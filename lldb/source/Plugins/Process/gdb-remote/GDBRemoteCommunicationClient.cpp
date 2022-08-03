@@ -1033,6 +1033,13 @@ bool GDBRemoteCommunicationClient::GetProcessStandaloneBinary(
   return true;
 }
 
+std::vector<addr_t>
+GDBRemoteCommunicationClient::GetProcessStandaloneBinaries() {
+  if (m_qProcessInfo_is_valid == eLazyBoolCalculate)
+    GetCurrentProcessInfo();
+  return m_binary_addresses;
+}
+
 bool GDBRemoteCommunicationClient::GetGDBServerVersion() {
   if (m_qGDBServerVersion_is_valid == eLazyBoolCalculate) {
     m_gdb_server_name.clear();
@@ -2191,6 +2198,14 @@ bool GDBRemoteCommunicationClient::GetCurrentProcessInfo(bool allow_lazy) {
           if (m_process_standalone_value != LLDB_INVALID_ADDRESS) {
             m_process_standalone_value_is_offset = false;
             ++num_keys_decoded;
+          }
+        } else if (name.equals("binary-addresses")) {
+          addr_t addr;
+          while (!value.empty()) {
+            llvm::StringRef addr_str;
+            std::tie(addr_str, value) = value.split(',');
+            if (!addr_str.getAsInteger(16, addr))
+              m_binary_addresses.push_back(addr);
           }
         }
       }

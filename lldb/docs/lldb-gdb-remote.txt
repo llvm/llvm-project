@@ -1032,6 +1032,12 @@ main-binary-uuid: is the UUID of a firmware type binary that the gdb stub knows 
 main-binary-address: is the load address of the firmware type binary
 main-binary-slide: is the slide of the firmware type binary, if address isn't known
 
+binary-addresses: A comma-separated list of binary load addresses base16.  
+                  lldb will parse the binaries in memory to get UUIDs, then
+                  try to find the binaries & debug info by UUID.  Intended for
+                  use with a small number of firmware type binaries where the 
+                  search for binary/debug info may be expensive.
+
 //----------------------------------------------------------------------
 // "qShlibInfoAddr"
 //
