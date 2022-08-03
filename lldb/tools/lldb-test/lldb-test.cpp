@@ -22,6 +22,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Symbol/Symtab.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/VariableList.h"
@@ -57,6 +58,8 @@ static cl::SubCommand BreakpointSubcommand("breakpoints",
 cl::SubCommand ObjectFileSubcommand("object-file",
                                     "Display LLDB object file information");
 cl::SubCommand SymbolsSubcommand("symbols", "Dump symbols for an object file");
+cl::SubCommand SymTabSubcommand("symtab",
+                                "Test symbol table functionality");
 cl::SubCommand IRMemoryMapSubcommand("ir-memory-map", "Test IRMemoryMap");
 cl::SubCommand AssertSubcommand("assert", "Test assert handling");
 
@@ -64,6 +67,7 @@ cl::opt<std::string> Log("log", cl::desc("Path to a log file"), cl::init(""),
                          cl::sub(BreakpointSubcommand),
                          cl::sub(ObjectFileSubcommand),
                          cl::sub(SymbolsSubcommand),
+                         cl::sub(SymTabSubcommand),
                          cl::sub(IRMemoryMapSubcommand));
 
 /// Create a target using the file pointed to by \p Filename, or abort.
@@ -101,6 +105,48 @@ cl::list<std::string> InputFilenames(cl::Positional, cl::desc("<input files>"),
                                      cl::OneOrMore,
                                      cl::sub(ObjectFileSubcommand));
 } // namespace object
+
+namespace symtab {
+
+/// The same enum as Mangled::NamePreference but with a default
+/// 'None' case. This is needed to disambiguate wheter "ManglingPreference" was
+/// explicitly set or not.
+enum class ManglingPreference {
+  None,
+  Mangled,
+  Demangled,
+  MangledWithoutArguments,
+};
+
+static cl::opt<std::string> FindSymbolsByRegex(
+    "find-symbols-by-regex",
+    cl::desc(
+        "Dump symbols found in the symbol table matching the specified regex."),
+    cl::sub(SymTabSubcommand));
+
+static cl::opt<ManglingPreference> ManglingPreference(
+    "mangling-preference",
+    cl::desc("Preference on mangling scheme the regex should match against and "
+             "dumped."),
+    cl::values(
+        clEnumValN(ManglingPreference::Mangled, "mangled", "Prefer mangled"),
+        clEnumValN(ManglingPreference::Demangled, "demangled",
+                   "Prefer demangled"),
+        clEnumValN(ManglingPreference::MangledWithoutArguments,
+                   "demangled-without-args", "Prefer mangled without args")),
+    cl::sub(SymTabSubcommand));
+
+static cl::opt<std::string> InputFile(cl::Positional, cl::desc("<input file>"),
+                                      cl::Required, cl::sub(SymTabSubcommand));
+
+/// Validate that the options passed make sense.
+static llvm::Optional<llvm::Error> validate();
+
+/// Transforms the selected mangling preference into a Mangled::NamePreference
+static Mangled::NamePreference getNamePreference();
+
+static int handleSymtabCommand(Debugger &Dbg);
+} // namespace symtab
 
 namespace symbols {
 static cl::opt<std::string> InputFile(cl::Positional, cl::desc("<input file>"),
@@ -814,6 +860,56 @@ Expected<Error (*)(lldb_private::Module &)> opts::symbols::getAction() {
   llvm_unreachable("Unsupported symbol action.");
 }
 
+llvm::Optional<llvm::Error> opts::symtab::validate() {
+  if (ManglingPreference != ManglingPreference::None &&
+      FindSymbolsByRegex.empty())
+    return make_string_error("Mangling preference set but no regex specified.");
+
+  return {};
+}
+
+static Mangled::NamePreference opts::symtab::getNamePreference() {
+  switch (ManglingPreference) {
+  case ManglingPreference::None:
+  case ManglingPreference::Mangled:
+    return Mangled::ePreferMangled;
+  case ManglingPreference::Demangled:
+    return Mangled::ePreferDemangled;
+  case ManglingPreference::MangledWithoutArguments:
+    return Mangled::ePreferDemangledWithoutArguments;
+  }
+}
+
+int opts::symtab::handleSymtabCommand(Debugger &Dbg) {
+  if (auto error = validate()) {
+    logAllUnhandledErrors(std::move(error.getValue()), WithColor::error(), "");
+    return 1;
+  }
+
+  if (!FindSymbolsByRegex.empty()) {
+    ModuleSpec Spec{FileSpec(InputFile)};
+
+    auto ModulePtr = std::make_shared<lldb_private::Module>(Spec);
+    auto *Symtab = ModulePtr->GetSymtab();
+    auto NamePreference = getNamePreference();
+    std::vector<uint32_t> Indexes;
+
+    Symtab->FindAllSymbolsMatchingRexExAndType(
+        RegularExpression(FindSymbolsByRegex), lldb::eSymbolTypeAny,
+        Symtab::eDebugAny, Symtab::eVisibilityAny, Indexes, NamePreference);
+    for (auto i : Indexes) {
+      auto *symbol = Symtab->SymbolAtIndex(i);
+      if (symbol) {
+        StreamString stream;
+        symbol->Dump(&stream, nullptr, i, NamePreference);
+        outs() << stream.GetString();
+      }
+    }
+  }
+
+  return 0;
+}
+
 int opts::symbols::dumpSymbols(Debugger &Dbg) {
   auto ActionOr = getAction();
   if (!ActionOr) {
@@ -1128,6 +1224,8 @@ int main(int argc, const char *argv[]) {
     return dumpObjectFiles(*Dbg);
   if (opts::SymbolsSubcommand)
     return opts::symbols::dumpSymbols(*Dbg);
+  if (opts::SymTabSubcommand)
+    return opts::symtab::handleSymtabCommand(*Dbg);
   if (opts::IRMemoryMapSubcommand)
     return opts::irmemorymap::evaluateMemoryMapCommands(*Dbg);
   if (opts::AssertSubcommand)

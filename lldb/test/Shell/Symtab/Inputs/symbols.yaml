@@ -1,0 +1,48 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_AARCH64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .text
+      - Name:            .strtab
+      - Name:            .symtab
+Symbols:
+  - Name:            _Z8someFunciii
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x1C
+  - Name:            _Z8someFuncci
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1C
+    Size:            0x18
+  - Name:            _Z13someOtherFuncv
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x34
+    Size:            0x4
+  - Name:            _Z13someOtherFuncd
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x38
+    Size:            0x10
+  - Name:            _Z18ignoreThisFunctionv
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x48
+    Size:            0x8
+...
