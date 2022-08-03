@@ -18,6 +18,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
@@ -254,6 +255,10 @@ public:
 
   LLVM_DUMP_METHOD void dumpFlowCondition(AtomicBoolValue &Token);
 
+  /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
+  /// returns null.
+  const ControlFlowContext *getControlFlowContext(const FunctionDecl *F);
+
 private:
   struct NullableQualTypeDenseMapInfo : private llvm::DenseMapInfo<QualType> {
     static QualType getEmptyKey() {
@@ -360,6 +365,8 @@ private:
   llvm::DenseMap<AtomicBoolValue *, llvm::DenseSet<AtomicBoolValue *>>
       FlowConditionDeps;
   llvm::DenseMap<AtomicBoolValue *, BoolValue *> FlowConditionConstraints;
+
+  llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
 };
 
 } // namespace dataflow

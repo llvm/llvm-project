@@ -1445,30 +1445,7 @@ public:
   // through scalar predication or masked load/store or masked gather/scatter.
   // \p VF is the vectorization factor that will be used to vectorize \p I.
   // Superset of instructions that return true for isScalarWithPredication.
-  bool isPredicatedInst(Instruction *I, ElementCount VF) {
-    // When we know the load's address is loop invariant and the instruction
-    // in the original scalar loop was unconditionally executed then we
-    // don't need to mark it as a predicated instruction. Tail folding may
-    // introduce additional predication, but we're guaranteed to always have
-    // at least one active lane.  We call Legal->blockNeedsPredication here
-    // because it doesn't query tail-folding.  For stores, we need to prove
-    // both speculation safety (which follows from the same argument as loads),
-    // but also must prove the value being stored is correct.  The easiest
-    // form of the later is to require that all values stored are the same.
-    if (Legal->isUniformMemOp(*I) &&
-        (isa<LoadInst>(I) ||
-         (isa<StoreInst>(I) &&
-          TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()))) &&
-        !Legal->blockNeedsPredication(I->getParent()))
-      return false;
-    if (!blockNeedsPredicationForAnyReason(I->getParent()))
-      return false;
-    // Loads and stores that need some form of masked operation are predicated
-    // instructions.
-    if (isa<LoadInst>(I) || isa<StoreInst>(I))
-      return Legal->isMaskRequired(I);
-    return isScalarWithPredication(I, VF);
-  }
+  bool isPredicatedInst(Instruction *I, ElementCount VF) const;
 
   /// Returns true if \p I is a memory instruction with consecutive memory
   /// access that can be widened.
@@ -4466,6 +4443,32 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
   return false;
 }
 
+bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I,
+                                                  ElementCount VF) const {
+  // When we know the load's address is loop invariant and the instruction
+  // in the original scalar loop was unconditionally executed then we
+  // don't need to mark it as a predicated instruction. Tail folding may
+  // introduce additional predication, but we're guaranteed to always have
+  // at least one active lane.  We call Legal->blockNeedsPredication here
+  // because it doesn't query tail-folding.  For stores, we need to prove
+  // both speculation safety (which follows from the same argument as loads),
+  // but also must prove the value being stored is correct.  The easiest
+  // form of the later is to require that all values stored are the same.
+  if (Legal->isUniformMemOp(*I) &&
+      (isa<LoadInst>(I) ||
+       (isa<StoreInst>(I) &&
+        TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()))) &&
+      !Legal->blockNeedsPredication(I->getParent()))
+    return false;
+  if (!blockNeedsPredicationForAnyReason(I->getParent()))
+    return false;
+  // Loads and stores that need some form of masked operation are predicated
+  // instructions.
+  if (isa<LoadInst>(I) || isa<StoreInst>(I))
+    return Legal->isMaskRequired(I);
+  return isScalarWithPredication(I, VF);
+}
+
 bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
     Instruction *I, ElementCount VF) {
   assert(isAccessInterleaved(I) && "Expecting interleaved access.");
@@ -6775,29 +6778,41 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         NumPredStores++;
 
       if (Legal->isUniformMemOp(I)) {
-        // Lowering story for uniform memory ops is currently a bit complicated.
-        // Scalarization works for everything which isn't a store with scalable
-        // VF.  Fixed len VFs just scalarize and then DCE later; scalarization
-        // knows how to handle uniform-per-part values (i.e. the first lane
-        // in each unrolled VF) and can thus handle scalable loads too.  For
-        // scalable stores, we use a scatter if legal.  If not, we have no way
-        // to lower (currently) and thus have to abort vectorization.
-        if (isa<StoreInst>(&I) && VF.isScalable()) {
-          if (isLegalGatherOrScatter(&I, VF))
-            setWideningDecision(&I, VF, CM_GatherScatter,
-                                getGatherScatterCost(&I, VF));
-          else
-            // Error case, abort vectorization
-            setWideningDecision(&I, VF, CM_Scalarize,
-                                InstructionCost::getInvalid());
-          continue;
-        }
+        auto isLegalToScalarize = [&]() {
+          if (!VF.isScalable())
+            // Scalarization of fixed length vectors "just works".
+            return true;
+
+          // For scalable vectors, a uniform memop load is always
+          // uniform-by-parts  and we know how to scalarize that.
+          if (isa<LoadInst>(I))
+            return true;
+
+          // A uniform store isn't neccessarily uniform-by-part
+          // and we can't assume scalarization.
+          auto &SI = cast<StoreInst>(I);
+          return TheLoop->isLoopInvariant(SI.getValueOperand());
+        };
+
+        const InstructionCost GatherScatterCost =
+          isLegalGatherOrScatter(&I, VF) ?
+          getGatherScatterCost(&I, VF) : InstructionCost::getInvalid();
+
         // Load: Scalar load + broadcast
         // Store: Scalar store + isLoopInvariantStoreValue ? 0 : extract
         // TODO: Avoid replicating loads and stores instead of relying on
         // instcombine to remove them.
-        setWideningDecision(&I, VF, CM_Scalarize,
-                            getUniformMemOpCost(&I, VF));
+        const InstructionCost ScalarizationCost = isLegalToScalarize() ?
+          getUniformMemOpCost(&I, VF) : InstructionCost::getInvalid();
+
+
+        // Choose better solution for the current VF,  Note that Invalid
+        // costs compare as maximumal large.  If both are invalid, we get
+        // scalable invalid which signals a failure and a vectorization abort.
+        if (GatherScatterCost < ScalarizationCost)
+          setWideningDecision(&I, VF, CM_GatherScatter, GatherScatterCost);
+        else
+          setWideningDecision(&I, VF, CM_Scalarize, ScalarizationCost);
         continue;
       }
 

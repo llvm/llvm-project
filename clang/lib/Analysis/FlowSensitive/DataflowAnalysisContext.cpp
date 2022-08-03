@@ -334,6 +334,27 @@ void DataflowAnalysisContext::dumpFlowCondition(AtomicBoolValue &Token) {
   llvm::dbgs() << debugString(Constraints, AtomNames);
 }
 
+const ControlFlowContext *
+DataflowAnalysisContext::getControlFlowContext(const FunctionDecl *F) {
+  // Canonicalize the key:
+  F = F->getDefinition();
+  if (F == nullptr)
+    return nullptr;
+  auto It = FunctionContexts.find(F);
+  if (It != FunctionContexts.end())
+    return &It->second;
+
+  if (Stmt *Body = F->getBody()) {
+    auto CFCtx = ControlFlowContext::build(F, *Body, F->getASTContext());
+    // FIXME: Handle errors.
+    assert(CFCtx);
+    auto Result = FunctionContexts.insert({F, std::move(*CFCtx)});
+    return &Result.first->second;
+  }
+
+  return nullptr;
+}
+
 } // namespace dataflow
 } // namespace clang
 

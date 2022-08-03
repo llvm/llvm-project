@@ -26,7 +26,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[variant.monostate.relops] <https://wg21.link/variant.monostate.relops>`_","| monostate
 | variant",None,Kent Ross,|In Progress|
 | `[unique.ptr.special] <https://wg21.link/unique.ptr.special>`_,| `unique_ptr <https://reviews.llvm.org/D130838>`_,[comparisons.three.way],Adrian Vogelsgesang,|In Progress|
-| `[util.smartptr.shared.cmp] <https://wg21.link/util.smartptr.shared.cmp>`_,| `shared_ptr <https://reviews.llvm.org/D130852>`_,[comparisons.three.way],Adrian Vogelsgesang,|In Progress|
+| `[util.smartptr.shared.cmp] <https://wg21.link/util.smartptr.shared.cmp>`_,| `shared_ptr <https://reviews.llvm.org/D130852>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
 | `[type.index.members] <https://wg21.link/type.index.members>`_,| type_index,None,Unassigned,|Not Started|
 | `[charconv.syn] <https://wg21.link/charconv.syn>`_,| to_chars_result,None,Mark de Wever,|Complete|
 | `[charconv.syn] <https://wg21.link/charconv.syn>`_,| from_chars_result,None,Mark de Wever,|Complete|

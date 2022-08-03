@@ -20,7 +20,6 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Stmt.h"
-#include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
