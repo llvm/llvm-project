@@ -130,7 +130,6 @@ define void @cmpxchg_masked_and_branch1(i8* %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-NEXT:  .LBB2_5: # %do_cmpxchg
 ; RV64IA-NEXT:    # in Loop: Header=BB2_1 Depth=1
 ; RV64IA-NEXT:    and a4, a4, a0
-; RV64IA-NEXT:    sext.w a4, a4
 ; RV64IA-NEXT:    bne a1, a4, .LBB2_1
 ; RV64IA-NEXT:  # %bb.2: # %exit
 ; RV64IA-NEXT:    ret
@@ -207,7 +206,6 @@ define void @cmpxchg_masked_and_branch2(i8* %ptr, i8 signext %cmp, i8 signext %v
 ; RV64IA-NEXT:  .LBB3_5: # %do_cmpxchg
 ; RV64IA-NEXT:    # in Loop: Header=BB3_1 Depth=1
 ; RV64IA-NEXT:    and a4, a4, a0
-; RV64IA-NEXT:    sext.w a4, a4
 ; RV64IA-NEXT:    beq a1, a4, .LBB3_1
 ; RV64IA-NEXT:  # %bb.2: # %exit
 ; RV64IA-NEXT:    ret
