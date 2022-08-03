@@ -18,6 +18,7 @@
 #if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL) || defined(LLVM_HAVE_TF_API)
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
+#include "llvm/Analysis/Utils/TrainingLogger.h"
 #endif
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
