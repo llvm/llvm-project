@@ -3147,7 +3147,7 @@ define void @unique_exit(i32 %N, i32 %M) {
 ; EPILOG-NEXT:    %cmp1.7 = icmp ult i32 %inc.7, %N
 ; EPILOG-NEXT:    br i1 %cmp1.7, label %latch.7, label %latchExit.epilog-lcssa.loopexit
 ; EPILOG:       latch.7:
-; EPILOG-NEXT:    %niter.next.7 = add i32 %niter.next.6, 1
+; EPILOG-NEXT:    %niter.next.7 = add nuw i32 %niter.next.6, 1
 ; EPILOG-NEXT:    %niter.ncmp.7 = icmp ne i32 %niter.next.7, %unroll_iter
 ; EPILOG-NEXT:    br i1 %niter.ncmp.7, label %header, label %latchExit.unr-lcssa.loopexit
 ; EPILOG:       latchExit.unr-lcssa.loopexit:
@@ -3209,7 +3209,7 @@ define void @unique_exit(i32 %N, i32 %M) {
 ; EPILOG-BLOCK-NEXT:    %cmp1.1 = icmp ult i32 %inc.1, %N
 ; EPILOG-BLOCK-NEXT:    br i1 %cmp1.1, label %latch.1, label %latchExit.epilog-lcssa.loopexit
 ; EPILOG-BLOCK:       latch.1:
-; EPILOG-BLOCK-NEXT:    %niter.next.1 = add i32 %niter.next, 1
+; EPILOG-BLOCK-NEXT:    %niter.next.1 = add nuw i32 %niter.next, 1
 ; EPILOG-BLOCK-NEXT:    %niter.ncmp.1 = icmp ne i32 %niter.next.1, %unroll_iter
 ; EPILOG-BLOCK-NEXT:    br i1 %niter.ncmp.1, label %header, label %latchExit.unr-lcssa.loopexit, !llvm.loop !8
 ; EPILOG-BLOCK:       latchExit.unr-lcssa.loopexit:
