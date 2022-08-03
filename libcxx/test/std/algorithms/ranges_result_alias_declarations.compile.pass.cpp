@@ -57,7 +57,7 @@ static_assert(std::is_same_v<in_out_out_result<int, long, char>, partition_copy_
 static_assert(std::is_same_v<min_max_result<int>, minmax_result<int>>);
 static_assert(std::is_same_v<min_max_result<int>, minmax_element_result<int>>);
 
-// static_assert(std::is_same_v<in_found_result<int>, next_permutation_result<int>>);
-// static_assert(std::is_same_v<in_found_result<int>, prev_permutation_result<int>>);
+static_assert(std::is_same_v<in_found_result<int>, next_permutation_result<int>>);
+static_assert(std::is_same_v<in_found_result<int>, prev_permutation_result<int>>);
 
 // static_assert(std::is_same_v<out_value_result<int>, iota_result<int>>);

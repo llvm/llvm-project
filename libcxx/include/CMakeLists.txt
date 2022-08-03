@@ -113,6 +113,7 @@ set(files
   __algorithm/ranges_mismatch.h
   __algorithm/ranges_move.h
   __algorithm/ranges_move_backward.h
+  __algorithm/ranges_next_permutation.h
   __algorithm/ranges_none_of.h
   __algorithm/ranges_nth_element.h
   __algorithm/ranges_partial_sort.h
@@ -121,6 +122,7 @@ set(files
   __algorithm/ranges_partition_copy.h
   __algorithm/ranges_partition_point.h
   __algorithm/ranges_pop_heap.h
+  __algorithm/ranges_prev_permutation.h
   __algorithm/ranges_push_heap.h
   __algorithm/ranges_remove.h
   __algorithm/ranges_remove_copy.h
