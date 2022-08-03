@@ -147,7 +147,7 @@ constexpr void run_tests() {
   test(std::ranges::remove, in, x);
   test(std::ranges::remove_if, in, unary_pred);
   test(std::ranges::reverse, in);
-  //test_mid(std::ranges::rotate, in, mid);
+  test_mid(std::ranges::rotate, in, mid);
   if (!std::is_constant_evaluated()) // `shuffle` isn't `constexpr`.
     test(std::ranges::shuffle, in, rand_gen());
   if (!std::is_constant_evaluated()) {
@@ -156,18 +156,15 @@ constexpr void run_tests() {
   }
   test(std::ranges::unique, in);
   test(std::ranges::partition, in, unary_pred);
-  // TODO(ranges): `stable_partition` requires `ranges::rotate` to be implemented.
-  //if (!std::is_constant_evaluated())
-  // test(std::ranges::stable_partition, in, unary_pred);
+  if (!std::is_constant_evaluated())
+    test(std::ranges::stable_partition, in, unary_pred);
   test(std::ranges::sort, in);
-  // TODO(ranges): `stable_sort` requires `ranges::rotate` to be implemented.
-  //if (!std::is_constant_evaluated())
-  //  test(std::ranges::stable_sort, in);
+  if (!std::is_constant_evaluated())
+    test(std::ranges::stable_sort, in);
   test_mid(std::ranges::partial_sort, in, mid);
   test_mid(std::ranges::nth_element, in, mid);
-  // TODO(ranges): `inplace_merge` requires `ranges::rotate` to be implemented.
-  //if (!std::is_constant_evaluated())
-  //  test_mid(std::ranges::inplace_merge, in, mid);
+  if (!std::is_constant_evaluated())
+    test_mid(std::ranges::inplace_merge, in, mid);
   test(std::ranges::make_heap, in);
   test(std::ranges::push_heap, in);
   test(std::ranges::pop_heap, in);
