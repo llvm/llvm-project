@@ -745,6 +745,13 @@ namespace ranges {
     constexpr ranges::reverse_copy_result<borrowed_iterator_t<R>, O>
       ranges::reverse_copy(R&& r, O result);                                                        // since C++20
 
+  template<permutable I, sentinel_for<I> S>
+    constexpr subrange<I> rotate(I first, I middle, S last);                                        // since C++20
+
+  template<forward_range R>
+    requires permutable<iterator_t<R>>
+    constexpr borrowed_subrange_t<R> rotate(R&& r, iterator_t<R> middle);                           // Since C++20
+
   template <class _InIter, class _OutIter>
   using rotate_copy_result = in_out_result<_InIter, _OutIter>;                                      // since C++20
 
@@ -1817,6 +1824,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_replace_if.h>
 #include <__algorithm/ranges_reverse.h>
 #include <__algorithm/ranges_reverse_copy.h>
+#include <__algorithm/ranges_rotate.h>
 #include <__algorithm/ranges_rotate_copy.h>
 #include <__algorithm/ranges_sample.h>
 #include <__algorithm/ranges_search.h>
