@@ -1,6 +1,5 @@
 set(files
   __algorithm/adjacent_find.h
-  __algorithm/algorithm_family.h
   __algorithm/all_of.h
   __algorithm/any_of.h
   __algorithm/binary_search.h
@@ -134,6 +133,7 @@ set(files
   __algorithm/ranges_replace_if.h
   __algorithm/ranges_reverse.h
   __algorithm/ranges_reverse_copy.h
+  __algorithm/ranges_rotate.h
   __algorithm/ranges_rotate_copy.h
   __algorithm/ranges_sample.h
   __algorithm/ranges_search.h
