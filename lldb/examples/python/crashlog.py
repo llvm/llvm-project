@@ -1052,27 +1052,28 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
     if not process or error.Fail():
         raise InteractiveCrashLogException("couldn't launch Scripted Process", error)
 
-    @contextlib.contextmanager
-    def synchronous(debugger):
-        async_state = debugger.GetAsync()
-        debugger.SetAsync(False)
-        try:
-            yield
-        finally:
-            debugger.SetAsync(async_state)
+    if not options.skip_status:
+        @contextlib.contextmanager
+        def synchronous(debugger):
+            async_state = debugger.GetAsync()
+            debugger.SetAsync(False)
+            try:
+                yield
+            finally:
+                debugger.SetAsync(async_state)
 
-    with synchronous(debugger):
-        run_options = lldb.SBCommandInterpreterRunOptions()
-        run_options.SetStopOnError(True)
-        run_options.SetStopOnCrash(True)
-        run_options.SetEchoCommands(True)
+        with synchronous(debugger):
+            run_options = lldb.SBCommandInterpreterRunOptions()
+            run_options.SetStopOnError(True)
+            run_options.SetStopOnCrash(True)
+            run_options.SetEchoCommands(True)
 
-        commands_stream = lldb.SBStream()
-        commands_stream.Print("process status\n")
-        commands_stream.Print("thread backtrace\n")
-        error = debugger.SetInputString(commands_stream.GetData())
-        if error.Success():
-            debugger.RunCommandInterpreter(True, False, run_options, 0, False, True)
+            commands_stream = lldb.SBStream()
+            commands_stream.Print("process status\n")
+            commands_stream.Print("thread backtrace\n")
+            error = debugger.SetInputString(commands_stream.GetData())
+            if error.Success():
+                debugger.RunCommandInterpreter(True, False, run_options, 0, False, True)
 
 def CreateSymbolicateCrashLogOptions(
         command_name,
@@ -1192,6 +1193,13 @@ def CreateSymbolicateCrashLogOptions(
             dest='target_path',
             help='the target binary path that should be used for interactive crashlog (optional)',
             default=None)
+        option_parser.add_option(
+            '--skip-status',
+            '-s',
+            dest='skip_status',
+            action='store_true',
+            help='prevent the interactive crashlog to dump the process status and thread backtrace at launch',
+            default=False)
     return option_parser
 
 
