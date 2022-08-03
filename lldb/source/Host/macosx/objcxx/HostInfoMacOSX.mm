@@ -16,6 +16,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FileSystem.h"
@@ -523,20 +524,33 @@ public:
   SharedCacheInfo();
 
 private:
+  bool CreateSharedCacheInfoWithInstrospectionSPIs();
+
   llvm::StringMap<SharedCacheImageInfo> m_images;
   UUID m_uuid;
 };
 }
 
-SharedCacheInfo::SharedCacheInfo() {
+bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
 #if defined(SDK_HAS_NEW_DYLD_INTROSPECTION_SPIS)
   if (__builtin_available(macOS 12, *)) {
     if (dyld_process_create_for_current_task) {
-      auto dyld_process = dyld_process_create_for_current_task();
-      auto snapshot =
+      dyld_process_t dyld_process = dyld_process_create_for_current_task();
+      if (!dyld_process)
+        return false;
+
+      dyld_process_snapshot_t snapshot =
           dyld_process_snapshot_create_for_process(dyld_process, nullptr);
-      auto shared_cache = dyld_process_snapshot_get_shared_cache(snapshot);
-      assert(dyld_process && snapshot && shared_cache);
+      if (!snapshot)
+        return false;
+
+      auto on_exit = llvm::make_scope_exit(
+          [&]() { dyld_process_snapshot_dispose(snapshot); });
+
+      dyld_shared_cache_t shared_cache =
+          dyld_process_snapshot_get_shared_cache(snapshot);
+      if (!shared_cache)
+        return false;
 
       dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
         __block uint64_t minVmAddr = UINT64_MAX;
@@ -558,11 +572,16 @@ SharedCacheInfo::SharedCacheInfo() {
             std::make_shared<DataBufferUnowned>((uint8_t *)minVmAddr,
                                                 maxVmAddr - minVmAddr)};
       });
-      dyld_process_snapshot_dispose(snapshot);
-      return;
+      return true;
     }
   }
 #endif
+  return false;
+}
+
+SharedCacheInfo::SharedCacheInfo() {
+  if (CreateSharedCacheInfoWithInstrospectionSPIs())
+    return;
 
   size_t shared_cache_size;
   uint8_t *shared_cache_start =
