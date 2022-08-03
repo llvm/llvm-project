@@ -202,6 +202,10 @@ public:
 };
 
 using BidirectionalRangeNotDerivedFrom = UncheckedRange<BidirectionalIteratorNotDerivedFrom>;
+using BidirectionalRangeNotSentinelSemiregular =
+    UncheckedRange<bidirectional_iterator<int*>, SentinelForNotSemiregular>;
+using BidirectionalRangeNotSentinelWeaklyEqualityComparableWith =
+    UncheckedRange<bidirectional_iterator<int*>, SentinelForNotWeaklyEqualityComparableWith>;
 
 static_assert(std::forward_iterator<BidirectionalIteratorNotDerivedFrom>);
 static_assert(!std::bidirectional_iterator<BidirectionalIteratorNotDerivedFrom>);

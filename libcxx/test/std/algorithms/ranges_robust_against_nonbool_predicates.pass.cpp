@@ -139,8 +139,8 @@ constexpr bool test_all() {
   test(std::ranges::push_heap, in, binary_pred);
   test(std::ranges::pop_heap, in, binary_pred);
   test(std::ranges::sort_heap, in, binary_pred);
-  //test(std::ranges::prev_permutation, in, binary_pred);
-  //test(std::ranges::next_permutation, in, binary_pred);
+  test(std::ranges::prev_permutation, in, binary_pred);
+  test(std::ranges::next_permutation, in, binary_pred);
 
   return true;
 }
