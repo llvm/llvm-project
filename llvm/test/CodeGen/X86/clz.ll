@@ -46,12 +46,14 @@ define i8 @cttz_i8(i8 %x)  {
 define i16 @cttz_i16(i16 %x)  {
 ; X86-LABEL: cttz_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    rep bsfw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    rep bsfl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cttz_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    rep bsfw %di, %ax
+; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: cttz_i16:
@@ -565,10 +567,12 @@ define i16 @cttz_i16_zero_test(i16 %n) {
 ; X86-NEXT:    testw %ax, %ax
 ; X86-NEXT:    je .LBB13_1
 ; X86-NEXT:  # %bb.2: # %cond.false
-; X86-NEXT:    rep bsfw %ax, %ax
+; X86-NEXT:    rep bsfl %eax, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB13_1:
 ; X86-NEXT:    movw $16, %ax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cttz_i16_zero_test:
@@ -576,20 +580,27 @@ define i16 @cttz_i16_zero_test(i16 %n) {
 ; X64-NEXT:    testw %di, %di
 ; X64-NEXT:    je .LBB13_1
 ; X64-NEXT:  # %bb.2: # %cond.false
-; X64-NEXT:    rep bsfw %di, %ax
+; X64-NEXT:    rep bsfl %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB13_1:
 ; X64-NEXT:    movw $16, %ax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-CLZ-LABEL: cttz_i16_zero_test:
 ; X86-CLZ:       # %bb.0:
-; X86-CLZ-NEXT:    tzcntw {{[0-9]+}}(%esp), %ax
+; X86-CLZ-NEXT:    movl $65536, %eax # imm = 0x10000
+; X86-CLZ-NEXT:    orl {{[0-9]+}}(%esp), %eax
+; X86-CLZ-NEXT:    tzcntl %eax, %eax
+; X86-CLZ-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-CLZ-NEXT:    retl
 ;
 ; X64-CLZ-LABEL: cttz_i16_zero_test:
 ; X64-CLZ:       # %bb.0:
-; X64-CLZ-NEXT:    tzcntw %di, %ax
+; X64-CLZ-NEXT:    orl $65536, %edi # imm = 0x10000
+; X64-CLZ-NEXT:    tzcntl %edi, %eax
+; X64-CLZ-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-CLZ-NEXT:    retq
   %tmp1 = call i16 @llvm.cttz.i16(i16 %n, i1 false)
   ret i16 %tmp1
