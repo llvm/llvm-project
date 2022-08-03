@@ -181,7 +181,7 @@ constexpr bool test_all() {
   dangling_1st(std::ranges::remove, in, x);
   dangling_1st(std::ranges::remove_if, in, unary_pred);
   dangling_1st(std::ranges::reverse, in);
-  //dangling_1st(std::ranges::rotate, in, mid);
+  dangling_1st(std::ranges::rotate, in, mid);
   if (!std::is_constant_evaluated()) // `shuffle` isn't `constexpr`.
     dangling_1st(std::ranges::shuffle, in, rand_gen());
   dangling_1st(std::ranges::unique, in);
