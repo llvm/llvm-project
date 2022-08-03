@@ -57,7 +57,7 @@ public:
   void visitLambdaExpr(LambdaExpr *L) const {
     for (const LambdaCapture &C : L->captures()) {
       if (C.capturesVariable()) {
-        ValueDecl *CapturedVar = C.getCapturedVar();
+        VarDecl *CapturedVar = C.getCapturedVar();
         if (auto *CapturedVarType = CapturedVar->getType().getTypePtrOrNull()) {
           Optional<bool> IsUncountedPtr = isUncountedPtr(CapturedVarType);
           if (IsUncountedPtr && *IsUncountedPtr) {
@@ -68,7 +68,7 @@ public:
     }
   }
 
-  void reportBug(const LambdaCapture &Capture, ValueDecl *CapturedVar,
+  void reportBug(const LambdaCapture &Capture, VarDecl *CapturedVar,
                  const Type *T) const {
     assert(CapturedVar);
 
