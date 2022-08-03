@@ -34,7 +34,7 @@ class MiniDumpTestCase(TestBase):
         # one and only thread.
         self.assertEqual(self.process.GetNumThreads(), 1)
         thread = self.process.GetThreadAtIndex(0)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonException)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonException)
         stop_description = thread.GetStopDescription(256)
         self.assertIn("0xc0000005", stop_description)
 
