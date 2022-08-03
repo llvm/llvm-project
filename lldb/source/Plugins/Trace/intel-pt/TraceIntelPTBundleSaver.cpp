@@ -359,9 +359,10 @@ Expected<FileSpec> TraceIntelPTBundleSaver::SaveToDisk(TraceIntelPT &trace_ipt,
   if (!json_cpus)
     return json_cpus.takeError();
 
-  JSONTraceBundleDescription json_intel_pt_bundle_desc{"intel-pt", *cpu_info, *json_processes,
-                                         *json_cpus,
-                                         trace_ipt.GetPerfZeroTscConversion()};
+  JSONTraceBundleDescription json_intel_pt_bundle_desc{
+      "intel-pt", *cpu_info, *json_processes, *json_cpus,
+      trace_ipt.GetPerfZeroTscConversion()};
 
-  return SaveTraceBundleDescription(toJSON(json_intel_pt_bundle_desc), directory);
+  return SaveTraceBundleDescription(toJSON(json_intel_pt_bundle_desc),
+                                    directory);
 }
