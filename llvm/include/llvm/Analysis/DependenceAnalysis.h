@@ -158,6 +158,16 @@ namespace llvm {
     /// particular level.
     virtual const SCEV *getDistance(unsigned Level) const { return nullptr; }
 
+    /// Check if the direction vector is negative. A negative direction
+    /// vector means Src and Dst are reversed in the actual program.
+    virtual bool isDirectionNegative() const { return false; }
+
+    /// If the direction vector is negative, normalize the direction
+    /// vector to make it non-negative. Normalization is done by reversing
+    /// Src and Dst, plus reversing the dependence directions and distances
+    /// in the vector.
+    virtual bool normalize(ScalarEvolution *SE) { return false; }
+
     /// isPeelFirst - Returns true if peeling the first iteration from
     /// this loop will break this dependence.
     virtual bool isPeelFirst(unsigned Level) const { return false; }
@@ -195,8 +205,10 @@ namespace llvm {
     ///
     void dump(raw_ostream &OS) const;
 
-  private:
+  protected:
     Instruction *Src, *Dst;
+
+  private:
     const Dependence *NextPredecessor = nullptr, *NextSuccessor = nullptr;
     friend class DependenceInfo;
   };
@@ -238,6 +250,16 @@ namespace llvm {
     /// getDistance - Returns the distance (or NULL) associated with a
     /// particular level.
     const SCEV *getDistance(unsigned Level) const override;
+
+    /// Check if the direction vector is negative. A negative direction
+    /// vector means Src and Dst are reversed in the actual program.
+    bool isDirectionNegative() const override;
+
+    /// If the direction vector is negative, normalize the direction
+    /// vector to make it non-negative. Normalization is done by reversing
+    /// Src and Dst, plus reversing the dependence directions and distances
+    /// in the vector.
+    bool normalize(ScalarEvolution *SE) override;
 
     /// isPeelFirst - Returns true if peeling the first iteration from
     /// this loop will break this dependence.
@@ -964,12 +986,15 @@ namespace llvm {
   /// Printer pass to dump DA results.
   struct DependenceAnalysisPrinterPass
       : public PassInfoMixin<DependenceAnalysisPrinterPass> {
-    DependenceAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
+    DependenceAnalysisPrinterPass(raw_ostream &OS,
+                                  bool NormalizeResults = false)
+        : OS(OS), NormalizeResults(NormalizeResults) {}
 
     PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 
   private:
     raw_ostream &OS;
+    bool NormalizeResults;
   }; // class DependenceAnalysisPrinterPass
 
   /// Legacy pass manager pass to access dependence information
