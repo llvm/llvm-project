@@ -275,7 +275,7 @@ define i32 @test5(i32* %a, i32 %b) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[SUM_0]], [[TMP1]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ [[SUM_0]], [[FOR_COND]] ]
@@ -410,7 +410,7 @@ define i32 @test8(i32* %a, i32 %b, i32 %init) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[SUM_0]], [[TMP2]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i64 0, [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_COND]], label [[FOR_END]]
 ; CHECK:       for.end:
