@@ -131,7 +131,10 @@ struct SizedStrideCounter {
   SizedStrideCounter operator++(int);
   int& operator*() const;
   bool operator==(SizedStrideCounter) const;
-  constexpr int operator-(SizedStrideCounter rhs) const { *minus_ += 1; return it_ - rhs.it_; }
+  constexpr int operator-(SizedStrideCounter rhs) const {
+    *minus_ += 1;
+    return static_cast<int>(it_ - rhs.it_);
+  }
 };
 static_assert(std::forward_iterator<SizedStrideCounter>);
 static_assert(std::sized_sentinel_for<SizedStrideCounter, SizedStrideCounter>);
