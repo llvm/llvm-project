@@ -459,7 +459,7 @@ void AliasSetTracker::add(Instruction *I) {
       using namespace PatternMatch;
       if (Call->use_empty() &&
           match(Call, m_Intrinsic<Intrinsic::invariant_start>()))
-        CallMask = clearMod(CallMask);
+        CallMask &= ModRefInfo::Ref;
 
       for (auto IdxArgPair : enumerate(Call->args())) {
         int ArgIdx = IdxArgPair.index();
@@ -469,7 +469,7 @@ void AliasSetTracker::add(Instruction *I) {
         MemoryLocation ArgLoc =
             MemoryLocation::getForArgument(Call, ArgIdx, nullptr);
         ModRefInfo ArgMask = AA.getArgModRefInfo(Call, ArgIdx);
-        ArgMask = intersectModRef(CallMask, ArgMask);
+        ArgMask &= CallMask;
         if (!isNoModRef(ArgMask))
           addPointer(ArgLoc, getAccessFromModRef(ArgMask));
       }

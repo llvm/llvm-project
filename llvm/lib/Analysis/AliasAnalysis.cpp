@@ -178,7 +178,7 @@ ModRefInfo AAResults::getArgModRefInfo(const CallBase *Call, unsigned ArgIdx) {
   ModRefInfo Result = ModRefInfo::ModRef;
 
   for (const auto &AA : AAs) {
-    Result = intersectModRef(Result, AA->getArgModRefInfo(Call, ArgIdx));
+    Result &= AA->getArgModRefInfo(Call, ArgIdx);
 
     // Early-exit the moment we reach the bottom of the lattice.
     if (isNoModRef(Result))
@@ -226,7 +226,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
   ModRefInfo Result = ModRefInfo::ModRef;
 
   for (const auto &AA : AAs) {
-    Result = intersectModRef(Result, AA->getModRefInfo(Call, Loc, AAQI));
+    Result &= AA->getModRefInfo(Call, Loc, AAQI);
 
     // Early-exit the moment we reach the bottom of the lattice.
     if (isNoModRef(Result))
@@ -240,9 +240,9 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
     return ModRefInfo::NoModRef;
 
   if (onlyReadsMemory(MRB))
-    Result = clearMod(Result);
+    Result &= ModRefInfo::Ref;
   else if (onlyWritesMemory(MRB))
-    Result = clearRef(Result);
+    Result &= ModRefInfo::Mod;
 
   if (onlyAccessesArgPointees(MRB) || onlyAccessesInaccessibleOrArgMem(MRB)) {
     ModRefInfo AllArgsMask = ModRefInfo::NoModRef;
@@ -255,23 +255,21 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
         MemoryLocation ArgLoc =
             MemoryLocation::getForArgument(Call, ArgIdx, TLI);
         AliasResult ArgAlias = alias(ArgLoc, Loc, AAQI);
-        if (ArgAlias != AliasResult::NoAlias) {
-          ModRefInfo ArgMask = getArgModRefInfo(Call, ArgIdx);
-          AllArgsMask = unionModRef(AllArgsMask, ArgMask);
-        }
+        if (ArgAlias != AliasResult::NoAlias)
+          AllArgsMask |= getArgModRefInfo(Call, ArgIdx);
       }
     }
     // Return NoModRef if no alias found with any argument.
     if (isNoModRef(AllArgsMask))
       return ModRefInfo::NoModRef;
     // Logical & between other AA analyses and argument analysis.
-    Result = intersectModRef(Result, AllArgsMask);
+    Result &= AllArgsMask;
   }
 
   // If Loc is a constant memory location, the call definitely could not
   // modify the memory location.
   if (isModSet(Result) && pointsToConstantMemory(Loc, AAQI, /*OrLocal*/ false))
-    Result = clearMod(Result);
+    Result &= ModRefInfo::Ref;
 
   return Result;
 }
@@ -287,7 +285,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
   ModRefInfo Result = ModRefInfo::ModRef;
 
   for (const auto &AA : AAs) {
-    Result = intersectModRef(Result, AA->getModRefInfo(Call1, Call2, AAQI));
+    Result &= AA->getModRefInfo(Call1, Call2, AAQI);
 
     // Early-exit the moment we reach the bottom of the lattice.
     if (isNoModRef(Result))
@@ -313,9 +311,9 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
   // If Call1 only reads memory, the only dependence on Call2 can be
   // from Call1 reading memory written by Call2.
   if (onlyReadsMemory(Call1B))
-    Result = clearMod(Result);
+    Result &= ModRefInfo::Ref;
   else if (onlyWritesMemory(Call1B))
-    Result = clearRef(Result);
+    Result &= ModRefInfo::Mod;
 
   // If Call2 only access memory through arguments, accumulate the mod/ref
   // information from Call1's references to the memory referenced by
@@ -346,10 +344,9 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
 
       // ModRefC1 indicates what Call1 might do to Call2ArgLoc, and we use
       // above ArgMask to update dependence info.
-      ModRefInfo ModRefC1 = getModRefInfo(Call1, Call2ArgLoc, AAQI);
-      ArgMask = intersectModRef(ArgMask, ModRefC1);
+      ArgMask &= getModRefInfo(Call1, Call2ArgLoc, AAQI);
 
-      R = intersectModRef(unionModRef(R, ArgMask), Result);
+      R = (R | ArgMask) & Result;
       if (R == Result)
         break;
     }
@@ -378,7 +375,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
       ModRefInfo ModRefC2 = getModRefInfo(Call2, Call1ArgLoc, AAQI);
       if ((isModSet(ArgModRefC1) && isModOrRefSet(ModRefC2)) ||
           (isRefSet(ArgModRefC1) && isModSet(ModRefC2)))
-        R = intersectModRef(unionModRef(R, ArgModRefC1), Result);
+        R = (R | ArgModRefC1) & Result;
 
       if (R == Result)
         break;
@@ -746,7 +743,7 @@ bool AAResults::canInstructionRangeModRef(const Instruction &I1,
   ++E;  // Convert from inclusive to exclusive range.
 
   for (; I != E; ++I) // Check every instruction in range
-    if (isModOrRefSet(intersectModRef(getModRefInfo(&*I, Loc), Mode)))
+    if (isModOrRefSet(getModRefInfo(&*I, Loc) & Mode))
       return true;
   return false;
 }
