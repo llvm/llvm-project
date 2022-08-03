@@ -130,7 +130,7 @@ static_assert(test(std::ranges::reverse, a));
 static_assert(test(std::ranges::reverse_copy, a, a));
 //static_assert(test(std::ranges::rotate, a, a+5));
 static_assert(test(std::ranges::rotate_copy, a, a+5, a));
-//static_assert(test(std::ranges::sample, a, a, 5));
+static_assert(test(std::ranges::sample, a, a, 5, g));
 static_assert(test(std::ranges::search, a, a));
 static_assert(test(std::ranges::search_n, a, 10, 42));
 static_assert(test(std::ranges::set_difference, a, a, a));
