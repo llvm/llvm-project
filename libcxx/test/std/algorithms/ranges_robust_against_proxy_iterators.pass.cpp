@@ -150,8 +150,10 @@ constexpr void run_tests() {
   //test_mid(std::ranges::rotate, in, mid);
   if (!std::is_constant_evaluated()) // `shuffle` isn't `constexpr`.
     test(std::ranges::shuffle, in, rand_gen());
-  //if (!std::is_constant_evaluated())
-  //  test(std::ranges::sample, in, out, count, rand_gen());
+  if (!std::is_constant_evaluated()) {
+    if constexpr (std::copyable<T>)
+      test(std::ranges::sample, in, out, count, rand_gen());
+  }
   test(std::ranges::unique, in);
   test(std::ranges::partition, in, unary_pred);
   // TODO(ranges): `stable_partition` requires `ranges::rotate` to be implemented.

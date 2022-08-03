@@ -139,7 +139,7 @@ constexpr bool test_all() {
   // `swap_ranges` has neither a projection nor a predicate.
   // `reverse_copy` has neither a projection nor a predicate.
   // `rotate_copy` has neither a projection nor a predicate.
-  // `sample` has no requirement that the given generator be invoked via `std::invoke`.
+  // For `sample`, whether the given generator is invoked via `std::invoke` is not observable.
   test(std::ranges::unique_copy, in, out, &Foo::binary_pred, &Bar::val);
   test(std::ranges::partition_copy, in, out, out2, &Foo::unary_pred, &Bar::val);
   test(std::ranges::partial_sort_copy, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
@@ -152,7 +152,7 @@ constexpr bool test_all() {
   test(std::ranges::remove_if, in, &Foo::unary_pred, &Bar::val);
   // `reverse` has neither a projection nor a predicate.
   // `rotate` has neither a projection nor a predicate.
-  // `shuffle` has neither a projection nor a predicate.
+  // For `shuffle`, whether the given generator is invoked via `std::invoke` is not observable.
   test(std::ranges::unique, in, &Foo::binary_pred, &Bar::val);
   test(std::ranges::partition, in, &Foo::unary_pred, &Bar::val);
   if (!std::is_constant_evaluated())

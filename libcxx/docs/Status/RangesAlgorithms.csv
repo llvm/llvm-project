@@ -56,7 +56,7 @@ Write,replace_copy_if,Nikolas Klauser,`D129806 <https://llvm.org/D129806>`_,✅
 Write,swap_ranges,Nikolas Klauser,`D116303 <https://llvm.org/D116303>`_,✅
 Write,reverse_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
 Write,rotate_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
-Write,sample,Not assigned,n/a,Not started
+Write,sample,Konstantin Varlamov,`D130865 <https://llvm.org/D130865>`_,✅
 Write,unique_copy,Hui Xie,`D130404 <https://llvm.org/D130404>`_,✅
 Write,partition_copy,Konstantin Varlamov,`D130070 <https://llvm.org/D130070>`_,✅
 Write,partial_sort_copy,Konstantin Varlamov,`D130532 <https://llvm.org/D130532>`_,✅
