@@ -86,6 +86,8 @@ struct is_same<T,T> {
 // Reject vector types:
 // expected-error@+1{{invalid vector element type '_BitInt(32)'}}
 typedef _BitInt(32) __attribute__((vector_size(16))) VecTy;
+// expected-error@+1{{invalid vector element type '_BitInt(32)'}}
+typedef _BitInt(32) __attribute__((ext_vector_type(32))) OtherVecTy;
 
 // Allow _Complex:
 _Complex _BitInt(3) Cmplx;
