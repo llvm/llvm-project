@@ -82,8 +82,8 @@ Permutation,make_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,
 Permutation,push_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,✅
 Permutation,pop_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,✅
 Permutation,sort_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,✅
-Permutation,prev_permutation,Not assigned,n/a,Not started
-Permutation,next_permutation,Not assigned,n/a,Not started
+Permutation,next_permutation,Nikolas Klauser,`D129859 <https://llvm.org/D129859>`_,✅
+Permutation,prev_permutation,Nikolas Klauser,`D129859 <https://llvm.org/D129859>`_,✅
 Uninitialised memory,uninitialized_copy,Konstantin Varlamov,`D116023 <https://llvm.org/D116023>`_,✅
 Uninitialised memory,uninitialized_copy_n,Konstantin Varlamov,`D116023 <https://llvm.org/D116023>`_,✅
 Uninitialised memory,uninitialized_fill,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅
