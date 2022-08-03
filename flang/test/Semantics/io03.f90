@@ -55,10 +55,7 @@
       decimal='comma', end=9, eor=9, err=9, id=id, iomsg=msg, iostat=stat2, &
       pad='no', round='processor_defined', size=kk) jj
 
-  !ERROR: Invalid character kind for an internal file variable
   read(internal_file2, *) jj
-
-  !ERROR: Invalid character kind for an internal file variable
   read(internal_file4, *) jj
 
   !ERROR: Internal file must not have a vector subscript

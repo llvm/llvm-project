@@ -20,6 +20,8 @@
 
 namespace Fortran::runtime::io {
 
+class IoStatementState;
+
 enum EditingFlags {
   blankZero = 1, // BLANK=ZERO or BZ edit
   decimalComma = 2, // DECIMAL=COMMA or DC edit
@@ -80,7 +82,7 @@ struct DataEdit {
 template <typename CONTEXT> class FormatControl {
 public:
   using Context = CONTEXT;
-  using CharType = typename Context::CharType;
+  using CharType = char; // formats are always default kind CHARACTER
 
   FormatControl() {}
   FormatControl(const Terminator &, const CharType *format,

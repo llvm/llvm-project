@@ -556,10 +556,6 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
       if (HasVectorSubscript(*expr)) {
         context_.Say(parser::FindSourceLocation(*var), // C1201
             "Internal file must not have a vector subscript"_err_en_US);
-      } else if (!ExprTypeKindIsDefault(*expr, context_)) {
-        // This may be too restrictive; other kinds may be valid.
-        context_.Say(parser::FindSourceLocation(*var), // C1202
-            "Invalid character kind for an internal file variable"_err_en_US);
       }
     }
     SetSpecifier(IoSpecKind::Unit);
