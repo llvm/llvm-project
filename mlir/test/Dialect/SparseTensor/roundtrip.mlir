@@ -290,3 +290,27 @@ func.func @sparse_reduce_2d_to_1d(%arg0: f64, %arg1: f64) -> f64 {
     }
   return %r : f64
 }
+
+// -----
+
+#SparseMatrix = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+
+// CHECK-LABEL: func @concat_sparse_sparse(
+//  CHECK-SAME:   %[[A0:.*]]: tensor<2x4xf64
+//  CHECK-SAME:   %[[A1:.*]]: tensor<3x4xf64
+//  CHECK-SAME:   %[[A2:.*]]: tensor<4x4xf64
+//       CHECK:   %[[TMP0:.*]] = sparse_tensor.concatenate %[[A0]], %[[A1]], %[[A2]] {dimension = 0 : index} :
+//  CHECK-SAME:   tensor<2x4xf64
+//  CHECK-SAME:   tensor<3x4xf64
+//  CHECK-SAME:   tensor<4x4xf64
+//  CHECK-SAME:   tensor<9x4xf64
+//       CHECK:   return %[[TMP0]] : tensor<9x4xf64
+func.func @concat_sparse_sparse(%arg0: tensor<2x4xf64, #SparseMatrix>,
+                                %arg1: tensor<3x4xf64, #SparseMatrix>,
+                                %arg2: tensor<4x4xf64, #SparseMatrix>) -> tensor<9x4xf64, #SparseMatrix> {
+  %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
+       : tensor<2x4xf64, #SparseMatrix>,
+         tensor<3x4xf64, #SparseMatrix>,
+         tensor<4x4xf64, #SparseMatrix> to tensor<9x4xf64, #SparseMatrix>
+  return %0 : tensor<9x4xf64, #SparseMatrix>
+}
