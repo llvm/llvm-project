@@ -3367,7 +3367,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       SDValue Powi =
           DAG.getNode(ISD::FPOWI, DL, MVT::f32, Op0, Op.getOperand(1));
       return DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, Powi,
-                         DAG.getIntPtrConstant(0, DL));
+                         DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
     }
     return SDValue();
   }
