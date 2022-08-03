@@ -507,28 +507,30 @@ public:
         return;
       Env.setStorageLocation(*S, *ArgLoc);
     } else if (const FunctionDecl *F = S->getDirectCallee()) {
-      // This case is for context-sensitive analysis, which we only do if we
-      // have the callee body available in the translation unit.
-      if (!Options.ContextSensitive || F->getBody() == nullptr)
+      // This case is for context-sensitive analysis.
+      if (!Options.ContextSensitive)
+        return;
+
+      const ControlFlowContext *CFCtx = Env.getControlFlowContext(F);
+      if (!CFCtx)
         return;
 
       // FIXME: We don't support context-sensitive analysis of recursion, so
       // we should return early here if `F` is the same as the `FunctionDecl`
       // holding `S` itself.
 
-      auto &ASTCtx = F->getASTContext();
-
-      // FIXME: Cache these CFGs.
-      auto CFCtx = ControlFlowContext::build(F, F->getBody(), &ASTCtx);
-      // FIXME: Handle errors here and below.
-      assert(CFCtx);
       auto ExitBlock = CFCtx->getCFG().getExit().getBlockID();
 
       auto CalleeEnv = Env.pushCall(S);
 
-      // FIXME: Use the same analysis as the caller for the callee.
-      DataflowAnalysisOptions Options;
-      auto Analysis = NoopAnalysis(ASTCtx, Options);
+      // FIXME: Use the same analysis as the caller for the callee. Note,
+      // though, that doing so would require support for changing the analysis's
+      // ASTContext.
+      assert(
+          CFCtx->getDecl() != nullptr &&
+          "ControlFlowContexts in the environment should always carry a decl");
+      auto Analysis = NoopAnalysis(CFCtx->getDecl()->getASTContext(),
+                                   DataflowAnalysisOptions());
 
       auto BlockToOutputState =
           dataflow::runDataflowAnalysis(*CFCtx, Analysis, CalleeEnv);
