@@ -346,6 +346,10 @@ function(runtime_register_target name target)
     list(APPEND ${name}_extra_args -DLLVM_ENABLE_RUNTIMES=${LLVM_ENABLE_RUNTIMES_PASSTHROUGH})
   endif()
 
+  if(NOT RUNTIMES_${name}_LLVM_USE_LINKER AND NOT RUNTIMES_${target}_LLVM_USE_LINKER)
+    list(APPEND ${name}_extra_args -DLLVM_USE_LINKER=${LLVM_USE_LINKER})
+  endif()
+
   llvm_ExternalProject_Add(runtimes-${name}
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../runtimes
                            DEPENDS ${${name}_deps}
@@ -362,7 +366,6 @@ function(runtime_register_target name target)
                                       -DLLVM_RUNTIMES_TARGET=${name}
                                       ${COMMON_CMAKE_ARGS}
                                       ${${name}_extra_args}
-                           PASSTHROUGH_PREFIXES LLVM_USE_LINKER
                            EXTRA_TARGETS ${${name}_extra_targets}
                                          ${${name}_test_targets}
                            USE_TOOLCHAIN
