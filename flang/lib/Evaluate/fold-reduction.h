@@ -15,7 +15,10 @@
 
 namespace Fortran::evaluate {
 
-// Fold and validate a DIM= argument.  Returns false on error.
+// Fold and validate a DIM= argument.  Returns true (with &dim empty)
+// when DIM= is not present or (with &dim set) when DIM= is present, constant,
+// and valid.  Returns false, possibly with an error message, when
+// DIM= is present but either not constant or not valid.
 bool CheckReductionDIM(std::optional<int> &dim, FoldingContext &,
     ActualArguments &, std::optional<int> dimIndex, int rank);
 
