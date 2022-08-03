@@ -165,8 +165,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::getMixedOffsets($_op, $_op.static_offsets(),
-                                       $_op.offsets());
+        return ::mlir::getMixedStridesOrOffsets($_op.static_offsets(),
+                                                $_op.offsets());
       }]
     >,
     InterfaceMethod<
@@ -178,7 +178,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::getMixedSizes($_op, $_op.static_sizes(), $_op.sizes());
+        return ::mlir::getMixedSizes($_op.static_sizes(), $_op.sizes());
       }]
     >,
     InterfaceMethod<
@@ -190,8 +190,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::getMixedStrides($_op, $_op.static_strides(),
-                                       $_op.strides());
+        return ::mlir::getMixedStridesOrOffsets($_op.static_strides(),
+                                                $_op.strides());
       }]
     >,
 
@@ -236,30 +236,6 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
           .template getAsValueRange<::mlir::IntegerAttr>().begin() + idx);
         return ::mlir::ShapedType::isDynamicStrideOrOffset(v.getSExtValue());
       }]
-    >,
-    StaticInterfaceMethod<
-      /*desc=*/"Return constant that indicates the offset is dynamic",
-      /*retTy=*/"int64_t",
-      /*methodName=*/"getDynamicOffsetIndicator",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImpl=*/[{ return ::mlir::ShapedType::kDynamicStrideOrOffset; }]
-    >,
-    StaticInterfaceMethod<
-      /*desc=*/"Return constant that indicates the size is dynamic",
-      /*retTy=*/"int64_t",
-      /*methodName=*/"getDynamicSizeIndicator",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImpl=*/[{ return ::mlir::ShapedType::kDynamicSize; }]
-    >,
-    StaticInterfaceMethod<
-      /*desc=*/"Return constant that indicates the stride is dynamic",
-      /*retTy=*/"int64_t",
-      /*methodName=*/"getDynamicStrideIndicator",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImpl=*/[{ return ::mlir::ShapedType::kDynamicStrideOrOffset; }]
     >,
     InterfaceMethod<
       /*desc=*/[{
