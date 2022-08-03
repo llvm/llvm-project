@@ -15763,8 +15763,9 @@ SDValue DAGCombiner::visitFP_ROUND(SDNode *N) {
     // Also, this is a value preserving truncation iff both fp_round's are.
     if (DAG.getTarget().Options.UnsafeFPMath || N0IsTrunc) {
       SDLoc DL(N);
-      return DAG.getNode(ISD::FP_ROUND, DL, VT, N0.getOperand(0),
-                         DAG.getIntPtrConstant(NIsTrunc && N0IsTrunc, DL));
+      return DAG.getNode(
+          ISD::FP_ROUND, DL, VT, N0.getOperand(0),
+          DAG.getIntPtrConstant(NIsTrunc && N0IsTrunc, DL, /*isTarget=*/true));
     }
   }
 
@@ -15822,11 +15823,11 @@ SDValue DAGCombiner::visitFP_EXTEND(SDNode *N) {
                                      LN0->getBasePtr(), N0.getValueType(),
                                      LN0->getMemOperand());
     CombineTo(N, ExtLoad);
-    CombineTo(N0.getNode(),
-              DAG.getNode(ISD::FP_ROUND, SDLoc(N0),
-                          N0.getValueType(), ExtLoad,
-                          DAG.getIntPtrConstant(1, SDLoc(N0))),
-              ExtLoad.getValue(1));
+    CombineTo(
+        N0.getNode(),
+        DAG.getNode(ISD::FP_ROUND, SDLoc(N0), N0.getValueType(), ExtLoad,
+                    DAG.getIntPtrConstant(1, SDLoc(N0), /*isTarget=*/true)),
+        ExtLoad.getValue(1));
     return SDValue(N, 0);   // Return N so it doesn't get rechecked!
   }
 

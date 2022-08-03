@@ -1341,7 +1341,8 @@ void SelectionDAG::clear() {
 SDValue SelectionDAG::getFPExtendOrRound(SDValue Op, const SDLoc &DL, EVT VT) {
   return VT.bitsGT(Op.getValueType())
              ? getNode(ISD::FP_EXTEND, DL, VT, Op)
-             : getNode(ISD::FP_ROUND, DL, VT, Op, getIntPtrConstant(0, DL));
+             : getNode(ISD::FP_ROUND, DL, VT, Op,
+                       getIntPtrConstant(0, DL, /*isTarget=*/true));
 }
 
 std::pair<SDValue, SDValue>

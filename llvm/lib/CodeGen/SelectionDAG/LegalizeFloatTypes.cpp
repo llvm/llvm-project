@@ -1071,8 +1071,9 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_STORE(SDNode *N, unsigned OpNo) {
 
   if (ST->isTruncatingStore())
     // Do an FP_ROUND followed by a non-truncating store.
-    Val = BitConvertToInteger(DAG.getNode(ISD::FP_ROUND, dl, ST->getMemoryVT(),
-                                          Val, DAG.getIntPtrConstant(0, dl)));
+    Val = BitConvertToInteger(
+        DAG.getNode(ISD::FP_ROUND, dl, ST->getMemoryVT(), Val,
+                    DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)));
   else
     Val = GetSoftenedFloat(Val);
 
@@ -2532,7 +2533,8 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_XINT_TO_FP(SDNode *N) {
   // Round the value to the desired precision (that of the source type).
   return DAG.getNode(
       ISD::FP_EXTEND, DL, NVT,
-      DAG.getNode(ISD::FP_ROUND, DL, VT, NV, DAG.getIntPtrConstant(0, DL)));
+      DAG.getNode(ISD::FP_ROUND, DL, VT, NV,
+                  DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)));
 }
 
 SDValue DAGTypeLegalizer::PromoteFloatRes_UNDEF(SDNode *N) {
