@@ -7145,8 +7145,9 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
   Operator *U = cast<Operator>(V);
   if (auto BO = MatchBinaryOp(U, DT)) {
     bool IsConstArg = isa<ConstantInt>(BO->RHS);
-    switch (U->getOpcode()) {
-    case Instruction::Add: {
+    switch (BO->Opcode) {
+    case Instruction::Add:
+    case Instruction::Mul: {
       // For additions and multiplications, traverse add/mul chains for which we
       // can potentially create a single SCEV, to reduce the number of
       // get{Add,Mul}Expr calls.
@@ -7159,29 +7160,23 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
         }
         Ops.push_back(BO->RHS);
         auto NewBO = MatchBinaryOp(BO->LHS, DT);
-        if (!NewBO || (NewBO->Opcode != Instruction::Add &&
-                       NewBO->Opcode != Instruction::Sub)) {
+        if (!NewBO ||
+            (U->getOpcode() == Instruction::Add &&
+             (NewBO->Opcode != Instruction::Add &&
+              NewBO->Opcode != Instruction::Sub)) ||
+            (U->getOpcode() == Instruction::Mul &&
+             NewBO->Opcode != Instruction::Mul)) {
           Ops.push_back(BO->LHS);
           break;
         }
-        BO = NewBO;
-      } while (true);
-      return nullptr;
-    }
-
-    case Instruction::Mul: {
-      do {
-        if (BO->Op) {
-          if (BO->Op != V && getExistingSCEV(BO->Op)) {
-            Ops.push_back(BO->Op);
+        // CreateSCEV calls getNoWrapFlagsFromUB, which under certain conditions
+        // requires a SCEV for the LHS.
+        if (NewBO->Op && (NewBO->IsNSW || NewBO->IsNUW)) {
+          if (auto *I = dyn_cast<Instruction>(NewBO->Op);
+              I && programUndefinedIfPoison(I)) {
+            Ops.push_back(BO->LHS);
             break;
           }
-        }
-        Ops.push_back(BO->RHS);
-        auto NewBO = MatchBinaryOp(BO->LHS, DT);
-        if (!NewBO || NewBO->Opcode != Instruction::Mul) {
-          Ops.push_back(BO->LHS);
-          break;
         }
         BO = NewBO;
       } while (true);
