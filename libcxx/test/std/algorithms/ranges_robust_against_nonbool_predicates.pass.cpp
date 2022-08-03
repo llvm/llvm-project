@@ -109,7 +109,7 @@ constexpr bool test_all() {
   test(std::ranges::includes, in, in2, binary_pred);
   test(std::ranges::is_heap, in, binary_pred);
   test(std::ranges::is_heap_until, in, binary_pred);
-  //std::ranges::clamp(2, 1, 3, binary_pred);
+  std::ranges::clamp(2, 1, 3, binary_pred);
   //test(std::ranges::is_permutation, in, in2, binary_pred);
   test(std::ranges::copy_if, in, out, unary_pred);
   test(std::ranges::remove_copy_if, in, out, unary_pred);
