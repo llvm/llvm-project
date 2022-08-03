@@ -293,12 +293,8 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
     // name-as-accessed on the \a FileEntryRef.
     //
     // A potential plan to remove this is as follows -
-    //   - Expose the requested filename. One possibility would be to allow
-    //     redirection-FileEntryRefs to be returned, rather than returning
-    //     the pointed-at-FileEntryRef, and customizing `getName()` to look
-    //     through the indirection.
     //   - Update callers such as `HeaderSearch::findUsableModuleForHeader()`
-    //     to explicitly use the requested filename rather than just using
+    //     to explicitly use the `getNameAsRequested()` rather than just using
     //     `getName()`.
     //   - Add a `FileManager::getExternalPath` API for explicitly getting the
     //     remapped external filename when there is one available. Adopt it in
@@ -329,9 +325,6 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
     // Cache the redirection in the previously-inserted entry, still available
     // in the tentative return value.
     NamedFileEnt->second = FileEntryRef::MapValue(Redirection);
-
-    // Fix the tentative return value.
-    NamedFileEnt = &Redirection;
   }
 
   FileEntryRef ReturnedRef(*NamedFileEnt);
