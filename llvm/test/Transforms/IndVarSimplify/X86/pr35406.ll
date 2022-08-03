@@ -77,17 +77,10 @@ define i32 @testRem(i8* %p, i64* %p1) {
 ; CHECK:       general_case24:
 ; CHECK-NEXT:    br i1 false, label [[LOOP2_PREHEADER:%.*]], label [[LOOP2_EXIT]]
 ; CHECK:       loop2.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i32 14, [[LOCAL_0_]]
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 60392, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sext i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], 60392
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT:%.*]] = add nsw i64 [[TMP5]], -1
 ; CHECK-NEXT:    [[I4:%.*]] = load atomic i64, i64* [[P1:%.*]] unordered, align 8
-; CHECK-NEXT:    [[I6:%.*]] = sub i64 [[I4]], [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[I6:%.*]] = sub i64 [[I4]], -1
 ; CHECK-NEXT:    store atomic i64 [[I6]], i64* [[P1]] unordered, align 8
 ; CHECK-NEXT:    br i1 true, label [[LOOP2_EXIT_LOOPEXIT:%.*]], label [[LOOP2]]
 ; CHECK:       loop2.exit.loopexit:

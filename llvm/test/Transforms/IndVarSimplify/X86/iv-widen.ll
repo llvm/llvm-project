@@ -75,7 +75,7 @@ define void @loop_0_dead(i32* %a) {
 ; CHECK-NEXT:    br label [[B18:%.*]]
 ; CHECK:       B18:
 ; CHECK-NEXT:    [[DOT02:%.*]] = phi i32 [ [[TMP33:%.*]], [[B24:%.*]] ], [ 0, [[B18_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP33]] = add nuw i32 [[DOT02]], 1
+; CHECK-NEXT:    [[TMP33]] = add nuw nsw i32 [[DOT02]], 1
 ; CHECK-NEXT:    [[O:%.*]] = getelementptr i32, i32* [[A:%.*]], i32 [[DOT02]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[O]], align 4
 ; CHECK-NEXT:    [[T:%.*]] = icmp eq i32 [[V]], 0
@@ -167,11 +167,11 @@ define void @loop_2(i32 %size, i32 %nsteps, i32 %hsize, i32* %lined, i8 %tmp1) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[SIZE]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[HSIZE:%.*]] to i64
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[NSTEPS:%.*]], i32 1)
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT11:%.*]] = zext i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT14:%.*]] = zext i32 [[SMAX]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV7:%.*]] = phi i64 [ [[INDVARS_IV_NEXT8:%.*]], [[FOR_INC:%.*]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw i64 [[INDVARS_IV7]], [[TMP0]]
+; CHECK-NEXT:    [[INDVARS_IV9:%.*]] = phi i64 [ [[INDVARS_IV_NEXT10:%.*]], [[FOR_INC:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw i64 [[INDVARS_IV9]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP215]], label [[FOR_BODY2_PREHEADER:%.*]], label [[FOR_INC]]
 ; CHECK:       for.body2.preheader:
@@ -188,22 +188,22 @@ define void @loop_2(i32 %size, i32 %nsteps, i32 %hsize, i32* %lined, i8 %tmp1) {
 ; CHECK:       for.body3.preheader:
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT5:%.*]] = zext i32 [[SIZE]] to i64
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT7:%.*]] = zext i32 [[SIZE]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
-; CHECK-NEXT:    [[INDVARS_IV2:%.*]] = phi i64 [ 1, [[FOR_BODY3_PREHEADER]] ], [ [[INDVARS_IV_NEXT3:%.*]], [[FOR_BODY3]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP6]], [[INDVARS_IV2]]
+; CHECK-NEXT:    [[INDVARS_IV3:%.*]] = phi i64 [ 1, [[FOR_BODY3_PREHEADER]] ], [ [[INDVARS_IV_NEXT4:%.*]], [[FOR_BODY3]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = add nuw nsw i64 [[TMP6]], [[INDVARS_IV3]]
 ; CHECK-NEXT:    [[ADD_PTR2:%.*]] = getelementptr inbounds i8, i8* [[BC0]], i64 [[TMP7]]
 ; CHECK-NEXT:    store i8 [[TMP1]], i8* [[ADD_PTR2]], align 1
-; CHECK-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
-; CHECK-NEXT:    [[EXITCOND6:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT3]], [[WIDE_TRIP_COUNT5]]
-; CHECK-NEXT:    br i1 [[EXITCOND6]], label [[FOR_BODY3]], label [[FOR_INC_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT4]] = add nuw nsw i64 [[INDVARS_IV3]], 1
+; CHECK-NEXT:    [[EXITCOND8:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT4]], [[WIDE_TRIP_COUNT7]]
+; CHECK-NEXT:    br i1 [[EXITCOND8]], label [[FOR_BODY3]], label [[FOR_INC_LOOPEXIT:%.*]]
 ; CHECK:       for.inc.loopexit:
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[INDVARS_IV_NEXT8]] = add nuw nsw i64 [[INDVARS_IV7]], 1
-; CHECK-NEXT:    [[EXITCOND12:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT8]], [[WIDE_TRIP_COUNT11]]
-; CHECK-NEXT:    br i1 [[EXITCOND12]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT10]] = add nuw nsw i64 [[INDVARS_IV9]], 1
+; CHECK-NEXT:    [[EXITCOND15:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT10]], [[WIDE_TRIP_COUNT14]]
+; CHECK-NEXT:    br i1 [[EXITCOND15]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    ret void
 ;
