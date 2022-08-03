@@ -1776,6 +1776,10 @@ struct FoldingRange {
   unsigned startCharacter;
   unsigned endLine = 0;
   unsigned endCharacter;
+
+  const static llvm::StringLiteral REGION_KIND;
+  const static llvm::StringLiteral COMMENT_KIND;
+  const static llvm::StringLiteral IMPORT_KIND;
   std::string kind;
 };
 llvm::json::Value toJSON(const FoldingRange &Range);
