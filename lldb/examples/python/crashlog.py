@@ -471,7 +471,6 @@ class JSONCrashLogParser:
     def parse_process_info(self, json_data):
         self.crashlog.process_id = json_data['pid']
         self.crashlog.process_identifier = json_data['procName']
-        self.crashlog.process_path = json_data['procPath']
 
     def parse_crash_reason(self, json_exception):
         exception_type = json_exception['type']
@@ -670,8 +669,6 @@ class TextCrashLogParser:
             (self.crashlog.process_name, pid_with_brackets) = line[
                 8:].strip().split(' [')
             self.crashlog.process_id = pid_with_brackets.strip('[]')
-        elif line.startswith('Path:'):
-            self.crashlog.process_path = line[5:].strip()
         elif line.startswith('Identifier:'):
             self.crashlog.process_identifier = line[11:].strip()
         elif line.startswith('Version:'):
