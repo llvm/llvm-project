@@ -411,6 +411,8 @@ class CrashLogFormatException(Exception):
 class CrashLogParseException(Exception):
     pass
 
+class InteractiveCrashLogException(Exception):
+    pass
 
 class CrashLogParser:
     def parse(self, debugger, path, verbose):
@@ -923,7 +925,7 @@ class Symbolicate:
         pass
 
     def __call__(self, debugger, command, exe_ctx, result):
-        SymbolicateCrashLogs(debugger, shlex.split(command))
+        SymbolicateCrashLogs(debugger, shlex.split(command), result)
 
     def get_short_help(self):
         return "Symbolicate one or more darwin crash log files."
@@ -1008,12 +1010,10 @@ def SymbolicateCrashLog(crash_log, options):
         for error in crash_log.errors:
             print(error)
 
-def load_crashlog_in_scripted_process(debugger, crash_log_file, options):
-    result = lldb.SBCommandReturnObject()
-
+def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result):
     crashlog_path = os.path.expanduser(crash_log_file)
     if not os.path.exists(crashlog_path):
-        result.PutCString("error: crashlog file %s does not exist" % crashlog_path)
+        raise InteractiveCrashLogException("crashlog file %s does not exist" % crashlog_path)
 
     crashlog = CrashLogParser().parse(debugger, crashlog_path, False)
 
@@ -1022,9 +1022,8 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options):
     if options.target_path:
         target = debugger.CreateTarget(options.target_path)
         if not target:
-            result.PutCString("error: couldn't create target provided by the \
-                              user ({})".format(options.target_path))
-            return
+            raise InteractiveCrashLogException("couldn't create target provided by the user (%s)" % options.target_path)
+
     # 2. If the user didn't provide a target, try to create a target using the symbolicator
     if not target or not target.IsValid():
         target = crashlog.create_target()
@@ -1033,19 +1032,15 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options):
         target = debugger.GetTargetAtIndex(0)
     # 4. Fail
     if target is None or not target.IsValid():
-        result.PutCString("error: couldn't create target")
-        return
+        raise InteractiveCrashLogException("couldn't create target")
 
     ci = debugger.GetCommandInterpreter()
     if not ci:
-        result.PutCString("error: couldn't get command interpreter")
-        return
+        raise InteractiveCrashLogException("couldn't get command interpreter")
 
-    res = lldb.SBCommandReturnObject()
-    ci.HandleCommand('script from lldb.macosx import crashlog_scripted_process', res)
-    if not res.Succeeded():
-        result.PutCString("error: couldn't import crashlog scripted process module")
-        return
+    ci.HandleCommand('script from lldb.macosx import crashlog_scripted_process', result)
+    if not result.Succeeded():
+        raise InteractiveCrashLogException("couldn't import crashlog scripted process module")
 
     structured_data = lldb.SBStructuredData()
     structured_data.SetFromJSON(json.dumps({ "crashlog_path" : crashlog_path,
@@ -1058,7 +1053,7 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options):
     process = target.Launch(launch_info, error)
 
     if not process or error.Fail():
-        return
+        raise InteractiveCrashLogException("couldn't launch Scripted Process", error)
 
     @contextlib.contextmanager
     def synchronous(debugger):
@@ -1214,7 +1209,7 @@ you to explore the program as if it were stopped at the locations described in t
 be disassembled and lookups can be performed using the addresses found in the crash log.'''
     return CreateSymbolicateCrashLogOptions('crashlog', description, True)
 
-def SymbolicateCrashLogs(debugger, command_args):
+def SymbolicateCrashLogs(debugger, command_args, result):
     option_parser = CrashLogOptionParser()
 
     if not len(command_args):
@@ -1251,8 +1246,11 @@ def SymbolicateCrashLogs(debugger, command_args):
     if args:
         for crash_log_file in args:
             if should_run_in_interactive_mode(options, ci):
-                load_crashlog_in_scripted_process(debugger, crash_log_file,
-                                                  options)
+                try:
+                    load_crashlog_in_scripted_process(debugger, crash_log_file,
+                                                      options, result)
+                except InteractiveCrashLogException as e:
+                    result.SetError(str(e))
             else:
                 crash_log = CrashLogParser().parse(debugger, crash_log_file, options.verbose)
                 SymbolicateCrashLog(crash_log, options)
@@ -1260,7 +1258,8 @@ def SymbolicateCrashLogs(debugger, command_args):
 if __name__ == '__main__':
     # Create a new debugger instance
     debugger = lldb.SBDebugger.Create()
-    SymbolicateCrashLogs(debugger, sys.argv[1:])
+    result = lldb.SBCommandReturnObject()
+    SymbolicateCrashLogs(debugger, sys.argv[1:], result)
     lldb.SBDebugger.Destroy(debugger)
 
 def __lldb_init_module(debugger, internal_dict):
