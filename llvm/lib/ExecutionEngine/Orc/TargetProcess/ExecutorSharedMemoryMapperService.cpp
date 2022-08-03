@@ -241,6 +241,7 @@ Error ExecutorSharedMemoryMapperService::release(
                                            errno, std::generic_category())));
 
 #elif defined(_WIN32)
+    (void)Size;
 
     if (!UnmapViewOfFile(Base.toPtr<void *>()))
       Err = joinErrors(std::move(Err),
