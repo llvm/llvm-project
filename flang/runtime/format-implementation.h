@@ -11,6 +11,7 @@
 #ifndef FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_
 #define FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_
 
+#include "emit-encoded.h"
 #include "format.h"
 #include "io-stmt.h"
 #include "flang/Common/format.h"
@@ -130,6 +131,10 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
     break;
   case 'X':
     if (!next) {
+      ConnectionState &connection{context.GetConnectionState()};
+      if (connection.internalIoCharKind > 1) {
+        n *= connection.internalIoCharKind;
+      }
       context.HandleRelativePosition(n);
       return;
     }
@@ -146,7 +151,14 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
     break;
   case 'T': {
     if (!next) { // Tn
-      context.HandleAbsolutePosition(n - 1); // convert 1-based to 0-based
+      --n; // convert 1-based to 0-based
+    }
+    ConnectionState &connection{context.GetConnectionState()};
+    if (connection.internalIoCharKind > 1) {
+      n *= connection.internalIoCharKind;
+    }
+    if (!next) { // Tn
+      context.HandleAbsolutePosition(n);
       return;
     }
     if (next == 'L' || next == 'R') { // TLn & TRn
@@ -300,7 +312,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       } else {
         --chars;
       }
-      context.Emit(format_ + start, chars);
+      EmitAscii(context, format_ + start, chars);
     } else if (ch == 'H') {
       // 9HHOLLERITH
       if (!repeat || *repeat < 1 || offset_ + *repeat > formatLength_) {
@@ -308,7 +320,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
             maybeReversionPoint);
         return 0;
       }
-      context.Emit(format_ + offset_, static_cast<std::size_t>(*repeat));
+      EmitAscii(context, format_ + offset_, static_cast<std::size_t>(*repeat));
       offset_ += *repeat;
     } else if (ch >= 'A' && ch <= 'Z') {
       int start{offset_ - 1};
@@ -350,7 +362,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
     } else if (ch == '\t' || ch == '\v') {
       // Tabs (extension)
       // TODO: any other raw characters?
-      context.Emit(format_ + offset_ - 1, 1);
+      EmitAscii(context, format_ + offset_ - 1, 1);
     } else {
       ReportBadFormat(
           context, "Invalid character in FORMAT", maybeReversionPoint);

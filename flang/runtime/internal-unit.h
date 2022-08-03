@@ -26,7 +26,7 @@ template <Direction DIR> class InternalDescriptorUnit : public ConnectionState {
 public:
   using Scalar =
       std::conditional_t<DIR == Direction::Input, const char *, char *>;
-  InternalDescriptorUnit(Scalar, std::size_t);
+  InternalDescriptorUnit(Scalar, std::size_t chars, int kind);
   InternalDescriptorUnit(const Descriptor &, const Terminator &);
   void EndIoStatement();
 
@@ -44,6 +44,7 @@ private:
     return descriptor().template ZeroBasedIndexedElement<char>(
         currentRecordNumber - 1);
   }
+  void BlankFill(char *, std::size_t);
   void BlankFillOutputRecord();
 
   StaticDescriptor<maxRank, true /*addendum*/> staticDescriptor_;
