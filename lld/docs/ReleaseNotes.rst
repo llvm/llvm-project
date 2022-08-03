@@ -60,7 +60,8 @@ COFF Improvements
 MinGW Improvements
 ------------------
 
-* ...
+* The ``--disable-reloc-section`` option is now supported.
+  (`D127478 <https://reviews.llvm.org/D127478>`_)
 
 MachO Improvements
 ------------------
