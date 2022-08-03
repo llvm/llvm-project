@@ -1,7 +1,6 @@
 # RUN: yaml2obj %S/Inputs/symbols.yaml -o %t
-#
 
-# RUN: lldb-test symtab --find-symbols-by-regex='.*some.*' --mangling-preference=demangled %t | Filecheck %s
+# RUN: lldb-test symtab --find-symbols-by-regex='.*some.*' --mangling-preference=demangled %t | FileCheck %s
 # CHECK: someFunc(int, int, int)
 # CHECK: someFunc(char, int)
 # CHECK: someOtherFunc()
