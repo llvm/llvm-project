@@ -43,7 +43,7 @@ long long pass_longlong(long long arg) { return arg; }
 // CHECK-LABEL: define{{.*}} i64 @pass_longlong(i64 %{{.*}})
 
 __int128 pass_int128(__int128 arg) { return arg; }
-// CHECK-LABEL: define{{.*}} void @pass_int128(i128* noalias sret(i128) align 16 %{{.*}}, i128* %0)
+// CHECK-LABEL: define{{.*}} void @pass_int128(i128* noalias sret(i128) align 8 %{{.*}}, i128* %0)
 
 float pass_float(float arg) { return arg; }
 // CHECK-LABEL: define{{.*}} float @pass_float(float %{{.*}})

@@ -26,6 +26,14 @@ void func (void)
 }
 
 
+// The SystemZ ABI aligns __int128_t to only eight bytes.
+
+struct S_int128 {  __int128_t B; } Obj_I128;
+__int128_t GlobI128;
+// CHECK: @Obj_I128 = global %struct.S_int128 zeroinitializer, align 8
+// CHECK: @GlobI128 = global i128 0, align 8
+
+
 // Alignment should be respected for coerced argument loads
 
 struct arg { long y __attribute__((packed, aligned(4))); };
@@ -40,4 +48,3 @@ void test (void)
 
 // CHECK-LABEL: @test
 // CHECK: load i64, i64* getelementptr inbounds (%struct.arg, %struct.arg* @x, i32 0, i32 0), align 4
-
