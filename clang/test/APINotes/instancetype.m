@@ -4,6 +4,6 @@
 
 void test() {
   // The nullability is here to verify that the API notes were applied.
-  int good = [SomeSubclass instancetypeFactoryMethod]; // expected-warning {{initializing 'int' with an expression of type 'SomeSubclass * _Nonnull'}}
-  int bad = [SomeSubclass staticFactoryMethod]; // expected-warning {{initializing 'int' with an expression of type 'SomeBaseClass * _Nonnull'}}
+  int good = [SomeSubclass instancetypeFactoryMethod]; // expected-error {{initializing 'int' with an expression of type 'SomeSubclass * _Nonnull'}}
+  int bad = [SomeSubclass staticFactoryMethod]; // expected-error {{initializing 'int' with an expression of type 'SomeBaseClass * _Nonnull'}}
 }

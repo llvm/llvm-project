@@ -44,7 +44,7 @@ void test_blend_discriminator(int *dp, int (*fp)(int), int value) {
   __builtin_ptrauth_blend_discriminator(mismatched_type, value); // expected-error {{blended pointer must have pointer type; type here is 'struct A'}}
   __builtin_ptrauth_blend_discriminator(dp, mismatched_type); // expected-error {{blended integer must have integer type; type here is 'struct A'}}
 
-  float *mismatch = __builtin_ptrauth_blend_discriminator(dp, value); // expected-warning {{incompatible integer to pointer conversion initializing 'float *' with an expression of type}}
+  float *mismatch = __builtin_ptrauth_blend_discriminator(dp, value); // expected-error {{incompatible integer to pointer conversion initializing 'float *' with an expression of type}}
 }
 
 void test_sign_constant(int *dp, int (*fp)(int)) {
@@ -151,5 +151,5 @@ void test_sign_generic_data(int *dp) {
   dr = __builtin_ptrauth_sign_generic_data(12314, 0);
   dr = __builtin_ptrauth_sign_generic_data(12314, &dv);
 
-  int *mismatch = __builtin_ptrauth_sign_generic_data(dp, 0); // expected-warning {{incompatible integer to pointer conversion initializing 'int *' with an expression of type}}
+  int *mismatch = __builtin_ptrauth_sign_generic_data(dp, 0); // expected-error {{incompatible integer to pointer conversion initializing 'int *' with an expression of type}}
 }
