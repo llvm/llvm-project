@@ -20,6 +20,7 @@
 #include "mlir/IR/OpImplementation.h"
 
 namespace mlir {
+
 /// Auxiliary range data structure to unpack the offset, size and stride
 /// operands into a list of triples. Such a list can be more convenient to
 /// manipulate.
@@ -29,31 +30,19 @@ struct Range {
   OpFoldResult stride;
 };
 
-class OffsetSizeAndStrideOpInterface;
-
 /// Return a vector of OpFoldResults given the special value
 /// that indicates whether of the value is dynamic or not.
 SmallVector<OpFoldResult, 4> getMixedValues(ArrayAttr staticValues,
                                             ValueRange dynamicValues,
                                             int64_t dynamicValueIndicator);
 
-/// Return a vector of all the static or dynamic offsets of the op from provided
-/// external static and dynamic offsets.
-SmallVector<OpFoldResult, 4> getMixedOffsets(OffsetSizeAndStrideOpInterface op,
-                                             ArrayAttr staticOffsets,
-                                             ValueRange offsets);
+/// Return a vector of all the static and dynamic offsets/strides.
+SmallVector<OpFoldResult, 4> getMixedStridesOrOffsets(ArrayAttr staticValues,
+                                                      ValueRange dynamicValues);
 
-/// Return a vector of all the static or dynamic sizes of the op from provided
-/// external static and dynamic sizes.
-SmallVector<OpFoldResult, 4> getMixedSizes(OffsetSizeAndStrideOpInterface op,
-                                           ArrayAttr staticSizes,
-                                           ValueRange sizes);
-
-/// Return a vector of all the static or dynamic strides of the op from provided
-/// external static and dynamic strides.
-SmallVector<OpFoldResult, 4> getMixedStrides(OffsetSizeAndStrideOpInterface op,
-                                             ArrayAttr staticStrides,
-                                             ValueRange strides);
+/// Return a vector of all the static and dynamic sizes.
+SmallVector<OpFoldResult, 4> getMixedSizes(ArrayAttr staticValues,
+                                           ValueRange dynamicValues);
 
 /// Decompose a vector of mixed static or dynamic values into the corresponding
 /// pair of arrays. This is the inverse function of `getMixedValues`.
@@ -62,9 +51,9 @@ decomposeMixedValues(Builder &b,
                      const SmallVectorImpl<OpFoldResult> &mixedValues,
                      const int64_t dynamicValueIndicator);
 
-/// Decompose a vector of mixed static or dynamic strides/offsets into the
+/// Decompose a vector of mixed static and dynamic strides/offsets into the
 /// corresponding pair of arrays. This is the inverse function of
-/// `getMixedStrides` and `getMixedOffsets`.
+/// `getMixedStridesOrOffsets`.
 std::pair<ArrayAttr, SmallVector<Value>> decomposeMixedStridesOrOffsets(
     OpBuilder &b, const SmallVectorImpl<OpFoldResult> &mixedValues);
 
@@ -75,12 +64,16 @@ std::pair<ArrayAttr, SmallVector<Value>>
 decomposeMixedSizes(OpBuilder &b,
                     const SmallVectorImpl<OpFoldResult> &mixedValues);
 
+class OffsetSizeAndStrideOpInterface;
+
 namespace detail {
+
 LogicalResult verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op);
 
 bool sameOffsetsSizesAndStrides(
     OffsetSizeAndStrideOpInterface a, OffsetSizeAndStrideOpInterface b,
     llvm::function_ref<bool(OpFoldResult, OpFoldResult)> cmp);
+
 } // namespace detail
 } // namespace mlir
 
