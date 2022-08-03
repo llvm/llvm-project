@@ -33,6 +33,24 @@ OpFoldResult math::AbsOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// AtanOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::AtanOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      operands, [](const APFloat &a) -> Optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(atan(a.convertToDouble()));
+        case 32:
+          return APFloat(atanf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // CeilOp folder
 //===----------------------------------------------------------------------===//
 
