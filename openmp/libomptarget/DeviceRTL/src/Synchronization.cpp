@@ -31,6 +31,8 @@ namespace impl {
 ///
 ///{
 /// NOTE: This function needs to be implemented by every target.
+void workersStartBarrier();
+void workersDoneBarrier();
 uint32_t atomicInc(uint32_t *Address, uint32_t Val, int Ordering);
 
 uint32_t atomicLoad(uint32_t *Address, int Ordering) {

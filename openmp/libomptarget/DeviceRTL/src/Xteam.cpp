@@ -35,6 +35,8 @@ constexpr uint64_t __xteam_mem_sz =
     __xteam_mem_slotsz * __xteam_mem_max_team_procs;
 // static __attribute__((address_space(1), aligned(64)))
 char __xteam_mem_ptr[__xteam_mem_sz] __attribute__((aligned(64)));
+double __shfl_xor_d(double var, int lane_mask, int width = mapping::getWarpSize());
+float __shfl_xor_f(float var, int lane_mask, int width = mapping::getWarpSize());
 
 void __xteam_set_mem(uint64_t team_proc_num, void *data, uint64_t length,
                      uint64_t offset = 0) {

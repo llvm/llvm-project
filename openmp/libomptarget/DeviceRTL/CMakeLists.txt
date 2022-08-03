@@ -321,61 +321,61 @@ foreach(mcpu ${amdgpu_mcpus})
 endforeach()
 
 ## FIXME:  the static library build for DeviceRTL needs some fixes
-#set(LIBOMPTARGET_LLVM_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
-#if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL LIBOMPTARGET_LLVM_VERSION))
-#  libomptarget_say("Not building static library, CMake compiler '${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' is not 'Clang ${LIBOMPTARGET_LLVM_VERSION}'.")
-#  libomptarget_say("  Use the 'LLVM_ENABLE_RUNTIMES=openmp' option instead")
-#  return()
-#endif()
+set(LIBOMPTARGET_LLVM_VERSION "${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}")
+if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL LIBOMPTARGET_LLVM_VERSION))
+ libomptarget_say("Not building static library, CMake compiler '${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}' is not 'Clang ${LIBOMPTARGET_LLVM_VERSION}'.")
+ libomptarget_say("  Use the 'LLVM_ENABLE_RUNTIMES=openmp' option instead")
+ return()
+endif()
 #
 # Set the flags to build the device runtime from clang.
-#set(clang_lib_flags -fopenmp -fopenmp-cuda-mode -foffload-lto -fvisibility=hidden -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx61 -nocudalib -nogpulib -nostdinc ${clang_opt_flags})
-#foreach(arch ${nvptx_sm_list})
-#  set(clang_lib_flags ${clang_lib_flags} --offload-arch=sm_${arch})
-#endforeach()
-#foreach(arch ${amdgpu_mcpus})
-#  set(clang_lib_flags ${clang_lib_flags} --offload-arch=${arch})
-#endforeach()
+set(clang_lib_flags -fopenmp -fopenmp-cuda-mode -foffload-lto -fvisibility=hidden -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx61 -nocudalib -nogpulib -nostdinc ${clang_opt_flags})
+foreach(arch ${nvptx_sm_list})
+ set(clang_lib_flags ${clang_lib_flags} --offload-arch=sm_${arch})
+endforeach()
+foreach(arch ${amdgpu_mcpus})
+ set(clang_lib_flags ${clang_lib_flags} --offload-arch=${arch})
+endforeach()
 #
 ## Build the static library version of the device runtime.
 ## first create an object target
-#add_library(omptarget.devicertl.all_objs OBJECT IMPORTED)
-#foreach(src ${src_files})
-#  get_filename_component(infile ${src} ABSOLUTE)
-#  get_filename_component(outfile ${src} NAME)
-#  set(outfile "${outfile}.o")
-#  set(outfile_full_path "${CMAKE_CURRENT_BINARY_DIR}/${outfile}")
-#
-#  add_custom_command(OUTPUT ${outfile_full_path}
-#    COMMAND ${CLANG_TOOL} ${clang_lib_flags} --std=c++17 -c
-#            -o ${outfile_full_path}
-#            -I${include_directory}
-#            -I${devicertl_base_directory}/../include
-#            ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
-#            ${infile}
-#    DEPENDS ${infile} ${include_files}
-#    IMPLICIT_DEPENDS CXX ${infile}
-#    COMMENT "Building device code ${outfile}"
-#    VERBATIM
-#  )
-#  if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang>")
-#    # Add a file-level dependency to ensure that clang is up-to-date.
-#    # By default, add_custom_command only builds clang if the
-#    # executable is missing.
-#    add_custom_command(OUTPUT ${outfile_full_path}
-#      DEPENDS clang
-#      APPEND
-#    )
-#  endif()
-#  set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${outfile_full_path})
-#
-#  set_property(TARGET omptarget.devicertl.all_objs APPEND PROPERTY IMPORTED_OBJECTS ${outfile_full_path})
-#endforeach()
-#
+add_library(omptarget.devicertl.all_objs OBJECT IMPORTED)
+foreach(src ${src_files})
+ get_filename_component(infile ${src} ABSOLUTE)
+ get_filename_component(outfile ${src} NAME)
+ set(outfile "${outfile}.o")
+ set(outfile_full_path "${CMAKE_CURRENT_BINARY_DIR}/${outfile}")
+
+ add_custom_command(OUTPUT ${outfile_full_path}
+   COMMAND ${CLANG_TOOL} ${clang_lib_flags} --std=c++17 -c
+           -o ${outfile_full_path}
+           -I${include_directory}
+           -I${devicertl_base_directory}/../include
+           ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
+           ${infile}
+   DEPENDS ${infile} ${include_files}
+   IMPLICIT_DEPENDS CXX ${infile}
+   COMMENT "Building device code ${outfile}"
+   VERBATIM
+ )
+ if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang>")
+   # Add a file-level dependency to ensure that clang is up-to-date.
+   # By default, add_custom_command only builds clang if the
+   # executable is missing.
+   add_custom_command(OUTPUT ${outfile_full_path}
+     DEPENDS clang
+     APPEND
+   )
+ endif()
+ set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${outfile_full_path})
+
+ set_property(TARGET omptarget.devicertl.all_objs APPEND PROPERTY IMPORTED_OBJECTS ${outfile_full_path})
+endforeach()
+
 ## second archive all the object files into a static library
-#add_library(omptarget.devicertl STATIC)
-#set_target_properties(omptarget.devicertl PROPERTIES LINKER_LANGUAGE CXX)
-#target_link_libraries(omptarget.devicertl PRIVATE omptarget.devicertl.all_objs)
-#
-#install(TARGETS omptarget.devicertl ARCHIVE DESTINATION ${OPENMP_INSTALL_LIBDIR})
+add_library(omptarget.devicertl STATIC)
+set_target_properties(omptarget.devicertl PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(omptarget.devicertl PRIVATE omptarget.devicertl.all_objs)
+
+install(TARGETS omptarget.devicertl ARCHIVE DESTINATION ${OPENMP_INSTALL_LIBDIR})
 

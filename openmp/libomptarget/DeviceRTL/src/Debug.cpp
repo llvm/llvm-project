@@ -27,6 +27,11 @@ extern "C" {
 /// AMDGCN Implementation
 ///
 ///{
+
+namespace impl {
+void omp_assert_assume(bool condition) {}
+}
+
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 namespace impl {
 void omp_assert_assume(bool condition) {}
