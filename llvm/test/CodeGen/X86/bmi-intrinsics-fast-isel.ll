@@ -11,12 +11,17 @@
 define i16 @test__tzcnt_u16(i16 %a0) {
 ; X86-LABEL: test__tzcnt_u16:
 ; X86:       # %bb.0:
-; X86-NEXT:    tzcntw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $65536, %eax # imm = 0x10000
+; X86-NEXT:    tzcntl %eax, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test__tzcnt_u16:
 ; X64:       # %bb.0:
-; X64-NEXT:    tzcntw %di, %ax
+; X64-NEXT:    orl $65536, %edi # imm = 0x10000
+; X64-NEXT:    tzcntl %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %zext = zext i16 %a0 to i32
   %cmp = icmp ne i32 %zext, 0
@@ -138,12 +143,17 @@ define i32 @test__tzcnt_u32(i32 %a0) {
 define i16 @test_tzcnt_u16(i16 %a0) {
 ; X86-LABEL: test_tzcnt_u16:
 ; X86:       # %bb.0:
-; X86-NEXT:    tzcntw {{[0-9]+}}(%esp), %ax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orl $65536, %eax # imm = 0x10000
+; X86-NEXT:    tzcntl %eax, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_tzcnt_u16:
 ; X64:       # %bb.0:
-; X64-NEXT:    tzcntw %di, %ax
+; X64-NEXT:    orl $65536, %edi # imm = 0x10000
+; X64-NEXT:    tzcntl %edi, %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
   %zext = zext i16 %a0 to i32
   %cmp = icmp ne i32 %zext, 0
