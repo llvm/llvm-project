@@ -736,3 +736,25 @@ define i64 @icmp_ne_zext_inreg_large_constant(i64 %a) nounwind {
   %3 = zext i1 %2 to i64
   ret i64 %3
 }
+
+; This used to trigger an infinite loop where we toggled between 'and' and
+; 'sext_inreg'.
+define i64 @icmp_ne_zext_inreg_umin(i64 %a) nounwind {
+; RV64I-LABEL: icmp_ne_zext_inreg_umin:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 30141
+; RV64I-NEXT:    addiw a1, a1, -747
+; RV64I-NEXT:    bltu a0, a1, .LBB66_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:  .LBB66_2:
+; RV64I-NEXT:    addi a0, a0, -123
+; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    ret
+  %1 = call i64 @llvm.umin.i64(i64 %a, i64 123456789)
+  %2 = and i64 %1, 4294967295
+  %3 = icmp ne i64 %2, 123
+  %4 = zext i1 %3 to i64
+  ret i64 %4
+}
+declare i64 @llvm.umin.i64(i64, i64)
