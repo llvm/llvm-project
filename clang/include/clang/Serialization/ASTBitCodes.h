@@ -343,9 +343,6 @@ enum ControlRecordTypes {
   /// name.
   ORIGINAL_FILE,
 
-  /// The directory that the PCH was originally created in.
-  ORIGINAL_PCH_DIR,
-
   /// Record code for file ID of the file or buffer that was used to
   /// generate the AST file.
   ORIGINAL_FILE_ID,
