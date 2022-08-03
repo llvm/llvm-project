@@ -444,8 +444,9 @@ public:
       markAsEscaped(VD);
     if (isa<OMPCapturedExprDecl>(VD))
       VisitValueDecl(VD);
-    else if (VD->isInitCapture())
-      VisitValueDecl(VD);
+    else if (const auto *VarD = dyn_cast<VarDecl>(VD))
+      if (VarD->isInitCapture())
+        VisitValueDecl(VD);
   }
   void VisitUnaryOperator(const UnaryOperator *E) {
     if (!E)
@@ -3809,7 +3810,7 @@ void CGOpenMPRuntimeGPU::adjustTargetSpecificDataForLambdas(
     else
       VDLVal = CGF.MakeAddrLValue(
           VDAddr, VD->getType().getCanonicalType().getNonReferenceType());
-    llvm::DenseMap<const ValueDecl *, FieldDecl *> Captures;
+    llvm::DenseMap<const VarDecl *, FieldDecl *> Captures;
     FieldDecl *ThisCapture = nullptr;
     RD->getCaptureFields(Captures, ThisCapture);
     if (ThisCapture && CGF.CapturedStmtInfo->isCXXThisExprCaptured()) {
@@ -3821,15 +3822,13 @@ void CGOpenMPRuntimeGPU::adjustTargetSpecificDataForLambdas(
     for (const LambdaCapture &LC : RD->captures()) {
       if (LC.getCaptureKind() != LCK_ByRef)
         continue;
-      const ValueDecl *VD = LC.getCapturedVar();
-      // FIXME: For now VD is always a VarDecl because OpenMP does not support
-      //  capturing structured bindings in lambdas yet.
-      if (!CS->capturesVariable(cast<VarDecl>(VD)))
+      const VarDecl *VD = LC.getCapturedVar();
+      if (!CS->capturesVariable(VD))
         continue;
       auto It = Captures.find(VD);
       assert(It != Captures.end() && "Found lambda capture without field.");
       LValue VarLVal = CGF.EmitLValueForFieldInitialization(VDLVal, It->second);
-      Address VDAddr = CGF.GetAddrOfLocalVar(cast<VarDecl>(VD));
+      Address VDAddr = CGF.GetAddrOfLocalVar(VD);
       if (VD->getType().getCanonicalType()->isReferenceType())
         VDAddr = CGF.EmitLoadOfReferenceLValue(VDAddr,
                                                VD->getType().getCanonicalType())

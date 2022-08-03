@@ -12986,7 +12986,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
       continue;
 
     TransformedInitCapture &Result = InitCaptures[C - E->capture_begin()];
-    auto *OldVD = cast<VarDecl>(C->getCapturedVar());
+    VarDecl *OldVD = C->getCapturedVar();
 
     auto SubstInitCapture = [&](SourceLocation EllipsisLoc,
                                 Optional<unsigned> NumExpansions) {
@@ -13003,8 +13003,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
           getSema().buildLambdaInitCaptureInitialization(
               C->getLocation(), OldVD->getType()->isReferenceType(),
               EllipsisLoc, NumExpansions, OldVD->getIdentifier(),
-              cast<VarDecl>(C->getCapturedVar())->getInitStyle() !=
-                  VarDecl::CInit,
+              C->getCapturedVar()->getInitStyle() != VarDecl::CInit,
               NewExprInit);
       Result.Expansions.push_back(
           InitCaptureInfoTy(NewExprInit, NewInitCaptureType));
@@ -13171,7 +13170,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
     if (E->isInitCapture(C)) {
       TransformedInitCapture &NewC = InitCaptures[C - E->capture_begin()];
 
-      auto *OldVD = cast<VarDecl>(C->getCapturedVar());
+      VarDecl *OldVD = C->getCapturedVar();
       llvm::SmallVector<Decl*, 4> NewVDs;
 
       for (InitCaptureInfoTy &Info : NewC.Expansions) {
@@ -13226,7 +13225,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
         // The transform has determined that we should perform an expansion;
         // transform and capture each of the arguments.
         // expansion of the pattern. Do so.
-        auto *Pack = cast<VarDecl>(C->getCapturedVar());
+        VarDecl *Pack = C->getCapturedVar();
         for (unsigned I = 0; I != *NumExpansions; ++I) {
           Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), I);
           VarDecl *CapturedVar

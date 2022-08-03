@@ -71,7 +71,7 @@ public:
   /// capture that is a pack expansion, or an invalid source
   /// location to indicate that this is not a pack expansion.
   LambdaCapture(SourceLocation Loc, bool Implicit, LambdaCaptureKind Kind,
-                ValueDecl *Var = nullptr,
+                VarDecl *Var = nullptr,
                 SourceLocation EllipsisLoc = SourceLocation());
 
   /// Determine the kind of capture.
@@ -86,7 +86,7 @@ public:
 
   /// Determine whether this capture handles a variable.
   bool capturesVariable() const {
-    return isa_and_nonnull<ValueDecl>(DeclAndBits.getPointer());
+    return isa_and_nonnull<VarDecl>(DeclAndBits.getPointer());
   }
 
   /// Determine whether this captures a variable length array bound
@@ -101,9 +101,9 @@ public:
   ///
   /// This operation is only valid if this capture is a variable capture
   /// (other than a capture of \c this).
-  ValueDecl *getCapturedVar() const {
+  VarDecl *getCapturedVar() const {
     assert(capturesVariable() && "No variable available for capture");
-    return static_cast<ValueDecl *>(DeclAndBits.getPointer());
+    return static_cast<VarDecl *>(DeclAndBits.getPointer());
   }
 
   /// Determine whether this was an implicit capture (not

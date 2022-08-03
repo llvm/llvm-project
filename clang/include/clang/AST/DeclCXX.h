@@ -1057,9 +1057,8 @@ public:
   ///
   /// \note No entries will be added for init-captures, as they do not capture
   /// variables.
-  void
-  getCaptureFields(llvm::DenseMap<const ValueDecl *, FieldDecl *> &Captures,
-                   FieldDecl *&ThisCapture) const;
+  void getCaptureFields(llvm::DenseMap<const VarDecl *, FieldDecl *> &Captures,
+                        FieldDecl *&ThisCapture) const;
 
   using capture_const_iterator = const LambdaCapture *;
   using capture_const_range = llvm::iterator_range<capture_const_iterator>;
