@@ -368,15 +368,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // encoding.
   setOperationPromotedToType(ISD::CTTZ           , MVT::i8   , MVT::i32);
   setOperationPromotedToType(ISD::CTTZ_ZERO_UNDEF, MVT::i8   , MVT::i32);
+  // Promoted i16. tzcntw has a false dependency on Intel CPUs. For BSF, we emit
+  // a REP prefix to encode it as TZCNT for modern CPUs so it makes sense to
+  // promote that too.
+  setOperationPromotedToType(ISD::CTTZ           , MVT::i16  , MVT::i32);
+  setOperationPromotedToType(ISD::CTTZ_ZERO_UNDEF, MVT::i16  , MVT::i32);
 
-  if (Subtarget.hasBMI()) {
-    // Promote the i16 zero undef variant and force it on up to i32 when tzcnt
-    // is enabled.
-    setOperationPromotedToType(ISD::CTTZ_ZERO_UNDEF, MVT::i16, MVT::i32);
-  } else {
-    setOperationAction(ISD::CTTZ, MVT::i16, Custom);
+  if (!Subtarget.hasBMI()) {
     setOperationAction(ISD::CTTZ           , MVT::i32  , Custom);
-    setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i16  , Legal);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32  , Legal);
     if (Subtarget.is64Bit()) {
       setOperationAction(ISD::CTTZ         , MVT::i64  , Custom);
