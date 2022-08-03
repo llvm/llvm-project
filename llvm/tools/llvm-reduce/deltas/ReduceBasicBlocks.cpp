@@ -102,6 +102,19 @@ removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
     }
 }
 
+/// A BB is ok to remove if it's not the entry block, or else it is
+/// the entry block but the next block in the function has just one
+/// predecessor -- this property is required because that block is
+/// going to become the new entry block
+static bool okToRemove(BasicBlock &BB) {
+  if (!BB.isEntryBlock())
+    return true;
+  auto F = BB.getParent();
+  auto it = F->begin();
+  ++it;
+  return (it == F->end()) || (*it).hasNPredecessors(1);
+}
+
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
 static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
@@ -110,7 +123,7 @@ static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
   SmallVector<BasicBlock *> BBsToDelete;
   for (auto &F : Program) {
     for (auto &BB : F) {
-      if (O.shouldKeep())
+      if (!okToRemove(BB) || O.shouldKeep())
         BBsToKeep.insert(&BB);
       else {
         BBsToDelete.push_back(&BB);
