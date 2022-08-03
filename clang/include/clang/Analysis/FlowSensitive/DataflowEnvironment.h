@@ -347,6 +347,13 @@ public:
   /// imply that `Val` is true.
   bool flowConditionImplies(BoolValue &Val) const;
 
+  /// Returns the `DeclContext` of the block being analysed, if any. Otherwise,
+  /// returns null.
+  const DeclContext *getDeclCtx() { return DeclCtx; }
+
+  /// Sets the `DeclContext` of the block being analysed.
+  void setDeclCtx(const DeclContext *Ctx) { DeclCtx = Ctx; }
+
   /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
   /// returns null.
   const ControlFlowContext *getControlFlowContext(const FunctionDecl *F) {
@@ -376,6 +383,9 @@ private:
 
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
+
+  // `DeclContext` of the block being analysed if provided.
+  const DeclContext *DeclCtx = nullptr;
 
   // In a properly initialized `Environment`, `ReturnLoc` should only be null if
   // its `DeclContext` could not be cast to a `FunctionDecl`.
