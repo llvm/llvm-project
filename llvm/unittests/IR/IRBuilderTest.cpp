@@ -1009,6 +1009,21 @@ TEST_F(IRBuilderTest, CreateGlobalStringPtr) {
   EXPECT_TRUE(String3->getType()->getPointerAddressSpace() == 2);
 }
 
+TEST_F(IRBuilderTest, CreateThreadLocalAddress) {
+  IRBuilder<> Builder(BB);
+
+  GlobalVariable *G = new GlobalVariable(*M, Builder.getInt64Ty(), /*isConstant*/true,
+                                         GlobalValue::ExternalLinkage, nullptr, "", nullptr,
+                                         GlobalValue::GeneralDynamicTLSModel);
+
+  Constant *CEBC = ConstantExpr::getBitCast(G, Builder.getInt8PtrTy());
+  // Tests that IRBuilder::CreateThreadLocalAddress wouldn't crash if its operand
+  // is BitCast ConstExpr. The case should be eliminated after we eliminate the
+  // abuse of constexpr.
+  CallInst *CI = Builder.CreateThreadLocalAddress(CEBC);
+  EXPECT_NE(CI, nullptr);
+}
+
 TEST_F(IRBuilderTest, DebugLoc) {
   auto CalleeTy = FunctionType::get(Type::getVoidTy(Ctx),
                                     /*isVarArg=*/false);
