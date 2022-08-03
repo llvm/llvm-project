@@ -51,3 +51,12 @@ add_integration_test(
     libc.src.errno.errno
     libc.src.sys.mman.mmap
 )
+
+add_integration_test(
+  init_fini_array_test
+  SUITE libc-loader-tests
+  LOADER
+    libc.loader.linux.crt1
+  SRCS
+    init_fini_array_test.cpp
+)
