@@ -147,13 +147,13 @@ module iso_fortran_env
   integer, parameter :: stat_unlocked_failed_image = FORTRAN_RUNTIME_STAT_UNLOCKED_FAILED_IMAGE
 
   interface compiler_options
-    character(len=80) function compiler_options()
-    end function compiler_options
+    character(len=80) function compiler_options_1()
+    end function compiler_options_1
   end interface compiler_options
 
   interface compiler_version
-    character(len=80) function compiler_version()
-    end function compiler_version
+    character(len=80) function compiler_version_1()
+    end function compiler_version_1
   end interface compiler_version
 
 end module iso_fortran_env
