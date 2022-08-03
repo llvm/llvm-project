@@ -593,6 +593,11 @@ namespace ranges {
     constexpr borrowed_iterator_t<R>
       ranges::replace_if(R&& r, Pred pred, const T& new_value, Proj proj = {});                     // since C++20
 
+  template<class T, class Proj = identity,
+           indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
+    constexpr const T&
+      ranges::clamp(const T& v, const T& lo, const T& hi, Comp comp = {}, Proj proj = {});          // since C++20
+
   template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
            class Proj1 = identity, class Proj2 = identity,
            indirect_strict_weak_order<projected<I1, Proj1>,
@@ -931,6 +936,7 @@ namespace ranges {
               indirectly_copyable_storable<iterator_t<R>, O>)
     constexpr unique_copy_result<borrowed_iterator_t<R>, O>
       unique_copy(R&& r, O result, C comp = {}, Proj proj = {});                                   // Since C++20
+<<<<<<< HEAD
 
   template<class I, class O>
       using remove_copy_result = in_out_result<I, O>;                                              // Since C++20
@@ -1764,6 +1770,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_all_of.h>
 #include <__algorithm/ranges_any_of.h>
 #include <__algorithm/ranges_binary_search.h>
+#include <__algorithm/ranges_clamp.h>
 #include <__algorithm/ranges_copy.h>
 #include <__algorithm/ranges_copy_backward.h>
 #include <__algorithm/ranges_copy_if.h>
