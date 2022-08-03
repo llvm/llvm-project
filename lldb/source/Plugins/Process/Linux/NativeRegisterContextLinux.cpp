@@ -8,13 +8,14 @@
 
 #include "NativeRegisterContextLinux.h"
 
+#include "Plugins/Process/Linux/NativeProcessLinux.h"
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Utility/RegisterValue.h"
-
-#include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include <sys/uio.h>
 
 using namespace lldb_private;
 using namespace lldb_private::process_linux;
@@ -154,4 +155,20 @@ Status NativeRegisterContextLinux::DoWriteRegisterValue(
 
   return NativeProcessLinux::PtraceWrapper(
       PTRACE_POKEUSER, m_thread.GetID(), reinterpret_cast<void *>(offset), buf);
+}
+
+llvm::Expected<ArchSpec>
+NativeRegisterContextLinux::DetermineArchitectureViaGPR(lldb::tid_t tid,
+                                                        size_t gpr64_size) {
+  std::unique_ptr<uint8_t[]> data = std::make_unique<uint8_t[]>(gpr64_size);
+  struct iovec iov;
+  iov.iov_base = data.get();
+  iov.iov_len = gpr64_size;
+  unsigned int regset = llvm::ELF::NT_PRSTATUS;
+  Status ST = NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET, tid, &regset,
+                                                &iov, sizeof(iov));
+  if (ST.Fail())
+    return ST.ToError();
+  return HostInfo::GetArchitecture(
+      iov.iov_len < gpr64_size ? HostInfo::eArchKind32 : HostInfo::eArchKind64);
 }
