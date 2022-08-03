@@ -9,6 +9,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "gtest/gtest.h"
 
@@ -58,6 +59,7 @@ std::string StdString(const char *Ptr) { return Ptr ? Ptr : ""; }
 TEST(DynamicLibrary, Overload) {
   {
     std::string Err;
+    llvm_shutdown_obj Shutdown;
     DynamicLibrary DL =
         DynamicLibrary::getPermanentLibrary(LibPath().c_str(), &Err);
     EXPECT_TRUE(DL.isValid());
@@ -105,6 +107,68 @@ TEST(DynamicLibrary, Overload) {
     EXPECT_EQ(GS, &OverloadTestA);
     EXPECT_EQ(StdString(GS()), "OverloadCall");
   }
+  EXPECT_TRUE(FuncPtr<GetString>(DynamicLibrary::SearchForAddressOfSymbol(
+                  "TestA")) == nullptr);
+
+  // Check serach ordering is reset to default after call to llvm_shutdown
+  EXPECT_EQ(DynamicLibrary::SearchOrder, DynamicLibrary::SO_Linker);
+}
+
+TEST(DynamicLibrary, Shutdown) {
+  std::string A("PipSqueak"), B, C("SecondLib");
+  std::vector<std::string> Order;
+  {
+    std::string Err;
+    llvm_shutdown_obj Shutdown;
+    DynamicLibrary DL =
+        DynamicLibrary::getPermanentLibrary(LibPath(A).c_str(), &Err);
+    EXPECT_TRUE(DL.isValid());
+    EXPECT_TRUE(Err.empty());
+
+    SetStrings SS_0 = FuncPtr<SetStrings>(
+        DynamicLibrary::SearchForAddressOfSymbol("SetStrings"));
+    EXPECT_NE(SS_0, nullptr);
+
+    SS_0(A, B);
+    EXPECT_EQ(B, "Local::Local(PipSqueak)");
+
+    TestOrder TO_0 = FuncPtr<TestOrder>(
+        DynamicLibrary::SearchForAddressOfSymbol("TestOrder"));
+    EXPECT_NE(TO_0, nullptr);
+
+    DynamicLibrary DL2 =
+        DynamicLibrary::getPermanentLibrary(LibPath(C).c_str(), &Err);
+    EXPECT_TRUE(DL2.isValid());
+    EXPECT_TRUE(Err.empty());
+
+    // Should find latest version of symbols in SecondLib
+    SetStrings SS_1 = FuncPtr<SetStrings>(
+        DynamicLibrary::SearchForAddressOfSymbol("SetStrings"));
+    EXPECT_NE(SS_1, nullptr);
+    EXPECT_NE(SS_0, SS_1);
+
+    TestOrder TO_1 = FuncPtr<TestOrder>(
+        DynamicLibrary::SearchForAddressOfSymbol("TestOrder"));
+    EXPECT_NE(TO_1, nullptr);
+    EXPECT_NE(TO_0, TO_1);
+
+    B.clear();
+    SS_1(C, B);
+    EXPECT_EQ(B, "Local::Local(SecondLib)");
+
+    TO_0(Order);
+    TO_1(Order);
+  }
+  EXPECT_EQ(A, "Global::~Global");
+  EXPECT_EQ(B, "Local::~Local");
+  EXPECT_EQ(FuncPtr<SetStrings>(
+                DynamicLibrary::SearchForAddressOfSymbol("SetStrings")),
+            nullptr);
+
+  // Test unload/destruction ordering
+  EXPECT_EQ(Order.size(), 2UL);
+  EXPECT_EQ(Order.front(), "SecondLib");
+  EXPECT_EQ(Order.back(), "PipSqueak");
 }
 
 #else
