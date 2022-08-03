@@ -337,3 +337,24 @@ func.func @atan_fold_vec() -> (vector<4xf32>) {
   %0 = math.atan %v1 : vector<4xf32>
   return %0 : vector<4xf32>
 }
+
+// CHECK-LABEL: @atan2_fold
+// CHECK-NEXT: %[[cst:.+]] = arith.constant 0.000000e+00 : f32
+// CHECK-NEXT:   return %[[cst]]
+func.func @atan2_fold() -> f32 {
+  %c1 = arith.constant 0.0 : f32
+  %c2 = arith.constant 1.0 : f32
+  %r = math.atan2 %c1, %c2 : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @atan2_fold_vec
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[0.000000e+00, 0.000000e+00, 0.463647604, 0.463647604]> : vector<4xf32>
+// CHECK-NEXT:   return %[[cst]]
+func.func @atan2_fold_vec() -> (vector<4xf32>) {
+  %v1 = arith.constant dense<[0.0, 0.0, 1.0, 1.0]> : vector<4xf32>
+  %v2 = arith.constant dense<[1.0, 1.0, 2.0, 2.0]> : vector<4xf32>
+  %0 = math.atan2 %v1, %v2 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
