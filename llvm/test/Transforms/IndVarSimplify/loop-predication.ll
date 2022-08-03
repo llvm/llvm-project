@@ -611,7 +611,7 @@ define i32 @unconditional_latch_with_side_effect(i32* %a, i32 %length) {
 ; CHECK-NEXT:    ret i32 -1
 ; CHECK:       guarded:
 ; CHECK-NEXT:    store volatile i32 0, i32* [[A:%.*]], align 4
-; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 loop.preheader:
