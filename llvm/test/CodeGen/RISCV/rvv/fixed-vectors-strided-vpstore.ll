@@ -455,3 +455,40 @@ define void @strided_vpstore_v2i8_allones_mask(<2 x i8> %val, i8* %ptr, i32 sign
   call void @llvm.experimental.vp.strided.store.v2i8.p0i8.i32(<2 x i8> %val, i8* %ptr, i32 %stride, <2 x i1> %b, i32 %evl)
   ret void
 }
+
+; Widening
+define void @strided_vpstore_v3f32(<3 x float> %v, float *%ptr, i32 signext %stride, <3 x i1> %mask, i32 zeroext %evl) {
+; CHECK-RV32-LABEL: strided_vpstore_v3f32:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-RV32-NEXT:    vsse32.v v8, (a0), a1, v0.t
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: strided_vpstore_v3f32:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-RV64-NEXT:    vsse32.v v8, (a0), a1, v0.t
+; CHECK-RV64-NEXT:    ret
+  call void @llvm.experimental.vp.strided.store.v3f32.p0f32.i32(<3 x float> %v, float* %ptr, i32 %stride, <3 x i1> %mask, i32 %evl)
+  ret void
+}
+
+define void @strided_vpstore_v3f32_allones_mask(<3 x float> %v, float *%ptr, i32 signext %stride, i32 zeroext %evl) {
+; CHECK-RV32-LABEL: strided_vpstore_v3f32_allones_mask:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-RV32-NEXT:    vsse32.v v8, (a0), a1
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: strided_vpstore_v3f32_allones_mask:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-RV64-NEXT:    vsse32.v v8, (a0), a1
+; CHECK-RV64-NEXT:    ret
+  %one = insertelement <3 x i1> poison, i1 true, i32 0
+  %allones = shufflevector <3 x i1> %one, <3 x i1> poison, <3 x i32> zeroinitializer
+  call void @llvm.experimental.vp.strided.store.v3f32.p0f32.i32(<3 x float> %v, float* %ptr, i32 %stride, <3 x i1> %allones, i32 %evl)
+  ret void
+}
+
+declare void @llvm.experimental.vp.strided.store.v3f32.p0f32.i32(<3 x float>, float* , i32, <3 x i1>, i32)
