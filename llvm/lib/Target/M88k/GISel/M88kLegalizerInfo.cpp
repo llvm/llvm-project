@@ -13,6 +13,7 @@
 #include "M88kSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/LostDebugLocObserver.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -86,6 +87,9 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
       .legalFor({S32})
       .libcallFor({S64})
       .clampScalar(0, S32, S64);
+  getActionDefinitionsBuilder({G_SREM, G_UREM})
+      .lowerFor({S32})
+      .libcallFor({S64});
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})
       .legalFor({S32})
       .clampScalar(0, S32, S32);
@@ -169,12 +173,17 @@ bool M88kLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case G_MUL: {
     // MC88110 only: 32bit multiplication with 64bit result.
     Register DstReg = MI.getOperand(0).getReg();
-    if (MRI.getType(DstReg) != S64)
-      return false;
     MachineInstr *Src1I = getDefIgnoringCopies(MI.getOperand(1).getReg(), MRI);
     MachineInstr *Src2I = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
     unsigned Opc1 = Src1I->getOpcode();
     unsigned Opc2 = Src2I->getOpcode();
+
+    auto Libcall = [&]() -> bool {
+      LostDebugLocObserver LDLObserver("");
+      return LegalizerHelper::UnableToLegalize !=
+             Helper.libcall(MI, LDLObserver);
+    };
+
     // Check if the multiplicants are blown-up 32 bit values. If yes then the
     // multiplication is legal.
     if (Opc1 == G_MERGE_VALUES && Opc2 == G_MERGE_VALUES) {
@@ -182,16 +191,18 @@ bool M88kLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
           Src1I->getOperand(1).getReg(), MRI);
       auto C2 = getIConstantVRegValWithLookThrough(
           Src1I->getOperand(1).getReg(), MRI);
-      return C1 && C1->Value.isZero() && C2 && C2->Value.isZero();
+      if (C1 && C1->Value.isZero() && C2 && C2->Value.isZero())
+        return true;
+      return Libcall();
     }
 
     // Try to legalize the instruction.
     if (!((Opc1 == G_ZEXT || Opc1 == G_SEXT) &&
           (Opc2 == G_ZEXT || Opc2 == G_SEXT)))
-      return false;
+      return Libcall();
     if (MRI.getType(Src1I->getOperand(1).getReg()) != S32 ||
         MRI.getType(Src2I->getOperand(1).getReg()) != S32)
-      return false;
+      return Libcall();
     auto Zero = MIRBuilder.buildConstant(S32, 0);
     auto Mult1 = MIRBuilder.buildMerge(
         S64, {Zero.getReg(0), Src1I->getOperand(1).getReg()});
@@ -205,23 +216,30 @@ bool M88kLegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     // MC88110 only: 64bit division with 32bit divisor.
     Register DstReg = MI.getOperand(0).getReg();
     Register Src1Reg = MI.getOperand(1).getReg();
-    if (MRI.getType(DstReg) != S64 || MRI.getType(Src1Reg) != S64)
-      return false;
     MachineInstr *Src2I = getDefIgnoringCopies(MI.getOperand(2).getReg(), MRI);
     unsigned Opc2 = Src2I->getOpcode();
+
+    auto Libcall = [&]() -> bool {
+      LostDebugLocObserver LDLObserver("");
+      return LegalizerHelper::UnableToLegalize !=
+             Helper.libcall(MI, LDLObserver);
+    };
+
     // Check if the divisor is a blown-up 32 bit value. If yes then the division
     // is legal.
     if (Opc2 == G_MERGE_VALUES) {
       auto Cst = getIConstantVRegValWithLookThrough(
           Src2I->getOperand(1).getReg(), MRI);
-      return Cst && Cst->Value.isZero();
+      if (Cst && Cst->Value.isZero())
+        return true;
+      return Libcall();
     }
 
     // Try to legalize the instruction.
     if (Opc2 != G_ZEXT)
-      return false;
+      return Libcall();
     if (MRI.getType(Src2I->getOperand(1).getReg()) != S32)
-      return false;
+      return Libcall();
     auto Zero = MIRBuilder.buildConstant(S32, 0);
     auto Div = MIRBuilder.buildMerge(
         S64, {Zero.getReg(0), Src2I->getOperand(1).getReg()});

@@ -183,9 +183,9 @@ class F_IRC<bits<6> func, bits<1> carryin, bits<1> carryout,
 }
 
 // Format: Integer with triadic register and register pair destination.
-class F_IRCD<bits<6> func, RegisterOperand cls, string asm,
-             list<dag> pattern = []>
-   : F_I<(outs GPR64:$rd), (ins GPR64:$rs1, cls:$rs2), asm,
+class F_IRCD<bits<6> func, RegisterOperand rc1, RegisterOperand rc2,
+             string asm, list<dag> pattern = []>
+   : F_I<(outs GPR64:$rd), (ins rc1:$rs1, rc2:$rs2), asm,
          "$rd, $rs1, $rs2", pattern> {
   bits<5> rs2;
 
