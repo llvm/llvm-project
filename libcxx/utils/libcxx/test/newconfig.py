@@ -6,6 +6,9 @@
 #
 #===----------------------------------------------------------------------===##
 
+import os
+
+
 def _getSubstitution(substitution, config):
   for (orig, replacement) in config.substitutions:
     if orig == substitution:
@@ -14,6 +17,7 @@ def _getSubstitution(substitution, config):
 
 def configure(parameters, features, config, lit_config):
   note = lambda s: lit_config.note("({}) {}".format(config.name, s))
+  config.environment = dict(os.environ)
 
   # Apply the actions supplied by parameters to the configuration first, since
   # parameters are things that we request explicitly and which might influence
