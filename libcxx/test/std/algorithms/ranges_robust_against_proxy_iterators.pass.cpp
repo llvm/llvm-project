@@ -62,6 +62,7 @@ constexpr void run_tests() {
   std::array output = {T{4}, T{5}, T{6}, T{7}, T{8}, T{9}};
   ProxyIterator out{output.begin()};
   ProxyIterator out2{output.begin() + 1};
+  ProxyIterator out_end{output.end()};
 
   T num{2};
   Proxy<T&> x{num};
@@ -110,12 +111,10 @@ constexpr void run_tests() {
     test(std::ranges::copy, in, out);
     std::ranges::copy_n(in.begin(), count, out);
     test(std::ranges::copy_if, in, out, unary_pred);
-    // TODO: uncomment `copy_backward` once https://reviews.llvm.org/D128864 lands.
-    //test(std::ranges::copy_backward, in, out);
+    test(std::ranges::copy_backward, in, out_end);
   }
   test(std::ranges::move, in, out);
-  // TODO: uncomment `move_backward` once https://reviews.llvm.org/D128864 lands.
-  // test(std::ranges::move_backward, in, out);
+  test(std::ranges::move_backward, in, out_end);
   if constexpr (std::copyable<T>) {
     test(std::ranges::fill, in, x);
     std::ranges::fill_n(in.begin(), count, x);
