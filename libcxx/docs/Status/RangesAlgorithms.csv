@@ -51,8 +51,8 @@ Write,remove_copy,Nikolas Klauser,`D130599 <https://llvm.org/D130599>`_,✅
 Write,remove_copy_if,Nikolas Klauser,`D130599 <https://llvm.org/D130599>`_,✅
 Write,replace,Nikolas Klauser,`D126283 <https://llvm.org/D126283>`_,✅
 Write,replace_if,Nikolas Klauser,`D126283 <https://llvm.org/D126283>`_,✅
-Write,replace_copy,Nikolas Klauser,`D129806 <https://llvm.org/D129806>`_,Under review
-Write,replace_copy_if,Nikolas Klauser,`D129806 <https://llvm.org/D129806>`_,Under review
+Write,replace_copy,Nikolas Klauser,`D129806 <https://llvm.org/D129806>`_,✅
+Write,replace_copy_if,Nikolas Klauser,`D129806 <https://llvm.org/D129806>`_,✅
 Write,swap_ranges,Nikolas Klauser,`D116303 <https://llvm.org/D116303>`_,✅
 Write,reverse_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
 Write,rotate_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
