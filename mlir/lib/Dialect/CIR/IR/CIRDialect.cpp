@@ -1209,6 +1209,73 @@ LogicalResult cir::FuncOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// CallOp
+//===----------------------------------------------------------------------===//
+
+/// Get the argument operands to the called function.
+OperandRange cir::CallOp::getArgOperands() {
+  return {arg_operand_begin(), arg_operand_end()};
+}
+
+MutableOperandRange cir::CallOp::getArgOperandsMutable() {
+  return getOperandsMutable();
+}
+
+/// Return the callee of this operation
+CallInterfaceCallable cir::CallOp::getCallableForCallee() {
+  return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+}
+
+/// Set the callee for this operation.
+void cir::CallOp::setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
+  if (auto calling =
+          (*this)->getAttrOfType<mlir::SymbolRefAttr>(getCalleeAttrName()))
+    (*this)->setAttr(getCalleeAttrName(), callee.get<mlir::SymbolRefAttr>());
+  setOperand(0, callee.get<mlir::Value>());
+}
+
+LogicalResult
+cir::CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Check that the callee attribute was specified.
+  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
+  if (!fnAttr)
+    return emitOpError("requires a 'callee' symbol reference attribute");
+  FuncOp fn =
+      symbolTable.lookupNearestSymbolFrom<mlir::cir::FuncOp>(*this, fnAttr);
+  if (!fn)
+    return emitOpError() << "'" << fnAttr.getValue()
+                         << "' does not reference a valid function";
+
+  // Verify that the operand and result types match the callee.
+  auto fnType = fn.getFunctionType();
+  if (fnType.getNumInputs() != getNumOperands())
+    return emitOpError("incorrect number of operands for callee");
+
+  for (unsigned i = 0, e = fnType.getNumInputs(); i != e; ++i)
+    if (getOperand(i).getType() != fnType.getInput(i))
+      return emitOpError("operand type mismatch: expected operand type ")
+             << fnType.getInput(i) << ", but provided "
+             << getOperand(i).getType() << " for operand number " << i;
+
+  if (fnType.getNumResults() != getNumResults())
+    return emitOpError("incorrect number of results for callee");
+
+  for (unsigned i = 0, e = fnType.getNumResults(); i != e; ++i)
+    if (getResult(i).getType() != fnType.getResult(i)) {
+      auto diag = emitOpError("result type mismatch at index ") << i;
+      diag.attachNote() << "      op result types: " << getResultTypes();
+      diag.attachNote() << "function result types: " << fnType.getResults();
+      return diag;
+    }
+
+  return success();
+}
+
+FunctionType CallOp::getCalleeType() {
+  return FunctionType::get(getContext(), getOperandTypes(), getResultTypes());
+}
+
+//===----------------------------------------------------------------------===//
 // CIR defined traits
 //===----------------------------------------------------------------------===//
 
