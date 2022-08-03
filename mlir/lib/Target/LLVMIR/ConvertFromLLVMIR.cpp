@@ -907,8 +907,20 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     Value rhs = processValue(inst->getOperand(1));
     if (!lhs || !rhs)
       return failure();
+
+    if (lhs.getType() != rhs.getType())
+      return failure();
+
+    Type boolType = b.getI1Type();
+    Type resType = boolType;
+    if (LLVM::isCompatibleVectorType(lhs.getType())) {
+      unsigned numElements =
+          LLVM::getVectorNumElements(lhs.getType()).getFixedValue();
+      resType = VectorType::get({numElements}, boolType);
+    }
+
     instMap[inst] = b.create<FCmpOp>(
-        loc, b.getI1Type(),
+        loc, resType,
         getFCmpPredicate(cast<llvm::FCmpInst>(inst)->getPredicate()), lhs, rhs);
     return success();
   }
