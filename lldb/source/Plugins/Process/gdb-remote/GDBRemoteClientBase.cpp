@@ -11,6 +11,7 @@
 #include "llvm/ADT/StringExtras.h"
 
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/Connection.h"
 #include "lldb/Utility/LLDBAssert.h"
 
 #include "ProcessGDBRemoteLog.h"
@@ -52,13 +53,15 @@ StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
   if (!cont_lock)
     return eStateInvalid;
   OnRunPacketSent(true);
-  // The main ReadPacket loop wakes up at computed_timeout intervals, just to 
+  // The main ReadPacket loop wakes up at computed_timeout intervals, just to
   // check that the connection hasn't dropped.  When we wake up we also check
   // whether there is an interrupt request that has reached its endpoint.
-  // If we want a shorter interrupt timeout that kWakeupInterval, we need to 
+  // If we want a shorter interrupt timeout that kWakeupInterval, we need to
   // choose the shorter interval for the wake up as well.
-  std::chrono::seconds computed_timeout = std::min(interrupt_timeout, 
-                                                   kWakeupInterval);
+  std::chrono::seconds computed_timeout =
+      std::min(interrupt_timeout, kWakeupInterval);
+  std::chrono::time_point<std::chrono::steady_clock> interrupt_endpoint;
+  bool interrupt_sent = false;
   for (;;) {
     PacketResult read_result = ReadPacket(response, computed_timeout, false);
     // Reset the computed_timeout to the default value in case we are going
@@ -70,16 +73,35 @@ StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
       if (m_async_count == 0) {
         continue;
       }
+      if (!interrupt_sent) {
+        const char ctrl_c = '\x03';
+        ConnectionStatus status = eConnectionStatusSuccess;
+        size_t bytes_written = Write(&ctrl_c, 1, status, nullptr);
+        if (bytes_written == 0) {
+          LLDB_LOG(log, "failed to send interrupt packet");
+          return eStateInvalid;
+        }
+        interrupt_endpoint = steady_clock::now() + interrupt_timeout;
+        if (log)
+          log->PutCString(
+              "GDBRemoteClientBase::SendContinuePacketAndWaitForResponse sent "
+              "packet: \\x03");
+
+        interrupt_sent = true;
+        continue;
+      }
+
       auto cur_time = steady_clock::now();
-      if (cur_time >= m_interrupt_endpoint)
+      if (cur_time >= interrupt_endpoint)
         return eStateInvalid;
       else {
         // We woke up and found an interrupt is in flight, but we haven't
         // exceeded the interrupt wait time.  So reset the wait time to the
         // time left till the interrupt timeout.  But don't wait longer
         // than our wakeup timeout.
-        auto new_wait = m_interrupt_endpoint - cur_time;
-        computed_timeout = std::min(kWakeupInterval,
+        auto new_wait = interrupt_endpoint - cur_time;
+        computed_timeout = std::min(
+            kWakeupInterval,
             std::chrono::duration_cast<std::chrono::seconds>(new_wait));
         continue;
       }
@@ -347,7 +369,6 @@ GDBRemoteClientBase::Lock::Lock(GDBRemoteClientBase &comm,
 }
 
 void GDBRemoteClientBase::Lock::SyncWithContinueThread() {
-  Log *log = GetLog(GDBRLog::Process|GDBRLog::Packets);
   std::unique_lock<std::mutex> lock(m_comm.m_mutex);
   if (m_comm.m_is_running && m_interrupt_timeout == std::chrono::seconds(0))
     return; // We were asked to avoid interrupting the sender. Lock is not
@@ -355,22 +376,11 @@ void GDBRemoteClientBase::Lock::SyncWithContinueThread() {
 
   ++m_comm.m_async_count;
   if (m_comm.m_is_running) {
-    if (m_comm.m_async_count == 1) {
-      // The sender has sent the continue packet and we are the first async
-      // packet. Let's interrupt it.
-      const char ctrl_c = '\x03';
-      ConnectionStatus status = eConnectionStatusSuccess;
-      size_t bytes_written = m_comm.Write(&ctrl_c, 1, status, nullptr);
-      if (bytes_written == 0) {
-        --m_comm.m_async_count;
-        LLDB_LOGF(log, "GDBRemoteClientBase::Lock::Lock failed to send "
-                       "interrupt packet");
-        return;
-      }
-      m_comm.m_interrupt_endpoint = steady_clock::now() + m_interrupt_timeout;
-      if (log)
-        log->PutCString("GDBRemoteClientBase::Lock::Lock sent packet: \\x03");
-    }
+    // SendContinuePacketAndWaitForResponse() takes care of sending
+    // the actual interrupt packet since we've increased m_async_count.
+    // Interrupt the ReadPacket() call to avoid having to wait for
+    // the interrupt timeout.
+    m_comm.GetConnection()->InterruptRead();
     m_comm.m_cv.wait(lock, [this] { return !m_comm.m_is_running; });
     m_did_interrupt = true;
   }
