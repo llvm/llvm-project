@@ -723,3 +723,40 @@ define <vscale x 8 x double> @strided_vpload_nxv8f64(double* %ptr, i32 signext %
   %load = call <vscale x 8 x double> @llvm.experimental.vp.strided.load.nxv8f64.p0f64.i32(double* %ptr, i32 signext %stride, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x double> %load
 }
+
+; Widening
+define <vscale x 3 x double> @strided_vpload_nxv3f64(double* %ptr, i32 signext %stride, <vscale x 3 x i1> %mask, i32 zeroext %evl) {
+; CHECK-RV32-LABEL: strided_vpload_nxv3f64:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
+; CHECK-RV32-NEXT:    vlse64.v v8, (a0), a1, v0.t
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: strided_vpload_nxv3f64:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
+; CHECK-RV64-NEXT:    vlse64.v v8, (a0), a1, v0.t
+; CHECK-RV64-NEXT:    ret
+  %v = call <vscale x 3 x double> @llvm.experimental.vp.strided.load.nxv3f64.p0f64.i32(double* %ptr, i32 %stride, <vscale x 3 x i1> %mask, i32 %evl)
+  ret <vscale x 3 x double> %v
+}
+
+define <vscale x 3 x double> @strided_vpload_nxv3f64_allones_mask(double* %ptr, i32 signext %stride, i32 zeroext %evl) {
+; CHECK-RV32-LABEL: strided_vpload_nxv3f64_allones_mask:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
+; CHECK-RV32-NEXT:    vlse64.v v8, (a0), a1
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: strided_vpload_nxv3f64_allones_mask:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
+; CHECK-RV64-NEXT:    vlse64.v v8, (a0), a1
+; CHECK-RV64-NEXT:    ret
+  %one = insertelement <vscale x 3 x i1> poison, i1 true, i32 0
+  %allones = shufflevector <vscale x 3 x i1> %one, <vscale x 3 x i1> poison, <vscale x 3 x i32> zeroinitializer
+  %v = call <vscale x 3 x double> @llvm.experimental.vp.strided.load.nxv3f64.p0f64.i32(double* %ptr, i32 %stride, <vscale x 3 x i1> %allones, i32 %evl)
+  ret <vscale x 3 x double> %v
+}
+
+declare <vscale x 3 x double> @llvm.experimental.vp.strided.load.nxv3f64.p0f64.i32(double*, i32, <vscale x 3 x i1>, i32)

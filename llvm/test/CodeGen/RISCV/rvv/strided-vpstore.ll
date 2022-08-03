@@ -579,3 +579,40 @@ define void @strided_vpstore_nxv1i8_allones_mask(<vscale x 1 x i8> %val, i8* %pt
   call void @llvm.experimental.vp.strided.store.nxv1i8.p0i8.i32(<vscale x 1 x i8> %val, i8* %ptr, i32 %strided, <vscale x 1 x i1> %b, i32 %evl)
   ret void
 }
+
+; Widening
+define void @strided_vpstore_nxv3f32(<vscale x 3 x float> %v, float *%ptr, i32 signext %stride, <vscale x 3 x i1> %mask, i32 zeroext %evl) {
+; CHECK-RV32-LABEL: strided_vpstore_nxv3f32:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-RV32-NEXT:    vsse32.v v8, (a0), a1, v0.t
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: strided_vpstore_nxv3f32:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-RV64-NEXT:    vsse32.v v8, (a0), a1, v0.t
+; CHECK-RV64-NEXT:    ret
+  call void @llvm.experimental.vp.strided.store.nxv3f32.p0f32.i32(<vscale x 3 x float> %v, float* %ptr, i32 %stride, <vscale x 3 x i1> %mask, i32 %evl)
+  ret void
+}
+
+define void @strided_vpstore_nxv3f32_allones_mask(<vscale x 3 x float> %v, float *%ptr, i32 signext %stride, i32 zeroext %evl) {
+; CHECK-RV32-LABEL: strided_vpstore_nxv3f32_allones_mask:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-RV32-NEXT:    vsse32.v v8, (a0), a1
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: strided_vpstore_nxv3f32_allones_mask:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-RV64-NEXT:    vsse32.v v8, (a0), a1
+; CHECK-RV64-NEXT:    ret
+  %one = insertelement <vscale x 3 x i1> poison, i1 true, i32 0
+  %allones = shufflevector <vscale x 3 x i1> %one, <vscale x 3 x i1> poison, <vscale x 3 x i32> zeroinitializer
+  call void @llvm.experimental.vp.strided.store.nxv3f32.p0f32.i32(<vscale x 3 x float> %v, float* %ptr, i32 %stride, <vscale x 3 x i1> %allones, i32 %evl)
+  ret void
+}
+
+declare void @llvm.experimental.vp.strided.store.nxv3f32.p0f32.i32(<vscale x 3 x float>, float* , i32, <vscale x 3 x i1>, i32)
