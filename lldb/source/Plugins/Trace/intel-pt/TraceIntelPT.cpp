@@ -13,9 +13,9 @@
 #include "../common/ThreadPostMortemTrace.h"
 #include "CommandObjectTraceStartIntelPT.h"
 #include "DecodedThread.h"
-#include "TraceIntelPTConstants.h"
 #include "TraceIntelPTBundleLoader.h"
 #include "TraceIntelPTBundleSaver.h"
+#include "TraceIntelPTConstants.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -65,8 +65,7 @@ Expected<FileSpec> TraceIntelPT::SaveToDisk(FileSpec directory, bool compact) {
 Expected<TraceSP> TraceIntelPT::CreateInstanceForTraceBundle(
     const json::Value &bundle_description, StringRef bundle_dir,
     Debugger &debugger) {
-  return TraceIntelPTBundleLoader(debugger, bundle_description,
-                                       bundle_dir)
+  return TraceIntelPTBundleLoader(debugger, bundle_description, bundle_dir)
       .Load();
 }
 
@@ -81,10 +80,13 @@ TraceIntelPTSP TraceIntelPT::GetSharedPtr() {
 }
 
 TraceIntelPTSP TraceIntelPT::CreateInstanceForPostmortemTrace(
-    JSONTraceBundleDescription &bundle_description, ArrayRef<ProcessSP> traced_processes,
+    JSONTraceBundleDescription &bundle_description,
+    ArrayRef<ProcessSP> traced_processes,
     ArrayRef<ThreadPostMortemTraceSP> traced_threads) {
-  TraceIntelPTSP trace_sp(new TraceIntelPT(bundle_description, traced_processes));
-  trace_sp->m_storage.tsc_conversion = bundle_description.tsc_perf_zero_conversion;
+  TraceIntelPTSP trace_sp(
+      new TraceIntelPT(bundle_description, traced_processes));
+  trace_sp->m_storage.tsc_conversion =
+      bundle_description.tsc_perf_zero_conversion;
 
   if (bundle_description.cpus) {
     std::vector<cpu_id_t> cpus;

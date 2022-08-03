@@ -285,7 +285,6 @@ Error lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
   for (size_t i = 0; i < executions.size(); i++) {
     const IntelPTThreadContinousExecution &execution = executions[i];
 
-
     auto variant = execution.thread_execution.variant;
     // We report the TSCs we are sure of
     switch (variant) {

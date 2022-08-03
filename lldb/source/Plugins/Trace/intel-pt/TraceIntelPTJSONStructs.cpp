@@ -117,20 +117,24 @@ bool fromJSON(const json::Value &value, pt_cpu &cpu_info, Path path) {
 }
 
 json::Value toJSON(const JSONTraceBundleDescription &bundle_description) {
-  return Object{{"type", bundle_description.type},
-                {"processes", bundle_description.processes},
-                // We have to do this because the compiler fails at doing it
-                // automatically because pt_cpu is not in a namespace
-                {"cpuInfo", toJSON(bundle_description.cpu_info)},
-                {"cpus", bundle_description.cpus},
-                {"tscPerfZeroConversion", bundle_description.tsc_perf_zero_conversion}};
+  return Object{
+      {"type", bundle_description.type},
+      {"processes", bundle_description.processes},
+      // We have to do this because the compiler fails at doing it
+      // automatically because pt_cpu is not in a namespace
+      {"cpuInfo", toJSON(bundle_description.cpu_info)},
+      {"cpus", bundle_description.cpus},
+      {"tscPerfZeroConversion", bundle_description.tsc_perf_zero_conversion}};
 }
 
-bool fromJSON(const json::Value &value, JSONTraceBundleDescription &bundle_description, Path path) {
+bool fromJSON(const json::Value &value,
+              JSONTraceBundleDescription &bundle_description, Path path) {
   ObjectMapper o(value, path);
   if (!(o && o.map("processes", bundle_description.processes) &&
-        o.map("type", bundle_description.type) && o.map("cpus", bundle_description.cpus) &&
-        o.map("tscPerfZeroConversion", bundle_description.tsc_perf_zero_conversion)))
+        o.map("type", bundle_description.type) &&
+        o.map("cpus", bundle_description.cpus) &&
+        o.map("tscPerfZeroConversion",
+              bundle_description.tsc_perf_zero_conversion)))
     return false;
   if (bundle_description.cpus && !bundle_description.tsc_perf_zero_conversion) {
     path.report(
@@ -139,8 +143,8 @@ bool fromJSON(const json::Value &value, JSONTraceBundleDescription &bundle_descr
   }
   // We have to do this because the compiler fails at doing it automatically
   // because pt_cpu is not in a namespace
-  if (!fromJSON(*value.getAsObject()->get("cpuInfo"), bundle_description.cpu_info,
-                path.field("cpuInfo")))
+  if (!fromJSON(*value.getAsObject()->get("cpuInfo"),
+                bundle_description.cpu_info, path.field("cpuInfo")))
     return false;
   return true;
 }

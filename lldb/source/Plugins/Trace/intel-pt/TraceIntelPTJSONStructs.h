@@ -84,7 +84,8 @@ bool fromJSON(const llvm::json::Value &value, JSONCpu &cpu,
 bool fromJSON(const llvm::json::Value &value, pt_cpu &cpu_info,
               llvm::json::Path path);
 
-bool fromJSON(const llvm::json::Value &value, JSONTraceBundleDescription &bundle_description,
+bool fromJSON(const llvm::json::Value &value,
+              JSONTraceBundleDescription &bundle_description,
               llvm::json::Path path);
 } // namespace trace_intel_pt
 } // namespace lldb_private
