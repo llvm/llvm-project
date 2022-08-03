@@ -128,8 +128,8 @@ constexpr void run_tests() {
     test(std::ranges::remove_copy_if, in, out, unary_pred);
     test(std::ranges::replace, in, x, x);
     test(std::ranges::replace_if, in, unary_pred, x);
-    //test(std::ranges::replace_copy, in, out, x, x);
-    //test(std::ranges::replace_copy_if, in, out, unary_pred, x);
+    test(std::ranges::replace_copy, in, out, x, x);
+    test(std::ranges::replace_copy_if, in, out, unary_pred, x);
   }
   test(std::ranges::swap_ranges, in, in2);
   if constexpr (std::copyable<T>) {

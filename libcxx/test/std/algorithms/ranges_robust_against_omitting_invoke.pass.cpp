@@ -134,8 +134,8 @@ constexpr bool test_all() {
   // `replace*` algorithms only use the projection to compare the elements, not to write them.
   test(std::ranges::replace, in, x, a, &Bar::val);
   test(std::ranges::replace_if, in, &Foo::unary_pred, a, &Bar::val);
-  //test(std::ranges::replace_copy, in, out, x, a, &Bar::val);
-  //test(std::ranges::replace_copy_if, in, out, pred, a, &Bar::val);
+  test(std::ranges::replace_copy, in, out, x, a, &Bar::val);
+  test(std::ranges::replace_copy_if, in, out, &Foo::unary_pred, a, &Bar::val);
   // `swap_ranges` has neither a projection nor a predicate.
   // `reverse_copy` has neither a projection nor a predicate.
   // `rotate_copy` has neither a projection nor a predicate.
