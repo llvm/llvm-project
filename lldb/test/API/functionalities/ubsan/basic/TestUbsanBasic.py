@@ -41,7 +41,7 @@ class UbsanBasicTestCase(TestBase):
                     substrs=['stopped', 'stop reason ='])
 
         stop_reason = thread.GetStopReason()
-        self.assertEqual(stop_reason, lldb.eStopReasonInstrumentation)
+        self.assertStopReason(stop_reason, lldb.eStopReasonInstrumentation)
 
         # test that the UBSan dylib is present
         self.expect(

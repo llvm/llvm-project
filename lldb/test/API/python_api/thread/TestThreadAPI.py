@@ -214,7 +214,7 @@ class ThreadAPITestCase(TestBase):
         # main2.cpp.
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
         # Expected failure with clang as the compiler.
         # rdar://problem/9223880
         #

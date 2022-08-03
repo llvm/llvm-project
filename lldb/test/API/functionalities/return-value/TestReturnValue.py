@@ -61,7 +61,7 @@ class ReturnValueTestCase(TestBase):
         thread.StepOut()
 
         self.assertState(self.process.GetState(), lldb.eStateStopped)
-        self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         frame = thread.GetFrameAtIndex(0)
         fun_name = frame.GetFunctionName()
@@ -93,7 +93,7 @@ class ReturnValueTestCase(TestBase):
         thread.StepOutOfFrame(frame)
 
         self.assertState(self.process.GetState(), lldb.eStateStopped)
-        self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
         frame = thread.GetFrameAtIndex(0)
         fun_name = frame.GetFunctionName()
         self.assertEquals(fun_name, "main")
@@ -122,7 +122,7 @@ class ReturnValueTestCase(TestBase):
         thread.StepOut()
 
         self.assertState(self.process.GetState(), lldb.eStateStopped)
-        self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         frame = thread.GetFrameAtIndex(0)
         fun_name = frame.GetFunctionName()
@@ -262,7 +262,7 @@ class ReturnValueTestCase(TestBase):
         thread.StepOut()
 
         self.assertState(self.process.GetState(), lldb.eStateStopped)
-        self.assertEquals(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         # Assuming all these functions step out to main.  Could figure out the caller dynamically
         # if that would add something to the test.

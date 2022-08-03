@@ -122,7 +122,7 @@ class ScriptedProcesTestCase(TestBase):
         self.assertTrue(thread, "Invalid thread.")
         self.assertEqual(thread.GetThreadID(), 0x19)
         self.assertEqual(thread.GetName(), "DummyScriptedThread.thread-1")
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonSignal)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
 
         self.assertGreater(thread.GetNumFrames(), 0)
 
