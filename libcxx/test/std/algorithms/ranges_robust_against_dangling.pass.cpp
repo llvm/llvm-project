@@ -68,14 +68,14 @@ constexpr bool test_all() {
 
   using std::ranges::binary_transform_result;
   using std::ranges::copy_result;
-  //using std::ranges::copy_backward_result;
+  using std::ranges::copy_backward_result;
   using std::ranges::copy_if_result;
   using std::ranges::for_each_result;
   using std::ranges::merge_result;
   using std::ranges::minmax_result;
   using std::ranges::mismatch_result;
   using std::ranges::move_result;
-  //using std::ranges::move_backward_result;
+  using std::ranges::move_backward_result;
   using std::ranges::partial_sort_copy_result;
   using std::ranges::partition_copy_result;
   using std::ranges::remove_copy_result;
@@ -128,12 +128,10 @@ constexpr bool test_all() {
   dangling_1st(std::ranges::is_heap_until, in);
   dangling_1st<for_each_result<dangling, decltype(unary_pred)>>(std::ranges::for_each, in, unary_pred);
   dangling_1st<copy_result<dangling, int*>>(std::ranges::copy, in, out);
-  // TODO: uncomment `copy_backward` once https://reviews.llvm.org/D128864 lands.
-  //dangling_1st<copy_backward_result<dangling, int*>>(std::ranges::copy_backward, in, out);
+  dangling_1st<copy_backward_result<dangling, int*>>(std::ranges::copy_backward, in, output.end());
   dangling_1st<copy_if_result<dangling, int*>>(std::ranges::copy_if, in, out, unary_pred);
   dangling_1st<move_result<dangling, int*>>(std::ranges::move, in, out);
-  // TODO: uncomment `move_backward` once https://reviews.llvm.org/D128864 lands.
-  //dangling_1st<move_backward_result<dangling, int*>>(std::ranges::move_backward, in, out);
+  dangling_1st<move_backward_result<dangling, int*>>(std::ranges::move_backward, in, output.end());
   dangling_1st(std::ranges::fill, in, x);
   { // transform
     std::array out_transform = {false, true, true};
