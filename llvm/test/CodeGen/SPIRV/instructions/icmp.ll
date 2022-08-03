@@ -1,6 +1,4 @@
-; RUN: llc %s -o - | FileCheck %s
-
-target triple = "spirv32-unknown-unknown"
+; RUN: llc -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ; CHECK-DAG: OpName [[EQ:%.*]] "test_eq"
 ; CHECK-DAG: OpName [[NE:%.*]] "test_ne"
@@ -24,7 +22,7 @@ target triple = "spirv32-unknown-unknown"
 ; CHECK-DAG: OpName [[v3UGE:%.*]] "test_v3_uge"
 ; CHECK-DAG: OpName [[v3SGE:%.*]] "test_v3_sge"
 
-; CHECK: [[EQ]] = OpFunction
+; CHECK:      [[EQ]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -36,7 +34,7 @@ define i1 @test_eq(i32 %a, i32 %b) {
   ret i1 %r
 }
 
-; CHECK: [[NE]] = OpFunction
+; CHECK:      [[NE]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -48,7 +46,7 @@ define i1 @test_ne(i32 %a, i32 %b) {
   ret i1 %r
 }
 
-; CHECK: [[SLT]] = OpFunction
+; CHECK:      [[SLT]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -60,7 +58,7 @@ define i1 @test_slt(i32 %a, i32 %b) {
   ret i1 %r
 }
 
-; CHECK: [[ULT]] = OpFunction
+; CHECK:      [[ULT]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -72,7 +70,7 @@ define i1 @test_ult(i32 %a, i32 %b) {
   ret i1 %r
 }
 
-; CHECK: [[ULE]] = OpFunction
+; CHECK:      [[ULE]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -84,7 +82,7 @@ define i1 @test_ule(i32 %a, i32 %b) {
   ret i1 %r
 }
 
-; CHECK: [[SLE]] = OpFunction
+; CHECK:      [[SLE]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -96,7 +94,7 @@ define i1 @test_sle(i32 %a, i32 %b) {
   ret i1 %r
 }
 
-; CHECK: [[UGT]] = OpFunction
+; CHECK:      [[UGT]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -108,7 +106,7 @@ define i1 @test_ugt(i32 %a, i32 %b) {
   ret i1 %r
 }
 
-; CHECK: [[SGT]] = OpFunction
+; CHECK:      [[SGT]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -120,7 +118,7 @@ define i1 @test_sgt(i32 %a, i32 %b) {
   ret i1 %r
 }
 
-; CHECK: [[UGE]] = OpFunction
+; CHECK:      [[UGE]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -132,7 +130,7 @@ define i1 @test_uge(i32 %a, i32 %b) {
   ret i1 %r
 }
 
-; CHECK: [[SGE]] = OpFunction
+; CHECK:      [[SGE]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -144,7 +142,7 @@ define i1 @test_sge(i32 %a, i32 %b) {
   ret i1 %r
 }
 
-; CHECK: [[v3EQ]] = OpFunction
+; CHECK:      [[v3EQ]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -156,7 +154,7 @@ define <3 x i1> @test_v3_eq(<3 x i32> %a, <3 x i32> %b) {
   ret <3 x i1> %r
 }
 
-; CHECK: [[v3NE]] = OpFunction
+; CHECK:      [[v3NE]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -168,7 +166,7 @@ define <3 x i1> @test_v3_ne(<3 x i32> %a, <3 x i32> %b) {
   ret <3 x i1> %r
 }
 
-; CHECK: [[v3SLT]] = OpFunction
+; CHECK:      [[v3SLT]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -180,7 +178,7 @@ define <3 x i1> @test_v3_slt(<3 x i32> %a, <3 x i32> %b) {
   ret <3 x i1> %r
 }
 
-; CHECK: [[v3ULT]] = OpFunction
+; CHECK:      [[v3ULT]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -192,7 +190,7 @@ define <3 x i1> @test_v3_ult(<3 x i32> %a, <3 x i32> %b) {
   ret <3 x i1> %r
 }
 
-; CHECK: [[v3ULE]] = OpFunction
+; CHECK:      [[v3ULE]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -204,7 +202,7 @@ define <3 x i1> @test_v3_ule(<3 x i32> %a, <3 x i32> %b) {
   ret <3 x i1> %r
 }
 
-; CHECK: [[v3SLE]] = OpFunction
+; CHECK:      [[v3SLE]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -216,7 +214,7 @@ define <3 x i1> @test_v3_sle(<3 x i32> %a, <3 x i32> %b) {
   ret <3 x i1> %r
 }
 
-; CHECK: [[v3UGT]] = OpFunction
+; CHECK:      [[v3UGT]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -228,7 +226,7 @@ define <3 x i1> @test_v3_ugt(<3 x i32> %a, <3 x i32> %b) {
   ret <3 x i1> %r
 }
 
-; CHECK: [[v3SGT]] = OpFunction
+; CHECK:      [[v3SGT]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -240,7 +238,7 @@ define <3 x i1> @test_v3_sgt(<3 x i32> %a, <3 x i32> %b) {
   ret <3 x i1> %r
 }
 
-; CHECK: [[v3UGE]] = OpFunction
+; CHECK:      [[v3UGE]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel
@@ -252,7 +250,7 @@ define <3 x i1> @test_v3_uge(<3 x i32> %a, <3 x i32> %b) {
   ret <3 x i1> %r
 }
 
-; CHECK: [[v3SGE]] = OpFunction
+; CHECK:      [[v3SGE]] = OpFunction
 ; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: [[B:%.*]] = OpFunctionParameter
 ; CHECK-NEXT: OpLabel

@@ -1,10 +1,8 @@
-; RUN: llc -O0 %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
-target triple = "spirv32-unknown-unknown"
+;; FIXME: Are there any attributes that would make the IR invalid for SPIR-V?
 
-; FIXME: Are there any attributes that would make the IR invalid for SPIR-V?
-
-; Names:
+;; Names:
 ; CHECK-DAG: OpName [[FN1:%.+]] "fn1"
 ; CHECK-DAG: OpName [[FN2:%.+]] "fn2"
 ; CHECK-DAG: OpName [[FN3:%.+]] "fn3"
@@ -13,19 +11,19 @@ target triple = "spirv32-unknown-unknown"
 ; CHECK-DAG: OpName [[FN6:%.+]] "fn6"
 ; CHECK-DAG: OpName [[FN7:%.+]] "fn7"
 
-; Types:
-; CHECK: [[VOID:%.+]] = OpTypeVoid
-; CHECK: [[FN:%.+]] = OpTypeFunction [[VOID]]
+;; Types:
+; CHECK:     [[VOID:%.+]] = OpTypeVoid
+; CHECK:     [[FN:%.+]] = OpTypeFunction [[VOID]]
 
 
-; Functions:
+;; Functions:
 
 define void @fn1() noinline {
   ret void
 }
-; CHECK: [[FN1]] = OpFunction [[VOID]] DontInline [[FN]]
+; CHECK:     [[FN1]] = OpFunction [[VOID]] DontInline [[FN]]
 ; CHECK-NOT: OpFunctionParameter
-; CHECK: OpFunctionEnd
+; CHECK:     OpFunctionEnd
 
 
 attributes #0 = { noinline }

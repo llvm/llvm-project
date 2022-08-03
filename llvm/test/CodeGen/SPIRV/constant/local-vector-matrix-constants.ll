@@ -1,6 +1,6 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
-; TODO: Add test for matrix. But how are they represented in LLVM IR?
+;; TODO: Add test for matrix. But how are they represented in LLVM IR?
 
 define <4 x i8> @getVectorConstant() {
   ret <4 x i8> <i8 1, i8 1, i8 1, i8 1>
