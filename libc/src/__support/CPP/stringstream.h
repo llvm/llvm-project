@@ -85,6 +85,8 @@ public:
 
   // Return true if any write operation(s) failed due to insufficient size.
   bool overflow() const { return err; }
+
+  size_t bufsize() const { return data.size(); }
 };
 
 } // namespace cpp

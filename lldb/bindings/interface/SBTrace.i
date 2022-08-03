@@ -15,6 +15,8 @@ class LLDB_API SBTrace {
 public:
   SBTrace();
 
+  SBTraceCursor CreateNewCursor(SBError &error, SBThread &thread);
+
   const char *GetStartConfigurationHelp();
 
   SBFileSpec SaveToDisk(SBError &error, const SBFileSpec &bundle_dir, bool compact = false);

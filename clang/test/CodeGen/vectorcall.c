@@ -110,7 +110,7 @@ struct HFA2 __vectorcall AddParticles(struct HFA2 p1, float p2, struct HFA4 p3, 
 // Vectorcall in both architectures allows passing of an HVA as long as there is room,
 // even if it is not one of the first 6 arguments.  First pass puts p4 into a
 // register on both.  p9 ends up in a register in x86 only.  Second pass puts p1
-// in a register, does NOT put p7 in a register (since theres no room), then puts
+// in a register, does NOT put p7 in a register (since there's no room), then puts
 // p8 in a register.
 void __vectorcall HVAAnywhere(struct HFA2 p1, int p2, int p3, float p4, int p5, int p6, struct HFA4 p7, struct HFA2 p8, float p9){}
 // X32: define dso_local x86_vectorcallcc void @"\01HVAAnywhere@@88"(%struct.HFA2 inreg %p1.coerce, i32 inreg noundef %p2, i32 inreg noundef %p3, float inreg noundef %p4, i32 noundef %p5, i32 noundef %p6, %struct.HFA4* noundef %p7, %struct.HFA2 inreg %p8.coerce, float inreg noundef %p9)

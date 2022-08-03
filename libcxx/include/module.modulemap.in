@@ -352,6 +352,7 @@ module std [system] {
       module ranges_mismatch                 { private header "__algorithm/ranges_mismatch.h" }
       module ranges_move                     { private header "__algorithm/ranges_move.h" }
       module ranges_move_backward            { private header "__algorithm/ranges_move_backward.h" }
+      module ranges_next_permutation         { private header "__algorithm/ranges_next_permutation.h" }
       module ranges_none_of                  { private header "__algorithm/ranges_none_of.h" }
       module ranges_nth_element              { private header "__algorithm/ranges_nth_element.h" }
       module ranges_partial_sort             { private header "__algorithm/ranges_partial_sort.h" }
@@ -360,6 +361,7 @@ module std [system] {
       module ranges_partition_copy           { private header "__algorithm/ranges_partition_copy.h" }
       module ranges_partition_point          { private header "__algorithm/ranges_partition_point.h" }
       module ranges_pop_heap                 { private header "__algorithm/ranges_pop_heap.h" }
+      module ranges_prev_permutation         { private header "__algorithm/ranges_prev_permutation.h" }
       module ranges_push_heap                { private header "__algorithm/ranges_push_heap.h" }
       module ranges_remove                   { private header "__algorithm/ranges_remove.h" }
       module ranges_remove_copy              { private header "__algorithm/ranges_remove_copy.h" }
@@ -372,6 +374,7 @@ module std [system] {
       module ranges_reverse                  { private header "__algorithm/ranges_reverse.h" }
       module ranges_reverse_copy             { private header "__algorithm/ranges_reverse_copy.h" }
       module ranges_rotate_copy              { private header "__algorithm/ranges_rotate_copy.h" }
+      module ranges_sample                   { private header "__algorithm/ranges_sample.h" }
       module ranges_search                   { private header "__algorithm/ranges_search.h" }
       module ranges_search_n                 { private header "__algorithm/ranges_search_n.h" }
       module ranges_set_difference           { private header "__algorithm/ranges_set_difference.h" }
@@ -385,6 +388,9 @@ module std [system] {
       module ranges_stable_sort              { private header "__algorithm/ranges_stable_sort.h" }
       module ranges_swap_ranges              { private header "__algorithm/ranges_swap_ranges.h" }
       module ranges_transform                { private header "__algorithm/ranges_transform.h" }
+      module uniform_random_bit_generator_adaptor {
+        private header "__algorithm/uniform_random_bit_generator_adaptor.h"
+      }
       module ranges_unique                   { private header "__algorithm/ranges_unique.h" }
       module ranges_unique_copy              { private header "__algorithm/ranges_unique_copy.h" }
       module ranges_upper_bound              { private header "__algorithm/ranges_upper_bound.h" }

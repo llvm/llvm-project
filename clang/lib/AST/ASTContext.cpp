@@ -2485,7 +2485,7 @@ CharUnits ASTContext::getTypeAlignInChars(const Type *T) const {
 }
 
 /// getTypeUnadjustedAlignInChars - Return the ABI-specified alignment of a
-/// type, in characters, before alignment adustments. This method does
+/// type, in characters, before alignment adjustments. This method does
 /// not work on incomplete types.
 CharUnits ASTContext::getTypeUnadjustedAlignInChars(QualType T) const {
   return toCharUnitsFromBits(getTypeUnadjustedAlign(T));

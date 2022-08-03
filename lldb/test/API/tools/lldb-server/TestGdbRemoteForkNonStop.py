@@ -113,6 +113,16 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
         self.resume_one_test(run_order=["parent", "child", "parent", "child"],
                              use_vCont=True, nonstop=True)
 
+    def get_all_output_via_vStdio(self, output_test):
+        # The output may be split into an arbitrary number of messages.
+        # Loop until we have everything. The first message is waiting for us
+        # in the packet queue.
+        output = self._server.get_raw_output_packet()
+        while not output_test(output):
+            self._server.send_packet(b"vStdio")
+            output += self._server.get_raw_output_packet()
+        return output
+
     @add_test_categories(["fork"])
     def test_c_both_nonstop(self):
         lock1 = self.getBuildArtifact("lock1")
@@ -132,13 +142,63 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
             "read packet: $c#00",
             "send packet: $OK#00",
             {"direction": "send", "regex": "%Stop:T.*"},
-            # see the comment in TestNonStop.py, test_stdio
-            "read packet: $vStdio#00",
-            "read packet: $vStdio#00",
-            "send packet: $OK#00",
             ], True)
-        ret = self.expect_gdbremote_sequence()
-        self.assertIn("PID: {}".format(int(parent_pid, 16)).encode(),
-                      ret["O_content"])
-        self.assertIn("PID: {}".format(int(child_pid, 16)).encode(),
-                      ret["O_content"])
+        self.expect_gdbremote_sequence()
+
+        output = self.get_all_output_via_vStdio(
+            lambda output: output.count(b"PID: ") >= 2)
+        self.assertEqual(output.count(b"PID: "), 2)
+        self.assertIn("PID: {}".format(int(parent_pid, 16)).encode(), output)
+        self.assertIn("PID: {}".format(int(child_pid, 16)).encode(), output)
+
+    @add_test_categories(["fork"])
+    def test_vCont_both_nonstop(self):
+        lock1 = self.getBuildArtifact("lock1")
+        lock2 = self.getBuildArtifact("lock2")
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test(["fork", "process:sync:" + lock1, "print-pid",
+                                  "process:sync:" + lock2, "stop"],
+                                 nonstop=True))
+
+        self.test_sequence.add_log_lines([
+            "read packet: $vCont;c:p{}.{};c:p{}.{}#00".format(
+                parent_pid, parent_tid, child_pid, child_tid),
+            "send packet: $OK#00",
+            {"direction": "send", "regex": "%Stop:T.*"},
+            ], True)
+        self.expect_gdbremote_sequence()
+
+        output = self.get_all_output_via_vStdio(
+            lambda output: output.count(b"PID: ") >= 2)
+        self.assertEqual(output.count(b"PID: "), 2)
+        self.assertIn("PID: {}".format(int(parent_pid, 16)).encode(), output)
+        self.assertIn("PID: {}".format(int(child_pid, 16)).encode(), output)
+
+    def vCont_both_nonstop_test(self, vCont_packet):
+        lock1 = self.getBuildArtifact("lock1")
+        lock2 = self.getBuildArtifact("lock2")
+        parent_pid, parent_tid, child_pid, child_tid = (
+            self.start_fork_test(["fork", "process:sync:" + lock1, "print-pid",
+                                  "process:sync:" + lock2, "stop"],
+                                 nonstop=True))
+
+        self.test_sequence.add_log_lines([
+            "read packet: ${}#00".format(vCont_packet),
+            "send packet: $OK#00",
+            {"direction": "send", "regex": "%Stop:T.*"},
+            ], True)
+        self.expect_gdbremote_sequence()
+
+        output = self.get_all_output_via_vStdio(
+            lambda output: output.count(b"PID: ") >= 2)
+        self.assertEqual(output.count(b"PID: "), 2)
+        self.assertIn("PID: {}".format(int(parent_pid, 16)).encode(), output)
+        self.assertIn("PID: {}".format(int(child_pid, 16)).encode(), output)
+
+    @add_test_categories(["fork"])
+    def test_vCont_both_implicit_nonstop(self):
+        self.vCont_both_nonstop_test("vCont;c")
+
+    @add_test_categories(["fork"])
+    def test_vCont_both_minus_one_nonstop(self):
+        self.vCont_both_nonstop_test("vCont;c:p-1.-1")

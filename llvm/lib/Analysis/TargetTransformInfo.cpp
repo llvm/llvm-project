@@ -295,9 +295,9 @@ bool TargetTransformInfo::isHardwareLoopProfitable(
 
 bool TargetTransformInfo::preferPredicateOverEpilogue(
     Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,
-    TargetLibraryInfo *TLI, DominatorTree *DT,
-    LoopVectorizationLegality *LVL) const {
-  return TTIImpl->preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL);
+    TargetLibraryInfo *TLI, DominatorTree *DT, LoopVectorizationLegality *LVL,
+    InterleavedAccessInfo *IAI) const {
+  return TTIImpl->preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL, IAI);
 }
 
 PredicationStyle TargetTransformInfo::emitGetActiveLaneMask() const {
@@ -976,11 +976,17 @@ InstructionCost TargetTransformInfo::getMinMaxReductionCost(
   return Cost;
 }
 
-InstructionCost TargetTransformInfo::getExtendedAddReductionCost(
-    bool IsMLA, bool IsUnsigned, Type *ResTy, VectorType *Ty,
+InstructionCost TargetTransformInfo::getExtendedReductionCost(
+    unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
+    Optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getExtendedReductionCost(Opcode, IsUnsigned, ResTy, Ty, FMF,
+                                           CostKind);
+}
+
+InstructionCost TargetTransformInfo::getMulAccReductionCost(
+    bool IsUnsigned, Type *ResTy, VectorType *Ty,
     TTI::TargetCostKind CostKind) const {
-  return TTIImpl->getExtendedAddReductionCost(IsMLA, IsUnsigned, ResTy, Ty,
-                                              CostKind);
+  return TTIImpl->getMulAccReductionCost(IsUnsigned, ResTy, Ty, CostKind);
 }
 
 InstructionCost

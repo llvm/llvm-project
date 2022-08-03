@@ -24,15 +24,14 @@
 namespace clang {
 namespace dataflow {
 
-StorageLocation &
-DataflowAnalysisContext::getStableStorageLocation(QualType Type) {
+StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
   if (!Type.isNull() &&
       (Type->isStructureOrClassType() || Type->isUnionType())) {
     // FIXME: Explore options to avoid eager initialization of fields as some of
     // them might not be needed for a particular analysis.
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
     for (const FieldDecl *Field : getObjectFields(Type))
-      FieldLocs.insert({Field, &getStableStorageLocation(Field->getType())});
+      FieldLocs.insert({Field, &createStorageLocation(Field->getType())});
     return takeOwnership(
         std::make_unique<AggregateStorageLocation>(Type, std::move(FieldLocs)));
   }
@@ -43,7 +42,7 @@ StorageLocation &
 DataflowAnalysisContext::getStableStorageLocation(const VarDecl &D) {
   if (auto *Loc = getStorageLocation(D))
     return *Loc;
-  auto &Loc = getStableStorageLocation(D.getType());
+  auto &Loc = createStorageLocation(D.getType());
   setStorageLocation(D, Loc);
   return Loc;
 }
@@ -52,7 +51,7 @@ StorageLocation &
 DataflowAnalysisContext::getStableStorageLocation(const Expr &E) {
   if (auto *Loc = getStorageLocation(E))
     return *Loc;
-  auto &Loc = getStableStorageLocation(E.getType());
+  auto &Loc = createStorageLocation(E.getType());
   setStorageLocation(E, Loc);
   return Loc;
 }
@@ -63,7 +62,7 @@ DataflowAnalysisContext::getOrCreateNullPointerValue(QualType PointeeType) {
       PointeeType.isNull() ? PointeeType : PointeeType.getCanonicalType();
   auto Res = NullPointerVals.try_emplace(CanonicalPointeeType, nullptr);
   if (Res.second) {
-    auto &PointeeLoc = getStableStorageLocation(CanonicalPointeeType);
+    auto &PointeeLoc = createStorageLocation(CanonicalPointeeType);
     Res.first->second =
         &takeOwnership(std::make_unique<PointerValue>(PointeeLoc));
   }

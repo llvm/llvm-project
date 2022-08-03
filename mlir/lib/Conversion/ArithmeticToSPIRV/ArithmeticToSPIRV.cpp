@@ -395,8 +395,8 @@ LogicalResult ConstantScalarOpPattern::matchAndRewrite(
     return failure();
 
   Attribute cstAttr = constOp.getValue();
-  if (cstAttr.getType().isa<ShapedType>())
-    cstAttr = cstAttr.cast<DenseElementsAttr>().getSplatValue<Attribute>();
+  if (auto elementsAttr = cstAttr.dyn_cast<DenseElementsAttr>())
+    cstAttr = elementsAttr.getSplatValue<Attribute>();
 
   Type dstType = getTypeConverter()->convertType(srcType);
   if (!dstType)

@@ -175,3 +175,57 @@ vuint64m8_t test_vfclass_v_u64m8_m(vbool8_t mask, vuint64m8_t maskedoff,
                                    vfloat64m8_t op1, size_t vl) {
   return vfclass(mask, maskedoff, op1, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vfclass_v_u32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vfclass.nxv1f32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x float> [[OP1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vfclass_v_u32mf2_tu(vuint32mf2_t merge, vfloat32mf2_t op1, size_t vl) {
+  return vfclass_tu(merge, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfclass_v_u32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vfclass.nxv1f32.i64(<vscale x 1 x i32> undef, <vscale x 1 x float> [[OP1:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vfclass_v_u32mf2_ta(vfloat32mf2_t op1, size_t vl) {
+  return vfclass_ta(op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfclass_v_u32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vfclass.mask.nxv1f32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x float> [[OP1:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vfclass_v_u32mf2_tuma(vbool64_t mask, vuint32mf2_t merge, vfloat32mf2_t op1, size_t vl) {
+  return vfclass_tuma(mask, merge, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfclass_v_u32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vfclass.mask.nxv1f32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x float> [[OP1:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vfclass_v_u32mf2_tumu(vbool64_t mask, vuint32mf2_t merge, vfloat32mf2_t op1, size_t vl) {
+  return vfclass_tumu(mask, merge, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfclass_v_u32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vfclass.mask.nxv1f32.i64(<vscale x 1 x i32> undef, <vscale x 1 x float> [[OP1:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vfclass_v_u32mf2_tama(vbool64_t mask, vfloat32mf2_t op1, size_t vl) {
+  return vfclass_tama(mask, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfclass_v_u32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vfclass.mask.nxv1f32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x float> [[OP1:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vfclass_v_u32mf2_tamu(vbool64_t mask, vuint32mf2_t merge, vfloat32mf2_t op1, size_t vl) {
+  return vfclass_tamu(mask, merge, op1, vl);
+}

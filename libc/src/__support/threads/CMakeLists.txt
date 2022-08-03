@@ -25,6 +25,8 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.stringstream
 )
 
 if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.thread)

@@ -194,18 +194,6 @@ define void @uniform_store_uniform_value(i32* align(4) %addr) {
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
 ; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[ADDR]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4096
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]

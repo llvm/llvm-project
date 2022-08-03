@@ -67,6 +67,11 @@ public:
   }
 
   FunctionPass *createTargetRegisterAllocator(bool) override { return nullptr; }
+  void addCodeGenPrepare() override {
+    addPass(createDXILOpLoweringLegacyPass());
+    addPass(createDXILPrepareModulePass());
+    addPass(createDXILTranslateMetadataPass());
+  }
 };
 
 DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
@@ -91,9 +96,9 @@ bool DirectXTargetMachine::addPassesToEmitFile(
     PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType, bool DisableVerify,
     MachineModuleInfoWrapperPass *MMIWP) {
-  PM.add(createDXILOpLoweringLegacyPass());
-  PM.add(createDXILPrepareModulePass());
-  PM.add(createDXILTranslateMetadataPass());
+  TargetPassConfig *PassConfig = createPassConfig(PM);
+  PassConfig->addCodeGenPrepare();
+
   if (TargetPassConfig::willCompleteCodeGenPipeline()) {
     PM.add(createDXILEmbedderPass());
   }

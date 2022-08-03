@@ -52,7 +52,7 @@ namespace rt_bootstrap {
 
 Expected<std::pair<ExecutorAddr, std::string>>
 ExecutorSharedMemoryMapperService::reserve(uint64_t Size) {
-#if defined(LLVM_ON_UNIX) || defined(_WIN32)
+#if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
 
 #if defined(LLVM_ON_UNIX)
 
@@ -125,7 +125,7 @@ ExecutorSharedMemoryMapperService::reserve(uint64_t Size) {
 
 Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
     ExecutorAddr Reservation, tpctypes::SharedMemoryFinalizeRequest &FR) {
-#if defined(LLVM_ON_UNIX) || defined(_WIN32)
+#if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
 
   ExecutorAddr MinAddr(~0ULL);
 
@@ -207,7 +207,7 @@ Error ExecutorSharedMemoryMapperService::deinitialize(
 
 Error ExecutorSharedMemoryMapperService::release(
     const std::vector<ExecutorAddr> &Bases) {
-#if defined(LLVM_ON_UNIX) || defined(_WIN32)
+#if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
   Error Err = Error::success();
 
   for (auto Base : Bases) {

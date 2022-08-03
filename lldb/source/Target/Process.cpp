@@ -2905,9 +2905,9 @@ void Process::CompleteAttach() {
   ArchSpec process_host_arch = GetSystemArchitecture();
   if (platform_sp) {
     const ArchSpec &target_arch = GetTarget().GetArchitecture();
-    if (target_arch.IsValid() &&
-        !platform_sp->IsCompatibleArchitecture(target_arch, process_host_arch,
-                                               false, nullptr)) {
+    if (target_arch.IsValid() && !platform_sp->IsCompatibleArchitecture(
+                                     target_arch, process_host_arch,
+                                     ArchSpec::CompatibleMatch, nullptr)) {
       ArchSpec platform_arch;
       platform_sp = GetTarget().GetDebugger().GetPlatformList().GetOrCreate(
           target_arch, process_host_arch, &platform_arch);

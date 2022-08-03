@@ -1587,3 +1587,219 @@ vuint64m8_t test_vnmsac_vv_u64m8_m(vbool8_t mask, vuint64m8_t acc, vuint64m8_t o
 vuint64m8_t test_vnmsac_vx_u64m8_m(vbool8_t mask, vuint64m8_t acc, uint64_t op1, vuint64m8_t op2, size_t vl) {
   return vnmsac_vx_u64m8_m(mask, acc, op1, op2, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vnmsac_vv_i32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[VD:%.*]], <vscale x 1 x i32> [[VS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnmsac_vv_i32mf2_tu(vint32mf2_t vd, vint32mf2_t vs1, vint32mf2_t vs2, size_t vl) {
+  return vnmsac_vv_i32mf2_tu(vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vx_i32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.nxv1i32.i32.i64(<vscale x 1 x i32> [[VD:%.*]], i32 [[RS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnmsac_vx_i32mf2_tu(vint32mf2_t vd, int32_t rs1, vint32mf2_t vs2, size_t vl) {
+  return vnmsac_vx_i32mf2_tu(vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vv_u32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[VD:%.*]], <vscale x 1 x i32> [[VS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnmsac_vv_u32mf2_tu(vuint32mf2_t vd, vuint32mf2_t vs1, vuint32mf2_t vs2, size_t vl) {
+  return vnmsac_vv_u32mf2_tu(vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vx_u32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.nxv1i32.i32.i64(<vscale x 1 x i32> [[VD:%.*]], i32 [[RS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnmsac_vx_u32mf2_tu(vuint32mf2_t vd, uint32_t rs1, vuint32mf2_t vs2, size_t vl) {
+  return vnmsac_vx_u32mf2_tu(vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vv_i32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[VD:%.*]], <vscale x 1 x i32> [[VS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnmsac_vv_i32mf2_ta(vint32mf2_t vd, vint32mf2_t vs1, vint32mf2_t vs2, size_t vl) {
+  return vnmsac_vv_i32mf2_ta(vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vx_i32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.nxv1i32.i32.i64(<vscale x 1 x i32> [[VD:%.*]], i32 [[RS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnmsac_vx_i32mf2_ta(vint32mf2_t vd, int32_t rs1, vint32mf2_t vs2, size_t vl) {
+  return vnmsac_vx_i32mf2_ta(vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vv_u32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[VD:%.*]], <vscale x 1 x i32> [[VS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnmsac_vv_u32mf2_ta(vuint32mf2_t vd, vuint32mf2_t vs1, vuint32mf2_t vs2, size_t vl) {
+  return vnmsac_vv_u32mf2_ta(vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vx_u32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.nxv1i32.i32.i64(<vscale x 1 x i32> [[VD:%.*]], i32 [[RS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnmsac_vx_u32mf2_ta(vuint32mf2_t vd, uint32_t rs1, vuint32mf2_t vs2, size_t vl) {
+  return vnmsac_vx_u32mf2_ta(vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vv_i32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[VD:%.*]], <vscale x 1 x i32> [[VS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnmsac_vv_i32mf2_tuma(vbool64_t mask, vint32mf2_t vd, vint32mf2_t vs1, vint32mf2_t vs2, size_t vl) {
+  return vnmsac_vv_i32mf2_tuma(mask, vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vx_i32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[VD:%.*]], i32 [[RS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnmsac_vx_i32mf2_tuma(vbool64_t mask, vint32mf2_t vd, int32_t rs1, vint32mf2_t vs2, size_t vl) {
+  return vnmsac_vx_i32mf2_tuma(mask, vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vv_u32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[VD:%.*]], <vscale x 1 x i32> [[VS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnmsac_vv_u32mf2_tuma(vbool64_t mask, vuint32mf2_t vd, vuint32mf2_t vs1, vuint32mf2_t vs2, size_t vl) {
+  return vnmsac_vv_u32mf2_tuma(mask, vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vx_u32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[VD:%.*]], i32 [[RS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnmsac_vx_u32mf2_tuma(vbool64_t mask, vuint32mf2_t vd, uint32_t rs1, vuint32mf2_t vs2, size_t vl) {
+  return vnmsac_vx_u32mf2_tuma(mask, vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vv_i32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[VD:%.*]], <vscale x 1 x i32> [[VS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnmsac_vv_i32mf2_tumu(vbool64_t mask, vint32mf2_t vd, vint32mf2_t vs1, vint32mf2_t vs2, size_t vl) {
+  return vnmsac_vv_i32mf2_tumu(mask, vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vx_i32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[VD:%.*]], i32 [[RS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnmsac_vx_i32mf2_tumu(vbool64_t mask, vint32mf2_t vd, int32_t rs1, vint32mf2_t vs2, size_t vl) {
+  return vnmsac_vx_i32mf2_tumu(mask, vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vv_u32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[VD:%.*]], <vscale x 1 x i32> [[VS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnmsac_vv_u32mf2_tumu(vbool64_t mask, vuint32mf2_t vd, vuint32mf2_t vs1, vuint32mf2_t vs2, size_t vl) {
+  return vnmsac_vv_u32mf2_tumu(mask, vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vx_u32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[VD:%.*]], i32 [[RS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnmsac_vx_u32mf2_tumu(vbool64_t mask, vuint32mf2_t vd, uint32_t rs1, vuint32mf2_t vs2, size_t vl) {
+  return vnmsac_vx_u32mf2_tumu(mask, vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vv_i32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[VD:%.*]], <vscale x 1 x i32> [[VS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnmsac_vv_i32mf2_tama(vbool64_t mask, vint32mf2_t vd, vint32mf2_t vs1, vint32mf2_t vs2, size_t vl) {
+  return vnmsac_vv_i32mf2_tama(mask, vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vx_i32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[VD:%.*]], i32 [[RS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnmsac_vx_i32mf2_tama(vbool64_t mask, vint32mf2_t vd, int32_t rs1, vint32mf2_t vs2, size_t vl) {
+  return vnmsac_vx_i32mf2_tama(mask, vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vv_u32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[VD:%.*]], <vscale x 1 x i32> [[VS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnmsac_vv_u32mf2_tama(vbool64_t mask, vuint32mf2_t vd, vuint32mf2_t vs1, vuint32mf2_t vs2, size_t vl) {
+  return vnmsac_vv_u32mf2_tama(mask, vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vx_u32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[VD:%.*]], i32 [[RS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnmsac_vx_u32mf2_tama(vbool64_t mask, vuint32mf2_t vd, uint32_t rs1, vuint32mf2_t vs2, size_t vl) {
+  return vnmsac_vx_u32mf2_tama(mask, vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vv_i32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[VD:%.*]], <vscale x 1 x i32> [[VS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnmsac_vv_i32mf2_tamu(vbool64_t mask, vint32mf2_t vd, vint32mf2_t vs1, vint32mf2_t vs2, size_t vl) {
+  return vnmsac_vv_i32mf2_tamu(mask, vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vx_i32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[VD:%.*]], i32 [[RS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnmsac_vx_i32mf2_tamu(vbool64_t mask, vint32mf2_t vd, int32_t rs1, vint32mf2_t vs2, size_t vl) {
+  return vnmsac_vx_i32mf2_tamu(mask, vd, rs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vv_u32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[VD:%.*]], <vscale x 1 x i32> [[VS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnmsac_vv_u32mf2_tamu(vbool64_t mask, vuint32mf2_t vd, vuint32mf2_t vs1, vuint32mf2_t vs2, size_t vl) {
+  return vnmsac_vv_u32mf2_tamu(mask, vd, vs1, vs2, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnmsac_vx_u32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vnmsac.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[VD:%.*]], i32 [[RS1:%.*]], <vscale x 1 x i32> [[VS2:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnmsac_vx_u32mf2_tamu(vbool64_t mask, vuint32mf2_t vd, uint32_t rs1, vuint32mf2_t vs2, size_t vl) {
+  return vnmsac_vx_u32mf2_tamu(mask, vd, rs1, vs2, vl);
+}

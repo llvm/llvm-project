@@ -610,7 +610,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     // If necessary, perform additional analysis.
     if (isModAndRefSet(MR))
       MR = BatchAA.callCapturesBefore(Inst, MemLoc, &DT);
-    switch (clearMust(MR)) {
+    switch (MR) {
     case ModRefInfo::NoModRef:
       // If the call has no effect on the queried pointer, just ignore it.
       continue;

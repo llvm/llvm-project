@@ -10,9 +10,11 @@
 #define _LIBCPP___ALGORITHM_ITERATOR_OPERATIONS_H
 
 #include <__algorithm/iter_swap.h>
+#include <__algorithm/ranges_iterator_concept.h>
 #include <__config>
 #include <__iterator/advance.h>
 #include <__iterator/distance.h>
+#include <__iterator/incrementable_traits.h>
 #include <__iterator/iter_move.h>
 #include <__iterator/iter_swap.h>
 #include <__iterator/iterator_traits.h>
@@ -40,6 +42,12 @@ struct _IterOps<_RangeAlgPolicy> {
   template <class _Iter>
   using __value_type = iter_value_t<_Iter>;
 
+  template <class _Iter>
+  using __iterator_category = ranges::__iterator_concept<_Iter>;
+
+  template <class _Iter>
+  using __difference_type = iter_difference_t<_Iter>;
+
   static constexpr auto advance = ranges::advance;
   static constexpr auto distance = ranges::distance;
   static constexpr auto __iter_move = ranges::iter_move;
@@ -57,6 +65,12 @@ struct _IterOps<_ClassicAlgPolicy> {
 
   template <class _Iter>
   using __value_type = typename iterator_traits<_Iter>::value_type;
+
+  template <class _Iter>
+  using __iterator_category = typename iterator_traits<_Iter>::iterator_category;
+
+  template <class _Iter>
+  using __difference_type = typename iterator_traits<_Iter>::difference_type;
 
   // advance
   template <class _Iter, class _Distance>

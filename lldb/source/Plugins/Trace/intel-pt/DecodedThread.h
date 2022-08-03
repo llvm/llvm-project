@@ -173,8 +173,8 @@ public:
   ///   The trace item index to compare with.
   ///
   /// \return
-  ///   The requested cpu id, or \a llvm::None if not available.
-  llvm::Optional<lldb::cpu_id_t> GetCPUByIndex(uint64_t item_index) const;
+  ///   The requested cpu id, or \a LLDB_INVALID_CPU_ID if not available.
+  lldb::cpu_id_t GetCPUByIndex(uint64_t item_index) const;
 
   /// Get a maximal range of trace items that include the given \p item_index
   /// that have the same TSC value.

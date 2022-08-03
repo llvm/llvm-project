@@ -1735,8 +1735,8 @@ void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
           replaceOneDbgValueForAlloca(DVI, NewAllocaAddress, Builder, Offset);
 }
 
-/// Where possible to salvage debug information for \p I do so
-/// and return True. If not possible mark undef and return False.
+/// Where possible to salvage debug information for \p I do so.
+/// If not possible mark undef.
 void llvm::salvageDebugInfo(Instruction &I) {
   SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   findDbgUsers(DbgUsers, &I);

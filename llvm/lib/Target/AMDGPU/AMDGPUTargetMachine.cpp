@@ -327,6 +327,11 @@ static cl::opt<bool> EnablePromoteKernelArguments(
     cl::desc("Enable promotion of flat kernel pointer arguments to global"),
     cl::Hidden, cl::init(true));
 
+static cl::opt<bool> EnableMaxIlpSchedStrategy(
+    "amdgpu-enable-max-ilp-scheduling-strategy",
+    cl::desc("Enable scheduling strategy to maximize ILP for a single wave."),
+    cl::Hidden, cl::init(false));
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   // Register the target
   RegisterTargetMachine<R600TargetMachine> X(getTheAMDGPUTarget());
@@ -429,6 +434,15 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
 }
 
 static ScheduleDAGInstrs *
+createGCNMaxILPMachineScheduler(MachineSchedContext *C) {
+  ScheduleDAGMILive *DAG =
+      new GCNScheduleDAGMILive(C, std::make_unique<GCNMaxILPSchedStrategy>(C));
+  DAG->addMutation(createIGroupLPDAGMutation());
+  DAG->addMutation(createSchedBarrierDAGMutation());
+  return DAG;
+}
+
+static ScheduleDAGInstrs *
 createIterativeGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   auto DAG = new GCNIterativeScheduler(C,
@@ -466,19 +480,23 @@ GCNMaxOccupancySchedRegistry("gcn-max-occupancy",
                              createGCNMaxOccupancyMachineScheduler);
 
 static MachineSchedRegistry
-IterativeGCNMaxOccupancySchedRegistry("gcn-max-occupancy-experimental",
-  "Run GCN scheduler to maximize occupancy (experimental)",
-  createIterativeGCNMaxOccupancyMachineScheduler);
+    GCNMaxILPSchedRegistry("gcn-max-ilp", "Run GCN scheduler to maximize ilp",
+                           createGCNMaxILPMachineScheduler);
 
-static MachineSchedRegistry
-GCNMinRegSchedRegistry("gcn-minreg",
-  "Run GCN iterative scheduler for minimal register usage (experimental)",
-  createMinRegScheduler);
+static MachineSchedRegistry IterativeGCNMaxOccupancySchedRegistry(
+    "gcn-iterative-max-occupancy-experimental",
+    "Run GCN scheduler to maximize occupancy (experimental)",
+    createIterativeGCNMaxOccupancyMachineScheduler);
 
-static MachineSchedRegistry
-GCNILPSchedRegistry("gcn-ilp",
-  "Run GCN iterative scheduler for ILP scheduling (experimental)",
-  createIterativeILPMachineScheduler);
+static MachineSchedRegistry GCNMinRegSchedRegistry(
+    "gcn-iterative-minreg",
+    "Run GCN iterative scheduler for minimal register usage (experimental)",
+    createMinRegScheduler);
+
+static MachineSchedRegistry GCNILPSchedRegistry(
+    "gcn-iterative-ilp",
+    "Run GCN iterative scheduler for ILP scheduling (experimental)",
+    createIterativeILPMachineScheduler);
 
 static StringRef computeDataLayout(const Triple &TT) {
   if (TT.getArch() == Triple::r600) {
@@ -987,7 +1005,6 @@ void AMDGPUPassConfig::addEarlyCSEOrGVNPass() {
 void AMDGPUPassConfig::addStraightLineScalarOptimizationPasses() {
   addPass(createLICMPass());
   addPass(createSeparateConstOffsetFromGEPPass());
-  addPass(createSpeculativeExecutionPass());
   // ReassociateGEPs exposes more opportunities for SLSR. See
   // the example in reassociate-geps-and-slsr.ll.
   addPass(createStraightLineStrengthReducePass());
@@ -1151,6 +1168,10 @@ ScheduleDAGInstrs *GCNPassConfig::createMachineScheduler(
   const GCNSubtarget &ST = C->MF->getSubtarget<GCNSubtarget>();
   if (ST.enableSIScheduler())
     return createSIMachineScheduler(C);
+
+  if (EnableMaxIlpSchedStrategy)
+    return createGCNMaxILPMachineScheduler(C);
+
   return createGCNMaxOccupancyMachineScheduler(C);
 }
 

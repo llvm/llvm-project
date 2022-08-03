@@ -340,6 +340,17 @@ Parser::parseResourceHandle(const OpAsmDialectInterface *dialect,
   return entry.second;
 }
 
+FailureOr<AsmDialectResourceHandle>
+Parser::parseResourceHandle(Dialect *dialect) {
+  const auto *interface = dyn_cast<OpAsmDialectInterface>(dialect);
+  if (!interface) {
+    return emitError() << "dialect '" << dialect->getNamespace()
+                       << "' does not expect resource handles";
+  }
+  StringRef resourceName;
+  return parseResourceHandle(interface, resourceName);
+}
+
 //===----------------------------------------------------------------------===//
 // Code Completion
 

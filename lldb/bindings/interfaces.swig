@@ -69,6 +69,7 @@
 %include "./interface/SBThreadCollection.i"
 %include "./interface/SBThreadPlan.i"
 %include "./interface/SBTrace.i"
+%include "./interface/SBTraceCursor.i"
 %include "./interface/SBType.i"
 %include "./interface/SBTypeCategory.i"
 %include "./interface/SBTypeEnumMember.i"

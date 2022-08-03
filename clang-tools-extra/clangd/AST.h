@@ -98,22 +98,22 @@ SymbolID getSymbolID(const llvm::StringRef MacroName, const MacroInfo *MI,
 ///
 /// Objective-C classes can have three types of declarations:
 ///
-/// - forward declaration: @class MyClass;
-/// - true declaration (interface definition): @interface MyClass ... @end
-/// - true definition (implementation): @implementation MyClass ... @end
+/// - forward declaration: "@class MyClass;"
+/// - true declaration (interface definition): "@interface MyClass ... @end"
+/// - true definition (implementation): "@implementation MyClass ... @end"
 ///
 /// Objective-C categories are extensions on classes:
 ///
-/// - declaration: @interface MyClass (Ext) ... @end
-/// - definition: @implementation MyClass (Ext) ... @end
+/// - declaration: "@interface MyClass (Ext) ... @end"
+/// - definition: "@implementation MyClass (Ext) ... @end"
 ///
 /// With one special case, a class extension, which is normally used to keep
 /// some declarations internal to a file without exposing them in a header.
 ///
-/// - class extension declaration: @interface MyClass () ... @end
-/// - which really links to class definition: @implementation MyClass ... @end
+/// - class extension declaration: "@interface MyClass () ... @end"
+/// - which really links to class definition: "@implementation MyClass ... @end"
 ///
-/// For Objective-C protocols, e.g. @protocol MyProtocol ... @end this will
+/// For Objective-C protocols, e.g. "@protocol MyProtocol ... @end" this will
 /// return nullptr as protocols don't have an implementation.
 const ObjCImplDecl *getCorrespondingObjCImpl(const ObjCContainerDecl *D);
 

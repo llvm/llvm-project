@@ -6351,6 +6351,24 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     }
   }
 
+  if (N0.getOpcode() == ISD::EXTRACT_SUBVECTOR && N0.hasOneUse() && N1C &&
+      ISD::isExtOpcode(N0.getOperand(0).getOpcode())) {
+    SDValue Ext = N0.getOperand(0);
+    EVT ExtVT = Ext->getValueType(0);
+    SDValue Extendee = Ext->getOperand(0);
+
+    unsigned ScalarWidth = Extendee.getValueType().getScalarSizeInBits();
+    if (N1C->getAPIntValue().isMask(ScalarWidth)) {
+      //    (and (extract_subvector (zext|anyext|sext v) _) iN_mask)
+      // => (extract_subvector (iN_zeroext v))
+      SDValue ZeroExtExtendee =
+          DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), ExtVT, Extendee);
+
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), VT, ZeroExtExtendee,
+                         N0.getOperand(1));
+    }
+  }
+
   // fold (and (masked_gather x)) -> (zext_masked_gather x)
   if (auto *GN0 = dyn_cast<MaskedGatherSDNode>(N0)) {
     EVT MemVT = GN0->getMemoryVT();
@@ -7299,12 +7317,14 @@ static bool matchRotateSub(SDValue Pos, SDValue Neg, unsigned EltSize,
   unsigned MaskLoBits = 0;
   if (IsRotate && isPowerOf2_64(EltSize)) {
     unsigned Bits = Log2_64(EltSize);
-    APInt DemandedBits =
-        APInt::getLowBitsSet(Neg.getScalarValueSizeInBits(), Bits);
-    if (SDValue Inner =
-            TLI.SimplifyMultipleUseDemandedBits(Neg, DemandedBits, DAG)) {
-      Neg = Inner;
-      MaskLoBits = Bits;
+    unsigned NegBits = Neg.getScalarValueSizeInBits();
+    if (NegBits >= Bits) {
+      APInt DemandedBits = APInt::getLowBitsSet(NegBits, Bits);
+      if (SDValue Inner =
+              TLI.SimplifyMultipleUseDemandedBits(Neg, DemandedBits, DAG)) {
+        Neg = Inner;
+        MaskLoBits = Bits;
+      }
     }
   }
 
@@ -7320,11 +7340,13 @@ static bool matchRotateSub(SDValue Pos, SDValue Neg, unsigned EltSize,
   // affect Mask's demanded bits, just replace Pos with Pos'. These operations
   // are redundant for the purpose of the equality.
   if (MaskLoBits) {
-    APInt DemandedBits =
-        APInt::getLowBitsSet(Pos.getScalarValueSizeInBits(), MaskLoBits);
-    if (SDValue Inner =
-            TLI.SimplifyMultipleUseDemandedBits(Pos, DemandedBits, DAG)) {
-      Pos = Inner;
+    unsigned PosBits = Pos.getScalarValueSizeInBits();
+    if (PosBits >= MaskLoBits) {
+      APInt DemandedBits = APInt::getLowBitsSet(PosBits, MaskLoBits);
+      if (SDValue Inner =
+              TLI.SimplifyMultipleUseDemandedBits(Pos, DemandedBits, DAG)) {
+        Pos = Inner;
+      }
     }
   }
 
@@ -19613,6 +19635,23 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
 
       // Failed to find a match in the chain - bail.
       break;
+    }
+
+    // See if we can fill in the missing constant elements as zeros.
+    // TODO: Should we do this for any constant?
+    APInt DemandedZeroElts = APInt::getZero(NumElts);
+    for (unsigned I = 0; I != NumElts; ++I)
+      if (!Ops[I])
+        DemandedZeroElts.setBit(I);
+
+    if (DAG.MaskedVectorIsZero(InVec, DemandedZeroElts)) {
+      SDValue Zero = VT.isInteger() ? DAG.getConstant(0, DL, MaxEltVT)
+                                    : DAG.getConstantFP(0, DL, MaxEltVT);
+      for (unsigned I = 0; I != NumElts; ++I)
+        if (!Ops[I])
+          Ops[I] = Zero;
+
+      return CanonicalizeBuildVector(Ops);
     }
   }
 

@@ -30,11 +30,13 @@ void ConstantOp::getAsmResultNames(
 bool ConstantOp::isBuildableWith(Attribute value, Type type) {
   if (auto arrAttr = value.dyn_cast<ArrayAttr>()) {
     auto complexTy = type.dyn_cast<ComplexType>();
-    if (!complexTy)
+    if (!complexTy || arrAttr.size() != 2)
       return false;
     auto complexEltTy = complexTy.getElementType();
-    return arrAttr.size() == 2 && arrAttr[0].getType() == complexEltTy &&
-           arrAttr[1].getType() == complexEltTy;
+    auto re = arrAttr[0].dyn_cast<FloatAttr>();
+    auto im = arrAttr[1].dyn_cast<FloatAttr>();
+    return re && im && re.getType() == complexEltTy &&
+           im.getType() == complexEltTy;
   }
   return false;
 }
@@ -48,11 +50,14 @@ LogicalResult ConstantOp::verify() {
   }
 
   auto complexEltTy = getType().getElementType();
-  if (complexEltTy != arrayAttr[0].getType() ||
-      complexEltTy != arrayAttr[1].getType()) {
+  auto re = arrayAttr[0].dyn_cast<FloatAttr>();
+  auto im = arrayAttr[1].dyn_cast<FloatAttr>();
+  if (!re || !im)
+    return emitOpError("requires attribute's elements to be float attributes");
+  if (complexEltTy != re.getType() || complexEltTy != im.getType()) {
     return emitOpError()
-           << "requires attribute's element types (" << arrayAttr[0].getType()
-           << ", " << arrayAttr[1].getType()
+           << "requires attribute's element types (" << re.getType() << ", "
+           << im.getType()
            << ") to match the element type of the op's return type ("
            << complexEltTy << ")";
   }

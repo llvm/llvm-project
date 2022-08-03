@@ -1093,6 +1093,10 @@ struct SymbolDetails {
   std::string USR;
 
   SymbolID ID;
+
+  llvm::Optional<Location> declarationRange;
+
+  llvm::Optional<Location> definitionRange;
 };
 llvm::json::Value toJSON(const SymbolDetails &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolDetails &);
@@ -1772,6 +1776,10 @@ struct FoldingRange {
   unsigned startCharacter;
   unsigned endLine = 0;
   unsigned endCharacter;
+
+  const static llvm::StringLiteral REGION_KIND;
+  const static llvm::StringLiteral COMMENT_KIND;
+  const static llvm::StringLiteral IMPORT_KIND;
   std::string kind;
 };
 llvm::json::Value toJSON(const FoldingRange &Range);

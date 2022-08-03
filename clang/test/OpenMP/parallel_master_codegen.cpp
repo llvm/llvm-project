@@ -629,7 +629,8 @@ void parallel_master_allocate() {
 // CHECK29-LABEL: define {{[^@]+}}@_Z22parallel_master_copyinv
 // CHECK29-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK29-NEXT:  entry:
-// CHECK29-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* @a)
+// CHECK29-NEXT:    [[TMP0:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @a)
+// CHECK29-NEXT:    call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @[[GLOB2:[0-9]+]], i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*), i32* [[TMP0]])
 // CHECK29-NEXT:    ret void
 //
 //
@@ -643,33 +644,37 @@ void parallel_master_allocate() {
 // CHECK29-NEXT:    store i32* [[DOTBOUND_TID_]], i32** [[DOTBOUND_TID__ADDR]], align 8
 // CHECK29-NEXT:    store i32* [[A]], i32** [[A_ADDR]], align 8
 // CHECK29-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[A_ADDR]], align 8
-// CHECK29-NEXT:    [[TMP1:%.*]] = ptrtoint i32* [[TMP0]] to i64
-// CHECK29-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], ptrtoint (i32* @a to i64)
-// CHECK29-NEXT:    br i1 [[TMP2]], label [[COPYIN_NOT_MASTER:%.*]], label [[COPYIN_NOT_MASTER_END:%.*]]
+// CHECK29-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @a)
+// CHECK29-NEXT:    [[TMP2:%.*]] = ptrtoint i32* [[TMP0]] to i64
+// CHECK29-NEXT:    [[TMP3:%.*]] = ptrtoint i32* [[TMP1]] to i64
+// CHECK29-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP2]], [[TMP3]]
+// CHECK29-NEXT:    br i1 [[TMP4]], label [[COPYIN_NOT_MASTER:%.*]], label [[COPYIN_NOT_MASTER_END:%.*]]
 // CHECK29:       copyin.not.master:
-// CHECK29-NEXT:    [[TMP3:%.*]] = load i32, i32* [[TMP0]], align 4
-// CHECK29-NEXT:    store i32 [[TMP3]], i32* @a, align 4
+// CHECK29-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP0]], align 4
+// CHECK29-NEXT:    store i32 [[TMP5]], i32* [[TMP1]], align 4
 // CHECK29-NEXT:    br label [[COPYIN_NOT_MASTER_END]]
 // CHECK29:       copyin.not.master.end:
-// CHECK29-NEXT:    [[TMP4:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
-// CHECK29-NEXT:    [[TMP5:%.*]] = load i32, i32* [[TMP4]], align 4
-// CHECK29-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB1:[0-9]+]], i32 [[TMP5]])
 // CHECK29-NEXT:    [[TMP6:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK29-NEXT:    [[TMP7:%.*]] = load i32, i32* [[TMP6]], align 4
-// CHECK29-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_master(%struct.ident_t* @[[GLOB2]], i32 [[TMP7]])
-// CHECK29-NEXT:    [[TMP9:%.*]] = icmp ne i32 [[TMP8]], 0
-// CHECK29-NEXT:    br i1 [[TMP9]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
+// CHECK29-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB1:[0-9]+]], i32 [[TMP7]])
+// CHECK29-NEXT:    [[TMP8:%.*]] = load i32*, i32** [[DOTGLOBAL_TID__ADDR]], align 8
+// CHECK29-NEXT:    [[TMP9:%.*]] = load i32, i32* [[TMP8]], align 4
+// CHECK29-NEXT:    [[TMP10:%.*]] = call i32 @__kmpc_master(%struct.ident_t* @[[GLOB2]], i32 [[TMP9]])
+// CHECK29-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP10]], 0
+// CHECK29-NEXT:    br i1 [[TMP11]], label [[OMP_IF_THEN:%.*]], label [[OMP_IF_END:%.*]]
 // CHECK29:       omp_if.then:
-// CHECK29-NEXT:    [[TMP10:%.*]] = load i32, i32* @a, align 4
-// CHECK29-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP10]], 1
-// CHECK29-NEXT:    store i32 [[INC]], i32* @a, align 4
-// CHECK29-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB2]], i32 [[TMP7]])
+// CHECK29-NEXT:    [[TMP12:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @a)
+// CHECK29-NEXT:    [[TMP13:%.*]] = load i32, i32* [[TMP12]], align 4
+// CHECK29-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP13]], 1
+// CHECK29-NEXT:    store i32 [[INC]], i32* [[TMP12]], align 4
+// CHECK29-NEXT:    call void @__kmpc_end_master(%struct.ident_t* @[[GLOB2]], i32 [[TMP9]])
 // CHECK29-NEXT:    br label [[OMP_IF_END]]
 // CHECK29:       omp_if.end:
 // CHECK29-NEXT:    ret void
 //
 //
 // CHECK29-LABEL: define {{[^@]+}}@_ZTW1a
-// CHECK29-SAME: () #[[ATTR4:[0-9]+]] comdat {
-// CHECK29-NEXT:    ret i32* @a
+// CHECK29-SAME: () #[[ATTR5:[0-9]+]] comdat {
+// CHECK29-NEXT:    [[TMP1:%.*]] = call i32* @llvm.threadlocal.address.p0i32(i32* @a)
+// CHECK29-NEXT:    ret i32* [[TMP1]]
 //
