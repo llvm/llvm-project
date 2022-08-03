@@ -76,7 +76,7 @@ enum TypeCheckKind {
   TCK_DynamicOperation
 };
 
-const char *TypeCheckKinds[] = {
+extern const char *const TypeCheckKinds[] = {
     "load of", "store to", "reference binding to", "member access within",
     "member call on", "constructor call on", "downcast of", "downcast of",
     "upcast of", "cast to virtual base of", "_Nonnull binding to",
