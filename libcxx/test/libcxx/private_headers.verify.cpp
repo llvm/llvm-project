@@ -170,6 +170,7 @@ END-SCRIPT
 #include <__algorithm/ranges_reverse.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_reverse.h'}}
 #include <__algorithm/ranges_reverse_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_reverse_copy.h'}}
 #include <__algorithm/ranges_rotate_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_rotate_copy.h'}}
+#include <__algorithm/ranges_sample.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_sample.h'}}
 #include <__algorithm/ranges_search.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_search.h'}}
 #include <__algorithm/ranges_search_n.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_search_n.h'}}
 #include <__algorithm/ranges_set_difference.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_set_difference.h'}}
@@ -215,6 +216,7 @@ END-SCRIPT
 #include <__algorithm/stable_sort.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/stable_sort.h'}}
 #include <__algorithm/swap_ranges.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/swap_ranges.h'}}
 #include <__algorithm/transform.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/transform.h'}}
+#include <__algorithm/uniform_random_bit_generator_adaptor.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/uniform_random_bit_generator_adaptor.h'}}
 #include <__algorithm/unique.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/unique.h'}}
 #include <__algorithm/unique_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/unique_copy.h'}}
 #include <__algorithm/unwrap_iter.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/unwrap_iter.h'}}
