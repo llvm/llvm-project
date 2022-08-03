@@ -179,7 +179,8 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
   case CHAR8SUPPORT:
     if (LangOpts.Char8) return KS_Enabled;
     if (LangOpts.CPlusPlus20) return KS_Unknown;
-    return KS_Future;
+    if (LangOpts.CPlusPlus) return KS_Future;
+    return KS_Unknown;
   case KEYOBJC:
     // We treat bridge casts as objective-C keywords so we can warn on them
     // in non-arc mode.
