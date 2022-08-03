@@ -212,20 +212,6 @@ if (LIBCXX_ENABLE_SHARED)
   cxx_add_common_build_flags(cxx_shared)
   cxx_set_common_defines(cxx_shared)
 
-  # Link against LLVM libunwind
-  # Note that we do need to link against libunwind directly to ensure that the correct
-  # dependencies are recorded when creating a linker script.
-  # TODO: Look into modifying the linker script creation to recursively consider interface libraries
-  if (LIBCXXABI_USE_LLVM_UNWINDER)
-    if (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY)
-      # libunwind is already included in libc++abi
-    elseif (TARGET unwind_shared OR HAVE_LIBUNWIND)
-      target_link_libraries(cxx_shared PUBLIC unwind_shared)
-    else()
-      target_link_libraries(cxx_shared PUBLIC unwind)
-    endif()
-  endif()
-
   # Link against libc++abi
   if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
     target_link_libraries(cxx_shared PRIVATE libcxx-abi-shared-objects)
@@ -254,8 +240,30 @@ if (LIBCXX_ENABLE_SHARED)
 
   # Generate a linker script in place of a libc++.so symlink.
   if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
-      include(DefineLinkerScript)
-      define_linker_script(cxx_shared)
+    set(link_libraries)
+
+    set(imported_libname "$<TARGET_PROPERTY:libcxx-abi-shared,IMPORTED_LIBNAME>")
+    set(output_name "$<TARGET_PROPERTY:libcxx-abi-shared,OUTPUT_NAME>")
+    string(APPEND link_libraries "${CMAKE_LINK_LIBRARY_FLAG}$<IF:$<BOOL:${imported_libname}>,${imported_libname},${output_name}>")
+
+    # TODO: Move to the same approach as above for the unwind library
+    if (LIBCXXABI_USE_LLVM_UNWINDER)
+      if (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY)
+        # libunwind is already included in libc++abi
+      elseif (TARGET unwind_shared OR HAVE_LIBUNWIND)
+        string(APPEND link_libraries " ${CMAKE_LINK_LIBRARY_FLAG}$<TARGET_PROPERTY:unwind_shared,OUTPUT_NAME>")
+      else()
+        string(APPEND link_libraries " ${CMAKE_LINK_LIBRARY_FLAG}unwind")
+      endif()
+    endif()
+
+    set(linker_script "INPUT($<TARGET_SONAME_FILE_NAME:cxx_shared> ${link_libraries})")
+    add_custom_command(TARGET cxx_shared POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E remove "$<TARGET_LINKER_FILE:cxx_shared>"
+      COMMAND "${CMAKE_COMMAND}" -E echo "${linker_script}" > "$<TARGET_LINKER_FILE:cxx_shared>"
+      COMMENT "Generating linker script: '${linker_script}' as file $<TARGET_LINKER_FILE:cxx_shared>"
+      VERBATIM
+    )
   endif()
 
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
