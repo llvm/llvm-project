@@ -150,11 +150,11 @@ void ACInstrumentation::instrumentCallRecordingBasicBlock(BasicBlock* CurrentBB,
 void ACInstrumentation::instrumentCallRecordingPHIInstructions(BasicBlock* CurrentBB,
                                                                long *NumInstrumentedInstructions) {
   BasicBlock::iterator NextInst(CurrentBB->getFirstNonPHIOrDbg());
-  while(NextInst->getOpcode() == 56 &&
-         (!static_cast<CallInst*>(&*NextInst)->getCalledFunction() ||
-          static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
-          static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate")) {
-    NextInst++;
+  while(NextInst->getOpcode() == 56) {
+    if (static_cast<CallInst*>(&*NextInst)->getCalledFunction() &&
+        (static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
+        static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate"))
+      NextInst++;
   }
   IRBuilder<> InstructionBuilder( &(*NextInst) );
 
@@ -604,10 +604,17 @@ void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
         FunctionName = static_cast<CallInst*>(CurrentInstruction)->getCalledFunction()->getName().str();
       transform(FunctionName.begin(), FunctionName.end(), FunctionName.begin(), ::tolower);
       if(FunctionName.find("markforresult") != std::string::npos) {
-        instrumentCallsForAFAnalysis(static_cast<Instruction*>(static_cast<CallInst*>(CurrentInstruction)->data_operands_begin()->get()),
-                                     CurrentInstruction,
-                                     NumInstrumentedInstructions);
-        *NumInstrumentedInstructions += 1;
+        if(!isa<Constant>(static_cast<CallInst*>(CurrentInstruction)->data_operands_begin()->get())) {
+          instrumentCallsForAFAnalysis(
+              static_cast<Instruction *>(
+                  static_cast<CallInst *>(CurrentInstruction)
+                      ->data_operands_begin()
+                      ->get()),
+              CurrentInstruction, NumInstrumentedInstructions);
+          *NumInstrumentedInstructions += 1;
+        } else {
+          errs() << "Value to be analyzed has been optimized into a constant\n";
+        }
       }
     }
 

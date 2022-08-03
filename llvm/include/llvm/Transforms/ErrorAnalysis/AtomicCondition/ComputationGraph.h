@@ -288,13 +288,13 @@ char *fCGperformPHIResolution(char *PHIInstruction) {
 #endif
 
   // Copying PHI Instruction Register Name
-  const unsigned long RegisterNameLen = (strstr(PHIInstruction, " ") - PHIInstruction);
-  char *ResolvedValue = (char*)malloc ( RegisterNameLen * sizeof (char));
-  strncpy(ResolvedValue, PHIInstruction, RegisterNameLen);
-  ResolvedValue[RegisterNameLen]=0;
+  const unsigned long PhiInstructionLen = strlen(PHIInstruction);
+  char *ResolvedValue = (char*)malloc ( (PhiInstructionLen+1) * sizeof (char));
+  strncpy(ResolvedValue, PHIInstruction, PhiInstructionLen);
+  ResolvedValue[PhiInstructionLen]=0;
 
 #if FAF_DEBUG
-  printf("\tFirst PHI Instruction Register Name:%s\n", ResolvedValue);
+  printf("\tFirst PHI Instruction:%s\n", ResolvedValue);
 #endif
 
   // Setting Basic Block Execution trace pointer to the tail of Basic Block
@@ -368,7 +368,7 @@ char *fCGperformPHIResolution(char *PHIInstruction) {
     printf("\t\tSearching for record of PHI Instruction in PHI Nodes List\n");
 #endif
     CurrPhiNode = CG->PhiNodesListHead;
-    while(CurrPhiNode != NULL && strcmp(CurrPhiNode->PhiInstruction, ResolvedValue) != 0) {
+    while(CurrPhiNode != NULL && strncmp(CurrPhiNode->PhiInstruction, ResolvedValue, strlen(ResolvedValue)) != 0) {
 #if FAF_DEBUG>=2
       printf("\t\t\tPHI Nodes List: Current PHI Instruction Register Name:%s\n", CurrPhiNode->PhiInstruction);
 #endif
@@ -377,6 +377,9 @@ char *fCGperformPHIResolution(char *PHIInstruction) {
 
     // If phi node not found, exit while loop
     if(CurrPhiNode == NULL) {
+#if FAF_DEBUG>=2
+      printf("\t\tPHI Node not found corresponding to %s\n", ResolvedValue);
+#endif
       break;
     }
 
