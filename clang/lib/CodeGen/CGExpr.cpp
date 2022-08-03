@@ -2942,13 +2942,8 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
   // FIXME: While we're emitting a binding from an enclosing scope, all other
   // DeclRefExprs we see should be implicitly treated as if they also refer to
   // an enclosing scope.
-  if (const auto *BD = dyn_cast<BindingDecl>(ND)) {
-    if (E->refersToEnclosingVariableOrCapture()) {
-      auto *FD = LambdaCaptureFields.lookup(BD);
-      return EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
-    }
+  if (const auto *BD = dyn_cast<BindingDecl>(ND))
     return EmitLValue(BD->getBinding());
-  }
 
   // We can form DeclRefExprs naming GUID declarations when reconstituting
   // non-type template parameters into expressions.
