@@ -3904,7 +3904,6 @@ define i1 @cmpxchg_i8_monotonic_monotonic_val1(i8* %ptr, i8 signext %cmp, i8 sig
 ; RV64IA-NEXT:    bnez a5, .LBB48_1
 ; RV64IA-NEXT:  .LBB48_3:
 ; RV64IA-NEXT:    and a0, a2, a4
-; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    xor a0, a1, a0
 ; RV64IA-NEXT:    seqz a0, a0
 ; RV64IA-NEXT:    ret
@@ -4077,7 +4076,6 @@ define i1 @cmpxchg_i16_monotonic_monotonic_val1(i16* %ptr, i16 signext %cmp, i16
 ; RV64IA-NEXT:    bnez a4, .LBB50_1
 ; RV64IA-NEXT:  .LBB50_3:
 ; RV64IA-NEXT:    and a0, a2, a5
-; RV64IA-NEXT:    sext.w a0, a0
 ; RV64IA-NEXT:    xor a0, a1, a0
 ; RV64IA-NEXT:    seqz a0, a0
 ; RV64IA-NEXT:    ret
