@@ -19,8 +19,7 @@ function(_add_capi_test_executable name)
   endif()
 endfunction(_add_capi_test_executable)
 
-# Only enable the ExecutionEngine if the native target is configured in.
-if(TARGET ${LLVM_NATIVE_ARCH})
+if(MLIR_ENABLE_EXECUTION_ENGINE)
   _add_capi_test_executable(mlir-capi-execution-engine-test
     execution_engine.c
   LINK_LIBS PRIVATE

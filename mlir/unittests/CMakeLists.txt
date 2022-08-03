@@ -16,7 +16,6 @@ add_subdirectory(Rewrite)
 add_subdirectory(TableGen)
 add_subdirectory(Transforms)
 
-# The native target may not be enabled when cross compiling.
-if(TARGET ${LLVM_NATIVE_ARCH})
+if(MLIR_ENABLE_EXECUTION_ENGINE)
   add_subdirectory(ExecutionEngine)
 endif()
