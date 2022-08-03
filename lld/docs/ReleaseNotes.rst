@@ -29,14 +29,37 @@ ELF Improvements
 * ``-z pack-relative-relocs`` is now available to support ``DT_RELR`` for glibc 2.36+.
   (`D120701 <https://reviews.llvm.org/D120701>`_)
 * ``--no-fortran-common`` (pre 12.0.0 behavior) is now the default.
+* ``--load-pass-plugin`` has been added to load a new pass manager plugin.
+  (`D120490 <https://reviews.llvm.org/D120490>`_)
+* ``--android-memtag-{mode=,stack,heap}`` have been added to synthesize SHT_NOTE for memory tags on Android.
+  (`D119384 <https://reviews.llvm.org/D119384>`_)
 * ``FORCE_LLD_DIAGNOSTICS_CRASH`` environment variable is now available to force LLD to crash.
   (`D128195 <https://reviews.llvm.org/D128195>`_)
+* ``--wrap`` semantics have been refined.
+  (`rG7288b85cc80f1ce5509aeea860e6b4232cd3ca01 <https://reviews.llvm.org/rG7288b85cc80f1ce5509aeea860e6b4232cd3ca01>`_)
+  (`D118756 <https://reviews.llvm.org/D118756>`_)
+  (`D124056 <https://reviews.llvm.org/D124056>`_)
+* ``--build-id={md5,sha1}`` are now implemented with truncated BLAKE3.
+  (`D121531 <https://reviews.llvm.org/D121531>`_)
+* ``--emit-relocs``: ``.rel[a].eh_frame`` relocation offsets are now adjusted.
+  (`D122459 <https://reviews.llvm.org/D122459>`_)
+* ``--emit-relocs``: fixed missing ``STT_SECTION`` when the first input section is synthetic.
+  (`D122463 <https://reviews.llvm.org/D122463>`_)
+* ``(TYPE=<value>)`` can now be used in linker scripts.
+  (`D118840 <https://reviews.llvm.org/D118840>`_)
+* Local symbol initialization is now performed in parallel.
+  (`D119909 <https://reviews.llvm.org/D119909>`_)
+  (`D120626 <https://reviews.llvm.org/D120626>`_)
 
 Breaking changes
 ----------------
 
+* Archives are now parsed as ``--start-lib`` object files. If a member is neither
+  an ELF relocatable object file nor an LLVM bitcode file, ld.lld will give a warning.
+  (`D119074 <https://reviews.llvm.org/D119074>`_)
 * The GNU ld incompatible ``--no-define-common`` has been removed.
 * The obscure ``-dc``/``-dp`` options have been removed.
+  (`D119108 <https://reviews.llvm.org/D119108>`_)
 * ``-d`` is now ignored.
 * If a prevailing COMDAT group defines STB_WEAK symbol, having a STB_GLOBAL symbol in a non-prevailing group is now rejected with a diagnostic.
   (`D120626 <https://reviews.llvm.org/D120626>`_)
