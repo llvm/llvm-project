@@ -10,6 +10,7 @@
 #include "lldb/API/SBTraceCursor.h"
 #include "Utils.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Target/TraceCursor.h"
 
 using namespace lldb;
 using namespace lldb_private;
