@@ -121,6 +121,10 @@ private:
   /// an async thread e.g. to inject a signal.
   std::string m_continue_packet;
 
+  /// When was the interrupt packet sent. Used to make sure we time out if the
+  /// stub does not respond to interrupt requests.
+  std::chrono::time_point<std::chrono::steady_clock> m_interrupt_endpoint;
+
   /// Number of threads interested in sending.
   uint32_t m_async_count;
 
