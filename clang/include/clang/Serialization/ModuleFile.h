@@ -148,10 +148,6 @@ public:
   /// build this AST file.
   FileID OriginalSourceFileID;
 
-  /// The directory that the PCH was originally created in. Used to
-  /// allow resolving headers even after headers+PCH was moved to a new path.
-  std::string OriginalDir;
-
   std::string ModuleMapPath;
 
   /// Whether this precompiled header is a relocatable PCH file.
