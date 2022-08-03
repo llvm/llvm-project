@@ -617,40 +617,44 @@ shared_ptr(unique_ptr<T, D>) -> shared_ptr<T>;
 template<class T, class U>
     bool operator==(shared_ptr<T> const& a, shared_ptr<U> const& b) noexcept;
 template<class T, class U>
-    bool operator!=(shared_ptr<T> const& a, shared_ptr<U> const& b) noexcept;
+    bool operator!=(shared_ptr<T> const& a, shared_ptr<U> const& b) noexcept;               // removed in C++20
 template<class T, class U>
-    bool operator<(shared_ptr<T> const& a, shared_ptr<U> const& b) noexcept;
+    bool operator<(shared_ptr<T> const& a, shared_ptr<U> const& b) noexcept;                // removed in C++20
 template<class T, class U>
-    bool operator>(shared_ptr<T> const& a, shared_ptr<U> const& b) noexcept;
+    bool operator>(shared_ptr<T> const& a, shared_ptr<U> const& b) noexcept;                // removed in C++20
 template<class T, class U>
-    bool operator<=(shared_ptr<T> const& a, shared_ptr<U> const& b) noexcept;
+    bool operator<=(shared_ptr<T> const& a, shared_ptr<U> const& b) noexcept;               // removed in C++20
 template<class T, class U>
-    bool operator>=(shared_ptr<T> const& a, shared_ptr<U> const& b) noexcept;
+    bool operator>=(shared_ptr<T> const& a, shared_ptr<U> const& b) noexcept;               // removed in C++20
+template<class T, class U>
+    strong_ordering operator<=>(shared_ptr<T> const& a, shared_ptr<U> const& b) noexcept;   // C++20
 
 template <class T>
     bool operator==(const shared_ptr<T>& x, nullptr_t) noexcept;
 template <class T>
-    bool operator==(nullptr_t, const shared_ptr<T>& y) noexcept;
+    bool operator==(nullptr_t, const shared_ptr<T>& y) noexcept;               // removed in C++20
 template <class T>
-    bool operator!=(const shared_ptr<T>& x, nullptr_t) noexcept;
+    bool operator!=(const shared_ptr<T>& x, nullptr_t) noexcept;               // removed in C++20
 template <class T>
-    bool operator!=(nullptr_t, const shared_ptr<T>& y) noexcept;
+    bool operator!=(nullptr_t, const shared_ptr<T>& y) noexcept;               // removed in C++20
 template <class T>
-    bool operator<(const shared_ptr<T>& x, nullptr_t) noexcept;
+    bool operator<(const shared_ptr<T>& x, nullptr_t) noexcept;                // removed in C++20
 template <class T>
-bool operator<(nullptr_t, const shared_ptr<T>& y) noexcept;
+    bool operator<(nullptr_t, const shared_ptr<T>& y) noexcept;                // removed in C++20
 template <class T>
-    bool operator<=(const shared_ptr<T>& x, nullptr_t) noexcept;
+    bool operator<=(const shared_ptr<T>& x, nullptr_t) noexcept;               // removed in C++20
 template <class T>
-    bool operator<=(nullptr_t, const shared_ptr<T>& y) noexcept;
+    bool operator<=(nullptr_t, const shared_ptr<T>& y) noexcept;               // removed in C++20
 template <class T>
-    bool operator>(const shared_ptr<T>& x, nullptr_t) noexcept;
+    bool operator>(const shared_ptr<T>& x, nullptr_t) noexcept;                // removed in C++20
 template <class T>
-    bool operator>(nullptr_t, const shared_ptr<T>& y) noexcept;
+    bool operator>(nullptr_t, const shared_ptr<T>& y) noexcept;                // removed in C++20
 template <class T>
-    bool operator>=(const shared_ptr<T>& x, nullptr_t) noexcept;
+    bool operator>=(const shared_ptr<T>& x, nullptr_t) noexcept;               // removed in C++20
 template <class T>
-    bool operator>=(nullptr_t, const shared_ptr<T>& y) noexcept;
+    bool operator>=(nullptr_t, const shared_ptr<T>& y) noexcept;               // removed in C++20
+template<class T>
+    strong_ordering operator<=>(shared_ptr<T> const& x, nullptr_t) noexcept;   // C++20
 
 // shared_ptr specialized algorithms:
 template<class T> void swap(shared_ptr<T>& a, shared_ptr<T>& b) noexcept;
