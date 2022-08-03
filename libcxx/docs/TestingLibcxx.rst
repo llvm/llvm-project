@@ -37,6 +37,12 @@ whether the required libraries have been built, you can use the
   $ <build>/bin/llvm-lit -sv libcxx/test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
   $ <build>/bin/llvm-lit -sv libcxx/test/std/atomics libcxx/test/std/threads # Test std::thread and std::atomic
 
+.. note::
+  If you used the Bootstrapping build instead of the default runtimes build, the
+  ``cxx-test-depends`` target is instead named ``runtimes-test-depends``, and
+  you will need to prefix ``<build>/runtimes/runtimes-<target>-bins/`` to the
+  paths of all tests.
+
 In the default configuration, the tests are built against headers that form a
 fake installation root of libc++. This installation root has to be updated when
 changes are made to the headers, so you should re-run the ``cxx-test-depends``
