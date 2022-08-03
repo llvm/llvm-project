@@ -78,8 +78,8 @@ constexpr bool test_all() {
   //using std::ranges::move_backward_result;
   using std::ranges::partial_sort_copy_result;
   using std::ranges::partition_copy_result;
-  //using std::ranges::remove_copy_result;
-  //using std::ranges::remove_copy_if_result;
+  using std::ranges::remove_copy_result;
+  using std::ranges::remove_copy_if_result;
   using std::ranges::reverse_copy_result;
   using std::ranges::rotate_copy_result;
   using std::ranges::set_difference_result;
@@ -146,8 +146,8 @@ constexpr bool test_all() {
         std::ranges::transform, in, in2, out_transform.begin(), binary_pred);
   }
   dangling_1st(std::ranges::generate, in, gen);
-  //dangling_1st<remove_copy_result<dangling, int*>>(std::ranges::remove_copy, in, out, x);
-  //dangling_1st<remove_copy_if_result<dangling, int*>>(std::ranges::remove_copy_if, in, out, unary_pred);
+  dangling_1st<remove_copy_result<dangling, int*>>(std::ranges::remove_copy, in, out, x);
+  dangling_1st<remove_copy_if_result<dangling, int*>>(std::ranges::remove_copy_if, in, out, unary_pred);
   dangling_1st(std::ranges::replace, in, x, x);
   dangling_1st(std::ranges::replace_if, in, std::identity{}, x);
   //dangling_1st(std::ranges::replace_copy, in, out, x, x);
