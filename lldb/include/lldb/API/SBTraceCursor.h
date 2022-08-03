@@ -12,7 +12,6 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBExecutionContext.h"
-#include "lldb/Target/TraceCursor.h"
 
 namespace lldb {
 
