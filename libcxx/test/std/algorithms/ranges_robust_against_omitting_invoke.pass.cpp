@@ -129,8 +129,8 @@ constexpr bool test_all() {
     test(std::ranges::transform, in, out_transform.begin(), &Foo::unary_pred, &Bar::val);
   }
   // Whether `ranges::generate{,_n}` invokes `gen` via `std::invoke` is not observable.
-  //test(std::ranges::remove_copy, in, out, x, &Bar::val);
-  //test(std::ranges::remove_copy_if, in, out, &Foo::unary_pred, &Bar::val);
+  test(std::ranges::remove_copy, in, out, x, &Bar::val);
+  test(std::ranges::remove_copy_if, in, out, &Foo::unary_pred, &Bar::val);
   // `replace*` algorithms only use the projection to compare the elements, not to write them.
   test(std::ranges::replace, in, x, a, &Bar::val);
   test(std::ranges::replace_if, in, &Foo::unary_pred, a, &Bar::val);
