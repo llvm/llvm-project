@@ -82,14 +82,14 @@ class TestStopOnSharedlibraryEvents(TestBase):
             process.Continue()
             self.assertState(process.GetState(), lldb.eStateStopped, "We didn't stop for the load")
             self.assertEqual(backstop_bkpt_2.GetHitCount(), 0, "Hit our backstop breakpoint")
-            self.assertEqual(thread.stop_reason, lldb.eStopReasonBreakpoint, "We attributed the stop to the breakpoint")
+            self.assertStopReason(thread.stop_reason, lldb.eStopReasonBreakpoint, "We attributed the stop to the breakpoint")
             self.assertEqual(load_bkpt.GetHitCount(), 1, "We hit our breakpoint at the load address")
         else:
             bkpt_modifier(load_bkpt)
             process.Continue()
             self.assertState(process.GetState(), lldb.eStateStopped, "We didn't stop")
             self.assertTrue(thread.IsValid(), "Our thread was no longer valid.")
-            self.assertEqual(thread.stop_reason, lldb.eStopReasonBreakpoint, "We didn't hit some breakpoint")
+            self.assertStopReason(thread.stop_reason, lldb.eStopReasonBreakpoint, "We didn't hit some breakpoint")
             self.assertEqual(backstop_bkpt_2.GetHitCount(), 1, "We continued to the right breakpoint")
 
         

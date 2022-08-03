@@ -32,7 +32,7 @@ class TestContinueToBkpts(TestBase):
         for elem in stop_list:
             command += " -b {0}".format(elem)
         self.expect(command)
-        self.assertEqual(self.thread.stop_reason, lldb.eStopReasonBreakpoint, "Hit a breakpoint")
+        self.assertStopReason(self.thread.stop_reason, lldb.eStopReasonBreakpoint, "Hit a breakpoint")
         self.assertEqual(self.thread.GetStopReasonDataAtIndex(0), bkpt_to_hit, "Hit the right breakpoint")
         if loc_to_hit != 0:
             self.assertEqual(self.thread.GetStopReasonDataAtIndex(1), loc_to_hit, "Hit the right location")

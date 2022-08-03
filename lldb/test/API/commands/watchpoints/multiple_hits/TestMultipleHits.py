@@ -45,5 +45,5 @@ class MultipleHitsTestCase(TestBase):
 
         process.Continue();
         self.assertState(process.GetState(), lldb.eStateStopped)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonWatchpoint)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonWatchpoint)
 

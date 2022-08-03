@@ -2474,6 +2474,14 @@ FileCheck output:
                 lldbutil.state_type_to_str(second), second)
             self.fail(self._formatMessage(msg, error))
 
+    """Assert two stop reasons are equal"""
+    def assertStopReason(self, first, second, msg=None):
+        if first != second:
+            error = "{} ({}) != {} ({})".format(
+                lldbutil.stop_reason_to_str(first), first,
+                lldbutil.stop_reason_to_str(second), second)
+            self.fail(self._formatMessage(msg, error))
+
     def createTestTarget(self, file_path=None, msg=None,
                          load_dependent_modules=True):
         """

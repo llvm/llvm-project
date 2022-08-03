@@ -77,7 +77,7 @@ class ChangeProcessGroupTestCase(TestBase):
 
         # step over the setpgid() call
         thread.StepOver()
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         # verify that the process group has been set correctly
         # this also checks that we are still in full control of the child

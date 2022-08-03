@@ -266,6 +266,10 @@ def stop_reason_to_str(enum):
         return "plancomplete"
     elif enum == lldb.eStopReasonThreadExiting:
         return "threadexiting"
+    elif enum == lldb.eStopReasonInstrumentation:
+        return "instrumentation"
+    elif enum == lldb.eStopReasonProcessorTrace:
+        return "processortrace"
     else:
         raise Exception("Unknown StopReason enum")
 
