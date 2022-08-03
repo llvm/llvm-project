@@ -125,14 +125,14 @@ llvm::Expected<std::vector<
 runDataflowAnalysis(
     const ControlFlowContext &CFCtx, AnalysisT &Analysis,
     const Environment &InitEnv,
-    std::function<void(const Stmt *, const DataflowAnalysisState<
-                                         typename AnalysisT::Lattice> &)>
+    std::function<void(const CFGStmt &, const DataflowAnalysisState<
+                                            typename AnalysisT::Lattice> &)>
         PostVisitStmt = nullptr) {
-  std::function<void(const Stmt *, const TypeErasedDataflowAnalysisState &)>
+  std::function<void(const CFGStmt &, const TypeErasedDataflowAnalysisState &)>
       PostVisitStmtClosure = nullptr;
   if (PostVisitStmt != nullptr) {
     PostVisitStmtClosure = [&PostVisitStmt](
-                               const Stmt *Stmt,
+                               const CFGStmt &Stmt,
                                const TypeErasedDataflowAnalysisState &State) {
       auto *Lattice =
           llvm::any_cast<typename AnalysisT::Lattice>(&State.Lattice.Value);

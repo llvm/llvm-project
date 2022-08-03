@@ -59,10 +59,11 @@ analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx) {
       BlockToOutputState = dataflow::runDataflowAnalysis(
           *Context, Analysis, Env,
           [&ASTCtx, &Diagnoser, &Diagnostics](
-              const Stmt *Stmt,
+              const CFGStmt &Stmt,
               const DataflowAnalysisState<UncheckedOptionalAccessModel::Lattice>
                   &State) mutable {
-            auto StmtDiagnostics = Diagnoser.diagnose(ASTCtx, Stmt, State.Env);
+            auto StmtDiagnostics =
+                Diagnoser.diagnose(ASTCtx, Stmt.getStmt(), State.Env);
             llvm::move(StmtDiagnostics, std::back_inserter(Diagnostics));
           });
   if (!BlockToOutputState)
