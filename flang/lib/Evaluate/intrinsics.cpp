@@ -749,6 +749,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"ncopies", AnyInt, Rank::scalar}},
         SameType, Rank::rankPlus1, IntrinsicClass::transformationalFunction},
     {"sqrt", {{"x", SameFloating}}, SameFloating},
+    {"stopped_images", {OptionalTEAM, SizeDefaultKIND}, KINDInt, Rank::vector,
+        IntrinsicClass::transformationalFunction},
     {"storage_size", {{"a", AnyData, Rank::anyOrAssumedRank}, SizeDefaultKIND},
         KINDInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"sum", {{"array", SameNumeric, Rank::array}, RequiredDIM, OptionalMASK},
@@ -840,8 +842,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 };
 
 // TODO: Coarray intrinsic functions
-//   LCOBOUND, UCOBOUND, IMAGE_INDEX,
-//   STOPPED_IMAGES, COSHAPE
+//   LCOBOUND, UCOBOUND, IMAGE_INDEX, COSHAPE
 // TODO: Non-standard intrinsic functions
 //  LSHIFT, RSHIFT, SHIFT, ZEXT, IZEXT,
 //  COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT,
