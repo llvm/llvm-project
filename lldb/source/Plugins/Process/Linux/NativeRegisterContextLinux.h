@@ -22,13 +22,19 @@ class NativeThreadLinux;
 class NativeRegisterContextLinux
     : public virtual NativeRegisterContextRegisterInfo {
 public:
-  // This function is implemented in the NativeRegisterContextLinux_* subclasses
-  // to create a new instance of the host specific NativeRegisterContextLinux.
-  // The implementations can't collide as only one NativeRegisterContextLinux_*
-  // variant should be compiled into the final executable.
+  // These static methods are implemented individual
+  // NativeRegisterContextLinux_* subclasses.  The implementations can't collide
+  // as only one NativeRegisterContextLinux_* variant should be compiled into
+  // the final executable.
+
+  // Return a NativeRegisterContextLinux instance suitable for debugging the
+  // given thread.
   static std::unique_ptr<NativeRegisterContextLinux>
   CreateHostNativeRegisterContextLinux(const ArchSpec &target_arch,
                                        NativeThreadLinux &native_thread);
+
+  // Determine the architecture of the thread given by its ID.
+  static llvm::Expected<ArchSpec> DetermineArchitecture(lldb::tid_t tid);
 
   // Invalidates cached values in register context data structures
   virtual void InvalidateAllRegisters(){}
@@ -125,6 +131,11 @@ protected:
 
   virtual Status DoWriteRegisterValue(uint32_t offset, const char *reg_name,
                                       const RegisterValue &value);
+
+  // Determine the architecture via GPR size, as reported by
+  // PTRACE_GETREGSET(NT_PRSTATUS).
+  static llvm::Expected<ArchSpec>
+  DetermineArchitectureViaGPR(lldb::tid_t tid, size_t gpr64_size);
 };
 
 } // namespace process_linux

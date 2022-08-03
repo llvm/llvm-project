@@ -9,7 +9,6 @@
 #if defined(__i386__) || defined(__x86_64__)
 
 #include "NativeRegisterContextLinux_x86_64.h"
-
 #include "Plugins/Process/Linux/NativeThreadLinux.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
@@ -253,6 +252,12 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     const ArchSpec &target_arch, NativeThreadLinux &native_thread) {
   return std::unique_ptr<NativeRegisterContextLinux>(
       new NativeRegisterContextLinux_x86_64(target_arch, native_thread));
+}
+
+llvm::Expected<ArchSpec>
+NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
+  return DetermineArchitectureViaGPR(
+      tid, RegisterContextLinux_x86_64::GetGPRSizeStatic());
 }
 
 // NativeRegisterContextLinux_x86_64 members.

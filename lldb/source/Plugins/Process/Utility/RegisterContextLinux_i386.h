@@ -15,7 +15,8 @@ class RegisterContextLinux_i386 : public lldb_private::RegisterInfoInterface {
 public:
   RegisterContextLinux_i386(const lldb_private::ArchSpec &target_arch);
 
-  size_t GetGPRSize() const override;
+  static size_t GetGPRSizeStatic();
+  size_t GetGPRSize() const override { return GetGPRSizeStatic(); }
 
   const lldb_private::RegisterInfo *GetRegisterInfo() const override;
 
