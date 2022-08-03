@@ -14,6 +14,7 @@
 // ensure that all result alias declarations are defined
 
 #include <algorithm>
+#include <memory>
 #include <type_traits>
 
 using namespace std::ranges;
