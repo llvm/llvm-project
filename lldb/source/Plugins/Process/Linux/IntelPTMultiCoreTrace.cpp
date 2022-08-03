@@ -29,7 +29,7 @@ static Error IncludePerfEventParanoidMessageInError(Error &&error) {
   return createStringError(
       inconvertibleErrorCode(),
       "%s\nYou might need to rerun as sudo or to set "
-      "/proc/sys/kernel/perf_event_paranoid to a value of 0 or -1.",
+      "/proc/sys/kernel/perf_event_paranoid to a value of 0 or -1. You can use `sudo sysctl -w kernel.perf_event_paranoid=-1` for that.",
       toString(std::move(error)).c_str());
 }
 
