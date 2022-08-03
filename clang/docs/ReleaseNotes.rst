@@ -56,7 +56,7 @@ Bug Fixes
   destructor names were incorrectly accepted on template classes.
 - Improve compile-times with large dynamic array allocations with trivial
   constructors. This fixes
-  `Issue 56774<https://github.com/llvm/llvm-project/issues/56774>`_.
+  `Issue 56774 <https://github.com/llvm/llvm-project/issues/56774>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
