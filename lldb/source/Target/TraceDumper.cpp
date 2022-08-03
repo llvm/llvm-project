@@ -304,14 +304,14 @@ TraceDumper::TraceDumper(lldb::TraceCursorSP cursor_sp, Stream &s,
   if (m_options.id)
     m_cursor_sp->GoToId(*m_options.id);
   else if (m_options.forwards)
-    m_cursor_sp->Seek(0, TraceCursor::SeekType::Beginning);
+    m_cursor_sp->Seek(0, lldb::eTraceCursorSeekTypeBeginning);
   else
-    m_cursor_sp->Seek(0, TraceCursor::SeekType::End);
+    m_cursor_sp->Seek(0, lldb::eTraceCursorSeekTypeEnd);
 
   m_cursor_sp->SetForwards(m_options.forwards);
   if (m_options.skip) {
     m_cursor_sp->Seek((m_options.forwards ? 1 : -1) * *m_options.skip,
-                      TraceCursor::SeekType::Current);
+                      lldb::eTraceCursorSeekTypeCurrent);
   }
 }
 

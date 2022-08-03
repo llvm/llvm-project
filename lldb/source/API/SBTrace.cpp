@@ -43,6 +43,27 @@ SBTrace SBTrace::LoadTraceFromFile(SBError &error, SBDebugger &debugger,
   return SBTrace(trace_or_err.get());
 }
 
+SBTraceCursor SBTrace::CreateNewCursor(SBError &error, SBThread &thread) {
+  LLDB_INSTRUMENT_VA(this, error, thread);
+
+  if (!m_opaque_sp) {
+    error.SetErrorString("error: invalid trace");
+    return SBTraceCursor();
+  }
+  if (!thread.get()) {
+    error.SetErrorString("error: invalid thread");
+    return SBTraceCursor();
+  }
+
+  if (llvm::Expected<lldb::TraceCursorSP> trace_cursor_sp =
+          m_opaque_sp->CreateNewCursor(*thread.get())) {
+    return SBTraceCursor(std::move(*trace_cursor_sp));
+  } else {
+    error.SetErrorString(llvm::toString(trace_cursor_sp.takeError()).c_str());
+    return SBTraceCursor();
+  }
+}
+
 SBFileSpec SBTrace::SaveToDisk(SBError &error, const SBFileSpec &bundle_dir,
                                bool compact) {
   LLDB_INSTRUMENT_VA(this, error, bundle_dir, compact);

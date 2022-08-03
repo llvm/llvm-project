@@ -130,7 +130,7 @@ TraceHTR::TraceHTR(Thread &thread, TraceCursor &cursor)
 
   // Move cursor to the first instruction in the trace
   cursor.SetForwards(true);
-  cursor.Seek(0, TraceCursor::SeekType::Beginning);
+  cursor.Seek(0, lldb::eTraceCursorSeekTypeBeginning);
 
   // TODO: fix after persona0220's patch on a new way to access instruction
   // kinds
