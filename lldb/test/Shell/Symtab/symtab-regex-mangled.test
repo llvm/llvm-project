@@ -1,7 +1,6 @@
 # RUN: yaml2obj %S/Inputs/symbols.yaml -o %t
-#
 
-# RUN: lldb-test symtab --find-symbols-by-regex='.*some.*' --mangling-preference=mangled %t | Filecheck %s
+# RUN: lldb-test symtab --find-symbols-by-regex='.*some.*' --mangling-preference=mangled %t | FileCheck %s
 # CHECK: _Z8someFunciii
 # CHECK: _Z8someFuncci
 # CHECK: _Z13someOtherFuncv
