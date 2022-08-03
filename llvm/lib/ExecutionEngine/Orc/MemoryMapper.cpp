@@ -361,8 +361,8 @@ void SharedMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
 #elif defined(_WIN32)
 
       if (!UnmapViewOfFile(Reservations[Base].LocalAddr))
-        joinErrors(std::move(Err),
-                   errorCodeToError(mapWindowsError(GetLastError())));
+        Err = joinErrors(std::move(Err),
+                         errorCodeToError(mapWindowsError(GetLastError())));
 
 #endif
 
