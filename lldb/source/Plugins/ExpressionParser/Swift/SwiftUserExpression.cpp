@@ -86,7 +86,7 @@ void SwiftUserExpression::WillStartExecuting() {
 
 void SwiftUserExpression::DidFinishExecuting() {
   if (auto process = m_jit_process_wp.lock()) {
-    if (auto swift_runtime = SwiftLanguageRuntime::Get(process))
+    if (auto *swift_runtime = SwiftLanguageRuntime::Get(process))
       swift_runtime->DidFinishExecutingUserExpression(
           m_runs_in_playground_or_repl);
     else
