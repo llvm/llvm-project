@@ -1344,6 +1344,13 @@ bool SelectionDAGBuilder::handleDebugValue(ArrayRef<const Value *> Values,
       continue;
     }
 
+    // Look through IntToPtr constants.
+    if (auto *CE = dyn_cast<ConstantExpr>(V))
+      if (CE->getOpcode() == Instruction::IntToPtr) {
+        LocationOps.emplace_back(SDDbgOperand::fromConst(CE->getOperand(0)));
+        continue;
+      }
+
     // If the Value is a frame index, we can create a FrameIndex debug value
     // without relying on the DAG at all.
     if (const AllocaInst *AI = dyn_cast<AllocaInst>(V)) {
@@ -7176,6 +7183,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     EVT PtrVT = Ptr.getValueType();
     setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr,
                              DAG.getZExtOrTrunc(Const, sdl, PtrVT)));
+    return;
+  }
+  case Intrinsic::threadlocal_address: {
+    setValue(&I, getValue(I.getOperand(0)));
     return;
   }
   case Intrinsic::get_active_lane_mask: {

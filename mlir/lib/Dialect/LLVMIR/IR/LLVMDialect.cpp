@@ -2409,10 +2409,15 @@ LogicalResult LLVM::ConstantOp::verify() {
     }
 
     auto arrayAttr = getValue().dyn_cast<ArrayAttr>();
-    if (!arrayAttr || arrayAttr.size() != 2 ||
-        arrayAttr[0].getType() != arrayAttr[1].getType()) {
+    if (!arrayAttr || arrayAttr.size() != 2) {
       return emitOpError() << "expected array attribute with two elements, "
                               "representing a complex constant";
+    }
+    auto re = arrayAttr[0].dyn_cast<TypedAttr>();
+    auto im = arrayAttr[1].dyn_cast<TypedAttr>();
+    if (!re || !im || re.getType() != im.getType()) {
+      return emitOpError()
+             << "expected array attribute with two elements of the same type";
     }
 
     Type elementType = structType.getBody()[0];
@@ -2976,12 +2981,9 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
 
   // Get the pointer to the first character in the global string.
   Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
-  Value cst0 = builder.create<LLVM::ConstantOp>(
-      loc, IntegerType::get(ctx, 64),
-      builder.getIntegerAttr(builder.getIndexType(), 0));
   return builder.create<LLVM::GEPOp>(
       loc, LLVM::LLVMPointerType::get(IntegerType::get(ctx, 8)), globalPtr,
-      ValueRange{cst0, cst0});
+      ArrayRef<GEPArg>{0, 0});
 }
 
 bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {

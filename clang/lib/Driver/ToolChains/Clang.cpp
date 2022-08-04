@@ -5986,8 +5986,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   } else if (IsOpenMPDevice) {
     // When compiling for the OpenMP device we want protected visibility by
-    // default. This prevents the device from accidenally preempting code on the
-    // host, makes the system more robust, and improves performance.
+    // default. This prevents the device from accidentally preempting code on
+    // the host, makes the system more robust, and improves performance.
     CmdArgs.push_back("-fvisibility");
     CmdArgs.push_back("protected");
   }
@@ -6595,7 +6595,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // support by default, or just assume that all languages do.
   bool HaveModules =
       Std && (Std->containsValue("c++2a") || Std->containsValue("c++20") ||
-              Std->containsValue("c++latest"));
+              Std->containsValue("c++2b") || Std->containsValue("c++latest"));
   RenderModulesOptions(C, D, Args, Input, Output, CmdArgs, HaveModules);
 
   if (Args.hasFlag(options::OPT_fpch_validate_input_files_content,

@@ -67,7 +67,7 @@ struct MapComponentInfoTy {
 // components are dynamically decided, so we utilize C++ STL vector
 // implementation here.
 struct MapperComponentsTy {
-  std::vector<MapComponentInfoTy> Components;
+  llvm::SmallVector<MapComponentInfoTy> Components;
   int32_t size() { return Components.size(); }
 };
 

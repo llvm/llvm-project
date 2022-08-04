@@ -155,6 +155,9 @@ add_subdirectory(tools/mlir-tblgen)
 add_subdirectory(tools/mlir-linalg-ods-gen)
 add_subdirectory(tools/mlir-pdll)
 
+set(MLIR_TABLEGEN_EXE "${MLIR_TABLEGEN_EXE}" CACHE INTERNAL "")
+set(MLIR_TABLEGEN_TARGET "${MLIR_TABLEGEN_TARGET}" CACHE INTERNAL "")
+
 add_subdirectory(include/mlir)
 add_subdirectory(lib)
 # C API needs all dialects for registration, but should be built before tests.

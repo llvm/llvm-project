@@ -373,6 +373,10 @@ def ConvertGpuOpsToROCDLOps : Pass<"convert-gpu-to-rocdl", "gpu::GPUModuleOp"> {
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
            "Bitwidth of the index type, 0 to use size of machine word">,
+    Option<"useBarePtrCallConv", "use-bare-ptr-memref-call-conv", "bool",
+           /*default=*/"false",
+           "Replace memref arguments in GPU functions with bare pointers."
+           "All memrefs must have static shape">,
     Option<"runtime", "runtime", "::mlir::gpu::amd::Runtime",
           "::mlir::gpu::amd::Runtime::Unknown",
           "Runtime code will be run on (default is Unknown, can also use HIP or OpenCl)",
@@ -615,8 +619,9 @@ def ReconcileUnrealizedCasts : Pass<"reconcile-unrealized-casts"> {
     ```
     %0 = "producer.op"() : () -> !type.A
     %1 = unrealized_conversion_cast %0 : !type.A to !type.B
-    %2 = unrealized_conversion_cast %1 : !type.B to !type.A
-    "consumer.op"(%2) : (!type.A) -> ()
+    %2 = unrealized_conversion_cast %1 : !type.B to !type.C
+    %3 = unrealized_conversion_cast %2 : !type.C to !type.A
+    "consumer.op"(%3) : (!type.A) -> ()
     ```
 
     Such situations appear when the consumer operation is converted by one pass

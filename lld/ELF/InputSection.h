@@ -333,7 +333,7 @@ public:
 
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
-  SmallVector<EhSectionPiece, 0> pieces;
+  SmallVector<EhSectionPiece, 0> cies, fdes;
 
   SyntheticSection *getParent() const;
   uint64_t getParentOffset(uint64_t offset) const;
@@ -424,6 +424,7 @@ inline bool isDebugSection(const InputSectionBase &sec) {
 
 // The list of all input sections.
 extern SmallVector<InputSectionBase *, 0> inputSections;
+extern SmallVector<EhInputSection *, 0> ehInputSections;
 
 // The set of TOC entries (.toc + addend) for which we should not apply
 // toc-indirect to toc-relative relaxation. const Symbol * refers to the

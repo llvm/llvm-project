@@ -3625,7 +3625,7 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    bne a3, a4, .LBB46_7
 ; CHECK-NEXT:  # %bb.3: # %entry
-; CHECK-NEXT:    bne s1, a1, .LBB46_8
+; CHECK-NEXT:    bnez s1, .LBB46_8
 ; CHECK-NEXT:  .LBB46_4: # %entry
 ; CHECK-NEXT:    beq s1, a4, .LBB46_6
 ; CHECK-NEXT:  .LBB46_5: # %entry
@@ -3639,7 +3639,7 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB46_7: # %entry
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    beq s1, a1, .LBB46_4
+; CHECK-NEXT:    beqz s1, .LBB46_4
 ; CHECK-NEXT:  .LBB46_8: # %entry
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    bne s1, a4, .LBB46_5
@@ -3893,7 +3893,7 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    bne a3, a4, .LBB49_7
 ; CHECK-NEXT:  # %bb.3: # %entry
-; CHECK-NEXT:    bne s1, a1, .LBB49_8
+; CHECK-NEXT:    bnez s1, .LBB49_8
 ; CHECK-NEXT:  .LBB49_4: # %entry
 ; CHECK-NEXT:    beq s1, a4, .LBB49_6
 ; CHECK-NEXT:  .LBB49_5: # %entry
@@ -3907,7 +3907,7 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB49_7: # %entry
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    beq s1, a1, .LBB49_4
+; CHECK-NEXT:    beqz s1, .LBB49_4
 ; CHECK-NEXT:  .LBB49_8: # %entry
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    bne s1, a4, .LBB49_5
@@ -4165,7 +4165,7 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    bne a3, a4, .LBB52_7
 ; CHECK-NEXT:  # %bb.3: # %entry
-; CHECK-NEXT:    bne s1, a1, .LBB52_8
+; CHECK-NEXT:    bnez s1, .LBB52_8
 ; CHECK-NEXT:  .LBB52_4: # %entry
 ; CHECK-NEXT:    beq s1, a4, .LBB52_6
 ; CHECK-NEXT:  .LBB52_5: # %entry
@@ -4179,7 +4179,7 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB52_7: # %entry
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:    beq s1, a1, .LBB52_4
+; CHECK-NEXT:    beqz s1, .LBB52_4
 ; CHECK-NEXT:  .LBB52_8: # %entry
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    bne s1, a4, .LBB52_5

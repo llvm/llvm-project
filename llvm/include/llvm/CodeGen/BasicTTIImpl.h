@@ -603,8 +603,9 @@ public:
   bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                                    AssumptionCache &AC, TargetLibraryInfo *TLI,
                                    DominatorTree *DT,
-                                   LoopVectorizationLegality *LVL) {
-    return BaseT::preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL);
+                                   LoopVectorizationLegality *LVL,
+                                   InterleavedAccessInfo *IAI) {
+    return BaseT::preferPredicateOverEpilogue(L, LI, SE, AC, TLI, DT, LVL, IAI);
   }
 
   PredicationStyle emitGetActiveLaneMask() {
@@ -2318,25 +2319,38 @@ public:
            thisT()->getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
   }
 
-  InstructionCost getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
-                                              Type *ResTy, VectorType *Ty,
-                                              TTI::TargetCostKind CostKind) {
+  InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
+                                           Type *ResTy, VectorType *Ty,
+                                           Optional<FastMathFlags> FMF,
+                                           TTI::TargetCostKind CostKind) {
     // Without any native support, this is equivalent to the cost of
-    // vecreduce.add(ext) or if IsMLA vecreduce.add(mul(ext, ext))
+    // vecreduce.op(ext).
     VectorType *ExtTy = VectorType::get(ResTy, Ty);
-    InstructionCost RedCost = thisT()->getArithmeticReductionCost(
-        Instruction::Add, ExtTy, None, CostKind);
-    InstructionCost MulCost = 0;
+    InstructionCost RedCost =
+        thisT()->getArithmeticReductionCost(Opcode, ExtTy, FMF, CostKind);
     InstructionCost ExtCost = thisT()->getCastInstrCost(
         IsUnsigned ? Instruction::ZExt : Instruction::SExt, ExtTy, Ty,
         TTI::CastContextHint::None, CostKind);
-    if (IsMLA) {
-      MulCost =
-          thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
-      ExtCost *= 2;
-    }
 
-    return RedCost + MulCost + ExtCost;
+    return RedCost + ExtCost;
+  }
+
+  InstructionCost getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
+                                         VectorType *Ty,
+                                         TTI::TargetCostKind CostKind) {
+    // Without any native support, this is equivalent to the cost of
+    // vecreduce.add(mul(ext, ext)).
+    VectorType *ExtTy = VectorType::get(ResTy, Ty);
+    InstructionCost RedCost = thisT()->getArithmeticReductionCost(
+        Instruction::Add, ExtTy, None, CostKind);
+    InstructionCost ExtCost = thisT()->getCastInstrCost(
+        IsUnsigned ? Instruction::ZExt : Instruction::SExt, ExtTy, Ty,
+        TTI::CastContextHint::None, CostKind);
+
+    InstructionCost MulCost =
+        thisT()->getArithmeticInstrCost(Instruction::Mul, ExtTy, CostKind);
+
+    return RedCost + MulCost + 2 * ExtCost;
   }
 
   InstructionCost getVectorSplitCost() { return 1; }

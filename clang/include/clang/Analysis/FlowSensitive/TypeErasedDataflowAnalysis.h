@@ -138,7 +138,8 @@ llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const ControlFlowContext &CFCtx, TypeErasedDataflowAnalysis &Analysis,
     const Environment &InitEnv,
-    std::function<void(const Stmt *, const TypeErasedDataflowAnalysisState &)>
+    std::function<void(const CFGStmt &,
+                       const TypeErasedDataflowAnalysisState &)>
         PostVisitStmt = nullptr);
 
 } // namespace dataflow

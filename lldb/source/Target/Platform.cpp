@@ -929,7 +929,8 @@ ArchSpec Platform::GetAugmentedArchSpec(llvm::StringRef triple) {
 
   ArchSpec compatible_arch;
   ArchSpec raw_arch(triple);
-  if (!IsCompatibleArchitecture(raw_arch, {}, false, &compatible_arch))
+  if (!IsCompatibleArchitecture(raw_arch, {}, ArchSpec::CompatibleMatch,
+                                &compatible_arch))
     return raw_arch;
 
   if (!compatible_arch.IsValid())
@@ -1156,16 +1157,14 @@ Platform::CreateArchList(llvm::ArrayRef<llvm::Triple::ArchType> archs,
 /// architecture and the target triple contained within.
 bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
                                         const ArchSpec &process_host_arch,
-                                        bool exact_arch_match,
+                                        ArchSpec::MatchType match,
                                         ArchSpec *compatible_arch_ptr) {
   // If the architecture is invalid, we must answer true...
   if (arch.IsValid()) {
     ArchSpec platform_arch;
-    auto match = exact_arch_match ? &ArchSpec::IsExactMatch
-                                  : &ArchSpec::IsCompatibleMatch;
     for (const ArchSpec &platform_arch :
          GetSupportedArchitectures(process_host_arch)) {
-      if ((arch.*match)(platform_arch)) {
+      if (arch.IsMatch(platform_arch, match)) {
         if (compatible_arch_ptr)
           *compatible_arch_ptr = platform_arch;
         return true;
@@ -1773,24 +1772,20 @@ lldb::ProcessSP Platform::DoConnectProcess(llvm::StringRef connect_url,
   error.Clear();
 
   if (!target) {
-    ArchSpec arch;
-    if (target && target->GetArchitecture().IsValid())
-      arch = target->GetArchitecture();
-    else
-      arch = Target::GetDefaultArchitecture();
+    ArchSpec arch = Target::GetDefaultArchitecture();
 
-    const char *triple = "";
-    if (arch.IsValid())
-      triple = arch.GetTriple().getTriple().c_str();
+    const char *triple =
+        arch.IsValid() ? arch.GetTriple().getTriple().c_str() : "";
 
     TargetSP new_target_sp;
     error = debugger.GetTargetList().CreateTarget(
         debugger, "", triple, eLoadDependentsNo, nullptr, new_target_sp);
-    target = new_target_sp.get();
-  }
 
-  if (!target || error.Fail())
-    return nullptr;
+    target = new_target_sp.get();
+    if (!target || error.Fail()) {
+      return nullptr;
+    }
+  }
 
   lldb::ProcessSP process_sp =
       target->CreateProcess(debugger.GetListener(), plugin_name, nullptr, true);
@@ -1966,14 +1961,15 @@ PlatformSP PlatformList::GetOrCreate(const ArchSpec &arch,
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // First try exact arch matches across all platforms already created
   for (const auto &platform_sp : m_platforms) {
-    if (platform_sp->IsCompatibleArchitecture(arch, process_host_arch, true,
-                                              platform_arch_ptr))
+    if (platform_sp->IsCompatibleArchitecture(
+            arch, process_host_arch, ArchSpec::ExactMatch, platform_arch_ptr))
       return platform_sp;
   }
 
   // Next try compatible arch matches across all platforms already created
   for (const auto &platform_sp : m_platforms) {
-    if (platform_sp->IsCompatibleArchitecture(arch, process_host_arch, false,
+    if (platform_sp->IsCompatibleArchitecture(arch, process_host_arch,
+                                              ArchSpec::CompatibleMatch,
                                               platform_arch_ptr))
       return platform_sp;
   }
@@ -1985,8 +1981,9 @@ PlatformSP PlatformList::GetOrCreate(const ArchSpec &arch,
        (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx));
        ++idx) {
     PlatformSP platform_sp = create_callback(false, &arch);
-    if (platform_sp && platform_sp->IsCompatibleArchitecture(
-                           arch, process_host_arch, true, platform_arch_ptr)) {
+    if (platform_sp &&
+        platform_sp->IsCompatibleArchitecture(
+            arch, process_host_arch, ArchSpec::ExactMatch, platform_arch_ptr)) {
       m_platforms.push_back(platform_sp);
       return platform_sp;
     }
@@ -1997,7 +1994,8 @@ PlatformSP PlatformList::GetOrCreate(const ArchSpec &arch,
        ++idx) {
     PlatformSP platform_sp = create_callback(false, &arch);
     if (platform_sp && platform_sp->IsCompatibleArchitecture(
-                           arch, process_host_arch, false, platform_arch_ptr)) {
+                           arch, process_host_arch, ArchSpec::CompatibleMatch,
+                           platform_arch_ptr)) {
       m_platforms.push_back(platform_sp);
       return platform_sp;
     }
@@ -2031,7 +2029,7 @@ PlatformSP PlatformList::GetOrCreate(llvm::ArrayRef<ArchSpec> archs,
   if (m_selected_platform_sp) {
     for (const ArchSpec &arch : archs) {
       if (m_selected_platform_sp->IsCompatibleArchitecture(
-              arch, process_host_arch, false, nullptr))
+              arch, process_host_arch, ArchSpec::CompatibleMatch, nullptr))
         return m_selected_platform_sp;
     }
   }
@@ -2039,8 +2037,8 @@ PlatformSP PlatformList::GetOrCreate(llvm::ArrayRef<ArchSpec> archs,
   // Prefer the host platform if it matches at least one architecture.
   if (host_platform_sp) {
     for (const ArchSpec &arch : archs) {
-      if (host_platform_sp->IsCompatibleArchitecture(arch, process_host_arch,
-                                                     false, nullptr))
+      if (host_platform_sp->IsCompatibleArchitecture(
+              arch, process_host_arch, ArchSpec::CompatibleMatch, nullptr))
         return host_platform_sp;
     }
   }

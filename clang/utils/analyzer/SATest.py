@@ -321,7 +321,7 @@ def main():
     dock_parser.add_argument("--clang-dir", action="store", default="",
                              help="Path to find/install LLVM installation.")
     dock_parser.add_argument("rest", nargs=argparse.REMAINDER, default=[],
-                             help="Additionall args that will be forwarded "
+                             help="Additional args that will be forwarded "
                              "to the docker's entrypoint.")
     dock_parser.set_defaults(func=docker)
 

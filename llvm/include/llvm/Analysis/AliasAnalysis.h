@@ -142,100 +142,60 @@ raw_ostream &operator<<(raw_ostream &OS, AliasResult AR);
 /// Flags indicating whether a memory access modifies or references memory.
 ///
 /// This is no access at all, a modification, a reference, or both
-/// a modification and a reference. These are specifically structured such that
-/// they form a three bit matrix and bit-tests for 'mod' or 'ref' or 'must'
-/// work with any of the possible values.
+/// a modification and a reference.
 enum class ModRefInfo : uint8_t {
-  /// Must is provided for completeness, but no routines will return only
-  /// Must today. See definition of Must below.
-  Must = 0,
-  /// The access may reference the value stored in memory,
-  /// a mustAlias relation was found, and no mayAlias or partialAlias found.
-  MustRef = 1,
-  /// The access may modify the value stored in memory,
-  /// a mustAlias relation was found, and no mayAlias or partialAlias found.
-  MustMod = 2,
-  /// The access may reference, modify or both the value stored in memory,
-  /// a mustAlias relation was found, and no mayAlias or partialAlias found.
-  MustModRef = MustRef | MustMod,
   /// The access neither references nor modifies the value stored in memory.
-  NoModRef = 4,
+  NoModRef = 0,
   /// The access may reference the value stored in memory.
-  Ref = NoModRef | MustRef,
+  Ref = 1,
   /// The access may modify the value stored in memory.
-  Mod = NoModRef | MustMod,
+  Mod = 2,
   /// The access may reference and may modify the value stored in memory.
   ModRef = Ref | Mod,
-
-  /// About Must:
-  /// Must is set in a best effort manner.
-  /// We usually do not try our best to infer Must, instead it is merely
-  /// another piece of "free" information that is presented when available.
-  /// Must set means there was certainly a MustAlias found. For calls,
-  /// where multiple arguments are checked (argmemonly), this translates to
-  /// only MustAlias or NoAlias was found.
-  /// Must is not set for RAR accesses, even if the two locations must
-  /// alias. The reason is that two read accesses translate to an early return
-  /// of NoModRef. An additional alias check to set Must may be
-  /// expensive. Other cases may also not set Must(e.g. callCapturesBefore).
-  /// We refer to Must being *set* when the most significant bit is *cleared*.
-  /// Conversely we *clear* Must information by *setting* the Must bit to 1.
+  LLVM_MARK_AS_BITMASK_ENUM(ModRef),
 };
 
 LLVM_NODISCARD inline bool isNoModRef(const ModRefInfo MRI) {
-  return (static_cast<int>(MRI) & static_cast<int>(ModRefInfo::MustModRef)) ==
-         static_cast<int>(ModRefInfo::Must);
+  return MRI == ModRefInfo::NoModRef;
 }
 LLVM_NODISCARD inline bool isModOrRefSet(const ModRefInfo MRI) {
-  return static_cast<int>(MRI) & static_cast<int>(ModRefInfo::MustModRef);
+  return MRI != ModRefInfo::NoModRef;
 }
 LLVM_NODISCARD inline bool isModAndRefSet(const ModRefInfo MRI) {
-  return (static_cast<int>(MRI) & static_cast<int>(ModRefInfo::MustModRef)) ==
-         static_cast<int>(ModRefInfo::MustModRef);
+  return MRI == ModRefInfo::ModRef;
 }
 LLVM_NODISCARD inline bool isModSet(const ModRefInfo MRI) {
-  return static_cast<int>(MRI) & static_cast<int>(ModRefInfo::MustMod);
+  return static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Mod);
 }
 LLVM_NODISCARD inline bool isRefSet(const ModRefInfo MRI) {
-  return static_cast<int>(MRI) & static_cast<int>(ModRefInfo::MustRef);
-}
-LLVM_NODISCARD inline bool isMustSet(const ModRefInfo MRI) {
-  return !(static_cast<int>(MRI) & static_cast<int>(ModRefInfo::NoModRef));
+  return static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Ref);
 }
 
+[[deprecated("Use operator | instead")]]
 LLVM_NODISCARD inline ModRefInfo setMod(const ModRefInfo MRI) {
-  return ModRefInfo(static_cast<int>(MRI) |
-                    static_cast<int>(ModRefInfo::MustMod));
+  return MRI | ModRefInfo::Mod;
 }
+[[deprecated("Use operator | instead")]]
 LLVM_NODISCARD inline ModRefInfo setRef(const ModRefInfo MRI) {
-  return ModRefInfo(static_cast<int>(MRI) |
-                    static_cast<int>(ModRefInfo::MustRef));
+  return MRI | ModRefInfo::Ref;
 }
-LLVM_NODISCARD inline ModRefInfo setMust(const ModRefInfo MRI) {
-  return ModRefInfo(static_cast<int>(MRI) &
-                    static_cast<int>(ModRefInfo::MustModRef));
-}
-LLVM_NODISCARD inline ModRefInfo setModAndRef(const ModRefInfo MRI) {
-  return ModRefInfo(static_cast<int>(MRI) |
-                    static_cast<int>(ModRefInfo::MustModRef));
-}
+[[deprecated("Use operator & instead")]]
 LLVM_NODISCARD inline ModRefInfo clearMod(const ModRefInfo MRI) {
-  return ModRefInfo(static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Ref));
+  return MRI & ModRefInfo::Ref;
 }
+[[deprecated("Use operator & instead")]]
 LLVM_NODISCARD inline ModRefInfo clearRef(const ModRefInfo MRI) {
-  return ModRefInfo(static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Mod));
+  return MRI & ModRefInfo::Mod;
 }
-LLVM_NODISCARD inline ModRefInfo clearMust(const ModRefInfo MRI) {
-  return ModRefInfo(static_cast<int>(MRI) |
-                    static_cast<int>(ModRefInfo::NoModRef));
-}
+[[deprecated("Use operator | instead")]]
 LLVM_NODISCARD inline ModRefInfo unionModRef(const ModRefInfo MRI1,
                                              const ModRefInfo MRI2) {
-  return ModRefInfo(static_cast<int>(MRI1) | static_cast<int>(MRI2));
+  return MRI1 | MRI2;
 }
+[[deprecated("Use operator & instead")]]
 LLVM_NODISCARD inline ModRefInfo intersectModRef(const ModRefInfo MRI1,
                                                  const ModRefInfo MRI2) {
-  return ModRefInfo(static_cast<int>(MRI1) & static_cast<int>(MRI2));
+  return MRI1 & MRI2;
 }
 
 /// The locations at which a function might access memory.
@@ -609,7 +569,7 @@ public:
   /// result's bits are set to indicate the allowed aliasing ModRef kinds. Note
   /// that these bits do not necessarily account for the overall behavior of
   /// the function, but rather only provide additional per-argument
-  /// information. This never sets ModRefInfo::Must.
+  /// information.
   ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx);
 
   /// Return the behavior of the given call site.
@@ -847,8 +807,6 @@ public:
   /// Return information about whether a particular call site modifies
   /// or reads the specified memory location \p MemLoc before instruction \p I
   /// in a BasicBlock.
-  /// Early exits in callCapturesBefore may lead to ModRefInfo::Must not being
-  /// set.
   ModRefInfo callCapturesBefore(const Instruction *I,
                                 const MemoryLocation &MemLoc,
                                 DominatorTree *DT) {

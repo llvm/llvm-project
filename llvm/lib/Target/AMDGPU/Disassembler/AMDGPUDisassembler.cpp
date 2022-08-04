@@ -576,6 +576,12 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Bytes.size() < 4) break;
     const uint64_t QW = ((uint64_t)eatBytes<uint32_t>(Bytes) << 32) | DW;
 
+    if (STI.getFeatureBits()[AMDGPU::FeatureGFX940Insts]) {
+      Res = tryDecodeInst(DecoderTableGFX94064, MI, QW, Address);
+      if (Res)
+        break;
+    }
+
     if (STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts]) {
       Res = tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address);
       if (Res)

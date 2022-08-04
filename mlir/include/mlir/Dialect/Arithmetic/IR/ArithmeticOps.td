@@ -15,6 +15,7 @@ include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 
 // Base class for Arithmetic dialect ops. Ops in this dialect have no side
@@ -147,7 +148,7 @@ def Arith_ConstantOp : Op<Arithmetic_Dialect, "constant",
     ```
   }];
 
-  let arguments = (ins AnyAttr:$value);
+  let arguments = (ins TypedAttrInterface:$value);
   // TODO: Disallow arith.constant to return anything other than a signless
   // integer or float like. Downstream users of Arithmetic should only be
   // working with signless integers, floats, or vectors/tensors thereof.

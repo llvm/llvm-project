@@ -122,3 +122,21 @@ vbool64_t test_vmsif_m_b64_m(vbool64_t mask, vbool64_t maskedoff, vbool64_t op1,
                              size_t vl) {
   return vmsif(mask, maskedoff, op1, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vmsif_m_b4_ma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.riscv.vmsif.mask.nxv16i1.i64(<vscale x 16 x i1> undef, <vscale x 16 x i1> [[OP1:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
+//
+vbool4_t test_vmsif_m_b4_ma(vbool4_t mask, vbool4_t op1, size_t vl) {
+  return vmsif_ma(mask, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vmsif_m_b4_mu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.riscv.vmsif.mask.nxv16i1.i64(<vscale x 16 x i1> [[MERGE:%.*]], <vscale x 16 x i1> [[OP1:%.*]], <vscale x 16 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 16 x i1> [[TMP0]]
+//
+vbool4_t test_vmsif_m_b4_mu(vbool4_t mask, vbool4_t merge, vbool4_t op1, size_t vl) {
+  return vmsif_mu(mask, merge, op1, vl);
+}

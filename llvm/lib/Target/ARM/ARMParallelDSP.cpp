@@ -372,8 +372,7 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
       MemoryLocation ReadLoc =
         MemoryLocation(Read->getPointerOperand(), Size);
 
-      if (!isModOrRefSet(intersectModRef(AA->getModRefInfo(Write, ReadLoc),
-          ModRefInfo::ModRef)))
+      if (!isModOrRefSet(AA->getModRefInfo(Write, ReadLoc)))
         continue;
       if (Write->comesBefore(Read))
         RAWDeps[Read].insert(Write);

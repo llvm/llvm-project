@@ -1313,10 +1313,9 @@ void X86AsmPrinter::LowerFAULTING_OP(const MachineInstr &FaultingMI,
   if (DefRegister != X86::NoRegister)
     MI.addOperand(MCOperand::createReg(DefRegister));
 
-  for (auto I = FaultingMI.operands_begin() + OperandsBeginIdx,
-            E = FaultingMI.operands_end();
-       I != E; ++I)
-    if (auto MaybeOperand = MCIL.LowerMachineOperand(&FaultingMI, *I))
+  for (const MachineOperand &MO :
+       llvm::drop_begin(FaultingMI.operands(), OperandsBeginIdx))
+    if (auto MaybeOperand = MCIL.LowerMachineOperand(&FaultingMI, MO))
       MI.addOperand(*MaybeOperand);
 
   OutStreamer->AddComment("on-fault: " + HandlerLabel->getName());

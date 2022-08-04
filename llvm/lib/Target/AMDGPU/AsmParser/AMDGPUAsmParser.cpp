@@ -1680,8 +1680,8 @@ private:
   bool validateDivScale(const MCInst &Inst);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              const SMLoc &IDLoc);
-  bool validateFlatLdsDMA(const MCInst &Inst, const OperandVector &Operands,
-                          const SMLoc &IDLoc);
+  bool validateLdsDMA(uint64_t Enc, const MCInst &Inst,
+                      const OperandVector &Operands, const SMLoc &IDLoc);
   bool validateExeczVcczOperands(const OperandVector &Operands);
   Optional<StringRef> validateLdsDirect(const MCInst &Inst);
   unsigned getConstantBusLimit(unsigned Opcode) const;
@@ -4543,25 +4543,31 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
   return true;
 }
 
-bool AMDGPUAsmParser::validateFlatLdsDMA(const MCInst &Inst,
-                                         const OperandVector &Operands,
-                                         const SMLoc &IDLoc) {
-  if (isGFX940())
+bool AMDGPUAsmParser::validateLdsDMA(uint64_t Enc, const MCInst &Inst,
+                                     const OperandVector &Operands,
+                                     const SMLoc &IDLoc) {
+  assert(Enc == SIInstrFlags::FLAT || Enc == SIInstrFlags::MUBUF);
+
+  // Exclude cases when there are separate DMA opcodes.
+  // In these cases, incorrect opcode selection is not possible.
+  if (Enc == SIInstrFlags::FLAT && isGFX940())
+    return true;
+  if (Enc == SIInstrFlags::MUBUF && isGFX11Plus())
     return true;
 
   uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
-  if ((TSFlags & (SIInstrFlags::VALU | SIInstrFlags::FLAT)) !=
-      (SIInstrFlags::VALU | SIInstrFlags::FLAT))
+  if ((TSFlags & (SIInstrFlags::VALU | Enc)) !=
+      (SIInstrFlags::VALU | Enc))
     return true;
-  // This is FLAT LDS DMA.
+  // This is FLAT/MUBUF LDS DMA.
 
   SMLoc S = getImmLoc(AMDGPUOperand::ImmTyLDS, Operands);
   StringRef CStr(S.getPointer());
   if (!CStr.startswith("lds")) {
-    // This is incorrectly selected LDS DMA version of a FLAT load opcode.
-    // And LDS version should have 'lds' modifier, but it follows optional
-    // operands so its absense is ignored by the matcher.
-    Error(IDLoc, "invalid operands for instruction");
+    // This is incorrectly selected LDS DMA version of a FLAT/MUBUF load
+    // opcode. And LDS version should have 'lds' modifier, but it follows
+    // optional operands so its absense is ignored by the matcher.
+    Error(IDLoc, "missing dst operand or lds modifier");
     return false;
   }
 
@@ -4698,7 +4704,11 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
 
-  if (!validateFlatLdsDMA(Inst, Operands, IDLoc)) {
+  if (!validateLdsDMA(SIInstrFlags::FLAT, Inst, Operands, IDLoc)) {
+    return false;
+  }
+
+  if (!validateLdsDMA(SIInstrFlags::MUBUF, Inst, Operands, IDLoc)) {
     return false;
   }
 

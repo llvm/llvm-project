@@ -1109,3 +1109,165 @@ vfloat64m8_t test_vslidedown_vx_f64m8_m(vbool8_t mask, vfloat64m8_t dst,
                                         size_t vl) {
   return vslidedown(mask, dst, src, offset, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_i32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vslidedown.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[SRC:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vslidedown_vx_i32mf2_tu(vint32mf2_t merge, vint32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tu(merge, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_u32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vslidedown.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[SRC:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vslidedown_vx_u32mf2_tu(vuint32mf2_t merge, vuint32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tu(merge, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_f32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vslidedown.nxv1f32.i64(<vscale x 1 x float> [[MERGE:%.*]], <vscale x 1 x float> [[SRC:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vslidedown_vx_f32mf2_tu(vfloat32mf2_t merge, vfloat32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tu(merge, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_i32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vslidedown.nxv1i32.i64(<vscale x 1 x i32> [[DEST:%.*]], <vscale x 1 x i32> [[SRC:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vslidedown_vx_i32mf2_ta(vint32mf2_t dest, vint32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_ta(dest, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_u32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vslidedown.nxv1i32.i64(<vscale x 1 x i32> [[DEST:%.*]], <vscale x 1 x i32> [[SRC:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vslidedown_vx_u32mf2_ta(vuint32mf2_t dest, vuint32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_ta(dest, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_f32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vslidedown.nxv1f32.i64(<vscale x 1 x float> [[DEST:%.*]], <vscale x 1 x float> [[SRC:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vslidedown_vx_f32mf2_ta(vfloat32mf2_t dest, vfloat32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_ta(dest, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_i32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vslidedown.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[SRC:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vslidedown_vx_i32mf2_tuma(vbool64_t mask, vint32mf2_t merge, vint32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tuma(mask, merge, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_u32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vslidedown.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[SRC:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vslidedown_vx_u32mf2_tuma(vbool64_t mask, vuint32mf2_t merge, vuint32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tuma(mask, merge, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_f32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vslidedown.mask.nxv1f32.i64(<vscale x 1 x float> [[MERGE:%.*]], <vscale x 1 x float> [[SRC:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vslidedown_vx_f32mf2_tuma(vbool64_t mask, vfloat32mf2_t merge, vfloat32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tuma(mask, merge, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_i32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vslidedown.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[SRC:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vslidedown_vx_i32mf2_tumu(vbool64_t mask, vint32mf2_t merge, vint32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tumu(mask, merge, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_u32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vslidedown.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[SRC:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vslidedown_vx_u32mf2_tumu(vbool64_t mask, vuint32mf2_t merge, vuint32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tumu(mask, merge, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_f32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vslidedown.mask.nxv1f32.i64(<vscale x 1 x float> [[MERGE:%.*]], <vscale x 1 x float> [[SRC:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vslidedown_vx_f32mf2_tumu(vbool64_t mask, vfloat32mf2_t merge, vfloat32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tumu(mask, merge, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_i32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vslidedown.mask.nxv1i32.i64(<vscale x 1 x i32> [[DEST:%.*]], <vscale x 1 x i32> [[SRC:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vslidedown_vx_i32mf2_tama(vbool64_t mask, vint32mf2_t dest, vint32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tama(mask, dest, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_u32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vslidedown.mask.nxv1i32.i64(<vscale x 1 x i32> [[DEST:%.*]], <vscale x 1 x i32> [[SRC:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vslidedown_vx_u32mf2_tama(vbool64_t mask, vuint32mf2_t dest, vuint32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tama(mask, dest, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_f32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vslidedown.mask.nxv1f32.i64(<vscale x 1 x float> [[DEST:%.*]], <vscale x 1 x float> [[SRC:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vslidedown_vx_f32mf2_tama(vbool64_t mask, vfloat32mf2_t dest, vfloat32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tama(mask, dest, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_i32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vslidedown.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[SRC:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vslidedown_vx_i32mf2_tamu(vbool64_t mask, vint32mf2_t merge, vint32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tamu(mask, merge, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_u32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vslidedown.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[SRC:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vslidedown_vx_u32mf2_tamu(vbool64_t mask, vuint32mf2_t merge, vuint32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tamu(mask, merge, src, offset, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vslidedown_vx_f32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x float> @llvm.riscv.vslidedown.mask.nxv1f32.i64(<vscale x 1 x float> [[MERGE:%.*]], <vscale x 1 x float> [[SRC:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x float> [[TMP0]]
+//
+vfloat32mf2_t test_vslidedown_vx_f32mf2_tamu(vbool64_t mask, vfloat32mf2_t merge, vfloat32mf2_t src, size_t offset, size_t vl) {
+  return vslidedown_tamu(mask, merge, src, offset, vl);
+}

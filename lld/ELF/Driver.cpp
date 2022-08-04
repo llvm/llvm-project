@@ -96,6 +96,7 @@ bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
   ctx->e.cleanupCallback = []() {
     inputSections.clear();
+    ehInputSections.clear();
     outputSections.clear();
     symAux.clear();
 
@@ -2244,6 +2245,49 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
   return v;
 }
 
+static void combineVersionedSymbol(Symbol &sym,
+                                   DenseMap<Symbol *, Symbol *> &map) {
+  const char *suffix1 = sym.getVersionSuffix();
+  if (suffix1[0] != '@' || suffix1[1] == '@')
+    return;
+
+  // Check the existing symbol foo. We have two special cases to handle:
+  //
+  // * There is a definition of foo@v1 and foo@@v1.
+  // * There is a definition of foo@v1 and foo.
+  Defined *sym2 = dyn_cast_or_null<Defined>(symtab->find(sym.getName()));
+  if (!sym2)
+    return;
+  const char *suffix2 = sym2->getVersionSuffix();
+  if (suffix2[0] == '@' && suffix2[1] == '@' &&
+      strcmp(suffix1 + 1, suffix2 + 2) == 0) {
+    // foo@v1 and foo@@v1 should be merged, so redirect foo@v1 to foo@@v1.
+    map.try_emplace(&sym, sym2);
+    // If both foo@v1 and foo@@v1 are defined and non-weak, report a
+    // duplicate definition error.
+    if (sym.isDefined())
+      sym2->checkDuplicate(cast<Defined>(sym));
+    sym2->resolve(sym);
+    // Eliminate foo@v1 from the symbol table.
+    sym.symbolKind = Symbol::PlaceholderKind;
+    sym.isUsedInRegularObj = false;
+  } else if (auto *sym1 = dyn_cast<Defined>(&sym)) {
+    if (sym2->versionId > VER_NDX_GLOBAL
+            ? config->versionDefinitions[sym2->versionId].name == suffix1 + 1
+            : sym1->section == sym2->section && sym1->value == sym2->value) {
+      // Due to an assembler design flaw, if foo is defined, .symver foo,
+      // foo@v1 defines both foo and foo@v1. Unless foo is bound to a
+      // different version, GNU ld makes foo@v1 canonical and eliminates
+      // foo. Emulate its behavior, otherwise we would have foo or foo@@v1
+      // beside foo@v1. foo@v1 and foo combining does not apply if they are
+      // not defined in the same place.
+      map.try_emplace(sym2, &sym);
+      sym2->symbolKind = Symbol::PlaceholderKind;
+      sym2->isUsedInRegularObj = false;
+    }
+  }
+}
+
 // Do renaming for --wrap and foo@v1 by updating pointers to symbols.
 //
 // When this function is executed, only InputFiles and symbol table
@@ -2256,51 +2300,14 @@ static void redirectSymbols(ArrayRef<WrappedSymbol> wrapped) {
     map[w.sym] = w.wrap;
     map[w.real] = w.sym;
   }
-  for (Symbol *sym : symtab->symbols()) {
-    // Enumerate symbols with a non-default version (foo@v1). hasVersionSuffix
-    // filters out most symbols but is not sufficient.
-    if (!sym->hasVersionSuffix)
-      continue;
-    const char *suffix1 = sym->getVersionSuffix();
-    if (suffix1[0] != '@' || suffix1[1] == '@')
-      continue;
 
-    // Check the existing symbol foo. We have two special cases to handle:
-    //
-    // * There is a definition of foo@v1 and foo@@v1.
-    // * There is a definition of foo@v1 and foo.
-    Defined *sym2 = dyn_cast_or_null<Defined>(symtab->find(sym->getName()));
-    if (!sym2)
-      continue;
-    const char *suffix2 = sym2->getVersionSuffix();
-    if (suffix2[0] == '@' && suffix2[1] == '@' &&
-        strcmp(suffix1 + 1, suffix2 + 2) == 0) {
-      // foo@v1 and foo@@v1 should be merged, so redirect foo@v1 to foo@@v1.
-      map.try_emplace(sym, sym2);
-      // If both foo@v1 and foo@@v1 are defined and non-weak, report a duplicate
-      // definition error.
-      if (sym->isDefined())
-        sym2->checkDuplicate(cast<Defined>(*sym));
-      sym2->resolve(*sym);
-      // Eliminate foo@v1 from the symbol table.
-      sym->symbolKind = Symbol::PlaceholderKind;
-      sym->isUsedInRegularObj = false;
-    } else if (auto *sym1 = dyn_cast<Defined>(sym)) {
-      if (sym2->versionId > VER_NDX_GLOBAL
-              ? config->versionDefinitions[sym2->versionId].name == suffix1 + 1
-              : sym1->section == sym2->section && sym1->value == sym2->value) {
-        // Due to an assembler design flaw, if foo is defined, .symver foo,
-        // foo@v1 defines both foo and foo@v1. Unless foo is bound to a
-        // different version, GNU ld makes foo@v1 canonical and eliminates foo.
-        // Emulate its behavior, otherwise we would have foo or foo@@v1 beside
-        // foo@v1. foo@v1 and foo combining does not apply if they are not
-        // defined in the same place.
-        map.try_emplace(sym2, sym);
-        sym2->symbolKind = Symbol::PlaceholderKind;
-        sym2->isUsedInRegularObj = false;
-      }
-    }
-  }
+  // If there are version definitions (versionDefinitions.size() > 2), enumerate
+  // symbols with a non-default version (foo@v1) and check whether it should be
+  // combined with foo or foo@@v1.
+  if (config->versionDefinitions.size() > 2)
+    for (Symbol *sym : symtab->symbols())
+      if (sym->hasVersionSuffix)
+        combineVersionedSymbol(*sym, map);
 
   if (map.empty())
     return;
@@ -2327,7 +2334,7 @@ static void checkAndReportMissingFeature(StringRef config, uint32_t features,
   }
 }
 
-// To enable CET (x86's hardware-assited control flow enforcement), each
+// To enable CET (x86's hardware-assisted control flow enforcement), each
 // source file must be compiled with -fcf-protection. Object files compiled
 // with the flag contain feature flags indicating that they are compatible
 // with CET. We enable the feature only when all object files are compatible
@@ -2655,10 +2662,16 @@ void LinkerDriver::link(opt::InputArgList &args) {
     // Now that we have a complete list of input files.
     // Beyond this point, no new files are added.
     // Aggregate all input sections into one place.
-    for (InputFile *f : ctx->objectFiles)
-      for (InputSectionBase *s : f->getSections())
-        if (s && s != &InputSection::discarded)
+    for (InputFile *f : ctx->objectFiles) {
+      for (InputSectionBase *s : f->getSections()) {
+        if (!s || s == &InputSection::discarded)
+          continue;
+        if (LLVM_UNLIKELY(isa<EhInputSection>(s)))
+          ehInputSections.push_back(cast<EhInputSection>(s));
+        else
           inputSections.push_back(s);
+      }
+    }
     for (BinaryFile *f : ctx->binaryFiles)
       for (InputSectionBase *s : f->getSections())
         inputSections.push_back(cast<InputSection>(s));

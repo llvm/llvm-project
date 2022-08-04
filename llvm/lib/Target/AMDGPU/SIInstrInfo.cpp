@@ -3454,9 +3454,8 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
   }
 
   // VOP2 mac/fmac with a literal operand cannot be converted to VOP3 mad/fma
-  // because VOP3 does not allow a literal operand.
-  // TODO: Remove this restriction for GFX10.
-  if (Src0Literal)
+  // if VOP3 does not allow a literal operand.
+  if (Src0Literal && !ST.hasVOP3Literal())
     return nullptr;
 
   unsigned NewOpc = IsFMA ? IsF16 ? AMDGPU::V_FMA_F16_gfx9_e64

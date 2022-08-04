@@ -46,7 +46,7 @@ class TestDarwinSignalHandlers(TestBase):
             name = thread.frame[0].name
             self.fail("Hit breakpoint {0} in '{1}' rather than getting a SIGBUS".format(id, name))
 
-        self.assertEqual(thread.stop_reason, lldb.eStopReasonSignal)
+        self.assertStopReason(thread.stop_reason, lldb.eStopReasonSignal)
         self.assertEqual(thread.GetStopReasonDataAtIndex(0), 10, "Got a SIGBUS")
 
         # Now when we continue, we'll find our way into the signal handler:

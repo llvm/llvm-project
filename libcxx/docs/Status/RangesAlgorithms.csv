@@ -13,7 +13,7 @@ Search,lexicographical_compare,Nikolas Klauser,`D127130 <https://llvm.org/D12713
 Search,partition_point,Konstantin Varlamov,`D130070 <https://llvm.org/D130070>`_,✅
 Search,lower_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
 Search,upper_bound,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
-Search,equal_range,Hui Xie,`D129796 <https://llvm.org/D129796>`,✅
+Search,equal_range,Hui Xie,`D129796 <https://llvm.org/D129796>`_,✅
 Search,binary_search,Nikolas Klauser,`D121964 <https://llvm.org/D121964>`_,✅
 Search,min,Nikolas Klauser,`D119589 <https://llvm.org/D119589>`_,✅
 Search,max,Nikolas Klauser,`D122002 <https://llvm.org/D122002>`_,✅
@@ -29,7 +29,7 @@ Search,find_end,Nikolas Klauser,`D124079 <https://llvm.org/D124079>`_,✅
 Read-only,is_partitioned,Nikolas Klauser,`D124440 <https://llvm.org/D124440>`_,✅
 Read-only,is_sorted,Nikolas Klauser,`D125608 <https://llvm.org/D125608>`_,✅
 Read-only,is_sorted_until,Nikolas Klauser,`D125608 <https://llvm.org/D125608>`_,✅
-Read-only,includes,Hui Xie,`D130116 <https://llvm.org/D130116>`,✅
+Read-only,includes,Hui Xie,`D130116 <https://llvm.org/D130116>`_,✅
 Read-only,is_heap,Konstantin Varlamov,`D130547 <https://llvm.org/D130547>`_,✅
 Read-only,is_heap_until,Konstantin Varlamov,`D130547 <https://llvm.org/D130547>`_,✅
 Read-only,clamp,Nikolas Klauser,`D126193 <https://llvm.org/D126193>`_,Under review
@@ -47,17 +47,17 @@ Write,fill_n,Nikolas Klauser,`D123462 <https://llvm.org/D123462>`_,✅
 Write,transform,Nikolas Klauser,`D122173 <https://llvm.org/D122173>`_,✅
 Write,generate,Konstantin Varlamov,`D130552 <https://llvm.org/D130552>`_,✅
 Write,generate_n,Konstantin Varlamov,`D130552 <https://llvm.org/D130552>`_,✅
-Write,remove_copy,Nikolas Klauser,n/a,Not started
-Write,remove_copy_if,Nikolas Klauser,n/a,Not started
+Write,remove_copy,Nikolas Klauser,`D130599 <https://llvm.org/D130599>`_,✅
+Write,remove_copy_if,Nikolas Klauser,`D130599 <https://llvm.org/D130599>`_,✅
 Write,replace,Nikolas Klauser,`D126283 <https://llvm.org/D126283>`_,✅
 Write,replace_if,Nikolas Klauser,`D126283 <https://llvm.org/D126283>`_,✅
-Write,replace_copy,Nikolas Klauser,`D129806 <https://llvm.org/D129806>`_,Under review
-Write,replace_copy_if,Nikolas Klauser,`D129806 <https://llvm.org/D129806>`_,Under review
+Write,replace_copy,Nikolas Klauser,`D129806 <https://llvm.org/D129806>`_,✅
+Write,replace_copy_if,Nikolas Klauser,`D129806 <https://llvm.org/D129806>`_,✅
 Write,swap_ranges,Nikolas Klauser,`D116303 <https://llvm.org/D116303>`_,✅
 Write,reverse_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
 Write,rotate_copy,Nikolas Klauser,`D127211 <https://llvm.org/D127211>`_,✅
-Write,sample,Not assigned,n/a,Not started
-Write,unique_copy,Hui Xie,`D130404 <https://llvm.org/D130404>`,✅
+Write,sample,Konstantin Varlamov,`D130865 <https://llvm.org/D130865>`_,✅
+Write,unique_copy,Hui Xie,`D130404 <https://llvm.org/D130404>`_,✅
 Write,partition_copy,Konstantin Varlamov,`D130070 <https://llvm.org/D130070>`_,✅
 Write,partial_sort_copy,Konstantin Varlamov,`D130532 <https://llvm.org/D130532>`_,✅
 Merge,merge,Hui Xie,`D128611 <https://llvm.org/D128611>`_,✅
@@ -68,9 +68,9 @@ Merge,set_union,Hui Xie,`D129657 <https://llvm.org/D129657>`_,✅
 Permutation,remove,Nikolas Klauser,`D128618 <https://llvm.org/D128618>`_,✅
 Permutation,remove_if,Nikolas Klauser,`D128618 <https://llvm.org/D128618>`_,✅
 Permutation,reverse,Nikolas Klauser,`D125752 <https://llvm.org/D125752>`_,✅
-Permutation,rotate,Nikolas Klauser,`D124122 <https://llvm.org/D124122>`_,Under review
+Permutation,rotate,Konstantin Varlamov and Nikolas Klauser,`D130758 <https://llvm.org/D130758>`_,✅
 Permutation,shuffle,Konstantin Varlamov,`D130321 <https://llvm.org/D130321>`_,✅
-Permutation,unique,Hui Xie,`D130404 <https://llvm.org/D130404>`,✅
+Permutation,unique,Hui Xie,`D130404 <https://llvm.org/D130404>`_,✅
 Permutation,partition,Konstantin Varlamov,`D129624 <https://llvm.org/D129624>`_,✅
 Permutation,stable_partition,Konstantin Varlamov,`D129624 <https://llvm.org/D129624>`_,✅
 Permutation,sort,Konstantin Varlamov,`D127557 <https://llvm.org/D127557>`_,✅
@@ -82,8 +82,8 @@ Permutation,make_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,
 Permutation,push_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,✅
 Permutation,pop_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,✅
 Permutation,sort_heap,Konstantin Varlamov,`D128115 <https://llvm.org/D128115>`_,✅
-Permutation,prev_permutation,Not assigned,n/a,Not started
-Permutation,next_permutation,Not assigned,n/a,Not started
+Permutation,next_permutation,Nikolas Klauser,`D129859 <https://llvm.org/D129859>`_,✅
+Permutation,prev_permutation,Nikolas Klauser,`D129859 <https://llvm.org/D129859>`_,✅
 Uninitialised memory,uninitialized_copy,Konstantin Varlamov,`D116023 <https://llvm.org/D116023>`_,✅
 Uninitialised memory,uninitialized_copy_n,Konstantin Varlamov,`D116023 <https://llvm.org/D116023>`_,✅
 Uninitialised memory,uninitialized_fill,Konstantin Varlamov,`D115626 <https://llvm.org/D115626>`_,✅

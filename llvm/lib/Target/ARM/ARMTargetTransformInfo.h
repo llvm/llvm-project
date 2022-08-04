@@ -275,9 +275,13 @@ public:
   InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                              Optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind CostKind);
-  InstructionCost getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
-                                              Type *ResTy, VectorType *ValTy,
-                                              TTI::TargetCostKind CostKind);
+  InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
+                                           Type *ResTy, VectorType *ValTy,
+                                           Optional<FastMathFlags> FMF,
+                                           TTI::TargetCostKind CostKind);
+  InstructionCost getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
+                                         VectorType *ValTy,
+                                         TTI::TargetCostKind CostKind);
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
@@ -291,7 +295,8 @@ public:
   bool preferPredicateOverEpilogue(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
                                    AssumptionCache &AC, TargetLibraryInfo *TLI,
                                    DominatorTree *DT,
-                                   LoopVectorizationLegality *LVL);
+                                   LoopVectorizationLegality *LVL,
+                                   InterleavedAccessInfo *IAI);
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP,
                                OptimizationRemarkEmitter *ORE);

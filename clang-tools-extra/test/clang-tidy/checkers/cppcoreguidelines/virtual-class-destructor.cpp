@@ -143,7 +143,7 @@ public:
   // CHECK-FIXES: virtual ~PublicNonVirtualBaseClass() {}
 };
 
-class PublicNonVirtualNonBaseClass { // OK accoring to C.35, since this class does not have any virtual methods.
+class PublicNonVirtualNonBaseClass { // OK according to C.35, since this class does not have any virtual methods.
   void f();
 
 public:

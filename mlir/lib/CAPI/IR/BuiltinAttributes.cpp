@@ -599,14 +599,6 @@ const void *mlirDenseElementsAttrGetRawData(MlirAttribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
-// Opaque elements attribute.
-//===----------------------------------------------------------------------===//
-
-bool mlirAttributeIsAOpaqueElements(MlirAttribute attr) {
-  return unwrap(attr).isa<OpaqueElementsAttr>();
-}
-
-//===----------------------------------------------------------------------===//
 // Sparse elements attribute.
 //===----------------------------------------------------------------------===//
 

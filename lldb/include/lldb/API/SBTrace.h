@@ -11,6 +11,7 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
+#include "lldb/API/SBTraceCursor.h"
 
 namespace lldb {
 
@@ -24,6 +25,20 @@ public:
   /// See SBDebugger::LoadTraceFromFile.
   static SBTrace LoadTraceFromFile(SBError &error, SBDebugger &debugger,
                                    const SBFileSpec &trace_description_file);
+
+  /// Get a \a TraceCursor for the given thread's trace.
+  ///
+  /// \param[out] error
+  ///   This will be set with an error in case of failures.
+  //
+  /// \param[in] thread
+  ///   The thread to get a \a TraceCursor for.
+  //
+  /// \return
+  ///     A \a SBTraceCursor. If the thread is not traced or its trace
+  ///     information failed to load, an invalid \a SBTraceCursor is returned
+  ///     and the \p error parameter is set.
+  SBTraceCursor CreateNewCursor(SBError &error, SBThread &thread);
 
   /// Save the trace to the specified directory, which will be created if
   /// needed. This will also create a a file \a <directory>/trace.json with the

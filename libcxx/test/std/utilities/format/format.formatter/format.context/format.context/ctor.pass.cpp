@@ -18,7 +18,7 @@
 // basic_format_context(Out out,
 //                      basic_format_args<basic_format_context> args,
 //                      std::optional<std::::locale>&& loc = std::nullopt);
-// If compliled with -D_LIBCPP_HAS_NO_LOCALIZATION
+// If compiled with -D_LIBCPP_HAS_NO_LOCALIZATION
 // basic_format_context(Out out,
 //                      basic_format_args<basic_format_context> args);
 

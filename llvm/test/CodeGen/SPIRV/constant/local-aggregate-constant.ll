@@ -6,7 +6,7 @@ define %aggregate @getConstant() {
   ret %aggregate { i8 1, i32 2 }
 }
 
-; CHECK: OpName [[GET:%.+]] "getConstant"
+; CHECK:     OpName [[GET:%.+]] "getConstant"
 
 ; CHECK-DAG: [[I8:%.+]] = OpTypeInt 8
 ; CHECK-DAG: [[I32:%.+]] = OpTypeInt 32
@@ -15,6 +15,6 @@ define %aggregate @getConstant() {
 ; CHECK-DAG: [[CST_I32:%.+]] = OpConstant [[I32]] 2
 ; CHECK-DAG: [[CST_AGGREGATE:%.+]] = OpConstantComposite [[AGGREGATE]] [[CST_I8]] [[CST_I32]]
 
-; CHECK: [[GET]] = OpFunction [[AGGREGATE]]
-; CHECK: OpReturnValue [[CST_AGGREGATE]]
-; CHECK: OpFunctionEnd
+; CHECK:     [[GET]] = OpFunction [[AGGREGATE]]
+; CHECK:     OpReturnValue [[CST_AGGREGATE]]
+; CHECK:     OpFunctionEnd

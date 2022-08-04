@@ -27,7 +27,7 @@ Usage
 After building libc++, you can run parts of the libc++ test suite by simply
 running ``llvm-lit`` on a specified test or directory. If you're unsure
 whether the required libraries have been built, you can use the
-`cxx-test-depends` target. For example:
+``cxx-test-depends`` target. For example:
 
 .. code-block:: bash
 
@@ -37,45 +37,41 @@ whether the required libraries have been built, you can use the
   $ <build>/bin/llvm-lit -sv libcxx/test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
   $ <build>/bin/llvm-lit -sv libcxx/test/std/atomics libcxx/test/std/threads # Test std::thread and std::atomic
 
+.. note::
+  If you used the Bootstrapping build instead of the default runtimes build, the
+  ``cxx-test-depends`` target is instead named ``runtimes-test-depends``, and
+  you will need to prefix ``<build>/runtimes/runtimes-<target>-bins/`` to the
+  paths of all tests.
+
 In the default configuration, the tests are built against headers that form a
 fake installation root of libc++. This installation root has to be updated when
-changes are made to the headers, so you should re-run the `cxx-test-depends`
-target before running the tests manually with `lit` when you make any sort of
+changes are made to the headers, so you should re-run the ``cxx-test-depends``
+target before running the tests manually with ``lit`` when you make any sort of
 change, including to the headers.
 
 Sometimes you'll want to change the way LIT is running the tests. Custom options
-can be specified using the `--param=<name>=<val>` flag. The most common option
-you'll want to change is the standard dialect (ie -std=c++XX). By default the
+can be specified using the ``--param <name>=<val>`` flag. The most common option
+you'll want to change is the standard dialect (ie ``-std=c++XX``). By default the
 test suite will select the newest C++ dialect supported by the compiler and use
-that. However if you want to manually specify the option like so:
+that. However, you can manually specify the option like so if you want:
 
 .. code-block:: bash
 
   $ <build>/bin/llvm-lit -sv libcxx/test/std/containers # Run the tests with the newest -std
-  $ <build>/bin/llvm-lit -sv libcxx/test/std/containers --param=std=c++03 # Run the tests in C++03
+  $ <build>/bin/llvm-lit -sv libcxx/test/std/containers --param std=c++03 # Run the tests in C++03
 
-Occasionally you'll want to add extra compile or link flags when testing.
-You can do this as follows:
+Other parameters are supported by the test suite. Those are defined in ``libcxx/utils/libcxx/test/params.py``.
+If you want to customize how to run the libc++ test suite beyond what is available
+in ``params.py``, you most likely want to use a custom site configuration instead.
 
-.. code-block:: bash
+The libc++ test suite works by loading a site configuration that defines various
+"base" parameters (via Lit substitutions). These base parameters represent things
+like the compiler to use for running the tests, which default compiler and linker
+flags to use, and how to run an executable. This system is meant to be easily
+extended for custom needs, in particular when porting the libc++ test suite to
+new platforms.
 
-  $ <build>/bin/llvm-lit -sv libcxx/test --param=compile_flags='-Wcustom-warning'
-  $ <build>/bin/llvm-lit -sv libcxx/test --param=link_flags='-L/custom/library/path'
-
-Some other common examples include:
-
-.. code-block:: bash
-
-  # Specify a custom compiler.
-  $ <build>/bin/llvm-lit -sv libcxx/test/std --param=cxx_under_test=/opt/bin/g++
-
-  # Disable warnings in the test suite
-  $ <build>/bin/llvm-lit -sv libcxx/test --param=enable_warnings=False
-
-  # Use UBSAN when running the tests.
-  $ <build>/bin/llvm-lit -sv libcxx/test --param=use_sanitizer=Undefined
-
-Using a custom site configuration
+Using a Custom Site Configuration
 ---------------------------------
 
 By default, the libc++ test suite will use a site configuration that matches
@@ -95,84 +91,6 @@ configuration easier.
      $ cmake <options> -DLIBCXX_TEST_CONFIG=<path-to-site-config>
      $ make -C <build> cxx-test-depends
      $ <build>/bin/llvm-lit -sv libcxx/test # will use your custom config file
-
-
-LIT Options
-===========
-
-:program:`lit` [*options*...] [*filenames*...]
-
-Command Line Options
---------------------
-
-To use these options you pass them on the LIT command line as ``--param NAME``
-or ``--param NAME=VALUE``. Some options have default values specified during
-CMake's configuration. Passing the option on the command line will override the
-default.
-
-.. program:: lit
-
-.. option:: cxx_under_test=<path/to/compiler>
-
-  Specify the compiler used to build the tests.
-
-.. option:: stdlib=<stdlib name>
-
-  **Values**: libc++, libstdc++, msvc
-
-  Specify the C++ standard library being tested. The default is libc++ if this
-  option is not provided. This option is intended to allow running the libc++
-  test suite against other standard library implementations.
-
-.. option:: std=<standard version>
-
-  **Values**: c++03, c++11, c++14, c++17, c++20, c++2b
-
-  Change the standard version used when building the tests.
-
-.. option:: cxx_headers=<path/to/headers>
-
-  Specify the c++ standard library headers that are tested. By default the
-  headers in the source tree are used.
-
-.. option:: cxx_library_root=<path/to/lib/>
-
-  Specify the directory of the libc++ library to be tested. By default the
-  library folder of the build directory is used.
-
-
-.. option:: cxx_runtime_root=<path/to/lib/>
-
-  Specify the directory of the libc++ library to use at runtime. This directory
-  is not added to the linkers search path. This can be used to compile tests
-  against one version of libc++ and run them using another. The default value
-  for this option is `cxx_library_root`.
-
-.. option:: use_system_cxx_lib=<bool>
-
-  **Default**: False
-
-  Enable or disable testing against the installed version of libc++ library.
-  This impacts whether the ``use_system_cxx_lib`` Lit feature is defined or
-  not. The ``cxx_library_root`` and ``cxx_runtime_root`` parameters should
-  still be used to specify the path of the library to link to and run against,
-  respectively.
-
-.. option:: use_sanitizer=<sanitizer name>
-
-  **Values**: Memory, MemoryWithOrigins, Address, Undefined
-
-  Run the tests using the given sanitizer. If LLVM_USE_SANITIZER was given when
-  building libc++ then that sanitizer will be used by default.
-
-.. option:: llvm_unwinder
-
-  Enable the use of LLVM unwinder instead of libgcc.
-
-.. option:: builtins_library
-
-  Path to the builtins library to use instead of libgcc.
-
 
 Writing Tests
 -------------
