@@ -1234,4 +1234,3 @@ define i1 @ult_ult_swap(i8 %a, i8 %b) {
   %and = and i1 %cmp1, %cmp2
   ret i1 %and
 }
-
