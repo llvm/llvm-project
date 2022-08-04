@@ -161,6 +161,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
     default:
       break;
     case '%': k = ConversionSpecifier::PercentArg;   break;
+    case 'b': k = ConversionSpecifier::bArg; break;
     case 'A': k = ConversionSpecifier::AArg; break;
     case 'E': k = ConversionSpecifier::EArg; break;
     case 'F': k = ConversionSpecifier::FArg; break;
@@ -267,6 +268,7 @@ ArgType ScanfSpecifier::getArgType(ASTContext &Ctx) const {
       llvm_unreachable("Unsupported LengthModifier Type");
 
     // Unsigned int.
+    case ConversionSpecifier::bArg:
     case ConversionSpecifier::oArg:
     case ConversionSpecifier::OArg:
     case ConversionSpecifier::uArg:

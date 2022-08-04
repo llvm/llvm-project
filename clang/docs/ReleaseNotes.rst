@@ -69,6 +69,9 @@ Improvements to Clang's diagnostics
   `Issue 50055: <https://github.com/llvm/llvm-project/issues/50055>`_.
 - Clang will now check compile-time determinable string literals as format strings.
   This fixes `Issue 55805: <https://github.com/llvm/llvm-project/issues/55805>`_.
+- ``-Wformat`` now recognizes ``%b`` for the ``printf``/``scanf`` family of
+  functions and ``%B`` for the ``printf`` family of functions. Fixes
+  `Issue 56885: <https://github.com/llvm/llvm-project/issues/56885>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
