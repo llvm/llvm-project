@@ -1144,8 +1144,8 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf"> {
     Example:
 
     ```mlir
-    %r1 = arith.cmpf "oeq" %0, %1 : f32
-    %r2 = arith.cmpf "ult" %0, %1 : tensor<42x42xf64>
+    %r1 = arith.cmpf oeq, %0, %1 : f32
+    %r2 = arith.cmpf ult, %0, %1 : tensor<42x42xf64>
     %r3 = "arith.cmpf"(%0, %1) {predicate: 0} : (f8, f8) -> i1
     ```
   }];
