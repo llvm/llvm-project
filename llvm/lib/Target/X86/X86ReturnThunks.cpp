@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/Debug.h"
 
@@ -73,9 +74,14 @@ bool X86ReturnThunks::runOnMachineFunction(MachineFunction &MF) {
       if (Term.getOpcode() == RetOpc)
         Rets.push_back(&Term);
 
+  bool IndCS =
+      MF.getMMI().getModule()->getModuleFlag("indirect_branch_cs_prefix");
+  const MCInstrDesc &CS = ST.getInstrInfo()->get(X86::CS_PREFIX);
   const MCInstrDesc &JMP = ST.getInstrInfo()->get(X86::TAILJMPd);
 
   for (MachineInstr *Ret : Rets) {
+    if (IndCS)
+      BuildMI(Ret->getParent(), Ret->getDebugLoc(), CS);
     BuildMI(Ret->getParent(), Ret->getDebugLoc(), JMP)
         .addExternalSymbol(ThunkName.data());
     Ret->eraseFromParent();

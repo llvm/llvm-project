@@ -138,6 +138,8 @@ CUDA Support in Clang
 X86 Support in Clang
 --------------------
 
+- Support ``-mindirect-branch-cs-prefix`` for call and jmp to indirect thunk.
+
 DWARF Support in Clang
 ----------------------
 
