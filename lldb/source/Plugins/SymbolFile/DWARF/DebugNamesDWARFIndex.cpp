@@ -238,10 +238,10 @@ void DebugNamesDWARFIndex::GetNamespaces(
 }
 
 void DebugNamesDWARFIndex::GetFunctions(
-    const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
-    const CompilerDeclContext &parent_decl_ctx,
+    ConstString name, SymbolFileDWARF &dwarf,
+    const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
     llvm::function_ref<bool(DWARFDIE die)> callback) {
-  ConstString name = lookup_info.GetLookupName();
+
   std::set<DWARFDebugInfoEntry *> seen;
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
@@ -250,8 +250,8 @@ void DebugNamesDWARFIndex::GetFunctions(
       continue;
 
     if (llvm::Optional<DIERef> ref = ToDIERef(entry)) {
-      if (!ProcessFunctionDIE(lookup_info, *ref, dwarf, parent_decl_ctx,
-                              [&](DWARFDIE die) {
+      if (!ProcessFunctionDIE(name.GetStringRef(), *ref, dwarf, parent_decl_ctx,
+                              name_type_mask, [&](DWARFDIE die) {
                                 if (!seen.insert(die.GetDIE()).second)
                                   return true;
                                 return callback(die);
@@ -260,7 +260,8 @@ void DebugNamesDWARFIndex::GetFunctions(
     }
   }
 
-  m_fallback.GetFunctions(lookup_info, dwarf, parent_decl_ctx, callback);
+  m_fallback.GetFunctions(name, dwarf, parent_decl_ctx, name_type_mask,
+                          callback);
 }
 
 void DebugNamesDWARFIndex::GetFunctions(

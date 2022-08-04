@@ -1004,17 +1004,17 @@ static void RemoveFunctionsWithModuleNotEqualTo(const ModuleSP &module_sp,
 }
 
 void SymbolFileDWARFDebugMap::FindFunctions(
-    const Module::LookupInfo &lookup_info,
-    const CompilerDeclContext &parent_decl_ctx, bool include_inlines,
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
+    FunctionNameType name_type_mask, bool include_inlines,
     SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   LLDB_SCOPED_TIMERF("SymbolFileDWARFDebugMap::FindFunctions (name = %s)",
-                     lookup_info.GetLookupName().GetCString());
+                     name.GetCString());
 
   ForEachSymbolFile([&](SymbolFileDWARF *oso_dwarf) -> bool {
     uint32_t sc_idx = sc_list.GetSize();
-    oso_dwarf->FindFunctions(lookup_info, parent_decl_ctx, include_inlines,
-                             sc_list);
+    oso_dwarf->FindFunctions(name, parent_decl_ctx, name_type_mask,
+                             include_inlines, sc_list);
     if (!sc_list.IsEmpty()) {
       RemoveFunctionsWithModuleNotEqualTo(m_objfile_sp->GetModule(), sc_list,
                                           sc_idx);

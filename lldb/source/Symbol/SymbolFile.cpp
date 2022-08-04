@@ -120,8 +120,9 @@ void SymbolFile::FindGlobalVariables(const RegularExpression &regex,
                                      uint32_t max_matches,
                                      VariableList &variables) {}
 
-void SymbolFile::FindFunctions(const Module::LookupInfo &lookup_info,
+void SymbolFile::FindFunctions(ConstString name,
                                const CompilerDeclContext &parent_decl_ctx,
+                               lldb::FunctionNameType name_type_mask,
                                bool include_inlines,
                                SymbolContextList &sc_list) {}
 

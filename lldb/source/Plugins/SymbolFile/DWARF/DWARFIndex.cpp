@@ -11,9 +11,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
 
-#include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Target/Language.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -21,31 +19,13 @@ using namespace lldb;
 DWARFIndex::~DWARFIndex() = default;
 
 bool DWARFIndex::ProcessFunctionDIE(
-    const Module::LookupInfo &lookup_info, DIERef ref, SymbolFileDWARF &dwarf,
-    const CompilerDeclContext &parent_decl_ctx,
+    llvm::StringRef name, DIERef ref, SymbolFileDWARF &dwarf,
+    const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
     llvm::function_ref<bool(DWARFDIE die)> callback) {
-  llvm::StringRef name = lookup_info.GetLookupName().GetStringRef();
-  FunctionNameType name_type_mask = lookup_info.GetNameTypeMask();
   DWARFDIE die = dwarf.GetDIE(ref);
   if (!die) {
     ReportInvalidDIERef(ref, name);
     return true;
-  }
-
-  if (!(name_type_mask & eFunctionNameTypeFull)) {
-    ConstString name_to_match_against;
-    if (const char *mangled_die_name = die.GetMangledName()) {
-      name_to_match_against = ConstString(mangled_die_name);
-    } else {
-      SymbolFileDWARF *symbols = die.GetDWARF();
-      if (ConstString demangled_die_name =
-              symbols->ConstructFunctionDemangledName(die))
-        name_to_match_against = demangled_die_name;
-    }
-
-    if (!lookup_info.NameMatchesLookupInfo(name_to_match_against,
-                                           lookup_info.GetLanguageType()))
-      return true;
   }
 
   // Exit early if we're searching exclusively for methods or selectors and
