@@ -91,6 +91,35 @@ void cleanup_tls(uintptr_t addr, uintptr_t size) {
 
 static void set_thread_ptr(uintptr_t val) { __arm_wsr64("tpidr_el0", val); }
 
+using InitCallback = void(int, char **, char **);
+using FiniCallback = void(void);
+
+extern "C" {
+// These arrays are present in the .init_array and .fini_array sections.
+// The symbols are inserted by linker when it sees references to them.
+extern uintptr_t __preinit_array_start[];
+extern uintptr_t __preinit_array_end[];
+extern uintptr_t __init_array_start[];
+extern uintptr_t __init_array_end[];
+extern uintptr_t __fini_array_start[];
+extern uintptr_t __fini_array_end[];
+}
+
+static void call_init_array_callbacks(int argc, char **argv, char **env) {
+  size_t preinit_array_size = __preinit_array_end - __preinit_array_start;
+  for (size_t i = 0; i < preinit_array_size; ++i)
+    reinterpret_cast<InitCallback *>(__preinit_array_start[i])(argc, argv, env);
+  size_t init_array_size = __init_array_end - __init_array_start;
+  for (size_t i = 0; i < init_array_size; ++i)
+    reinterpret_cast<InitCallback *>(__init_array_start[i])(argc, argv, env);
+}
+
+static void call_fini_array_callbacks() {
+  size_t fini_array_size = __fini_array_end - __fini_array_start;
+  for (size_t i = 0; i < fini_array_size; ++i)
+    reinterpret_cast<FiniCallback *>(__fini_array_start[i])();
+}
+
 } // namespace __llvm_libc
 
 using __llvm_libc::app;
@@ -101,13 +130,7 @@ struct AuxEntry {
   uint64_t value;
 };
 
-extern "C" void _start() {
-  // Skip the Frame Pointer and the Link Register
-  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst
-  // Section 6.2.3
-  app.args = reinterpret_cast<__llvm_libc::Args *>(
-      reinterpret_cast<uintptr_t *>(__builtin_frame_address(0)) + 2);
-
+__attribute__((noinline)) static void do_start() {
   auto tid = __llvm_libc::syscall(SYS_gettid);
   if (tid <= 0)
     __llvm_libc::syscall(SYS_exit, 1);
@@ -162,8 +185,31 @@ extern "C" void _start() {
 
   __llvm_libc::self.attrib = &__llvm_libc::main_thread_attrib;
 
+  __llvm_libc::call_init_array_callbacks(
+      app.args->argc, reinterpret_cast<char **>(app.args->argv),
+      reinterpret_cast<char **>(env_ptr));
+
   int retval = main(app.args->argc, reinterpret_cast<char **>(app.args->argv),
                     reinterpret_cast<char **>(env_ptr));
+
+  __llvm_libc::call_fini_array_callbacks();
+
   __llvm_libc::cleanup_tls(tls.addr, tls.size);
   __llvm_libc::syscall(SYS_exit, retval);
+}
+
+extern "C" void _start() {
+  // Skip the Frame Pointer and the Link Register
+  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst
+  // Section 6.2.3. Note that this only works if the current function
+  // is not using any callee-saved registers (x19 to x28). If the
+  // function uses such registers, then their value is pushed on to the
+  // stack before the frame pointer an link register values. That breaks
+  // the assumption that stepping over the frame pointer and link register
+  // will take us to the previous stack pointer. That is the reason why the
+  // actual business logic of the startup code is pushed into a non-inline
+  // function do_start so that this function is free of any stack usage.
+  app.args = reinterpret_cast<__llvm_libc::Args *>(
+      reinterpret_cast<uintptr_t *>(__builtin_frame_address(0)) + 2);
+  do_start();
 }
