@@ -33,7 +33,7 @@ Read-only,includes,Hui Xie,`D130116 <https://llvm.org/D130116>`_,✅
 Read-only,is_heap,Konstantin Varlamov,`D130547 <https://llvm.org/D130547>`_,✅
 Read-only,is_heap_until,Konstantin Varlamov,`D130547 <https://llvm.org/D130547>`_,✅
 Read-only,clamp,Nikolas Klauser,`D126193 <https://llvm.org/D126193>`_,✅
-Read-only,is_permutation,Nikolas Klauser,`D127194 <https://llvm.org/D127194>`_,Under review
+Read-only,is_permutation,Nikolas Klauser,`D127194 <https://llvm.org/D127194>`_,✅
 Read-only,for_each,Nikolas Klauser,`D124332 <https://llvm.org/D124332>`_,✅
 Read-only,for_each_n,Nikolas Klauser,`D124332 <https://llvm.org/D124332>`_,✅
 Write,copy,Nikolas Klauser,`D122982 <https://llvm.org/D122982>`_,✅
