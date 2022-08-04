@@ -159,6 +159,7 @@ define void @fp_to_int() {
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s9 = fptosi <4 x half> undef to <4 x i64>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s10 = fptosi <4 x float> undef to <4 x i64>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s11 = fptosi <4 x double> undef to <4 x i16>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %s12 = fptosi <4 x double> undef to <4 x i1>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u0 = fptoui <4 x half> undef to <4 x i8>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u1 = fptoui <4 x float> undef to <4 x i8>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %u2 = fptoui <4 x double> undef to <4 x i8>
@@ -171,6 +172,7 @@ define void @fp_to_int() {
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u9 = fptoui <4 x half> undef to <4 x i64>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u10 = fptoui <4 x float> undef to <4 x i64>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u11 = fptoui <4 x double> undef to <4 x i16>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %u12 = fptoui <4 x double> undef to <4 x i1>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; RISCV64-LABEL: 'fp_to_int'
@@ -186,6 +188,7 @@ define void @fp_to_int() {
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s9 = fptosi <4 x half> undef to <4 x i64>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s10 = fptosi <4 x float> undef to <4 x i64>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s11 = fptosi <4 x double> undef to <4 x i16>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %s12 = fptosi <4 x double> undef to <4 x i1>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u0 = fptoui <4 x half> undef to <4 x i8>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u1 = fptoui <4 x float> undef to <4 x i8>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %u2 = fptoui <4 x double> undef to <4 x i8>
@@ -198,6 +201,7 @@ define void @fp_to_int() {
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u9 = fptoui <4 x half> undef to <4 x i64>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u10 = fptoui <4 x float> undef to <4 x i64>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u11 = fptoui <4 x double> undef to <4 x i16>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %u12 = fptoui <4 x double> undef to <4 x i1>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %s0 = fptosi <4 x half> undef to <4 x i8>
@@ -212,6 +216,7 @@ define void @fp_to_int() {
   %s9 = fptosi <4 x half> undef to <4 x i64>
   %s10 = fptosi <4 x float> undef to <4 x i64>
   %s11 = fptosi <4 x double> undef to <4 x i16>
+  %s12 = fptosi <4 x double> undef to <4 x i1>
 
   %u0 = fptoui <4 x half> undef to <4 x i8>
   %u1 = fptoui <4 x float> undef to <4 x i8>
@@ -225,6 +230,8 @@ define void @fp_to_int() {
   %u9 = fptoui <4 x half> undef to <4 x i64>
   %u10 = fptoui <4 x float> undef to <4 x i64>
   %u11 = fptoui <4 x double> undef to <4 x i16>
+  %u12 = fptoui <4 x double> undef to <4 x i1>
+
   ret void
 }
 
@@ -242,6 +249,7 @@ define void @int_to_fp() {
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s9 = sitofp <4 x i64> undef to <4 x half>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s10 = sitofp <4 x i64> undef to <4 x float>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s11 = sitofp <4 x i16> undef to <4 x double>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %s12 = sitofp <4 x i1> undef to <4 x double>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u0 = uitofp <4 x i8> undef to <4 x half>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u1 = uitofp <4 x i8> undef to <4 x float>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u2 = uitofp <4 x i8> undef to <4 x double>
@@ -254,6 +262,7 @@ define void @int_to_fp() {
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u9 = uitofp <4 x i64> undef to <4 x half>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u10 = uitofp <4 x i64> undef to <4 x float>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u11 = uitofp <4 x i16> undef to <4 x double>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %u12 = uitofp <4 x i1> undef to <4 x double>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; RISCV64-LABEL: 'int_to_fp'
@@ -269,6 +278,7 @@ define void @int_to_fp() {
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s9 = sitofp <4 x i64> undef to <4 x half>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s10 = sitofp <4 x i64> undef to <4 x float>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s11 = sitofp <4 x i16> undef to <4 x double>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %s12 = sitofp <4 x i1> undef to <4 x double>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u0 = uitofp <4 x i8> undef to <4 x half>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u1 = uitofp <4 x i8> undef to <4 x float>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u2 = uitofp <4 x i8> undef to <4 x double>
@@ -281,6 +291,7 @@ define void @int_to_fp() {
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u9 = uitofp <4 x i64> undef to <4 x half>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u10 = uitofp <4 x i64> undef to <4 x float>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %u11 = uitofp <4 x i16> undef to <4 x double>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %u12 = uitofp <4 x i1> undef to <4 x double>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %s0 = sitofp <4 x i8> undef to <4 x half>
@@ -295,6 +306,7 @@ define void @int_to_fp() {
   %s9 = sitofp <4 x i64> undef to <4 x half>
   %s10 = sitofp <4 x i64> undef to <4 x float>
   %s11 = sitofp <4 x i16> undef to <4 x double>
+  %s12 = sitofp <4 x i1> undef to <4 x double>
 
   %u0 = uitofp <4 x i8> undef to <4 x half>
   %u1 = uitofp <4 x i8> undef to <4 x float>
@@ -308,5 +320,7 @@ define void @int_to_fp() {
   %u9 = uitofp <4 x i64> undef to <4 x half>
   %u10 = uitofp <4 x i64> undef to <4 x float>
   %u11 = uitofp <4 x i16> undef to <4 x double>
+  %u12 = uitofp <4 x i1> undef to <4 x double>
+
   ret void
 }
