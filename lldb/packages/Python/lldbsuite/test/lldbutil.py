@@ -13,6 +13,7 @@ import os
 import re
 import sys
 import subprocess
+from typing import Dict
 
 # Third-party modules
 from six import StringIO as SixStringIO
@@ -208,144 +209,54 @@ def get_description(obj, option=None):
 # Convert some enum value to its string counterpart
 # =================================================
 
-def state_type_to_str(enum):
+def _enum_names(prefix: str) -> Dict[int, str]:
+    """Generate a mapping of enum value to name, for the enum prefix."""
+    suffix_start = len(prefix)
+    return {
+        getattr(lldb, attr): attr[suffix_start:].lower()
+        for attr in dir(lldb)
+        if attr.startswith(prefix)
+    }
+
+
+_STATE_NAMES = _enum_names(prefix="eState")
+
+def state_type_to_str(enum: int) -> str:
     """Returns the stateType string given an enum."""
-    if enum == lldb.eStateInvalid:
-        return "invalid"
-    elif enum == lldb.eStateUnloaded:
-        return "unloaded"
-    elif enum == lldb.eStateConnected:
-        return "connected"
-    elif enum == lldb.eStateAttaching:
-        return "attaching"
-    elif enum == lldb.eStateLaunching:
-        return "launching"
-    elif enum == lldb.eStateStopped:
-        return "stopped"
-    elif enum == lldb.eStateRunning:
-        return "running"
-    elif enum == lldb.eStateStepping:
-        return "stepping"
-    elif enum == lldb.eStateCrashed:
-        return "crashed"
-    elif enum == lldb.eStateDetached:
-        return "detached"
-    elif enum == lldb.eStateExited:
-        return "exited"
-    elif enum == lldb.eStateSuspended:
-        return "suspended"
-    else:
-        raise Exception("Unknown StateType enum: " + str(enum))
+    name = _STATE_NAMES.get(enum)
+    if name:
+        return name
+    raise Exception(f"Unknown StateType enum: {enum}")
 
 
-def stop_reason_to_str(enum):
+_STOP_REASON_NAMES = _enum_names(prefix="eStopReason")
+
+def stop_reason_to_str(enum: int) -> str:
     """Returns the stopReason string given an enum."""
-    if enum == lldb.eStopReasonInvalid:
-        return "invalid"
-    elif enum == lldb.eStopReasonNone:
-        return "none"
-    elif enum == lldb.eStopReasonTrace:
-        return "trace"
-    elif enum == lldb.eStopReasonBreakpoint:
-        return "breakpoint"
-    elif enum == lldb.eStopReasonWatchpoint:
-        return "watchpoint"
-    elif enum == lldb.eStopReasonExec:
-        return "exec"
-    elif enum == lldb.eStopReasonFork:
-        return "fork"
-    elif enum == lldb.eStopReasonVFork:
-        return "vfork"
-    elif enum == lldb.eStopReasonVForkDone:
-        return "vforkdone"
-    elif enum == lldb.eStopReasonSignal:
-        return "signal"
-    elif enum == lldb.eStopReasonException:
-        return "exception"
-    elif enum == lldb.eStopReasonPlanComplete:
-        return "plancomplete"
-    elif enum == lldb.eStopReasonThreadExiting:
-        return "threadexiting"
-    elif enum == lldb.eStopReasonInstrumentation:
-        return "instrumentation"
-    elif enum == lldb.eStopReasonProcessorTrace:
-        return "processortrace"
-    else:
-        raise Exception("Unknown StopReason enum")
+    name = _STOP_REASON_NAMES.get(enum)
+    if name:
+        return name
+    raise Exception(f"Unknown StopReason enum: {enum}")
 
 
-def symbol_type_to_str(enum):
+_SYMBOL_TYPE_NAMES = _enum_names(prefix="eSymbolType")
+
+def symbol_type_to_str(enum: int) -> str:
     """Returns the symbolType string given an enum."""
-    if enum == lldb.eSymbolTypeInvalid:
-        return "invalid"
-    elif enum == lldb.eSymbolTypeAbsolute:
-        return "absolute"
-    elif enum == lldb.eSymbolTypeCode:
-        return "code"
-    elif enum == lldb.eSymbolTypeData:
-        return "data"
-    elif enum == lldb.eSymbolTypeTrampoline:
-        return "trampoline"
-    elif enum == lldb.eSymbolTypeRuntime:
-        return "runtime"
-    elif enum == lldb.eSymbolTypeException:
-        return "exception"
-    elif enum == lldb.eSymbolTypeSourceFile:
-        return "sourcefile"
-    elif enum == lldb.eSymbolTypeHeaderFile:
-        return "headerfile"
-    elif enum == lldb.eSymbolTypeObjectFile:
-        return "objectfile"
-    elif enum == lldb.eSymbolTypeCommonBlock:
-        return "commonblock"
-    elif enum == lldb.eSymbolTypeBlock:
-        return "block"
-    elif enum == lldb.eSymbolTypeLocal:
-        return "local"
-    elif enum == lldb.eSymbolTypeParam:
-        return "param"
-    elif enum == lldb.eSymbolTypeVariable:
-        return "variable"
-    elif enum == lldb.eSymbolTypeVariableType:
-        return "variabletype"
-    elif enum == lldb.eSymbolTypeLineEntry:
-        return "lineentry"
-    elif enum == lldb.eSymbolTypeLineHeader:
-        return "lineheader"
-    elif enum == lldb.eSymbolTypeScopeBegin:
-        return "scopebegin"
-    elif enum == lldb.eSymbolTypeScopeEnd:
-        return "scopeend"
-    elif enum == lldb.eSymbolTypeAdditional:
-        return "additional"
-    elif enum == lldb.eSymbolTypeCompiler:
-        return "compiler"
-    elif enum == lldb.eSymbolTypeInstrumentation:
-        return "instrumentation"
-    elif enum == lldb.eSymbolTypeUndefined:
-        return "undefined"
+    name = _SYMBOL_TYPE_NAMES.get(enum)
+    if name:
+        return name
+    raise Exception(f"Unknown SymbolType enum: {enum}")
 
 
-def value_type_to_str(enum):
+_VALUE_TYPE_NAMES = _enum_names(prefix="eValueType")
+
+def value_type_to_str(enum: int) -> str:
     """Returns the valueType string given an enum."""
-    if enum == lldb.eValueTypeInvalid:
-        return "invalid"
-    elif enum == lldb.eValueTypeVariableGlobal:
-        return "global_variable"
-    elif enum == lldb.eValueTypeVariableStatic:
-        return "static_variable"
-    elif enum == lldb.eValueTypeVariableArgument:
-        return "argument_variable"
-    elif enum == lldb.eValueTypeVariableLocal:
-        return "local_variable"
-    elif enum == lldb.eValueTypeRegister:
-        return "register"
-    elif enum == lldb.eValueTypeRegisterSet:
-        return "register_set"
-    elif enum == lldb.eValueTypeConstResult:
-        return "constant_result"
-    else:
-        raise Exception("Unknown ValueType enum")
+    name = _VALUE_TYPE_NAMES.get(enum)
+    if name:
+        return name
+    raise Exception(f"Unknown ValueType enum: {enum}")
 
 
 # ==================================================
