@@ -339,8 +339,8 @@ runTypeErasedDataflowAnalysis(
   PostOrderCFGView POV(&CFCtx.getCFG());
   ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
 
-  std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates;
-  BlockStates.resize(CFCtx.getCFG().size(), llvm::None);
+  std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates(
+      CFCtx.getCFG().size(), llvm::None);
 
   // The entry basic block doesn't contain statements so it can be skipped.
   const CFGBlock &Entry = CFCtx.getCFG().getEntry();
