@@ -811,6 +811,20 @@ def : Pat<(vec.vt (or (and (vec.vt V128:$c), (vec.vt V128:$v1)),
             (and (vnot V128:$c), (vec.vt V128:$v2)))),
           (BITSELECT $v1, $v2, $c)>;
 
+// Bitselect is also equivalent to ((v1 ^ v2) & c) ^ v2
+foreach vec = IntVecs in
+def : Pat<(vec.vt (xor (and (xor (vec.vt V128:$v1), (vec.vt V128:$v2)),
+                            (vec.vt V128:$c)),
+                       (vec.vt V128:$v2))),
+          (BITSELECT $v1, $v2, $c)>;
+
+// Same pattern with `c` negated so `a` and `b` get swapped.
+foreach vec = IntVecs in
+def : Pat<(vec.vt (xor (and (xor (vec.vt V128:$v1), (vec.vt V128:$v2)),
+                            (vnot (vec.vt V128:$c))),
+                       (vec.vt V128:$v2))),
+          (BITSELECT $v2, $v1, $c)>;
+
 // Also implement vselect in terms of bitselect
 foreach vec = AllVecs in
 def : Pat<(vec.vt (vselect
