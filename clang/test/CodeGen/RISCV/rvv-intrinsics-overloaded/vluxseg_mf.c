@@ -6922,3 +6922,29 @@ void test_vluxseg7ei64_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32m
 void test_vluxseg8ei64_v_f32mf2 (vfloat32mf2_t *v0, vfloat32mf2_t *v1, vfloat32mf2_t *v2, vfloat32mf2_t *v3, vfloat32mf2_t *v4, vfloat32mf2_t *v5, vfloat32mf2_t *v6, vfloat32mf2_t *v7, const float *base, vuint64m1_t bindex, size_t vl) {
   return vluxseg8ei64(v0, v1, v2, v3, v4, v5, v6, v7, base, bindex, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vluxseg2ei32_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vluxseg2.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[MERGE0:%.*]], <vscale x 1 x i32> [[MERGE1:%.*]], i32* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP2]], <vscale x 1 x i32>* [[V1:%.*]], align 4
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vluxseg2ei32_tu(vint32mf2_t *v0, vint32mf2_t *v1, vint32mf2_t merge0, vint32mf2_t merge1, const int32_t *base, vuint32mf2_t bindex, size_t vl) {
+  return vluxseg2ei32_tu(v0, v1, merge0, merge1, base, bindex, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vluxseg2ei32_v_i32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vluxseg2.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP2]], <vscale x 1 x i32>* [[V1:%.*]], align 4
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vluxseg2ei32_v_i32mf2_ta(vint32mf2_t *v0, vint32mf2_t *v1, const int32_t *base, vuint32mf2_t bindex, size_t vl) {
+  return vluxseg2ei32_ta(v0, v1, base, bindex, vl);
+}

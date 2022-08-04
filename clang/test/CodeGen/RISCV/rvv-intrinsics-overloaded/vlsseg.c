@@ -3646,3 +3646,80 @@ void test_vlsseg2e64_v_f64m4_m (vfloat64m4_t *v0, vfloat64m4_t *v1, vbool16_t ma
   return vlsseg2e64(v0, v1, mask, maskedoff0, maskedoff1, base, bstride, vl);
 }
 
+// CHECK-RV64-LABEL: @test_vlsseg2e32_v_u32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlsseg2.nxv1i32.i64(<vscale x 1 x i32> [[MERGE0:%.*]], <vscale x 1 x i32> [[MERGE1:%.*]], i32* [[BASE:%.*]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP2]], <vscale x 1 x i32>* [[V1:%.*]], align 4
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vlsseg2e32_v_u32mf2_tu(vuint32mf2_t *v0, vuint32mf2_t *v1, vuint32mf2_t merge0, vuint32mf2_t merge1, const uint32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlsseg2e32_tu(v0, v1, merge0, merge1, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlsseg2e32_v_u32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlsseg2.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[BSTRIDE:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP2]], <vscale x 1 x i32>* [[V1:%.*]], align 4
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vlsseg2e32_v_u32mf2_ta(vuint32mf2_t *v0, vuint32mf2_t *v1, const uint32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlsseg2e32_ta(v0, v1, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlsseg2e32_v_u32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlsseg2.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE0:%.*]], <vscale x 1 x i32> [[MERGE1:%.*]], i32* [[BASE:%.*]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP2]], <vscale x 1 x i32>* [[V1:%.*]], align 4
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vlsseg2e32_v_u32mf2_tuma(vuint32mf2_t *v0, vuint32mf2_t *v1, vbool64_t mask, vuint32mf2_t merge0, vuint32mf2_t merge1, const uint32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlsseg2e32_tuma(v0, v1, mask, merge0, merge1, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlsseg2e32_v_u32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlsseg2.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE0:%.*]], <vscale x 1 x i32> [[MERGE1:%.*]], i32* [[BASE:%.*]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP2]], <vscale x 1 x i32>* [[V1:%.*]], align 4
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vlsseg2e32_v_u32mf2_tumu(vuint32mf2_t *v0, vuint32mf2_t *v1, vbool64_t mask, vuint32mf2_t merge0, vuint32mf2_t merge1, const uint32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlsseg2e32_tumu(v0, v1, mask, merge0, merge1, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlsseg2e32_v_u32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlsseg2.mask.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP2]], <vscale x 1 x i32>* [[V1:%.*]], align 4
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vlsseg2e32_v_u32mf2_tama(vuint32mf2_t *v0, vuint32mf2_t *v1, vbool64_t mask, const uint32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlsseg2e32_tama(v0, v1, mask, base, bstride, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vlsseg2e32_v_u32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vlsseg2.mask.nxv1i32.i64(<vscale x 1 x i32> [[MERGE0:%.*]], <vscale x 1 x i32> [[MERGE1:%.*]], i32* [[BASE:%.*]], i64 [[BSTRIDE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP2]], <vscale x 1 x i32>* [[V1:%.*]], align 4
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vlsseg2e32_v_u32mf2_tamu(vuint32mf2_t *v0, vuint32mf2_t *v1, vbool64_t mask, vuint32mf2_t merge0, vuint32mf2_t merge1, const uint32_t *base, ptrdiff_t bstride, size_t vl) {
+  return vlsseg2e32_tamu(v0, v1, mask, merge0, merge1, base, bstride, vl);
+}
