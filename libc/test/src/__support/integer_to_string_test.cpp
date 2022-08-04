@@ -14,6 +14,7 @@
 #include "limits.h"
 
 using __llvm_libc::integer_to_string;
+using __llvm_libc::IntegerToString;
 using __llvm_libc::cpp::StringView;
 
 TEST(LlvmLibcIntegerToStringTest, UINT8) {
@@ -182,4 +183,61 @@ TEST(LlvmLibcIntegerToStringTest, INT64) {
             (StringView("9223372036854775807")));
   EXPECT_EQ(integer_to_string(int64_t(INT64_MIN)).str(),
             (StringView("-9223372036854775808")));
+}
+
+TEST(LlvmLibcIntegerToStringTest, UINT64_Base_10) {
+  EXPECT_EQ((IntegerToString<uint64_t, 10>(int64_t(0)).str()), StringView("0"));
+  EXPECT_EQ((IntegerToString<uint64_t, 10>(int64_t(1234567890123456789)).str()),
+            StringView("1234567890123456789"));
+}
+
+TEST(LlvmLibcIntegerToStringTest, UINT64_Base_8) {
+  EXPECT_EQ((IntegerToString<uint64_t, 8>(int64_t(0)).str()), StringView("0"));
+  EXPECT_EQ((IntegerToString<uint64_t, 8>(int64_t(012345)).str()),
+            StringView("12345"));
+  EXPECT_EQ(
+      (IntegerToString<uint64_t, 8>(int64_t(0123456701234567012345)).str()),
+      StringView("123456701234567012345"));
+  EXPECT_EQ(
+      (IntegerToString<uint64_t, 8>(int64_t(01777777777777777777777)).str()),
+      StringView("1777777777777777777777"));
+}
+
+TEST(LlvmLibcIntegerToStringTest, UINT64_Base_16) {
+  EXPECT_EQ((IntegerToString<uint64_t, 16>(int64_t(0)).str()), StringView("0"));
+  EXPECT_EQ((IntegerToString<uint64_t, 16>(int64_t(0x12345)).str()),
+            StringView("12345"));
+  EXPECT_EQ((IntegerToString<uint64_t, 16>(int64_t(0x123456789abcdef)).str()),
+            StringView("123456789abcdef"));
+  EXPECT_EQ(
+      (IntegerToString<uint64_t, 16>(int64_t(0x123456789abcdef), false).str()),
+      StringView("123456789ABCDEF"));
+  EXPECT_EQ((IntegerToString<uint64_t, 16>(int64_t(0xffffffffffffffff)).str()),
+            StringView("ffffffffffffffff"));
+}
+
+TEST(LlvmLibcIntegerToStringTest, UINT64_Base_2) {
+  EXPECT_EQ((IntegerToString<uint64_t, 2>(int64_t(0)).str()), StringView("0"));
+  EXPECT_EQ((IntegerToString<uint64_t, 2>(int64_t(0xf0c)).str()),
+            StringView("111100001100"));
+  EXPECT_EQ((IntegerToString<uint64_t, 2>(int64_t(0x123abc)).str()),
+            StringView("100100011101010111100"));
+  EXPECT_EQ(
+      (IntegerToString<uint64_t, 2>(int64_t(0xffffffffffffffff)).str()),
+      StringView(
+          "1111111111111111111111111111111111111111111111111111111111111111"));
+}
+
+TEST(LlvmLibcIntegerToStringTest, UINT64_Base_36) {
+  EXPECT_EQ((IntegerToString<uint64_t, 36>(int64_t(0)).str()), StringView("0"));
+  EXPECT_EQ((IntegerToString<uint64_t, 36>(int64_t(12345)).str()),
+            StringView("9ix"));
+  EXPECT_EQ((IntegerToString<uint64_t, 36>(int64_t(1047601316295595)).str()),
+            StringView("abcdefghij"));
+  EXPECT_EQ((IntegerToString<uint64_t, 36>(int64_t(2092218013456445)).str()),
+            StringView("klmnopqrst"));
+  EXPECT_EQ((IntegerToString<uint64_t, 36>(int64_t(1867590395), false).str()),
+            StringView("UVWXYZ"));
+  EXPECT_EQ((IntegerToString<uint64_t, 36>(int64_t(0xffffffffffffffff)).str()),
+            StringView("3w5e11264sgsf"));
 }
