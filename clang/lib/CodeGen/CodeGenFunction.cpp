@@ -851,18 +851,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     }
   }
 
-  if (CGM.getCodeGenOpts().getProfileInstr() != CodeGenOptions::ProfileNone) {
-    switch (CGM.isFunctionBlockedFromProfileInstr(Fn, Loc)) {
-    case ProfileList::Skip:
-      Fn->addFnAttr(llvm::Attribute::SkipProfile);
-      break;
-    case ProfileList::Forbid:
+  if (CGM.getCodeGenOpts().getProfileInstr() != CodeGenOptions::ProfileNone)
+    if (CGM.isFunctionBlockedFromProfileInstr(Fn, Loc))
       Fn->addFnAttr(llvm::Attribute::NoProfile);
-      break;
-    case ProfileList::Allow:
-      break;
-    }
-  }
 
   unsigned Count, Offset;
   if (const auto *Attr =

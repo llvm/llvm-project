@@ -1351,14 +1351,13 @@ public:
 
   /// \returns true if \p Fn at \p Loc should be excluded from profile
   /// instrumentation by the SCL passed by \p -fprofile-list.
-  ProfileList::ExclusionType
-  isFunctionBlockedByProfileList(llvm::Function *Fn, SourceLocation Loc) const;
+  bool isFunctionBlockedByProfileList(llvm::Function *Fn,
+                                      SourceLocation Loc) const;
 
   /// \returns true if \p Fn at \p Loc should be excluded from profile
   /// instrumentation.
-  ProfileList::ExclusionType
-  isFunctionBlockedFromProfileInstr(llvm::Function *Fn,
-                                    SourceLocation Loc) const;
+  bool isFunctionBlockedFromProfileInstr(llvm::Function *Fn,
+                                         SourceLocation Loc) const;
 
   SanitizerMetadata *getSanitizerMetadata() {
     return SanitizerMD.get();
