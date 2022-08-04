@@ -1729,29 +1729,31 @@ LogicalResult ResumeOp::verify() {
 // Verifier for LLVM::AddressOfOp.
 //===----------------------------------------------------------------------===//
 
-template <typename OpTy>
-static OpTy lookupSymbolInModule(Operation *parent, StringRef name) {
+static Operation *lookupSymbolInModule(Operation *parent, StringRef name) {
   Operation *module = parent;
   while (module && !satisfiesLLVMModule(module))
     module = module->getParentOp();
   assert(module && "unexpected operation outside of a module");
-  return dyn_cast_or_null<OpTy>(
-      mlir::SymbolTable::lookupSymbolIn(module, name));
+  return mlir::SymbolTable::lookupSymbolIn(module, name);
 }
 
 GlobalOp AddressOfOp::getGlobal() {
-  return lookupSymbolInModule<LLVM::GlobalOp>((*this)->getParentOp(),
-                                              getGlobalName());
+  return dyn_cast_or_null<GlobalOp>(
+      lookupSymbolInModule((*this)->getParentOp(), getGlobalName()));
 }
 
 LLVMFuncOp AddressOfOp::getFunction() {
-  return lookupSymbolInModule<LLVM::LLVMFuncOp>((*this)->getParentOp(),
-                                                getGlobalName());
+  return dyn_cast_or_null<LLVMFuncOp>(
+      lookupSymbolInModule((*this)->getParentOp(), getGlobalName()));
 }
 
 LogicalResult AddressOfOp::verify() {
-  auto global = getGlobal();
-  auto function = getFunction();
+  Operation *symbol =
+      lookupSymbolInModule((*this)->getParentOp(), getGlobalName());
+
+  auto global = dyn_cast_or_null<GlobalOp>(symbol);
+  auto function = dyn_cast_or_null<LLVMFuncOp>(symbol);
+
   if (!global && !function)
     return emitOpError(
         "must reference a global defined by 'llvm.mlir.global' or 'llvm.func'");
