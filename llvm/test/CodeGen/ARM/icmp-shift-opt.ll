@@ -139,15 +139,13 @@ define i1 @opt_setcc_expanded_shl_wrong_shifts(i32 %a, i32 %b) nounwind {
 define i1 @opt_setcc_shl_ne_zero_i128(i128 %a) nounwind {
 ; CHECK-LABEL: opt_setcc_shl_ne_zero_i128:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    lsl r3, r3, #17
-; CHECK-NEXT:    orr r12, r3, r2, lsr #15
-; CHECK-NEXT:    lsl r3, r1, #17
-; CHECK-NEXT:    orr r3, r3, r0, lsr #15
+; CHECK-NEXT:    orr r3, r1, r3
 ; CHECK-NEXT:    orr r0, r2, r0
-; CHECK-NEXT:    orr r3, r3, r12
-; CHECK-NEXT:    lsl r0, r0, #17
-; CHECK-NEXT:    orr r0, r0, r1, lsr #15
-; CHECK-NEXT:    orrs r0, r0, r3
+; CHECK-NEXT:    orr r2, r0, r3
+; CHECK-NEXT:    orr r0, r0, r1
+; CHECK-NEXT:    lsr r0, r0, #15
+; CHECK-NEXT:    orr r0, r0, r2, lsl #17
+; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    movwne r0, #1
 ; CHECK-NEXT:    bx lr
   %shl = shl i128 %a, 17
