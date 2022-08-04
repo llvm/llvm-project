@@ -9051,3 +9051,54 @@ void test_vluxseg2ei8_v_i8mf8_m (vint8mf8_t *v0, vint8mf8_t *v1, vbool64_t mask,
   return vluxseg2ei8_v_i8mf8_m(v0, v1, mask, maskedoff0, maskedoff1, base, bindex, vl);
 }
 
+// CHECK-RV64-LABEL: @test_vluxseg2ei32_v_i32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vluxseg2.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[MERGE0:%.*]], <vscale x 1 x i32> [[MERGE1:%.*]], i32* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP2]], <vscale x 1 x i32>* [[V1:%.*]], align 4
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vluxseg2ei32_v_i32mf2_tuma(vint32mf2_t *v0, vint32mf2_t *v1, vbool64_t mask, vint32mf2_t merge0, vint32mf2_t merge1, const int32_t *base, vuint32mf2_t bindex, size_t vl) {
+  return vluxseg2ei32_v_i32mf2_tuma(v0, v1, mask, merge0, merge1, base, bindex, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vluxseg2ei32_v_i32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vluxseg2.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[MERGE0:%.*]], <vscale x 1 x i32> [[MERGE1:%.*]], i32* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP2]], <vscale x 1 x i32>* [[V1:%.*]], align 4
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vluxseg2ei32_v_i32mf2_tumu(vint32mf2_t *v0, vint32mf2_t *v1, vbool64_t mask, vint32mf2_t merge0, vint32mf2_t merge1, const int32_t *base, vuint32mf2_t bindex, size_t vl) {
+  return vluxseg2ei32_v_i32mf2_tumu(v0, v1, mask, merge0, merge1, base, bindex, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vluxseg2ei32_v_i32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vluxseg2.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> undef, i32* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP2]], <vscale x 1 x i32>* [[V1:%.*]], align 4
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vluxseg2ei32_v_i32mf2_tama(vint32mf2_t *v0, vint32mf2_t *v1, vbool64_t mask, const int32_t *base, vuint32mf2_t bindex, size_t vl) {
+  return vluxseg2ei32_v_i32mf2_tama(v0, v1, mask, base, bindex, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vluxseg2ei32_v_i32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call { <vscale x 1 x i32>, <vscale x 1 x i32> } @llvm.riscv.vluxseg2.mask.nxv1i32.nxv1i32.i64(<vscale x 1 x i32> [[MERGE0:%.*]], <vscale x 1 x i32> [[MERGE1:%.*]], i32* [[BASE:%.*]], <vscale x 1 x i32> [[BINDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 0
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP1]], <vscale x 1 x i32>* [[V0:%.*]], align 4
+// CHECK-RV64-NEXT:    [[TMP2:%.*]] = extractvalue { <vscale x 1 x i32>, <vscale x 1 x i32> } [[TMP0]], 1
+// CHECK-RV64-NEXT:    store <vscale x 1 x i32> [[TMP2]], <vscale x 1 x i32>* [[V1:%.*]], align 4
+// CHECK-RV64-NEXT:    ret void
+//
+void test_vluxseg2ei32_v_i32mf2_tamu(vint32mf2_t *v0, vint32mf2_t *v1, vbool64_t mask, vint32mf2_t merge0, vint32mf2_t merge1, const int32_t *base, vuint32mf2_t bindex, size_t vl) {
+  return vluxseg2ei32_v_i32mf2_tamu(v0, v1, mask, merge0, merge1, base, bindex, vl);
+}
