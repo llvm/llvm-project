@@ -172,6 +172,10 @@ public:
 
   TraceIntelPTSP GetSharedPtr();
 
+  enum class TraceMode { UserMode, KernelMode };
+
+  TraceMode GetTraceMode();
+
 private:
   friend class TraceIntelPTBundleLoader;
 
@@ -183,11 +187,14 @@ private:
   ///     The definition file for the postmortem bundle.
   ///
   /// \param[in] traced_processes
-  ///     The processes traced in the live session.
+  ///     The processes traced in the postmortem session.
   ///
   /// \param[in] trace_threads
-  ///     The threads traced in the live session. They must belong to the
+  ///     The threads traced in the postmortem session. They must belong to the
   ///     processes mentioned above.
+  ///
+  /// \param[in] trace_mode
+  ///     The tracing mode of the postmortem session.
   ///
   /// \return
   ///     A TraceIntelPT shared pointer instance.
@@ -195,16 +202,19 @@ private:
   static TraceIntelPTSP CreateInstanceForPostmortemTrace(
       JSONTraceBundleDescription &bundle_description,
       llvm::ArrayRef<lldb::ProcessSP> traced_processes,
-      llvm::ArrayRef<lldb::ThreadPostMortemTraceSP> traced_threads);
+      llvm::ArrayRef<lldb::ThreadPostMortemTraceSP> traced_threads,
+      TraceMode trace_mode);
 
   /// This constructor is used by CreateInstanceForPostmortemTrace to get the
   /// instance ready before using shared pointers, which is a limitation of C++.
   TraceIntelPT(JSONTraceBundleDescription &bundle_description,
-               llvm::ArrayRef<lldb::ProcessSP> traced_processes);
+               llvm::ArrayRef<lldb::ProcessSP> traced_processes,
+               TraceMode trace_mode);
   /// \}
 
   /// Constructor for live processes
-  TraceIntelPT(Process &live_process) : Trace(live_process){};
+  TraceIntelPT(Process &live_process)
+      : Trace(live_process), trace_mode(TraceMode::UserMode){};
 
   /// Decode the trace of the given thread that, i.e. recontruct the traced
   /// instructions.
@@ -253,6 +263,9 @@ private:
 
   /// Get the storage after refreshing the data in the case of a live process.
   Storage &GetUpdatedStorage();
+
+  /// The tracing mode of post mortem trace.
+  TraceMode trace_mode;
 };
 
 } // namespace trace_intel_pt

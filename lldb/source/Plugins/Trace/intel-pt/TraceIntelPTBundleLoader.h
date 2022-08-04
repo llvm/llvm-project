@@ -67,6 +67,10 @@ private:
   CreateTraceIntelPTInstance(JSONTraceBundleDescription &bundle_description,
                              std::vector<ParsedProcess> &parsed_processes);
 
+  /// Create an empty Process object with given pid and target.
+  llvm::Expected<ParsedProcess> CreateEmptyProcess(lldb::pid_t pid,
+                                                   llvm::StringRef triple);
+
   /// Create the corresponding Threads and Process objects given the JSON
   /// process definition.
   ///
@@ -77,6 +81,10 @@ private:
   /// Create a module associated with the given \p target using the definition
   /// from \p module.
   llvm::Error ParseModule(Target &target, const JSONModule &module);
+
+  /// Create a kernel process and cpu threads given the JSON kernel definition.
+  llvm::Expected<ParsedProcess>
+  ParseKernel(const JSONTraceBundleDescription &bundle_description);
 
   /// Create a user-friendly error message upon a JSON-parsing failure using the
   /// \a json::ObjectMapper functionality.

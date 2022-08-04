@@ -367,11 +367,37 @@ Context:
             for _ in range(TEST_SEEK_ID): sequentialTraversalCursor.Next()
             assertCurrentTraceCursorItemEqual(sequentialTraversalCursor, randomAccessCursor)
 
+    @testSBAPIAndCommands
+    def testLoadKernelTrace(self):
+        # kernel section without loadAddress (using default loadAddress).
+        src_dir = self.getSourceDir()
+        trace_description_file_path = os.path.join(src_dir, "intelpt-kernel-trace", "trace.json")
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
 
-            
-                
+        self.expect("image list", substrs=["0xffffffff81000000", "modules/m.out"])
 
+        self.expect("thread list", substrs=[
+            "Process 1 stopped",
+            "* thread #1: tid = 0x002d",
+            "  thread #2: tid = 0x0033"])
 
+        # kernel section with custom loadAddress.
+        trace_description_file_path = os.path.join(src_dir, "intelpt-kernel-trace",
+                "trace_with_loadAddress.json")
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
 
+        self.expect("image list", substrs=["0x400000", "modules/m.out"])
 
-        
+    @testSBAPIAndCommands
+    def testLoadInvalidKernelTrace(self):
+        src_dir = self.getSourceDir()
+
+        # Test kernel section with non-empty processeses section.
+        trace_description_file_path = os.path.join(src_dir, "intelpt-kernel-trace", "trace_kernel_with_process.json")
+        expected_substrs = ['error: "processes" must be empty when "kernel" is provided when parsing traceBundle']
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)
+
+        # Test kernel section without cpus section.
+        trace_description_file_path = os.path.join(src_dir, "intelpt-kernel-trace", "trace_kernel_wo_cpus.json")
+        expected_substrs = ['error: "cpus" is required when "kernel" is provided when parsing traceBundle']
+        self.traceLoad(traceDescriptionFilePath=trace_description_file_path, error=True, substrs=expected_substrs)
