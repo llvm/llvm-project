@@ -89,6 +89,92 @@ static ELFKind getELFKind(MemoryBufferRef mb, StringRef archiveName) {
   return (endian == ELFDATA2LSB) ? ELF64LEKind : ELF64BEKind;
 }
 
+// For ARM only, to set the EF_ARM_ABI_FLOAT_SOFT or EF_ARM_ABI_FLOAT_HARD
+// flag in the ELF Header we need to look at Tag_ABI_VFP_args to find out how
+// the input objects have been compiled.
+static void updateARMVFPArgs(const ARMAttributeParser &attributes,
+                             const InputFile *f) {
+  Optional<unsigned> attr =
+      attributes.getAttributeValue(ARMBuildAttrs::ABI_VFP_args);
+  if (!attr)
+    // If an ABI tag isn't present then it is implicitly given the value of 0
+    // which maps to ARMBuildAttrs::BaseAAPCS. However many assembler files,
+    // including some in glibc that don't use FP args (and should have value 3)
+    // don't have the attribute so we do not consider an implicit value of 0
+    // as a clash.
+    return;
+
+  unsigned vfpArgs = *attr;
+  ARMVFPArgKind arg;
+  switch (vfpArgs) {
+  case ARMBuildAttrs::BaseAAPCS:
+    arg = ARMVFPArgKind::Base;
+    break;
+  case ARMBuildAttrs::HardFPAAPCS:
+    arg = ARMVFPArgKind::VFP;
+    break;
+  case ARMBuildAttrs::ToolChainFPPCS:
+    // Tool chain specific convention that conforms to neither AAPCS variant.
+    arg = ARMVFPArgKind::ToolChain;
+    break;
+  case ARMBuildAttrs::CompatibleFPAAPCS:
+    // Object compatible with all conventions.
+    return;
+  default:
+    error(toString(f) + ": unknown Tag_ABI_VFP_args value: " + Twine(vfpArgs));
+    return;
+  }
+  // Follow ld.bfd and error if there is a mix of calling conventions.
+  if (config->armVFPArgs != arg && config->armVFPArgs != ARMVFPArgKind::Default)
+    error(toString(f) + ": incompatible Tag_ABI_VFP_args");
+  else
+    config->armVFPArgs = arg;
+}
+
+// The ARM support in lld makes some use of instructions that are not available
+// on all ARM architectures. Namely:
+// - Use of BLX instruction for interworking between ARM and Thumb state.
+// - Use of the extended Thumb branch encoding in relocation.
+// - Use of the MOVT/MOVW instructions in Thumb Thunks.
+// The ARM Attributes section contains information about the architecture chosen
+// at compile time. We follow the convention that if at least one input object
+// is compiled with an architecture that supports these features then lld is
+// permitted to use them.
+static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
+  Optional<unsigned> attr =
+      attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
+  if (!attr)
+    return;
+  auto arch = attr.value();
+  switch (arch) {
+  case ARMBuildAttrs::Pre_v4:
+  case ARMBuildAttrs::v4:
+  case ARMBuildAttrs::v4T:
+    // Architectures prior to v5 do not support BLX instruction
+    break;
+  case ARMBuildAttrs::v5T:
+  case ARMBuildAttrs::v5TE:
+  case ARMBuildAttrs::v5TEJ:
+  case ARMBuildAttrs::v6:
+  case ARMBuildAttrs::v6KZ:
+  case ARMBuildAttrs::v6K:
+    config->armHasBlx = true;
+    // Architectures used in pre-Cortex processors do not support
+    // The J1 = 1 J2 = 1 Thumb branch range extension, with the exception
+    // of Architecture v6T2 (arm1156t2-s and arm1156t2f-s) that do.
+    break;
+  default:
+    // All other Architectures have BLX and extended branch encoding
+    config->armHasBlx = true;
+    config->armJ1J2BranchEncoding = true;
+    if (arch != ARMBuildAttrs::v6_M && arch != ARMBuildAttrs::v6S_M)
+      // All Architectures used in Cortex processors with the exception
+      // of v6-M and v6S-M have the MOVT and MOVW instructions.
+      config->armHasMovtMovw = true;
+    break;
+  }
+}
+
 InputFile::InputFile(Kind k, MemoryBufferRef m)
     : mb(m), groupId(nextGroupId), fileKind(k) {
   // All files within the same --{start,end}-group get the same group ID.
@@ -683,92 +769,6 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     handleSectionGroup<ELFT>(this->sections, entries);
 }
 
-// For ARM only, to set the EF_ARM_ABI_FLOAT_SOFT or EF_ARM_ABI_FLOAT_HARD
-// flag in the ELF Header we need to look at Tag_ABI_VFP_args to find out how
-// the input objects have been compiled.
-static void updateARMVFPArgs(const ARMAttributeParser &attributes,
-                             const InputFile *f) {
-  Optional<unsigned> attr =
-      attributes.getAttributeValue(ARMBuildAttrs::ABI_VFP_args);
-  if (!attr)
-    // If an ABI tag isn't present then it is implicitly given the value of 0
-    // which maps to ARMBuildAttrs::BaseAAPCS. However many assembler files,
-    // including some in glibc that don't use FP args (and should have value 3)
-    // don't have the attribute so we do not consider an implicit value of 0
-    // as a clash.
-    return;
-
-  unsigned vfpArgs = *attr;
-  ARMVFPArgKind arg;
-  switch (vfpArgs) {
-  case ARMBuildAttrs::BaseAAPCS:
-    arg = ARMVFPArgKind::Base;
-    break;
-  case ARMBuildAttrs::HardFPAAPCS:
-    arg = ARMVFPArgKind::VFP;
-    break;
-  case ARMBuildAttrs::ToolChainFPPCS:
-    // Tool chain specific convention that conforms to neither AAPCS variant.
-    arg = ARMVFPArgKind::ToolChain;
-    break;
-  case ARMBuildAttrs::CompatibleFPAAPCS:
-    // Object compatible with all conventions.
-    return;
-  default:
-    error(toString(f) + ": unknown Tag_ABI_VFP_args value: " + Twine(vfpArgs));
-    return;
-  }
-  // Follow ld.bfd and error if there is a mix of calling conventions.
-  if (config->armVFPArgs != arg && config->armVFPArgs != ARMVFPArgKind::Default)
-    error(toString(f) + ": incompatible Tag_ABI_VFP_args");
-  else
-    config->armVFPArgs = arg;
-}
-
-// The ARM support in lld makes some use of instructions that are not available
-// on all ARM architectures. Namely:
-// - Use of BLX instruction for interworking between ARM and Thumb state.
-// - Use of the extended Thumb branch encoding in relocation.
-// - Use of the MOVT/MOVW instructions in Thumb Thunks.
-// The ARM Attributes section contains information about the architecture chosen
-// at compile time. We follow the convention that if at least one input object
-// is compiled with an architecture that supports these features then lld is
-// permitted to use them.
-static void updateSupportedARMFeatures(const ARMAttributeParser &attributes) {
-  Optional<unsigned> attr =
-      attributes.getAttributeValue(ARMBuildAttrs::CPU_arch);
-  if (!attr)
-    return;
-  auto arch = attr.value();
-  switch (arch) {
-  case ARMBuildAttrs::Pre_v4:
-  case ARMBuildAttrs::v4:
-  case ARMBuildAttrs::v4T:
-    // Architectures prior to v5 do not support BLX instruction
-    break;
-  case ARMBuildAttrs::v5T:
-  case ARMBuildAttrs::v5TE:
-  case ARMBuildAttrs::v5TEJ:
-  case ARMBuildAttrs::v6:
-  case ARMBuildAttrs::v6KZ:
-  case ARMBuildAttrs::v6K:
-    config->armHasBlx = true;
-    // Architectures used in pre-Cortex processors do not support
-    // The J1 = 1 J2 = 1 Thumb branch range extension, with the exception
-    // of Architecture v6T2 (arm1156t2-s and arm1156t2f-s) that do.
-    break;
-  default:
-    // All other Architectures have BLX and extended branch encoding
-    config->armHasBlx = true;
-    config->armJ1J2BranchEncoding = true;
-    if (arch != ARMBuildAttrs::v6_M && arch != ARMBuildAttrs::v6S_M)
-      // All Architectures used in Cortex processors with the exception
-      // of v6-M and v6S-M have the MOVT and MOVW instructions.
-      config->armHasMovtMovw = true;
-    break;
-  }
-}
-
 // If a source file is compiled with x86 hardware-assisted call flow control
 // enabled, the generated object file contains feature flags indicating that
 // fact. This function reads the feature flags and returns it.
@@ -871,8 +871,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     if (Error e = attributes.parse(contents, config->ekind == ELF32LEKind
                                                  ? support::little
                                                  : support::big)) {
-      auto *isec = make<InputSection>(*this, sec, name);
-      warn(toString(isec) + ": " + llvm::toString(std::move(e)));
+      InputSection isec(*this, sec, name);
+      warn(toString(&isec) + ": " + llvm::toString(std::move(e)));
     } else {
       updateSupportedARMFeatures(attributes);
       updateARMVFPArgs(attributes, this);
@@ -893,8 +893,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     RISCVAttributeParser attributes;
     ArrayRef<uint8_t> contents = check(this->getObj().getSectionContents(sec));
     if (Error e = attributes.parse(contents, support::little)) {
-      auto *isec = make<InputSection>(*this, sec, name);
-      warn(toString(isec) + ": " + llvm::toString(std::move(e)));
+      InputSection isec(*this, sec, name);
+      warn(toString(&isec) + ": " + llvm::toString(std::move(e)));
     } else {
       // FIXME: Validate arch tag contains C if and only if EF_RISCV_RVC is
       // present.
