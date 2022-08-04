@@ -1,5 +1,7 @@
 ; RUN: opt < %s -disable-output -da-delinearize=false "-passes=print<da>"      \
 ; RUN: -aa-pipeline=basic-aa 2>&1 | FileCheck %s
+; RUN: opt < %s -disable-output -da-delinearize=false -passes='print<da><normalized-results>'      \
+; RUN: -aa-pipeline=basic-aa 2>&1 | FileCheck %s -check-prefix=NORMALIZE
 ; RUN: opt < %s -disable-output "-passes=print<da>" -aa-pipeline=basic-aa 2>&1 \
 ; RUN: | FileCheck %s -check-prefix=DELIN
 
@@ -22,6 +24,14 @@ entry:
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
+
+; NORMALIZE: 'Dependence Analysis' for function 'banerjee0':
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - flow [<= <>]!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
 
 ; DELIN: 'Dependence Analysis' for function 'banerjee0':
 ; DELIN: da analyze - none!
@@ -82,6 +92,14 @@ entry:
 ; CHECK: da analyze - input [* *]!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - output [* *]!
+
+; NORMALIZE: 'Dependence Analysis' for function 'banerjee1':
+; NORMALIZE: da analyze - output [* *]!
+; NORMALIZE: da analyze - flow [* <>]!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - input [* *]!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - output [* *]!
 
 ; DELIN: 'Dependence Analysis' for function 'banerjee1':
 ; DELIN: da analyze - output [* *]!
@@ -158,6 +176,14 @@ entry:
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 
+; NORMALIZE: 'Dependence Analysis' for function 'banerjee2':
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+
 ; DELIN: 'Dependence Analysis' for function 'banerjee2':
 ; DELIN: da analyze - none!
 ; DELIN: da analyze - none!
@@ -216,6 +242,14 @@ entry:
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
+
+; NORMALIZE: 'Dependence Analysis' for function 'banerjee3':
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - normalized - anti [< <]!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
 
 ; DELIN: 'Dependence Analysis' for function 'banerjee3':
 ; DELIN: da analyze - none!
@@ -276,6 +310,14 @@ entry:
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 
+; NORMALIZE: 'Dependence Analysis' for function 'banerjee4':
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+
 ; DELIN: 'Dependence Analysis' for function 'banerjee4':
 ; DELIN: da analyze - none!
 ; DELIN: da analyze - none!
@@ -334,6 +376,14 @@ entry:
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
+
+; NORMALIZE: 'Dependence Analysis' for function 'banerjee5':
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - flow [< <]!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
 
 ; DELIN: 'Dependence Analysis' for function 'banerjee5':
 ; DELIN: da analyze - none!
@@ -394,6 +444,14 @@ entry:
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 
+; NORMALIZE: 'Dependence Analysis' for function 'banerjee6':
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - normalized - anti [<= <>]!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+
 ; DELIN: 'Dependence Analysis' for function 'banerjee6':
 ; DELIN: da analyze - none!
 ; DELIN: da analyze - flow [=> <>]!
@@ -452,6 +510,14 @@ entry:
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
+
+; NORMALIZE: 'Dependence Analysis' for function 'banerjee7':
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - normalized - anti [< =>]!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
 
 ; DELIN: 'Dependence Analysis' for function 'banerjee7':
 ; DELIN: da analyze - none!
@@ -512,6 +578,14 @@ entry:
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 
+; NORMALIZE: 'Dependence Analysis' for function 'banerjee8':
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - normalized - anti [< <>]!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+
 ; DELIN: 'Dependence Analysis' for function 'banerjee8':
 ; DELIN: da analyze - none!
 ; DELIN: da analyze - flow [> <>]!
@@ -570,6 +644,14 @@ entry:
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
+
+; NORMALIZE: 'Dependence Analysis' for function 'banerjee9':
+; NORMALIZE: da analyze - output [* *]!
+; NORMALIZE: da analyze - flow [<= =|<]!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
 
 ; DELIN: 'Dependence Analysis' for function 'banerjee9':
 ; DELIN: da analyze - output [* *]!
@@ -631,6 +713,14 @@ entry:
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 
+; NORMALIZE: 'Dependence Analysis' for function 'banerjee10':
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - flow [<> =]!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+
 ; DELIN: 'Dependence Analysis' for function 'banerjee10':
 ; DELIN: da analyze - none!
 ; DELIN: da analyze - flow [<> =]!
@@ -690,6 +780,14 @@ entry:
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 
+; NORMALIZE: 'Dependence Analysis' for function 'banerjee11':
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - flow [<= <>]!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+
 ; DELIN: 'Dependence Analysis' for function 'banerjee11':
 ; DELIN: da analyze - none!
 ; DELIN: da analyze - flow [<= <>]!
@@ -748,6 +846,14 @@ entry:
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
+
+; NORMALIZE: 'Dependence Analysis' for function 'banerjee12':
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - flow [= <>]!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
+; NORMALIZE: da analyze - confused!
+; NORMALIZE: da analyze - none!
 
 ; DELIN: 'Dependence Analysis' for function 'banerjee12':
 ; DELIN: da analyze - none!
