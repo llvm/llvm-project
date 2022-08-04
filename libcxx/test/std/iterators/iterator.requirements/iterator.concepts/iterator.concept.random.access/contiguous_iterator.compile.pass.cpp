@@ -13,6 +13,7 @@
 
 #include <iterator>
 #include <compare>
+#include <memory>
 
 #include "test_iterators.h"
 
@@ -208,3 +209,47 @@ struct template_and_no_element_type {
 // Template param is used instead of element_type.
 static_assert(std::random_access_iterator<template_and_no_element_type<int>>);
 static_assert(std::contiguous_iterator<template_and_no_element_type<int>>);
+
+template <bool DisableArrow, bool DisableToAddress>
+struct no_operator_arrow {
+    typedef std::contiguous_iterator_tag    iterator_category;
+    typedef int                             value_type;
+    typedef int                             element_type;
+    typedef std::ptrdiff_t                  difference_type;
+    typedef int*                            pointer;
+    typedef int&                            reference;
+    typedef no_operator_arrow               self;
+
+    no_operator_arrow();
+
+    reference operator*() const;
+    pointer operator->() const requires (!DisableArrow);
+    auto operator<=>(const self&) const = default;
+
+    self& operator++();
+    self operator++(int);
+
+    self& operator--();
+    self operator--(int);
+
+    self& operator+=(difference_type n);
+    self operator+(difference_type n) const;
+    // Note: it's a template function to prevent a GCC warning ("friend declaration declares a non-template function").
+    template <bool B1, bool B2>
+    friend no_operator_arrow<B1, B2> operator+(difference_type n, no_operator_arrow<B1, B2> x);
+
+    self& operator-=(difference_type n);
+    self operator-(difference_type n) const;
+    difference_type operator-(const self& n) const;
+
+    reference operator[](difference_type n) const;
+};
+
+template<>
+struct std::pointer_traits<no_operator_arrow</*DisableArrow=*/true, /*DisableToAddress=*/false>> {
+  static constexpr int *to_address(const no_operator_arrow<true, false>&);
+};
+
+static_assert(std::contiguous_iterator<no_operator_arrow</*DisableArrow=*/false, /*DisableToAddress=*/true>>);
+static_assert(!std::contiguous_iterator<no_operator_arrow</*DisableArrow=*/true, /*DisableToAddress=*/true>>);
+static_assert(std::contiguous_iterator<no_operator_arrow</*DisableArrow=*/true, /*DisableToAddress=*/false>>);
