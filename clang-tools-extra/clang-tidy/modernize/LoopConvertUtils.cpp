@@ -785,8 +785,8 @@ bool ForLoopIndexUseVisitor::TraverseLambdaCapture(LambdaExpr *LE,
                                                    const LambdaCapture *C,
                                                    Expr *Init) {
   if (C->capturesVariable()) {
-    const VarDecl *VDecl = C->getCapturedVar();
-    if (areSameVariable(IndexVar, cast<ValueDecl>(VDecl))) {
+    const ValueDecl *VDecl = C->getCapturedVar();
+    if (areSameVariable(IndexVar, VDecl)) {
       // FIXME: if the index is captured, it will count as an usage and the
       // alias (if any) won't work, because it is only used in case of having
       // exactly one usage.

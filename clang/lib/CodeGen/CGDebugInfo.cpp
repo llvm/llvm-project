@@ -1505,7 +1505,7 @@ void CGDebugInfo::CollectRecordLambdaFields(
     if (C.capturesVariable()) {
       SourceLocation Loc = C.getLocation();
       assert(!Field->isBitField() && "lambdas don't have bitfield members!");
-      VarDecl *V = C.getCapturedVar();
+      ValueDecl *V = C.getCapturedVar();
       StringRef VName = V->getName();
       llvm::DIFile *VUnit = getOrCreateFile(Loc);
       auto Align = getDeclAlignIfRequired(V, CGM.getContext());

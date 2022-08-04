@@ -7846,7 +7846,7 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
           break;
         // FIXME: We can't easily tell apart an init-capture from a nested
         // capture of an init-capture.
-        const VarDecl *VD = Elem.Capture->getCapturedVar();
+        const ValueDecl *VD = Elem.Capture->getCapturedVar();
         Diag(Elem.Capture->getLocation(), diag::note_lambda_capture_initializer)
             << VD << VD->isInitCapture() << Elem.Capture->isExplicit()
             << (Elem.Capture->getCaptureKind() == LCK_ByRef) << VD
