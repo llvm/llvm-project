@@ -1,0 +1,100 @@
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-jitlink -noexec %t 2>&1 | FileCheck %s
+#
+# Check that FDE with bogus PC-begin pointer triggers an error.
+#
+# CHECK: llvm-jitlink error: No symbol or block covering address
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      360
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    segname:         ''
+    vmaddr:          0
+    vmsize:          64
+    fileoff:         392
+    filesize:        64
+    maxprot:         7
+    initprot:        7
+    nsects:          2
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            3
+        offset:          0x188
+        align:           4
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         31C0C3
+      - sectname:        __eh_frame
+        segname:         __TEXT
+        addr:            0x8
+        size:            56
+        offset:          0x190
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x6800000B
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         1400000000000000017A520001781001100C0708900100001C0000001C000000000000000000001003000000000000000000000000000000
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           851968
+    sdk:             0
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          456
+    nsyms:           1
+    stroff:          472
+    strsize:         8
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       0
+    iextdefsym:      0
+    nextdefsym:      1
+    iundefsym:       1
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - _main
+    - ''
+...
