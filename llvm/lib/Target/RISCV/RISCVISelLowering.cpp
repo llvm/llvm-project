@@ -8874,8 +8874,6 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
   // We might have an ADD or SUB between the SRA and SHL.
   bool IsAdd = N0.getOpcode() == ISD::ADD;
   if ((IsAdd || N0.getOpcode() == ISD::SUB)) {
-    if (!N0.hasOneUse())
-      return SDValue();
     // Other operand needs to be a constant we can modify.
     AddC = dyn_cast<ConstantSDNode>(N0.getOperand(IsAdd ? 1 : 0));
     if (!AddC)
@@ -8884,6 +8882,16 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
     // AddC needs to have at least 32 trailing zeros.
     if (AddC->getAPIntValue().countTrailingZeros() < 32)
       return SDValue();
+
+    // All users should be a shift by constant less than or equal to 32. This
+    // ensures we'll do this optimization for each of them to produce an
+    // add/sub+sext_inreg they can all share.
+    for (SDNode *U : N0->uses()) {
+      if (U->getOpcode() != ISD::SRA ||
+          !isa<ConstantSDNode>(U->getOperand(1)) ||
+          cast<ConstantSDNode>(U->getOperand(1))->getZExtValue() > 32)
+        return SDValue();
+    }
 
     Shl = N0.getOperand(IsAdd ? 0 : 1);
   } else {
