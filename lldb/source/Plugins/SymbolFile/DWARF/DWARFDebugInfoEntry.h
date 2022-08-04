@@ -99,11 +99,6 @@ public:
 
   const char *GetPubname(const DWARFUnit *cu) const;
 
-  const char *GetQualifiedName(DWARFUnit *cu, std::string &storage) const;
-
-  const char *GetQualifiedName(DWARFUnit *cu, const DWARFAttributes &attributes,
-                               std::string &storage) const;
-
   bool GetDIENamesAndRanges(
       DWARFUnit *cu, const char *&name, const char *&mangled,
       DWARFRangeList &rangeList, int &decl_file, int &decl_line,
