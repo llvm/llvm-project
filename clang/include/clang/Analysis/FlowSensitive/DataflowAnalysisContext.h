@@ -93,9 +93,7 @@ public:
 
   /// Returns a new storage location appropriate for `Type`.
   ///
-  /// Requirements:
-  ///
-  ///  `Type` must not be null.
+  /// A null `Type` is interpreted as the pointee type of `std::nullptr_t`.
   StorageLocation &createStorageLocation(QualType Type);
 
   /// Returns a stable storage location for `D`.
