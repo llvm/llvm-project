@@ -261,48 +261,74 @@ class CheckerMessages:
 class ProgramState:
     def __init__(self, state_id, json_ps):
         logging.debug('Adding ProgramState ' + str(state_id))
+        
+        store_key = 'store'
+        env_key = 'environment'
+        constraints_key = 'constraints'
+        dyn_ty_key = 'dynamic_types'
+        ctor_key = 'constructing_objects'
+        ind_key = 'index_of_element'
+        init_loop_key = 'pending_init_loops'
+        dtor_key = 'pending_destructors'
+        msg_key = 'checker_messages'
 
         if json_ps is None:
             json_ps = {
-                'store': None,
-                'environment': None,
-                'constraints': None,
-                'dynamic_types': None,
-                'constructing_objects': None,
-                'index_of_element': None,
-                'checker_messages': None
+                store_key: None,
+                env_key: None,
+                constraints_key: None,
+                dyn_ty_key: None,
+                ctor_key: None,
+                ind_key: None,
+                init_loop_key: None,
+                dtor_key: None,
+                msg_key: None
             }
 
         self.state_id = state_id
 
-        self.store = Store(json_ps['store']) \
-            if json_ps['store'] is not None else None
+        self.store = Store(json_ps[store_key]) \
+            if json_ps[store_key] is not None else None
 
         self.environment = \
-            GenericEnvironment(json_ps['environment']['items']) \
-            if json_ps['environment'] is not None else None
+            GenericEnvironment(json_ps[env_key]['items']) \
+            if json_ps[env_key] is not None else None
 
         self.constraints = GenericMap([
-            (c['symbol'], c['range']) for c in json_ps['constraints']
-        ]) if json_ps['constraints'] is not None else None
+            (c['symbol'], c['range']) for c in json_ps[constraints_key]
+        ]) if json_ps[constraints_key] is not None else None
 
         self.dynamic_types = GenericMap([
                 (t['region'], '%s%s' % (t['dyn_type'],
                                         ' (or a sub-class)'
                                         if t['sub_classable'] else ''))
-                for t in json_ps['dynamic_types']]) \
-            if json_ps['dynamic_types'] is not None else None
+                for t in json_ps[dyn_ty_key]]) \
+            if json_ps[dyn_ty_key] is not None else None
+
+        self.checker_messages = CheckerMessages(json_ps[msg_key]) \
+            if json_ps[msg_key] is not None else None
+
+        # State traits
+        # 
+        # For traits we always check if a key exists because if a trait
+        # has no imformation, nothing will be printed in the .dot file 
+        # we parse. 
 
         self.constructing_objects = \
-            GenericEnvironment(json_ps['constructing_objects']) \
-            if json_ps['constructing_objects'] is not None else None
+            GenericEnvironment(json_ps[ctor_key]) \
+            if ctor_key in json_ps and json_ps[ctor_key] is not None else None
 
         self.index_of_element = \
-            GenericEnvironment(json_ps['index_of_element']) \
-            if json_ps['index_of_element'] is not None else None
+            GenericEnvironment(json_ps[ind_key]) \
+            if ind_key in json_ps and json_ps[ind_key] is not None else None
+        
+        self.pending_init_loops = \
+            GenericEnvironment(json_ps[init_loop_key]) \
+            if init_loop_key in json_ps and json_ps[init_loop_key] is not None else None
 
-        self.checker_messages = CheckerMessages(json_ps['checker_messages']) \
-            if json_ps['checker_messages'] is not None else None
+        self.pending_destructors = \
+            GenericEnvironment(json_ps[dtor_key]) \
+            if dtor_key in json_ps and json_ps[dtor_key] is not None else None
 
 
 # A deserialized exploded graph node. Has a default constructor because it
@@ -800,6 +826,12 @@ class DotDumpVisitor:
                                         s, prev_s)
         self.visit_environment_in_state('index_of_element',
                                         'Indices Of Elements Under Construction',
+                                        s, prev_s)
+        self.visit_environment_in_state('pending_init_loops',
+                                        'Pending Array Init Loop Expressions',
+                                        s, prev_s)
+        self.visit_environment_in_state('pending_destructors',
+                                        'Indices of Elements Under Destruction',
                                         s, prev_s)
         self.visit_checker_messages_in_state(s, prev_s)
 

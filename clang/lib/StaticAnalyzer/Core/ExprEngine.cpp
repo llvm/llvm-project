@@ -693,7 +693,7 @@ printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
       continue;
 
     if (!HasItem) {
-      Out << "[" << NL;
+      Out << '[' << NL;
       HasItem = true;
     }
 
@@ -724,12 +724,11 @@ printObjectsUnderConstructionJson(raw_ostream &Out, ProgramStateRef State,
 
 static void printIndicesOfElementsToConstructJson(
     raw_ostream &Out, ProgramStateRef State, const char *NL,
-    const LocationContext *LCtx, const ASTContext &Context,
-    unsigned int Space = 0, bool IsDot = false) {
+    const LocationContext *LCtx, unsigned int Space = 0, bool IsDot = false) {
   using KeyT = std::pair<const Expr *, const LocationContext *>;
 
-  PrintingPolicy PP =
-      LCtx->getAnalysisDeclContext()->getASTContext().getPrintingPolicy();
+  const auto &Context = LCtx->getAnalysisDeclContext()->getASTContext();
+  PrintingPolicy PP = Context.getPrintingPolicy();
 
   ++Space;
   bool HasItem = false;
@@ -742,7 +741,7 @@ static void printIndicesOfElementsToConstructJson(
       continue;
 
     if (!HasItem) {
-      Out << "[" << NL;
+      Out << '[' << NL;
       HasItem = true;
     }
 
@@ -761,17 +760,17 @@ static void printIndicesOfElementsToConstructJson(
     const Expr *E = Key.first;
     Out << "\"stmt_id\": " << E->getID(Context);
 
-    // Kind - hack to display the current index
-    Out << ", \"kind\": \"Cur: " << Value - 1 << "\"";
+    // Kind
+    Out << ", \"kind\": null";
 
     // Pretty-print
     Out << ", \"pretty\": ";
-    Out << "\"" << E->getStmtClassName() << " "
+    Out << "\"" << E->getStmtClassName() << ' '
         << E->getSourceRange().printToString(Context.getSourceManager()) << " '"
         << QualType::getAsString(E->getType().split(), PP);
     Out << "'\"";
 
-    Out << ", \"value\": \"Next: " << Value << "\" }";
+    Out << ", \"value\": \"Current index: " << Value - 1 << "\" }";
 
     if (Key != LastKey)
       Out << ',';
@@ -785,40 +784,168 @@ static void printIndicesOfElementsToConstructJson(
   }
 }
 
+static void printPendingInitLoopJson(raw_ostream &Out, ProgramStateRef State,
+                                     const char *NL,
+                                     const LocationContext *LCtx,
+                                     unsigned int Space = 0,
+                                     bool IsDot = false) {
+  using KeyT = std::pair<const CXXConstructExpr *, const LocationContext *>;
+
+  const auto &Context = LCtx->getAnalysisDeclContext()->getASTContext();
+  PrintingPolicy PP = Context.getPrintingPolicy();
+
+  ++Space;
+  bool HasItem = false;
+
+  // Store the last key.
+  KeyT LastKey;
+  for (const auto &I : State->get<PendingInitLoop>()) {
+    const KeyT &Key = I.first;
+    if (Key.second != LCtx)
+      continue;
+
+    if (!HasItem) {
+      Out << '[' << NL;
+      HasItem = true;
+    }
+
+    LastKey = Key;
+  }
+
+  for (const auto &I : State->get<PendingInitLoop>()) {
+    const KeyT &Key = I.first;
+    unsigned Value = I.second;
+    if (Key.second != LCtx)
+      continue;
+
+    Indent(Out, Space, IsDot) << "{ ";
+
+    const CXXConstructExpr *E = Key.first;
+    Out << "\"stmt_id\": " << E->getID(Context);
+
+    Out << ", \"kind\": null";
+    Out << ", \"pretty\": ";
+    Out << '\"' << E->getStmtClassName() << ' '
+        << E->getSourceRange().printToString(Context.getSourceManager()) << " '"
+        << QualType::getAsString(E->getType().split(), PP);
+    Out << "'\"";
+
+    Out << ", \"value\": \"Flattened size: " << Value << "\"}";
+
+    if (Key != LastKey)
+      Out << ',';
+    Out << NL;
+  }
+
+  if (HasItem)
+    Indent(Out, --Space, IsDot) << ']'; // End of "location_context".
+  else {
+    Out << "null ";
+  }
+}
+
+static void
+printPendingArrayDestructionsJson(raw_ostream &Out, ProgramStateRef State,
+                                  const char *NL, const LocationContext *LCtx,
+                                  unsigned int Space = 0, bool IsDot = false) {
+  using KeyT = const LocationContext *;
+
+  ++Space;
+  bool HasItem = false;
+
+  // Store the last key.
+  KeyT LastKey = nullptr;
+  for (const auto &I : State->get<PendingArrayDestruction>()) {
+    const KeyT &Key = I.first;
+    if (Key != LCtx)
+      continue;
+
+    if (!HasItem) {
+      Out << '[' << NL;
+      HasItem = true;
+    }
+
+    LastKey = Key;
+  }
+
+  for (const auto &I : State->get<PendingArrayDestruction>()) {
+    const KeyT &Key = I.first;
+    if (Key != LCtx)
+      continue;
+
+    Indent(Out, Space, IsDot) << "{ ";
+
+    Out << "\"stmt_id\": null";
+    Out << ", \"kind\": null";
+    Out << ", \"pretty\": \"Current index: \"";
+    Out << ", \"value\": \"" << I.second << "\" }";
+
+    if (Key != LastKey)
+      Out << ',';
+    Out << NL;
+  }
+
+  if (HasItem)
+    Indent(Out, --Space, IsDot) << ']'; // End of "location_context".
+  else {
+    Out << "null ";
+  }
+}
+
+/// A helper function to generalize program state trait printing.
+/// The function invokes Printer as 'Printer(Out, State, NL, LC, Space, IsDot,
+/// std::forward<Args>(args)...)'. \n One possible type for Printer is
+/// 'void()(raw_ostream &, ProgramStateRef, const char *, const LocationContext
+/// *, unsigned int, bool, ...)' \n \param Trait The state trait to be printed.
+/// \param Printer A void function that prints Trait.
+/// \param Args An additional parameter pack that is passed to Print upon
+/// invocation.
+template <typename Trait, typename Printer, typename... Args>
+static void printStateTraitWithLocationContextJson(
+    raw_ostream &Out, ProgramStateRef State, const LocationContext *LCtx,
+    const char *NL, unsigned int Space, bool IsDot,
+    const char *jsonPropertyName, Printer printer, Args &&...args) {
+
+  using RequiredType =
+      void (*)(raw_ostream &, ProgramStateRef, const char *,
+               const LocationContext *, unsigned int, bool, Args &&...);
+
+  // Try to do as much compile time checking as possible.
+  // FIXME: check for invocable instead of function?
+  static_assert(std::is_function<std::remove_pointer_t<Printer>>::value,
+                "Printer is not a function!");
+  static_assert(std::is_convertible<Printer, RequiredType>::value,
+                "Printer doesn't have the required type!");
+
+  if (LCtx && !State->get<Trait>().isEmpty()) {
+    Indent(Out, Space, IsDot) << '\"' << jsonPropertyName << "\": ";
+    ++Space;
+    Out << '[' << NL;
+    LCtx->printJson(Out, NL, Space, IsDot, [&](const LocationContext *LC) {
+      printer(Out, State, NL, LC, Space, IsDot, std::forward<Args>(args)...);
+    });
+
+    --Space;
+    Indent(Out, Space, IsDot) << "]," << NL; // End of "jsonPropertyName".
+  }
+}
+
 void ExprEngine::printJson(raw_ostream &Out, ProgramStateRef State,
                            const LocationContext *LCtx, const char *NL,
                            unsigned int Space, bool IsDot) const {
-  Indent(Out, Space, IsDot) << "\"constructing_objects\": ";
 
-  if (LCtx && !State->get<ObjectsUnderConstruction>().isEmpty()) {
-    ++Space;
-    Out << '[' << NL;
-    LCtx->printJson(Out, NL, Space, IsDot, [&](const LocationContext *LC) {
-      printObjectsUnderConstructionJson(Out, State, NL, LC, Space, IsDot);
-    });
-
-    --Space;
-    Indent(Out, Space, IsDot) << "]," << NL; // End of "constructing_objects".
-  } else {
-    Out << "null," << NL;
-  }
-
-  Indent(Out, Space, IsDot) << "\"index_of_element\": ";
-  if (LCtx && !State->get<IndexOfElementToConstruct>().isEmpty()) {
-    ++Space;
-
-    auto &Context = getContext();
-    Out << '[' << NL;
-    LCtx->printJson(Out, NL, Space, IsDot, [&](const LocationContext *LC) {
-      printIndicesOfElementsToConstructJson(Out, State, NL, LC, Context, Space,
-                                            IsDot);
-    });
-
-    --Space;
-    Indent(Out, Space, IsDot) << "]," << NL; // End of "index_of_element".
-  } else {
-    Out << "null," << NL;
-  }
+  printStateTraitWithLocationContextJson<ObjectsUnderConstruction>(
+      Out, State, LCtx, NL, Space, IsDot, "constructing_objects",
+      printObjectsUnderConstructionJson);
+  printStateTraitWithLocationContextJson<IndexOfElementToConstruct>(
+      Out, State, LCtx, NL, Space, IsDot, "index_of_element",
+      printIndicesOfElementsToConstructJson);
+  printStateTraitWithLocationContextJson<PendingInitLoop>(
+      Out, State, LCtx, NL, Space, IsDot, "pending_init_loops",
+      printPendingInitLoopJson);
+  printStateTraitWithLocationContextJson<PendingArrayDestruction>(
+      Out, State, LCtx, NL, Space, IsDot, "pending_destructors",
+      printPendingArrayDestructionsJson);
 
   getCheckerManager().runCheckersForPrintStateJson(Out, State, NL, Space,
                                                    IsDot);
@@ -3714,7 +3841,7 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
           OtherNode->getLocation().printJson(Out, /*NL=*/"\\l");
           Out << ", \"tag\": ";
           if (const ProgramPointTag *Tag = OtherNode->getLocation().getTag())
-            Out << '\"' << Tag->getTagDescription() << "\"";
+            Out << '\"' << Tag->getTagDescription() << '\"';
           else
             Out << "null";
           Out << ", \"node_id\": " << OtherNode->getID() <<
