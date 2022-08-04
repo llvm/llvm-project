@@ -5,9 +5,9 @@
 ; (Aliasee should be either GlobalValue or ConstantExpr).
 
 ; CHECK-INTERESTINGNESS: @alias =
-; CHECK-FINAL: @alias = alias void (i32), bitcast (void ()* @func to void (i32)*)
+; CHECK-FINAL: @alias = alias void (i32), ptr @func
 
-@alias = alias void (i32), void (i32)* @func
+@alias = alias void (i32), ptr @func
 
 ; CHECK-FINAL: @func()
 
