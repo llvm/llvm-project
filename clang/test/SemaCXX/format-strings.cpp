@@ -163,3 +163,48 @@ void f() {
   t::func4("Hello %s"); // expected-warning {{more '%' conversions than data arguments}}
 }
 }
+#if __cplusplus >= 201103L
+namespace evaluated {
+
+constexpr const char *basic() { 
+  return 
+"%s %d"; // expected-note {{format string is defined here}}
+}
+
+constexpr const char *correct_fmt() { 
+  return 
+"%d %d";
+}
+
+constexpr const char *string_linebreak() { 
+  return 
+"%d %d"
+"%d %s"; // expected-note {{format string is defined here}}
+}
+
+/*non-constexpr*/ const char *not_literal() { 
+  return 
+"%d %d"
+"%d %s";
+}
+
+constexpr const char *inner_call() {
+  return "%d %s"; // expected-note {{format string is defined here}}
+}
+
+constexpr const char *wrap_constexpr() {
+  return inner_call();
+}
+
+
+void f() {
+  printf(basic(), 1, 2); // expected-warning {{format specifies type 'char *' but the argument has type 'int'}}
+  printf(correct_fmt(), 1, 2);
+  printf(string_linebreak(), 1, 2, 3, 4); // expected-warning {{format specifies type 'char *' but the argument has type 'int'}}
+  printf(not_literal(), 1, 2, 3, 4); // expected-warning {{format string is not a string literal}}
+  printf(wrap_constexpr(), 1, 2); // expected-warning {{format specifies type 'char *' but the argument has type 'int'}}
+}
+
+
+}
+#endif
