@@ -219,8 +219,8 @@ template <typename AttrT, typename T>
 static void checkNativeAccess(MLIRContext *ctx, ArrayRef<T> data,
                               Type elementType) {
   auto type = RankedTensorType::get(data.size(), elementType);
-  auto attr =
-      AttrT::get(type, "resource", UnmanagedAsmResourceBlob::allocate(data));
+  auto attr = AttrT::get(type, "resource",
+                         UnmanagedAsmResourceBlob::allocate(data, alignof(T)));
 
   // Check that we can access and iterate the data properly.
   Optional<ArrayRef<T>> attrData = attr.tryGetAsArrayRef();
