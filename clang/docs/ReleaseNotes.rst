@@ -62,6 +62,10 @@ Bug Fixes
   already properly diagnosing this case).
 - Fix clang not properly diagnosing the failing subexpression when chained
   binary operators are used in a ``static_assert`` expression.
+- Fix a crash when evaluating a multi-dimensional array's array filler
+  expression is element-dependent. This fixes
+  `Issue 50601 <https://github.com/llvm/llvm-project/issues/56016>`_.
+
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
