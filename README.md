@@ -1,7 +1,7 @@
 # ClangIR (CIR)
 
 For more information see https://clangir.org. The rest of this document
-fallbacks to llvm-project's default `README.td`.
+fallbacks to llvm-project's default `README.md`.
 
 ---
 
