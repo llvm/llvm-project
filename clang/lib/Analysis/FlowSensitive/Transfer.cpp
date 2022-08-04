@@ -332,6 +332,25 @@ public:
                           std::make_unique<PointerValue>(*ThisPointeeLoc)));
   }
 
+  void VisitReturnStmt(const ReturnStmt *S) {
+    auto *Ret = S->getRetValue();
+    if (Ret == nullptr)
+      return;
+
+    auto *Val = Env.getValue(*Ret, SkipPast::None);
+    if (Val == nullptr)
+      return;
+
+    // FIXME: Support reference-type returns.
+    if (Val->getKind() == Value::Kind::Reference)
+      return;
+
+    auto *Loc = Env.getReturnStorageLocation();
+    assert(Loc != nullptr);
+    // FIXME: Model NRVO.
+    Env.setValue(*Loc, *Val);
+  }
+
   void VisitMemberExpr(const MemberExpr *S) {
     ValueDecl *Member = S->getMemberDecl();
     assert(Member != nullptr);
@@ -521,6 +540,11 @@ public:
 
       auto ExitBlock = CFCtx->getCFG().getExit().getBlockID();
 
+      // Note that it is important for the storage location of `S` to be set
+      // before `pushCall`, because the latter uses it to set the storage
+      // location for `return`.
+      auto &ReturnLoc = Env.createStorageLocation(*S);
+      Env.setStorageLocation(*S, ReturnLoc);
       auto CalleeEnv = Env.pushCall(S);
 
       // FIXME: Use the same analysis as the caller for the callee. Note,

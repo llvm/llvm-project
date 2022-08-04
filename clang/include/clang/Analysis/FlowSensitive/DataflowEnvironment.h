@@ -222,6 +222,9 @@ public:
   /// in the environment.
   StorageLocation *getThisPointeeStorageLocation() const;
 
+  /// Returns the storage location of the return value or null, if unset.
+  StorageLocation *getReturnStorageLocation() const;
+
   /// Returns a pointer value that represents a null pointer. Calls with
   /// `PointeeType` that are canonically equivalent will return the same result.
   PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
@@ -373,6 +376,11 @@ private:
 
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
+
+  // In a properly initialized `Environment`, `ReturnLoc` should only be null if
+  // its `DeclContext` could not be cast to a `FunctionDecl`.
+  StorageLocation *ReturnLoc = nullptr;
+  // FIXME: Move `ThisPointeeLoc` here from `DataflowAnalysisContext`.
 
   // Maps from program declarations and statements to storage locations that are
   // assigned to them. Unlike the maps in `DataflowAnalysisContext`, these
