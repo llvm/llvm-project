@@ -1085,13 +1085,13 @@ def Arith_CmpIOp
 
     ```mlir
     // Custom form of scalar "signed less than" comparison.
-    %x = arith.cmpi "slt", %lhs, %rhs : i32
+    %x = arith.cmpi slt, %lhs, %rhs : i32
 
     // Generic form of the same operation.
     %x = "arith.cmpi"(%lhs, %rhs) {predicate = 2 : i64} : (i32, i32) -> i1
 
     // Custom form of vector equality comparison.
-    %x = arith.cmpi "eq", %lhs, %rhs : vector<4xi64>
+    %x = arith.cmpi eq, %lhs, %rhs : vector<4xi64>
 
     // Generic form of the same operation.
     %x = "arith.cmpi"(%lhs, %rhs) {predicate = 0 : i64}
