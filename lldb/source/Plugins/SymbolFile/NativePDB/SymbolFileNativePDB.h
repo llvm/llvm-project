@@ -130,8 +130,9 @@ public:
   void GetTypes(SymbolContextScope *sc_scope, lldb::TypeClass type_mask,
                 TypeList &type_list) override;
 
-  void FindFunctions(const Module::LookupInfo &lookup_info,
+  void FindFunctions(ConstString name,
                      const CompilerDeclContext &parent_decl_ctx,
+                     lldb::FunctionNameType name_type_mask,
                      bool include_inlines, SymbolContextList &sc_list) override;
 
   void FindFunctions(const RegularExpression &regex, bool include_inlines,

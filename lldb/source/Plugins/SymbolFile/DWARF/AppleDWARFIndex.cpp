@@ -180,13 +180,12 @@ void AppleDWARFIndex::GetNamespaces(
 }
 
 void AppleDWARFIndex::GetFunctions(
-    const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
-    const CompilerDeclContext &parent_decl_ctx,
+    ConstString name, SymbolFileDWARF &dwarf,
+    const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
     llvm::function_ref<bool(DWARFDIE die)> callback) {
-  ConstString name = lookup_info.GetLookupName();
   m_apple_names_up->FindByName(name.GetStringRef(), [&](DIERef die_ref) {
-    return ProcessFunctionDIE(lookup_info, die_ref, dwarf, parent_decl_ctx,
-                              callback);
+    return ProcessFunctionDIE(name.GetStringRef(), die_ref, dwarf,
+                              parent_decl_ctx, name_type_mask, callback);
   });
 }
 

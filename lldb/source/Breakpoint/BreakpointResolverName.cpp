@@ -274,8 +274,9 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
     if (context.module_sp) {
       for (const auto &lookup : m_lookups) {
         const size_t start_func_idx = func_list.GetSize();
-        context.module_sp->FindFunctions(lookup, CompilerDeclContext(),
-                                         function_options, func_list);
+        context.module_sp->FindFunctions(
+            lookup.GetLookupName(), CompilerDeclContext(),
+            lookup.GetNameTypeMask(), function_options, func_list);
 
         const size_t end_func_idx = func_list.GetSize();
 
