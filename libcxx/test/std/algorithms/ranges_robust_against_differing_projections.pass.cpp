@@ -56,7 +56,7 @@ constexpr bool test_all() {
 
   test(std::ranges::equal, in, in2, eq, proj1, proj2);
   test(std::ranges::lexicographical_compare, in, in2, eq, proj1, proj2);
-  //test(std::ranges::is_permutation, in, in2, eq, proj1, proj2);
+  test(std::ranges::is_permutation, in, in2, eq, proj1, proj2);
   test(std::ranges::includes, in, in2, less, proj1, proj2);
   test(std::ranges::find_first_of, in, in2, eq, proj1, proj2);
   test(std::ranges::mismatch, in, in2, eq, proj1, proj2);

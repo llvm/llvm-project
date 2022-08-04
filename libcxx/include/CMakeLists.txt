@@ -97,6 +97,7 @@ set(files
   __algorithm/ranges_is_heap.h
   __algorithm/ranges_is_heap_until.h
   __algorithm/ranges_is_partitioned.h
+  __algorithm/ranges_is_permutation.h
   __algorithm/ranges_is_sorted.h
   __algorithm/ranges_is_sorted_until.h
   __algorithm/ranges_iterator_concept.h

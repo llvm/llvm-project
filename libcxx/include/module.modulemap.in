@@ -336,6 +336,7 @@ module std [system] {
       module ranges_is_heap                  { private header "__algorithm/ranges_is_heap.h" }
       module ranges_is_heap_until            { private header "__algorithm/ranges_is_heap_until.h" }
       module ranges_is_partitioned           { private header "__algorithm/ranges_is_partitioned.h" }
+      module ranges_is_permutation           { private header "__algorithm/ranges_is_permutation.h" }
       module ranges_is_sorted                { private header "__algorithm/ranges_is_sorted.h" }
       module ranges_is_sorted_until          { private header "__algorithm/ranges_is_sorted_until.h" }
       module ranges_iterator_concept         { private header "__algorithm/ranges_iterator_concept.h" }

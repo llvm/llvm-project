@@ -104,7 +104,7 @@ constexpr void run_tests() {
   test(std::ranges::includes, in, in2);
   test(std::ranges::is_heap, in);
   test(std::ranges::is_heap_until, in);
-  //test(std::ranges::is_permutation, in, in2);
+  test(std::ranges::is_permutation, in, in2);
   test(std::ranges::for_each, in, std::identity{});
   std::ranges::for_each_n(in.begin(), count, std::identity{});
   if constexpr (std::copyable<T>) {

@@ -507,6 +507,12 @@ using __iterator_category_type = typename iterator_traits<_Iter>::iterator_categ
 template <class _Iter>
 using __iterator_pointer_type = typename iterator_traits<_Iter>::pointer;
 
+template <class _Iter>
+using __iter_diff_t = typename iterator_traits<_Iter>::difference_type;
+
+template<class _InputIterator>
+using __iter_value_type = typename iterator_traits<_InputIterator>::value_type;
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___ITERATOR_ITERATOR_TRAITS_H
