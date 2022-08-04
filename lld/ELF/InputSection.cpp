@@ -283,7 +283,8 @@ std::string InputSectionBase::getObjMsg(uint64_t off) {
     archive = (" in archive " + file->archiveName).str();
 
   // Find a symbol that encloses a given location. getObjMsg may be called
-  // before ObjFile::initializeLocalSymbols where local symbols are initialized.
+  // before ObjFile::initSectionsAndLocalSyms where local symbols are
+  // initialized.
   for (Symbol *b : file->getSymbols())
     if (auto *d = dyn_cast_or_null<Defined>(b))
       if (d->section == this && d->value <= off && off < d->value + d->size)
