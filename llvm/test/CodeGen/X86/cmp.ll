@@ -759,14 +759,13 @@ return:                                           ; preds = %if.end, %if.then
 declare i32 @g()
 declare i32 @f()
 
-; FIXME: We should use a test from memory here instead of a load+and.i
-; The store makes sure the chain result of the load is used which prevents the
-; post isel peephole from catching this.
+; Make sure we fold the load+and into a test from memory.
+; The store makes sure the chain result of the load is used which used to
+; prevent the post isel peephole from catching this.
 define i1 @fold_test_and_with_chain(i32* %x, i32* %y, i32 %z) {
 ; CHECK-LABEL: fold_test_and_with_chain:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl (%rdi), %eax # encoding: [0x8b,0x07]
-; CHECK-NEXT:    andl %edx, %eax # encoding: [0x21,0xd0]
+; CHECK-NEXT:    testl %edx, (%rdi) # encoding: [0x85,0x17]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    movl %edx, (%rsi) # encoding: [0x89,0x16]
 ; CHECK-NEXT:    retq # encoding: [0xc3]

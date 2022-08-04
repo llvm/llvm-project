@@ -1487,12 +1487,13 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     if ((Opc == X86::TEST8rr || Opc == X86::TEST16rr ||
          Opc == X86::TEST32rr || Opc == X86::TEST64rr) &&
         N->getOperand(0) == N->getOperand(1) &&
-        N->isOnlyUserOf(N->getOperand(0).getNode()) &&
+        N->getOperand(0)->hasNUsesOfValue(2, N->getOperand(0).getResNo()) &&
         N->getOperand(0).isMachineOpcode()) {
       SDValue And = N->getOperand(0);
       unsigned N0Opc = And.getMachineOpcode();
-      if (N0Opc == X86::AND8rr || N0Opc == X86::AND16rr ||
-          N0Opc == X86::AND32rr || N0Opc == X86::AND64rr) {
+      if ((N0Opc == X86::AND8rr || N0Opc == X86::AND16rr ||
+           N0Opc == X86::AND32rr || N0Opc == X86::AND64rr) &&
+          !And->hasAnyUseOfValue(1)) {
         MachineSDNode *Test = CurDAG->getMachineNode(Opc, SDLoc(N),
                                                      MVT::i32,
                                                      And.getOperand(0),
@@ -1501,8 +1502,9 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
         MadeChange = true;
         continue;
       }
-      if (N0Opc == X86::AND8rm || N0Opc == X86::AND16rm ||
-          N0Opc == X86::AND32rm || N0Opc == X86::AND64rm) {
+      if ((N0Opc == X86::AND8rm || N0Opc == X86::AND16rm ||
+           N0Opc == X86::AND32rm || N0Opc == X86::AND64rm) &&
+          !And->hasAnyUseOfValue(1)) {
         unsigned NewOpc;
         switch (N0Opc) {
         case X86::AND8rm:  NewOpc = X86::TEST8mr; break;
@@ -1523,7 +1525,8 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
                                                      MVT::i32, MVT::Other, Ops);
         CurDAG->setNodeMemRefs(
             Test, cast<MachineSDNode>(And.getNode())->memoperands());
-        ReplaceUses(N, Test);
+        ReplaceUses(And.getValue(2), SDValue(Test, 1));
+        ReplaceUses(SDValue(N, 0), SDValue(Test, 0));
         MadeChange = true;
         continue;
       }
