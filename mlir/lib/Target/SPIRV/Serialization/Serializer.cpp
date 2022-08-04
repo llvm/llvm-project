@@ -598,6 +598,27 @@ LogicalResult Serializer::prepareBasicType(
     return success();
   }
 
+  if (auto jointMatrixType = type.dyn_cast<spirv::JointMatrixINTELType>()) {
+    uint32_t elementTypeID = 0;
+    if (failed(processTypeImpl(loc, jointMatrixType.getElementType(),
+                               elementTypeID, serializationCtx))) {
+      return failure();
+    }
+    typeEnum = spirv::Opcode::OpTypeJointMatrixINTEL;
+    auto getConstantOp = [&](uint32_t id) {
+      auto attr = IntegerAttr::get(IntegerType::get(type.getContext(), 32), id);
+      return prepareConstantInt(loc, attr);
+    };
+    operands.push_back(elementTypeID);
+    operands.push_back(getConstantOp(jointMatrixType.getRows()));
+    operands.push_back(getConstantOp(jointMatrixType.getColumns()));
+    operands.push_back(getConstantOp(
+        static_cast<uint32_t>(jointMatrixType.getMatrixLayout())));
+    operands.push_back(
+        getConstantOp(static_cast<uint32_t>(jointMatrixType.getScope())));
+    return success();
+  }
+
   if (auto matrixType = type.dyn_cast<spirv::MatrixType>()) {
     uint32_t elementTypeID = 0;
     if (failed(processTypeImpl(loc, matrixType.getColumnType(), elementTypeID,

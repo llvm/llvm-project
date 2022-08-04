@@ -23,11 +23,11 @@ class SPV_CastOp<string mnemonic, Type resultType, Type operandType,
              !listconcat(traits,
                          [NoSideEffect, SameOperandsAndResultShape])> {
   let arguments = (ins
-    SPV_ScalarOrVectorOrCoopMatrixOf<operandType>:$operand
+    SPV_ScalarOrVectorOrCoopMatrixOfOrJointMatrixOf<operandType>:$operand
   );
 
   let results = (outs
-    SPV_ScalarOrVectorOrCoopMatrixOf<resultType>:$result
+    SPV_ScalarOrVectorOrCoopMatrixOfOrJointMatrixOf<resultType>:$result
   );
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand) `to` type($result)
