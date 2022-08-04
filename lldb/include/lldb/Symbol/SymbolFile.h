@@ -9,6 +9,7 @@
 #ifndef LLDB_SYMBOL_SYMBOLFILE_H
 #define LLDB_SYMBOL_SYMBOLFILE_H
 
+#include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SourceLocationSpec.h"
@@ -234,9 +235,8 @@ public:
   virtual void FindGlobalVariables(const RegularExpression &regex,
                                    uint32_t max_matches,
                                    VariableList &variables);
-  virtual void FindFunctions(ConstString name,
+  virtual void FindFunctions(const Module::LookupInfo &lookup_info,
                              const CompilerDeclContext &parent_decl_ctx,
-                             lldb::FunctionNameType name_type_mask,
                              bool include_inlines, SymbolContextList &sc_list);
   virtual void FindFunctions(const RegularExpression &regex,
                              bool include_inlines, SymbolContextList &sc_list);

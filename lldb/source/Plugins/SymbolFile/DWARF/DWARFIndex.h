@@ -13,6 +13,7 @@
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
 #include "Plugins/SymbolFile/DWARF/DWARFFormValue.h"
 
+#include "lldb/Core/Module.h"
 #include "lldb/Target/Statistics.h"
 
 class DWARFDeclContext;
@@ -54,9 +55,8 @@ public:
   GetNamespaces(ConstString name,
                 llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
   virtual void
-  GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
+  GetFunctions(const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
                const CompilerDeclContext &parent_decl_ctx,
-               uint32_t name_type_mask,
                llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
   virtual void
   GetFunctions(const RegularExpression &regex,
@@ -74,10 +74,9 @@ protected:
   /// the function given by "ref" matches search criteria given by
   /// "parent_decl_ctx" and "name_type_mask", it is inserted into the "dies"
   /// vector.
-  bool ProcessFunctionDIE(llvm::StringRef name, DIERef ref,
+  bool ProcessFunctionDIE(const Module::LookupInfo &lookup_info, DIERef ref,
                           SymbolFileDWARF &dwarf,
                           const CompilerDeclContext &parent_decl_ctx,
-                          uint32_t name_type_mask,
                           llvm::function_ref<bool(DWARFDIE die)> callback);
 
   class DIERefCallbackImpl {
