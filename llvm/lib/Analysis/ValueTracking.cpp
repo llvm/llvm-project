@@ -6688,14 +6688,8 @@ static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
 
   // Can we infer anything when the two compares have matching operands?
   bool AreSwappedOps;
-  if (isMatchingOps(ALHS, ARHS, BLHS, BRHS, AreSwappedOps)) {
-    if (Optional<bool> Implication = isImpliedCondMatchingOperands(
-            APred, BPred, AreSwappedOps))
-      return Implication;
-    // No amount of additional analysis will infer the second condition, so
-    // early exit.
-    return None;
-  }
+  if (isMatchingOps(ALHS, ARHS, BLHS, BRHS, AreSwappedOps))
+    return isImpliedCondMatchingOperands(APred, BPred, AreSwappedOps);
 
   // Can we infer anything when the LHS operands match and the RHS operands are
   // constants (not necessarily matching)?
@@ -6705,6 +6699,7 @@ static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
 
   if (APred == BPred)
     return isImpliedCondOperands(APred, ALHS, ARHS, BLHS, BRHS, DL, Depth);
+
   return None;
 }
 
