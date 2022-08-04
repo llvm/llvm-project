@@ -9871,11 +9871,10 @@ struct AAPotentialValuesImpl : AAPotentialValues {
         auto &PotentialConstantsAA = A.getAAFor<AAPotentialConstantValues>(
             *this, ValIRP, DepClassTy::OPTIONAL);
         if (PotentialConstantsAA.isValidState()) {
-          for (auto &It : PotentialConstantsAA.getAssumedSet()) {
+          for (auto &It : PotentialConstantsAA.getAssumedSet())
             State.unionAssumed({{*ConstantInt::get(&Ty, It), nullptr}, S});
-          }
-          assert(!PotentialConstantsAA.undefIsContained() &&
-                 "Undef should be an explicit value!");
+          if (PotentialConstantsAA.undefIsContained())
+            State.unionAssumed({{*UndefValue::get(&Ty), nullptr}, S});
           return;
         }
       }
@@ -10406,8 +10405,7 @@ struct AAPotentialValuesArgument final : AAPotentialValuesImpl {
                getAnchorScope());
       AnyNonLocal = true;
     }
-    if (undefIsContained())
-      unionAssumedWithUndef();
+    assert(!undefIsContained() && "Undef should be an explicit value!");
     if (AnyNonLocal)
       giveUpOnIntraprocedural(A);
 
