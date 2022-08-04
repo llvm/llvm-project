@@ -791,8 +791,11 @@ public:
   static bool classof(Attribute attr);
 };
 template <>
+void DenseArrayAttr<bool>::printWithoutBraces(raw_ostream &os) const;
+template <>
 void DenseArrayAttr<int8_t>::printWithoutBraces(raw_ostream &os) const;
 
+extern template class DenseArrayAttr<bool>;
 extern template class DenseArrayAttr<int8_t>;
 extern template class DenseArrayAttr<int16_t>;
 extern template class DenseArrayAttr<int32_t>;
@@ -802,6 +805,7 @@ extern template class DenseArrayAttr<double>;
 } // namespace detail
 
 // Public name for all the supported DenseArrayAttr
+using DenseBoolArrayAttr = detail::DenseArrayAttr<bool>;
 using DenseI8ArrayAttr = detail::DenseArrayAttr<int8_t>;
 using DenseI16ArrayAttr = detail::DenseArrayAttr<int16_t>;
 using DenseI32ArrayAttr = detail::DenseArrayAttr<int32_t>;

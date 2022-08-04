@@ -43,6 +43,9 @@ struct TestElementsAttrInterface
         if (auto concreteAttr =
                 attr.getValue().dyn_cast<DenseArrayBaseAttr>()) {
           switch (concreteAttr.getElementType()) {
+          case DenseArrayBaseAttr::EltType::I1:
+            testElementsAttrIteration<bool>(op, elementsAttr, "bool");
+            break;
           case DenseArrayBaseAttr::EltType::I8:
             testElementsAttrIteration<int8_t>(op, elementsAttr, "int8_t");
             break;
