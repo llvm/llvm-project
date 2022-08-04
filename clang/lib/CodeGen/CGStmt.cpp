@@ -130,50 +130,48 @@ void CodeGenFunction::EmitNoLoopKernel(
   if (!HaveInsertPoint())
     EnsureInsertPoint();
 
-  auto handleForStmt = [](const ForStmt &FStmt, CodeGenFunction *CGFunc) {
-    Address IvAddr = CGFunc->CGM.checkDeclStmt(FStmt)
-                         ? CGFunc->getAddressFromDeclStmt(FStmt)
-                         : CGFunc->getAddressFromExpr(FStmt);
+  auto emitNoLoopStmt = [this](const Stmt *CapturedStmt) {
+    const ForStmt *FStmt = CGM.getSingleForStmt(CapturedStmt);
+    assert(FStmt && "Cannot generate kernel for null captured stmt");
+
+    Address IvAddr = CGM.checkDeclStmt(*FStmt) ? getAddressFromDeclStmt(*FStmt)
+                                               : getAddressFromExpr(*FStmt);
 
     // We generate NoLoop kernel for the device, not the host
-    assert(CGFunc->CGM.getLangOpts().OpenMPIsDevice);
+    assert(CGM.getLangOpts().OpenMPIsDevice);
 
     // Generate myid = workgroup_id * workgroup_size + workitem_id
-    auto &RT =
-        static_cast<CGOpenMPRuntimeGPU &>(CGFunc->CGM.getOpenMPRuntime());
+    auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
 
     // workitem_id
-    llvm::Value *GpuThreadId = RT.getGPUThreadID(*CGFunc);
+    llvm::Value *GpuThreadId = RT.getGPUThreadID(*this);
 
     // workgroup_size
-    llvm::Value *WorkGroupSize = RT.getGPUCompleteBlockSize(*CGFunc);
+    llvm::Value *WorkGroupSize = RT.getGPUCompleteBlockSize(*this);
 
     // workgroup_id
-    llvm::Value *WorkGroupId = RT.getGPUBlockID(*CGFunc);
+    llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);
 
-    llvm::Value *WorkGroup =
-        CGFunc->Builder.CreateMul(WorkGroupId, WorkGroupSize);
-    llvm::Value *GlobalGpuThreadId =
-        CGFunc->Builder.CreateAdd(WorkGroup, GpuThreadId);
+    llvm::Value *WorkGroup = Builder.CreateMul(WorkGroupId, WorkGroupSize);
+    llvm::Value *GlobalGpuThreadId = Builder.CreateAdd(WorkGroup, GpuThreadId);
 
     // Generate my_index = my_index + myid. Note that my_index was already
     // initialized
-    llvm::Value *Gtid = CGFunc->Builder.CreateIntCast(
-        GlobalGpuThreadId, IvAddr.getElementType(), false);
-    llvm::Value *Iv =
-        CGFunc->Builder.CreateAdd(Gtid, CGFunc->Builder.CreateLoad(IvAddr));
-    CGFunc->Builder.CreateStore(Iv, IvAddr);
+    llvm::Value *Gtid = Builder.CreateIntCast(GlobalGpuThreadId,
+                                              IvAddr.getElementType(), false);
+    llvm::Value *Iv = Builder.CreateAdd(Gtid, Builder.CreateLoad(IvAddr));
+    Builder.CreateStore(Iv, IvAddr);
 
     // Check the loop increment
-    assert(CGFunc->CGM.checkLoopStep(FStmt) && "Loop incr check failed");
+    assert(CGM.checkLoopStep(*FStmt) && "Loop incr check failed");
 
     // Check the loop condition
-    assert(CGFunc->CGM.checkLoopStop(FStmt) && "Loop cond check failed");
+    assert(CGM.checkLoopStop(*FStmt) && "Loop cond check failed");
 
     // Now branch to the appropriate code block if my_index is within upper
     // bound
-    const BinaryOperator &FCondOp = cast<BinaryOperator>(*FStmt.getCond());
-    llvm::Value *RhsVal = CGFunc->EmitScalarExpr(FCondOp.getRHS());
+    const BinaryOperator &FCondOp = cast<BinaryOperator>(*FStmt->getCond());
+    llvm::Value *RhsVal = EmitScalarExpr(FCondOp.getRHS());
 
     assert(Iv->getType()->isIntegerTy());
     llvm::CmpInst::Predicate IvCmpOp;
@@ -201,22 +199,21 @@ void CodeGenFunction::EmitNoLoopKernel(
       break;
     }
 
-    llvm::Value *IvCmp = CGFunc->Builder.CreateICmp(
-        IvCmpOp, Iv,
-        CGFunc->Builder.CreateIntCast(RhsVal, Iv->getType(), false));
+    llvm::Value *IvCmp = Builder.CreateICmp(
+        IvCmpOp, Iv, Builder.CreateIntCast(RhsVal, Iv->getType(), false));
 
-    llvm::BasicBlock *ExecBB = CGFunc->createBasicBlock("omp.kernel.body");
-    llvm::BasicBlock *DoneBB = CGFunc->createBasicBlock("omp.kernel.done");
-    CGFunc->Builder.CreateCondBr(IvCmp, ExecBB, DoneBB);
+    llvm::BasicBlock *ExecBB = createBasicBlock("omp.kernel.body");
+    llvm::BasicBlock *DoneBB = createBasicBlock("omp.kernel.done");
+    Builder.CreateCondBr(IvCmp, ExecBB, DoneBB);
 
     // Emit the kernel body block
-    CGFunc->EmitBlock(ExecBB);
-    CGFunc->EmitStmt(FStmt.getBody());
-    CGFunc->EmitBranch(DoneBB);
+    EmitBlock(ExecBB);
+    EmitStmt(FStmt->getBody());
+    EmitBranch(DoneBB);
 
-    CGFunc->EmitBlock(DoneBB);
-    CGFunc->Builder.CreateRetVoid();
-    CGFunc->Builder.ClearInsertionPoint();
+    EmitBlock(DoneBB);
+    Builder.CreateRetVoid();
+    Builder.ClearInsertionPoint();
   };
 
   // For non-combined constructs, the for loop has to be retrieved from
@@ -229,10 +226,10 @@ void CodeGenFunction::EmitNoLoopKernel(
     EmitOMPPrivateClause(*NoLoopDir, PrivateScope);
     (void)PrivateScope.Privatize();
     S = NoLoopDir->getAssociatedStmt();
+    emitNoLoopStmt(S);
+  } else {
+    emitNoLoopStmt(S);
   }
-  const ForStmt *CapturedForStmt = CGM.getSingleForStmt(S);
-  assert(CapturedForStmt && "Cannot generate kernel for null captured stmt");
-  handleForStmt(*CapturedForStmt, this);
 }
 
 void CodeGenFunction::EmitXteamRedKernel(
