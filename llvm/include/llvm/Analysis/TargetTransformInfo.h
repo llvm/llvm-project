@@ -1178,7 +1178,7 @@ public:
   ///
   /// A typical suitable use case is cost estimation when vector instruction
   /// exists (e.g., from basic blocks during transformation).
-  InstructionCost getVectorInstrCost(const Instruction *I, Type *Val,
+  InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                      unsigned Index = -1) const;
 
   /// \return The cost of replication shuffle of \p VF elements typed \p EltTy
@@ -1759,7 +1759,7 @@ public:
                                              const Instruction *I) = 0;
   virtual InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                              unsigned Index) = 0;
-  virtual InstructionCost getVectorInstrCost(const Instruction *I, Type *Val,
+  virtual InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                              unsigned Index) = 0;
 
   virtual InstructionCost
@@ -2319,7 +2319,7 @@ public:
                                      unsigned Index) override {
     return Impl.getVectorInstrCost(Opcode, Val, Index);
   }
-  InstructionCost getVectorInstrCost(const Instruction *I, Type *Val,
+  InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                      unsigned Index) override {
     return Impl.getVectorInstrCost(I, Val, Index);
   }

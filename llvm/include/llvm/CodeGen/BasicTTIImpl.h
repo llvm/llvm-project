@@ -1159,9 +1159,9 @@ public:
     return LT.first;
   }
 
-  InstructionCost getVectorInstrCost(const Instruction *I, Type *Val,
+  InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
                                      unsigned Index) {
-    return thisT()->getVectorInstrCost(I->getOpcode(), Val, Index);
+    return thisT()->getVectorInstrCost(I.getOpcode(), Val, Index);
   }
 
   InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
