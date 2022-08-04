@@ -380,7 +380,9 @@ private:
   // In a properly initialized `Environment`, `ReturnLoc` should only be null if
   // its `DeclContext` could not be cast to a `FunctionDecl`.
   StorageLocation *ReturnLoc = nullptr;
-  // FIXME: Move `ThisPointeeLoc` here from `DataflowAnalysisContext`.
+  // The storage location of the `this` pointee. Should only be null if the
+  // function being analyzed is only a function and not a method.
+  StorageLocation *ThisPointeeLoc = nullptr;
 
   // Maps from program declarations and statements to storage locations that are
   // assigned to them. Unlike the maps in `DataflowAnalysisContext`, these
