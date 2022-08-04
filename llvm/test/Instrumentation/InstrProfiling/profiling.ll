@@ -87,7 +87,7 @@ define linkonce_odr void @foo_inline() {
 ; MACHO: @__profc_foo_extern = linkonce_odr hidden global
 ; MACHO: @__profd_foo_extern = linkonce_odr hidden global
 ; COFF: @__profc_foo_extern = linkonce_odr hidden global {{.*}}section ".lprfc$M", comdat, align 8
-; COFF: @__profd_foo_extern = private global {{.*}}section ".lprfd$M", comdat($__profc_foo_extern), align 8
+; COFF: @__profd_foo_extern = internal global {{.*}}section ".lprfd$M", comdat($__profc_foo_extern), align 8
 ; XCOFF: @__profc_foo_extern = private global
 ; XCOFF: @__profd_foo_extern = private global
 define available_externally void @foo_extern() {
