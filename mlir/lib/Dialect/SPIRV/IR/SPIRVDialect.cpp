@@ -348,6 +348,39 @@ static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
   return CooperativeMatrixNVType::get(elementTy, scope, dims[0], dims[1]);
 }
 
+// joint-matrix-type ::= `!spv.jointmatrix` `<`rows `x` columns `x` element-type
+//                                                       `,` layout `,` scope`>`
+static Type parseJointMatrixType(SPIRVDialect const &dialect,
+                                 DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return Type();
+
+  SmallVector<int64_t, 2> dims;
+  SMLoc countLoc = parser.getCurrentLocation();
+  if (parser.parseDimensionList(dims, /*allowDynamic=*/false))
+    return Type();
+
+  if (dims.size() != 2) {
+    parser.emitError(countLoc, "expected rows and columns size");
+    return Type();
+  }
+
+  auto elementTy = parseAndVerifyType(dialect, parser);
+  if (!elementTy)
+    return Type();
+  MatrixLayout matrixLayout;
+  if (parser.parseComma() ||
+      parseEnumKeywordAttr(matrixLayout, parser, "matrixLayout <id>"))
+    return Type();
+  Scope scope;
+  if (parser.parseComma() || parseEnumKeywordAttr(scope, parser, "scope <id>"))
+    return Type();
+  if (parser.parseGreater())
+    return Type();
+  return JointMatrixINTELType::get(elementTy, scope, dims[0], dims[1],
+                                   matrixLayout);
+}
+
 // TODO: Reorder methods to be utilities first and parse*Type
 // methods in alphabetical order
 //
@@ -753,6 +786,8 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return parseArrayType(*this, parser);
   if (keyword == "coopmatrix")
     return parseCooperativeMatrixType(*this, parser);
+  if (keyword == "jointmatrix")
+    return parseJointMatrixType(*this, parser);
   if (keyword == "image")
     return parseImageType(*this, parser);
   if (keyword == "ptr")
@@ -859,6 +894,13 @@ static void print(CooperativeMatrixNVType type, DialectAsmPrinter &os) {
   os << ">";
 }
 
+static void print(JointMatrixINTELType type, DialectAsmPrinter &os) {
+  os << "jointmatrix<" << type.getRows() << "x" << type.getColumns() << "x";
+  os << type.getElementType() << ", "
+     << stringifyMatrixLayout(type.getMatrixLayout());
+  os << ", " << stringifyScope(type.getScope()) << ">";
+}
+
 static void print(MatrixType type, DialectAsmPrinter &os) {
   os << "matrix<" << type.getNumColumns() << " x " << type.getColumnType();
   os << ">";
@@ -866,9 +908,9 @@ static void print(MatrixType type, DialectAsmPrinter &os) {
 
 void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
-      .Case<ArrayType, CooperativeMatrixNVType, PointerType, RuntimeArrayType,
-            ImageType, SampledImageType, StructType, MatrixType>(
-          [&](auto type) { print(type, os); })
+      .Case<ArrayType, CooperativeMatrixNVType, JointMatrixINTELType,
+            PointerType, RuntimeArrayType, ImageType, SampledImageType,
+            StructType, MatrixType>([&](auto type) { print(type, os); })
       .Default([](Type) { llvm_unreachable("unhandled SPIR-V type"); });
 }
 
