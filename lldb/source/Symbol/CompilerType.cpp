@@ -280,9 +280,9 @@ size_t CompilerType::GetPointerByteSize() const {
   return 0;
 }
 
-ConstString CompilerType::GetTypeName() const {
+ConstString CompilerType::GetTypeName(bool BaseOnly) const {
   if (IsValid()) {
-    return m_type_system->GetTypeName(m_type);
+    return m_type_system->GetTypeName(m_type, BaseOnly);
   }
   return ConstString("<invalid>");
 }

@@ -3781,7 +3781,8 @@ bool TypeSystemClang::GetCompleteType(lldb::opaque_compiler_type_t type) {
                              allow_completion);
 }
 
-ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type) {
+ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type,
+                                         bool BaseOnly) {
   if (!type)
     return ConstString();
 
@@ -3803,7 +3804,9 @@ ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type) {
     return ConstString(GetTypeNameForDecl(typedef_decl));
   }
 
-  return ConstString(qual_type.getAsString(GetTypePrintingPolicy()));
+  clang::PrintingPolicy printing_policy(GetTypePrintingPolicy());
+  printing_policy.SuppressScope = BaseOnly;
+  return ConstString(qual_type.getAsString(printing_policy));
 }
 
 ConstString
@@ -9353,7 +9356,9 @@ clang::ClassTemplateDecl *TypeSystemClang::ParseClassTemplateDecl(
     const TypeSystemClang::TemplateParameterInfos &template_param_infos) {
   if (template_param_infos.IsValid()) {
     std::string template_basename(parent_name);
-    template_basename.erase(template_basename.find('<'));
+    // With -gsimple-template-names we may omit template parameters in the name.
+    if (auto i = template_basename.find('<'); i != std::string::npos)
+      template_basename.erase(i);
 
     return CreateClassTemplateDecl(decl_ctx, owning_module, access_type,
                                    template_basename.c_str(), tag_decl_kind,
