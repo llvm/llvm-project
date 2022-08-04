@@ -871,8 +871,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     if (Error e = attributes.parse(contents, config->ekind == ELF32LEKind
                                                  ? support::little
                                                  : support::big)) {
-      auto *isec = make<InputSection>(*this, sec, name);
-      warn(toString(isec) + ": " + llvm::toString(std::move(e)));
+      InputSection isec(*this, sec, name);
+      warn(toString(&isec) + ": " + llvm::toString(std::move(e)));
     } else {
       updateSupportedARMFeatures(attributes);
       updateARMVFPArgs(attributes, this);
@@ -893,8 +893,8 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     RISCVAttributeParser attributes;
     ArrayRef<uint8_t> contents = check(this->getObj().getSectionContents(sec));
     if (Error e = attributes.parse(contents, support::little)) {
-      auto *isec = make<InputSection>(*this, sec, name);
-      warn(toString(isec) + ": " + llvm::toString(std::move(e)));
+      InputSection isec(*this, sec, name);
+      warn(toString(&isec) + ": " + llvm::toString(std::move(e)));
     } else {
       // FIXME: Validate arch tag contains C if and only if EF_RISCV_RVC is
       // present.
