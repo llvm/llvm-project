@@ -142,10 +142,10 @@ private:
     std::vector<span<uintptr_t>> ObjCClassListSectionsNew;
     std::vector<span<uintptr_t>> ObjCSelRefsSections;
     std::vector<span<uintptr_t>> ObjCSelRefsSectionsNew;
-    std::vector<span<char>> Swift5ProtoSections;
-    std::vector<span<char>> Swift5ProtoSectionsNew;
-    std::vector<span<char>> Swift5ProtosSections;
-    std::vector<span<char>> Swift5ProtosSectionsNew;
+    std::vector<span<char>> Swift5ProtocolsSections;
+    std::vector<span<char>> Swift5ProtocolsSectionsNew;
+    std::vector<span<char>> Swift5ProtocolConformancesSections;
+    std::vector<span<char>> Swift5ProtocolConformancesSectionsNew;
     std::vector<span<char>> Swift5TypesSections;
     std::vector<span<char>> Swift5TypesSectionsNew;
 
@@ -347,9 +347,10 @@ Error MachOPlatformRuntimeState::registerObjectPlatformSections(
     else if (KV.first == "__DATA,__objc_classlist")
       JDS->ObjCClassListSectionsNew.push_back(KV.second.toSpan<uintptr_t>());
     else if (KV.first == "__TEXT,__swift5_protos")
-      JDS->Swift5ProtosSectionsNew.push_back(KV.second.toSpan<char>());
+      JDS->Swift5ProtocolsSectionsNew.push_back(KV.second.toSpan<char>());
     else if (KV.first == "__TEXT,__swift5_proto")
-      JDS->Swift5ProtoSectionsNew.push_back(KV.second.toSpan<char>());
+      JDS->Swift5ProtocolConformancesSectionsNew.push_back(
+          KV.second.toSpan<char>());
     else if (KV.first == "__TEXT,__swift5_types")
       JDS->Swift5TypesSectionsNew.push_back(KV.second.toSpan<char>());
     else if (KV.first == "__DATA,__mod_init_func")
@@ -417,11 +418,11 @@ Error MachOPlatformRuntimeState::deregisterObjectPlatformSections(
       if (!removeIfPresent(JDS->ObjCClassListSections, KV.second))
         removeIfPresent(JDS->ObjCClassListSectionsNew, KV.second);
     } else if (KV.first == "__TEXT,__swift5_protos") {
-      if (!removeIfPresent(JDS->Swift5ProtosSections, KV.second))
-        removeIfPresent(JDS->Swift5ProtosSectionsNew, KV.second);
+      if (!removeIfPresent(JDS->Swift5ProtocolsSections, KV.second))
+        removeIfPresent(JDS->Swift5ProtocolsSectionsNew, KV.second);
     } else if (KV.first == "__TEXT,__swift5_proto") {
-      if (!removeIfPresent(JDS->Swift5ProtoSections, KV.second))
-        removeIfPresent(JDS->Swift5ProtoSectionsNew, KV.second);
+      if (!removeIfPresent(JDS->Swift5ProtocolConformancesSections, KV.second))
+        removeIfPresent(JDS->Swift5ProtocolConformancesSectionsNew, KV.second);
     } else if (KV.first == "__TEXT,__swift5_types") {
       if (!removeIfPresent(JDS->Swift5TypesSections, KV.second))
         removeIfPresent(JDS->Swift5TypesSectionsNew, KV.second);
@@ -640,40 +641,42 @@ Error MachOPlatformRuntimeState::registerObjCClasses(JITDylibState &JDS) {
 
 Error MachOPlatformRuntimeState::registerSwift5Protocols(JITDylibState &JDS) {
 
-  if (JDS.Swift5ProtosSectionsNew.empty())
+  if (JDS.Swift5ProtocolsSectionsNew.empty())
     return Error::success();
 
   if (ORC_RT_UNLIKELY(!swift_registerProtocols))
     return make_error<StringError>("swift_registerProtocols is not available");
 
-  for (const auto &Swift5Protocols : JDS.Swift5ProtoSectionsNew)
+  for (const auto &Swift5Protocols : JDS.Swift5ProtocolsSectionsNew)
     swift_registerProtocols(
         reinterpret_cast<const ProtocolRecord *>(Swift5Protocols.data()),
         reinterpret_cast<const ProtocolRecord *>(Swift5Protocols.data() +
                                                  Swift5Protocols.size()));
 
-  moveAppendSections(JDS.Swift5ProtoSections, JDS.Swift5ProtoSectionsNew);
+  moveAppendSections(JDS.Swift5ProtocolsSections,
+                     JDS.Swift5ProtocolsSectionsNew);
   return Error::success();
 }
 
 Error MachOPlatformRuntimeState::registerSwift5ProtocolConformances(
     JITDylibState &JDS) {
 
-  if (JDS.Swift5ProtosSectionsNew.empty())
+  if (JDS.Swift5ProtocolConformancesSectionsNew.empty())
     return Error::success();
 
   if (ORC_RT_UNLIKELY(!swift_registerProtocolConformances))
     return make_error<StringError>(
         "swift_registerProtocolConformances is not available");
 
-  for (const auto &ProtoConfSec : JDS.Swift5ProtosSectionsNew)
+  for (const auto &ProtoConfSec : JDS.Swift5ProtocolConformancesSectionsNew)
     swift_registerProtocolConformances(
         reinterpret_cast<const ProtocolConformanceRecord *>(
             ProtoConfSec.data()),
         reinterpret_cast<const ProtocolConformanceRecord *>(
             ProtoConfSec.data() + ProtoConfSec.size()));
 
-  moveAppendSections(JDS.Swift5ProtosSections, JDS.Swift5ProtosSectionsNew);
+  moveAppendSections(JDS.Swift5ProtocolConformancesSections,
+                     JDS.Swift5ProtocolConformancesSectionsNew);
   return Error::success();
 }
 
