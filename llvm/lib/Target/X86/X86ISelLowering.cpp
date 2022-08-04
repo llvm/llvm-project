@@ -6158,7 +6158,7 @@ static bool canWidenShuffleElements(ArrayRef<int> Mask,
                                     SmallVectorImpl<int> &WidenedMask) {
   // Create an alternative mask with info about zeroable elements.
   // Here we do not set undef elements as zeroable.
-  SmallVector<int, 64> ZeroableMask(Mask.begin(), Mask.end());
+  SmallVector<int, 64> ZeroableMask(Mask);
   if (V2IsZero) {
     assert(!Zeroable.isZero() && "V2's non-undef elements are used?!");
     for (int i = 0, Size = Mask.size(); i != Size; ++i)
@@ -11927,7 +11927,7 @@ static bool is128BitUnpackShuffleMask(ArrayRef<int> Mask,
   MVT VT = MVT::getVectorVT(EltVT, Mask.size());
 
   // We can't assume a canonical shuffle mask, so try the commuted version too.
-  SmallVector<int, 4> CommutedMask(Mask.begin(), Mask.end());
+  SmallVector<int, 4> CommutedMask(Mask);
   ShuffleVectorSDNode::commuteMask(CommutedMask);
 
   // Match any of unary/binary or low/high.
@@ -12786,7 +12786,7 @@ static SDValue lowerShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
                                    SelectionDAG &DAG) {
   uint64_t BlendMask = 0;
   bool ForceV1Zero = false, ForceV2Zero = false;
-  SmallVector<int, 64> Mask(Original.begin(), Original.end());
+  SmallVector<int, 64> Mask(Original);
   if (!matchShuffleAsBlend(V1, V2, Mask, Zeroable, ForceV1Zero, ForceV2Zero,
                            BlendMask))
     return SDValue();
@@ -14242,7 +14242,7 @@ static SDValue lowerShuffleAsElementInsertion(
     assert(VT == ExtVT && "Cannot change extended type when non-zeroable!");
     if (!VT.isFloatingPoint() || V2Index != 0)
       return SDValue();
-    SmallVector<int, 8> V1Mask(Mask.begin(), Mask.end());
+    SmallVector<int, 8> V1Mask(Mask);
     V1Mask[V2Index] = -1;
     if (!isNoopShuffleMask(V1Mask))
       return SDValue();
@@ -14391,7 +14391,7 @@ static SDValue lowerShuffleOfExtractsAsVperm(const SDLoc &DL, SDValue N0,
   // Match extracts of each half of the wide source vector. Commute the shuffle
   // if the extract of the low half is N1.
   unsigned NumElts = VT.getVectorNumElements();
-  SmallVector<int, 4> NewMask(Mask.begin(), Mask.end());
+  SmallVector<int, 4> NewMask(Mask);
   const APInt &ExtIndex0 = N0.getConstantOperandAPInt(1);
   const APInt &ExtIndex1 = N1.getConstantOperandAPInt(1);
   if (ExtIndex1 == 0 && ExtIndex0 == NumElts)
@@ -14695,7 +14695,7 @@ static bool matchShuffleAsInsertPS(SDValue &V1, SDValue &V2,
     return true;
 
   // Commute and try again.
-  SmallVector<int, 4> CommutedMask(Mask.begin(), Mask.end());
+  SmallVector<int, 4> CommutedMask(Mask);
   ShuffleVectorSDNode::commuteMask(CommutedMask);
   if (matchAsInsertPS(V2, V1, CommutedMask))
     return true;
@@ -15030,7 +15030,7 @@ static SDValue lowerShuffleWithSHUFPS(const SDLoc &DL, MVT VT,
                                       ArrayRef<int> Mask, SDValue V1,
                                       SDValue V2, SelectionDAG &DAG) {
   SDValue LowV = V1, HighV = V2;
-  SmallVector<int, 4> NewMask(Mask.begin(), Mask.end());
+  SmallVector<int, 4> NewMask(Mask);
   int NumV2Elements = count_if(Mask, [](int M) { return M >= 4; });
 
   if (NumV2Elements == 1) {
@@ -15951,7 +15951,7 @@ static SDValue lowerV8I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
       return Rotate;
 
     // Make a copy of the mask so it can be modified.
-    SmallVector<int, 8> MutableMask(Mask.begin(), Mask.end());
+    SmallVector<int, 8> MutableMask(Mask);
     return lowerV8I16GeneralSingleInputShuffle(DL, MVT::v8i16, V1, MutableMask,
                                                Subtarget, DAG);
   }
@@ -16135,7 +16135,7 @@ static SDValue lowerShuffleWithPERMV(const SDLoc &DL, MVT VT,
     // Adjust mask to correct indices for the second input.
     int NumElts = VT.getVectorNumElements();
     unsigned Scale = 512 / VT.getSizeInBits();
-    SmallVector<int, 32> AdjustedMask(Mask.begin(), Mask.end());
+    SmallVector<int, 32> AdjustedMask(Mask);
     for (int &M : AdjustedMask)
       if (NumElts <= M)
         M += (Scale - 1) * NumElts;
@@ -16881,7 +16881,7 @@ static SDValue lowerShuffleAsLanePermuteAndShuffle(
   assert(V2.isUndef() &&
          "This last part of this routine only works on single input shuffles");
 
-  SmallVector<int, 32> InLaneMask(Mask.begin(), Mask.end());
+  SmallVector<int, 32> InLaneMask(Mask);
   for (int i = 0; i < Size; ++i) {
     int &M = InLaneMask[i];
     if (M < 0)
@@ -19369,7 +19369,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
   // the mask.
   if (V2IsUndef &&
       any_of(OrigMask, [NumElements](int M) { return M >= NumElements; })) {
-    SmallVector<int, 8> NewMask(OrigMask.begin(), OrigMask.end());
+    SmallVector<int, 8> NewMask(OrigMask);
     for (int &M : NewMask)
       if (M >= NumElements)
         M = -1;
@@ -19442,7 +19442,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, const X86Subtarget &Subtarget,
   }
 
   SmallVector<SDValue> Ops = {V1, V2};
-  SmallVector<int> Mask(OrigMask.begin(), OrigMask.end());
+  SmallVector<int> Mask(OrigMask);
 
   // Canonicalize the shuffle with any horizontal ops inputs.
   // NOTE: This may update Ops and Mask.
@@ -37692,7 +37692,7 @@ static bool matchBinaryPermuteShuffle(
       (MaskVT == MVT::v16i16 && Subtarget.hasAVX2())) {
     uint64_t BlendMask = 0;
     bool ForceV1Zero = false, ForceV2Zero = false;
-    SmallVector<int, 8> TargetMask(Mask.begin(), Mask.end());
+    SmallVector<int, 8> TargetMask(Mask);
     if (matchShuffleAsBlend(V1, V2, TargetMask, Zeroable, ForceV1Zero,
                             ForceV2Zero, BlendMask)) {
       if (MaskVT == MVT::v16i16) {
@@ -37895,7 +37895,7 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     return CanonicalizeShuffleInput(RootVT, V1);
   }
 
-  SmallVector<int, 64> Mask(BaseMask.begin(), BaseMask.end());
+  SmallVector<int, 64> Mask(BaseMask);
 
   // See if the shuffle is a hidden identity shuffle - repeated args in HOPs
   // etc. can be simplified.
@@ -38638,7 +38638,7 @@ static SDValue combineX86ShuffleChainWithExtract(
   for (unsigned i = 1; i != NumInputs; ++i)
     Offsets[i] += i * Scale * NumMaskElts;
 
-  SmallVector<int, 64> WideMask(BaseMask.begin(), BaseMask.end());
+  SmallVector<int, 64> WideMask(BaseMask);
   for (int &M : WideMask) {
     if (M < 0)
       continue;
