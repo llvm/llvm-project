@@ -8892,9 +8892,15 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
   }
 
   // Look for a shift left by 32.
-  if (Shl.getOpcode() != ISD::SHL || !Shl.hasOneUse() ||
-      !isa<ConstantSDNode>(Shl.getOperand(1)) ||
+  if (Shl.getOpcode() != ISD::SHL || !isa<ConstantSDNode>(Shl.getOperand(1)) ||
       Shl.getConstantOperandVal(1) != 32)
+    return SDValue();
+
+  // We if we didn't look through an add/sub, then the shl should have one use.
+  // If we did look through an add/sub, the sext_inreg we create is free so
+  // we're only creating 2 new instructions. It's enough to only remove the
+  // original sra+add/sub.
+  if (!AddC && !Shl.hasOneUse())
     return SDValue();
 
   SDLoc DL(N);
