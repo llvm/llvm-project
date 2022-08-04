@@ -28,29 +28,29 @@ $interesting5 = comdat any
 
 define i32 @main() {
 entry:
-  %0 = load i32, i32* @uninteresting, align 4
+  %0 = load i32, ptr @uninteresting, align 4
 
-  ; CHECK-INTERESTINGNESS: store i32 {{.*}}, i32* @interesting, align 4
-  ; CHECK-FINAL: store i32 0, i32* @interesting, align 4
-  store i32 %0, i32* @interesting, align 4
+  ; CHECK-INTERESTINGNESS: store i32 {{.*}}, ptr @interesting, align 4
+  ; CHECK-FINAL: store i32 0, ptr @interesting, align 4
+  store i32 %0, ptr @interesting, align 4
 
-  ; CHECK-INTERESTINGNESS: store i32 {{.*}}, i32* @interesting3, align 4
-  ; CHECK-FINAL: store i32 0, i32* @interesting3, align 4
-  store i32 %0, i32* @interesting3, align 4
+  ; CHECK-INTERESTINGNESS: store i32 {{.*}}, ptr @interesting3, align 4
+  ; CHECK-FINAL: store i32 0, ptr @interesting3, align 4
+  store i32 %0, ptr @interesting3, align 4
 
-  ; CHECK-ALL: load i32, i32* @interesting, align 4
-  %1 = load i32, i32* @interesting, align 4
-  store i32 %1, i32* @uninteresting, align 4
+  ; CHECK-ALL: load i32, ptr @interesting, align 4
+  %1 = load i32, ptr @interesting, align 4
+  store i32 %1, ptr @uninteresting, align 4
 
-  ; CHECK-ALL: load i32, i32* @interesting3, align 4
-  %2 = load i32, i32* @interesting3, align 4
-  store i32 %2, i32* @uninteresting2, align 4
+  ; CHECK-ALL: load i32, ptr @interesting3, align 4
+  %2 = load i32, ptr @interesting3, align 4
+  store i32 %2, ptr @uninteresting2, align 4
 
-  ; CHECK-ALL: store i32 5, i32* @interesting, align 4
-  store i32 5, i32* @interesting, align 4
+  ; CHECK-ALL: store i32 5, ptr @interesting, align 4
+  store i32 5, ptr @interesting, align 4
 
-  ; CHECK-ALL: store i32 5, i32* @interesting3, align 4
-  store i32 5, i32* @interesting3, align 4
+  ; CHECK-ALL: store i32 5, ptr @interesting3, align 4
+  store i32 5, ptr @interesting3, align 4
 
   ret i32 0
 }

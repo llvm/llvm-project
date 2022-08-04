@@ -18533,32 +18533,8 @@ static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
   } else {
     ByRef = (LSI->ImpCaptureStyle == LambdaScopeInfo::ImpCap_LambdaByref);
   }
-  // C++20 : [expr.prim.lambda.capture]p12
-  // A bit-field or a member of an anonymous union shall
-  // not be captured by reference.
-  MemberExpr *ME = nullptr;
-  BindingDecl *BD = nullptr;
-  if (auto *V = dyn_cast<VarDecl>(Var)) {
-    if (V->getInit())
-      ME = dyn_cast<MemberExpr>(V->getInit()->IgnoreImplicit());
-  } else if ((BD = dyn_cast<BindingDecl>(Var))) {
-    ME = dyn_cast_or_null<MemberExpr>(BD->getBinding());
-  }
 
-  // Capturing a bitfield by reference is not allowed except in OpenMP.
-  if (ByRef && ME &&
-      (isa<BindingDecl>(Var) || !S.LangOpts.OpenMP ||
-       !S.isOpenMPCapturedDecl(Var))) {
-    const auto *FD = dyn_cast_or_null<FieldDecl>(ME->getMemberDecl());
-    if (FD && FD->isBitField()) {
-      if (BuildAndDiagnose) {
-        S.Diag(Loc, diag::err_bitfield_capture_by_ref) << Var;
-        S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
-        S.Diag(FD->getLocation(), diag::note_bitfield_decl) << FD;
-      }
-      Invalid = true;
-    }
-  }
+  BindingDecl *BD = dyn_cast<BindingDecl>(Var);
   // FIXME: We should support capturing structured bindings in OpenMP.
   if (!Invalid && BD && S.LangOpts.OpenMP) {
     if (BuildAndDiagnose) {
