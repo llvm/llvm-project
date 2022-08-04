@@ -52,13 +52,11 @@ add_integration_test(
     libc.src.sys.mman.mmap
 )
 
-if(${LIBC_TARGET_ARCHITECTURE} STREQUAL "x86_64")
-  add_integration_test(
-    init_fini_array_test
-    SUITE libc-loader-tests
-    LOADER
-      libc.loader.linux.crt1
-    SRCS
-      init_fini_array_test.cpp
-  )
-endif()
+add_integration_test(
+  init_fini_array_test
+  SUITE libc-loader-tests
+  LOADER
+    libc.loader.linux.crt1
+  SRCS
+    init_fini_array_test.cpp
+)
