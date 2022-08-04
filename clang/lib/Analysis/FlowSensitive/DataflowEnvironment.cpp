@@ -154,9 +154,9 @@ Environment::Environment(DataflowAnalysisContext &DACtx)
     : DACtx(&DACtx), FlowConditionToken(&DACtx.makeFlowConditionToken()) {}
 
 Environment::Environment(const Environment &Other)
-    : DACtx(Other.DACtx), DeclToLoc(Other.DeclToLoc),
-      ExprToLoc(Other.ExprToLoc), LocToVal(Other.LocToVal),
-      MemberLocToStruct(Other.MemberLocToStruct),
+    : DACtx(Other.DACtx), ReturnLoc(Other.ReturnLoc),
+      DeclToLoc(Other.DeclToLoc), ExprToLoc(Other.ExprToLoc),
+      LocToVal(Other.LocToVal), MemberLocToStruct(Other.MemberLocToStruct),
       FlowConditionToken(&DACtx->forkFlowCondition(*Other.FlowConditionToken)) {
 }
 
@@ -179,6 +179,9 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
       if (Value *ParamVal = createValue(ParamDecl->getType()))
         setValue(ParamLoc, *ParamVal);
     }
+
+    QualType ReturnType = FuncDecl->getReturnType();
+    ReturnLoc = &createStorageLocation(ReturnType);
   }
 
   if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(&DeclCtx)) {
@@ -202,10 +205,11 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
 
 Environment Environment::pushCall(const CallExpr *Call) const {
   Environment Env(*this);
+  // FIXME: Support references here.
+  Env.ReturnLoc = Env.getStorageLocation(*Call, SkipPast::Reference);
 
   const auto *FuncDecl = Call->getDirectCallee();
   assert(FuncDecl != nullptr);
-  assert(FuncDecl->getBody() != nullptr);
   // FIXME: In order to allow the callee to reference globals, we probably need
   // to call `initGlobalVars` here in some way.
 
@@ -241,12 +245,13 @@ Environment Environment::pushCall(const CallExpr *Call) const {
 }
 
 void Environment::popCall(const Environment &CalleeEnv) {
-  // We ignore `DACtx` because it's already the same in both. We don't bring
-  // back `DeclToLoc` and `ExprToLoc` because we want to be able to later
-  // analyze the same callee in a different context, and `setStorageLocation`
-  // requires there to not already be a storage location assigned. Conceptually,
-  // these maps capture information from the local scope, so when popping that
-  // scope, we do not propagate the maps.
+  // We ignore `DACtx` because it's already the same in both. We don't want the
+  // callee's `ReturnLoc`. We don't bring back `DeclToLoc` and `ExprToLoc`
+  // because we want to be able to later analyze the same callee in a different
+  // context, and `setStorageLocation` requires there to not already be a
+  // storage location assigned. Conceptually, these maps capture information
+  // from the local scope, so when popping that scope, we do not propagate the
+  // maps.
   this->LocToVal = std::move(CalleeEnv.LocToVal);
   this->MemberLocToStruct = std::move(CalleeEnv.MemberLocToStruct);
   this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
@@ -255,6 +260,9 @@ void Environment::popCall(const Environment &CalleeEnv) {
 bool Environment::equivalentTo(const Environment &Other,
                                Environment::ValueModel &Model) const {
   assert(DACtx == Other.DACtx);
+
+  if (ReturnLoc != Other.ReturnLoc)
+    return false;
 
   if (DeclToLoc != Other.DeclToLoc)
     return false;
@@ -285,10 +293,13 @@ bool Environment::equivalentTo(const Environment &Other,
 LatticeJoinEffect Environment::join(const Environment &Other,
                                     Environment::ValueModel &Model) {
   assert(DACtx == Other.DACtx);
+  assert(ReturnLoc == Other.ReturnLoc);
 
   auto Effect = LatticeJoinEffect::Unchanged;
 
   Environment JoinedEnv(*DACtx);
+
+  JoinedEnv.ReturnLoc = ReturnLoc;
 
   JoinedEnv.DeclToLoc = intersectDenseMaps(DeclToLoc, Other.DeclToLoc);
   if (DeclToLoc.size() != JoinedEnv.DeclToLoc.size())
@@ -380,6 +391,10 @@ StorageLocation *Environment::getStorageLocation(const Expr &E,
 
 StorageLocation *Environment::getThisPointeeStorageLocation() const {
   return DACtx->getThisPointeeStorageLocation();
+}
+
+StorageLocation *Environment::getReturnStorageLocation() const {
+  return ReturnLoc;
 }
 
 PointerValue &Environment::getOrCreateNullPointerValue(QualType PointeeType) {

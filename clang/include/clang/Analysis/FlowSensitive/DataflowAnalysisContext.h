@@ -322,6 +322,7 @@ private:
   llvm::DenseMap<const ValueDecl *, StorageLocation *> DeclToLoc;
   llvm::DenseMap<const Expr *, StorageLocation *> ExprToLoc;
 
+  // FIXME: Move this into `Environment`.
   StorageLocation *ThisPointeeLoc = nullptr;
 
   // Null pointer values, keyed by the canonical pointee type.
