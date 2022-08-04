@@ -109,6 +109,7 @@ END-SCRIPT
 #include <__algorithm/ranges_all_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_all_of.h'}}
 #include <__algorithm/ranges_any_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_any_of.h'}}
 #include <__algorithm/ranges_binary_search.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_binary_search.h'}}
+#include <__algorithm/ranges_clamp.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_clamp.h'}}
 #include <__algorithm/ranges_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy.h'}}
 #include <__algorithm/ranges_copy_backward.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy_backward.h'}}
 #include <__algorithm/ranges_copy_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy_if.h'}}
