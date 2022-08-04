@@ -514,6 +514,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       Params.capabilities.HierarchicalDocumentSymbol;
   SupportFileStatus = Params.initializationOptions.FileStatus;
   HoverContentFormat = Params.capabilities.HoverContentFormat;
+  Opts.LineFoldingOnly = Params.capabilities.LineFoldingOnly;
   SupportsOffsetsInSignatureHelp = Params.capabilities.OffsetsInSignatureHelp;
   if (Params.capabilities.WorkDoneProgress)
     BackgroundIndexProgressState = BackgroundIndexProgress::Empty;
