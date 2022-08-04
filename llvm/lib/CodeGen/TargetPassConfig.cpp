@@ -266,14 +266,13 @@ static cl::opt<bool> DisableSelectOptimize(
     "disable-select-optimize", cl::init(true), cl::Hidden,
     cl::desc("Disable the select-optimization pass from running"));
 
-static cl::opt<bool> YkBlockDisambiguate(
-    "yk-block-disambiguate", cl::init(false), cl::NotHidden,
-    cl::desc("Disambiguate blocks for yk"));
-
 static cl::opt<bool>
-YkPatchCtrlPoint("yk-patch-control-point",
-  cl::init(false), cl::NotHidden,
-  cl::desc("Patch yk_mt_control_point()"));
+    YkBlockDisambiguate("yk-block-disambiguate", cl::init(false), cl::NotHidden,
+                        cl::desc("Disambiguate blocks for yk"));
+
+static cl::opt<bool> YkPatchCtrlPoint("yk-patch-control-point", cl::init(false),
+                                      cl::NotHidden,
+                                      cl::desc("Patch yk_mt_control_point()"));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.

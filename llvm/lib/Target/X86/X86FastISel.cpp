@@ -2591,10 +2591,10 @@ bool X86FastISel::TryEmitSmallMemcpy(X86AddressMode DestAM,
 // This is only necessary for intrinsics which may emit machine code.
 void annotateIntrinsic(const IntrinsicInst *II, bool Inlined) {
   IntrinsicInst *CI = const_cast<IntrinsicInst *>(II);
-  LLVMContext& C = CI->getContext();
+  LLVMContext &C = CI->getContext();
   ConstantInt *CInt;
-  CInt = ConstantInt::get(C, APInt(1, Inlined ? 1: 0));
-  MDNode* N = MDNode::get(C, ConstantAsMetadata::get(CInt));
+  CInt = ConstantInt::get(C, APInt(1, Inlined ? 1 : 0));
+  MDNode *N = MDNode::get(C, ConstantAsMetadata::get(CInt));
   CI->setMetadata("yk.intrinsic.inlined", N);
 }
 

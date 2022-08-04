@@ -130,7 +130,8 @@ using namespace llvm;
 
 static cl::opt<bool>
     EmbedBitcodeFinal("embed-bitcode-final", cl::NotHidden,
-                             cl::desc("Embed final IR as bitcode after all optimisations and transformations have run."));
+                      cl::desc("Embed final IR as bitcode after all "
+                               "optimisations and transformations have run."));
 
 const char DWARFGroupName[] = "dwarf";
 const char DWARFGroupDescription[] = "DWARF Emission";
@@ -1391,8 +1392,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       const Instruction *Term = CorrBB->getTerminator();
       assert(Term != nullptr);
       if ((isa<BranchInst>(Term)) &&
-          (!(dyn_cast<const BranchInst>(Term))->isConditional()))
-      {
+          (!(dyn_cast<const BranchInst>(Term))->isConditional())) {
         CorrBB = CorrBB->getUniqueSuccessor();
         assert(CorrBB != nullptr);
         if (MergedBBs.count(CorrBB) == 0) {

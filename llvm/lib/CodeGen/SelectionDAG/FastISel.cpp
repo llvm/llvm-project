@@ -1562,7 +1562,8 @@ bool FastISel::selectInstruction(const Instruction *I) {
 /// (fall-through) successor, and update the CFG.
 void FastISel::fastEmitBranch(MachineBasicBlock *MSucc,
                               const DebugLoc &DbgLoc) {
-  if ((!YkNoFallThrough) && (FuncInfo.MBB->getBasicBlock()->sizeWithoutDebug() > 1) &&
+  if ((!YkNoFallThrough) &&
+      (FuncInfo.MBB->getBasicBlock()->sizeWithoutDebug() > 1) &&
       FuncInfo.MBB->isLayoutSuccessor(MSucc)) {
     // For more accurate line information if this is the only non-debug
     // instruction in the block then emit it, otherwise we have the

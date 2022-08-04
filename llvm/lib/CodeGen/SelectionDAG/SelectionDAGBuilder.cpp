@@ -2370,8 +2370,8 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
 
     // If this is not a fall-through branch or optimizations are switched off,
     // emit the branch.
-    if ((YkNoFallThrough) || (Succ0MBB != NextBlock(BrMBB) ||
-        TM.getOptLevel() == CodeGenOpt::None))
+    if ((YkNoFallThrough) ||
+        (Succ0MBB != NextBlock(BrMBB) || TM.getOptLevel() == CodeGenOpt::None))
       DAG.setRoot(DAG.getNode(ISD::BR, getCurSDLoc(),
                               MVT::Other, getControlRoot(),
                               DAG.getBasicBlock(Succ0MBB)));
