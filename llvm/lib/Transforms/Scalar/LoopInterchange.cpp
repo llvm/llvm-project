@@ -86,7 +86,8 @@ static void printDepMatrix(CharMatrix &DepMatrix) {
 #endif
 
 static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
-                                     Loop *L, DependenceInfo *DI) {
+                                     Loop *L, DependenceInfo *DI,
+                                     ScalarEvolution *SE) {
   using ValueVector = SmallVector<Value *, 16>;
 
   ValueVector MemInstr;
@@ -125,6 +126,10 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
       // Track Output, Flow, and Anti dependencies.
       if (auto D = DI->depends(Src, Dst, true)) {
         assert(D->isOrdered() && "Expected an output, flow or anti dep.");
+        // If the direction vector is negative, normalize it to
+        // make it non-negative.
+        if (D->normalize(SE))
+          LLVM_DEBUG(dbgs() << "Negative dependence vector normalized.\n");
         LLVM_DEBUG(StringRef DepType =
                        D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
                    dbgs() << "Found " << DepType
@@ -133,19 +138,7 @@ static bool populateDependencyMatrix(CharMatrix &DepMatrix, unsigned Level,
         unsigned Levels = D->getLevels();
         char Direction;
         for (unsigned II = 1; II <= Levels; ++II) {
-          const SCEV *Distance = D->getDistance(II);
-          const SCEVConstant *SCEVConst =
-              dyn_cast_or_null<SCEVConstant>(Distance);
-          if (SCEVConst) {
-            const ConstantInt *CI = SCEVConst->getValue();
-            if (CI->isNegative())
-              Direction = '<';
-            else if (CI->isZero())
-              Direction = '=';
-            else
-              Direction = '>';
-            Dep.push_back(Direction);
-          } else if (D->isScalar(II)) {
+          if (D->isScalar(II)) {
             Direction = 'S';
             Dep.push_back(Direction);
           } else {
@@ -486,7 +479,7 @@ struct LoopInterchange {
     CharMatrix DependencyMatrix;
     Loop *OuterMostLoop = *(LoopList.begin());
     if (!populateDependencyMatrix(DependencyMatrix, LoopNestDepth,
-                                  OuterMostLoop, DI)) {
+                                  OuterMostLoop, DI, SE)) {
       LLVM_DEBUG(dbgs() << "Populating dependency matrix failed\n");
       return false;
     }
