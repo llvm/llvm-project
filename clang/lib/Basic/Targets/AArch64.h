@@ -116,6 +116,8 @@ public:
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override;
 
+  bool hasBFloat16Type() const override;
+
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
 
   bool isCLZForZeroUndef() const override;
