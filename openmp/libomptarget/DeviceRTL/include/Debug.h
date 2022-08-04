@@ -13,6 +13,7 @@
 #define OMPTARGET_DEVICERTL_DEBUG_H
 
 #include "Configuration.h"
+#include "LibC.h"
 
 /// Assertion
 ///
@@ -32,14 +33,6 @@ void __assert_fail(const char *assertion, const char *file, unsigned line,
   }
 
 ///}
-
-/// Print
-/// printf() calls are rewritten by CGGPUBuiltin to __llvm_omp_vprintf
-/// {
-
-extern "C" {
-int printf(const char *format, ...);
-}
 
 #define PRINTF(fmt, ...) (void)printf(fmt, ##__VA_ARGS__);
 #define PRINT(str) PRINTF("%s", str)
