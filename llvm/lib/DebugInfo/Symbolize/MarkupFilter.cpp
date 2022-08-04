@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/DebugInfo/Symbolize/Markup.h"
+#include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ObjectFile.h"
@@ -32,9 +33,11 @@
 using namespace llvm;
 using namespace llvm::symbolize;
 
-MarkupFilter::MarkupFilter(raw_ostream &OS, Optional<bool> ColorsEnabled)
-    : OS(OS), ColorsEnabled(ColorsEnabled.value_or(
-                  WithColor::defaultAutoDetectFunction()(OS))) {}
+MarkupFilter::MarkupFilter(raw_ostream &OS, LLVMSymbolizer &Symbolizer,
+                           Optional<bool> ColorsEnabled)
+    : OS(OS), Symbolizer(Symbolizer),
+      ColorsEnabled(
+          ColorsEnabled.value_or(WithColor::defaultAutoDetectFunction()(OS))) {}
 
 void MarkupFilter::filter(StringRef Line) {
   this->Line = Line;
@@ -94,10 +97,10 @@ bool MarkupFilter::tryMMap(const MarkupNode &Node,
   if (!ParsedMMap)
     return true;
 
-  if (const MMap *M = overlappingMMap(*ParsedMMap)) {
+  if (const MMap *M = getOverlappingMMap(*ParsedMMap)) {
     WithColor::error(errs())
-        << formatv("overlapping mmap: #{0:x} [{1:x},{2:x})\n", M->Mod->ID,
-                   M->Addr, M->Addr + M->Size);
+        << formatv("overlapping mmap: #{0:x} [{1:x}-{2:x}]\n", M->Mod->ID,
+                   M->Addr, M->Addr + M->Size - 1);
     reportLocation(Node.Fields[0].begin());
     return true;
   }
@@ -182,9 +185,9 @@ void MarkupFilter::endAnyModuleInfoLine() {
     return A->Addr < B->Addr;
   });
   for (const MMap *M : MIL->MMaps) {
-    OS << (M == MIL->MMaps.front() ? ' ' : '-');
+    OS << (M == MIL->MMaps.front() ? ' ' : ',');
     highlightValue();
-    OS << formatv("{0:x}", M->Addr);
+    OS << formatv("[{0:x}-{1:x}]", M->Addr, M->Addr + M->Size - 1);
     highlight();
     OS << '(';
     highlightValue();
@@ -210,7 +213,9 @@ void MarkupFilter::filterNode(const MarkupNode &Node) {
 }
 
 bool MarkupFilter::tryPresentation(const MarkupNode &Node) {
-  return trySymbol(Node);
+  if (trySymbol(Node))
+    return true;
+  return tryData(Node);
 }
 
 bool MarkupFilter::trySymbol(const MarkupNode &Node) {
@@ -221,6 +226,47 @@ bool MarkupFilter::trySymbol(const MarkupNode &Node) {
 
   highlight();
   OS << llvm::demangle(Node.Fields.front().str());
+  restoreColor();
+  return true;
+}
+
+bool MarkupFilter::tryData(const MarkupNode &Node) {
+  if (Node.Tag != "data")
+    return false;
+  if (!checkNumFields(Node, 1))
+    return true;
+  Optional<uint64_t> Addr = parseAddr(Node.Fields[0]);
+  if (!Addr)
+    return true;
+
+  const auto PrintRaw = [&]() {
+    highlight();
+    OS << "[[[data:";
+    highlightValue();
+    OS << "0x" << toHex(*Addr, /*LowerCase=*/true);
+    highlight();
+    OS << "]]]\n";
+    restoreColor();
+  };
+
+  const MMap *MMap = getContainingMMap(*Addr);
+  if (!MMap) {
+    WithColor::error() << "no mmap covers address\n";
+    reportLocation(Node.Fields[0].begin());
+    PrintRaw();
+    return true;
+  }
+
+  Expected<DIGlobal> Symbol = Symbolizer.symbolizeData(
+      MMap->Mod->BuildID, {MMap->getModuleRelativeAddr(*Addr)});
+  if (!Symbol) {
+    WithColor::defaultErrorHandler(Symbol.takeError());
+    PrintRaw();
+    return true;
+  }
+
+  highlight();
+  OS << Symbol->Name;
   restoreColor();
   return true;
 }
@@ -442,7 +488,7 @@ bool MarkupFilter::checkTag(const MarkupNode &Node) const {
 bool MarkupFilter::checkNumFields(const MarkupNode &Element,
                                   size_t Size) const {
   if (Element.Fields.size() != Size) {
-    WithColor::error(errs()) << "expected " << Size << " fields; found "
+    WithColor::error(errs()) << "expected " << Size << " field(s); found "
                              << Element.Fields.size() << "\n";
     reportLocation(Element.Tag.end());
     return false;
@@ -454,7 +500,7 @@ bool MarkupFilter::checkNumFieldsAtLeast(const MarkupNode &Element,
                                          size_t Size) const {
   if (Element.Fields.size() < Size) {
     WithColor::error(errs())
-        << "expected at least " << Size << " fields; found "
+        << "expected at least " << Size << " field(s); found "
         << Element.Fields.size() << "\n";
     reportLocation(Element.Tag.end());
     return false;
@@ -479,7 +525,8 @@ void MarkupFilter::reportLocation(StringRef::iterator Loc) const {
 
 // Checks for an existing mmap that overlaps the given one and returns a
 // pointer to one of them.
-const MarkupFilter::MMap *MarkupFilter::overlappingMMap(const MMap &Map) const {
+const MarkupFilter::MMap *
+MarkupFilter::getOverlappingMMap(const MMap &Map) const {
   // If the given map contains the start of another mmap, they overlap.
   auto I = MMaps.upper_bound(Map.Addr);
   if (I != MMaps.end() && Map.contains(I->second.Addr))
@@ -495,10 +542,29 @@ const MarkupFilter::MMap *MarkupFilter::overlappingMMap(const MMap &Map) const {
   return nullptr;
 }
 
+// Returns the MMap that contains the given address or nullptr if none.
+const MarkupFilter::MMap *MarkupFilter::getContainingMMap(uint64_t Addr) const {
+  // Find the first mmap starting >= Addr.
+  auto I = MMaps.lower_bound(Addr);
+  if (I != MMaps.end() && I->second.contains(Addr))
+    return &I->second;
+
+  // The previous mmap is the last one starting < Addr.
+  if (I == MMaps.begin())
+    return nullptr;
+  --I;
+  return I->second.contains(Addr) ? &I->second : nullptr;
+}
+
 StringRef MarkupFilter::lineEnding() const {
   return Line.endswith("\r\n") ? "\r\n" : "\n";
 }
 
 bool MarkupFilter::MMap::contains(uint64_t Addr) const {
   return this->Addr <= Addr && Addr < this->Addr + Size;
+}
+
+// Returns the module-relative address for a given virtual address.
+uint64_t MarkupFilter::MMap::getModuleRelativeAddr(uint64_t Addr) const {
+  return Addr - this->Addr + ModuleRelativeAddr;
 }

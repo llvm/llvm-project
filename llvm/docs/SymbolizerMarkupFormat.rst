@@ -195,7 +195,7 @@ human-readable symbolic form.
     {{{pc:0x12345678}}}
     {{{pc:0xffffffff9abcdef0}}}
 
-``{{{data:%p}}}`` [#not_yet_implemented]_
+``{{{data:%p}}}``
 
   Here ``%p`` is the memory address of a data location. It might be presented as
   the name of a global variable at that location.

@@ -7,12 +7,12 @@ RUN: FileCheck %s --check-prefix=ERR -input-file=%t.err --match-full-lines
 CHECK: [[BEGIN:\[{3}]]ELF module #0x0 "a.o"; BuildID=ab[[END:\]{3}]]
 CHECK: [[BEGIN]]ELF module #0x1 "b.o"; BuildID=abb50d82b6bdc861[[END]]
 CHECK: [[BEGIN]]ELF module #0x2 "c.o"; BuildID=cd[[END]]
-CHECK: [[BEGIN]]ELF module #0x1 "b.o"; adds 0x0(r)[[END]]
+CHECK: [[BEGIN]]ELF module #0x1 "b.o"; adds [0x0-0x98967f](r)[[END]]
 
-ERR: error: expected at least 3 fields; found 0
+ERR: error: expected at least 3 field(s); found 0
 ERR: error: unknown module type
 ERR: error: duplicate module ID
-ERR: error: expected 4 fields; found 3
+ERR: error: expected 4 field(s); found 3
 
 ;--- log
 {{{module:0:a.o:elf:ab}}}

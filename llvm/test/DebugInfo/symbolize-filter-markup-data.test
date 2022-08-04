@@ -1,0 +1,35 @@
+REQUIRES: x86-registered-target
+RUN: split-file %s %t
+RUN: mkdir -p %t/.build-id/ab
+RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %t/asm.s \
+RUN:   -o %t/.build-id/ab/cdef.debug
+RUN: llvm-symbolizer --debug-file-directory=%t --filter-markup < %t/input \
+RUN:   > %t.output 2> %t.err
+RUN: FileCheck %s --input-file=%t.output --match-full-lines \
+RUN:   --implicit-check-not {{.}}
+RUN: FileCheck %s --check-prefix=ERR --input-file=%t.err --match-full-lines
+
+CHECK: [[BEGIN:\[{3}]]ELF module #0x0 "a.o"; BuildID=abcdef [0x0-0x4](r),[0x10-0x11](r)[[END:\]{3}]]
+CHECK: long long byte
+CHECK: long byte
+CHECK: [[BEGIN]]data:0x05[[END]]
+
+ERR: error: expected 1 field(s); found 0
+ERR: error: no mmap covers address
+
+;--- input
+{{{module:0:a.o:elf:abcdef}}}
+{{{mmap:0:5:load:0:r:0}}}
+{{{mmap:0x10:2:load:0:r:0x3}}}
+{{{data:0x0}}} {{{data:0x1}}} {{{data:0x4}}}
+{{{data:0x10}}} {{{data:0x11}}}
+
+{{{data}}}
+{{{data:0x5}}}
+;--- asm.s
+long:
+  .long 0x11223344
+  .size long, 4
+byte:
+  .byte 0x42
+  .size byte, 1
