@@ -1,0 +1,69 @@
+// RUN: cir-tool %s -cir-to-func -cir-to-memref -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-tool %s -cir-to-func -cir-to-memref -cir-to-llvm -o - | mlir-translate -mlir-to-llvmir | FileCheck %s -check-prefix=LLVM
+// XFAIL: *
+
+module {
+  cir.func @foo() {
+    %0 = cir.alloca f32, cir.ptr <f32>, ["c", uninitialized] {alignment = 4 : i64}
+    %1 = cir.alloca f32, cir.ptr <f32>, ["d", uninitialized] {alignment = 4 : i64}
+    %2 = cir.alloca f32, cir.ptr <f32>, ["y", cinit] {alignment = 4 : i64}
+    %3 = cir.alloca f64, cir.ptr <f64>, ["e", uninitialized] {alignment = 8 : i64}
+    %4 = cir.alloca f64, cir.ptr <f64>, ["f", uninitialized] {alignment = 8 : i64}
+    %5 = cir.alloca f64, cir.ptr <f64>, ["g", cinit] {alignment = 8 : i64}
+    %6 = cir.load %0 : cir.ptr <f32>, f32
+    %7 = cir.load %1 : cir.ptr <f32>, f32
+    %8 = cir.binop(mul, %6, %7) : f32
+    cir.store %8, %2 : f32, cir.ptr <f32>
+    %9 = cir.load %2 : cir.ptr <f32>, f32
+    %10 = cir.load %1 : cir.ptr <f32>, f32
+    %11 = cir.binop(div, %9, %10) : f32
+    cir.store %11, %2 : f32, cir.ptr <f32>
+    %12 = cir.load %2 : cir.ptr <f32>, f32
+    %13 = cir.load %1 : cir.ptr <f32>, f32
+    %14 = cir.binop(add, %12, %13) : f32
+    cir.store %14, %2 : f32, cir.ptr <f32>
+    %15 = cir.load %2 : cir.ptr <f32>, f32
+    %16 = cir.load %1 : cir.ptr <f32>, f32
+    %17 = cir.binop(sub, %15, %16) : f32
+    cir.store %17, %2 : f32, cir.ptr <f32>
+    %18 = cir.load %3 : cir.ptr <f64>, f64
+    %19 = cir.load %4 : cir.ptr <f64>, f64
+    %20 = cir.binop(add, %18, %19) : f64
+    cir.store %20, %5 : f64, cir.ptr <f64>
+    %21 = cir.load %3 : cir.ptr <f64>, f64
+    %22 = cir.load %4 : cir.ptr <f64>, f64
+    %23 = cir.binop(sub, %21, %22) : f64
+    cir.store %23, %5 : f64, cir.ptr <f64>
+    %24 = cir.load %3 : cir.ptr <f64>, f64
+    %25 = cir.load %4 : cir.ptr <f64>, f64
+    %26 = cir.binop(mul, %24, %25) : f64
+    cir.store %26, %5 : f64, cir.ptr <f64>
+    %27 = cir.load %3 : cir.ptr <f64>, f64
+    %28 = cir.load %4 : cir.ptr <f64>, f64
+    %29 = cir.binop(div, %27, %28) : f64
+    cir.store %29, %5 : f64, cir.ptr <f64>
+    cir.return
+  }
+}
+
+// MLIR: = memref.alloca() {alignment = 4 : i64} : memref<f32>
+// MLIR: = memref.alloca() {alignment = 8 : i64} : memref<f64>
+// MLIR: = arith.mulf {{.*}} : f32
+// MLIR: = arith.divf
+// MLIR: = arith.addf
+// MLIR: = arith.subf
+// MLIR: = arith.addf {{.*}} : f64
+// MLIR: = arith.subf
+// MLIR: = arith.mulf
+// MLIR: = arith.divf
+
+// LLVM: = alloca float, i64
+// LLVM: = alloca double, i64
+// LLVM: = fmul float
+// LLVM: = fdiv float
+// LLVM: = fadd float
+// LLVM: = fsub float
+// LLVM: = fadd double
+// LLVM: = fsub double
+// LLVM: = fmul double
+// LLVM: = fdiv double
