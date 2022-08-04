@@ -363,8 +363,7 @@ declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses
     MLIRCAPIAsync
 )
 
-# Only enable the ExecutionEngine if the native target is configured in.
-if(TARGET ${LLVM_NATIVE_ARCH})
+if(MLIR_ENABLE_EXECUTION_ENGINE)
   declare_mlir_python_extension(MLIRPythonExtension.ExecutionEngine
     MODULE_NAME _mlirExecutionEngine
     ADD_TO_PARENT MLIRPythonSources.ExecutionEngine

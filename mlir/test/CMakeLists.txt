@@ -40,7 +40,7 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
 
 
   # The native target may not be enabled when cross compiling, raise an error.
-  if(NOT TARGET ${LLVM_NATIVE_ARCH})
+  if(NOT MLIR_ENABLE_EXECUTION_ENGINE)
     message(FATAL_ERROR "MLIR_INCLUDE_INTEGRATION_TESTS requires a native target")
   endif()
 

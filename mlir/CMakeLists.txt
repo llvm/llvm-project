@@ -86,9 +86,16 @@ set_target_properties(mlir-headers PROPERTIES FOLDER "Misc")
 add_dependencies(mlir-headers mlir-generic-headers)
 add_custom_target(mlir-doc)
 
+# Only enable execution engine if the native target is available.
+if(${LLVM_NATIVE_ARCH} IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(MLIR_ENABLE_EXECUTION_ENGINE 1)
+else()
+  set(MLIR_ENABLE_EXECUTION_ENGINE 0)
+endif()
+
 # Build the CUDA conversions and run according tests if the NVPTX backend
 # is available
-if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
+if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD AND MLIR_ENABLE_EXECUTION_ENGINE)
   set(MLIR_ENABLE_CUDA_CONVERSIONS 1)
 else()
   set(MLIR_ENABLE_CUDA_CONVERSIONS 0)
@@ -97,8 +104,8 @@ endif()
 add_definitions(-DMLIR_CUDA_CONVERSIONS_ENABLED=${MLIR_ENABLE_CUDA_CONVERSIONS})
 
 # Build the ROCm conversions and run according tests if the AMDGPU backend
-# is available
-if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
+# is available.
+if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD AND MLIR_ENABLE_EXECUTION_ENGINE)
   set(MLIR_ENABLE_ROCM_CONVERSIONS 1)
 else()
   set(MLIR_ENABLE_ROCM_CONVERSIONS 0)

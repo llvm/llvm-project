@@ -39,8 +39,7 @@ add_mlir_library(MLIRExecutionEngineUtils
   Passes
   )
 
-# Only enable the ExecutionEngine if the native target is configured in.
-if(NOT TARGET ${LLVM_NATIVE_ARCH})
+if(NOT MLIR_ENABLE_EXECUTION_ENGINE)
   return()
 endif()
 
