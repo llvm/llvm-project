@@ -1684,6 +1684,18 @@ template <class InputIterator1, class InputIterator2, class Compare>
     lexicographical_compare(InputIterator1 first1, InputIterator1 last1,
                             InputIterator2 first2, InputIterator2 last2, Compare comp);
 
+template<class InputIterator1, class InputIterator2, class Cmp>
+    constexpr auto
+    lexicographical_compare_three_way(InputIterator1 first1, InputIterator1 last1,
+                                      InputIterator2 first2, InputIterator2 last2,
+                                      Cmp comp)
+      -> decltype(comp(*b1, *b2));                                                        // since C++20
+
+template<class InputIterator1, class InputIterator2>
+    constexpr auto
+    lexicographical_compare_three_way(InputIterator1 first1, InputIterator1 last1,
+                                      InputIterator2 first2, InputIterator2 last2);      // since C++20
+
 template <class BidirectionalIterator>
     constexpr bool     // constexpr in C++20
     next_permutation(BidirectionalIterator first, BidirectionalIterator last);
@@ -1753,6 +1765,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/is_sorted_until.h>
 #include <__algorithm/iter_swap.h>
 #include <__algorithm/lexicographical_compare.h>
+#include <__algorithm/lexicographical_compare_three_way.h>
 #include <__algorithm/lower_bound.h>
 #include <__algorithm/make_heap.h>
 #include <__algorithm/max.h>

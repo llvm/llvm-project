@@ -174,6 +174,14 @@ void test_algorithms() {
   std::lexicographical_compare(std::begin(arr), std::end(arr), std::begin(arr),
                                std::end(arr), std::greater<int>());
 
+#if TEST_STD_VER >= 20
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::lexicographical_compare_three_way(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr));
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::lexicographical_compare_three_way(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr), std::compare_three_way());
+#endif
+
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::lower_bound(std::begin(arr), std::end(arr), 1);
 
