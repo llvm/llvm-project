@@ -481,7 +481,6 @@ int main(int Argc, char const *Argv[]) {
   InitializeAllTargetMCs();
   InitializeAllTargetInfos();
   InitializeAllAsmPrinters();
-  InitializeAllAsmParsers();
 
   ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
       MemoryBuffer::getFileOrSTDIN(Opts.InputFileName);
