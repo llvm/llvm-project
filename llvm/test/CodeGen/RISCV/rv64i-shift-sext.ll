@@ -196,3 +196,27 @@ define i8 @test13(i8* %0, i64 %1) {
   %12 = add i8 %7, %11
   ret i8 %12
 }
+
+define signext i32 @test14(i8* %0, i32* %1, i64 %2) {
+; RV64I-LABEL: test14:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a3, 1
+; RV64I-NEXT:    subw a2, a3, a2
+; RV64I-NEXT:    add a0, a0, a2
+; RV64I-NEXT:    lbu a0, 0(a0)
+; RV64I-NEXT:    slli a2, a2, 2
+; RV64I-NEXT:    add a1, a1, a2
+; RV64I-NEXT:    lw a1, 0(a1)
+; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    ret
+  %4 = mul i64 %2, -4294967296
+  %5 = add i64 %4, 4294967296 ; 1 << 32
+  %6 = ashr exact i64 %5, 32
+  %7 = getelementptr inbounds i8, i8* %0, i64 %6
+  %8 = load i8, i8* %7, align 4
+  %9 = zext i8 %8 to i32
+  %10 = getelementptr inbounds i32, i32* %1, i64 %6
+  %11 = load i32, i32* %10, align 4
+  %12 = add i32 %9, %11
+  ret i32 %12
+}
