@@ -3687,6 +3687,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_LOAD:
     Res = WidenVecRes_VP_LOAD(cast<VPLoadSDNode>(N));
     break;
+  case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
+    Res = WidenVecRes_VP_STRIDED_LOAD(cast<VPStridedLoadSDNode>(N));
+    break;
   case ISD::MLOAD:
     Res = WidenVecRes_MLOAD(cast<MaskedLoadSDNode>(N));
     break;
@@ -4919,6 +4922,33 @@ SDValue DAGTypeLegalizer::WidenVecRes_VP_LOAD(VPLoadSDNode *N) {
   return Res;
 }
 
+SDValue DAGTypeLegalizer::WidenVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *N) {
+  SDLoc DL(N);
+
+  // The mask should be widened as well
+  SDValue Mask = N->getMask();
+  assert(getTypeAction(Mask.getValueType()) ==
+             TargetLowering::TypeWidenVector &&
+         "Unable to widen VP strided load");
+  Mask = GetWidenedVector(Mask);
+
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  assert(Mask.getValueType().getVectorElementCount() ==
+             WidenVT.getVectorElementCount() &&
+         "Data and mask vectors should have the same number of elements");
+
+  SDValue Res = DAG.getStridedLoadVP(
+      N->getAddressingMode(), N->getExtensionType(), WidenVT, DL, N->getChain(),
+      N->getBasePtr(), N->getOffset(), N->getStride(), Mask,
+      N->getVectorLength(), N->getMemoryVT(), N->getMemOperand(),
+      N->isExpandingLoad());
+
+  // Legalize the chain result - switch anything that used the old chain to
+  // use the new one.
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
+}
+
 SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
 
   EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(),N->getValueType(0));
@@ -5436,6 +5466,9 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::EXTRACT_VECTOR_ELT: Res = WidenVecOp_EXTRACT_VECTOR_ELT(N); break;
   case ISD::STORE:              Res = WidenVecOp_STORE(N); break;
   case ISD::VP_STORE:           Res = WidenVecOp_VP_STORE(N, OpNo); break;
+  case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
+    Res = WidenVecOp_VP_STRIDED_STORE(N, OpNo);
+    break;
   case ISD::MSTORE:             Res = WidenVecOp_MSTORE(N, OpNo); break;
   case ISD::MGATHER:            Res = WidenVecOp_MGATHER(N, OpNo); break;
   case ISD::MSCATTER:           Res = WidenVecOp_MSCATTER(N, OpNo); break;
@@ -5912,6 +5945,38 @@ SDValue DAGTypeLegalizer::WidenVecOp_VP_STORE(SDNode *N, unsigned OpNo) {
                         ST->getMemoryVT(), ST->getMemOperand(),
                         ST->getAddressingMode(), ST->isTruncatingStore(),
                         ST->isCompressingStore());
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_VP_STRIDED_STORE(SDNode *N,
+                                                      unsigned OpNo) {
+  assert((OpNo == 1 || OpNo == 4) &&
+         "Can widen only data or mask operand of vp_strided_store");
+  VPStridedStoreSDNode *SST = cast<VPStridedStoreSDNode>(N);
+  SDValue Mask = SST->getMask();
+  SDValue StVal = SST->getValue();
+  SDLoc DL(N);
+
+  if (OpNo == 1)
+    assert(getTypeAction(Mask.getValueType()) ==
+               TargetLowering::TypeWidenVector &&
+           "Unable to widen VP strided store");
+  else
+    assert(getTypeAction(StVal.getValueType()) ==
+               TargetLowering::TypeWidenVector &&
+           "Unable to widen VP strided store");
+
+  StVal = GetWidenedVector(StVal);
+  Mask = GetWidenedVector(Mask);
+
+  assert(StVal.getValueType().getVectorElementCount() ==
+             Mask.getValueType().getVectorElementCount() &&
+         "Data and mask vectors should have the same number of elements");
+
+  return DAG.getStridedStoreVP(
+      SST->getChain(), DL, StVal, SST->getBasePtr(), SST->getOffset(),
+      SST->getStride(), Mask, SST->getVectorLength(), SST->getMemoryVT(),
+      SST->getMemOperand(), SST->getAddressingMode(), SST->isTruncatingStore(),
+      SST->isCompressingStore());
 }
 
 SDValue DAGTypeLegalizer::WidenVecOp_MSTORE(SDNode *N, unsigned OpNo) {
