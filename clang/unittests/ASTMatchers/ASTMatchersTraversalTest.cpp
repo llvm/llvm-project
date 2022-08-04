@@ -4681,9 +4681,6 @@ TEST(UsingDeclaration, ThroughUsingDeclaration) {
   EXPECT_TRUE(notMatches(
     "namespace a { void f(); } using a::f; void g() { a::f(); }",
     declRefExpr(throughUsingDecl(anything()))));
-  EXPECT_TRUE(matches("struct S {}; namespace a { int operator+(S s1, S s2); } "
-                      "using a::operator+; int g() { return S() + S(); }",
-                      declRefExpr(throughUsingDecl(anything()))));
 }
 
 TEST(SingleDecl, IsSingleDecl) {
