@@ -68,6 +68,18 @@ using BitcastOpLowering =
     VectorConvertToLLVMPattern<arith::BitcastOp, LLVM::BitcastOp>;
 using SelectOpLowering =
     VectorConvertToLLVMPattern<arith::SelectOp, LLVM::SelectOp>;
+using MaxFOpLowering =
+    VectorConvertToLLVMPattern<arith::MaxFOp, LLVM::MaxNumOp>;
+using MaxSIOpLowering =
+    VectorConvertToLLVMPattern<arith::MaxSIOp, LLVM::SMaxOp>;
+using MaxUIOpLowering =
+    VectorConvertToLLVMPattern<arith::MaxUIOp, LLVM::UMaxOp>;
+using MinFOpLowering =
+    VectorConvertToLLVMPattern<arith::MinFOp, LLVM::MinNumOp>;
+using MinSIOpLowering =
+    VectorConvertToLLVMPattern<arith::MinSIOp, LLVM::SMinOp>;
+using MinUIOpLowering =
+    VectorConvertToLLVMPattern<arith::MinUIOp, LLVM::UMinOp>;
 
 //===----------------------------------------------------------------------===//
 // Op Lowering Patterns
@@ -321,7 +333,13 @@ void mlir::arith::populateArithmeticToLLVMConversionPatterns(
     BitcastOpLowering,
     CmpIOpLowering,
     CmpFOpLowering,
-    SelectOpLowering
+    SelectOpLowering,
+    MaxFOpLowering,
+    MaxUIOpLowering,
+    MaxSIOpLowering,
+    MinFOpLowering,
+    MinUIOpLowering,
+    MinSIOpLowering
   >(converter);
   // clang-format on
 }
