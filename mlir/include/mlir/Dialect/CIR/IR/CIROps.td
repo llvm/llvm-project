@@ -404,7 +404,6 @@ def IfOp : CIR_Op<"if",
   let arguments = (ins CIR_BoolType:$condition);
   let regions = (region AnyRegion:$thenRegion, AnyRegion:$elseRegion);
 
-  // FIXME: unify these within CIR_Ops.
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
