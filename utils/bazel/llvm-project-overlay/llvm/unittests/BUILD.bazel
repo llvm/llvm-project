@@ -38,6 +38,7 @@ cc_test(
         exclude = [
             # TODO: Add this file to the build.
             "Analysis/TFUtilsTest.cpp",
+            "Analysis/TrainingLoggerTest.cpp",
             "Analysis/MLModelRunnerTest.cpp",
         ],
     ),
