@@ -1803,8 +1803,14 @@ example:
     startup time if the function is not called during program startup.
 ``noprofile``
     This function attribute prevents instrumentation based profiling, used for
-    coverage or profile based optimization, from being added to a function,
-    even when inlined.
+    coverage or profile based optimization, from being added to a function. It
+    also blocks inlining if the caller and callee have different values of this
+    attribute.
+``skipprofile``
+    This function attribute prevents instrumentation based profiling, used for
+    coverage or profile based optimization, from being added to a function. This
+    attribute does not restrict inlining, so instrumented instruction could end
+    up in this function.
 ``noredzone``
     This attribute indicates that the code generator should not use a
     red zone, even if the target-specific ABI normally permits it.
