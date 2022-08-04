@@ -25,6 +25,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 17
 
+/// The character type specializations of \ref formatter.
+template <class _CharT>
+concept __fmt_char_type =
+    same_as<_CharT, char>
+#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+    || same_as<_CharT, wchar_t>
+#  endif
+    ;
+
 // The output iterator isn't specified. A formatter should accept any
 // output_iterator. This iterator is a minimal iterator to test the concept.
 // (Note testing for (w)format_context would be a valid choice, but requires

@@ -17,9 +17,9 @@
 #include <__algorithm/transform.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
+#include <__format/concepts.h>
 #include <__format/enable_insertable.h>
 #include <__format/format_to_n_result.h>
-#include <__format/formatter.h> // for __char_type TODO FMT Move the concept?
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
@@ -49,7 +49,7 @@ namespace __format {
 /// This helper is used together with the @ref back_insert_iterator to offer
 /// type-erasure for the formatting functions. This reduces the number to
 /// template instantiations.
-template <__formatter::__char_type _CharT>
+template <__fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __output_buffer {
 public:
   using value_type = _CharT;
@@ -222,7 +222,7 @@ private:
 ///
 /// This storage is used when writing a single element to the output iterator
 /// is expensive.
-template <__formatter::__char_type _CharT>
+template <__fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __internal_storage {
 public:
   _LIBCPP_HIDE_FROM_ABI _CharT* __begin() { return __buffer_; }
@@ -238,11 +238,11 @@ private:
 /// This requires the storage to be a contiguous buffer of \a _CharT.
 /// Since the output is directly written to the underlying storage this class
 /// is just an empty class.
-template <__formatter::__char_type _CharT>
+template <__fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __direct_storage {};
 
 template <class _OutIt, class _CharT>
-concept __enable_direct_output = __formatter::__char_type<_CharT> &&
+concept __enable_direct_output = __fmt_char_type<_CharT> &&
     (same_as<_OutIt, _CharT*>
 #ifndef _LIBCPP_ENABLE_DEBUG_MODE
      || same_as<_OutIt, __wrap_iter<_CharT*>>
@@ -250,7 +250,7 @@ concept __enable_direct_output = __formatter::__char_type<_CharT> &&
     );
 
 /// Write policy for directly writing to the underlying output.
-template <class _OutIt, __formatter::__char_type _CharT>
+template <class _OutIt, __fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __writer_direct {
 public:
   _LIBCPP_HIDE_FROM_ABI explicit __writer_direct(_OutIt __out_it)
@@ -269,7 +269,7 @@ private:
 };
 
 /// Write policy for copying the buffer to the output.
-template <class _OutIt, __formatter::__char_type _CharT>
+template <class _OutIt, __fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __writer_iterator {
 public:
   _LIBCPP_HIDE_FROM_ABI explicit __writer_iterator(_OutIt __out_it)
@@ -294,7 +294,7 @@ private:
 /// \ref __enable_insertable.
 template <class _Container>
 concept __insertable =
-    __enable_insertable<_Container> && __formatter::__char_type<typename _Container::value_type> &&
+    __enable_insertable<_Container> && __fmt_char_type<typename _Container::value_type> &&
     requires(_Container& __t, add_pointer_t<typename _Container::value_type> __first,
              add_pointer_t<typename _Container::value_type> __last) { __t.insert(__t.end(), __first, __last); };
 
@@ -340,7 +340,7 @@ public:
 };
 
 /// The generic formatting buffer.
-template <class _OutIt, __formatter::__char_type _CharT>
+template <class _OutIt, __fmt_char_type _CharT>
 requires(output_iterator<_OutIt, const _CharT&>) class _LIBCPP_TEMPLATE_VIS
     __format_buffer {
   using _Storage =
@@ -376,7 +376,7 @@ private:
 ///
 /// Since \ref formatted_size only needs to know the size, the output itself is
 /// discarded.
-template <__formatter::__char_type _CharT>
+template <__fmt_char_type _CharT>
 class _LIBCPP_TEMPLATE_VIS __formatted_size_buffer {
 public:
   _LIBCPP_HIDE_FROM_ABI auto __make_output_iterator() { return __output_.__make_output_iterator(); }
@@ -395,7 +395,7 @@ private:
 };
 
 /// The base of a buffer that counts and limits the number of insertions.
-template <class _OutIt, __formatter::__char_type _CharT, bool>
+template <class _OutIt, __fmt_char_type _CharT, bool>
   requires(output_iterator<_OutIt, const _CharT&>)
 struct _LIBCPP_TEMPLATE_VIS __format_to_n_buffer_base {
   using _Size = iter_difference_t<_OutIt>;
@@ -425,7 +425,7 @@ protected:
 ///
 /// This class limits the size available to the direct writer so it will not
 /// exceed the maximum number of code units.
-template <class _OutIt, __formatter::__char_type _CharT>
+template <class _OutIt, __fmt_char_type _CharT>
   requires(output_iterator<_OutIt, const _CharT&>)
 class _LIBCPP_TEMPLATE_VIS __format_to_n_buffer_base<_OutIt, _CharT, true> {
   using _Size = iter_difference_t<_OutIt>;
@@ -475,7 +475,7 @@ protected:
 };
 
 /// The buffer that counts and limits the number of insertions.
-template <class _OutIt, __formatter::__char_type _CharT>
+template <class _OutIt, __fmt_char_type _CharT>
   requires(output_iterator<_OutIt, const _CharT&>)
 struct _LIBCPP_TEMPLATE_VIS __format_to_n_buffer final
     : public __format_to_n_buffer_base< _OutIt, _CharT, __enable_direct_output<_OutIt, _CharT>> {
