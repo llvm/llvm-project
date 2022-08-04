@@ -566,6 +566,17 @@ private:
   llvm::SmallBitVector positions;
 };
 
+static std::pair<int64_t, int64_t>
+getResultsPositionInLoopsToShapeMap(LinalgOp &op) {
+  int64_t inputRankSum = 0;
+  int64_t outputRankSum = 0;
+  for (OpOperand *input : op.getInputOperands())
+    inputRankSum += op.getRank(input);
+  for (OpOperand *output : op.getOutputOperands())
+    outputRankSum += op.getRank(output);
+  return {inputRankSum, inputRankSum + outputRankSum};
+}
+
 LogicalResult
 LinalgOp::reifyResultShapes(OpBuilder &b,
                             ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
@@ -582,7 +593,7 @@ LinalgOp::reifyResultShapes(OpBuilder &b,
 
   // Find the position in the above map that represents the shape of the
   // result:dim being inferred.
-  auto resultShapesSubMapPos = getResultsPositionInLoopsToShapeMap();
+  auto resultShapesSubMapPos = getResultsPositionInLoopsToShapeMap(*this);
 
   /// From loopsToShapesMap extract the submap that represents the shape of the
   /// (resultIdx, dim) needed.
