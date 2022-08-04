@@ -877,10 +877,9 @@ InstructionCost TargetTransformInfo::getVectorInstrCost(unsigned Opcode,
   return Cost;
 }
 
-InstructionCost TargetTransformInfo::getVectorInstrCost(const Instruction *I,
+InstructionCost TargetTransformInfo::getVectorInstrCost(const Instruction &I,
                                                         Type *Val,
                                                         unsigned Index) const {
-  assert((I != nullptr) && "Expect not-null instruction pointer");
   // FIXME: Assert that Opcode is either InsertElement or ExtractElement.
   // This is mentioned in the interface description and respected by all
   // callers, but never asserted upon.
