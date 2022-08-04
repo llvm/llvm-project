@@ -97,7 +97,7 @@ if(APPLE)
   endfunction()
 
   set(DARWIN_EMBEDDED_PLATFORMS)
-  set(DARWIN_osx_BUILTIN_MIN_VER 10.5)
+  set(DARWIN_osx_BUILTIN_MIN_VER 10.7)
   set(DARWIN_osx_BUILTIN_MIN_VER_FLAG
       -mmacosx-version-min=${DARWIN_osx_BUILTIN_MIN_VER})
   set(DARWIN_osx_BUILTIN_ALL_POSSIBLE_ARCHS ${X86} ${X86_64})

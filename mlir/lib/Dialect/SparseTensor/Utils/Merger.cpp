@@ -807,7 +807,7 @@ bool Merger::maybeZero(unsigned e) const {
     if (auto c = tensorExps[e].val.getDefiningOp<complex::ConstantOp>()) {
       ArrayAttr arrayAttr = c.getValue();
       return arrayAttr[0].cast<FloatAttr>().getValue().isZero() &&
-             arrayAttr[0].cast<FloatAttr>().getValue().isZero();
+             arrayAttr[1].cast<FloatAttr>().getValue().isZero();
     }
     if (auto c = tensorExps[e].val.getDefiningOp<arith::ConstantIntOp>())
       return c.value() == 0;

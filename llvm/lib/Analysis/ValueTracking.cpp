@@ -6624,44 +6624,42 @@ isImpliedCondOperands(CmpInst::Predicate Pred, const Value *ALHS,
   }
 }
 
-/// Return true if the operands of the two compares match.  IsSwappedOps is true
-/// when the operands match, but are swapped.
-static bool isMatchingOps(const Value *ALHS, const Value *ARHS,
-                          const Value *BLHS, const Value *BRHS,
-                          bool &IsSwappedOps) {
-
-  bool IsMatchingOps = (ALHS == BLHS && ARHS == BRHS);
-  IsSwappedOps = (ALHS == BRHS && ARHS == BLHS);
-  return IsMatchingOps || IsSwappedOps;
+/// Return true if the operands of two compares (expanded as "L0 pred L1" and
+/// "R0 pred R1") match. IsSwappedOps is true when the operands match, but are
+/// swapped.
+static bool areMatchingOperands(const Value *L0, const Value *L1, const Value *R0,
+                           const Value *R1, bool &AreSwappedOps) {
+  bool AreMatchingOps = (L0 == R0 && L1 == R1);
+  AreSwappedOps = (L0 == R1 && L1 == R0);
+  return AreMatchingOps || AreSwappedOps;
 }
 
-/// Return true if "icmp1 APred X, Y" implies "icmp2 BPred X, Y" is true.
-/// Return false if "icmp1 APred X, Y" implies "icmp2 BPred X, Y" is false.
+/// Return true if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is true.
+/// Return false if "icmp1 LPred X, Y" implies "icmp2 RPred X, Y" is false.
 /// Otherwise, return None if we can't infer anything.
-static Optional<bool> isImpliedCondMatchingOperands(CmpInst::Predicate APred,
-                                                    CmpInst::Predicate BPred,
+static Optional<bool> isImpliedCondMatchingOperands(CmpInst::Predicate LPred,
+                                                    CmpInst::Predicate RPred,
                                                     bool AreSwappedOps) {
   // Canonicalize the predicate as if the operands were not commuted.
   if (AreSwappedOps)
-    BPred = ICmpInst::getSwappedPredicate(BPred);
+    RPred = ICmpInst::getSwappedPredicate(RPred);
 
-  if (CmpInst::isImpliedTrueByMatchingCmp(APred, BPred))
+  if (CmpInst::isImpliedTrueByMatchingCmp(LPred, RPred))
     return true;
-  if (CmpInst::isImpliedFalseByMatchingCmp(APred, BPred))
+  if (CmpInst::isImpliedFalseByMatchingCmp(LPred, RPred))
     return false;
 
   return None;
 }
 
-/// Return true if "icmp APred X, C1" implies "icmp BPred X, C2" is true.
-/// Return false if "icmp APred X, C1" implies "icmp BPred X, C2" is false.
+/// Return true if "icmp LPred X, LC" implies "icmp RPred X, RC" is true.
+/// Return false if "icmp LPred X, LC" implies "icmp RPred X, RC" is false.
 /// Otherwise, return None if we can't infer anything.
-static Optional<bool> isImpliedCondMatchingImmOperands(CmpInst::Predicate APred,
-                                                       const APInt &C1,
-                                                       CmpInst::Predicate BPred,
-                                                       const APInt &C2) {
-  ConstantRange DomCR = ConstantRange::makeExactICmpRegion(APred, C1);
-  ConstantRange CR = ConstantRange::makeExactICmpRegion(BPred, C2);
+static Optional<bool> isImpliedCondCommonOperandWithConstants(
+    CmpInst::Predicate LPred, const APInt &LC, CmpInst::Predicate RPred,
+    const APInt &RC) {
+  ConstantRange DomCR = ConstantRange::makeExactICmpRegion(LPred, LC);
+  ConstantRange CR = ConstantRange::makeExactICmpRegion(RPred, RC);
   ConstantRange Intersection = DomCR.intersectWith(CR);
   ConstantRange Difference = DomCR.difference(CR);
   if (Intersection.isEmptySet())
@@ -6671,40 +6669,36 @@ static Optional<bool> isImpliedCondMatchingImmOperands(CmpInst::Predicate APred,
   return None;
 }
 
-/// Return true if LHS implies RHS is true.  Return false if LHS implies RHS is
-/// false.  Otherwise, return None if we can't infer anything.
+/// Return true if LHS implies RHS (expanded to its components as "R0 RPred R1")
+/// is true.  Return false if LHS implies RHS is false. Otherwise, return None
+/// if we can't infer anything.
 static Optional<bool> isImpliedCondICmps(const ICmpInst *LHS,
-                                         CmpInst::Predicate BPred,
-                                         const Value *BLHS, const Value *BRHS,
+                                         CmpInst::Predicate RPred,
+                                         const Value *R0, const Value *R1,
                                          const DataLayout &DL, bool LHSIsTrue,
                                          unsigned Depth) {
-  Value *ALHS = LHS->getOperand(0);
-  Value *ARHS = LHS->getOperand(1);
+  Value *L0 = LHS->getOperand(0);
+  Value *L1 = LHS->getOperand(1);
 
   // The rest of the logic assumes the LHS condition is true.  If that's not the
   // case, invert the predicate to make it so.
-  CmpInst::Predicate APred =
+  CmpInst::Predicate LPred =
       LHSIsTrue ? LHS->getPredicate() : LHS->getInversePredicate();
 
   // Can we infer anything when the two compares have matching operands?
   bool AreSwappedOps;
-  if (isMatchingOps(ALHS, ARHS, BLHS, BRHS, AreSwappedOps)) {
-    if (Optional<bool> Implication = isImpliedCondMatchingOperands(
-            APred, BPred, AreSwappedOps))
-      return Implication;
-    // No amount of additional analysis will infer the second condition, so
-    // early exit.
-    return None;
-  }
+  if (areMatchingOperands(L0, L1, R0, R1, AreSwappedOps))
+    return isImpliedCondMatchingOperands(LPred, RPred, AreSwappedOps);
 
-  // Can we infer anything when the LHS operands match and the RHS operands are
+  // Can we infer anything when the 0-operands match and the 1-operands are
   // constants (not necessarily matching)?
-  const APInt *AC, *BC;
-  if (ALHS == BLHS && match(ARHS, m_APInt(AC)) && match(BRHS, m_APInt(BC)))
-    return isImpliedCondMatchingImmOperands(APred, *AC, BPred, *BC);
+  const APInt *LC, *RC;
+  if (L0 == R0 && match(L1, m_APInt(LC)) && match(R1, m_APInt(RC)))
+    return isImpliedCondCommonOperandWithConstants(LPred, *LC, RPred, *RC);
 
-  if (APred == BPred)
-    return isImpliedCondOperands(APred, ALHS, ARHS, BLHS, BRHS, DL, Depth);
+  if (LPred == RPred)
+    return isImpliedCondOperands(LPred, L0, L1, R0, R1, DL, Depth);
+
   return None;
 }
 
