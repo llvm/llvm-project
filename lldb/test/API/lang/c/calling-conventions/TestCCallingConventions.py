@@ -47,7 +47,6 @@ class TestCase(TestBase):
         self.expect_expr("func(1, 2, 3, 4)", result_type="int", result_value="10")
 
     @skipIf(compiler="clang", compiler_version=['<', '9.0'])
-    @expectedFailureDarwin(archs=["arm64", "arm64e"]) # rdar://84528755
     def test_ms_abi(self):
         if not self.build_and_run("ms_abi.c"):
             return
