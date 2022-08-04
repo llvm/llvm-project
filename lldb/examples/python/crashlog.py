@@ -603,26 +603,26 @@ class CrashLogParseMode:
 
 
 class TextCrashLogParser(CrashLogParser):
-    parent_process_regex = re.compile('^Parent Process:\s*(.*)\[(\d+)\]')
-    thread_state_regex = re.compile('^Thread ([0-9]+) crashed with')
-    thread_instrs_regex = re.compile('^Thread ([0-9]+) instruction stream')
-    thread_regex = re.compile('^Thread ([0-9]+)([^:]*):(.*)')
-    app_backtrace_regex = re.compile('^Application Specific Backtrace ([0-9]+)([^:]*):(.*)')
-    version = r'(\(.+\)|(arm|x86_)[0-9a-z]+)\s+'
-    frame_regex = re.compile(r'^([0-9]+)' r'\s+'                # id
-                             r'(.+?)' r'\s+'                    # img_name
-                             r'(' +version+ r')?'               # img_version
-                             r'(0x[0-9a-fA-F]{7,})'             # addr (7 chars or more)
-                             r' +(.*)'                          # offs
+    parent_process_regex = re.compile(r'^Parent Process:\s*(.*)\[(\d+)\]')
+    thread_state_regex = re.compile(r'^Thread \d+ crashed with')
+    thread_instrs_regex = re.compile(r'^Thread \d+ instruction stream')
+    thread_regex = re.compile(r'^Thread (\d+).*:')
+    app_backtrace_regex = re.compile(r'^Application Specific Backtrace (\d+).*:')
+    version = r'\(.+\)|(?:arm|x86_)[0-9a-z]+'
+    frame_regex = re.compile(r'^(\d+)\s+'              # id
+                             r'(.+?)\s+'               # img_name
+                             r'(?:' +version+ r'\s+)?' # img_version
+                             r'(0x[0-9a-fA-F]{7,})'    # addr (7 chars or more)
+                             r' +(.*)'                 # offs
                             )
-    null_frame_regex = re.compile(r'^([0-9]+)\s+\?\?\?\s+(0{7}0+) +(.*)')
-    image_regex_uuid = re.compile(r'(0x[0-9a-fA-F]+)'            # img_lo
-                                  r'\s+' '-' r'\s+'              #   -
-                                  r'(0x[0-9a-fA-F]+)'     r'\s+' # img_hi
-                                  r'[+]?(.+?)'            r'\s+' # img_name
-                                  r'(' +version+ ')?'            # img_version
-                                  r'(<([-0-9a-fA-F]+)>\s+)?'     # img_uuid
-                                  r'(/.*)'                       # img_path
+    null_frame_regex = re.compile(r'^\d+\s+\?\?\?\s+0{7,} +')
+    image_regex_uuid = re.compile(r'(0x[0-9a-fA-F]+)'          # img_lo
+                                  r'\s+-\s+'                   #   -
+                                  r'(0x[0-9a-fA-F]+)\s+'       # img_hi
+                                  r'[+]?(.+?)\s+'              # img_name
+                                  r'(?:(' +version+ r')\s+)?'  # img_version
+                                  r'(?:<([-0-9a-fA-F]+)>\s+)?' # img_uuid
+                                  r'(/.*)'                     # img_path
                                  )
 
     def __init__(self, debugger, path, verbose):
@@ -768,8 +768,8 @@ class TextCrashLogParser(CrashLogParser):
             return
         frame_match = self.frame_regex.search(line)
         if frame_match:
-            (frame_id, frame_img_name, _, frame_img_version, _,
-                frame_addr, frame_ofs) = frame_match.groups()
+            (frame_id, frame_img_name, frame_addr,
+                frame_ofs) = frame_match.groups()
             ident = frame_img_name
             self.thread.add_ident(ident)
             if ident not in self.crashlog.idents:
@@ -782,8 +782,8 @@ class TextCrashLogParser(CrashLogParser):
     def parse_images(self, line):
         image_match = self.image_regex_uuid.search(line)
         if image_match:
-            (img_lo, img_hi, img_name, _, img_version, _,
-                _, img_uuid, img_path) = image_match.groups()
+            (img_lo, img_hi, img_name, img_version,
+                img_uuid, img_path) = image_match.groups()
             image = self.crashlog.DarwinImage(int(img_lo, 0), int(img_hi, 0),
                                             img_name.strip(),
                                             img_version.strip()
@@ -796,13 +796,10 @@ class TextCrashLogParser(CrashLogParser):
 
 
     def parse_thread_registers(self, line):
-        stripped_line = line.strip()
         # "r12: 0x00007fff6b5939c8  r13: 0x0000000007000006  r14: 0x0000000000002a03  r15: 0x0000000000000c00"
-        reg_values = re.findall(
-            '([a-zA-Z0-9]+: 0[Xx][0-9a-fA-F]+) *', stripped_line)
-        for reg_value in reg_values:
-            (reg, value) = reg_value.split(': ')
-            self.thread.registers[reg.strip()] = int(value, 0)
+        reg_values = re.findall('([a-z0-9]+): (0x[0-9a-f]+)', line, re.I)
+        for reg, value in reg_values:
+            self.thread.registers[reg] = int(value, 16)
 
     def parse_system(self, line):
         self.crashlog.system_profile.append(line)
