@@ -18,6 +18,7 @@
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugAbbrev.h"
