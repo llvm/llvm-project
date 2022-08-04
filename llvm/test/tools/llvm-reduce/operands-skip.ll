@@ -1,13 +1,6 @@
 ; RUN: llvm-reduce %s -o %t --delta-passes=operands-skip --test FileCheck --test-arg %s --test-arg --match-full-lines --test-arg --check-prefix=INTERESTING --test-arg --input-file
 ; RUN: FileCheck %s --input-file %t --check-prefixes=REDUCED
 
-; RUN: llvm-reduce -j 2 %s -o %t.1 --delta-passes=operands-skip --test FileCheck --test-arg %s --test-arg --match-full-lines --test-arg --check-prefix=INTERESTING --test-arg --input-file
-; RUN: FileCheck %s --input-file %t.1 --check-prefixes=REDUCED
-
-; RUN: llvm-reduce -j 4 %s -o %t.2 --delta-passes=operands-skip --test FileCheck --test-arg %s --test-arg --match-full-lines --test-arg --check-prefix=INTERESTING --test-arg --input-file
-; RUN: FileCheck %s --input-file %t.2 --check-prefixes=REDUCED
-
-
 ; INTERESTING: store i32 43, i32* {{(%imm|%indirect)}}, align 4
 ; REDUCED:     store i32 43, i32* %imm, align 4
 
