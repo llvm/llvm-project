@@ -186,8 +186,24 @@ Changes to the WebAssembly Backend
 Changes to the X86 Backend
 --------------------------
 
-* Support ``half`` type on SSE2 and above targets.
+* Support ``half`` type on SSE2 and above targets following X86 psABI.
 * Support ``rdpru`` instruction on Zen2 and above targets.
+
+During this release, ``half`` type has an ABI breaking change to provide the
+support for the ABI of ``_Float16`` type on SSE2 and above following X86 psABI.
+(`D107082 <https://reviews.llvm.org/D107082>`_)
+
+The change may affect the current use of ``half`` includes (but is not limited
+to):
+
+* Frontends generating ``half`` type in function passing and/or returning
+arguments.
+* Downstream runtimes providing any ``half`` conversion builtins assuming the
+old ABI.
+* Projects built with LLVM 15.0 but using early versions of compiler-rt.
+
+When you find failures with ``half`` type, check the calling conversion of the
+code and switch it to the new ABI.
 
 Changes to the OCaml bindings
 -----------------------------
