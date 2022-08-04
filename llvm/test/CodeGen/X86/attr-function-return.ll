@@ -6,6 +6,11 @@
 define void @x() fn_ret_thunk_extern {
 ; CHECK-LABEL: x:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    cs
 ; CHECK-NEXT:    jmp __x86_return_thunk
   ret void
 }
+
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 4, !"indirect_branch_cs_prefix", i32 1}
