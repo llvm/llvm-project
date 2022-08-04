@@ -330,7 +330,6 @@ alive:
 }
 
 ; Check that merging sizes in a phi works.
-; FIXME: bounds-checking thinks that %alloc has an underlying size of 0.
 define i8 @f14(i1 %i) {
 ; CHECK-LABEL: @f14(
 ; CHECK-NEXT:  entry:
@@ -340,16 +339,18 @@ define i8 @f14(i1 %i) {
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[A]], i32 32
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[ALLOC:%.*]] = phi ptr [ null, [[ENTRY:%.*]] ], [ [[G]], [[BB1]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ 32, [[BB1]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ 32, [[BB1]] ]
+; CHECK-NEXT:    [[ALLOC:%.*]] = phi ptr [ null, [[ENTRY]] ], [ [[G]], [[BB1]] ]
 ; CHECK-NEXT:    [[IND:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ -4, [[BB1]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 0, [[IND]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[IND]]
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[ALLOC]], i64 [[IND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 0, [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[TRAP:%.*]], label [[TMP5:%.*]]
-; CHECK:       5:
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[TRAP:%.*]], label [[TMP7:%.*]]
+; CHECK:       7:
 ; CHECK-NEXT:    [[RET:%.*]] = load i8, ptr [[P]], align 1
 ; CHECK-NEXT:    ret i8 [[RET]]
 ; CHECK:       trap:
