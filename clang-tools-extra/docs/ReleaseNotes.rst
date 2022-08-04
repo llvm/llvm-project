@@ -81,7 +81,7 @@ Miscellaneous
 Improvements to clang-doc
 -------------------------
 
-The improvements are...
+- The default executor was changed to standalone to match other tools.
 
 Improvements to clang-query
 ---------------------------
