@@ -98,7 +98,8 @@ using ::std::nullptr_t;
 #endif /* defined(__need_NULL) */
 
 #if defined(__need_STDDEF_H_misc)
-#if __STDC_VERSION__ >= 201112L || __cplusplus >= 201103L
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L) ||              \
+    (defined(__cplusplus) && __cplusplus >= 201103L)
 #include "__stddef_max_align_t.h"
 #endif
 #define offsetof(t, d) __builtin_offsetof(t, d)
