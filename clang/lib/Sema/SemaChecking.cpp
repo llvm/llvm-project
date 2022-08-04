@@ -8716,7 +8716,7 @@ tryAgain:
         }
       }
     }
-    if (const auto *SLE = maybeConstEvalStringLiteral(S.Context, E))
+    if (const Expr *SLE = maybeConstEvalStringLiteral(S.Context, E))
       return checkFormatStringExpr(S, SLE, Args, APK, format_idx, firstDataArg,
                                    Type, CallType, /*InFunctionCall*/ false,
                                    CheckedVarArgs, UncoveredArg, Offset,
