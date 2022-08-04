@@ -516,10 +516,121 @@ uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &sym) const {
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   object::ELFFile<ELFT> obj = this->getObj();
   // Read a section table. justSymbols is usually false.
-  if (this->justSymbols)
+  if (this->justSymbols) {
     initializeJustSymbols();
-  else
-    initializeSections(ignoreComdats, obj);
+    initializeSymbols(obj);
+    return;
+  }
+
+  // Handle dependent libraries and selection of section groups as these are not
+  // done in parallel.
+  ArrayRef<Elf_Shdr> objSections = getELFShdrs<ELFT>();
+  StringRef shstrtab = CHECK(obj.getSectionStringTable(objSections), this);
+  uint64_t size = objSections.size();
+  sections.resize(size);
+  for (size_t i = 0; i != size; ++i) {
+    const Elf_Shdr &sec = objSections[i];
+    if (sec.sh_type == SHT_LLVM_DEPENDENT_LIBRARIES && !config->relocatable) {
+      StringRef name = check(obj.getSectionName(sec, shstrtab));
+      ArrayRef<char> data = CHECK(
+          this->getObj().template getSectionContentsAsArray<char>(sec), this);
+      if (!data.empty() && data.back() != '\0') {
+        error(
+            toString(this) +
+            ": corrupted dependent libraries section (unterminated string): " +
+            name);
+      } else {
+        for (const char *d = data.begin(), *e = data.end(); d < e;) {
+          StringRef s(d);
+          addDependentLibrary(s, this);
+          d += s.size() + 1;
+        }
+      }
+      this->sections[i] = &InputSection::discarded;
+      continue;
+    }
+
+    if (sec.sh_type == SHT_ARM_ATTRIBUTES && config->emachine == EM_ARM) {
+      ARMAttributeParser attributes;
+      ArrayRef<uint8_t> contents =
+          check(this->getObj().getSectionContents(sec));
+      StringRef name = check(obj.getSectionName(sec, shstrtab));
+      this->sections[i] = &InputSection::discarded;
+      if (Error e = attributes.parse(contents, config->ekind == ELF32LEKind
+                                                   ? support::little
+                                                   : support::big)) {
+        InputSection isec(*this, sec, name);
+        warn(toString(&isec) + ": " + llvm::toString(std::move(e)));
+      } else {
+        updateSupportedARMFeatures(attributes);
+        updateARMVFPArgs(attributes, this);
+
+        // FIXME: Retain the first attribute section we see. The eglibc ARM
+        // dynamic loaders require the presence of an attribute section for
+        // dlopen to work. In a full implementation we would merge all attribute
+        // sections.
+        if (in.attributes == nullptr) {
+          in.attributes = std::make_unique<InputSection>(*this, sec, name);
+          this->sections[i] = in.attributes.get();
+        }
+      }
+    }
+
+    if (sec.sh_type == SHT_RISCV_ATTRIBUTES && config->emachine == EM_RISCV) {
+      RISCVAttributeParser attributes;
+      ArrayRef<uint8_t> contents =
+          check(this->getObj().getSectionContents(sec));
+      StringRef name = check(obj.getSectionName(sec, shstrtab));
+      this->sections[i] = &InputSection::discarded;
+      if (Error e = attributes.parse(contents, support::little)) {
+        InputSection isec(*this, sec, name);
+        warn(toString(&isec) + ": " + llvm::toString(std::move(e)));
+      } else {
+        // FIXME: Validate arch tag contains C if and only if EF_RISCV_RVC is
+        // present.
+
+        // FIXME: Retain the first attribute section we see. Tools such as
+        // llvm-objdump make use of the attribute section to determine which
+        // standard extensions to enable. In a full implementation we would
+        // merge all attribute sections.
+        if (in.attributes == nullptr) {
+          in.attributes = std::make_unique<InputSection>(*this, sec, name);
+          this->sections[i] = in.attributes.get();
+        }
+      }
+    }
+
+    if (sec.sh_type != SHT_GROUP)
+      continue;
+    StringRef signature = getShtGroupSignature(objSections, sec);
+    ArrayRef<Elf_Word> entries =
+        CHECK(obj.template getSectionContentsAsArray<Elf_Word>(sec), this);
+    if (entries.empty())
+      fatal(toString(this) + ": empty SHT_GROUP");
+
+    Elf_Word flag = entries[0];
+    if (flag && flag != GRP_COMDAT)
+      fatal(toString(this) + ": unsupported SHT_GROUP format");
+
+    bool keepGroup =
+        (flag & GRP_COMDAT) == 0 || ignoreComdats ||
+        symtab->comdatGroups.try_emplace(CachedHashStringRef(signature), this)
+            .second;
+    if (keepGroup) {
+      if (config->relocatable)
+        this->sections[i] = createInputSection(
+            i, sec, check(obj.getSectionName(sec, shstrtab)));
+      continue;
+    }
+
+    // Otherwise, discard group members.
+    for (uint32_t secIndex : entries.slice(1)) {
+      if (secIndex >= size)
+        fatal(toString(this) +
+              ": invalid section index in group: " + Twine(secIndex));
+      this->sections[secIndex] = &InputSection::discarded;
+    }
+  }
 
   // Read a symbol table.
   initializeSymbols(obj);
@@ -601,10 +712,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
   ArrayRef<Elf_Shdr> objSections = getELFShdrs<ELFT>();
   StringRef shstrtab = CHECK(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
-  this->sections.resize(size);
-
-  std::vector<ArrayRef<Elf_Word>> selectedGroups;
-
+  SmallVector<ArrayRef<Elf_Word>, 0> selectedGroups;
   for (size_t i = 0; i != size; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
@@ -637,38 +745,16 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
 
     switch (sec.sh_type) {
     case SHT_GROUP: {
-      // De-duplicate section groups by their signatures.
-      StringRef signature = getShtGroupSignature(objSections, sec);
-      this->sections[i] = &InputSection::discarded;
-
+      if (!config->relocatable)
+        sections[i] = &InputSection::discarded;
+      StringRef signature =
+          cantFail(this->getELFSyms<ELFT>()[sec.sh_info].getName(stringTable));
       ArrayRef<Elf_Word> entries =
-          CHECK(obj.template getSectionContentsAsArray<Elf_Word>(sec), this);
-      if (entries.empty())
-        fatal(toString(this) + ": empty SHT_GROUP");
-
-      Elf_Word flag = entries[0];
-      if (flag && flag != GRP_COMDAT)
-        fatal(toString(this) + ": unsupported SHT_GROUP format");
-
-      bool keepGroup =
-          (flag & GRP_COMDAT) == 0 || ignoreComdats ||
-          symtab->comdatGroups.try_emplace(CachedHashStringRef(signature), this)
-              .second;
-      if (keepGroup) {
-        if (config->relocatable)
-          this->sections[i] = createInputSection(
-              i, sec, check(obj.getSectionName(sec, shstrtab)));
+          cantFail(obj.template getSectionContentsAsArray<Elf_Word>(sec));
+      if ((entries[0] & GRP_COMDAT) == 0 || ignoreComdats ||
+          symtab->comdatGroups.find(CachedHashStringRef(signature))->second ==
+              this)
         selectedGroups.push_back(entries);
-        continue;
-      }
-
-      // Otherwise, discard group members.
-      for (uint32_t secIndex : entries.slice(1)) {
-        if (secIndex >= size)
-          fatal(toString(this) +
-                ": invalid section index in group: " + Twine(secIndex));
-        this->sections[secIndex] = &InputSection::discarded;
-      }
       break;
     }
     case SHT_SYMTAB_SHNDX:
@@ -718,8 +804,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // simply handle such sections as non-mergeable ones. Degrading like this
       // is acceptable because section merging is optional.
       if (auto *ms = dyn_cast<MergeInputSection>(s)) {
-        s = make<InputSection>(ms->file, ms->flags, ms->type, ms->alignment,
-                               ms->data(), ms->name);
+        s = makeThreadLocal<InputSection>(ms->file, ms->flags, ms->type,
+                                          ms->alignment, ms->data(), ms->name);
         sections[info] = s;
       }
 
@@ -734,7 +820,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       // specified, we need to copy them to the output. (Some post link analysis
       // tools specify --emit-relocs to obtain the information.)
       if (config->copyRelocs) {
-        auto *isec = make<InputSection>(
+        auto *isec = makeThreadLocal<InputSection>(
             *this, sec, check(obj.getSectionName(sec, shstrtab)));
         // If the relocated section is discarded (due to /DISCARD/ or
         // --gc-sections), the relocation section should be discarded as well.
@@ -861,73 +947,12 @@ InputSectionBase *ObjFile<ELFT>::getRelocTarget(uint32_t idx,
   return nullptr;
 }
 
+// The function may be called concurrently for different input files. For
+// allocation, prefer makeThreadLocal which does not require holding a lock.
 template <class ELFT>
 InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
                                                     const Elf_Shdr &sec,
                                                     StringRef name) {
-  if (sec.sh_type == SHT_ARM_ATTRIBUTES && config->emachine == EM_ARM) {
-    ARMAttributeParser attributes;
-    ArrayRef<uint8_t> contents = check(this->getObj().getSectionContents(sec));
-    if (Error e = attributes.parse(contents, config->ekind == ELF32LEKind
-                                                 ? support::little
-                                                 : support::big)) {
-      InputSection isec(*this, sec, name);
-      warn(toString(&isec) + ": " + llvm::toString(std::move(e)));
-    } else {
-      updateSupportedARMFeatures(attributes);
-      updateARMVFPArgs(attributes, this);
-
-      // FIXME: Retain the first attribute section we see. The eglibc ARM
-      // dynamic loaders require the presence of an attribute section for dlopen
-      // to work. In a full implementation we would merge all attribute
-      // sections.
-      if (in.attributes == nullptr) {
-        in.attributes = std::make_unique<InputSection>(*this, sec, name);
-        return in.attributes.get();
-      }
-      return &InputSection::discarded;
-    }
-  }
-
-  if (sec.sh_type == SHT_RISCV_ATTRIBUTES && config->emachine == EM_RISCV) {
-    RISCVAttributeParser attributes;
-    ArrayRef<uint8_t> contents = check(this->getObj().getSectionContents(sec));
-    if (Error e = attributes.parse(contents, support::little)) {
-      InputSection isec(*this, sec, name);
-      warn(toString(&isec) + ": " + llvm::toString(std::move(e)));
-    } else {
-      // FIXME: Validate arch tag contains C if and only if EF_RISCV_RVC is
-      // present.
-
-      // FIXME: Retain the first attribute section we see. Tools such as
-      // llvm-objdump make use of the attribute section to determine which
-      // standard extensions to enable. In a full implementation we would merge
-      // all attribute sections.
-      if (in.attributes == nullptr) {
-        in.attributes = std::make_unique<InputSection>(*this, sec, name);
-        return in.attributes.get();
-      }
-      return &InputSection::discarded;
-    }
-  }
-
-  if (sec.sh_type == SHT_LLVM_DEPENDENT_LIBRARIES && !config->relocatable) {
-    ArrayRef<char> data =
-        CHECK(this->getObj().template getSectionContentsAsArray<char>(sec), this);
-    if (!data.empty() && data.back() != '\0') {
-      error(toString(this) +
-            ": corrupted dependent libraries section (unterminated string): " +
-            name);
-      return &InputSection::discarded;
-    }
-    for (const char *d = data.begin(), *e = data.end(); d < e;) {
-      StringRef s(d);
-      addDependentLibrary(s, this);
-      d += s.size() + 1;
-    }
-    return &InputSection::discarded;
-  }
-
   if (name.startswith(".n")) {
     // The GNU linker uses .note.GNU-stack section as a marker indicating
     // that the code in the object file does not expect that the stack is
@@ -993,11 +1018,11 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   // .eh_frame_hdr section for runtime. So we handle them with a special
   // class. For relocatable outputs, they are just passed through.
   if (name == ".eh_frame" && !config->relocatable)
-    return make<EhInputSection>(*this, sec, name);
+    return makeThreadLocal<EhInputSection>(*this, sec, name);
 
   if ((sec.sh_flags & SHF_MERGE) && shouldMerge(sec, name))
-    return make<MergeInputSection>(*this, sec, name);
-  return make<InputSection>(*this, sec, name);
+    return makeThreadLocal<MergeInputSection>(*this, sec, name);
+  return makeThreadLocal<InputSection>(*this, sec, name);
 }
 
 // Initialize this->Symbols. this->Symbols is a parallel array as
@@ -1063,7 +1088,11 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   }
 }
 
-template <class ELFT> void ObjFile<ELFT>::initializeLocalSymbols() {
+template <class ELFT>
+void ObjFile<ELFT>::initSectionsAndLocalSyms(bool ignoreComdats) {
+  if (!justSymbols)
+    initializeSections(ignoreComdats, getObj());
+
   if (!firstGlobal)
     return;
   SymbolUnion *locals = makeThreadLocalN<SymbolUnion>(firstGlobal);
