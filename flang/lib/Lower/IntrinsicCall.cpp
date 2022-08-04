@@ -1122,6 +1122,20 @@ static mlir::FunctionType genF32F32IntFuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {ftype, itype}, {ftype});
 }
 
+template <int Bits>
+static mlir::FunctionType genF64IntF64FuncType(mlir::MLIRContext *context) {
+  auto ftype = mlir::FloatType::getF64(context);
+  auto itype = mlir::IntegerType::get(context, Bits);
+  return mlir::FunctionType::get(context, {itype, ftype}, {ftype});
+}
+
+template <int Bits>
+static mlir::FunctionType genF32IntF32FuncType(mlir::MLIRContext *context) {
+  auto ftype = mlir::FloatType::getF32(context);
+  auto itype = mlir::IntegerType::get(context, Bits);
+  return mlir::FunctionType::get(context, {itype, ftype}, {ftype});
+}
+
 /// Callback type for generating lowering for a math operation.
 using MathGeneratorTy = mlir::Value (*)(fir::FirOpBuilder &, mlir::Location,
                                         llvm::StringRef, mlir::FunctionType,
@@ -1211,6 +1225,10 @@ static constexpr MathOperation mathOperations[] = {
     {"abs", "fabs", genF64F64FuncType, genMathOp<mlir::math::AbsFOp>},
     {"abs", "llvm.fabs.f128", genF128F128FuncType,
      genMathOp<mlir::math::AbsFOp>},
+    {"acos", "acosf", genF32F32FuncType, genLibCall},
+    {"acos", "acos", genF64F64FuncType, genLibCall},
+    {"acosh", "acoshf", genF32F32FuncType, genLibCall},
+    {"acosh", "acosh", genF64F64FuncType, genLibCall},
     // llvm.trunc behaves the same way as libm's trunc.
     {"aint", "llvm.trunc.f32", genF32F32FuncType, genLibCall},
     {"aint", "llvm.trunc.f64", genF64F64FuncType, genLibCall},
@@ -1222,10 +1240,28 @@ static constexpr MathOperation mathOperations[] = {
      genMathOp<mlir::LLVM::RoundOp>},
     {"anint", "llvm.round.f80", genF80F80FuncType,
      genMathOp<mlir::LLVM::RoundOp>},
+    {"asin", "asinf", genF32F32FuncType, genLibCall},
+    {"asin", "asin", genF64F64FuncType, genLibCall},
+    {"asinh", "asinhf", genF32F32FuncType, genLibCall},
+    {"asinh", "asinh", genF64F64FuncType, genLibCall},
     {"atan", "atanf", genF32F32FuncType, genMathOp<mlir::math::AtanOp>},
     {"atan", "atan", genF64F64FuncType, genMathOp<mlir::math::AtanOp>},
     {"atan2", "atan2f", genF32F32F32FuncType, genMathOp<mlir::math::Atan2Op>},
     {"atan2", "atan2", genF64F64F64FuncType, genMathOp<mlir::math::Atan2Op>},
+    {"atanh", "atanhf", genF32F32FuncType, genLibCall},
+    {"atanh", "atanh", genF64F64FuncType, genLibCall},
+    {"bessel_j0", "j0f", genF32F32FuncType, genLibCall},
+    {"bessel_j0", "j0", genF64F64FuncType, genLibCall},
+    {"bessel_j1", "j1f", genF32F32FuncType, genLibCall},
+    {"bessel_j1", "j1", genF64F64FuncType, genLibCall},
+    {"bessel_jn", "jnf", genF32IntF32FuncType<32>, genLibCall},
+    {"bessel_jn", "jn", genF64IntF64FuncType<32>, genLibCall},
+    {"bessel_y0", "y0f", genF32F32FuncType, genLibCall},
+    {"bessel_y0", "y0", genF64F64FuncType, genLibCall},
+    {"bessel_y1", "y1f", genF32F32FuncType, genLibCall},
+    {"bessel_y1", "y1", genF64F64FuncType, genLibCall},
+    {"bessel_yn", "ynf", genF32IntF32FuncType<32>, genLibCall},
+    {"bessel_yn", "yn", genF64IntF64FuncType<32>, genLibCall},
     // math::CeilOp returns a real, while Fortran CEILING returns integer.
     {"ceil", "ceilf", genF32F32FuncType, genMathOp<mlir::math::CeilOp>},
     {"ceil", "ceil", genF64F64FuncType, genMathOp<mlir::math::CeilOp>},
@@ -1235,17 +1271,23 @@ static constexpr MathOperation mathOperations[] = {
     {"cosh", "cosh", genF64F64FuncType, genLibCall},
     {"erf", "erff", genF32F32FuncType, genMathOp<mlir::math::ErfOp>},
     {"erf", "erf", genF64F64FuncType, genMathOp<mlir::math::ErfOp>},
+    {"erfc", "erfcf", genF32F32FuncType, genLibCall},
+    {"erfc", "erfc", genF64F64FuncType, genLibCall},
     {"exp", "expf", genF32F32FuncType, genMathOp<mlir::math::ExpOp>},
     {"exp", "exp", genF64F64FuncType, genMathOp<mlir::math::ExpOp>},
     // math::FloorOp returns a real, while Fortran FLOOR returns integer.
     {"floor", "floorf", genF32F32FuncType, genMathOp<mlir::math::FloorOp>},
     {"floor", "floor", genF64F64FuncType, genMathOp<mlir::math::FloorOp>},
+    {"gamma", "tgammaf", genF32F32FuncType, genLibCall},
+    {"gamma", "tgamma", genF64F64FuncType, genLibCall},
     {"hypot", "hypotf", genF32F32F32FuncType, genLibCall},
     {"hypot", "hypot", genF64F64F64FuncType, genLibCall},
     {"log", "logf", genF32F32FuncType, genMathOp<mlir::math::LogOp>},
     {"log", "log", genF64F64FuncType, genMathOp<mlir::math::LogOp>},
     {"log10", "log10f", genF32F32FuncType, genMathOp<mlir::math::Log10Op>},
     {"log10", "log10", genF64F64FuncType, genMathOp<mlir::math::Log10Op>},
+    {"log_gamma", "lgammaf", genF32F32FuncType, genLibCall},
+    {"log_gamma", "lgamma", genF64F64FuncType, genLibCall},
     // llvm.lround behaves the same way as libm's lround.
     {"nint", "llvm.lround.i64.f64", genIntF64FuncType<64>, genLibCall},
     {"nint", "llvm.lround.i64.f32", genIntF32FuncType<64>, genLibCall},
