@@ -159,6 +159,7 @@ public:
   bool isInlineAsmSourceOfDivergence(const CallInst *CI,
                                      ArrayRef<unsigned> Indices = {}) const;
 
+  using BaseT::getVectorInstrCost;
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *ValTy,
                                      unsigned Index);
   bool isSourceOfDivergence(const Value *V) const;
