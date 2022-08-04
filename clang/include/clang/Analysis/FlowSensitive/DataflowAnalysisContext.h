@@ -137,22 +137,6 @@ public:
     return It == ExprToLoc.end() ? nullptr : It->second;
   }
 
-  /// Assigns `Loc` as the storage location of the `this` pointee.
-  ///
-  /// Requirements:
-  ///
-  ///  The `this` pointee must not be assigned a storage location.
-  void setThisPointeeStorageLocation(StorageLocation &Loc) {
-    assert(ThisPointeeLoc == nullptr);
-    ThisPointeeLoc = &Loc;
-  }
-
-  /// Returns the storage location assigned to the `this` pointee or null if the
-  /// `this` pointee has no assigned storage location.
-  StorageLocation *getThisPointeeStorageLocation() const {
-    return ThisPointeeLoc;
-  }
-
   /// Returns a pointer value that represents a null pointer. Calls with
   /// `PointeeType` that are canonically equivalent will return the same result.
   /// A null `PointeeType` can be used for the pointee of `std::nullptr_t`.
@@ -321,9 +305,6 @@ private:
   // in scope for a particular basic block are stored in `Environment`.
   llvm::DenseMap<const ValueDecl *, StorageLocation *> DeclToLoc;
   llvm::DenseMap<const Expr *, StorageLocation *> ExprToLoc;
-
-  // FIXME: Move this into `Environment`.
-  StorageLocation *ThisPointeeLoc = nullptr;
 
   // Null pointer values, keyed by the canonical pointee type.
   //
