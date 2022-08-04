@@ -1802,7 +1802,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
                          getNumEqualities(), getNumCols() - 1, newSpace);
 
   // This will be used to check if the elimination was integer exact.
-  unsigned lcmProducts = 1;
+  bool allLCMsAreOne = true;
 
   // Let x be the variable we are eliminating.
   // For each lower bound, lb <= c_l*x, and each upper bound c_u*x <= ub, (note
@@ -1831,7 +1831,9 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
         int64_t lcm = mlir::lcm(lbCoeff, ubCoeff);
         ineq.push_back(atIneq(ubPos, l) * (lcm / ubCoeff) +
                        atIneq(lbPos, l) * (lcm / lbCoeff));
-        lcmProducts *= lcm;
+        assert(lcm > 0 && "lcm should be positive!");
+        if (lcm != 1)
+          allLCMsAreOne = false;
       }
       if (darkShadow) {
         // The dark shadow is a convex subset of the exact integer shadow. If
@@ -1844,9 +1846,9 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
     }
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "FM isResultIntegerExact: " << (lcmProducts == 1)
+  LLVM_DEBUG(llvm::dbgs() << "FM isResultIntegerExact: " << allLCMsAreOne
                           << "\n");
-  if (lcmProducts == 1 && isResultIntegerExact)
+  if (allLCMsAreOne && isResultIntegerExact)
     *isResultIntegerExact = true;
 
   // Copy over the constraints not involving this variable.
