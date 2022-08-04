@@ -57,6 +57,7 @@ add_llvm_component_library(LLVMCore
   Statepoint.cpp
   StructuralHash.cpp
   Type.cpp
+  TypedPointerType.cpp
   TypeFinder.cpp
   Use.cpp
   User.cpp

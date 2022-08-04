@@ -70,6 +70,7 @@ class RemarkStreamer;
 }
 template <typename T> class StringMapEntry;
 class StringRef;
+class TypedPointerType;
 class ValueHandleBase;
 
 using DenseMapAPIntKeyInfo = DenseMapInfo<APInt>;
@@ -1484,6 +1485,7 @@ public:
   DenseMap<std::pair<Type *, ElementCount>, VectorType *> VectorTypes;
   DenseMap<Type *, PointerType *> PointerTypes; // Pointers in AddrSpace = 0
   DenseMap<std::pair<Type *, unsigned>, PointerType *> ASPointerTypes;
+  DenseMap<std::pair<Type *, unsigned>, TypedPointerType *> ASTypedPointerTypes;
 
   /// ValueHandles - This map keeps track of all of the value handles that are
   /// watching a Value*.  The Value::HasValueHandle bit is used to know
@@ -1570,8 +1572,6 @@ public:
   bool getOpaquePointers();
   bool hasOpaquePointersValue();
   void setOpaquePointers(bool OP);
-
-  llvm::Any TargetDataStorage;
 
 private:
   Optional<bool> OpaquePointers;

@@ -1068,7 +1068,7 @@ void DXILBitcodeWriter::writeTypeTable() {
       Code = bitc::TYPE_CODE_INTEGER;
       TypeVals.push_back(cast<IntegerType>(T)->getBitWidth());
       break;
-    case Type::DXILPointerTyID: {
+    case Type::TypedPointerTyID: {
       TypedPointerType *PTy = cast<TypedPointerType>(T);
       // POINTER: [pointee type, address space]
       Code = bitc::TYPE_CODE_POINTER;
