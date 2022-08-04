@@ -304,9 +304,6 @@ private:
   // If the section does not exist (which is common), the array is empty.
   ArrayRef<Elf_Word> shndxTable;
 
-  // Storage for local symbols.
-  std::unique_ptr<SymbolUnion[]> localSymStorage;
-
   // Debugging information to retrieve source file and line for error
   // reporting. Linker may find reasonable number of errors in a
   // single object file, so we cache debugging information in order to
