@@ -67,30 +67,41 @@ public:
 
   // Add x to this number and store the result in this number.
   // Returns the carry value produced by the addition operation.
+  // To prevent overflow from intermediate results, we use the following
+  // property of unsigned integers:
+  //   x + (~x) = 2^(sizeof(x)) - 1.
   constexpr uint64_t add(const UInt<Bits> &x) {
-    uint64_t carry = 0;
+    bool carry = false;
     for (size_t i = 0; i < WordCount; ++i) {
-      uint64_t res_lo = low(val[i]) + low(x.val[i]) + carry;
-      carry = high(res_lo);
-      res_lo = low(res_lo);
-
-      uint64_t res_hi = high(val[i]) + high(x.val[i]) + carry;
-      carry = high(res_hi);
-      res_hi = low(res_hi);
-
-      val[i] = res_lo + (res_hi << 32);
+      uint64_t complement = ~x.val[i];
+      if (!carry) {
+        if (val[i] <= complement)
+          val[i] += x.val[i];
+        else {
+          val[i] -= complement + 1;
+          carry = true;
+        }
+      } else {
+        if (val[i] < complement) {
+          val[i] += x.val[i] + 1;
+          carry = false;
+        } else
+          val[i] -= complement;
+      }
     }
-    return carry;
+    return carry ? 1 : 0;
   }
 
   constexpr UInt<Bits> operator+(const UInt<Bits> &other) const {
     UInt<Bits> result(*this);
     result.add(other);
+    // TODO(lntue): Set overflow flag / errno when carry is true.
     return result;
   }
 
   constexpr UInt<Bits> operator+=(const UInt<Bits> &other) {
-    *this = *this + other;
+    // TODO(lntue): Set overflow flag / errno when carry is true.
+    add(other);
     return *this;
   }
 
