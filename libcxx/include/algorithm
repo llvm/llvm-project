@@ -936,7 +936,6 @@ namespace ranges {
               indirectly_copyable_storable<iterator_t<R>, O>)
     constexpr unique_copy_result<borrowed_iterator_t<R>, O>
       unique_copy(R&& r, O result, C comp = {}, Proj proj = {});                                   // Since C++20
-<<<<<<< HEAD
 
   template<class I, class O>
       using remove_copy_result = in_out_result<I, O>;                                              // Since C++20
