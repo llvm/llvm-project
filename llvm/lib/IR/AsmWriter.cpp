@@ -62,6 +62,7 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/TypeFinder.h"
+#include "llvm/IR/TypedPointerType.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -610,11 +611,12 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
     OS << '>';
     return;
   }
-  case Type::DXILPointerTyID:
-    // DXIL pointer types are only handled by the DirectX backend. To avoid
-    // extra dependencies we just print the pointer's address here.
-    OS << "dxil-ptr (" << Ty << ")";
+  case Type::TypedPointerTyID: {
+    TypedPointerType *TPTy = cast<TypedPointerType>(Ty);
+    OS << "typedptr(" << *TPTy->getElementType() << ", "
+       << TPTy->getAddressSpace() << ")";
     return;
+  }
   }
   llvm_unreachable("Invalid TypeID");
 }

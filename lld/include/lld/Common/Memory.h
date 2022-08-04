@@ -62,6 +62,32 @@ template <typename T, typename... U> T *make(U &&... args) {
       T(std::forward<U>(args)...);
 }
 
+template <typename T>
+inline llvm::SpecificBumpPtrAllocator<T> &
+getSpecificAllocSingletonThreadLocal() {
+  thread_local SpecificAlloc<T> instance;
+  return instance.alloc;
+}
+
+// Create a new instance of T off a thread-local SpecificAlloc, used by code
+// like parallel input section initialization. The use cases assume that the
+// return value outlives the containing parallelForEach (if exists), which is
+// currently guaranteed: when parallelForEach returns, the threads allocating
+// the TLS are not destroyed.
+//
+// Note: Some ports (e.g. ELF) have lots of global states which are currently
+// infeasible to remove, and context() just adds overhead with no benefit. The
+// allocation performance is of higher importance, so we simply use thread_local
+// allocators instead of doing context indirection and pthread_getspecific.
+template <typename T, typename... U> T *makeThreadLocal(U &&...args) {
+  return new (getSpecificAllocSingletonThreadLocal<T>().Allocate())
+      T(std::forward<U>(args)...);
+}
+
+template <typename T> T *makeThreadLocalN(size_t n) {
+  return new (getSpecificAllocSingletonThreadLocal<T>().Allocate(n)) T[n];
+}
+
 } // namespace lld
 
 #endif

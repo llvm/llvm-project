@@ -14,6 +14,8 @@
 
     string_view synopsis
 
+#include <compare>
+
 namespace std {
 
     // 7.2, Class template basic_string_view
@@ -30,21 +32,25 @@ namespace std {
     template<class charT, class traits>
     constexpr bool operator==(basic_string_view<charT, traits> x,
                               basic_string_view<charT, traits> y) noexcept;
-    template<class charT, class traits>
+    template<class charT, class traits>                                                            // Removed in C++20
     constexpr bool operator!=(basic_string_view<charT, traits> x,
                               basic_string_view<charT, traits> y) noexcept;
-    template<class charT, class traits>
+    template<class charT, class traits>                                                            // Removed in C++20
     constexpr bool operator< (basic_string_view<charT, traits> x,
                                  basic_string_view<charT, traits> y) noexcept;
-    template<class charT, class traits>
+    template<class charT, class traits>                                                            // Removed in C++20
     constexpr bool operator> (basic_string_view<charT, traits> x,
                               basic_string_view<charT, traits> y) noexcept;
-    template<class charT, class traits>
+    template<class charT, class traits>                                                            // Removed in C++20
     constexpr bool operator<=(basic_string_view<charT, traits> x,
                                  basic_string_view<charT, traits> y) noexcept;
-    template<class charT, class traits>
+    template<class charT, class traits>                                                            // Removed in C++20
     constexpr bool operator>=(basic_string_view<charT, traits> x,
                               basic_string_view<charT, traits> y) noexcept;
+    template<class charT, class traits>                                                            // Since C++20
+    constexpr see below operator<=>(basic_string_view<charT, traits> x,
+                                    basic_string_view<charT, traits> y) noexcept;
+
     // see below, sufficient additional overloads of comparison functions
 
     // 7.10, Inserters and extractors
@@ -770,6 +776,8 @@ bool operator==(basic_string_view<_CharT, _Traits> __lhs,
     return __lhs.compare(__rhs) == 0;
 }
 
+#if _LIBCPP_STD_VER < 20
+// This overload is automatically generated in C++20.
 template<class _CharT, class _Traits, int = 2>
 _LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
 bool operator==(typename common_type<basic_string_view<_CharT, _Traits> >::type __lhs,
@@ -778,7 +786,41 @@ bool operator==(typename common_type<basic_string_view<_CharT, _Traits> >::type 
     if ( __lhs.size() != __rhs.size()) return false;
     return __lhs.compare(__rhs) == 0;
 }
+#endif // _LIBCPP_STD_VER > 17
 
+// operator <=>
+
+#if _LIBCPP_STD_VER > 17
+
+template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI constexpr auto
+operator<=>(basic_string_view<_CharT, _Traits> __lhs, basic_string_view<_CharT, _Traits> __rhs) noexcept {
+    if constexpr (requires { typename _Traits::comparison_category; }) {
+        // [string.view]/4
+        static_assert(
+            __comparison_category<typename _Traits::comparison_category>,
+            "return type is not a comparison category type");
+        return static_cast<typename _Traits::comparison_category>(__lhs.compare(__rhs) <=> 0);
+    } else {
+        return static_cast<weak_ordering>(__lhs.compare(__rhs) <=> 0);
+    }
+}
+
+template <class _CharT, class _Traits, int = 1>
+_LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(
+    basic_string_view<_CharT, _Traits> __lhs, common_type_t<basic_string_view<_CharT, _Traits>> __rhs) noexcept {
+    if constexpr (requires { typename _Traits::comparison_category; }) {
+        // [string.view]/4
+        static_assert(
+            __comparison_category<typename _Traits::comparison_category>,
+            "return type is not a comparison category type");
+        return static_cast<typename _Traits::comparison_category>(__lhs.compare(__rhs) <=> 0);
+    } else {
+        return static_cast<weak_ordering>(__lhs.compare(__rhs) <=> 0);
+    }
+}
+
+#else //  _LIBCPP_STD_VER > 17
 
 // operator !=
 template<class _CharT, class _Traits>
@@ -911,6 +953,7 @@ bool operator>=(typename common_type<basic_string_view<_CharT, _Traits> >::type 
     return __lhs.compare(__rhs) >= 0;
 }
 
+#endif //  _LIBCPP_STD_VER > 17
 
 template<class _CharT, class _Traits>
 basic_ostream<_CharT, _Traits>&
