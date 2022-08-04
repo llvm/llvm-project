@@ -68,8 +68,6 @@ struct ConvertCIRToFuncPass
     : public mlir::PassWrapper<ConvertCIRToFuncPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
   void getDependentDialects(mlir::DialectRegistry &registry) const override {
-    // FIXME: after we rebase to more recent changes, this should be
-    // mlir::FuncDialect instead.
     registry.insert<mlir::BuiltinDialect, mlir::func::FuncDialect,
                     mlir::cir::CIRDialect>();
   }
@@ -244,13 +242,9 @@ void ConvertCIRToMemRefPass::runOnOperation() {
 }
 
 void ConvertCIRToFuncPass::runOnOperation() {
-  // End goal here is to legalize to mlir::FuncOp (builtin dialect) and
-  // mlir::ReturnOp (standard dialect). This is done in two steps, becase
-  // cir.return is a cir.func child it will be ignored in the first conversion.
-  //
-  // TODO: is there a better way to handle this? If such handling is decoupled
-  // from the same pass the verifier won't accept the mix between mlir::FuncOp
-  // and mlir::cir::ReturnOp.
+  // End goal here is to legalize to builtin.func, func.return, func.call.
+  // Given that children node are ignored, handle both return and call in
+  // a subsequent conversion.
 
   // Convert cir.func to builtin.func
   mlir::ConversionTarget fnTarget(getContext());
@@ -264,7 +258,7 @@ void ConvertCIRToFuncPass::runOnOperation() {
   if (failed(applyPartialConversion(module, fnTarget, std::move(fnPatterns))))
     signalPassFailure();
 
-  // Convert cir.return to std.return, cir.call to std.call
+  // Convert cir.return -> func.return, cir.call -> func.call
   mlir::ConversionTarget retTarget(getContext());
   retTarget
       .addLegalOp<mlir::ModuleOp, mlir::func::ReturnOp, mlir::func::CallOp>();
