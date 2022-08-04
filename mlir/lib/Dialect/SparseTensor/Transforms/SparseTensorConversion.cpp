@@ -117,6 +117,26 @@ static Value genNewCall(OpBuilder &builder, Operation *op,
       .getResult(0);
 }
 
+/// Compute the size from type (for static sizes) or from an already-converted
+/// opaque pointer source (for dynamic sizes) at the given dimension.
+static Value sizeFromPtrAtDim(OpBuilder &builder, Operation *op,
+                              SparseTensorEncodingAttr &enc, ShapedType stp,
+                              Value src, unsigned dim) {
+  auto shape = stp.getShape();
+  if (shape[dim] == ShapedType::kDynamicSize)
+    return genDimSizeCall(builder, op, enc, src, dim);
+  return constantIndex(builder, op->getLoc(), shape[dim]);
+}
+
+/// Populates given sizes array from type (for static sizes) and from
+/// an already-converted opaque pointer source (for dynamic sizes).
+static void sizesFromPtr(OpBuilder &builder, SmallVector<Value, 4> &sizes,
+                         Operation *op, SparseTensorEncodingAttr &enc,
+                         ShapedType stp, Value src) {
+  for (unsigned i = 0, rank = stp.getRank(); i < rank; i++)
+    sizes.push_back(sizeFromPtrAtDim(builder, op, enc, stp, src, i));
+}
+
 /// Populates given sizes array from type.
 static void sizesFromType(OpBuilder &builder, SmallVector<Value, 4> &sizes,
                           Location loc, ShapedType stp) {
@@ -135,18 +155,42 @@ static void sizesFromSrc(OpBuilder &builder, SmallVector<Value, 4> &sizes,
     sizes.push_back(linalg::createOrFoldDimOp(builder, loc, src, i));
 }
 
-/// Populates given sizes array from type (for static sizes) and from
-/// an already converted into opague pointer source (for dynamic sizes).
-static void sizesFromPtr(OpBuilder &builder, SmallVector<Value, 4> &sizes,
-                         Operation *op, SparseTensorEncodingAttr &enc,
-                         ShapedType stp, Value src) {
+/// Populates the given sizes array for concatenation from type (for static
+/// sizes) and from an already-converted opaque pointer source (for dynamic
+/// sizes).
+static void concatSizesFromInputs(OpBuilder &builder,
+                                  SmallVector<Value, 4> &sizes, Operation *op,
+                                  ShapedType dstTp, ValueRange srcs,
+                                  unsigned dim) {
   Location loc = op->getLoc();
-  auto shape = stp.getShape();
-  for (unsigned i = 0, rank = stp.getRank(); i < rank; i++)
-    if (shape[i] == ShapedType::kDynamicSize)
-      sizes.push_back(genDimSizeCall(builder, op, enc, src, i));
-    else
-      sizes.push_back(constantIndex(builder, loc, shape[i]));
+  auto dstShape = dstTp.getShape();
+
+  auto srcTp = srcs[0].getType().cast<ShapedType>();
+  auto srcEnc = getSparseTensorEncoding(srcTp);
+  // We first fills the sizes from an input tensor, and then
+  // compute the size of the concatenation dimension if necessary.
+  if (srcEnc)
+    // Reuses sizes from an arbitrary input tensor is fine.
+    sizesFromPtr(builder, sizes, op, srcEnc, srcTp, srcs[0]);
+  else
+    sizesFromSrc(builder, sizes, loc, srcs[0]);
+
+  // Sum up on the `dim` if the dimension is dynamic.
+  if (dstShape[dim] != ShapedType::kDynamicSize) {
+    // Faithfully take the static size.
+    sizes[dim] = constantIndex(builder, loc, dstShape[dim]);
+  } else {
+    // Else, compute the shape dynamically.
+    for (size_t i = 1, sz = srcs.size(); i < sz; i++) {
+      auto srcTp = srcs[i].getType().cast<ShapedType>();
+      auto encSrc = getSparseTensorEncoding(srcTp);
+      Value srcSz =
+          encSrc ? sizeFromPtrAtDim(builder, op, encSrc, srcTp, srcs[i], dim)
+                 : linalg::createOrFoldDimOp(builder, loc, srcs[i], dim);
+      // Sum up all the sizes.
+      sizes[dim] = builder.create<arith::AddIOp>(loc, sizes[dim], srcSz);
+    }
+  }
 }
 
 /// Generates an uninitialized temporary buffer of the given size and
@@ -234,6 +278,20 @@ static void newParams(OpBuilder &builder, SmallVector<Value, 8> &params,
   params.push_back(ptr);
 }
 
+/// Generates the code to read the value from tensor[ivs].The generated code
+/// looks like the following and the insertion point after this routine is
+/// inside the if-then branch behind the assignment to ind.
+///    if (tensor[ivs] != 0)
+///      insert_point
+static Value genValueForDense(OpBuilder &builder, Location loc, Value tensor,
+                              ValueRange ivs) {
+  Value val = builder.create<tensor::ExtractOp>(loc, tensor, ivs);
+  Value cond = genIsNonzero(builder, loc, val);
+  scf::IfOp ifOp = builder.create<scf::IfOp>(loc, cond, /*else*/ false);
+  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  return val;
+}
+
 /// Generates the code to read the value from tensor[ivs], and conditionally
 /// stores the indices ivs to the memory in ind. The generated code looks like
 /// the following and the insertion point after this routine is inside the
@@ -243,10 +301,7 @@ static void newParams(OpBuilder &builder, SmallVector<Value, 8> &params,
 ///      ind = ivs
 static Value genIndexAndValueForDense(OpBuilder &builder, Location loc,
                                       Value tensor, Value ind, ValueRange ivs) {
-  Value val = builder.create<tensor::ExtractOp>(loc, tensor, ivs);
-  Value cond = genIsNonzero(builder, loc, val);
-  scf::IfOp ifOp = builder.create<scf::IfOp>(loc, cond, /*else*/ false);
-  builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+  Value val = genValueForDense(builder, loc, tensor, ivs);
   unsigned i = 0;
   for (auto iv : ivs) {
     Value idx = constantIndex(builder, loc, i++);
@@ -346,18 +401,43 @@ static void deallocDenseTensor(OpBuilder &builder, Location loc, Value buffer) {
   builder.create<memref::DeallocOp>(loc, buffer);
 }
 
-/// Inserts the element returned by genGetNextCall(_, ind, elemPtr) into
-/// the tensor created by allocDenseTensor().  The `rank` is the rank
-/// of the `tensor` and the length of `ind`.
-static void insertScalarIntoDenseTensor(OpBuilder &builder, Location loc,
-                                        Value elemPtr, Value tensor,
-                                        unsigned rank, Value ind) {
+/// Converts a pointer to COO (from calls to iter->next()) into a vector of
+/// indices, apply (optional) `offset` on `offsetDim`.
+static SmallVector<Value, 4> loadIndices(OpBuilder &builder, Location loc,
+                                         unsigned rank, Value ind,
+                                         unsigned offsetDim = 0,
+                                         Value offset = Value()) {
   SmallVector<Value, 4> ivs;
   ivs.reserve(rank);
   for (unsigned i = 0; i < rank; i++) {
     Value idx = constantIndex(builder, loc, i);
-    ivs.push_back(builder.create<memref::LoadOp>(loc, ind, idx));
+    idx = builder.create<memref::LoadOp>(loc, ind, idx);
+    if (offsetDim == i && offset)
+      idx = builder.create<arith::AddIOp>(loc, idx, offset);
+    ivs.push_back(idx);
   }
+  return ivs;
+}
+
+/// Converts the vector indices and store it into the memory pointed by
+/// `ind`, apply (optional) `offset` on `offsetDim`.
+static void storeIndices(OpBuilder &builder, Location loc, unsigned rank,
+                         Value ind, ValueRange ivs, unsigned offsetDim = 0,
+                         Value offset = Value()) {
+  for (unsigned i = 0; i < rank; i++) {
+    Value idx = ivs[i];
+    if (offsetDim == i && offset)
+      idx = builder.create<arith::AddIOp>(loc, idx, offset);
+    builder.create<memref::StoreOp>(loc, idx, ind,
+                                    constantIndex(builder, loc, i));
+  }
+}
+
+/// Inserts a value stored in `elemPtr` into a dense tensor created by
+/// allocDenseTensor().
+static void insertScalarIntoDenseTensor(OpBuilder &builder, Location loc,
+                                        Value elemPtr, Value tensor,
+                                        ValueRange ivs) {
   Value elemV = builder.create<memref::LoadOp>(loc, elemPtr);
   builder.create<memref::StoreOp>(loc, elemV, tensor, ivs);
 }
@@ -508,6 +588,100 @@ genSparse2SparseReshape(Operation *op, ConversionPatternRewriter &rewriter,
   genDelCOOCall(rewriter, op, elemTp, iter);
   rewriter.replaceOp(op, dst);
   return success();
+}
+
+// Generates a while loop that iterates over the COO list extracted
+// from `t`, using `bodyBuilder` to build the loop body.
+//   while (elem = coo->getNext()) {
+//     bodyBuilder
+//   }
+// TODO: Get rid of Operation *op in the parameters list! It seems
+// that we only use it for op->getLoc(), pass the loc directly instead!
+// TODO: It can be used by other operators (ReshapeOp, ConvertOP) conversion to
+// reduce code repetition!
+static void genSparseCOOIterationLoop(
+    ConversionPatternRewriter &rewriter, Operation *op, Value t,
+    RankedTensorType tensorTp,
+    function_ref<void(OpBuilder &, Location, Value, Value)> bodyBuilder) {
+  Location loc = op->getLoc();
+  auto enc = getSparseTensorEncoding(tensorTp);
+  assert(enc && "Generating Sparse Tensor COO Loop on a Dense Tensor!");
+
+  unsigned rank = tensorTp.getRank();
+  Type elemTp = tensorTp.getElementType();
+
+  // Start an iterator over the tensor (in original index order).
+  auto noPerm = SparseTensorEncodingAttr::get(
+      rewriter.getContext(), enc.getDimLevelType(), AffineMap(),
+      enc.getPointerBitWidth(), enc.getIndexBitWidth());
+  SmallVector<Value, 4> sizes;
+  SmallVector<Value, 8> params;
+  sizesFromPtr(rewriter, sizes, op, noPerm, tensorTp, t);
+  newParams(rewriter, params, op, tensorTp, noPerm, Action::kToIterator, sizes,
+            t);
+  Value iter = genNewCall(rewriter, op, params);
+
+  // Construct a while loop over the iterator.
+  Value srcIdx = genAlloca(rewriter, loc, rank, rewriter.getIndexType());
+  Value elemPtr = genAllocaScalar(rewriter, loc, elemTp);
+  SmallVector<Value> noArgs;
+  SmallVector<Type> noTypes;
+  auto whileOp = rewriter.create<scf::WhileOp>(loc, noTypes, noArgs);
+  Block *before = rewriter.createBlock(&whileOp.getBefore(), {}, noTypes);
+  rewriter.setInsertionPointToEnd(before);
+  Value cond = genGetNextCall(rewriter, op, iter, srcIdx, elemPtr);
+  rewriter.create<scf::ConditionOp>(loc, cond, before->getArguments());
+  Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, noTypes);
+  rewriter.setInsertionPointToStart(after);
+  // Callback here to build loop body.
+  bodyBuilder(rewriter, loc, srcIdx, elemPtr);
+  rewriter.create<scf::YieldOp>(loc);
+  // Finish generating loop.
+  rewriter.setInsertionPointAfter(whileOp);
+
+  // Free memory for iterator.
+  genDelCOOCall(rewriter, op, elemTp, iter);
+}
+
+// Generate loop that iterates over a dense tensor.
+//   for i1 in dim1
+//    ..
+//     for ik in dimk
+//       val = a[i1,..,ik]
+//       if val != 0
+//         bodyBuilder(v, [i1, ..., ik])
+// TODO: It can be used by other operators (ReshapeOp, ConvertOP) conversion to
+// reduce code repetition!
+static void genDenseTensorIterationLoop(
+    ConversionPatternRewriter &rewriter, Operation *op, Value t,
+    RankedTensorType tensorTp,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
+  Location loc = op->getLoc();
+  auto enc = getSparseTensorEncoding(tensorTp);
+  assert(!enc && "Generating Densor Tensor Loop on a Sparse Tensor!");
+
+  unsigned rank = tensorTp.getRank();
+  Value zero = constantIndex(rewriter, loc, 0);
+  Value one = constantIndex(rewriter, loc, 1);
+
+  SmallVector<Value> lo;
+  SmallVector<Value> hi;
+  SmallVector<Value> st;
+
+  // Fill out loop iteration information.
+  for (unsigned i = 0; i < rank; i++) {
+    lo.push_back(zero);
+    hi.push_back(linalg::createOrFoldDimOp(rewriter, loc, t, i));
+    st.push_back(one);
+  }
+
+  scf::buildLoopNest(rewriter, op->getLoc(), lo, hi, st, {},
+                     [&](OpBuilder &builder, Location loc, ValueRange ivs,
+                         ValueRange args) -> scf::ValueVector {
+                       // Invoke callback to build the body of the loop.
+                       bodyBuilder(builder, loc, ivs);
+                       return {};
+                     });
 }
 
 //===----------------------------------------------------------------------===//
@@ -760,7 +934,8 @@ public:
       rewriter.create<scf::ConditionOp>(loc, cond, before->getArguments());
       Block *after = rewriter.createBlock(&whileOp.getAfter(), {}, noTypes);
       rewriter.setInsertionPointToStart(after);
-      insertScalarIntoDenseTensor(rewriter, loc, elemPtr, dst, rank, ind);
+      SmallVector<Value, 4> ivs = loadIndices(rewriter, loc, rank, ind);
+      insertScalarIntoDenseTensor(rewriter, loc, elemPtr, dst, ivs);
       rewriter.create<scf::YieldOp>(loc);
       rewriter.setInsertionPointAfter(whileOp);
       genDelCOOCall(rewriter, op, elemTp, iter);
@@ -1043,6 +1218,139 @@ public:
   }
 };
 
+/// Sparse conversion rule for the concatenate operator.
+class SparseTensorConcatConverter : public OpConversionPattern<ConcatenateOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ConcatenateOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // The conversion works as follow:
+    // (1). When output is sparse, and mix of inputs:
+    //    a_sparse = concat (b_dense, c_sparse, ....)
+    // =>
+    //    coo_for_a = newSparseCOO(shapeOf(a))
+    //    for i, j, k // dense input
+    //      coo->add(adjustForOffset(i,j,k), b[i,j,k])
+    //
+    //    for elem in sparse_input
+    //      coo->add(adjustForOffset(elem.indices), elem.value)
+    //    ...
+    //    a = newSparseTensor(coo_for_a)
+    //    return a
+    //
+    // (2). When output is dense, and mix of inputs:
+    //    a_dense = concat (b_dense, c_sparse, ....)
+    // =>
+    //    a = malloc(shapeOf(a))
+    //    for i, j, k // dense input
+    //      a[ adjustForOffset(i,j,k) ] = b[i,j,k]
+    //
+    //    for elem in sparse_input
+    //      a[ adjustForOffset(elem.indices) ] = elem.value
+    //    return a
+    Location loc = op.getLoc();
+    auto dstTp = op.getType().cast<RankedTensorType>();
+    auto encDst = getSparseTensorEncoding(dstTp);
+    Type elemTp = dstTp.getElementType();
+    uint64_t concatDim = op.getDimension().getZExtValue();
+    unsigned rank = dstTp.getRank();
+
+    Value dst;     // destination tensor
+    Value dstPerm; // destination tensor permutation (if sparse out)
+    // A pointer to the value being inserted (if dense => sparse)
+    Value elemPtr;
+    // Memory that holds the COO for destination tensor (if sparse out)
+    Value dstIdx;
+    // The offset applied to the dimenstion to be concated (starting from 0)
+    Value offset = constantIndex(rewriter, loc, 0);
+
+    SmallVector<Value, 4> sizes;
+    SmallVector<Value, 8> params;
+    concatSizesFromInputs(rewriter, sizes, op, dstTp, op.getInputs(),
+                          concatDim);
+
+    if (encDst) {
+      // Start a new COO for the destination tensor.
+      newParams(rewriter, params, op, dstTp, encDst, Action::kEmptyCOO, sizes);
+      dst = genNewCall(rewriter, op, params);
+      dstPerm = params[2];
+      elemPtr = genAllocaScalar(rewriter, loc, elemTp);
+      dstIdx = genAlloca(rewriter, loc, rank, rewriter.getIndexType());
+    } else {
+      // TODO: Dense buffers should be allocated/deallocated via the callback
+      // in BufferizationOptions.
+      dst = allocDenseTensor(rewriter, loc, dstTp, sizes);
+    }
+    for (auto it : llvm::zip(op.getInputs(), adaptor.getInputs())) {
+      Value orignalOp = std::get<0>(it); // Input (with encoding) from Op
+      Value adaptedOp = std::get<1>(it); // Input (type converted) from adaptor
+      RankedTensorType srcTp = orignalOp.getType().cast<RankedTensorType>();
+      auto encSrc = getSparseTensorEncoding(srcTp);
+      if (encSrc) {
+        genSparseCOOIterationLoop(
+            rewriter, op, adaptedOp, srcTp,
+            [&](OpBuilder &builder, Location loc, Value idx,
+                Value elemPtr) -> void {
+              auto indVec =
+                  loadIndices(builder, loc, rank, idx, concatDim, offset);
+              if (encDst) {
+                // Case: sparse => sparse
+                storeIndices(builder, loc, rank, dstIdx, indVec);
+                genAddEltCall(builder, op, elemTp, dst, elemPtr, dstIdx,
+                              dstPerm);
+              } else {
+                // Case: sparse => dense
+                insertScalarIntoDenseTensor(builder, loc, elemPtr, dst, indVec);
+              }
+            });
+      } else {
+        genDenseTensorIterationLoop(
+            rewriter, op, adaptedOp, srcTp,
+            [&](OpBuilder &builder, Location loc, ValueRange idx) -> void {
+              if (encDst) {
+                // Case: dense => sparse
+                storeIndices(builder, loc, rank, dstIdx, idx, concatDim,
+                             offset);
+                Value val = genValueForDense(builder, loc, adaptedOp, idx);
+                builder.create<memref::StoreOp>(loc, val, elemPtr);
+                genAddEltCall(builder, op, elemTp, dst, elemPtr, dstIdx,
+                              dstPerm);
+              } else {
+                // Case: dense => dense
+                Value val = genValueForDense(builder, loc, adaptedOp, idx);
+                SmallVector<Value, 4> indVec(idx);
+                // Apply offset.
+                indVec[concatDim] = builder.create<arith::AddIOp>(
+                    loc, indVec[concatDim], offset);
+                builder.create<memref::StoreOp>(loc, val, dst, indVec);
+              }
+            });
+      }
+      // Accumulate offset.
+      // TODO: avoid calling sparseDimSize multiple times by caching the result!
+      Value curDim = encSrc ? sizeFromPtrAtDim(rewriter, op, encSrc, srcTp,
+                                               adaptedOp, concatDim)
+                            : linalg::createOrFoldDimOp(rewriter, loc,
+                                                        adaptedOp, concatDim);
+
+      offset = rewriter.create<arith::AddIOp>(loc, offset, curDim);
+    }
+    if (encDst) {
+      params[6] = constantAction(rewriter, loc, Action::kFromCOO);
+      // In sparse output case, the destination holds the COO.
+      Value coo = dst;
+      params[7] = coo;
+      dst = genNewCall(rewriter, op, params);
+      // Release resources.
+      genDelCOOCall(rewriter, op, elemTp, coo);
+      rewriter.replaceOp(op, dst);
+    } else {
+      rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, dstTp, dst);
+    }
+    return success();
+  }
+};
 /// Sparse conversion rule for the output operator.
 class SparseTensorOutConverter : public OpConversionPattern<OutOp> {
 public:
@@ -1099,12 +1407,13 @@ void mlir::populateSparseTensorConversionPatterns(
                SparseCastConverter, SparseTensorNewConverter,
                SparseReshapeConverter<tensor::ExpandShapeOp>,
                SparseReshapeConverter<tensor::CollapseShapeOp>,
-               SparseTensorAllocConverter, SparseTensorDeallocConverter,
-               SparseTensorToPointersConverter, SparseTensorToIndicesConverter,
-               SparseTensorToValuesConverter, SparseTensorLoadConverter,
-               SparseTensorLexInsertConverter, SparseTensorExpandConverter,
-               SparseTensorCompressConverter, SparseTensorOutConverter>(
-      typeConverter, patterns.getContext());
+               SparseTensorConcatConverter, SparseTensorAllocConverter,
+               SparseTensorDeallocConverter, SparseTensorToPointersConverter,
+               SparseTensorToIndicesConverter, SparseTensorToValuesConverter,
+               SparseTensorLoadConverter, SparseTensorLexInsertConverter,
+               SparseTensorExpandConverter, SparseTensorCompressConverter,
+               SparseTensorOutConverter>(typeConverter, patterns.getContext());
+
   patterns.add<SparseTensorConvertConverter>(typeConverter,
                                              patterns.getContext(), options);
 }
