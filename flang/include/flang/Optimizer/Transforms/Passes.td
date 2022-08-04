@@ -174,6 +174,20 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
   ];
 }
 
+// This needs to be a "mlir::ModuleOp" pass, because it inserts simplified
+// functions into the module, which is invalid if a finer grain mlir::Operation
+// is used as the pass specification says to not touch things outside hte scope
+// of the operation being processed.
+def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
+  let summary = "Intrinsics simplification";
+  let description = [{
+    Qualifying intrinsics calls are replaced with calls to a specialized and
+    simplified function. The simplified function is added to the current module.
+    This function can be inlined by a general purpose inlining pass.
+  }];
+  let constructor = "::fir::createSimplifyIntrinsicsPass()";
+}
+
 def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
   let summary = "Convert stack to heap allocations and vice versa.";
   let description = [{
