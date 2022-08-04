@@ -1961,6 +1961,32 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     return;
   }
 
+  if (auto *CActions = getPPCachedActions()) {
+    DiscardUntilEndOfDirective();
+    SourceLocation IncludePos = FilenameTok.getLocation();
+    // If the filename string was the result of macro expansions, set the
+    // include position on the file where it will be included and after the
+    // expansions.
+    if (IncludePos.isMacroID())
+      IncludePos = SourceMgr.getExpansionRange(IncludePos).getEnd();
+    Optional<FileID> FID = CActions->handleIncludeDirective(
+        *this, IncludePos, CurLexer->getSourceLocation());
+    if (!FID) {
+      // FIXME: Report \p Callbacks->FileSkipped? Note that it currently
+      // requires the resolved FileEntry for this particular #include.
+      return;
+    }
+    const FileEntry *FE = SourceMgr.getFileEntryForID(*FID);
+    bool IsImport =
+        IncludeTok.getIdentifierInfo()->getPPKeywordID() == tok::pp_import;
+    if (FE && IsImport) {
+      HeaderInfo.getFileInfo(FE).isImport = true;
+    }
+    EnterSourceFile(*FID, nullptr, FilenameTok.getLocation(),
+                    /*IsFirstIncludeOfFile*/ true);
+    return;
+  }
+
   // Verify that there is nothing after the filename, other than EOD.  Note
   // that we allow macros that expand to nothing after the filename, because
   // this falls into the category of "#include pp-tokens new-line" specified

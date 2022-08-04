@@ -40,6 +40,7 @@ protected:
   }
 
   friend class IncludeFile;
+  friend class IncludeFileList;
   friend class IncludeTree;
   friend class IncludeTreeRoot;
 };
@@ -98,6 +99,7 @@ public:
 
 private:
   friend class IncludeTreeBase<IncludeFile>;
+  friend class IncludeFileList;
   friend class IncludeTree;
   friend class IncludeTreeRoot;
 
@@ -214,12 +216,77 @@ private:
   }
 };
 
+/// A flat list of \p IncludeFile entries. This is used along with a simple
+/// implementation of a \p vfs::FileSystem produced via
+/// \p createIncludeTreeFileSystem().
+class IncludeFileList : public IncludeTreeBase<IncludeFileList> {
+public:
+  static constexpr StringRef getNodeKind() { return "List"; }
+
+  using FileSizeTy = uint32_t;
+
+  size_t getNumFiles() const { return getNumReferences(); }
+
+  ObjectRef getFileRef(size_t I) const {
+    assert(I < getNumFiles());
+    return getReference(I);
+  }
+
+  Expected<IncludeFile> getFile(size_t I) { return getFile(getFileRef(I)); }
+  FileSizeTy getFileSize(size_t I) const;
+
+  /// \returns each \p IncludeFile entry along with its file size.
+  llvm::Error forEachFile(
+      llvm::function_ref<llvm::Error(IncludeFile, FileSizeTy)> Callback);
+
+  /// We record the file size as well to avoid needing to materialize the
+  /// underlying buffer for the \p IncludeTreeFileSystem::status()
+  /// implementation to provide the file size.
+  struct FileEntry {
+    ObjectRef FileRef;
+    FileSizeTy Size;
+  };
+  static Expected<IncludeFileList> create(CASDB &DB, ArrayRef<FileEntry> Files);
+
+  static Expected<IncludeFileList> get(CASDB &CAS, ObjectRef Ref);
+
+  llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
+
+private:
+  friend class IncludeTreeBase<IncludeFileList>;
+  friend class IncludeTreeRoot;
+
+  explicit IncludeFileList(ObjectProxy Node)
+      : IncludeTreeBase(std::move(Node)) {
+    assert(isValid(*this));
+  }
+
+  Expected<IncludeFile> getFile(ObjectRef Ref) {
+    auto Node = getCAS().getProxy(Ref);
+    if (!Node)
+      return Node.takeError();
+    return IncludeFile(std::move(*Node));
+  }
+
+  static bool isValid(const ObjectProxy &Node);
+  static bool isValid(CASDB &CAS, ObjectRef Ref) {
+    auto Node = CAS.getProxy(Ref);
+    if (!Node) {
+      llvm::consumeError(Node.takeError());
+      return false;
+    }
+    return isValid(*Node);
+  }
+};
+
 /// Represents the include-tree result for a translation unit.
 class IncludeTreeRoot : public IncludeTreeBase<IncludeTreeRoot> {
 public:
   static constexpr StringRef getNodeKind() { return "Root"; }
 
   ObjectRef getMainFileTreeRef() const { return getReference(0); }
+
+  ObjectRef getFileListRef() const { return getReference(1); }
 
   Expected<IncludeTree> getMainFileTree() {
     auto Node = getCAS().getProxy(getMainFileTreeRef());
@@ -228,7 +295,15 @@ public:
     return IncludeTree(std::move(*Node));
   }
 
-  static Expected<IncludeTreeRoot> create(CASDB &DB, ObjectRef MainFileTree);
+  Expected<IncludeFileList> getFileList() {
+    auto Node = getCAS().getProxy(getFileListRef());
+    if (!Node)
+      return Node.takeError();
+    return IncludeFileList(std::move(*Node));
+  }
+
+  static Expected<IncludeTreeRoot> create(CASDB &DB, ObjectRef MainFileTree,
+                                          ObjectRef FileList);
 
   static Expected<IncludeTreeRoot> get(CASDB &DB, ObjectRef Ref);
 
@@ -238,7 +313,7 @@ public:
     if (!IncludeTreeBase::isValid(Node))
       return false;
     IncludeTreeBase Base(Node);
-    return Base.getNumReferences() == 1 && Base.getData().empty();
+    return Base.getNumReferences() == 2 && Base.getData().empty();
   }
   static bool isValid(CASDB &DB, ObjectRef Ref) {
     auto Node = DB.getProxy(Ref);
@@ -257,6 +332,13 @@ private:
     assert(isValid(*this));
   }
 };
+
+/// An implementation of a \p vfs::FileSystem that supports the simple queries
+/// of the preprocessor, for creating \p FileEntries using a file path, while
+/// "replaying" an \p IncludeTreeRoot. It is not intended to be a complete
+/// implementation of a file system.
+Expected<IntrusiveRefCntPtr<llvm::vfs::FileSystem>>
+createIncludeTreeFileSystem(IncludeTreeRoot &Root);
 
 } // namespace cas
 } // namespace clang

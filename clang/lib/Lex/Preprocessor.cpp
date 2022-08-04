@@ -566,12 +566,17 @@ void Preprocessor::EnterMainSourceFile() {
       markIncluded(FE);
   }
 
-  // Preprocess Predefines to populate the initial preprocessor state.
-  std::unique_ptr<llvm::MemoryBuffer> SB =
-    llvm::MemoryBuffer::getMemBufferCopy(Predefines, "<built-in>");
-  assert(SB && "Cannot create predefined source buffer");
-  FileID FID = SourceMgr.createFileID(std::move(SB));
-  assert(FID.isValid() && "Could not create FileID for predefines?");
+  FileID FID;
+  if (auto *CActions = getPPCachedActions()) {
+    FID = CActions->handlePredefines(*this);
+  } else {
+    // Preprocess Predefines to populate the initial preprocessor state.
+    std::unique_ptr<llvm::MemoryBuffer> SB =
+        llvm::MemoryBuffer::getMemBufferCopy(Predefines, "<built-in>");
+    assert(SB && "Cannot create predefined source buffer");
+    FID = SourceMgr.createFileID(std::move(SB));
+    assert(FID.isValid() && "Could not create FileID for predefines?");
+  }
   setPredefinesFileID(FID);
 
   // Start parsing the predefines.

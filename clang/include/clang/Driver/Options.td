@@ -6453,6 +6453,9 @@ def fdepscan_daemon_EQ : Joined<["-"], "fdepscan-daemon=">, Group<f_Group>,
              " daemon specified, rather than try to spawn its own based on"
              " parent processes.">;
 
+def fdepscan_include_tree : Flag<["-"], "fdepscan-include-tree">,
+    Group<f_Group>, HelpText<"Set dep-scanner to produce the include tree">;
+
 // CAS prefix map options.
 //
 // FIXME: Add DepscanOption flag.
@@ -6510,6 +6513,11 @@ def fcas_fs_working_directory : Separate<["-"], "fcas-fs-working-directory">,
     HelpText<"Working directory for -fcas-fs (if not the root).">,
     ShouldParseIf<!strconcat("!", fcas_fs.KeyPath, ".empty()")>,
     MarshallingInfoString<FileSystemOpts<"CASFileSystemWorkingDirectory">>;
+
+def fcas_include_tree : Separate<["-"], "fcas-include-tree">,
+    Group<f_Group>, MetaVarName<"<tree>">,
+    HelpText<"Configure the frontend to use a CAS include tree.">,
+    MarshallingInfoString<FrontendOpts<"CASIncludeTreeID">>;
 
 // FIXME: Add to driver under -fexperimental-cache=compile-job.
 defm cache_compile_job : BoolFOption<"cache-compile-job",

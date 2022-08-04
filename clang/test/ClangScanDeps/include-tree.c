@@ -20,6 +20,12 @@
 // ORDER-NEXT:     [[PREFIX]]/n3.h
 // ORDER-NEXT: [[PREFIX]]/n3.h
 // ORDER-NEXT: [[PREFIX]]/n2.h
+// ORDER-NEXT: Files:
+// ORDER-NEXT: [[PREFIX]]/t.c
+// ORDER-NEXT: [[PREFIX]]/top.h
+// ORDER-NEXT: [[PREFIX]]/n1.h
+// ORDER-NEXT: [[PREFIX]]/n2.h
+// ORDER-NEXT: [[PREFIX]]/n3.h
 // ORDER-NOT: [[PREFIX]]
 
 

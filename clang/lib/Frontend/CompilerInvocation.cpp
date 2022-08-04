@@ -28,6 +28,7 @@
 #include "clang/Basic/Version.h"
 #include "clang/Basic/Visibility.h"
 #include "clang/Basic/XRayInstr.h"
+#include "clang/CAS/IncludeTree.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -2830,11 +2831,46 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
 
   // OPT_INPUT has a unique class, generate it directly.
   for (const auto &Input : Opts.Inputs)
-    Args.push_back(SA(Input.getFile()));
+    if (!Input.isIncludeTree())
+      Args.push_back(SA(Input.getFile()));
+}
+
+static void determineInputFromIncludeTree(
+    StringRef IncludeTreeID, CASOptions &CASOpts, DiagnosticsEngine &Diags,
+    Optional<cas::IncludeTreeRoot> &IncludeTree, StringRef &InputFilename) {
+  assert(!IncludeTreeID.empty());
+  auto reportError = [&](llvm::Error &&E) {
+    Diags.Report(diag::err_fe_unable_to_load_include_tree)
+        << IncludeTreeID << llvm::toString(std::move(E));
+  };
+  auto CAS = CASOpts.getOrCreateCAS(Diags);
+  if (!CAS)
+    return;
+  auto ID = CAS->parseID(IncludeTreeID);
+  if (!ID)
+    return reportError(ID.takeError());
+  auto Object = CAS->getReference(*ID);
+  if (!Object)
+    return reportError(llvm::cas::CASDB::createUnknownObjectError(*ID));
+  auto Root = cas::IncludeTreeRoot::get(*CAS, *Object);
+  if (!Root)
+    return reportError(Root.takeError());
+  auto MainTree = Root->getMainFileTree();
+  if (!MainTree)
+    return reportError(MainTree.takeError());
+  auto BaseFile = MainTree->getBaseFile();
+  if (!BaseFile)
+    return reportError(BaseFile.takeError());
+  auto FilenameBlob = BaseFile->getFilename();
+  if (!FilenameBlob)
+    return reportError(FilenameBlob.takeError());
+  InputFilename = FilenameBlob->getData();
+  IncludeTree = *Root;
 }
 
 static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
-                              DiagnosticsEngine &Diags, bool &IsHeaderFile) {
+                              CASOptions &CASOpts, DiagnosticsEngine &Diags,
+                              bool &IsHeaderFile) {
   unsigned NumErrorsBefore = Diags.getNumErrors();
 
   FrontendOptions &FrontendOpts = Opts;
@@ -3050,6 +3086,19 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   // '-' is the default input if none is given.
   std::vector<std::string> Inputs = Args.getAllArgValues(OPT_INPUT);
   Opts.Inputs.clear();
+
+  Optional<cas::IncludeTreeRoot> Tree;
+  if (!Opts.CASIncludeTreeID.empty()) {
+    if (!Inputs.empty()) {
+      Diags.Report(diag::err_drv_inputs_and_include_tree);
+    }
+    StringRef InputFilename;
+    determineInputFromIncludeTree(Opts.CASIncludeTreeID, CASOpts, Diags, Tree,
+                                  InputFilename);
+    if (!InputFilename.empty())
+      Inputs.push_back(InputFilename.str());
+  }
+
   if (Inputs.empty())
     Inputs.push_back("-");
 
@@ -3080,6 +3129,12 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     }
 
     Opts.Inputs.emplace_back(std::move(Inputs[i]), IK, IsSystem);
+  }
+
+  if (Tree) {
+    FrontendInputFile &InputFile = Opts.Inputs.back();
+    InputFile = FrontendInputFile(Tree->getRef(), InputFile.getFile(),
+                                  InputFile.getKind(), InputFile.isSystem());
   }
 
   Opts.DashX = DashX;
@@ -4661,7 +4716,8 @@ bool CompilerInvocation::CreateFromArgsImpl(
   ParseAnalyzerArgs(*Res.getAnalyzerOpts(), Args, Diags);
   ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                       /*DefaultDiagColor=*/false);
-  ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags, LangOpts.IsHeaderFile);
+  ParseFrontendArgs(Res.getFrontendOpts(), Args, Res.getCASOpts(), Diags,
+                    LangOpts.IsHeaderFile);
   // FIXME: We shouldn't have to pass the DashX option around here
   InputKind DashX = Res.getFrontendOpts().DashX;
   ParseTargetArgs(Res.getTargetOpts(), Args, Diags);

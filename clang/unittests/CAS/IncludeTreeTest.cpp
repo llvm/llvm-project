@@ -55,12 +55,20 @@ TEST(IncludeTree, IncludeTreeScan) {
   ASSERT_THAT_ERROR(
       ScanTool.getIncludeTree(*DB, CommandLine, /*CWD*/ "").moveInto(Root),
       llvm::Succeeded());
+
+  Optional<IncludeFile> MainFile;
+  Optional<IncludeFile> A1File;
+  Optional<IncludeFile> B1File;
+  Optional<IncludeFile> SysFile;
+
   Optional<IncludeTree> Main;
   ASSERT_THAT_ERROR(Root->getMainFileTree().moveInto(Main), llvm::Succeeded());
   {
+    ASSERT_THAT_ERROR(Main->getBaseFile().moveInto(MainFile),
+                      llvm::Succeeded());
     EXPECT_EQ(Main->getFileCharacteristic(), SrcMgr::C_User);
     IncludeFile::FileInfo FI;
-    ASSERT_THAT_ERROR(Main->getBaseFileInfo().moveInto(FI), llvm::Succeeded());
+    ASSERT_THAT_ERROR(MainFile->getFileInfo().moveInto(FI), llvm::Succeeded());
     EXPECT_EQ(FI.Filename, "t.cpp");
     EXPECT_EQ(FI.Contents, MainContents);
   }
@@ -81,9 +89,10 @@ TEST(IncludeTree, IncludeTreeScan) {
   ASSERT_THAT_ERROR(Main->getInclude(1).moveInto(A1), llvm::Succeeded());
   EXPECT_EQ(Main->getIncludeOffset(1), uint32_t(21));
   {
+    ASSERT_THAT_ERROR(A1->getBaseFile().moveInto(A1File), llvm::Succeeded());
     EXPECT_EQ(A1->getFileCharacteristic(), SrcMgr::C_User);
     IncludeFile::FileInfo FI;
-    ASSERT_THAT_ERROR(A1->getBaseFileInfo().moveInto(FI), llvm::Succeeded());
+    ASSERT_THAT_ERROR(A1File->getFileInfo().moveInto(FI), llvm::Succeeded());
     EXPECT_EQ(FI.Filename, "./a1.h");
     EXPECT_EQ(FI.Contents, A1Contents);
     EXPECT_FALSE(A1->getCheckResult(0));
@@ -94,6 +103,7 @@ TEST(IncludeTree, IncludeTreeScan) {
     ASSERT_THAT_ERROR(A1->getInclude(0).moveInto(B1), llvm::Succeeded());
     EXPECT_EQ(A1->getIncludeOffset(0), uint32_t(122));
     {
+      ASSERT_THAT_ERROR(B1->getBaseFile().moveInto(B1File), llvm::Succeeded());
       EXPECT_EQ(B1->getFileCharacteristic(), SrcMgr::C_User);
       IncludeFile::FileInfo FI;
       ASSERT_THAT_ERROR(B1->getBaseFileInfo().moveInto(FI), llvm::Succeeded());
@@ -108,6 +118,7 @@ TEST(IncludeTree, IncludeTreeScan) {
   ASSERT_THAT_ERROR(Main->getInclude(2).moveInto(Sys), llvm::Succeeded());
   EXPECT_EQ(Main->getIncludeOffset(2), uint32_t(42));
   {
+    ASSERT_THAT_ERROR(Sys->getBaseFile().moveInto(SysFile), llvm::Succeeded());
     EXPECT_EQ(Sys->getFileCharacteristic(), SrcMgr::C_System);
     IncludeFile::FileInfo FI;
     ASSERT_THAT_ERROR(Sys->getBaseFileInfo().moveInto(FI), llvm::Succeeded());
@@ -115,5 +126,33 @@ TEST(IncludeTree, IncludeTreeScan) {
     EXPECT_EQ(FI.Contents, "");
 
     ASSERT_EQ(Sys->getNumIncludes(), uint32_t(0));
+  }
+
+  Optional<IncludeFileList> FileList;
+  ASSERT_THAT_ERROR(Root->getFileList().moveInto(FileList), llvm::Succeeded());
+  ASSERT_EQ(FileList->getNumFiles(), size_t(4));
+  {
+    Optional<IncludeFile> File;
+    ASSERT_THAT_ERROR(FileList->getFile(0).moveInto(File), llvm::Succeeded());
+    EXPECT_EQ(File->getRef(), MainFile->getRef());
+    EXPECT_EQ(FileList->getFileSize(0), MainContents.size());
+  }
+  {
+    Optional<IncludeFile> File;
+    ASSERT_THAT_ERROR(FileList->getFile(1).moveInto(File), llvm::Succeeded());
+    EXPECT_EQ(File->getRef(), A1File->getRef());
+    EXPECT_EQ(FileList->getFileSize(1), A1Contents.size());
+  }
+  {
+    Optional<IncludeFile> File;
+    ASSERT_THAT_ERROR(FileList->getFile(2).moveInto(File), llvm::Succeeded());
+    EXPECT_EQ(File->getRef(), B1File->getRef());
+    EXPECT_EQ(FileList->getFileSize(2), IncludeFileList::FileSizeTy(0));
+  }
+  {
+    Optional<IncludeFile> File;
+    ASSERT_THAT_ERROR(FileList->getFile(3).moveInto(File), llvm::Succeeded());
+    EXPECT_EQ(File->getRef(), SysFile->getRef());
+    EXPECT_EQ(FileList->getFileSize(3), IncludeFileList::FileSizeTy(0));
   }
 }

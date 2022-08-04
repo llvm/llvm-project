@@ -33,3 +33,21 @@
 // CHECK:   file llvmcas://
 // CHECK: version: llvmcas://
 // CHECK:   clang version
+
+// Print a key containing an include-tree.
+
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas CLANG_CACHE_ENABLE_INCLUDE_TREE=1 %clang-cache \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/output.o -Rcompile-job-cache 2> %t/output-tree.txt
+
+// RUN: cat %t/output-tree.txt | sed \
+// RUN:   -e "s/^.*miss for '//" \
+// RUN:   -e "s/' .*$//" > %t/cache-key-tree
+
+// RUN: clang-cas-test -print-compile-job-cache-key -cas %t/cas @%t/cache-key-tree | FileCheck %s -check-prefix=INCLUDE_TREE -DSRC_FILE=%s
+//
+// INCLUDE_TREE: command-line: llvmcas://
+// INCLUDE_TREE: computation: llvmcas://
+// INCLUDE_TREE: include-tree: llvmcas://
+// INCLUDE_TREE-NEXT: [[SRC_FILE]] llvmcas://
+// INCLUDE_TREE: Files:
+// INCLUDE_TREE-NEXT: [[SRC_FILE]] llvmcas://

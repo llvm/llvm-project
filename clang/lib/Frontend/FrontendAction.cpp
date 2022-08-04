@@ -12,10 +12,12 @@
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/LangStandard.h"
+#include "clang/CAS/IncludeTree.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
+#include "clang/Frontend/IncludeTreePPActions.h"
 #include "clang/Frontend/LayoutOverrideSource.h"
 #include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Frontend/Utils.h"
@@ -840,6 +842,31 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     if (CI.getLangOpts().ModuleName.empty())
       CI.getLangOpts().ModuleName = std::string(FileName);
     CI.getLangOpts().CurrentModule = CI.getLangOpts().ModuleName;
+  }
+
+  if (Input.isIncludeTree()) {
+    auto reportError = [&](llvm::Error &&E) -> bool {
+      std::string IncludeTreeID =
+          CI.getOrCreateCAS().getID(Input.getIncludeTree()).toString();
+      CI.getDiagnostics().Report(diag::err_fe_unable_to_load_include_tree)
+          << IncludeTreeID << llvm::toString(std::move(E));
+      return false;
+    };
+    auto Root =
+        cas::IncludeTreeRoot::get(CI.getOrCreateCAS(), Input.getIncludeTree());
+    if (!Root)
+      return reportError(Root.takeError());
+    auto IncludeTreeFS = cas::createIncludeTreeFileSystem(*Root);
+    if (!IncludeTreeFS)
+      return reportError(IncludeTreeFS.takeError());
+    CI.getFileManager().setVirtualFileSystem(std::move(*IncludeTreeFS));
+
+    Expected<std::unique_ptr<PPCachedActions>> PPCachedAct =
+        createPPActionsFromIncludeTree(*Root);
+    if (!PPCachedAct)
+      return reportError(PPCachedAct.takeError());
+    CI.getPreprocessor().setPPCachedActions(std::move(*PPCachedAct));
+    CI.getFrontendOpts().IncludeTimestamps = false;
   }
 
   if (!CI.InitializeSourceManager(Input))
