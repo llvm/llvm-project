@@ -134,17 +134,21 @@ Optional<StringRef> getAllocationFamily(const Value *I,
 struct ObjectSizeOpts {
   /// Controls how we handle conditional statements with unknown conditions.
   enum class Mode : uint8_t {
-    /// Fail to evaluate an unknown condition.
-    Exact,
+    /// All branches must be known and have the same size, starting from the
+    /// offset, to be merged.
+    ExactSizeFromOffset,
+    /// All branches must be known and have the same underlying size and offset
+    /// to be merged.
+    ExactUnderlyingSizeAndOffset,
     /// Evaluate all branches of an unknown condition. If all evaluations
     /// succeed, pick the minimum size.
     Min,
     /// Same as Min, except we pick the maximum size of all of the branches.
-    Max
+    Max,
   };
 
   /// How we want to evaluate this object's size.
-  Mode EvalMode = Mode::Exact;
+  Mode EvalMode = Mode::ExactSizeFromOffset;
   /// Whether to round the result up to the alignment of allocas, byval
   /// arguments, and global variables.
   bool RoundToAlign = false;

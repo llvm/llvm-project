@@ -641,7 +641,7 @@ Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
     EvalOptions.EvalMode =
         MaxVal ? ObjectSizeOpts::Mode::Max : ObjectSizeOpts::Mode::Min;
   else
-    EvalOptions.EvalMode = ObjectSizeOpts::Mode::Exact;
+    EvalOptions.EvalMode = ObjectSizeOpts::Mode::ExactSizeFromOffset;
 
   EvalOptions.NullIsUnknownSize =
       cast<ConstantInt>(ObjectSize->getArgOperand(2))->isOne();
@@ -999,9 +999,11 @@ SizeOffsetType ObjectSizeOffsetVisitor::combineSizeOffset(SizeOffsetType LHS,
     return (getSizeWithOverflow(LHS).slt(getSizeWithOverflow(RHS))) ? LHS : RHS;
   case ObjectSizeOpts::Mode::Max:
     return (getSizeWithOverflow(LHS).sgt(getSizeWithOverflow(RHS))) ? LHS : RHS;
-  case ObjectSizeOpts::Mode::Exact:
+  case ObjectSizeOpts::Mode::ExactSizeFromOffset:
     return (getSizeWithOverflow(LHS).eq(getSizeWithOverflow(RHS))) ? LHS
                                                                    : unknown();
+  case ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset:
+    return LHS == RHS && LHS.second.eq(RHS.second) ? LHS : unknown();
   }
   llvm_unreachable("missing an eval mode");
 }
