@@ -21,19 +21,31 @@
 using namespace lldb;
 using namespace lldb_private;
 
+MainLoopWindows::MainLoopWindows() {
+  m_trigger_event = WSACreateEvent();
+  assert(m_trigger_event != WSA_INVALID_EVENT);
+}
+
+MainLoopWindows::~MainLoopWindows() {
+  assert(m_read_fds.empty());
+  BOOL result = WSACloseEvent(m_trigger_event);
+  assert(result == TRUE);
+}
+
 llvm::Expected<size_t> MainLoopWindows::Poll() {
-  std::vector<WSAEVENT> read_events;
-  read_events.reserve(m_read_fds.size());
+  std::vector<WSAEVENT> events;
+  events.reserve(m_read_fds.size() + 1);
   for (auto &[fd, info] : m_read_fds) {
     int result = WSAEventSelect(fd, info.event, FD_READ | FD_ACCEPT | FD_CLOSE);
     assert(result == 0);
     (void)result;
 
-    read_events.push_back(info.event);
+    events.push_back(info.event);
   }
+  events.push_back(m_trigger_event);
 
-  DWORD result = WSAWaitForMultipleEvents(
-      read_events.size(), read_events.data(), FALSE, WSA_INFINITE, FALSE);
+  DWORD result = WSAWaitForMultipleEvents(events.size(), events.data(), FALSE,
+                                          WSA_INFINITE, FALSE);
 
   for (auto &fd : m_read_fds) {
     int result = WSAEventSelect(fd.first, WSA_INVALID_EVENT, 0);
@@ -41,8 +53,7 @@ llvm::Expected<size_t> MainLoopWindows::Poll() {
     (void)result;
   }
 
-  if (result >= WSA_WAIT_EVENT_0 &&
-      result < WSA_WAIT_EVENT_0 + read_events.size())
+  if (result >= WSA_WAIT_EVENT_0 && result <= WSA_WAIT_EVENT_0 + events.size())
     return result - WSA_WAIT_EVENT_0;
 
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
@@ -109,10 +120,18 @@ Status MainLoopWindows::Run() {
     if (!signaled_event)
       return Status(signaled_event.takeError());
 
-    auto &KV = *std::next(m_read_fds.begin(), *signaled_event);
-
-    ProcessReadObject(KV.first);
+    if (*signaled_event < m_read_fds.size()) {
+      auto &KV = *std::next(m_read_fds.begin(), *signaled_event);
+      ProcessReadObject(KV.first);
+    } else {
+      assert(*signaled_event == m_read_fds.size());
+      WSAResetEvent(m_trigger_event);
+    }
     ProcessPendingCallbacks();
   }
   return Status();
+}
+
+void MainLoopWindows::TriggerPendingCallbacks() {
+  WSASetEvent(m_trigger_event);
 }
