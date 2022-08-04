@@ -144,6 +144,33 @@ TEST_F(MainLoopTest, PendingCallbackCalledOnlyOnce) {
   ASSERT_EQ(3u, callback_count);
 }
 
+TEST_F(MainLoopTest, PendingCallbackTrigger) {
+  MainLoop loop;
+  std::promise<void> add_callback2;
+  bool callback1_called = false;
+  loop.AddPendingCallback([&](MainLoopBase &loop) {
+    callback1_called = true;
+    add_callback2.set_value();
+  });
+  Status error;
+  auto socket_handle = loop.RegisterReadObject(
+      socketpair[1], [](MainLoopBase &) {}, error);
+  ASSERT_TRUE(socket_handle);
+  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  bool callback2_called = false;
+  std::thread callback2_adder([&]() {
+    add_callback2.get_future().get();
+    loop.AddPendingCallback([&](MainLoopBase &loop) {
+      callback2_called = true;
+      loop.RequestTermination();
+    });
+  });
+  ASSERT_THAT_ERROR(loop.Run().ToError(), llvm::Succeeded());
+  callback2_adder.join();
+  ASSERT_TRUE(callback1_called);
+  ASSERT_TRUE(callback2_called);
+}
+
 #ifdef LLVM_ON_UNIX
 TEST_F(MainLoopTest, DetectsEOF) {
 
