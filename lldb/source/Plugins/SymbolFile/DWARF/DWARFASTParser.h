@@ -31,9 +31,6 @@ public:
                                           const DWARFDIE &die,
                                           bool *type_is_new_ptr) = 0;
 
-  virtual lldb_private::ConstString
-  ConstructDemangledNameFromDWARF(const DWARFDIE &die) = 0;
-
   virtual lldb_private::Function *
   ParseFunctionFromDWARF(lldb_private::CompileUnit &comp_unit,
                          const DWARFDIE &die,
