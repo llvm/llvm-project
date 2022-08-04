@@ -19,7 +19,6 @@ add_llvm_target(DirectXCodeGen
   DirectXTargetMachine.cpp
   DXILOpBuilder.cpp
   DXILOpLowering.cpp
-  DXILPointerType.cpp
   DXILPrepare.cpp
   DXILTranslateMetadata.cpp
   PointerTypeAnalysis.cpp
