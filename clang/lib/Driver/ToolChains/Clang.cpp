@@ -2580,6 +2580,13 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       switch (C.getDefaultToolChain().getArch()) {
       default:
         break;
+      case llvm::Triple::wasm32:
+      case llvm::Triple::wasm64:
+        if (Value == "--no-type-check") {
+          CmdArgs.push_back("-mno-type-check");
+          continue;
+        }
+        break;
       case llvm::Triple::thumb:
       case llvm::Triple::thumbeb:
       case llvm::Triple::arm:
