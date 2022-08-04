@@ -2441,6 +2441,8 @@ static void MakeSpeedTestPacket(StreamString &packet, uint32_t send_size,
 
 duration<float>
 calculate_standard_deviation(const std::vector<duration<float>> &v) {
+  if (v.size() == 0)
+    return duration<float>::zero();
   using Dur = duration<float>;
   Dur sum = std::accumulate(std::begin(v), std::end(v), Dur());
   Dur mean = sum / v.size();
@@ -2458,7 +2460,7 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
                                                    uint32_t max_recv,
                                                    uint64_t recv_amount,
                                                    bool json, Stream &strm) {
-  uint32_t i;
+
   if (SendSpeedTestPacket(0, 0)) {
     StreamString packet;
     if (json)
@@ -2483,7 +2485,7 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
         packet_times.clear();
         // Test how long it takes to send 'num_packets' packets
         const auto start_time = steady_clock::now();
-        for (i = 0; i < num_packets; ++i) {
+        for (uint32_t i = 0; i < num_packets; ++i) {
           const auto packet_start_time = steady_clock::now();
           StringExtractorGDBRemote response;
           SendPacketAndWaitForResponse(packet.GetString(), response);
@@ -2495,7 +2497,8 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
 
         float packets_per_second =
             ((float)num_packets) / duration<float>(total_time).count();
-        auto average_per_packet = total_time / num_packets;
+        auto average_per_packet = num_packets > 0 ? total_time / num_packets
+                                                  : duration<float>::zero();
         const duration<float> standard_deviation =
             calculate_standard_deviation(packet_times);
         if (json) {
@@ -2551,7 +2554,9 @@ void GDBRemoteCommunicationClient::TestPacketSpeed(const uint32_t num_packets,
                           (1024.0 * 1024.0);
         float packets_per_second =
             ((float)packet_count) / duration<float>(total_time).count();
-        const auto average_per_packet = total_time / packet_count;
+        const auto average_per_packet = packet_count > 0
+                                            ? total_time / packet_count
+                                            : duration<float>::zero();
 
         if (json) {
           strm.Format("{0}\n     {{\"send_size\" : {1,6}, \"recv_size\" : "
