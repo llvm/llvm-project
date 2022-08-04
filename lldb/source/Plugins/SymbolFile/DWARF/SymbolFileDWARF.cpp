@@ -862,27 +862,6 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die, func_range);
 }
 
-ConstString
-SymbolFileDWARF::ConstructFunctionDemangledName(const DWARFDIE &die) {
-  ASSERT_MODULE_LOCK(this);
-  if (!die.IsValid()) {
-    return ConstString();
-  }
-
-  auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.GetCU()));
-  if (auto err = type_system_or_err.takeError()) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to construct demangled name for function");
-    return ConstString();
-  }
-
-  DWARFASTParser *dwarf_ast = type_system_or_err->GetDWARFParser();
-  if (!dwarf_ast)
-    return ConstString();
-
-  return dwarf_ast->ConstructDemangledNameFromDWARF(die);
-}
-
 lldb::addr_t SymbolFileDWARF::FixupAddress(lldb::addr_t file_addr) {
   SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
   if (debug_map_symfile)
@@ -2331,13 +2310,12 @@ bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx,
   return false;
 }
 
-void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
+void SymbolFileDWARF::FindFunctions(ConstString name,
                                     const CompilerDeclContext &parent_decl_ctx,
+                                    FunctionNameType name_type_mask,
                                     bool include_inlines,
                                     SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  ConstString name = lookup_info.GetLookupName();
-  FunctionNameType name_type_mask = lookup_info.GetNameTypeMask();
   LLDB_SCOPED_TIMERF("SymbolFileDWARF::FindFunctions (name = '%s')",
                      name.AsCString());
 
@@ -2369,11 +2347,12 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
 
   llvm::DenseSet<const DWARFDebugInfoEntry *> resolved_dies;
 
-  m_index->GetFunctions(lookup_info, *this, parent_decl_ctx, [&](DWARFDIE die) {
-    if (resolved_dies.insert(die.GetDIE()).second)
-      ResolveFunction(die, include_inlines, sc_list);
-    return true;
-  });
+  m_index->GetFunctions(name, *this, parent_decl_ctx, name_type_mask,
+                        [&](DWARFDIE die) {
+                          if (resolved_dies.insert(die.GetDIE()).second)
+                            ResolveFunction(die, include_inlines, sc_list);
+                          return true;
+                        });
 
   // Return the number of variable that were appended to the list
   const uint32_t num_matches = sc_list.GetSize() - original_size;

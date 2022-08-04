@@ -1305,13 +1305,11 @@ void SymbolFilePDB::CacheFunctionNames() {
 }
 
 void SymbolFilePDB::FindFunctions(
-    const lldb_private::Module::LookupInfo &lookup_info,
+    lldb_private::ConstString name,
     const lldb_private::CompilerDeclContext &parent_decl_ctx,
-    bool include_inlines,
+    FunctionNameType name_type_mask, bool include_inlines,
     lldb_private::SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  ConstString name = lookup_info.GetLookupName();
-  FunctionNameType name_type_mask = lookup_info.GetNameTypeMask();
   lldbassert((name_type_mask & eFunctionNameTypeAuto) == 0);
 
   if (name_type_mask == eFunctionNameTypeNone)

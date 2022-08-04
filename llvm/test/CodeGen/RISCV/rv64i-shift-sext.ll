@@ -170,3 +170,29 @@ define i32 @test12(i32 signext %0) {
   %3 = ashr i32 %2, 15
   ret i32 %3
 }
+
+define i8 @test13(i8* %0, i64 %1) {
+; RV64I-LABEL: test13:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a2, 1
+; RV64I-NEXT:    subw a2, a2, a1
+; RV64I-NEXT:    add a2, a0, a2
+; RV64I-NEXT:    lb a2, 0(a2)
+; RV64I-NEXT:    li a3, 2
+; RV64I-NEXT:    subw a1, a3, a1
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    lb a0, 0(a0)
+; RV64I-NEXT:    add a0, a2, a0
+; RV64I-NEXT:    ret
+  %3 = mul i64 %1, -4294967296
+  %4 = add i64 %3, 4294967296 ; 1 << 32
+  %5 = ashr exact i64 %4, 32
+  %6 = getelementptr inbounds i8, i8* %0, i64 %5
+  %7 = load i8, i8* %6, align 4
+  %8 = add i64 %3, 8589934592 ; 2 << 32
+  %9 = ashr exact i64 %8, 32
+  %10 = getelementptr inbounds i8, i8* %0, i64 %9
+  %11 = load i8, i8* %10, align 4
+  %12 = add i8 %7, %11
+  ret i8 %12
+}
