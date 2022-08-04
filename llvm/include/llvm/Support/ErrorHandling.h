@@ -147,7 +147,11 @@ llvm_unreachable_internal(const char *msg = nullptr, const char *file = nullptr,
 #elif LLVM_UNREACHABLE_OPTIMIZE
 #define llvm_unreachable(msg) LLVM_BUILTIN_UNREACHABLE
 #else
-#define llvm_unreachable(msg) LLVM_BUILTIN_TRAP, LLVM_BUILTIN_UNREACHABLE
+#define llvm_unreachable(msg)                                                  \
+  do {                                                                         \
+    LLVM_BUILTIN_TRAP;                                                         \
+    LLVM_BUILTIN_UNREACHABLE;                                                  \
+  } while (false)
 #endif
 
 #endif
