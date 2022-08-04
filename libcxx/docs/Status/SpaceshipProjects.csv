@@ -33,7 +33,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[stacktrace.entry.cmp] <https://wg21.link/stacktrace.entry.cmp>`_,| stacktrace_entry,None,Unassigned,|Not Started|
 | `[stacktrace.basic.cmp] <https://wg21.link/stacktrace.basic.cmp>`_,| basic_stacktrace,[alg.three.way],Unassigned,|Not Started|
 | `[string.cmp] <https://wg21.link/string.cmp>`_,| basic_string,None,Mark de Wever,|In Progress|
-| `[string.view.comparison] <https://wg21.link/string.view.comparison>`_,| `basic_string_view <https://reviews.llvm.org/D130295>`_,None,Mark de Wever,|In Progress|
+| `[string.view.comparison] <https://wg21.link/string.view.comparison>`_,| `basic_string_view <https://reviews.llvm.org/D130295>`_,None,Mark de Wever,|Complete|
 | `[array.syn] <https://wg21.link/array.syn>`_ (`general <https://wg21.link/container.requirements.general#14>`_),| array,[expos.only.func],Unassigned,|Not Started|
 | `[deque.syn] <https://wg21.link/deque.syn>`_ (`general <https://wg21.link/container.requirements.general#14>`_),| deque,[expos.only.func],Unassigned,|Not Started|
 | `[forward.list.syn] <https://wg21.link/forward.list.syn>`_ (`general <https://wg21.link/container.requirements.general#14>`_),| forward_list,[expos.only.func],Unassigned,|Not Started|

@@ -15,6 +15,7 @@
 // typedef streamoff off_type;
 // typedef streampos pos_type;
 // typedef mbstate_t state_type;
+// using comparison_category = strong_ordering;
 
 // UNSUPPORTED: no-wide-characters
 
@@ -30,6 +31,9 @@ int main(int, char**)
     static_assert((std::is_same<std::char_traits<wchar_t>::off_type, std::streamoff>::value), "");
     static_assert((std::is_same<std::char_traits<wchar_t>::pos_type, std::wstreampos>::value), "");
     static_assert((std::is_same<std::char_traits<wchar_t>::state_type, std::mbstate_t>::value), "");
+#if TEST_STD_VER > 17
+    static_assert(std::is_same_v<std::char_traits<wchar_t>::comparison_category, std::strong_ordering>);
+#endif
 
   return 0;
 }

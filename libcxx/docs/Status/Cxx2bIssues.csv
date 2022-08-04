@@ -7,7 +7,7 @@
 "`3236 <https://wg21.link/LWG3236>`__","Random access iterator requirements lack limiting relational operators domain to comparing those from the same range","November 2020","|Nothing To Do|","","|ranges|"
 "`3265 <https://wg21.link/LWG3265>`__","``move_iterator``'s conversions are more broken after P1207","November 2020","Fixed by `LWG3435 <https://wg21.link/LWG3435>`__",""
 "`3435 <https://wg21.link/LWG3435>`__","``three_way_comparable_with<reverse_iterator<int*>, reverse_iterator<const int*>>``","November 2020","|Complete|","13.0"
-"`3432 <https://wg21.link/LWG3432>`__","Missing requirement for ``comparison_category``","November 2020","","","|spaceship|"
+"`3432 <https://wg21.link/LWG3432>`__","Missing requirement for ``comparison_category``","November 2020","|Complete|","16.0","|spaceship|"
 "`3447 <https://wg21.link/LWG3447>`__","Deduction guides for ``take_view`` and ``drop_view`` have different constraints","November 2020","|Complete|","14.0"
 "`3450 <https://wg21.link/LWG3450>`__","The const overloads of ``take_while_view::begin/end`` are underconstrained","November 2020","","","|ranges|"
 "`3464 <https://wg21.link/LWG3464>`__","``istream::gcount()`` can overflow","November 2020","",""
