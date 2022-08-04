@@ -561,7 +561,7 @@ private:
     // Otherwise, set the specialization cost to be the cost of all the
     // instructions in the function and penalty for specializing more functions.
     unsigned Penalty = NbFunctionsSpecialized + 1;
-    return Metrics.NumInsts * InlineConstants::InstrCost * Penalty;
+    return Metrics.NumInsts * InlineConstants::getInstrCost() * Penalty;
   }
 
   InstructionCost getUserBonus(User *U, llvm::TargetTransformInfo &TTI,
