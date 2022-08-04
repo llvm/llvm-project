@@ -66,7 +66,8 @@ ProfileSpecialCaseList::createOrDie(const std::vector<std::string> &Paths,
 ProfileList::ProfileList(ArrayRef<std::string> Paths, SourceManager &SM)
     : SCL(ProfileSpecialCaseList::createOrDie(
           Paths, SM.getFileManager().getVirtualFileSystem())),
-      Empty(SCL->isEmpty()), SM(SM) {}
+      Empty(SCL->isEmpty()),
+      Default(SCL->hasPrefix("fun") || SCL->hasPrefix("src")), SM(SM) {}
 
 ProfileList::~ProfileList() = default;
 
@@ -84,66 +85,30 @@ static StringRef getSectionName(CodeGenOptions::ProfileInstrKind Kind) {
   llvm_unreachable("Unhandled CodeGenOptions::ProfileInstrKind enum");
 }
 
-ProfileList::ExclusionType
-ProfileList::getDefault(CodeGenOptions::ProfileInstrKind Kind) const {
-  StringRef Section = getSectionName(Kind);
-  // Check for "default:<type>"
-  if (SCL->inSection(Section, "default", "allow"))
-    return Allow;
-  if (SCL->inSection(Section, "default", "skip"))
-    return Skip;
-  if (SCL->inSection(Section, "default", "forbid"))
-    return Forbid;
-  // If any cases use "fun" or "src", set the default to FORBID.
-  if (SCL->hasPrefix("fun") || SCL->hasPrefix("src"))
-    return Forbid;
-  return Allow;
-}
-
-llvm::Optional<ProfileList::ExclusionType>
-ProfileList::inSection(StringRef Section, StringRef Prefix,
-                       StringRef Query) const {
-  if (SCL->inSection(Section, Prefix, Query, "allow"))
-    return Allow;
-  if (SCL->inSection(Section, Prefix, Query, "skip"))
-    return Skip;
-  if (SCL->inSection(Section, Prefix, Query, "forbid"))
-    return Forbid;
-  if (SCL->inSection(Section, Prefix, Query))
-    return Allow;
-  return None;
-}
-
-llvm::Optional<ProfileList::ExclusionType>
+llvm::Optional<bool>
 ProfileList::isFunctionExcluded(StringRef FunctionName,
                                 CodeGenOptions::ProfileInstrKind Kind) const {
   StringRef Section = getSectionName(Kind);
-  // Check for "function:<regex>=<case>"
-  if (auto V = inSection(Section, "function", FunctionName))
-    return V;
   if (SCL->inSection(Section, "!fun", FunctionName))
-    return Forbid;
+    return true;
   if (SCL->inSection(Section, "fun", FunctionName))
-    return Allow;
+    return false;
   return None;
 }
 
-llvm::Optional<ProfileList::ExclusionType>
+llvm::Optional<bool>
 ProfileList::isLocationExcluded(SourceLocation Loc,
                                 CodeGenOptions::ProfileInstrKind Kind) const {
   return isFileExcluded(SM.getFilename(SM.getFileLoc(Loc)), Kind);
 }
 
-llvm::Optional<ProfileList::ExclusionType>
+llvm::Optional<bool>
 ProfileList::isFileExcluded(StringRef FileName,
                             CodeGenOptions::ProfileInstrKind Kind) const {
   StringRef Section = getSectionName(Kind);
-  // Check for "source:<regex>=<case>"
-  if (auto V = inSection(Section, "source", FileName))
-    return V;
   if (SCL->inSection(Section, "!src", FileName))
-    return Forbid;
+    return true;
   if (SCL->inSection(Section, "src", FileName))
-    return Allow;
+    return false;
   return None;
 }

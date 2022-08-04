@@ -4,21 +4,21 @@
 
 // Group 0
 
-// SELECT1: skipprofile
-// SELECT2: skipprofile
+// SELECT1: noprofile
+// SELECT2: noprofile
 // CHECK: define {{.*}} @hoo()
 void hoo() {}
 
 // Group 1
-// SELECT0: skipprofile
+// SELECT0: noprofile
 
-// SELECT2: skipprofile
+// SELECT2: noprofile
 // CHECK: define {{.*}} @goo()
 void goo() {}
 
 // Group 2
-// SELECT0: skipprofile
-// SELECT1: skipprofile
+// SELECT0: noprofile
+// SELECT1: noprofile
 
 // CHECK: define {{.*}} @boo()
 void boo() {}
