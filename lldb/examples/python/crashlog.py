@@ -600,11 +600,11 @@ class TextCrashLogParser:
     thread_regex = re.compile('^Thread ([0-9]+)([^:]*):(.*)')
     app_backtrace_regex = re.compile('^Application Specific Backtrace ([0-9]+)([^:]*):(.*)')
     version = r'(\(.+\)|(arm|x86_)[0-9a-z]+)\s+'
-    frame_regex = re.compile(r'^([0-9]+)' r'\s'                # id
-                             r'+(.+?)'    r'\s+'               # img_name
-                             r'(' +version+ r')?'              # img_version
-                             r'(0x[0-9a-fA-F]{7}[0-9a-fA-F]+)' # addr
-                             r' +(.*)'                         # offs
+    frame_regex = re.compile(r'^([0-9]+)' r'\s+'                # id
+                             r'(.+?)' r'\s+'                    # img_name
+                             r'(' +version+ r')?'               # img_version
+                             r'(0x[0-9a-fA-F]{7,})'             # addr (7 chars or more)
+                             r' +(.*)'                          # offs
                             )
     null_frame_regex = re.compile(r'^([0-9]+)\s+\?\?\?\s+(0{7}0+) +(.*)')
     image_regex_uuid = re.compile(r'(0x[0-9a-fA-F]+)'            # img_lo
