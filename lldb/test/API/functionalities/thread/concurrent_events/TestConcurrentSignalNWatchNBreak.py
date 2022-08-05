@@ -14,10 +14,6 @@ class ConcurrentSignalNWatchNBreak(ConcurrentEventsBase):
     @expectedFailureNetBSD
     @expectedFailureAll(archs=["aarch64"], oslist=["freebsd"],
                         bugnumber="llvm.org/pr49433")
-    @skipIf(
-        oslist=["ios", "watchos", "tvos", "bridgeos", "macosx"],
-        archs=['arm64', 'arm64e', 'arm64_32', 'arm'],
-        bugnumber="rdar://93863107")
     @add_test_categories(["watchpoint"])
     def test(self):
         """Test one signal thread with 5 watchpoint and breakpoint threads."""

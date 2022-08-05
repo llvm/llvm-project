@@ -75,7 +75,7 @@ public:
   bool IsHardware() const override;
 
   bool ShouldStop(StoppointCallbackContext *context) override;
-
+  
   bool WatchpointRead() const;
   bool WatchpointWrite() const;
   uint32_t GetIgnoreCount() const;
@@ -157,11 +157,14 @@ public:
 private:
   friend class Target;
   friend class WatchpointList;
+  friend class StopInfoWatchpoint; // This needs to call UndoHitCount()
 
   void ResetHistoricValues() {
     m_old_value_sp.reset();
     m_new_value_sp.reset();
   }
+
+  void UndoHitCount() { m_hit_counter.Decrement(); }
 
   Target &m_target;
   bool m_enabled;           // Is this watchpoint enabled
