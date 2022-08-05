@@ -1777,8 +1777,15 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
     for (auto *DVI : DIs)
       DVI->replaceUsesOfWith(Alloca, G);
 
-    for (Instruction *I : UsersToUpdate)
+    for (Instruction *I : UsersToUpdate) {
+      // It is meaningless to remain the lifetime intrinsics refer for the
+      // member of coroutine frames and the meaningless lifetime intrinsics
+      // are possible to block further optimizations.
+      if (I->isLifetimeStartOrEnd())
+        continue;
+
       I->replaceUsesOfWith(Alloca, G);
+    }
   }
   Builder.SetInsertPoint(Shape.getInsertPtAfterFramePtr());
   for (const auto &A : FrameData.Allocas) {
