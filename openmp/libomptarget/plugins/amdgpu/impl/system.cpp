@@ -192,11 +192,13 @@ find_metadata(void *binary, size_t binSize) {
         address name = (address)&note[1];
 
         if (note->n_type == 7 || note->n_type == 8) {
+          elf_end(e);
           return failure;
         } else if (note->n_type == 10 /* NT_AMD_AMDGPU_HSA_METADATA */ &&
                    note->n_namesz == sizeof "AMD" &&
                    !memcmp(name, "AMD", note->n_namesz)) {
           // code object v2 uses yaml metadata, no longer supported
+          elf_end(e);
           return failure;
         } else if (note->n_type == 32 /* NT_AMDGPU_METADATA */ &&
                    note->n_namesz == sizeof "AMDGPU" &&
@@ -214,6 +216,7 @@ find_metadata(void *binary, size_t binSize) {
           unsigned char *metadata_start = (unsigned char *)ptr + offset;
           unsigned char *metadata_end =
               metadata_start + core::alignUp(note->n_descsz, 4);
+          elf_end(e);
           return {metadata_start, metadata_end};
         }
         ptr += sizeof(*note) + core::alignUp(note->n_namesz, sizeof(int)) +
@@ -221,7 +224,7 @@ find_metadata(void *binary, size_t binSize) {
       }
     }
   }
-
+  elf_end(e);
   return failure;
 }
 
@@ -350,6 +353,7 @@ static hsa_status_t get_code_object_custom_metadata(
   msgpack_errors =
       map_lookup_array({metadata.first, metadata.second}, "amdhsa.kernels",
                        &kernel_array, &kernelsSize);
+
   if (msgpack_errors != 0) {
     printf("[%s:%d] %s failed\n", __FILE__, __LINE__,
            "kernels lookup in program metadata");
