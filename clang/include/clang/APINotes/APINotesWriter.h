@@ -93,9 +93,6 @@ public:
   void addGlobalFunction(llvm::StringRef name, const GlobalFunctionInfo &info,
                          llvm::VersionTuple swiftVersion);
 
-  void addMemberFunction(llvm::StringRef name, const FunctionInfo &info,
-                         llvm::VersionTuple swiftVersion);
-
   /// Add information about an enumerator.
   ///
   /// \param name The name of this enumerator.

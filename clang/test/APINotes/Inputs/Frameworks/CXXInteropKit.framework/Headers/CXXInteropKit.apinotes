@@ -13,20 +13,3 @@ Enumerators:
 Tags:
 - Name: NSSomeEnumOptions
   SwiftName: SomeEnum.Options
-- Name: GlobalStruct
-  Methods:
-  - Name: 'method'
-    SwiftName: globalMethod()
-    SwiftImportAs: unsafe
-- Name: ParentNS.ChildNS.ParentStruct.ChildStruct
-  Methods:
-    - Name: 'method'
-      SwiftName: nestedMethod()
-- Name: ImportAsReference
-  SwiftImportAs: reference
-  SwiftRetain: IARetain
-  SwiftRelease: IARelease
-Functions:
-- Name: ParentNS.ChildNS.gloablFnInNS
-  SwiftName: childFnInNS()
-  SwiftImportAs: unsafe

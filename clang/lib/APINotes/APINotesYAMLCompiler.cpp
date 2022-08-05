@@ -402,7 +402,6 @@ struct Function {
   StringRef SwiftName;
   StringRef Type;
   StringRef ResultType;
-  Optional<StringRef> SwiftImportAs;
 };
 
 typedef std::vector<Function> FunctionsSeq;
@@ -425,7 +424,6 @@ template <> struct MappingTraits<Function> {
     IO.mapOptional("SwiftPrivate", F.SwiftPrivate);
     IO.mapOptional("SwiftName", F.SwiftName, StringRef(""));
     IO.mapOptional("ResultType", F.ResultType, StringRef(""));
-    IO.mapOptional("SwiftImportAs", F.SwiftImportAs);
   }
 };
 } // namespace yaml
@@ -532,10 +530,6 @@ struct Tag {
   Optional<EnumExtensibilityKind> EnumExtensibility;
   Optional<bool> FlagEnum;
   Optional<EnumConvenienceAliasKind> EnumConvenienceKind;
-  Optional<StringRef> SwiftImportAs;
-  Optional<StringRef> SwiftRetainOp;
-  Optional<StringRef> SwiftReleaseOp;
-  FunctionsSeq MemberFunctions;
 };
 
 typedef std::vector<Tag> TagsSeq;
@@ -566,10 +560,6 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("EnumExtensibility", T.EnumExtensibility);
     IO.mapOptional("FlagEnum", T.FlagEnum);
     IO.mapOptional("EnumKind", T.EnumConvenienceKind);
-    IO.mapOptional("SwiftImportAs", T.SwiftImportAs);
-    IO.mapOptional("SwiftRetain", T.SwiftRetainOp);
-    IO.mapOptional("SwiftRelease", T.SwiftReleaseOp);
-    IO.mapOptional("Methods", T.MemberFunctions);
   }
 };
 } // namespace yaml
@@ -1040,9 +1030,6 @@ namespace {
                            info, function.Name);
         info.ResultType = std::string(function.ResultType);
         info.setRetainCountConvention(function.RetainCountConvention);
-        if (function.SwiftImportAs)
-          info.SwiftImportAs = function.SwiftImportAs->str();
-
         Writer->addGlobalFunction(function.Name, info, swiftVersion);
       }
 
@@ -1111,33 +1098,7 @@ namespace {
           tagInfo.setFlagEnum(t.FlagEnum);          
         }
 
-        if (t.SwiftImportAs)
-          tagInfo.SwiftImportAs = t.SwiftImportAs->str();
-        if (t.SwiftRetainOp)
-          tagInfo.SwiftRetainOp = t.SwiftRetainOp->str();
-        if (t.SwiftReleaseOp)
-          tagInfo.SwiftReleaseOp = t.SwiftReleaseOp->str();
-
         Writer->addTag(t.Name, tagInfo, swiftVersion);
-
-        for (auto Member : t.MemberFunctions) {
-          auto MemberName = (t.Name + "." + Member.Name).str();
-
-          FunctionInfo info;
-          convertAvailability(Member.Availability, info, MemberName);
-          info.setSwiftPrivate(Member.SwiftPrivate);
-          info.SwiftName = std::string(Member.SwiftName);
-          convertParams(Member.Params, info);
-          convertNullability(Member.Nullability,
-                             Member.NullabilityOfRet,
-                             info, MemberName);
-          info.ResultType = std::string(Member.ResultType);
-          info.setRetainCountConvention(Member.RetainCountConvention);
-          if (Member.SwiftImportAs)
-            info.SwiftImportAs = Member.SwiftImportAs->str();
-
-          Writer->addMemberFunction(MemberName, info, swiftVersion);
-        }
       }
 
       // Write all typedefs.

@@ -101,11 +101,6 @@ public:
                                    1>>
     GlobalFunctions;
 
-  llvm::DenseMap<unsigned,
-                 llvm::SmallVector<std::pair<VersionTuple, FunctionInfo>,
-                                   1>>
-      MemberFunctions;
-
   /// Information about enumerators.
   ///
   /// Indexed by the identifier ID.
@@ -174,7 +169,6 @@ private:
   void writeObjCSelectorBlock(llvm::BitstreamWriter &writer);
   void writeGlobalVariableBlock(llvm::BitstreamWriter &writer);
   void writeGlobalFunctionBlock(llvm::BitstreamWriter &writer);
-  void writeMemberFunctionBlock(llvm::BitstreamWriter &writer);
   void writeEnumConstantBlock(llvm::BitstreamWriter &writer);
   void writeTagBlock(llvm::BitstreamWriter &writer);
   void writeTypedefBlock(llvm::BitstreamWriter &writer);
@@ -739,8 +733,7 @@ namespace {
   /// Retrieve the serialized size of the given FunctionInfo, for use in
   /// on-disk hash tables.
   static unsigned getFunctionInfoSize(const FunctionInfo &info) {
-    unsigned size = 2 + sizeof(uint64_t) + getCommonEntityInfoSize(info) + 2 +
-                    2 + (info.SwiftImportAs ? info.SwiftImportAs->size() : 0);
+    unsigned size = 2 + sizeof(uint64_t) + getCommonEntityInfoSize(info) + 2;
 
     for (const auto &param : info.Params)
       size += getParamInfoSize(param);
@@ -774,13 +767,6 @@ namespace {
     // Result type.
     writer.write<uint16_t>(info.ResultType.size());
     out.write(info.ResultType.data(), info.ResultType.size());
-
-    if (auto importAs = info.SwiftImportAs) {
-      writer.write<uint16_t>(importAs->size() + 1);
-      out.write(importAs->c_str(), importAs->size());
-    } else {
-      writer.write<uint16_t>(0);
-    }
   }
 
   /// Used to serialize the on-disk Objective-C method table.
@@ -984,31 +970,6 @@ namespace {
       emitFunctionInfo(out, info);
     }
   };
-
-  /// Used to serialize the on-disk global function table.
-  class MemberFunctionTableInfo
-      : public VersionedTableInfo<MemberFunctionTableInfo,
-                                  unsigned,
-                                  FunctionInfo> {
-  public:
-    unsigned getKeyLength(key_type_ref) {
-      return sizeof(uint32_t);
-    }
-
-    void EmitKey(raw_ostream &out, key_type_ref key, unsigned len) {
-      endian::Writer writer(out, little);
-      writer.write<uint32_t>(key);
-    }
-
-    unsigned getUnversionedInfoSize(const FunctionInfo &info) {
-      return getFunctionInfoSize(info);
-    }
-
-    void emitUnversionedInfo(raw_ostream &out,
-                             const FunctionInfo &info) {
-      emitFunctionInfo(out, info);
-    }
-  };
 } // end anonymous namespace
 
 void APINotesWriter::Implementation::writeGlobalFunctionBlock(
@@ -1033,31 +994,6 @@ void APINotesWriter::Implementation::writeGlobalFunctionBlock(
   }
 
   global_function_block::GlobalFunctionDataLayout layout(writer);
-  layout.emit(ScratchRecord, tableOffset, hashTableBlob);
-}
-
-void APINotesWriter::Implementation::writeMemberFunctionBlock(
-    llvm::BitstreamWriter &writer) {
-  llvm::BCBlockRAII restoreBlock(writer, MEMBER_FUNCTION_BLOCK_ID, 3);
-
-  if (MemberFunctions.empty())
-    return;
-
-  llvm::SmallString<4096> hashTableBlob;
-  uint32_t tableOffset;
-  {
-    llvm::OnDiskChainedHashTableGenerator<MemberFunctionTableInfo> generator;
-    for (auto &entry : MemberFunctions) {
-      generator.insert(entry.first, entry.second);
-    }
-
-    llvm::raw_svector_ostream blobStream(hashTableBlob);
-    // Make sure that no bucket is at offset 0
-    endian::write<uint32_t>(blobStream, 0, little);
-    tableOffset = generator.Emit(blobStream);
-  }
-
-  member_function_block::MemberFunctionDataLayout layout(writer);
   layout.emit(ScratchRecord, tableOffset, hashTableBlob);
 }
 
@@ -1140,10 +1076,7 @@ namespace {
   class TagTableInfo : public CommonTypeTableInfo<TagTableInfo, TagInfo> {
   public:
     unsigned getUnversionedInfoSize(const TagInfo &info) {
-      return 2 + (info.SwiftImportAs ? info.SwiftImportAs->size() : 0) +
-             2 + (info.SwiftRetainOp ? info.SwiftRetainOp->size() : 0) +
-             2 + (info.SwiftReleaseOp ? info.SwiftReleaseOp->size() : 0) +
-          1 + getCommonTypeInfoSize(info);
+      return 1 + getCommonTypeInfoSize(info);
     }
 
     void emitUnversionedInfo(raw_ostream &out, const TagInfo &info) {
@@ -1162,19 +1095,6 @@ namespace {
       }
 
       writer.write<uint8_t>(payload);
-
-      auto writeStringIfPresent = [&](llvm::Optional<std::string> opt) {
-        if (auto value = opt) {
-          writer.write<uint16_t>(value->size() + 1);
-          out.write(value->c_str(), value->size());
-        } else {
-          writer.write<uint16_t>(0);
-        }
-      };
-
-      writeStringIfPresent(info.SwiftImportAs);
-      writeStringIfPresent(info.SwiftRetainOp);
-      writeStringIfPresent(info.SwiftReleaseOp);
 
       emitCommonTypeInfo(out, info);
     }
@@ -1276,7 +1196,6 @@ void APINotesWriter::Implementation::writeToStream(llvm::raw_ostream &os) {
     writeObjCSelectorBlock(writer);
     writeGlobalVariableBlock(writer);
     writeGlobalFunctionBlock(writer);
-    writeMemberFunctionBlock(writer);
     writeEnumConstantBlock(writer);
     writeTagBlock(writer);
     writeTypedefBlock(writer);
@@ -1393,13 +1312,6 @@ void APINotesWriter::addGlobalFunction(llvm::StringRef name,
                                        VersionTuple swiftVersion) {
   IdentifierID nameID = Impl.getIdentifier(name);
   Impl.GlobalFunctions[nameID].push_back({swiftVersion, info});
-}
-
-void APINotesWriter::addMemberFunction(llvm::StringRef name,
-                                       const FunctionInfo &info,
-                                       VersionTuple swiftVersion) {
-  IdentifierID nameID = Impl.getIdentifier(name);
-  Impl.MemberFunctions[nameID].push_back({swiftVersion, info});
 }
 
 void APINotesWriter::addEnumConstant(llvm::StringRef name,
