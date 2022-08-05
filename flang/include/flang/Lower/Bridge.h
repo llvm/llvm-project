@@ -15,6 +15,7 @@
 
 #include "flang/Common/Fortran.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/LoweringOptions.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Support/KindMapping.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -52,9 +53,10 @@ public:
          const Fortran::evaluate::IntrinsicProcTable &intrinsics,
          const Fortran::evaluate::TargetCharacteristics &targetCharacteristics,
          const Fortran::parser::AllCookedSources &allCooked,
-         llvm::StringRef triple, fir::KindMapping &kindMap) {
+         llvm::StringRef triple, fir::KindMapping &kindMap,
+         const Fortran::lower::LoweringOptions &loweringOptions) {
     return LoweringBridge(ctx, defaultKinds, intrinsics, targetCharacteristics,
-                          allCooked, triple, kindMap);
+                          allCooked, triple, kindMap, loweringOptions);
   }
 
   //===--------------------------------------------------------------------===//
@@ -83,6 +85,10 @@ public:
   /// Get the kind map.
   const fir::KindMapping &getKindMap() const { return kindMap; }
 
+  const Fortran::lower::LoweringOptions &getLoweringOptions() const {
+    return loweringOptions;
+  }
+
   /// Create a folding context. Careful: this is very expensive.
   Fortran::evaluate::FoldingContext createFoldingContext() const;
 
@@ -107,7 +113,8 @@ private:
       const Fortran::evaluate::IntrinsicProcTable &intrinsics,
       const Fortran::evaluate::TargetCharacteristics &targetCharacteristics,
       const Fortran::parser::AllCookedSources &cooked, llvm::StringRef triple,
-      fir::KindMapping &kindMap);
+      fir::KindMapping &kindMap,
+      const Fortran::lower::LoweringOptions &loweringOptions);
   LoweringBridge() = delete;
   LoweringBridge(const LoweringBridge &) = delete;
 
@@ -118,6 +125,7 @@ private:
   mlir::MLIRContext &context;
   std::unique_ptr<mlir::ModuleOp> module;
   fir::KindMapping &kindMap;
+  const Fortran::lower::LoweringOptions &loweringOptions;
 };
 
 } // namespace lower
