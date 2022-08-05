@@ -212,13 +212,7 @@ FileManager::getFileRef(StringRef Filename, bool openFile, bool CacheFailure) {
     if (!SeenFileInsertResult.first->second)
       return llvm::errorCodeToError(
           SeenFileInsertResult.first->second.getError());
-    // Construct and return and FileEntryRef, unless it's a redirect to another
-    // filename.
-    FileEntryRef::MapValue Value = *SeenFileInsertResult.first->second;
-    if (LLVM_LIKELY(Value.V.is<FileEntry *>()))
-      return FileEntryRef(*SeenFileInsertResult.first);
-    return FileEntryRef(*reinterpret_cast<const FileEntryRef::MapEntry *>(
-        Value.V.get<const void *>()));
+    return FileEntryRef(*SeenFileInsertResult.first);
   }
 
   // We've not seen this before. Fill it in.
