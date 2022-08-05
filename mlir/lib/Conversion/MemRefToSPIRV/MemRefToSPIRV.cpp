@@ -126,8 +126,8 @@ static Optional<spirv::Scope> getAtomicOpScope(MemRefType type) {
     return spirv::Scope::Device;
   case spirv::StorageClass::Workgroup:
     return spirv::Scope::Workgroup;
-  default: {
-  }
+  default:
+    break;
   }
   return {};
 }

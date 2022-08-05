@@ -538,6 +538,17 @@ def ConvertMemRefToLLVM : Pass<"convert-memref-to-llvm", "ModuleOp"> {
 // MemRefToSPIRV
 //===----------------------------------------------------------------------===//
 
+def MapMemRefStorageClass : Pass<"map-memref-spirv-storage-class", "ModuleOp"> {
+  let summary = "Map numeric MemRef memory spaces to SPIR-V storage classes";
+  let constructor = "mlir::createMapMemRefStorageClassPass()";
+  let dependentDialects = ["spirv::SPIRVDialect"];
+  let options = [
+    Option<"mappings", "mappings", "std::string", /*default=*/"",
+           "A comma-separated list of memory space to storage class mappings; "
+           "for example, '0=StorageClass,1=Uniform,2=Workgroup'">
+  ];
+}
+
 def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv", "ModuleOp"> {
   let summary = "Convert MemRef dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertMemRefToSPIRVPass()";
