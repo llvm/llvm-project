@@ -7,8 +7,6 @@ import re
 import unittest
 import warnings
 
-import six
-
 from unittest2 import result
 from unittest2.util import (
     safe_repr, safe_str, strclass,
@@ -153,7 +151,7 @@ class _AssertRaisesContext(object):
             return True
 
         expected_regexp = self.expected_regexp
-        if isinstance(expected_regexp, six.string_types):
+        if isinstance(expected_regexp, str):
             expected_regexp = re.compile(expected_regexp)
         if not expected_regexp.search(str(exc_value)):
             raise self.failureException(
@@ -173,7 +171,7 @@ class _TypeEqualityDict(object):
 
     def __getitem__(self, key):
         value = self._store[key]
-        if isinstance(value, six.string_types):
+        if isinstance(value, str):
             return getattr(self.testcase, value)
         return value
 
@@ -251,10 +249,7 @@ class TestCase(unittest.TestCase):
         self.addTypeEqualityFunc(tuple, 'assertTupleEqual')
         self.addTypeEqualityFunc(set, 'assertSetEqual')
         self.addTypeEqualityFunc(frozenset, 'assertSetEqual')
-        if six.PY2:
-            self.addTypeEqualityFunc(unicode, 'assertMultiLineEqual')
-        else:
-            self.addTypeEqualityFunc(str, 'assertMultiLineEqual')
+        self.addTypeEqualityFunc(str, 'assertMultiLineEqual')
 
     def addTypeEqualityFunc(self, typeobj, function):
         """Add a type specific assertEqual style function to compare a type.
@@ -993,9 +988,9 @@ class TestCase(unittest.TestCase):
 
     def assertMultiLineEqual(self, first, second, msg=None):
         """Assert that two multi-line strings are equal."""
-        self.assert_(isinstance(first, six.string_types), (
+        self.assert_(isinstance(first, str), (
             'First argument is not a string'))
-        self.assert_(isinstance(second, six.string_types), (
+        self.assert_(isinstance(second, str), (
             'Second argument is not a string'))
 
         if first != second:
@@ -1076,7 +1071,7 @@ class TestCase(unittest.TestCase):
         try:
             callable_obj(*args, **kwargs)
         except expected_exception as exc_value:
-            if isinstance(expected_regexp, six.string_types):
+            if isinstance(expected_regexp, str):
                 expected_regexp = re.compile(expected_regexp)
             if not expected_regexp.search(str(exc_value)):
                 raise self.failureException(
@@ -1091,7 +1086,7 @@ class TestCase(unittest.TestCase):
 
     def assertRegexpMatches(self, text, expected_regexp, msg=None):
         """Fail the test unless the text matches the regular expression."""
-        if isinstance(expected_regexp, six.string_types):
+        if isinstance(expected_regexp, str):
             expected_regexp = re.compile(expected_regexp)
         if not expected_regexp.search(text):
             msg = msg or "Regexp didn't match"
@@ -1101,7 +1096,7 @@ class TestCase(unittest.TestCase):
 
     def assertNotRegexpMatches(self, text, unexpected_regexp, msg=None):
         """Fail the test if the text matches the regular expression."""
-        if isinstance(unexpected_regexp, six.string_types):
+        if isinstance(unexpected_regexp, str):
             unexpected_regexp = re.compile(unexpected_regexp)
         match = unexpected_regexp.search(text)
         if match:
