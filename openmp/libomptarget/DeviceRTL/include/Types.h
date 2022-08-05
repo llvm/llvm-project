@@ -33,6 +33,7 @@ using uint32_t = unsigned int;
 using int64_t = long;
 using uint64_t = unsigned long;
 using size_t = decltype(sizeof(char));
+using uintptr_t = unsigned long;
 
 static_assert(sizeof(int8_t) == 1, "type size mismatch");
 static_assert(sizeof(uint8_t) == 1, "type size mismatch");
@@ -175,6 +176,21 @@ using ListGlobalFnTy = void (*)(void *buffer, int idx, void *reduce_data);
 ///{
 
 // Follows the pattern in interface.h
+// Same definitions as in host runtime
+// TODO: move these definitions to a common
+// place between host and device runtimes (e.g. in LLVM)
+typedef enum omp_memspace_handle_t {
+  omp_default_mem_space = 0,
+  omp_large_cap_mem_space = 1,
+  omp_const_mem_space = 2,
+  omp_high_bw_mem_space = 3,
+  omp_low_lat_mem_space = 4,
+  llvm_omp_target_host_mem_space = 100,
+  llvm_omp_target_shared_mem_space = 101,
+  llvm_omp_target_device_mem_space = 102,
+  KMP_MEMSPACE_MAX_HANDLE = ~(0u)
+} omp_memspace_handle_t;
+
 typedef enum omp_allocator_handle_t {
   omp_null_allocator = 0,
   omp_default_mem_alloc = 1,
@@ -187,6 +203,45 @@ typedef enum omp_allocator_handle_t {
   omp_thread_mem_alloc = 8,
   KMP_ALLOCATOR_MAX_HANDLE = ~(0U)
 } omp_allocator_handle_t;
+
+typedef enum {
+  omp_atk_sync_hint = 1,
+  omp_atk_alignment = 2,
+  omp_atk_access = 3,
+  omp_atk_pool_size = 4,
+  omp_atk_fallback = 5,
+  omp_atk_fb_data = 6,
+  omp_atk_pinned = 7,
+  omp_atk_partition = 8
+} omp_alloctrait_key_t;
+
+typedef enum {
+  omp_atv_false = 0,
+  omp_atv_true = 1,
+  omp_atv_contended = 3,
+  omp_atv_uncontended = 4,
+  omp_atv_serialized = 5,
+  omp_atv_sequential = omp_atv_serialized, // (deprecated)
+  omp_atv_private = 6,
+  omp_atv_all = 7,
+  omp_atv_thread = 8,
+  omp_atv_pteam = 9,
+  omp_atv_cgroup = 10,
+  omp_atv_default_mem_fb = 11,
+  omp_atv_null_fb = 12,
+  omp_atv_abort_fb = 13,
+  omp_atv_allocator_fb = 14,
+  omp_atv_environment = 15,
+  omp_atv_nearest = 16,
+  omp_atv_blocked = 17,
+  omp_atv_interleaved = 18
+} omp_alloctrait_value_t;
+#define omp_atv_default ((uintptr_t)-1)
+
+typedef struct {
+  omp_alloctrait_key_t key;
+  uintptr_t value;
+} omp_alloctrait_t;
 
 enum OMPTgtExecModeFlags : int8_t {
   OMP_TGT_EXEC_MODE_GENERIC = 1 << 0,

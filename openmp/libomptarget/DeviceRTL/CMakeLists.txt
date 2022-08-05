@@ -132,6 +132,7 @@ set(src_files
   ${source_directory}/Workshare.cpp
   ${source_directory}/ExtraMapping.cpp
   ${source_directory}/Xteam.cpp
+  ${source_directory}/Memory.cpp
 )
 
 set(clang_opt_flags -O3 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)

@@ -171,6 +171,40 @@ double omp_get_wtick(void);
 
 double omp_get_wtime(void);
 ///}
+
+/// OpenMP 5.1 Memory Management routines (from libomp)
+/// OpenMP allocator API is currently unimplemented, including traits.
+/// All allocation routines will directly call the global memory allocation
+/// routine and, consequently, omp_free will call device memory deallocation.
+///
+/// {
+omp_allocator_handle_t omp_init_allocator(omp_memspace_handle_t m, int ntraits,
+                                          omp_alloctrait_t traits[]);
+
+void omp_destroy_allocator(omp_allocator_handle_t allocator);
+
+void omp_set_default_allocator(omp_allocator_handle_t a);
+
+omp_allocator_handle_t omp_get_default_allocator(void);
+
+void *omp_alloc(uint64_t size,
+                omp_allocator_handle_t allocator = omp_null_allocator);
+
+void *omp_aligned_alloc(uint64_t align, uint64_t size,
+                        omp_allocator_handle_t allocator = omp_null_allocator);
+
+void *omp_calloc(uint64_t nmemb, uint64_t size,
+                 omp_allocator_handle_t allocator = omp_null_allocator);
+
+void *omp_aligned_calloc(uint64_t align, uint64_t nmemb, uint64_t size,
+                         omp_allocator_handle_t allocator = omp_null_allocator);
+
+void *omp_realloc(void *ptr, uint64_t size,
+                  omp_allocator_handle_t allocator = omp_null_allocator,
+                  omp_allocator_handle_t free_allocator = omp_null_allocator);
+
+void omp_free(void *ptr, omp_allocator_handle_t allocator = omp_null_allocator);
+/// }
 }
 
 extern "C" {
