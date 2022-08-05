@@ -118,30 +118,19 @@ static void start_thread() {
   auto *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
   auto *attrib = start_args->thread_attrib;
   self.attrib = attrib;
+  self.attrib->atexit_callback_mgr = internal::get_thread_atexit_callback_mgr();
 
-  long retval;
   if (attrib->style == ThreadStyle::POSIX) {
     attrib->retval.posix_retval =
         start_args->runner.posix_runner(start_args->arg);
-    retval = long(attrib->retval.posix_retval);
+    thread_exit(ThreadReturnValue(attrib->retval.posix_retval),
+                ThreadStyle::POSIX);
   } else {
     attrib->retval.stdc_retval =
         start_args->runner.stdc_runner(start_args->arg);
-    retval = long(attrib->retval.stdc_retval);
+    thread_exit(ThreadReturnValue(attrib->retval.stdc_retval),
+                ThreadStyle::STDC);
   }
-
-  uint32_t joinable_state = uint32_t(DetachState::JOINABLE);
-  if (!attrib->detach_state.compare_exchange_strong(
-          joinable_state, uint32_t(DetachState::EXITING))) {
-    // Thread is detached so cleanup the resources.
-    cleanup_thread_resources(attrib);
-
-    // Set the CLEAR_TID address to nullptr to prevent the kernel
-    // from signalling at a non-existent futex location.
-    __llvm_libc::syscall(SYS_set_tid_address, 0);
-  }
-
-  __llvm_libc::syscall(SYS_exit, retval);
 }
 
 int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
@@ -373,6 +362,36 @@ int Thread::get_name(cpp::StringStream &name) const {
     name_buffer[retval] = '\0';
   name << name_buffer;
   return 0;
+}
+
+void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
+  auto attrib = self.attrib;
+
+  // The very first thing we do is to call the thread's atexit callbacks.
+  // These callbacks could be the ones registered by the language runtimes,
+  // for example, the destructors of thread local objects. They can also
+  // be destructors of the TSS objects set using API like pthread_setspecific.
+  // NOTE: We cannot call the atexit callbacks as part of the 
+  // cleanup_thread_resources function as that function can be called from a
+  // different thread. The destructors of thread local and TSS objects should
+  // be called by the thread which owns them.
+  internal::call_atexit_callbacks(attrib);
+
+  uint32_t joinable_state = uint32_t(DetachState::JOINABLE);
+  if (!attrib->detach_state.compare_exchange_strong(
+          joinable_state, uint32_t(DetachState::EXITING))) {
+    // Thread is detached so cleanup the resources.
+    cleanup_thread_resources(attrib);
+
+    // Set the CLEAR_TID address to nullptr to prevent the kernel
+    // from signalling at a non-existent futex location.
+    __llvm_libc::syscall(SYS_set_tid_address, 0);
+  }
+
+  if (style == ThreadStyle::POSIX)
+    __llvm_libc::syscall(SYS_exit, retval.posix_retval);
+  else
+    __llvm_libc::syscall(SYS_exit, retval.stdc_retval);
 }
 
 } // namespace __llvm_libc
