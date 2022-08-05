@@ -2421,23 +2421,19 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       return V;
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
-    // If Op0 is true implies Op1 is true, then Op0 is a subset of Op1.
-    if (Optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL)) {
-      if (*Implied == true)
-        return Op1;
-    }
-    // If Op0 is false implies Op1 is true, then at least one is always true.
     if (Optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL, false)) {
+      // If Op0 is false implies Op1 is false, then Op1 is a subset of Op0.
+      if (*Implied == false)
+        return Op0;
+      // If Op0 is false implies Op1 is true, then at least one is always true.
       if (*Implied == true)
         return ConstantInt::getTrue(Op0->getType());
     }
-    // If Op1 is true implies Op0 is true, then Op1 is a subset of Op0.
-    if (Optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL)) {
-      if (*Implied == true)
-        return Op0;
-    }
-    // If Op1 is false implies Op0 is true, then at least one is always true.
     if (Optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL, false)) {
+      // If Op1 is false implies Op0 is false, then Op0 is a subset of Op1.
+      if (*Implied == false)
+        return Op1;
+      // If Op1 is false implies Op0 is true, then at least one is always true.
       if (*Implied == true)
         return ConstantInt::getTrue(Op1->getType());
     }
