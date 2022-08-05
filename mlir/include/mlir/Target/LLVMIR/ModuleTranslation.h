@@ -16,6 +16,7 @@
 
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
@@ -264,6 +265,8 @@ public:
     ModuleTranslation &moduleTranslation;
   };
 
+  SymbolTableCollection& symbolTable() { return symbolTableCollection; }
+
 private:
   ModuleTranslation(Operation *module,
                     std::unique_ptr<llvm::Module> llvmModule);
@@ -333,6 +336,9 @@ private:
   /// Stack of user-specified state elements, useful when translating operations
   /// with regions.
   SmallVector<std::unique_ptr<StackFrame>> stack;
+
+  /// A cache for the symbol tables constructed during symbols lookup.
+  SymbolTableCollection symbolTableCollection;
 };
 
 namespace detail {

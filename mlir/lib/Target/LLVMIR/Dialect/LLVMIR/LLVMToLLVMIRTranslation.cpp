@@ -466,8 +466,10 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   // operation and store it in the MLIR-to-LLVM value mapping.  This does not
   // emit any LLVM instruction.
   if (auto addressOfOp = dyn_cast<LLVM::AddressOfOp>(opInst)) {
-    LLVM::GlobalOp global = addressOfOp.getGlobal();
-    LLVM::LLVMFuncOp function = addressOfOp.getFunction();
+    LLVM::GlobalOp global =
+        addressOfOp.getGlobal(moduleTranslation.symbolTable());
+    LLVM::LLVMFuncOp function =
+        addressOfOp.getFunction(moduleTranslation.symbolTable());
 
     // The verifier should not have allowed this.
     assert((global || function) &&
