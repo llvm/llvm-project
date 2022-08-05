@@ -155,6 +155,7 @@ func.func @foo() {
   // them to trigger the attribute type mismatch error.
   // expected-error @+1 {{invalid kind of attribute specified}}
   llvm.mlir.addressof "foo" : i64 : !llvm.ptr<func<void ()>>
+  llvm.return
 }
 
 // -----
@@ -162,6 +163,7 @@ func.func @foo() {
 func.func @foo() {
   // expected-error @+1 {{must reference a global defined by 'llvm.mlir.global'}}
   llvm.mlir.addressof @foo : !llvm.ptr<func<void ()>>
+  llvm.return
 }
 
 // -----
@@ -171,6 +173,7 @@ llvm.mlir.global internal @foo(0: i32) : i32
 func.func @bar() {
   // expected-error @+1 {{the type must be a pointer to the type of the referenced global}}
   llvm.mlir.addressof @foo : !llvm.ptr<i64>
+  llvm.return
 }
 
 // -----
@@ -180,6 +183,7 @@ llvm.func @foo()
 llvm.func @bar() {
   // expected-error @+1 {{the type must be a pointer to the type of the referenced function}}
   llvm.mlir.addressof @foo : !llvm.ptr<i8>
+  llvm.return
 }
 
 // -----
@@ -211,6 +215,7 @@ llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : i64
 func.func @mismatch_addr_space_implicit_global() {
   // expected-error @+1 {{pointer address space must match address space of the referenced global}}
   llvm.mlir.addressof @g : !llvm.ptr<i64>
+  llvm.return
 }
 
 // -----
@@ -219,6 +224,7 @@ llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : i64
 func.func @mismatch_addr_space() {
   // expected-error @+1 {{pointer address space must match address space of the referenced global}}
   llvm.mlir.addressof @g : !llvm.ptr<i64, 4>
+  llvm.return
 }
 // -----
 
@@ -227,6 +233,7 @@ llvm.mlir.global internal @g(32 : i64) {addr_space = 3: i32} : i64
 func.func @mismatch_addr_space_opaque() {
   // expected-error @+1 {{pointer address space must match address space of the referenced global}}
   llvm.mlir.addressof @g : !llvm.ptr<4>
+  llvm.return
 }
 
 // -----
