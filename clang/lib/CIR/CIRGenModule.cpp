@@ -1743,7 +1743,7 @@ void CIRGenModule::Release() {
   buildDeferred();
   // TODO: buildVTablesOpportunistically();
   // TODO: applyGlobalValReplacements();
-  // TODO: applyReplacements();
+  applyReplacements();
   // TODO: checkAliases();
   // TODO: buildMultiVersionFunctions();
   buildCXXGlobalInitFunc();
@@ -1839,4 +1839,30 @@ void CIRGenModule::AddDeferredUnusedCoverageMapping(Decl *D) {
 void CIRGenModule::UpdateCompletedType(const TagDecl *TD) {
   // Make sure that this type is translated.
   genTypes.UpdateCompletedType(TD);
+}
+
+void CIRGenModule::addReplacement(StringRef Name, mlir::Operation *Op) {
+  Replacements[Name] = Op;
+}
+
+void CIRGenModule::applyReplacements() {
+  for (auto &I : Replacements) {
+    StringRef MangledName = I.first();
+    mlir::Operation *Replacement = I.second;
+    auto *Entry = getGlobalValue(MangledName);
+    if (!Entry)
+      continue;
+    assert(isa<mlir::cir::FuncOp>(Entry) && "expected function");
+    auto OldF = cast<mlir::cir::FuncOp>(Entry);
+    auto NewF = dyn_cast<mlir::cir::FuncOp>(Replacement);
+    assert(NewF && "not implemented");
+
+    // Replace old with new, but keep the old order.
+    if (OldF.replaceAllSymbolUses(NewF.getSymNameAttr(), theModule).failed())
+      llvm_unreachable("internal error, cannot RAUW symbol");
+    if (NewF) {
+      NewF->moveBefore(OldF);
+      OldF->erase();
+    }
+  }
 }

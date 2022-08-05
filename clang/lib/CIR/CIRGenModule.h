@@ -360,6 +360,8 @@ public:
   getCIRLinkageForDeclarator(const DeclaratorDecl *D, GVALinkage Linkage,
                              bool IsConstantVariable);
 
+  void addReplacement(StringRef Name, mlir::Operation *Op);
+
 private:
   // TODO: CodeGen also passes an AttributeList here. We'll have to match that
   // in CIR
@@ -376,6 +378,12 @@ private:
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> MangledDeclNames;
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> Manglings;
+
+  // FIXME: should we use llvm::TrackingVH<mlir::Operation> here?
+  typedef llvm::StringMap<mlir::Operation *> ReplacementsTy;
+  ReplacementsTy Replacements;
+  /// Call replaceAllUsesWith on all pairs in Replacements.
+  void applyReplacements();
 };
 } // namespace cir
 

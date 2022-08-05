@@ -302,7 +302,10 @@ void CIRGenItaniumCXXABI::buildCXXStructor(GlobalDecl GD) {
     }
 
     if (CIRGenType == StructorCIRGen::RAUW) {
-      llvm_unreachable("NYI");
+      StringRef MangledName = CGM.getMangledName(GD);
+      auto *Aliasee = CGM.GetAddrOfGlobal(BaseDecl);
+      CGM.addReplacement(MangledName, Aliasee);
+      return;
     }
   }
 
