@@ -5326,6 +5326,21 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
     return DAG.getNode(HandOpcode, DL, VT, Logic);
   }
 
+  // For funnel shifts FSHL/FSHR:
+  // logic_op (OP x, x1, s), (OP y, y1, s) -->
+  // --> OP (logic_op x, y), (logic_op, x1, y1), s
+  if ((HandOpcode == ISD::FSHL || HandOpcode == ISD::FSHR) &&
+      N0.getOperand(2) == N1.getOperand(2)) {
+    if (!N0.hasOneUse() || !N1.hasOneUse())
+      return SDValue();
+    SDValue X1 = N0.getOperand(1);
+    SDValue Y1 = N1.getOperand(1);
+    SDValue S = N0.getOperand(2);
+    SDValue Logic0 = DAG.getNode(LogicOpcode, DL, VT, X, Y);
+    SDValue Logic1 = DAG.getNode(LogicOpcode, DL, VT, X1, Y1);
+    return DAG.getNode(HandOpcode, DL, VT, Logic0, Logic1, S);
+  }
+
   // Simplify xor/and/or (bitcast(A), bitcast(B)) -> bitcast(op (A,B))
   // Only perform this optimization up until type legalization, before
   // LegalizeVectorOprs. LegalizeVectorOprs promotes vector operations by
