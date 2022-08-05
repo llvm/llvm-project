@@ -1,4 +1,7 @@
 // Test for PR56919. Tests the destroy function contains the call to delete function only.
+//
+// REQUIRES: x86-registered-target
+//
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 %s -O3 -S -o - | FileCheck %s
 
 #include "Inputs/coroutine.h"
