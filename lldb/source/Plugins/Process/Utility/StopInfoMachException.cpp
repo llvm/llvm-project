@@ -410,7 +410,8 @@ const char *StopInfoMachException::GetDescription() {
 
       switch (resource_type) {
       case RESOURCE_TYPE_CPU:
-        exc_desc = "EXC_RESOURCE RESOURCE_TYPE_CPU";
+        exc_desc =
+            "EXC_RESOURCE (RESOURCE_TYPE_CPU: CPU usage monitor tripped)";
         snprintf(code_desc_buf, sizeof(code_desc_buf), "%d%%",
                  (int)EXC_RESOURCE_CPUMONITOR_DECODE_PERCENTAGE(m_exc_code));
         snprintf(subcode_desc_buf, sizeof(subcode_desc_buf), "%d%%",
@@ -418,7 +419,8 @@ const char *StopInfoMachException::GetDescription() {
                      m_exc_subcode));
         break;
       case RESOURCE_TYPE_WAKEUPS:
-        exc_desc = "EXC_RESOURCE RESOURCE_TYPE_WAKEUPS";
+        exc_desc = "EXC_RESOURCE (RESOURCE_TYPE_WAKEUPS: idle wakeups monitor "
+                   "tripped)";
         snprintf(
             code_desc_buf, sizeof(code_desc_buf), "%d w/s",
             (int)EXC_RESOURCE_CPUMONITOR_DECODE_WAKEUPS_PERMITTED(m_exc_code));
@@ -427,11 +429,12 @@ const char *StopInfoMachException::GetDescription() {
                      m_exc_subcode));
         break;
       case RESOURCE_TYPE_MEMORY:
-        exc_desc = "EXC_RESOURCE RESOURCE_TYPE_MEMORY";
+        exc_desc = "EXC_RESOURCE (RESOURCE_TYPE_MEMORY: high watermark memory "
+                   "limit exceeded)";
         snprintf(code_desc_buf, sizeof(code_desc_buf), "%d MB",
                  (int)EXC_RESOURCE_HWM_DECODE_LIMIT(m_exc_code));
         subcode_desc = nullptr;
-        subcode_label = "unused";
+        subcode_label = nullptr;
         break;
 #if defined(RESOURCE_TYPE_IO)
       // RESOURCE_TYPE_IO is introduced in macOS SDK 10.12.
@@ -468,9 +471,9 @@ const char *StopInfoMachException::GetDescription() {
   }
 
   if (m_exc_data_count >= 2) {
-    if (subcode_desc)
+    if (subcode_label && subcode_desc)
       strm.Printf(", %s=%s", subcode_label, subcode_desc);
-    else
+    else if (subcode_label)
       strm.Printf(", %s=0x%" PRIx64, subcode_label, m_exc_subcode);
   }
 
