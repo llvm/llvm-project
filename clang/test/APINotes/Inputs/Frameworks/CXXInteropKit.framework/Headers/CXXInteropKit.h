@@ -21,26 +21,3 @@ typedef NS_OPTIONS(NSUInteger, NSSomeEnumOptions) {
 	NSSomeEnumWithGreen,
 	NSSomeEnumWithBlue,
 };
-
-struct GlobalStruct {
-  int x;
-  void method() {}
-};
-
-namespace ParentNS {
-namespace ChildNS {
-
-void gloablFnInNS();
-
-struct ParentStruct {
-  int x;
-  struct ChildStruct {
-    int y;
-    void method() {}
-  };
-};
-
-}
-}
-
-struct ImportAsReference { int x; };
