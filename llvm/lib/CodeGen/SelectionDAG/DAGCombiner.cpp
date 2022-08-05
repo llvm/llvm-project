@@ -10238,6 +10238,25 @@ static SDValue foldSelectOfConstantsUsingSra(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+static bool shouldConvertSelectOfConstantsToMath(const SDValue &Cond, EVT VT,
+                                                 const TargetLowering &TLI) {
+  if (!TLI.convertSelectOfConstantsToMath(VT))
+    return false;
+
+  if (Cond.getOpcode() != ISD::SETCC || !Cond->hasOneUse())
+    return true;
+  if (!TLI.isOperationLegalOrCustom(ISD::SELECT_CC, VT))
+    return true;
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+  if (CC == ISD::SETLT && isNullOrNullSplat(Cond.getOperand(1)))
+    return true;
+  if (CC == ISD::SETGT && isAllOnesOrAllOnesSplat(Cond.getOperand(1)))
+    return true;
+
+  return false;
+}
+
 SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
   SDValue Cond = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -10288,9 +10307,9 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
 
     // Use a target hook because some targets may prefer to transform in the
     // other direction.
-    if (TLI.convertSelectOfConstantsToMath(VT)) {
-      // For any constants that differ by 1, we can transform the select into an
-      // extend and add.
+    if (shouldConvertSelectOfConstantsToMath(Cond, VT, TLI)) {
+      // For any constants that differ by 1, we can transform the select into
+      // an extend and add.
       const APInt &C1Val = C1->getAPIntValue();
       const APInt &C2Val = C2->getAPIntValue();
       if (C1Val - 1 == C2Val) {
@@ -10299,6 +10318,7 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
           Cond = DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Cond);
         return DAG.getNode(ISD::ADD, DL, VT, Cond, N2);
       }
+
       if (C1Val + 1 == C2Val) {
         // select Cond, C1, C1+1 --> add (sext Cond), C1+1
         if (VT != MVT::i1)
@@ -10313,6 +10333,12 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
         SDValue ShAmtC =
             DAG.getShiftAmountConstant(C1Val.exactLogBase2(), VT, DL);
         return DAG.getNode(ISD::SHL, DL, VT, Cond, ShAmtC);
+      }
+
+      // select Cond, -1, C --> or (sext Cond), C
+      if (C1->isAllOnes()) {
+        Cond = DAG.getSExtOrTrunc(Cond, DL, VT);
+        return DAG.getNode(ISD::OR, DL, VT, Cond, N2);
       }
 
       if (SDValue V = foldSelectOfConstantsUsingSra(N, DAG))
@@ -10451,10 +10477,17 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   if (SDValue V = DAG.simplifySelect(N0, N1, N2))
     return V;
 
-  if (SDValue V = foldSelectOfConstants(N))
+  if (SDValue V = foldBoolSelectToLogic(N, DAG))
     return V;
 
-  if (SDValue V = foldBoolSelectToLogic(N, DAG))
+  // select (not Cond), N1, N2 -> select Cond, N2, N1
+  if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false)) {
+    SDValue SelectOp = DAG.getSelect(DL, VT, F, N2, N1);
+    SelectOp->setFlags(Flags);
+    return SelectOp;
+  }
+
+  if (SDValue V = foldSelectOfConstants(N))
     return V;
 
   // If we can fold this based on the true/false value, do so.
@@ -10537,13 +10570,6 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
                              N2_2, Flags);
       }
     }
-  }
-
-  // select (not Cond), N1, N2 -> select Cond, N2, N1
-  if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false)) {
-    SDValue SelectOp = DAG.getSelect(DL, VT, F, N2, N1);
-    SelectOp->setFlags(Flags);
-    return SelectOp;
   }
 
   // Fold selects based on a setcc into other things, such as min/max/abs.
@@ -10955,7 +10981,7 @@ SDValue DAGCombiner::foldVSelectOfConstants(SDNode *N) {
   SDValue N2 = N->getOperand(2);
   EVT VT = N->getValueType(0);
   if (!Cond.hasOneUse() || Cond.getScalarValueSizeInBits() != 1 ||
-      !TLI.convertSelectOfConstantsToMath(VT) ||
+      !shouldConvertSelectOfConstantsToMath(Cond, VT, TLI) ||
       !ISD::isBuildVectorOfConstantSDNodes(N1.getNode()) ||
       !ISD::isBuildVectorOfConstantSDNodes(N2.getNode()))
     return SDValue();
@@ -11281,6 +11307,11 @@ SDValue DAGCombiner::visitSELECT_CC(SDNode *N) {
   // fold select_cc lhs, rhs, x, x, cc -> x
   if (N2 == N3)
     return N2;
+
+  // select_cc bool, 0, x, y, seteq -> select bool, y, x
+  if (CC == ISD::SETEQ && !LegalTypes && N0.getValueType() == MVT::i1 &&
+      isNullConstant(N1))
+    return DAG.getSelect(SDLoc(N), N2.getValueType(), N0, N3, N2);
 
   // Determine if the condition we're dealing with is constant
   if (SDValue SCC = SimplifySetCC(getSetCCResultType(N0.getValueType()), N0, N1,
@@ -12125,7 +12156,7 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
   if (SDValue SCC = SimplifySelectCC(DL, N00, N01, ExtTrueVal, Zero, CC, true))
     return SCC;
 
-  if (!VT.isVector() && !TLI.convertSelectOfConstantsToMath(VT)) {
+  if (!VT.isVector() && !shouldConvertSelectOfConstantsToMath(N0, VT, TLI)) {
     EVT SetCCVT = getSetCCResultType(N00VT);
     // Don't do this transform for i1 because there's a select transform
     // that would reverse it.

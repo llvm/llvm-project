@@ -14,14 +14,12 @@ define void @test(i32* dereferenceable(4) %.ial, i32* noalias dereferenceable(4)
 ; CHECK-P9-LABEL: test:
 ; CHECK-P9:       # %bb.0: # %test_entry
 ; CHECK-P9-NEXT:    andi. r3, r6, 15
+; CHECK-P9-NEXT:    li r3, 2
+; CHECK-P9-NEXT:    li r10, 1
 ; CHECK-P9-NEXT:    lwz r4, 0(r4)
 ; CHECK-P9-NEXT:    lwz r5, 0(r5)
-; CHECK-P9-NEXT:    li r11, 1
-; CHECK-P9-NEXT:    addic r3, r3, -1
-; CHECK-P9-NEXT:    subfe r10, r3, r3
-; CHECK-P9-NEXT:    li r3, 2
-; CHECK-P9-NEXT:    not r10, r10
-; CHECK-P9-NEXT:    iseleq r3, r11, r3
+; CHECK-P9-NEXT:    iseleq r3, r10, r3
+; CHECK-P9-NEXT:    subfic r10, r3, 1
 ; CHECK-P9-NEXT:    add r4, r10, r4
 ; CHECK-P9-NEXT:    srawi r4, r4, 4
 ; CHECK-P9-NEXT:    addze r4, r4
@@ -67,14 +65,13 @@ define void @test(i32* dereferenceable(4) %.ial, i32* noalias dereferenceable(4)
 ;
 ; CHECK-P10-LABEL: test:
 ; CHECK-P10:       # %bb.0: # %test_entry
-; CHECK-P10-NEXT:    lwz r4, 0(r4)
 ; CHECK-P10-NEXT:    andi. r3, r6, 15
 ; CHECK-P10-NEXT:    li r3, 2
 ; CHECK-P10-NEXT:    li r10, 1
+; CHECK-P10-NEXT:    lwz r4, 0(r4)
 ; CHECK-P10-NEXT:    lwz r5, 0(r5)
 ; CHECK-P10-NEXT:    iseleq r3, r10, r3
-; CHECK-P10-NEXT:    setnbc r10, eq
-; CHECK-P10-NEXT:    not r10, r10
+; CHECK-P10-NEXT:    subfic r10, r3, 1
 ; CHECK-P10-NEXT:    add r4, r10, r4
 ; CHECK-P10-NEXT:    srawi r4, r4, 4
 ; CHECK-P10-NEXT:    addze r4, r4
