@@ -158,6 +158,12 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       if (!isLegalValidatorVersion(ValVerStr, getDriver()))
         continue;
     }
+    if (A->getOption().getID() == options::OPT_dxc_entrypoint) {
+      DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_hlsl_entrypoint),
+                          A->getValue());
+      A->claim();
+      continue;
+    }
     if (A->getOption().getID() == options::OPT_emit_pristine_llvm) {
       // Translate fcgl into -S -emit-llvm and -disable-llvm-passes.
       DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_S));

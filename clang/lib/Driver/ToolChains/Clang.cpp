@@ -3515,7 +3515,8 @@ static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
                                          options::OPT_S,
                                          options::OPT_emit_llvm,
                                          options::OPT_disable_llvm_passes,
-                                         options::OPT_fnative_half_type};
+                                         options::OPT_fnative_half_type,
+                                         options::OPT_hlsl_entrypoint};
 
   for (const auto &Arg : ForwardedArguments)
     if (const auto *A = Args.getLastArg(Arg))
