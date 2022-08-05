@@ -60,6 +60,8 @@ Bug Fixes
 - No longer assert/miscompile when trying to make a vectorized ``_BitInt`` type
   using the ``ext_vector_type`` attribute (the ``vector_size`` attribute was
   already properly diagnosing this case).
+- Fix clang not properly diagnosing the failing subexpression when chained
+  binary operators are used in a ``static_assert`` expression.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
