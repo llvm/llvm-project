@@ -474,7 +474,7 @@ func.func @atan2() {
   %atan2_8 = math.atan2 %neg_two, %one : f32
   vector.print %atan2_8 : f32
 
-  // CHECK: 0.463643
+  // CHECK: 0.463648
   %atan2_9 = math.atan2 %one, %two : f32
   vector.print %atan2_9 : f32
 
@@ -490,7 +490,7 @@ func.func @atan2() {
   %atan2_11 = math.atan2 %neg_one, %neg_two : f32
   vector.print %atan2_11 : f32
 
-  // CHECK: -0.463643
+  // CHECK: -0.463648
   %atan2_12 = math.atan2 %neg_one, %two : f32
   vector.print %atan2_12 : f32
 
