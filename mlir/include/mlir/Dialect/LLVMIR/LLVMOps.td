@@ -1031,10 +1031,10 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
   let extraClassDeclaration = [{
     /// Return the llvm.mlir.global operation that defined the value referenced
     /// here.
-    GlobalOp getGlobal();
+    GlobalOp getGlobal(SymbolTableCollection &symbolTable);
 
     /// Return the llvm.func operation that is referenced here.
-    LLVMFuncOp getFunction();
+    LLVMFuncOp getFunction(SymbolTableCollection &symbolTable);
   }];
 
   let assemblyFormat = "$global_name attr-dict `:` type($res)";
