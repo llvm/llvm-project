@@ -44,6 +44,7 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
+#include "llvm/Transforms/Yk/ControlPoint.h"
 
 using namespace llvm;
 using namespace lto;

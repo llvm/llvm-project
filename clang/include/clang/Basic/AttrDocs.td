@@ -6659,3 +6659,11 @@ The symbol used for ``thunk-extern`` is target specific:
 As such, this function attribute is currently only supported on X86 targets.
   }];
 }
+
+def YkOutlineDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+  The ``yk_outline`` attribute tells the Yk JIT to outline (not inline) calls
+  to the annotated function.
+  }];
+}

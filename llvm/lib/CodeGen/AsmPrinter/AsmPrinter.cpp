@@ -37,6 +37,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GCMetadataPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -126,6 +127,11 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
+
+static cl::opt<bool>
+    EmbedBitcodeFinal("embed-bitcode-final", cl::NotHidden,
+                      cl::desc("Embed final IR as bitcode after all "
+                               "optimisations and transformations have run."));
 
 const char DWARFGroupName[] = "dwarf";
 const char DWARFGroupDescription[] = "DWARF Emission";
@@ -1336,6 +1342,36 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   OutStreamer->AddComment("number of basic blocks");
   OutStreamer->emitULEB128IntValue(MF.size());
   const MCSymbol *PrevMBBEndSymbol = FunctionSymbol;
+  const Function &F = MF.getFunction();
+
+  // LLVM's codegen can can merge multiple BasicBlocks into a single
+  // MachineBasicBlock. Unfortunately, MachineBasicBlock::getBasicBlock() only
+  // returns the first BasicBlock in the merged sequence, so we have to find
+  // the other corresponding BasicBlock(s) (if any) in the merged sequence
+  // another way. We do so in two steps:
+  //
+  //   1. We create a set, MergedBBs, which is the set of BasicBlocks that are
+  //   *not* returned by MachineBasicBlock::getBasicBlock(MBB) for any
+  //   MachineBasicBlock, MBB, in the parent MachineFunction -- in other words,
+  //   it's the set of BasicBlocks that have been merged into a predecessor
+  //   during codegen.
+  //
+  //   2. For each BasicBlock BBX returned by
+  //   MachineBasicBlock::getBasicBlock() we check if it is terminated by an
+  //   unconditional branch. If so and that unconditional branch transfers to a
+  //   block BBY, and BBY is a member of MergedBBs, then we know that BBX and
+  //   BBY were merged during codegen. [Note that we then see if another BBZ
+  //   was also merged into BBY and so on]
+  std::set<const BasicBlock *> MergedBBs;
+  for (const BasicBlock &BB : F) {
+    MergedBBs.insert(&BB);
+  }
+  for (const MachineBasicBlock &MBB : MF) {
+    const BasicBlock *BB = MBB.getBasicBlock();
+    if (BB != nullptr) {
+      MergedBBs.erase(BB);
+    }
+  }
   // Emit BB Information for each basic block in the funciton.
   for (const MachineBasicBlock &MBB : MF) {
     const MCSymbol *MBBSymbol =
@@ -1348,6 +1384,42 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     emitLabelDifferenceAsULEB128(MBB.getEndSymbol(), MBBSymbol);
     OutStreamer->emitULEB128IntValue(getBBAddrMapMetadata(MBB));
     PrevMBBEndSymbol = MBB.getEndSymbol();
+    // Find BBs corresponding with this MBB as described above.
+    const BasicBlock *CorrBB = MBB.getBasicBlock();
+    std::vector<const BasicBlock *> CorrBBs;
+    while (CorrBB != nullptr) {
+      CorrBBs.push_back(CorrBB);
+      const Instruction *Term = CorrBB->getTerminator();
+      assert(Term != nullptr);
+      if ((isa<BranchInst>(Term)) &&
+          (!(dyn_cast<const BranchInst>(Term))->isConditional())) {
+        CorrBB = CorrBB->getUniqueSuccessor();
+        assert(CorrBB != nullptr);
+        if (MergedBBs.count(CorrBB) == 0) {
+          CorrBB = nullptr;
+        }
+      } else {
+        CorrBB = nullptr;
+      }
+    }
+    // Emit the number of corresponding BasicBlocks.
+    OutStreamer->emitULEB128IntValue(CorrBBs.size());
+    // Emit the corresponding block indices.
+    for (auto CorrBB : CorrBBs) {
+      size_t I = 0;
+      bool Found = false;
+      for (auto It = F.begin(); It != F.end(); It++) {
+        const BasicBlock *BB = &*It;
+        if (BB == CorrBB) {
+          Found = true;
+          break;
+        }
+        I++;
+      }
+      if (!Found)
+        OutContext.reportError(SMLoc(), "Couldn't find the block's index");
+      OutStreamer->emitULEB128IntValue(I);
+    }
   }
   OutStreamer->popSection();
 }
@@ -1932,6 +2004,18 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
 }
 
 bool AsmPrinter::doFinalization(Module &M) {
+  // The `embed-bitcode` flag serialises the IR after only architecture
+  // agnostic optimisations have been run, but then proceeds to apply other
+  // optimisations and transformations afterwards. Sometimes this final version
+  // is precisely what we are interested in. The `embed-bitcode-final` flag
+  // waits until all optimisations/transformations have been run before
+  // embedding the IR.
+  if (EmbedBitcodeFinal)
+    llvm::embedBitcodeInModule(M, llvm::MemoryBufferRef(),
+                               /*EmbedBitcode*/ true,
+                               /*EmbedCmdline*/ false,
+                               /*CmdArgs*/ std::vector<uint8_t>());
+
   // Set the MachineFunction to nullptr so that we can catch attempted
   // accesses to MF specific features at the module level and so that
   // we can conditionalize accesses based on whether or not it is nullptr.

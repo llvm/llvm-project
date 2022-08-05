@@ -14,8 +14,15 @@
 #include "llvm-c/Initialization.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/PassRegistry.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+llvm::cl::opt<bool> YkNoFallThrough(
+    "yk-no-fallthrough", cl::Hidden, cl::init(false),
+    cl::desc("Always emit a branch even if fallthrough is possible. This "
+             "is required for the yk JIT, so that the machine IR has the "
+             "same block structure as the high-level IR"));
 
 /// initializeCodeGen - Initialize all passes linked into the CodeGen library.
 void llvm::initializeCodeGen(PassRegistry &Registry) {

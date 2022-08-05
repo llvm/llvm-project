@@ -35,4 +35,5 @@ add_llvm_component_library(LLVMLTO
   Support
   Target
   TransformUtils
+  YkPasses
 )

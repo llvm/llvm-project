@@ -48,6 +48,8 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Yk/BlockDisambiguate.h"
+#include "llvm/Transforms/Yk/ControlPoint.h"
 #include <cassert>
 #include <string>
 
@@ -263,6 +265,14 @@ static cl::opt<bool> DisableExpandReductions(
 static cl::opt<bool> DisableSelectOptimize(
     "disable-select-optimize", cl::init(true), cl::Hidden,
     cl::desc("Disable the select-optimization pass from running"));
+
+static cl::opt<bool>
+    YkBlockDisambiguate("yk-block-disambiguate", cl::init(false), cl::NotHidden,
+                        cl::desc("Disambiguate blocks for yk"));
+
+static cl::opt<bool> YkPatchCtrlPoint("yk-patch-control-point", cl::init(false),
+                                      cl::NotHidden,
+                                      cl::desc("Patch yk_mt_control_point()"));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -1116,8 +1126,24 @@ bool TargetPassConfig::addISelPasses() {
   addIRPasses();
   addCodeGenPrepare();
   addPassesToHandleExceptions();
-  addISelPrepare();
+  if (YkBlockDisambiguate)
+    addPass(createYkBlockDisambiguatePass());
 
+  // We insert the yk control point pass as late as possible. It has to run
+  // before instruction selection (or the machine IR won't reflect our
+  // patching), but after other passes which mutate the IR (e.g.
+  // `CodegenPrepare` above).
+  //
+  // By running the pass late, we also ensure that no IR optimisation passes
+  // ever see our patched-in control point function. If optimisations were to
+  // be applied then this would be problematic as the interface to the control
+  // point could be changed, e.g. the control point's struct argument could be
+  // decomposed into scalar arguments. The JIT runtime relies on the interface
+  // *not* being changed.
+  if (YkPatchCtrlPoint)
+    addPass(createYkControlPointPass());
+
+  addISelPrepare();
   return addCoreISelPasses();
 }
 
