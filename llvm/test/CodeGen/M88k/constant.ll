@@ -123,9 +123,8 @@ define float @f15() {
 
 define double @f16() {
 ; CHECK-LABEL: f16:
-; Big Endian Bug!
-; NOT: CHECK: or %r2, %r0, 0
-; NOT: CHECK: or.u %r3, %r0, 16368
+; CHECK: or %r3, %r0, 0
+; CHECK: or.u %r2, %r0, 16368
 ; Alternativ instruction could also be: set %r2,%r0,10<20>
 ; CHECK: jmp %r1
   ret double 1.0

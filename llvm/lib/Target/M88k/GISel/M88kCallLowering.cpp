@@ -116,22 +116,22 @@ unsigned OutgoingArgHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
                                                std::function<void()> *Thunk) {
   assert(Arg.Regs.size() == 1 && "Can't handle multple regs yet");
 
-  CCValAssign VA = VAs[0];
-  assert(VA.needsCustom() && "Value doesn't need custom handling");
+  CCValAssign HiVA = VAs[0];
+  assert(HiVA.needsCustom() && "Value doesn't need custom handling");
 
   // Custom lowering for other types, such as f16, is currently not supported
-  if (VA.getValVT() != MVT::f64)
+  if (HiVA.getValVT() != MVT::f64)
     return 0;
 
-  CCValAssign NextVA = VAs[1];
-  assert(NextVA.needsCustom() && "Value doesn't need custom handling");
-  assert(NextVA.getValVT() == MVT::f64 && "Unsupported type");
+  CCValAssign LoVA = VAs[1];
+  assert(LoVA.needsCustom() && "Value doesn't need custom handling");
+  assert(LoVA.getValVT() == MVT::f64 && "Unsupported type");
 
-  assert(VA.getValNo() == NextVA.getValNo() &&
+  assert(HiVA.getValNo() == LoVA.getValNo() &&
          "Values belong to different arguments");
 
-  assert(VA.isRegLoc() && "Value should be in reg");
-  assert(NextVA.isRegLoc() && "Value should be in reg");
+  assert(HiVA.isRegLoc() && "Value should be in reg");
+  assert(LoVA.isRegLoc() && "Value should be in reg");
 
   Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
                         MRI.createGenericVirtualRegister(LLT::scalar(32))};
@@ -139,13 +139,13 @@ unsigned OutgoingArgHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
 
   if (Thunk) {
     *Thunk = [=]() {
-      assignValueToReg(NewRegs[0], VA.getLocReg(), VA);
-      assignValueToReg(NewRegs[1], NextVA.getLocReg(), NextVA);
+      assignValueToReg(NewRegs[0], LoVA.getLocReg(), LoVA);
+      assignValueToReg(NewRegs[1], HiVA.getLocReg(), HiVA);
     };
     return 1;
   }
-  assignValueToReg(NewRegs[0], VA.getLocReg(), VA);
-  assignValueToReg(NewRegs[1], NextVA.getLocReg(), NextVA);
+  assignValueToReg(NewRegs[0], LoVA.getLocReg(), LoVA);
+  assignValueToReg(NewRegs[1], HiVA.getLocReg(), HiVA);
   return 1;
 }
 
@@ -236,28 +236,28 @@ M88kIncomingValueHandler::assignCustomValue(CallLowering::ArgInfo &Arg,
                                             std::function<void()> *Thunk) {
   assert(Arg.Regs.size() == 1 && "Can't handle multple regs yet");
 
-  CCValAssign VA = VAs[0];
-  assert(VA.needsCustom() && "Value doesn't need custom handling");
+  CCValAssign HiVA = VAs[0];
+  assert(HiVA.needsCustom() && "Value doesn't need custom handling");
 
   // Custom lowering for other types is currently not supported.
-  if (VA.getValVT() != MVT::f64)
+  if (HiVA.getValVT() != MVT::f64)
     return 0;
 
-  CCValAssign NextVA = VAs[1];
-  assert(NextVA.needsCustom() && "Value doesn't need custom handling");
-  assert(NextVA.getValVT() == MVT::f64 && "Unsupported type");
+  CCValAssign LoVA = VAs[1];
+  assert(LoVA.needsCustom() && "Value doesn't need custom handling");
+  assert(LoVA.getValVT() == MVT::f64 && "Unsupported type");
 
-  assert(VA.getValNo() == NextVA.getValNo() &&
+  assert(HiVA.getValNo() == LoVA.getValNo() &&
          "Values belong to different arguments");
 
-  assert(VA.isRegLoc() && "Value should be in reg");
-  assert(NextVA.isRegLoc() && "Value should be in reg");
+  assert(HiVA.isRegLoc() && "Value should be in reg");
+  assert(LoVA.isRegLoc() && "Value should be in reg");
 
   Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
                         MRI.createGenericVirtualRegister(LLT::scalar(32))};
 
-  assignValueToReg(NewRegs[0], VA.getLocReg(), VA);
-  assignValueToReg(NewRegs[1], NextVA.getLocReg(), NextVA);
+  assignValueToReg(NewRegs[0], LoVA.getLocReg(), LoVA);
+  assignValueToReg(NewRegs[1], HiVA.getLocReg(), HiVA);
 
   MIRBuilder.buildMerge(Arg.Regs[0], NewRegs);
 
