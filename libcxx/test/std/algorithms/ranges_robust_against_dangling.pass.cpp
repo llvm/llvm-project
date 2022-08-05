@@ -76,8 +76,10 @@ constexpr bool test_all() {
   using std::ranges::mismatch_result;
   using std::ranges::move_result;
   using std::ranges::move_backward_result;
+  using std::ranges::next_permutation_result;
   using std::ranges::partial_sort_copy_result;
   using std::ranges::partition_copy_result;
+  using std::ranges::prev_permutation_result;
   using std::ranges::remove_copy_result;
   using std::ranges::remove_copy_if_result;
   using std::ranges::replace_copy_result;
@@ -199,8 +201,8 @@ constexpr bool test_all() {
   dangling_1st(std::ranges::push_heap, in);
   dangling_1st(std::ranges::pop_heap, in);
   dangling_1st(std::ranges::sort_heap, in);
-  //dangling_1st(std::ranges::prev_permutation, in);
-  //dangling_1st(std::ranges::next_permutation, in);
+  dangling_1st<prev_permutation_result<dangling>>(std::ranges::prev_permutation, in);
+  dangling_1st<next_permutation_result<dangling>>(std::ranges::next_permutation, in);
 
   return true;
 }
