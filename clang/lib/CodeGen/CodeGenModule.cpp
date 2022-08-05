@@ -1680,7 +1680,7 @@ void CodeGenModule::SetLLVMFunctionAttributes(GlobalDecl GD,
   F->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
   if (getLangOpts().HLSL) {
     if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(GD.getDecl()))
-      getHLSLRuntime().setHLSLFnuctionAttributes(F, FD);
+      getHLSLRuntime().setHLSLFunctionAttributes(F, FD);
   }
 }
 
