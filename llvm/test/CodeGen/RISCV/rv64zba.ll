@@ -1116,6 +1116,28 @@ define i64 @add8208(i64 %a) {
   ret i64 %c
 }
 
+; Make sure we prefer LUI for the 8192 instead of using sh3add.
+define signext i32 @add8192_i32(i32 signext %a) {
+; CHECK-LABEL: add8192_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 2
+; CHECK-NEXT:    addw a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = add i32 %a, 8192
+  ret i32 %c
+}
+
+; Make sure we prefer LUI for the 8192 instead of using sh3add.
+define i64 @add8192(i64 %a) {
+; CHECK-LABEL: add8192:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = add i64 %a, 8192
+  ret i64 %c
+}
+
 define signext i32 @addshl32_5_6(i32 signext %a, i32 signext %b) {
 ; RV64I-LABEL: addshl32_5_6:
 ; RV64I:       # %bb.0:
