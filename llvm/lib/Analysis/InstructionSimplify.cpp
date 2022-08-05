@@ -1582,45 +1582,6 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
   return nullptr;
 }
 
-/// Commuted variants are assumed to be handled by calling this function again
-/// with the parameters swapped.
-static Value *simplifyAndOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
-  ICmpInst::Predicate Pred0, Pred1;
-  Value *A, *B;
-  if (!match(Op0, m_ICmp(Pred0, m_Value(A), m_Value(B))) ||
-      !match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
-    return nullptr;
-
-  // Check for any combination of predicates that are guaranteed to be disjoint.
-  if ((Pred0 == ICmpInst::getInversePredicate(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_EQ && ICmpInst::isFalseWhenEqual(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_SLT && Pred1 == ICmpInst::ICMP_SGT) ||
-      (Pred0 == ICmpInst::ICMP_ULT && Pred1 == ICmpInst::ICMP_UGT))
-    return getFalse(Op0->getType());
-
-  return nullptr;
-}
-
-/// Commuted variants are assumed to be handled by calling this function again
-/// with the parameters swapped.
-static Value *simplifyOrOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
-  ICmpInst::Predicate Pred0, Pred1;
-  Value *A, *B;
-  if (!match(Op0, m_ICmp(Pred0, m_Value(A), m_Value(B))) ||
-      !match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
-    return nullptr;
-
-  // Check for any combination of predicates that cover the entire range of
-  // possibilities.
-  if ((Pred0 == ICmpInst::getInversePredicate(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_NE && ICmpInst::isTrueWhenEqual(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_SLE && Pred1 == ICmpInst::ICMP_SGE) ||
-      (Pred0 == ICmpInst::ICMP_ULE && Pred1 == ICmpInst::ICMP_UGE))
-    return getTrue(Op0->getType());
-
-  return nullptr;
-}
-
 /// Test if a pair of compares with a shared operand and 2 constants has an
 /// empty set intersection, full set union, or if one compare is a superset of
 /// the other.
@@ -1833,11 +1794,6 @@ static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   if (Value *X = simplifyUnsignedRangeCheck(Op1, Op0, /*IsAnd=*/true, Q))
     return X;
 
-  if (Value *X = simplifyAndOfICmpsWithSameOperands(Op0, Op1))
-    return X;
-  if (Value *X = simplifyAndOfICmpsWithSameOperands(Op1, Op0))
-    return X;
-
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, true))
     return X;
 
@@ -1912,11 +1868,6 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/false, Q))
     return X;
   if (Value *X = simplifyUnsignedRangeCheck(Op1, Op0, /*IsAnd=*/false, Q))
-    return X;
-
-  if (Value *X = simplifyOrOfICmpsWithSameOperands(Op0, Op1))
-    return X;
-  if (Value *X = simplifyOrOfICmpsWithSameOperands(Op1, Op0))
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, false))
@@ -2220,12 +2171,22 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return Constant::getNullValue(Op0->getType());
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
-    // Op0&Op1 -> Op0 where Op0 implies Op1
-    if (isImpliedCondition(Op0, Op1, Q.DL).value_or(false))
-      return Op0;
-    // Op0&Op1 -> Op1 where Op1 implies Op0
-    if (isImpliedCondition(Op1, Op0, Q.DL).value_or(false))
-      return Op1;
+    if (Optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL)) {
+      // If Op0 is true implies Op1 is true, then Op0 is a subset of Op1.
+      if (*Implied == true)
+        return Op0;
+      // If Op0 is true implies Op1 is false, then they are not true together.
+      if (*Implied == false)
+        return ConstantInt::getFalse(Op0->getType());
+    }
+    if (Optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL)) {
+      // If Op1 is true implies Op0 is true, then Op1 is a subset of Op0.
+      if (Implied.getValue())
+        return Op1;
+      // If Op1 is true implies Op0 is false, then they are not true together.
+      if (!Implied.getValue())
+        return ConstantInt::getFalse(Op1->getType());
+    }
   }
 
   return nullptr;
@@ -2460,12 +2421,26 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       return V;
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
-    // Op0|Op1 -> Op1 where Op0 implies Op1
-    if (isImpliedCondition(Op0, Op1, Q.DL).value_or(false))
-      return Op1;
-    // Op0|Op1 -> Op0 where Op1 implies Op0
-    if (isImpliedCondition(Op1, Op0, Q.DL).value_or(false))
-      return Op0;
+    // If Op0 is true implies Op1 is true, then Op0 is a subset of Op1.
+    if (Optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL)) {
+      if (*Implied == true)
+        return Op1;
+    }
+    // If Op0 is false implies Op1 is true, then at least one is always true.
+    if (Optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL, false)) {
+      if (*Implied == true)
+        return ConstantInt::getTrue(Op0->getType());
+    }
+    // If Op1 is true implies Op0 is true, then Op1 is a subset of Op0.
+    if (Optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL)) {
+      if (*Implied == true)
+        return Op0;
+    }
+    // If Op1 is false implies Op0 is true, then at least one is always true.
+    if (Optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL, false)) {
+      if (*Implied == true)
+        return ConstantInt::getTrue(Op1->getType());
+    }
   }
 
   return nullptr;
