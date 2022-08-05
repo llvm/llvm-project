@@ -23,6 +23,8 @@ class SPIRVTypeConverter;
 namespace spirv {
 /// Mapping from numeric MemRef memory spaces into SPIR-V symbolic ones.
 using MemorySpaceToStorageClassMap = DenseMap<unsigned, spirv::StorageClass>;
+/// Returns the default map for targeting Vulkan-flavored SPIR-V.
+MemorySpaceToStorageClassMap getDefaultVulkanStorageClassMap();
 
 /// Type converter for converting numeric MemRef memory spaces into SPIR-V
 /// symbolic ones.
