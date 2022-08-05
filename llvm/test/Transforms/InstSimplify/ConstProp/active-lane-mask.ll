@@ -292,8 +292,14 @@ entry:
 }
 
 
-
-
+define <4 x float> @poisonc(<4 x float> %a, i32 %n) {
+entry:
+  %new0 = shl i1 0, 1
+  %last = zext i1 %new0 to i32
+  %var27 = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %last, i32 1024)
+  %var33 = select <4 x i1> %var27, <4 x float> %a, <4 x float> zeroinitializer
+  ret <4 x float> %var33
+}
 
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)
