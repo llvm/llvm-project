@@ -21,6 +21,7 @@
 // are necessary to run this test.
 // UNSUPPORTED: target=powerpc{{(64)?}}-ibm-aix
 
+#undef NDEBUG
 #include <assert.h>
 #include <stdlib.h>
 #include <libunwind.h>
