@@ -896,12 +896,7 @@ types::ID MachO::LookupTypeForExtension(StringRef Ext) const {
 bool MachO::HasNativeLLVMSupport() const { return true; }
 
 ToolChain::CXXStdlibType Darwin::GetDefaultCXXStdlibType() const {
-  // Use libstdc++ on old targets (OSX < 10.9 and iOS < 7)
-  if ((isTargetMacOSBased() && isMacosxVersionLT(10, 9)) ||
-      (isTargetIOSBased() && isIPhoneOSVersionLT(7, 0)))
-    return ToolChain::CST_Libstdcxx;
-
-  // On all other targets, use libc++
+  // Always use libc++ by default
   return ToolChain::CST_Libcxx;
 }
 
