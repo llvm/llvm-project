@@ -32,7 +32,14 @@
 
 namespace llvm {
 
+template <typename T> class ArrayRef;
+
 template <typename IteratorT> class iterator_range;
+
+template <class Iterator>
+using EnableIfConvertibleToInputIterator = std::enable_if_t<std::is_convertible<
+    typename std::iterator_traits<Iterator>::iterator_category,
+    std::input_iterator_tag>::value>;
 
 /// This is all the stuff common to all SmallVectors.
 ///
@@ -660,11 +667,8 @@ public:
   void swap(SmallVectorImpl &RHS);
 
   /// Add the specified range to the end of the SmallVector.
-  template <typename in_iter,
-            typename = std::enable_if_t<std::is_convertible<
-                typename std::iterator_traits<in_iter>::iterator_category,
-                std::input_iterator_tag>::value>>
-  void append(in_iter in_start, in_iter in_end) {
+  template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
+  void append(ItTy in_start, ItTy in_end) {
     this->assertSafeToAddRange(in_start, in_end);
     size_type NumInputs = std::distance(in_start, in_end);
     this->reserve(this->size() + NumInputs);
@@ -704,11 +708,8 @@ public:
   // FIXME: Consider assigning over existing elements, rather than clearing &
   // re-initializing them - for all assign(...) variants.
 
-  template <typename in_iter,
-            typename = std::enable_if_t<std::is_convertible<
-                typename std::iterator_traits<in_iter>::iterator_category,
-                std::input_iterator_tag>::value>>
-  void assign(in_iter in_start, in_iter in_end) {
+  template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
+  void assign(ItTy in_start, ItTy in_end) {
     this->assertSafeToReferenceAfterClear(in_start, in_end);
     clear();
     append(in_start, in_end);
@@ -858,10 +859,7 @@ public:
     return I;
   }
 
-  template <typename ItTy,
-            typename = std::enable_if_t<std::is_convertible<
-                typename std::iterator_traits<ItTy>::iterator_category,
-                std::input_iterator_tag>::value>>
+  template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
   iterator insert(iterator I, ItTy From, ItTy To) {
     // Convert iterator to elt# to avoid invalidating iterator when we reserve()
     size_t InsertElt = I - this->begin();
@@ -1197,10 +1195,7 @@ public:
     this->assign(Size, Value);
   }
 
-  template <typename ItTy,
-            typename = std::enable_if_t<std::is_convertible<
-                typename std::iterator_traits<ItTy>::iterator_category,
-                std::input_iterator_tag>::value>>
+  template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>
   SmallVector(ItTy S, ItTy E) : SmallVectorImpl<T>(N) {
     this->append(S, E);
   }
@@ -1213,6 +1208,12 @@ public:
 
   SmallVector(std::initializer_list<T> IL) : SmallVectorImpl<T>(N) {
     this->append(IL);
+  }
+
+  template <typename U,
+            typename = std::enable_if_t<std::is_convertible<U, T>::value>>
+  explicit SmallVector(ArrayRef<U> A) : SmallVectorImpl<T>(N) {
+    this->append(A.begin(), A.end());
   }
 
   SmallVector(const SmallVector &RHS) : SmallVectorImpl<T>(N) {

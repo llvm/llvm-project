@@ -6,7 +6,7 @@ declare i1 @opaque_true(i1) nounwind readonly
 
 define i1 @foo(i32* %ptr, i1 %cond) {
   %cond_wide = zext i1 %cond to i32
-; CHECK: MemoryUse(liveOnEntry) MayAlias
+; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: call i32 bitcast
   %cond_hidden_wide = call i32 bitcast (i1 (i1)* @opaque_true to i32 (i32)*)(i32 %cond_wide)
   %cond_hidden = trunc i32 %cond_hidden_wide to i1

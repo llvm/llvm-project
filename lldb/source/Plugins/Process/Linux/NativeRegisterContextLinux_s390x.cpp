@@ -96,6 +96,11 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
                                                              native_thread);
 }
 
+llvm::Expected<ArchSpec>
+NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
+  return HostInfo::GetArchitecture();
+}
+
 // NativeRegisterContextLinux_s390x members.
 
 static RegisterInfoInterface *

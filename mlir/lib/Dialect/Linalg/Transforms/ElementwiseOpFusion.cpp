@@ -1509,14 +1509,14 @@ public:
       return failure();
     for (OpOperand *opOperand : genericOp.getInputOperands()) {
       Operation *def = opOperand->get().getDefiningOp();
-      Attribute constantAttr;
+      TypedAttr constantAttr;
       auto isScalarOrSplatConstantOp = [&constantAttr](Operation *def) -> bool {
         {
           DenseElementsAttr splatAttr;
           if (matchPattern(def, m_Constant<DenseElementsAttr>(&splatAttr)) &&
               splatAttr.isSplat() &&
               splatAttr.getType().getElementType().isIntOrFloat()) {
-            constantAttr = splatAttr.getSplatValue<Attribute>();
+            constantAttr = splatAttr.getSplatValue<TypedAttr>();
             return true;
           }
         }

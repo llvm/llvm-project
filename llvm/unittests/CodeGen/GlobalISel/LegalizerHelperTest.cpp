@@ -2136,6 +2136,64 @@ TEST_F(AArch64GISelMITest, LibcallSimple) {
             Helper.libcall(*MIBFADD, DummyLocObserver));
 }
 
+TEST_F(AArch64GISelMITest, LibcallMul) {
+  setUp();
+  if (!TM)
+    return;
+
+  // Declare your legalization info
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_MUL).libcallFor({s32, s64, s128});
+  });
+
+  LLT S32{LLT::scalar(32)};
+  LLT S64{LLT::scalar(64)};
+  LLT S128{LLT::scalar(128)};
+  auto MIBTrunc = B.buildTrunc(S32, Copies[0]);
+  auto MIBExt = B.buildAnyExt(S128, Copies[0]);
+
+  auto MIBMul32 =
+      B.buildInstr(TargetOpcode::G_MUL, {S32}, {MIBTrunc, MIBTrunc});
+  auto MIBMul64 =
+      B.buildInstr(TargetOpcode::G_MUL, {S64}, {Copies[0], Copies[0]});
+  auto MIBMul128 =
+      B.buildInstr(TargetOpcode::G_MUL, {S128}, {MIBExt, MIBExt});
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LostDebugLocObserver DummyLocObserver("");
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMul32, DummyLocObserver));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMul64, DummyLocObserver));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.libcall(*MIBMul128, DummyLocObserver));
+
+  auto CheckStr = R"(
+  CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY
+  CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC
+  CHECK: [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT
+  CHECK: $w0 = COPY [[TRUNC]]
+  CHECK: $w1 = COPY [[TRUNC]]
+  CHECK: BL &__mulsi3
+  CHECK: $x0 = COPY [[COPY]]
+  CHECK: $x1 = COPY [[COPY]]
+  CHECK: BL &__muldi3
+  CHECK: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[ANYEXT]]
+  CHECK: $x0 = COPY [[UV]]
+  CHECK: $x1 = COPY [[UV1]]
+  CHECK: $x2 = COPY [[UV2]]
+  CHECK: $x3 = COPY [[UV3]]
+  CHECK: BL &__multi3
+  )";
+
+  // Check
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 TEST_F(AArch64GISelMITest, LibcallSRem) {
   setUp();
   if (!TM)

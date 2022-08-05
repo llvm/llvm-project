@@ -591,9 +591,6 @@ void Merger::dumpBits(const BitVector &bits) const {
       case kDense:
         llvm::dbgs() << "D";
         break;
-      case kSingle:
-        llvm::dbgs() << "T";
-        break;
       case kUndef:
         llvm::dbgs() << "U";
         break;
@@ -810,7 +807,7 @@ bool Merger::maybeZero(unsigned e) const {
     if (auto c = tensorExps[e].val.getDefiningOp<complex::ConstantOp>()) {
       ArrayAttr arrayAttr = c.getValue();
       return arrayAttr[0].cast<FloatAttr>().getValue().isZero() &&
-             arrayAttr[0].cast<FloatAttr>().getValue().isZero();
+             arrayAttr[1].cast<FloatAttr>().getValue().isZero();
     }
     if (auto c = tensorExps[e].val.getDefiningOp<arith::ConstantIntOp>())
       return c.value() == 0;

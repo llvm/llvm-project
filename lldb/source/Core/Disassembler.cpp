@@ -599,6 +599,7 @@ const char *Instruction::GetNameForInstructionControlFlowKind(
   case eInstructionControlFlowKindFarJump:
     return "far jump";
   }
+  llvm_unreachable("Fully covered switch above!");
 }
 
 void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,

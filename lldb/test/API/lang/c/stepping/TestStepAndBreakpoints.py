@@ -165,13 +165,13 @@ class TestCStepping(TestBase):
         process.Continue()
 
         self.assertEqual(thread.GetFrameAtIndex(0).GetFunctionName(), "a")
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         # And one more time should get us back to main:
         process.Continue()
 
         self.assertEqual(thread.GetFrameAtIndex(0).GetFunctionName(), "main")
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         # Now make sure we can call a function, break in the called function,
         # then have "continue" get us back out again:

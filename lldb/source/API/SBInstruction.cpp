@@ -164,6 +164,25 @@ const char *SBInstruction::GetComment(SBTarget target) {
   return nullptr;
 }
 
+lldb::InstructionControlFlowKind SBInstruction::GetControlFlowKind(lldb::SBTarget target) {
+  LLDB_INSTRUMENT_VA(this, target);
+
+  lldb::InstructionSP inst_sp(GetOpaque());
+  if (inst_sp) {
+    ExecutionContext exe_ctx;
+    TargetSP target_sp(target.GetSP());
+    std::unique_lock<std::recursive_mutex> lock;
+    if (target_sp) {
+      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+
+      target_sp->CalculateExecutionContext(exe_ctx);
+      exe_ctx.SetProcessSP(target_sp->GetProcessSP());
+    }
+    return inst_sp->GetControlFlowKind(&exe_ctx);
+  }
+  return lldb::eInstructionControlFlowKindUnknown;
+}
+
 size_t SBInstruction::GetByteSize() {
   LLDB_INSTRUMENT_VA(this);
 

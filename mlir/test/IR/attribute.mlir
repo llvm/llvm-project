@@ -521,13 +521,15 @@ func.func @simple_scalar_example() {
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: func @dense_array_attr
-func.func @dense_array_attr() attributes{
+func.func @dense_array_attr() attributes {
 // CHECK-SAME: emptyf32attr = [:f32],
                emptyf32attr = [:f32],
 // CHECK-SAME: emptyf64attr = [:f64],
                emptyf64attr = [:f64],
 // CHECK-SAME: emptyi16attr = [:i16],
                emptyi16attr = [:i16],
+// CHECK-SAME: emptyi1attr = [:i1],
+               emptyi1attr = [:i1],
 // CHECK-SAME: emptyi32attr = [:i32],
                emptyi32attr = [:i32],
 // CHECK-SAME: emptyi64attr = [:i64],
@@ -540,6 +542,8 @@ func.func @dense_array_attr() attributes{
                f64attr = [:f64 -142.],
 // CHECK-SAME: i16attr = [:i16 3, 5, -4, 10],
                i16attr = [:i16 3, 5, -4, 10],
+// CHECK-SAME: i1attr = [:i1 true, false, true],
+               i1attr = [:i1 true, false, true],
 // CHECK-SAME: i32attr = [:i32 1024, 453, -6435],
                i32attr = [:i32 1024, 453, -6435],
 // CHECK-SAME: i64attr = [:i64 -142],
@@ -549,6 +553,8 @@ func.func @dense_array_attr() attributes{
  } {
 // CHECK:  test.dense_array_attr
   test.dense_array_attr
+// CHECK-SAME: i1attr = [true, false, true]
+               i1attr = [true, false, true]
 // CHECK-SAME: i8attr = [1, -2, 3]
                i8attr = [1, -2, 3]
 // CHECK-SAME: i16attr = [3, 5, -4, 10]
@@ -691,9 +697,3 @@ func.func @wrong_shape_fail() {
   } : () -> ()
   return
 }
-
-// -----
-
-// expected-error @+1 {{invalid dialect namespace '"string with space"'}}
-#invalid_dialect = opaque<"string with space", "0xDEADBEEF"> : tensor<100xi32>
-

@@ -85,7 +85,7 @@ define i32 @unknown.start(i32 %start, i32* %len.ptr) {
 ; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_CMP]], label [[BACKEDGE]], label [[FAILED_UNSIGNED:%.*]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[DONE:%.*]]
 ; CHECK:       failed.signed:
@@ -161,7 +161,7 @@ define i32 @start.from.sibling.iv(i32* %len.ptr, i32* %sibling.len.ptr) {
 ; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_CMP]], label [[BACKEDGE]], label [[FAILED_UNSIGNED:%.*]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[DONE:%.*]]
 ; CHECK:       failed.signed:
@@ -252,7 +252,7 @@ define i32 @start.from.sibling.iv.wide(i32* %len.ptr, i32* %sibling.len.ptr) {
 ; CHECK:       signed.passed:
 ; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[FAILED_UNSIGNED:%.*]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[DONE:%.*]]
 ; CHECK:       failed.signed:
@@ -352,7 +352,7 @@ define i32 @start.from.sibling.iv.wide.cycled.phis(i32* %len.ptr, i32* %sibling.
 ; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_CMP]], label [[BACKEDGE]], label [[FAILED_UNSIGNED:%.*]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[OUTER_LOOP_BACKEDGE]]
 ; CHECK:       outer.loop.backedge:
@@ -470,7 +470,7 @@ define i32 @start.from.sibling.iv.wide.cycled.phis.complex.phis(i32* %len.ptr, i
 ; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_CMP]], label [[BACKEDGE]], label [[FAILED_UNSIGNED:%.*]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[OUTER_LOOP_SELECTION:%.*]]
 ; CHECK:       outer.loop.selection:

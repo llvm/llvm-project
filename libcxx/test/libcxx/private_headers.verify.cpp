@@ -37,7 +37,6 @@ END-SCRIPT
 // DO NOT MANUALLY EDIT ANYTHING BETWEEN THE MARKERS BELOW
 // GENERATED-MARKER
 #include <__algorithm/adjacent_find.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/adjacent_find.h'}}
-#include <__algorithm/algorithm_family.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/algorithm_family.h'}}
 #include <__algorithm/all_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/all_of.h'}}
 #include <__algorithm/any_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/any_of.h'}}
 #include <__algorithm/binary_search.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/binary_search.h'}}
@@ -110,6 +109,7 @@ END-SCRIPT
 #include <__algorithm/ranges_all_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_all_of.h'}}
 #include <__algorithm/ranges_any_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_any_of.h'}}
 #include <__algorithm/ranges_binary_search.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_binary_search.h'}}
+#include <__algorithm/ranges_clamp.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_clamp.h'}}
 #include <__algorithm/ranges_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy.h'}}
 #include <__algorithm/ranges_copy_backward.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy_backward.h'}}
 #include <__algorithm/ranges_copy_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_copy_if.h'}}
@@ -134,6 +134,7 @@ END-SCRIPT
 #include <__algorithm/ranges_is_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_is_heap.h'}}
 #include <__algorithm/ranges_is_heap_until.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_is_heap_until.h'}}
 #include <__algorithm/ranges_is_partitioned.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_is_partitioned.h'}}
+#include <__algorithm/ranges_is_permutation.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_is_permutation.h'}}
 #include <__algorithm/ranges_is_sorted.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_is_sorted.h'}}
 #include <__algorithm/ranges_is_sorted_until.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_is_sorted_until.h'}}
 #include <__algorithm/ranges_iterator_concept.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_iterator_concept.h'}}
@@ -150,6 +151,7 @@ END-SCRIPT
 #include <__algorithm/ranges_mismatch.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_mismatch.h'}}
 #include <__algorithm/ranges_move.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_move.h'}}
 #include <__algorithm/ranges_move_backward.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_move_backward.h'}}
+#include <__algorithm/ranges_next_permutation.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_next_permutation.h'}}
 #include <__algorithm/ranges_none_of.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_none_of.h'}}
 #include <__algorithm/ranges_nth_element.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_nth_element.h'}}
 #include <__algorithm/ranges_partial_sort.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_partial_sort.h'}}
@@ -158,6 +160,7 @@ END-SCRIPT
 #include <__algorithm/ranges_partition_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_partition_copy.h'}}
 #include <__algorithm/ranges_partition_point.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_partition_point.h'}}
 #include <__algorithm/ranges_pop_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_pop_heap.h'}}
+#include <__algorithm/ranges_prev_permutation.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_prev_permutation.h'}}
 #include <__algorithm/ranges_push_heap.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_push_heap.h'}}
 #include <__algorithm/ranges_remove.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_remove.h'}}
 #include <__algorithm/ranges_remove_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_remove_copy.h'}}
@@ -169,7 +172,9 @@ END-SCRIPT
 #include <__algorithm/ranges_replace_if.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_replace_if.h'}}
 #include <__algorithm/ranges_reverse.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_reverse.h'}}
 #include <__algorithm/ranges_reverse_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_reverse_copy.h'}}
+#include <__algorithm/ranges_rotate.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_rotate.h'}}
 #include <__algorithm/ranges_rotate_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_rotate_copy.h'}}
+#include <__algorithm/ranges_sample.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_sample.h'}}
 #include <__algorithm/ranges_search.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_search.h'}}
 #include <__algorithm/ranges_search_n.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_search_n.h'}}
 #include <__algorithm/ranges_set_difference.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/ranges_set_difference.h'}}
@@ -215,6 +220,7 @@ END-SCRIPT
 #include <__algorithm/stable_sort.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/stable_sort.h'}}
 #include <__algorithm/swap_ranges.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/swap_ranges.h'}}
 #include <__algorithm/transform.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/transform.h'}}
+#include <__algorithm/uniform_random_bit_generator_adaptor.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/uniform_random_bit_generator_adaptor.h'}}
 #include <__algorithm/unique.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/unique.h'}}
 #include <__algorithm/unique_copy.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/unique_copy.h'}}
 #include <__algorithm/unwrap_iter.h> // expected-error@*:* {{use of private header from outside its module: '__algorithm/unwrap_iter.h'}}

@@ -45,7 +45,7 @@ buildStmtToBasicBlockMap(const CFG &Cfg) {
 }
 
 llvm::Expected<ControlFlowContext>
-ControlFlowContext::build(const Decl *D, Stmt *S, ASTContext *C) {
+ControlFlowContext::build(const Decl *D, Stmt &S, ASTContext &C) {
   CFG::BuildOptions Options;
   Options.PruneTriviallyFalseEdges = false;
   Options.AddImplicitDtors = true;
@@ -56,7 +56,7 @@ ControlFlowContext::build(const Decl *D, Stmt *S, ASTContext *C) {
   // Ensure that all sub-expressions in basic blocks are evaluated.
   Options.setAllAlwaysAdd();
 
-  auto Cfg = CFG::buildCFG(D, S, C, Options);
+  auto Cfg = CFG::buildCFG(D, &S, &C, Options);
   if (Cfg == nullptr)
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
@@ -64,7 +64,14 @@ ControlFlowContext::build(const Decl *D, Stmt *S, ASTContext *C) {
 
   llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock =
       buildStmtToBasicBlockMap(*Cfg);
-  return ControlFlowContext(std::move(Cfg), std::move(StmtToBlock));
+  return ControlFlowContext(D, std::move(Cfg), std::move(StmtToBlock));
+}
+
+llvm::Expected<ControlFlowContext>
+ControlFlowContext::build(const Decl *D, Stmt *S, ASTContext *C) {
+  assert(S != nullptr);
+  assert(C != nullptr);
+  return build(D, *S, *C);
 }
 
 } // namespace dataflow

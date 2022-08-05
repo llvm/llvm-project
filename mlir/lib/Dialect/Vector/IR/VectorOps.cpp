@@ -1737,7 +1737,7 @@ OpFoldResult BroadcastOp::fold(ArrayRef<Attribute> operands) {
   if (!operands[0])
     return {};
   auto vectorType = getVectorType();
-  if (operands[0].getType().isIntOrIndexOrFloat())
+  if (operands[0].isa<IntegerAttr, FloatAttr>())
     return DenseElementsAttr::get(vectorType, operands[0]);
   if (auto attr = operands[0].dyn_cast<SplatElementsAttr>())
     return DenseElementsAttr::get(vectorType, attr.getSplatValue<Attribute>());
@@ -1855,7 +1855,7 @@ OpFoldResult vector::ShuffleOp::fold(ArrayRef<Attribute> operands) {
   if (!lhs || !rhs)
     return {};
 
-  auto lhsType = lhs.getType().cast<VectorType>();
+  auto lhsType = lhs.cast<DenseElementsAttr>().getType().cast<VectorType>();
   // Only support 1-D for now to avoid complicated n-D DenseElementsAttr
   // manipulation.
   if (lhsType.getRank() != 1)

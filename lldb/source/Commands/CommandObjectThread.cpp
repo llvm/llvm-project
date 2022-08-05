@@ -2269,17 +2269,17 @@ protected:
       m_options.m_dumper_options.id = m_last_id;
     }
 
-    llvm::Expected<TraceCursorUP> cursor_or_error =
+    llvm::Expected<TraceCursorSP> cursor_or_error =
         m_exe_ctx.GetTargetSP()->GetTrace()->CreateNewCursor(*thread_sp);
 
     if (!cursor_or_error) {
       result.AppendError(llvm::toString(cursor_or_error.takeError()));
       return false;
     }
-    TraceCursorUP &cursor_up = *cursor_or_error;
+    TraceCursorSP &cursor_sp = *cursor_or_error;
 
     if (m_options.m_dumper_options.id &&
-        !cursor_up->HasId(*m_options.m_dumper_options.id)) {
+        !cursor_sp->HasId(*m_options.m_dumper_options.id)) {
       result.AppendError("invalid instruction id\n");
       return false;
     }
@@ -2295,10 +2295,10 @@ protected:
       // We need to stop processing data when we already ran out of instructions
       // in a previous command. We can fake this by setting the cursor past the
       // end of the trace.
-      cursor_up->Seek(1, TraceCursor::SeekType::End);
+      cursor_sp->Seek(1, lldb::eTraceCursorSeekTypeEnd);
     }
 
-    TraceDumper dumper(std::move(cursor_up),
+    TraceDumper dumper(std::move(cursor_sp),
                        out_file ? *out_file : result.GetOutputStream(),
                        m_options.m_dumper_options);
 

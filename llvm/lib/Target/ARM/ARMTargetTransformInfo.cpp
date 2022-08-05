@@ -1677,10 +1677,45 @@ ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
   return BaseT::getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 }
 
+InstructionCost ARMTTIImpl::getExtendedReductionCost(
+    unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
+    Optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
+  EVT ValVT = TLI->getValueType(DL, ValTy);
+  EVT ResVT = TLI->getValueType(DL, ResTy);
+
+  int ISD = TLI->InstructionOpcodeToISD(Opcode);
+
+  switch (ISD) {
+  case ISD::ADD:
+    if (ST->hasMVEIntegerOps() && ValVT.isSimple() && ResVT.isSimple()) {
+      std::pair<InstructionCost, MVT> LT =
+          TLI->getTypeLegalizationCost(DL, ValTy);
+
+      // The legal cases are:
+      //   VADDV u/s 8/16/32
+      //   VADDLV u/s 32
+      // Codegen currently cannot always handle larger than legal vectors very
+      // well, especially for predicated reductions where the mask needs to be
+      // split, so restrict to 128bit or smaller input types.
+      unsigned RevVTSize = ResVT.getSizeInBits();
+      if (ValVT.getSizeInBits() <= 128 &&
+          ((LT.second == MVT::v16i8 && RevVTSize <= 32) ||
+           (LT.second == MVT::v8i16 && RevVTSize <= 32) ||
+           (LT.second == MVT::v4i32 && RevVTSize <= 64)))
+        return ST->getMVEVectorCostFactor(CostKind) * LT.first;
+    }
+    break;
+  default:
+    break;
+  }
+  return BaseT::getExtendedReductionCost(Opcode, IsUnsigned, ResTy, ValTy, FMF,
+                                         CostKind);
+}
+
 InstructionCost
-ARMTTIImpl::getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
-                                        Type *ResTy, VectorType *ValTy,
-                                        TTI::TargetCostKind CostKind) {
+ARMTTIImpl::getMulAccReductionCost(bool IsUnsigned, Type *ResTy,
+                                   VectorType *ValTy,
+                                   TTI::TargetCostKind CostKind) {
   EVT ValVT = TLI->getValueType(DL, ValTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
@@ -1689,9 +1724,7 @@ ARMTTIImpl::getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
         TLI->getTypeLegalizationCost(DL, ValTy);
 
     // The legal cases are:
-    //   VADDV u/s 8/16/32
     //   VMLAV u/s 8/16/32
-    //   VADDLV u/s 32
     //   VMLALV u/s 16/32
     // Codegen currently cannot always handle larger than legal vectors very
     // well, especially for predicated reductions where the mask needs to be
@@ -1699,13 +1732,12 @@ ARMTTIImpl::getExtendedAddReductionCost(bool IsMLA, bool IsUnsigned,
     unsigned RevVTSize = ResVT.getSizeInBits();
     if (ValVT.getSizeInBits() <= 128 &&
         ((LT.second == MVT::v16i8 && RevVTSize <= 32) ||
-         (LT.second == MVT::v8i16 && RevVTSize <= (IsMLA ? 64u : 32u)) ||
+         (LT.second == MVT::v8i16 && RevVTSize <= 64) ||
          (LT.second == MVT::v4i32 && RevVTSize <= 64)))
       return ST->getMVEVectorCostFactor(CostKind) * LT.first;
   }
 
-  return BaseT::getExtendedAddReductionCost(IsMLA, IsUnsigned, ResTy, ValTy,
-                                            CostKind);
+  return BaseT::getMulAccReductionCost(IsUnsigned, ResTy, ValTy, CostKind);
 }
 
 InstructionCost
@@ -2200,7 +2232,8 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
 
 bool ARMTTIImpl::preferPredicateOverEpilogue(
     Loop *L, LoopInfo *LI, ScalarEvolution &SE, AssumptionCache &AC,
-    TargetLibraryInfo *TLI, DominatorTree *DT, LoopVectorizationLegality *LVL) {
+    TargetLibraryInfo *TLI, DominatorTree *DT, LoopVectorizationLegality *LVL,
+    InterleavedAccessInfo *IAI) {
   if (!EnableTailPredication) {
     LLVM_DEBUG(dbgs() << "Tail-predication not enabled.\n");
     return false;

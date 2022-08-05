@@ -118,20 +118,29 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     MemRefDescriptor memrefDescriptor(memref);
     Type llvmI64 = this->typeConverter->convertType(rewriter.getI64Type());
     Type llvm2xI32 = this->typeConverter->convertType(VectorType::get(2, i32));
+    Value c32I64 = rewriter.create<LLVM::ConstantOp>(
+        loc, llvmI64, rewriter.getI64IntegerAttr(32));
 
     Value resource = rewriter.create<LLVM::UndefOp>(loc, llvm4xI32);
 
     Value ptr = memrefDescriptor.alignedPtr(rewriter, loc);
     Value ptrAsInt = rewriter.create<LLVM::PtrToIntOp>(loc, llvmI64, ptr);
-    Value ptrAsInts =
-        rewriter.create<LLVM::BitcastOp>(loc, llvm2xI32, ptrAsInt);
-    for (int64_t i = 0; i < 2; ++i) {
-      Value idxConst = this->createIndexConstant(rewriter, loc, i);
-      Value part =
-          rewriter.create<LLVM::ExtractElementOp>(loc, ptrAsInts, idxConst);
-      resource = rewriter.create<LLVM::InsertElementOp>(
-          loc, llvm4xI32, resource, part, idxConst);
-    }
+    Value lowHalf = rewriter.create<LLVM::TruncOp>(loc, llvmI32, ptrAsInt);
+    resource = rewriter.create<LLVM::InsertElementOp>(
+        loc, llvm4xI32, resource, lowHalf,
+        this->createIndexConstant(rewriter, loc, 0));
+
+    // Bits 48-63 are used both for the stride of the buffer and (on gfx10) for
+    // enabling swizzling. Prevent the high bits of pointers from accidentally
+    // setting those flags.
+    Value highHalfShifted = rewriter.create<LLVM::TruncOp>(
+        loc, llvmI32, rewriter.create<LLVM::LShrOp>(loc, ptrAsInt, c32I64));
+    Value highHalfTruncated = rewriter.create<LLVM::AndOp>(
+        loc, llvmI32, highHalfShifted,
+        createI32Constant(rewriter, loc, 0x0000ffff));
+    resource = rewriter.create<LLVM::InsertElementOp>(
+        loc, llvm4xI32, resource, highHalfTruncated,
+        this->createIndexConstant(rewriter, loc, 1));
 
     Value numRecords;
     if (memrefType.hasStaticShape()) {

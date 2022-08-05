@@ -121,7 +121,7 @@ struct TypeErasedDataflowAnalysisState {
 ///   `llvm::None` represent basic blocks that are not evaluated yet.
 TypeErasedDataflowAnalysisState transferBlock(
     const ControlFlowContext &CFCtx,
-    std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> &BlockStates,
+    llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates,
     const CFGBlock &Block, const Environment &InitEnv,
     TypeErasedDataflowAnalysis &Analysis,
     std::function<void(const CFGStmt &,
@@ -138,7 +138,8 @@ llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const ControlFlowContext &CFCtx, TypeErasedDataflowAnalysis &Analysis,
     const Environment &InitEnv,
-    std::function<void(const Stmt *, const TypeErasedDataflowAnalysisState &)>
+    std::function<void(const CFGStmt &,
+                       const TypeErasedDataflowAnalysisState &)>
         PostVisitStmt = nullptr);
 
 } // namespace dataflow

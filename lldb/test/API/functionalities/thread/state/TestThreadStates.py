@@ -226,7 +226,7 @@ class ThreadStateTestCase(TestBase):
         # Stop the process
         self.runCmd("process interrupt")
 
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonSignal)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonSignal)
 
         # Get the inferior out of its loop
         self.runCmd("expression g_test = 1")
@@ -282,7 +282,7 @@ class ThreadStateTestCase(TestBase):
         # Stop the process
         self.runCmd("process interrupt")
 
-        self.assertEqual(thread.GetState(), lldb.eStopReasonSignal)
+        self.assertStopReason(thread.GetState(), lldb.eStopReasonSignal)
 
         # Check the thread state
         self.assertTrue(
@@ -302,12 +302,12 @@ class ThreadStateTestCase(TestBase):
             thread.IsSuspended(),
             "Thread state is \'suspended\' after expression evaluation.")
 
-        self.assertEqual(thread.GetState(), lldb.eStopReasonSignal)
+        self.assertStopReason(thread.GetState(), lldb.eStopReasonSignal)
 
         # Run to breakpoint 2
         self.runCmd("continue")
 
-        self.assertEqual(thread.GetState(), lldb.eStopReasonBreakpoint)
+        self.assertStopReason(thread.GetState(), lldb.eStopReasonBreakpoint)
 
         # Make sure both threads are stopped
         self.assertTrue(

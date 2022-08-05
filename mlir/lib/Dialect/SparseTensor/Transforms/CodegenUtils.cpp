@@ -148,8 +148,6 @@ DimLevelType mlir::sparse_tensor::dimLevelTypeEncoding(
     return DimLevelType::kDense;
   case SparseTensorEncodingAttr::DimLevelType::Compressed:
     return DimLevelType::kCompressed;
-  case SparseTensorEncodingAttr::DimLevelType::Singleton:
-    return DimLevelType::kSingleton;
   }
   llvm_unreachable("Unknown SparseTensorEncodingAttr::DimLevelType");
 }

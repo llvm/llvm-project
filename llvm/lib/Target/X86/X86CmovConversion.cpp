@@ -67,6 +67,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/CGPassBuilderOption.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -165,6 +166,10 @@ bool X86CmovConverterPass::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
   if (!EnableCmovConverter)
+    return false;
+
+  // If the SelectOptimize pass is enabled, cmovs have already been optimized.
+  if (!getCGPassBuilderOption().DisableSelectOptimize)
     return false;
 
   LLVM_DEBUG(dbgs() << "********** " << getPassName() << " : " << MF.getName()

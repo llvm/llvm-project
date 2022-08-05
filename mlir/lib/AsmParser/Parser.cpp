@@ -238,6 +238,15 @@ ParseResult Parser::parseToken(Token::Kind expectedToken,
 
 /// Parse an optional integer value from the stream.
 OptionalParseResult Parser::parseOptionalInteger(APInt &result) {
+  // Parse `false` and `true` keywords as 0 and 1 respectively.
+  if (consumeIf(Token::kw_false)) {
+    result = false;
+    return success();
+  } else if (consumeIf(Token::kw_true)) {
+    result = true;
+    return success();
+  }
+
   Token curToken = getToken();
   if (curToken.isNot(Token::integer, Token::minus))
     return llvm::None;
@@ -338,6 +347,17 @@ Parser::parseResourceHandle(const OpAsmDialectInterface *dialect,
 
   name = entry.first;
   return entry.second;
+}
+
+FailureOr<AsmDialectResourceHandle>
+Parser::parseResourceHandle(Dialect *dialect) {
+  const auto *interface = dyn_cast<OpAsmDialectInterface>(dialect);
+  if (!interface) {
+    return emitError() << "dialect '" << dialect->getNamespace()
+                       << "' does not expect resource handles";
+  }
+  StringRef resourceName;
+  return parseResourceHandle(interface, resourceName);
 }
 
 //===----------------------------------------------------------------------===//

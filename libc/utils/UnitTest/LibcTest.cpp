@@ -48,6 +48,8 @@ std::string describeValue(std::string Value) { return std::string(Value); }
 // one type, UInt<128> or __uint128_t. We want both overloads as we want to
 // be able to unittest UInt<128> on platforms where UInt128 resolves to
 // UInt128.
+// TODO(lntue): Investigate why UInt<128> was printed backward, with the lower
+// 64-bits first.
 template <typename UInt128Type>
 std::string describeValue128(UInt128Type Value) {
   std::string S(sizeof(UInt128) * 2, '0');

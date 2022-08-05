@@ -186,6 +186,10 @@ def NoCfCheck : EnumAttr<"nocf_check", [FnAttr]>;
 /// Function should not be instrumented.
 def NoProfile : EnumAttr<"noprofile", [FnAttr]>;
 
+/// This function should not be instrumented but it is ok to inline profiled
+// functions into it.
+def SkipProfile : EnumAttr<"skipprofile", [FnAttr]>;
+
 /// Function doesn't unwind stack.
 def NoUnwind : EnumAttr<"nounwind", [FnAttr]>;
 

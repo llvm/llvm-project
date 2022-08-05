@@ -11,6 +11,8 @@
 #define _LIBCPP___MEMORY_SHARED_PTR_H
 
 #include <__availability>
+#include <__compare/compare_three_way.h>
+#include <__compare/ordering.h>
 #include <__config>
 #include <__functional/binary_function.h>
 #include <__functional/operations.h>
@@ -1184,6 +1186,8 @@ operator==(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT
     return __x.get() == __y.get();
 }
 
+#if _LIBCPP_STD_VER <= 17
+
 template<class _Tp, class _Up>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -1230,6 +1234,17 @@ operator>=(const shared_ptr<_Tp>& __x, const shared_ptr<_Up>& __y) _NOEXCEPT
     return !(__x < __y);
 }
 
+#endif // _LIBCPP_STD_VER <= 17
+
+#if _LIBCPP_STD_VER > 17
+template<class _Tp, class _Up>
+_LIBCPP_HIDE_FROM_ABI strong_ordering
+operator<=>(shared_ptr<_Tp> const& __x, shared_ptr<_Up> const& __y) noexcept
+{
+    return compare_three_way()(__x.get(), __y.get());
+}
+#endif
+
 template<class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -1237,6 +1252,8 @@ operator==(const shared_ptr<_Tp>& __x, nullptr_t) _NOEXCEPT
 {
     return !__x;
 }
+
+#if _LIBCPP_STD_VER <= 17
 
 template<class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1325,6 +1342,17 @@ operator>=(nullptr_t, const shared_ptr<_Tp>& __x) _NOEXCEPT
 {
     return !(nullptr < __x);
 }
+
+#endif // _LIBCPP_STD_VER <= 17
+
+#if _LIBCPP_STD_VER > 17
+template<class _Tp>
+_LIBCPP_HIDE_FROM_ABI strong_ordering
+operator<=>(shared_ptr<_Tp> const& __x, nullptr_t) noexcept
+{
+    return compare_three_way()(__x.get(), static_cast<typename shared_ptr<_Tp>::element_type*>(nullptr));
+}
+#endif
 
 template<class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
