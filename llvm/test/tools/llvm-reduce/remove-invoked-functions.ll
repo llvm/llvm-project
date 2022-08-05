@@ -19,23 +19,23 @@ declare void @thrown()
 
 ; CHECK-INTERESTINGNESS: define void @caller(
 ; CHECK-FINAL: define void @caller()
-define void @caller(i32 %arg) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @caller(i32 %arg) personality ptr @__gxx_personality_v0 {
 ; CHECK-ALL: bb:
 bb:
 ; CHECK-INTERESTINGNESS: %i0 = invoke i32 {{.*}}@maybe_throwing_callee
-; CHECK-FINAL: %i0 = invoke i32 bitcast (i32 ()* @maybe_throwing_callee to i32 (i32)*)
+; CHECK-FINAL: %i0 = invoke i32 @maybe_throwing_callee
 ; CHECK-ALL: to label %bb3 unwind label %bb1
   %i0 = invoke i32 @maybe_throwing_callee(i32 %arg)
           to label %bb3 unwind label %bb1
 
 ; CHECK-ALL: bb1:
 bb1:
-; CHECK-ALL: landingpad { i8*, i32 }
-; CHECK-ALL: catch i8* null
+; CHECK-ALL: landingpad { ptr, i32 }
+; CHECK-ALL: catch ptr null
 ; CHECK-ALL: call void @thrown()
 ; CHECK-ALL: br label %bb4
-  landingpad { i8*, i32 }
-  catch i8* null
+  landingpad { ptr, i32 }
+  catch ptr null
   call void @thrown()
   br label %bb4
 

@@ -19,7 +19,7 @@
 declare void @llvm.foo(metadata)
 
 ; CHECK-LABEL: define i32 @main
-define i32 @main(%t* %a, i32 %a2) {
+define i32 @main(ptr %a, i32 %a2) {
 
 ; CHECK-LABEL: lb1:
 ; ONE: inttoptr i16 0
@@ -32,12 +32,12 @@ define i32 @main(%t* %a, i32 %a2) {
 ; ZERO: inttoptr i16 0
 ; CHECK: br label %lb2
 lb1:
-  %b = getelementptr %t, %t* %a, i32 1, i32 0
-  %i1 = inttoptr i16 0 to i8*
-  %i2 = inttoptr i16 1 to i8*
-  %i3 = inttoptr i16 2 to i8*
-  %i4 = inttoptr i16 undef to i8*
-  call void @llvm.foo(metadata %t* %a)
+  %b = getelementptr %t, ptr %a, i32 1, i32 0
+  %i1 = inttoptr i16 0 to ptr
+  %i2 = inttoptr i16 1 to ptr
+  %i3 = inttoptr i16 2 to ptr
+  %i4 = inttoptr i16 undef to ptr
+  call void @llvm.foo(metadata ptr %a)
   br label %lb2
 
 ; CHECK-LABEL: lb2:
