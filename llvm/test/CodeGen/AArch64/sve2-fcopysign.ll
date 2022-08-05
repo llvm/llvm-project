@@ -8,8 +8,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define <vscale x 2 x float> @test_copysign_v2f32_v2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b) #0 {
 ; CHECK-LABEL: test_copysign_v2f32_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147483647
-; CHECK-NEXT:    mov z2.s, w8
+; CHECK-NEXT:    mov z2.s, #0x7fffffff
 ; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %r = call <vscale x 2 x float> @llvm.copysign.v2f32(<vscale x 2 x float> %a, <vscale x 2 x float> %b)
@@ -19,10 +18,9 @@ define <vscale x 2 x float> @test_copysign_v2f32_v2f32(<vscale x 2 x float> %a, 
 define <vscale x 2 x float> @test_copysign_v2f32_v2f64(<vscale x 2 x float> %a, <vscale x 2 x double> %b) #0 {
 ; CHECK-LABEL: test_copysign_v2f32_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147483647
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    mov z2.s, #0x7fffffff
 ; CHECK-NEXT:    fcvt z1.s, p0/m, z1.d
-; CHECK-NEXT:    mov z2.s, w8
 ; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <vscale x 2 x double> %b to <vscale x 2 x float>
@@ -37,8 +35,7 @@ declare <vscale x 2 x float> @llvm.copysign.v2f32(<vscale x 2 x float> %a, <vsca
 define <vscale x 4 x float> @test_copysign_v4f32_v4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: test_copysign_v4f32_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147483647
-; CHECK-NEXT:    mov z2.s, w8
+; CHECK-NEXT:    mov z2.s, #0x7fffffff
 ; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %r = call <vscale x 4 x float> @llvm.copysign.v4f32(<vscale x 4 x float> %a, <vscale x 4 x float> %b)
@@ -49,12 +46,11 @@ define <vscale x 4 x float> @test_copysign_v4f32_v4f32(<vscale x 4 x float> %a, 
 define <vscale x 4 x float> @test_copysign_v4f32_v4f64(<vscale x 4 x float> %a, <vscale x 4 x double> %b) #0 {
 ; CHECK-LABEL: test_copysign_v4f32_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #2147483647
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcvt z2.s, p0/m, z2.d
 ; CHECK-NEXT:    fcvt z1.s, p0/m, z1.d
 ; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
-; CHECK-NEXT:    mov z2.s, w8
+; CHECK-NEXT:    mov z2.s, #0x7fffffff
 ; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <vscale x 4 x double> %b to <vscale x 4 x float>
@@ -130,8 +126,7 @@ declare <vscale x 4 x double> @llvm.copysign.v4f64(<vscale x 4 x double> %a, <vs
 define <vscale x 4 x half> @test_copysign_v4f16_v4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b) #0 {
 ; CHECK-LABEL: test_copysign_v4f16_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32767
-; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
 ; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %r = call <vscale x 4 x half> @llvm.copysign.v4f16(<vscale x 4 x half> %a, <vscale x 4 x half> %b)
@@ -141,10 +136,9 @@ define <vscale x 4 x half> @test_copysign_v4f16_v4f16(<vscale x 4 x half> %a, <v
 define <vscale x 4 x half> @test_copysign_v4f16_v4f32(<vscale x 4 x half> %a, <vscale x 4 x float> %b) #0 {
 ; CHECK-LABEL: test_copysign_v4f16_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32767
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
 ; CHECK-NEXT:    fcvt z1.h, p0/m, z1.s
-; CHECK-NEXT:    mov z2.h, w8
 ; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <vscale x 4 x float> %b to <vscale x 4 x half>
@@ -155,12 +149,11 @@ define <vscale x 4 x half> @test_copysign_v4f16_v4f32(<vscale x 4 x half> %a, <v
 define <vscale x 4 x half> @test_copysign_v4f16_v4f64(<vscale x 4 x half> %a, <vscale x 4 x double> %b) #0 {
 ; CHECK-LABEL: test_copysign_v4f16_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32767
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    fcvt z2.h, p0/m, z2.d
 ; CHECK-NEXT:    fcvt z1.h, p0/m, z1.d
 ; CHECK-NEXT:    uzp1 z1.s, z1.s, z2.s
-; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
 ; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <vscale x 4 x double> %b to <vscale x 4 x half>
@@ -175,8 +168,7 @@ declare <vscale x 4 x half> @llvm.copysign.v4f16(<vscale x 4 x half> %a, <vscale
 define <vscale x 8 x half> @test_copysign_v8f16_v8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b) #0 {
 ; CHECK-LABEL: test_copysign_v8f16_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32767
-; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
 ; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %r = call <vscale x 8 x half> @llvm.copysign.v8f16(<vscale x 8 x half> %a, <vscale x 8 x half> %b)
@@ -186,12 +178,11 @@ define <vscale x 8 x half> @test_copysign_v8f16_v8f16(<vscale x 8 x half> %a, <v
 define <vscale x 8 x half> @test_copysign_v8f16_v8f32(<vscale x 8 x half> %a, <vscale x 8 x float> %b) #0 {
 ; CHECK-LABEL: test_copysign_v8f16_v8f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32767
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    fcvt z2.h, p0/m, z2.s
 ; CHECK-NEXT:    fcvt z1.h, p0/m, z1.s
 ; CHECK-NEXT:    uzp1 z1.h, z1.h, z2.h
-; CHECK-NEXT:    mov z2.h, w8
+; CHECK-NEXT:    mov z2.h, #32767 // =0x7fff
 ; CHECK-NEXT:    bsl z0.d, z0.d, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <vscale x 8 x float> %b to <vscale x 8 x half>
