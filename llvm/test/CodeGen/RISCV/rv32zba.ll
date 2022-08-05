@@ -561,6 +561,16 @@ define i32 @add8208(i32 %a) {
   ret i32 %c
 }
 
+define i32 @add8192(i32 %a) {
+; CHECK-LABEL: add8192:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %c = add i32 %a, 8192
+  ret i32 %c
+}
+
 define i32 @addshl_5_6(i32 %a, i32 %b) {
 ; RV32I-LABEL: addshl_5_6:
 ; RV32I:       # %bb.0:
