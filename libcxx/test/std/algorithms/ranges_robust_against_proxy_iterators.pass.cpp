@@ -69,7 +69,6 @@ constexpr void run_tests() {
   int count = 1;
 
   auto unary_pred = [](const Proxy<T&>&) { return true; };
-  //auto binary_pred = [](const Proxy<T>&, const Proxy<T>&) { return return false; };
   auto binary_func = [](const Proxy<T>&, const Proxy<T>&) -> Proxy<T> { return Proxy<T>(T()); };
   auto gen = [] { return Proxy<T>(T{42}); };
 
@@ -87,7 +86,7 @@ constexpr void run_tests() {
   test(std::ranges::partition_point, in, unary_pred);
   test(std::ranges::lower_bound, in, x);
   test(std::ranges::upper_bound, in, x);
-  //test(std::ranges::equal_range, in, x);
+  test(std::ranges::equal_range, in, x);
   test(std::ranges::binary_search, in, x);
 
   test(std::ranges::min_element, in);
@@ -169,8 +168,8 @@ constexpr void run_tests() {
   test(std::ranges::push_heap, in);
   test(std::ranges::pop_heap, in);
   test(std::ranges::sort_heap, in);
-  //test(std::ranges::prev_permutation, in);
-  //test(std::ranges::next_permutation, in);
+  test(std::ranges::prev_permutation, in);
+  test(std::ranges::next_permutation, in);
 
   // The algorithms that work on uninitialized memory have constraints that prevent proxy iterators from being used with
   // them.

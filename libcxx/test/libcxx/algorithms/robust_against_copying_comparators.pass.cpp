@@ -120,7 +120,7 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
 #endif
     (void)std::equal_range(first, last, value, Less<T>(&copies)); assert(copies == 0);
     (void)std::find_end(first, last, first2, mid2, Equal<T>(&copies)); assert(copies == 0);
-    //(void)std::find_first_of(first, last, first2, last2, Equal(&copies)); assert(copies == 0);
+    (void)std::find_first_of(first, last, first2, last2, Equal<T>(&copies)); assert(copies == 0);
     (void)std::find_if(first, last, UnaryTrue<T>(&copies)); assert(copies == 0);
     (void)std::find_if_not(first, last, UnaryTrue<T>(&copies)); assert(copies == 0);
     (void)std::for_each(first, last, UnaryVoid<T>(&copies)); assert(copies == 1); copies = 0;
