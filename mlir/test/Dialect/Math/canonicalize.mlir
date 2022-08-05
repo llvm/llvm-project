@@ -358,3 +358,20 @@ func.func @atan2_fold_vec() -> (vector<4xf32>) {
   return %0 : vector<4xf32>
 }
 
+// CHECK-LABEL: @cos_fold
+// CHECK-NEXT: %[[cst:.+]] = arith.constant 0.540302277 : f32
+// CHECK-NEXT:   return %[[cst]]
+func.func @cos_fold() -> f32 {
+  %c = arith.constant 1.0 : f32
+  %r = math.cos %c : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @cos_fold_vec
+// CHECK-NEXT: %[[cst:.+]] = arith.constant dense<[1.000000e+00, 0.540302277, 1.000000e+00, 0.540302277]> : vector<4xf32>
+// CHECK-NEXT:   return %[[cst]]
+func.func @cos_fold_vec() -> (vector<4xf32>) {
+  %v1 = arith.constant dense<[0.0, 1.0, 0.0, 1.0]> : vector<4xf32>
+  %0 = math.cos %v1 : vector<4xf32>
+  return %0 : vector<4xf32>
+}

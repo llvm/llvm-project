@@ -346,37 +346,30 @@ func.func @sin() {
 // cos.
 // -------------------------------------------------------------------------- //
 
-func.func @cos() {
+func.func @cos(%zero : f32, %pi_over_4 : f32, %pi_over_2 : f32, %pi : f32, %pi_3_over_2 : f32, %vec_cos : vector<3xf32>) {
   // CHECK: 1
-  %0 = arith.constant 0.0 : f32
-  %cos_0 = math.cos %0 : f32
+  %cos_0 = math.cos %zero : f32
   vector.print %cos_0 : f32
 
   // CHECK: 0.707107
-  %pi_over_4 = arith.constant 0.78539816339 : f32
   %cos_pi_over_4 = math.cos %pi_over_4 : f32
   vector.print %cos_pi_over_4 : f32
 
   //// CHECK: 0
-  %pi_over_2 = arith.constant 1.57079632679 : f32
   %cos_pi_over_2 = math.cos %pi_over_2 : f32
   vector.print %cos_pi_over_2 : f32
 
   /// CHECK: -1
-  %pi = arith.constant 3.14159265359 : f32
   %cos_pi = math.cos %pi : f32
   vector.print %cos_pi : f32
 
   // CHECK: 0
-  %pi_3_over_2 = arith.constant 4.71238898038 : f32
   %cos_pi_3_over_2 = math.cos %pi_3_over_2 : f32
   vector.print %cos_pi_3_over_2 : f32
 
   // CHECK: -1, -0.5, 0
-  %vec_x = arith.constant dense<[9.42477796077, 2.09439510239, -1.57079632679]> : vector<3xf32>
-  %cos_vec_x = math.cos %vec_x : vector<3xf32>
+  %cos_vec_x = math.cos %vec_cos : vector<3xf32>
   vector.print %cos_vec_x : vector<3xf32>
-
 
   return
 }
@@ -507,7 +500,13 @@ func.func @main() {
   call @exp(): () -> ()
   call @expm1(): () -> ()
   call @sin(): () -> ()
-  call @cos(): () -> ()
+  %zero = arith.constant 0.0 : f32
+  %pi_over_4 = arith.constant 0.78539816339 : f32
+  %pi_over_2 = arith.constant 1.57079632679 : f32
+  %pi = arith.constant 3.14159265359 : f32
+  %pi_3_over_2 = arith.constant 4.71238898038 : f32
+  %vec_cos = arith.constant dense<[9.42477796077, 2.09439510239, -1.57079632679]> : vector<3xf32>
+  call @cos(%zero, %pi_over_4, %pi_over_2, %pi, %pi_3_over_2, %vec_cos): (f32, f32, f32, f32, f32, vector<3xf32>) -> ()
   call @atan() : () -> ()
   call @atan2() : () -> ()
   return

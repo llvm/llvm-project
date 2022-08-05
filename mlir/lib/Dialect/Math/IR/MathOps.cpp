@@ -105,6 +105,24 @@ OpFoldResult math::CopySignOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// CosOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::CosOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOpConditional<FloatAttr>(
+      operands, [](const APFloat &a) -> Optional<APFloat> {
+        switch (a.getSizeInBits(a.getSemantics())) {
+        case 64:
+          return APFloat(cos(a.convertToDouble()));
+        case 32:
+          return APFloat(cosf(a.convertToFloat()));
+        default:
+          return {};
+        }
+      });
+}
+
+//===----------------------------------------------------------------------===//
 // CountLeadingZerosOp folder
 //===----------------------------------------------------------------------===//
 
