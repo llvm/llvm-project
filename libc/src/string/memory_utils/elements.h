@@ -145,7 +145,7 @@ template <typename Element, size_t ElementCount> struct Repeated {
 };
 
 template <typename Element> struct Repeated<Element, 0> {
-  static void move(char *dst, const char *src) {}
+  static void move(char *, const char *) {}
 };
 
 // Chain the operation of several types.
@@ -188,11 +188,11 @@ template <typename Head, typename... Tail> struct Chained<Head, Tail...> {
 
 template <> struct Chained<> {
   static constexpr size_t SIZE = 0;
-  static void copy(char *__restrict dst, const char *__restrict src) {}
-  static void move(char *dst, const char *src) {}
-  static bool equals(const char *lhs, const char *rhs) { return true; }
-  static int three_way_compare(const char *lhs, const char *rhs) { return 0; }
-  static void splat_set(char *dst, const unsigned char value) {}
+  static void copy(char *__restrict, const char *__restrict) {}
+  static void move(char *, const char *) {}
+  static bool equals(const char *, const char *) { return true; }
+  static int three_way_compare(const char *, const char *) { return 0; }
+  static void splat_set(char *, const unsigned char) {}
 };
 
 // Overlap ElementA and ElementB so they span Size bytes.
@@ -431,14 +431,14 @@ template <Arg arg> struct ArgSelector {};
 
 template <> struct ArgSelector<Arg::_1> {
   template <typename T1, typename T2>
-  static T1 *__restrict &Select(T1 *__restrict &p1ref, T2 *__restrict &p2ref) {
+  static T1 *__restrict &Select(T1 *__restrict &p1ref, T2 *__restrict &) {
     return p1ref;
   }
 };
 
 template <> struct ArgSelector<Arg::_2> {
   template <typename T1, typename T2>
-  static T2 *__restrict &Select(T1 *__restrict &p1ref, T2 *__restrict &p2ref) {
+  static T2 *__restrict &Select(T1 *__restrict &, T2 *__restrict &p2ref) {
     return p2ref;
   }
 };
