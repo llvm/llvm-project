@@ -2699,7 +2699,7 @@ Check stream handling functions: ``fopen, tmpfile, fclose, fread, fwrite, fseek,
 
 alpha.unix.cstring.BufferOverlap (C)
 """"""""""""""""""""""""""""""""""""
-Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy, wmemcpy``.
+Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy, wmemcpy, wmempcpy``.
 
 .. code-block:: c
 
