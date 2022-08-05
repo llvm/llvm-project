@@ -982,6 +982,15 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
           X86II::isX86_64ExtendedReg(OutMI.getOperand(2).getReg()))
         std::swap(OutMI.getOperand(1), OutMI.getOperand(2));
     }
+    // Add an REP prefix to BSF instructions so that new processors can
+    // recognize as TZCNT, which has better performance than BSF.
+    if (X86::isBSF(OutMI.getOpcode()) && !MF.getFunction().hasOptSize()) {
+      // BSF and TZCNT have different interpretations on ZF bit. So make sure
+      // it won't be used later.
+      const MachineOperand *FlagDef = MI->findRegisterDefOperand(X86::EFLAGS);
+      if (FlagDef && FlagDef->isDead())
+        OutMI.setFlags(X86::IP_HAS_REPEAT);
+    }
     break;
   }
   }
@@ -1856,7 +1865,7 @@ static std::string getShuffleComment(const MachineInstr *MI, unsigned SrcOp1Idx,
       SrcOp2.isReg() ? GetRegisterName(SrcOp2.getReg()) : "mem";
 
   // One source operand, fix the mask to print all elements in one span.
-  SmallVector<int, 8> ShuffleMask(Mask.begin(), Mask.end());
+  SmallVector<int, 8> ShuffleMask(Mask);
   if (Src1Name == Src2Name)
     for (int i = 0, e = ShuffleMask.size(); i != e; ++i)
       if (ShuffleMask[i] >= e)
@@ -2488,13 +2497,16 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     break;
   }
 
+  case X86::TAILJMPd64:
+    if (IndCSPrefix && MI->hasRegisterImplicitUseOperand(X86::R11))
+      EmitAndCountInstruction(MCInstBuilder(X86::CS_PREFIX));
+    LLVM_FALLTHROUGH;
   case X86::TAILJMPr:
   case X86::TAILJMPm:
   case X86::TAILJMPd:
   case X86::TAILJMPd_CC:
   case X86::TAILJMPr64:
   case X86::TAILJMPm64:
-  case X86::TAILJMPd64:
   case X86::TAILJMPd64_CC:
   case X86::TAILJMPr64_REX:
   case X86::TAILJMPm64_REX:
@@ -2668,6 +2680,10 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
                                 .addImm(MI->getOperand(0).getImm())
                                 .addReg(X86::NoRegister));
     return;
+  case X86::CALL64pcrel32:
+    if (IndCSPrefix && MI->hasRegisterImplicitUseOperand(X86::R11))
+      EmitAndCountInstruction(MCInstBuilder(X86::CS_PREFIX));
+    break;
   }
 
   MCInst TmpInst;

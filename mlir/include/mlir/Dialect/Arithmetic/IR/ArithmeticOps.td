@@ -1085,13 +1085,13 @@ def Arith_CmpIOp
 
     ```mlir
     // Custom form of scalar "signed less than" comparison.
-    %x = arith.cmpi "slt", %lhs, %rhs : i32
+    %x = arith.cmpi slt, %lhs, %rhs : i32
 
     // Generic form of the same operation.
     %x = "arith.cmpi"(%lhs, %rhs) {predicate = 2 : i64} : (i32, i32) -> i1
 
     // Custom form of vector equality comparison.
-    %x = arith.cmpi "eq", %lhs, %rhs : vector<4xi64>
+    %x = arith.cmpi eq, %lhs, %rhs : vector<4xi64>
 
     // Generic form of the same operation.
     %x = "arith.cmpi"(%lhs, %rhs) {predicate = 0 : i64}
@@ -1144,8 +1144,8 @@ def Arith_CmpFOp : Arith_CompareOp<"cmpf"> {
     Example:
 
     ```mlir
-    %r1 = arith.cmpf "oeq" %0, %1 : f32
-    %r2 = arith.cmpf "ult" %0, %1 : tensor<42x42xf64>
+    %r1 = arith.cmpf oeq, %0, %1 : f32
+    %r2 = arith.cmpf ult, %0, %1 : tensor<42x42xf64>
     %r3 = "arith.cmpf"(%0, %1) {predicate: 0} : (f8, f8) -> i1
     ```
   }];

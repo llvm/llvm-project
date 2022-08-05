@@ -70,10 +70,6 @@ class SendSignalTestCase(TestBase):
         # Now continue:
         process.Continue()
 
-        # If running remote test, there should be a connected event
-        if lldb.remote_platform:
-            self.match_state(process_listener, lldb.eStateConnected)
-
         self.match_state(process_listener, lldb.eStateRunning)
 
         # Now signal the process, and make sure it stops:

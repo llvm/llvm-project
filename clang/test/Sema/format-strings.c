@@ -199,7 +199,7 @@ void check_writeback_specifier(void)
 
 void check_invalid_specifier(FILE* fp, char *buf)
 {
-  printf("%s%lb%d","unix",10,20); // expected-warning {{invalid conversion specifier 'b'}} expected-warning {{data argument not used by format string}}
+  printf("%s%lv%d","unix",10,20); // expected-warning {{invalid conversion specifier 'v'}} expected-warning {{data argument not used by format string}}
   fprintf(fp,"%%%l"); // expected-warning {{incomplete format specifier}}
   sprintf(buf,"%%%%%ld%d%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}}
   snprintf(buf, 2, "%%%%%ld%;%d", 1, 2, 3); // expected-warning{{format specifies type 'long' but the argument has type 'int'}} expected-warning {{invalid conversion specifier ';'}} expected-warning {{data argument not used by format string}}
@@ -304,6 +304,7 @@ void test10(int x, float f, int i, long long lli) {
   printf("%qp", (void *)0); // expected-warning{{length modifier 'q' results in undefined behavior or no effect with 'p' conversion specifier}}
   printf("hhX %hhX", (unsigned char)10); // no-warning
   printf("llX %llX", (long long) 10); // no-warning
+  printf("%llb %llB", (long long) 10, (long long) 10); // no-warning
   // This is fine, because there is an implicit conversion to an int.
   printf("%d", (unsigned char) 10); // no-warning
   printf("%d", (long long) 10); // expected-warning{{format specifies type 'int' but the argument has type 'long long'}}
@@ -429,6 +430,7 @@ void bug7377_bad_length_mod_usage(void) {
   // Bad flag usage
   printf("%#p", (void *) 0); // expected-warning{{flag '#' results in undefined behavior with 'p' conversion specifier}}
   printf("%0d", -1); // no-warning
+  printf("%0b%0B", -1u, -1u); // no-warning
   printf("%-p", (void *) 0); // no-warning
 #if !defined(__ANDROID__) && !defined(__Fuchsia__)
   printf("%#n", (int *) 0); // expected-warning{{flag '#' results in undefined behavior with 'n' conversion specifier}}
@@ -499,6 +501,7 @@ void rdar8332221(va_list ap, int *x, long *y) {
 void pr8641(void) {
   printf("%#x\n", 10);
   printf("%#X\n", 10);
+  printf("%#b %#15.8B\n", 10, 10u);
 }
 
 void posix_extensions(void) {
@@ -508,6 +511,8 @@ void posix_extensions(void) {
   printf("%'i\n", 123456789); // no-warning
   printf("%'f\n", (float) 1.0); // no-warning
   printf("%'p\n", (void*) 0); // expected-warning{{results in undefined behavior with 'p' conversion specifier}}
+  printf("%'b\n", 123456789); // expected-warning{{results in undefined behavior with 'b' conversion specifier}}
+  printf("%'B\n", 123456789); // expected-warning{{results in undefined behavior with 'B' conversion specifier}}
 }
 
 // PR8486
@@ -540,6 +545,7 @@ void check_char(unsigned char x, signed char y) {
   printf("%hhi", x); // no-warning
   printf("%c", x); // no-warning
   printf("%hhu", y); // no-warning
+  printf("%hhb %hhB", x, x); // no-warning
 }
 
 // Test suppression of individual warnings.

@@ -670,6 +670,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   return true;
 }
 
+bool AArch64TargetInfo::hasBFloat16Type() const {
+  return true;
+}
+
 TargetInfo::CallingConvCheckResult
 AArch64TargetInfo::checkCallingConvention(CallingConv CC) const {
   switch (CC) {

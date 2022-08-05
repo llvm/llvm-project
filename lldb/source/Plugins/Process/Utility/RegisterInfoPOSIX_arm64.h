@@ -47,6 +47,7 @@ public:
     uint64_t sp;    // x31
     uint64_t pc;    // pc
     uint32_t cpsr;  // cpsr
+    uint32_t pad;
   };
   LLVM_PACKED_END
 

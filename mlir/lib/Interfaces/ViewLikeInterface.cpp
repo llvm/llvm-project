@@ -181,7 +181,7 @@ bool mlir::detail::sameOffsetsSizesAndStrides(
 
 SmallVector<OpFoldResult, 4>
 mlir::getMixedValues(ArrayAttr staticValues, ValueRange dynamicValues,
-                     int64_t dynamicValueIndicator) {
+                     const int64_t dynamicValueIndicator) {
   SmallVector<OpFoldResult, 4> res;
   res.reserve(staticValues.size());
   unsigned numDynamic = 0;
@@ -196,21 +196,15 @@ mlir::getMixedValues(ArrayAttr staticValues, ValueRange dynamicValues,
 }
 
 SmallVector<OpFoldResult, 4>
-mlir::getMixedOffsets(OffsetSizeAndStrideOpInterface op,
-                      ArrayAttr staticOffsets, ValueRange offsets) {
-  return getMixedValues(staticOffsets, offsets, op.getDynamicOffsetIndicator());
+mlir::getMixedStridesOrOffsets(ArrayAttr staticValues,
+                               ValueRange dynamicValues) {
+  return getMixedValues(staticValues, dynamicValues,
+                        ShapedType::kDynamicStrideOrOffset);
 }
 
-SmallVector<OpFoldResult, 4>
-mlir::getMixedSizes(OffsetSizeAndStrideOpInterface op, ArrayAttr staticSizes,
-                    ValueRange sizes) {
-  return getMixedValues(staticSizes, sizes, op.getDynamicSizeIndicator());
-}
-
-SmallVector<OpFoldResult, 4>
-mlir::getMixedStrides(OffsetSizeAndStrideOpInterface op,
-                      ArrayAttr staticStrides, ValueRange strides) {
-  return getMixedValues(staticStrides, strides, op.getDynamicStrideIndicator());
+SmallVector<OpFoldResult, 4> mlir::getMixedSizes(ArrayAttr staticValues,
+                                                 ValueRange dynamicValues) {
+  return getMixedValues(staticValues, dynamicValues, ShapedType::kDynamicSize);
 }
 
 std::pair<ArrayAttr, SmallVector<Value>>

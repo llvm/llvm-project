@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILPointerType.h"
 #include "PointerTypeAnalysis.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/TypedPointerType.h"
 #include "llvm/Support/SourceMgr.h"
 
 #include "gmock/gmock.h"
@@ -26,16 +26,6 @@ using namespace llvm::dxil;
 template <typename T> struct IsA {
   friend bool operator==(const Value *V, const IsA &) { return isa<T>(V); }
 };
-
-TEST(DXILPointerType, PrintTest) {
-  std::string Buffer;
-  LLVMContext Context;
-  raw_string_ostream OS(Buffer);
-
-  Type *I8Ptr = TypedPointerType::get(Type::getInt8Ty(Context), 0);
-  I8Ptr->print(OS);
-  EXPECT_TRUE(StringRef(Buffer).startswith("dxil-ptr ("));
-}
 
 TEST(PointerTypeAnalysis, DigressToi8) {
   StringRef Assembly = R"(

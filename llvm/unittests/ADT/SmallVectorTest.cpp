@@ -202,6 +202,11 @@ template <typename VectorT> void makeSequence(VectorT &v, int start, int end) {
   }
 }
 
+template <typename T, unsigned N>
+static unsigned NumBuiltinElts(const SmallVector<T, N> &) {
+  return N;
+}
+
 class SmallVectorTestBase : public testing::Test {
 protected:
   void SetUp() override { Constructable::reset(); }
@@ -239,6 +244,18 @@ TYPED_TEST(SmallVectorTest, ConstructorIterTest) {
   auto &V = this->theVector;
   V = SmallVector<Constructable, 4>(std::begin(arr), std::end(arr));
   assertValuesInOrder(V, 3u, 1, 2, 3);
+}
+
+// Constructor test.
+TYPED_TEST(SmallVectorTest, ConstructorFromArrayRefSimpleTest) {
+  SCOPED_TRACE("ConstructorFromArrayRefSimpleTest");
+  std::array<Constructable, 3> StdArray = {Constructable(1), Constructable(2),
+                                           Constructable(3)};
+  ArrayRef<Constructable> Array = StdArray;
+  auto &V = this->theVector;
+  V = SmallVector<Constructable, 4>(Array);
+  assertValuesInOrder(V, 3u, 1, 2, 3);
+  ASSERT_EQ(NumBuiltinElts(TypeParam{}), NumBuiltinElts(V));
 }
 
 // New vector test.
@@ -862,9 +879,6 @@ class DualSmallVectorsTest<std::pair<VectorT1, VectorT2>> : public SmallVectorTe
 protected:
   VectorT1 theVector;
   VectorT2 otherVector;
-
-  template <typename T, unsigned N>
-  static unsigned NumBuiltinElts(const SmallVector<T, N>&) { return N; }
 };
 
 typedef ::testing::Types<
@@ -904,7 +918,7 @@ TYPED_TEST(DualSmallVectorsTest, MoveAssignment) {
 
   // If the source vector (otherVector) was in small-mode, assert that we just
   // moved the data pointer over.
-  EXPECT_TRUE(this->NumBuiltinElts(U) == 4 || V.data() == OrigDataPtr);
+  EXPECT_TRUE(NumBuiltinElts(U) == 4 || V.data() == OrigDataPtr);
 
   // There shouldn't be any live objects any more.
   V.clear();
@@ -1128,6 +1142,44 @@ TEST(SmallVectorTest, InitializerList) {
   EXPECT_TRUE(makeArrayRef(V2).equals({4, 5, 3, 2}));
 }
 
+struct To {
+  int Content;
+  friend bool operator==(const To &LHS, const To &RHS) {
+    return LHS.Content == RHS.Content;
+  }
+};
+
+class From {
+public:
+  From() = default;
+  From(To M) { T = M; }
+  operator To() const { return T; }
+
+private:
+  To T;
+};
+
+TEST(SmallVectorTest, ConstructFromArrayRefOfConvertibleType) {
+  To to1{1}, to2{2}, to3{3};
+  std::vector<From> StdVector = {From(to1), From(to2), From(to3)};
+  ArrayRef<From> Array = StdVector;
+  {
+    llvm::SmallVector<To> Vector(Array);
+
+    ASSERT_EQ(Array.size(), Vector.size());
+    for (size_t I = 0; I < Array.size(); ++I)
+      EXPECT_EQ(Array[I], Vector[I]);
+  }
+  {
+    llvm::SmallVector<To, 4> Vector(Array);
+
+    ASSERT_EQ(Array.size(), Vector.size());
+    ASSERT_EQ(4u, NumBuiltinElts(Vector));
+    for (size_t I = 0; I < Array.size(); ++I)
+      EXPECT_EQ(Array[I], Vector[I]);
+  }
+}
+
 template <class VectorT>
 class SmallVectorReferenceInvalidationTest : public SmallVectorTestBase {
 protected:
@@ -1136,11 +1188,6 @@ protected:
       "\"that invalidates it";
 
   VectorT V;
-
-  template <typename T, unsigned N>
-  static unsigned NumBuiltinElts(const SmallVector<T, N> &) {
-    return N;
-  }
 
   template <class T> static bool isValueType() {
     return std::is_same<T, typename VectorT::value_type>::value;
@@ -1167,7 +1214,7 @@ TYPED_TEST_SUITE(SmallVectorReferenceInvalidationTest,
 TYPED_TEST(SmallVectorReferenceInvalidationTest, PushBack) {
   // Note: setup adds [1, 2, ...] to V until it's at capacity in small mode.
   auto &V = this->V;
-  int N = this->NumBuiltinElts(V);
+  int N = NumBuiltinElts(V);
 
   // Push back a reference to last element when growing from small storage.
   V.push_back(V.back());
@@ -1189,7 +1236,7 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, PushBack) {
 TYPED_TEST(SmallVectorReferenceInvalidationTest, PushBackMoved) {
   // Note: setup adds [1, 2, ...] to V until it's at capacity in small mode.
   auto &V = this->V;
-  int N = this->NumBuiltinElts(V);
+  int N = NumBuiltinElts(V);
 
   // Push back a reference to last element when growing from small storage.
   V.push_back(std::move(V.back()));
@@ -1218,7 +1265,7 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, PushBackMoved) {
 TYPED_TEST(SmallVectorReferenceInvalidationTest, Resize) {
   auto &V = this->V;
   (void)V;
-  int N = this->NumBuiltinElts(V);
+  int N = NumBuiltinElts(V);
   V.resize(N + 1, V.back());
   EXPECT_EQ(N, V.back());
 
@@ -1233,7 +1280,7 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, Append) {
   auto &V = this->V;
   (void)V;
   V.append(1, V.back());
-  int N = this->NumBuiltinElts(V);
+  int N = NumBuiltinElts(V);
   EXPECT_EQ(N, V[N - 1]);
 
   // Append enough more elements that V will grow again. This tests growing
@@ -1251,7 +1298,7 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, AppendRange) {
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
   EXPECT_DEATH(V.append(V.begin(), V.begin() + 1), this->AssertionMessage);
 
-  ASSERT_EQ(3u, this->NumBuiltinElts(V));
+  ASSERT_EQ(3u, NumBuiltinElts(V));
   ASSERT_EQ(3u, V.size());
   V.pop_back();
   ASSERT_EQ(2u, V.size());
@@ -1266,7 +1313,7 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, Assign) {
   // Note: setup adds [1, 2, ...] to V until it's at capacity in small mode.
   auto &V = this->V;
   (void)V;
-  int N = this->NumBuiltinElts(V);
+  int N = NumBuiltinElts(V);
   ASSERT_EQ(unsigned(N), V.size());
   ASSERT_EQ(unsigned(N), V.capacity());
 
@@ -1366,7 +1413,7 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, InsertN) {
 
   // Cover NumToInsert <= this->end() - I.
   V.insert(V.begin() + 1, 1, V.back());
-  int N = this->NumBuiltinElts(V);
+  int N = NumBuiltinElts(V);
   EXPECT_EQ(N, V[1]);
 
   // Cover NumToInsert > this->end() - I, inserting enough elements that V will
@@ -1386,7 +1433,7 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, InsertRange) {
   EXPECT_DEATH(V.insert(V.begin(), V.begin(), V.begin() + 1),
                this->AssertionMessage);
 
-  ASSERT_EQ(3u, this->NumBuiltinElts(V));
+  ASSERT_EQ(3u, NumBuiltinElts(V));
   ASSERT_EQ(3u, V.size());
   V.pop_back();
   ASSERT_EQ(2u, V.size());
@@ -1400,7 +1447,7 @@ TYPED_TEST(SmallVectorReferenceInvalidationTest, InsertRange) {
 TYPED_TEST(SmallVectorReferenceInvalidationTest, EmplaceBack) {
   // Note: setup adds [1, 2, ...] to V until it's at capacity in small mode.
   auto &V = this->V;
-  int N = this->NumBuiltinElts(V);
+  int N = NumBuiltinElts(V);
 
   // Push back a reference to last element when growing from small storage.
   V.emplace_back(V.back());
@@ -1454,7 +1501,7 @@ TYPED_TEST_SUITE(SmallVectorInternalReferenceInvalidationTest,
 TYPED_TEST(SmallVectorInternalReferenceInvalidationTest, EmplaceBack) {
   // Note: setup adds [1, 2, ...] to V until it's at capacity in small mode.
   auto &V = this->V;
-  int N = this->NumBuiltinElts(V);
+  int N = NumBuiltinElts(V);
 
   // Push back a reference to last element when growing from small storage.
   V.emplace_back(V.back().first, V.back().second);

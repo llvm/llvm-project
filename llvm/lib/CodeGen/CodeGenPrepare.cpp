@@ -7261,7 +7261,7 @@ class VectorPromoteHelper {
     // scalar to vector.
     // The vector chain has to account for the combining cost.
     InstructionCost ScalarCost =
-        TTI.getVectorInstrCost(Transition->getOpcode(), PromotedType, Index);
+        TTI.getVectorInstrCost(*Transition, PromotedType, Index);
     InstructionCost VectorCost = StoreExtractCombineCost;
     enum TargetTransformInfo::TargetCostKind CostKind =
       TargetTransformInfo::TCK_RecipThroughput;

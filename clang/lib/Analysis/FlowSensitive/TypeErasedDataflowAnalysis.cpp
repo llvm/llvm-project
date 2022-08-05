@@ -164,7 +164,7 @@ private:
 ///   `llvm::None` represent basic blocks that are not evaluated yet.
 static TypeErasedDataflowAnalysisState computeBlockInputState(
     const ControlFlowContext &CFCtx,
-    std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> &BlockStates,
+    llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates,
     const CFGBlock &Block, const Environment &InitEnv,
     TypeErasedDataflowAnalysis &Analysis) {
   llvm::DenseSet<const CFGBlock *> Preds;
@@ -303,7 +303,7 @@ static void transferCFGInitializer(const CFGInitializer &CfgInit,
 
 TypeErasedDataflowAnalysisState transferBlock(
     const ControlFlowContext &CFCtx,
-    std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> &BlockStates,
+    llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates,
     const CFGBlock &Block, const Environment &InitEnv,
     TypeErasedDataflowAnalysis &Analysis,
     std::function<void(const CFGStmt &,
@@ -339,8 +339,8 @@ runTypeErasedDataflowAnalysis(
   PostOrderCFGView POV(&CFCtx.getCFG());
   ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
 
-  std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates;
-  BlockStates.resize(CFCtx.getCFG().size(), llvm::None);
+  std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates(
+      CFCtx.getCFG().size(), llvm::None);
 
   // The entry basic block doesn't contain statements so it can be skipped.
   const CFGBlock &Entry = CFCtx.getCFG().getEntry();

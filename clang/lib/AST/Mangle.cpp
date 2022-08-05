@@ -133,6 +133,10 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
   if (isa<MSGuidDecl>(D))
     return true;
 
+  // HLSL shader entry function never need to be mangled.
+  if (getASTContext().getLangOpts().HLSL && D->hasAttr<HLSLShaderAttr>())
+    return false;
+
   return shouldMangleCXXName(D);
 }
 

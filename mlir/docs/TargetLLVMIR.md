@@ -16,6 +16,14 @@ are expected to closely match the corresponding LLVM IR instructions and
 intrinsics. This minimizes the dependency on LLVM IR libraries in MLIR as well
 as reduces the churn in case of changes.
 
+Note that many different dialects can be lowered to LLVM but are provided as
+different sets of patterns and have different passes available to mlir-opt.
+However, this is primarily useful for testing and prototyping, and using the
+collection of patterns together is highly recommended. One place this is
+important and visible is the ControlFlow dialect's branching operations which
+will fail to apply if their types mismatch with the blocks they jump to in the
+parent op.
+
 SPIR-V to LLVM dialect conversion has a
 [dedicated document](SPIRVToLLVMDialectConversion.md).
 

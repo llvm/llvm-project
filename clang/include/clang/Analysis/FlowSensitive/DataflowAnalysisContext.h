@@ -93,9 +93,7 @@ public:
 
   /// Returns a new storage location appropriate for `Type`.
   ///
-  /// Requirements:
-  ///
-  ///  `Type` must not be null.
+  /// A null `Type` is interpreted as the pointee type of `std::nullptr_t`.
   StorageLocation &createStorageLocation(QualType Type);
 
   /// Returns a stable storage location for `D`.
@@ -137,22 +135,6 @@ public:
   StorageLocation *getStorageLocation(const Expr &E) const {
     auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
     return It == ExprToLoc.end() ? nullptr : It->second;
-  }
-
-  /// Assigns `Loc` as the storage location of the `this` pointee.
-  ///
-  /// Requirements:
-  ///
-  ///  The `this` pointee must not be assigned a storage location.
-  void setThisPointeeStorageLocation(StorageLocation &Loc) {
-    assert(ThisPointeeLoc == nullptr);
-    ThisPointeeLoc = &Loc;
-  }
-
-  /// Returns the storage location assigned to the `this` pointee or null if the
-  /// `this` pointee has no assigned storage location.
-  StorageLocation *getThisPointeeStorageLocation() const {
-    return ThisPointeeLoc;
   }
 
   /// Returns a pointer value that represents a null pointer. Calls with
@@ -323,8 +305,6 @@ private:
   // in scope for a particular basic block are stored in `Environment`.
   llvm::DenseMap<const ValueDecl *, StorageLocation *> DeclToLoc;
   llvm::DenseMap<const Expr *, StorageLocation *> ExprToLoc;
-
-  StorageLocation *ThisPointeeLoc = nullptr;
 
   // Null pointer values, keyed by the canonical pointee type.
   //

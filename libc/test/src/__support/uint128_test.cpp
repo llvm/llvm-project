@@ -27,7 +27,7 @@ TEST(LlvmLibcUInt128ClassTest, AdditionTests) {
   LL_UInt128 val2(54321);
   LL_UInt128 result1(66666);
   EXPECT_EQ(val1 + val2, result1);
-  EXPECT_EQ((val1 + val2), (val2 + val1)); // addition is reciprocal
+  EXPECT_EQ((val1 + val2), (val2 + val1)); // addition is commutative
 
   // Test overflow
   LL_UInt128 val3({0xf000000000000001, 0});
@@ -35,6 +35,42 @@ TEST(LlvmLibcUInt128ClassTest, AdditionTests) {
   LL_UInt128 result2({0x10, 0x1});
   EXPECT_EQ(val3 + val4, result2);
   EXPECT_EQ(val3 + val4, val4 + val3);
+
+  // Test overflow
+  LL_UInt128 val5({0x0123456789abcdef, 0xfedcba9876543210});
+  LL_UInt128 val6({0x1111222233334444, 0xaaaabbbbccccdddd});
+  LL_UInt128 result3({0x12346789bcdf1233, 0xa987765443210fed});
+  EXPECT_EQ(val5 + val6, result3);
+  EXPECT_EQ(val5 + val6, val6 + val5);
+}
+
+TEST(LlvmLibcUInt128ClassTest, SubtractionTests) {
+  LL_UInt128 val1(12345);
+  LL_UInt128 val2(54321);
+  LL_UInt128 result1({0xffffffffffff5c08, 0xffffffffffffffff});
+  LL_UInt128 result2(0xa3f8);
+  EXPECT_EQ(val1 - val2, result1);
+  EXPECT_EQ(val1, val2 + result1);
+  EXPECT_EQ(val2 - val1, result2);
+  EXPECT_EQ(val2, val1 + result2);
+
+  LL_UInt128 val3({0xf000000000000001, 0});
+  LL_UInt128 val4({0x100000000000000f, 0});
+  LL_UInt128 result3(0xdffffffffffffff2);
+  LL_UInt128 result4({0x200000000000000e, 0xffffffffffffffff});
+  EXPECT_EQ(val3 - val4, result3);
+  EXPECT_EQ(val3, val4 + result3);
+  EXPECT_EQ(val4 - val3, result4);
+  EXPECT_EQ(val4, val3 + result4);
+
+  LL_UInt128 val5({0x0123456789abcdef, 0xfedcba9876543210});
+  LL_UInt128 val6({0x1111222233334444, 0xaaaabbbbccccdddd});
+  LL_UInt128 result5({0xf0122345567889ab, 0x5431fedca9875432});
+  LL_UInt128 result6({0x0feddcbaa9877655, 0xabce01235678abcd});
+  EXPECT_EQ(val5 - val6, result5);
+  EXPECT_EQ(val5, val6 + result5);
+  EXPECT_EQ(val6 - val5, result6);
+  EXPECT_EQ(val6, val5 + result6);
 }
 
 TEST(LlvmLibcUInt128ClassTest, MultiplicationTests) {
@@ -42,7 +78,7 @@ TEST(LlvmLibcUInt128ClassTest, MultiplicationTests) {
   LL_UInt128 val2({10, 0});
   LL_UInt128 result1({50, 0});
   EXPECT_EQ((val1 * val2), result1);
-  EXPECT_EQ((val1 * val2), (val2 * val1)); // multiplication is reciprocal
+  EXPECT_EQ((val1 * val2), (val2 * val1)); // multiplication is commutative
 
   // Check that the multiplication works accross the whole number
   LL_UInt128 val3({0xf, 0});

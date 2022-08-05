@@ -593,6 +593,11 @@ namespace ranges {
     constexpr borrowed_iterator_t<R>
       ranges::replace_if(R&& r, Pred pred, const T& new_value, Proj proj = {});                     // since C++20
 
+  template<class T, class Proj = identity,
+           indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
+    constexpr const T&
+      ranges::clamp(const T& v, const T& lo, const T& hi, Comp comp = {}, Proj proj = {});          // since C++20
+
   template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
            class Proj1 = identity, class Proj2 = identity,
            indirect_strict_weak_order<projected<I1, Proj1>,
@@ -786,6 +791,21 @@ namespace ranges {
     requires permutable<iterator_t<R>> &&
             uniform_random_bit_generator<remove_reference_t<Gen>>
     borrowed_iterator_t<R> shuffle(R&& r, Gen&& g);                                                // Since C++20
+
+  template<forward_iterator I1, sentinel_for<I1> S1, forward_iterator I2,
+         sentinel_for<I2> S2, class Proj1 = identity, class Proj2 = identity,
+         indirect_equivalence_relation<projected<I1, Proj1>,
+                                       projected<I2, Proj2>> Pred = ranges::equal_to>
+  constexpr bool ranges::is_permutation(I1 first1, S1 last1, I2 first2, S2 last2,
+                                        Pred pred = {},
+                                        Proj1 proj1 = {}, Proj2 proj2 = {});                       // Since C++20
+
+  template<forward_range R1, forward_range R2,
+         class Proj1 = identity, class Proj2 = identity,
+         indirect_equivalence_relation<projected<iterator_t<R1>, Proj1>,
+                                       projected<iterator_t<R2>, Proj2>> Pred = ranges::equal_to>
+  constexpr bool ranges::is_permutation(R1&& r1, R2&& r2, Pred pred = {},
+                                        Proj1 proj1 = {}, Proj2 proj2 = {});                       // Since C++20
 
   template<forward_iterator I1, sentinel_for<I1> S1, forward_iterator I2,
            sentinel_for<I2> S2, class Pred = ranges::equal_to,
@@ -1764,6 +1784,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_all_of.h>
 #include <__algorithm/ranges_any_of.h>
 #include <__algorithm/ranges_binary_search.h>
+#include <__algorithm/ranges_clamp.h>
 #include <__algorithm/ranges_copy.h>
 #include <__algorithm/ranges_copy_backward.h>
 #include <__algorithm/ranges_copy_if.h>
@@ -1788,6 +1809,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_is_heap.h>
 #include <__algorithm/ranges_is_heap_until.h>
 #include <__algorithm/ranges_is_partitioned.h>
+#include <__algorithm/ranges_is_permutation.h>
 #include <__algorithm/ranges_is_sorted.h>
 #include <__algorithm/ranges_is_sorted_until.h>
 #include <__algorithm/ranges_lexicographical_compare.h>

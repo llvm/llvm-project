@@ -272,6 +272,7 @@ def StringElementsAttrOp : TEST_Op<"string_elements_attr"> {
 
 def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
   let arguments = (ins
+    DenseBoolArrayAttr:$i1attr,
     DenseI8ArrayAttr:$i8attr,
     DenseI16ArrayAttr:$i16attr,
     DenseI32ArrayAttr:$i32attr,
@@ -281,10 +282,9 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
     DenseI32ArrayAttr:$emptyattr
   );
   let assemblyFormat = [{
-   `i8attr` `=` $i8attr `i16attr` `=` $i16attr `i32attr` `=` $i32attr
-   `i64attr` `=` $i64attr  `f32attr` `=` $f32attr `f64attr` `=` $f64attr
-   `emptyattr` `=` $emptyattr
-   attr-dict
+   `i1attr` `=` $i1attr `i8attr` `=` $i8attr `i16attr` `=` $i16attr
+   `i32attr` `=` $i32attr `i64attr` `=` $i64attr  `f32attr` `=` $f32attr
+   `f64attr` `=` $f64attr `emptyattr` `=` $emptyattr attr-dict
   }];
 }
 

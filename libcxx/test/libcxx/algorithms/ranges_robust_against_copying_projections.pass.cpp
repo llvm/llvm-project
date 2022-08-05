@@ -80,7 +80,7 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::any_of(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::binary_search(first, last, value, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::binary_search(a, value, Less(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::clamp(T(), T(), T(), Less(), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::clamp(T(), T(), T(), Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::count(first, last, value, Proj(&copies)); assert(copies == 0);
     (void)std::ranges::count(a, value, Proj(&copies)); assert(copies == 0);
     (void)std::ranges::count_if(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
@@ -115,8 +115,8 @@ constexpr bool all_the_algorithms()
     (void)std::ranges::is_heap_until(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::is_partitioned(first, last, UnaryTrue(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::is_partitioned(a, UnaryTrue(), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::is_permutation(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
-    //(void)std::ranges::is_permutation(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::is_permutation(first, last, first2, last2, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
+    (void)std::ranges::is_permutation(a, b, Equal(), Proj(&copies), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::is_sorted(first, last, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::is_sorted(a, Less(), Proj(&copies)); assert(copies == 0);
     (void)std::ranges::is_sorted_until(first, last, Less(), Proj(&copies)); assert(copies == 0);
