@@ -1160,7 +1160,7 @@ Operation::operand_range CallOp::getArgOperands() {
   return getOperands().drop_front(getCallee().has_value() ? 0 : 1);
 }
 
-LogicalResult CallOp::verify() {
+LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (getNumResults() > 1)
     return emitOpError("must have 0 or 1 result");
 
@@ -1184,7 +1184,7 @@ LogicalResult CallOp::verify() {
     fnType = ptrType.getElementType();
   } else {
     Operation *callee =
-        SymbolTable::lookupNearestSymbolFrom(*this, calleeName.getAttr());
+        symbolTable.lookupNearestSymbolFrom(*this, calleeName.getAttr());
     if (!callee)
       return emitOpError()
              << "'" << calleeName.getValue()

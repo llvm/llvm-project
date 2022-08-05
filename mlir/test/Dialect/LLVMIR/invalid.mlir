@@ -191,6 +191,7 @@ func.func @store_malformed_elem_type(%foo: !llvm.ptr, %bar: f32) {
 func.func @call_non_function_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
   // expected-error@+1 {{expected function type}}
   llvm.call %callee(%arg) : !llvm.func<i8 (i8)>
+  llvm.return
 }
 
 // -----
@@ -198,6 +199,7 @@ func.func @call_non_function_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 func.func @invalid_call() {
   // expected-error@+1 {{'llvm.call' op must have either a `callee` attribute or at least an operand}}
   "llvm.call"() : () -> ()
+  llvm.return
 }
 
 // -----
@@ -205,6 +207,7 @@ func.func @invalid_call() {
 func.func @call_non_function_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
   // expected-error@+1 {{expected function type}}
   llvm.call %callee(%arg) : !llvm.func<i8 (i8)>
+  llvm.return
 }
 
 // -----
@@ -212,6 +215,7 @@ func.func @call_non_function_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 func.func @call_unknown_symbol() {
   // expected-error@+1 {{'llvm.call' op 'missing_callee' does not reference a symbol in the current scope}}
   llvm.call @missing_callee() : () -> ()
+  llvm.return
 }
 
 // -----
@@ -221,6 +225,7 @@ func.func private @standard_func_callee()
 func.func @call_non_llvm() {
   // expected-error@+1 {{'llvm.call' op 'standard_func_callee' does not reference a valid LLVM function}}
   llvm.call @standard_func_callee() : () -> ()
+  llvm.return
 }
 
 // -----
@@ -228,6 +233,7 @@ func.func @call_non_llvm() {
 func.func @call_non_llvm_indirect(%arg0 : tensor<*xi32>) {
   // expected-error@+1 {{'llvm.call' op operand #0 must be LLVM dialect-compatible type}}
   "llvm.call"(%arg0) : (tensor<*xi32>) -> ()
+  llvm.return
 }
 
 // -----
@@ -237,6 +243,7 @@ llvm.func @callee_func(i8) -> ()
 func.func @callee_arg_mismatch(%arg0 : i32) {
   // expected-error@+1 {{'llvm.call' op operand type mismatch for operand 0: 'i32' != 'i8'}}
   llvm.call @callee_func(%arg0) : (i32) -> ()
+  llvm.return
 }
 
 // -----
@@ -244,6 +251,7 @@ func.func @callee_arg_mismatch(%arg0 : i32) {
 func.func @indirect_callee_arg_mismatch(%arg0 : i32, %callee : !llvm.ptr<func<void(i8)>>) {
   // expected-error@+1 {{'llvm.call' op operand type mismatch for operand 0: 'i32' != 'i8'}}
   "llvm.call"(%callee, %arg0) : (!llvm.ptr<func<void(i8)>>, i32) -> ()
+  llvm.return
 }
 
 // -----
@@ -253,6 +261,7 @@ llvm.func @callee_func() -> (i8)
 func.func @callee_return_mismatch() {
   // expected-error@+1 {{'llvm.call' op result type mismatch: 'i32' != 'i8'}}
   %res = llvm.call @callee_func() : () -> (i32)
+  llvm.return
 }
 
 // -----
@@ -260,6 +269,7 @@ func.func @callee_return_mismatch() {
 func.func @indirect_callee_return_mismatch(%callee : !llvm.ptr<func<i8()>>) {
   // expected-error@+1 {{'llvm.call' op result type mismatch: 'i32' != 'i8'}}
   "llvm.call"(%callee) : (!llvm.ptr<func<i8()>>) -> (i32)
+  llvm.return
 }
 
 // -----
@@ -267,6 +277,7 @@ func.func @indirect_callee_return_mismatch(%callee : !llvm.ptr<func<i8()>>) {
 func.func @call_too_many_results(%callee : () -> (i32,i32)) {
   // expected-error@+1 {{expected function with 0 or 1 result}}
   llvm.call %callee() : () -> (i32, i32)
+  llvm.return
 }
 
 // -----
@@ -274,6 +285,7 @@ func.func @call_too_many_results(%callee : () -> (i32,i32)) {
 func.func @call_non_llvm_result(%callee : () -> (tensor<*xi32>)) {
   // expected-error@+1 {{expected result to have LLVM type}}
   llvm.call %callee() : () -> (tensor<*xi32>)
+  llvm.return
 }
 
 // -----
@@ -281,6 +293,7 @@ func.func @call_non_llvm_result(%callee : () -> (tensor<*xi32>)) {
 func.func @call_non_llvm_input(%callee : (tensor<*xi32>) -> (), %arg : tensor<*xi32>) {
   // expected-error@+1 {{expected LLVM types as inputs}}
   llvm.call %callee(%arg) : (tensor<*xi32>) -> ()
+  llvm.return
 }
 
 // -----
