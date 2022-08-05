@@ -647,7 +647,8 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
 
 def LLVM_CallOp : LLVM_Op<"call",
                           [DeclareOpInterfaceMethods<FastmathFlagsInterface>,
-                           DeclareOpInterfaceMethods<CallOpInterface>]> {
+                           DeclareOpInterfaceMethods<CallOpInterface>,
+                           DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Call to an LLVM function.";
   let description = [{
 
@@ -701,8 +702,8 @@ def LLVM_CallOp : LLVM_Op<"call",
             StringAttr::get($_builder.getContext(), callee), operands);
     }]>];
   let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
 }
+
 def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [NoSideEffect]> {
   let arguments = (ins LLVM_AnyVector:$vector, AnyInteger:$position);
   let results = (outs LLVM_Type:$res);
