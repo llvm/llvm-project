@@ -14885,7 +14885,7 @@ SDValue PPCTargetLowering::combineVectorShuffle(ShuffleVectorSDNode *SVN,
   // Adjust the shuffle mask if either input vector comes from a
   // SCALAR_TO_VECTOR and keep the respective input vector in permuted
   // form (to prevent the need for a swap).
-  SmallVector<int, 16> ShuffV(Mask.begin(), Mask.end());
+  SmallVector<int, 16> ShuffV(Mask);
   SDValue SToVLHS = isScalarToVec(LHS);
   SDValue SToVRHS = isScalarToVec(RHS);
   if (SToVLHS || SToVRHS) {

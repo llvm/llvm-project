@@ -18334,7 +18334,7 @@ SDValue ARMTargetLowering::PerformMVETruncCombine(
     if (S0->getOperand(0) == S1->getOperand(0) &&
         S0->getOperand(1) == S1->getOperand(1)) {
       // Construct complete shuffle mask
-      SmallVector<int, 8> Mask(S0->getMask().begin(), S0->getMask().end());
+      SmallVector<int, 8> Mask(S0->getMask());
       Mask.append(S1->getMask().begin(), S1->getMask().end());
 
       if (isVMOVNTruncMask(Mask, VT, false))
