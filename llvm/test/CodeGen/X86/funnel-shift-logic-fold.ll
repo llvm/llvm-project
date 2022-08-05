@@ -7,12 +7,11 @@ declare i64 @llvm.fshr.i64(i64, i64, i64) nounwind readnone
 define i64 @hoist_fshl_from_or(i64 %a, i64 %b, i64 %c, i64 %d, i64 %s) nounwind {
 ; X64-LABEL: hoist_fshl_from_or:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    orq %rcx, %rsi
+; X64-NEXT:    orq %rdx, %rax
 ; X64-NEXT:    movl %r8d, %ecx
-; X64-NEXT:    shldq %cl, %rsi, %rdi
-; X64-NEXT:    shldq %cl, %rax, %rdx
-; X64-NEXT:    orq %rdi, %rdx
-; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    shldq %cl, %rsi, %rax
 ; X64-NEXT:    retq
   %fshl.0 = call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 %s)
   %fshl.1 = call i64 @llvm.fshl.i64(i64 %c, i64 %d, i64 %s)
@@ -23,12 +22,11 @@ define i64 @hoist_fshl_from_or(i64 %a, i64 %b, i64 %c, i64 %d, i64 %s) nounwind 
 define i64 @hoist_fshl_from_and(i64 %a, i64 %b, i64 %c, i64 %d, i64 %s) nounwind {
 ; X64-LABEL: hoist_fshl_from_and:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    andq %rcx, %rsi
+; X64-NEXT:    andq %rdx, %rax
 ; X64-NEXT:    movl %r8d, %ecx
-; X64-NEXT:    shldq %cl, %rsi, %rdi
-; X64-NEXT:    shldq %cl, %rax, %rdx
-; X64-NEXT:    andq %rdi, %rdx
-; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    shldq %cl, %rsi, %rax
 ; X64-NEXT:    retq
   %fshl.0 = call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 %s)
   %fshl.1 = call i64 @llvm.fshl.i64(i64 %c, i64 %d, i64 %s)
@@ -39,12 +37,11 @@ define i64 @hoist_fshl_from_and(i64 %a, i64 %b, i64 %c, i64 %d, i64 %s) nounwind
 define i64 @hoist_fshl_from_xor(i64 %a, i64 %b, i64 %c, i64 %d, i64 %s) nounwind {
 ; X64-LABEL: hoist_fshl_from_xor:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    xorq %rcx, %rsi
+; X64-NEXT:    xorq %rdx, %rax
 ; X64-NEXT:    movl %r8d, %ecx
-; X64-NEXT:    shldq %cl, %rsi, %rdi
-; X64-NEXT:    shldq %cl, %rax, %rdx
-; X64-NEXT:    xorq %rdi, %rdx
-; X64-NEXT:    movq %rdx, %rax
+; X64-NEXT:    shldq %cl, %rsi, %rax
 ; X64-NEXT:    retq
   %fshl.0 = call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 %s)
   %fshl.1 = call i64 @llvm.fshl.i64(i64 %c, i64 %d, i64 %s)
@@ -69,10 +66,10 @@ define i64 @fshl_or_with_different_shift_value(i64 %a, i64 %b, i64 %c, i64 %d) n
 define i64 @hoist_fshl_from_or_const_shift(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; X64-LABEL: hoist_fshl_from_or_const_shift:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdx, %rax
-; X64-NEXT:    shldq $15, %rsi, %rdi
-; X64-NEXT:    shldq $15, %rcx, %rax
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    orq %rcx, %rsi
+; X64-NEXT:    orq %rdx, %rax
+; X64-NEXT:    shldq $15, %rsi, %rax
 ; X64-NEXT:    retq
   %fshl.0 = call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 15)
   %fshl.1 = call i64 @llvm.fshl.i64(i64 %c, i64 %d, i64 15)
@@ -83,11 +80,11 @@ define i64 @hoist_fshl_from_or_const_shift(i64 %a, i64 %b, i64 %c, i64 %d) nounw
 define i64 @hoist_fshr_from_or(i64 %a, i64 %b, i64 %c, i64 %d, i64 %s) nounwind {
 ; X64-LABEL: hoist_fshr_from_or:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    movq %rsi, %rax
+; X64-NEXT:    orq %rdx, %rdi
+; X64-NEXT:    orq %rcx, %rax
 ; X64-NEXT:    movl %r8d, %ecx
-; X64-NEXT:    shrdq %cl, %rdi, %rsi
-; X64-NEXT:    shrdq %cl, %rdx, %rax
-; X64-NEXT:    orq %rsi, %rax
+; X64-NEXT:    shrdq %cl, %rdi, %rax
 ; X64-NEXT:    retq
   %fshr.0 = call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 %s)
   %fshr.1 = call i64 @llvm.fshr.i64(i64 %c, i64 %d, i64 %s)
@@ -98,11 +95,11 @@ define i64 @hoist_fshr_from_or(i64 %a, i64 %b, i64 %c, i64 %d, i64 %s) nounwind 
 define i64 @hoist_fshr_from_and(i64 %a, i64 %b, i64 %c, i64 %d, i64 %s) nounwind {
 ; X64-LABEL: hoist_fshr_from_and:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    movq %rsi, %rax
+; X64-NEXT:    andq %rdx, %rdi
+; X64-NEXT:    andq %rcx, %rax
 ; X64-NEXT:    movl %r8d, %ecx
-; X64-NEXT:    shrdq %cl, %rdi, %rsi
-; X64-NEXT:    shrdq %cl, %rdx, %rax
-; X64-NEXT:    andq %rsi, %rax
+; X64-NEXT:    shrdq %cl, %rdi, %rax
 ; X64-NEXT:    retq
   %fshr.0 = call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 %s)
   %fshr.1 = call i64 @llvm.fshr.i64(i64 %c, i64 %d, i64 %s)
@@ -113,11 +110,11 @@ define i64 @hoist_fshr_from_and(i64 %a, i64 %b, i64 %c, i64 %d, i64 %s) nounwind
 define i64 @hoist_fshr_from_xor(i64 %a, i64 %b, i64 %c, i64 %d, i64 %s) nounwind {
 ; X64-LABEL: hoist_fshr_from_xor:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    movq %rsi, %rax
+; X64-NEXT:    xorq %rdx, %rdi
+; X64-NEXT:    xorq %rcx, %rax
 ; X64-NEXT:    movl %r8d, %ecx
-; X64-NEXT:    shrdq %cl, %rdi, %rsi
-; X64-NEXT:    shrdq %cl, %rdx, %rax
-; X64-NEXT:    xorq %rsi, %rax
+; X64-NEXT:    shrdq %cl, %rdi, %rax
 ; X64-NEXT:    retq
   %fshr.0 = call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 %s)
   %fshr.1 = call i64 @llvm.fshr.i64(i64 %c, i64 %d, i64 %s)
@@ -142,10 +139,10 @@ define i64 @fshr_or_with_different_shift_value(i64 %a, i64 %b, i64 %c, i64 %d) n
 define i64 @hoist_fshr_from_or_const_shift(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; X64-LABEL: hoist_fshr_from_or_const_shift:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdx, %rax
-; X64-NEXT:    shldq $49, %rsi, %rdi
-; X64-NEXT:    shldq $49, %rcx, %rax
-; X64-NEXT:    orq %rdi, %rax
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    orq %rcx, %rsi
+; X64-NEXT:    orl %edx, %eax
+; X64-NEXT:    shldq $49, %rsi, %rax
 ; X64-NEXT:    retq
   %fshr.0 = call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 15)
   %fshr.1 = call i64 @llvm.fshr.i64(i64 %c, i64 %d, i64 15)
