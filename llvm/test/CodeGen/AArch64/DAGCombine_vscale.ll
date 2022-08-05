@@ -50,9 +50,8 @@ define <vscale x 4 x i32> @ashr_shl_illegal_trunc_vec_ty(<vscale x 4 x i32> %a) 
 define <vscale x 4 x i32> @ashr_add_shl_nxv4i8(<vscale x 4 x i32> %a) {
 ; CHECK-LABEL: ashr_add_shl_nxv4i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16777216
+; CHECK-NEXT:    mov z1.s, #0x1000000
 ; CHECK-NEXT:    lsl z0.s, z0.s, #24
-; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    add z0.s, z0.s, z1.s
 ; CHECK-NEXT:    asr z0.s, z0.s, #24
 ; CHECK-NEXT:    ret
