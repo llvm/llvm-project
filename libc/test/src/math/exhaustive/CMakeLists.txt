@@ -56,6 +56,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sincosf_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    sincosf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.include.math
+    libc.src.math.sincosf
+    libc.src.__support.FPUtil.fputil
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   expf_test
   NO_RUN_POSTBUILD
   NEED_MPFR

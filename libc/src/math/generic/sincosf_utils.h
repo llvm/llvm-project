@@ -1,4 +1,4 @@
-//===-- Collection of utils for cosf/sinf/sincosf ---------------*- C++ -*-===//
+//===-- Collection of utils for sinf/cosf/sincosf ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,132 +9,78 @@
 #ifndef LLVM_LIBC_SRC_MATH_SINCOSF_UTILS_H
 #define LLVM_LIBC_SRC_MATH_SINCOSF_UTILS_H
 
-#include "math_utils.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/common.h"
 
-#include <stdint.h>
+#if defined(LIBC_TARGET_HAS_FMA)
+#include "range_reduction_fma.h"
+// using namespace __llvm_libc::fma;
+using __llvm_libc::fma::FAST_PASS_BOUND;
+using __llvm_libc::fma::large_range_reduction;
+using __llvm_libc::fma::small_range_reduction;
+#else
+#include "range_reduction.h"
+// using namespace __llvm_libc::generic;
+using __llvm_libc::generic::FAST_PASS_BOUND;
+using __llvm_libc::generic::large_range_reduction;
+using __llvm_libc::generic::small_range_reduction;
+#endif // LIBC_TARGET_HAS_FMA
 
 namespace __llvm_libc {
 
-// 2PI * 2^-64.
-static constexpr double PI63 = 0x1.921fb54442d18p-62;
-// PI / 4.
-static constexpr double PIO4 = 0x1.921fb54442d18p-1;
+// Lookup table for sin(k * pi / 16) with k = 0, ..., 31.
+// Table is generated with Sollya as follow:
+// > display = hexadecimal;
+// > for k from 0 to 31 do { D(sin(k * pi/16)); };
+const double SIN_K_PI_OVER_16[32] = {
+    0x0.0000000000000p+0,  0x1.8f8b83c69a60bp-3,  0x1.87de2a6aea963p-2,
+    0x1.1c73b39ae68c8p-1,  0x1.6a09e667f3bcdp-1,  0x1.a9b66290ea1a3p-1,
+    0x1.d906bcf328d46p-1,  0x1.f6297cff75cb0p-1,  0x1.0000000000000p+0,
+    0x1.f6297cff75cb0p-1,  0x1.d906bcf328d46p-1,  0x1.a9b66290ea1a3p-1,
+    0x1.6a09e667f3bcdp-1,  0x1.1c73b39ae68c8p-1,  0x1.87de2a6aea963p-2,
+    0x1.8f8b83c69a60bp-3,  0x0.0000000000000p+0,  -0x1.8f8b83c69a60bp-3,
+    -0x1.87de2a6aea963p-2, -0x1.1c73b39ae68c8p-1, -0x1.6a09e667f3bcdp-1,
+    -0x1.a9b66290ea1a3p-1, -0x1.d906bcf328d46p-1, -0x1.f6297cff75cb0p-1,
+    -0x1.0000000000000p+0, -0x1.f6297cff75cb0p-1, -0x1.d906bcf328d46p-1,
+    -0x1.a9b66290ea1a3p-1, -0x1.6a09e667f3bcdp-1, -0x1.1c73b39ae68c8p-1,
+    -0x1.87de2a6aea963p-2, -0x1.8f8b83c69a60bp-3};
 
-// The constants and polynomials for sine and cosine.
-typedef struct {
-  double sign[4];            // Sign of sine in quadrants 0..3.
-  double hpi_inv;            // 2 / PI ( * 2^24 ).
-  double hpi;                // PI / 2.
-  double c0, c1, c2, c3, c4; // Cosine polynomial.
-  double s1, s2, s3;         // Sine polynomial.
-} sincos_t;
+static inline void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
+                                double &cos_k, double &sin_y, double &cosm1_y) {
+  int64_t k;
+  double y;
 
-// Polynomial data (the cosine polynomial is negated in the 2nd entry).
-extern const sincos_t SINCOSF_TABLE[2];
-
-// Table with 4/PI to 192 bit precision.
-extern const uint32_t INV_PIO4[];
-
-// Top 12 bits of the float representation with the sign bit cleared.
-static inline uint32_t abstop12(float x) {
-  return (as_uint32_bits(x) >> 20) & 0x7ff;
-}
-
-// Compute the sine and cosine of inputs X and X2 (X squared), using the
-// polynomial P and store the results in SINP and COSP. N is the quadrant,
-// if odd the cosine and sine polynomials are swapped.
-static inline void sincosf_poly(double x, double x2, const sincos_t *p, int n,
-                                float *sinp, float *cosp) {
-  double x3, x4, x5, x6, s, c, c1, c2, s1;
-
-  x4 = x2 * x2;
-  x3 = x2 * x;
-  c2 = p->c3 + x2 * p->c4;
-  s1 = p->s2 + x2 * p->s3;
-
-  // Swap sin/cos result based on quadrant.
-  float *tmp = (n & 1 ? cosp : sinp);
-  cosp = (n & 1 ? sinp : cosp);
-  sinp = tmp;
-
-  c1 = p->c0 + x2 * p->c1;
-  x5 = x3 * x2;
-  x6 = x4 * x2;
-
-  s = x + x3 * p->s1;
-  c = c1 + x4 * p->c2;
-
-  *sinp = s + x5 * s1;
-  *cosp = c + x6 * c2;
-}
-
-// Return the sine of inputs X and X2 (X squared) using the polynomial P.
-// N is the quadrant, and if odd the cosine polynomial is used.
-static inline float sinf_poly(double x, double x2, const sincos_t *p, int n) {
-  double x3, x4, x6, x7, s, c, c1, c2, s1;
-
-  if ((n & 1) == 0) {
-    x3 = x * x2;
-    s1 = p->s2 + x2 * p->s3;
-
-    x7 = x3 * x2;
-    s = x + x3 * p->s1;
-
-    return s + x7 * s1;
+  if (likely(x_abs < FAST_PASS_BOUND)) {
+    k = small_range_reduction(xd, y);
   } else {
-    x4 = x2 * x2;
-    c2 = p->c3 + x2 * p->c4;
-    c1 = p->c0 + x2 * p->c1;
-
-    x6 = x4 * x2;
-    c = c1 + x4 * p->c2;
-
-    return c + x6 * c2;
+    fputil::FPBits<float> x_bits(x_abs);
+    k = large_range_reduction(xd, x_bits.get_exponent(), y);
   }
-}
 
-// Fast range reduction using single multiply-subtract. Return the modulo of
-// X as a value between -PI/4 and PI/4 and store the quadrant in NP.
-// The values for PI/2 and 2/PI are accessed via P. Since PI/2 as a double
-// is accurate to 55 bits and the worst-case cancellation happens at 6 * PI/4,
-// the result is accurate for |X| <= 120.0.
-static inline double reduce_fast(double x, const sincos_t *p, int *np) {
-  double r;
-  // Use scaled float to int conversion with explicit rounding.
-  // hpi_inv is prescaled by 2^24 so the quadrant ends up in bits 24..31.
-  // This avoids inaccuracies introduced by truncating negative values.
-  r = x * p->hpi_inv;
-  int n = ((int32_t)r + 0x800000) >> 24;
-  *np = n;
-  return x - n * p->hpi;
-}
+  // After range reduction, k = round(x * 16 / pi) and y = (x * 16 / pi) - k.
+  // So k is an integer and -0.5 <= y <= 0.5.
+  // Then sin(x) = sin((k + y)*pi/16)
+  //             = sin(y*pi/16) * cos(k*pi/16) + cos(y*pi/16) * sin(k*pi/16)
 
-// Reduce the range of XI to a multiple of PI/2 using fast integer arithmetic.
-// XI is a reinterpreted float and must be >= 2.0f (the sign bit is ignored).
-// Return the modulo between -PI/4 and PI/4 and store the quadrant in NP.
-// Reduction uses a table of 4/PI with 192 bits of precision. A 32x96->128 bit
-// multiply computes the exact 2.62-bit fixed-point modulo. Since the result
-// can have at most 29 leading zeros after the binary point, the double
-// precision result is accurate to 33 bits.
-static inline double reduce_large(uint32_t xi, int *np) {
-  const uint32_t *arr = &INV_PIO4[(xi >> 26) & 15];
-  int shift = (xi >> 23) & 7;
-  uint64_t n, res0, res1, res2;
+  sin_k = SIN_K_PI_OVER_16[k & 31];
+  // cos(k * pi/16) = sin(k * pi/16 + pi/2) = sin((k + 8) * pi/16).
+  // cos_k = y * cos(k * pi/16)
+  cos_k = SIN_K_PI_OVER_16[(k + 8) & 31];
 
-  xi = (xi & 0xffffff) | 0x800000;
-  xi <<= shift;
+  double ysq = y * y;
 
-  res0 = xi * arr[0];
-  res1 = (uint64_t)xi * arr[4];
-  res2 = (uint64_t)xi * arr[8];
-  res0 = (res2 >> 32) | (res0 << 32);
-  res0 += res1;
-
-  n = (res0 + (1ULL << 61)) >> 62;
-  res0 -= n << 62;
-  double x = (int64_t)res0;
-  *np = n;
-  return x * PI63;
+  // Degree-6 minimax even polynomial for sin(y*pi/16)/y generated by Sollya
+  // with:
+  // > Q = fpminimax(sin(y*pi/16)/y, [|0, 2, 4, 6|], [|D...|], [0, 0.5]);
+  sin_y = y * fputil::polyeval(ysq, 0x1.921fb54442d17p-3, -0x1.4abbce6256adp-10,
+                               0x1.466bc5a5ac6b3p-19, -0x1.32bdcb4207562p-29);
+  // Degree-8 minimax even polynomial for cos(y*pi/16) generated by Sollya with:
+  // > P = fpminimax(cos(x*pi/16), [|0, 2, 4, 6, 8|], [|1, D...|], [0, 0.5]);
+  // Note that cosm1_y = cos(y*pi/16) - 1.
+  cosm1_y =
+      ysq * fputil::polyeval(ysq, -0x1.3bd3cc9be45dcp-6, 0x1.03c1f081b08ap-14,
+                             -0x1.55d3c6fb0fb6ep-24, 0x1.e1d3d60f58873p-35);
 }
 
 } // namespace __llvm_libc
