@@ -169,3 +169,22 @@ class TestTraceSave(TraceIntelPTTestCaseBase):
         ci.HandleCommand("thread trace dump instructions -c 10", res)
         self.assertEqual(res.Succeeded(), True)
         self.assertEqual(res.GetOutput(), last_ten_instructions)
+
+    def testSaveKernelTrace(self):
+        original_trace_file = os.path.join(self.getSourceDir(), "intelpt-kernel-trace",
+                "trace.json")
+        copied_trace_dir = os.path.join(self.getBuildDir(), "intelpt-kernel-trace")
+        copied_trace_file = os.path.join(copied_trace_dir, "trace.json")
+
+        self.expect("trace load -v " + original_trace_file, substrs=["intel-pt"])
+        self.expect("trace save " + copied_trace_dir)
+
+        # We finally check that the new json has the same information as the original one
+        with open(original_trace_file) as original_file:
+            original_file = json.load(original_file)
+            with open(copied_trace_file) as copy_file:
+                copy_file = json.load(copy_file)
+                self.assertTrue("kernel" in copy_file)
+
+                self.assertEqual(os.path.basename(original_file["kernel"]["file"]),
+                        os.path.basename(copy_file["kernel"]["file"]))

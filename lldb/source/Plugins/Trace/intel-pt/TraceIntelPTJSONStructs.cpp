@@ -116,6 +116,20 @@ bool fromJSON(const json::Value &value, pt_cpu &cpu_info, Path path) {
   return true;
 }
 
+json::Value toJSON(const JSONKernel &kernel) {
+  json::Object json_module;
+  if (kernel.load_address)
+    json_module["loadAddress"] = toJSON(*kernel.load_address, true);
+  json_module["file"] = kernel.file;
+  return std::move(json_module);
+}
+
+bool fromJSON(const json::Value &value, JSONKernel &kernel, Path path) {
+  ObjectMapper o(value, path);
+  return o && o.map("loadAddress", kernel.load_address) &&
+         o.map("file", kernel.file);
+}
+
 json::Value toJSON(const JSONTraceBundleDescription &bundle_description) {
   return Object{
       {"type", bundle_description.type},
@@ -124,7 +138,8 @@ json::Value toJSON(const JSONTraceBundleDescription &bundle_description) {
       // automatically because pt_cpu is not in a namespace
       {"cpuInfo", toJSON(bundle_description.cpu_info)},
       {"cpus", bundle_description.cpus},
-      {"tscPerfZeroConversion", bundle_description.tsc_perf_zero_conversion}};
+      {"tscPerfZeroConversion", bundle_description.tsc_perf_zero_conversion},
+      {"kernel", bundle_description.kernel}};
 }
 
 bool fromJSON(const json::Value &value,
@@ -134,7 +149,8 @@ bool fromJSON(const json::Value &value,
         o.map("type", bundle_description.type) &&
         o.map("cpus", bundle_description.cpus) &&
         o.map("tscPerfZeroConversion",
-              bundle_description.tsc_perf_zero_conversion)))
+              bundle_description.tsc_perf_zero_conversion) &&
+        o.map("kernel", bundle_description.kernel)))
     return false;
   if (bundle_description.cpus && !bundle_description.tsc_perf_zero_conversion) {
     path.report(
@@ -146,6 +162,25 @@ bool fromJSON(const json::Value &value,
   if (!fromJSON(*value.getAsObject()->get("cpuInfo"),
                 bundle_description.cpu_info, path.field("cpuInfo")))
     return false;
+
+  // When kernel section is present, this is kernel-only tracing. Thus, throw an
+  // error if the "processes" section is non-empty or the "cpus" section is not
+  // present.
+  if (bundle_description.kernel) {
+    if (bundle_description.processes &&
+        !bundle_description.processes->empty()) {
+      path.report("\"processes\" must be empty when \"kernel\" is provided");
+      return false;
+    }
+    if (!bundle_description.cpus) {
+      path.report("\"cpus\" is required when \"kernel\" is provided");
+      return false;
+    }
+  } else if (!bundle_description.processes) {
+    // Usermode tracing requires processes section.
+    path.report("\"processes\" is required when \"kernel\" is not provided");
+    return false;
+  }
   return true;
 }
 

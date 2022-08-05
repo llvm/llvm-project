@@ -3469,7 +3469,9 @@ Parser::ParseSimpleExpressionList(SmallVectorImpl<Expr*> &Exprs,
 
     Exprs.push_back(Expr.get());
 
-    if (Tok.isNot(tok::comma))
+    // We might be parsing the LHS of a fold-expression. If we reached the fold
+    // operator, stop.
+    if (Tok.isNot(tok::comma) || NextToken().is(tok::ellipsis))
       return false;
 
     // Move to the next argument, remember where the comma was.

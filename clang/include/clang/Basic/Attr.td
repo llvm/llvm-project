@@ -4016,16 +4016,25 @@ def HLSLShader : InheritableAttr {
   let Spellings = [Microsoft<"shader">];
   let Subjects = SubjectList<[HLSLEntry]>;
   let LangOpts = [HLSL];
-  let Args = [EnumArgument<"Type", "ShaderType",
-                           ["pixel", "vertex", "geometry", "hull", "domain",
-                            "compute", "raygeneration", "intersection",
-                            "anyhit", "closesthit", "miss", "callable", "mesh",
-                            "amplification"],
-                           ["Pixel", "Vertex", "Geometry", "Hull", "Domain",
-                            "Compute", "RayGeneration", "Intersection",
-                            "AnyHit", "ClosestHit", "Miss", "Callable", "Mesh",
-                            "Amplification"]
-                           >];
+  // NOTE:
+  // order for the enum should match order in llvm::Triple::EnvironmentType.
+  // ShaderType will be converted to llvm::Triple::EnvironmentType like
+  //   (llvm::Triple::EnvironmentType)((uint32_t)ShaderType +
+  //      (uint32_t)llvm::Triple::EnvironmentType::Pixel).
+  // This will avoid update code for convert when new shader type is added.
+  let Args = [
+    EnumArgument<"Type", "ShaderType",
+                 [
+                   "pixel", "vertex", "geometry", "hull", "domain", "compute",
+                   "library", "raygeneration", "intersection", "anyHit",
+                   "closestHit", "miss", "callable", "mesh", "amplification"
+                 ],
+                 [
+                   "Pixel", "Vertex", "Geometry", "Hull", "Domain", "Compute",
+                   "Library", "RayGeneration", "Intersection", "AnyHit",
+                   "ClosestHit", "Miss", "Callable", "Mesh", "Amplification"
+                 ]>
+  ];
   let Documentation = [HLSLSV_ShaderTypeAttrDocs];
 }
 
