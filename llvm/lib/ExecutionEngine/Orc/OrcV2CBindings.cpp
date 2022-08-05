@@ -892,7 +892,10 @@ void LLVMOrcIRTransformLayerSetTransform(
               assert(!TSMRef && "TSMRef was not reset to null on error");
               return unwrap(Err);
             }
-            return std::move(*unwrap(TSMRef));
+            assert(TSMRef && "Transform succeeded, but TSMRef was set to null");
+            ThreadSafeModule Result = std::move(*unwrap(TSMRef));
+            LLVMOrcDisposeThreadSafeModule(TSMRef);
+            return std::move(Result);
           });
 }
 
