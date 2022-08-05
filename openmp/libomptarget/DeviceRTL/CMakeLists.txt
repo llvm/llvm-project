@@ -228,28 +228,26 @@ function(compileDeviceRTLLibrary target_cpu target_name)
       string(SUBSTRING ${target_cpu} 3 4 gfxnum)
     endif()
     get_target_property(oclc_isa_bc_file oclc_isa_version_${gfxnum} LOCATION)
-    # This touch file is made after external bitcodes are made.
-    set(touch_file_name "external-bcs-are-built-${target_cpu}")
-    add_custom_command(OUTPUT ${touch_file_name}
-      COMMAND /usr/bin/touch ${touch_file_name}
-      COMMENT "All external bcs have been built creating ${touch_file_name}")
-    add_custom_target(touch-target-${target_cpu} ALL
-      DEPENDS ${touch_file_name}
-              ${CMAKE_BINARY_DIR}/libm-amdgcn-${target_cpu}.bc
-              ${CMAKE_BINARY_DIR}/libhostrpc-amdgcn-${target_cpu}.bc
+    # Add custom target so targets from other directories
+    # can be added as dependencies to ensure libm
+    # and libhostrpc bc files have been built.
+    add_custom_target(touch-target-${target_cpu} ALL)
+    add_dependencies(touch-target-${target_cpu}
+      libm-target-${target_cpu}
+      libhostrpc-target-${target_cpu}
     )
-    add_dependencies(touch-target-${target_cpu} libm-target-${target_cpu})
-    list(APPEND bc_files ${CMAKE_BINARY_DIR}/libm-amdgcn-${target_cpu}.bc)
-    add_dependencies(touch-target-${target_cpu} libhostrpc-target-${target_cpu})
-    list(APPEND bc_files ${CMAKE_BINARY_DIR}/libhostrpc-amdgcn-${target_cpu}.bc)
+    list(APPEND bc_files
+      ${CMAKE_BINARY_DIR}/libm-amdgcn-${target_cpu}.bc
+      ${CMAKE_BINARY_DIR}/libhostrpc-amdgcn-${target_cpu}.bc
+    )
     if (EXISTS ${CMAKE_BINARY_DIR}/../../tools/ROCMDEVLIBS)
       add_dependencies(touch-target-${target_cpu}
         ockl ocml oclc_wavefrontsize64_on oclc_wavefrontsize64_off oclc_isa_version_${gfxnum})
     endif()
     # Add amdgcn-specific bc files to link command
     list(APPEND bc_files ${ocml_bc_file} ${ockl_bc_file} ${oclc_wf_bc_file} ${oclc_isa_bc_file})
-    # Add touch_file_name to local_depend_files so all $bc_files will exist or be created.
-    list(APPEND local_depend_files ${touch_file_name})
+    # Add touch-target-$(target_cpu) to local_depend_files so all $bc_files will exist or be created.
+    list(APPEND local_depend_files touch-target-${target_cpu})
   endif()
 
   # Link to a bitcode library.

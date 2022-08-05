@@ -204,26 +204,19 @@ macro(build_bc_library mcpu target_libname)
   endif()
   get_target_property(oclc_isa_bc_file oclc_isa_version_${gfxnum} LOCATION)
 
-  # This touch file is generated when both hostrpc and libm bitcodes for mcpu
-  # are made ensuring they are built before the following llvm-link command.
-  set(touch_file "touch.${mcpu}")
-  add_custom_command( OUTPUT ${touch_file} COMMAND /usr/bin/touch ${touch_file})
-  add_custom_target(touch-${mcpu} ALL
-    DEPENDS ${touch_file}
-            ${CMAKE_BINARY_DIR}/libm-amdgcn-${mcpu}.bc
-            ${CMAKE_BINARY_DIR}/libhostrpc-amdgcn-${mcpu}.bc
+  # Add custom target so targets from other directories
+  # can be added as dependencies to ensure libm
+  # and libhostrpc bc files have been built.
+  add_custom_target(touch-${mcpu} ALL)
+  add_dependencies(touch-${mcpu}
+    libm-target-${mcpu}
+    libhostrpc-target-${mcpu}
   )
-  add_dependencies(touch-${mcpu} libm-target-${mcpu})
-  add_dependencies(touch-${mcpu} libhostrpc-target-${mcpu})
 
   if (EXISTS ${CMAKE_BINARY_DIR}/../../tools/ROCMDEVLIBS)
     add_dependencies(touch-${mcpu}
       ockl ocml oclc_wavefrontsize64_on oclc_wavefrontsize64_off oclc_isa_version_${gfxnum})
   endif()
-
-  #  NOTE:  When building ROCMDEVLIBS as part of LLVM, we may have to 
-  #  add the ROCM-DEVICE_LIBS file names as dependencies to touch_file,
-  #  not just the rocm device libs target names that creates the file.
 
   set(linkout_bc_file "linkout.${mcpu}.bc")
   set(opt_bc_file opt-amdgcn-${mcpu}.bc)
@@ -231,7 +224,7 @@ macro(build_bc_library mcpu target_libname)
     OUTPUT ${linkout_bc_file}
     COMMAND ${LINK_TOOL} ${source_bc_files} ${libm-bc} ${libhostrpc-bc}
       ${ocml_bc_file} ${ockl_bc_file} ${oclc_wf_bc_file} ${oclc_isa_bc_file} -o ${linkout_bc_file}
-    DEPENDS ${source_bc_files} ${touch_file} ${toolchain_deps})
+    DEPENDS ${source_bc_files} touch-${mcpu} ${toolchain_deps})
   add_custom_command(
     OUTPUT ${opt_bc_file}
     COMMAND ${OPT_TOOL} ${link_opt_flags} ${linkout_bc_file} -o ${opt_bc_file}
