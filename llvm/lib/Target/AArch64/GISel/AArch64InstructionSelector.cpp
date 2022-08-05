@@ -4821,8 +4821,13 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
   LLT OpTy = MRI.getType(LHS);
   assert(OpTy.getSizeInBits() == 32 || OpTy.getSizeInBits() == 64);
   unsigned CCmpOpc;
+  Optional<ValueAndVReg> C;
   if (CmpInst::isIntPredicate(CC)) {
-    CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
+    C = getIConstantVRegValWithLookThrough(RHS, MRI);
+    if (C && C->Value.ult(32))
+      CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWi : AArch64::CCMPXi;
+    else
+      CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
   } else {
     switch (OpTy.getSizeInBits()) {
     case 16:
@@ -4841,7 +4846,12 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
   AArch64CC::CondCode InvOutCC = AArch64CC::getInvertedCondCode(OutCC);
   unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvOutCC);
   auto CCmp =
-      MIB.buildInstr(CCmpOpc, {}, {LHS, RHS}).addImm(NZCV).addImm(Predicate);
+      MIB.buildInstr(CCmpOpc, {}, {LHS});
+  if (C)
+    CCmp.addImm(C->Value.getZExtValue());
+  else
+    CCmp.addReg(RHS);
+  CCmp.addImm(NZCV).addImm(Predicate);
   constrainSelectedInstRegOperands(*CCmp, TII, TRI, RBI);
   return &*CCmp;
 }
