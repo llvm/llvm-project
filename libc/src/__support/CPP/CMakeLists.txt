@@ -69,6 +69,12 @@ add_header_library(
 )
 
 add_header_library(
+  optional
+  HDRS
+    optional.h
+)
+
+add_header_library(
   type_traits
   HDRS
     type_traits.h
