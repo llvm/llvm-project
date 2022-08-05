@@ -47,7 +47,7 @@ public:
 
   void finishCodeGen();
 
-  void setHLSLFnuctionAttributes(llvm::Function *, const FunctionDecl *);
+  void setHLSLFunctionAttributes(llvm::Function *, const FunctionDecl *);
 };
 
 } // namespace CodeGen
