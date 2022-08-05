@@ -85,15 +85,18 @@ public:
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
-  typedef bool LoongArchCCAssignFn(unsigned ValNo, MVT ValVT,
+  typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
+                                   unsigned ValNo, MVT ValVT,
                                    CCValAssign::LocInfo LocInfo,
-                                   CCState &State);
+                                   ISD::ArgFlagsTy ArgFlags, CCState &State,
+                                   bool IsFixed, bool IsReg, Type *OrigTy);
 
-  void analyzeInputArgs(CCState &CCInfo,
-                        const SmallVectorImpl<ISD::InputArg> &Ins,
+  void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
+                        const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
                         LoongArchCCAssignFn Fn) const;
-  void analyzeOutputArgs(CCState &CCInfo,
+  void analyzeOutputArgs(MachineFunction &MF, CCState &CCInfo,
                          const SmallVectorImpl<ISD::OutputArg> &Outs,
+                         bool IsRet, CallLoweringInfo *CLI,
                          LoongArchCCAssignFn Fn) const;
 
   SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
