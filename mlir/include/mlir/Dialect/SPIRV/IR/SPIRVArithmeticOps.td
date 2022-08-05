@@ -310,6 +310,55 @@ def SPV_IAddOp : SPV_ArithmeticBinaryOp<"IAdd",
 
 // -----
 
+def SPV_IAddCarryOp : SPV_BinaryOp<"IAddCarry",
+                                   SPV_AnyStruct, SPV_Integer,
+                                   [Commutative, NoSideEffect]> {
+  let summary = [{
+    Integer addition of Operand 1 and Operand 2, including the carry.
+  }];
+
+  let description = [{
+    Result Type must be from OpTypeStruct.  The struct must have two
+    members, and the two members must be the same type.  The member type
+    must be a scalar or vector of integer type, whose Signedness operand is
+    0.
+
+    Operand 1 and Operand 2 must have the same type as the members of Result
+    Type. These are consumed as unsigned integers.
+
+     Results are computed per component.
+
+    Member 0 of the result gets the low-order bits (full component width) of
+    the addition.
+
+    Member 1 of the result gets the high-order (carry) bit of the result of
+    the addition. That is, it gets the value 1 if the addition overflowed
+    the component width, and 0 otherwise.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %2 = spv.IAddCarry %0, %1 : !spv.struct<(i32, i32)>
+    %2 = spv.IAddCarry %0, %1 : !spv.struct<(vector<2xi32>, vector<2xi32>)>
+    ```
+  }];
+
+  let arguments = (ins
+    SPV_ScalarOrVectorOf<SPV_Integer>:$operand1,
+    SPV_ScalarOrVectorOf<SPV_Integer>:$operand2
+  );
+
+  let results = (outs
+    SPV_AnyStruct:$result
+  );
+
+  let hasVerifier = 1;
+}
+
+// -----
+
 def SPV_IMulOp : SPV_ArithmeticBinaryOp<"IMul",
                                         SPV_Integer,
                                         [Commutative, UsableInSpecConstantOp]> {
