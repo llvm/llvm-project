@@ -105,6 +105,48 @@ public:
     return *this;
   }
 
+  // Subtract x to this number and store the result in this number.
+  // Returns the carry value produced by the subtraction operation.
+  // To prevent overflow from intermediate results, we use the following
+  // property of unsigned integers:
+  //   x + (~x) = 2^(sizeof(x)) - 1,
+  // So:
+  //   -x = ((~x) + 1) + (-2^(sizeof(x))),
+  // where 2^(sizeof(x)) is represented by the carry bit.
+  constexpr uint64_t sub(const UInt<Bits> &x) {
+    bool carry = false;
+    for (size_t i = 0; i < WordCount; ++i) {
+      if (!carry) {
+        if (val[i] >= x.val[i])
+          val[i] -= x.val[i];
+        else {
+          val[i] += (~x.val[i]) + 1;
+          carry = true;
+        }
+      } else {
+        if (val[i] > x.val[i]) {
+          val[i] -= x.val[i] + 1;
+          carry = false;
+        } else
+          val[i] += ~x.val[i];
+      }
+    }
+    return carry ? 1 : 0;
+  }
+
+  constexpr UInt<Bits> operator-(const UInt<Bits> &other) const {
+    UInt<Bits> result(*this);
+    result.sub(other);
+    // TODO(lntue): Set overflow flag / errno when carry is true.
+    return result;
+  }
+
+  constexpr UInt<Bits> operator-=(const UInt<Bits> &other) {
+    // TODO(lntue): Set overflow flag / errno when carry is true.
+    sub(other);
+    return *this;
+  }
+
   // Multiply this number with x and store the result in this number. It is
   // implemented using the long multiplication algorithm by splitting the
   // 64-bit words of this number and |x| in to 32-bit halves but peforming
