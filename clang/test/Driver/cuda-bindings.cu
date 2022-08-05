@@ -135,3 +135,14 @@
 // RUN: | FileCheck -check-prefix=DASM2 %s
 // DASM2: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-cuda-nvptx64-nvidia-cuda-sm_30.s"
 // DASM2: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output: "cuda-bindings-cuda-nvptx64-nvidia-cuda-sm_35.s"
+
+//
+// Ensure we output the user's specified name in device-only mode.
+//
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -### \
+// RUN:        --cuda-gpu-arch=sm_52 --cuda-device-only -c -o foo.o %s 2>&1 \
+// RUN: | FileCheck -check-prefix=D_ONLY %s
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -### --offload-new-driver \
+// RUN:        --cuda-gpu-arch=sm_52 --cuda-device-only -c -o foo.o %s 2>&1 \
+// RUN: | FileCheck -check-prefix=D_ONLY %s
+// D_ONLY: "foo.o"
