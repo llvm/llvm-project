@@ -974,7 +974,8 @@ def UnnamedAddr : LLVM_EnumAttr<
   let cppNamespace = "::mlir::LLVM";
 }
 
-def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof", [NoSideEffect]> {
+def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
+    [NoSideEffect, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins FlatSymbolRefAttr:$global_name);
   let results = (outs LLVM_AnyPointer:$res);
 
@@ -1036,7 +1037,6 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof", [NoSideEffect]> {
   }];
 
   let assemblyFormat = "$global_name attr-dict `:` type($res)";
-  let hasVerifier = 1;
 }
 
 def LLVM_MetadataOp : LLVM_Op<"metadata", [
