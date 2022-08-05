@@ -543,9 +543,8 @@ def MapMemRefStorageClass : Pass<"map-memref-spirv-storage-class", "ModuleOp"> {
   let constructor = "mlir::createMapMemRefStorageClassPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
   let options = [
-    Option<"mappings", "mappings", "std::string", /*default=*/"",
-           "A comma-separated list of memory space to storage class mappings; "
-           "for example, '0=StorageClass,1=Uniform,2=Workgroup'">
+    Option<"clientAPI", "client-api", "std::string", /*default=*/"\"vulkan\"",
+           "The client API to use for populating mappings">
   ];
 }
 
