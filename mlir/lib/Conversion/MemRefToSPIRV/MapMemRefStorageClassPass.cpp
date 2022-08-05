@@ -16,6 +16,7 @@
 #include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRVPass.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/StringExtras.h"
@@ -26,37 +27,47 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
-// Utility Functions
+// Mappings
 //===----------------------------------------------------------------------===//
 
-/// Parses the  memory space mapping string `memorySpaceMapStr `and writes the
-/// mappings encoded inside to `memorySpaceMap`.
-static bool
-parseMappingStr(StringRef memorySpaceMapStr,
-                spirv::MemorySpaceToStorageClassMap &memorySpaceMap) {
-  memorySpaceMap.clear();
-  SmallVector<StringRef> mappings;
-  llvm::SplitString(memorySpaceMapStr, mappings, ",");
-  for (StringRef mapping : mappings) {
-    StringRef key, value;
-    std::tie(key, value) = mapping.split('=');
-    unsigned space;
-    if (!llvm::to_integer(key, space)) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "failed to parse mapping string key: " << key << "\n");
-      memorySpaceMap.clear();
-      return false;
-    }
-    Optional<spirv::StorageClass> storage = spirv::symbolizeStorageClass(value);
-    if (!storage) {
-      LLVM_DEBUG(llvm::dbgs()
-                 << "failed to parse mapping string value: " << value << "\n");
-      memorySpaceMap.clear();
-      return false;
-    }
-    memorySpaceMap[space] = *storage;
-  }
-  return true;
+spirv::MemorySpaceToStorageClassMap spirv::getDefaultVulkanStorageClassMap() {
+/// Mapping between SPIR-V storage classes to memref memory spaces.
+///
+/// Note: memref does not have a defined semantics for each memory space; it
+/// depends on the context where it is used. There are no particular reasons
+/// behind the number assignments; we try to follow NVVM conventions and largely
+/// give common storage classes a smaller number.
+#define STORAGE_SPACE_MAP_LIST(MAP_FN)                                         \
+  MAP_FN(spirv::StorageClass::StorageBuffer, 0)                                \
+  MAP_FN(spirv::StorageClass::Generic, 1)                                      \
+  MAP_FN(spirv::StorageClass::Workgroup, 3)                                    \
+  MAP_FN(spirv::StorageClass::Uniform, 4)                                      \
+  MAP_FN(spirv::StorageClass::Private, 5)                                      \
+  MAP_FN(spirv::StorageClass::Function, 6)                                     \
+  MAP_FN(spirv::StorageClass::PushConstant, 7)                                 \
+  MAP_FN(spirv::StorageClass::UniformConstant, 8)                              \
+  MAP_FN(spirv::StorageClass::Input, 9)                                        \
+  MAP_FN(spirv::StorageClass::Output, 10)                                      \
+  MAP_FN(spirv::StorageClass::CrossWorkgroup, 11)                              \
+  MAP_FN(spirv::StorageClass::AtomicCounter, 12)                               \
+  MAP_FN(spirv::StorageClass::Image, 13)                                       \
+  MAP_FN(spirv::StorageClass::CallableDataKHR, 14)                             \
+  MAP_FN(spirv::StorageClass::IncomingCallableDataKHR, 15)                     \
+  MAP_FN(spirv::StorageClass::RayPayloadKHR, 16)                               \
+  MAP_FN(spirv::StorageClass::HitAttributeKHR, 17)                             \
+  MAP_FN(spirv::StorageClass::IncomingRayPayloadKHR, 18)                       \
+  MAP_FN(spirv::StorageClass::ShaderRecordBufferKHR, 19)                       \
+  MAP_FN(spirv::StorageClass::PhysicalStorageBuffer, 20)                       \
+  MAP_FN(spirv::StorageClass::CodeSectionINTEL, 21)                            \
+  MAP_FN(spirv::StorageClass::DeviceOnlyINTEL, 22)                             \
+  MAP_FN(spirv::StorageClass::HostOnlyINTEL, 23)
+
+#define STORAGE_SPACE_MAP_FN(storage, space) {space, storage},
+
+  return {STORAGE_SPACE_MAP_LIST(STORAGE_SPACE_MAP_FN)};
+
+#undef STORAGE_SPACE_MAP_FN
+#undef STORAGE_SPACE_MAP_LIST
 }
 
 //===----------------------------------------------------------------------===//
@@ -237,8 +248,10 @@ LogicalResult MapMemRefStorageClassPass::initializeOptions(StringRef options) {
   if (failed(Pass::initializeOptions(options)))
     return failure();
 
-  if (!parseMappingStr(mappings, memorySpaceMap))
+  if (clientAPI != "vulkan")
     return failure();
+
+  memorySpaceMap = spirv::getDefaultVulkanStorageClassMap();
 
   LLVM_DEBUG({
     llvm::dbgs() << "memory space to storage class mapping:\n";
