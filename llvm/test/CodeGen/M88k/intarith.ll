@@ -1,7 +1,7 @@
 ; Test floating point arithmetic.
 ;
-; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88100 -O0 | FileCheck --check-prefixes=CHECK,MC88100 %s
-; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88110 -O0 | FileCheck --check-prefixes=CHECK,MC88110 %s
+; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88100 -m88k-enable-delay-slot-filler=false | FileCheck --check-prefixes=CHECK,MC88100 %s
+; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88110 -m88k-enable-delay-slot-filler=false | FileCheck --check-prefixes=CHECK,MC88110 %s
 
 define i64 @udiv64(i64 %a, i64 %b) {
 ; CHECK-LABEL: udiv64:
@@ -14,7 +14,7 @@ define i64 @udiv64(i64 %a, i64 %b) {
 define i64 @udiv64with32(i64 %a, i32 %b) {
 ; CHECK-LABEL: udiv64with32:
 ; MC88100: bsr __udivdi3
-; MC88110: divu.d %r4, %r2, %r4
+; MC88110: divu.d %r2, %r2, %r4
 ; CHECK: jmp %r1
   %conv = zext i32 %b to i64
   %quot = udiv i64 %a, %conv
@@ -56,7 +56,7 @@ define i64 @mul64(i64 %a, i64 %b) {
 define i64 @mul32to64(i32 %a, i32 %b) {
 ; CHECK-LABEL: mul32to64:
 ; MC88100: bsr __muldi3
-; MC88110: mulu.d %r4, %r2, %r3
+; MC88110: mulu.d %r2, %r2, %r3
 ; CHECK: jmp %r1
   %conva = zext i32 %a to i64
   %convb = zext i32 %b to i64

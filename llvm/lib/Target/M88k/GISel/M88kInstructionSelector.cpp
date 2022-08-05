@@ -866,30 +866,16 @@ bool M88kInstructionSelector::selectMergeUnmerge(
 
   MachineInstr *MI = nullptr;
   if (I.getOpcode() == TargetOpcode::G_MERGE_VALUES) {
-    Register ImpDefReg = MRI.createVirtualRegister(&M88k::GPR64RCRegClass);
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::IMPLICIT_DEF),
-                 ImpDefReg);
-    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
-
-    Register HiReg = MRI.createVirtualRegister(&M88k::GPR64RCRegClass);
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::INSERT_SUBREG),
-                 HiReg)
-             .addUse(ImpDefReg)
-             .addUse(I.getOperand(1).getReg())
-             .addImm(M88k::sub_hi);
-    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
-
-    Register HiLoReg = MRI.createVirtualRegister(&M88k::GPR64RCRegClass);
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::INSERT_SUBREG),
-                 HiLoReg)
-             .addUse(HiReg)
-             .addUse(I.getOperand(2).getReg())
-             .addImm(M88k::sub_lo);
-    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
-
-    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
-                 I.getOperand(0).getReg())
-             .addUse(HiLoReg);
+    Register DstReg = I.getOperand(0).getReg();
+    Register LoReg = I.getOperand(1).getReg();
+    Register HiReg = I.getOperand(2).getReg();
+    MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::REG_SEQUENCE),
+            DstReg)
+        .addUse(LoReg)
+        .addImm(M88k::sub_lo)
+        .addUse(HiReg)
+        .addImm(M88k::sub_hi);
+    RBI.constrainGenericRegister(DstReg, M88k::GPR64RCRegClass, MRI);
   } else {
     Register SrcReg = I.getOperand(2).getReg();
 
