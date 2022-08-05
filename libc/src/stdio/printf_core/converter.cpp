@@ -38,12 +38,10 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'd':
   case 'i':
   case 'u':
-    return convert_int(writer, to_conv);
   case 'o':
-    return convert_oct(writer, to_conv);
   case 'x':
   case 'X':
-    return convert_hex(writer, to_conv);
+    return convert_int(writer, to_conv);
 #ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
   // case 'f':
   // case 'F':

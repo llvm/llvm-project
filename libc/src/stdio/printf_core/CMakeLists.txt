@@ -63,9 +63,7 @@ add_object_library(
     string_converter.h
     char_converter.h
     int_converter.h
-    hex_converter.h
     ptr_converter.h
-    oct_converter.h
     write_int_converter.h
     float_inf_nan_converter.h
     float_hex_converter.h
@@ -74,6 +72,7 @@ add_object_library(
     .core_structs
     libc.src.__support.integer_to_string
     libc.src.__support.CPP.limits
+    libc.src.__support.CPP.string_view
     libc.src.__support.FPUtil.fputil
 )
 
