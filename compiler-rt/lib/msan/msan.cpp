@@ -585,7 +585,10 @@ void __msan_set_origin(const void *a, uptr size, u32 origin) {
 // When we see descr for the first time we replace '----' with a uniq id
 // and set the origin to (id | (31-th bit)).
 void __msan_set_alloca_origin(void *a, uptr size, char *descr) {
-  __msan_set_alloca_origin4(a, size, descr, 0);
+  __msan_set_alloca_origin4(
+      a, size, descr,
+      StackTrace::GetPreviousInstructionPc(
+          reinterpret_cast<uptr>(__builtin_return_address(0))));
 }
 
 void __msan_set_alloca_origin4(void *a, uptr size, char *descr, uptr pc) {

@@ -15,5 +15,5 @@ int main(int argc, char **argv) {
   return f();
   // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
   // CHECK: Uninitialized value was created by an allocation of 'x' in the stack frame of function '_Z1fv'
-  // CHECK: #0 {{.*}} in f{{.*}} {{.*}}report-demangling.cpp:[[@LINE-10]]
+  // CHECK: #0 {{.*}} in f{{.*}} {{.*}}report-demangling.cpp:[[@LINE-9]]
 }
