@@ -101,6 +101,7 @@ EXTERN void __tgt_unregister_lib(__tgt_bin_desc *Desc) {
   }
   if (__tgt_num_registered_images) {
     free(__tgt_AllImageInfos);
+    __tgt_AllImageInfos = nullptr;
     __tgt_num_registered_images = 0;
   }
 }
