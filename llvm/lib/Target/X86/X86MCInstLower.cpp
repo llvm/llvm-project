@@ -2449,9 +2449,6 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   if (OutStreamer->isVerboseAsm())
     addConstantComments(MI, *OutStreamer);
 
-  bool IndCS =
-      MF->getMMI().getModule()->getModuleFlag("indirect_branch_cs_prefix");
-
   switch (MI->getOpcode()) {
   case TargetOpcode::DBG_VALUE:
     llvm_unreachable("Should be handled target independently");
@@ -2501,7 +2498,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   case X86::TAILJMPd64:
-    if (IndCS && MI->hasRegisterImplicitUseOperand(X86::R11))
+    if (IndCSPrefix && MI->hasRegisterImplicitUseOperand(X86::R11))
       EmitAndCountInstruction(MCInstBuilder(X86::CS_PREFIX));
     LLVM_FALLTHROUGH;
   case X86::TAILJMPr:
@@ -2684,7 +2681,7 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
                                 .addReg(X86::NoRegister));
     return;
   case X86::CALL64pcrel32:
-    if (IndCS && MI->hasRegisterImplicitUseOperand(X86::R11))
+    if (IndCSPrefix && MI->hasRegisterImplicitUseOperand(X86::R11))
       EmitAndCountInstruction(MCInstBuilder(X86::CS_PREFIX));
     break;
   }
