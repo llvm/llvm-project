@@ -1235,10 +1235,7 @@ define i1 @ult_ule_swap(i8 %a, i8 %b) {
 
 define i1 @ule_ule_swap(i8 %a, i8 %b) {
 ; CHECK-LABEL: @ule_ule_swap(
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ule i8 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ule i8 [[B]], [[A]]
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP1]], [[CMP2]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp1 = icmp ule i8 %a, %b
   %cmp2 = icmp ule i8 %b, %a
