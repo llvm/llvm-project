@@ -27,6 +27,7 @@
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -216,6 +217,8 @@ bool MarkupFilter::tryPresentation(const MarkupNode &Node) {
     return true;
   if (tryPC(Node))
     return true;
+  if (tryBackTrace(Node))
+    return true;
   return tryData(Node);
 }
 
@@ -269,8 +272,7 @@ bool MarkupFilter::tryPC(const MarkupNode &Node) {
     printRawElement(Node);
     return true;
   }
-  if (LI->FileName == DILineInfo::BadString &&
-      LI->FunctionName == DILineInfo::BadString && LI->Line == 0) {
+  if (!*LI) {
     printRawElement(Node);
     return true;
   }
@@ -282,6 +284,87 @@ bool MarkupFilter::tryPC(const MarkupNode &Node) {
   OS << ':';
   printValue(Twine(LI->Line));
   OS << ']';
+  restoreColor();
+  return true;
+}
+
+bool MarkupFilter::tryBackTrace(const MarkupNode &Node) {
+  if (Node.Tag != "bt")
+    return false;
+  if (!checkNumFieldsAtLeast(Node, 2))
+    return true;
+  if (!checkNumFieldsAtMost(Node, 3))
+    return true;
+
+  Optional<uint64_t> FrameNumber = parseFrameNumber(Node.Fields[0]);
+  if (!FrameNumber)
+    return true;
+
+  Optional<uint64_t> Addr = parseAddr(Node.Fields[1]);
+  if (!Addr)
+    return true;
+
+  // Backtrace addresses are assumed to be return addresses by default.
+  PCType Type = PCType::ReturnAddress;
+  if (Node.Fields.size() == 3) {
+    Optional<PCType> ParsedType = parsePCType(Node.Fields[2]);
+    if (!ParsedType)
+      return true;
+    Type = *ParsedType;
+  }
+  *Addr = adjustAddr(*Addr, Type);
+
+  const MMap *MMap = getContainingMMap(*Addr);
+  if (!MMap) {
+    WithColor::error() << "no mmap covers address\n";
+    reportLocation(Node.Fields[0].begin());
+    printRawElement(Node);
+    return true;
+  }
+  uint64_t MRA = MMap->getModuleRelativeAddr(*Addr);
+
+  Expected<DIInliningInfo> II =
+      Symbolizer.symbolizeInlinedCode(MMap->Mod->BuildID, {MRA});
+  if (!II) {
+    WithColor::defaultErrorHandler(II.takeError());
+    printRawElement(Node);
+    return true;
+  }
+
+  highlight();
+  for (unsigned I = 0, E = II->getNumberOfFrames(); I != E; ++I) {
+    auto Header = formatv("{0, +6}", formatv("#{0}", FrameNumber)).sstr<16>();
+    // Don't highlight the # sign as a value.
+    size_t NumberIdx = Header.find("#") + 1;
+    OS << Header.substr(0, NumberIdx);
+    printValue(Header.substr(NumberIdx));
+    if (I == E - 1) {
+      OS << "   ";
+    } else {
+      OS << '.';
+      printValue(formatv("{0, -2}", I + 1));
+    }
+    printValue(formatv(" {0:x16} ", *Addr));
+
+    DILineInfo LI = II->getFrame(I);
+    if (LI) {
+      printValue(LI.FunctionName);
+      OS << ' ';
+      printValue(LI.FileName);
+      OS << ':';
+      printValue(Twine(LI.Line));
+      OS << ':';
+      printValue(Twine(LI.Column));
+      OS << ' ';
+    }
+    OS << '(';
+    printValue(MMap->Mod->Name);
+    OS << "+";
+    printValue(formatv("{0:x}", MRA));
+    OS << ')';
+    if (I != E - 1)
+      OS << lineEnding();
+  }
   restoreColor();
   return true;
 }
@@ -497,6 +580,16 @@ Optional<uint64_t> MarkupFilter::parseSize(StringRef Str) const {
   uint64_t ID;
   if (Str.getAsInteger(0, ID)) {
     reportTypeError(Str, "size");
+    return None;
+  }
+  return ID;
+}
+
+// Parse a frame number (%i in the spec).
+Optional<uint64_t> MarkupFilter::parseFrameNumber(StringRef Str) const {
+  uint64_t ID;
+  if (Str.getAsInteger(10, ID)) {
+    reportTypeError(Str, "frame number");
     return None;
   }
   return ID;
