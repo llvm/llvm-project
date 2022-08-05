@@ -148,7 +148,7 @@ bool CodeGenAction::beginSourceFileAction() {
       *mlirCtx, defKinds, ci.getInvocation().getSemanticsContext().intrinsics(),
       ci.getInvocation().getSemanticsContext().targetCharacteristics(),
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
-      kindMap);
+      kindMap, ci.getInvocation().getLoweringOpts());
 
   // Create a parse tree and lower it to FIR
   Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
