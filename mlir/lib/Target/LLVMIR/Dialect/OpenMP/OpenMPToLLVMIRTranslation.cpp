@@ -1285,7 +1285,8 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
     return opInst.emitError("Addressing symbol not found");
   LLVM::AddressOfOp addressOfOp = dyn_cast<LLVM::AddressOfOp>(symOp);
 
-  LLVM::GlobalOp global = addressOfOp.getGlobal();
+  LLVM::GlobalOp global =
+      addressOfOp.getGlobal(moduleTranslation.symbolTable());
   llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
   llvm::Value *data =
       builder.CreateBitCast(globalValue, builder.getInt8PtrTy());

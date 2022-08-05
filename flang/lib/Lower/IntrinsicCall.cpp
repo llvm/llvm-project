@@ -3393,11 +3393,9 @@ mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
   if (resultType.isa<mlir::IntegerType>())
     return builder.create<mlir::arith::RemSIOp>(loc, args[0], args[1]);
 
-  // Use runtime. Note that mlir::arith::RemFOp implements floating point
-  // remainder, but it does not work with fir::Real type.
-  // TODO: consider using mlir::arith::RemFOp when possible, that may help
-  // folding and  optimizations.
-  return genRuntimeCall("mod", resultType, args);
+  // Use runtime.
+  return builder.createConvert(
+      loc, resultType, fir::runtime::genMod(builder, loc, args[0], args[1]));
 }
 
 // MODULO

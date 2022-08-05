@@ -837,7 +837,7 @@ define <vscale x 2 x i32> @pre_lmul(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a1, a0, 1
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    beqz a1, .LBB18_2
 ; CHECK-NEXT:  # %bb.1: # %if
