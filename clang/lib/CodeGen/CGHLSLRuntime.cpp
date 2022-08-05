@@ -87,7 +87,7 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
             ConstantAsMetadata::get(B.getInt32(Counter))}));
 }
 
-void clang::CodeGen::CGHLSLRuntime::setHLSLFnuctionAttributes(
+void clang::CodeGen::CGHLSLRuntime::setHLSLFunctionAttributes(
     llvm::Function *F, const FunctionDecl *FD) {
   if (HLSLShaderAttr *ShaderAttr = FD->getAttr<HLSLShaderAttr>()) {
     const StringRef ShaderAttrKindStr = "dx.shader";
