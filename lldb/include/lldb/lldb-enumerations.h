@@ -1179,6 +1179,19 @@ enum TraceItemKind {
   eTraceItemKindInstruction,
 };
 
+/// Enum to indicate the reference point when invoking
+/// \a TraceCursor::Seek().
+/// The following values are inspired by \a std::istream::seekg.
+enum TraceCursorSeekType {
+  /// The beginning of the trace, i.e the oldest item.
+  eTraceCursorSeekTypeBeginning = 0,
+  /// The current position in the trace.
+  eTraceCursorSeekTypeCurrent,
+  /// The end of the trace, i.e the most recent item.
+  eTraceCursorSeekTypeEnd
+};
+
+
 } // namespace lldb
 
 #endif // LLDB_LLDB_ENUMERATIONS_H

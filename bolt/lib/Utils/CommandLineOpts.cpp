@@ -135,12 +135,9 @@ OutputFilename("o",
   cl::Optional,
   cl::cat(BoltOutputCategory));
 
-cl::opt<std::string>
-PerfData("perfdata",
-  cl::desc("<data file>"),
-  cl::Optional,
-  cl::cat(AggregatorCategory),
-  cl::sub(*cl::AllSubCommands));
+cl::opt<std::string> PerfData("perfdata", cl::desc("<data file>"), cl::Optional,
+                              cl::cat(AggregatorCategory),
+                              cl::sub(cl::SubCommand::getAll()));
 
 static cl::alias
 PerfDataA("p",
@@ -181,12 +178,9 @@ cl::opt<bool> UpdateDebugSections(
     cl::cat(BoltCategory));
 
 cl::opt<unsigned>
-Verbosity("v",
-  cl::desc("set verbosity level for diagnostic output"),
-  cl::init(0),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory),
-  cl::sub(*cl::AllSubCommands));
+    Verbosity("v", cl::desc("set verbosity level for diagnostic output"),
+              cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
+              cl::sub(cl::SubCommand::getAll()));
 
 bool processAllFunctions() {
   if (opts::AggregateOnly)

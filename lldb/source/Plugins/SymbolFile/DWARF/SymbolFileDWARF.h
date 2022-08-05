@@ -178,9 +178,8 @@ public:
                            uint32_t max_matches,
                            lldb_private::VariableList &variables) override;
 
-  void FindFunctions(lldb_private::ConstString name,
+  void FindFunctions(const lldb_private::Module::LookupInfo &lookup_info,
                      const lldb_private::CompilerDeclContext &parent_decl_ctx,
-                     lldb::FunctionNameType name_type_mask,
                      bool include_inlines,
                      lldb_private::SymbolContextList &sc_list) override;
 
@@ -328,6 +327,8 @@ public:
   lldb_private::StatsDuration &GetDebugInfoParseTimeRef() {
     return m_parse_time;
   }
+
+  lldb_private::ConstString ConstructFunctionDemangledName(const DWARFDIE &die);
 
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>

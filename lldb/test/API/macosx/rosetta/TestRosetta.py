@@ -35,6 +35,7 @@ class TestRosetta(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessAppleSilicon
+    @skipIfDarwinEmbedded
     def test_rosetta(self):
         """There can be many tests in a test case - describe this test here."""
         self.build()

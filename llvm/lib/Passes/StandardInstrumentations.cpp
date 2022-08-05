@@ -615,9 +615,15 @@ template <typename T>
 bool IRComparer<T>::generateFunctionData(IRDataT<T> &Data, const Function &F) {
   if (!F.isDeclaration() && isFunctionInPrintList(F.getName())) {
     FuncDataT<T> FD(F.getEntryBlock().getName().str());
+    int I = 0;
     for (const auto &B : F) {
-      FD.getOrder().emplace_back(B.getName());
-      FD.getData().insert({B.getName(), B});
+      std::string BBName = B.getName().str();
+      if (BBName.empty()) {
+        BBName = formatv("{0}", I);
+        ++I;
+      }
+      FD.getOrder().emplace_back(BBName);
+      FD.getData().insert({BBName, B});
     }
     Data.getOrder().emplace_back(F.getName());
     Data.getData().insert({F.getName(), FD});

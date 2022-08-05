@@ -23,7 +23,9 @@ typedef __builtin_va_list va_list;
  */
 #define __va_copy(d,s) __builtin_va_copy(d,s)
 
-#if __STDC_VERSION__ >= 199901L || __cplusplus >= 201103L || !defined(__STRICT_ANSI__)
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) ||              \
+    (defined(__cplusplus) && __cplusplus >= 201103L) ||                        \
+    !defined(__STRICT_ANSI__)
 #define va_copy(dest, src)  __builtin_va_copy(dest, src)
 #endif
 

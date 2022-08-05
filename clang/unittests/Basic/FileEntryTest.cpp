@@ -50,6 +50,14 @@ public:
                             const_cast<FileEntry &>(Base.getFileEntry()), DR)})
              .first);
   }
+  FileEntryRef addFileRedirect(StringRef Name, FileEntryRef Base) {
+    return FileEntryRef(
+        *Files
+             .insert({Name, FileEntryRef::MapValue(
+                                const_cast<FileEntryRef::MapEntry &>(
+                                    Base.getMapEntry()))})
+             .first);
+  }
 };
 
 namespace {
@@ -58,13 +66,23 @@ TEST(FileEntryTest, FileEntryRef) {
   FileEntryRef R1 = Refs.addFile("1");
   FileEntryRef R2 = Refs.addFile("2");
   FileEntryRef R1Also = Refs.addFileAlias("1-also", R1);
+  FileEntryRef R1Redirect = Refs.addFileRedirect("1-redirect", R1);
+  FileEntryRef R1Redirect2 = Refs.addFileRedirect("1-redirect2", R1Redirect);
 
   EXPECT_EQ("1", R1.getName());
   EXPECT_EQ("2", R2.getName());
   EXPECT_EQ("1-also", R1Also.getName());
+  EXPECT_EQ("1", R1Redirect.getName());
+  EXPECT_EQ("1", R1Redirect2.getName());
+
+  EXPECT_EQ("1", R1.getNameAsRequested());
+  EXPECT_EQ("1-redirect", R1Redirect.getNameAsRequested());
+  EXPECT_EQ("1-redirect2", R1Redirect2.getNameAsRequested());
 
   EXPECT_NE(&R1.getFileEntry(), &R2.getFileEntry());
   EXPECT_EQ(&R1.getFileEntry(), &R1Also.getFileEntry());
+  EXPECT_EQ(&R1.getFileEntry(), &R1Redirect.getFileEntry());
+  EXPECT_EQ(&R1Redirect.getFileEntry(), &R1Redirect2.getFileEntry());
 
   const FileEntry *CE1 = R1;
   EXPECT_EQ(CE1, &R1.getFileEntry());
@@ -93,6 +111,8 @@ TEST(FileEntryTest, equals) {
   FileEntryRef R1 = Refs.addFile("1");
   FileEntryRef R2 = Refs.addFile("2");
   FileEntryRef R1Also = Refs.addFileAlias("1-also", R1);
+  FileEntryRef R1Redirect = Refs.addFileRedirect("1-redirect", R1);
+  FileEntryRef R1Redirect2 = Refs.addFileRedirect("1-redirect2", R1Redirect);
 
   EXPECT_EQ(R1, &R1.getFileEntry());
   EXPECT_EQ(&R1.getFileEntry(), R1);
@@ -100,6 +120,8 @@ TEST(FileEntryTest, equals) {
   EXPECT_NE(R1, &R2.getFileEntry());
   EXPECT_NE(&R2.getFileEntry(), R1);
   EXPECT_NE(R1, R2);
+  EXPECT_EQ(R1, R1Redirect);
+  EXPECT_EQ(R1, R1Redirect2);
 
   OptionalFileEntryRefDegradesToFileEntryPtr M1 = R1;
 
@@ -114,11 +136,16 @@ TEST(FileEntryTest, isSameRef) {
   FileEntryRef R1 = Refs.addFile("1");
   FileEntryRef R2 = Refs.addFile("2");
   FileEntryRef R1Also = Refs.addFileAlias("1-also", R1);
+  FileEntryRef R1Redirect = Refs.addFileRedirect("1-redirect", R1);
+  FileEntryRef R1Redirect2 = Refs.addFileRedirect("1-redirect2", R1Redirect);
 
   EXPECT_TRUE(R1.isSameRef(FileEntryRef(R1)));
   EXPECT_TRUE(R1.isSameRef(FileEntryRef(R1.getMapEntry())));
   EXPECT_FALSE(R1.isSameRef(R2));
   EXPECT_FALSE(R1.isSameRef(R1Also));
+  EXPECT_FALSE(R1.isSameRef(R1Redirect));
+  EXPECT_FALSE(R1.isSameRef(R1Redirect2));
+  EXPECT_FALSE(R1Redirect.isSameRef(R1Redirect2));
 }
 
 TEST(FileEntryTest, DenseMapInfo) {

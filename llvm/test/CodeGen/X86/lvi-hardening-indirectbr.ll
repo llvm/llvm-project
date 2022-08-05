@@ -22,18 +22,22 @@ entry:
 ; X64:       callq bar
 ; X64-DAG:   movl %[[x]], %edi
 ; X64-DAG:   movq %[[fp]], %r11
-; X64:       callq __llvm_lvi_thunk_r11
+; X64:       cs
+; X64-NEXT:  callq __llvm_lvi_thunk_r11
 ; X64:       movl %[[x]], %edi
 ; X64:       callq bar
 ; X64-DAG:   movl %[[x]], %edi
 ; X64-DAG:   movq %[[fp]], %r11
-; X64:       jmp __llvm_lvi_thunk_r11 # TAILCALL
+; X64:       cs
+; X64-NEXT:  jmp __llvm_lvi_thunk_r11 # TAILCALL
 
 ; X64FAST-LABEL: icall_reg:
 ; X64FAST:       callq bar
-; X64FAST:       callq __llvm_lvi_thunk_r11
+; X64FAST:       cs
+; X64FAST-NEXT:  callq __llvm_lvi_thunk_r11
 ; X64FAST:       callq bar
-; X64FAST:       jmp __llvm_lvi_thunk_r11 # TAILCALL
+; X64FAST:       cs
+; X64FAST-NEXT:  jmp __llvm_lvi_thunk_r11 # TAILCALL
 
 
 @global_fp = external dso_local global void (i32)*
@@ -50,16 +54,20 @@ define void @icall_global_fp(i32 %x, void (i32)** %fpp) #0 {
 ; X64-LABEL: icall_global_fp:
 ; X64-DAG:   movl %edi, %[[x:[^ ]*]]
 ; X64-DAG:   movq global_fp(%rip), %r11
-; X64:       callq __llvm_lvi_thunk_r11
+; X64:       cs
+; X64-NEXT:  callq __llvm_lvi_thunk_r11
 ; X64-DAG:   movl %[[x]], %edi
 ; X64-DAG:   movq global_fp(%rip), %r11
-; X64:       jmp __llvm_lvi_thunk_r11 # TAILCALL
+; X64:       cs
+; X64-NEXT:  jmp __llvm_lvi_thunk_r11 # TAILCALL
 
 ; X64FAST-LABEL: icall_global_fp:
 ; X64FAST:       movq global_fp(%rip), %r11
-; X64FAST:       callq __llvm_lvi_thunk_r11
+; X64FAST:       cs
+; X64FAST-NEXT:  callq __llvm_lvi_thunk_r11
 ; X64FAST:       movq global_fp(%rip), %r11
-; X64FAST:       jmp __llvm_lvi_thunk_r11 # TAILCALL
+; X64FAST:       cs
+; X64FAST-NEXT:  jmp __llvm_lvi_thunk_r11 # TAILCALL
 
 
 %struct.Foo = type { void (%struct.Foo*)** }
@@ -80,14 +88,18 @@ define void @vcall(%struct.Foo* %obj) #0 {
 ; X64:       movq (%rdi), %[[vptr:[^ ]*]]
 ; X64:       movq 8(%[[vptr]]), %[[fp:[^ ]*]]
 ; X64:       movq %[[fp]], %r11
-; X64:       callq __llvm_lvi_thunk_r11
+; X64:       cs
+; X64-NEXT:  callq __llvm_lvi_thunk_r11
 ; X64-DAG:   movq %[[obj]], %rdi
 ; X64-DAG:   movq %[[fp]], %r11
-; X64:       jmp __llvm_lvi_thunk_r11 # TAILCALL
+; X64:       cs
+; X64-NEXT:  jmp __llvm_lvi_thunk_r11 # TAILCALL
 
 ; X64FAST-LABEL: vcall:
-; X64FAST:       callq __llvm_lvi_thunk_r11
-; X64FAST:       jmp __llvm_lvi_thunk_r11 # TAILCALL
+; X64FAST:       cs
+; X64FAST-NEXT:  callq __llvm_lvi_thunk_r11
+; X64FAST:       cs
+; X64FAST-NEXT:  jmp __llvm_lvi_thunk_r11 # TAILCALL
 
 
 declare dso_local void @direct_callee()
@@ -114,14 +126,18 @@ define void @nonlazybind_caller() #0 {
 ; X64-LABEL: nonlazybind_caller:
 ; X64:       movq nonlazybind_callee@GOTPCREL(%rip), %[[REG:.*]]
 ; X64:       movq %[[REG]], %r11
-; X64:       callq __llvm_lvi_thunk_r11
+; X64:       cs
+; X64-NEXT:  callq __llvm_lvi_thunk_r11
 ; X64:       movq %[[REG]], %r11
-; X64:       jmp __llvm_lvi_thunk_r11 # TAILCALL
+; X64:       cs
+; X64-NEXT:  jmp __llvm_lvi_thunk_r11 # TAILCALL
 ; X64FAST-LABEL: nonlazybind_caller:
 ; X64FAST:   movq nonlazybind_callee@GOTPCREL(%rip), %r11
-; X64FAST:   callq __llvm_lvi_thunk_r11
+; X64FAST:   cs
+; X64FAST-NEXT:  callq __llvm_lvi_thunk_r11
 ; X64FAST:   movq nonlazybind_callee@GOTPCREL(%rip), %r11
-; X64FAST:   jmp __llvm_lvi_thunk_r11 # TAILCALL
+; X64FAST:   cs
+; X64FAST-NEXT:  jmp __llvm_lvi_thunk_r11 # TAILCALL
 
 
 ; Check that a switch gets lowered using a jump table
@@ -279,3 +295,7 @@ latch:
 ; X64-NEXT:          jmpq     *%r11
 
 attributes #1 = { nonlazybind }
+
+!llvm.module.flags = !{!0}
+
+!0 = !{i32 4, !"indirect_branch_cs_prefix", i32 1}

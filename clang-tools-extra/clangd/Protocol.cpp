@@ -1443,6 +1443,10 @@ bool fromJSON(const llvm::json::Value &Params, FoldingRangeParams &R,
   return O && O.map("textDocument", R.textDocument);
 }
 
+const llvm::StringLiteral FoldingRange::REGION_KIND = "region";
+const llvm::StringLiteral FoldingRange::COMMENT_KIND = "comment";
+const llvm::StringLiteral FoldingRange::IMPORT_KIND = "import";
+
 llvm::json::Value toJSON(const FoldingRange &Range) {
   llvm::json::Object Result{
       {"startLine", Range.startLine},

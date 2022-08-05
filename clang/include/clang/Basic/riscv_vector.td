@@ -137,6 +137,8 @@ class PolicyScheme<int val>{
 def NonePolicy : PolicyScheme<0>;
 def HasPassthruOperand : PolicyScheme<1>;
 def HasPolicyOperand : PolicyScheme<2>;
+// Specail case for passthru operand which is not a first opeand.
+def HasPassthruOperandAtIdx1 : PolicyScheme<3>;
 
 class RVVBuiltin<string suffix, string prototype, string type_range,
                  string overloaded_suffix = ""> {
@@ -841,22 +843,29 @@ multiclass RVVUnitStridedSegLoad<string op> {
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
-            SupportOverloading = false,
             ManualCodegen = [{
     {
-      // builtin: (val0 address, val1 address, ..., ptr, vl)
       ResultType = ConvertType(E->getArg(0)->getType()->getPointeeType());
-      IntrinsicTypes = {ResultType, Ops[NF + 1]->getType()};
+      // TA builtin: (val0 address, val1 address, ..., ptr, vl)
+      // TU builtin: (val0 address, ..., passthru0, ..., ptr, vl)
+      IntrinsicTypes = {ResultType, Ops.back()->getType()};
       // intrinsic: (passthru0, passthru1, ..., ptr, vl)
       SmallVector<llvm::Value*, 10> Operands;
-      for (unsigned I = 0; I < NF; ++I)
-        Operands.push_back(llvm::UndefValue::get(ResultType));
-      Operands.push_back(Ops[NF]);
-      Operands.push_back(Ops[NF + 1]);
+      if (DefaultPolicy == TAIL_AGNOSTIC) {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(llvm::UndefValue::get(ResultType));
+        Operands.push_back(Ops[NF]);
+        Operands.push_back(Ops[NF + 1]);
+      } else {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(Ops[NF + I]);
+        Operands.push_back(Ops[2 * NF]);
+        Operands.push_back(Ops[2 * NF + 1]);
+      }
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
       clang::CharUnits Align =
-          CGM.getNaturalPointeeTypeAlignment(E->getArg(NF)->getType());
+          CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
         llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {I});
@@ -867,17 +876,26 @@ multiclass RVVUnitStridedSegLoad<string op> {
             }],
             MaskedManualCodegen = [{
     {
+      // TAMA builtin: (val0 address, ..., mask, ptr, vl)
       // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, vl)
       // intrinsic: (maskedoff0, ..., ptr, mask, vl)
-      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
-                        Ops[2 * NF + 2]->getType()};
+      ResultType =  ConvertType(E->getArg(0)->getType()->getPointeeType());
+      IntrinsicTypes = {ResultType, Ops.back()->getType()};
       SmallVector<llvm::Value*, 12> Operands;
-      for (unsigned I = 0; I < NF; ++I)
-        Operands.push_back(Ops[NF + I + 1]);
-      Operands.push_back(Ops[2 * NF + 1]);
-      Operands.push_back(Ops[NF]);
-      Operands.push_back(Ops[2 * NF + 2]);
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
+      if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC) {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(llvm::UndefValue::get(ResultType));
+        Operands.push_back(Ops[NF + 1]);
+        Operands.push_back(Ops[NF]);
+        Operands.push_back(Ops[NF + 2]);
+      } else {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(Ops[NF + I + 1]);
+        Operands.push_back(Ops[2 * NF + 1]);
+        Operands.push_back(Ops[NF]);
+        Operands.push_back(Ops[2 * NF + 2]);
+      }
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
       assert(Operands.size() == NF + 4);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
@@ -916,19 +934,28 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
             IRName = op # nf # "ff",
             MaskedIRName = op # nf # "ff_mask",
             NF = nf,
-            SupportOverloading = false,
             ManualCodegen = [{
     {
-      // builtin: (val0 address, val1 address, ..., ptr, new_vl, vl)
+      // TA builtin: (val0 address, val1 address, ..., ptr, new_vl, vl)
+      // TU builtin: (val0 address, ..., passthru0, ..., ptr, new_vl, vl)
       ResultType = ConvertType(E->getArg(0)->getType()->getPointeeType());
-      IntrinsicTypes = {ResultType, Ops[NF + 2]->getType()};
+      IntrinsicTypes = {ResultType, Ops.back()->getType()};
       // intrinsic: (passthru0, passthru1, ..., ptr, vl)
       SmallVector<llvm::Value*, 12> Operands;
-      for (unsigned I = 0; I < NF; ++I)
-        Operands.push_back(llvm::UndefValue::get(ResultType));
-      Operands.push_back(Ops[NF]);
-      Operands.push_back(Ops[NF + 2]);
-      Value *NewVL = Ops[NF + 1];
+      Value *NewVL;
+      if (DefaultPolicy == TAIL_AGNOSTIC) {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(llvm::UndefValue::get(ResultType));
+        Operands.push_back(Ops[NF]);
+        Operands.push_back(Ops[NF + 2]);
+        NewVL = Ops[NF + 1];
+      } else {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(Ops[NF + I]);
+        Operands.push_back(Ops[2 * NF]);
+        Operands.push_back(Ops[2 * NF + 2]);
+        NewVL = Ops[2 * NF + 1];
+      }
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
       clang::CharUnits Align =
@@ -944,18 +971,29 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
             }],
             MaskedManualCodegen = [{
     {
+      // TAMA builtin: (val0 address, ..., mask, ptr, new_vl, vl)
       // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, new_vl, vl)
       // intrinsic: (maskedoff0, ..., ptr, mask, vl)
-      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
-                        Ops[2 * NF + 3]->getType()};
+      ResultType =  ConvertType(E->getArg(0)->getType()->getPointeeType());
+      IntrinsicTypes = {ResultType, Ops.back()->getType()};
       SmallVector<llvm::Value*, 12> Operands;
-      for (unsigned I = 0; I < NF; ++I)
-        Operands.push_back(Ops[NF + I + 1]);
-      Operands.push_back(Ops[2 * NF + 1]);
-      Operands.push_back(Ops[NF]);
-      Operands.push_back(Ops[2 * NF + 3]);
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
-      Value *NewVL = Ops[2 * NF + 2];
+      Value *NewVL;
+      if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC) {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(llvm::UndefValue::get(ResultType));
+        Operands.push_back(Ops[NF + 1]);
+        Operands.push_back(Ops[NF]);
+        Operands.push_back(Ops[NF + 3]);
+        NewVL = Ops[NF + 2];
+      } else {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(Ops[NF + I + 1]);
+        Operands.push_back(Ops[2 * NF + 1]);
+        Operands.push_back(Ops[NF]);
+        Operands.push_back(Ops[2 * NF + 3]);
+        NewVL = Ops[2 * NF + 2];
+      }
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
       assert(Operands.size() == NF + 4);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
@@ -995,19 +1033,27 @@ multiclass RVVStridedSegLoad<string op> {
             IRName = op # nf,
             MaskedIRName = op # nf # "_mask",
             NF = nf,
-            SupportOverloading = false,
             ManualCodegen = [{
     {
-      // builtin: (val0 address, val1 address, ..., ptr, stride, vl)
+      // TA builtin: (val0 address, val1 address, ..., ptr, stride, vl)
+      // TU builtin: (val0 address, ..., passthru0, ..., ptr, stride, vl)
       ResultType = ConvertType(E->getArg(0)->getType()->getPointeeType());
-      IntrinsicTypes = {ResultType, Ops[NF + 2]->getType()};
+      IntrinsicTypes = {ResultType, Ops.back()->getType()};
       // intrinsic: (passthru0, passthru1, ..., ptr, stride, vl)
       SmallVector<llvm::Value*, 12> Operands;
-      for (unsigned I = 0; I < NF; ++I)
-        Operands.push_back(llvm::UndefValue::get(ResultType));
-      Operands.push_back(Ops[NF]);
-      Operands.push_back(Ops[NF + 1]);
-      Operands.push_back(Ops[NF + 2]);
+      if (DefaultPolicy == TAIL_AGNOSTIC) {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(llvm::UndefValue::get(ResultType));
+        Operands.push_back(Ops[NF]);
+        Operands.push_back(Ops[NF + 1]);
+        Operands.push_back(Ops[NF + 2]);
+      } else {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(Ops[NF + I]);
+        Operands.push_back(Ops[2 * NF]);
+        Operands.push_back(Ops[2 * NF + 1]);
+        Operands.push_back(Ops[2 * NF + 2]);
+      }
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
       clang::CharUnits Align =
@@ -1022,18 +1068,28 @@ multiclass RVVStridedSegLoad<string op> {
             }],
             MaskedManualCodegen = [{
     {
+      //TAMA builtin: (val0 address, ..., mask, ptr, stride, vl)
       // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, stride, vl)
       // intrinsic: (maskedoff0, ..., ptr, stride, mask, vl)
-      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
-                        Ops[2 * NF + 3]->getType()};
+      ResultType =  ConvertType(E->getArg(0)->getType()->getPointeeType());
+      IntrinsicTypes = {ResultType, Ops.back()->getType()};
       SmallVector<llvm::Value*, 12> Operands;
-      for (unsigned I = 0; I < NF; ++I)
-        Operands.push_back(Ops[NF + I + 1]);
-      Operands.push_back(Ops[2 * NF + 1]);
-      Operands.push_back(Ops[2 * NF + 2]);
-      Operands.push_back(Ops[NF]);
-      Operands.push_back(Ops[2 * NF + 3]);
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
+      if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC) {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(llvm::UndefValue::get(ResultType));
+        Operands.push_back(Ops[NF + 1]);
+        Operands.push_back(Ops[NF + 2]);
+        Operands.push_back(Ops[NF]);
+        Operands.push_back(Ops[NF + 3]);
+      } else {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(Ops[NF + I + 1]);
+        Operands.push_back(Ops[2 * NF + 1]);
+        Operands.push_back(Ops[2 * NF + 2]);
+        Operands.push_back(Ops[NF]);
+        Operands.push_back(Ops[2 * NF + 3]);
+      }
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
       assert(Operands.size() == NF + 5);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
@@ -1070,16 +1126,26 @@ multiclass RVVIndexedSegLoad<string op> {
             NF = nf,
             ManualCodegen = [{
     {
-      // builtin: (val0 address, val1 address, ..., ptr, index, vl)
+      // TA builtin: (val0 address, val1 address, ..., ptr, index, vl)
+      // TU builtin: (val0 address, ..., passthru0, ..., ptr, index, vl)
       ResultType = ConvertType(E->getArg(0)->getType()->getPointeeType());
-      IntrinsicTypes = {ResultType, Ops[NF + 1]->getType(), Ops[NF + 2]->getType()};
       // intrinsic: (passthru0, passthru1, ..., ptr, index, vl)
       SmallVector<llvm::Value*, 12> Operands;
-      for (unsigned I = 0; I < NF; ++I)
-        Operands.push_back(llvm::UndefValue::get(ResultType));
-      Operands.push_back(Ops[NF]);
-      Operands.push_back(Ops[NF + 1]);
-      Operands.push_back(Ops[NF + 2]);
+      if (DefaultPolicy == TAIL_AGNOSTIC) {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(llvm::UndefValue::get(ResultType));
+        Operands.push_back(Ops[NF]);
+        Operands.push_back(Ops[NF + 1]);
+        Operands.push_back(Ops[NF + 2]);
+        IntrinsicTypes = {ResultType, Ops[NF + 1]->getType(), Ops.back()->getType()};
+      } else {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(Ops[NF + I]);
+        Operands.push_back(Ops[2 * NF]);
+        Operands.push_back(Ops[2 * NF + 1]);
+        Operands.push_back(Ops[2 * NF + 2]);
+        IntrinsicTypes = {ResultType, Ops[2 * NF + 1]->getType(), Ops.back()->getType()};
+      }
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
       clang::CharUnits Align =
@@ -1094,18 +1160,29 @@ multiclass RVVIndexedSegLoad<string op> {
             }],
             MaskedManualCodegen = [{
     {
+      // TAMA builtin: (val0 address, ..., mask, ptr, index, vl)
       // builtin: (val0 address, ..., mask, maskedoff0, ..., ptr, index, vl)
-      IntrinsicTypes = {ConvertType(E->getArg(0)->getType()->getPointeeType()),
-                        Ops[2 * NF + 2]->getType(), Ops[2 * NF + 3]->getType()};
+      ResultType = ConvertType(E->getArg(0)->getType()->getPointeeType());
       // intrinsic: (maskedoff0, ..., ptr, index, mask, vl)
       SmallVector<llvm::Value*, 12> Operands;
-      for (unsigned I = 0; I < NF; ++I)
-        Operands.push_back(Ops[NF + I + 1]);
-      Operands.push_back(Ops[2 * NF + 1]);
-      Operands.push_back(Ops[2 * NF + 2]);
-      Operands.push_back(Ops[NF]);
-      Operands.push_back(Ops[2 * NF + 3]);
-      Operands.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
+      if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC) {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(llvm::UndefValue::get(ResultType));
+        Operands.push_back(Ops[NF + 1]);
+        Operands.push_back(Ops[NF + 2]);
+        Operands.push_back(Ops[NF]);
+        Operands.push_back(Ops[NF + 3]);
+        IntrinsicTypes = {ResultType, Ops[NF + 2]->getType(), Ops.back()->getType()};
+      } else {
+        for (unsigned I = 0; I < NF; ++I)
+          Operands.push_back(Ops[NF + I + 1]);
+        Operands.push_back(Ops[2 * NF + 1]);
+        Operands.push_back(Ops[2 * NF + 2]);
+        Operands.push_back(Ops[NF]);
+        Operands.push_back(Ops[2 * NF + 3]);
+        IntrinsicTypes = {ResultType, Ops[2 * NF + 2]->getType(), Ops.back()->getType()};
+      }
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
       assert(Operands.size() == NF + 5);
       llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
       llvm::Value *LoadValue = Builder.CreateCall(F, Operands, "");
@@ -1282,27 +1359,28 @@ multiclass RVVPseudoUnaryBuiltin<string IR, string type_range> {
   let Name = NAME,
       IRName = IR,
       MaskedIRName = IR # "_mask",
+      UnMaskedPolicyScheme = HasPassthruOperand,
       ManualCodegen = [{
       {
-        // op1, vl
-        IntrinsicTypes = {ResultType,
-                          cast<llvm::VectorType>(ResultType)->getElementType(),
-                          Ops[1]->getType()};
-        Ops.insert(Ops.begin() + 1, llvm::Constant::getNullValue(IntrinsicTypes[1]));
-        // insert undef passthru
-        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        if (DefaultPolicy == TAIL_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
+        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(ElemTy));
+        // passthru, op1, op2, vl
+        IntrinsicTypes = {ResultType, ElemTy, Ops[3]->getType()};
         break;
       }
       }],
       MaskedManualCodegen = [{
       {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
-        // maskedoff, op1, mask, vl
-        IntrinsicTypes = {ResultType,
-                          cast<llvm::VectorType>(ResultType)->getElementType(),
-                          Ops[3]->getType()};
-        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(IntrinsicTypes[1]));
+        if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
+        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(ElemTy));
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
+        // maskedoff, op1, op2, mask, vl, policy
+        IntrinsicTypes = {ResultType, ElemTy, Ops[4]->getType()};
         break;
       }
       }] in {
@@ -1314,29 +1392,34 @@ multiclass RVVPseudoVNotBuiltin<string IR, string type_range> {
   let Name = NAME,
       IRName = IR,
       MaskedIRName = IR # "_mask",
+      UnMaskedPolicyScheme = HasPassthruOperand,
       ManualCodegen = [{
       {
-        // op1, vl
+        if (DefaultPolicy == TAIL_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
+        Ops.insert(Ops.begin() + 2,
+                   llvm::Constant::getAllOnesValue(ElemTy));
+        // passthru, op1, op2, vl
         IntrinsicTypes = {ResultType,
-                          cast<llvm::VectorType>(ResultType)->getElementType(),
-                          Ops[1]->getType()};
-        Ops.insert(Ops.begin() + 1,
-                   llvm::Constant::getAllOnesValue(IntrinsicTypes[1]));
-        // insert undef passthru
-        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+                          ElemTy,
+                          Ops[3]->getType()};
         break;
       }
       }],
       MaskedManualCodegen = [{
       {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        Ops.push_back(ConstantInt::get(Ops.back()->getType(), TAIL_UNDISTURBED));
-        // maskedoff, op1, mask, vl
-        IntrinsicTypes = {ResultType,
-                          cast<llvm::VectorType>(ResultType)->getElementType(),
-                          Ops[3]->getType()};
+        if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
+          Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
         Ops.insert(Ops.begin() + 2,
-                   llvm::Constant::getAllOnesValue(IntrinsicTypes[1]));
+                   llvm::Constant::getAllOnesValue(ElemTy));
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
+        // maskedoff, op1, po2, mask, vl, policy
+        IntrinsicTypes = {ResultType,
+                          ElemTy,
+                          Ops[4]->getType()};
         break;
       }
       }] in {
@@ -1366,28 +1449,29 @@ multiclass RVVPseudoVFUnaryBuiltin<string IR, string type_range> {
   let Name = NAME,
       IRName = IR,
       MaskedIRName = IR # "_mask",
+      UnMaskedPolicyScheme = HasPassthruOperand,
       ManualCodegen = [{
       {
-        // op1, vl
-        IntrinsicTypes = {ResultType,
-                          Ops[0]->getType(), Ops[1]->getType()};
-        Ops.insert(Ops.begin() + 1, Ops[0]);
         if (DefaultPolicy == TAIL_AGNOSTIC)
           Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        // op1, po2, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[1]->getType(), Ops[2]->getType()};
+        Ops.insert(Ops.begin() + 2, Ops[1]);
         break;
       }
       }],
       MaskedManualCodegen = [{
       {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
-        // maskedoff, op1, mask, vl
-        IntrinsicTypes = {ResultType,
-                          Ops[1]->getType(),
-                          Ops[3]->getType()};
-        Ops.insert(Ops.begin() + 2, Ops[1]);
         if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
           Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        Ops.insert(Ops.begin() + 2, Ops[1]);
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
+        // maskedoff, op1, op2, mask, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[2]->getType(),
+                          Ops.back()->getType()};
         break;
       }
       }] in {
@@ -1401,31 +1485,34 @@ multiclass RVVPseudoVWCVTBuiltin<string IR, string MName, string type_range,
       OverloadedName = MName,
       IRName = IR,
       MaskedIRName = IR # "_mask",
+      UnMaskedPolicyScheme = HasPassthruOperand,
       ManualCodegen = [{
       {
-        // op1, vl
-        IntrinsicTypes = {ResultType,
-                          Ops[0]->getType(),
-                          cast<llvm::VectorType>(Ops[0]->getType())->getElementType(),
-                          Ops[1]->getType()};
-        Ops.insert(Ops.begin() + 1, llvm::Constant::getNullValue(IntrinsicTypes[2]));
         if (DefaultPolicy == TAIL_AGNOSTIC)
           Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
+        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(ElemTy));
+        // passtru, op1, op2, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[1]->getType(),
+                          ElemTy,
+                          Ops[3]->getType()};
         break;
       }
       }],
       MaskedManualCodegen = [{
       {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
-        // maskedoff, op1, mask, vl
-        IntrinsicTypes = {ResultType,
-                          Ops[1]->getType(),
-                          cast<llvm::VectorType>(Ops[1]->getType())->getElementType(),
-                          Ops[3]->getType()};
-        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(IntrinsicTypes[2]));
         if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
           Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        auto ElemTy = cast<llvm::VectorType>(ResultType)->getElementType();
+        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(ElemTy));
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
+        // maskedoff, op1, op2, mask, vl, policy
+        IntrinsicTypes = {ResultType,
+                          Ops[1]->getType(),
+                          ElemTy,
+                          Ops[4]->getType()};
         break;
       }
       }] in {
@@ -1441,31 +1528,32 @@ multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
       OverloadedName = MName,
       IRName = IR,
       MaskedIRName = IR # "_mask",
+      UnMaskedPolicyScheme = HasPassthruOperand,
       ManualCodegen = [{
       {
-        // op1, vl
-        IntrinsicTypes = {ResultType,
-                          Ops[0]->getType(),
-                          Ops[1]->getType(),
-                          Ops[1]->getType()};
-        Ops.insert(Ops.begin() + 1, llvm::Constant::getNullValue(IntrinsicTypes[2]));
         if (DefaultPolicy == TAIL_AGNOSTIC)
           Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(Ops.back()->getType()));
+        // passthru, op1, xlen, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[1]->getType(),
+                          Ops[3]->getType(),
+                          Ops[3]->getType()};
         break;
       }
       }],
       MaskedManualCodegen = [{
       {
         std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
-        Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
-        // maskedoff, op1, mask, vl
-        IntrinsicTypes = {ResultType,
-                          Ops[1]->getType(),
-                          Ops[3]->getType(),
-                          Ops[3]->getType()};
-        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(IntrinsicTypes[2]));
         if (DefaultPolicy == TAIL_AGNOSTIC_MASK_AGNOSTIC)
           Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+        Ops.insert(Ops.begin() + 2, llvm::Constant::getNullValue(Ops.back()->getType()));
+        Ops.push_back(ConstantInt::get(Ops.back()->getType(), DefaultPolicy));
+        // maskedoff, op1, xlen, mask, vl
+        IntrinsicTypes = {ResultType,
+                          Ops[1]->getType(),
+                          Ops[4]->getType(),
+                          Ops[4]->getType()};
         break;
       }
       }] in {
@@ -1636,14 +1724,15 @@ defm vle32ff: RVVVLEFFBuiltin<["i", "f"]>;
 defm vle64ff: RVVVLEFFBuiltin<["l", "d"]>;
 
 // 7.8 Vector Load/Store Segment Instructions
-// TODO: Support policy function for segment load.
-let UnMaskedPolicyScheme = NonePolicy,
-    MaskedPolicyScheme = NonePolicy in {
+let UnMaskedPolicyScheme = HasPassthruOperand in {
 defm : RVVUnitStridedSegLoad<"vlseg">;
 defm : RVVUnitStridedSegLoadFF<"vlseg">;
 defm : RVVStridedSegLoad<"vlsseg">;
 defm : RVVIndexedSegLoad<"vluxseg">;
 defm : RVVIndexedSegLoad<"vloxseg">;
+}
+let UnMaskedPolicyScheme = NonePolicy,
+    MaskedPolicyScheme = NonePolicy in {
 defm : RVVUnitStridedSegStore<"vsseg">;
 defm : RVVStridedSegStore<"vssseg">;
 defm : RVVIndexedSegStore<"vsuxseg">;
@@ -1732,7 +1821,8 @@ defm vncvt_x_x_w : RVVPseudoVNCVTBuiltin<"vnsrl", "vncvt_x", "csi",
                                           ["Uv", "UvUw"]]>;
 
 // 12.8. Vector Integer Comparison Instructions
-let MaskedPolicyScheme = NonePolicy in {
+let MaskedPolicyScheme = HasPassthruOperand,
+    HasTailPolicy = false in {
 defm vmseq : RVVIntMaskOutBuiltinSet;
 defm vmsne : RVVIntMaskOutBuiltinSet;
 defm vmsltu : RVVUnsignedMaskOutBuiltinSet;
@@ -1808,13 +1898,16 @@ defm vwmaccus : RVVOutOp1Op2BuiltinSet<"vwmaccus", "csi",
 }
 
 // 12.15. Vector Integer Merge Instructions
-// C/C++ Operand: (mask, op1, op2, vl), Intrinsic: (op1, op2, mask, vl)
-let HasMasked = false, MaskedPolicyScheme = NonePolicy,
+// C/C++ Operand: (mask, op1, op2, vl), Intrinsic: (passthru, op1, op2, mask, vl)
+let HasMasked = false,
+    UnMaskedPolicyScheme = HasPassthruOperandAtIdx1,
+    MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
-      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
-      IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
       // insert undef passthru
-      Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+      if (DefaultPolicy == TAIL_AGNOSTIC)
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+      IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
     }] in {
   defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "csil",
                                     [["vvm", "v", "vmvv"],
@@ -1934,7 +2027,8 @@ defm vfneg_v : RVVPseudoVFUnaryBuiltin<"vfsgnjn", "xfd">;
 defm vfabs_v : RVVPseudoVFUnaryBuiltin<"vfsgnjx", "xfd">;
 
 // 14.13. Vector Floating-Point Compare Instructions
-let MaskedPolicyScheme = NonePolicy in {
+let MaskedPolicyScheme = HasPassthruOperand,
+    HasTailPolicy = false in {
 defm vmfeq : RVVFloatingMaskOutBuiltinSet;
 defm vmfne : RVVFloatingMaskOutBuiltinSet;
 defm vmflt : RVVFloatingMaskOutBuiltinSet;
@@ -1949,12 +2043,15 @@ let Name = "vfclass_v", UnMaskedPolicyScheme = HasPassthruOperand in
 
 // 14.15. Vector Floating-Point Merge Instructio
 // C/C++ Operand: (mask, op1, op2, vl), Builtin: (op1, op2, mask, vl)
-let HasMasked = false, MaskedPolicyScheme = NonePolicy,
+let HasMasked = false,
+    UnMaskedPolicyScheme = HasPassthruOperandAtIdx1,
+    MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
-      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
-      IntrinsicTypes = {ResultType, Ops[1]->getType(), Ops[3]->getType()};
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
       // insert undef passthru
-      Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+      if (DefaultPolicy == TAIL_AGNOSTIC)
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+      IntrinsicTypes = {ResultType, Ops[2]->getType(), Ops.back()->getType()};
     }] in {
   defm vmerge : RVVOutOp1BuiltinSet<"vmerge", "xfd",
                                     [["vvm", "v", "vmvv"]]>;
@@ -2006,7 +2103,8 @@ let Log2LMUL = [-3, -2, -1, 0, 1, 2] in {
 
 // 15. Vector Reduction Operations
 // 15.1. Vector Single-Width Integer Reduction Instructions
-let MaskedPolicyScheme = NonePolicy,
+let UnMaskedPolicyScheme = HasPassthruOperand,
+    MaskedPolicyScheme = HasPassthruOperand,
     IsPrototypeDefaultTU = true,
     HasMaskPolicy = false in {
 defm vredsum : RVVIntReductionBuiltinSet;
@@ -2060,7 +2158,10 @@ def vcpop : RVVMaskOp0Builtin<"um">;
 
 // 16.3. vfirst find-first-set mask bit
 def vfirst : RVVMaskOp0Builtin<"lm">;
+}
 
+let MaskedPolicyScheme = HasPassthruOperand,
+    HasTailPolicy = false in {
 // 16.4. vmsbf.m set-before-first mask bit
 def vmsbf : RVVMaskUnaryBuiltin;
 
@@ -2141,10 +2242,16 @@ defm vrgatherei16 : RVVOutBuiltinSet<"vrgatherei16_vv", "csil",
 }
 
 // 17.5. Vector Compress Instruction
-let HasMasked = false, MaskedPolicyScheme = NonePolicy,
+let IsPrototypeDefaultTU = true,
+    HasMasked = false,
+    UnMaskedPolicyScheme = HasPassthruOperandAtIdx1,
+    MaskedPolicyScheme = NonePolicy,
     ManualCodegen = [{
-      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.begin() + 3);
-      IntrinsicTypes = {ResultType, Ops[3]->getType()};
+      std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end() - 1);
+      // insert undef passthru
+      if (DefaultPolicy == TAIL_AGNOSTIC)
+        Ops.insert(Ops.begin(), llvm::UndefValue::get(ResultType));
+      IntrinsicTypes = {ResultType, Ops.back()->getType()};
     }] in {
   // signed and floating type
   defm vcompress : RVVOutBuiltinSet<"vcompress", "csilxfd",

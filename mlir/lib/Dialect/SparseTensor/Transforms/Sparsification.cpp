@@ -147,8 +147,6 @@ static Dim toDim(const SparseTensorEncodingAttr &enc, unsigned d) {
     SparseTensorEncodingAttr::DimLevelType tp = enc.getDimLevelType()[d];
     if (tp == SparseTensorEncodingAttr::DimLevelType::Compressed)
       return Dim::kSparse;
-    if (tp == SparseTensorEncodingAttr::DimLevelType::Singleton)
-      return Dim::kSingle;
   }
   return Dim::kDense;
 }

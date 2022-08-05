@@ -85,6 +85,7 @@ struct ModuleFunctionSearchOptions {
 class Module : public std::enable_shared_from_this<Module>,
                public SymbolContextScope {
 public:
+  class LookupInfo;
   // Static functions that can track the lifetime of module objects. This is
   // handy because we might have Module objects that are in shared pointers
   // that aren't in the global module list (from ModuleList). If this is the
@@ -261,9 +262,10 @@ public:
                                   lldb::SymbolType symbol_type,
                                   SymbolContextList &sc_list);
 
-  void FindSymbolsMatchingRegExAndType(const RegularExpression &regex,
-                                       lldb::SymbolType symbol_type,
-                                       SymbolContextList &sc_list);
+  void FindSymbolsMatchingRegExAndType(
+      const RegularExpression &regex, lldb::SymbolType symbol_type,
+      SymbolContextList &sc_list,
+      Mangled::NamePreference mangling_preference = Mangled::ePreferDemangled);
 
   /// Find a function symbols in the object file's symbol table.
   ///
@@ -292,6 +294,23 @@ public:
   ///     A symbol context list that gets filled in with all of the
   ///     matches.
   void FindCompileUnits(const FileSpec &path, SymbolContextList &sc_list);
+
+  /// Find functions by lookup info.
+  ///
+  /// If the function is an inlined function, it will have a block,
+  /// representing the inlined function, and the function will be the
+  /// containing function.  If it is not inlined, then the block will be NULL.
+  ///
+  /// \param[in] lookup_info
+  ///     The lookup info of the function we are looking for.
+  ///
+  /// \param[out] sc_list
+  ///     A symbol context list that gets filled in with all of the
+  ///     matches.
+  void FindFunctions(const LookupInfo &lookup_info,
+                     const CompilerDeclContext &parent_decl_ctx,
+                     const ModuleFunctionSearchOptions &options,
+                     SymbolContextList &sc_list);
 
   /// Find functions by name.
   ///
@@ -929,6 +948,12 @@ public:
     void SetNameTypeMask(lldb::FunctionNameType mask) {
       m_name_type_mask = mask;
     }
+
+    lldb::LanguageType GetLanguageType() const { return m_language; }
+
+    bool NameMatchesLookupInfo(
+        ConstString function_name,
+        lldb::LanguageType language_type = lldb::eLanguageTypeUnknown) const;
 
     void Prune(SymbolContextList &sc_list, size_t start_idx) const;
 

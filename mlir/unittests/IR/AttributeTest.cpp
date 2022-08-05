@@ -293,7 +293,7 @@ TEST(DenseResourceElementsAttrTest, CheckInvalidData) {
   // Create a bool attribute with data of the incorrect type.
   ArrayRef<uint32_t> data;
   auto type = RankedTensorType::get(data.size(), builder.getI32Type());
-  ASSERT_DEATH(
+  EXPECT_DEBUG_DEATH(
       {
         DenseBoolResourceElementsAttr::get(
             type, "resource", UnmanagedAsmResourceBlob::allocate(data));
@@ -308,7 +308,7 @@ TEST(DenseResourceElementsAttrTest, CheckInvalidType) {
   // Create a bool attribute with incorrect type.
   ArrayRef<bool> data;
   auto type = RankedTensorType::get(data.size(), builder.getI32Type());
-  ASSERT_DEATH(
+  EXPECT_DEBUG_DEATH(
       {
         DenseBoolResourceElementsAttr::get(
             type, "resource", UnmanagedAsmResourceBlob::allocate(data));

@@ -379,23 +379,25 @@ define void @store_sh3add() {
 }
 
 define dso_local void @rmw_addi_addi() nounwind {
-; CHECK-LABEL: rmw_addi_addi:
-; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    lui a0, %hi(bar+3211)
-; CHECK-NEXT:    lb a1, %lo(bar+3211)(a0)
-; CHECK-NEXT:    blez a1, .LBB23_2
-; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    li a1, 10
-; CHECK-NEXT:    sb a1, %lo(bar+3211)(a0)
-; CHECK-NEXT:  .LBB23_2: # %if.end
-; CHECK-NEXT:    ret
+; RV32-LABEL: rmw_addi_addi:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lui a0, %hi(bar+3211)
+; RV32-NEXT:    lb a1, %lo(bar+3211)(a0)
+; RV32-NEXT:    addi a1, a1, 10
+; RV32-NEXT:    sb a1, %lo(bar+3211)(a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: rmw_addi_addi:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lui a0, %hi(bar+3211)
+; RV64-NEXT:    lb a1, %lo(bar+3211)(a0)
+; RV64-NEXT:    addiw a1, a1, 10
+; RV64-NEXT:    sb a1, %lo(bar+3211)(a0)
+; RV64-NEXT:    ret
 entry:
   %0 = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 3211)
-  %cmp = icmp sgt i8 %0, 0
-  br i1 %cmp, label %if.then, label %if.end
-
-if.then:                                          ; preds = %entry
-  store i8 10, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 3211)
+  %1 = add i8 %0, 10
+  store i8 %1, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @bar, i32 0, i64 3211)
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry

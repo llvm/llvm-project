@@ -914,6 +914,11 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
       if (!NeedComdat)
         C->setSelectionKind(Comdat::NoDeduplicate);
       GV->setComdat(C);
+      // COFF doesn't allow the comdat group leader to have private linkage, so
+      // upgrade private linkage to internal linkage to produce a symbol table
+      // entry.
+      if (TT.isOSBinFormatCOFF() && GV->hasPrivateLinkage())
+        GV->setLinkage(GlobalValue::InternalLinkage);
     }
   };
 
@@ -924,8 +929,8 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   CounterPtr->setVisibility(Visibility);
   CounterPtr->setSection(
       getInstrProfSectionName(IPSK_cnts, TT.getObjectFormat()));
-  MaybeSetComdat(CounterPtr);
   CounterPtr->setLinkage(Linkage);
+  MaybeSetComdat(CounterPtr);
   PD.RegionCounters = CounterPtr;
   if (DebugInfoCorrelate) {
     if (auto *SP = Fn->getSubprogram()) {
@@ -1045,7 +1050,6 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfInstBase *Inc) {
   Data->setSection(getInstrProfSectionName(IPSK_data, TT.getObjectFormat()));
   Data->setAlignment(Align(INSTR_PROF_DATA_ALIGNMENT));
   MaybeSetComdat(Data);
-  Data->setLinkage(Linkage);
 
   PD.DataVar = Data;
 

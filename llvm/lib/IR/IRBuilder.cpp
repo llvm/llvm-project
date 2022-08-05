@@ -527,8 +527,19 @@ CallInst *IRBuilderBase::CreateInvariantStart(Value *Ptr, ConstantInt *Size) {
 }
 
 CallInst *IRBuilderBase::CreateThreadLocalAddress(Value *Ptr) {
-  assert(isa<GlobalValue>(Ptr) && cast<GlobalValue>(Ptr)->isThreadLocal() &&
+#ifndef NDEBUG
+  // Handle specially for constexpr cast. This is possible when
+  // opaque pointers not enabled since constant could be sinked
+  // directly by the design of llvm. This could be eliminated
+  // after we eliminate the abuse of constexpr.
+  auto *V = Ptr;
+  if (auto *CE = dyn_cast<ConstantExpr>(V))
+    if (CE->isCast())
+      V = CE->getOperand(0);
+
+  assert(isa<GlobalValue>(V) && cast<GlobalValue>(V)->isThreadLocal() &&
          "threadlocal_address only applies to thread local variables.");
+#endif
   return CreateIntrinsic(llvm::Intrinsic::threadlocal_address, {Ptr->getType()},
                          {Ptr});
 }
@@ -895,6 +906,33 @@ CallInst *IRBuilderBase::CreateIntrinsic(Intrinsic::ID ID,
                                          const Twine &Name) {
   Module *M = BB->getModule();
   Function *Fn = Intrinsic::getDeclaration(M, ID, Types);
+  return createCallHelper(Fn, Args, Name, FMFSource);
+}
+
+CallInst *IRBuilderBase::CreateIntrinsic(Type *RetTy, Intrinsic::ID ID,
+                                         ArrayRef<Value *> Args,
+                                         Instruction *FMFSource,
+                                         const Twine &Name) {
+  Module *M = BB->getModule();
+
+  SmallVector<Intrinsic::IITDescriptor> Table;
+  Intrinsic::getIntrinsicInfoTableEntries(ID, Table);
+  ArrayRef<Intrinsic::IITDescriptor> TableRef(Table);
+
+  SmallVector<Type *> ArgTys;
+  ArgTys.reserve(Args.size());
+  for (auto &I : Args)
+    ArgTys.push_back(I->getType());
+  FunctionType *FTy = FunctionType::get(RetTy, ArgTys, false);
+  SmallVector<Type *> OverloadTys;
+  Intrinsic::MatchIntrinsicTypesResult Res =
+      matchIntrinsicSignature(FTy, TableRef, OverloadTys);
+  (void)Res;
+  assert(Res == Intrinsic::MatchIntrinsicTypes_Match && TableRef.empty() &&
+         "Wrong types for intrinsic!");
+  // TODO: Handle varargs intrinsics.
+
+  Function *Fn = Intrinsic::getDeclaration(M, ID, OverloadTys);
   return createCallHelper(Fn, Args, Name, FMFSource);
 }
 

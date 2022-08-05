@@ -1089,7 +1089,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     if (C->Init.isInvalid())
       continue;
 
-    VarDecl *Var = nullptr;
+    ValueDecl *Var = nullptr;
     if (C->Init.isUsable()) {
       Diag(C->Loc, getLangOpts().CPlusPlus14
                        ? diag::warn_cxx11_compat_init_capture
@@ -1167,7 +1167,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
           continue;
       }
 
-      Var = R.getAsSingle<VarDecl>();
+      if (auto *BD = R.getAsSingle<BindingDecl>())
+        Var = BD;
+      else
+        Var = R.getAsSingle<VarDecl>();
       if (Var && DiagnoseUseOfDecl(Var, C->Loc))
         continue;
     }
@@ -1201,7 +1204,13 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     if (Var->isInvalidDecl())
       continue;
 
-    if (!Var->hasLocalStorage()) {
+    VarDecl *Underlying;
+    if (auto *BD = dyn_cast<BindingDecl>(Var))
+      Underlying = dyn_cast<VarDecl>(BD->getDecomposedDecl());
+    else
+      Underlying = cast<VarDecl>(Var);
+
+    if (!Underlying->hasLocalStorage()) {
       Diag(C->Loc, diag::err_capture_non_automatic_variable) << C->Id;
       Diag(Var->getLocation(), diag::note_previous_decl) << C->Id;
       continue;
@@ -1225,7 +1234,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     }
 
     if (C->Init.isUsable()) {
-      addInitCapture(LSI, Var);
+      addInitCapture(LSI, cast<VarDecl>(Var));
     } else {
       TryCaptureKind Kind = C->Kind == LCK_ByRef ? TryCapture_ExplicitByRef :
                                                    TryCapture_ExplicitByVal;
@@ -1575,7 +1584,7 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
 
   // An init-capture is initialized directly from its stored initializer.
   if (Cap.isInitCapture())
-    return Cap.getVariable()->getInit();
+    return cast<VarDecl>(Cap.getVariable())->getInit();
 
   // For anything else, build an initialization expression. For an implicit
   // capture, the capture notionally happens at the capture-default, so use
@@ -1606,7 +1615,7 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
       Init = This;
   } else {
     assert(Cap.isVariableCapture() && "unknown kind of capture");
-    VarDecl *Var = Cap.getVariable();
+    ValueDecl *Var = Cap.getVariable();
     Name = Var->getIdentifier();
     Init = BuildDeclarationNameExpr(
       CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
@@ -1655,7 +1664,7 @@ mapImplicitCaptureStyle(CapturingScopeInfo::ImplicitCaptureStyle ICS) {
 
 bool Sema::CaptureHasSideEffects(const Capture &From) {
   if (From.isInitCapture()) {
-    Expr *Init = From.getVariable()->getInit();
+    Expr *Init = cast<VarDecl>(From.getVariable())->getInit();
     if (Init && Init->HasSideEffects(Context))
       return true;
   }
@@ -1705,9 +1714,9 @@ FieldDecl *Sema::BuildCaptureField(RecordDecl *RD,
 
   TypeSourceInfo *TSI = nullptr;
   if (Capture.isVariableCapture()) {
-    auto *Var = Capture.getVariable();
-    if (Var->isInitCapture())
-      TSI = Capture.getVariable()->getTypeSourceInfo();
+    const auto *Var = dyn_cast_or_null<VarDecl>(Capture.getVariable());
+    if (Var && Var->isInitCapture())
+      TSI = Var->getTypeSourceInfo();
   }
 
   // FIXME: Should we really be doing this? A null TypeSourceInfo seems more
@@ -1855,7 +1864,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
           return LambdaCapture(From.getLocation(), IsImplicit, LCK_VLAType);
         } else {
           assert(From.isVariableCapture() && "unknown kind of capture");
-          VarDecl *Var = From.getVariable();
+          ValueDecl *Var = From.getVariable();
           LambdaCaptureKind Kind =
               From.isCopyCapture() ? LCK_ByCopy : LCK_ByRef;
           return LambdaCapture(From.getLocation(), IsImplicit, Kind, Var,

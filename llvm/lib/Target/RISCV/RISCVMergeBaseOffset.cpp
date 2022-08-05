@@ -426,7 +426,7 @@ bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
       if (!detectFoldable(Hi, Lo))
         continue;
       LLVM_DEBUG(dbgs() << "  Found lowered global address: "
-                        << *Hi.getOperand(2).getGlobal() << "\n");
+                        << *Hi.getOperand(1).getGlobal() << "\n");
       MadeChange |= detectAndFoldOffset(Hi, *Lo);
       MadeChange |= foldIntoMemoryOps(Hi, *Lo);
     }

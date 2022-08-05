@@ -353,6 +353,7 @@ define i1 @asm_clobbering_flags(i32* %mem) nounwind {
 ; CHECK32-NEXT:    testl %edx, %edx
 ; CHECK32-NEXT:    setg %al
 ; CHECK32-NEXT:    #APP
+; CHECK32-NOT:     rep
 ; CHECK32-NEXT:    bsfl %edx, %edx
 ; CHECK32-NEXT:    #NO_APP
 ; CHECK32-NEXT:    movl %edx, (%ecx)
@@ -364,6 +365,7 @@ define i1 @asm_clobbering_flags(i32* %mem) nounwind {
 ; CHECK64-NEXT:    testl %ecx, %ecx
 ; CHECK64-NEXT:    setg %al
 ; CHECK64-NEXT:    #APP
+; CHECK64-NOT:     rep
 ; CHECK64-NEXT:    bsfl %ecx, %ecx
 ; CHECK64-NEXT:    #NO_APP
 ; CHECK64-NEXT:    movl %ecx, (%rdi)

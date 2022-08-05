@@ -1415,4 +1415,34 @@ define <8 x half> @select(i1 %c, <8 x half> %x, <8 x half> %y) {
   ret <8 x half> %s
 }
 
+define <8 x half> @shuffle(ptr %p) {
+; BWON-LABEL: shuffle:
+; BWON:       # %bb.0:
+; BWON-NEXT:    movq %rdi, %rax
+; BWON-NEXT:    movzwl 8(%rsi), %ecx
+; BWON-NEXT:    movw %cx, 2(%rdi)
+; BWON-NEXT:    movw %cx, (%rdi)
+; BWON-NEXT:    retq
+;
+; BWOFF-LABEL: shuffle:
+; BWOFF:       # %bb.0:
+; BWOFF-NEXT:    movq %rdi, %rax
+; BWOFF-NEXT:    movw 8(%rsi), %cx
+; BWOFF-NEXT:    movw %cx, 2(%rdi)
+; BWOFF-NEXT:    movw %cx, (%rdi)
+; BWOFF-NEXT:    retq
+;
+; CHECK-I686-LABEL: shuffle:
+; CHECK-I686:       # %bb.0:
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-I686-NEXT:    movw 8(%ecx), %cx
+; CHECK-I686-NEXT:    movw %cx, 2(%eax)
+; CHECK-I686-NEXT:    movw %cx, (%eax)
+; CHECK-I686-NEXT:    retl $4
+  %1 = load <8 x half>, ptr %p, align 8
+  %2 = shufflevector <8 x half> %1, <8 x half> poison, <8 x i32> <i32 4, i32 4, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <8 x half> %2
+}
+
 attributes #0 = { nounwind }

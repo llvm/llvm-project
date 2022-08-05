@@ -41,12 +41,16 @@
 #include "print_tracing.h"
 #include "trace.h"
 
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 #include "MemoryManager.h"
 
 #include "utils.h"
+
+using namespace llvm;
 
 #ifdef OMPT_SUPPORT
 #include <ompt_device_callbacks.h>
@@ -266,9 +270,6 @@ private:
 };
 pthread_mutex_t KernelArgPool::Mutex = PTHREAD_MUTEX_INITIALIZER;
 
-std::unordered_map<std::string /*kernel*/, std::unique_ptr<KernelArgPool>>
-    KernelArgPoolMap;
-
 /// Use a single entity to encode a kernel and a set of flags
 struct KernelTy {
   llvm::omp::OMPTgtExecModeFlags ExecutionMode;
@@ -280,7 +281,9 @@ struct KernelTy {
   KernelTy(llvm::omp::OMPTgtExecModeFlags ExecutionMode, int16_t ConstWgSize,
            int32_t DeviceId, void *CallStackAddr, const char *Name,
            uint32_t KernargSegmentSize,
-           hsa_amd_memory_pool_t &KernArgMemoryPool)
+           hsa_amd_memory_pool_t &KernArgMemoryPool,
+           std::unordered_map<std::string, std::unique_ptr<KernelArgPool>>
+               &KernelArgPoolMap)
       : ExecutionMode(ExecutionMode), ConstWGSize(ConstWgSize),
         DeviceId(DeviceId), CallStackAddr(CallStackAddr), Name(Name) {
     DP("Construct kernelinfo: ExecMode %d\n", ExecutionMode);
@@ -293,10 +296,6 @@ struct KernelTy {
     }
   }
 };
-
-/// List that contains all the kernels.
-/// FIXME: we may need this to be per device and per library.
-std::list<KernelTy> KernelsList;
 
 template <typename Callback> static hsa_status_t findAgents(Callback CB) {
 
@@ -546,6 +545,12 @@ public:
 
   int NumberOfDevices = 0;
 
+  /// List that contains all the kernels.
+  /// FIXME: we may need this to be per device and per library.
+  std::list<KernelTy> KernelsList;
+  std::unordered_map<std::string /*kernel*/, std::unique_ptr<KernelArgPool>>
+      KernelArgPoolMap;
+
   // GPU devices
   std::vector<hsa_agent_t> HSAAgents;
   std::vector<HSAQueueScheduler> HSAQueueSchedulers; // one per gpu
@@ -559,6 +564,7 @@ public:
   std::vector<int> ThreadsPerGroup;
   std::vector<int> WarpSize;
   std::vector<std::string> GPUName;
+  std::vector<std::string> TargetID;
 
   // OpenMP properties
   std::vector<int> NumTeams;
@@ -956,7 +962,6 @@ public:
            "Unexpected device id!");
     FuncGblEntries[DeviceId].emplace_back();
     FuncOrGblEntryTy &E = FuncGblEntries[DeviceId].back();
-    // KernelArgPoolMap.clear();
     E.Entries.clear();
     E.Table.EntriesBegin = E.Table.EntriesEnd = 0;
   }
@@ -1841,7 +1846,6 @@ int32_t dataSubmit(int32_t DeviceId, void *TgtPtr, void *HstPtr, int64_t Size,
   DP("Submit data %ld bytes, (hst:%016llx) -> (tgt:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)HstPtr,
      (long long unsigned)(Elf64_Addr)TgtPtr);
-
   void *HstOrPoolPtr = prepareHstPtrForDataSubmit(Size, HstPtr);
   assert(HstOrPoolPtr && "HstOrPoolPtr cannot be null");
 
@@ -2191,8 +2195,9 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
     KernelArgPool *ArgPool = nullptr;
     void *KernArg = nullptr;
     {
-      auto It = KernelArgPoolMap.find(std::string(KernelInfo->Name));
-      if (It != KernelArgPoolMap.end()) {
+      auto It =
+          DeviceInfo().KernelArgPoolMap.find(std::string(KernelInfo->Name));
+      if (It != DeviceInfo().KernelArgPoolMap.end()) {
         ArgPool = (It->second).get();
       }
     }
@@ -2765,6 +2770,124 @@ void launchInitFiniKernel(int32_t DeviceId, void *img, const size_t &size,
 }
 } // namespace core
 
+static hsa_status_t GetIsaInfo(hsa_isa_t isa, void *data) {
+  hsa_status_t err;
+  uint32_t name_len;
+  err = hsa_isa_get_info_alt(isa, HSA_ISA_INFO_NAME_LENGTH, &name_len);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error getting ISA info length\n");
+    return err;
+  }
+
+  char TargetID[name_len];
+  err = hsa_isa_get_info_alt(isa, HSA_ISA_INFO_NAME, TargetID);
+  if (err != HSA_STATUS_SUCCESS) {
+    DP("Error getting ISA info name\n");
+    return err;
+  }
+
+  auto TripleTargetID = llvm::StringRef(TargetID);
+  if (TripleTargetID.consume_front("amdgcn-amd-amdhsa")) {
+    DeviceInfo().TargetID.push_back(TripleTargetID.ltrim('-').str());
+  }
+  return HSA_STATUS_SUCCESS;
+}
+
+/// Parse a TargetID to get processor arch and feature map.
+/// Returns processor subarch.
+/// Returns TargetID features in \p FeatureMap argument.
+/// If the \p TargetID contains feature+, FeatureMap it to true.
+/// If the \p TargetID contains feature-, FeatureMap it to false.
+/// If the \p TargetID does not contain a feature (default), do not map it.
+StringRef parseTargetID(StringRef TargetID, StringMap<bool> &FeatureMap) {
+  if (TargetID.empty())
+    return llvm::StringRef();
+
+  auto ArchFeature = TargetID.split(":");
+  auto Arch = ArchFeature.first;
+  auto Features = ArchFeature.second;
+  if (Features.empty())
+    return Arch;
+
+  if (Features.contains("sramecc+")) {
+    FeatureMap.insert(std::pair<std::string, bool>("sramecc", true));
+  } else if (Features.contains("sramecc-")) {
+    FeatureMap.insert(std::pair<std::string, bool>("sramecc", false));
+  }
+  if (Features.contains("xnack+")) {
+    FeatureMap.insert(std::pair<std::string, bool>("xnack", true));
+  } else if (Features.contains("xnack-")) {
+    FeatureMap.insert(std::pair<std::string, bool>("xnack", false));
+  }
+
+  return Arch;
+}
+
+/// Checks if an image \p ImgInfo is compatible with current
+/// system's environment \p EnvInfo
+bool IsImageCompatibleWithEnv(const char *ImgInfo, std::string EnvInfo) {
+  llvm::StringRef ImgTID(ImgInfo), EnvTID(EnvInfo);
+
+  // Compatible in case of exact match
+  if (ImgTID == EnvTID) {
+    DP("Compatible: Exact match \t[Image: %s]\t:\t[Environment: %s]\n",
+       ImgTID.data(), EnvTID.data());
+    return true;
+  }
+
+  // Incompatible if Archs mismatch.
+  StringMap<bool> ImgMap, EnvMap;
+  StringRef ImgArch = parseTargetID(ImgTID, ImgMap);
+  StringRef EnvArch = parseTargetID(EnvTID, EnvMap);
+
+  // Both EnvArch and ImgArch can't be empty here.
+  if (EnvArch.empty() || ImgArch.empty() || !ImgArch.contains(EnvArch)) {
+    DP("Incompatible: Processor mismatch \t[Image: %s]\t:\t[Environment: %s]\n",
+       ImgTID.data(), EnvTID.data());
+    return false;
+  }
+
+  // Incompatible if image has more features than the environment, irrespective
+  // of type or sign of features.
+  if (ImgMap.size() > EnvMap.size()) {
+    DP("Incompatible: Image has more features than the environment \t[Image: "
+       "%s]\t:\t[Environment: %s]\n",
+       ImgTID.data(), EnvTID.data());
+    return false;
+  }
+
+  // Compatible if each target feature specified by the environment is
+  // compatible with target feature of the image. The target feature is
+  // compatible if the iamge does not specify it (meaning Any), or if it
+  // specifies it with the same value (meaning On or Off).
+  for (const auto &ImgFeature : ImgMap) {
+    auto EnvFeature = EnvMap.find(ImgFeature.first());
+    if (EnvFeature == EnvMap.end()) {
+      DP("Incompatible: Value of Image's non-ANY feature is not matching with "
+         "the Environment feature's ANY value \t[Image: %s]\t:\t[Environment: "
+         "%s]\n",
+         ImgTID.data(), EnvTID.data());
+      return false;
+    } else if (EnvFeature->first() == ImgFeature.first() &&
+               EnvFeature->second != ImgFeature.second) {
+      DP("Incompatible: Value of Image's non-ANY feature is not matching with "
+         "the Environment feature's non-ANY value \t[Image: "
+         "%s]\t:\t[Environment: %s]\n",
+         ImgTID.data(), EnvTID.data());
+      return false;
+    }
+  }
+
+  // Image is compatible if all features of Environment are:
+  //   - either, present in the Image's features map with the same sign,
+  //   - or, the feature is missing from Image's features map i.e. it is
+  //   set to ANY
+  DP("Compatible: Target IDs are compatible \t[Image: %s]\t:\t[Environment: "
+     "%s]\n",
+     ImgTID.data(), EnvTID.data());
+  return true;
+}
+
 extern "C" {
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
   return elfMachineIdIsAmdgcn(Image);
@@ -3218,7 +3341,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
         hsa_signal_t Signal;
         bool UserLocked;
         Err = DeviceInfo().freesignalpoolMemcpyH2D(Varptr, E->addr,
-          sizeof(void *), DeviceId, Signal, UserLocked);
+                                                 sizeof(void *), DeviceId, Signal, UserLocked);
         if (Err != HSA_STATUS_SUCCESS)
           DP("Error when copying USM\n");
 
@@ -3383,11 +3506,12 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
     }
     check("Loading computation property", Err);
 
-    KernelsList.push_back(KernelTy(ExecModeVal, WGSizeVal, DeviceId,
-                                   CallStackAddr, E->name, KernargSegmentSize,
-                                   DeviceInfo().KernArgPool));
+    DeviceInfo().KernelsList.push_back(
+        KernelTy(ExecModeVal, WGSizeVal, DeviceId, CallStackAddr, E->name,
+                 KernargSegmentSize, DeviceInfo().KernArgPool,
+                 DeviceInfo().KernelArgPoolMap));
     __tgt_offload_entry Entry = *E;
-    Entry.addr = (void *)&KernelsList.back();
+    Entry.addr = (void *)&DeviceInfo().KernelsList.back();
     DeviceInfo().addOffloadEntry(DeviceId, Entry);
     DP("Entry point %ld maps to %s\n", E - HostBegin, E->name);
   }

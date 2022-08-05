@@ -1860,27 +1860,8 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
     }
   } else if (auto denseArrayAttr = attr.dyn_cast<DenseArrayBaseAttr>()) {
     typeElision = AttrTypeElision::Must;
-    switch (denseArrayAttr.getElementType()) {
-    case DenseArrayBaseAttr::EltType::I8:
-      os << "[:i8";
-      break;
-    case DenseArrayBaseAttr::EltType::I16:
-      os << "[:i16";
-      break;
-    case DenseArrayBaseAttr::EltType::I32:
-      os << "[:i32";
-      break;
-    case DenseArrayBaseAttr::EltType::I64:
-      os << "[:i64";
-      break;
-    case DenseArrayBaseAttr::EltType::F32:
-      os << "[:f32";
-      break;
-    case DenseArrayBaseAttr::EltType::F64:
-      os << "[:f64";
-      break;
-    }
-    if (denseArrayAttr.getType().getRank())
+    os << "[:" << denseArrayAttr.getType().getElementType();
+    if (denseArrayAttr.size())
       os << " ";
     denseArrayAttr.printWithoutBraces(os);
     os << "]";

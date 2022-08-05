@@ -91,6 +91,12 @@ LogicalResult DeviceAsyncCopyOp::verify() {
 //===----------------------------------------------------------------------===//
 // NVGPU_MmaSyncOp
 //===----------------------------------------------------------------------===//
+void MmaSyncOp::build(::mlir::OpBuilder &odsBuilder,
+                      ::mlir::OperationState &odsState, Value matrixA,
+                      Value matrixB, Value matrixC, ArrayAttr mmaShape) {
+  build(odsBuilder, odsState, matrixC.getType(), matrixA, matrixB, matrixC,
+        mmaShape, UnitAttr());
+}
 
 LogicalResult MmaSyncOp::verify() {
 
@@ -121,6 +127,9 @@ LogicalResult MmaSyncOp::verify() {
 
   // vector element type
   Type aType = aVector.getElementType();
+
+  // tensor float32 (TF32) enabled
+  bool tf32Enabled = getOperation()->hasAttr(getTf32EnabledAttrName());
 
   // nvgpu.mma.sync shape (per 32 threads or per warp)
   int64_t m = getMmaShape()[0].cast<IntegerAttr>().getInt();
@@ -162,6 +171,10 @@ LogicalResult MmaSyncOp::verify() {
   if (cShape[0] * cShape[1] * kThreads != m * n)
     return emitOpError() << "expected " << m * n
                          << " warp-wide matrix C elements";
+
+  // verify tf32 tensor cores are enabled for only F32 datatype
+  if (tf32Enabled && !(aType.isF32()))
+    return emitOpError() << "expected tf32 tensor cores only for F32 operands";
 
   //
   // Extended verification

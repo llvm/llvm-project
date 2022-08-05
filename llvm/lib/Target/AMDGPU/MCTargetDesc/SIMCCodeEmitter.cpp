@@ -330,13 +330,13 @@ void SIMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     Encoding |= getImplicitOpSelHiEncoding(Opcode);
   }
 
-  // GFX11 v_cmpx opcodes promoted to VOP3 have implied dst=EXEC.
+  // GFX10+ v_cmpx opcodes promoted to VOP3 have implied dst=EXEC.
   // Documentation requires dst to be encoded as EXEC (0x7E),
   // but it looks like the actual value encoded for dst operand
   // is ignored by HW. It was decided to define dst as "do not care"
   // in td files to allow disassembler accept any dst value.
   // However, dst is encoded as EXEC for compatibility with SP3.
-  if (AMDGPU::isGFX11Plus(STI) && isVCMPX64(Desc)) {
+  if (AMDGPU::isGFX10Plus(STI) && isVCMPX64(Desc)) {
     assert((Encoding & 0xFF) == 0);
     Encoding |= MRI.getEncodingValue(AMDGPU::EXEC_LO);
   }

@@ -535,6 +535,9 @@ define void @f86() nosanitize_bounds
 ; CHECK: define void @f87() [[FNRETTHUNKEXTERN:#[0-9]+]]
 define void @f87() fn_ret_thunk_extern { ret void }
 
+; CHECK: define void @f88() [[SKIPPROFILE:#[0-9]+]]
+define void @f88() skipprofile { ret void }
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }
@@ -589,4 +592,5 @@ define void @f87() fn_ret_thunk_extern { ret void }
 ; CHECK: attributes #51 = { uwtable(sync) }
 ; CHECK: attributes #52 = { nosanitize_bounds }
 ; CHECK: attributes [[FNRETTHUNKEXTERN]] = { fn_ret_thunk_extern }
+; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

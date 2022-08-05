@@ -26,7 +26,7 @@ using namespace __sanitizer;
 using namespace __ubsan;
 
 namespace __ubsan {
-  extern const char *TypeCheckKinds[];
+  extern const char *const TypeCheckKinds[];
 }
 
 // Returns true if UBSan has printed an error report.

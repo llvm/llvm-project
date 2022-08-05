@@ -257,9 +257,7 @@ llvm::hash_code hash_value(const MPInt &x); // NOLINT
 /// This just calls through to the operator int64_t, but it's useful when a
 /// function pointer is required. (Although this is marked inline, it is still
 /// possible to obtain and use a function pointer to this.)
-LLVM_ATTRIBUTE_ALWAYS_INLINE int64_t int64FromMPInt(const MPInt &x) {
-  return int64_t(x);
-}
+static inline int64_t int64FromMPInt(const MPInt &x) { return int64_t(x); }
 LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt mpintFromInt64(int64_t x) {
   return MPInt(x);
 }

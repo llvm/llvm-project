@@ -16505,39 +16505,35 @@ Value *EmitAMDGPUGridSize(CodeGenFunction &CGF, unsigned Index) {
 // it into LLVM's memory ordering specifier using atomic C ABI, and writes
 // to \p AO. \p Scope takes a const char * and converts it into AMDGCN
 // specific SyncScopeID and writes it to \p SSID.
-bool CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
+void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
                                               llvm::AtomicOrdering &AO,
                                               llvm::SyncScope::ID &SSID) {
-  if (isa<llvm::ConstantInt>(Order)) {
-    int ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
+  int ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
 
-    // Map C11/C++11 memory ordering to LLVM memory ordering
-    assert(llvm::isValidAtomicOrderingCABI(ord));
-    switch (static_cast<llvm::AtomicOrderingCABI>(ord)) {
-    case llvm::AtomicOrderingCABI::acquire:
-    case llvm::AtomicOrderingCABI::consume:
-      AO = llvm::AtomicOrdering::Acquire;
-      break;
-    case llvm::AtomicOrderingCABI::release:
-      AO = llvm::AtomicOrdering::Release;
-      break;
-    case llvm::AtomicOrderingCABI::acq_rel:
-      AO = llvm::AtomicOrdering::AcquireRelease;
-      break;
-    case llvm::AtomicOrderingCABI::seq_cst:
-      AO = llvm::AtomicOrdering::SequentiallyConsistent;
-      break;
-    case llvm::AtomicOrderingCABI::relaxed:
-      AO = llvm::AtomicOrdering::Monotonic;
-      break;
-    }
-
-    StringRef scp;
-    llvm::getConstantStringInfo(Scope, scp);
-    SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
-    return true;
+  // Map C11/C++11 memory ordering to LLVM memory ordering
+  assert(llvm::isValidAtomicOrderingCABI(ord));
+  switch (static_cast<llvm::AtomicOrderingCABI>(ord)) {
+  case llvm::AtomicOrderingCABI::acquire:
+  case llvm::AtomicOrderingCABI::consume:
+    AO = llvm::AtomicOrdering::Acquire;
+    break;
+  case llvm::AtomicOrderingCABI::release:
+    AO = llvm::AtomicOrdering::Release;
+    break;
+  case llvm::AtomicOrderingCABI::acq_rel:
+    AO = llvm::AtomicOrdering::AcquireRelease;
+    break;
+  case llvm::AtomicOrderingCABI::seq_cst:
+    AO = llvm::AtomicOrdering::SequentiallyConsistent;
+    break;
+  case llvm::AtomicOrderingCABI::relaxed:
+    AO = llvm::AtomicOrdering::Monotonic;
+    break;
   }
-  return false;
+
+  StringRef scp;
+  llvm::getConstantStringInfo(Scope, scp);
+  SSID = getLLVMContext().getOrInsertSyncScopeID(scp);
 }
 
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
@@ -16967,12 +16963,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     Function *F = CGM.getIntrinsic(Intrinsic::fshr, Src0->getType());
     return Builder.CreateCall(F, { Src0, Src1, Src2 });
   }
-
   case AMDGPU::BI__builtin_amdgcn_fence: {
-    if (ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(0)),
-                                EmitScalarExpr(E->getArg(1)), AO, SSID))
-      return Builder.CreateFence(AO, SSID);
-    LLVM_FALLTHROUGH;
+    ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(0)),
+                            EmitScalarExpr(E->getArg(1)), AO, SSID);
+    return Builder.CreateFence(AO, SSID);
   }
   case AMDGPU::BI__builtin_amdgcn_atomic_inc32:
   case AMDGPU::BI__builtin_amdgcn_atomic_inc64:
@@ -16998,22 +16992,20 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F =
         CGM.getIntrinsic(BuiltinAtomicOp, {ResultType, Ptr->getType()});
 
-    if (ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(2)),
-                                EmitScalarExpr(E->getArg(3)), AO, SSID)) {
+    ProcessOrderScopeAMDGCN(EmitScalarExpr(E->getArg(2)),
+                            EmitScalarExpr(E->getArg(3)), AO, SSID);
 
-      // llvm.amdgcn.atomic.inc and llvm.amdgcn.atomic.dec expects ordering and
-      // scope as unsigned values
-      Value *MemOrder = Builder.getInt32(static_cast<int>(AO));
-      Value *MemScope = Builder.getInt32(static_cast<int>(SSID));
+    // llvm.amdgcn.atomic.inc and llvm.amdgcn.atomic.dec expects ordering and
+    // scope as unsigned values
+    Value *MemOrder = Builder.getInt32(static_cast<int>(AO));
+    Value *MemScope = Builder.getInt32(static_cast<int>(SSID));
 
-      QualType PtrTy = E->getArg(0)->IgnoreImpCasts()->getType();
-      bool Volatile =
-          PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
-      Value *IsVolatile = Builder.getInt1(static_cast<bool>(Volatile));
+    QualType PtrTy = E->getArg(0)->IgnoreImpCasts()->getType();
+    bool Volatile =
+      PtrTy->castAs<PointerType>()->getPointeeType().isVolatileQualified();
+    Value *IsVolatile = Builder.getInt1(static_cast<bool>(Volatile));
 
-      return Builder.CreateCall(F, {Ptr, Val, MemOrder, MemScope, IsVolatile});
-    }
-    LLVM_FALLTHROUGH;
+    return Builder.CreateCall(F, {Ptr, Val, MemOrder, MemScope, IsVolatile});
   }
   default:
     return nullptr;

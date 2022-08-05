@@ -174,6 +174,7 @@ protected:
 public:
   llvm::IntegerType *ShortTy, *IntTy, *LongTy;
   llvm::PointerType *Int8PtrTy, *Int8PtrPtrTy;
+  llvm::PointerType *Int8PtrProgramASTy;
   llvm::Type *IvarOffsetVarTy;
 
   /// ObjectPtrTy - LLVM type for object handles (typeof(id))
@@ -5739,11 +5740,13 @@ ObjCCommonTypesHelper::ObjCCommonTypesHelper(CodeGen::CodeGenModule &cgm)
 {
   CodeGen::CodeGenTypes &Types = CGM.getTypes();
   ASTContext &Ctx = CGM.getContext();
+  unsigned ProgramAS = CGM.getDataLayout().getProgramAddressSpace();
 
   ShortTy = cast<llvm::IntegerType>(Types.ConvertType(Ctx.ShortTy));
   IntTy = CGM.IntTy;
   LongTy = cast<llvm::IntegerType>(Types.ConvertType(Ctx.LongTy));
   Int8PtrTy = CGM.Int8PtrTy;
+  Int8PtrProgramASTy = llvm::PointerType::get(CGM.Int8Ty, ProgramAS);
   Int8PtrPtrTy = CGM.Int8PtrPtrTy;
 
   // arm64 targets use "int" ivar offset variables. All others,
@@ -5812,7 +5815,7 @@ ObjCCommonTypesHelper::ObjCCommonTypesHelper(CodeGen::CodeGenModule &cgm)
   //   char *_imp;
   // }
   MethodTy = llvm::StructType::create("struct._objc_method", SelectorPtrTy,
-                                      Int8PtrTy, Int8PtrTy);
+                                      Int8PtrTy, Int8PtrProgramASTy);
 
   // struct _objc_cache *
   CacheTy = llvm::StructType::create(VMContext, "struct._objc_cache");
@@ -6771,11 +6774,11 @@ void CGObjCNonFragileABIMac::emitMethodConstant(ConstantArrayBuilder &builder,
 
   if (forProtocol) {
     // Protocol methods have no implementation. So, this entry is always NULL.
-    method.addNullPointer(ObjCTypes.Int8PtrTy);
+    method.addNullPointer(ObjCTypes.Int8PtrProgramASTy);
   } else {
     llvm::Function *fn = GetMethodDefinition(MD);
     assert(fn && "no definition for method?");
-    method.addBitCast(fn, ObjCTypes.Int8PtrTy);
+    method.addBitCast(fn, ObjCTypes.Int8PtrProgramASTy);
   }
 
   method.finishAndAddTo(builder);

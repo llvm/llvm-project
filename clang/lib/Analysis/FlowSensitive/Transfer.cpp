@@ -332,6 +332,25 @@ public:
                           std::make_unique<PointerValue>(*ThisPointeeLoc)));
   }
 
+  void VisitReturnStmt(const ReturnStmt *S) {
+    auto *Ret = S->getRetValue();
+    if (Ret == nullptr)
+      return;
+
+    auto *Val = Env.getValue(*Ret, SkipPast::None);
+    if (Val == nullptr)
+      return;
+
+    // FIXME: Support reference-type returns.
+    if (Val->getKind() == Value::Kind::Reference)
+      return;
+
+    auto *Loc = Env.getReturnStorageLocation();
+    assert(Loc != nullptr);
+    // FIXME: Model NRVO.
+    Env.setValue(*Loc, *Val);
+  }
+
   void VisitMemberExpr(const MemberExpr *S) {
     ValueDecl *Member = S->getMemberDecl();
     assert(Member != nullptr);
@@ -507,28 +526,35 @@ public:
         return;
       Env.setStorageLocation(*S, *ArgLoc);
     } else if (const FunctionDecl *F = S->getDirectCallee()) {
-      // This case is for context-sensitive analysis, which we only do if we
-      // have the callee body available in the translation unit.
-      if (!Options.ContextSensitive || F->getBody() == nullptr)
+      // This case is for context-sensitive analysis.
+      if (!Options.ContextSensitive)
+        return;
+
+      const ControlFlowContext *CFCtx = Env.getControlFlowContext(F);
+      if (!CFCtx)
         return;
 
       // FIXME: We don't support context-sensitive analysis of recursion, so
       // we should return early here if `F` is the same as the `FunctionDecl`
       // holding `S` itself.
 
-      auto &ASTCtx = F->getASTContext();
-
-      // FIXME: Cache these CFGs.
-      auto CFCtx = ControlFlowContext::build(F, F->getBody(), &ASTCtx);
-      // FIXME: Handle errors here and below.
-      assert(CFCtx);
       auto ExitBlock = CFCtx->getCFG().getExit().getBlockID();
 
+      // Note that it is important for the storage location of `S` to be set
+      // before `pushCall`, because the latter uses it to set the storage
+      // location for `return`.
+      auto &ReturnLoc = Env.createStorageLocation(*S);
+      Env.setStorageLocation(*S, ReturnLoc);
       auto CalleeEnv = Env.pushCall(S);
 
-      // FIXME: Use the same analysis as the caller for the callee.
-      DataflowAnalysisOptions Options;
-      auto Analysis = NoopAnalysis(ASTCtx, Options);
+      // FIXME: Use the same analysis as the caller for the callee. Note,
+      // though, that doing so would require support for changing the analysis's
+      // ASTContext.
+      assert(
+          CFCtx->getDecl() != nullptr &&
+          "ControlFlowContexts in the environment should always carry a decl");
+      auto Analysis = NoopAnalysis(CFCtx->getDecl()->getASTContext(),
+                                   DataflowAnalysisOptions());
 
       auto BlockToOutputState =
           dataflow::runDataflowAnalysis(*CFCtx, Analysis, CalleeEnv);

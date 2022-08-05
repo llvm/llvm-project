@@ -374,7 +374,3 @@ void LLVMContext::setOpaquePointers(bool Enable) const {
 bool LLVMContext::supportsTypedPointers() const {
   return !pImpl->getOpaquePointers();
 }
-
-Any &LLVMContext::getTargetData() const {
-  return pImpl->TargetDataStorage;
-}
