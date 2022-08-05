@@ -113,6 +113,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NonAtomicToAtomic:
   case CK_NoOp:
   case CK_UserDefinedConversion:
+  case CK_NullToPointer:
     return this->Visit(SubExpr);
 
   case CK_ToVoid:
@@ -562,6 +563,24 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   }
 
   return this->bail(VD);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXBoolLiteralExpr(
+    const CXXBoolLiteralExpr *E) {
+  if (DiscardResult)
+    return true;
+
+  return this->emitConstBool(E->getValue(), E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXNullPtrLiteralExpr(
+    const CXXNullPtrLiteralExpr *E) {
+  if (DiscardResult)
+    return true;
+
+  return this->emitNullPtr(E);
 }
 
 template <class Emitter>
