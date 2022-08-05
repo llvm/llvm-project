@@ -26,7 +26,6 @@
 #include <cstring>
 #include <dlfcn.h>
 #include <functional>
-#include <libelf.h>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -51,6 +50,7 @@
 
 using namespace llvm;
 using namespace llvm::object;
+using namespace llvm::ELF;
 
 #ifdef OMPT_SUPPORT
 #include <ompt_device_callbacks.h>
@@ -2310,8 +2310,8 @@ int32_t runRegionLocked(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
 }
 
 bool elfMachineIdIsAmdgcn(__tgt_device_image *Image) {
-  const uint16_t AmdgcnMachineID = 224; // EM_AMDGPU may not be in system elf.h
-  int32_t R = elf_check_machine(Image, AmdgcnMachineID);
+  const uint16_t AmdgcnMachineID = EM_AMDGPU;
+  const int32_t R = elf_check_machine(Image, AmdgcnMachineID);
   if (!R) {
     DP("Supported machine ID not found\n");
   }
@@ -2319,28 +2319,20 @@ bool elfMachineIdIsAmdgcn(__tgt_device_image *Image) {
 }
 
 uint32_t elfEFlags(__tgt_device_image *Image) {
-  char *ImgBegin = (char *)Image->ImageStart;
+  const char *ImgBegin = (char *)Image->ImageStart;
   size_t ImgSize = (char *)Image->ImageEnd - ImgBegin;
 
-  Elf *E = elf_memory(ImgBegin, ImgSize);
-  if (!E) {
-    DP("Unable to get ELF handle: %s!\n", elf_errmsg(-1));
+  StringRef Buffer = StringRef(ImgBegin, ImgSize);
+  auto ElfOrErr = ObjectFile::createELFObjectFile(MemoryBufferRef(Buffer, ""),
+                                                  /*InitContent=*/false);
+  if (!ElfOrErr) {
+    consumeError(ElfOrErr.takeError());
     return 0;
   }
 
-  Elf64_Ehdr *Eh64 = elf64_getehdr(E);
-
-  if (!Eh64) {
-    DP("Unable to get machine ID from ELF file!\n");
-    elf_end(E);
-    return 0;
-  }
-
-  uint32_t Flags = Eh64->e_flags;
-
-  elf_end(E);
-  DP("ELF Flags: 0x%x\n", Flags);
-  return Flags;
+  if (const auto *ELFObj = dyn_cast<ELF64LEObjectFile>(ElfOrErr->get()))
+    return ELFObj->getPlatformFlags();
+  return 0;
 }
 
 template <typename T> bool enforceUpperBound(T *Value, T Upper) {
