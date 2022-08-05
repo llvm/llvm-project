@@ -881,8 +881,8 @@ private:
       auto *Vec1 = dyn_cast<ConstantVector>(Mask1);
       if (!Vec0 || !Vec1)
         return false;
-      assert(Vec0->getType() == Vec1->getType() &&
-             "Masks should have the same type");
+      if (Vec0->getType() != Vec1->getType())
+        return false;
       for (int i = 0, e = Vec0->getNumOperands(); i != e; ++i) {
         Constant *Elem0 = Vec0->getOperand(i);
         Constant *Elem1 = Vec1->getOperand(i);

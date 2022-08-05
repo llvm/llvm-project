@@ -16,6 +16,23 @@ define i32 @different_types_load(ptr %p) {
   ret i32 %sub
 }
 
+define i32 @different_types_vector_load(ptr %p) {
+; CHECK-LABEL: @different_types_vector_load(
+; CHECK-NEXT:    [[V1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[P:%.*]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i32> poison)
+; CHECK-NEXT:    [[V2:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[P]], i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i32> poison)
+; CHECK-NEXT:    [[E1:%.*]] = extractelement <4 x i32> [[V1]], i32 0
+; CHECK-NEXT:    [[E2:%.*]] = extractelement <8 x i32> [[V2]], i32 6
+; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[E1]], [[E2]]
+; CHECK-NEXT:    ret i32 [[SUM]]
+;
+  %v1 = call <4 x i32> @llvm.masked.load.v4i32.p(ptr %p, i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x i32> poison)
+  %v2 = call <8 x i32> @llvm.masked.load.v8i32.p(ptr %p, i32 4, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i32> poison)
+  %e1 = extractelement <4 x i32> %v1, i32 0
+  %e2 = extractelement <8 x i32> %v2, i32 6
+  %sum = add i32 %e1, %e2
+  ret i32 %sum
+}
+
 define i32 @different_types_store(ptr %p, i32 %a) {
 ; CHECK-LABEL: @different_types_store(
 ; CHECK-NEXT:    store i32 [[A:%.*]], ptr [[P:%.*]], align 4
@@ -41,3 +58,6 @@ define void @dse(ptr %p, i32 %i1, i8 %i2) {
   store i8 %i2, ptr %p
   ret void
 }
+
+declare <4 x i32> @llvm.masked.load.v4i32.p(ptr, i32 immarg, <4 x i1>, <4 x i32>)
+declare <8 x i32> @llvm.masked.load.v8i32.p(ptr, i32 immarg, <8 x i1>, <8 x i32>)
