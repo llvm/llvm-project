@@ -2286,7 +2286,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
   // If Lo or Hi uses elements from at most two of the four input vectors, then
   // express it as a vector shuffle of those two inputs.  Otherwise extract the
   // input elements by hand and construct the Lo/Hi output using a BUILD_VECTOR.
-  SmallVector<int> OrigMask(N->getMask().begin(), N->getMask().end());
+  SmallVector<int> OrigMask(N->getMask());
   // Try to pack incoming shuffles/inputs.
   auto &&TryPeekThroughShufflesInputs = [&Inputs, &NewVT, this, NewElts,
                                          &DL](SmallVectorImpl<int> &Mask) {

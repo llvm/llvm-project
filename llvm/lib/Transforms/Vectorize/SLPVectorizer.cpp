@@ -7659,7 +7659,7 @@ public:
 
   /// Functions adds masks, merging them into  single one.
   void addMask(ArrayRef<unsigned> SubMask) {
-    SmallVector<int, 4> NewMask(SubMask.begin(), SubMask.end());
+    SmallVector<int, 4> NewMask(SubMask);
     addMask(NewMask);
   }
 
@@ -8755,7 +8755,7 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
       return PoisonValue::get(FixedVectorType::get(
           cast<VectorType>(V1->getType())->getElementType(), Mask.size()));
     Value *Op = V1;
-    SmallVector<int> CombinedMask(Mask.begin(), Mask.end());
+    SmallVector<int> CombinedMask(Mask);
     PeekThroughShuffles(Op, CombinedMask);
     if (!isa<FixedVectorType>(Op->getType()) ||
         !IsIdentityMask(CombinedMask, cast<FixedVectorType>(Op->getType()))) {

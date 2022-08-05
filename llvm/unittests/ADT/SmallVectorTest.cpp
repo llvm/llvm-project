@@ -246,6 +246,18 @@ TYPED_TEST(SmallVectorTest, ConstructorIterTest) {
   assertValuesInOrder(V, 3u, 1, 2, 3);
 }
 
+// Constructor test.
+TYPED_TEST(SmallVectorTest, ConstructorFromArrayRefSimpleTest) {
+  SCOPED_TRACE("ConstructorFromArrayRefSimpleTest");
+  std::array<Constructable, 3> StdArray = {Constructable(1), Constructable(2),
+                                           Constructable(3)};
+  ArrayRef<Constructable> Array = StdArray;
+  auto &V = this->theVector;
+  V = SmallVector<Constructable, 4>(Array);
+  assertValuesInOrder(V, 3u, 1, 2, 3);
+  ASSERT_EQ(NumBuiltinElts(TypeParam{}), NumBuiltinElts(V));
+}
+
 // New vector test.
 TYPED_TEST(SmallVectorTest, EmptyVectorTest) {
   SCOPED_TRACE("EmptyVectorTest");
@@ -1128,6 +1140,44 @@ TEST(SmallVectorTest, InitializerList) {
   EXPECT_TRUE(makeArrayRef(V2).equals({4, 3, 2}));
   V2.insert(V2.begin() + 1, 5);
   EXPECT_TRUE(makeArrayRef(V2).equals({4, 5, 3, 2}));
+}
+
+struct To {
+  int Content;
+  friend bool operator==(const To &LHS, const To &RHS) {
+    return LHS.Content == RHS.Content;
+  }
+};
+
+class From {
+public:
+  From() = default;
+  From(To M) { T = M; }
+  operator To() const { return T; }
+
+private:
+  To T;
+};
+
+TEST(SmallVectorTest, ConstructFromArrayRefOfConvertibleType) {
+  To to1{1}, to2{2}, to3{3};
+  std::vector<From> StdVector = {From(to1), From(to2), From(to3)};
+  ArrayRef<From> Array = StdVector;
+  {
+    llvm::SmallVector<To> Vector(Array);
+
+    ASSERT_EQ(Array.size(), Vector.size());
+    for (size_t I = 0; I < Array.size(); ++I)
+      EXPECT_EQ(Array[I], Vector[I]);
+  }
+  {
+    llvm::SmallVector<To, 4> Vector(Array);
+
+    ASSERT_EQ(Array.size(), Vector.size());
+    ASSERT_EQ(4u, NumBuiltinElts(Vector));
+    for (size_t I = 0; I < Array.size(); ++I)
+      EXPECT_EQ(Array[I], Vector[I]);
+  }
 }
 
 template <class VectorT>
