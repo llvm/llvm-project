@@ -21,9 +21,9 @@ namespace lldb_private {
 /// between these kinds of processes can have default implementations in this
 /// class.
 class PostMortemProcess : public Process {
-public:
   using Process::Process;
 
+public:
   bool IsLiveDebugSession() const override { return false; }
 };
 
