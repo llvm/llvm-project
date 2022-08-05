@@ -66,12 +66,16 @@ public:
   unsigned getArgSize() const { return ArgSize; }
 
   /// Returns a pointer to the start of the code.
-  CodePtr getCodeBegin() const;
+  CodePtr getCodeBegin() const { return Code.data(); }
   /// Returns a pointer to the end of the code.
-  CodePtr getCodeEnd() const;
+  CodePtr getCodeEnd() const { return Code.data() + Code.size(); }
 
   /// Returns the original FunctionDecl.
   const FunctionDecl *getDecl() const { return F; }
+
+  /// Returns the name of the function decl this code
+  /// was generated for.
+  const std::string getName() const { return F->getNameInfo().getAsString(); }
 
   /// Returns the location.
   SourceLocation getLoc() const { return Loc; }
