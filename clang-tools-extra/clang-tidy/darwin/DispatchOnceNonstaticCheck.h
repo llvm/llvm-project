@@ -19,7 +19,7 @@ namespace darwin {
 /// storage duration, as required by the libdispatch documentation.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/darwin-dispatch-once-nonstatic.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/darwin/dispatch-once-nonstatic.html
 class DispatchOnceNonstaticCheck : public ClangTidyCheck {
 public:
   DispatchOnceNonstaticCheck(StringRef Name, ClangTidyContext *Context)

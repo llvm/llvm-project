@@ -22,7 +22,7 @@ namespace cert {
 /// constant expression is a security vulnerability.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert-properly-seeded-random-generator.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cert/properly-seeded-random-generator.html
 class ProperlySeededRandomGeneratorCheck : public ClangTidyCheck {
 public:
   ProperlySeededRandomGeneratorCheck(StringRef Name, ClangTidyContext *Context);

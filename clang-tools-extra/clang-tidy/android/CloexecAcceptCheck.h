@@ -18,7 +18,7 @@ namespace android {
 /// accept() is better to be replaced by accept4().
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-accept.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-accept.html
 class CloexecAcceptCheck : public CloexecCheck {
 public:
   CloexecAcceptCheck(StringRef Name, ClangTidyContext *Context)

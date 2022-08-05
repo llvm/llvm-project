@@ -19,7 +19,7 @@ namespace readability {
 /// equality or inequality.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-string-compare.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/string-compare.html
 class StringCompareCheck : public ClangTidyCheck {
 public:
   StringCompareCheck(StringRef Name, ClangTidyContext *Context)

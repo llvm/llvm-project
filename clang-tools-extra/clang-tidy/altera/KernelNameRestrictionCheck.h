@@ -19,7 +19,7 @@ namespace altera {
 /// `Verilog.cl`, or `VHDL.cl`.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/altera-kernel-name-restriction.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/altera/kernel-name-restriction.html
 class KernelNameRestrictionCheck : public ClangTidyCheck {
 public:
   KernelNameRestrictionCheck(StringRef Name, ClangTidyContext *Context)

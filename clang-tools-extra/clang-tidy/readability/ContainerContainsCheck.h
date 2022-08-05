@@ -19,7 +19,7 @@ namespace readability {
 /// replaced by a call to the `container.contains()` method introduced in C++20.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-container-contains.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/container-contains.html
 class ContainerContainsCheck : public ClangTidyCheck {
 public:
   ContainerContainsCheck(StringRef Name, ClangTidyContext *Context)

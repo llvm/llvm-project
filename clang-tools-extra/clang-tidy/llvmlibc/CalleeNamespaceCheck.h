@@ -18,7 +18,7 @@ namespace llvm_libc {
 /// Checks all calls resolve to functions within __llvm_libc namespace.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvmlibc-callee-namespace.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/llvmlibc/callee-namespace.html
 class CalleeNamespaceCheck : public ClangTidyCheck {
 public:
   CalleeNamespaceCheck(StringRef Name, ClangTidyContext *Context)

@@ -18,7 +18,7 @@ namespace cppcoreguidelines {
 /// This check flags all instances of const_cast
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-type-const-cast.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/pro-type-const-cast.html
 class ProTypeConstCastCheck : public ClangTidyCheck {
 public:
   ProTypeConstCastCheck(StringRef Name, ClangTidyContext *Context)

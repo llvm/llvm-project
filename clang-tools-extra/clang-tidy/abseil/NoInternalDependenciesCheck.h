@@ -19,7 +19,7 @@ namespace abseil {
 /// against doing so.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil-no-internal-dependencies.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/no-internal-dependencies.html
 class NoInternalDependenciesCheck : public ClangTidyCheck {
 public:
   NoInternalDependenciesCheck(StringRef Name, ClangTidyContext *Context)

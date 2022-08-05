@@ -30,7 +30,7 @@ namespace readability {
 ///     macros. Default is `false`.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-function-cognitive-complexity.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/function-cognitive-complexity.html
 class FunctionCognitiveComplexityCheck : public ClangTidyCheck {
 public:
   FunctionCognitiveComplexityCheck(StringRef Name, ClangTidyContext *Context);

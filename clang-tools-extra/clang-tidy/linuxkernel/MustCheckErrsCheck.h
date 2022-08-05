@@ -27,7 +27,7 @@ namespace linuxkernel {
 /// this warning enabled for clang.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/linuxkernel-must-use-errs.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/linuxkernel/must-use-errs.html
 class MustCheckErrsCheck : public ClangTidyCheck {
 public:
   MustCheckErrsCheck(StringRef Name, ClangTidyContext *Context)

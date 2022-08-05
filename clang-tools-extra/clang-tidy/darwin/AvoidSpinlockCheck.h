@@ -19,7 +19,7 @@ namespace darwin {
 /// problems.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/darwin-avoid-spinlock.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/darwin/avoid-spinlock.html
 class AvoidSpinlockCheck : public ClangTidyCheck {
  public:
   AvoidSpinlockCheck(StringRef Name, ClangTidyContext *Context)

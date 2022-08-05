@@ -20,7 +20,7 @@ namespace cppcoreguidelines {
 ///   i += 0.1;
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-narrowing-conversions.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/narrowing-conversions.html
 class NarrowingConversionsCheck : public ClangTidyCheck {
 public:
   NarrowingConversionsCheck(StringRef Name, ClangTidyContext *Context);
