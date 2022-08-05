@@ -19,7 +19,6 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpDefinition.h"
@@ -2841,6 +2840,55 @@ void spirv::GroupNonUniformUMinOp::print(OpAsmPrinter &p) {
 }
 
 //===----------------------------------------------------------------------===//
+// spv.IAddCarryOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::IAddCarryOp::verify() {
+  auto resultType = getType().cast<spirv::StructType>();
+  if (resultType.getNumElements() != 2)
+    return emitOpError("expected result struct type containing two members");
+
+  if (!llvm::is_splat(llvm::makeArrayRef(
+          {operand1().getType(), operand2().getType(),
+           resultType.getElementType(0), resultType.getElementType(1)})))
+    return emitOpError(
+        "expected all operand types and struct member types are the same");
+
+  return success();
+}
+
+ParseResult spirv::IAddCarryOp::parse(OpAsmParser &parser,
+                                      OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand, 2> operands;
+  if (parser.parseOptionalAttrDict(result.attributes) ||
+      parser.parseOperandList(operands) || parser.parseColon())
+    return failure();
+
+  Type resultType;
+  SMLoc loc = parser.getCurrentLocation();
+  if (parser.parseType(resultType))
+    return failure();
+
+  auto structType = resultType.dyn_cast<spirv::StructType>();
+  if (!structType || structType.getNumElements() != 2)
+    return parser.emitError(loc, "expected spv.struct type with two members");
+
+  SmallVector<Type, 2> operandTypes(2, structType.getElementType(0));
+  if (parser.resolveOperands(operands, operandTypes, loc, result.operands))
+    return failure();
+
+  result.addTypes(resultType);
+  return success();
+}
+
+void spirv::IAddCarryOp::print(OpAsmPrinter &printer) {
+  printer << ' ';
+  printer.printOptionalAttrDict((*this)->getAttrs());
+  printer.printOperands((*this)->getOperands());
+  printer << " : " << getType();
+}
+
+//===----------------------------------------------------------------------===//
 // spv.ISubBorrowOp
 //===----------------------------------------------------------------------===//
 
@@ -2849,12 +2897,9 @@ LogicalResult spirv::ISubBorrowOp::verify() {
   if (resultType.getNumElements() != 2)
     return emitOpError("expected result struct type containing two members");
 
-  SmallVector<Type, 4> types;
-  types.push_back(operand1().getType());
-  types.push_back(operand2().getType());
-  types.push_back(resultType.getElementType(0));
-  types.push_back(resultType.getElementType(1));
-  if (!llvm::is_splat(types))
+  if (!llvm::is_splat(llvm::makeArrayRef(
+          {operand1().getType(), operand2().getType(),
+           resultType.getElementType(0), resultType.getElementType(1)})))
     return emitOpError(
         "expected all operand types and struct member types are the same");
 
@@ -2862,9 +2907,9 @@ LogicalResult spirv::ISubBorrowOp::verify() {
 }
 
 ParseResult spirv::ISubBorrowOp::parse(OpAsmParser &parser,
-                                       OperationState &state) {
+                                       OperationState &result) {
   SmallVector<OpAsmParser::UnresolvedOperand, 2> operands;
-  if (parser.parseOptionalAttrDict(state.attributes) ||
+  if (parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseOperandList(operands) || parser.parseColon())
     return failure();
 
@@ -2878,10 +2923,10 @@ ParseResult spirv::ISubBorrowOp::parse(OpAsmParser &parser,
     return parser.emitError(loc, "expected spv.struct type with two members");
 
   SmallVector<Type, 2> operandTypes(2, structType.getElementType(0));
-  if (parser.resolveOperands(operands, operandTypes, loc, state.operands))
+  if (parser.resolveOperands(operands, operandTypes, loc, result.operands))
     return failure();
 
-  state.addTypes(resultType);
+  result.addTypes(resultType);
   return success();
 }
 
