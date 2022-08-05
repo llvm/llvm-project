@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s
 
 class String {
   char *storage{nullptr};
@@ -8,11 +8,13 @@ class String {
 public:
   String() : size{0} {}
   String(int size) : size{size} {}
+  String(const char *s) {}
 };
 
 void test() {
   String s1{};
   String s2{1};
+  String s3{"abcdefghijklmnop"};
 }
 
 //      CHECK: cir.func @_ZN6StringC2Ev
@@ -43,3 +45,29 @@ void test() {
 // CHECK-NEXT:   cir.store %7, %5 : i64, cir.ptr <i64>
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
+
+//      CHECK: cir.func @_ZN6StringC2EPKc
+// CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>, ["this", paraminit] {alignment = 8 : i64}
+// CHECK-NEXT:   %1 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["s", paraminit] {alignment = 8 : i64}
+// CHECK-NEXT:   cir.store %arg0, %0 : !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>
+// CHECK-NEXT:   cir.store %arg1, %1 : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
+// CHECK-NEXT:   %2 = cir.load %0 : cir.ptr <!cir.ptr<!_22class2EString22>>, !cir.ptr<!_22class2EString22>
+// CHECK-NEXT:   %3 = "cir.struct_element_addr"(%0) <{member_name = "storage"}> : (!cir.ptr<!cir.ptr<!_22class2EString22>>) -> !cir.ptr<!cir.ptr<i8>>
+// CHECK-NEXT:   %4 = cir.cst(#cir.null : !cir.ptr<i8>) : !cir.ptr<i8>
+// CHECK-NEXT:   cir.store %4, %3 : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
+// CHECK-NEXT:   cir.return
+
+//      CHECK: cir.func @_ZN6StringC1EPKc
+// CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>, ["this", paraminit] {alignment = 8 : i64}
+// CHECK-NEXT:   %1 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["s", paraminit] {alignment = 8 : i64}
+// CHECK-NEXT:   cir.store %arg0, %0 : !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>
+// CHECK-NEXT:   cir.store %arg1, %1 : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
+// CHECK-NEXT:   %2 = cir.load %0 : cir.ptr <!cir.ptr<!_22class2EString22>>, !cir.ptr<!_22class2EString22>
+// CHECK-NEXT:   %3 = cir.load %1 : cir.ptr <!cir.ptr<i8>>, !cir.ptr<i8>
+// CHECK-NEXT:   cir.call @_ZN6StringC2EPKc(%2, %3) : (!cir.ptr<!_22class2EString22>, !cir.ptr<i8>) -> ()
+// CHECK-NEXT:   cir.return
+
+// CHECK: cir.func @_Z4testv() {
+// CHECK:   cir.call @_ZN6StringC1Ev(%0) : (!cir.ptr<!_22class2EString22>) -> ()
+// CHECK:   cir.call @_ZN6StringC1Ei(%1, %3) : (!cir.ptr<!_22class2EString22>, i32) -> ()
+// CHECK:   cir.call @_ZN6StringC1EPKc(%2, %5) : (!cir.ptr<!_22class2EString22>, !cir.ptr<i8>) -> ()
