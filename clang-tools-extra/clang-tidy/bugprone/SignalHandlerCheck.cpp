@@ -13,7 +13,7 @@
 
 // This is the minimal set of safe functions.
 // https://wiki.sei.cmu.edu/confluence/display/c/SIG30-C.+Call+only+asynchronous-safe+functions+within+signal+handlers
-constexpr std::initializer_list<llvm::StringRef> MinimalConformingFunctions = {
+constexpr llvm::StringLiteral MinimalConformingFunctions[] = {
     "signal", "abort", "_Exit", "quick_exit"};
 
 // The POSIX-defined set of safe functions.
@@ -22,7 +22,7 @@ constexpr std::initializer_list<llvm::StringRef> MinimalConformingFunctions = {
 // mentioned POSIX specification was not updated after 'quick_exit' appeared
 // in the C11 standard.
 // Also, we want to keep the "minimal set" a subset of the "POSIX set".
-constexpr std::initializer_list<llvm::StringRef> POSIXConformingFunctions = {
+constexpr llvm::StringLiteral POSIXConformingFunctions[] = {
     "_Exit",
     "_exit",
     "abort",
@@ -300,12 +300,16 @@ AST_MATCHER(FunctionDecl, isStandardFunction) {
 SignalHandlerCheck::SignalHandlerCheck(StringRef Name,
                                        ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      AsyncSafeFunctionSet(
-          Options.get("AsyncSafeFunctionSet", AsyncSafeFunctionSetKind::POSIX)),
-      ConformingFunctions(AsyncSafeFunctionSet ==
-                                  AsyncSafeFunctionSetKind::Minimal
-                              ? MinimalConformingFunctions
-                              : POSIXConformingFunctions) {}
+      AsyncSafeFunctionSet(Options.get("AsyncSafeFunctionSet",
+                                       AsyncSafeFunctionSetKind::POSIX)) {
+  if (AsyncSafeFunctionSet == AsyncSafeFunctionSetKind::Minimal) {
+    for (StringRef v : MinimalConformingFunctions)
+      ConformingFunctions.insert(v);
+  } else {
+    for (StringRef v : POSIXConformingFunctions)
+      ConformingFunctions.insert(v);
+  }
+}
 
 void SignalHandlerCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AsyncSafeFunctionSet", AsyncSafeFunctionSet);
