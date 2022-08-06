@@ -232,7 +232,7 @@ static LLVMPointerType parsePointerType(AsmParser &parser) {
 
   unsigned addressSpace = 0;
   OptionalParseResult opr = parser.parseOptionalInteger(addressSpace);
-  if (opr.hasValue()) {
+  if (opr.has_value()) {
     if (failed(*opr) || parser.parseGreater())
       return LLVMPointerType();
     return parser.getChecked<LLVMPointerType>(loc, parser.getContext(),
@@ -441,7 +441,7 @@ static Type dispatchParse(AsmParser &parser, bool allowAny = true) {
   // Try parsing any MLIR type.
   Type type;
   OptionalParseResult result = parser.parseOptionalType(type);
-  if (result.hasValue()) {
+  if (result.has_value()) {
     if (failed(result.getValue()))
       return nullptr;
     if (!allowAny) {

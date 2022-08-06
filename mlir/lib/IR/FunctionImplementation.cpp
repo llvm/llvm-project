@@ -41,7 +41,7 @@ parseFunctionArgumentList(OpAsmParser &parser, bool allowVariadic,
         OpAsmParser::Argument argument;
         auto argPresent = parser.parseOptionalArgument(
             argument, /*allowType=*/true, /*allowAttrs=*/true);
-        if (argPresent.hasValue()) {
+        if (argPresent.has_value()) {
           if (failed(argPresent.getValue()))
             return failure(); // Present but malformed.
 
@@ -229,7 +229,7 @@ ParseResult mlir::function_interface_impl::parseFunctionOp(
   OptionalParseResult parseResult =
       parser.parseOptionalRegion(*body, entryArgs,
                                  /*enableNameShadowing=*/false);
-  if (parseResult.hasValue()) {
+  if (parseResult.has_value()) {
     if (failed(*parseResult))
       return failure();
     // Function body was parsed, make sure its not empty.
