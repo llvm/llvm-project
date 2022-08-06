@@ -5582,6 +5582,7 @@ cc_library(
     ],
     deps = [
         ":ConversionPassIncGen",
+        ":FuncDialect",
         ":IR",
         ":MemRefDialect",
         ":Pass",
