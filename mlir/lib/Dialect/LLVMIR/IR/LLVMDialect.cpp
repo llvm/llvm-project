@@ -344,7 +344,7 @@ static ParseResult parseSwitchOpCases(
     if (values.empty() && !integerParseResult.has_value())
       return success();
 
-    if (!integerParseResult.has_value() || integerParseResult.getValue())
+    if (!integerParseResult.has_value() || integerParseResult.value())
       return failure();
     values.push_back(APInt(bitWidth, value));
 
@@ -542,7 +542,7 @@ parseGEPIndices(OpAsmParser &parser,
     OptionalParseResult parsedInteger =
         parser.parseOptionalInteger(constantIndex);
     if (parsedInteger.has_value()) {
-      if (failed(parsedInteger.getValue()))
+      if (failed(parsedInteger.value()))
         return failure();
       constantIndices.push_back(constantIndex);
       return success();

@@ -1504,7 +1504,7 @@ public:
     OptionalParseResult result = parseOptionalAssignmentList(lhs, rhs);
     if (!result.has_value())
       return emitError(getCurrentLocation(), "expected '('");
-    return result.getValue();
+    return result.value();
   }
 
   virtual OptionalParseResult
