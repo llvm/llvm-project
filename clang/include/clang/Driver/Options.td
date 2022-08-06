@@ -6919,7 +6919,7 @@ def enable_16bit_types : DXCFlag<"enable-16bit-types">, Alias<fnative_half_type>
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
                       Group<dxc_Group>,
                       Flags<[CC1Option]>,
-                      MarshallingInfoString<TargetOpts<"HLSLEntry">>,
+                      MarshallingInfoString<TargetOpts<"HLSLEntry">, "\"main\"">,
                       HelpText<"Entry point name for hlsl">;
 def dxc_entrypoint : Option<["--", "/", "-"], "E", KIND_JOINED_OR_SEPARATE>,
                      Group<dxc_Group>,
