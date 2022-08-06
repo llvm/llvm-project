@@ -873,8 +873,8 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 static TargetInfo *getTargetInfo() {
-  if (config->andFeatures & (GNU_PROPERTY_AARCH64_FEATURE_1_BTI |
-                             GNU_PROPERTY_AARCH64_FEATURE_1_PAC)) {
+  if ((config->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_BTI) ||
+      config->zPacPlt) {
     static AArch64BtiPac t;
     return &t;
   }
