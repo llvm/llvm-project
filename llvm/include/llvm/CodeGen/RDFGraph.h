@@ -233,6 +233,7 @@
 #include <cstdint>
 #include <cstring>
 #include <map>
+#include <memory>
 #include <set>
 #include <unordered_map>
 #include <utility>
@@ -644,6 +645,9 @@ namespace rdf {
   struct DataFlowGraph {
     DataFlowGraph(MachineFunction &mf, const TargetInstrInfo &tii,
         const TargetRegisterInfo &tri, const MachineDominatorTree &mdt,
+        const MachineDominanceFrontier &mdf);
+    DataFlowGraph(MachineFunction &mf, const TargetInstrInfo &tii,
+        const TargetRegisterInfo &tri, const MachineDominatorTree &mdt,
         const MachineDominanceFrontier &mdf, const TargetOperandInfo &toi);
 
     NodeBase *ptr(NodeId N) const;
@@ -860,6 +864,9 @@ namespace rdf {
       NodeAddr<InstrNode*> IA = RA.Addr->getOwner(*this);
       IA.Addr->removeMember(RA, *this);
     }
+
+    // Default TOI object, if not given in the constructor.
+    std::unique_ptr<TargetOperandInfo> DefaultTOI;
 
     MachineFunction &MF;
     const TargetInstrInfo &TII;

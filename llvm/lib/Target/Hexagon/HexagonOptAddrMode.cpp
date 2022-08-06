@@ -863,9 +863,8 @@ bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   HRI = HST.getRegisterInfo();
   const auto &MDF = getAnalysis<MachineDominanceFrontier>();
   MDT = &getAnalysis<MachineDominatorTree>();
-  const TargetOperandInfo TOI(*HII);
 
-  DataFlowGraph G(MF, *HII, *HRI, *MDT, MDF, TOI);
+  DataFlowGraph G(MF, *HII, *HRI, *MDT, MDF);
   // Need to keep dead phis because we can propagate uses of registers into
   // nodes dominated by those would-be phis.
   G.build(BuildOptions::KeepDeadPhis);
