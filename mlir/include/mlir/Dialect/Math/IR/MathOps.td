@@ -87,6 +87,27 @@ def Math_AbsFOp : Math_FloatUnaryOp<"absf"> {
 }
 
 //===----------------------------------------------------------------------===//
+// AbsIOp
+//===----------------------------------------------------------------------===//
+
+def Math_AbsIOp : Math_IntegerUnaryOp<"absi"> {
+  let summary = "integer absolute-value operation";
+  let description = [{
+    The `absi` operation computes the absolute value. It takes one operand of
+    integer type (i.e., scalar, tensor or vector) and returns one result of the
+    same type.
+
+    Example:
+
+    ```mlir
+    // Scalar absolute value.
+    %a = math.absi %b : i64
+    ```
+  }];
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // AtanOp
 //===----------------------------------------------------------------------===//
 

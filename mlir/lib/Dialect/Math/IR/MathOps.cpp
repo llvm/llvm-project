@@ -31,6 +31,15 @@ OpFoldResult math::AbsFOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// AbsIOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::AbsIOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOp<IntegerAttr>(operands,
+                                       [](const APInt &a) { return a.abs(); });
+}
+
+//===----------------------------------------------------------------------===//
 // AtanOp folder
 //===----------------------------------------------------------------------===//
 
