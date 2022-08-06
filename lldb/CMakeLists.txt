@@ -20,7 +20,7 @@ include(GNUInstallDirs)
 if(LLDB_BUILT_STANDALONE)
   include(LLDBStandalone)
 
-  set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
+  set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
   set(CMAKE_CXX_STANDARD_REQUIRED YES)
   set(CMAKE_CXX_EXTENSIONS NO)
 endif()
