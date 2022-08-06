@@ -1712,7 +1712,8 @@ static bool mergeCmp(const InputSection *a, const InputSection *b) {
   if (a->outSecOff < b->outSecOff)
     return true;
 
-  if (a->outSecOff == b->outSecOff) {
+  // FIXME dyn_cast<ThunkSection> is non-null for any SyntheticSection.
+  if (a->outSecOff == b->outSecOff && a != b) {
     auto *ta = dyn_cast<ThunkSection>(a);
     auto *tb = dyn_cast<ThunkSection>(b);
 
