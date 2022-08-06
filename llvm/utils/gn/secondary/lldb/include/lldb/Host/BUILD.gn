@@ -62,8 +62,14 @@ write_cmake_config("Config") {
   }
 
   if (current_os == "linux" || current_os == "android") {
-    values += [ "HAVE_PPOLL=1" ]
+    values += [
+      "HAVE_PPOLL=1",
+      "HAVE_PROCESS_VM_READV=1",
+    ]
   } else {
-    values += [ "HAVE_PPOLL=" ]
+    values += [
+      "HAVE_PPOLL=",
+      "HAVE_PROCESS_VM_READV=",
+    ]
   }
 }
