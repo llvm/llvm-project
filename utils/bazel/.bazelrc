@@ -31,8 +31,8 @@ build:terminfo_system --repo_env=BAZEL_LLVM_TERMINFO_STRATEGY=system
 # Set the default compiler to the `clang` binary on the `PATH`.
 build:generic_clang --repo_env=CC=clang
 
-# C++14 standard version is required.
-build:generic_clang --cxxopt=-std=c++14 --host_cxxopt=-std=c++14
+# C++17 standard version is required.
+build:generic_clang --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
 
 # Use `-Wall` and `-Werror` for Clang.
 build:generic_clang --copt=-Wall --copt=-Werror --host_copt=-Wall --host_copt=-Werror
@@ -56,8 +56,8 @@ build:generic_clang --copt=-Wno-deprecated --host_copt=-Wno-deprecated
 # Set the default compiler to the `gcc` binary on the `PATH`.
 build:generic_gcc --repo_env=CC=gcc
 
-# C++14 standard version is required.
-build:generic_gcc --cxxopt=-std=c++14 --host_cxxopt=-std=c++14
+# C++17 standard version is required.
+build:generic_gcc --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
 
 # Build errors are not a helpful way to enforce deprecation in-repo and it is
 # not the point of the Bazel build to catch usage of deprecated APIs.
@@ -78,8 +78,8 @@ build:generic_gcc --copt=-Werror --host_copt=-Werror
 # Generic Windows flags common to both MSVC and Clang.
 ###############################################################################
 
-# C++14 standard version is required.
-build:windows --cxxopt=/std:c++14 --host_cxxopt=/std:c++14
+# C++17 standard version is required.
+build:windows --cxxopt=/std:c++17 --host_cxxopt=/std:c++17
 
 # Other generic dialect flags.
 build:windows --copt=/Zc:strictStrings --host_copt=/Zc:strictStrings
