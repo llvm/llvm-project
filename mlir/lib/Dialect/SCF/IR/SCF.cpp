@@ -2613,7 +2613,7 @@ ParseResult scf::WhileOp::parse(OpAsmParser &parser, OperationState &result) {
 
   OptionalParseResult listResult =
       parser.parseOptionalAssignmentList(regionArgs, operands);
-  if (listResult.hasValue() && failed(listResult.getValue()))
+  if (listResult.has_value() && failed(listResult.getValue()))
     return failure();
 
   FunctionType functionType;
