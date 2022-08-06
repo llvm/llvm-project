@@ -769,6 +769,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
   auto isFragmentOf = [](BinaryFunction *Fragment, BinaryFunction *Parent) {
     return (Fragment->isFragment() && Fragment->isParentFragment(Parent));
   };
+  (void)isFragmentOf;
 
   // Two fragments of same function access same jump table
   if (JumpTable *JT = getJumpTableContainingAddress(Address)) {
@@ -795,6 +796,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     }
 
     bool IsJumpTableParent = false;
+    (void)IsJumpTableParent;
     for (BinaryFunction *Frag : JT->Parents)
       if (Frag == &Function)
         IsJumpTableParent = true;
