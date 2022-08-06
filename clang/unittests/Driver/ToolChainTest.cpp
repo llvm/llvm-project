@@ -14,8 +14,10 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Host.h"
@@ -569,6 +571,33 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
       "\"<major>.<minor>\" (ex:\"1.4\").");
   Diags.Clear();
   DiagConsumer->clear();
+}
+
+TEST(DxcModeTest, DefaultEntry) {
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
+
+  InMemoryFileSystem->addFile("foo.hlsl", 0,
+                              llvm::MemoryBuffer::getMemBuffer("\n"));
+
+  const char *Args[] = {"clang", "--driver-mode=dxc", "-Tcs_6_7", "foo.hlsl"};
+
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(new DiagnosticOptions());
+
+  CreateInvocationOptions CIOpts;
+  CIOpts.Diags = Diags;
+  std::unique_ptr<CompilerInvocation> CInvok =
+      createInvocation(Args, std::move(CIOpts));
+  EXPECT_TRUE(CInvok);
+  // Make sure default entry is "main".
+  EXPECT_STREQ(CInvok->getTargetOpts().HLSLEntry.c_str(), "main");
+
+  const char *EntryArgs[] = {"clang", "--driver-mode=dxc", "-Ebar", "-Tcs_6_7", "foo.hlsl"};
+  CInvok = createInvocation(EntryArgs, std::move(CIOpts));
+  EXPECT_TRUE(CInvok);
+  // Make sure "-E" will set entry.
+  EXPECT_STREQ(CInvok->getTargetOpts().HLSLEntry.c_str(), "bar");
 }
 
 TEST(ToolChainTest, Toolsets) {
