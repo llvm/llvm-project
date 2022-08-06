@@ -442,7 +442,7 @@ static Type dispatchParse(AsmParser &parser, bool allowAny = true) {
   Type type;
   OptionalParseResult result = parser.parseOptionalType(type);
   if (result.has_value()) {
-    if (failed(result.getValue()))
+    if (failed(result.value()))
       return nullptr;
     if (!allowAny) {
       parser.emitError(keyLoc) << "unexpected type, expected keyword";

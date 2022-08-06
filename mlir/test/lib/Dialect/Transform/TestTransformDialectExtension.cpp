@@ -55,9 +55,9 @@ public:
     if (!result.has_value())
       return success();
 
-    if (result.getValue().succeeded())
+    if (result.value().succeeded())
       state.addAttribute("message", message);
-    return result.getValue();
+    return result.value();
   }
 
   void print(OpAsmPrinter &printer) {
