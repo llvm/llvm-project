@@ -650,11 +650,6 @@ template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_floating_point(__parser<_CharT>& __parser) {
   switch (__parser.__type_) {
   case __format_spec::__type::__default:
-    // When no precision specified then it keeps default since that
-    // formatting differs from the other types.
-    if (__parser.__precision_as_arg_ || __parser.__precision_ != -1)
-      __parser.__type_ = __format_spec::__type::__general_lower_case;
-    break;
   case __format_spec::__type::__hexfloat_lower_case:
   case __format_spec::__type::__hexfloat_upper_case:
     // Precision specific behavior will be handled later.
