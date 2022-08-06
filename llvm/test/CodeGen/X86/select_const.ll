@@ -268,9 +268,9 @@ define i8 @sel_1_neg1(i32 %x) {
 ; CHECK-LABEL: sel_1_neg1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl $43, %edi
-; CHECK-NEXT:    setge %al
-; CHECK-NEXT:    shlb $2, %al
-; CHECK-NEXT:    decb %al
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    negb %al
+; CHECK-NEXT:    orb $3, %al
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt i32 %x, 42
   %sel = select i1 %cmp, i8 3, i8 -1
@@ -432,10 +432,9 @@ define i32 @select_C1_C2_signext(i1 signext %cond) {
 define i32 @select_n_or_minus1(i1 signext %cond) {
 ; CHECK-LABEL: select_n_or_minus1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    movl $12414, %ecx # imm = 0x307E
-; CHECK-NEXT:    movl $-1, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    notl %eax
+; CHECK-NEXT:    orl $12414, %eax # imm = 0x307E
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 12414, i32 -1
   ret i32 %sel
