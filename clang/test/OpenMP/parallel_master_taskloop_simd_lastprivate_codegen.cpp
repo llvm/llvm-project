@@ -1847,8 +1847,12 @@ void loop() {
 // CHECK6-NEXT:    [[TMP38:%.*]] = icmp ne i32 [[TMP37]], 0
 // CHECK6-NEXT:    br i1 [[TMP38]], label [[DOTOMP_LINEAR_PU_I:%.*]], label [[DOTOMP_OUTLINED__1_EXIT:%.*]]
 // CHECK6:       .omp.linear.pu.i:
-// CHECK6-NEXT:    [[TMP39:%.*]] = load i32, i32* [[J_I]], align 4, !noalias !14
-// CHECK6-NEXT:    store i32 [[TMP39]], i32* [[J_I]], align 4, !noalias !14
+// CHECK6-NEXT:    [[TMP39:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP20]], i32 0, i32 0
+// CHECK6-NEXT:    [[TMP40:%.*]] = load i32*, i32** [[TMP39]], align 8
+// CHECK6-NEXT:    [[TMP41:%.*]] = getelementptr inbounds [[STRUCT_ANON]], %struct.anon* [[TMP20]], i32 0, i32 1
+// CHECK6-NEXT:    [[TMP42:%.*]] = load i32*, i32** [[TMP41]], align 8
+// CHECK6-NEXT:    [[TMP43:%.*]] = load i32, i32* [[J_I]], align 4, !noalias !14
+// CHECK6-NEXT:    store i32 [[TMP43]], i32* [[TMP42]], align 4
 // CHECK6-NEXT:    br label [[DOTOMP_OUTLINED__1_EXIT]]
 // CHECK6:       .omp_outlined..1.exit:
 // CHECK6-NEXT:    ret i32 0

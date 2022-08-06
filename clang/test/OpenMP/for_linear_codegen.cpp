@@ -322,18 +322,18 @@ int main() {
 // CHECK1-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // CHECK1:       omp.loop.exit:
 // CHECK1-NEXT:    call void @__kmpc_for_static_fini(%struct.ident_t* @[[GLOB2]], i32 [[TMP5]])
-// CHECK1-NEXT:    [[TMP19:%.*]] = bitcast i64* [[DOTLVAR__ADDR]] to i8*
-// CHECK1-NEXT:    call void @__kmpc_free(i32 [[TMP5]], i8* [[TMP19]], i8* inttoptr (i64 5 to i8*))
-// CHECK1-NEXT:    [[TMP20:%.*]] = load i32, i32* [[DOTOMP_IS_LAST]], align 4
-// CHECK1-NEXT:    [[TMP21:%.*]] = icmp ne i32 [[TMP20]], 0
-// CHECK1-NEXT:    br i1 [[TMP21]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
+// CHECK1-NEXT:    [[TMP19:%.*]] = load i32, i32* [[DOTOMP_IS_LAST]], align 4
+// CHECK1-NEXT:    [[TMP20:%.*]] = icmp ne i32 [[TMP19]], 0
+// CHECK1-NEXT:    br i1 [[TMP20]], label [[DOTOMP_LINEAR_PU:%.*]], label [[DOTOMP_LINEAR_PU_DONE:%.*]]
 // CHECK1:       .omp.linear.pu:
-// CHECK1-NEXT:    [[TMP22:%.*]] = load float*, float** [[PVAR2]], align 8
-// CHECK1-NEXT:    store float* [[TMP22]], float** [[TMP0]], align 8
-// CHECK1-NEXT:    [[TMP23:%.*]] = load i64, i64* [[DOTLVAR__ADDR]], align 8
-// CHECK1-NEXT:    store i64 [[TMP23]], i64* [[TMP1]], align 8
+// CHECK1-NEXT:    [[TMP21:%.*]] = load float*, float** [[PVAR2]], align 8
+// CHECK1-NEXT:    store float* [[TMP21]], float** [[TMP0]], align 8
+// CHECK1-NEXT:    [[TMP22:%.*]] = load i64, i64* [[DOTLVAR__ADDR]], align 8
+// CHECK1-NEXT:    store i64 [[TMP22]], i64* [[TMP1]], align 8
 // CHECK1-NEXT:    br label [[DOTOMP_LINEAR_PU_DONE]]
 // CHECK1:       .omp.linear.pu.done:
+// CHECK1-NEXT:    [[TMP23:%.*]] = bitcast i64* [[DOTLVAR__ADDR]] to i8*
+// CHECK1-NEXT:    call void @__kmpc_free(i32 [[TMP5]], i8* [[TMP23]], i8* inttoptr (i64 5 to i8*))
 // CHECK1-NEXT:    call void @__kmpc_barrier(%struct.ident_t* @[[GLOB1]], i32 [[TMP5]])
 // CHECK1-NEXT:    ret void
 //
