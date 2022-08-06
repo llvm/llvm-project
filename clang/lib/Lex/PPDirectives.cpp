@@ -947,7 +947,7 @@ Optional<FileEntryRef> Preprocessor::LookupFile(
     ConstSearchDirIterator *CurDirArg, SmallVectorImpl<char> *SearchPath,
     SmallVectorImpl<char> *RelativePath,
     ModuleMap::KnownHeader *SuggestedModule, bool *IsMapped,
-    bool *IsFrameworkFound, bool SkipCache) {
+    bool *IsFrameworkFound, bool SkipCache, bool OpenFile, bool CacheFailures) {
   ConstSearchDirIterator CurDirLocal = nullptr;
   ConstSearchDirIterator &CurDir = CurDirArg ? *CurDirArg : CurDirLocal;
 
@@ -1026,7 +1026,7 @@ Optional<FileEntryRef> Preprocessor::LookupFile(
   Optional<FileEntryRef> FE = HeaderInfo.LookupFile(
       Filename, FilenameLoc, isAngled, FromDir, &CurDir, Includers, SearchPath,
       RelativePath, RequestingModule, SuggestedModule, IsMapped,
-      IsFrameworkFound, SkipCache, BuildSystemModule);
+      IsFrameworkFound, SkipCache, BuildSystemModule, OpenFile, CacheFailures);
   if (FE) {
     if (SuggestedModule && !LangOpts.AsmPreprocessor)
       HeaderInfo.getModuleMap().diagnoseHeaderInclusion(
