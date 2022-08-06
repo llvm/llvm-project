@@ -175,6 +175,15 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
     }
     DAL->append(A);
   }
+
+  if (DAL->hasArg(options::OPT_o)) {
+    // When run the whole pipeline.
+    if (!DAL->hasArg(options::OPT_emit_llvm))
+      // Emit obj if write to file.
+      DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_emit_obj));
+  } else
+    DAL->AddSeparateArg(nullptr, Opts.getOption(options::OPT_o), "-");
+
   // Add default validator version if not set.
   // TODO: remove this once read validator version from validator.
   if (!DAL->hasArg(options::OPT_dxil_validator_version)) {

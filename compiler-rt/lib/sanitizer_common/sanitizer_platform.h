@@ -90,7 +90,7 @@
 #  else
 #    define SANITIZER_IOSSIM 0
 #  endif
-#  if TARGET_OS_DRIVERKIT
+#  if defined(TARGET_OS_DRIVERKIT) && TARGET_OS_DRIVERKIT
 #    define SANITIZER_DRIVERKIT 1
 #  else
 #    define SANITIZER_DRIVERKIT 0

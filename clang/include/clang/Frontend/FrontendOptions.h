@@ -344,17 +344,11 @@ public:
   /// When using -emit-module, treat the modulemap as a system module.
   unsigned IsSystemModule : 1;
 
-  /// Output a PCM/PCH file that does not write out information about its output
-  /// path.
-  ///
-  /// FIXME: This only controls whether \p ORIGINAL_PCH_DIR record is written
-  /// out or not. Consider either removing that record entirely if it's no
-  /// longer relevant or switching the default to not write it unless an option
-  /// is set to true.
-  unsigned OutputPathIndependentPCM : 1;
-
   /// Output (and read) PCM files regardless of compiler errors.
   unsigned AllowPCMWithCompilerErrors : 1;
+
+  /// Whether to share the FileManager when building modules.
+  unsigned ModulesShareFileManager : 1;
 
   CodeCompleteOptions CodeCompleteOpts;
 
@@ -522,7 +516,7 @@ public:
         ASTDumpLookups(false), BuildingImplicitModule(false),
         BuildingImplicitModuleUsesLock(true), ModulesEmbedAllFiles(false),
         IncludeTimestamps(true), UseTemporary(true),
-        OutputPathIndependentPCM(false), AllowPCMWithCompilerErrors(false),
+        AllowPCMWithCompilerErrors(false), ModulesShareFileManager(true),
         TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file

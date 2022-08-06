@@ -1397,41 +1397,6 @@ llvm::Error ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
   }
 }
 
-/// If a header file is not found at the path that we expect it to be
-/// and the PCH file was moved from its original location, try to resolve the
-/// file by assuming that header+PCH were moved together and the header is in
-/// the same place relative to the PCH.
-static std::string
-resolveFileRelativeToOriginalDir(const std::string &Filename,
-                                 const std::string &OriginalDir,
-                                 const std::string &CurrDir) {
-  assert(OriginalDir != CurrDir &&
-         "No point trying to resolve the file if the PCH dir didn't change");
-
-  using namespace llvm::sys;
-
-  SmallString<128> filePath(Filename);
-  fs::make_absolute(filePath);
-  assert(path::is_absolute(OriginalDir));
-  SmallString<128> currPCHPath(CurrDir);
-
-  path::const_iterator fileDirI = path::begin(path::parent_path(filePath)),
-                       fileDirE = path::end(path::parent_path(filePath));
-  path::const_iterator origDirI = path::begin(OriginalDir),
-                       origDirE = path::end(OriginalDir);
-  // Skip the common path components from filePath and OriginalDir.
-  while (fileDirI != fileDirE && origDirI != origDirE &&
-         *fileDirI == *origDirI) {
-    ++fileDirI;
-    ++origDirI;
-  }
-  for (; origDirI != origDirE; ++origDirI)
-    path::append(currPCHPath, "..");
-  path::append(currPCHPath, fileDirI, fileDirE);
-  path::append(currPCHPath, path::filename(Filename));
-  return std::string(currPCHPath.str());
-}
-
 bool ASTReader::ReadSLocEntry(int ID) {
   if (ID == 0)
     return false;
@@ -2334,16 +2299,6 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   OptionalFileEntryRefDegradesToFileEntryPtr File =
       expectedToOptional(FileMgr.getFileRef(Filename, /*OpenFile=*/false));
 
-  // If we didn't find the file, resolve it relative to the
-  // original directory from which this AST file was created.
-  if (!File && !F.OriginalDir.empty() && !F.BaseDirectory.empty() &&
-      F.OriginalDir != F.BaseDirectory) {
-    std::string Resolved = resolveFileRelativeToOriginalDir(
-        std::string(Filename), F.OriginalDir, F.BaseDirectory);
-    if (!Resolved.empty())
-      File = expectedToOptional(FileMgr.getFileRef(Resolved));
-  }
-
   // For an overridden file, create a virtual file with the stored
   // size/timestamp.
   if ((Overridden || Transient) && !File)
@@ -2896,11 +2851,6 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
     case ORIGINAL_FILE_ID:
       F.OriginalSourceFileID = FileID::get(Record[0]);
-      break;
-
-    case ORIGINAL_PCH_DIR:
-      F.OriginalDir = std::string(Blob);
-      ResolveImportedPath(F, F.OriginalDir);
       break;
 
     case MODULE_NAME:
@@ -8706,8 +8656,9 @@ ASTReader::getSourceDescriptor(unsigned ID) {
     ModuleFile &MF = ModuleMgr.getPrimaryModule();
     StringRef ModuleName = llvm::sys::path::filename(MF.OriginalSourceFileName);
     StringRef FileName = llvm::sys::path::filename(MF.FileName);
-    return ASTSourceDescriptor(ModuleName, MF.OriginalDir, FileName,
-                               MF.Signature);
+    return ASTSourceDescriptor(ModuleName,
+                               llvm::sys::path::parent_path(MF.FileName),
+                               FileName, MF.Signature);
   }
   return None;
 }
