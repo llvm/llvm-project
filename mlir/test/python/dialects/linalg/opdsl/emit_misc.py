@@ -92,7 +92,7 @@ with Context() as ctx, Location.unknown():
 
     # CHECK-LABEL: @test_f32_elemwise_abs
     # CHECK:      ^{{.*}}(%[[IN:.+]]: f32, %[[OUT:.+]]: f32)
-    # CHECK-NEXT:   %[[EXP:.+]] = math.abs %[[IN]] : f32
+    # CHECK-NEXT:   %[[EXP:.+]] = math.absf %[[IN]] : f32
     # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
     # CHECK-NEXT: -> tensor<4x16xf32>
     @func.FuncOp.from_py_func(

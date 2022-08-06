@@ -309,7 +309,7 @@ public:
     case UnaryFn::log:
       return builder.create<math::LogOp>(arg.getLoc(), arg);
     case UnaryFn::abs:
-      return builder.create<math::AbsOp>(arg.getLoc(), arg);
+      return builder.create<math::AbsFOp>(arg.getLoc(), arg);
     case UnaryFn::ceil:
       return builder.create<math::CeilOp>(arg.getLoc(), arg);
     case UnaryFn::floor:
