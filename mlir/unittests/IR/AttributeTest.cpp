@@ -224,7 +224,7 @@ static void checkNativeAccess(MLIRContext *ctx, ArrayRef<T> data,
 
   // Check that we can access and iterate the data properly.
   Optional<ArrayRef<T>> attrData = attr.tryGetAsArrayRef();
-  EXPECT_TRUE(attrData.hasValue());
+  EXPECT_TRUE(attrData.has_value());
   EXPECT_EQ(*attrData, data);
 
   // Check that we cast to this attribute when possible.
