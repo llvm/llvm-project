@@ -27,7 +27,7 @@ func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: spv.CL.sin %{{.*}}: f32
   %8 = math.sin %arg0 : f32
   // CHECK: spv.CL.fabs %{{.*}}: f32
-  %9 = math.abs %arg0 : f32
+  %9 = math.absf %arg0 : f32
   // CHECK: spv.CL.ceil %{{.*}}: f32
   %10 = math.ceil %arg0 : f32
   // CHECK: spv.CL.floor %{{.*}}: f32

@@ -7,7 +7,7 @@ func.func @test_abs(%arg0: tensor<f32>) -> tensor<f32> {
   // CHECK: [[INIT:%.+]] = linalg.init_tensor [] : tensor<f32>
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]]], iterator_types = []} ins(%arg0 : tensor<f32>) outs([[INIT]] : tensor<f32>) {
   // CHECK: ^bb0(%arg1: f32, %arg2: f32):
-  // CHECK:   [[ELEMENT:%.+]] = math.abs %arg1
+  // CHECK:   [[ELEMENT:%.+]] = math.absf %arg1
   // CHECK:   linalg.yield [[ELEMENT]] : f32
   // CHECK: } -> tensor<f32>
 
@@ -26,7 +26,7 @@ func.func @test_abs(%arg0: tensor<2xf32>) -> tensor<2xf32> {
   // CHECK: [[INIT:%.+]] = linalg.init_tensor [2] : tensor<2xf32>
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]]], iterator_types = ["parallel"]} ins(%arg0 : tensor<2xf32>) outs([[INIT]] : tensor<2xf32>) {
   // CHECK: ^bb0(%arg1: f32, %arg2: f32):
-  // CHECK:   [[ELEMENT:%.+]] = math.abs %arg1
+  // CHECK:   [[ELEMENT:%.+]] = math.absf %arg1
   // CHECK:   linalg.yield [[ELEMENT]] : f32
   // CHECK: } -> tensor<2xf32>
   %0 = "tosa.abs"(%arg0) : (tensor<2xf32>) -> tensor<2xf32>
@@ -44,7 +44,7 @@ func.func @test_abs(%arg0: tensor<2x3xf32>) -> tensor<2x3xf32> {
   // CHECK: [[INIT:%.+]] = linalg.init_tensor [2, 3] : tensor<2x3xf32>
   // CHECK: [[GENERIC:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]]], iterator_types = ["parallel", "parallel"]} ins(%arg0 : tensor<2x3xf32>) outs([[INIT]] : tensor<2x3xf32>) {
   // CHECK: ^bb0(%arg1: f32, %arg2: f32):
-  // CHECK:   [[ELEMENT:%.+]] = math.abs %arg1
+  // CHECK:   [[ELEMENT:%.+]] = math.absf %arg1
   // CHECK:   linalg.yield [[ELEMENT]] : f32
   // CHECK: } -> tensor<2x3xf32>
   %0 = "tosa.abs"(%arg0) : (tensor<2x3xf32>) -> tensor<2x3xf32>
@@ -61,7 +61,7 @@ func.func @test_abs(%arg0: tensor<?xf32>) -> tensor<?xf32> {
   // CHECK: %[[DIM:.+]] = tensor.dim %arg0, %[[C0]]
   // CHECK: %[[INIT:.+]] = linalg.init_tensor [%[[DIM]]]
   // CHECK: linalg.generic
-  // CHECK: math.abs
+  // CHECK: math.absf
   %0 = "tosa.abs"(%arg0) : (tensor<?xf32>) -> tensor<?xf32>
   return %0 : tensor<?xf32>
 }
@@ -76,7 +76,7 @@ func.func @test_abs_dyn(%arg0: tensor<2x?xf32>) -> tensor<2x?xf32> {
   // CHECK: %[[DIM:.+]] = tensor.dim %arg0, %[[C1]]
   // CHECK: %[[INIT:.+]] = linalg.init_tensor [2, %[[DIM]]]
   // CHECK: linalg.generic
-  // CHECK: math.abs
+  // CHECK: math.absf
   %0 = "tosa.abs"(%arg0) : (tensor<2x?xf32>) -> tensor<2x?xf32>
   return %0 : tensor<2x?xf32>
 }
@@ -146,7 +146,7 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   %0 = "tosa.tanh"(%arg0) : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: math.abs
+  // CHECK: math.absf
   %1 = "tosa.abs"(%arg0) : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
@@ -1252,7 +1252,7 @@ func.func @pad_float(%arg0 : tensor<1x2xf32>) -> (tensor<4x9xf32>) {
   // CHECK-DAG: [[INDEX4:%.+]] = arith.constant 4 : index
   // CHECK-DAG: [[CST:%.+]] = arith.constant 0.000000e+00 : f32
   // CHECK: tensor.pad %arg0 low{{\[}}%{{.*}}, [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
-  // CHECK: ^bb0(%arg1: index, %arg2: index):  
+  // CHECK: ^bb0(%arg1: index, %arg2: index):
   // CHECK:   tensor.yield [[CST]]
   // CHECK: } : tensor<1x2xf32> to tensor<4x9xf32>
   %1 = "tosa.pad"(%arg0, %0)  : (tensor<1x2xf32>, tensor<2x2xi32>)  -> (tensor<4x9xf32>)
@@ -1288,7 +1288,7 @@ func.func @pad_float_explicit(%arg0 : tensor<1x2xf32>) -> (tensor<4x9xf32>) {
   // CHECK-DAG: [[INDEX4:%.+]] = arith.constant 4 : index
   // CHECK-DAG: [[CST:%.+]] = arith.constant 4.200000e+01 : f32
   // CHECK: tensor.pad %arg0 low{{\[}}%{{.*}}, [[INDEX3]]] high{{\[}}[[INDEX2]], [[INDEX4]]]  {
-  // CHECK: ^bb0(%arg1: index, %arg2: index):  
+  // CHECK: ^bb0(%arg1: index, %arg2: index):
   // CHECK:   tensor.yield [[CST]]
   // CHECK: } : tensor<1x2xf32> to tensor<4x9xf32>
   %1 = arith.constant dense<42.0> : tensor<f32>

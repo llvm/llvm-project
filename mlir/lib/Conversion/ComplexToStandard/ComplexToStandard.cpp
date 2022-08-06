@@ -288,10 +288,10 @@ struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
     // Case 1. Zero denominator, numerator contains at most one NaN value.
     Value zero = rewriter.create<arith::ConstantOp>(
         loc, elementType, rewriter.getZeroAttr(elementType));
-    Value rhsRealAbs = rewriter.create<math::AbsOp>(loc, rhsReal);
+    Value rhsRealAbs = rewriter.create<math::AbsFOp>(loc, rhsReal);
     Value rhsRealIsZero = rewriter.create<arith::CmpFOp>(
         loc, arith::CmpFPredicate::OEQ, rhsRealAbs, zero);
-    Value rhsImagAbs = rewriter.create<math::AbsOp>(loc, rhsImag);
+    Value rhsImagAbs = rewriter.create<math::AbsFOp>(loc, rhsImag);
     Value rhsImagIsZero = rewriter.create<arith::CmpFOp>(
         loc, arith::CmpFPredicate::OEQ, rhsImagAbs, zero);
     Value lhsRealIsNotNaN = rewriter.create<arith::CmpFOp>(
@@ -321,10 +321,10 @@ struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
         loc, arith::CmpFPredicate::ONE, rhsImagAbs, inf);
     Value rhsFinite =
         rewriter.create<arith::AndIOp>(loc, rhsRealFinite, rhsImagFinite);
-    Value lhsRealAbs = rewriter.create<math::AbsOp>(loc, lhsReal);
+    Value lhsRealAbs = rewriter.create<math::AbsFOp>(loc, lhsReal);
     Value lhsRealInfinite = rewriter.create<arith::CmpFOp>(
         loc, arith::CmpFPredicate::OEQ, lhsRealAbs, inf);
-    Value lhsImagAbs = rewriter.create<math::AbsOp>(loc, lhsImag);
+    Value lhsImagAbs = rewriter.create<math::AbsFOp>(loc, lhsImag);
     Value lhsImagInfinite = rewriter.create<arith::CmpFOp>(
         loc, arith::CmpFPredicate::OEQ, lhsImagAbs, inf);
     Value lhsInfinite =
@@ -533,25 +533,25 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
     auto elementType = type.getElementType().cast<FloatType>();
 
     Value lhsReal = b.create<complex::ReOp>(elementType, adaptor.getLhs());
-    Value lhsRealAbs = b.create<math::AbsOp>(lhsReal);
+    Value lhsRealAbs = b.create<math::AbsFOp>(lhsReal);
     Value lhsImag = b.create<complex::ImOp>(elementType, adaptor.getLhs());
-    Value lhsImagAbs = b.create<math::AbsOp>(lhsImag);
+    Value lhsImagAbs = b.create<math::AbsFOp>(lhsImag);
     Value rhsReal = b.create<complex::ReOp>(elementType, adaptor.getRhs());
-    Value rhsRealAbs = b.create<math::AbsOp>(rhsReal);
+    Value rhsRealAbs = b.create<math::AbsFOp>(rhsReal);
     Value rhsImag = b.create<complex::ImOp>(elementType, adaptor.getRhs());
-    Value rhsImagAbs = b.create<math::AbsOp>(rhsImag);
+    Value rhsImagAbs = b.create<math::AbsFOp>(rhsImag);
 
     Value lhsRealTimesRhsReal = b.create<arith::MulFOp>(lhsReal, rhsReal);
-    Value lhsRealTimesRhsRealAbs = b.create<math::AbsOp>(lhsRealTimesRhsReal);
+    Value lhsRealTimesRhsRealAbs = b.create<math::AbsFOp>(lhsRealTimesRhsReal);
     Value lhsImagTimesRhsImag = b.create<arith::MulFOp>(lhsImag, rhsImag);
-    Value lhsImagTimesRhsImagAbs = b.create<math::AbsOp>(lhsImagTimesRhsImag);
+    Value lhsImagTimesRhsImagAbs = b.create<math::AbsFOp>(lhsImagTimesRhsImag);
     Value real =
         b.create<arith::SubFOp>(lhsRealTimesRhsReal, lhsImagTimesRhsImag);
 
     Value lhsImagTimesRhsReal = b.create<arith::MulFOp>(lhsImag, rhsReal);
-    Value lhsImagTimesRhsRealAbs = b.create<math::AbsOp>(lhsImagTimesRhsReal);
+    Value lhsImagTimesRhsRealAbs = b.create<math::AbsFOp>(lhsImagTimesRhsReal);
     Value lhsRealTimesRhsImag = b.create<arith::MulFOp>(lhsReal, rhsImag);
-    Value lhsRealTimesRhsImagAbs = b.create<math::AbsOp>(lhsRealTimesRhsImag);
+    Value lhsRealTimesRhsImagAbs = b.create<math::AbsFOp>(lhsRealTimesRhsImag);
     Value imag =
         b.create<arith::AddFOp>(lhsImagTimesRhsReal, lhsRealTimesRhsImag);
 
@@ -762,7 +762,7 @@ struct SqrtOpConversion : public OpConversionPattern<complex::SqrtOp> {
     Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
     Value imag = b.create<complex::ImOp>(elementType, adaptor.getComplex());
 
-    Value absLhs = b.create<math::AbsOp>(real);
+    Value absLhs = b.create<math::AbsFOp>(real);
     Value absArg = b.create<complex::AbsOp>(elementType, arg);
     Value addAbs = b.create<arith::AddFOp>(absLhs, absArg);
 

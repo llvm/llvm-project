@@ -66,21 +66,21 @@ class Math_FloatTernaryOp<string mnemonic, list<Trait> traits = []> :
 }
 
 //===----------------------------------------------------------------------===//
-// AbsOp
+// AbsFOp
 //===----------------------------------------------------------------------===//
 
-def Math_AbsOp : Math_FloatUnaryOp<"abs"> {
+def Math_AbsFOp : Math_FloatUnaryOp<"absf"> {
   let summary = "floating point absolute-value operation";
   let description = [{
-    The `abs` operation computes the absolute value. It takes one operand of
-    floating point type (i.e., scalar, tensor or vector) and returns one result of
-    the same type.
+    The `absf` operation computes the absolute value. It takes one operand of
+    floating point type (i.e., scalar, tensor or vector) and returns one result
+    of the same type.
 
     Example:
 
     ```mlir
     // Scalar absolute value.
-    %a = math.abs %b : f64
+    %a = math.absf %b : f64
     ```
   }];
   let hasFolder = 1;
@@ -446,7 +446,7 @@ def Math_FloorOp : Math_FloatUnaryOp<"floor"> {
 
     ```mlir
     // Scalar floor value.
-    %a = math.floor %b : f64 
+    %a = math.floor %b : f64
     ```
   }];
 }
@@ -611,7 +611,7 @@ def Math_RsqrtOp : Math_FloatUnaryOp<"rsqrt"> {
     one result of the same type. It has no standard attributes.
 
     Example:
-  
+
     ```mlir
     // Scalar reciprocal square root value.
     %a = math.rsqrt %b : f64
