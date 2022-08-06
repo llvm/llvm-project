@@ -79,6 +79,13 @@ func.func @float32_ternary_vector(%a: vector<4xf32>, %b: vector<4xf32>,
   return
 }
 
+// CHECK-LABEL: @int_unary
+func.func @int_unary(%arg0: i32) {
+  // CHECK: spv.GL.SAbs %{{.*}}
+  %0 = math.absi %arg0 : i32
+  return
+}
+
 // CHECK-LABEL: @ctlz_scalar
 //  CHECK-SAME: (%[[VAL:.+]]: i32)
 func.func @ctlz_scalar(%val: i32) -> i32 {

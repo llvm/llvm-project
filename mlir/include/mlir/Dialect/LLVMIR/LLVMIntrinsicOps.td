@@ -40,6 +40,7 @@ class LLVM_CountZerosIntrinsicOp<string func, list<Trait> traits = []> :
   let arguments = (ins LLVM_Type:$in, I<1>:$zero_undefined);
 }
 
+def LLVM_AbsOp : LLVM_UnaryIntrinsicOp<"abs">;
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrinsicOp<"copysign">;
 def LLVM_CosOp : LLVM_UnaryIntrinsicOp<"cos">;
 def LLVM_ExpOp : LLVM_UnaryIntrinsicOp<"exp">;
