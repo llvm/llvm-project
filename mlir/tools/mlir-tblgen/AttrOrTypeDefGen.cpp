@@ -683,7 +683,7 @@ static const char *const dialectDynamicAttrParserDispatch = R"(
     ::mlir::Attribute genAttr;
     auto parseResult = parseOptionalDynamicAttr(attrTag, parser, genAttr);
     if (parseResult.has_value()) {
-      if (::mlir::succeeded(parseResult.getValue()))
+      if (::mlir::succeeded(parseResult.value()))
         return genAttr;
       return Attribute();
     }

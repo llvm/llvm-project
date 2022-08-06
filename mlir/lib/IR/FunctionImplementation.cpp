@@ -42,7 +42,7 @@ parseFunctionArgumentList(OpAsmParser &parser, bool allowVariadic,
         auto argPresent = parser.parseOptionalArgument(
             argument, /*allowType=*/true, /*allowAttrs=*/true);
         if (argPresent.has_value()) {
-          if (failed(argPresent.getValue()))
+          if (failed(argPresent.value()))
             return failure(); // Present but malformed.
 
           // Reject this if the preceding argument was missing a name.
