@@ -19,8 +19,9 @@ namespace {
 
 template <int> struct Shadow;
 
-struct WeirdIter : std::iterator<std::input_iterator_tag, Shadow<0>, Shadow<1>,
-                                 Shadow<2>, Shadow<3>> {};
+struct WeirdIter
+    : llvm::iterator_facade_base<WeirdIter, std::input_iterator_tag, Shadow<0>,
+                                 Shadow<1>, Shadow<2>, Shadow<3>> {};
 
 struct AdaptedIter : iterator_adaptor_base<AdaptedIter, WeirdIter> {};
 
