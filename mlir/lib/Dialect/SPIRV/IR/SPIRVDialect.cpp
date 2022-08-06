@@ -573,7 +573,7 @@ static ParseResult parseStructMemberDecorations(
   SMLoc offsetLoc = parser.getCurrentLocation();
   StructType::OffsetInfo offset = 0;
   OptionalParseResult offsetParseResult = parser.parseOptionalInteger(offset);
-  if (offsetParseResult.hasValue()) {
+  if (offsetParseResult.has_value()) {
     if (failed(*offsetParseResult))
       return failure();
 
@@ -590,7 +590,7 @@ static ParseResult parseStructMemberDecorations(
     return success();
 
   // If there was an offset, make sure to parse the comma.
-  if (offsetParseResult.hasValue() && parser.parseComma())
+  if (offsetParseResult.has_value() && parser.parseComma())
     return failure();
 
   // Check for spirv::Decorations.
