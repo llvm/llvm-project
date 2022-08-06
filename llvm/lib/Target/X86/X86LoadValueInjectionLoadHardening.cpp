@@ -331,8 +331,7 @@ X86LoadValueInjectionLoadHardeningPass::getGadgetGraph(
   using namespace rdf;
 
   // Build the Register Dataflow Graph using the RDF framework
-  TargetOperandInfo TOI{*TII};
-  DataFlowGraph DFG{MF, *TII, *TRI, MDT, MDF, TOI};
+  DataFlowGraph DFG{MF, *TII, *TRI, MDT, MDF};
   DFG.build();
   Liveness L{MF.getRegInfo(), DFG};
   L.computePhiInfo();
