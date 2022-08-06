@@ -6583,7 +6583,8 @@ cc_library(
 
 cc_library(
     name = "MlirTableGenMain",
-    srcs = ["tools/mlir-tblgen/mlir-tblgen.cpp"],
+    srcs = glob(["lib/Tools/mlir-tblgen/*.cpp"]),
+    hdrs = glob(["include/mlir/Tools/mlir-tblgen/*.h"]),
     includes = ["include"],
     deps = [
         ":TableGen",
