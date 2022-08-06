@@ -10,6 +10,9 @@
 #ifndef _LIBCPP___MEMORY_UNIQUE_PTR_H
 #define _LIBCPP___MEMORY_UNIQUE_PTR_H
 
+#include <__compare/compare_three_way.h>
+#include <__compare/compare_three_way_result.h>
+#include <__compare/three_way_comparable.h>
 #include <__config>
 #include <__functional/hash.h>
 #include <__functional/operations.h>
@@ -557,10 +560,12 @@ inline _LIBCPP_INLINE_VISIBILITY
 bool
 operator==(const unique_ptr<_T1, _D1>& __x, const unique_ptr<_T2, _D2>& __y) {return __x.get() == __y.get();}
 
+#if _LIBCPP_STD_VER <= 17
 template <class _T1, class _D1, class _T2, class _D2>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
 operator!=(const unique_ptr<_T1, _D1>& __x, const unique_ptr<_T2, _D2>& __y) {return !(__x == __y);}
+#endif
 
 template <class _T1, class _D1, class _T2, class _D2>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -588,6 +593,19 @@ inline _LIBCPP_INLINE_VISIBILITY
 bool
 operator>=(const unique_ptr<_T1, _D1>& __x, const unique_ptr<_T2, _D2>& __y) {return !(__x < __y);}
 
+
+#if _LIBCPP_STD_VER > 17
+template <class _T1, class _D1, class _T2, class _D2>
+requires three_way_comparable_with<typename unique_ptr<_T1, _D1>::pointer,
+                                   typename unique_ptr<_T2, _D2>::pointer>
+_LIBCPP_HIDE_FROM_ABI
+compare_three_way_result_t<typename unique_ptr<_T1, _D1>::pointer,
+                           typename unique_ptr<_T2, _D2>::pointer>
+operator<=>(const unique_ptr<_T1, _D1>& __x, const unique_ptr<_T2, _D2>& __y) {
+   return compare_three_way()(__x.get(), __y.get());
+}
+#endif
+
 template <class _T1, class _D1>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -596,6 +614,7 @@ operator==(const unique_ptr<_T1, _D1>& __x, nullptr_t) _NOEXCEPT
     return !__x;
 }
 
+#if _LIBCPP_STD_VER <= 17
 template <class _T1, class _D1>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -619,6 +638,7 @@ operator!=(nullptr_t, const unique_ptr<_T1, _D1>& __x) _NOEXCEPT
 {
     return static_cast<bool>(__x);
 }
+#endif // _LIBCPP_STD_VER <= 17
 
 template <class _T1, class _D1>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -685,6 +705,16 @@ operator>=(nullptr_t, const unique_ptr<_T1, _D1>& __x)
 {
     return !(nullptr < __x);
 }
+
+#if _LIBCPP_STD_VER > 17
+template <class _T1, class _D1>
+requires three_way_comparable<typename unique_ptr<_T1, _D1>::pointer>
+_LIBCPP_HIDE_FROM_ABI
+compare_three_way_result_t<typename unique_ptr<_T1, _D1>::pointer>
+operator<=>(const unique_ptr<_T1, _D1>& __x, nullptr_t) {
+   return compare_three_way()(__x.get(), static_cast<typename unique_ptr<_T1, _D1>::pointer>(nullptr));
+}
+#endif
 
 #if _LIBCPP_STD_VER > 11
 
