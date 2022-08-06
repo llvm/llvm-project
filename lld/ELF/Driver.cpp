@@ -591,11 +591,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (errorCount())
       return;
 
-    // The Target instance handles target-specific stuff, such as applying
-    // relocations or writing a PLT section. It also contains target-dependent
-    // values such as a default image base address.
-    target = getTarget();
-
     link(args);
   }
 
