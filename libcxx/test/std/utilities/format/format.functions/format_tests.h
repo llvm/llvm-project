@@ -86,15 +86,16 @@ struct std::formatter<status, CharT> {
   template <class Out>
   auto format(status s, basic_format_context<Out, CharT>& ctx) -> decltype(ctx.out()) {
     const char* names[] = {"foo", "bar", "foobar"};
-    char buffer[6];
-    const char* begin;
-    const char* end;
+    char buffer[7];
+    const char* begin = names[0];
+    const char* end = names[0];
     switch (type) {
     case 0:
       begin = buffer;
       buffer[0] = '0';
       buffer[1] = 'x';
       end = std::to_chars(&buffer[2], std::end(buffer), static_cast<uint16_t>(s), 16).ptr;
+      buffer[6] = '\0';
       break;
 
     case 1:
@@ -102,7 +103,9 @@ struct std::formatter<status, CharT> {
       buffer[0] = '0';
       buffer[1] = 'X';
       end = std::to_chars(&buffer[2], std::end(buffer), static_cast<uint16_t>(s), 16).ptr;
-      std::transform(static_cast<const char*>(&buffer[2]), end, &buffer[2], [](char c) { return std::toupper(c); });
+      std::transform(static_cast<const char*>(&buffer[2]), end, &buffer[2], [](char c) {
+        return static_cast<char>(std::toupper(c)); });
+      buffer[6] = '\0';
       break;
 
     case 2:
@@ -991,8 +994,8 @@ void format_test_char_as_integer(TestFunction check, ExceptionTest check_excepti
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_hex_lower_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // Test whether the hexadecimal letters are the proper case.
   // The precision is too large for float, so two tests are used.
@@ -1116,8 +1119,8 @@ void format_test_floating_point_hex_lower_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_hex_upper_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // Test whether the hexadecimal letters are the proper case.
   // The precision is too large for float, so two tests are used.
@@ -1241,8 +1244,8 @@ void format_test_floating_point_hex_upper_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_hex_lower_case_precision(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:14.6a}'">(SV("answer is '   1.000000p-2'"), F(0.25));
@@ -1355,8 +1358,8 @@ void format_test_floating_point_hex_lower_case_precision(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_hex_upper_case_precision(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:14.6A}'">(SV("answer is '   1.000000P-2'"), F(0.25));
@@ -1469,8 +1472,8 @@ void format_test_floating_point_hex_upper_case_precision(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_scientific_lower_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:15e}'">(SV("answer is '   2.500000e-01'"), F(0.25));
@@ -1592,8 +1595,8 @@ void format_test_floating_point_scientific_lower_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_scientific_upper_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:15E}'">(SV("answer is '   2.500000E-01'"), F(0.25));
@@ -1715,8 +1718,8 @@ void format_test_floating_point_scientific_upper_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_fixed_lower_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:11f}'">(SV("answer is '   0.250000'"), F(0.25));
@@ -1838,8 +1841,8 @@ void format_test_floating_point_fixed_lower_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_fixed_upper_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:11F}'">(SV("answer is '   0.250000'"), F(0.25));
@@ -1961,8 +1964,8 @@ void format_test_floating_point_fixed_upper_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_general_lower_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:7g}'">(SV("answer is '   0.25'"), F(0.25));
@@ -2087,8 +2090,8 @@ void format_test_floating_point_general_lower_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_general_upper_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:7G}'">(SV("answer is '   0.25'"), F(0.25));
@@ -2213,8 +2216,8 @@ void format_test_floating_point_general_upper_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_default(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:7}'">(SV("answer is '   0.25'"), F(0.25));
@@ -2330,8 +2333,8 @@ void format_test_floating_point_default(TestFunction check) {
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_default_precision(TestFunction check) {
 
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:7.6}'">(SV("answer is '   0.25'"), F(0.25));
