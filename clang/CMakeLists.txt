@@ -15,54 +15,6 @@ if(CLANG_BUILT_STANDALONE)
   set(CMAKE_CXX_STANDARD_REQUIRED YES)
   set(CMAKE_CXX_EXTENSIONS NO)
 
-  # Rely on llvm-config.
-  set(LLVM_CONFIG_OUTPUT)
-  if(LLVM_CONFIG)
-    set (LLVM_CONFIG_FOUND 1)
-    message(STATUS "Found LLVM_CONFIG as ${LLVM_CONFIG}")
-    message(DEPRECATION "Using llvm-config to detect the LLVM installation is \
-          deprecated.  The installed cmake files should be used \
-          instead.  CMake should be able to detect your LLVM install \
-          automatically, but you can also use LLVM_DIR to specify \
-          the path containing LLVMConfig.cmake.")
-    set(CONFIG_COMMAND ${LLVM_CONFIG}
-      "--includedir"
-      "--prefix"
-      "--src-root"
-      "--cmakedir"
-      "--bindir"
-      "--libdir"
-      "--assertion-mode"
-      )
-    execute_process(
-      COMMAND ${CONFIG_COMMAND}
-      RESULT_VARIABLE HAD_ERROR
-      OUTPUT_VARIABLE LLVM_CONFIG_OUTPUT
-    )
-    if(NOT HAD_ERROR)
-      string(REGEX REPLACE
-        "[ \t]*[\r\n]+[ \t]*" ";"
-        LLVM_CONFIG_OUTPUT ${LLVM_CONFIG_OUTPUT})
-    else()
-      string(REPLACE ";" " " CONFIG_COMMAND_STR "${CONFIG_COMMAND}")
-      message(STATUS "${CONFIG_COMMAND_STR}")
-      message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
-    endif()
-
-    list(GET LLVM_CONFIG_OUTPUT 0 MAIN_INCLUDE_DIR)
-    list(GET LLVM_CONFIG_OUTPUT 1 LLVM_OBJ_ROOT)
-    list(GET LLVM_CONFIG_OUTPUT 2 MAIN_SRC_DIR)
-    list(GET LLVM_CONFIG_OUTPUT 3 LLVM_CONFIG_CMAKE_DIR)
-    list(GET LLVM_CONFIG_OUTPUT 4 TOOLS_BINARY_DIR)
-    list(GET LLVM_CONFIG_OUTPUT 5 LIBRARY_DIR)
-    list(GET LLVM_CONFIG_OUTPUT 6 ENABLE_ASSERTIONS)
-
-    # Normalize LLVM_CMAKE_DIR. --cmakedir might contain backslashes.
-    # CMake assumes slashes as PATH.
-    file(TO_CMAKE_PATH ${LLVM_CONFIG_CMAKE_DIR} LLVM_CMAKE_DIR)
-  endif()
-
-
   if(NOT MSVC_IDE)
     set(LLVM_ENABLE_ASSERTIONS ${ENABLE_ASSERTIONS}
       CACHE BOOL "Enable assertions")
@@ -73,26 +25,12 @@ if(CLANG_BUILT_STANDALONE)
   find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
   list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
 
-  # We can't check LLVM_CONFIG here, because find_package(LLVM ...) also sets
-  # LLVM_CONFIG.
-  if (NOT LLVM_CONFIG_FOUND)
-    # Pull values from LLVMConfig.cmake.  We can drop this once the llvm-config
-    # path is removed.
-    set(INCLUDE_DIRS ${LLVM_INCLUDE_DIRS})
-    set(LLVM_OBJ_DIR "${LLVM_BINARY_DIR}")
-    # N.B. this is just a default value, the CACHE PATHs below can be overriden.
-    set(MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm")
-    set(TOOLS_BINARY_DIR "${LLVM_TOOLS_BINARY_DIR}")
-    set(LIBRARY_DIR "${LLVM_LIBRARY_DIR}")
-  else()
-    set(INCLUDE_DIRS "${LLVM_BINARY_DIR}/include" "${MAIN_INCLUDE_DIR}")
-  endif()
-
-  set(LLVM_INCLUDE_DIRS ${INCLUDE_DIRS} CACHE PATH "Path to llvm/include and any other header dirs needed")
-  set(LLVM_BINARY_DIR "${LLVM_OBJ_ROOT}" CACHE PATH "Path to LLVM build tree")
-  set(LLVM_MAIN_SRC_DIR "${MAIN_SRC_DIR}" CACHE PATH "Path to LLVM source tree")
-  set(LLVM_TOOLS_BINARY_DIR "${TOOLS_BINARY_DIR}" CACHE PATH "Path to llvm/bin")
-  set(LLVM_LIBRARY_DIR "${LIBRARY_DIR}" CACHE PATH "Path to llvm/lib")
+  # Turn into CACHE PATHs for overwritting
+  set(LLVM_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS} CACHE PATH "Path to llvm/include and any other header dirs needed")
+  set(LLVM_BINARY_DIR "${LLVM_BINARY_DIR}" CACHE PATH "Path to LLVM build tree")
+  set(LLVM_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../llvm" CACHE PATH "Path to LLVM source tree")
+  set(LLVM_TOOLS_BINARY_DIR "${LLVM_TOOLS_BINARY_DIR}" CACHE PATH "Path to llvm/bin")
+  set(LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE PATH "Path to llvm/lib")
 
   find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
     NO_DEFAULT_PATH)
@@ -777,7 +715,6 @@ if (CLANG_ENABLE_BOOTSTRAP)
   endif()
 
   if(BOOTSTRAP_CMAKE_SYSTEM_NAME)
-    set(${CLANG_STAGE}_CONFIG -DLLVM_CONFIG_PATH=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-config)
     set(${CLANG_STAGE}_TABLEGEN
       -DLLVM_TABLEGEN=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-tblgen
       -DCLANG_TABLEGEN=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-tblgen)
@@ -865,7 +802,6 @@ if (CLANG_ENABLE_BOOTSTRAP)
                 ${CLANG_BOOTSTRAP_CMAKE_ARGS}
                  -DCLANG_STAGE=${NEXT_CLANG_STAGE}
                 ${COMPILER_OPTIONS}
-                ${${CLANG_STAGE}_CONFIG}
                 ${${CLANG_STAGE}_TABLEGEN}
                 ${LTO_LIBRARY} ${verbose} ${PGO_OPT}
                 ${${CLANG_STAGE}_LINKER}
