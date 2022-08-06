@@ -505,7 +505,7 @@ template <class T, class D>
 template <class T1, class D1, class T2, class D2>
     bool operator==(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);
 template <class T1, class D1, class T2, class D2>
-    bool operator!=(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);
+    bool operator!=(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);    // removed in C++20
 template <class T1, class D1, class T2, class D2>
     bool operator<(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);
 template <class T1, class D1, class T2, class D2>
@@ -514,15 +514,21 @@ template <class T1, class D1, class T2, class D2>
     bool operator>(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);
 template <class T1, class D1, class T2, class D2>
     bool operator>=(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);
+template<class T1, class D1, class T2, class D2>
+  requires three_way_comparable_with<typename unique_ptr<T1, D1>::pointer,
+                                     typename unique_ptr<T2, D2>::pointer>
+  compare_three_way_result_t<typename unique_ptr<T1, D1>::pointer,
+                             typename unique_ptr<T2, D2>::pointer>
+    operator<=>(const unique_ptr<T1, D1>& x, const unique_ptr<T2, D2>& y);      // C++20
 
 template <class T, class D>
     bool operator==(const unique_ptr<T, D>& x, nullptr_t) noexcept;
 template <class T, class D>
-    bool operator==(nullptr_t, const unique_ptr<T, D>& y) noexcept;
+    bool operator==(nullptr_t, const unique_ptr<T, D>& y) noexcept;     // removed in C++20
 template <class T, class D>
-    bool operator!=(const unique_ptr<T, D>& x, nullptr_t) noexcept;
+    bool operator!=(const unique_ptr<T, D>& x, nullptr_t) noexcept;     // removed in C++20
 template <class T, class D>
-    bool operator!=(nullptr_t, const unique_ptr<T, D>& y) noexcept;
+    bool operator!=(nullptr_t, const unique_ptr<T, D>& y) noexcept;     // removed in C++20
 
 template <class T, class D>
     bool operator<(const unique_ptr<T, D>& x, nullptr_t);
@@ -540,6 +546,10 @@ template <class T, class D>
     bool operator>=(const unique_ptr<T, D>& x, nullptr_t);
 template <class T, class D>
     bool operator>=(nullptr_t, const unique_ptr<T, D>& y);
+template<class T, class D>
+  requires three_way_comparable<typename unique_ptr<T, D>::pointer>
+  compare_three_way_result_t<typename unique_ptr<T, D>::pointer>
+    operator<=>(const unique_ptr<T, D>& x, nullptr_t);                          // C++20
 
 class bad_weak_ptr
     : public std::exception

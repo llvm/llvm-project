@@ -158,7 +158,7 @@
 "`P1878R1 <https://wg21.link/P1878R1>`__","LWG","Constraining Readable Types","Belfast","|Complete|","15.0"
 "`P1892R1 <https://wg21.link/P1892R1>`__","LWG","Extended locale-specific presentation specifiers for std::format","Belfast","|Complete|","14.0"
 "`P1902R1 <https://wg21.link/P1902R1>`__","LWG","Missing feature-test macros 2018-2019","Belfast","* *",""
-"`P1959R0 <https://wg21.link/P1959R0>`__","LWG","Remove std::weak_equality and std::strong_equality","Belfast","* *",""
+"`P1959R0 <https://wg21.link/P1959R0>`__","LWG","Remove std::weak_equality and std::strong_equality","Belfast","|Nothing To Do|",""
 "`P1960R0 <https://wg21.link/P1960R0>`__","LWG","NB Comment Changes Reviewed by SG1","Belfast","* *",""
 "`P1961R0 <https://wg21.link/P1961R0>`__","LWG","Harmonizing the definitions of total order for pointers","Belfast","* *",""
 "`P1965R0 <https://wg21.link/P1965R0>`__","LWG","Blanket Wording for Specifying ""Hidden Friends""","Belfast","* *",""
