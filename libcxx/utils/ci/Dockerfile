@@ -55,34 +55,34 @@ RUN locale-gen
 # LLVM 15, we still need to have Clang 12 in this Docker image because the LLVM
 # 14 release branch CI uses it. The tip-of-trunk CI will never use Clang 12,
 # though.
-ENV LLVM_LATEST_VERSION=14
+ENV LLVM_HEAD_VERSION=16
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
 RUN wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
-# TODO Use the apt.llvm.org version after branching to LLVM 15
-RUN apt-get update && apt-get install -y clang-$(($LLVM_LATEST_VERSION - 2))
-#RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION - 2)) # for CI transitions
-RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION - 1)) # previous release
-RUN bash /tmp/llvm.sh $LLVM_LATEST_VERSION          # latest release
-RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION + 1)) # current ToT
+RUN bash /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 3)) # for CI transitions
+RUN bash /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 2)) # previous release
+RUN bash /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 1)) # latest release
+RUN bash /tmp/llvm.sh $LLVM_HEAD_VERSION          # current ToT
 
 # Make the latest version of Clang the "default" compiler on the system
-# TODO: In the future, all jobs should be using an explicitly-versioned version of Clang instead,
-#       and we can get rid of this entirely.
-RUN ln -fs /usr/bin/clang++-$LLVM_LATEST_VERSION /usr/bin/c++ && [ -e $(readlink /usr/bin/c++) ]
-RUN ln -fs /usr/bin/clang-$LLVM_LATEST_VERSION /usr/bin/cc && [ -e $(readlink /usr/bin/cc) ]
+# TODO: After branching for LLVM 16, all jobs will be using an
+#       explicitly-versioned version of Clang instead, so we can get rid of
+#       these symlinks.
+RUN ln -fs /usr/bin/clang++-14 /usr/bin/c++ && [ -e $(readlink /usr/bin/c++) ]
+RUN ln -fs /usr/bin/clang-14 /usr/bin/cc && [ -e $(readlink /usr/bin/cc) ]
 
-# Install clang-format
-RUN apt-get update && apt-get install -y clang-format-$LLVM_LATEST_VERSION
-RUN ln -s /usr/bin/clang-format-$LLVM_LATEST_VERSION /usr/bin/clang-format && [ -e $(readlink /usr/bin/clang-format) ]
-RUN ln -s /usr/bin/git-clang-format-$LLVM_LATEST_VERSION /usr/bin/git-clang-format && [ -e $(readlink /usr/bin/git-clang-format) ]
+# Install clang-format; always use the lastest stable branch.
+# TODO LLVM 16 remove hard-coded version 14 and the symlinks
+RUN apt-get update && apt-get install -y clang-format-$(($LLVM_HEAD_VERSION - 2)) clang-format-$(($LLVM_HEAD_VERSION - 1))
+RUN ln -s /usr/bin/clang-format-14 /usr/bin/clang-format && [ -e $(readlink /usr/bin/clang-format) ]
+RUN ln -s /usr/bin/git-clang-format-14 /usr/bin/git-clang-format && [ -e $(readlink /usr/bin/git-clang-format) ]
 
 # Install clang-tidy
-RUN apt-get update && apt-get install -y clang-tidy-$LLVM_LATEST_VERSION
-RUN ln -s /usr/bin/clang-tidy-$LLVM_LATEST_VERSION /usr/bin/clang-tidy && [ -e $(readlink /usr/bin/clang-tidy) ]
+# TODO LLVM 16 remove hard-coded version 14 and the symlink
+RUN apt-get update && apt-get install -y clang-tidy-$(($LLVM_HEAD_VERSION - 1)) clang-tidy-$LLVM_HEAD_VERSION clang-tidy-14
+RUN ln -s /usr/bin/clang-tidy-14 /usr/bin/clang-tidy && [ -e $(readlink /usr/bin/clang-tidy) ]
 
 # Install clang-tools
-RUN apt-get update && apt-get install -y clang-tools-$LLVM_LATEST_VERSION
-RUN ln -s /usr/bin/clang-query-$LLVM_LATEST_VERSION /usr/bin/clang-query && [ -e $(readlink /usr/bin/clang-query) ]
+RUN apt-get update && apt-get install -y clang-tools-$(($LLVM_HEAD_VERSION - 1)) clang-tools-$LLVM_HEAD_VERSION
 
 # Install the most recent GCC, like clang install the previous version as a transition.
 ENV GCC_LATEST_VERSION=12
