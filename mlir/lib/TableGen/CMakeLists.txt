@@ -17,6 +17,7 @@ llvm_add_library(MLIRTableGen STATIC
   Constraint.cpp
   Dialect.cpp
   Format.cpp
+  GenInfo.cpp
   Interfaces.cpp
   Operator.cpp
   Pass.cpp
