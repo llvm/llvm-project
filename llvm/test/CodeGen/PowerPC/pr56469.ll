@@ -11,11 +11,11 @@ define void @callee(float  %a, float  %b, float  %c, float  %d, float  %e, float
 ; CHECK-NEXT:    stwu 1, -16(1)
 ; CHECK-NEXT:    lfs 1, 24(1)
 ; CHECK-NEXT:    lis 3, .L.str@ha
-; CHECK-NEXT:    lfs 2, 32(1)
+; CHECK-NEXT:    lfs 2, 28(1)
 ; CHECK-NEXT:    la 3, .L.str@l(3)
-; CHECK-NEXT:    lfs 3, 40(1)
+; CHECK-NEXT:    lfs 3, 32(1)
 ; CHECK-NEXT:    creqv 6, 6, 6
-; CHECK-NEXT:    lfs 4, 48(1)
+; CHECK-NEXT:    lfs 4, 36(1)
 ; CHECK-NEXT:    bl printf
 ; CHECK-NEXT:    lwz 0, 20(1)
 ; CHECK-NEXT:    addi 1, 1, 16

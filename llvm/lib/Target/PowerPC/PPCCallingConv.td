@@ -206,13 +206,8 @@ def CC_PPC32_SVR4_Common : CallingConv<[
   
   CCIfType<[i32], CCAssignToStack<4, 4>>,
   
-  // Floats are stored in double precision format, thus they have the same
-  // alignment and size as doubles.
-  // With SPE floats are stored as single precision, so have alignment and
-  // size of int.
-  CCIfType<[f32,f64], CCIfNotSubtarget<"hasSPE()", CCAssignToStack<8, 8>>>,
-  CCIfType<[f32], CCIfSubtarget<"hasSPE()", CCAssignToStack<4, 4>>>,
-  CCIfType<[f64], CCIfSubtarget<"hasSPE()", CCAssignToStack<8, 8>>>,
+  CCIfType<[f32], CCAssignToStack<4, 4>>,
+  CCIfType<[f64], CCAssignToStack<8, 8>>,
 
   // Vectors and float128 get 16-byte stack slots that are 16-byte aligned.
   CCIfType<[v16i8, v8i16, v4i32, v4f32, v2f64, v2i64], CCAssignToStack<16, 16>>,
