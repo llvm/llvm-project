@@ -50,7 +50,7 @@ public:
   /// Access the internal ParseResult value.
   ParseResult value() const { return impl.value(); }
   ParseResult getValue() const { return impl.value(); }
-  ParseResult operator*() const { return getValue(); }
+  ParseResult operator*() const { return value(); }
 
 private:
   Optional<ParseResult> impl;
