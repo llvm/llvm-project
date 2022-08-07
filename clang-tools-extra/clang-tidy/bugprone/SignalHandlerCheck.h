@@ -60,7 +60,7 @@ private:
   clang::CallGraph CG;
 
   AsyncSafeFunctionSetKind AsyncSafeFunctionSet;
-  const llvm::StringSet<> ConformingFunctions;
+  llvm::StringSet<> ConformingFunctions;
 };
 
 } // namespace bugprone
