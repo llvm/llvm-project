@@ -232,7 +232,7 @@ void LinkerDriver::addBuffer(std::unique_ptr<MemoryBuffer> mb,
                        "import library?");
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     error(mbref.getBufferIdentifier() + ": unknown file type");
     break;

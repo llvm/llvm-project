@@ -1418,7 +1418,7 @@ DynamicSection<ELFT>::computeContents() {
                   r.sym->stOther & STO_AARCH64_VARIANT_PCS;
           }) != in.relaPlt->relocs.end())
         addInt(DT_AARCH64_VARIANT_PCS, 0);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       addInSec(DT_PLTGOT, *in.gotPlt);
       break;

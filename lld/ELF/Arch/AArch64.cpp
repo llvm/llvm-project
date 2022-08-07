@@ -375,7 +375,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
   case R_AARCH64_TLSDESC_ADR_PAGE21:
     checkInt(loc, val, 33, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_ADR_PREL_PG_HI21_NC:
     write32AArch64Addr(loc, val >> 12);
     break;
@@ -392,7 +392,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     // transformation by placing a R_AARCH64_JUMP26 relocation at the offset of
     // the instruction we want to patch.
     write32le(loc, 0x14000000);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_CALL26:
     checkInt(loc, val, 28, rel);
     or32le(loc, (val & 0x0FFFFFFC) >> 2);
@@ -436,19 +436,19 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_MOVW_UABS_G0:
     checkUInt(loc, val, 16, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G0_NC:
     or32le(loc, (val & 0xFFFF) << 5);
     break;
   case R_AARCH64_MOVW_UABS_G1:
     checkUInt(loc, val, 32, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G1_NC:
     or32le(loc, (val & 0xFFFF0000) >> 11);
     break;
   case R_AARCH64_MOVW_UABS_G2:
     checkUInt(loc, val, 48, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_MOVW_UABS_G2_NC:
     or32le(loc, (val & 0xFFFF00000000) >> 27);
     break;
@@ -459,7 +459,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_MOVW_SABS_G0:
   case R_AARCH64_TLSLE_MOVW_TPREL_G0:
     checkInt(loc, val, 17, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_MOVW_PREL_G0_NC:
   case R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
     writeSMovWImm(loc, val);
@@ -468,7 +468,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_MOVW_SABS_G1:
   case R_AARCH64_TLSLE_MOVW_TPREL_G1:
     checkInt(loc, val, 33, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_MOVW_PREL_G1_NC:
   case R_AARCH64_TLSLE_MOVW_TPREL_G1_NC:
     writeSMovWImm(loc, val >> 16);
@@ -477,7 +477,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
   case R_AARCH64_MOVW_SABS_G2:
   case R_AARCH64_TLSLE_MOVW_TPREL_G2:
     checkInt(loc, val, 49, rel);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_AARCH64_MOVW_PREL_G2_NC:
     writeSMovWImm(loc, val >> 32);
     break;
