@@ -32,8 +32,9 @@ public:
     virtual string message(int ev) const = 0;
 
     bool operator==(const error_category& rhs) const noexcept;
-    bool operator!=(const error_category& rhs) const noexcept;
-    bool operator<(const error_category& rhs) const noexcept;
+    bool operator!=(const error_category& rhs) const noexcept;              // removed in C++20
+    bool operator<(const error_category& rhs) const noexcept;               // removed in C++20
+    strong_ordering operator<=>(const error_category& rhs) const noexcept;  // C++20
 };
 
 const error_category& generic_category() noexcept;
@@ -147,6 +148,7 @@ template <> struct hash<std::error_condition>;
 #include <__errc>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
+#include <__memory/addressof.h>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -223,11 +225,20 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     bool operator==(const error_category& __rhs) const _NOEXCEPT {return this == &__rhs;}
 
+#if _LIBCPP_STD_VER > 17
+
+    _LIBCPP_HIDE_FROM_ABI
+    strong_ordering operator<=>(const error_category& __rhs) const noexcept {return compare_three_way()(this, std::addressof(__rhs));}
+
+#else // _LIBCPP_STD_VER > 17
+
     _LIBCPP_INLINE_VISIBILITY
     bool operator!=(const error_category& __rhs) const _NOEXCEPT {return !(*this == __rhs);}
 
     _LIBCPP_INLINE_VISIBILITY
     bool operator< (const error_category& __rhs) const _NOEXCEPT {return this < &__rhs;}
+
+#endif // _LIBCPP_STD_VER > 17
 
     friend class _LIBCPP_HIDDEN __do_message;
 };
