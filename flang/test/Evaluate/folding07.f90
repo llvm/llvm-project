@@ -280,5 +280,6 @@ module m
   logical, parameter :: test_set_exponent_0 = set_exponent(1., 0) == 0.5
   logical, parameter :: test_set_exponent_1 = set_exponent(1., 1) == 1.
   logical, parameter :: test_set_exponent_2 = set_exponent(1., 2) == 2.
+  logical, parameter :: test_set_exponent_min = set_exponent(1., -149) == 1.40129846432481707092372958328991613128026194187651577175706828388979108268586060148663818836212158203125e-45_4
 
 end module
