@@ -772,7 +772,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       break;
     case SHT_LLVM_SYMPART:
       ctx->hasSympart.store(true, std::memory_order_relaxed);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));
