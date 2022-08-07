@@ -20,8 +20,7 @@
 #include <cstddef>
 #include <cstdint>
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 
 class Symbol;
@@ -164,7 +163,6 @@ struct ILP32 {
 
 extern TargetInfo *target;
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif
