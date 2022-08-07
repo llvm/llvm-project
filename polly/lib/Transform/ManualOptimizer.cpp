@@ -189,7 +189,7 @@ private:
     }
 
     // If illegal, revert and remove the transformation to not risk re-trying
-    // indefintely.
+    // indefinitely.
     MDNode *NewLoopMD =
         makePostTransformationMetadata(Ctx, LoopMD, {TransPrefix}, {});
     BandAttr *Attr = getBandAttr(OrigBand);

@@ -4,7 +4,7 @@
 ; Thus, in order to save a scalar dependency, forward-optree replaces
 ; the use of %0 in Stmt_lor_end93 by a load from @c by changing the
 ; access find from a scalar access to a array accesses.
-; llvm.org/PR48034 decribes a crash caused by the mid-processing change.
+; llvm.org/PR48034 describes a crash caused by the mid-processing change.
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

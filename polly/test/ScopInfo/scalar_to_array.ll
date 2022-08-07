@@ -6,7 +6,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 @A = common global [1024 x float] zeroinitializer, align 8
 
-; Terminating loops without side-effects will be optimzied away, hence
+; Terminating loops without side-effects will be optimized away, hence
 ; detecting a scop would be pointless.
 ; CHECK-NOT: Function: empty
 ; Function Attrs: nounwind

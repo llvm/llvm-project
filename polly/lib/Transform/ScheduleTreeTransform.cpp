@@ -573,7 +573,7 @@ public:
 
     // Do not merge permutable band to avoid loosing the permutability property.
     // Cannot collapse even two permutable loops, they might be permutable
-    // individually, but not necassarily accross.
+    // individually, but not necassarily across.
     if (unsignedFromIslSize(Band.n_member()) > 1u && Band.permutable())
       return getBase().visitBand(Band);
 

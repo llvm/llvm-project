@@ -10,7 +10,7 @@
 ;      }
 ;    }
 
-; Verify that all changed memory access functions are corectly code generated.
+; Verify that all changed memory access functions are correctly code generated.
 ; At some point this did not work due to memory access identifiers not being
 ; unique within non-affine scop statements.
 
