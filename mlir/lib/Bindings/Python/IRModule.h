@@ -330,7 +330,7 @@ public:
   PyDiagnosticHandler(MlirContext context, pybind11::object callback);
   ~PyDiagnosticHandler();
 
-  bool isAttached() { return registeredID.hasValue(); }
+  bool isAttached() { return registeredID.has_value(); }
   bool getHadError() { return hadError; }
 
   /// Detaches the handler. Does nothing if not attached.
