@@ -51,7 +51,11 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
   Ctx->getMemoryManager().allocate(
       Ctx->getJITLinkDylib(), *G,
       [S = std::move(Self)](AllocResult AR) mutable {
-        S->linkPhase2(std::move(S), std::move(AR));
+        // FIXME: Once MSVC implements c++17 order of evaluation rules for calls
+        // this can be simplified to
+        //          S->linkPhase2(std::move(S), std::move(AR));
+        auto *TmpSelf = S.get();
+        TmpSelf->linkPhase2(std::move(S), std::move(AR));
       });
 }
 
@@ -87,7 +91,10 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
       dbgs() << "No external symbols for " << G->getName()
              << ". Proceeding immediately with link phase 3.\n";
     });
-    Self->linkPhase3(std::move(Self), AsyncLookupResult());
+    // FIXME: Once MSVC implements c++17 order of evaluation rules for calls
+    // this can be simplified. See below.
+    auto &TmpSelf = *Self;
+    TmpSelf.linkPhase3(std::move(Self), AsyncLookupResult());
     return;
   }
 
@@ -99,11 +106,20 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
 
   // We're about to hand off ownership of ourself to the continuation. Grab a
   // pointer to the context so that we can call it to initiate the lookup.
+  //
+  // FIXME: Once MSVC implements c++17 order of evaluation rules for calls this
+  // can be simplified to:
+  //
+  // Ctx->lookup(std::move(UnresolvedExternals),
+  //             [Self=std::move(Self)](Expected<AsyncLookupResult> Result) {
+  //               Self->linkPhase3(std::move(Self), std::move(Result));
+  //             });
   Ctx->lookup(std::move(ExternalSymbols),
               createLookupContinuation(
                   [S = std::move(Self)](
                       Expected<AsyncLookupResult> LookupResult) mutable {
-                    S->linkPhase3(std::move(S), std::move(LookupResult));
+                    auto &TmpSelf = *S;
+                    TmpSelf.linkPhase3(std::move(S), std::move(LookupResult));
                   }));
 }
 
@@ -148,7 +164,11 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
     return abandonAllocAndBailOut(std::move(Self), std::move(Err));
 
   Alloc->finalize([S = std::move(Self)](FinalizeResult FR) mutable {
-    S->linkPhase4(std::move(S), std::move(FR));
+    // FIXME: Once MSVC implements c++17 order of evaluation rules for calls
+    // this can be simplified to
+    //          S->linkPhase2(std::move(S), std::move(AR));
+    auto *TmpSelf = S.get();
+    TmpSelf->linkPhase4(std::move(S), std::move(FR));
   });
 }
 
