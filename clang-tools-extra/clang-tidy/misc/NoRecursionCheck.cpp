@@ -60,7 +60,7 @@ public:
   size_type count(const T &V) const {
     if (isSmall()) {
       // Since the collection is small, just do a linear search.
-      return llvm::find(Vector, V) == Vector.end() ? 0 : 1;
+      return llvm::is_contained(Vector, V) ? 1 : 0;
     }
 
     return Set.count(V);
@@ -106,7 +106,7 @@ private:
   size_type count(const T &V) const {
     if (isSmall()) {
       // Since the collection is small, just do a linear search.
-      return llvm::find(Vector, V) == Vector.end() ? 0 : 1;
+      return llvm::is_contained(Vector, V) ? 1 : 0;
     }
     // Look-up in the Set.
     return Set.count(V);

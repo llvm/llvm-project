@@ -1618,9 +1618,7 @@ void SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
 
   if (can_parse) {
     if (auto *type = ResolveTypeUID(pdb_symbol.getSymIndexId())) {
-      auto result =
-          std::find(type_collection.begin(), type_collection.end(), type);
-      if (result == type_collection.end())
+      if (!llvm::is_contained(type_collection, type))
         type_collection.push_back(type);
     }
   }

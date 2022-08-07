@@ -80,7 +80,7 @@ void DuplicateIncludeCallbacks::InclusionDirective(
     bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
     StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
-  if (llvm::find(Files.back(), FileName) != Files.back().end()) {
+  if (llvm::is_contained(Files.back(), FileName)) {
     // We want to delete the entire line, so make sure that [Start,End] covers
     // everything.
     SourceLocation Start =
