@@ -398,7 +398,7 @@ static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
     return;
 
   // Generate random numbers between 10 and 99, which will line up nicely in
-  // debug output.  We're not worried about collisons here.
+  // debug output.  We're not worried about collisions here.
   LLVM_DEBUG(dbgs() << "V = "; V->dump());
   std::uniform_int_distribution<short> Dist(10, 99);
   SmallDenseMap<const Use *, short, 16> Order;

@@ -699,7 +699,7 @@ private:
   /// stating whether or not the two candidates are known at compile time to
   /// have the same TripCount. The second is the difference in the two
   /// TripCounts. This information can be used later to determine whether or not
-  /// peeling can be performed on either one of the candiates.
+  /// peeling can be performed on either one of the candidates.
   std::pair<bool, Optional<unsigned>>
   haveIdenticalTripCounts(const FusionCandidate &FC0,
                           const FusionCandidate &FC1) const {

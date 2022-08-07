@@ -354,7 +354,7 @@ bool HexagonDAGToDAGISel::SelectBrevLdIntrinsic(SDNode *IntN) {
   return false;
 }
 
-/// Generate a machine instruction node for the new circlar buffer intrinsics.
+/// Generate a machine instruction node for the new circular buffer intrinsics.
 /// The new versions use a CSx register instead of the K field.
 bool HexagonDAGToDAGISel::SelectNewCircIntrinsic(SDNode *IntN) {
   if (IntN->getOpcode() != ISD::INTRINSIC_W_CHAIN)

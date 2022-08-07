@@ -1379,7 +1379,7 @@ bool PPCMIPeephole::eliminateRedundantCompare() {
     bool IsPartiallyRedundant = (MBBtoMoveCmp != nullptr);
 
     // We cannot optimize an unsupported compare opcode or
-    // a mix of 32-bit and 64-bit comaprisons
+    // a mix of 32-bit and 64-bit comparisons
     if (!isSupportedCmpOp(CMPI1->getOpcode()) ||
         !isSupportedCmpOp(CMPI2->getOpcode()) ||
         is64bitCmpOp(CMPI1->getOpcode()) != is64bitCmpOp(CMPI2->getOpcode()))

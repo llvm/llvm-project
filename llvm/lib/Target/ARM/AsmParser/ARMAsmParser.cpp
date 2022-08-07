@@ -302,7 +302,7 @@ class ARMAsmParser : public MCTargetAsmParser {
     ITInst.addOperand(MCOperand::createImm(ITState.Mask));
     Out.emitInstruction(ITInst, getSTI());
 
-    // Emit the conditonal instructions
+    // Emit the conditional instructions
     assert(PendingConditionalInsts.size() <= 4);
     for (const MCInst &Inst : PendingConditionalInsts) {
       Out.emitInstruction(Inst, getSTI());

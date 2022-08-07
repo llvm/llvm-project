@@ -2127,7 +2127,7 @@ bool HexagonInstrInfo::isComplex(const MachineInstr &MI) const {
          !isMemOp(MI) && !MI.isBranch() && !MI.isReturn() && !MI.isCall();
 }
 
-// Return true if the instruction is a compund branch instruction.
+// Return true if the instruction is a compound branch instruction.
 bool HexagonInstrInfo::isCompoundBranchInstr(const MachineInstr &MI) const {
   return getType(MI) == HexagonII::TypeCJ && MI.isBranch();
 }

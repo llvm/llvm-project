@@ -540,7 +540,7 @@ checkOuterLoopInsts(FlattenInfo &FI,
       // they make a net difference of zero.
       if (IterationInstructions.count(&I))
         continue;
-      // The uncoditional branch to the inner loop's header will turn into
+      // The unconditional branch to the inner loop's header will turn into
       // a fall-through, so adds no cost.
       BranchInst *Br = dyn_cast<BranchInst>(&I);
       if (Br && Br->isUnconditional() &&

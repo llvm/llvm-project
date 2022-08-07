@@ -3259,7 +3259,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     MVT VT = Op.getSimpleValueType();
     SDLoc DL(Op);
     if (Subtarget.hasStdExtZbp()) {
-      // Convert BSWAP/BITREVERSE to GREVI to enable GREVI combinining.
+      // Convert BSWAP/BITREVERSE to GREVI to enable GREVI combining.
       // Start with the maximum immediate value which is the bitwidth - 1.
       unsigned Imm = VT.getSizeInBits() - 1;
       // If this is BSWAP rather than BITREVERSE, clear the lower 3 bits.
