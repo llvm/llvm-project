@@ -1492,12 +1492,10 @@ using has_fold_trait =
 template <typename T>
 using detect_has_fold_trait = llvm::is_detected<has_fold_trait, T>;
 /// Trait to check if T provides any `foldTrait` method.
-/// NOTE: This should use std::disjunction when C++17 is available.
 template <typename T>
 using detect_has_any_fold_trait =
-    std::conditional_t<bool(detect_has_fold_trait<T>::value),
-                       detect_has_fold_trait<T>,
-                       detect_has_single_result_fold_trait<T>>;
+    std::disjunction<detect_has_fold_trait<T>,
+                     detect_has_single_result_fold_trait<T>>;
 
 /// Returns the result of folding a trait that implements a `foldTrait` function
 /// that is specialized for operations that have a single result.
@@ -1543,10 +1541,7 @@ foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
 template <typename... Ts>
 static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
                                 SmallVectorImpl<OpFoldResult> &results) {
-  bool anyFolded = false;
-  (void)std::initializer_list<int>{
-      (anyFolded |= succeeded(foldTrait<Ts>(op, operands, results)), 0)...};
-  return success(anyFolded);
+  return success((succeeded(foldTrait<Ts>(op, operands, results)) | ...));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1581,10 +1576,7 @@ verifyTrait(Operation *) {
 /// Given a set of traits, return the result of verifying the given operation.
 template <typename... Ts>
 LogicalResult verifyTraits(Operation *op) {
-  LogicalResult result = success();
-  (void)std::initializer_list<int>{
-      (result = succeeded(result) ? verifyTrait<Ts>(op) : failure(), 0)...};
-  return result;
+  return success((succeeded(verifyTrait<Ts>(op)) && ...));
 }
 
 /// Verify the given trait if it provides a region verifier.
@@ -1604,12 +1596,7 @@ verifyRegionTrait(Operation *) {
 /// given operation.
 template <typename... Ts>
 LogicalResult verifyRegionTraits(Operation *op) {
-  (void)op;
-  LogicalResult result = success();
-  (void)std::initializer_list<int>{
-      (result = succeeded(result) ? verifyRegionTrait<Ts>(op) : failure(),
-       0)...};
-  return result;
+  return success((succeeded(verifyRegionTrait<Ts>(op)) && ...));
 }
 } // namespace op_definition_impl
 
@@ -1695,7 +1682,7 @@ public:
       llvm::report_fatal_error(
           "Attempting to attach an interface to an unregistered operation " +
           ConcreteType::getOperationName() + ".");
-    (void)std::initializer_list<int>{(checkInterfaceTarget<Models>(), 0)...};
+    (checkInterfaceTarget<Models>(), ...);
     info->attachInterface<Models...>();
   }
 
