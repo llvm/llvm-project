@@ -255,6 +255,12 @@ bool IsHostAssociated(const Symbol &symbol, const Scope &scope) {
       GetProgramUnitOrBlockConstructContaining(scope));
 }
 
+bool IsHostAssociatedIntoSubprogram(const Symbol &symbol, const Scope &scope) {
+  return DoesScopeContain(
+      &GetProgramUnitOrBlockConstructContaining(FollowHostAssoc(symbol)),
+      GetProgramUnitContaining(scope));
+}
+
 bool IsInStmtFunction(const Symbol &symbol) {
   if (const Symbol * function{symbol.owner().symbol()}) {
     return IsStmtFunction(*function);

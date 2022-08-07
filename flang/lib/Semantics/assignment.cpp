@@ -103,7 +103,7 @@ static const char *WhyBaseObjectIsSuspicious(
     const Symbol &x, const Scope &scope) {
   // See C1594, first paragraph.  These conditions enable checks on both
   // left-hand and right-hand sides in various circumstances.
-  if (IsHostAssociated(x, scope)) {
+  if (IsHostAssociatedIntoSubprogram(x, scope)) {
     return "host-associated";
   } else if (IsUseAssociated(x, scope)) {
     return "USE-associated";
