@@ -1349,7 +1349,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // of the TLS block. Therefore, in the case of R_PPC64_DTPREL34 we first
     // need to subtract that value then fallthrough to the general case.
     val -= dynamicThreadPointerOffset;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_PPC64_PCREL34:
   case R_PPC64_GOT_PCREL34:
   case R_PPC64_GOT_TLSGD_PCREL34:

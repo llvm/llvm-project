@@ -311,7 +311,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
     // Otherwise we need to interwork if STT_FUNC Symbol has bit 0 set (Thumb).
     if (s.isFunc() && expr == R_PC && (s.getVA() & 1))
       return true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_ARM_CALL: {
     uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
     return !inBranchRange(type, branchAddr, dst + a);
@@ -322,7 +322,7 @@ bool ARM::needsThunk(RelExpr expr, RelType type, const InputFile *file,
     // Otherwise we need to interwork if STT_FUNC Symbol has bit 0 clear (ARM).
     if (expr == R_PLT_PC || (s.isFunc() && (s.getVA() & 1) == 0))
       return true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_ARM_THM_CALL: {
     uint64_t dst = (expr == R_PLT_PC) ? s.getPltVA() : s.getVA();
     return !inBranchRange(type, branchAddr, dst + a);
@@ -550,7 +550,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write32le(loc, 0xeb000000 | (read32le(loc) & 0x00ffffff));
     // fall through as BL encoding is shared with B
   }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_ARM_JUMP24:
   case R_ARM_PC24:
   case R_ARM_PLT32:
@@ -617,7 +617,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     }
   }
     // Fall through as rest of encoding is the same as B.W
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_ARM_THM_JUMP24:
     // Encoding B  T4, BL T1, BLX T2: Val = S:I1:I2:imm10:imm11:0
     checkInt(loc, val, 25, rel);
@@ -809,7 +809,7 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
                               ((lo & 0x7ff) << 1));  // imm11:0
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case R_ARM_THM_JUMP24: {
     // Encoding B T4, BL T1, BLX T2: A = S:I1:I2:imm10:imm11:0
     // I1 = NOT(J1 EOR S), I2 = NOT(J2 EOR S)
