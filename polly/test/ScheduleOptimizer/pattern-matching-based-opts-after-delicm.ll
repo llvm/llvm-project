@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly \
 ; RUN: -polly-pattern-matching-based-opts=true \
 ; RUN: -polly-optree -polly-delicm -polly-simplify \
-; RUN: -polly-opt-isl -debug < %s 2>&1 \
+; RUN: -polly-opt-isl -polly-tc-opt=true -debug < %s 2>&1 \
 ; RUN: | FileCheck %s
 ; REQUIRES: asserts
 
@@ -10,6 +10,36 @@
 ; is not through the original memory access, but trough a PHI node that was
 ; delicmed. This test covers the polybench 2mm and 3mm cases.
 ;
+; This test case generates the following schedule, which contains filters:
+;
+; domain: "{ Stmt_for_body8[i0, i1, i2]  : 0 <= i0 <= 1599 and
+;                                          0 <= i1 <= 1799 and
+;                                          0 <= i2 <= 2199;
+;            Stmt_for_body3[i0, i1] :      0 <= i0 <= 1599 and
+;                                          0 <= i1 <= 1799;
+;            Stmt_for_body3_last[i0, i1] : 0 <= i0 <= 1599 and
+;                                          0 <= i1 <= 1799 }"
+; child:
+;  sequence:
+;  - filter: "{ Stmt_for_body3[i0, i1] }"
+;    child:
+;      schedule: "[{ Stmt_for_body3[i0, i1] -> [(i0)] }, { Stmt_for_body3[i0, i1] -> [(i1)] }]"
+;      permutable: 1
+;      coincident: [ 1, 1 ]
+;  - filter: "{ Stmt_for_body3_last[i0, i1] }"
+;    child:
+;      schedule: "[{ Stmt_for_body3_last[i0, i1] -> [(i0)] }, { Stmt_for_body3_last[i0, i1] -> [(i1)] }]"
+;      permutable: 1
+;      coincident: [ 1, 1 ]
+;  - filter: "{ Stmt_for_body8[i0, i1, i2] }"
+;    child:
+;      schedule: "[{ Stmt_for_body8[i0, i1, i2] -> [(i0)] },
+;                  { Stmt_for_body8[i0, i1, i2] -> [(i1)] },
+;                  { Stmt_for_body8[i0, i1, i2] -> [(i2)] }]"
+;      permutable: 1
+;      coincident: [ 1, 1, 0 ]
+;
+; CHECK: The tensor contraction pattern was detected
 ; CHECK: The matrix multiplication pattern was detected
 ;
 

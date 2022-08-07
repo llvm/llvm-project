@@ -13,10 +13,13 @@
 #include "polly/ScopInfo.h"
 #include "polly/ScopPass.h"
 #include "polly/Simplify.h"
+#include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLTools.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -126,6 +129,24 @@ static cl::opt<int> PollyPatternMatchingNcQuotient(
              "macro-kernel, by Nr, the parameter of the micro-kernel"),
     cl::Hidden, cl::init(256), cl::cat(PollyCategory));
 
+static cl::opt<bool>
+    PMBasedTCOpts("polly-tc-opt",
+                  cl::desc("Perform optimizations of tensor contractions based "
+                           "on pattern matching"),
+                  cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<bool>
+    PMBasedMMMOpts("polly-matmul-opt",
+                   cl::desc("Perform optimizations of matrix multiplications "
+                            "based on pattern matching"),
+                   cl::init(true), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+static cl::opt<int> OptComputeOut(
+    "polly-tc-dependences-computeout",
+    cl::desc("Bound the dependence analysis by a maximal amount of "
+             "computational steps (0 means no bound)"),
+    cl::Hidden, cl::init(500000), cl::ZeroOrMore, cl::cat(PollyCategory));
+
 namespace {
 /// Parameters of the micro kernel.
 ///
@@ -158,6 +179,83 @@ struct MatMulInfoTy {
   int i = -1;
   int j = -1;
   int k = -1;
+};
+
+/// Parameters of the tensor contraction operands.
+///
+/// A general d-dimensional tensor T ∈ R ^ Nu0 x ... x Nud−1 can be defined
+/// as the set of scalar elements indexed by the set of indices u0 ... ud,
+///
+/// T ≡ {Anu0...nud−1 ∈ R | (u0,...,ud−1) ∈ Nu0 x ... x Nud−1}.
+///
+/// Let A, B, and C be dA, dB, and dC-dimensional tensors, respectively.
+/// Let the free and the contracted indices of the tensor A be grouped into
+/// two bundles I = i0...ir−1 and P = p0...pt−1, respectively. Similarly,
+/// the free and the contracted indices of B are grouped into bundles
+/// J = j0..js−1 and P and the free indices of C are grouped into
+/// bundles I and J.
+///
+/// Tensor contraction (TC) of tensors A, B into tensor C can be represented as
+/// C(shuffle(I,J))=∑α·A(shuffle(I,P))·B(shuffle(P,J))+β·C(shuffle(I,J)),
+/// where ∑ is a summation over all contracted indices of P,
+/// α, β ∈ R, Npi is the length of the tensor dimension that corresponds
+/// to the index pi, A(shuffle(I, P)), B(shuffle(P, J)), C(shuffle(I, J)) are
+/// accesses to tensors A, B, C, respectively,
+/// shuffle(I, J), shuffle(I, P), and shuffle(P, J) are permutations of
+/// the enclosed indices.
+///
+/// Multiplication of C(shuffle(I,J)) by β can be moved into a different SCoP
+/// statement by loop distribution, which is done by the isl scheduler.
+//  If β is not equal to one, the optimization of TC of Polly requires
+/// such a transformation.
+///
+/// TCInfoTy contains parameters, which describe access relations that represent
+/// operands of the tensor contraction.
+struct TCInfoTy {
+  /// @{
+  /// Memory accesses that represent reading from tensors, which are operands of
+  /// the tensor contraction.
+  MemoryAccess *A = nullptr;
+  MemoryAccess *B = nullptr;
+  /// @}
+
+  /// @{
+  /// Memory accesses that represent reading from and writing into the tensor,
+  /// which contains the result of the tensor contraction.
+  MemoryAccess *ReadFromC = nullptr;
+  MemoryAccess *WriteToC = nullptr;
+  /// @}
+
+  /// @{
+  /// Input dimensions of the schedule space, which represent free
+  /// indices of tensors.
+  SmallDenseSet<int> I;
+  SmallDenseSet<int> J;
+  /// @}
+
+  /// Input dimension of the schedule space, which represents contracted
+  /// indices of tensors.
+  SmallDenseSet<int> P;
+
+  /// @{
+  /// Sizes of tensor dimensions for corresponding input dimensions of
+  /// the schedule space. The size of the tensor dimension can be larger than
+  /// the size of the corresponding input dimension of the schedule space.
+  /// This does not correspond to a tensor contraction. However, such a pattern
+  /// will be optimized by the transformation.
+  SmallVector<int> DimensionSizes;
+  SmallVector<int> ADimensions;
+  SmallVector<int> BDimensions;
+  SmallVector<int> CDimensions;
+  /// @}
+
+  /// @{
+  /// Permutations of indices of I, J, and P, which describe operands of
+  /// the tensor contraction and its result.
+  SmallVector<int> OrderedI;
+  SmallVector<int> OrderedJ;
+  SmallVector<int> OrderedP;
+  /// @}
 };
 
 /// Create an isl::union_set, which describes the option of the form
@@ -1007,11 +1105,7 @@ static bool isMatrMultPattern(isl::schedule_node Node, const Dependences *D,
                               MatMulInfoTy &MMI) {
   auto PartialSchedule = isl::manage(
       isl_schedule_node_band_get_partial_schedule_union_map(Node.get()));
-  Node = Node.child(0);
-  auto LeafType = isl_schedule_node_get_type(Node.get());
-  Node = Node.parent();
-  if (LeafType != isl_schedule_node_leaf ||
-      isl_schedule_node_band_n_member(Node.get()) < 3 ||
+  if (isl_schedule_node_band_n_member(Node.get()) < 3 ||
       Node.get_schedule_depth().release() != 0 ||
       isl_union_map_n_map(PartialSchedule.get()) != 1)
     return false;
@@ -1021,14 +1115,720 @@ static bool isMatrMultPattern(isl::schedule_node Node, const Dependences *D,
   return false;
 }
 
+/// Get the dimension size.
+///
+/// Return the size of the dimension @p Pos, which is obtained from @p SAI.
+/// Return -1 in the case of the first dimension of a multi-dimensional array,
+/// since the ScopArrayInfo class does not carry size information.
+///
+/// @param SAI The information about the array.
+/// @param Pos The position of the dimension.
+/// @return The size of the dimension.
+static int getDimSize(const ScopArrayInfo *SAI, unsigned Pos) {
+  if (Pos == 0)
+    return -1;
+  const llvm::SCEV *SCEVDimSize = SAI->getDimensionSize(Pos);
+  assert(SCEVDimSize);
+  auto *ConstantDimSize = dyn_cast<const SCEVConstant>(SCEVDimSize);
+  assert(ConstantDimSize);
+  auto *IntDimSize = dyn_cast<ConstantInt>(ConstantDimSize->getValue());
+  assert(IntDimSize);
+  return IntDimSize->getSExtValue();
+}
+
+/// Check whether the access relation has the specified form.
+///
+/// Check that the access relation @p AccMap has the form T[I0, …, In], where
+/// indexes I0, …, In are specified by @p Dimensions.
+///
+/// @param Domain     The domain of the access relation.
+/// @param AccMap     The access relation to be checked.
+/// @param Dimensions The permutation of the subset of the input dimensions.
+/// @return True if @p AccMap has the expected form and false,
+///         otherwise.
+static bool isCorrectAccessMap(isl::set Domain, isl::map AccMap,
+                               ArrayRef<int> Dimensions) {
+  isl::space Space = AccMap.get_space();
+  if (unsignedFromIslSize(Space.dim(isl::dim::out)) != Dimensions.size())
+    return false;
+
+  // Create an access relation of the following form:
+  // [I0, …, Im] -> [Il, …, In], where indexes
+  // Il, …, In are specified by @p Dimensions.
+  isl::map PossibleTensor = isl::map::universe(Space);
+  unsigned DimInSize = unsignedFromIslSize(Space.dim(isl::dim::in));
+  for (unsigned i = 0; i < Dimensions.size(); i++) {
+    const int InPos = Dimensions[i];
+    if ((InPos >= static_cast<int>(DimInSize)) || (InPos < 0))
+      return false;
+    PossibleTensor =
+        PossibleTensor.equate(isl::dim::in, InPos, isl::dim::out, i);
+  }
+
+  AccMap = AccMap.intersect_domain(Domain);
+  PossibleTensor = PossibleTensor.intersect_domain(Domain);
+
+  // If AccMap != PossibleTensor here (the two maps have been gisted at
+  // this point), it means that the writes are not complete, or in other
+  // words, it is a Partial write and Partial writes must be rejected.
+  return AccMap.is_equal(PossibleTensor);
+}
+
+/// Check whether the access represents the tensor contraction operand.
+///
+/// Check that the access relation @p AccMap has the form T[i1, …, in].
+/// Obtained indexes i1, …, in, their sizes and their permutation are stored
+/// into @p IndexSet, @p DimensionSizes, and @p Dimensions, respectively.
+///
+/// @param Domain         The domain of the access relation.
+/// @param AccMap         The access relation to be checked.
+/// @param IndexSet       The subset of the input dimensions.
+/// @param DimensionSizes Sizes of the input dimensions of @p Dimensions.
+/// @param Dimensions     The permutation of the subset of the input dimensions.
+/// @return True if @p AccMap has the expected form and false,
+///         otherwise.
+static bool isTCOperandAcc(isl::set Domain, isl::map AccMap,
+                           SmallDenseSet<int> &IndexSet,
+                           SmallVectorImpl<int> &DimensionSizes,
+                           SmallVectorImpl<int> &Dimensions) {
+  isl::id Id = AccMap.get_tuple_id(isl::dim::out);
+  const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
+  assert(SAI && "AccMap should represent memory access");
+
+  // Fix values of output dimensions with respect to their positions.
+  // In the case of the tensor contraction, values of output dimensions are
+  // fixed and form a permutation of a subset of values of input dimensions.
+  //
+  // For example, in the case of Stmt[i][j][k] -> A[k][i], which represents
+  // the operand of the tensor contraction, we get the following map by fixing
+  // the output dimensions Stmt[1][j][0] -> A[0][1].
+  //
+  // We store the permutation of the subset of the input dimensions {2, 0} into
+  // @p Dimensions.
+  //
+  // The obtained permutation and the isCorrectAccessMap function are used to
+  // check whether the access relation @p AccMap represents the tensor
+  // contraction operand. For example, in the case of
+  // Stmt[i][j][k] -> A[i-1][j+1], we get Stmt[1][0][k] -> A[0][1] and,
+  // consequently, {1, 0}, which is rejected by isCorrectAccessMap,
+  // since it corresponds to Stmt[i][j][k] -> A[j][i].
+  isl::map CheckMap = isl::manage(AccMap.copy());
+  unsigned OutDimNum = unsignedFromIslSize(CheckMap.dim(isl::dim::out));
+  for (unsigned i = 0; i < OutDimNum; i++)
+    CheckMap = CheckMap.fix_si(isl::dim::out, i, i);
+
+  // Try to obtain the permutation and sizes of corresponding input dimensions.
+  Dimensions.assign(OutDimNum, -1);
+  for (unsigned i : rangeIslSize(0, CheckMap.dim(isl::dim::in))) {
+    isl::val Val = getConstant(CheckMap, isl::dim::in, i);
+    if (!Val.is_int())
+      continue;
+    int OutPos = -1;
+    llvm::APInt ValAPInt = APIntFromVal(Val);
+    if (ValAPInt.isSignedIntN(32))
+      OutPos = ValAPInt.getSExtValue();
+    if ((OutPos < 0) || (OutPos >= static_cast<int>(OutDimNum)) ||
+        IndexSet.count(i))
+      return false;
+    IndexSet.insert(i);
+    Dimensions[OutPos] = i;
+    if (DimensionSizes[i] <= 0)
+      DimensionSizes[i] = getDimSize(SAI, OutPos);
+  }
+
+  return isCorrectAccessMap(Domain, AccMap, Dimensions);
+}
+
+/// Find the intersection of two sets.
+///
+/// Find the intersection of the set @p A and the set @p B.
+///
+/// @param A, B Sets to intersect.
+/// @return The set intersection.
+static SmallDenseSet<int> intersect(const SmallDenseSet<int> &A,
+                                    const SmallDenseSet<int> &B) {
+  SmallDenseSet<int> Intersection = A;
+  set_intersect(Intersection, B);
+  return Intersection;
+}
+
+/// Check whether the set is a superset.
+///
+/// Check that the set @p A is a superset of @p B.
+///
+/// @param A, B Sets to be checked.
+/// @return True if the set A is a superset of B.
+static bool isSuperset(const SmallDenseSet<int> &A,
+                       const SmallDenseSet<int> &B) {
+  return intersect(A, B).size() == B.size();
+}
+
+/// Find the union of two sets.
+///
+/// Find the union of the set @p A and the set @p B.
+///
+/// @param A, B Sets to unite.
+/// @return The set union.
+static SmallDenseSet<int> unite(const SmallDenseSet<int> &A,
+                                const SmallDenseSet<int> &B) {
+  SmallDenseSet<int> Union = A;
+  set_union(Union, B);
+  return Union;
+}
+
+/// Determine the access that writes to the tensor, which contains
+/// the result of the tensor contraction.
+///
+/// @param Domain        The domain of the statement.
+/// @param Stmt          The statement, which writes to memory.
+/// @param TCI           The information about the tensor contraction.
+/// @param IandJIndexSet The set, which contains free indexes of tensors.
+/// @return The determined MemoryAccess, or nullptr if there is no necessary
+///         access within the SCoP.
+static MemoryAccess *getWriteAccess(isl::set Domain, ScopStmt *Stmt,
+                                    TCInfoTy &TCI,
+                                    SmallDenseSet<int> &IandJIndexSet) {
+  TCI.WriteToC = nullptr;
+  SmallVector<MemoryAccess *, 32> Accesses = getAccessesInOrder(*Stmt);
+  for (MemoryAccess *MemA : reverse(Accesses)) {
+    // A TC-like does not contain write scalar memory accesses
+    if (!MemA->isLatestArrayKind())
+      return nullptr;
+    // The last memory access should be a write memory access.
+    if (!MemA->isWrite())
+      return nullptr;
+
+    isl::map AccMap = MemA->getLatestAccessRelation();
+    if (!isTCOperandAcc(Domain, AccMap, IandJIndexSet, TCI.DimensionSizes,
+                        TCI.CDimensions))
+      return nullptr;
+
+    return MemA;
+  }
+  return nullptr;
+}
+
+/// Determine an access, which reads elements of an operand of the tensor
+/// contraction
+///
+/// @param MemAccessPtr  The access, which reads elements of the tensor.
+/// @param IndexSet      The set, which contains indexes of the tensors.
+/// @param IandJIndexSet The set, which contains free indexes of tensors.
+/// @param Dimensions    The permutation of the subset of the input dimensions.
+/// @param TCI           The information about the tensor contraction.
+/// @return True if the memory access @p MemAccessPtr corresponds
+///         to the tensor contraction.
+static bool setReadAccess(MemoryAccess *MemAccessPtr,
+                          const SmallDenseSet<int> &IndexSet,
+                          const SmallDenseSet<int> &IandJIndexSet,
+                          ArrayRef<int> Dimensions, TCInfoTy &TCI) {
+  if (!TCI.A) {
+    // Probably IndexSet is a union of I and P sets.
+    if (!isSuperset(IndexSet, TCI.P))
+      return false;
+
+    // Obtain the set I.
+    TCI.I = set_difference(IndexSet, TCI.P);
+    if (!isSuperset(IandJIndexSet, TCI.I))
+      return false;
+
+    // Obtain the set J.
+    TCI.J = set_difference(IandJIndexSet, TCI.I);
+
+    // Set the first operand of the tensor contraction.
+    TCI.A = MemAccessPtr;
+    llvm::replace(TCI.ADimensions, TCI.ADimensions.begin(),
+                  TCI.ADimensions.end(), Dimensions.begin(), Dimensions.end());
+    return true;
+  }
+
+  if (!TCI.B) {
+    // IndexSet should be a union of J and P sets.
+    if (unite(TCI.P, TCI.J) != IndexSet)
+      return false;
+
+    // Set the second operand of the tensor contraction.
+    TCI.B = MemAccessPtr;
+    llvm::replace(TCI.BDimensions, TCI.BDimensions.begin(),
+                  TCI.BDimensions.end(), Dimensions.begin(), Dimensions.end());
+    return true;
+  }
+
+  return false;
+}
+
+/// Check that all memory accesses of the statement, except from the last
+/// one, are read memory accesses, which read elements of operands of the tensor
+/// contraction and its result.
+///
+/// @param Domain        The domain of the statement.
+/// @param Stmt          The statement, which writes to memory.
+/// @param TCI           The information about the tensor contraction.
+/// @param IandJIndexSet The set, which contains free indexes of tensors.
+/// @return True if all read memory accesses of the statement @p Stmt correspond
+///         to the tensor contraction.
+static bool setReadAccesses(isl::set Domain, ScopStmt *Stmt, TCInfoTy &TCI,
+                            SmallDenseSet<int> &IandJIndexSet) {
+  TCI.A = nullptr;
+  TCI.B = nullptr;
+  TCI.ReadFromC = nullptr;
+  SmallVector<MemoryAccess *, 32> Accesses = getAccessesInOrder(*Stmt);
+  for (auto *MemA = Accesses.begin(); *MemA != TCI.WriteToC; MemA++) {
+    MemoryAccess *MemAccessPtr = *MemA;
+
+    // All memory accesses, except from the last one, should be read memory
+    // accesses.
+    if (MemAccessPtr->isWrite())
+      return false;
+
+    isl::map AccMap = MemAccessPtr->getLatestAccessRelation();
+
+    if (!MemAccessPtr->isLatestArrayKind()) {
+      // Check whether the scalar read memory access is not partial.
+      if (!Domain.is_subset(AccMap.domain()))
+        return false;
+      continue;
+      return false;
+    }
+
+    // There is only one memory access, which reads elements of the result of
+    // the tensor contraction.
+    if (AccMap.is_equal(TCI.WriteToC->getLatestAccessRelation())) {
+      if (TCI.ReadFromC)
+        return false;
+      TCI.ReadFromC = MemAccessPtr;
+      continue;
+    }
+
+    SmallVector<int> Dimensions;
+    SmallDenseSet<int> IndexSet;
+    if (!isTCOperandAcc(Domain, AccMap, IndexSet, TCI.DimensionSizes,
+                        Dimensions))
+      return false;
+
+    if (!setReadAccess(MemAccessPtr, IndexSet, IandJIndexSet, Dimensions, TCI))
+      return false;
+  }
+
+  // Check that there are read memory accesses, which read elements of operands
+  // of the tensor contraction and its result.
+  return TCI.ReadFromC && TCI.A && TCI.B;
+}
+
+/// Check accesses to operands of the tensor contraction.
+///
+/// Check that accesses of the SCoP statement, which corresponds to
+/// the partial schedule @p PartialSchedule, represent accesses
+/// to the non-scalar operands of the tensor contraction.
+///
+/// @param  Domain          The domain of the SCoP statement.
+/// @param  PartialSchedule The partial schedule of the SCoP statement.
+/// @param  TCI             Parameters of the tensor contraction operands.
+/// @return                 True if the corresponding SCoP statement
+///                         represents tensor contraction and false,
+///                         otherwise.
+static bool containsOnlyTCAcc(isl::set Domain, isl::map PartialSchedule,
+                              TCInfoTy &TCI) {
+  isl::id InputDimsId = PartialSchedule.get_tuple_id(isl::dim::in);
+  ScopStmt *Stmt = static_cast<ScopStmt *>(InputDimsId.get_user());
+
+  // In region statements, the order of memory accesses execution is not
+  // predictable at compile-time.
+  if ((Stmt->size() <= 1) || Stmt->isRegionStmt())
+    return false;
+
+  unsigned DimNum = unsignedFromIslSize(PartialSchedule.dim(isl::dim::in));
+  TCI.DimensionSizes.resize(DimNum);
+  SmallDenseSet<int> IandJIndexSet;
+
+  TCI.WriteToC = getWriteAccess(Domain, Stmt, TCI, IandJIndexSet);
+  if (!TCI.WriteToC)
+    return false;
+
+  if (intersect(IandJIndexSet, TCI.P).size() != 0)
+    return false;
+
+  if (!setReadAccesses(Domain, Stmt, TCI, IandJIndexSet))
+    return false;
+
+  return true;
+}
+
+/// Check that dependency corresponds to the tensor contraction carried over
+/// loop dimension @p Dim.
+///
+/// Check that the dependency has the form
+/// S(..., ki, max(k(i + 1)), ..., max(kn), ...) ->
+/// S(..., ki + 1, min(k(i + 1)), ..., min(kn), ...), where S is the SCoP
+/// statement. For this purpose, we analyze the set @p DepDelta, which
+/// represents the differences between image elements and domain elements of
+/// the corresponding map.
+///
+/// @param  DepDelta    The set contains the differences between image elements
+///                     and corresponding domain elements of the map, which
+///                     represents the dependency.
+/// @param  Dim         The position of the index ki.
+/// @param  BoundDeltas In the case of indexes of ki, the difference between
+///                     image elements and corresponding domain elements
+///                     corresponds to the difference between lexicographic
+///                     minimum and lexicographic maximum of the corresponding
+///                     dimension of the domain of the statement.
+/// @param  IndexSet    Obtained indexes ki, which describe the dependency.
+/// @return True if dependencies correspond to the tensor contraction
+///         and false, otherwise.
+static bool isReductionCarriedOverDim(isl::set DepDelta, unsigned Dim,
+                                      isl::pw_multi_aff BoundDeltas,
+                                      const SmallDenseSet<int> &IndexSet) {
+  isl::space Space = DepDelta.get_space();
+  isl::set Superset = isl::set::universe(Space);
+  for (unsigned i = 0; i < Dim; i += 1)
+    Superset = Superset.fix_si(isl::dim::set, i, 0);
+  Superset = Superset.fix_si(isl::dim::set, Dim, 1);
+
+  // Check that the difference between the image element and the domain element
+  // is equal to one in the case of the index ki. Image elements and
+  // corresponding domain elements should be equal in the case of positions,
+  // which are lower than the specified position.
+  if (!DepDelta.is_subset(Superset))
+    return false;
+
+  // Compute a set, which is used to analyze how values of
+  // the domain are related to the map that describes the dependency.
+  isl_pw_multi_aff *DepDeltaPW = isl_pw_multi_aff_from_set(DepDelta.copy());
+  BoundDeltas = BoundDeltas.add(isl::manage(DepDeltaPW));
+  isl_set *ComplementRawSet = isl_set_from_pw_multi_aff(BoundDeltas.release());
+  isl::set Complement = isl::manage(ComplementRawSet);
+
+  for (unsigned i : rangeIslSize(Dim + 1, DepDelta.dim(isl::dim::set))) {
+    if (!IndexSet.count(i)) {
+      // Check the difference between the image element and the domain element
+      // in the case of indexes, which do not describe the dependency.
+      if (DepDelta.plain_get_val_if_fixed(isl::dim::set, i).is_zero())
+        continue;
+      return false;
+    }
+
+    // In the case of other indexes, which describe the dependency,
+    // the difference between the image element and the domain element
+    // should be equal to the difference between lexicographic minimum and
+    // lexicographic maximum of the domain of the statement.
+    if (!Complement.plain_get_val_if_fixed(isl::dim::set, i).is_zero())
+      return false;
+  }
+
+  return true;
+}
+
+/// Check whether dependencies are over the complete domain.
+///
+/// In the case of the tensor contraction RAW, WAW, WAR dependencies
+/// have the form
+/// S(..., ki, max(k(i + 1)), ..., max(kn), ...) ->
+/// S(..., ki + 1, min(k(i + 1)), ..., min(kn), ...), where S is the SCoP
+/// statement. Consequently, the domain of the dependencies
+/// can be described as
+/// Domain / Domain ∩ S(…, max(kn),…) ∩ S(…, max(k(i + 1)),…),
+/// where Domain is the domain of the statement S.
+///
+/// For example, in the case of the following tensor contraction,
+/// corresponding domains will have the following form.
+///
+/// An example of the tensor contraction:
+/// for (i = 0; i < 1024; i++)
+///   for (j = 0; j < 1024; j++)
+///     for (l = 0; l < 64; ++l)
+///       for (w = 0; w < 64; ++w)
+///         C[i][j] += A[i][l][w] * B[w][j][l];
+///
+/// The domain of the statement:
+/// { S[i0, i1, i2, i3] : i0 >= 0 and i0 <= 1023 and
+///                       i1 >= 0 and i1 <= 1023 and
+///                       i2 >= 0 and i2 <= 63 and
+///                       i3 >= 0 and i3 <= 63 }
+///
+/// The domain of the dependencies:
+/// { S[i0, i1, i2, i3] : (i0 >= 0 and i0 <= 1023 and
+///                        i1 >= 0 and i1 <= 1023 and
+///                        i2 >= 0 and i2 <= 63 and
+///                        i3 >= 0 and i3 <= 62) or
+///                       (i3 = 63 and i0 >= 0 and i0 <= 1023 and
+///                        i1 >= 0 and i1 <= 1023 and
+///                        i2 >= 0 and i2 <= 62) }
+///
+/// @param  Domain       The domain of the statement.
+/// @param  DepsForStmt  RAW and RED dependencies for the statement.
+/// @param  UpperBound   The lexicographic maximum of the elements in
+///                      the @p Domain.
+/// @param  IndexSet     Obtained indexes ki, which describe the dependencies.
+/// @return True if dependencies are over the complete domain
+///         and false, otherwise.
+static bool areDepsOverCompleteDomain(isl::set Domain, isl::map DepsForStmt,
+                                      isl::pw_multi_aff UpperBound,
+                                      SmallDenseSet<int> &IndexSet) {
+  isl_set *UpperBoundRawSet = isl_set_from_pw_multi_aff(UpperBound.copy());
+  isl::set UpperBoundSet = isl::manage(UpperBoundRawSet);
+
+  isl::set DomainRed = isl::manage(Domain.copy());
+  for (const auto It : IndexSet) {
+    isl::val FixedVal = UpperBoundSet.plain_get_val_if_fixed(isl::dim::set, It);
+    if (FixedVal.is_nan())
+      return false;
+    DomainRed = isl::manage(
+        isl_set_fix_val(DomainRed.copy(), isl_dim_set, It, FixedVal.release()));
+  }
+  return DepsForStmt.domain().intersect(Domain).is_equal(
+      Domain.subtract(DomainRed));
+}
+
+/// Check that dependencies correspond to the tensor contraction.
+///
+/// Check that there are only true dependencies of the form
+/// S(..., ki, max(k(i + 1)), ..., max(kn), ...) ->
+/// S(..., ki + 1, min(k(i + 1)), ..., min(kn), ...), where S is the SCoP
+/// statement represented by @p Schedule. Such dependencies are produced by
+/// the tensor contraction. Obtained indexes ki are stored into @p IndexSet.
+///
+/// The form of anti and output dependencies is specified implicitly by
+/// the form the SCoP statement, which is checked by subsequent analysis.
+///
+/// @param  Schedule The schedule of the SCoP statement.
+/// @param  D        The SCoP dependencies.
+/// @param  Domain   The domain of the statement.
+/// @param  IndexSet Obtained indexes ki, which describe the dependencies.
+/// @return True if dependencies correspond to the tensor contraction
+///         and false, otherwise.
+static bool containsOnlyTcDeps(isl::map Schedule, const Dependences *D,
+                               SmallDenseSet<int> &IndexSet, isl::set Domain) {
+  IslMaxOperationsGuard MaxOpGuard(Schedule.ctx().get(), OptComputeOut);
+
+  isl::union_map Dep =
+      D->getDependences(Dependences::TYPE_RAW | Dependences::TYPE_RED);
+
+  isl::space DomainSpace = Schedule.get_space().domain();
+  isl::space Space = DomainSpace.map_from_domain_and_range(DomainSpace);
+  isl::map DepsForStmt = Dep.extract_map(Space);
+  isl::set DepDeltas = DepsForStmt.deltas();
+  isl::size DeltasDimNum = DepDeltas.dim(isl::dim::set);
+  isl::pw_multi_aff LowerBound = Domain.lexmin_pw_multi_aff();
+  isl::pw_multi_aff UpperBound = Domain.lexmax_pw_multi_aff();
+  isl::pw_multi_aff BoundDeltas = UpperBound.sub(LowerBound);
+
+  for (int i : reverse(rangeIslSize(0, DeltasDimNum))) {
+    // In the case of the tensor contraction, the difference between image
+    // elements and domain elements lies on a hyperplane where a dimension
+    // has the fixed value one.
+    isl::set Intersection = DepDeltas.fix_si(isl::dim::set, i, 1);
+    if (Intersection.is_empty())
+      continue;
+
+    if (!isReductionCarriedOverDim(Intersection, i, BoundDeltas, IndexSet))
+      return false;
+
+    IndexSet.insert(i);
+    DepDeltas = DepDeltas.subtract(Intersection);
+  }
+
+  // In the case of the tensor contraction, all dependencies should have
+  // the previously described form.
+  if ((unsignedFromIslSize(DeltasDimNum) == 0) || !DepDeltas.is_empty())
+    return false;
+
+  return areDepsOverCompleteDomain(Domain, DepsForStmt, UpperBound, IndexSet);
+}
+
+/// Check if the SCoP statement could probably be optimized with analytical
+/// modeling.
+///
+/// containsTCInfoTy tries to determine whether the following conditions
+/// are true:
+///
+/// 1. The last memory access modeling an array, MA1, represents writing to
+///    memory and has the form S(..., I, ..., J, ...) -> M(shuffle(I, J)),
+///    where S is the SCoP statement under consideration and shuffle(I, J)
+///    is a permutation of indexes of sets I and J.
+/// 2. There are only true dependencies of the form
+///    S(..., ki, max(k(i + 1)), ..., max(kn), ...) ->
+///    S(..., ki + 1, min(k(i + 1)), ..., min(kn), ...), where S is the SCoP
+///    statement represented by @p Schedule and ki are indexes of the set P.
+/// 3. SCoP contains an arbitrary number of reads from constants and only three
+///    access relations, MA2, MA3, and MA4 that represent reading from memory
+///    and have the form
+///    S(..., I, ..., P, ...) -> M(shuffle(I, P)),
+///    S(..., P, ..., J, ...) -> M(shuffle(J, P)),
+///    S(...) -> M(shuffle(I, J)), respectively.
+///
+/// @param  PartialSchedule The PartialSchedule that contains a SCoP statement
+///                         to check.
+/// @param  D               The SCoP dependencies.
+/// @param  TCI             Parameters of the tensor contraction operands.
+/// @param  Domain          The domain of the statement.
+/// @return True if dependencies and memory accesses correspond to the tensor
+///              contraction and false, otherwise.
+static bool containsTCInfoTy(isl::map PartialSchedule, const Dependences *D,
+                             TCInfoTy &TCI, isl::set Domain) {
+  if (!containsOnlyTcDeps(PartialSchedule, D, TCI.P, Domain))
+    return false;
+
+  // TODO: handle cases of scalar multiplication if needed.
+  if (TCI.P.size() == 0)
+    return false;
+
+  if (!containsOnlyTCAcc(Domain, PartialSchedule, TCI))
+    return false;
+
+  // TODO: handle cases of GEMV if needed.
+  if ((TCI.I.size() == 0) || (TCI.J.size() == 0))
+    return false;
+
+  return true;
+}
+
+/// Check if this node contains a partial schedule that could
+/// probably be optimized with analytical modeling.
+///
+/// isTCPattern is used to determine whether the SCoP represents a TC-like
+/// kernel [1], which is a perfectly nested set of loops, with a data usage
+/// pattern that is similar to that produced by the tensor contraction.
+///
+/// A TC-like kernel can be defined as follows:
+///
+/// 1. It satisfies the requirements of the polyhedral model.
+/// 2. Without loss of generality, it contains three nonempty bundles of
+///    one-dimensional for-loops with induction variables that are grouped into
+///    bundles I = i0...i(r-1), J = j0..j(s-1), and P = p0...p(t-1), and they
+///    are incremented by one.
+/// 3. The innermost loop body can be represented as a statement of the form
+///    C(shuffle(I, J)) = E(A(shuffle(I, P)), B(shuffle(P, J)),
+///    C(shuffle(I, J))), where A(shuffle(I, P)), B(shuffle(P, J)),
+///    C(shuffle(I, J)) are accesses to tensors A, B, C, respectively,
+///    shuffle(I, J), shuffle(I, P), and shuffle(P, J) are permutations of the
+///    enclosed indices, and E is an expression that contains reads from
+///    the tensors A, B, C, and an arbitrary number of reads from constants
+///    with respect to bundles I, J, and P.
+///
+/// TC can be considered as a particular case of a TC-like kernel.
+///
+/// The order of loops with indexes from P should be preserved. Otherwise,
+/// isTCPattern should check if a commutative operation is used.
+///
+/// isTCPattern performs the following steps to check whether the SCoP
+/// corresponds to a definition of a TC-like kernel:
+///
+/// 1. Checks that the node is the innermost band node.
+/// 2. Checks that the partial schedule contains only one statement.
+/// 3. Check that all ancestors of the node contain all band nodes for
+///    the statement and only mark nodes interleave such band nodes. This
+///    corresponds to a straightforward implementation of TC.
+/// 4. Analyses the dependencies to determine contraction dimensions.
+/// 5. Check that the last memory access modeling an array, represents writing
+///    to the result of the TC-like kernel.
+/// 6. Check that SCoP contains only three access relations that represent
+///    reading of the operands of the TC-like kernel and an arbitrary number of
+///    reads from constants.
+///
+/// [1] - Gareev R., Grosser T., Kruse M. High-Performance Generalized Tensor
+///       Operations: A Compiler-Oriented Approach // ACM Transactions
+///       Architecture and Code Optimization (TACO). 2018.
+///       Vol. 15, no. 3. P. 34:1–34:27. DOI: 10.1145/3235029.
+///
+/// If this is the case, we could logically represent tensors as matrices and
+/// apply algorithms, which are used to get close-to-peak performance of
+/// matrix multiplications in manually tuned BLAS libraries (e.g., BLIS).
+///
+/// @param Node The node to check.
+/// @param D    The SCoP dependencies.
+/// @param TCI  Parameters of the tensor contraction operands.
+static bool isTCPattern(isl::schedule_node Node, const Dependences *D,
+                        TCInfoTy &TCI) {
+  Node = Node.child(0);
+  isl::union_map PartialSchedule = Node.get_prefix_schedule_union_map();
+  isl::union_set Domain = Node.domain();
+  Node = Node.parent();
+
+  // The partial schedule should contain only one statement.
+  // TODO: This constraint should not be intrinsic to the algorithm.
+  if (isl_union_set_n_set(Domain.get()) != 1)
+    return false;
+
+  isl_schedule_node_type NodeType = isl_schedule_node_get_type(Node.get());
+
+  // Check that all ancestors of the node contain all band nodes for
+  // the statement, which represents the TC-like kernel, and only mark nodes
+  // interleave such band nodes. This corresponds to a straightforward
+  // implementation of TC with/without DeLICM applied.
+  //
+  // For example, this covers the matrix multiplication pattern after a full
+  // run of -polly-optree and -polly-delicm, where the write access is not
+  // through the original memory access, but trough a PHI node that was
+  // delicmed. Subsequently, such band nodes will be replaced by a single band
+  // node.
+  //
+  // The corresponding schedule can be the following, where Stmt_for_body8
+  // contains the matrix multiplication:
+  //
+  // domain: "{ Stmt_for_body8[i0, i1, i2]  : 0 <= i0 <= 1599 and
+  //                                          0 <= i1 <= 1799 and
+  //                                          0 <= i2 <= 2199;
+  //            Stmt_for_body3[i0, i1] :      0 <= i0 <= 1599 and
+  //                                          0 <= i1 <= 1799;
+  //            Stmt_for_body3_last[i0, i1] : 0 <= i0 <= 1599 and
+  //                                          0 <= i1 <= 1799 }"
+  // child:
+  //  sequence:
+  //  - filter: "{ Stmt_for_body3[i0, i1] }"
+  //    child:
+  //      schedule: "[{ Stmt_for_body3[i0, i1] -> [(i0)] },
+  //                  { Stmt_for_body3[i0, i1] -> [(i1)] }]"
+  //      permutable: 1
+  //      coincident: [ 1, 1 ]
+  //  - filter: "{ Stmt_for_body3_last[i0, i1] }"
+  //    child:
+  //      schedule: "[{ Stmt_for_body3_last[i0, i1] -> [(i0)] },
+  //                  { Stmt_for_body3_last[i0, i1] -> [(i1)] }]"
+  //      permutable: 1
+  //      coincident: [ 1, 1 ]
+  //  - filter: "{ Stmt_for_body8[i0, i1, i2] }"
+  //    child:
+  //      schedule: "[{ Stmt_for_body8[i0, i1, i2] -> [(i0)] },
+  //                  { Stmt_for_body8[i0, i1, i2] -> [(i1)] },
+  //                  { Stmt_for_body8[i0, i1, i2] -> [(i2)] }]"
+  //      permutable: 1
+  //      coincident: [ 1, 1, 0 ]
+  //
+  while (NodeType != isl_schedule_node_domain) {
+    if (NodeType == isl_schedule_node_filter) {
+      if (!Node.parent().isa<isl::schedule_node_sequence>() ||
+          !Node.parent().parent().isa<isl::schedule_node_domain>())
+        return false;
+      break;
+    }
+
+    if ((NodeType != isl_schedule_node_band) &&
+        (NodeType != isl_schedule_node_mark))
+      return false;
+
+    Node = Node.parent();
+    NodeType = isl_schedule_node_get_type(Node.get());
+  }
+
+  isl::map PartialScheduleMap = isl::map::from_union_map(PartialSchedule);
+  if (containsTCInfoTy(PartialScheduleMap, D, TCI, isl::set(Domain)))
+    return true;
+
+  return false;
+}
+
 } // namespace
 
 isl::schedule_node
 polly::tryOptimizeMatMulPattern(isl::schedule_node Node,
                                 const llvm::TargetTransformInfo *TTI,
                                 const Dependences *D) {
+  TCInfoTy TCI;
+  if (PMBasedTCOpts && isTCPattern(Node, D, TCI))
+    LLVM_DEBUG(dbgs() << "The tensor contraction pattern was detected\n");
   MatMulInfoTy MMI;
-  if (isMatrMultPattern(Node, D, MMI)) {
+  if (PMBasedMMMOpts && isMatrMultPattern(Node, D, MMI)) {
     LLVM_DEBUG(dbgs() << "The matrix multiplication pattern was detected\n");
     return optimizeMatMulPattern(Node, TTI, MMI);
   }
