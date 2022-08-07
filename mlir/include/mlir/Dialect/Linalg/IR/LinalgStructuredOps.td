@@ -202,8 +202,8 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [AttrSizedOperandSegments]> {
       };
     }
     std::string getLibraryCallName() {
-      return library_call() ?
-        library_call()->str() : "op_has_no_registered_library_name";
+      return getLibraryCall() ?
+        getLibraryCall()->str() : "op_has_no_registered_library_name";
     }
 
     static std::function<void(ImplicitLocOpBuilder &,
