@@ -796,7 +796,7 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
 
 Optional<unsigned> Merger::buildTensorExpFromLinalg(linalg::GenericOp op) {
   // Build the linalg semantics backward from yield.
-  Operation *yield = op.region().front().getTerminator();
+  Operation *yield = op.getRegion().front().getTerminator();
   assert(isa<linalg::YieldOp>(yield));
   return buildTensorExp(op, yield->getOperand(0));
 }
@@ -880,12 +880,12 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
   }
   // Something defined outside is invariant.
   Operation *def = v.getDefiningOp();
-  if (def->getBlock() != &op.region().front())
+  if (def->getBlock() != &op.getRegion().front())
     return addExp(kInvariant, v);
   // Construct index operations.
   if (def->getNumOperands() == 0) {
     if (auto indexOp = dyn_cast<linalg::IndexOp>(def))
-      return addExp(kIndex, indexOp.dim());
+      return addExp(kIndex, indexOp.getDim());
   }
   // Construct unary operations if subexpression can be built.
   if (def->getNumOperands() == 1) {
