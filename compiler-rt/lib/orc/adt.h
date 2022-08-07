@@ -58,10 +58,6 @@ private:
   size_type Size = 0;
 };
 
-inline std::ostream &operator<<(std::ostream &OS, std::string_view S) {
-  return OS.write(S.data(), S.size());
-}
-
 } // end namespace __orc_rt
 
 #endif // ORC_RT_ADT_H
