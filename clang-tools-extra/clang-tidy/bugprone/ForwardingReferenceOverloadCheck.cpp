@@ -44,11 +44,12 @@ AST_MATCHER(QualType, isEnableIf) {
   if (CheckTemplate(BaseType->getAs<TemplateSpecializationType>()))
     return true; // Case: enable_if_t< >.
   if (const auto *Elaborated = BaseType->getAs<ElaboratedType>()) {
-    if (const auto *Qualifier = Elaborated->getQualifier()->getAsType()) {
-      if (CheckTemplate(Qualifier->getAs<TemplateSpecializationType>())) {
-        return true; // Case: enable_if< >::type.
+    if (const auto *Q = Elaborated->getQualifier())
+      if (const auto *Qualifier = Q->getAsType()) {
+        if (CheckTemplate(Qualifier->getAs<TemplateSpecializationType>())) {
+          return true; // Case: enable_if< >::type.
+        }
       }
-    }
   }
   return false;
 }
