@@ -89,7 +89,7 @@ public:
 
   SmallPtrSetImplBase &operator=(const SmallPtrSetImplBase &) = delete;
 
-  LLVM_NODISCARD bool empty() const { return size() == 0; }
+  [[nodiscard]] bool empty() const { return size() == 0; }
   size_type size() const { return NumNonEmpty - NumTombstones; }
 
   void clear() {

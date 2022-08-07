@@ -174,7 +174,7 @@ public:
   }
 
   template <typename ElemT>
-  LLVM_NODISCARD ImmutableList<T> concat(ElemT &&Head, ImmutableList<T> Tail) {
+  [[nodiscard]] ImmutableList<T> concat(ElemT &&Head, ImmutableList<T> Tail) {
     // Profile the new list to see if it already exists in our cache.
     FoldingSetNodeID ID;
     void* InsertPos;
@@ -197,13 +197,13 @@ public:
   }
 
   template <typename ElemT>
-  LLVM_NODISCARD ImmutableList<T> add(ElemT &&Data, ImmutableList<T> L) {
+  [[nodiscard]] ImmutableList<T> add(ElemT &&Data, ImmutableList<T> L) {
     return concat(std::forward<ElemT>(Data), L);
   }
 
-  template <typename ...CtorArgs>
-  LLVM_NODISCARD ImmutableList<T> emplace(ImmutableList<T> Tail,
-                                          CtorArgs &&...Args) {
+  template <typename... CtorArgs>
+  [[nodiscard]] ImmutableList<T> emplace(ImmutableList<T> Tail,
+                                         CtorArgs &&...Args) {
     return concat(T(std::forward<CtorArgs>(Args)...), Tail);
   }
 

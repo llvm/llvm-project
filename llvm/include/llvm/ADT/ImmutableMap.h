@@ -95,13 +95,13 @@ public:
 
     ImmutableMap getEmptyMap() { return ImmutableMap(F.getEmptyTree()); }
 
-    LLVM_NODISCARD ImmutableMap add(ImmutableMap Old, key_type_ref K,
-                                    data_type_ref D) {
+    [[nodiscard]] ImmutableMap add(ImmutableMap Old, key_type_ref K,
+                                   data_type_ref D) {
       TreeTy *T = F.add(Old.Root.get(), std::pair<key_type, data_type>(K, D));
       return ImmutableMap(Canonicalize ? F.getCanonicalTree(T): T);
     }
 
-    LLVM_NODISCARD ImmutableMap remove(ImmutableMap Old, key_type_ref K) {
+    [[nodiscard]] ImmutableMap remove(ImmutableMap Old, key_type_ref K) {
       TreeTy *T = F.remove(Old.Root.get(), K);
       return ImmutableMap(Canonicalize ? F.getCanonicalTree(T): T);
     }

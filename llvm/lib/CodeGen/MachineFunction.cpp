@@ -306,7 +306,7 @@ bool MachineFunction::shouldSplitStack() const {
   return getFunction().hasFnAttribute("split-stack");
 }
 
-LLVM_NODISCARD unsigned
+[[nodiscard]] unsigned
 MachineFunction::addFrameInst(const MCCFIInstruction &Inst) {
   FrameInstructions.push_back(Inst);
   return FrameInstructions.size() - 1;

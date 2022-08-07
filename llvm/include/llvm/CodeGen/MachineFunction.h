@@ -1055,7 +1055,7 @@ public:
     return FrameInstructions;
   }
 
-  LLVM_NODISCARD unsigned addFrameInst(const MCCFIInstruction &Inst);
+  [[nodiscard]] unsigned addFrameInst(const MCCFIInstruction &Inst);
 
   /// Returns a reference to a list of symbols immediately following calls to
   /// _setjmp in the function. Used to construct the longjmp target table used
