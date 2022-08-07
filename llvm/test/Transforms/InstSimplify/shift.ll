@@ -345,8 +345,7 @@ define i32 @all_ones_left_right_not_same_shift(i32 %x, i32 %y) {
 
 define <vscale x 4 x i16> @lshr_scalable_overshift(<vscale x 4 x i16> %va) {
 ; CHECK-LABEL: @lshr_scalable_overshift(
-; CHECK-NEXT:    [[VC:%.*]] = lshr <vscale x 4 x i16> [[VA:%.*]], shufflevector (<vscale x 4 x i16> insertelement (<vscale x 4 x i16> poison, i16 16, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 4 x i16> [[VC]]
+; CHECK-NEXT:    ret <vscale x 4 x i16> poison
 ;
   %vc = lshr <vscale x 4 x i16> %va, shufflevector (<vscale x 4 x i16> insertelement (<vscale x 4 x i16> poison, i16 16, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer)
   ret <vscale x 4 x i16> %vc

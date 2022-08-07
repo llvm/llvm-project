@@ -1252,12 +1252,14 @@ static bool isPoisonShift(Value *Amount, const SimplifyQuery &Q) {
   if (Q.isUndefValue(C))
     return true;
 
-  // Shifting by the bitwidth or more is undefined.
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(C))
-    if (CI->getValue().uge(CI->getType()->getScalarSizeInBits()))
-      return true;
+  // Shifting by the bitwidth or more is poison. This covers scalars and
+  // fixed/scalable vectors with splat constants.
+  const APInt *AmountC;
+  if (match(C, m_APInt(AmountC)) && AmountC->uge(AmountC->getBitWidth()))
+    return true;
 
-  // If all lanes of a vector shift are undefined the whole shift is.
+  // Try harder for fixed-length vectors:
+  // If all lanes of a vector shift are poison, the whole shift is poison.
   if (isa<ConstantVector>(C) || isa<ConstantDataVector>(C)) {
     for (unsigned I = 0,
                   E = cast<FixedVectorType>(C->getType())->getNumElements();
