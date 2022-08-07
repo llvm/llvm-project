@@ -659,9 +659,8 @@ void MCJIT::notifyObjectLoaded(const object::ObjectFile &Obj,
       static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Obj.getData().data()));
   std::lock_guard<sys::Mutex> locked(lock);
   MemMgr->notifyObjectLoaded(this, Obj);
-  for (unsigned I = 0, S = EventListeners.size(); I < S; ++I) {
-    EventListeners[I]->notifyObjectLoaded(Key, Obj, L);
-  }
+  for (JITEventListener *EL : EventListeners)
+    EL->notifyObjectLoaded(Key, Obj, L);
 }
 
 void MCJIT::notifyFreeingObject(const object::ObjectFile &Obj) {

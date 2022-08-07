@@ -1097,9 +1097,9 @@ void X86FrameLowering::emitStackProbeInlineWindowsCoreCLR64(
     for (MachineInstr &MI : *LoopMBB) {
       MI.setFlag(MachineInstr::FrameSetup);
     }
-    for (MachineBasicBlock::iterator CMBBI = ContinueMBB->begin();
-         CMBBI != ContinueMBBI; ++CMBBI) {
-      CMBBI->setFlag(MachineInstr::FrameSetup);
+    for (MachineInstr &MI :
+         llvm::make_range(ContinueMBB->begin(), ContinueMBBI)) {
+      MI.setFlag(MachineInstr::FrameSetup);
     }
   }
 }
