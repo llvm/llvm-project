@@ -92,13 +92,16 @@ public:
   }
 
   constexpr bool has_value() const noexcept { return hasVal; }
-  constexpr bool hasValue() const noexcept { return hasVal; }
+  [[deprecated("Use has_value instead.")]] constexpr bool
+  hasValue() const noexcept {
+    return hasVal;
+  }
 
   T &value() &noexcept {
     assert(hasVal);
     return val;
   }
-  T &getValue() &noexcept {
+  [[deprecated("Use value instead.")]] T &getValue() &noexcept {
     assert(hasVal);
     return val;
   }
@@ -106,7 +109,8 @@ public:
     assert(hasVal);
     return val;
   }
-  constexpr T const &getValue() const &noexcept {
+  [[deprecated("Use value instead.")]] constexpr T const &
+  getValue() const &noexcept {
     assert(hasVal);
     return val;
   }
@@ -114,7 +118,7 @@ public:
     assert(hasVal);
     return std::move(val);
   }
-  T &&getValue() &&noexcept {
+  [[deprecated("Use value instead.")]] T &&getValue() &&noexcept {
     assert(hasVal);
     return std::move(val);
   }
@@ -203,13 +207,16 @@ public:
   }
 
   constexpr bool has_value() const noexcept { return hasVal; }
-  constexpr bool hasValue() const noexcept { return hasVal; }
+  [[deprecated("Use has_value instead.")]] constexpr bool
+  hasValue() const noexcept {
+    return hasVal;
+  }
 
   T &value() &noexcept {
     assert(hasVal);
     return val;
   }
-  T &getValue() &noexcept {
+  [[deprecated("Use value instead.")]] T &getValue() &noexcept {
     assert(hasVal);
     return val;
   }
@@ -217,7 +224,8 @@ public:
     assert(hasVal);
     return val;
   }
-  constexpr T const &getValue() const &noexcept {
+  [[deprecated("Use value instead.")]] constexpr T const &
+  getValue() const &noexcept {
     assert(hasVal);
     return val;
   }
@@ -225,7 +233,7 @@ public:
     assert(hasVal);
     return std::move(val);
   }
-  T &&getValue() &&noexcept {
+  [[deprecated("Use value instead.")]] T &&getValue() &&noexcept {
     assert(hasVal);
     return std::move(val);
   }
@@ -303,13 +311,19 @@ public:
   constexpr const T *getPointer() const { return &Storage.value(); }
   T *getPointer() { return &Storage.value(); }
   constexpr const T &value() const & { return Storage.value(); }
-  constexpr const T &getValue() const & { return Storage.value(); }
+  [[deprecated("Use value instead.")]] constexpr const T &getValue() const & {
+    return Storage.value();
+  }
   T &value() & { return Storage.value(); }
-  T &getValue() & { return Storage.value(); }
+  [[deprecated("Use value instead.")]] T &getValue() & {
+    return Storage.value();
+  }
 
   constexpr explicit operator bool() const { return has_value(); }
   constexpr bool has_value() const { return Storage.has_value(); }
-  constexpr bool hasValue() const { return Storage.has_value(); }
+  [[deprecated("Use has_value instead.")]] constexpr bool hasValue() const {
+    return Storage.has_value();
+  }
   constexpr const T *operator->() const { return getPointer(); }
   T *operator->() { return getPointer(); }
   constexpr const T &operator*() const & { return value(); }
@@ -333,7 +347,9 @@ public:
   }
 
   T &&value() && { return std::move(Storage.value()); }
-  T &&getValue() && { return std::move(Storage.value()); }
+  [[deprecated("Use value instead.")]] T &&getValue() && {
+    return std::move(Storage.value());
+  }
   T &&operator*() && { return std::move(Storage.value()); }
 
   template <typename U> T value_or(U &&alt) && {
