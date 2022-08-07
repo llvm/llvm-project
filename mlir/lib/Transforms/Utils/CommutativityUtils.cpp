@@ -119,7 +119,6 @@ struct CommutativeOperand {
     ancestorQueue.push(op);
     if (op)
       visitedAncestors.insert(op);
-    return;
   }
 
   /// Refresh the key.
@@ -136,7 +135,6 @@ struct CommutativeOperand {
     Operation *frontAncestor = ancestorQueue.front();
     AncestorKey frontAncestorKey(frontAncestor);
     key.push_back(frontAncestorKey);
-    return;
   }
 
   /// Pop the front ancestor, if any, from the queue and then push its adjacent
@@ -154,7 +152,6 @@ struct CommutativeOperand {
       if (!operandDefOp || !visitedAncestors.contains(operandDefOp))
         pushAncestor(operandDefOp);
     }
-    return;
   }
 };
 
