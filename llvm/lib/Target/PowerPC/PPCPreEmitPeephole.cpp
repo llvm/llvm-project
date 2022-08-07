@@ -291,7 +291,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
               !BBI->modifiesRegister(Pair.DefReg, TRI))
             continue;
 
-          // The use needs to be used in the address compuation and not
+          // The use needs to be used in the address computation and not
           // as the register being stored for a store.
           const MachineOperand *UseOp =
               hasPCRelativeForm(*BBI) ? &BBI->getOperand(2) : nullptr;

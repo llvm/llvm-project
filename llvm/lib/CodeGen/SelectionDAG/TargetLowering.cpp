@@ -397,7 +397,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
     }
   }
 
-  // Use the target specific return value for comparions lib calls.
+  // Use the target specific return value for comparison lib calls.
   EVT RetVT = getCmpLibcallReturnType();
   SDValue Ops[2] = {NewLHS, NewRHS};
   TargetLowering::MakeLibCallOptions CallOptions;
