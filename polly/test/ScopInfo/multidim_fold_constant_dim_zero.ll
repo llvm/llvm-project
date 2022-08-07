@@ -5,7 +5,7 @@
 ; This test case at some point crashed Polly due to a 'division by zero'
 ; when trying to fold the constant dimension into outer dimension.
 ; We verify that this scop is detected without crash. We also test the
-; output to undertand that the scop has been analyzed, but has also been
+; output to understand that the scop has been analyzed, but has also been
 ; invalidated due to the zero size dimension.
 
 ; CHECK: Assumed Context:
