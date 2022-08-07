@@ -313,7 +313,7 @@ class ReleaseWorkflow:
     def create_pull_request(self, owner:str, repo_name:str, branch:str) -> bool:
         """
         reate a pull request in `self.branch_repo_name`.  The base branch of the
-        pull request will be choosen based on the the milestone attached to
+        pull request will be chosen based on the the milestone attached to
         the issue represented by `self.issue_number`  For example if the milestone
         is Release 13.0.1, then the base branch will be release/13.x. `branch`
         will be used as the compare branch.
