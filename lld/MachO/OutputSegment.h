@@ -17,8 +17,7 @@
 #include <limits>
 #include <vector>
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 namespace segment_names {
 
@@ -72,7 +71,6 @@ void resetOutputSegments();
 
 OutputSegment *getOrCreateOutputSegment(StringRef name);
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

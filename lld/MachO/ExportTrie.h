@@ -14,8 +14,7 @@
 
 #include <vector>
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 struct TrieNode;
 class Symbol;
@@ -44,7 +43,6 @@ using TrieEntryCallback =
 
 void parseTrie(const uint8_t *buf, size_t size, const TrieEntryCallback &);
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

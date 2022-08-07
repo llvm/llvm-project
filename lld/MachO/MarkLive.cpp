@@ -15,8 +15,7 @@
 #include "mach-o/compact_unwind_encoding.h"
 #include "llvm/Support/TimeProfiler.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -288,5 +287,4 @@ void markLive() {
   marker->markTransitively();
 }
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho

@@ -17,9 +17,7 @@
 
 #include "llvm/Support/Endian.h"
 
-namespace lld {
-
-namespace structs {
+namespace lld::structs {
 
 struct nlist_64 {
   llvm::support::ulittle32_t n_strx;
@@ -44,8 +42,6 @@ struct entry_point_command {
   llvm::support::ulittle64_t stacksize;
 };
 
-} // namespace structs
-
-} // namespace lld
+} // namespace lld::structs
 
 #endif

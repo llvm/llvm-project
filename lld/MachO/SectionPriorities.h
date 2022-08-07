@@ -12,8 +12,7 @@
 #include "InputSection.h"
 #include "llvm/ADT/DenseMap.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 using SectionPair = std::pair<const InputSection *, const InputSection *>;
 
@@ -76,7 +75,6 @@ private:
 };
 
 extern PriorityBuilder priorityBuilder;
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif
