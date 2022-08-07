@@ -331,7 +331,7 @@ PlatformSP PlatformAppleSimulator::CreateInstance(
       }
 
       if (create) {
-        if (std::count(supported_os.begin(), supported_os.end(), triple.getOS()))
+        if (llvm::is_contained(supported_os, triple.getOS()))
           create = true;
 #if defined(__APPLE__)
         // Only accept "unknown" for the OS if the host is Apple and it
