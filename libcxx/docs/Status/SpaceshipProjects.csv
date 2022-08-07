@@ -17,7 +17,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[pairs.spec] <https://wg21.link/pairs.spec>`_,| `pair <https://reviews.llvm.org/D107721>`_,[expos.only.func],Kent Ross,|Complete|
 | `[syserr.errcat.nonvirtuals] <https://wg21.link/syserr.errcat.nonvirtuals>`_,| `error_category <https://reviews.llvm.org/D131363>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
 | `[syserr.compare] <https://wg21.link/syserr.compare>`_,"| `error_code <https://reviews.llvm.org/D131371>`_
-| `error_condition <https://reviews.llvm.org/D131371>`_",None,Adrian Vogelsgesang,|In Progress|
+| `error_condition <https://reviews.llvm.org/D131371>`_",None,Adrian Vogelsgesang,|Complete|
 | `[tuple.rel] <https://wg21.link/tuple.rel>`_,| `tuple <https://reviews.llvm.org/D108250>`_,[expos.only.func],Kent Ross,|Complete|
 "| `[optional.relops] <https://wg21.link/optional.relops>`_
 | `[optional.nullops] <https://wg21.link/optional.nullops>`_
