@@ -3063,7 +3063,7 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   // 1) If we know that we must execute the scalar epilogue, emit an
   //    unconditional branch.
   // 2) Otherwise, we must have a single unique exit block (due to how we
-  //    implement the multiple exit case).  In this case, set up a conditonal
+  //    implement the multiple exit case).  In this case, set up a conditional
   //    branch from the middle block to the loop scalar preheader, and the
   //    exit block.  completeLoopSkeleton will update the condition to use an
   //    iteration check, if required to decide whether to execute the remainder.

@@ -678,6 +678,9 @@ bool GotSection::isNeeded() const {
 }
 
 void GotSection::writeTo(uint8_t *buf) {
+  // On PPC64 .got may be needed but empty. Skip the write.
+  if (size == 0)
+    return;
   target->writeGotHeader(buf);
   relocateAlloc(buf, buf + size);
 }
@@ -1415,7 +1418,7 @@ DynamicSection<ELFT>::computeContents() {
                   r.sym->stOther & STO_AARCH64_VARIANT_PCS;
           }) != in.relaPlt->relocs.end())
         addInt(DT_AARCH64_VARIANT_PCS, 0);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       addInSec(DT_PLTGOT, *in.gotPlt);
       break;

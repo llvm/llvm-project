@@ -494,7 +494,7 @@ SymbolGraphSerializer::serializeAPIRecord(const RecordTy &Record) const {
   serializeObject(
       Obj, "location",
       serializeSourceLocation(Record.Location, /*IncludeFileURI=*/true));
-  serializeObject(Obj, "availbility",
+  serializeObject(Obj, "availability",
                   serializeAvailability(Record.Availability));
   serializeObject(Obj, "docComment", serializeDocComment(Record.Comment));
   serializeArray(Obj, "declarationFragments",

@@ -43,9 +43,6 @@ using namespace llvm;
 #include "AMDGPUGenInstrInfo.inc"
 
 namespace llvm {
-
-class AAResults;
-
 namespace AMDGPU {
 #define GET_D16ImageDimIntrinsics_IMPL
 #define GET_ImageDimIntrinsicTable_IMPL
@@ -2248,8 +2245,8 @@ SIInstrInfo::expandMovDPP64(MachineInstr &MI) const {
       }
     }
 
-    for (unsigned I = 3; I < MI.getNumExplicitOperands(); ++I)
-      MovDPP.addImm(MI.getOperand(I).getImm());
+    for (const MachineOperand &MO : llvm::drop_begin(MI.explicit_operands(), 3))
+      MovDPP.addImm(MO.getImm());
 
     Split[Part] = MovDPP;
     ++Part;

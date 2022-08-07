@@ -1931,7 +1931,7 @@ void InstrRefBasedLDV::produceMLocTransferFunction(
         Result.first->second = P;
     }
 
-    // Accumulate any bitmask operands into the clobberred reg mask for this
+    // Accumulate any bitmask operands into the clobbered reg mask for this
     // block.
     for (auto &P : MTracker->Masks) {
       BlockMasks[CurBB].clearBitsNotInMask(P.first->getRegMask(), BVWords);

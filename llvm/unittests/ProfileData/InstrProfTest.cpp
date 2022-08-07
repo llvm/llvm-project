@@ -23,7 +23,7 @@
 
 using namespace llvm;
 
-LLVM_NODISCARD static ::testing::AssertionResult
+[[nodiscard]] static ::testing::AssertionResult
 ErrorEquals(instrprof_error Expected, Error E) {
   instrprof_error Found;
   std::string FoundMsg;

@@ -58,8 +58,8 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
   GenericOp genericOp =
       rewriter.create<GenericOp>(linalgOp.getLoc(), types, inputOperands,
                                  outputOperands, indexingMaps, iterators);
-  rewriter.inlineRegionBefore(linalgOp->getRegion(0), genericOp.region(),
-                              genericOp.region().begin());
+  rewriter.inlineRegionBefore(linalgOp->getRegion(0), genericOp.getRegion(),
+                              genericOp.getRegion().begin());
   rewriter.replaceOp(linalgOp, genericOp->getResults());
   return genericOp;
 }

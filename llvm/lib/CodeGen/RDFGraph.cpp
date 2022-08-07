@@ -648,6 +648,14 @@ bool TargetOperandInfo::isFixedReg(const MachineInstr &In, unsigned OpNum)
 
 DataFlowGraph::DataFlowGraph(MachineFunction &mf, const TargetInstrInfo &tii,
       const TargetRegisterInfo &tri, const MachineDominatorTree &mdt,
+      const MachineDominanceFrontier &mdf)
+    : DefaultTOI(std::make_unique<TargetOperandInfo>(tii)), MF(mf), TII(tii),
+      TRI(tri), PRI(tri, mf), MDT(mdt), MDF(mdf), TOI(*DefaultTOI),
+      LiveIns(PRI) {
+}
+
+DataFlowGraph::DataFlowGraph(MachineFunction &mf, const TargetInstrInfo &tii,
+      const TargetRegisterInfo &tri, const MachineDominatorTree &mdt,
       const MachineDominanceFrontier &mdf, const TargetOperandInfo &toi)
     : MF(mf), TII(tii), TRI(tri), PRI(tri, mf), MDT(mdt), MDF(mdf), TOI(toi),
       LiveIns(PRI) {

@@ -775,7 +775,7 @@ ParseResult SplitOp::parse(OpAsmParser &parser, OperationState &result) {
 
   OptionalParseResult dynamicPointParseResult =
       parser.parseOptionalOperand(dynamicSplitPoint);
-  if (!dynamicPointParseResult.hasValue()) {
+  if (!dynamicPointParseResult.has_value()) {
     int64_t staticSplitPointValue;
     if (failed(parser.parseInteger(staticSplitPointValue)))
       return failure();

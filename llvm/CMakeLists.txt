@@ -58,7 +58,7 @@ project(LLVM
 # Must go after project(..)
 include(GNUInstallDirs)
 
-set(CMAKE_CXX_STANDARD 14 CACHE STRING "C++ standard to conform to")
+set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 if (CYGWIN)
   # Cygwin is a bit stricter and lack things like 'strdup', 'stricmp', etc in

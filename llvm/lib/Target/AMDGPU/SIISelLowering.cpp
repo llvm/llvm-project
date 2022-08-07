@@ -6654,8 +6654,7 @@ SDValue SITargetLowering::lowerImage(SDValue Op,
       Opcode = AMDGPU::getMIMGOpcode(IntrOpcode, AMDGPU::MIMGEncGfx90a,
                                      NumVDataDwords, NumVAddrDwords);
       if (Opcode == -1)
-        report_fatal_error(
-            "requested image instruction is not supported on this GPU");
+        return makeV_ILLEGAL(Op, DAG);
     }
     if (Opcode == -1 &&
         Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
@@ -7845,6 +7844,9 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     unsigned Opcode = 0;
     switch (IntrID) {
     case Intrinsic::amdgcn_global_atomic_fadd:
+      if (!Subtarget->hasAtomicFaddNoRtnInsts())
+        return makeV_ILLEGAL(Op, DAG);
+      LLVM_FALLTHROUGH;
     case Intrinsic::amdgcn_flat_atomic_fadd: {
       EVT VT = Op.getOperand(3).getValueType();
       return DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, VT,
@@ -8410,6 +8412,27 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return Op;
   }
   }
+}
+
+SDValue SITargetLowering::makeV_ILLEGAL(SDValue Op, SelectionDAG & DAG) const {
+  // Create the V_ILLEGAL node.
+  SDLoc DL(Op);
+  auto Opcode = Subtarget->getGeneration() < AMDGPUSubtarget::GFX10 ?
+    AMDGPU::V_ILLEGAL_gfx6_gfx7_gfx8_gfx9 : AMDGPU::V_ILLEGAL;
+  auto EntryNode = DAG.getEntryNode();
+  auto IllegalNode = DAG.getMachineNode(Opcode, DL, MVT::Other, EntryNode);
+  auto IllegalVal = SDValue(IllegalNode, 0u);
+
+  // Add the V_ILLEGAL node to the root chain to prevent its removal.
+  auto Chains = SmallVector<SDValue, 2u>();
+  Chains.push_back(IllegalVal);
+  Chains.push_back(DAG.getRoot());
+  auto Root = DAG.getTokenFactor(SDLoc(Chains.back()), Chains);
+  DAG.setRoot(Root);
+
+  // Merge with UNDEF to satisfy return value requirements.
+  auto UndefVal = DAG.getUNDEF(Op.getValueType());
+  return DAG.getMergeValues({UndefVal, IllegalVal}, DL);
 }
 
 // The raw.(t)buffer and struct.(t)buffer intrinsics have two offset args:

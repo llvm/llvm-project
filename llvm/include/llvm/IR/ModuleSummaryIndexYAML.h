@@ -270,8 +270,8 @@ template <> struct CustomMappingTraits<TypeIdSummaryMapTy> {
     V.insert({GlobalValue::getGUID(Key), {std::string(Key), TId}});
   }
   static void output(IO &io, TypeIdSummaryMapTy &V) {
-    for (auto TidIter = V.begin(); TidIter != V.end(); TidIter++)
-      io.mapRequired(TidIter->second.first.c_str(), TidIter->second.second);
+    for (auto &TidIter : V)
+      io.mapRequired(TidIter.second.first.c_str(), TidIter.second.second);
   }
 };
 

@@ -103,7 +103,7 @@ static bool isTiled(AffineMap map, ArrayRef<OpFoldResult> tileSizes) {
 
 Optional<RegionMatcher::BinaryOpKind>
 RegionMatcher::matchAsScalarBinaryOp(GenericOp op) {
-  auto &region = op.region();
+  auto &region = op.getRegion();
   if (!llvm::hasSingleElement(region))
     return llvm::None;
 
@@ -1062,7 +1062,7 @@ void offsetIndices(RewriterBase &b, LinalgOp linalgOp,
     return;
 
   for (IndexOp indexOp : linalgOp.getBlock()->getOps<IndexOp>()) {
-    if (indexOp.dim() >= offsets.size() || !offsets[indexOp.dim()])
+    if (indexOp.getDim() >= offsets.size() || !offsets[indexOp.getDim()])
       continue;
     OpBuilder::InsertionGuard guard(b);
     b.setInsertionPointAfter(indexOp);
@@ -1070,7 +1070,7 @@ void offsetIndices(RewriterBase &b, LinalgOp linalgOp,
     bindDims(b.getContext(), index, offset);
     OpFoldResult applied = makeComposedFoldedAffineApply(
         b, indexOp.getLoc(), index + offset,
-        {getAsOpFoldResult(indexOp.getResult()), offsets[indexOp.dim()]});
+        {getAsOpFoldResult(indexOp.getResult()), offsets[indexOp.getDim()]});
     Value materialized = materializeOpFoldResult(b, indexOp.getLoc(), applied);
     b.replaceOpWithIf(indexOp, materialized, [&](OpOperand &use) {
       return use.getOwner() != materialized.getDefiningOp();

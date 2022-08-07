@@ -13,7 +13,6 @@ write_cmake_config("Config") {
     "LLDB_EDITLINE_USE_WCHAR=",
     "LLDB_HAVE_EL_RFUNC_T=",
     "HAVE_PTSNAME_R=",
-    "HAVE_PROCESS_VM_READV=",
     "HAVE_NR_PROCESS_VM_READV=",
     "LLDB_ENABLE_LZMA=",
     "LLDB_ENABLE_CURSES=",
@@ -62,8 +61,14 @@ write_cmake_config("Config") {
   }
 
   if (current_os == "linux" || current_os == "android") {
-    values += [ "HAVE_PPOLL=1" ]
+    values += [
+      "HAVE_PPOLL=1",
+      "HAVE_PROCESS_VM_READV=1",
+    ]
   } else {
-    values += [ "HAVE_PPOLL=" ]
+    values += [
+      "HAVE_PPOLL=",
+      "HAVE_PROCESS_VM_READV=",
+    ]
   }
 }

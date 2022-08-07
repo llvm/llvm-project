@@ -50,7 +50,7 @@ static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
   map.map(body->getArguments(), argValues);
   for (auto &op : body->without_terminator()) {
     if (auto indexOp = dyn_cast<IndexOp>(&op)) {
-      map.map(indexOp.getResult(), ivs[indexOp.dim()]);
+      map.map(indexOp.getResult(), ivs[indexOp.getDim()]);
       continue;
     }
     b.clone(op, map);
@@ -263,8 +263,7 @@ static void registerOne(MLIRContext *ctx) {
 /// Variadic helper function.
 template <typename... OpTypes>
 static void registerAll(MLIRContext *ctx) {
-  // FIXME: In c++17 this can be simplified by using 'fold expressions'.
-  (void)std::initializer_list<int>{0, (registerOne<OpTypes>(ctx), 0)...};
+  (registerOne<OpTypes>(ctx), ...);
 }
 
 #define GET_OP_LIST
