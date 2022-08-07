@@ -1541,7 +1541,7 @@ foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
 template <typename... Ts>
 static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
                                 SmallVectorImpl<OpFoldResult> &results) {
-  return success((succeeded(foldTrait<Ts>(op, operands, results)) | ...));
+  return success((succeeded(foldTrait<Ts>(op, operands, results)) || ...));
 }
 
 //===----------------------------------------------------------------------===//
