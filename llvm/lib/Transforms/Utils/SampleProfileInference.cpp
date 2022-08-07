@@ -740,7 +740,7 @@ private:
   /// parts to a multiple of 1 / BaseDistance.
   int64_t jumpDistance(FlowJump *Jump) const {
     uint64_t BaseDistance =
-        std::max(static_cast<uint64_t>(MinCostMaxFlow::MinBaseDistance),
+        std::max(MinCostMaxFlow::MinBaseDistance,
                  std::min(Func.Blocks[Func.Entry].Flow,
                           MinCostMaxFlow::AuxCostUnlikely / NumBlocks()));
     if (Jump->IsUnlikely)
