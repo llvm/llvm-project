@@ -104,8 +104,8 @@ struct SimplifyDepthwiseConvOp
     Value kernel = op.getInputOperand(1)->get();
     Value init = op.getOutputOperand(0)->get();
 
-    auto stride = op.strides();
-    auto dilation = op.dilations();
+    auto stride = op.getStrides();
+    auto dilation = op.getDilations();
 
     return matchAndReplaceDepthwiseConv(operation, input, kernel, nullptr,
                                         nullptr, init, stride, dilation,
@@ -126,8 +126,8 @@ struct SimplifyDepthwiseConvQOp
     Value kZp = op.getInputOperand(3)->get();
     Value init = op.getOutputOperand(0)->get();
 
-    auto stride = op.strides();
-    auto dilation = op.dilations();
+    auto stride = op.getStrides();
+    auto dilation = op.getDilations();
 
     return matchAndReplaceDepthwiseConv(operation, input, kernel, iZp, kZp,
                                         init, stride, dilation, rewriter);

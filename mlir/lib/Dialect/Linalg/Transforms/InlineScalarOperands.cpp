@@ -56,10 +56,10 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
     auto newOp = rewriter.create<GenericOp>(
         loc, genericOp->getResultTypes(), newOperands, outputOperands,
         newIndexingMaps,
-        llvm::to_vector<4>(
-            genericOp.iterator_types().template getAsValueRange<StringAttr>()));
-    rewriter.cloneRegionBefore(genericOp.region(), newOp.region(),
-                               newOp.region().begin());
+        llvm::to_vector<4>(genericOp.getIteratorTypes()
+                               .template getAsValueRange<StringAttr>()));
+    rewriter.cloneRegionBefore(genericOp.getRegion(), newOp.getRegion(),
+                               newOp.getRegion().begin());
 
     Block *body = newOp.getBody();
     PatternRewriter::InsertionGuard guard(rewriter);

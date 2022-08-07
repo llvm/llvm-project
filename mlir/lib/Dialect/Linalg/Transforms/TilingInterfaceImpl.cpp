@@ -50,7 +50,7 @@ static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
   map.map(body->getArguments(), argValues);
   for (auto &op : body->without_terminator()) {
     if (auto indexOp = dyn_cast<IndexOp>(&op)) {
-      map.map(indexOp.getResult(), ivs[indexOp.dim()]);
+      map.map(indexOp.getResult(), ivs[indexOp.getDim()]);
       continue;
     }
     b.clone(op, map);

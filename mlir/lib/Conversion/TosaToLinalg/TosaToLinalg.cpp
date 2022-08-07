@@ -810,7 +810,7 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
   auto initTensor = rewriter
                         .create<linalg::InitTensorOp>(loc, dynDims, reduceShape,
                                                       resultTy.getElementType())
-                        .result();
+                        .getResult();
 
   auto fillValueAttr = createInitialValueForReduceOp(op, elementTy, rewriter);
   if (!fillValueAttr)
@@ -1375,7 +1375,7 @@ public:
     rewriter.replaceOp(op, genericOp.getResult(0));
 
     OpBuilder::InsertionGuard regionGuard(rewriter);
-    rewriter.createBlock(&genericOp.region(), genericOp.region().end(),
+    rewriter.createBlock(&genericOp.getRegion(), genericOp.getRegion().end(),
                          TypeRange({resultElementTy}), loc);
     Value batch = rewriter.create<linalg::IndexOp>(loc, 0);
     Value y = rewriter.create<linalg::IndexOp>(loc, 1);
@@ -1732,7 +1732,7 @@ public:
                           .create<linalg::InitTensorOp>(
                               loc, ArrayRef<Value>({dynDims}),
                               inputTy.getShape(), inputTy.getElementType())
-                          .result();
+                          .getResult();
     SmallVector<AffineMap, 2> affineMaps = {
         rewriter.getMultiDimIdentityMap(resultTy.getRank())};
 
@@ -1951,7 +1951,7 @@ public:
         rewriter
             .create<linalg::InitTensorOp>(loc, dynDims, resultTy.getShape(),
                                           outElementTy)
-            .result();
+            .getResult();
     auto fillValueIdx = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getIntegerAttr(outElementTy, 0));
     auto filledTensorIdx =
@@ -1964,7 +1964,7 @@ public:
     auto initTensorMax = rewriter
                              .create<linalg::InitTensorOp>(
                                  loc, dynDims, resultTy.getShape(), inElementTy)
-                             .result();
+                             .getResult();
     auto fillValueMaxAttr =
         createInitialValueForReduceOp(argmaxOp, inElementTy, rewriter);
 
@@ -2063,7 +2063,7 @@ public:
         rewriter
             .create<linalg::InitTensorOp>(loc, dynamicDims, resultTy.getShape(),
                                           resultElementTy)
-            .result();
+            .getResult();
 
     SmallVector<AffineMap, 2> affineMaps = {
         AffineMap::get(
@@ -2123,7 +2123,7 @@ public:
         rewriter
             .create<linalg::InitTensorOp>(loc, dynDims, resultTy.getShape(),
                                           resultElementTy)
-            .result();
+            .getResult();
 
     SmallVector<AffineMap, 2> affineMaps = {
         rewriter.getMultiDimIdentityMap(resultTy.getRank()),
@@ -2137,7 +2137,7 @@ public:
     {
       OpBuilder::InsertionGuard regionGuard(rewriter);
       Block *block = rewriter.createBlock(
-          &genericOp.region(), genericOp.region().end(),
+          &genericOp.getRegion(), genericOp.getRegion().end(),
           TypeRange({inputElementTy, resultElementTy}), {loc, loc});
 
       auto inputValue = block->getArgument(0);

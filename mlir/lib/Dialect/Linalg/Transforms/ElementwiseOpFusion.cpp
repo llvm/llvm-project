@@ -146,7 +146,7 @@ generateFusedElementwiseOpRegion(PatternRewriter &rewriter, GenericOp fusedOp,
   Block &producerBlock = producer->getRegion(0).front();
   Block &consumerBlock = consumer->getRegion(0).front();
   Block *fusedBlock = new Block();
-  fusedOp.region().push_back(fusedBlock);
+  fusedOp.getRegion().push_back(fusedBlock);
   BlockAndValueMapping mapper;
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(fusedBlock);
@@ -167,7 +167,7 @@ generateFusedElementwiseOpRegion(PatternRewriter &rewriter, GenericOp fusedOp,
          llvm::make_early_inc_range(producerBlock.getOps<IndexOp>())) {
       Value newIndex = rewriter.create<mlir::AffineApplyOp>(
           producer.getLoc(),
-          consumerToProducerLoopsMap.getSubMap(indexOp.dim()), fusedIndices);
+          consumerToProducerLoopsMap.getSubMap(indexOp.getDim()), fusedIndices);
       mapper.map(indexOp.getResult(), newIndex);
     }
   }
@@ -320,7 +320,7 @@ fuseElementwiseOpsImpl(GenericOp producer, OpOperand *consumerOpOperand,
       /*inputs=*/fusedOperands,
       // TODO: handle outputs.
       consumerOutputs, rewriter.getAffineMapArrayAttr(fusedIndexMaps),
-      consumer.iterator_types(),
+      consumer.getIteratorTypes(),
       /*doc=*/nullptr,
       /*library_call=*/nullptr);
   if (!fusedOp.getShapesToLoopsMap()) {
@@ -458,14 +458,14 @@ static bool isFusableWithReshapeByDimExpansion(GenericOp genericOp,
   // - The fused tensor is not a scalar.
   // - All the loops are parallel loops.
   return genericOp.hasTensorSemantics() &&
-         llvm::all_of(genericOp.indexing_maps().getValue(),
+         llvm::all_of(genericOp.getIndexingMaps().getValue(),
                       [](Attribute attr) {
                         return attr.cast<AffineMapAttr>()
                             .getValue()
                             .isProjectedPermutation();
                       }) &&
          genericOp.getTiedIndexingMap(fusableOpOperand).getNumResults() > 0 &&
-         llvm::all_of(genericOp.iterator_types(), [](Attribute attr) {
+         llvm::all_of(genericOp.getIteratorTypes(), [](Attribute attr) {
            return attr.cast<StringAttr>().getValue() ==
                   getParallelIteratorTypeName();
          });
@@ -646,19 +646,19 @@ static void updateExpandedGenericOpRegion(PatternRewriter &rewriter,
   for (IndexOp indexOp :
        llvm::make_early_inc_range(fusedRegion.front().getOps<IndexOp>())) {
     ArrayRef<int64_t> expandedDims =
-        expansionInfo.getExpandedDims(indexOp.dim());
+        expansionInfo.getExpandedDims(indexOp.getDim());
     assert(!expandedDims.empty() && "expected valid expansion info");
 
     // Skip index operations that are not affected by the expansion.
     if (expandedDims.size() == 1 &&
-        expandedDims.front() == (int64_t)indexOp.dim())
+        expandedDims.front() == (int64_t)indexOp.getDim())
       continue;
 
     // Linearize the expanded indices of the original index dimension.
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointAfter(indexOp);
     ArrayRef<int64_t> expandedDimsShape =
-        expansionInfo.getExpandedShapeOfDim(indexOp.dim()).drop_front();
+        expansionInfo.getExpandedShapeOfDim(indexOp.getDim()).drop_front();
     SmallVector<Value> expandedIndices;
     expandedIndices.reserve(expandedDims.size() - 1);
     llvm::transform(
@@ -1016,7 +1016,8 @@ getCollapsableIterationSpaceDims(GenericOp genericOp, OpOperand *fusableOperand,
 
   // Compute all the loops with the reduction iterator types.
   SmallVector<int64_t> reductionDims;
-  for (const auto &iteratorType : llvm::enumerate(genericOp.iterator_types())) {
+  for (const auto &iteratorType :
+       llvm::enumerate(genericOp.getIteratorTypes())) {
     if (isReductionIterator(iteratorType.value())) {
       reductionDims.push_back(iteratorType.index());
     }
@@ -1024,7 +1025,7 @@ getCollapsableIterationSpaceDims(GenericOp genericOp, OpOperand *fusableOperand,
 
   llvm::SmallDenseSet<unsigned, 4> processedIterationDims;
   AffineMap indexingMap = genericOp.getTiedIndexingMap(fusableOperand);
-  auto iteratorTypes = genericOp.iterator_types().getValue();
+  auto iteratorTypes = genericOp.getIteratorTypes().getValue();
   SmallVector<ReassociationIndices> iterationSpaceReassociation;
   for (ReassociationIndicesRef foldedRangeDims : reassociation) {
     assert(!foldedRangeDims.empty() && "unexpected empty reassociation");
@@ -1323,7 +1324,7 @@ void generateCollapsedIndexingRegion(Location loc, Block *block,
   }
 
   for (auto indexOp : indexOps) {
-    auto dim = indexOp.dim();
+    auto dim = indexOp.getDim();
     rewriter.replaceOp(indexOp, indexReplacementVals[dim]);
   }
 }
@@ -1368,7 +1369,7 @@ static FailureOr<SmallVector<Value>> collapseGenericOpIterationDims(
 
   // Get the iterator types for the operand.
   SmallVector<StringRef> iteratorTypes = getCollapsedOpIteratorTypes(
-      genericOp.iterator_types().getValue(), collapsingInfo);
+      genericOp.getIteratorTypes().getValue(), collapsingInfo);
 
   // Get the indexing maps.
   auto indexingMaps = llvm::to_vector(
@@ -1577,7 +1578,7 @@ public:
           /*inputs=*/fusedOperands,
           /*outputs=*/outputOperands,
           rewriter.getAffineMapArrayAttr(fusedIndexMaps),
-          genericOp.iterator_types(),
+          genericOp.getIteratorTypes(),
           /*doc=*/nullptr,
           /*library_call=*/nullptr);
 
@@ -1664,7 +1665,7 @@ struct FoldFillWithGenericOp : public OpRewritePattern<GenericOp> {
     if (!genericOp.hasTensorSemantics())
       return failure();
     bool fillFound = false;
-    Block &payload = genericOp.region().front();
+    Block &payload = genericOp.getRegion().front();
     for (OpOperand *opOperand : genericOp.getInputOperands()) {
       if (!genericOp.payloadUsesValueFromOperand(opOperand))
         continue;

@@ -189,7 +189,7 @@ static void replaceIndexOpsByInductionVariables(LinalgOp linalgOp,
     LoopLikeOpInterface loopOp = loopOps.back();
     for (IndexOp indexOp :
          llvm::make_early_inc_range(loopOp.getLoopBody().getOps<IndexOp>()))
-      rewriter.replaceOp(indexOp, allIvs[indexOp.dim()]);
+      rewriter.replaceOp(indexOp, allIvs[indexOp.getDim()]);
   }
 }
 
