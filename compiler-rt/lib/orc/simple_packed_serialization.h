@@ -399,20 +399,20 @@ public:
 ///
 /// Serialization is as for regular strings. Deserialization points directly
 /// into the blob.
-template <> class SPSSerializationTraits<SPSString, __orc_rt::string_view> {
+template <> class SPSSerializationTraits<SPSString, std::string_view> {
 public:
-  static size_t size(const __orc_rt::string_view &S) {
+  static size_t size(const std::string_view &S) {
     return SPSArgList<uint64_t>::size(static_cast<uint64_t>(S.size())) +
            S.size();
   }
 
-  static bool serialize(SPSOutputBuffer &OB, const __orc_rt::string_view &S) {
+  static bool serialize(SPSOutputBuffer &OB, const std::string_view &S) {
     if (!SPSArgList<uint64_t>::serialize(OB, static_cast<uint64_t>(S.size())))
       return false;
     return OB.write(S.data(), S.size());
   }
 
-  static bool deserialize(SPSInputBuffer &IB, __orc_rt::string_view &S) {
+  static bool deserialize(SPSInputBuffer &IB, std::string_view &S) {
     const char *Data = nullptr;
     uint64_t Size;
     if (!SPSArgList<uint64_t>::deserialize(IB, Size))

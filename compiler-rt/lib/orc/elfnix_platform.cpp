@@ -109,9 +109,9 @@ public:
   Error deregisterObjectSections(ELFNixPerObjectSectionsToRegister POSR);
 
   const char *dlerror();
-  void *dlopen(string_view Name, int Mode);
+  void *dlopen(std::string_view Name, int Mode);
   int dlclose(void *DSOHandle);
-  void *dlsym(void *DSOHandle, string_view Symbol);
+  void *dlsym(void *DSOHandle, std::string_view Symbol);
 
   int registerAtExit(void (*F)(void *), void *Arg, void *DSOHandle);
   void runAtExits(void *DSOHandle);
@@ -124,18 +124,18 @@ public:
 
 private:
   PerJITDylibState *getJITDylibStateByHeaderAddr(void *DSOHandle);
-  PerJITDylibState *getJITDylibStateByName(string_view Path);
+  PerJITDylibState *getJITDylibStateByName(std::string_view Path);
   PerJITDylibState &
   getOrCreateJITDylibState(ELFNixJITDylibInitializers &MOJDIs);
 
   Error registerThreadDataSection(span<const char> ThreadDataSection);
 
   Expected<ExecutorAddr> lookupSymbolInJITDylib(void *DSOHandle,
-                                                string_view Symbol);
+                                                std::string_view Symbol);
 
   Expected<ELFNixJITDylibInitializerSequence>
-  getJITDylibInitializersByName(string_view Path);
-  Expected<void *> dlopenInitialize(string_view Path, int Mode);
+  getJITDylibInitializersByName(std::string_view Path);
+  Expected<void *> dlopenInitialize(std::string_view Path, int Mode);
   Error initializeJITDylib(ELFNixJITDylibInitializers &MOJDIs);
 
   static ELFNixPlatformRuntimeState *MOPS;
@@ -196,7 +196,7 @@ Error ELFNixPlatformRuntimeState::deregisterObjectSections(
 
 const char *ELFNixPlatformRuntimeState::dlerror() { return DLFcnError.c_str(); }
 
-void *ELFNixPlatformRuntimeState::dlopen(string_view Path, int Mode) {
+void *ELFNixPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
   std::lock_guard<std::recursive_mutex> Lock(JDStatesMutex);
 
   // Use fast path if all JITDylibs are already loaded and don't require
@@ -222,7 +222,8 @@ int ELFNixPlatformRuntimeState::dlclose(void *DSOHandle) {
   return 0;
 }
 
-void *ELFNixPlatformRuntimeState::dlsym(void *DSOHandle, string_view Symbol) {
+void *ELFNixPlatformRuntimeState::dlsym(void *DSOHandle,
+                                        std::string_view Symbol) {
   auto Addr = lookupSymbolInJITDylib(DSOHandle, Symbol);
   if (!Addr) {
     DLFcnError = toString(Addr.takeError());
@@ -282,7 +283,7 @@ ELFNixPlatformRuntimeState::getJITDylibStateByHeaderAddr(void *DSOHandle) {
 }
 
 ELFNixPlatformRuntimeState::PerJITDylibState *
-ELFNixPlatformRuntimeState::getJITDylibStateByName(string_view Name) {
+ELFNixPlatformRuntimeState::getJITDylibStateByName(std::string_view Name) {
   // FIXME: Avoid creating string copy here.
   auto I = JDNameToHeader.find(std::string(Name.data(), Name.size()));
   if (I == JDNameToHeader.end())
@@ -328,7 +329,7 @@ Error ELFNixPlatformRuntimeState::registerThreadDataSection(
 
 Expected<ExecutorAddr>
 ELFNixPlatformRuntimeState::lookupSymbolInJITDylib(void *DSOHandle,
-                                                   string_view Sym) {
+                                                   std::string_view Sym) {
   Expected<ExecutorAddr> Result((ExecutorAddr()));
   if (auto Err = WrapperFunction<SPSExpected<SPSExecutorAddr>(
           SPSExecutorAddr, SPSString)>::call(&__orc_rt_elfnix_symbol_lookup_tag,
@@ -340,7 +341,8 @@ ELFNixPlatformRuntimeState::lookupSymbolInJITDylib(void *DSOHandle,
 }
 
 Expected<ELFNixJITDylibInitializerSequence>
-ELFNixPlatformRuntimeState::getJITDylibInitializersByName(string_view Path) {
+ELFNixPlatformRuntimeState::getJITDylibInitializersByName(
+    std::string_view Path) {
   Expected<ELFNixJITDylibInitializerSequence> Result(
       (ELFNixJITDylibInitializerSequence()));
   std::string PathStr(Path.data(), Path.size());
@@ -352,8 +354,8 @@ ELFNixPlatformRuntimeState::getJITDylibInitializersByName(string_view Path) {
   return Result;
 }
 
-Expected<void *> ELFNixPlatformRuntimeState::dlopenInitialize(string_view Path,
-                                                              int Mode) {
+Expected<void *>
+ELFNixPlatformRuntimeState::dlopenInitialize(std::string_view Path, int Mode) {
   // Either our JITDylib wasn't loaded, or it or one of its dependencies allows
   // reinitialization. We need to call in to the JIT to see if there's any new
   // work pending.
