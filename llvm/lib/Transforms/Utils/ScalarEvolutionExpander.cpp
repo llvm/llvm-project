@@ -1508,7 +1508,7 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
 Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   // In canonical mode we compute the addrec as an expression of a canonical IV
   // using evaluateAtIteration and expand the resulting SCEV expression. This
-  // way we avoid introducing new IVs to carry on the comutation of the addrec
+  // way we avoid introducing new IVs to carry on the computation of the addrec
   // throughout the loop.
   //
   // For nested addrecs evaluateAtIteration might need a canonical IV of a
@@ -2191,7 +2191,7 @@ template<typename T> static InstructionCost costAndCollectOperands(
   }
   case scAddRecExpr: {
     // In this polynominal, we may have some zero operands, and we shouldn't
-    // really charge for those. So how many non-zero coeffients are there?
+    // really charge for those. So how many non-zero coefficients are there?
     int NumTerms = llvm::count_if(S->operands(), [](const SCEV *Op) {
                                     return !Op->isZero();
                                   });
@@ -2200,7 +2200,7 @@ template<typename T> static InstructionCost costAndCollectOperands(
     assert(!(*std::prev(S->operands().end()))->isZero() &&
            "Last operand should not be zero");
 
-    // Ignoring constant term (operand 0), how many of the coeffients are u> 1?
+    // Ignoring constant term (operand 0), how many of the coefficients are u> 1?
     int NumNonZeroDegreeNonOneTerms =
       llvm::count_if(S->operands(), [](const SCEV *Op) {
                       auto *SConst = dyn_cast<SCEVConstant>(Op);
