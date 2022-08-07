@@ -96,8 +96,7 @@ void addNamedOpBuilderImpl(
 template <typename... OpTypes>
 void addNamedOpBuilders(
     llvm::StringMap<LinalgDialect::RegionBuilderFunType> &map) {
-  (void)std::initializer_list<int>{0,
-                                   (addNamedOpBuilderImpl<OpTypes>(map), 0)...};
+  (addNamedOpBuilderImpl<OpTypes>(map), ...);
 }
 
 void mlir::linalg::LinalgDialect::initialize() {

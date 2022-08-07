@@ -262,7 +262,7 @@ def Builtin_Integer : Builtin_Type<"Integer"> {
 
     /// Integer representation maximal bitwidth.
     /// Note: This is aligned with the maximum width of llvm::IntegerType.
-    static constexpr unsigned kMaxWidth = (1 << 24) - 1;
+    static constexpr inline unsigned kMaxWidth = (1 << 24) - 1;
   }];
 }
 

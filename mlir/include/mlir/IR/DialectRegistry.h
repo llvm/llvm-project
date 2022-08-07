@@ -175,8 +175,7 @@ public:
   /// Add the given extensions to the registry.
   template <typename... ExtensionsT>
   void addExtensions() {
-    (void)std::initializer_list<int>{
-        (addExtension(std::make_unique<ExtensionsT>()), 0)...};
+    (addExtension(std::make_unique<ExtensionsT>()), ...);
   }
 
   /// Add an extension function that requires the given dialects.

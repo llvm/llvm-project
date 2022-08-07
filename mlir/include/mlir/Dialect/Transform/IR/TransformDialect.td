@@ -334,13 +334,10 @@ def Transform_Dialect : Dialect {
       /// dialect. Checks that they implement the required interfaces.
       template <typename... OpTys>
       void addOperationsChecked() {
-        (void)std::initializer_list<int>{(addOperationIfNotRegistered<OpTys>(),
-                                          0)...};
+        (addOperationIfNotRegistered<OpTys>(),...);
 
         #ifndef NDEBUG
-        (void)std::initializer_list<int>{
-          (detail::checkImplementsTransformInterface<OpTys>(getContext()),
-           0)...};
+        (detail::checkImplementsTransformInterface<OpTys>(getContext()),...);
         #endif // NDEBUG
       }
 

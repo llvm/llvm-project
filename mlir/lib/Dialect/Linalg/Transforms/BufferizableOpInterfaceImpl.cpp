@@ -137,8 +137,7 @@ struct LinalgOpInterface
 template <typename... Ops>
 struct LinalgOpInterfaceHelper {
   static void registerOpInterface(MLIRContext *ctx) {
-    (void)std::initializer_list<int>{
-        0, (Ops::template attachInterface<LinalgOpInterface<Ops>>(*ctx), 0)...};
+    (Ops::template attachInterface<LinalgOpInterface<Ops>>(*ctx), ...);
   }
 };
 } // namespace

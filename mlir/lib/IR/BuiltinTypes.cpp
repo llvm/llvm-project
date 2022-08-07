@@ -60,9 +60,6 @@ LogicalResult ComplexType::verify(function_ref<InFlightDiagnostic()> emitError,
 // Integer Type
 //===----------------------------------------------------------------------===//
 
-// static constexpr must have a definition (until in C++17 and inline variable).
-constexpr unsigned IntegerType::kMaxWidth;
-
 /// Verify the construction of an integer type.
 LogicalResult IntegerType::verify(function_ref<InFlightDiagnostic()> emitError,
                                   unsigned width,
