@@ -138,8 +138,8 @@ public:
     if (!abstract)
       llvm::report_fatal_error("Registering an interface for an attribute/type "
                                "that is not itself registered.");
-    (void)std::initializer_list<int>{
-        (checkInterfaceTarget<IfaceModels>(), 0)...};
+
+    (checkInterfaceTarget<IfaceModels>(), ...);
     abstract->interfaceMap.template insert<IfaceModels...>();
   }
 

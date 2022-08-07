@@ -84,7 +84,6 @@ public:
   /// Type trait used to check if the given type T is a potentially valid C++
   /// floating point type that can be used to access the underlying element
   /// types of a DenseElementsAttr.
-  // TODO: Use std::disjunction when C++17 is supported.
   template <typename T>
   struct is_valid_cpp_fp_type {
     /// The type is a valid floating point type if it is a builtin floating

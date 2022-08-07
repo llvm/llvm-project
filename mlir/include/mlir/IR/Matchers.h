@@ -224,10 +224,9 @@ struct PatternMatcherValue {
 template <typename TupleT, class CallbackT, std::size_t... Is>
 constexpr void enumerateImpl(TupleT &&tuple, CallbackT &&callback,
                              std::index_sequence<Is...>) {
-  (void)std::initializer_list<int>{
-      0,
-      (callback(std::integral_constant<std::size_t, Is>{}, std::get<Is>(tuple)),
-       0)...};
+
+  (callback(std::integral_constant<std::size_t, Is>{}, std::get<Is>(tuple)),
+   ...);
 }
 
 template <typename... Tys, typename CallbackT>
