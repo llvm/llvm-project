@@ -127,7 +127,7 @@ TEST(SimplePackedSerializationTest, SequenceSerialization) {
 
 TEST(SimplePackedSerializationTest, StringViewCharSequenceSerialization) {
   const char *HW = "Hello, world!";
-  blobSerializationRoundTrip<SPSString, string_view>(string_view(HW));
+  blobSerializationRoundTrip<SPSString, std::string_view>(std::string_view(HW));
 }
 
 TEST(SimplePackedSerializationTest, SpanSerialization) {
