@@ -163,7 +163,7 @@ static void rewriteOldValToNew(Instruction *Inst, Value *OldVal, Value *NewVal,
 // in an expression.
 // We need this auxiliary function, because if we have a
 // `Constant` that is a user of `V`, we need to recurse into the
-// `Constant`s uses to gather the root instruciton.
+// `Constant`s uses to gather the root instruction.
 static void getInstructionUsersOfValue(Value *V,
                                        SmallVector<Instruction *, 4> &Owners) {
   if (auto *I = dyn_cast<Instruction>(V)) {

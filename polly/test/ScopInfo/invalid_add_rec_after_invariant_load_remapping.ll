@@ -1,6 +1,6 @@
 ; RUN: opt %loadPolly -polly-print-scops -disable-output < %s
 ;
-; This crased at some point as we place %1 and %4 in the same equivalence class
+; This crashed at some point as we place %1 and %4 in the same equivalence class
 ; for invariant loads and when we remap SCEVs to use %4 instead of %1 AddRec SCEVs
 ; for the for.body.10 loop caused a crash as their operands were not invariant
 ; in the loop. While we know they are, ScalarEvolution does not. However, we can simply

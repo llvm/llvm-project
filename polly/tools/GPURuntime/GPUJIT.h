@@ -16,7 +16,7 @@
 #include "stddef.h"
 
 /*
- * The following demostrates how we can use the GPURuntime library to
+ * The following demonstrates how we can use the GPURuntime library to
  * execute a GPU kernel.
  *
  * char KernelString[] = "\n\

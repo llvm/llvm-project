@@ -26,7 +26,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; m->rows, m->cols and m->deps happen before the scop.
 
 ; This test case verifies that the construction of the assumed context finishes
-; successfully. Depending on how constraineds are accummulated in the assumed
+; successfully. Depending on how constrained are accumulated in the assumed
 ; context, this test case can take even for a smaller number of arrays over a
 ; minute to complete. With the unrolling choosen in this test, an inefficient
 ; formulation of the assumption tracking cause LLVM to crash due to excessive

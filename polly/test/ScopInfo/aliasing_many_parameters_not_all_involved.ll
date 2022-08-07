@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-analysis-computeout=0 -polly-print-scops -polly-rtc-max-parameters=8 -disable-output < %s | FileCheck %s --check-prefix=MAX8
 ; RUN: opt %loadPolly -polly-analysis-computeout=0 -polly-print-scops -polly-rtc-max-parameters=7 -disable-output < %s | FileCheck %s --check-prefix=MAX7
 ;
-; Check that we allow this SCoP even though it has 10 parameters involved in posisbly aliasing accesses.
+; Check that we allow this SCoP even though it has 10 parameters involved in possibly aliasing accesses.
 ; However, only 7 are involved in accesses through B, 8 through C and none in accesses through A.
 ;
 ; MAX8-LABEL:  Function: jd
