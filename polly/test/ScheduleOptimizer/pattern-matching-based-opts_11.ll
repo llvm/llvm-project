@@ -9,7 +9,7 @@
 ; RUN: -polly-target-vector-register-bitwidth=256 \
 ; RUN: -polly-target-2nd-cache-level-size=262144 \
 ; RUN: -polly-opt-isl -debug \
-; RUN: -polly-tc-opt=true < %s 2>&1 \
+; RUN: -polly-tc-opt=true -disable-output < %s 2>&1 \
 ; RUN: | FileCheck %s
 ; REQUIRES: asserts
 ;
