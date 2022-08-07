@@ -437,8 +437,7 @@ bool X86CmovConverterPass::checkForProfitableCmovCandidates(
   // Depth-Diff[i]:
   //   Number of cycles saved in first 'i` iterations by optimizing the loop.
   //===--------------------------------------------------------------------===//
-  for (unsigned I = 0; I < LoopIterations; ++I) {
-    DepthInfo &MaxDepth = LoopDepth[I];
+  for (DepthInfo &MaxDepth : LoopDepth) {
     for (auto *MBB : Blocks) {
       // Clear physical registers Def map.
       RegDefMaps[PhyRegType].clear();
