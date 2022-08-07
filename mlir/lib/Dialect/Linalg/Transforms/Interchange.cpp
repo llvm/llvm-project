@@ -77,7 +77,7 @@ mlir::linalg::interchangeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
                      rewriter.getAffineMapArrayAttr(newIndexingMaps));
 
   // 3. Compute the interchanged iterator types.
-  ArrayRef<Attribute> itTypes = genericOp.iterator_types().getValue();
+  ArrayRef<Attribute> itTypes = genericOp.getIteratorTypes().getValue();
   SmallVector<Attribute> itTypesVector;
   llvm::append_range(itTypesVector, itTypes);
   SmallVector<int64_t> permutation(interchangeVector.begin(),
@@ -99,7 +99,7 @@ mlir::linalg::interchangeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
                         return rewriter.create<IndexOp>(indexOp->getLoc(), dim);
                       });
       rewriter.replaceOpWithNewOp<AffineApplyOp>(
-          indexOp, permutationMap.getSubMap(indexOp.dim()), allIndices);
+          indexOp, permutationMap.getSubMap(indexOp.getDim()), allIndices);
     }
   }
 

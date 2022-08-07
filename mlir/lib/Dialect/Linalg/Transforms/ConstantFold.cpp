@@ -273,7 +273,7 @@ struct FoldConstantTranspose : public FoldConstantBase<FoldConstantTranspose> {
 
   RegionComputationFn getRegionComputeFn(GenericOp genericOp) const {
     // Make sure the region only contains a yield op.
-    Block &body = genericOp.region().front();
+    Block &body = genericOp.getRegion().front();
     if (!llvm::hasSingleElement(body))
       return nullptr;
     auto yieldOp = dyn_cast<linalg::YieldOp>(body.getTerminator());
@@ -281,7 +281,7 @@ struct FoldConstantTranspose : public FoldConstantBase<FoldConstantTranspose> {
       return nullptr;
 
     // The yield op should return the block argument corresponds to the input.
-    for (Value yieldVal : yieldOp.values()) {
+    for (Value yieldVal : yieldOp.getValues()) {
       auto yieldArg = yieldVal.dyn_cast<BlockArgument>();
       if (!yieldArg || yieldArg.getOwner() != &body)
         return nullptr;

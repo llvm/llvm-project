@@ -201,8 +201,8 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   GenericOp genericOp = b.create<GenericOp>(
       loc, TypeRange({initOrAllocTensor.getType()}), newInputs,
       ValueRange({identityTensor}), newMaps, newIteratorTypes);
-  b.inlineRegionBefore(op->getRegion(0), genericOp.region(),
-                       genericOp.region().begin());
+  b.inlineRegionBefore(op->getRegion(0), genericOp.getRegion(),
+                       genericOp.getRegion().begin());
 
   // Then create a new reduction that only reduce the newly added dimension
   // from the previous op.
@@ -391,10 +391,10 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   GenericOp genericOp =
       b.create<GenericOp>(loc, ValueRange(newOutputs).getTypes(), newInputs,
                           newOutputs, newMaps, iteratorTypes);
-  b.inlineRegionBefore(op->getRegion(0), genericOp.region(),
-                       genericOp.region().begin());
-  genericOp.region().front().insertArgument(reductionDimPos,
-                                            b.getIntegerType(1), loc);
+  b.inlineRegionBefore(op->getRegion(0), genericOp.getRegion(),
+                       genericOp.getRegion().begin());
+  genericOp.getRegion().front().insertArgument(reductionDimPos,
+                                               b.getIntegerType(1), loc);
 
   // Step 5. Create new reduction ops that only reduce the newly added
   // dimensions from the previous op.

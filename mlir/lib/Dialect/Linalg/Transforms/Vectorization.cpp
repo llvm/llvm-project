@@ -252,7 +252,7 @@ vectorizeLinalgYield(OpBuilder &b, Operation *op,
   auto yieldOp = dyn_cast<linalg::YieldOp>(op);
   if (!yieldOp)
     return VectorizationResult{VectorizationStatus::Failure, nullptr};
-  for (const auto &outputs : llvm::enumerate(yieldOp.values())) {
+  for (const auto &outputs : llvm::enumerate(yieldOp.getValues())) {
     // TODO: Scan for an opportunity for reuse.
     // TODO: use a map.
     Value vectorValue = bvm.lookup(outputs.value());
@@ -278,23 +278,23 @@ static VectorizationResult vectorizeLinalgIndex(OpBuilder &b, Operation *op,
   auto targetShape = linalgOp.computeStaticLoopSizes();
   // Compute a one-dimensional index vector for the index op dimension.
   SmallVector<int64_t> constantSeq =
-      llvm::to_vector<16>(llvm::seq<int64_t>(0, targetShape[indexOp.dim()]));
+      llvm::to_vector<16>(llvm::seq<int64_t>(0, targetShape[indexOp.getDim()]));
   auto constantOp =
       b.create<arith::ConstantOp>(loc, b.getIndexVectorAttr(constantSeq));
   // Return the one-dimensional index vector if it lives in the trailing
   // dimension of the iteration space since the vectorization algorithm in this
   // case can handle the broadcast.
-  if (indexOp.dim() == targetShape.size() - 1)
+  if (indexOp.getDim() == targetShape.size() - 1)
     return VectorizationResult{VectorizationStatus::NewOp, constantOp};
   // Otherwise permute the targetShape to move the index dimension last,
   // broadcast the one-dimensional index vector to the permuted shape, and
   // finally transpose the broadcasted index vector to undo the permutation.
-  std::swap(targetShape[indexOp.dim()], targetShape.back());
+  std::swap(targetShape[indexOp.getDim()], targetShape.back());
   auto broadCastOp = b.create<vector::BroadcastOp>(
       loc, VectorType::get(targetShape, b.getIndexType()), constantOp);
   SmallVector<int64_t> transposition =
       llvm::to_vector<16>(llvm::seq<int64_t>(0, linalgOp.getNumLoops()));
-  std::swap(transposition.back(), transposition[indexOp.dim()]);
+  std::swap(transposition.back(), transposition[indexOp.getDim()]);
   auto transposeOp =
       b.create<vector::TransposeOp>(loc, broadCastOp, transposition);
   return VectorizationResult{VectorizationStatus::NewOp, transposeOp};

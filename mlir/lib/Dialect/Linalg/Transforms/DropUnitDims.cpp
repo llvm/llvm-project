@@ -152,15 +152,15 @@ static void replaceUnitDimIndexOps(GenericOp genericOp,
        llvm::make_early_inc_range(genericOp.getBody()->getOps<IndexOp>())) {
     OpBuilder::InsertionGuard guard(rewriter);
     rewriter.setInsertionPoint(indexOp);
-    if (unitDims.count(indexOp.dim()) != 0) {
+    if (unitDims.count(indexOp.getDim()) != 0) {
       rewriter.replaceOpWithNewOp<arith::ConstantIndexOp>(indexOp, 0);
     } else {
       // Update the dimension of the index operation if needed.
       unsigned droppedDims = llvm::count_if(
-          unitDims, [&](unsigned dim) { return dim < indexOp.dim(); });
+          unitDims, [&](unsigned dim) { return dim < indexOp.getDim(); });
       if (droppedDims != 0)
         rewriter.replaceOpWithNewOp<IndexOp>(indexOp,
-                                             indexOp.dim() - droppedDims);
+                                             indexOp.getDim() - droppedDims);
     }
   }
 }
@@ -185,7 +185,7 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOp> {
 
     DenseSet<unsigned> unitDims;
     SmallVector<unsigned, 4> unitDimsReductionLoops;
-    ArrayAttr iteratorTypes = genericOp.iterator_types();
+    ArrayAttr iteratorTypes = genericOp.getIteratorTypes();
     for (const auto &expr : enumerate(invertedMap.getResults())) {
       if (AffineDimExpr dimExpr = expr.value().dyn_cast<AffineDimExpr>())
         if (dims[dimExpr.getPosition()] == 1)
@@ -211,8 +211,8 @@ struct FoldUnitDimLoops : public OpRewritePattern<GenericOp> {
     }
 
     rewriter.startRootUpdate(genericOp);
-    genericOp.indexing_mapsAttr(newIndexingMapAttr);
-    genericOp.iterator_typesAttr(ArrayAttr::get(context, newIteratorTypes));
+    genericOp.setIndexingMapsAttr(newIndexingMapAttr);
+    genericOp.setIteratorTypesAttr(ArrayAttr::get(context, newIteratorTypes));
     replaceUnitDimIndexOps(genericOp, unitDims, rewriter);
     rewriter.finalizeRootUpdate(genericOp);
     return success();
@@ -420,8 +420,8 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
       return res;
     };
 
-    SmallVector<Value, 4> newInputs = insertReshapes(genericOp.inputs());
-    SmallVector<Value, 4> newOutputs = insertReshapes(genericOp.outputs());
+    SmallVector<Value, 4> newInputs = insertReshapes(genericOp.getInputs());
+    SmallVector<Value, 4> newOutputs = insertReshapes(genericOp.getOutputs());
 
     // If any result type changes, insert a reshape to convert from the original
     // type to the new type.
@@ -431,10 +431,11 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
       resultTypes.push_back(newInputOutputTypes[i + genericOp.getNumInputs()]);
     GenericOp replacementOp = rewriter.create<GenericOp>(
         loc, resultTypes, newInputs, newOutputs, newIndexingMaps,
-        llvm::to_vector<4>(
-            genericOp.iterator_types().template getAsValueRange<StringAttr>()));
-    rewriter.inlineRegionBefore(genericOp.region(), replacementOp.region(),
-                                replacementOp.region().begin());
+        llvm::to_vector<4>(genericOp.getIteratorTypes()
+                               .template getAsValueRange<StringAttr>()));
+    rewriter.inlineRegionBefore(genericOp.getRegion(),
+                                replacementOp.getRegion(),
+                                replacementOp.getRegion().begin());
 
     // If any result tensor has a modified shape, then add reshape to recover
     // the original shape.

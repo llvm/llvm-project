@@ -860,9 +860,9 @@ DownscaleSizeOneWindowed2DConvolution::returningMatchAndRewrite(
   if (convOp.hasBufferSemantics())
     return failure(); // To be implemented.
 
-  Value input = convOp.inputs().front();
-  Value kernel = convOp.inputs().back();
-  Value output = convOp.outputs().front();
+  Value input = convOp.getInputs().front();
+  Value kernel = convOp.getInputs().back();
+  Value output = convOp.getOutputs().front();
 
   auto inputType = input.getType().dyn_cast<RankedTensorType>();
   auto kernelType = kernel.getType().dyn_cast<RankedTensorType>();
@@ -901,11 +901,12 @@ DownscaleSizeOneWindowed2DConvolution::returningMatchAndRewrite(
 
   // Rank-reduce strides and dilations too.
   // TODO: dropDim 1-liner helper.
-  auto strides = llvm::to_vector<4>(convOp.strides().getValues<int64_t>());
+  auto strides = llvm::to_vector<4>(convOp.getStrides().getValues<int64_t>());
   strides.erase(strides.begin() + (removeH ? 0 : 1));
   auto stridesAttr = rewriter.getI64VectorAttr(strides);
 
-  auto dilations = llvm::to_vector<4>(convOp.dilations().getValues<int64_t>());
+  auto dilations =
+      llvm::to_vector<4>(convOp.getDilations().getValues<int64_t>());
   dilations.erase(dilations.begin() + (removeH ? 0 : 1));
   auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
 
@@ -930,9 +931,9 @@ DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
   if (convOp.hasBufferSemantics())
     return failure(); // To be implemented.
 
-  Value input = convOp.inputs().front();
-  Value kernel = convOp.inputs().back();
-  Value output = convOp.outputs().front();
+  Value input = convOp.getInputs().front();
+  Value kernel = convOp.getInputs().back();
+  Value output = convOp.getOutputs().front();
 
   auto inputType = input.getType().dyn_cast<RankedTensorType>();
   auto kernelType = kernel.getType().dyn_cast<RankedTensorType>();
@@ -971,11 +972,12 @@ DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
 
   // Rank-reduce strides and dilations too.
   // TODO: dropDim 1-liner helper.
-  auto strides = llvm::to_vector<4>(convOp.strides().getValues<int64_t>());
+  auto strides = llvm::to_vector<4>(convOp.getStrides().getValues<int64_t>());
   strides.erase(strides.begin() + (removeH ? 0 : 1));
   auto stridesAttr = rewriter.getI64VectorAttr(strides);
 
-  auto dilations = llvm::to_vector<4>(convOp.dilations().getValues<int64_t>());
+  auto dilations =
+      llvm::to_vector<4>(convOp.getDilations().getValues<int64_t>());
   dilations.erase(dilations.begin() + (removeH ? 0 : 1));
   auto dilationsAttr = rewriter.getI64VectorAttr(dilations);
 

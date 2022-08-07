@@ -58,7 +58,7 @@ static bool isAlloc(OpOperand *op, bool isZero) {
 
 // Helper to detect sampling operation.
 static bool isSampling(GenericOp op) {
-  auto yieldOp = cast<linalg::YieldOp>(op.region().front().getTerminator());
+  auto yieldOp = cast<linalg::YieldOp>(op.getRegion().front().getTerminator());
   if (auto *def = yieldOp.getOperand(0).getDefiningOp()) {
     if (isa<arith::MulFOp>(def) || isa<arith::MulIOp>(def)) {
       // Both scalar input arguments used exactly once.
@@ -85,7 +85,7 @@ static bool isMulChain(Value val, Value x) {
 
 // Helper to detect x = x + <multiplications>.
 static bool isSumOfMul(GenericOp op) {
-  auto yieldOp = cast<linalg::YieldOp>(op.region().front().getTerminator());
+  auto yieldOp = cast<linalg::YieldOp>(op.getRegion().front().getTerminator());
   if (auto *def = yieldOp.getOperand(0).getDefiningOp()) {
     if (isa<arith::AddFOp>(def) || isa<arith::AddIOp>(def)) {
       Value x = op.getBlock()->getArguments().back();
@@ -98,7 +98,7 @@ static bool isSumOfMul(GenericOp op) {
 
 // Helper to detect direct yield of a zero value.
 static bool isZeroYield(GenericOp op) {
-  auto yieldOp = cast<linalg::YieldOp>(op.region().front().getTerminator());
+  auto yieldOp = cast<linalg::YieldOp>(op.getRegion().front().getTerminator());
   if (auto arg = yieldOp.getOperand(0).dyn_cast<BlockArgument>()) {
     if (arg.getOwner()->getParentOp() == op) {
       OpOperand *t = op.getInputAndOutputOperands()[arg.getArgNumber()];
@@ -201,11 +201,11 @@ public:
         loc, op.getResult(0).getType(), inputOps, outputOps,
         rewriter.getAffineMapArrayAttr(fusedIndexMaps), prod.iterator_types(),
         /*doc=*/nullptr, /*library_call=*/nullptr);
-    Block &prodBlock = prod.region().front();
-    Block &consBlock = op.region().front();
+    Block &prodBlock = prod.getRegion().front();
+    Block &consBlock = op.getRegion().front();
     BlockAndValueMapping mapper;
     Block *fusedBlock = new Block();
-    fusedOp.region().push_back(fusedBlock);
+    fusedOp.getRegion().push_back(fusedBlock);
     unsigned num = prodBlock.getNumArguments();
     for (unsigned i = 0; i < num - 1; i++)
       addArg(mapper, fusedBlock, prodBlock.getArgument(i));
