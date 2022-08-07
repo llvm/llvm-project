@@ -51,10 +51,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  bool isPrivateExtern, bool isThumb,
                                  bool isReferencedDynamically, bool noDeadStrip,
                                  bool isWeakDefCanBeHidden) {
-  Symbol *s;
-  bool wasInserted;
   bool overridesWeakDef = false;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   assert(!isWeakDef || (isa<BitcodeFile>(file) && !isec) ||
          (isa<ObjFile>(file) && file == isec->getFile()));
@@ -126,9 +124,7 @@ Defined *SymbolTable::aliasDefined(Defined *src, StringRef target) {
 
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
                                   bool isWeakRef) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   RefState refState = isWeakRef ? RefState::Weak : RefState::Strong;
 
@@ -147,9 +143,7 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
 
 Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
                                uint32_t align, bool isPrivateExtern) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   if (!wasInserted) {
     if (auto *common = dyn_cast<CommonSymbol>(s)) {
@@ -168,9 +162,7 @@ Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
 
 Symbol *SymbolTable::addDylib(StringRef name, DylibFile *file, bool isWeakDef,
                               bool isTlv) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   RefState refState = RefState::Unreferenced;
   if (!wasInserted) {
@@ -203,9 +195,7 @@ Symbol *SymbolTable::addDynamicLookup(StringRef name) {
 
 Symbol *SymbolTable::addLazyArchive(StringRef name, ArchiveFile *file,
                                     const object::Archive::Symbol &sym) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, file);
+  auto [s, wasInserted] = insert(name, file);
 
   if (wasInserted) {
     replaceSymbol<LazyArchive>(s, file, sym);
@@ -223,9 +213,7 @@ Symbol *SymbolTable::addLazyArchive(StringRef name, ArchiveFile *file,
 }
 
 Symbol *SymbolTable::addLazyObject(StringRef name, InputFile &file) {
-  Symbol *s;
-  bool wasInserted;
-  std::tie(s, wasInserted) = insert(name, &file);
+  auto [s, wasInserted] = insert(name, &file);
 
   if (wasInserted) {
     replaceSymbol<LazyObject>(s, file, name);
