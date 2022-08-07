@@ -145,6 +145,20 @@ bool ProcedureDesignator::IsElemental() const {
   return false;
 }
 
+bool ProcedureDesignator::IsPure() const {
+  if (const Symbol * interface{GetInterfaceSymbol()}) {
+    return IsPureProcedure(*interface);
+  } else if (const Symbol * symbol{GetSymbol()}) {
+    return IsPureProcedure(*symbol);
+  } else if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&u)}) {
+    return intrinsic->characteristics.value().attrs.test(
+        characteristics::Procedure::Attr::Pure);
+  } else {
+    DIE("ProcedureDesignator::IsPure(): no case");
+  }
+  return false;
+}
+
 const SpecificIntrinsic *ProcedureDesignator::GetSpecificIntrinsic() const {
   return std::get_if<SpecificIntrinsic>(&u);
 }

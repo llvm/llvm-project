@@ -1007,17 +1007,25 @@ std::optional<std::string> FindImpureCall(
 // Predicate: is a scalar expression suitable for naive scalar expansion
 // in the flattening of an array expression?
 // TODO: capture such scalar expansions in temporaries, flatten everything
-struct UnexpandabilityFindingVisitor
+class UnexpandabilityFindingVisitor
     : public AnyTraverse<UnexpandabilityFindingVisitor> {
+public:
   using Base = AnyTraverse<UnexpandabilityFindingVisitor>;
   using Base::operator();
-  UnexpandabilityFindingVisitor() : Base{*this} {}
-  template <typename T> bool operator()(const FunctionRef<T> &) { return true; }
+  explicit UnexpandabilityFindingVisitor(bool admitPureCall)
+      : Base{*this}, admitPureCall_{admitPureCall} {}
+  template <typename T> bool operator()(const FunctionRef<T> &procRef) {
+    return !admitPureCall_ || !procRef.proc().IsPure();
+  }
   bool operator()(const CoarrayRef &) { return true; }
+
+private:
+  bool admitPureCall_{false};
 };
 
-template <typename T> bool IsExpandableScalar(const Expr<T> &expr) {
-  return !UnexpandabilityFindingVisitor{}(expr);
+template <typename T>
+bool IsExpandableScalar(const Expr<T> &expr, bool admitPureCall = false) {
+  return !UnexpandabilityFindingVisitor{admitPureCall}(expr);
 }
 
 // Common handling for procedure pointer compatibility of left- and right-hand
