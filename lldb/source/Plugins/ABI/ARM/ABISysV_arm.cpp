@@ -1539,7 +1539,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
       default:
         return return_valobj_sp;
       case 64: {
-        static_assert(sizeof(double) == sizeof(uint64_t), "");
+        static_assert(sizeof(double) == sizeof(uint64_t));
 
         if (IsArmHardFloat(thread)) {
           RegisterValue reg_value;
@@ -1563,7 +1563,7 @@ ValueObjectSP ABISysV_arm::GetReturnValueObjectImpl(
       }
       case 16: // Half precision returned after a conversion to single precision
       case 32: {
-        static_assert(sizeof(float) == sizeof(uint32_t), "");
+        static_assert(sizeof(float) == sizeof(uint32_t));
 
         if (IsArmHardFloat(thread)) {
           RegisterValue reg_value;

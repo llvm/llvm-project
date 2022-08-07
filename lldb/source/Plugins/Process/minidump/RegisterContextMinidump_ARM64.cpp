@@ -775,7 +775,7 @@ RegisterContextMinidump_ARM64::RegisterContextMinidump_ARM64(
   auto regs_data = data.GetData(&offset, sizeof(m_regs.v));
   if (regs_data)
     memcpy(m_regs.v, regs_data, sizeof(m_regs.v));
-  static_assert(k_num_regs == k_num_reg_infos, "");
+  static_assert(k_num_regs == k_num_reg_infos);
 }
 size_t RegisterContextMinidump_ARM64::GetRegisterCount() { return k_num_regs; }
 
