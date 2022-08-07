@@ -91,7 +91,7 @@ private:
   uint32_t m_section : 1;
   dw_offset_t m_die_offset;
 };
-static_assert(sizeof(DIERef) == 8, "");
+static_assert(sizeof(DIERef) == 8);
 
 typedef std::vector<DIERef> DIEArray;
 

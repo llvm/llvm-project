@@ -137,7 +137,7 @@ public:
                        llvm::StringLiteral description, Cat mask)
         : name(name), description(description), flag(MaskType(mask)) {
       static_assert(
-          std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value, "");
+          std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value);
     }
   };
 
@@ -157,7 +157,7 @@ public:
         : log_ptr(nullptr), categories(categories),
           default_flags(MaskType(default_flags)) {
       static_assert(
-          std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value, "");
+          std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value);
     }
 
     // This function is safe to call at any time. If the channel is disabled
@@ -306,8 +306,8 @@ template <typename Cat> Log::Channel &LogChannelFor() = delete;
 /// Returns a valid Log object if any of the provided categories are enabled.
 /// Otherwise, returns nullptr.
 template <typename Cat> Log *GetLog(Cat mask) {
-  static_assert(std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value,
-                "");
+  static_assert(
+      std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value);
   return LogChannelFor<Cat>().GetLog(Log::MaskType(mask));
 }
 
