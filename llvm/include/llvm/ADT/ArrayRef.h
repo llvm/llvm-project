@@ -25,7 +25,7 @@
 #include <vector>
 
 namespace llvm {
-  template<typename T> class LLVM_NODISCARD MutableArrayRef;
+  template<typename T> class [[nodiscard]] MutableArrayRef;
 
   /// ArrayRef - Represent a constant reference to an array (0 or more elements
   /// consecutively in memory), i.e. a start pointer and a length.  It allows
@@ -39,7 +39,7 @@ namespace llvm {
   /// This is intended to be trivially copyable, so it should be passed by
   /// value.
   template<typename T>
-  class LLVM_GSL_POINTER LLVM_NODISCARD ArrayRef {
+  class LLVM_GSL_POINTER [[nodiscard]] ArrayRef {
   public:
     using value_type = T;
     using pointer = value_type *;
@@ -303,7 +303,7 @@ namespace llvm {
   /// This is intended to be trivially copyable, so it should be passed by
   /// value.
   template<typename T>
-  class LLVM_NODISCARD MutableArrayRef : public ArrayRef<T> {
+  class [[nodiscard]] MutableArrayRef : public ArrayRef<T> {
   public:
     using value_type = T;
     using pointer = value_type *;

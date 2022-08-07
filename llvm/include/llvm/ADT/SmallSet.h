@@ -154,9 +154,7 @@ public:
 
   SmallSet() = default;
 
-  LLVM_NODISCARD bool empty() const {
-    return Vector.empty() && Set.empty();
-  }
+  [[nodiscard]] bool empty() const { return Vector.empty() && Set.empty(); }
 
   size_type size() const {
     return isSmall() ? Vector.size() : Set.size();

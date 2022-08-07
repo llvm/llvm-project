@@ -22,7 +22,7 @@
 using namespace llvm;
 using namespace coverage;
 
-LLVM_NODISCARD static ::testing::AssertionResult
+[[nodiscard]] static ::testing::AssertionResult
 ErrorEquals(coveragemap_error Expected, Error E) {
   coveragemap_error Found;
   std::string FoundMsg;

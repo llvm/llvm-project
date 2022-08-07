@@ -95,9 +95,7 @@ public:
     return makeConstIterator(getBucketsEnd(), getBucketsEnd(), *this, true);
   }
 
-  LLVM_NODISCARD bool empty() const {
-    return getNumEntries() == 0;
-  }
+  [[nodiscard]] bool empty() const { return getNumEntries() == 0; }
   unsigned size() const { return getNumEntries(); }
 
   /// Grow the densemap so that it can contain at least \p NumEntries items

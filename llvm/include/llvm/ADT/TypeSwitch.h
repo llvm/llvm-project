@@ -125,20 +125,19 @@ public:
 
   /// As a default, invoke the given callable within the root value.
   template <typename CallableT>
-  LLVM_NODISCARD ResultT Default(CallableT &&defaultFn) {
+  [[nodiscard]] ResultT Default(CallableT &&defaultFn) {
     if (result)
       return std::move(*result);
     return defaultFn(this->value);
   }
   /// As a default, return the given value.
-  LLVM_NODISCARD ResultT Default(ResultT defaultResult) {
+  [[nodiscard]] ResultT Default(ResultT defaultResult) {
     if (result)
       return std::move(*result);
     return defaultResult;
   }
 
-  LLVM_NODISCARD
-  operator ResultT() {
+  [[nodiscard]] operator ResultT() {
     assert(result && "Fell off the end of a type-switch");
     return std::move(*result);
   }
