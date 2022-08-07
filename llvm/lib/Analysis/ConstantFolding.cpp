@@ -2360,7 +2360,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
       // Conversion is always precise.
       (void)status;
-      assert(status == APFloat::opOK && !lost &&
+      assert(status != APFloat::opInexact && !lost &&
              "Precision lost during fp16 constfolding");
 
       return ConstantFP::get(Ty->getContext(), Val);
