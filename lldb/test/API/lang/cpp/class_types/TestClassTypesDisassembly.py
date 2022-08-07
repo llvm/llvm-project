@@ -48,24 +48,17 @@ class IterateFrameAndDisassembleTestCase(TestBase):
         thread = lldbutil.get_stopped_thread(
             process, lldb.eStopReasonBreakpoint)
         self.assertIsNotNone(thread)
-        depth = thread.GetNumFrames()
-        for i in range(depth - 1):
-            frame = thread.GetFrameAtIndex(i)
-            function = frame.GetFunction()
-            # Print the function header.
-            if self.TraceOn():
-                print()
-                print(function)
-            if function:
-                # Get all instructions for this function and print them out.
-                insts = function.GetInstructions(target)
-                for inst in insts:
-                    # We could simply do 'print inst' to print out the disassembly.
-                    # But we want to print to stdout only if self.TraceOn() is
-                    # True.
-                    disasm = str(inst)
-                    if self.TraceOn():
-                        print(disasm)
+        if self.TraceOn():
+            for frame in thread.frames:
+                function = frame.GetFunction()
+                if function:
+                    # Print the function header.
+                    print()
+                    print(function)
+                    # Get all instructions for this function and print them out.
+                    insts = function.GetInstructions(target)
+                    for inst in insts:
+                        print(inst)
 
     def setUp(self):
         # Call super's setUp().

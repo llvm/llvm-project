@@ -70,8 +70,18 @@ public:
   Iostat SetDirection(Direction);
 
   template <typename A, typename... X>
-  IoStatementState &BeginIoStatement(X &&...xs) {
-    lock_.Take(); // dropped in EndIoStatement()
+  IoStatementState &BeginIoStatement(const Terminator &terminator, X &&...xs) {
+    bool alreadyBusy{false};
+    {
+      CriticalSection critical{lock_};
+      alreadyBusy = isBusy_;
+      isBusy_ = true; // cleared in EndIoStatement()
+    }
+    if (alreadyBusy) {
+      terminator.Crash("Could not acquire exclusive lock on unit %d, perhaps "
+                       "due to an attempt to perform recursive I/O",
+          unitNumber_);
+    }
     A &state{u_.emplace<A>(std::forward<X>(xs)...)};
     if constexpr (!std::is_same_v<A, OpenStatementState>) {
       state.mutableModes() = ConnectionState::modes;
@@ -125,6 +135,8 @@ private:
   void HitEndOnRead(IoErrorHandler &);
 
   Lock lock_;
+  // TODO: replace with a thread ID
+  bool isBusy_{false}; // under lock_
 
   int unitNumber_{-1};
   Direction direction_{Direction::Output};

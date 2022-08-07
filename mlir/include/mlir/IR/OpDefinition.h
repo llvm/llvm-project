@@ -50,7 +50,7 @@ public:
   /// Access the internal ParseResult value.
   ParseResult value() const { return impl.value(); }
   ParseResult getValue() const { return impl.value(); }
-  ParseResult operator*() const { return getValue(); }
+  ParseResult operator*() const { return value(); }
 
 private:
   Optional<ParseResult> impl;
@@ -1541,7 +1541,7 @@ foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
 template <typename... Ts>
 static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
                                 SmallVectorImpl<OpFoldResult> &results) {
-  return success((succeeded(foldTrait<Ts>(op, operands, results)) | ...));
+  return success((succeeded(foldTrait<Ts>(op, operands, results)) || ...));
 }
 
 //===----------------------------------------------------------------------===//
