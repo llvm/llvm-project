@@ -291,6 +291,7 @@ struct Configuration {
   StringRef thinLTOJobs;
   unsigned timeTraceGranularity;
   int32_t splitStackAdjustSize;
+  StringRef packageMetadata;
 
   // The following config options do not directly correspond to any
   // particular command line options.
