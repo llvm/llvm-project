@@ -1701,14 +1701,13 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
 }
 
 /// Return the DW_AT_(GNU_)dwo_id.
-/// FIXME: Technically 0 is a valid hash.
-static uint64_t GetDWOId(DWARFCompileUnit &dwarf_cu,
+static llvm::Optional<uint64_t> GetDWOId(DWARFCompileUnit &dwarf_cu,
                          const DWARFDebugInfoEntry &cu_die) {
-  uint64_t dwo_id =
-      cu_die.GetAttributeValueAsUnsigned(&dwarf_cu, DW_AT_GNU_dwo_id, 0);
-  if (!dwo_id)
-    dwo_id = cu_die.GetAttributeValueAsUnsigned(&dwarf_cu, DW_AT_dwo_id, 0);
-  return dwo_id;
+  llvm::Optional<uint64_t> dwo_id =
+      cu_die.GetAttributeValueAsOptionalUnsigned(&dwarf_cu, DW_AT_GNU_dwo_id);
+  if (dwo_id)
+    return dwo_id;
+  return cu_die.GetAttributeValueAsOptionalUnsigned(&dwarf_cu, DW_AT_dwo_id);
 }
 
 llvm::Optional<uint64_t> SymbolFileDWARF::GetDWOId() {
@@ -1716,8 +1715,7 @@ llvm::Optional<uint64_t> SymbolFileDWARF::GetDWOId() {
     if (auto comp_unit = GetCompileUnitAtIndex(0))
       if (DWARFCompileUnit *cu = GetDWARFCompileUnit(comp_unit.get()))
         if (DWARFDebugInfoEntry *cu_die = cu->DIE().GetDIE())
-          if (uint64_t dwo_id = ::GetDWOId(*cu, *cu_die))
-            return dwo_id;
+          return ::GetDWOId(*cu, *cu_die);
   }
   return {};
 }
@@ -1867,7 +1865,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
 
     // Verify the DWO hash.
     // FIXME: Technically "0" is a valid hash.
-    uint64_t dwo_id = ::GetDWOId(*dwarf_cu, *die.GetDIE());
+    llvm::Optional<uint64_t> dwo_id = ::GetDWOId(*dwarf_cu, *die.GetDIE());
     if (!dwo_id)
       continue;
 
