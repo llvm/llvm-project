@@ -254,7 +254,6 @@ OPTIONS
   and prints the results to standard output. The following markup elements are
   not yet supported:
 
-  * ``{{pc}}``
   * ``{{bt}}``
   * ``{{hexdict}}``
   * ``{{dumpfile}}``
