@@ -18,6 +18,7 @@
 ; the analysis caches.
 ;
 ; CHECK: Running pass: SimpleLoopUnswitchPass on Loop at depth 1 containing: %loop_begin<header>,%loop_b,%loop_b_inner,%loop_b_inner_exit,%loop_a,%loop_a_inner,%loop_a_inner_exit,%latch<latch><exiting>
+; CHECK-NEXT: Running analysis: OuterAnalysisManagerProxy
 ; CHECK-NEXT: Clearing all analysis results for: loop_a_inner
 
 
