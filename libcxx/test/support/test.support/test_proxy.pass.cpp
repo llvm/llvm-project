@@ -293,7 +293,7 @@ constexpr bool test() {
   return true;
 }
 
-int main(int, const char**) {
+int main(int, char**) {
   test();
   static_assert(test());
 
