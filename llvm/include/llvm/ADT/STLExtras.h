@@ -725,8 +725,8 @@ class zip_shortest : public zip_common<zip_shortest<Iters...>, Iters...> {
   template <size_t... Ns>
   bool test(const zip_shortest<Iters...> &other,
             std::index_sequence<Ns...>) const {
-    return all_of(std::initializer_list<bool>{std::get<Ns>(this->iterators) !=
-                                              std::get<Ns>(other.iterators)...},
+    return all_of(std::array{std::get<Ns>(this->iterators) !=
+                             std::get<Ns>(other.iterators)...},
                   identity<bool>{});
   }
 
