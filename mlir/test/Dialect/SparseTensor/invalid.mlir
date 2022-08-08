@@ -360,3 +360,86 @@ func.func @invalid_reduce_wrong_yield(%arg0: f64, %arg1: f64) -> f64 {
     }
   return %r : f64
 }
+
+// -----
+
+#DC = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
+func.func @invalid_concat_less_inputs(%arg: tensor<9x4xf64, #DC>) -> tensor<9x4xf64, #DC> {
+  // expected-error@+1 {{Need at least two tensors to concatenate.}}
+  %0 = sparse_tensor.concatenate %arg {dimension = 1 : index}
+       : tensor<9x4xf64, #DC> to tensor<9x4xf64, #DC>
+  return %0 : tensor<9x4xf64, #DC>
+}
+
+// -----
+
+#DC = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
+func.func @invalid_concat_dim(%arg0: tensor<2x4xf64, #DC>,
+                              %arg1: tensor<3x4xf64, #DC>,
+                              %arg2: tensor<4x4xf64, #DC>) -> tensor<9x4xf64, #DC> {
+  // expected-error@+1 {{Failed to concatentate tensors with rank=2 on dimension=4}}
+  %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 4 : index}
+       : tensor<2x4xf64, #DC>,
+         tensor<3x4xf64, #DC>,
+         tensor<4x4xf64, #DC> to tensor<9x4xf64, #DC>
+  return %0 : tensor<9x4xf64, #DC>
+}
+
+// -----
+
+#C = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
+#DC = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
+#DCC = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed", "compressed"]}>
+func.func @invalid_concat_rank_mismatch(%arg0: tensor<2xf64, #C>,
+                                        %arg1: tensor<3x4xf64, #DC>,
+                                        %arg2: tensor<4x4x4xf64, #DCC>) -> tensor<9x4xf64, #DC> {
+  // expected-error@+1 {{The input tensor $0 has a different rank (rank=1) from the output tensor (rank=2)}}
+  %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
+       : tensor<2xf64, #C>,
+         tensor<3x4xf64, #DC>,
+         tensor<4x4x4xf64, #DCC> to tensor<9x4xf64, #DC>
+  return %0 : tensor<9x4xf64, #DC>
+}
+
+// -----
+
+#DC = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
+func.func @invalid_concat_size_mismatch_dyn(%arg0: tensor<?x4xf64, #DC>,
+                                            %arg1: tensor<5x4xf64, #DC>,
+                                            %arg2: tensor<4x4xf64, #DC>) -> tensor<9x4xf64, #DC> {
+  // expected-error@+1 {{Only statically-sized input tensors are supported.}}
+  %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
+       : tensor<?x4xf64, #DC>,
+         tensor<5x4xf64, #DC>,
+         tensor<4x4xf64, #DC> to tensor<9x4xf64, #DC>
+  return %0 : tensor<9x4xf64, #DC>
+}
+
+// -----
+
+#DC = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
+func.func @invalid_concat_size_mismatch(%arg0: tensor<3x4xf64, #DC>,
+                                        %arg1: tensor<5x4xf64, #DC>,
+                                        %arg2: tensor<4x4xf64, #DC>) -> tensor<9x4xf64, #DC> {
+  // expected-error@+1 {{The concatenation dimension of the output tensor should be the sum of}}
+  %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
+       : tensor<3x4xf64, #DC>,
+         tensor<5x4xf64, #DC>,
+         tensor<4x4xf64, #DC> to tensor<9x4xf64, #DC>
+  return %0 : tensor<9x4xf64, #DC>
+}
+
+// -----
+
+#DC = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
+func.func @invalid_concat_size_mismatch(%arg0: tensor<2x4xf64, #DC>,
+                                        %arg1: tensor<3x3xf64, #DC>,
+                                        %arg2: tensor<4x4xf64, #DC>) -> tensor<9x4xf64, #DC> {
+  // expected-error@+1 {{All dimensions (expect for the concatenating one) should be equal}}
+  %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
+       : tensor<2x4xf64, #DC>,
+         tensor<3x3xf64, #DC>,
+         tensor<4x4xf64, #DC> to tensor<9x4xf64, #DC>
+  return %0 : tensor<9x4xf64, #DC>
+}
+

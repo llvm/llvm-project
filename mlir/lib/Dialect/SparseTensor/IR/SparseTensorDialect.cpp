@@ -13,6 +13,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -347,6 +348,69 @@ LogicalResult UnaryOp::verify() {
         verifyNumBlockArgs(this, absent, "absent", TypeRange{}, outputType);
     if (failed(regionResult))
       return regionResult;
+  }
+
+  return success();
+}
+
+LogicalResult ConcatenateOp::verify() {
+  auto dstTp = getType().cast<RankedTensorType>();
+  uint64_t concatDim = getDimension().getZExtValue();
+  unsigned rank = dstTp.getRank();
+
+  if (getInputs().size() <= 1)
+    return emitError("Need at least two tensors to concatenate.");
+
+  for (auto type : getInputs().getTypes()) {
+    auto shape = type.cast<RankedTensorType>().getShape();
+    for (auto dim : shape) {
+      if (dim == ShapedType::kDynamicSize)
+        return emitError("Only statically-sized input tensors are supported.");
+    }
+  }
+
+  if (concatDim >= rank)
+    return emitError(llvm::formatv(
+        "Failed to concatentate tensors with rank={0} on dimension={1}.", rank,
+        concatDim));
+
+  for (size_t i = 0; i < getInputs().size(); i++) {
+    Value input = getInputs()[i];
+    auto inputRank = input.getType().cast<RankedTensorType>().getRank();
+    if (inputRank != rank)
+      return emitError(
+          llvm::formatv("The input tensor ${0} has a different rank (rank={1}) "
+                        "from the output tensor (rank={2}).",
+                        i, inputRank, rank));
+  }
+
+  for (unsigned i = 0; i < rank; i++) {
+    auto dstDim = dstTp.getShape()[i];
+    if (i == concatDim) {
+      if (dstDim != ShapedType::kDynamicSize) {
+        unsigned sumDim = 0;
+        for (auto src : getInputs()) {
+          // If we reach here, all inputs should have static shapes.
+          auto d = src.getType().cast<RankedTensorType>().getShape()[i];
+          sumDim += d;
+        }
+        // If all dimension are statically known, the sum of all the input
+        // dimensions should be equal to the output dimension.
+        if (sumDim != dstDim)
+          return emitError(
+              "The concatenation dimension of the output tensor should be the "
+              "sum of all the concatenation dimensions of the input tensors.");
+      }
+    } else {
+      int prev = dstDim;
+      for (auto src : getInputs()) {
+        auto d = src.getType().cast<RankedTensorType>().getShape()[i];
+        if (prev != ShapedType::kDynamicSize && d != prev)
+          return emitError("All dimensions (expect for the concatenating one) "
+                           "should be equal.");
+        prev = d;
+      }
+    }
   }
 
   return success();

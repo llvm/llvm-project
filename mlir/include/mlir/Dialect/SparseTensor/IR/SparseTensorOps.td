@@ -163,6 +163,34 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
   let hasVerifier = 1;
 }
 
+def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", []>,
+    Arguments<(ins Variadic<AnyRankedTensor>:$inputs,
+                   IndexAttr:$dimension)>,
+    Results<(outs AnyRankedTensor:$result)> {
+
+  let summary = "Concatenates a list of tensors into a single tensor.";
+  let description = [{
+     Concatenates a list input tensors and the output tensor with the same rank.
+     The concatenation happens on the specified `dimension` (0<= dimension < rank).
+     The resulting `dimension` size is the sum of all the input dimension sizes,
+     while all the other dimensions should have the same size in the input and
+     output tensors.
+
+     Only statically-sized input tensors are accepted, while the output tensor
+     can be dynamically-sized.
+
+     Example:
+
+     ```mlir
+     %0 = sparse_tensor.concatenate %1, %2 { dimension = 0 : index }
+       : tensor<64x64xf64, #CSR>, tensor<64x64xf64, #CSR> to tensor<128x64xf64, #CSR>
+     ```
+   }];
+
+  let assemblyFormat = "$inputs attr-dict `:` type($inputs) `to` type($result)";
+  let hasVerifier = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Management Operations. These operations are "impure" in the
 // sense that they do not properly operate on SSA values. Instead, the behavior
