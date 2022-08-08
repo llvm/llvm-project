@@ -86,7 +86,7 @@ static void checkSample(bool hasSample, const IntegerPolyhedron &poly,
         EXPECT_TRUE(Simplex(poly).isUnbounded());
       }
       if (maybeLexMin.isBounded()) {
-        EXPECT_TRUE(poly.containsPoint(*maybeLexMin));
+        EXPECT_TRUE(poly.containsPointNoLocal(*maybeLexMin));
       }
     }
     break;
@@ -409,6 +409,9 @@ TEST(IntegerPolyhedronTest, FindSampleTest) {
 
   checkSample(true, parsePoly("(x, y, z) : (2 * x - 1 >= 0, x - y - 1 == 0, "
                               "y - z == 0)"));
+
+  // Test with a local id.
+  checkSample(true, parsePoly("(x) : (x == 5*(x floordiv 2))"));
 
   // Regression tests for the computation of dual coefficients.
   checkSample(false, parsePoly("(x, y, z) : ("
