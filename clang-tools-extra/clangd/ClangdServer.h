@@ -253,7 +253,13 @@ public:
   /// Get information about type hierarchy for a given position.
   void typeHierarchy(PathRef File, Position Pos, int Resolve,
                      TypeHierarchyDirection Direction,
-                     Callback<llvm::Optional<TypeHierarchyItem>> CB);
+                     Callback<std::vector<TypeHierarchyItem>> CB);
+  /// Get direct parents of a type hierarchy item.
+  void superTypes(const TypeHierarchyItem &Item,
+                  Callback<llvm::Optional<std::vector<TypeHierarchyItem>>> CB);
+  /// Get direct children of a type hierarchy item.
+  void subTypes(const TypeHierarchyItem &Item,
+                Callback<std::vector<TypeHierarchyItem>> CB);
 
   /// Resolve type hierarchy item in the given direction.
   void resolveTypeHierarchy(TypeHierarchyItem Item, int Resolve,
