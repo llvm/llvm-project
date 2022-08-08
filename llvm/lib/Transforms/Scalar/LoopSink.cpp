@@ -300,8 +300,8 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
     return BFI.getBlockFreq(A) < BFI.getBlockFreq(B);
   });
 
-  // Traverse preheader's instructions in reverse order becaue if A depends
-  // on B (A appears after B), A needs to be sinked first before B can be
+  // Traverse preheader's instructions in reverse order because if A depends
+  // on B (A appears after B), A needs to be sunk first before B can be
   // sinked.
   for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
     if (isa<PHINode>(&I))

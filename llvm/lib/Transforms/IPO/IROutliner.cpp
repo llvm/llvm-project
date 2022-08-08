@@ -1210,7 +1210,7 @@ static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
     // the hash for the PHINode.
     OGVN = Cand.getGVN(IncomingBlock);
 
-    // If there is no number for the incoming block, it is becaause we have
+    // If there is no number for the incoming block, it is because we have
     // split the candidate basic blocks.  So we use the previous block that it
     // was split from to find the valid global value numbering for the PHINode.
     if (!OGVN) {

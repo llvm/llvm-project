@@ -139,7 +139,7 @@ struct FlattenInfo {
 
   PHINode *NarrowInnerInductionPHI = nullptr; // Holds the old/narrow induction
   PHINode *NarrowOuterInductionPHI = nullptr; // phis, i.e. the Phis before IV
-                                              // has been apllied. Used to skip
+                                              // has been applied. Used to skip
                                               // checks on phi nodes.
 
   FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL){};

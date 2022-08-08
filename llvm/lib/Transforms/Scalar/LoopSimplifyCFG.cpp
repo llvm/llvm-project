@@ -474,7 +474,7 @@ private:
     NumLoopBlocksDeleted += DeadLoopBlocks.size();
   }
 
-  /// Constant-fold terminators of blocks acculumated in FoldCandidates into the
+  /// Constant-fold terminators of blocks accumulated in FoldCandidates into the
   /// unconditional branches.
   void foldTerminators() {
     for (BasicBlock *BB : FoldCandidates) {
