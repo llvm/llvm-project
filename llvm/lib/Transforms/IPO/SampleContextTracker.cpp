@@ -534,7 +534,7 @@ SampleContextTracker::getOrCreateContextPath(const SampleContext &Context,
   ContextTrieNode *ContextNode = &RootContext;
   LineLocation CallSiteLoc(0, 0);
 
-  for (auto &Callsite : Context.getContextFrames()) {
+  for (const auto &Callsite : Context.getContextFrames()) {
     // Create child node at parent line/disc location
     if (AllowCreate) {
       ContextNode =

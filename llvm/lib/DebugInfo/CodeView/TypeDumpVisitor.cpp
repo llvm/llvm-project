@@ -335,7 +335,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, MemberFunctionRecord &MF) {
 
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR,
                                         MethodOverloadListRecord &MethodList) {
-  for (auto &M : MethodList.getMethods()) {
+  for (const auto &M : MethodList.getMethods()) {
     ListScope S(*W, "Method");
     printMemberAttributes(M.getAccess(), M.getMethodKind(), M.getOptions());
     printTypeIndex("Type", M.getType());

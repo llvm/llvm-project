@@ -230,11 +230,11 @@ public:
     }
     // The intersection requires the *union* of the explicitly not-preserved
     // IDs and the *intersection* of the preserved IDs.
-    for (auto ID : Arg.NotPreservedAnalysisIDs) {
+    for (auto *ID : Arg.NotPreservedAnalysisIDs) {
       PreservedIDs.erase(ID);
       NotPreservedAnalysisIDs.insert(ID);
     }
-    for (auto ID : PreservedIDs)
+    for (auto *ID : PreservedIDs)
       if (!Arg.PreservedIDs.count(ID))
         PreservedIDs.erase(ID);
   }
@@ -252,11 +252,11 @@ public:
     }
     // The intersection requires the *union* of the explicitly not-preserved
     // IDs and the *intersection* of the preserved IDs.
-    for (auto ID : Arg.NotPreservedAnalysisIDs) {
+    for (auto *ID : Arg.NotPreservedAnalysisIDs) {
       PreservedIDs.erase(ID);
       NotPreservedAnalysisIDs.insert(ID);
     }
-    for (auto ID : PreservedIDs)
+    for (auto *ID : PreservedIDs)
       if (!Arg.PreservedIDs.count(ID))
         PreservedIDs.erase(ID);
   }
@@ -1104,7 +1104,7 @@ public:
           DeadKeys.push_back(OuterID);
       }
 
-      for (auto OuterID : DeadKeys)
+      for (auto *OuterID : DeadKeys)
         OuterAnalysisInvalidationMap.erase(OuterID);
 
       // The proxy itself remains valid regardless of anything else.

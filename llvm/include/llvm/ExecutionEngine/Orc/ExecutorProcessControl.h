@@ -228,7 +228,7 @@ public:
   /// found. If any symbol is not found then the function returns an error.
   Error getBootstrapSymbols(
       ArrayRef<std::pair<ExecutorAddr &, StringRef>> Pairs) const {
-    for (auto &KV : Pairs) {
+    for (const auto &KV : Pairs) {
       auto I = BootstrapSymbols.find(KV.second);
       if (I == BootstrapSymbols.end())
         return make_error<StringError>("Symbol \"" + KV.second +

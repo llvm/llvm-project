@@ -146,7 +146,7 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
       }
       std::vector<Loop *> GrandChildLoops;
       std::swap(GrandChildLoops, Child->getSubLoopsVector());
-      for (auto GrandChildLoop : GrandChildLoops) {
+      for (auto *GrandChildLoop : GrandChildLoops) {
         GrandChildLoop->setParentLoop(nullptr);
         NewLoop->addChildLoop(GrandChildLoop);
       }
@@ -170,14 +170,14 @@ static void createNaturalLoopInternal(LoopInfo &LI, DominatorTree &DT,
                                       SetVector<BasicBlock *> &Headers) {
 #ifndef NDEBUG
   // All headers are part of the SCC
-  for (auto H : Headers) {
+  for (auto *H : Headers) {
     assert(Blocks.count(H));
   }
 #endif
 
   SetVector<BasicBlock *> Predecessors;
-  for (auto H : Headers) {
-    for (auto P : predecessors(H)) {
+  for (auto *H : Headers) {
+    for (auto *P : predecessors(H)) {
       Predecessors.insert(P);
     }
   }
@@ -214,13 +214,13 @@ static void createNaturalLoopInternal(LoopInfo &LI, DominatorTree &DT,
   // in the loop. This ensures that it is recognized as the
   // header. Since the new loop is already in LoopInfo, the new blocks
   // are also propagated up the chain of parent loops.
-  for (auto G : GuardBlocks) {
+  for (auto *G : GuardBlocks) {
     LLVM_DEBUG(dbgs() << "added guard block: " << G->getName() << "\n");
     NewLoop->addBasicBlockToLoop(G, LI);
   }
 
   // Add the SCC blocks to the new loop.
-  for (auto BB : Blocks) {
+  for (auto *BB : Blocks) {
     NewLoop->addBlockEntry(BB);
     if (LI.getLoopFor(BB) == ParentLoop) {
       LLVM_DEBUG(dbgs() << "moved block from parent: " << BB->getName()
@@ -288,7 +288,7 @@ static bool makeReducible(LoopInfo &LI, DominatorTree &DT, Graph &&G) {
     // match. So we discover the headers using the reverse of the block order.
     SetVector<BasicBlock *> Headers;
     LLVM_DEBUG(dbgs() << "Found headers:");
-    for (auto BB : reverse(Blocks)) {
+    for (auto *BB : reverse(Blocks)) {
       for (const auto P : predecessors(BB)) {
         // Skip unreachable predecessors.
         if (!DT.isReachableFromEntry(P))

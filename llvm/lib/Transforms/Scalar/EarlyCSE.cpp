@@ -1106,7 +1106,7 @@ bool EarlyCSE::handleBranchCondition(Instruction *CondInst,
 
     Value *LHS, *RHS;
     if (MatchBinOp(Curr, PropagateOpcode, LHS, RHS))
-      for (auto &Op : { LHS, RHS })
+      for (auto *Op : { LHS, RHS })
         if (Instruction *OPI = dyn_cast<Instruction>(Op))
           if (SimpleValue::canHandle(OPI) && Visited.insert(OPI).second)
             WorkList.push_back(OPI);
