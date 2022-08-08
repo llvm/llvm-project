@@ -257,8 +257,7 @@ static Defined *createBoundarySymbol(const Undefined &sym) {
 
 static void handleSectionBoundarySymbol(const Undefined &sym, StringRef segSect,
                                         Boundary which) {
-  StringRef segName, sectName;
-  std::tie(segName, sectName) = segSect.split('$');
+  auto [segName, sectName] = segSect.split('$');
 
   // Attach the symbol to any InputSection that will end up in the right
   // OutputSection -- it doesn't matter which one we pick.
