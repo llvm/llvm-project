@@ -299,6 +299,43 @@ static int64_t GetAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
   return *MaybeDiff;
 }
 
+static void checkARM64Instructions(MCStreamer &Streamer,
+                                   ArrayRef<WinEH::Instruction> Insns,
+                                   const MCSymbol *Begin, const MCSymbol *End,
+                                   StringRef Name, StringRef Type) {
+  if (!End)
+    return;
+  Optional<int64_t> MaybeDistance =
+      GetOptionalAbsDifference(Streamer, End, Begin);
+  if (!MaybeDistance)
+    return;
+  uint32_t Distance = (uint32_t)*MaybeDistance;
+
+  for (const auto &I : Insns) {
+    switch (static_cast<Win64EH::UnwindOpcodes>(I.Operation)) {
+    default:
+      break;
+    case Win64EH::UOP_TrapFrame:
+    case Win64EH::UOP_PushMachFrame:
+    case Win64EH::UOP_Context:
+    case Win64EH::UOP_ClearUnwoundToCall:
+      // Can't reason about these opcodes and how they map to actual
+      // instructions.
+      return;
+    }
+  }
+  // Exclude the end opcode which doesn't map to an instruction.
+  uint32_t InstructionBytes = 4 * (Insns.size() - 1);
+  if (Distance != InstructionBytes) {
+    Streamer.getContext().reportError(
+        SMLoc(), "Incorrect size for " + Name + " " + Type + ": " +
+                     Twine(Distance) +
+                     " bytes of instructions in range, but .seh directives "
+                     "corresponding to " +
+                     Twine(InstructionBytes) + " bytes\n");
+  }
+}
+
 static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
   uint32_t Count = 0;
   for (const auto &I : Insns) {
@@ -1002,6 +1039,10 @@ static void ARM64ProcessEpilogs(WinEH::FrameInfo *info,
 static void ARM64FindSegmentsInFunction(MCStreamer &streamer,
                                         WinEH::FrameInfo *info,
                                         int64_t RawFuncLength) {
+  if (info->PrologEnd)
+    checkARM64Instructions(streamer, info->Instructions, info->Begin,
+                           info->PrologEnd, info->Function->getName(),
+                           "prologue");
   struct EpilogStartEnd {
     MCSymbol *Start;
     int64_t Offset;
@@ -1013,6 +1054,8 @@ static void ARM64FindSegmentsInFunction(MCStreamer &streamer,
     MCSymbol *Start = I.first;
     auto &Instrs = I.second.Instructions;
     int64_t Offset = GetAbsDifference(streamer, Start, info->Begin);
+    checkARM64Instructions(streamer, Instrs, Start, I.second.End,
+                           info->Function->getName(), "epilogue");
     assert((Epilogs.size() == 0 || Offset >= Epilogs.back().End) &&
            "Epilogs should be monotonically ordered");
     // Exclue the end opcode from Instrs.size() when calculating the end of the
