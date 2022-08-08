@@ -150,9 +150,9 @@ def SPV_BitFieldInsertOp : SPV_Op<"BitFieldInsert",
 
   let availability = [
     MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Shader]>
+    Capability<[SPV_C_BitInstructions, SPV_C_Shader]>
   ];
 
   let arguments = (ins
@@ -222,9 +222,9 @@ def SPV_BitFieldSExtractOp : SPV_BitFieldExtractOp<"BitFieldSExtract",
 
   let availability = [
     MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Shader]>
+    Capability<[SPV_C_BitInstructions, SPV_C_Shader]>
   ];
 }
 
@@ -259,9 +259,9 @@ def SPV_BitFieldUExtractOp : SPV_BitFieldExtractOp<"BitFieldUExtract",
 
   let availability = [
     MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Shader]>
+    Capability<[SPV_C_BitInstructions, SPV_C_Shader]>
   ];
 }
 
@@ -299,9 +299,9 @@ def SPV_BitReverseOp : SPV_BitUnaryOp<"BitReverse", []> {
 
   let availability = [
     MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Shader]>
+    Capability<[SPV_C_BitInstructions, SPV_C_Shader]>
   ];
 }
 

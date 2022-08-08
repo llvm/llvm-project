@@ -364,7 +364,7 @@ def SPV_ReturnOp : SPV_Op<"Return", [InFunctionScope, NoSideEffect,
 // -----
 
 def SPV_UnreachableOp : SPV_Op<"Unreachable", [InFunctionScope, Terminator]> {
-  let summary = "Declares that this block is not reachable in the CFG.";
+  let summary = "Behavior is undefined if this instruction is executed.";
 
   let description = [{
     This instruction must be the last instruction in a block.
