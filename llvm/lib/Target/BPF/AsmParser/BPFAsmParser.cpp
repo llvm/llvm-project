@@ -368,7 +368,7 @@ BPFAsmParser::parseOperandAsOperator(OperandVector &Operands) {
   case AsmToken::Plus: {
     if (getLexer().peekTok().is(AsmToken::Integer))
       return MatchOperand_NoMatch;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
 
   case AsmToken::Equal:

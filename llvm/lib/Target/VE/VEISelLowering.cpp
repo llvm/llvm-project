@@ -2710,7 +2710,7 @@ static bool isI32Insn(const SDNode *User, const SDNode *N) {
     if (User->getOperand(2).getNode() != N &&
         User->getOperand(3).getNode() != N)
       return true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:

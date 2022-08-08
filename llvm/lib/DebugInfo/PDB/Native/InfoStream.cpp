@@ -63,7 +63,7 @@ Error InfoStream::reload() {
     case uint32_t(PdbRaw_FeatureSig::VC110):
       // No other flags for VC110 PDB.
       Stop = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case uint32_t(PdbRaw_FeatureSig::VC140):
       Features |= PdbFeatureContainsIdStream;
       break;

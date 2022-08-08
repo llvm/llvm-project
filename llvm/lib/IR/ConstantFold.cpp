@@ -903,7 +903,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         // Handle undef ^ undef -> 0 special case. This is a common
         // idiom (misuse).
         return Constant::getNullValue(C1->getType());
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Instruction::Add:
     case Instruction::Sub:
       return UndefValue::get(C1->getType());
@@ -979,7 +979,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       // -0.0 - undef --> undef (consistent with "fneg undef")
       if (match(C1, m_NegZeroFP()) && isa<UndefValue>(C2))
         return C2;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Instruction::FAdd:
     case Instruction::FMul:
     case Instruction::FDiv:
@@ -1513,7 +1513,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
       if (const GlobalValue *GV = dyn_cast<GlobalValue>(CE1Op0))
         if (const GlobalValue *GV2 = dyn_cast<GlobalValue>(V2))
           return areGlobalsPotentiallyEqual(GV, GV2);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Instruction::UIToFP:
     case Instruction::SIToFP:
     case Instruction::ZExt:

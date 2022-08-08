@@ -2848,7 +2848,7 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
     if (const auto *Formatter = TII->getMIRFormatter()) {
       return parseTargetImmMnemonic(OpCode, OpIdx, Dest, *Formatter);
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   default:
     // FIXME: Parse the MCSymbol machine operand.

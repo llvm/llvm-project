@@ -2576,7 +2576,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_SBYTE:
   case DK_DB:
     Lex();
@@ -2587,7 +2587,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_SWORD:
   case DK_DW:
     Lex();
@@ -2598,7 +2598,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_SDWORD:
   case DK_DD:
     Lex();
@@ -2609,7 +2609,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_DF:
     Lex();
     return parseDirectiveNamedValue(nextVal, 6, IDVal, IDLoc);
@@ -2619,7 +2619,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_SQWORD:
   case DK_DQ:
     Lex();

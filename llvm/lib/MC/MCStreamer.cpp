@@ -1286,7 +1286,7 @@ static VersionTuple getMachoBuildVersionSupportedOS(const Triple &Target) {
     // Mac Catalyst always uses the build version load command.
     if (Target.isMacCatalystEnvironment())
       return VersionTuple();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Triple::TvOS:
     return VersionTuple(12);
   case Triple::WatchOS:

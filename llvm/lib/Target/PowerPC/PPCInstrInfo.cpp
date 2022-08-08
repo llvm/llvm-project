@@ -3022,7 +3022,7 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     // BUILD_UACC is expanded to 4 copies of the underlying vsx registers.
     // So after building the 4 copies, we can replace the BUILD_UACC instruction
     // with a NOP.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case PPC::KILL_PAIR: {
     MI.setDesc(get(PPC::UNENCODED_NOP));
@@ -4259,7 +4259,7 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
         }
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::XFLOADf32:
       III.ImmOpcode = PPC::DFLOADf32;
       break;
@@ -4273,7 +4273,7 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
         }
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::XFLOADf64:
       III.ImmOpcode = PPC::DFLOADf64;
       break;
@@ -4291,7 +4291,7 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
         }
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::XFSTOREf32:
       III.ImmOpcode = PPC::DFSTOREf32;
       break;
@@ -4305,7 +4305,7 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
         }
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::XFSTOREf64:
       III.ImmOpcode = PPC::DFSTOREf64;
       break;

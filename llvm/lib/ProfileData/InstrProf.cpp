@@ -1349,7 +1349,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
         "if not add a case statement to fall through to the latest version.");
   case 8ull:
     H.MemProfOffset = read(Buffer, offsetOf(&Header::MemProfOffset));
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default: // Version7 (when the backwards compatible header was introduced).
     H.HashType = read(Buffer, offsetOf(&Header::HashType));
     H.HashOffset = read(Buffer, offsetOf(&Header::HashOffset));

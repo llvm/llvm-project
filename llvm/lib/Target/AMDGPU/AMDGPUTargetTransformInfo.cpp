@@ -588,7 +588,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
             return TargetTransformInfo::TCC_Free;
         }
       }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
     if (ST->hasPackedFP32Ops() && SLT == MVT::f32)

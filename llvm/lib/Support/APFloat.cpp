@@ -1485,7 +1485,7 @@ IEEEFloat::opStatus IEEEFloat::addOrSubtractSpecials(const IEEEFloat &rhs,
   case PackCategoriesIntoKey(fcNormal, fcNaN):
   case PackCategoriesIntoKey(fcInfinity, fcNaN):
     assign(rhs);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case PackCategoriesIntoKey(fcNaN, fcZero):
   case PackCategoriesIntoKey(fcNaN, fcNormal):
   case PackCategoriesIntoKey(fcNaN, fcInfinity):
@@ -1610,7 +1610,7 @@ IEEEFloat::opStatus IEEEFloat::multiplySpecials(const IEEEFloat &rhs) {
   case PackCategoriesIntoKey(fcInfinity, fcNaN):
     assign(rhs);
     sign = false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case PackCategoriesIntoKey(fcNaN, fcZero):
   case PackCategoriesIntoKey(fcNaN, fcNormal):
   case PackCategoriesIntoKey(fcNaN, fcInfinity):
@@ -1654,7 +1654,7 @@ IEEEFloat::opStatus IEEEFloat::divideSpecials(const IEEEFloat &rhs) {
   case PackCategoriesIntoKey(fcInfinity, fcNaN):
     assign(rhs);
     sign = false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case PackCategoriesIntoKey(fcNaN, fcZero):
   case PackCategoriesIntoKey(fcNaN, fcNormal):
   case PackCategoriesIntoKey(fcNaN, fcInfinity):
@@ -1699,7 +1699,7 @@ IEEEFloat::opStatus IEEEFloat::modSpecials(const IEEEFloat &rhs) {
   case PackCategoriesIntoKey(fcNormal, fcNaN):
   case PackCategoriesIntoKey(fcInfinity, fcNaN):
     assign(rhs);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case PackCategoriesIntoKey(fcNaN, fcZero):
   case PackCategoriesIntoKey(fcNaN, fcNormal):
   case PackCategoriesIntoKey(fcNaN, fcInfinity):
@@ -1737,7 +1737,7 @@ IEEEFloat::opStatus IEEEFloat::remainderSpecials(const IEEEFloat &rhs) {
   case PackCategoriesIntoKey(fcNormal, fcNaN):
   case PackCategoriesIntoKey(fcInfinity, fcNaN):
     assign(rhs);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case PackCategoriesIntoKey(fcNaN, fcZero):
   case PackCategoriesIntoKey(fcNaN, fcNormal):
   case PackCategoriesIntoKey(fcNaN, fcInfinity):

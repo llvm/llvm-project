@@ -126,7 +126,7 @@ static bool mutationIsSane(const LegalizeRule &Rule,
   case FewerElements:
     if (!OldTy.isVector())
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MoreElements: {
     // MoreElements can go from scalar to vector.
     const ElementCount OldElts = OldTy.isVector() ?

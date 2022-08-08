@@ -239,7 +239,7 @@ tgtok::TokKind TGLexer::LexToken(bool FileOrLineStart) {
         case '0': case '1':
           if (NextChar == 'b')
             return LexNumber();
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case '2': case '3': case '4': case '5':
         case '6': case '7': case '8': case '9':
         case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
@@ -306,7 +306,7 @@ tgtok::TokKind TGLexer::LexString() {
     case '\0':
       if (CurPtr == CurBuf.end())
         return ReturnError(StrStart, "End of file in string literal");
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       return ReturnError(CurPtr, "invalid escape in string literal");
     }

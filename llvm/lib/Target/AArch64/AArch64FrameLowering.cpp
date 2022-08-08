@@ -993,7 +993,7 @@ static MachineBasicBlock::iterator InsertSEH(MachineBasicBlock::iterator MBBI,
     llvm_unreachable("No SEH Opcode for this instruction");
   case AArch64::LDPDpost:
     Imm = -Imm;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::STPDpre: {
     unsigned Reg0 = RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
     unsigned Reg1 = RegInfo->getSEHRegNum(MBBI->getOperand(2).getReg());
@@ -1006,7 +1006,7 @@ static MachineBasicBlock::iterator InsertSEH(MachineBasicBlock::iterator MBBI,
   }
   case AArch64::LDPXpost:
     Imm = -Imm;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::STPXpre: {
     Register Reg0 = MBBI->getOperand(1).getReg();
     Register Reg1 = MBBI->getOperand(2).getReg();
@@ -1024,7 +1024,7 @@ static MachineBasicBlock::iterator InsertSEH(MachineBasicBlock::iterator MBBI,
   }
   case AArch64::LDRDpost:
     Imm = -Imm;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::STRDpre: {
     unsigned Reg = RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
     MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveFReg_X))
@@ -1035,7 +1035,7 @@ static MachineBasicBlock::iterator InsertSEH(MachineBasicBlock::iterator MBBI,
   }
   case AArch64::LDRXpost:
     Imm = -Imm;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::STRXpre: {
     unsigned Reg =  RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
     MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveReg_X))
@@ -1452,7 +1452,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
             .addImm(Subtarget.isTargetILP32() ? 32 : 0);
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case SwiftAsyncFramePointerMode::Always:
       // ORR x29, x29, #0x1000_0000_0000_0000
@@ -2025,7 +2025,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       // Avoid the reload as it is GOT relative, and instead fall back to the
       // hardcoded value below.  This allows a mismatch between the OS and
       // application without immediately terminating on the difference.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case SwiftAsyncFramePointerMode::Always:
       // We need to reset FP to its untagged state on return. Bit 60 is
       // currently used to show the presence of an extended frame.

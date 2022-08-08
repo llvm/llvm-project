@@ -1926,7 +1926,7 @@ VersionTuple Triple::getCanonicalVersionForOS(OSType OSKind,
     // macOS 10.16 is canonicalized to macOS 11.
     if (Version == VersionTuple(10, 16))
       return VersionTuple(11, 0);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     return Version;
   }
