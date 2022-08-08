@@ -4622,8 +4622,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   TC.addClangWarningOptions(CmdArgs);
 
   // FIXME: Subclass ToolChain for SPIR and move this to addClangWarningOptions.
-  if (Triple.isSPIR() || Triple.isSPIRV())
+  if (Triple.isSPIR() || Triple.isSPIRV()) {
     CmdArgs.push_back("-Wspir-compat");
+    // SPIR-V support still needs pointer types in some cases as recovering
+    // type from pointer uses is not always possible e.g. for extern functions
+    // (see PR56660).
+    CmdArgs.push_back("-no-opaque-pointers");
+  }
 
   // Select the appropriate action.
   RewriteKind rewriteKind = RK_None;
