@@ -64,6 +64,8 @@
       uintmax_t capacity;
       uintmax_t free;
       uintmax_t available;
+
+      friend bool operator==(const space_info&, const space_info&) = default; // C++20
     };
 
     enum class file_type;
