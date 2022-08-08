@@ -40,9 +40,7 @@ static char ValidDatePatternChars[] = {
 bool isValidDatePattern(StringRef Pattern) {
   for (auto &PatternChar : Pattern) {
     if (isalpha(PatternChar)) {
-      if (std::find(std::begin(ValidDatePatternChars),
-                    std::end(ValidDatePatternChars),
-                    PatternChar) == std::end(ValidDatePatternChars)) {
+      if (!llvm::is_contained(ValidDatePatternChars, PatternChar)) {
         return false;
       }
     }
