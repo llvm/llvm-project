@@ -186,6 +186,8 @@ loaded before starting the execution of a multi-threaded pass pipeline. To this
 end, a pass that may create an entity from a dialect that isn't guaranteed to
 already be loaded must express this by overriding the `getDependentDialects()`
 method and declare this list of Dialects explicitly.
+See also the `dependentDialects` field in the
+[TableGen Specification](#tablegen-specification).
 
 ### Initialization
 
