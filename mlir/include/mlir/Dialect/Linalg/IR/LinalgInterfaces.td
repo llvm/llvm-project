@@ -309,7 +309,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.inputs().size();
+        return $_op.getInputs().size();
       }]
     >,
     // `outputs` must be defined by each op that wants to implement the

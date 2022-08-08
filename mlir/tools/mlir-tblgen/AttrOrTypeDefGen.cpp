@@ -660,7 +660,7 @@ static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
   {{
     ::mlir::Attribute attr;
     auto parseResult = generatedAttributeParser(parser, &attrTag, type, attr);
-    if (parseResult.hasValue())
+    if (parseResult.has_value())
       return attr;
   }
   {1}
@@ -682,8 +682,8 @@ static const char *const dialectDynamicAttrParserDispatch = R"(
   {
     ::mlir::Attribute genAttr;
     auto parseResult = parseOptionalDynamicAttr(attrTag, parser, genAttr);
-    if (parseResult.hasValue()) {
-      if (::mlir::succeeded(parseResult.getValue()))
+    if (parseResult.has_value()) {
+      if (::mlir::succeeded(parseResult.value()))
         return genAttr;
       return Attribute();
     }
@@ -707,7 +707,7 @@ static const char *const dialectDefaultTypePrinterParserDispatch = R"(
   ::llvm::StringRef mnemonic;
   ::mlir::Type genType;
   auto parseResult = generatedTypeParser(parser, &mnemonic, genType);
-  if (parseResult.hasValue())
+  if (parseResult.has_value())
     return genType;
   {1}
   parser.emitError(typeLoc) << "unknown  type `"

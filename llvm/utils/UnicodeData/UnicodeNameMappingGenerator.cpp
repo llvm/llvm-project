@@ -247,7 +247,7 @@ public:
       } else {
         // When there is no value (that's most intermediate nodes)
         // Dispense of the 3 values bytes, and only store
-        // 1 byte to track whether the node has sibling and chidren
+        // 1 byte to track whether the node has sibling and children
         // + 2 bytes for the index of the first children if necessary.
         // That index also uses bytes 0-6 of the previous byte.
         uint8_t Byte =

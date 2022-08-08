@@ -142,7 +142,7 @@ TEST_P(MCPlusBuilderTester, Annotation) {
   // Round-trip encoding-decoding check for negative values
   Optional<MCPlus::MCLandingPad> EHInfo = BC->MIB->getEHInfo(Inst);
   ASSERT_TRUE(EHInfo.has_value());
-  MCPlus::MCLandingPad LP = EHInfo.getValue();
+  MCPlus::MCLandingPad LP = EHInfo.value();
   uint64_t DecodedValue = LP.second;
   ASSERT_EQ(Value, DecodedValue);
 

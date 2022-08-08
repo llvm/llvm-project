@@ -47,14 +47,18 @@ std::unique_ptr<TarWriter> elf::tar;
 
 // Returns "<internal>", "foo.a(bar.o)" or "baz.o".
 std::string lld::toString(const InputFile *f) {
+  static std::mutex mu;
   if (!f)
     return "<internal>";
 
-  if (f->toStringCache.empty()) {
-    if (f->archiveName.empty())
-      f->toStringCache = f->getName();
-    else
-      (f->archiveName + "(" + f->getName() + ")").toVector(f->toStringCache);
+  {
+    std::lock_guard<std::mutex> lock(mu);
+    if (f->toStringCache.empty()) {
+      if (f->archiveName.empty())
+        f->toStringCache = f->getName();
+      else
+        (f->archiveName + "(" + f->getName() + ")").toVector(f->toStringCache);
+    }
   }
   return std::string(f->toStringCache);
 }
@@ -768,7 +772,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       break;
     case SHT_LLVM_SYMPART:
       ctx->hasSympart.store(true, std::memory_order_relaxed);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       this->sections[i] =
           createInputSection(i, sec, check(obj.getSectionName(sec, shstrtab)));

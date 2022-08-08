@@ -581,7 +581,7 @@ void RVVEmitter::createRVVIntrinsics(
                 Name, SuffixStr, OverloadedName, OverloadedSuffixStr, IRName,
                 /*IsMask=*/false, /*HasMaskedOffOperand=*/false, HasVL,
                 UnMaskedPolicyScheme, SupportOverloading, HasBuiltinAlias,
-                ManualCodegen, PolicyTypes.getValue(), IntrinsicTypes,
+                ManualCodegen, PolicyTypes.value(), IntrinsicTypes,
                 RequiredFeatures, NF, P, IsPrototypeDefaultTU));
           }
         if (!HasMasked)
@@ -593,7 +593,7 @@ void RVVEmitter::createRVVIntrinsics(
             Name, SuffixStr, OverloadedName, OverloadedSuffixStr, MaskedIRName,
             /*IsMasked=*/true, HasMaskedOffOperand, HasVL, MaskedPolicyScheme,
             SupportOverloading, HasBuiltinAlias, MaskedManualCodegen,
-            MaskTypes.getValue(), IntrinsicTypes, RequiredFeatures, NF,
+            MaskTypes.value(), IntrinsicTypes, RequiredFeatures, NF,
             Policy::PolicyNone, IsPrototypeDefaultTU));
         if (MaskedPolicyScheme == PolicyScheme::SchemeNone)
           continue;
@@ -608,7 +608,7 @@ void RVVEmitter::createRVVIntrinsics(
               Name, SuffixStr, OverloadedName, OverloadedSuffixStr,
               MaskedIRName, /*IsMasked=*/true, HasMaskedOffOperand, HasVL,
               MaskedPolicyScheme, SupportOverloading, HasBuiltinAlias,
-              MaskedManualCodegen, PolicyTypes.getValue(), IntrinsicTypes,
+              MaskedManualCodegen, PolicyTypes.value(), IntrinsicTypes,
               RequiredFeatures, NF, P, IsPrototypeDefaultTU));
         }
       } // End for Log2LMULList

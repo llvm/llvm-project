@@ -145,34 +145,29 @@ namespace llvm {
 
     /// data - Get a pointer to the start of the string (which may not be null
     /// terminated).
-    LLVM_NODISCARD
-    const char *data() const { return Data; }
+    [[nodiscard]] const char *data() const { return Data; }
 
     /// empty - Check if the string is empty.
-    LLVM_NODISCARD
-    constexpr bool empty() const { return Length == 0; }
+    [[nodiscard]] constexpr bool empty() const { return Length == 0; }
 
     /// size - Get the string size.
-    LLVM_NODISCARD
-    constexpr size_t size() const { return Length; }
+    [[nodiscard]] constexpr size_t size() const { return Length; }
 
     /// front - Get the first character in the string.
-    LLVM_NODISCARD
-    char front() const {
+    [[nodiscard]] char front() const {
       assert(!empty());
       return Data[0];
     }
 
     /// back - Get the last character in the string.
-    LLVM_NODISCARD
-    char back() const {
+    [[nodiscard]] char back() const {
       assert(!empty());
       return Data[Length-1];
     }
 
     // copy - Allocate copy in Allocator and return StringRef to it.
     template <typename Allocator>
-    LLVM_NODISCARD StringRef copy(Allocator &A) const {
+    [[nodiscard]] StringRef copy(Allocator &A) const {
       // Don't request a length 0 copy from the allocator.
       if (empty())
         return StringRef();
@@ -183,22 +178,19 @@ namespace llvm {
 
     /// equals - Check for string equality, this is more efficient than
     /// compare() when the relative ordering of inequal strings isn't needed.
-    LLVM_NODISCARD
-    bool equals(StringRef RHS) const {
+    [[nodiscard]] bool equals(StringRef RHS) const {
       return (Length == RHS.Length &&
               compareMemory(Data, RHS.Data, RHS.Length) == 0);
     }
 
     /// Check for string equality, ignoring case.
-    LLVM_NODISCARD
-    bool equals_insensitive(StringRef RHS) const {
+    [[nodiscard]] bool equals_insensitive(StringRef RHS) const {
       return Length == RHS.Length && compare_insensitive(RHS) == 0;
     }
 
     /// compare - Compare two strings; the result is -1, 0, or 1 if this string
     /// is lexicographically less than, equal to, or greater than the \p RHS.
-    LLVM_NODISCARD
-    int compare(StringRef RHS) const {
+    [[nodiscard]] int compare(StringRef RHS) const {
       // Check the prefix for a mismatch.
       if (int Res = compareMemory(Data, RHS.Data, std::min(Length, RHS.Length)))
         return Res < 0 ? -1 : 1;
@@ -210,13 +202,11 @@ namespace llvm {
     }
 
     /// Compare two strings, ignoring case.
-    LLVM_NODISCARD
-    int compare_insensitive(StringRef RHS) const;
+    [[nodiscard]] int compare_insensitive(StringRef RHS) const;
 
     /// compare_numeric - Compare two strings, treating sequences of digits as
     /// numbers.
-    LLVM_NODISCARD
-    int compare_numeric(StringRef RHS) const;
+    [[nodiscard]] int compare_numeric(StringRef RHS) const;
 
     /// Determine the edit distance between this string and another
     /// string.
@@ -236,17 +226,16 @@ namespace llvm {
     /// or (if \p AllowReplacements is \c true) replacements needed to
     /// transform one of the given strings into the other. If zero,
     /// the strings are identical.
-    LLVM_NODISCARD
-    unsigned edit_distance(StringRef Other, bool AllowReplacements = true,
-                           unsigned MaxEditDistance = 0) const;
+    [[nodiscard]] unsigned edit_distance(StringRef Other,
+                                         bool AllowReplacements = true,
+                                         unsigned MaxEditDistance = 0) const;
 
-    LLVM_NODISCARD unsigned
+    [[nodiscard]] unsigned
     edit_distance_insensitive(StringRef Other, bool AllowReplacements = true,
                               unsigned MaxEditDistance = 0) const;
 
     /// str - Get the contents as an std::string.
-    LLVM_NODISCARD
-    std::string str() const {
+    [[nodiscard]] std::string str() const {
       if (!Data) return std::string();
       return std::string(Data, Length);
     }
@@ -255,8 +244,7 @@ namespace llvm {
     /// @name Operator Overloads
     /// @{
 
-    LLVM_NODISCARD
-    char operator[](size_t Index) const {
+    [[nodiscard]] char operator[](size_t Index) const {
       assert(Index < Length && "Invalid index!");
       return Data[Index];
     }
@@ -286,26 +274,22 @@ namespace llvm {
     /// @{
 
     /// Check if this string starts with the given \p Prefix.
-    LLVM_NODISCARD
-    bool startswith(StringRef Prefix) const {
+    [[nodiscard]] bool startswith(StringRef Prefix) const {
       return Length >= Prefix.Length &&
              compareMemory(Data, Prefix.Data, Prefix.Length) == 0;
     }
 
     /// Check if this string starts with the given \p Prefix, ignoring case.
-    LLVM_NODISCARD
-    bool startswith_insensitive(StringRef Prefix) const;
+    [[nodiscard]] bool startswith_insensitive(StringRef Prefix) const;
 
     /// Check if this string ends with the given \p Suffix.
-    LLVM_NODISCARD
-    bool endswith(StringRef Suffix) const {
+    [[nodiscard]] bool endswith(StringRef Suffix) const {
       return Length >= Suffix.Length &&
         compareMemory(end() - Suffix.Length, Suffix.Data, Suffix.Length) == 0;
     }
 
     /// Check if this string ends with the given \p Suffix, ignoring case.
-    LLVM_NODISCARD
-    bool endswith_insensitive(StringRef Suffix) const;
+    [[nodiscard]] bool endswith_insensitive(StringRef Suffix) const;
 
     /// @}
     /// @name String Searching
@@ -315,8 +299,7 @@ namespace llvm {
     ///
     /// \returns The index of the first occurrence of \p C, or npos if not
     /// found.
-    LLVM_NODISCARD
-    size_t find(char C, size_t From = 0) const {
+    [[nodiscard]] size_t find(char C, size_t From = 0) const {
       size_t FindBegin = std::min(From, Length);
       if (FindBegin < Length) { // Avoid calling memchr with nullptr.
         // Just forward to memchr, which is faster than a hand-rolled loop.
@@ -330,15 +313,14 @@ namespace llvm {
     ///
     /// \returns The index of the first occurrence of \p C, or npos if not
     /// found.
-    LLVM_NODISCARD
-    size_t find_insensitive(char C, size_t From = 0) const;
+    [[nodiscard]] size_t find_insensitive(char C, size_t From = 0) const;
 
     /// Search for the first character satisfying the predicate \p F
     ///
     /// \returns The index of the first character satisfying \p F starting from
     /// \p From, or npos if not found.
-    LLVM_NODISCARD
-    size_t find_if(function_ref<bool(char)> F, size_t From = 0) const {
+    [[nodiscard]] size_t find_if(function_ref<bool(char)> F,
+                                 size_t From = 0) const {
       StringRef S = drop_front(From);
       while (!S.empty()) {
         if (F(S.front()))
@@ -352,8 +334,8 @@ namespace llvm {
     ///
     /// \returns The index of the first character not satisfying \p F starting
     /// from \p From, or npos if not found.
-    LLVM_NODISCARD
-    size_t find_if_not(function_ref<bool(char)> F, size_t From = 0) const {
+    [[nodiscard]] size_t find_if_not(function_ref<bool(char)> F,
+                                     size_t From = 0) const {
       return find_if([F](char c) { return !F(c); }, From);
     }
 
@@ -361,22 +343,19 @@ namespace llvm {
     ///
     /// \returns The index of the first occurrence of \p Str, or npos if not
     /// found.
-    LLVM_NODISCARD
-    size_t find(StringRef Str, size_t From = 0) const;
+    [[nodiscard]] size_t find(StringRef Str, size_t From = 0) const;
 
     /// Search for the first string \p Str in the string, ignoring case.
     ///
     /// \returns The index of the first occurrence of \p Str, or npos if not
     /// found.
-    LLVM_NODISCARD
-    size_t find_insensitive(StringRef Str, size_t From = 0) const;
+    [[nodiscard]] size_t find_insensitive(StringRef Str, size_t From = 0) const;
 
     /// Search for the last character \p C in the string.
     ///
     /// \returns The index of the last occurrence of \p C, or npos if not
     /// found.
-    LLVM_NODISCARD
-    size_t rfind(char C, size_t From = npos) const {
+    [[nodiscard]] size_t rfind(char C, size_t From = npos) const {
       From = std::min(From, Length);
       size_t i = From;
       while (i != 0) {
@@ -391,27 +370,23 @@ namespace llvm {
     ///
     /// \returns The index of the last occurrence of \p C, or npos if not
     /// found.
-    LLVM_NODISCARD
-    size_t rfind_insensitive(char C, size_t From = npos) const;
+    [[nodiscard]] size_t rfind_insensitive(char C, size_t From = npos) const;
 
     /// Search for the last string \p Str in the string.
     ///
     /// \returns The index of the last occurrence of \p Str, or npos if not
     /// found.
-    LLVM_NODISCARD
-    size_t rfind(StringRef Str) const;
+    [[nodiscard]] size_t rfind(StringRef Str) const;
 
     /// Search for the last string \p Str in the string, ignoring case.
     ///
     /// \returns The index of the last occurrence of \p Str, or npos if not
     /// found.
-    LLVM_NODISCARD
-    size_t rfind_insensitive(StringRef Str) const;
+    [[nodiscard]] size_t rfind_insensitive(StringRef Str) const;
 
     /// Find the first character in the string that is \p C, or npos if not
     /// found. Same as find.
-    LLVM_NODISCARD
-    size_t find_first_of(char C, size_t From = 0) const {
+    [[nodiscard]] size_t find_first_of(char C, size_t From = 0) const {
       return find(C, From);
     }
 
@@ -419,25 +394,22 @@ namespace llvm {
     /// not found.
     ///
     /// Complexity: O(size() + Chars.size())
-    LLVM_NODISCARD
-    size_t find_first_of(StringRef Chars, size_t From = 0) const;
+    [[nodiscard]] size_t find_first_of(StringRef Chars, size_t From = 0) const;
 
     /// Find the first character in the string that is not \p C or npos if not
     /// found.
-    LLVM_NODISCARD
-    size_t find_first_not_of(char C, size_t From = 0) const;
+    [[nodiscard]] size_t find_first_not_of(char C, size_t From = 0) const;
 
     /// Find the first character in the string that is not in the string
     /// \p Chars, or npos if not found.
     ///
     /// Complexity: O(size() + Chars.size())
-    LLVM_NODISCARD
-    size_t find_first_not_of(StringRef Chars, size_t From = 0) const;
+    [[nodiscard]] size_t find_first_not_of(StringRef Chars,
+                                           size_t From = 0) const;
 
     /// Find the last character in the string that is \p C, or npos if not
     /// found.
-    LLVM_NODISCARD
-    size_t find_last_of(char C, size_t From = npos) const {
+    [[nodiscard]] size_t find_last_of(char C, size_t From = npos) const {
       return rfind(C, From);
     }
 
@@ -445,42 +417,41 @@ namespace llvm {
     /// found.
     ///
     /// Complexity: O(size() + Chars.size())
-    LLVM_NODISCARD
-    size_t find_last_of(StringRef Chars, size_t From = npos) const;
+    [[nodiscard]] size_t find_last_of(StringRef Chars,
+                                      size_t From = npos) const;
 
     /// Find the last character in the string that is not \p C, or npos if not
     /// found.
-    LLVM_NODISCARD
-    size_t find_last_not_of(char C, size_t From = npos) const;
+    [[nodiscard]] size_t find_last_not_of(char C, size_t From = npos) const;
 
     /// Find the last character in the string that is not in \p Chars, or
     /// npos if not found.
     ///
     /// Complexity: O(size() + Chars.size())
-    LLVM_NODISCARD
-    size_t find_last_not_of(StringRef Chars, size_t From = npos) const;
+    [[nodiscard]] size_t find_last_not_of(StringRef Chars,
+                                          size_t From = npos) const;
 
     /// Return true if the given string is a substring of *this, and false
     /// otherwise.
-    LLVM_NODISCARD
-    bool contains(StringRef Other) const { return find(Other) != npos; }
+    [[nodiscard]] bool contains(StringRef Other) const {
+      return find(Other) != npos;
+    }
 
     /// Return true if the given character is contained in *this, and false
     /// otherwise.
-    LLVM_NODISCARD
-    bool contains(char C) const { return find_first_of(C) != npos; }
+    [[nodiscard]] bool contains(char C) const {
+      return find_first_of(C) != npos;
+    }
 
     /// Return true if the given string is a substring of *this, and false
     /// otherwise.
-    LLVM_NODISCARD
-    bool contains_insensitive(StringRef Other) const {
+    [[nodiscard]] bool contains_insensitive(StringRef Other) const {
       return find_insensitive(Other) != npos;
     }
 
     /// Return true if the given character is contained in *this, and false
     /// otherwise.
-    LLVM_NODISCARD
-    bool contains_insensitive(char C) const {
+    [[nodiscard]] bool contains_insensitive(char C) const {
       return find_insensitive(C) != npos;
     }
 
@@ -489,8 +460,7 @@ namespace llvm {
     /// @{
 
     /// Return the number of occurrences of \p C in the string.
-    LLVM_NODISCARD
-    size_t count(char C) const {
+    [[nodiscard]] size_t count(char C) const {
       size_t Count = 0;
       for (size_t i = 0, e = Length; i != e; ++i)
         if (Data[i] == C)
@@ -591,12 +561,10 @@ namespace llvm {
     /// @{
 
     // Convert the given ASCII string to lowercase.
-    LLVM_NODISCARD
-    std::string lower() const;
+    [[nodiscard]] std::string lower() const;
 
     /// Convert the given ASCII string to uppercase.
-    LLVM_NODISCARD
-    std::string upper() const;
+    [[nodiscard]] std::string upper() const;
 
     /// @}
     /// @name Substring Operations
@@ -611,8 +579,7 @@ namespace llvm {
     /// \param N The number of characters to included in the substring. If N
     /// exceeds the number of characters remaining in the string, the string
     /// suffix (starting with \p Start) will be returned.
-    LLVM_NODISCARD
-    StringRef substr(size_t Start, size_t N = npos) const {
+    [[nodiscard]] StringRef substr(size_t Start, size_t N = npos) const {
       Start = std::min(Start, Length);
       return StringRef(Data + Start, std::min(N, Length - Start));
     }
@@ -620,8 +587,7 @@ namespace llvm {
     /// Return a StringRef equal to 'this' but with only the first \p N
     /// elements remaining.  If \p N is greater than the length of the
     /// string, the entire string is returned.
-    LLVM_NODISCARD
-    StringRef take_front(size_t N = 1) const {
+    [[nodiscard]] StringRef take_front(size_t N = 1) const {
       if (N >= size())
         return *this;
       return drop_back(size() - N);
@@ -630,8 +596,7 @@ namespace llvm {
     /// Return a StringRef equal to 'this' but with only the last \p N
     /// elements remaining.  If \p N is greater than the length of the
     /// string, the entire string is returned.
-    LLVM_NODISCARD
-    StringRef take_back(size_t N = 1) const {
+    [[nodiscard]] StringRef take_back(size_t N = 1) const {
       if (N >= size())
         return *this;
       return drop_front(size() - N);
@@ -639,45 +604,39 @@ namespace llvm {
 
     /// Return the longest prefix of 'this' such that every character
     /// in the prefix satisfies the given predicate.
-    LLVM_NODISCARD
-    StringRef take_while(function_ref<bool(char)> F) const {
+    [[nodiscard]] StringRef take_while(function_ref<bool(char)> F) const {
       return substr(0, find_if_not(F));
     }
 
     /// Return the longest prefix of 'this' such that no character in
     /// the prefix satisfies the given predicate.
-    LLVM_NODISCARD
-    StringRef take_until(function_ref<bool(char)> F) const {
+    [[nodiscard]] StringRef take_until(function_ref<bool(char)> F) const {
       return substr(0, find_if(F));
     }
 
     /// Return a StringRef equal to 'this' but with the first \p N elements
     /// dropped.
-    LLVM_NODISCARD
-    StringRef drop_front(size_t N = 1) const {
+    [[nodiscard]] StringRef drop_front(size_t N = 1) const {
       assert(size() >= N && "Dropping more elements than exist");
       return substr(N);
     }
 
     /// Return a StringRef equal to 'this' but with the last \p N elements
     /// dropped.
-    LLVM_NODISCARD
-    StringRef drop_back(size_t N = 1) const {
+    [[nodiscard]] StringRef drop_back(size_t N = 1) const {
       assert(size() >= N && "Dropping more elements than exist");
       return substr(0, size()-N);
     }
 
     /// Return a StringRef equal to 'this', but with all characters satisfying
     /// the given predicate dropped from the beginning of the string.
-    LLVM_NODISCARD
-    StringRef drop_while(function_ref<bool(char)> F) const {
+    [[nodiscard]] StringRef drop_while(function_ref<bool(char)> F) const {
       return substr(find_if_not(F));
     }
 
     /// Return a StringRef equal to 'this', but with all characters not
     /// satisfying the given predicate dropped from the beginning of the string.
-    LLVM_NODISCARD
-    StringRef drop_until(function_ref<bool(char)> F) const {
+    [[nodiscard]] StringRef drop_until(function_ref<bool(char)> F) const {
       return substr(find_if(F));
     }
 
@@ -732,8 +691,7 @@ namespace llvm {
     /// remaining in the string, the string suffix (starting with \p Start)
     /// will be returned. If this is less than \p Start, an empty string will
     /// be returned.
-    LLVM_NODISCARD
-    StringRef slice(size_t Start, size_t End) const {
+    [[nodiscard]] StringRef slice(size_t Start, size_t End) const {
       Start = std::min(Start, Length);
       End = std::min(std::max(Start, End), Length);
       return StringRef(Data + Start, End - Start);
@@ -749,8 +707,7 @@ namespace llvm {
     ///
     /// \param Separator The character to split on.
     /// \returns The split substrings.
-    LLVM_NODISCARD
-    std::pair<StringRef, StringRef> split(char Separator) const {
+    [[nodiscard]] std::pair<StringRef, StringRef> split(char Separator) const {
       return split(StringRef(&Separator, 1));
     }
 
@@ -764,8 +721,8 @@ namespace llvm {
     ///
     /// \param Separator - The string to split on.
     /// \return - The split substrings.
-    LLVM_NODISCARD
-    std::pair<StringRef, StringRef> split(StringRef Separator) const {
+    [[nodiscard]] std::pair<StringRef, StringRef>
+    split(StringRef Separator) const {
       size_t Idx = find(Separator);
       if (Idx == npos)
         return std::make_pair(*this, StringRef());
@@ -782,8 +739,8 @@ namespace llvm {
     ///
     /// \param Separator - The string to split on.
     /// \return - The split substrings.
-    LLVM_NODISCARD
-    std::pair<StringRef, StringRef> rsplit(StringRef Separator) const {
+    [[nodiscard]] std::pair<StringRef, StringRef>
+    rsplit(StringRef Separator) const {
       size_t Idx = rfind(Separator);
       if (Idx == npos)
         return std::make_pair(*this, StringRef());
@@ -835,50 +792,43 @@ namespace llvm {
     ///
     /// \param Separator - The character to split on.
     /// \return - The split substrings.
-    LLVM_NODISCARD
-    std::pair<StringRef, StringRef> rsplit(char Separator) const {
+    [[nodiscard]] std::pair<StringRef, StringRef> rsplit(char Separator) const {
       return rsplit(StringRef(&Separator, 1));
     }
 
     /// Return string with consecutive \p Char characters starting from the
     /// the left removed.
-    LLVM_NODISCARD
-    StringRef ltrim(char Char) const {
+    [[nodiscard]] StringRef ltrim(char Char) const {
       return drop_front(std::min(Length, find_first_not_of(Char)));
     }
 
     /// Return string with consecutive characters in \p Chars starting from
     /// the left removed.
-    LLVM_NODISCARD
-    StringRef ltrim(StringRef Chars = " \t\n\v\f\r") const {
+    [[nodiscard]] StringRef ltrim(StringRef Chars = " \t\n\v\f\r") const {
       return drop_front(std::min(Length, find_first_not_of(Chars)));
     }
 
     /// Return string with consecutive \p Char characters starting from the
     /// right removed.
-    LLVM_NODISCARD
-    StringRef rtrim(char Char) const {
+    [[nodiscard]] StringRef rtrim(char Char) const {
       return drop_back(Length - std::min(Length, find_last_not_of(Char) + 1));
     }
 
     /// Return string with consecutive characters in \p Chars starting from
     /// the right removed.
-    LLVM_NODISCARD
-    StringRef rtrim(StringRef Chars = " \t\n\v\f\r") const {
+    [[nodiscard]] StringRef rtrim(StringRef Chars = " \t\n\v\f\r") const {
       return drop_back(Length - std::min(Length, find_last_not_of(Chars) + 1));
     }
 
     /// Return string with consecutive \p Char characters starting from the
     /// left and right removed.
-    LLVM_NODISCARD
-    StringRef trim(char Char) const {
+    [[nodiscard]] StringRef trim(char Char) const {
       return ltrim(Char).rtrim(Char);
     }
 
     /// Return string with consecutive characters in \p Chars starting from
     /// the left and right removed.
-    LLVM_NODISCARD
-    StringRef trim(StringRef Chars = " \t\n\v\f\r") const {
+    [[nodiscard]] StringRef trim(StringRef Chars = " \t\n\v\f\r") const {
       return ltrim(Chars).rtrim(Chars);
     }
 
@@ -888,8 +838,7 @@ namespace llvm {
     /// sequence that is detected. Otherwise return '\n' for unix line endings.
     ///
     /// \return - The line ending character sequence.
-    LLVM_NODISCARD
-    StringRef detectEOL() const {
+    [[nodiscard]] StringRef detectEOL() const {
       size_t Pos = find('\r');
       if (Pos == npos) {
         // If there is no carriage return, assume unix
@@ -968,8 +917,7 @@ namespace llvm {
   /// @}
 
   /// Compute a hash_code for a StringRef.
-  LLVM_NODISCARD
-  hash_code hash_value(StringRef S);
+  [[nodiscard]] hash_code hash_value(StringRef S);
 
   // Provide DenseMapInfo for StringRefs.
   template <> struct DenseMapInfo<StringRef, void> {

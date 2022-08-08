@@ -756,7 +756,7 @@ void GenericOp::print(OpAsmPrinter &p) {
   }
 
   // Printing is shared with named ops, except for the region and attributes
-  printCommonStructuredOpParts(p, inputs(), outputs());
+  printCommonStructuredOpParts(p, getInputs(), getOutputs());
 
   genericAttrNames.push_back("operand_segment_sizes");
   genericAttrNamesSet.insert(genericAttrNames.back());
@@ -773,13 +773,13 @@ void GenericOp::print(OpAsmPrinter &p) {
   }
 
   // Print region.
-  if (!region().empty()) {
+  if (!getRegion().empty()) {
     p << ' ';
-    p.printRegion(region());
+    p.printRegion(getRegion());
   }
 
   // Print results.
-  printNamedStructuredOpResults(p, result_tensors().getTypes());
+  printNamedStructuredOpResults(p, getResultTensors().getTypes());
 }
 
 ParseResult GenericOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -889,8 +889,8 @@ struct DeduplicateAndRemoveDeadOperandsAndResults
     auto newOp = rewriter.create<GenericOp>(
         loc, newResultTypes, newInputOperands, newOutputOperands,
         rewriter.getAffineMapArrayAttr(newIndexingMaps),
-        genericOp.iterator_types(), genericOp.docAttr(),
-        genericOp.library_callAttr(),
+        genericOp.getIteratorTypes(), genericOp.getDocAttr(),
+        genericOp.getLibraryCallAttr(),
         [](OpBuilder & /*builder*/, Location /*loc*/, ValueRange /*args*/) {
           return;
         });
@@ -1045,9 +1045,9 @@ private:
       const llvm::SmallDenseMap<unsigned, unsigned> &origOutsToNewOutsPos,
       PatternRewriter &rewriter) const {
     // Merge the body of the original op with the new op.
-    Block *newOpBlock = &newOp.region().front();
+    Block *newOpBlock = &newOp.getRegion().front();
     assert(newOpBlock->empty() && "expected new op to have an empty payload");
-    Block *origOpBlock = &genericOp.region().front();
+    Block *origOpBlock = &genericOp.getRegion().front();
     SmallVector<Value> replacements(origOpBlock->getNumArguments(), nullptr);
 
     // Replace all arguments in the original op, with arguments from the
@@ -1084,7 +1084,7 @@ private:
 
       SmallVector<Value> newYieldVals(newOp.getNumOutputs(), nullptr);
       for (const auto &yieldOpOperands :
-           llvm::enumerate(origYieldOp.values())) {
+           llvm::enumerate(origYieldOp.getValues())) {
         auto it = origOutsToNewOutsPos.find(yieldOpOperands.index());
         if (it == origOutsToNewOutsPos.end())
           continue;
@@ -1112,7 +1112,7 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
 
     // Check that the body of the linalg operation is just a linalg.yield
     // operation.
-    Block &body = genericOp.region().front();
+    Block &body = genericOp.getRegion().front();
     if (!llvm::hasSingleElement(body))
       return failure();
     auto yieldOp = dyn_cast<linalg::YieldOp>(body.getTerminator());
@@ -1133,7 +1133,7 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
     // Get the argument number of the returned values. That is the operand
     // number to use for replacing uses of this operation.
     SmallVector<Value> returnedArgs;
-    for (const auto &yieldVal : llvm::enumerate(yieldOp.values())) {
+    for (const auto &yieldVal : llvm::enumerate(yieldOp.getValues())) {
       auto yieldArg = yieldVal.value().dyn_cast<BlockArgument>();
       if (!yieldArg || yieldArg.getOwner() != &body)
         return failure();
@@ -1200,15 +1200,15 @@ void InitTensorOp::build(OpBuilder &b, OperationState &result,
 LogicalResult InitTensorOp::verify() {
   RankedTensorType resultType = getType();
   SmallVector<int64_t, 4> staticSizes = llvm::to_vector<4>(llvm::map_range(
-      static_sizes().cast<ArrayAttr>(),
+      getStaticSizes().cast<ArrayAttr>(),
       [](Attribute a) -> int64_t { return a.cast<IntegerAttr>().getInt(); }));
 
   if (failed(verifyListOfOperandsOrIntegers(
-          *this, "sizes", resultType.getRank(), static_sizes(), sizes(),
+          *this, "sizes", resultType.getRank(), getStaticSizes(), getSizes(),
           ShapedType::isDynamic)))
     return failure();
 
-  if (static_sizes().size() != static_cast<unsigned>(resultType.getRank()))
+  if (getStaticSizes().size() != static_cast<unsigned>(resultType.getRank()))
     return emitError("expected ") << resultType.getRank() << " sizes values";
 
   Type expectedType = InitTensorOp::inferResultType(
@@ -1230,13 +1230,13 @@ SmallVector<OpFoldResult> InitTensorOp::getMixedSizes() {
   SmallVector<OpFoldResult> mixedSizes;
   mixedSizes.reserve(getType().getRank());
   unsigned dynamicValIndex = 0;
-  for (Attribute attr : static_sizes()) {
+  for (Attribute attr : getStaticSizes()) {
     auto intAttr = attr.cast<IntegerAttr>();
     if (!ShapedType::isDynamic(intAttr.getInt())) {
       mixedSizes.push_back(intAttr);
       continue;
     }
-    mixedSizes.push_back(sizes()[dynamicValIndex++]);
+    mixedSizes.push_back(getSizes()[dynamicValIndex++]);
   }
   return mixedSizes;
 }
@@ -1524,9 +1524,9 @@ LogicalResult IndexOp::verify() {
   auto linalgOp = dyn_cast<LinalgOp>((*this)->getParentOp());
   if (!linalgOp)
     return emitOpError("expected parent op with LinalgOp interface");
-  if (linalgOp.getNumLoops() <= dim())
+  if (linalgOp.getNumLoops() <= getDim())
     return emitOpError("expected dim (")
-           << dim() << ") to be lower than the number of loops ("
+           << getDim() << ") to be lower than the number of loops ("
            << linalgOp.getNumLoops() << ") of the enclosing LinalgOp";
   return success();
 }

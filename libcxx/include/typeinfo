@@ -22,7 +22,7 @@ public:
     virtual ~type_info();
 
     bool operator==(const type_info& rhs) const noexcept;
-    bool operator!=(const type_info& rhs) const noexcept;
+    bool operator!=(const type_info& rhs) const noexcept; // removed in C++20
 
     bool before(const type_info& rhs) const noexcept;
     size_t hash_code() const noexcept;
@@ -112,9 +112,11 @@ public:
       return __compare(__arg) == 0;
     }
 
+#if _LIBCPP_STD_VER <= 17
     _LIBCPP_INLINE_VISIBILITY
     bool operator!=(const type_info& __arg) const _NOEXCEPT
     { return !operator==(__arg); }
+#endif
 };
 
 #else // !defined(_LIBCPP_ABI_MICROSOFT)
@@ -337,9 +339,11 @@ public:
       return __impl::__eq(__type_name, __arg.__type_name);
     }
 
+#if _LIBCPP_STD_VER <= 17
     _LIBCPP_INLINE_VISIBILITY
     bool operator!=(const type_info& __arg) const _NOEXCEPT
     { return !operator==(__arg); }
+#endif
 };
 #endif // defined(_LIBCPP_ABI_MICROSOFT)
 

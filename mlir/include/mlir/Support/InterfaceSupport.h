@@ -191,16 +191,14 @@ public:
   /// do not represent interfaces are not added to the interface map.
   template <typename... Types>
   static InterfaceMap get() {
-    // TODO: Use constexpr if here in C++17.
     constexpr size_t numInterfaces = num_interface_types_t<Types...>::value;
-    if (numInterfaces == 0)
+    if constexpr (numInterfaces == 0)
       return InterfaceMap();
 
     std::array<std::pair<TypeID, void *>, numInterfaces> elements;
     std::pair<TypeID, void *> *elementIt = elements.data();
     (void)elementIt;
-    (void)std::initializer_list<int>{
-        0, (addModelAndUpdateIterator<Types>(elementIt), 0)...};
+    (addModelAndUpdateIterator<Types>(elementIt), ...);
     return InterfaceMap(elements);
   }
 

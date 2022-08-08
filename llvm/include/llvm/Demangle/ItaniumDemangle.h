@@ -369,6 +369,10 @@ public:
   VendorExtQualType(const Node *Ty_, StringView Ext_, const Node *TA_)
       : Node(KVendorExtQualType), Ty(Ty_), Ext(Ext_), TA(TA_) {}
 
+  const Node *getTy() const { return Ty; }
+  StringView getExt() const { return Ext; }
+  const Node *getTA() const { return TA; }
+
   template <typename Fn> void match(Fn F) const { F(Ty, Ext, TA); }
 
   void printLeft(OutputBuffer &OB) const override {
@@ -416,6 +420,9 @@ public:
       : Node(KQualType, Child_->RHSComponentCache,
              Child_->ArrayCache, Child_->FunctionCache),
         Quals(Quals_), Child(Child_) {}
+
+  Qualifiers getQuals() const { return Quals; }
+  const Node *getChild() const { return Child; }
 
   template<typename Fn> void match(Fn F) const { F(Child, Quals); }
 
@@ -584,6 +591,8 @@ public:
   PointerType(const Node *Pointee_)
       : Node(KPointerType, Pointee_->RHSComponentCache),
         Pointee(Pointee_) {}
+
+  const Node *getPointee() const { return Pointee; }
 
   template<typename Fn> void match(Fn F) const { F(Pointee); }
 
@@ -1069,6 +1078,9 @@ class VectorType final : public Node {
 public:
   VectorType(const Node *BaseType_, const Node *Dimension_)
       : Node(KVectorType), BaseType(BaseType_), Dimension(Dimension_) {}
+
+  const Node *getBaseType() const { return BaseType; }
+  const Node *getDimension() const { return Dimension; }
 
   template<typename Fn> void match(Fn F) const { F(BaseType, Dimension); }
 

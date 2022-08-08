@@ -299,9 +299,8 @@ bool VZeroUpperInserter::runOnMachineFunction(MachineFunction &MF) {
   bool YmmOrZmmUsed = FnHasLiveInYmmOrZmm;
   for (auto *RC : {&X86::VR256RegClass, &X86::VR512_0_15RegClass}) {
     if (!YmmOrZmmUsed) {
-      for (TargetRegisterClass::iterator i = RC->begin(), e = RC->end(); i != e;
-           i++) {
-        if (!MRI.reg_nodbg_empty(*i)) {
+      for (MCPhysReg R : *RC) {
+        if (!MRI.reg_nodbg_empty(R)) {
           YmmOrZmmUsed = true;
           break;
         }

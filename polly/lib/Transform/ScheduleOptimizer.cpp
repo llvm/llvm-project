@@ -296,6 +296,16 @@ private:
   /// @param Node The node to check.
   static bool isTileableBandNode(isl::schedule_node Node);
 
+  /// Check if this node is a band node we want to transform using pattern
+  /// matching.
+  ///
+  /// We look for innermost band nodes where individual dimensions are marked as
+  /// permutable. There is no restriction on the number of individual
+  /// dimensions.
+  ///
+  /// @param Node The node to check.
+  static bool isPMOptimizableBandNode(isl::schedule_node Node);
+
   /// Pre-vectorizes one scheduling dimension of a schedule band.
   ///
   /// prevectSchedBand splits out the dimension DimToVectorize, tiles it and
@@ -456,11 +466,21 @@ static bool isSimpleInnermostBand(const isl::schedule_node &Node) {
   return true;
 }
 
-bool ScheduleTreeOptimizer::isTileableBandNode(isl::schedule_node Node) {
+/// Check if this node is a band node, which has only one child.
+///
+/// @param Node The node to check.
+static bool isOneTimeParentBandNode(isl::schedule_node Node) {
   if (isl_schedule_node_get_type(Node.get()) != isl_schedule_node_band)
     return false;
 
   if (isl_schedule_node_n_children(Node.get()) != 1)
+    return false;
+
+  return true;
+}
+
+bool ScheduleTreeOptimizer::isTileableBandNode(isl::schedule_node Node) {
+  if (!isOneTimeParentBandNode(Node))
     return false;
 
   if (!isl_schedule_node_band_get_permutable(Node.get()))
@@ -472,6 +492,13 @@ bool ScheduleTreeOptimizer::isTileableBandNode(isl::schedule_node Node) {
     return false;
 
   return isSimpleInnermostBand(Node);
+}
+
+bool ScheduleTreeOptimizer::isPMOptimizableBandNode(isl::schedule_node Node) {
+  if (!isOneTimeParentBandNode(Node))
+    return false;
+
+  return Node.child(0).isa<isl::schedule_node_leaf>();
 }
 
 __isl_give isl::schedule_node
@@ -519,10 +546,8 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *NodeArg,
   assert(OAI && "Expecting optimization options");
 
   isl::schedule_node Node = isl::manage(NodeArg);
-  if (!isTileableBandNode(Node))
-    return Node.release();
 
-  if (OAI->PatternOpts) {
+  if (OAI->PatternOpts && isPMOptimizableBandNode(Node)) {
     isl::schedule_node PatternOptimizedSchedule =
         tryOptimizeMatMulPattern(Node, OAI->TTI, OAI->D);
     if (!PatternOptimizedSchedule.is_null()) {
@@ -531,6 +556,9 @@ ScheduleTreeOptimizer::optimizeBand(__isl_take isl_schedule_node *NodeArg,
       return PatternOptimizedSchedule.release();
     }
   }
+
+  if (!isTileableBandNode(Node))
+    return Node.release();
 
   if (OAI->Postopts)
     Node = applyTileBandOpt(Node);

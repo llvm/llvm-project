@@ -151,9 +151,7 @@ public:
   bool isEntryVal() const { return getExpression()->isEntryValue(); }
   bool isVariadic() const { return IsVariadic; }
   const DIExpression *getExpression() const { return Expression; }
-  const ArrayRef<DbgValueLocEntry> getLocEntries() const {
-    return ValueLocEntries;
-  }
+  ArrayRef<DbgValueLocEntry> getLocEntries() const { return ValueLocEntries; }
   friend bool operator==(const DbgValueLoc &, const DbgValueLoc &);
   friend bool operator<(const DbgValueLoc &, const DbgValueLoc &);
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
