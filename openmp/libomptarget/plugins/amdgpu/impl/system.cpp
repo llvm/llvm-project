@@ -63,7 +63,7 @@ public:
   };
 
   KernelArgMD()
-      : name_(std::string()),  size_(0), offset_(0),
+      : name_(std::string()), size_(0), offset_(0),
         valueKind_(ValueKind::Unknown) {}
 
   // fields
@@ -94,8 +94,7 @@ static const std::map<std::string, KernelArgMD::ValueKind> ArgValueKind = {
     {"hidden_multigrid_sync_arg",
      KernelArgMD::ValueKind::HiddenMultiGridSyncArg},
     {"hidden_hostcall_buffer", KernelArgMD::ValueKind::HiddenHostcallBuffer},
-    {"hidden_heap_v1", KernelArgMD::ValueKind::HiddenHeapV1}
-};
+    {"hidden_heap_v1", KernelArgMD::ValueKind::HiddenHeapV1}};
 
 namespace core {
 
@@ -487,7 +486,7 @@ static hsa_status_t get_code_object_custom_metadata(
       }
     }
 
-    // TODO: Probably don't want this arithmetic 
+    // TODO: Probably don't want this arithmetic
     info.kernel_segment_size =
         (hasHiddenArgs ? kernel_explicit_args_size : kernel_segment_size);
     DP("[%s: kernarg seg size] (%lu --> %u)\n", kernelName.c_str(),
