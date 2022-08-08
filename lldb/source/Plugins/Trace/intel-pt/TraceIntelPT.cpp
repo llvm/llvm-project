@@ -284,20 +284,6 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose,
     s.Format("    Total number of unattributed PSB blocks found: {0}\n",
              storage.multicpu_decoder->GetUnattributedPSBBlocksCount());
   }
-
-  // Errors
-  {
-    s << "\n  Errors:\n";
-    const DecodedThread::LibiptErrorsStats &tsc_errors_stats =
-        decoded_thread_sp->GetTscErrorsStats();
-    s.Format("    Number of TSC decoding errors: {0}\n",
-             tsc_errors_stats.total_count);
-    for (const auto &error_message_to_count :
-         tsc_errors_stats.libipt_errors_counts) {
-      s.Format("      {0}: {1}\n", error_message_to_count.first,
-               error_message_to_count.second);
-    }
-  }
 }
 
 void TraceIntelPT::DumpTraceInfoAsJson(Thread &thread, Stream &s,
@@ -372,21 +358,8 @@ void TraceIntelPT::DumpTraceInfoAsJson(Thread &thread, Stream &s,
             "PSBBlocks",
             storage.multicpu_decoder->GePSBBlocksCountForThread(tid));
       }
-
-      // Errors
-      const DecodedThread::LibiptErrorsStats &tsc_errors_stats =
-          decoded_thread_sp->GetTscErrorsStats();
-      json_str.attributeObject("errorItems", [&] {
-        json_str.attribute("total", tsc_errors_stats.total_count);
-        json_str.attributeObject("individualErrors", [&] {
-          for (const auto &error_message_to_count :
-               tsc_errors_stats.libipt_errors_counts) {
-            json_str.attribute(error_message_to_count.first,
-                               error_message_to_count.second);
-          }
-        });
-      });
     });
+
     json_str.attributeObject("globalStats", [&] {
       json_str.attributeObject("timingInSeconds", [&] {
         GetTimer().ForGlobal().ForEachTimedTask(

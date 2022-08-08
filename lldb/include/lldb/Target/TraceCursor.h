@@ -271,6 +271,15 @@ public:
   ///     The approximate wall clock time for the trace item, or \a llvm::None
   ///     if not available.
   virtual llvm::Optional<double> GetWallClockTime() const = 0;
+
+  /// Get some metadata associated with a synchronization point event. As
+  /// different trace technologies might have different values for this,
+  /// we return a string for flexibility.
+  ///
+  /// \return
+  ///     A string representing some metadata associated with a
+  ///     \a eTraceEventSyncPoint event. \b None if no metadata is available.
+  virtual llvm::Optional<std::string> GetSyncPointMetadata() const = 0;
   /// \}
 
 protected:
