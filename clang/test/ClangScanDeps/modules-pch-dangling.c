@@ -88,7 +88,7 @@ module mod    { header "mod.h"    }
 //
 // RUN: sed "s|DIR|%/t|g" %t/cdb_pch.json.template > %t/cdb_pch.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_pch.json -format experimental-full \
-// RUN:   -generate-modules-path-args -module-files-dir %t/build > %t/result_pch.json
+// RUN:   -module-files-dir %t/build > %t/result_pch.json
 
 // Explicitly build the PCH:
 //
@@ -136,4 +136,4 @@ module mod    { header "mod.h"    }
 //
 // RUN: sed "s|DIR|%/t|g" %t/cdb_tu.json.template > %t/cdb_tu.json
 // RUN: clang-scan-deps -compilation-database %t/cdb_tu.json -format experimental-full \
-// RUN:   -generate-modules-path-args -module-files-dir %t/build
+// RUN:   -module-files-dir %t/build
