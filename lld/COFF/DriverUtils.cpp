@@ -76,8 +76,7 @@ private:
 
 // Parses a string in the form of "<integer>[,<integer>]".
 void parseNumbers(StringRef arg, uint64_t *addr, uint64_t *size) {
-  StringRef s1, s2;
-  std::tie(s1, s2) = arg.split(',');
+  auto [s1, s2] = arg.split(',');
   if (s1.getAsInteger(0, *addr))
     fatal("invalid number: " + s1);
   if (size && !s2.empty() && s2.getAsInteger(0, *size))
@@ -87,8 +86,7 @@ void parseNumbers(StringRef arg, uint64_t *addr, uint64_t *size) {
 // Parses a string in the form of "<integer>[.<integer>]".
 // If second number is not present, Minor is set to 0.
 void parseVersion(StringRef arg, uint32_t *major, uint32_t *minor) {
-  StringRef s1, s2;
-  std::tie(s1, s2) = arg.split('.');
+  auto [s1, s2] = arg.split('.');
   if (s1.getAsInteger(10, *major))
     fatal("invalid number: " + s1);
   *minor = 0;
@@ -120,8 +118,7 @@ void parseGuard(StringRef fullArg) {
 // Parses a string in the form of "<subsystem>[,<integer>[.<integer>]]".
 void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
                     uint32_t *minor, bool *gotVersion) {
-  StringRef sysStr, ver;
-  std::tie(sysStr, ver) = arg.split(',');
+  auto [sysStr, ver] = arg.split(',');
   std::string sysStrLower = sysStr.lower();
   *sys = StringSwitch<WindowsSubsystem>(sysStrLower)
     .Case("boot_application", IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
@@ -146,8 +143,7 @@ void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
 // Parse a string of the form of "<from>=<to>".
 // Results are directly written to Config.
 void parseAlternateName(StringRef s) {
-  StringRef from, to;
-  std::tie(from, to) = s.split('=');
+  auto [from, to] = s.split('=');
   if (from.empty() || to.empty())
     fatal("/alternatename: invalid argument: " + s);
   auto it = config->alternateNames.find(from);
@@ -159,8 +155,7 @@ void parseAlternateName(StringRef s) {
 // Parse a string of the form of "<from>=<to>".
 // Results are directly written to Config.
 void parseMerge(StringRef s) {
-  StringRef from, to;
-  std::tie(from, to) = s.split('=');
+  auto [from, to] = s.split('=');
   if (from.empty() || to.empty())
     fatal("/merge: invalid argument: " + s);
   if (from == ".rsrc" || to == ".rsrc")
@@ -224,8 +219,7 @@ static uint32_t parseSectionAttributes(StringRef s) {
 
 // Parses /section option argument.
 void parseSection(StringRef s) {
-  StringRef name, attrs;
-  std::tie(name, attrs) = s.split(',');
+  auto [name, attrs] = s.split(',');
   if (name.empty() || attrs.empty())
     fatal("/section: invalid argument: " + s);
   config->section[name] = parseSectionAttributes(attrs);
@@ -233,8 +227,7 @@ void parseSection(StringRef s) {
 
 // Parses /aligncomm option argument.
 void parseAligncomm(StringRef s) {
-  StringRef name, align;
-  std::tie(name, align) = s.split(',');
+  auto [name, align] = s.split(',');
   if (name.empty() || align.empty()) {
     error("/aligncomm: invalid argument: " + s);
     return;
@@ -318,8 +311,7 @@ void parseManifestUAC(StringRef arg) {
 // Results are directly written to Config.
 void parseSwaprun(StringRef arg) {
   do {
-    StringRef swaprun, newArg;
-    std::tie(swaprun, newArg) = arg.split(',');
+    auto [swaprun, newArg] = arg.split(',');
     if (swaprun.equals_insensitive("cd"))
       config->swaprunCD = true;
     else if (swaprun.equals_insensitive("net"))
@@ -561,8 +553,7 @@ Export parseExport(StringRef arg) {
     goto err;
 
   if (e.name.contains('=')) {
-    StringRef x, y;
-    std::tie(x, y) = e.name.split("=");
+    auto [x, y] = e.name.split("=");
 
     // If "<name>=<dllname>.<name>".
     if (y.contains(".")) {
@@ -716,8 +707,7 @@ void assignExportOrdinals() {
 // Parses a string in the form of "key=value" and check
 // if value matches previous values for the same key.
 void checkFailIfMismatch(StringRef arg, InputFile *source) {
-  StringRef k, v;
-  std::tie(k, v) = arg.split('=');
+  auto [k, v] = arg.split('=');
   if (k.empty() || v.empty())
     fatal("/failifmismatch: invalid argument: " + arg);
   std::pair<StringRef, InputFile *> existing = config->mustMatch[k];

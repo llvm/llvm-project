@@ -451,11 +451,8 @@ static bool createThunks(OutputSection *os, int margin) {
       if (isInRange(rel.Type, s, p, margin))
         continue;
 
-      // If the target isn't in range, hook it up to an existing or new
-      // thunk.
-      Defined *thunk;
-      bool wasNew;
-      std::tie(thunk, wasNew) = getThunk(lastThunks, sym, p, rel.Type, margin);
+      // If the target isn't in range, hook it up to an existing or new thunk.
+      auto [thunk, wasNew] = getThunk(lastThunks, sym, p, rel.Type, margin);
       if (wasNew) {
         Chunk *thunkChunk = thunk->getChunk();
         thunkChunk->setRVA(
