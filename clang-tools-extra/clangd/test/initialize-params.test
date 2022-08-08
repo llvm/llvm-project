@@ -88,6 +88,7 @@
 # CHECK-NEXT:          ","
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
+# CHECK-NEXT:      "standardTypeHierarchyProvider": true,
 # CHECK-NEXT:      "textDocumentSync": {
 # CHECK-NEXT:        "change": 2,
 # CHECK-NEXT:        "openClose": true,
