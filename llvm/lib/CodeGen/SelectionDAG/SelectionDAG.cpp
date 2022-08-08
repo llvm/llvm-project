@@ -5465,6 +5465,23 @@ static llvm::Optional<APInt> FoldValue(unsigned Opcode, const APInt &C1,
   return llvm::None;
 }
 
+// Handle constant folding with UNDEF.
+// TODO: Handle more cases.
+static llvm::Optional<APInt> FoldValueWithUndef(unsigned Opcode,
+                                                const APInt &C1, bool IsUndef1,
+                                                const APInt &C2,
+                                                bool IsUndef2) {
+  if (!(IsUndef1 || IsUndef2))
+    return FoldValue(Opcode, C1, C2);
+
+  // Fold and(x, undef) -> 0
+  // Fold mul(x, undef) -> 0
+  if (Opcode == ISD::AND || Opcode == ISD::MUL)
+    return APInt::getZero(C1.getBitWidth());
+
+  return llvm::None;
+};
+
 SDValue SelectionDAG::FoldSymbolOffset(unsigned Opcode, EVT VT,
                                        const GlobalAddressSDNode *GA,
                                        const SDNode *N2) {
@@ -5565,7 +5582,6 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
   ElementCount NumElts = VT.getVectorElementCount();
 
   // See if we can fold through bitcasted integer ops.
-  // TODO: Can we handle undef elements?
   if (NumOps == 2 && VT.isFixedLengthVector() && VT.isInteger() &&
       Ops[0].getValueType() == VT && Ops[1].getValueType() == VT &&
       Ops[0].getOpcode() == ISD::BITCAST &&
@@ -5581,11 +5597,11 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       SmallVector<APInt> RawBits1, RawBits2;
       BitVector UndefElts1, UndefElts2;
       if (BV1->getConstantRawBits(IsLE, EltBits, RawBits1, UndefElts1) &&
-          BV2->getConstantRawBits(IsLE, EltBits, RawBits2, UndefElts2) &&
-          UndefElts1.none() && UndefElts2.none()) {
+          BV2->getConstantRawBits(IsLE, EltBits, RawBits2, UndefElts2)) {
         SmallVector<APInt> RawBits;
         for (unsigned I = 0, E = NumElts.getFixedValue(); I != E; ++I) {
-          Optional<APInt> Fold = FoldValue(Opcode, RawBits1[I], RawBits2[I]);
+          Optional<APInt> Fold = FoldValueWithUndef(
+              Opcode, RawBits1[I], UndefElts1[I], RawBits2[I], UndefElts2[I]);
           if (!Fold)
             break;
           RawBits.push_back(*Fold);

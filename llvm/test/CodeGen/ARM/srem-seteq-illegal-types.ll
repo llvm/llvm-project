@@ -431,7 +431,7 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM7-NEXT:  .LCPI3_2:
 ; ARM7-NEXT:    .long 3 @ 0x3
 ; ARM7-NEXT:    .long 0 @ 0x0
-; ARM7-NEXT:    .zero 4
+; ARM7-NEXT:    .long 0 @ 0x0
 ; ARM7-NEXT:    .long 0 @ 0x0
 ;
 ; ARM8-LABEL: test_srem_vec:
@@ -507,7 +507,7 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; ARM8-NEXT:  .LCPI3_2:
 ; ARM8-NEXT:    .long 3 @ 0x3
 ; ARM8-NEXT:    .long 0 @ 0x0
-; ARM8-NEXT:    .zero 4
+; ARM8-NEXT:    .long 0 @ 0x0
 ; ARM8-NEXT:    .long 0 @ 0x0
 ;
 ; NEON7-LABEL: test_srem_vec:
@@ -583,7 +583,7 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; NEON7-NEXT:  .LCPI3_2:
 ; NEON7-NEXT:    .long 3 @ 0x3
 ; NEON7-NEXT:    .long 0 @ 0x0
-; NEON7-NEXT:    .zero 4
+; NEON7-NEXT:    .long 0 @ 0x0
 ; NEON7-NEXT:    .long 0 @ 0x0
 ;
 ; NEON8-LABEL: test_srem_vec:
@@ -659,7 +659,7 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; NEON8-NEXT:  .LCPI3_2:
 ; NEON8-NEXT:    .long 3 @ 0x3
 ; NEON8-NEXT:    .long 0 @ 0x0
-; NEON8-NEXT:    .zero 4
+; NEON8-NEXT:    .long 0 @ 0x0
 ; NEON8-NEXT:    .long 0 @ 0x0
   %srem = srem <3 x i33> %X, <i33 9, i33 9, i33 -9>
   %cmp = icmp ne <3 x i33> %srem, <i33 3, i33 -3, i33 3>
