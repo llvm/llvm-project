@@ -4,15 +4,13 @@ define i32 @A(i32 %Size) {
 ; CHECK-LABEL: A:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0:
-; CHECK-NEXT:    move.l %a6, -(%sp)
+; CHECK-NEXT:    link.w %a6, #-128
 ; CHECK-NEXT:    .cfi_def_cfa_offset -8
 ; CHECK-NEXT:    .cfi_offset %a6, -8
-; CHECK-NEXT:    move.l %sp, %a6
 ; CHECK-NEXT:    .cfi_def_cfa_register %a6
 ; CHECK-NEXT:    move.l %sp, %d0
 ; CHECK-NEXT:    and.l #-128, %d0
 ; CHECK-NEXT:    move.l %d0, %sp
-; CHECK-NEXT:    suba.l #128, %sp
 ; CHECK-NEXT:    move.l %sp, %a4
 ; CHECK-NEXT:    movem.l %a4, (116,%a4) ; 8-byte Folded Spill
 ; CHECK-NEXT:    move.l (8,%a6), %d1
@@ -23,8 +21,7 @@ define i32 @A(i32 %Size) {
 ; CHECK-NEXT:    and.l #-128, %d0
 ; CHECK-NEXT:    move.l %d0, %sp
 ; CHECK-NEXT:    movem.l (116,%a4), %a4 ; 8-byte Folded Reload
-; CHECK-NEXT:    move.l %a6, %sp
-; CHECK-NEXT:    move.l (%sp)+, %a6
+; CHECK-NEXT:    unlk %a6
 ; CHECK-NEXT:    rts
   %A = alloca i8, i32 %Size, align 128
   %A_addr = ptrtoint i8* %A to i32
