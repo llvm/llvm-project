@@ -393,7 +393,7 @@ class _BodyBuilder:
 
   def _unary_abs(self, x: Value) -> Value:
     if _is_floating_point_type(x.type):
-      return math.AbsOp(x).result
+      return math.AbsFOp(x).result
     raise NotImplementedError("Unsupported 'abs' operand: {x}")
 
   def _unary_ceil(self, x: Value) -> Value:
