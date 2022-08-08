@@ -19,17 +19,9 @@
 #include <cstring>
 #include <limits>
 #include <string>
-#if __cplusplus > 201402L
 #include <string_view>
-#endif
 #include <type_traits>
 #include <utility>
-
-// Declare the __builtin_strlen intrinsic for MSVC so it can be used in
-// constexpr context.
-#if defined(_MSC_VER)
-extern "C" size_t __builtin_strlen(const char *);
-#endif
 
 namespace llvm {
 
@@ -77,21 +69,6 @@ namespace llvm {
       return ::memcmp(Lhs,Rhs,Length);
     }
 
-    // Constexpr version of std::strlen.
-    static constexpr size_t strLen(const char *Str) {
-#if __cplusplus > 201402L
-      return std::char_traits<char>::length(Str);
-#elif __has_builtin(__builtin_strlen) || defined(__GNUC__) || \
-    (defined(_MSC_VER) && _MSC_VER >= 1916)
-      return __builtin_strlen(Str);
-#else
-      const char *Begin = Str;
-      while (*Str != '\0')
-        ++Str;
-      return Str - Begin;
-#endif
-    }
-
   public:
     /// @name Constructors
     /// @{
@@ -105,7 +82,7 @@ namespace llvm {
 
     /// Construct a string ref from a cstring.
     /*implicit*/ constexpr StringRef(const char *Str)
-        : Data(Str), Length(Str ? strLen(Str) : 0) {}
+        : Data(Str), Length(Str ? std::char_traits<char>::length(Str) : 0) {}
 
     /// Construct a string ref from a pointer and length.
     /*implicit*/ constexpr StringRef(const char *data, size_t length)
@@ -115,11 +92,9 @@ namespace llvm {
     /*implicit*/ StringRef(const std::string &Str)
       : Data(Str.data()), Length(Str.length()) {}
 
-#if __cplusplus > 201402L
     /// Construct a string ref from an std::string_view.
     /*implicit*/ constexpr StringRef(std::string_view Str)
         : Data(Str.data()), Length(Str.size()) {}
-#endif
 
     /// @}
     /// @name Iterators
@@ -261,13 +236,9 @@ namespace llvm {
     /// @name Type Conversions
     /// @{
 
-    explicit operator std::string() const { return str(); }
-
-#if __cplusplus > 201402L
     operator std::string_view() const {
       return std::string_view(data(), size());
     }
-#endif
 
     /// @}
     /// @name String Predicates
