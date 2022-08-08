@@ -304,7 +304,7 @@ def SPV_AtomicFAddEXTOp : SPV_Op<"AtomicFAddEXT", []> {
 
   let availability = [
     MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[SPV_EXT_shader_atomic_float_add]>,
     Capability<[SPV_C_AtomicFloat16AddEXT, SPV_C_AtomicFloat32AddEXT, SPV_C_AtomicFloat64AddEXT]>
   ];
