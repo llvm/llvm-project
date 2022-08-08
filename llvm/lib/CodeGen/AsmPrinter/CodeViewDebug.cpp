@@ -3350,11 +3350,13 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
   if (const auto *MemberDecl = dyn_cast_or_null<DIDerivedType>(
           DIGV->getRawStaticDataMemberDeclaration()))
     Scope = MemberDecl->getScope();
-  // For Fortran, the scoping portion is elided in its name so that we can
-  // reference the variable in the command line of the VS debugger.
+  // For static local variables and Fortran, the scoping portion is elided
+  // in its name so that we can reference the variable in the command line
+  // of the VS debugger.
   std::string QualifiedName =
-      (moduleIsInFortran()) ? std::string(DIGV->getName())
-                            : getFullyQualifiedName(Scope, DIGV->getName());
+      (moduleIsInFortran() || isa<DILocalScope>(Scope))
+          ? std::string(DIGV->getName())
+          : getFullyQualifiedName(Scope, DIGV->getName());
 
   if (const GlobalVariable *GV =
           CVGV.GVInfo.dyn_cast<const GlobalVariable *>()) {
