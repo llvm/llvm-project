@@ -378,7 +378,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
           case lldb::eExpressionSetupError:
           case lldb::eExpressionParseError:
             add_to_code = false;
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
           case lldb::eExpressionDiscarded:
             error_sp->Printf("%s\n", error.AsCString());
             break;

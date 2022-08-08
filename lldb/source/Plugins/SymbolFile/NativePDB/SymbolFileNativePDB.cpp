@@ -774,7 +774,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   switch (sym.kind()) {
   case S_GDATA32:
     is_external = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case S_LDATA32: {
     DataSym ds(sym.kind());
     llvm::cantFail(SymbolDeserializer::deserializeAs<DataSym>(sym, ds));
@@ -789,7 +789,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   }
   case S_GTHREAD32:
     is_external = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case S_LTHREAD32: {
     ThreadLocalDataSym tlds(sym.kind());
     llvm::cantFail(

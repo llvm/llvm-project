@@ -53,7 +53,7 @@ static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
       return Scalar(llvm::APInt(buf.GetByteSize()*8, val, false));
     }
   }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     return status.ToError();
   }
