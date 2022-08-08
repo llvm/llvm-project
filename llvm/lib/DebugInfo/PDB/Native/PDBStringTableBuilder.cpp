@@ -178,7 +178,7 @@ Error PDBStringTableBuilder::writeHashTable(BinaryStreamWriter &Writer) const {
     return EC;
   std::vector<ulittle32_t> Buckets(BucketCount);
 
-  for (auto &Pair : Strings) {
+  for (const auto &Pair : Strings) {
     StringRef S = Pair.getKey();
     uint32_t Offset = Pair.getValue();
     uint32_t Hash = hashStringV1(S);

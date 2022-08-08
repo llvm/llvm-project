@@ -395,7 +395,7 @@ void StructurizeCFG::orderNodes() {
         WorkList.emplace_back(I, I + Size);
 
       // Add the SCC nodes to the Order array.
-      for (auto &N : SCC) {
+      for (const auto &N : SCC) {
         assert(I < E && "SCC size mismatch!");
         Order[I++] = N.first;
       }

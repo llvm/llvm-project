@@ -208,7 +208,7 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
     }
 
     const MemoryPhi *Phi = cast<MemoryPhi>(MA);
-    for (auto &Use : Phi->incoming_values())
+    for (const auto &Use : Phi->incoming_values())
       WorkList.push_back(cast<MemoryAccess>(&Use));
   }
 

@@ -908,7 +908,7 @@ uint32_t InstrProfRecord::getNumValueKinds() const {
 
 uint32_t InstrProfRecord::getNumValueData(uint32_t ValueKind) const {
   uint32_t N = 0;
-  for (auto &SR : getValueSitesForKind(ValueKind))
+  for (const auto &SR : getValueSitesForKind(ValueKind))
     N += SR.ValueData.size();
   return N;
 }

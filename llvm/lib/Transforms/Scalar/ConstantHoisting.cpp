@@ -221,7 +221,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   // dominated by any other blocks in set 'BBs', and all nodes in the path
   // in the dominator tree from Entry to 'BB'.
   SmallPtrSet<BasicBlock *, 16> Candidates;
-  for (auto BB : BBs) {
+  for (auto *BB : BBs) {
     // Ignore unreachable basic blocks.
     if (!DT.isReachableFromEntry(BB))
       continue;
@@ -330,7 +330,7 @@ SetVector<Instruction *> ConstantHoistingPass::findConstantInsertionPoint(
 
   if (BFI) {
     findBestInsertionSet(*DT, *BFI, Entry, BBs);
-    for (auto BB : BBs) {
+    for (auto *BB : BBs) {
       BasicBlock::iterator InsertPt = BB->begin();
       for (; isa<PHINode>(InsertPt) || InsertPt->isEHPad(); ++InsertPt)
         ;

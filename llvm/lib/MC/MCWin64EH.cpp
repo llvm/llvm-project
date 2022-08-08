@@ -2360,7 +2360,7 @@ static void ARM64EmitRuntimeFunction(MCStreamer &streamer,
   MCContext &context = streamer.getContext();
 
   streamer.emitValueToAlignment(4);
-  for (auto &S : info->Segments) {
+  for (const auto &S : info->Segments) {
     EmitSymbolRefWithOfs(streamer, info->Begin, S.Offset);
     if (info->PackedInfo)
       streamer.emitInt32(info->PackedInfo);
