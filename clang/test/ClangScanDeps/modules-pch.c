@@ -9,7 +9,7 @@
 //
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_pch.json > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
-// RUN:   -generate-modules-path-args -module-files-dir %t/build > %t/result_pch.json
+// RUN:   -module-files-dir %t/build > %t/result_pch.json
 // RUN: cat %t/result_pch.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-PCH
 //
 // Check we didn't build the PCH during dependency scanning.
@@ -121,7 +121,7 @@
 //
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_tu.json > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
-// RUN:   -generate-modules-path-args -module-files-dir %t/build > %t/result_tu.json
+// RUN:   -module-files-dir %t/build > %t/result_tu.json
 // RUN: cat %t/result_tu.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU
 //
 // CHECK-TU:      {
@@ -179,7 +179,7 @@
 //
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch/cdb_tu_with_common.json > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
-// RUN:   -generate-modules-path-args -module-files-dir %t/build > %t/result_tu_with_common.json
+// RUN:   -module-files-dir %t/build > %t/result_tu_with_common.json
 // RUN: cat %t/result_tu_with_common.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU-WITH-COMMON
 //
 // CHECK-TU-WITH-COMMON:      {

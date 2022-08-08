@@ -214,11 +214,6 @@ static std::string getModuleContextHash(const ModuleDeps &MD) {
   return toString(llvm::APInt(sizeof(Words) * 8, Words), 36, /*Signed=*/false);
 }
 
-std::vector<std::string>
-ModuleDeps::getCanonicalCommandLineWithoutModulePaths() const {
-  return serializeCompilerInvocation(BuildInvocation);
-}
-
 void ModuleDepCollectorPP::FileChanged(SourceLocation Loc,
                                        FileChangeReason Reason,
                                        SrcMgr::CharacteristicKind FileType,

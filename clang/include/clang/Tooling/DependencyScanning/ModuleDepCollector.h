@@ -138,10 +138,6 @@ struct ModuleDeps {
   std::vector<std::string> getCanonicalCommandLine(
       llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>
           LookupModuleOutput) const;
-
-  /// Gets the canonical command line suitable for passing to clang, excluding
-  /// "-fmodule-file=" and "-o" arguments.
-  std::vector<std::string> getCanonicalCommandLineWithoutModulePaths() const;
 };
 
 class ModuleDepCollector;
