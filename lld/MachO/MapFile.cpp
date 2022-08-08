@@ -152,8 +152,7 @@ void macho::writeMapFile() {
     }
 
   // Dump table of symbols
-  Symbols liveSymbols, deadSymbols;
-  std::tie(liveSymbols, deadSymbols) = getSymbols();
+  auto [liveSymbols, deadSymbols] = getSymbols();
 
   DenseMap<Symbol *, std::string> liveSymbolStrings =
       getSymbolStrings(liveSymbols);
