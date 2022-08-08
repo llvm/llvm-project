@@ -6,10 +6,6 @@ div.document {
   width: 90%;
 }
 
-div.body {
-  max-width: 90%;
-}
-
 div.note {
   padding: 20px 20px 10px 20px;
 }
@@ -97,4 +93,22 @@ div.sphinxsidebar ul li.toctree-l1 > a {
 div.sphinxsidebar h3 {
   /* Hide Navigation. */
   display: none;
+}
+
+@media screen and (min-width: 875px) {
+div.body {
+  max-width: 90%;
+}
+}
+
+@media screen and (max-width: 875px) {
+div.sphinxsidebar {
+  margin-left: 0px;
+  margin-right: 0px;
+}
+
+div.body {
+  min-width: auto;
+  max-width: auto;
+}
 }
