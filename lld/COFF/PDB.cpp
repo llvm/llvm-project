@@ -811,6 +811,10 @@ void DebugSHandler::handleDebugS(SectionChunk *debugChunk) {
       // Unclear what this is for.
       break;
 
+    case DebugSubsectionKind::XfgHashType:
+    case DebugSubsectionKind::XfgHashVirtual:
+      break;
+
     default:
       warn("ignoring unknown debug$S subsection kind 0x" +
            utohexstr(uint32_t(ss.kind())) + " in file " + toString(&file));
