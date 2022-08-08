@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Support/Process.h"
 
@@ -55,8 +56,8 @@ private:
 };
 
 MapperJITLinkMemoryManager::MapperJITLinkMemoryManager(
-    std::unique_ptr<MemoryMapper> Mapper)
-    : Mapper(std::move(Mapper)) {}
+    size_t ReservationGranularity, std::unique_ptr<MemoryMapper> Mapper)
+    : ReservationUnits(ReservationGranularity), Mapper(std::move(Mapper)) {}
 
 void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
                                           OnAllocatedFunction OnAllocated) {
@@ -69,66 +70,94 @@ void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
     return;
   }
 
-  // Check if total size fits in address space
-  if (SegsSizes->total() > std::numeric_limits<size_t>::max()) {
-    OnAllocated(make_error<JITLinkError>(
-        formatv("Total requested size {:x} for graph {} exceeds address space",
-                SegsSizes->total(), G.getName())));
-    return;
+  auto TotalSize = SegsSizes->total();
+
+  Mutex.lock();
+
+  // find an already reserved range that is large enough
+  ExecutorAddrRange SelectedRange{};
+  std::vector<ExecutorAddrRange>::iterator SelectedRangeIt;
+  SelectedRangeIt =
+      llvm::find_if(AvailableMemory, [TotalSize](ExecutorAddrRange Range) {
+        return TotalSize < Range.size();
+      });
+  if (SelectedRangeIt != AvailableMemory.end()) {
+    SelectedRange = *SelectedRangeIt;
+    AvailableMemory.erase(SelectedRangeIt);
   }
 
-  Mapper->reserve(
-      SegsSizes->total(),
-      [this, &G, BL = std::move(BL), OnAllocated = std::move(OnAllocated)](
-          Expected<ExecutorAddrRange> Result) mutable {
-        if (!Result) {
-          return OnAllocated(Result.takeError());
-        }
+  auto CompleteAllocation = [this, &G, BL = std::move(BL),
+                             OnAllocated = std::move(OnAllocated)](
+                                Expected<ExecutorAddrRange> Result) mutable {
+    if (!Result) {
+      Mutex.unlock();
+      return OnAllocated(Result.takeError());
+    }
 
-        auto NextSegAddr = Result->Start;
+    auto NextSegAddr = Result->Start;
 
-        std::vector<MemoryMapper::AllocInfo::SegInfo> SegInfos;
+    std::vector<MemoryMapper::AllocInfo::SegInfo> SegInfos;
 
-        for (auto &KV : BL.segments()) {
-          auto &AG = KV.first;
-          auto &Seg = KV.second;
+    for (auto &KV : BL.segments()) {
+      auto &AG = KV.first;
+      auto &Seg = KV.second;
 
-          auto TotalSize = Seg.ContentSize + Seg.ZeroFillSize;
+      auto TotalSize = Seg.ContentSize + Seg.ZeroFillSize;
 
-          Seg.Addr = NextSegAddr;
-          Seg.WorkingMem = Mapper->prepare(NextSegAddr, TotalSize);
+      Seg.Addr = NextSegAddr;
+      Seg.WorkingMem = Mapper->prepare(NextSegAddr, TotalSize);
 
-          NextSegAddr += alignTo(TotalSize, Mapper->getPageSize());
+      NextSegAddr += alignTo(TotalSize, Mapper->getPageSize());
 
-          MemoryMapper::AllocInfo::SegInfo SI;
-          SI.Offset = Seg.Addr - Result->Start;
-          SI.ContentSize = Seg.ContentSize;
-          SI.ZeroFillSize = Seg.ZeroFillSize;
-          SI.Prot = (toSysMemoryProtectionFlags(AG.getMemProt()));
-          SI.WorkingMem = Seg.WorkingMem;
+      MemoryMapper::AllocInfo::SegInfo SI;
+      SI.Offset = Seg.Addr - Result->Start;
+      SI.ContentSize = Seg.ContentSize;
+      SI.ZeroFillSize = Seg.ZeroFillSize;
+      SI.Prot = toSysMemoryProtectionFlags(AG.getMemProt());
+      SI.WorkingMem = Seg.WorkingMem;
 
-          SegInfos.push_back(SI);
-        }
+      SegInfos.push_back(SI);
+    }
 
-        if (auto Err = BL.apply()) {
-          OnAllocated(std::move(Err));
-          return;
-        }
+    UsedMemory.insert({Result->Start, NextSegAddr - Result->Start});
 
-        OnAllocated(std::make_unique<InFlightAlloc>(*this, G, Result->Start,
-                                                    std::move(SegInfos)));
-      });
+    if (NextSegAddr < Result->End) {
+      // Save the remaining memory for reuse in next allocation(s)
+      auto RemainingRange = ExecutorAddrRange(NextSegAddr, Result->End);
+      AvailableMemory.push_back(RemainingRange);
+    }
+    Mutex.unlock();
+
+    if (auto Err = BL.apply()) {
+      OnAllocated(std::move(Err));
+      return;
+    }
+
+    OnAllocated(std::make_unique<InFlightAlloc>(*this, G, Result->Start,
+                                                std::move(SegInfos)));
+  };
+
+  if (SelectedRange.empty()) { // no already reserved range was found
+    auto TotalAllocation = alignTo(TotalSize, ReservationUnits);
+    Mapper->reserve(TotalAllocation, std::move(CompleteAllocation));
+  } else {
+    CompleteAllocation(SelectedRange);
+  }
 }
 
 void MapperJITLinkMemoryManager::deallocate(
     std::vector<FinalizedAlloc> Allocs, OnDeallocatedFunction OnDeallocated) {
-  std::vector<ExecutorAddr> Bases;
-  Bases.reserve(Allocs.size());
+  std::lock_guard<std::mutex> Lock(Mutex);
+
   for (auto &FA : Allocs) {
-    Bases.push_back(FA.getAddress());
+    ExecutorAddr Addr = FA.getAddress();
+    ExecutorAddrDiff Size = UsedMemory[Addr];
+    UsedMemory.erase(Addr);
+
+    AvailableMemory.push_back({Addr, Addr + Size});
     FA.release();
   }
-  Mapper->release(Bases, std::move(OnDeallocated));
+  OnDeallocated(Error::success());
 }
 
 } // end namespace orc
