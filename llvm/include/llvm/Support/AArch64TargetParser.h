@@ -25,52 +25,53 @@ class Triple;
 
 namespace AArch64 {
 
-// Arch extension modifiers for CPUs.
+// Arch extension modifiers for CPUs. These are labelled with their Arm ARM
+// feature name (though the canonical reference for those is AArch64.td)
 enum ArchExtKind : uint64_t {
   AEK_INVALID =     0,
   AEK_NONE =        1,
-  AEK_CRC =         1 << 1,
+  AEK_CRC =         1 << 1,  // FEAT_CRC32
   AEK_CRYPTO =      1 << 2,
-  AEK_FP =          1 << 3,
-  AEK_SIMD =        1 << 4,
-  AEK_FP16 =        1 << 5,
-  AEK_PROFILE =     1 << 6,
-  AEK_RAS =         1 << 7,
-  AEK_LSE =         1 << 8,
-  AEK_SVE =         1 << 9,
-  AEK_DOTPROD =     1 << 10,
-  AEK_RCPC =        1 << 11,
-  AEK_RDM =         1 << 12,
-  AEK_SM4 =         1 << 13,
-  AEK_SHA3 =        1 << 14,
-  AEK_SHA2 =        1 << 15,
-  AEK_AES =         1 << 16,
-  AEK_FP16FML =     1 << 17,
-  AEK_RAND =        1 << 18,
-  AEK_MTE =         1 << 19,
-  AEK_SSBS =        1 << 20,
-  AEK_SB =          1 << 21,
-  AEK_PREDRES =     1 << 22,
-  AEK_SVE2 =        1 << 23,
-  AEK_SVE2AES =     1 << 24,
-  AEK_SVE2SM4 =     1 << 25,
-  AEK_SVE2SHA3 =    1 << 26,
-  AEK_SVE2BITPERM = 1 << 27,
-  AEK_TME =         1 << 28,
-  AEK_BF16 =        1 << 29,
-  AEK_I8MM =        1 << 30,
-  AEK_F32MM =       1ULL << 31,
-  AEK_F64MM =       1ULL << 32,
-  AEK_LS64 =        1ULL << 33,
-  AEK_BRBE =        1ULL << 34,
-  AEK_PAUTH =       1ULL << 35,
-  AEK_FLAGM =       1ULL << 36,
-  AEK_SME =         1ULL << 37,
-  AEK_SMEF64 =      1ULL << 38,
-  AEK_SMEI64 =      1ULL << 39,
-  AEK_HBC =         1ULL << 40,
-  AEK_MOPS =        1ULL << 41,
-  AEK_PERFMON =     1ULL << 42,
+  AEK_FP =          1 << 3,  // FEAT_FP
+  AEK_SIMD =        1 << 4,  // FEAT_AdvSIMD
+  AEK_FP16 =        1 << 5,  // FEAT_FP16
+  AEK_PROFILE =     1 << 6,  // FEAT_SPE
+  AEK_RAS =         1 << 7,  // FEAT_RAS, FEAT_RASv1p1
+  AEK_LSE =         1 << 8,  // FEAT_LSE
+  AEK_SVE =         1 << 9,  // FEAT_SVE
+  AEK_DOTPROD =     1 << 10, // FEAT_DotProd
+  AEK_RCPC =        1 << 11, // FEAT_LRCPC
+  AEK_RDM =         1 << 12, // FEAT_RDM
+  AEK_SM4 =         1 << 13, // FEAT_SM4, FEAT_SM3
+  AEK_SHA3 =        1 << 14, // FEAT_SHA3, FEAT_SHA512
+  AEK_SHA2 =        1 << 15, // FEAT_SHA1, FEAT_SHA256
+  AEK_AES =         1 << 16, // FEAT_AES, FEAT_PMULL
+  AEK_FP16FML =     1 << 17, // FEAT_FHM
+  AEK_RAND =        1 << 18, // FEAT_RNG
+  AEK_MTE =         1 << 19, // FEAT_MTE, FEAT_MTE2
+  AEK_SSBS =        1 << 20, // FEAT_SSBS, FEAT_SSBS2
+  AEK_SB =          1 << 21, // FEAT_SB
+  AEK_PREDRES =     1 << 22, // FEAT_SPECRES
+  AEK_SVE2 =        1 << 23, // FEAT_SVE2
+  AEK_SVE2AES =     1 << 24, // FEAT_SVE_AES, FEAT_SVE_PMULL128
+  AEK_SVE2SM4 =     1 << 25, // FEAT_SVE_SM4
+  AEK_SVE2SHA3 =    1 << 26, // FEAT_SVE_SHA3
+  AEK_SVE2BITPERM = 1 << 27, // FEAT_SVE_BitPerm
+  AEK_TME =         1 << 28, // FEAT_TME
+  AEK_BF16 =        1 << 29, // FEAT_BF16
+  AEK_I8MM =        1 << 30, // FEAT_I8MM
+  AEK_F32MM =       1ULL << 31, // FEAT_F32MM
+  AEK_F64MM =       1ULL << 32, // FEAT_F64MM
+  AEK_LS64 =        1ULL << 33, // FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA
+  AEK_BRBE =        1ULL << 34, // FEAT_BRBE
+  AEK_PAUTH =       1ULL << 35, // FEAT_PAuth
+  AEK_FLAGM =       1ULL << 36, // FEAT_FlagM
+  AEK_SME =         1ULL << 37, // FEAT_SME
+  AEK_SMEF64 =      1ULL << 38, // FEAT_SME_F64F64
+  AEK_SMEI64 =      1ULL << 39, // FEAT_SME_I16I64
+  AEK_HBC =         1ULL << 40, // FEAT_HBC
+  AEK_MOPS =        1ULL << 41, // FEAT_MOPS
+  AEK_PERFMON =     1ULL << 42, // FEAT_PMUv3
 };
 
 enum class ArchKind {
