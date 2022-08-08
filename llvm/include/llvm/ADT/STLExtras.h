@@ -1796,6 +1796,11 @@ bool is_splat(R &&Range) {
          std::equal(adl_begin(Range) + 1, adl_end(Range), adl_begin(Range)));
 }
 
+/// Returns true iff all Values in the initializer lists are same.
+template <typename T> bool is_splat(std::initializer_list<T> Values) {
+  return is_splat<std::initializer_list<T>>(std::move(Values));
+}
+
 /// Provide a container algorithm similar to C++ Library Fundamentals v2's
 /// `erase_if` which is equivalent to:
 ///
