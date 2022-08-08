@@ -75,14 +75,12 @@ module std [system] {
       export Darwin.C.stdint
     }
     module stdio_h {
-      // <stdio.h>'s __need_* macros require textual inclusion.
-      textual header "stdio.h"
+      header "stdio.h"
       export *
       export Darwin.C.stdio
     }
     module stdlib_h {
-      // <stdlib.h>'s __need_* macros require textual inclusion.
-      textual header "stdlib.h"
+      header "stdlib.h"
       export *
     }
     module string_h {
@@ -96,8 +94,7 @@ module std [system] {
     // <time.h> provided by C library.
     module wchar_h {
       @requires_LIBCXX_ENABLE_WIDE_CHARACTERS@
-      // <wchar.h>'s __need_* macros require textual inclusion.
-      textual header "wchar.h"
+      header "wchar.h"
       export *
     }
     module wctype_h {
