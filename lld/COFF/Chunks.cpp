@@ -27,8 +27,7 @@ using namespace llvm::support::endian;
 using namespace llvm::COFF;
 using llvm::support::ulittle32_t;
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 SectionChunk::SectionChunk(ObjFile *f, const coff_section *h)
     : Chunk(SectionKind), file(f), header(h), repl(this) {
@@ -996,5 +995,4 @@ void AbsolutePointerChunk::writeTo(uint8_t *buf) const {
   }
 }
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff

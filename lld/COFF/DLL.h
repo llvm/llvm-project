@@ -12,8 +12,7 @@
 #include "Chunks.h"
 #include "Symbols.h"
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 // Windows-specific.
 // IdataContents creates all chunks for the DLL import table.
@@ -76,7 +75,6 @@ public:
   }
 };
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 #endif

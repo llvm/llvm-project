@@ -17,8 +17,7 @@
 #include "llvm/Option/ArgList.h"
 #include <vector>
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 class COFFLinkerContext;
 
 // Logic for deciding what symbols to export, when exporting all
@@ -59,7 +58,6 @@ std::vector<WrappedSymbol> addWrappedSymbols(COFFLinkerContext &ctx,
 
 void wrapSymbols(COFFLinkerContext &ctx, ArrayRef<WrappedSymbol> wrapped);
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 #endif

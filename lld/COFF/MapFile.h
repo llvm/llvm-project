@@ -9,11 +9,9 @@
 #ifndef LLD_COFF_MAPFILE_H
 #define LLD_COFF_MAPFILE_H
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 class COFFLinkerContext;
 void writeMapFile(COFFLinkerContext &ctx);
-}
 }
 
 #endif

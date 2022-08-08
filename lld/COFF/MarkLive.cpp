@@ -13,8 +13,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include <vector>
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 // Set live bit on for each reachable chunk. Unmarked (unreachable)
 // COMDAT chunks will be ignored by Writer, so they will be excluded
@@ -68,6 +67,5 @@ void markLive(COFFLinkerContext &ctx) {
     for (SectionChunk &c : sc->children())
       enqueue(&c);
   }
-}
 }
 }

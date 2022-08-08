@@ -26,8 +26,7 @@
 
 using namespace llvm;
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 StringRef ltrim1(StringRef s, const char *chars) {
   if (!s.empty() && strchr(chars, s[0]))
@@ -891,5 +890,4 @@ void SymbolTable::compileBitcodeFiles() {
   }
 }
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
