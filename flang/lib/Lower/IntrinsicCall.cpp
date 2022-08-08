@@ -3297,6 +3297,7 @@ mlir::Value IntrinsicLibrary::genMask(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
 
+  mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
   mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
   mlir::Value bitSize = builder.createIntegerConstant(
       loc, resultType, resultType.getIntOrFloatBitWidth());
@@ -3309,7 +3310,11 @@ mlir::Value IntrinsicLibrary::genMask(mlir::Type resultType,
   // in this case either, so we choose the most efficient implementation.
   mlir::Value shift =
       builder.create<mlir::arith::SubIOp>(loc, bitSize, bitsToSet);
-  return builder.create<Shift>(loc, ones, shift);
+  mlir::Value shifted = builder.create<Shift>(loc, ones, shift);
+  mlir::Value isZero = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::eq, bitsToSet, zero);
+
+  return builder.create<mlir::arith::SelectOp>(loc, isZero, zero, shifted);
 }
 
 // MATMUL
