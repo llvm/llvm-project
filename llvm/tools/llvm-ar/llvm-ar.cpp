@@ -1125,8 +1125,7 @@ static void performOperation(ArchiveOperation Operation,
   llvm_unreachable("Unknown operation.");
 }
 
-static int performOperation(ArchiveOperation Operation,
-                            std::vector<NewArchiveMember> *NewMembers) {
+static int performOperation(ArchiveOperation Operation) {
   // Create or open the archive object.
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(
       ArchiveName, /*IsText=*/false, /*RequiresNullTerminator=*/false);
@@ -1145,7 +1144,7 @@ static int performOperation(ArchiveOperation Operation,
     if (Archive->isThin())
       CompareFullPath = true;
     performOperation(Operation, Archive.get(), std::move(Buf.get()),
-                     NewMembers);
+                     /*NewMembers=*/nullptr);
     return 0;
   }
 
@@ -1160,7 +1159,7 @@ static int performOperation(ArchiveOperation Operation,
     }
   }
 
-  performOperation(Operation, nullptr, nullptr, NewMembers);
+  performOperation(Operation, nullptr, nullptr, /*NewMembers=*/nullptr);
   return 0;
 }
 
@@ -1403,8 +1402,7 @@ static int ar_main(int argc, char **argv) {
     Options += *ArgIt + 1;
   }
 
-  ArchiveOperation Operation = parseCommandLine();
-  return performOperation(Operation, nullptr);
+  return performOperation(parseCommandLine());
 }
 
 static int ranlib_main(int argc, char **argv) {
@@ -1442,7 +1440,7 @@ static int ranlib_main(int argc, char **argv) {
   if (!ArchiveSpecified) {
     badUsage("an archive name must be specified");
   }
-  return performOperation(CreateSymTab, nullptr);
+  return performOperation(CreateSymTab);
 }
 
 int llvm_ar_main(int argc, char **argv) {
