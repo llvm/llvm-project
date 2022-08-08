@@ -328,7 +328,9 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_deref}), llvm::Failed());
 
   struct MockProcess : Process {
-    using Process::Process;
+    MockProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
+        : Process(target_sp, listener_sp) {}
+
     llvm::StringRef GetPluginName() override { return "mock process"; }
     bool CanDebug(lldb::TargetSP target,
                   bool plugin_specified_by_name) override {

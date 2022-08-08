@@ -42,7 +42,8 @@ public:
 
 class DummyProcess : public Process {
 public:
-  using Process::Process;
+  DummyProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
+      : Process(target_sp, listener_sp) {}
 
   bool CanDebug(lldb::TargetSP target, bool plugin_specified_by_name) override {
     return true;
