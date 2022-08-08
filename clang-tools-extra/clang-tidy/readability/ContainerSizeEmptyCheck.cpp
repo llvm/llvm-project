@@ -86,6 +86,9 @@ AST_MATCHER(Expr, usedInBooleanContext) {
 AST_MATCHER(CXXConstructExpr, isDefaultConstruction) {
   return Node.getConstructor()->isDefaultConstructor();
 }
+AST_MATCHER(QualType, isIntegralType) {
+  return Node->isIntegralType(Finder->getASTContext());
+}
 } // namespace ast_matchers
 namespace tidy {
 namespace readability {
@@ -99,10 +102,9 @@ ContainerSizeEmptyCheck::ContainerSizeEmptyCheck(StringRef Name,
 void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   const auto ValidContainerRecord = cxxRecordDecl(isSameOrDerivedFrom(
       namedDecl(
-          has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
-                            hasName("size"),
-                            returns(qualType(isInteger(), unless(booleanType()),
-                                             unless(elaboratedType()))))
+          has(cxxMethodDecl(
+                  isConst(), parameterCountIs(0), isPublic(), hasName("size"),
+                  returns(qualType(isIntegralType(), unless(booleanType()))))
                   .bind("size")),
           has(cxxMethodDecl(isConst(), parameterCountIs(0), isPublic(),
                             hasName("empty"), returns(booleanType()))
