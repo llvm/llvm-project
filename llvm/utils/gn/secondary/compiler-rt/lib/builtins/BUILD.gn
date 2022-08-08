@@ -546,6 +546,7 @@ static_library("builtins") {
 
   if (current_cpu == "riscv" || current_cpu == "riscv64") {
     sources += [
+      "riscv/fp_mode.c",
       "riscv/restore.S",
       "riscv/save.S",
     ]
