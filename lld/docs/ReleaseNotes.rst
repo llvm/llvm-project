@@ -25,6 +25,8 @@ Non-comprehensive list of changes in this release
 
 ELF Improvements
 ----------------
+* ``--package-metadata=`` has been added to create package metadata notes
+  (`D131439 <https://reviews.llvm.org/D131439>`_)
 
 Breaking changes
 ----------------
