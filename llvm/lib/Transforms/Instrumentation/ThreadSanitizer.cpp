@@ -561,12 +561,12 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // Instrument atomic memory accesses in any case (they can be used to
   // implement synchronization).
   if (ClInstrumentAtomics)
-    for (auto Inst : AtomicAccesses) {
+    for (auto *Inst : AtomicAccesses) {
       Res |= instrumentAtomic(Inst, DL);
     }
 
   if (ClInstrumentMemIntrinsics && SanitizeFunction)
-    for (auto Inst : MemIntrinCalls) {
+    for (auto *Inst : MemIntrinCalls) {
       Res |= instrumentMemIntrinsic(Inst);
     }
 

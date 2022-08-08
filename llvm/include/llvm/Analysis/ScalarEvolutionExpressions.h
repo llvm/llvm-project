@@ -77,7 +77,7 @@ public:
 
 inline unsigned short computeExpressionSize(ArrayRef<const SCEV *> Args) {
   APInt Size(16, 1);
-  for (auto *Arg : Args)
+  for (const auto *Arg : Args)
     Size = Size.uadd_sat(APInt(16, Arg->getExpressionSize()));
   return (unsigned short)Size.getZExtValue();
 }
@@ -810,7 +810,7 @@ public:
   const SCEV *visitAddExpr(const SCEVAddExpr *Expr) {
     SmallVector<const SCEV *, 2> Operands;
     bool Changed = false;
-    for (auto *Op : Expr->operands()) {
+    for (const auto *Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
@@ -820,7 +820,7 @@ public:
   const SCEV *visitMulExpr(const SCEVMulExpr *Expr) {
     SmallVector<const SCEV *, 2> Operands;
     bool Changed = false;
-    for (auto *Op : Expr->operands()) {
+    for (const auto *Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
@@ -837,7 +837,7 @@ public:
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
     SmallVector<const SCEV *, 2> Operands;
     bool Changed = false;
-    for (auto *Op : Expr->operands()) {
+    for (const auto *Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
@@ -849,7 +849,7 @@ public:
   const SCEV *visitSMaxExpr(const SCEVSMaxExpr *Expr) {
     SmallVector<const SCEV *, 2> Operands;
     bool Changed = false;
-    for (auto *Op : Expr->operands()) {
+    for (const auto *Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
@@ -859,7 +859,7 @@ public:
   const SCEV *visitUMaxExpr(const SCEVUMaxExpr *Expr) {
     SmallVector<const SCEV *, 2> Operands;
     bool Changed = false;
-    for (auto *Op : Expr->operands()) {
+    for (const auto *Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
@@ -869,7 +869,7 @@ public:
   const SCEV *visitSMinExpr(const SCEVSMinExpr *Expr) {
     SmallVector<const SCEV *, 2> Operands;
     bool Changed = false;
-    for (auto *Op : Expr->operands()) {
+    for (const auto *Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
@@ -879,7 +879,7 @@ public:
   const SCEV *visitUMinExpr(const SCEVUMinExpr *Expr) {
     SmallVector<const SCEV *, 2> Operands;
     bool Changed = false;
-    for (auto *Op : Expr->operands()) {
+    for (const auto *Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }
@@ -889,7 +889,7 @@ public:
   const SCEV *visitSequentialUMinExpr(const SCEVSequentialUMinExpr *Expr) {
     SmallVector<const SCEV *, 2> Operands;
     bool Changed = false;
-    for (auto *Op : Expr->operands()) {
+    for (const auto *Op : Expr->operands()) {
       Operands.push_back(((SC *)this)->visit(Op));
       Changed |= Op != Operands.back();
     }

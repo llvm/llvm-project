@@ -192,7 +192,7 @@ public:
       std::initializer_list<SymbolStringPtr> Names,
       SymbolLookupFlags Flags = SymbolLookupFlags::RequiredSymbol) {
     Symbols.reserve(Names.size());
-    for (auto &Name : Names)
+    for (const auto &Name : Names)
       add(std::move(Name), Flags);
   }
 
@@ -331,7 +331,7 @@ public:
   SymbolNameVector getSymbolNames() const {
     SymbolNameVector Names;
     Names.reserve(Symbols.size());
-    for (auto &KV : Symbols)
+    for (const auto &KV : Symbols)
       Names.push_back(KV.first);
     return Names;
   }

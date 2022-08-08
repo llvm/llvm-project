@@ -1495,7 +1495,7 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F,
     instrumentMemAccess(Operand);
 
   if (ClInstrumentMemIntrinsics && !IntrinToInstrument.empty()) {
-    for (auto Inst : IntrinToInstrument)
+    for (auto *Inst : IntrinToInstrument)
       instrumentMemIntrinsic(cast<MemIntrinsic>(Inst));
   }
 
