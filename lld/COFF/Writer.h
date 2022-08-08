@@ -16,8 +16,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 static const int pageSize = 4096;
 class COFFLinkerContext;
 
@@ -80,7 +79,6 @@ private:
   uint32_t stringTableOff = 0;
 };
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 #endif

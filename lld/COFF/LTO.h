@@ -27,14 +27,11 @@
 #include <memory>
 #include <vector>
 
-namespace llvm {
-namespace lto {
+namespace llvm::lto {
 class LTO;
 }
-}
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 class BitcodeFile;
 class InputFile;
@@ -55,7 +52,6 @@ private:
   std::unique_ptr<llvm::raw_fd_ostream> indexFile;
   llvm::DenseSet<StringRef> thinIndices;
 };
-}
 }
 
 #endif

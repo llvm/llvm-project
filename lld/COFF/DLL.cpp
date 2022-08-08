@@ -31,8 +31,7 @@ using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::COFF;
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 namespace {
 
 // Import table
@@ -752,5 +751,4 @@ EdataContents::EdataContents() {
   chunks.insert(chunks.end(), forwards.begin(), forwards.end());
 }
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
