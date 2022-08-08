@@ -4535,6 +4535,48 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   return false;
 }
 
+bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, bool PoisonOnly,
+                                          bool ConsiderFlags,
+                                          unsigned Depth) const {
+  // TODO: Assume we don't know anything for now.
+  EVT VT = Op.getValueType();
+  if (VT.isScalableVector())
+    return true;
+
+  APInt DemandedElts = VT.isVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return canCreateUndefOrPoison(Op, DemandedElts, PoisonOnly, ConsiderFlags,
+                                Depth);
+}
+
+bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
+                                          bool PoisonOnly, bool ConsiderFlags,
+                                          unsigned Depth) const {
+  // TODO: Assume we don't know anything for now.
+  EVT VT = Op.getValueType();
+  if (VT.isScalableVector())
+    return true;
+
+  unsigned Opcode = Op.getOpcode();
+  switch (Opcode) {
+  case ISD::BITCAST:
+  case ISD::FREEZE:
+    return false;
+
+  default:
+    // Allow the target to implement this method for its nodes.
+    if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
+        Opcode == ISD::INTRINSIC_W_CHAIN || Opcode == ISD::INTRINSIC_VOID)
+      return TLI->canCreateUndefOrPoisonForTargetNode(
+          Op, DemandedElts, *this, PoisonOnly, ConsiderFlags, Depth);
+    break;
+  }
+
+  // Be conservative and return true.
+  return true;
+}
+
 bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
   if ((Op.getOpcode() != ISD::ADD && Op.getOpcode() != ISD::OR) ||
       !isa<ConstantSDNode>(Op.getOperand(1)))

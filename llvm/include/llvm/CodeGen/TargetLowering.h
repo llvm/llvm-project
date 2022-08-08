@@ -3776,6 +3776,14 @@ public:
       SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
       bool PoisonOnly, unsigned Depth) const;
 
+  /// Return true if Op can create undef or poison from non-undef & non-poison
+  /// operands. The DemandedElts argument limits the check to the requested
+  /// vector elements.
+  virtual bool
+  canCreateUndefOrPoisonForTargetNode(SDValue Op, const APInt &DemandedElts,
+                                      const SelectionDAG &DAG, bool PoisonOnly,
+                                      bool ConsiderFlags, unsigned Depth) const;
+
   /// Tries to build a legal vector shuffle using the provided parameters
   /// or equivalent variations. The Mask argument maybe be modified as the
   /// function tries different variations.
