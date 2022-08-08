@@ -545,12 +545,12 @@ struct CastInfo<To, Optional<From>> : public OptionalValueCast<To, From> {};
 ///  if (isa<Type>(myVal)) { ... }
 ///  if (isa<Type0, Type1, Type2>(myVal)) { ... }
 template <typename To, typename From>
-LLVM_NODISCARD inline bool isa(const From &Val) {
+[[nodiscard]] inline bool isa(const From &Val) {
   return CastInfo<To, const From>::isPossible(Val);
 }
 
 template <typename First, typename Second, typename... Rest, typename From>
-LLVM_NODISCARD inline bool isa(const From &Val) {
+[[nodiscard]] inline bool isa(const From &Val) {
   return isa<First>(Val) || isa<Second, Rest...>(Val);
 }
 
@@ -562,25 +562,25 @@ LLVM_NODISCARD inline bool isa(const From &Val) {
 ///  cast<Instruction>(myVal)->getParent()
 
 template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) cast(const From &Val) {
+[[nodiscard]] inline decltype(auto) cast(const From &Val) {
   assert(isa<To>(Val) && "cast<Ty>() argument of incompatible type!");
   return CastInfo<To, const From>::doCast(Val);
 }
 
 template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) cast(From &Val) {
+[[nodiscard]] inline decltype(auto) cast(From &Val) {
   assert(isa<To>(Val) && "cast<Ty>() argument of incompatible type!");
   return CastInfo<To, From>::doCast(Val);
 }
 
 template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) cast(From *Val) {
+[[nodiscard]] inline decltype(auto) cast(From *Val) {
   assert(isa<To>(Val) && "cast<Ty>() argument of incompatible type!");
   return CastInfo<To, From *>::doCast(Val);
 }
 
 template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) cast(std::unique_ptr<From> &&Val) {
+[[nodiscard]] inline decltype(auto) cast(std::unique_ptr<From> &&Val) {
   assert(isa<To>(Val) && "cast<Ty>() argument of incompatible type!");
   return CastInfo<To, std::unique_ptr<From>>::doCast(std::move(Val));
 }
@@ -594,22 +594,22 @@ LLVM_NODISCARD inline decltype(auto) cast(std::unique_ptr<From> &&Val) {
 ///  if (const Instruction *I = dyn_cast<Instruction>(myVal)) { ... }
 
 template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) dyn_cast(const From &Val) {
+[[nodiscard]] inline decltype(auto) dyn_cast(const From &Val) {
   return CastInfo<To, const From>::doCastIfPossible(Val);
 }
 
 template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) dyn_cast(From &Val) {
+[[nodiscard]] inline decltype(auto) dyn_cast(From &Val) {
   return CastInfo<To, From>::doCastIfPossible(Val);
 }
 
 template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) dyn_cast(From *Val) {
+[[nodiscard]] inline decltype(auto) dyn_cast(From *Val) {
   return CastInfo<To, From *>::doCastIfPossible(Val);
 }
 
 template <typename To, typename From>
-LLVM_NODISCARD inline decltype(auto) dyn_cast(std::unique_ptr<From> &&Val) {
+[[nodiscard]] inline decltype(auto) dyn_cast(std::unique_ptr<From> &&Val) {
   return CastInfo<To, std::unique_ptr<From>>::doCastIfPossible(std::move(Val));
 }
 
@@ -667,35 +667,35 @@ template <typename T> inline decltype(auto) unwrapValue(T &t) {
 /// isa_and_present<X> - Functionally identical to isa, except that a null value
 /// is accepted.
 template <typename... X, class Y>
-LLVM_NODISCARD inline bool isa_and_present(const Y &Val) {
+[[nodiscard]] inline bool isa_and_present(const Y &Val) {
   if (!detail::isPresent(Val))
     return false;
   return isa<X...>(Val);
 }
 
 template <typename... X, class Y>
-LLVM_NODISCARD inline bool isa_and_nonnull(const Y &Val) {
+[[nodiscard]] inline bool isa_and_nonnull(const Y &Val) {
   return isa_and_present<X...>(Val);
 }
 
 /// cast_if_present<X> - Functionally identical to cast, except that a null
 /// value is accepted.
 template <class X, class Y>
-LLVM_NODISCARD inline auto cast_if_present(const Y &Val) {
+[[nodiscard]] inline auto cast_if_present(const Y &Val) {
   if (!detail::isPresent(Val))
     return CastInfo<X, const Y>::castFailed();
   assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
   return cast<X>(detail::unwrapValue(Val));
 }
 
-template <class X, class Y> LLVM_NODISCARD inline auto cast_if_present(Y &Val) {
+template <class X, class Y> [[nodiscard]] inline auto cast_if_present(Y &Val) {
   if (!detail::isPresent(Val))
     return CastInfo<X, Y>::castFailed();
   assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
   return cast<X>(detail::unwrapValue(Val));
 }
 
-template <class X, class Y> LLVM_NODISCARD inline auto cast_if_present(Y *Val) {
+template <class X, class Y> [[nodiscard]] inline auto cast_if_present(Y *Val) {
   if (!detail::isPresent(Val))
     return CastInfo<X, Y *>::castFailed();
   assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
@@ -703,7 +703,7 @@ template <class X, class Y> LLVM_NODISCARD inline auto cast_if_present(Y *Val) {
 }
 
 template <class X, class Y>
-LLVM_NODISCARD inline auto cast_if_present(std::unique_ptr<Y> &&Val) {
+[[nodiscard]] inline auto cast_if_present(std::unique_ptr<Y> &&Val) {
   if (!detail::isPresent(Val))
     return UniquePtrCast<X, Y>::castFailed();
   return UniquePtrCast<X, Y>::doCast(std::move(Val));
@@ -769,7 +769,7 @@ template <class X, class Y> auto dyn_cast_or_null(Y *Val) {
 /// is returned.  If the cast is unsuccessful, the function returns nullptr
 /// and From is unchanged.
 template <class X, class Y>
-LLVM_NODISCARD inline typename CastInfo<X, std::unique_ptr<Y>>::CastResultType
+[[nodiscard]] inline typename CastInfo<X, std::unique_ptr<Y>>::CastResultType
 unique_dyn_cast(std::unique_ptr<Y> &Val) {
   if (!isa<X>(Val))
     return nullptr;
@@ -777,14 +777,14 @@ unique_dyn_cast(std::unique_ptr<Y> &Val) {
 }
 
 template <class X, class Y>
-LLVM_NODISCARD inline auto unique_dyn_cast(std::unique_ptr<Y> &&Val) {
+[[nodiscard]] inline auto unique_dyn_cast(std::unique_ptr<Y> &&Val) {
   return unique_dyn_cast<X, Y>(Val);
 }
 
 // unique_dyn_cast_or_null<X> - Functionally identical to unique_dyn_cast,
 // except that a null value is accepted.
 template <class X, class Y>
-LLVM_NODISCARD inline typename CastInfo<X, std::unique_ptr<Y>>::CastResultType
+[[nodiscard]] inline typename CastInfo<X, std::unique_ptr<Y>>::CastResultType
 unique_dyn_cast_or_null(std::unique_ptr<Y> &Val) {
   if (!Val)
     return nullptr;
@@ -792,7 +792,7 @@ unique_dyn_cast_or_null(std::unique_ptr<Y> &Val) {
 }
 
 template <class X, class Y>
-LLVM_NODISCARD inline auto unique_dyn_cast_or_null(std::unique_ptr<Y> &&Val) {
+[[nodiscard]] inline auto unique_dyn_cast_or_null(std::unique_ptr<Y> &&Val) {
   return unique_dyn_cast_or_null<X, Y>(Val);
 }
 

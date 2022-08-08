@@ -68,7 +68,7 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
     case Instruction::Shl:
       // SIMD128's shifts currently only accept a scalar shift count. For each
       // element, we'll need to extract, op, insert. The following is a rough
-      // approxmation.
+      // approximation.
       if (Opd2Info != TTI::OK_UniformValue &&
           Opd2Info != TTI::OK_UniformConstantValue)
         Cost =

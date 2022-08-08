@@ -172,9 +172,7 @@ public:
     llvm::SmallVector<void *> argsArray;
     // Pack every arguments in an array of pointers. Delegate the packing to a
     // trait so that it can be overridden per argument type.
-    // TODO: replace with a fold expression when migrating to C++17.
-    int dummy[] = {0, ((void)Argument<Args>::pack(argsArray, args), 0)...};
-    (void)dummy;
+    (Argument<Args>::pack(argsArray, args), ...);
     return invokePacked(adapterName, argsArray);
   }
 

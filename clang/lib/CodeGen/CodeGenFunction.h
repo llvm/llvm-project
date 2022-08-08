@@ -1101,7 +1101,7 @@ public:
 
     void ForceCleanup() {
       RunCleanupsScope::ForceCleanup();
-      MappedVars.restore(CGF);
+      restoreMap();
     }
 
     /// Exit scope - all the mapped variables are restored.
@@ -1115,6 +1115,11 @@ public:
       VD = VD->getCanonicalDecl();
       return !VD->isLocalVarDeclOrParm() && CGF.LocalDeclMap.count(VD) > 0;
     }
+
+    /// Restore all mapped variables w/o clean up. This is usefully when we want
+    /// to reference the original variables but don't want the clean up because
+    /// that could emit lifetime end too early, causing backend issue #56913.
+    void restoreMap() { MappedVars.restore(CGF); }
   };
 
   /// Save/restore original map of previously emitted local vars in case when we

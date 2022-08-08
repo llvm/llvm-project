@@ -21,6 +21,7 @@
 #include <map>
 #include <mutex>
 #include <sstream>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -174,15 +175,15 @@ public:
   Error deregisterThreadDataSection(span<const char> ThreadDataSection);
   Error registerObjectPlatformSections(
       ExecutorAddr HeaderAddr,
-      std::vector<std::pair<string_view, ExecutorAddrRange>> Secs);
+      std::vector<std::pair<std::string_view, ExecutorAddrRange>> Secs);
   Error deregisterObjectPlatformSections(
       ExecutorAddr HeaderAddr,
-      std::vector<std::pair<string_view, ExecutorAddrRange>> Secs);
+      std::vector<std::pair<std::string_view, ExecutorAddrRange>> Secs);
 
   const char *dlerror();
-  void *dlopen(string_view Name, int Mode);
+  void *dlopen(std::string_view Name, int Mode);
   int dlclose(void *DSOHandle);
-  void *dlsym(void *DSOHandle, string_view Symbol);
+  void *dlsym(void *DSOHandle, std::string_view Symbol);
 
   int registerAtExit(void (*F)(void *), void *Arg, void *DSOHandle);
   void runAtExits(JITDylibState &JDS);
@@ -194,10 +195,10 @@ public:
 
 private:
   JITDylibState *getJITDylibStateByHeader(void *DSOHandle);
-  JITDylibState *getJITDylibStateByName(string_view Path);
+  JITDylibState *getJITDylibStateByName(std::string_view Path);
 
   Expected<ExecutorAddr> lookupSymbolInJITDylib(void *DSOHandle,
-                                                string_view Symbol);
+                                                std::string_view Symbol);
 
   static Error registerObjCSelectors(JITDylibState &JDS);
   static Error registerObjCClasses(JITDylibState &JDS);
@@ -206,7 +207,7 @@ private:
   static Error registerSwift5Types(JITDylibState &JDS);
   static Error runModInits(JITDylibState &JDS);
 
-  Expected<void *> dlopenImpl(string_view Path, int Mode);
+  Expected<void *> dlopenImpl(std::string_view Path, int Mode);
   Error dlopenFull(JITDylibState &JDS);
   Error dlopenInitialize(JITDylibState &JDS, MachOJITDylibDepInfoMap &DepInfo);
 
@@ -220,7 +221,7 @@ private:
 
   std::recursive_mutex JDStatesMutex;
   std::unordered_map<void *, JITDylibState> JDStates;
-  std::unordered_map<string_view, void *> JDNameToHeader;
+  std::unordered_map<std::string_view, void *> JDNameToHeader;
 
   std::mutex ThreadDataSectionsMutex;
   std::map<const char *, size_t> ThreadDataSections;
@@ -321,7 +322,7 @@ Error MachOPlatformRuntimeState::deregisterThreadDataSection(
 
 Error MachOPlatformRuntimeState::registerObjectPlatformSections(
     ExecutorAddr HeaderAddr,
-    std::vector<std::pair<string_view, ExecutorAddrRange>> Secs) {
+    std::vector<std::pair<std::string_view, ExecutorAddrRange>> Secs) {
   ORC_RT_DEBUG({
     printdbg("MachOPlatform: Registering object sections for %p.\n",
              HeaderAddr.toPtr<void *>());
@@ -383,7 +384,7 @@ bool removeIfPresent(std::vector<span<T>> &V, ExecutorAddrRange R) {
 
 Error MachOPlatformRuntimeState::deregisterObjectPlatformSections(
     ExecutorAddr HeaderAddr,
-    std::vector<std::pair<string_view, ExecutorAddrRange>> Secs) {
+    std::vector<std::pair<std::string_view, ExecutorAddrRange>> Secs) {
   // TODO: Make this more efficient? (maybe unnecessary if removal is rare?)
   // TODO: Add a JITDylib prepare-for-teardown operation that clears all
   //       registered sections, causing this function to take the fast-path.
@@ -442,7 +443,7 @@ Error MachOPlatformRuntimeState::deregisterObjectPlatformSections(
 
 const char *MachOPlatformRuntimeState::dlerror() { return DLFcnError.c_str(); }
 
-void *MachOPlatformRuntimeState::dlopen(string_view Path, int Mode) {
+void *MachOPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
   ORC_RT_DEBUG({
     std::string S(Path.data(), Path.size());
     printdbg("MachOPlatform::dlopen(\"%s\")\n", S.c_str());
@@ -477,7 +478,8 @@ int MachOPlatformRuntimeState::dlclose(void *DSOHandle) {
   return 0;
 }
 
-void *MachOPlatformRuntimeState::dlsym(void *DSOHandle, string_view Symbol) {
+void *MachOPlatformRuntimeState::dlsym(void *DSOHandle,
+                                       std::string_view Symbol) {
   auto Addr = lookupSymbolInJITDylib(DSOHandle, Symbol);
   if (!Addr) {
     DLFcnError = toString(Addr.takeError());
@@ -548,7 +550,7 @@ MachOPlatformRuntimeState::getJITDylibStateByHeader(void *DSOHandle) {
 }
 
 MachOPlatformRuntimeState::JITDylibState *
-MachOPlatformRuntimeState::getJITDylibStateByName(string_view Name) {
+MachOPlatformRuntimeState::getJITDylibStateByName(std::string_view Name) {
   // FIXME: Avoid creating string once we have C++20.
   auto I = JDNameToHeader.find(std::string(Name.data(), Name.size()));
   if (I != JDNameToHeader.end())
@@ -558,7 +560,7 @@ MachOPlatformRuntimeState::getJITDylibStateByName(string_view Name) {
 
 Expected<ExecutorAddr>
 MachOPlatformRuntimeState::lookupSymbolInJITDylib(void *DSOHandle,
-                                                  string_view Sym) {
+                                                  std::string_view Sym) {
   Expected<ExecutorAddr> Result((ExecutorAddr()));
   if (auto Err = WrapperFunction<SPSExpected<SPSExecutorAddr>(
           SPSExecutorAddr, SPSString)>::call(&__orc_rt_macho_symbol_lookup_tag,
@@ -710,7 +712,7 @@ Error MachOPlatformRuntimeState::runModInits(JITDylibState &JDS) {
   return Error::success();
 }
 
-Expected<void *> MachOPlatformRuntimeState::dlopenImpl(string_view Path,
+Expected<void *> MachOPlatformRuntimeState::dlopenImpl(std::string_view Path,
                                                        int Mode) {
   // Try to find JITDylib state by name.
   auto *JDS = getJITDylibStateByName(Path);
@@ -976,7 +978,8 @@ __orc_rt_macho_register_object_platform_sections(char *ArgData,
                                   SPSMachOObjectPlatformSectionsMap)>::
       handle(ArgData, ArgSize,
              [](ExecutorAddr HeaderAddr,
-                std::vector<std::pair<string_view, ExecutorAddrRange>> &Secs) {
+                std::vector<std::pair<std::string_view, ExecutorAddrRange>>
+                    &Secs) {
                return MachOPlatformRuntimeState::get()
                    .registerObjectPlatformSections(HeaderAddr, std::move(Secs));
              })
@@ -990,7 +993,8 @@ __orc_rt_macho_deregister_object_platform_sections(char *ArgData,
                                   SPSMachOObjectPlatformSectionsMap)>::
       handle(ArgData, ArgSize,
              [](ExecutorAddr HeaderAddr,
-                std::vector<std::pair<string_view, ExecutorAddrRange>> &Secs) {
+                std::vector<std::pair<std::string_view, ExecutorAddrRange>>
+                    &Secs) {
                return MachOPlatformRuntimeState::get()
                    .deregisterObjectPlatformSections(HeaderAddr,
                                                      std::move(Secs));

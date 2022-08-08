@@ -4233,7 +4233,7 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
   if (!ST->hasAVX512())
     return Cost + LT.first * (IsLoad ? 2 : 8);
 
-  // AVX-512 masked load/store is cheapper
+  // AVX-512 masked load/store is cheaper
   return Cost + LT.first;
 }
 

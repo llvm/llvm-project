@@ -155,46 +155,44 @@ enum class ModRefInfo : uint8_t {
   LLVM_MARK_AS_BITMASK_ENUM(ModRef),
 };
 
-LLVM_NODISCARD inline bool isNoModRef(const ModRefInfo MRI) {
+[[nodiscard]] inline bool isNoModRef(const ModRefInfo MRI) {
   return MRI == ModRefInfo::NoModRef;
 }
-LLVM_NODISCARD inline bool isModOrRefSet(const ModRefInfo MRI) {
+[[nodiscard]] inline bool isModOrRefSet(const ModRefInfo MRI) {
   return MRI != ModRefInfo::NoModRef;
 }
-LLVM_NODISCARD inline bool isModAndRefSet(const ModRefInfo MRI) {
+[[nodiscard]] inline bool isModAndRefSet(const ModRefInfo MRI) {
   return MRI == ModRefInfo::ModRef;
 }
-LLVM_NODISCARD inline bool isModSet(const ModRefInfo MRI) {
+[[nodiscard]] inline bool isModSet(const ModRefInfo MRI) {
   return static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Mod);
 }
-LLVM_NODISCARD inline bool isRefSet(const ModRefInfo MRI) {
+[[nodiscard]] inline bool isRefSet(const ModRefInfo MRI) {
   return static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Ref);
 }
 
-[[deprecated("Use operator | instead")]]
-LLVM_NODISCARD inline ModRefInfo setMod(const ModRefInfo MRI) {
+[[deprecated("Use operator | instead")]] [[nodiscard]] inline ModRefInfo
+setMod(const ModRefInfo MRI) {
   return MRI | ModRefInfo::Mod;
 }
-[[deprecated("Use operator | instead")]]
-LLVM_NODISCARD inline ModRefInfo setRef(const ModRefInfo MRI) {
+[[deprecated("Use operator | instead")]] [[nodiscard]] inline ModRefInfo
+setRef(const ModRefInfo MRI) {
   return MRI | ModRefInfo::Ref;
 }
-[[deprecated("Use operator & instead")]]
-LLVM_NODISCARD inline ModRefInfo clearMod(const ModRefInfo MRI) {
+[[deprecated("Use operator & instead")]] [[nodiscard]] inline ModRefInfo
+clearMod(const ModRefInfo MRI) {
   return MRI & ModRefInfo::Ref;
 }
-[[deprecated("Use operator & instead")]]
-LLVM_NODISCARD inline ModRefInfo clearRef(const ModRefInfo MRI) {
+[[deprecated("Use operator & instead")]] [[nodiscard]] inline ModRefInfo
+clearRef(const ModRefInfo MRI) {
   return MRI & ModRefInfo::Mod;
 }
-[[deprecated("Use operator | instead")]]
-LLVM_NODISCARD inline ModRefInfo unionModRef(const ModRefInfo MRI1,
-                                             const ModRefInfo MRI2) {
+[[deprecated("Use operator | instead")]] [[nodiscard]] inline ModRefInfo
+unionModRef(const ModRefInfo MRI1, const ModRefInfo MRI2) {
   return MRI1 | MRI2;
 }
-[[deprecated("Use operator & instead")]]
-LLVM_NODISCARD inline ModRefInfo intersectModRef(const ModRefInfo MRI1,
-                                                 const ModRefInfo MRI2) {
+[[deprecated("Use operator & instead")]] [[nodiscard]] inline ModRefInfo
+intersectModRef(const ModRefInfo MRI1, const ModRefInfo MRI2) {
   return MRI1 & MRI2;
 }
 
@@ -333,7 +331,7 @@ enum FunctionModRefBehavior {
 // to obtain a valid ModRefInfo. The benefit of using the wrapper is that if
 // ModRefInfo enum changes, the wrapper can be updated to & with the new enum
 // entry with all bits set to 1.
-LLVM_NODISCARD inline ModRefInfo
+[[nodiscard]] inline ModRefInfo
 createModRefInfo(const FunctionModRefBehavior FMRB) {
   return ModRefInfo(FMRB & static_cast<int>(ModRefInfo::ModRef));
 }
