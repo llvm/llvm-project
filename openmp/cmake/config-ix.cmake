@@ -30,4 +30,4 @@ check_cxx_compiler_flag(-Wno-extra OPENMP_HAVE_WNO_EXTRA_FLAG)
 check_cxx_compiler_flag(-Wno-pedantic OPENMP_HAVE_WNO_PEDANTIC_FLAG)
 check_cxx_compiler_flag(-Wno-maybe-uninitialized OPENMP_HAVE_WNO_MAYBE_UNINITIALIZED_FLAG)
 
-check_cxx_compiler_flag(-std=c++17 OPENMP_HAVE_STD_CPP14_FLAG)
+check_cxx_compiler_flag(-std=c++17 OPENMP_HAVE_STD_CPP17_FLAG)
