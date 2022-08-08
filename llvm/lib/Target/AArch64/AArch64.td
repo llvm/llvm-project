@@ -19,27 +19,33 @@ include "llvm/Target/Target.td"
 // AArch64 Subtarget features.
 //
 
+// Each SubtargetFeature which corresponds to an Arm Architecture feature should
+// be annotated with the respective FEAT_ feature name from the Architecture
+// Reference Manual. If a SubtargetFeature enables instructions from multiple
+// Arm Architecture Features, it should list all the relevant features. Not all
+// FEAT_ features have a corresponding SubtargetFeature.
+
 def FeatureFPARMv8 : SubtargetFeature<"fp-armv8", "HasFPARMv8", "true",
-                                       "Enable ARMv8 FP">;
+                                       "Enable ARMv8 FP (FEAT_FP)">;
 
 def FeatureNEON : SubtargetFeature<"neon", "HasNEON", "true",
-  "Enable Advanced SIMD instructions", [FeatureFPARMv8]>;
+  "Enable Advanced SIMD instructions (FEAT_AdvSIMD)", [FeatureFPARMv8]>;
 
 def FeatureSM4 : SubtargetFeature<
     "sm4", "HasSM4", "true",
-    "Enable SM3 and SM4 support", [FeatureNEON]>;
+    "Enable SM3 and SM4 support (FEAT_SM4, FEAT_SM3)", [FeatureNEON]>;
 
 def FeatureSHA2 : SubtargetFeature<
     "sha2", "HasSHA2", "true",
-    "Enable SHA1 and SHA256 support", [FeatureNEON]>;
+    "Enable SHA1 and SHA256 support (FEAT_SHA1, FEAT_SHA256)", [FeatureNEON]>;
 
 def FeatureSHA3 : SubtargetFeature<
     "sha3", "HasSHA3", "true",
-    "Enable SHA512 and SHA3 support", [FeatureNEON, FeatureSHA2]>;
+    "Enable SHA512 and SHA3 support (FEAT_SHA3, FEAT_SHA512)", [FeatureNEON, FeatureSHA2]>;
 
 def FeatureAES : SubtargetFeature<
     "aes", "HasAES", "true",
-    "Enable AES support", [FeatureNEON]>;
+    "Enable AES support (FEAT_AES, FEAT_PMULL)", [FeatureNEON]>;
 
 // Crypto has been split up and any combination is now valid (see the
 // crypto definitions above). Also, crypto is now context sensitive:
@@ -53,16 +59,16 @@ def FeatureCrypto : SubtargetFeature<"crypto", "HasCrypto", "true",
   "Enable cryptographic instructions", [FeatureNEON, FeatureSHA2, FeatureAES]>;
 
 def FeatureCRC : SubtargetFeature<"crc", "HasCRC", "true",
-  "Enable ARMv8 CRC-32 checksum instructions">;
+  "Enable ARMv8 CRC-32 checksum instructions (FEAT_CRC32)">;
 
 def FeatureRAS : SubtargetFeature<"ras", "HasRAS", "true",
-  "Enable ARMv8 Reliability, Availability and Serviceability Extensions">;
+  "Enable ARMv8 Reliability, Availability and Serviceability Extensions (FEAT_RAS, FEAT_RASv1p1)">;
 
 def FeatureLSE : SubtargetFeature<"lse", "HasLSE", "true",
-  "Enable ARMv8.1 Large System Extension (LSE) atomic instructions">;
+  "Enable ARMv8.1 Large System Extension (LSE) atomic instructions (FEAT_LSE)">;
 
 def FeatureLSE2 : SubtargetFeature<"lse2", "HasLSE2", "true",
-  "Enable ARMv8.4 Large System Extension 2 (LSE2) atomicity rules">;
+  "Enable ARMv8.4 Large System Extension 2 (LSE2) atomicity rules (FEAT_LSE2)">;
 
 def FeatureLDAPR : SubtargetFeature<"ldapr", "HasLDAPR", "true",
   "Use LDAPR to lower atomic loads; experimental until we "
@@ -72,48 +78,51 @@ def FeatureOutlineAtomics : SubtargetFeature<"outline-atomics", "OutlineAtomics"
   "Enable out of line atomics to support LSE instructions">;
 
 def FeatureRDM : SubtargetFeature<"rdm", "HasRDM", "true",
-  "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions">;
+  "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions (FEAT_RDM)">;
 
 def FeaturePAN : SubtargetFeature<
     "pan", "HasPAN", "true",
-    "Enables ARM v8.1 Privileged Access-Never extension">;
+    "Enables ARM v8.1 Privileged Access-Never extension (FEAT_PAN)">;
 
 def FeatureLOR : SubtargetFeature<
     "lor", "HasLOR", "true",
-    "Enables ARM v8.1 Limited Ordering Regions extension">;
+    "Enables ARM v8.1 Limited Ordering Regions extension (FEAT_LOR)">;
 
 def FeatureCONTEXTIDREL2 : SubtargetFeature<"CONTEXTIDREL2", "HasCONTEXTIDREL2",
     "true", "Enable RW operand CONTEXTIDR_EL2" >;
 
 def FeatureVH : SubtargetFeature<"vh", "HasVH", "true",
-    "Enables ARM v8.1 Virtual Host extension", [FeatureCONTEXTIDREL2] >;
+    "Enables ARM v8.1 Virtual Host extension (FEAT_VHE)", [FeatureCONTEXTIDREL2] >;
 
+// This SubtargetFeature is special. It controls only whether codegen will turn
+// `llvm.readcyclecounter()` into an access to a PMUv3 System Register. The
+// `FEAT_PMUv3*` system registers are always available for assembly/disassembly.
 def FeaturePerfMon : SubtargetFeature<"perfmon", "HasPerfMon", "true",
-  "Enable ARMv8 PMUv3 Performance Monitors extension">;
+  "Enable Code Generation for ARMv8 PMUv3 Performance Monitors extension (FEAT_PMUv3)">;
 
 def FeatureFullFP16 : SubtargetFeature<"fullfp16", "HasFullFP16", "true",
-  "Full FP16", [FeatureFPARMv8]>;
+  "Full FP16 (FEAT_FP16)", [FeatureFPARMv8]>;
 
 def FeatureFP16FML : SubtargetFeature<"fp16fml", "HasFP16FML", "true",
-  "Enable FP16 FML instructions", [FeatureFullFP16]>;
+  "Enable FP16 FML instructions (FEAT_FHM)", [FeatureFullFP16]>;
 
 def FeatureSPE : SubtargetFeature<"spe", "HasSPE", "true",
-  "Enable Statistical Profiling extension">;
+  "Enable Statistical Profiling extension (FEAT_SPE)">;
 
 def FeaturePAN_RWV : SubtargetFeature<
     "pan-rwv", "HasPAN_RWV", "true",
-    "Enable v8.2 PAN s1e1R and s1e1W Variants",
+    "Enable v8.2 PAN s1e1R and s1e1W Variants (FEAT_PAN2)",
     [FeaturePAN]>;
 
 // UAO PState
 def FeaturePsUAO : SubtargetFeature< "uaops", "HasPsUAO", "true",
-    "Enable v8.2 UAO PState">;
+    "Enable v8.2 UAO PState (FEAT_UAO)">;
 
 def FeatureCCPP : SubtargetFeature<"ccpp", "HasCCPP",
-    "true", "Enable v8.2 data Cache Clean to Point of Persistence" >;
+    "true", "Enable v8.2 data Cache Clean to Point of Persistence (FEAT_DPB)" >;
 
 def FeatureSVE : SubtargetFeature<"sve", "HasSVE", "true",
-  "Enable Scalable Vector Extension (SVE) instructions", [FeatureFullFP16]>;
+  "Enable Scalable Vector Extension (SVE) instructions (FEAT_SVE)", [FeatureFullFP16]>;
 
 // This flag is currently still labeled as Experimental, but when fully
 // implemented this should tell the compiler to use the zeroing pseudos to
@@ -137,20 +146,21 @@ def FeatureUseScalarIncVL : SubtargetFeature<"use-scalar-inc-vl",
   "UseScalarIncVL", "true", "Prefer inc/dec over add+cnt">;
 
 def FeatureSVE2 : SubtargetFeature<"sve2", "HasSVE2", "true",
-  "Enable Scalable Vector Extension 2 (SVE2) instructions",
+  "Enable Scalable Vector Extension 2 (SVE2) instructions (FEAT_SVE2)",
   [FeatureSVE, FeatureUseScalarIncVL]>;
 
 def FeatureSVE2AES : SubtargetFeature<"sve2-aes", "HasSVE2AES", "true",
-  "Enable AES SVE2 instructions", [FeatureSVE2, FeatureAES]>;
+  "Enable AES SVE2 instructions (FEAT_SVE_AES, FEAT_SVE_PMULL128)",
+  [FeatureSVE2, FeatureAES]>;
 
 def FeatureSVE2SM4 : SubtargetFeature<"sve2-sm4", "HasSVE2SM4", "true",
-  "Enable SM4 SVE2 instructions", [FeatureSVE2, FeatureSM4]>;
+  "Enable SM4 SVE2 instructions (FEAT_SVE_SM4)", [FeatureSVE2, FeatureSM4]>;
 
 def FeatureSVE2SHA3 : SubtargetFeature<"sve2-sha3", "HasSVE2SHA3", "true",
-  "Enable SHA3 SVE2 instructions", [FeatureSVE2, FeatureSHA3]>;
+  "Enable SHA3 SVE2 instructions (FEAT_SVE_SHA3)", [FeatureSVE2, FeatureSHA3]>;
 
 def FeatureSVE2BitPerm : SubtargetFeature<"sve2-bitperm", "HasSVE2BitPerm", "true",
-  "Enable bit permutation SVE2 instructions", [FeatureSVE2]>;
+  "Enable bit permutation SVE2 instructions (FEAT_SVE_BitPerm)", [FeatureSVE2]>;
 
 def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
                                         "Has zero-cycle register moves">;
@@ -275,7 +285,7 @@ def FeatureForce32BitJumpTables
                       "Force jump table entries to be 32-bits wide except at MinSize">;
 
 def FeatureRCPC : SubtargetFeature<"rcpc", "HasRCPC", "true",
-                                   "Enable support for RCPC extension">;
+                                   "Enable support for RCPC extension (FEAT_LRCPC)">;
 
 def FeatureUseRSqrt : SubtargetFeature<
     "use-reciprocal-square-root", "UseRSqrt", "true",
@@ -283,66 +293,66 @@ def FeatureUseRSqrt : SubtargetFeature<
 
 def FeatureDotProd : SubtargetFeature<
     "dotprod", "HasDotProd", "true",
-    "Enable dot product support">;
+    "Enable dot product support (FEAT_DotProd)">;
 
 def FeaturePAuth : SubtargetFeature<
     "pauth", "HasPAuth", "true",
-    "Enable v8.3-A Pointer Authentication extension">;
+    "Enable v8.3-A Pointer Authentication extension (FEAT_PAuth)">;
 
 def FeatureJS : SubtargetFeature<
     "jsconv", "HasJS", "true",
-    "Enable v8.3-A JavaScript FP conversion instructions",
+    "Enable v8.3-A JavaScript FP conversion instructions (FEAT_JSCVT)",
     [FeatureFPARMv8]>;
 
 def FeatureCCIDX : SubtargetFeature<
     "ccidx", "HasCCIDX", "true",
-    "Enable v8.3-A Extend of the CCSIDR number of sets">;
+    "Enable v8.3-A Extend of the CCSIDR number of sets (FEAT_CCIDX)">;
 
 def FeatureComplxNum : SubtargetFeature<
     "complxnum", "HasComplxNum", "true",
-    "Enable v8.3-A Floating-point complex number support",
+    "Enable v8.3-A Floating-point complex number support (FEAT_FCMA)",
     [FeatureNEON]>;
 
 def FeatureNV : SubtargetFeature<
     "nv", "HasNV", "true",
-    "Enable v8.4-A Nested Virtualization Enchancement">;
+    "Enable v8.4-A Nested Virtualization Enchancement (FEAT_NV, FEAT_NV2)">;
 
 def FeatureMPAM : SubtargetFeature<
     "mpam", "HasMPAM", "true",
-    "Enable v8.4-A Memory system Partitioning and Monitoring extension">;
+    "Enable v8.4-A Memory system Partitioning and Monitoring extension (FEAT_MPAM)">;
 
 def FeatureDIT : SubtargetFeature<
     "dit", "HasDIT", "true",
-    "Enable v8.4-A Data Independent Timing instructions">;
+    "Enable v8.4-A Data Independent Timing instructions (FEAT_DIT)">;
 
 def FeatureTRACEV8_4 : SubtargetFeature<
     "tracev8.4", "HasTRACEV8_4", "true",
-    "Enable v8.4-A Trace extension">;
+    "Enable v8.4-A Trace extension (FEAT_TRF)">;
 
 def FeatureAM : SubtargetFeature<
     "am", "HasAM", "true",
-    "Enable v8.4-A Activity Monitors extension">;
+    "Enable v8.4-A Activity Monitors extension (FEAT_AMUv1)">;
 
 def FeatureAMVS : SubtargetFeature<
     "amvs", "HasAMVS", "true",
-    "Enable v8.6-A Activity Monitors Virtualization support",
+    "Enable v8.6-A Activity Monitors Virtualization support (FEAT_AMUv1p1)",
     [FeatureAM]>;
 
 def FeatureSEL2 : SubtargetFeature<
     "sel2", "HasSEL2", "true",
-    "Enable v8.4-A Secure Exception Level 2 extension">;
+    "Enable v8.4-A Secure Exception Level 2 extension (FEAT_SEL2)">;
 
 def FeatureTLB_RMI : SubtargetFeature<
     "tlb-rmi", "HasTLB_RMI", "true",
-    "Enable v8.4-A TLB Range and Maintenance Instructions">;
+    "Enable v8.4-A TLB Range and Maintenance Instructions (FEAT_TLBIOS, FEAT_TLBIRANGE)">;
 
 def FeatureFlagM : SubtargetFeature<
     "flagm", "HasFlagM", "true",
-    "Enable v8.4-A Flag Manipulation Instructions">;
+    "Enable v8.4-A Flag Manipulation Instructions (FEAT_FlagM)">;
 
 // 8.4 RCPC enchancements: LDAPR & STLR instructions with Immediate Offset
 def FeatureRCPC_IMMO : SubtargetFeature<"rcpc-immo", "HasRCPC_IMMO", "true",
-    "Enable v8.4-A RCPC instructions with Immediate Offsets",
+    "Enable v8.4-A RCPC instructions with Immediate Offsets (FEAT_LRCPC2)",
     [FeatureRCPC]>;
 
 def FeatureNoNegativeImmediates : SubtargetFeature<"no-neg-immediates",
@@ -363,45 +373,45 @@ def FeatureAggressiveFMA :
                    "Enable Aggressive FMA for floating-point.">;
 
 def FeatureAltFPCmp : SubtargetFeature<"altnzcv", "HasAlternativeNZCV", "true",
-  "Enable alternative NZCV format for floating point comparisons">;
+  "Enable alternative NZCV format for floating point comparisons (FEAT_FlagM2)">;
 
 def FeatureFRInt3264 : SubtargetFeature<"fptoint", "HasFRInt3264", "true",
   "Enable FRInt[32|64][Z|X] instructions that round a floating-point number to "
-  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int" >;
+  "an integer (in FP format) forcing it to fit into a 32- or 64-bit int (FEAT_FRINTTS)" >;
 
 def FeatureSpecRestrict : SubtargetFeature<"specrestrict", "HasSpecRestrict",
-  "true", "Enable architectural speculation restriction" >;
+  "true", "Enable architectural speculation restriction (FEAT_CSV2_2)">;
 
 def FeatureSB : SubtargetFeature<"sb", "HasSB",
-  "true", "Enable v8.5 Speculation Barrier" >;
+  "true", "Enable v8.5 Speculation Barrier (FEAT_SB)" >;
 
 def FeatureSSBS : SubtargetFeature<"ssbs", "HasSSBS",
-  "true", "Enable Speculative Store Bypass Safe bit" >;
+  "true", "Enable Speculative Store Bypass Safe bit (FEAT_SSBS, FEAT_SSBS2)" >;
 
 def FeaturePredRes : SubtargetFeature<"predres", "HasPredRes", "true",
-  "Enable v8.5a execution and data prediction invalidation instructions" >;
+  "Enable v8.5a execution and data prediction invalidation instructions (FEAT_SPECRES)" >;
 
 def FeatureCacheDeepPersist : SubtargetFeature<"ccdp", "HasCCDP",
-    "true", "Enable v8.5 Cache Clean to Point of Deep Persistence" >;
+    "true", "Enable v8.5 Cache Clean to Point of Deep Persistence (FEAT_DPB2)" >;
 
 def FeatureBranchTargetId : SubtargetFeature<"bti", "HasBTI",
-    "true", "Enable Branch Target Identification" >;
+    "true", "Enable Branch Target Identification (FEAT_BTI)" >;
 
 def FeatureRandGen : SubtargetFeature<"rand", "HasRandGen",
-    "true", "Enable Random Number generation instructions" >;
+    "true", "Enable Random Number generation instructions (FEAT_RNG)" >;
 
 def FeatureMTE : SubtargetFeature<"mte", "HasMTE",
-    "true", "Enable Memory Tagging Extension" >;
+    "true", "Enable Memory Tagging Extension (FEAT_MTE, FEAT_MTE2)" >;
 
 def FeatureTRBE : SubtargetFeature<"trbe", "HasTRBE",
-    "true", "Enable Trace Buffer Extension">;
+    "true", "Enable Trace Buffer Extension (FEAT_TRBE)">;
 
 def FeatureETE : SubtargetFeature<"ete", "HasETE",
-    "true", "Enable Embedded Trace Extension",
+    "true", "Enable Embedded Trace Extension (FEAT_ETE)",
     [FeatureTRBE]>;
 
 def FeatureTME : SubtargetFeature<"tme", "HasTME",
-    "true", "Enable Transactional Memory Extension" >;
+    "true", "Enable Transactional Memory Extension (FEAT_TME)" >;
 
 def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
@@ -409,59 +419,59 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "that allows a memory tag in the upper address bits">;
 
 def FeatureBF16 : SubtargetFeature<"bf16", "HasBF16",
-    "true", "Enable BFloat16 Extension" >;
+    "true", "Enable BFloat16 Extension (FEAT_BF16)" >;
 
 def FeatureMatMulInt8 : SubtargetFeature<"i8mm", "HasMatMulInt8",
-    "true", "Enable Matrix Multiply Int8 Extension">;
+    "true", "Enable Matrix Multiply Int8 Extension (FEAT_I8MM)">;
 
 def FeatureMatMulFP32 : SubtargetFeature<"f32mm", "HasMatMulFP32",
-    "true", "Enable Matrix Multiply FP32 Extension", [FeatureSVE]>;
+    "true", "Enable Matrix Multiply FP32 Extension (FEAT_F32MM)", [FeatureSVE]>;
 
 def FeatureMatMulFP64 : SubtargetFeature<"f64mm", "HasMatMulFP64",
-    "true", "Enable Matrix Multiply FP64 Extension", [FeatureSVE]>;
+    "true", "Enable Matrix Multiply FP64 Extension (FEAT_F64MM)", [FeatureSVE]>;
 
 def FeatureXS : SubtargetFeature<"xs", "HasXS",
-    "true", "Enable Armv8.7-A limited-TLB-maintenance instruction">;
+    "true", "Enable Armv8.7-A limited-TLB-maintenance instruction (FEAT_XS)">;
 
 def FeatureWFxT : SubtargetFeature<"wfxt", "HasWFxT",
-    "true", "Enable Armv8.7-A WFET and WFIT instruction">;
+    "true", "Enable Armv8.7-A WFET and WFIT instruction (FEAT_WFxT)">;
 
 def FeatureHCX : SubtargetFeature<
-    "hcx", "HasHCX", "true", "Enable Armv8.7-A HCRX_EL2 system register">;
+    "hcx", "HasHCX", "true", "Enable Armv8.7-A HCRX_EL2 system register (FEAT_HCX)">;
 
 def FeatureLS64 : SubtargetFeature<"ls64", "HasLS64",
-    "true", "Enable Armv8.7-A LD64B/ST64B Accelerator Extension">;
+    "true", "Enable Armv8.7-A LD64B/ST64B Accelerator Extension (FEAT_LS64, FEAT_LS64_V, FEAT_LS64_ACCDATA)">;
 
 def FeatureHBC : SubtargetFeature<"hbc", "HasHBC",
-    "true", "Enable Armv8.8-A Hinted Conditional Branches Extension">;
+    "true", "Enable Armv8.8-A Hinted Conditional Branches Extension (FEAT_HBC)">;
 
 def FeatureMOPS : SubtargetFeature<"mops", "HasMOPS",
-    "true", "Enable Armv8.8-A memcpy and memset acceleration instructions">;
+    "true", "Enable Armv8.8-A memcpy and memset acceleration instructions (FEAT_MOPS)">;
 
 def FeatureBRBE : SubtargetFeature<"brbe", "HasBRBE",
-    "true", "Enable Branch Record Buffer Extension">;
+    "true", "Enable Branch Record Buffer Extension (FEAT_BRBE)">;
 
 def FeatureSPE_EEF : SubtargetFeature<"spe-eef", "HasSPE_EEF",
-    "true", "Enable extra register in the Statistical Profiling Extension">;
+    "true", "Enable extra register in the Statistical Profiling Extension (FEAT_SPEv1p2)">;
 
 def FeatureFineGrainedTraps : SubtargetFeature<"fgt", "HasFineGrainedTraps",
-    "true", "Enable fine grained virtualization traps extension">;
+    "true", "Enable fine grained virtualization traps extension (FEAT_FGT)">;
 
 def FeatureEnhancedCounterVirtualization :
       SubtargetFeature<"ecv", "HasEnhancedCounterVirtualization",
-      "true", "Enable enhanced counter virtualization extension">;
+      "true", "Enable enhanced counter virtualization extension (FEAT_ECV)">;
 
 def FeatureRME : SubtargetFeature<"rme", "HasRME",
-    "true", "Enable Realm Management Extension">;
+    "true", "Enable Realm Management Extension (FEAT_RME)">;
 
 def FeatureSME : SubtargetFeature<"sme", "HasSME", "true",
-  "Enable Scalable Matrix Extension (SME)", [FeatureBF16, FeatureUseScalarIncVL]>;
+  "Enable Scalable Matrix Extension (SME) (FEAT_SME)", [FeatureBF16, FeatureUseScalarIncVL]>;
 
 def FeatureSMEF64 : SubtargetFeature<"sme-f64", "HasSMEF64", "true",
-  "Enable Scalable Matrix Extension (SME) F64F64 instructions", [FeatureSME]>;
+  "Enable Scalable Matrix Extension (SME) F64F64 instructions (FEAT_SME_F64F64)", [FeatureSME]>;
 
 def FeatureSMEI64 : SubtargetFeature<"sme-i64", "HasSMEI64", "true",
-  "Enable Scalable Matrix Extension (SME) I16I64 instructions", [FeatureSME]>;
+  "Enable Scalable Matrix Extension (SME) I16I64 instructions (FEAT_SME_I16I64)", [FeatureSME]>;
 
 def FeatureAppleA7SysReg  : SubtargetFeature<"apple-a7-sysreg", "HasAppleA7SysReg", "true",
   "Apple A7 (the CPU formerly known as Cyclone)">;
