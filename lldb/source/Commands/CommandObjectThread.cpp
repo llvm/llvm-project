@@ -2178,6 +2178,11 @@ public:
         m_dumper_options.json = true;
         break;
       }
+      case 'E': {
+        m_dumper_options.only_events = true;
+        m_dumper_options.show_events = true;
+        break;
+      }
       case 'C': {
         m_continue = true;
         break;
