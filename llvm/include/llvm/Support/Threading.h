@@ -50,7 +50,7 @@ class Twine;
 
 /// Returns true if LLVM is compiled with support for multi-threading, and
 /// false otherwise.
-bool llvm_is_multithreaded();
+constexpr bool llvm_is_multithreaded() { return LLVM_ENABLE_THREADS; }
 
 #if LLVM_THREADING_USE_STD_CALL_ONCE
 
