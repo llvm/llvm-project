@@ -36,16 +36,16 @@ bool PrettyClassLayoutGraphicalDumper::start(const UDTLayoutBase &Layout) {
 
   if (RecursionLevel == 1 &&
       opts::pretty::ClassFormat == opts::pretty::ClassDefinitionFormat::All) {
-    for (auto &Other : Layout.other_items())
+    for (const auto &Other : Layout.other_items())
       Other->dump(*this);
-    for (auto &Func : Layout.funcs())
+    for (const auto &Func : Layout.funcs())
       Func->dump(*this);
   }
 
   const BitVector &UseMap = Layout.usedBytes();
   int NextPaddingByte = UseMap.find_first_unset();
 
-  for (auto &Item : Layout.layout_items()) {
+  for (const auto &Item : Layout.layout_items()) {
     // Calculate the absolute offset of the first byte of the next field.
     uint32_t RelativeOffset = Item->getOffsetInParent();
     CurrentAbsoluteOffset = ClassOffsetZero + RelativeOffset;

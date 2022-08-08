@@ -173,7 +173,7 @@ void SDKNameMap::populateFromObject(ObjectFile *O) {
   }
   const auto *ELF = cast<ELFObjectFileBase>(O);
 
-  for (auto &S : ELF->getDynamicSymbolIterators()) {
+  for (const auto &S : ELF->getDynamicSymbolIterators()) {
     // We want only defined global function symbols.
     SymbolRef::Type Type = unwrapIgnoreError(S.getType());
     uint32_t Flags = unwrapIgnoreError(S.getFlags());
@@ -191,7 +191,7 @@ void SDKNameMap::populateFromObject(ObjectFile *O) {
 void SDKNameMap::populateFromArchive(Archive *A) {
   Error Err = Error::success();
   int Index = -1;
-  for (auto &C : A->children(Err)) {
+  for (const auto &C : A->children(Err)) {
     ++Index;
     Expected<std::unique_ptr<object::Binary>> ChildOrErr = C.getAsBinary();
     if (!ChildOrErr) {

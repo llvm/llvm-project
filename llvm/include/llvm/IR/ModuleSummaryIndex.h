@@ -1223,7 +1223,7 @@ public:
         dyn_cast<FunctionSummary>(V.getSummaryList().front().get());
     assert(F != nullptr && "Expected FunctionSummary node");
 
-    for (auto &C : F->calls()) {
+    for (const auto &C : F->calls()) {
       // Insert node if necessary
       auto S = FunctionHasParent.emplace(C.first, true);
 
@@ -1572,9 +1572,9 @@ public:
   template <class Map>
   void
   collectDefinedGVSummariesPerModule(Map &ModuleToDefinedGVSummaries) const {
-    for (auto &GlobalList : *this) {
+    for (const auto &GlobalList : *this) {
       auto GUID = GlobalList.first;
-      for (auto &Summary : GlobalList.second.SummaryList) {
+      for (const auto &Summary : GlobalList.second.SummaryList) {
         ModuleToDefinedGVSummaries[Summary->modulePath()][GUID] = Summary.get();
       }
     }

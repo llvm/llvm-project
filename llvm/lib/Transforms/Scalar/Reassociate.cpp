@@ -2027,7 +2027,7 @@ void ReassociatePass::RecursivelyEraseDeadInsts(Instruction *I,
   RedoInsts.remove(I);
   llvm::salvageDebugInfo(*I);
   I->eraseFromParent();
-  for (auto Op : Ops)
+  for (auto *Op : Ops)
     if (Instruction *OpInst = dyn_cast<Instruction>(Op))
       if (OpInst->use_empty())
         Insts.insert(OpInst);

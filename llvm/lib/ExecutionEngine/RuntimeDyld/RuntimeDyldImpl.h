@@ -527,7 +527,7 @@ public:
   std::map<StringRef, JITEvaluatedSymbol> getSymbolTable() const {
     std::map<StringRef, JITEvaluatedSymbol> Result;
 
-    for (auto &KV : GlobalSymbolTable) {
+    for (const auto &KV : GlobalSymbolTable) {
       auto SectionID = KV.second.getSectionID();
       uint64_t SectionAddr = getSectionLoadAddress(SectionID);
       Result[KV.first()] =

@@ -135,7 +135,7 @@ void CallStackTrie::addCallStack(MDNode *MIB) {
   assert(StackMD);
   std::vector<uint64_t> CallStack;
   CallStack.reserve(StackMD->getNumOperands());
-  for (auto &MIBStackIter : StackMD->operands()) {
+  for (const auto &MIBStackIter : StackMD->operands()) {
     auto *StackId = mdconst::dyn_extract<ConstantInt>(MIBStackIter);
     assert(StackId);
     CallStack.push_back(StackId->getZExtValue());

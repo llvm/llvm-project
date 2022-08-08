@@ -164,7 +164,7 @@ bool PruneEH::runOnSCC(CallGraphSCC &SCC) {
   if (skipSCC(SCC))
     return false;
   SetVector<Function *> Functions;
-  for (auto &N : SCC) {
+  for (const auto &N : SCC) {
     if (auto *F = N->getFunction())
       Functions.insert(F);
   }

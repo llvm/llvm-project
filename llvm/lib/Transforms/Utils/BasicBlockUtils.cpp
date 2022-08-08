@@ -1592,7 +1592,7 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
     auto NewPhi =
         PHINode::Create(Phi->getType(), Incoming.size(),
                         Phi->getName() + ".moved", &FirstGuardBlock->back());
-    for (auto In : Incoming) {
+    for (auto *In : Incoming) {
       Value *V = UndefValue::get(Phi->getType());
       if (In == Out) {
         V = NewPhi;
@@ -1686,7 +1686,7 @@ static void convertToGuardPredicates(
     GuardPredicates[Out] = Phi;
   }
 
-  for (auto In : Incoming) {
+  for (auto *In : Incoming) {
     Value *Condition;
     BasicBlock *Succ0;
     BasicBlock *Succ1;
@@ -1771,9 +1771,9 @@ BasicBlock *llvm::CreateControlFlowHub(
 
   SmallVector<DominatorTree::UpdateType, 16> Updates;
   if (DTU) {
-    for (auto In : Incoming) {
+    for (auto *In : Incoming) {
       Updates.push_back({DominatorTree::Insert, In, FirstGuardBlock});
-      for (auto Succ : successors(In)) {
+      for (auto *Succ : successors(In)) {
         if (Outgoing.count(Succ))
           Updates.push_back({DominatorTree::Delete, In, Succ});
       }
