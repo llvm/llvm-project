@@ -1131,7 +1131,7 @@ static void processResults(PatternRewriter &rewriter, PDLResultList &results,
   auto applyFn = [&](auto &&...args) {
     (processResults(rewriter, results, std::move(args)), ...);
   };
-  llvm::apply_tuple(applyFn, std::move(tuple));
+  std::apply(applyFn, std::move(tuple));
 }
 
 //===----------------------------------------------------------------------===//
