@@ -492,7 +492,7 @@ void CodeGenSchedModels::collectLoadStoreQueueInfo() {
       if (PM.StoreQueue) {
         PrintError(Queue->getLoc(),
                    "Expected a single StoreQueue definition");
-        PrintNote(PM.LoadQueue->getLoc(),
+        PrintNote(PM.StoreQueue->getLoc(),
                   "Previous definition of StoreQueue was here");
       }
 
