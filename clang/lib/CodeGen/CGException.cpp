@@ -158,7 +158,7 @@ static const EHPersonality &getObjCPersonality(const TargetInfo &Target,
   case ObjCRuntime::GNUstep:
     if (L.ObjCRuntime.getVersion() >= VersionTuple(1, 7))
       return EHPersonality::GNUstep_ObjC;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ObjCRuntime::GCC:
   case ObjCRuntime::ObjFW:
     if (L.hasSjLjExceptions())

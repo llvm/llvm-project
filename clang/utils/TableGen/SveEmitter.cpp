@@ -523,7 +523,7 @@ void SVEType::applyModifier(char Mod) {
     break;
   case 'c':
     Constant = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 'p':
     Pointer = true;
     Bitwidth = ElementBitwidth;

@@ -1132,7 +1132,7 @@ namespace {
           if (!HasFoldFailureDiagnostic)
             break;
           // We've already failed to fold something. Keep that diagnostic.
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case EM_ConstantExpression:
         case EM_ConstantExpressionUnevaluated:
           setActiveDiagnostic(false);
@@ -9217,7 +9217,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Builtin::BI__builtin_strchr:
   case Builtin::BI__builtin_wcschr:
   case Builtin::BI__builtin_memchr:
@@ -9278,7 +9278,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                Desired))
         return ZeroInitialization(E);
       StopAtNull = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Builtin::BImemchr:
     case Builtin::BI__builtin_memchr:
     case Builtin::BI__builtin_char_memchr:
@@ -9291,7 +9291,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIwcschr:
     case Builtin::BI__builtin_wcschr:
       StopAtNull = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Builtin::BIwmemchr:
     case Builtin::BI__builtin_wmemchr:
       // wcschr and wmemchr are given a wchar_t to look for. Just use it.
@@ -9325,7 +9325,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Builtin::BI__builtin_memcpy:
   case Builtin::BI__builtin_memmove:
   case Builtin::BI__builtin_wmemcpy:
@@ -12122,7 +12122,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Builtin::BI__builtin_strlen:
   case Builtin::BI__builtin_wcslen: {
     // As an extension, we support __builtin_strlen() as a constant expression,
@@ -12147,7 +12147,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Builtin::BI__builtin_strcmp:
   case Builtin::BI__builtin_wcscmp:
   case Builtin::BI__builtin_strncmp:

@@ -3613,7 +3613,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
     // them distinct if they are ODR-uniqued.
     if (Identifier.empty())
       break;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case llvm::dwarf::DW_TAG_structure_type:
   case llvm::dwarf::DW_TAG_union_type:

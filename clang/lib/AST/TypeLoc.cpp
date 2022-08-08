@@ -208,7 +208,7 @@ SourceLocation TypeLoc::getBeginLoc() const {
         LeftMost = Cur;
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case FunctionNoProto:
     case ConstantArray:
     case DependentSizedArray:
@@ -260,7 +260,7 @@ SourceLocation TypeLoc::getEndLoc() const {
       // `id` and `id<...>` have no star location.
       if (Cur.castAs<ObjCObjectPointerTypeLoc>().getStarLoc().isInvalid())
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Pointer:
     case BlockPointer:
     case MemberPointer:

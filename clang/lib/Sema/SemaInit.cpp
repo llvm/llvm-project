@@ -86,7 +86,7 @@ static StringInitFailureKind IsStringInit(Expr *Init, const ArrayType *AT,
     // char8_t array can be initialized with a UTF-8 string.
     if (ElemTy->isChar8Type())
       return SIF_None;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case StringLiteral::Ordinary:
     // char array can be initialized with a narrow string.
     // Only allow char x[] = "foo";  not char x[] = L"foo";
@@ -7572,7 +7572,7 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
     case IndirectLocalPathEntry::VarInit:
       if (cast<VarDecl>(Path[I].D)->isImplicit())
         return SourceRange();
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case IndirectLocalPathEntry::DefaultInit:
       return Path[I].E->getSourceRange();
 
@@ -8739,7 +8739,7 @@ ExprResult InitializationSequence::Perform(Sema &S,
         << Step->Type << CurInit.get()->getType()
         << CurInit.get()->getSourceRange();
       updateGNUCompoundLiteralRValue(CurInit.get());
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case SK_ArrayInit:
       // If the destination type is an incomplete array type, update the
       // type accordingly.
@@ -9201,7 +9201,7 @@ bool InitializationSequence::Diagnose(Sema &S,
       << Args[0]->getSourceRange();
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case FK_NonConstLValueReferenceBindingToUnrelated:
     S.Diag(Kind.getLocation(),

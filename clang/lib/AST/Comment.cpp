@@ -301,7 +301,7 @@ void DeclInfo::fill() {
       TemplateKind = TemplateSpecialization;
       TemplateParameters = VTD->getTemplateParameters();
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Decl::Field:
   case Decl::EnumConstant:
   case Decl::ObjCIvar:

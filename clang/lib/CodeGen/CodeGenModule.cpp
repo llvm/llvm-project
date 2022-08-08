@@ -5475,7 +5475,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
 
     switch (CFRuntime) {
     default: break;
-    case LangOptions::CoreFoundationABI::Swift: LLVM_FALLTHROUGH;
+    case LangOptions::CoreFoundationABI::Swift: [[fallthrough]];
     case LangOptions::CoreFoundationABI::Swift5_0:
       CFConstantStringClassName =
           Triple.isOSDarwin() ? "$s15SwiftFoundation19_NSCFConstantStringCN"
@@ -6132,7 +6132,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
               TSK_ExplicitInstantiationDefinition &&
           Spec->hasDefinition())
         DI->completeTemplateDefinition(*Spec);
-  } LLVM_FALLTHROUGH;
+  } [[fallthrough]];
   case Decl::CXXRecord: {
     CXXRecordDecl *CRD = cast<CXXRecordDecl>(D);
     if (CGDebugInfo *DI = getModuleDebugInfo()) {

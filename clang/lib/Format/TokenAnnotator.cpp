@@ -1061,7 +1061,7 @@ private:
           CurrentToken->isOneOf(tok::kw_constexpr, tok::identifier)) {
         next();
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case tok::kw_while:
       if (CurrentToken && CurrentToken->is(tok::l_paren)) {
         next();
