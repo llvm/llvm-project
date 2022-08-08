@@ -19,6 +19,7 @@ using namespace mlir;
 
 namespace {
 using AbsFOpLowering = VectorConvertToLLVMPattern<math::AbsFOp, LLVM::FAbsOp>;
+using AbsIOpLowering = VectorConvertToLLVMPattern<math::AbsIOp, LLVM::AbsOp>;
 using CeilOpLowering = VectorConvertToLLVMPattern<math::CeilOp, LLVM::FCeilOp>;
 using CopySignOpLowering =
     VectorConvertToLLVMPattern<math::CopySignOp, LLVM::CopySignOp>;
@@ -269,6 +270,7 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
   // clang-format off
   patterns.add<
     AbsFOpLowering,
+    AbsIOpLowering,
     CeilOpLowering,
     CopySignOpLowering,
     CosOpLowering,

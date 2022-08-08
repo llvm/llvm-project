@@ -2,14 +2,16 @@
 
 // CHECK-LABEL: @ops
 func.func @ops(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32, %arg4: f64) {
-// CHECK: = "llvm.intr.exp"(%{{.*}}) : (f32) -> f32
-  %13 = math.exp %arg0 : f32
-// CHECK: = "llvm.intr.exp2"(%{{.*}}) : (f32) -> f32
-  %14 = math.exp2 %arg0 : f32
-// CHECK: = "llvm.intr.sqrt"(%{{.*}}) : (f32) -> f32
-  %19 = math.sqrt %arg0 : f32
-// CHECK: = "llvm.intr.sqrt"(%{{.*}}) : (f64) -> f64
-  %20 = math.sqrt %arg4 : f64
+  // CHECK: = "llvm.intr.exp"(%{{.*}}) : (f32) -> f32
+  %0 = math.exp %arg0 : f32
+  // CHECK: = "llvm.intr.exp2"(%{{.*}}) : (f32) -> f32
+  %1 = math.exp2 %arg0 : f32
+  // CHECK: = "llvm.intr.sqrt"(%{{.*}}) : (f32) -> f32
+  %2 = math.sqrt %arg0 : f32
+  // CHECK: = "llvm.intr.sqrt"(%{{.*}}) : (f64) -> f64
+  %3 = math.sqrt %arg4 : f64
+  // CHECK: = "llvm.intr.abs"(%{{.*}}) : (i32) -> i32
+  %4 = math.absi %arg2 : i32
   func.return
 }
 
