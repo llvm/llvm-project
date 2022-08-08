@@ -433,7 +433,7 @@ size_t DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
           // curr_depth is not zero
           break;
         }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       default:
         attributes.Append(form_value, offset, attr);
         break;

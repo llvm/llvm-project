@@ -49,7 +49,7 @@ static bool registerRSDefaultTargetOpts(clang::TargetOptions &proto,
     proto.CPU = "atom";
     proto.Features.push_back("+long64");
     // Fallthrough for common x86 family features
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case llvm::Triple::ArchType::x86_64:
     proto.Features.push_back("+mmx");
     proto.Features.push_back("+sse");

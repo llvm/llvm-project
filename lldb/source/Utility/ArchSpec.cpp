@@ -1083,7 +1083,7 @@ static bool cores_match(const ArchSpec::Core core1, const ArchSpec::Core core2,
   case ArchSpec::eCore_arm_generic:
     if (enforce_exact_match)
       break;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ArchSpec::kCore_arm_any:
     if (core2 >= ArchSpec::kCore_arm_first && core2 <= ArchSpec::kCore_arm_last)
       return true;

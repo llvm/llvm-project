@@ -428,7 +428,7 @@ PlatformDarwin::GetSoftwareBreakpointTrapOpcode(Target &target,
 
   case llvm::Triple::thumb:
     bp_is_thumb = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case llvm::Triple::arm: {
     static const uint8_t g_arm_breakpoint_opcode[] = {0xFE, 0xDE, 0xFF, 0xE7};
     static const uint8_t g_thumb_breakpooint_opcode[] = {0xFE, 0xDE};
@@ -498,7 +498,7 @@ void PlatformDarwin::x86GetSupportedArchitectures(
 static llvm::ArrayRef<const char *> GetCompatibleArchs(ArchSpec::Core core) {
   switch (core) {
   default:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ArchSpec::eCore_arm_arm64e: {
     static const char *g_arm64e_compatible_archs[] = {
         "arm64e",    "arm64",    "armv7",    "armv7f",   "armv7k",   "armv7s",
