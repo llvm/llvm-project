@@ -13534,7 +13534,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return Info.Ctx.getTypeSize(DestType) == Info.Ctx.getTypeSize(SrcType);
     }
 
-    if (DestType->isEnumeralType()) {
+    if (Info.Ctx.getLangOpts().CPlusPlus && DestType->isEnumeralType()) {
       const EnumType *ET = dyn_cast<EnumType>(DestType.getCanonicalType());
       const EnumDecl *ED = ET->getDecl();
       // Check that the value is within the range of the enumeration values.
@@ -13557,12 +13557,14 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
         if (ED->getNumNegativeBits() &&
             (Max.slt(Result.getInt().getSExtValue()) ||
              Min.sgt(Result.getInt().getSExtValue())))
-          CCEDiag(E, diag::note_constexpr_unscoped_enum_out_of_range)
-              << Result.getInt() << Min.getSExtValue() << Max.getSExtValue();
+          Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
+                                       diag::warn_constexpr_unscoped_enum_out_of_range)
+	       << llvm::toString(Result.getInt(),10) << Min.getSExtValue() << Max.getSExtValue();
         else if (!ED->getNumNegativeBits() &&
                  Max.ult(Result.getInt().getZExtValue()))
-          CCEDiag(E, diag::note_constexpr_unscoped_enum_out_of_range)
-              << Result.getInt() << Min.getZExtValue() << Max.getZExtValue();
+          Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
+                                       diag::warn_constexpr_unscoped_enum_out_of_range)
+	    << llvm::toString(Result.getInt(),10) << Min.getZExtValue() << Max.getZExtValue();
       }
     }
 

@@ -239,14 +239,14 @@ template void function_missing_typename<D>(const D::Type param);
 //MSVC allows forward enum declaration
 enum ENUM; // expected-warning {{forward references to 'enum' types are a Microsoft extension}}
 ENUM *var = 0;     
-ENUM var2 = (ENUM)3;
+ENUM var2 = (ENUM)0;
 enum ENUM1* var3 = 0;// expected-warning {{forward references to 'enum' types are a Microsoft extension}}
 
 enum ENUM1 { kA };
 enum ENUM1;  // This way round is fine.
 
 enum ENUM2 {
-	ENUM2_a = (enum ENUM2) 4,
+	ENUM2_a = (enum ENUM2) 0,
 	ENUM2_b = 0x9FFFFFFF, // expected-warning {{enumerator value is not representable in the underlying type 'int'}}
 	ENUM2_c = 0x100000000 // expected-warning {{enumerator value is not representable in the underlying type 'int'}}
 };
