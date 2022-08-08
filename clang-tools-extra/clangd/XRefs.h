@@ -117,16 +117,25 @@ ReferencesResult findReferences(ParsedAST &AST, Position Pos, uint32_t Limit,
 /// Get info about symbols at \p Pos.
 std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos);
 
-/// Find the record type references at \p Pos.
-const CXXRecordDecl *findRecordTypeAt(ParsedAST &AST, Position Pos);
+/// Find the record types referenced at \p Pos.
+std::vector<const CXXRecordDecl *> findRecordTypeAt(ParsedAST &AST,
+                                                    Position Pos);
 
 /// Given a record type declaration, find its base (parent) types.
 std::vector<const CXXRecordDecl *> typeParents(const CXXRecordDecl *CXXRD);
 
 /// Get type hierarchy information at \p Pos.
-llvm::Optional<TypeHierarchyItem> getTypeHierarchy(
+std::vector<TypeHierarchyItem> getTypeHierarchy(
     ParsedAST &AST, Position Pos, int Resolve, TypeHierarchyDirection Direction,
     const SymbolIndex *Index = nullptr, PathRef TUPath = PathRef{});
+
+/// Returns direct parents of a TypeHierarchyItem using SymbolIDs stored inside
+/// the item.
+llvm::Optional<std::vector<TypeHierarchyItem>>
+superTypes(const TypeHierarchyItem &Item, const SymbolIndex *Index);
+/// Returns direct children of a TypeHierarchyItem.
+std::vector<TypeHierarchyItem> subTypes(const TypeHierarchyItem &Item,
+                                        const SymbolIndex *Index);
 
 void resolveTypeHierarchy(TypeHierarchyItem &Item, int ResolveLevels,
                           TypeHierarchyDirection Direction,
