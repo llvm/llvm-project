@@ -2,6 +2,8 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -test-vector-warp-distribute="hoist-uniform" | FileCheck --check-prefixes=CHECK-HOIST %s
 // RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -test-vector-warp-distribute="hoist-uniform distribute-transfer-write" | FileCheck --check-prefixes=CHECK-D %s
 // RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -test-vector-warp-distribute=propagate-distribution -canonicalize | FileCheck --check-prefixes=CHECK-PROP %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -test-vector-warp-distribute="hoist-uniform distribute-transfer-write propagate-distribution" -canonicalize | FileCheck --check-prefixes=CHECK-DIST-AND-PROP %s
+
 
 // CHECK-SCF-IF-DAG: memref.global "private" @__shared_32xf32 : memref<32xf32, 3>
 // CHECK-SCF-IF-DAG: memref.global "private" @__shared_64xf32 : memref<64xf32, 3>
@@ -60,7 +62,7 @@ func.func @rewrite_warp_op_to_scf_if(%laneid: index,
 
 // CHECK-D-DAG: #[[MAP1:.*]] = affine_map<()[s0] -> (s0 * 2 + 32)>
 
-// CHECK-ALL-LABEL: func @warp(
+// CHECK-DIST-AND-PROP-LABEL: func @warp(
 // CHECK-HOIST: memref.subview
 // CHECK-HOIST: memref.subview
 // CHECK-HOIST: memref.subview
@@ -74,15 +76,15 @@ func.func @rewrite_warp_op_to_scf_if(%laneid: index,
 // CHECK-D-DAG: %[[ID1:.*]] = affine.apply #[[MAP1]]()[%{{.*}}]
 // CHECK-D-DAG: vector.transfer_write %[[R]]#0, %2[%[[ID1]]] {in_bounds = [true]} : vector<2xf32>, memref<128xf32
 
-// CHECK-ALL-NOT: vector.warp_execute_on_lane_0
-// CHECK-ALL: vector.transfer_read {{.*}} vector<1xf32>
-// CHECK-ALL: vector.transfer_read {{.*}} vector<1xf32>
-// CHECK-ALL: vector.transfer_read {{.*}} vector<2xf32>
-// CHECK-ALL: vector.transfer_read {{.*}} vector<2xf32>
-// CHECK-ALL: arith.addf {{.*}} : vector<1xf32>
-// CHECK-ALL: arith.addf {{.*}} : vector<2xf32>
-// CHECK-ALL: vector.transfer_write {{.*}} : vector<1xf32>
-// CHECK-ALL: vector.transfer_write {{.*}} : vector<2xf32>
+// CHECK-DIST-AND-PROP-NOT: vector.warp_execute_on_lane_0
+// CHECK-DIST-AND-PROP: vector.transfer_read {{.*}} vector<1xf32>
+// CHECK-DIST-AND-PROP: vector.transfer_read {{.*}} vector<1xf32>
+// CHECK-DIST-AND-PROP: vector.transfer_read {{.*}} vector<2xf32>
+// CHECK-DIST-AND-PROP: vector.transfer_read {{.*}} vector<2xf32>
+// CHECK-DIST-AND-PROP: arith.addf {{.*}} : vector<1xf32>
+// CHECK-DIST-AND-PROP: arith.addf {{.*}} : vector<2xf32>
+// CHECK-DIST-AND-PROP: vector.transfer_write {{.*}} : vector<1xf32>
+// CHECK-DIST-AND-PROP: vector.transfer_write {{.*}} : vector<2xf32>
 
 #map0 =  affine_map<(d0)[s0] -> (d0 + s0)>
 func.func @warp(%laneid: index, %arg1: memref<1024xf32>, %arg2: memref<1024xf32>,
