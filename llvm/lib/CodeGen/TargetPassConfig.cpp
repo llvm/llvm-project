@@ -50,6 +50,7 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Yk/BlockDisambiguate.h"
 #include "llvm/Transforms/Yk/ControlPoint.h"
+#include "llvm/Transforms/Yk/Stackmaps.h"
 #include <cassert>
 #include <string>
 
@@ -273,6 +274,10 @@ static cl::opt<bool>
 static cl::opt<bool> YkPatchCtrlPoint("yk-patch-control-point", cl::init(false),
                                       cl::NotHidden,
                                       cl::desc("Patch yk_mt_control_point()"));
+
+static cl::opt<bool>
+    YkInsertStackMaps("yk-insert-stackmaps", cl::init(false), cl::NotHidden,
+                      cl::desc("Insert stackmaps for JIT deoptimisation"));
 
 /// Allow standard passes to be disabled by command line options. This supports
 /// simple binary flags that either suppress the pass or do nothing.
@@ -1142,6 +1147,9 @@ bool TargetPassConfig::addISelPasses() {
   // *not* being changed.
   if (YkPatchCtrlPoint)
     addPass(createYkControlPointPass());
+
+  if (YkInsertStackMaps)
+    addPass(createYkStackmapsPass());
 
   addISelPrepare();
   return addCoreISelPasses();
