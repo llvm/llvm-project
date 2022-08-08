@@ -11,71 +11,71 @@
 vnclipu.wv v8, v4, v20, v0.t
 # CHECK-INST: vnclipu.wv v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x04,0x4a,0xb8]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 04 4a b8 <unknown>
 
 vnclipu.wv v8, v4, v20
 # CHECK-INST: vnclipu.wv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x04,0x4a,0xba]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 04 4a ba <unknown>
 
 vnclipu.wx v8, v4, a0, v0.t
 # CHECK-INST: vnclipu.wx v8, v4, a0, v0.t
 # CHECK-ENCODING: [0x57,0x44,0x45,0xb8]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 44 45 b8 <unknown>
 
 vnclipu.wx v8, v4, a0
 # CHECK-INST: vnclipu.wx v8, v4, a0
 # CHECK-ENCODING: [0x57,0x44,0x45,0xba]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 44 45 ba <unknown>
 
 vnclipu.wi v8, v4, 31, v0.t
 # CHECK-INST: vnclipu.wi v8, v4, 31, v0.t
 # CHECK-ENCODING: [0x57,0xb4,0x4f,0xb8]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 b4 4f b8 <unknown>
 
 vnclipu.wi v8, v4, 31
 # CHECK-INST: vnclipu.wi v8, v4, 31
 # CHECK-ENCODING: [0x57,0xb4,0x4f,0xba]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 b4 4f ba <unknown>
 
 vnclip.wv v8, v4, v20, v0.t
 # CHECK-INST: vnclip.wv v8, v4, v20, v0.t
 # CHECK-ENCODING: [0x57,0x04,0x4a,0xbc]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 04 4a bc <unknown>
 
 vnclip.wv v8, v4, v20
 # CHECK-INST: vnclip.wv v8, v4, v20
 # CHECK-ENCODING: [0x57,0x04,0x4a,0xbe]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 04 4a be <unknown>
 
 vnclip.wx v8, v4, a0, v0.t
 # CHECK-INST: vnclip.wx v8, v4, a0, v0.t
 # CHECK-ENCODING: [0x57,0x44,0x45,0xbc]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 44 45 bc <unknown>
 
 vnclip.wx v8, v4, a0
 # CHECK-INST: vnclip.wx v8, v4, a0
 # CHECK-ENCODING: [0x57,0x44,0x45,0xbe]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 44 45 be <unknown>
 
 vnclip.wi v8, v4, 31, v0.t
 # CHECK-INST: vnclip.wi v8, v4, 31, v0.t
 # CHECK-ENCODING: [0x57,0xb4,0x4f,0xbc]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 b4 4f bc <unknown>
 
 vnclip.wi v8, v4, 31
 # CHECK-INST: vnclip.wi v8, v4, 31
 # CHECK-ENCODING: [0x57,0xb4,0x4f,0xbe]
-# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 57 b4 4f be <unknown>

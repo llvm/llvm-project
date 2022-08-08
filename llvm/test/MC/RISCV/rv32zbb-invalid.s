@@ -18,6 +18,6 @@ max t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 minu t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 # Too few operands
 maxu t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
-clzw t0, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-ctzw t0, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-cpopw t0, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+clzw t0, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
+ctzw t0, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
+cpopw t0, t1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}

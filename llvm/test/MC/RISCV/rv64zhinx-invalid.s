@@ -1,7 +1,7 @@
 # RUN: not llvm-mc -triple riscv64 -mattr=+zhinx %s 2>&1 | FileCheck %s
 
 # Not support float registers
-flh fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal)
+flh fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal){{$}}
 
 # Invalid instructions
 fsh a5, 12(sp) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
