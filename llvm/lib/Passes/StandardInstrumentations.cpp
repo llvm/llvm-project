@@ -540,7 +540,10 @@ void OrderedChangedData<T>::report(
     }
     // This section is in both; advance and print out any before-only
     // until we get to it.
-    while (*BI != *AI) {
+    // It's possible that this section has moved to be later than before. This
+    // will mess up printing most blocks side by side, but it's a rare case and
+    // it's better than crashing.
+    while (BI != BE && *BI != *AI) {
       HandlePotentiallyRemovedData(*BI);
       ++BI;
     }
@@ -550,7 +553,8 @@ void OrderedChangedData<T>::report(
     const T &AData = AFD.find(*AI)->getValue();
     const T &BData = BFD.find(*AI)->getValue();
     HandlePair(&BData, &AData);
-    ++BI;
+    if (BI != BE)
+      ++BI;
     ++AI;
   }
 
