@@ -125,7 +125,7 @@ def ParallelOp : OpenMP_Op<"parallel", [
   }];
 }
 
-def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
+def TerminatorOp : OpenMP_Op<"terminator", [Terminator, NoSideEffect]> {
   let summary = "terminator for OpenMP regions";
   let description = [{
     A terminator operation for regions that appear in the body of OpenMP
