@@ -335,7 +335,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     if (!IsInNonspecializedTemplate)
       return std::make_tuple(nullptr, ManglingContextDecl);
     // Fall through to get the current context.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case DataMember:
     //  -- the in-class initializers of class members

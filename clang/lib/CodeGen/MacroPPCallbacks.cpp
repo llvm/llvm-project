@@ -120,7 +120,7 @@ void MacroPPCallbacks::FileEntered(SourceLocation Loc) {
     if (PP.getSourceManager().isWrittenInCommandLineFile(Loc))
       return;
     updateStatusToNextScope();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CommandLineIncludeScope:
     EnteredCommandLineIncludeFiles++;
     break;

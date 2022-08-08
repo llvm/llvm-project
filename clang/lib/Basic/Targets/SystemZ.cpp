@@ -69,7 +69,7 @@ bool SystemZTargetInfo::validateAsmConstraint(
     case 'T': // Likewise, plus an index
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 'a': // Address register
   case 'd': // Data register (equivalent to 'r')
   case 'f': // Floating-point register

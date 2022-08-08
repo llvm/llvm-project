@@ -249,7 +249,7 @@ ExprResult Sema::BuildPossibleImplicitMemberExpr(
   case IMA_Field_Uneval_Context:
     Diag(R.getNameLoc(), diag::warn_cxx98_compat_non_static_member_use)
       << R.getLookupNameInfo().getName();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case IMA_Static:
   case IMA_Abstract:
   case IMA_Mixed_StaticContext:

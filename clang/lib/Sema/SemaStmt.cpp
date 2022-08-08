@@ -2660,7 +2660,7 @@ BuildNonArrayForRange(Sema &SemaRef, Expr *BeginRange, Expr *EndRange,
                                   SemaRef.PDiag(diag::err_for_range_invalid)
                                       << BeginRange->getType() << BEFFound),
               SemaRef, OCD_AllCandidates, BeginRange);
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
 
         case Sema::FRS_DiagnosticIssued:
           for (NamedDecl *D : OldFound) {
