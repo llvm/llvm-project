@@ -110,6 +110,7 @@ private:
   SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
