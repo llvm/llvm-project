@@ -28,14 +28,6 @@ using namespace llvm;
 //===          independent code.
 //===----------------------------------------------------------------------===//
 
-bool llvm::llvm_is_multithreaded() {
-#if LLVM_ENABLE_THREADS != 0
-  return true;
-#else
-  return false;
-#endif
-}
-
 #if LLVM_ENABLE_THREADS == 0 ||                                                \
     (!defined(_WIN32) && !defined(HAVE_PTHREAD_H))
 uint64_t llvm::get_threadid() { return 0; }
