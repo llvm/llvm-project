@@ -23,40 +23,31 @@ define i8 @test_i8(i8 %a) {
 ; CHECK-THUMB-LABEL: test_i8:
 ; CHECK-THUMB:       @ %bb.0:
 ; CHECK-THUMB-NEXT:    lsls r1, r0, #24
-; CHECK-THUMB-NEXT:    beq .LBB0_2
+; CHECK-THUMB-NEXT:    beq .LBB0_3
 ; CHECK-THUMB-NEXT:  @ %bb.1: @ %cond.false
-; CHECK-THUMB-NEXT:    subs r1, r0, #1
-; CHECK-THUMB-NEXT:    bics r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r1, #1
-; CHECK-THUMB-NEXT:    ldr r2, .LCPI0_0
-; CHECK-THUMB-NEXT:    ands r2, r0
-; CHECK-THUMB-NEXT:    subs r0, r1, r2
-; CHECK-THUMB-NEXT:    ldr r1, .LCPI0_1
-; CHECK-THUMB-NEXT:    lsrs r2, r0, #2
-; CHECK-THUMB-NEXT:    ands r0, r1
-; CHECK-THUMB-NEXT:    ands r2, r1
-; CHECK-THUMB-NEXT:    adds r0, r0, r2
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    ldr r1, .LCPI0_2
+; CHECK-THUMB-NEXT:    cmp r0, #0
+; CHECK-THUMB-NEXT:    beq .LBB0_4
+; CHECK-THUMB-NEXT:  @ %bb.2: @ %cond.false
+; CHECK-THUMB-NEXT:    rsbs r1, r0, #0
 ; CHECK-THUMB-NEXT:    ands r1, r0
-; CHECK-THUMB-NEXT:    ldr r0, .LCPI0_3
+; CHECK-THUMB-NEXT:    ldr r0, .LCPI0_0
 ; CHECK-THUMB-NEXT:    muls r0, r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r0, #24
+; CHECK-THUMB-NEXT:    lsrs r0, r0, #27
+; CHECK-THUMB-NEXT:    adr r1, .LCPI0_1
+; CHECK-THUMB-NEXT:    ldrb r0, [r1, r0]
 ; CHECK-THUMB-NEXT:    bx lr
-; CHECK-THUMB-NEXT:  .LBB0_2:
+; CHECK-THUMB-NEXT:  .LBB0_3:
 ; CHECK-THUMB-NEXT:    movs r0, #8
 ; CHECK-THUMB-NEXT:    bx lr
+; CHECK-THUMB-NEXT:  .LBB0_4:
+; CHECK-THUMB-NEXT:    movs r0, #32
+; CHECK-THUMB-NEXT:    bx lr
 ; CHECK-THUMB-NEXT:    .p2align 2
-; CHECK-THUMB-NEXT:  @ %bb.3:
+; CHECK-THUMB-NEXT:  @ %bb.5:
 ; CHECK-THUMB-NEXT:  .LCPI0_0:
-; CHECK-THUMB-NEXT:    .long 1431655765 @ 0x55555555
+; CHECK-THUMB-NEXT:    .long 125613361 @ 0x77cb531
 ; CHECK-THUMB-NEXT:  .LCPI0_1:
-; CHECK-THUMB-NEXT:    .long 858993459 @ 0x33333333
-; CHECK-THUMB-NEXT:  .LCPI0_2:
-; CHECK-THUMB-NEXT:    .long 252645135 @ 0xf0f0f0f
-; CHECK-THUMB-NEXT:  .LCPI0_3:
-; CHECK-THUMB-NEXT:    .long 16843009 @ 0x1010101
+; CHECK-THUMB-NEXT:    .ascii "\000\001\034\002\035\016\030\003\036\026\024\017\031\021\004\b\037\033\r\027\025\023\020\007\032\f\022\006\013\005\n\t"
   %tmp = call i8 @llvm.cttz.i8(i8 %a, i1 false)
   ret i8 %tmp
 }
@@ -72,40 +63,31 @@ define i16 @test_i16(i16 %a) {
 ; CHECK-THUMB-LABEL: test_i16:
 ; CHECK-THUMB:       @ %bb.0:
 ; CHECK-THUMB-NEXT:    lsls r1, r0, #16
-; CHECK-THUMB-NEXT:    beq .LBB1_2
+; CHECK-THUMB-NEXT:    beq .LBB1_3
 ; CHECK-THUMB-NEXT:  @ %bb.1: @ %cond.false
-; CHECK-THUMB-NEXT:    subs r1, r0, #1
-; CHECK-THUMB-NEXT:    bics r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r1, #1
-; CHECK-THUMB-NEXT:    ldr r2, .LCPI1_0
-; CHECK-THUMB-NEXT:    ands r2, r0
-; CHECK-THUMB-NEXT:    subs r0, r1, r2
-; CHECK-THUMB-NEXT:    ldr r1, .LCPI1_1
-; CHECK-THUMB-NEXT:    lsrs r2, r0, #2
-; CHECK-THUMB-NEXT:    ands r0, r1
-; CHECK-THUMB-NEXT:    ands r2, r1
-; CHECK-THUMB-NEXT:    adds r0, r0, r2
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    ldr r1, .LCPI1_2
+; CHECK-THUMB-NEXT:    cmp r0, #0
+; CHECK-THUMB-NEXT:    beq .LBB1_4
+; CHECK-THUMB-NEXT:  @ %bb.2: @ %cond.false
+; CHECK-THUMB-NEXT:    rsbs r1, r0, #0
 ; CHECK-THUMB-NEXT:    ands r1, r0
-; CHECK-THUMB-NEXT:    ldr r0, .LCPI1_3
+; CHECK-THUMB-NEXT:    ldr r0, .LCPI1_0
 ; CHECK-THUMB-NEXT:    muls r0, r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r0, #24
+; CHECK-THUMB-NEXT:    lsrs r0, r0, #27
+; CHECK-THUMB-NEXT:    adr r1, .LCPI1_1
+; CHECK-THUMB-NEXT:    ldrb r0, [r1, r0]
 ; CHECK-THUMB-NEXT:    bx lr
-; CHECK-THUMB-NEXT:  .LBB1_2:
+; CHECK-THUMB-NEXT:  .LBB1_3:
 ; CHECK-THUMB-NEXT:    movs r0, #16
 ; CHECK-THUMB-NEXT:    bx lr
+; CHECK-THUMB-NEXT:  .LBB1_4:
+; CHECK-THUMB-NEXT:    movs r0, #32
+; CHECK-THUMB-NEXT:    bx lr
 ; CHECK-THUMB-NEXT:    .p2align 2
-; CHECK-THUMB-NEXT:  @ %bb.3:
+; CHECK-THUMB-NEXT:  @ %bb.5:
 ; CHECK-THUMB-NEXT:  .LCPI1_0:
-; CHECK-THUMB-NEXT:    .long 1431655765 @ 0x55555555
+; CHECK-THUMB-NEXT:    .long 125613361 @ 0x77cb531
 ; CHECK-THUMB-NEXT:  .LCPI1_1:
-; CHECK-THUMB-NEXT:    .long 858993459 @ 0x33333333
-; CHECK-THUMB-NEXT:  .LCPI1_2:
-; CHECK-THUMB-NEXT:    .long 252645135 @ 0xf0f0f0f
-; CHECK-THUMB-NEXT:  .LCPI1_3:
-; CHECK-THUMB-NEXT:    .long 16843009 @ 0x1010101
+; CHECK-THUMB-NEXT:    .ascii "\000\001\034\002\035\016\030\003\036\026\024\017\031\021\004\b\037\033\r\027\025\023\020\007\032\f\022\006\013\005\n\t"
   %tmp = call i16 @llvm.cttz.i16(i16 %a, i1 false)
   ret i16 %tmp
 }
@@ -120,40 +102,28 @@ define i32 @test_i32(i32 %a) {
 ; CHECK-THUMB-LABEL: test_i32:
 ; CHECK-THUMB:       @ %bb.0:
 ; CHECK-THUMB-NEXT:    cmp r0, #0
-; CHECK-THUMB-NEXT:    beq .LBB2_2
+; CHECK-THUMB-NEXT:    beq .LBB2_3
 ; CHECK-THUMB-NEXT:  @ %bb.1: @ %cond.false
-; CHECK-THUMB-NEXT:    subs r1, r0, #1
-; CHECK-THUMB-NEXT:    bics r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r1, #1
-; CHECK-THUMB-NEXT:    ldr r2, .LCPI2_0
-; CHECK-THUMB-NEXT:    ands r2, r0
-; CHECK-THUMB-NEXT:    subs r0, r1, r2
-; CHECK-THUMB-NEXT:    ldr r1, .LCPI2_1
-; CHECK-THUMB-NEXT:    lsrs r2, r0, #2
-; CHECK-THUMB-NEXT:    ands r0, r1
-; CHECK-THUMB-NEXT:    ands r2, r1
-; CHECK-THUMB-NEXT:    adds r0, r0, r2
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    ldr r1, .LCPI2_2
+; CHECK-THUMB-NEXT:    cmp r0, #0
+; CHECK-THUMB-NEXT:    beq .LBB2_3
+; CHECK-THUMB-NEXT:  @ %bb.2: @ %cond.false
+; CHECK-THUMB-NEXT:    rsbs r1, r0, #0
 ; CHECK-THUMB-NEXT:    ands r1, r0
-; CHECK-THUMB-NEXT:    ldr r0, .LCPI2_3
+; CHECK-THUMB-NEXT:    ldr r0, .LCPI2_0
 ; CHECK-THUMB-NEXT:    muls r0, r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r0, #24
+; CHECK-THUMB-NEXT:    lsrs r0, r0, #27
+; CHECK-THUMB-NEXT:    adr r1, .LCPI2_1
+; CHECK-THUMB-NEXT:    ldrb r0, [r1, r0]
 ; CHECK-THUMB-NEXT:    bx lr
-; CHECK-THUMB-NEXT:  .LBB2_2:
+; CHECK-THUMB-NEXT:  .LBB2_3:
 ; CHECK-THUMB-NEXT:    movs r0, #32
 ; CHECK-THUMB-NEXT:    bx lr
 ; CHECK-THUMB-NEXT:    .p2align 2
-; CHECK-THUMB-NEXT:  @ %bb.3:
+; CHECK-THUMB-NEXT:  @ %bb.4:
 ; CHECK-THUMB-NEXT:  .LCPI2_0:
-; CHECK-THUMB-NEXT:    .long 1431655765 @ 0x55555555
+; CHECK-THUMB-NEXT:    .long 125613361 @ 0x77cb531
 ; CHECK-THUMB-NEXT:  .LCPI2_1:
-; CHECK-THUMB-NEXT:    .long 858993459 @ 0x33333333
-; CHECK-THUMB-NEXT:  .LCPI2_2:
-; CHECK-THUMB-NEXT:    .long 252645135 @ 0xf0f0f0f
-; CHECK-THUMB-NEXT:  .LCPI2_3:
-; CHECK-THUMB-NEXT:    .long 16843009 @ 0x1010101
+; CHECK-THUMB-NEXT:    .ascii "\000\001\034\002\035\016\030\003\036\026\024\017\031\021\004\b\037\033\r\027\025\023\020\007\032\f\022\006\013\005\n\t"
   %tmp = call i32 @llvm.cttz.i32(i32 %a, i1 false)
   ret i32 %tmp
 }
@@ -176,56 +146,47 @@ define i64 @test_i64(i64 %a) {
 ; CHECK-THUMB-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-THUMB-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-THUMB-NEXT:    ldr r5, .LCPI3_0
-; CHECK-THUMB-NEXT:    ldr r4, .LCPI3_1
-; CHECK-THUMB-NEXT:    ldr r3, .LCPI3_2
-; CHECK-THUMB-NEXT:    ldr r2, .LCPI3_3
+; CHECK-THUMB-NEXT:    adr r4, .LCPI3_1
+; CHECK-THUMB-NEXT:    movs r3, #32
 ; CHECK-THUMB-NEXT:    cmp r0, #0
-; CHECK-THUMB-NEXT:    bne .LBB3_2
+; CHECK-THUMB-NEXT:    mov r2, r3
+; CHECK-THUMB-NEXT:    bne .LBB3_5
 ; CHECK-THUMB-NEXT:  @ %bb.1:
-; CHECK-THUMB-NEXT:    subs r0, r1, #1
-; CHECK-THUMB-NEXT:    bics r0, r1
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #1
-; CHECK-THUMB-NEXT:    ands r1, r5
-; CHECK-THUMB-NEXT:    subs r0, r0, r1
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #2
-; CHECK-THUMB-NEXT:    ands r0, r4
-; CHECK-THUMB-NEXT:    ands r1, r4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    ands r0, r3
-; CHECK-THUMB-NEXT:    muls r2, r0, r2
-; CHECK-THUMB-NEXT:    lsrs r0, r2, #24
-; CHECK-THUMB-NEXT:    adds r0, #32
-; CHECK-THUMB-NEXT:    movs r1, #0
-; CHECK-THUMB-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-THUMB-NEXT:    cmp r1, #0
+; CHECK-THUMB-NEXT:    bne .LBB3_6
 ; CHECK-THUMB-NEXT:  .LBB3_2:
-; CHECK-THUMB-NEXT:    subs r1, r0, #1
-; CHECK-THUMB-NEXT:    bics r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r1, #1
-; CHECK-THUMB-NEXT:    ands r0, r5
-; CHECK-THUMB-NEXT:    subs r0, r1, r0
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #2
-; CHECK-THUMB-NEXT:    ands r0, r4
-; CHECK-THUMB-NEXT:    ands r1, r4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    ands r0, r3
-; CHECK-THUMB-NEXT:    muls r2, r0, r2
-; CHECK-THUMB-NEXT:    lsrs r0, r2, #24
+; CHECK-THUMB-NEXT:    cmp r0, #0
+; CHECK-THUMB-NEXT:    bne .LBB3_4
+; CHECK-THUMB-NEXT:  .LBB3_3:
+; CHECK-THUMB-NEXT:    adds r3, #32
+; CHECK-THUMB-NEXT:    mov r2, r3
+; CHECK-THUMB-NEXT:  .LBB3_4:
 ; CHECK-THUMB-NEXT:    movs r1, #0
+; CHECK-THUMB-NEXT:    mov r0, r2
 ; CHECK-THUMB-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-THUMB-NEXT:  .LBB3_5:
+; CHECK-THUMB-NEXT:    rsbs r2, r0, #0
+; CHECK-THUMB-NEXT:    ands r2, r0
+; CHECK-THUMB-NEXT:    muls r2, r5, r2
+; CHECK-THUMB-NEXT:    lsrs r2, r2, #27
+; CHECK-THUMB-NEXT:    ldrb r2, [r4, r2]
+; CHECK-THUMB-NEXT:    cmp r1, #0
+; CHECK-THUMB-NEXT:    beq .LBB3_2
+; CHECK-THUMB-NEXT:  .LBB3_6:
+; CHECK-THUMB-NEXT:    rsbs r3, r1, #0
+; CHECK-THUMB-NEXT:    ands r3, r1
+; CHECK-THUMB-NEXT:    muls r5, r3, r5
+; CHECK-THUMB-NEXT:    lsrs r1, r5, #27
+; CHECK-THUMB-NEXT:    ldrb r3, [r4, r1]
+; CHECK-THUMB-NEXT:    cmp r0, #0
+; CHECK-THUMB-NEXT:    beq .LBB3_3
+; CHECK-THUMB-NEXT:    b .LBB3_4
 ; CHECK-THUMB-NEXT:    .p2align 2
-; CHECK-THUMB-NEXT:  @ %bb.3:
+; CHECK-THUMB-NEXT:  @ %bb.7:
 ; CHECK-THUMB-NEXT:  .LCPI3_0:
-; CHECK-THUMB-NEXT:    .long 1431655765 @ 0x55555555
+; CHECK-THUMB-NEXT:    .long 125613361 @ 0x77cb531
 ; CHECK-THUMB-NEXT:  .LCPI3_1:
-; CHECK-THUMB-NEXT:    .long 858993459 @ 0x33333333
-; CHECK-THUMB-NEXT:  .LCPI3_2:
-; CHECK-THUMB-NEXT:    .long 252645135 @ 0xf0f0f0f
-; CHECK-THUMB-NEXT:  .LCPI3_3:
-; CHECK-THUMB-NEXT:    .long 16843009 @ 0x1010101
+; CHECK-THUMB-NEXT:    .ascii "\000\001\034\002\035\016\030\003\036\026\024\017\031\021\004\b\037\033\r\027\025\023\020\007\032\f\022\006\013\005\n\t"
   %tmp = call i64 @llvm.cttz.i64(i64 %a, i1 false)
   ret i64 %tmp
 }
@@ -241,35 +202,26 @@ define i8 @test_i8_zero_undef(i8 %a) {
 ;
 ; CHECK-THUMB-LABEL: test_i8_zero_undef:
 ; CHECK-THUMB:       @ %bb.0:
-; CHECK-THUMB-NEXT:    subs r1, r0, #1
-; CHECK-THUMB-NEXT:    bics r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r1, #1
-; CHECK-THUMB-NEXT:    ldr r2, .LCPI4_0
-; CHECK-THUMB-NEXT:    ands r2, r0
-; CHECK-THUMB-NEXT:    subs r0, r1, r2
-; CHECK-THUMB-NEXT:    ldr r1, .LCPI4_1
-; CHECK-THUMB-NEXT:    lsrs r2, r0, #2
-; CHECK-THUMB-NEXT:    ands r0, r1
-; CHECK-THUMB-NEXT:    ands r2, r1
-; CHECK-THUMB-NEXT:    adds r0, r0, r2
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    ldr r1, .LCPI4_2
+; CHECK-THUMB-NEXT:    cmp r0, #0
+; CHECK-THUMB-NEXT:    beq .LBB4_2
+; CHECK-THUMB-NEXT:  @ %bb.1:
+; CHECK-THUMB-NEXT:    rsbs r1, r0, #0
 ; CHECK-THUMB-NEXT:    ands r1, r0
-; CHECK-THUMB-NEXT:    ldr r0, .LCPI4_3
+; CHECK-THUMB-NEXT:    ldr r0, .LCPI4_0
 ; CHECK-THUMB-NEXT:    muls r0, r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r0, #24
+; CHECK-THUMB-NEXT:    lsrs r0, r0, #27
+; CHECK-THUMB-NEXT:    adr r1, .LCPI4_1
+; CHECK-THUMB-NEXT:    ldrb r0, [r1, r0]
+; CHECK-THUMB-NEXT:    bx lr
+; CHECK-THUMB-NEXT:  .LBB4_2:
+; CHECK-THUMB-NEXT:    movs r0, #32
 ; CHECK-THUMB-NEXT:    bx lr
 ; CHECK-THUMB-NEXT:    .p2align 2
-; CHECK-THUMB-NEXT:  @ %bb.1:
+; CHECK-THUMB-NEXT:  @ %bb.3:
 ; CHECK-THUMB-NEXT:  .LCPI4_0:
-; CHECK-THUMB-NEXT:    .long 1431655765 @ 0x55555555
+; CHECK-THUMB-NEXT:    .long 125613361 @ 0x77cb531
 ; CHECK-THUMB-NEXT:  .LCPI4_1:
-; CHECK-THUMB-NEXT:    .long 858993459 @ 0x33333333
-; CHECK-THUMB-NEXT:  .LCPI4_2:
-; CHECK-THUMB-NEXT:    .long 252645135 @ 0xf0f0f0f
-; CHECK-THUMB-NEXT:  .LCPI4_3:
-; CHECK-THUMB-NEXT:    .long 16843009 @ 0x1010101
+; CHECK-THUMB-NEXT:    .ascii "\000\001\034\002\035\016\030\003\036\026\024\017\031\021\004\b\037\033\r\027\025\023\020\007\032\f\022\006\013\005\n\t"
   %tmp = call i8 @llvm.cttz.i8(i8 %a, i1 true)
   ret i8 %tmp
 }
@@ -283,35 +235,26 @@ define i16 @test_i16_zero_undef(i16 %a) {
 ;
 ; CHECK-THUMB-LABEL: test_i16_zero_undef:
 ; CHECK-THUMB:       @ %bb.0:
-; CHECK-THUMB-NEXT:    subs r1, r0, #1
-; CHECK-THUMB-NEXT:    bics r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r1, #1
-; CHECK-THUMB-NEXT:    ldr r2, .LCPI5_0
-; CHECK-THUMB-NEXT:    ands r2, r0
-; CHECK-THUMB-NEXT:    subs r0, r1, r2
-; CHECK-THUMB-NEXT:    ldr r1, .LCPI5_1
-; CHECK-THUMB-NEXT:    lsrs r2, r0, #2
-; CHECK-THUMB-NEXT:    ands r0, r1
-; CHECK-THUMB-NEXT:    ands r2, r1
-; CHECK-THUMB-NEXT:    adds r0, r0, r2
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    ldr r1, .LCPI5_2
+; CHECK-THUMB-NEXT:    cmp r0, #0
+; CHECK-THUMB-NEXT:    beq .LBB5_2
+; CHECK-THUMB-NEXT:  @ %bb.1:
+; CHECK-THUMB-NEXT:    rsbs r1, r0, #0
 ; CHECK-THUMB-NEXT:    ands r1, r0
-; CHECK-THUMB-NEXT:    ldr r0, .LCPI5_3
+; CHECK-THUMB-NEXT:    ldr r0, .LCPI5_0
 ; CHECK-THUMB-NEXT:    muls r0, r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r0, #24
+; CHECK-THUMB-NEXT:    lsrs r0, r0, #27
+; CHECK-THUMB-NEXT:    adr r1, .LCPI5_1
+; CHECK-THUMB-NEXT:    ldrb r0, [r1, r0]
+; CHECK-THUMB-NEXT:    bx lr
+; CHECK-THUMB-NEXT:  .LBB5_2:
+; CHECK-THUMB-NEXT:    movs r0, #32
 ; CHECK-THUMB-NEXT:    bx lr
 ; CHECK-THUMB-NEXT:    .p2align 2
-; CHECK-THUMB-NEXT:  @ %bb.1:
+; CHECK-THUMB-NEXT:  @ %bb.3:
 ; CHECK-THUMB-NEXT:  .LCPI5_0:
-; CHECK-THUMB-NEXT:    .long 1431655765 @ 0x55555555
+; CHECK-THUMB-NEXT:    .long 125613361 @ 0x77cb531
 ; CHECK-THUMB-NEXT:  .LCPI5_1:
-; CHECK-THUMB-NEXT:    .long 858993459 @ 0x33333333
-; CHECK-THUMB-NEXT:  .LCPI5_2:
-; CHECK-THUMB-NEXT:    .long 252645135 @ 0xf0f0f0f
-; CHECK-THUMB-NEXT:  .LCPI5_3:
-; CHECK-THUMB-NEXT:    .long 16843009 @ 0x1010101
+; CHECK-THUMB-NEXT:    .ascii "\000\001\034\002\035\016\030\003\036\026\024\017\031\021\004\b\037\033\r\027\025\023\020\007\032\f\022\006\013\005\n\t"
   %tmp = call i16 @llvm.cttz.i16(i16 %a, i1 true)
   ret i16 %tmp
 }
@@ -326,35 +269,26 @@ define i32 @test_i32_zero_undef(i32 %a) {
 ;
 ; CHECK-THUMB-LABEL: test_i32_zero_undef:
 ; CHECK-THUMB:       @ %bb.0:
-; CHECK-THUMB-NEXT:    subs r1, r0, #1
-; CHECK-THUMB-NEXT:    bics r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r1, #1
-; CHECK-THUMB-NEXT:    ldr r2, .LCPI6_0
-; CHECK-THUMB-NEXT:    ands r2, r0
-; CHECK-THUMB-NEXT:    subs r0, r1, r2
-; CHECK-THUMB-NEXT:    ldr r1, .LCPI6_1
-; CHECK-THUMB-NEXT:    lsrs r2, r0, #2
-; CHECK-THUMB-NEXT:    ands r0, r1
-; CHECK-THUMB-NEXT:    ands r2, r1
-; CHECK-THUMB-NEXT:    adds r0, r0, r2
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    ldr r1, .LCPI6_2
+; CHECK-THUMB-NEXT:    cmp r0, #0
+; CHECK-THUMB-NEXT:    beq .LBB6_2
+; CHECK-THUMB-NEXT:  @ %bb.1:
+; CHECK-THUMB-NEXT:    rsbs r1, r0, #0
 ; CHECK-THUMB-NEXT:    ands r1, r0
-; CHECK-THUMB-NEXT:    ldr r0, .LCPI6_3
+; CHECK-THUMB-NEXT:    ldr r0, .LCPI6_0
 ; CHECK-THUMB-NEXT:    muls r0, r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r0, #24
+; CHECK-THUMB-NEXT:    lsrs r0, r0, #27
+; CHECK-THUMB-NEXT:    adr r1, .LCPI6_1
+; CHECK-THUMB-NEXT:    ldrb r0, [r1, r0]
+; CHECK-THUMB-NEXT:    bx lr
+; CHECK-THUMB-NEXT:  .LBB6_2:
+; CHECK-THUMB-NEXT:    movs r0, #32
 ; CHECK-THUMB-NEXT:    bx lr
 ; CHECK-THUMB-NEXT:    .p2align 2
-; CHECK-THUMB-NEXT:  @ %bb.1:
+; CHECK-THUMB-NEXT:  @ %bb.3:
 ; CHECK-THUMB-NEXT:  .LCPI6_0:
-; CHECK-THUMB-NEXT:    .long 1431655765 @ 0x55555555
+; CHECK-THUMB-NEXT:    .long 125613361 @ 0x77cb531
 ; CHECK-THUMB-NEXT:  .LCPI6_1:
-; CHECK-THUMB-NEXT:    .long 858993459 @ 0x33333333
-; CHECK-THUMB-NEXT:  .LCPI6_2:
-; CHECK-THUMB-NEXT:    .long 252645135 @ 0xf0f0f0f
-; CHECK-THUMB-NEXT:  .LCPI6_3:
-; CHECK-THUMB-NEXT:    .long 16843009 @ 0x1010101
+; CHECK-THUMB-NEXT:    .ascii "\000\001\034\002\035\016\030\003\036\026\024\017\031\021\004\b\037\033\r\027\025\023\020\007\032\f\022\006\013\005\n\t"
   %tmp = call i32 @llvm.cttz.i32(i32 %a, i1 true)
   ret i32 %tmp
 }
@@ -377,56 +311,47 @@ define i64 @test_i64_zero_undef(i64 %a) {
 ; CHECK-THUMB-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-THUMB-NEXT:    push {r4, r5, r7, lr}
 ; CHECK-THUMB-NEXT:    ldr r5, .LCPI7_0
-; CHECK-THUMB-NEXT:    ldr r4, .LCPI7_1
-; CHECK-THUMB-NEXT:    ldr r3, .LCPI7_2
-; CHECK-THUMB-NEXT:    ldr r2, .LCPI7_3
+; CHECK-THUMB-NEXT:    adr r4, .LCPI7_1
+; CHECK-THUMB-NEXT:    movs r3, #32
 ; CHECK-THUMB-NEXT:    cmp r0, #0
-; CHECK-THUMB-NEXT:    bne .LBB7_2
+; CHECK-THUMB-NEXT:    mov r2, r3
+; CHECK-THUMB-NEXT:    bne .LBB7_5
 ; CHECK-THUMB-NEXT:  @ %bb.1:
-; CHECK-THUMB-NEXT:    subs r0, r1, #1
-; CHECK-THUMB-NEXT:    bics r0, r1
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #1
-; CHECK-THUMB-NEXT:    ands r1, r5
-; CHECK-THUMB-NEXT:    subs r0, r0, r1
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #2
-; CHECK-THUMB-NEXT:    ands r0, r4
-; CHECK-THUMB-NEXT:    ands r1, r4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    ands r0, r3
-; CHECK-THUMB-NEXT:    muls r2, r0, r2
-; CHECK-THUMB-NEXT:    lsrs r0, r2, #24
-; CHECK-THUMB-NEXT:    adds r0, #32
-; CHECK-THUMB-NEXT:    movs r1, #0
-; CHECK-THUMB-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-THUMB-NEXT:    cmp r1, #0
+; CHECK-THUMB-NEXT:    bne .LBB7_6
 ; CHECK-THUMB-NEXT:  .LBB7_2:
-; CHECK-THUMB-NEXT:    subs r1, r0, #1
-; CHECK-THUMB-NEXT:    bics r1, r0
-; CHECK-THUMB-NEXT:    lsrs r0, r1, #1
-; CHECK-THUMB-NEXT:    ands r0, r5
-; CHECK-THUMB-NEXT:    subs r0, r1, r0
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #2
-; CHECK-THUMB-NEXT:    ands r0, r4
-; CHECK-THUMB-NEXT:    ands r1, r4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    lsrs r1, r0, #4
-; CHECK-THUMB-NEXT:    adds r0, r0, r1
-; CHECK-THUMB-NEXT:    ands r0, r3
-; CHECK-THUMB-NEXT:    muls r2, r0, r2
-; CHECK-THUMB-NEXT:    lsrs r0, r2, #24
+; CHECK-THUMB-NEXT:    cmp r0, #0
+; CHECK-THUMB-NEXT:    bne .LBB7_4
+; CHECK-THUMB-NEXT:  .LBB7_3:
+; CHECK-THUMB-NEXT:    adds r3, #32
+; CHECK-THUMB-NEXT:    mov r2, r3
+; CHECK-THUMB-NEXT:  .LBB7_4:
 ; CHECK-THUMB-NEXT:    movs r1, #0
+; CHECK-THUMB-NEXT:    mov r0, r2
 ; CHECK-THUMB-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-THUMB-NEXT:  .LBB7_5:
+; CHECK-THUMB-NEXT:    rsbs r2, r0, #0
+; CHECK-THUMB-NEXT:    ands r2, r0
+; CHECK-THUMB-NEXT:    muls r2, r5, r2
+; CHECK-THUMB-NEXT:    lsrs r2, r2, #27
+; CHECK-THUMB-NEXT:    ldrb r2, [r4, r2]
+; CHECK-THUMB-NEXT:    cmp r1, #0
+; CHECK-THUMB-NEXT:    beq .LBB7_2
+; CHECK-THUMB-NEXT:  .LBB7_6:
+; CHECK-THUMB-NEXT:    rsbs r3, r1, #0
+; CHECK-THUMB-NEXT:    ands r3, r1
+; CHECK-THUMB-NEXT:    muls r5, r3, r5
+; CHECK-THUMB-NEXT:    lsrs r1, r5, #27
+; CHECK-THUMB-NEXT:    ldrb r3, [r4, r1]
+; CHECK-THUMB-NEXT:    cmp r0, #0
+; CHECK-THUMB-NEXT:    beq .LBB7_3
+; CHECK-THUMB-NEXT:    b .LBB7_4
 ; CHECK-THUMB-NEXT:    .p2align 2
-; CHECK-THUMB-NEXT:  @ %bb.3:
+; CHECK-THUMB-NEXT:  @ %bb.7:
 ; CHECK-THUMB-NEXT:  .LCPI7_0:
-; CHECK-THUMB-NEXT:    .long 1431655765 @ 0x55555555
+; CHECK-THUMB-NEXT:    .long 125613361 @ 0x77cb531
 ; CHECK-THUMB-NEXT:  .LCPI7_1:
-; CHECK-THUMB-NEXT:    .long 858993459 @ 0x33333333
-; CHECK-THUMB-NEXT:  .LCPI7_2:
-; CHECK-THUMB-NEXT:    .long 252645135 @ 0xf0f0f0f
-; CHECK-THUMB-NEXT:  .LCPI7_3:
-; CHECK-THUMB-NEXT:    .long 16843009 @ 0x1010101
+; CHECK-THUMB-NEXT:    .ascii "\000\001\034\002\035\016\030\003\036\026\024\017\031\021\004\b\037\033\r\027\025\023\020\007\032\f\022\006\013\005\n\t"
   %tmp = call i64 @llvm.cttz.i64(i64 %a, i1 true)
   ret i64 %tmp
 }
