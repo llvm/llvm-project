@@ -274,7 +274,7 @@ uint32_t SIMCCodeEmitter::getLitEncoding(const MCOperand &MO,
       return getLit32Encoding(static_cast<uint32_t>(Imm), STI);
     if (OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP16)
       return getLit16Encoding(static_cast<uint16_t>(Imm), STI);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
   case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:

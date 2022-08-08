@@ -2017,7 +2017,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
                                      TargetTransformInfo::OP_None);
       return Cost;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::UDIV: {
     if (Opd2Info == TargetTransformInfo::OK_UniformConstantValue) {
       auto VT = TLI->getValueType(DL, Ty);

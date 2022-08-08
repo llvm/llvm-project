@@ -2017,7 +2017,7 @@ NVPTXAsmPrinter::lowerConstantForGV(const Constant *CV, bool ProcessingGeneric) 
     // expression properly.  This is important for differences between
     // blockaddress labels.  Since the two labels are in the same function, it
     // is reasonable to treat their delta as a 32-bit value.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::BitCast:
     return lowerConstantForGV(CE->getOperand(0), ProcessingGeneric);
 

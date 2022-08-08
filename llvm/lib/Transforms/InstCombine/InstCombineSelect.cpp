@@ -1371,7 +1371,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
                                       C2->getType()->getScalarSizeInBits()))))
       return nullptr; // Can't do, have signed max element[s].
     C2 = InstCombiner::AddOne(C2);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ICmpInst::Predicate::ICMP_SGE:
     // Also non-canonical, but here we don't need to change C2,
     // so we don't have any restrictions on C2, so we can just handle it.

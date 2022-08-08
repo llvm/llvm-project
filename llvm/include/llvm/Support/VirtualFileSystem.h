@@ -861,7 +861,7 @@ public:
     static bool classof(const Entry *E) {
       switch (E->getKind()) {
       case EK_DirectoryRemap:
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case EK_File:
         return true;
       case EK_Directory:

@@ -675,7 +675,7 @@ static PHINode *getLoopPhiForCounter(Value *IncV, Loop *L) {
     // An IV counter must preserve its type.
     if (IncI->getNumOperands() == 2)
       break;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     return nullptr;
   }

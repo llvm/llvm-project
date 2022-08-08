@@ -105,7 +105,7 @@ X86InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
       // It's not always legal to reference the low 8-bit of the larger
       // register in 32-bit mode.
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case X86::MOVSX32rr16:
   case X86::MOVZX32rr16:
   case X86::MOVSX64rr16:
@@ -1395,7 +1395,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
   }
   case X86::SHL8ri:
     Is8BitOp = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case X86::SHL16ri: {
     assert(MI.getNumOperands() >= 3 && "Unknown shift instruction!");
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);
@@ -1456,7 +1456,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
   case X86::DEC8r:
   case X86::INC8r:
     Is8BitOp = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case X86::DEC16r:
   case X86::INC16r:
     return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
@@ -1512,7 +1512,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
   case X86::ADD8rr:
   case X86::ADD8rr_DB:
     Is8BitOp = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case X86::ADD16rr:
   case X86::ADD16rr_DB:
     return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
@@ -1554,7 +1554,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
   case X86::ADD8ri:
   case X86::ADD8ri_DB:
     Is8BitOp = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case X86::ADD16ri:
   case X86::ADD16ri8:
   case X86::ADD16ri_DB:
@@ -2047,7 +2047,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                                        OpIdx1, OpIdx2);
       }
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case X86::PBLENDWrri:
   case X86::VBLENDPDYrri:
   case X86::VBLENDPSYrri:
@@ -2798,18 +2798,18 @@ X86::getX86ConditionCode(CmpInst::Predicate Predicate) {
   default: break;
   // Floating-point Predicates
   case CmpInst::FCMP_UEQ: CC = X86::COND_E;       break;
-  case CmpInst::FCMP_OLT: NeedSwap = true;        LLVM_FALLTHROUGH;
+  case CmpInst::FCMP_OLT: NeedSwap = true;        [[fallthrough]];
   case CmpInst::FCMP_OGT: CC = X86::COND_A;       break;
-  case CmpInst::FCMP_OLE: NeedSwap = true;        LLVM_FALLTHROUGH;
+  case CmpInst::FCMP_OLE: NeedSwap = true;        [[fallthrough]];
   case CmpInst::FCMP_OGE: CC = X86::COND_AE;      break;
-  case CmpInst::FCMP_UGT: NeedSwap = true;        LLVM_FALLTHROUGH;
+  case CmpInst::FCMP_UGT: NeedSwap = true;        [[fallthrough]];
   case CmpInst::FCMP_ULT: CC = X86::COND_B;       break;
-  case CmpInst::FCMP_UGE: NeedSwap = true;        LLVM_FALLTHROUGH;
+  case CmpInst::FCMP_UGE: NeedSwap = true;        [[fallthrough]];
   case CmpInst::FCMP_ULE: CC = X86::COND_BE;      break;
   case CmpInst::FCMP_ONE: CC = X86::COND_NE;      break;
   case CmpInst::FCMP_UNO: CC = X86::COND_P;       break;
   case CmpInst::FCMP_ORD: CC = X86::COND_NP;      break;
-  case CmpInst::FCMP_OEQ:                         LLVM_FALLTHROUGH;
+  case CmpInst::FCMP_OEQ:                         [[fallthrough]];
   case CmpInst::FCMP_UNE: CC = X86::COND_INVALID; break;
 
   // Integer Predicates
@@ -4494,7 +4494,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         // can't do the optimization.
         if (NoSignFlag)
           return false;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case X86::COND_O: case X86::COND_NO:
         // If OF is used, the instruction needs to clear it like CmpZero does.
         if (!ClearsOverflowFlag)

@@ -6739,23 +6739,23 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
       if (ST->hasMVEFloatOps()) {
         Opc = ARMCC::NE; break;
       } else {
-        Invert = true; LLVM_FALLTHROUGH;
+        Invert = true; [[fallthrough]];
       }
     case ISD::SETOEQ:
     case ISD::SETEQ:  Opc = ARMCC::EQ; break;
     case ISD::SETOLT:
-    case ISD::SETLT: Swap = true; LLVM_FALLTHROUGH;
+    case ISD::SETLT: Swap = true; [[fallthrough]];
     case ISD::SETOGT:
     case ISD::SETGT:  Opc = ARMCC::GT; break;
     case ISD::SETOLE:
-    case ISD::SETLE:  Swap = true; LLVM_FALLTHROUGH;
+    case ISD::SETLE:  Swap = true; [[fallthrough]];
     case ISD::SETOGE:
     case ISD::SETGE: Opc = ARMCC::GE; break;
-    case ISD::SETUGE: Swap = true; LLVM_FALLTHROUGH;
+    case ISD::SETUGE: Swap = true; [[fallthrough]];
     case ISD::SETULE: Invert = true; Opc = ARMCC::GT; break;
-    case ISD::SETUGT: Swap = true; LLVM_FALLTHROUGH;
+    case ISD::SETUGT: Swap = true; [[fallthrough]];
     case ISD::SETULT: Invert = true; Opc = ARMCC::GE; break;
-    case ISD::SETUEQ: Invert = true; LLVM_FALLTHROUGH;
+    case ISD::SETUEQ: Invert = true; [[fallthrough]];
     case ISD::SETONE: {
       // Expand this to (OLT | OGT).
       SDValue TmpOp0 = DAG.getNode(ARMISD::VCMP, dl, CmpVT, Op1, Op0,
@@ -6767,7 +6767,7 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
         Result = DAG.getNOT(dl, Result, VT);
       return Result;
     }
-    case ISD::SETUO: Invert = true; LLVM_FALLTHROUGH;
+    case ISD::SETUO: Invert = true; [[fallthrough]];
     case ISD::SETO: {
       // Expand this to (OLT | OGE).
       SDValue TmpOp0 = DAG.getNode(ARMISD::VCMP, dl, CmpVT, Op1, Op0,
@@ -6788,16 +6788,16 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
       if (ST->hasMVEIntegerOps()) {
         Opc = ARMCC::NE; break;
       } else {
-        Invert = true; LLVM_FALLTHROUGH;
+        Invert = true; [[fallthrough]];
       }
     case ISD::SETEQ:  Opc = ARMCC::EQ; break;
-    case ISD::SETLT:  Swap = true; LLVM_FALLTHROUGH;
+    case ISD::SETLT:  Swap = true; [[fallthrough]];
     case ISD::SETGT:  Opc = ARMCC::GT; break;
-    case ISD::SETLE:  Swap = true; LLVM_FALLTHROUGH;
+    case ISD::SETLE:  Swap = true; [[fallthrough]];
     case ISD::SETGE:  Opc = ARMCC::GE; break;
-    case ISD::SETULT: Swap = true; LLVM_FALLTHROUGH;
+    case ISD::SETULT: Swap = true; [[fallthrough]];
     case ISD::SETUGT: Opc = ARMCC::HI; break;
-    case ISD::SETULE: Swap = true; LLVM_FALLTHROUGH;
+    case ISD::SETULE: Swap = true; [[fallthrough]];
     case ISD::SETUGE: Opc = ARMCC::HS; break;
     }
 
@@ -12301,7 +12301,7 @@ static bool isConditionalZeroOrAllOnes(SDNode *N, bool AllOnes,
     // (zext cc) can never be the all ones value.
     if (AllOnes)
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SIGN_EXTEND: {
     SDLoc dl(N);
     EVT VT = N->getValueType(0);
@@ -20979,7 +20979,7 @@ Instruction *ARMTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
   case AtomicOrdering::SequentiallyConsistent:
     if (!Inst->hasAtomicStore())
       return nullptr; // Nothing to do
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AtomicOrdering::Release:
   case AtomicOrdering::AcquireRelease:
     if (Subtarget->preferISHSTBarriers())

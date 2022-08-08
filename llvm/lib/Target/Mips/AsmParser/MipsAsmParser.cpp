@@ -1890,7 +1890,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     case Mips::BBIT1:
     case Mips::BBIT132:
       assert(hasCnMips() && "instruction only valid for octeon cpus");
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case Mips::BEQ:
     case Mips::BNE:
@@ -2072,7 +2072,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case Mips::SDIV_MM:
     FirstOp = 0;
     SecondOp = 1;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Mips::SDivMacro:
   case Mips::DSDivMacro:
   case Mips::UDivMacro:
@@ -5664,7 +5664,7 @@ bool MipsAsmParser::expandMXTRAlias(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   switch (Inst.getOpcode()) {
     case Mips::MFTC0:
       IsMFTR = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Mips::MTTC0:
       u = 0;
       rd = getRegisterForMxtrC0(Inst, IsMFTR);
@@ -5672,7 +5672,7 @@ bool MipsAsmParser::expandMXTRAlias(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       break;
     case Mips::MFTGPR:
       IsMFTR = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Mips::MTTGPR:
       rd = Inst.getOperand(IsMFTR ? 1 : 0).getReg();
       break;
@@ -5681,7 +5681,7 @@ bool MipsAsmParser::expandMXTRAlias(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
     case Mips::MFTACX:
     case Mips::MFTDSP:
       IsMFTR = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Mips::MTTLO:
     case Mips::MTTHI:
     case Mips::MTTACX:
@@ -5691,7 +5691,7 @@ bool MipsAsmParser::expandMXTRAlias(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       break;
     case Mips::MFTHC1:
       h = 1;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Mips::MFTC1:
       IsMFTR = true;
       rd = getRegisterForMxtrFP(Inst, IsMFTR);
@@ -5699,14 +5699,14 @@ bool MipsAsmParser::expandMXTRAlias(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       break;
     case Mips::MTTHC1:
       h = 1;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Mips::MTTC1:
       rd = getRegisterForMxtrFP(Inst, IsMFTR);
       sel = 2;
       break;
     case Mips::CFTC1:
       IsMFTR = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Mips::CTTC1:
       rd = getRegisterForMxtrFP(Inst, IsMFTR);
       sel = 3;

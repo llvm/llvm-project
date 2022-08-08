@@ -861,7 +861,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
   switch (I.getOpcode()) {
   case G_SEXT:
     isSExt = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case G_ZEXT: {
     assert(MRI.getType(I.getOperand(0).getReg()).getSizeInBits() <= 32 &&
            "Unsupported destination size for extension");

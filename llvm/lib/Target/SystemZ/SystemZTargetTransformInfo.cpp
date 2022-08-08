@@ -1056,7 +1056,7 @@ isFoldableLoad(const LoadInst *Ld, const Instruction *&FoldedValue) {
   case Instruction::ICmp:
     if (LoadedBits == 32 && ZExtBits == 64)
       return true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::Mul: // SE: 16->32, 32->64, z14:16->64
     if (UserI->getOpcode() != Instruction::ICmp) {
       if (LoadedBits == 16 &&
@@ -1066,11 +1066,11 @@ isFoldableLoad(const LoadInst *Ld, const Instruction *&FoldedValue) {
       if (LoadOrTruncBits == 16)
         return true;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::SDiv:// SE: 32->64
     if (LoadedBits == 32 && SExtBits == 64)
       return true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::UDiv:
   case Instruction::And:
   case Instruction::Or:

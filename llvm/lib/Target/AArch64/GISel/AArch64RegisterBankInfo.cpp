@@ -648,7 +648,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
           /*NumOperands*/ 1);
     }
     // Both registers are generic, use G_BITCAST.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case TargetOpcode::G_BITCAST: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());

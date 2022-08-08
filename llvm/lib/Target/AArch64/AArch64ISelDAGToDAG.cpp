@@ -3694,7 +3694,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       return;
     if (tryBitfieldInsertInZeroOp(Node))
       return;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::ROTR:
   case ISD::SHL:
     if (tryShiftAmountMod(Node))

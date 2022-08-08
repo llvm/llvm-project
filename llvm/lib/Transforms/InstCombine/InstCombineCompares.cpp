@@ -3479,7 +3479,7 @@ Instruction *InstCombinerImpl::foldICmpBinOpWithConstant(ICmpInst &Cmp,
   case Instruction::UDiv:
     if (Instruction *I = foldICmpUDivConstant(Cmp, BO, C))
       return I;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::SDiv:
     if (Instruction *I = foldICmpDivConstant(Cmp, BO, C))
       return I;
@@ -5947,7 +5947,7 @@ static Instruction *canonicalizeICmpBool(ICmpInst &I,
   case ICmpInst::ICMP_UGT:
     // icmp ugt -> icmp ult
     std::swap(A, B);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ICmpInst::ICMP_ULT:
     // icmp ult i1 A, B -> ~A & B
     return BinaryOperator::CreateAnd(Builder.CreateNot(A), B);
@@ -5955,7 +5955,7 @@ static Instruction *canonicalizeICmpBool(ICmpInst &I,
   case ICmpInst::ICMP_SGT:
     // icmp sgt -> icmp slt
     std::swap(A, B);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ICmpInst::ICMP_SLT:
     // icmp slt i1 A, B -> A & ~B
     return BinaryOperator::CreateAnd(Builder.CreateNot(B), A);
@@ -5963,7 +5963,7 @@ static Instruction *canonicalizeICmpBool(ICmpInst &I,
   case ICmpInst::ICMP_UGE:
     // icmp uge -> icmp ule
     std::swap(A, B);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ICmpInst::ICMP_ULE:
     // icmp ule i1 A, B -> ~A | B
     return BinaryOperator::CreateOr(Builder.CreateNot(A), B);
@@ -5971,7 +5971,7 @@ static Instruction *canonicalizeICmpBool(ICmpInst &I,
   case ICmpInst::ICMP_SGE:
     // icmp sge -> icmp sle
     std::swap(A, B);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ICmpInst::ICMP_SLE:
     // icmp sle i1 A, B -> A | ~B
     return BinaryOperator::CreateOr(Builder.CreateNot(B), A);

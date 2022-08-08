@@ -282,7 +282,7 @@ Error InlineAsm::verify(FunctionType *Ty, StringRef ConstStr) {
         break;
       }
       ++NumIndirect;
-      LLVM_FALLTHROUGH; // We fall through for Indirect Outputs.
+      [[fallthrough]]; // We fall through for Indirect Outputs.
     case InlineAsm::isInput:
       if (NumClobbers)
         return makeStringError("input constraint occurs after clobber "

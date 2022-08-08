@@ -549,7 +549,7 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
     if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
       return 0;
     // fall-through to ADDXri and ADDWri.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::ADDXri:
   case AArch64::ADDWri:
     // add x, 1 -> csinc.
@@ -577,7 +577,7 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
     if (DefMI->findRegisterDefOperandIdx(AArch64::NZCV, true) == -1)
       return 0;
     // fall-through to SUBXrr and SUBWrr.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::SUBXrr:
   case AArch64::SUBWrr: {
     // neg x -> csneg, represented as sub dst, xzr, src.
@@ -1576,7 +1576,7 @@ static UsedNZCV getUsedNZCV(AArch64CC::CondCode CC) {
   case AArch64CC::HI: // Z clear and C set
   case AArch64CC::LS: // Z set   or  C clear
     UsedFlags.Z = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64CC::HS: // C set
   case AArch64CC::LO: // C clear
     UsedFlags.C = true;
@@ -1595,7 +1595,7 @@ static UsedNZCV getUsedNZCV(AArch64CC::CondCode CC) {
   case AArch64CC::GT: // Z clear, N and V the same
   case AArch64CC::LE: // Z set,   N and V differ
     UsedFlags.Z = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64CC::GE: // N and V the same
   case AArch64CC::LT: // N and V differ
     UsedFlags.N = true;
@@ -8021,7 +8021,7 @@ Optional<RegImmPair> AArch64InstrInfo::isAddImmediate(const MachineInstr &MI,
   case AArch64::SUBSWri:
   case AArch64::SUBSXri:
     Sign *= -1;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::ADDSWri:
   case AArch64::ADDSXri:
   case AArch64::ADDWri:

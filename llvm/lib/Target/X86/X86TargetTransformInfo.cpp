@@ -109,7 +109,7 @@ llvm::Optional<unsigned> X86TTIImpl::getCacheAssociativity(
   //   - Kabylake
   switch (Level) {
   case TargetTransformInfo::CacheLevel::L1D:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case TargetTransformInfo::CacheLevel::L2D:
     return 8;
   }

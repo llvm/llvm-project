@@ -82,11 +82,11 @@ static void replaceFrameIndex(MachineBasicBlock::iterator II,
   switch (MI.getOpcode()) {
   case ARC::LD_rs9:
     assert((Offset % 4 == 0) && "LD needs 4 byte alignment.");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARC::LDH_rs9:
   case ARC::LDH_X_rs9:
     assert((Offset % 2 == 0) && "LDH needs 2 byte alignment.");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARC::LDB_rs9:
   case ARC::LDB_X_rs9:
     LLVM_DEBUG(dbgs() << "Building LDFI\n");
@@ -97,10 +97,10 @@ static void replaceFrameIndex(MachineBasicBlock::iterator II,
     break;
   case ARC::ST_rs9:
     assert((Offset % 4 == 0) && "ST needs 4 byte alignment.");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARC::STH_rs9:
     assert((Offset % 2 == 0) && "STH needs 2 byte alignment.");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARC::STB_rs9:
     LLVM_DEBUG(dbgs() << "Building STFI\n");
     BuildMI(MBB, II, DL, TII.get(MI.getOpcode()))

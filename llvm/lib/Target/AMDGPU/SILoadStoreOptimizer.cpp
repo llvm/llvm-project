@@ -362,14 +362,14 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM:
     return 8;
-  case AMDGPU::DS_READ_B32:      LLVM_FALLTHROUGH;
-  case AMDGPU::DS_READ_B32_gfx9: LLVM_FALLTHROUGH;
-  case AMDGPU::DS_WRITE_B32:     LLVM_FALLTHROUGH;
+  case AMDGPU::DS_READ_B32:      [[fallthrough]];
+  case AMDGPU::DS_READ_B32_gfx9: [[fallthrough]];
+  case AMDGPU::DS_WRITE_B32:     [[fallthrough]];
   case AMDGPU::DS_WRITE_B32_gfx9:
     return 1;
-  case AMDGPU::DS_READ_B64:      LLVM_FALLTHROUGH;
-  case AMDGPU::DS_READ_B64_gfx9: LLVM_FALLTHROUGH;
-  case AMDGPU::DS_WRITE_B64:     LLVM_FALLTHROUGH;
+  case AMDGPU::DS_READ_B64:      [[fallthrough]];
+  case AMDGPU::DS_READ_B64_gfx9: [[fallthrough]];
+  case AMDGPU::DS_WRITE_B64:     [[fallthrough]];
   case AMDGPU::DS_WRITE_B64_gfx9:
     return 2;
   default:
@@ -635,7 +635,7 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_STORE_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX4_SADDR:
     Result.SAddr = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AMDGPU::GLOBAL_LOAD_DWORD:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
   case AMDGPU::GLOBAL_LOAD_DWORDX3:

@@ -350,7 +350,7 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
     case Hexagon::A4_combineri:
       ImmX++;
       // Fall through into A4_combineir.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Hexagon::A4_combineir: {
       ImmX++;
       const MachineOperand &OpX = MI->getOperand(ImmX);
@@ -360,7 +360,7 @@ int32_t HexagonSplitDoubleRegs::profit(const MachineInstr *MI) const {
           return 10;
       }
       // Fall through into A2_combinew.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case Hexagon::A2_combinew:
       return 2;

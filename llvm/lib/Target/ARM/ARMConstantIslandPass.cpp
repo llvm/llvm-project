@@ -801,7 +801,7 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
         case ARM::Bcc:
           isCond = true;
           UOpc = ARM::B;
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case ARM::B:
           Bits = 24;
           Scale = 4;

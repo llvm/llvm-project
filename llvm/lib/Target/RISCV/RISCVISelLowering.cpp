@@ -7110,7 +7110,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
       return;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case ISD::ADD:
   case ISD::SUB:
@@ -9406,7 +9406,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SRA:
     if (SDValue V = performSRACombine(N, DAG, Subtarget))
       return V;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SRL:
   case ISD::SHL: {
     SDValue ShAmt = N->getOperand(1);
