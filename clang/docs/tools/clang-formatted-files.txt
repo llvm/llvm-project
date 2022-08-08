@@ -3591,7 +3591,6 @@ lldb/examples/plugins/commands/fooplugin.cpp
 lldb/examples/synthetic/bitfield/program.cpp
 lldb/include/lldb/lldb-defines.h
 lldb/include/lldb/lldb-forward.h
-lldb/include/lldb/lldb-private-defines.h
 lldb/include/lldb/lldb-private.h
 lldb/include/lldb/lldb-public.h
 lldb/include/lldb/lldb-versioning.h
