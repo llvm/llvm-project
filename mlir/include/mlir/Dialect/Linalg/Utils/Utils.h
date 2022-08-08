@@ -162,8 +162,7 @@ getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
 enum class LinalgTilingLoopType {
   Loops = 0,
   AffineLoops = 1,
-  ParallelLoops = 2,
-  TiledLoops = 3,
+  ParallelLoops = 2
 };
 
 /// Checks whether the specific `producer` is the last write to exactly the
