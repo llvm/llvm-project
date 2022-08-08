@@ -25,6 +25,8 @@ Non-comprehensive list of changes in this release
 
 ELF Improvements
 ----------------
+* ``--package-metadata=`` has been added to create package metadata notes
+  (`D131439 <https://reviews.llvm.org/D131439>`_)
 
 * ``-z pack-relative-relocs`` is now available to support ``DT_RELR`` for glibc 2.36+.
   (`D120701 <https://reviews.llvm.org/D120701>`_)
