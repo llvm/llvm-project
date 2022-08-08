@@ -424,6 +424,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_ARM_EABI_VER3, EF_ARM_EABIMASK);
     BCaseMask(EF_ARM_EABI_VER4, EF_ARM_EABIMASK);
     BCaseMask(EF_ARM_EABI_VER5, EF_ARM_EABIMASK);
+    BCaseMask(EF_ARM_BE8, EF_ARM_BE8);
     break;
   case ELF::EM_MIPS:
     BCase(EF_MIPS_NOREORDER);
