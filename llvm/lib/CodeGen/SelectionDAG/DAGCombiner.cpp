@@ -22763,6 +22763,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       SDLoc DL(N);
       EVT IntVT = VT.changeVectorElementTypeToInteger();
       EVT IntSVT = VT.getVectorElementType().changeTypeToInteger();
+      IntSVT = TLI.getTypeToTransformTo(*DAG.getContext(), IntSVT);
       SDValue ZeroElt = DAG.getConstant(0, DL, IntSVT);
       SDValue AllOnesElt = DAG.getAllOnesConstant(DL, IntSVT);
       SmallVector<SDValue, 16> AndMask(NumElts, DAG.getUNDEF(IntSVT));

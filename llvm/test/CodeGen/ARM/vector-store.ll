@@ -397,3 +397,25 @@ define <4 x i32>* @test_vst1_1reg(<4 x i32>* %ptr.in, <4 x i32>* %ptr.out) {
   %next = getelementptr <4 x i32>, <4 x i32>* %ptr.out, i32 2
   ret <4 x i32>* %next
 }
+
+; PR56970
+define void @v3i8store(<3 x i8> *%p) {
+; CHECK-LABEL: v3i8store:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    sub sp, #4
+; CHECK-NEXT:    vmov.i32 d16, #0xff
+; CHECK-NEXT:    mov r1, sp
+; CHECK-NEXT:    vmov.i32 d17, #0x0
+; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vand d16, d17, d16
+; CHECK-NEXT:    vst1.32 {d16[0]}, [r1:32]
+; CHECK-NEXT:    vld1.32 {d16[0]}, [r1:32]
+; CHECK-NEXT:    vmovl.u16 q8, d16
+; CHECK-NEXT:    strb r2, [r0, #2]
+; CHECK-NEXT:    vmov.32 r1, d16[0]
+; CHECK-NEXT:    strh r1, [r0]
+; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    bx lr
+  store <3 x i8> zeroinitializer, <3 x i8> *%p, align 4
+  ret void
+}
