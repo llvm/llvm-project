@@ -1222,7 +1222,7 @@ static LoopUnrollResult tryToUnrollLoop(
   // Find the smallest exact trip count for any exit. This is an upper bound
   // on the loop trip count, but an exit at an earlier iteration is still
   // possible. An unroll by the smallest exact trip count guarantees that all
-  // brnaches relating to at least one exit can be eliminated. This is unlike
+  // branches relating to at least one exit can be eliminated. This is unlike
   // the max trip count, which only guarantees that the backedge can be broken.
   unsigned TripCount = 0;
   unsigned TripMultiple = 1;

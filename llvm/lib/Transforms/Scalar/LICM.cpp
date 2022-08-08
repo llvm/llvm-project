@@ -1988,7 +1988,7 @@ bool llvm::promoteLoopAccessesToScalars(
     IsKnownThreadLocalObject = !isa<AllocaInst>(Object);
   }
 
-  // Check that all accesses to pointers in the aliass set use the same type.
+  // Check that all accesses to pointers in the alias set use the same type.
   // We cannot (yet) promote a memory location that is loaded and stored in
   // different sizes.  While we are at it, collect alignment and AA info.
   Type *AccessTy = nullptr;

@@ -428,7 +428,7 @@ using LoopVector = SmallVector<Loop *, 4>;
 // order. Thus, if FC0 comes *before* FC1 in a FusionCandidateSet, then FC0
 // dominates FC1 and FC1 post-dominates FC0.
 // std::set was chosen because we want a sorted data structure with stable
-// iterators. A subsequent patch to loop fusion will enable fusing non-ajdacent
+// iterators. A subsequent patch to loop fusion will enable fusing non-adjacent
 // loops by moving intervening code around. When this intervening code contains
 // loops, those loops will be moved also. The corresponding FusionCandidates
 // will also need to be moved accordingly. As this is done, having stable

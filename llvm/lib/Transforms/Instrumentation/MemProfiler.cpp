@@ -385,7 +385,7 @@ MemProfiler::isInterestingMemoryAccess(Instruction *I) const {
   if (!Access.Addr)
     return None;
 
-  // Do not instrument acesses from different address spaces; we cannot deal
+  // Do not instrument accesses from different address spaces; we cannot deal
   // with them.
   Type *PtrTy = cast<PointerType>(Access.Addr->getType()->getScalarType());
   if (PtrTy->getPointerAddressSpace() != 0)

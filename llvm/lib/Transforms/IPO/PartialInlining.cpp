@@ -753,7 +753,7 @@ BranchProbability PartialInlinerImpl::getOutliningCallBBRelativeFreq(
   // is predicted to be less likely, the predicted probablity is usually
   // higher than the actual. For instance, the actual probability of the
   // less likely target is only 5%, but the guessed probablity can be
-  // 40%. In the latter case, there is no need for further adjustement.
+  // 40%. In the latter case, there is no need for further adjustment.
   // FIXME: add an option for this.
   if (OutlineRegionRelFreq < BranchProbability(45, 100))
     return OutlineRegionRelFreq;
