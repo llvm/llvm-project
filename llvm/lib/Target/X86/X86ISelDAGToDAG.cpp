@@ -658,7 +658,7 @@ X86DAGToDAGISel::IsProfitableToFold(SDValue N, SDNode *U, SDNode *Root) const {
       // addl 4(%esp), %eax
       // The former is 2 bytes shorter. In case where the increment is 1, then
       // the saving can be 4 bytes (by using incl %eax).
-      if (ConstantSDNode *Imm = dyn_cast<ConstantSDNode>(Op1)) {
+      if (auto *Imm = dyn_cast<ConstantSDNode>(Op1)) {
         if (Imm->getAPIntValue().isSignedIntN(8))
           return false;
 
@@ -823,7 +823,7 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
   // *really* important that we are sure the load will be folded.
   if (Callee.getNode() == Chain.getNode() || !Callee.hasOneUse())
     return false;
-  LoadSDNode *LD = dyn_cast<LoadSDNode>(Callee.getNode());
+  auto *LD = dyn_cast<LoadSDNode>(Callee.getNode());
   if (!LD ||
       !LD->isSimple() ||
       LD->getAddressingMode() != ISD::UNINDEXED ||
@@ -1700,7 +1700,7 @@ bool X86DAGToDAGISel::matchLoadInAddress(LoadSDNode *N, X86ISelAddressMode &AM,
   // zero-extended to 64 bits and then added it to the base address, which gives
   // unwanted results when the register holds a negative value.
   // For more information see http://people.redhat.com/drepper/tls.pdf
-  if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Address)) {
+  if (auto *C = dyn_cast<ConstantSDNode>(Address)) {
     if (C->getSExtValue() == 0 && AM.Segment.getNode() == nullptr &&
         !IndirectTlsSegRefs &&
         (Subtarget->isTargetGlibc() || Subtarget->isTargetAndroid() ||
@@ -1760,24 +1760,24 @@ bool X86DAGToDAGISel::matchWrapper(SDValue N, X86ISelAddressMode &AM) {
 
   int64_t Offset = 0;
   SDValue N0 = N.getOperand(0);
-  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(N0)) {
+  if (auto *G = dyn_cast<GlobalAddressSDNode>(N0)) {
     AM.GV = G->getGlobal();
     AM.SymbolFlags = G->getTargetFlags();
     Offset = G->getOffset();
-  } else if (ConstantPoolSDNode *CP = dyn_cast<ConstantPoolSDNode>(N0)) {
+  } else if (auto *CP = dyn_cast<ConstantPoolSDNode>(N0)) {
     AM.CP = CP->getConstVal();
     AM.Alignment = CP->getAlign();
     AM.SymbolFlags = CP->getTargetFlags();
     Offset = CP->getOffset();
-  } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(N0)) {
+  } else if (auto *S = dyn_cast<ExternalSymbolSDNode>(N0)) {
     AM.ES = S->getSymbol();
     AM.SymbolFlags = S->getTargetFlags();
   } else if (auto *S = dyn_cast<MCSymbolSDNode>(N0)) {
     AM.MCSym = S->getMCSymbol();
-  } else if (JumpTableSDNode *J = dyn_cast<JumpTableSDNode>(N0)) {
+  } else if (auto *J = dyn_cast<JumpTableSDNode>(N0)) {
     AM.JT = J->getIndex();
     AM.SymbolFlags = J->getTargetFlags();
-  } else if (BlockAddressSDNode *BA = dyn_cast<BlockAddressSDNode>(N0)) {
+  } else if (auto *BA = dyn_cast<BlockAddressSDNode>(N0)) {
     AM.BlockAddr = BA->getBlockAddress();
     AM.SymbolFlags = BA->getTargetFlags();
     Offset = BA->getOffset();
@@ -2205,7 +2205,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     if (!(AM.ES || AM.MCSym) && AM.JT != -1)
       return true;
 
-    if (ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(N))
+    if (auto *Cst = dyn_cast<ConstantSDNode>(N))
       if (!foldOffsetIntoAddress(Cst->getSExtValue(), AM))
         return false;
     return true;
@@ -2254,7 +2254,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     if (AM.IndexReg.getNode() != nullptr || AM.Scale != 1)
       break;
 
-    if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
+    if (auto *CN = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
       unsigned Val = CN->getZExtValue();
       // Note that we handle x<<1 as (,x,2) rather than (x,x) here so
       // that the base operand remains free for further matching. If
@@ -2269,7 +2269,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
         // constant into the disp field here.
         if (CurDAG->isBaseWithConstantOffset(ShVal)) {
           AM.IndexReg = ShVal.getOperand(0);
-          ConstantSDNode *AddVal = cast<ConstantSDNode>(ShVal.getOperand(1));
+          auto *AddVal = cast<ConstantSDNode>(ShVal.getOperand(1));
           uint64_t Disp = (uint64_t)AddVal->getSExtValue() << Val;
           if (!foldOffsetIntoAddress(Disp, AM))
             return false;
@@ -2320,7 +2320,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     if (AM.BaseType == X86ISelAddressMode::RegBase &&
         AM.Base_Reg.getNode() == nullptr &&
         AM.IndexReg.getNode() == nullptr) {
-      if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(N.getOperand(1)))
+      if (auto *CN = dyn_cast<ConstantSDNode>(N.getOperand(1)))
         if (CN->getZExtValue() == 3 || CN->getZExtValue() == 5 ||
             CN->getZExtValue() == 9) {
           AM.Scale = unsigned(CN->getZExtValue())-1;
@@ -2334,8 +2334,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
           if (MulVal.getNode()->getOpcode() == ISD::ADD && MulVal.hasOneUse() &&
               isa<ConstantSDNode>(MulVal.getOperand(1))) {
             Reg = MulVal.getOperand(0);
-            ConstantSDNode *AddVal =
-              cast<ConstantSDNode>(MulVal.getOperand(1));
+            auto *AddVal = cast<ConstantSDNode>(MulVal.getOperand(1));
             uint64_t Disp = AddVal->getSExtValue() * CN->getZExtValue();
             if (foldOffsetIntoAddress(Disp, AM))
               Reg = N.getOperand(0);
@@ -2708,7 +2707,7 @@ bool X86DAGToDAGISel::selectLEA64_32Addr(SDValue N, SDValue &Base,
   if (!selectLEAAddr(N, Base, Scale, Index, Disp, Segment))
     return false;
 
-  RegisterSDNode *RN = dyn_cast<RegisterSDNode>(Base);
+  auto *RN = dyn_cast<RegisterSDNode>(Base);
   if (RN && RN->getReg() == 0)
     Base = CurDAG->getRegister(0, MVT::i64);
   else if (Base.getValueType() == MVT::i32 && !isa<FrameIndexSDNode>(Base)) {
@@ -2829,7 +2828,7 @@ bool X86DAGToDAGISel::selectTLSADDRAddr(SDValue N, SDValue &Base,
                                         SDValue &Scale, SDValue &Index,
                                         SDValue &Disp, SDValue &Segment) {
   assert(N.getOpcode() == ISD::TargetGlobalTLSAddress);
-  const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(N);
+  auto *GA = cast<GlobalAddressSDNode>(N);
 
   X86ISelAddressMode AM;
   AM.GV = GA->getGlobal();
@@ -3232,7 +3231,7 @@ static bool isFusableLoadOpStorePattern(StoreSDNode *StoreNode,
 // Until then, we manually fold these and instruction select the operation
 // here.
 bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
-  StoreSDNode *StoreNode = cast<StoreSDNode>(Node);
+  auto *StoreNode = cast<StoreSDNode>(Node);
   SDValue StoredVal = StoreNode->getOperand(1);
   unsigned Opc = StoredVal->getOpcode();
 
@@ -3814,8 +3813,8 @@ MachineSDNode *X86DAGToDAGISel::matchBEXTRFromAndImm(SDNode *Node) {
     return nullptr;
 
   // Shift amount and RHS of and must be constant.
-  ConstantSDNode *MaskCst = dyn_cast<ConstantSDNode>(N1);
-  ConstantSDNode *ShiftCst = dyn_cast<ConstantSDNode>(N0->getOperand(1));
+  auto *MaskCst = dyn_cast<ConstantSDNode>(N1);
+  auto *ShiftCst = dyn_cast<ConstantSDNode>(N0->getOperand(1));
   if (!MaskCst || !ShiftCst)
     return nullptr;
 
@@ -3909,7 +3908,7 @@ MachineSDNode *X86DAGToDAGISel::emitPCMPISTR(unsigned ROpc, unsigned MOpc,
   SDValue N0 = Node->getOperand(0);
   SDValue N1 = Node->getOperand(1);
   SDValue Imm = Node->getOperand(2);
-  const ConstantInt *Val = cast<ConstantSDNode>(Imm)->getConstantIntValue();
+  auto *Val = cast<ConstantSDNode>(Imm)->getConstantIntValue();
   Imm = CurDAG->getTargetConstant(*Val, SDLoc(Node), Imm.getValueType());
 
   // Try to fold a load. No need to check alignment.
@@ -3942,7 +3941,7 @@ MachineSDNode *X86DAGToDAGISel::emitPCMPESTR(unsigned ROpc, unsigned MOpc,
   SDValue N0 = Node->getOperand(0);
   SDValue N2 = Node->getOperand(2);
   SDValue Imm = Node->getOperand(4);
-  const ConstantInt *Val = cast<ConstantSDNode>(Imm)->getConstantIntValue();
+  auto *Val = cast<ConstantSDNode>(Imm)->getConstantIntValue();
   Imm = CurDAG->getTargetConstant(*Val, SDLoc(Node), Imm.getValueType());
 
   // Try to fold a load. No need to check alignment.
@@ -4083,7 +4082,7 @@ bool X86DAGToDAGISel::tryShrinkShlLogicImm(SDNode *N) {
   SDValue Shift = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(N1);
+  auto *Cst = dyn_cast<ConstantSDNode>(N1);
   if (!Cst)
     return false;
 
@@ -4107,7 +4106,7 @@ bool X86DAGToDAGISel::tryShrinkShlLogicImm(SDNode *N) {
   if (NVT != MVT::i32 && NVT != MVT::i64)
     return false;
 
-  ConstantSDNode *ShlCst = dyn_cast<ConstantSDNode>(Shift.getOperand(1));
+  auto *ShlCst = dyn_cast<ConstantSDNode>(Shift.getOperand(1));
   if (!ShlCst)
     return false;
 
@@ -5035,7 +5034,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);
 
-    ConstantSDNode *Cst = dyn_cast<ConstantSDNode>(N1);
+    auto *Cst = dyn_cast<ConstantSDNode>(N1);
     if (!Cst)
       break;
 
