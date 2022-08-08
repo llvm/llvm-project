@@ -121,7 +121,7 @@ static ParseResult parseOperandsOrIntegersImpl(
   while (true) {
     OpAsmParser::UnresolvedOperand operand;
     auto res = parser.parseOptionalOperand(operand);
-    if (res.hasValue() && succeeded(res.getValue())) {
+    if (res.has_value() && succeeded(res.value())) {
       values.push_back(operand);
       attrVals.push_back(dynVal);
     } else {

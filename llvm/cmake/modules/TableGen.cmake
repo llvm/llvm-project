@@ -140,6 +140,8 @@ function(add_public_tablegen_target target)
 endfunction()
 
 macro(add_tablegen target project)
+  cmake_parse_arguments(ADD_TABLEGEN "" "DESTINATION" "" ${ARGN})
+
   set(${target}_OLD_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
   set(LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS} TableGen)
 
@@ -149,7 +151,8 @@ macro(add_tablegen target project)
     set(LLVM_ENABLE_OBJLIB ON)
   endif()
 
-  add_llvm_executable(${target} DISABLE_LLVM_LINK_LLVM_DYLIB ${ARGN})
+  add_llvm_executable(${target} DISABLE_LLVM_LINK_LLVM_DYLIB
+    ${ADD_TABLEGEN_UNPARSED_ARGUMENTS})
   set(LLVM_LINK_COMPONENTS ${${target}_OLD_LLVM_LINK_COMPONENTS})
 
   set(${project}_TABLEGEN "${target}" CACHE
@@ -186,7 +189,7 @@ macro(add_tablegen target project)
     endif()
   endif()
 
-  if ((${project} STREQUAL LLVM OR ${project} STREQUAL MLIR) AND NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND LLVM_BUILD_UTILS)
+  if (ADD_TABLEGEN_DESTINATION AND NOT LLVM_INSTALL_TOOLCHAIN_ONLY AND LLVM_BUILD_UTILS)
     set(export_to_llvmexports)
     if(${target} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
         NOT LLVM_DISTRIBUTION_COMPONENTS)
@@ -196,7 +199,7 @@ macro(add_tablegen target project)
     install(TARGETS ${target}
             ${export_to_llvmexports}
             COMPONENT ${target}
-            RUNTIME DESTINATION "${${project}_TOOLS_INSTALL_DIR}")
+            RUNTIME DESTINATION "${ADD_TABLEGEN_DESTINATION}")
     if(NOT LLVM_ENABLE_IDE)
       add_llvm_install_targets("install-${target}"
                                DEPENDS ${target}

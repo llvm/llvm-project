@@ -27,7 +27,7 @@
 "`3420 <https://wg21.link/LWG3420>`__","cpp17-iterator should check that the type looks like an iterator first","November 2020","|Complete|","14.0","|ranges|"
 "`3421 <https://wg21.link/LWG3421>`__","Imperfect ADL emulation for boolean-testable","November 2020","|Nothing To Do|","","|ranges|"
 "`3425 <https://wg21.link/LWG3425>`__","``condition_variable_any`` fails to constrain its Lock parameters","November 2020","|Nothing To Do|",""
-"`3426 <https://wg21.link/LWG3426>`__","``operator<=>(const unique_ptr<T, D>&, nullptr_t)`` can't get no satisfaction","November 2020","","","|spaceship|"
+"`3426 <https://wg21.link/LWG3426>`__","``operator<=>(const unique_ptr<T, D>&, nullptr_t)`` can't get no satisfaction","November 2020","|Complete|","16.0","|spaceship|"
 "`3427 <https://wg21.link/LWG3427>`__","``operator<=>(const shared_ptr<T>&, nullptr_t)`` definition ill-formed","November 2020","|Complete|","16.0","|spaceship|"
 "`3428 <https://wg21.link/LWG3428>`__","``single_view``'s in place constructor should be explicit","November 2020","|Complete|","14.0","|ranges|"
 "`3434 <https://wg21.link/LWG3434>`__","``ios_base`` never reclaims memory for iarray and parray","November 2020","|Nothing To Do|",""

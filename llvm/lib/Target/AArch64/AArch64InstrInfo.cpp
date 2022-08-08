@@ -1777,7 +1777,7 @@ static bool canCmpInstrBeRemoved(MachineInstr &MI, MachineInstr &CmpInstr,
   return true;
 }
 
-/// Remove comparision in csinc-cmp sequence
+/// Remove comparison in csinc-cmp sequence
 ///
 /// Examples:
 /// 1. \code

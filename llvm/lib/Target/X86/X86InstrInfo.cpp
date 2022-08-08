@@ -9407,8 +9407,8 @@ namespace {
       }
 
       // Visit the children of this block in the dominator tree.
-      for (auto I = Node->begin(), E = Node->end(); I != E; ++I) {
-        Changed |= VisitNode(*I, TLSBaseAddrReg);
+      for (auto &I : *Node) {
+        Changed |= VisitNode(I, TLSBaseAddrReg);
       }
 
       return Changed;
