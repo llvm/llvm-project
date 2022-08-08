@@ -10,10 +10,10 @@ RUN:   --implicit-check-not {{.}}
 RUN: FileCheck %s --check-prefix=ERR --input-file=%t.err --match-full-lines
 
 CHECK: [[BEGIN:\[{3}]]ELF module #0x0 "a.o"; BuildID=abcdef [0x0-0xff](r)[[END:\]{3}]]
-CHECK: first[/dir/tmp.c:3]
-CHECK: first[/dir/tmp.c:5]
-CHECK: first[/dir/tmp.c:4]
-CHECK: first[/dir/tmp.c:5]
+CHECK: first[/dir[[SEP:[/\\]]]tmp.c:3]
+CHECK: first[/dir[[SEP]]tmp.c:5]
+CHECK: first[/dir[[SEP]]tmp.c:4]
+CHECK: first[/dir[[SEP]]tmp.c:5]
 CHECK: [[BEGIN]]pc:0xff[[END]]
 CHECK: [[BEGIN]]pc:0x100[[END]]
 
