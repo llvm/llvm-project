@@ -68,9 +68,9 @@ static StringRef ToolName;
 static StringRef Stem;
 
 static void printRanLibHelp(StringRef ToolName) {
-  outs() << "OVERVIEW: LLVM Ranlib\n\n"
-         << "This program generates an index to speed access to archives\n\n"
-         << "USAGE: " + ToolName + " <archive-file>\n\n"
+  outs() << "OVERVIEW: LLVM ranlib\n\n"
+         << "Generate an index for archives\n\n"
+         << "USAGE: " + ToolName + " archive...\n\n"
          << "OPTIONS:\n"
          << "  -h --help             - Display available options\n"
          << "  -v --version          - Display the version of this program\n"
@@ -1406,7 +1406,7 @@ static int ar_main(int argc, char **argv) {
 }
 
 static int ranlib_main(int argc, char **argv) {
-  bool ArchiveSpecified = false;
+  std::vector<StringRef> Archives;
   for (int i = 1; i < argc; ++i) {
     StringRef arg(argv[i]);
     if (handleGenericOption(arg)) {
@@ -1431,16 +1431,17 @@ static int ranlib_main(int argc, char **argv) {
         arg = arg.drop_front(1);
       }
     } else {
-      if (ArchiveSpecified)
-        fail("exactly one archive should be specified");
-      ArchiveSpecified = true;
-      ArchiveName = arg.str();
+      Archives.push_back(arg);
     }
   }
-  if (!ArchiveSpecified) {
-    badUsage("an archive name must be specified");
+
+  for (StringRef Archive : Archives) {
+    ArchiveName = Archive.str();
+    performOperation(CreateSymTab);
   }
-  return performOperation(CreateSymTab);
+  if (Archives.empty())
+    badUsage("an archive name must be specified");
+  return 0;
 }
 
 int llvm_ar_main(int argc, char **argv) {
