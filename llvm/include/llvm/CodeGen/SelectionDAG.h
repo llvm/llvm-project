@@ -1973,6 +1973,32 @@ public:
                                             /*PoisonOnly*/ true, Depth);
   }
 
+  /// Return true if Op can create undef or poison from non-undef & non-poison
+  /// operands. The DemandedElts argument limits the check to the requested
+  /// vector elements.
+  ///
+  /// \p ConsiderFlags controls whether poison producing flags on the
+  /// instruction are considered.  This can be used to see if the instruction
+  /// could still introduce undef or poison even without poison generating flags
+  /// which might be on the instruction.  (i.e. could the result of
+  /// Op->dropPoisonGeneratingFlags() still create poison or undef)
+  bool canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
+                              bool PoisonOnly = false,
+                              bool ConsiderFlags = true,
+                              unsigned Depth = 0) const;
+
+  /// Return true if Op can create undef or poison from non-undef & non-poison
+  /// operands.
+  ///
+  /// \p ConsiderFlags controls whether poison producing flags on the
+  /// instruction are considered.  This can be used to see if the instruction
+  /// could still introduce undef or poison even without poison generating flags
+  /// which might be on the instruction.  (i.e. could the result of
+  /// Op->dropPoisonGeneratingFlags() still create poison or undef)
+  bool canCreateUndefOrPoison(SDValue Op, bool PoisonOnly = false,
+                              bool ConsiderFlags = true,
+                              unsigned Depth = 0) const;
+
   /// Return true if the specified operand is an ISD::ADD with a ConstantSDNode
   /// on the right-hand side, or if it is an ISD::OR with a ConstantSDNode that
   /// is guaranteed to have the same semantics as an ADD. This handles the
