@@ -50,7 +50,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
   // tosa::AbsOp
   if (isa<tosa::AbsOp>(op) && elementTy.isa<FloatType>())
-    return rewriter.create<math::AbsOp>(loc, resultTypes, args);
+    return rewriter.create<math::AbsFOp>(loc, resultTypes, args);
 
   if (isa<tosa::AbsOp>(op) && elementTy.isa<IntegerType>()) {
     auto zero = rewriter.create<arith::ConstantOp>(

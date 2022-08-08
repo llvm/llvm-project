@@ -254,8 +254,8 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
       StringAttr::get(&converter.getContext(),
                       NVVM::NVVMDialect::getKernelFuncAttrName()));
 
-  patterns.add<OpToFuncCallLowering<math::AbsOp>>(converter, "__nv_fabsf",
-                                                  "__nv_fabs");
+  patterns.add<OpToFuncCallLowering<math::AbsFOp>>(converter, "__nv_fabsf",
+                                                   "__nv_fabs");
   patterns.add<OpToFuncCallLowering<math::AtanOp>>(converter, "__nv_atanf",
                                                    "__nv_atan");
   patterns.add<OpToFuncCallLowering<math::Atan2Op>>(converter, "__nv_atan2f",

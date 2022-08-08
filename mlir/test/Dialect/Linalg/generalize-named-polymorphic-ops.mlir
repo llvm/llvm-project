@@ -306,7 +306,7 @@ func.func @generalize_elemwise_abs(%lhs : tensor<4x8xf32>, %output : tensor<4x8x
 }
 
 // CHECK-LABEL: @generalize_elemwise_abs
-// CHECK:        = math.abs
+// CHECK:        = math.absf
 
 // -----
 

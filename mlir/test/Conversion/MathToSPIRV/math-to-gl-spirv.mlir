@@ -29,7 +29,7 @@ func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: spv.GL.Sin %{{.*}}: f32
   %8 = math.sin %arg0 : f32
   // CHECK: spv.GL.FAbs %{{.*}}: f32
-  %9 = math.abs %arg0 : f32
+  %9 = math.absf %arg0 : f32
   // CHECK: spv.GL.Ceil %{{.*}}: f32
   %10 = math.ceil %arg0 : f32
   // CHECK: spv.GL.Floor %{{.*}}: f32

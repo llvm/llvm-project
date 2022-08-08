@@ -1207,10 +1207,10 @@ static mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
 ///       See https://gcc.gnu.org/onlinedocs/gcc-12.1.0/gfortran/\
 ///       Intrinsic-Procedures.html for a reference.
 static constexpr MathOperation mathOperations[] = {
-    {"abs", "fabsf", genF32F32FuncType, genMathOp<mlir::math::AbsOp>},
-    {"abs", "fabs", genF64F64FuncType, genMathOp<mlir::math::AbsOp>},
+    {"abs", "fabsf", genF32F32FuncType, genMathOp<mlir::math::AbsFOp>},
+    {"abs", "fabs", genF64F64FuncType, genMathOp<mlir::math::AbsFOp>},
     {"abs", "llvm.fabs.f128", genF128F128FuncType,
-     genMathOp<mlir::math::AbsOp>},
+     genMathOp<mlir::math::AbsFOp>},
     // llvm.trunc behaves the same way as libm's trunc.
     {"aint", "llvm.trunc.f32", genF32F32FuncType, genLibCall},
     {"aint", "llvm.trunc.f64", genF64F64FuncType, genLibCall},

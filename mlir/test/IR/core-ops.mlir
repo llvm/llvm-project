@@ -105,17 +105,17 @@ func.func @standard_instrs(tensor<4x4x?xf32>, f32, i32, index, i64, f16) {
   // CHECK: arith.constant false
   %75 = arith.constant false
 
-  // CHECK: %{{.*}} = math.abs %arg1 : f32
-  %100 = "math.abs"(%f) : (f32) -> f32
+  // CHECK: %{{.*}} = math.absf %arg1 : f32
+  %100 = "math.absf"(%f) : (f32) -> f32
 
-  // CHECK: %{{.*}} = math.abs %arg1 : f32
-  %101 = math.abs %f : f32
+  // CHECK: %{{.*}} = math.absf %arg1 : f32
+  %101 = math.absf %f : f32
 
-  // CHECK: %{{.*}} = math.abs %{{.*}}: vector<4xf32>
-  %102 = math.abs %vcf32 : vector<4xf32>
+  // CHECK: %{{.*}} = math.absf %{{.*}}: vector<4xf32>
+  %102 = math.absf %vcf32 : vector<4xf32>
 
-  // CHECK: %{{.*}} = math.abs %arg0 : tensor<4x4x?xf32>
-  %103 = math.abs %t : tensor<4x4x?xf32>
+  // CHECK: %{{.*}} = math.absf %arg0 : tensor<4x4x?xf32>
+  %103 = math.absf %t : tensor<4x4x?xf32>
 
   // CHECK: %{{.*}} = math.ceil %arg1 : f32
   %104 = "math.ceil"(%f) : (f32) -> f32

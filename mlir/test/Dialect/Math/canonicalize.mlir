@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -canonicalize | FileCheck %s 
+// RUN: mlir-opt %s -canonicalize | FileCheck %s
 
 // CHECK-LABEL: @ceil_fold
 // CHECK: %[[cst:.+]] = arith.constant 1.000000e+00 : f32
@@ -125,7 +125,7 @@ func.func @sqrt_fold_vec() -> (vector<4xf32>) {
 // CHECK: return %[[cst]]
 func.func @abs_fold() -> f32 {
   %c = arith.constant -4.0 : f32
-  %r = math.abs %c : f32
+  %r = math.absf %c : f32
   return %r : f32
 }
 
