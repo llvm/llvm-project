@@ -44,7 +44,8 @@ class TraceIntelPTTestCaseBase(TestBase):
                 return False
         if not is_supported():
             self.skipTest("Per cpu tracing is not supported. You need "
-                "/proc/sys/kernel/perf_event_paranoid to be 0 or -1.")
+                "/proc/sys/kernel/perf_event_paranoid to be 0 or -1. "
+                "You can use `sudo sysctl -w kernel.perf_event_paranoid=-1` for that.")
 
     def getTraceOrCreate(self):
         if not self.target().GetTrace().IsValid():

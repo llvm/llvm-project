@@ -24,7 +24,6 @@
 
 namespace llvm {
 
-class Any;
 class DiagnosticInfo;
 enum DiagnosticSeverity : char;
 class Function;
@@ -322,10 +321,6 @@ public:
 
   /// Whether typed pointers are supported. If false, all pointers are opaque.
   bool supportsTypedPointers() const;
-
-  /// Optionally target-spcific data can be attached to the context for lifetime
-  /// management and bypassing layering restrictions.
-  llvm::Any &getTargetData() const;
 
 private:
   // Module needs access to the add/removeModule methods.

@@ -453,7 +453,6 @@
 ; GCN-O1-OPTS-NEXT:      Optimization Remark Emitter
 ; GCN-O1-OPTS-NEXT:      Loop Data Prefetch
 ; GCN-O1-OPTS-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
-; GCN-O1-OPTS-NEXT:      Speculatively execute instructions
 ; GCN-O1-OPTS-NEXT:      Scalar Evolution Analysis
 ; GCN-O1-OPTS-NEXT:      Straight line strength reduction
 ; GCN-O1-OPTS-NEXT:      Early CSE
@@ -744,7 +743,6 @@
 ; GCN-O2-NEXT:      Loop Pass Manager
 ; GCN-O2-NEXT:        Loop Invariant Code Motion
 ; GCN-O2-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
-; GCN-O2-NEXT:      Speculatively execute instructions
 ; GCN-O2-NEXT:      Scalar Evolution Analysis
 ; GCN-O2-NEXT:      Straight line strength reduction
 ; GCN-O2-NEXT:      Early CSE
@@ -1037,7 +1035,6 @@
 ; GCN-O3-NEXT:      Loop Pass Manager
 ; GCN-O3-NEXT:        Loop Invariant Code Motion
 ; GCN-O3-NEXT:      Split GEPs to a variadic base and a constant offset for better CSE
-; GCN-O3-NEXT:      Speculatively execute instructions
 ; GCN-O3-NEXT:      Scalar Evolution Analysis
 ; GCN-O3-NEXT:      Straight line strength reduction
 ; GCN-O3-NEXT:      Phi Values Analysis

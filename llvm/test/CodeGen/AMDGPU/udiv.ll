@@ -671,7 +671,7 @@ define amdgpu_kernel void @udiv_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> ad
 ; SI-NEXT:    v_cndmask_b32_e64 v9, v9, v15, s[2:3]
 ; SI-NEXT:    v_subrev_i32_e32 v13, vcc, v1, v5
 ; SI-NEXT:    v_cndmask_b32_e64 v10, v10, v17, s[4:5]
-; SI-NEXT:    v_sub_i32_e32 v14, vcc, v6, v2
+; SI-NEXT:    v_subrev_i32_e32 v14, vcc, v2, v6
 ; SI-NEXT:    v_cndmask_b32_e64 v11, v11, v19, s[6:7]
 ; SI-NEXT:    v_sub_i32_e32 v15, vcc, v7, v3
 ; SI-NEXT:    v_cndmask_b32_e64 v4, v4, v12, s[0:1]
@@ -1851,14 +1851,14 @@ define amdgpu_kernel void @v_udiv_i24(i32 addrspace(1)* %out, i24 addrspace(1)* 
 ; SI-NEXT:    v_cvt_u32_f32_e32 v1, v1
 ; SI-NEXT:    v_mul_lo_u32 v4, v4, v1
 ; SI-NEXT:    v_mul_hi_u32 v4, v1, v4
-; SI-NEXT:    v_add_i32_e32 v1, vcc, v4, v1
+; SI-NEXT:    v_add_i32_e32 v1, vcc, v1, v4
 ; SI-NEXT:    v_mul_hi_u32 v1, v2, v1
 ; SI-NEXT:    v_mul_lo_u32 v3, v1, v0
 ; SI-NEXT:    v_add_i32_e32 v4, vcc, 1, v1
-; SI-NEXT:    v_sub_i32_e32 v2, vcc, v2, v3
+; SI-NEXT:    v_subrev_i32_e32 v2, vcc, v3, v2
 ; SI-NEXT:    v_cmp_ge_u32_e64 s[0:1], v2, v0
 ; SI-NEXT:    v_cndmask_b32_e64 v1, v1, v4, s[0:1]
-; SI-NEXT:    v_sub_i32_e32 v3, vcc, v2, v0
+; SI-NEXT:    v_subrev_i32_e32 v3, vcc, v0, v2
 ; SI-NEXT:    v_cndmask_b32_e64 v2, v2, v3, s[0:1]
 ; SI-NEXT:    v_add_i32_e32 v3, vcc, 1, v1
 ; SI-NEXT:    v_cmp_ge_u32_e32 vcc, v2, v0
@@ -2352,7 +2352,7 @@ define amdgpu_kernel void @fdiv_test_denormals(i8 addrspace(1)* nocapture readon
 ; SI-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; SI-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, |v2|
 ; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; SI-NEXT:    v_add_i32_e32 v0, vcc, v1, v0
+; SI-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
 ; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -2500,8 +2500,8 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; SI-NEXT:    v_mul_hi_u32 v4, v2, s4
 ; SI-NEXT:    v_mul_lo_u32 v6, v3, s4
 ; SI-NEXT:    v_mul_lo_u32 v5, v2, s4
-; SI-NEXT:    v_subrev_i32_e32 v4, vcc, v2, v4
-; SI-NEXT:    v_add_i32_e32 v4, vcc, v6, v4
+; SI-NEXT:    v_sub_i32_e32 v4, vcc, v4, v2
+; SI-NEXT:    v_add_i32_e32 v4, vcc, v4, v6
 ; SI-NEXT:    v_mul_hi_u32 v7, v2, v5
 ; SI-NEXT:    v_mul_lo_u32 v6, v2, v4
 ; SI-NEXT:    v_mul_hi_u32 v8, v2, v4
@@ -2598,8 +2598,8 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; VI-NEXT:    v_cvt_u32_f32_e32 v7, v3
 ; VI-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v6, s6, 0
 ; VI-NEXT:    v_mul_lo_u32 v4, v7, s6
-; VI-NEXT:    v_sub_u32_e32 v3, vcc, v3, v6
-; VI-NEXT:    v_add_u32_e32 v8, vcc, v4, v3
+; VI-NEXT:    v_subrev_u32_e32 v3, vcc, v6, v3
+; VI-NEXT:    v_add_u32_e32 v8, vcc, v3, v4
 ; VI-NEXT:    v_mul_hi_u32 v5, v6, v2
 ; VI-NEXT:    v_mad_u64_u32 v[3:4], s[4:5], v6, v8, 0
 ; VI-NEXT:    v_add_u32_e32 v9, vcc, v5, v3
@@ -2685,8 +2685,8 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v7, v3
 ; GCN-NEXT:    v_mad_u64_u32 v[2:3], s[4:5], v6, s6, 0
 ; GCN-NEXT:    v_mul_lo_u32 v4, v7, s6
-; GCN-NEXT:    v_sub_u32_e32 v3, vcc, v3, v6
-; GCN-NEXT:    v_add_u32_e32 v8, vcc, v4, v3
+; GCN-NEXT:    v_subrev_u32_e32 v3, vcc, v6, v3
+; GCN-NEXT:    v_add_u32_e32 v8, vcc, v3, v4
 ; GCN-NEXT:    v_mul_hi_u32 v5, v6, v2
 ; GCN-NEXT:    v_mad_u64_u32 v[3:4], s[4:5], v6, v8, 0
 ; GCN-NEXT:    v_add_u32_e32 v9, vcc, v5, v3

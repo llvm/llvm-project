@@ -912,11 +912,6 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
   SmallVector<llvm::OpenMPIRBuilder::InsertPointTy> bodyInsertPoints;
   LogicalResult bodyGenStatus = success();
-
-  // TODO: The code generation for if clause is not supported yet.
-  if (loop.if_expr())
-    return failure();
-
   auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip, llvm::Value *iv) {
     // Make sure further conversions know about the induction variable.
     moduleTranslation.mapValue(
@@ -975,7 +970,10 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   if (llvm::Optional<uint64_t> simdlenVar = loop.simdlen())
     simdlen = builder.getInt64(simdlenVar.value());
 
-  ompBuilder->applySimd(loopInfo, simdlen);
+  ompBuilder->applySimd(
+      loopInfo,
+      loop.if_expr() ? moduleTranslation.lookupValue(loop.if_expr()) : nullptr,
+      simdlen);
 
   builder.restoreIP(afterIP);
   return success();
@@ -1287,7 +1285,8 @@ convertOmpThreadprivate(Operation &opInst, llvm::IRBuilderBase &builder,
     return opInst.emitError("Addressing symbol not found");
   LLVM::AddressOfOp addressOfOp = dyn_cast<LLVM::AddressOfOp>(symOp);
 
-  LLVM::GlobalOp global = addressOfOp.getGlobal();
+  LLVM::GlobalOp global =
+      addressOfOp.getGlobal(moduleTranslation.symbolTable());
   llvm::GlobalValue *globalValue = moduleTranslation.lookupGlobal(global);
   llvm::Value *data =
       builder.CreateBitCast(globalValue, builder.getInt8PtrTy());

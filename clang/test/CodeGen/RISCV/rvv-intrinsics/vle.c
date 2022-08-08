@@ -1254,3 +1254,123 @@ vbool32_t test_vlm_v_b32(const uint8_t *base, size_t vl) {
 vbool64_t test_vlm_v_b64(const uint8_t *base, size_t vl) {
   return vlm_v_b64(base, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vle8_v_i8mf8_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.i64(<vscale x 1 x i8> [[MERGE:%.*]], <vscale x 1 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP1]]
+//
+vint8mf8_t test_vle8_v_i8mf8_tu(vint8mf8_t merge, const int8_t *base, size_t vl) {
+  return vle8_v_i8mf8_tu(merge, base, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vle8_v_u8mf8_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.i64(<vscale x 1 x i8> [[MERGE:%.*]], <vscale x 1 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP1]]
+//
+vuint8mf8_t test_vle8_v_u8mf8_tu(vuint8mf8_t merge, const uint8_t *base, size_t vl) {
+  return vle8_v_u8mf8_tu(merge, base, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vle8_v_i8mf8_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP1]]
+//
+vint8mf8_t test_vle8_v_i8mf8_ta(const int8_t *base, size_t vl) {
+  return vle8_v_i8mf8_ta(base, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vle8_v_u8mf8_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vle.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8>* [[TMP0]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP1]]
+//
+vuint8mf8_t test_vle8_v_u8mf8_ta(const uint8_t *base, size_t vl) {
+  return vle8_v_u8mf8_ta(base, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vle8_v_i8mf8_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vle.mask.nxv1i8.i64(<vscale x 1 x i8> [[MERGE:%.*]], <vscale x 1 x i8>* [[TMP0]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP1]]
+//
+vint8mf8_t test_vle8_v_i8mf8_tuma(vbool64_t mask, vint8mf8_t merge, const int8_t *base, size_t vl) {
+  return vle8_v_i8mf8_tuma(mask, merge, base, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vle8_v_u8mf8_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vle.mask.nxv1i8.i64(<vscale x 1 x i8> [[MERGE:%.*]], <vscale x 1 x i8>* [[TMP0]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP1]]
+//
+vuint8mf8_t test_vle8_v_u8mf8_tuma(vbool64_t mask, vuint8mf8_t merge, const uint8_t *base, size_t vl) {
+  return vle8_v_u8mf8_tuma(mask, merge, base, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vle8_v_i8mf8_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vle.mask.nxv1i8.i64(<vscale x 1 x i8> [[MERGE:%.*]], <vscale x 1 x i8>* [[TMP0]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP1]]
+//
+vint8mf8_t test_vle8_v_i8mf8_tumu(vbool64_t mask, vint8mf8_t merge, const int8_t *base, size_t vl) {
+  return vle8_v_i8mf8_tumu(mask, merge, base, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vle8_v_u8mf8_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vle.mask.nxv1i8.i64(<vscale x 1 x i8> [[MERGE:%.*]], <vscale x 1 x i8>* [[TMP0]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP1]]
+//
+vuint8mf8_t test_vle8_v_u8mf8_tumu(vbool64_t mask, vuint8mf8_t merge, const uint8_t *base, size_t vl) {
+  return vle8_v_u8mf8_tumu(mask, merge, base, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vle8_v_i8mf8_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vle.mask.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8>* [[TMP0]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP1]]
+//
+vint8mf8_t test_vle8_v_i8mf8_tama(vbool64_t mask, const int8_t *base, size_t vl) {
+  return vle8_v_i8mf8_tama(mask, base, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vle8_v_u8mf8_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vle.mask.nxv1i8.i64(<vscale x 1 x i8> undef, <vscale x 1 x i8>* [[TMP0]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP1]]
+//
+vuint8mf8_t test_vle8_v_u8mf8_tama(vbool64_t mask, const uint8_t *base, size_t vl) {
+  return vle8_v_u8mf8_tama(mask, base, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vle8_v_i8mf8_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vle.mask.nxv1i8.i64(<vscale x 1 x i8> [[MERGE:%.*]], <vscale x 1 x i8>* [[TMP0]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP1]]
+//
+vint8mf8_t test_vle8_v_i8mf8_tamu(vbool64_t mask, vint8mf8_t merge, const int8_t *base, size_t vl) {
+  return vle8_v_i8mf8_tamu(mask, merge, base, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vle8_v_u8mf8_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[BASE:%.*]] to <vscale x 1 x i8>*
+// CHECK-RV64-NEXT:    [[TMP1:%.*]] = call <vscale x 1 x i8> @llvm.riscv.vle.mask.nxv1i8.i64(<vscale x 1 x i8> [[MERGE:%.*]], <vscale x 1 x i8>* [[TMP0]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i8> [[TMP1]]
+//
+vuint8mf8_t test_vle8_v_u8mf8_tamu(vbool64_t mask, vuint8mf8_t merge, const uint8_t *base, size_t vl) {
+  return vle8_v_u8mf8_tamu(mask, merge, base, vl);
+}

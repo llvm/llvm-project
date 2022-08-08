@@ -41,38 +41,38 @@ namespace CallingConv {
     /// possible (e.g. by passing things in registers).
     Fast = 8,
 
-    // Cold - This calling convention attempts to make code in the caller as
-    // efficient as possible under the assumption that the call is not commonly
-    // executed.  As such, these calls often preserve all registers so that the
-    // call does not break any live ranges in the caller side.
+    /// Cold - This calling convention attempts to make code in the caller as
+    /// efficient as possible under the assumption that the call is not commonly
+    /// executed.  As such, these calls often preserve all registers so that the
+    /// call does not break any live ranges in the caller side.
     Cold = 9,
 
-    // GHC - Calling convention used by the Glasgow Haskell Compiler (GHC).
+    /// GHC - Calling convention used by the Glasgow Haskell Compiler (GHC).
     GHC = 10,
 
-    // HiPE - Calling convention used by the High-Performance Erlang Compiler
-    // (HiPE).
+    /// HiPE - Calling convention used by the High-Performance Erlang Compiler
+    /// (HiPE).
     HiPE = 11,
 
-    // WebKit JS - Calling convention for stack based JavaScript calls
+    /// WebKit JS - Calling convention for stack based JavaScript calls
     WebKit_JS = 12,
 
-    // AnyReg - Calling convention for dynamic register based calls (e.g.
-    // stackmap and patchpoint intrinsics).
+    /// AnyReg - Calling convention for dynamic register based calls (e.g.
+    /// stackmap and patchpoint intrinsics).
     AnyReg = 13,
 
-    // PreserveMost - Calling convention for runtime calls that preserves most
-    // registers.
+    /// PreserveMost - Calling convention for runtime calls that preserves most
+    /// registers.
     PreserveMost = 14,
 
-    // PreserveAll - Calling convention for runtime calls that preserves
-    // (almost) all registers.
+    /// PreserveAll - Calling convention for runtime calls that preserves
+    /// (almost) all registers.
     PreserveAll = 15,
 
-    // Swift - Calling convention for Swift.
+    /// Swift - Calling convention for Swift.
     Swift = 16,
 
-    // CXX_FAST_TLS - Calling convention for access functions.
+    /// CXX_FAST_TLS - Calling convention for access functions.
     CXX_FAST_TLS = 17,
 
     /// Tail - This calling convention attemps to make calls as fast as
@@ -91,8 +91,8 @@ namespace CallingConv {
     /// clean up their stack.
     SwiftTail = 20,
 
-    // Target - This is the start of the target-specific calling conventions,
-    // e.g. fastcall and thiscall on X86.
+    /// Target - This is the start of the target-specific calling conventions,
+    /// e.g. fastcall and thiscall on X86.
     FirstTargetCC = 64,
 
     /// X86_StdCall - stdcall is the calling conventions mostly used by the
@@ -235,7 +235,7 @@ namespace CallingConv {
     /// shader if tessellation is in use, or otherwise the vertex shader.
     AMDGPU_ES = 96,
 
-    // Calling convention between AArch64 Advanced SIMD functions
+    /// Calling convention between AArch64 Advanced SIMD functions
     AArch64_VectorCall = 97,
 
     /// Calling convention between AArch64 SVE functions

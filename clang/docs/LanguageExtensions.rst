@@ -757,8 +757,6 @@ performing the operation, and then truncating to ``_Float16``.
 * 32-bit ARM
 * 64-bit ARM (AArch64)
 
-The ``__bf16`` type is only available when supported in hardware.
-
 ``__fp16`` is a storage and interchange format only.  This means that values of
 ``__fp16`` are immediately promoted to (at least) ``float`` when used in arithmetic
 operations, so that e.g. the result of adding two ``__fp16`` values has type ``float``.
@@ -3006,7 +3004,7 @@ stable numbering order in which they appear in their local declaration contexts.
 Once this builtin is evaluated in a constexpr context, it is erroneous to use
 it in an instantiation which changes its value.
 
-In order to produce the unique name, the current implementation of the bultin
+In order to produce the unique name, the current implementation of the builtin
 uses Itanium mangling even if the host compilation uses a different name
 mangling scheme at runtime. The mangler marks all the lambdas required to name
 the SYCL kernel and emits a stable local ordering of the respective lambdas.

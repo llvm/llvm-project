@@ -102,22 +102,48 @@ removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
     }
 }
 
+/// It's OK to add a block to the set of removed blocks if the first
+/// basic block in the function that survives all of the deletions is
+/// a legal entry block
+static bool okToRemove(BasicBlock &Candidate, Function &F,
+                       const DenseSet<BasicBlock *> &BBsToDelete) {
+  for (auto &B : F) {
+    if (&B == &Candidate)
+      continue;
+    if (BBsToDelete.count(&B))
+      continue;
+    /// Ok we've found the first block that's not going to be deleted,
+    /// it will be the new entry block -- that's only legal if this
+    /// block has no predecessors among blocks that survive the
+    /// deletions
+    for (BasicBlock *Pred : predecessors(&B)) {
+      if (!BBsToDelete.contains(Pred))
+        return false;
+    }
+    return true;
+  }
+  return true;
+}
+
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
 static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
-  DenseSet<BasicBlock *> BBsToKeep;
+  DenseSet<BasicBlock *> BBsToKeep, BBsToDelete;
 
-  SmallVector<BasicBlock *> BBsToDelete;
   for (auto &F : Program) {
     for (auto &BB : F) {
-      if (O.shouldKeep())
+      if (!okToRemove(BB, F, BBsToDelete) || O.shouldKeep())
         BBsToKeep.insert(&BB);
-      else {
-        BBsToDelete.push_back(&BB);
-        // Remove out-of-chunk BB from successor phi nodes
-        for (auto *Succ : successors(&BB))
-          Succ->removePredecessor(&BB);
-      }
+      else
+        BBsToDelete.insert(&BB);
+    }
+  }
+
+  // Remove out-of-chunk BB from successor phi nodes
+  for (auto &F : Program) {
+    for (auto &BB : F) {
+      for (auto *Succ : successors(&BB))
+        Succ->removePredecessor(&BB);
     }
   }
 

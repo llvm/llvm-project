@@ -768,10 +768,10 @@ class VOP3_DOT_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP
   let HasSrc2Mods = 1;
   let Src0ModDPP = FPVRegInputMods;
   let Src1ModDPP = FPVRegInputMods;
-  let Src2ModVOP3DPP = FPVRegInputMods;
+  let Src2ModVOP3DPP = FP16InputMods;
   let InsVOP3OpSel = getInsVOP3OpSel<Src0RC64, Src1RC64, Src2RC64, NumSrcArgs,
-                                     HasClamp, HasOMod, FPVRegInputMods,
-                                     FPVRegInputMods, FPVRegInputMods>.ret;
+                                     HasClamp, HasOMod, FP16InputMods,
+                                     FP16InputMods, FP16InputMods>.ret;
   let AsmVOP3OpSel = getAsmVOP3OpSel<NumSrcArgs, HasClamp, 1, 1, 1>.ret;
 }
 

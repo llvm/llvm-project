@@ -10,18 +10,21 @@
 #define COMPLEX_ATTRIBUTE
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/Dialect/Complex/IR/ComplexBase.td"
 
 //===----------------------------------------------------------------------===//
 // Complex Attributes.
 //===----------------------------------------------------------------------===//
 
-class Complex_Attr<string attrName, string attrMnemonic>
-    : AttrDef<Complex_Dialect, attrName> {
+class Complex_Attr<string attrName, string attrMnemonic,
+                   list<Trait> traits = []>
+    : AttrDef<Complex_Dialect, attrName, traits> {
   let mnemonic = attrMnemonic;
 }
 
-def Complex_NumberAttr : Complex_Attr<"Number", "number"> {
+def Complex_NumberAttr : Complex_Attr<"Number", "number",
+                                      [TypedAttrInterface]> {
   let summary = "A complex number attribute";
 
   let description = [{

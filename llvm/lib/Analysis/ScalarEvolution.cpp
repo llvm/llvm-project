@@ -242,6 +242,11 @@ static cl::opt<bool>
                             cl::desc("Handle <= and >= in finite loops"),
                             cl::init(true));
 
+static cl::opt<bool> UseContextForNoWrapFlagInference(
+    "scalar-evolution-use-context-for-no-wrap-flag-strenghening", cl::Hidden,
+    cl::desc("Infer nuw/nsw flags using context where suitable"),
+    cl::init(true));
+
 //===----------------------------------------------------------------------===//
 //                           SCEV class definitions
 //===----------------------------------------------------------------------===//
@@ -2285,7 +2290,8 @@ CollectAddOperandsWithScales(DenseMap<const SCEV *, APInt> &M,
 }
 
 bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
-                                      const SCEV *LHS, const SCEV *RHS) {
+                                      const SCEV *LHS, const SCEV *RHS,
+                                      const Instruction *CtxI) {
   const SCEV *(ScalarEvolution::*Operation)(const SCEV *, const SCEV *,
                                             SCEV::NoWrapFlags, unsigned);
   switch (BinOp) {
@@ -2316,7 +2322,30 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
   const SCEV *LHSB = (this->*Extension)(LHS, WideTy, 0);
   const SCEV *RHSB = (this->*Extension)(RHS, WideTy, 0);
   const SCEV *B = (this->*Operation)(LHSB, RHSB, SCEV::FlagAnyWrap, 0);
-  return A == B;
+  if (A == B)
+    return true;
+  // Can we use context to prove the fact we need?
+  if (!CtxI)
+    return false;
+  // We can prove that add(x, constant) doesn't wrap if isKnownPredicateAt can
+  // guarantee that x <= max_int - constant at the given context.
+  // TODO: Support other operations.
+  if (BinOp != Instruction::Add)
+    return false;
+  auto *RHSC = dyn_cast<SCEVConstant>(RHS);
+  // TODO: Lift this limitation.
+  if (!RHSC)
+    return false;
+  APInt C = RHSC->getAPInt();
+  // TODO: Also lift this limitation.
+  if (Signed && C.isNegative())
+    return false;
+  unsigned NumBits = C.getBitWidth();
+  APInt Max =
+      Signed ? APInt::getSignedMaxValue(NumBits) : APInt::getMaxValue(NumBits);
+  APInt Limit = Max - C;
+  ICmpInst::Predicate Pred = Signed ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
+  return isKnownPredicateAt(Pred, LHS, getConstant(Limit), CtxI);
 }
 
 Optional<SCEV::NoWrapFlags>
@@ -2343,16 +2372,18 @@ ScalarEvolution::getStrengthenedNoWrapFlagsFromBinOp(
   const SCEV *LHS = getSCEV(OBO->getOperand(0));
   const SCEV *RHS = getSCEV(OBO->getOperand(1));
 
+  const Instruction *CtxI =
+      UseContextForNoWrapFlagInference ? dyn_cast<Instruction>(OBO) : nullptr;
   if (!OBO->hasNoUnsignedWrap() &&
       willNotOverflow((Instruction::BinaryOps)OBO->getOpcode(),
-                      /* Signed */ false, LHS, RHS)) {
+                      /* Signed */ false, LHS, RHS, CtxI)) {
     Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
     Deduced = true;
   }
 
   if (!OBO->hasNoSignedWrap() &&
       willNotOverflow((Instruction::BinaryOps)OBO->getOpcode(),
-                      /* Signed */ true, LHS, RHS)) {
+                      /* Signed */ true, LHS, RHS, CtxI)) {
     Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNSW);
     Deduced = true;
   }
@@ -7258,7 +7289,8 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
   if (auto BO = MatchBinaryOp(U, DT)) {
     bool IsConstArg = isa<ConstantInt>(BO->RHS);
     switch (BO->Opcode) {
-    case Instruction::Add: {
+    case Instruction::Add:
+    case Instruction::Mul: {
       // For additions and multiplications, traverse add/mul chains for which we
       // can potentially create a single SCEV, to reduce the number of
       // get{Add,Mul}Expr calls.
@@ -7271,29 +7303,23 @@ ScalarEvolution::getOperandsToCreate(Value *V, SmallVectorImpl<Value *> &Ops) {
         }
         Ops.push_back(BO->RHS);
         auto NewBO = MatchBinaryOp(BO->LHS, DT);
-        if (!NewBO || (NewBO->Opcode != Instruction::Add &&
-                       NewBO->Opcode != Instruction::Sub)) {
+        if (!NewBO ||
+            (U->getOpcode() == Instruction::Add &&
+             (NewBO->Opcode != Instruction::Add &&
+              NewBO->Opcode != Instruction::Sub)) ||
+            (U->getOpcode() == Instruction::Mul &&
+             NewBO->Opcode != Instruction::Mul)) {
           Ops.push_back(BO->LHS);
           break;
         }
-        BO = NewBO;
-      } while (true);
-      return nullptr;
-    }
-
-    case Instruction::Mul: {
-      do {
-        if (BO->Op) {
-          if (BO->Op != V && getExistingSCEV(BO->Op)) {
-            Ops.push_back(BO->Op);
+        // CreateSCEV calls getNoWrapFlagsFromUB, which under certain conditions
+        // requires a SCEV for the LHS.
+        if (NewBO->Op && (NewBO->IsNSW || NewBO->IsNUW)) {
+          auto *I = dyn_cast<Instruction>(NewBO->Op);
+          if (I && programUndefinedIfPoison(I)) {
+            Ops.push_back(BO->LHS);
             break;
           }
-        }
-        Ops.push_back(BO->RHS);
-        auto NewBO = MatchBinaryOp(BO->LHS, DT);
-        if (!NewBO || NewBO->Opcode != Instruction::Mul) {
-          Ops.push_back(BO->LHS);
-          break;
         }
         BO = NewBO;
       } while (true);

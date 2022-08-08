@@ -53,7 +53,7 @@ class MTCSimpleTestCase(TestBase):
                 "instrumentation_class",
                 "selector"
             ])
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonInstrumentation)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonInstrumentation)
         output_lines = self.res.GetOutput().split('\n')
         json_line = '\n'.join(output_lines[2:])
         data = json.loads(json_line)

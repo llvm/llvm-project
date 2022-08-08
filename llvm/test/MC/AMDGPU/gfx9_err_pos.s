@@ -179,6 +179,19 @@ v_add_i16 v5, 0.5, v2
 // CHECK-NEXT:{{^}}              ^
 
 //==============================================================================
+// missing dst operand or lds modifier
+
+buffer_load_dword off, s[8:11], s3
+// CHECK: error: missing dst operand or lds modifier
+// CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3
+// CHECK-NEXT:{{^}}^
+
+buffer_load_dword off, s[8:11], s3 offset:1
+// CHECK: error: missing dst operand or lds modifier
+// CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3 offset:1
+// CHECK-NEXT:{{^}}^
+
+//==============================================================================
 // r128 modifier is not supported on this GPU
 
 image_atomic_add v10, v6, s[8:15] dmask:0x1 r128

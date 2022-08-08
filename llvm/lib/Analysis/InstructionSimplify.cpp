@@ -1252,12 +1252,14 @@ static bool isPoisonShift(Value *Amount, const SimplifyQuery &Q) {
   if (Q.isUndefValue(C))
     return true;
 
-  // Shifting by the bitwidth or more is undefined.
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(C))
-    if (CI->getValue().uge(CI->getType()->getScalarSizeInBits()))
-      return true;
+  // Shifting by the bitwidth or more is poison. This covers scalars and
+  // fixed/scalable vectors with splat constants.
+  const APInt *AmountC;
+  if (match(C, m_APInt(AmountC)) && AmountC->uge(AmountC->getBitWidth()))
+    return true;
 
-  // If all lanes of a vector shift are undefined the whole shift is.
+  // Try harder for fixed-length vectors:
+  // If all lanes of a vector shift are poison, the whole shift is poison.
   if (isa<ConstantVector>(C) || isa<ConstantDataVector>(C)) {
     for (unsigned I = 0,
                   E = cast<FixedVectorType>(C->getType())->getNumElements();
@@ -1582,45 +1584,6 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
   return nullptr;
 }
 
-/// Commuted variants are assumed to be handled by calling this function again
-/// with the parameters swapped.
-static Value *simplifyAndOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
-  ICmpInst::Predicate Pred0, Pred1;
-  Value *A, *B;
-  if (!match(Op0, m_ICmp(Pred0, m_Value(A), m_Value(B))) ||
-      !match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
-    return nullptr;
-
-  // Check for any combination of predicates that are guaranteed to be disjoint.
-  if ((Pred0 == ICmpInst::getInversePredicate(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_EQ && ICmpInst::isFalseWhenEqual(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_SLT && Pred1 == ICmpInst::ICMP_SGT) ||
-      (Pred0 == ICmpInst::ICMP_ULT && Pred1 == ICmpInst::ICMP_UGT))
-    return getFalse(Op0->getType());
-
-  return nullptr;
-}
-
-/// Commuted variants are assumed to be handled by calling this function again
-/// with the parameters swapped.
-static Value *simplifyOrOfICmpsWithSameOperands(ICmpInst *Op0, ICmpInst *Op1) {
-  ICmpInst::Predicate Pred0, Pred1;
-  Value *A, *B;
-  if (!match(Op0, m_ICmp(Pred0, m_Value(A), m_Value(B))) ||
-      !match(Op1, m_ICmp(Pred1, m_Specific(A), m_Specific(B))))
-    return nullptr;
-
-  // Check for any combination of predicates that cover the entire range of
-  // possibilities.
-  if ((Pred0 == ICmpInst::getInversePredicate(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_NE && ICmpInst::isTrueWhenEqual(Pred1)) ||
-      (Pred0 == ICmpInst::ICMP_SLE && Pred1 == ICmpInst::ICMP_SGE) ||
-      (Pred0 == ICmpInst::ICMP_ULE && Pred1 == ICmpInst::ICMP_UGE))
-    return getTrue(Op0->getType());
-
-  return nullptr;
-}
-
 /// Test if a pair of compares with a shared operand and 2 constants has an
 /// empty set intersection, full set union, or if one compare is a superset of
 /// the other.
@@ -1833,11 +1796,6 @@ static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   if (Value *X = simplifyUnsignedRangeCheck(Op1, Op0, /*IsAnd=*/true, Q))
     return X;
 
-  if (Value *X = simplifyAndOfICmpsWithSameOperands(Op0, Op1))
-    return X;
-  if (Value *X = simplifyAndOfICmpsWithSameOperands(Op1, Op0))
-    return X;
-
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, true))
     return X;
 
@@ -1912,11 +1870,6 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
   if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/false, Q))
     return X;
   if (Value *X = simplifyUnsignedRangeCheck(Op1, Op0, /*IsAnd=*/false, Q))
-    return X;
-
-  if (Value *X = simplifyOrOfICmpsWithSameOperands(Op0, Op1))
-    return X;
-  if (Value *X = simplifyOrOfICmpsWithSameOperands(Op1, Op0))
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithConstants(Op0, Op1, false))
@@ -2220,12 +2173,22 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     return Constant::getNullValue(Op0->getType());
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
-    // Op0&Op1 -> Op0 where Op0 implies Op1
-    if (isImpliedCondition(Op0, Op1, Q.DL).value_or(false))
-      return Op0;
-    // Op0&Op1 -> Op1 where Op1 implies Op0
-    if (isImpliedCondition(Op1, Op0, Q.DL).value_or(false))
-      return Op1;
+    if (Optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL)) {
+      // If Op0 is true implies Op1 is true, then Op0 is a subset of Op1.
+      if (*Implied == true)
+        return Op0;
+      // If Op0 is true implies Op1 is false, then they are not true together.
+      if (*Implied == false)
+        return ConstantInt::getFalse(Op0->getType());
+    }
+    if (Optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL)) {
+      // If Op1 is true implies Op0 is true, then Op1 is a subset of Op0.
+      if (Implied.value())
+        return Op1;
+      // If Op1 is true implies Op0 is false, then they are not true together.
+      if (!Implied.value())
+        return ConstantInt::getFalse(Op1->getType());
+    }
   }
 
   return nullptr;
@@ -2460,12 +2423,22 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
       return V;
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
-    // Op0|Op1 -> Op1 where Op0 implies Op1
-    if (isImpliedCondition(Op0, Op1, Q.DL).value_or(false))
-      return Op1;
-    // Op0|Op1 -> Op0 where Op1 implies Op0
-    if (isImpliedCondition(Op1, Op0, Q.DL).value_or(false))
-      return Op0;
+    if (Optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL, false)) {
+      // If Op0 is false implies Op1 is false, then Op1 is a subset of Op0.
+      if (*Implied == false)
+        return Op0;
+      // If Op0 is false implies Op1 is true, then at least one is always true.
+      if (*Implied == true)
+        return ConstantInt::getTrue(Op0->getType());
+    }
+    if (Optional<bool> Implied = isImpliedCondition(Op1, Op0, Q.DL, false)) {
+      // If Op1 is false implies Op0 is false, then Op0 is a subset of Op1.
+      if (*Implied == false)
+        return Op1;
+      // If Op1 is false implies Op0 is true, then at least one is always true.
+      if (*Implied == true)
+        return ConstantInt::getTrue(Op1->getType());
+    }
   }
 
   return nullptr;
@@ -2689,7 +2662,7 @@ static Constant *computePointerICmp(CmpInst::Predicate Pred, Value *LHS,
   default:
     return nullptr;
 
-    // Equality comaprisons are easy to fold.
+    // Equality comparisons are easy to fold.
   case CmpInst::ICMP_EQ:
   case CmpInst::ICMP_NE:
     break;
@@ -5573,6 +5546,24 @@ static bool isIdempotent(Intrinsic::ID ID) {
   }
 }
 
+/// Return true if the intrinsic rounds a floating-point value to an integral
+/// floating-point value (not an integer type).
+static bool removesFPFraction(Intrinsic::ID ID) {
+  switch (ID) {
+  default:
+    return false;
+
+  case Intrinsic::floor:
+  case Intrinsic::ceil:
+  case Intrinsic::trunc:
+  case Intrinsic::rint:
+  case Intrinsic::nearbyint:
+  case Intrinsic::round:
+  case Intrinsic::roundeven:
+    return true;
+  }
+}
+
 static Value *simplifyRelativeLoad(Constant *Ptr, Constant *Offset,
                                    const DataLayout &DL) {
   GlobalValue *PtrSym;
@@ -5638,6 +5629,18 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
       if (II->getIntrinsicID() == IID)
         return II;
 
+  if (removesFPFraction(IID)) {
+    // Converting from int or calling a rounding function always results in a
+    // finite integral number or infinity. For those inputs, rounding functions
+    // always return the same value, so the (2nd) rounding is eliminated. Ex:
+    // floor (sitofp x) -> sitofp x
+    // round (ceil x) -> ceil x
+    auto *II = dyn_cast<IntrinsicInst>(Op0);
+    if ((II && removesFPFraction(II->getIntrinsicID())) ||
+        match(Op0, m_SIToFP(m_Value())) || match(Op0, m_UIToFP(m_Value())))
+      return Op0;
+  }
+
   Value *X;
   switch (IID) {
   case Intrinsic::fabs:
@@ -5695,23 +5698,6 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
         match(Op0, m_Intrinsic<Intrinsic::pow>(m_SpecificFP(10.0), m_Value(X))))
       return X;
     break;
-  case Intrinsic::floor:
-  case Intrinsic::trunc:
-  case Intrinsic::ceil:
-  case Intrinsic::round:
-  case Intrinsic::roundeven:
-  case Intrinsic::nearbyint:
-  case Intrinsic::rint: {
-    // floor (sitofp x) -> sitofp x
-    // floor (uitofp x) -> uitofp x
-    //
-    // Converting from int always results in a finite integral number or
-    // infinity. For either of those inputs, these rounding functions always
-    // return the same value, so the rounding can be eliminated.
-    if (match(Op0, m_SIToFP(m_Value())) || match(Op0, m_UIToFP(m_Value())))
-      return Op0;
-    break;
-  }
   case Intrinsic::experimental_vector_reverse:
     // experimental.vector.reverse(experimental.vector.reverse(x)) -> x
     if (match(Op0,

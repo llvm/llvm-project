@@ -186,25 +186,25 @@ define amdgpu_kernel void @copy_local(<4 x i32> addrspace(3)* nocapture %d, <4 x
   ; GCN-NEXT:   liveins: $sgpr2, $sgpr0_sgpr1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr0_sgpr1, 36, 0 :: (dereferenceable invariant load (s64) from %ir.0, align 4, addrspace 4)
-  ; GCN-NEXT:   $vgpr0 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $exec
-  ; GCN-NEXT:   $vgpr1 = V_MOV_B32_e32 killed $sgpr0, implicit $exec, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2.for.body:
   ; GCN-NEXT:   successors: %bb.3(0x04000000), %bb.2(0x7c000000)
-  ; GCN-NEXT:   liveins: $sgpr2, $vgpr0, $vgpr1
+  ; GCN-NEXT:   liveins: $sgpr2, $sgpr0_sgpr1:0x000000000000000F
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   BUNDLE implicit-def $vgpr2_vgpr3, implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit-def $vgpr4_vgpr5, implicit-def $vgpr4, implicit-def $vgpr4_lo16, implicit-def $vgpr4_hi16, implicit-def $vgpr5, implicit-def $vgpr5_lo16, implicit-def $vgpr5_hi16, implicit $vgpr0, implicit $exec {
-  ; GCN-NEXT:     renamable $vgpr2_vgpr3 = DS_READ2_B32_gfx9 renamable $vgpr0, 2, 3, 0, implicit $exec :: (load (s64) from %ir.lsr.iv3 + 8, align 4, addrspace 3)
-  ; GCN-NEXT:     renamable $vgpr4_vgpr5 = DS_READ2_B32_gfx9 renamable $vgpr0, 0, 1, 0, implicit $exec :: (load (s64) from %ir.lsr.iv3, align 4, addrspace 3)
-  ; GCN-NEXT:   }
-  ; GCN-NEXT:   renamable $vgpr0 = V_ADD_U32_e64 killed $vgpr0, 16, 0, implicit $exec
+  ; GCN-NEXT:   $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $exec
+  ; GCN-NEXT:   $vgpr4 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit $exec
   ; GCN-NEXT:   renamable $sgpr2 = S_ADD_I32 killed renamable $sgpr2, -1, implicit-def dead $scc
-  ; GCN-NEXT:   BUNDLE implicit $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit $exec, implicit killed $vgpr4, implicit killed $vgpr5 {
-  ; GCN-NEXT:     DS_WRITE2_B32_gfx9 renamable $vgpr1, killed renamable $vgpr2, killed renamable $vgpr3, 2, 3, 0, implicit $exec :: (store (s64) into %ir.lsr.iv + 8, align 4, addrspace 3)
-  ; GCN-NEXT:     DS_WRITE2_B32_gfx9 renamable $vgpr1, killed renamable $vgpr4, killed renamable $vgpr5, 0, 1, 0, implicit $exec :: (store (s64) into %ir.lsr.iv, align 4, addrspace 3)
+  ; GCN-NEXT:   renamable $sgpr0 = S_ADD_I32 killed renamable $sgpr0, 16, implicit-def dead $scc
+  ; GCN-NEXT:   renamable $sgpr1 = S_ADD_I32 killed renamable $sgpr1, 16, implicit-def dead $scc
+  ; GCN-NEXT:   BUNDLE implicit-def $vgpr0_vgpr1, implicit-def $vgpr0, implicit-def $vgpr0_lo16, implicit-def $vgpr0_hi16, implicit-def $vgpr1, implicit-def $vgpr1_lo16, implicit-def $vgpr1_hi16, implicit-def $vgpr2_vgpr3, implicit-def $vgpr2, implicit-def $vgpr2_lo16, implicit-def $vgpr2_hi16, implicit-def $vgpr3, implicit-def $vgpr3_lo16, implicit-def $vgpr3_hi16, implicit killed $vgpr2, implicit $exec {
+  ; GCN-NEXT:     renamable $vgpr0_vgpr1 = DS_READ2_B32_gfx9 renamable $vgpr2, 2, 3, 0, implicit $exec :: (load (s64) from %ir.lsr.iv3 + 8, align 4, addrspace 3)
+  ; GCN-NEXT:     renamable $vgpr2_vgpr3 = DS_READ2_B32_gfx9 killed renamable $vgpr2, 0, 1, 0, implicit $exec :: (load (s64) from %ir.lsr.iv3, align 4, addrspace 3)
   ; GCN-NEXT:   }
-  ; GCN-NEXT:   renamable $vgpr1 = V_ADD_U32_e64 killed $vgpr1, 16, 0, implicit $exec
   ; GCN-NEXT:   S_CMP_LG_U32 renamable $sgpr2, 0, implicit-def $scc
+  ; GCN-NEXT:   BUNDLE implicit killed $vgpr4, implicit killed $vgpr0, implicit killed $vgpr1, implicit $exec, implicit killed $vgpr2, implicit killed $vgpr3 {
+  ; GCN-NEXT:     DS_WRITE2_B32_gfx9 renamable $vgpr4, killed renamable $vgpr0, killed renamable $vgpr1, 2, 3, 0, implicit $exec :: (store (s64) into %ir.lsr.iv + 8, align 4, addrspace 3)
+  ; GCN-NEXT:     DS_WRITE2_B32_gfx9 killed renamable $vgpr4, killed renamable $vgpr2, killed renamable $vgpr3, 0, 1, 0, implicit $exec :: (store (s64) into %ir.lsr.iv, align 4, addrspace 3)
+  ; GCN-NEXT:   }
   ; GCN-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3.for.end:

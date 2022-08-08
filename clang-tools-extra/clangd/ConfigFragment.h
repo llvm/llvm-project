@@ -163,8 +163,8 @@ struct Fragment {
     /// Flags added by the same CompileFlags entry will not be removed.
     std::vector<Located<std::string>> Remove;
 
-    /// Directory to search for compilation database (compile_comands.json etc).
-    /// Valid values are:
+    /// Directory to search for compilation database (compile_commands.json
+    /// etc). Valid values are:
     /// - A single path to a directory (absolute, or relative to the fragment)
     /// - Ancestors: search all parent directories (the default)
     /// - None: do not use a compilation database, just default flags.

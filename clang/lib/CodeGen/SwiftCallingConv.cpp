@@ -21,7 +21,7 @@ using namespace CodeGen;
 using namespace swiftcall;
 
 static const SwiftABIInfo &getSwiftABIInfo(CodeGenModule &CGM) {
-  return cast<SwiftABIInfo>(CGM.getTargetCodeGenInfo().getABIInfo());
+  return CGM.getTargetCodeGenInfo().getSwiftABIInfo();
 }
 
 static bool isPowerOf2(unsigned n) {
@@ -631,9 +631,8 @@ bool SwiftAggLowering::shouldPassIndirectly(bool asReturnValue) const {
 
   // Avoid copying the array of types when there's just a single element.
   if (Entries.size() == 1) {
-    return getSwiftABIInfo(CGM).shouldPassIndirectlyForSwift(
-                                                           Entries.back().Type,
-                                                             asReturnValue);
+    return getSwiftABIInfo(CGM).shouldPassIndirectly(Entries.back().Type,
+                                                     asReturnValue);
   }
 
   SmallVector<llvm::Type*, 8> componentTys;
@@ -641,15 +640,13 @@ bool SwiftAggLowering::shouldPassIndirectly(bool asReturnValue) const {
   for (auto &entry : Entries) {
     componentTys.push_back(entry.Type);
   }
-  return getSwiftABIInfo(CGM).shouldPassIndirectlyForSwift(componentTys,
-                                                           asReturnValue);
+  return getSwiftABIInfo(CGM).shouldPassIndirectly(componentTys, asReturnValue);
 }
 
 bool swiftcall::shouldPassIndirectly(CodeGenModule &CGM,
                                      ArrayRef<llvm::Type*> componentTys,
                                      bool asReturnValue) {
-  return getSwiftABIInfo(CGM).shouldPassIndirectlyForSwift(componentTys,
-                                                           asReturnValue);
+  return getSwiftABIInfo(CGM).shouldPassIndirectly(componentTys, asReturnValue);
 }
 
 CharUnits swiftcall::getMaximumVoluntaryIntegerSize(CodeGenModule &CGM) {
@@ -699,8 +696,7 @@ bool swiftcall::isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
 bool swiftcall::isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
                                   llvm::Type *eltTy, unsigned numElts) {
   assert(numElts > 1 && "illegal vector length");
-  return getSwiftABIInfo(CGM)
-           .isLegalVectorTypeForSwift(vectorSize, eltTy, numElts);
+  return getSwiftABIInfo(CGM).isLegalVectorType(vectorSize, eltTy, numElts);
 }
 
 std::pair<llvm::Type*, unsigned>

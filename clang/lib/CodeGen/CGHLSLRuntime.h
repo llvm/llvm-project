@@ -15,7 +15,19 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 #define LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 
+#include "clang/Basic/HLSLRuntime.h"
+
+namespace llvm {
+class Value;
+class GlobalVariable;
+class Function;
+} // namespace llvm
 namespace clang {
+class CallExpr;
+class Type;
+class VarDecl;
+
+class FunctionDecl;
 
 namespace CodeGen {
 
@@ -24,12 +36,18 @@ class CodeGenModule;
 class CGHLSLRuntime {
 protected:
   CodeGenModule &CGM;
+  uint32_t ResourceCounters[static_cast<uint32_t>(
+      hlsl::ResourceClass::NumClasses)] = {0};
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
   virtual ~CGHLSLRuntime() {}
 
+  void annotateHLSLResource(const VarDecl *D, llvm::GlobalVariable *GV);
+
   void finishCodeGen();
+
+  void setHLSLFunctionAttributes(llvm::Function *, const FunctionDecl *);
 };
 
 } // namespace CodeGen

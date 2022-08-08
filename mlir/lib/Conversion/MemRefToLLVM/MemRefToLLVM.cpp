@@ -178,14 +178,11 @@ struct AlignedAllocOpLowering : public AllocLikeOpLLVMLowering {
   }
 
   /// The minimum alignment to use with aligned_alloc (has to be a power of 2).
-  static constexpr uint64_t kMinAlignedAllocAlignment = 16UL;
+  static inline constexpr uint64_t kMinAlignedAllocAlignment = 16UL;
 
   /// Default layout to use in absence of the corresponding analysis.
   DataLayout defaultLayout;
 };
-
-// Out of line definition, required till C++17.
-constexpr uint64_t AlignedAllocOpLowering::kMinAlignedAllocAlignment;
 
 struct AllocaOpLowering : public AllocLikeOpLLVMLowering {
   AllocaOpLowering(LLVMTypeConverter &converter)
@@ -389,19 +386,15 @@ private:
     // Get pointer to offset field of memref<element_type> descriptor.
     Type indexPtrTy = LLVM::LLVMPointerType::get(
         getTypeConverter()->getIndexType(), addressSpace);
-    Value two = rewriter.create<LLVM::ConstantOp>(
-        loc, typeConverter->convertType(rewriter.getI32Type()),
-        rewriter.getI32IntegerAttr(2));
     Value offsetPtr = rewriter.create<LLVM::GEPOp>(
-        loc, indexPtrTy, scalarMemRefDescPtr,
-        ValueRange({createIndexConstant(rewriter, loc, 0), two}));
+        loc, indexPtrTy, scalarMemRefDescPtr, ArrayRef<LLVM::GEPArg>{0, 2});
 
     // The size value that we have to extract can be obtained using GEPop with
     // `dimOp.index() + 1` index argument.
     Value idxPlusOne = rewriter.create<LLVM::AddOp>(
         loc, createIndexConstant(rewriter, loc, 1), adaptor.getIndex());
-    Value sizePtr = rewriter.create<LLVM::GEPOp>(loc, indexPtrTy, offsetPtr,
-                                                 ValueRange({idxPlusOne}));
+    Value sizePtr =
+        rewriter.create<LLVM::GEPOp>(loc, indexPtrTy, offsetPtr, idxPlusOne);
     return rewriter.create<LLVM::LoadOp>(loc, sizePtr);
   }
 
@@ -664,11 +657,9 @@ struct GetGlobalMemrefOpLowering : public AllocLikeOpLLVMLowering {
     Type elementType = typeConverter->convertType(type.getElementType());
     Type elementPtrType = LLVM::LLVMPointerType::get(elementType, memSpace);
 
-    SmallVector<Value> operands;
-    operands.insert(operands.end(), type.getRank() + 1,
-                    createIndexConstant(rewriter, loc, 0));
-    auto gep =
-        rewriter.create<LLVM::GEPOp>(loc, elementPtrType, addressOf, operands);
+    auto gep = rewriter.create<LLVM::GEPOp>(
+        loc, elementPtrType, addressOf,
+        SmallVector<LLVM::GEPArg>(type.getRank() + 1, 0));
 
     // We do not expect the memref obtained using `memref.get_global` to be
     // ever deallocated. Set the allocated pointer to be known bad value to
@@ -1286,8 +1277,8 @@ private:
 
     // Copy size from shape to descriptor.
     Type llvmIndexPtrType = LLVM::LLVMPointerType::get(indexType);
-    Value sizeLoadGep = rewriter.create<LLVM::GEPOp>(
-        loc, llvmIndexPtrType, shapeOperandPtr, ValueRange{indexArg});
+    Value sizeLoadGep = rewriter.create<LLVM::GEPOp>(loc, llvmIndexPtrType,
+                                                     shapeOperandPtr, indexArg);
     Value size = rewriter.create<LLVM::LoadOp>(loc, sizeLoadGep);
     UnrankedMemRefDescriptor::setSize(rewriter, loc, *getTypeConverter(),
                                       targetSizesBase, indexArg, size);

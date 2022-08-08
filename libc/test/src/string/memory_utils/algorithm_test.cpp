@@ -2,7 +2,7 @@
 #define LLVM_LIBC_USE_BUILTIN_MEMSET_INLINE 0
 
 #include "utils/UnitTest/Test.h"
-#include <src/__support/CPP/Array.h>
+#include <src/__support/CPP/array.h>
 #include <src/string/memory_utils/algorithm.h>
 #include <src/string/memory_utils/backends.h>
 
@@ -10,7 +10,7 @@
 
 namespace __llvm_libc {
 
-struct alignas(64) Buffer : cpp::Array<char, 128> {
+struct alignas(64) Buffer : cpp::array<char, 128> {
   bool contains(const char *ptr) const {
     return ptr >= data() && ptr < (data() + size());
   }

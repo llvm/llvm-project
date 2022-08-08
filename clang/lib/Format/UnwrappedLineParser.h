@@ -208,7 +208,7 @@ private:
   //
   // NextTok specifies the next token. A null pointer NextTok is supported, and
   // signifies either the absence of a next token, or that the next token
-  // shouldn't be taken into accunt for the analysis.
+  // shouldn't be taken into account for the analysis.
   void distributeComments(const SmallVectorImpl<FormatToken *> &Comments,
                           const FormatToken *NextTok);
 

@@ -26,11 +26,14 @@
 namespace llvm {
 namespace symbolize {
 
+class LLVMSymbolizer;
+
 /// Filter to convert parsed log symbolizer markup elements into human-readable
 /// text.
 class MarkupFilter {
 public:
-  MarkupFilter(raw_ostream &OS, Optional<bool> ColorsEnabled = llvm::None);
+  MarkupFilter(raw_ostream &OS, LLVMSymbolizer &Symbolizer,
+               Optional<bool> ColorsEnabled = llvm::None);
 
   /// Filters a line containing symbolizer markup and writes the human-readable
   /// results to the output stream.
@@ -57,6 +60,7 @@ private:
     uint64_t ModuleRelativeAddr;
 
     bool contains(uint64_t Addr) const;
+    uint64_t getModuleRelativeAddr(uint64_t Addr) const;
   };
 
   // An informational module line currently being constructed. As many mmap
@@ -83,6 +87,7 @@ private:
 
   bool tryPresentation(const MarkupNode &Node);
   bool trySymbol(const MarkupNode &Node);
+  bool tryData(const MarkupNode &Node);
 
   bool trySGR(const MarkupNode &Node);
 
@@ -107,11 +112,13 @@ private:
   void reportTypeError(StringRef Str, StringRef TypeName) const;
   void reportLocation(StringRef::iterator Loc) const;
 
-  const MMap *overlappingMMap(const MMap &Map) const;
+  const MMap *getOverlappingMMap(const MMap &Map) const;
+  const MMap *getContainingMMap(uint64_t Addr) const;
 
   StringRef lineEnding() const;
 
   raw_ostream &OS;
+  LLVMSymbolizer &Symbolizer;
   const bool ColorsEnabled;
 
   MarkupParser Parser;

@@ -11,6 +11,7 @@
 
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/Any.h"
@@ -18,7 +19,6 @@
 #include <complex>
 
 namespace mlir {
-class ShapedType;
 
 //===----------------------------------------------------------------------===//
 // ElementsAttr
@@ -237,10 +237,10 @@ class ElementsAttrRange : public llvm::iterator_range<IteratorT> {
 public:
   using reference = typename IteratorT::reference;
 
-  ElementsAttrRange(Type shapeType,
+  ElementsAttrRange(ShapedType shapeType,
                     const llvm::iterator_range<IteratorT> &range)
       : llvm::iterator_range<IteratorT>(range), shapeType(shapeType) {}
-  ElementsAttrRange(Type shapeType, IteratorT beginIt, IteratorT endIt)
+  ElementsAttrRange(ShapedType shapeType, IteratorT beginIt, IteratorT endIt)
       : ElementsAttrRange(shapeType, llvm::make_range(beginIt, endIt)) {}
 
   /// Return the value at the given index.
@@ -254,7 +254,7 @@ public:
 
 private:
   /// The shaped type of the parent ElementsAttr.
-  Type shapeType;
+  ShapedType shapeType;
 };
 
 } // namespace detail

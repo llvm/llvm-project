@@ -255,7 +255,7 @@ TEST(SourceCodeTest, getAssociatedRange) {
   Visitor.runOverAnnotated(R"cpp(
       #define ATTR __attribute__((deprecated("message")))
       $r[[ATTR
-      // Commment.
+      // Comment.
       int x;]])cpp");
 }
 
@@ -410,7 +410,7 @@ TEST(SourceCodeTest, getAssociatedRangeWithComments) {
   Visit(R"cpp(
       #define ATTR __attribute__((deprecated("message")))
       $r[[ATTR
-      // Commment.
+      // Comment.
       int x;]])cpp");
 }
 

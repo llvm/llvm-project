@@ -333,3 +333,94 @@ entry:
   %inc = add i64 %or, 1
   ret i64 %inc
 }
+
+define i32 @or_sext1(i32 %x) {
+; CHECK-LABEL: or_sext1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl $43, %edi
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    orl $1, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt i32 %x, 42
+  %sext = sext i1 %cmp to i32
+  %or = or i32 %sext, 1
+  ret i32 %or
+}
+
+define i32 @or_sext2(i32 %x) {
+; CHECK-LABEL: or_sext2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl $43, %edi
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    orl $2, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt i32 %x, 42
+  %sext = sext i1 %cmp to i32
+  %or = or i32 %sext, 2
+  ret i32 %or
+}
+
+define i32 @or_sext3(i32 %x) {
+; CHECK-LABEL: or_sext3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl $43, %edi
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    orl $3, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt i32 %x, 42
+  %sext = sext i1 %cmp to i32
+  %or = or i32 %sext, 3
+  ret i32 %or
+}
+
+define i32 @or_sext4(i32 %x) {
+; CHECK-LABEL: or_sext4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl $43, %edi
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    orl $4, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt i32 %x, 42
+  %sext = sext i1 %cmp to i32
+  %or = or i32 %sext, 4
+  ret i32 %or
+}
+
+define i32 @or_sext7(i32 %x) {
+; CHECK-LABEL: or_sext7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl $43, %edi
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    orl $7, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt i32 %x, 42
+  %sext = sext i1 %cmp to i32
+  %or = or i32 %sext, 7
+  ret i32 %or
+}
+
+define i32 @or_sext8(i32 %x) {
+; CHECK-LABEL: or_sext8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl $43, %edi
+; CHECK-NEXT:    setge %al
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    orl $8, %eax
+; CHECK-NEXT:    retq
+  %cmp = icmp sgt i32 %x, 42
+  %sext = sext i1 %cmp to i32
+  %or = or i32 %sext, 8
+  ret i32 %or
+}
+

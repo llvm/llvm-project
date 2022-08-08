@@ -1464,7 +1464,7 @@ bool DataFlowSanitizer::runImpl(Module &M) {
       //   br i1 icmp ne (i8 (i8)* @my_func, i8 (i8)* null), label %use_my_func,
       //   label %avoid_my_func
       // The @"dfsw$my_func" wrapper is never null, so if we replace this use
-      // in the comparision, the icmp will simplify to false and we have
+      // in the comparison, the icmp will simplify to false and we have
       // accidentially optimized away a null check that is necessary.
       // This can lead to a crash when the null extern_weak my_func is called.
       //

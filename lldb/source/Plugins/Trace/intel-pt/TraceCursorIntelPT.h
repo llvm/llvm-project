@@ -21,7 +21,7 @@ public:
       const llvm::Optional<LinuxPerfZeroTscConversion> &tsc_conversion,
       llvm::Optional<uint64_t> beginning_of_time_nanos);
 
-  bool Seek(int64_t offset, SeekType origin) override;
+  bool Seek(int64_t offset, lldb::TraceCursorSeekType origin) override;
 
   void Next() override;
 
@@ -33,7 +33,7 @@ public:
 
   lldb::TraceEvent GetEventType() const override;
 
-  llvm::Optional<lldb::cpu_id_t> GetCPU() const override;
+  lldb::cpu_id_t GetCPU() const override;
 
   llvm::Optional<uint64_t> GetHWClock() const override;
 

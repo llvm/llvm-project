@@ -12,7 +12,7 @@ set(LIBS
   MLIRPDLLParser
   )
 
-add_tablegen(mlir-pdll MLIR_PDLL
+add_tablegen(mlir-pdll MLIR_PDLL DESTINATION "${MLIR_TOOLS_INSTALL_DIR}"
   mlir-pdll.cpp
 
   DEPENDS

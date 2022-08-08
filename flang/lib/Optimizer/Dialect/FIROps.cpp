@@ -1105,7 +1105,7 @@ mlir::ParseResult fir::DispatchTableOp::parse(mlir::OpAsmParser &parser,
   // Parse the optional table body.
   mlir::Region *body = result.addRegion();
   mlir::OptionalParseResult parseResult = parser.parseOptionalRegion(*body);
-  if (parseResult.hasValue() && failed(*parseResult))
+  if (parseResult.has_value() && failed(*parseResult))
     return mlir::failure();
 
   fir::DispatchTableOp::ensureTerminator(*body, parser.getBuilder(),
@@ -1287,7 +1287,7 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
     // Parse the optional initializer body.
     auto parseResult =
         parser.parseOptionalRegion(*result.addRegion(), /*arguments=*/{});
-    if (parseResult.hasValue() && mlir::failed(*parseResult))
+    if (parseResult.has_value() && mlir::failed(*parseResult))
       return mlir::failure();
   }
   return mlir::success();

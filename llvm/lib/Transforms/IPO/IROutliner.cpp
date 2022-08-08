@@ -169,7 +169,15 @@ static void getSortedConstantKeys(std::vector<Value *> &SortedKeys,
   for (auto &VtoBB : Map)
     SortedKeys.push_back(VtoBB.first);
 
+  // Here we expect to have either 1 value that is void (nullptr) or multiple
+  // values that are all constant integers.
+  if (SortedKeys.size() == 1) {
+    assert(!SortedKeys[0] && "Expected a single void value.");
+    return;
+  }
+
   stable_sort(SortedKeys, [](const Value *LHS, const Value *RHS) {
+    assert(LHS && RHS && "Expected non void values.");
     const ConstantInt *LHSC = dyn_cast<ConstantInt>(LHS);
     const ConstantInt *RHSC = dyn_cast<ConstantInt>(RHS);
     assert(RHSC && "Not a constant integer in return value?");

@@ -1445,30 +1445,7 @@ public:
   // through scalar predication or masked load/store or masked gather/scatter.
   // \p VF is the vectorization factor that will be used to vectorize \p I.
   // Superset of instructions that return true for isScalarWithPredication.
-  bool isPredicatedInst(Instruction *I, ElementCount VF) {
-    // When we know the load's address is loop invariant and the instruction
-    // in the original scalar loop was unconditionally executed then we
-    // don't need to mark it as a predicated instruction. Tail folding may
-    // introduce additional predication, but we're guaranteed to always have
-    // at least one active lane.  We call Legal->blockNeedsPredication here
-    // because it doesn't query tail-folding.  For stores, we need to prove
-    // both speculation safety (which follows from the same argument as loads),
-    // but also must prove the value being stored is correct.  The easiest
-    // form of the later is to require that all values stored are the same.
-    if (Legal->isUniformMemOp(*I) &&
-        (isa<LoadInst>(I) ||
-         (isa<StoreInst>(I) &&
-          TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()))) &&
-        !Legal->blockNeedsPredication(I->getParent()))
-      return false;
-    if (!blockNeedsPredicationForAnyReason(I->getParent()))
-      return false;
-    // Loads and stores that need some form of masked operation are predicated
-    // instructions.
-    if (isa<LoadInst>(I) || isa<StoreInst>(I))
-      return Legal->isMaskRequired(I);
-    return isScalarWithPredication(I, VF);
-  }
+  bool isPredicatedInst(Instruction *I, ElementCount VF) const;
 
   /// Returns true if \p I is a memory instruction with consecutive memory
   /// access that can be widened.
@@ -3086,7 +3063,7 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   // 1) If we know that we must execute the scalar epilogue, emit an
   //    unconditional branch.
   // 2) Otherwise, we must have a single unique exit block (due to how we
-  //    implement the multiple exit case).  In this case, set up a conditonal
+  //    implement the multiple exit case).  In this case, set up a conditional
   //    branch from the middle block to the loop scalar preheader, and the
   //    exit block.  completeLoopSkeleton will update the condition to use an
   //    iteration check, if required to decide whether to execute the remainder.
@@ -4466,6 +4443,32 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
   return false;
 }
 
+bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I,
+                                                  ElementCount VF) const {
+  // When we know the load's address is loop invariant and the instruction
+  // in the original scalar loop was unconditionally executed then we
+  // don't need to mark it as a predicated instruction. Tail folding may
+  // introduce additional predication, but we're guaranteed to always have
+  // at least one active lane.  We call Legal->blockNeedsPredication here
+  // because it doesn't query tail-folding.  For stores, we need to prove
+  // both speculation safety (which follows from the same argument as loads),
+  // but also must prove the value being stored is correct.  The easiest
+  // form of the later is to require that all values stored are the same.
+  if (Legal->isUniformMemOp(*I) &&
+      (isa<LoadInst>(I) ||
+       (isa<StoreInst>(I) &&
+        TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()))) &&
+      !Legal->blockNeedsPredication(I->getParent()))
+    return false;
+  if (!blockNeedsPredicationForAnyReason(I->getParent()))
+    return false;
+  // Loads and stores that need some form of masked operation are predicated
+  // instructions.
+  if (isa<LoadInst>(I) || isa<StoreInst>(I))
+    return Legal->isMaskRequired(I);
+  return isScalarWithPredication(I, VF);
+}
+
 bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
     Instruction *I, ElementCount VF) {
   assert(isAccessInterleaved(I) && "Expecting interleaved access.");
@@ -4616,17 +4619,26 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   if (Cmp && TheLoop->contains(Cmp) && Cmp->hasOneUse())
     addToWorklistIfAllowed(Cmp);
 
+  // Return true if all lanes perform the same memory operation, and we can
+  // thus chose to execute only one.
+  auto isUniformMemOpUse = [&](Instruction *I) {
+    if (!Legal->isUniformMemOp(*I))
+      return false;
+    if (isa<LoadInst>(I))
+      // Loading the same address always produces the same result - at least
+      // assuming aliasing and ordering which have already been checked.
+      return true;
+    // Storing the same value on every iteration.
+    return TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand());
+  };
+
   auto isUniformDecision = [&](Instruction *I, ElementCount VF) {
     InstWidening WideningDecision = getWideningDecision(I, VF);
     assert(WideningDecision != CM_Unknown &&
            "Widening decision should be ready at this moment");
 
-    // A uniform memory op is itself uniform.  We exclude uniform stores
-    // here as they demand the last lane, not the first one.
-    if (isa<LoadInst>(I) && Legal->isUniformMemOp(*I)) {
-      assert(WideningDecision == CM_Scalarize);
+    if (isUniformMemOpUse(I))
       return true;
-    }
 
     return (WideningDecision == CM_Widen ||
             WideningDecision == CM_Widen_Reverse ||
@@ -4680,9 +4692,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
       if (!Ptr)
         continue;
 
-      // A uniform memory op is itself uniform.  We exclude uniform stores
-      // here as they demand the last lane, not the first one.
-      if (isa<LoadInst>(I) && Legal->isUniformMemOp(I))
+      if (isUniformMemOpUse(&I))
         addToWorklistIfAllowed(&I);
 
       if (isUniformDecision(&I, VF)) {
@@ -6547,7 +6557,7 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
   VectorTy = VectorType::get(I->getOperand(0)->getType(), VectorTy);
 
   Instruction *Op0, *Op1;
-  if (RedOp &&
+  if (RedOp && RdxDesc.getOpcode() == Instruction::Add &&
       match(RedOp,
             m_ZExtOrSExt(m_Mul(m_Instruction(Op0), m_Instruction(Op1)))) &&
       match(Op0, m_ZExtOrSExt(m_Value())) &&
@@ -6556,7 +6566,7 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
       !TheLoop->isLoopInvariant(Op0) && !TheLoop->isLoopInvariant(Op1) &&
       (Op0->getOpcode() == RedOp->getOpcode() || Op0 == Op1)) {
 
-    // Matched reduce(ext(mul(ext(A), ext(B)))
+    // Matched reduce.add(ext(mul(ext(A), ext(B)))
     // Note that the extend opcodes need to all match, or if A==B they will have
     // been converted to zext(mul(sext(A), sext(A))) as it is known positive,
     // which is equally fine.
@@ -6573,9 +6583,8 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
         TTI.getCastInstrCost(RedOp->getOpcode(), VectorTy, MulType,
                              TTI::CastContextHint::None, CostKind, RedOp);
 
-    InstructionCost RedCost = TTI.getExtendedAddReductionCost(
-        /*IsMLA=*/true, IsUnsigned, RdxDesc.getRecurrenceType(), ExtType,
-        CostKind);
+    InstructionCost RedCost = TTI.getMulAccReductionCost(
+        IsUnsigned, RdxDesc.getRecurrenceType(), ExtType, CostKind);
 
     if (RedCost.isValid() &&
         RedCost < ExtCost * 2 + MulCost + Ext2Cost + BaseCost)
@@ -6585,16 +6594,16 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
     // Matched reduce(ext(A))
     bool IsUnsigned = isa<ZExtInst>(RedOp);
     auto *ExtType = VectorType::get(RedOp->getOperand(0)->getType(), VectorTy);
-    InstructionCost RedCost = TTI.getExtendedAddReductionCost(
-        /*IsMLA=*/false, IsUnsigned, RdxDesc.getRecurrenceType(), ExtType,
-        CostKind);
+    InstructionCost RedCost = TTI.getExtendedReductionCost(
+        RdxDesc.getOpcode(), IsUnsigned, RdxDesc.getRecurrenceType(), ExtType,
+        RdxDesc.getFastMathFlags(), CostKind);
 
     InstructionCost ExtCost =
         TTI.getCastInstrCost(RedOp->getOpcode(), VectorTy, ExtType,
                              TTI::CastContextHint::None, CostKind, RedOp);
     if (RedCost.isValid() && RedCost < BaseCost + ExtCost)
       return I == RetI ? RedCost : 0;
-  } else if (RedOp &&
+  } else if (RedOp && RdxDesc.getOpcode() == Instruction::Add &&
              match(RedOp, m_Mul(m_Instruction(Op0), m_Instruction(Op1)))) {
     if (match(Op0, m_ZExtOrSExt(m_Value())) &&
         Op0->getOpcode() == Op1->getOpcode() &&
@@ -6607,7 +6616,7 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
                                                                     : Op0Ty;
       auto *ExtType = VectorType::get(LargestOpTy, VectorTy);
 
-      // Matched reduce(mul(ext(A), ext(B))), where the two ext may be of
+      // Matched reduce.add(mul(ext(A), ext(B))), where the two ext may be of
       // different sizes. We take the largest type as the ext to reduce, and add
       // the remaining cost as, for example reduce(mul(ext(ext(A)), ext(B))).
       InstructionCost ExtCost0 = TTI.getCastInstrCost(
@@ -6619,9 +6628,8 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
       InstructionCost MulCost =
           TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
 
-      InstructionCost RedCost = TTI.getExtendedAddReductionCost(
-          /*IsMLA=*/true, IsUnsigned, RdxDesc.getRecurrenceType(), ExtType,
-          CostKind);
+      InstructionCost RedCost = TTI.getMulAccReductionCost(
+          IsUnsigned, RdxDesc.getRecurrenceType(), ExtType, CostKind);
       InstructionCost ExtraExtCost = 0;
       if (Op0Ty != LargestOpTy || Op1Ty != LargestOpTy) {
         Instruction *ExtraExtOp = (Op0Ty != LargestOpTy) ? Op0 : Op1;
@@ -6635,13 +6643,12 @@ Optional<InstructionCost> LoopVectorizationCostModel::getReductionPatternCost(
           (RedCost + ExtraExtCost) < (ExtCost0 + ExtCost1 + MulCost + BaseCost))
         return I == RetI ? RedCost : 0;
     } else if (!match(I, m_ZExtOrSExt(m_Value()))) {
-      // Matched reduce(mul())
+      // Matched reduce.add(mul())
       InstructionCost MulCost =
           TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
 
-      InstructionCost RedCost = TTI.getExtendedAddReductionCost(
-          /*IsMLA=*/true, true, RdxDesc.getRecurrenceType(), VectorTy,
-          CostKind);
+      InstructionCost RedCost = TTI.getMulAccReductionCost(
+          true, RdxDesc.getRecurrenceType(), VectorTy, CostKind);
 
       if (RedCost.isValid() && RedCost < MulCost + BaseCost)
         return I == RetI ? RedCost : 0;
@@ -6771,29 +6778,41 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         NumPredStores++;
 
       if (Legal->isUniformMemOp(I)) {
-        // Lowering story for uniform memory ops is currently a bit complicated.
-        // Scalarization works for everything which isn't a store with scalable
-        // VF.  Fixed len VFs just scalarize and then DCE later; scalarization
-        // knows how to handle uniform-per-part values (i.e. the first lane
-        // in each unrolled VF) and can thus handle scalable loads too.  For
-        // scalable stores, we use a scatter if legal.  If not, we have no way
-        // to lower (currently) and thus have to abort vectorization.
-        if (isa<StoreInst>(&I) && VF.isScalable()) {
-          if (isLegalGatherOrScatter(&I, VF))
-            setWideningDecision(&I, VF, CM_GatherScatter,
-                                getGatherScatterCost(&I, VF));
-          else
-            // Error case, abort vectorization
-            setWideningDecision(&I, VF, CM_Scalarize,
-                                InstructionCost::getInvalid());
-          continue;
-        }
+        auto isLegalToScalarize = [&]() {
+          if (!VF.isScalable())
+            // Scalarization of fixed length vectors "just works".
+            return true;
+
+          // For scalable vectors, a uniform memop load is always
+          // uniform-by-parts  and we know how to scalarize that.
+          if (isa<LoadInst>(I))
+            return true;
+
+          // A uniform store isn't neccessarily uniform-by-part
+          // and we can't assume scalarization.
+          auto &SI = cast<StoreInst>(I);
+          return TheLoop->isLoopInvariant(SI.getValueOperand());
+        };
+
+        const InstructionCost GatherScatterCost =
+          isLegalGatherOrScatter(&I, VF) ?
+          getGatherScatterCost(&I, VF) : InstructionCost::getInvalid();
+
         // Load: Scalar load + broadcast
         // Store: Scalar store + isLoopInvariantStoreValue ? 0 : extract
         // TODO: Avoid replicating loads and stores instead of relying on
         // instcombine to remove them.
-        setWideningDecision(&I, VF, CM_Scalarize,
-                            getUniformMemOpCost(&I, VF));
+        const InstructionCost ScalarizationCost = isLegalToScalarize() ?
+          getUniformMemOpCost(&I, VF) : InstructionCost::getInvalid();
+
+
+        // Choose better solution for the current VF,  Note that Invalid
+        // costs compare as maximumal large.  If both are invalid, we get
+        // scalable invalid which signals a failure and a vectorization abort.
+        if (GatherScatterCost < ScalarizationCost)
+          setWideningDecision(&I, VF, CM_GatherScatter, GatherScatterCost);
+        else
+          setWideningDecision(&I, VF, CM_Scalarize, ScalarizationCost);
         continue;
       }
 
@@ -9715,7 +9734,7 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
     Function *F, Loop *L, LoopVectorizeHints &Hints, ProfileSummaryInfo *PSI,
     BlockFrequencyInfo *BFI, TargetTransformInfo *TTI, TargetLibraryInfo *TLI,
     AssumptionCache *AC, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
-    LoopVectorizationLegality &LVL) {
+    LoopVectorizationLegality &LVL, InterleavedAccessInfo *IAI) {
   // 1) OptSize takes precedence over all other options, i.e. if this is set,
   // don't look at hints or options, and don't request a scalar epilogue.
   // (For PGSO, as shouldOptimizeForSize isn't currently accessible from
@@ -9750,7 +9769,7 @@ static ScalarEpilogueLowering getScalarEpilogueLowering(
   };
 
   // 4) if the TTI hook indicates this is profitable, request predication.
-  if (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT, &LVL))
+  if (TTI->preferPredicateOverEpilogue(L, LI, *SE, *AC, TLI, DT, &LVL, IAI))
     return CM_ScalarEpilogueNotNeededUsePredicate;
 
   return CM_ScalarEpilogueAllowed;
@@ -9845,7 +9864,7 @@ static bool processLoopInVPlanNativePath(
   InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL->getLAI());
 
   ScalarEpilogueLowering SEL = getScalarEpilogueLowering(
-      F, L, Hints, PSI, BFI, TTI, TLI, AC, LI, PSE.getSE(), DT, *LVL);
+      F, L, Hints, PSI, BFI, TTI, TLI, AC, LI, PSE.getSE(), DT, *LVL, &IAI);
 
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE, F,
                                 &Hints, IAI);
@@ -10089,11 +10108,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  // Check the function attributes and profiles to find out if this function
-  // should be optimized for size.
-  ScalarEpilogueLowering SEL = getScalarEpilogueLowering(
-      F, L, Hints, PSI, BFI, TTI, TLI, AC, LI, PSE.getSE(), DT, LVL);
-
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
   // here. They may require CFG and instruction level transformations before
   // even evaluating whether vectorization is profitable. Since we cannot modify
@@ -10104,6 +10118,22 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                         ORE, BFI, PSI, Hints, Requirements);
 
   assert(L->isInnermost() && "Inner loop expected.");
+
+  InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI());
+  bool UseInterleaved = TTI->enableInterleavedAccessVectorization();
+
+  // If an override option has been passed in for interleaved accesses, use it.
+  if (EnableInterleavedMemAccesses.getNumOccurrences() > 0)
+    UseInterleaved = EnableInterleavedMemAccesses;
+
+  // Analyze interleaved memory accesses.
+  if (UseInterleaved)
+    IAI.analyzeInterleaving(useMaskedInterleavedAccesses(*TTI));
+
+  // Check the function attributes and profiles to find out if this function
+  // should be optimized for size.
+  ScalarEpilogueLowering SEL = getScalarEpilogueLowering(
+      F, L, Hints, PSI, BFI, TTI, TLI, AC, LI, PSE.getSE(), DT, LVL, &IAI);
 
   // Check the loop for a trip count threshold: vectorize loops with a tiny trip
   // count by optimizing for size, to minimize overheads.
@@ -10166,18 +10196,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                          "reorder floating-point operations\n");
     Hints.emitRemarkWithHints();
     return false;
-  }
-
-  bool UseInterleaved = TTI->enableInterleavedAccessVectorization();
-  InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI());
-
-  // If an override option has been passed in for interleaved accesses, use it.
-  if (EnableInterleavedMemAccesses.getNumOccurrences() > 0)
-    UseInterleaved = EnableInterleavedMemAccesses;
-
-  // Analyze interleaved memory accesses.
-  if (UseInterleaved) {
-    IAI.analyzeInterleaving(useMaskedInterleavedAccesses(*TTI));
   }
 
   // Use the cost model.

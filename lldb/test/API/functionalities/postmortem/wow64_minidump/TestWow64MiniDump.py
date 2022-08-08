@@ -42,7 +42,7 @@ class Wow64MiniDumpTestCase(TestBase):
         # In the dump, none of the threads are stopped, so we cannot use
         # lldbutil.get_stopped_thread.
         thread = process.GetThreadAtIndex(0)
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonNone)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonNone)
 
     def test_stack_info_in_wow64_mini_dump(self):
         """Test that we can see a trivial stack in a VS-generate mini dump."""

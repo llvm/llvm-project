@@ -302,7 +302,7 @@ protected:
 ///
 /// This version is used when \c __enable_direct_output<_OutIt, _CharT> == true.
 ///
-/// This class limits the size available the the direct writer so it will not
+/// This class limits the size available to the direct writer so it will not
 /// exceed the maximum number of code units.
 template <class _OutIt, __formatter::__char_type _CharT>
   requires(output_iterator<_OutIt, const _CharT&>)

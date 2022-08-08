@@ -5,13 +5,13 @@ conversions between, and within dialects. This framework allows for transforming
 illegal operations to those supported by a provided conversion target, via a set
 of pattern-based operation rewriting patterns.
 
-[TOC]
-
 The dialect conversion framework consists of the following components:
 
 *   A [Conversion Target](#conversion-target)
 *   A set of [Rewrite Patterns](#rewrite-pattern-specification)
 *   A [Type Converter](#type-conversion) (Optional)
+
+[TOC]
 
 ## Modes of Conversion
 

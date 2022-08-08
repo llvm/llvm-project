@@ -928,14 +928,6 @@ uint32_t ArchSpec::GetMaximumOpcodeByteSize() const {
   return 0;
 }
 
-bool ArchSpec::IsExactMatch(const ArchSpec &rhs) const {
-  return IsEqualTo(rhs, true);
-}
-
-bool ArchSpec::IsCompatibleMatch(const ArchSpec &rhs) const {
-  return IsEqualTo(rhs, false);
-}
-
 static bool IsCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
                                     llvm::Triple::EnvironmentType rhs) {
   if (lhs == rhs)
@@ -967,11 +959,11 @@ static bool IsCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
   return false;
 }
 
-bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
+bool ArchSpec::IsMatch(const ArchSpec &rhs, MatchType match) const {
   // explicitly ignoring m_distribution_id in this method.
 
   if (GetByteOrder() != rhs.GetByteOrder() ||
-      !cores_match(GetCore(), rhs.GetCore(), true, exact_match))
+      !cores_match(GetCore(), rhs.GetCore(), true, match == ExactMatch))
     return false;
 
   const llvm::Triple &lhs_triple = GetTriple();
@@ -988,7 +980,7 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
   // On Windows, the vendor field doesn't have any practical effect, but
   // it is often set to either "pc" or "w64".
   if ((lhs_triple_vendor != rhs_triple_vendor) &&
-      (exact_match || !both_windows)) {
+      (match == ExactMatch || !both_windows)) {
     const bool rhs_vendor_specified = rhs.TripleVendorWasSpecified();
     const bool lhs_vendor_specified = TripleVendorWasSpecified();
     // Both architectures had the vendor specified, so if they aren't equal
@@ -1007,7 +999,7 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
   const llvm::Triple::EnvironmentType rhs_triple_env =
       rhs_triple.getEnvironment();
 
-  if (!exact_match) {
+  if (match == CompatibleMatch) {
     // x86_64-apple-ios-macabi, x86_64-apple-macosx are compatible, no match.
     if ((lhs_triple_os == llvm::Triple::IOS &&
          lhs_triple_env == llvm::Triple::MacABI &&
@@ -1034,12 +1026,13 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
       return false;
 
     // If the pair of os+env is both unspecified, match any other os+env combo.
-    if (!exact_match && ((!lhs_os_specified && !lhs_triple.hasEnvironment()) ||
-                         (!rhs_os_specified && !rhs_triple.hasEnvironment())))
+    if (match == CompatibleMatch &&
+        ((!lhs_os_specified && !lhs_triple.hasEnvironment()) ||
+         (!rhs_os_specified && !rhs_triple.hasEnvironment())))
       return true;
   }
 
-  if (!exact_match && both_windows)
+  if (match == CompatibleMatch && both_windows)
     return true; // The Windows environments (MSVC vs GNU) are compatible
 
   return IsCompatibleEnvironment(lhs_triple_env, rhs_triple_env);

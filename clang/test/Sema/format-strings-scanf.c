@@ -40,9 +40,11 @@ void test(const char *s, int *i) {
   scanf("%0d", i); // expected-warning{{zero field width in scanf format string is unused}}
   scanf("%00d", i); // expected-warning{{zero field width in scanf format string is unused}}
   scanf("%d%[asdfasdfd", i, s); // expected-warning{{no closing ']' for '%[' in scanf format string}}
+  scanf("%B", i); // expected-warning{{invalid conversion specifier 'B'}}
 
   unsigned short s_x;
   scanf ("%" "hu" "\n", &s_x); // no-warning
+  scanf("%hb", &s_x);
   scanf("%y", i); // expected-warning{{invalid conversion specifier 'y'}}
   scanf("%%"); // no-warning
   scanf("%%%1$d", i); // no-warning
@@ -57,6 +59,7 @@ void test(const char *s, int *i) {
   scanf("%s", (signed char*)0); // no-warning
   scanf("%s", (unsigned char*)0); // no-warning
   scanf("%hhu", (signed char*)0); // no-warning
+  scanf("%hhb", (signed char*)0); // no-warning
 }
 
 void bad_length_modifiers(char *s, void *p, wchar_t *ws, long double *ld) {
@@ -193,6 +196,7 @@ void test_qualifiers(const int *cip, volatile int* vip,
 void test_size_types(void) {
   size_t s = 0;
   scanf("%zu", &s); // No warning.
+  scanf("%zb", &s);
 
   double d1 = 0.;
   scanf("%zu", &d1); // expected-warning-re{{format specifies type 'size_t *' (aka '{{.+}}') but the argument has type 'double *'}}
@@ -213,6 +217,7 @@ void test_size_types(void) {
 void test_ptrdiff_t_types(void) {
   __UNSIGNED_PTRDIFF_TYPE__ p1 = 0;
   scanf("%tu", &p1); // No warning.
+  scanf("%tb", &p1);
 
   double d1 = 0.;
   scanf("%tu", &d1); // expected-warning-re{{format specifies type 'unsigned ptrdiff_t *' (aka '{{.+}}') but the argument has type 'double *'}}

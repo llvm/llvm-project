@@ -13,6 +13,6 @@
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(void, mtx_destroy, (mtx_t * mutex)) {}
+LLVM_LIBC_FUNCTION(void, mtx_destroy, (mtx_t *)) {}
 
 } // namespace __llvm_libc

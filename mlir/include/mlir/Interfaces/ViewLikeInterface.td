@@ -165,8 +165,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::getMixedOffsets($_op, $_op.static_offsets(),
-                                       $_op.offsets());
+        return ::mlir::getMixedStridesOrOffsets($_op.static_offsets(),
+                                                $_op.offsets());
       }]
     >,
     InterfaceMethod<
@@ -178,7 +178,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::getMixedSizes($_op, $_op.static_sizes(), $_op.sizes());
+        return ::mlir::getMixedSizes($_op.static_sizes(), $_op.sizes());
       }]
     >,
     InterfaceMethod<
@@ -190,8 +190,8 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::getMixedStrides($_op, $_op.static_strides(),
-                                       $_op.strides());
+        return ::mlir::getMixedStridesOrOffsets($_op.static_strides(),
+                                                $_op.strides());
       }]
     >,
 
@@ -237,7 +237,6 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
         return ::mlir::ShapedType::isDynamicStrideOrOffset(v.getSExtValue());
       }]
     >,
-
     InterfaceMethod<
       /*desc=*/[{
         Assert the offset `idx` is a static constant and return its value.

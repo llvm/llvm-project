@@ -687,8 +687,8 @@ convertContractOpToMmaSync(vector::ContractionOp op,
   int64_t m = op.getLhs().getType().cast<VectorType>().getShape()[0];
   int64_t n = op.getRhs().getType().cast<VectorType>().getShape()[0];
   int64_t k = op.getLhs().getType().cast<VectorType>().getShape()[1];
-  Value matmul = b.create<nvgpu::MmaSyncOp>(
-      op.getLoc(), opC.getType(), opA, opB, opC, b.getI64ArrayAttr({m, n, k}));
+  Value matmul = b.create<nvgpu::MmaSyncOp>(op.getLoc(), opA, opB, opC,
+                                            b.getI64ArrayAttr({m, n, k}));
   valueMapping[op.getResult()] = matmul;
   return success();
 }
@@ -698,8 +698,8 @@ static void convertConstantOp(arith::ConstantOp op,
                               llvm::DenseMap<Value, Value> &valueMapping) {
   assert(constantSupportsMMAMatrixType(op));
   OpBuilder b(op);
-  Attribute splat =
-      op.getValue().cast<SplatElementsAttr>().getSplatValue<Attribute>();
+  auto splat =
+      op.getValue().cast<SplatElementsAttr>().getSplatValue<TypedAttr>();
   auto scalarConstant =
       b.create<arith::ConstantOp>(op.getLoc(), splat.getType(), splat);
   const char *fragType = inferFragType(op);

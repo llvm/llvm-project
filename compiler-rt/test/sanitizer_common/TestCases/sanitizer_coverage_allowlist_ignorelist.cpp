@@ -79,9 +79,6 @@
 // RUN: %clangxx -O0 %s -S -o - -emit-llvm -Xclang -no-opaque-pointers -fsanitize-coverage=inline-8bit-counters,indirect-calls,trace-cmp,pc-table -fsanitize-coverage-allowlist=al_foo.txt  -fsanitize-coverage-ignorelist=bl_bar.txt   2>&1 |     grep -f patterns.txt | count 9
 // RUN: %clangxx -O0 %s -S -o - -emit-llvm -Xclang -no-opaque-pointers -fsanitize-coverage=inline-8bit-counters,indirect-calls,trace-cmp,pc-table -fsanitize-coverage-allowlist=al_bar.txt  -fsanitize-coverage-ignorelist=bl_bar.txt   2>&1 | not grep -f patterns.txt
 
-/// The options below are deprecated and will be removed.
-// RUN: %clangxx -O0 %s -S -o - -emit-llvm -Xclang -no-opaque-pointers -fsanitize-coverage=inline-8bit-counters,indirect-calls,trace-cmp,pc-table -fsanitize-coverage-whitelist=al_bar.txt  -fsanitize-coverage-ignorelist=bl_bar.txt   2>&1 | not grep -f patterns.txt
-
 // RUN: cd -
 // RUN: rm -rf $DIR
 

@@ -3369,3 +3369,25 @@ def G_FPTRUNC_ROUND_DOWNWARD : AMDGPUGenericInstruction {
   let InOperandList = (ins type1:$src0);
   let hasSideEffects = 0;
 }
+
+//============================================================================//
+// Dummy Instructions
+//============================================================================//
+
+def V_ILLEGAL_gfx6_gfx7_gfx8_gfx9 : Enc32, InstSI<(outs), (ins), "v_illegal"> {
+  let Inst{31-0} = 0xFFFFFFFF;
+  let FixedSize = 1;
+  let Size = 4;
+  let Uses = [EXEC];
+  let hasSideEffects = 1;
+  let SubtargetPredicate = isGFX6GFX7GFX8GFX9;
+}
+
+def V_ILLEGAL : Enc32, InstSI<(outs), (ins), "v_illegal"> {
+  let Inst{31-0} = 0x00000000;
+  let FixedSize = 1;
+  let Size = 4;
+  let Uses = [EXEC];
+  let hasSideEffects = 1;
+  let SubtargetPredicate = isGFX10Plus;
+}

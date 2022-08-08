@@ -503,10 +503,37 @@ void arith::ExtSIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 static ConstantIntRanges truncIRange(const ConstantIntRanges &range,
                                      Type destType) {
   unsigned destWidth = ConstantIntRanges::getStorageBitwidth(destType);
-  APInt umin = range.umin().trunc(destWidth);
-  APInt umax = range.umax().trunc(destWidth);
-  APInt smin = range.smin().trunc(destWidth);
-  APInt smax = range.smax().trunc(destWidth);
+  // If you truncate the first four bytes in [0xaaaabbbb, 0xccccbbbb],
+  // the range of the resulting value is not contiguous ind includes 0.
+  // Ex. If you truncate [256, 258] from i16 to i8, you validly get [0, 2],
+  // but you can't truncate [255, 257] similarly.
+  bool hasUnsignedRollover =
+      range.umin().lshr(destWidth) != range.umax().lshr(destWidth);
+  APInt umin = hasUnsignedRollover ? APInt::getZero(destWidth)
+                                   : range.umin().trunc(destWidth);
+  APInt umax = hasUnsignedRollover ? APInt::getMaxValue(destWidth)
+                                   : range.umax().trunc(destWidth);
+
+  // Signed post-truncation rollover will not occur when either:
+  // - The high parts of the min and max, plus the sign bit, are the same
+  // - The high halves + sign bit of the min and max are either all 1s or all 0s
+  //  and you won't create a [positive, negative] range by truncating.
+  // For example, you can truncate the ranges [256, 258]_i16 to [0, 2]_i8
+  // but not [255, 257]_i16 to a range of i8s. You can also truncate
+  // [-256, -256]_i16 to [-2, 0]_i8, but not [-257, -255]_i16.
+  // You can also truncate [-130, 0]_i16 to i8 because -130_i16 (0xff7e)
+  // will truncate to 0x7e, which is greater than 0
+  APInt sminHighPart = range.smin().ashr(destWidth - 1);
+  APInt smaxHighPart = range.smax().ashr(destWidth - 1);
+  bool hasSignedOverflow =
+      (sminHighPart != smaxHighPart) &&
+      !(sminHighPart.isAllOnes() &&
+        (smaxHighPart.isAllOnes() || smaxHighPart.isZero())) &&
+      !(sminHighPart.isZero() && smaxHighPart.isZero());
+  APInt smin = hasSignedOverflow ? APInt::getSignedMinValue(destWidth)
+                                 : range.smin().trunc(destWidth);
+  APInt smax = hasSignedOverflow ? APInt::getSignedMaxValue(destWidth)
+                                 : range.smax().trunc(destWidth);
   return {umin, umax, smin, smax};
 }
 

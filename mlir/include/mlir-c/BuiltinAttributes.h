@@ -456,15 +456,6 @@ MLIR_CAPI_EXPORTED const void *
 mlirDenseElementsAttrGetRawData(MlirAttribute attr);
 
 //===----------------------------------------------------------------------===//
-// Opaque elements attribute.
-//===----------------------------------------------------------------------===//
-
-// TODO: expose Dialect to the bindings and implement accessors here.
-
-/// Checks whether the given attribute is an opaque elements attribute.
-MLIR_CAPI_EXPORTED bool mlirAttributeIsAOpaqueElements(MlirAttribute attr);
-
-//===----------------------------------------------------------------------===//
 // Sparse elements attribute.
 //===----------------------------------------------------------------------===//
 

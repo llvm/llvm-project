@@ -143,20 +143,14 @@ template <class ELFT>
 template <class RelTy>
 void MarkLive<ELFT>::scanEhFrameSection(EhInputSection &eh,
                                         ArrayRef<RelTy> rels) {
-  for (size_t i = 0, end = eh.pieces.size(); i < end; ++i) {
-    EhSectionPiece &piece = eh.pieces[i];
-    size_t firstRelI = piece.firstRelocation;
+  for (const EhSectionPiece &cie : eh.cies)
+    if (cie.firstRelocation != unsigned(-1))
+      resolveReloc(eh, rels[cie.firstRelocation], false);
+  for (const EhSectionPiece &fde : eh.fdes) {
+    size_t firstRelI = fde.firstRelocation;
     if (firstRelI == (unsigned)-1)
       continue;
-
-    if (read32<ELFT::TargetEndianness>(piece.data().data() + 4) == 0) {
-      // This is a CIE, we only need to worry about the first relocation. It is
-      // known to point to the personality function.
-      resolveReloc(eh, rels[firstRelI], false);
-      continue;
-    }
-
-    uint64_t pieceEnd = piece.inputOff + piece.size;
+    uint64_t pieceEnd = fde.inputOff + fde.size;
     for (size_t j = firstRelI, end2 = rels.size();
          j < end2 && rels[j].r_offset < pieceEnd; ++j)
       resolveReloc(eh, rels[j], true);
@@ -244,22 +238,18 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   for (StringRef s : script->referencedSymbols)
     markSymbol(symtab->find(s));
 
+  // Mark .eh_frame sections as live because there are usually no relocations
+  // that point to .eh_frames. Otherwise, the garbage collector would drop
+  // all of them. We also want to preserve personality routines and LSDA
+  // referenced by .eh_frame sections, so we scan them for that here.
+  for (EhInputSection *eh : ehInputSections) {
+    const RelsOrRelas<ELFT> rels = eh->template relsOrRelas<ELFT>();
+    if (rels.areRelocsRel())
+      scanEhFrameSection(*eh, rels.rels);
+    else if (rels.relas.size())
+      scanEhFrameSection(*eh, rels.relas);
+  }
   for (InputSectionBase *sec : inputSections) {
-    // Mark .eh_frame sections as live because there are usually no relocations
-    // that point to .eh_frames. Otherwise, the garbage collector would drop
-    // all of them. We also want to preserve personality routines and LSDA
-    // referenced by .eh_frame sections, so we scan them for that here.
-    if (auto *eh = dyn_cast<EhInputSection>(sec)) {
-      eh->markLive();
-
-      const RelsOrRelas<ELFT> rels = eh->template relsOrRelas<ELFT>();
-      if (rels.areRelocsRel())
-        scanEhFrameSection(*eh, rels.rels);
-      else if (rels.relas.size())
-        scanEhFrameSection(*eh, rels.relas);
-      continue;
-    }
-
     if (sec->flags & SHF_GNU_RETAIN) {
       enqueue(sec, 0);
       continue;

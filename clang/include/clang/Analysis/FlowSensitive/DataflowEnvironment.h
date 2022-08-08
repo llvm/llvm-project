@@ -19,6 +19,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
@@ -221,6 +222,9 @@ public:
   /// in the environment.
   StorageLocation *getThisPointeeStorageLocation() const;
 
+  /// Returns the storage location of the return value or null, if unset.
+  StorageLocation *getReturnStorageLocation() const;
+
   /// Returns a pointer value that represents a null pointer. Calls with
   /// `PointeeType` that are canonically equivalent will return the same result.
   PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
@@ -343,6 +347,12 @@ public:
   /// imply that `Val` is true.
   bool flowConditionImplies(BoolValue &Val) const;
 
+  /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
+  /// returns null.
+  const ControlFlowContext *getControlFlowContext(const FunctionDecl *F) {
+    return DACtx->getControlFlowContext(F);
+  }
+
   LLVM_DUMP_METHOD void dump() const;
 
 private:
@@ -366,6 +376,13 @@ private:
 
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
+
+  // In a properly initialized `Environment`, `ReturnLoc` should only be null if
+  // its `DeclContext` could not be cast to a `FunctionDecl`.
+  StorageLocation *ReturnLoc = nullptr;
+  // The storage location of the `this` pointee. Should only be null if the
+  // function being analyzed is only a function and not a method.
+  StorageLocation *ThisPointeeLoc = nullptr;
 
   // Maps from program declarations and statements to storage locations that are
   // assigned to them. Unlike the maps in `DataflowAnalysisContext`, these

@@ -182,12 +182,23 @@ int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   std::error_code OK;
 
-  ExecutorName.setInitialValue("all-TUs");
-  auto Exec = clang::tooling::createExecutorFromCommandLineArgs(
-      argc, argv, ClangDocCategory);
+  const char *Overview =
+    R"(Generates documentation from source code and comments.
 
-  if (!Exec) {
-    llvm::errs() << toString(Exec.takeError()) << "\n";
+Example usage for files without flags (default):
+
+  $ clang-doc File1.cpp File2.cpp ... FileN.cpp
+
+Example usage for a project using a compile commands database:
+
+  $ clang-doc --executor=all-TUs compile_commands.json
+)";
+
+  auto Executor = clang::tooling::createExecutorFromCommandLineArgs(
+      argc, argv, ClangDocCategory, Overview);
+
+  if (!Executor) {
+    llvm::errs() << toString(Executor.takeError()) << "\n";
     return 1;
   }
 
@@ -208,7 +219,7 @@ int main(int argc, const char **argv) {
         ArgAdjuster);
 
   clang::doc::ClangDocContext CDCtx = {
-      Exec->get()->getExecutionContext(),
+      Executor->get()->getExecutionContext(),
       ProjectName,
       PublicOnly,
       OutDirectory,
@@ -239,7 +250,7 @@ int main(int argc, const char **argv) {
   // Mapping phase
   llvm::outs() << "Mapping decls...\n";
   auto Err =
-      Exec->get()->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster);
+      Executor->get()->execute(doc::newMapperActionFactory(CDCtx), ArgAdjuster);
   if (Err) {
     if (IgnoreMappingFailures)
       llvm::errs() << "Error mapping decls in files. Clang-doc will ignore "
@@ -256,7 +267,7 @@ int main(int argc, const char **argv) {
   // bitcode-encoded representation of the Info object.
   llvm::outs() << "Collecting infos...\n";
   llvm::StringMap<std::vector<StringRef>> USRToBitcode;
-  Exec->get()->getToolResults()->forEachResult(
+  Executor->get()->getToolResults()->forEachResult(
       [&](StringRef Key, StringRef Value) {
         auto R = USRToBitcode.try_emplace(Key, std::vector<StringRef>());
         R.first->second.emplace_back(Value);
