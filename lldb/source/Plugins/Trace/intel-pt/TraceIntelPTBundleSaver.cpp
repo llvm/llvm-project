@@ -10,6 +10,7 @@
 
 #include "PerfContextSwitchDecoder.h"
 #include "TraceIntelPT.h"
+#include "TraceIntelPTConstants.h"
 #include "TraceIntelPTJSONStructs.h"
 
 #include "lldb/Core/Module.h"
@@ -103,7 +104,7 @@ BuildThreadsSection(Process &process, FileSpec directory) {
 
   FileSpec threads_dir = directory;
   threads_dir.AppendPathComponent("threads");
-  sys::fs::create_directories(threads_dir.GetCString());
+  sys::fs::create_directories(threads_dir.GetPath().c_str());
 
   for (ThreadSP thread_sp : process.Threads()) {
     lldb::tid_t tid = thread_sp->GetID();
@@ -200,7 +201,7 @@ BuildCpusSection(TraceIntelPT &trace_ipt, FileSpec directory, bool compact) {
   std::vector<JSONCpu> json_cpus;
   FileSpec cpus_dir = directory;
   cpus_dir.AppendPathComponent("cpus");
-  sys::fs::create_directories(cpus_dir.GetCString());
+  sys::fs::create_directories(cpus_dir.GetPath().c_str());
 
   for (lldb::cpu_id_t cpu_id : trace_ipt.GetTracedCpus()) {
     JSONCpu json_cpu;
@@ -335,6 +336,25 @@ BuildProcessesSection(TraceIntelPT &trace_ipt, const FileSpec &directory) {
   return processes;
 }
 
+static llvm::Expected<JSONKernel>
+BuildKernelSection(TraceIntelPT &trace_ipt, const FileSpec &directory) {
+  JSONKernel json_kernel;
+  std::vector<Process *> processes = trace_ipt.GetAllProcesses();
+  Process *kernel_process = processes[0];
+
+  assert(processes.size() == 1 && "User processeses exist in kernel mode");
+  assert(kernel_process->GetID() == kDefaultKernelProcessID &&
+         "Kernel process not exist");
+
+  Expected<std::vector<JSONModule>> json_modules =
+      BuildModulesSection(*kernel_process, directory);
+  if (!json_modules)
+    return json_modules.takeError();
+
+  JSONModule kernel_image = json_modules.get()[0];
+  return JSONKernel{kernel_image.load_address, kernel_image.system_path};
+}
+
 Expected<FileSpec> TraceIntelPTBundleSaver::SaveToDisk(TraceIntelPT &trace_ipt,
                                                        FileSpec directory,
                                                        bool compact) {
@@ -348,20 +368,38 @@ Expected<FileSpec> TraceIntelPTBundleSaver::SaveToDisk(TraceIntelPT &trace_ipt,
 
   FileSystem::Instance().Resolve(directory);
 
-  Expected<std::vector<JSONProcess>> json_processes =
-      BuildProcessesSection(trace_ipt, directory);
-
-  if (!json_processes)
-    return json_processes.takeError();
-
   Expected<Optional<std::vector<JSONCpu>>> json_cpus =
       BuildCpusSection(trace_ipt, directory, compact);
   if (!json_cpus)
     return json_cpus.takeError();
 
-  JSONTraceBundleDescription json_intel_pt_bundle_desc{"intel-pt", *cpu_info, *json_processes,
-                                         *json_cpus,
-                                         trace_ipt.GetPerfZeroTscConversion()};
+  Optional<std::vector<JSONProcess>> json_processes;
+  Optional<JSONKernel> json_kernel;
 
-  return SaveTraceBundleDescription(toJSON(json_intel_pt_bundle_desc), directory);
+  if (trace_ipt.GetTraceMode() == TraceIntelPT::TraceMode::KernelMode) {
+    Expected<Optional<JSONKernel>> exp_json_kernel =
+        BuildKernelSection(trace_ipt, directory);
+    if (!exp_json_kernel)
+      return exp_json_kernel.takeError();
+    else
+      json_kernel = *exp_json_kernel;
+  } else {
+    Expected<Optional<std::vector<JSONProcess>>> exp_json_processes =
+        BuildProcessesSection(trace_ipt, directory);
+    if (!exp_json_processes)
+      return exp_json_processes.takeError();
+    else
+      json_processes = *exp_json_processes;
+  }
+
+  JSONTraceBundleDescription json_intel_pt_bundle_desc{
+      "intel-pt",
+      *cpu_info,
+      json_processes,
+      *json_cpus,
+      trace_ipt.GetPerfZeroTscConversion(),
+      json_kernel};
+
+  return SaveTraceBundleDescription(toJSON(json_intel_pt_bundle_desc),
+                                    directory);
 }

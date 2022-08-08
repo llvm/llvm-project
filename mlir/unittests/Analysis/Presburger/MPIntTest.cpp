@@ -190,6 +190,8 @@ TYPED_TEST(IntTest, floorCeilModAbsLcmGcd) {
     EXPECT_EQ(abs(y), y);
     EXPECT_EQ(abs(-y), y);
 
+    EXPECT_EQ(gcd(3 * y, three), three);
+    EXPECT_EQ(lcm(y, three), 3 * y);
     EXPECT_EQ(gcd(2 * y, 3 * y), y);
     EXPECT_EQ(lcm(2 * y, 3 * y), 6 * y);
     EXPECT_EQ(gcd(15 * y, 6 * y), 3 * y);

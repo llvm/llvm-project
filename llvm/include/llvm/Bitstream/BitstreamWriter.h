@@ -267,10 +267,9 @@ public:
     if (!BlockInfoRecords.empty() && BlockInfoRecords.back().BlockID == BlockID)
       return &BlockInfoRecords.back();
 
-    for (unsigned i = 0, e = static_cast<unsigned>(BlockInfoRecords.size());
-         i != e; ++i)
-      if (BlockInfoRecords[i].BlockID == BlockID)
-        return &BlockInfoRecords[i];
+    for (BlockInfo &BI : BlockInfoRecords)
+      if (BI.BlockID == BlockID)
+        return &BI;
     return nullptr;
   }
 

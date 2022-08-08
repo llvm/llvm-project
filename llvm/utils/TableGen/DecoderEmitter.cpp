@@ -2254,7 +2254,7 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
 // fieldFromInstruction().
 // On Windows we make sure that this function is not inlined when
 // using the VS compiler. It has a bug which causes the function
-// to be optimized out in some circustances. See llvm.org/pr38292
+// to be optimized out in some circumstances. See llvm.org/pr38292
 static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
   OS << "// Helper functions for extracting fields from encoded instructions.\n"
      << "// InsnType must either be integral or an APInt-like object that "

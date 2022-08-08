@@ -1803,8 +1803,14 @@ example:
     startup time if the function is not called during program startup.
 ``noprofile``
     This function attribute prevents instrumentation based profiling, used for
-    coverage or profile based optimization, from being added to a function,
-    even when inlined.
+    coverage or profile based optimization, from being added to a function. It
+    also blocks inlining if the caller and callee have different values of this
+    attribute.
+``skipprofile``
+    This function attribute prevents instrumentation based profiling, used for
+    coverage or profile based optimization, from being added to a function. This
+    attribute does not restrict inlining, so instrumented instruction could end
+    up in this function.
 ``noredzone``
     This attribute indicates that the code generator should not use a
     red zone, even if the target-specific ABI normally permits it.
@@ -10427,7 +10433,7 @@ Syntax:
 ::
 
       <result> = getelementptr <ty>, ptr <ptrval>{, [inrange] <ty> <idx>}*
-      <result> = getelementptr inbounds ptr <ptrval>{, [inrange] <ty> <idx>}*
+      <result> = getelementptr inbounds <ty>, ptr <ptrval>{, [inrange] <ty> <idx>}*
       <result> = getelementptr <ty>, <N x ptr> <ptrval>, [inrange] <vector index type> <idx>
 
 Overview:
@@ -24544,6 +24550,30 @@ information on the *based on* terminology see
 :ref:`the pointer aliasing rules <pointeraliasing>`). If the bitwidth of the
 mask argument does not match the pointer size of the target, the mask is
 zero-extended or truncated accordingly.
+
+.. _int_threadlocal_address:
+
+'``llvm.threadlocal.address``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare ptr @llvm.threadlocal.address(ptr) nounwind readnone willreturn
+
+Arguments:
+""""""""""
+
+The first argument is a pointer, which refers to a thread local global.
+
+Semantics:
+""""""""""
+
+The address of a thread local global is not a constant, since it depends on
+the calling thread. The `llvm.threadlocal.address` intrinsic returns the
+address of the given thread local global in the calling thread.
 
 .. _int_vscale:
 

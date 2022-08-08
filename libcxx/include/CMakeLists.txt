@@ -1,6 +1,5 @@
 set(files
   __algorithm/adjacent_find.h
-  __algorithm/algorithm_family.h
   __algorithm/all_of.h
   __algorithm/any_of.h
   __algorithm/binary_search.h
@@ -73,6 +72,7 @@ set(files
   __algorithm/ranges_all_of.h
   __algorithm/ranges_any_of.h
   __algorithm/ranges_binary_search.h
+  __algorithm/ranges_clamp.h
   __algorithm/ranges_copy.h
   __algorithm/ranges_copy_backward.h
   __algorithm/ranges_copy_if.h
@@ -97,6 +97,7 @@ set(files
   __algorithm/ranges_is_heap.h
   __algorithm/ranges_is_heap_until.h
   __algorithm/ranges_is_partitioned.h
+  __algorithm/ranges_is_permutation.h
   __algorithm/ranges_is_sorted.h
   __algorithm/ranges_is_sorted_until.h
   __algorithm/ranges_iterator_concept.h
@@ -113,6 +114,7 @@ set(files
   __algorithm/ranges_mismatch.h
   __algorithm/ranges_move.h
   __algorithm/ranges_move_backward.h
+  __algorithm/ranges_next_permutation.h
   __algorithm/ranges_none_of.h
   __algorithm/ranges_nth_element.h
   __algorithm/ranges_partial_sort.h
@@ -121,6 +123,7 @@ set(files
   __algorithm/ranges_partition_copy.h
   __algorithm/ranges_partition_point.h
   __algorithm/ranges_pop_heap.h
+  __algorithm/ranges_prev_permutation.h
   __algorithm/ranges_push_heap.h
   __algorithm/ranges_remove.h
   __algorithm/ranges_remove_copy.h
@@ -132,7 +135,9 @@ set(files
   __algorithm/ranges_replace_if.h
   __algorithm/ranges_reverse.h
   __algorithm/ranges_reverse_copy.h
+  __algorithm/ranges_rotate.h
   __algorithm/ranges_rotate_copy.h
+  __algorithm/ranges_sample.h
   __algorithm/ranges_search.h
   __algorithm/ranges_search_n.h
   __algorithm/ranges_set_difference.h
@@ -178,6 +183,7 @@ set(files
   __algorithm/stable_sort.h
   __algorithm/swap_ranges.h
   __algorithm/transform.h
+  __algorithm/uniform_random_bit_generator_adaptor.h
   __algorithm/unique.h
   __algorithm/unique_copy.h
   __algorithm/unwrap_iter.h

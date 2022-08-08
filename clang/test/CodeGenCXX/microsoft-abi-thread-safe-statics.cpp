@@ -38,7 +38,8 @@ extern inline S &f() {
 // CHECK-NEXT:  br label %[[init_end:.*]]
 
 // CHECK:     [[init_end]]:
-// CHECK-NEXT:  ret %struct.S* @"?s@?1??f@@YAAAUS@@XZ@4U2@A"
+// CHECK: [[S_ADDR:%.+]] = call %struct.S* @llvm.threadlocal.address.p0s_struct.Ss(%struct.S* @"?s@?1??f@@YAAAUS@@XZ@4U2@A")
+// CHECK-NEXT:  ret %struct.S* [[S_ADDR]]
 
 // CHECK:     [[lpad:.*]]:
 // CHECK-NEXT: cleanuppad within none []

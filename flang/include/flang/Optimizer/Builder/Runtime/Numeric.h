@@ -26,6 +26,10 @@ mlir::Value genExponent(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genFraction(fir::FirOpBuilder &builder, mlir::Location loc,
                         mlir::Value x);
 
+/// Generate call to Mod intrinsic runtime routine.
+mlir::Value genMod(fir::FirOpBuilder &builder, mlir::Location loc,
+                   mlir::Value a, mlir::Value p);
+
 /// Generate call to Nearest intrinsic runtime routine.
 mlir::Value genNearest(fir::FirOpBuilder &builder, mlir::Location loc,
                        mlir::Value x, mlir::Value s);

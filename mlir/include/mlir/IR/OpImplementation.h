@@ -605,7 +605,7 @@ public:
   ParseResult parseInteger(IntT &result) {
     auto loc = getCurrentLocation();
     OptionalParseResult parseResult = parseOptionalInteger(result);
-    if (!parseResult.hasValue())
+    if (!parseResult.has_value())
       return emitError(loc, "expected integer value");
     return *parseResult;
   }
@@ -620,7 +620,7 @@ public:
     // Parse the unsigned variant.
     APInt uintResult;
     OptionalParseResult parseResult = parseOptionalInteger(uintResult);
-    if (!parseResult.hasValue() || failed(*parseResult))
+    if (!parseResult.has_value() || failed(*parseResult))
       return parseResult;
 
     // Try to convert to the provided integer type.  sextOrTrunc is correct even
@@ -976,7 +976,7 @@ public:
                                              StringRef attrName,
                                              NamedAttrList &attrs) {
     OptionalParseResult parseResult = parseOptionalAttribute(result, type);
-    if (parseResult.hasValue() && succeeded(*parseResult))
+    if (parseResult.has_value() && succeeded(*parseResult))
       attrs.append(attrName, result);
     return parseResult;
   }
@@ -1023,8 +1023,17 @@ public:
   template <typename ResourceT>
   FailureOr<ResourceT> parseResourceHandle() {
     SMLoc handleLoc = getCurrentLocation();
-    FailureOr<AsmDialectResourceHandle> handle = parseResourceHandle(
-        getContext()->getOrLoadDialect<typename ResourceT::Dialect>());
+
+    // Try to load the dialect that owns the handle.
+    auto *dialect =
+        getContext()->getOrLoadDialect<typename ResourceT::Dialect>();
+    if (!dialect) {
+      return emitError(handleLoc)
+             << "dialect '" << ResourceT::Dialect::getDialectNamespace()
+             << "' is unknown";
+    }
+
+    FailureOr<AsmDialectResourceHandle> handle = parseResourceHandle(dialect);
     if (failed(handle))
       return failure();
     if (auto *result = dyn_cast<ResourceT>(&*handle))
@@ -1493,9 +1502,9 @@ public:
   ParseResult parseAssignmentList(SmallVectorImpl<Argument> &lhs,
                                   SmallVectorImpl<UnresolvedOperand> &rhs) {
     OptionalParseResult result = parseOptionalAssignmentList(lhs, rhs);
-    if (!result.hasValue())
+    if (!result.has_value())
       return emitError(getCurrentLocation(), "expected '('");
-    return result.getValue();
+    return result.value();
   }
 
   virtual OptionalParseResult

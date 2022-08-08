@@ -19,9 +19,9 @@ entry:
   call void @callee()
   ret void
 }
-define i8* @f() {
-  ; CHECK-ALL: ret i8* @g.{{([0-9a-f]{32})}}
-  ret i8* @g
+define ptr @f() {
+  ; CHECK-ALL: ret ptr @g.{{([0-9a-f]{32})}}
+  ret ptr @g
 }
 
 !0 = !{i32 0, !"typeid"}

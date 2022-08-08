@@ -161,7 +161,7 @@ NativeProcessELF::GetLoadedSVR4Libraries() {
                       GetAddressByteSize(), bytes_read);
   if (!status.Success())
     return status.ToError();
-  if (address == 0)
+  if (link_map == 0)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "Invalid link_map address");
 

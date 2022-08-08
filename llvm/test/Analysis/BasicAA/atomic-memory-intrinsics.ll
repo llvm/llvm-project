@@ -4,7 +4,7 @@ declare void @llvm.memset.element.unordered.atomic.p0i8.i32(i8*, i8, i64, i32)
 
 define void @test_memset_element_unordered_atomic_const_size(i8* noalias %a) {
 ; CHECK-LABEL: Function: test_memset_element_unordered_atomic_const_size
-; CHECK:       Just Mod (MustAlias):  Ptr: i8* %a	<->  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %a, i8 0, i64 4, i32 1)
+; CHECK:       Just Mod:  Ptr: i8* %a	<->  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %a, i8 0, i64 4, i32 1)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.1	<->  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %a, i8 0, i64 4, i32 1)
 ; CHECK-NEXT:  NoModRef:  Ptr: i8* %a.gep.5	<->  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %a, i8 0, i64 4, i32 1)
 ;
@@ -20,7 +20,7 @@ entry:
 
 define void @test_memset_element_unordered_atomic_variable_size(i8* noalias %a, i64 %n) {
 ; CHECK-LABEL: Function: test_memset_element_unordered_atomic_variable_size
-; CHECK:       Just Mod (MustAlias):  Ptr: i8* %a	<->  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %a, i8 0, i64 %n, i32 1)
+; CHECK:       Just Mod:  Ptr: i8* %a	<->  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %a, i8 0, i64 %n, i32 1)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.1	<->  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %a, i8 0, i64 %n, i32 1)
 ; CHECK-NEXT:  Just Mod:  Ptr: i8* %a.gep.5	<->  call void @llvm.memset.element.unordered.atomic.p0i8.i64(i8* align 1 %a, i8 0, i64 %n, i32 1)
 ;

@@ -86,13 +86,22 @@ def phab_login_to_github_login(phab_token:str, repo:github.Repository.Repository
         return None
 
     commit_sha = data[0]['fields']['identifier']
-    return repo.get_commit(commit_sha).committer.login
+    committer = repo.get_commit(commit_sha).committer
+    if not committer:
+        # This committer had an email address GitHub could not recognize, so
+        # it can't link the user to a GitHub account.
+        print(f"Warning: Can't find github account for {phab_login}")
+        return None
+    return committer.login
 
 def phab_get_commit_approvers(phab_token:str, repo:github.Repository.Repository, commit:github.Commit.Commit) -> list:
     args = { "corpus" : commit.commit.message }
     # API documentation: https://reviews.llvm.org/conduit/method/differential.parsecommitmessage/
     r = phab_api_call(phab_token, "https://reviews.llvm.org/api/differential.parsecommitmessage", args)
     review_id = r['result']['revisionIDFieldInfo']['value']
+    if not review_id:
+        # No Phabricator revision for this commit
+        return []
 
     args = {
         'constraints[ids][0]' : review_id,
@@ -304,7 +313,7 @@ class ReleaseWorkflow:
     def create_pull_request(self, owner:str, repo_name:str, branch:str) -> bool:
         """
         reate a pull request in `self.branch_repo_name`.  The base branch of the
-        pull request will be choosen based on the the milestone attached to
+        pull request will be chosen based on the the milestone attached to
         the issue represented by `self.issue_number`  For example if the milestone
         is Release 13.0.1, then the base branch will be release/13.x. `branch`
         will be used as the compare branch.

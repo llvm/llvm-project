@@ -20,12 +20,6 @@ arith.constant #test.i64_elements<[10, 11, 12, 13, 14]> : tensor<5xi64>
 // expected-error@below {{Test iterating `IntegerAttr`: 10 : i64, 11 : i64, 12 : i64, 13 : i64, 14 : i64}}
 arith.constant dense<[10, 11, 12, 13, 14]> : tensor<5xi64>
 
-// expected-error@below {{Test iterating `int64_t`: unable to iterate type}}
-// expected-error@below {{Test iterating `uint64_t`: unable to iterate type}}
-// expected-error@below {{Test iterating `APInt`: unable to iterate type}}
-// expected-error@below {{Test iterating `IntegerAttr`: unable to iterate type}}
-arith.constant opaque<"_", "0xDEADBEEF"> : tensor<5xi64>
-
 // Check that we don't crash on empty element attributes.
 // expected-error@below {{Test iterating `int64_t`: }}
 // expected-error@below {{Test iterating `uint64_t`: }}
@@ -33,6 +27,8 @@ arith.constant opaque<"_", "0xDEADBEEF"> : tensor<5xi64>
 // expected-error@below {{Test iterating `IntegerAttr`: }}
 arith.constant dense<> : tensor<0xi64>
 
+// expected-error@below {{Test iterating `bool`: true, false, true, false, true, false}}
+arith.constant [:i1 true, false, true, false, true, false]
 // expected-error@below {{Test iterating `int8_t`: 10, 11, -12, 13, 14}}
 arith.constant [:i8 10, 11, -12, 13, 14]
 // expected-error@below {{Test iterating `int16_t`: 10, 11, -12, 13, 14}}

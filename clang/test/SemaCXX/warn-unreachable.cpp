@@ -396,16 +396,15 @@ void tautological_compare(bool x, int y) {
   if (y == -1 && y != -1)  // expected-note {{silence}}
     calledFun();        // expected-warning {{will never be executed}}
 
-  if (x == -1)   // expected-note {{silence}}
-    calledFun(); // expected-warning {{will never be executed}}
-
-  if (x != -1)   // expected-note {{silence}}
-    calledFun();
-  else
-    calledFun(); // expected-warning {{will never be executed}}
-
   // TODO: Extend warning to the following code:
   if (x < -1)
+    calledFun();
+  if (x == -1)
+    calledFun();
+
+  if (x != -1)
+    calledFun();
+  else
     calledFun();
   if (-1 > x)
     calledFun();

@@ -796,3 +796,111 @@ vuint64m4_t test_vnot_v_u64m4_m (vbool16_t mask, vuint64m4_t maskedoff, vuint64m
 vuint64m8_t test_vnot_v_u64m8_m (vbool8_t mask, vuint64m8_t maskedoff, vuint64m8_t op1, size_t vl) {
   return vnot(mask, maskedoff, op1, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vnot_v_i32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vxor.nxv1i32.i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i32 -1, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnot_v_i32mf2_tu(vint32mf2_t merge, vint32mf2_t op1, size_t vl) {
+  return vnot_tu(merge, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnot_v_u32mf2_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vxor.nxv1i32.i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i32 -1, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnot_v_u32mf2_tu(vuint32mf2_t merge, vuint32mf2_t op1, size_t vl) {
+  return vnot_tu(merge, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnot_v_i32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vxor.nxv1i32.i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> [[OP1:%.*]], i32 -1, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnot_v_i32mf2_ta(vint32mf2_t op1, size_t vl) {
+  return vnot_ta(op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnot_v_u32mf2_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vxor.nxv1i32.i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> [[OP1:%.*]], i32 -1, i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnot_v_u32mf2_ta(vuint32mf2_t op1, size_t vl) {
+  return vnot_ta(op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnot_v_i32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vxor.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i32 -1, <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnot_v_i32mf2_tuma(vbool64_t mask, vint32mf2_t merge, vint32mf2_t op1, size_t vl) {
+  return vnot_tuma(mask, merge, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnot_v_u32mf2_tuma(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vxor.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i32 -1, <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 2)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnot_v_u32mf2_tuma(vbool64_t mask, vuint32mf2_t merge, vuint32mf2_t op1, size_t vl) {
+  return vnot_tuma(mask, merge, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnot_v_i32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vxor.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i32 -1, <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnot_v_i32mf2_tumu(vbool64_t mask, vint32mf2_t merge, vint32mf2_t op1, size_t vl) {
+  return vnot_tumu(mask, merge, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnot_v_u32mf2_tumu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vxor.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i32 -1, <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 0)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnot_v_u32mf2_tumu(vbool64_t mask, vuint32mf2_t merge, vuint32mf2_t op1, size_t vl) {
+  return vnot_tumu(mask, merge, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnot_v_i32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vxor.mask.nxv1i32.i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> [[OP1:%.*]], i32 -1, <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnot_v_i32mf2_tama(vbool64_t mask, vint32mf2_t op1, size_t vl) {
+  return vnot_tama(mask, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnot_v_u32mf2_tama(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vxor.mask.nxv1i32.i32.i64(<vscale x 1 x i32> undef, <vscale x 1 x i32> [[OP1:%.*]], i32 -1, <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 3)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnot_v_u32mf2_tama(vbool64_t mask, vuint32mf2_t op1, size_t vl) {
+  return vnot_tama(mask, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnot_v_i32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vxor.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i32 -1, <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vint32mf2_t test_vnot_v_i32mf2_tamu(vbool64_t mask, vint32mf2_t merge, vint32mf2_t op1, size_t vl) {
+  return vnot_tamu(mask, merge, op1, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vnot_v_u32mf2_tamu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vxor.mask.nxv1i32.i32.i64(<vscale x 1 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[OP1:%.*]], i32 -1, <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1)
+// CHECK-RV64-NEXT:    ret <vscale x 1 x i32> [[TMP0]]
+//
+vuint32mf2_t test_vnot_v_u32mf2_tamu(vbool64_t mask, vuint32mf2_t merge, vuint32mf2_t op1, size_t vl) {
+  return vnot_tamu(mask, merge, op1, vl);
+}

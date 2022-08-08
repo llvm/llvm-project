@@ -217,6 +217,13 @@ public:
   }
   SubCommand() = default;
 
+  // Get the special subcommand representing no subcommand.
+  static SubCommand &getTopLevel();
+
+  // Get the special subcommand that can be used to put an option into all
+  // subcomands.
+  static SubCommand &getAll();
+
   void reset();
 
   explicit operator bool() const;
@@ -309,7 +316,7 @@ public:
   }
 
   bool isInAllSubCommands() const {
-    return llvm::is_contained(Subs, &*AllSubCommands);
+    return llvm::is_contained(Subs, &SubCommand::getAll());
   }
 
   //-------------------------------------------------------------------------===
@@ -1952,7 +1959,8 @@ void PrintHelpMessage(bool Hidden = false, bool Categorized = false);
 /// Hopefully this API can be deprecated soon. Any situation where options need
 /// to be modified by tools or libraries should be handled by sane APIs rather
 /// than just handing around a global list.
-StringMap<Option *> &getRegisteredOptions(SubCommand &Sub = *TopLevelSubCommand);
+StringMap<Option *> &
+getRegisteredOptions(SubCommand &Sub = SubCommand::getTopLevel());
 
 /// Use this to get all registered SubCommands from the provided parser.
 ///
@@ -2123,7 +2131,7 @@ bool expandResponseFiles(int Argc, const char *const *Argv, const char *EnvVar,
 /// not specific to the tool. This function allows a tool to specify a single
 /// option category to display in the -help output.
 void HideUnrelatedOptions(cl::OptionCategory &Category,
-                          SubCommand &Sub = *TopLevelSubCommand);
+                          SubCommand &Sub = SubCommand::getTopLevel());
 
 /// Mark all options not part of the categories as cl::ReallyHidden.
 ///
@@ -2133,7 +2141,7 @@ void HideUnrelatedOptions(cl::OptionCategory &Category,
 /// not specific to the tool. This function allows a tool to specify a single
 /// option category to display in the -help output.
 void HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
-                          SubCommand &Sub = *TopLevelSubCommand);
+                          SubCommand &Sub = SubCommand::getTopLevel());
 
 /// Reset all command line options to a state that looks as if they have
 /// never appeared on the command line.  This is useful for being able to parse

@@ -48,9 +48,9 @@ using RegisterAliasMapTy =
 // The struct contains results of the module analysis and methods
 // to access them.
 struct ModuleAnalysisInfo {
-  SPIRV::MemoryModel Mem;
-  SPIRV::AddressingModel Addr;
-  SPIRV::SourceLanguage SrcLang;
+  SPIRV::MemoryModel::MemoryModel Mem;
+  SPIRV::AddressingModel::AddressingModel Addr;
+  SPIRV::SourceLanguage::SourceLanguage SrcLang;
   unsigned SrcLangVersion;
   StringSet<> SrcExt;
   // Maps ExtInstSet to corresponding ID register.

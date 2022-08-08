@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/Array.h"
-#include "src/__support/CPP/Utility.h"
+#include "src/__support/CPP/array.h"
+#include "src/__support/CPP/utility.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
 #include "utils/UnitTest/Test.h"
@@ -40,10 +40,10 @@ TEST(LlvmLibcAtExit, AtExitCallsSysExit) {
 }
 
 static int size;
-static __llvm_libc::cpp::Array<int, 256> arr;
+static __llvm_libc::cpp::array<int, 256> arr;
 
 template <int... Ts>
-void register_atexit_handlers(__llvm_libc::cpp::IntegerSequence<int, Ts...>) {
+void register_atexit_handlers(__llvm_libc::cpp::integer_sequence<int, Ts...>) {
   (__llvm_libc::atexit(+[] { arr[size++] = Ts; }), ...);
 }
 
@@ -57,7 +57,7 @@ template <int count> constexpr auto getTest() {
           __builtin_trap();
     });
     register_atexit_handlers(
-        __llvm_libc::cpp::MakeIntegerSequence<int, count>{});
+        __llvm_libc::cpp::make_integer_sequence<int, count>{});
     __llvm_libc::exit(0);
   };
 }

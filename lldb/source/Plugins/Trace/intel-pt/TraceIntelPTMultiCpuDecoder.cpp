@@ -63,8 +63,7 @@ Expected<DecodedThreadSP> TraceIntelPTMultiCpuDecoder::Decode(Thread &thread) {
 
   TraceIntelPTSP trace_sp = GetTrace();
 
-  return trace_sp
-      ->GetThreadTimer(thread.GetID())
+  return trace_sp->GetThreadTimer(thread.GetID())
       .TimeTask("Decoding instructions", [&]() -> Expected<DecodedThreadSP> {
         auto it = m_decoded_threads.find(thread.GetID());
         if (it != m_decoded_threads.end())

@@ -2427,7 +2427,7 @@ void ExecutionSession::OL_applyQueryPhase1(
 
       // Add any non-candidates from the last JITDylib (if any) back on to the
       // list of definition candidates for this JITDylib, reset definition
-      // non-candiates to the empty set.
+      // non-candidates to the empty set.
       SymbolLookupSet Tmp;
       std::swap(IPLS->DefGeneratorNonCandidates, Tmp);
       IPLS->DefGeneratorCandidates.append(std::move(Tmp));

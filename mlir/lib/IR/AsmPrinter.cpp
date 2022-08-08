@@ -20,6 +20,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
@@ -1723,14 +1724,10 @@ static void printSymbolReference(StringRef symbolRef, raw_ostream &os) {
 // Print out a valid ElementsAttr that is succinct and can represent any
 // potential shape/type, for use when eliding a large ElementsAttr.
 //
-// We choose to use an opaque ElementsAttr literal with conspicuous content to
-// hopefully alert readers to the fact that this has been elided.
-//
-// Unfortunately, neither of the strings of an opaque ElementsAttr literal will
-// accept the string "elided". The first string must be a registered dialect
-// name and the latter must be a hex constant.
+// We choose to use a dense resource ElementsAttr literal with conspicuous
+// content to hopefully alert readers to the fact that this has been elided.
 static void printElidedElementsAttr(raw_ostream &os) {
-  os << R"(opaque<"elided_large_const", "0xDEADBEEF">)";
+  os << R"(dense_resource<__elided__>)";
 }
 
 LogicalResult AsmPrinter::Impl::printAlias(Attribute attr) {
@@ -1752,7 +1749,6 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
   if (succeeded(printAlias(attr)))
     return;
 
-  auto attrType = attr.getType();
   if (!isa<BuiltinDialect>(attr.getDialect())) {
     printDialectAttribute(attr);
   } else if (auto opaqueAttr = attr.dyn_cast<OpaqueAttr>()) {
@@ -1768,7 +1764,8 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
     os << '}';
 
   } else if (auto intAttr = attr.dyn_cast<IntegerAttr>()) {
-    if (attrType.isSignlessInteger(1)) {
+    Type intType = intAttr.getType();
+    if (intType.isSignlessInteger(1)) {
       os << (intAttr.getValue().getBoolValue() ? "true" : "false");
 
       // Boolean integer attributes always elides the type.
@@ -1779,18 +1776,18 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
     // signless 1-bit values.  Indexes, signed values, and multi-bit signless
     // values print as signed.
     bool isUnsigned =
-        attrType.isUnsignedInteger() || attrType.isSignlessInteger(1);
+        intType.isUnsignedInteger() || intType.isSignlessInteger(1);
     intAttr.getValue().print(os, !isUnsigned);
 
     // IntegerAttr elides the type if I64.
-    if (typeElision == AttrTypeElision::May && attrType.isSignlessInteger(64))
+    if (typeElision == AttrTypeElision::May && intType.isSignlessInteger(64))
       return;
 
   } else if (auto floatAttr = attr.dyn_cast<FloatAttr>()) {
     printFloatValue(floatAttr.getValue(), os);
 
     // FloatAttr elides the type if F64.
-    if (typeElision == AttrTypeElision::May && attrType.isF64())
+    if (typeElision == AttrTypeElision::May && floatAttr.getType().isF64())
       return;
 
   } else if (auto strAttr = attr.dyn_cast<StringAttr>()) {
@@ -1829,15 +1826,6 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
       printSymbolReference(nestedRef.getValue(), os);
     }
 
-  } else if (auto opaqueAttr = attr.dyn_cast<OpaqueElementsAttr>()) {
-    if (printerFlags.shouldElideElementsAttr(opaqueAttr)) {
-      printElidedElementsAttr(os);
-    } else {
-      os << "opaque<" << opaqueAttr.getDialect() << ", ";
-      printHexString(opaqueAttr.getValue());
-      os << ">";
-    }
-
   } else if (auto intOrFpEltAttr = attr.dyn_cast<DenseIntOrFPElementsAttr>()) {
     if (printerFlags.shouldElideElementsAttr(intOrFpEltAttr)) {
       printElidedElementsAttr(os);
@@ -1872,39 +1860,29 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
     }
   } else if (auto denseArrayAttr = attr.dyn_cast<DenseArrayBaseAttr>()) {
     typeElision = AttrTypeElision::Must;
-    switch (denseArrayAttr.getElementType()) {
-    case DenseArrayBaseAttr::EltType::I8:
-      os << "[:i8";
-      break;
-    case DenseArrayBaseAttr::EltType::I16:
-      os << "[:i16";
-      break;
-    case DenseArrayBaseAttr::EltType::I32:
-      os << "[:i32";
-      break;
-    case DenseArrayBaseAttr::EltType::I64:
-      os << "[:i64";
-      break;
-    case DenseArrayBaseAttr::EltType::F32:
-      os << "[:f32";
-      break;
-    case DenseArrayBaseAttr::EltType::F64:
-      os << "[:f64";
-      break;
-    }
-    if (denseArrayAttr.getType().cast<ShapedType>().getRank())
+    os << "[:" << denseArrayAttr.getType().getElementType();
+    if (denseArrayAttr.size())
       os << " ";
     denseArrayAttr.printWithoutBraces(os);
     os << "]";
+  } else if (auto resourceAttr = attr.dyn_cast<DenseResourceElementsAttr>()) {
+    os << "dense_resource<";
+    printResourceHandle(resourceAttr.getRawHandle());
+    os << ">";
   } else if (auto locAttr = attr.dyn_cast<LocationAttr>()) {
     printLocation(locAttr);
   } else {
     llvm::report_fatal_error("Unknown builtin attribute");
   }
   // Don't print the type if we must elide it, or if it is a None type.
-  if (typeElision != AttrTypeElision::Must && !attrType.isa<NoneType>()) {
-    os << " : ";
-    printType(attrType);
+  if (typeElision != AttrTypeElision::Must) {
+    if (auto typedAttr = attr.dyn_cast<TypedAttr>()) {
+      Type attrType = typedAttr.getType();
+      if (!attrType.isa<NoneType>()) {
+        os << " : ";
+        printType(attrType);
+      }
+    }
   }
 }
 

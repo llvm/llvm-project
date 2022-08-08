@@ -10,7 +10,7 @@
 // RUN:            -fcuda-is-device -target-feature +ptx71 \
 // RUN:            -DPTX=71 -DSM=80 \
 // RUN:            -S -emit-llvm -o - -x cuda %s \
-// RUN:   | FileCheck -check-prefixes=CHECK_PTX70_SM80,CHECK_PTX60_SM70,CHECK_PTX63_SM72,CHECK_PTX61_SM70,CHECK_PTX63_SM75,CHECK_PTX71_SM75 %s
+// RUN:   | FileCheck -check-prefixes=CHECK_PTX70_SM80,CHECK_PTX60_SM70,CHECK_PTX63_SM72,CHECK_PTX61_SM70,CHECK_PTX63_SM75,CHECK_PTX71_SM80 %s
 // Verify that all builtins have correct constraints.
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown \
 // RUN:   -target-cpu sm_60 -target-feature +ptx42 \
@@ -167,7 +167,7 @@ __device__ void test_wmma_buitins(int *src, int *dst,
   // CHECK_PTX60_SM70: call {{.*}} @llvm.nvvm.wmma.m16n16k16.mma.row.row.f32.f32.satfinite
   // expected-error-re@+1 {{'__hmma_m16n16k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx60{{.*}}}}
   __hmma_m16n16k16_mma_f32f32(fdst, src, src, fsrc, 0, 1);
-#endif // (PTX >= 60) && (SM >= 70) 
+#endif // (PTX >= 60) && (SM >= 70)
 
 #if (PTX >= 61) && (SM >= 70)
 
@@ -435,7 +435,7 @@ __device__ void test_wmma_buitins(int *src, int *dst,
   // CHECK_PTX61_SM70: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.f32.f32.satfinite
   // expected-error-re@+1 {{'__hmma_m8n32k16_mma_f32f32' needs target feature (sm_70{{.*}},(ptx61{{.*}}}}
   __hmma_m8n32k16_mma_f32f32(fdst, src, src, fsrc, 0, 1);
-#endif // (PTX >= 61) && (SM >= 70) 
+#endif // (PTX >= 61) && (SM >= 70)
 
 #if (PTX >= 63) && (SM >= 72)
 
@@ -691,7 +691,7 @@ __device__ void test_wmma_buitins(int *src, int *dst,
   // CHECK_PTX63_SM72: call {{.*}} @llvm.nvvm.wmma.m8n32k16.mma.row.row.u8.satfinite
   // expected-error-re@+1 {{'__imma_m8n32k16_mma_u8' needs target feature (sm_72{{.*}},(ptx63{{.*}}}}
   __imma_m8n32k16_mma_u8(dst, src, src, src, 0, 1);
-#endif // (PTX >= 63) && (SM >= 72) 
+#endif // (PTX >= 63) && (SM >= 72)
 
 #if (PTX >= 63) && (SM >= 75)
 
@@ -752,7 +752,7 @@ __device__ void test_wmma_buitins(int *src, int *dst,
   // CHECK_PTX63_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k32.mma.row.col.u4.satfinite
   // expected-error-re@+1 {{'__imma_m8n8k32_mma_u4' needs target feature (sm_75{{.*}},(ptx63{{.*}}}}
   __imma_m8n8k32_mma_u4(dst, src, src, src, 1, 1);
-#endif // (PTX >= 63) && (SM >= 75) 
+#endif // (PTX >= 63) && (SM >= 75)
 
 #if (PTX >= 70) && (SM >= 80)
 
@@ -900,12 +900,12 @@ __device__ void test_wmma_buitins(int *src, int *dst,
   // CHECK_PTX70_SM80: call {{.*}} @llvm.nvvm.wmma.m8n8k4.mma.row.row.f64
   // expected-error-re@+1 {{'__dmma_m8n8k4_mma_f64' needs target feature (sm_80{{.*}},(ptx70{{.*}}}}
   __dmma_m8n8k4_mma_f64(ddst, dsrc, dsrc, dsrc, 0, 0);
-#endif // (PTX >= 70) && (SM >= 80) 
+#endif // (PTX >= 70) && (SM >= 80)
 
-#if (PTX >= 71) && (SM >= 75)
+#if (PTX >= 71) && (SM >= 80)
 
-  // CHECK_PTX71_SM75: call {{.*}} @llvm.nvvm.wmma.m8n8k128.mma.and.popc.row.col.b1
-  // expected-error-re@+1 {{'__bmma_m8n8k128_mma_and_popc_b1' needs target feature (sm_75{{.*}},(ptx71{{.*}}}}
+  // CHECK_PTX71_SM80: call {{.*}} @llvm.nvvm.wmma.m8n8k128.mma.and.popc.row.col.b1
+  // expected-error-re@+1 {{'__bmma_m8n8k128_mma_and_popc_b1' needs target feature (sm_80{{.*}},(ptx71{{.*}}}}
   __bmma_m8n8k128_mma_and_popc_b1(dst, src, src, src, 1);
-#endif // (PTX >= 71) && (SM >= 75) 
+#endif // (PTX >= 71) && (SM >= 80)
 }

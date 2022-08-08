@@ -14,6 +14,7 @@
 #define FORTRAN_LOWER_ABSTRACTCONVERTER_H
 
 #include "flang/Common/Fortran.h"
+#include "flang/Lower/LoweringOptions.h"
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Semantics/symbol.h"
@@ -225,7 +226,22 @@ public:
   /// Get the KindMap.
   virtual const fir::KindMapping &getKindMap() = 0;
 
+  AbstractConverter(const Fortran::lower::LoweringOptions &loweringOptions)
+      : loweringOptions(loweringOptions) {}
   virtual ~AbstractConverter() = default;
+
+  //===--------------------------------------------------------------------===//
+  // Miscellaneous
+  //===--------------------------------------------------------------------===//
+
+  /// Return options controlling lowering behavior.
+  const Fortran::lower::LoweringOptions &getLoweringOptions() const {
+    return loweringOptions;
+  }
+
+private:
+  /// Options controlling lowering behavior.
+  const Fortran::lower::LoweringOptions &loweringOptions;
 };
 
 } // namespace lower

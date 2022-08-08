@@ -339,7 +339,7 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
         BinaryData *BD = BC.getBinaryDataByName(Function);
         if (!BD) {
           uint32_t LocalID = 1;
-          while(1) {
+          while (true) {
             // If we can't find the main symbol name, look for alternates.
             const std::string FuncName =
                 Function + "/" + std::to_string(LocalID);

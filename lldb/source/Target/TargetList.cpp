@@ -216,7 +216,8 @@ Status TargetList::CreateTargetInternal(
   // If we have a valid architecture, make sure the current platform is
   // compatible with that architecture.
   if (!prefer_platform_arch && arch.IsValid()) {
-    if (!platform_sp->IsCompatibleArchitecture(arch, {}, false, nullptr)) {
+    if (!platform_sp->IsCompatibleArchitecture(
+            arch, {}, ArchSpec::CompatibleMatch, nullptr)) {
       platform_sp = platform_list.GetOrCreate(arch, {}, &platform_arch);
       if (platform_sp)
         platform_list.SetSelectedPlatform(platform_sp);
@@ -225,7 +226,8 @@ Status TargetList::CreateTargetInternal(
     // If "arch" isn't valid, yet "platform_arch" is, it means we have an
     // executable file with a single architecture which should be used.
     ArchSpec fixed_platform_arch;
-    if (!platform_sp->IsCompatibleArchitecture(platform_arch, {}, false, nullptr)) {
+    if (!platform_sp->IsCompatibleArchitecture(
+            platform_arch, {}, ArchSpec::CompatibleMatch, nullptr)) {
       platform_sp =
           platform_list.GetOrCreate(platform_arch, {}, &fixed_platform_arch);
       if (platform_sp)
@@ -256,8 +258,8 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
   ArchSpec arch(specified_arch);
 
   if (arch.IsValid()) {
-    if (!platform_sp ||
-        !platform_sp->IsCompatibleArchitecture(arch, {}, false, nullptr))
+    if (!platform_sp || !platform_sp->IsCompatibleArchitecture(
+                            arch, {}, ArchSpec::CompatibleMatch, nullptr))
       platform_sp =
           debugger.GetPlatformList().GetOrCreate(specified_arch, {}, &arch);
   }

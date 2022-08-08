@@ -42,7 +42,7 @@ func.func @_QPtest_dt_slice() {
 // CHECK: %[[a5:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
 // CHECK-SAME: { ptr undef, i64 4, i32 20180515, i8 1, i8 9, i8 0, i8 0, [1 x [3 x i64]]
 // CHECK-SAME: [i64 1, i64 5, i64 mul
-// CHECK-SAME: (i64 ptrtoint (ptr getelementptr (%_QFtest_dt_sliceTt, ptr null, i64 1) to i64), i64 2)]] }
+// CHECK-SAME: (i64 ptrtoint (ptr getelementptr (%_QFtest_dt_sliceTt, ptr null, i32 1) to i64), i64 2)]] }
 // CHECK-SAME: , ptr %[[a4]], 0
 
 // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[a5]], ptr %[[a1]], align 8,

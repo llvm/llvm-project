@@ -14,6 +14,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/ExprCXX.h"
@@ -807,9 +808,8 @@ private:
     // Skip functions with less parameters, they can't be the target.
     if (Callee->parameters().size() < Parameters.size())
       return;
-    if (std::any_of(Args.begin(), Args.end(), [](const Expr *E) {
-          return dyn_cast<PackExpansionExpr>(E) != nullptr;
-        })) {
+    if (llvm::any_of(Args,
+                     [](const Expr *E) { return isa<PackExpansionExpr>(E); })) {
       return;
     }
     auto PackLocation = findPack(Args);

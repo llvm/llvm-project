@@ -833,46 +833,225 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
 //===----------------------------------------------------------------------===//
 //                     Calling Convention Implementation
 //===----------------------------------------------------------------------===//
-// FIXME: Now, we only support CallingConv::C with fixed arguments which are
-// passed with integer or floating-point registers.
+
+// Eight general-purpose registers a0-a7 used for passing integer arguments,
+// with a0-a1 reused to return values. Generally, the GPRs are used to pass
+// fixed-point arguments, and floating-point arguments when no FPR is available
+// or with soft float ABI.
 const MCPhysReg ArgGPRs[] = {LoongArch::R4,  LoongArch::R5, LoongArch::R6,
                              LoongArch::R7,  LoongArch::R8, LoongArch::R9,
                              LoongArch::R10, LoongArch::R11};
+// Eight floating-point registers fa0-fa7 used for passing floating-point
+// arguments, and fa0-fa1 are also used to return values.
 const MCPhysReg ArgFPR32s[] = {LoongArch::F0, LoongArch::F1, LoongArch::F2,
                                LoongArch::F3, LoongArch::F4, LoongArch::F5,
                                LoongArch::F6, LoongArch::F7};
+// FPR32 and FPR64 alias each other.
 const MCPhysReg ArgFPR64s[] = {
     LoongArch::F0_64, LoongArch::F1_64, LoongArch::F2_64, LoongArch::F3_64,
     LoongArch::F4_64, LoongArch::F5_64, LoongArch::F6_64, LoongArch::F7_64};
 
-// Implements the LoongArch calling convention. Returns true upon failure.
-static bool CC_LoongArch(unsigned ValNo, MVT ValVT,
-                         CCValAssign::LocInfo LocInfo, CCState &State) {
-  // Allocate to a register if possible.
-  Register Reg;
+// Pass a 2*GRLen argument that has been split into two GRLen values through
+// registers or the stack as necessary.
+static bool CC_LoongArchAssign2GRLen(unsigned GRLen, CCState &State,
+                                     CCValAssign VA1, ISD::ArgFlagsTy ArgFlags1,
+                                     unsigned ValNo2, MVT ValVT2, MVT LocVT2,
+                                     ISD::ArgFlagsTy ArgFlags2) {
+  unsigned GRLenInBytes = GRLen / 8;
+  if (Register Reg = State.AllocateReg(ArgGPRs)) {
+    // At least one half can be passed via register.
+    State.addLoc(CCValAssign::getReg(VA1.getValNo(), VA1.getValVT(), Reg,
+                                     VA1.getLocVT(), CCValAssign::Full));
+  } else {
+    // Both halves must be passed on the stack, with proper alignment.
+    Align StackAlign =
+        std::max(Align(GRLenInBytes), ArgFlags1.getNonZeroOrigAlign());
+    State.addLoc(
+        CCValAssign::getMem(VA1.getValNo(), VA1.getValVT(),
+                            State.AllocateStack(GRLenInBytes, StackAlign),
+                            VA1.getLocVT(), CCValAssign::Full));
+    State.addLoc(CCValAssign::getMem(
+        ValNo2, ValVT2, State.AllocateStack(GRLenInBytes, Align(GRLenInBytes)),
+        LocVT2, CCValAssign::Full));
+    return false;
+  }
+  if (Register Reg = State.AllocateReg(ArgGPRs)) {
+    // The second half can also be passed via register.
+    State.addLoc(
+        CCValAssign::getReg(ValNo2, ValVT2, Reg, LocVT2, CCValAssign::Full));
+  } else {
+    // The second half is passed via the stack, without additional alignment.
+    State.addLoc(CCValAssign::getMem(
+        ValNo2, ValVT2, State.AllocateStack(GRLenInBytes, Align(GRLenInBytes)),
+        LocVT2, CCValAssign::Full));
+  }
+  return false;
+}
 
-  if (ValVT == MVT::f32)
+// Implements the LoongArch calling convention. Returns true upon failure.
+static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
+                         unsigned ValNo, MVT ValVT,
+                         CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                         CCState &State, bool IsFixed, bool IsRet,
+                         Type *OrigTy) {
+  unsigned GRLen = DL.getLargestLegalIntTypeSizeInBits();
+  assert((GRLen == 32 || GRLen == 64) && "Unspport GRLen");
+  MVT GRLenVT = GRLen == 32 ? MVT::i32 : MVT::i64;
+  MVT LocVT = ValVT;
+
+  // Any return value split into more than two values can't be returned
+  // directly.
+  if (IsRet && ValNo > 1)
+    return true;
+
+  // If passing a variadic argument, or if no FPR is available.
+  bool UseGPRForFloat = true;
+
+  switch (ABI) {
+  default:
+    llvm_unreachable("Unexpected ABI");
+  case LoongArchABI::ABI_ILP32S:
+  case LoongArchABI::ABI_LP64S:
+  case LoongArchABI::ABI_ILP32F:
+  case LoongArchABI::ABI_LP64F:
+    report_fatal_error("Unimplemented ABI");
+    break;
+  case LoongArchABI::ABI_ILP32D:
+  case LoongArchABI::ABI_LP64D:
+    UseGPRForFloat = !IsFixed;
+    break;
+  }
+
+  // FPR32 and FPR64 alias each other.
+  if (State.getFirstUnallocated(ArgFPR32s) == array_lengthof(ArgFPR32s))
+    UseGPRForFloat = true;
+
+  if (UseGPRForFloat && ValVT == MVT::f32) {
+    LocVT = GRLenVT;
+    LocInfo = CCValAssign::BCvt;
+  } else if (UseGPRForFloat && GRLen == 64 && ValVT == MVT::f64) {
+    LocVT = MVT::i64;
+    LocInfo = CCValAssign::BCvt;
+  } else if (UseGPRForFloat && GRLen == 32 && ValVT == MVT::f64) {
+    // TODO: Handle passing f64 on LA32 with D feature.
+    report_fatal_error("Passing f64 with GPR on LA32 is undefined");
+  }
+
+  // If this is a variadic argument, the LoongArch calling convention requires
+  // that it is assigned an 'even' or 'aligned' register if it has (2*GRLen)/8
+  // byte alignment. An aligned register should be used regardless of whether
+  // the original argument was split during legalisation or not. The argument
+  // will not be passed by registers if the original type is larger than
+  // 2*GRLen, so the register alignment rule does not apply.
+  unsigned TwoGRLenInBytes = (2 * GRLen) / 8;
+  if (!IsFixed && ArgFlags.getNonZeroOrigAlign() == TwoGRLenInBytes &&
+      DL.getTypeAllocSize(OrigTy) == TwoGRLenInBytes) {
+    unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
+    // Skip 'odd' register if necessary.
+    if (RegIdx != array_lengthof(ArgGPRs) && RegIdx % 2 == 1)
+      State.AllocateReg(ArgGPRs);
+  }
+
+  SmallVectorImpl<CCValAssign> &PendingLocs = State.getPendingLocs();
+  SmallVectorImpl<ISD::ArgFlagsTy> &PendingArgFlags =
+      State.getPendingArgFlags();
+
+  assert(PendingLocs.size() == PendingArgFlags.size() &&
+         "PendingLocs and PendingArgFlags out of sync");
+
+  // Split arguments might be passed indirectly, so keep track of the pending
+  // values.
+  if (ValVT.isScalarInteger() && (ArgFlags.isSplit() || !PendingLocs.empty())) {
+    LocVT = GRLenVT;
+    LocInfo = CCValAssign::Indirect;
+    PendingLocs.push_back(
+        CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
+    PendingArgFlags.push_back(ArgFlags);
+    if (!ArgFlags.isSplitEnd()) {
+      return false;
+    }
+  }
+
+  // If the split argument only had two elements, it should be passed directly
+  // in registers or on the stack.
+  if (ValVT.isScalarInteger() && ArgFlags.isSplitEnd() &&
+      PendingLocs.size() <= 2) {
+    assert(PendingLocs.size() == 2 && "Unexpected PendingLocs.size()");
+    // Apply the normal calling convention rules to the first half of the
+    // split argument.
+    CCValAssign VA = PendingLocs[0];
+    ISD::ArgFlagsTy AF = PendingArgFlags[0];
+    PendingLocs.clear();
+    PendingArgFlags.clear();
+    return CC_LoongArchAssign2GRLen(GRLen, State, VA, AF, ValNo, ValVT, LocVT,
+                                    ArgFlags);
+  }
+
+  // Allocate to a register if possible, or else a stack slot.
+  Register Reg;
+  unsigned StoreSizeBytes = GRLen / 8;
+  Align StackAlign = Align(GRLen / 8);
+
+  if (ValVT == MVT::f32 && !UseGPRForFloat)
     Reg = State.AllocateReg(ArgFPR32s);
-  else if (ValVT == MVT::f64)
+  else if (ValVT == MVT::f64 && !UseGPRForFloat)
     Reg = State.AllocateReg(ArgFPR64s);
   else
     Reg = State.AllocateReg(ArgGPRs);
+
+  unsigned StackOffset =
+      Reg ? 0 : State.AllocateStack(StoreSizeBytes, StackAlign);
+
+  // If we reach this point and PendingLocs is non-empty, we must be at the
+  // end of a split argument that must be passed indirectly.
+  if (!PendingLocs.empty()) {
+    assert(ArgFlags.isSplitEnd() && "Expected ArgFlags.isSplitEnd()");
+    assert(PendingLocs.size() > 2 && "Unexpected PendingLocs.size()");
+    for (auto &It : PendingLocs) {
+      if (Reg)
+        It.convertToReg(Reg);
+      else
+        It.convertToMem(StackOffset);
+      State.addLoc(It);
+    }
+    PendingLocs.clear();
+    PendingArgFlags.clear();
+    return false;
+  }
+  assert((!UseGPRForFloat || LocVT == GRLenVT) &&
+         "Expected an GRLenVT at this stage");
+
   if (Reg) {
-    State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, ValVT, LocInfo));
+    State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
     return false;
   }
 
-  // TODO: Handle arguments passed without register.
-  return true;
+  // When a floating-point value is passed on the stack, no bit-cast is needed.
+  if (ValVT.isFloatingPoint()) {
+    LocVT = ValVT;
+    LocInfo = CCValAssign::Full;
+  }
+
+  State.addLoc(CCValAssign::getMem(ValNo, ValVT, StackOffset, LocVT, LocInfo));
+  return false;
 }
 
 void LoongArchTargetLowering::analyzeInputArgs(
-    CCState &CCInfo, const SmallVectorImpl<ISD::InputArg> &Ins,
+    MachineFunction &MF, CCState &CCInfo,
+    const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
     LoongArchCCAssignFn Fn) const {
+  FunctionType *FType = MF.getFunction().getFunctionType();
   for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
     MVT ArgVT = Ins[i].VT;
-
-    if (Fn(i, ArgVT, CCValAssign::Full, CCInfo)) {
+    Type *ArgTy = nullptr;
+    if (IsRet)
+      ArgTy = FType->getReturnType();
+    else if (Ins[i].isOrigArg())
+      ArgTy = FType->getParamType(Ins[i].getOrigArgIndex());
+    LoongArchABI::ABI ABI =
+        MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
+    if (Fn(MF.getDataLayout(), ABI, i, ArgVT, CCValAssign::Full, Ins[i].Flags,
+           CCInfo, /*IsFixed=*/true, IsRet, ArgTy)) {
       LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type "
                         << EVT(ArgVT).getEVTString() << '\n');
       llvm_unreachable("");
@@ -881,17 +1060,41 @@ void LoongArchTargetLowering::analyzeInputArgs(
 }
 
 void LoongArchTargetLowering::analyzeOutputArgs(
-    CCState &CCInfo, const SmallVectorImpl<ISD::OutputArg> &Outs,
-    LoongArchCCAssignFn Fn) const {
+    MachineFunction &MF, CCState &CCInfo,
+    const SmallVectorImpl<ISD::OutputArg> &Outs, bool IsRet,
+    CallLoweringInfo *CLI, LoongArchCCAssignFn Fn) const {
   for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
     MVT ArgVT = Outs[i].VT;
-
-    if (Fn(i, ArgVT, CCValAssign::Full, CCInfo)) {
+    Type *OrigTy = CLI ? CLI->getArgs()[Outs[i].OrigArgIndex].Ty : nullptr;
+    LoongArchABI::ABI ABI =
+        MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
+    if (Fn(MF.getDataLayout(), ABI, i, ArgVT, CCValAssign::Full, Outs[i].Flags,
+           CCInfo, Outs[i].IsFixed, IsRet, OrigTy)) {
       LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type "
                         << EVT(ArgVT).getEVTString() << "\n");
       llvm_unreachable("");
     }
   }
+}
+
+// Convert Val to a ValVT. Should not be called for CCValAssign::Indirect
+// values.
+static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDValue Val,
+                                   const CCValAssign &VA, const SDLoc &DL) {
+  switch (VA.getLocInfo()) {
+  default:
+    llvm_unreachable("Unexpected CCValAssign::LocInfo");
+  case CCValAssign::Full:
+  case CCValAssign::Indirect:
+    break;
+  case CCValAssign::BCvt:
+    if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32)
+      Val = DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64, DL, MVT::f32, Val);
+    else
+      Val = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Val);
+    break;
+  }
+  return Val;
 }
 
 static SDValue unpackFromRegLoc(SelectionDAG &DAG, SDValue Chain,
@@ -900,11 +1103,59 @@ static SDValue unpackFromRegLoc(SelectionDAG &DAG, SDValue Chain,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   EVT LocVT = VA.getLocVT();
+  SDValue Val;
   const TargetRegisterClass *RC = TLI.getRegClassFor(LocVT.getSimpleVT());
   Register VReg = RegInfo.createVirtualRegister(RC);
   RegInfo.addLiveIn(VA.getLocReg(), VReg);
+  Val = DAG.getCopyFromReg(Chain, DL, VReg, LocVT);
 
-  return DAG.getCopyFromReg(Chain, DL, VReg, LocVT);
+  return convertLocVTToValVT(DAG, Val, VA, DL);
+}
+
+// The caller is responsible for loading the full value if the argument is
+// passed with CCValAssign::Indirect.
+static SDValue unpackFromMemLoc(SelectionDAG &DAG, SDValue Chain,
+                                const CCValAssign &VA, const SDLoc &DL) {
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  EVT ValVT = VA.getValVT();
+  int FI = MFI.CreateFixedObject(ValVT.getStoreSize(), VA.getLocMemOffset(),
+                                 /*IsImmutable=*/true);
+  SDValue FIN = DAG.getFrameIndex(
+      FI, MVT::getIntegerVT(DAG.getDataLayout().getPointerSizeInBits(0)));
+
+  ISD::LoadExtType ExtType;
+  switch (VA.getLocInfo()) {
+  default:
+    llvm_unreachable("Unexpected CCValAssign::LocInfo");
+  case CCValAssign::Full:
+  case CCValAssign::Indirect:
+  case CCValAssign::BCvt:
+    ExtType = ISD::NON_EXTLOAD;
+    break;
+  }
+  return DAG.getExtLoad(
+      ExtType, DL, VA.getLocVT(), Chain, FIN,
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI), ValVT);
+}
+
+static SDValue convertValVTToLocVT(SelectionDAG &DAG, SDValue Val,
+                                   const CCValAssign &VA, const SDLoc &DL) {
+  EVT LocVT = VA.getLocVT();
+
+  switch (VA.getLocInfo()) {
+  default:
+    llvm_unreachable("Unexpected CCValAssign::LocInfo");
+  case CCValAssign::Full:
+    break;
+  case CCValAssign::BCvt:
+    if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32)
+      Val = DAG.getNode(LoongArchISD::MOVFR2GR_S_LA64, DL, MVT::i64, Val);
+    else
+      Val = DAG.getNode(ISD::BITCAST, DL, LocVT, Val);
+    break;
+  }
+  return Val;
 }
 
 // Transform physical registers into virtual registers.
@@ -922,16 +1173,54 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
     break;
   }
 
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  analyzeInputArgs(CCInfo, Ins, CC_LoongArch);
+  analyzeInputArgs(MF, CCInfo, Ins, /*IsRet=*/false, CC_LoongArch);
 
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i)
-    InVals.push_back(unpackFromRegLoc(DAG, Chain, ArgLocs[i], DL, *this));
+  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+    CCValAssign &VA = ArgLocs[i];
+    SDValue ArgValue;
+    if (VA.isRegLoc())
+      ArgValue = unpackFromRegLoc(DAG, Chain, VA, DL, *this);
+    else
+      ArgValue = unpackFromMemLoc(DAG, Chain, VA, DL);
+    if (VA.getLocInfo() == CCValAssign::Indirect) {
+      // If the original argument was split and passed by reference, we need to
+      // load all parts of it here (using the same address).
+      InVals.push_back(DAG.getLoad(VA.getValVT(), DL, Chain, ArgValue,
+                                   MachinePointerInfo()));
+      unsigned ArgIndex = Ins[i].OrigArgIndex;
+      unsigned ArgPartOffset = Ins[i].PartOffset;
+      assert(ArgPartOffset == 0);
+      while (i + 1 != e && Ins[i + 1].OrigArgIndex == ArgIndex) {
+        CCValAssign &PartVA = ArgLocs[i + 1];
+        unsigned PartOffset = Ins[i + 1].PartOffset - ArgPartOffset;
+        SDValue Offset = DAG.getIntPtrConstant(PartOffset, DL);
+        SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, ArgValue, Offset);
+        InVals.push_back(DAG.getLoad(PartVA.getValVT(), DL, Chain, Address,
+                                     MachinePointerInfo()));
+        ++i;
+      }
+      continue;
+    }
+    InVals.push_back(ArgValue);
+  }
+
+  if (IsVarArg) {
+    // TODO: Support vararg.
+    report_fatal_error("Not support vararg");
+  }
 
   return Chain;
+}
+
+static Align getPrefTypeAlign(EVT VT, SelectionDAG &DAG) {
+  return DAG.getDataLayout().getPrefTypeAlign(
+      VT.getTypeForEVT(*DAG.getContext()));
 }
 
 // Lower a call to a callseq_start + CALL + callseq_end chain, and add input
@@ -949,10 +1238,8 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
   CallingConv::ID CallConv = CLI.CallConv;
   bool IsVarArg = CLI.IsVarArg;
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  MVT GRLenVT = Subtarget.getGRLenVT();
   CLI.IsTailCall = false;
-
-  if (IsVarArg)
-    report_fatal_error("LowerCall with varargs not implemented");
 
   MachineFunction &MF = DAG.getMachineFunction();
 
@@ -960,37 +1247,118 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
   SmallVector<CCValAssign> ArgLocs;
   CCState ArgCCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  analyzeOutputArgs(ArgCCInfo, Outs, CC_LoongArch);
+  analyzeOutputArgs(MF, ArgCCInfo, Outs, /*IsRet=*/false, &CLI, CC_LoongArch);
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = ArgCCInfo.getNextStackOffset();
 
-  for (auto &Arg : Outs) {
-    if (!Arg.Flags.isByVal())
+  // Create local copies for byval args.
+  SmallVector<SDValue> ByValArgs;
+  for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
+    ISD::ArgFlagsTy Flags = Outs[i].Flags;
+    if (!Flags.isByVal())
       continue;
-    report_fatal_error("Passing arguments byval not implemented");
+
+    SDValue Arg = OutVals[i];
+    unsigned Size = Flags.getByValSize();
+    Align Alignment = Flags.getNonZeroByValAlign();
+
+    int FI =
+        MF.getFrameInfo().CreateStackObject(Size, Alignment, /*isSS=*/false);
+    SDValue FIPtr = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
+    SDValue SizeNode = DAG.getConstant(Size, DL, GRLenVT);
+
+    Chain = DAG.getMemcpy(Chain, DL, FIPtr, Arg, SizeNode, Alignment,
+                          /*IsVolatile=*/false,
+                          /*AlwaysInline=*/false, /*isTailCall=*/false,
+                          MachinePointerInfo(), MachinePointerInfo());
+    ByValArgs.push_back(FIPtr);
   }
 
   Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, CLI.DL);
 
   // Copy argument values to their designated locations.
   SmallVector<std::pair<Register, SDValue>> RegsToPass;
-  for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
+  SmallVector<SDValue> MemOpChains;
+  SDValue StackPtr;
+  for (unsigned i = 0, j = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
     SDValue ArgValue = OutVals[i];
+    ISD::ArgFlagsTy Flags = Outs[i].Flags;
 
     // Promote the value if needed.
-    // For now, only handle fully promoted arguments.
-    if (VA.getLocInfo() != CCValAssign::Full)
-      report_fatal_error("Unknown loc info");
+    // For now, only handle fully promoted and indirect arguments.
+    if (VA.getLocInfo() == CCValAssign::Indirect) {
+      // Store the argument in a stack slot and pass its address.
+      Align StackAlign =
+          std::max(getPrefTypeAlign(Outs[i].ArgVT, DAG),
+                   getPrefTypeAlign(ArgValue.getValueType(), DAG));
+      TypeSize StoredSize = ArgValue.getValueType().getStoreSize();
+      // If the original argument was split and passed by reference, we need to
+      // store the required parts of it here (and pass just one address).
+      unsigned ArgIndex = Outs[i].OrigArgIndex;
+      unsigned ArgPartOffset = Outs[i].PartOffset;
+      assert(ArgPartOffset == 0);
+      // Calculate the total size to store. We don't have access to what we're
+      // actually storing other than performing the loop and collecting the
+      // info.
+      SmallVector<std::pair<SDValue, SDValue>> Parts;
+      while (i + 1 != e && Outs[i + 1].OrigArgIndex == ArgIndex) {
+        SDValue PartValue = OutVals[i + 1];
+        unsigned PartOffset = Outs[i + 1].PartOffset - ArgPartOffset;
+        SDValue Offset = DAG.getIntPtrConstant(PartOffset, DL);
+        EVT PartVT = PartValue.getValueType();
+
+        StoredSize += PartVT.getStoreSize();
+        StackAlign = std::max(StackAlign, getPrefTypeAlign(PartVT, DAG));
+        Parts.push_back(std::make_pair(PartValue, Offset));
+        ++i;
+      }
+      SDValue SpillSlot = DAG.CreateStackTemporary(StoredSize, StackAlign);
+      int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
+      MemOpChains.push_back(
+          DAG.getStore(Chain, DL, ArgValue, SpillSlot,
+                       MachinePointerInfo::getFixedStack(MF, FI)));
+      for (const auto &Part : Parts) {
+        SDValue PartValue = Part.first;
+        SDValue PartOffset = Part.second;
+        SDValue Address =
+            DAG.getNode(ISD::ADD, DL, PtrVT, SpillSlot, PartOffset);
+        MemOpChains.push_back(
+            DAG.getStore(Chain, DL, PartValue, Address,
+                         MachinePointerInfo::getFixedStack(MF, FI)));
+      }
+      ArgValue = SpillSlot;
+    } else {
+      ArgValue = convertValVTToLocVT(DAG, ArgValue, VA, DL);
+    }
+
+    // Use local copy if it is a byval arg.
+    if (Flags.isByVal())
+      ArgValue = ByValArgs[j++];
 
     if (VA.isRegLoc()) {
       // Queue up the argument copies and emit them at the end.
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), ArgValue));
     } else {
-      report_fatal_error("Passing arguments via the stack not implemented");
+      assert(VA.isMemLoc() && "Argument not register or memory");
+
+      // Work out the address of the stack slot.
+      if (!StackPtr.getNode())
+        StackPtr = DAG.getCopyFromReg(Chain, DL, LoongArch::R3, PtrVT);
+      SDValue Address =
+          DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr,
+                      DAG.getIntPtrConstant(VA.getLocMemOffset(), DL));
+
+      // Emit the store.
+      MemOpChains.push_back(
+          DAG.getStore(Chain, DL, ArgValue, Address, MachinePointerInfo()));
     }
   }
+
+  // Join the stores, which are independent of one another.
+  if (!MemOpChains.empty())
+    Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
 
   SDValue Glue;
 
@@ -1044,17 +1412,20 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign> RVLocs;
   CCState RetCCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
-  analyzeInputArgs(RetCCInfo, Ins, CC_LoongArch);
+  analyzeInputArgs(MF, RetCCInfo, Ins, /*IsRet=*/true, CC_LoongArch);
 
   // Copy all of the result registers out of their specified physreg.
   for (auto &VA : RVLocs) {
     // Copy the value out.
     SDValue RetValue =
         DAG.getCopyFromReg(Chain, DL, VA.getLocReg(), VA.getLocVT(), Glue);
+    // Glue the RetValue to the end of the call sequence.
     Chain = RetValue.getValue(1);
     Glue = RetValue.getValue(2);
 
-    InVals.push_back(Chain.getValue(0));
+    RetValue = convertLocVTToValVT(DAG, RetValue, VA, DL);
+
+    InVals.push_back(RetValue);
   }
 
   return Chain;
@@ -1063,9 +1434,18 @@ LoongArchTargetLowering::LowerCall(CallLoweringInfo &CLI,
 bool LoongArchTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
-  // Any return value split in to more than two values can't be returned
-  // directly.
-  return Outs.size() <= 2;
+  SmallVector<CCValAssign> RVLocs;
+  CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
+
+  for (unsigned i = 0, e = Outs.size(); i != e; ++i) {
+    LoongArchABI::ABI ABI =
+        MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
+    if (CC_LoongArch(MF.getDataLayout(), ABI, i, Outs[i].VT, CCValAssign::Full,
+                     Outs[i].Flags, CCInfo, /*IsFixed=*/true, /*IsRet=*/true,
+                     nullptr))
+      return false;
+  }
+  return true;
 }
 
 SDValue LoongArchTargetLowering::LowerReturn(
@@ -1080,7 +1460,8 @@ SDValue LoongArchTargetLowering::LowerReturn(
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
 
-  analyzeOutputArgs(CCInfo, Outs, CC_LoongArch);
+  analyzeOutputArgs(DAG.getMachineFunction(), CCInfo, Outs, /*IsRet=*/true,
+                    nullptr, CC_LoongArch);
 
   SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
@@ -1091,7 +1472,8 @@ SDValue LoongArchTargetLowering::LowerReturn(
     assert(VA.isRegLoc() && "Can only return in registers!");
 
     // Handle a 'normal' return.
-    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVals[i], Glue);
+    SDValue Val = convertValVTToLocVT(DAG, OutVals[i], VA, DL);
+    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), Val, Glue);
 
     // Guarantee that all emitted copies are stuck together.
     Glue = Chain.getValue(1);

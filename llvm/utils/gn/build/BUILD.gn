@@ -117,7 +117,7 @@ config("compiler_defaults") {
       ldflags += [ "-Wl,--color-diagnostics" ]
     }
     cflags_cc += [
-      "-std=c++14",
+      "-std=c++17",
       "-fvisibility-inlines-hidden",
     ]
   } else {
@@ -161,6 +161,7 @@ config("compiler_defaults") {
       "UNICODE",
     ]
     cflags += [ "/EHs-c-" ]
+    cflags_cc += [ "/std:c++17" ]
 
     # The MSVC default value (1 MB) is not enough for parsing recursive C++
     # templates in Clang.

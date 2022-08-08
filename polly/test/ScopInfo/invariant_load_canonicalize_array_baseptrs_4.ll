@@ -3,7 +3,7 @@
 ; RUN:  | FileCheck %s
 
 ; Verify that a delinearized and a not delinearized access are not
-; canonizalized.
+; canonicalized.
 
 ; CHECK:      Stmt_body1
 ; CHECK-NEXT:   Domain :=

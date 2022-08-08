@@ -109,12 +109,12 @@ constexpr bool test_all() {
   test(std::ranges::includes, in, in2, binary_pred);
   test(std::ranges::is_heap, in, binary_pred);
   test(std::ranges::is_heap_until, in, binary_pred);
-  //std::ranges::clamp(2, 1, 3, binary_pred);
-  //test(std::ranges::is_permutation, in, in2, binary_pred);
+  std::ranges::clamp(2, 1, 3, binary_pred);
+  test(std::ranges::is_permutation, in, in2, binary_pred);
   test(std::ranges::copy_if, in, out, unary_pred);
-  //test(std::ranges::remove_copy_if, in, out, unary_pred);
+  test(std::ranges::remove_copy_if, in, out, unary_pred);
   test(std::ranges::replace_if, in, unary_pred, x);
-  //test(std::ranges::replace_copy_if, in, out, unary_pred, x);
+  test(std::ranges::replace_copy_if, in, out, unary_pred, x);
   test(std::ranges::unique_copy, in, out, binary_pred);
   test(std::ranges::partition_copy, in, out, out2, unary_pred);
   test(std::ranges::partial_sort_copy, in, in2, binary_pred);
@@ -139,8 +139,8 @@ constexpr bool test_all() {
   test(std::ranges::push_heap, in, binary_pred);
   test(std::ranges::pop_heap, in, binary_pred);
   test(std::ranges::sort_heap, in, binary_pred);
-  //test(std::ranges::prev_permutation, in, binary_pred);
-  //test(std::ranges::next_permutation, in, binary_pred);
+  test(std::ranges::prev_permutation, in, binary_pred);
+  test(std::ranges::next_permutation, in, binary_pred);
 
   return true;
 }

@@ -688,7 +688,7 @@ steps:
       agents:
         queue: "libcxx-builders"
         os: "macos"
-        arch: "x86_64" # We need to use x86_64 for back-deployment CI, since the old dylibs were compiled for x86_64
+        arch: "x86_64" # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then.
       retry:
         automatic:
           - exit_status: -1  # Agent was lost
@@ -703,7 +703,7 @@ steps:
       agents:
         queue: "libcxx-builders"
         os: "macos"
-        arch: "x86_64" # We need to use x86_64 for back-deployment CI, since the old dylibs were compiled for x86_64
+        arch: "x86_64" # We need to use x86_64 for back-deployment CI on this target since macOS didn't support arm64 back then.
       retry:
         automatic:
           - exit_status: -1  # Agent was lost

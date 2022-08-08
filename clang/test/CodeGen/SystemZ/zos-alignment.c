@@ -160,6 +160,13 @@ struct s11 {
 // CHECK-NEXT:         8 |   char b
 // CHECK-NEXT:           | [sizeof=16, align=8]
 
+struct s12 {
+  __int128_t a;
+} S12;
+// CHECK:              0 | struct s12
+// CHECK-NEXT:         0 |   __int128_t a
+// CHECK-NEXT:           | [sizeof=16, align=8]
+
 union u0 {
   unsigned short d1 __attribute__((packed));
   int d2 : 10;
