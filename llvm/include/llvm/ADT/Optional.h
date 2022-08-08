@@ -92,8 +92,8 @@ public:
   }
 
   constexpr bool has_value() const noexcept { return hasVal; }
-  [[deprecated("Use has_value instead.")]] constexpr bool
-  hasValue() const noexcept {
+  LLVM_DEPRECATED("Use has_value instead.", "has_value")
+  constexpr bool hasValue() const noexcept {
     return hasVal;
   }
 
@@ -101,7 +101,7 @@ public:
     assert(hasVal);
     return val;
   }
-  [[deprecated("Use value instead.")]] T &getValue() &noexcept {
+  LLVM_DEPRECATED("Use value instead.", "value") T &getValue() &noexcept {
     assert(hasVal);
     return val;
   }
@@ -109,8 +109,8 @@ public:
     assert(hasVal);
     return val;
   }
-  [[deprecated("Use value instead.")]] constexpr T const &
-  getValue() const &noexcept {
+  LLVM_DEPRECATED("Use value instead.", "value")
+  constexpr T const &getValue() const &noexcept {
     assert(hasVal);
     return val;
   }
@@ -118,7 +118,7 @@ public:
     assert(hasVal);
     return std::move(val);
   }
-  [[deprecated("Use value instead.")]] T &&getValue() &&noexcept {
+  LLVM_DEPRECATED("Use value instead.", "value") T &&getValue() &&noexcept {
     assert(hasVal);
     return std::move(val);
   }
@@ -207,8 +207,8 @@ public:
   }
 
   constexpr bool has_value() const noexcept { return hasVal; }
-  [[deprecated("Use has_value instead.")]] constexpr bool
-  hasValue() const noexcept {
+  LLVM_DEPRECATED("Use has_value instead.", "has_value")
+  constexpr bool hasValue() const noexcept {
     return hasVal;
   }
 
@@ -216,7 +216,7 @@ public:
     assert(hasVal);
     return val;
   }
-  [[deprecated("Use value instead.")]] T &getValue() &noexcept {
+  LLVM_DEPRECATED("Use value instead.", "value") T &getValue() &noexcept {
     assert(hasVal);
     return val;
   }
@@ -224,8 +224,8 @@ public:
     assert(hasVal);
     return val;
   }
-  [[deprecated("Use value instead.")]] constexpr T const &
-  getValue() const &noexcept {
+  LLVM_DEPRECATED("Use value instead.", "value")
+  constexpr T const &getValue() const &noexcept {
     assert(hasVal);
     return val;
   }
@@ -233,7 +233,7 @@ public:
     assert(hasVal);
     return std::move(val);
   }
-  [[deprecated("Use value instead.")]] T &&getValue() &&noexcept {
+  LLVM_DEPRECATED("Use value instead.", "value") T &&getValue() &&noexcept {
     assert(hasVal);
     return std::move(val);
   }
@@ -311,17 +311,19 @@ public:
   constexpr const T *getPointer() const { return &Storage.value(); }
   T *getPointer() { return &Storage.value(); }
   constexpr const T &value() const & { return Storage.value(); }
-  [[deprecated("Use value instead.")]] constexpr const T &getValue() const & {
+  LLVM_DEPRECATED("Use value instead.", "value")
+  constexpr const T &getValue() const & {
     return Storage.value();
   }
   T &value() & { return Storage.value(); }
-  [[deprecated("Use value instead.")]] T &getValue() & {
+  LLVM_DEPRECATED("Use value instead.", "value") T &getValue() & {
     return Storage.value();
   }
 
   constexpr explicit operator bool() const { return has_value(); }
   constexpr bool has_value() const { return Storage.has_value(); }
-  [[deprecated("Use has_value instead.")]] constexpr bool hasValue() const {
+  LLVM_DEPRECATED("Use has_value instead.", "has_value")
+  constexpr bool hasValue() const {
     return Storage.has_value();
   }
   constexpr const T *operator->() const { return getPointer(); }
@@ -333,8 +335,8 @@ public:
     return has_value() ? value() : std::forward<U>(alt);
   }
   template <typename U>
-  [[deprecated("Use value_or instead.")]] constexpr T
-  getValueOr(U &&alt) const & {
+  LLVM_DEPRECATED("Use value_or instead.", "value_or")
+  constexpr T getValueOr(U &&alt) const & {
     return has_value() ? value() : std::forward<U>(alt);
   }
 
@@ -347,7 +349,7 @@ public:
   }
 
   T &&value() && { return std::move(Storage.value()); }
-  [[deprecated("Use value instead.")]] T &&getValue() && {
+  LLVM_DEPRECATED("Use value instead.", "value") T &&getValue() && {
     return std::move(Storage.value());
   }
   T &&operator*() && { return std::move(Storage.value()); }
@@ -356,7 +358,8 @@ public:
     return has_value() ? std::move(value()) : std::forward<U>(alt);
   }
   template <typename U>
-  [[deprecated("Use value_or instead.")]] T getValueOr(U &&alt) && {
+  LLVM_DEPRECATED("Use value_or instead.", "value_or")
+  T getValueOr(U &&alt) && {
     return has_value() ? std::move(value()) : std::forward<U>(alt);
   }
 
