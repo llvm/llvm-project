@@ -953,15 +953,13 @@ public:
 };
 } // namespace
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 /// This type is just a wrapper around GHashTable with external linkage so it
 /// can be used from a header.
 struct GHashState {
   GHashTable table;
 };
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 GHashTable::~GHashTable() { delete[] table; }
 

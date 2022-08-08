@@ -20,8 +20,7 @@ namespace llvm {
 struct LTOCodeGenerator;
 }
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 class Chunk;
 class CommonChunk;
@@ -142,7 +141,6 @@ std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);
 
 StringRef ltrim1(StringRef s, const char *chars);
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 #endif
