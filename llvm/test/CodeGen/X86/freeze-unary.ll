@@ -125,3 +125,153 @@ define <4 x i32> @freeze_bitreverse_vec(<4 x i32> %a0) nounwind {
   ret <4 x i32> %z
 }
 declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>)
+
+; split parity pattern
+define i8 @freeze_ctpop(i8 %a0) nounwind {
+; X86-LABEL: freeze_ctpop:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    shrb %al
+; X86-NEXT:    andb $85, %al
+; X86-NEXT:    subb %al, %cl
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    andb $51, %al
+; X86-NEXT:    shrb $2, %cl
+; X86-NEXT:    andb $51, %cl
+; X86-NEXT:    addb %al, %cl
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    shrb $4, %al
+; X86-NEXT:    addb %cl, %al
+; X86-NEXT:    andb $15, %al
+; X86-NEXT:    andb $1, %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_ctpop:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shrb %al
+; X64-NEXT:    andb $85, %al
+; X64-NEXT:    subb %al, %dil
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    andb $51, %cl
+; X64-NEXT:    shrb $2, %dil
+; X64-NEXT:    andb $51, %dil
+; X64-NEXT:    addb %dil, %cl
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    shrb $4, %al
+; X64-NEXT:    addb %cl, %al
+; X64-NEXT:    andb $15, %al
+; X64-NEXT:    andb $1, %al
+; X64-NEXT:    retq
+  %x = call i8 @llvm.ctpop.i8(i8 %a0)
+  %y = freeze i8 %x
+  %z = and i8 %y, 1
+  ret i8 %z
+}
+declare i8 @llvm.ctpop.i8(i8)
+
+define <16 x i8> @freeze_ctpop_vec(<16 x i8> %a0) nounwind {
+; X86-LABEL: freeze_ctpop_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlw $1, %xmm1
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-NEXT:    psubb %xmm1, %xmm0
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    pand %xmm1, %xmm2
+; X86-NEXT:    psrlw $2, %xmm0
+; X86-NEXT:    pand %xmm1, %xmm0
+; X86-NEXT:    paddb %xmm2, %xmm0
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlw $4, %xmm1
+; X86-NEXT:    paddb %xmm1, %xmm0
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_ctpop_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X64-NEXT:    movdqa %xmm0, %xmm3
+; X64-NEXT:    pand %xmm2, %xmm3
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X64-NEXT:    movdqa %xmm1, %xmm4
+; X64-NEXT:    pshufb %xmm3, %xmm4
+; X64-NEXT:    psrlw $4, %xmm0
+; X64-NEXT:    pand %xmm2, %xmm0
+; X64-NEXT:    pshufb %xmm0, %xmm1
+; X64-NEXT:    paddb %xmm4, %xmm1
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm0
+; X64-NEXT:    retq
+  %x = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %a0)
+  %y = freeze <16 x i8> %x
+  %z = and <16 x i8> %y, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  ret <16 x i8> %z
+}
+declare <16 x i8> @llvm.ctpop.v16i8(<16 x i8>)
+
+; parity knownbits pattern
+define i8 @freeze_parity(i8 %a0) nounwind {
+; X86-LABEL: freeze_parity:
+; X86:       # %bb.0:
+; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    setnp %al
+; X86-NEXT:    andb $1, %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_parity:
+; X64:       # %bb.0:
+; X64-NEXT:    testb %dil, %dil
+; X64-NEXT:    setnp %al
+; X64-NEXT:    andb $1, %al
+; X64-NEXT:    retq
+  %x = call i8 @llvm.ctpop.i8(i8 %a0)
+  %y = and i8 %x, 1
+  %z = freeze i8 %y
+  %w = and i8 %z, 1
+  ret i8 %w
+}
+
+define <16 x i8> @freeze_parity_vec(<16 x i8> %a0) nounwind {
+; X86-LABEL: freeze_parity_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlw $1, %xmm1
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-NEXT:    psubb %xmm1, %xmm0
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    pand %xmm1, %xmm2
+; X86-NEXT:    psrlw $2, %xmm0
+; X86-NEXT:    pand %xmm1, %xmm0
+; X86-NEXT:    paddb %xmm2, %xmm0
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psrlw $4, %xmm1
+; X86-NEXT:    paddb %xmm1, %xmm0
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_parity_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
+; X64-NEXT:    movdqa %xmm0, %xmm3
+; X64-NEXT:    pand %xmm2, %xmm3
+; X64-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4]
+; X64-NEXT:    movdqa %xmm1, %xmm4
+; X64-NEXT:    pshufb %xmm3, %xmm4
+; X64-NEXT:    psrlw $4, %xmm0
+; X64-NEXT:    pand %xmm2, %xmm0
+; X64-NEXT:    pshufb %xmm0, %xmm1
+; X64-NEXT:    paddb %xmm4, %xmm1
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm0
+; X64-NEXT:    retq
+  %x = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %a0)
+  %y = and <16 x i8> %x, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  %z = freeze <16 x i8> %y
+  %w = and <16 x i8> %z, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
+  ret <16 x i8> %z
+}
