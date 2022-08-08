@@ -686,52 +686,6 @@ DenseElementsAttr::ComplexIntElementIterator::operator*() const {
 // DenseArrayAttr
 //===----------------------------------------------------------------------===//
 
-/// Custom storage to ensure proper memory alignment for the allocation of
-/// DenseArray of any element type.
-struct mlir::detail::DenseArrayBaseAttrStorage : public AttributeStorage {
-  using KeyTy =
-      std::tuple<ShapedType, DenseArrayBaseAttr::EltType, ArrayRef<char>>;
-  DenseArrayBaseAttrStorage(ShapedType type,
-                            DenseArrayBaseAttr::EltType eltType,
-                            ArrayRef<char> elements)
-      : type(type), eltType(eltType), elements(elements) {}
-
-  bool operator==(const KeyTy &key) const {
-    return (type == std::get<0>(key)) && (eltType == std::get<1>(key)) &&
-           (elements == std::get<2>(key));
-  }
-
-  static llvm::hash_code hashKey(const KeyTy &key) {
-    return llvm::hash_combine(std::get<0>(key), std::get<1>(key),
-                              std::get<2>(key));
-  }
-
-  static DenseArrayBaseAttrStorage *
-  construct(AttributeStorageAllocator &allocator, const KeyTy &key) {
-    auto type = std::get<0>(key);
-    auto eltType = std::get<1>(key);
-    auto elements = std::get<2>(key);
-    if (!elements.empty()) {
-      char *alloc = static_cast<char *>(
-          allocator.allocate(elements.size(), alignof(uint64_t)));
-      std::uninitialized_copy(elements.begin(), elements.end(), alloc);
-      elements = ArrayRef<char>(alloc, elements.size());
-    }
-    return new (allocator.allocate<DenseArrayBaseAttrStorage>())
-        DenseArrayBaseAttrStorage(type, eltType, elements);
-  }
-
-  ShapedType type;
-  DenseArrayBaseAttr::EltType eltType;
-  ArrayRef<char> elements;
-};
-
-DenseArrayBaseAttr::EltType DenseArrayBaseAttr::getElementType() const {
-  return getImpl()->eltType;
-}
-
-ShapedType DenseArrayBaseAttr::getType() const { return getImpl()->type; }
-
 const bool *DenseArrayBaseAttr::value_begin_impl(OverloadToken<bool>) const {
   return cast<DenseBoolArrayAttr>().asArrayRef().begin();
 }
@@ -880,7 +834,7 @@ Attribute DenseArrayAttr<T>::parse(AsmParser &parser, Type odsType) {
 /// Conversion from DenseArrayAttr<T> to ArrayRef<T>.
 template <typename T>
 DenseArrayAttr<T>::operator ArrayRef<T>() const {
-  ArrayRef<char> raw = getImpl()->elements;
+  ArrayRef<char> raw = getRawData();
   assert((raw.size() % sizeof(T)) == 0);
   return ArrayRef<T>(reinterpret_cast<const T *>(raw.data()),
                      raw.size() / sizeof(T));
