@@ -1,4 +1,3 @@
-// XFAIL: aix
 // Test __llvm_profile_get_filename.
 // RUN: %clang_pgogen -O2 -o %t %s
 // RUN: %run %t
