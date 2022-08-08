@@ -606,7 +606,7 @@ TEST(STLExtrasTest, EarlyIncrementTestCustomPointerIterator) {
   EXPECT_EQ(EIR.end(), I);
 }
 
-TEST(STLExtrasTest, splat) {
+TEST(STLExtrasTest, IsSplat) {
   std::vector<int> V;
   EXPECT_FALSE(is_splat(V));
 
@@ -619,6 +619,13 @@ TEST(STLExtrasTest, splat) {
 
   V.push_back(2);
   EXPECT_FALSE(is_splat(V));
+}
+
+TEST(STLExtrasTest, IsSplatInitializerList) {
+  EXPECT_TRUE(is_splat({1}));
+  EXPECT_TRUE(is_splat({1, 1}));
+  EXPECT_FALSE(is_splat({1, 2}));
+  EXPECT_TRUE(is_splat({1, 1, 1}));
 }
 
 TEST(STLExtrasTest, to_address) {
