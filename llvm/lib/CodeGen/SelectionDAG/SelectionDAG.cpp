@@ -5480,7 +5480,7 @@ static llvm::Optional<APInt> FoldValueWithUndef(unsigned Opcode,
     return APInt::getZero(C1.getBitWidth());
 
   return llvm::None;
-};
+}
 
 SDValue SelectionDAG::FoldSymbolOffset(unsigned Opcode, EVT VT,
                                        const GlobalAddressSDNode *GA,
