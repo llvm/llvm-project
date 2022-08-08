@@ -1439,7 +1439,7 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
     if (!ParseExpression(EVal))
       break;
     // Fall-through
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     return Error(S, "unknown operand");
   }

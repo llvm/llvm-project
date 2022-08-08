@@ -1779,7 +1779,7 @@ static bool tryARMPackedUnwind(MCStreamer &streamer, WinEH::FrameInfo *info,
         Step = 2;
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Win64EH::UOP_WideSaveRegMask:
       if (Step != 1 && Step != 2)
         return false;
@@ -2043,7 +2043,7 @@ static bool tryARMPackedUnwind(MCStreamer &streamer, WinEH::FrameInfo *info,
       case Win64EH::UOP_WideEndNop:
         GotReturn = true;
         Ret = (Inst.Operation == Win64EH::UOP_EndNop) ? 1 : 2;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case Win64EH::UOP_End:
         if (Step != 6 && Step != 7 && Step != 8 && Step != 9 && Step != 10)
           return false;

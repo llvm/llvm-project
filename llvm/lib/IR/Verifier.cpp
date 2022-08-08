@@ -2494,7 +2494,7 @@ void Verifier::visitFunction(const Function &F) {
   case CallingConv::SPIR_KERNEL:
     Check(F.getReturnType()->isVoidTy(),
           "Calling convention requires void return type", &F);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CallingConv::AMDGPU_VS:
   case CallingConv::AMDGPU_HS:
   case CallingConv::AMDGPU_GS:
@@ -2523,7 +2523,7 @@ void Verifier::visitFunction(const Function &F) {
       }
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CallingConv::Fast:
   case CallingConv::Cold:
   case CallingConv::Intel_OCL_BI:

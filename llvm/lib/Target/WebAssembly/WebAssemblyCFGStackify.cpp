@@ -1501,7 +1501,7 @@ void WebAssemblyCFGStackify::fixEndsAtEndOfFunction(MachineFunction &MF) {
             std::next(WebAssembly::findCatch(EHPad)->getReverseIterator());
         if (NextIt != EHPad->rend())
           Worklist.push_back(NextIt);
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       }
       case WebAssembly::END_BLOCK:
       case WebAssembly::END_LOOP:

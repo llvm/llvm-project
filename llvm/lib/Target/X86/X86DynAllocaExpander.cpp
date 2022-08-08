@@ -231,7 +231,7 @@ void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
       break;
 
     // Fall through to make any remaining adjustment.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case Sub:
     assert(Amount > 0);

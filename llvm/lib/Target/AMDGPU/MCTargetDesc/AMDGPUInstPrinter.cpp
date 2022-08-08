@@ -715,7 +715,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
         printImmediate16(static_cast<uint16_t>(Op.getImm()), STI, O);
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
       printImmediateInt16(static_cast<uint16_t>(Op.getImm()), STI, O);

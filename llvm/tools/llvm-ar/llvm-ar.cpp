@@ -1218,7 +1218,7 @@ static void runMRIScript() {
       break;
     case MRICommand::CreateThin:
       Thin = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case MRICommand::Create:
       Create = true;
       if (!ArchiveName.empty())

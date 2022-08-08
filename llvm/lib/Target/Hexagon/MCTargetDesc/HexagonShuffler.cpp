@@ -488,10 +488,10 @@ HexagonShuffler::HexagonPacketSummary HexagonShuffler::GetPacketSummary() {
     case HexagonII::TypeCVI_GATHER_DV:
     case HexagonII::TypeCVI_GATHER_RST:
       ++Summary.NonZCVIloads;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case HexagonII::TypeCVI_ZW:
       ++Summary.AllCVIloads;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case HexagonII::TypeLD:
       ++Summary.loads;
       ++Summary.memory;
@@ -510,7 +510,7 @@ HexagonShuffler::HexagonPacketSummary HexagonShuffler::GetPacketSummary() {
     case HexagonII::TypeCVI_SCATTER_NEW_RST:
     case HexagonII::TypeCVI_SCATTER_NEW_ST:
       ++Summary.CVIstores;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case HexagonII::TypeST:
       ++Summary.stores;
       ++Summary.memory;

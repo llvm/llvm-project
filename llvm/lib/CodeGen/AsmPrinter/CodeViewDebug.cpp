@@ -1620,7 +1620,7 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty, const DIType *ClassTy) {
   case dwarf::DW_TAG_pointer_type:
     if (cast<DIDerivedType>(Ty)->getName() == "__vtbl_ptr_type")
       return lowerTypeVFTableShape(cast<DIDerivedType>(Ty));
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case dwarf::DW_TAG_reference_type:
   case dwarf::DW_TAG_rvalue_reference_type:
     return lowerTypePointer(cast<DIDerivedType>(Ty));

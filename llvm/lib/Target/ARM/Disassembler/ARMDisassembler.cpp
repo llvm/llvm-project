@@ -2010,7 +2010,7 @@ static DecodeStatus DecodeCopMemInstruction(MCInst &Inst, unsigned Insn,
     case ARM::STC_POST:
     case ARM::STCL_POST:
       imm |= U << 8;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       // The 'option' variant doesn't encode 'U' in the immediate since
       // the immediate is unsigned [0,255].
@@ -3193,7 +3193,7 @@ static DecodeStatus DecodeVLDInstruction(MCInst &Inst, unsigned Insn,
       break;
     }
     // Fall through to handle the register offset variant.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARM::VLD1d8wb_fixed:
   case ARM::VLD1d16wb_fixed:
   case ARM::VLD1d32wb_fixed:
@@ -5015,7 +5015,7 @@ static DecodeStatus DecodeMSRMask(MCInst &Inst, unsigned Val, uint64_t Address,
     case 0x93: // faultmask_ns
       if (!(FeatureBits[ARM::HasV8MMainlineOps]))
         return MCDisassembler::Fail;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case 10:   // msplim
     case 11:   // psplim
     case 0x88: // msp_ns
@@ -6345,7 +6345,7 @@ static DecodeStatus DecodeLOLoop(MCInst &Inst, unsigned Insn, uint64_t Address,
   case ARM::MVE_LETP:
     Inst.addOperand(MCOperand::createReg(ARM::LR));
     Inst.addOperand(MCOperand::createReg(ARM::LR));
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARM::t2LE:
     if (!Check(S, DecodeBFLabelOperand<false, true, true, 11>(
                    Inst, Imm, Address, Decoder)))

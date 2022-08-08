@@ -2803,7 +2803,7 @@ void InformationCache::initializeInformationCache(const Function &CF,
         if (const Function *Callee = cast<CallInst>(I).getCalledFunction())
           getFunctionInfo(*Callee).CalledViaMustTail = true;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Instruction::CallBr:
     case Instruction::Invoke:
     case Instruction::CleanupRet:

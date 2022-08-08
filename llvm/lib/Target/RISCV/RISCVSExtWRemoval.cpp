@@ -275,7 +275,7 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI,
     // SLLIW reads the lowest 5 bits, while SLLI reads lowest 6 bits
     if (MI.getOperand(2).getImm() >= 32)
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case RISCV::ADD:
   case RISCV::LD:
   case RISCV::LWU:
@@ -337,7 +337,7 @@ static bool isSignExtendedW(MachineInstr &OrigMI, MachineRegisterInfo &MRI,
     case RISCV::BSETI:
       if (MI->getOperand(2).getImm() >= 31)
         return false;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RISCV::REM:
     case RISCV::ANDI:
     case RISCV::ORI:

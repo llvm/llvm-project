@@ -471,7 +471,7 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
       return addMappingFromTable<1>(MI, MRI, {{ 0 }}, Table);
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_FRAME_INDEX:
@@ -2367,7 +2367,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
         llvm_unreachable("lowerAbsToMaxNeg should have succeeded");
       return;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AMDGPU::G_ADD:
   case AMDGPU::G_SUB:
@@ -3717,7 +3717,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AMDGPU::G_PTR_ADD:
   case AMDGPU::G_PTRMASK:
@@ -3743,7 +3743,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_UBFX:
     if (isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case AMDGPU::G_SADDSAT: // FIXME: Could lower sat ops for SALU
   case AMDGPU::G_SSUBSAT:
@@ -3906,7 +3906,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AMDGPU::G_MERGE_VALUES:
   case AMDGPU::G_CONCAT_VECTORS: {
@@ -4353,7 +4353,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned IdxSize = MRI.getType(IdxReg).getSizeInBits();
       unsigned IdxBank = getRegBankID(IdxReg, MRI, AMDGPU::SGPRRegBankID);
       OpdsMapping[3] = AMDGPU::getValueMapping(IdxBank, IdxSize);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case Intrinsic::amdgcn_readfirstlane: {
       unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();

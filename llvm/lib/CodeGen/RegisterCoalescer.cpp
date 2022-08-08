@@ -2956,7 +2956,7 @@ void JoinVals::computeAssignment(unsigned ValNo, JoinVals &Other) {
     }
 
     OtherV.Pruned = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   default:
     // This value number needs to go in the final joined live range.
@@ -3399,7 +3399,7 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
         if (LI != nullptr)
           dbgs() << "\t\t  LHS = " << *LI << '\n';
       });
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
 
     case CR_Erase: {

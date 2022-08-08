@@ -6646,7 +6646,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   case MVT::i64:
     // i64 arguments should have been split to i32 for PPC32.
     assert(IsPPC64 && "PPC32 should have split i64 values.");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::i1:
   case MVT::i32: {
     const unsigned Offset = State.AllocateStack(PtrAlign.value(), PtrAlign);
@@ -7945,7 +7945,7 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     default: break;       // SETUO etc aren't handled by fsel.
     case ISD::SETNE:
       std::swap(TV, FV);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ISD::SETEQ:
       if (LHS.getValueType() == MVT::f32)   // Comparison is always 64-bits
         LHS = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f64, LHS);
@@ -7957,7 +7957,7 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     case ISD::SETULT:
     case ISD::SETLT:
       std::swap(TV, FV);  // fsel is natively setge, swap operands for setlt
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ISD::SETOGE:
     case ISD::SETGE:
       if (LHS.getValueType() == MVT::f32)   // Comparison is always 64-bits
@@ -7966,7 +7966,7 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     case ISD::SETUGT:
     case ISD::SETGT:
       std::swap(TV, FV);  // fsel is natively setge, swap operands for setlt
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ISD::SETOLE:
     case ISD::SETLE:
       if (LHS.getValueType() == MVT::f32)   // Comparison is always 64-bits
@@ -7980,7 +7980,7 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   default: break;       // SETUO etc aren't handled by fsel.
   case ISD::SETNE:
     std::swap(TV, FV);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETEQ:
     Cmp = DAG.getNode(ISD::FSUB, dl, CmpVT, LHS, RHS, Flags);
     if (Cmp.getValueType() == MVT::f32)   // Comparison is always 64-bits
@@ -15140,7 +15140,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SETCC:
     if (SDValue CSCC = combineSetCC(N, DCI))
       return CSCC;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SELECT_CC:
     return DAGCombineTruncBoolExt(N, DCI);
   case ISD::SINT_TO_FP:
@@ -16957,7 +16957,7 @@ bool PPCTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
       // we can materialize all immediatess via XXSPLTI32DX and XXSPLTIDP.
       return true;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::ppcf128:
     return Imm.isPosZero();
   }

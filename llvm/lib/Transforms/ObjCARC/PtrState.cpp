@@ -212,7 +212,7 @@ bool BottomUpPtrState::MatchWithRetain() {
     // imprecise release, clear our reverse insertion points.
     if (OldSeq != S_Use || IsTrackingImpreciseReleases())
       ClearReverseInsertPts();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case S_CanRelease:
     return true;
   case S_None:
@@ -360,7 +360,7 @@ bool TopDownPtrState::MatchWithRelease(ARCMDKindCache &Cache,
   case S_CanRelease:
     if (OldSeq == S_Retain || ReleaseMetadata != nullptr)
       ClearReverseInsertPts();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case S_Use:
     SetReleaseMetadata(ReleaseMetadata);
     SetTailCallRelease(cast<CallInst>(Release)->isTailCall());

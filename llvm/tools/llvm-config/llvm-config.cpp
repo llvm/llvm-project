@@ -660,7 +660,7 @@ int main(int argc, char **argv) {
         }
         WithColor::error(errs(), "llvm-config")
             << "component libraries and shared library\n\n";
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case LinkModeStatic:
         for (auto &Lib : MissingLibs)
           WithColor::error(errs(), "llvm-config") << "missing: " << Lib << "\n";

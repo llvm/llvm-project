@@ -221,7 +221,7 @@ static bool tryInterleave(Instruction *Start,
       default:
         return false;
       }
-      LLVM_FALLTHROUGH; // Fall through to treating these like an operator below.
+      [[fallthrough]]; // Fall through to treating these like an operator below.
     }
     // Binary/tertiary ops
     case Instruction::Add:
@@ -255,7 +255,7 @@ static bool tryInterleave(Instruction *Start,
       // A shuffle of a splat is a splat.
       if (cast<ShuffleVectorInst>(I)->isZeroEltSplat())
         continue;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     default:
       LLVM_DEBUG(dbgs() << "  Unhandled instruction: " << *I << "\n");

@@ -2953,7 +2953,7 @@ static bool isOptimizeCompareCandidate(MachineInstr *MI, bool &IsThumb1) {
   case ARM::tASRrr:
   case ARM::tROR:
     IsThumb1 = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARM::RSBrr:
   case ARM::RSBri:
   case ARM::RSCrr:

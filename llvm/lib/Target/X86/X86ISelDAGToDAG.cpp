@@ -2313,7 +2313,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
   case ISD::UMUL_LOHI:
     // A mul_lohi where we need the low part can be folded as a plain multiply.
     if (N.getResNo() != 0) break;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::MUL:
   case X86ISD::MUL_IMM:
     // X*[3,5,9] -> X+X*[2,4,8]
@@ -3310,7 +3310,7 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
                                       MVT::Other, Ops);
       break;
     }
-   LLVM_FALLTHROUGH;
+   [[fallthrough]];
   case X86ISD::ADD:
     // Try to match inc/dec.
     if (!Subtarget->slowIncDec() || CurDAG->shouldOptForSize()) {
@@ -3328,7 +3328,7 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
         break;
       }
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case X86ISD::ADC:
   case X86ISD::SBB:
   case X86ISD::AND:
@@ -4962,7 +4962,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
   case ISD::SRL:
     if (matchBitExtract(Node))
       return;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SRA:
   case ISD::SHL:
     if (tryShiftAmountMod(Node))
@@ -5005,7 +5005,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     if (AndImmShrink && shrinkAndImmediate(Node))
       return;
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::OR:
   case ISD::XOR:
     if (tryShrinkShlLogicImm(Node))
@@ -5015,7 +5015,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     if (tryVPTERNLOG(Node))
       return;
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::ADD:
   case ISD::SUB: {
     // Try to avoid folding immediates with multiple uses for optsize.
@@ -5126,7 +5126,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     // i16/i32/i64 are handled with isel patterns.
     if (NVT != MVT::i8)
       break;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case X86ISD::UMUL: {
     SDValue N0 = Node->getOperand(0);
     SDValue N1 = Node->getOperand(1);

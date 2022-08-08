@@ -1533,7 +1533,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
             .addUse(X86::NoRegister);
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case SwiftAsyncFramePointerMode::Always:
       BuildMI(MBB, MBBI, DL, TII.get(X86::BTS64ri8), MachineFramePtr)

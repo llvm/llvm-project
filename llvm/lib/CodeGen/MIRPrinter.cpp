@@ -880,7 +880,7 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
       MachineOperand::printSubRegIdx(OS, Op.getImm(), TRI);
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MachineOperand::MO_Register:
   case MachineOperand::MO_CImmediate:
   case MachineOperand::MO_FPImmediate:

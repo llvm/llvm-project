@@ -264,7 +264,7 @@ LegacyLegalizerInfo::findAction(const SizeAndActionsVec &Vec, const uint32_t Siz
     // Special case for scalarization:
     if (Vec == SizeAndActionsVec({{1, FewerElements}}))
       return {1, FewerElements};
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case NarrowScalar: {
     // The following needs to be a loop, as for now, we do allow needing to
     // go over "Unsupported" bit sizes before finding a legalizable bit size.
