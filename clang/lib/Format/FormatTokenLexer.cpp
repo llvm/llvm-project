@@ -1027,7 +1027,7 @@ FormatToken *FormatTokenLexer::getNextToken() {
         // the same as a single LF.
         if (i + 1 < e && Text[i + 1] == '\n')
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case '\n':
         ++FormatTok->NewlinesBefore;
         if (!InEscape)

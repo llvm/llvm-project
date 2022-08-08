@@ -380,7 +380,7 @@ class JSONDumper : public ASTNodeTraverser<JSONDumper, JSONNodeDumper> {
       case TSK_ExplicitInstantiationDefinition:
         if (!DumpExplicitInst)
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case TSK_Undeclared:
       case TSK_ImplicitInstantiation:
         if (DumpRefOnly)

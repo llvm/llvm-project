@@ -986,7 +986,7 @@ void Preprocessor::Lex(Token &Result) {
         TrackGMFState.handleModule(ImportSeqState.afterTopLevelSeq());
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       TrackGMFState.handleMisc();
       ImportSeqState.handleMisc();
@@ -1232,7 +1232,7 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
       Suffix.back().setLocation(SemiLoc);
       Suffix.back().setAnnotationEndLoc(SemiLoc);
       Suffix.back().setAnnotationValue(Action.ModuleForHeader);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case ImportAction::ModuleImport:
     case ImportAction::HeaderUnitImport:
