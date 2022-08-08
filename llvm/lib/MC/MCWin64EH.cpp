@@ -997,7 +997,9 @@ static void ARM64FindSegmentsInFunction(MCStreamer &streamer,
     int64_t Offset = GetAbsDifference(streamer, Start, info->Begin);
     assert((Epilogs.size() == 0 || Offset >= Epilogs.back().End) &&
            "Epilogs should be monotonically ordered");
-    Epilogs.push_back({Start, Offset, Offset + (int64_t)Instrs.size() * 4});
+    // Exclue the end opcode from Instrs.size() when calculating the end of the
+    // epilog.
+    Epilogs.push_back({Start, Offset, Offset + (int64_t)(Instrs.size() - 1) * 4});
   }
 
   unsigned E = 0;
