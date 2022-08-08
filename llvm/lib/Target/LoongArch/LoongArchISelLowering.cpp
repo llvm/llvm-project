@@ -55,6 +55,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::GlobalAddress, ISD::ConstantPool}, GRLenVT, Custom);
 
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, GRLenVT, Expand);
+  setOperationAction(ISD::VASTART, MVT::Other, Custom);
+  setOperationAction({ISD::VAARG, ISD::VACOPY, ISD::VAEND}, MVT::Other, Expand);
+
   if (Subtarget.is64Bit()) {
     setOperationAction(ISD::SHL, MVT::i32, Custom);
     setOperationAction(ISD::SRA, MVT::i32, Custom);
@@ -137,7 +141,25 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return SDValue();
   case ISD::UINT_TO_FP:
     return lowerUINT_TO_FP(Op, DAG);
+  case ISD::VASTART:
+    return lowerVASTART(Op, DAG);
   }
+}
+
+SDValue LoongArchTargetLowering::lowerVASTART(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  auto *FuncInfo = MF.getInfo<LoongArchMachineFunctionInfo>();
+
+  SDLoc DL(Op);
+  SDValue FI = DAG.getFrameIndex(FuncInfo->getVarArgsFrameIndex(),
+                                 getPointerTy(MF.getDataLayout()));
+
+  // vastart just stores the address of the VarArgsFrameIndex slot into the
+  // memory location argument.
+  const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
+  return DAG.getStore(Op.getOperand(0), DL, FI, Op.getOperand(1),
+                      MachinePointerInfo(SV));
 }
 
 SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
@@ -1174,6 +1196,10 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
+  MVT GRLenVT = Subtarget.getGRLenVT();
+  unsigned GRLenInBytes = Subtarget.getGRLen() / 8;
+  // Used with varargs to acumulate store chains.
+  std::vector<SDValue> OutChains;
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign> ArgLocs;
@@ -1211,8 +1237,66 @@ SDValue LoongArchTargetLowering::LowerFormalArguments(
   }
 
   if (IsVarArg) {
-    // TODO: Support vararg.
-    report_fatal_error("Not support vararg");
+    ArrayRef<MCPhysReg> ArgRegs = makeArrayRef(ArgGPRs);
+    unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
+    const TargetRegisterClass *RC = &LoongArch::GPRRegClass;
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+    MachineRegisterInfo &RegInfo = MF.getRegInfo();
+    auto *LoongArchFI = MF.getInfo<LoongArchMachineFunctionInfo>();
+
+    // Offset of the first variable argument from stack pointer, and size of
+    // the vararg save area. For now, the varargs save area is either zero or
+    // large enough to hold a0-a7.
+    int VaArgOffset, VarArgsSaveSize;
+
+    // If all registers are allocated, then all varargs must be passed on the
+    // stack and we don't need to save any argregs.
+    if (ArgRegs.size() == Idx) {
+      VaArgOffset = CCInfo.getNextStackOffset();
+      VarArgsSaveSize = 0;
+    } else {
+      VarArgsSaveSize = GRLenInBytes * (ArgRegs.size() - Idx);
+      VaArgOffset = -VarArgsSaveSize;
+    }
+
+    // Record the frame index of the first variable argument
+    // which is a value necessary to VASTART.
+    int FI = MFI.CreateFixedObject(GRLenInBytes, VaArgOffset, true);
+    LoongArchFI->setVarArgsFrameIndex(FI);
+
+    // If saving an odd number of registers then create an extra stack slot to
+    // ensure that the frame pointer is 2*GRLen-aligned, which in turn ensures
+    // offsets to even-numbered registered remain 2*GRLen-aligned.
+    if (Idx % 2) {
+      MFI.CreateFixedObject(GRLenInBytes, VaArgOffset - (int)GRLenInBytes,
+                            true);
+      VarArgsSaveSize += GRLenInBytes;
+    }
+
+    // Copy the integer registers that may have been used for passing varargs
+    // to the vararg save area.
+    for (unsigned I = Idx; I < ArgRegs.size();
+         ++I, VaArgOffset += GRLenInBytes) {
+      const Register Reg = RegInfo.createVirtualRegister(RC);
+      RegInfo.addLiveIn(ArgRegs[I], Reg);
+      SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, GRLenVT);
+      FI = MFI.CreateFixedObject(GRLenInBytes, VaArgOffset, true);
+      SDValue PtrOff = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
+      SDValue Store = DAG.getStore(Chain, DL, ArgValue, PtrOff,
+                                   MachinePointerInfo::getFixedStack(MF, FI));
+      cast<StoreSDNode>(Store.getNode())
+          ->getMemOperand()
+          ->setValue((Value *)nullptr);
+      OutChains.push_back(Store);
+    }
+    LoongArchFI->setVarArgsSaveSize(VarArgsSaveSize);
+  }
+
+  // All stores are grouped in one node to allow the matching between
+  // the size of Ins and InVals. This only happens for vararg functions.
+  if (!OutChains.empty()) {
+    OutChains.push_back(Chain);
+    Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, OutChains);
   }
 
   return Chain;

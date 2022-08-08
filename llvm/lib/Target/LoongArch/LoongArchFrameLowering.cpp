@@ -87,6 +87,7 @@ void LoongArchFrameLowering::determineFrameLayout(MachineFunction &MF) const {
 void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
                                           MachineBasicBlock &MBB) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto *LoongArchFI = MF.getInfo<LoongArchMachineFunctionInfo>();
   const LoongArchRegisterInfo *RI = STI.getRegisterInfo();
   const LoongArchInstrInfo *TII = STI.getInstrInfo();
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -138,11 +139,14 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Generate new FP.
   if (hasFP(MF)) {
-    adjustReg(MBB, MBBI, DL, FPReg, SPReg, StackSize, MachineInstr::FrameSetup);
+    adjustReg(MBB, MBBI, DL, FPReg, SPReg,
+              StackSize - LoongArchFI->getVarArgsSaveSize(),
+              MachineInstr::FrameSetup);
 
-    // Emit ".cfi_def_cfa $fp, 0"
-    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
-        nullptr, RI->getDwarfRegNum(FPReg, true), 0));
+    // Emit ".cfi_def_cfa $fp, LoongArchFI->getVarArgsSaveSize()"
+    unsigned CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::cfiDefCfa(nullptr, RI->getDwarfRegNum(FPReg, true),
+                                    LoongArchFI->getVarArgsSaveSize()));
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
         .setMIFlag(MachineInstr::FrameSetup);
@@ -153,6 +157,7 @@ void LoongArchFrameLowering::emitEpilogue(MachineFunction &MF,
                                           MachineBasicBlock &MBB) const {
   const LoongArchRegisterInfo *RI = STI.getRegisterInfo();
   MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto *LoongArchFI = MF.getInfo<LoongArchMachineFunctionInfo>();
   Register SPReg = LoongArch::R3;
 
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
@@ -170,7 +175,8 @@ void LoongArchFrameLowering::emitEpilogue(MachineFunction &MF,
   // Restore the stack pointer.
   if (RI->hasStackRealignment(MF) || MFI.hasVarSizedObjects()) {
     assert(hasFP(MF) && "frame pointer should not have been eliminated");
-    adjustReg(MBB, LastFrameDestroy, DL, SPReg, LoongArch::R22, -StackSize,
+    adjustReg(MBB, LastFrameDestroy, DL, SPReg, LoongArch::R22,
+              -StackSize + LoongArchFI->getVarArgsSaveSize(),
               MachineInstr::FrameDestroy);
   }
 
@@ -193,10 +199,49 @@ void LoongArchFrameLowering::determineCalleeSaves(MachineFunction &MF,
     SavedRegs.set(LoongArchABI::getBPReg());
 }
 
+// Do not preserve stack space within prologue for outgoing variables if the
+// function contains variable size objects.
+// Let eliminateCallFramePseudoInstr preserve stack space for it.
+bool LoongArchFrameLowering::hasReservedCallFrame(
+    const MachineFunction &MF) const {
+  return !MF.getFrameInfo().hasVarSizedObjects();
+}
+
+// Eliminate ADJCALLSTACKDOWN, ADJCALLSTACKUP pseudo instructions.
+MachineBasicBlock::iterator
+LoongArchFrameLowering::eliminateCallFramePseudoInstr(
+    MachineFunction &MF, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator MI) const {
+  Register SPReg = LoongArch::R3;
+  DebugLoc DL = MI->getDebugLoc();
+
+  if (!hasReservedCallFrame(MF)) {
+    // If space has not been reserved for a call frame, ADJCALLSTACKDOWN and
+    // ADJCALLSTACKUP must be converted to instructions manipulating the stack
+    // pointer. This is necessary when there is a variable length stack
+    // allocation (e.g. alloca), which means it's not possible to allocate
+    // space for outgoing arguments from within the function prologue.
+    int64_t Amount = MI->getOperand(0).getImm();
+
+    if (Amount != 0) {
+      // Ensure the stack remains aligned after adjustment.
+      Amount = alignSPAdjust(Amount);
+
+      if (MI->getOpcode() == LoongArch::ADJCALLSTACKDOWN)
+        Amount = -Amount;
+
+      adjustReg(MBB, MI, DL, SPReg, SPReg, Amount, MachineInstr::NoFlags);
+    }
+  }
+
+  return MBB.erase(MI);
+}
+
 StackOffset LoongArchFrameLowering::getFrameIndexReference(
     const MachineFunction &MF, int FI, Register &FrameReg) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
+  auto *LoongArchFI = MF.getInfo<LoongArchMachineFunctionInfo>();
 
   // Callee-saved registers should be referenced relative to the stack
   // pointer (positive offset), otherwise use the frame pointer (negative
@@ -213,10 +258,12 @@ StackOffset LoongArchFrameLowering::getFrameIndexReference(
     MaxCSFI = CSI[CSI.size() - 1].getFrameIdx();
   }
 
-  FrameReg = RI->getFrameRegister(MF);
   if ((FI >= MinCSFI && FI <= MaxCSFI) || !hasFP(MF)) {
     FrameReg = LoongArch::R3;
     Offset += StackOffset::getFixed(MFI.getStackSize());
+  } else {
+    FrameReg = RI->getFrameRegister(MF);
+    Offset += StackOffset::getFixed(LoongArchFI->getVarArgsSaveSize());
   }
 
   return Offset;
