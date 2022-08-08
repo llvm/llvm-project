@@ -6,13 +6,11 @@ define i32 @freeze_sext(i8 %a0) nounwind {
 ; X86-LABEL: freeze_sext:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    cwtl
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_sext:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movsbl %dil, %eax
-; X64-NEXT:    cwtl
 ; X64-NEXT:    retq
   %x = sext i8 %a0 to i16
   %y = freeze i16 %x
@@ -24,15 +22,13 @@ define <4 x i32> @freeze_sext_vec(<4 x i8> %a0) nounwind {
 ; X86-LABEL: freeze_sext_vec:
 ; X86:       # %bb.0:
 ; X86-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X86-NEXT:    psraw $8, %xmm0
 ; X86-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
-; X86-NEXT:    psrad $16, %xmm0
+; X86-NEXT:    psrad $24, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_sext_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    pmovsxbw %xmm0, %xmm0
-; X64-NEXT:    pmovsxwd %xmm0, %xmm0
+; X64-NEXT:    pmovsxbd %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = sext <4 x i8> %a0 to <4 x i16>
   %y = freeze <4 x i16> %x
@@ -44,13 +40,11 @@ define i32 @freeze_zext(i8 %a0) nounwind {
 ; X86-LABEL: freeze_zext:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_zext:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
   %x = zext i8 %a0 to i16
   %y = freeze i16 %x
@@ -68,8 +62,7 @@ define <2 x i64> @freeze_zext_vec(<2 x i16> %a0) nounwind {
 ;
 ; X64-LABEL: freeze_zext_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; X64-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; X64-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; X64-NEXT:    retq
   %x = zext <2 x i16> %a0 to <2 x i32>
   %y = freeze <2 x i32> %x
