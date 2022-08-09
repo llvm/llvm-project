@@ -26,6 +26,7 @@
 #   PYTHONPATH=/path/to/LLDB.framework/Resources/Python ./crashlog.py ~/Library/Logs/DiagnosticReports/a.crash
 #----------------------------------------------------------------------
 
+import abc
 import concurrent.futures
 import contextlib
 import datetime
@@ -415,37 +416,46 @@ class InteractiveCrashLogException(Exception):
     pass
 
 class CrashLogParser:
-    def parse(self, debugger, path, verbose):
-        try:
-            return JSONCrashLogParser(debugger, path, verbose).parse()
-        except CrashLogFormatException:
-            return TextCrashLogParser(debugger, path, verbose).parse()
+    "CrashLog parser base class and factory."
+    def __new__(cls, debugger, path, verbose):
+        data = JSONCrashLogParser.is_valid_json(path)
+        if data:
+            self = object.__new__(JSONCrashLogParser)
+            self.data = data
+            return self
+        else:
+            return object.__new__(TextCrashLogParser)
 
-
-class JSONCrashLogParser:
     def __init__(self, debugger, path, verbose):
         self.path = os.path.expanduser(path)
         self.verbose = verbose
         self.crashlog = CrashLog(debugger, self.path, self.verbose)
 
-    def parse_json(self, buffer):
+    @abc.abstractmethod
+    def parse(self):
+        pass
+
+
+class JSONCrashLogParser(CrashLogParser):
+    @staticmethod
+    def is_valid_json(path):
+        def parse_json(buffer):
+            try:
+                return json.loads(buffer)
+            except:
+                # The first line can contain meta data. Try stripping it and
+                # try again.
+                head, _, tail = buffer.partition('\n')
+                return json.loads(tail)
+
+        with open(path, 'r') as f:
+            buffer = f.read()
         try:
-            return json.loads(buffer)
+            return parse_json(buffer)
         except:
-            # The first line can contain meta data. Try stripping it and try
-            # again.
-            head, _, tail = buffer.partition('\n')
-            return json.loads(tail)
+            return None
 
     def parse(self):
-        with open(self.path, 'r') as f:
-            buffer = f.read()
-
-        try:
-            self.data = self.parse_json(buffer)
-        except:
-            raise CrashLogFormatException()
-
         try:
             self.parse_process_info(self.data)
             self.parse_images(self.data['usedImages'])
@@ -592,7 +602,7 @@ class CrashLogParseMode:
     INSTRS = 5
 
 
-class TextCrashLogParser:
+class TextCrashLogParser(CrashLogParser):
     parent_process_regex = re.compile('^Parent Process:\s*(.*)\[(\d+)\]')
     thread_state_regex = re.compile('^Thread ([0-9]+) crashed with')
     thread_instrs_regex = re.compile('^Thread ([0-9]+) instruction stream')
@@ -615,13 +625,10 @@ class TextCrashLogParser:
                                   r'(/.*)'                       # img_path
                                  )
 
-
     def __init__(self, debugger, path, verbose):
-        self.path = os.path.expanduser(path)
-        self.verbose = verbose
+        super().__init__(debugger, path, verbose)
         self.thread = None
         self.app_specific_backtrace = False
-        self.crashlog = CrashLog(debugger, self.path, self.verbose)
         self.parse_mode = CrashLogParseMode.NORMAL
         self.parsers = {
             CrashLogParseMode.NORMAL : self.parse_normal,
@@ -1012,7 +1019,7 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
     if not os.path.exists(crashlog_path):
         raise InteractiveCrashLogException("crashlog file %s does not exist" % crashlog_path)
 
-    crashlog = CrashLogParser().parse(debugger, crashlog_path, False)
+    crashlog = CrashLogParser(debugger, crashlog_path, False).parse()
 
     target = lldb.SBTarget()
     # 1. Try to use the user-provided target
@@ -1257,7 +1264,7 @@ def SymbolicateCrashLogs(debugger, command_args, result):
                 except InteractiveCrashLogException as e:
                     result.SetError(str(e))
             else:
-                crash_log = CrashLogParser().parse(debugger, crash_log_file, options.verbose)
+                crash_log = CrashLogParser(debugger, crash_log_file, options.verbose).parse()
                 SymbolicateCrashLog(crash_log, options)
 
 if __name__ == '__main__':
