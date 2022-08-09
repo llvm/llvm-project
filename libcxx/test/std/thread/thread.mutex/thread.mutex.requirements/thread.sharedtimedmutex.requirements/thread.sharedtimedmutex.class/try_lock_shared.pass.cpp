@@ -38,7 +38,10 @@ typedef std::chrono::milliseconds ms;
 typedef std::chrono::nanoseconds ns;
 
 
-#if !defined(TEST_HAS_SANITIZERS)
+// Thread sanitizer causes more overhead and will sometimes cause this test
+// to fail. To prevent this we give Thread sanitizer more time to complete the
+// test.
+#if !defined(TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT)
 ms Tolerance = ms(200);
 #else
 ms Tolerance = ms(200 * 5);
