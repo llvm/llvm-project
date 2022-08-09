@@ -167,7 +167,7 @@ inline void createDefaultFIROptimizerPassPipeline(
   pm.addPass(fir::createSimplifyRegionLitePass());
   // Algebraic simplifications may increase code size.
   if (optLevel.isOptimizingForSpeed())
-    pm.addPass(fir::createAlgebraicSimplificationPass());
+    pm.addPass(fir::createAlgebraicSimplificationPass(config));
   pm.addPass(mlir::createCSEPass());
   fir::addMemoryAllocationOpt(pm);
 
