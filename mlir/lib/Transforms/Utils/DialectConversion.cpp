@@ -1407,9 +1407,7 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
   bool resultChanged = false;
 
   // Create mappings for each of the new result values.
-  Value newValue, result;
-  for (auto it : llvm::zip(newValues, op->getResults())) {
-    std::tie(newValue, result) = it;
+  for (auto [newValue, result] : llvm::zip(newValues, op->getResults())) {
     if (!newValue) {
       resultChanged = true;
       continue;
@@ -2554,9 +2552,7 @@ replaceMaterialization(ConversionPatternRewriterImpl &rewriterImpl,
 
   // For each of the materialization results, update the inverse mappings to
   // point to the replacement values.
-  for (auto it : llvm::zip(matResults, values)) {
-    Value matResult, newValue;
-    std::tie(matResult, newValue) = it;
+  for (auto [matResult, newValue] : llvm::zip(matResults, values)) {
     auto inverseMapIt = inverseMapping.find(matResult);
     if (inverseMapIt == inverseMapping.end())
       continue;

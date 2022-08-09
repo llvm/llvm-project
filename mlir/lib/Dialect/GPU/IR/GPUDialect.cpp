@@ -1040,9 +1040,7 @@ LogicalResult gpu::ReturnOp::verify() {
 
   for (const auto &pair : llvm::enumerate(
            llvm::zip(function.getFunctionType().getResults(), operands()))) {
-    Type type;
-    Value operand;
-    std::tie(type, operand) = pair.value();
+    auto [type, operand] = pair.value();
     if (type != operand.getType())
       return emitOpError() << "unexpected type `" << operand.getType()
                            << "' for operand #" << pair.index();

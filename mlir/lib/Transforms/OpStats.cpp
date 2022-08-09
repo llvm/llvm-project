@@ -66,16 +66,15 @@ void PrintOpStatsPass::printSummary() {
   };
 
   // Compute the largest dialect and operation name.
-  StringRef dialectName, opName;
   size_t maxLenOpName = 0, maxLenDialect = 0;
   for (const auto &key : sorted) {
-    std::tie(dialectName, opName) = splitOperationName(key);
+    auto [dialectName, opName] = splitOperationName(key);
     maxLenDialect = std::max(maxLenDialect, dialectName.size());
     maxLenOpName = std::max(maxLenOpName, opName.size());
   }
 
   for (const auto &key : sorted) {
-    std::tie(dialectName, opName) = splitOperationName(key);
+    auto [dialectName, opName] = splitOperationName(key);
 
     // Left-align the names (aligning on the dialect) and right-align the count
     // below. The alignment is for readability and does not affect CSV/FileCheck

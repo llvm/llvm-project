@@ -292,9 +292,8 @@ struct AssumingOpRemoveUnusedResults : public OpRewritePattern<AssumingOp> {
 
     // Find used values.
     SmallVector<Value, 4> newYieldOperands;
-    Value opResult, yieldOperand;
-    for (auto it : llvm::zip(op.getResults(), yieldOp.getOperands())) {
-      std::tie(opResult, yieldOperand) = it;
+    for (auto [opResult, yieldOperand] :
+         llvm::zip(op.getResults(), yieldOp.getOperands())) {
       if (!opResult.getUses().empty()) {
         newYieldOperands.push_back(yieldOperand);
       }

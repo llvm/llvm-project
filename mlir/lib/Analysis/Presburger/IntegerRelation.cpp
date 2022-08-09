@@ -1108,8 +1108,7 @@ Optional<uint64_t> IntegerRelation::computeVolume() const {
   bool hasUnboundedVar = false;
   for (unsigned i = 0, e = getNumDimAndSymbolVars(); i < e; ++i) {
     dim[i] = 1;
-    MaybeOptimum<int64_t> min, max;
-    std::tie(min, max) = simplex.computeIntegerBounds(dim);
+    auto [min, max] = simplex.computeIntegerBounds(dim);
     dim[i] = 0;
 
     assert((!min.isEmpty() && !max.isEmpty()) &&

@@ -1990,9 +1990,7 @@ Optional<SmallVector<int64_t, 8>> Simplex::findIntegerSample() {
           llvm::to_vector<8>(basis.getRow(level));
       basisCoeffs.emplace_back(0);
 
-      MaybeOptimum<int64_t> minRoundedUp, maxRoundedDown;
-      std::tie(minRoundedUp, maxRoundedDown) =
-          computeIntegerBounds(basisCoeffs);
+      auto [minRoundedUp, maxRoundedDown] = computeIntegerBounds(basisCoeffs);
 
       // We don't have any integer values in the range.
       // Pop the stack and return up a level.
