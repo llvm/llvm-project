@@ -131,13 +131,15 @@ public:
   void reset() { MaybeRef = optional_none_tag(); }
 
   bool has_value() const { return MaybeRef.hasOptionalValue(); }
-  bool hasValue() const { return MaybeRef.hasOptionalValue(); }
+  LLVM_DEPRECATED("Use has_value instead.", "has_value") bool hasValue() const {
+    return MaybeRef.hasOptionalValue();
+  }
 
   RefTy &value() & {
     assert(has_value());
     return MaybeRef;
   }
-  RefTy &getValue() & {
+  LLVM_DEPRECATED("Use value instead.", "value") RefTy &getValue() & {
     assert(has_value());
     return MaybeRef;
   }
@@ -145,6 +147,7 @@ public:
     assert(has_value());
     return MaybeRef;
   }
+  LLVM_DEPRECATED("Use value instead.", "value")
   RefTy const &getValue() const & {
     assert(has_value());
     return MaybeRef;
@@ -153,7 +156,7 @@ public:
     assert(has_value());
     return std::move(MaybeRef);
   }
-  RefTy &&getValue() && {
+  LLVM_DEPRECATED("Use value instead.", "value") RefTy &&getValue() && {
     assert(has_value());
     return std::move(MaybeRef);
   }
