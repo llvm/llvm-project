@@ -558,7 +558,7 @@ define i32 @xor_tree_with_shifts_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
   %a.shifted = lshr i32 %a, 16
   %c.shifted = lshr i32 %c, 16
   %xor.ab = xor i32 %a.shifted, %b
-  %xor.cd = xor i32 %c.shifted, %d
+  %xor.cd = xor i32 %d, %c.shifted
   %r = xor i32 %xor.ab, %xor.cd
   ret i32 %r
 }
@@ -579,12 +579,12 @@ define i32 @and_tree_with_shifts_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; X64-NEXT:    sarl $16, %edi
 ; X64-NEXT:    sarl $16, %eax
 ; X64-NEXT:    andl %ecx, %eax
-; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    andl %edi, %eax
+; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    retq
   %a.shifted = ashr i32 %a, 16
   %c.shifted = ashr i32 %c, 16
-  %and.ab = and i32 %a.shifted, %b
+  %and.ab = and i32 %b, %a.shifted
   %and.cd = and i32 %c.shifted, %d
   %r = and i32 %and.ab, %and.cd
   ret i32 %r
@@ -610,13 +610,13 @@ define i32 @logic_tree_with_shifts_var_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %
 ; X64-NEXT:    shll %cl, %edi
 ; X64-NEXT:    shll %cl, %edx
 ; X64-NEXT:    orl %edx, %eax
-; X64-NEXT:    orl %esi, %eax
 ; X64-NEXT:    orl %edi, %eax
+; X64-NEXT:    orl %esi, %eax
 ; X64-NEXT:    retq
   %a.shifted = shl i32 %a, %s
   %c.shifted = shl i32 %c, %s
-  %or.ab = or i32 %a.shifted, %b
-  %or.cd = or i32 %c.shifted, %d
+  %or.ab = or i32 %b, %a.shifted
+  %or.cd = or i32 %d, %c.shifted
   %r = or i32 %or.ab, %or.cd
   ret i32 %r
 }
