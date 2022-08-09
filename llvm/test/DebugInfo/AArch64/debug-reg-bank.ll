@@ -6,7 +6,7 @@ define void @foo(i32 %n) !dbg !7 {
   ; CHECK: bb.1.entry:
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   DBG_VALUE %{{[0-9]+}}:_, $noreg, !12, !DIExpression(), debug-location !19
+  ; CHECK-NEXT:   DBG_VALUE %2:gpr32, $noreg, !12, !DIExpression(), debug-location !19
   ; CHECK-NEXT:   RET_ReallyLR debug-location !20
 entry:
   %m = mul i32 %n, 13

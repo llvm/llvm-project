@@ -449,6 +449,9 @@ void RegisterBankInfo::applyDefaultMapping(const OperandsMapper &OpdMapper) {
       LLVM_DEBUG(dbgs() << " is $noreg, nothing to be done\n");
       continue;
     }
+    LLT Ty = MRI.getType(MO.getReg());
+    if (!Ty.isValid())
+      continue;
     assert(OpdMapper.getInstrMapping().getOperandMapping(OpIdx).NumBreakDowns !=
                0 &&
            "Invalid mapping");
@@ -601,6 +604,7 @@ bool RegisterBankInfo::InstructionMapping::verify(
   const MachineFunction &MF = *MI.getMF();
   const RegisterBankInfo *RBI = MF.getSubtarget().getRegBankInfo();
   (void)RBI;
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     const MachineOperand &MO = MI.getOperand(Idx);
@@ -611,6 +615,9 @@ bool RegisterBankInfo::InstructionMapping::verify(
     }
     Register Reg = MO.getReg();
     if (!Reg)
+      continue;
+    LLT Ty = MRI.getType(Reg);
+    if (!Ty.isValid())
       continue;
     assert(getOperandMapping(Idx).isValid() &&
            "We must have a mapping for reg operands");
