@@ -696,14 +696,14 @@ void parseNamespaceEvents(llvm::StringRef Code, const LangOptions &LangOpts,
       switch (State) {
       case UsingNamespace:
         NSName.clear();
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case UsingNamespaceName:
         NSName.append(Tok.text(SM).str());
         State = UsingNamespaceName;
         break;
       case Namespace:
         NSName.clear();
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case NamespaceName:
         NSName.append(Tok.text(SM).str());
         State = NamespaceName;
@@ -720,7 +720,7 @@ void parseNamespaceEvents(llvm::StringRef Code, const LangOptions &LangOpts,
       switch (State) {
       case UsingNamespace:
         NSName.clear();
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case UsingNamespaceName:
         NSName.append("::");
         State = UsingNamespaceName;
@@ -865,7 +865,7 @@ llvm::StringSet<> collectWords(llvm::StringRef Content) {
     switch (Roles[I]) {
     case Head:
       Flush();
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Tail:
       Word.push_back(Content[I]);
       break;
