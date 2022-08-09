@@ -31,7 +31,7 @@ namespace mlir {
 /// Transform IR operations containing other operations are allowed to do either
 /// with the results of the nested transformations, but must propagate definite
 /// failures as their diagnostics have been already reported to the user.
-class LLVM_NODISCARD DiagnosedSilenceableFailure {
+class [[nodiscard]] DiagnosedSilenceableFailure {
 public:
   explicit DiagnosedSilenceableFailure(LogicalResult result) : result(result) {}
   DiagnosedSilenceableFailure(const DiagnosedSilenceableFailure &) = delete;
