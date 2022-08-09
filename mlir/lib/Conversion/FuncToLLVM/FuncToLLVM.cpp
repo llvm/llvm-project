@@ -131,9 +131,7 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   SmallVector<NamedAttribute, 4> attributes;
   filterFuncAttributes(funcOp->getAttrs(), /*filterArgAndResAttrs=*/false,
                        attributes);
-  Type wrapperFuncType;
-  bool resultIsNowArg;
-  std::tie(wrapperFuncType, resultIsNowArg) =
+  auto [wrapperFuncType, resultIsNowArg] =
       typeConverter.convertFunctionTypeCWrapper(type);
   if (resultIsNowArg)
     prependResAttrsToArgAttrs(rewriter, attributes, funcOp.getNumArguments());
@@ -189,9 +187,7 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
                                  LLVM::LLVMFuncOp newFuncOp) {
   OpBuilder::InsertionGuard guard(builder);
 
-  Type wrapperType;
-  bool resultIsNowArg;
-  std::tie(wrapperType, resultIsNowArg) =
+  auto [wrapperType, resultIsNowArg] =
       typeConverter.convertFunctionTypeCWrapper(funcOp.getFunctionType());
   // This conversion can only fail if it could not convert one of the argument
   // types. But since it has been applied to a non-wrapper function before, it
