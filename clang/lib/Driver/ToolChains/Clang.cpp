@@ -4788,6 +4788,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       if (Triple.isAMDGCN() && IsOpenMPDevice && Args.hasArg(options::OPT_S) &&
           Args.hasArg(options::OPT_emit_llvm)) {
         CmdArgs.push_back("-emit-llvm");
+      } else if (Triple.isAMDGCN() && IsOpenMPDevice &&
+                 Args.hasArg(options::OPT_S)) {
+        CmdArgs.push_back("-S");
       } else {
         CmdArgs.push_back("-emit-llvm-bc");
       }
