@@ -514,6 +514,7 @@ def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [NoSideEffect]>,
       ```
 
       Example returning +1 for existing values and -1 for missing values:
+
       ```mlir
       %result = sparse_tensor.unary %a : f64 to i32
         present={
@@ -529,6 +530,7 @@ def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [NoSideEffect]>,
 
       Example showing a structural inversion (existing values become missing in
       the output, while missing values are filled with 1):
+
       ```mlir
       %result = sparse_tensor.unary %a : f64 to i64
         present={}
@@ -562,7 +564,6 @@ def SparseTensor_ReduceOp : SparseTensor_Op<"reduce", [NoSideEffect, SameOperand
       argument types.
 
       Note that this operation is only required for custom reductions beyond the
-
       standard operations (add, mul, and, or, etc). The `linalg.generic`
       `iterator_types` defines which indices are being reduced. When the associated
       operands are used in an operation, a reduction will occur. The use of this
