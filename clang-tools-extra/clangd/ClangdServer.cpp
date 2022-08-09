@@ -1000,7 +1000,7 @@ llvm::StringMap<TUScheduler::FileStats> ClangdServer::fileStats() const {
   return WorkScheduler->fileStats();
 }
 
-LLVM_NODISCARD bool
+[[nodiscard]] bool
 ClangdServer::blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds) {
   // Order is important here: we don't want to block on A and then B,
   // if B might schedule work on A.
