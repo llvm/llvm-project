@@ -226,6 +226,183 @@ define i64 @ld_wu(ptr %a) nounwind {
   ret i64 %6
 }
 
+define i64 @ldx_b(ptr %a, i64 %idx) nounwind {
+; LA32-LABEL: ldx_b:
+; LA32:       # %bb.0:
+; LA32-NEXT:    add.w $a1, $a0, $a1
+; LA32-NEXT:    ld.b $a2, $a1, 0
+; LA32-NEXT:    ld.b $a0, $a0, 0
+; LA32-NEXT:    srai.w $a1, $a2, 31
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:    jirl $zero, $ra, 0
+;
+; LA64-LABEL: ldx_b:
+; LA64:       # %bb.0:
+; LA64-NEXT:    ldx.b $a1, $a0, $a1
+; LA64-NEXT:    ld.b $a0, $a0, 0
+; LA64-NEXT:    move $a0, $a1
+; LA64-NEXT:    jirl $zero, $ra, 0
+  %1 = getelementptr i8, ptr %a, i64 %idx
+  %2 = load i8, ptr %1
+  %3 = sext i8 %2 to i64
+  %4 = load volatile i8, ptr %a
+  ret i64 %3
+}
+
+define i64 @ldx_h(ptr %a, i64 %idx) nounwind {
+; LA32-LABEL: ldx_h:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a1, 1
+; LA32-NEXT:    add.w $a1, $a0, $a1
+; LA32-NEXT:    ld.h $a2, $a1, 0
+; LA32-NEXT:    ld.h $a0, $a0, 0
+; LA32-NEXT:    srai.w $a1, $a2, 31
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:    jirl $zero, $ra, 0
+;
+; LA64-LABEL: ldx_h:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a1, 1
+; LA64-NEXT:    ldx.h $a1, $a0, $a1
+; LA64-NEXT:    ld.h $a0, $a0, 0
+; LA64-NEXT:    move $a0, $a1
+; LA64-NEXT:    jirl $zero, $ra, 0
+  %1 = getelementptr i16, ptr %a, i64 %idx
+  %2 = load i16, ptr %1
+  %3 = sext i16 %2 to i64
+  %4 = load volatile i16, ptr %a
+  ret i64 %3
+}
+
+define i64 @ldx_w(ptr %a, i64 %idx) nounwind {
+; LA32-LABEL: ldx_w:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a1, 2
+; LA32-NEXT:    add.w $a1, $a0, $a1
+; LA32-NEXT:    ld.w $a2, $a1, 0
+; LA32-NEXT:    ld.w $a0, $a0, 0
+; LA32-NEXT:    srai.w $a1, $a2, 31
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:    jirl $zero, $ra, 0
+;
+; LA64-LABEL: ldx_w:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a1, 2
+; LA64-NEXT:    ldx.w $a1, $a0, $a1
+; LA64-NEXT:    ld.w $a0, $a0, 0
+; LA64-NEXT:    move $a0, $a1
+; LA64-NEXT:    jirl $zero, $ra, 0
+  %1 = getelementptr i32, ptr %a, i64 %idx
+  %2 = load i32, ptr %1
+  %3 = sext i32 %2 to i64
+  %4 = load volatile i32, ptr %a
+  ret i64 %3
+}
+
+define i64 @ldx_d(ptr %a, i64 %idx) nounwind {
+; LA32-LABEL: ldx_d:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a1, 3
+; LA32-NEXT:    add.w $a1, $a0, $a1
+; LA32-NEXT:    ld.w $a2, $a1, 0
+; LA32-NEXT:    ld.w $a3, $a0, 0
+; LA32-NEXT:    ld.w $a1, $a1, 4
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    move $a0, $a2
+; LA32-NEXT:    jirl $zero, $ra, 0
+;
+; LA64-LABEL: ldx_d:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a1, 3
+; LA64-NEXT:    ldx.d $a1, $a0, $a1
+; LA64-NEXT:    ld.d $a0, $a0, 0
+; LA64-NEXT:    move $a0, $a1
+; LA64-NEXT:    jirl $zero, $ra, 0
+  %1 = getelementptr i64, ptr %a, i64 %idx
+  %2 = load i64, ptr %1
+  %3 = load volatile i64, ptr %a
+  ret i64 %2
+}
+
+define i64 @ldx_bu(ptr %a, i64 %idx) nounwind {
+; LA32-LABEL: ldx_bu:
+; LA32:       # %bb.0:
+; LA32-NEXT:    add.w $a1, $a0, $a1
+; LA32-NEXT:    ld.bu $a1, $a1, 0
+; LA32-NEXT:    ld.bu $a0, $a0, 0
+; LA32-NEXT:    add.w $a0, $a1, $a0
+; LA32-NEXT:    sltu $a1, $a0, $a1
+; LA32-NEXT:    jirl $zero, $ra, 0
+;
+; LA64-LABEL: ldx_bu:
+; LA64:       # %bb.0:
+; LA64-NEXT:    ldx.bu $a1, $a0, $a1
+; LA64-NEXT:    ld.bu $a0, $a0, 0
+; LA64-NEXT:    add.d $a0, $a1, $a0
+; LA64-NEXT:    jirl $zero, $ra, 0
+  %1 = getelementptr i8, ptr %a, i64 %idx
+  %2 = load i8, ptr %1
+  %3 = zext i8 %2 to i64
+  %4 = load volatile i8, ptr %a
+  %5 = zext i8 %4 to i64
+  %6 = add i64 %3, %5
+  ret i64 %6
+}
+
+define i64 @ldx_hu(ptr %a, i64 %idx) nounwind {
+; LA32-LABEL: ldx_hu:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a1, 1
+; LA32-NEXT:    add.w $a1, $a0, $a1
+; LA32-NEXT:    ld.hu $a1, $a1, 0
+; LA32-NEXT:    ld.hu $a0, $a0, 0
+; LA32-NEXT:    add.w $a0, $a1, $a0
+; LA32-NEXT:    sltu $a1, $a0, $a1
+; LA32-NEXT:    jirl $zero, $ra, 0
+;
+; LA64-LABEL: ldx_hu:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a1, 1
+; LA64-NEXT:    ldx.hu $a1, $a0, $a1
+; LA64-NEXT:    ld.hu $a0, $a0, 0
+; LA64-NEXT:    add.d $a0, $a1, $a0
+; LA64-NEXT:    jirl $zero, $ra, 0
+  %1 = getelementptr i16, ptr %a, i64 %idx
+  %2 = load i16, ptr %1
+  %3 = zext i16 %2 to i64
+  %4 = load volatile i16, ptr %a
+  %5 = zext i16 %4 to i64
+  %6 = add i64 %3, %5
+  ret i64 %6
+}
+
+define i64 @ldx_wu(ptr %a, i64 %idx) nounwind {
+; LA32-LABEL: ldx_wu:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a1, 2
+; LA32-NEXT:    add.w $a1, $a0, $a1
+; LA32-NEXT:    ld.w $a1, $a1, 0
+; LA32-NEXT:    ld.w $a0, $a0, 0
+; LA32-NEXT:    add.w $a0, $a1, $a0
+; LA32-NEXT:    sltu $a1, $a0, $a1
+; LA32-NEXT:    jirl $zero, $ra, 0
+;
+; LA64-LABEL: ldx_wu:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a1, 2
+; LA64-NEXT:    ldx.wu $a1, $a0, $a1
+; LA64-NEXT:    ld.wu $a0, $a0, 0
+; LA64-NEXT:    add.d $a0, $a1, $a0
+; LA64-NEXT:    jirl $zero, $ra, 0
+  %1 = getelementptr i32, ptr %a, i64 %idx
+  %2 = load i32, ptr %1
+  %3 = zext i32 %2 to i64
+  %4 = load volatile i32, ptr %a
+  %5 = zext i32 %4 to i64
+  %6 = add i64 %3, %5
+  ret i64 %6
+}
+
 ;; Check indexed and unindexed stores.
 
 define void @st_b(ptr %a, i8 %b) nounwind {
@@ -281,6 +458,77 @@ define void @st_d(ptr %a, i64 %b) nounwind {
   store i64 %b, ptr %a
   %1 = getelementptr i64, ptr %a, i64 8
   store i64 %b, ptr %1
+  ret void
+}
+
+define void @stx_b(ptr %dst, i64 %idx, i8 %val) nounwind {
+; LA32-LABEL: stx_b:
+; LA32:       # %bb.0:
+; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    st.b $a3, $a0, 0
+; LA32-NEXT:    jirl $zero, $ra, 0
+;
+; LA64-LABEL: stx_b:
+; LA64:       # %bb.0:
+; LA64-NEXT:    stx.b $a2, $a0, $a1
+; LA64-NEXT:    jirl $zero, $ra, 0
+  %1 = getelementptr i8, ptr %dst, i64 %idx
+  store i8 %val, ptr %1
+  ret void
+}
+
+define void @stx_h(ptr %dst, i64 %idx, i16 %val) nounwind {
+; LA32-LABEL: stx_h:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a1, 1
+; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    st.h $a3, $a0, 0
+; LA32-NEXT:    jirl $zero, $ra, 0
+;
+; LA64-LABEL: stx_h:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a1, 1
+; LA64-NEXT:    stx.h $a2, $a0, $a1
+; LA64-NEXT:    jirl $zero, $ra, 0
+  %1 = getelementptr i16, ptr %dst, i64 %idx
+  store i16 %val, ptr %1
+  ret void
+}
+
+define void @stx_w(ptr %dst, i64 %idx, i32 %val) nounwind {
+; LA32-LABEL: stx_w:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a1, 2
+; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    st.w $a3, $a0, 0
+; LA32-NEXT:    jirl $zero, $ra, 0
+;
+; LA64-LABEL: stx_w:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a1, 2
+; LA64-NEXT:    stx.w $a2, $a0, $a1
+; LA64-NEXT:    jirl $zero, $ra, 0
+  %1 = getelementptr i32, ptr %dst, i64 %idx
+  store i32 %val, ptr %1
+  ret void
+}
+
+define void @stx_d(ptr %dst, i64 %idx, i64 %val) nounwind {
+; LA32-LABEL: stx_d:
+; LA32:       # %bb.0:
+; LA32-NEXT:    slli.w $a1, $a1, 3
+; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    st.w $a4, $a0, 4
+; LA32-NEXT:    st.w $a3, $a0, 0
+; LA32-NEXT:    jirl $zero, $ra, 0
+;
+; LA64-LABEL: stx_d:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slli.d $a1, $a1, 3
+; LA64-NEXT:    stx.d $a2, $a0, $a1
+; LA64-NEXT:    jirl $zero, $ra, 0
+  %1 = getelementptr i64, ptr %dst, i64 %idx
+  store i64 %val, ptr %1
   ret void
 }
 
