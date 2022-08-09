@@ -13,6 +13,7 @@
 
 #include "ReduceFunctionBodies.h"
 #include "Delta.h"
+#include "Utils.h"
 #include "llvm/IR/GlobalValue.h"
 
 using namespace llvm;
@@ -21,12 +22,12 @@ using namespace llvm;
 /// desired Chunks.
 static void extractFunctionBodiesFromModule(Oracle &O, Module &Program) {
   // Delete out-of-chunk function bodies
-  std::vector<Function *> FuncDefsToReduce;
-  for (auto &F : Program)
-    if (!F.isDeclaration() && !O.shouldKeep()) {
+  for (auto &F : Program) {
+    if (!F.isDeclaration() && !hasAliasUse(F) && !O.shouldKeep()) {
       F.deleteBody();
       F.setComdat(nullptr);
     }
+  }
 }
 
 void llvm::reduceFunctionBodiesDeltaPass(TestRunner &Test) {
