@@ -116,6 +116,12 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
   // a map between register names in the original block and the names created
   // in each stage of the pipelined loop.
   ValueMapTy *VRMap = new ValueMapTy[(MaxStageCount + 1) * 2];
+
+  // The renaming destination by Phis for the registers across stages.
+  // This map is updated during Phis generation to point to the most recent
+  // renaming destination.
+  ValueMapTy *VRMapPhi = new ValueMapTy[(MaxStageCount + 1) * 2];
+
   InstrMapTy InstrMap;
 
   SmallVector<MachineBasicBlock *, 4> PrologBBs;
@@ -151,14 +157,15 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
 
   generateExistingPhis(KernelBB, PrologBBs.back(), KernelBB, KernelBB, VRMap,
                        InstrMap, MaxStageCount, MaxStageCount, false);
-  generatePhis(KernelBB, PrologBBs.back(), KernelBB, KernelBB, VRMap, InstrMap,
-               MaxStageCount, MaxStageCount, false);
+  generatePhis(KernelBB, PrologBBs.back(), KernelBB, KernelBB, VRMap, VRMapPhi,
+               InstrMap, MaxStageCount, MaxStageCount, false);
 
   LLVM_DEBUG(dbgs() << "New block\n"; KernelBB->dump(););
 
   SmallVector<MachineBasicBlock *, 4> EpilogBBs;
   // Generate the epilog instructions to complete the pipeline.
-  generateEpilog(MaxStageCount, KernelBB, BB, VRMap, EpilogBBs, PrologBBs);
+  generateEpilog(MaxStageCount, KernelBB, BB, VRMap, VRMapPhi, EpilogBBs,
+                 PrologBBs);
 
   // We need this step because the register allocation doesn't handle some
   // situations well, so we insert copies to help out.
@@ -171,6 +178,7 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
   addBranches(*Preheader, PrologBBs, KernelBB, EpilogBBs, VRMap);
 
   delete[] VRMap;
+  delete[] VRMapPhi;
 }
 
 void ModuloScheduleExpander::cleanup() {
@@ -242,7 +250,8 @@ void ModuloScheduleExpander::generateProlog(unsigned LastStage,
 /// block for each stage that needs to complete.
 void ModuloScheduleExpander::generateEpilog(
     unsigned LastStage, MachineBasicBlock *KernelBB, MachineBasicBlock *OrigBB,
-    ValueMapTy *VRMap, MBBVectorTy &EpilogBBs, MBBVectorTy &PrologBBs) {
+    ValueMapTy *VRMap, ValueMapTy *VRMapPhi, MBBVectorTy &EpilogBBs,
+    MBBVectorTy &PrologBBs) {
   // We need to change the branch from the kernel to the first epilog block, so
   // this call to analyze branch uses the kernel rather than the original BB.
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
@@ -296,8 +305,8 @@ void ModuloScheduleExpander::generateEpilog(
     }
     generateExistingPhis(NewBB, PrologBBs[i - 1], PredBB, KernelBB, VRMap,
                          InstrMap, LastStage, EpilogStage, i == 1);
-    generatePhis(NewBB, PrologBBs[i - 1], PredBB, KernelBB, VRMap, InstrMap,
-                 LastStage, EpilogStage, i == 1);
+    generatePhis(NewBB, PrologBBs[i - 1], PredBB, KernelBB, VRMap, VRMapPhi,
+                 InstrMap, LastStage, EpilogStage, i == 1);
     PredBB = NewBB;
 
     LLVM_DEBUG({
@@ -593,8 +602,9 @@ void ModuloScheduleExpander::generateExistingPhis(
 /// use in the pipelined sequence.
 void ModuloScheduleExpander::generatePhis(
     MachineBasicBlock *NewBB, MachineBasicBlock *BB1, MachineBasicBlock *BB2,
-    MachineBasicBlock *KernelBB, ValueMapTy *VRMap, InstrMapTy &InstrMap,
-    unsigned LastStageNum, unsigned CurStageNum, bool IsLast) {
+    MachineBasicBlock *KernelBB, ValueMapTy *VRMap, ValueMapTy *VRMapPhi,
+    InstrMapTy &InstrMap, unsigned LastStageNum, unsigned CurStageNum,
+    bool IsLast) {
   // Compute the stage number that contains the initial Phi value, and
   // the Phi from the previous stage.
   unsigned PrologStage = 0;
@@ -631,26 +641,49 @@ void ModuloScheduleExpander::generatePhis(
       if (!InKernel && (unsigned)StageScheduled > PrologStage)
         continue;
 
-      unsigned PhiOp2 = VRMap[PrevStage][Def];
-      if (MachineInstr *InstOp2 = MRI.getVRegDef(PhiOp2))
-        if (InstOp2->isPHI() && InstOp2->getParent() == NewBB)
-          PhiOp2 = getLoopPhiReg(*InstOp2, BB2);
+      unsigned PhiOp2;
+      if (InKernel) {
+        PhiOp2 = VRMap[PrevStage][Def];
+        if (MachineInstr *InstOp2 = MRI.getVRegDef(PhiOp2))
+          if (InstOp2->isPHI() && InstOp2->getParent() == NewBB)
+            PhiOp2 = getLoopPhiReg(*InstOp2, BB2);
+      }
       // The number of Phis can't exceed the number of prolog stages. The
       // prolog stage number is zero based.
       if (NumPhis > PrologStage + 1 - StageScheduled)
         NumPhis = PrologStage + 1 - StageScheduled;
       for (unsigned np = 0; np < NumPhis; ++np) {
+        // Example for
+        // Org:
+        //   %Org = ... (Scheduled at Stage#0, NumPhi = 2)
+        //
+        // Prolog0 (Stage0):
+        //   %Clone0 = ...
+        // Prolog1 (Stage1):
+        //   %Clone1 = ...
+        // Kernel (Stage2):
+        //   %Phi0 = Phi %Clone1, Prolog1, %Clone2, Kernel
+        //   %Phi1 = Phi %Clone0, Prolog1, %Phi0, Kernel
+        //   %Clone2 = ...
+        // Epilog0 (Stage3):
+        //   %Phi2 = Phi %Clone1, Prolog1, %Clone2, Kernel
+        //   %Phi3 = Phi %Clone0, Prolog1, %Phi0, Kernel
+        // Epilog1 (Stage4):
+        //   %Phi4 = Phi %Clone0, Prolog0, %Phi2, Epilog0
+        //
+        // VRMap = {0: %Clone0, 1: %Clone1, 2: %Clone2}
+        // VRMapPhi (after Kernel) = {0: %Phi1, 1: %Phi0}
+        // VRMapPhi (after Epilog0) = {0: %Phi3, 1: %Phi2}
+
         unsigned PhiOp1 = VRMap[PrologStage][Def];
         if (np <= PrologStage)
           PhiOp1 = VRMap[PrologStage - np][Def];
-        if (MachineInstr *InstOp1 = MRI.getVRegDef(PhiOp1)) {
-          if (InstOp1->isPHI() && InstOp1->getParent() == KernelBB)
-            PhiOp1 = getInitPhiReg(*InstOp1, KernelBB);
-          if (InstOp1->isPHI() && InstOp1->getParent() == NewBB)
-            PhiOp1 = getInitPhiReg(*InstOp1, NewBB);
+        if (!InKernel) {
+          if (PrevStage == LastStageNum && np == 0)
+            PhiOp2 = VRMap[LastStageNum][Def];
+          else
+            PhiOp2 = VRMapPhi[PrevStage - np][Def];
         }
-        if (!InKernel)
-          PhiOp2 = VRMap[PrevStage - np][Def];
 
         const TargetRegisterClass *RC = MRI.getRegClass(Def);
         Register NewReg = MRI.createVirtualRegister(RC);
@@ -672,9 +705,9 @@ void ModuloScheduleExpander::generatePhis(
                                 NewReg);
 
           PhiOp2 = NewReg;
-          VRMap[PrevStage - np - 1][Def] = NewReg;
+          VRMapPhi[PrevStage - np - 1][Def] = NewReg;
         } else {
-          VRMap[CurStageNum - np][Def] = NewReg;
+          VRMapPhi[CurStageNum - np][Def] = NewReg;
           if (np == NumPhis - 1)
             rewriteScheduledInstr(NewBB, InstrMap, CurStageNum, np, &*BBI, Def,
                                   NewReg);
