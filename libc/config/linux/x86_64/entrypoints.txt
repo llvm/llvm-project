@@ -253,9 +253,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_equal
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_getname_np
+    libc.src.pthread.pthread_getspecific
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_self
     libc.src.pthread.pthread_setname_np
+    libc.src.pthread.pthread_key_create
+    libc.src.pthread.pthread_key_delete
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
@@ -268,6 +271,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_mutexattr_setpshared
     libc.src.pthread.pthread_mutexattr_setrobust
     libc.src.pthread.pthread_mutexattr_settype
+    libc.src.pthread.pthread_setspecific
 
     # stdlib.h entrypoints
     libc.src.stdlib._Exit
@@ -328,6 +332,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.threads.thrd_equal
     libc.src.threads.thrd_exit
     libc.src.threads.thrd_join
+    libc.src.threads.tss_create
+    libc.src.threads.tss_delete
+    libc.src.threads.tss_get
+    libc.src.threads.tss_set
 
     # time.h entrypoints
     libc.src.time.asctime
