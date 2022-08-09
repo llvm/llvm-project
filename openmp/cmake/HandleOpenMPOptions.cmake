@@ -25,6 +25,7 @@ append_if(OPENMP_HAVE_WIMPLICIT_FALLTHROUGH_FLAG "-Wimplicit-fallthrough" CMAKE_
 append_if(OPENMP_HAVE_WSIGN_COMPARE_FLAG "-Wsign-compare" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
 # Warnings that we want to disable because they are too verbose or fragile.
+append_if(OPENMP_HAVE_WNO_ENUM_CONSTEXPR_CONVERSION_FLAG "-Wno-enum-constexpr-conversion" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_WNO_EXTRA_FLAG "-Wno-extra" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_WNO_PEDANTIC_FLAG "-Wno-pedantic" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 append_if(OPENMP_HAVE_WNO_MAYBE_UNINITIALIZED_FLAG "-Wno-maybe-uninitialized" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
