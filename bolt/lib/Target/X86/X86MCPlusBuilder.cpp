@@ -1002,7 +1002,7 @@ public:
         if (isUpper8BitReg(Operand.getReg()))
           return true;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       return false;
     }

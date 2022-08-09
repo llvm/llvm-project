@@ -221,7 +221,7 @@ struct CompletionCandidate {
 #ifndef NDEBUG
         llvm_unreachable("Don't expect members from index in code completion");
 #else
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
 #endif
       case index::SymbolKind::Function:
         // We can't group overloads together that need different #includes.

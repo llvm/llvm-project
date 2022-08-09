@@ -193,7 +193,7 @@ public:
       switch (CFI->getOperation()) {
       case MCCFIInstruction::OpDefCfa:
         CfaOffset = CFI->getOffset();
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case MCCFIInstruction::OpDefCfaRegister:
         CfaReg = CFI->getRegister();
         break;
