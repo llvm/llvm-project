@@ -22,7 +22,7 @@ endif()
 
 add_executable(prepare-builtins prepare-builtins.cpp)
 set_target_properties(prepare-builtins PROPERTIES
-  CXX_STANDARD 14
+  CXX_STANDARD 17
   CXX_STANDARD_REQUIRED Yes
   CXX_EXTENSIONS No)
 llvm_update_compile_flags(prepare-builtins)
