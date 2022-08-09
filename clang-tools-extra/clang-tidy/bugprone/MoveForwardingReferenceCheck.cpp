@@ -112,7 +112,7 @@ void MoveForwardingReferenceCheck::check(
   // template as the function parameter of that type. (This implies that type
   // deduction will happen on the type.)
   const TemplateParameterList *Params = FuncTemplate->getTemplateParameters();
-  if (!std::count(Params->begin(), Params->end(), TypeParmDecl))
+  if (!llvm::is_contained(*Params, TypeParmDecl))
     return;
 
   auto Diag = diag(CallMove->getExprLoc(),

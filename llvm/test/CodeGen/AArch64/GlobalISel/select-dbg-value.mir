@@ -65,7 +65,7 @@ body: |
     ; CHECK-LABEL: name: test_dbg_value_dead
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: DBG_VALUE %0:gpr, $noreg, !7, !DIExpression(), debug-location !9
+    ; CHECK-NEXT: DBG_VALUE %0:gpr32, $noreg, !7, !DIExpression(), debug-location !9
     %0:gpr(s32) = COPY $w0
     DBG_VALUE %0(s32), $noreg, !7, !DIExpression(), debug-location !9
 ...

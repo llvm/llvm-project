@@ -23,7 +23,7 @@ namespace mlir {
 /// this class, it generally shouldn't be used as the result of functions that
 /// very frequently have the result ignored. This class is intended to be used
 /// in conjunction with the utility functions below.
-struct LLVM_NODISCARD LogicalResult {
+struct [[nodiscard]] LogicalResult {
 public:
   /// If isSuccess is true a `success` result is generated, otherwise a
   /// 'failure' result is generated.
@@ -75,7 +75,7 @@ inline bool failed(LogicalResult result) { return result.failed(); }
 /// value of type `T`. This allows for integrating with LogicalResult, while
 /// also providing a value on the success path.
 template <typename T>
-class LLVM_NODISCARD FailureOr : public Optional<T> {
+class [[nodiscard]] FailureOr : public Optional<T> {
 public:
   /// Allow constructing from a LogicalResult. The result *must* be a failure.
   /// Success results should use a proper instance of type `T`.
@@ -110,7 +110,7 @@ private:
 /// swallowed up in boilerplate without this, so we provide this for narrow
 /// cases where it is important.
 ///
-class LLVM_NODISCARD ParseResult : public LogicalResult {
+class [[nodiscard]] ParseResult : public LogicalResult {
 public:
   ParseResult(LogicalResult result = success()) : LogicalResult(result) {}
 

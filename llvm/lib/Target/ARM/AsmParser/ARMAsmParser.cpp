@@ -6223,7 +6223,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 
     // Fall though for the Identifier case that is not a register or a
     // special name.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AsmToken::LParen:  // parenthesized expressions like (_strcmp-4)
   case AsmToken::Integer: // things like 1f and 2b as a branch targets
@@ -6290,7 +6290,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return false;
     }
     // w/ a ':' after the '#', it's just like a plain ':'.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AsmToken::Colon: {
     S = Parser.getTok().getLoc();

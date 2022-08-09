@@ -29,7 +29,7 @@ func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: spv.GL.Sin %{{.*}}: f32
   %8 = math.sin %arg0 : f32
   // CHECK: spv.GL.FAbs %{{.*}}: f32
-  %9 = math.abs %arg0 : f32
+  %9 = math.absf %arg0 : f32
   // CHECK: spv.GL.Ceil %{{.*}}: f32
   %10 = math.ceil %arg0 : f32
   // CHECK: spv.GL.Floor %{{.*}}: f32
@@ -76,6 +76,13 @@ func.func @float32_ternary_vector(%a: vector<4xf32>, %b: vector<4xf32>,
                             %c: vector<4xf32>) {
   // CHECK: spv.GL.Fma %{{.*}}: vector<4xf32>
   %0 = math.fma %a, %b, %c : vector<4xf32>
+  return
+}
+
+// CHECK-LABEL: @int_unary
+func.func @int_unary(%arg0: i32) {
+  // CHECK: spv.GL.SAbs %{{.*}}
+  %0 = math.absi %arg0 : i32
   return
 }
 

@@ -50,8 +50,7 @@
  * 5. (Optional) LSDA address (pointer-sized pcrel offset)
  * 6. DWARF instructions (ignored by LLD)
  */
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class EhReader {
 public:
@@ -112,7 +111,6 @@ private:
   SmallVector<Reloc, 6> newRelocs;
 };
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

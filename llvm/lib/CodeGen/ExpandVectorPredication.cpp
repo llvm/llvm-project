@@ -293,7 +293,7 @@ static Value *getNeutralReductionElement(const VPReductionIntrinsic &VPI,
                             APInt::getSignedMinValue(EltBits));
   case Intrinsic::vp_reduce_fmax:
     Negative = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Intrinsic::vp_reduce_fmin: {
     FastMathFlags Flags = VPI.getFastMathFlags();
     const fltSemantics &Semantics = EltTy->getFltSemantics();

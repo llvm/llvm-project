@@ -3876,6 +3876,20 @@ size_t MemtagAndroidNote::getSize() const {
          /*descsz=*/sizeof(uint32_t);
 }
 
+void PackageMetadataNote::writeTo(uint8_t *buf) {
+  write32(buf, 4);
+  write32(buf + 4, config->packageMetadata.size() + 1);
+  write32(buf + 8, FDO_PACKAGING_METADATA);
+  memcpy(buf + 12, "FDO", 4);
+  memcpy(buf + 16, config->packageMetadata.data(),
+         config->packageMetadata.size());
+}
+
+size_t PackageMetadataNote::getSize() const {
+  return sizeof(llvm::ELF::Elf64_Nhdr) + 4 +
+         alignTo(config->packageMetadata.size() + 1, 4);
+}
+
 InStruct elf::in;
 
 std::vector<Partition> elf::partitions;

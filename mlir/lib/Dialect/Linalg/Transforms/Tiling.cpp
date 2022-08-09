@@ -415,9 +415,7 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
   if (!shapeSizesToLoopsMap)
     return failure();
 
-  SmallVector<Range, 4> loopRanges;
-  LoopIndexToRangeIndexMap loopIndexToRangeIndex;
-  std::tie(loopRanges, loopIndexToRangeIndex) = makeTiledLoopRanges(
+  auto [loopRanges, loopIndexToRangeIndex] = makeTiledLoopRanges(
       b, op.getLoc(), shapeSizesToLoopsMap, allShapeSizes, tileSizes);
 
   SmallVector<Attribute, 4> iteratorTypes;

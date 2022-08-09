@@ -54,7 +54,7 @@ class TargetFeatures {
       case ')':
         --InParentheses;
         assert(InParentheses >= 0 && "Parentheses are not in pair");
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case '|':
       case ',':
         if (InParentheses == 0) {

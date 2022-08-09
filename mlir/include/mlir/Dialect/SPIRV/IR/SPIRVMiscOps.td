@@ -39,7 +39,7 @@ def SPV_AssumeTrueKHROp : SPV_Op<"AssumeTrueKHR", []> {
 
   let availability = [
     MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[SPV_KHR_expect_assume]>,
     Capability<[SPV_C_ExpectAssumeKHR]>
   ];

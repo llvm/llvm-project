@@ -90,9 +90,8 @@ protected:
     unsigned dialectIdx = 0;
     auto derivedDialects = std::tuple<DialectsT *...>{
         static_cast<DialectsT *>(dialects[dialectIdx++])...};
-    llvm::apply_tuple(
-        [&](DialectsT *...dialect) { apply(context, dialect...); },
-        derivedDialects);
+    std::apply([&](DialectsT *...dialect) { apply(context, dialect...); },
+               derivedDialects);
   }
 };
 

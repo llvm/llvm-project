@@ -4046,7 +4046,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "Expected immediate, but got non-immediate";
         return false;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       continue;
     }

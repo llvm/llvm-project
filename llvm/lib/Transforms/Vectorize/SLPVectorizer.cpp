@@ -644,7 +644,7 @@ static bool InTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
       if (isVectorIntrinsicWithScalarOpAtArg(ID, i))
         return (CI->getArgOperand(i) == Scalar);
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   default:
     return false;
@@ -9394,7 +9394,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
           WorkList.push_back(DestBundle);
       };
 
-      // Any instruction which isn't safe to speculate at the begining of the
+      // Any instruction which isn't safe to speculate at the beginning of the
       // block is control dependend on any early exit or non-willreturn call
       // which proceeds it.
       if (!isGuaranteedToTransferExecutionToSuccessor(BundleMember->Inst)) {

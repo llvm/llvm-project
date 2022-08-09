@@ -650,6 +650,7 @@ endif()
 set(powerpc64le_SOURCES ${powerpc64_SOURCES})
 
 set(riscv_SOURCES
+  riscv/fp_mode.c
   riscv/save.S
   riscv/restore.S
   ${GENERIC_SOURCES}

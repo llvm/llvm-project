@@ -319,7 +319,7 @@ public:
       // We care about logical not only if we care about comparisons.
       if (!ShouldRetrieveFromComparisons)
         return nullptr;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     // Function pointer/references can be dereferenced before a call.
     // That doesn't make it, however, any different from a regular call.
     // For this reason, dereference operation is a "no-op".

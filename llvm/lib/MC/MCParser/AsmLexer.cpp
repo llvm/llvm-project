@@ -339,7 +339,7 @@ AsmToken AsmLexer::LexDigit() {
         if (!FirstNonDecimal) {
           FirstNonDecimal = CurPtr;
         }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case '9':
       case '8':
       case '7':

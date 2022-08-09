@@ -846,9 +846,7 @@ void Parser::processTdIncludeRecords(llvm::RecordKeeper &tdRecords,
     bool supportsResultTypeInferrence =
         op.getTrait("::mlir::InferTypeOpInterface::Trait");
 
-    bool inserted = false;
-    ods::Operation *odsOp = nullptr;
-    std::tie(odsOp, inserted) = odsContext.insertOperation(
+    auto [odsOp, inserted] = odsContext.insertOperation(
         op.getOperationName(), processDoc(op.getSummary()),
         processAndFormatDoc(op.getDescription()), op.getQualCppClassName(),
         supportsResultTypeInferrence, op.getLoc().front());

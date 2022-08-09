@@ -232,49 +232,6 @@ TEST(STLExtrasTest, EnumerateLifetimeSemanticsLValue) {
   EXPECT_EQ(1, Destructors);
 }
 
-TEST(STLExtrasTest, ApplyTuple) {
-  auto T = std::make_tuple(1, 3, 7);
-  auto U = llvm::apply_tuple(
-      [](int A, int B, int C) { return std::make_tuple(A - B, B - C, C - A); },
-      T);
-
-  EXPECT_EQ(-2, std::get<0>(U));
-  EXPECT_EQ(-4, std::get<1>(U));
-  EXPECT_EQ(6, std::get<2>(U));
-
-  auto V = llvm::apply_tuple(
-      [](int A, int B, int C) {
-        return std::make_tuple(std::make_pair(A, char('A' + A)),
-                               std::make_pair(B, char('A' + B)),
-                               std::make_pair(C, char('A' + C)));
-      },
-      T);
-
-  EXPECT_EQ(std::make_pair(1, 'B'), std::get<0>(V));
-  EXPECT_EQ(std::make_pair(3, 'D'), std::get<1>(V));
-  EXPECT_EQ(std::make_pair(7, 'H'), std::get<2>(V));
-}
-
-class apply_variadic {
-  static int apply_one(int X) { return X + 1; }
-  static char apply_one(char C) { return C + 1; }
-  static StringRef apply_one(StringRef S) { return S.drop_back(); }
-
-public:
-  template <typename... Ts> auto operator()(Ts &&... Items) {
-    return std::make_tuple(apply_one(Items)...);
-  }
-};
-
-TEST(STLExtrasTest, ApplyTupleVariadic) {
-  auto Items = std::make_tuple(1, llvm::StringRef("Test"), 'X');
-  auto Values = apply_tuple(apply_variadic(), Items);
-
-  EXPECT_EQ(2, std::get<0>(Values));
-  EXPECT_EQ("Tes", std::get<1>(Values));
-  EXPECT_EQ('Y', std::get<2>(Values));
-}
-
 TEST(STLExtrasTest, CountAdaptor) {
   std::vector<int> v;
 
@@ -606,7 +563,7 @@ TEST(STLExtrasTest, EarlyIncrementTestCustomPointerIterator) {
   EXPECT_EQ(EIR.end(), I);
 }
 
-TEST(STLExtrasTest, splat) {
+TEST(STLExtrasTest, IsSplat) {
   std::vector<int> V;
   EXPECT_FALSE(is_splat(V));
 
@@ -619,6 +576,13 @@ TEST(STLExtrasTest, splat) {
 
   V.push_back(2);
   EXPECT_FALSE(is_splat(V));
+}
+
+TEST(STLExtrasTest, IsSplatInitializerList) {
+  EXPECT_TRUE(is_splat({1}));
+  EXPECT_TRUE(is_splat({1, 1}));
+  EXPECT_FALSE(is_splat({1, 2}));
+  EXPECT_TRUE(is_splat({1, 1, 1}));
 }
 
 TEST(STLExtrasTest, to_address) {

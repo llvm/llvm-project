@@ -322,7 +322,7 @@ SubtargetFeatures ELFObjectFileBase::getRISCVFeatures() const {
         break;
       case 'd':
         Features.AddFeature("f"); // D-ext will imply F-ext.
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case 'e':
       case 'm':
       case 'a':

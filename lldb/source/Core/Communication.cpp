@@ -356,7 +356,7 @@ lldb::thread_result_t Communication::ReadThread() {
     case eConnectionStatusLostConnection: // Lost connection while connected to
                                           // a valid connection
       done = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case eConnectionStatusTimedOut: // Request timed out
       if (error.Fail())
         LLDB_LOG(log, "error: {0}, status = {1}", error,

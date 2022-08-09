@@ -397,7 +397,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
       }
     }
   }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::ZExt: {
     unsigned SrcBitWidth = I->getOperand(0)->getType()->getScalarSizeInBits();
 
@@ -498,7 +498,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         return Builder.CreateSExt(Or, VTy);
       }
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::Sub: {
     APInt DemandedFromOps;
     if (simplifyOperandsBasedOnUnusedHighBits(DemandedFromOps))

@@ -894,7 +894,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     break;
   }
   case CE_CXXDeallocator:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CE_CXXAllocator:
     if (Opts.MayInlineCXXAllocator)
       break;

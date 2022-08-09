@@ -726,7 +726,7 @@ public:
     bool hasValue() const { return result.has_value(); }
 
     /// Return the result of the switch.
-    LLVM_NODISCARD operator ResultT() {
+    [[nodiscard]] operator ResultT() {
       if (!result)
         return parser.emitError(loc, "unexpected keyword: ") << keyword;
       return std::move(*result);

@@ -34,11 +34,10 @@ public:
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
 
+  bool hasReservedCallFrame(const MachineFunction &MF) const override;
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MI) const override {
-    return MBB.erase(MI);
-  }
+                                MachineBasicBlock::iterator MI) const override;
 
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;

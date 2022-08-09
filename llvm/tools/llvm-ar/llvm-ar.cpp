@@ -68,9 +68,9 @@ static StringRef ToolName;
 static StringRef Stem;
 
 static void printRanLibHelp(StringRef ToolName) {
-  outs() << "OVERVIEW: LLVM Ranlib\n\n"
-         << "This program generates an index to speed access to archives\n\n"
-         << "USAGE: " + ToolName + " <archive-file>\n\n"
+  outs() << "OVERVIEW: LLVM ranlib\n\n"
+         << "Generate an index for archives\n\n"
+         << "USAGE: " + ToolName + " archive...\n\n"
          << "OPTIONS:\n"
          << "  -h --help             - Display available options\n"
          << "  -v --version          - Display the version of this program\n"
@@ -1125,8 +1125,7 @@ static void performOperation(ArchiveOperation Operation,
   llvm_unreachable("Unknown operation.");
 }
 
-static int performOperation(ArchiveOperation Operation,
-                            std::vector<NewArchiveMember> *NewMembers) {
+static int performOperation(ArchiveOperation Operation) {
   // Create or open the archive object.
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(
       ArchiveName, /*IsText=*/false, /*RequiresNullTerminator=*/false);
@@ -1145,7 +1144,7 @@ static int performOperation(ArchiveOperation Operation,
     if (Archive->isThin())
       CompareFullPath = true;
     performOperation(Operation, Archive.get(), std::move(Buf.get()),
-                     NewMembers);
+                     /*NewMembers=*/nullptr);
     return 0;
   }
 
@@ -1160,7 +1159,7 @@ static int performOperation(ArchiveOperation Operation,
     }
   }
 
-  performOperation(Operation, nullptr, nullptr, NewMembers);
+  performOperation(Operation, nullptr, nullptr, /*NewMembers=*/nullptr);
   return 0;
 }
 
@@ -1219,7 +1218,7 @@ static void runMRIScript() {
       break;
     case MRICommand::CreateThin:
       Thin = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case MRICommand::Create:
       Create = true;
       if (!ArchiveName.empty())
@@ -1403,12 +1402,11 @@ static int ar_main(int argc, char **argv) {
     Options += *ArgIt + 1;
   }
 
-  ArchiveOperation Operation = parseCommandLine();
-  return performOperation(Operation, nullptr);
+  return performOperation(parseCommandLine());
 }
 
 static int ranlib_main(int argc, char **argv) {
-  bool ArchiveSpecified = false;
+  std::vector<StringRef> Archives;
   for (int i = 1; i < argc; ++i) {
     StringRef arg(argv[i]);
     if (handleGenericOption(arg)) {
@@ -1433,16 +1431,17 @@ static int ranlib_main(int argc, char **argv) {
         arg = arg.drop_front(1);
       }
     } else {
-      if (ArchiveSpecified)
-        fail("exactly one archive should be specified");
-      ArchiveSpecified = true;
-      ArchiveName = arg.str();
+      Archives.push_back(arg);
     }
   }
-  if (!ArchiveSpecified) {
-    badUsage("an archive name must be specified");
+
+  for (StringRef Archive : Archives) {
+    ArchiveName = Archive.str();
+    performOperation(CreateSymTab);
   }
-  return performOperation(CreateSymTab, nullptr);
+  if (Archives.empty())
+    badUsage("an archive name must be specified");
+  return 0;
 }
 
 int llvm_ar_main(int argc, char **argv) {

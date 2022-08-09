@@ -1,4 +1,3 @@
-// XFAIL: aix
 # IR based instrumentation
 RUN: %clangxx_pgogen -O2  -c -o %t.1.o  %S/Inputs/instrprof-icall-promo_1.cpp
 RUN: %clangxx_pgogen -O2 -c -o %t.2.o  %S/Inputs/instrprof-icall-promo_2.cpp

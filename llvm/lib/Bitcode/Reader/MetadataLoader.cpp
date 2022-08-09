@@ -552,7 +552,7 @@ class MetadataLoader::MetadataLoaderImpl {
     case 0:
       if (N >= 3 && Expr[N - 3] == dwarf::DW_OP_bit_piece)
         Expr[N - 3] = dwarf::DW_OP_LLVM_fragment;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case 1:
       // Move DW_OP_deref to the end.
       if (N && Expr[0] == dwarf::DW_OP_deref) {
@@ -564,7 +564,7 @@ class MetadataLoader::MetadataLoaderImpl {
         *std::prev(End) = dwarf::DW_OP_deref;
       }
       NeedDeclareExpressionUpgrade = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case 2: {
       // Change DW_OP_plus to DW_OP_plus_uconst.
       // Change DW_OP_minus to DW_OP_uconst, DW_OP_minus
@@ -613,7 +613,7 @@ class MetadataLoader::MetadataLoaderImpl {
         SubExpr = SubExpr.slice(HistoricSize);
       }
       Expr = MutableArrayRef<uint64_t>(Buffer);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case 3:
       // Up-to-date!
@@ -1285,7 +1285,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
   }
   case bitc::METADATA_DISTINCT_NODE:
     IsDistinct = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case bitc::METADATA_NODE: {
     SmallVector<Metadata *, 8> Elts;
     Elts.reserve(Record.size());

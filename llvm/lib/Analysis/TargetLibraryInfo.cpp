@@ -514,7 +514,7 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     // on Linux.
     //
     // Fall through to disable all of them.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     TLI.setUnavailable(LibFunc_exp10);
     TLI.setUnavailable(LibFunc_exp10f);
@@ -945,7 +945,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     --NumParams;
     if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case LibFunc_strlen:
     return NumParams == 1 && FTy.getParamType(0)->isPointerTy() &&
            FTy.getReturnType()->isIntegerTy(SizeTBits);
@@ -970,7 +970,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     --NumParams;
     if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case LibFunc_strcat:
     return (NumParams == 2 && FTy.getReturnType()->isPointerTy() &&
             FTy.getParamType(0) == FTy.getReturnType() &&
@@ -980,7 +980,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     --NumParams;
     if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case LibFunc_strncat:
     return (NumParams == 3 && FTy.getReturnType()->isPointerTy() &&
             FTy.getParamType(0) == FTy.getReturnType() &&
@@ -992,7 +992,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     --NumParams;
     if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case LibFunc_strcpy:
   case LibFunc_stpcpy:
     return (NumParams == 2 && FTy.getReturnType() == FTy.getParamType(0) &&
@@ -1004,7 +1004,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     --NumParams;
     if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case LibFunc_strlcat:
   case LibFunc_strlcpy:
     return NumParams == 3 && FTy.getReturnType()->isIntegerTy(SizeTBits) &&
@@ -1017,7 +1017,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     --NumParams;
     if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case LibFunc_strncpy:
   case LibFunc_stpncpy:
     return (NumParams == 3 && FTy.getReturnType() == FTy.getParamType(0) &&
@@ -1138,7 +1138,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     --NumParams;
     if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case LibFunc_memcpy:
   case LibFunc_mempcpy:
   case LibFunc_memmove:
@@ -1151,7 +1151,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
     --NumParams;
     if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case LibFunc_memset:
     return (NumParams == 3 && FTy.getReturnType() == FTy.getParamType(0) &&
             FTy.getParamType(0)->isPointerTy() &&
@@ -1162,7 +1162,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
       --NumParams;
     if (!FTy.getParamType(NumParams)->isIntegerTy(SizeTBits))
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case LibFunc_memccpy:
     return (NumParams >= 2 && FTy.getParamType(1)->isPointerTy());
   case LibFunc_memalign:

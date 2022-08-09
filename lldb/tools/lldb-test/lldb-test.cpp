@@ -401,7 +401,7 @@ std::string opts::breakpoint::substitute(StringRef Cmd) {
         OS << sys::path::parent_path(breakpoint::CommandFile);
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       size_t pos = Cmd.find('%');
       OS << Cmd.substr(0, pos);

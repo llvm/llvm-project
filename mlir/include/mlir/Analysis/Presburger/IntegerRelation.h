@@ -336,7 +336,7 @@ public:
   /// additional processing using Simplex for unbounded sets.
   ///
   /// Returns an integer sample point if one exists, or an empty Optional
-  /// otherwise.
+  /// otherwise. The returned value also includes values of local ids.
   Optional<SmallVector<int64_t, 8>> findIntegerSample() const;
 
   /// Compute an overapproximation of the number of integer points in the

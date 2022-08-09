@@ -812,7 +812,7 @@ std::unique_ptr<LanaiOperand> LanaiAsmParser::parseImmediate() {
   case AsmToken::Dot:
     if (!Parser.parseExpression(ExprVal))
       return LanaiOperand::createImm(ExprVal, Start, End);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     return nullptr;
   }

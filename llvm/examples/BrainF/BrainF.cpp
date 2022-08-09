@@ -335,7 +335,7 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
         switch(c) {
           case '-':
             direction = -1;
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
 
           case '+':
             if (cursym == SYM_CHANGE) {
@@ -356,7 +356,7 @@ void BrainF::readloop(PHINode *phi, BasicBlock *oldbb, BasicBlock *testbb,
 
           case '<':
             direction = -1;
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
 
           case '>':
             if (cursym == SYM_MOVE) {

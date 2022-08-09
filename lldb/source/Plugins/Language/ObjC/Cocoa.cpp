@@ -616,7 +616,7 @@ bool lldb_private::formatters::NSNumberSummaryProvider(
           break;
         case 17:
           data_location += 8;
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case 4:
           type_code = TypeCodes::sint64;
           break;

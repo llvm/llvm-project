@@ -116,7 +116,7 @@ public:
   // Read a varint (as consumeVar) and resize the container accordingly.
   // If the size is invalid, return false and mark an error.
   // (The caller should abort in this case).
-  template <typename T> LLVM_NODISCARD bool consumeSize(T &Container) {
+  template <typename T> [[nodiscard]] bool consumeSize(T &Container) {
     auto Size = consumeVar();
     // Conservatively assume each element is at least one byte.
     if (Size > (size_t)(End - Begin)) {

@@ -1614,7 +1614,8 @@ public:
                                    QualType Wrapped);
 
   QualType getSubstTemplateTypeParmType(const TemplateTypeParmType *Replaced,
-                                        QualType Replacement) const;
+                                        QualType Replacement,
+                                        Optional<unsigned> PackIndex) const;
   QualType getSubstTemplateTypeParmPackType(
                                           const TemplateTypeParmType *Replaced,
                                             const TemplateArgument &ArgPack);
@@ -3202,11 +3203,11 @@ OPT_LIST(V)
 
 #undef OPT_LIST
 
-    LLVM_NODISCARD ObjCEncOptions keepingOnly(ObjCEncOptions Mask) const {
+    [[nodiscard]] ObjCEncOptions keepingOnly(ObjCEncOptions Mask) const {
       return Bits & Mask.Bits;
     }
 
-    LLVM_NODISCARD ObjCEncOptions forComponentType() const {
+    [[nodiscard]] ObjCEncOptions forComponentType() const {
       ObjCEncOptions Mask = ObjCEncOptions()
                                 .setIsOutermostType()
                                 .setIsStructField();

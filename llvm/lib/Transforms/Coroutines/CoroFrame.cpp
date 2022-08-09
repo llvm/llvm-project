@@ -2694,7 +2694,7 @@ void coro::buildCoroutineFrame(Function &F, Shape &Shape) {
   }
 
   // Later code makes structural assumptions about single predecessors phis e.g
-  // that they are not live accross a suspend point.
+  // that they are not live across a suspend point.
   cleanupSinglePredPHIs(F);
 
   // Transforms multi-edge PHI Nodes, so that any value feeding into a PHI will

@@ -892,7 +892,7 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
     auto x = buildTensorExp(op, def->getOperand(0));
     if (x.has_value()) {
       unsigned e = x.value();
-      if (isa<math::AbsOp>(def))
+      if (isa<math::AbsFOp>(def))
         return addExp(kAbsF, e);
       if (isa<complex::AbsOp>(def))
         return addExp(kAbsC, e);
@@ -1073,7 +1073,7 @@ Value Merger::buildExp(RewriterBase &rewriter, Location loc, unsigned e,
     llvm_unreachable("unexpected non-op");
   // Unary operations.
   case kAbsF:
-    return rewriter.create<math::AbsOp>(loc, v0);
+    return rewriter.create<math::AbsFOp>(loc, v0);
   case kAbsC: {
     auto type = v0.getType().cast<ComplexType>();
     auto eltType = type.getElementType().cast<FloatType>();

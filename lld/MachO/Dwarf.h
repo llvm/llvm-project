@@ -12,8 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class ObjFile;
 
@@ -57,7 +56,6 @@ private:
   llvm::StringRef strSection;
 };
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

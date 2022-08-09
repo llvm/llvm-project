@@ -14,7 +14,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_MAPPERJITLINKMEMORYMANAGER_H
 
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
 
 namespace llvm {
@@ -22,16 +21,18 @@ namespace orc {
 
 class MapperJITLinkMemoryManager : public jitlink::JITLinkMemoryManager {
 public:
-  MapperJITLinkMemoryManager(std::unique_ptr<MemoryMapper> Mapper);
+  MapperJITLinkMemoryManager(size_t ReservationGranularity,
+                             std::unique_ptr<MemoryMapper> Mapper);
 
   template <class MemoryMapperType, class... Args>
   static Expected<std::unique_ptr<MapperJITLinkMemoryManager>>
-  CreateWithMapper(Args &&...A) {
+  CreateWithMapper(size_t ReservationGranularity, Args &&...A) {
     auto Mapper = MemoryMapperType::Create(std::forward<Args>(A)...);
     if (!Mapper)
       return Mapper.takeError();
 
-    return std::make_unique<MapperJITLinkMemoryManager>(std::move(*Mapper));
+    return std::make_unique<MapperJITLinkMemoryManager>(ReservationGranularity,
+                                                        std::move(*Mapper));
   }
 
   void allocate(const jitlink::JITLinkDylib *JD, jitlink::LinkGraph &G,
@@ -46,6 +47,15 @@ public:
 
 private:
   class InFlightAlloc;
+
+  std::mutex Mutex;
+
+  // We reserve multiples of this from the executor address space
+  size_t ReservationUnits;
+  // Ranges that have been reserved in executor but not yet allocated
+  std::vector<ExecutorAddrRange> AvailableMemory;
+  // Ranges that have been reserved in executor and already allocated
+  DenseMap<ExecutorAddr, ExecutorAddrDiff> UsedMemory;
 
   std::unique_ptr<MemoryMapper> Mapper;
 };

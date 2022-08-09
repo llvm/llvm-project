@@ -280,7 +280,7 @@ void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
   case TypeSpecWithTemplate:
     OS << "template ";
     // Fall through to print the type.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case TypeSpec: {
     const auto *Record =

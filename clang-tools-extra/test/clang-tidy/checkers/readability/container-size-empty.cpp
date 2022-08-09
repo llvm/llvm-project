@@ -718,3 +718,16 @@ bool call_through_unique_ptr_deref(const std::unique_ptr<std::vector<int>> &ptr)
   // CHECK-MESSAGES: :9:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: {{^  }}return !(*ptr).empty();
 }
+
+struct TypedefSize {
+  typedef int size_type;
+  size_type size() const;
+  bool empty() const;
+};
+void test() {
+  TypedefSize ts;
+  if (ts.size() == 0)
+    ;
+  // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
+  // CHECK-FIXES: {{^  }}if (ts.empty()){{$}}
+}

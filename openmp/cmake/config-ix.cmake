@@ -26,8 +26,9 @@ check_cxx_compiler_flag(-Wimplicit-fallthrough OPENMP_HAVE_WIMPLICIT_FALLTHROUGH
 check_cxx_compiler_flag(-Wsign-compare OPENMP_HAVE_WSIGN_COMPARE_FLAG)
 
 # Warnings that we want to disable because they are too verbose or fragile.
+check_cxx_compiler_flag(-Wno-enum-constexpr-conversion OPENMP_HAVE_WNO_ENUM_CONSTEXPR_CONVERSION_FLAG)
 check_cxx_compiler_flag(-Wno-extra OPENMP_HAVE_WNO_EXTRA_FLAG)
 check_cxx_compiler_flag(-Wno-pedantic OPENMP_HAVE_WNO_PEDANTIC_FLAG)
 check_cxx_compiler_flag(-Wno-maybe-uninitialized OPENMP_HAVE_WNO_MAYBE_UNINITIALIZED_FLAG)
 
-check_cxx_compiler_flag(-std=c++14 OPENMP_HAVE_STD_CPP14_FLAG)
+check_cxx_compiler_flag(-std=c++17 OPENMP_HAVE_STD_CPP17_FLAG)

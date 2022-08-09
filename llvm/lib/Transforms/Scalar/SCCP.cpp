@@ -705,7 +705,7 @@ bool llvm::runIPSCCP(
 
   // If we inferred constant or undef values for globals variables, we can
   // delete the global and any stores that remain to it.
-  for (auto &I : make_early_inc_range(Solver.getTrackedGlobals())) {
+  for (const auto &I : make_early_inc_range(Solver.getTrackedGlobals())) {
     GlobalVariable *GV = I.first;
     if (isOverdefined(I.second))
       continue;

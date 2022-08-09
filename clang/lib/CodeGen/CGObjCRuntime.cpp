@@ -293,7 +293,7 @@ void CGObjCRuntime::EmitInitOfCatchParam(CodeGenFunction &CGF,
   switch (paramDecl->getType().getQualifiers().getObjCLifetime()) {
   case Qualifiers::OCL_Strong:
     exn = CGF.EmitARCRetainNonBlock(exn);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case Qualifiers::OCL_None:
   case Qualifiers::OCL_ExplicitNone:

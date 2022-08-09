@@ -19,10 +19,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 // -----
 
 def SPV_AccessChainOp : SPV_Op<"AccessChain", [NoSideEffect]> {
-  let summary = [{
-    Create a pointer into a composite object that can be used with OpLoad
-    and OpStore.
-  }];
+  let summary = "Create a pointer into a composite object.";
 
   let description = [{
     Result Type must be an OpTypePointer. Its Type operand must be the type
@@ -164,7 +161,7 @@ def SPV_InBoundsPtrAccessChainOp : SPV_Op<"InBoundsPtrAccessChain", [NoSideEffec
 
   let availability = [
     MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
     Capability<[SPV_C_Addresses]>
   ];
@@ -290,7 +287,7 @@ def SPV_PtrAccessChainOp : SPV_Op<"PtrAccessChain", [NoSideEffect]> {
 
   let availability = [
     MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
     Capability<[SPV_C_Addresses, SPV_C_PhysicalStorageBufferAddresses, SPV_C_VariablePointers, SPV_C_VariablePointersStorageBuffer]>
   ];

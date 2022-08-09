@@ -21,8 +21,7 @@
 #include <utility>
 #include <vector>
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 using llvm::COFF::ImportDirectoryTableEntry;
 using llvm::object::COFFSymbolRef;
@@ -698,8 +697,7 @@ void applyArm64Addr(uint8_t *off, uint64_t s, uint64_t p, int shift);
 void applyArm64Imm(uint8_t *off, uint64_t imm, uint32_t rangeLimit);
 void applyArm64Branch26(uint8_t *off, int64_t v);
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 namespace llvm {
 template <>

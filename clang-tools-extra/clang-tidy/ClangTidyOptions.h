@@ -63,8 +63,8 @@ struct ClangTidyOptions {
   /// Creates a new \c ClangTidyOptions instance combined from all fields
   /// of this instance overridden by the fields of \p Other that have a value.
   /// \p Order specifies precedence of \p Other option.
-  LLVM_NODISCARD ClangTidyOptions merge(const ClangTidyOptions &Other,
-                                        unsigned Order) const;
+  [[nodiscard]] ClangTidyOptions merge(const ClangTidyOptions &Other,
+                                       unsigned Order) const;
 
   /// Checks filter.
   llvm::Optional<std::string> Checks;

@@ -22,14 +22,21 @@ using namespace mlir::math;
 #include "mlir/Dialect/Math/IR/MathOps.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// AbsOp folder
+// AbsFOp folder
 //===----------------------------------------------------------------------===//
 
-OpFoldResult math::AbsOp::fold(ArrayRef<Attribute> operands) {
-  return constFoldUnaryOp<FloatAttr>(operands, [](const APFloat &a) {
-    const APFloat &result(a);
-    return abs(result);
-  });
+OpFoldResult math::AbsFOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOp<FloatAttr>(operands,
+                                     [](const APFloat &a) { return abs(a); });
+}
+
+//===----------------------------------------------------------------------===//
+// AbsIOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::AbsIOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldUnaryOp<IntegerAttr>(operands,
+                                       [](const APInt &a) { return a.abs(); });
 }
 
 //===----------------------------------------------------------------------===//

@@ -1921,7 +1921,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           break;
         return Error(Tok.getLoc(), "unknown token in expression");
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case AsmToken::String: {
       if (Parser.isParsingMasm()) {
         // MASM parsers handle strings in expressions as constants.
@@ -1937,7 +1937,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           return Error(ValueLoc, ErrMsg);
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case AsmToken::At:
     case AsmToken::Identifier: {

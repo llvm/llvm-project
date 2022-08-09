@@ -15,8 +15,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class Defined;
 
@@ -109,7 +108,6 @@ extern llvm::MapVector<NamePair, ConcatOutputSection *> concatOutputSections;
 
 extern llvm::DenseMap<Symbol *, ThunkInfo> thunkMap;
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

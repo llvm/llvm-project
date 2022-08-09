@@ -724,10 +724,7 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
         MachO::Target(getArchitectureFromName(archName), PLATFORM_MACCATALYST);
   }
 
-  uint32_t cpuType;
-  uint32_t cpuSubtype;
-  std::tie(cpuType, cpuSubtype) = getCPUTypeFromArchitecture(config->arch());
-
+  auto [cpuType, cpuSubtype] = getCPUTypeFromArchitecture(config->arch());
   switch (cpuType) {
   case CPU_TYPE_X86_64:
     return createX86_64TargetInfo();

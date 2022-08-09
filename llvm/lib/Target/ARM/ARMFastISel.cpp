@@ -1053,7 +1053,7 @@ bool ARMFastISel::ARMEmitStore(MVT VT, unsigned SrcReg, Address &Addr,
                               TII.get(Opc), Res)
                       .addReg(SrcReg).addImm(1));
       SrcReg = Res;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case MVT::i8:
       if (isThumb2) {
@@ -1393,7 +1393,7 @@ bool ARMFastISel::ARMEmitCmp(const Value *Src1Value, const Value *Src2Value,
     case MVT::i8:
     case MVT::i16:
       needsExt = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case MVT::i32:
       if (isThumb2) {
         if (!UseImm)
@@ -1837,7 +1837,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
       // For AAPCS ABI targets, just use VFP variant of the calling convention.
       return (Return ? RetCC_ARM_AAPCS_VFP : CC_ARM_AAPCS_VFP);
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CallingConv::C:
   case CallingConv::CXX_FAST_TLS:
     // Use target triple & subtarget features to do actual dispatch.
@@ -1857,7 +1857,7 @@ CCAssignFn *ARMFastISel::CCAssignFnForCall(CallingConv::ID CC,
       return (Return ? RetCC_ARM_AAPCS_VFP: CC_ARM_AAPCS_VFP);
     // Fall through to soft float variant, variadic functions don't
     // use hard floating point ABI.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CallingConv::ARM_AAPCS:
     return (Return ? RetCC_ARM_AAPCS: CC_ARM_AAPCS);
   case CallingConv::ARM_APCS:

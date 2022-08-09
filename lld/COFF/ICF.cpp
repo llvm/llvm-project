@@ -34,8 +34,7 @@
 
 using namespace llvm;
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 class ICF {
 public:
@@ -322,5 +321,4 @@ void doICF(COFFLinkerContext &ctx, ICFLevel icfLevel) {
   ICF(ctx, icfLevel).run();
 }
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff

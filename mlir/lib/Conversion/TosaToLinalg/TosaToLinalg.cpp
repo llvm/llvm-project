@@ -50,7 +50,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
   // tosa::AbsOp
   if (isa<tosa::AbsOp>(op) && elementTy.isa<FloatType>())
-    return rewriter.create<math::AbsOp>(loc, resultTypes, args);
+    return rewriter.create<math::AbsFOp>(loc, resultTypes, args);
 
   if (isa<tosa::AbsOp>(op) && elementTy.isa<IntegerType>()) {
     auto zero = rewriter.create<arith::ConstantOp>(
@@ -182,8 +182,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     auto max = rewriter.create<arith::ConstantIntOp>(
         loc, APInt::getSignedMaxValue(inputBitWidth).getSExtValue(),
         intermediateType);
-    auto clamp = clampHelper<arith::CmpIOp>(
-        loc, sub, min, max, arith::CmpIPredicate::slt, rewriter);
+    auto clamp = clampIntHelper(loc, sub, min, max, rewriter);
 
     // Truncate to the final value.
     return rewriter.create<arith::TruncIOp>(loc, elementTy, clamp);
@@ -335,9 +334,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
   // tosa::MaximumOp
   if (isa<tosa::MaximumOp>(op) && elementTy.isa<FloatType>()) {
-    auto predicate = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::OGT, args[0], args[1]);
-    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::MaxFOp>(loc, args[0], args[1]);
   }
 
   if (isa<tosa::MaximumOp>(op) && elementTy.isSignlessInteger()) {
@@ -348,9 +345,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
 
   // tosa::MinimumOp
   if (isa<tosa::MinimumOp>(op) && elementTy.isa<FloatType>()) {
-    auto predicate = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::OLT, args[0], args[1]);
-    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::MinFOp>(loc, args[0], args[1]);
   }
 
   if (isa<tosa::MinimumOp>(op) && elementTy.isSignlessInteger()) {
@@ -380,8 +375,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
         loc, elementTy, rewriter.getFloatAttr(elementTy, min_apf));
     auto max = rewriter.create<arith::ConstantOp>(
         loc, elementTy, rewriter.getFloatAttr(elementTy, max_apf));
-    return clampHelper<arith::CmpFOp>(loc, args[0], min, max,
-                                      arith::CmpFPredicate::OLT, rewriter);
+    return clampFloatHelper(loc, args[0], min, max, rewriter);
   }
 
   if (isa<tosa::ClampOp>(op) && elementTy.isa<IntegerType>()) {
@@ -409,8 +403,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
         loc, min, intTy.getIntOrFloatBitWidth());
     auto maxVal = rewriter.create<arith::ConstantIntOp>(
         loc, max, intTy.getIntOrFloatBitWidth());
-    return clampHelper<arith::CmpIOp>(loc, args[0], minVal, maxVal,
-                                      arith::CmpIPredicate::slt, rewriter);
+    return clampIntHelper(loc, args[0], minVal, maxVal, rewriter);
   }
 
   // tosa::ReluNOp
@@ -423,8 +416,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
                     APFloat::rmNearestTiesToEven, &losesInfo);
     auto n = rewriter.create<arith::ConstantOp>(
         loc, elementTy, rewriter.getFloatAttr(elementTy, max_apf));
-    return clampHelper<arith::CmpFOp>(loc, args[0], zero, n,
-                                      arith::CmpFPredicate::OLT, rewriter);
+    return clampFloatHelper(loc, args[0], zero, n, rewriter);
   }
 
   if (isa<tosa::ReluNOp>(op) && elementTy.isa<IntegerType>()) {
@@ -432,8 +424,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
         rewriter.create<arith::ConstantOp>(loc, IntegerAttr::get(elementTy, 0));
     auto n = createConstFromIntAttribute<int32_t>(op, "max_int", elementTy,
                                                   rewriter);
-    return clampHelper<arith::CmpIOp>(loc, args[0], zero, n,
-                                      arith::CmpIPredicate::slt, rewriter);
+    return clampIntHelper(loc, args[0], zero, n, rewriter);
   }
 
   // tosa::SigmoidOp
@@ -521,8 +512,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
       auto rounded =
           rewriter.create<arith::SelectOp>(loc, negative, subbed, added);
 
-      auto clamped = clampHelper<arith::CmpFOp>(
-          loc, rounded, intMin, intMax, arith::CmpFPredicate::OLT, rewriter);
+      auto clamped = clampFloatHelper(loc, rounded, intMin, intMax, rewriter);
 
       return rewriter.create<arith::FPToSIOp>(loc, dstTy, clamped);
     }
@@ -553,8 +543,7 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
               .getSExtValue(),
           srcTy.getIntOrFloatBitWidth());
 
-      auto clamped = clampHelper<arith::CmpIOp>(
-          loc, args[0], intMin, intMax, arith::CmpIPredicate::slt, rewriter);
+      auto clamped = clampIntHelper(loc, args[0], intMin, intMax, rewriter);
       return rewriter.create<arith::TruncIOp>(loc, dstTy, clamped);
     }
   }
@@ -751,9 +740,7 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
   }
 
   if (isa<tosa::ReduceMinOp>(op) && elementTy.isa<FloatType>()) {
-    auto predicate = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::OLT, args[0], args[1]);
-    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::MinFOp>(loc, args[0], args[1]);
   }
 
   if (isa<tosa::ReduceMinOp>(op) && elementTy.isa<IntegerType>()) {
@@ -763,9 +750,7 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
   }
 
   if (isa<tosa::ReduceMaxOp>(op) && elementTy.isa<FloatType>()) {
-    auto predicate = rewriter.create<arith::CmpFOp>(
-        loc, arith::CmpFPredicate::OGT, args[0], args[1]);
-    return rewriter.create<arith::SelectOp>(loc, predicate, args[0], args[1]);
+    return rewriter.create<arith::MaxFOp>(loc, args[0], args[1]);
   }
 
   if (isa<tosa::ReduceMaxOp>(op) && elementTy.isa<IntegerType>()) {
@@ -1314,9 +1299,8 @@ public:
           auto intMaxVal = nestedBuilder.create<arith::ConstantOp>(
               loc, nestedBuilder.getI32IntegerAttr(intMax));
 
-          value = clampHelper<arith::CmpIOp>(
-              nestedLoc, value, intMinVal, intMaxVal, arith::CmpIPredicate::slt,
-              nestedBuilder);
+          value = clampIntHelper(nestedLoc, value, intMinVal, intMaxVal,
+                                 nestedBuilder);
 
           if (outIntType.getWidth() < 32) {
             value = nestedBuilder.create<arith::TruncIOp>(
@@ -1497,10 +1481,8 @@ public:
 
       // Clamp the to be within the bounds of the input image.
 
-      iy = clampHelper<arith::CmpIOp>(loc, iy, hwMin, hMax,
-                                      arith::CmpIPredicate::slt, rewriter);
-      ix = clampHelper<arith::CmpIOp>(loc, ix, hwMin, wMax,
-                                      arith::CmpIPredicate::slt, rewriter);
+      iy = clampIntHelper(loc, iy, hwMin, hMax, rewriter);
+      ix = clampIntHelper(loc, ix, hwMin, wMax, rewriter);
 
       // Read the value from the input array.
       iy =
@@ -1525,15 +1507,11 @@ public:
       Value y1 = rewriter.create<arith::AddIOp>(loc, y0, oneVal);
       Value x1 = rewriter.create<arith::AddIOp>(loc, x0, oneVal);
 
-      y0 = clampHelper<arith::CmpIOp>(loc, y0, hwMin, hMax,
-                                      arith::CmpIPredicate::slt, rewriter);
-      y1 = clampHelper<arith::CmpIOp>(loc, y1, hwMin, hMax,
-                                      arith::CmpIPredicate::slt, rewriter);
+      y0 = clampIntHelper(loc, y0, hwMin, hMax, rewriter);
+      y1 = clampIntHelper(loc, y1, hwMin, hMax, rewriter);
 
-      x0 = clampHelper<arith::CmpIOp>(loc, x0, hwMin, wMax,
-                                      arith::CmpIPredicate::slt, rewriter);
-      x1 = clampHelper<arith::CmpIOp>(loc, x1, hwMin, wMax,
-                                      arith::CmpIPredicate::slt, rewriter);
+      x0 = clampIntHelper(loc, x0, hwMin, wMax, rewriter);
+      x1 = clampIntHelper(loc, x1, hwMin, wMax, rewriter);
 
       y0 =
           rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), y0);

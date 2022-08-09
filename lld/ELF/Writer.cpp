@@ -405,6 +405,11 @@ template <class ELFT> void elf::createSyntheticSections() {
       part.armExidx = std::make_unique<ARMExidxSyntheticSection>();
       add(*part.armExidx);
     }
+
+    if (!config->packageMetadata.empty()) {
+      part.packageMetadataNote = std::make_unique<PackageMetadataNote>();
+      add(*part.packageMetadataNote);
+    }
   }
 
   if (partitions.size() != 1) {
