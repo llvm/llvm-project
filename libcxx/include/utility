@@ -84,19 +84,29 @@ struct pair
     explicit(see-below) constexpr pair();
     explicit(see-below) pair(const T1& x, const T2& y);                          // constexpr in C++14
     template <class U = T1, class V = T2> explicit(see-below) pair(U&&, V&&);    // constexpr in C++14
+    template <class U, class V> constexpr explicit(see below) pair(pair<U, V>&); // since C++23
     template <class U, class V> explicit(see-below) pair(const pair<U, V>& p);   // constexpr in C++14
     template <class U, class V> explicit(see-below) pair(pair<U, V>&& p);        // constexpr in C++14
+    template <class U, class V>
+    constexpr explicit(see below) pair(const pair<U, V>&&);                      // since C++23
     template <class... Args1, class... Args2>
         pair(piecewise_construct_t, tuple<Args1...> first_args,
              tuple<Args2...> second_args);                                       // constexpr in C++20
 
+    constexpr const pair& operator=(const pair& p) const;                        // since C++23
     template <class U, class V> pair& operator=(const pair<U, V>& p);            // constexpr in C++20
+    template <class U, class V>
+    constexpr const pair& operator=(const pair<U, V>& p) const;                  // since C++23
     pair& operator=(pair&& p) noexcept(is_nothrow_move_assignable<T1>::value &&
                                        is_nothrow_move_assignable<T2>::value);   // constexpr in C++20
+    constexpr const pair& operator=(pair&& p) const;                             // since C++23
     template <class U, class V> pair& operator=(pair<U, V>&& p);                 // constexpr in C++20
+    template <class U, class V>
+    constexpr const pair& operator=(pair<U, V>&& p) const;                       // since C++23
 
     void swap(pair& p) noexcept(is_nothrow_swappable_v<T1> &&
                                 is_nothrow_swappable_v<T2>);                     // constexpr in C++20
+    constexpr void swap(const pair& p) const noexcept(see below);                // since C++23
 };
 
 template<class T1, class T2, class U1, class U2, template<class> class TQual, template<class> class UQual>
@@ -122,6 +132,9 @@ template <class T1, class T2> pair<V1, V2> make_pair(T1&&, T2&&);               
 template <class T1, class T2>
 void
 swap(pair<T1, T2>& x, pair<T1, T2>& y) noexcept(noexcept(x.swap(y)));            // constexpr in C++20
+
+template<class T1, class T2>
+constexpr void swap(const pair<T1, T2>& x, const pair<T1, T2>& y) noexcept(noexcept(x.swap(y)));    // since C++23
 
 struct piecewise_construct_t { explicit piecewise_construct_t() = default; };
 inline constexpr piecewise_construct_t piecewise_construct = piecewise_construct_t();
