@@ -6360,7 +6360,8 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
     SDValue Extendee = Ext->getOperand(0);
 
     unsigned ScalarWidth = Extendee.getValueType().getScalarSizeInBits();
-    if (N1C->getAPIntValue().isMask(ScalarWidth)) {
+    if (N1C->getAPIntValue().isMask(ScalarWidth) &&
+        (!LegalOperations || TLI.isOperationLegal(ISD::ZERO_EXTEND, ExtVT))) {
       //    (and (extract_subvector (zext|anyext|sext v) _) iN_mask)
       // => (extract_subvector (iN_zeroext v))
       SDValue ZeroExtExtendee =
