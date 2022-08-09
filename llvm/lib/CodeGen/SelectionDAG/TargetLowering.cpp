@@ -3389,9 +3389,15 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     if (SimplifyDemandedVectorElts(Op1, DemandedElts, SrcUndef, SrcZero, TLO,
                                    Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(Op0, DemandedElts, KnownUndef, KnownZero,
+    // If we know that a demanded element was zero in Op1 we don't need to
+    // demand it in Op0 - its guaranteed to be zero.
+    APInt DemandedElts0 = DemandedElts & ~SrcZero;
+    if (SimplifyDemandedVectorElts(Op0, DemandedElts0, KnownUndef, KnownZero,
                                    TLO, Depth + 1))
       return true;
+
+    KnownUndef &= DemandedElts0;
+    KnownZero &= DemandedElts0;
 
     // If every element pair has a zero/undef then just fold to zero.
     // fold (and x, undef) -> 0  /  (and x, 0) -> 0
