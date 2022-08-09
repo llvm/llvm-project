@@ -165,11 +165,11 @@ func.func @target_env_cooperative_matrix() attributes{
   // CHECK-SAME: #spv.coop_matrix_props<
   // CHECK-SAME:   m_size = 8, n_size = 8, k_size = 32,
   // CHECK-SAME:   a_type = i8, b_type = i8, c_type = i32,
-  // CHECK-SAME:   result_type = i32, scope = 3 : i32>
+  // CHECK-SAME:   result_type = i32, scope = <Subgroup>>
   // CHECK-SAME: #spv.coop_matrix_props<
   // CHECK-SAME:   m_size = 8, n_size = 8, k_size = 16,
   // CHECK-SAME:   a_type = f16, b_type = f16, c_type = f16,
-  // CHECK-SAME:   result_type = f16, scope = 3 : i32>
+  // CHECK-SAME:   result_type = f16, scope = <Subgroup>>
   spv.target_env = #spv.target_env<
   #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class,
                             SPV_NV_cooperative_matrix]>,
@@ -182,7 +182,7 @@ func.func @target_env_cooperative_matrix() attributes{
       b_type = i8,
       c_type = i32,
       result_type = i32,
-      scope = 3 : i32
+      scope = #spv.scope<Subgroup>
     >, #spv.coop_matrix_props<
       m_size = 8,
       n_size = 8,
@@ -191,7 +191,7 @@ func.func @target_env_cooperative_matrix() attributes{
       b_type = f16,
       c_type = f16,
       result_type = f16,
-      scope = 3 : i32
+      scope = #spv.scope<Subgroup>
     >]
   >>
 } { return }

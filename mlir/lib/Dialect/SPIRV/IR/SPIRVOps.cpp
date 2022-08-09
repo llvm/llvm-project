@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SPIRV/IR/ParserUtils.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOpTraits.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
@@ -174,19 +175,16 @@ parseEnumStrAttr(EnumClass &value, OpAsmParser &parser,
   NamedAttrList attr;
   auto loc = parser.getCurrentLocation();
   if (parser.parseAttribute(attrVal, parser.getBuilder().getNoneType(),
-                            attrName, attr)) {
+                            attrName, attr))
     return failure();
-  }
-  if (!attrVal.isa<StringAttr>()) {
+  if (!attrVal.isa<StringAttr>())
     return parser.emitError(loc, "expected ")
            << attrName << " attribute specified as string";
-  }
   auto attrOptional =
       spirv::symbolizeEnum<EnumClass>(attrVal.cast<StringAttr>().getValue());
-  if (!attrOptional) {
+  if (!attrOptional)
     return parser.emitError(loc, "invalid ")
            << attrName << " attribute specification: " << attrVal;
-  }
   value = *attrOptional;
   return success();
 }
@@ -194,50 +192,52 @@ parseEnumStrAttr(EnumClass &value, OpAsmParser &parser,
 /// Parses the next string attribute in `parser` as an enumerant of the given
 /// `EnumClass` and inserts the enumerant into `state` as an 32-bit integer
 /// attribute with the enum class's name as attribute name.
-template <typename EnumClass>
+template <typename EnumAttrClass,
+          typename EnumClass = typename EnumAttrClass::ValueType>
 static ParseResult
 parseEnumStrAttr(EnumClass &value, OpAsmParser &parser, OperationState &state,
                  StringRef attrName = spirv::attributeName<EnumClass>()) {
-  if (parseEnumStrAttr(value, parser)) {
+  if (parseEnumStrAttr(value, parser))
     return failure();
-  }
-  state.addAttribute(attrName, parser.getBuilder().getI32IntegerAttr(
-                                   llvm::bit_cast<int32_t>(value)));
+  state.addAttribute(attrName,
+                     parser.getBuilder().getAttr<EnumAttrClass>(value));
   return success();
 }
 
 /// Parses the next keyword in `parser` as an enumerant of the given `EnumClass`
 /// and inserts the enumerant into `state` as an 32-bit integer attribute with
 /// the enum class's name as attribute name.
-template <typename EnumClass>
+template <typename EnumAttrClass,
+          typename EnumClass = typename EnumAttrClass::ValueType>
 static ParseResult
 parseEnumKeywordAttr(EnumClass &value, OpAsmParser &parser,
                      OperationState &state,
                      StringRef attrName = spirv::attributeName<EnumClass>()) {
-  if (parseEnumKeywordAttr(value, parser)) {
+  if (parseEnumKeywordAttr(value, parser))
     return failure();
-  }
-  state.addAttribute(attrName, parser.getBuilder().getI32IntegerAttr(
-                                   llvm::bit_cast<int32_t>(value)));
+  state.addAttribute(attrName,
+                     parser.getBuilder().getAttr<EnumAttrClass>(value));
   return success();
 }
 
 /// Parses Function, Selection and Loop control attributes. If no control is
 /// specified, "None" is used as a default.
-template <typename EnumClass>
+template <typename EnumAttrClass, typename EnumClass>
 static ParseResult
 parseControlAttribute(OpAsmParser &parser, OperationState &state,
                       StringRef attrName = spirv::attributeName<EnumClass>()) {
   if (succeeded(parser.parseOptionalKeyword(kControl))) {
     EnumClass control;
-    if (parser.parseLParen() || parseEnumKeywordAttr(control, parser, state) ||
+    if (parser.parseLParen() ||
+        parseEnumKeywordAttr<EnumAttrClass>(control, parser, state) ||
         parser.parseRParen())
       return failure();
     return success();
   }
   // Set control to "None" otherwise.
   Builder builder = parser.getBuilder();
-  state.addAttribute(attrName, builder.getI32IntegerAttr(0));
+  state.addAttribute(attrName,
+                     builder.getAttr<EnumAttrClass>(static_cast<EnumClass>(0)));
   return success();
 }
 
@@ -256,10 +256,9 @@ static ParseResult parseMemoryAccessAttributes(OpAsmParser &parser,
   }
 
   spirv::MemoryAccess memoryAccessAttr;
-  if (parseEnumStrAttr(memoryAccessAttr, parser, state,
-                       kMemoryAccessAttrName)) {
+  if (parseEnumStrAttr<spirv::MemoryAccessAttr>(memoryAccessAttr, parser, state,
+                                                kMemoryAccessAttrName))
     return failure();
-  }
 
   if (spirv::bitEnumContains(memoryAccessAttr, spirv::MemoryAccess::Aligned)) {
     // Parse integer attribute for alignment.
@@ -287,10 +286,9 @@ static ParseResult parseSourceMemoryAccessAttributes(OpAsmParser &parser,
   }
 
   spirv::MemoryAccess memoryAccessAttr;
-  if (parseEnumStrAttr(memoryAccessAttr, parser, state,
-                       kSourceMemoryAccessAttrName)) {
+  if (parseEnumStrAttr<spirv::MemoryAccessAttr>(memoryAccessAttr, parser, state,
+                                                kSourceMemoryAccessAttrName))
     return failure();
-  }
 
   if (spirv::bitEnumContains(memoryAccessAttr, spirv::MemoryAccess::Aligned)) {
     // Parse integer attribute for alignment.
@@ -479,15 +477,15 @@ static LogicalResult verifyMemoryAccessAttribute(MemoryOpTy memoryOp) {
     return success();
   }
 
-  auto memAccessVal = memAccessAttr.template cast<IntegerAttr>();
-  auto memAccess = spirv::symbolizeMemoryAccess(memAccessVal.getInt());
+  auto memAccess = memAccessAttr.template cast<spirv::MemoryAccessAttr>();
 
   if (!memAccess) {
     return memoryOp.emitOpError("invalid memory access specifier: ")
-           << memAccessVal;
+           << memAccessAttr;
   }
 
-  if (spirv::bitEnumContains(*memAccess, spirv::MemoryAccess::Aligned)) {
+  if (spirv::bitEnumContains(memAccess.getValue(),
+                             spirv::MemoryAccess::Aligned)) {
     if (!op->getAttr(kAlignmentAttrName)) {
       return memoryOp.emitOpError("missing alignment value");
     }
@@ -523,15 +521,15 @@ static LogicalResult verifySourceMemoryAccessAttribute(MemoryOpTy memoryOp) {
     return success();
   }
 
-  auto memAccessVal = memAccessAttr.template cast<IntegerAttr>();
-  auto memAccess = spirv::symbolizeMemoryAccess(memAccessVal.getInt());
+  auto memAccess = memAccessAttr.template cast<spirv::MemoryAccessAttr>();
 
   if (!memAccess) {
     return memoryOp.emitOpError("invalid memory access specifier: ")
-           << memAccessVal;
+           << memAccess;
   }
 
-  if (spirv::bitEnumContains(*memAccess, spirv::MemoryAccess::Aligned)) {
+  if (spirv::bitEnumContains(memAccess.getValue(),
+                             spirv::MemoryAccess::Aligned)) {
     if (!op->getAttr(kSourceAlignmentAttrName)) {
       return memoryOp.emitOpError("missing alignment value");
     }
@@ -770,8 +768,10 @@ static ParseResult parseAtomicUpdateOp(OpAsmParser &parser,
   OpAsmParser::UnresolvedOperand ptrInfo, valueInfo;
   Type type;
   SMLoc loc;
-  if (parseEnumStrAttr(scope, parser, state, kMemoryScopeAttrName) ||
-      parseEnumStrAttr(memoryScope, parser, state, kSemanticsAttrName) ||
+  if (parseEnumStrAttr<spirv::ScopeAttr>(scope, parser, state,
+                                         kMemoryScopeAttrName) ||
+      parseEnumStrAttr<spirv::MemorySemanticsAttr>(memoryScope, parser, state,
+                                                   kSemanticsAttrName) ||
       parser.parseOperandList(operandInfo, (hasValue ? 2 : 1)) ||
       parser.getCurrentLocation(&loc) || parser.parseColonType(type))
     return failure();
@@ -793,14 +793,11 @@ static ParseResult parseAtomicUpdateOp(OpAsmParser &parser,
 // Prints an atomic update op.
 static void printAtomicUpdateOp(Operation *op, OpAsmPrinter &printer) {
   printer << " \"";
-  auto scopeAttr = op->getAttrOfType<IntegerAttr>(kMemoryScopeAttrName);
-  printer << spirv::stringifyScope(
-                 static_cast<spirv::Scope>(scopeAttr.getInt()))
-          << "\" \"";
-  auto memorySemanticsAttr = op->getAttrOfType<IntegerAttr>(kSemanticsAttrName);
-  printer << spirv::stringifyMemorySemantics(
-                 static_cast<spirv::MemorySemantics>(
-                     memorySemanticsAttr.getInt()))
+  auto scopeAttr = op->getAttrOfType<spirv::ScopeAttr>(kMemoryScopeAttrName);
+  printer << spirv::stringifyScope(scopeAttr.getValue()) << "\" \"";
+  auto memorySemanticsAttr =
+      op->getAttrOfType<spirv::MemorySemanticsAttr>(kSemanticsAttrName);
+  printer << spirv::stringifyMemorySemantics(memorySemanticsAttr.getValue())
           << "\" " << op->getOperands() << " : " << op->getOperand(0).getType();
 }
 
@@ -834,8 +831,9 @@ static LogicalResult verifyAtomicUpdateOp(Operation *op) {
                              "pointer operand's pointee type ")
              << elementType << ", but found " << valueType;
   }
-  auto memorySemantics = static_cast<spirv::MemorySemantics>(
-      op->getAttrOfType<IntegerAttr>(kSemanticsAttrName).getInt());
+  auto memorySemantics =
+      op->getAttrOfType<spirv::MemorySemanticsAttr>(kSemanticsAttrName)
+          .getValue();
   if (failed(verifyMemorySemantics(op, memorySemantics))) {
     return failure();
   }
@@ -847,10 +845,10 @@ static ParseResult parseGroupNonUniformArithmeticOp(OpAsmParser &parser,
   spirv::Scope executionScope;
   spirv::GroupOperation groupOperation;
   OpAsmParser::UnresolvedOperand valueInfo;
-  if (parseEnumStrAttr(executionScope, parser, state,
-                       kExecutionScopeAttrName) ||
-      parseEnumStrAttr(groupOperation, parser, state,
-                       kGroupOperationAttrName) ||
+  if (parseEnumStrAttr<spirv::ScopeAttr>(executionScope, parser, state,
+                                         kExecutionScopeAttrName) ||
+      parseEnumStrAttr<spirv::GroupOperationAttr>(groupOperation, parser, state,
+                                                  kGroupOperationAttrName) ||
       parser.parseOperand(valueInfo))
     return failure();
 
@@ -880,15 +878,17 @@ static ParseResult parseGroupNonUniformArithmeticOp(OpAsmParser &parser,
 
 static void printGroupNonUniformArithmeticOp(Operation *groupOp,
                                              OpAsmPrinter &printer) {
-  printer << " \""
-          << stringifyScope(static_cast<spirv::Scope>(
-                 groupOp->getAttrOfType<IntegerAttr>(kExecutionScopeAttrName)
-                     .getInt()))
-          << "\" \""
-          << stringifyGroupOperation(static_cast<spirv::GroupOperation>(
-                 groupOp->getAttrOfType<IntegerAttr>(kGroupOperationAttrName)
-                     .getInt()))
-          << "\" " << groupOp->getOperand(0);
+  printer
+      << " \""
+      << stringifyScope(
+             groupOp->getAttrOfType<spirv::ScopeAttr>(kExecutionScopeAttrName)
+                 .getValue())
+      << "\" \""
+      << stringifyGroupOperation(groupOp
+                                     ->getAttrOfType<spirv::GroupOperationAttr>(
+                                         kGroupOperationAttrName)
+                                     .getValue())
+      << "\" " << groupOp->getOperand(0);
 
   if (groupOp->getNumOperands() > 1)
     printer << " " << kClusterSize << '(' << groupOp->getOperand(1) << ')';
@@ -896,14 +896,16 @@ static void printGroupNonUniformArithmeticOp(Operation *groupOp,
 }
 
 static LogicalResult verifyGroupNonUniformArithmeticOp(Operation *groupOp) {
-  spirv::Scope scope = static_cast<spirv::Scope>(
-      groupOp->getAttrOfType<IntegerAttr>(kExecutionScopeAttrName).getInt());
+  spirv::Scope scope =
+      groupOp->getAttrOfType<spirv::ScopeAttr>(kExecutionScopeAttrName)
+          .getValue();
   if (scope != spirv::Scope::Workgroup && scope != spirv::Scope::Subgroup)
     return groupOp->emitOpError(
         "execution scope must be 'Workgroup' or 'Subgroup'");
 
-  spirv::GroupOperation operation = static_cast<spirv::GroupOperation>(
-      groupOp->getAttrOfType<IntegerAttr>(kGroupOperationAttrName).getInt());
+  spirv::GroupOperation operation =
+      groupOp->getAttrOfType<spirv::GroupOperationAttr>(kGroupOperationAttrName)
+          .getValue();
   if (operation == spirv::GroupOperation::ClusteredReduce &&
       groupOp->getNumOperands() == 1)
     return groupOp->emitOpError("cluster size operand must be provided for "
@@ -1145,11 +1147,12 @@ static ParseResult parseAtomicCompareExchangeImpl(OpAsmParser &parser,
   spirv::MemorySemantics equalSemantics, unequalSemantics;
   SmallVector<OpAsmParser::UnresolvedOperand, 3> operandInfo;
   Type type;
-  if (parseEnumStrAttr(memoryScope, parser, state, kMemoryScopeAttrName) ||
-      parseEnumStrAttr(equalSemantics, parser, state,
-                       kEqualSemanticsAttrName) ||
-      parseEnumStrAttr(unequalSemantics, parser, state,
-                       kUnequalSemanticsAttrName) ||
+  if (parseEnumStrAttr<spirv::ScopeAttr>(memoryScope, parser, state,
+                                         kMemoryScopeAttrName) ||
+      parseEnumStrAttr<spirv::MemorySemanticsAttr>(
+          equalSemantics, parser, state, kEqualSemanticsAttrName) ||
+      parseEnumStrAttr<spirv::MemorySemanticsAttr>(
+          unequalSemantics, parser, state, kUnequalSemanticsAttrName) ||
       parser.parseOperandList(operandInfo, 3))
     return failure();
 
@@ -1267,8 +1270,10 @@ ParseResult spirv::AtomicExchangeOp::parse(OpAsmParser &parser,
   spirv::MemorySemantics semantics;
   SmallVector<OpAsmParser::UnresolvedOperand, 2> operandInfo;
   Type type;
-  if (parseEnumStrAttr(memoryScope, parser, result, kMemoryScopeAttrName) ||
-      parseEnumStrAttr(semantics, parser, result, kSemanticsAttrName) ||
+  if (parseEnumStrAttr<spirv::ScopeAttr>(memoryScope, parser, result,
+                                         kMemoryScopeAttrName) ||
+      parseEnumStrAttr<spirv::MemorySemanticsAttr>(semantics, parser, result,
+                                                   kSemanticsAttrName) ||
       parser.parseOperandList(operandInfo, 2))
     return failure();
 
@@ -2075,7 +2080,7 @@ ParseResult spirv::EntryPointOp::parse(OpAsmParser &parser,
   SmallVector<Attribute, 4> interfaceVars;
 
   FlatSymbolRefAttr fn;
-  if (parseEnumStrAttr(execModel, parser, result) ||
+  if (parseEnumStrAttr<spirv::ExecutionModelAttr>(execModel, parser, result) ||
       parser.parseAttribute(fn, Type(), kFnNameAttrName, result.attributes)) {
     return failure();
   }
@@ -2132,7 +2137,7 @@ ParseResult spirv::ExecutionModeOp::parse(OpAsmParser &parser,
   spirv::ExecutionMode execMode;
   Attribute fn;
   if (parser.parseAttribute(fn, kFnNameAttrName, result.attributes) ||
-      parseEnumStrAttr(execMode, parser, result)) {
+      parseEnumStrAttr<spirv::ExecutionModeAttr>(execMode, parser, result)) {
     return failure();
   }
 
@@ -2220,7 +2225,7 @@ ParseResult spirv::FuncOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse the optional function control keyword.
   spirv::FunctionControl fnControl;
-  if (parseEnumStrAttr(fnControl, parser, result))
+  if (parseEnumStrAttr<spirv::FunctionControlAttr>(fnControl, parser, result))
     return failure();
 
   // If additional attributes are present, parse them.
@@ -2308,7 +2313,7 @@ void spirv::FuncOp::build(OpBuilder &builder, OperationState &state,
                      builder.getStringAttr(name));
   state.addAttribute(getTypeAttrName(), TypeAttr::get(type));
   state.addAttribute(spirv::attributeName<spirv::FunctionControl>(),
-                     builder.getI32IntegerAttr(static_cast<uint32_t>(control)));
+                     builder.getAttr<spirv::FunctionControlAttr>(control));
   state.attributes.append(attrs.begin(), attrs.end());
   state.addRegion();
 }
@@ -2997,14 +3002,14 @@ LogicalResult spirv::LoadOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void spirv::LoopOp::build(OpBuilder &builder, OperationState &state) {
-  state.addAttribute("loop_control",
-                     builder.getI32IntegerAttr(
-                         static_cast<uint32_t>(spirv::LoopControl::None)));
+  state.addAttribute("loop_control", builder.getAttr<spirv::LoopControlAttr>(
+                                         spirv::LoopControl::None));
   state.addRegion();
 }
 
 ParseResult spirv::LoopOp::parse(OpAsmParser &parser, OperationState &result) {
-  if (parseControlAttribute<spirv::LoopControl>(parser, result))
+  if (parseControlAttribute<spirv::LoopControlAttr, spirv::LoopControl>(parser,
+                                                                        result))
     return failure();
   return parser.parseRegion(*result.addRegion(), /*arguments=*/{});
 }
@@ -3195,9 +3200,9 @@ void spirv::ModuleOp::build(OpBuilder &builder, OperationState &state,
                             Optional<StringRef> name) {
   state.addAttribute(
       "addressing_model",
-      builder.getI32IntegerAttr(static_cast<int32_t>(addressingModel)));
-  state.addAttribute("memory_model", builder.getI32IntegerAttr(
-                                         static_cast<int32_t>(memoryModel)));
+      builder.getAttr<spirv::AddressingModelAttr>(addressingModel));
+  state.addAttribute("memory_model",
+                     builder.getAttr<spirv::MemoryModelAttr>(memoryModel));
   OpBuilder::InsertionGuard guard(builder);
   builder.createBlock(state.addRegion());
   if (vceTriple)
@@ -3219,8 +3224,10 @@ ParseResult spirv::ModuleOp::parse(OpAsmParser &parser,
   // Parse attributes
   spirv::AddressingModel addrModel;
   spirv::MemoryModel memoryModel;
-  if (::parseEnumKeywordAttr(addrModel, parser, result) ||
-      ::parseEnumKeywordAttr(memoryModel, parser, result))
+  if (::parseEnumKeywordAttr<spirv::AddressingModelAttr>(addrModel, parser,
+                                                         result) ||
+      ::parseEnumKeywordAttr<spirv::MemoryModelAttr>(memoryModel, parser,
+                                                     result))
     return failure();
 
   if (succeeded(parser.parseOptionalKeyword("requires"))) {
@@ -3401,7 +3408,8 @@ LogicalResult spirv::SelectOp::verify() {
 
 ParseResult spirv::SelectionOp::parse(OpAsmParser &parser,
                                       OperationState &result) {
-  if (parseControlAttribute<spirv::SelectionControl>(parser, result))
+  if (parseControlAttribute<spirv::SelectionControlAttr,
+                            spirv::SelectionControl>(parser, result))
     return failure();
   return parser.parseRegion(*result.addRegion(), /*arguments=*/{});
 }
@@ -3666,8 +3674,8 @@ ParseResult spirv::VariableOp::parse(OpAsmParser &parser,
       return failure();
   }
 
-  auto attr = parser.getBuilder().getI32IntegerAttr(
-      llvm::bit_cast<int32_t>(ptrType.getStorageClass()));
+  auto attr = parser.getBuilder().getAttr<spirv::StorageClassAttr>(
+      ptrType.getStorageClass());
   result.addAttribute(spirv::attributeName<spirv::StorageClass>(), attr);
 
   return success();

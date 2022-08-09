@@ -32,7 +32,7 @@ module attributes {
 // CHECK:        %[[ADD:.+]] = spv.GroupNonUniformIAdd "Subgroup" "Reduce" %[[VAL]] : i32
 
 // CHECK:        %[[OUTPTR:.+]] = spv.AccessChain %[[OUTPUT]][%[[ZERO]], %[[ZERO]]]
-// CHECK:        %[[ELECT:.+]] = spv.GroupNonUniformElect Subgroup : i1
+// CHECK:        %[[ELECT:.+]] = spv.GroupNonUniformElect <Subgroup> : i1
 
 // CHECK:        spv.mlir.selection {
 // CHECK:          spv.BranchConditional %[[ELECT]], ^bb1, ^bb2

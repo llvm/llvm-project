@@ -216,10 +216,11 @@ spirv::Deserializer::processMemoryModel(ArrayRef<uint32_t> operands) {
 
   (*module)->setAttr(
       "addressing_model",
-      opBuilder.getI32IntegerAttr(llvm::bit_cast<int32_t>(operands.front())));
-  (*module)->setAttr(
-      "memory_model",
-      opBuilder.getI32IntegerAttr(llvm::bit_cast<int32_t>(operands.back())));
+      opBuilder.getAttr<spirv::AddressingModelAttr>(
+          static_cast<spirv::AddressingModel>(operands.front())));
+  (*module)->setAttr("memory_model",
+                     opBuilder.getAttr<spirv::MemoryModelAttr>(
+                         static_cast<spirv::MemoryModel>(operands.back())));
 
   return success();
 }

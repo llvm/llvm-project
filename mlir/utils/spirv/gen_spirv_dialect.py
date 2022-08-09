@@ -437,10 +437,13 @@ def gen_operand_kind_enum_attr(operand_kind, capability_mapping):
   # Generate the enum attribute definition
   kind_category = 'Bit' if is_bit_enum else 'I32'
   enum_attr = '''def SPV_{name}Attr :
-    SPV_{category}EnumAttr<"{name}", "valid SPIR-V {name}", [
+    SPV_{category}EnumAttr<"{name}", "valid SPIR-V {name}", "{snake_name}", [
 {cases}
     ]>;'''.format(
-          name=kind_name, category=kind_category, cases=case_names)
+          name=kind_name,
+          snake_name=snake_casify(kind_name),
+          category=kind_category,
+          cases=case_names)
   return kind_name, case_defs + '\n\n' + enum_attr
 
 
@@ -473,7 +476,8 @@ def gen_opcode(instructions):
   ]
   opcode_list = ',\n'.join(opcode_list)
   enum_attr = 'def SPV_OpcodeAttr :\n'\
-              '    SPV_I32EnumAttr<"{name}", "valid SPIR-V instructions", [\n'\
+              '    SPV_I32EnumAttr<"{name}", "valid SPIR-V instructions", '\
+              '"opcode", [\n'\
               '{lst}\n'\
               '    ]>;'.format(name='Opcode', lst=opcode_list)
   return opcode_str + '\n\n' + enum_attr
@@ -630,9 +634,7 @@ def update_td_enum_attrs(path, operand_kinds, filter_list):
 
 def snake_casify(name):
   """Turns the given name to follow snake_case convention."""
-  name = re.sub('\W+', '', name).split()
-  name = [s.lower() for s in name]
-  return '_'.join(name)
+  return re.sub(r'(?<!^)(?=[A-Z])', '_', name).lower()
 
 
 def map_spec_operand_to_ods_argument(operand):
