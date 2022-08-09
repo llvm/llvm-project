@@ -1661,7 +1661,7 @@ void CheckHelper::CheckProcBinding(
         return;
       }
       if (!IsElementalProcedure(binding.symbol()) &&
-          IsElementalProcedure(overriddenBinding->symbol())) {
+          IsElementalProcedure(*overridden)) {
         SayWithDeclaration(*overridden,
             "A type-bound procedure and its override must both, or neither, be ELEMENTAL"_err_en_US);
         return;
@@ -1674,7 +1674,7 @@ void CheckHelper::CheckProcBinding(
                 : "A passed-argument type-bound procedure may not override a NOPASS procedure"_err_en_US);
       } else {
         const auto *bindingChars{Characterize(binding.symbol())};
-        const auto *overriddenChars{Characterize(overriddenBinding->symbol())};
+        const auto *overriddenChars{Characterize(*overridden)};
         if (bindingChars && overriddenChars) {
           if (isNopass) {
             if (!bindingChars->CanOverride(*overriddenChars, std::nullopt)) {
