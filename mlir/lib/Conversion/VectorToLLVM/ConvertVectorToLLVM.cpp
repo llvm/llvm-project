@@ -260,7 +260,8 @@ public:
   matchAndRewrite(vector::GatherOp gather, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = gather->getLoc();
-    MemRefType memRefType = gather.getMemRefType();
+    MemRefType memRefType = gather.getBaseType().dyn_cast<MemRefType>();
+    assert(memRefType && "The base should be bufferized");
 
     // Resolve alignment.
     unsigned align;
