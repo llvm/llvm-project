@@ -538,7 +538,7 @@ def ConvertMemRefToLLVM : Pass<"convert-memref-to-llvm", "ModuleOp"> {
 // MemRefToSPIRV
 //===----------------------------------------------------------------------===//
 
-def MapMemRefStorageClass : Pass<"map-memref-spirv-storage-class", "ModuleOp"> {
+def MapMemRefStorageClass : Pass<"map-memref-spirv-storage-class"> {
   let summary = "Map numeric MemRef memory spaces to SPIR-V storage classes";
   let constructor = "mlir::createMapMemRefStorageClassPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];

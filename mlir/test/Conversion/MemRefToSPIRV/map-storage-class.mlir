@@ -41,7 +41,7 @@ func.func @type_attribute() {
 
 // -----
 
-// VULKAN-LABEL: func @function_io
+// VULKAN-LABEL: func.func @function_io
 func.func @function_io
   // VULKAN-SAME: (%{{.+}}: memref<f64, #spv.storage_class<Generic>>, %{{.+}}: memref<4xi32, #spv.storage_class<Workgroup>>)
   (%arg0: memref<f64, 1>, %arg1: memref<4xi32, 3>)
@@ -52,7 +52,15 @@ func.func @function_io
 
 // -----
 
-// VULKAN: func @region
+gpu.module @kernel {
+// VULKAN-LABEL: gpu.func @function_io
+// VULKAN-SAME: memref<8xi32, #spv.storage_class<StorageBuffer>>
+gpu.func @function_io(%arg0 : memref<8xi32>) kernel { gpu.return }
+}
+
+// -----
+
+// VULKAN-LABEL: func.func @region
 func.func @region(%cond: i1, %arg0: memref<f32, 1>) {
   scf.if %cond {
     //      VULKAN: "dialect.memref_consumer"(%{{.+}}) {attr = memref<i64, #spv.storage_class<Workgroup>>}
