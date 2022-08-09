@@ -204,6 +204,8 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
     for (const auto &argType :
          enumerate(funcOp.getFunctionType().getInputs())) {
       auto convertedType = typeConverter.convertType(argType.value());
+      if (!convertedType)
+        return nullptr;
       signatureConverter.addInputs(argType.index(), convertedType);
     }
   }
