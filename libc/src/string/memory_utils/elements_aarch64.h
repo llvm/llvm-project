@@ -54,7 +54,7 @@ using _64 = Chained<_32, _32>;
 
 struct ZVA {
   static constexpr size_t SIZE = 64;
-  static void splat_set(char *dst, const unsigned char value) {
+  static void splat_set(char *dst, const unsigned char) {
 #if __SIZEOF_POINTER__ == 4
     asm("dc zva, %w[dst]" : : [dst] "r"(dst) : "memory");
 #else
