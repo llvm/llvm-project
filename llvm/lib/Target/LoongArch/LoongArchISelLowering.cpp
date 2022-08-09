@@ -52,6 +52,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRA_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::SRL_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::FP_TO_SINT, GRLenVT, Custom);
+  setOperationAction(ISD::ROTL, GRLenVT, Expand);
 
   setOperationAction({ISD::GlobalAddress, ISD::ConstantPool}, GRLenVT, Custom);
 
@@ -65,6 +66,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SRL, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
     setOperationAction(ISD::BITCAST, MVT::i32, Custom);
+    setOperationAction(ISD::ROTR, MVT::i32, Custom);
+    setOperationAction(ISD::ROTL, MVT::i32, Custom);
     if (Subtarget.hasBasicF() && !Subtarget.hasBasicD())
       setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
   }
@@ -363,6 +366,10 @@ static LoongArchISD::NodeType getLoongArchWOpcode(unsigned Opcode) {
     return LoongArchISD::SRA_W;
   case ISD::SRL:
     return LoongArchISD::SRL_W;
+  case ISD::ROTR:
+    return LoongArchISD::ROTR_W;
+  case ISD::ROTL:
+    return LoongArchISD::ROTL_W;
   }
 }
 
@@ -391,9 +398,17 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
+  case ISD::ROTR:
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     if (N->getOperand(1).getOpcode() != ISD::Constant) {
+      Results.push_back(customLegalizeToWOp(N, DAG));
+      break;
+    }
+    break;
+  case ISD::ROTL:
+    ConstantSDNode *CN;
+    if ((CN = dyn_cast<ConstantSDNode>(N->getOperand(1)))) {
       Results.push_back(customLegalizeToWOp(N, DAG));
       break;
     }
@@ -882,6 +897,8 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(FTINT)
     NODE_NAME_CASE(REVB_2H)
     NODE_NAME_CASE(REVB_2W)
+    NODE_NAME_CASE(ROTR_W)
+    NODE_NAME_CASE(ROTL_W)
   }
 #undef NODE_NAME_CASE
   return nullptr;
