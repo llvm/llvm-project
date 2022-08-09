@@ -2782,7 +2782,7 @@ static LogicalResult legalizeUnresolvedMaterialization(
 
       // If an argument materialization failed, fallback to trying a target
       // materialization.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case UnresolvedMaterialization::Target:
       newMaterialization = converter->materializeTargetConversion(
           rewriter, op->getLoc(), outputType, inputOperands);

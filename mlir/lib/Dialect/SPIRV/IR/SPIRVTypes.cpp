@@ -529,7 +529,7 @@ void ScalarType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
       ArrayRef<Extension> ref(exts, llvm::array_lengthof(exts));
       extensions.push_back(ref);
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case StorageClass::Input:
   case StorageClass::Output:
     if (getIntOrFloatBitWidth() == 16) {
