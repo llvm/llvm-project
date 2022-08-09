@@ -18,9 +18,8 @@ using namespace mlir::amdgpu;
 
 static Value createI32Constant(ConversionPatternRewriter &rewriter,
                                Location loc, int32_t value) {
-  IntegerAttr valAttr = rewriter.getI32IntegerAttr(value);
   Type llvmI32 = rewriter.getI32Type();
-  return rewriter.create<LLVM::ConstantOp>(loc, llvmI32, valAttr);
+  return rewriter.create<LLVM::ConstantOp>(loc, llvmI32, value);
 }
 
 namespace {
@@ -118,8 +117,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     MemRefDescriptor memrefDescriptor(memref);
     Type llvmI64 = this->typeConverter->convertType(rewriter.getI64Type());
     Type llvm2xI32 = this->typeConverter->convertType(VectorType::get(2, i32));
-    Value c32I64 = rewriter.create<LLVM::ConstantOp>(
-        loc, llvmI64, rewriter.getI64IntegerAttr(32));
+    Value c32I64 = rewriter.create<LLVM::ConstantOp>(loc, llvmI64, 32);
 
     Value resource = rewriter.create<LLVM::UndefOp>(loc, llvm4xI32);
 

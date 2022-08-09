@@ -218,15 +218,15 @@ void VulkanLaunchFuncToVulkanCallsPass::createBindMemRefCalls(
   // Create LLVM constant for the descriptor set index.
   // Bind all memrefs to the `0` descriptor set, the same way as `GPUToSPIRV`
   // pass does.
-  Value descriptorSet = builder.create<LLVM::ConstantOp>(
-      loc, getInt32Type(), builder.getI32IntegerAttr(0));
+  Value descriptorSet =
+      builder.create<LLVM::ConstantOp>(loc, getInt32Type(), 0);
 
   for (const auto &en :
        llvm::enumerate(cInterfaceVulkanLaunchCallOp.getOperands().drop_front(
            kVulkanLaunchNumConfigOperands))) {
     // Create LLVM constant for the descriptor binding index.
-    Value descriptorBinding = builder.create<LLVM::ConstantOp>(
-        loc, getInt32Type(), builder.getI32IntegerAttr(en.index()));
+    Value descriptorBinding =
+        builder.create<LLVM::ConstantOp>(loc, getInt32Type(), en.index());
 
     auto ptrToMemRefDescriptor = en.value();
     uint32_t rank = 0;
@@ -384,8 +384,7 @@ void VulkanLaunchFuncToVulkanCallsPass::translateVulkanLaunchCall(
 
   // Create LLVM constant for the size of SPIR-V binary shader.
   Value binarySize = builder.create<LLVM::ConstantOp>(
-      loc, getInt32Type(),
-      builder.getI32IntegerAttr(spirvAttributes.first.getValue().size()));
+      loc, getInt32Type(), spirvAttributes.first.getValue().size());
 
   // Create call to `bindMemRef` for each memref operand.
   createBindMemRefCalls(cInterfaceVulkanLaunchCallOp, vulkanRuntime);
