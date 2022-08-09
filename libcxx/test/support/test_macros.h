@@ -193,6 +193,7 @@
 #if TEST_HAS_FEATURE(address_sanitizer) || TEST_HAS_FEATURE(hwaddress_sanitizer) || \
     TEST_HAS_FEATURE(memory_sanitizer) || TEST_HAS_FEATURE(thread_sanitizer)
 #define TEST_HAS_SANITIZERS
+#define TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT
 #endif
 
 #if defined(_LIBCPP_NORETURN)
