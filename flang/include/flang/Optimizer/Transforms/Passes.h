@@ -15,6 +15,7 @@
 
 namespace mlir {
 class BlockAndValueMapping;
+class GreedyRewriteConfig;
 class Operation;
 class Pass;
 class Region;
@@ -42,6 +43,8 @@ createMemoryAllocationPass(bool dynOnHeap, std::size_t maxStackSize);
 std::unique_ptr<mlir::Pass> createAnnotateConstantOperandsPass();
 std::unique_ptr<mlir::Pass> createSimplifyRegionLitePass();
 std::unique_ptr<mlir::Pass> createAlgebraicSimplificationPass();
+std::unique_ptr<mlir::Pass>
+createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION
