@@ -69,15 +69,6 @@ public:
   /// Gets the SPIR-V correspondence for the standard index type.
   Type getIndexType() const;
 
-  /// Returns the corresponding memory space for memref given a SPIR-V storage
-  /// class.
-  static unsigned getMemorySpaceForStorageClass(spirv::StorageClass);
-
-  /// Returns the SPIR-V storage class given a memory space for memref. Return
-  /// llvm::None if the memory space does not map to any SPIR-V storage class.
-  static Optional<spirv::StorageClass>
-  getStorageClassForMemorySpace(unsigned space);
-
   /// Returns the options controlling the SPIR-V type converter.
   const Options &getOptions() const;
 

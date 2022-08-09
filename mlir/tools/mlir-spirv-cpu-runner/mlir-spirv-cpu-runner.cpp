@@ -75,7 +75,7 @@ static LogicalResult runMLIRPasses(ModuleOp module) {
   PassManager passManager(module.getContext());
   applyPassManagerCLOptions(passManager);
   passManager.addPass(createGpuKernelOutliningPass());
-  passManager.addPass(createConvertGPUToSPIRVPass());
+  passManager.addPass(createConvertGPUToSPIRVPass(/*mapMemorySpace=*/true));
 
   OpPassManager &nestedPM = passManager.nest<spirv::ModuleOp>();
   nestedPM.addPass(spirv::createLowerABIAttributesPass());

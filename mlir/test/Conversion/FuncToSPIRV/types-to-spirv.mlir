@@ -274,24 +274,46 @@ module attributes {
 // CHECK-SAME: Private
 // CHECK-SAME: Function
 func.func @memref_mem_space(
-    %arg0: memref<4xf32, 0>,
-    %arg1: memref<4xf32, 4>,
-    %arg2: memref<4xf32, 3>,
-    %arg3: memref<4xf32, 7>,
-    %arg4: memref<4xf32, 5>,
-    %arg5: memref<4xf32, 6>
+    %arg0: memref<4xf32, #spv.storage_class<StorageBuffer>>,
+    %arg1: memref<4xf32, #spv.storage_class<Uniform>>,
+    %arg2: memref<4xf32, #spv.storage_class<Workgroup>>,
+    %arg3: memref<4xf32, #spv.storage_class<PushConstant>>,
+    %arg4: memref<4xf32, #spv.storage_class<Private>>,
+    %arg5: memref<4xf32, #spv.storage_class<Function>>
 ) { return }
 
 // CHECK-LABEL: func @memref_1bit_type
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<8 x i32, stride=4> [0])>, StorageBuffer>
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<8 x i32>)>, Function>
 // NOEMU-LABEL: func @memref_1bit_type
-// NOEMU-SAME: memref<4x8xi1>
-// NOEMU-SAME: memref<4x8xi1, 6>
+// NOEMU-SAME: memref<4x8xi1, #spv.storage_class<StorageBuffer>>
+// NOEMU-SAME: memref<4x8xi1, #spv.storage_class<Function>>
 func.func @memref_1bit_type(
-    %arg0: memref<4x8xi1, 0>,
-    %arg1: memref<4x8xi1, 6>
+    %arg0: memref<4x8xi1, #spv.storage_class<StorageBuffer>>,
+    %arg1: memref<4x8xi1, #spv.storage_class<Function>>
 ) { return }
+
+} // end module
+
+// -----
+
+// Reject memory spaces.
+module attributes {
+  spv.target_env = #spv.target_env<
+    #spv.vce<v1.0, [], [SPV_KHR_storage_buffer_storage_class]>, #spv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func @numeric_memref_mem_space1
+// CHECK-SAME: memref<4xf32>
+// NOEMU-LABEL: func @numeric_memref_mem_space1
+// NOEMU-SAME: memref<4xf32>
+func.func @numeric_memref_mem_space1(%arg0: memref<4xf32>) { return }
+
+// CHECK-LABEL: func @numeric_memref_mem_space2
+// CHECK-SAME: memref<4xf32, 3>
+// NOEMU-LABEL: func @numeric_memref_mem_space2
+// NOEMU-SAME: memref<4xf32, 3>
+func.func @numeric_memref_mem_space2(%arg0: memref<4xf32, 3>) { return }
 
 } // end module
 
@@ -308,86 +330,86 @@ module attributes {
 // CHECK-LABEL: spv.func @memref_1bit_type
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<2 x i32, stride=4> [0])>, StorageBuffer>
 // NOEMU-LABEL: func @memref_1bit_type
-// NOEMU-SAME: memref<5xi1>
-func.func @memref_1bit_type(%arg0: memref<5xi1>) { return }
+// NOEMU-SAME: memref<5xi1, #spv.storage_class<StorageBuffer>>
+func.func @memref_1bit_type(%arg0: memref<5xi1, #spv.storage_class<StorageBuffer>>) { return }
 
 // CHECK-LABEL: spv.func @memref_8bit_StorageBuffer
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<4 x i32, stride=4> [0])>, StorageBuffer>
 // NOEMU-LABEL: func @memref_8bit_StorageBuffer
-// NOEMU-SAME: memref<16xi8>
-func.func @memref_8bit_StorageBuffer(%arg0: memref<16xi8, 0>) { return }
+// NOEMU-SAME: memref<16xi8, #spv.storage_class<StorageBuffer>>
+func.func @memref_8bit_StorageBuffer(%arg0: memref<16xi8, #spv.storage_class<StorageBuffer>>) { return }
 
 // CHECK-LABEL: spv.func @memref_8bit_Uniform
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<4 x si32, stride=4> [0])>, Uniform>
 // NOEMU-LABEL: func @memref_8bit_Uniform
-// NOEMU-SAME: memref<16xsi8, 4>
-func.func @memref_8bit_Uniform(%arg0: memref<16xsi8, 4>) { return }
+// NOEMU-SAME: memref<16xsi8, #spv.storage_class<Uniform>>
+func.func @memref_8bit_Uniform(%arg0: memref<16xsi8, #spv.storage_class<Uniform>>) { return }
 
 // CHECK-LABEL: spv.func @memref_8bit_PushConstant
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<4 x ui32, stride=4> [0])>, PushConstant>
 // NOEMU-LABEL: func @memref_8bit_PushConstant
-// NOEMU-SAME: memref<16xui8, 7>
-func.func @memref_8bit_PushConstant(%arg0: memref<16xui8, 7>) { return }
+// NOEMU-SAME: memref<16xui8, #spv.storage_class<PushConstant>>
+func.func @memref_8bit_PushConstant(%arg0: memref<16xui8, #spv.storage_class<PushConstant>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_StorageBuffer
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<8 x i32, stride=4> [0])>, StorageBuffer>
 // NOEMU-LABEL: func @memref_16bit_StorageBuffer
-// NOEMU-SAME: memref<16xi16>
-func.func @memref_16bit_StorageBuffer(%arg0: memref<16xi16, 0>) { return }
+// NOEMU-SAME: memref<16xi16, #spv.storage_class<StorageBuffer>>
+func.func @memref_16bit_StorageBuffer(%arg0: memref<16xi16, #spv.storage_class<StorageBuffer>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_Uniform
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<8 x si32, stride=4> [0])>, Uniform>
 // NOEMU-LABEL: func @memref_16bit_Uniform
-// NOEMU-SAME: memref<16xsi16, 4>
-func.func @memref_16bit_Uniform(%arg0: memref<16xsi16, 4>) { return }
+// NOEMU-SAME: memref<16xsi16, #spv.storage_class<Uniform>>
+func.func @memref_16bit_Uniform(%arg0: memref<16xsi16, #spv.storage_class<Uniform>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_PushConstant
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<8 x ui32, stride=4> [0])>, PushConstant>
 // NOEMU-LABEL: func @memref_16bit_PushConstant
-// NOEMU-SAME: memref<16xui16, 7>
-func.func @memref_16bit_PushConstant(%arg0: memref<16xui16, 7>) { return }
+// NOEMU-SAME: memref<16xui16, #spv.storage_class<PushConstant>>
+func.func @memref_16bit_PushConstant(%arg0: memref<16xui16, #spv.storage_class<PushConstant>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_Input
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<8 x f32>)>, Input>
 // NOEMU-LABEL: func @memref_16bit_Input
-// NOEMU-SAME: memref<16xf16, 9>
-func.func @memref_16bit_Input(%arg3: memref<16xf16, 9>) { return }
+// NOEMU-SAME: memref<16xf16, #spv.storage_class<Input>>
+func.func @memref_16bit_Input(%arg3: memref<16xf16, #spv.storage_class<Input>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_Output
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<8 x f32>)>, Output>
 // NOEMU-LABEL: func @memref_16bit_Output
-// NOEMU-SAME: memref<16xf16, 10>
-func.func @memref_16bit_Output(%arg4: memref<16xf16, 10>) { return }
+// NOEMU-SAME: memref<16xf16, #spv.storage_class<Output>>
+func.func @memref_16bit_Output(%arg4: memref<16xf16, #spv.storage_class<Output>>) { return }
 
 // CHECK-LABEL: spv.func @memref_64bit_StorageBuffer
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<32 x i32, stride=4> [0])>, StorageBuffer>
 // NOEMU-LABEL: func @memref_64bit_StorageBuffer
-// NOEMU-SAME: memref<16xi64>
-func.func @memref_64bit_StorageBuffer(%arg0: memref<16xi64, 0>) { return }
+// NOEMU-SAME: memref<16xi64, #spv.storage_class<StorageBuffer>>
+func.func @memref_64bit_StorageBuffer(%arg0: memref<16xi64, #spv.storage_class<StorageBuffer>>) { return }
 
 // CHECK-LABEL: spv.func @memref_64bit_Uniform
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<32 x si32, stride=4> [0])>, Uniform>
 // NOEMU-LABEL: func @memref_64bit_Uniform
-// NOEMU-SAME: memref<16xsi64, 4>
-func.func @memref_64bit_Uniform(%arg0: memref<16xsi64, 4>) { return }
+// NOEMU-SAME: memref<16xsi64, #spv.storage_class<Uniform>>
+func.func @memref_64bit_Uniform(%arg0: memref<16xsi64, #spv.storage_class<Uniform>>) { return }
 
 // CHECK-LABEL: spv.func @memref_64bit_PushConstant
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<32 x ui32, stride=4> [0])>, PushConstant>
 // NOEMU-LABEL: func @memref_64bit_PushConstant
-// NOEMU-SAME: memref<16xui64, 7>
-func.func @memref_64bit_PushConstant(%arg0: memref<16xui64, 7>) { return }
+// NOEMU-SAME: memref<16xui64, #spv.storage_class<PushConstant>>
+func.func @memref_64bit_PushConstant(%arg0: memref<16xui64, #spv.storage_class<PushConstant>>) { return }
 
 // CHECK-LABEL: spv.func @memref_64bit_Input
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<32 x f32>)>, Input>
 // NOEMU-LABEL: func @memref_64bit_Input
-// NOEMU-SAME: memref<16xf64, 9>
-func.func @memref_64bit_Input(%arg3: memref<16xf64, 9>) { return }
+// NOEMU-SAME: memref<16xf64, #spv.storage_class<Input>>
+func.func @memref_64bit_Input(%arg3: memref<16xf64, #spv.storage_class<Input>>) { return }
 
 // CHECK-LABEL: spv.func @memref_64bit_Output
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<32 x f32>)>, Output>
 // NOEMU-LABEL: func @memref_64bit_Output
-// NOEMU-SAME: memref<16xf64, 10>
-func.func @memref_64bit_Output(%arg4: memref<16xf64, 10>) { return }
+// NOEMU-SAME: memref<16xf64, #spv.storage_class<Output>>
+func.func @memref_64bit_Output(%arg4: memref<16xf64, #spv.storage_class<Output>>) { return }
 
 } // end module
 
@@ -406,7 +428,7 @@ module attributes {
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i8, stride=1> [0])>, PushConstant>
 // NOEMU-LABEL: spv.func @memref_8bit_PushConstant
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i8, stride=1> [0])>, PushConstant>
-func.func @memref_8bit_PushConstant(%arg0: memref<16xi8, 7>) { return }
+func.func @memref_8bit_PushConstant(%arg0: memref<16xi8, #spv.storage_class<PushConstant>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_PushConstant
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i16, stride=2> [0])>, PushConstant>
@@ -415,8 +437,8 @@ func.func @memref_8bit_PushConstant(%arg0: memref<16xi8, 7>) { return }
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i16, stride=2> [0])>, PushConstant>
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f16, stride=2> [0])>, PushConstant>
 func.func @memref_16bit_PushConstant(
-  %arg0: memref<16xi16, 7>,
-  %arg1: memref<16xf16, 7>
+  %arg0: memref<16xi16, #spv.storage_class<PushConstant>>,
+  %arg1: memref<16xf16, #spv.storage_class<PushConstant>>
 ) { return }
 
 // CHECK-LABEL: spv.func @memref_64bit_PushConstant
@@ -426,8 +448,8 @@ func.func @memref_16bit_PushConstant(
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i64, stride=8> [0])>, PushConstant>
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f64, stride=8> [0])>, PushConstant>
 func.func @memref_64bit_PushConstant(
-  %arg0: memref<16xi64, 7>,
-  %arg1: memref<16xf64, 7>
+  %arg0: memref<16xi64, #spv.storage_class<PushConstant>>,
+  %arg1: memref<16xf64, #spv.storage_class<PushConstant>>
 ) { return }
 
 } // end module
@@ -447,7 +469,7 @@ module attributes {
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i8, stride=1> [0])>, StorageBuffer>
 // NOEMU-LABEL: spv.func @memref_8bit_StorageBuffer
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i8, stride=1> [0])>, StorageBuffer>
-func.func @memref_8bit_StorageBuffer(%arg0: memref<16xi8, 0>) { return }
+func.func @memref_8bit_StorageBuffer(%arg0: memref<16xi8, #spv.storage_class<StorageBuffer>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_StorageBuffer
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i16, stride=2> [0])>, StorageBuffer>
@@ -456,8 +478,8 @@ func.func @memref_8bit_StorageBuffer(%arg0: memref<16xi8, 0>) { return }
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i16, stride=2> [0])>, StorageBuffer>
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f16, stride=2> [0])>, StorageBuffer>
 func.func @memref_16bit_StorageBuffer(
-  %arg0: memref<16xi16, 0>,
-  %arg1: memref<16xf16, 0>
+  %arg0: memref<16xi16, #spv.storage_class<StorageBuffer>>,
+  %arg1: memref<16xf16, #spv.storage_class<StorageBuffer>>
 ) { return }
 
 // CHECK-LABEL: spv.func @memref_64bit_StorageBuffer
@@ -467,8 +489,8 @@ func.func @memref_16bit_StorageBuffer(
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i64, stride=8> [0])>, StorageBuffer>
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f64, stride=8> [0])>, StorageBuffer>
 func.func @memref_64bit_StorageBuffer(
-  %arg0: memref<16xi64, 0>,
-  %arg1: memref<16xf64, 0>
+  %arg0: memref<16xi64, #spv.storage_class<StorageBuffer>>,
+  %arg1: memref<16xf64, #spv.storage_class<StorageBuffer>>
 ) { return }
 
 } // end module
@@ -488,7 +510,7 @@ module attributes {
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i8, stride=1> [0])>, Uniform>
 // NOEMU-LABEL: spv.func @memref_8bit_Uniform
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i8, stride=1> [0])>, Uniform>
-func.func @memref_8bit_Uniform(%arg0: memref<16xi8, 4>) { return }
+func.func @memref_8bit_Uniform(%arg0: memref<16xi8, #spv.storage_class<Uniform>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_Uniform
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i16, stride=2> [0])>, Uniform>
@@ -497,8 +519,8 @@ func.func @memref_8bit_Uniform(%arg0: memref<16xi8, 4>) { return }
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i16, stride=2> [0])>, Uniform>
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f16, stride=2> [0])>, Uniform>
 func.func @memref_16bit_Uniform(
-  %arg0: memref<16xi16, 4>,
-  %arg1: memref<16xf16, 4>
+  %arg0: memref<16xi16, #spv.storage_class<Uniform>>,
+  %arg1: memref<16xf16, #spv.storage_class<Uniform>>
 ) { return }
 
 // CHECK-LABEL: spv.func @memref_64bit_Uniform
@@ -508,8 +530,8 @@ func.func @memref_16bit_Uniform(
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i64, stride=8> [0])>, Uniform>
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f64, stride=8> [0])>, Uniform>
 func.func @memref_64bit_Uniform(
-  %arg0: memref<16xi64, 4>,
-  %arg1: memref<16xf64, 4>
+  %arg0: memref<16xi64, #spv.storage_class<Uniform>>,
+  %arg1: memref<16xf64, #spv.storage_class<Uniform>>
 ) { return }
 
 } // end module
@@ -528,13 +550,13 @@ module attributes {
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f16>)>, Input>
 // NOEMU-LABEL: spv.func @memref_16bit_Input
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f16>)>, Input>
-func.func @memref_16bit_Input(%arg3: memref<16xf16, 9>) { return }
+func.func @memref_16bit_Input(%arg3: memref<16xf16, #spv.storage_class<Input>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_Output
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i16>)>, Output>
 // NOEMU-LABEL: spv.func @memref_16bit_Output
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i16>)>, Output>
-func.func @memref_16bit_Output(%arg4: memref<16xi16, 10>) { return }
+func.func @memref_16bit_Output(%arg4: memref<16xi16, #spv.storage_class<Output>>) { return }
 
 // CHECK-LABEL: spv.func @memref_64bit_Input
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i64>)>, Input>
@@ -543,8 +565,8 @@ func.func @memref_16bit_Output(%arg4: memref<16xi16, 10>) { return }
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i64>)>, Input>
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f64>)>, Input>
 func.func @memref_64bit_Input(
-  %arg0: memref<16xi64, 9>,
-  %arg1: memref<16xf64, 9>
+  %arg0: memref<16xi64, #spv.storage_class<Input>>,
+  %arg1: memref<16xf64, #spv.storage_class<Input>>
 ) { return }
 
 // CHECK-LABEL: spv.func @memref_64bit_Output
@@ -554,8 +576,8 @@ func.func @memref_64bit_Input(
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x i64>)>, Output>
 // NOEMU-SAME: !spv.ptr<!spv.struct<(!spv.array<16 x f64>)>, Output>
 func.func @memref_64bit_Output(
-  %arg0: memref<16xi64, 10>,
-  %arg1: memref<16xf64, 10>
+  %arg0: memref<16xi64, #spv.storage_class<Output>>,
+  %arg1: memref<16xf64, #spv.storage_class<Output>>
 ) { return }
 
 } // end module
@@ -575,22 +597,22 @@ func.func @memref_offset_strides(
 // CHECK-SAME: !spv.array<256 x f32, stride=4> [0])>, StorageBuffer>
 // CHECK-SAME: !spv.array<64 x f32, stride=4> [0])>, StorageBuffer>
 // CHECK-SAME: !spv.array<88 x f32, stride=4> [0])>, StorageBuffer>
-  %arg0: memref<16x4xf32, offset: 0, strides: [4, 1]>,  // tightly packed; row major
-  %arg1: memref<16x4xf32, offset: 8, strides: [4, 1]>,  // offset 8
-  %arg2: memref<16x4xf32, offset: 0, strides: [16, 1]>, // pad 12 after each row
-  %arg3: memref<16x4xf32, offset: 0, strides: [1, 16]>, // tightly packed; col major
-  %arg4: memref<16x4xf32, offset: 0, strides: [1, 22]>, // pad 4 after each col
+  %arg0: memref<16x4xf32, offset: 0, strides: [4, 1], #spv.storage_class<StorageBuffer>>,  // tightly packed; row major
+  %arg1: memref<16x4xf32, offset: 8, strides: [4, 1], #spv.storage_class<StorageBuffer>>,  // offset 8
+  %arg2: memref<16x4xf32, offset: 0, strides: [16, 1], #spv.storage_class<StorageBuffer>>, // pad 12 after each row
+  %arg3: memref<16x4xf32, offset: 0, strides: [1, 16], #spv.storage_class<StorageBuffer>>, // tightly packed; col major
+  %arg4: memref<16x4xf32, offset: 0, strides: [1, 22], #spv.storage_class<StorageBuffer>>, // pad 4 after each col
 
 // CHECK-SAME: !spv.array<64 x f16, stride=2> [0])>, StorageBuffer>
 // CHECK-SAME: !spv.array<72 x f16, stride=2> [0])>, StorageBuffer>
 // CHECK-SAME: !spv.array<256 x f16, stride=2> [0])>, StorageBuffer>
 // CHECK-SAME: !spv.array<64 x f16, stride=2> [0])>, StorageBuffer>
 // CHECK-SAME: !spv.array<88 x f16, stride=2> [0])>, StorageBuffer>
-  %arg5: memref<16x4xf16, offset: 0, strides: [4, 1]>,
-  %arg6: memref<16x4xf16, offset: 8, strides: [4, 1]>,
-  %arg7: memref<16x4xf16, offset: 0, strides: [16, 1]>,
-  %arg8: memref<16x4xf16, offset: 0, strides: [1, 16]>,
-  %arg9: memref<16x4xf16, offset: 0, strides: [1, 22]>
+  %arg5: memref<16x4xf16, offset: 0, strides: [4, 1], #spv.storage_class<StorageBuffer>>,
+  %arg6: memref<16x4xf16, offset: 8, strides: [4, 1], #spv.storage_class<StorageBuffer>>,
+  %arg7: memref<16x4xf16, offset: 0, strides: [16, 1], #spv.storage_class<StorageBuffer>>,
+  %arg8: memref<16x4xf16, offset: 0, strides: [1, 16], #spv.storage_class<StorageBuffer>>,
+  %arg9: memref<16x4xf16, offset: 0, strides: [1, 22], #spv.storage_class<StorageBuffer>>
 ) { return }
 
 } // end module
@@ -610,14 +632,15 @@ func.func @unranked_memref(%arg0: memref<*xi32>) { return }
 // CHECK-LABEL: func @memref_1bit_type
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<i32, stride=4> [0])>, StorageBuffer>
 // NOEMU-LABEL: func @memref_1bit_type
-// NOEMU-SAME: memref<?xi1>
-func.func @memref_1bit_type(%arg0: memref<?xi1>) { return }
+// NOEMU-SAME: memref<?xi1, #spv.storage_class<StorageBuffer>>
+func.func @memref_1bit_type(%arg0: memref<?xi1, #spv.storage_class<StorageBuffer>>) { return }
 
 // CHECK-LABEL: func @dynamic_dim_memref
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<i32, stride=4> [0])>, StorageBuffer>
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<f32, stride=4> [0])>, StorageBuffer>
-func.func @dynamic_dim_memref(%arg0: memref<8x?xi32>,
-                         %arg1: memref<?x?xf32>) { return }
+func.func @dynamic_dim_memref(
+    %arg0: memref<8x?xi32, #spv.storage_class<StorageBuffer>>,
+    %arg1: memref<?x?xf32, #spv.storage_class<StorageBuffer>>) { return }
 
 // Check that using non-32-bit scalar types in interface storage classes
 // requires special capability and extension: convert them to 32-bit if not
@@ -626,50 +649,50 @@ func.func @dynamic_dim_memref(%arg0: memref<8x?xi32>,
 // CHECK-LABEL: spv.func @memref_8bit_StorageBuffer
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<i32, stride=4> [0])>, StorageBuffer>
 // NOEMU-LABEL: func @memref_8bit_StorageBuffer
-// NOEMU-SAME: memref<?xi8>
-func.func @memref_8bit_StorageBuffer(%arg0: memref<?xi8, 0>) { return }
+// NOEMU-SAME: memref<?xi8, #spv.storage_class<StorageBuffer>>
+func.func @memref_8bit_StorageBuffer(%arg0: memref<?xi8, #spv.storage_class<StorageBuffer>>) { return }
 
 // CHECK-LABEL: spv.func @memref_8bit_Uniform
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<si32, stride=4> [0])>, Uniform>
 // NOEMU-LABEL: func @memref_8bit_Uniform
-// NOEMU-SAME: memref<?xsi8, 4>
-func.func @memref_8bit_Uniform(%arg0: memref<?xsi8, 4>) { return }
+// NOEMU-SAME: memref<?xsi8, #spv.storage_class<Uniform>>
+func.func @memref_8bit_Uniform(%arg0: memref<?xsi8, #spv.storage_class<Uniform>>) { return }
 
 // CHECK-LABEL: spv.func @memref_8bit_PushConstant
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<ui32, stride=4> [0])>, PushConstant>
 // NOEMU-LABEL: func @memref_8bit_PushConstant
-// NOEMU-SAME: memref<?xui8, 7>
-func.func @memref_8bit_PushConstant(%arg0: memref<?xui8, 7>) { return }
+// NOEMU-SAME: memref<?xui8, #spv.storage_class<PushConstant>>
+func.func @memref_8bit_PushConstant(%arg0: memref<?xui8, #spv.storage_class<PushConstant>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_StorageBuffer
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<i32, stride=4> [0])>, StorageBuffer>
 // NOEMU-LABEL: func @memref_16bit_StorageBuffer
-// NOEMU-SAME: memref<?xi16>
-func.func @memref_16bit_StorageBuffer(%arg0: memref<?xi16, 0>) { return }
+// NOEMU-SAME: memref<?xi16, #spv.storage_class<StorageBuffer>>
+func.func @memref_16bit_StorageBuffer(%arg0: memref<?xi16, #spv.storage_class<StorageBuffer>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_Uniform
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<si32, stride=4> [0])>, Uniform>
 // NOEMU-LABEL: func @memref_16bit_Uniform
-// NOEMU-SAME: memref<?xsi16, 4>
-func.func @memref_16bit_Uniform(%arg0: memref<?xsi16, 4>) { return }
+// NOEMU-SAME: memref<?xsi16, #spv.storage_class<Uniform>>
+func.func @memref_16bit_Uniform(%arg0: memref<?xsi16, #spv.storage_class<Uniform>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_PushConstant
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<ui32, stride=4> [0])>, PushConstant>
 // NOEMU-LABEL: func @memref_16bit_PushConstant
-// NOEMU-SAME: memref<?xui16, 7>
-func.func @memref_16bit_PushConstant(%arg0: memref<?xui16, 7>) { return }
+// NOEMU-SAME: memref<?xui16, #spv.storage_class<PushConstant>>
+func.func @memref_16bit_PushConstant(%arg0: memref<?xui16, #spv.storage_class<PushConstant>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_Input
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<f32>)>, Input>
 // NOEMU-LABEL: func @memref_16bit_Input
-// NOEMU-SAME: memref<?xf16, 9>
-func.func @memref_16bit_Input(%arg3: memref<?xf16, 9>) { return }
+// NOEMU-SAME: memref<?xf16, #spv.storage_class<Input>>
+func.func @memref_16bit_Input(%arg3: memref<?xf16, #spv.storage_class<Input>>) { return }
 
 // CHECK-LABEL: spv.func @memref_16bit_Output
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<f32>)>, Output>
 // NOEMU-LABEL: func @memref_16bit_Output
-// NOEMU-SAME: memref<?xf16, 10>
-func.func @memref_16bit_Output(%arg4: memref<?xf16, 10>) { return }
+// NOEMU-SAME: memref<?xf16, #spv.storage_class<Output>>
+func.func @memref_16bit_Output(%arg4: memref<?xf16, #spv.storage_class<Output>>) { return }
 
 } // end module
 
@@ -684,15 +707,16 @@ module attributes {
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<4 x vector<2xf32>, stride=8> [0])>, StorageBuffer>
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.array<4 x vector<4xf32>, stride=16> [0])>, Uniform>
 func.func @memref_vector(
-    %arg0: memref<4xvector<2xf32>, 0>,
-    %arg1: memref<4xvector<4xf32>, 4>)
+    %arg0: memref<4xvector<2xf32>, #spv.storage_class<StorageBuffer>>,
+    %arg1: memref<4xvector<4xf32>, #spv.storage_class<Uniform>>)
 { return }
 
 // CHECK-LABEL: func @dynamic_dim_memref_vector
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<vector<4xi32>, stride=16> [0])>, StorageBuffer>
 // CHECK-SAME: !spv.ptr<!spv.struct<(!spv.rtarray<vector<2xf32>, stride=8> [0])>, StorageBuffer>
-func.func @dynamic_dim_memref_vector(%arg0: memref<8x?xvector<4xi32>>,
-                         %arg1: memref<?x?xvector<2xf32>>)
+func.func @dynamic_dim_memref_vector(
+    %arg0: memref<8x?xvector<4xi32>, #spv.storage_class<StorageBuffer>>,
+    %arg1: memref<?x?xvector<2xf32>, #spv.storage_class<StorageBuffer>>)
 { return }
 
 } // end module
@@ -705,9 +729,9 @@ module attributes {
 } {
 
 // CHECK-LABEL: func @memref_vector_wrong_size
-// CHECK-SAME: memref<4xvector<5xf32>>
+// CHECK-SAME: memref<4xvector<5xf32>, #spv.storage_class<StorageBuffer>>
 func.func @memref_vector_wrong_size(
-    %arg0: memref<4xvector<5xf32>, 0>)
+    %arg0: memref<4xvector<5xf32>, #spv.storage_class<StorageBuffer>>)
 { return }
 
 } // end module

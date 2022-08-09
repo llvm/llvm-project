@@ -5,7 +5,7 @@ module attributes {
   spv.target_env = #spv.target_env<
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spv.resource_limits<>>
 } {
-  func.func @load_store(%arg0: memref<12x4xf32>, %arg1: memref<12x4xf32>, %arg2: memref<12x4xf32>) {
+  func.func @load_store(%arg0: memref<12x4xf32, #spv.storage_class<StorageBuffer>>, %arg1: memref<12x4xf32, #spv.storage_class<StorageBuffer>>, %arg2: memref<12x4xf32, #spv.storage_class<StorageBuffer>>) {
     %c0 = arith.constant 0 : index
     %c12 = arith.constant 12 : index
     %0 = arith.subi %c12, %c0 : index
@@ -17,7 +17,7 @@ module attributes {
     %c1_2 = arith.constant 1 : index
     gpu.launch_func @kernels::@load_store_kernel
         blocks in (%0, %c1_2, %c1_2) threads in (%1, %c1_2, %c1_2)
-        args(%arg0 : memref<12x4xf32>, %arg1 : memref<12x4xf32>, %arg2 : memref<12x4xf32>,
+        args(%arg0 : memref<12x4xf32, #spv.storage_class<StorageBuffer>>, %arg1 : memref<12x4xf32, #spv.storage_class<StorageBuffer>>, %arg2 : memref<12x4xf32, #spv.storage_class<StorageBuffer>>,
              %c0 : index, %c0_0 : index, %c1 : index, %c1_1 : index)
     return
   }
@@ -35,7 +35,7 @@ module attributes {
     // CHECK-SAME: %[[ARG4:.*]]: i32 {spv.interface_var_abi = #spv.interface_var_abi<(0, 4), StorageBuffer>}
     // CHECK-SAME: %[[ARG5:.*]]: i32 {spv.interface_var_abi = #spv.interface_var_abi<(0, 5), StorageBuffer>}
     // CHECK-SAME: %[[ARG6:.*]]: i32 {spv.interface_var_abi = #spv.interface_var_abi<(0, 6), StorageBuffer>}
-    gpu.func @load_store_kernel(%arg0: memref<12x4xf32>, %arg1: memref<12x4xf32>, %arg2: memref<12x4xf32>, %arg3: index, %arg4: index, %arg5: index, %arg6: index) kernel
+    gpu.func @load_store_kernel(%arg0: memref<12x4xf32, #spv.storage_class<StorageBuffer>>, %arg1: memref<12x4xf32, #spv.storage_class<StorageBuffer>>, %arg2: memref<12x4xf32, #spv.storage_class<StorageBuffer>>, %arg3: index, %arg4: index, %arg5: index, %arg6: index) kernel
       attributes {spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[16, 1, 1]>: vector<3xi32>>} {
       // CHECK: %[[ADDRESSWORKGROUPID:.*]] = spv.mlir.addressof @[[$WORKGROUPIDVAR]]
       // CHECK: %[[WORKGROUPID:.*]] = spv.Load "Input" %[[ADDRESSWORKGROUPID]]
@@ -69,15 +69,15 @@ module attributes {
       // CHECK: %[[OFFSET1_2:.*]] = spv.IAdd %[[OFFSET1_1]], %[[UPDATE1_2]] : i32
       // CHECK: %[[PTR1:.*]] = spv.AccessChain %[[ARG0]]{{\[}}%[[ZERO]], %[[OFFSET1_2]]{{\]}}
       // CHECK-NEXT: %[[VAL1:.*]] = spv.Load "StorageBuffer" %[[PTR1]]
-      %14 = memref.load %arg0[%12, %13] : memref<12x4xf32>
+      %14 = memref.load %arg0[%12, %13] : memref<12x4xf32, #spv.storage_class<StorageBuffer>>
       // CHECK: %[[PTR2:.*]] = spv.AccessChain %[[ARG1]]{{\[}}{{%.*}}, {{%.*}}{{\]}}
       // CHECK-NEXT: %[[VAL2:.*]] = spv.Load "StorageBuffer" %[[PTR2]]
-      %15 = memref.load %arg1[%12, %13] : memref<12x4xf32>
+      %15 = memref.load %arg1[%12, %13] : memref<12x4xf32, #spv.storage_class<StorageBuffer>>
       // CHECK: %[[VAL3:.*]] = spv.FAdd %[[VAL1]], %[[VAL2]]
       %16 = arith.addf %14, %15 : f32
       // CHECK: %[[PTR3:.*]] = spv.AccessChain %[[ARG2]]{{\[}}{{%.*}}, {{%.*}}{{\]}}
       // CHECK-NEXT: spv.Store "StorageBuffer" %[[PTR3]], %[[VAL3]]
-      memref.store %16, %arg2[%12, %13] : memref<12x4xf32>
+      memref.store %16, %arg2[%12, %13] : memref<12x4xf32, #spv.storage_class<StorageBuffer>>
       gpu.return
     }
   }

@@ -6,7 +6,7 @@ module attributes {
 } {
 
 // CHECK-LABEL: @kernel_simple_selection
-func.func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1) {
+func.func @kernel_simple_selection(%arg2 : memref<10xf32, #spv.storage_class<StorageBuffer>>, %arg3 : i1) {
   %value = arith.constant 0.0 : f32
   %i = arith.constant 0 : index
 
@@ -20,13 +20,13 @@ func.func @kernel_simple_selection(%arg2 : memref<10xf32>, %arg3 : i1) {
   // CHECK-NEXT:  spv.Return
 
   scf.if %arg3 {
-    memref.store %value, %arg2[%i] : memref<10xf32>
+    memref.store %value, %arg2[%i] : memref<10xf32, #spv.storage_class<StorageBuffer>>
   }
   return
 }
 
 // CHECK-LABEL: @kernel_nested_selection
-func.func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32>, %arg5 : i1, %arg6 : i1) {
+func.func @kernel_nested_selection(%arg3 : memref<10xf32, #spv.storage_class<StorageBuffer>>, %arg4 : memref<10xf32, #spv.storage_class<StorageBuffer>>, %arg5 : i1, %arg6 : i1) {
   %i = arith.constant 0 : index
   %j = arith.constant 9 : index
 
@@ -61,26 +61,26 @@ func.func @kernel_nested_selection(%arg3 : memref<10xf32>, %arg4 : memref<10xf32
 
   scf.if %arg5 {
     scf.if %arg6 {
-      %value = memref.load %arg3[%i] : memref<10xf32>
-      memref.store %value, %arg4[%i] : memref<10xf32>
+      %value = memref.load %arg3[%i] : memref<10xf32, #spv.storage_class<StorageBuffer>>
+      memref.store %value, %arg4[%i] : memref<10xf32, #spv.storage_class<StorageBuffer>>
     } else {
-      %value = memref.load %arg4[%i] : memref<10xf32>
-      memref.store %value, %arg3[%i] : memref<10xf32>
+      %value = memref.load %arg4[%i] : memref<10xf32, #spv.storage_class<StorageBuffer>>
+      memref.store %value, %arg3[%i] : memref<10xf32, #spv.storage_class<StorageBuffer>>
     }
   } else {
     scf.if %arg6 {
-      %value = memref.load %arg3[%j] : memref<10xf32>
-      memref.store %value, %arg4[%j] : memref<10xf32>
+      %value = memref.load %arg3[%j] : memref<10xf32, #spv.storage_class<StorageBuffer>>
+      memref.store %value, %arg4[%j] : memref<10xf32, #spv.storage_class<StorageBuffer>>
     } else {
-      %value = memref.load %arg4[%j] : memref<10xf32>
-      memref.store %value, %arg3[%j] : memref<10xf32>
+      %value = memref.load %arg4[%j] : memref<10xf32, #spv.storage_class<StorageBuffer>>
+      memref.store %value, %arg3[%j] : memref<10xf32, #spv.storage_class<StorageBuffer>>
     }
   }
   return
 }
 
 // CHECK-LABEL: @simple_if_yield
-func.func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
+func.func @simple_if_yield(%arg2 : memref<10xf32, #spv.storage_class<StorageBuffer>>, %arg3 : i1) {
   // CHECK: %[[VAR1:.*]] = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: %[[VAR2:.*]] = spv.Variable : !spv.ptr<f32, Function>
   // CHECK:       spv.mlir.selection {
@@ -116,15 +116,15 @@ func.func @simple_if_yield(%arg2 : memref<10xf32>, %arg3 : i1) {
   }
   %i = arith.constant 0 : index
   %j = arith.constant 1 : index
-  memref.store %0#0, %arg2[%i] : memref<10xf32>
-  memref.store %0#1, %arg2[%j] : memref<10xf32>
+  memref.store %0#0, %arg2[%i] : memref<10xf32, #spv.storage_class<StorageBuffer>>
+  memref.store %0#1, %arg2[%j] : memref<10xf32, #spv.storage_class<StorageBuffer>>
   return
 }
 
 // TODO: The transformation should only be legal if VariablePointer capability
 // is supported. This test is still useful to make sure we can handle scf op
 // result with type change.
-func.func @simple_if_yield_type_change(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>, %arg4 : i1) {
+func.func @simple_if_yield_type_change(%arg2 : memref<10xf32, #spv.storage_class<StorageBuffer>>, %arg3 : memref<10xf32, #spv.storage_class<StorageBuffer>>, %arg4 : i1) {
   // CHECK-LABEL: @simple_if_yield_type_change
   // CHECK:       %[[VAR:.*]] = spv.Variable : !spv.ptr<!spv.ptr<!spv.struct<(!spv.array<10 x f32, stride=4> [0])>, StorageBuffer>, Function>
   // CHECK:       spv.mlir.selection {
@@ -144,12 +144,12 @@ func.func @simple_if_yield_type_change(%arg2 : memref<10xf32>, %arg3 : memref<10
   // CHECK:       spv.Return
   %i = arith.constant 0 : index
   %value = arith.constant 0.0 : f32
-  %0 = scf.if %arg4 -> (memref<10xf32>) {
-    scf.yield %arg2 : memref<10xf32>
+  %0 = scf.if %arg4 -> (memref<10xf32, #spv.storage_class<StorageBuffer>>) {
+    scf.yield %arg2 : memref<10xf32, #spv.storage_class<StorageBuffer>>
   } else {
-    scf.yield %arg3 : memref<10xf32>
+    scf.yield %arg3 : memref<10xf32, #spv.storage_class<StorageBuffer>>
   }
-  memref.store %value, %0[%i] : memref<10xf32>
+  memref.store %value, %0[%i] : memref<10xf32, #spv.storage_class<StorageBuffer>>
   return
 }
 
