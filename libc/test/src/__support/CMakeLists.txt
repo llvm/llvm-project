@@ -63,6 +63,16 @@ add_libc_unittest(
     libc.src.__support.CPP.uint
 )
 
+add_libc_unittest(
+  fixedvector_test
+  SUITE
+    libc_support_unittests
+  SRCS
+    fixedvector_test.cpp
+  DEPENDS
+    libc.src.__support.fixedvector
+)
+
 add_executable(
   libc_str_to_float_comparison_test
   str_to_float_comparison_test.cpp
