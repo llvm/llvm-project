@@ -293,13 +293,13 @@ def SparseTensor_CompressOp : SparseTensor_Op<"compress", []>,
     ```mlir
     sparse_tensor.compress %0, %1, %values, %filled, %added, %2
         : tensor<4x4xf64, #CSR>, memref<?xindex>, memref<?xf64>,
-	  memref<?xi1>, memref<?xindex>, index
+          memref<?xi1>, memref<?xindex>, index
     ```
   }];
   let assemblyFormat = "$tensor `,` $indices `,` $values `,` $filled `,`"
-                        " $added `,` $count attr-dict `:` type($tensor) `,`"
-			" type($indices) `,` type($values) `,` type($filled) `,`"
-			" type($added) `,` type($count)";
+                       " $added `,` $count attr-dict `:` type($tensor) `,`"
+                       " type($indices) `,` type($values) `,` type($filled) `,`"
+                       " type($added) `,` type($count)";
 }
 
 def SparseTensor_LoadOp : SparseTensor_Op<"load", [SameOperandsAndResultType]>,
@@ -395,8 +395,9 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
       ```mlir
       %C = bufferization.alloc_tensor...
       %0 = linalg.generic #trait
-        ins(%A: tensor<?xf64, #SparseVec>, %B: tensor<?xf64, #SparseVec>)
-        outs(%C: tensor<?xi8, #SparseVec>) {
+        ins(%A: tensor<?xf64, #SparseVector>,
+            %B: tensor<?xf64, #SparseVector>)
+        outs(%C: tensor<?xi8, #SparseVector>) {
         ^bb0(%a: f64, %b: f64, %c: i8) :
           %result = sparse_tensor.binary %a, %b : f64, f64 to i8
             overlap={
@@ -408,7 +409,7 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
             left={}
             right={}
           linalg.yield %result : i8
-      } -> tensor<?xi8, #SparseVec>
+      } -> tensor<?xi8, #SparseVector>
       ```
 
       Example of A+B in upper triangle, A-B in lower triangle:
@@ -497,8 +498,8 @@ def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [NoSideEffect]>,
       ```mlir
       %C = bufferization.alloc_tensor...
       %0 = linalg.generic #trait
-        ins(%A: tensor<?xf64, #SparseVec>)
-        outs(%C: tensor<?xf64, #SparseVec>) {
+         ins(%A: tensor<?xf64, #SparseVector>)
+        outs(%C: tensor<?xf64, #SparseVector>) {
         ^bb0(%a: f64, %c: f64) :
           %result = sparse_tensor.unary %a : f64 to f64
             present={
@@ -509,7 +510,7 @@ def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [NoSideEffect]>,
             }
             absent={}
           linalg.yield %result : f64
-      } -> tensor<?xf64, #SparseVec>
+      } -> tensor<?xf64, #SparseVector>
       ```
 
       Example returning +1 for existing values and -1 for missing values:
@@ -574,8 +575,8 @@ def SparseTensor_ReduceOp : SparseTensor_Op<"reduce", [NoSideEffect, SameOperand
       %cf100 = arith.constant 100.0 : f64
       %C = bufferization.alloc_tensor...
       %0 = linalg.generic #trait
-        ins(%A: tensor<?x?xf64, #SparseMatrix>)
-        outs(%C: tensor<?xf64, #SparseVec>) {
+         ins(%A: tensor<?x?xf64, #SparseMatrix>)
+        outs(%C: tensor<?xf64, #SparseVector>) {
         ^bb0(%a: f64, %c: f64) :
           %result = sparse_tensor.reduce %c, %a, %cf1 : f64 {
               ^bb0(%arg0: f64, %arg1: f64):
@@ -585,7 +586,7 @@ def SparseTensor_ReduceOp : SparseTensor_Op<"reduce", [NoSideEffect, SameOperand
                 sparse_tensor.yield %ret : f64
             }
           linalg.yield %result : f64
-      } -> tensor<?xf64, #SparseVec>
+      } -> tensor<?xf64, #SparseVector>
       ```
   }];
 
