@@ -629,6 +629,10 @@ public:
                              [](const HostAssocDetails &x) {
                                return x.symbol().HasExplicitInterface();
                              },
+                             [](const GenericDetails &x) {
+                               return x.specific() &&
+                                   x.specific()->HasExplicitInterface();
+                             },
                              [](const auto &) { return false; },
                          },
         details_);

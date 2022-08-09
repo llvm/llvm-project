@@ -57,7 +57,7 @@ module m
     integer :: i
   contains
     !ERROR: 'proc' must be an abstract interface or a procedure with an explicit interface
-    !ERROR: Procedure component 'p1' has invalid interface 'proc'
+    !ERROR: Procedure component 'p1' must have NOPASS attribute or explicit interface
     procedure(proc), deferred :: p1
   end type t1
 
