@@ -147,6 +147,12 @@ approved. If unsure, the reviewer should provide a qualified approval, (e.g.,
 you are fairly certain that a particular community member will wish to review,
 even if that person hasn't done so yet.
 
+If you approve of the idea/concept of a patch but feel unqualified to approve,
+another option (other than accepting the patch) is to simply *"Award Token"*
+(right-hand side in Phabricator) to indicate support without indicating to
+other reviewers that the patch has been accepted and reviewed in their
+dashboard.
+
 Note that, if a reviewer has requested a particular community member to review,
 and after a week that community member has yet to respond, feel free to ping
 the patch (which literally means submitting a comment on the patch with the
