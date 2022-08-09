@@ -943,8 +943,7 @@ public:
             auto max = rewriter.create<arith::ConstantIntOp>(
                 loc, APInt::getSignedMaxValue(outBitwidth).getSExtValue(),
                 accETy);
-            auto clamp = clampHelper<arith::CmpIOp>(
-                loc, scaled, min, max, arith::CmpIPredicate::slt, rewriter);
+            auto clamp = clampIntHelper(loc, scaled, min, max, rewriter);
 
             poolVal = clamp;
             // Convert type.
