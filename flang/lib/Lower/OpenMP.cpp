@@ -783,28 +783,50 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   }
 }
 
+/// This function returns the identity value of the operator \p reductionOpName.
+/// For example:
+///    0 + x = x,
+///    1 * x = x
+static int getOperationIdentity(llvm::StringRef reductionOpName,
+                                mlir::Location loc) {
+  if (reductionOpName.contains("add"))
+    return 0;
+  else if (reductionOpName.contains("multiply"))
+    return 1;
+  TODO(loc, "Reduction of some intrinsic operators is not supported");
+}
+
+static Value getReductionInitValue(mlir::Location loc, mlir::Type type,
+                                   llvm::StringRef reductionOpName,
+                                   fir::FirOpBuilder &builder) {
+  return builder.create<mlir::arith::ConstantOp>(
+      loc, type,
+      builder.getIntegerAttr(type, getOperationIdentity(reductionOpName, loc)));
+}
+
 /// Creates an OpenMP reduction declaration and inserts it into the provided
 /// symbol table. The declaration has a constant initializer with the neutral
 /// value `initValue`, and the reduction combiner carried over from `reduce`.
 /// TODO: Generalize this for non-integer types, add atomic region.
-static omp::ReductionDeclareOp createReductionDecl(fir::FirOpBuilder &builder,
-                                                   llvm::StringRef name,
-                                                   mlir::Type type,
-                                                   mlir::Location loc) {
+static omp::ReductionDeclareOp createReductionDecl(
+    fir::FirOpBuilder &builder, llvm::StringRef reductionOpName,
+    Fortran::parser::DefinedOperator::IntrinsicOperator intrinsicOp,
+    mlir::Type type, mlir::Location loc) {
   OpBuilder::InsertionGuard guard(builder);
   mlir::ModuleOp module = builder.getModule();
   mlir::OpBuilder modBuilder(module.getBodyRegion());
-  auto decl = module.lookupSymbol<mlir::omp::ReductionDeclareOp>(name);
+  auto decl =
+      module.lookupSymbol<mlir::omp::ReductionDeclareOp>(reductionOpName);
   if (!decl)
-    decl = modBuilder.create<omp::ReductionDeclareOp>(loc, name, type);
+    decl =
+        modBuilder.create<omp::ReductionDeclareOp>(loc, reductionOpName, type);
   else
     return decl;
 
   builder.createBlock(&decl.initializerRegion(), decl.initializerRegion().end(),
                       {type}, {loc});
   builder.setInsertionPointToEnd(&decl.initializerRegion().back());
-  Value init = builder.create<mlir::arith::ConstantOp>(
-      loc, type, builder.getIntegerAttr(type, 0));
+  Value init = getReductionInitValue(loc, type, reductionOpName, builder);
   builder.create<omp::YieldOp>(loc, init);
 
   builder.createBlock(&decl.reductionRegion(), decl.reductionRegion().end(),
@@ -812,8 +834,20 @@ static omp::ReductionDeclareOp createReductionDecl(fir::FirOpBuilder &builder,
   builder.setInsertionPointToEnd(&decl.reductionRegion().back());
   mlir::Value op1 = decl.reductionRegion().front().getArgument(0);
   mlir::Value op2 = decl.reductionRegion().front().getArgument(1);
-  Value addRes = builder.create<mlir::arith::AddIOp>(loc, op1, op2);
-  builder.create<omp::YieldOp>(loc, addRes);
+
+  Value res;
+  switch (intrinsicOp) {
+  case Fortran::parser::DefinedOperator::IntrinsicOperator::Add:
+    res = builder.create<mlir::arith::AddIOp>(loc, op1, op2);
+    break;
+  case Fortran::parser::DefinedOperator::IntrinsicOperator::Multiply:
+    res = builder.create<mlir::arith::MulIOp>(loc, op1, op2);
+    break;
+  default:
+    TODO(loc, "Reduction of some intrinsic operators is not supported");
+  }
+
+  builder.create<omp::YieldOp>(loc, res);
   return decl;
 }
 
@@ -885,10 +919,18 @@ static std::string getReductionName(
     Fortran::parser::DefinedOperator::IntrinsicOperator intrinsicOp,
     mlir::Type ty) {
   std::string reductionName;
-  if (intrinsicOp == Fortran::parser::DefinedOperator::IntrinsicOperator::Add)
+
+  switch (intrinsicOp) {
+  case Fortran::parser::DefinedOperator::IntrinsicOperator::Add:
     reductionName = "add_reduction";
-  else
+    break;
+  case Fortran::parser::DefinedOperator::IntrinsicOperator::Multiply:
+    reductionName = "multiply_reduction";
+    break;
+  default:
     reductionName = "other_reduction";
+    break;
+  }
 
   return (llvm::Twine(reductionName) +
           (ty.isIntOrIndex() ? llvm::Twine("_i_") : llvm::Twine("_f_")) +
@@ -990,10 +1032,16 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         const auto &intrinsicOp{
             std::get<Fortran::parser::DefinedOperator::IntrinsicOperator>(
                 redDefinedOp->u)};
-        if (intrinsicOp !=
-            Fortran::parser::DefinedOperator::IntrinsicOperator::Add)
+        switch (intrinsicOp) {
+        case Fortran::parser::DefinedOperator::IntrinsicOperator::Add:
+        case Fortran::parser::DefinedOperator::IntrinsicOperator::Multiply:
+          break;
+
+        default:
           TODO(currentLocation,
                "Reduction of some intrinsic operators is not supported");
+          break;
+        }
         for (const auto &ompObject : objectList.v) {
           if (const auto *name{
                   Fortran::parser::Unwrap<Fortran::parser::Name>(ompObject)}) {
@@ -1005,7 +1053,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
               if (redType.isIntOrIndex()) {
                 decl = createReductionDecl(
                     firOpBuilder, getReductionName(intrinsicOp, redType),
-                    redType, currentLocation);
+                    intrinsicOp, redType, currentLocation);
               } else {
                 TODO(currentLocation,
                      "Reduction of some types is not supported");
@@ -1604,8 +1652,8 @@ void Fortran::lower::genOpenMPDeclarativeConstruct(
 // Generate an OpenMP reduction operation. This implementation finds the chain :
 // load reduction var -> reduction_operation -> store reduction var and replaces
 // it with the reduction operation.
-// TODO: Currently assumes it is an integer addition reduction. Generalize this
-// for various reduction operation types.
+// TODO: Currently assumes it is an integer addition/multiplication reduction.
+// Generalize this for various reduction operation types.
 // TODO: Generate the reduction operation during lowering instead of creating
 // and removing operations since this is not a robust approach. Also, removing
 // ops in the builder (instead of a rewriter) is probably not the best approach.
@@ -1626,9 +1674,14 @@ void Fortran::lower::genOpenMPReduction(
         const auto &intrinsicOp{
             std::get<Fortran::parser::DefinedOperator::IntrinsicOperator>(
                 reductionOp->u)};
-        if (intrinsicOp !=
-            Fortran::parser::DefinedOperator::IntrinsicOperator::Add)
+
+        switch (intrinsicOp) {
+        case Fortran::parser::DefinedOperator::IntrinsicOperator::Add:
+        case Fortran::parser::DefinedOperator::IntrinsicOperator::Multiply:
+          break;
+        default:
           continue;
+        }
         for (const auto &ompObject : objectList.v) {
           if (const auto *name{
                   Fortran::parser::Unwrap<Fortran::parser::Name>(ompObject)}) {
