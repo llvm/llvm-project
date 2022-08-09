@@ -89,12 +89,9 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     auto resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
                                                      {valueTy, predTy});
 
-    Value one = rewriter.create<LLVM::ConstantOp>(
-        loc, int32Type, rewriter.getI32IntegerAttr(1));
-    Value minusOne = rewriter.create<LLVM::ConstantOp>(
-        loc, int32Type, rewriter.getI32IntegerAttr(-1));
-    Value thirtyTwo = rewriter.create<LLVM::ConstantOp>(
-        loc, int32Type, rewriter.getI32IntegerAttr(32));
+    Value one = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 1);
+    Value minusOne = rewriter.create<LLVM::ConstantOp>(loc, int32Type, -1);
+    Value thirtyTwo = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 32);
     Value numLeadInactiveLane = rewriter.create<LLVM::SubOp>(
         loc, int32Type, thirtyTwo, adaptor.width());
     // Bit mask of active lanes: `(-1) >> (32 - activeWidth)`.

@@ -53,8 +53,7 @@ static mlir::LLVM::ConstantOp
 genConstantIndex(mlir::Location loc, mlir::Type ity,
                  mlir::ConversionPatternRewriter &rewriter,
                  std::int64_t offset) {
-  auto cattr = rewriter.getI64IntegerAttr(offset);
-  return rewriter.create<mlir::LLVM::ConstantOp>(loc, ity, cattr);
+  return rewriter.create<mlir::LLVM::ConstantOp>(loc, ity, offset);
 }
 
 static mlir::Block *createBlock(mlir::ConversionPatternRewriter &rewriter,
@@ -102,8 +101,7 @@ protected:
   genI32Constant(mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
                  int value) const {
     mlir::Type i32Ty = rewriter.getI32Type();
-    mlir::IntegerAttr attr = rewriter.getI32IntegerAttr(value);
-    return rewriter.create<mlir::LLVM::ConstantOp>(loc, i32Ty, attr);
+    return rewriter.create<mlir::LLVM::ConstantOp>(loc, i32Ty, value);
   }
 
   mlir::LLVM::ConstantOp
@@ -111,8 +109,7 @@ protected:
                     mlir::ConversionPatternRewriter &rewriter,
                     int offset) const {
     mlir::Type ity = lowerTy().offsetType();
-    mlir::IntegerAttr cattr = rewriter.getI32IntegerAttr(offset);
-    return rewriter.create<mlir::LLVM::ConstantOp>(loc, ity, cattr);
+    return rewriter.create<mlir::LLVM::ConstantOp>(loc, ity, offset);
   }
 
   /// Perform an extension or truncation as needed on an integer value. Lowering
@@ -630,13 +627,11 @@ struct StringLitOpConversion : public FIROpConversion<fir::StringLitOp> {
     if (auto arr = attr.dyn_cast<mlir::DenseElementsAttr>()) {
       cst = rewriter.create<mlir::LLVM::ConstantOp>(loc, ty, arr);
     } else if (auto arr = attr.dyn_cast<mlir::ArrayAttr>()) {
-      for (auto a : llvm::enumerate(arr.getValue())) {
+      for (auto &a :
+           llvm::enumerate(arr.getAsValueRange<mlir::IntegerAttr>())) {
         // convert each character to a precise bitsize
-        auto elemAttr = mlir::IntegerAttr::get(
-            intTy,
-            a.value().cast<mlir::IntegerAttr>().getValue().zextOrTrunc(bits));
-        auto elemCst =
-            rewriter.create<mlir::LLVM::ConstantOp>(loc, intTy, elemAttr);
+        auto elemCst = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, intTy, a.value().zextOrTrunc(bits));
         auto index = mlir::ArrayAttr::get(
             constop.getContext(), rewriter.getI32IntegerAttr(a.index()));
         cst = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ty, cst, elemCst,
@@ -733,12 +728,10 @@ struct ConstcOpConversion : public FIROpConversion<fir::ConstcOp> {
     mlir::MLIRContext *ctx = conc.getContext();
     mlir::Type ty = convertType(conc.getType());
     mlir::Type ety = convertType(getComplexEleTy(conc.getType()));
-    auto realFloatAttr = mlir::FloatAttr::get(ety, getValue(conc.getReal()));
-    auto realPart =
-        rewriter.create<mlir::LLVM::ConstantOp>(loc, ety, realFloatAttr);
-    auto imFloatAttr = mlir::FloatAttr::get(ety, getValue(conc.getImaginary()));
-    auto imPart =
-        rewriter.create<mlir::LLVM::ConstantOp>(loc, ety, imFloatAttr);
+    auto realPart = rewriter.create<mlir::LLVM::ConstantOp>(
+        loc, ety, getValue(conc.getReal()));
+    auto imPart = rewriter.create<mlir::LLVM::ConstantOp>(
+        loc, ety, getValue(conc.getImaginary()));
     auto realIndex = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(0));
     auto imIndex = mlir::ArrayAttr::get(ctx, rewriter.getI32IntegerAttr(1));
     auto undef = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);

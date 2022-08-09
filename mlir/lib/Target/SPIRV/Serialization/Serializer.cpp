@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
@@ -23,6 +24,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/Debug.h"
+#include <cstdint>
 
 #define DEBUG_TYPE "spirv-serialization"
 
@@ -192,8 +194,11 @@ void Serializer::processExtension() {
 }
 
 void Serializer::processMemoryModel() {
-  uint32_t mm = module->getAttrOfType<IntegerAttr>("memory_model").getInt();
-  uint32_t am = module->getAttrOfType<IntegerAttr>("addressing_model").getInt();
+  auto mm = static_cast<uint32_t>(
+      module->getAttrOfType<spirv::MemoryModelAttr>("memory_model").getValue());
+  auto am = static_cast<uint32_t>(
+      module->getAttrOfType<spirv::AddressingModelAttr>("addressing_model")
+          .getValue());
 
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
 }

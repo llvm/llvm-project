@@ -903,7 +903,9 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"random_seed",
      &I::genRandomSeed,
-     {{{"size", asBox}, {"put", asBox}, {"get", asBox}}},
+     {{{"size", asBox, handleDynamicOptional},
+       {"put", asBox, handleDynamicOptional},
+       {"get", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"repeat",
      &I::genRepeat,
@@ -3672,12 +3674,16 @@ void IntrinsicLibrary::genRandomNumber(
 // RANDOM_SEED
 void IntrinsicLibrary::genRandomSeed(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
-  for (int i = 0; i < 3; ++i)
-    if (isStaticallyPresent(args[i])) {
-      Fortran::lower::genRandomSeed(builder, loc, i, fir::getBase(args[i]));
-      return;
-    }
-  Fortran::lower::genRandomSeed(builder, loc, -1, mlir::Value{});
+  mlir::Type boxNoneTy = fir::BoxType::get(builder.getNoneType());
+  auto getDesc = [&](int i) {
+    return isStaticallyPresent(args[i])
+               ? fir::getBase(args[i])
+               : builder.create<fir::AbsentOp>(loc, boxNoneTy).getResult();
+  };
+  mlir::Value size = getDesc(0);
+  mlir::Value put = getDesc(1);
+  mlir::Value get = getDesc(2);
+  Fortran::lower::genRandomSeed(builder, loc, size, put, get);
 }
 
 // REPEAT

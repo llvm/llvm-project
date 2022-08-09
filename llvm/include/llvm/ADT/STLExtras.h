@@ -1982,6 +1982,16 @@ private:
   IterOfRange<R> Iter;
 };
 
+template <std::size_t i, typename R>
+decltype(auto) get(const result_pair<R> &Pair) {
+  static_assert(i < 2);
+  if constexpr (i == 0) {
+    return Pair.index();
+  } else {
+    return Pair.value();
+  }
+}
+
 template <typename R>
 class enumerator_iter
     : public iterator_facade_base<enumerator_iter<R>, std::forward_iterator_tag,
@@ -2052,6 +2062,12 @@ private:
 /// std::vector<char> Items = {'A', 'B', 'C', 'D'};
 /// for (auto X : enumerate(Items)) {
 ///   printf("Item %d - %c\n", X.index(), X.value());
+/// }
+///
+/// or using structured bindings:
+///
+/// for (auto [Index, Value] : enumerate(Items)) {
+///   printf("Item %d - %c\n", Index, Value);
 /// }
 ///
 /// Output:
@@ -2191,5 +2207,18 @@ template <class Ptr> auto to_address(const Ptr &P) { return P.operator->(); }
 template <class T> constexpr T *to_address(T *P) { return P; }
 
 } // end namespace llvm
+
+namespace std {
+template <typename R>
+struct tuple_size<llvm::detail::result_pair<R>>
+    : std::integral_constant<std::size_t, 2> {};
+
+template <std::size_t i, typename R>
+struct tuple_element<i, llvm::detail::result_pair<R>>
+    : std::conditional<i == 0, std::size_t,
+                       typename llvm::detail::result_pair<R>::value_reference> {
+};
+
+} // namespace std
 
 #endif // LLVM_ADT_STLEXTRAS_H
