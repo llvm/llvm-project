@@ -131,22 +131,48 @@ ConstantOpLowering::matchAndRewrite(arith::ConstantOp op, OpAdaptor adaptor,
 LogicalResult IndexCastOpLowering::matchAndRewrite(
     arith::IndexCastOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  auto targetType = typeConverter->convertType(op.getResult().getType());
+  auto resultType = op.getResult().getType();
   auto targetElementType =
-      typeConverter->convertType(getElementTypeOrSelf(op.getResult()))
-          .cast<IntegerType>();
+      typeConverter->convertType(getElementTypeOrSelf(resultType));
   auto sourceElementType =
-      getElementTypeOrSelf(adaptor.getIn()).cast<IntegerType>();
-  unsigned targetBits = targetElementType.getWidth();
-  unsigned sourceBits = sourceElementType.getWidth();
+      typeConverter->convertType(getElementTypeOrSelf(op.getIn()));
+  unsigned targetBits = targetElementType.getIntOrFloatBitWidth();
+  unsigned sourceBits = sourceElementType.getIntOrFloatBitWidth();
 
-  if (targetBits == sourceBits)
+  if (targetBits == sourceBits) {
     rewriter.replaceOp(op, adaptor.getIn());
-  else if (targetBits < sourceBits)
-    rewriter.replaceOpWithNewOp<LLVM::TruncOp>(op, targetType, adaptor.getIn());
-  else
-    rewriter.replaceOpWithNewOp<LLVM::SExtOp>(op, targetType, adaptor.getIn());
-  return success();
+    return success();
+  }
+
+  // Handle the scalar and 1D vector cases.
+  auto operandType = adaptor.getIn().getType();
+  if (!operandType.isa<LLVM::LLVMArrayType>()) {
+    auto targetType = typeConverter->convertType(resultType);
+    if (targetBits < sourceBits)
+      rewriter.replaceOpWithNewOp<LLVM::TruncOp>(op, targetType,
+                                                 adaptor.getIn());
+    else
+      rewriter.replaceOpWithNewOp<LLVM::SExtOp>(op, targetType,
+                                                adaptor.getIn());
+    return success();
+  }
+
+  auto vectorType = resultType.dyn_cast<VectorType>();
+  if (!vectorType)
+    return rewriter.notifyMatchFailure(op, "expected vector result type");
+
+  return LLVM::detail::handleMultidimensionalVectors(
+      op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
+      [&](Type llvm1DVectorTy, ValueRange operands) -> Value {
+        OpAdaptor adaptor(operands);
+        if (targetBits < sourceBits) {
+          return rewriter.create<LLVM::TruncOp>(op.getLoc(), llvm1DVectorTy,
+                                                adaptor.getIn());
+        }
+        return rewriter.create<LLVM::SExtOp>(op.getLoc(), llvm1DVectorTy,
+                                             adaptor.getIn());
+      },
+      rewriter);
 }
 
 //===----------------------------------------------------------------------===//
