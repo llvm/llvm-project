@@ -190,10 +190,10 @@ module ieee_arithmetic
     integer(RKIND), intent(in) :: radix; \
   end subroutine ieee_get_rounding_mode_i##RKIND;
   interface ieee_get_rounding_mode
-    subroutine ieee_get_rounding_mode(round_value)
+    subroutine ieee_get_rounding_mode_0(round_value)
       import ieee_round_type
       type(ieee_round_type), intent(out) :: round_value
-    end subroutine ieee_get_rounding_mode
+    end subroutine ieee_get_rounding_mode_0
     SPECIFICS_I(IEEE_GET_ROUNDING_MODE_I)
   end interface ieee_get_rounding_mode
   PRIVATE_I(IEEE_GET_ROUNDING_MODE)
@@ -418,10 +418,10 @@ module ieee_arithmetic
     integer(RKIND), intent(in) :: radix; \
   end subroutine ieee_set_rounding_mode_i##RKIND;
   interface ieee_set_rounding_mode
-    subroutine ieee_set_rounding_mode(round_value)
+    subroutine ieee_set_rounding_mode_0(round_value)
       import ieee_round_type
       type(ieee_round_type), intent(in) :: round_value
-    end subroutine ieee_set_rounding_mode
+    end subroutine ieee_set_rounding_mode_0
     SPECIFICS_I(IEEE_SET_ROUNDING_MODE_I)
   end interface ieee_set_rounding_mode
   PRIVATE_I(IEEE_SET_ROUNDING_MODE)
@@ -514,10 +514,10 @@ module ieee_arithmetic
     real(XKIND), intent(in) :: x(..); \
   end function ieee_support_rounding_a##XKIND;
   interface ieee_support_rounding
-    pure logical function ieee_support_rounding(round_value)
+    pure logical function ieee_support_rounding_0(round_value)
       import ieee_round_type
       type(ieee_round_type), intent(in) :: round_value
-    end function ieee_support_rounding
+    end function ieee_support_rounding_0
     SPECIFICS_R(IEEE_SUPPORT_ROUNDING_R)
   end interface ieee_support_rounding
   PRIVATE_R(IEEE_SUPPORT_ROUNDING)
