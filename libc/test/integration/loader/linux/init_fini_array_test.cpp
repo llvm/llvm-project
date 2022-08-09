@@ -8,6 +8,10 @@
 
 #include "utils/IntegrationTest/test.h"
 
+#include <stddef.h>
+
+int global_destroyed = false;
+
 class A {
 private:
   int val[1024];
@@ -19,10 +23,7 @@ public:
     val[i] = a;
   }
 
-  // TODO: When we have implementation for __cxa_atexit, an explicit definition
-  // of the destructor should be provided to test that path of registering the
-  // destructor callback for a global.
-  ~A() = default;
+  ~A() { global_destroyed = true; }
 
   int get(int i) const { return val[i]; }
 };
@@ -33,14 +34,23 @@ int INITVAL_INITIALIZER = 0x600D;
 A global(GLOBAL_INDEX, INITVAL_INITIALIZER);
 
 int initval = 0;
+int preinitval = 0;
+
 __attribute__((constructor)) void set_initval() {
   initval = INITVAL_INITIALIZER;
 }
-__attribute__((destructor)) void reset_initval() { initval = 0; }
+__attribute__((destructor(1))) void reset_initval() {
+  ASSERT_TRUE(global_destroyed);
+  ASSERT_EQ(preinitval, 0);
+  initval = 0;
+}
 
-int preinitval = 0;
 void set_preinitval() { preinitval = INITVAL_INITIALIZER; }
-__attribute__((destructor)) void reset_preinitval() { preinitval = 0; }
+__attribute__((destructor(2))) void reset_preinitval() {
+  ASSERT_TRUE(global_destroyed);
+  ASSERT_EQ(initval, INITVAL_INITIALIZER);
+  preinitval = 0;
+}
 
 using PreInitFunc = void();
 __attribute__((section(".preinit_array"))) PreInitFunc *preinit_func_ptr =
