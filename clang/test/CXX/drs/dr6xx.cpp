@@ -911,9 +911,9 @@ namespace dr674 { // dr674: 8
 namespace dr675 { // dr675: dup 739
   template<typename T> struct A { T n : 1; };
 #if __cplusplus >= 201103L
-  static_assert(A<char>{1}.n < 0, "");
-  static_assert(A<int>{1}.n < 0, "");
-  static_assert(A<long long>{1}.n < 0, "");
+  static_assert(A<char>{1}.n < 0, ""); // expected-warning {{implicit truncation from 'int' to bit-field changes value from 1 to -1}}
+  static_assert(A<int>{1}.n < 0, ""); // expected-warning {{implicit truncation from 'int' to bit-field changes value from 1 to -1}}
+  static_assert(A<long long>{1}.n < 0, ""); // expected-warning {{implicit truncation from 'int' to bit-field changes value from 1 to -1}}
 #endif
 }
 

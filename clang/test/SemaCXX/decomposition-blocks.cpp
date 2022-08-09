@@ -7,7 +7,7 @@ struct S {
 
 void run(void (^)());
 void test() {
-  auto [i, j] = S{1, 42}; // expected-note {{'i' declared here}}
+  auto [i, j] = S{-1, 42}; // expected-note {{'i' declared here}}
   run(^{
     (void)i; // expected-error {{reference to local binding 'i' declared in enclosing function 'test'}}
   });

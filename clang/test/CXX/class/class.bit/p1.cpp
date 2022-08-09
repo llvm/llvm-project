@@ -9,11 +9,11 @@ struct A {
   int [[]] c : 1; // OK, attribute applies to the type.
   int : 2 = 1; // expected-error {{anonymous bit-field cannot have a default member initializer}}
   int : 0 { 1 }; // expected-error {{anonymous bit-field cannot have a default member initializer}}
-  int : 0, d : 1 = 1;
+  unsigned int : 0, d : 1 = 1;
   int : 1 = 12, e : 1; // expected-error {{anonymous bit-field cannot have a default member initializer}}
-  int : 0, f : 1 = 1;
-  int g [[]] : 1 = 1;
-  int h [[]] : 1 {1};
-  int i : foo() = foo();
+  unsigned int : 0, f : 1 = 1;
+  unsigned int g [[]] : 1 = 1;
+  unsigned int h [[]] : 1 {1};
+  unsigned int i : foo() = foo();
   int j, [[]] k; // expected-error {{an attribute list cannot appear here}}
 };
