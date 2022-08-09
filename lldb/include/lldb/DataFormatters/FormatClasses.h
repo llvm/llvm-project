@@ -43,20 +43,48 @@ public:
 
 class FormattersMatchCandidate {
 public:
-  FormattersMatchCandidate(ConstString name, bool strip_ptr,
-                           bool strip_ref, bool strip_tydef)
-      : m_type_name(name), m_stripped_pointer(strip_ptr),
-        m_stripped_reference(strip_ref), m_stripped_typedef(strip_tydef) {}
+  // Contains flags to indicate how this candidate was generated (e.g. if
+  // typedefs were stripped, or pointers were skipped). These are later compared
+  // to flags in formatters to confirm a string match.
+  struct Flags {
+    bool stripped_pointer = false;
+    bool stripped_reference = false;
+    bool stripped_typedef = false;
+
+    // Returns a copy of this with the "stripped pointer" flag set.
+    Flags WithStrippedPointer() {
+      Flags result(*this);
+      result.stripped_pointer = true;
+      return result;
+    }
+
+    // Returns a copy of this with the "stripped reference" flag set.
+    Flags WithStrippedReference() {
+      Flags result(*this);
+      result.stripped_reference = true;
+      return result;
+    }
+
+    // Returns a copy of this with the "stripped typedef" flag set.
+    Flags WithStrippedTypedef() {
+      Flags result(*this);
+      result.stripped_typedef = true;
+      return result;
+    }
+  };
+
+  FormattersMatchCandidate(ConstString name, Flags flags)
+      : m_type_name(name), m_flags(flags) {}
 
   ~FormattersMatchCandidate() = default;
 
   ConstString GetTypeName() const { return m_type_name; }
 
-  bool DidStripPointer() const { return m_stripped_pointer; }
+  bool DidStripPointer() const { return m_flags.stripped_pointer; }
 
-  bool DidStripReference() const { return m_stripped_reference; }
+  bool DidStripReference() const { return m_flags.stripped_reference; }
 
-  bool DidStripTypedef() const { return m_stripped_typedef; }
+  bool DidStripTypedef() const { return m_flags.stripped_typedef; }
 
   template <class Formatter>
   bool IsMatch(const std::shared_ptr<Formatter> &formatter_sp) const {
@@ -73,9 +101,7 @@ public:
 
 private:
   ConstString m_type_name;
-  bool m_stripped_pointer;
-  bool m_stripped_reference;
-  bool m_stripped_typedef;
+  Flags m_flags;
 };
 
 typedef std::vector<FormattersMatchCandidate> FormattersMatchVector;
