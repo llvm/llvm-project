@@ -801,7 +801,7 @@ public:
       // reuse the information about UseStmt for DefStmt
       DefStmt = UseStmt;
 
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case VirtualUse::Inter:
       Instruction *Inst = cast<Instruction>(UseVal);
 

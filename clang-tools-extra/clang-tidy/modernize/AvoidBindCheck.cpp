@@ -699,7 +699,7 @@ void AvoidBindCheck::check(const MatchFinder::MatchResult &Result) {
         Stream << "(" << LP.Callable.UsageIdentifier << ")";
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case CE_InitExpression:
       Stream << LP.Callable.UsageIdentifier;
       break;
