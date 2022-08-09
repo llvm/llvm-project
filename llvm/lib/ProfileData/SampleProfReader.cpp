@@ -30,6 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MD5.h"
@@ -70,6 +71,79 @@ void SampleProfileReader::dump(raw_ostream &OS) {
   sortFuncProfiles(Profiles, V);
   for (const auto &I : V)
     dumpFunctionProfile(I.first, OS);
+}
+
+static void dumpFunctionProfileJson(const FunctionSamples &S,
+                                    json::OStream &JOS, bool TopLevel = false) {
+  auto DumpBody = [&](const BodySampleMap &BodySamples) {
+    for (const auto &I : BodySamples) {
+      const LineLocation &Loc = I.first;
+      const SampleRecord &Sample = I.second;
+      JOS.object([&] {
+        JOS.attribute("line", Loc.LineOffset);
+        if (Loc.Discriminator)
+          JOS.attribute("discriminator", Loc.Discriminator);
+        JOS.attribute("samples", Sample.getSamples());
+
+        auto CallTargets = Sample.getSortedCallTargets();
+        if (!CallTargets.empty()) {
+          JOS.attributeArray("calls", [&] {
+            for (const auto &J : CallTargets) {
+              JOS.object([&] {
+                JOS.attribute("function", J.first);
+                JOS.attribute("samples", J.second);
+              });
+            }
+          });
+        }
+      });
+    }
+  };
+
+  auto DumpCallsiteSamples = [&](const CallsiteSampleMap &CallsiteSamples) {
+    for (const auto &I : CallsiteSamples)
+      for (const auto &FS : I.second) {
+        const LineLocation &Loc = I.first;
+        const FunctionSamples &CalleeSamples = FS.second;
+        JOS.object([&] {
+          JOS.attribute("line", Loc.LineOffset);
+          if (Loc.Discriminator)
+            JOS.attribute("discriminator", Loc.Discriminator);
+          JOS.attributeArray(
+              "samples", [&] { dumpFunctionProfileJson(CalleeSamples, JOS); });
+        });
+      }
+  };
+
+  JOS.object([&] {
+    JOS.attribute("name", S.getName());
+    JOS.attribute("total", S.getTotalSamples());
+    if (TopLevel)
+      JOS.attribute("head", S.getHeadSamples());
+
+    const auto &BodySamples = S.getBodySamples();
+    if (!BodySamples.empty())
+      JOS.attributeArray("body", [&] { DumpBody(BodySamples); });
+
+    const auto &CallsiteSamples = S.getCallsiteSamples();
+    if (!CallsiteSamples.empty())
+      JOS.attributeArray("callsites",
+                         [&] { DumpCallsiteSamples(CallsiteSamples); });
+  });
+}
+
+/// Dump all the function profiles found on stream \p OS in the JSON format.
+void SampleProfileReader::dumpJson(raw_ostream &OS) {
+  std::vector<NameFunctionSamples> V;
+  sortFuncProfiles(Profiles, V);
+  json::OStream JOS(OS, 2);
+  JOS.arrayBegin();
+  for (const auto &[FC, FS] : V)
+    dumpFunctionProfileJson(*FS, JOS, true);
+  JOS.arrayEnd();
+
+  // Emit a newline character at the end as json::OStream doesn't emit one.
+  OS << "\n";
 }
 
 /// Parse \p Input as function head.
