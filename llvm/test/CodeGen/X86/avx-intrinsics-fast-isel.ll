@@ -2967,13 +2967,6 @@ define i32 @test_mm256_testz_si256(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 }
 declare i32 @llvm.x86.avx.ptestz.256(<4 x i64>, <4 x i64>) nounwind readnone
 
-define <2 x double> @test_mm_undefined_pd() nounwind {
-; CHECK-LABEL: test_mm_undefined_pd:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret{{[l|q]}}
-  ret <2 x double> undef
-}
-
 define <4 x double> @test_mm256_undefined_pd() nounwind {
 ; CHECK-LABEL: test_mm256_undefined_pd:
 ; CHECK:       # %bb.0:
