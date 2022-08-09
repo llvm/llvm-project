@@ -1465,6 +1465,10 @@ public:
   /// to a stack reload.
   unsigned getGISelRematGlobalCost() const;
 
+  /// \returns the lower bound of a trip count to decide on vectorization
+  /// while tail-folding.
+  unsigned getMinTripCountTailFoldingThreshold() const;
+
   /// \returns True if the target supports scalable vectors.
   bool supportsScalableVectors() const;
 
@@ -1863,6 +1867,7 @@ public:
                                                ReductionFlags) const = 0;
   virtual bool shouldExpandReduction(const IntrinsicInst *II) const = 0;
   virtual unsigned getGISelRematGlobalCost() const = 0;
+  virtual unsigned getMinTripCountTailFoldingThreshold() const = 0;
   virtual bool enableScalableVectorization() const = 0;
   virtual bool supportsScalableVectors() const = 0;
   virtual bool hasActiveVectorLength(unsigned Opcode, Type *DataType,
@@ -2500,6 +2505,10 @@ public:
 
   unsigned getGISelRematGlobalCost() const override {
     return Impl.getGISelRematGlobalCost();
+  }
+
+  unsigned getMinTripCountTailFoldingThreshold() const override {
+    return Impl.getMinTripCountTailFoldingThreshold();
   }
 
   bool supportsScalableVectors() const override {
