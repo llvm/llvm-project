@@ -425,7 +425,7 @@ public:
 
   /// Finalizes token collection. Should be called after preprocessing is
   /// finished, i.e. after running Execute().
-  LLVM_NODISCARD TokenBuffer consume() &&;
+  [[nodiscard]] TokenBuffer consume() &&;
 
 private:
   /// Maps from a start to an end spelling location of transformations
