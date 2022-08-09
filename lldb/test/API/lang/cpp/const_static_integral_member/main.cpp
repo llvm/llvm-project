@@ -48,7 +48,9 @@ struct A {
 
   const static Enum enum_val = enum_case2;
   const static ScopedEnum scoped_enum_val = ScopedEnum::scoped_enum_case2;
-  const static ScopedEnum invalid_scoped_enum_val = static_cast<ScopedEnum>(5);
+  const static ScopedEnum not_enumerator_scoped_enum_val = static_cast<ScopedEnum>(5);
+  const static ScopedEnum not_enumerator_scoped_enum_val_2 =
+      static_cast<ScopedEnum>(7);
   const static ScopedCharEnum scoped_char_enum_val = ScopedCharEnum::case2;
   const static ScopedLongLongEnum scoped_ll_enum_val_neg =
       ScopedLongLongEnum::case0;
@@ -102,7 +104,7 @@ int main() {
 
   Enum e = A::enum_val;
   ScopedEnum se = A::scoped_enum_val;
-  se = A::invalid_scoped_enum_val;
+  se = A::not_enumerator_scoped_enum_val;
   ScopedCharEnum sce = A::scoped_char_enum_val;
   ScopedLongLongEnum sle = A::scoped_ll_enum_val;
 
