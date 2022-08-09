@@ -21,7 +21,7 @@ class ModuleOp;
 
 /// Creates a pass to map numeric MemRef memory spaces to symbolic SPIR-V
 /// storage classes. The mapping is read from the command-line option.
-std::unique_ptr<OperationPass<ModuleOp>> createMapMemRefStorageClassPass();
+std::unique_ptr<OperationPass<>> createMapMemRefStorageClassPass();
 
 /// Creates a pass to convert MemRef ops to SPIR-V ops.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertMemRefToSPIRVPass();
