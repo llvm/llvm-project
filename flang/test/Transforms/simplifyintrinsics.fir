@@ -320,6 +320,35 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 
 // -----
 
+// Check that the compiler accepts unknown size arrays.
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
+  func.func @sum_dim() {
+    %arr = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+    %var = fir.alloca !fir.array<8x8xi32>  
+    %size = arith.constant 8 : index
+    %c1 = arith.constant 1 : index
+    %c1_i32 = arith.constant 1 : i32
+    %lineno = arith.constant 12 : i32
+    %shape = fir.shape %size, %size : (index, index) -> !fir.shape<2>
+    %slice = fir.slice %c1, %size, %c1, %c1, %size, %c1 : (index, index, index, index, index, index) -> !fir.slice<2>
+    %box_array = fir.embox %var(%shape) [%slice] : (!fir.ref<!fir.array<8x8xi32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xi32>>
+    %box_none = fir.convert %arr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+    %box_none2 = fir.convert %box_array : (!fir.box<!fir.array<?x?xi32>>) -> !fir.box<none>
+    %absent = fir.absent !fir.box<i1>
+    %file = fir.address_of(@filename) : !fir.ref<!fir.char<1,16>>
+    %file_ref = fir.convert %file : (!fir.ref<!fir.char<1,16>>) -> !fir.ref<i8>
+    %absent_none = fir.convert %absent : (!fir.box<i1>) -> !fir.box<none>
+    %res = fir.call @_FortranASumDim(%box_none, %box_none2, %c1_i32, %file_ref, %lineno, %absent_none) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>) -> none
+    func.return
+  }
+}
+
+// Just check that SOMETHING is being output.
+// CHECK-LABEL @sum_dim() {
+// CHECK: return
+
+// -----
+
 func.func @dot_f32(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
   %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
@@ -332,12 +361,6 @@ func.func @dot_f32(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %a
   %6 = fir.load %0 : !fir.ref<f32>
   return %6 : f32
 }
-func.func private @_FortranADotProductReal4(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f32 attributes {fir.runtime}
-fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
-  %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
-  fir.has_value %0 : !fir.char<1,10>
-}
-
 // CHECK-LABEL:   func.func @dot_f32(
 // CHECK-SAME:                      %[[A:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"},
 // CHECK-SAME:                      %[[B:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f32 {

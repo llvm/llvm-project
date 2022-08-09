@@ -302,25 +302,37 @@ mlir::func::FuncOp SimplifyIntrinsicsPass::getOrCreateFunction(
   return newFunc;
 }
 
+fir::ConvertOp expectConvertOp(mlir::Value val) {
+  if (fir::ConvertOp op =
+          mlir::dyn_cast_or_null<fir::ConvertOp>(val.getDefiningOp()))
+    return op;
+  LLVM_DEBUG(llvm::dbgs() << "Didn't find expected fir::ConvertOp\n");
+  return nullptr;
+}
+
 static bool isOperandAbsent(mlir::Value val) {
-  if (mlir::Operation *op = val.getDefiningOp())
+  if (auto op = expectConvertOp(val)) {
+    assert(op->getOperands().size() != 0);
     return mlir::isa_and_nonnull<fir::AbsentOp>(
         op->getOperand(0).getDefiningOp());
+  }
   return false;
 }
 
 static bool isZero(mlir::Value val) {
-  if (mlir::Operation *op = val.getDefiningOp())
+  if (auto op = expectConvertOp(val)) {
+    assert(op->getOperands().size() != 0);
     if (mlir::Operation *defOp = op->getOperand(0).getDefiningOp())
       return mlir::matchPattern(defOp, mlir::m_Zero());
+  }
   return false;
 }
 
 static mlir::Value findShape(mlir::Value val) {
-  mlir::Operation *defOp = val.getDefiningOp();
-  while (defOp) {
-    defOp = defOp->getOperand(0).getDefiningOp();
-    if (fir::EmboxOp box = mlir::dyn_cast_or_null<fir::EmboxOp>(defOp))
+  if (auto op = expectConvertOp(val)) {
+    assert(op->getOperands().size() != 0);
+    if (auto box =
+            mlir::dyn_cast<fir::EmboxOp>(op->getOperand(0).getDefiningOp()))
       return box.getShape();
   }
   return {};
