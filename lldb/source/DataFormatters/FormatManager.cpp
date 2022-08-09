@@ -179,21 +179,18 @@ void FormatManager::DisableAllCategories() {
 void FormatManager::GetPossibleMatches(
     ValueObject &valobj, CompilerType compiler_type,
     lldb::DynamicValueType use_dynamic, FormattersMatchVector &entries,
-    bool did_strip_ptr, bool did_strip_ref, bool did_strip_typedef,
-    bool root_level) {
+    FormattersMatchCandidate::Flags current_flags, bool root_level) {
   compiler_type = compiler_type.GetTypeForFormatters();
   ConstString type_name(compiler_type.GetTypeName());
   if (valobj.GetBitfieldBitSize() > 0) {
     StreamString sstring;
     sstring.Printf("%s:%d", type_name.AsCString(), valobj.GetBitfieldBitSize());
     ConstString bitfieldname(sstring.GetString());
-    entries.push_back(
-        {bitfieldname, did_strip_ptr, did_strip_ref, did_strip_typedef});
+    entries.push_back({bitfieldname, current_flags});
   }
 
   if (!compiler_type.IsMeaninglessWithoutDynamicResolution()) {
-    entries.push_back(
-        {type_name, did_strip_ptr, did_strip_ref, did_strip_typedef});
+    entries.push_back({type_name, current_flags});
 
 // BEGIN SWIFT
     TypeSystem *ts = compiler_type.GetTypeSystem();
@@ -205,8 +202,7 @@ void FormatManager::GetPossibleMatches(
 
       ConstString display_type_name(compiler_type.GetDisplayTypeName(sc));
       if (display_type_name != type_name)
-        entries.push_back({display_type_name, did_strip_ptr, did_strip_ref,
-                           did_strip_typedef});
+        entries.push_back({display_type_name, current_flags});
 // BEGIN SWIFT
     }
 // END SWIFT
@@ -215,35 +211,30 @@ void FormatManager::GetPossibleMatches(
   for (bool is_rvalue_ref = true, j = true;
        j && compiler_type.IsReferenceType(nullptr, &is_rvalue_ref); j = false) {
     CompilerType non_ref_type = compiler_type.GetNonReferenceType();
-    GetPossibleMatches(
-        valobj, non_ref_type,
-        use_dynamic, entries, did_strip_ptr, true, did_strip_typedef);
+    GetPossibleMatches(valobj, non_ref_type, use_dynamic, entries,
+                       current_flags.WithStrippedReference());
     if (non_ref_type.IsTypedefType()) {
       CompilerType deffed_referenced_type = non_ref_type.GetTypedefedType();
       deffed_referenced_type =
           is_rvalue_ref ? deffed_referenced_type.GetRValueReferenceType()
                         : deffed_referenced_type.GetLValueReferenceType();
+      // this is not exactly the usual meaning of stripping typedefs
       GetPossibleMatches(
           valobj, deffed_referenced_type,
-          use_dynamic, entries, did_strip_ptr, did_strip_ref,
-          true); // this is not exactly the usual meaning of stripping typedefs
+          use_dynamic, entries, current_flags.WithStrippedTypedef());
     }
   }
 
   if (compiler_type.IsPointerType()) {
     CompilerType non_ptr_type = compiler_type.GetPointeeType();
-    GetPossibleMatches(
-        valobj, non_ptr_type,
-        use_dynamic, entries, true, did_strip_ref, did_strip_typedef);
+    GetPossibleMatches(valobj, non_ptr_type, use_dynamic, entries,
+                       current_flags.WithStrippedPointer());
     if (non_ptr_type.IsTypedefType()) {
       CompilerType deffed_pointed_type =
           non_ptr_type.GetTypedefedType().GetPointerType();
-      const bool stripped_typedef = true;
-      GetPossibleMatches(
-          valobj, deffed_pointed_type,
-          use_dynamic, entries, did_strip_ptr, did_strip_ref,
-          stripped_typedef); // this is not exactly the usual meaning of
-                             // stripping typedefs
+      // this is not exactly the usual meaning of stripping typedefs
+      GetPossibleMatches(valobj, deffed_pointed_type, use_dynamic, entries,
+                         current_flags.WithStrippedTypedef());
     }
   }
 
@@ -259,12 +250,10 @@ void FormatManager::GetPossibleMatches(
       // from it.
       CompilerType deffed_array_type =
           element_type.GetTypedefedType().GetArrayType(array_size);
-      const bool stripped_typedef = true;
+      // this is not exactly the usual meaning of stripping typedefs
       GetPossibleMatches(
           valobj, deffed_array_type,
-          use_dynamic, entries, did_strip_ptr, did_strip_ref,
-          stripped_typedef); // this is not exactly the usual meaning of
-                             // stripping typedefs
+          use_dynamic, entries, current_flags.WithStrippedTypedef());
     }
   }
 
@@ -273,9 +262,7 @@ void FormatManager::GetPossibleMatches(
     if (Language *language = Language::FindPlugin(language_type)) {
       for (ConstString candidate :
            language->GetPossibleFormattersMatches(valobj, use_dynamic)) {
-        entries.push_back(
-            {candidate,
-             did_strip_ptr, did_strip_ref, did_strip_typedef});
+        entries.push_back({candidate, current_flags});
       }
     }
   }
@@ -283,9 +270,8 @@ void FormatManager::GetPossibleMatches(
   // try to strip typedef chains
   if (compiler_type.IsTypedefType()) {
     CompilerType deffed_type = compiler_type.GetTypedefedType();
-    GetPossibleMatches(
-        valobj, deffed_type,
-        use_dynamic, entries, did_strip_ptr, did_strip_ref, true);
+    GetPossibleMatches(valobj, deffed_type, use_dynamic, entries,
+                       current_flags.WithStrippedTypedef());
   }
 
   if (root_level) {
@@ -299,19 +285,17 @@ void FormatManager::GetPossibleMatches(
         break;
       if (unqual_compiler_ast_type.GetOpaqueQualType() !=
           compiler_type.GetOpaqueQualType())
-        GetPossibleMatches(valobj, unqual_compiler_ast_type,
-                           use_dynamic, entries, did_strip_ptr, did_strip_ref,
-                           did_strip_typedef);
+        GetPossibleMatches(valobj, unqual_compiler_ast_type, use_dynamic,
+                           entries, current_flags);
     } while (false);
 
     // if all else fails, go to static type
     if (valobj.IsDynamic()) {
       lldb::ValueObjectSP static_value_sp(valobj.GetStaticValue());
       if (static_value_sp)
-        GetPossibleMatches(
-            *static_value_sp.get(), static_value_sp->GetCompilerType(),
-            use_dynamic, entries, did_strip_ptr, did_strip_ref,
-            did_strip_typedef, true);
+        GetPossibleMatches(*static_value_sp.get(),
+                           static_value_sp->GetCompilerType(), use_dynamic,
+                           entries, current_flags, true);
     }
   }
 }
