@@ -80,18 +80,14 @@ struct AsanInterceptorContext {
 // See http://llvm.org/bugs/show_bug.cgi?id=11763.
 #define ASAN_MEMCPY_IMPL(ctx, to, from, size)                 \
   do {                                                        \
-    if (UNLIKELY(!asan_inited))                               \
-      return internal_memcpy(to, from, size);                 \
-    if (asan_init_is_running) {                               \
-      return REAL(memcpy)(to, from, size);                    \
-    }                                                         \
-    ENSURE_ASAN_INITED();                                     \
-    if (LIKELY(flags()->replace_intrin)) {                    \
-      if (LIKELY(to != from)) {                             \
+    if (LIKELY(replace_intrin_cached)) {                      \
+      if (LIKELY(to != from)) {                               \
         CHECK_RANGES_OVERLAP("memcpy", to, size, from, size); \
       }                                                       \
       ASAN_READ_RANGE(ctx, from, size);                       \
       ASAN_WRITE_RANGE(ctx, to, size);                        \
+    } else if (UNLIKELY(!asan_inited)) {                      \
+      return internal_memcpy(to, from, size);                 \
     }                                                         \
     return REAL(memcpy)(to, from, size);                      \
   } while (0)
@@ -99,24 +95,17 @@ struct AsanInterceptorContext {
 // memset is called inside Printf.
 #define ASAN_MEMSET_IMPL(ctx, block, c, size) \
   do {                                        \
-    if (UNLIKELY(!asan_inited))               \
-      return internal_memset(block, c, size); \
-    if (asan_init_is_running) {               \
-      return REAL(memset)(block, c, size);    \
-    }                                         \
-    ENSURE_ASAN_INITED();                     \
-    if (LIKELY(flags()->replace_intrin)) {    \
+    if (LIKELY(replace_intrin_cached)) {      \
       ASAN_WRITE_RANGE(ctx, block, size);     \
+    } else if (UNLIKELY(!asan_inited)) {      \
+      return internal_memset(block, c, size); \
     }                                         \
     return REAL(memset)(block, c, size);      \
   } while (0)
 
 #define ASAN_MEMMOVE_IMPL(ctx, to, from, size) \
   do {                                         \
-    if (UNLIKELY(!asan_inited))                \
-      return internal_memmove(to, from, size); \
-    ENSURE_ASAN_INITED();                      \
-    if (LIKELY(flags()->replace_intrin)) {     \
+    if (LIKELY(replace_intrin_cached)) {       \
       ASAN_READ_RANGE(ctx, from, size);        \
       ASAN_WRITE_RANGE(ctx, to, size);         \
     }                                          \
