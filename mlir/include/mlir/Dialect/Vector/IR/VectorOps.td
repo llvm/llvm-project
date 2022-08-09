@@ -1758,21 +1758,24 @@ def Vector_MaskedStoreOp :
 
 def Vector_GatherOp :
   Vector_Op<"gather">,
-    Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
+    Arguments<(ins Arg<AnyShaped, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                VectorOfRankAndType<[1], [AnyInteger, Index]>:$index_vec,
                VectorOfRankAndType<[1], [I1]>:$mask,
                VectorOfRank<[1]>:$pass_thru)>,
     Results<(outs VectorOfRank<[1]>:$result)> {
 
-  let summary = "gathers elements from memory into a vector as defined by an index vector and mask";
+  let summary = [{
+    gathers elements from memory or ranked tensor into a vector as defined by an
+    index vector and mask
+  }];
 
   let description = [{
-    The gather operation gathers elements from memory into a 1-D vector as
-    defined by a base with indices and an additional 1-D index vector, but
-    only if the corresponding bit is set in a 1-D mask vector. Otherwise, the
-    element is taken from a 1-D pass-through vector. Informally the semantics
-    are:
+    The gather operation gathers elements from memory or ranked tensor into a
+    1-D vector as defined by a base with indices and an additional 1-D index
+    vector, but only if the corresponding bit is set in a 1-D mask vector.
+    Otherwise, the element is taken from a 1-D pass-through vector. Informally
+    the semantics are:
     ```
     result[0] := mask[0] ? base[index[0]] : pass_thru[0]
     result[1] := mask[1] ? base[index[1]] : pass_thru[1]
@@ -1797,8 +1800,8 @@ def Vector_GatherOp :
     ```
   }];
   let extraClassDeclaration = [{
-    MemRefType getMemRefType() {
-      return getBase().getType().cast<MemRefType>();
+    ShapedType getBaseType() {
+      return getBase().getType().cast<ShapedType>();
     }
     VectorType getIndexVectorType() {
       return getIndexVec().getType().cast<VectorType>();
