@@ -15,6 +15,7 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -643,15 +644,15 @@ public:
     // this entry point's execution mode. We set it to be:
     //   __spv__{SPIR-V module name}_{function name}_execution_mode_info_{mode}
     ModuleOp module = op->getParentOfType<ModuleOp>();
-    IntegerAttr executionModeAttr = op.execution_modeAttr();
+    spirv::ExecutionModeAttr executionModeAttr = op.execution_modeAttr();
     std::string moduleName;
     if (module.getName().has_value())
       moduleName = "_" + module.getName().value().str();
     else
       moduleName = "";
-    std::string executionModeInfoName =
-        llvm::formatv("__spv_{0}_{1}_execution_mode_info_{2}", moduleName,
-                      op.fn().str(), executionModeAttr.getValue());
+    std::string executionModeInfoName = llvm::formatv(
+        "__spv_{0}_{1}_execution_mode_info_{2}", moduleName, op.fn().str(),
+        static_cast<uint32_t>(executionModeAttr.getValue()));
 
     MLIRContext *context = rewriter.getContext();
     OpBuilder::InsertionGuard guard(rewriter);
@@ -684,8 +685,10 @@ public:
     // Initialize the struct and set the execution mode value.
     rewriter.setInsertionPoint(block, block->begin());
     Value structValue = rewriter.create<LLVM::UndefOp>(loc, structType);
-    Value executionMode =
-        rewriter.create<LLVM::ConstantOp>(loc, llvmI32Type, executionModeAttr);
+    Value executionMode = rewriter.create<LLVM::ConstantOp>(
+        loc, llvmI32Type,
+        rewriter.getI32IntegerAttr(
+            static_cast<uint32_t>(executionModeAttr.getValue())));
     structValue = rewriter.create<LLVM::InsertValueOp>(
         loc, structType, structValue, executionMode,
         ArrayAttr::get(context,
@@ -1391,8 +1394,8 @@ public:
     auto llvmI32Type = IntegerType::get(context, 32);
     Value targetOp = rewriter.create<LLVM::UndefOp>(loc, dstType);
     for (unsigned i = 0; i < componentsArray.size(); i++) {
-      if (componentsArray[i].isa<IntegerAttr>())
-        op.emitError("unable to support non-constant component");
+      if (!componentsArray[i].isa<IntegerAttr>())
+        return op.emitError("unable to support non-constant component");
 
       int indexVal = componentsArray[i].cast<IntegerAttr>().getInt();
       if (indexVal == -1)

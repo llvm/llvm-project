@@ -112,7 +112,7 @@ module attributes {gpu.container_module} {
     // CHECK-LABEL: spv.func @barrier
     gpu.func @barrier(%arg0 : f32, %arg1 : memref<12xf32>) kernel
       attributes {spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[32, 4, 1]>: vector<3xi32>>} {
-      // CHECK: spv.ControlBarrier Workgroup, Workgroup, "AcquireRelease|WorkgroupMemory"
+      // CHECK: spv.ControlBarrier <Workgroup>, <Workgroup>, <AcquireRelease|WorkgroupMemory>
       gpu.barrier
       gpu.return
     }
