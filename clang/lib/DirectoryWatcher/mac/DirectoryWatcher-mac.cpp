@@ -136,7 +136,7 @@ static void eventStreamCallback(ConstFSEventStreamRef Stream,
                           llvm::sys::path::filename(Path));
       continue;
     } else if (Flags & ModifyingFileEvents) {
-      if (!getFileStatus(Path).hasValue()) {
+      if (!getFileStatus(Path).has_value()) {
         Events.emplace_back(DirectoryWatcher::Event::EventKind::Removed,
                             llvm::sys::path::filename(Path));
       } else {
