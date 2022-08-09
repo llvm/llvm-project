@@ -3281,6 +3281,10 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
 
   assert(*EV.idx_begin() == 1 && "Unexpected extract index for overflow inst");
 
+  // (usub LHS, RHS) overflows when LHS is unsigned-less-than RHS.
+  if (OvID == Intrinsic::usub_with_overflow)
+    return new ICmpInst(ICmpInst::ICMP_ULT, WO->getLHS(), WO->getRHS());
+
   // If only the overflow result is used, and the right hand side is a
   // constant (or constant splat), we can remove the intrinsic by directly
   // checking for overflow.
