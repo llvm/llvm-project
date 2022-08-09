@@ -309,7 +309,7 @@ makeDepscanDaemonKey(StringRef Mode, const DepscanSharing &Sharing) {
   };
 
   if (Sharing.ShareViaIdentifier)
-    return makeIdentifierKey(Sharing.Name.getValue());
+    return makeIdentifierKey(*Sharing.Name);
 
   if (Sharing.Name) {
     // Check for fast path, which doesn't need to look up process names:

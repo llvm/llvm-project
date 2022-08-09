@@ -310,13 +310,13 @@ IncludeTreePPConsumer::getObjectForFile(Preprocessor &PP, FileID FID) {
   }
   assert(FI.getContentCache().OrigEntry);
   auto &FileRef = ObjectForFile[FI.getContentCache().OrigEntry];
-  if (!FileRef.hasValue()) {
+  if (!FileRef) {
     auto Ref = getObjectForFileNonCached(SM.getFileManager(), FI);
     if (!Ref)
       return Ref.takeError();
     FileRef = *Ref;
   }
-  return FileRef.getValue();
+  return *FileRef;
 }
 
 Expected<cas::ObjectRef>

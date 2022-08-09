@@ -154,7 +154,7 @@ Expected<ScanDaemon> ScanDaemon::launchDaemon(StringRef BasePath,
 
   static bool LaunchTestDaemon =
       llvm::sys::Process::GetEnv("__CLANG_TEST_CC1DEPSCAND_SHUTDOWN")
-          .hasValue();
+          .has_value();
 
   ArrayRef<const char *> InitialArgs =
       LaunchTestDaemon ? makeArrayRef(ArgsTestMode) : makeArrayRef(Args);
