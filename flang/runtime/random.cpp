@@ -11,6 +11,7 @@
 
 #include "flang/Runtime/random.h"
 #include "lock.h"
+#include "terminator.h"
 #include "flang/Common/leading-zero-bit-count.h"
 #include "flang/Common/uint128.h"
 #include "flang/Runtime/cpp-type.h"
@@ -139,18 +140,23 @@ void RTNAME(RandomNumber)(
 }
 
 void RTNAME(RandomSeedSize)(
-    const Descriptor &size, const char *source, int line) {
+    const Descriptor *size, const char *source, int line) {
+  if (!size || !size->raw().base_addr) {
+    RTNAME(RandomSeedDefaultPut)();
+    return;
+  }
   Terminator terminator{source, line};
-  auto typeCode{size.type().GetCategoryAndKind()};
+  auto typeCode{size->type().GetCategoryAndKind()};
   RUNTIME_CHECK(terminator,
-      size.rank() == 0 && typeCode && typeCode->first == TypeCategory::Integer);
+      size->rank() == 0 && typeCode &&
+          typeCode->first == TypeCategory::Integer);
   int kind{typeCode->second};
   switch (kind) {
   case 4:
-    *size.OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>() = 1;
+    *size->OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>() = 1;
     break;
   case 8:
-    *size.OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>() = 1;
+    *size->OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>() = 1;
     break;
   default:
     terminator.Crash(
@@ -159,20 +165,25 @@ void RTNAME(RandomSeedSize)(
 }
 
 void RTNAME(RandomSeedPut)(
-    const Descriptor &put, const char *source, int line) {
+    const Descriptor *put, const char *source, int line) {
+  if (!put || !put->raw().base_addr) {
+    RTNAME(RandomSeedDefaultPut)();
+    return;
+  }
   Terminator terminator{source, line};
-  auto typeCode{put.type().GetCategoryAndKind()};
+  auto typeCode{put->type().GetCategoryAndKind()};
   RUNTIME_CHECK(terminator,
-      put.rank() == 1 && typeCode && typeCode->first == TypeCategory::Integer &&
-          put.GetDimension(0).Extent() >= 1);
+      put->rank() == 1 && typeCode &&
+          typeCode->first == TypeCategory::Integer &&
+          put->GetDimension(0).Extent() >= 1);
   int kind{typeCode->second};
   GeneratedWord seed;
   switch (kind) {
   case 4:
-    seed = *put.OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>();
+    seed = *put->OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>();
     break;
   case 8:
-    seed = *put.OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>();
+    seed = *put->OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>();
     break;
   default:
     terminator.Crash("not yet implemented: RANDOM_SEED(PUT=): kind %d\n", kind);
@@ -193,12 +204,17 @@ void RTNAME(RandomSeedDefaultPut)() {
 }
 
 void RTNAME(RandomSeedGet)(
-    const Descriptor &got, const char *source, int line) {
+    const Descriptor *get, const char *source, int line) {
+  if (!get || !get->raw().base_addr) {
+    RTNAME(RandomSeedDefaultPut)();
+    return;
+  }
   Terminator terminator{source, line};
-  auto typeCode{got.type().GetCategoryAndKind()};
+  auto typeCode{get->type().GetCategoryAndKind()};
   RUNTIME_CHECK(terminator,
-      got.rank() == 1 && typeCode && typeCode->first == TypeCategory::Integer &&
-          got.GetDimension(0).Extent() >= 1);
+      get->rank() == 1 && typeCode &&
+          typeCode->first == TypeCategory::Integer &&
+          get->GetDimension(0).Extent() >= 1);
   int kind{typeCode->second};
   GeneratedWord seed;
   {
@@ -208,14 +224,33 @@ void RTNAME(RandomSeedGet)(
   }
   switch (kind) {
   case 4:
-    *got.OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>() = seed;
+    *get->OffsetElement<CppTypeFor<TypeCategory::Integer, 4>>() = seed;
     break;
   case 8:
-    *got.OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>() = seed;
+    *get->OffsetElement<CppTypeFor<TypeCategory::Integer, 8>>() = seed;
     break;
   default:
     terminator.Crash("not yet implemented: RANDOM_SEED(GET=): kind %d\n", kind);
   }
 }
+
+void RTNAME(RandomSeed)(const Descriptor *size, const Descriptor *put,
+    const Descriptor *get, const char *source, int line) {
+  bool sizePresent = size && size->raw().base_addr;
+  bool putPresent = put && put->raw().base_addr;
+  bool getPresent = get && get->raw().base_addr;
+  if (sizePresent + putPresent + getPresent > 1)
+    Terminator{source, line}.Crash(
+        "RANDOM_SEED must have either 1 or no arguments");
+  if (sizePresent)
+    RTNAME(RandomSeedSize)(size, source, line);
+  else if (putPresent)
+    RTNAME(RandomSeedPut)(put, source, line);
+  else if (getPresent)
+    RTNAME(RandomSeedGet)(get, source, line);
+  else
+    RTNAME(RandomSeedDefaultPut)();
+}
+
 } // extern "C"
 } // namespace Fortran::runtime
