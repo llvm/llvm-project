@@ -422,8 +422,15 @@ function(add_integration_test test_name)
 
   get_fq_deps_list(fq_deps_list ${INTEGRATION_TEST_DEPENDS})
   # All integration tests setup TLS area and the main thread's self object.
-  # So, we need to link in the threads implementation.
-  list(APPEND fq_deps_list libc.src.__support.threads.thread)
+  # So, we need to link in the threads implementation. Likewise, the startup
+  # code also has to run init_array callbacks which potentially register
+  # their own atexit callbacks. So, link in exit and atexit also with all
+  # integration tests.
+  list(
+      APPEND fq_deps_list
+      libc.src.__support.threads.thread
+      libc.src.stdlib.atexit
+      libc.src.stdlib.exit)
   list(REMOVE_DUPLICATES fq_deps_list)
   # TODO: Instead of gathering internal object files from entrypoints,
   # collect the object files with public names of entrypoints.

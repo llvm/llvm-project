@@ -817,6 +817,8 @@ public:
 
   unsigned getGISelRematGlobalCost() const { return 1; }
 
+  unsigned getMinTripCountTailFoldingThreshold() const { return 0; }
+
   bool supportsScalableVectors() const { return false; }
 
   bool enableScalableVectorization() const { return false; }
