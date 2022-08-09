@@ -380,14 +380,14 @@ define void @pr55505_remove_redundant_fptosi_for_float_iv(i32 %index, ptr %dst) 
 ; CHECK-NEXT:    [[INDVAR_CONV:%.*]] = sitofp i32 [[FLOAT_IV_INT]] to float
 ; CHECK-NEXT:    call void @use.float(float [[INDVAR_CONV]])
 ; CHECK-NEXT:    call void @use.i32(i32 [[FLOAT_IV_INT]])
-; CHECK-NEXT:    [[CONV_I16:%.*]] = fptosi float [[INDVAR_CONV]] to i16
-; CHECK-NEXT:    [[CONV_I64:%.*]] = fptosi float [[INDVAR_CONV]] to i64
-; CHECK-NEXT:    call void @use.i16(i16 [[CONV_I16]])
-; CHECK-NEXT:    call void @use.i64(i64 [[CONV_I64]])
-; CHECK-NEXT:    [[UCONV_I16:%.*]] = fptoui float [[INDVAR_CONV]] to i16
-; CHECK-NEXT:    [[UCONV_I64:%.*]] = fptoui float [[INDVAR_CONV]] to i64
-; CHECK-NEXT:    call void @use.i16(i16 [[UCONV_I16]])
-; CHECK-NEXT:    call void @use.i64(i64 [[UCONV_I64]])
+; CHECK-NEXT:    [[FLOAT_IV_INT_TRUNC:%.*]] = trunc i32 [[FLOAT_IV_INT]] to i16
+; CHECK-NEXT:    [[FLOAT_IV_INT_SEXT:%.*]] = sext i32 [[FLOAT_IV_INT]] to i64
+; CHECK-NEXT:    call void @use.i16(i16 [[FLOAT_IV_INT_TRUNC]])
+; CHECK-NEXT:    call void @use.i64(i64 [[FLOAT_IV_INT_SEXT]])
+; CHECK-NEXT:    [[FLOAT_IV_INT_TRUNC2:%.*]] = trunc i32 [[FLOAT_IV_INT]] to i16
+; CHECK-NEXT:    [[FLOAT_IV_INT_ZEXT:%.*]] = zext i32 [[FLOAT_IV_INT]] to i64
+; CHECK-NEXT:    call void @use.i16(i16 [[FLOAT_IV_INT_TRUNC2]])
+; CHECK-NEXT:    call void @use.i64(i64 [[FLOAT_IV_INT_ZEXT]])
 ; CHECK-NEXT:    [[FLOAT_IV_NEXT_INT]] = add nsw i32 [[FLOAT_IV_INT]], -1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[FLOAT_IV_NEXT_INT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
