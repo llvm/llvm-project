@@ -37,6 +37,11 @@ class MemoryCommandRegion(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
+    # This test builds a large result string in such a way that when run
+    # under ASAN the test always times out.  Most of the time is in the asan
+    # checker under PyUnicode_Append.
+    # This seems to be a worst-case scenario for ASAN performance.
+    @skipIfAsan
     def test_command(self):
         self.setup_program()
 
