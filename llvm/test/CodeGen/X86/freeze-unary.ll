@@ -130,39 +130,14 @@ declare <4 x i32> @llvm.bitreverse.v4i32(<4 x i32>)
 define i8 @freeze_ctpop(i8 %a0) nounwind {
 ; X86-LABEL: freeze_ctpop:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shrb %al
-; X86-NEXT:    andb $85, %al
-; X86-NEXT:    subb %al, %cl
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    andb $51, %al
-; X86-NEXT:    shrb $2, %cl
-; X86-NEXT:    andb $51, %cl
-; X86-NEXT:    addb %al, %cl
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    shrb $4, %al
-; X86-NEXT:    addb %cl, %al
-; X86-NEXT:    andb $15, %al
-; X86-NEXT:    andb $1, %al
+; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    setnp %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_ctpop:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shrb %al
-; X64-NEXT:    andb $85, %al
-; X64-NEXT:    subb %al, %dil
-; X64-NEXT:    movl %edi, %ecx
-; X64-NEXT:    andb $51, %cl
-; X64-NEXT:    shrb $2, %dil
-; X64-NEXT:    andb $51, %dil
-; X64-NEXT:    addb %dil, %cl
-; X64-NEXT:    movl %ecx, %eax
-; X64-NEXT:    shrb $4, %al
-; X64-NEXT:    addb %cl, %al
-; X64-NEXT:    andb $15, %al
-; X64-NEXT:    andb $1, %al
+; X64-NEXT:    testb %dil, %dil
+; X64-NEXT:    setnp %al
 ; X64-NEXT:    retq
   %x = call i8 @llvm.ctpop.i8(i8 %a0)
   %y = freeze i8 %x
@@ -187,7 +162,6 @@ define <16 x i8> @freeze_ctpop_vec(<16 x i8> %a0) nounwind {
 ; X86-NEXT:    movdqa %xmm0, %xmm1
 ; X86-NEXT:    psrlw $4, %xmm1
 ; X86-NEXT:    paddb %xmm1, %xmm0
-; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
@@ -219,14 +193,12 @@ define i8 @freeze_parity(i8 %a0) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    setnp %al
-; X86-NEXT:    andb $1, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_parity:
 ; X64:       # %bb.0:
 ; X64-NEXT:    testb %dil, %dil
 ; X64-NEXT:    setnp %al
-; X64-NEXT:    andb $1, %al
 ; X64-NEXT:    retq
   %x = call i8 @llvm.ctpop.i8(i8 %a0)
   %y = and i8 %x, 1

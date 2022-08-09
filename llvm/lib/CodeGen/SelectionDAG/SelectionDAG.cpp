@@ -4562,7 +4562,9 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   switch (Opcode) {
   case ISD::FREEZE:
   case ISD::BSWAP:
+  case ISD::CTPOP:
   case ISD::BITREVERSE:
+  case ISD::PARITY:
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
   case ISD::BITCAST:
