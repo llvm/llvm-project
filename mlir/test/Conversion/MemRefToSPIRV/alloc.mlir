@@ -6,10 +6,10 @@ module attributes {
   }
 {
   func.func @alloc_dealloc_workgroup_mem(%arg0 : index, %arg1 : index) {
-    %0 = memref.alloc() : memref<4x5xf32, 3>
-    %1 = memref.load %0[%arg0, %arg1] : memref<4x5xf32, 3>
-    memref.store %1, %0[%arg0, %arg1] : memref<4x5xf32, 3>
-    memref.dealloc %0 : memref<4x5xf32, 3>
+    %0 = memref.alloc() : memref<4x5xf32, #spv.storage_class<Workgroup>>
+    %1 = memref.load %0[%arg0, %arg1] : memref<4x5xf32, #spv.storage_class<Workgroup>>
+    memref.store %1, %0[%arg0, %arg1] : memref<4x5xf32, #spv.storage_class<Workgroup>>
+    memref.dealloc %0 : memref<4x5xf32, #spv.storage_class<Workgroup>>
     return
   }
 }
@@ -31,10 +31,10 @@ module attributes {
   }
 {
   func.func @alloc_dealloc_workgroup_mem(%arg0 : index, %arg1 : index) {
-    %0 = memref.alloc() : memref<4x5xi16, 3>
-    %1 = memref.load %0[%arg0, %arg1] : memref<4x5xi16, 3>
-    memref.store %1, %0[%arg0, %arg1] : memref<4x5xi16, 3>
-    memref.dealloc %0 : memref<4x5xi16, 3>
+    %0 = memref.alloc() : memref<4x5xi16, #spv.storage_class<Workgroup>>
+    %1 = memref.load %0[%arg0, %arg1] : memref<4x5xi16, #spv.storage_class<Workgroup>>
+    memref.store %1, %0[%arg0, %arg1] : memref<4x5xi16, #spv.storage_class<Workgroup>>
+    memref.dealloc %0 : memref<4x5xi16, #spv.storage_class<Workgroup>>
     return
   }
 }
@@ -60,8 +60,8 @@ module attributes {
   }
 {
   func.func @two_allocs() {
-    %0 = memref.alloc() : memref<4x5xf32, 3>
-    %1 = memref.alloc() : memref<2x3xi32, 3>
+    %0 = memref.alloc() : memref<4x5xf32, #spv.storage_class<Workgroup>>
+    %1 = memref.alloc() : memref<2x3xi32, #spv.storage_class<Workgroup>>
     return
   }
 }
@@ -80,8 +80,8 @@ module attributes {
   }
 {
   func.func @two_allocs_vector() {
-    %0 = memref.alloc() : memref<4xvector<4xf32>, 3>
-    %1 = memref.alloc() : memref<2xvector<2xi32>, 3>
+    %0 = memref.alloc() : memref<4xvector<4xf32>, #spv.storage_class<Workgroup>>
+    %1 = memref.alloc() : memref<2xvector<2xi32>, #spv.storage_class<Workgroup>>
     return
   }
 }
@@ -103,8 +103,8 @@ module attributes {
   // CHECK-LABEL: func @alloc_dynamic_size
   func.func @alloc_dynamic_size(%arg0 : index) -> f32 {
     // CHECK: memref.alloc
-    %0 = memref.alloc(%arg0) : memref<4x?xf32, 3>
-    %1 = memref.load %0[%arg0, %arg0] : memref<4x?xf32, 3>
+    %0 = memref.alloc(%arg0) : memref<4x?xf32, #spv.storage_class<Workgroup>>
+    %1 = memref.load %0[%arg0, %arg0] : memref<4x?xf32, #spv.storage_class<Workgroup>>
     return %1: f32
   }
 }
@@ -119,8 +119,8 @@ module attributes {
   // CHECK-LABEL: func @alloc_unsupported_memory_space
   func.func @alloc_unsupported_memory_space(%arg0: index) -> f32 {
     // CHECK: memref.alloc
-    %0 = memref.alloc() : memref<4x5xf32>
-    %1 = memref.load %0[%arg0, %arg0] : memref<4x5xf32>
+    %0 = memref.alloc() : memref<4x5xf32, #spv.storage_class<StorageBuffer>>
+    %1 = memref.load %0[%arg0, %arg0] : memref<4x5xf32, #spv.storage_class<StorageBuffer>>
     return %1: f32
   }
 }
@@ -134,9 +134,9 @@ module attributes {
   }
 {
   // CHECK-LABEL: func @dealloc_dynamic_size
-  func.func @dealloc_dynamic_size(%arg0 : memref<4x?xf32, 3>) {
+  func.func @dealloc_dynamic_size(%arg0 : memref<4x?xf32, #spv.storage_class<Workgroup>>) {
     // CHECK: memref.dealloc
-    memref.dealloc %arg0 : memref<4x?xf32, 3>
+    memref.dealloc %arg0 : memref<4x?xf32, #spv.storage_class<Workgroup>>
     return
   }
 }
@@ -149,9 +149,9 @@ module attributes {
   }
 {
   // CHECK-LABEL: func @dealloc_unsupported_memory_space
-  func.func @dealloc_unsupported_memory_space(%arg0 : memref<4x5xf32>) {
+  func.func @dealloc_unsupported_memory_space(%arg0 : memref<4x5xf32, #spv.storage_class<StorageBuffer>>) {
     // CHECK: memref.dealloc
-    memref.dealloc %arg0 : memref<4x5xf32>
+    memref.dealloc %arg0 : memref<4x5xf32, #spv.storage_class<StorageBuffer>>
     return
   }
 }
