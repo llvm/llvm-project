@@ -1277,16 +1277,19 @@ def FXCR : F_SFU1CR2<0b11001, (outs GPR:$rd), (ins GPR:$rs1, FCR:$cr),
 // Graphics/vector instructions. 881100 only.
 // ---------------------------------------------------------------------------//
 
-multiclass PArithPixel<bits<5> func, string opc> {
-  def : F_SFU2<func, /*sat=*/ 0b00, /*ty=*/ 0b11,
-                  (outs GPR64:$rd), (ins GPR64:$rs1, GPR64:$rs2),
-                  opc>;
+multiclass PArithPixel<bits<5> func, string opc, SDNode OpNode> {
+  def "": F_SFU2<func, /*sat=*/ 0b00, /*ty=*/ 0b11,
+                 (outs GPR64:$rd), (ins GPR64:$rs1, GPR64:$rs2),
+                 opc,
+                 [(set v2i32:$rd, (OpNode v2i32:$rs1, v2i32:$rs2))]>;
   def b : F_SFU2<func, /*sat=*/ 0b00, /*ty=*/ 0b01,
                   (outs GPR64:$rd), (ins GPR64:$rs1, GPR64:$rs2),
-                  !strconcat(opc, ".b")>;
+                  !strconcat(opc, ".b"),
+                 [(set v8i8:$rd, (OpNode v8i8:$rs1, v8i8:$rs2))]>;
   def h : F_SFU2<func, /*sat=*/ 0b00, /*ty=*/ 0b10,
                   (outs GPR64:$rd), (ins GPR64:$rs1, GPR64:$rs2),
-                  !strconcat(opc, ".h")>;
+                  !strconcat(opc, ".h"),
+                 [(set v4i16:$rd, (OpNode v4i16:$rs1, v4i16:$rs2))]>;
 }
 
 multiclass PArithPixelSat<bits<5> func, string opc> {
@@ -1350,8 +1353,8 @@ def PMUL : F_SFU2<0b00000, 0b00, 0b00,
 def PCMP : F_SFU2<0b00111, 0b00, 0b11,
                   (outs GPR:$rd), (ins GPR64:$rs1, GPR64:$rs2),
                   "pcmp">;
-defm PADD : PArithPixel<0b00100, "padd">;
-defm PSUB : PArithPixel<0b00110, "psub">;
+defm PADD : PArithPixel<0b00100, "padd", add>;
+defm PSUB : PArithPixel<0b00110, "psub", sub>;
 defm PADDS : PArithPixelSat<0b00100, "padds">;
 defm PSUBS : PArithPixelSat<0b00110, "psubs">;
 defm PPACK : PPack;

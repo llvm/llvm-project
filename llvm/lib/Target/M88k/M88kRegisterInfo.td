@@ -65,7 +65,8 @@ def GRPair : RegisterTuples<[sub_hi, sub_lo],
                             [(add (sequence "R%u", 0, 30, 2)),
                              (add (sequence "R%u", 1, 31, 2))]>;
 
-defm GPR64 : M88kRegisterClass<[i64, f64], 64, 32, (add GRPair), 1, 2>;
+defm GPR64 : M88kRegisterClass<[i64, f64, v8i8, v4i16, v2i32], 64, 32,
+                               (add GRPair), 1, 2>;
 
 //defm GPR64 : M88kRegisterClass<[i64, f64], 64, 32,
 //                               (add R0_R1, R2_R3, R4_R5, R6_R7, R8_R9,

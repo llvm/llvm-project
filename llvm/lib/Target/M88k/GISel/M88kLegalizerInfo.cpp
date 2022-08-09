@@ -35,6 +35,9 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
   const LLT S80 = LLT::scalar(80);
+  const LLT V8S8 = LLT::fixed_vector(8, 8);
+  const LLT V4S16 = LLT::fixed_vector(4, 16);
+  const LLT V2S32 = LLT::fixed_vector(2, 32);
   const LLT P0 = LLT::pointer(0, 32);
 
   auto IsMC88110 = [=, &ST](const LegalityQuery &Query) {
@@ -76,8 +79,11 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{P0, S32}})
       .clampScalar(1, S32, S32);
-  getActionDefinitionsBuilder(G_ADD).legalFor({S32});
-  getActionDefinitionsBuilder(G_SUB).legalFor({S32});
+  getActionDefinitionsBuilder({G_ADD, G_SUB})
+      .legalFor({S32})
+      .legalIf(
+          all(typeInSet(0, {V8S8, V4S16, V2S32}), LegalityPredicate(IsMC88110)))
+      .clampScalar(0, S32, S32);
   getActionDefinitionsBuilder({G_MUL, G_UDIV})
       .legalFor({S32})
       .customIf(all(typeInSet(0, {S64}), LegalityPredicate(IsMC88110)))
