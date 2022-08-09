@@ -120,8 +120,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
               .template cast<Type>(),
           allocaAddrSpace);
       Value numElements = rewriter.create<LLVM::ConstantOp>(
-          gpuFuncOp.getLoc(), int64Ty,
-          rewriter.getI64IntegerAttr(type.getNumElements()));
+          gpuFuncOp.getLoc(), int64Ty, type.getNumElements());
       Value allocated = rewriter.create<LLVM::AllocaOp>(
           gpuFuncOp.getLoc(), ptrType, numElements, /*alignment=*/0);
       auto descr = MemRefDescriptor::fromStaticShape(
@@ -219,8 +218,7 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
           {llvmI64, i8Ptr, /*length (bytes)*/ llvmI64, /*isLast*/ llvmI32}));
 
   /// Start the printf hostcall
-  Value zeroI64 = rewriter.create<LLVM::ConstantOp>(
-      loc, llvmI64, rewriter.getI64IntegerAttr(0));
+  Value zeroI64 = rewriter.create<LLVM::ConstantOp>(loc, llvmI64, 0);
   auto printfBeginCall = rewriter.create<LLVM::CallOp>(loc, ocklBegin, zeroI64);
   Value printfDesc = printfBeginCall.getResult(0);
 
@@ -251,13 +249,11 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
   Value globalPtr = rewriter.create<LLVM::AddressOfOp>(loc, global);
   Value stringStart = rewriter.create<LLVM::GEPOp>(
       loc, i8Ptr, globalPtr, ArrayRef<LLVM::GEPArg>{0, 0});
-  Value stringLen = rewriter.create<LLVM::ConstantOp>(
-      loc, llvmI64, rewriter.getI64IntegerAttr(formatStringSize));
+  Value stringLen =
+      rewriter.create<LLVM::ConstantOp>(loc, llvmI64, formatStringSize);
 
-  Value oneI32 = rewriter.create<LLVM::ConstantOp>(
-      loc, llvmI32, rewriter.getI32IntegerAttr(1));
-  Value zeroI32 = rewriter.create<LLVM::ConstantOp>(
-      loc, llvmI32, rewriter.getI32IntegerAttr(0));
+  Value oneI32 = rewriter.create<LLVM::ConstantOp>(loc, llvmI32, 1);
+  Value zeroI32 = rewriter.create<LLVM::ConstantOp>(loc, llvmI32, 0);
 
   auto appendFormatCall = rewriter.create<LLVM::CallOp>(
       loc, ocklAppendStringN,
@@ -274,8 +270,8 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
 
     SmallVector<mlir::Value, 2 + argsPerAppend + 1> arguments;
     arguments.push_back(printfDesc);
-    arguments.push_back(rewriter.create<LLVM::ConstantOp>(
-        loc, llvmI32, rewriter.getI32IntegerAttr(numArgsThisCall)));
+    arguments.push_back(
+        rewriter.create<LLVM::ConstantOp>(loc, llvmI32, numArgsThisCall));
     for (size_t i = group; i < bound; ++i) {
       Value arg = adaptor.args()[i];
       if (auto floatType = arg.getType().dyn_cast<FloatType>()) {

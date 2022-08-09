@@ -675,12 +675,11 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
     argumentTypes.push_back(argument.getType());
   auto structType = LLVM::LLVMStructType::getNewIdentified(context, StringRef(),
                                                            argumentTypes);
-  auto one = builder.create<LLVM::ConstantOp>(loc, llvmInt32Type,
-                                              builder.getI32IntegerAttr(1));
+  auto one = builder.create<LLVM::ConstantOp>(loc, llvmInt32Type, 1);
   auto structPtr = builder.create<LLVM::AllocaOp>(
       loc, LLVM::LLVMPointerType::get(structType), one, /*alignment=*/0);
-  auto arraySize = builder.create<LLVM::ConstantOp>(
-      loc, llvmInt32Type, builder.getI32IntegerAttr(numArguments));
+  auto arraySize =
+      builder.create<LLVM::ConstantOp>(loc, llvmInt32Type, numArguments);
   auto arrayPtr = builder.create<LLVM::AllocaOp>(loc, llvmPointerPointerType,
                                                  arraySize, /*alignment=*/0);
   for (const auto &en : llvm::enumerate(arguments)) {
@@ -786,8 +785,7 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
       launchOp.getKernelName().getValue(), loc, rewriter);
   auto function = moduleGetFunctionCallBuilder.create(
       loc, rewriter, {module.getResult(0), kernelName});
-  auto zero = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type,
-                                                rewriter.getI32IntegerAttr(0));
+  auto zero = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type, 0);
   Value stream =
       adaptor.asyncDependencies().empty()
           ? streamCreateCallBuilder.create(loc, rewriter, {}).getResult(0)
