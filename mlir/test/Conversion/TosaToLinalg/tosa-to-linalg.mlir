@@ -198,13 +198,11 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   %13 = "tosa.select"(%10, %0, %1) : (tensor<1xi1>, tensor<1xf32>, tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: arith.cmpf
-  // CHECK: select
+  // CHECK: arith.maxf
   %14 = "tosa.maximum"(%0, %1) : (tensor<1xf32>, tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: arith.cmpf
-  // CHECK: select
+  // CHECK: arith.minf
   %15 = "tosa.minimum"(%0, %1) : (tensor<1xf32>, tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
@@ -216,13 +214,13 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   %17 = "tosa.floor"(%0) : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: arith.cmpf
-  // CHECK: select
+  // CHECK: arith.minf
+  // CHECK: arith.maxf
   %18 = "tosa.clamp"(%0) {min_int = 1 : i64, max_int = 5 : i64, min_fp = 1.0 : f32, max_fp = 5.0 : f32} : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: arith.cmpf
-  // CHECK: select
+  // CHECK: arith.minf
+  // CHECK: arith.maxf
   %19 = "tosa.reluN"(%0) {max_int = 5 : i64, max_fp = 5.0 : f32} : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
@@ -241,10 +239,8 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   // CHECK: arith.subf
   // CHECK: arith.cmpf olt
   // CHECK: select
-  // CHECK: arith.cmpf olt
-  // CHECK: select
-  // CHECK: arith.cmpf olt
-  // CHECK: select
+  // CHECK: arith.minf
+  // CHECK: arith.maxf
   // CHECK: arith.fptosi
   %21 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi32>
 
@@ -451,20 +447,22 @@ func.func @test_simple_ui8(%arg0: tensor<1xi8>) -> () {
 // CHECK-LABEL: @test_i8
 func.func @test_i8(%arg0: tensor<1xi8>) -> () {
   // CHECK: linalg.generic
+  // CHECK: ^bb0(%[[ARG1:.+]]: i8,
   // CHECK-DAG: %[[C127:.+]] = arith.constant -127
   // CHECK-DAG: %[[C126:.+]] = arith.constant 126
-  // CHECK-DAG: %[[CMP1:.+]] = arith.cmpi slt, %arg1, %[[C127]]
+  // CHECK-DAG: %[[CMP1:.+]] = arith.cmpi slt, %[[ARG1]], %[[C127]]
   // CHECK-DAG: %[[SEL1:.+]] = arith.select %[[CMP1]], %[[C127]]
-  // CHECK-DAG: %[[CMP2:.+]] = arith.cmpi slt, %[[C126]], %arg1
+  // CHECK-DAG: %[[CMP2:.+]] = arith.cmpi slt, %[[C126]], %[[ARG1]]
   // CHECK: %[[SEL2:.+]] = arith.select %[[CMP2]], %[[C126]], %[[SEL1]]
   %0 = "tosa.clamp"(%arg0) {min_int = -127 : i64, max_int = 126 : i64, min_fp = 0.0 : f32, max_fp = 0.0 : f32} : (tensor<1xi8>) -> tensor<1xi8>
 
   // CHECK: linalg.generic
+  // CHECK: ^bb0(%[[ARG1:.+]]: i8,
   // CHECK-DAG: %[[C128:.+]] = arith.constant -128
   // CHECK-DAG: %[[C127:.+]] = arith.constant 127
-  // CHECK-DAG: %[[CMP1:.+]] = arith.cmpi slt, %arg1, %[[C128]]
+  // CHECK-DAG: %[[CMP1:.+]] = arith.cmpi slt, %[[ARG1]], %[[C128]]
   // CHECK-DAG: %[[SEL1:.+]] = arith.select %[[CMP1]], %[[C128]]
-  // CHECK-DAG: %[[CMP2:.+]] = arith.cmpi slt, %[[C127]], %arg1
+  // CHECK-DAG: %[[CMP2:.+]] = arith.cmpi slt, %[[C127]], %[[ARG1]]
   // CHECK: %[[SEL2:.+]] = arith.select %[[CMP2]], %[[C127]], %[[SEL1]]
   %1 = "tosa.clamp"(%arg0) {min_int = -130 : i64, max_int = 130 : i64, min_fp = 0.0 : f32, max_fp = 0.0 : f32} : (tensor<1xi8>) -> tensor<1xi8>
 
@@ -476,12 +474,11 @@ func.func @test_i8(%arg0: tensor<1xi8>) -> () {
 // CHECK-LABEL: @test_clamp_f16
 func.func @test_clamp_f16(%arg0: tensor<1xf16>) -> () {
   // CHECK: linalg.generic
+  // CHECK: ^bb0(%[[ARG1:.+]]: f16, 
   // CHECK-DAG: %[[C0:.+]] = arith.constant 0.0
   // CHECK-DAG: %[[C6:.+]] = arith.constant 6.0
-  // CHECK-DAG: %[[CMP1:.+]] = arith.cmpf olt, %arg1, %[[C0]]
-  // CHECK-DAG: %[[SEL1:.+]] = arith.select %[[CMP1]], %[[C0]]
-  // CHECK-DAG: %[[CMP2:.+]] = arith.cmpf olt, %[[C6]], %arg1
-  // CHECK: %[[SEL2:.+]] = arith.select %[[CMP2]], %[[C6]], %[[SEL1]]
+  // CHECK-DAG: %[[MIN:.+]] = arith.minf %[[ARG1]], %[[C0]]
+  // CHECK-DAG: %[[MAX:.+]] = arith.maxf %[[MIN]], %[[C6]]
   %0 = "tosa.clamp"(%arg0) {min_int = 0 : i64, max_int = 0 : i64, min_fp = 0.0 : f32, max_fp = 6.0 : f32} : (tensor<1xf16>) -> tensor<1xf16>
 
   return
@@ -732,15 +729,13 @@ func.func @reduce_float(%arg0: tensor<5x4xf32>) -> () {
   // CHECK: arith.constant 3.40282347E+38 : f32
   // CHECK: linalg.fill
   // CHECK: linalg.generic
-  // CHECK: arith.cmpf olt
-  // CHECK: select
+  // CHECK: arith.minf
   %3 = "tosa.reduce_min"(%arg0) {axis = 0 : i64} : (tensor<5x4xf32>) -> tensor<1x4xf32>
 
   // CHECK: arith.constant -3.40282347E+38 : f32
   // CHECK: linalg.fill
   // CHECK: linalg.generic
-  // CHECK: arith.cmpf ogt
-  // CHECK: select
+  // CHECK: arith.maxf
   %4 = "tosa.reduce_max"(%arg0) {axis = 0 : i64} : (tensor<5x4xf32>) -> tensor<1x4xf32>
   return
 }
@@ -803,9 +798,8 @@ func.func @reduce_float_dyn_multiple(%arg0: tensor<?x?xf32>) -> () {
   // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CMIN]]{{.*}}outs(%[[INIT]]
   // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["parallel", "reduction"]} ins(%arg0 : tensor<?x?xf32>) outs(%[[FILL]] : tensor<?xf32>)
   // CHECK: ^bb0(%arg1: f32, %arg2: f32)
-  // CHECK:   %[[CMP:.+]] = arith.cmpf ogt, %arg1, %arg2 : f32
-  // CHECK:   %[[RES:.+]] = arith.select %[[CMP]], %arg1, %arg2 : f32
-  // CHECK:   linalg.yield %[[RES]] : f32
+  // CHECK:   %[[MAX:.+]] = arith.maxf %arg1, %arg2 : f32
+  // CHECK:   linalg.yield %[[MAX]] : f32
   // CHECK: tensor.expand_shape %[[GENERIC]] {{\[}}[0, 1]] : tensor<?xf32> into tensor<?x1xf32>
   %0 = "tosa.reduce_max"(%arg0) {axis = 1 : i64} : (tensor<?x?xf32>) -> tensor<?x1xf32>
   return
