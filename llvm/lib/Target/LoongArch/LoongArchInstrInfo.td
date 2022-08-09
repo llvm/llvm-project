@@ -661,6 +661,10 @@ def : PatGprGpr<or, OR>;
 def : PatGprImm<or, ORI, uimm12>;
 def : PatGprGpr<xor, XOR>;
 def : PatGprImm<xor, XORI, uimm12>;
+def : Pat<(not GPR:$rj), (NOR GPR:$rj, R0)>;
+def : Pat<(not (or GPR:$rj, GPR:$rk)), (NOR GPR:$rj, GPR:$rk)>;
+def : Pat<(or GPR:$rj, (not GPR:$rk)), (ORN GPR:$rj, GPR:$rk)>;
+def : Pat<(and GPR:$rj, (not GPR:$rk)), (ANDN GPR:$rj, GPR:$rk)>;
 
 /// FrameIndex calculations
 let Predicates = [IsLA32] in {
