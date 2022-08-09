@@ -199,7 +199,9 @@ private:
 };
 
 class ForestNode::RecursiveIterator
-    : public std::iterator<std::input_iterator_tag, const ForestNode> {
+    : public llvm::iterator_facade_base<ForestNode::RecursiveIterator,
+                                        std::input_iterator_tag,
+                                        const ForestNode> {
   llvm::DenseSet<const ForestNode *> Seen;
   struct StackFrame {
     const ForestNode *Parent;
