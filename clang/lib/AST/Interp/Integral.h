@@ -155,9 +155,11 @@ public:
     return Integral(Max);
   }
 
-  template <typename T>
-  static std::enable_if_t<std::is_integral<T>::value, Integral> from(T Value) {
-    return Integral(Value);
+  template <typename ValT> static Integral from(ValT Value) {
+    if constexpr (std::is_integral<ValT>::value)
+      return Integral(Value);
+    else
+      return Integral::from(static_cast<Integral::T>(Value));
   }
 
   template <unsigned SrcBits, bool SrcSign>
@@ -201,6 +203,11 @@ public:
 
   static bool mul(Integral A, Integral B, unsigned OpBits, Integral *R) {
     return CheckMulUB(A.V, B.V, R->V);
+  }
+
+  static bool neg(Integral A, Integral *R) {
+    *R = -A;
+    return false;
   }
 
 private:

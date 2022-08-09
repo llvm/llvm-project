@@ -116,13 +116,36 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NullToPointer:
     return this->Visit(SubExpr);
 
+  case CK_IntegralCast: {
+    Optional<PrimType> FromT = classify(SubExpr->getType());
+    Optional<PrimType> ToT = classify(CE->getType());
+    if (!FromT || !ToT)
+      return false;
+
+    if (!this->Visit(SubExpr))
+      return false;
+
+    return this->emitCast(*FromT, *ToT, CE);
+  }
+
   case CK_ToVoid:
     return discard(SubExpr);
 
-  default: {
-    // TODO: implement other casts.
-    return this->bail(CE);
-  }
+  case CK_IntegralToBoolean:
+    // Compare integral from Subexpr with 0
+    if (Optional<PrimType> T = classify(SubExpr->getType())) {
+      if (!this->Visit(SubExpr))
+        return false;
+
+      if (!this->emitConst(SubExpr, 0))
+        return false;
+
+      return this->emitNE(*T, SubExpr);
+    }
+    return false;
+
+  default:
+    assert(false && "Cast not implemented");
   }
 }
 
@@ -581,6 +604,40 @@ bool ByteCodeExprGen<Emitter>::VisitCXXNullPtrLiteralExpr(
     return true;
 
   return this->emitNullPtr(E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
+  if (!this->Visit(E->getSubExpr()))
+    return false;
+
+  switch (E->getOpcode()) {
+  case UO_PostInc: // x++
+  case UO_PostDec: // x--
+  case UO_PreInc:  // --x
+  case UO_PreDec:  // ++x
+    return false;
+
+  case UO_LNot: // !x
+    return this->emitInvBool(E);
+  case UO_Minus: // -x
+    if (Optional<PrimType> T = classify(E->getType()))
+      return this->emitNeg(*T, E);
+    return false;
+  case UO_Plus:  // +x
+    return true; // noop
+
+  case UO_AddrOf: // &x
+  case UO_Deref:  // *x
+  case UO_Not:    // ~x
+  case UO_Real:   // __real x
+  case UO_Imag:   // __imag x
+  case UO_Extension:
+  case UO_Coawait:
+    assert(false && "Unhandled opcode");
+  }
+
+  return false;
 }
 
 template <class Emitter>
