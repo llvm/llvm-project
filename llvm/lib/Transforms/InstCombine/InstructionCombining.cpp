@@ -3247,6 +3247,64 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
   return nullptr;
 }
 
+Instruction *
+InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
+  auto *WO = dyn_cast<WithOverflowInst>(EV.getAggregateOperand());
+  if (!WO)
+    return nullptr;
+
+  // extractvalue (any_mul_with_overflow X, -1), 0 --> -X
+  Intrinsic::ID OvID = WO->getIntrinsicID();
+  if (*EV.idx_begin() == 0 &&
+      (OvID == Intrinsic::smul_with_overflow ||
+       OvID == Intrinsic::umul_with_overflow) &&
+      match(WO->getArgOperand(1), m_AllOnes())) {
+    return BinaryOperator::CreateNeg(WO->getArgOperand(0));
+  }
+
+  // We're extracting from an overflow intrinsic. See if we're the only user.
+  // That allows us to simplify multiple result intrinsics to simpler things
+  // that just get one value.
+  if (!WO->hasOneUse())
+    return nullptr;
+
+  // Check if we're grabbing only the result of a 'with overflow' intrinsic
+  // and replace it with a traditional binary instruction.
+  if (*EV.idx_begin() == 0) {
+    Instruction::BinaryOps BinOp = WO->getBinaryOp();
+    Value *LHS = WO->getLHS(), *RHS = WO->getRHS();
+    // Replace the old instruction's uses with poison.
+    replaceInstUsesWith(*WO, PoisonValue::get(WO->getType()));
+    eraseInstFromFunction(*WO);
+    return BinaryOperator::Create(BinOp, LHS, RHS);
+  }
+
+  assert(*EV.idx_begin() == 1 && "Unexpected extract index for overflow inst");
+
+  // If only the overflow result is used, and the right hand side is a
+  // constant (or constant splat), we can remove the intrinsic by directly
+  // checking for overflow.
+  const APInt *C;
+  if (match(WO->getRHS(), m_APInt(C))) {
+    // Compute the no-wrap range for LHS given RHS=C, then construct an
+    // equivalent icmp, potentially using an offset.
+    ConstantRange NWR = ConstantRange::makeExactNoWrapRegion(
+        WO->getBinaryOp(), *C, WO->getNoWrapKind());
+
+    CmpInst::Predicate Pred;
+    APInt NewRHSC, Offset;
+    NWR.getEquivalentICmp(Pred, NewRHSC, Offset);
+    auto *OpTy = WO->getRHS()->getType();
+    auto *NewLHS = WO->getLHS();
+    if (Offset != 0)
+      NewLHS = Builder.CreateAdd(NewLHS, ConstantInt::get(OpTy, Offset));
+    return new ICmpInst(ICmpInst::getInversePredicate(Pred), NewLHS,
+                        ConstantInt::get(OpTy, NewRHSC));
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
   Value *Agg = EV.getAggregateOperand();
 
@@ -3308,58 +3366,11 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
       return ExtractValueInst::Create(IV->getInsertedValueOperand(),
                                       makeArrayRef(exti, exte));
   }
-  if (WithOverflowInst *WO = dyn_cast<WithOverflowInst>(Agg)) {
-    // extractvalue (any_mul_with_overflow X, -1), 0 --> -X
-    Intrinsic::ID OvID = WO->getIntrinsicID();
-    if (*EV.idx_begin() == 0 &&
-        (OvID == Intrinsic::smul_with_overflow ||
-         OvID == Intrinsic::umul_with_overflow) &&
-        match(WO->getArgOperand(1), m_AllOnes())) {
-      return BinaryOperator::CreateNeg(WO->getArgOperand(0));
-    }
 
-    // We're extracting from an overflow intrinsic, see if we're the only user,
-    // which allows us to simplify multiple result intrinsics to simpler
-    // things that just get one value.
-    if (WO->hasOneUse()) {
-      // Check if we're grabbing only the result of a 'with overflow' intrinsic
-      // and replace it with a traditional binary instruction.
-      if (*EV.idx_begin() == 0) {
-        Instruction::BinaryOps BinOp = WO->getBinaryOp();
-        Value *LHS = WO->getLHS(), *RHS = WO->getRHS();
-        // Replace the old instruction's uses with poison.
-        replaceInstUsesWith(*WO, PoisonValue::get(WO->getType()));
-        eraseInstFromFunction(*WO);
-        return BinaryOperator::Create(BinOp, LHS, RHS);
-      }
+  if (Instruction *R = foldExtractOfOverflowIntrinsic(EV))
+    return R;
 
-      assert(*EV.idx_begin() == 1 &&
-             "unexpected extract index for overflow inst");
-
-      // If only the overflow result is used, and the right hand side is a
-      // constant (or constant splat), we can remove the intrinsic by directly
-      // checking for overflow.
-      const APInt *C;
-      if (match(WO->getRHS(), m_APInt(C))) {
-        // Compute the no-wrap range for LHS given RHS=C, then construct an
-        // equivalent icmp, potentially using an offset.
-        ConstantRange NWR =
-          ConstantRange::makeExactNoWrapRegion(WO->getBinaryOp(), *C,
-                                               WO->getNoWrapKind());
-
-        CmpInst::Predicate Pred;
-        APInt NewRHSC, Offset;
-        NWR.getEquivalentICmp(Pred, NewRHSC, Offset);
-        auto *OpTy = WO->getRHS()->getType();
-        auto *NewLHS = WO->getLHS();
-        if (Offset != 0)
-          NewLHS = Builder.CreateAdd(NewLHS, ConstantInt::get(OpTy, Offset));
-        return new ICmpInst(ICmpInst::getInversePredicate(Pred), NewLHS,
-                            ConstantInt::get(OpTy, NewRHSC));
-      }
-    }
-  }
-  if (LoadInst *L = dyn_cast<LoadInst>(Agg))
+  if (LoadInst *L = dyn_cast<LoadInst>(Agg)) {
     // If the (non-volatile) load only has one use, we can rewrite this to a
     // load from a GEP. This reduces the size of the load. If a load is used
     // only by extractvalue instructions then this either must have been
@@ -3386,6 +3397,8 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
       // the wrong spot, so use replaceInstUsesWith().
       return replaceInstUsesWith(EV, NL);
     }
+  }
+
   // We could simplify extracts from other values. Note that nested extracts may
   // already be simplified implicitly by the above: extract (extract (insert) )
   // will be translated into extract ( insert ( extract ) ) first and then just
