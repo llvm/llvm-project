@@ -14,20 +14,75 @@ main_body:
   ret void
 }
 
-; GCN-LABEL: {{^}}mbcnt_lo_known_bits:
+; GCN-LABEL: {{^}}mbcnt_lo_known_bits_1:
 ; GCN: v_mbcnt_lo_u32_b32
-; GCN-NOT: and
-define i32 @mbcnt_lo_known_bits(i32 %x, i32 %y) #0 {
+; GCN: v_and_b32_e32
+define i32 @mbcnt_lo_known_bits_1(i32 %x, i32 %y) #0 {
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 %x, i32 %y)
   %mask = and i32 %lo, 63
   ret i32 %mask
 }
 
-; GCN-LABEL: {{^}}mbcnt_hi_known_bits:
+; GCN-LABEL: {{^}}mbcnt_lo_known_bits_2:
+; GCN: v_mbcnt_lo_u32_b32
+; GCN-NOT: and
+define i32 @mbcnt_lo_known_bits_2(i32 %x) #0 {
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 %x, i32 0)
+  %mask = and i32 %lo, 63
+  ret i32 %mask
+}
+
+; GCN-LABEL: {{^}}mbcnt_lo_known_bits_3:
+; GCN: v_mbcnt_lo_u32_b32
+; GCN-NOT: and
+define i32 @mbcnt_lo_known_bits_3(i32 %x) #0 {
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 %x, i32 15)
+  %mask = and i32 %lo, 127
+  ret i32 %mask
+}
+
+; GCN-LABEL: {{^}}mbcnt_lo_known_bits_4:
+; GCN: v_mbcnt_lo_u32_b32
+; GCN: v_and_b32_e32
+define i32 @mbcnt_lo_known_bits_4(i32 %x) #0 {
+  %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 %x, i32 15)
+  %mask = and i32 %lo, 63
+  ret i32 %mask
+}
+
+
+; GCN-LABEL: {{^}}mbcnt_hi_known_bits_1:
+; GCN: v_mbcnt_hi_u32_b32
+; GCN: v_and_b32_e32
+define i32 @mbcnt_hi_known_bits_1(i32 %x, i32 %y) #0 {
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 %x, i32 %y)
+  %mask = and i32 %hi, 63
+  ret i32 %mask
+}
+
+; GCN-LABEL: {{^}}mbcnt_hi_known_bits_2:
 ; GCN: v_mbcnt_hi_u32_b32
 ; GCN-NOT: and
-define i32 @mbcnt_hi_known_bits(i32 %x, i32 %y) #0 {
-  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 %x, i32 %y)
+define i32 @mbcnt_hi_known_bits_2(i32 %x) #0 {
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 %x, i32 0)
+  %mask = and i32 %hi, 63
+  ret i32 %mask
+}
+
+; GCN-LABEL: {{^}}mbcnt_hi_known_bits_3:
+; GCN: v_mbcnt_hi_u32_b32
+; GCN-NOT: and
+define i32 @mbcnt_hi_known_bits_3(i32 %x) #0 {
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 %x, i32 15)
+  %mask = and i32 %hi, 127
+  ret i32 %mask
+}
+
+; GCN-LABEL: {{^}}mbcnt_hi_known_bits_4:
+; GCN: v_mbcnt_hi_u32_b32
+; GCN: v_and_b32_e32
+define i32 @mbcnt_hi_known_bits_4(i32 %x) #0 {
+  %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 %x, i32 15)
   %mask = and i32 %hi, 63
   ret i32 %mask
 }
