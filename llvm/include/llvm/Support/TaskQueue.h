@@ -38,7 +38,7 @@ class TaskQueue {
   // type-specialized domain (before type erasure) and then erase this into a
   // std::function.
   template <typename Callable> struct Task {
-    using ResultTy = std::result_of_t<Callable()>;
+    using ResultTy = std::invoke_result_t<Callable>;
     explicit Task(Callable C, TaskQueue &Parent)
         : C(std::move(C)), P(std::make_shared<std::promise<ResultTy>>()),
           Parent(&Parent) {}
@@ -78,13 +78,13 @@ public:
   /// used to wait for the task (and all previous tasks that have not yet
   /// completed) to finish.
   template <typename Callable>
-  std::future<std::result_of_t<Callable()>> async(Callable &&C) {
+  std::future<std::invoke_result_t<Callable>> async(Callable &&C) {
 #if !LLVM_ENABLE_THREADS
     static_assert(false,
                   "TaskQueue requires building with LLVM_ENABLE_THREADS!");
 #endif
     Task<Callable> T{std::move(C), *this};
-    using ResultTy = std::result_of_t<Callable()>;
+    using ResultTy = std::invoke_result_t<Callable>;
     std::future<ResultTy> F = T.P->get_future();
     {
       std::lock_guard<std::mutex> Lock(QueueLock);
