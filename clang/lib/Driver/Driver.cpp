@@ -4510,6 +4510,102 @@ Action *Driver::ConstructPhaseAction(
   llvm_unreachable("invalid phase in ConstructPhaseAction");
 }
 
+// Infer data storing path of the options `-ftime-trace`, `-ftime-trace=<path>`
+void InferTimeTracePath(Compilation &C) {
+  bool HasTimeTrace =
+      C.getArgs().getLastArg(options::OPT_ftime_trace) != nullptr;
+  bool HasTimeTraceFile =
+      C.getArgs().getLastArg(options::OPT_ftime_trace_EQ) != nullptr;
+  // Whether `-ftime-trace` or `-ftime-trace=<path>` are specified
+  if (!HasTimeTrace && !HasTimeTraceFile)
+    return;
+
+  // If `-ftime-trace=<path>` is specified, TracePath is the <path>.
+  // Else if there is a linking job, TracePath is the parent path of .exe,
+  //         then the OutputFile's name may be appended to it.
+  // Else, TracePath is "",
+  //         then the full OutputFile's path may be appended to it.
+  SmallString<128> TracePath("");
+
+  if (HasTimeTraceFile) {
+    TracePath = SmallString<128>(
+        C.getArgs().getLastArg(options::OPT_ftime_trace_EQ)->getValue());
+  } else {
+    // Get linking executable file's parent path as TracePath's parent path,
+    // default is ".". Filename may be determined and added into TracePath then.
+    //
+    // e.g. executable file's path: /usr/local/a.out
+    //      its parent's path:      /usr/local
+    for (auto &J : C.getJobs()) {
+      if (J.getSource().getKind() == Action::LinkJobClass) {
+        assert(!J.getOutputFilenames().empty() &&
+               "linking output filename is empty");
+        auto OutputFilePath =
+            SmallString<128>(J.getOutputFilenames()[0].c_str());
+        if (llvm::sys::path::has_parent_path(OutputFilePath)) {
+          TracePath = llvm::sys::path::parent_path(OutputFilePath);
+        } else {
+          TracePath = SmallString<128>(".");
+        }
+        break;
+      }
+    }
+  }
+
+  // Add or replace the modified -ftime-trace=<path>` to all clang jobs
+  for (auto &J : C.getJobs()) {
+    if (J.getSource().getKind() == Action::AssembleJobClass ||
+        J.getSource().getKind() == Action::BackendJobClass ||
+        J.getSource().getKind() == Action::CompileJobClass) {
+      SmallString<128> TracePathReal = TracePath;
+      SmallString<128> OutputPath(J.getOutputFilenames()[0].c_str());
+      std::string arg = std::string("-ftime-trace=");
+      if (!HasTimeTraceFile) {
+        if (TracePathReal.empty()) {
+          // /xxx/yyy.o => /xxx/yyy.json
+          llvm::sys::path::replace_extension(OutputPath, "json");
+          arg += std::string(OutputPath.c_str());
+        } else {
+          // /xxx/yyy.o => /executable_file_parent_path/yyy.json
+          llvm::sys::path::append(TracePathReal,
+                                  llvm::sys::path::filename(OutputPath));
+          llvm::sys::path::replace_extension(TracePathReal, "json");
+          arg += std::string(TracePathReal.c_str());
+        }
+      } else {
+        // /full_file_path_specified or /path_specified/yyy.json
+        if (llvm::sys::fs::is_directory(TracePathReal))
+          llvm::sys::path::append(TracePathReal,
+                                  llvm::sys::path::filename(OutputPath));
+        llvm::sys::path::replace_extension(TracePathReal, "json");
+        arg += std::string(TracePathReal.c_str());
+      }
+
+      assert(arg.size() > strlen("-ftime-trace") &&
+             arg.find("-ftime-trace=") == 0 && arg[arg.size() - 1] != '=' &&
+             "invalid `-ftime-trace=<path>`");
+
+      const std::string::size_type size = arg.size();
+      char *buffer = new char[size + 1];
+      memcpy(buffer, arg.c_str(), size + 1);
+
+      // Replace `-ftime-trace` or `-ftime-trace=<path>` with the modified
+      // `-ftime-trace=<infered_path>`.
+      auto &JArgs = J.getArguments();
+      for (unsigned I = 0; I < JArgs.size(); ++I) {
+        if (StringRef(JArgs[I]).startswith("-ftime-trace=") ||
+            (StringRef(JArgs[I]).equals("-ftime-trace") && !HasTimeTraceFile)) {
+          ArgStringList NewArgs(JArgs.begin(), JArgs.begin() + I);
+          NewArgs.push_back(buffer);
+          NewArgs.append(JArgs.begin() + I + 1, JArgs.end());
+          J.replaceArguments(NewArgs);
+          break;
+        }
+      }
+    }
+  }
+}
+
 void Driver::BuildJobs(Compilation &C) const {
   llvm::PrettyStackTraceString CrashInfo("Building compilation jobs");
 
@@ -4596,6 +4692,9 @@ void Driver::BuildJobs(Compilation &C) const {
                        /*LinkingOutput*/ LinkingOutput, CachedResults,
                        /*TargetDeviceOffloadKind*/ Action::OFK_None);
   }
+
+  // set data storing path of the options `-ftime-trace`, `-ftime-trace=<path>`
+  InferTimeTracePath(C);
 
   // If we have more than one job, then disable integrated-cc1 for now. Do this
   // also when we need to report process execution statistics.
