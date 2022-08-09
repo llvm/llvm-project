@@ -522,7 +522,8 @@ feature_test_macros = [ add_version_header(x) for x in [
     "name": "__cpp_lib_ranges",
     "values": { "c++20": 201811 },
     "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
-    "unimplemented": True,
+    "test_suite_guard": "!defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)",
+    "libcxx_guard": "!defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)",
   }, {
     "name": "__cpp_lib_ranges_chunk",
     "values": { "c++2b": 202202 },
