@@ -291,7 +291,11 @@ void CheckHelper::Check(const Symbol &symbol) {
         canHaveAssumedParameter |= symbol.has<AssocEntityDetails>();
       }
     }
-    Check(*type, canHaveAssumedParameter);
+    if (IsProcedurePointer(symbol) && symbol.HasExplicitInterface()) {
+      // Don't check function result types here
+    } else {
+      Check(*type, canHaveAssumedParameter);
+    }
     if (InPure() && InFunction() && IsFunctionResult(symbol)) {
       if (derived && HasImpureFinal(*derived)) { // C1584
         messages_.Say(
