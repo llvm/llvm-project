@@ -499,7 +499,9 @@ static std::optional<Procedure> CharacterizeProcedure(
               }
               return intrinsic;
             }
-            const semantics::ProcInterface &interface { proc.interface() };
+            const semantics::ProcInterface &interface {
+              proc.interface()
+            };
             if (const semantics::Symbol * interfaceSymbol{interface.symbol()}) {
               auto interface {
                 CharacterizeProcedure(*interfaceSymbol, context, seenProcs)
@@ -557,6 +559,13 @@ static std::optional<Procedure> CharacterizeProcedure(
           },
           [&](const semantics::HostAssocDetails &assoc) {
             return CharacterizeProcedure(assoc.symbol(), context, seenProcs);
+          },
+          [&](const semantics::GenericDetails &generic) {
+            if (const semantics::Symbol * specific{generic.specific()}) {
+              return CharacterizeProcedure(*specific, context, seenProcs);
+            } else {
+              return std::optional<Procedure>{};
+            }
           },
           [&](const semantics::EntityDetails &) {
             context.messages().Say(

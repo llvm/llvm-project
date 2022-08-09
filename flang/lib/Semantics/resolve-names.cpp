@@ -4869,10 +4869,13 @@ void DeclarationVisitor::Post(
     if (!procedure) {
       procedure = NoteInterfaceName(procedureName);
     }
-    if (auto *s{MakeTypeSymbol(bindingName, ProcBindingDetails{*procedure})}) {
-      SetPassNameOn(*s);
-      if (GetAttrs().test(Attr::DEFERRED)) {
-        context().SetError(*s);
+    if (procedure) {
+      if (auto *s{
+              MakeTypeSymbol(bindingName, ProcBindingDetails{*procedure})}) {
+        SetPassNameOn(*s);
+        if (GetAttrs().test(Attr::DEFERRED)) {
+          context().SetError(*s);
+        }
       }
     }
   }
