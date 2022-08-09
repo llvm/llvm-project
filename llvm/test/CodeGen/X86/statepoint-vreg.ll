@@ -435,7 +435,7 @@ define void @test_sched(float %0, i32 %1, ptr addrspace(1) %2) gc "statepoint-ex
 ; CHECK-NEXT:  .Ltmp14:
 ; CHECK-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss %xmm0, {{[-0-9]*}}(%rsp)
+; CHECK-NEXT:    movss %xmm0, (%rsp)
 ; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
