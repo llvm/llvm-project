@@ -179,7 +179,7 @@ public:
   }
 
   size_t nodeCount() const { return NodeCount; }
-  size_t bytes() const { return Arena.getBytesAllocated() + sizeof(this); }
+  size_t bytes() const { return Arena.getBytesAllocated() + sizeof(*this); }
 
 private:
   ForestNode &create(ForestNode::Kind K, SymbolID SID, Token::Index Start,
