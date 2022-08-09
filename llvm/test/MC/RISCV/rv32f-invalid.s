@@ -29,6 +29,6 @@ fmsub.s f14, f15, f16, f17, 0 # CHECK: :[[@LINE]]:29: error: operand must be a v
 fnmsub.s f18, f19, f20, f21, 0b111 # CHECK: :[[@LINE]]:30: error: operand must be a valid floating point rounding mode mnemonic
 
 # Using 'D' instructions for an 'F'-only target
-fadd.d ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'D' (Double-Precision Floating-Point)
+fadd.d ft0, ft1, ft2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
 
 # Using RV64F instructions for RV32 is tested in rv64f-valid.s

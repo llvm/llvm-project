@@ -6,4 +6,4 @@ clmul t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 clmulh t0, t1 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 
 # Undefined zbc instruction in zbkc
-clmulr t0, t1, t2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbc' (Carry-Less Multiplication)
+clmulr t0, t1, t2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbc' (Carry-Less Multiplication){{$}}

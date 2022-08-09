@@ -23,7 +23,7 @@ prefetch.w %pcrel_lo(foo)(a0) # CHECK: :[[@LINE]]:12: error: immediate must be a
 
 # Instructions from other zicbo* extensions aren't available without enabling
 # the appropriate -mattr flag.
-cbo.clean (t0) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbom' (Cache-Block Management Instructions)
-cbo.flush (t1) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbom' (Cache-Block Management Instructions)
-cbo.inval (t2) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbom' (Cache-Block Management Instructions)
-cbo.zero (t0) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicboz' (Cache-Block Zero Instructions)
+cbo.clean (t0) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbom' (Cache-Block Management Instructions){{$}}
+cbo.flush (t1) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbom' (Cache-Block Management Instructions){{$}}
+cbo.inval (t2) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbom' (Cache-Block Management Instructions){{$}}
+cbo.zero (t0) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicboz' (Cache-Block Zero Instructions){{$}}

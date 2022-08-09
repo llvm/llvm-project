@@ -13,6 +13,6 @@ fsri t0, t1, t2 # CHECK: :[[@LINE]]:1: error: too few operands for instruction
 # Immediate operand out of range
 fsri t0, t1, t2, 32 # CHECK: :[[@LINE]]:18: error: immediate must be an integer in the range [0, 31]
 fsri t0, t1, t2, -1 # CHECK: :[[@LINE]]:18: error: immediate must be an integer in the range [0, 31]
-fslw t0, t1, t2, t3 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-fsrw t0, t1, t2, t3 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
-fsriw t0, t1, t2, 0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set
+fslw t0, t1, t2, t3 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
+fsrw t0, t1, t2, t3 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}
+fsriw t0, t1, t2, 0 # CHECK: :[[@LINE]]:1: error: instruction requires the following: RV64I Base Instruction Set{{$}}

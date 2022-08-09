@@ -11,9 +11,9 @@ cbo.zero 1(t0) # CHECK: :[[@LINE]]:10: error: optional integer offset must be 0
 
 # Instructions from other zicbo* extensions aren't available without enabling
 # the appropriate -mattr flag.
-cbo.clean (t0) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbom' (Cache-Block Management Instructions)
-cbo.flush (t1) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbom' (Cache-Block Management Instructions)
-cbo.inval (t2) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbom' (Cache-Block Management Instructions)
-prefetch.i 0(t3) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbop' (Cache-Block Prefetch Instructions)
-prefetch.r 0(t4) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbop' (Cache-Block Prefetch Instructions)
-prefetch.w 0(t5) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbop' (Cache-Block Prefetch Instructions)
+cbo.clean (t0) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbom' (Cache-Block Management Instructions){{$}}
+cbo.flush (t1) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbom' (Cache-Block Management Instructions){{$}}
+cbo.inval (t2) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbom' (Cache-Block Management Instructions){{$}}
+prefetch.i 0(t3) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbop' (Cache-Block Prefetch Instructions){{$}}
+prefetch.r 0(t4) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbop' (Cache-Block Prefetch Instructions){{$}}
+prefetch.w 0(t5) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zicbop' (Cache-Block Prefetch Instructions){{$}}
