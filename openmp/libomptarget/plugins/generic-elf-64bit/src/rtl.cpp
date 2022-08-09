@@ -11,12 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/DynamicLibrary.h"
 
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <dlfcn.h>
 #include <ffi.h>
 #include <gelf.h>
 #include <link.h>
@@ -28,6 +28,7 @@
 #include "omptargetplugin.h"
 
 using namespace llvm;
+using namespace llvm::sys;
 
 #ifndef TARGET_NAME
 #define TARGET_NAME Generic ELF - 64bit
@@ -46,7 +47,7 @@ using namespace llvm;
 /// Array of Dynamic libraries loaded for this target.
 struct DynLibTy {
   std::string FileName;
-  void *Handle;
+  std::unique_ptr<DynamicLibrary> DynLib;
 };
 
 /// Keep entries table per device.
@@ -105,10 +106,8 @@ public:
   ~RTLDeviceInfoTy() {
     // Close dynamic libraries
     for (auto &Lib : DynLibs) {
-      if (Lib.Handle) {
-        dlclose(Lib.Handle);
+      if (Lib.DynLib->isValid())
         remove(Lib.FileName.c_str());
-      }
     }
   }
 };
@@ -164,14 +163,15 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
   fwrite(Image->ImageStart, ImageSize, 1, Ftmp);
   fclose(Ftmp);
 
-  DynLibTy Lib = {TmpName, dlopen(TmpName, RTLD_LAZY)};
+  std::string ErrMsg;
+  auto DynLib = std::make_unique<sys::DynamicLibrary>(
+      sys::DynamicLibrary::getPermanentLibrary(TmpName, &ErrMsg));
+  DynLibTy Lib = {TmpName, std::move(DynLib)};
 
-  if (!Lib.Handle) {
-    DP("Target library loading error: %s\n", dlerror());
+  if (!Lib.DynLib->isValid()) {
+    DP("Target library loading error: %s\n", ErrMsg.c_str());
     return NULL;
   }
-
-  DeviceInfo.DynLibs.push_back(Lib);
 
   __tgt_offload_entry *HostBegin = Image->EntriesBegin;
   __tgt_offload_entry *HostEnd = Image->EntriesEnd;
@@ -184,7 +184,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
 
     __tgt_offload_entry Entry = *E;
 
-    void *DevAddr = dlsym(Lib.Handle, E->name);
+    void *DevAddr = Lib.DynLib->getAddressOfSymbol(E->name);
     Entry.addr = DevAddr;
 
     DP("Entry point " DPxMOD " maps to global %s (" DPxMOD ")\n",
@@ -194,6 +194,7 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
   }
 
   DeviceInfo.createOffloadTable(DeviceId, std::move(Entries));
+  DeviceInfo.DynLibs.emplace_back(std::move(Lib));
 
   return DeviceInfo.getOffloadEntriesTable(DeviceId);
 }
