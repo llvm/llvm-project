@@ -51,6 +51,8 @@ def loongarch_ret : SDNode<"LoongArchISD::RET", SDTNone,
 def loongarch_sll_w : SDNode<"LoongArchISD::SLL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
+def loongarch_rotr_w : SDNode<"LoongArchISD::ROTR_W", SDT_LoongArchIntBinOpW>;
+def loongarch_rotl_w : SDNode<"LoongArchISD::ROTL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_bstrins
     : SDNode<"LoongArchISD::BSTRINS", SDT_LoongArchBStrIns>;
 def loongarch_bstrpick
@@ -177,6 +179,12 @@ def NegImm : SDNodeXForm<imm, [{
 def fpimm0    : PatLeaf<(fpimm), [{return N->isExactlyValue(+0.0);}]>;
 def fpimm0neg : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
 def fpimm1    : PatLeaf<(fpimm), [{return N->isExactlyValue(+1.0);}]>;
+
+// Return an immediate subtracted from 32.
+def ImmSubFrom32 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(32 - N->getZExtValue(), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
 
 def CallSymbol: AsmOperandClass {
   let Name = "CallSymbol";
@@ -626,6 +634,8 @@ def : PatGprGpr<urem, MOD_WU>;
 def : PatGprGpr<mul, MUL_W>;
 def : PatGprGpr<mulhs, MULH_W>;
 def : PatGprGpr<mulhu, MULH_WU>;
+def : PatGprGpr<rotr, ROTR_W>;
+def : PatGprImm<rotr, ROTRI_W, uimm5>;
 } // Predicates = [IsLA32]
 
 let Predicates = [IsLA64] in {
@@ -639,6 +649,14 @@ def : PatGprGpr<sdiv, DIV_D>;
 def : PatGprGpr<udiv, DIV_DU>;
 def : PatGprGpr<srem, MOD_D>;
 def : PatGprGpr<urem, MOD_DU>;
+def : PatGprGpr<rotr, ROTR_D>;
+def : PatGprGpr<loongarch_rotr_w, ROTR_W>;
+def : PatGprImm<rotr, ROTRI_D, uimm6>;
+def : PatGprImm_32<rotr, ROTRI_W, uimm5>;
+def : Pat<(loongarch_rotl_w GPR:$rj, uimm5:$imm),
+          (ROTRI_W GPR:$rj, (ImmSubFrom32 uimm5:$imm))>;
+def : Pat<(sext_inreg (loongarch_rotl_w GPR:$rj, uimm5:$imm), i32),
+          (ROTRI_W GPR:$rj, (ImmSubFrom32 uimm5:$imm))>;
 // TODO: Select "_W[U]" instructions for i32xi32 if only lower 32 bits of the
 // product are used.
 def : PatGprGpr<mul, MUL_D>;
