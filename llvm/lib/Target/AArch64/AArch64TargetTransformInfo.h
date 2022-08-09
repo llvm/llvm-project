@@ -334,6 +334,10 @@ public:
     return 2;
   }
 
+  unsigned getMinTripCountTailFoldingThreshold() const {
+    return ST->hasSVE() ? 5 : 0;
+  }
+
   PredicationStyle emitGetActiveLaneMask() const {
     if (ST->hasSVE())
       return PredicationStyle::DataAndControlFlow;
