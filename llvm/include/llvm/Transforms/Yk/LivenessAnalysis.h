@@ -22,9 +22,8 @@ class LivenessAnalysis {
   /// Find the successor instructions of the specified instruction.
   std::set<Instruction *> getSuccessorInstructions(Instruction *I);
 
-  /// Replaces the value set behind the pointer `S` with the value set `R` and
-  /// returns whether the set behind `S` changed.
-  bool updateValueSet(std::set<Value *> *S, const std::set<Value *> R);
+  /// Replaces the set `S` with the set `R`, returning if the set changed.
+  bool updateValueSet(std::set<Value *> &S, const std::set<Value *> &R);
 
 public:
   LivenessAnalysis(Function *Func);

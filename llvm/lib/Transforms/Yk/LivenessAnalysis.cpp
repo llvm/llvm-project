@@ -40,7 +40,7 @@ void vset_union(const std::set<Value *> &S1, const std::set<Value *> &S2,
 }
 
 namespace llvm {
-/// Find the successor instructions of the specified instruction.
+
 std::set<Instruction *>
 LivenessAnalysis::getSuccessorInstructions(Instruction *I) {
   Instruction *Term = I->getParent()->getTerminator();
@@ -58,12 +58,10 @@ LivenessAnalysis::getSuccessorInstructions(Instruction *I) {
   return SuccInsts;
 }
 
-/// Replaces the value set behind the pointer `S` with the value set `R` and
-/// returns whether the set behind `S` changed.
-bool LivenessAnalysis::updateValueSet(std::set<Value *> *S,
-                                      const std::set<Value *> R) {
-  const bool Changed = (*S != R);
-  *S = R;
+bool LivenessAnalysis::updateValueSet(std::set<Value *> &S,
+                                      const std::set<Value *> &R) {
+  const bool Changed = (S != R);
+  S = R;
   return Changed;
 }
 
@@ -138,7 +136,7 @@ LivenessAnalysis::LivenessAnalysis(Function *Func) {
         for (Instruction *SI : SuccInsts) {
           NewOut.insert(In[SI].begin(), In[SI].end());
         }
-        Changed |= updateValueSet(&Out[I], std::move(NewOut));
+        Changed |= updateValueSet(Out[I], NewOut);
 
         // Update in[I].
         std::set<Value *> OutMinusDef;
@@ -146,14 +144,12 @@ LivenessAnalysis::LivenessAnalysis(Function *Func) {
 
         std::set<Value *> NewIn;
         vset_union(Uses[I], OutMinusDef, NewIn);
-        Changed |= updateValueSet(&In[I], std::move(NewIn));
+        Changed |= updateValueSet(In[I], NewIn);
       }
     }
   } while (Changed); // Until a fixed-point.
 }
 
-/// Returns the set of live variables immediately before the specified
-/// instruction.
 std::set<Value *> LivenessAnalysis::getLiveVarsBefore(Instruction *I) {
   return In[I];
 }
