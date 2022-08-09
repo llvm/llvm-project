@@ -313,6 +313,8 @@ void PPCCTRLoops::expandCTRLoops(MachineLoop *ML, MachineInstr *Start,
 
   MachineBasicBlock *Preheader = Start->getParent();
   MachineBasicBlock *Exiting = Dec->getParent();
+
+  (void)Preheader;
   assert((Preheader && Exiting) &&
          "Preheader and exiting should exist for CTR loop!");
 
