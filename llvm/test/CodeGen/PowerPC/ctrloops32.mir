@@ -10,16 +10,16 @@ body:             |
   bb.0.entry:
 
     %0:gprc = LI 2048
-    ; CHECK: MTCTR
+    ; CHECK: MTCTRloop
     ; CHECK: BDNZ
     ; CHECK-NOT: ADDI
     ; CHECK-NOT: CMPLWI
     ; CHECK-NOT: BC
-    MTCTRPseudo killed %0:gprc, implicit-def dead $ctr
+    MTCTRloop killed %0:gprc, implicit-def dead $ctr
 
   bb.1:
 
-    %1:crbitrc = DecreaseCTRPseudo 1, implicit-def dead $ctr, implicit $ctr
+    %1:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -35,17 +35,17 @@ body:             |
   bb.0.entry:
 
     %0:gprc = LI 2048
-    ; CHECK-NOT: MTCTR
+    ; CHECK-NOT: MTCTRloop
     ; CHECK-NOT: BDNZ
     ; CHECK: ADDI
     ; CHECK: CMPLWI
     ; CHECK: BC
-    MTCTRPseudo killed %0:gprc, implicit-def dead $ctr
+    MTCTRloop killed %0:gprc, implicit-def dead $ctr
 
   bb.1:
 
     INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr
-    %1:crbitrc = DecreaseCTRPseudo 1, implicit-def dead $ctr, implicit $ctr
+    %1:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -61,17 +61,17 @@ body:             |
   bb.0.entry:
 
     %0:gprc = LI 2048
-    ; CHECK-NOT: MTCTR
+    ; CHECK-NOT: MTCTRloop
     ; CHECK-NOT: BDNZ
     ; CHECK: ADDI
     ; CHECK: CMPLWI
     ; CHECK: BC
-    MTCTRPseudo killed %0:gprc, implicit-def dead $ctr
+    MTCTRloop killed %0:gprc, implicit-def dead $ctr
 
   bb.1:
 
     %1:gprc = MFCTR implicit $ctr
-    %2:crbitrc = DecreaseCTRPseudo 1, implicit-def dead $ctr, implicit $ctr
+    %2:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
     BC killed %2:crbitrc, %bb.1
     B %bb.2
 
@@ -92,12 +92,12 @@ body:             |
     ; CHECK: ADDI
     ; CHECK: CMPLWI
     ; CHECK: BC
-    MTCTRPseudo killed %0:gprc, implicit-def dead $ctr
+    MTCTRloop killed %0:gprc, implicit-def dead $ctr
     BL @test_fail_use_in_loop, csr_aix32, implicit-def dead $lr, implicit $rm
 
   bb.1:
 
-    %1:crbitrc = DecreaseCTRPseudo 1, implicit-def dead $ctr, implicit $ctr
+    %1:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -119,11 +119,11 @@ body:             |
     ; CHECK-NOT: ADDI
     ; CHECK-NOT: CMPLWI
     ; CHECK-NOT: BC
-    MTCTRPseudo killed %0:gprc, implicit-def dead $ctr
+    MTCTRloop killed %0:gprc, implicit-def dead $ctr
 
   bb.1:
 
-    %1:crbitrc = DecreaseCTRPseudo 1, implicit-def dead $ctr, implicit $ctr
+    %1:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -144,12 +144,12 @@ body:             |
     ; CHECK: ADDI
     ; CHECK: CMPLWI
     ; CHECK: BC
-    MTCTRPseudo killed %0:gprc, implicit-def dead $ctr
+    MTCTRloop killed %0:gprc, implicit-def dead $ctr
 
   bb.1:
 
     BL @test_fail_use_in_loop, csr_aix32, implicit-def dead $lr, implicit $rm
-    %1:crbitrc = DecreaseCTRPseudo 1, implicit-def dead $ctr, implicit $ctr
+    %1:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -174,12 +174,12 @@ body:             |
     renamable %1:crrc = CMPLW killed renamable $r3, killed renamable $r4
     renamable %2:crbitrc = COPY %1.sub_gt
     MTLR %0:gprc, implicit-def $lr
-    MTCTRPseudo %0:gprc, implicit-def dead $ctr
+    MTCTRloop %0:gprc, implicit-def dead $ctr
 
   bb.1:
 
     BCLRL renamable %2, implicit $lr, implicit $rm
-    %3:crbitrc = DecreaseCTRPseudo 1, implicit-def dead $ctr, implicit $ctr
+    %3:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
     BC killed %3:crbitrc, %bb.1
     B %bb.2
 
@@ -196,16 +196,16 @@ body:             |
     liveins: $ctr
 
     %0:gprc = LI 2048
-    ; CHECK-NOT: MTCTR
+    ; CHECK-NOT: MTCTRloop
     ; CHECK-NOT: BDNZ
     ; CHECK: ADDI
     ; CHECK: CMPLWI
     ; CHECK: BC
-    MTCTRPseudo killed %0:gprc, implicit-def dead $ctr
+    MTCTRloop killed %0:gprc, implicit-def dead $ctr
 
   bb.1:
 
-    %1:crbitrc = DecreaseCTRPseudo 1, implicit-def dead $ctr, implicit $ctr
+    %1:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -222,16 +222,16 @@ body:             |
 
     INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr
     %0:gprc = LI 2048
-    ; CHECK2-NOT: MTCTR
+    ; CHECK-NOT: MTCTRloop
     ; CHECK-NOT: BDNZ
     ; CHECK: ADDI
     ; CHECK: CMPLWI
     ; CHECK: BC
-    MTCTRPseudo killed %0:gprc, implicit-def dead $ctr
+    MTCTRloop killed %0:gprc, implicit-def dead $ctr
 
   bb.1:
 
-    %1:crbitrc = DecreaseCTRPseudo 1, implicit-def dead $ctr, implicit $ctr
+    %1:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
     BC killed %1:crbitrc, %bb.1
     B %bb.2
 
@@ -248,16 +248,16 @@ body:             |
 
     %0:gprc = MFCTR implicit $ctr
     %1:gprc = LI 2048
-    ; CHECK: MTCTR
+    ; CHECK: MTCTRloop
     ; CHECK: BDNZ
     ; CHECK-NOT: ADDI
     ; CHECK-NOT: CMPLWI
     ; CHECK-NOT: BC
-    MTCTRPseudo killed %1:gprc, implicit-def dead $ctr
+    MTCTRloop killed %1:gprc, implicit-def dead $ctr
 
   bb.1:
 
-    %2:crbitrc = DecreaseCTRPseudo 1, implicit-def dead $ctr, implicit $ctr
+    %2:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
     BC killed %2:crbitrc, %bb.1
     B %bb.2
 
@@ -273,17 +273,17 @@ body:             |
   bb.0.entry:
 
     %0:gprc = LI 2048
-    ; CHECK-NOT: MTCTR
+    ; CHECK-NOT: MTCTRloop
     ; CHECK-NOT: BDNZ
     ; CHECK: ADDI
     ; CHECK: CMPLWI
     ; CHECK: BC
-    MTCTRPseudo killed %0:gprc, implicit-def dead $ctr
+    MTCTRloop killed %0:gprc, implicit-def dead $ctr
     %1:gprc = MFCTR implicit $ctr
 
   bb.1:
 
-    %2:crbitrc = DecreaseCTRPseudo 1, implicit-def dead $ctr, implicit $ctr
+    %2:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
     BC killed %2:crbitrc, %bb.1
     B %bb.2
 
@@ -299,17 +299,17 @@ body:             |
   bb.0.entry:
 
     %0:gprc = LI 2048
-    ; CHECK-NOT: MTCTR
+    ; CHECK-NOT: MTCTRloop
     ; CHECK-NOT: BDNZ
     ; CHECK: ADDI
     ; CHECK: CMPLWI
     ; CHECK: BC
-    MTCTRPseudo killed %0:gprc, implicit-def dead $ctr
+    MTCTRloop killed %0:gprc, implicit-def dead $ctr
     INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def early-clobber $ctr
 
   bb.1:
 
-    %2:crbitrc = DecreaseCTRPseudo 1, implicit-def dead $ctr, implicit $ctr
+    %2:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
     BC killed %2:crbitrc, %bb.1
     B %bb.2
 
@@ -325,16 +325,16 @@ body:             |
   bb.0.entry:
 
     %0:gprc = LI 2048
-    ; CHECK: MTCTR
+    ; CHECK: MTCTRloop
     ; CHECK: BDNZ
     ; CHECK-NOT: ADDI
     ; CHECK-NOT: CMPLWI
     ; CHECK-NOT: BC
-    MTCTRPseudo killed %0:gprc, implicit-def dead $ctr
+    MTCTRloop killed %0:gprc, implicit-def dead $ctr
 
   bb.1:
 
-    %2:crbitrc = DecreaseCTRPseudo 1, implicit-def dead $ctr, implicit $ctr
+    %2:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
     BC killed %2:crbitrc, %bb.1
     B %bb.2
 
