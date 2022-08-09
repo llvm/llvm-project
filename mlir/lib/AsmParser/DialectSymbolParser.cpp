@@ -160,9 +160,7 @@ static Symbol parseExtendedSymbol(Parser &p, SymbolAliasMap &aliases,
   p.consumeToken();
 
   // Check to see if this is a pretty name.
-  StringRef dialectName;
-  StringRef symbolData;
-  std::tie(dialectName, symbolData) = identifier.split('.');
+  auto [dialectName, symbolData] = identifier.split('.');
   bool isPrettyName = !symbolData.empty() || identifier.back() == '.';
 
   // Check to see if the symbol has trailing data, i.e. has an immediately

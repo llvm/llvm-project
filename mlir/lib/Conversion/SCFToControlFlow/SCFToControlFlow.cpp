@@ -458,11 +458,9 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   ivs.reserve(parallelOp.getNumLoops());
   bool first = true;
   SmallVector<Value, 4> loopResults(iterArgs);
-  for (auto loopOperands :
+  for (auto [iv, lower, upper, step] :
        llvm::zip(parallelOp.getInductionVars(), parallelOp.getLowerBound(),
                  parallelOp.getUpperBound(), parallelOp.getStep())) {
-    Value iv, lower, upper, step;
-    std::tie(iv, lower, upper, step) = loopOperands;
     ForOp forOp = rewriter.create<ForOp>(loc, lower, upper, step, iterArgs);
     ivs.push_back(forOp.getInductionVar());
     auto iterRange = forOp.getRegionIterArgs();
