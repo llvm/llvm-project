@@ -84,7 +84,7 @@ CallInst *findControlPointCall(Module &M) {
     return nullptr;
 
   // Find the call site of `yk_mt_control_point()`.
-  Value::user_iterator U = CtrlPoint->user_begin();
+  const Value::user_iterator U = CtrlPoint->user_begin();
   if (U == CtrlPoint->user_end())
     return nullptr;
 
@@ -130,7 +130,7 @@ public:
 
     // Find all live variables just before the call to the control point.
     LivenessAnalysis LA(OldCtrlPointCall->getFunction());
-    std::set<Value *> LiveVals = LA.getLiveVarsBefore(OldCtrlPointCall);
+    const std::set<Value *> LiveVals = LA.getLiveVarsBefore(OldCtrlPointCall);
     if (LiveVals.size() == 0) {
       Context.emitError(
           "The interpreter loop has no live variables!\n"
