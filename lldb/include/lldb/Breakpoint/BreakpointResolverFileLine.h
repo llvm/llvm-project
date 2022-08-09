@@ -56,7 +56,7 @@ public:
   CopyForBreakpoint(lldb::BreakpointSP &breakpoint) override;
 
 protected:
-  void FilterContexts(SymbolContextList &sc_list, bool is_relative);
+  void FilterContexts(SymbolContextList &sc_list);
 
   friend class Breakpoint;
   SourceLocationSpec m_location_spec;
