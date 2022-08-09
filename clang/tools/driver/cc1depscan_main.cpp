@@ -65,8 +65,6 @@ using llvm::Error;
 #define DEBUG_TYPE "cc1depscand"
 
 ALWAYS_ENABLED_STATISTIC(NumRequests, "Number of -cc1 update requests");
-ALWAYS_ENABLED_STATISTIC(NumCASCacheHit,
-                         "Number of compilations should hit cache");
 
 #ifdef CLANG_HAVE_RLIMITS
 #if defined(__linux__) && defined(__PIE__)
@@ -1024,16 +1022,6 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
           printComputedCC1(OS);
         });
 #endif
-        // FIXME: we re-compute the cache key here and try to access the action
-        // cache and see if it should be a cache hit. Is there a better way to
-        // get this stats in the daemon?
-        auto &CAS = Tool->getCachingFileSystem().getCAS();
-        auto Key = createCompileJobCacheKey(CAS, NewArgs, *RootID);
-        auto Result = CAS.getCachedResult(Key);
-        if (Result)
-          ++NumCASCacheHit;
-        else
-          llvm::consumeError(Result.takeError());
       }
     });
   };

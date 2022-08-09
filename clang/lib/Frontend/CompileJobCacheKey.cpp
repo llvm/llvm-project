@@ -21,8 +21,8 @@ using namespace clang;
 using namespace llvm;
 using namespace llvm::cas;
 
-llvm::cas::CASID
-clang::createCompileJobCacheKey(CASDB &CAS, ArrayRef<const char *> CC1Args,
+static llvm::cas::CASID
+createCompileJobCacheKeyForArgs(CASDB &CAS, ArrayRef<const char *> CC1Args,
                                 llvm::cas::CASID FileSystemRootID) {
   Optional<llvm::cas::ObjectRef> RootRef = CAS.getReference(FileSystemRootID);
   if (!RootRef)
@@ -61,8 +61,10 @@ clang::createCompileJobCacheKey(CASDB &CAS, DiagnosticsEngine &Diags,
   FrontendOptions &FrontendOpts = InvocationForCacheKey.getFrontendOpts();
   DiagnosticOptions &DiagOpts = InvocationForCacheKey.getDiagnosticOpts();
   // Keep the key independent of the paths of these outputs.
-  FrontendOpts.OutputFile = "-";
-  InvocationForCacheKey.getDependencyOutputOpts().OutputFile = "-";
+  if (!FrontendOpts.OutputFile.empty())
+    FrontendOpts.OutputFile = "-";
+  if (!InvocationForCacheKey.getDependencyOutputOpts().OutputFile.empty())
+    InvocationForCacheKey.getDependencyOutputOpts().OutputFile = "-";
   // We always generate the serialized diagnostics so the key is independent of
   // the presence of '--serialize-diagnostics'.
   DiagOpts.DiagnosticSerializationFile.clear();
@@ -86,7 +88,7 @@ clang::createCompileJobCacheKey(CASDB &CAS, DiagnosticsEngine &Diags,
     return None;
   }
 
-  return createCompileJobCacheKey(CAS, Argv, *RootID);
+  return createCompileJobCacheKeyForArgs(CAS, Argv, *RootID);
 }
 
 static Error printFileSystem(CASDB &CAS, ObjectRef Ref, raw_ostream &OS) {
