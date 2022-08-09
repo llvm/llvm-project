@@ -73,6 +73,7 @@ static void CheckUnwind() {
 // -------------------------- Globals --------------------- {{{1
 int asan_inited;
 bool asan_init_is_running;
+bool replace_intrin_cached;
 
 #if !ASAN_FIXED_MAPPING
 uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;
@@ -451,6 +452,7 @@ static void AsanInitInternal() {
 
   // On Linux AsanThread::ThreadStart() calls malloc() that's why asan_inited
   // should be set to 1 prior to initializing the threads.
+  replace_intrin_cached = flags()->replace_intrin;
   asan_inited = 1;
   asan_init_is_running = false;
 
