@@ -14,7 +14,7 @@ func.func @atomic_and(%ptr : !spv.ptr<i32, StorageBuffer>, %value : i32) -> i32 
 
 func.func @atomic_and(%ptr : !spv.ptr<f32, StorageBuffer>, %value : i32) -> i32 {
   // expected-error @+1 {{pointer operand must point to an integer value, found 'f32'}}
-  %0 = "spv.AtomicAnd"(%ptr, %value) {memory_scope = 4: i32, semantics = 0x4 : i32} : (!spv.ptr<f32, StorageBuffer>, i32) -> (i32)
+  %0 = "spv.AtomicAnd"(%ptr, %value) {memory_scope = #spv.scope<Workgroup>, semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<f32, StorageBuffer>, i32) -> (i32)
   return %0 : i32
 }
 
@@ -23,7 +23,7 @@ func.func @atomic_and(%ptr : !spv.ptr<f32, StorageBuffer>, %value : i32) -> i32 
 
 func.func @atomic_and(%ptr : !spv.ptr<i32, StorageBuffer>, %value : i64) -> i64 {
   // expected-error @+1 {{expected value to have the same type as the pointer operand's pointee type 'i32', but found 'i64'}}
-  %0 = "spv.AtomicAnd"(%ptr, %value) {memory_scope = 2: i32, semantics = 0x8 : i32} : (!spv.ptr<i32, StorageBuffer>, i64) -> (i64)
+  %0 = "spv.AtomicAnd"(%ptr, %value) {memory_scope = #spv.scope<Workgroup>, semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<i32, StorageBuffer>, i64) -> (i64)
   return %0 : i64
 }
 
@@ -51,7 +51,7 @@ func.func @atomic_compare_exchange(%ptr: !spv.ptr<i32, Workgroup>, %value: i32, 
 
 func.func @atomic_compare_exchange(%ptr: !spv.ptr<i32, Workgroup>, %value: i64, %comparator: i32) -> i32 {
   // expected-error @+1 {{value operand must have the same type as the op result, but found 'i64' vs 'i32'}}
-  %0 = "spv.AtomicCompareExchange"(%ptr, %value, %comparator) {memory_scope = 4: i32, equal_semantics = 0x4: i32, unequal_semantics = 0x2:i32} : (!spv.ptr<i32, Workgroup>, i64, i32) -> (i32)
+  %0 = "spv.AtomicCompareExchange"(%ptr, %value, %comparator) {memory_scope = #spv.scope<Workgroup>, equal_semantics = #spv.memory_semantics<AcquireRelease>, unequal_semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<i32, Workgroup>, i64, i32) -> (i32)
   return %0: i32
 }
 
@@ -59,7 +59,7 @@ func.func @atomic_compare_exchange(%ptr: !spv.ptr<i32, Workgroup>, %value: i64, 
 
 func.func @atomic_compare_exchange(%ptr: !spv.ptr<i32, Workgroup>, %value: i32, %comparator: i16) -> i32 {
   // expected-error @+1 {{comparator operand must have the same type as the op result, but found 'i16' vs 'i32'}}
-  %0 = "spv.AtomicCompareExchange"(%ptr, %value, %comparator) {memory_scope = 4: i32, equal_semantics = 0x4: i32, unequal_semantics = 0x2:i32} : (!spv.ptr<i32, Workgroup>, i32, i16) -> (i32)
+  %0 = "spv.AtomicCompareExchange"(%ptr, %value, %comparator) {memory_scope = #spv.scope<Workgroup>, equal_semantics = #spv.memory_semantics<AcquireRelease>, unequal_semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<i32, Workgroup>, i32, i16) -> (i32)
   return %0: i32
 }
 
@@ -67,7 +67,7 @@ func.func @atomic_compare_exchange(%ptr: !spv.ptr<i32, Workgroup>, %value: i32, 
 
 func.func @atomic_compare_exchange(%ptr: !spv.ptr<i64, Workgroup>, %value: i32, %comparator: i32) -> i32 {
   // expected-error @+1 {{pointer operand's pointee type must have the same as the op result type, but found 'i64' vs 'i32'}}
-  %0 = "spv.AtomicCompareExchange"(%ptr, %value, %comparator) {memory_scope = 4: i32, equal_semantics = 0x4: i32, unequal_semantics = 0x2:i32} : (!spv.ptr<i64, Workgroup>, i32, i32) -> (i32)
+  %0 = "spv.AtomicCompareExchange"(%ptr, %value, %comparator) {memory_scope = #spv.scope<Workgroup>, equal_semantics = #spv.memory_semantics<AcquireRelease>, unequal_semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<i64, Workgroup>, i32, i32) -> (i32)
   return %0: i32
 }
 
@@ -87,7 +87,7 @@ func.func @atomic_compare_exchange_weak(%ptr: !spv.ptr<i32, Workgroup>, %value: 
 
 func.func @atomic_compare_exchange_weak(%ptr: !spv.ptr<i32, Workgroup>, %value: i64, %comparator: i32) -> i32 {
   // expected-error @+1 {{value operand must have the same type as the op result, but found 'i64' vs 'i32'}}
-  %0 = "spv.AtomicCompareExchangeWeak"(%ptr, %value, %comparator) {memory_scope = 4: i32, equal_semantics = 0x4: i32, unequal_semantics = 0x2:i32} : (!spv.ptr<i32, Workgroup>, i64, i32) -> (i32)
+  %0 = "spv.AtomicCompareExchangeWeak"(%ptr, %value, %comparator) {memory_scope = #spv.scope<Workgroup>, equal_semantics = #spv.memory_semantics<AcquireRelease>, unequal_semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<i32, Workgroup>, i64, i32) -> (i32)
   return %0: i32
 }
 
@@ -95,7 +95,7 @@ func.func @atomic_compare_exchange_weak(%ptr: !spv.ptr<i32, Workgroup>, %value: 
 
 func.func @atomic_compare_exchange_weak(%ptr: !spv.ptr<i32, Workgroup>, %value: i32, %comparator: i16) -> i32 {
   // expected-error @+1 {{comparator operand must have the same type as the op result, but found 'i16' vs 'i32'}}
-  %0 = "spv.AtomicCompareExchangeWeak"(%ptr, %value, %comparator) {memory_scope = 4: i32, equal_semantics = 0x4: i32, unequal_semantics = 0x2:i32} : (!spv.ptr<i32, Workgroup>, i32, i16) -> (i32)
+  %0 = "spv.AtomicCompareExchangeWeak"(%ptr, %value, %comparator) {memory_scope = #spv.scope<Workgroup>, equal_semantics = #spv.memory_semantics<AcquireRelease>, unequal_semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<i32, Workgroup>, i32, i16) -> (i32)
   return %0: i32
 }
 
@@ -103,7 +103,7 @@ func.func @atomic_compare_exchange_weak(%ptr: !spv.ptr<i32, Workgroup>, %value: 
 
 func.func @atomic_compare_exchange_weak(%ptr: !spv.ptr<i64, Workgroup>, %value: i32, %comparator: i32) -> i32 {
   // expected-error @+1 {{pointer operand's pointee type must have the same as the op result type, but found 'i64' vs 'i32'}}
-  %0 = "spv.AtomicCompareExchangeWeak"(%ptr, %value, %comparator) {memory_scope = 4: i32, equal_semantics = 0x4: i32, unequal_semantics = 0x2:i32} : (!spv.ptr<i64, Workgroup>, i32, i32) -> (i32)
+  %0 = "spv.AtomicCompareExchangeWeak"(%ptr, %value, %comparator) {memory_scope = #spv.scope<Workgroup>, equal_semantics = #spv.memory_semantics<AcquireRelease>, unequal_semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<i64, Workgroup>, i32, i32) -> (i32)
   return %0: i32
 }
 
@@ -123,7 +123,7 @@ func.func @atomic_exchange(%ptr: !spv.ptr<i32, Workgroup>, %value: i32) -> i32 {
 
 func.func @atomic_exchange(%ptr: !spv.ptr<i32, Workgroup>, %value: i64) -> i32 {
   // expected-error @+1 {{value operand must have the same type as the op result, but found 'i64' vs 'i32'}}
-  %0 = "spv.AtomicExchange"(%ptr, %value) {memory_scope = 4: i32, semantics = 0x4: i32} : (!spv.ptr<i32, Workgroup>, i64) -> (i32)
+  %0 = "spv.AtomicExchange"(%ptr, %value) {memory_scope = #spv.scope<Workgroup>, semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<i32, Workgroup>, i64) -> (i32)
   return %0: i32
 }
 
@@ -131,7 +131,7 @@ func.func @atomic_exchange(%ptr: !spv.ptr<i32, Workgroup>, %value: i64) -> i32 {
 
 func.func @atomic_exchange(%ptr: !spv.ptr<i64, Workgroup>, %value: i32) -> i32 {
   // expected-error @+1 {{pointer operand's pointee type must have the same as the op result type, but found 'i64' vs 'i32'}}
-  %0 = "spv.AtomicExchange"(%ptr, %value) {memory_scope = 4: i32, semantics = 0x4: i32} : (!spv.ptr<i64, Workgroup>, i32) -> (i32)
+  %0 = "spv.AtomicExchange"(%ptr, %value) {memory_scope = #spv.scope<Workgroup>, semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<i64, Workgroup>, i32) -> (i32)
   return %0: i32
 }
 
@@ -253,7 +253,7 @@ func.func @atomic_fadd(%ptr : !spv.ptr<f32, StorageBuffer>, %value : f32) -> f32
 
 func.func @atomic_fadd(%ptr : !spv.ptr<i32, StorageBuffer>, %value : f32) -> f32 {
   // expected-error @+1 {{pointer operand must point to an float value, found 'i32'}}
-  %0 = "spv.AtomicFAddEXT"(%ptr, %value) {memory_scope = 4: i32, semantics = 0x4 : i32} : (!spv.ptr<i32, StorageBuffer>, f32) -> (f32)
+  %0 = "spv.AtomicFAddEXT"(%ptr, %value) {memory_scope = #spv.scope<Workgroup>, semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<i32, StorageBuffer>, f32) -> (f32)
   return %0 : f32
 }
 
@@ -261,7 +261,7 @@ func.func @atomic_fadd(%ptr : !spv.ptr<i32, StorageBuffer>, %value : f32) -> f32
 
 func.func @atomic_fadd(%ptr : !spv.ptr<f32, StorageBuffer>, %value : f64) -> f64 {
   // expected-error @+1 {{expected value to have the same type as the pointer operand's pointee type 'f32', but found 'f64'}}
-  %0 = "spv.AtomicFAddEXT"(%ptr, %value) {memory_scope = 2: i32, semantics = 0x8 : i32} : (!spv.ptr<f32, StorageBuffer>, f64) -> (f64)
+  %0 = "spv.AtomicFAddEXT"(%ptr, %value) {memory_scope = #spv.scope<Device>, semantics = #spv.memory_semantics<AcquireRelease>} : (!spv.ptr<f32, StorageBuffer>, f64) -> (f64)
   return %0 : f64
 }
 

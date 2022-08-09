@@ -519,10 +519,24 @@ static void emitAttributeSerialization(const Attribute &attr,
      << formatv("if (auto attr = {0}->getAttr(\"{1}\")) {{\n", opVar, attrName);
   if (attr.getAttrDefName() == "SPV_ScopeAttr" ||
       attr.getAttrDefName() == "SPV_MemorySemanticsAttr") {
+    // These two enums are encoded as <id> to constant values in SPIR-V blob,
+    // but we directly use the constant value as attribute in SPIR-V dialect. So
+    // need to handle them separately from normal enum attributes.
+    EnumAttr baseEnum(attr.getDef().getValueAsDef("enum"));
     os << tabs
        << formatv("  {0}.push_back(prepareConstantInt({1}.getLoc(), "
-                  "attr.cast<IntegerAttr>()));\n",
-                  operandList, opVar);
+                  "Builder({1}).getI32IntegerAttr(static_cast<uint32_t>("
+                  "attr.cast<{2}::{3}Attr>().getValue()))));\n",
+                  operandList, opVar, baseEnum.getCppNamespace(),
+                  baseEnum.getEnumClassName());
+  } else if (attr.isSubClassOf("SPV_BitEnumAttr") ||
+             attr.isSubClassOf("SPV_I32EnumAttr")) {
+    EnumAttr baseEnum(attr.getDef().getValueAsDef("enum"));
+    os << tabs
+       << formatv("  {0}.push_back(static_cast<uint32_t>("
+                  "attr.cast<{1}::{2}Attr>().getValue()));\n",
+                  operandList, baseEnum.getCppNamespace(),
+                  baseEnum.getEnumClassName());
   } else if (attr.getAttrDefName() == "I32ArrayAttr") {
     // Serialize all the elements of the array
     os << tabs << "  for (auto attrElem : attr.cast<ArrayAttr>()) {\n";
@@ -531,7 +545,7 @@ static void emitAttributeSerialization(const Attribute &attr,
                   "attrElem.cast<IntegerAttr>().getValue().getZExtValue()));\n",
                   operandList);
     os << tabs << "  }\n";
-  } else if (attr.isEnumAttr() || attr.getAttrDefName() == "I32Attr") {
+  } else if (attr.getAttrDefName() == "I32Attr") {
     os << tabs
        << formatv("  {0}.push_back(static_cast<uint32_t>("
                   "attr.cast<IntegerAttr>().getValue().getZExtValue()));\n",
@@ -797,10 +811,25 @@ static void emitAttributeDeserialization(const Attribute &attr,
                                          raw_ostream &os) {
   if (attr.getAttrDefName() == "SPV_ScopeAttr" ||
       attr.getAttrDefName() == "SPV_MemorySemanticsAttr") {
+    // These two enums are encoded as <id> to constant values in SPIR-V blob,
+    // but we directly use the constant value as attribute in SPIR-V dialect. So
+    // need to handle them separately from normal enum attributes.
+    EnumAttr baseEnum(attr.getDef().getValueAsDef("enum"));
     os << tabs
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
-                  "getConstantInt({2}[{3}++])));\n",
-                  attrList, attrName, words, wordIndex);
+                  "opBuilder.getAttr<{2}::{3}Attr>(static_cast<{2}::{3}>("
+                  "getConstantInt({4}[{5}++]).getValue().getZExtValue()))));\n",
+                  attrList, attrName, baseEnum.getCppNamespace(),
+                  baseEnum.getEnumClassName(), words, wordIndex);
+  } else if (attr.isSubClassOf("SPV_BitEnumAttr") ||
+             attr.isSubClassOf("SPV_I32EnumAttr")) {
+    EnumAttr baseEnum(attr.getDef().getValueAsDef("enum"));
+    os << tabs
+       << formatv("  {0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
+                  "opBuilder.getAttr<{2}::{3}Attr>("
+                  "static_cast<{2}::{3}>({4}[{5}++]))));\n",
+                  attrList, attrName, baseEnum.getCppNamespace(),
+                  baseEnum.getEnumClassName(), words, wordIndex);
   } else if (attr.getAttrDefName() == "I32ArrayAttr") {
     os << tabs << "SmallVector<Attribute, 4> attrListElems;\n";
     os << tabs << formatv("while ({0} < {1}.size()) {{\n", wordIndex, words);
@@ -815,7 +844,7 @@ static void emitAttributeDeserialization(const Attribute &attr,
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "opBuilder.getArrayAttr(attrListElems)));\n",
                   attrList, attrName);
-  } else if (attr.isEnumAttr() || attr.getAttrDefName() == "I32Attr") {
+  } else if (attr.getAttrDefName() == "I32Attr") {
     os << tabs
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "opBuilder.getI32IntegerAttr({2}[{3}++])));\n",
@@ -1257,11 +1286,12 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
   for (const Availability &avail : opAvailabilities)
     availClasses.try_emplace(avail.getClass(), avail);
   for (const NamedAttribute &namedAttr : srcOp.getAttributes()) {
-    const auto *enumAttr = llvm::dyn_cast<EnumAttr>(&namedAttr.attr);
-    if (!enumAttr)
+    if (!namedAttr.attr.isSubClassOf("SPV_BitEnumAttr") &&
+        !namedAttr.attr.isSubClassOf("SPV_I32EnumAttr"))
       continue;
+    EnumAttr enumAttr(namedAttr.attr.getDef().getValueAsDef("enum"));
 
-    for (const EnumAttrCase &enumerant : enumAttr->getAllCases())
+    for (const EnumAttrCase &enumerant : enumAttr.getAllCases())
       for (const Availability &caseAvail :
            getAvailabilities(enumerant.getDef()))
         availClasses.try_emplace(caseAvail.getClass(), caseAvail);
@@ -1298,16 +1328,17 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
 
     // Update with enum attributes' specific availability spec.
     for (const NamedAttribute &namedAttr : srcOp.getAttributes()) {
-      const auto *enumAttr = llvm::dyn_cast<EnumAttr>(&namedAttr.attr);
-      if (!enumAttr)
+      if (!namedAttr.attr.isSubClassOf("SPV_BitEnumAttr") &&
+          !namedAttr.attr.isSubClassOf("SPV_I32EnumAttr"))
         continue;
+      EnumAttr enumAttr(namedAttr.attr.getDef().getValueAsDef("enum"));
 
       // (enumerant, availability specification) pairs for this availability
       // class.
       SmallVector<std::pair<EnumAttrCase, Availability>, 1> caseSpecs;
 
       // Collect all cases' availability specs.
-      for (const EnumAttrCase &enumerant : enumAttr->getAllCases())
+      for (const EnumAttrCase &enumerant : enumAttr.getAllCases())
         for (const Availability &caseAvail :
              getAvailabilities(enumerant.getDef()))
           if (availClassName == caseAvail.getClass())
@@ -1318,19 +1349,19 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
       if (caseSpecs.empty())
         continue;
 
-      if (enumAttr->isBitEnum()) {
+      if (enumAttr.isBitEnum()) {
         // For BitEnumAttr, we need to iterate over each bit to query its
         // availability spec.
         os << formatv("  for (unsigned i = 0; "
                       "i < std::numeric_limits<{0}>::digits; ++i) {{\n",
-                      enumAttr->getUnderlyingType());
+                      enumAttr.getUnderlyingType());
         os << formatv("    {0}::{1} tblgen_attrVal = this->{2}() & "
                       "static_cast<{0}::{1}>(1 << i);\n",
-                      enumAttr->getCppNamespace(), enumAttr->getEnumClassName(),
+                      enumAttr.getCppNamespace(), enumAttr.getEnumClassName(),
                       namedAttr.name);
         os << formatv(
             "    if (static_cast<{0}>(tblgen_attrVal) == 0) continue;\n",
-            enumAttr->getUnderlyingType());
+            enumAttr.getUnderlyingType());
       } else {
         // For IntEnumAttr, we just need to query the value as a whole.
         os << "  {\n";
@@ -1338,7 +1369,7 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
                       namedAttr.name);
       }
       os << formatv("    auto tblgen_instance = {0}::{1}(tblgen_attrVal);\n",
-                    enumAttr->getCppNamespace(), avail.getQueryFnName());
+                    enumAttr.getCppNamespace(), avail.getQueryFnName());
       os << "    if (tblgen_instance) "
          // TODO` here once ODS supports
          // dialect-specific contents so that we can use not implementing the
@@ -1385,7 +1416,8 @@ static bool emitCapabilityImplication(const RecordKeeper &recordKeeper,
                                       raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Capability Implication", os);
 
-  EnumAttr enumAttr(recordKeeper.getDef("SPV_CapabilityAttr"));
+  EnumAttr enumAttr(
+      recordKeeper.getDef("SPV_CapabilityAttr")->getValueAsDef("enum"));
 
   os << "ArrayRef<spirv::Capability> "
         "spirv::getDirectImpliedCapabilities(spirv::Capability cap) {\n"

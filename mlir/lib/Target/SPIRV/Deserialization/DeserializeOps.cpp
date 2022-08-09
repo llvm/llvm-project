@@ -12,6 +12,7 @@
 
 #include "Deserializer.h"
 
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Location.h"
@@ -408,35 +409,6 @@ Deserializer::processOp<spirv::ExecutionModeOp>(ArrayRef<uint32_t> words) {
 
 template <>
 LogicalResult
-Deserializer::processOp<spirv::ControlBarrierOp>(ArrayRef<uint32_t> operands) {
-  if (operands.size() != 3) {
-    return emitError(
-        unknownLoc,
-        "OpControlBarrier must have execution scope <id>, memory scope <id> "
-        "and memory semantics <id>");
-  }
-
-  SmallVector<IntegerAttr, 3> argAttrs;
-  for (auto operand : operands) {
-    auto argAttr = getConstantInt(operand);
-    if (!argAttr) {
-      return emitError(unknownLoc,
-                       "expected 32-bit integer constant from <id> ")
-             << operand << " for OpControlBarrier";
-    }
-    argAttrs.push_back(argAttr);
-  }
-
-  opBuilder.create<spirv::ControlBarrierOp>(
-      unknownLoc, argAttrs[0].cast<spirv::ScopeAttr>(),
-      argAttrs[1].cast<spirv::ScopeAttr>(),
-      argAttrs[2].cast<spirv::MemorySemanticsAttr>());
-
-  return success();
-}
-
-template <>
-LogicalResult
 Deserializer::processOp<spirv::FunctionCallOp>(ArrayRef<uint32_t> operands) {
   if (operands.size() < 3) {
     return emitError(unknownLoc,
@@ -479,31 +451,6 @@ Deserializer::processOp<spirv::FunctionCallOp>(ArrayRef<uint32_t> operands) {
 
 template <>
 LogicalResult
-Deserializer::processOp<spirv::MemoryBarrierOp>(ArrayRef<uint32_t> operands) {
-  if (operands.size() != 2) {
-    return emitError(unknownLoc, "OpMemoryBarrier must have memory scope <id> "
-                                 "and memory semantics <id>");
-  }
-
-  SmallVector<IntegerAttr, 2> argAttrs;
-  for (auto operand : operands) {
-    auto argAttr = getConstantInt(operand);
-    if (!argAttr) {
-      return emitError(unknownLoc,
-                       "expected 32-bit integer constant from <id> ")
-             << operand << " for OpMemoryBarrier";
-    }
-    argAttrs.push_back(argAttr);
-  }
-
-  opBuilder.create<spirv::MemoryBarrierOp>(
-      unknownLoc, argAttrs[0].cast<spirv::ScopeAttr>(),
-      argAttrs[1].cast<spirv::MemorySemanticsAttr>());
-  return success();
-}
-
-template <>
-LogicalResult
 Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
   SmallVector<Type, 1> resultTypes;
   size_t wordIndex = 0;
@@ -538,8 +485,9 @@ Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
 
   if (wordIndex < words.size()) {
     auto attrValue = words[wordIndex++];
-    attributes.push_back(opBuilder.getNamedAttr(
-        "memory_access", opBuilder.getI32IntegerAttr(attrValue)));
+    auto attr = opBuilder.getAttr<spirv::MemoryAccessAttr>(
+        static_cast<spirv::MemoryAccess>(attrValue));
+    attributes.push_back(opBuilder.getNamedAttr("memory_access", attr));
     isAlignedAttr = (attrValue == 2);
   }
 
@@ -549,9 +497,10 @@ Deserializer::processOp<spirv::CopyMemoryOp>(ArrayRef<uint32_t> words) {
   }
 
   if (wordIndex < words.size()) {
-    attributes.push_back(opBuilder.getNamedAttr(
-        "source_memory_access",
-        opBuilder.getI32IntegerAttr(words[wordIndex++])));
+    auto attrValue = words[wordIndex++];
+    auto attr = opBuilder.getAttr<spirv::MemoryAccessAttr>(
+        static_cast<spirv::MemoryAccess>(attrValue));
+    attributes.push_back(opBuilder.getNamedAttr("source_memory_access", attr));
   }
 
   if (wordIndex < words.size()) {
