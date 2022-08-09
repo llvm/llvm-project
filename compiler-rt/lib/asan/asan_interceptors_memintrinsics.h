@@ -26,7 +26,7 @@ namespace __asan {
 // Return true if we can quickly decide that the region is unpoisoned.
 // We assume that a redzone is at least 16 bytes.
 static inline bool QuickCheckForUnpoisonedRegion(uptr beg, uptr size) {
-  if (size == 0)
+  if (UNLIKELY(size == 0))
     return true;
   if (size <= 32)
     return !AddressIsPoisoned(beg) && !AddressIsPoisoned(beg + size - 1) &&
@@ -53,11 +53,11 @@ struct AsanInterceptorContext {
     uptr __offset = (uptr)(offset);                                       \
     uptr __size = (uptr)(size);                                           \
     uptr __bad = 0;                                                       \
-    if (__offset > __offset + __size) {                                   \
+    if (UNLIKELY(__offset > __offset + __size)) {                         \
       GET_STACK_TRACE_FATAL_HERE;                                         \
       ReportStringFunctionSizeOverflow(__offset, __size, &stack);         \
     }                                                                     \
-    if (!QuickCheckForUnpoisonedRegion(__offset, __size) &&               \
+    if (UNLIKELY(!QuickCheckForUnpoisonedRegion(__offset, __size)) &&     \
         (__bad = __asan_region_is_poisoned(__offset, __size))) {          \
       AsanInterceptorContext *_ctx = (AsanInterceptorContext *)ctx;       \
       bool suppressed = false;                                            \
@@ -86,8 +86,8 @@ struct AsanInterceptorContext {
       return REAL(memcpy)(to, from, size);                    \
     }                                                         \
     ENSURE_ASAN_INITED();                                     \
-    if (flags()->replace_intrin) {                            \
-      if (to != from) {                                       \
+    if (LIKELY(flags()->replace_intrin)) {                    \
+      if (UNLIKELY(to != from)) {                             \
         CHECK_RANGES_OVERLAP("memcpy", to, size, from, size); \
       }                                                       \
       ASAN_READ_RANGE(ctx, from, size);                       \
@@ -105,7 +105,7 @@ struct AsanInterceptorContext {
       return REAL(memset)(block, c, size);    \
     }                                         \
     ENSURE_ASAN_INITED();                     \
-    if (flags()->replace_intrin) {            \
+    if (LIKELY(flags()->replace_intrin)) {    \
       ASAN_WRITE_RANGE(ctx, block, size);     \
     }                                         \
     return REAL(memset)(block, c, size);      \
@@ -116,7 +116,7 @@ struct AsanInterceptorContext {
     if (UNLIKELY(!asan_inited))                \
       return internal_memmove(to, from, size); \
     ENSURE_ASAN_INITED();                      \
-    if (flags()->replace_intrin) {             \
+    if (LIKELY(flags()->replace_intrin)) {     \
       ASAN_READ_RANGE(ctx, from, size);        \
       ASAN_WRITE_RANGE(ctx, to, size);         \
     }                                          \
@@ -139,7 +139,7 @@ static inline bool RangesOverlap(const char *offset1, uptr length1,
   do {                                                                     \
     const char *offset1 = (const char *)_offset1;                          \
     const char *offset2 = (const char *)_offset2;                          \
-    if (RangesOverlap(offset1, length1, offset2, length2)) {               \
+    if (UNLIKELY(RangesOverlap(offset1, length1, offset2, length2))) {     \
       GET_STACK_TRACE_FATAL_HERE;                                          \
       bool suppressed = IsInterceptorSuppressed(name);                     \
       if (!suppressed && HaveStackTraceBasedSuppressions()) {              \
