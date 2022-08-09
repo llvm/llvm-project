@@ -3390,6 +3390,7 @@ private:
       // A template passed as argument can be not in ParentDC.
       return false;
     }
+    llvm_unreachable("Unknown TemplateArgument::ArgKind enum");
   };
 };
 } // namespace
