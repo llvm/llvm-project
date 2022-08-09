@@ -367,12 +367,13 @@ PerfInputFile PerfScriptReader::convertPerfDataToTrace(
   }
   std::string PerfPath = *PerfExecutable;
   std::string PerfTraceFile = PerfData.str() + ".script.tmp";
+  std::string ErrorFile = PerfData.str() + ".script.err.tmp";
   StringRef ScriptMMapArgs[] = {PerfPath, "script",   "--show-mmap-events",
                                 "-F",     "comm,pid", "-i",
                                 PerfData};
-  Optional<StringRef> Redirects[] = {llvm::None,                // Stdin
-                                     StringRef(PerfTraceFile),  // Stdout
-                                     StringRef(PerfTraceFile)}; // Stderr
+  Optional<StringRef> Redirects[] = {llvm::None,               // Stdin
+                                     StringRef(PerfTraceFile), // Stdout
+                                     StringRef(ErrorFile)};    // Stderr
   sys::ExecuteAndWait(PerfPath, ScriptMMapArgs, llvm::None, Redirects);
 
   // Collect the PIDs
@@ -950,8 +951,8 @@ bool PerfScriptReader::extractMMap2EventForBinary(ProfiledBinary *Binary,
   SmallVector<StringRef, 6> Fields;
   bool R = RegMmap2.match(Line, &Fields);
   if (!R) {
-    std::string ErrorMsg = "Cannot parse mmap event: " + Line.str() + " \n";
-    exitWithError(ErrorMsg);
+    std::string WarningMsg = "Cannot parse mmap event: " + Line.str() + " \n";
+    WithColor::warning() << WarningMsg;
   }
   Fields[PID].getAsInteger(10, MMap.PID);
   Fields[MMAPPED_ADDRESS].getAsInteger(0, MMap.Address);
