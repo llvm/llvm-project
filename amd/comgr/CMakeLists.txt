@@ -184,7 +184,7 @@ include(opencl_pch)
 include(DeviceLibs)
 
 set_target_properties(amd_comgr PROPERTIES
-  CXX_STANDARD 14
+  CXX_STANDARD 17
   CXX_STANDARD_REQUIRED Yes
   CXX_EXTENSIONS No)
 if (ROCM_FOUND)
