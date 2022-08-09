@@ -87,7 +87,7 @@ struct AsanInterceptorContext {
     }                                                         \
     ENSURE_ASAN_INITED();                                     \
     if (LIKELY(flags()->replace_intrin)) {                    \
-      if (UNLIKELY(to != from)) {                             \
+      if (LIKELY(to != from)) {                             \
         CHECK_RANGES_OVERLAP("memcpy", to, size, from, size); \
       }                                                       \
       ASAN_READ_RANGE(ctx, from, size);                       \
