@@ -456,12 +456,11 @@ void IoStatementState::HandleAbsolutePosition(std::int64_t n) {
 }
 
 void IoStatementState::CompleteOperation() {
-  common::visit([this](auto &x) { x.get().CompleteOperation(); }, u_);
+  common::visit([](auto &x) { x.get().CompleteOperation(); }, u_);
 }
 
 int IoStatementState::EndIoStatement() {
-  return common::visit(
-      [this](auto &x) { return x.get().EndIoStatement(); }, u_);
+  return common::visit([](auto &x) { return x.get().EndIoStatement(); }, u_);
 }
 
 ConnectionState &IoStatementState::GetConnectionState() {
