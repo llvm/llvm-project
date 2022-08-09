@@ -76,8 +76,8 @@ void wait(std::unique_lock<std::mutex> &Lock, std::condition_variable &CV,
           Deadline D);
 /// Waits on a condition variable until F() is true or D expires.
 template <typename Func>
-LLVM_NODISCARD bool wait(std::unique_lock<std::mutex> &Lock,
-                         std::condition_variable &CV, Deadline D, Func F) {
+[[nodiscard]] bool wait(std::unique_lock<std::mutex> &Lock,
+                        std::condition_variable &CV, Deadline D, Func F) {
   while (!F()) {
     if (D.expired())
       return false;
@@ -93,7 +93,7 @@ public:
   void notify();
   // Blocks until flag is set.
   void wait() const { (void)wait(Deadline::infinity()); }
-  LLVM_NODISCARD bool wait(Deadline D) const;
+  [[nodiscard]] bool wait(Deadline D) const;
 
 private:
   bool Notified = false;
@@ -110,7 +110,7 @@ public:
   ~AsyncTaskRunner();
 
   void wait() const { (void)wait(Deadline::infinity()); }
-  LLVM_NODISCARD bool wait(Deadline D) const;
+  [[nodiscard]] bool wait(Deadline D) const;
   // The name is used for tracing and debugging (e.g. to name a spawned thread).
   void runAsync(const llvm::Twine &Name, llvm::unique_function<void()> Action);
 

@@ -314,7 +314,7 @@ ProgramStateRef ProgramState::BindExpr(const Stmt *S,
   return getStateManager().getPersistentState(NewSt);
 }
 
-LLVM_NODISCARD std::pair<ProgramStateRef, ProgramStateRef>
+[[nodiscard]] std::pair<ProgramStateRef, ProgramStateRef>
 ProgramState::assumeInBoundDual(DefinedOrUnknownSVal Idx,
                                 DefinedOrUnknownSVal UpperBound,
                                 QualType indexTy) const {

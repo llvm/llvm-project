@@ -110,7 +110,7 @@ public:
   // Disables thread priority lowering to ensure progress on loaded systems.
   // Only affects tasks that run after the call.
   static void preventThreadStarvationInTests();
-  LLVM_NODISCARD bool
+  [[nodiscard]] bool
   blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds);
 
 private:
@@ -172,7 +172,7 @@ public:
   }
 
   // Wait until the queue is empty, to allow deterministic testing.
-  LLVM_NODISCARD bool
+  [[nodiscard]] bool
   blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10) {
     return Queue.blockUntilIdleForTest(TimeoutSeconds);
   }

@@ -184,13 +184,13 @@ namespace clang {
 
     // Use this instead of Importer.importInto .
     template <typename ImportT>
-    LLVM_NODISCARD Error importInto(ImportT &To, const ImportT &From) {
+    [[nodiscard]] Error importInto(ImportT &To, const ImportT &From) {
       return Importer.importInto(To, From);
     }
 
     // Use this to import pointers of specific type.
     template <typename ImportT>
-    LLVM_NODISCARD Error importInto(ImportT *&To, ImportT *From) {
+    [[nodiscard]] Error importInto(ImportT *&To, ImportT *From) {
       auto ToOrErr = Importer.Import(From);
       if (ToOrErr)
         To = cast_or_null<ImportT>(*ToOrErr);
@@ -245,8 +245,8 @@ namespace clang {
     // then to the already imported Decl.  Returns a bool value set to true if
     // the `FromD` had been imported before.
     template <typename ToDeclT, typename FromDeclT, typename... Args>
-    LLVM_NODISCARD bool GetImportedOrCreateDecl(ToDeclT *&ToD, FromDeclT *FromD,
-                                                Args &&... args) {
+    [[nodiscard]] bool GetImportedOrCreateDecl(ToDeclT *&ToD, FromDeclT *FromD,
+                                               Args &&...args) {
       // There may be several overloads of ToDeclT::Create. We must make sure
       // to call the one which would be chosen by the arguments, thus we use a
       // wrapper for the overload set.
@@ -261,8 +261,8 @@ namespace clang {
     // GetImportedOrCreateDecl<TypeAliasDecl>(ToTypedef, FromD, ...);
     template <typename NewDeclT, typename ToDeclT, typename FromDeclT,
               typename... Args>
-    LLVM_NODISCARD bool GetImportedOrCreateDecl(ToDeclT *&ToD, FromDeclT *FromD,
-                                                Args &&... args) {
+    [[nodiscard]] bool GetImportedOrCreateDecl(ToDeclT *&ToD, FromDeclT *FromD,
+                                               Args &&...args) {
       CallOverloadedCreateFun<NewDeclT> OC;
       return GetImportedOrCreateSpecialDecl(ToD, OC, FromD,
                                             std::forward<Args>(args)...);
@@ -271,9 +271,9 @@ namespace clang {
     // used, e.g. CXXRecordDecl::CreateLambda .
     template <typename ToDeclT, typename CreateFunT, typename FromDeclT,
               typename... Args>
-    LLVM_NODISCARD bool
+    [[nodiscard]] bool
     GetImportedOrCreateSpecialDecl(ToDeclT *&ToD, CreateFunT CreateFun,
-                                   FromDeclT *FromD, Args &&... args) {
+                                   FromDeclT *FromD, Args &&...args) {
       if (Importer.getImportDeclErrorIfAny(FromD)) {
         ToD = nullptr;
         return true; // Already imported but with error.

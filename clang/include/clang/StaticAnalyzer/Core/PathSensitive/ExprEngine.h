@@ -899,18 +899,19 @@ public:
   /// Note whether this loop has any more iteratios to model. These methods are
   /// essentially an interface for a GDM trait. Further reading in
   /// ExprEngine::VisitObjCForCollectionStmt().
-  LLVM_NODISCARD static ProgramStateRef
+  [[nodiscard]] static ProgramStateRef
   setWhetherHasMoreIteration(ProgramStateRef State,
                              const ObjCForCollectionStmt *O,
                              const LocationContext *LC, bool HasMoreIteraton);
 
-  LLVM_NODISCARD static ProgramStateRef
+  [[nodiscard]] static ProgramStateRef
   removeIterationState(ProgramStateRef State, const ObjCForCollectionStmt *O,
                        const LocationContext *LC);
 
-  LLVM_NODISCARD static bool hasMoreIteration(ProgramStateRef State,
-                                              const ObjCForCollectionStmt *O,
-                                              const LocationContext *LC);
+  [[nodiscard]] static bool hasMoreIteration(ProgramStateRef State,
+                                             const ObjCForCollectionStmt *O,
+                                             const LocationContext *LC);
+
 private:
   /// Assuming we construct an array of non-POD types, this method allows us
   /// to store which element is to be constructed next.

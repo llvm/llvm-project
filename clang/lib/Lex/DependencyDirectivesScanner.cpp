@@ -81,7 +81,7 @@ struct Scanner {
 
 private:
   /// Lexes next token and advances \p First and the \p Lexer.
-  LLVM_NODISCARD dependency_directives_scan::Token &
+  [[nodiscard]] dependency_directives_scan::Token &
   lexToken(const char *&First, const char *const End);
 
   dependency_directives_scan::Token &lexIncludeFilename(const char *&First,
@@ -92,35 +92,35 @@ private:
   ///
   /// In any case (whatever the token kind) \p First and the \p Lexer will
   /// advance beyond the token.
-  LLVM_NODISCARD Optional<StringRef>
+  [[nodiscard]] Optional<StringRef>
   tryLexIdentifierOrSkipLine(const char *&First, const char *const End);
 
   /// Used when it is certain that next token is an identifier.
-  LLVM_NODISCARD StringRef lexIdentifier(const char *&First,
-                                         const char *const End);
+  [[nodiscard]] StringRef lexIdentifier(const char *&First,
+                                        const char *const End);
 
   /// Lexes next token and returns true iff it is an identifier that matches \p
   /// Id, otherwise it skips the current line and returns false.
   ///
   /// In any case (whatever the token kind) \p First and the \p Lexer will
   /// advance beyond the token.
-  LLVM_NODISCARD bool isNextIdentifierOrSkipLine(StringRef Id,
-                                                 const char *&First,
-                                                 const char *const End);
+  [[nodiscard]] bool isNextIdentifierOrSkipLine(StringRef Id,
+                                                const char *&First,
+                                                const char *const End);
 
-  LLVM_NODISCARD bool scanImpl(const char *First, const char *const End);
-  LLVM_NODISCARD bool lexPPLine(const char *&First, const char *const End);
-  LLVM_NODISCARD bool lexAt(const char *&First, const char *const End);
-  LLVM_NODISCARD bool lexModule(const char *&First, const char *const End);
-  LLVM_NODISCARD bool lexDefine(const char *HashLoc, const char *&First,
+  [[nodiscard]] bool scanImpl(const char *First, const char *const End);
+  [[nodiscard]] bool lexPPLine(const char *&First, const char *const End);
+  [[nodiscard]] bool lexAt(const char *&First, const char *const End);
+  [[nodiscard]] bool lexModule(const char *&First, const char *const End);
+  [[nodiscard]] bool lexDefine(const char *HashLoc, const char *&First,
+                               const char *const End);
+  [[nodiscard]] bool lexPragma(const char *&First, const char *const End);
+  [[nodiscard]] bool lexEndif(const char *&First, const char *const End);
+  [[nodiscard]] bool lexDefault(DirectiveKind Kind, const char *&First,
                                 const char *const End);
-  LLVM_NODISCARD bool lexPragma(const char *&First, const char *const End);
-  LLVM_NODISCARD bool lexEndif(const char *&First, const char *const End);
-  LLVM_NODISCARD bool lexDefault(DirectiveKind Kind, const char *&First,
-                                 const char *const End);
-  LLVM_NODISCARD bool lexModuleDirectiveBody(DirectiveKind Kind,
-                                             const char *&First,
-                                             const char *const End);
+  [[nodiscard]] bool lexModuleDirectiveBody(DirectiveKind Kind,
+                                            const char *&First,
+                                            const char *const End);
   void lexPPDirectiveBody(const char *&First, const char *const End);
 
   DirectiveWithTokens &pushDirective(DirectiveKind Kind) {
@@ -177,8 +177,8 @@ static void skipOverSpaces(const char *&First, const char *const End) {
     ++First;
 }
 
-LLVM_NODISCARD static bool isRawStringLiteral(const char *First,
-                                              const char *Current) {
+[[nodiscard]] static bool isRawStringLiteral(const char *First,
+                                             const char *Current) {
   assert(First <= Current);
 
   // Check if we can even back up.
@@ -517,7 +517,7 @@ void Scanner::lexPPDirectiveBody(const char *&First, const char *const End) {
   }
 }
 
-LLVM_NODISCARD Optional<StringRef>
+[[nodiscard]] Optional<StringRef>
 Scanner::tryLexIdentifierOrSkipLine(const char *&First, const char *const End) {
   const dependency_directives_scan::Token &Tok = lexToken(First, End);
   if (Tok.isNot(tok::raw_identifier)) {

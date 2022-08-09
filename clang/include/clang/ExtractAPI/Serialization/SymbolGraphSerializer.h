@@ -164,7 +164,7 @@ private:
   /// \param Component The component to push onto the path components stack.
   /// \return A PathComponentGuard responsible for removing the latest
   /// component from the stack on scope exit.
-  LLVM_NODISCARD PathComponentGuard makePathComponentGuard(StringRef Component);
+  [[nodiscard]] PathComponentGuard makePathComponentGuard(StringRef Component);
 
 public:
   SymbolGraphSerializer(const APISet &API, StringRef ProductName,
