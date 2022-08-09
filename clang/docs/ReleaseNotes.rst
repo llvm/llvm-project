@@ -82,6 +82,9 @@ Improvements to Clang's diagnostics
 - ``-Wformat`` now recognizes ``%b`` for the ``printf``/``scanf`` family of
   functions and ``%B`` for the ``printf`` family of functions. Fixes
   `Issue 56885: <https://github.com/llvm/llvm-project/issues/56885>`_.
+- ``-Wbitfield-constant-conversion`` now diagnoses implicit truncation when 1 is
+  assigned to a 1-bit signed integer bitfield. This fixes
+  `Issue 53253 <https://github.com/llvm/llvm-project/issues/53253>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

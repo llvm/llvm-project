@@ -105,6 +105,15 @@ int test_trunc_three_bits() {
 // CHECK: define{{.*}} i32 @test_trunc_three_bits()
 // CHECK: ret i32 -1
 
+int test_trunc_one_bit() {
+  union {
+    int i : 1; // truncated to 0b1 == -1
+  } const U = {1};  // 0b00000001
+  return U.i;
+}
+// CHECK: define{{.*}} i32 @test_trunc_one_bit()
+// CHECK: ret i32 -1
+
 int test_trunc_1() {
   union {
     int i : 1; // truncated to 0b1 == -1
