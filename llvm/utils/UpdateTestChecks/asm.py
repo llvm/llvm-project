@@ -24,6 +24,7 @@ ASM_FUNCTION_X86_RE = re.compile(
 
 ASM_FUNCTION_ARM_RE = re.compile(
     r'^(?P<func>[0-9a-zA-Z_$]+):\n' # f: (name of function)
+    r'(?:\.L(?P=func)\$local:\n)?'  # drop .L<func>$local:
     r'\s+\.fnstart\n' # .fnstart
     r'(?P<body>.*?)' # (body of the function)
     r'^.Lfunc_end[0-9]+:', # .Lfunc_end0: or # -- End function

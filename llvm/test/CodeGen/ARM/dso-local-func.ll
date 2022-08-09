@@ -10,8 +10,7 @@ define dso_local ptr @dsolocal_func() nounwind {
 ; CHECK-NEXT: 	.type	dsolocal_func,%function
 ; CHECK-NEXT: 	.code	32
 ; CHECK-NEXT: dsolocal_func:
-; TODO: PIC codegen should emit a $local alias here
-; PIC-TODO-NEXT: .Ldsolocal_func$local:
+; PIC-NEXT: .Ldsolocal_func$local:
 ; CHECK-NEXT: 	.fnstart
 ; CHECK-NEXT: @ %bb.0:
 ; STATIC-NEXT: 	movw	r0, :lower16:dsolocal_func
