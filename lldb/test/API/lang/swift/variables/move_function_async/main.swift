@@ -25,7 +25,7 @@ public func copyableValueTest() async {
     let k = Klass()
     k.doSomething()
     await forceSplit() // Set breakpoint 01
-    let m = _move(k)   // Set breakpoint 02
+    let m = _move k    // Set breakpoint 02
     m.doSomething()    // Set breakpoint 03
     await forceSplit()
     m.doSomething()    // Set breakpoint 04
@@ -36,7 +36,7 @@ public func copyableVarTest() async {
     var k = Klass()    // Set breakpoint 05
     k.doSomething()
     await forceSplit() // Set breakpoint 06
-    let m = _move(k)   // Set breakpoint 07
+    let m = _move k    // Set breakpoint 07
     m.doSomething()    // Set breakpoint 08
     await forceSplit()
     k = Klass()        // Set breakpoint 09
