@@ -299,8 +299,24 @@ public:
   /// Nested OpenMP constructs that may use no-loop codegen
   using NoLoopIntermediateStmts =
       llvm::SmallVector<const OMPExecutableDirective *, 3>;
+  /// Kernel specific metadata used for communicating between CodeGen phases
+  /// while generating a no-loop kernel
+  struct NoLoopKernelMetadata {
+    /// For statement with parallel pragma for which a no-loop kernel is being
+    /// generated
+    const ForStmt *NoLoopForStmt = nullptr;
+    /// The immediately enclosing for statement during no-loop kernel
+    /// generation. This will be different from NoLoopForStmt while emitting
+    /// code for nested loops
+    const ForStmt *ImmediateForStmt = nullptr;
+    /// Exit basic block generated for NoLoopForStmt. This signifies the end of
+    /// the NoLoop kernel.
+    llvm::BasicBlock *ExitBB = nullptr;
+  };
+  using NoLoopKernelInfo =
+      std::pair<NoLoopIntermediateStmts, NoLoopKernelMetadata>;
   /// Map top-level construct to the intermediate ones for no-loop codegen
-  using NoLoopKernelMap = llvm::DenseMap<const Stmt *, NoLoopIntermediateStmts>;
+  using NoLoopKernelMap = llvm::DenseMap<const Stmt *, NoLoopKernelInfo>;
 
   /// Kernel specific metadata used for communicating between CodeGen phases
   /// while generating an optimized reduction kernel
@@ -350,6 +366,9 @@ private:
   std::unique_ptr<llvm::IndexedInstrProfReader> PGOReader;
   InstrProfStats PGOStats;
   std::unique_ptr<llvm::SanitizerStatReport> SanStats;
+
+  /// Statement for which a no-loop kernel is being generated currently
+  const Stmt *CurrentNoLoopStmt = nullptr;
 
   NoLoopKernelMap NoLoopKernels;
   XteamRedKernelMap XteamRedKernels;
@@ -1569,7 +1588,7 @@ public:
   /// intermediate OpenMP constructs
   const NoLoopIntermediateStmts &getNoLoopStmts(const Stmt *S) {
     assert(isNoLoopKernel(S));
-    return NoLoopKernels.find(S)->second;
+    return NoLoopKernels.find(S)->second.first;
   }
 
   /// Erase no-loop related metadata for the input statement
@@ -1604,11 +1623,55 @@ public:
     return XteamRedKernels.find(S) != XteamRedKernels.end();
   }
 
+  void setCurrentNoLoopStmt(const Stmt *S) { CurrentNoLoopStmt = S; }
+
+  const Stmt *getCurrentNoLoopStmt() { return CurrentNoLoopStmt; }
+
+  /// Return false if emitting code for a nested loop within the NoLoopForStmt,
+  /// otherwise return true
+  bool isImmediateForStmtNoLoopCandidate() {
+    assert(CurrentNoLoopStmt != nullptr);
+    assert(isNoLoopKernel(CurrentNoLoopStmt));
+    NoLoopKernelMetadata &MD =
+        NoLoopKernels.find(CurrentNoLoopStmt)->second.second;
+    return MD.NoLoopForStmt == MD.ImmediateForStmt;
+  }
+
+  /// During No-Loop codegen, return the exit basic block of the kernel
+  llvm::BasicBlock *getNoLoopExitBB() {
+    assert(CurrentNoLoopStmt != nullptr);
+    assert(isNoLoopKernel(CurrentNoLoopStmt));
+    NoLoopKernelMetadata &MD =
+        NoLoopKernels.find(CurrentNoLoopStmt)->second.second;
+    return MD.ExitBB;
+  }
+
+  /// During No-Loop codegen, update the metadata
+  void updateNoLoopKernelMetadata(const ForStmt *NoLoop, const ForStmt *Curr,
+                                  llvm::BasicBlock *BB) {
+    assert(CurrentNoLoopStmt != nullptr);
+    assert(isNoLoopKernel(CurrentNoLoopStmt));
+    NoLoopKernelMetadata &MD =
+        NoLoopKernels.find(CurrentNoLoopStmt)->second.second;
+    MD.NoLoopForStmt = NoLoop;
+    MD.ImmediateForStmt = Curr;
+    MD.ExitBB = BB;
+  }
+
+  /// During No-Loop codegen, update the current immediately enclsoign loop
+  /// statement in the metadata
+  void updateImmediateForStmtInNoLoopKernelMetadata(const ForStmt *Curr) {
+    assert(CurrentNoLoopStmt != nullptr);
+    assert(isNoLoopKernel(CurrentNoLoopStmt));
+    NoLoopKernelMetadata &MD =
+        NoLoopKernels.find(CurrentNoLoopStmt)->second.second;
+    MD.ImmediateForStmt = Curr;
+  }
+
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
   /// because we'll lose all important information after each repl.
   void moveLazyEmissionStates(CodeGenModule *NewBuilder);
-
 
 private:
   llvm::Constant *GetOrCreateLLVMFunction(
@@ -1820,9 +1883,8 @@ private:
   bool canHandleReductionClause(const OMPExecutableDirective &D);
 
   /// Populate the map used for no-loop codegen
-  void setNoLoopKernel(const Stmt *S,
-                       NoLoopIntermediateStmts IntermediateStmts) {
-    NoLoopKernels[S] = IntermediateStmts;
+  void setNoLoopKernel(const Stmt *S, NoLoopKernelInfo KI) {
+    NoLoopKernels[S] = KI;
   }
 
   /// Populate the map used for xteam reduction codegen

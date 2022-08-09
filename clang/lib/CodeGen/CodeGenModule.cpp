@@ -7293,7 +7293,11 @@ bool CodeGenModule::checkAndSetNoLoopTargetConstruct(
   assert(NoLoopOutermostStmt != AssocStmt);
   NoLoopIntermediateStmts IntermediateStmts;
   IntermediateStmts.push_back(AssocDir);
-  setNoLoopKernel(NoLoopOutermostStmt, IntermediateStmts);
+  NoLoopKernelMetadata NoLoopKernelMD;
+  // Create a map from the associated statement, the corresponding info will be
+  // populated later
+  setNoLoopKernel(NoLoopOutermostStmt,
+                  std::make_pair(IntermediateStmts, NoLoopKernelMD));
 
   // All checks passed
   return true;
@@ -7328,7 +7332,11 @@ bool CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
       return false;
 
     NoLoopIntermediateStmts IntermediateStmts;
-    setNoLoopKernel(AssocStmt, IntermediateStmts);
+    NoLoopKernelMetadata NoLoopKernelMD;
+    // Create a map from the associated statement, the corresponding info will
+    // be populated later
+    setNoLoopKernel(AssocStmt,
+                    std::make_pair(IntermediateStmts, NoLoopKernelMD));
 
     // All checks passed
     return true;

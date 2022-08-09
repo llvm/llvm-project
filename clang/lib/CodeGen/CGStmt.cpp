@@ -121,11 +121,13 @@ void CodeGenFunction::EmitXteamRedInc(const Address &NoLoopIvAddr) {
   Builder.CreateStore(NoLoopInc, NoLoopIvAddr);
 }
 
-void CodeGenFunction::EmitNoLoopKernel(
-    const OMPExecutableDirective &D, const Stmt *S,
-    const CodeGenModule::NoLoopIntermediateStmts &IntermediateStmts,
-    SourceLocation Loc) {
+void CodeGenFunction::EmitNoLoopKernel(const OMPExecutableDirective &D,
+                                       const Stmt *S, SourceLocation Loc) {
   assert(S && "Null statement?");
+
+  /// This is the top level statement for which a No-Loop kernel is being
+  /// generated
+  CGM.setCurrentNoLoopStmt(S);
 
   if (!HaveInsertPoint())
     EnsureInsertPoint();
@@ -206,6 +208,9 @@ void CodeGenFunction::EmitNoLoopKernel(
     llvm::BasicBlock *DoneBB = createBasicBlock("omp.kernel.done");
     Builder.CreateCondBr(IvCmp, ExecBB, DoneBB);
 
+    /// Update the metadata as applicable now
+    CGM.updateNoLoopKernelMetadata(FStmt, FStmt, DoneBB);
+
     // Emit the kernel body block
     EmitBlock(ExecBB);
     EmitStmt(FStmt->getBody());
@@ -218,6 +223,8 @@ void CodeGenFunction::EmitNoLoopKernel(
 
   // For non-combined constructs, the for loop has to be retrieved from
   // the intermediate statements
+  const CodeGenModule::NoLoopIntermediateStmts &IntermediateStmts =
+      CGM.getNoLoopStmts(S);
   if (!IntermediateStmts.empty()) {
     // For now, we support at most one level of nesting
     assert(IntermediateStmts.size() == 1);
@@ -230,6 +237,8 @@ void CodeGenFunction::EmitNoLoopKernel(
   } else {
     emitNoLoopStmt(S);
   }
+  // No-Loop codegen done
+  CGM.setCurrentNoLoopStmt(nullptr);
 }
 
 void CodeGenFunction::EmitXteamRedKernel(
@@ -1260,6 +1269,11 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   LexicalScope ForScope(*this, S.getSourceRange());
 
+  /// If the current No-Loop statement is valid, we are generating a No-Loop
+  /// kernel. Hence, update the current immediately enclosing loop statement
+  if (CGM.getLangOpts().OpenMPIsDevice && CGM.getCurrentNoLoopStmt() != nullptr)
+    CGM.updateImmediateForStmtInNoLoopKernelMetadata(&S);
+
   Address XteamRedIvAddr = Address::invalid();
   if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {
     XteamRedIvAddr = EmitXteamRedStartingIndex(S);
@@ -1659,6 +1673,15 @@ void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
 }
 
 void CodeGenFunction::EmitContinueStmt(const ContinueStmt &S) {
+  /// If the current No-Loop statement is valid, we are generating a No-Loop
+  /// kernel. Just branch to the end of the kernel for a continue statement.
+  if (CGM.getLangOpts().OpenMPIsDevice &&
+      CGM.getCurrentNoLoopStmt() != nullptr &&
+      CGM.isImmediateForStmtNoLoopCandidate()) {
+    EmitBranch(CGM.getNoLoopExitBB());
+    return;
+  }
+
   assert(!BreakContinueStack.empty() && "continue stmt not in a loop!");
 
   // If this code is reachable then emit a stop point (if generating

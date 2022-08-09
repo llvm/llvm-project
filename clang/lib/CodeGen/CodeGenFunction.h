@@ -3233,7 +3233,6 @@ public:
   /// This function should be called after ensuring that legality
   /// conditions for a no-loop kernel are met.
   void EmitNoLoopKernel(const OMPExecutableDirective &D, const Stmt *S,
-                        const CodeGenModule::NoLoopIntermediateStmts &,
                         SourceLocation Loc);
 
   /// EmitXteamRedKernel - For an OpenMP target reduction directive, emit the
