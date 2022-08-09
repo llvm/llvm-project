@@ -277,11 +277,9 @@ define i64 @caller_small_scalar_ret() nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    bl callee_small_scalar_ret
-; CHECK-NEXT:    addi.w $a2, $zero, -1
-; CHECK-NEXT:    xor $a1, $a1, $a2
 ; CHECK-NEXT:    addi.w $a2, $zero, -2
 ; CHECK-NEXT:    xor $a0, $a0, $a2
-; CHECK-NEXT:    or $a0, $a0, $a1
+; CHECK-NEXT:    orn $a0, $a0, $a1
 ; CHECK-NEXT:    sltui $a0, $a0, 1
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
