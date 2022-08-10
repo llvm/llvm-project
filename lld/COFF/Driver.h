@@ -158,7 +158,7 @@ private:
   std::vector<StringRef> filePaths;
   std::vector<MemoryBufferRef> resources;
 
-  llvm::StringSet<> directivesExports;
+  llvm::DenseSet<StringRef> directivesExports;
 
   COFFLinkerContext &ctx;
 
