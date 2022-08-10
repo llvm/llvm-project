@@ -48,3 +48,9 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_arch_subdir \
 // RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARM-BAREMETAL %s
 // CHECK-CLANGRT-ARM-BAREMETAL: libclang_rt.builtins-armv7m.a
+
+// RUN: %clang -rtlib=compiler-rt -print-libgcc-file-name 2>&1 \
+// RUN:     --target=armv7m-vendor-none-eabi \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   | FileCheck --check-prefix=CHECK-CLANGRT-ARM-BAREMETAL-PER-TARGET %s
+// CHECK-CLANGRT-ARM-BAREMETAL-PER-TARGET: libclang_rt.builtins.a
