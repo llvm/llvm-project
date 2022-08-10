@@ -148,9 +148,9 @@ For example, a stack map with 8 byte shadow:
 .. code-block:: llvm
 
   call void @runtime()
-  call void (i64, i32, ...)* @llvm.experimental.stackmap(i64 77, i32 8,
-                                                         i64* %ptr)
-  %val = load i64* %ptr
+  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 77, i32 8,
+                                                        ptr %ptr)
+  %val = load i64, ptr %ptr
   %add = add i64 %val, 3
   ret i64 %add
 
@@ -188,10 +188,10 @@ Syntax:
 
       declare void
         @llvm.experimental.patchpoint.void(i64 <id>, i32 <numBytes>,
-                                           i8* <target>, i32 <numArgs>, ...)
+                                           ptr <target>, i32 <numArgs>, ...)
       declare i64
         @llvm.experimental.patchpoint.i64(i64 <id>, i32 <numBytes>,
-                                          i8* <target>, i32 <numArgs>, ...)
+                                          ptr <target>, i32 <numArgs>, ...)
 
 Overview:
 """""""""
@@ -260,10 +260,10 @@ in $rdi, and a return value in $rax per native calling convention:
 
 .. code-block:: llvm
 
-  %target = inttoptr i64 -281474976710654 to i8*
-  %val = call i64 (i64, i32, ...)*
+  %target = inttoptr i64 -281474976710654 to ptr
+  %val = call i64 (i64, i32, ...)
            @llvm.experimental.patchpoint.i64(i64 78, i32 15,
-                                             i8* %target, i32 1, i64* %ptr)
+                                             ptr %target, i32 1, ptr %ptr)
   %add = add i64 %val, 3
   ret i64 %add
 
@@ -285,8 +285,8 @@ registers, then the ``anyregcc`` convention may be used:
 .. code-block:: none
 
   %val = call anyregcc @llvm.experimental.patchpoint(i64 78, i32 15,
-                                                     i8* %target, i32 1,
-                                                     i64* %ptr)
+                                                     ptr %target, i32 1,
+                                                     ptr %ptr)
 
 The stack map now indicates the location of the %ptr argument and
 return value:
@@ -492,7 +492,7 @@ For example:
 
   entry:
     %a = alloca i64...
-    llvm.experimental.stackmap(i64 <ID>, i32 <shadowBytes>, i64* %a)
+    llvm.experimental.stackmap(i64 <ID>, i32 <shadowBytes>, ptr %a)
 
 The runtime can determine this alloca's relative location on the
 stack immediately after compilation, or at any time thereafter. This
