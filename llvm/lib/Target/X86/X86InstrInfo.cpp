@@ -3100,44 +3100,6 @@ bool X86InstrInfo::AnalyzeBranchImpl(
 
     // Working from the bottom, handle the first conditional branch.
     if (Cond.empty()) {
-      MachineBasicBlock *TargetBB = I->getOperand(0).getMBB();
-      if (AllowModify && UnCondBrIter != MBB.end() &&
-          MBB.isLayoutSuccessor(TargetBB)) {
-        // If we can modify the code and it ends in something like:
-        //
-        //     jCC L1
-        //     jmp L2
-        //   L1:
-        //     ...
-        //   L2:
-        //
-        // Then we can change this to:
-        //
-        //     jnCC L2
-        //   L1:
-        //     ...
-        //   L2:
-        //
-        // Which is a bit more efficient.
-        // We conditionally jump to the fall-through block.
-        BranchCode = GetOppositeBranchCondition(BranchCode);
-        MachineBasicBlock::iterator OldInst = I;
-
-        BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), get(X86::JCC_1))
-          .addMBB(UnCondBrIter->getOperand(0).getMBB())
-          .addImm(BranchCode);
-        BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), get(X86::JMP_1))
-          .addMBB(TargetBB);
-
-        OldInst->eraseFromParent();
-        UnCondBrIter->eraseFromParent();
-
-        // Restart the analysis.
-        UnCondBrIter = MBB.end();
-        I = MBB.end();
-        continue;
-      }
-
       FBB = TBB;
       TBB = I->getOperand(0).getMBB();
       Cond.push_back(MachineOperand::CreateImm(BranchCode));
