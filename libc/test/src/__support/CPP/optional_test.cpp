@@ -12,15 +12,19 @@
 using __llvm_libc::cpp::nullopt;
 using __llvm_libc::cpp::optional;
 
-// This has clase has two properties for testing:
-// 1) No default constructor
-// 2) A non-trivial destructor with an observable side-effect
+// This class has three properties for testing:
+// 1) No default constructor.
+// 2) A non-trivial destructor with an observable side-effect.
+// 3) Functions that can be called explicitly.
 class Contrived {
   int *_a;
 
 public:
   Contrived(int *a) : _a(a) {}
   ~Contrived() { (*_a)++; }
+
+  int get_a() { return *_a; }
+  void inc_a() { (*_a)++; }
 };
 
 TEST(LlvmLibcOptionalTest, Tests) {
@@ -59,4 +63,16 @@ TEST(LlvmLibcOptionalTest, Tests) {
   ASSERT_FALSE(Trivial5.has_value());
   optional<int> Trivial6 = Trivial5;
   ASSERT_FALSE(Trivial6.has_value());
+
+  // Test operator->
+  int arrow_num = 5;
+  optional<Contrived> arrow_test(&arrow_num);
+  ASSERT_TRUE(arrow_test.has_value());
+  ASSERT_EQ(arrow_test->get_a(), arrow_num);
+  arrow_num = 10;
+  ASSERT_EQ(arrow_test->get_a(), arrow_num);
+  arrow_test->inc_a();
+  ASSERT_EQ(arrow_test->get_a(), arrow_num);
+  ASSERT_EQ(arrow_num, 11);
+  arrow_test.reset();
 }
