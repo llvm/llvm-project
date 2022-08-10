@@ -13869,9 +13869,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   if (N0.getNumOperands() == 1 &&
       !DAG.canCreateUndefOrPoison(N0, /*PoisonOnly*/ false) && N0->hasOneUse())
     return DAG.getNode(N0.getOpcode(), SDLoc(N0), N->getValueType(0),
-                       DAG.getNode(ISD::FREEZE, SDLoc(N0),
-                                   N0.getOperand(0).getValueType(),
-                                   N0.getOperand(0)));
+                       DAG.getFreeze(N0.getOperand(0)));
 
   return SDValue();
 }
