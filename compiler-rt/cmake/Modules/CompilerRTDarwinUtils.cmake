@@ -406,6 +406,8 @@ macro(darwin_add_builtin_libraries)
 
   append_list_if(COMPILER_RT_HAS_ASM_LSE -DHAS_ASM_LSE CFLAGS)
 
+  append_list_if(COMPILER_RT_HAS_BFLOAT16 -DCOMPILER_RT_HAS_BFLOAT16 CFLAGS)
+
   set(PROFILE_SOURCES ../profile/InstrProfiling.c
                       ../profile/InstrProfilingBuffer.c
                       ../profile/InstrProfilingPlatformDarwin.c
