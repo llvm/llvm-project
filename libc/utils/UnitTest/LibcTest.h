@@ -14,6 +14,7 @@
 
 #include "PlatformDefs.h"
 
+#include "src/__support/CPP/StringView.h"
 #include "src/__support/CPP/type_traits.h"
 #include "utils/testutils/ExecuteFunction.h"
 #include "utils/testutils/StreamWrapper.h"
@@ -103,6 +104,14 @@ protected:
             const char *RHSStr, const char *File, unsigned long Line) {
     return internal::test(Ctx, Cond, (unsigned long long)LHS,
                           (unsigned long long)RHS, LHSStr, RHSStr, File, Line);
+  }
+
+  template <typename ValType,
+            cpp::enable_if_t<
+                cpp::is_same_v<ValType, __llvm_libc::cpp::StringView>, int> = 0>
+  bool test(TestCondition Cond, ValType LHS, ValType RHS, const char *LHSStr,
+            const char *RHSStr, const char *File, unsigned long Line) {
+    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, File, Line);
   }
 
   bool testStrEq(const char *LHS, const char *RHS, const char *LHSStr,
