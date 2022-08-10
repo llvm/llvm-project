@@ -20,6 +20,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Frontend/CASDependencyCollector.h"
 #include "clang/Frontend/ChainedDiagnosticConsumer.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -499,9 +500,13 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   // Handle generating dependencies, if requested.
   const DependencyOutputOptions &DepOpts = getDependencyOutputOpts();
-  if (!DepOpts.OutputFile.empty())
+  if (!DepOpts.OutputFile.empty()) {
+    if (hasCASOutputBackend())
+      addDependencyCollector(
+          std::make_shared<CASDependencyCollector>(DepOpts, CASOutputBackend));
     addDependencyCollector(
         std::make_shared<DependencyFileGenerator>(DepOpts, TheOutputBackend));
+  }
   if (!DepOpts.DOTOutputFile.empty())
     AttachDependencyGraphGen(*PP, DepOpts.DOTOutputFile,
                              getHeaderSearchOpts().Sysroot);
@@ -840,6 +845,11 @@ void CompilerInstance::setOutputBackend(
   assert(!TheOutputBackend && "Already has an output manager");
   TheOutputBackend = std::move(NewOutputs);
 }
+void CompilerInstance::setCASOutputBackend(
+    clang::IntrusiveRefCntPtr<llvm::cas::CASOutputBackend> NewOutputs) {
+  assert(!CASOutputBackend && "Already has a CAS output backend");
+  CASOutputBackend = std::move(NewOutputs);
+}
 
 void CompilerInstance::createOutputBackend() {
   assert(!TheOutputBackend && "Already has an output manager");
@@ -855,6 +865,11 @@ llvm::vfs::OutputBackend &CompilerInstance::getOrCreateOutputBackend() {
   if (!hasOutputBackend())
     createOutputBackend();
   return getOutputBackend();
+}
+
+llvm::cas::CASOutputBackend &CompilerInstance::getCASOutputBackend() {
+  assert(CASOutputBackend);
+  return *CASOutputBackend;
 }
 
 llvm::cas::CASDB &CompilerInstance::getOrCreateCAS() {

@@ -60,14 +60,20 @@ clang::createCompileJobCacheKey(CASDB &CAS, DiagnosticsEngine &Diags,
   CompilerInvocation InvocationForCacheKey(OriginalInvocation);
   FrontendOptions &FrontendOpts = InvocationForCacheKey.getFrontendOpts();
   DiagnosticOptions &DiagOpts = InvocationForCacheKey.getDiagnosticOpts();
+  DependencyOutputOptions &DepOpts =
+      InvocationForCacheKey.getDependencyOutputOpts();
   // Keep the key independent of the paths of these outputs.
   if (!FrontendOpts.OutputFile.empty())
     FrontendOpts.OutputFile = "-";
-  if (!InvocationForCacheKey.getDependencyOutputOpts().OutputFile.empty())
-    InvocationForCacheKey.getDependencyOutputOpts().OutputFile = "-";
+  if (!DepOpts.OutputFile.empty())
+    DepOpts.OutputFile = "-";
   // We always generate the serialized diagnostics so the key is independent of
   // the presence of '--serialize-diagnostics'.
   DiagOpts.DiagnosticSerializationFile.clear();
+  // Dependency options that do not affect the list of files are canonicalized.
+  if (!DepOpts.Targets.empty())
+    DepOpts.Targets = {"-"};
+  DepOpts.UsePhonyTargets = false;
 
   // Generate a new command-line in case Invocation has been canonicalized.
   llvm::BumpPtrAllocator Alloc;

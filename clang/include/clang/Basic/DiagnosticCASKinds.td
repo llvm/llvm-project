@@ -23,6 +23,7 @@ def err_cas_depscan_daemon_connection: Error<
   "Failed to establish connection with depscan daemon: %0">, DefaultFatal;
 def err_cas_depscan_failed: Error<
   "CAS-based dependency scan failed: %0">, DefaultFatal;
+def err_cas_store: Error<"failed to store to CAS: %0">, DefaultFatal;
 
 def warn_clang_cache_disabled_caching: Warning<
   "caching disabled because %0">,

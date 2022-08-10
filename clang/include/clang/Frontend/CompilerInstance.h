@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CAS/CASOutputBackend.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/VirtualOutputBackend.h"
@@ -91,6 +92,10 @@ class CompilerInstance : public ModuleLoader {
 
   /// The output context.
   IntrusiveRefCntPtr<llvm::vfs::OutputBackend> TheOutputBackend;
+
+  /// The underlying CAS output context, if any. Used to create CAS-specific
+  /// outputs.
+  IntrusiveRefCntPtr<llvm::cas::CASOutputBackend> CASOutputBackend;
 
   /// The source manager.
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
@@ -429,13 +434,19 @@ public:
   /// Set the output manager.
   void setOutputBackend(IntrusiveRefCntPtr<llvm::vfs::OutputBackend> NewOutputs);
 
+  void setCASOutputBackend(
+      clang::IntrusiveRefCntPtr<llvm::cas::CASOutputBackend> NewOutputs);
+
   /// Create an output manager.
   void createOutputBackend();
 
   bool hasOutputBackend() const { return bool(TheOutputBackend); }
+  bool hasCASOutputBackend() const { return bool(CASOutputBackend); }
 
   llvm::vfs::OutputBackend &getOutputBackend();
   llvm::vfs::OutputBackend &getOrCreateOutputBackend();
+
+  llvm::cas::CASOutputBackend &getCASOutputBackend();
 
   /// Get the CAS, or create it using the configuration in CompilerInvocation.
   llvm::cas::CASDB &getOrCreateCAS();

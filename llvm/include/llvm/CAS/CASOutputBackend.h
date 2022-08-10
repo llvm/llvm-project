@@ -36,6 +36,8 @@ public:
   /// the \p Kind string instead of its path.
   void addKindMap(StringRef Kind, StringRef Path);
 
+  CASDB &getCAS() const { return CAS; }
+
 private:
   Expected<std::unique_ptr<vfs::OutputFileImpl>>
   createFileImpl(StringRef Path, Optional<vfs::OutputConfig> Config) override;
