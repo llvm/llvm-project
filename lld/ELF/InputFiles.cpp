@@ -1673,16 +1673,12 @@ void BitcodeFile::parse() {
   symbols.resize(obj->symbols().size());
   // Process defined symbols first. See the comment in
   // ObjFile<ELFT>::initializeSymbols.
-  for (auto it : llvm::enumerate(obj->symbols()))
-    if (!it.value().isUndefined()) {
-      Symbol *&sym = symbols[it.index()];
-      createBitcodeSymbol(sym, keptComdats, it.value(), *this);
-    }
-  for (auto it : llvm::enumerate(obj->symbols()))
-    if (it.value().isUndefined()) {
-      Symbol *&sym = symbols[it.index()];
-      createBitcodeSymbol(sym, keptComdats, it.value(), *this);
-    }
+  for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
+    if (!irSym.isUndefined())
+      createBitcodeSymbol(symbols[i], keptComdats, irSym, *this);
+  for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
+    if (irSym.isUndefined())
+      createBitcodeSymbol(symbols[i], keptComdats, irSym, *this);
 
   for (auto l : obj->getDependentLibraries())
     addDependentLibrary(l, this);
@@ -1691,22 +1687,21 @@ void BitcodeFile::parse() {
 void BitcodeFile::parseLazy() {
   SymbolTable &symtab = *elf::symtab;
   symbols.resize(obj->symbols().size());
-  for (auto it : llvm::enumerate(obj->symbols()))
-    if (!it.value().isUndefined()) {
-      auto *sym = symtab.insert(saver().save(it.value().getName()));
+  for (auto [i, irSym] : llvm::enumerate(obj->symbols()))
+    if (!irSym.isUndefined()) {
+      auto *sym = symtab.insert(saver().save(irSym.getName()));
       sym->resolve(LazyObject{*this});
-      symbols[it.index()] = sym;
+      symbols[i] = sym;
     }
 }
 
 void BitcodeFile::postParse() {
-  for (auto it : llvm::enumerate(obj->symbols())) {
-    const Symbol &sym = *symbols[it.index()];
-    const auto &objSym = it.value();
-    if (sym.file == this || !sym.isDefined() || objSym.isUndefined() ||
-        objSym.isCommon() || objSym.isWeak())
+  for (auto [i, irSym] : llvm::enumerate(obj->symbols())) {
+    const Symbol &sym = *symbols[i];
+    if (sym.file == this || !sym.isDefined() || irSym.isUndefined() ||
+        irSym.isCommon() || irSym.isWeak())
       continue;
-    int c = objSym.getComdatIndex();
+    int c = irSym.getComdatIndex();
     if (c != -1 && !keptComdats[c])
       continue;
     reportDuplicate(sym, this, nullptr, 0);
