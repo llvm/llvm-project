@@ -1086,7 +1086,7 @@ SmallVector<Value> makeTiledShapes(OpBuilder &builder, Location loc,
     Value valueToTile = std::get<0>(item);
     Optional<SliceParameters> sliceParams = std::get<1>(item);
     tiledShapes.push_back(
-        sliceParams.hasValue()
+        sliceParams.has_value()
             ? materializeTiledShape(builder, loc, valueToTile, *sliceParams)
             : valueToTile);
   }
