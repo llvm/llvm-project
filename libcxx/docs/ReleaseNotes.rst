@@ -48,6 +48,12 @@ Deprecations and Removals
 Upcoming Deprecations and Removals
 ----------------------------------
 
+API Changes
+-----------
+- The comparison operators on ``thread::id`` are now defined as free-standing
+  functions instead of as hidden friends, in conformance with the C++ standard.
+  Also see `issue 56187 <https://github.com/llvm/llvm-project/issues/56187>`_.
+
 ABI Affecting Changes
 ---------------------
 

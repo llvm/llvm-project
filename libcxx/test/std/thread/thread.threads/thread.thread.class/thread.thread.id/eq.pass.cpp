@@ -31,5 +31,11 @@ int main(int, char**)
     assert(!(id1 == id0));
     assert( (id1 != id0));
 
-  return 0;
+    // Regression tests for https://github.com/llvm/llvm-project/issues/56187
+    // libc++ previously declared the comparison operators as hidden friends
+    // which was non-conforming.
+    assert(!std::operator==(id1, id0));
+    assert(std::operator!=(id1, id0));
+
+    return 0;
 }
