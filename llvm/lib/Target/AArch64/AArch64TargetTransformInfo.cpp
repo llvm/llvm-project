@@ -1208,32 +1208,6 @@ static Optional<Instruction *> instCombineSVETBL(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, VectorSplat);
 }
 
-static Optional<Instruction *> instCombineSVETupleGet(InstCombiner &IC,
-                                                      IntrinsicInst &II) {
-  // Try to remove sequences of tuple get/set.
-  Value *SetTuple, *SetIndex, *SetValue;
-  auto *GetTuple = II.getArgOperand(0);
-  auto *GetIndex = II.getArgOperand(1);
-  // Check that we have tuple_get(GetTuple, GetIndex) where GetTuple is a
-  // call to tuple_set i.e. tuple_set(SetTuple, SetIndex, SetValue).
-  // Make sure that the types of the current intrinsic and SetValue match
-  // in order to safely remove the sequence.
-  if (!match(GetTuple,
-             m_Intrinsic<Intrinsic::aarch64_sve_tuple_set>(
-                 m_Value(SetTuple), m_Value(SetIndex), m_Value(SetValue))) ||
-      SetValue->getType() != II.getType())
-    return None;
-  // Case where we get the same index right after setting it.
-  // tuple_get(tuple_set(SetTuple, SetIndex, SetValue), GetIndex) --> SetValue
-  if (GetIndex == SetIndex)
-    return IC.replaceInstUsesWith(II, SetValue);
-  // If we are getting a different index than what was set in the tuple_set
-  // intrinsic. We can just set the input tuple to the one up in the chain.
-  // tuple_get(tuple_set(SetTuple, SetIndex, SetValue), GetIndex)
-  // --> tuple_get(SetTuple, GetIndex)
-  return IC.replaceOperand(II, 0, SetTuple);
-}
-
 static Optional<Instruction *> instCombineSVEZip(InstCombiner &IC,
                                                  IntrinsicInst &II) {
   // zip1(uzp1(A, B), uzp2(A, B)) --> A
@@ -1448,8 +1422,6 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   case Intrinsic::aarch64_sve_sunpkhi:
   case Intrinsic::aarch64_sve_sunpklo:
     return instCombineSVEUnpack(IC, II);
-  case Intrinsic::aarch64_sve_tuple_get:
-    return instCombineSVETupleGet(IC, II);
   case Intrinsic::aarch64_sve_zip1:
   case Intrinsic::aarch64_sve_zip2:
     return instCombineSVEZip(IC, II);
