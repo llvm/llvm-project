@@ -238,30 +238,30 @@ class HipBinBase {
   void printUsage() const;
   bool canRunCompiler(string exeName, string& cmdOut);
   HipBinCommand gethipconfigCmd(string argument);
+  const string& getrocm_pathOption() const;
 
  protected:
   // hipBinUtilPtr used by derived platforms
   // so therefore its protected
   HipBinUtil* hipBinUtilPtr_;
-
- private:
-  EnvVariables envVariables_, variables_;
-  OsType osInfo_;
-  string hipVersion_;
+  string rocm_pathOption_ = "";
   void readOSInfo();
   void readEnvVariables();
   void constructHipPath();
   void constructRoccmPath();
   void readHipVersion();
+  
+ private:
+  EnvVariables envVariables_, variables_;
+  OsType osInfo_;
+  string hipVersion_;
+
 };
 
 HipBinBase::HipBinBase() {
   hipBinUtilPtr_ = hipBinUtilPtr_->getInstance();
   readOSInfo();                 // detects if windows or linux
-  readEnvVariables();           // reads the envirnoment variables
-  constructHipPath();           // constructs HIP Path
-  constructRoccmPath();         // constructs Roccm Path
-  readHipVersion();             // stores the hip version
+  readEnvVariables();           // reads the environment variables
 }
 
 // detects the OS information
@@ -330,7 +330,13 @@ void HipBinBase::constructHipPath() {
 
 // constructs the ROCM path
 void HipBinBase::constructRoccmPath() {
-  if (envVariables_.roccmPathEnv_.empty()) {
+  // we need to use --rocm-path option
+  string rocm_path_name = getrocm_pathOption();
+
+  // chose the --rocm-path option first, if specified.
+  if (!rocm_path_name.empty())
+    variables_.roccmPathEnv_ = rocm_path_name;
+  else if (envVariables_.roccmPathEnv_.empty()) {
     const string& hipPath = getHipPath();
     fs::path roccm_path(hipPath);
     roccm_path = roccm_path.parent_path();
@@ -339,7 +345,6 @@ void HipBinBase::constructRoccmPath() {
     if (!fs::exists(rocm_agent_enumerator_file)) {
       roccm_path = "/opt/rocm";
     }
-    variables_.roccmPathEnv_ = roccm_path.string();
   } else {
     variables_.roccmPathEnv_ = envVariables_.roccmPathEnv_;}
 }
@@ -520,5 +525,8 @@ HipBinCommand HipBinBase::gethipconfigCmd(string argument) {
   return full;  // default is full. return full if no commands are matched
 }
 
+const  string& HipBinBase::getrocm_pathOption() const {
+  return rocm_pathOption_;
+}
 
 #endif  // SRC_HIPBIN_BASE_H_

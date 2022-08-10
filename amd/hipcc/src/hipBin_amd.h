@@ -84,9 +84,6 @@ HipBinAmd::HipBinAmd() {
   platformInfo.runtime = rocclr;
   platformInfo.compiler = clang;
   platformInfoAMD_ = platformInfo;
-  constructRocclrHomePath();    // constructs RocclrHomePath
-  constructHsaPath();           // constructs hsa path
-  constructCompilerPath();
 }
 
 // returns the Rocclr Home path
@@ -240,9 +237,6 @@ void HipBinAmd::constructCompilerPath() {
   hipClangPath_ = complierPath;
 }
 
-
-
-
 // returns clang path.
 const string& HipBinAmd::getCompilerPath() const {
   return hipClangPath_;
@@ -386,8 +380,6 @@ bool HipBinAmd::detectPlatform() {
   }
   return detected;
 }
-
-
 
 string HipBinAmd::getHipLibPath() const {
   string hipLibPath;
@@ -536,47 +528,10 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
   }
 
   string HIPLDARCHFLAGS;
-
-  initializeHipCXXFlags();
-  initializeHipCFlags();
-  initializeHipLdFlags();
   string HIPCXXFLAGS, HIPCFLAGS, HIPLDFLAGS;
-  HIPCFLAGS = getHipCFlags();
-  HIPCXXFLAGS = getHipCXXFlags();
-  HIPLDFLAGS = getHipLdFlags();
-  string hipLibPath;
-  string hipIncludePath, deviceLibPath;
-  hipLibPath = getHipLibPath();
-  const string& roccmPath = getRoccmPath();
-  const string& hipPath = getHipPath();
-  const PlatformInfo& platformInfo = getPlatformInfo();
-  const string& rocclrHomePath = getRocclrHomePath();
-  const string& hipClangPath = getCompilerPath();
-  hipIncludePath = getHipInclude();
-  deviceLibPath = getDeviceLibPath();
-  const string& hipVersion = getHipVersion();
-  if (verbose & 0x2) {
-    cout << "HIP_PATH=" << hipPath << endl;
-    cout << "HIP_PLATFORM=" <<  PlatformTypeStr(platformInfo.platform) <<endl;
-    cout << "HIP_COMPILER=" << CompilerTypeStr(platformInfo.compiler) <<endl;
-    cout << "HIP_RUNTIME=" << RuntimeTypeStr(platformInfo.runtime) <<endl;
-    cout << "ROCM_PATH=" << roccmPath << endl;
-    cout << "HIP_ROCCLR_HOME="<< rocclrHomePath << endl;
-    cout << "HIP_CLANG_PATH=" << hipClangPath <<endl;
-    cout << "HIP_INCLUDE_PATH="<< hipIncludePath  <<endl;
-    cout << "HIP_LIB_PATH="<< hipLibPath <<endl;
-    cout << "DEVICE_LIB_PATH="<< deviceLibPath <<endl;
-  }
 
-  if (verbose & 0x4) {
-    cout <<  "hipcc-args: ";
-    for (unsigned int i = 1; i< argv.size(); i++) {
-      cout <<  argv.at(i) << " ";
-    }
-    cout << endl;
-  }
-
-
+  // ARGV Processing Loop
+  // TODO(hipcc): create a proper Options Processing function/routine
   for (unsigned int argcount = 1; argcount < argv.size(); argcount++) {
     // Save $arg, it can get changed in the loop.
     string arg = argv.at(argcount);
@@ -611,6 +566,11 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
       HIPCXXFLAGS += " -stdlib=libc++";
       setStdLib = 1;
     }
+
+    // Process --rocm-path option
+    const string& rocmPathOption = "--rocm-path=";
+    if (arg.compare(0,rocmPathOption.length(),rocmPathOption) == 0)
+    	rocm_pathOption_ = arg.substr(rocmPathOption.length());
 
     // Check target selection option: --offload-arch= and --amdgpu-target=...
     for (unsigned int i = 0; i <targetOpts.size(); i++) {
@@ -948,8 +908,56 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     if (!swallowArg)
       toolArgs += " " + arg;
     prevArg = arg;
-  }  // end of for loop
-  // No AMDGPU target specified at commandline. So look for HCC_AMDGPU_TARGET
+  }  // end of ARGV Processing Loop
+
+  // now construct Paths ...
+  constructRoccmPath();         // constructs Roccm Path
+  constructHipPath();           // constructs HIP Path
+  readHipVersion();             // stores the hip version
+  constructCompilerPath();
+  constructRocclrHomePath();
+  constructHsaPath();
+
+  initializeHipCXXFlags();
+  initializeHipCFlags();
+  initializeHipLdFlags();
+  HIPCFLAGS = getHipCFlags();
+  HIPCXXFLAGS = getHipCXXFlags();
+  HIPLDFLAGS = getHipLdFlags();
+
+  string hipLibPath;
+  string hipIncludePath, deviceLibPath;
+  hipLibPath = getHipLibPath();
+  const string& roccmPath = getRoccmPath();
+  const string& hipPath = getHipPath();
+  const PlatformInfo& platformInfo = getPlatformInfo();
+  const string& rocclrHomePath = getRocclrHomePath();
+  const string& hipClangPath = getCompilerPath();
+  hipIncludePath = getHipInclude();
+  deviceLibPath = getDeviceLibPath();
+  const string& hipVersion = getHipVersion();
+  if (verbose & 0x2) {
+    cout << "HIP_PATH=" << hipPath << endl;
+    cout << "HIP_PLATFORM=" <<  PlatformTypeStr(platformInfo.platform) <<endl;
+    cout << "HIP_COMPILER=" << CompilerTypeStr(platformInfo.compiler) <<endl;
+    cout << "HIP_RUNTIME=" << RuntimeTypeStr(platformInfo.runtime) <<endl;
+    cout << "ROCM_PATH=" << roccmPath << endl;
+    cout << "HIP_ROCCLR_HOME="<< rocclrHomePath << endl;
+    cout << "HIP_CLANG_PATH=" << hipClangPath <<endl;
+    cout << "HIP_INCLUDE_PATH="<< hipIncludePath  <<endl;
+    cout << "HIP_LIB_PATH="<< hipLibPath <<endl;
+    cout << "DEVICE_LIB_PATH="<< deviceLibPath <<endl;
+  }
+
+  if (verbose & 0x4) {
+    cout <<  "hipcc-args: ";
+    for (unsigned int i = 1; i< argv.size(); i++) {
+      cout <<  argv.at(i) << " ";
+    }
+    cout << endl;
+  }
+
+ // No AMDGPU target specified at commandline. So look for HCC_AMDGPU_TARGET
   if (default_amdgpu_target == 1) {
     if (!var.hccAmdGpuTargetEnv_.empty()) {
       targetsStr = var.hccAmdGpuTargetEnv_;
