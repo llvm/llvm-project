@@ -17,10 +17,10 @@ int main(void) {
     exit(1);
 
   if (!(nobody = getgrnam("nobody")))
-    exit(1);
+    exit(2);
 
   if (getgrouplist("nobody", nobody->gr_gid, groups, &ngroups) == -1)
-    exit(1);
+    exit(3);
 
   if (groups && ngroups) {
     free(groups);
