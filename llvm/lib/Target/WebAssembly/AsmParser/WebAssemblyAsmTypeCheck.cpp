@@ -184,7 +184,7 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc, const MCInst &Inst,
     default:
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
                                     " missing .globaltype");

@@ -417,6 +417,7 @@ namespace {
 private:
     bool trySETCC(SDNode *N);
     bool tryFoldSWTestBRCC(SDNode *N);
+    bool trySelectLoopCountIntrinsic(SDNode *N);
     bool tryAsSingleRLDICL(SDNode *N);
     bool tryAsSingleRLDICR(SDNode *N);
     bool tryAsSingleRLWINM(SDNode *N);
@@ -2772,7 +2773,7 @@ public:
       if (CmpInGPR == ICGPR_Sext || CmpInGPR == ICGPR_SextI32 ||
           CmpInGPR == ICGPR_SextI64)
         return nullptr;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ISD::SIGN_EXTEND:
       if (CmpInGPR == ICGPR_Zext || CmpInGPR == ICGPR_ZextI32 ||
           CmpInGPR == ICGPR_ZextI64)
@@ -3200,7 +3201,7 @@ IntegerCompareEliminator::get32BitZExtCompare(SDValue LHS, SDValue RHS,
     std::swap(LHS, RHS);
     ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
     IsRHSZero = RHSConst && RHSConst->isZero();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case ISD::SETLE: {
     if (CmpInGPR == ICGPR_NonExtIn)
@@ -3251,7 +3252,7 @@ IntegerCompareEliminator::get32BitZExtCompare(SDValue LHS, SDValue RHS,
     ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
     IsRHSZero = RHSConst && RHSConst->isZero();
     IsRHSOne = RHSConst && RHSConst->getSExtValue() == 1;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case ISD::SETLT: {
     // (zext (setcc %a, %b, setlt)) -> (lshr (sub %a, %b), 63)
@@ -3286,7 +3287,7 @@ IntegerCompareEliminator::get32BitZExtCompare(SDValue LHS, SDValue RHS,
     // (zext (setcc %a, %b, setuge)) -> (xor (lshr (sub %b, %a), 63), 1)
     // (zext (setcc %a, %b, setule)) -> (xor (lshr (sub %a, %b), 63), 1)
     std::swap(LHS, RHS);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETULE: {
     if (CmpInGPR == ICGPR_NonExtIn)
       return SDValue();
@@ -3306,7 +3307,7 @@ IntegerCompareEliminator::get32BitZExtCompare(SDValue LHS, SDValue RHS,
     // (zext (setcc %a, %b, setugt)) -> (lshr (sub %b, %a), 63)
     // (zext (setcc %a, %b, setult)) -> (lshr (sub %a, %b), 63)
     std::swap(LHS, RHS);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETULT: {
     if (CmpInGPR == ICGPR_NonExtIn)
       return SDValue();
@@ -3384,7 +3385,7 @@ IntegerCompareEliminator::get32BitSExtCompare(SDValue LHS, SDValue RHS,
     std::swap(LHS, RHS);
     ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
     IsRHSZero = RHSConst && RHSConst->isZero();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case ISD::SETLE: {
     if (CmpInGPR == ICGPR_NonExtIn)
@@ -3430,7 +3431,7 @@ IntegerCompareEliminator::get32BitSExtCompare(SDValue LHS, SDValue RHS,
     ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
     IsRHSZero = RHSConst && RHSConst->isZero();
     IsRHSOne = RHSConst && RHSConst->getSExtValue() == 1;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case ISD::SETLT: {
     // (sext (setcc %a, %b, setgt)) -> (ashr (sub %a, %b), 63)
@@ -3459,7 +3460,7 @@ IntegerCompareEliminator::get32BitSExtCompare(SDValue LHS, SDValue RHS,
     // (sext (setcc %a, %b, setuge)) -> (add (lshr (sub %a, %b), 63), -1)
     // (sext (setcc %a, %b, setule)) -> (add (lshr (sub %b, %a), 63), -1)
     std::swap(LHS, RHS);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETULE: {
     if (CmpInGPR == ICGPR_NonExtIn)
       return SDValue();
@@ -3479,7 +3480,7 @@ IntegerCompareEliminator::get32BitSExtCompare(SDValue LHS, SDValue RHS,
     // (sext (setcc %a, %b, setugt)) -> (ashr (sub %b, %a), 63)
     // (sext (setcc %a, %b, setugt)) -> (ashr (sub %a, %b), 63)
     std::swap(LHS, RHS);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETULT: {
     if (CmpInGPR == ICGPR_NonExtIn)
       return SDValue();
@@ -3542,7 +3543,7 @@ IntegerCompareEliminator::get64BitZExtCompare(SDValue LHS, SDValue RHS,
     std::swap(LHS, RHS);
     ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
     IsRHSZero = RHSConst && RHSConst->isZero();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case ISD::SETLE: {
     // {subc.reg, subc.CA} = (subcarry %b, %a)
@@ -3585,7 +3586,7 @@ IntegerCompareEliminator::get64BitZExtCompare(SDValue LHS, SDValue RHS,
     ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
     IsRHSZero = RHSConst && RHSConst->isZero();
     IsRHSOne = RHSConst && RHSConst->getSExtValue() == 1;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case ISD::SETLT: {
     // {subc.reg, subc.CA} = (subcarry %a, %b)
@@ -3618,7 +3619,7 @@ IntegerCompareEliminator::get64BitZExtCompare(SDValue LHS, SDValue RHS,
     // {subc.reg, subc.CA} = (subcarry %a, %b)
     // (zext (setcc %a, %b, setuge)) -> (add (sube %b, %b, subc.CA), 1)
     std::swap(LHS, RHS);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETULE: {
     // {subc.reg, subc.CA} = (subcarry %b, %a)
     // (zext (setcc %a, %b, setule)) -> (add (sube %a, %a, subc.CA), 1)
@@ -3635,7 +3636,7 @@ IntegerCompareEliminator::get64BitZExtCompare(SDValue LHS, SDValue RHS,
     // {subc.reg, subc.CA} = (subcarry %b, %a)
     // (zext (setcc %a, %b, setugt)) -> -(sube %b, %b, subc.CA)
     std::swap(LHS, RHS);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETULT: {
     // {subc.reg, subc.CA} = (subcarry %a, %b)
     // (zext (setcc %a, %b, setult)) -> -(sube %a, %a, subc.CA)
@@ -3701,7 +3702,7 @@ IntegerCompareEliminator::get64BitSExtCompare(SDValue LHS, SDValue RHS,
     std::swap(LHS, RHS);
     ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
     IsRHSZero = RHSConst && RHSConst->isZero();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case ISD::SETLE: {
     // {subc.reg, subc.CA} = (subcarry %b, %a)
@@ -3745,7 +3746,7 @@ IntegerCompareEliminator::get64BitSExtCompare(SDValue LHS, SDValue RHS,
     ConstantSDNode *RHSConst = dyn_cast<ConstantSDNode>(RHS);
     IsRHSZero = RHSConst && RHSConst->isZero();
     IsRHSOne = RHSConst && RHSConst->getSExtValue() == 1;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case ISD::SETLT: {
     // {subc.reg, subc.CA} = (subcarry %a, %b)
@@ -3781,7 +3782,7 @@ IntegerCompareEliminator::get64BitSExtCompare(SDValue LHS, SDValue RHS,
     // {subc.reg, subc.CA} = (subcarry %a, %b)
     // (sext (setcc %a, %b, setuge)) -> ~(sube %b, %b, subc.CA)
     std::swap(LHS, RHS);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETULE: {
     // {subc.reg, subc.CA} = (subcarry %b, %a)
     // (sext (setcc %a, %b, setule)) -> ~(sube %a, %a, subc.CA)
@@ -3798,7 +3799,7 @@ IntegerCompareEliminator::get64BitSExtCompare(SDValue LHS, SDValue RHS,
     // {subc.reg, subc.CA} = (subcarry %b, %a)
     // (sext (setcc %a, %b, setugt)) -> (sube %b, %b, subc.CA)
     std::swap(LHS, RHS);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETULT: {
     // {subc.reg, subc.CA} = (subcarry %a, %b)
     // (sext (setcc %a, %b, setult)) -> (sube %a, %a, subc.CA)
@@ -4604,7 +4605,7 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
     if (!IsUnCmp && InnerCC != ISD::SETNE)
       return false;
     IsUnCmp = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETLT:
     if (InnerCC == ISD::SETNE || (InnerCC == ISD::SETGT && !InnerSwapped) ||
         (InnerCC == ISD::SETLT && InnerSwapped))
@@ -4623,7 +4624,7 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
     if (!IsUnCmp && InnerCC != ISD::SETNE)
       return false;
     IsUnCmp = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETGT:
     if (InnerCC == ISD::SETNE || (InnerCC == ISD::SETLT && !InnerSwapped) ||
         (InnerCC == ISD::SETGT && InnerSwapped))
@@ -4716,6 +4717,59 @@ bool PPCDAGToDAGISel::tryFoldSWTestBRCC(SDNode *N) {
     return true;
   }
   return false;
+}
+
+bool PPCDAGToDAGISel::trySelectLoopCountIntrinsic(SDNode *N) {
+  // Sometimes the promoted value of the intrinsic is ANDed by some non-zero
+  // value, for example when crbits is disabled. If so, select the
+  // loop_decrement intrinsics now.
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
+  SDValue LHS = N->getOperand(2), RHS = N->getOperand(3);
+
+  if (LHS.getOpcode() != ISD::AND || !isa<ConstantSDNode>(LHS.getOperand(1)) ||
+      isNullConstant(LHS.getOperand(1)))
+    return false;
+
+  if (LHS.getOperand(0).getOpcode() != ISD::INTRINSIC_W_CHAIN ||
+      cast<ConstantSDNode>(LHS.getOperand(0).getOperand(1))->getZExtValue() !=
+          Intrinsic::loop_decrement)
+    return false;
+
+  if (!isa<ConstantSDNode>(RHS))
+    return false;
+
+  assert((CC == ISD::SETEQ || CC == ISD::SETNE) &&
+         "Counter decrement comparison is not EQ or NE");
+
+  SDValue OldDecrement = LHS.getOperand(0);
+  assert(OldDecrement.hasOneUse() && "loop decrement has more than one use!");
+
+  SDLoc DecrementLoc(OldDecrement);
+  SDValue ChainInput = OldDecrement.getOperand(0);
+  SDValue DecrementOps[] = {Subtarget->isPPC64() ? getI64Imm(1, DecrementLoc)
+                                                 : getI32Imm(1, DecrementLoc)};
+  unsigned DecrementOpcode =
+      Subtarget->isPPC64() ? PPC::DecreaseCTR8loop : PPC::DecreaseCTRloop;
+  SDNode *NewDecrement = CurDAG->getMachineNode(DecrementOpcode, DecrementLoc,
+                                                MVT::i1, DecrementOps);
+
+  unsigned Val = cast<ConstantSDNode>(RHS)->getZExtValue();
+  bool IsBranchOnTrue = (CC == ISD::SETEQ && Val) || (CC == ISD::SETNE && !Val);
+  unsigned Opcode = IsBranchOnTrue ? PPC::BC : PPC::BCn;
+
+  ReplaceUses(LHS.getValue(0), LHS.getOperand(1));
+  CurDAG->RemoveDeadNode(LHS.getNode());
+
+  // Mark the old loop_decrement intrinsic as dead.
+  ReplaceUses(OldDecrement.getValue(1), ChainInput);
+  CurDAG->RemoveDeadNode(OldDecrement.getNode());
+
+  SDValue Chain = CurDAG->getNode(ISD::TokenFactor, SDLoc(N), MVT::Other,
+                                  ChainInput, N->getOperand(0));
+
+  CurDAG->SelectNodeTo(N, Opcode, MVT::Other, SDValue(NewDecrement, 0),
+                       N->getOperand(4), Chain);
+  return true;
 }
 
 bool PPCDAGToDAGISel::tryAsSingleRLWINM(SDNode *N) {
@@ -5739,6 +5793,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
   case ISD::BR_CC: {
     if (tryFoldSWTestBRCC(N))
       return;
+    if (trySelectLoopCountIntrinsic(N))
+      return;
     ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
     unsigned PCC =
         getPredicateForSetCC(CC, N->getOperand(2).getValueType(), Subtarget);
@@ -6488,7 +6544,7 @@ void PPCDAGToDAGISel::PeepholeCROps() {
                    Op.getOperand(0) == Op.getOperand(1))
             Op2Not = true;
         }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       }
       case PPC::BC:
       case PPC::BCn:
@@ -7306,7 +7362,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     case PPC::DFLOADf64:
     case PPC::DFLOADf32:
       RequiresMod4Offset = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::LBZ:
     case PPC::LBZ8:
     case PPC::LFD:
@@ -7324,7 +7380,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
     case PPC::DFSTOREf64:
     case PPC::DFSTOREf32:
       RequiresMod4Offset = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::STB:
     case PPC::STB8:
     case PPC::STFD:

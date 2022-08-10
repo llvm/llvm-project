@@ -13,6 +13,7 @@
 #include "Serializer.h"
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
@@ -277,8 +278,8 @@ LogicalResult Serializer::processVariableOp(spirv::VariableOp op) {
   operands.push_back(resultID);
   auto attr = op->getAttr(spirv::attributeName<spirv::StorageClass>());
   if (attr) {
-    operands.push_back(static_cast<uint32_t>(
-        attr.cast<IntegerAttr>().getValue().getZExtValue()));
+    operands.push_back(
+        static_cast<uint32_t>(attr.cast<spirv::StorageClassAttr>().getValue()));
   }
   elidedAttrs.push_back(spirv::attributeName<spirv::StorageClass>());
   for (auto arg : op.getODSOperands(0)) {
@@ -567,27 +568,6 @@ Serializer::processOp<spirv::EntryPointOp>(spirv::EntryPointOp op) {
 
 template <>
 LogicalResult
-Serializer::processOp<spirv::ControlBarrierOp>(spirv::ControlBarrierOp op) {
-  StringRef argNames[] = {"execution_scope", "memory_scope",
-                          "memory_semantics"};
-  SmallVector<uint32_t, 3> operands;
-
-  for (auto argName : argNames) {
-    auto argIntAttr = op->getAttrOfType<IntegerAttr>(argName);
-    auto operand = prepareConstantInt(op.getLoc(), argIntAttr);
-    if (!operand) {
-      return failure();
-    }
-    operands.push_back(operand);
-  }
-
-  encodeInstructionInto(functionBody, spirv::Opcode::OpControlBarrier,
-                        operands);
-  return success();
-}
-
-template <>
-LogicalResult
 Serializer::processOp<spirv::ExecutionModeOp>(spirv::ExecutionModeOp op) {
   SmallVector<uint32_t, 4> operands;
   // Add the function <id>.
@@ -612,25 +592,6 @@ Serializer::processOp<spirv::ExecutionModeOp>(spirv::ExecutionModeOp op) {
   }
   encodeInstructionInto(executionModes, spirv::Opcode::OpExecutionMode,
                         operands);
-  return success();
-}
-
-template <>
-LogicalResult
-Serializer::processOp<spirv::MemoryBarrierOp>(spirv::MemoryBarrierOp op) {
-  StringRef argNames[] = {"memory_scope", "memory_semantics"};
-  SmallVector<uint32_t, 2> operands;
-
-  for (auto argName : argNames) {
-    auto argIntAttr = op->getAttrOfType<IntegerAttr>(argName);
-    auto operand = prepareConstantInt(op.getLoc(), argIntAttr);
-    if (!operand) {
-      return failure();
-    }
-    operands.push_back(operand);
-  }
-
-  encodeInstructionInto(functionBody, spirv::Opcode::OpMemoryBarrier, operands);
   return success();
 }
 
@@ -674,8 +635,8 @@ Serializer::processOp<spirv::CopyMemoryOp>(spirv::CopyMemoryOp op) {
   }
 
   if (auto attr = op->getAttr("memory_access")) {
-    operands.push_back(static_cast<uint32_t>(
-        attr.cast<IntegerAttr>().getValue().getZExtValue()));
+    operands.push_back(
+        static_cast<uint32_t>(attr.cast<spirv::MemoryAccessAttr>().getValue()));
   }
 
   elidedAttrs.push_back("memory_access");
@@ -688,8 +649,8 @@ Serializer::processOp<spirv::CopyMemoryOp>(spirv::CopyMemoryOp op) {
   elidedAttrs.push_back("alignment");
 
   if (auto attr = op->getAttr("source_memory_access")) {
-    operands.push_back(static_cast<uint32_t>(
-        attr.cast<IntegerAttr>().getValue().getZExtValue()));
+    operands.push_back(
+        static_cast<uint32_t>(attr.cast<spirv::MemoryAccessAttr>().getValue()));
   }
 
   elidedAttrs.push_back("source_memory_access");

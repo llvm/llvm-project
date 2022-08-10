@@ -588,7 +588,7 @@ public:
   /// \return True if the exit code was successfully set; false if the
   ///         interpreter doesn't allow custom exit codes.
   /// \see AllowExitCodeOnQuit
-  LLVM_NODISCARD bool SetQuitExitCode(int exit_code);
+  [[nodiscard]] bool SetQuitExitCode(int exit_code);
 
   /// Returns the exit code that the user has specified when running the
   /// 'quit' command.

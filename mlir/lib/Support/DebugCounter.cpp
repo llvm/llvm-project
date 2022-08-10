@@ -122,8 +122,7 @@ void DebugCounter::applyCLOptions() {
       continue;
 
     // Debug counter arguments are expected to be in the form: `counter=value`.
-    StringRef counterName, counterValueStr;
-    std::tie(counterName, counterValueStr) = arg.split('=');
+    auto [counterName, counterValueStr] = arg.split('=');
     if (counterValueStr.empty()) {
       llvm::errs() << "error: expected DebugCounter argument to have an `=` "
                       "separating the counter name and value, but the provided "

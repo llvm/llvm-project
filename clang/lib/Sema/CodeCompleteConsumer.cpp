@@ -776,7 +776,7 @@ void CodeCompletionResult::computeCursorKindAndAvailability(bool Accessible) {
       // Do nothing: Patterns can come with cursor kinds!
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case RK_Declaration: {
     // Set the availability based on attributes.

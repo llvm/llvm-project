@@ -1373,7 +1373,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     OpcodeOffset = MI.getOperand(NumOps - 1).getImm();
     assert(OpcodeOffset < 16 && "Unexpected opcode offset!");
     --NumOps; // Drop the operand from the end.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case X86II::RawFrm:
     emitByte(BaseOpcode + OpcodeOffset, OS);
 

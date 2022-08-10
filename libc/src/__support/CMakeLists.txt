@@ -70,6 +70,14 @@ add_header_library(
     arg_list.h
 )
 
+add_header_library(
+  fixedvector
+  HDRS
+    fixedvector.h
+  DEPENDS
+    libc.src.__support.CPP.array
+)
+
 add_subdirectory(FPUtil)
 add_subdirectory(OSUtil)
 

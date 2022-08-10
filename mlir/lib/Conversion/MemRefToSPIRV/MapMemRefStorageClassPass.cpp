@@ -14,10 +14,11 @@
 #include "../PassDetail.h"
 #include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
 #include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRVPass.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
@@ -30,7 +31,6 @@ using namespace mlir;
 // Mappings
 //===----------------------------------------------------------------------===//
 
-spirv::MemorySpaceToStorageClassMap spirv::getDefaultVulkanStorageClassMap() {
 /// Mapping between SPIR-V storage classes to memref memory spaces.
 ///
 /// Note: memref does not have a defined semantics for each memory space; it
@@ -47,28 +47,41 @@ spirv::MemorySpaceToStorageClassMap spirv::getDefaultVulkanStorageClassMap() {
   MAP_FN(spirv::StorageClass::PushConstant, 7)                                 \
   MAP_FN(spirv::StorageClass::UniformConstant, 8)                              \
   MAP_FN(spirv::StorageClass::Input, 9)                                        \
-  MAP_FN(spirv::StorageClass::Output, 10)                                      \
-  MAP_FN(spirv::StorageClass::CrossWorkgroup, 11)                              \
-  MAP_FN(spirv::StorageClass::AtomicCounter, 12)                               \
-  MAP_FN(spirv::StorageClass::Image, 13)                                       \
-  MAP_FN(spirv::StorageClass::CallableDataKHR, 14)                             \
-  MAP_FN(spirv::StorageClass::IncomingCallableDataKHR, 15)                     \
-  MAP_FN(spirv::StorageClass::RayPayloadKHR, 16)                               \
-  MAP_FN(spirv::StorageClass::HitAttributeKHR, 17)                             \
-  MAP_FN(spirv::StorageClass::IncomingRayPayloadKHR, 18)                       \
-  MAP_FN(spirv::StorageClass::ShaderRecordBufferKHR, 19)                       \
-  MAP_FN(spirv::StorageClass::PhysicalStorageBuffer, 20)                       \
-  MAP_FN(spirv::StorageClass::CodeSectionINTEL, 21)                            \
-  MAP_FN(spirv::StorageClass::DeviceOnlyINTEL, 22)                             \
-  MAP_FN(spirv::StorageClass::HostOnlyINTEL, 23)
+  MAP_FN(spirv::StorageClass::Output, 10)
 
-#define STORAGE_SPACE_MAP_FN(storage, space) {space, storage},
+Optional<spirv::StorageClass>
+spirv::mapMemorySpaceToVulkanStorageClass(unsigned memorySpace) {
+#define STORAGE_SPACE_MAP_FN(storage, space)                                   \
+  case space:                                                                  \
+    return storage;
 
-  return {STORAGE_SPACE_MAP_LIST(STORAGE_SPACE_MAP_FN)};
+  switch (memorySpace) {
+    STORAGE_SPACE_MAP_LIST(STORAGE_SPACE_MAP_FN)
+  default:
+    break;
+  }
+  return llvm::None;
 
 #undef STORAGE_SPACE_MAP_FN
-#undef STORAGE_SPACE_MAP_LIST
 }
+
+Optional<unsigned>
+spirv::mapVulkanStorageClassToMemorySpace(spirv::StorageClass storageClass) {
+#define STORAGE_SPACE_MAP_FN(storage, space)                                   \
+  case storage:                                                                \
+    return space;
+
+  switch (storageClass) {
+    STORAGE_SPACE_MAP_LIST(STORAGE_SPACE_MAP_FN)
+  default:
+    break;
+  }
+  return llvm::None;
+
+#undef STORAGE_SPACE_MAP_FN
+}
+
+#undef STORAGE_SPACE_MAP_LIST
 
 //===----------------------------------------------------------------------===//
 // Type Converter
@@ -86,20 +99,21 @@ spirv::MemorySpaceToStorageClassConverter::MemorySpaceToStorageClassConverter(
     Attribute spaceAttr = memRefType.getMemorySpace();
     if (spaceAttr && !spaceAttr.isa<IntegerAttr>()) {
       LLVM_DEBUG(llvm::dbgs() << "cannot convert " << memRefType
-                              << " due to non-IntegerAttr memory space");
+                              << " due to non-IntegerAttr memory space\n");
       return llvm::None;
     }
 
     unsigned space = memRefType.getMemorySpaceAsInt();
-    auto it = this->memorySpaceMap.find(space);
-    if (it == this->memorySpaceMap.end()) {
-      LLVM_DEBUG(llvm::dbgs() << "cannot convert " << memRefType
-                              << " due to unable to find memory space in map");
+    auto storage = this->memorySpaceMap(space);
+    if (!storage) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "cannot convert " << memRefType
+                 << " due to being unable to find memory space in map\n");
       return llvm::None;
     }
 
     auto storageAttr =
-        spirv::StorageClassAttr::get(memRefType.getContext(), it->second);
+        spirv::StorageClassAttr::get(memRefType.getContext(), *storage);
     if (auto rankedType = memRefType.dyn_cast<MemRefType>()) {
       return MemRefType::get(memRefType.getShape(), memRefType.getElementType(),
                              rankedType.getLayout(), storageAttr);
@@ -143,10 +157,9 @@ static bool isLegalAttr(Attribute attr) {
 
 /// Returns true if the given `op` is considered as legal for SPIR-V conversion.
 static bool isLegalOp(Operation *op) {
-  if (auto funcOp = dyn_cast<func::FuncOp>(op)) {
-    FunctionType funcType = funcOp.getFunctionType();
-    return llvm::all_of(funcType.getInputs(), isLegalType) &&
-           llvm::all_of(funcType.getResults(), isLegalType);
+  if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
+    return llvm::all_of(funcOp.getArgumentTypes(), isLegalType) &&
+           llvm::all_of(funcOp.getResultTypes(), isLegalType);
   }
 
   auto attrs = llvm::map_range(op->getAttrs(), [](const NamedAttribute &attr) {
@@ -230,7 +243,9 @@ namespace {
 class MapMemRefStorageClassPass final
     : public MapMemRefStorageClassBase<MapMemRefStorageClassPass> {
 public:
-  explicit MapMemRefStorageClassPass() = default;
+  explicit MapMemRefStorageClassPass() {
+    memorySpaceMap = spirv::mapMemorySpaceToVulkanStorageClass;
+  }
   explicit MapMemRefStorageClassPass(
       const spirv::MemorySpaceToStorageClassMap &memorySpaceMap)
       : memorySpaceMap(memorySpaceMap) {}
@@ -251,46 +266,23 @@ LogicalResult MapMemRefStorageClassPass::initializeOptions(StringRef options) {
   if (clientAPI != "vulkan")
     return failure();
 
-  memorySpaceMap = spirv::getDefaultVulkanStorageClassMap();
-
-  LLVM_DEBUG({
-    llvm::dbgs() << "memory space to storage class mapping:\n";
-    if (memorySpaceMap.empty())
-      llvm::dbgs() << "  [empty]\n";
-    for (auto kv : memorySpaceMap)
-      llvm::dbgs() << "  " << kv.first << " -> "
-                   << spirv::stringifyStorageClass(kv.second) << "\n";
-  });
-
   return success();
 }
 
 void MapMemRefStorageClassPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  ModuleOp module = getOperation();
+  Operation *op = getOperation();
 
   auto target = spirv::getMemorySpaceToStorageClassTarget(*context);
-
   spirv::MemorySpaceToStorageClassConverter converter(memorySpaceMap);
-  // Use UnrealizedConversionCast as the bridge so that we don't need to pull in
-  // patterns for other dialects.
-  auto addUnrealizedCast = [](OpBuilder &builder, Type type, ValueRange inputs,
-                              Location loc) {
-    auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
-    return Optional<Value>(cast.getResult(0));
-  };
-  converter.addSourceMaterialization(addUnrealizedCast);
-  converter.addTargetMaterialization(addUnrealizedCast);
-  target->addLegalOp<UnrealizedConversionCastOp>();
 
   RewritePatternSet patterns(context);
   spirv::populateMemorySpaceToStorageClassPatterns(converter, patterns);
 
-  if (failed(applyPartialConversion(module, *target, std::move(patterns))))
+  if (failed(applyFullConversion(op, *target, std::move(patterns))))
     return signalPassFailure();
 }
 
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createMapMemRefStorageClassPass() {
+std::unique_ptr<OperationPass<>> mlir::createMapMemRefStorageClassPass() {
   return std::make_unique<MapMemRefStorageClassPass>();
 }

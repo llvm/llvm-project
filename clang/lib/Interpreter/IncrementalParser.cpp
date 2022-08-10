@@ -59,22 +59,22 @@ public:
                 CI.getFrontendOpts().ProgramAction);
             return Act;
           case frontend::ASTDump:
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
           case frontend::ASTPrint:
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
           case frontend::ParseSyntaxOnly:
             Act = CreateFrontendAction(CI);
             break;
           case frontend::PluginAction:
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
           case frontend::EmitAssembly:
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
           case frontend::EmitBC:
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
           case frontend::EmitObj:
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
           case frontend::PrintPreprocessedInput:
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
           case frontend::EmitLLVMOnly:
             Act.reset(new EmitLLVMOnlyAction(&LLVMCtx));
             break;

@@ -219,7 +219,7 @@ int64_t AffineExpr::getLargestKnownDivisor() const {
   AffineBinaryOpExpr binExpr(nullptr);
   switch (getKind()) {
   case AffineExprKind::CeilDiv:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AffineExprKind::DimId:
   case AffineExprKind::FloorDiv:
   case AffineExprKind::SymbolId:
@@ -232,7 +232,7 @@ int64_t AffineExpr::getLargestKnownDivisor() const {
            binExpr.getRHS().getLargestKnownDivisor();
   }
   case AffineExprKind::Add:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AffineExprKind::Mod: {
     binExpr = cast<AffineBinaryOpExpr>();
     return llvm::GreatestCommonDivisor64(
@@ -248,7 +248,7 @@ bool AffineExpr::isMultipleOf(int64_t factor) const {
   uint64_t l, u;
   switch (getKind()) {
   case AffineExprKind::SymbolId:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AffineExprKind::DimId:
     return factor * factor == 1;
   case AffineExprKind::Constant:

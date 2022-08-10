@@ -230,7 +230,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       }
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case clang::CK_IntegralCast:
     // Convert integral and no-op casts between builtin types and enums to
     // static_cast. A cast from enum to integer may be unnecessary, but it's

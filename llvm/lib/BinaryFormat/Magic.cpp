@@ -192,13 +192,13 @@ file_magic llvm::identify_magic(StringRef Magic) {
   case 0x50: // mc68K
     if (startswith(Magic, "\x50\xed\x55\xba"))
       return file_magic::cuda_fatbinary;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case 0x4c: // 80386 Windows
   case 0xc4: // ARMNT Windows
     if (Magic[1] == 0x01)
       return file_magic::coff_object;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case 0x90: // PA-RISC Windows
   case 0x68: // mc68K Windows

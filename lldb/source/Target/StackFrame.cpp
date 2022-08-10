@@ -666,7 +666,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       }
 
       var_expr = var_expr.drop_front(); // Remove the '-'
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case '.': {
       var_expr = var_expr.drop_front(); // Remove the '.' or '>'
       separator_idx = var_expr.find_first_of(".-[");
@@ -1932,12 +1932,12 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
       case Debugger::eStopDisassemblyTypeNoDebugInfo:
         if (have_debuginfo)
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
 
       case Debugger::eStopDisassemblyTypeNoSource:
         if (have_source)
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
 
       case Debugger::eStopDisassemblyTypeAlways:
         if (target) {

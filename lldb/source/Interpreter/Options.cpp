@@ -988,10 +988,10 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
                 .str(),
             llvm::inconvertibleErrorCode());
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case OptionParser::eOptionalArgument:
       option_arg = OptionParser::GetOptionArgument();
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case OptionParser::eNoArgument:
       break;
     default:

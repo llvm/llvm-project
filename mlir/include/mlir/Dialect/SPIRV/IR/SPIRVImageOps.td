@@ -59,7 +59,7 @@ def SPV_ImageDrefGatherOp : SPV_Op<"ImageDrefGather", [NoSideEffect]> {
 
   let availability = [
     MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
     Capability<[SPV_C_Shader]>
   ];
@@ -125,7 +125,7 @@ def SPV_ImageQuerySizeOp : SPV_Op<"ImageQuerySize", [NoSideEffect]> {
 
   let availability = [
     MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
     Capability<[SPV_C_ImageQuery, SPV_C_Kernel]>
   ];

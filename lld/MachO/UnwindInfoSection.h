@@ -15,8 +15,7 @@
 
 #include "mach-o/compact_unwind_encoding.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class UnwindInfoSection : public SyntheticSection {
 public:
@@ -37,7 +36,6 @@ protected:
 
 UnwindInfoSection *makeUnwindInfoSection();
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

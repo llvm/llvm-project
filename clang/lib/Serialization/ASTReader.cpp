@@ -1275,10 +1275,10 @@ void ASTReader::Error(llvm::Error &&Err) const {
         switch (NumArgs) {
         case 3:
           Arg3 = Diag.getStringArg(2);
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case 2:
           Arg2 = Diag.getStringArg(1);
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case 1:
           Arg1 = Diag.getStringArg(0);
         }

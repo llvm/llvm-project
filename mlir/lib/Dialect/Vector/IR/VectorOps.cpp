@@ -4065,12 +4065,15 @@ LogicalResult GatherOp::verify() {
   VectorType indVType = getIndexVectorType();
   VectorType maskVType = getMaskVectorType();
   VectorType resVType = getVectorType();
-  MemRefType memType = getMemRefType();
+  ShapedType baseType = getBaseType();
 
-  if (resVType.getElementType() != memType.getElementType())
+  if (!baseType.isa<MemRefType, RankedTensorType>())
+    return emitOpError("requires base to be a memref or ranked tensor type");
+
+  if (resVType.getElementType() != baseType.getElementType())
     return emitOpError("base and result element type should match");
-  if (llvm::size(getIndices()) != memType.getRank())
-    return emitOpError("requires ") << memType.getRank() << " indices";
+  if (llvm::size(getIndices()) != baseType.getRank())
+    return emitOpError("requires ") << baseType.getRank() << " indices";
   if (resVType.getDimSize(0) != indVType.getDimSize(0))
     return emitOpError("expected result dim to match indices dim");
   if (resVType.getDimSize(0) != maskVType.getDimSize(0))

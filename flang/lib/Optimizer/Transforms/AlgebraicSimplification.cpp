@@ -21,17 +21,28 @@ using namespace mlir;
 namespace {
 struct AlgebraicSimplification
     : public fir::AlgebraicSimplificationBase<AlgebraicSimplification> {
+  AlgebraicSimplification(const GreedyRewriteConfig &rewriteConfig) {
+    config = rewriteConfig;
+  }
 
   void runOnOperation() override;
+
+  mlir::GreedyRewriteConfig config;
 };
 } // namespace
 
 void AlgebraicSimplification::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateMathAlgebraicSimplificationPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns),
+                                     config);
 }
 
 std::unique_ptr<mlir::Pass> fir::createAlgebraicSimplificationPass() {
-  return std::make_unique<AlgebraicSimplification>();
+  return std::make_unique<AlgebraicSimplification>(GreedyRewriteConfig());
+}
+
+std::unique_ptr<mlir::Pass> fir::createAlgebraicSimplificationPass(
+    const mlir::GreedyRewriteConfig &config) {
+  return std::make_unique<AlgebraicSimplification>(config);
 }

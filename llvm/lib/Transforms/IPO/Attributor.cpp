@@ -2803,7 +2803,7 @@ void InformationCache::initializeInformationCache(const Function &CF,
         if (const Function *Callee = cast<CallInst>(I).getCalledFunction())
           getFunctionInfo(*Callee).CalledViaMustTail = true;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Instruction::CallBr:
     case Instruction::Invoke:
     case Instruction::CleanupRet:
@@ -3298,7 +3298,7 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   // Internalize non-exact functions
   // TODO: for now we eagerly internalize functions without calculating the
   //       cost, we need a cost interface to determine whether internalizing
-  //       a function is "benefitial"
+  //       a function is "beneficial"
   if (AllowDeepWrapper) {
     unsigned FunSize = Functions.size();
     for (unsigned u = 0; u < FunSize; u++) {

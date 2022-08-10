@@ -461,7 +461,7 @@ bool MSP430AsmParser::ParseOperand(OperandVector &Operands) {
         Operands.push_back(MSP430Operand::CreateReg(RegNo, StartLoc, EndLoc));
         return false;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case AsmToken::Integer:
     case AsmToken::Plus:

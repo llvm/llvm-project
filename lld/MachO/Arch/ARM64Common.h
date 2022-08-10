@@ -16,8 +16,7 @@
 
 #include "llvm/BinaryFormat/MachO.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 struct ARM64Common : TargetInfo {
   template <class LP> ARM64Common(LP lp) : TargetInfo(lp) {}
@@ -148,7 +147,6 @@ inline void writeStubHelperEntry(uint8_t *buf8,
   buf32[2] = sym.lazyBindOffset;
 }
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

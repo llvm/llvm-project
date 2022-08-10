@@ -977,7 +977,7 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
           getWaitStatesSince(IsVALUDefSGPRFn, VALUWriteVGPRReadlaneRead);
       WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
     }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case AMDGPU::V_WRITELANE_B32: {
       UseReg = AMDGPU::EXEC;
       int WaitStatesNeededForDef =
@@ -1913,7 +1913,7 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) {
                break;
       case 8:  NeedWaitStates = MFMA16x16WritesAGPRAccVgprReadWaitStates;
                break;
-      case 16: LLVM_FALLTHROUGH;
+      case 16: [[fallthrough]];
       default: NeedWaitStates = MFMA32x32WritesAGPRAccVgprReadWaitStates;
                break;
       }
@@ -1923,7 +1923,7 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) {
                break;
       case 8:  NeedWaitStates = MFMA16x16WritesAGPRAccVgprWriteWaitStates;
                break;
-      case 16: LLVM_FALLTHROUGH;
+      case 16: [[fallthrough]];
       default: NeedWaitStates = MFMA32x32WritesAGPRAccVgprWriteWaitStates;
                break;
       }
@@ -1984,7 +1984,7 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) {
              break;
     case 8:  NeedWaitStates = MFMA16x16ReadSrcCAccVgprWriteWaitStates;
              break;
-    case 16: LLVM_FALLTHROUGH;
+    case 16: [[fallthrough]];
     default: NeedWaitStates = MFMA32x32ReadSrcCAccVgprWriteWaitStates;
              break;
     }
@@ -2140,7 +2140,7 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
                 ? SMFMA16x16WritesVGPROverlappedDMFMASrcCWaitStates
                 : SMFMA16x16WritesVGPROverlappedSMFMASrcCWaitStates;
             break;
-          case 16: LLVM_FALLTHROUGH;
+          case 16: [[fallthrough]];
           default:
             NeedWaitStates = ST.hasGFX940Insts()
               ? isXDL(ST, *MI1)
@@ -2186,7 +2186,7 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) {
               : GFX940_SMFMA8PassWritesVGPROverlappedSrcABWaitStates
             : SMFMA16x16WritesVGPROverlappedSrcABWaitStates;
           break;
-        case 16: LLVM_FALLTHROUGH;
+        case 16: [[fallthrough]];
         default:
           NeedWaitStates = ST.hasGFX940Insts()
             ? isXDL(ST, *MI1)
@@ -2407,7 +2407,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
               : GFX940_SMFMA8PassWriteVgprVALUMemExpReadWaitStates
             : SMFMA16x16WriteVgprVALUMemExpReadWaitStates;
         break;
-      case 16: LLVM_FALLTHROUGH;
+      case 16: [[fallthrough]];
       default:
         NeedWaitStates =
           isDGEMM(MFMA->getOpcode())
@@ -2502,7 +2502,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
             : GFX940_SMFMA8PassWriteVgprVALUWawWaitStates
           : SMFMA16x16WriteVgprVALUWawWaitStates;
         break;
-      case 16: LLVM_FALLTHROUGH;
+      case 16: [[fallthrough]];
       default:
         NeedWaitStates = isDGEMM(MFMA->getOpcode())
                    ? DMFMA16x16WriteVgprVALUWriteWaitStates
@@ -2555,7 +2555,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
              break;
     case 8:  NeedWaitStates = SMFMA16x16ReadVgprVALUWarWaitStates;
              break;
-    case 16: LLVM_FALLTHROUGH;
+    case 16: [[fallthrough]];
     default: NeedWaitStates = SMFMA32x32ReadVgprVALUWarWaitStates;
              break;
     }

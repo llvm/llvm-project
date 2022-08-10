@@ -863,11 +863,25 @@ conformance.</p>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2672.pdf">N2672</a></td>
       <td class="full" align="center">Yes</td>
     </tr>
-    <tr>
-      <td>Adding a Fundamental Type for N-bit integers</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2763.pdf">N2763</a></td>
-      <td class="unreleased" align="center">Clang 15</td>
+    <tr id="_BitInt">
+      <td rowspan="5">Adding Fundamental Type for N-bit Integers</td>
     </tr>
+      <tr> <!-- Jun 2021 -->
+        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2763.pdf">N2763</a></td>
+        <td class="unreleased" align="center">Clang 15</td>
+      </tr>
+      <tr> <!-- Feb 2022 -->
+        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2775.pdf">N2775</a></td>
+        <td class="unreleased" align="center">Clang 15</td>
+      </tr>
+      <tr> <!-- Jul 2022 -->
+        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2969.htm">N2969</a></td>
+        <td class="full" align="center">Clang 15</td>
+      </tr>
+      <tr> <!-- Jul 2022 -->
+        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3035.pdf">N3035</a></td>
+        <td class="unknown" align="center">Unknown</td>
+      </tr>
     <!-- Sep 2021 Papers -->
     <tr>
       <td>#warning directive</td>
@@ -992,11 +1006,6 @@ conformance.</p>
       <td class="unreleased" align="center">Clang 15</td>
     </tr>
     <tr>
-      <td>Literal suffixes for bit-precise integers</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2775.pdf">N2775</a></td>
-      <td class="unreleased" align="center">Clang 15</td>
-    </tr>
-    <tr>
       <td>*_HAS_SUBNORM==0 implies what?</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2797.htm">N2797</a></td>
       <td class="full" align="center">Yes</td>
@@ -1051,22 +1060,34 @@ conformance.</p>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2882.pdf">N2882</a></td>
       <td class="unknown" align="center">Unknown</td>
     </tr>
-    <tr>
-      <td>Consistent, Warningless, and Intuitive Initialization with {}, revision 2</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2900.htm">N2900</a></td>
-      <td class="unknown" align="center">Unknown</td>
+    <tr id="InitializationWithCurlyBraces">
+      <td rowspan="3">Consistent, Warningless, and Intuitive Initialization with {}</td>
     </tr>
-    <tr>
-      <td>Not-so-magic: typeof, r5</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2927.htm">N2927</a></td>
-      <td class="partial" align="center">
-        <details><summary>Partial</summary>
-          Clang supports <code>typeof</code> in GNU standards mode, but its
-          compatibility with this proposal is unknown. Also, Clang does not yet
-          support remove_quals.
-        </details>
-      </td>
+      <tr> <!-- Feb 2022 -->
+        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2900.htm">N2900</a></td>
+        <td class="unknown" align="center">Unknown</td>
+      </tr>
+      <tr> <!-- Jul 2022 -->
+        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3011.htm">N3011</a></td>
+        <td class="unknown" align="center">Unknown</td>
+      </tr>
+    <tr id="typeof">
+      <td rowspan="3">Not-so-magic: typeof</td>
     </tr>
+      <tr> <!-- Feb 2022 -->
+        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2927.htm">N2927</a></td>
+        <td class="partial" align="center">
+          <details><summary>Partial</summary>
+            Clang supports <code>typeof</code> in GNU standards mode, but its
+            compatibility with this proposal is unknown. Also, Clang does not yet
+            support remove_quals.
+          </details>
+        </td>
+      </tr>
+      <tr> <!-- Jul 2022 -->
+        <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2930.pdf">N2930</a></td>
+        <td class="none" align="center">No</td>
+      </tr>
     <tr>
       <td>Type annex tgmath narrowing macros with integer args v2</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2931.pdf">N2931</a></td>
@@ -1112,6 +1133,92 @@ conformance.</p>
       <td>Wording Change for Variably-Modified Types</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2992.pdf">N2992</a></td>
       <td class="full" align="center">Yes</td>
+    </tr>
+    <!-- Jul 2022 Papers -->
+    <tr>
+      <td>Identifier syntax fixes</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2939.pdf">N2939</a></td>
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>Remove trigraphs??!</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2940.pdf">N2940</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Improved normal enumerations</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3029.htm">N3029</a></td>
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>Relax requirements for va_start</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2975.pdf">N2975</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Enhanced enumerations</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3030.htm">N3030</a></td>
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>Freestanding C and IEC 60559 conformance scope reduction</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2951.htm">N2951</a></td>
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>Unsequenced functions</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2956.htm">N2956</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Comma ommission and deletion (__VA_OPT__)</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3033.htm">N3033</a></td>
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>Underspecified object definitions</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm">N3006</a></td>
+      <td class="unknown" align="center">Unknown</td>
+    </tr>
+    <tr>
+      <td>Type inference for object declarations</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3007.htm">N3007</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>constexpr for object definitions</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3018.htm">N3018</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Introduce storage class specifiers for compound literals</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3038.htm">N3038</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Identifier primary expressions</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3034.pdf">N3034</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Introduce the nullptr constant</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3042.htm">N3042</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Memory layout of unions</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2929.pdf">N2929</a></td>
+      <td class="full" align="center">Yes</td>
+    </tr>
+    <tr>
+      <td>Improved tag compatibility</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3037.pdf">N3037</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>#embed</td>
+      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3017.htm">N3017</a></td>
+      <td class="none" align="center">No</td>
     </tr>
 </table>
 </details>

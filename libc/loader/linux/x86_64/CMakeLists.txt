@@ -8,6 +8,8 @@ add_loader_object(
     libc.include.sys_syscall
     libc.src.__support.threads.thread
     libc.src.__support.OSUtil.osutil
+    libc.src.stdlib.exit
+    libc.src.stdlib.atexit
     libc.src.string.memory_utils.memcpy_implementation
   COMPILE_OPTIONS
     -fno-omit-frame-pointer

@@ -98,6 +98,7 @@ private:
   bool EnableSaveRestore = false;
   bool EnableUnalignedScalarMem = false;
   bool HasLUIADDIFusion = false;
+  bool HasForcedAtomics = false;
   unsigned XLen = 32;
   unsigned ZvlLen = 0;
   MVT XLenVT = MVT::i32;
@@ -194,6 +195,7 @@ public:
   bool enableSaveRestore() const { return EnableSaveRestore; }
   bool enableUnalignedScalarMem() const { return EnableUnalignedScalarMem; }
   bool hasLUIADDIFusion() const { return HasLUIADDIFusion; }
+  bool hasForcedAtomics() const { return HasForcedAtomics; }
   MVT getXLenVT() const { return XLenVT; }
   unsigned getXLen() const { return XLen; }
   unsigned getFLen() const {

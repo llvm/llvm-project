@@ -404,7 +404,7 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
     case tok::r_brace:
       if (!NestedModules)
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       ParsedAttributes Attrs(AttrFactory);
       MaybeParseCXX11Attributes(Attrs);
@@ -3242,7 +3242,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
     // yet.
     if (getLangOpts().OpenCL && !NextToken().is(tok::colon))
       return ParseCXXClassMemberDeclaration(AS, AccessAttrs);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case tok::kw_public:
   case tok::kw_protected: {
     if (getLangOpts().HLSL)
@@ -4717,7 +4717,7 @@ void Parser::ParseMicrosoftIfExistsClassDeclaration(
     Diag(Result.KeywordLoc, diag::warn_microsoft_dependent_exists)
         << Result.IsIfExists;
     // Fall through to skip.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case IEB_Skip:
     Braces.skipToEnd();

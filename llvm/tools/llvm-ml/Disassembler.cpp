@@ -61,7 +61,7 @@ static bool PrintInsts(const MCDisassembler &DisAsm, const ByteArrayTy &Bytes,
       SM.PrintMessage(SMLoc::getFromPointer(Bytes.second[Index]),
                       SourceMgr::DK_Warning,
                       "potentially undefined instruction encoding");
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case MCDisassembler::Success:
       Streamer.emitInstruction(Inst, STI);

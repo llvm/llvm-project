@@ -2027,7 +2027,7 @@ void RuntimeDyldELF::processX86_64TLSRelocation(
   case ELF::R_X86_64_REX_GOTPCRELX:
   case ELF::R_X86_64_GOTPCRELX:
     IsGOTPCRel = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ELF::R_X86_64_PLT32:
     IsSmallCodeModel = true;
     break;

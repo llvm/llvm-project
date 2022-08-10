@@ -968,7 +968,7 @@ FunctionComparator::FunctionHash FunctionComparator::functionHash(Function &F) {
     // This random value acts as a block header, as otherwise the partition of
     // opcodes into BBs wouldn't affect the hash, only the order of the opcodes
     H.add(45798);
-    for (auto &Inst : *BB) {
+    for (const auto &Inst : *BB) {
       H.add(Inst.getOpcode());
     }
     const Instruction *Term = BB->getTerminator();

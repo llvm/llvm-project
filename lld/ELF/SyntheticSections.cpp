@@ -2007,8 +2007,8 @@ template <class ELFT> bool RelrSection<ELFT>::updateAllocSize() {
 
   // Get offsets for all relative relocations and sort them.
   std::unique_ptr<uint64_t[]> offsets(new uint64_t[relocs.size()]);
-  for (auto it : llvm::enumerate(relocs))
-    offsets[it.index()] = it.value().getOffset();
+  for (auto [i, r] : llvm::enumerate(relocs))
+    offsets[i] = r.getOffset();
   llvm::sort(offsets.get(), offsets.get() + relocs.size());
 
   // For each leading relocation, find following ones that can be folded
@@ -3874,6 +3874,20 @@ size_t MemtagAndroidNote::getSize() const {
   return sizeof(llvm::ELF::Elf64_Nhdr) +
          /*namesz=*/sizeof(kMemtagAndroidNoteName) +
          /*descsz=*/sizeof(uint32_t);
+}
+
+void PackageMetadataNote::writeTo(uint8_t *buf) {
+  write32(buf, 4);
+  write32(buf + 4, config->packageMetadata.size() + 1);
+  write32(buf + 8, FDO_PACKAGING_METADATA);
+  memcpy(buf + 12, "FDO", 4);
+  memcpy(buf + 16, config->packageMetadata.data(),
+         config->packageMetadata.size());
+}
+
+size_t PackageMetadataNote::getSize() const {
+  return sizeof(llvm::ELF::Elf64_Nhdr) + 4 +
+         alignTo(config->packageMetadata.size() + 1, 4);
 }
 
 InStruct elf::in;

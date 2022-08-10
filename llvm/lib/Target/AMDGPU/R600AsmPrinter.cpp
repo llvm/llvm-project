@@ -71,7 +71,7 @@ void R600AsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   if (STM.getGeneration() >= AMDGPUSubtarget::EVERGREEN) {
     // Evergreen / Northern Islands
     switch (MF.getFunction().getCallingConv()) {
-    default: LLVM_FALLTHROUGH;
+    default: [[fallthrough]];
     case CallingConv::AMDGPU_CS: RsrcReg = R_0288D4_SQ_PGM_RESOURCES_LS; break;
     case CallingConv::AMDGPU_GS: RsrcReg = R_028878_SQ_PGM_RESOURCES_GS; break;
     case CallingConv::AMDGPU_PS: RsrcReg = R_028844_SQ_PGM_RESOURCES_PS; break;
@@ -80,9 +80,9 @@ void R600AsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   } else {
     // R600 / R700
     switch (MF.getFunction().getCallingConv()) {
-    default: LLVM_FALLTHROUGH;
-    case CallingConv::AMDGPU_GS: LLVM_FALLTHROUGH;
-    case CallingConv::AMDGPU_CS: LLVM_FALLTHROUGH;
+    default: [[fallthrough]];
+    case CallingConv::AMDGPU_GS: [[fallthrough]];
+    case CallingConv::AMDGPU_CS: [[fallthrough]];
     case CallingConv::AMDGPU_VS: RsrcReg = R_028868_SQ_PGM_RESOURCES_VS; break;
     case CallingConv::AMDGPU_PS: RsrcReg = R_028850_SQ_PGM_RESOURCES_PS; break;
     }

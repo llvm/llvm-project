@@ -480,7 +480,7 @@ bool AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         PrintAsmMemoryOperand(MI, OpNo, nullptr, O);
         return false;
       }
-      LLVM_FALLTHROUGH; // GCC allows '%a' to behave like '%c' with immediates.
+      [[fallthrough]]; // GCC allows '%a' to behave like '%c' with immediates.
     case 'c': // Substitute immediate value without immediate syntax
       if (MO.isImm()) {
         O << MO.getImm();
