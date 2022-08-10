@@ -47,6 +47,7 @@ class COFFMasmParser : public MCAsmParserExtension {
   bool ParseDirectiveSegment(StringRef, SMLoc);
   bool ParseDirectiveSegmentEnd(StringRef, SMLoc);
   bool ParseDirectiveIncludelib(StringRef, SMLoc);
+  bool ParseDirectiveOption(StringRef, SMLoc);
 
   bool ParseDirectiveAlias(StringRef, SMLoc);
 
@@ -120,7 +121,7 @@ class COFFMasmParser : public MCAsmParserExtension {
     // .fpo
     addDirectiveHandler<&COFFMasmParser::ParseDirectiveIncludelib>(
         "includelib");
-    // option
+    addDirectiveHandler<&COFFMasmParser::ParseDirectiveOption>("option");
     // popcontext
     // pushcontext
     // .safeseh
@@ -400,6 +401,43 @@ bool COFFMasmParser::ParseDirectiveIncludelib(StringRef Directive, SMLoc Loc) {
   getStreamer().emitBytes(Lib);
   getStreamer().emitBytes(" ");
   getStreamer().popSection();
+  return false;
+}
+
+/// ParseDirectiveOption
+///  ::= "option" option-list
+bool COFFMasmParser::ParseDirectiveOption(StringRef Directive, SMLoc Loc) {
+  auto parseOption = [&]() -> bool {
+    StringRef Option;
+    if (getParser().parseIdentifier(Option))
+      return TokError("expected identifier for option name");
+    if (Option.equals_insensitive("prologue")) {
+      StringRef MacroId;
+      if (parseToken(AsmToken::Colon) || getParser().parseIdentifier(MacroId))
+        return TokError("expected :macroId after OPTION PROLOGUE");
+      if (MacroId.equals_insensitive("none")) {
+        // Since we currently don't implement prologues/epilogues, NONE is our
+        // default.
+        return false;
+      }
+      return TokError("OPTION PROLOGUE is currently unsupported");
+    }
+    if (Option.equals_insensitive("epilogue")) {
+      StringRef MacroId;
+      if (parseToken(AsmToken::Colon) || getParser().parseIdentifier(MacroId))
+        return TokError("expected :macroId after OPTION EPILOGUE");
+      if (MacroId.equals_insensitive("none")) {
+        // Since we currently don't implement prologues/epilogues, NONE is our
+        // default.
+        return false;
+      }
+      return TokError("OPTION EPILOGUE is currently unsupported");
+    }
+    return TokError("OPTION '" + Option + "' is currently unsupported");
+  };
+
+  if (parseMany(parseOption))
+    return addErrorSuffix(" in OPTION directive");
   return false;
 }
 
