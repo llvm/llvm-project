@@ -1,6 +1,6 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t
 //
-// REQUIRES: linux, freebsd, netbsd
+// REQUIRES: linux || freebsd || netbsd
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -8,7 +8,7 @@
 
 int main(void) {
   gid_t *groups;
-  gid_t nobody;
+  group *nobody;
   int ngroups;
 
   ngroups = sysconf(_SC_NGROUPS_MAX);
@@ -16,10 +16,10 @@ int main(void) {
   if (!groups)
     exit(1);
 
-  if (gid_from_group("nobody", &nobody) == -1)
+  if (!(nobody = getgrnam("nobody")))
     exit(1);
 
-  if (getgrouplist("nobody", nobody, groups, &ngroups))
+  if (getgrouplist("nobody", nobody->gr_gid, groups, &ngroups) == -1)
     exit(1);
 
   if (groups && ngroups) {

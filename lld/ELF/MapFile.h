@@ -9,10 +9,8 @@
 #ifndef LLD_ELF_MAPFILE_H
 #define LLD_ELF_MAPFILE_H
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 void writeMapAndCref();
-} // namespace elf
-} // namespace lld
+}
 
 #endif

@@ -16,7 +16,9 @@
 
 namespace __llvm_libc {
 
-template <typename T, uint8_t BASE = 10> class IntegerToString {
+template <typename T, uint8_t BASE = 10,
+          cpp::enable_if_t<2 <= BASE && BASE <= 36, int> = 0>
+class IntegerToString {
 public:
   static constexpr inline size_t floor_log_2(size_t num) {
     size_t i = 0;
@@ -47,16 +49,16 @@ public:
   // two base, since the space needed is easy to calculate and it won't
   // overestimate by too much.
 
-  template <uint8_t STATIC_BASE> static constexpr size_t bufsize() {
-    constexpr size_t BITS_PER_DIGIT = floor_log_2(STATIC_BASE);
+  static constexpr size_t bufsize() {
+    constexpr size_t BITS_PER_DIGIT = floor_log_2(BASE);
     constexpr size_t BUFSIZE_COMMON =
         ((sizeof(T) * 8 + (BITS_PER_DIGIT - 1)) / BITS_PER_DIGIT);
     constexpr size_t BUFSIZE_BASE10 = (sizeof(T) * 5 + 1) / 2;
     return (cpp::is_signed<T>() ? 1 : 0) +
-           (STATIC_BASE == 10 ? BUFSIZE_BASE10 : BUFSIZE_COMMON);
+           (BASE == 10 ? BUFSIZE_BASE10 : BUFSIZE_COMMON);
   }
 
-  static constexpr size_t BUFSIZE = bufsize<BASE>();
+  static constexpr size_t BUFSIZE = bufsize();
 
 private:
   static_assert(cpp::is_integral_v<T>,
@@ -101,33 +103,30 @@ private:
   // well as to convert the templated call into a non-templated call. This
   // allows the compiler to decide to do strength reduction and constant folding
   // on the base or not, depending on if size or performance is required.
-  template <uint8_t STATIC_BASE = BASE,
-            cpp::enable_if_t<2 <= STATIC_BASE && STATIC_BASE <= 36, int> = 0>
   static inline constexpr cpp::StringView
   convert_internal(T val, cpp::MutableArrayRef<char> &buffer, bool lowercase) {
-    return convert_alpha_numeric(val, buffer, lowercase, STATIC_BASE);
+    return convert_alpha_numeric(val, buffer, lowercase, BASE);
   }
 
 public:
-  template <uint8_t STATIC_BASE = BASE>
   static inline cpp::optional<cpp::StringView>
   convert(T val, cpp::MutableArrayRef<char> &buffer, bool lowercase) {
     // If This function can actually be a constexpr, then the below "if" will be
     // optimized out.
-    if (buffer.size() < bufsize<STATIC_BASE>())
+    if (buffer.size() < bufsize())
       return cpp::optional<cpp::StringView>();
     return cpp::optional<cpp::StringView>(
-        convert_internal<STATIC_BASE>(val, buffer, lowercase));
+        convert_internal(val, buffer, lowercase));
   }
 
   constexpr explicit IntegerToString(T val) {
     cpp::MutableArrayRef<char> bufref(strbuf, BUFSIZE);
-    str_view = convert_internal<BASE>(val, bufref, true);
+    str_view = convert_internal(val, bufref, true);
   }
 
   constexpr explicit IntegerToString(T val, bool lowercase) {
     cpp::MutableArrayRef<char> bufref(strbuf, BUFSIZE);
-    str_view = convert_internal<BASE>(val, bufref, lowercase);
+    str_view = convert_internal(val, bufref, lowercase);
   }
 
   cpp::StringView str() const { return str_view; }
