@@ -358,6 +358,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 
     HasFloat16 = SSELevel >= SSE2;
 
+    HasBFloat16 = SSELevel >= SSE2;
+
     MMX3DNowEnum ThreeDNowLevel = llvm::StringSwitch<MMX3DNowEnum>(Feature)
                                       .Case("+3dnowa", AMD3DNowAthlon)
                                       .Case("+3dnow", AMD3DNow)
