@@ -84,7 +84,7 @@ void enclosing() {
 
   (void)[outerbit1]{}; // expected-error {{'outerbit1' cannot be captured because it does not have automatic storage duration}}
 
-  auto [bit, var] = S2{1, 1}; // expected-note 2{{'bit' declared here}}
+  auto [bit, var] = S2{-1, 1}; // expected-note 2{{'bit' declared here}}
 
   (void)[&bit] { // expected-error {{non-const reference cannot bind to bit-field 'a'}} \
                     // expected-warning {{C++20}}

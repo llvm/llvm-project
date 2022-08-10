@@ -637,10 +637,10 @@ static bool TryPrintAsStringLiteral(raw_ostream &Out,
     return false;
 
   // Nothing we can do about a sequence that is not null-terminated
-  if (!Inits.back().getInt().isZero())
+  if (!Inits.back().isInt() || !Inits.back().getInt().isZero())
     return false;
-  else
-    Inits = Inits.drop_back();
+
+  Inits = Inits.drop_back();
 
   llvm::SmallString<40> Buf;
   Buf.push_back('"');
@@ -655,6 +655,8 @@ static bool TryPrintAsStringLiteral(raw_ostream &Out,
   }
 
   for (auto &Val : Inits) {
+    if (!Val.isInt())
+      return false;
     int64_t Char64 = Val.getInt().getExtValue();
     if (!isASCII(Char64))
       return false; // Bye bye, see you in integers.
@@ -871,7 +873,7 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
           Out << "...}";
           return;
         }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       default:
         getArrayInitializedElt(I).printPretty(Out, Policy, ElemTy, Ctx);
       }

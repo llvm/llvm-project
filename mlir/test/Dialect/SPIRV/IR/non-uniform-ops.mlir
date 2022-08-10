@@ -5,8 +5,8 @@
 //===----------------------------------------------------------------------===//
 
 func.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xi32> {
-  // CHECK: %{{.*}} = spv.GroupNonUniformBallot Workgroup %{{.*}}: vector<4xi32>
-  %0 = spv.GroupNonUniformBallot Workgroup %predicate : vector<4xi32>
+  // CHECK: %{{.*}} = spv.GroupNonUniformBallot <Workgroup> %{{.*}}: vector<4xi32>
+  %0 = spv.GroupNonUniformBallot <Workgroup> %predicate : vector<4xi32>
   return %0: vector<4xi32>
 }
 
@@ -14,7 +14,7 @@ func.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xi32> {
 
 func.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xi32> {
   // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
-  %0 = spv.GroupNonUniformBallot Device %predicate : vector<4xi32>
+  %0 = spv.GroupNonUniformBallot <Device> %predicate : vector<4xi32>
   return %0: vector<4xi32>
 }
 
@@ -22,7 +22,7 @@ func.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xi32> {
 
 func.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xsi32> {
   // expected-error @+1 {{op result #0 must be vector of 8/16/32/64-bit signless/unsigned integer values of length 4, but got 'vector<4xsi32>'}}
-  %0 = spv.GroupNonUniformBallot Workgroup %predicate : vector<4xsi32>
+  %0 = spv.GroupNonUniformBallot <Workgroup> %predicate : vector<4xsi32>
   return %0: vector<4xsi32>
 }
 
@@ -34,8 +34,8 @@ func.func @group_non_uniform_ballot(%predicate: i1) -> vector<4xsi32> {
 
 func.func @group_non_uniform_broadcast_scalar(%value: f32) -> f32 {
   %one = spv.Constant 1 : i32
-  // CHECK: spv.GroupNonUniformBroadcast Workgroup %{{.*}}, %{{.*}} : f32, i32
-  %0 = spv.GroupNonUniformBroadcast Workgroup %value, %one : f32, i32
+  // CHECK: spv.GroupNonUniformBroadcast <Workgroup> %{{.*}}, %{{.*}} : f32, i32
+  %0 = spv.GroupNonUniformBroadcast <Workgroup> %value, %one : f32, i32
   return %0: f32
 }
 
@@ -43,8 +43,8 @@ func.func @group_non_uniform_broadcast_scalar(%value: f32) -> f32 {
 
 func.func @group_non_uniform_broadcast_vector(%value: vector<4xf32>) -> vector<4xf32> {
   %one = spv.Constant 1 : i32
-  // CHECK: spv.GroupNonUniformBroadcast Subgroup %{{.*}}, %{{.*}} : vector<4xf32>, i32
-  %0 = spv.GroupNonUniformBroadcast Subgroup %value, %one : vector<4xf32>, i32
+  // CHECK: spv.GroupNonUniformBroadcast <Subgroup> %{{.*}}, %{{.*}} : vector<4xf32>, i32
+  %0 = spv.GroupNonUniformBroadcast <Subgroup> %value, %one : vector<4xf32>, i32
   return %0: vector<4xf32>
 }
 
@@ -53,7 +53,7 @@ func.func @group_non_uniform_broadcast_vector(%value: vector<4xf32>) -> vector<4
 func.func @group_non_uniform_broadcast_negative_scope(%value: f32, %localid: i32 ) -> f32 {
   %one = spv.Constant 1 : i32
   // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}} 
-  %0 = spv.GroupNonUniformBroadcast Device %value, %one : f32, i32
+  %0 = spv.GroupNonUniformBroadcast <Device> %value, %one : f32, i32
   return %0: f32
 }
 
@@ -61,7 +61,7 @@ func.func @group_non_uniform_broadcast_negative_scope(%value: f32, %localid: i32
 
 func.func @group_non_uniform_broadcast_negative_non_const(%value: f32, %localid: i32) -> f32 {
   // expected-error @+1 {{id must be the result of a constant op}}
-  %0 = spv.GroupNonUniformBroadcast Subgroup %value, %localid : f32, i32
+  %0 = spv.GroupNonUniformBroadcast <Subgroup> %value, %localid : f32, i32
   return %0: f32
 }
 
@@ -73,8 +73,8 @@ func.func @group_non_uniform_broadcast_negative_non_const(%value: f32, %localid:
 
 // CHECK-LABEL: @group_non_uniform_elect
 func.func @group_non_uniform_elect() -> i1 {
-  // CHECK: %{{.+}} = spv.GroupNonUniformElect Workgroup : i1
-  %0 = spv.GroupNonUniformElect Workgroup : i1
+  // CHECK: %{{.+}} = spv.GroupNonUniformElect <Workgroup> : i1
+  %0 = spv.GroupNonUniformElect <Workgroup> : i1
   return %0: i1
 }
 
@@ -82,7 +82,7 @@ func.func @group_non_uniform_elect() -> i1 {
 
 func.func @group_non_uniform_elect() -> i1 {
   // expected-error @+1 {{execution scope must be 'Workgroup' or 'Subgroup'}}
-  %0 = spv.GroupNonUniformElect CrossDevice : i1
+  %0 = spv.GroupNonUniformElect <CrossDevice> : i1
   return %0: i1
 }
 

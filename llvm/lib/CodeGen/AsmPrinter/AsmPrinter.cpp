@@ -529,7 +529,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   switch (MAI->getExceptionHandlingType()) {
   case ExceptionHandling::None:
     // We may want to emit CFI for debug.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ExceptionHandling::SjLj:
   case ExceptionHandling::DwarfCFI:
   case ExceptionHandling::ARM:
@@ -553,7 +553,7 @@ bool AsmPrinter::doInitialization(Module &M) {
   case ExceptionHandling::None:
     if (!needsCFIForDebug())
       break;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ExceptionHandling::SjLj:
   case ExceptionHandling::DwarfCFI:
     ES = new DwarfCFIException(this);
@@ -2761,7 +2761,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     // expression properly.  This is important for differences between
     // blockaddress labels.  Since the two labels are in the same function, it
     // is reasonable to treat their delta as a 32-bit value.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::BitCast:
     return lowerConstant(CE->getOperand(0));
 

@@ -84,10 +84,10 @@ std::vector<std::string> FuzzySymbolIndex::tokenize(StringRef Text) {
       switch (State) {
       case BIG_WORD:
         Flush(I - 1); // FOOBar: first token is FOO, not FOOB.
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ONE_BIG:
         State = SMALL_WORD;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case SMALL_WORD:
         break;
       default:
@@ -98,7 +98,7 @@ std::vector<std::string> FuzzySymbolIndex::tokenize(StringRef Text) {
       switch (State) {
       case ONE_BIG:
         State = BIG_WORD;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case BIG_WORD:
         break;
       default:

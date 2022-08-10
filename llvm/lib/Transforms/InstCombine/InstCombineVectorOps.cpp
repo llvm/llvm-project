@@ -1636,7 +1636,7 @@ static bool canEvaluateShuffled(Value *V, ArrayRef<int> Mask,
       // from an undefined element in an operand.
       if (llvm::is_contained(Mask, -1))
         return false;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Instruction::Add:
     case Instruction::FAdd:
     case Instruction::Sub:

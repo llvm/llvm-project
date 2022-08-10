@@ -173,8 +173,28 @@ int * __ptr32 __ptr32 wrong8;	// expected-warning {{attribute '__ptr32' is alrea
 
 int *(__ptr32 __sptr wrong9); // expected-error {{'__sptr' attribute only applies to pointer arguments}} // expected-error {{'__ptr32' attribute only applies to pointer arguments}}
 
+int *(__ptr32 wrong10); // expected-error {{'__ptr32' attribute only applies to pointer arguments}}
+
+int *(__ptr64 wrong11); // expected-error {{'__ptr64' attribute only applies to pointer arguments}}
+
+int *(__ptr32 __ptr64 wrong12); // expected-error {{'__ptr32' attribute only applies to pointer arguments}} // expected-error {{'__ptr64' attribute only applies to pointer arguments}}
+
 typedef int *T;
-T __ptr32 wrong10; // expected-error {{'__ptr32' attribute only applies to pointer arguments}}
+T __ptr32 ok1;
+T __ptr64 ok2;
+T __ptr32 __ptr64 wrong13; // expected-error {{'__ptr32' and '__ptr64' attributes are not compatible}}
+
+typedef int *__ptr32 T1;
+T1 ok3;
+T1 __ptr32 wrong14;  // expected-warning {{attribute '__ptr32' is already applied}}
+T1 __ptr64 wrong15;  // expected-error {{'__ptr32' and '__ptr64' attributes are not compatible}}
+
+typedef int *__ptr64 T2;
+T2 ok4;
+T2 __ptr64 wrong16;  // expected-warning {{attribute '__ptr64' is already applied}}
+T2 __ptr32 wrong17;  // expected-error {{'__ptr32' and '__ptr64' attributes are not compatible}}
+
+typedef int *__ptr32 __ptr64 wrong18; // expected-error {{'__ptr32' and '__ptr64' attributes are not compatible}}
 
 typedef char *my_va_list;
 void __va_start(my_va_list *ap, ...); // expected-note {{passing argument to parameter 'ap' here}}

@@ -138,6 +138,12 @@
 #define LLVM_ATTRIBUTE_USED
 #endif
 
+#if defined(__clang__)
+#define LLVM_DEPRECATED(MSG, FIX) __attribute__((deprecated(MSG, FIX)))
+#else
+#define LLVM_DEPRECATED(MSG, FIX) [[deprecated(MSG)]]
+#endif
+
 /// LLVM_NODISCARD - Warn if a type or return value is discarded.
 
 // Use the 'nodiscard' attribute in C++17 or newer mode.

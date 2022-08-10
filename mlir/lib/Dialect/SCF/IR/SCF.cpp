@@ -1741,11 +1741,9 @@ struct ReplaceIfYieldWithConditionOrValue : public OpRewritePattern<IfOp> {
                                op.getOperation()->getIterator());
     bool changed = false;
     Type i1Ty = rewriter.getI1Type();
-    for (auto tup : llvm::zip(trueYield.getResults(), falseYield.getResults(),
-                              op.getResults())) {
-      Value trueResult, falseResult, opResult;
-      std::tie(trueResult, falseResult, opResult) = tup;
-
+    for (auto [trueResult, falseResult, opResult] :
+         llvm::zip(trueYield.getResults(), falseYield.getResults(),
+                   op.getResults())) {
       if (trueResult == falseResult) {
         if (!opResult.use_empty()) {
           opResult.replaceAllUsesWith(trueResult);
@@ -2315,10 +2313,9 @@ struct CollapseSingleIterationLoops : public OpRewritePattern<ParallelOp> {
     newLowerBounds.reserve(op.getLowerBound().size());
     newUpperBounds.reserve(op.getUpperBound().size());
     newSteps.reserve(op.getStep().size());
-    for (auto dim : llvm::zip(op.getLowerBound(), op.getUpperBound(),
-                              op.getStep(), op.getInductionVars())) {
-      Value lowerBound, upperBound, step, iv;
-      std::tie(lowerBound, upperBound, step, iv) = dim;
+    for (auto [lowerBound, upperBound, step, iv] :
+         llvm::zip(op.getLowerBound(), op.getUpperBound(), op.getStep(),
+                   op.getInductionVars())) {
       // Collect the statically known loop bounds.
       auto lowerBoundConstant =
           dyn_cast_or_null<arith::ConstantIndexOp>(lowerBound.getDefiningOp());
@@ -2823,8 +2820,7 @@ struct RemoveLoopInvariantArgsFromBeforeBlock
     for (const auto &it :
          llvm::enumerate(llvm::zip(op.getOperands(), yieldOpArgs))) {
       auto index = static_cast<unsigned>(it.index());
-      Value initVal, yieldOpArg;
-      std::tie(initVal, yieldOpArg) = it.value();
+      auto [initVal, yieldOpArg] = it.value();
       // If i-th yield operand is equal to the i-th operand of the scf.while,
       // the i-th before block argument is a loop invariant.
       if (yieldOpArg == initVal) {
@@ -2855,8 +2851,7 @@ struct RemoveLoopInvariantArgsFromBeforeBlock
     for (const auto &it :
          llvm::enumerate(llvm::zip(op.getOperands(), yieldOpArgs))) {
       auto index = static_cast<unsigned>(it.index());
-      Value initVal, yieldOpArg;
-      std::tie(initVal, yieldOpArg) = it.value();
+      auto [initVal, yieldOpArg] = it.value();
 
       // If i-th yield operand is equal to the i-th operand of the scf.while,
       // the i-th before block argument is a loop invariant.

@@ -17,6 +17,7 @@
 #ifndef LLVM_ADT_STLEXTRAS_H
 #define LLVM_ADT_STLEXTRAS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLArrayExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -725,8 +726,8 @@ class zip_shortest : public zip_common<zip_shortest<Iters...>, Iters...> {
   template <size_t... Ns>
   bool test(const zip_shortest<Iters...> &other,
             std::index_sequence<Ns...>) const {
-    return all_of(std::initializer_list<bool>{std::get<Ns>(this->iterators) !=
-                                              std::get<Ns>(other.iterators)...},
+    return all_of(llvm::ArrayRef<bool>({std::get<Ns>(this->iterators) !=
+                                        std::get<Ns>(other.iterators)...}),
                   identity<bool>{});
   }
 
@@ -1796,6 +1797,11 @@ bool is_splat(R &&Range) {
          std::equal(adl_begin(Range) + 1, adl_end(Range), adl_begin(Range)));
 }
 
+/// Returns true iff all Values in the initializer lists are same.
+template <typename T> bool is_splat(std::initializer_list<T> Values) {
+  return is_splat<std::initializer_list<T>>(std::move(Values));
+}
+
 /// Provide a container algorithm similar to C++ Library Fundamentals v2's
 /// `erase_if` which is equivalent to:
 ///
@@ -1976,6 +1982,16 @@ private:
   IterOfRange<R> Iter;
 };
 
+template <std::size_t i, typename R>
+decltype(auto) get(const result_pair<R> &Pair) {
+  static_assert(i < 2);
+  if constexpr (i == 0) {
+    return Pair.index();
+  } else {
+    return Pair.value();
+  }
+}
+
 template <typename R>
 class enumerator_iter
     : public iterator_facade_base<enumerator_iter<R>, std::forward_iterator_tag,
@@ -2048,6 +2064,12 @@ private:
 ///   printf("Item %d - %c\n", X.index(), X.value());
 /// }
 ///
+/// or using structured bindings:
+///
+/// for (auto [Index, Value] : enumerate(Items)) {
+///   printf("Item %d - %c\n", Index, Value);
+/// }
+///
 /// Output:
 ///   Item 0 - A
 ///   Item 1 - B
@@ -2060,34 +2082,13 @@ template <typename R> detail::enumerator<R> enumerate(R &&TheRange) {
 
 namespace detail {
 
-template <typename F, typename Tuple, std::size_t... I>
-decltype(auto) apply_tuple_impl(F &&f, Tuple &&t, std::index_sequence<I...>) {
-  return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))...);
-}
-
-} // end namespace detail
-
-/// Given an input tuple (a1, a2, ..., an), pass the arguments of the
-/// tuple variadically to f as if by calling f(a1, a2, ..., an) and
-/// return the result.
-template <typename F, typename Tuple>
-decltype(auto) apply_tuple(F &&f, Tuple &&t) {
-  using Indices = std::make_index_sequence<
-      std::tuple_size<typename std::decay<Tuple>::type>::value>;
-
-  return detail::apply_tuple_impl(std::forward<F>(f), std::forward<Tuple>(t),
-                                  Indices{});
-}
-
-namespace detail {
-
 template <typename Predicate, typename... Args>
 bool all_of_zip_predicate_first(Predicate &&P, Args &&...args) {
   auto z = zip(args...);
   auto it = z.begin();
   auto end = z.end();
   while (it != end) {
-    if (!apply_tuple([&](auto &&...args) { return P(args...); }, *it))
+    if (!std::apply([&](auto &&...args) { return P(args...); }, *it))
       return false;
     ++it;
   }
@@ -2206,5 +2207,18 @@ template <class Ptr> auto to_address(const Ptr &P) { return P.operator->(); }
 template <class T> constexpr T *to_address(T *P) { return P; }
 
 } // end namespace llvm
+
+namespace std {
+template <typename R>
+struct tuple_size<llvm::detail::result_pair<R>>
+    : std::integral_constant<std::size_t, 2> {};
+
+template <std::size_t i, typename R>
+struct tuple_element<i, llvm::detail::result_pair<R>>
+    : std::conditional<i == 0, std::size_t,
+                       typename llvm::detail::result_pair<R>::value_reference> {
+};
+
+} // namespace std
 
 #endif // LLVM_ADT_STLEXTRAS_H

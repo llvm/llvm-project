@@ -16,6 +16,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/GuardUtils.h"
@@ -26,6 +27,7 @@
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/MustExecute.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -3044,6 +3046,7 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
              bool NonTrivial,
              function_ref<void(bool, bool, ArrayRef<Loop *>)> UnswitchCB,
              ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
+             ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI,
              function_ref<void(Loop &, StringRef)> DestroyLoopCB) {
   assert(L.isRecursivelyLCSSAForm(DT, LI) &&
          "Loops must be in LCSSA form before unswitching.");
@@ -3080,6 +3083,14 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
   if (L.getHeader()->getParent()->hasOptSize())
     return false;
 
+  // Skip cold loops, as unswitching them brings little benefit
+  // but increases the code size
+  if (PSI && PSI->hasProfileSummary() && BFI &&
+      PSI->isColdBlock(L.getHeader(), BFI)) {
+    LLVM_DEBUG(dbgs() << " Skip cold loop: " << L << "\n");
+    return false;
+  }
+
   // Skip non-trivial unswitching for loops that cannot be cloned.
   if (!L.isSafeToClone())
     return false;
@@ -3105,7 +3116,11 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
                                               LPMUpdater &U) {
   Function &F = *L.getHeader()->getParent();
   (void)F;
-
+  ProfileSummaryInfo *PSI = nullptr;
+  if (auto OuterProxy =
+          AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR)
+              .getCachedResult<ModuleAnalysisManagerFunctionProxy>(F))
+    PSI = OuterProxy->getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   LLVM_DEBUG(dbgs() << "Unswitching loop in " << F.getName() << ": " << L
                     << "\n");
 
@@ -3152,7 +3167,7 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
   }
   if (!unswitchLoop(L, AR.DT, AR.LI, AR.AC, AR.AA, AR.TTI, Trivial, NonTrivial,
                     UnswitchCB, &AR.SE, MSSAU ? MSSAU.getPointer() : nullptr,
-                    DestroyLoopCB))
+                    PSI, AR.BFI, DestroyLoopCB))
     return PreservedAnalyses::all();
 
   if (AR.MSSA && VerifyMemorySSA)
@@ -3214,7 +3229,6 @@ bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   LLVM_DEBUG(dbgs() << "Unswitching loop in " << F.getName() << ": " << *L
                     << "\n");
-
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
@@ -3251,9 +3265,9 @@ bool SimpleLoopUnswitchLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   if (VerifyMemorySSA)
     MSSA->verifyMemorySSA();
-
-  bool Changed = unswitchLoop(*L, DT, LI, AC, AA, TTI, true, NonTrivial,
-                              UnswitchCB, SE, &MSSAU, DestroyLoopCB);
+  bool Changed =
+      unswitchLoop(*L, DT, LI, AC, AA, TTI, true, NonTrivial, UnswitchCB, SE,
+                   &MSSAU, nullptr, nullptr, DestroyLoopCB);
 
   if (VerifyMemorySSA)
     MSSA->verifyMemorySSA();

@@ -778,7 +778,7 @@ llvm::Optional<bool> yaml::parseBool(StringRef S) {
     case 'O':
       if (S[1] == 'N') // ON
         return true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case 'o':
       if (S[1] == 'n') //[Oo]n
         return true;
@@ -786,7 +786,7 @@ llvm::Optional<bool> yaml::parseBool(StringRef S) {
     case 'N':
       if (S[1] == 'O') // NO
         return false;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case 'n':
       if (S[1] == 'o') //[Nn]o
         return false;
@@ -799,7 +799,7 @@ llvm::Optional<bool> yaml::parseBool(StringRef S) {
     case 'O':
       if (S.drop_front() == "FF") // OFF
         return false;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case 'o':
       if (S.drop_front() == "ff") //[Oo]ff
         return false;
@@ -807,7 +807,7 @@ llvm::Optional<bool> yaml::parseBool(StringRef S) {
     case 'Y':
       if (S.drop_front() == "ES") // YES
         return true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case 'y':
       if (S.drop_front() == "es") //[Yy]es
         return true;
@@ -820,7 +820,7 @@ llvm::Optional<bool> yaml::parseBool(StringRef S) {
     case 'T':
       if (S.drop_front() == "RUE") // TRUE
         return true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case 't':
       if (S.drop_front() == "rue") //[Tt]rue
         return true;
@@ -833,7 +833,7 @@ llvm::Optional<bool> yaml::parseBool(StringRef S) {
     case 'F':
       if (S.drop_front() == "ALSE") // FALSE
         return false;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case 'f':
       if (S.drop_front() == "alse") //[Ff]alse
         return false;
@@ -2285,7 +2285,7 @@ void MappingNode::increment() {
       break;
     default:
       setError("Unexpected token. Expected Key or Block End", T);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Token::TK_Error:
       IsAtEnd = true;
       CurrentEntry = nullptr;
@@ -2298,7 +2298,7 @@ void MappingNode::increment() {
       return increment();
     case Token::TK_FlowMappingEnd:
       getNext();
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Token::TK_Error:
       // Set this to end iterator.
       IsAtEnd = true;
@@ -2341,7 +2341,7 @@ void SequenceNode::increment() {
     default:
       setError( "Unexpected token. Expected Block Entry or Block End."
               , T);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Token::TK_Error:
       IsAtEnd = true;
       CurrentEntry = nullptr;
@@ -2370,7 +2370,7 @@ void SequenceNode::increment() {
       return increment();
     case Token::TK_FlowSequenceEnd:
       getNext();
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Token::TK_Error:
       // Set this to end iterator.
       IsAtEnd = true;

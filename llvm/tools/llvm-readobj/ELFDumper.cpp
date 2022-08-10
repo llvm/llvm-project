@@ -2329,7 +2329,7 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
       return "REL";
     if (Value == DT_RELA)
       return "RELA";
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DT_PLTGOT:
   case DT_HASH:
   case DT_STRTAB:
@@ -6499,7 +6499,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
         break;
       case 0:
         // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
         W.printFlags("Flags", E.e_flags,
                      makeArrayRef(ElfHeaderAMDGPUFlagsABIVersion3),

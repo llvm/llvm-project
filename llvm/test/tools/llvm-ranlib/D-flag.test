@@ -22,9 +22,11 @@
 # RUN: cp %t-no-index.a %t.a && llvm-ranlib -UUD %t.a
 # RUN: env TZ=UTC llvm-ar tv %t.a | FileCheck %s --check-prefix=DETERMINISTIC-VALUES
 
-## Check arguments can be passed before and after the file name
-# RUN: cp %t-no-index.a %t.a && llvm-ranlib -U %t.a -D -U
+## Check multiple archives can be specified and arguments can be specified anywhere.
+# RUN: cp %t-no-index.a %t.a && cp %t-no-index.a %t2.a
+# RUN: llvm-ranlib -U %t.a -D %t2.a -U
 # RUN: env TZ=UTC llvm-ar tv %t.a | FileCheck %s --check-prefix=REAL-VALUES
+# RUN: env TZ=UTC llvm-ar tv %t2.a | FileCheck %s --check-prefix=REAL-VALUES
 
 ## Check that the -D/-U option is only accepted with a single dash. This matches
 ## the GNU ranlib behaviour.

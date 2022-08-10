@@ -1260,7 +1260,7 @@ bool WebAssemblyFastISel::selectStore(const Instruction *I) {
   switch (getSimpleType(Store->getValueOperand()->getType())) {
   case MVT::i1:
     VTIsi1 = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::i8:
     Opc = A64 ? WebAssembly::STORE8_I32_A64 : WebAssembly::STORE8_I32_A32;
     break;

@@ -399,7 +399,7 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     if (match(Ops[1], m_One()))
       return Builder.CreateNot(Ops[0], I->getName() + ".neg");
     // Else, just defer to Instruction::Add handling.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case Instruction::Add: {
     // `add` is negatible if both of its operands are negatible.

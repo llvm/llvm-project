@@ -198,14 +198,14 @@ public:
   /// Return a vector containing all instructions inserted during expansion.
   SmallVector<Instruction *, 32> getAllInsertedInstructions() const {
     SmallVector<Instruction *, 32> Result;
-    for (auto &VH : InsertedValues) {
+    for (const auto &VH : InsertedValues) {
       Value *V = VH;
       if (ReusedValues.contains(V))
         continue;
       if (auto *Inst = dyn_cast<Instruction>(V))
         Result.push_back(Inst);
     }
-    for (auto &VH : InsertedPostIncValues) {
+    for (const auto &VH : InsertedPostIncValues) {
       Value *V = VH;
       if (ReusedValues.contains(V))
         continue;

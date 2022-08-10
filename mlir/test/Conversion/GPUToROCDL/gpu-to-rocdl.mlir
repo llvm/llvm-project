@@ -89,9 +89,9 @@ gpu.module @test_module {
   // CHECK: llvm.func @__ocml_fabs_f64(f64) -> f64
   // CHECK-LABEL: func @gpu_fabs
   func.func @gpu_fabs(%arg_f32 : f32, %arg_f64 : f64) -> (f32, f64) {
-    %result32 = math.abs %arg_f32 : f32
+    %result32 = math.absf %arg_f32 : f32
     // CHECK: llvm.call @__ocml_fabs_f32(%{{.*}}) : (f32) -> f32
-    %result64 = math.abs %arg_f64 : f64
+    %result64 = math.absf %arg_f64 : f64
     // CHECK: llvm.call @__ocml_fabs_f64(%{{.*}}) : (f64) -> f64
     func.return %result32, %result64 : f32, f64
   }

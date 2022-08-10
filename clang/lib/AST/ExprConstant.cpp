@@ -1132,7 +1132,7 @@ namespace {
           if (!HasFoldFailureDiagnostic)
             break;
           // We've already failed to fold something. Keep that diagnostic.
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case EM_ConstantExpression:
         case EM_ConstantExpressionUnevaluated:
           setActiveDiagnostic(false);
@@ -1219,7 +1219,7 @@ namespace {
     /// (Foo(), 1)      // use noteSideEffect
     /// (Foo() || true) // use noteSideEffect
     /// Foo() + 1       // use noteFailure
-    LLVM_NODISCARD bool noteFailure() {
+    [[nodiscard]] bool noteFailure() {
       // Failure when evaluating some expression often means there is some
       // subexpression whose evaluation was skipped. Therefore, (because we
       // don't track whether we skipped an expression when unwinding after an
@@ -6834,9 +6834,8 @@ public:
       : Bytes(Width.getQuantity()),
         TargetIsLittleEndian(TargetIsLittleEndian) {}
 
-  LLVM_NODISCARD
-  bool readObject(CharUnits Offset, CharUnits Width,
-                  SmallVectorImpl<unsigned char> &Output) const {
+  [[nodiscard]] bool readObject(CharUnits Offset, CharUnits Width,
+                                SmallVectorImpl<unsigned char> &Output) const {
     for (CharUnits I = Offset, E = Offset + Width; I != E; ++I) {
       // If a byte of an integer is uninitialized, then the whole integer is
       // uninitialized.
@@ -9217,7 +9216,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Builtin::BI__builtin_strchr:
   case Builtin::BI__builtin_wcschr:
   case Builtin::BI__builtin_memchr:
@@ -9278,7 +9277,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                Desired))
         return ZeroInitialization(E);
       StopAtNull = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Builtin::BImemchr:
     case Builtin::BI__builtin_memchr:
     case Builtin::BI__builtin_char_memchr:
@@ -9291,7 +9290,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     case Builtin::BIwcschr:
     case Builtin::BI__builtin_wcschr:
       StopAtNull = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Builtin::BIwmemchr:
     case Builtin::BI__builtin_wmemchr:
       // wcschr and wmemchr are given a wchar_t to look for. Just use it.
@@ -9325,7 +9324,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Builtin::BI__builtin_memcpy:
   case Builtin::BI__builtin_memmove:
   case Builtin::BI__builtin_wmemcpy:
@@ -12122,7 +12121,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Builtin::BI__builtin_strlen:
   case Builtin::BI__builtin_wcslen: {
     // As an extension, we support __builtin_strlen() as a constant expression,
@@ -12147,7 +12146,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         << (std::string("'") + Info.Ctx.BuiltinInfo.getName(BuiltinOp) + "'");
     else
       Info.CCEDiag(E, diag::note_invalid_subexpr_in_const_expr);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Builtin::BI__builtin_strcmp:
   case Builtin::BI__builtin_wcscmp:
   case Builtin::BI__builtin_strncmp:
@@ -13534,7 +13533,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return Info.Ctx.getTypeSize(DestType) == Info.Ctx.getTypeSize(SrcType);
     }
 
-    if (DestType->isEnumeralType()) {
+    if (Info.Ctx.getLangOpts().CPlusPlus && DestType->isEnumeralType()) {
       const EnumType *ET = dyn_cast<EnumType>(DestType.getCanonicalType());
       const EnumDecl *ED = ET->getDecl();
       // Check that the value is within the range of the enumeration values.
@@ -13557,12 +13556,14 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
         if (ED->getNumNegativeBits() &&
             (Max.slt(Result.getInt().getSExtValue()) ||
              Min.sgt(Result.getInt().getSExtValue())))
-          CCEDiag(E, diag::note_constexpr_unscoped_enum_out_of_range)
-              << Result.getInt() << Min.getSExtValue() << Max.getSExtValue();
+          Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
+                                       diag::warn_constexpr_unscoped_enum_out_of_range)
+	       << llvm::toString(Result.getInt(),10) << Min.getSExtValue() << Max.getSExtValue();
         else if (!ED->getNumNegativeBits() &&
                  Max.ult(Result.getInt().getZExtValue()))
-          CCEDiag(E, diag::note_constexpr_unscoped_enum_out_of_range)
-              << Result.getInt() << Min.getZExtValue() << Max.getZExtValue();
+          Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
+                                       diag::warn_constexpr_unscoped_enum_out_of_range)
+	    << llvm::toString(Result.getInt(),10) << Min.getZExtValue() << Max.getZExtValue();
       }
     }
 

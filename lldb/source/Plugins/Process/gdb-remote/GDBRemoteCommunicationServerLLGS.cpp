@@ -1733,7 +1733,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
       if (thread_action.signal == 0)
         return SendIllFormedResponse(
             packet, "Could not parse signal in vCont packet C action");
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case 'c':
       // Continue
@@ -1745,7 +1745,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
       if (thread_action.signal == 0)
         return SendIllFormedResponse(
             packet, "Could not parse signal in vCont packet S action");
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case 's':
       // Step

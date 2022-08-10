@@ -136,7 +136,7 @@ static bool isAddConstantOp(const MachineInstr &MI, int64_t &Amount) {
   switch (MI.getOpcode()) {
   case ARC::SUB_rru6:
     Sign = -1;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARC::ADD_rru6:
     assert(MI.getOperand(2).isImm() && "Expected immediate operand");
     Amount = Sign * MI.getOperand(2).getImm();

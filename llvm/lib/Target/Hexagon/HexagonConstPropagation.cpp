@@ -2269,7 +2269,7 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &BrI,
     case Hexagon::J2_jumpfnew:
     case Hexagon::J2_jumpfnewpt:
       Negated = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Hexagon::J2_jumpt:
     case Hexagon::J2_jumptnew:
     case Hexagon::J2_jumptnewpt:

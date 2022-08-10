@@ -1,4 +1,4 @@
-import os,json,struct,signal
+import os,json,struct,signal,uuid
 
 from typing import Any, Dict
 
@@ -10,10 +10,8 @@ from lldb.macosx.crashlog import CrashLog,CrashLogParser
 
 class CrashLogScriptedProcess(ScriptedProcess):
     def parse_crashlog(self):
-        try:
-            crash_log = CrashLogParser().parse(self.dbg, self.crashlog_path, False)
-        except Exception as e:
-            return
+        crashlog_parser = CrashLogParser(self.dbg, self.crashlog_path, False)
+        crash_log = crashlog_parser.parse()
 
         self.pid = crash_log.process_id
         self.addr_mask = crash_log.addr_mask
@@ -25,8 +23,11 @@ class CrashLogScriptedProcess(ScriptedProcess):
             if images:
                 for image in images:
                     if image not in self.loaded_images:
+                        if image.uuid == uuid.UUID(int=0):
+                            continue
                         err = image.add_module(self.target)
                         if err:
+                            # Append to SBCommandReturnObject
                             print(err)
                         else:
                             self.loaded_images.append(image)
@@ -44,6 +45,7 @@ class CrashLogScriptedProcess(ScriptedProcess):
         super().__init__(target, args)
 
         if not self.target or not self.target.IsValid():
+            # Return error
             return
 
         self.crashlog_path = None
@@ -54,6 +56,7 @@ class CrashLogScriptedProcess(ScriptedProcess):
                 self.crashlog_path = crashlog_path.GetStringValue(4096)
 
         if not self.crashlog_path:
+            # Return error
             return
 
         load_all_images = args.GetValueForKey("load_all_images")

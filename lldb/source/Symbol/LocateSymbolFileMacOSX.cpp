@@ -491,190 +491,184 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
   return success;
 }
 
-bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
-                                          Status &error, bool force_lookup) {
-  bool success = false;
-  const UUID *uuid_ptr = module_spec.GetUUIDPtr();
-  const FileSpec *file_spec_ptr = module_spec.GetFileSpecPtr();
-
-  // It's expensive to check for the DBGShellCommands defaults setting, only do
-  // it once per lldb run and cache the result.
-  static bool g_have_checked_for_dbgshell_command = false;
-  static const char *g_dbgshell_command = NULL;
-  if (!g_have_checked_for_dbgshell_command) {
-    g_have_checked_for_dbgshell_command = true;
+/// It's expensive to check for the DBGShellCommands defaults setting. Only do
+/// it once per lldb run and cache the result.
+static llvm::StringRef GetDbgShellCommand() {
+  static std::once_flag g_once_flag;
+  static std::string g_dbgshell_command;
+  std::call_once(g_once_flag, [&]() {
     CFTypeRef defaults_setting = CFPreferencesCopyAppValue(
         CFSTR("DBGShellCommands"), CFSTR("com.apple.DebugSymbols"));
     if (defaults_setting &&
         CFGetTypeID(defaults_setting) == CFStringGetTypeID()) {
-      char cstr_buf[PATH_MAX];
-      if (CFStringGetCString((CFStringRef)defaults_setting, cstr_buf,
-                             sizeof(cstr_buf), kCFStringEncodingUTF8)) {
-        g_dbgshell_command =
-            strdup(cstr_buf); // this malloc'ed memory will never be freed
+      char buffer[PATH_MAX];
+      if (CFStringGetCString((CFStringRef)defaults_setting, buffer,
+                             sizeof(buffer), kCFStringEncodingUTF8)) {
+        g_dbgshell_command = buffer;
       }
     }
     if (defaults_setting) {
       CFRelease(defaults_setting);
     }
+  });
+  return g_dbgshell_command;
+}
+
+/// Get the dsymForUUID executable and cache the result so we don't end up
+/// stat'ing the binary over and over.
+static FileSpec GetDsymForUUIDExecutable() {
+  // The LLDB_APPLE_DSYMFORUUID_EXECUTABLE environment variable is used by the
+  // test suite to override the dsymForUUID location. Because we must be able
+  // to change the value within a single test, don't bother caching it.
+  if (const char *dsymForUUID_env =
+          getenv("LLDB_APPLE_DSYMFORUUID_EXECUTABLE")) {
+    FileSpec dsymForUUID_executable(dsymForUUID_env);
+    FileSystem::Instance().Resolve(dsymForUUID_executable);
+    if (FileSystem::Instance().Exists(dsymForUUID_executable))
+      return dsymForUUID_executable;
   }
 
-  // When g_dbgshell_command is NULL, the user has not enabled the use of an
+  static std::once_flag g_once_flag;
+  static FileSpec g_dsymForUUID_executable;
+  std::call_once(g_once_flag, [&]() {
+    // Try the DBGShellCommand.
+    llvm::StringRef dbgshell_command = GetDbgShellCommand();
+    if (!dbgshell_command.empty()) {
+      g_dsymForUUID_executable = FileSpec(dbgshell_command);
+      FileSystem::Instance().Resolve(g_dsymForUUID_executable);
+      if (FileSystem::Instance().Exists(g_dsymForUUID_executable))
+        return;
+    }
+
+    // Try dsymForUUID in /usr/local/bin
+    {
+      g_dsymForUUID_executable = FileSpec("/usr/local/bin/dsymForUUID");
+      if (FileSystem::Instance().Exists(g_dsymForUUID_executable))
+        return;
+    }
+
+    // We couldn't find the dsymForUUID binary.
+    g_dsymForUUID_executable = {};
+  });
+  return g_dsymForUUID_executable;
+}
+
+bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
+                                          Status &error, bool force_lookup) {
+  const UUID *uuid_ptr = module_spec.GetUUIDPtr();
+  const FileSpec *file_spec_ptr = module_spec.GetFileSpecPtr();
+
+  llvm::StringRef dbgshell_command = GetDbgShellCommand();
+
+  // When dbgshell_command is empty, the user has not enabled the use of an
   // external program to find the symbols, don't run it for them.
-  if (!force_lookup && g_dbgshell_command == NULL) {
+  if (!force_lookup && dbgshell_command.empty())
+    return false;
+
+  // We need a UUID or valid (existing FileSpec.
+  if (!uuid_ptr &&
+      (!file_spec_ptr || !FileSystem::Instance().Exists(*file_spec_ptr)))
+    return false;
+
+  // We need a dsymForUUID binary or an equivalent executable/script.
+  FileSpec dsymForUUID_exe_spec = GetDsymForUUIDExecutable();
+  if (!dsymForUUID_exe_spec)
+    return false;
+
+  const std::string dsymForUUID_exe_path = dsymForUUID_exe_spec.GetPath();
+  const std::string uuid_str = uuid_ptr ? uuid_ptr->GetAsString() : "";
+  const std::string file_path_str =
+      file_spec_ptr ? file_spec_ptr->GetPath() : "";
+
+  Log *log = GetLog(LLDBLog::Host);
+
+  // Create the dsymForUUID command.
+  StreamString command;
+  if (!uuid_str.empty()) {
+    command.Printf("%s --ignoreNegativeCache --copyExecutable %s",
+                   dsymForUUID_exe_path.c_str(), uuid_str.c_str());
+    LLDB_LOGF(log, "Calling %s with UUID %s to find dSYM: %s",
+              dsymForUUID_exe_path.c_str(), uuid_str.c_str(),
+              command.GetString().data());
+  } else if (!file_path_str.empty()) {
+    command.Printf("%s --ignoreNegativeCache --copyExecutable %s",
+                   dsymForUUID_exe_path.c_str(), file_path_str.c_str());
+    LLDB_LOGF(log, "Calling %s with file %s to find dSYM: %s",
+              dsymForUUID_exe_path.c_str(), file_path_str.c_str(),
+              command.GetString().data());
+  } else {
     return false;
   }
 
-  if (uuid_ptr ||
-      (file_spec_ptr && FileSystem::Instance().Exists(*file_spec_ptr))) {
-    static bool g_located_dsym_for_uuid_exe = false;
-    static bool g_dsym_for_uuid_exe_exists = false;
-    static char g_dsym_for_uuid_exe_path[PATH_MAX];
-    if (!g_located_dsym_for_uuid_exe) {
-      g_located_dsym_for_uuid_exe = true;
-      const char *dsym_for_uuid_exe_path_cstr =
-          getenv("LLDB_APPLE_DSYMFORUUID_EXECUTABLE");
-      FileSpec dsym_for_uuid_exe_spec;
-      if (dsym_for_uuid_exe_path_cstr) {
-        dsym_for_uuid_exe_spec.SetFile(dsym_for_uuid_exe_path_cstr,
-                                       FileSpec::Style::native);
-        FileSystem::Instance().Resolve(dsym_for_uuid_exe_spec);
-        g_dsym_for_uuid_exe_exists =
-            FileSystem::Instance().Exists(dsym_for_uuid_exe_spec);
-      }
+  // Invoke dsymForUUID.
+  int exit_status = -1;
+  int signo = -1;
+  std::string command_output;
+  error = Host::RunShellCommand(
+      command.GetData(),
+      FileSpec(),      // current working directory
+      &exit_status,    // Exit status
+      &signo,          // Signal int *
+      &command_output, // Command output
+      std::chrono::seconds(
+          640), // Large timeout to allow for long dsym download times
+      false);   // Don't run in a shell (we don't need shell expansion)
 
-      if (!g_dsym_for_uuid_exe_exists) {
-        dsym_for_uuid_exe_spec.SetFile("/usr/local/bin/dsymForUUID",
-                                       FileSpec::Style::native);
-        g_dsym_for_uuid_exe_exists =
-            FileSystem::Instance().Exists(dsym_for_uuid_exe_spec);
-        if (!g_dsym_for_uuid_exe_exists) {
-          long bufsize;
-          if ((bufsize = sysconf(_SC_GETPW_R_SIZE_MAX)) != -1) {
-            char buffer[bufsize];
-            struct passwd pwd;
-            struct passwd *tilde_rc = NULL;
-            // we are a library so we need to use the reentrant version of
-            // getpwnam()
-            if (getpwnam_r("rc", &pwd, buffer, bufsize, &tilde_rc) == 0 &&
-                tilde_rc && tilde_rc->pw_dir) {
-              std::string dsymforuuid_path(tilde_rc->pw_dir);
-              dsymforuuid_path += "/bin/dsymForUUID";
-              dsym_for_uuid_exe_spec.SetFile(dsymforuuid_path.c_str(),
-                                             FileSpec::Style::native);
-              g_dsym_for_uuid_exe_exists =
-                  FileSystem::Instance().Exists(dsym_for_uuid_exe_spec);
-            }
-          }
-        }
-      }
-      if (!g_dsym_for_uuid_exe_exists && g_dbgshell_command != NULL) {
-        dsym_for_uuid_exe_spec.SetFile(g_dbgshell_command,
-                                       FileSpec::Style::native);
-        FileSystem::Instance().Resolve(dsym_for_uuid_exe_spec);
-        g_dsym_for_uuid_exe_exists =
-            FileSystem::Instance().Exists(dsym_for_uuid_exe_spec);
-      }
+  if (error.Fail() || exit_status != 0 || command_output.empty()) {
+    LLDB_LOGF(log, "'%s' failed (exit status: %d, error: '%s', output: '%s')",
+              command.GetData(), exit_status, error.AsCString(),
+              command_output.c_str());
+    return false;
+  }
 
-      if (g_dsym_for_uuid_exe_exists)
-        dsym_for_uuid_exe_spec.GetPath(g_dsym_for_uuid_exe_path,
-                                       sizeof(g_dsym_for_uuid_exe_path));
+  CFCData data(
+      CFDataCreateWithBytesNoCopy(NULL, (const UInt8 *)command_output.data(),
+                                  command_output.size(), kCFAllocatorNull));
+
+  CFCReleaser<CFDictionaryRef> plist(
+      (CFDictionaryRef)::CFPropertyListCreateFromXMLData(
+          NULL, data.get(), kCFPropertyListImmutable, NULL));
+
+  if (!plist.get()) {
+    LLDB_LOGF(log, "'%s' failed: output is not a valid plist",
+              command.GetData());
+    return false;
+  }
+
+  if (CFGetTypeID(plist.get()) != CFDictionaryGetTypeID()) {
+    LLDB_LOGF(log, "'%s' failed: output plist is not a valid CFDictionary",
+              command.GetData());
+    return false;
+  }
+
+  if (!uuid_str.empty()) {
+    CFCString uuid_cfstr(uuid_str.c_str());
+    CFDictionaryRef uuid_dict =
+        (CFDictionaryRef)CFDictionaryGetValue(plist.get(), uuid_cfstr.get());
+    return GetModuleSpecInfoFromUUIDDictionary(uuid_dict, module_spec, error);
+  }
+
+  if (const CFIndex num_values = ::CFDictionaryGetCount(plist.get())) {
+    std::vector<CFStringRef> keys(num_values, NULL);
+    std::vector<CFDictionaryRef> values(num_values, NULL);
+    ::CFDictionaryGetKeysAndValues(plist.get(), NULL,
+                                   (const void **)&values[0]);
+    if (num_values == 1) {
+      return GetModuleSpecInfoFromUUIDDictionary(values[0], module_spec, error);
     }
-    if (g_dsym_for_uuid_exe_exists) {
-      std::string uuid_str;
-      char file_path[PATH_MAX];
-      file_path[0] = '\0';
 
-      if (uuid_ptr)
-        uuid_str = uuid_ptr->GetAsString();
-
-      if (file_spec_ptr)
-        file_spec_ptr->GetPath(file_path, sizeof(file_path));
-
-      StreamString command;
-      if (!uuid_str.empty())
-        command.Printf("%s --ignoreNegativeCache --copyExecutable %s",
-                       g_dsym_for_uuid_exe_path, uuid_str.c_str());
-      else if (file_path[0] != '\0')
-        command.Printf("%s --ignoreNegativeCache --copyExecutable %s",
-                       g_dsym_for_uuid_exe_path, file_path);
-
-      if (!command.GetString().empty()) {
-        Log *log = GetLog(LLDBLog::Host);
-        int exit_status = -1;
-        int signo = -1;
-        std::string command_output;
-        if (log) {
-          if (!uuid_str.empty())
-            LLDB_LOGF(log, "Calling %s with UUID %s to find dSYM",
-                      g_dsym_for_uuid_exe_path, uuid_str.c_str());
-          else if (file_path[0] != '\0')
-            LLDB_LOGF(log, "Calling %s with file %s to find dSYM",
-                      g_dsym_for_uuid_exe_path, file_path);
-        }
-        error = Host::RunShellCommand(
-            command.GetData(),
-            FileSpec(),      // current working directory
-            &exit_status,    // Exit status
-            &signo,          // Signal int *
-            &command_output, // Command output
-            std::chrono::seconds(
-                640), // Large timeout to allow for long dsym download times
-            false);   // Don't run in a shell (we don't need shell expansion)
-        if (error.Success() && exit_status == 0 && !command_output.empty()) {
-          CFCData data(CFDataCreateWithBytesNoCopy(
-              NULL, (const UInt8 *)command_output.data(), command_output.size(),
-              kCFAllocatorNull));
-
-          CFCReleaser<CFDictionaryRef> plist(
-              (CFDictionaryRef)::CFPropertyListCreateFromXMLData(
-                  NULL, data.get(), kCFPropertyListImmutable, NULL));
-
-          if (plist.get() &&
-              CFGetTypeID(plist.get()) == CFDictionaryGetTypeID()) {
-            if (!uuid_str.empty()) {
-              CFCString uuid_cfstr(uuid_str.c_str());
-              CFDictionaryRef uuid_dict = (CFDictionaryRef)CFDictionaryGetValue(
-                  plist.get(), uuid_cfstr.get());
-              success = GetModuleSpecInfoFromUUIDDictionary(uuid_dict,
-                                                            module_spec, error);
-            } else {
-              const CFIndex num_values = ::CFDictionaryGetCount(plist.get());
-              if (num_values > 0) {
-                std::vector<CFStringRef> keys(num_values, NULL);
-                std::vector<CFDictionaryRef> values(num_values, NULL);
-                ::CFDictionaryGetKeysAndValues(plist.get(), NULL,
-                                               (const void **)&values[0]);
-                if (num_values == 1) {
-                  success = GetModuleSpecInfoFromUUIDDictionary(
-                      values[0], module_spec, error);
-                  return success;
-                } else {
-                  for (CFIndex i = 0; i < num_values; ++i) {
-                    ModuleSpec curr_module_spec;
-                    if (GetModuleSpecInfoFromUUIDDictionary(
-                            values[i], curr_module_spec, error)) {
-                      if (module_spec.GetArchitecture().IsCompatibleMatch(
-                              curr_module_spec.GetArchitecture())) {
-                        module_spec = curr_module_spec;
-                        return true;
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } else {
-          if (!uuid_str.empty())
-            LLDB_LOGF(log, "Called %s on %s, no matches",
-                      g_dsym_for_uuid_exe_path, uuid_str.c_str());
-          else if (file_path[0] != '\0')
-            LLDB_LOGF(log, "Called %s on %s, no matches",
-                      g_dsym_for_uuid_exe_path, file_path);
+    for (CFIndex i = 0; i < num_values; ++i) {
+      ModuleSpec curr_module_spec;
+      if (GetModuleSpecInfoFromUUIDDictionary(values[i], curr_module_spec,
+                                              error)) {
+        if (module_spec.GetArchitecture().IsCompatibleMatch(
+                curr_module_spec.GetArchitecture())) {
+          module_spec = curr_module_spec;
+          return true;
         }
       }
     }
   }
-  return success;
+
+  return false;
 }

@@ -67,7 +67,7 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     // zext.w
     if (Imm == UINT64_C(0xffffffff) && ST->hasStdExtZba())
       return TTI::TCC_Free;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::Add:
   case Instruction::Or:
   case Instruction::Xor:
@@ -300,6 +300,20 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     case ISD::FP_TO_UINT:
     case ISD::SINT_TO_FP:
     case ISD::UINT_TO_FP:
+      if (Src->getScalarSizeInBits() == 1 || Dst->getScalarSizeInBits() == 1) {
+        // The cost of convert from or to mask vector is different from other
+        // cases. We could not use PowDiff to calculate it.
+        // For mask vector to fp, we should use the following instructions:
+        // vmv.v.i v8, 0
+        // vmerge.vim v8, v8, -1, v0
+        // vfcvt.f.x.v v8, v8
+
+        // And for fp vector to mask, we use:
+        // vfncvt.rtz.x.f.w v9, v8
+        // vand.vi v8, v9, 1
+        // vmsne.vi v0, v8, 0
+        return 3;
+      }
       if (std::abs(PowDiff) <= 1)
         return 1;
       // Backend could lower (v[sz]ext i8 to double) to vfcvt(v[sz]ext.f8 i8),

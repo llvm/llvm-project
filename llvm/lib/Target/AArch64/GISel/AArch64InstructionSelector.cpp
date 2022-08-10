@@ -907,6 +907,38 @@ getRegClassesForCopy(MachineInstr &I, const TargetInstrInfo &TII,
           getMinClassForRegBank(DstRegBank, DstSize, true)};
 }
 
+// FIXME: We need some sort of API in RBI/TRI to allow generic code to
+// constrain operands of simple instructions given a TargetRegisterClass
+// and LLT
+static bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI,
+                             const RegisterBankInfo &RBI) {
+  for (MachineOperand &MO : I.operands()) {
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (!Reg)
+      continue;
+    if (Reg.isPhysical())
+      continue;
+    LLT Ty = MRI.getType(Reg);
+    const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
+    const TargetRegisterClass *RC =
+        RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+    if (!RC) {
+      const RegisterBank &RB = *RegClassOrBank.get<const RegisterBank *>();
+      RC = getRegClassForTypeOnBank(Ty, RB);
+      if (!RC) {
+        LLVM_DEBUG(
+            dbgs() << "Warning: DBG_VALUE operand has unexpected size/bank\n");
+        break;
+      }
+    }
+    RBI.constrainGenericRegister(Reg, *RC, MRI);
+  }
+
+  return true;
+}
+
 static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                        const RegisterBankInfo &RBI) {
@@ -2377,6 +2409,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     if (I.isCopy())
       return selectCopy(I, TII, MRI, TRI, RBI);
 
+    if (I.isDebugInstr())
+      return selectDebugInstr(I, MRI, RBI);
+
     return true;
   }
 
@@ -2569,7 +2604,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         // For s32, use a cp load if we have optsize/minsize.
         if (!shouldOptForSize(&MF))
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case 16:
       case 64:
       case 128: {
@@ -2972,7 +3007,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_ASHR:
     if (MRI.getType(I.getOperand(0).getReg()).isVector())
       return selectVectorAshrLshr(I, MRI);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case TargetOpcode::G_SHL:
     if (Opcode == TargetOpcode::G_SHL &&
         MRI.getType(I.getOperand(0).getReg()).isVector())
@@ -2997,7 +3032,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         I.getOperand(2).setReg(Trunc.getReg(0));
       }
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case TargetOpcode::G_OR: {
     // Reject the various things we don't support yet.
     if (unsupportedBinOp(I, RBI, MRI, TRI))

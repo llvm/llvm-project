@@ -5,7 +5,7 @@ module attributes {
     #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spv.resource_limits<>>
 } {
 
-func.func @loop_kernel(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>) {
+func.func @loop_kernel(%arg2 : memref<10xf32, #spv.storage_class<StorageBuffer>>, %arg3 : memref<10xf32, #spv.storage_class<StorageBuffer>>) {
   // CHECK: %[[LB:.*]] = spv.Constant 4 : i32
   %lb = arith.constant 4 : index
   // CHECK: %[[UB:.*]] = spv.Constant 42 : i32
@@ -36,14 +36,14 @@ func.func @loop_kernel(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>) {
   // CHECK:        spv.mlir.merge
   // CHECK:      }
   scf.for %arg4 = %lb to %ub step %step {
-    %1 = memref.load %arg2[%arg4] : memref<10xf32>
-    memref.store %1, %arg3[%arg4] : memref<10xf32>
+    %1 = memref.load %arg2[%arg4] : memref<10xf32, #spv.storage_class<StorageBuffer>>
+    memref.store %1, %arg3[%arg4] : memref<10xf32, #spv.storage_class<StorageBuffer>>
   }
   return
 }
 
 // CHECK-LABEL: @loop_yield
-func.func @loop_yield(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>) {
+func.func @loop_yield(%arg2 : memref<10xf32, #spv.storage_class<StorageBuffer>>, %arg3 : memref<10xf32, #spv.storage_class<StorageBuffer>>) {
   // CHECK: %[[LB:.*]] = spv.Constant 4 : i32
   %lb = arith.constant 4 : index
   // CHECK: %[[UB:.*]] = spv.Constant 42 : i32
@@ -78,8 +78,8 @@ func.func @loop_yield(%arg2 : memref<10xf32>, %arg3 : memref<10xf32>) {
   // CHECK-DAG: %[[OUT2:.*]] = spv.Load "Function" %[[VAR2]] : f32
   // CHECK: spv.Store "StorageBuffer" {{%.*}}, %[[OUT1]] : f32
   // CHECK: spv.Store "StorageBuffer" {{%.*}}, %[[OUT2]] : f32
-  memref.store %result#0, %arg3[%lb] : memref<10xf32>
-  memref.store %result#1, %arg3[%ub] : memref<10xf32>
+  memref.store %result#0, %arg3[%lb] : memref<10xf32, #spv.storage_class<StorageBuffer>>
+  memref.store %result#1, %arg3[%ub] : memref<10xf32, #spv.storage_class<StorageBuffer>>
   return
 }
 

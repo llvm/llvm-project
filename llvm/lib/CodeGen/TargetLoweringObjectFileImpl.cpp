@@ -127,7 +127,7 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
     if (Ctx.getAsmInfo()->getExceptionHandlingType() == ExceptionHandling::ARM)
       break;
     // Fallthrough if not using EHABI
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Triple::ppc:
   case Triple::ppcle:
   case Triple::x86:

@@ -5007,7 +5007,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   case CM_ScalarEpilogueAllowed:
     return computeFeasibleMaxVF(TC, UserVF, false);
   case CM_ScalarEpilogueNotAllowedUsePredicate:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CM_ScalarEpilogueNotNeededUsePredicate:
     LLVM_DEBUG(
         dbgs() << "LV: vector predicate hint/switch found.\n"
@@ -7072,7 +7072,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       // likely.
       return Cost / getReciprocalPredBlockProb();
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::Add:
   case Instruction::FAdd:
   case Instruction::Sub:
@@ -7178,7 +7178,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
   case Instruction::BitCast:
     if (I->getType()->isPointerTy())
       return 0;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Instruction::ZExt:
   case Instruction::SExt:
   case Instruction::FPToUI:
@@ -7287,7 +7287,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     // the result would need to be a vector of pointers.
     if (VF.isScalable())
       return InstructionCost::getInvalid();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     // This opcode is unknown. Assume that it is the same as 'mul'.
     return TTI.getArithmeticInstrCost(Instruction::Mul, VectorTy, CostKind);
@@ -10145,8 +10145,19 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     if (Hints.getForce() == LoopVectorizeHints::FK_Enabled)
       LLVM_DEBUG(dbgs() << " But vectorizing was explicitly forced.\n");
     else {
-      LLVM_DEBUG(dbgs() << "\n");
-      SEL = CM_ScalarEpilogueNotAllowedLowTripLoop;
+      if (*ExpectedTC > TTI->getMinTripCountTailFoldingThreshold()) {
+        LLVM_DEBUG(dbgs() << "\n");
+        SEL = CM_ScalarEpilogueNotAllowedLowTripLoop;
+      } else {
+        LLVM_DEBUG(dbgs() << " But the target considers the trip count too "
+                             "small to consider vectorizing.\n");
+        reportVectorizationFailure(
+            "The trip count is below the minial threshold value.",
+            "loop trip count is too low, avoiding vectorization",
+            "LowTripCount", ORE, L);
+        Hints.emitRemarkWithHints();
+        return false;
+      }
     }
   }
 

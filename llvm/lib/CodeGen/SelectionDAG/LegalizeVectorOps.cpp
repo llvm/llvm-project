@@ -492,7 +492,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     if (LowerOperationWrapper(Node, ResultVals))
       break;
     LLVM_DEBUG(dbgs() << "Could not custom legalize node\n");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case TargetLowering::Expand:
     LLVM_DEBUG(dbgs() << "Expanding\n");
     Expand(Node, ResultVals);

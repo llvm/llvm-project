@@ -179,7 +179,7 @@ public:
   }
 
   size_t nodeCount() const { return NodeCount; }
-  size_t bytes() const { return Arena.getBytesAllocated() + sizeof(this); }
+  size_t bytes() const { return Arena.getBytesAllocated() + sizeof(*this); }
 
 private:
   ForestNode &create(ForestNode::Kind K, SymbolID SID, Token::Index Start,
@@ -199,7 +199,9 @@ private:
 };
 
 class ForestNode::RecursiveIterator
-    : public std::iterator<std::input_iterator_tag, const ForestNode> {
+    : public llvm::iterator_facade_base<ForestNode::RecursiveIterator,
+                                        std::input_iterator_tag,
+                                        const ForestNode> {
   llvm::DenseSet<const ForestNode *> Seen;
   struct StackFrame {
     const ForestNode *Parent;

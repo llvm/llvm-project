@@ -1,4 +1,4 @@
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-unknown-linux-gnu" %s | FileCheck %s
+// RUN: fir-opt --split-input-file --cfg-conversion --fir-to-llvm-ir="target=aarch64-unknown-linux-gnu" %s | FileCheck %s
 
 func.func @_QPsb1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "arr"}) {
   %c1_i64 = arith.constant 1 : i64
@@ -217,3 +217,56 @@ func.func @_QPsimd1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref
 // CHECK: }
 // CHECK: llvm.return
 // CHECK: }
+
+func.func @_QPsimdloop_with_nested_loop() {
+  %0 = fir.alloca i32 {adapt.valuebyref}
+  %1 = fir.alloca !fir.array<10xi32> {bindc_name = "a", uniq_name = "_QFsimdloop_with_nested_loopEa"}
+  %2 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimdloop_with_nested_loopEi"}
+  %3 = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFsimdloop_with_nested_loopEj"}
+  %c1_i32 = arith.constant 1 : i32
+  %c10_i32 = arith.constant 10 : i32
+  %c1_i32_0 = arith.constant 1 : i32
+  omp.simdloop   for  (%arg0) : i32 = (%c1_i32) to (%c10_i32) inclusive step (%c1_i32_0) {
+    fir.store %arg0 to %0 : !fir.ref<i32>
+    %c1_i32_1 = arith.constant 1 : i32
+    %4 = fir.convert %c1_i32_1 : (i32) -> index
+    %c10_i32_2 = arith.constant 10 : i32
+    %5 = fir.convert %c10_i32_2 : (i32) -> index
+    %c1 = arith.constant 1 : index
+    %6 = fir.do_loop %arg1 = %4 to %5 step %c1 -> index {
+      %8 = fir.convert %arg1 : (index) -> i32
+      fir.store %8 to %3 : !fir.ref<i32>
+      %9 = fir.load %0 : !fir.ref<i32>
+      %10 = fir.load %0 : !fir.ref<i32>
+      %11 = fir.convert %10 : (i32) -> i64
+      %c1_i64 = arith.constant 1 : i64
+      %12 = arith.subi %11, %c1_i64 : i64
+      %13 = fir.coordinate_of %1, %12 : (!fir.ref<!fir.array<10xi32>>, i64) -> !fir.ref<i32>
+      fir.store %9 to %13 : !fir.ref<i32>
+      %14 = arith.addi %arg1, %c1 : index
+      fir.result %14 : index
+    }
+    %7 = fir.convert %6 : (index) -> i32
+    fir.store %7 to %3 : !fir.ref<i32>
+    omp.yield
+  }
+  return
+}
+
+// CHECK-LABEL:   llvm.func @_QPsimdloop_with_nested_loop() {
+// CHECK:           %[[LOWER:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:           %[[UPPER:.*]] = llvm.mlir.constant(10 : i32) : i32
+// CHECK:           %[[STEP:.*]] = llvm.mlir.constant(1 : i32) : i32
+// CHECK:           omp.simdloop   for  (%[[CNT:.*]]) : i32 = (%[[LOWER]]) to (%[[UPPER]]) inclusive step (%[[STEP]]) {
+// CHECK:             llvm.br ^bb1(%[[VAL_1:.*]], %[[VAL_2:.*]] : i64, i64)
+// CHECK:           ^bb1(%[[VAL_3:.*]]: i64, %[[VAL_4:.*]]: i64):
+// CHECK:             %[[VAL_5:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:             %[[VAL_6:.*]] = llvm.icmp "sgt" %[[VAL_4]], %[[VAL_5]] : i64
+// CHECK:             llvm.cond_br %[[VAL_6]], ^bb2, ^bb3
+// CHECK:           ^bb2:
+// CHECK:             llvm.br ^bb1(%[[VAL_7:.*]], %[[VAL_8:.*]] : i64, i64)
+// CHECK:           ^bb3:
+// CHECK:             omp.yield
+// CHECK:           }
+// CHECK:           llvm.return
+// CHECK:         }

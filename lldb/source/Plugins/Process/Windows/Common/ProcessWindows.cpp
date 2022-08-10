@@ -483,7 +483,7 @@ void ProcessWindows::RefreshStateAfterStop() {
                "Creating stop info with the exception.");
       // FALLTHROUGH:  We'll treat this as a generic exception record in the
       // default case.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
   }
 
