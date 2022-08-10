@@ -114,7 +114,7 @@ def ConvertArithmeticToLLVM : Pass<"convert-arith-to-llvm"> {
 // ArithmeticToSPIRV
 //===----------------------------------------------------------------------===//
 
-def ConvertArithmeticToSPIRV : Pass<"convert-arith-to-spirv", "ModuleOp"> {
+def ConvertArithmeticToSPIRV : Pass<"convert-arith-to-spirv"> {
   let summary = "Convert Arithmetic dialect to SPIR-V dialect";
   let constructor = "mlir::arith::createConvertArithmeticToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
@@ -250,7 +250,7 @@ def ConvertControlFlowToLLVM : Pass<"convert-cf-to-llvm", "ModuleOp"> {
 // ControlFlowToSPIRV
 //===----------------------------------------------------------------------===//
 
-def ConvertControlFlowToSPIRV : Pass<"convert-cf-to-spirv", "ModuleOp"> {
+def ConvertControlFlowToSPIRV : Pass<"convert-cf-to-spirv"> {
   let summary = "Convert ControlFlow dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertControlFlowToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
@@ -311,7 +311,7 @@ def ConvertFuncToLLVM : Pass<"convert-func-to-llvm", "ModuleOp"> {
 // FuncToSPIRV
 //===----------------------------------------------------------------------===//
 
-def ConvertFuncToSPIRV : Pass<"convert-func-to-spirv", "ModuleOp"> {
+def ConvertFuncToSPIRV : Pass<"convert-func-to-spirv"> {
   let summary = "Convert Func dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertFuncToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
@@ -505,7 +505,7 @@ def ConvertMathToLLVM : Pass<"convert-math-to-llvm"> {
 // MathToSPIRV
 //===----------------------------------------------------------------------===//
 
-def ConvertMathToSPIRV : Pass<"convert-math-to-spirv", "ModuleOp"> {
+def ConvertMathToSPIRV : Pass<"convert-math-to-spirv"> {
   let summary = "Convert Math dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertMathToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
@@ -548,7 +548,7 @@ def MapMemRefStorageClass : Pass<"map-memref-spirv-storage-class"> {
   ];
 }
 
-def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv", "ModuleOp"> {
+def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv"> {
   let summary = "Convert MemRef dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertMemRefToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
@@ -668,7 +668,7 @@ def ConvertSCFToOpenMP : Pass<"convert-scf-to-openmp", "ModuleOp"> {
 // SCFToSPIRV
 //===----------------------------------------------------------------------===//
 
-def SCFToSPIRV : Pass<"convert-scf-to-spirv", "ModuleOp"> {
+def SCFToSPIRV : Pass<"convert-scf-to-spirv"> {
   let summary = "Convert SCF dialect to SPIR-V dialect.";
   let description = [{
     This pass converts SCF ops into SPIR-V structured control flow ops.
@@ -764,7 +764,7 @@ def ConvertTensorToLinalg : Pass<"convert-tensor-to-linalg", "ModuleOp"> {
 // TensorToSPIRV
 //===----------------------------------------------------------------------===//
 
-def ConvertTensorToSPIRV : Pass<"convert-tensor-to-spirv", "ModuleOp"> {
+def ConvertTensorToSPIRV : Pass<"convert-tensor-to-spirv"> {
   let summary = "Convert Tensor dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertTensorToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];
@@ -961,7 +961,7 @@ def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
 // VectorToSPIRV
 //===----------------------------------------------------------------------===//
 
-def ConvertVectorToSPIRV : Pass<"convert-vector-to-spirv", "ModuleOp"> {
+def ConvertVectorToSPIRV : Pass<"convert-vector-to-spirv"> {
   let summary = "Convert Vector dialect to SPIR-V dialect";
   let constructor = "mlir::createConvertVectorToSPIRVPass()";
   let dependentDialects = ["spirv::SPIRVDialect"];

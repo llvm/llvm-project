@@ -31,9 +31,9 @@ struct SCFToSPIRVPass : public SCFToSPIRVBase<SCFToSPIRVPass> {
 
 void SCFToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  ModuleOp module = getOperation();
+  Operation *op = getOperation();
 
-  auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
+  auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
   std::unique_ptr<ConversionTarget> target =
       SPIRVConversionTarget::get(targetAttr);
 
@@ -49,10 +49,10 @@ void SCFToSPIRVPass::runOnOperation() {
   populateMemRefToSPIRVPatterns(typeConverter, patterns);
   populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
 
-  if (failed(applyPartialConversion(module, *target, std::move(patterns))))
+  if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();
 }
 
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertSCFToSPIRVPass() {
+std::unique_ptr<OperationPass<>> mlir::createConvertSCFToSPIRVPass() {
   return std::make_unique<SCFToSPIRVPass>();
 }

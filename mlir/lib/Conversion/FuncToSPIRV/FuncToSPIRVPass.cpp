@@ -28,9 +28,9 @@ class ConvertFuncToSPIRVPass
 
 void ConvertFuncToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  ModuleOp module = getOperation();
+  Operation *op = getOperation();
 
-  auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
+  auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
   std::unique_ptr<ConversionTarget> target =
       SPIRVConversionTarget::get(targetAttr);
 
@@ -42,10 +42,10 @@ void ConvertFuncToSPIRVPass::runOnOperation() {
   populateFuncToSPIRVPatterns(typeConverter, patterns);
   populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
 
-  if (failed(applyPartialConversion(module, *target, std::move(patterns))))
+  if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();
 }
 
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertFuncToSPIRVPass() {
+std::unique_ptr<OperationPass<>> mlir::createConvertFuncToSPIRVPass() {
   return std::make_unique<ConvertFuncToSPIRVPass>();
 }

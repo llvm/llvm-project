@@ -19,7 +19,7 @@ namespace mlir {
 class ModuleOp;
 
 /// Creates a pass to convert ControlFlow ops to SPIR-V ops.
-std::unique_ptr<OperationPass<ModuleOp>> createConvertControlFlowToSPIRVPass();
+std::unique_ptr<OperationPass<>> createConvertControlFlowToSPIRVPass();
 
 } // namespace mlir
 

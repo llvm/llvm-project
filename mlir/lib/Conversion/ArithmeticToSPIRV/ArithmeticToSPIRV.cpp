@@ -912,8 +912,8 @@ namespace {
 struct ConvertArithmeticToSPIRVPass
     : public ConvertArithmeticToSPIRVBase<ConvertArithmeticToSPIRVPass> {
   void runOnOperation() override {
-    auto module = getOperation();
-    auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
+    Operation *op = getOperation();
+    auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
     auto target = SPIRVConversionTarget::get(targetAttr);
 
     SPIRVTypeConverter::Options options;
@@ -934,12 +934,13 @@ struct ConvertArithmeticToSPIRVPass
     RewritePatternSet patterns(&getContext());
     arith::populateArithmeticToSPIRVPatterns(typeConverter, patterns);
 
-    if (failed(applyPartialConversion(module, *target, std::move(patterns))))
+    if (failed(applyPartialConversion(op, *target, std::move(patterns))))
       signalPassFailure();
   }
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::arith::createConvertArithmeticToSPIRVPass() {
+std::unique_ptr<OperationPass<>>
+mlir::arith::createConvertArithmeticToSPIRVPass() {
   return std::make_unique<ConvertArithmeticToSPIRVPass>();
 }
