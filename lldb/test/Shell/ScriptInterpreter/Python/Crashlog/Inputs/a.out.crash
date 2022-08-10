@@ -31,7 +31,7 @@ Thread 0 Crashed:: Dispatch queue: com.apple.main-thread
 0   a.out                         	@foo@ foo + 16 (test.c:3)
 1   a.out                         	@bar@ bar + 9 (test.c:6)
 2   a.out                         	@main@ main + 20 (test.c:8)
-3   libdyld.dylib                 	0x0000000100000000 start + 1
+3   libdyld.dylib                 	0x1000000 start + 1
 
 Thread 0 crashed with X86 Thread State (64-bit):
   rax: 0x0000000000000000  rbx: 0x0000000000000000  rcx: 0x00007ffee42d81d0  rdx: 0x00007ffee42d8080
