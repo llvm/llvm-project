@@ -754,14 +754,13 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
     llvm::SmallBitVector OccurringIndices(TemplateParams->size());
     S.MarkUsedTemplateParameters(Atomic.ConstraintExpr, /*OnlyDeduced=*/false,
                                  /*Depth=*/0, OccurringIndices);
-    Atomic.ParameterMapping.emplace(
-        MutableArrayRef<TemplateArgumentLoc>(
-            new (S.Context) TemplateArgumentLoc[OccurringIndices.count()],
-            OccurringIndices.count()));
+    TemplateArgumentLoc *TempArgs =
+        new (S.Context) TemplateArgumentLoc[OccurringIndices.count()];
     for (unsigned I = 0, J = 0, C = TemplateParams->size(); I != C; ++I)
       if (OccurringIndices[I])
-        new (&(*Atomic.ParameterMapping)[J++]) TemplateArgumentLoc(
-            S.getIdentityTemplateArgumentLoc(TemplateParams->begin()[I],
+        new (&(TempArgs)[J++])
+            TemplateArgumentLoc(S.getIdentityTemplateArgumentLoc(
+                TemplateParams->begin()[I],
                 // Here we assume we do not support things like
                 // template<typename A, typename B>
                 // concept C = ...;
@@ -770,9 +769,10 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
                 // struct S { };
                 // The above currently yields a diagnostic.
                 // We still might have default arguments for concept parameters.
-                ArgsAsWritten->NumTemplateArgs > I ?
-                ArgsAsWritten->arguments()[I].getLocation() :
-                SourceLocation()));
+                ArgsAsWritten->NumTemplateArgs > I
+                    ? ArgsAsWritten->arguments()[I].getLocation()
+                    : SourceLocation()));
+    Atomic.ParameterMapping.emplace(TempArgs,  OccurringIndices.count());
   }
   Sema::InstantiatingTemplate Inst(
       S, ArgsAsWritten->arguments().front().getSourceRange().getBegin(),
@@ -781,12 +781,12 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
                   ArgsAsWritten->arguments().back().getSourceRange().getEnd()));
   if (S.SubstTemplateArguments(*Atomic.ParameterMapping, MLTAL, SubstArgs))
     return true;
-  Atomic.ParameterMapping.emplace(
-        MutableArrayRef<TemplateArgumentLoc>(
-            new (S.Context) TemplateArgumentLoc[SubstArgs.size()],
-            SubstArgs.size()));
+
+  TemplateArgumentLoc *TempArgs =
+      new (S.Context) TemplateArgumentLoc[SubstArgs.size()];
   std::copy(SubstArgs.arguments().begin(), SubstArgs.arguments().end(),
-            N.getAtomicConstraint()->ParameterMapping->begin());
+            TempArgs);
+  Atomic.ParameterMapping.emplace(TempArgs, SubstArgs.size());
   return false;
 }
 

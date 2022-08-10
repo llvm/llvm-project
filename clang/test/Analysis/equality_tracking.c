@@ -8,6 +8,7 @@
 #define CHAR_MAX (char)(UCHAR_MAX & (UCHAR_MAX >> 1))
 #define CHAR_MIN (char)(UCHAR_MAX & ~(UCHAR_MAX >> 1))
 
+void clang_analyzer_value(int);
 void clang_analyzer_eval(int);
 void clang_analyzer_warnIfReached(void);
 
@@ -231,5 +232,141 @@ void implyDisequalityFromLT(int a, int b) {
   if (a < b) {
     clang_analyzer_eval(a == b); // expected-warning{{FALSE}}
     clang_analyzer_eval(a != b); // expected-warning{{TRUE}}
+  }
+}
+
+void deletePointBefore(int x, int tmp) {
+  if(tmp == 0)
+    if(x != tmp)
+     clang_analyzer_value(x); // expected-warning {{32s:{ [-2147483648, -1], [1, 2147483647] }}}
+}
+
+void deletePointAfter(int x, int tmp) {
+  if(x != tmp)
+    if(tmp == 2147483647)
+      clang_analyzer_value(x); // expected-warning {{32s:{ [-2147483648, 2147483646] }}}
+}
+
+void deleteTwoPoints(int x, int tmp1, int tmp2) {
+  if(x != tmp1) {
+    if (tmp1 == 42 && tmp2 == 87) {
+      clang_analyzer_value(x); // expected-warning {{32s:{ [-2147483648, 41], [43, 2147483647] }}}
+      if(x != tmp2)
+        clang_analyzer_value(x); // expected-warning {{32s:{ [-2147483648, 41], [43, 86], [88, 2147483647] }}}
+    }
+  }
+}
+
+void deleteAllPoints(unsigned char x, unsigned char *arr) {
+
+#define cond(n) \
+arr[n##0] == n##0 && \
+arr[n##1] == n##1 && \
+arr[n##2] == n##2 && \
+arr[n##3] == n##3 && \
+arr[n##4] == n##4 && \
+arr[n##5] == n##5 && \
+arr[n##6] == n##6 && \
+arr[n##7] == n##7 && \
+arr[n##8] == n##8 && \
+arr[n##9] == n##9 && \
+
+#define condX(n) \
+arr[n##0] != x && \
+arr[n##1] != x && \
+arr[n##2] != x && \
+arr[n##3] != x && \
+arr[n##4] != x && \
+arr[n##5] != x && \
+arr[n##6] != x && \
+arr[n##7] != x && \
+arr[n##8] != x && \
+arr[n##9] != x && \
+
+  clang_analyzer_value(x); // expected-warning {{{ [0, 255] }}}
+  if (
+    cond()  // 0  .. 9
+    cond(1) // 10 .. 19
+    cond(2) // 20 .. 29
+    cond(3) // 30 .. 39
+    cond(4) // 40 .. 49
+    cond(5) // 50 .. 59
+    cond(6) // 60 .. 69
+    cond(7) // 70 .. 79
+    cond(8) // 80 .. 89
+    cond(9) // 90 .. 99
+    cond(10) // 100 .. 209
+    cond(11) // 110 .. 219
+    cond(12) // 120 .. 229
+    cond(13) // 130 .. 239
+    cond(14) // 140 .. 249
+    cond(15) // 150 .. 259
+    cond(16) // 160 .. 269
+    cond(17) // 170 .. 279
+    cond(18) // 180 .. 289
+    cond(19) // 190 .. 199
+    cond(20) // 200 .. 209
+    cond(21) // 210 .. 219
+    cond(22) // 220 .. 229
+    cond(23) // 230 .. 239
+    cond(24) // 240 .. 249
+    arr[250] == 250 &&
+    arr[251] == 251 &&
+    arr[252] == 252 &&
+    arr[253] == 253 &&
+    arr[254] == 254 &&
+    arr[255] == 255
+    ) {
+    if (
+      condX()  // 0  .. 9
+      condX(1) // 10 .. 19
+      condX(2) // 20 .. 29
+      condX(3) // 30 .. 39
+      condX(4) // 40 .. 49
+      condX(5) // 50 .. 59
+      condX(6) // 60 .. 69
+      condX(7) // 70 .. 79
+      condX(8) // 80 .. 89
+      condX(9) // 90 .. 99
+      condX(10) // 100 .. 209
+      condX(11) // 110 .. 219
+      condX(12) // 120 .. 229
+      condX(13) // 130 .. 239
+      condX(14) // 140 .. 249
+      condX(15) // 150 .. 259
+      condX(16) // 160 .. 269
+      condX(17) // 170 .. 279
+      condX(18) // 180 .. 289
+      condX(19) // 190 .. 199
+      condX(20) // 200 .. 209
+      condX(21) // 210 .. 219
+      condX(22) // 220 .. 229
+      condX(23) // 230 .. 239
+      arr[240] != x &&
+      arr[241] != x &&
+      arr[242] != x &&
+      arr[243] != x &&
+      arr[244] != x &&
+      arr[245] != x &&
+      arr[246] != x &&
+      arr[247] != x &&
+      arr[248] != x &&
+      arr[249] != x
+      ) {
+      clang_analyzer_value(x); // expected-warning {{{ [250, 255] }}}
+      if (
+      arr[250] != x &&
+      arr[251] != x &&
+      //skip arr[252]
+      arr[253] != x &&
+      arr[254] != x &&
+      arr[255] != x
+      ) {
+        clang_analyzer_value(x); // expected-warning {{32s:252}}
+        if (arr[252] != x) {
+          clang_analyzer_warnIfReached(); // unreachable
+        }
+      }
+    }
   }
 }

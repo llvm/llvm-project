@@ -139,9 +139,6 @@ constexpr void AssertOrderReturn() {
 template <class Order, class T, class U = T>
 constexpr bool testOrder(const T& t1, const U& t2, Order order) {
     bool equal = order == Order::equivalent;
-    if constexpr (std::same_as<Order, std::strong_ordering>)
-        equal |= order == Order::equal;
-
     bool less = order == Order::less;
 
     return (t1 <=> t2 == order) && testComparisons(t1, t2, equal, less);
