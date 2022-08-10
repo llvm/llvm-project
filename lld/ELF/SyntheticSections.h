@@ -28,8 +28,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Threading.h"
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 class Defined;
 struct PhdrEntry;
 class SymbolTableBaseSection;
@@ -1267,7 +1266,6 @@ struct InStruct {
 
 extern InStruct in;
 
-} // namespace elf
-} // namespace lld
+} // namespace lld::elf
 
 #endif

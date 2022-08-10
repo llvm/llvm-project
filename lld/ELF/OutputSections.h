@@ -15,8 +15,7 @@
 
 #include <array>
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 
 struct PhdrEntry;
 
@@ -154,7 +153,6 @@ struct Out {
 uint64_t getHeaderSize();
 
 extern llvm::SmallVector<OutputSection *, 0> outputSections;
-} // namespace elf
-} // namespace lld
+} // namespace lld::elf
 
 #endif
