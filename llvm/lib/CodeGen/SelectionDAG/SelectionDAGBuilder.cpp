@@ -3346,7 +3346,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       break;
     case SPF_NABS:
       Negate = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case SPF_ABS:
       IsUnaryAbs = true;
       Opc = ISD::ABS;
@@ -7297,7 +7297,7 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
       // The only reason why ebIgnore nodes still need to be chained is that
       // they might depend on the current rounding mode, and therefore must
       // not be moved across instruction that may change that mode.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case fp::ExceptionBehavior::ebMayTrap:
       // These must not be moved across calls or instructions that may change
       // floating-point exception masks.

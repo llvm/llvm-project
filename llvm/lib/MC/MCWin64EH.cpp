@@ -997,7 +997,9 @@ static void ARM64FindSegmentsInFunction(MCStreamer &streamer,
     int64_t Offset = GetAbsDifference(streamer, Start, info->Begin);
     assert((Epilogs.size() == 0 || Offset >= Epilogs.back().End) &&
            "Epilogs should be monotonically ordered");
-    Epilogs.push_back({Start, Offset, Offset + (int64_t)Instrs.size() * 4});
+    // Exclue the end opcode from Instrs.size() when calculating the end of the
+    // epilog.
+    Epilogs.push_back({Start, Offset, Offset + (int64_t)(Instrs.size() - 1) * 4});
   }
 
   unsigned E = 0;
@@ -1779,7 +1781,7 @@ static bool tryARMPackedUnwind(MCStreamer &streamer, WinEH::FrameInfo *info,
         Step = 2;
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Win64EH::UOP_WideSaveRegMask:
       if (Step != 1 && Step != 2)
         return false;
@@ -2043,7 +2045,7 @@ static bool tryARMPackedUnwind(MCStreamer &streamer, WinEH::FrameInfo *info,
       case Win64EH::UOP_WideEndNop:
         GotReturn = true;
         Ret = (Inst.Operation == Win64EH::UOP_EndNop) ? 1 : 2;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case Win64EH::UOP_End:
         if (Step != 6 && Step != 7 && Step != 8 && Step != 9 && Step != 10)
           return false;
@@ -2360,7 +2362,7 @@ static void ARM64EmitRuntimeFunction(MCStreamer &streamer,
   MCContext &context = streamer.getContext();
 
   streamer.emitValueToAlignment(4);
-  for (auto &S : info->Segments) {
+  for (const auto &S : info->Segments) {
     EmitSymbolRefWithOfs(streamer, info->Begin, S.Offset);
     if (info->PackedInfo)
       streamer.emitInt32(info->PackedInfo);

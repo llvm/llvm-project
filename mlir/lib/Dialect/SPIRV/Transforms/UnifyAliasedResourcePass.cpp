@@ -78,6 +78,7 @@ static Type getRuntimeArrayElementType(Type type) {
 static Optional<int> deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
   // scalarNumBits: contains all resources' scalar types' bit counts.
   // vectorNumBits: only contains resources whose element types are vectors.
+  // vectorIndices: each vector's original index in `types`.
   SmallVector<int> scalarNumBits, vectorNumBits, vectorIndices;
   scalarNumBits.reserve(types.size());
   vectorNumBits.reserve(types.size());
@@ -104,11 +105,6 @@ static Optional<int> deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
   }
 
   if (!vectorNumBits.empty()) {
-    // If there are vector types, require all element types to be the same for
-    // now to simplify the transformation.
-    if (!llvm::is_splat(scalarNumBits))
-      return llvm::None;
-
     // Choose the *vector* with the smallest bitwidth as the canonical resource,
     // so that we can still keep vectorized load/store and avoid partial updates
     // to large vectors.
@@ -116,10 +112,18 @@ static Optional<int> deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
     // Make sure that the canonical resource's bitwidth is divisible by others.
     // With out this, we cannot properly adjust the index later.
     if (llvm::any_of(vectorNumBits,
-                     [minVal](int64_t bits) { return bits % *minVal != 0; }))
+                     [&](int bits) { return bits % *minVal != 0; }))
       return llvm::None;
 
-    return vectorIndices[std::distance(vectorNumBits.begin(), minVal)];
+    // Require all scalar type bit counts to be a multiple of the chosen
+    // vector's primitive type to avoid reading/writing subcomponents.
+    int index = vectorIndices[std::distance(vectorNumBits.begin(), minVal)];
+    int baseNumBits = scalarNumBits[index];
+    if (llvm::any_of(scalarNumBits,
+                     [&](int bits) { return bits % baseNumBits != 0; }))
+      return llvm::None;
+
+    return index;
   }
 
   // All element types are scalars. Then choose the smallest bitwidth as the
@@ -357,10 +361,10 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       // them into a buffer with vector element types. We need to scale the last
       // index for the vector as a whole, then add one level of index for inside
       // the vector.
-      int srcNumBits = *srcElemType.getSizeInBytes();
-      int dstNumBits = *dstElemType.getSizeInBytes();
-      assert(dstNumBits > srcNumBits && dstNumBits % srcNumBits == 0);
-      int ratio = dstNumBits / srcNumBits;
+      int srcNumBytes = *srcElemType.getSizeInBytes();
+      int dstNumBytes = *dstElemType.getSizeInBytes();
+      assert(dstNumBytes >= srcNumBytes && dstNumBytes % srcNumBytes == 0);
+      int ratio = dstNumBytes / srcNumBytes;
       auto ratioValue = rewriter.create<spirv::ConstantOp>(
           loc, i32Type, rewriter.getI32IntegerAttr(ratio));
 
@@ -381,10 +385,10 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       // The source indices are for a buffer with larger bitwidth scalar/vector
       // element types. Rewrite them into a buffer with smaller bitwidth element
       // types. We only need to scale the last index.
-      int srcNumBits = *srcElemType.getSizeInBytes();
-      int dstNumBits = *dstElemType.getSizeInBytes();
-      assert(srcNumBits > dstNumBits && srcNumBits % dstNumBits == 0);
-      int ratio = srcNumBits / dstNumBits;
+      int srcNumBytes = *srcElemType.getSizeInBytes();
+      int dstNumBytes = *dstElemType.getSizeInBytes();
+      assert(srcNumBytes >= dstNumBytes && srcNumBytes % dstNumBytes == 0);
+      int ratio = srcNumBytes / dstNumBytes;
       auto ratioValue = rewriter.create<spirv::ConstantOp>(
           loc, i32Type, rewriter.getI32IntegerAttr(ratio));
 
@@ -435,10 +439,10 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       // vector types of different component counts. For such cases, we load
       // multiple smaller bitwidth values and construct a larger bitwidth one.
 
-      int srcNumBits = *srcElemType.getSizeInBytes() * 8;
-      int dstNumBits = *dstElemType.getSizeInBytes() * 8;
-      assert(srcNumBits > dstNumBits && srcNumBits % dstNumBits == 0);
-      int ratio = srcNumBits / dstNumBits;
+      int srcNumBytes = *srcElemType.getSizeInBytes();
+      int dstNumBytes = *dstElemType.getSizeInBytes();
+      assert(srcNumBytes > dstNumBytes && srcNumBytes % dstNumBytes == 0);
+      int ratio = srcNumBytes / dstNumBytes;
       if (ratio > 4)
         return rewriter.notifyMatchFailure(loadOp, "more than 4 components");
 

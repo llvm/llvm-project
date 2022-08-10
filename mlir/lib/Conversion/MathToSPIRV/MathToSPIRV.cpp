@@ -287,7 +287,8 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
   patterns
       .add<CountLeadingZerosPattern, Log1pOpPattern<spirv::GLLogOp>,
            ExpM1OpPattern<spirv::GLExpOp>, PowFOpPattern, RoundOpPattern,
-           spirv::ElementwiseOpPattern<math::AbsOp, spirv::GLFAbsOp>,
+           spirv::ElementwiseOpPattern<math::AbsFOp, spirv::GLFAbsOp>,
+           spirv::ElementwiseOpPattern<math::AbsIOp, spirv::GLSAbsOp>,
            spirv::ElementwiseOpPattern<math::CeilOp, spirv::GLCeilOp>,
            spirv::ElementwiseOpPattern<math::CosOp, spirv::GLCosOp>,
            spirv::ElementwiseOpPattern<math::ExpOp, spirv::GLExpOp>,
@@ -302,7 +303,7 @@ void populateMathToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
 
   // OpenCL patterns
   patterns.add<Log1pOpPattern<spirv::CLLogOp>, ExpM1OpPattern<spirv::CLExpOp>,
-               spirv::ElementwiseOpPattern<math::AbsOp, spirv::CLFAbsOp>,
+               spirv::ElementwiseOpPattern<math::AbsFOp, spirv::CLFAbsOp>,
                spirv::ElementwiseOpPattern<math::CeilOp, spirv::CLCeilOp>,
                spirv::ElementwiseOpPattern<math::CosOp, spirv::CLCosOp>,
                spirv::ElementwiseOpPattern<math::ErfOp, spirv::CLErfOp>,

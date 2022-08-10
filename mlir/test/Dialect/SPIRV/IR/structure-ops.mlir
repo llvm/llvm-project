@@ -819,7 +819,7 @@ spv.module Logical GLSL450 {
     %0 = spv.Variable : !spv.ptr<i32, Function>
 
     // expected-error @+1 {{invalid enclosed op}}
-    %1 = spv.SpecConstantOperation wraps "spv.Load"(%0) {memory_access = 0 : i32} : (!spv.ptr<i32, Function>) -> i32
+    %1 = spv.SpecConstantOperation wraps "spv.Load"(%0) {memory_access = #spv.memory_access<None>} : (!spv.ptr<i32, Function>) -> i32
     spv.Return
   }
 }

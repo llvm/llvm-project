@@ -2973,7 +2973,7 @@ void DAGTypeLegalizer::ExpandIntRes_ADDSUB(SDNode *N,
     switch (BoolType) {
     case TargetLoweringBase::UndefinedBooleanContent:
       OVF = DAG.getNode(ISD::AND, dl, OvfVT, DAG.getConstant(1, dl, OvfVT), OVF);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case TargetLoweringBase::ZeroOrOneBooleanContent:
       OVF = DAG.getZExtOrTrunc(OVF, dl, NVT);
       Hi = DAG.getNode(N->getOpcode(), dl, NVT, Hi, OVF);

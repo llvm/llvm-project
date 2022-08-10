@@ -1246,7 +1246,7 @@ class llvm::vfs::RedirectingFSDirIterImpl
       sys::fs::file_type Type = sys::fs::file_type::type_unknown;
       switch ((*Current)->getKind()) {
       case RedirectingFileSystem::EK_Directory:
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case RedirectingFileSystem::EK_DirectoryRemap:
         Type = sys::fs::file_type::directory_file;
         break;

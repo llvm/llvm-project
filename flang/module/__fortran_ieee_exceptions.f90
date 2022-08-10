@@ -54,33 +54,33 @@ module __Fortran_ieee_exceptions
   G##_a2, G##_a3, G##_a4, G##_a8, G##_a10, G##_a16
 
   interface ieee_get_flag
-    elemental subroutine ieee_get_flag(flag, flag_value)
+    elemental subroutine ieee_get_flag_0(flag, flag_value)
       import ieee_flag_type
       type(ieee_flag_type), intent(in) :: flag
       logical, intent(out) :: flag_value
-    end subroutine ieee_get_flag
+    end subroutine ieee_get_flag_0
   end interface
 
   interface ieee_get_halting_mode
-    elemental subroutine ieee_get_halting_mode(flag, halting)
+    elemental subroutine ieee_get_halting_mode_0(flag, halting)
       import ieee_flag_type
       type(ieee_flag_type), intent(in) :: flag
       logical, intent(out) :: halting
-    end subroutine ieee_get_halting_mode
+    end subroutine ieee_get_halting_mode_0
   end interface
 
   interface ieee_get_modes
-    subroutine ieee_get_modes(modes)
+    subroutine ieee_get_modes_0(modes)
       import ieee_modes_type
       type(ieee_modes_type), intent(out) :: modes
-    end subroutine ieee_get_modes
+    end subroutine ieee_get_modes_0
   end interface
 
   interface ieee_get_status
-    subroutine ieee_get_status(status)
+    subroutine ieee_get_status_0(status)
       import ieee_status_type
       type(ieee_status_type), intent(out) :: status
-    end subroutine ieee_get_status
+    end subroutine ieee_get_status_0
   end interface
 
 #define IEEE_SET_FLAG_L(FVKIND) \
@@ -110,17 +110,17 @@ module __Fortran_ieee_exceptions
 #undef IEEE_SET_HALTING_MODE_L
 
   interface ieee_set_modes
-    subroutine ieee_set_modes(modes)
+    subroutine ieee_set_modes_0(modes)
       import ieee_modes_type
       type(ieee_modes_type), intent(in) :: modes
-    end subroutine ieee_set_modes
+    end subroutine ieee_set_modes_0
   end interface
-  
+
   interface ieee_set_status
-    subroutine ieee_set_status(status)
+    subroutine ieee_set_status_0(status)
       import ieee_status_type
       type(ieee_status_type), intent(in) :: status
-    end subroutine ieee_set_status
+    end subroutine ieee_set_status_0
   end interface
 
 #define IEEE_SUPPORT_FLAG_R(XKIND) \
@@ -130,20 +130,20 @@ module __Fortran_ieee_exceptions
     real(XKIND), intent(in) :: x(..); \
   end function ieee_support_flag_a##XKIND;
   interface ieee_support_flag
-    pure logical function ieee_support_flag(flag)
+    pure logical function ieee_support_flag_0(flag)
       import ieee_flag_type
       type(ieee_flag_type), intent(in) :: flag
-    end function ieee_support_flag
+    end function ieee_support_flag_0
     SPECIFICS_R(IEEE_SUPPORT_FLAG_R)
   end interface ieee_support_flag
   PRIVATE_R(IEEE_SUPPORT_FLAG)
 #undef IEEE_SUPPORT_FLAG_R
 
   interface ieee_support_halting
-    pure logical function ieee_support_halting(flag)
+    pure logical function ieee_support_halting_0(flag)
       import ieee_flag_type
       type(ieee_flag_type), intent(in) :: flag
-    end function ieee_support_halting
+    end function ieee_support_halting_0
   end interface
 
 end module __Fortran_ieee_exceptions

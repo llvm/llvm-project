@@ -118,7 +118,7 @@ static bool needsPrologueENDBR(MachineFunction &MF, const Module *M) {
       return F.hasAddressTaken();
     }
     // if !IBTSeal, fall into default case.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   // Address taken or externally linked functions may be reachable.
   default:
     return (F.hasAddressTaken() || !F.hasLocalLinkage());

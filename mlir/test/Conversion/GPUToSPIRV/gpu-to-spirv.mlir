@@ -7,7 +7,7 @@ module attributes {gpu.container_module} {
     // CHECK-SAME: {{%.*}}: f32 {spv.interface_var_abi = #spv.interface_var_abi<(0, 0), StorageBuffer>}
     // CHECK-SAME: {{%.*}}: !spv.ptr<!spv.struct<(!spv.array<12 x f32, stride=4> [0])>, StorageBuffer> {spv.interface_var_abi = #spv.interface_var_abi<(0, 1)>}
     // CHECK-SAME: spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[32, 4, 1]> : vector<3xi32>>
-    gpu.func @basic_module_structure(%arg0 : f32, %arg1 : memref<12xf32>) kernel
+    gpu.func @basic_module_structure(%arg0 : f32, %arg1 : memref<12xf32, #spv.storage_class<StorageBuffer>>) kernel
       attributes {spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[32, 4, 1]>: vector<3xi32>>} {
       // CHECK: spv.Return
       gpu.return
@@ -16,11 +16,11 @@ module attributes {gpu.container_module} {
 
   func.func @main() {
     %0 = "op"() : () -> (f32)
-    %1 = "op"() : () -> (memref<12xf32>)
+    %1 = "op"() : () -> (memref<12xf32, #spv.storage_class<StorageBuffer>>)
     %cst = arith.constant 1 : index
     gpu.launch_func @kernels::@basic_module_structure
         blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
-        args(%0 : f32, %1 : memref<12xf32>)
+        args(%0 : f32, %1 : memref<12xf32, #spv.storage_class<StorageBuffer>>)
     return
   }
 }
@@ -39,7 +39,7 @@ module attributes {gpu.container_module} {
     gpu.func @basic_module_structure_preset_ABI(
       %arg0 : f32
         {spv.interface_var_abi = #spv.interface_var_abi<(1, 2), StorageBuffer>},
-      %arg1 : memref<12xf32>
+      %arg1 : memref<12xf32, #spv.storage_class<StorageBuffer>>
         {spv.interface_var_abi = #spv.interface_var_abi<(3, 0)>}) kernel
       attributes
         {spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[32, 4, 1]>: vector<3xi32>>} {
@@ -55,18 +55,18 @@ module attributes {gpu.container_module} {
   gpu.module @kernels {
     // expected-error @below {{failed to legalize operation 'gpu.func'}}
     // expected-remark @below {{match failure: missing 'spv.entry_point_abi' attribute}}
-    gpu.func @missing_entry_point_abi(%arg0 : f32, %arg1 : memref<12xf32>) kernel {
+    gpu.func @missing_entry_point_abi(%arg0 : f32, %arg1 : memref<12xf32, #spv.storage_class<StorageBuffer>>) kernel {
       gpu.return
     }
   }
 
   func.func @main() {
     %0 = "op"() : () -> (f32)
-    %1 = "op"() : () -> (memref<12xf32>)
+    %1 = "op"() : () -> (memref<12xf32, #spv.storage_class<StorageBuffer>>)
     %cst = arith.constant 1 : index
     gpu.launch_func @kernels::@missing_entry_point_abi
         blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
-        args(%0 : f32, %1 : memref<12xf32>)
+        args(%0 : f32, %1 : memref<12xf32, #spv.storage_class<StorageBuffer>>)
     return
   }
 }
@@ -80,7 +80,7 @@ module attributes {gpu.container_module} {
     gpu.func @missing_entry_point_abi(
       %arg0 : f32
         {spv.interface_var_abi = #spv.interface_var_abi<(1, 2), StorageBuffer>},
-      %arg1 : memref<12xf32>) kernel
+      %arg1 : memref<12xf32, #spv.storage_class<StorageBuffer>>) kernel
     attributes
       {spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[32, 4, 1]>: vector<3xi32>>} {
       gpu.return
@@ -96,7 +96,7 @@ module attributes {gpu.container_module} {
     // expected-remark @below {{match failure: missing 'spv.interface_var_abi' attribute at argument 0}}
     gpu.func @missing_entry_point_abi(
       %arg0 : f32,
-      %arg1 : memref<12xf32>
+      %arg1 : memref<12xf32, #spv.storage_class<StorageBuffer>>
         {spv.interface_var_abi = #spv.interface_var_abi<(3, 0)>}) kernel
     attributes
       {spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[32, 4, 1]>: vector<3xi32>>} {
@@ -110,9 +110,9 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   gpu.module @kernels {
     // CHECK-LABEL: spv.func @barrier
-    gpu.func @barrier(%arg0 : f32, %arg1 : memref<12xf32>) kernel
+    gpu.func @barrier(%arg0 : f32, %arg1 : memref<12xf32, #spv.storage_class<StorageBuffer>>) kernel
       attributes {spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[32, 4, 1]>: vector<3xi32>>} {
-      // CHECK: spv.ControlBarrier Workgroup, Workgroup, "AcquireRelease|WorkgroupMemory"
+      // CHECK: spv.ControlBarrier <Workgroup>, <Workgroup>, <AcquireRelease|WorkgroupMemory>
       gpu.barrier
       gpu.return
     }
@@ -120,11 +120,11 @@ module attributes {gpu.container_module} {
 
   func.func @main() {
     %0 = "op"() : () -> (f32)
-    %1 = "op"() : () -> (memref<12xf32>)
+    %1 = "op"() : () -> (memref<12xf32, #spv.storage_class<StorageBuffer>>)
     %cst = arith.constant 1 : index
     gpu.launch_func @kernels::@barrier
         blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
-        args(%0 : f32, %1 : memref<12xf32>)
+        args(%0 : f32, %1 : memref<12xf32, #spv.storage_class<StorageBuffer>>)
     return
   }
 }

@@ -474,7 +474,7 @@ static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
     break;
   case 'V':
     EmitPercent = false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 'q':
     // Print 64-bit register names if 64-bit integer registers are available.
     // Otherwise, print 32-bit register names.

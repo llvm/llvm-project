@@ -1247,7 +1247,8 @@ bool IsElementalProcedure(const Symbol &original) {
           IsElementalProcedure(*procInterface);
     }
   } else if (const auto *details{symbol.detailsIf<ProcBindingDetails>()}) {
-    return IsElementalProcedure(details->symbol());
+    return !details->symbol().attrs().test(Attr::INTRINSIC) &&
+        IsElementalProcedure(details->symbol());
   } else if (!IsProcedure(symbol)) {
     return false;
   }

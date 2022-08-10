@@ -503,6 +503,8 @@ def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
 def visual_studio_diagnostics_format : FF<"vs-diagnostics">,
 HelpText<"Format diagnostics for Visual Studio compatibility">;
 
+def package_metadata: JJ<"package-metadata=">, HelpText<"Emit package metadata note">;
+
 // Aliases
 def: Separate<["-"], "f">, Alias<auxiliary>, HelpText<"Alias for --auxiliary">;
 def: F<"call_shared">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;

@@ -70,27 +70,20 @@ module {
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
     %a = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #SparseMatrix>
 
-    // Initialize dense vectors.
-    %init_256_4 = bufferization.alloc_tensor(%c256, %c4) : tensor<?x?xf64>
-    %b = scf.for %i = %c0 to %c256 step %c1 iter_args(%t = %init_256_4) -> tensor<?x?xf64> {
-      %b2 = scf.for %j = %c0 to %c4 step %c1 iter_args(%t2 = %t) -> tensor<?x?xf64> {
-        %k0 = arith.muli %i, %c4 : index
-        %k1 = arith.addi %j, %k0 : index
-        %k2 = arith.index_cast %k1 : index to i32
-        %k = arith.sitofp %k2 : i32 to f64
-        %t3 = tensor.insert %k into %t2[%i, %j] : tensor<?x?xf64>
-        scf.yield %t3 : tensor<?x?xf64>
-      }
-      scf.yield %b2 : tensor<?x?xf64>
-    }
-    %init_4_4 = bufferization.alloc_tensor(%c4, %c4) : tensor<?x?xf64>
-    %x = scf.for %i = %c0 to %c4 step %c1 iter_args(%t = %init_4_4) -> tensor<?x?xf64> {
-      %x2 = scf.for %j = %c0 to %c4 step %c1 iter_args(%t2 = %t) -> tensor<?x?xf64> {
-        %t3 = tensor.insert %i0 into %t2[%i, %j] : tensor<?x?xf64>
-        scf.yield %t3 : tensor<?x?xf64>
-      }
-      scf.yield %x2 : tensor<?x?xf64>
-    }
+    // Initialize dense tensors.
+    %b = tensor.generate %c256, %c4 {
+    ^bb0(%i : index, %j : index):
+      %k0 = arith.muli %i, %c4 : index
+      %k1 = arith.addi %j, %k0 : index
+      %k2 = arith.index_cast %k1 : index to i32
+      %k = arith.sitofp %k2 : i32 to f64
+      tensor.yield %k : f64
+    } : tensor<?x?xf64>
+
+    %x = tensor.generate %c4, %c4 {
+    ^bb0(%i : index, %j : index):
+      tensor.yield %i0 : f64
+    } : tensor<?x?xf64>
   
     // Call kernel.
     %0 = call @kernel_spmm(%a, %b, %x)

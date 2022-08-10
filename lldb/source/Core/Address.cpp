@@ -451,7 +451,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
       else
         s->Printf("%s[", "<Unknown>");
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DumpStyleFileAddress: {
     addr_t file_addr = GetFileAddress();
     if (file_addr == LLDB_INVALID_ADDRESS) {

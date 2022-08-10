@@ -62,8 +62,8 @@ lldb::ProcessSP ScriptedProcess::CreateInstance(lldb::TargetSP target_sp,
   ScriptedProcess::ScriptedProcessInfo scripted_process_info(
       target_sp->GetProcessLaunchInfo());
 
-  auto process_sp = std::make_shared<ScriptedProcess>(
-      target_sp, listener_sp, scripted_process_info, error);
+  auto process_sp = std::shared_ptr<ScriptedProcess>(new ScriptedProcess(
+      target_sp, listener_sp, scripted_process_info, error));
 
   if (error.Fail() || !process_sp || !process_sp->m_script_object_sp ||
       !process_sp->m_script_object_sp->IsValid()) {

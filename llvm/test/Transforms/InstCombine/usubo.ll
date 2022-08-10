@@ -6,8 +6,7 @@ declare { i8, i1 } @llvm.usub.with.overflow.i8(i8, i8)
 
 define i1 @test_generic(i64 %a, i64 %b) {
 ; CHECK-LABEL: @test_generic(
-; CHECK-NEXT:    [[RES:%.*]] = tail call { i64, i1 } @llvm.usub.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]])
-; CHECK-NEXT:    [[OVERFLOW:%.*]] = extractvalue { i64, i1 } [[RES]], 1
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = icmp ult i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[OVERFLOW]]
 ;
   %res = tail call { i64, i1 } @llvm.usub.with.overflow.i64(i64 %a, i64 %b)

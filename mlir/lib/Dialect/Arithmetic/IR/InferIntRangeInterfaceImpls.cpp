@@ -368,9 +368,8 @@ widenBitwiseBounds(const ConstantIntRanges &bound) {
 
 void arith::AndIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
-  APInt lhsZeros, lhsOnes, rhsZeros, rhsOnes;
-  std::tie(lhsZeros, lhsOnes) = widenBitwiseBounds(argRanges[0]);
-  std::tie(rhsZeros, rhsOnes) = widenBitwiseBounds(argRanges[1]);
+  auto [lhsZeros, lhsOnes] = widenBitwiseBounds(argRanges[0]);
+  auto [rhsZeros, rhsOnes] = widenBitwiseBounds(argRanges[1]);
   auto andi = [](const APInt &a, const APInt &b) -> Optional<APInt> {
     return a & b;
   };
@@ -385,9 +384,8 @@ void arith::AndIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 void arith::OrIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                      SetIntRangeFn setResultRange) {
-  APInt lhsZeros, lhsOnes, rhsZeros, rhsOnes;
-  std::tie(lhsZeros, lhsOnes) = widenBitwiseBounds(argRanges[0]);
-  std::tie(rhsZeros, rhsOnes) = widenBitwiseBounds(argRanges[1]);
+  auto [lhsZeros, lhsOnes] = widenBitwiseBounds(argRanges[0]);
+  auto [rhsZeros, rhsOnes] = widenBitwiseBounds(argRanges[1]);
   auto ori = [](const APInt &a, const APInt &b) -> Optional<APInt> {
     return a | b;
   };
@@ -402,9 +400,8 @@ void arith::OrIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 void arith::XOrIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                       SetIntRangeFn setResultRange) {
-  APInt lhsZeros, lhsOnes, rhsZeros, rhsOnes;
-  std::tie(lhsZeros, lhsOnes) = widenBitwiseBounds(argRanges[0]);
-  std::tie(rhsZeros, rhsOnes) = widenBitwiseBounds(argRanges[1]);
+  auto [lhsZeros, lhsOnes] = widenBitwiseBounds(argRanges[0]);
+  auto [rhsZeros, rhsOnes] = widenBitwiseBounds(argRanges[1]);
   auto xori = [](const APInt &a, const APInt &b) -> Optional<APInt> {
     return a ^ b;
   };

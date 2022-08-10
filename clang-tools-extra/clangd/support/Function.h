@@ -35,7 +35,7 @@ public:
 
   // A subscription defines the scope of when a listener should receive events.
   // After destroying the subscription, no more events are received.
-  class LLVM_NODISCARD Subscription {
+  class [[nodiscard]] Subscription {
     Event *Parent;
     unsigned ListenerID;
 

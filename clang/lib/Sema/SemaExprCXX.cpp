@@ -4817,7 +4817,7 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_HasTrivialDestructor:
   case UTT_HasVirtualDestructor:
     ArgTy = QualType(ArgTy->getBaseElementTypeUnsafe(), 0);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   // C++1z [meta.unary.prop]:
   //   T shall be a complete type, cv void, or an array of unknown bound.

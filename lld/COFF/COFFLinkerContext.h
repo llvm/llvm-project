@@ -18,8 +18,7 @@
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Timer.h"
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 class COFFLinkerContext : public CommonLinkerContext {
 public:
@@ -80,7 +79,6 @@ public:
   Timer diskCommitTimer;
 };
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 #endif

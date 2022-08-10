@@ -210,3 +210,24 @@ func.func @select_2d(%arg0 : vector<4x3xi1>, %arg1 : vector<4x3xi32>, %arg2 : ve
   %0 = arith.select %arg0, %arg1, %arg2 : vector<4x3xi1>, vector<4x3xi32>
   func.return
 }
+
+// CHECK-LABEL: func @index_cast_2d(
+// CHECK-SAME:    %[[ARG0:.*]]: vector<1x2x3xi1>)
+func.func @index_cast_2d(%arg0: vector<1x2x3xi1>) {
+  // CHECK: %[[SRC:.*]] = builtin.unrealized_conversion_cast %[[ARG0]]
+  // CHECK: %[[EXTRACT1:.*]] = llvm.extractvalue %[[SRC]][0, 0] : !llvm.array<1 x array<2 x vector<3xi1>>>
+  // CHECK: %[[SEXT1:.*]] = llvm.sext %[[EXTRACT1]] : vector<3xi1> to vector<3xi{{.*}}>
+  // CHECK: %[[INSERT1:.*]] = llvm.insertvalue %[[SEXT1]], %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi{{.*}}>>>
+  // CHECK: %[[EXTRACT2:.*]] = llvm.extractvalue %[[SRC]][0, 1] : !llvm.array<1 x array<2 x vector<3xi1>>>
+  // CHECK: %[[SEXT2:.*]] = llvm.sext %[[EXTRACT2]] : vector<3xi1> to vector<3xi{{.*}}>
+  // CHECK: %[[INSERT2:.*]] = llvm.insertvalue %[[SEXT2]], %[[INSERT1]][0, 1] : !llvm.array<1 x array<2 x vector<3xi{{.*}}>>>
+  %0 = arith.index_cast %arg0: vector<1x2x3xi1> to vector<1x2x3xindex>
+  // CHECK: %[[EXTRACT3:.*]] = llvm.extractvalue %[[INSERT2]][0, 0] : !llvm.array<1 x array<2 x vector<3xi{{.*}}>>>
+  // CHECK: %[[TRUNC1:.*]] = llvm.trunc %[[EXTRACT3]] : vector<3xi{{.*}}> to vector<3xi1>
+  // CHECK: %[[INSERT3:.*]] = llvm.insertvalue %[[TRUNC1]], %{{.*}}[0, 0] : !llvm.array<1 x array<2 x vector<3xi1>>>
+  // CHECK: %[[EXTRACT4:.*]] = llvm.extractvalue %[[INSERT2]][0, 1] : !llvm.array<1 x array<2 x vector<3xi{{.*}}>>>
+  // CHECK: %[[TRUNC2:.*]] = llvm.trunc %[[EXTRACT4]] : vector<3xi{{.*}}> to vector<3xi1>
+  // CHECK: %[[INSERT4:.*]] = llvm.insertvalue %[[TRUNC2]], %[[INSERT3]][0, 1] : !llvm.array<1 x array<2 x vector<3xi1>>>
+  %1 = arith.index_cast %0: vector<1x2x3xindex> to vector<1x2x3xi1>
+  return
+}

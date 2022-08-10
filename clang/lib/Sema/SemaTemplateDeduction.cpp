@@ -1587,7 +1587,7 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       // FIXME: Implement deduction in dependent case.
       if (P->isDependentType())
         return Sema::TDK_Success;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Type::Builtin:
     case Type::VariableArray:
     case Type::Vector:
@@ -1775,7 +1775,7 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
         switch (FPA->canThrow()) {
         case CT_Cannot:
           Noexcept = 1;
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
 
         case CT_Can:
           // We give E in noexcept(E) the "deduced from array bound" treatment.
@@ -5741,7 +5741,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
                                cast<DependentSizedArrayType>(T)->getSizeExpr(),
                                OnlyDeduced, Depth, Used);
     // Fall through to check the element type
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case Type::ConstantArray:
   case Type::IncompleteArray:
@@ -5851,7 +5851,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
 
   case Type::InjectedClassName:
     T = cast<InjectedClassNameType>(T)->getInjectedSpecializationType();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case Type::TemplateSpecialization: {
     const TemplateSpecializationType *Spec

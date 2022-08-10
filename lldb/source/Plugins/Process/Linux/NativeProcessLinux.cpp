@@ -852,7 +852,7 @@ bool NativeProcessLinux::MonitorClone(NativeThreadLinux &parent,
       break;
     }
   }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case PTRACE_EVENT_FORK:
   case PTRACE_EVENT_VFORK: {
     bool is_vfork = event == PTRACE_EVENT_VFORK;

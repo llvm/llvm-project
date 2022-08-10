@@ -366,9 +366,6 @@ def note_constexpr_unsupported_layout : Note<
   "type %0 has unexpected layout">;
 def note_constexpr_unsupported_flexible_array : Note<
   "flexible array initialization is not yet supported">;
-def note_constexpr_unscoped_enum_out_of_range : Note<
-  "integer value %0 is outside the valid range of values [%1, %2] for this "
-  "enumeration type">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 
@@ -378,6 +375,9 @@ def warn_integer_constant_overflow : Warning<
 def warn_fixedpoint_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,
   InGroup<DiagGroup<"fixed-point-overflow">>;
+def warn_constexpr_unscoped_enum_out_of_range : Warning<
+  "integer value %0 is outside the valid range of values [%1, %2] for this "
+  "enumeration type">, DefaultError, InGroup<DiagGroup<"enum-constexpr-conversion">>;
 
 // This is a temporary diagnostic, and shall be removed once our
 // implementation is complete, and like the preceding constexpr notes belongs

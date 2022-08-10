@@ -2438,7 +2438,7 @@ BasicBlock *JumpThreadingPass::splitBlockPreds(BasicBlock *BB,
   // update the edge weight of the result of splitting predecessors.
   DenseMap<BasicBlock *, BlockFrequency> FreqMap;
   if (HasProfileData)
-    for (auto Pred : Preds)
+    for (auto *Pred : Preds)
       FreqMap.insert(std::make_pair(
           Pred, BFI->getBlockFreq(Pred) * BPI->getEdgeProbability(Pred, BB)));
 
@@ -2453,7 +2453,7 @@ BasicBlock *JumpThreadingPass::splitBlockPreds(BasicBlock *BB,
 
   std::vector<DominatorTree::UpdateType> Updates;
   Updates.reserve((2 * Preds.size()) + NewBBs.size());
-  for (auto NewBB : NewBBs) {
+  for (auto *NewBB : NewBBs) {
     BlockFrequency NewBBFreq(0);
     Updates.push_back({DominatorTree::Insert, NewBB, BB});
     for (auto Pred : predecessors(NewBB)) {

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "edit-output.h"
+#include "emit-encoded.h"
 #include "utf.h"
 #include "flang/Common/uint128.h"
 #include <algorithm>
@@ -69,17 +70,17 @@ static bool EditBOZOutput(IoStatementState &io, const DataEdit &edit,
   int subTotal{leadingZeroes + significant};
   int leadingSpaces{std::max(0, editWidth - subTotal)};
   if (editWidth > 0 && leadingSpaces + subTotal > editWidth) {
-    return io.EmitRepeated('*', editWidth);
+    return EmitRepeated(io, '*', editWidth);
   }
-  if (!(io.EmitRepeated(' ', leadingSpaces) &&
-          io.EmitRepeated('0', leadingZeroes))) {
+  if (!(EmitRepeated(io, ' ', leadingSpaces) &&
+          EmitRepeated(io, '0', leadingZeroes))) {
     return false;
   }
   // Emit remaining digits
   while (bytes > 0) {
     if (get == 0) {
       char ch{static_cast<char>(digit >= 10 ? 'A' + digit - 10 : '0' + digit)};
-      if (!io.Emit(&ch, 1)) {
+      if (!EmitAscii(io, &ch, 1)) {
         return false;
       }
       get = LOG2_BASE;
@@ -157,7 +158,7 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
   int subTotal{signChars + leadingZeroes + digits};
   int leadingSpaces{std::max(0, editWidth - subTotal)};
   if (editWidth > 0 && leadingSpaces + subTotal > editWidth) {
-    return io.EmitRepeated('*', editWidth);
+    return EmitRepeated(io, '*', editWidth);
   }
   if (edit.IsListDirected()) {
     int total{std::max(leadingSpaces, 1) + subTotal};
@@ -167,9 +168,9 @@ bool EditIntegerOutput(IoStatementState &io, const DataEdit &edit,
     }
     leadingSpaces = 1;
   }
-  return io.EmitRepeated(' ', leadingSpaces) &&
-      io.Emit(n < 0 ? "-" : "+", signChars) &&
-      io.EmitRepeated('0', leadingZeroes) && io.Emit(p, digits);
+  return EmitRepeated(io, ' ', leadingSpaces) &&
+      EmitAscii(io, n < 0 ? "-" : "+", signChars) &&
+      EmitRepeated(io, '0', leadingZeroes) && EmitAscii(io, p, digits);
 }
 
 // Formats the exponent (see table 13.1 for all the cases)
@@ -218,9 +219,9 @@ bool RealOutputEditingBase::EmitPrefix(
     length += prefixLength + suffixLength;
     ConnectionState &connection{io_.GetConnectionState()};
     return (!connection.NeedAdvance(length) || io_.AdvanceRecord()) &&
-        io_.Emit(" (", prefixLength);
+        EmitAscii(io_, " (", prefixLength);
   } else if (width > length) {
-    return io_.EmitRepeated(' ', width - length);
+    return EmitRepeated(io_, ' ', width - length);
   } else {
     return true;
   }
@@ -228,9 +229,10 @@ bool RealOutputEditingBase::EmitPrefix(
 
 bool RealOutputEditingBase::EmitSuffix(const DataEdit &edit) {
   if (edit.descriptor == DataEdit::ListDirectedRealPart) {
-    return io_.Emit(edit.modes.editingFlags & decimalComma ? ";" : ",", 1);
+    return EmitAscii(
+        io_, edit.modes.editingFlags & decimalComma ? ";" : ",", 1);
   } else if (edit.descriptor == DataEdit::ListDirectedImaginaryPart) {
-    return io_.Emit(")", 1);
+    return EmitAscii(io_, ")", 1);
   } else {
     return true;
   }
@@ -307,7 +309,7 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
         Convert(significantDigits, edit.modes.round, flags)};
     if (IsInfOrNaN(converted)) {
       return EmitPrefix(edit, converted.length, editWidth) &&
-          io_.Emit(converted.str, converted.length) && EmitSuffix(edit);
+          EmitAscii(io_, converted.str, converted.length) && EmitSuffix(edit);
     }
     if (!IsZero()) {
       converted.decimalExponent -= scale;
@@ -354,7 +356,7 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
         expoLength};
     int width{editWidth > 0 ? editWidth : totalLength};
     if (totalLength > width || !exponent) {
-      return io_.EmitRepeated('*', width);
+      return EmitRepeated(io_, '*', width);
     }
     if (totalLength < width && digitsBeforePoint == 0 &&
         zeroesBeforePoint == 0) {
@@ -365,14 +367,14 @@ bool RealOutputEditing<binaryPrecision>::EditEorDOutput(const DataEdit &edit) {
       width = totalLength;
     }
     return EmitPrefix(edit, totalLength, width) &&
-        io_.Emit(converted.str, signLength + digitsBeforePoint) &&
-        io_.EmitRepeated('0', zeroesBeforePoint) &&
-        io_.Emit(edit.modes.editingFlags & decimalComma ? "," : ".", 1) &&
-        io_.EmitRepeated('0', zeroesAfterPoint) &&
-        io_.Emit(
-            converted.str + signLength + digitsBeforePoint, digitsAfterPoint) &&
-        io_.EmitRepeated('0', trailingZeroes) &&
-        io_.Emit(exponent, expoLength) && EmitSuffix(edit);
+        EmitAscii(io_, converted.str, signLength + digitsBeforePoint) &&
+        EmitRepeated(io_, '0', zeroesBeforePoint) &&
+        EmitAscii(io_, edit.modes.editingFlags & decimalComma ? "," : ".", 1) &&
+        EmitRepeated(io_, '0', zeroesAfterPoint) &&
+        EmitAscii(io_, converted.str + signLength + digitsBeforePoint,
+            digitsAfterPoint) &&
+        EmitRepeated(io_, '0', trailingZeroes) &&
+        EmitAscii(io_, exponent, expoLength) && EmitSuffix(edit);
   }
 }
 
@@ -401,7 +403,7 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
         Convert(extraDigits + fracDigits, rounding, flags)};
     if (IsInfOrNaN(converted)) {
       return EmitPrefix(edit, converted.length, editWidth) &&
-          io_.Emit(converted.str, converted.length) && EmitSuffix(edit);
+          EmitAscii(io_, converted.str, converted.length) && EmitSuffix(edit);
     }
     int expo{converted.decimalExponent + edit.modes.scale /*kP*/};
     int signLength{*converted.str == '-' || *converted.str == '+' ? 1 : 0};
@@ -463,22 +465,22 @@ bool RealOutputEditing<binaryPrecision>::EditFOutput(const DataEdit &edit) {
         trailingZeroes};
     int width{editWidth > 0 ? editWidth : totalLength};
     if (totalLength > width) {
-      return io_.EmitRepeated('*', width);
+      return EmitRepeated(io_, '*', width);
     }
     if (totalLength < width && digitsBeforePoint + zeroesBeforePoint == 0) {
       zeroesBeforePoint = 1;
       ++totalLength;
     }
     return EmitPrefix(edit, totalLength, width) &&
-        io_.Emit(converted.str, signLength + digitsBeforePoint) &&
-        io_.EmitRepeated('0', zeroesBeforePoint) &&
-        io_.Emit(edit.modes.editingFlags & decimalComma ? "," : ".", 1) &&
-        io_.EmitRepeated('0', zeroesAfterPoint) &&
-        io_.Emit(
-            converted.str + signLength + digitsBeforePoint, digitsAfterPoint) &&
-        io_.EmitRepeated('1', trailingOnes) &&
-        io_.EmitRepeated('0', trailingZeroes) &&
-        io_.EmitRepeated(' ', trailingBlanks_) && EmitSuffix(edit);
+        EmitAscii(io_, converted.str, signLength + digitsBeforePoint) &&
+        EmitRepeated(io_, '0', zeroesBeforePoint) &&
+        EmitAscii(io_, edit.modes.editingFlags & decimalComma ? "," : ".", 1) &&
+        EmitRepeated(io_, '0', zeroesAfterPoint) &&
+        EmitAscii(io_, converted.str + signLength + digitsBeforePoint,
+            digitsAfterPoint) &&
+        EmitRepeated(io_, '1', trailingOnes) &&
+        EmitRepeated(io_, '0', trailingZeroes) &&
+        EmitRepeated(io_, ' ', trailingBlanks_) && EmitSuffix(edit);
   }
 }
 
@@ -594,15 +596,16 @@ template <int KIND> bool RealOutputEditing<KIND>::Edit(const DataEdit &edit) {
 
 bool ListDirectedLogicalOutput(IoStatementState &io,
     ListDirectedStatementState<Direction::Output> &list, bool truth) {
-  return list.EmitLeadingSpaceOrAdvance(io) && io.Emit(truth ? "T" : "F", 1);
+  return list.EmitLeadingSpaceOrAdvance(io) &&
+      EmitAscii(io, truth ? "T" : "F", 1);
 }
 
 bool EditLogicalOutput(IoStatementState &io, const DataEdit &edit, bool truth) {
   switch (edit.descriptor) {
   case 'L':
   case 'G':
-    return io.EmitRepeated(' ', std::max(0, edit.width.value_or(1) - 1)) &&
-        io.Emit(truth ? "T" : "F", 1);
+    return EmitRepeated(io, ' ', std::max(0, edit.width.value_or(1) - 1)) &&
+        EmitAscii(io, truth ? "T" : "F", 1);
   case 'B':
     return EditBOZOutput<1>(io, edit,
         reinterpret_cast<const unsigned char *>(&truth), sizeof truth);
@@ -635,7 +638,7 @@ bool ListDirectedCharacterOutput(IoStatementState &io,
       if (connection.NeedAdvance(1)) {
         ok = ok && io.AdvanceRecord();
       }
-      ok = ok && io.EmitEncoded(&ch, 1);
+      ok = ok && EmitEncoded(io, &ch, 1);
     }};
     EmitOne(modes.delim);
     for (std::size_t j{0}; j < length; ++j) {
@@ -658,15 +661,18 @@ bool ListDirectedCharacterOutput(IoStatementState &io,
     // Undelimited list-directed output
     ok = ok && list.EmitLeadingSpaceOrAdvance(io, length > 0 ? 1 : 0, true);
     std::size_t put{0};
-    std::size_t oneIfUTF8{connection.useUTF8<CHAR>() ? 1 : length};
+    std::size_t oneAtATime{
+        connection.useUTF8<CHAR>() || connection.internalIoCharKind > 1
+            ? 1
+            : length};
     while (ok && put < length) {
       if (std::size_t chunk{std::min<std::size_t>(
-              std::min<std::size_t>(length - put, oneIfUTF8),
+              std::min<std::size_t>(length - put, oneAtATime),
               connection.RemainingSpaceInRecord())}) {
-        ok = io.EmitEncoded(x + put, chunk);
+        ok = EmitEncoded(io, x + put, chunk);
         put += chunk;
       } else {
-        ok = io.AdvanceRecord() && io.Emit(" ", 1);
+        ok = io.AdvanceRecord() && EmitAscii(io, " ", 1);
       }
     }
     list.set_lastWasUndelimitedCharacter(true);
@@ -702,8 +708,8 @@ bool EditCharacterOutput(IoStatementState &io, const DataEdit &edit,
         edit.descriptor);
     return false;
   }
-  return io.EmitRepeated(' ', std::max(0, width - len)) &&
-      io.EmitEncoded(x, std::min(width, len));
+  return EmitRepeated(io, ' ', std::max(0, width - len)) &&
+      EmitEncoded(io, x, std::min(width, len));
 }
 
 template bool EditIntegerOutput<1>(

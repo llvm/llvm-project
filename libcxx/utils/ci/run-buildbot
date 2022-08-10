@@ -385,6 +385,48 @@ apple-system)
     # TODO: It would be better to run the tests against the fake-installed version of libc++ instead
     xcrun --sdk macosx ninja -vC "${BUILD_DIR}/${arch}" check-cxx check-cxxabi check-cxx-abilist
 ;;
+apple-system-backdeployment-assertions-*)
+    clean
+
+    if [[ "${OSX_ROOTS}" == "" ]]; then
+        echo "--- Downloading previous macOS dylibs"
+        PREVIOUS_DYLIBS_URL="https://dl.dropboxusercontent.com/s/gmcfxwgl9f9n6pu/libcxx-roots.tar.gz"
+        OSX_ROOTS="${BUILD_DIR}/macos-roots"
+        mkdir -p "${OSX_ROOTS}"
+        curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${OSX_ROOTS}"
+    fi
+
+    DEPLOYMENT_TARGET="${BUILDER#apple-system-backdeployment-assertions-}"
+
+    # TODO: On Apple platforms, we never produce libc++abi.1.dylib or libunwind.1.dylib,
+    #       only libc++abi.dylib and libunwind.dylib. Fix that in the build so that the
+    #       tests stop searching for @rpath/libc++abi.1.dylib and @rpath/libunwind.1.dylib.
+    cp "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.dylib" \
+       "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.1.dylib"
+    cp "${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}/libunwind.dylib" \
+       "${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}/libunwind.1.dylib"
+
+    arch="$(uname -m)"
+    PARAMS="target_triple=${arch}-apple-macosx${DEPLOYMENT_TARGET}"
+    PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
+    PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
+    PARAMS+=";unwind_runtime_root=${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}"
+    PARAMS+=";use_system_cxx_lib=True"
+    PARAMS+=";enable_assertions=True"
+    # TODO: Enable experimental features during back-deployment -- right now some of the availability
+    #       annotations are incorrect, leading to test failures that could be avoided.
+    PARAMS+=";enable_experimental=False"
+
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
+                   -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \
+                   -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-backdeployment.cfg.in" \
+                   -DLIBUNWIND_TEST_CONFIG="apple-libunwind-backdeployment.cfg.in" \
+                   -DLIBCXX_TEST_PARAMS="${PARAMS}" \
+                   -DLIBCXXABI_TEST_PARAMS="${PARAMS}" \
+                   -DLIBUNWIND_TEST_PARAMS="${PARAMS}"
+
+    check-runtimes
+;;
 apple-system-backdeployment-*)
     clean
 

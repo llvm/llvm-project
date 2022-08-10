@@ -53,8 +53,6 @@ class TestCase(TestBase):
 
         # Test an unscoped enum.
         self.expect_expr("A::enum_val", result_value="enum_case2")
-        # Test an unscoped enum with an invalid enum case.
-        self.expect_expr("A::invalid_enum_val", result_value="enum_case1 | enum_case2 | 0x4")
 
         # Test a scoped enum.
         self.expect_expr("A::scoped_enum_val", result_value="scoped_enum_case2")

@@ -596,9 +596,9 @@ public:
   }
 
   /// Determine whether the token is a simple-type-specifier.
-  LLVM_NODISCARD bool isSimpleTypeSpecifier() const;
+  [[nodiscard]] bool isSimpleTypeSpecifier() const;
 
-  LLVM_NODISCARD bool isTypeOrIdentifier() const;
+  [[nodiscard]] bool isTypeOrIdentifier() const;
 
   bool isObjCAccessSpecifier() const {
     return is(tok::at) && Next &&
@@ -723,7 +723,7 @@ public:
   }
 
   /// Returns the previous token ignoring comments.
-  LLVM_NODISCARD FormatToken *getPreviousNonComment() const {
+  [[nodiscard]] FormatToken *getPreviousNonComment() const {
     FormatToken *Tok = Previous;
     while (Tok && Tok->is(tok::comment))
       Tok = Tok->Previous;
@@ -731,7 +731,7 @@ public:
   }
 
   /// Returns the next token ignoring comments.
-  LLVM_NODISCARD const FormatToken *getNextNonComment() const {
+  [[nodiscard]] const FormatToken *getNextNonComment() const {
     const FormatToken *Tok = Next;
     while (Tok && Tok->is(tok::comment))
       Tok = Tok->Next;
@@ -740,7 +740,7 @@ public:
 
   /// Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
-  LLVM_NODISCARD bool opensBlockOrBlockTypeList(const FormatStyle &Style) const;
+  [[nodiscard]] bool opensBlockOrBlockTypeList(const FormatStyle &Style) const;
 
   /// Returns whether the token is the left square bracket of a C++
   /// structured binding declaration.

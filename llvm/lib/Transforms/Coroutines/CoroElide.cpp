@@ -244,7 +244,7 @@ bool Lowerer::shouldElide(Function *F, DominatorTree &DT) const {
 
   // Filter out the coro.destroy that lie along exceptional paths.
   SmallPtrSet<CoroBeginInst *, 8> ReferencedCoroBegins;
-  for (auto &It : DestroyAddr) {
+  for (const auto &It : DestroyAddr) {
     // If there is any coro.destroy dominates all of the terminators for the
     // coro.begin, we could know the corresponding coro.begin wouldn't escape.
     for (Instruction *DA : It.second) {

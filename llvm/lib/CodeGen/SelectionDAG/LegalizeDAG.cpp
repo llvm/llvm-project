@@ -850,7 +850,7 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
     default: llvm_unreachable("This action is not supported yet!");
     case TargetLowering::Custom:
       isCustom = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case TargetLowering::Legal:
       Value = SDValue(Node, 0);
       Chain = SDValue(Node, 1);
@@ -1317,11 +1317,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
         return;
       }
       LLVM_DEBUG(dbgs() << "Could not custom legalize node\n");
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case TargetLowering::Expand:
       if (ExpandNode(Node))
         return;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case TargetLowering::LibCall:
       ConvertNodeToLibcall(Node);
       return;
@@ -2961,7 +2961,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         Results.push_back(Tmp2);
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SINT_TO_FP:
   case ISD::STRICT_SINT_TO_FP:
     if ((Tmp1 = ExpandLegalINT_TO_FP(Node, Tmp2))) {
