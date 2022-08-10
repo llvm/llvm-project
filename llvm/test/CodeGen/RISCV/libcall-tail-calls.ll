@@ -106,12 +106,7 @@ define i64 @mul64(i64 %a, i64 %b) nounwind {
 ;
 ; RV64-ALL-LABEL: mul64:
 ; RV64-ALL:       # %bb.0:
-; RV64-ALL-NEXT:    addi sp, sp, -16
-; RV64-ALL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-ALL-NEXT:    call __muldi3@plt
-; RV64-ALL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-ALL-NEXT:    addi sp, sp, 16
-; RV64-ALL-NEXT:    ret
+; RV64-ALL-NEXT:    tail __muldi3@plt
   %1 = mul i64 %a, %b
   ret i64 %1
 }
@@ -241,23 +236,27 @@ define half @sin_f16(half %a) nounwind {
 declare float @llvm.sin.f32(float)
 
 define float @sin_f32(float %a) nounwind {
-; RV32-ALL-LABEL: sin_f32:
-; RV32-ALL:       # %bb.0:
-; RV32-ALL-NEXT:    addi sp, sp, -16
-; RV32-ALL-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ALL-NEXT:    call sinf@plt
-; RV32-ALL-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-ALL-NEXT:    addi sp, sp, 16
-; RV32-ALL-NEXT:    ret
+; F-ABI-ALL-LABEL: sin_f32:
+; F-ABI-ALL:       # %bb.0:
+; F-ABI-ALL-NEXT:    tail sinf@plt
 ;
-; RV64-ALL-LABEL: sin_f32:
-; RV64-ALL:       # %bb.0:
-; RV64-ALL-NEXT:    addi sp, sp, -16
-; RV64-ALL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-ALL-NEXT:    call sinf@plt
-; RV64-ALL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-ALL-NEXT:    addi sp, sp, 16
-; RV64-ALL-NEXT:    ret
+; RV32-ILP32-ALL-LABEL: sin_f32:
+; RV32-ILP32-ALL:       # %bb.0:
+; RV32-ILP32-ALL-NEXT:    addi sp, sp, -16
+; RV32-ILP32-ALL-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ILP32-ALL-NEXT:    call sinf@plt
+; RV32-ILP32-ALL-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-ILP32-ALL-NEXT:    addi sp, sp, 16
+; RV32-ILP32-ALL-NEXT:    ret
+;
+; RV64-LP64-ALL-LABEL: sin_f32:
+; RV64-LP64-ALL:       # %bb.0:
+; RV64-LP64-ALL-NEXT:    addi sp, sp, -16
+; RV64-LP64-ALL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-LP64-ALL-NEXT:    call sinf@plt
+; RV64-LP64-ALL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-LP64-ALL-NEXT:    addi sp, sp, 16
+; RV64-LP64-ALL-NEXT:    ret
   %1 = call float @llvm.sin.f32(float %a)
   ret float %1
 }
@@ -265,14 +264,22 @@ define float @sin_f32(float %a) nounwind {
 declare float @llvm.powi.f32.i32(float, i32)
 
 define float @powi_f32(float %a, i32 %b) nounwind {
-; RV32-ALL-LABEL: powi_f32:
-; RV32-ALL:       # %bb.0:
-; RV32-ALL-NEXT:    addi sp, sp, -16
-; RV32-ALL-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ALL-NEXT:    call __powisf2@plt
-; RV32-ALL-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-ALL-NEXT:    addi sp, sp, 16
-; RV32-ALL-NEXT:    ret
+; RV32IFD-ILP32D-LABEL: powi_f32:
+; RV32IFD-ILP32D:       # %bb.0:
+; RV32IFD-ILP32D-NEXT:    tail __powisf2@plt
+;
+; RV32IF-ILP32F-LABEL: powi_f32:
+; RV32IF-ILP32F:       # %bb.0:
+; RV32IF-ILP32F-NEXT:    tail __powisf2@plt
+;
+; RV32-ILP32-ALL-LABEL: powi_f32:
+; RV32-ILP32-ALL:       # %bb.0:
+; RV32-ILP32-ALL-NEXT:    addi sp, sp, -16
+; RV32-ILP32-ALL-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ILP32-ALL-NEXT:    call __powisf2@plt
+; RV32-ILP32-ALL-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-ILP32-ALL-NEXT:    addi sp, sp, 16
+; RV32-ILP32-ALL-NEXT:    ret
 ;
 ; RV64IFD-LP64D-LABEL: powi_f32:
 ; RV64IFD-LP64D:       # %bb.0:
@@ -352,23 +359,45 @@ define i64 @llround_f32(float %a) nounwind {
 declare double @llvm.sin.f64(double)
 
 define double @sin_f64(double %a) nounwind {
-; RV32-ALL-LABEL: sin_f64:
-; RV32-ALL:       # %bb.0:
-; RV32-ALL-NEXT:    addi sp, sp, -16
-; RV32-ALL-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ALL-NEXT:    call sin@plt
-; RV32-ALL-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-ALL-NEXT:    addi sp, sp, 16
-; RV32-ALL-NEXT:    ret
+; D-ABI-ALL-LABEL: sin_f64:
+; D-ABI-ALL:       # %bb.0:
+; D-ABI-ALL-NEXT:    tail sin@plt
 ;
-; RV64-ALL-LABEL: sin_f64:
-; RV64-ALL:       # %bb.0:
-; RV64-ALL-NEXT:    addi sp, sp, -16
-; RV64-ALL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-ALL-NEXT:    call sin@plt
-; RV64-ALL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-ALL-NEXT:    addi sp, sp, 16
-; RV64-ALL-NEXT:    ret
+; RV32IF-ILP32F-LABEL: sin_f64:
+; RV32IF-ILP32F:       # %bb.0:
+; RV32IF-ILP32F-NEXT:    addi sp, sp, -16
+; RV32IF-ILP32F-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-ILP32F-NEXT:    call sin@plt
+; RV32IF-ILP32F-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-ILP32F-NEXT:    addi sp, sp, 16
+; RV32IF-ILP32F-NEXT:    ret
+;
+; RV32-ILP32-ALL-LABEL: sin_f64:
+; RV32-ILP32-ALL:       # %bb.0:
+; RV32-ILP32-ALL-NEXT:    addi sp, sp, -16
+; RV32-ILP32-ALL-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ILP32-ALL-NEXT:    call sin@plt
+; RV32-ILP32-ALL-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-ILP32-ALL-NEXT:    addi sp, sp, 16
+; RV32-ILP32-ALL-NEXT:    ret
+;
+; RV64IF-LP64F-LABEL: sin_f64:
+; RV64IF-LP64F:       # %bb.0:
+; RV64IF-LP64F-NEXT:    addi sp, sp, -16
+; RV64IF-LP64F-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64IF-LP64F-NEXT:    call sin@plt
+; RV64IF-LP64F-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64IF-LP64F-NEXT:    addi sp, sp, 16
+; RV64IF-LP64F-NEXT:    ret
+;
+; RV64-LP64-ALL-LABEL: sin_f64:
+; RV64-LP64-ALL:       # %bb.0:
+; RV64-LP64-ALL-NEXT:    addi sp, sp, -16
+; RV64-LP64-ALL-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64-LP64-ALL-NEXT:    call sin@plt
+; RV64-LP64-ALL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64-LP64-ALL-NEXT:    addi sp, sp, 16
+; RV64-LP64-ALL-NEXT:    ret
   %1 = call double @llvm.sin.f64(double %a)
   ret double %1
 }
@@ -376,14 +405,27 @@ define double @sin_f64(double %a) nounwind {
 declare double @llvm.powi.f64.i32(double, i32)
 
 define double @powi_f64(double %a, i32 %b) nounwind {
-; RV32-ALL-LABEL: powi_f64:
-; RV32-ALL:       # %bb.0:
-; RV32-ALL-NEXT:    addi sp, sp, -16
-; RV32-ALL-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-ALL-NEXT:    call __powidf2@plt
-; RV32-ALL-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-ALL-NEXT:    addi sp, sp, 16
-; RV32-ALL-NEXT:    ret
+; RV32IFD-ILP32D-LABEL: powi_f64:
+; RV32IFD-ILP32D:       # %bb.0:
+; RV32IFD-ILP32D-NEXT:    tail __powidf2@plt
+;
+; RV32IF-ILP32F-LABEL: powi_f64:
+; RV32IF-ILP32F:       # %bb.0:
+; RV32IF-ILP32F-NEXT:    addi sp, sp, -16
+; RV32IF-ILP32F-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32IF-ILP32F-NEXT:    call __powidf2@plt
+; RV32IF-ILP32F-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32IF-ILP32F-NEXT:    addi sp, sp, 16
+; RV32IF-ILP32F-NEXT:    ret
+;
+; RV32-ILP32-ALL-LABEL: powi_f64:
+; RV32-ILP32-ALL:       # %bb.0:
+; RV32-ILP32-ALL-NEXT:    addi sp, sp, -16
+; RV32-ILP32-ALL-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32-ILP32-ALL-NEXT:    call __powidf2@plt
+; RV32-ILP32-ALL-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32-ILP32-ALL-NEXT:    addi sp, sp, 16
+; RV32-ILP32-ALL-NEXT:    ret
 ;
 ; RV64IFD-LP64D-LABEL: powi_f64:
 ; RV64IFD-LP64D:       # %bb.0:
@@ -561,6 +603,3 @@ define i64 @atomicrmw_nand_i64_seq_cst(i64* %a, i64 %b) nounwind {
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; ALL: {{.*}}
-; D-ABI-ALL: {{.*}}
-; F-ABI-ALL: {{.*}}
-; RV32-ILP32-ALL: {{.*}}
