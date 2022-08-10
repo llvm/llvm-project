@@ -26,9 +26,9 @@ func.func @conv(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>, %arg2 : memref
 //       CHECK:     scf.for %[[ARG4:.*]] = %[[C0]] to %[[T3]] step %[[C3]]
 //       CHECK:       %[[T4:.*]] = affine.min #[[MAP0]](%[[ARG3]])[%[[T2]], %[[T0]]]
 //       CHECK:       %[[T5:.*]] = affine.min #[[MAP1]](%[[ARG4]])[%[[T3]], %[[T1]]]
-//       CHECK:       %[[SV1:.*]] = memref.subview %[[ARG0]][%[[ARG3]], %[[ARG4]]] [%[[T4]], %[[T5]]]
 //       CHECK:       %[[T6:.*]] = affine.min #[[MAP2]](%[[ARG3]])[%[[T2]]
 //       CHECK:       %[[T7:.*]] = affine.min #[[MAP3]](%[[ARG4]])[%[[T3]]]
+//       CHECK:       %[[SV1:.*]] = memref.subview %[[ARG0]][%[[ARG3]], %[[ARG4]]] [%[[T4]], %[[T5]]]
 //       CHECK:       %[[SV2:.*]] = memref.subview %[[ARG2]][%[[ARG3]], %[[ARG4]]] [%[[T6]], %[[T7]]]
 //       CHECK:       linalg.conv_2d
 //  CHECK-SAME:         ins(%[[SV1]], %[[ARG1]]
