@@ -504,18 +504,16 @@ define i32 @or_sext1(i32 %x) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $43, {{[0-9]+}}(%esp)
-; X86-NEXT:    setge %al
-; X86-NEXT:    negl %eax
-; X86-NEXT:    orl $1, %eax
+; X86-NEXT:    setl %al
+; X86-NEXT:    leal -1(%eax,%eax), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_sext1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $43, %edi
-; X64-NEXT:    setge %al
-; X64-NEXT:    negl %eax
-; X64-NEXT:    orl $1, %eax
+; X64-NEXT:    setl %al
+; X64-NEXT:    leal -1(%rax,%rax), %eax
 ; X64-NEXT:    retq
   %cmp = icmp sgt i32 %x, 42
   %sext = sext i1 %cmp to i32
@@ -541,9 +539,8 @@ define i64 @or_sext1_64(i64 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq $43, %rdi
-; X64-NEXT:    setge %al
-; X64-NEXT:    negq %rax
-; X64-NEXT:    orq $1, %rax
+; X64-NEXT:    setl %al
+; X64-NEXT:    leaq -1(%rax,%rax), %rax
 ; X64-NEXT:    retq
   %cmp = icmp sgt i64 %x, 42
   %sext = sext i1 %cmp to i64
@@ -556,18 +553,16 @@ define i32 @or_sext2(i32 %x) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $43, {{[0-9]+}}(%esp)
-; X86-NEXT:    setge %al
-; X86-NEXT:    negl %eax
-; X86-NEXT:    orl $2, %eax
+; X86-NEXT:    setl %al
+; X86-NEXT:    leal -1(%eax,%eax,2), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_sext2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $43, %edi
-; X64-NEXT:    setge %al
-; X64-NEXT:    negl %eax
-; X64-NEXT:    orl $2, %eax
+; X64-NEXT:    setl %al
+; X64-NEXT:    leal -1(%rax,%rax,2), %eax
 ; X64-NEXT:    retq
   %cmp = icmp sgt i32 %x, 42
   %sext = sext i1 %cmp to i32
@@ -593,9 +588,8 @@ define i64 @or_sext2_64(i64 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq $43, %rdi
-; X64-NEXT:    setge %al
-; X64-NEXT:    negq %rax
-; X64-NEXT:    orq $2, %rax
+; X64-NEXT:    setl %al
+; X64-NEXT:    leaq -1(%rax,%rax,2), %rax
 ; X64-NEXT:    retq
   %cmp = icmp sgt i64 %x, 42
   %sext = sext i1 %cmp to i64
@@ -608,18 +602,16 @@ define i32 @or_sext3(i32 %x) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $43, {{[0-9]+}}(%esp)
-; X86-NEXT:    setge %al
-; X86-NEXT:    negl %eax
-; X86-NEXT:    orl $3, %eax
+; X86-NEXT:    setl %al
+; X86-NEXT:    leal -1(,%eax,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_sext3:
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $43, %edi
-; X64-NEXT:    setge %al
-; X64-NEXT:    negl %eax
-; X64-NEXT:    orl $3, %eax
+; X64-NEXT:    setl %al
+; X64-NEXT:    leal -1(,%rax,4), %eax
 ; X64-NEXT:    retq
   %cmp = icmp sgt i32 %x, 42
   %sext = sext i1 %cmp to i32
@@ -645,9 +637,8 @@ define i64 @or_sext3_64(i64 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq $43, %rdi
-; X64-NEXT:    setge %al
-; X64-NEXT:    negq %rax
-; X64-NEXT:    orq $3, %rax
+; X64-NEXT:    setl %al
+; X64-NEXT:    leaq -1(,%rax,4), %rax
 ; X64-NEXT:    retq
   %cmp = icmp sgt i64 %x, 42
   %sext = sext i1 %cmp to i64
@@ -660,18 +651,16 @@ define i32 @or_sext4(i32 %x) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $43, {{[0-9]+}}(%esp)
-; X86-NEXT:    setge %al
-; X86-NEXT:    negl %eax
-; X86-NEXT:    orl $4, %eax
+; X86-NEXT:    setl %al
+; X86-NEXT:    leal -1(%eax,%eax,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_sext4:
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $43, %edi
-; X64-NEXT:    setge %al
-; X64-NEXT:    negl %eax
-; X64-NEXT:    orl $4, %eax
+; X64-NEXT:    setl %al
+; X64-NEXT:    leal -1(%rax,%rax,4), %eax
 ; X64-NEXT:    retq
   %cmp = icmp sgt i32 %x, 42
   %sext = sext i1 %cmp to i32
@@ -697,9 +686,8 @@ define i64 @or_sext4_64(i64 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq $43, %rdi
-; X64-NEXT:    setge %al
-; X64-NEXT:    negq %rax
-; X64-NEXT:    orq $4, %rax
+; X64-NEXT:    setl %al
+; X64-NEXT:    leaq -1(%rax,%rax,4), %rax
 ; X64-NEXT:    retq
   %cmp = icmp sgt i64 %x, 42
   %sext = sext i1 %cmp to i64
@@ -712,18 +700,16 @@ define i32 @or_sext7(i32 %x) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $43, {{[0-9]+}}(%esp)
-; X86-NEXT:    setge %al
-; X86-NEXT:    negl %eax
-; X86-NEXT:    orl $7, %eax
+; X86-NEXT:    setl %al
+; X86-NEXT:    leal -1(,%eax,8), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_sext7:
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $43, %edi
-; X64-NEXT:    setge %al
-; X64-NEXT:    negl %eax
-; X64-NEXT:    orl $7, %eax
+; X64-NEXT:    setl %al
+; X64-NEXT:    leal -1(,%rax,8), %eax
 ; X64-NEXT:    retq
   %cmp = icmp sgt i32 %x, 42
   %sext = sext i1 %cmp to i32
@@ -749,9 +735,8 @@ define i64 @or_sext7_64(i64 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq $43, %rdi
-; X64-NEXT:    setge %al
-; X64-NEXT:    negq %rax
-; X64-NEXT:    orq $7, %rax
+; X64-NEXT:    setl %al
+; X64-NEXT:    leaq -1(,%rax,8), %rax
 ; X64-NEXT:    retq
   %cmp = icmp sgt i64 %x, 42
   %sext = sext i1 %cmp to i64
@@ -764,18 +749,16 @@ define i32 @or_sext8(i32 %x) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $43, {{[0-9]+}}(%esp)
-; X86-NEXT:    setge %al
-; X86-NEXT:    negl %eax
-; X86-NEXT:    orl $8, %eax
+; X86-NEXT:    setl %al
+; X86-NEXT:    leal -1(%eax,%eax,8), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_sext8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $43, %edi
-; X64-NEXT:    setge %al
-; X64-NEXT:    negl %eax
-; X64-NEXT:    orl $8, %eax
+; X64-NEXT:    setl %al
+; X64-NEXT:    leal -1(%rax,%rax,8), %eax
 ; X64-NEXT:    retq
   %cmp = icmp sgt i32 %x, 42
   %sext = sext i1 %cmp to i32
@@ -801,9 +784,8 @@ define i64 @or_sext8_64(i64 %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq $43, %rdi
-; X64-NEXT:    setge %al
-; X64-NEXT:    negq %rax
-; X64-NEXT:    orq $8, %rax
+; X64-NEXT:    setl %al
+; X64-NEXT:    leaq -1(%rax,%rax,8), %rax
 ; X64-NEXT:    retq
   %cmp = icmp sgt i64 %x, 42
   %sext = sext i1 %cmp to i64
