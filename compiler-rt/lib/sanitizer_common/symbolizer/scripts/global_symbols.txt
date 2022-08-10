@@ -114,6 +114,7 @@ munmap U
 newlocale U
 perror U
 posix_madvise U
+posix_memalign U
 posix_spawn U
 posix_spawn_file_actions_adddup2 U
 posix_spawn_file_actions_addopen U
