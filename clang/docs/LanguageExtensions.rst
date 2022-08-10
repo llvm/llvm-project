@@ -400,7 +400,7 @@ Builtin Macros
 Vectors and Extended Vectors
 ============================
 
-Supports the GCC, OpenCL, AltiVec and NEON vector extensions.
+Supports the GCC, OpenCL, AltiVec, NEON and SVE vector extensions.
 
 OpenCL vector types are created using the ``ext_vector_type`` attribute.  It
 supports the ``V.xyzw`` syntax and other tidbits as seen in OpenCL.  An example
@@ -539,32 +539,33 @@ The table below shows the support for each operation by vector extension.  A
 dash indicates that an operation is not accepted according to a corresponding
 specification.
 
-============================== ======= ======= ============= =======
-         Operator              OpenCL  AltiVec     GCC        NEON
-============================== ======= ======= ============= =======
-[]                               yes     yes       yes         --
-unary operators +, --            yes     yes       yes         --
-++, -- --                        yes     yes       yes         --
-+,--,*,/,%                       yes     yes       yes         --
-bitwise operators &,|,^,~        yes     yes       yes         --
->>,<<                            yes     yes       yes         --
-!, &&, ||                        yes     --        yes         --
-==, !=, >, <, >=, <=             yes     yes       yes         --
-=                                yes     yes       yes         yes
-?: [#]_                          yes     --        yes         --
-sizeof                           yes     yes       yes         yes
-C-style cast                     yes     yes       yes         no
-reinterpret_cast                 yes     no        yes         no
-static_cast                      yes     no        yes         no
-const_cast                       no      no        no          no
-address &v[i]                    no      no        no [#]_     no
-============================== ======= ======= ============= =======
+============================== ======= ======= ============= ======= =====
+         Operator              OpenCL  AltiVec     GCC        NEON    SVE
+============================== ======= ======= ============= ======= =====
+[]                               yes     yes       yes         yes    yes
+unary operators +, --            yes     yes       yes         yes    yes
+++, -- --                        yes     yes       yes         no     no
++,--,*,/,%                       yes     yes       yes         yes    yes
+bitwise operators &,|,^,~        yes     yes       yes         yes    yes
+>>,<<                            yes     yes       yes         yes    yes
+!, &&, ||                        yes     --        yes         yes    yes
+==, !=, >, <, >=, <=             yes     yes       yes         yes    yes
+=                                yes     yes       yes         yes    yes
+?: [#]_                          yes     --        yes         yes    yes
+sizeof                           yes     yes       yes         yes    yes
+C-style cast                     yes     yes       yes         no     no
+reinterpret_cast                 yes     no        yes         no     no
+static_cast                      yes     no        yes         no     no
+const_cast                       no      no        no          no     no
+address &v[i]                    no      no        no [#]_     no     no
+============================== ======= ======= ============= ======= =====
 
 See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convertvector`.
 
 .. [#] ternary operator(?:) has different behaviors depending on condition
   operand's vector type. If the condition is a GNU vector (i.e. __vector_size__),
-  it's only available in C++ and uses normal bool conversions (that is, != 0).
+  a NEON vector or an SVE vector, it's only available in C++ and uses normal bool
+  conversions (that is, != 0).
   If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
   And it selects base on signedness of the condition operands (OpenCL v1.1 s6.3.9).
 .. [#] Clang does not allow the address of an element to be taken while GCC
