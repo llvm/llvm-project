@@ -18,6 +18,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Sema.h"
@@ -389,7 +390,8 @@ bool Declarator::isDeclarationOfFunction() const {
         return E->getType()->isFunctionType();
       return false;
 
-    case TST_underlyingType:
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case TST_##Trait:
+#include "clang/Basic/TransformTypeTraits.def"
     case TST_typename:
     case TST_typeofType: {
       QualType QT = DS.getRepAsType().get();
@@ -576,7 +578,10 @@ const char *DeclSpec::getSpecifierName(DeclSpec::TST T,
   case DeclSpec::TST_auto_type:   return "__auto_type";
   case DeclSpec::TST_decltype:    return "(decltype)";
   case DeclSpec::TST_decltype_auto: return "decltype(auto)";
-  case DeclSpec::TST_underlyingType: return "__underlying_type";
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
+  case DeclSpec::TST_##Trait:                                                  \
+    return "__" #Trait;
+#include "clang/Basic/TransformTypeTraits.def"
   case DeclSpec::TST_unknown_anytype: return "__unknown_anytype";
   case DeclSpec::TST_atomic: return "_Atomic";
   case DeclSpec::TST_BFloat16: return "__bf16";

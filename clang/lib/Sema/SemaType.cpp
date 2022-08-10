@@ -19,9 +19,11 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "clang/Basic/PartialDiagnostic.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -33,6 +35,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateInstCallback.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -1247,6 +1250,18 @@ getImageAccess(const ParsedAttributesView &Attrs) {
   return OpenCLAccessAttr::Keyword_read_only;
 }
 
+static UnaryTransformType::UTTKind
+TSTToUnaryTransformType(DeclSpec::TST SwitchTST) {
+  switch (SwitchTST) {
+#define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
+  case TST_##Trait:                                                            \
+    return UnaryTransformType::Enum;
+#include "clang/Basic/TransformTypeTraits.def"
+  default:
+    llvm_unreachable("attempted to parse a non-unary transform builtin");
+  }
+}
+
 /// Convert the specified declspec to the appropriate type
 /// object.
 /// \param state Specifies the declarator containing the declaration specifier
@@ -1628,12 +1643,13 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     }
     break;
   }
-  case DeclSpec::TST_underlyingType:
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case DeclSpec::TST_##Trait:
+#include "clang/Basic/TransformTypeTraits.def"
     Result = S.GetTypeFromParser(DS.getRepAsType());
-    assert(!Result.isNull() && "Didn't get a type for __underlying_type?");
-    Result = S.BuildUnaryTransformType(Result,
-                                       UnaryTransformType::EnumUnderlyingType,
-                                       DS.getTypeSpecTypeLoc());
+    assert(!Result.isNull() && "Didn't get a type for the transformation?");
+    Result = S.BuildUnaryTransformType(
+        Result, TSTToUnaryTransformType(DS.getTypeSpecType()),
+        DS.getTypeSpecTypeLoc());
     if (Result.isNull()) {
       Result = Context.IntTy;
       declarator.setInvalidType(true);
@@ -6067,8 +6083,7 @@ namespace {
       TL.setRParenLoc(DS.getTypeofParensRange().getEnd());
     }
     void VisitUnaryTransformTypeLoc(UnaryTransformTypeLoc TL) {
-      // FIXME: This holds only because we only have one unary transform.
-      assert(DS.getTypeSpecType() == DeclSpec::TST_underlyingType);
+      assert(DS.isTransformTypeTrait(DS.getTypeSpecType()));
       TL.setKWLoc(DS.getTypeSpecTypeLoc());
       TL.setParensRange(DS.getTypeofParensRange());
       assert(DS.getRepAsType());
@@ -9205,39 +9220,259 @@ QualType Sema::BuildDecltypeType(Expr *E, bool AsUnevaluated) {
   return Context.getDecltypeType(E, getDecltypeForExpr(E));
 }
 
-QualType Sema::BuildUnaryTransformType(QualType BaseType,
-                                       UnaryTransformType::UTTKind UKind,
-                                       SourceLocation Loc) {
-  switch (UKind) {
-  case UnaryTransformType::EnumUnderlyingType:
-    if (!BaseType->isDependentType() && !BaseType->isEnumeralType()) {
-      Diag(Loc, diag::err_only_enums_have_underlying_types);
+static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,
+                                      SourceLocation Loc) {
+  assert(BaseType->isEnumeralType());
+  EnumDecl *ED = BaseType->castAs<EnumType>()->getDecl();
+  assert(ED && "EnumType has no EnumDecl");
+
+  S.DiagnoseUseOfDecl(ED, Loc);
+
+  QualType Underlying = ED->getIntegerType();
+  assert(!Underlying.isNull());
+
+  return Underlying;
+}
+
+QualType Sema::BuiltinEnumUnderlyingType(QualType BaseType,
+                                         SourceLocation Loc) {
+  if (!BaseType->isEnumeralType()) {
+    Diag(Loc, diag::err_only_enums_have_underlying_types);
+    return QualType();
+  }
+
+  // The enum could be incomplete if we're parsing its definition or
+  // recovering from an error.
+  NamedDecl *FwdDecl = nullptr;
+  if (BaseType->isIncompleteType(&FwdDecl)) {
+    Diag(Loc, diag::err_underlying_type_of_incomplete_enum) << BaseType;
+    Diag(FwdDecl->getLocation(), diag::note_forward_declaration) << FwdDecl;
+    return QualType();
+  }
+
+  return GetEnumUnderlyingType(*this, BaseType, Loc);
+}
+
+QualType Sema::BuiltinAddPointer(QualType BaseType, SourceLocation Loc) {
+  QualType Pointer = BaseType.isReferenceable() || BaseType->isVoidType()
+                         ? BuildPointerType(BaseType.getNonReferenceType(), Loc,
+                                            DeclarationName())
+                         : BaseType;
+
+  return Pointer.isNull() ? QualType() : Pointer;
+}
+
+QualType Sema::BuiltinRemovePointer(QualType BaseType, SourceLocation Loc) {
+  // We don't want block pointers or ObjectiveC's id type.
+  if (!BaseType->isAnyPointerType() || BaseType->isObjCIdType())
+    return BaseType;
+
+  return BaseType->getPointeeType();
+}
+
+QualType Sema::BuiltinDecay(QualType BaseType, SourceLocation Loc) {
+  QualType Underlying = BaseType.getNonReferenceType();
+  if (Underlying->isArrayType())
+    return Context.getDecayedType(Underlying);
+
+  if (Underlying->isFunctionType())
+    return BuiltinAddPointer(BaseType, Loc);
+
+  SplitQualType Split = Underlying.getSplitUnqualifiedType();
+  // std::decay is supposed to produce 'std::remove_cv', but since 'restrict' is
+  // in the same group of qualifiers as 'const' and 'volatile', we're extending
+  // '__decay(T)' so that it removes all qualifiers.
+  Split.Quals.removeCVRQualifiers();
+  return Context.getQualifiedType(Split);
+}
+
+QualType Sema::BuiltinAddReference(QualType BaseType, UTTKind UKind,
+                                   SourceLocation Loc) {
+  assert(LangOpts.CPlusPlus);
+  QualType Reference =
+      BaseType.isReferenceable()
+          ? BuildReferenceType(BaseType,
+                               UKind == UnaryTransformType::AddLvalueReference,
+                               Loc, DeclarationName())
+          : BaseType;
+  return Reference.isNull() ? QualType() : Reference;
+}
+
+QualType Sema::BuiltinRemoveExtent(QualType BaseType, UTTKind UKind,
+                                   SourceLocation Loc) {
+  if (UKind == UnaryTransformType::RemoveAllExtents)
+    return Context.getBaseElementType(BaseType);
+
+  if (const auto *AT = Context.getAsArrayType(BaseType))
+    return AT->getElementType();
+
+  return BaseType;
+}
+
+QualType Sema::BuiltinRemoveReference(QualType BaseType, UTTKind UKind,
+                                      SourceLocation Loc) {
+  assert(LangOpts.CPlusPlus);
+  QualType T = BaseType.getNonReferenceType();
+  if (UKind == UTTKind::RemoveCVRef &&
+      (T.isConstQualified() || T.isVolatileQualified())) {
+    Qualifiers Quals;
+    QualType Unqual = Context.getUnqualifiedArrayType(T, Quals);
+    Quals.removeConst();
+    Quals.removeVolatile();
+    T = Context.getQualifiedType(Unqual, Quals);
+  }
+  return T;
+}
+
+QualType Sema::BuiltinChangeCVRQualifiers(QualType BaseType, UTTKind UKind,
+                                          SourceLocation Loc) {
+  if ((BaseType->isReferenceType() && UKind != UTTKind::RemoveRestrict) ||
+      BaseType->isFunctionType())
+    return BaseType;
+
+  Qualifiers Quals;
+  QualType Unqual = Context.getUnqualifiedArrayType(BaseType, Quals);
+
+  if (UKind == UTTKind::RemoveConst || UKind == UTTKind::RemoveCV)
+    Quals.removeConst();
+  if (UKind == UTTKind::RemoveVolatile || UKind == UTTKind::RemoveCV)
+    Quals.removeVolatile();
+  if (UKind == UTTKind::RemoveRestrict)
+    Quals.removeRestrict();
+
+  return Context.getQualifiedType(Unqual, Quals);
+}
+
+static QualType ChangeIntegralSignedness(Sema &S, QualType BaseType,
+                                         bool IsMakeSigned,
+                                         SourceLocation Loc) {
+  if (BaseType->isEnumeralType()) {
+    QualType Underlying = GetEnumUnderlyingType(S, BaseType, Loc);
+    if (auto *BitInt = dyn_cast<BitIntType>(Underlying)) {
+      unsigned int Bits = BitInt->getNumBits();
+      if (Bits > 1)
+        return S.Context.getBitIntType(!IsMakeSigned, Bits);
+
+      S.Diag(Loc, diag::err_make_signed_integral_only)
+          << IsMakeSigned << /*_BitInt(1)*/ true << BaseType << 1 << Underlying;
       return QualType();
-    } else {
-      QualType Underlying = BaseType;
-      if (!BaseType->isDependentType()) {
-        // The enum could be incomplete if we're parsing its definition or
-        // recovering from an error.
-        NamedDecl *FwdDecl = nullptr;
-        if (BaseType->isIncompleteType(&FwdDecl)) {
-          Diag(Loc, diag::err_underlying_type_of_incomplete_enum) << BaseType;
-          Diag(FwdDecl->getLocation(), diag::note_forward_declaration) << FwdDecl;
-          return QualType();
-        }
-
-        EnumDecl *ED = BaseType->castAs<EnumType>()->getDecl();
-        assert(ED && "EnumType has no EnumDecl");
-
-        DiagnoseUseOfDecl(ED, Loc);
-
-        Underlying = ED->getIntegerType();
-        assert(!Underlying.isNull());
-      }
-      return Context.getUnaryTransformType(BaseType, Underlying,
-                                        UnaryTransformType::EnumUnderlyingType);
+    }
+    if (Underlying->isBooleanType()) {
+      S.Diag(Loc, diag::err_make_signed_integral_only)
+          << IsMakeSigned << /*_BitInt(1)*/ false << BaseType << 1
+          << Underlying;
+      return QualType();
     }
   }
-  llvm_unreachable("unknown unary transform type");
+
+  bool Int128Unsupported = !S.Context.getTargetInfo().hasInt128Type();
+  std::array<CanQualType *, 6> AllSignedIntegers = {
+      &S.Context.SignedCharTy, &S.Context.ShortTy,    &S.Context.IntTy,
+      &S.Context.LongTy,       &S.Context.LongLongTy, &S.Context.Int128Ty};
+  ArrayRef<CanQualType *> AvailableSignedIntegers(
+      AllSignedIntegers.begin(), AllSignedIntegers.end() - Int128Unsupported);
+  std::array<CanQualType *, 6> AllUnsignedIntegers = {
+      &S.Context.UnsignedCharTy,     &S.Context.UnsignedShortTy,
+      &S.Context.UnsignedIntTy,      &S.Context.UnsignedLongTy,
+      &S.Context.UnsignedLongLongTy, &S.Context.UnsignedInt128Ty};
+  ArrayRef<CanQualType *> AvailableUnsignedIntegers(AllUnsignedIntegers.begin(),
+                                                    AllUnsignedIntegers.end() -
+                                                        Int128Unsupported);
+  ArrayRef<CanQualType *> *Consider =
+      IsMakeSigned ? &AvailableSignedIntegers : &AvailableUnsignedIntegers;
+
+  uint64_t BaseSize = S.Context.getTypeSize(BaseType);
+  auto *Result =
+      llvm::find_if(*Consider, [&S, BaseSize](const CanQual<Type> *T) {
+        return BaseSize == S.Context.getTypeSize(T->getTypePtr());
+      });
+
+  assert(Result != Consider->end());
+  return QualType((*Result)->getTypePtr(), 0);
+}
+
+QualType Sema::BuiltinChangeSignedness(QualType BaseType, UTTKind UKind,
+                                       SourceLocation Loc) {
+  bool IsMakeSigned = UKind == UnaryTransformType::MakeSigned;
+  if ((!BaseType->isIntegerType() && !BaseType->isEnumeralType()) ||
+      BaseType->isBooleanType() ||
+      (BaseType->isBitIntType() &&
+       BaseType->getAs<BitIntType>()->getNumBits() < 2)) {
+    Diag(Loc, diag::err_make_signed_integral_only)
+        << IsMakeSigned << BaseType->isBitIntType() << BaseType << 0;
+    return QualType();
+  }
+
+  bool IsNonIntIntegral =
+      BaseType->isChar16Type() || BaseType->isChar32Type() ||
+      BaseType->isWideCharType() || BaseType->isEnumeralType();
+
+  QualType Underlying =
+      IsNonIntIntegral
+          ? ChangeIntegralSignedness(*this, BaseType, IsMakeSigned, Loc)
+      : IsMakeSigned ? Context.getCorrespondingSignedType(BaseType)
+                     : Context.getCorrespondingUnsignedType(BaseType);
+  if (Underlying.isNull())
+    return Underlying;
+  return Context.getQualifiedType(Underlying, BaseType.getQualifiers());
+}
+
+QualType Sema::BuildUnaryTransformType(QualType BaseType, UTTKind UKind,
+                                       SourceLocation Loc) {
+  if (BaseType->isDependentType())
+    return Context.getUnaryTransformType(BaseType, BaseType, UKind);
+  QualType Result;
+  switch (UKind) {
+  case UnaryTransformType::EnumUnderlyingType: {
+    Result = BuiltinEnumUnderlyingType(BaseType, Loc);
+    break;
+  }
+  case UnaryTransformType::AddPointer: {
+    Result = BuiltinAddPointer(BaseType, Loc);
+    break;
+  }
+  case UnaryTransformType::RemovePointer: {
+    Result = BuiltinRemovePointer(BaseType, Loc);
+    break;
+  }
+  case UnaryTransformType::Decay: {
+    Result = BuiltinDecay(BaseType, Loc);
+    break;
+  }
+  case UnaryTransformType::AddLvalueReference:
+  case UnaryTransformType::AddRvalueReference: {
+    Result = BuiltinAddReference(BaseType, UKind, Loc);
+    break;
+  }
+  case UnaryTransformType::RemoveAllExtents:
+  case UnaryTransformType::RemoveExtent: {
+    Result = BuiltinRemoveExtent(BaseType, UKind, Loc);
+    break;
+  }
+  case UnaryTransformType::RemoveCVRef:
+  case UnaryTransformType::RemoveReference: {
+    Result = BuiltinRemoveReference(BaseType, UKind, Loc);
+    break;
+  }
+  case UnaryTransformType::RemoveConst:
+  case UnaryTransformType::RemoveCV:
+  case UnaryTransformType::RemoveRestrict:
+  case UnaryTransformType::RemoveVolatile: {
+    Result = BuiltinChangeCVRQualifiers(BaseType, UKind, Loc);
+    break;
+  }
+  case UnaryTransformType::MakeSigned:
+  case UnaryTransformType::MakeUnsigned: {
+    Result = BuiltinChangeSignedness(BaseType, UKind, Loc);
+    break;
+  }
+  default:
+    llvm_unreachable("unknown unary transform type");
+  }
+
+  return !Result.isNull()
+             ? Context.getUnaryTransformType(BaseType, Result, UKind)
+             : Result;
 }
 
 QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
