@@ -699,6 +699,8 @@ else ()
 
   append_list_if(COMPILER_RT_HAS_FLOAT16 -DCOMPILER_RT_HAS_FLOAT16 BUILTIN_CFLAGS)
 
+  append_list_if(COMPILER_RT_HAS_BFLOAT16 -DCOMPILER_RT_HAS_BFLOAT16 BUILTIN_CFLAGS)
+
   append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
 
   # These flags would normally be added to CMAKE_C_FLAGS by the llvm
