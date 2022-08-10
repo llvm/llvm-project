@@ -23,9 +23,6 @@ struct TrieNode {
   const bool IsSubtrie = false;
 
   TrieNode(bool IsSubtrie) : IsSubtrie(IsSubtrie) {}
-
-  static void *operator new(size_t Size) { return ::malloc(Size); }
-  void operator delete(void *Ptr) { ::free(Ptr); }
 };
 
 struct TrieContent final : public TrieNode {
@@ -118,7 +115,7 @@ static size_t getTrieTailSize(size_t StartBit, size_t NumBits) {
 std::unique_ptr<TrieSubtrie> TrieSubtrie::create(size_t StartBit,
                                                  size_t NumBits) {
   size_t Size = sizeof(TrieSubtrie) + getTrieTailSize(StartBit, NumBits);
-  void *Memory = ::malloc(Size);
+  void *Memory = ::operator new(Size);
   TrieSubtrie *S = ::new (Memory) TrieSubtrie(StartBit, NumBits);
   return std::unique_ptr<TrieSubtrie>(S);
 }
@@ -158,7 +155,7 @@ TrieSubtrie *TrieSubtrie::sink(
 struct ThreadSafeHashMappedTrieBase::ImplType {
   static ImplType *create(size_t StartBit, size_t NumBits) {
     size_t Size = sizeof(ImplType) + getTrieTailSize(StartBit, NumBits);
-    void *Memory = ::malloc(Size);
+    void *Memory = ::operator new(Size);
     return ::new (Memory) ImplType(StartBit, NumBits);
   }
 
