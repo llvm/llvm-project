@@ -176,8 +176,8 @@
 
 define void @constantargs() {
 entry:
-  %0 = inttoptr i64 12345 to i8*
-  tail call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 1, i32 16, i8* %0, i32 0, i16 65535, i16 -1, i32 65536, i32 2000000000, i32 2147483647, i32 -1, i32 4294967295, i32 4294967296, i64 2147483648, i64 4294967295, i64 4294967296, i64 -1, i128 66, i128 4294967297)
+  %0 = inttoptr i64 12345 to ptr
+  tail call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 1, i32 16, ptr %0, i32 0, i16 65535, i16 -1, i32 65536, i32 2000000000, i32 2147483647, i32 -1, i32 4294967295, i32 4294967296, i64 2147483648, i64 4294967295, i64 4294967296, i64 -1, i128 66, i128 4294967297)
   ret void
 }
 
@@ -201,7 +201,7 @@ entry:
 define void @osrinline(i64 %a, i64 %b) {
 entry:
   ; Runtime void->void call.
-  call void inttoptr (i64 -559038737 to void ()*)()
+  call void inttoptr (i64 -559038737 to ptr)()
   ; Followed by inline OSR patchpoint with 12-byte shadow and 2 live vars.
   call void (i64, i32, ...) @llvm.experimental.stackmap(i64 3, i32 12, i64 %a, i64 %b)
   ret void
@@ -232,8 +232,8 @@ entry:
   br i1 %test, label %ret, label %cold
 cold:
   ; OSR patchpoint with 12-byte nop-slide and 2 live vars.
-  %thunk = inttoptr i64 3735928559 to i8*
-  call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 4, i32 16, i8* %thunk, i32 0, i64 %a, i64 %b)
+  %thunk = inttoptr i64 3735928559 to ptr
+  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 4, i32 16, ptr %thunk, i32 0, i64 %a, i64 %b)
   unreachable
 ret:
   ret void
@@ -255,10 +255,10 @@ ret:
 ; CHECK-NEXT:   .hword  {{[0-9]+}}
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
-define i64 @propertyRead(i64* %obj) {
+define i64 @propertyRead(ptr %obj) {
 entry:
-  %resolveRead = inttoptr i64 3735928559 to i8*
-  %result = call anyregcc i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 5, i32 16, i8* %resolveRead, i32 1, i64* %obj)
+  %resolveRead = inttoptr i64 3735928559 to ptr
+  %result = call anyregcc i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 5, i32 16, ptr %resolveRead, i32 1, ptr %obj)
   %add = add i64 %result, 3
   ret i64 %add
 }
@@ -279,10 +279,10 @@ entry:
 ; CHECK-NEXT:   .hword  {{[0-9]+}}
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
-define void @propertyWrite(i64 %dummy1, i64* %obj, i64 %dummy2, i64 %a) {
+define void @propertyWrite(i64 %dummy1, ptr %obj, i64 %dummy2, i64 %a) {
 entry:
-  %resolveWrite = inttoptr i64 3735928559 to i8*
-  call anyregcc void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 6, i32 16, i8* %resolveWrite, i32 2, i64* %obj, i64 %a)
+  %resolveWrite = inttoptr i64 3735928559 to ptr
+  call anyregcc void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 6, i32 16, ptr %resolveWrite, i32 2, ptr %obj, i64 %a)
   ret void
 }
 
@@ -305,10 +305,10 @@ entry:
 ; CHECK-NEXT:   .hword  {{[0-9]+}}
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
-define void @jsVoidCall(i64 %dummy1, i64* %obj, i64 %arg, i64 %l1, i64 %l2) {
+define void @jsVoidCall(i64 %dummy1, ptr %obj, i64 %arg, i64 %l1, i64 %l2) {
 entry:
-  %resolveCall = inttoptr i64 3735928559 to i8*
-  call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 7, i32 16, i8* %resolveCall, i32 2, i64* %obj, i64 %arg, i64 %l1, i64 %l2)
+  %resolveCall = inttoptr i64 3735928559 to ptr
+  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 7, i32 16, ptr %resolveCall, i32 2, ptr %obj, i64 %arg, i64 %l1, i64 %l2)
   ret void
 }
 
@@ -331,10 +331,10 @@ entry:
 ; CHECK-NEXT:   .hword  {{[0-9]+}}
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
-define i64 @jsIntCall(i64 %dummy1, i64* %obj, i64 %arg, i64 %l1, i64 %l2) {
+define i64 @jsIntCall(i64 %dummy1, ptr %obj, i64 %arg, i64 %l1, i64 %l2) {
 entry:
-  %resolveCall = inttoptr i64 3735928559 to i8*
-  %result = call i64 (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.i64(i64 8, i32 16, i8* %resolveCall, i32 2, i64* %obj, i64 %arg, i64 %l1, i64 %l2)
+  %resolveCall = inttoptr i64 3735928559 to ptr
+  %result = call i64 (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.i64(i64 8, i32 16, ptr %resolveCall, i32 2, ptr %obj, i64 %arg, i64 %l1, i64 %l2)
   %add = add i64 %result, 3
   ret i64 %add
 }
@@ -357,7 +357,7 @@ entry:
 ; CHECK-NEXT:   .word
 define void @spilledValue(i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16, i64 %l17, i64 %l18, i64 %l19, i64 %l20, i64 %l21, i64 %l22, i64 %l23, i64 %l24, i64 %l25, i64 %l26, i64 %l27) {
 entry:
-  call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 11, i32 20, i8* null, i32 5, i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16, i64 %l17, i64 %l18, i64 %l19, i64 %l20, i64 %l21, i64 %l22, i64 %l23, i64 %l24, i64 %l25, i64 %l26, i64 %l27)
+  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 11, i32 20, ptr null, i32 5, i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %l0, i64 %l1, i64 %l2, i64 %l3, i64 %l4, i64 %l5, i64 %l6, i64 %l7, i64 %l8, i64 %l9, i64 %l10, i64 %l11, i64 %l12, i64 %l13, i64 %l14, i64 %l15, i64 %l16, i64 %l17, i64 %l18, i64 %l19, i64 %l20, i64 %l21, i64 %l22, i64 %l23, i64 %l24, i64 %l25, i64 %l26, i64 %l27)
   ret void
 }
 
@@ -439,13 +439,13 @@ define void @liveConstant() {
 define void @directFrameIdx() {
 entry:
   %metadata1 = alloca i64, i32 3, align 8
-  store i64 11, i64* %metadata1
-  store i64 12, i64* %metadata1
-  store i64 13, i64* %metadata1
-  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 16, i32 0, i64* %metadata1)
+  store i64 11, ptr %metadata1
+  store i64 12, ptr %metadata1
+  store i64 13, ptr %metadata1
+  call void (i64, i32, ...) @llvm.experimental.stackmap(i64 16, i32 0, ptr %metadata1)
   %metadata2 = alloca i8, i32 4, align 8
   %metadata3 = alloca i16, i32 4, align 8
-  call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 17, i32 4, i8* null, i32 0, i8* %metadata2, i16* %metadata3)
+  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 17, i32 4, ptr null, i32 0, ptr %metadata2, ptr %metadata3)
   ret void
 }
 
@@ -461,10 +461,10 @@ entry:
 ; CHECK-LABEL:  .word .L{{.*}}-longid
 define void @longid() {
 entry:
-  tail call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 4294967295, i32 0, i8* null, i32 0)
-  tail call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 4294967296, i32 0, i8* null, i32 0)
-  tail call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 9223372036854775807, i32 0, i8* null, i32 0)
-  tail call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 -1, i32 0, i8* null, i32 0)
+  tail call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 4294967295, i32 0, ptr null, i32 0)
+  tail call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 4294967296, i32 0, ptr null, i32 0)
+  tail call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 9223372036854775807, i32 0, ptr null, i32 0)
+  tail call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 -1, i32 0, ptr null, i32 0)
   ret void
 }
 
@@ -496,7 +496,7 @@ define void @clobberLR(i32 %a) {
 ; CHECK-NEXT:   .hword 0
 define void @needsStackRealignment() {
   %val = alloca i64, i32 3, align 128
-  tail call void (...) @escape_values(i64* %val)
+  tail call void (...) @escape_values(ptr %val)
 ; Note: Adding any non-constant to the stackmap would fail because we
 ; expected to be able to address off the frame pointer.  In a realigned
 ; frame, we must use the stack pointer instead.  This is a separate bug.
@@ -555,10 +555,10 @@ define void @floats(float %f, double %g) {
   %ff = alloca float
   %gg = alloca double
   call void (i64, i32, ...) @llvm.experimental.stackmap(i64 888, i32 0, float 1.25,
-    double 1.5, float %f, double %g, float* %ff, double* %gg)
+    double 1.5, float %f, double %g, ptr %ff, ptr %gg)
   ret void
 }
 
 declare void @llvm.experimental.stackmap(i64, i32, ...)
-declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
-declare i64 @llvm.experimental.patchpoint.i64(i64, i32, i8*, i32, ...)
+declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)
+declare i64 @llvm.experimental.patchpoint.i64(i64, i32, ptr, i32, ...)
