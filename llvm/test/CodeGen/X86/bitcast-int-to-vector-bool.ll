@@ -135,8 +135,7 @@ define <8 x i1> @bitcast_i8_8i1(i8 zeroext %a0) {
 define <8 x i1> @bitcast_i8_8i1_freeze(i8 zeroext %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_i8_8i1_freeze:
 ; SSE2-SSSE3:       # %bb.0:
-; SSE2-SSSE3-NEXT:    movzbl %dil, %eax
-; SSE2-SSSE3-NEXT:    movd %eax, %xmm0
+; SSE2-SSSE3-NEXT:    movd %edi, %xmm0
 ; SSE2-SSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; SSE2-SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
@@ -147,8 +146,7 @@ define <8 x i1> @bitcast_i8_8i1_freeze(i8 zeroext %a0) {
 ;
 ; AVX1-LABEL: bitcast_i8_8i1_freeze:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    movzbl %dil, %eax
-; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    vmovd %edi, %xmm0
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [1,2,4,8,16,32,64,128]
