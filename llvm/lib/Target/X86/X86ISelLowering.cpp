@@ -29745,7 +29745,7 @@ static SDValue LowerShiftByScalarImmediate(SDValue Op, SelectionDAG &DAG,
       // safe, we must freeze R to ensure that register allocation uses the same
       // register for an undefined value. This ensures that the result will
       // still be even and preserves the original semantics.
-      R = DAG.getNode(ISD::FREEZE, dl, VT, R);
+      R = DAG.getFreeze(R);
       return DAG.getNode(ISD::ADD, dl, VT, R, R);
     }
 
