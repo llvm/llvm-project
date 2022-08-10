@@ -1926,6 +1926,13 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     trap_opcode_size = sizeof(g_i386_opcode);
   } break;
 
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64: {
+    static const uint8_t g_riscv_opcode[] = {0x73, 0x00, 0x10, 0x00}; // ebreak
+    trap_opcode = g_riscv_opcode;
+    trap_opcode_size = sizeof(g_riscv_opcode);
+  } break;
+
   default:
     return 0;
   }
