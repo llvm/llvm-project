@@ -3769,10 +3769,6 @@ bool EmulateInstructionARM::EmulateShiftImm(const uint32_t opcode,
 
     switch (use_encoding) {
     case eEncodingT1:
-      // Due to the above special case handling!
-      if (shift_type == SRType_ROR)
-        return false;
-
       Rd = Bits32(opcode, 2, 0);
       Rm = Bits32(opcode, 5, 3);
       setflags = !InITBlock();
@@ -4139,8 +4135,6 @@ bool EmulateInstructionARM::EmulateLDMDA(const uint32_t opcode,
 
     // if wback && registers<n> == '0' then R[n] = R[n] - 4*BitCount(registers);
     if (wback && BitIsClear(registers, n)) {
-      if (!success)
-        return false;
 
       offset = (addr_byte_size * BitCount(registers)) * -1;
       context.type = EmulateInstruction::eContextAdjustBaseRegister;
@@ -4277,8 +4271,6 @@ bool EmulateInstructionARM::EmulateLDMDB(const uint32_t opcode,
 
     // if wback && registers<n> == '0' then R[n] = R[n] - 4*BitCount(registers);
     if (wback && BitIsClear(registers, n)) {
-      if (!success)
-        return false;
 
       offset = (addr_byte_size * BitCount(registers)) * -1;
       context.type = EmulateInstruction::eContextAdjustBaseRegister;
@@ -4391,8 +4383,6 @@ bool EmulateInstructionARM::EmulateLDMIB(const uint32_t opcode,
 
     // if wback && registers<n> == '0' then R[n] = R[n] + 4*BitCount(registers);
     if (wback && BitIsClear(registers, n)) {
-      if (!success)
-        return false;
 
       offset = addr_byte_size * BitCount(registers);
       context.type = EmulateInstruction::eContextAdjustBaseRegister;
