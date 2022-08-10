@@ -58,8 +58,7 @@ static Value insertOne(ConversionPatternRewriter &rewriter,
     return rewriter.create<LLVM::InsertElementOp>(loc, llvmType, val1, val2,
                                                   constant);
   }
-  return rewriter.create<LLVM::InsertValueOp>(loc, llvmType, val1, val2,
-                                              rewriter.getI64ArrayAttr(pos));
+  return rewriter.create<LLVM::InsertValueOp>(loc, val1, val2, pos);
 }
 
 // Helper that picks the proper sequence for extracting.
@@ -74,8 +73,7 @@ static Value extractOne(ConversionPatternRewriter &rewriter,
     return rewriter.create<LLVM::ExtractElementOp>(loc, llvmType, val,
                                                    constant);
   }
-  return rewriter.create<LLVM::ExtractValueOp>(loc, llvmType, val,
-                                               rewriter.getI64ArrayAttr(pos));
+  return rewriter.create<LLVM::ExtractValueOp>(loc, val, pos);
 }
 
 // Helper that returns data layout alignment of a memref.
@@ -647,7 +645,6 @@ public:
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = extractOp->getLoc();
-    auto vectorType = extractOp.getVectorType();
     auto resultType = extractOp.getResult().getType();
     auto llvmResultType = typeConverter->convertType(resultType);
     auto positionArrayAttr = extractOp.getPosition();
@@ -664,23 +661,24 @@ public:
 
     // One-shot extraction of vector from array (only requires extractvalue).
     if (resultType.isa<VectorType>()) {
+      SmallVector<int64_t> indices;
+      for (auto idx : positionArrayAttr.getAsRange<IntegerAttr>())
+        indices.push_back(idx.getInt());
       Value extracted = rewriter.create<LLVM::ExtractValueOp>(
-          loc, llvmResultType, adaptor.getVector(), positionArrayAttr);
+          loc, adaptor.getVector(), indices);
       rewriter.replaceOp(extractOp, extracted);
       return success();
     }
 
     // Potential extraction of 1-D vector from array.
-    auto *context = extractOp->getContext();
     Value extracted = adaptor.getVector();
     auto positionAttrs = positionArrayAttr.getValue();
     if (positionAttrs.size() > 1) {
-      auto oneDVectorType = reducedVectorTypeBack(vectorType);
-      auto nMinusOnePositionAttrs =
-          ArrayAttr::get(context, positionAttrs.drop_back());
-      extracted = rewriter.create<LLVM::ExtractValueOp>(
-          loc, typeConverter->convertType(oneDVectorType), extracted,
-          nMinusOnePositionAttrs);
+      SmallVector<int64_t> nMinusOnePosition;
+      for (auto idx : positionAttrs.drop_back())
+        nMinusOnePosition.push_back(idx.cast<IntegerAttr>().getInt());
+      extracted = rewriter.create<LLVM::ExtractValueOp>(loc, extracted,
+                                                        nMinusOnePosition);
     }
 
     // Remaining extraction of element from 1-D LLVM vector
@@ -786,25 +784,22 @@ public:
     // One-shot insertion of a vector into an array (only requires insertvalue).
     if (sourceType.isa<VectorType>()) {
       Value inserted = rewriter.create<LLVM::InsertValueOp>(
-          loc, llvmResultType, adaptor.getDest(), adaptor.getSource(),
-          positionArrayAttr);
+          loc, adaptor.getDest(), adaptor.getSource(),
+          LLVM::convertArrayToIndices(positionArrayAttr));
       rewriter.replaceOp(insertOp, inserted);
       return success();
     }
 
     // Potential extraction of 1-D vector from array.
-    auto *context = insertOp->getContext();
     Value extracted = adaptor.getDest();
     auto positionAttrs = positionArrayAttr.getValue();
     auto position = positionAttrs.back().cast<IntegerAttr>();
     auto oneDVectorType = destVectorType;
     if (positionAttrs.size() > 1) {
       oneDVectorType = reducedVectorTypeBack(destVectorType);
-      auto nMinusOnePositionAttrs =
-          ArrayAttr::get(context, positionAttrs.drop_back());
       extracted = rewriter.create<LLVM::ExtractValueOp>(
-          loc, typeConverter->convertType(oneDVectorType), extracted,
-          nMinusOnePositionAttrs);
+          loc, extracted,
+          LLVM::convertArrayToIndices(positionAttrs.drop_back()));
     }
 
     // Insertion of an element into a 1-D LLVM vector.
@@ -816,11 +811,9 @@ public:
 
     // Potential insertion of resulting 1-D vector into array.
     if (positionAttrs.size() > 1) {
-      auto nMinusOnePositionAttrs =
-          ArrayAttr::get(context, positionAttrs.drop_back());
       inserted = rewriter.create<LLVM::InsertValueOp>(
-          loc, llvmResultType, adaptor.getDest(), inserted,
-          nMinusOnePositionAttrs);
+          loc, adaptor.getDest(), inserted,
+          LLVM::convertArrayToIndices(positionAttrs.drop_back()));
     }
 
     rewriter.replaceOp(insertOp, inserted);
@@ -1269,9 +1262,8 @@ struct VectorSplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
 
     // Iterate of linear index, convert to coords space and insert splatted 1-D
     // vector in each position.
-    nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayAttr position) {
-      desc = rewriter.create<LLVM::InsertValueOp>(loc, llvmNDVectorTy, desc, v,
-                                                  position);
+    nDVectorIterate(vectorTypeInfo, rewriter, [&](ArrayRef<int64_t> position) {
+      desc = rewriter.create<LLVM::InsertValueOp>(loc, desc, v, position);
     });
     rewriter.replaceOp(splatOp, desc);
     return success();

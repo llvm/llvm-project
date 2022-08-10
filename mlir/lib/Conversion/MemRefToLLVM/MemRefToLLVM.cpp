@@ -533,10 +533,8 @@ struct GenericAtomicRMWOpLowering
         loc, pairType, dataPtr, loopArgument, result, successOrdering,
         failureOrdering);
     // Extract the %new_loaded and %ok values from the pair.
-    Value newLoaded = rewriter.create<LLVM::ExtractValueOp>(
-        loc, valueType, cmpxchg, rewriter.getI64ArrayAttr({0}));
-    Value ok = rewriter.create<LLVM::ExtractValueOp>(
-        loc, boolType, cmpxchg, rewriter.getI64ArrayAttr({1}));
+    Value newLoaded = rewriter.create<LLVM::ExtractValueOp>(loc, cmpxchg, 0);
+    Value ok = rewriter.create<LLVM::ExtractValueOp>(loc, cmpxchg, 1);
 
     // Conditionally branch to the end or back to the loop depending on %ok.
     rewriter.create<LLVM::CondBrOp>(loc, ok, endBlock, ArrayRef<Value>(),

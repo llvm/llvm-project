@@ -1506,8 +1506,8 @@ llvm.mlir.global linkonce @take_self_address() : !llvm.struct<(i32, !llvm.ptr<i3
   %0 = llvm.mlir.undef : !llvm.struct<(i32, !llvm.ptr<i32>)>
   %1 = llvm.mlir.addressof @take_self_address : !llvm.ptr<!llvm.struct<(i32, !llvm.ptr<i32>)>>
   %2 = llvm.getelementptr %1[%z32, 0] : (!llvm.ptr<!llvm.struct<(i32, !llvm.ptr<i32>)>>, i32) -> !llvm.ptr<i32>
-  %3 = llvm.insertvalue %z32, %0[0 : i32] : !llvm.struct<(i32, !llvm.ptr<i32>)>
-  %4 = llvm.insertvalue %2, %3[1 : i32] : !llvm.struct<(i32, !llvm.ptr<i32>)>
+  %3 = llvm.insertvalue %z32, %0[0] : !llvm.struct<(i32, !llvm.ptr<i32>)>
+  %4 = llvm.insertvalue %2, %3[1] : !llvm.struct<(i32, !llvm.ptr<i32>)>
   llvm.return %4 : !llvm.struct<(i32, !llvm.ptr<i32>)>
 }
 

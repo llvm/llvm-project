@@ -85,9 +85,8 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
     if (arrayType.getElementType() == f16x2Ty ||
         arrayType.getElementType() == f32x1Ty) {
       for (unsigned i = 0; i < structType.getBody().size(); i++) {
-        Value el = rewriter.create<LLVM::ExtractValueOp>(
-            loc, structType.getBody()[i], intrinsicResult,
-            rewriter.getI64ArrayAttr(i));
+        Value el =
+            rewriter.create<LLVM::ExtractValueOp>(loc, intrinsicResult, i);
         el = rewriter.createOrFold<LLVM::BitcastOp>(
             loc, arrayType.getElementType(), el);
         elements.push_back(el);
@@ -105,12 +104,10 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
       for (unsigned i = 0, e = structType.getBody().size() / 2; i < e; i++) {
         Value vec =
             rewriter.create<LLVM::UndefOp>(loc, arrayType.getElementType());
-        Value x1 = rewriter.create<LLVM::ExtractValueOp>(
-            loc, structType.getBody()[i * 2], intrinsicResult,
-            rewriter.getI64ArrayAttr(i * 2));
-        Value x2 = rewriter.create<LLVM::ExtractValueOp>(
-            loc, structType.getBody()[i * 2 + 1], intrinsicResult,
-            rewriter.getI64ArrayAttr(i * 2 + 1));
+        Value x1 =
+            rewriter.create<LLVM::ExtractValueOp>(loc, intrinsicResult, i * 2);
+        Value x2 = rewriter.create<LLVM::ExtractValueOp>(loc, intrinsicResult,
+                                                         i * 2 + 1);
         vec = rewriter.create<LLVM::InsertElementOp>(loc, vec.getType(), vec,
                                                      x1, makeConst(0));
         vec = rewriter.create<LLVM::InsertElementOp>(loc, vec.getType(), vec,
@@ -122,9 +119,8 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
     // Create the final vectorized result.
     Value result = rewriter.create<LLVM::UndefOp>(loc, arrayType);
     for (const auto &el : llvm::enumerate(elements)) {
-      result = rewriter.create<LLVM::InsertValueOp>(
-          loc, arrayType, result, el.value(),
-          rewriter.getI64ArrayAttr(el.index()));
+      result = rewriter.create<LLVM::InsertValueOp>(loc, result, el.value(),
+                                                    el.index());
     }
     return result;
   }
@@ -152,8 +148,7 @@ static SmallVector<Value> unpackOperandVector(RewriterBase &rewriter,
   auto arrayTy = operand.getType().cast<LLVM::LLVMArrayType>();
 
   for (unsigned i = 0, e = arrayTy.getNumElements(); i < e; ++i) {
-    Value toUse = rewriter.create<LLVM::ExtractValueOp>(
-        loc, arrayTy.getElementType(), operand, rewriter.getI64ArrayAttr(i));
+    Value toUse = rewriter.create<LLVM::ExtractValueOp>(loc, operand, i);
 
     // For 4xi8 vectors, the intrinsic expects these to be provided as i32
     // scalar types.
@@ -238,15 +233,13 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
     Type finalResultType = typeConverter->convertType(vectorResultType);
     Value result = rewriter.create<LLVM::UndefOp>(loc, finalResultType);
     for (int64_t i = 0, e = vectorResultType.getDimSize(0); i < e; i++) {
-      Value i32Register = num32BitRegs > 1
-                              ? rewriter.create<LLVM::ExtractValueOp>(
-                                    loc, rewriter.getI32Type(), ldMatrixResult,
-                                    rewriter.getI64ArrayAttr(i))
-                              : ldMatrixResult;
+      Value i32Register =
+          num32BitRegs > 1
+              ? rewriter.create<LLVM::ExtractValueOp>(loc, ldMatrixResult, i)
+              : ldMatrixResult;
       Value casted =
           rewriter.create<LLVM::BitcastOp>(loc, innerVectorType, i32Register);
-      result = rewriter.create<LLVM::InsertValueOp>(
-          loc, finalResultType, result, casted, rewriter.getI64ArrayAttr(i));
+      result = rewriter.create<LLVM::InsertValueOp>(loc, result, casted, i);
     }
 
     rewriter.replaceOp(op, result);

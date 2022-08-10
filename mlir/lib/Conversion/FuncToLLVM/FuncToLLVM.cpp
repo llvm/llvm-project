@@ -517,11 +517,8 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
       // Extract individual results from the structure and return them as list.
       results.reserve(numResults);
       for (unsigned i = 0; i < numResults; ++i) {
-        auto type =
-            this->typeConverter->convertType(callOp.getResult(i).getType());
         results.push_back(rewriter.create<LLVM::ExtractValueOp>(
-            callOp.getLoc(), type, newOp->getResult(0),
-            rewriter.getI64ArrayAttr(i)));
+            callOp.getLoc(), newOp->getResult(0), i));
       }
     }
 
@@ -638,9 +635,8 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
 
     Value packed = rewriter.create<LLVM::UndefOp>(loc, packedType);
     for (unsigned i = 0; i < numArguments; ++i) {
-      packed = rewriter.create<LLVM::InsertValueOp>(
-          loc, packedType, packed, updatedOperands[i],
-          rewriter.getI64ArrayAttr(i));
+      packed = rewriter.create<LLVM::InsertValueOp>(loc, packed,
+                                                    updatedOperands[i], i);
     }
     rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, TypeRange(), packed,
                                                 op->getAttrs());

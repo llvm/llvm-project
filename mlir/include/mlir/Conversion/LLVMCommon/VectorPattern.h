@@ -47,7 +47,7 @@ SmallVector<int64_t, 4> getCoordinates(ArrayRef<int64_t> basis,
 // Iterate of linear index, convert to coords space and insert splatted 1-D
 // vector in each position.
 void nDVectorIterate(const NDVectorTypeInfo &info, OpBuilder &builder,
-                     function_ref<void(ArrayAttr)> fun);
+                     function_ref<void(ArrayRef<int64_t>)> fun);
 
 LogicalResult handleMultidimensionalVectors(
     Operation *op, ValueRange operands, LLVMTypeConverter &typeConverter,

@@ -543,9 +543,8 @@ Value Importer::processConstant(llvm::Constant *c) {
       if (!elementValue)
         return nullptr;
       if (useInsertValue) {
-        ArrayAttr indexAttr = bEntry.getI32ArrayAttr({static_cast<int32_t>(i)});
-        root = bEntry.create<InsertValueOp>(UnknownLoc::get(context), rootType,
-                                            root, elementValue, indexAttr);
+        root = bEntry.create<InsertValueOp>(UnknownLoc::get(context), root,
+                                            elementValue, i);
       } else {
         Attribute indexAttr = bEntry.getI32IntegerAttr(static_cast<int32_t>(i));
         Value indexValue = bEntry.create<ConstantOp>(
@@ -1100,11 +1099,8 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     if (!aggOperand)
       return failure();
 
-    SmallVector<int32_t> idxValues;
-    for (unsigned idx : ivInst->getIndices())
-      idxValues.push_back(static_cast<int32_t>(idx));
-    ArrayAttr indices = b.getI32ArrayAttr(idxValues);
-
+    SmallVector<int64_t> indices;
+    llvm::append_range(indices, ivInst->getIndices());
     instMap[inst] = b.create<InsertValueOp>(loc, aggOperand, inserted, indices);
     return success();
   }
@@ -1118,12 +1114,9 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     if (!type)
       return failure();
 
-    SmallVector<int32_t> idxValues;
-    for (unsigned idx : evInst->getIndices())
-      idxValues.push_back(static_cast<int32_t>(idx));
-    ArrayAttr indices = b.getI32ArrayAttr(idxValues);
-
-    instMap[inst] = b.create<ExtractValueOp>(loc, type, aggOperand, indices);
+    SmallVector<int64_t> indices;
+    llvm::append_range(indices, evInst->getIndices());
+    instMap[inst] = b.create<ExtractValueOp>(loc, aggOperand, indices);
     return success();
   }
   case llvm::Instruction::ShuffleVector: {

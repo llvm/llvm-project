@@ -334,9 +334,8 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   SmallVector<Value, 4> results;
   results.reserve(numResults);
   for (unsigned i = 0; i < numResults; ++i) {
-    auto type = typeConverter.convertType(op->getResult(i).getType());
     results.push_back(rewriter.create<LLVM::ExtractValueOp>(
-        op->getLoc(), type, newOp->getResult(0), rewriter.getI64ArrayAttr(i)));
+        op->getLoc(), newOp->getResult(0), i));
   }
   rewriter.replaceOp(op, results);
   return success();
