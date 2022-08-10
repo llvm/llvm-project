@@ -317,7 +317,7 @@ public:
   BitcodeFile(MemoryBufferRef m, StringRef archiveName,
               uint64_t offsetInArchive, bool lazy);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
-  template <class ELFT> void parse();
+  void parse();
   void parseLazy();
   void postParse();
   std::unique_ptr<llvm::lto::InputFile> obj;

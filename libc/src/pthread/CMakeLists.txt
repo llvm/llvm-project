@@ -292,6 +292,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_exit
+  SRCS
+    pthread_exit.cpp
+  HDRS
+    pthread_exit.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
   pthread_self
   SRCS
     pthread_self.cpp
