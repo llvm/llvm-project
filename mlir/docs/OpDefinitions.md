@@ -768,9 +768,9 @@ when generating the C++ code for the format. The `UserDirective` is an
 identifier used as a suffix to these two calls, i.e., `custom<MyDirective>(...)`
 would result in calls to `parseMyDirective` and `printMyDirective` within the
 parser and printer respectively. `Params` may be any combination of variables
-(i.e. Attribute, Operand, Successor, etc.), type directives, and `attr-dict`.
-The type directives must refer to a variable, but that variable need not also be
-a parameter to the custom directive.
+(i.e. Attribute, Operand, Successor, etc.), type directives, `attr-dict`, and
+strings of C++ code. The type directives must refer to a variable, but that
+variable need not also be a parameter to the custom directive.
 
 The arguments to the `parse<UserDirective>` method are firstly a reference to
 the `OpAsmParser`(`OpAsmParser &`), and secondly a set of output parameters
@@ -837,7 +837,16 @@ declarative parameter to `print` method argument is detailed below:
     -   VariadicOfVariadic: `TypeRangeRange`
 *   `attr-dict` Directive: `DictionaryAttr`
 
-When a variable is optional, the provided value may be null.
+When a variable is optional, the provided value may be null. When a variable is
+referenced in a custom directive parameter using `ref`, it is passed in by
+value. Referenced variables to `print<UserDirective>` are passed as the same as
+bound variables, but referenced variables to `parse<UserDirective>` are passed
+like to the printer.
+
+A custom directive can take a string of C++ code as a parameter. The code is
+pasted verbatim in the calls to the custom parser and printers, with the
+substitutions `$_builder` and `$_ctxt`. String literals can be used to
+parameterize custom directives.
 
 #### Optional Groups
 
@@ -1462,7 +1471,7 @@ std::string stringifyMyBitEnum(MyBitEnum symbol) {
   if (2u == (2u & val)) { strs.push_back("Bit1"); }
   if (4u == (4u & val)) { strs.push_back("Bit2"); }
   if (8u == (8u & val)) { strs.push_back("Bit3"); }
-  
+
   return llvm::join(strs, "|");
 }
 

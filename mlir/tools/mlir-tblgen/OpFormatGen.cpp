@@ -916,6 +916,13 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
       body << llvm::formatv("{0}Type", listName);
     else
       body << formatv("{0}RawTypes[0]", listName);
+
+  } else if (auto *string = dyn_cast<StringElement>(param)) {
+    FmtContext ctx;
+    ctx.withBuilder("parser.getBuilder()");
+    ctx.addSubst("_ctxt", "parser.getContext()");
+    body << tgfmt(string->getValue(), &ctx);
+
   } else {
     llvm_unreachable("unknown custom directive parameter");
   }
@@ -1715,6 +1722,13 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
       body << llvm::formatv("({0}() ? {0}().getType() : Type())", name);
     else
       body << name << "().getType()";
+
+  } else if (auto *string = dyn_cast<StringElement>(element)) {
+    FmtContext ctx;
+    ctx.withBuilder("parser.getBuilder()");
+    ctx.addSubst("_ctxt", "parser.getContext()");
+    body << tgfmt(string->getValue(), &ctx);
+
   } else {
     llvm_unreachable("unknown custom directive parameter");
   }
@@ -2826,8 +2840,9 @@ OpFormatParser::parseAttrDictDirective(SMLoc loc, Context context,
 LogicalResult OpFormatParser::verifyCustomDirectiveArguments(
     SMLoc loc, ArrayRef<FormatElement *> arguments) {
   for (FormatElement *argument : arguments) {
-    if (!isa<RefDirective, TypeDirective, AttrDictDirective, AttributeVariable,
-             OperandVariable, RegionVariable, SuccessorVariable>(argument)) {
+    if (!isa<StringElement, RefDirective, TypeDirective, AttrDictDirective,
+             AttributeVariable, OperandVariable, RegionVariable,
+             SuccessorVariable>(argument)) {
       // TODO: FormatElement should have location info attached.
       return emitError(loc, "only variables and types may be used as "
                             "parameters to a custom directive");
