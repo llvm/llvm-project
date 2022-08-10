@@ -11,7 +11,7 @@
 
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
-#include "src/stdio/printf_core/hex_converter.h"
+#include "src/stdio/printf_core/int_converter.h"
 #include "src/stdio/printf_core/writer.h"
 
 namespace __llvm_libc {
@@ -28,7 +28,7 @@ int inline convert_pointer(Writer *writer, const FormatSection &to_conv) {
     hex_conv.conv_name = 'x';
     hex_conv.flags = FormatFlags::ALTERNATE_FORM;
     hex_conv.conv_val_raw = reinterpret_cast<uintptr_t>(to_conv.conv_val_ptr);
-    return convert_hex(writer, hex_conv);
+    return convert_int(writer, hex_conv);
   }
   return WRITE_OK;
 }

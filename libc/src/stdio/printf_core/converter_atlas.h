@@ -22,11 +22,6 @@
 // defines convert_int
 #include "src/stdio/printf_core/int_converter.h"
 
-// defines convert_oct
-#include "src/stdio/printf_core/oct_converter.h"
-// defines convert_hex
-#include "src/stdio/printf_core/hex_converter.h"
-
 #ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
 // defines convert_float_decimal
 // defines convert_float_dec_exp
