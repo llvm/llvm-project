@@ -1,4 +1,4 @@
-; RUN: opt -passes='print<cost-model>' 2>&1 -disable-output -mtriple=aarch64-linux-gnu -mattr=+neon < %s | FileCheck %s
+; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=aarch64-linux-gnu -mattr=+neon < %s | FileCheck %s
 
 ; Verify the cost of integer division by constant.
 

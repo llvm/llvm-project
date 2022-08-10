@@ -3,7 +3,7 @@
 ; follow by and a trunc to a register sized integer gives a cost of 1 rather
 ; than the expanded cost if it is not.
 
-; RUN: opt -passes='print<cost-model>' -cost-kind=code-size 2>&1 -disable-output -mtriple=riscv64 < %s | FileCheck %s --check-prefix=CHECK
+; RUN: opt -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output -mtriple=riscv64 < %s | FileCheck %s --check-prefix=CHECK
 
 ; Check that cost is 1 for unusual load to register sized load.
 define i32 @loadUnusualIntegerWithTrunc(i128* %ptr) {

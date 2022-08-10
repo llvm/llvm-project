@@ -1,4 +1,4 @@
-; RUN: opt < %s  -passes='print<cost-model>' 2>&1 -disable-output -mtriple=armv7-linux-gnueabihf -mcpu=cortex-a9 | FileCheck --check-prefix=COST %s
+; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -mtriple=armv7-linux-gnueabihf -mcpu=cortex-a9 | FileCheck --check-prefix=COST %s
 ; To see the assembly output: llc -mcpu=cortex-a9 < %s | FileCheck --check-prefix=ASM %s
 ; ASM lines below are only for reference, tests on that direction should go to tests/CodeGen/ARM
 

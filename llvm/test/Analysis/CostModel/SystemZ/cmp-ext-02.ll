@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=zEC12 | FileCheck %s
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=zEC12 | FileCheck %s
 ;
 ; Check the cost values for older subtargets that use an IPM sequence for
 ; extension of a compare result.
