@@ -74,6 +74,10 @@ public:
   constexpr T &operator*() & { return Storage.StoredValue; }
 
   constexpr const T &operator*() const & { return Storage.StoredValue; }
+
+  constexpr T *operator->() { return &Storage.StoredValue; }
+
+  constexpr const T *operator->() const { return &Storage.StoredValue; }
 };
 } // namespace cpp
 } // namespace __llvm_libc
