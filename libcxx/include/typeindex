@@ -23,11 +23,12 @@ public:
     type_index(const type_info& rhs) noexcept;
 
     bool operator==(const type_index& rhs) const noexcept;
-    bool operator!=(const type_index& rhs) const noexcept;
+    bool operator!=(const type_index& rhs) const noexcept; // removed in C++20
     bool operator< (const type_index& rhs) const noexcept;
     bool operator<=(const type_index& rhs) const noexcept;
     bool operator> (const type_index& rhs) const noexcept;
     bool operator>=(const type_index& rhs) const noexcept;
+    strong_ordering operator<=>(const type_index& rhs) const noexcept; // C++20
 
     size_t hash_code() const noexcept;
     const char* name() const noexcept;
@@ -76,8 +77,10 @@ public:
     bool operator==(const type_index& __y) const _NOEXCEPT
         {return *__t_ == *__y.__t_;}
     _LIBCPP_INLINE_VISIBILITY
+#if _LIBCPP_STD_VER <= 17
     bool operator!=(const type_index& __y) const _NOEXCEPT
         {return *__t_ != *__y.__t_;}
+#endif
     _LIBCPP_INLINE_VISIBILITY
     bool operator< (const type_index& __y) const _NOEXCEPT
         {return  __t_->before(*__y.__t_);}
@@ -90,6 +93,16 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     bool operator>=(const type_index& __y) const _NOEXCEPT
         {return !__t_->before(*__y.__t_);}
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_HIDE_FROM_ABI
+    strong_ordering operator<=>(const type_index& __y) const noexcept {
+      if (*__t_ == *__y.__t_)
+        return strong_ordering::equal;
+      if (__t_->before(*__y.__t_))
+        return strong_ordering::less;
+      return strong_ordering::greater;
+    }
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     size_t hash_code() const _NOEXCEPT {return __t_->hash_code();}
