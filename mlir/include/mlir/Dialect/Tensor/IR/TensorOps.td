@@ -219,11 +219,11 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     To disambiguate, the inference helpers `inferCanonicalRankReducedResultType`
     only drop the first unit dimensions, in order:
       e.g. 1x6x1 rank-reduced to 2-D will infer the 6x1 2-D shape, but not 1x6.
-    
+
     Verification however has access to result type and does not need to infer.
-    The verifier calls `isRankReducedType(getSource(), getResult())` to 
+    The verifier calls `isRankReducedType(getSource(), getResult())` to
     determine whether the result type is rank-reduced from the source type.
-    This computes a so-called rank-reduction mask, consisting of dropped unit 
+    This computes a so-called rank-reduction mask, consisting of dropped unit
     dims, to map the rank-reduced type to the source type by dropping ones:
       e.g. 1x6 is a rank-reduced version of 1x6x1 by mask {2}
            6x1 is a rank-reduced version of 1x6x1 by mask {0}
@@ -254,9 +254,12 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
 
   let assemblyFormat = [{
     $source ``
-    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
-    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes)
-    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    custom<DynamicIndexList>($offsets, $static_offsets,
+                               "ShapedType::kDynamicStrideOrOffset")
+    custom<DynamicIndexList>($sizes, $static_sizes,
+                               "ShapedType::kDynamicSize")
+    custom<DynamicIndexList>($strides, $static_strides,
+                               "ShapedType::kDynamicStrideOrOffset")
     attr-dict `:` type($source) `to` type($result)
   }];
 
@@ -298,12 +301,12 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     /// tensor type to the result tensor type by dropping unit dims.
     llvm::Optional<llvm::SmallDenseSet<unsigned>>
     computeRankReductionMask() {
-      return ::mlir::computeRankReductionMask(getSourceType().getShape(), 
+      return ::mlir::computeRankReductionMask(getSourceType().getShape(),
                                               getType().getShape());
     };
 
     /// An extract_slice result type can be inferred, when it is not
-    /// rank-reduced, from the source type and the static representation of 
+    /// rank-reduced, from the source type and the static representation of
     /// offsets, sizes and strides. Special sentinels encode the dynamic case.
     static RankedTensorType inferResultType(
       ShapedType sourceShapedTensorType,
@@ -580,9 +583,12 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
 
   let assemblyFormat = [{
     $source `into` $dest ``
-    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
-    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes)
-    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    custom<DynamicIndexList>($offsets, $static_offsets,
+                               "ShapedType::kDynamicStrideOrOffset")
+    custom<DynamicIndexList>($sizes, $static_sizes,
+                               "ShapedType::kDynamicSize")
+    custom<DynamicIndexList>($strides, $static_strides,
+                               "ShapedType::kDynamicStrideOrOffset")
     attr-dict `:` type($source) `into` type($dest)
   }];
 
@@ -608,7 +614,7 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     RankedTensorType getType() {
       return getResult().getType().cast<RankedTensorType>();
     }
-    
+
     /// The `dest` type is the same as the result type.
     RankedTensorType getDestType() {
       return getType();
@@ -962,8 +968,10 @@ def Tensor_PadOp : Tensor_Op<"pad", [AttrSizedOperandSegments, NoSideEffect,
   let assemblyFormat = [{
     $source
     (`nofold` $nofold^)?
-    `low` `` custom<OperandsOrIntegersSizesList>($low, $static_low)
-    `high` `` custom<OperandsOrIntegersSizesList>($high, $static_high)
+    `low` `` custom<DynamicIndexList>($low, $static_low,
+                                        "ShapedType::kDynamicSize")
+    `high` `` custom<DynamicIndexList>($high, $static_high,
+                                         "ShapedType::kDynamicSize")
     $region attr-dict `:` type($source) `to` type($result)
   }];
 
@@ -1069,15 +1077,15 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
        // HasParent<"ParallelCombiningOpInterface">
   ]> {
   let summary = [{
-    Specify the tensor slice update of a single thread of a parent 
+    Specify the tensor slice update of a single thread of a parent
     ParallelCombiningOpInterface op.
   }];
   let description = [{
-    The `parallel_insert_slice` yields a subset tensor value to its parent 
+    The `parallel_insert_slice` yields a subset tensor value to its parent
     ParallelCombiningOpInterface. These subset tensor values are aggregated to
-    in some unspecified order into a full tensor value returned by the parent 
-    parallel iterating op. 
-    The `parallel_insert_slice` is one such op allowed in the 
+    in some unspecified order into a full tensor value returned by the parent
+    parallel iterating op.
+    The `parallel_insert_slice` is one such op allowed in the
     ParallelCombiningOpInterface op.
 
     Conflicting writes result in undefined semantics, in that the indices written
@@ -1118,12 +1126,12 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
     into a memref.subview op.
 
     A parallel_insert_slice operation may additionally specify insertion into a
-    tensor of higher rank than the source tensor, along dimensions that are 
+    tensor of higher rank than the source tensor, along dimensions that are
     statically known to be of size 1.
     This rank-altering behavior is not required by the op semantics: this
     flexibility allows to progressively drop unit dimensions while lowering
     between different flavors of ops on that operate on tensors.
-    The rank-altering behavior of tensor.parallel_insert_slice matches the 
+    The rank-altering behavior of tensor.parallel_insert_slice matches the
     rank-reducing behavior of tensor.insert_slice and tensor.extract_slice.
 
     Verification in the rank-reduced case:
@@ -1144,9 +1152,12 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
   );
   let assemblyFormat = [{
     $source `into` $dest ``
-    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
-    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes)
-    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    custom<DynamicIndexList>($offsets, $static_offsets,
+                               "ShapedType::kDynamicStrideOrOffset")
+    custom<DynamicIndexList>($sizes, $static_sizes,
+                               "ShapedType::kDynamicSize")
+    custom<DynamicIndexList>($strides, $static_strides,
+                               "ShapedType::kDynamicStrideOrOffset")
     attr-dict `:` type($source) `into` type($dest)
   }];
 
@@ -1194,7 +1205,7 @@ def Tensor_ParallelInsertSliceOp : Tensor_Op<"parallel_insert_slice", [
       "ValueRange":$offsets, "ValueRange":$sizes, "ValueRange":$strides,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
-  
+
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;

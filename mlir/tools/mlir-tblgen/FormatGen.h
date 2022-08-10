@@ -78,6 +78,7 @@ public:
     identifier,
     literal,
     variable,
+    string,
   };
 
   FormatToken(Kind kind, StringRef spelling) : kind(kind), spelling(spelling) {}
@@ -130,10 +131,11 @@ private:
   /// Return the next character in the stream.
   int getNextChar();
 
-  /// Lex an identifier, literal, or variable.
+  /// Lex an identifier, literal, variable, or string.
   FormatToken lexIdentifier(const char *tokStart);
   FormatToken lexLiteral(const char *tokStart);
   FormatToken lexVariable(const char *tokStart);
+  FormatToken lexString(const char *tokStart);
 
   /// Create a token with the current pointer and a start pointer.
   FormatToken formToken(FormatToken::Kind kind, const char *tokStart) {
@@ -163,7 +165,7 @@ public:
   virtual ~FormatElement();
 
   // The top-level kinds of format elements.
-  enum Kind { Literal, Variable, Whitespace, Directive, Optional };
+  enum Kind { Literal, String, Variable, Whitespace, Directive, Optional };
 
   /// Support LLVM-style RTTI.
   static bool classof(const FormatElement *el) { return true; }
@@ -210,6 +212,20 @@ private:
   /// The spelling of the variable, i.e. the string contained within the
   /// backticks.
   StringRef spelling;
+};
+
+/// This class represents a raw string that can contain arbitrary C++ code.
+class StringElement : public FormatElementBase<FormatElement::String> {
+public:
+  /// Create a string element with the given contents.
+  explicit StringElement(std::string value) : value(std::move(value)) {}
+
+  /// Get the value of the string element.
+  StringRef getValue() const { return value; }
+
+private:
+  /// The contents of the string.
+  std::string value;
 };
 
 /// This class represents a variable element. A variable refers to some part of
@@ -447,6 +463,8 @@ protected:
   FailureOr<FormatElement *> parseElement(Context ctx);
   /// Parse a literal.
   FailureOr<FormatElement *> parseLiteral(Context ctx);
+  /// Parse a string.
+  FailureOr<FormatElement *> parseString(Context ctx);
   /// Parse a variable.
   FailureOr<FormatElement *> parseVariable(Context ctx);
   /// Parse a directive.
