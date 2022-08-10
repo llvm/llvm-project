@@ -41,6 +41,7 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterContextPOSIX_mips64.cpp
   RegisterContextPOSIX_powerpc.cpp
   RegisterContextPOSIX_ppc64le.cpp
+  RegisterContextPOSIX_riscv64.cpp
   RegisterContextPOSIX_s390x.cpp
   RegisterContextPOSIX_x86.cpp
   RegisterContextThreadMemory.cpp
@@ -49,6 +50,7 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterInfoPOSIX_arm.cpp
   RegisterInfoPOSIX_arm64.cpp
   RegisterInfoPOSIX_ppc64le.cpp
+  RegisterInfoPOSIX_riscv64.cpp
   StopInfoMachException.cpp
   ThreadMemory.cpp
 
