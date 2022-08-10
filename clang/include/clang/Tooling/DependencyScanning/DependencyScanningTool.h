@@ -66,9 +66,6 @@ struct FullDependencies {
   std::vector<std::string> getCommandLine(
       llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>
           LookupModuleOutput) const;
-
-  /// Get the full command line, excluding -fmodule-file=" arguments.
-  std::vector<std::string> getCommandLineWithoutModulePaths() const;
 };
 
 struct FullDependenciesResult {

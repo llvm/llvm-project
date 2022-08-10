@@ -21,24 +21,15 @@ using namespace dependencies;
 std::vector<std::string> FullDependencies::getCommandLine(
     llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>
         LookupModuleOutput) const {
-  std::vector<std::string> Ret = getCommandLineWithoutModulePaths();
-
-  for (ModuleID MID : ClangModuleDeps) {
-    auto PCM = LookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
-    Ret.push_back("-fmodule-file=" + PCM);
-  }
-
-  return Ret;
-}
-
-std::vector<std::string>
-FullDependencies::getCommandLineWithoutModulePaths() const {
   std::vector<std::string> Args = OriginalCommandLine;
 
   Args.push_back("-fno-implicit-modules");
   Args.push_back("-fno-implicit-module-maps");
   for (const PrebuiltModuleDep &PMD : PrebuiltModuleDeps)
     Args.push_back("-fmodule-file=" + PMD.PCMFile);
+  for (ModuleID MID : ClangModuleDeps)
+    Args.push_back("-fmodule-file=" +
+                   LookupModuleOutput(MID, ModuleOutputKind::ModuleFile));
 
   // These arguments are unused in explicit compiles.
   llvm::erase_if(Args, [](StringRef Arg) {

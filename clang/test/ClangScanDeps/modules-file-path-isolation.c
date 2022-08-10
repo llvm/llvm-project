@@ -11,7 +11,7 @@
 // RUN: ln -s A.h %t/Z.h
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -j 1 -format experimental-full \
-// RUN:   -mode preprocess-dependency-directives -generate-modules-path-args > %t/output
+// RUN:   -mode preprocess-dependency-directives > %t/output
 // RUN: FileCheck %s < %t/output
 
 // CHECK:      "modules": [

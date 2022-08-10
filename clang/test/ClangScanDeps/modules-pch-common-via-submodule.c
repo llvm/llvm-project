@@ -13,7 +13,7 @@
 //
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch-common-via-submodule/cdb_pch.json > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
-// RUN:   -generate-modules-path-args -module-files-dir %t/build > %t/result_pch.json
+// RUN:   -module-files-dir %t/build > %t/result_pch.json
 // RUN: cat %t/result_pch.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-PCH
 //
 // CHECK-PCH:      {
@@ -70,7 +70,7 @@
 //
 // RUN: sed "s|DIR|%/t|g" %S/Inputs/modules-pch-common-via-submodule/cdb_tu.json > %t/cdb.json
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
-// RUN:   -generate-modules-path-args -module-files-dir %t/build > %t/result_tu.json
+// RUN:   -module-files-dir %t/build > %t/result_tu.json
 // RUN: cat %t/result_tu.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t -check-prefix=CHECK-TU
 //
 // CHECK-TU:      {
