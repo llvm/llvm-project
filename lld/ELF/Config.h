@@ -26,8 +26,7 @@
 #include <memory>
 #include <vector>
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 
 class InputFile;
 class BinaryFile;
@@ -419,7 +418,6 @@ static inline void internalLinkerError(StringRef loc, const Twine &msg) {
               llvm::getBugReportMsg());
 }
 
-} // namespace elf
-} // namespace lld
+} // namespace lld::elf
 
 #endif

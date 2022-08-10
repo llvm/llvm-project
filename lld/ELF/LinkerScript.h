@@ -22,8 +22,7 @@
 #include <functional>
 #include <memory>
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 
 class Defined;
 class InputFile;
@@ -365,7 +364,6 @@ public:
 
 extern std::unique_ptr<LinkerScript> script;
 
-} // end namespace elf
-} // end namespace lld
+} // end namespace lld::elf
 
 #endif // LLD_ELF_LINKER_SCRIPT_H
