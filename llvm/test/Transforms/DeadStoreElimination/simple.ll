@@ -266,7 +266,7 @@ define i32 addrspace(1)* @test13_addrspacecast() {
 
 declare noalias i8* @malloc(i64) willreturn allockind("alloc,uninitialized")
 declare noalias i8* @custom_malloc(i32) willreturn
-declare noalias i8* @calloc(i32, i32) willreturn allockind("alloc,zeroed")
+declare noalias i8* @calloc(i64, i64) willreturn allockind("alloc,zeroed")
 
 define void @test14(i32* %Q) {
 ; CHECK-LABEL: @test14(
@@ -321,7 +321,7 @@ define void @test21() {
 ; CHECK-LABEL: @test21(
 ; CHECK-NEXT:    ret void
 ;
-  %m = call i8* @calloc(i32 9, i32 7)
+  %m = call i8* @calloc(i64 9, i64 7)
   store i8 0, i8* %m
   ret void
 }

@@ -286,15 +286,15 @@ define {i8, i1} @test_smul4_poison(i8 %V) {
 }
 
 ; Test a non-intrinsic that we know about as a library call.
-declare float @fabs(float %x)
+declare float @fabsf(float %x)
 
 define float @test_fabs_libcall() {
 ; CHECK-LABEL: @test_fabs_libcall(
-; CHECK-NEXT:    [[X:%.*]] = call float @fabs(float -4.200000e+01)
+; CHECK-NEXT:    [[X:%.*]] = call float @fabsf(float -4.200000e+01)
 ; CHECK-NEXT:    ret float 4.200000e+01
 ;
 
-  %x = call float @fabs(float -42.0)
+  %x = call float @fabsf(float -42.0)
 ; This is still a real function call, so instsimplify won't nuke it -- other
 ; passes have to do that.
 

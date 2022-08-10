@@ -56,7 +56,7 @@ exit:
 
 
 ; Similar to the test case above, but checks getVectorCallCost as well.
-declare float @pow(float, float) readnone nounwind
+declare float @powf(float, float) readnone nounwind
 
 ; CM: LV: Found uniform instruction:   %a = extractvalue { float, float } %sv, 0
 ; CM: LV: Found uniform instruction:   %b = extractvalue { float, float } %sv, 1
@@ -94,7 +94,7 @@ loop.body:
   %a = extractvalue { float, float } %sv, 0
   %b = extractvalue { float, float } %sv, 1
   %addr = getelementptr float, float* %dst, i32 %iv
-  %p = call float @pow(float %a, float %b)
+  %p = call float @powf(float %a, float %b)
   store float %p, float* %addr
   %iv.next = add nsw i32 %iv, 1
   %cond = icmp ne i32 %iv.next, 0
