@@ -385,44 +385,28 @@ llvm.func @struct_wrong_element_types() -> !llvm.struct<(!llvm.array<2 x f64>, !
 // -----
 
 func.func @insertvalue_non_llvm_type(%a : i32, %b : i32) {
-  // expected-error@+1 {{expected LLVM IR Dialect type}}
+  // expected-error@+2 {{expected LLVM IR Dialect type}}
   llvm.insertvalue %a, %b[0] : tensor<*xi32>
 }
 
 // -----
 
-func.func @insertvalue_non_array_position() {
-  // Note the double-type, otherwise attribute parsing consumes the trailing
-  // type of the op as the (wrong) attribute type.
-  // expected-error@+1 {{invalid kind of attribute specified}}
-  llvm.insertvalue %a, %b 0 : i32 : !llvm.struct<(i32)>
-}
-
-// -----
-
-func.func @insertvalue_non_integer_position() {
-  // expected-error@+1 {{expected an array of integer literals}}
-  llvm.insertvalue %a, %b[0.0] : !llvm.struct<(i32)>
-}
-
-// -----
-
 func.func @insertvalue_struct_out_of_bounds() {
-  // expected-error@+1 {{position out of bounds}}
+  // expected-error@+2 {{position out of bounds}}
   llvm.insertvalue %a, %b[1] : !llvm.struct<(i32)>
 }
 
 // -----
 
 func.func @insertvalue_array_out_of_bounds() {
-  // expected-error@+1 {{position out of bounds}}
+  // expected-error@+2 {{position out of bounds}}
   llvm.insertvalue %a, %b[1] : !llvm.array<1 x i32>
 }
 
 // -----
 
 func.func @insertvalue_wrong_nesting() {
-  // expected-error@+1 {{expected LLVM IR structure/array type}}
+  // expected-error@+2 {{expected LLVM IR structure/array type}}
   llvm.insertvalue %a, %b[0,0] : !llvm.struct<(i32)>
 }
 
@@ -430,7 +414,7 @@ func.func @insertvalue_wrong_nesting() {
 
 func.func @insertvalue_invalid_type(%a : !llvm.array<1 x i32>) -> !llvm.array<1 x i32> {
   // expected-error@+1 {{'llvm.insertvalue' op Type mismatch: cannot insert '!llvm.array<1 x i32>' into '!llvm.array<1 x i32>'}}
-  %b = "llvm.insertvalue"(%a, %a) {position = [0]} : (!llvm.array<1 x i32>, !llvm.array<1 x i32>) -> !llvm.array<1 x i32>
+  %b = "llvm.insertvalue"(%a, %a) {position = [:i64 0]} : (!llvm.array<1 x i32>, !llvm.array<1 x i32>) -> !llvm.array<1 x i32>
   return %b : !llvm.array<1 x i32>
 }
 
@@ -438,7 +422,7 @@ func.func @insertvalue_invalid_type(%a : !llvm.array<1 x i32>) -> !llvm.array<1 
 
 func.func @extractvalue_invalid_type(%a : !llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>> {
   // expected-error@+1 {{'llvm.extractvalue' op Type mismatch: extracting from '!llvm.array<4 x vector<8xf32>>' should produce 'vector<8xf32>' but this op returns '!llvm.array<4 x vector<8xf32>>'}}
-  %b = "llvm.extractvalue"(%a) {position = [1]}
+  %b = "llvm.extractvalue"(%a) {position = [:i64 1]}
             : (!llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>>
   return %b : !llvm.array<4 x vector<8xf32>>
 }
@@ -447,44 +431,27 @@ func.func @extractvalue_invalid_type(%a : !llvm.array<4 x vector<8xf32>>) -> !ll
 // -----
 
 func.func @extractvalue_non_llvm_type(%a : i32, %b : tensor<*xi32>) {
-  // expected-error@+1 {{expected LLVM IR Dialect type}}
+  // expected-error@+2 {{expected LLVM IR Dialect type}}
   llvm.extractvalue %b[0] : tensor<*xi32>
 }
-
-// -----
-
-func.func @extractvalue_non_array_position() {
-  // Note the double-type, otherwise attribute parsing consumes the trailing
-  // type of the op as the (wrong) attribute type.
-  // expected-error@+1 {{invalid kind of attribute specified}}
-  llvm.extractvalue %b 0 : i32 : !llvm.struct<(i32)>
-}
-
-// -----
-
-func.func @extractvalue_non_integer_position() {
-  // expected-error@+1 {{expected an array of integer literals}}
-  llvm.extractvalue %b[0.0] : !llvm.struct<(i32)>
-}
-
 // -----
 
 func.func @extractvalue_struct_out_of_bounds() {
-  // expected-error@+1 {{position out of bounds}}
+  // expected-error@+2 {{position out of bounds}}
   llvm.extractvalue %b[1] : !llvm.struct<(i32)>
 }
 
 // -----
 
 func.func @extractvalue_array_out_of_bounds() {
-  // expected-error@+1 {{position out of bounds}}
+  // expected-error@+2 {{position out of bounds}}
   llvm.extractvalue %b[1] : !llvm.array<1 x i32>
 }
 
 // -----
 
 func.func @extractvalue_wrong_nesting() {
-  // expected-error@+1 {{expected LLVM IR structure/array type}}
+  // expected-error@+2 {{expected LLVM IR structure/array type}}
   llvm.extractvalue %b[0,0] : !llvm.struct<(i32)>
 }
 

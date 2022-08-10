@@ -159,9 +159,8 @@ struct WmmaStoreOpToNVVMLowering
 
     auto matrixType = adaptor.src().getType().cast<LLVM::LLVMStructType>();
     for (unsigned i = 0, e = matrixType.getBody().size(); i < e; ++i) {
-      Value toUse = rewriter.create<LLVM::ExtractValueOp>(
-          loc, matrixType.getBody()[i], adaptor.src(),
-          rewriter.getI32ArrayAttr(i));
+      Value toUse =
+          rewriter.create<LLVM::ExtractValueOp>(loc, adaptor.src(), i);
       storeOpOperands.push_back(toUse);
     }
 
@@ -203,8 +202,7 @@ struct WmmaMmaOpToNVVMLowering
     auto unpackOp = [&](Value operand) {
       auto structType = operand.getType().cast<LLVM::LLVMStructType>();
       for (size_t i = 0, e = structType.getBody().size(); i < e; ++i) {
-        Value toUse = rewriter.create<LLVM::ExtractValueOp>(
-            loc, structType.getBody()[i], operand, rewriter.getI32ArrayAttr(i));
+        Value toUse = rewriter.create<LLVM::ExtractValueOp>(loc, operand, i);
         unpackedOps.push_back(toUse);
       }
     };
@@ -268,8 +266,8 @@ struct WmmaConstantOpToNVVMLowering
     }
     Value matrixStruct = rewriter.create<LLVM::UndefOp>(loc, type);
     for (size_t i : llvm::seq(size_t(0), type.getBody().size())) {
-      matrixStruct = rewriter.create<LLVM::InsertValueOp>(
-          loc, matrixStruct, cst, rewriter.getI32ArrayAttr(i));
+      matrixStruct =
+          rewriter.create<LLVM::InsertValueOp>(loc, matrixStruct, cst, i);
     }
     rewriter.replaceOp(subgroupMmaConstantOp, matrixStruct);
     return success();
@@ -336,19 +334,14 @@ struct WmmaElementwiseOpToNVVMLowering
     for (size_t i = 0, e = destType.getBody().size(); i < e; ++i) {
       SmallVector<Value> extractedOperands;
       for (size_t opIdx = 0; opIdx < numOperands; opIdx++) {
-        Type elementType = adaptor.getOperands()[opIdx]
-                               .getType()
-                               .cast<LLVM::LLVMStructType>()
-                               .getBody()[i];
         extractedOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
-            loc, elementType, adaptor.getOperands()[opIdx],
-            rewriter.getI32ArrayAttr(i)));
+            loc, adaptor.getOperands()[opIdx], i));
       }
       Value element =
           createScalarOp(rewriter, loc, subgroupMmaElementwiseOp.operation(),
                          extractedOperands);
-      matrixStruct = rewriter.create<LLVM::InsertValueOp>(
-          loc, matrixStruct, element, rewriter.getI32ArrayAttr(i));
+      matrixStruct =
+          rewriter.create<LLVM::InsertValueOp>(loc, matrixStruct, element, i);
     }
     rewriter.replaceOp(subgroupMmaElementwiseOp, matrixStruct);
     return success();

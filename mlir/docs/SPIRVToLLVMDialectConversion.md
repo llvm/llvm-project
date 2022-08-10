@@ -396,7 +396,7 @@ entry points in LLVM. At the moment, we use the following approach:
     llvm.mlir.global external constant @{{.*}}() : !llvm.struct<(i32)> {
       %0   = llvm.mlir.undef : !llvm.struct<(i32)>
       %1   = llvm.mlir.constant(31 : i32) : i32
-      %ret = llvm.insertvalue %1, %0[0 : i32] : !llvm.struct<(i32)>
+      %ret = llvm.insertvalue %1, %0[0] : !llvm.struct<(i32)>
       llvm.return %ret : !llvm.struct<(i32)>
     }
     ```

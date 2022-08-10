@@ -251,16 +251,16 @@ static void setLoopMetadata(Operation &opInst, llvm::Instruction &llvmInst,
   }
 }
 
+/// Convert the value of a DenseI64ArrayAttr to a vector of unsigned indices.
+static SmallVector<unsigned> extractPosition(ArrayRef<int64_t> indices) {
+  SmallVector<unsigned> position;
+  llvm::append_range(position, indices);
+  return position;
+}
+
 static LogicalResult
 convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
-  auto extractPosition = [](ArrayAttr attr) {
-    SmallVector<unsigned, 4> position;
-    position.reserve(attr.size());
-    for (Attribute v : attr)
-      position.push_back(v.cast<IntegerAttr>().getValue().getZExtValue());
-    return position;
-  };
 
   llvm::IRBuilder<>::FastMathFlagGuard fmfGuard(builder);
   if (auto fmf = dyn_cast<FastmathFlagsInterface>(opInst))

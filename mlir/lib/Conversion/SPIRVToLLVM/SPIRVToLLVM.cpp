@@ -575,8 +575,9 @@ public:
           op, dstType, adaptor.composite(), index);
       return success();
     }
+
     rewriter.replaceOpWithNewOp<LLVM::ExtractValueOp>(
-        op, dstType, adaptor.composite(), op.indices());
+        op, adaptor.composite(), LLVM::convertArrayToIndices(op.indices()));
     return success();
   }
 };
@@ -605,8 +606,10 @@ public:
           op, dstType, adaptor.composite(), adaptor.object(), index);
       return success();
     }
+
     rewriter.replaceOpWithNewOp<LLVM::InsertValueOp>(
-        op, dstType, adaptor.composite(), adaptor.object(), op.indices());
+        op, adaptor.composite(), adaptor.object(),
+        LLVM::convertArrayToIndices(op.indices()));
     return success();
   }
 };
@@ -689,20 +692,15 @@ public:
         loc, llvmI32Type,
         rewriter.getI32IntegerAttr(
             static_cast<uint32_t>(executionModeAttr.getValue())));
-    structValue = rewriter.create<LLVM::InsertValueOp>(
-        loc, structType, structValue, executionMode,
-        ArrayAttr::get(context,
-                       {rewriter.getIntegerAttr(rewriter.getI32Type(), 0)}));
+    structValue = rewriter.create<LLVM::InsertValueOp>(loc, structValue,
+                                                       executionMode, 0);
 
     // Insert extra operands if they exist into execution mode info struct.
     for (unsigned i = 0, e = values.size(); i < e; ++i) {
       auto attr = values.getValue()[i];
       Value entry = rewriter.create<LLVM::ConstantOp>(loc, llvmI32Type, attr);
       structValue = rewriter.create<LLVM::InsertValueOp>(
-          loc, structType, structValue, entry,
-          ArrayAttr::get(context,
-                         {rewriter.getIntegerAttr(rewriter.getI32Type(), 1),
-                          rewriter.getIntegerAttr(rewriter.getI32Type(), i)}));
+          loc, structValue, entry, llvm::makeArrayRef<int64_t>({1, i}));
     }
     rewriter.create<LLVM::ReturnOp>(loc, ArrayRef<Value>({structValue}));
     rewriter.eraseOp(op);

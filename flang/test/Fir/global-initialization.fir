@@ -63,8 +63,8 @@ fir.global internal @_QElookforme : !fir.type<_QTt{i:!fir.array<500xi32>,j:!fir.
 // CHECK:   [[STRUCT:%.*]] = llvm.mlir.undef : !llvm.struct<"_QTt", (array<500 x i32>, array<500 x i32>)>
 // CHECK:   [[ARR1:%.*]] = llvm.mlir.undef : !llvm.array<500 x i32>
 // CHECK:   [[DENSE1:%.*]] = llvm.mlir.constant(dense<2> : vector<500xi32>) : !llvm.array<500 x i32>
-// CHECK:   [[STRUCT1:%.*]] = llvm.insertvalue [[DENSE1]], [[STRUCT]][0 : i32] : !llvm.struct<"_QTt", (array<500 x i32>, array<500 x i32>)>
+// CHECK:   [[STRUCT1:%.*]] = llvm.insertvalue [[DENSE1]], [[STRUCT]][0] : !llvm.struct<"_QTt", (array<500 x i32>, array<500 x i32>)>
 // CHECK:   [[DENSE2:%.*]] = llvm.mlir.constant(dense<52> : vector<500xi32>) : !llvm.array<500 x i32>
-// CHECK:   [[STRUCT2:%.*]] = llvm.insertvalue [[DENSE2]], [[STRUCT1]][1 : i32] : !llvm.struct<"_QTt", (array<500 x i32>, array<500 x i32>)>
+// CHECK:   [[STRUCT2:%.*]] = llvm.insertvalue [[DENSE2]], [[STRUCT1]][1] : !llvm.struct<"_QTt", (array<500 x i32>, array<500 x i32>)>
 // CHECK:   llvm.return [[STRUCT2]] : !llvm.struct<"_QTt", (array<500 x i32>, array<500 x i32>)>
 // CHECK: }
