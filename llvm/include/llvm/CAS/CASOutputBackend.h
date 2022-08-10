@@ -27,8 +27,14 @@ public:
   /// Create a top-level tree for all created files. This will contain all files
   Expected<ObjectProxy> getCASProxy();
 
-  /// Add a CAS object to the path in the output backend.
-  Error addObject(StringRef Path, ObjectRef Object);
+  /// Add a CAS object in the output backend associated with the given name,
+  /// which can be a path or a "kind" string.
+  Error addObject(StringRef Name, ObjectRef Object);
+
+  /// Add an association of a "kind" string with a particular output path.
+  /// When the output for \p Path is encountered it will be associated with
+  /// the \p Kind string instead of its path.
+  void addKindMap(StringRef Kind, StringRef Path);
 
 private:
   Expected<std::unique_ptr<vfs::OutputFileImpl>>

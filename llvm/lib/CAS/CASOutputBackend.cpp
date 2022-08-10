@@ -11,6 +11,7 @@
 #include "llvm/CAS/Utils.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/StringSaver.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -48,6 +49,24 @@ CASOutputBackend::~CASOutputBackend() = default;
 struct CASOutputBackend::PrivateImpl {
   // FIXME: Use a NodeBuilder here once it exists.
   SmallVector<ObjectRef> Refs;
+  BumpPtrAllocator Alloc;
+  StringSaver Saver{Alloc};
+
+  struct KindMap {
+    StringRef Kind;
+    StringRef Path;
+  };
+  SmallVector<KindMap> KindMaps;
+
+  /// Returns the "kind" name for the path if one was added for it, otherwise
+  /// returns the \p Path itself.
+  StringRef tryRemapPath(StringRef Path) const {
+    for (const KindMap &Map : KindMaps) {
+      if (Map.Path == Path)
+        return Map.Kind;
+    }
+    return Path;
+  }
 };
 
 Expected<std::unique_ptr<vfs::OutputFileImpl>>
@@ -63,15 +82,16 @@ CASOutputBackend::createFileImpl(StringRef ResolvedPath,
   // The opened file can be kept inside \a CASOutputFile and forwarded.
   return std::make_unique<CASOutputFile>(
       ResolvedPath, [&](StringRef Path, StringRef Bytes) -> Error {
-        Optional<ObjectProxy> PathBlob;
+        StringRef Name = Impl->tryRemapPath(Path);
+        Optional<ObjectProxy> NameBlob;
         Optional<ObjectProxy> BytesBlob;
-        if (Error E = CAS.createProxy(None, Path).moveInto(PathBlob))
+        if (Error E = CAS.createProxy(None, Name).moveInto(NameBlob))
           return E;
         if (Error E = CAS.createProxy(None, Bytes).moveInto(BytesBlob))
           return E;
 
         // FIXME: Should there be a lock taken before accessing PrivateImpl?
-        Impl->Refs.push_back(PathBlob->getRef());
+        Impl->Refs.push_back(NameBlob->getRef());
         Impl->Refs.push_back(BytesBlob->getRef());
         return Error::success();
       });
@@ -88,15 +108,24 @@ Expected<ObjectProxy> CASOutputBackend::getCASProxy() {
   return CAS.createProxy(MovedRefs, "");
 }
 
-Error CASOutputBackend::addObject(StringRef Path, ObjectRef Object) {
+Error CASOutputBackend::addObject(StringRef Name, ObjectRef Object) {
   if (!Impl)
     Impl = std::make_unique<PrivateImpl>();
 
-  Optional<ObjectProxy> PathBlob;
-  if (Error E = CAS.createProxy(None, Path).moveInto(PathBlob))
+  Name = Impl->tryRemapPath(Name);
+  Optional<ObjectProxy> NameBlob;
+  if (Error E = CAS.createProxy(None, Name).moveInto(NameBlob))
     return E;
 
-  Impl->Refs.push_back(PathBlob->getRef());
+  Impl->Refs.push_back(NameBlob->getRef());
   Impl->Refs.push_back(Object);
   return Error::success();
+}
+
+void CASOutputBackend::addKindMap(StringRef Kind, StringRef Path) {
+  if (!Impl)
+    Impl = std::make_unique<PrivateImpl>();
+
+  StringSaver &SA = Impl->Saver;
+  Impl->KindMaps.push_back({SA.save(Kind), SA.save(Path)});
 }

@@ -264,7 +264,7 @@ DependencyScanningCASFilesystem::lookupPath(const Twine &Path) {
     return LookupPathResult{nullptr, std::move(MaybeStatus)};
 
   auto &Entry = Entries[PathRef];
-  Entry.ID = *FileID;
+  Entry.CASContents = CAS.getReference(*FileID);
   llvm::ErrorOr<StringRef> Buffer = expectedToErrorOr(getOriginal(*FileID));
   if (!Buffer) {
     // Cache CAS failures. Not going to recover later.
@@ -295,17 +295,6 @@ DependencyScanningCASFilesystem::status(const Twine &Path) {
   return Result.Entry->Status;
 }
 
-Optional<llvm::cas::CASID>
-DependencyScanningCASFilesystem::getFileCASID(const Twine &Path) {
-  LookupPathResult Result = lookupPath(Path);
-  if (!Result.Entry)
-    return None;
-  if (Result.Entry->EC)
-    return None;
-  assert(Result.Entry->ID);
-  return Result.Entry->ID;
-}
-
 IntrusiveRefCntPtr<llvm::cas::ThreadSafeFileSystem>
 DependencyScanningCASFilesystem::createThreadSafeProxyFS() {
   llvm::report_fatal_error("not implemented");
@@ -315,8 +304,10 @@ namespace {
 
 class DepScanFile final : public llvm::vfs::File {
 public:
-  DepScanFile(StringRef Buffer, llvm::vfs::Status Stat)
-      : Buffer(Buffer), Stat(std::move(Stat)) {}
+  DepScanFile(StringRef Buffer, Optional<cas::ObjectRef> CASContents,
+              llvm::vfs::Status Stat)
+      : Buffer(Buffer), CASContents(std::move(CASContents)),
+        Stat(std::move(Stat)) {}
 
   llvm::ErrorOr<llvm::vfs::Status> status() override { return Stat; }
 
@@ -327,10 +318,15 @@ public:
     return llvm::MemoryBuffer::getMemBuffer(Buffer, Name.toStringRef(Storage));
   }
 
+  llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() override {
+    return CASContents;
+  }
+
   std::error_code close() override { return {}; }
 
 private:
   StringRef Buffer;
+  Optional<cas::ObjectRef> CASContents;
   llvm::vfs::Status Stat;
 };
 
@@ -349,8 +345,8 @@ DependencyScanningCASFilesystem::openFileForRead(const Twine &Path) {
   if (Result.Entry->EC)
     return Result.Entry->EC;
 
-  return std::make_unique<DepScanFile>(*Result.Entry->Buffer,
-                                       Result.Entry->Status);
+  return std::make_unique<DepScanFile>(
+      *Result.Entry->Buffer, Result.Entry->CASContents, Result.Entry->Status);
 }
 
 Optional<ArrayRef<dependency_directives_scan::Directive>>

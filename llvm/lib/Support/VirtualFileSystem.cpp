@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/CAS/CASReference.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Chrono.h"
@@ -113,16 +114,35 @@ bool Status::exists() const {
 
 File::~File() = default;
 
+llvm::ErrorOr<Optional<cas::ObjectRef>> File::getObjectRefForContent() {
+  return None;
+}
+
 FileSystem::~FileSystem() = default;
 
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 FileSystem::getBufferForFile(const llvm::Twine &Name, int64_t FileSize,
-                             bool RequiresNullTerminator, bool IsVolatile) {
+                             bool RequiresNullTerminator, bool IsVolatile,
+                             Optional<cas::ObjectRef> *CASContents) {
   auto F = openFileForRead(Name);
   if (!F)
     return F.getError();
+  if (CASContents) {
+    auto CASRef = (*F)->getObjectRefForContent();
+    if (!CASRef)
+      return CASRef.getError();
+    *CASContents = *CASRef;
+  }
 
   return (*F)->getBuffer(Name, FileSize, RequiresNullTerminator, IsVolatile);
+}
+
+llvm::ErrorOr<Optional<cas::ObjectRef>>
+FileSystem::getObjectRefForFileContent(const Twine &Name) {
+  auto F = openFileForRead(Name);
+  if (!F)
+    return F.getError();
+  return (*F)->getObjectRefForContent();
 }
 
 std::error_code FileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {

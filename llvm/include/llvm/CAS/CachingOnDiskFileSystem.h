@@ -28,7 +28,7 @@ class ObjectProxy;
 /// working directory. This allows a single caching on-disk filesystem to be
 /// used across the filesystem, with each thread using a different proxy to set
 /// the working directory.
-class CachingOnDiskFileSystem : public CASFileSystemBase {
+class CachingOnDiskFileSystem : public ThreadSafeFileSystem {
   void anchor() override;
 
 public:
@@ -99,7 +99,7 @@ public:
   /// cached filesystem contents.
   virtual std::unique_ptr<TreeBuilder> createTreeBuilder() = 0;
 
-  CASDB &getCAS() const final { return DB; }
+  CASDB &getCAS() const { return DB; }
 
   /// Get a proxy FS that has an independent working directory but uses the
   /// same thread-safe cache.

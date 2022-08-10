@@ -33,11 +33,16 @@ DependencyScanningWorkerFilesystem::readFile(StringRef Filename) {
     return MaybeBuffer.getError();
   auto Buffer = std::move(*MaybeBuffer);
 
+  auto MaybeCASContents = File->getObjectRefForContent();
+  if (!MaybeCASContents)
+    return MaybeCASContents.getError();
+  auto CASContents = std::move(*MaybeCASContents);
+
   // If the file size changed between read and stat, pretend it didn't.
   if (Stat.getSize() != Buffer->getBufferSize())
     Stat = llvm::vfs::Status::copyWithNewSize(Stat, Buffer->getBufferSize());
 
-  return TentativeEntry(Stat, std::move(Buffer));
+  return TentativeEntry(Stat, std::move(Buffer), std::move(CASContents));
 }
 
 EntryRef DependencyScanningWorkerFilesystem::scanForDirectivesIfNecessary(
@@ -136,14 +141,15 @@ DependencyScanningFilesystemSharedCache::CacheShard::
 const CachedFileSystemEntry &
 DependencyScanningFilesystemSharedCache::CacheShard::getOrEmplaceEntryForUID(
     llvm::sys::fs::UniqueID UID, llvm::vfs::Status Stat,
-    std::unique_ptr<llvm::MemoryBuffer> Contents) {
+    std::unique_ptr<llvm::MemoryBuffer> Contents,
+    Optional<cas::ObjectRef> CASContents) {
   std::lock_guard<std::mutex> LockGuard(CacheLock);
   auto Insertion = EntriesByUID.insert({UID, nullptr});
   if (Insertion.second) {
     CachedFileContents *StoredContents = nullptr;
     if (Contents)
       StoredContents = new (ContentsStorage.Allocate())
-          CachedFileContents(std::move(Contents));
+          CachedFileContents(std::move(Contents), std::move(CASContents));
     Insertion.first->second = new (EntryStorage.Allocate())
         CachedFileSystemEntry(std::move(Stat), StoredContents);
   }
@@ -193,9 +199,9 @@ const CachedFileSystemEntry &
 DependencyScanningWorkerFilesystem::getOrEmplaceSharedEntryForUID(
     TentativeEntry TEntry) {
   auto &Shard = SharedCache.getShardForUID(TEntry.Status.getUniqueID());
-  return Shard.getOrEmplaceEntryForUID(TEntry.Status.getUniqueID(),
-                                       std::move(TEntry.Status),
-                                       std::move(TEntry.Contents));
+  return Shard.getOrEmplaceEntryForUID(
+      TEntry.Status.getUniqueID(), std::move(TEntry.Status),
+      std::move(TEntry.Contents), std::move(TEntry.CASContents));
 }
 
 const CachedFileSystemEntry *
@@ -270,8 +276,9 @@ namespace {
 class DepScanFile final : public llvm::vfs::File {
 public:
   DepScanFile(std::unique_ptr<llvm::MemoryBuffer> Buffer,
-              llvm::vfs::Status Stat)
-      : Buffer(std::move(Buffer)), Stat(std::move(Stat)) {}
+              Optional<cas::ObjectRef> CASContents, llvm::vfs::Status Stat)
+      : Buffer(std::move(Buffer)), CASContents(std::move(CASContents)),
+        Stat(std::move(Stat)) {}
 
   static llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>> create(EntryRef Entry);
 
@@ -283,10 +290,15 @@ public:
     return std::move(Buffer);
   }
 
+  llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() override {
+    return CASContents;
+  }
+
   std::error_code close() override { return {}; }
 
 private:
   std::unique_ptr<llvm::MemoryBuffer> Buffer;
+  Optional<cas::ObjectRef> CASContents;
   llvm::vfs::Status Stat;
 };
 
@@ -303,7 +315,7 @@ DepScanFile::create(EntryRef Entry) {
       llvm::MemoryBuffer::getMemBuffer(Entry.getContents(),
                                        Entry.getStatus().getName(),
                                        /*RequiresNullTerminator=*/false),
-      Entry.getStatus());
+      Entry.getObjectRefForContent(), Entry.getStatus());
 
   return llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>(
       std::unique_ptr<llvm::vfs::File>(std::move(Result)));

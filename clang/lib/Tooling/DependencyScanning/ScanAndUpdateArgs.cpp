@@ -181,7 +181,7 @@ static void updateCompilerInvocation(CompilerInvocation &Invocation,
 
 Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
     tooling::dependencies::DependencyScanningTool &Tool,
-    DiagnosticConsumer &DiagsConsumer, const char *Exec,
+    DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS, const char *Exec,
     CompilerInvocation &Invocation, StringRef WorkingDirectory,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping) {
   llvm::cas::CachingOnDiskFileSystem &FS = Tool.getCachingFileSystem();
@@ -197,10 +197,16 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
           computeFullMapping(Saver, Exec, Invocation, PrefixMapping, Mapper))
     return std::move(E);
 
+  auto ScanInvocation = std::make_shared<CompilerInvocation>(Invocation);
+  // An error during dep-scanning is treated as if the main compilation has
+  // failed, but warnings are ignored and deferred for the main compilation.
+  ScanInvocation->getDiagnosticOpts().IgnoreWarnings = true;
+
   Optional<llvm::cas::CASID> Root;
   if (Error E = Tool.getDependencyTreeFromCompilerInvocation(
-                        std::make_shared<CompilerInvocation>(Invocation),
-                        WorkingDirectory, DiagsConsumer,
+                        std::move(ScanInvocation),
+                        WorkingDirectory, DiagsConsumer, VerboseOS,
+                        /*DiagGenerationAsCompilation*/ true,
                         [&](const llvm::vfs::CachedDirectoryEntry &Entry) {
                           return Mapper.map(Entry);
                         })

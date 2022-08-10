@@ -24,16 +24,37 @@
 // RUN: c-index-test -read-diagnostics %t/diags 2>&1 | FileCheck %s --check-prefix=SERIALIZED-HIT
 
 // CACHE-HIT: remark: compile job cache hit
-// CACHE-HIT: warning: call to undeclared function
+// CACHE-HIT: warning: some warning
 
-// CACHE-MISS: warning: call to undeclared function
+// CACHE-MISS: warning: some warning
 // CACHE-MISS-NOT: remark: compile job cache hit
 
-// FIXME: serialized diagnostics should match the text diagnostics rdar://85234207
-// SERIALIZED-HIT: warning: compile job cache hit for
+// FIXME: serialized diagnostics should include the "compile job cache" remark but without storing
+// it in a diagnostics file that we put in the CAS.
+// SERIALIZED-HIT: warning: some warning
 // SERIALIZED-HIT: Number of diagnostics: 1
-// SERIALIZED-MISS: Number of diagnostics: 0
+// SERIALIZED-MISS: warning: some warning
+// SERIALIZED-MISS: Number of diagnostics: 1
 
-void foo(void) {
-  bar();
-}
+// Make sure warnings are merged with driver ones.
+// Using normal compilation as baseline.
+// RUN: %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -fmodules-cache-path=%t/mcp --serialize-diagnostics %t/t1.diag \
+// RUN:   2>&1 | FileCheck %s -check-prefix=WARN
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -fmodules-cache-path=%t/mcp --serialize-diagnostics %t/t2.diag \
+// RUN:   2>&1 | FileCheck %s -check-prefix=WARN
+// RUN: diff %t/t1.diag %t/t2.diag
+
+// Try again with cache hit.
+// RUN: rm %t/t2.diag
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -fmodules-cache-path=%t/mcp --serialize-diagnostics %t/t2.diag
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -fmodules-cache-path=%t/mcp --serialize-diagnostics %t/t2.diag \
+// RUN:   2>&1 | FileCheck %s -check-prefix=WARN
+// RUN: diff %t/t1.diag %t/t2.diag
+
+// WARN: warning: argument unused during compilation
+// WARN: warning: some warning
+
+#warning some warning

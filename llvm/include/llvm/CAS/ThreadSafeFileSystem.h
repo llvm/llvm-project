@@ -28,20 +28,6 @@ public:
   createThreadSafeProxyFS() = 0;
 };
 
-/// For filesystems that use a CAS.
-class CASFileSystemBase : public ThreadSafeFileSystem {
-  virtual void anchor() override;
-
-public:
-  /// Get a proxy FS that has an independent working directory.
-  virtual CASDB &getCAS() const = 0;
-
-  /// An extra API to pull out the \a CASID if \p Path refers to a file.
-  virtual Optional<CASID> getFileCASID(const Twine &Path) = 0;
-
-  bool isCASFS() const final { return true; }
-};
-
 } // namespace cas
 } // namespace llvm
 

@@ -31,15 +31,12 @@ namespace clang {
 namespace tooling {
 namespace dependencies {
 
-class DependencyScanningCASFilesystem : public llvm::cas::CASFileSystemBase {
+class DependencyScanningCASFilesystem : public llvm::cas::ThreadSafeFileSystem {
 public:
   DependencyScanningCASFilesystem(
       IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> WorkerFS);
 
   ~DependencyScanningCASFilesystem();
-
-  llvm::cas::CASDB &getCAS() const override { return FS->getCAS(); }
-  Optional<llvm::cas::CASID> getFileCASID(const Twine &Path) override;
 
   // FIXME: Make a templated version of ProxyFileSystem with a configurable
   // base class.
@@ -76,7 +73,7 @@ private:
   /// Check whether the file should be scanned for preprocessor directives.
   bool shouldScanForDirectives(StringRef Filename);
 
-  IntrusiveRefCntPtr<llvm::cas::CASFileSystemBase> FS;
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
 
   struct FileEntry {
     std::error_code EC; // If non-zero, caches a stat failure.
@@ -84,7 +81,7 @@ private:
     SmallVector<dependency_directives_scan::Token, 64> DepTokens;
     SmallVector<dependency_directives_scan::Directive, 16> DepDirectives;
     llvm::vfs::Status Status;
-    Optional<llvm::cas::CASID> ID;
+    Optional<llvm::cas::ObjectRef> CASContents;
   };
   llvm::BumpPtrAllocator EntryAlloc;
   llvm::StringMap<FileEntry, llvm::BumpPtrAllocator &> Entries;

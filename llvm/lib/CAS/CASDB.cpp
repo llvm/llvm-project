@@ -57,6 +57,14 @@ void ReferenceBase::print(raw_ostream &OS, const ObjectRef &This) const {
   printReferenceBase(OS, "object-ref", InternalRef, ID);
 }
 
+std::unique_ptr<MemoryBuffer>
+CASDB::getMemoryBuffer(ObjectHandle Node, StringRef Name,
+                       bool RequiresNullTerminator) {
+  return MemoryBuffer::getMemBuffer(
+      toStringRef(getData(Node, RequiresNullTerminator)), Name,
+      RequiresNullTerminator);
+}
+
 /// Default implementation opens the file and calls \a createBlob().
 Expected<ObjectHandle>
 CASDB::storeFromOpenFileImpl(sys::fs::file_t FD,
@@ -124,12 +132,6 @@ Expected<ObjectProxy> CASDB::createProxy(ArrayRef<ObjectRef> Refs,
 Expected<std::unique_ptr<MemoryBuffer>>
 CASDB::loadIndependentDataBuffer(ObjectHandle Node, const Twine &Name,
                                  bool NullTerminate) const {
-  return loadIndependentDataBufferImpl(Node, Name, NullTerminate);
-}
-
-Expected<std::unique_ptr<MemoryBuffer>>
-CASDB::loadIndependentDataBufferImpl(ObjectHandle Node, const Twine &Name,
-                                     bool NullTerminate) const {
   SmallString<256> Bytes;
   raw_svector_ostream OS(Bytes);
   readData(Node, OS);

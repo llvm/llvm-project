@@ -7,10 +7,10 @@
 // RUN: ln -s %clang %t/clang-symlink-outside-bindir
 
 // 'clang-cache' launcher invokes itself, enables caching.
-// RUN: env CLANG_CACHE_CAS_PATH=%t/cas clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANG -DPREFIX=%t
-// RUN: env CLANG_CACHE_CAS_PATH=%t/cas clang-cache %clang++ -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANGPP -DPREFIX=%t
-// RUN: env CLANG_CACHE_CAS_PATH=%t/cas clang-cache %t/clang-symlink-outside-bindir -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANG -DPREFIX=%t
-// RUN: env CLANG_CACHE_CAS_PATH=%t/cas PATH="%t:$PATH" clang-cache clang-symlink-outside-bindir -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANG -DPREFIX=%t
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANG -DPREFIX=%t
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache %clang++ -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANGPP -DPREFIX=%t
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache %t/clang-symlink-outside-bindir -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANG -DPREFIX=%t
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas PATH="%t:$PATH" %clang-cache clang-symlink-outside-bindir -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANG -DPREFIX=%t
 
 // CLANG: "-cc1depscan" "-fdepscan=auto"
 // CLANG: "-fcas-path" "[[PREFIX]]/cas"
@@ -22,7 +22,7 @@
 // CLANGPP: "-greproducible"
 // CLANGPP: "-x" "c++"
 
-// RUN: env CLANG_CACHE_CAS_PATH=%t/cas cache-build-session clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=SESSION -DPREFIX=%t
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas cache-build-session %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=SESSION -DPREFIX=%t
 // SESSION: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-share-identifier"
 // SESSION: "-fcas-path" "[[PREFIX]]/cas"
 // SESSION: "-greproducible"
@@ -30,7 +30,7 @@
 // RUN: cp -R %S/Inputs/cmake-build %t/cmake-build
 // RUN: pushd %t/cmake-build
 // RUN: cache-build-session -prefix-map-cmake -v echo 2>&1 | FileCheck %s -check-prefix=SESSION-CMAKE-PREFIX
-// RUN: env CLANG_CACHE_CAS_PATH=%t/cas cache-build-session -prefix-map-cmake clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANG-CMAKE-PREFIX -DPREFIX=%t
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas cache-build-session -prefix-map-cmake %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANG-CMAKE-PREFIX -DPREFIX=%t
 // RUN: popd
 
 // SESSION-CMAKE-PREFIX: note: setting LLVM_CACHE_PREFIX_MAPS=/llvm/build=/^build;/llvm/llvm-project/llvm=/^src;/llvm/llvm-project/clang=/^src-clang;/llvm/llvm-project/clang-tools-extra=/^src-clang-tools-extra;/llvm/llvm-project/third-party/benchmark=/^src-benchmark;/llvm/llvm-project/other/benchmark=/^src-benchmark-1;/llvm/llvm-project/another/benchmark=/^src-benchmark-2{{$}}
@@ -51,12 +51,33 @@
 // SESSION-SCRIPT: run some compiler with opts -c [[SRC]] -o [[PREFIX]].o
 
 // 'clang-cache' launcher invokes a different clang, does normal non-caching launch.
-// RUN: env CLANG_CACHE_CAS_PATH=%t/cas clang-cache %t/clang -c %s -o %t.o 2>&1 | FileCheck %s -check-prefix=OTHERCLANG -DSRC=%s -DPREFIX=%t
-// OTHERCLANG: warning: clang-cache invokes a different clang binary than itself, it will perform a normal non-caching invocation of the compiler
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache %t/clang -c %s -o %t.o 2>&1 | FileCheck %s -check-prefix=OTHERCLANG -DSRC=%s -DPREFIX=%t
+// OTHERCLANG: warning: caching disabled because clang-cache invokes a different clang binary than itself
 // OTHERCLANG-NEXT: run some compiler with opts -c [[SRC]] -o [[PREFIX]].o
 
-// RUN: not clang-cache %t/nonexistent -c %s -o %t.o 2>&1 | FileCheck %s -check-prefix=NONEXISTENT
+// RUN: %clang-cache %clang -x objective-c++ -fmodules -fmodules-cache-path=%t/mcp -fno-cxx-modules -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=NONMOD -DPREFIX=%t
+// RUN: %clang-cache %clang -x c++ -fmodules -fmodules-cache-path=%t/mcp -fno-cxx-modules -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=NONMOD -DPREFIX=%t
+// RUN: %clang-cache %clang -x objective-c -fmodules -fmodules-cache-path=%t/mcp -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=MOD -DPREFIX=%t
+// RUN: %clang-cache %clang -x objective-c++ -fmodules -fmodules-cache-path=%t/mcp -fcxx-modules -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=MOD -DPREFIX=%t
+// RUN: %clang-cache %clang -x c++ -fmodules -fmodules-cache-path=%t/mcp -fcxx-modules -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=MOD -DPREFIX=%t
+// NONMOD: "-cc1depscan"
+// MOD: warning: caching disabled because -fmodules is enabled
+// MOD-NOT: "-cc1depscan"
+
+// RUN: touch %t/t.s
+// RUN: %clang-cache %clang -target arm64-apple-macosx12 -c %t/t.s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=ASM
+// ASM: warning: caching disabled because assembler language mode is enabled
+// ASM-NOT: "-cc1depscan"
+
+// RUN: env LLVM_CACHE_WARNINGS=-Wno-clang-cache %clang-cache %clang -x c++ -fmodules -fmodules-cache-path=%t/mcp -fcxx-modules -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=MOD_HIDE -DPREFIX=%t
+// MOD_HIDE-NOT: warning: caching disabled
+// MOD_HIDE-NOT: "-cc1depscan"
+
+// RUN: env LLVM_CACHE_WARNINGS=-Werror=clang-cache not %clang-cache %clang -x c++ -fmodules -fmodules-cache-path=%t/mcp -fcxx-modules -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=MOD_ERR -DPREFIX=%t
+// MOD_ERR: error: caching disabled because -fmodules is enabled
+
+// RUN: not %clang-cache %t/nonexistent -c %s -o %t.o 2>&1 | FileCheck %s -check-prefix=NONEXISTENT
 // NONEXISTENT: error: clang-cache failed to execute compiler
 
-// RUN: not clang-cache 2>&1 | FileCheck %s -check-prefix=NOCOMMAND
+// RUN: not %clang-cache 2>&1 | FileCheck %s -check-prefix=NOCOMMAND
 // NOCOMMAND: error: missing compiler command for clang-cache

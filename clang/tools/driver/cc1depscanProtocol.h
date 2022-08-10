@@ -152,10 +152,12 @@ public:
 
   llvm::Error putScanResultFailed(StringRef Reason);
   llvm::Error putScanResultSuccess(StringRef RootID,
-                                   ArrayRef<const char *> Args);
+                                   ArrayRef<const char *> Args,
+                                   StringRef DiagnosticOutput);
   llvm::Error getScanResult(llvm::StringSaver &Saver, ResultKind &Result,
                             StringRef &FailedReason, StringRef &RootID,
-                            SmallVectorImpl<const char *> &Args);
+                            SmallVectorImpl<const char *> &Args,
+                            StringRef &DiagnosticOutput);
 
   explicit CC1DepScanDProtocol(int Socket) : Socket(Socket) {}
   CC1DepScanDProtocol() = delete;

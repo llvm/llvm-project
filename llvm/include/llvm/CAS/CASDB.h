@@ -83,10 +83,8 @@ class ObjectProxy;
 ///
 /// TODO: Remove CASID.
 ///
-/// Here's how to remove CASID and Tree:
+/// Here's how to remove CASID:
 ///
-/// - Lift trees into a filesystem schema, dropping TreeHandle and making
-///   TreeProxy inherit from NodeProxy.
 /// - Add APIs for bypassing CASID when parsing:
 ///     - Validate an ID without doing anything else (current check done by
 ///       `parseID()`).
@@ -134,10 +132,67 @@ public:
   /// extractHashFromID().
   virtual Expected<CASID> parseID(StringRef ID) = 0;
 
-  Expected<ObjectProxy> createProxy(ArrayRef<ObjectRef> Refs, StringRef Data);
+  /// Store object into CASDB.
   virtual Expected<ObjectHandle> store(ArrayRef<ObjectRef> Refs,
                                        ArrayRef<char> Data) = 0;
+  /// Get an ID for \p Ref.
+  virtual CASID getID(ObjectRef Ref) const = 0;
+  /// Get an ID for \p Handle.
+  virtual CASID getID(ObjectHandle Handle) const = 0;
 
+  /// Get a reference to the object called \p ID.
+  ///
+  /// Returns \c None if not stored in this CAS.
+  virtual Optional<ObjectRef> getReference(const CASID &ID) const = 0;
+
+  /// Get a Ref from Handle.
+  virtual ObjectRef getReference(ObjectHandle Handle) const = 0;
+
+  /// Load the object referenced by \p Ref.
+  ///
+  /// Errors if the object cannot be loaded.
+  virtual Expected<ObjectHandle> load(ObjectRef Ref) = 0;
+
+  /// Validate the underlying object referred by CASID.
+  virtual Error validate(const CASID &ID) = 0;
+
+  /// Get the size of some data.
+  virtual uint64_t getDataSize(ObjectHandle Node) const = 0;
+
+  /// Methods for handling objects.
+  virtual Error forEachRef(ObjectHandle Node,
+                           function_ref<Error(ObjectRef)> Callback) const = 0;
+  virtual ObjectRef readRef(ObjectHandle Node, size_t I) const = 0;
+  virtual size_t getNumRefs(ObjectHandle Node) const = 0;
+  virtual ArrayRef<char> getData(ObjectHandle Node,
+                                 bool RequiresNullTerminator = false) const = 0;
+
+public:
+  /// ActionCache APIs.
+  // FIXME: Split out in the future. This should also be generic key-value
+  // storage interface, rather than CASID -> CASID.
+  virtual Expected<CASID> getCachedResult(CASID InputID) = 0;
+  virtual Error putCachedResult(CASID InputID, CASID OutputID) = 0;
+
+protected:
+  virtual Expected<ObjectHandle>
+  storeFromOpenFileImpl(sys::fs::file_t FD,
+                        Optional<sys::fs::file_status> Status);
+
+  /// Allow CASDB implementations to create internal handles.
+#define MAKE_CAS_HANDLE_CONSTRUCTOR(HandleKind)                                \
+  HandleKind make##HandleKind(uint64_t InternalRef) const {                    \
+    return HandleKind(*this, InternalRef);                                     \
+  }
+  MAKE_CAS_HANDLE_CONSTRUCTOR(ObjectHandle)
+  MAKE_CAS_HANDLE_CONSTRUCTOR(ObjectRef)
+#undef MAKE_CAS_HANDLE_CONSTRUCTOR
+
+public:
+  /// Helper functions to store object and returns a ObjectProxy.
+  Expected<ObjectProxy> createProxy(ArrayRef<ObjectRef> Refs, StringRef Data);
+
+  /// Store object from StringRef.
   Expected<ObjectHandle> storeFromString(ArrayRef<ObjectRef> Refs,
                                          StringRef String) {
     return store(Refs, arrayRefFromStringRef<char>(String));
@@ -158,37 +213,6 @@ public:
     return storeFromOpenFileImpl(FD, Status);
   }
 
-protected:
-  virtual Expected<ObjectHandle>
-  storeFromOpenFileImpl(sys::fs::file_t FD,
-                        Optional<sys::fs::file_status> Status);
-
-  /// Allow CASDB implementations to create internal handles.
-#define MAKE_CAS_HANDLE_CONSTRUCTOR(HandleKind)                                \
-  HandleKind make##HandleKind(uint64_t InternalRef) const {                    \
-    return HandleKind(*this, InternalRef);                                     \
-  }
-  MAKE_CAS_HANDLE_CONSTRUCTOR(ObjectHandle)
-  MAKE_CAS_HANDLE_CONSTRUCTOR(ObjectRef)
-#undef MAKE_CAS_HANDLE_CONSTRUCTOR
-
-public:
-  /// Get an ID for \p Ref.
-  virtual CASID getID(ObjectRef Ref) const = 0;
-  virtual CASID getID(ObjectHandle Handle) const = 0;
-
-  /// Get a reference to the object called \p ID.
-  ///
-  /// Returns \c None if not stored in this CAS.
-  virtual Optional<ObjectRef> getReference(const CASID &ID) const = 0;
-
-  virtual ObjectRef getReference(ObjectHandle Handle) const = 0;
-
-  /// Load the object referenced by \p Ref.
-  ///
-  /// Errors if the object cannot be loaded.
-  virtual Expected<ObjectHandle> load(ObjectRef Ref) = 0;
-
   /// Load the object called \p ID.
   ///
   /// Returns \c None if it's unknown in this CAS instance.
@@ -198,76 +222,48 @@ public:
 
   static Error createUnknownObjectError(CASID ID);
 
+  /// Create ObjectProxy from other types that refer to object.
   Expected<ObjectProxy> getProxy(CASID ID);
   Expected<ObjectProxy> getProxy(ObjectRef Ref);
   Expected<ObjectProxy> getProxy(Expected<ObjectHandle> H);
 
-  virtual Error validate(const CASID &ID) = 0;
-
-public:
-  /// Get the size of some data.
-  virtual uint64_t getDataSize(ObjectHandle Node) const = 0;
-
   /// Read the data from \p Data into \p OS.
   uint64_t readData(ObjectHandle Node, raw_ostream &OS, uint64_t Offset = 0,
                     uint64_t MaxBytes = -1ULL) const {
-    return readDataImpl(Node, OS, Offset, MaxBytes);
+    ArrayRef<char> Data = getData(Node);
+    assert(Offset < Data.size() && "Expected valid offset");
+    Data = Data.drop_front(Offset).take_front(MaxBytes);
+    OS << toStringRef(Data);
+    return Data.size();
   }
 
-protected:
-  virtual uint64_t readDataImpl(ObjectHandle Node, raw_ostream &OS,
-                                uint64_t Offset, uint64_t MaxBytes) const = 0;
-
-public:
   /// Get a lifetime-extended StringRef pointing at \p Data.
   ///
   /// Depending on the CAS implementation, this may involve in-memory storage
   /// overhead.
-  StringRef getDataString(ObjectHandle Node, bool NullTerminate = true) {
-    return toStringRef(getDataImpl(Node, NullTerminate));
+  StringRef getDataString(ObjectHandle Node) {
+    return toStringRef(getData(Node));
   }
 
-  /// Get a lifetime-extended ArrayRef pointing at \p Data.
+  /// Get a lifetime-extended MemoryBuffer pointing at \p Data.
   ///
   /// Depending on the CAS implementation, this may involve in-memory storage
   /// overhead.
-  template <class CharT = char>
-  ArrayRef<CharT> getDataArray(ObjectHandle Node, bool NullTerminate = true) {
-    static_assert(std::is_same<CharT, char>::value ||
-                      std::is_same<CharT, unsigned char>::value ||
-                      std::is_same<CharT, signed char>::value,
-                  "Expected byte type");
-    ArrayRef<char> S = getDataImpl(Node, NullTerminate);
-    return makeArrayRef(reinterpret_cast<const CharT *>(S.data()), S.size());
-  }
+  std::unique_ptr<MemoryBuffer>
+  getMemoryBuffer(ObjectHandle Node, StringRef Name = "",
+                  bool RequiresNullTerminator = true);
 
-protected:
-  virtual ArrayRef<char> getDataImpl(ObjectHandle Node, bool NullTerminate) = 0;
-
-public:
   /// Get a MemoryBuffer with the contents of \p Data whose lifetime is
   /// independent of this CAS instance.
-  Expected<std::unique_ptr<MemoryBuffer>>
+  virtual Expected<std::unique_ptr<MemoryBuffer>>
   loadIndependentDataBuffer(ObjectHandle Node, const Twine &Name = "",
                             bool NullTerminate = true) const;
 
-protected:
-  virtual Expected<std::unique_ptr<MemoryBuffer>>
-  loadIndependentDataBufferImpl(ObjectHandle Node, const Twine &Name,
-                                bool NullTerminate) const;
-
-public:
-  virtual Error forEachRef(ObjectHandle Node,
-                           function_ref<Error(ObjectRef)> Callback) const = 0;
+  /// Read all the refs from object in a SmallVector.
   virtual void readRefs(ObjectHandle Node,
                         SmallVectorImpl<ObjectRef> &Refs) const;
-  virtual ObjectRef readRef(ObjectHandle Node, size_t I) const = 0;
-  virtual size_t getNumRefs(ObjectHandle Node) const = 0;
 
-
-  virtual Expected<CASID> getCachedResult(CASID InputID) = 0;
-  virtual Error putCachedResult(CASID InputID, CASID OutputID) = 0;
-
+  /// Print the CASDB internals for debugging purpose.
   virtual void print(raw_ostream &) const {}
   void dump() const;
 
@@ -277,6 +273,7 @@ public:
 template <class HandleT> class ProxyBase : public HandleT {
 public:
   const CASDB &getCAS() const { return *CAS; }
+  CASDB &getCAS() { return *CAS; }
   CASID getID() const {
     return CAS->getID(*static_cast<const ObjectHandle *>(this));
   }
@@ -302,8 +299,8 @@ public:
   }
 
 protected:
-  ProxyBase(const CASDB &CAS, HandleT H) : HandleT(H), CAS(&CAS) {}
-  const CASDB *CAS;
+  ProxyBase(CASDB &CAS, HandleT H) : HandleT(H), CAS(&CAS) {}
+  CASDB *CAS;
 };
 
 
@@ -358,8 +355,7 @@ public:
   }
 
 private:
-  ObjectProxy(const CASDB &CAS, ObjectHandle H, size_t NumReferences,
-              StringRef Data)
+  ObjectProxy(CASDB &CAS, ObjectHandle H, size_t NumReferences, StringRef Data)
       : ProxyBase::ProxyBase(CAS, H), NumReferences(NumReferences), Data(Data) {
   }
 

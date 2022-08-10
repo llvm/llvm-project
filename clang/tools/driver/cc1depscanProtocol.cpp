@@ -364,7 +364,8 @@ CC1DepScanDProtocol::getDepscanPrefixMapping(llvm::StringSaver &Saver,
 llvm::Error
 CC1DepScanDProtocol::getScanResult(llvm::StringSaver &Saver, ResultKind &Result,
                                    StringRef &FailedReason, StringRef &RootID,
-                                   SmallVectorImpl<const char *> &Args) {
+                                   SmallVectorImpl<const char *> &Args,
+                                   StringRef &DiagnosticOutput) {
   if (Error E = getResultKind(Result))
     return E;
 
@@ -378,17 +379,20 @@ CC1DepScanDProtocol::getScanResult(llvm::StringSaver &Saver, ResultKind &Result,
 
   if (Error E = getString(Saver, RootID))
     return E;
-  return getArgs(Saver, Args);
+  if (Error E = getArgs(Saver, Args))
+    return E;
+  return getString(Saver, DiagnosticOutput);
 }
 
-llvm::Error
-CC1DepScanDProtocol::putScanResultSuccess(StringRef RootID,
-                                          ArrayRef<const char *> Args) {
+llvm::Error CC1DepScanDProtocol::putScanResultSuccess(
+    StringRef RootID, ArrayRef<const char *> Args, StringRef DiagnosticOutput) {
   if (Error E = putResultKind(SuccessResult))
     return E;
   if (Error E = putString(RootID))
     return E;
-  return putArgs(Args);
+  if (Error E = putArgs(Args))
+    return E;
+  return putString(DiagnosticOutput);
 }
 
 llvm::Error CC1DepScanDProtocol::putScanResultFailed(StringRef Reason) {

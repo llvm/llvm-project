@@ -142,10 +142,11 @@ class SDiagsWriter : public DiagnosticConsumer {
         State(std::move(State)) {}
 
 public:
-  SDiagsWriter(StringRef File, DiagnosticOptions *Diags, bool MergeChildRecords)
+  SDiagsWriter(StringRef File, std::unique_ptr<raw_ostream> OS,
+               DiagnosticOptions *Diags, bool MergeChildRecords)
       : LangOpts(nullptr), OriginalInstance(true),
         MergeChildRecords(MergeChildRecords),
-        State(std::make_shared<SharedState>(File, Diags)) {
+        State(std::make_shared<SharedState>(File, std::move(OS), Diags)) {
     if (MergeChildRecords)
       RemoveOldDiagnostics();
     EmitPreamble();
@@ -244,9 +245,10 @@ private:
   /// State that is shared among the various clones of this diagnostic
   /// consumer.
   struct SharedState {
-    SharedState(StringRef File, DiagnosticOptions *Diags)
+    SharedState(StringRef File, std::unique_ptr<raw_ostream> OS,
+                DiagnosticOptions *Diags)
         : DiagOpts(Diags), Stream(Buffer), OutputFile(File.str()),
-          EmittedAnyDiagBlocks(false) {}
+          OutputStream(std::move(OS)), EmittedAnyDiagBlocks(false) {}
 
     /// Diagnostic options.
     IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
@@ -259,6 +261,9 @@ private:
 
     /// The name of the diagnostics file.
     std::string OutputFile;
+
+    /// Optional output stream instead of writing directly to a file.
+    std::unique_ptr<raw_ostream> OutputStream;
 
     /// The set of constructed record abbreviations.
     AbbreviationMap Abbrevs;
@@ -297,9 +302,12 @@ private:
 
 namespace clang {
 namespace serialized_diags {
-std::unique_ptr<DiagnosticConsumer>
-create(StringRef OutputFile, DiagnosticOptions *Diags, bool MergeChildRecords) {
-  return std::make_unique<SDiagsWriter>(OutputFile, Diags, MergeChildRecords);
+std::unique_ptr<DiagnosticConsumer> create(StringRef OutputFile,
+                                           DiagnosticOptions *Diags,
+                                           bool MergeChildRecords,
+                                           std::unique_ptr<raw_ostream> OS) {
+  return std::make_unique<SDiagsWriter>(OutputFile, std::move(OS), Diags,
+                                        MergeChildRecords);
 }
 
 } // end namespace serialized_diags
@@ -794,6 +802,15 @@ void SDiagsWriter::finish() {
     if (llvm::sys::fs::exists(State->OutputFile))
       if (SDiagsMerger(*this).mergeRecordsFromFile(State->OutputFile.c_str()))
         getMetaDiags()->Report(diag::warn_fe_serialized_diag_merge_failure);
+  }
+
+  if (State->OutputStream) {
+    // Write the generated bitstream to "Out".
+    State->OutputStream->write((char *)&State->Buffer.front(),
+                               State->Buffer.size());
+    State->OutputStream->flush();
+    State->OutputStream.reset();
+    return;
   }
 
   std::error_code EC;
