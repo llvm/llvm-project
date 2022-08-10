@@ -29,7 +29,8 @@ define void @test1(i32 %c) nounwind {
   ; AIX64-NEXT:   [[LWZ:%[0-9]+]]:gprc = LWZ 0, [[LDtoc]] :: (volatile dereferenceable load (s32) from @a)
   ; AIX64-NEXT:   [[ADD4_:%[0-9]+]]:gprc = nsw ADD4 killed [[LWZ]], [[COPY1]]
   ; AIX64-NEXT:   STW killed [[ADD4_]], 0, [[LDtoc]] :: (volatile store (s32) into @a)
-  ; AIX64-NEXT:   BDNZ8 %bb.1, implicit-def dead $ctr8, implicit $ctr8
+  ; AIX64-NEXT:   [[DecreaseCTR8loop:%[0-9]+]]:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
+  ; AIX64-NEXT:   BC killed [[DecreaseCTR8loop]], %bb.1
   ; AIX64-NEXT:   B %bb.2
   ; AIX64-NEXT: {{  $}}
   ; AIX64-NEXT: bb.2.for.end:
@@ -50,7 +51,8 @@ define void @test1(i32 %c) nounwind {
   ; AIX32-NEXT:   [[LWZ:%[0-9]+]]:gprc = LWZ 0, [[LWZtoc]] :: (volatile dereferenceable load (s32) from @a)
   ; AIX32-NEXT:   [[ADD4_:%[0-9]+]]:gprc = nsw ADD4 killed [[LWZ]], [[COPY]]
   ; AIX32-NEXT:   STW killed [[ADD4_]], 0, [[LWZtoc]] :: (volatile store (s32) into @a)
-  ; AIX32-NEXT:   BDNZ %bb.1, implicit-def dead $ctr, implicit $ctr
+  ; AIX32-NEXT:   [[DecreaseCTRloop:%[0-9]+]]:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
+  ; AIX32-NEXT:   BC killed [[DecreaseCTRloop]], %bb.1
   ; AIX32-NEXT:   B %bb.2
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT: bb.2.for.end:
@@ -73,7 +75,8 @@ define void @test1(i32 %c) nounwind {
   ; LE64-NEXT:   [[LWZ:%[0-9]+]]:gprc = LWZ 0, [[LDtocL]] :: (volatile dereferenceable load (s32) from @a)
   ; LE64-NEXT:   [[ADD4_:%[0-9]+]]:gprc = nsw ADD4 killed [[LWZ]], [[COPY1]]
   ; LE64-NEXT:   STW killed [[ADD4_]], 0, [[LDtocL]] :: (volatile store (s32) into @a)
-  ; LE64-NEXT:   BDNZ8 %bb.1, implicit-def dead $ctr8, implicit $ctr8
+  ; LE64-NEXT:   [[DecreaseCTR8loop:%[0-9]+]]:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
+  ; LE64-NEXT:   BC killed [[DecreaseCTR8loop]], %bb.1
   ; LE64-NEXT:   B %bb.2
   ; LE64-NEXT: {{  $}}
   ; LE64-NEXT: bb.2.for.end:
@@ -125,7 +128,8 @@ define void @test2(i32 %c, i32 %d) nounwind {
   ; AIX64-NEXT:   [[LWZ:%[0-9]+]]:gprc = LWZ 0, [[LDtoc]] :: (volatile dereferenceable load (s32) from @a)
   ; AIX64-NEXT:   [[ADD4_:%[0-9]+]]:gprc = nsw ADD4 killed [[LWZ]], [[COPY2]]
   ; AIX64-NEXT:   STW killed [[ADD4_]], 0, [[LDtoc]] :: (volatile store (s32) into @a)
-  ; AIX64-NEXT:   BDNZ8 %bb.2, implicit-def dead $ctr8, implicit $ctr8
+  ; AIX64-NEXT:   [[DecreaseCTR8loop:%[0-9]+]]:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
+  ; AIX64-NEXT:   BC killed [[DecreaseCTR8loop]], %bb.2
   ; AIX64-NEXT:   B %bb.3
   ; AIX64-NEXT: {{  $}}
   ; AIX64-NEXT: bb.3.for.end:
@@ -153,7 +157,8 @@ define void @test2(i32 %c, i32 %d) nounwind {
   ; AIX32-NEXT:   [[LWZ:%[0-9]+]]:gprc = LWZ 0, [[LWZtoc]] :: (volatile dereferenceable load (s32) from @a)
   ; AIX32-NEXT:   [[ADD4_:%[0-9]+]]:gprc = nsw ADD4 killed [[LWZ]], [[COPY1]]
   ; AIX32-NEXT:   STW killed [[ADD4_]], 0, [[LWZtoc]] :: (volatile store (s32) into @a)
-  ; AIX32-NEXT:   BDNZ %bb.2, implicit-def dead $ctr, implicit $ctr
+  ; AIX32-NEXT:   [[DecreaseCTRloop:%[0-9]+]]:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
+  ; AIX32-NEXT:   BC killed [[DecreaseCTRloop]], %bb.2
   ; AIX32-NEXT:   B %bb.3
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT: bb.3.for.end:
@@ -189,7 +194,8 @@ define void @test2(i32 %c, i32 %d) nounwind {
   ; LE64-NEXT:   [[LWZ:%[0-9]+]]:gprc = LWZ 0, [[LDtocL]] :: (volatile dereferenceable load (s32) from @a)
   ; LE64-NEXT:   [[ADD4_:%[0-9]+]]:gprc = nsw ADD4 killed [[LWZ]], [[COPY2]]
   ; LE64-NEXT:   STW killed [[ADD4_]], 0, [[LDtocL]] :: (volatile store (s32) into @a)
-  ; LE64-NEXT:   BDNZ8 %bb.2, implicit-def dead $ctr8, implicit $ctr8
+  ; LE64-NEXT:   [[DecreaseCTR8loop:%[0-9]+]]:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
+  ; LE64-NEXT:   BC killed [[DecreaseCTR8loop]], %bb.2
   ; LE64-NEXT:   B %bb.3
   ; LE64-NEXT: {{  $}}
   ; LE64-NEXT: bb.3.for.end:
@@ -245,7 +251,8 @@ define void @test3(i32 %c, i32 %d) nounwind {
   ; AIX64-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 [[PHI]], killed [[LWZ]]
   ; AIX64-NEXT:   STW killed [[ADD4_]], 0, [[LDtoc]] :: (volatile store (s32) into @a)
   ; AIX64-NEXT:   [[ADD4_1:%[0-9]+]]:gprc = ADD4 [[PHI]], [[COPY2]]
-  ; AIX64-NEXT:   BDNZ8 %bb.2, implicit-def dead $ctr8, implicit $ctr8
+  ; AIX64-NEXT:   [[DecreaseCTR8loop:%[0-9]+]]:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
+  ; AIX64-NEXT:   BC killed [[DecreaseCTR8loop]], %bb.2
   ; AIX64-NEXT:   B %bb.3
   ; AIX64-NEXT: {{  $}}
   ; AIX64-NEXT: bb.3.for.end:
@@ -276,7 +283,8 @@ define void @test3(i32 %c, i32 %d) nounwind {
   ; AIX32-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 [[PHI]], killed [[LWZ]]
   ; AIX32-NEXT:   STW killed [[ADD4_]], 0, [[LWZtoc]] :: (volatile store (s32) into @a)
   ; AIX32-NEXT:   [[ADD4_1:%[0-9]+]]:gprc = ADD4 [[PHI]], [[COPY1]]
-  ; AIX32-NEXT:   BDNZ %bb.2, implicit-def dead $ctr, implicit $ctr
+  ; AIX32-NEXT:   [[DecreaseCTRloop:%[0-9]+]]:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
+  ; AIX32-NEXT:   BC killed [[DecreaseCTRloop]], %bb.2
   ; AIX32-NEXT:   B %bb.3
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT: bb.3.for.end:
@@ -315,7 +323,8 @@ define void @test3(i32 %c, i32 %d) nounwind {
   ; LE64-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 [[PHI]], killed [[LWZ]]
   ; LE64-NEXT:   STW killed [[ADD4_]], 0, [[LDtocL]] :: (volatile store (s32) into @a)
   ; LE64-NEXT:   [[ADD4_1:%[0-9]+]]:gprc = ADD4 [[PHI]], [[COPY2]]
-  ; LE64-NEXT:   BDNZ8 %bb.2, implicit-def dead $ctr8, implicit $ctr8
+  ; LE64-NEXT:   [[DecreaseCTR8loop:%[0-9]+]]:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
+  ; LE64-NEXT:   BC killed [[DecreaseCTR8loop]], %bb.2
   ; LE64-NEXT:   B %bb.3
   ; LE64-NEXT: {{  $}}
   ; LE64-NEXT: bb.3.for.end:
@@ -361,7 +370,8 @@ define i32 @test4(i32 %inp) {
   ; AIX64-NEXT: bb.1.for.body:
   ; AIX64-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; AIX64-NEXT: {{  $}}
-  ; AIX64-NEXT:   BDNZ8 %bb.1, implicit-def dead $ctr8, implicit $ctr8
+  ; AIX64-NEXT:   [[DecreaseCTR8loop:%[0-9]+]]:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
+  ; AIX64-NEXT:   BC killed [[DecreaseCTR8loop]], %bb.1
   ; AIX64-NEXT:   B %bb.2
   ; AIX64-NEXT: {{  $}}
   ; AIX64-NEXT: bb.2.return:
@@ -390,7 +400,8 @@ define i32 @test4(i32 %inp) {
   ; AIX32-NEXT: bb.1.for.body:
   ; AIX32-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; AIX32-NEXT: {{  $}}
-  ; AIX32-NEXT:   BDNZ %bb.1, implicit-def dead $ctr, implicit $ctr
+  ; AIX32-NEXT:   [[DecreaseCTRloop:%[0-9]+]]:crbitrc = DecreaseCTRloop 1, implicit-def dead $ctr, implicit $ctr
+  ; AIX32-NEXT:   BC killed [[DecreaseCTRloop]], %bb.1
   ; AIX32-NEXT:   B %bb.2
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT: bb.2.return:
@@ -420,7 +431,8 @@ define i32 @test4(i32 %inp) {
   ; LE64-NEXT: bb.1.for.body:
   ; LE64-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; LE64-NEXT: {{  $}}
-  ; LE64-NEXT:   BDNZ8 %bb.1, implicit-def dead $ctr8, implicit $ctr8
+  ; LE64-NEXT:   [[DecreaseCTR8loop:%[0-9]+]]:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
+  ; LE64-NEXT:   BC killed [[DecreaseCTR8loop]], %bb.1
   ; LE64-NEXT:   B %bb.2
   ; LE64-NEXT: {{  $}}
   ; LE64-NEXT: bb.2.return:

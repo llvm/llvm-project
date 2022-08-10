@@ -190,11 +190,13 @@ contains
 end module
 subroutine s9a
   use m9a
+  !ERROR: Cannot use-associate generic interface 'g' with specific procedure of the same name when another such generic is in scope
   use m9b
 end
 subroutine s9b
   !ERROR: USE-associated generic 'g' may not have specific procedures 'g' and 'g' as their interfaces are not distinguishable
   use m9a
+  !ERROR: Cannot use-associate generic interface 'g' with specific procedure of the same name when another such generic is in scope
   use m9c
 end
 

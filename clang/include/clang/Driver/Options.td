@@ -815,8 +815,10 @@ def Xassembler : Separate<["-"], "Xassembler">,
   HelpText<"Pass <arg> to the assembler">, MetaVarName<"<arg>">,
   Group<CompileOnly_Group>;
 def Xclang : Separate<["-"], "Xclang">,
-  HelpText<"Pass <arg> to the clang compiler">, MetaVarName<"<arg>">,
+  HelpText<"Pass <arg> to clang -cc1">, MetaVarName<"<arg>">,
   Flags<[NoXarchOption, CoreOption]>, Group<CompileOnly_Group>;
+def : Joined<["-"], "Xclang=">, Group<CompileOnly_Group>, Flags<[NoXarchOption, CoreOption]>, Alias<Xclang>,
+  HelpText<"Alias for -Xclang">, MetaVarName<"<arg>">;
 def Xcuda_fatbinary : Separate<["-"], "Xcuda-fatbinary">,
   HelpText<"Pass <arg> to fatbinary invocation">, MetaVarName<"<arg>">;
 def Xcuda_ptxas : Separate<["-"], "Xcuda-ptxas">,

@@ -35,8 +35,14 @@ namespace {
 /// replace it).
 ///
 /// 2) Lower the body of the spirv::ModuleOp.
-struct GPUToSPIRVPass : public ConvertGPUToSPIRVBase<GPUToSPIRVPass> {
+class GPUToSPIRVPass : public ConvertGPUToSPIRVBase<GPUToSPIRVPass> {
+public:
+  explicit GPUToSPIRVPass(bool mapMemorySpace)
+      : mapMemorySpace(mapMemorySpace) {}
   void runOnOperation() override;
+
+private:
+  bool mapMemorySpace;
 };
 } // namespace
 
@@ -44,15 +50,29 @@ void GPUToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
   ModuleOp module = getOperation();
 
-  SmallVector<Operation *, 1> kernelModules;
+  SmallVector<Operation *, 1> gpuModules;
   OpBuilder builder(context);
-  module.walk([&builder, &kernelModules](gpu::GPUModuleOp moduleOp) {
-    // For each kernel module (should be only 1 for now, but that is not a
-    // requirement here), clone the module for conversion because the
-    // gpu.launch function still needs the kernel module.
+  module.walk([&](gpu::GPUModuleOp moduleOp) {
+    // Clone each GPU kernel module for conversion, given that the GPU
+    // launch op still needs the original GPU kernel module.
     builder.setInsertionPoint(moduleOp.getOperation());
-    kernelModules.push_back(builder.clone(*moduleOp.getOperation()));
+    gpuModules.push_back(builder.clone(*moduleOp.getOperation()));
   });
+
+  // Map MemRef memory space to SPIR-V sotrage class first if requested.
+  if (mapMemorySpace) {
+    std::unique_ptr<ConversionTarget> target =
+        spirv::getMemorySpaceToStorageClassTarget(*context);
+    spirv::MemorySpaceToStorageClassMap memorySpaceMap =
+        spirv::mapMemorySpaceToVulkanStorageClass;
+    spirv::MemorySpaceToStorageClassConverter converter(memorySpaceMap);
+
+    RewritePatternSet patterns(context);
+    spirv::populateMemorySpaceToStorageClassPatterns(converter, patterns);
+
+    if (failed(applyFullConversion(gpuModules, *target, std::move(patterns))))
+      return signalPassFailure();
+  }
 
   auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
   std::unique_ptr<ConversionTarget> target =
@@ -68,10 +88,11 @@ void GPUToSPIRVPass::runOnOperation() {
   populateMemRefToSPIRVPatterns(typeConverter, patterns);
   populateFuncToSPIRVPatterns(typeConverter, patterns);
 
-  if (failed(applyFullConversion(kernelModules, *target, std::move(patterns))))
+  if (failed(applyFullConversion(gpuModules, *target, std::move(patterns))))
     return signalPassFailure();
 }
 
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertGPUToSPIRVPass() {
-  return std::make_unique<GPUToSPIRVPass>();
+std::unique_ptr<OperationPass<ModuleOp>>
+mlir::createConvertGPUToSPIRVPass(bool mapMemorySpace) {
+  return std::make_unique<GPUToSPIRVPass>(mapMemorySpace);
 }

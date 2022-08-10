@@ -28,8 +28,7 @@
 #include <set>
 #include <vector>
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 extern std::unique_ptr<class LinkerDriver> driver;
 
@@ -159,7 +158,7 @@ private:
   std::vector<StringRef> filePaths;
   std::vector<MemoryBufferRef> resources;
 
-  llvm::StringSet<> directivesExports;
+  llvm::DenseSet<StringRef> directivesExports;
 
   COFFLinkerContext &ctx;
 
@@ -234,7 +233,6 @@ enum {
 #undef OPTION
 };
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 #endif

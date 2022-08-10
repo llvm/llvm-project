@@ -260,8 +260,7 @@ struct WmmaConstantOpToNVVMLowering
       Value vecCst = rewriter.create<LLVM::UndefOp>(loc, vecType);
       for (int64_t vecEl = 0; vecEl < vecType.getNumElements(); vecEl++) {
         Value idx = rewriter.create<LLVM::ConstantOp>(
-            loc, typeConverter->convertType(rewriter.getIntegerType(32)),
-            rewriter.getI32IntegerAttr(vecEl));
+            loc, rewriter.getI32Type(), vecEl);
         vecCst = rewriter.create<LLVM::InsertElementOp>(loc, vecType, vecCst,
                                                         cst, idx);
       }

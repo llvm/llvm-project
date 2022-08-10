@@ -35,6 +35,9 @@ enum NodeType : unsigned {
   SRA_W,
   SRL_W,
 
+  ROTL_W,
+  ROTR_W,
+
   // FPR<->GPR transfer operations
   MOVGR2FR_W_LA64,
   MOVFR2GR_S_LA64,
@@ -44,6 +47,9 @@ enum NodeType : unsigned {
   BSTRINS,
   BSTRPICK,
 
+  // Byte swapping operations
+  REVB_2H,
+  REVB_2W,
 };
 } // end namespace LoongArchISD
 
@@ -110,6 +116,7 @@ private:
   SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;

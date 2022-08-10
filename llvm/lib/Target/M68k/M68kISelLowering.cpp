@@ -1666,7 +1666,7 @@ SDValue M68kTargetLowering::EmitTest(SDValue Op, unsigned M68kCC,
     case ISD::SHL: {
       if (Op.getNode()->getFlags().hasNoSignedWrap())
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     default:
       NeedOF = true;
@@ -1755,7 +1755,7 @@ SDValue M68kTargetLowering::EmitTest(SDValue Op, unsigned M68kCC,
       if (/*!Subtarget.hasBMI() ||*/ !IsAndn || !IsLegalAndnType)
         break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SUB:
   case ISD::OR:
   case ISD::XOR:

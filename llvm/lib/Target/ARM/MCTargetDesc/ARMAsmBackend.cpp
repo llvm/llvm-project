@@ -462,7 +462,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     assert(STI != nullptr);
     if (IsResolved || !STI->getTargetTriple().isOSBinFormatELF())
       Value >>= 16;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARM::fixup_arm_movw_lo16: {
     unsigned Hi4 = (Value & 0xF000) >> 12;
     unsigned Lo12 = Value & 0x0FFF;
@@ -475,7 +475,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     assert(STI != nullptr);
     if (IsResolved || !STI->getTargetTriple().isOSBinFormatELF())
       Value >>= 16;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARM::fixup_t2_movw_lo16: {
     unsigned Hi4 = (Value & 0xF000) >> 12;
     unsigned i = (Value & 0x800) >> 11;
@@ -491,11 +491,11 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   case ARM::fixup_arm_ldst_pcrel_12:
     // ARM PC-relative values are offset by 8.
     Value -= 4;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARM::fixup_t2_ldst_pcrel_12:
     // Offset by 4, adjusted by two due to the half-word ordering of thumb.
     Value -= 4;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARM::fixup_arm_ldst_abs_12: {
     bool isAdd = true;
     if ((int64_t)Value < 0) {
@@ -742,7 +742,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   case ARM::fixup_arm_pcrel_10:
     Value = Value - 4; // ARM fixups offset by an additional word and don't
                        // need to adjust for the half-word ordering.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARM::fixup_t2_pcrel_10: {
     // Offset by 4, adjusted by two due to the half-word ordering of thumb.
     Value = Value - 4;
@@ -769,7 +769,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   case ARM::fixup_arm_pcrel_9:
     Value = Value - 4; // ARM fixups offset by an additional word and don't
                        // need to adjust for the half-word ordering.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ARM::fixup_t2_pcrel_9: {
     // Offset by 4, adjusted by two due to the half-word ordering of thumb.
     Value = Value - 4;

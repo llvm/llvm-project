@@ -206,7 +206,7 @@ void GlobalDCEPass::ScanVTables(Module &M) {
 
 void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
                                    uint64_t CallOffset) {
-  for (auto &VTableInfo : TypeIdMap[TypeId]) {
+  for (const auto &VTableInfo : TypeIdMap[TypeId]) {
     GlobalVariable *VTable = VTableInfo.first;
     uint64_t VTableOffset = VTableInfo.second;
 
@@ -254,7 +254,7 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
     } else {
       // type.checked.load with a non-constant offset, so assume every entry in
       // every matching vtable is used.
-      for (auto &VTableInfo : TypeIdMap[TypeId]) {
+      for (const auto &VTableInfo : TypeIdMap[TypeId]) {
         VFESafeVTables.erase(VTableInfo.first);
       }
     }

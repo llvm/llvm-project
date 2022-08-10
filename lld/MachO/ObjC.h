@@ -11,8 +11,7 @@
 
 #include "llvm/Support/MemoryBuffer.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 namespace objc {
 
@@ -25,7 +24,6 @@ constexpr const char ivar[] = "_OBJC_IVAR_$_";
 
 bool hasObjCSection(llvm::MemoryBufferRef);
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

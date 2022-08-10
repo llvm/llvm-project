@@ -9,10 +9,8 @@
 #ifndef LLD_MACHO_MAPFILE_H
 #define LLD_MACHO_MAPFILE_H
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 void writeMapFile();
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

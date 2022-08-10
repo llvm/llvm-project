@@ -184,7 +184,7 @@ SerializedDiagnosticReader::readMetaBlock(llvm::BitstreamCursor &Stream) {
         consumeError(std::move(Err));
         return SDError::MalformedMetadataBlock;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Cursor::BlockEnd:
       if (!VersionChecked)
         return SDError::MissingVersion;

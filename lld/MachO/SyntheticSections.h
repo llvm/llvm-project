@@ -31,8 +31,7 @@ namespace llvm {
 class DWARFUnit;
 } // namespace llvm
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class Defined;
 class DylibSymbol;
@@ -645,7 +644,6 @@ extern std::vector<SyntheticSection *> syntheticSections;
 
 void createSyntheticSymbols();
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

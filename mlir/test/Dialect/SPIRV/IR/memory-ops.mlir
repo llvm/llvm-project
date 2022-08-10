@@ -198,7 +198,7 @@ func.func @load_none_access() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Load
   // CHECK-SAME: ["None"]
-  %1 = "spv.Load"(%0) {memory_access = 0 : i32} : (!spv.ptr<f32, Function>) -> (f32)
+  %1 = "spv.Load"(%0) {memory_access = #spv.memory_access<None>} : (!spv.ptr<f32, Function>) -> (f32)
   return
 }
 
@@ -207,7 +207,7 @@ func.func @volatile_load() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Load
   // CHECK-SAME: ["Volatile"]
-  %1 = "spv.Load"(%0) {memory_access = 1 : i32} : (!spv.ptr<f32, Function>) -> (f32)
+  %1 = "spv.Load"(%0) {memory_access = #spv.memory_access<Volatile>} : (!spv.ptr<f32, Function>) -> (f32)
   return
 }
 
@@ -216,7 +216,7 @@ func.func @aligned_load() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Load
   // CHECK-SAME: ["Aligned", 4]
-  %1 = "spv.Load"(%0) {memory_access = 2 : i32, alignment = 4 : i32} : (!spv.ptr<f32, Function>) -> (f32)
+  %1 = "spv.Load"(%0) {memory_access = #spv.memory_access<Aligned>, alignment = 4 : i32} : (!spv.ptr<f32, Function>) -> (f32)
   return
 }
 
@@ -225,7 +225,7 @@ func.func @volatile_aligned_load() -> () {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   // CHECK: spv.Load
   // CHECK-SAME: ["Volatile|Aligned", 4]
-  %1 = "spv.Load"(%0) {memory_access = 3 : i32, alignment = 4 : i32} : (!spv.ptr<f32, Function>) -> (f32)
+  %1 = "spv.Load"(%0) {memory_access = #spv.memory_access<Volatile|Aligned>, alignment = 4 : i32} : (!spv.ptr<f32, Function>) -> (f32)
   return
 }
 
@@ -588,7 +588,7 @@ func.func @copy_memory_invalid_maa() {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   %1 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{missing alignment value}}
-  "spv.CopyMemory"(%0, %1) {memory_access=0x0002 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
+  "spv.CopyMemory"(%0, %1) {memory_access=#spv.memory_access<Aligned>} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
   spv.Return
 }
 
@@ -598,7 +598,7 @@ func.func @copy_memory_invalid_source_maa() {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   %1 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{invalid alignment specification with non-aligned memory access specification}}
-  "spv.CopyMemory"(%0, %1) {source_memory_access=0x0001 : i32, memory_access=0x0002 : i32, source_alignment=8 : i32, alignment=4 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
+  "spv.CopyMemory"(%0, %1) {source_memory_access=#spv.memory_access<Volatile>, memory_access=#spv.memory_access<Aligned>, source_alignment=8 : i32, alignment=4 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
   spv.Return
 }
 
@@ -608,7 +608,7 @@ func.func @copy_memory_invalid_source_maa2() {
   %0 = spv.Variable : !spv.ptr<f32, Function>
   %1 = spv.Variable : !spv.ptr<f32, Function>
   // expected-error @+1 {{missing alignment value}}
-  "spv.CopyMemory"(%0, %1) {source_memory_access=0x0002 : i32, memory_access=0x0002 : i32, alignment=4 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
+  "spv.CopyMemory"(%0, %1) {source_memory_access=#spv.memory_access<Aligned>, memory_access=#spv.memory_access<Aligned>, alignment=4 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
   spv.Return
 }
 
@@ -619,16 +619,16 @@ func.func @copy_memory_print_maa() {
   %1 = spv.Variable : !spv.ptr<f32, Function>
 
   // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Volatile"] : f32
-  "spv.CopyMemory"(%0, %1) {memory_access=0x0001 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
+  "spv.CopyMemory"(%0, %1) {memory_access=#spv.memory_access<Volatile>} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
 
   // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Aligned", 4] : f32
-  "spv.CopyMemory"(%0, %1) {memory_access=0x0002 : i32, alignment=4 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
+  "spv.CopyMemory"(%0, %1) {memory_access=#spv.memory_access<Aligned>, alignment=4 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
 
   // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Aligned", 4], ["Volatile"] : f32
-  "spv.CopyMemory"(%0, %1) {source_memory_access=0x0001 : i32, memory_access=0x0002 : i32, alignment=4 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
+  "spv.CopyMemory"(%0, %1) {source_memory_access=#spv.memory_access<Volatile>, memory_access=#spv.memory_access<Aligned>, alignment=4 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
 
   // CHECK: spv.CopyMemory "Function" %{{.*}}, "Function" %{{.*}} ["Aligned", 4], ["Aligned", 8] : f32
-  "spv.CopyMemory"(%0, %1) {source_memory_access=0x0002 : i32, memory_access=0x0002 : i32, source_alignment=8 : i32, alignment=4 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
+  "spv.CopyMemory"(%0, %1) {source_memory_access=#spv.memory_access<Aligned>, memory_access=#spv.memory_access<Aligned>, source_alignment=8 : i32, alignment=4 : i32} : (!spv.ptr<f32, Function>, !spv.ptr<f32, Function>) -> ()
 
   spv.Return
 }

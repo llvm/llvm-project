@@ -3362,7 +3362,7 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
     m_stdio_communication.Disconnect();
     m_stdin_forward = false;
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case eStateConnected:
   case eStateAttaching:
   case eStateLaunching:

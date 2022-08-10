@@ -396,7 +396,7 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
     }
     }
     // FALLTHROUGH
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
 
   // If we don't have a special case, fall back to the AST's constant evaluator.

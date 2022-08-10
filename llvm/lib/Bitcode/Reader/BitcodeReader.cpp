@@ -3445,7 +3445,7 @@ Error BitcodeReader::parseUseLists() {
       break;
     case bitc::USELIST_CODE_BB:
       IsBB = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case bitc::USELIST_CODE_DEFAULT: {
       unsigned RecordLength = Record.size();
       if (RecordLength < 3)

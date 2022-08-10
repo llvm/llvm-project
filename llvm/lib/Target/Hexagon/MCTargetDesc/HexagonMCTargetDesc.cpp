@@ -475,22 +475,22 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
   switch (CpuArch) {
   case ArchV69:
     FB.set(ExtensionHVXV69);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
     case ArchV68:
       FB.set(ExtensionHVXV68);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ArchV67:
       FB.set(ExtensionHVXV67);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ArchV66:
       FB.set(ExtensionHVXV66);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ArchV65:
       FB.set(ExtensionHVXV65);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ArchV62:
       FB.set(ExtensionHVXV62);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case ArchV60:
       FB.set(ExtensionHVXV60);
       break;

@@ -27,39 +27,39 @@ using TaintTagType = unsigned;
 static constexpr TaintTagType TaintTagGeneric = 0;
 
 /// Create a new state in which the value of the statement is marked as tainted.
-LLVM_NODISCARD ProgramStateRef addTaint(ProgramStateRef State, const Stmt *S,
-                                        const LocationContext *LCtx,
-                                        TaintTagType Kind = TaintTagGeneric);
+[[nodiscard]] ProgramStateRef addTaint(ProgramStateRef State, const Stmt *S,
+                                       const LocationContext *LCtx,
+                                       TaintTagType Kind = TaintTagGeneric);
 
 /// Create a new state in which the value is marked as tainted.
-LLVM_NODISCARD ProgramStateRef addTaint(ProgramStateRef State, SVal V,
-                                        TaintTagType Kind = TaintTagGeneric);
+[[nodiscard]] ProgramStateRef addTaint(ProgramStateRef State, SVal V,
+                                       TaintTagType Kind = TaintTagGeneric);
 
 /// Create a new state in which the symbol is marked as tainted.
-LLVM_NODISCARD ProgramStateRef addTaint(ProgramStateRef State, SymbolRef Sym,
-                                        TaintTagType Kind = TaintTagGeneric);
+[[nodiscard]] ProgramStateRef addTaint(ProgramStateRef State, SymbolRef Sym,
+                                       TaintTagType Kind = TaintTagGeneric);
 
 /// Create a new state in which the pointer represented by the region
 /// is marked as tainted.
-LLVM_NODISCARD ProgramStateRef addTaint(ProgramStateRef State,
-                                        const MemRegion *R,
-                                        TaintTagType Kind = TaintTagGeneric);
+[[nodiscard]] ProgramStateRef addTaint(ProgramStateRef State,
+                                       const MemRegion *R,
+                                       TaintTagType Kind = TaintTagGeneric);
 
-LLVM_NODISCARD ProgramStateRef removeTaint(ProgramStateRef State, SVal V);
+[[nodiscard]] ProgramStateRef removeTaint(ProgramStateRef State, SVal V);
 
-LLVM_NODISCARD ProgramStateRef removeTaint(ProgramStateRef State,
-                                           const MemRegion *R);
+[[nodiscard]] ProgramStateRef removeTaint(ProgramStateRef State,
+                                          const MemRegion *R);
 
-LLVM_NODISCARD ProgramStateRef removeTaint(ProgramStateRef State,
-                                           SymbolRef Sym);
+[[nodiscard]] ProgramStateRef removeTaint(ProgramStateRef State, SymbolRef Sym);
 
 /// Create a new state in a which a sub-region of a given symbol is tainted.
 /// This might be necessary when referring to regions that can not have an
 /// individual symbol, e.g. if they are represented by the default binding of
 /// a LazyCompoundVal.
-LLVM_NODISCARD ProgramStateRef addPartialTaint(
-    ProgramStateRef State, SymbolRef ParentSym, const SubRegion *SubRegion,
-    TaintTagType Kind = TaintTagGeneric);
+[[nodiscard]] ProgramStateRef
+addPartialTaint(ProgramStateRef State, SymbolRef ParentSym,
+                const SubRegion *SubRegion,
+                TaintTagType Kind = TaintTagGeneric);
 
 /// Check if the statement has a tainted value in the given state.
 bool isTainted(ProgramStateRef State, const Stmt *S,

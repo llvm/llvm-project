@@ -388,7 +388,7 @@ void StackLayoutModifier::classifyCFIs() {
       case MCCFIInstruction::OpDefCfa:
         CfaOffset = -CFI->getOffset();
         recordAccess(&Inst, CfaOffset);
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case MCCFIInstruction::OpDefCfaRegister:
         CfaReg = CFI->getRegister();
         break;

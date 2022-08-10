@@ -81,6 +81,58 @@ size_t FileSpecList::FindFileIndex(size_t start_idx, const FileSpec &file_spec,
   return UINT32_MAX;
 }
 
+size_t FileSpecList::FindCompatibleIndex(size_t start_idx,
+                                         const FileSpec &file_spec) const {
+  const size_t num_files = m_files.size();
+  if (start_idx >= num_files)
+    return UINT32_MAX;
+
+  const bool file_spec_relative = file_spec.IsRelative();
+  const bool file_spec_case_sensitive = file_spec.IsCaseSensitive();
+  // When looking for files, we will compare only the filename if the directory
+  // argument is empty in file_spec
+  const bool full = !file_spec.GetDirectory().IsEmpty();
+
+  for (size_t idx = start_idx; idx < num_files; ++idx) {
+    const FileSpec &curr_file = m_files[idx];
+
+    // Always start by matching the filename first
+    if (!curr_file.FileEquals(file_spec))
+      continue;
+
+    // Only compare the full name if the we were asked to and if the current
+    // file entry has the a directory. If it doesn't have a directory then we
+    // only compare the filename.
+    if (FileSpec::Equal(curr_file, file_spec, full)) {
+      return idx;
+    } else if (curr_file.IsRelative() || file_spec_relative) {
+      llvm::StringRef curr_file_dir = curr_file.GetDirectory().GetStringRef();
+      if (curr_file_dir.empty())
+        return idx; // Basename match only for this file in the list
+
+      // Check if we have a relative path in our file list, or if "file_spec" is
+      // relative, if so, check if either ends with the other.
+      llvm::StringRef file_spec_dir = file_spec.GetDirectory().GetStringRef();
+      // We have a relative path in our file list, it matches if the
+      // specified path ends with this path, but we must ensure the full
+      // component matches (we don't want "foo/bar.cpp" to match "oo/bar.cpp").
+      auto is_suffix = [](llvm::StringRef a, llvm::StringRef b,
+                          bool case_sensitive) -> bool {
+        if (case_sensitive ? a.consume_back(b) : a.consume_back_insensitive(b))
+          return a.empty() || a.endswith("/");
+        return false;
+      };
+      const bool case_sensitive =
+          file_spec_case_sensitive || curr_file.IsCaseSensitive();
+      if (is_suffix(curr_file_dir, file_spec_dir, case_sensitive) ||
+          is_suffix(file_spec_dir, curr_file_dir, case_sensitive))
+        return idx;
+    }
+  }
+
+  // We didn't find the file, return an invalid index
+  return UINT32_MAX;
+}
 // Returns the FileSpec object at index "idx". If "idx" is out of range, then
 // an empty FileSpec object will be returned.
 const FileSpec &FileSpecList::GetFileSpecAtIndex(size_t idx) const {

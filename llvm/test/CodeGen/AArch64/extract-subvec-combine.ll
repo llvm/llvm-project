@@ -51,5 +51,61 @@ define <4 x i16> @and_extract_sext_idx4(<8 x i8> %vec) nounwind {
   ret <4 x i16> %and
 }
 
+define <2 x i32> @sext_extract_zext_idx0(<4 x i16> %vec) nounwind {
+; CHECK-LABEL: sext_extract_zext_idx0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    shl v0.2s, v0.2s, #16
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #16
+; CHECK-NEXT:    ret
+  %zext = zext <4 x i16> %vec to <4 x i32>
+  %extract = call <2 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32> %zext, i64 0)
+  %sext_inreg_step0 = shl <2 x i32> %extract, <i32 16, i32 16>
+  %sext_inreg = ashr <2 x i32> %sext_inreg_step0, <i32 16, i32 16>
+  ret <2 x i32> %sext_inreg
+}
+
+define <4 x i16> @sext_extract_sext_idx0(<8 x i8> %vec) nounwind {
+; CHECK-LABEL: sext_extract_sext_idx0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %sext = sext <8 x i8> %vec to <8 x i16>
+  %extract = call <4 x i16> @llvm.vector.extract.v4i16.v8i16(<8 x i16> %sext, i64 0)
+  %sext_inreg_step0 = shl <4 x i16> %extract, <i16 8, i16 8, i16 8, i16 8>
+  %sext_inreg = ashr <4 x i16> %sext_inreg_step0, <i16 8, i16 8, i16 8, i16 8>
+  ret <4 x i16> %sext_inreg
+}
+
+define <2 x i32> @sext_extract_zext_idx2(<4 x i16> %vec) nounwind {
+; CHECK-LABEL: sext_extract_zext_idx2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    shl v0.2s, v0.2s, #16
+; CHECK-NEXT:    sshr v0.2s, v0.2s, #16
+; CHECK-NEXT:    ret
+  %zext = zext <4 x i16> %vec to <4 x i32>
+  %extract = call <2 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32> %zext, i64 2)
+  %sext_inreg_step0 = shl <2 x i32> %extract, <i32 16, i32 16>
+  %sext_inreg = ashr <2 x i32> %sext_inreg_step0, <i32 16, i32 16>
+  ret <2 x i32> %sext_inreg
+}
+
+define <4 x i16> @sext_extract_sext_idx4(<8 x i8> %vec) nounwind {
+; CHECK-LABEL: sext_extract_sext_idx4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %sext = sext <8 x i8> %vec to <8 x i16>
+  %extract = call <4 x i16> @llvm.vector.extract.v4i16.v8i16(<8 x i16> %sext, i64 4)
+  %sext_inreg_step0 = shl <4 x i16> %extract, <i16 8, i16 8, i16 8, i16 8>
+  %sext_inreg = ashr <4 x i16> %sext_inreg_step0, <i16 8, i16 8, i16 8, i16 8>
+  ret <4 x i16> %sext_inreg
+}
+
 declare <2 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32>, i64)
 declare <4 x i16> @llvm.vector.extract.v4i16.v8i16(<8 x i16>, i64)

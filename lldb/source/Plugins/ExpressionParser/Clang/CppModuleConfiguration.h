@@ -30,7 +30,7 @@ class CppModuleConfiguration {
   public:
     /// Try setting the path. Returns true if the path was set and false if
     /// the path was already set.
-    LLVM_NODISCARD bool TrySet(llvm::StringRef path);
+    [[nodiscard]] bool TrySet(llvm::StringRef path);
     /// Return the path if there is one.
     llvm::StringRef Get() const {
       assert(m_valid && "Called Get() on an invalid SetOncePath?");

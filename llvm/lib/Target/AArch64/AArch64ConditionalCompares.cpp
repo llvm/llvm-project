@@ -333,7 +333,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
         ++NumImmRangeRejs;
         return nullptr;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case AArch64::SUBSWrr:
     case AArch64::SUBSXrr:
     case AArch64::ADDSWrr:

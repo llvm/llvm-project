@@ -385,7 +385,7 @@ public:
     if (auto Err = reserveStubs(StubInits.size()))
       return Err;
 
-    for (auto &Entry : StubInits)
+    for (const auto &Entry : StubInits)
       createStubInternal(Entry.first(), Entry.second.first,
                          Entry.second.second);
 

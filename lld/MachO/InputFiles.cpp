@@ -1961,10 +1961,10 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
       continue;
 
     switch (symbol->getKind()) {
-    case SymbolKind::GlobalSymbol:               // Fallthrough
-    case SymbolKind::ObjectiveCClass:            // Fallthrough
-    case SymbolKind::ObjectiveCClassEHType:      // Fallthrough
-    case SymbolKind::ObjectiveCInstanceVariable: // Fallthrough
+    case SymbolKind::GlobalSymbol:
+    case SymbolKind::ObjectiveCClass:
+    case SymbolKind::ObjectiveCClassEHType:
+    case SymbolKind::ObjectiveCInstanceVariable:
       normalSymbols.push_back(symbol);
     }
   }

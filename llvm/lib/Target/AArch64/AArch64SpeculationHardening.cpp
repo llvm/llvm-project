@@ -556,7 +556,7 @@ bool AArch64SpeculationHardening::expandSpeculationSafeValue(
     break;
   case AArch64::SpeculationSafeValueW:
     Is64Bit = false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::SpeculationSafeValueX:
     // Just remove the SpeculationSafe pseudo's if control flow
     // miss-speculation isn't happening because we're already inserting barriers

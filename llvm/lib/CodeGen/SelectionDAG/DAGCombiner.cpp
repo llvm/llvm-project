@@ -135,6 +135,11 @@ static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
     cl::desc("DAG combiner enable load/<replace bytes>/store with "
              "a narrower store"));
 
+static cl::opt<bool> EnableVectorFCopySignExtendRound(
+    "combiner-vector-fcopysign-extend-round", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Enable merging extends and rounds into FCOPYSIGN on vector types"));
+
 namespace {
 
   class DAGCombiner {
@@ -1962,7 +1967,7 @@ SDValue DAGCombiner::visitTokenFactor(SDNode *N) {
           Changed = true;
           break;
         }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
 
       default:
         // Only add if it isn't already in the list.
@@ -13863,13 +13868,13 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   if (DAG.isGuaranteedNotToBeUndefOrPoison(N0, /*PoisonOnly*/ false))
     return N0;
 
-  // Fold freeze(bitcast(x)) -> bitcast(freeze(x)).
-  // TODO: Replace with pushFreezeToPreventPoisonFromPropagating fold.
-  if (N0.getOpcode() == ISD::BITCAST)
-    return DAG.getBitcast(N->getValueType(0),
-                          DAG.getNode(ISD::FREEZE, SDLoc(N0),
-                                      N0.getOperand(0).getValueType(),
-                                      N0.getOperand(0)));
+  // Fold freeze(unaryop(x)) -> unaryop(freeze(x)).
+  // TODO: Replace with pushFreezeToPreventPoisonFromPropagating fold and
+  // support getNumOperands() >= 1.
+  if (N0.getNumOperands() == 1 &&
+      !DAG.canCreateUndefOrPoison(N0, /*PoisonOnly*/ false) && N0->hasOneUse())
+    return DAG.getNode(N0.getOpcode(), SDLoc(N0), N->getValueType(0),
+                       DAG.getFreeze(N0.getOperand(0)));
 
   return SDValue();
 }
@@ -14987,7 +14992,7 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
       case ISD::SETLT:
       case ISD::SETLE:
         std::swap(TrueOpnd, FalseOpnd);
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ISD::SETOGT:
       case ISD::SETUGT:
       case ISD::SETOGE:
@@ -15419,11 +15424,7 @@ static inline bool CanCombineFCOPYSIGN_EXTEND_ROUND(SDNode *N) {
     if (N1Op0VT == MVT::f128)
       return false;
 
-    // Avoid mismatched vector operand types, for better instruction selection.
-    if (N1Op0VT.isVector())
-      return false;
-
-    return true;
+    return !N1Op0VT.isVector() || EnableVectorFCopySignExtendRound;
   }
   return false;
 }
@@ -22763,6 +22764,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       SDLoc DL(N);
       EVT IntVT = VT.changeVectorElementTypeToInteger();
       EVT IntSVT = VT.getVectorElementType().changeTypeToInteger();
+      IntSVT = TLI.getTypeToTransformTo(*DAG.getContext(), IntSVT);
       SDValue ZeroElt = DAG.getConstant(0, DL, IntSVT);
       SDValue AllOnesElt = DAG.getAllOnesConstant(DL, IntSVT);
       SmallVector<SDValue, 16> AndMask(NumElts, DAG.getUNDEF(IntSVT));

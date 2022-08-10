@@ -2013,7 +2013,7 @@ void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
       case OO_LessLessEqual:
       case OO_GreaterGreaterEqual:
         checkAccess(OE->getArg(1), AK_Read);
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case OO_PlusPlus:
       case OO_MinusMinus:
         checkAccess(OE->getArg(0), AK_Written);
@@ -2026,7 +2026,7 @@ void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
           // Grrr.  operator* can be multiplication...
           checkPtAccess(OE->getArg(0), AK_Read);
         }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       default: {
         // TODO: get rid of this, and rely on pass-by-ref instead.
         const Expr *Obj = OE->getArg(0);

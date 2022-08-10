@@ -756,6 +756,10 @@ performing the operation, and then truncating to ``_Float16``.
 ``__bf16`` is purely a storage format; it is currently only supported on the following targets:
 * 32-bit ARM
 * 64-bit ARM (AArch64)
+* X86 (see below)
+
+On X86 targets, ``__bf16`` is supported as long as SSE2 is available, which
+includes all 64-bit and all recent 32-bit processors.
 
 ``__fp16`` is a storage and interchange format only.  This means that values of
 ``__fp16`` are immediately promoted to (at least) ``float`` when used in arithmetic

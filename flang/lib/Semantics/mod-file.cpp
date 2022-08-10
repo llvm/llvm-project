@@ -273,10 +273,11 @@ void ModFileWriter::PutSymbol(
               }
             } else {
               PutGeneric(symbol);
-              if (x.specific()) {
+              if (x.specific() && &x.specific()->owner() == &symbol.owner()) {
                 PutSymbol(typeBindings, *x.specific());
               }
-              if (x.derivedType()) {
+              if (x.derivedType() &&
+                  &x.derivedType()->owner() == &symbol.owner()) {
                 PutSymbol(typeBindings, *x.derivedType());
               }
             }

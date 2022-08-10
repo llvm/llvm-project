@@ -536,7 +536,7 @@ TEST(FormatVariadicTest, BigTest) {
                     "bigint2", "limit", "byte")
          << "\n";
   for (auto &Item : Ts) {
-    Stream << llvm::apply_tuple(format_tuple(Line), Item) << "\n";
+    Stream << std::apply(format_tuple(Line), Item) << "\n";
   }
   Stream.flush();
   const char *Expected =

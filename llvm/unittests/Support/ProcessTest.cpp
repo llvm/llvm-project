@@ -46,14 +46,14 @@ TEST(ProcessTest, GetRandomNumberTest) {
 TEST(ProcessTest, Basic) {
   setenv("__LLVM_TEST_ENVIRON_VAR__", "abc", true);
   Optional<std::string> val(Process::GetEnv("__LLVM_TEST_ENVIRON_VAR__"));
-  EXPECT_TRUE(val.hasValue());
+  EXPECT_TRUE(val.has_value());
   EXPECT_STREQ("abc", val->c_str());
 }
 
 TEST(ProcessTest, None) {
   Optional<std::string> val(
       Process::GetEnv("__LLVM_TEST_ENVIRON_NO_SUCH_VAR__"));
-  EXPECT_FALSE(val.hasValue());
+  EXPECT_FALSE(val.has_value());
 }
 #endif
 
@@ -62,14 +62,14 @@ TEST(ProcessTest, None) {
 TEST(ProcessTest, EmptyVal) {
   SetEnvironmentVariableA("__LLVM_TEST_ENVIRON_VAR__", "");
   Optional<std::string> val(Process::GetEnv("__LLVM_TEST_ENVIRON_VAR__"));
-  EXPECT_TRUE(val.hasValue());
+  EXPECT_TRUE(val.has_value());
   EXPECT_STREQ("", val->c_str());
 }
 
 TEST(ProcessTest, Wchar) {
   SetEnvironmentVariableW(L"__LLVM_TEST_ENVIRON_VAR__", L"abcdefghijklmnopqrs");
   Optional<std::string> val(Process::GetEnv("__LLVM_TEST_ENVIRON_VAR__"));
-  EXPECT_TRUE(val.hasValue());
+  EXPECT_TRUE(val.has_value());
   EXPECT_STREQ("abcdefghijklmnopqrs", val->c_str());
 }
 #endif

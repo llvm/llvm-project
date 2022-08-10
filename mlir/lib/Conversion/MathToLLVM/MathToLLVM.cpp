@@ -18,7 +18,8 @@
 using namespace mlir;
 
 namespace {
-using AbsOpLowering = VectorConvertToLLVMPattern<math::AbsOp, LLVM::FAbsOp>;
+using AbsFOpLowering = VectorConvertToLLVMPattern<math::AbsFOp, LLVM::FAbsOp>;
+using AbsIOpLowering = VectorConvertToLLVMPattern<math::AbsIOp, LLVM::AbsOp>;
 using CeilOpLowering = VectorConvertToLLVMPattern<math::CeilOp, LLVM::FCeilOp>;
 using CopySignOpLowering =
     VectorConvertToLLVMPattern<math::CopySignOp, LLVM::CopySignOp>;
@@ -56,12 +57,10 @@ struct CountOpLowering : public ConvertOpToLLVMPattern<MathOp> {
 
     auto loc = op.getLoc();
     auto resultType = op.getResult().getType();
-    auto boolType = rewriter.getIntegerType(1);
-    auto boolZero = rewriter.getIntegerAttr(boolType, 0);
+    auto boolZero = rewriter.getBoolAttr(false);
 
     if (!operandType.template isa<LLVM::LLVMArrayType>()) {
-      LLVM::ConstantOp zero =
-          rewriter.create<LLVM::ConstantOp>(loc, boolType, boolZero);
+      LLVM::ConstantOp zero = rewriter.create<LLVM::ConstantOp>(loc, boolZero);
       rewriter.replaceOpWithNewOp<LLVMOp>(op, resultType, adaptor.getOperand(),
                                           zero);
       return success();
@@ -75,7 +74,7 @@ struct CountOpLowering : public ConvertOpToLLVMPattern<MathOp> {
         op.getOperation(), adaptor.getOperands(), *this->getTypeConverter(),
         [&](Type llvm1DVectorTy, ValueRange operands) {
           LLVM::ConstantOp zero =
-              rewriter.create<LLVM::ConstantOp>(loc, boolType, boolZero);
+              rewriter.create<LLVM::ConstantOp>(loc, boolZero);
           return rewriter.create<LLVMOp>(loc, llvm1DVectorTy, operands[0],
                                          zero);
         },
@@ -268,7 +267,8 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                 RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
-    AbsOpLowering,
+    AbsFOpLowering,
+    AbsIOpLowering,
     CeilOpLowering,
     CopySignOpLowering,
     CosOpLowering,

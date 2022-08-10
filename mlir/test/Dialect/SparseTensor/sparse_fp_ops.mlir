@@ -44,7 +44,7 @@
 // CHECK:         scf.for %[[VAL_10:.*]] = %[[VAL_8]] to %[[VAL_9]] step %[[VAL_3]] {
 // CHECK:           %[[VAL_11:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_10]]] : memref<?xindex>
 // CHECK:           %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_10]]] : memref<?xf64>
-// CHECK:           %[[VAL_13:.*]] = math.abs %[[VAL_12]] : f64
+// CHECK:           %[[VAL_13:.*]] = math.absf %[[VAL_12]] : f64
 // CHECK:             memref.store %[[VAL_13]], %[[VAL_7]]{{\[}}%[[VAL_11]]] : memref<32xf64>
 // CHECK:         }
 // CHECK:         %[[VAL_14:.*]] = bufferization.to_tensor %[[VAL_7]] : memref<32xf64>
@@ -56,7 +56,7 @@ func.func @abs(%arga: tensor<32xf64, #SV>,
      ins(%arga: tensor<32xf64, #SV>)
     outs(%argx: tensor<32xf64>) {
       ^bb(%a: f64, %x: f64):
-        %0 = math.abs %a : f64
+        %0 = math.absf %a : f64
         linalg.yield %0 : f64
   } -> tensor<32xf64>
   return %0 : tensor<32xf64>
@@ -366,7 +366,7 @@ func.func @divbyc(%arga: tensor<32xf64, #SV>,
 // CHECK:           %[[VAL_12:.*]] = memref.load %[[VAL_6]]{{\[}}%[[VAL_11]]] : memref<?xindex>
 // CHECK:           memref.store %[[VAL_12]], %[[VAL_8]]{{\[}}%[[VAL_1]]] : memref<?xindex>
 // CHECK:           %[[VAL_13:.*]] = memref.load %[[VAL_7]]{{\[}}%[[VAL_11]]] : memref<?xf64>
-// CHECK:           %[[VAL_14:.*]] = math.abs %[[VAL_13]] : f64
+// CHECK:           %[[VAL_14:.*]] = math.absf %[[VAL_13]] : f64
 // CHECK:           %[[VAL_15:.*]] = math.ceil %[[VAL_14]] : f64
 // CHECK:           %[[VAL_16:.*]] = math.floor %[[VAL_15]] : f64
 // CHECK:           %[[VAL_17:.*]] = math.sqrt %[[VAL_16]] : f64
@@ -387,7 +387,7 @@ func.func @zero_preserving_math(%arga: tensor<32xf64, #SV>) -> tensor<32xf64, #S
      ins(%arga: tensor<32xf64, #SV>)
     outs(%xinp: tensor<32xf64, #SV>) {
       ^bb(%a: f64, %x: f64):
-	%0 = math.abs %a : f64
+	%0 = math.absf %a : f64
         %1 = math.ceil %0 : f64
         %2 = math.floor %1 : f64
         %3 = math.sqrt %2 : f64
