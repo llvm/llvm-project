@@ -4229,6 +4229,27 @@ TEST(TransferTest, ContextSensitiveReturnArg) {
                /*.BuiltinTransferOptions=*/{/*.ContextSensitive=*/true}});
 }
 
+TEST(TransferTest, ContextSensitiveReturnInt) {
+  std::string Code = R"(
+    int identity(int x) { return x; }
+
+    void target() {
+      int y = identity(42);
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                // This just tests that the analysis doesn't crash.
+              },
+              {/*.ApplyBuiltinTransfer=*/true,
+               /*.BuiltinTransferOptions=*/{/*.ContextSensitive=*/true}});
+}
+
 TEST(TransferTest, ContextSensitiveMethodLiteral) {
   std::string Code = R"(
     class MyClass {
