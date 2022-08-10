@@ -29,8 +29,7 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
   // Get the ELF sections to retrieve sh_flags. See the SHF_GROUP comment below.
   ArrayRef<typename ELFT::Shdr> objSections = obj->template getELFShdrs<ELFT>();
   assert(objSections.size() == obj->getSections().size());
-  for (auto it : llvm::enumerate(obj->getSections())) {
-    InputSectionBase *sec = it.value();
+  for (auto [i, sec] : llvm::enumerate(obj->getSections())) {
     if (!sec)
       continue;
 
@@ -57,7 +56,7 @@ template <class ELFT> LLDDwarfObj<ELFT>::LLDDwarfObj(ObjFile<ELFT> *obj) {
     else if (sec->name == ".debug_line_str")
       lineStrSection = toStringRef(sec->data());
     else if (sec->name == ".debug_info" &&
-             !(objSections[it.index()].sh_flags & ELF::SHF_GROUP)) {
+             !(objSections[i].sh_flags & ELF::SHF_GROUP)) {
       // In DWARF v5, -fdebug-types-section places type units in .debug_info
       // sections in COMDAT groups. They are not compile units and thus should
       // be ignored for .gdb_index/diagnostics purposes.
