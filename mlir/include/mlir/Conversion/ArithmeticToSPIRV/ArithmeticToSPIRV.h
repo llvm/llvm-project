@@ -9,6 +9,7 @@
 #ifndef MLIR_CONVERSION_ARITHMETICTOSPIRV_ARITHMETICTOSPIRV_H
 #define MLIR_CONVERSION_ARITHMETICTOSPIRV_ARITHMETICTOSPIRV_H
 
+#include "mlir/Pass/Pass.h"
 #include <memory>
 
 namespace mlir {
@@ -21,7 +22,7 @@ namespace arith {
 void populateArithmeticToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                        RewritePatternSet &patterns);
 
-std::unique_ptr<Pass> createConvertArithmeticToSPIRVPass();
+std::unique_ptr<OperationPass<>> createConvertArithmeticToSPIRVPass();
 } // namespace arith
 } // namespace mlir
 

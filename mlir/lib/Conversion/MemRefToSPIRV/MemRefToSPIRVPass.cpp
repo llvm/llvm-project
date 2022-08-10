@@ -28,9 +28,9 @@ class ConvertMemRefToSPIRVPass
 
 void ConvertMemRefToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  ModuleOp module = getOperation();
+  Operation *op = getOperation();
 
-  auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
+  auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
   std::unique_ptr<ConversionTarget> target =
       SPIRVConversionTarget::get(targetAttr);
 
@@ -52,11 +52,10 @@ void ConvertMemRefToSPIRVPass::runOnOperation() {
   RewritePatternSet patterns(context);
   populateMemRefToSPIRVPatterns(typeConverter, patterns);
 
-  if (failed(applyPartialConversion(module, *target, std::move(patterns))))
+  if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();
 }
 
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertMemRefToSPIRVPass() {
+std::unique_ptr<OperationPass<>> mlir::createConvertMemRefToSPIRVPass() {
   return std::make_unique<ConvertMemRefToSPIRVPass>();
 }

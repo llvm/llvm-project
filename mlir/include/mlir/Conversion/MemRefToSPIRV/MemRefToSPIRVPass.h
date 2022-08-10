@@ -24,7 +24,7 @@ class ModuleOp;
 std::unique_ptr<OperationPass<>> createMapMemRefStorageClassPass();
 
 /// Creates a pass to convert MemRef ops to SPIR-V ops.
-std::unique_ptr<OperationPass<ModuleOp>> createConvertMemRefToSPIRVPass();
+std::unique_ptr<OperationPass<>> createConvertMemRefToSPIRVPass();
 
 } // namespace mlir
 

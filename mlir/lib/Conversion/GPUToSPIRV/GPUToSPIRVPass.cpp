@@ -59,7 +59,7 @@ void GPUToSPIRVPass::runOnOperation() {
     gpuModules.push_back(builder.clone(*moduleOp.getOperation()));
   });
 
-  // Map MemRef memory space to SPIR-V sotrage class first if requested.
+  // Map MemRef memory space to SPIR-V storage class first if requested.
   if (mapMemorySpace) {
     std::unique_ptr<ConversionTarget> target =
         spirv::getMemorySpaceToStorageClassTarget(*context);
