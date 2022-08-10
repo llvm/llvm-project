@@ -13,9 +13,12 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/CAS/CASID.h"
 #include <string>
+#include <vector>
 
 namespace llvm {
 namespace cas {
@@ -158,6 +161,43 @@ public:
 
 private:
   DependencyScanningWorker Worker;
+};
+
+class FullDependencyConsumer : public DependencyConsumer {
+public:
+  FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen)
+      : AlreadySeen(AlreadySeen) {}
+
+  void handleDependencyOutputOpts(const DependencyOutputOptions &) override {}
+
+  void handleFileDependency(StringRef File) override {
+    Dependencies.push_back(std::string(File));
+  }
+
+  void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
+    PrebuiltModuleDeps.emplace_back(std::move(PMD));
+  }
+
+  void handleModuleDependency(ModuleDeps MD) override {
+    ClangModuleDeps[MD.ID.ContextHash + MD.ID.ModuleName] = std::move(MD);
+  }
+
+  void handleContextHash(std::string Hash) override {
+    ContextHash = std::move(Hash);
+  }
+
+  Expected<FullDependenciesResult>
+  getFullDependencies(const std::vector<std::string> &OriginalCommandLine,
+                      llvm::cas::CachingOnDiskFileSystem *FS) const;
+
+private:
+  std::vector<std::string> Dependencies;
+  std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
+  llvm::MapVector<std::string, ModuleDeps, llvm::StringMap<unsigned>>
+      ClangModuleDeps;
+  std::string ContextHash;
+  std::vector<std::string> OutputPaths;
+  const llvm::StringSet<> &AlreadySeen;
 };
 
 } // end namespace dependencies
