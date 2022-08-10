@@ -2569,7 +2569,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         // For s32, use a cp load if we have optsize/minsize.
         if (!shouldOptForSize(&MF))
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case 16:
       case 64:
       case 128: {
@@ -2972,7 +2972,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_ASHR:
     if (MRI.getType(I.getOperand(0).getReg()).isVector())
       return selectVectorAshrLshr(I, MRI);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case TargetOpcode::G_SHL:
     if (Opcode == TargetOpcode::G_SHL &&
         MRI.getType(I.getOperand(0).getReg()).isVector())
@@ -2997,7 +2997,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         I.getOperand(2).setReg(Trunc.getReg(0));
       }
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case TargetOpcode::G_OR: {
     // Reject the various things we don't support yet.
     if (unsupportedBinOp(I, RBI, MRI, TRI))

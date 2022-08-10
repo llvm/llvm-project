@@ -6348,7 +6348,7 @@ ChangeStatus AAHeapToStackFunction::updateImpl(Attributor &A) {
       if (UsesCheck(AI))
         break;
       AI.Status = AllocationInfo::STACK_DUE_TO_FREE;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case AllocationInfo::STACK_DUE_TO_FREE:
       if (FreeCheck(AI))
         break;

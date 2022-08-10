@@ -330,6 +330,9 @@ enum class DebugSubsectionKind : uint32_t {
   MergedAssemblyInput = 0xfc,
 
   CoffSymbolRVA = 0xfd,
+
+  XfgHashType = 0xff,
+  XfgHashVirtual = 0x100,
 };
 
 /// Equivalent to CV_ptrtype_e.

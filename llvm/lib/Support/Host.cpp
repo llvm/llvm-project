@@ -291,7 +291,7 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
     switch (Exynos) {
     default:
       // Default by falling through to Exynos M3.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case 0x1002:
       return "exynos-m3";
     case 0x1003:

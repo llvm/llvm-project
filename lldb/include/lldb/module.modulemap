@@ -134,7 +134,6 @@ module lldb_Utility {
   module lldb_enumerations { header "lldb-enumerations.h" export * }
   module lldb_forward { header "lldb-forward.h" export * }
   module lldb_private_enumerations { header "lldb-private-enumerations.h" export * }
-  module lldb_private_defines { header "lldb-private-defines.h" export * }
   module lldb_private_forward { header "lldb-private-forward.h" export * }
   module lldb_private { header "lldb-private.h" export * }
   module lldb_private_interfaces { header "lldb-private-interfaces.h" export * }

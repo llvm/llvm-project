@@ -17,6 +17,7 @@
 # SPIR-V enum classes.
 
 import itertools
+import math
 import re
 import requests
 import textwrap
@@ -266,7 +267,7 @@ def get_availability_spec(enum_case, capability_mapping, for_op, for_cap):
   assert not (for_op and for_cap), 'cannot set both for_op and for_cap'
 
   DEFAULT_MIN_VERSION = 'MinVersion<SPV_V_1_0>'
-  DEFAULT_MAX_VERSION = 'MaxVersion<SPV_V_1_5>'
+  DEFAULT_MAX_VERSION = 'MaxVersion<SPV_V_1_6>'
   DEFAULT_CAP = 'Capability<[]>'
   DEFAULT_EXT = 'Extension<[]>'
 
@@ -367,7 +368,6 @@ def gen_operand_kind_enum_attr(operand_kind, capability_mapping):
 
   kind_name = operand_kind['kind']
   is_bit_enum = operand_kind['category'] == 'BitEnum'
-  kind_category = 'Bit' if is_bit_enum else 'I32'
   kind_acronym = ''.join([c for c in kind_name if c >= 'A' and c <= 'Z'])
 
   name_to_case_dict = {}
@@ -386,22 +386,40 @@ def gen_operand_kind_enum_attr(operand_kind, capability_mapping):
   max_len = max([len(symbol) for (symbol, _) in kind_cases])
 
   # Generate the definition for each enum case
-  fmt_str = 'def SPV_{acronym}_{case} {colon:>{offset}} '\
-            '{category}EnumAttrCase<"{symbol}", {value}>{avail}'
+  case_category = 'I32Bit' if is_bit_enum else 'I32'
+  fmt_str = 'def SPV_{acronym}_{case_name} {colon:>{offset}} '\
+            '{category}EnumAttrCase{suffix}<"{symbol}"{case_value_part}>{avail}'
   case_defs = []
-  for case in kind_cases:
-    avail = get_availability_spec(name_to_case_dict[case[0]],
+  for case_pair in kind_cases:
+    name = case_pair[0]
+    if is_bit_enum:
+      value = int(case_pair[1], base=16)
+    else:
+      value = int(case_pair[1])
+    avail = get_availability_spec(name_to_case_dict[name],
                                   capability_mapping,
                                   False, kind_name == 'Capability')
+    if is_bit_enum:
+      if value == 0:
+        suffix = 'None'
+        value = ''
+      else:
+        suffix = "Bit"
+        value = ', {}'.format(int(math.log2(value)))
+    else:
+        suffix = ''
+        value = ', {}'.format(value)
+
     case_def = fmt_str.format(
-        category=kind_category,
+        category=case_category,
+        suffix=suffix,
         acronym=kind_acronym,
-        case=case[0],
-        symbol=get_case_symbol(kind_name, case[0]),
-        value=case[1],
+        case_name=name,
+        symbol=get_case_symbol(kind_name, name),
+        case_value_part=value,
         avail=' {{\n  {}\n}}'.format(avail) if avail else ';',
         colon=':',
-        offset=(max_len + 1 - len(case[0])))
+        offset=(max_len + 1 - len(name)))
     case_defs.append(case_def)
   case_defs = '\n'.join(case_defs)
 
@@ -417,6 +435,7 @@ def gen_operand_kind_enum_attr(operand_kind, capability_mapping):
   case_names = ',\n'.join(case_names)
 
   # Generate the enum attribute definition
+  kind_category = 'Bit' if is_bit_enum else 'I32'
   enum_attr = '''def SPV_{name}Attr :
     SPV_{category}EnumAttr<"{name}", "valid SPIR-V {name}", [
 {cases}

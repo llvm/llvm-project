@@ -10799,7 +10799,7 @@ void Sema::CheckConversionDeclarator(Declarator &D, QualType &R,
           PastFunctionChunk = true;
           break;
         }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case DeclaratorChunk::Array:
         NeedsTypedef = true;
         extendRight(After, Chunk.getSourceRange());
@@ -15418,7 +15418,7 @@ static bool hasOneRealArgument(MultiExprArg Args) {
     if (!Args[1]->isDefaultArgument())
       return false;
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 1:
     return !Args[0]->isDefaultArgument();
   }
@@ -18112,7 +18112,7 @@ bool Sema::checkThisInStaticMemberFunctionExceptionSpec(CXXMethodDecl *Method) {
   case EST_NoexceptTrue:
     if (!Finder.TraverseStmt(Proto->getNoexceptExpr()))
       return true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case EST_Dynamic:
     for (const auto &E : Proto->exceptions()) {

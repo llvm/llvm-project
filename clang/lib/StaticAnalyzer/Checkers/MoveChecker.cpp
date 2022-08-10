@@ -309,7 +309,7 @@ MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
 
       // If it's not a dereference, we don't care if it was reset to null
       // or that it is even a smart pointer.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case SK_NonStd:
     case SK_Safe:
       OS << "Object";
@@ -587,7 +587,7 @@ void MoveChecker::explainObject(llvm::raw_ostream &OS, const MemRegion *MR,
         break;
 
       // We only care about the type if it's a dereference.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case SK_Unsafe:
       OS << " of type '" << RD->getQualifiedNameAsString() << "'";
       break;

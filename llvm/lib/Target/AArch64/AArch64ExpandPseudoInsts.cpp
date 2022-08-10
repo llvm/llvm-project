@@ -461,7 +461,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
       UseRev = true;
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::DestructiveBinary:
   case AArch64::DestructiveBinaryImm:
     std::tie(PredIdx, DOPIdx, SrcIdx) = std::make_tuple(1, 2, 3);
@@ -1086,7 +1086,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       return true;
     }
   }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::MOVaddr:
   case AArch64::MOVaddrJT:
   case AArch64::MOVaddrCP:

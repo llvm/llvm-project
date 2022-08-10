@@ -12698,11 +12698,11 @@ static SDValue lowerShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
   case MVT::v4i64:
   case MVT::v8i32:
     assert(Subtarget.hasAVX2() && "256-bit integer blends require AVX2!");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::v4f64:
   case MVT::v8f32:
     assert(Subtarget.hasAVX() && "256-bit float blends require AVX!");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::v2f64:
   case MVT::v2i64:
   case MVT::v4f32:
@@ -12738,11 +12738,11 @@ static SDValue lowerShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
           MVT::v16i16, DL, Lo, Hi,
           {0, 1, 2, 3, 4, 5, 6, 7, 24, 25, 26, 27, 28, 29, 30, 31});
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case MVT::v32i8:
     assert(Subtarget.hasAVX2() && "256-bit byte-blends require AVX2!");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::v16i8: {
     assert(Subtarget.hasSSE41() && "128-bit byte-blends require SSE41!");
 
@@ -23362,7 +23362,7 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
     case ISD::SHL:
       if (Op.getNode()->getFlags().hasNoSignedWrap())
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       NeedOF = true;
       break;
@@ -23393,7 +23393,7 @@ static SDValue EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
     if (!hasNonFlagsUse(Op))
       break;
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::ADD:
   case ISD::SUB:
   case ISD::OR:
@@ -23804,19 +23804,19 @@ static unsigned translateX86FSETCC(ISD::CondCode SetCCOpcode, SDValue &Op0,
   case ISD::SETOEQ:
   case ISD::SETEQ:  SSECC = 0; break;
   case ISD::SETOGT:
-  case ISD::SETGT:  Swap = true; LLVM_FALLTHROUGH;
+  case ISD::SETGT:  Swap = true; [[fallthrough]];
   case ISD::SETLT:
   case ISD::SETOLT: SSECC = 1; break;
   case ISD::SETOGE:
-  case ISD::SETGE:  Swap = true; LLVM_FALLTHROUGH;
+  case ISD::SETGE:  Swap = true; [[fallthrough]];
   case ISD::SETLE:
   case ISD::SETOLE: SSECC = 2; break;
   case ISD::SETUO:  SSECC = 3; break;
   case ISD::SETUNE:
   case ISD::SETNE:  SSECC = 4; break;
-  case ISD::SETULE: Swap = true; LLVM_FALLTHROUGH;
+  case ISD::SETULE: Swap = true; [[fallthrough]];
   case ISD::SETUGE: SSECC = 5; break;
-  case ISD::SETULT: Swap = true; LLVM_FALLTHROUGH;
+  case ISD::SETULT: Swap = true; [[fallthrough]];
   case ISD::SETUGT: SSECC = 6; break;
   case ISD::SETO:   SSECC = 7; break;
   case ISD::SETUEQ: SSECC = 8; break;
@@ -24268,9 +24268,9 @@ static SDValue LowerVSETCC(SDValue Op, const X86Subtarget &Subtarget,
     unsigned Opc;
     switch (Cond) {
     default: llvm_unreachable("Unexpected condition code");
-    case ISD::SETUGT: Invert = true; LLVM_FALLTHROUGH;
+    case ISD::SETUGT: Invert = true; [[fallthrough]];
     case ISD::SETULE: Opc = ISD::UMIN; break;
-    case ISD::SETULT: Invert = true; LLVM_FALLTHROUGH;
+    case ISD::SETULT: Invert = true; [[fallthrough]];
     case ISD::SETUGE: Opc = ISD::UMAX; break;
     }
 
@@ -26898,7 +26898,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     case Intrinsic::x86_avx_vtestz_ps_256:
     case Intrinsic::x86_avx_vtestz_pd_256:
       TestOpc = X86ISD::TESTP;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Intrinsic::x86_sse41_ptestz:
     case Intrinsic::x86_avx_ptestz_256:
       // ZF = 1
@@ -26909,7 +26909,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     case Intrinsic::x86_avx_vtestc_ps_256:
     case Intrinsic::x86_avx_vtestc_pd_256:
       TestOpc = X86ISD::TESTP;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Intrinsic::x86_sse41_ptestc:
     case Intrinsic::x86_avx_ptestc_256:
       // CF = 1
@@ -26920,7 +26920,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     case Intrinsic::x86_avx_vtestnzc_ps_256:
     case Intrinsic::x86_avx_vtestnzc_pd_256:
       TestOpc = X86ISD::TESTP;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Intrinsic::x86_sse41_ptestnzc:
     case Intrinsic::x86_avx_ptestnzc_256:
       // ZF and CF = 0
@@ -39230,7 +39230,7 @@ combineRedundantDWordShuffle(SDValue N, MutableArrayRef<int> Mask,
 
           Chain.push_back(V);
 
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case ISD::BITCAST:
           V = V.getOperand(0);
           continue;
@@ -39375,7 +39375,7 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
     if (!getTargetShuffleMask(N.getNode(), ShuffleVT.getSimpleVT(), false, Ops,
                               Mask))
       break;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case X86ISD::VBROADCAST:
   case X86ISD::MOVDDUP:
@@ -39420,7 +39420,7 @@ static SDValue canonicalizeShuffleWithBinOps(SDValue N, SelectionDAG &DAG,
     unsigned ZeroMask = InsertPSMask & 0xF;
     if (ZeroMask != 0)
       break;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case X86ISD::MOVSD:
   case X86ISD::MOVSS:
@@ -39505,7 +39505,7 @@ static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
       if ((Mask & 0x3) != ((Mask >> 2) & 0x3))
         break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case X86ISD::VSHLI:
   case X86ISD::VSRLI:
   case X86ISD::VSRAI:
@@ -40680,7 +40680,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     if (SimplifyDemandedVectorElts(Amt, AmtElts, AmtUndef, AmtZero, TLO,
                                    Depth + 1, AssumeSingleUse))
       return true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case X86ISD::VSHLI:
   case X86ISD::VSRLI:
@@ -41869,7 +41869,7 @@ static bool checkBitcastSrcVectorSize(SDValue Src, unsigned Size,
   case ISD::TRUNCATE:
     if (!AllowTruncate)
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SETCC:
     return Src.getOperand(0).getValueSizeInBits() == Size;
   case ISD::AND:
@@ -44321,7 +44321,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // Converting this to a min would handle both negative zeros and NaNs
         // incorrectly, but we can swap the operands to fix both.
         std::swap(LHS, RHS);
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ISD::SETOLT:
       case ISD::SETLT:
       case ISD::SETLE:
@@ -44353,7 +44353,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // Converting this to a max would handle both negative zeros and NaNs
         // incorrectly, but we can swap the operands to fix both.
         std::swap(LHS, RHS);
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ISD::SETOGT:
       case ISD::SETGT:
       case ISD::SETGE:
@@ -44388,7 +44388,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // Converting this to a min would handle both negative zeros and NaNs
         // incorrectly, but we can swap the operands to fix both.
         std::swap(LHS, RHS);
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ISD::SETOGT:
       case ISD::SETGT:
       case ISD::SETGE:
@@ -44418,7 +44418,7 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
         // Converting this to a max would handle both negative zeros and NaNs
         // incorrectly, but we can swap the operands to fix both.
         std::swap(LHS, RHS);
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ISD::SETOLT:
       case ISD::SETLT:
       case ISD::SETLE:
@@ -44930,7 +44930,7 @@ static SDValue checkBoolTestSetCCCombine(SDValue Cmp, X86::CondCode &CC) {
       break;
     assert(X86::CondCode(SetCC.getConstantOperandVal(0)) == X86::COND_B &&
            "Invalid use of SETCC_CARRY!");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case X86ISD::SETCC:
     // Set the condition code or opposite one if necessary.
     CC = X86::CondCode(SetCC.getConstantOperandVal(0));
@@ -45003,7 +45003,7 @@ static bool checkBoolTestAndOrSetCCCombine(SDValue Cond, X86::CondCode &CC0,
   case ISD::AND:
   case X86ISD::AND:
     isAnd = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::OR:
   case X86ISD::OR:
     SetCC0 = Cond->getOperand(0);
@@ -49826,7 +49826,7 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
         TLI.isOperationLegal(SrcOpcode, VT) &&
         !TLI.isOperationLegal(SrcOpcode, SrcVT))
       return TruncateArithmetic(Src.getOperand(0), Src.getOperand(1));
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::AND:
   case ISD::XOR:
   case ISD::OR:
@@ -53679,7 +53679,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         return DAG.getNode(Op0.getOpcode(), DL, VT,
                            ConcatSubOperand(VT, Ops, 0), Op0.getOperand(1));
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case X86ISD::VPERMILPI:
       if (!IsSplat && NumOps == 2 && (VT == MVT::v8f32 || VT == MVT::v8i32) &&
           Op0.getOperand(1) == Ops[1].getOperand(1)) {
@@ -53755,7 +53755,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         }
         return DAG.getBitcast(VT, Res);
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case X86ISD::VSRAI:
     case X86ISD::VSHL:
     case X86ISD::VSRL:
@@ -55026,7 +55026,7 @@ bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
   case ISD::OR:
   case ISD::XOR:
     Commute = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::SUB: {
     SDValue N0 = Op.getOperand(0);
     SDValue N1 = Op.getOperand(1);
@@ -55279,7 +55279,7 @@ TargetLowering::ConstraintWeight
   switch (*constraint) {
   default:
     weight = TargetLowering::getSingleConstraintMatchWeight(info, constraint);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 'R':
   case 'q':
   case 'Q':
@@ -55338,7 +55338,7 @@ TargetLowering::ConstraintWeight
   case 'v':
     if ((type->getPrimitiveSizeInBits() == 512) && Subtarget.hasAVX512())
       weight = CW_Register;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 'x':
     if (((type->getPrimitiveSizeInBits() == 128) && Subtarget.hasSSE1()) ||
         ((type->getPrimitiveSizeInBits() == 256) && Subtarget.hasAVX()))
@@ -55676,7 +55676,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
           return std::make_pair(0U, &X86::GR64RegClass);
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
       // 32-bit fallthrough
     case 'Q':   // Q_REGS
       if (VT == MVT::i8 || VT == MVT::i1)
@@ -55758,7 +55758,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v8f16:
         if (!Subtarget.hasFP16())
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case MVT::f128:
       case MVT::v16i8:
       case MVT::v8i16:
@@ -55773,7 +55773,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v16f16:
         if (!Subtarget.hasFP16())
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case MVT::v32i8:
       case MVT::v16i16:
       case MVT::v8i32:
@@ -55788,7 +55788,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v32f16:
         if (!Subtarget.hasFP16())
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case MVT::v64i8:
       case MVT::v32i16:
       case MVT::v8f64:
@@ -55831,7 +55831,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v8f16:
         if (!Subtarget.hasFP16())
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case MVT::f128:
       case MVT::v16i8:
       case MVT::v8i16:
@@ -55844,7 +55844,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v16f16:
         if (!Subtarget.hasFP16())
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case MVT::v32i8:
       case MVT::v16i16:
       case MVT::v8i32:
@@ -55857,7 +55857,7 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       case MVT::v32f16:
         if (!Subtarget.hasFP16())
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case MVT::v64i8:
       case MVT::v32i16:
       case MVT::v8f64:

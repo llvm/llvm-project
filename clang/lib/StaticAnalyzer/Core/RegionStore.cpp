@@ -1354,11 +1354,11 @@ RegionStoreManager::invalidateRegions(Store store,
   case GFK_All:
     B = invalidateGlobalRegion(MemRegion::GlobalInternalSpaceRegionKind,
                                Ex, Count, LCtx, B, Invalidated);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case GFK_SystemOnly:
     B = invalidateGlobalRegion(MemRegion::GlobalSystemSpaceRegionKind,
                                Ex, Count, LCtx, B, Invalidated);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case GFK_None:
     break;
   }

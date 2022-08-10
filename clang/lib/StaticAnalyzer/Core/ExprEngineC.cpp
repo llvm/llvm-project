@@ -524,7 +524,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
         }
         // Explicitly proceed with default handler for this case cascade.
       }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       // Various C++ casts that are not handled yet.
       case CK_ToUnion:
       case CK_MatrixCast:
@@ -1001,7 +1001,7 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
     }
     case UO_Plus:
       assert(!U->isGLValue());
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case UO_Deref:
     case UO_Extension: {
       handleUOExtension(I, U, Bldr);

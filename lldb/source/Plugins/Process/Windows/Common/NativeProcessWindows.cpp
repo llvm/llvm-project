@@ -528,7 +528,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
       return ExceptionResult::BreakInDebugger;
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     LLDB_LOG(log,
              "Debugger thread reported exception {0:x} at address {1:x} "

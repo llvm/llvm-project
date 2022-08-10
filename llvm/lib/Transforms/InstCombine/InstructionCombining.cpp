@@ -2778,7 +2778,7 @@ static bool isAllocSiteRemovable(Instruction *AI,
             MemIntrinsic *MI = cast<MemIntrinsic>(II);
             if (MI->isVolatile() || MI->getRawDest() != PI)
               return false;
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
           }
           case Intrinsic::assume:
           case Intrinsic::invariant_start:

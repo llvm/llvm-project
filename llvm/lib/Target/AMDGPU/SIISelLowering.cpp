@@ -4338,7 +4338,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   case AMDGPU::DS_GWS_SEMA_BR:
   case AMDGPU::DS_GWS_BARRIER:
     TII->enforceOperandRCAlignment(MI, AMDGPU::OpName::data0);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AMDGPU::DS_GWS_SEMA_V:
   case AMDGPU::DS_GWS_SEMA_P:
   case AMDGPU::DS_GWS_SEMA_RELEASE_ALL:
@@ -7807,7 +7807,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
       DAG.getContext()->diagnose(NoFpRet);
       return SDValue();
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case Intrinsic::amdgcn_global_atomic_fmin:
   case Intrinsic::amdgcn_global_atomic_fmax:
   case Intrinsic::amdgcn_flat_atomic_fadd:
@@ -7824,7 +7824,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     case Intrinsic::amdgcn_global_atomic_fadd:
       if (!Subtarget->hasAtomicFaddNoRtnInsts())
         return makeV_ILLEGAL(Op, DAG);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Intrinsic::amdgcn_flat_atomic_fadd: {
       EVT VT = Op.getOperand(3).getValueType();
       return DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, VT,
@@ -10168,7 +10168,7 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
       break;
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   default:
     return denormalsEnabledForType(DAG, Op.getValueType()) &&
@@ -11554,7 +11554,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::LOAD: {
     if (SDValue Widended = widenLoad(cast<LoadSDNode>(N), DCI))
       return Widended;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   default: {
     if (!DCI.isBeforeLegalize()) {

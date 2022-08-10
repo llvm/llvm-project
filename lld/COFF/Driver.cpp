@@ -58,8 +58,7 @@ using namespace llvm::object;
 using namespace llvm::COFF;
 using namespace llvm::sys;
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 std::unique_ptr<Configuration> config;
 std::unique_ptr<LinkerDriver> driver;
@@ -2418,5 +2417,4 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     ctx.rootTimer.print();
 }
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff

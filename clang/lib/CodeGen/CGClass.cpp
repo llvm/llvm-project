@@ -1507,7 +1507,7 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
     }
 
     // Fallthrough: act like we're in the base variant.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case Dtor_Base:
     assert(Body);

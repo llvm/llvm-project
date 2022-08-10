@@ -361,10 +361,10 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
   unsigned Tmp = 0;
   switch (VT) {
   default: break;
-  case MVT::iPTRAny: ++Tmp; LLVM_FALLTHROUGH;
-  case MVT::vAny: ++Tmp;    LLVM_FALLTHROUGH;
-  case MVT::fAny: ++Tmp;    LLVM_FALLTHROUGH;
-  case MVT::iAny: ++Tmp;    LLVM_FALLTHROUGH;
+  case MVT::iPTRAny: ++Tmp; [[fallthrough]];
+  case MVT::vAny: ++Tmp;    [[fallthrough]];
+  case MVT::fAny: ++Tmp;    [[fallthrough]];
+  case MVT::iAny: ++Tmp;    [[fallthrough]];
   case MVT::Any: {
     // If this is an "any" valuetype, then the type is the type of the next
     // type in the list specified to getIntrinsic().
@@ -444,16 +444,16 @@ static void UpdateArgCodes(Record *R, std::vector<unsigned char> &ArgCodes,
     break;
   case MVT::iPTRAny:
     ++Tmp;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::vAny:
     ++Tmp;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::fAny:
     ++Tmp;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::iAny:
     ++Tmp;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MVT::Any:
     unsigned OriginalIdx = ArgCodes.size() - NumInserted;
     assert(OriginalIdx >= Mapping.size());

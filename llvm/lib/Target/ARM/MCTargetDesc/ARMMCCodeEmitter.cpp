@@ -1680,7 +1680,7 @@ getT2SORegOpValue(const MCInst &MI, unsigned OpIdx,
   case ARM_AM::lsl: SBits = 0x0; break;
   case ARM_AM::lsr: SBits = 0x2; break;
   case ARM_AM::asr: SBits = 0x4; break;
-  case ARM_AM::rrx: LLVM_FALLTHROUGH;
+  case ARM_AM::rrx: [[fallthrough]];
   case ARM_AM::ror: SBits = 0x6; break;
   }
 

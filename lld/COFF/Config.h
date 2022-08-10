@@ -21,8 +21,7 @@
 #include <set>
 #include <string>
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 using llvm::COFF::IMAGE_FILE_MACHINE_UNKNOWN;
 using llvm::COFF::WindowsSubsystem;
@@ -289,7 +288,6 @@ struct Configuration {
 
 extern std::unique_ptr<Configuration> config;
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 #endif

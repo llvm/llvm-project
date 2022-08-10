@@ -208,11 +208,11 @@ const char *TargetInfo::getTypeConstantSuffix(IntType T) const {
   case UnsignedChar:
     if (getCharWidth() < getIntWidth())
       return "";
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case UnsignedShort:
     if (getShortWidth() < getIntWidth())
       return "";
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case UnsignedInt:      return "U";
   case UnsignedLong:     return "UL";
   case UnsignedLongLong: return "ULL";

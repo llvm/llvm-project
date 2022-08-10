@@ -559,7 +559,7 @@ ClangExpressionParser::ClangExpressionParser(
   case lldb::eLanguageTypeC_plus_plus_14:
     lang_opts.CPlusPlus11 = true;
     m_compiler->getHeaderSearchOpts().UseLibcxx = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case lldb::eLanguageTypeC_plus_plus_03:
     lang_opts.CPlusPlus = true;
     if (process_sp)

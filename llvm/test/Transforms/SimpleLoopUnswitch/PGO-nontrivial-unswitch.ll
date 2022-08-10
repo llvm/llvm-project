@@ -46,31 +46,18 @@ define void @f1(i32 %i, i1 %cond, i1 %hot_cond, i1 %cold_cond, i1* %ptr) !prof !
 ; CHECK:       entry_cold_loop:
 ; CHECK-NEXT:    br i1 [[COLD_COND:%.*]], label [[COLD_LOOP_BEGIN_PREHEADER:%.*]], label [[COLD_LOOP_EXIT:%.*]], !prof [[PROF16:![0-9]+]]
 ; CHECK:       cold_loop_begin.preheader:
-; CHECK-NEXT:    br i1 [[COND]], label [[COLD_LOOP_BEGIN_PREHEADER_SPLIT_US:%.*]], label [[COLD_LOOP_BEGIN_PREHEADER_SPLIT:%.*]]
-; CHECK:       cold_loop_begin.preheader.split.us:
-; CHECK-NEXT:    br label [[COLD_LOOP_BEGIN_US:%.*]]
-; CHECK:       cold_loop_begin.us:
-; CHECK-NEXT:    br label [[COLD_LOOP_A_US:%.*]]
-; CHECK:       cold_loop_a.us:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @a()
-; CHECK-NEXT:    br label [[COLD_LOOP_LATCH_US:%.*]]
-; CHECK:       cold_loop_latch.us:
-; CHECK-NEXT:    [[V2_US:%.*]] = load i1, i1* [[PTR]], align 1
-; CHECK-NEXT:    br i1 [[V2_US]], label [[COLD_LOOP_BEGIN_US]], label [[COLD_LOOP_EXIT_LOOPEXIT_SPLIT_US:%.*]]
-; CHECK:       cold_loop_exit.loopexit.split.us:
-; CHECK-NEXT:    br label [[COLD_LOOP_EXIT_LOOPEXIT:%.*]]
-; CHECK:       cold_loop_begin.preheader.split:
 ; CHECK-NEXT:    br label [[COLD_LOOP_BEGIN:%.*]]
 ; CHECK:       cold_loop_begin:
-; CHECK-NEXT:    br label [[COLD_LOOP_B:%.*]]
+; CHECK-NEXT:    br i1 [[COND]], label [[COLD_LOOP_A:%.*]], label [[COLD_LOOP_B:%.*]]
+; CHECK:       cold_loop_a:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @a()
+; CHECK-NEXT:    br label [[COLD_LOOP_LATCH:%.*]]
 ; CHECK:       cold_loop_b:
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @b()
-; CHECK-NEXT:    br label [[COLD_LOOP_LATCH:%.*]]
+; CHECK-NEXT:    br label [[COLD_LOOP_LATCH]]
 ; CHECK:       cold_loop_latch:
 ; CHECK-NEXT:    [[V2:%.*]] = load i1, i1* [[PTR]], align 1
-; CHECK-NEXT:    br i1 [[V2]], label [[COLD_LOOP_BEGIN]], label [[COLD_LOOP_EXIT_LOOPEXIT_SPLIT:%.*]]
-; CHECK:       cold_loop_exit.loopexit.split:
-; CHECK-NEXT:    br label [[COLD_LOOP_EXIT_LOOPEXIT]]
+; CHECK-NEXT:    br i1 [[V2]], label [[COLD_LOOP_BEGIN]], label [[COLD_LOOP_EXIT_LOOPEXIT:%.*]]
 ; CHECK:       cold_loop_exit.loopexit:
 ; CHECK-NEXT:    br label [[COLD_LOOP_EXIT]]
 ; CHECK:       cold_loop_exit:

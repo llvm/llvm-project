@@ -573,7 +573,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
         break;
       }
       // Else, if it is 'default:', fall through to the case handling.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case tok::kw_case:
       if (Style.isVerilog() ||
@@ -600,7 +600,7 @@ bool UnwrappedLineParser::parseLevel(const FormatToken *OpeningBrace,
       }
       if (handleCppAttributes())
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       ParseDefault();
       break;
@@ -736,7 +736,7 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     case tok::identifier:
       if (!Tok->is(TT_StatementMacro))
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case tok::at:
     case tok::semi:
     case tok::kw_if:
@@ -1627,7 +1627,7 @@ void UnwrappedLineParser::parseStructuralElement(
     if (!Style.isCpp())
       break;
     // Handle C++ "(inline|export) namespace".
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case tok::kw_inline:
     nextToken();
     if (FormatTok->is(tok::kw_namespace)) {
@@ -1804,7 +1804,7 @@ void UnwrappedLineParser::parseStructuralElement(
         addUnwrappedLine();
         return;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case tok::kw_struct:
     case tok::kw_union:
       if (parseStructLike())
@@ -2531,7 +2531,7 @@ void UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType) {
     case tok::ampamp:
       if (AmpAmpTokenType != TT_Unknown)
         FormatTok->setFinalizedType(AmpAmpTokenType);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       nextToken();
       break;

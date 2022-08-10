@@ -871,7 +871,7 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
           Out << "...}";
           return;
         }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       default:
         getArrayInitializedElt(I).printPretty(Out, Policy, ElemTy, Ctx);
       }

@@ -387,7 +387,7 @@ static LinearExpression GetLinearExpression(
                                BOp, DT))
           return Val;
 
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case Instruction::Add: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
                                 Depth + 1, AC, DT);

@@ -184,20 +184,19 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
 /// Create an extra user-specified \p OffloadFile.
 /// TODO: We should find a way to wrap these as libraries instead.
 Expected<OffloadFile> getInputBitcodeLibrary(StringRef Input) {
-  auto DeviceAndPath = StringRef(Input).split('=');
-  auto StringAndArch = DeviceAndPath.first.rsplit('-');
-  auto KindAndTriple = StringAndArch.first.split('-');
+  auto [Device, Path] = StringRef(Input).split('=');
+  auto [String, Arch] = Device.rsplit('-');
+  auto [Kind, Triple] = String.split('-');
 
   llvm::ErrorOr<std::unique_ptr<MemoryBuffer>> ImageOrError =
-      llvm::MemoryBuffer::getFileOrSTDIN(DeviceAndPath.second);
+      llvm::MemoryBuffer::getFileOrSTDIN(Path);
   if (std::error_code EC = ImageOrError.getError())
-    return createFileError(DeviceAndPath.second, EC);
+    return createFileError(Path, EC);
 
   OffloadingImage Image{};
   Image.TheImageKind = IMG_Bitcode;
-  Image.TheOffloadKind = getOffloadKind(KindAndTriple.first);
-  Image.StringData = {{"triple", KindAndTriple.second},
-                      {"arch", StringAndArch.second}};
+  Image.TheOffloadKind = getOffloadKind(Kind);
+  Image.StringData = {{"triple", Triple}, {"arch", Arch}};
   Image.Image = std::move(*ImageOrError);
 
   std::unique_ptr<MemoryBuffer> Binary = OffloadBinary::write(Image);
@@ -538,10 +537,9 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
   CmdArgs.push_back(Triple.isArch64Bit() ? "-64" : "-32");
   CmdArgs.push_back("--create");
   CmdArgs.push_back(*TempFileOrErr);
-  for (const auto &FileAndArch : InputFiles)
+  for (const auto &[File, Arch] : InputFiles)
     CmdArgs.push_back(
-        Args.MakeArgString("--image=profile=" + std::get<1>(FileAndArch) +
-                           ",file=" + std::get<0>(FileAndArch)));
+        Args.MakeArgString("--image=profile=" + Arch + ",file=" + File));
 
   if (Error Err = executeCommands(*FatBinaryPath, CmdArgs))
     return std::move(Err);
@@ -624,14 +622,13 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
   CmdArgs.push_back("-bundle-align=4096");
 
   SmallVector<StringRef> Targets = {"-targets=host-x86_64-unknown-linux"};
-  for (const auto &FileAndArch : InputFiles)
-    Targets.push_back(
-        Saver.save("hipv4-amdgcn-amd-amdhsa--" + std::get<1>(FileAndArch)));
+  for (const auto &[File, Arch] : InputFiles)
+    Targets.push_back(Saver.save("hipv4-amdgcn-amd-amdhsa--" + Arch));
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
 
   CmdArgs.push_back("-input=/dev/null");
-  for (const auto &FileAndArch : InputFiles)
-    CmdArgs.push_back(Saver.save("-input=" + std::get<0>(FileAndArch)));
+  for (const auto &[File, Arch] : InputFiles)
+    CmdArgs.push_back(Saver.save("-input=" + File));
 
   CmdArgs.push_back(Saver.save("-output=" + *TempFileOrErr));
 
@@ -1268,13 +1265,13 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
 
   // Forward '-Xoffload-linker' options to the appropriate backend.
   for (StringRef Arg : Args.getAllArgValues(OPT_device_linker_args_EQ)) {
-    auto TripleAndValue = Arg.split('=');
-    if (TripleAndValue.second.empty())
+    auto [Triple, Value] = Arg.split('=');
+    if (Value.empty())
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
-                       Args.MakeArgString(TripleAndValue.first));
-    else if (TripleAndValue.first == DAL.getLastArgValue(OPT_triple_EQ))
+                       Args.MakeArgString(Triple));
+    else if (Triple == DAL.getLastArgValue(OPT_triple_EQ))
       DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_linker_arg_EQ),
-                       Args.MakeArgString(TripleAndValue.second));
+                       Args.MakeArgString(Value));
   }
 
   return DAL;
@@ -1293,10 +1290,9 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
   LinkerInputFiles.clear();
 
   DenseMap<OffloadKind, SmallVector<OffloadingImage, 2>> Images;
-  for (auto &InputForTarget : InputsForTarget) {
+  for (auto &[ID, Input] : InputsForTarget) {
     llvm::TimeTraceScope TimeScope("Link device input");
 
-    SmallVector<OffloadFile, 4> &Input = InputForTarget.getSecond();
     auto LinkerArgs = getLinkerArgs(Input, Args);
 
     DenseSet<OffloadKind> ActiveOffloadKinds;
@@ -1347,10 +1343,8 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
   // Create a binary image of each offloading image and embed it into a new
   // object file.
   SmallVector<StringRef> WrappedOutput;
-  for (const auto &KindAndImages : Images) {
-    OffloadKind Kind = KindAndImages.first;
-    auto BundledImagesOrErr =
-        bundleLinkedOutput(KindAndImages.second, Args, Kind);
+  for (const auto &[Kind, Input] : Images) {
+    auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, Kind);
     if (!BundledImagesOrErr)
       return BundledImagesOrErr.takeError();
     auto OutputOrErr = wrapDeviceImages(*BundledImagesOrErr, Args, Kind);

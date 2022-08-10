@@ -2106,6 +2106,11 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
           // using dlopen().
           const char libcxxabi[] = "libc++abi.a(libc++abi.so.1)";
           void *libHandle;
+          // The AIX dlopen() sets errno to 0 when it is successful, which
+          // clobbers the value of errno from the user code. This is an AIX
+          // bug because according to POSIX it should not set errno to 0. To
+          // workaround before AIX fixes the bug, errno is saved and restored.
+          int saveErrno = errno;
           libHandle = dlopen(libcxxabi, RTLD_MEMBER | RTLD_NOW);
           if (libHandle == NULL) {
             _LIBUNWIND_TRACE_UNWINDING("dlopen() failed with errno=%d\n",
@@ -2119,6 +2124,7 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
             assert(0 && "dlsym() failed");
           }
           dlclose(libHandle);
+          errno = saveErrno;
         }
       }
       xlcPersonalityV0InitLock.unlock();

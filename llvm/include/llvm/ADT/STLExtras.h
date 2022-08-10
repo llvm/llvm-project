@@ -1796,6 +1796,11 @@ bool is_splat(R &&Range) {
          std::equal(adl_begin(Range) + 1, adl_end(Range), adl_begin(Range)));
 }
 
+/// Returns true iff all Values in the initializer lists are same.
+template <typename T> bool is_splat(std::initializer_list<T> Values) {
+  return is_splat<std::initializer_list<T>>(std::move(Values));
+}
+
 /// Provide a container algorithm similar to C++ Library Fundamentals v2's
 /// `erase_if` which is equivalent to:
 ///
@@ -2060,34 +2065,13 @@ template <typename R> detail::enumerator<R> enumerate(R &&TheRange) {
 
 namespace detail {
 
-template <typename F, typename Tuple, std::size_t... I>
-decltype(auto) apply_tuple_impl(F &&f, Tuple &&t, std::index_sequence<I...>) {
-  return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(t))...);
-}
-
-} // end namespace detail
-
-/// Given an input tuple (a1, a2, ..., an), pass the arguments of the
-/// tuple variadically to f as if by calling f(a1, a2, ..., an) and
-/// return the result.
-template <typename F, typename Tuple>
-decltype(auto) apply_tuple(F &&f, Tuple &&t) {
-  using Indices = std::make_index_sequence<
-      std::tuple_size<typename std::decay<Tuple>::type>::value>;
-
-  return detail::apply_tuple_impl(std::forward<F>(f), std::forward<Tuple>(t),
-                                  Indices{});
-}
-
-namespace detail {
-
 template <typename Predicate, typename... Args>
 bool all_of_zip_predicate_first(Predicate &&P, Args &&...args) {
   auto z = zip(args...);
   auto it = z.begin();
   auto end = z.end();
   while (it != end) {
-    if (!apply_tuple([&](auto &&...args) { return P(args...); }, *it))
+    if (!std::apply([&](auto &&...args) { return P(args...); }, *it))
       return false;
     ++it;
   }

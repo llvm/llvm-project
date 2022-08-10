@@ -893,3 +893,410 @@ entry:
   %cmp.i = icmp ugt i32 %bf.cast.i, %AttrArgNo
   ret i1 %cmp.i
 }
+
+define i64 @or_tree_with_shifts_i64(i64 %a, i64 %b, i64 %c, i64 %d) {
+; CHECK-ARM-LABEL: or_tree_with_shifts_i64:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    .save {r11, lr}
+; CHECK-ARM-NEXT:    push {r11, lr}
+; CHECK-ARM-NEXT:    ldr lr, [sp, #16]
+; CHECK-ARM-NEXT:    lsl r3, r3, #16
+; CHECK-ARM-NEXT:    ldr r12, [sp, #8]
+; CHECK-ARM-NEXT:    orr r3, r3, r2, lsr #16
+; CHECK-ARM-NEXT:    orr r0, r0, r2, lsl #16
+; CHECK-ARM-NEXT:    orr r1, r1, lr, lsl #16
+; CHECK-ARM-NEXT:    orr r1, r1, r3
+; CHECK-ARM-NEXT:    orr r1, r1, r12
+; CHECK-ARM-NEXT:    pop {r11, pc}
+;
+; CHECK-BE-LABEL: or_tree_with_shifts_i64:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    .save {r11, lr}
+; CHECK-BE-NEXT:    push {r11, lr}
+; CHECK-BE-NEXT:    ldr lr, [sp, #20]
+; CHECK-BE-NEXT:    lsl r2, r2, #16
+; CHECK-BE-NEXT:    ldr r12, [sp, #12]
+; CHECK-BE-NEXT:    orr r2, r2, r3, lsr #16
+; CHECK-BE-NEXT:    orr r1, r1, r3, lsl #16
+; CHECK-BE-NEXT:    orr r0, r0, lr, lsl #16
+; CHECK-BE-NEXT:    orr r0, r0, r2
+; CHECK-BE-NEXT:    orr r0, r0, r12
+; CHECK-BE-NEXT:    pop {r11, pc}
+;
+; CHECK-ALIGN-LABEL: or_tree_with_shifts_i64:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #8]
+; CHECK-ALIGN-NEXT:    lsls r3, r3, #16
+; CHECK-ALIGN-NEXT:    orr.w r3, r3, r2, lsr #16
+; CHECK-ALIGN-NEXT:    orr.w r0, r0, r2, lsl #16
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r12, lsl #16
+; CHECK-ALIGN-NEXT:    orrs r1, r3
+; CHECK-ALIGN-NEXT:    ldr r3, [sp]
+; CHECK-ALIGN-NEXT:    orrs r1, r3
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: or_tree_with_shifts_i64:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    push {r4, lr}
+; CHECK-V6M-NEXT:    lsrs r4, r2, #16
+; CHECK-V6M-NEXT:    lsls r3, r3, #16
+; CHECK-V6M-NEXT:    adds r3, r3, r4
+; CHECK-V6M-NEXT:    ldr r4, [sp, #16]
+; CHECK-V6M-NEXT:    lsls r4, r4, #16
+; CHECK-V6M-NEXT:    orrs r1, r4
+; CHECK-V6M-NEXT:    orrs r1, r3
+; CHECK-V6M-NEXT:    ldr r3, [sp, #8]
+; CHECK-V6M-NEXT:    orrs r1, r3
+; CHECK-V6M-NEXT:    lsls r2, r2, #16
+; CHECK-V6M-NEXT:    orrs r0, r2
+; CHECK-V6M-NEXT:    pop {r4, pc}
+  %b.shifted = shl i64 %b, 16
+  %c.shifted = shl i64 %c, 32
+  %d.shifted = shl i64 %d, 48
+  %or.ad = or i64 %a, %d.shifted
+  %or.adb = or i64 %or.ad, %b.shifted
+  %or.adbc = or i64 %or.adb, %c.shifted
+  ret i64 %or.adbc
+}
+
+define i32 @or_tree_with_shifts_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-ARM-LABEL: or_tree_with_shifts_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    orr r2, r3, r2, lsl #16
+; CHECK-ARM-NEXT:    orr r0, r1, r0, lsl #16
+; CHECK-ARM-NEXT:    orr r0, r0, r2
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: or_tree_with_shifts_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    orr r2, r3, r2, lsl #16
+; CHECK-BE-NEXT:    orr r0, r1, r0, lsl #16
+; CHECK-BE-NEXT:    orr r0, r0, r2
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: or_tree_with_shifts_i32:
+; CHECK-THUMB:       @ %bb.0:
+; CHECK-THUMB-NEXT:    orr.w r2, r3, r2, lsl #16
+; CHECK-THUMB-NEXT:    orr.w r0, r1, r0, lsl #16
+; CHECK-THUMB-NEXT:    orrs r0, r2
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: or_tree_with_shifts_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    orr.w r2, r3, r2, lsl #16
+; CHECK-ALIGN-NEXT:    orr.w r0, r1, r0, lsl #16
+; CHECK-ALIGN-NEXT:    orrs r0, r2
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: or_tree_with_shifts_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    lsls r2, r2, #16
+; CHECK-V6M-NEXT:    orrs r2, r3
+; CHECK-V6M-NEXT:    lsls r0, r0, #16
+; CHECK-V6M-NEXT:    orrs r0, r1
+; CHECK-V6M-NEXT:    orrs r0, r2
+; CHECK-V6M-NEXT:    bx lr
+  %a.shifted = shl i32 %a, 16
+  %c.shifted = shl i32 %c, 16
+  %or.ab = or i32 %a.shifted, %b
+  %or.cd = or i32 %c.shifted, %d
+  %r = or i32 %or.ab, %or.cd
+  ret i32 %r
+}
+
+define i32 @xor_tree_with_shifts_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-ARM-LABEL: xor_tree_with_shifts_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    eor r2, r3, r2, lsr #16
+; CHECK-ARM-NEXT:    eor r0, r1, r0, lsr #16
+; CHECK-ARM-NEXT:    eor r0, r0, r2
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: xor_tree_with_shifts_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    eor r2, r3, r2, lsr #16
+; CHECK-BE-NEXT:    eor r0, r1, r0, lsr #16
+; CHECK-BE-NEXT:    eor r0, r0, r2
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: xor_tree_with_shifts_i32:
+; CHECK-THUMB:       @ %bb.0:
+; CHECK-THUMB-NEXT:    eor.w r2, r3, r2, lsr #16
+; CHECK-THUMB-NEXT:    eor.w r0, r1, r0, lsr #16
+; CHECK-THUMB-NEXT:    eors r0, r2
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: xor_tree_with_shifts_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    eor.w r2, r3, r2, lsr #16
+; CHECK-ALIGN-NEXT:    eor.w r0, r1, r0, lsr #16
+; CHECK-ALIGN-NEXT:    eors r0, r2
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: xor_tree_with_shifts_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    lsrs r2, r2, #16
+; CHECK-V6M-NEXT:    eors r2, r3
+; CHECK-V6M-NEXT:    lsrs r0, r0, #16
+; CHECK-V6M-NEXT:    eors r0, r1
+; CHECK-V6M-NEXT:    eors r0, r2
+; CHECK-V6M-NEXT:    bx lr
+  %a.shifted = lshr i32 %a, 16
+  %c.shifted = lshr i32 %c, 16
+  %xor.ab = xor i32 %a.shifted, %b
+  %xor.cd = xor i32 %c.shifted, %d
+  %r = xor i32 %xor.ab, %xor.cd
+  ret i32 %r
+}
+
+define i32 @and_tree_with_shifts_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-ARM-LABEL: and_tree_with_shifts_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    and r2, r3, r2, asr #16
+; CHECK-ARM-NEXT:    and r0, r1, r0, asr #16
+; CHECK-ARM-NEXT:    and r0, r0, r2
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: and_tree_with_shifts_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    and r2, r3, r2, asr #16
+; CHECK-BE-NEXT:    and r0, r1, r0, asr #16
+; CHECK-BE-NEXT:    and r0, r0, r2
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: and_tree_with_shifts_i32:
+; CHECK-THUMB:       @ %bb.0:
+; CHECK-THUMB-NEXT:    and.w r2, r3, r2, asr #16
+; CHECK-THUMB-NEXT:    and.w r0, r1, r0, asr #16
+; CHECK-THUMB-NEXT:    ands r0, r2
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: and_tree_with_shifts_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    and.w r2, r3, r2, asr #16
+; CHECK-ALIGN-NEXT:    and.w r0, r1, r0, asr #16
+; CHECK-ALIGN-NEXT:    ands r0, r2
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: and_tree_with_shifts_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    asrs r2, r2, #16
+; CHECK-V6M-NEXT:    ands r2, r3
+; CHECK-V6M-NEXT:    asrs r0, r0, #16
+; CHECK-V6M-NEXT:    ands r0, r1
+; CHECK-V6M-NEXT:    ands r0, r2
+; CHECK-V6M-NEXT:    bx lr
+  %a.shifted = ashr i32 %a, 16
+  %c.shifted = ashr i32 %c, 16
+  %and.ab = and i32 %a.shifted, %b
+  %and.cd = and i32 %c.shifted, %d
+  %r = and i32 %and.ab, %and.cd
+  ret i32 %r
+}
+
+define i32 @logic_tree_with_shifts_var_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %s) {
+; CHECK-ARM-LABEL: logic_tree_with_shifts_var_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    ldr r12, [sp]
+; CHECK-ARM-NEXT:    orr r2, r3, r2, lsl r12
+; CHECK-ARM-NEXT:    orr r0, r1, r0, lsl r12
+; CHECK-ARM-NEXT:    orr r0, r0, r2
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: logic_tree_with_shifts_var_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    ldr r12, [sp]
+; CHECK-BE-NEXT:    orr r2, r3, r2, lsl r12
+; CHECK-BE-NEXT:    orr r0, r1, r0, lsl r12
+; CHECK-BE-NEXT:    orr r0, r0, r2
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: logic_tree_with_shifts_var_i32:
+; CHECK-THUMB:       @ %bb.0:
+; CHECK-THUMB-NEXT:    ldr.w r12, [sp]
+; CHECK-THUMB-NEXT:    lsl.w r2, r2, r12
+; CHECK-THUMB-NEXT:    lsl.w r0, r0, r12
+; CHECK-THUMB-NEXT:    orrs r2, r3
+; CHECK-THUMB-NEXT:    orrs r0, r1
+; CHECK-THUMB-NEXT:    orrs r0, r2
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: logic_tree_with_shifts_var_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp]
+; CHECK-ALIGN-NEXT:    lsl.w r2, r2, r12
+; CHECK-ALIGN-NEXT:    lsl.w r0, r0, r12
+; CHECK-ALIGN-NEXT:    orrs r2, r3
+; CHECK-ALIGN-NEXT:    orrs r0, r1
+; CHECK-ALIGN-NEXT:    orrs r0, r2
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: logic_tree_with_shifts_var_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    push {r4, lr}
+; CHECK-V6M-NEXT:    ldr r4, [sp, #8]
+; CHECK-V6M-NEXT:    lsls r2, r4
+; CHECK-V6M-NEXT:    orrs r2, r3
+; CHECK-V6M-NEXT:    lsls r0, r4
+; CHECK-V6M-NEXT:    orrs r0, r1
+; CHECK-V6M-NEXT:    orrs r0, r2
+; CHECK-V6M-NEXT:    pop {r4, pc}
+  %a.shifted = shl i32 %a, %s
+  %c.shifted = shl i32 %c, %s
+  %or.ab = or i32 %a.shifted, %b
+  %or.cd = or i32 %c.shifted, %d
+  %r = or i32 %or.ab, %or.cd
+  ret i32 %r
+}
+
+define i32 @logic_tree_with_mismatching_shifts_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-ARM-LABEL: logic_tree_with_mismatching_shifts_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    orr r2, r3, r2, lsl #16
+; CHECK-ARM-NEXT:    orr r0, r1, r0, lsl #15
+; CHECK-ARM-NEXT:    orr r0, r0, r2
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: logic_tree_with_mismatching_shifts_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    orr r2, r3, r2, lsl #16
+; CHECK-BE-NEXT:    orr r0, r1, r0, lsl #15
+; CHECK-BE-NEXT:    orr r0, r0, r2
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: logic_tree_with_mismatching_shifts_i32:
+; CHECK-THUMB:       @ %bb.0:
+; CHECK-THUMB-NEXT:    orr.w r2, r3, r2, lsl #16
+; CHECK-THUMB-NEXT:    orr.w r0, r1, r0, lsl #15
+; CHECK-THUMB-NEXT:    orrs r0, r2
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: logic_tree_with_mismatching_shifts_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    orr.w r2, r3, r2, lsl #16
+; CHECK-ALIGN-NEXT:    orr.w r0, r1, r0, lsl #15
+; CHECK-ALIGN-NEXT:    orrs r0, r2
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: logic_tree_with_mismatching_shifts_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    lsls r2, r2, #16
+; CHECK-V6M-NEXT:    orrs r2, r3
+; CHECK-V6M-NEXT:    lsls r0, r0, #15
+; CHECK-V6M-NEXT:    orrs r0, r1
+; CHECK-V6M-NEXT:    orrs r0, r2
+; CHECK-V6M-NEXT:    bx lr
+  %a.shifted = shl i32 %a, 15
+  %c.shifted = shl i32 %c, 16
+  %or.ab = or i32 %a.shifted, %b
+  %or.cd = or i32 %c.shifted, %d
+  %r = or i32 %or.ab, %or.cd
+  ret i32 %r
+}
+
+define i32 @logic_tree_with_mismatching_shifts2_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-ARM-LABEL: logic_tree_with_mismatching_shifts2_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    orr r2, r3, r2, lsr #16
+; CHECK-ARM-NEXT:    orr r0, r1, r0, lsl #16
+; CHECK-ARM-NEXT:    orr r0, r0, r2
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: logic_tree_with_mismatching_shifts2_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    orr r2, r3, r2, lsr #16
+; CHECK-BE-NEXT:    orr r0, r1, r0, lsl #16
+; CHECK-BE-NEXT:    orr r0, r0, r2
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: logic_tree_with_mismatching_shifts2_i32:
+; CHECK-THUMB:       @ %bb.0:
+; CHECK-THUMB-NEXT:    orr.w r2, r3, r2, lsr #16
+; CHECK-THUMB-NEXT:    orr.w r0, r1, r0, lsl #16
+; CHECK-THUMB-NEXT:    orrs r0, r2
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: logic_tree_with_mismatching_shifts2_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    orr.w r2, r3, r2, lsr #16
+; CHECK-ALIGN-NEXT:    orr.w r0, r1, r0, lsl #16
+; CHECK-ALIGN-NEXT:    orrs r0, r2
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: logic_tree_with_mismatching_shifts2_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    lsrs r2, r2, #16
+; CHECK-V6M-NEXT:    orrs r2, r3
+; CHECK-V6M-NEXT:    lsls r0, r0, #16
+; CHECK-V6M-NEXT:    orrs r0, r1
+; CHECK-V6M-NEXT:    orrs r0, r2
+; CHECK-V6M-NEXT:    bx lr
+  %a.shifted = shl i32 %a, 16
+  %c.shifted = lshr i32 %c, 16
+  %or.ab = or i32 %a.shifted, %b
+  %or.cd = or i32 %c.shifted, %d
+  %r = or i32 %or.ab, %or.cd
+  ret i32 %r
+}
+
+define <4 x i32> @or_tree_with_shifts_vec_i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
+; CHECK-ARM-LABEL: or_tree_with_shifts_vec_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    vshl.i32 q8, q2, #16
+; CHECK-ARM-NEXT:    vshl.i32 q9, q0, #16
+; CHECK-ARM-NEXT:    vorr q8, q8, q3
+; CHECK-ARM-NEXT:    vorr q9, q9, q1
+; CHECK-ARM-NEXT:    vorr q0, q9, q8
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: or_tree_with_shifts_vec_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vrev64.32 q8, q2
+; CHECK-BE-NEXT:    vrev64.32 q9, q0
+; CHECK-BE-NEXT:    vshl.i32 q8, q8, #16
+; CHECK-BE-NEXT:    vrev64.32 q10, q3
+; CHECK-BE-NEXT:    vshl.i32 q9, q9, #16
+; CHECK-BE-NEXT:    vrev64.32 q11, q1
+; CHECK-BE-NEXT:    vorr q8, q8, q10
+; CHECK-BE-NEXT:    vorr q9, q9, q11
+; CHECK-BE-NEXT:    vorr q8, q9, q8
+; CHECK-BE-NEXT:    vrev64.32 q0, q8
+; CHECK-BE-NEXT:    bx lr
+  %a.shifted = shl <4 x i32> %a, <i32 16, i32 16, i32 16, i32 16>
+  %c.shifted = shl <4 x i32> %c, <i32 16, i32 16, i32 16, i32 16>
+  %or.ab = or <4 x i32> %a.shifted, %b
+  %or.cd = or <4 x i32> %c.shifted, %d
+  %r = or <4 x i32> %or.ab, %or.cd
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @or_tree_with_mismatching_shifts_vec_i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
+; CHECK-ARM-LABEL: or_tree_with_mismatching_shifts_vec_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    vshl.i32 q8, q2, #17
+; CHECK-ARM-NEXT:    vshl.i32 q9, q0, #16
+; CHECK-ARM-NEXT:    vorr q8, q8, q3
+; CHECK-ARM-NEXT:    vorr q9, q9, q1
+; CHECK-ARM-NEXT:    vorr q0, q9, q8
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: or_tree_with_mismatching_shifts_vec_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vrev64.32 q8, q2
+; CHECK-BE-NEXT:    vrev64.32 q9, q0
+; CHECK-BE-NEXT:    vshl.i32 q8, q8, #17
+; CHECK-BE-NEXT:    vrev64.32 q10, q3
+; CHECK-BE-NEXT:    vshl.i32 q9, q9, #16
+; CHECK-BE-NEXT:    vrev64.32 q11, q1
+; CHECK-BE-NEXT:    vorr q8, q8, q10
+; CHECK-BE-NEXT:    vorr q9, q9, q11
+; CHECK-BE-NEXT:    vorr q8, q9, q8
+; CHECK-BE-NEXT:    vrev64.32 q0, q8
+; CHECK-BE-NEXT:    bx lr
+  %a.shifted = shl <4 x i32> %a, <i32 16, i32 16, i32 16, i32 16>
+  %c.shifted = shl <4 x i32> %c, <i32 17, i32 17, i32 17, i32 17>
+  %or.ab = or <4 x i32> %a.shifted, %b
+  %or.cd = or <4 x i32> %c.shifted, %d
+  %r = or <4 x i32> %or.ab, %or.cd
+  ret <4 x i32> %r
+}
