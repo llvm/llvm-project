@@ -253,7 +253,8 @@ void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
 
     const Expr *Arg = Args[ArgIndex];
     auto *ArgLoc = getStorageLocation(*Arg, SkipPast::Reference);
-    assert(ArgLoc != nullptr);
+    if (ArgLoc == nullptr)
+      continue;
 
     const VarDecl *Param = *ParamIt;
     auto &Loc = createStorageLocation(*Param);
