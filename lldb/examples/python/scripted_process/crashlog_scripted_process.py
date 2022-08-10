@@ -1,4 +1,4 @@
-import os,json,struct,signal
+import os,json,struct,signal,uuid
 
 from typing import Any, Dict
 
@@ -25,8 +25,11 @@ class CrashLogScriptedProcess(ScriptedProcess):
             if images:
                 for image in images:
                     if image not in self.loaded_images:
+                        if image.uuid == uuid.UUID(int=0):
+                            continue
                         err = image.add_module(self.target)
                         if err:
+                            # Append to SBCommandReturnObject
                             print(err)
                         else:
                             self.loaded_images.append(image)
