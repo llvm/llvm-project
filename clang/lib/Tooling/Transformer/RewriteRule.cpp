@@ -50,17 +50,21 @@ translateEdits(const MatchResult &Result, ArrayRef<ASTEdit> ASTEdits) {
     // produces a bad range, whereas the latter will simply ignore A.
     if (!EditRange)
       return SmallVector<Edit, 0>();
-    auto Replacement = E.Replacement->eval(Result);
-    if (!Replacement)
-      return Replacement.takeError();
-    auto Metadata = E.Metadata(Result);
-    if (!Metadata)
-      return Metadata.takeError();
     transformer::Edit T;
     T.Kind = E.Kind;
     T.Range = *EditRange;
-    T.Replacement = std::move(*Replacement);
-    T.Metadata = std::move(*Metadata);
+    if (E.Replacement) {
+      auto Replacement = E.Replacement->eval(Result);
+      if (!Replacement)
+        return Replacement.takeError();
+      T.Replacement = std::move(*Replacement);
+    }
+    if (E.Metadata) {
+      auto Metadata = E.Metadata(Result);
+      if (!Metadata)
+        return Metadata.takeError();
+      T.Metadata = std::move(*Metadata);
+    }
     Edits.push_back(std::move(T));
   }
   return Edits;
