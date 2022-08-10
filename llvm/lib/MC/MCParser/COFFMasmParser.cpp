@@ -330,7 +330,7 @@ bool COFFMasmParser::ParseDirectiveSegment(StringRef Directive, SMLoc Loc) {
                 .CaseLower("nocache", COFF::IMAGE_SCN_MEM_NOT_CACHED)
                 .CaseLower("discard", COFF::IMAGE_SCN_MEM_DISCARDABLE)
                 .Default(-1);
-        if (Characteristic == -1) {
+        if (Characteristic == static_cast<unsigned>(-1)) {
           return Error(KeywordLoc,
                        "Expected characteristic in SEGMENT directive; found '" +
                            Keyword + "'");
