@@ -89,6 +89,13 @@ Improvements to Clang's diagnostics
   language modes. It may be downgraded to a warning with
   ``-Wno-error=incompatible-function-pointer-types`` or disabled entirely with
   ``-Wno-implicit-function-pointer-types``.
+- When including a PCH from a GCC style directory with multiple alternative PCH
+  files, Clang now requires all defines set on the command line while generating
+  the PCH and when including it to match. This matches GCC's behaviour.
+  Previously Clang would tolerate defines to be set when creating the PCH but
+  missing when used, or vice versa. This makes sure that Clang picks the
+  correct one, where it previously would consider multiple ones as potentially
+  acceptable (and erroneously use whichever one is tried first).
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
