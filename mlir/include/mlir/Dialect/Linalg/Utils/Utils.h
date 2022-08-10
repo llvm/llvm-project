@@ -213,6 +213,43 @@ Value materializeOpFoldResult(ImplicitLocOpBuilder &builder,
 Value materializeOpFoldResult(OpBuilder &b, Location loc,
                               OpFoldResult opFoldResult);
 
+/// A struct containg offsets-sizes-strides arguments of the tiled shape.
+struct SliceParameters {
+  SmallVector<OpFoldResult> offsets;
+  SmallVector<OpFoldResult> sizes;
+  SmallVector<OpFoldResult> strides;
+};
+
+/// Computes SliceParameters for a single `valueToTile` assuming that its user
+/// is being tiled with the given loop bounds `lbs` and `ubs` and the tile sizes
+/// `tileSizes`.
+///
+/// `omitPartialTileCheck` controls whether to omit the partial/boundary tile
+/// condition check in cases where we statically know that it is unnecessary.
+SliceParameters
+computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
+                       ArrayRef<OpFoldResult> tileSizes, AffineMap map,
+                       ArrayRef<OpFoldResult> lbs, ArrayRef<OpFoldResult> ubs,
+                       ArrayRef<OpFoldResult> subShapeSizes,
+                       bool omitPartialTileCheck);
+
+/// Computes SliceParamaters for all `valuesToTile` of the given `linalgOp`,
+/// assuming `linalgOp` is being fused into a loop nest. Calls
+/// `computeSliceParameters` for every individual value.
+///
+/// Note that a constant zero in `tileSizes` means no tiling at that implicit
+/// loop. The number of non-zero values in `tileSizes` should be equal to the
+/// number of values in `ivs`.
+///
+/// Some of the `valuesToTile` won't be affected by tiling. For these values,
+/// llvm::None will be returned.
+SmallVector<Optional<SliceParameters>>
+computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
+                          ValueRange valuesToTile, ArrayRef<OpFoldResult> ivs,
+                          ArrayRef<OpFoldResult> tileSizes,
+                          ArrayRef<OpFoldResult> sizeBounds,
+                          bool omitPartialTileCheck);
+
 /// Creates an extract_slice/subview op for a single `valueToTile` with
 /// `builder`. This new operation extracts a tile of `valueToTile`, starting
 /// at offsets `lbs` and with sizes `subShapeSizes`. `omitPartialTileCheck`
