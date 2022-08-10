@@ -106,7 +106,7 @@ int main(void) {
 // CHECK-ORIGINS: Origin C (origin_id {{.*}}):
 // CHECK-ORIGINS-2:  Uninitialized value was stored to memory at
 // CHECK-ORIGINS-2:    #0 {{.*}} in main{{.*}}msan_print_shadow.cpp:48
-// CHECK-ORIGINS:   Uninitialized value was created by an allocation of 'x' in the stack frame of function 'main'
+// CHECK-ORIGINS:   Uninitialized value was created by an allocation of 'x' in the stack frame
 // CHECK-ORIGINS:     #0 {{.*}} in main{{.*}}msan_print_shadow.cpp:13
 
 // CHECK-ORIGINS: Origin D (origin_id {{.*}}):

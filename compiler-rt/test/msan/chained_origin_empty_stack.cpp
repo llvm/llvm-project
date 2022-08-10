@@ -10,7 +10,7 @@
 // CHECK:   #0 {{.*}} in fn_g
 // CHECK-NOT: #1
 
-// CHECK: Uninitialized value was created by an allocation of 'z' in the stack frame of function 'main'
+// CHECK: Uninitialized value was created by an allocation of 'z' in the stack frame
 // CHECK:   #0 {{.*}} in main
 
 #include <stdio.h>
