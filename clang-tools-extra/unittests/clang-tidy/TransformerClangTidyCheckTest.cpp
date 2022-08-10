@@ -90,6 +90,32 @@ TEST(TransformerClangTidyCheckTest, DiagnosticsCorrectlyGenerated) {
   EXPECT_EQ(Errors[0].Message.FileOffset, 10U);
 }
 
+transformer::ASTEdit noReplacementEdit(transformer::RangeSelector Target) {
+  transformer::ASTEdit E;
+  E.TargetRange = std::move(Target);
+  return E;
+}
+
+TEST(TransformerClangTidyCheckTest, EmptyReplacement) {
+  class DiagOnlyCheck : public TransformerClangTidyCheck {
+  public:
+    DiagOnlyCheck(StringRef Name, ClangTidyContext *Context)
+        : TransformerClangTidyCheck(
+              makeRule(returnStmt(), edit(noReplacementEdit(node(RootID))),
+                       cat("message")),
+              Name, Context) {}
+  };
+  std::string Input = "int h() { return 5; }";
+  std::vector<ClangTidyError> Errors;
+  EXPECT_EQ("int h() { }", test::runCheckOnCode<DiagOnlyCheck>(Input, &Errors));
+  EXPECT_EQ(Errors.size(), 1U);
+  EXPECT_EQ(Errors[0].Message.Message, "message");
+  EXPECT_THAT(Errors[0].Message.Ranges, testing::IsEmpty());
+
+  // The diagnostic is anchored to the match, "return 5".
+  EXPECT_EQ(Errors[0].Message.FileOffset, 10U);
+}
+
 TEST(TransformerClangTidyCheckTest, DiagnosticMessageEscaped) {
   class GiveDiagWithPercentSymbol : public TransformerClangTidyCheck {
   public:
