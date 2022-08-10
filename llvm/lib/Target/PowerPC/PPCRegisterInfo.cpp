@@ -257,8 +257,11 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_SVR432_VSRP_SaveList;
   if (Subtarget.hasAltivec())
     return CSR_SVR432_Altivec_SaveList;
-  else if (Subtarget.hasSPE())
+  else if (Subtarget.hasSPE()) {
+    if (TM.isPositionIndependent() && !TM.isPPC64())
+      return CSR_SVR432_SPE_NO_S30_31_SaveList;
     return CSR_SVR432_SPE_SaveList;
+   }
   return CSR_SVR432_SaveList;
 }
 
@@ -317,8 +320,11 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                ? CSR_SVR432_VSRP_RegMask
                : (Subtarget.hasAltivec()
                       ? CSR_SVR432_Altivec_RegMask
-                      : (Subtarget.hasSPE() ? CSR_SVR432_SPE_RegMask
-                                            : CSR_SVR432_RegMask));
+                      : (Subtarget.hasSPE()
+                             ? (TM.isPositionIndependent()
+                                     ? CSR_SVR432_SPE_NO_S30_31_RegMask
+                                     : CSR_SVR432_SPE_RegMask)
+                             : CSR_SVR432_RegMask));
 }
 
 const uint32_t*

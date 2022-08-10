@@ -272,12 +272,18 @@ def CSR_SVR432 :  CalleeSavedRegs<(add CSR_SVR432_COMM, F14, F15, F16, F17, F18,
                                         F27, F28, F29, F30, F31
                                    )>;
 def CSR_SPE : CalleeSavedRegs<(add S14, S15, S16, S17, S18, S19, S20, S21, S22,
-                                   S23, S24, S25, S26, S27, S28, S29, S30, S31
+                                   S23, S24, S25, S26, S27, S28, S29, S30 
                               )>;
+
+def CSR_SPE_NO_S30_31 : CalleeSavedRegs<(add S14, S15, S16, S17, S18, S19, S20, S21,
+				          S22, S23, S24, S25, S26, S27, S28, S29
+			      )>;
 
 def CSR_SVR432_Altivec : CalleeSavedRegs<(add CSR_SVR432, CSR_Altivec)>;
 
 def CSR_SVR432_SPE : CalleeSavedRegs<(add CSR_SVR432_COMM, CSR_SPE)>;
+
+def CSR_SVR432_SPE_NO_S30_31 : CalleeSavedRegs<(add CSR_SVR432_COMM, CSR_SPE_NO_S30_31)>;
 
 def CSR_AIX32 : CalleeSavedRegs<(add R13, R14, R15, R16, R17, R18, R19, R20,
                                      R21, R22, R23, R24, R25, R26, R27, R28,

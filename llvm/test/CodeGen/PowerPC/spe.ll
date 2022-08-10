@@ -1639,14 +1639,13 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* 
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    mflr 0
 ; SPE-NEXT:    stw 0, 4(1)
-; SPE-NEXT:    stwu 1, -272(1)
+; SPE-NEXT:    stwu 1, -288(1)
 ; SPE-NEXT:    li 5, 256
-; SPE-NEXT:    evstddx 30, 1, 5 # 8-byte Folded Spill
-; SPE-NEXT:    li 5, 264
-; SPE-NEXT:    evstddx 31, 1, 5 # 8-byte Folded Spill
-; SPE-NEXT:    li 5, .LCPI55_0@l
+; SPE-NEXT:    evstddx 30, 1, 5  # 8-byte Folded Spill
+; SPE-NEXT:    li 5, .LCPI55_0@
 ; SPE-NEXT:    lis 6, .LCPI55_0@ha
 ; SPE-NEXT:    evlddx 5, 6, 5
+; SPE-NEXT:    stw 31, 284(1)    # 4-byte Folded Spill
 ; SPE-NEXT:    evstdd 14, 128(1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd 15, 136(1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd 16, 144(1) # 8-byte Folded Spill
@@ -1664,7 +1663,7 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* 
 ; SPE-NEXT:    evstdd 28, 240(1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd 29, 248(1) # 8-byte Folded Spill
 ; SPE-NEXT:    evmergelo 3, 3, 4
-; SPE-NEXT:    lwz 4, 280(1)
+; SPE-NEXT:    lwz 4, 296(1)
 ; SPE-NEXT:    efdadd 3, 3, 3
 ; SPE-NEXT:    efdadd 3, 3, 5
 ; SPE-NEXT:    evstdd 3, 24(1) # 8-byte Folded Spill
@@ -1686,13 +1685,11 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* 
 ; SPE-NEXT:    li 6, 1
 ; SPE-NEXT:    bl test_memset
 ; SPE-NEXT:    evldd 4, 24(1) # 8-byte Folded Reload
-; SPE-NEXT:    li 5, 264
-; SPE-NEXT:    evmergehi 3, 4, 4
-; SPE-NEXT:    evlddx 31, 1, 5 # 8-byte Folded Reload
 ; SPE-NEXT:    li 5, 256
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
+; SPE-NEXT:    evmergehi 3, 4, 4
 ; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
 ; SPE-NEXT:    evlddx 30, 1, 5 # 8-byte Folded Reload
+; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    evldd 29, 248(1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd 28, 240(1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd 27, 232(1) # 8-byte Folded Reload
@@ -1709,8 +1706,9 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* 
 ; SPE-NEXT:    evldd 16, 144(1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd 15, 136(1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd 14, 128(1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz 0, 276(1)
-; SPE-NEXT:    addi 1, 1, 272
+; SPE-NEXT:    lwz 31, 284(1)   # 4-byte Folded Reload
+; SPE-NEXT:    lwz 0, 292(1)
+; SPE-NEXT:    addi 1, 1, 288
 ; SPE-NEXT:    mtlr 0
 ; SPE-NEXT:    blr
 ;
