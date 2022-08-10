@@ -131,8 +131,9 @@ void ACInstrumentation::instrumentCallRecordingBasicBlock(BasicBlock* CurrentBB,
   BasicBlock::iterator NextInst(CurrentBB->getFirstNonPHIOrDbg());
   while(NextInst->getOpcode() == 56 &&
          (!static_cast<CallInst*>(&*NextInst)->getCalledFunction() ||
-          static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
-          static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate"))
+          (static_cast<CallInst*>(&*NextInst)->getCalledFunction() &&
+           (static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
+            static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate"))))
     NextInst++;
   IRBuilder<> InstructionBuilder( &(*NextInst) );
   std::vector<Value *> Args;
@@ -150,12 +151,12 @@ void ACInstrumentation::instrumentCallRecordingBasicBlock(BasicBlock* CurrentBB,
 void ACInstrumentation::instrumentCallRecordingPHIInstructions(BasicBlock* CurrentBB,
                                                                long *NumInstrumentedInstructions) {
   BasicBlock::iterator NextInst(CurrentBB->getFirstNonPHIOrDbg());
-  while(NextInst->getOpcode() == 56) {
-    if (static_cast<CallInst*>(&*NextInst)->getCalledFunction() &&
-        (static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
-        static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate"))
+  while(NextInst->getOpcode() == 56 &&
+         (!static_cast<CallInst*>(&*NextInst)->getCalledFunction() ||
+          (static_cast<CallInst*>(&*NextInst)->getCalledFunction() &&
+           (static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
+            static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate"))))
       NextInst++;
-  }
   IRBuilder<> InstructionBuilder( &(*NextInst) );
 
   long int NumberOfCalls = 0;

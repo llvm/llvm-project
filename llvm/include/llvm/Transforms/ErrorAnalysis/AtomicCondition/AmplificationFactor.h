@@ -24,6 +24,7 @@ typedef struct FloatAFItem {
   char *WRTInstructionString;
   int WRTNodeID;
   float AF;
+  float RelativeError;
 } FloatAFItem;
 
 typedef struct DoubleAFItem {
@@ -32,6 +33,7 @@ typedef struct DoubleAFItem {
   char *WRTInstructionString;
   int WRTNodeID;
   double AF;
+  double RelativeError;
 } DoubleAFItem;
 
 typedef struct AnalysisResult {
@@ -180,6 +182,7 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
   AFItemPointer->WRTInstructionString = WRTNode->Node->InstructionString;
   AFItemPointer->WRTNodeID = WRTNode->Node->NodeId;
   AFItemPointer->AF = 1;
+  AFItemPointer->RelativeError = 0;
   AFResult->FloatAFRecords++;
 
   // Amplification Factor Calculation
@@ -254,6 +257,8 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
         AFItemPointer->AF =
             AFofWRTNode *
             StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTX;
+        AFItemPointer->RelativeError = AFItemPointer->AF *
+                                       fp32OpError[WRTNode->Node->Kind];
 
         AFResult->FloatAFRecords++;
 
@@ -273,6 +278,8 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
                    .WRTNodeID);
         printf("\t\tAF: %f\n",
                AFResult->FloatAFItemPointer[AFResult->FloatAFRecords - 1].AF);
+        printf("\t\tRelative Error: %f\n",
+               AFResult->FloatAFItemPointer[AFResult->FloatAFRecords - 1].RelativeError);
 #endif
         if (WRTNode->Node->LeftNode->Kind != 0) {
           // Pushing Node on Processing Q
@@ -308,6 +315,9 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
         AFItemPointer->AF =
             AFofWRTNode *
             StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTX;
+        AFItemPointer->RelativeError = AFItemPointer->AF *
+                                       fp32OpError[WRTNode->Node->Kind];
+
         AFResult->FloatAFRecords++;
 
 #if FAF_DEBUG == 2
@@ -326,6 +336,8 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
                    .WRTNodeID);
         printf("\t\tAF: %f\n",
                AFResult->FloatAFItemPointer[AFResult->FloatAFRecords - 1].AF);
+        printf("\t\tRelativeError: %f\n",
+               AFResult->FloatAFItemPointer[AFResult->FloatAFRecords - 1].RelativeError);
 #endif
 
         if (WRTNode->Node->LeftNode->Kind != 0) {
@@ -357,6 +369,8 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
         AFItemPointer->AF =
             AFofWRTNode *
             StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTY;
+        AFItemPointer->RelativeError = AFItemPointer->AF *
+                                       fp32OpError[WRTNode->Node->Kind];
 
         AFResult->FloatAFRecords++;
 
@@ -376,6 +390,8 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
                    .WRTNodeID);
         printf("\t\tAF: %f\n",
                AFResult->FloatAFItemPointer[AFResult->FloatAFRecords - 1].AF);
+        printf("\t\tRelative Error: %f\n",
+               AFResult->FloatAFItemPointer[AFResult->FloatAFRecords - 1].RelativeError);
 #endif
 
         if (WRTNode->Node->RightNode->Kind != 0) {
@@ -483,6 +499,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
   AFItemPointer->WRTInstructionString = WRTNode->Node->InstructionString;
   AFItemPointer->WRTNodeID = WRTNode->Node->NodeId;
   AFItemPointer->AF = 1;
+  AFItemPointer->RelativeError = 0;
   AFResult->DoubleAFRecords++;
 
   // Amplification Factor Calculation
@@ -557,6 +574,8 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
         AFItemPointer->AF =
             AFofWRTNode *
             StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTX;
+        AFItemPointer->RelativeError = AFItemPointer->AF *
+                                       fp64OpError[WRTNode->Node->Kind];
 
         AFResult->DoubleAFRecords++;
 
@@ -574,8 +593,10 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
         printf("\t\tWRTNodeID: %d\n",
                AFResult->DoubleAFItemPointer[AFResult->DoubleAFRecords - 1]
                    .WRTNodeID);
-        printf("\t\tAF: %f\n",
+        printf("\t\tAF: %0.15lf\n",
                AFResult->DoubleAFItemPointer[AFResult->DoubleAFRecords - 1].AF);
+        printf("\t\tRelativeError: %0.15lf\n",
+               AFResult->DoubleAFItemPointer[AFResult->DoubleAFRecords - 1].RelativeError);
 #endif
         if (WRTNode->Node->LeftNode->Kind != 0) {
           // Pushing Node on Processing Q
@@ -610,6 +631,9 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
         AFItemPointer->AF =
             AFofWRTNode *
             StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTX;
+        AFItemPointer->RelativeError = AFItemPointer->AF *
+                                       fp64OpError[WRTNode->Node->Kind];
+
         AFResult->DoubleAFRecords++;
 
 #if FAF_DEBUG == 2
@@ -626,8 +650,10 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
         printf("\t\tWRTNodeID: %d\n",
                AFResult->DoubleAFItemPointer[AFResult->DoubleAFRecords - 1]
                    .WRTNodeID);
-        printf("\t\tAF: %f\n",
+        printf("\t\tAF: %0.15lf\n",
                AFResult->DoubleAFItemPointer[AFResult->DoubleAFRecords - 1].AF);
+        printf("\t\tRelative Error: %0.15lf\n",
+               AFResult->DoubleAFItemPointer[AFResult->DoubleAFRecords - 1].RelativeError);
 #endif
 
         if (WRTNode->Node->LeftNode->Kind != 0) {
@@ -659,6 +685,8 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
         AFItemPointer->AF =
             AFofWRTNode *
             StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTY;
+        AFItemPointer->RelativeError = AFItemPointer->AF *
+                                       fp64OpError[WRTNode->Node->Kind];
 
         AFResult->DoubleAFRecords++;
 
@@ -676,8 +704,10 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
         printf("\t\tWRTNodeID: %d\n",
                AFResult->DoubleAFItemPointer[AFResult->DoubleAFRecords - 1]
                    .WRTNodeID);
-        printf("\t\tAF: %f\n",
+        printf("\t\tAF: %0.15lf\n",
                AFResult->DoubleAFItemPointer[AFResult->DoubleAFRecords - 1].AF);
+        printf("\t\tRelativeError: %0.15lf\n",
+               AFResult->DoubleAFItemPointer[AFResult->DoubleAFRecords - 1].RelativeError);
 #endif
 
         if (WRTNode->Node->RightNode->Kind != 0) {
@@ -710,6 +740,10 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
 #endif
 
   return ;
+}
+
+void fAFAnalyseFunction() {
+
 }
 
 void fAFStoreResult() {
@@ -754,12 +788,14 @@ void fAFStoreResult() {
                 "\t\t\t\"Result Node ID\":%d,\n"
                 "\t\t\t\"AF WRT Node\": \"%s\",\n"
                 "\t\t\t\"WRT Node ID\":%d,\n"
-                "\t\t\t\"AF\": %0.7f\n",
+                "\t\t\t\"AF\": %0.7f,\n"
+                "\t\t\t\"Relative Error\": %0.7f\n",
                 AFResult->FloatAFItemPointer[I].ResultInstructionString,
                 AFResult->FloatAFItemPointer[I].ResultNodeID,
                 AFResult->FloatAFItemPointer[I].WRTInstructionString,
                 AFResult->FloatAFItemPointer[I].WRTNodeID,
-                AFResult->FloatAFItemPointer[I].AF) > 0)
+                AFResult->FloatAFItemPointer[I].AF,
+                AFResult->FloatAFItemPointer[I].RelativeError) > 0)
       RecordsStored++;
 
     if (RecordsStored != AFResult->FloatAFRecords)
@@ -781,12 +817,14 @@ void fAFStoreResult() {
                 "\t\t\t\"Result Node ID\":%d,\n"
                 "\t\t\t\"AF WRT Node\": \"%s\",\n"
                 "\t\t\t\"WRT Node ID\":%d,\n"
-                "\t\t\t\"AF\": %0.15lf\n",
+                "\t\t\t\"AF\": %0.15lf,\n"
+                "\t\t\t\"Relative Error\": %0.15lf\n",
                 AFResult->DoubleAFItemPointer[I].ResultInstructionString,
                 AFResult->DoubleAFItemPointer[I].ResultNodeID,
                 AFResult->DoubleAFItemPointer[I].WRTInstructionString,
                 AFResult->DoubleAFItemPointer[I].WRTNodeID,
-                AFResult->DoubleAFItemPointer[I].AF) > 0)
+                AFResult->DoubleAFItemPointer[I].AF,
+                AFResult->DoubleAFItemPointer[I].RelativeError) > 0)
       RecordsStored++;
 
     if (RecordsStored != AFResult->DoubleAFRecords)
