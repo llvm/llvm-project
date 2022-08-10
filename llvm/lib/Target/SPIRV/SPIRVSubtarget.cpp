@@ -43,8 +43,10 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
-      PointerSize(computePointerSize(TT)), SPIRVVersion(0), InstrInfo(),
-      FrameLowering(initSubtargetDependencies(CPU, FS)), TLInfo(TM, *this) {
+      PointerSize(computePointerSize(TT)), SPIRVVersion(0), OpenCLVersion(0),
+      InstrInfo(), FrameLowering(initSubtargetDependencies(CPU, FS)),
+      TLInfo(TM, *this) {
+  initAvailableExtensions();
   GR = std::make_unique<SPIRVGlobalRegistry>(PointerSize);
   CallLoweringInfo = std::make_unique<SPIRVCallLowering>(TLInfo, GR.get());
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
@@ -58,10 +60,34 @@ SPIRVSubtarget &SPIRVSubtarget::initSubtargetDependencies(StringRef CPU,
   ParseSubtargetFeatures(CPU, /*TuneCPU=*/CPU, FS);
   if (SPIRVVersion == 0)
     SPIRVVersion = 14;
+  if (OpenCLVersion == 0)
+    OpenCLVersion = 22;
   return *this;
+}
+
+bool SPIRVSubtarget::canUseExtension(SPIRV::Extension::Extension E) const {
+  return AvailableExtensions.contains(E);
+}
+
+bool SPIRVSubtarget::isAtLeastSPIRVVer(uint32_t VerToCompareTo) const {
+  return isAtLeastVer(SPIRVVersion, VerToCompareTo);
+}
+
+bool SPIRVSubtarget::isAtLeastOpenCLVer(uint32_t VerToCompareTo) const {
+  return isAtLeastVer(OpenCLVersion, VerToCompareTo);
 }
 
 // If the SPIR-V version is >= 1.4 we can call OpPtrEqual and OpPtrNotEqual.
 bool SPIRVSubtarget::canDirectlyComparePointers() const {
   return isAtLeastVer(SPIRVVersion, 14);
+}
+
+// TODO: use command line args for this rather than defaults.
+void SPIRVSubtarget::initAvailableExtensions() {
+  AvailableExtensions.clear();
+  if (!isOpenCLEnv())
+    return;
+  // A default extension for testing.
+  AvailableExtensions.insert(
+      SPIRV::Extension::SPV_KHR_no_integer_wrap_decoration);
 }
