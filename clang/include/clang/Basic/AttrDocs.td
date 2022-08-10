@@ -5241,6 +5241,21 @@ aarch64/aarch64-be/riscv32/riscv64/i386/x86-64 targets.
 }];
 }
 
+def HotFunctionEntryDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+``__attribute__((hot))`` marks a function as hot, as a manual alternative to PGO hotness data.
+If PGO data is available, the annotation ``__attribute__((hot))`` overrides the profile count based hotness (unlike ``__attribute__((cold))``).
+}];
+}
+
+def ColdFunctionEntryDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+``__attribute__((cold))`` marks a function as cold, as a manual alternative to PGO hotness data.
+If PGO data is available, the profile count based hotness overrides the ``__attribute__((cold))`` annotation (unlike ``__attribute__((hot))``).
+}];
+}
 def TransparentUnionDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
