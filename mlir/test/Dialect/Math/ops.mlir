@@ -218,3 +218,15 @@ func.func @round(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
   %2 = math.round %t : tensor<4x4x?xf32>
   return
 }
+
+// CHECK-LABEL: func @ipowi(
+// CHECK-SAME:             %[[I:.*]]: i32, %[[V:.*]]: vector<4xi32>, %[[T:.*]]: tensor<4x4x?xi32>)
+func.func @ipowi(%i: i32, %v: vector<4xi32>, %t: tensor<4x4x?xi32>) {
+  // CHECK: %{{.*}} = math.ipowi %[[I]], %[[I]] : i32
+  %0 = math.ipowi %i, %i : i32
+  // CHECK: %{{.*}} = math.ipowi %[[V]], %[[V]] : vector<4xi32>
+  %1 = math.ipowi %v, %v : vector<4xi32>
+  // CHECK: %{{.*}} = math.ipowi %[[T]], %[[T]] : tensor<4x4x?xi32>
+  %2 = math.ipowi %t, %t : tensor<4x4x?xi32>
+  return
+}

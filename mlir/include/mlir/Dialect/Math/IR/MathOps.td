@@ -43,6 +43,17 @@ class Math_FloatUnaryOp<string mnemonic, list<Trait> traits = []> :
   let assemblyFormat = "$operand attr-dict `:` type($result)";
 }
 
+// Base class for binary math operations on integer types. Require two
+// operands and one result of the same type. This type can be an integer
+// type, vector or tensor thereof.
+class Math_IntegerBinaryOp<string mnemonic, list<Trait> traits = []> :
+    Math_Op<mnemonic, traits # [SameOperandsAndResultType]> {
+  let arguments = (ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs);
+  let results = (outs SignlessIntegerLike:$result);
+
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($result)";
+}
+
 // Base class for binary math operations on floating point types. Require two
 // operands and one result of the same type. This type can be a floating point
 // type, vector or tensor thereof.
@@ -500,6 +511,32 @@ def Math_FmaOp : Math_FloatTernaryOp<"fma"> {
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-fma-intrinsic). In the
     particular case of lowering to LLVM, this is guaranteed to lower
     to the `llvm.fma.*` intrinsic.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// IPowIOp
+//===----------------------------------------------------------------------===//
+
+def Math_IPowIOp : Math_IntegerBinaryOp<"ipowi"> {
+  let summary = "signed integer raised to the power of operation";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.ipowi` ssa-use `,` ssa-use `:` type
+    ```
+
+    The `ipowi` operation takes two operands of integer type (i.e., scalar,
+    tensor or vector) and returns one result of the same type. Operands
+    must have the same type.
+
+    Example:
+
+    ```mlir
+    // Scalar signed integer exponentiation.
+    %a = math.ipowi %b, %c : i32
+    ```
   }];
 }
 
