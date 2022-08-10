@@ -406,11 +406,11 @@ def Shape_MaxOp : Shape_Op<"max",
 
 def Shape_MeetOp : Shape_Op<"meet",
     [Commutative, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
-  let summary = "Returns the least general shape.shape of its operands";
+  let summary = "Returns the least general shape or size of its operands";
   let description = [{
-    An operation that computes the least general shape of input operands.
+    An operation that computes the least general shape or dim of input operands.
     This effectively asserts that corresponding static dimensions are equal.
-    The behavior is to match each element of the `shape.shape` and propagate the
+    The behavior is to match each element of the shape/size and propagate the
     most restrictive information, returning an invalid shape if there are
     contradictory requirements. E.g., using pseudo code
 
@@ -433,9 +433,11 @@ def Shape_MeetOp : Shape_Op<"meet",
     ```
   }];
 
-  let arguments = (ins Shape_ShapeOrSizeType:$arg0, Shape_ShapeOrSizeType:$arg1,
-                   OptionalAttr<StrAttr>:$error);
-  let results = (outs Shape_ShapeOrSizeType:$result);
+  let arguments = (ins
+    Shape_AnyShapeOrSizeType:$arg0,
+    Shape_AnyShapeOrSizeType:$arg1,
+    OptionalAttr<StrAttr>:$error);
+  let results = (outs Shape_AnyShapeOrSizeType:$result);
 
   let assemblyFormat = [{
     $arg0 `,` $arg1 (`,` `error` `=` $error^)? attr-dict `:`
