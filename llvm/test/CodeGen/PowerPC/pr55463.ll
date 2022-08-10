@@ -6,44 +6,18 @@ define void @baz() #0 {
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    stw 0, 4(1)
-; CHECK-NEXT:    stwu 1, -48(1)
-; CHECK-NEXT:    li 3, .LCPI0_0@l
-; CHECK-NEXT:    li 5, .LCPI0_1@l
-; CHECK-NEXT:    lis 4, .LCPI0_0@ha
-; CHECK-NEXT:    lis 6, .LCPI0_1@ha
-; CHECK-NEXT:    evstdd 29, 24(1) # 8-byte Folded Spill
-; CHECK-NEXT:    evstdd 30, 32(1) # 8-byte Folded Spill
-; CHECK-NEXT:    evlddx 30, 4, 3
+; CHECK-NEXT:    stwu 1, -16(1)
 ; CHECK-NEXT:    # implicit-def: $r3
-; CHECK-NEXT:    evlddx 29, 6, 5
-; CHECK-NEXT:    evstdd 28, 16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    # implicit-def: $r28
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %bb1
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    efdcfsi 8, 3
-; CHECK-NEXT:    mr 4, 30
-; CHECK-NEXT:    mr 6, 29
-; CHECK-NEXT:    evmergehi 3, 30, 30
-; CHECK-NEXT:    evmergehi 5, 29, 29
-; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; CHECK-NEXT:    # kill: def $r5 killed $r5 killed $s5
-; CHECK-NEXT:    evmergehi 7, 8, 8
-; CHECK-NEXT:    # kill: def $r8 killed $r8 killed $s8
-; CHECK-NEXT:    # kill: def $r7 killed $r7 killed $s7
-; CHECK-NEXT:    bl fma
-; CHECK-NEXT:    evmergelo 3, 3, 4
-; CHECK-NEXT:    addi 28, 28, 1
-; CHECK-NEXT:    cmplwi 28, 0
-; CHECK-NEXT:    efdctsiz 3, 3
+; CHECK-NEXT:    addi 3, 3, 1
+; CHECK-NEXT:    cmplwi 3, 0
 ; CHECK-NEXT:    bne 0, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %bb8
 ; CHECK-NEXT:    bl wibble
-; CHECK-NEXT:    evldd 30, 32(1) # 8-byte Folded Reload
-; CHECK-NEXT:    evldd 29, 24(1) # 8-byte Folded Reload
-; CHECK-NEXT:    evldd 28, 16(1) # 8-byte Folded Reload
-; CHECK-NEXT:    lwz 0, 52(1)
-; CHECK-NEXT:    addi 1, 1, 48
+; CHECK-NEXT:    lwz 0, 20(1)
+; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 bb:

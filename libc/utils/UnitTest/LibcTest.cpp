@@ -9,6 +9,7 @@
 #include "LibcTest.h"
 
 #include "src/__support/CPP/UInt128.h"
+#include "src/__support/CPP/StringView.h"
 #include "utils/testutils/ExecuteFunction.h"
 #include <cassert>
 #include <iostream>
@@ -42,6 +43,9 @@ describeValue(ValType Value) {
 }
 
 std::string describeValue(std::string Value) { return std::string(Value); }
+std::string describeValue(cpp::StringView Value) {
+  return std::string(Value.data(), Value.size());
+}
 
 // When the value is UInt128 or __uint128_t, show its hexadecimal digits.
 // We cannot just use a UInt128 specialization as that resolves to only
@@ -277,6 +281,12 @@ template bool test<__llvm_libc::cpp::UInt<128>>(
     RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::UInt<128> LHS,
     __llvm_libc::cpp::UInt<128> RHS, const char *LHSStr, const char *RHSStr,
     const char *File, unsigned long Line);
+
+template bool test<__llvm_libc::cpp::StringView>(RunContext *Ctx, TestCondition Cond,
+                                       __llvm_libc::cpp::StringView LHS,
+                                       __llvm_libc::cpp::StringView RHS,
+                                       const char *LHSStr, const char *RHSStr,
+                                       const char *File, unsigned long Line);
 
 } // namespace internal
 

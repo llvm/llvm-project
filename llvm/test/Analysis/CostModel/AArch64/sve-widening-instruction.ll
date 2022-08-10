@@ -1,6 +1,6 @@
 ; Checks if widening instructions works for SVE
 
-; RUN: opt  -passes='print<cost-model>' 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: opt  -passes="print<cost-model>" 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve < %s | FileCheck %s
 
 define <vscale x 4 x i32> @widening(<vscale x 16 x i8> %in, <vscale x 4 x i16> %in2) {
 

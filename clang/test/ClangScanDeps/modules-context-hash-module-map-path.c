@@ -8,13 +8,13 @@
 // RUN: split-file %s %t
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
 
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -j 1 -generate-modules-path-args \
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -j 1 \
 // RUN:   -format experimental-full > %t/deps.json
 
 // RUN: mv %t/module.modulemap %t/module.map
 // RUN: echo 'AFTER_MOVE' >> %t/deps.json
 
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -j 1 -generate-modules-path-args \
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -j 1 \
 // RUN:   -format experimental-full >> %t/deps.json
 
 // RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s

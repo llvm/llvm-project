@@ -325,3 +325,9 @@ func.func @size_lower_bounded_by_constant(%a: !shape.size) -> !shape.size {
     !shape.size, !shape.size -> !shape.size
   return %2 : !shape.size
 }
+
+func.func @meet_index(%arg0 : index, %arg1 : index) -> index {
+  %result = shape.meet %arg0, %arg1 : index, index -> index
+  return %result : index
+}
+

@@ -1,9 +1,9 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -generate-modules-path-args > %t/deps1.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full > %t/deps1.json
 // RUN: mv %t/tu2.c %t/tu.c
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full -generate-modules-path-args > %t/deps2.json
+// RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full > %t/deps2.json
 // RUN: diff -u %t/deps1.json %t/deps2.json
 // RUN: FileCheck %s < %t/deps1.json
 
