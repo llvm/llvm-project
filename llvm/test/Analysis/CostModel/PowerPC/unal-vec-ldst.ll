@@ -1,4 +1,4 @@
-; RUN: opt < %s  -passes='print<cost-model>' 2>&1 -disable-output | FileCheck %s
+; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
