@@ -1,6 +1,6 @@
 ; Check getShuffleCost for SK_BroadCast with scalable vector
 
-; RUN: opt -passes='print<cost-model>' 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=sve  < %s | FileCheck %s
+; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=sve  < %s | FileCheck %s
 
 define void  @broadcast() #0{
 ; CHECK-LABEL: 'broadcast'
