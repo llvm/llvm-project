@@ -59,7 +59,7 @@ def SparseTensor_Dialect : Dialect {
     * [Biketal22] Aart J.C. Bik, Penporn Koanantakool, Tatiana Shpeisman,
     Nicolas Vasilache, Bixia Zheng, and Fredrik Kjolstad. Compiler Support
     for Sparse Tensor Computations in MLIR. ACM Transactions on Architecture
-    and Code Optimization, June, 2022 (see https://dl.acm.org/doi/10.1145/3544559).
+    and Code Optimization, June, 2022. See: https://dl.acm.org/doi/10.1145/3544559
     * [Chou18] Stephen Chou, Fredrik Berg Kjolstad, and Saman Amarasinghe.
     Format Abstraction for Sparse Tensor Algebra Compilers. Proceedings of
     the ACM on Programming Languages, October 2018.
