@@ -59,4 +59,5 @@ int main(int argc, char *argv[]) {
 
 // CHECK-Z1: Uninitialized value was created by an allocation of 'z1' in the stack frame of function 'main'
 // CHECK-Z2: Uninitialized value was created by an allocation of 'z2' in the stack frame of function 'main'
-// CHECK: {{#0 .* in main.*chained_origin_memcpy.cpp:}}[[@LINE-22]]
+// CHECK-Z1: {{#0 .* in main.*chained_origin_memcpy.cpp:}}[[@LINE-21]]
+// CHECK-Z2: {{#0 .* in main.*chained_origin_memcpy.cpp:}}[[@LINE-21]]
