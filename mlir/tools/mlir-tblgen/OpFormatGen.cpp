@@ -1396,6 +1396,8 @@ void OperationFormat::genParserTypeResolution(Operator &op, MethodBody &body) {
         body << tgfmt(*tform, &fmtContext);
       } else {
         body << var->name << "Types";
+        if (!var->isVariadic())
+          body << "[0]";
       }
     } else if (const NamedAttribute *attr = resolver.getAttribute()) {
       if (Optional<StringRef> tform = resolver.getVarTransformer())
@@ -1484,8 +1486,8 @@ void OperationFormat::genParserOperandTypeResolution(
       emitTypeResolver(operandTypes.front(), op.getOperand(0).name);
     }
 
-    body << ", allOperandLoc, result.operands))\n"
-         << "    return ::mlir::failure();\n";
+    body << ", allOperandLoc, result.operands))\n    return "
+            "::mlir::failure();\n";
     return;
   }
 
@@ -1499,25 +1501,8 @@ void OperationFormat::genParserOperandTypeResolution(
     TypeResolution &operandType = operandTypes[i];
     emitTypeResolver(operandType, operand.name);
 
-    // If the type is resolved by a non-variadic variable, index into the
-    // resolved type list. This allows for resolving the types of a variadic
-    // operand list from a non-variadic variable.
-    bool verifyOperandAndTypeSize = true;
-    if (auto *resolverVar = operandType.getVariable()) {
-      if (!resolverVar->isVariadic() && !operandType.getVarTransformer()) {
-        body << "[0]";
-        verifyOperandAndTypeSize = false;
-      }
-    } else {
-      verifyOperandAndTypeSize = !operandType.getBuilderIdx();
-    }
-
-    // Check to see if the sizes between the types and operands must match. If
-    // they do, provide the operand location to select the proper resolution
-    // overload.
-    if (verifyOperandAndTypeSize)
-      body << ", " << operand.name << "OperandsLoc";
-    body << ", result.operands))\n    return ::mlir::failure();\n";
+    body << ", " << operand.name
+         << "OperandsLoc, result.operands))\n    return ::mlir::failure();\n";
   }
 }
 
@@ -2731,11 +2716,11 @@ void OpFormatParser::handleSameTypesConstraint(
 
   // Set the resolvers for each operand and result.
   for (unsigned i = 0, e = op.getNumOperands(); i != e; ++i)
-    if (!seenOperandTypes.test(i) && !op.getOperand(i).name.empty())
+    if (!seenOperandTypes.test(i))
       variableTyResolver[op.getOperand(i).name] = {resolver, llvm::None};
   if (includeResults) {
     for (unsigned i = 0, e = op.getNumResults(); i != e; ++i)
-      if (!seenResultTypes.test(i) && !op.getResultName(i).empty())
+      if (!seenResultTypes.test(i))
         variableTyResolver[op.getResultName(i)] = {resolver, llvm::None};
   }
 }
