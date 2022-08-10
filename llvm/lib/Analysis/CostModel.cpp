@@ -57,14 +57,6 @@ namespace {
         *PassRegistry::getPassRegistry());
     }
 
-    /// Returns the expected cost of the instruction.
-    /// Returns -1 if the cost is unknown.
-    /// Note, this method does not cache the cost calculation and it
-    /// can be expensive in some cases.
-    InstructionCost getInstructionCost(const Instruction *I) const {
-      return TTI->getInstructionCost(I, TargetTransformInfo::TCK_RecipThroughput);
-    }
-
   private:
     void getAnalysisUsage(AnalysisUsage &AU) const override;
     bool runOnFunction(Function &F) override;

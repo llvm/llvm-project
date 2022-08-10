@@ -92,7 +92,7 @@ static bool findRISCVMultilibs(const Driver &D,
 }
 
 BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
-                           const ArgList &Args)
+                     const ArgList &Args)
     : ToolChain(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
   if (getDriver().getInstalledDir() != getDriver().Dir)
@@ -173,21 +173,6 @@ Tool *BareMetal::buildLinker() const {
   return new tools::baremetal::Linker(*this);
 }
 
-std::string BareMetal::getCompilerRTPath() const { return getRuntimesDir(); }
-
-std::string BareMetal::buildCompilerRTBasename(const llvm::opt::ArgList &,
-                                               StringRef, FileType,
-                                               bool) const {
-  return ("libclang_rt.builtins-" + getTriple().getArchName() + ".a").str();
-}
-
-std::string BareMetal::getRuntimesDir() const {
-  SmallString<128> Dir(getDriver().ResourceDir);
-  llvm::sys::path::append(Dir, "lib", "baremetal");
-  Dir += SelectedMultilib.gccSuffix();
-  return std::string(Dir.str());
-}
-
 std::string BareMetal::computeSysRoot() const {
   if (!getDriver().SysRoot.empty())
     return getDriver().SysRoot + SelectedMultilib.osSuffix();
@@ -226,8 +211,8 @@ void BareMetal::addClangTargetOptions(const ArgList &DriverArgs,
   CC1Args.push_back("-nostdsysteminc");
 }
 
-void BareMetal::AddClangCXXStdlibIncludeArgs(
-    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
+void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
+                                             ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nostdinc) ||
       DriverArgs.hasArg(options::OPT_nostdlibinc) ||
       DriverArgs.hasArg(options::OPT_nostdincxx))
@@ -292,10 +277,14 @@ void BareMetal::AddLinkRuntimeLib(const ArgList &Args,
                                   ArgStringList &CmdArgs) const {
   ToolChain::RuntimeLibType RLT = GetRuntimeLibType(Args);
   switch (RLT) {
-  case ToolChain::RLT_CompilerRT:
-    CmdArgs.push_back(
-        Args.MakeArgString("-lclang_rt.builtins-" + getTriple().getArchName()));
+  case ToolChain::RLT_CompilerRT: {
+    const std::string FileName = getCompilerRT(Args, "builtins");
+    llvm::StringRef BaseName = llvm::sys::path::filename(FileName);
+    BaseName.consume_front("lib");
+    BaseName.consume_back(".a");
+    CmdArgs.push_back(Args.MakeArgString("-l" + BaseName));
     return;
+  }
   case ToolChain::RLT_Libgcc:
     CmdArgs.push_back("-lgcc");
     return;
@@ -310,7 +299,7 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                      const char *LinkingOutput) const {
   ArgStringList CmdArgs;
 
-  auto &TC = static_cast<const toolchains::BareMetal&>(getToolChain());
+  auto &TC = static_cast<const toolchains::BareMetal &>(getToolChain());
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
@@ -322,10 +311,17 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
 
-  CmdArgs.push_back(Args.MakeArgString("-L" + TC.getRuntimesDir()));
+  for (const auto &LibPath : TC.getLibraryPaths())
+    CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
+
+  const std::string FileName = TC.getCompilerRT(Args, "builtins");
+  llvm::SmallString<128> PathBuf{FileName};
+  llvm::sys::path::remove_filename(PathBuf);
+  CmdArgs.push_back(Args.MakeArgString("-L" + PathBuf));
 
   if (TC.ShouldLinkCXXStdlib(Args))
     TC.AddCXXStdlibLibArgs(Args, CmdArgs);
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     CmdArgs.push_back("-lc");
     CmdArgs.push_back("-lm");
