@@ -625,131 +625,41 @@ define i64 @test_roundeven_ui64(double %x) {
 }
 
 define double @test_floor_double(double %x) {
-; RV32IFD-LABEL: test_floor_double:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    .cfi_offset ra, -4
-; RV32IFD-NEXT:    call floor@plt
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    addi sp, sp, 16
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: test_floor_double:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    .cfi_offset ra, -8
-; RV64IFD-NEXT:    call floor@plt
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    addi sp, sp, 16
-; RV64IFD-NEXT:    ret
+; CHECKIFD-LABEL: test_floor_double:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    tail floor@plt
   %a = call double @llvm.floor.f64(double %x)
   ret double %a
 }
 
 define double @test_ceil_double(double %x) {
-; RV32IFD-LABEL: test_ceil_double:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    .cfi_offset ra, -4
-; RV32IFD-NEXT:    call ceil@plt
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    addi sp, sp, 16
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: test_ceil_double:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    .cfi_offset ra, -8
-; RV64IFD-NEXT:    call ceil@plt
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    addi sp, sp, 16
-; RV64IFD-NEXT:    ret
+; CHECKIFD-LABEL: test_ceil_double:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    tail ceil@plt
   %a = call double @llvm.ceil.f64(double %x)
   ret double %a
 }
 
 define double @test_trunc_double(double %x) {
-; RV32IFD-LABEL: test_trunc_double:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    .cfi_offset ra, -4
-; RV32IFD-NEXT:    call trunc@plt
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    addi sp, sp, 16
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: test_trunc_double:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    .cfi_offset ra, -8
-; RV64IFD-NEXT:    call trunc@plt
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    addi sp, sp, 16
-; RV64IFD-NEXT:    ret
+; CHECKIFD-LABEL: test_trunc_double:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    tail trunc@plt
   %a = call double @llvm.trunc.f64(double %x)
   ret double %a
 }
 
 define double @test_round_double(double %x) {
-; RV32IFD-LABEL: test_round_double:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    .cfi_offset ra, -4
-; RV32IFD-NEXT:    call round@plt
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    addi sp, sp, 16
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: test_round_double:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    .cfi_offset ra, -8
-; RV64IFD-NEXT:    call round@plt
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    addi sp, sp, 16
-; RV64IFD-NEXT:    ret
+; CHECKIFD-LABEL: test_round_double:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    tail round@plt
   %a = call double @llvm.round.f64(double %x)
   ret double %a
 }
 
 define double @test_roundeven_double(double %x) {
-; RV32IFD-LABEL: test_roundeven_double:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi sp, sp, -16
-; RV32IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV32IFD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IFD-NEXT:    .cfi_offset ra, -4
-; RV32IFD-NEXT:    call roundeven@plt
-; RV32IFD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IFD-NEXT:    addi sp, sp, 16
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: test_roundeven_double:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    .cfi_def_cfa_offset 16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    .cfi_offset ra, -8
-; RV64IFD-NEXT:    call roundeven@plt
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    addi sp, sp, 16
-; RV64IFD-NEXT:    ret
+; CHECKIFD-LABEL: test_roundeven_double:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    tail roundeven@plt
   %a = call double @llvm.roundeven.f64(double %x)
   ret double %a
 }

@@ -15,13 +15,8 @@ define void @test_load_store(half* %p, half* %q) nounwind {
 define float @test_fpextend_float(half* %p) nounwind {
 ; CHECK-LABEL: test_fpextend_float:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    lhu a0, 0(a0)
-; CHECK-NEXT:    call __extendhfsf2@plt
-; CHECK-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    tail __extendhfsf2@plt
   %a = load half, half* %p
   %r = fpext half %a to float
   ret float %r
