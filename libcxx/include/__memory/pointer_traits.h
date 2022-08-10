@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__memory/addressof.h>
+#include <cstddef>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
