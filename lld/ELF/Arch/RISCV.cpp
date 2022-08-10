@@ -616,11 +616,11 @@ static bool relax(InputSection &sec) {
   DenseMap<const Defined *, uint64_t> valueDelta;
   ArrayRef<SymbolAnchor> sa = makeArrayRef(aux.anchors);
   uint32_t delta = 0;
-  for (auto it : llvm::enumerate(sec.relocations)) {
-    for (; sa.size() && sa[0].offset <= it.value().offset; sa = sa.slice(1))
+  for (auto [i, r] : llvm::enumerate(sec.relocations)) {
+    for (; sa.size() && sa[0].offset <= r.offset; sa = sa.slice(1))
       if (!sa[0].end)
         valueDelta[sa[0].d] = delta;
-    delta = aux.relocDeltas[it.index()];
+    delta = aux.relocDeltas[i];
   }
   for (const SymbolAnchor &sa : sa)
     if (!sa.end)
@@ -630,9 +630,7 @@ static bool relax(InputSection &sec) {
 
   std::fill_n(aux.relocTypes.get(), sec.relocations.size(), R_RISCV_NONE);
   aux.writes.clear();
-  for (auto it : llvm::enumerate(sec.relocations)) {
-    Relocation &r = it.value();
-    const size_t i = it.index();
+  for (auto [i, r] : llvm::enumerate(sec.relocations)) {
     const uint64_t loc = secAddr + r.offset - delta;
     uint32_t &cur = aux.relocDeltas[i], remove = 0;
     switch (r.type) {

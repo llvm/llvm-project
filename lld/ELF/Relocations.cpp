@@ -812,9 +812,9 @@ void elf::reportUndefinedSymbols() {
   }
 
   // Enable spell corrector for the first 2 diagnostics.
-  for (auto it : enumerate(undefs))
-    if (!it.value().locs.empty())
-      reportUndefinedSymbol(it.value(), it.index() < 2);
+  for (const auto &[i, undef] : llvm::enumerate(undefs))
+    if (!undef.locs.empty())
+      reportUndefinedSymbol(undef, i < 2);
   undefs.clear();
 }
 
