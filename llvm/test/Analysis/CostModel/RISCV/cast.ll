@@ -16,6 +16,14 @@ define void @ext() {
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z4i16i64 = zext <4 x i16> undef to <4 x i64>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4i32i64 = sext <4 x i32> undef to <4 x i64>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z4i32i64 = zext <4 x i32> undef to <4 x i64>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i8 = sext <4 x i1> undef to <4 x i8>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z4i1i8 = zext <4 x i1> undef to <4 x i8>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i16 = sext <4 x i1> undef to <4 x i16>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z4i1i16 = zext <4 x i1> undef to <4 x i16>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i32 = sext <4 x i1> undef to <4 x i32>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z4i1i32 = zext <4 x i1> undef to <4 x i32>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i64 = sext <4 x i1> undef to <4 x i64>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z4i1i64 = zext <4 x i1> undef to <4 x i64>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8i8i16 = sext <8 x i8> undef to <8 x i16>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z8i8i16 = zext <8 x i8> undef to <8 x i16>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8i8i32 = sext <8 x i8> undef to <8 x i32>
@@ -26,6 +34,14 @@ define void @ext() {
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z8i16i32 = zext <8 x i16> undef to <8 x i32>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8i16i64 = sext <8 x i16> undef to <8 x i64>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z8i16i64 = zext <8 x i16> undef to <8 x i64>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s8i1i8 = sext <8 x i1> undef to <8 x i8>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z8i1i8 = zext <8 x i1> undef to <8 x i8>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s8i1i16 = sext <8 x i1> undef to <8 x i16>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z8i1i16 = zext <8 x i1> undef to <8 x i16>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s8i1i32 = sext <8 x i1> undef to <8 x i32>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z8i1i32 = zext <8 x i1> undef to <8 x i32>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s8i1i64 = sext <8 x i1> undef to <8 x i64>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z8i1i64 = zext <8 x i1> undef to <8 x i64>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; RISCV64-LABEL: 'ext'
@@ -41,6 +57,14 @@ define void @ext() {
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z4i16i64 = zext <4 x i16> undef to <4 x i64>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4i32i64 = sext <4 x i32> undef to <4 x i64>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z4i32i64 = zext <4 x i32> undef to <4 x i64>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i8 = sext <4 x i1> undef to <4 x i8>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z4i1i8 = zext <4 x i1> undef to <4 x i8>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i16 = sext <4 x i1> undef to <4 x i16>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z4i1i16 = zext <4 x i1> undef to <4 x i16>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i32 = sext <4 x i1> undef to <4 x i32>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z4i1i32 = zext <4 x i1> undef to <4 x i32>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i64 = sext <4 x i1> undef to <4 x i64>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z4i1i64 = zext <4 x i1> undef to <4 x i64>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8i8i16 = sext <8 x i8> undef to <8 x i16>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z8i8i16 = zext <8 x i8> undef to <8 x i16>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8i8i32 = sext <8 x i8> undef to <8 x i32>
@@ -51,6 +75,14 @@ define void @ext() {
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z8i16i32 = zext <8 x i16> undef to <8 x i32>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s8i16i64 = sext <8 x i16> undef to <8 x i64>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %z8i16i64 = zext <8 x i16> undef to <8 x i64>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s8i1i8 = sext <8 x i1> undef to <8 x i8>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z8i1i8 = zext <8 x i1> undef to <8 x i8>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s8i1i16 = sext <8 x i1> undef to <8 x i16>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z8i1i16 = zext <8 x i1> undef to <8 x i16>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s8i1i32 = sext <8 x i1> undef to <8 x i32>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z8i1i32 = zext <8 x i1> undef to <8 x i32>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s8i1i64 = sext <8 x i1> undef to <8 x i64>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %z8i1i64 = zext <8 x i1> undef to <8 x i64>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %s4i8i16 = sext <4 x i8>  undef to <4 x i16>
@@ -65,6 +97,14 @@ define void @ext() {
   %z4i16i64 = zext <4 x i16> undef to <4 x i64>
   %s4i32i64 = sext <4 x i32> undef to <4 x i64>
   %z4i32i64 = zext <4 x i32> undef to <4 x i64>
+  %s4i1i8 = sext <4 x i1>  undef to <4 x i8>
+  %z4i1i8 = zext <4 x i1>  undef to <4 x i8>
+  %s4i1i16 = sext <4 x i1>  undef to <4 x i16>
+  %z4i1i16 = zext <4 x i1>  undef to <4 x i16>
+  %s4i1i32 = sext <4 x i1>  undef to <4 x i32>
+  %z4i1i32 = zext <4 x i1>  undef to <4 x i32>
+  %s4i1i64 = sext <4 x i1>  undef to <4 x i64>
+  %z4i1i64 = zext <4 x i1>  undef to <4 x i64>
 
   %s8i8i16 = sext <8 x i8>  undef to <8 x i16>
   %z8i8i16 = zext <8 x i8>  undef to <8 x i16>
@@ -76,6 +116,14 @@ define void @ext() {
   %z8i16i32 = zext <8 x i16> undef to <8 x i32>
   %s8i16i64 = sext <8 x i16> undef to <8 x i64>
   %z8i16i64 = zext <8 x i16> undef to <8 x i64>
+  %s8i1i8 = sext <8 x i1>  undef to <8 x i8>
+  %z8i1i8 = zext <8 x i1>  undef to <8 x i8>
+  %s8i1i16 = sext <8 x i1>  undef to <8 x i16>
+  %z8i1i16 = zext <8 x i1>  undef to <8 x i16>
+  %s8i1i32 = sext <8 x i1>  undef to <8 x i32>
+  %z8i1i32 = zext <8 x i1>  undef to <8 x i32>
+  %s8i1i64 = sext <8 x i1>  undef to <8 x i64>
+  %z8i1i64 = zext <8 x i1>  undef to <8 x i64>
   ret void
 }
 
@@ -87,6 +135,10 @@ define void @trunc() {
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4i16i32 = trunc <4 x i32> undef to <4 x i16>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i16i64 = trunc <4 x i64> undef to <4 x i16>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4i32i64 = trunc <4 x i64> undef to <4 x i32>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i8 = trunc <4 x i8> undef to <4 x i1>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i16 = trunc <4 x i16> undef to <4 x i1>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i32 = trunc <4 x i32> undef to <4 x i1>
+; RISCV32-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i64 = trunc <4 x i64> undef to <4 x i1>
 ; RISCV32-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; RISCV64-LABEL: 'trunc'
@@ -96,6 +148,10 @@ define void @trunc() {
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4i16i32 = trunc <4 x i32> undef to <4 x i16>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i16i64 = trunc <4 x i64> undef to <4 x i16>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %s4i32i64 = trunc <4 x i64> undef to <4 x i32>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i8 = trunc <4 x i8> undef to <4 x i1>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i16 = trunc <4 x i16> undef to <4 x i1>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i32 = trunc <4 x i32> undef to <4 x i1>
+; RISCV64-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s4i1i64 = trunc <4 x i64> undef to <4 x i1>
 ; RISCV64-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %s4i8i16 = trunc <4 x i16> undef to <4 x i8>
@@ -104,6 +160,10 @@ define void @trunc() {
   %s4i16i32 = trunc <4 x i32> undef to <4 x i16>
   %s4i16i64 = trunc <4 x i64> undef to <4 x i16>
   %s4i32i64 = trunc <4 x i64> undef to <4 x i32>
+  %s4i1i8 = trunc <4 x i8> undef to <4 x i1>
+  %s4i1i16 = trunc <4 x i16> undef to <4 x i1>
+  %s4i1i32 = trunc <4 x i32> undef to <4 x i1>
+  %s4i1i64 = trunc <4 x i64> undef to <4 x i1>
   ret void
 }
 
