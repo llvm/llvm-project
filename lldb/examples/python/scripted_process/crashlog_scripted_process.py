@@ -13,7 +13,7 @@ class CrashLogScriptedProcess(ScriptedProcess):
         try:
             crash_log = CrashLogParser().parse(self.dbg, self.crashlog_path, False)
         except Exception as e:
-            return
+            raise e
 
         self.pid = crash_log.process_id
         self.addr_mask = crash_log.addr_mask
@@ -44,6 +44,7 @@ class CrashLogScriptedProcess(ScriptedProcess):
         super().__init__(target, args)
 
         if not self.target or not self.target.IsValid():
+            # Return error
             return
 
         self.crashlog_path = None
@@ -54,6 +55,7 @@ class CrashLogScriptedProcess(ScriptedProcess):
                 self.crashlog_path = crashlog_path.GetStringValue(4096)
 
         if not self.crashlog_path:
+            # Return error
             return
 
         load_all_images = args.GetValueForKey("load_all_images")

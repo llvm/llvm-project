@@ -1017,11 +1017,22 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options):
 
     crashlog = CrashLogParser().parse(debugger, crashlog_path, False)
 
-    if debugger.GetNumTargets() > 0:
-        target = debugger.GetTargetAtIndex(0)
-    else:
+    target = lldb.SBTarget()
+    # 1. Try to use the user-provided target
+    if options.target_path:
+        target = debugger.CreateTarget(options.target_path)
+        if not target:
+            result.PutCString("error: couldn't create target provided by the \
+                              user ({})".format(options.target_path))
+            return
+    # 2. If the user didn't provide a target, try to create a target using the symbolicator
+    if not target or not target.IsValid():
         target = crashlog.create_target()
-    if not target:
+    # 3. If that didn't work, and a target is already loaded, use it
+    if (target is None  or not target.IsValid()) and debugger.GetNumTargets() > 0:
+        target = debugger.GetTargetAtIndex(0)
+    # 4. Fail
+    if target is None or not target.IsValid():
         result.PutCString("error: couldn't create target")
         return
 
@@ -1183,6 +1194,12 @@ def CreateSymbolicateCrashLogOptions(
             action='store_true',
             help='dump symbolicated stackframes without creating a debug session',
             default=True)
+        option_parser.add_option(
+            '--target',
+            '-t',
+            dest='target_path',
+            help='the target binary path that should be used for interactive crashlog (optional)',
+            default=None)
     return option_parser
 
 
