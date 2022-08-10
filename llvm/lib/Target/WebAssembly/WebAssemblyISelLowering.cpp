@@ -1581,6 +1581,11 @@ SDValue WebAssemblyTargetLowering::LowerStore(SDValue Op,
     return DAG.getNode(WebAssemblyISD::LOCAL_SET, DL, Tys, Ops);
   }
 
+  if (WebAssembly::isWasmVarAddressSpace(SN->getAddressSpace()))
+    report_fatal_error(
+        "Encountered an unlowerable store to the wasm_var address space",
+        false);
+
   return Op;
 }
 
@@ -1635,6 +1640,11 @@ SDValue WebAssemblyTargetLowering::LowerLoad(SDValue Op,
     assert(Result->getNumValues() == 2 && "Loads must carry a chain!");
     return Result;
   }
+
+  if (WebAssembly::isWasmVarAddressSpace(LN->getAddressSpace()))
+    report_fatal_error(
+        "Encountered an unlowerable load from the wasm_var address space",
+        false);
 
   return Op;
 }
