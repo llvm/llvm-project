@@ -35,6 +35,8 @@ if(TARGET libc.src.__support.threads.${LIBC_TARGET_OS}.thread)
     SRCS
       thread.cpp
     DEPENDS
+      .mutex
       .${LIBC_TARGET_OS}.thread
+      libc.src.__support.fixedvector
   )
 endif()

@@ -475,6 +475,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<PThreadTType>]
       >,
       FunctionSpec<
+          "pthread_exit",
+          RetValSpec<VoidType>,
+          [ArgSpec<VoidPtr>]
+      >,
+      FunctionSpec<
           "pthread_self",
           RetValSpec<PThreadTType>,
           [ArgSpec<VoidType>]
