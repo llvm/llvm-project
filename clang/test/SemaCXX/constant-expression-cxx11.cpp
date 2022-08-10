@@ -2421,6 +2421,7 @@ void testValueInRangeOfEnumerationValues() {
   constexpr E1 x1 = static_cast<E1>(-8);
   constexpr E1 x2 = static_cast<E1>(8);
   // expected-error@-1 {{integer value 8 is outside the valid range of values [-8, 7] for this enumeration type}}
+  E1 x2b = static_cast<E1>(8); // ok, not a constant expression context
 
   constexpr E2 x3 = static_cast<E2>(-8);
   // expected-error@-1 {{integer value -8 is outside the valid range of values [0, 7] for this enumeration type}}
