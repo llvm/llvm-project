@@ -4368,4 +4368,106 @@ TEST(TransferTest, ContextSensitiveMethodGetterAndSetter) {
                /*.BuiltinTransferOptions=*/{/*.ContextSensitive=*/true}});
 }
 
+TEST(TransferTest, ContextSensitiveConstructorBody) {
+  std::string Code = R"(
+    class MyClass {
+    public:
+      MyClass() { MyField = true; }
+
+      bool MyField;
+    };
+
+    void target() {
+      MyClass MyObj;
+      bool Foo = MyObj.MyField;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                auto &FooVal =
+                    *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+                EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+              },
+              {/*.ApplyBuiltinTransfer=*/true,
+               /*.BuiltinTransferOptions=*/{/*.ContextSensitive=*/true}});
+}
+
+TEST(TransferTest, ContextSensitiveConstructorInitializer) {
+  std::string Code = R"(
+    class MyClass {
+    public:
+      MyClass() : MyField(true) {}
+
+      bool MyField;
+    };
+
+    void target() {
+      MyClass MyObj;
+      bool Foo = MyObj.MyField;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                auto &FooVal =
+                    *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+                EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+              },
+              {/*.ApplyBuiltinTransfer=*/true,
+               /*.BuiltinTransferOptions=*/{/*.ContextSensitive=*/true}});
+}
+
+TEST(TransferTest, ContextSensitiveConstructorDefault) {
+  std::string Code = R"(
+    class MyClass {
+    public:
+      MyClass() = default;
+
+      bool MyField = true;
+    };
+
+    void target() {
+      MyClass MyObj;
+      bool Foo = MyObj.MyField;
+      // [[p]]
+    }
+  )";
+  runDataflow(Code,
+              [](llvm::ArrayRef<
+                     std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                     Results,
+                 ASTContext &ASTCtx) {
+                ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+                const Environment &Env = Results[0].second.Env;
+
+                const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+                ASSERT_THAT(FooDecl, NotNull());
+
+                auto &FooVal =
+                    *cast<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+                EXPECT_TRUE(Env.flowConditionImplies(FooVal));
+              },
+              {/*.ApplyBuiltinTransfer=*/true,
+               /*.BuiltinTransferOptions=*/{/*.ContextSensitive=*/true}});
+}
+
 } // namespace
