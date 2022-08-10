@@ -14,6 +14,7 @@ typedef void (*sighandler_t)(int);
 sighandler_t signal(int signum, sighandler_t handler);
 
 void f_extern(void);
+void f_extern_handler(int);
 
 void handler_printf(int) {
   printf("1234");
@@ -185,8 +186,8 @@ void test_other(void) {
   signal(SIGINT, _Exit);
   signal(SIGINT, other_call);
   // CHECK-NOTES: :[[@LINE-1]]:18: warning: standard function 'other_call' may not be asynchronous-safe; using it as a signal handler may be dangerous [bugprone-signal-handler]
-  signal(SIGINT, f_extern);
-  // CHECK-NOTES: :[[@LINE-1]]:18: warning: cannot verify that external function 'f_extern' is asynchronous-safe; using it as a signal handler may be dangerous [bugprone-signal-handler]
+  signal(SIGINT, f_extern_handler);
+  // CHECK-NOTES: :[[@LINE-1]]:18: warning: cannot verify that external function 'f_extern_handler' is asynchronous-safe; using it as a signal handler may be dangerous [bugprone-signal-handler]
 
   signal(SIGINT, SIG_IGN);
   signal(SIGINT, SIG_DFL);

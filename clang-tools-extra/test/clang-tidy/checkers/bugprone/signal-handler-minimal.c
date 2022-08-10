@@ -13,7 +13,9 @@ void handler_bad1(int) {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: standard function '_exit' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
 }
 
-void handler_bad2(void *dst, const void *src) {
+void handler_bad2(int) {
+  void *dst;
+  const void *src;
   memcpy(dst, src, 10);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: standard function 'memcpy' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
 }

@@ -8157,24 +8157,6 @@ def err_typecheck_convert_incompatible_pointer : Error<
   "; take the address with &|"
   "; remove *|"
   "; remove &}3">;
-def ext_typecheck_convert_incompatible_function_pointer : ExtWarn<
-  "incompatible function pointer types "
-  "%select{%diff{assigning to $ from $|assigning to different types}0,1"
-  "|%diff{passing $ to parameter of type $|"
-  "passing to parameter of different type}0,1"
-  "|%diff{returning $ from a function with result type $|"
-  "returning from function with different return type}0,1"
-  "|%diff{converting $ to type $|converting between types}0,1"
-  "|%diff{initializing $ with an expression of type $|"
-  "initializing with expression of different type}0,1"
-  "|%diff{sending $ to parameter of type $|"
-  "sending to parameter of different type}0,1"
-  "|%diff{casting $ to type $|casting between types}0,1}2"
-  "%select{|; dereference with *|"
-  "; take the address with &|"
-  "; remove *|"
-  "; remove &}3">,
-  InGroup<IncompatibleFunctionPointerTypes>;
 def err_typecheck_convert_incompatible_function_pointer : Error<
   "incompatible function pointer types "
   "%select{%diff{assigning to $ from $|assigning to different types}0,1"
@@ -8192,6 +8174,9 @@ def err_typecheck_convert_incompatible_function_pointer : Error<
   "; take the address with &|"
   "; remove *|"
   "; remove &}3">;
+def ext_typecheck_convert_incompatible_function_pointer : ExtWarn<
+  err_typecheck_convert_incompatible_function_pointer.Text>,
+  InGroup<IncompatibleFunctionPointerTypes>, DefaultError;
 def ext_typecheck_convert_discards_qualifiers : ExtWarn<
   "%select{%diff{assigning to $ from $|assigning to different types}0,1"
   "|%diff{passing $ to parameter of type $|"

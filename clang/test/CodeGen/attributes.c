@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -Wno-strict-prototypes -fcf-protection=branch -triple i386-linux-gnu %s -o - | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -Wno-strict-prototypes -Wno-incompatible-function-pointer-types -fcf-protection=branch -triple i386-linux-gnu %s -o - | FileCheck %s
 
 // CHECK: @t5 = weak{{.*}} global i32 2
 int t5 __attribute__((weak)) = 2;
