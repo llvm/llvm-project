@@ -3118,11 +3118,22 @@ void mlir::python::populateIRCore(py::module &m) {
       .def_property_readonly(
           "owner",
           [](PyValue &self) {
-            assert(mlirOperationEqual(self.getParentOperation()->get(),
-                                      mlirOpResultGetOwner(self.get())) &&
-                   "expected the owner of the value in Python to match that in "
-                   "the IR");
-            return self.getParentOperation().getObject();
+            MlirValue v = self.get();
+            if (mlirValueIsAOpResult(v)) {
+              assert(
+                  mlirOperationEqual(self.getParentOperation()->get(),
+                                     mlirOpResultGetOwner(self.get())) &&
+                  "expected the owner of the value in Python to match that in "
+                  "the IR");
+              return self.getParentOperation().getObject();
+            }
+
+            if (mlirValueIsABlockArgument(v)) {
+              MlirBlock block = mlirBlockArgumentGetOwner(self.get());
+              return py::cast(PyBlock(self.getParentOperation(), block));
+            }
+
+            assert(false && "Value must be a block argument or an op result");
           })
       .def("__eq__",
            [](PyValue &self, PyValue &other) {
