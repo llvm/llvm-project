@@ -201,42 +201,6 @@ typedef void CXModuleDiscoveredCallback(void *Context,
                                         CXModuleDependencySet *MDS);
 
 /**
- * Returns the list of file dependencies for a particular compiler invocation.
- *
- * \param argc the number of compiler invocation arguments (including argv[0]).
- * \param argv the compiler driver invocation arguments (including argv[0]).
- * \param WorkingDirectory the directory in which the invocation runs.
- * \param MDC a callback that is called whenever a new module is discovered.
- *            This may receive the same module on different workers. This should
- *            be NULL if
- *            \c clang_experimental_DependencyScannerService_create_v0 was
- *            called with \c CXDependencyMode_Flat. This callback will be called
- *            on the same thread that called this function.
- * \param Context the context that will be passed to \c MDC each time it is
- *                called.
- * \param [out] error the error string to pass back to client (if any).
- *
- * \returns A pointer to a CXFileDependencies on success, NULL otherwise. The
- *          CXFileDependencies must be freed by calling
- *          \c clang_experimental_FileDependencies_dispose.
- */
-CINDEX_LINKAGE CXFileDependencies *
-clang_experimental_DependencyScannerWorker_getFileDependencies_v2(
-    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
-    const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
-    void *Context, CXString *error);
-
-/**
- * Same as \c clang_experimental_DependencyScannerWorker_getFileDependencies_v2,
- * but get the dependencies by module name alone.
- */
-CINDEX_LINKAGE CXFileDependencies *
-clang_experimental_DependencyScannerWorker_getDependenciesByModuleName_v0(
-    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
-    const char *ModuleName, const char *WorkingDirectory,
-    CXModuleDiscoveredCallback *MDC, void *Context, CXString *error);
-
-/**
  * A callback that is called to determine the paths of output files for each
  * module dependency. The ModuleFile (pcm) path mapping is mandatory.
  *

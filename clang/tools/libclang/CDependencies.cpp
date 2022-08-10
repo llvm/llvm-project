@@ -261,37 +261,6 @@ getFileDependencies(CXDependencyScannerWorker W, int argc,
                              ModuleName);
 }
 
-CXFileDependencies *
-clang_experimental_DependencyScannerWorker_getFileDependencies_v2(
-    CXDependencyScannerWorker W, int argc, const char *const *argv,
-    const char *WorkingDirectory, CXModuleDiscoveredCallback *MDC,
-    void *Context, CXString *error) {
-  return getFileDependencies(
-      W, argc, argv, WorkingDirectory, MDC, Context, error,
-      [](const FullDependencies &FD) {
-        return FD.getCommandLineWithoutModulePaths();
-      },
-      [](const ModuleDeps &MD) {
-        return MD.getCanonicalCommandLineWithoutModulePaths();
-      });
-}
-
-CXFileDependencies *
-clang_experimental_DependencyScannerWorker_getDependenciesByModuleName_v0(
-    CXDependencyScannerWorker W, int argc, const char *const *argv,
-    const char *ModuleName, const char *WorkingDirectory,
-    CXModuleDiscoveredCallback *MDC, void *Context, CXString *error) {
-  return getFileDependencies(
-      W, argc, argv, WorkingDirectory, MDC, Context, error,
-      [](const FullDependencies &FD) {
-        return FD.getCommandLineWithoutModulePaths();
-      },
-      [](const ModuleDeps &MD) {
-        return MD.getCanonicalCommandLineWithoutModulePaths();
-      },
-      StringRef(ModuleName));
-}
-
 namespace {
 class OutputLookup {
 public:
