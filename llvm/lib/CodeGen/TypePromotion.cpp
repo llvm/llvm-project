@@ -106,9 +106,9 @@ class IRPromoter {
   SetVector<Value *> &Sources;
   SetVector<Instruction *> &Sinks;
   SmallPtrSetImpl<Instruction *> &SafeWrap;
+  SmallPtrSetImpl<Instruction *> &InstsToRemove;
   IntegerType *ExtTy = nullptr;
   SmallPtrSet<Value *, 8> NewInsts;
-  SmallPtrSet<Instruction *, 4> InstsToRemove;
   DenseMap<Value *, SmallVector<Type *, 4>> TruncTysMap;
   SmallPtrSet<Value *, 8> Promoted;
 
@@ -120,12 +120,12 @@ class IRPromoter {
   void Cleanup();
 
 public:
-  IRPromoter(LLVMContext &C, unsigned Width,
-             SetVector<Value *> &visited, SetVector<Value *> &sources,
-             SetVector<Instruction *> &sinks,
-             SmallPtrSetImpl<Instruction *> &wrap)
-      : Ctx(C), PromotedWidth(Width), Visited(visited),
-        Sources(sources), Sinks(sinks), SafeWrap(wrap) {
+  IRPromoter(LLVMContext &C, unsigned Width, SetVector<Value *> &visited,
+             SetVector<Value *> &sources, SetVector<Instruction *> &sinks,
+             SmallPtrSetImpl<Instruction *> &wrap,
+             SmallPtrSetImpl<Instruction *> &instsToRemove)
+      : Ctx(C), PromotedWidth(Width), Visited(visited), Sources(sources),
+        Sinks(sinks), SafeWrap(wrap), InstsToRemove(instsToRemove) {
     ExtTy = IntegerType::get(Ctx, PromotedWidth);
   }
 
@@ -139,6 +139,7 @@ class TypePromotion : public FunctionPass {
   SmallPtrSet<Value *, 16> AllVisited;
   SmallPtrSet<Instruction *, 8> SafeToPromote;
   SmallPtrSet<Instruction *, 4> SafeWrap;
+  SmallPtrSet<Instruction *, 4> InstsToRemove;
 
   // Does V have the same size result type as TypeSize.
   bool EqualTypeSize(Value *V);
@@ -604,7 +605,6 @@ void IRPromoter::Cleanup() {
   for (auto *I : InstsToRemove) {
     LLVM_DEBUG(dbgs() << "IR Promotion: Removing " << *I << "\n");
     I->dropAllReferences();
-    I->eraseFromParent();
   }
 }
 
@@ -876,7 +876,7 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
     return false;
 
   IRPromoter Promoter(*Ctx, PromotedWidth, CurrentVisited, Sources, Sinks,
-                      SafeWrap);
+                      SafeWrap, InstsToRemove);
   Promoter.Mutate();
   return true;
 }
@@ -941,6 +941,11 @@ bool TypePromotion::runOnFunction(Function &F) {
           break;
         }
       }
+    }
+    if (!InstsToRemove.empty()) {
+      for (auto *I : InstsToRemove)
+        I->eraseFromParent();
+      InstsToRemove.clear();
     }
   }
 
