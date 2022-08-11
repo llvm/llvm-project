@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -175,9 +176,11 @@ public:
   TypePromotion() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     AU.setPreservesCFG();
+    AU.addPreserved<LoopInfoWrapperPass>();
   }
 
   StringRef getPassName() const override { return PASS_NAME; }
@@ -872,7 +875,8 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
 
   // DAG optimizations should be able to handle these cases better, especially
   // for function arguments.
-  if (ToPromote < 2 || (Blocks.size() == 1 && (NonFreeArgs > SafeWrap.size())))
+  if (!isa<PHINode>(V) && (ToPromote < 2 || (Blocks.size() == 1 &&
+                                             (NonFreeArgs > SafeWrap.size()))))
     return false;
 
   IRPromoter Promoter(*Ctx, PromotedWidth, CurrentVisited, Sources, Sinks,
@@ -901,6 +905,7 @@ bool TypePromotion::runOnFunction(Function &F) {
   const TargetLowering *TLI = SubtargetInfo->getTargetLowering();
   const TargetTransformInfo &TII =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  const LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   RegisterBitWidth =
       TII.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedSize();
   Ctx = &F.getParent()->getContext();
@@ -929,28 +934,39 @@ bool TypePromotion::runOnFunction(Function &F) {
     return PromotedVT.getFixedSizeInBits();
   };
 
-  // Search up from icmps to try to promote their operands.
+  auto BBIsInLoop = [&](BasicBlock *BB) -> bool {
+    for (auto *L : LI)
+      if (L->contains(BB))
+        return true;
+    return false;
+  };
+
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       if (AllVisited.count(&I))
         continue;
 
-      if (!isa<ICmpInst>(&I))
-        continue;
+      if (isa<ZExtInst>(&I) && isa<PHINode>(I.getOperand(0)) &&
+          BBIsInLoop(&BB)) {
+        LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: " << I.getOperand(0)
+                          << "\n");
+        EVT ZExtVT = TLI->getValueType(DL, I.getType());
+        Instruction *Phi = static_cast<Instruction *>(I.getOperand(0));
+        MadeChange |= TryToPromote(Phi, ZExtVT.getFixedSizeInBits());
+      } else if (auto *ICmp = dyn_cast<ICmpInst>(&I)) {
+        // Search up from icmps to try to promote their operands.
+        // Skip signed or pointer compares
+        if (ICmp->isSigned())
+          continue;
 
-      auto *ICmp = cast<ICmpInst>(&I);
+        LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: " << *ICmp << "\n");
 
-      // Skip signed
-      if (ICmp->isSigned())
-        continue;
-
-      LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: " << *ICmp << "\n");
-
-      for (auto &Op : ICmp->operands()) {
-        if (auto *OpI = dyn_cast<Instruction>(Op)) {
-          if (auto PromotedWidth = GetPromoteWidth(OpI)) {
-            MadeChange |= TryToPromote(OpI, PromotedWidth);
-            break;
+        for (auto &Op : ICmp->operands()) {
+          if (auto *OpI = dyn_cast<Instruction>(Op)) {
+            if (auto PromotedWidth = GetPromoteWidth(OpI)) {
+              MadeChange |= TryToPromote(OpI, PromotedWidth);
+              break;
+            }
           }
         }
       }
