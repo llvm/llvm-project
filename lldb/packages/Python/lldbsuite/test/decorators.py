@@ -248,7 +248,7 @@ def _decorateTest(mode,
                 reason_str = "{} due to the following parameter(s): {}".format(
                     mode_str, reason_str)
             else:
-                reason_str = "{} unconditionally"
+                reason_str = "{} unconditionally".format(mode_str)
             if bugnumber is not None and not six.callable(bugnumber):
                 reason_str = reason_str + " [" + str(bugnumber) + "]"
         return reason_str
