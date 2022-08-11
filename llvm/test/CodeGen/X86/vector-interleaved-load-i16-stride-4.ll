@@ -42,16 +42,15 @@ define void @vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr %out.vec2, ptr %
 ; AVX512-LABEL: vf2:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512-NEXT:    vpmovqw %xmm0, %xmm1
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[0,2,2,3]
-; AVX512-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[1,3,2,3,4,5,6,7]
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,1,2,3]
-; AVX512-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm0[2,0,2,3,4,5,6,7]
-; AVX512-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[3,1,2,3,4,5,6,7]
-; AVX512-NEXT:    vmovd %xmm1, (%rsi)
-; AVX512-NEXT:    vmovd %xmm2, (%rdx)
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[0,2,2,3]
+; AVX512-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[1,3,2,3,4,5,6,7]
+; AVX512-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[3,1,2,3]
+; AVX512-NEXT:    vpshuflw {{.*#+}} xmm3 = xmm2[2,0,2,3,4,5,6,7]
+; AVX512-NEXT:    vpshuflw {{.*#+}} xmm2 = xmm2[3,1,2,3,4,5,6,7]
+; AVX512-NEXT:    vpmovqw %xmm0, (%rsi)
+; AVX512-NEXT:    vmovd %xmm1, (%rdx)
 ; AVX512-NEXT:    vmovd %xmm3, (%rcx)
-; AVX512-NEXT:    vmovd %xmm0, (%r8)
+; AVX512-NEXT:    vmovd %xmm2, (%r8)
 ; AVX512-NEXT:    retq
   %wide.vec = load <8 x i16>, ptr %in.vec, align 32
 
