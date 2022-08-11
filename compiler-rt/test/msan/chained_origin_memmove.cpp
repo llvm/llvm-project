@@ -52,6 +52,7 @@ int main(int argc, char *argv[]) {
 // CHECK-FULL-STACK: {{#1 .* in fn_f.*chained_origin_memmove.cpp:}}[[@LINE-24]]
 // CHECK-SHORT-STACK: {{#0 .* in fn_g.*chained_origin_memmove.cpp:}}[[@LINE-29]]
 
-// CHECK-Z1: Uninitialized value was created by an allocation of 'z1' in the stack frame of function 'main'
-// CHECK-Z2: Uninitialized value was created by an allocation of 'z2' in the stack frame of function 'main'
-// CHECK: {{#0 .* in main.*chained_origin_memmove.cpp:}}[[@LINE-22]]
+// CHECK-Z1: Uninitialized value was created by an allocation of 'z1' in the stack frame
+// CHECK-Z2: Uninitialized value was created by an allocation of 'z2' in the stack frame
+// CHECK-Z1: {{#0 .* in main.*chained_origin_memmove.cpp:}}[[@LINE-21]]
+// CHECK-Z2: {{#0 .* in main.*chained_origin_memmove.cpp:}}[[@LINE-21]]

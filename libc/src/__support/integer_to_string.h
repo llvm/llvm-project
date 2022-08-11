@@ -9,14 +9,25 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_INTEGER_TO_STRING_H
 #define LLVM_LIBC_SRC_SUPPORT_INTEGER_TO_STRING_H
 
+#include "src/__support/CPP/ArrayRef.h"
 #include "src/__support/CPP/StringView.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
 
 namespace __llvm_libc {
 
-template <typename T> class IntegerToString {
+template <typename T, uint8_t BASE = 10,
+          cpp::enable_if_t<2 <= BASE && BASE <= 36, int> = 0>
+class IntegerToString {
 public:
-  // We size the string buffer using an approximation algorithm:
+  static constexpr inline size_t floor_log_2(size_t num) {
+    size_t i = 0;
+    for (; num > 1; num /= 2) {
+      ++i;
+    }
+    return i;
+  }
+  // We size the string buffer for base 10 using an approximation algorithm:
   //
   //   size = ceil(sizeof(T) * 5 / 2)
   //
@@ -34,8 +45,20 @@ public:
   // overhead is small enough to tolerate. In the actual formula below, we
   // add an additional byte to accommodate the '-' sign in case of signed
   // integers.
-  static constexpr size_t BUFSIZE =
-      (sizeof(T) * 5 + 1) / 2 + (cpp::is_signed<T>() ? 1 : 0);
+  // For other bases, we approximate by rounding down to the nearest power of
+  // two base, since the space needed is easy to calculate and it won't
+  // overestimate by too much.
+
+  static constexpr size_t bufsize() {
+    constexpr size_t BITS_PER_DIGIT = floor_log_2(BASE);
+    constexpr size_t BUFSIZE_COMMON =
+        ((sizeof(T) * 8 + (BITS_PER_DIGIT - 1)) / BITS_PER_DIGIT);
+    constexpr size_t BUFSIZE_BASE10 = (sizeof(T) * 5 + 1) / 2;
+    return (cpp::is_signed<T>() ? 1 : 0) +
+           (BASE == 10 ? BUFSIZE_BASE10 : BUFSIZE_COMMON);
+  }
+
+  static constexpr size_t BUFSIZE = bufsize();
 
 private:
   static_assert(cpp::is_integral_v<T>,
@@ -44,33 +67,69 @@ private:
   using UnsignedType = cpp::make_unsigned_t<T>;
 
   char strbuf[BUFSIZE] = {'\0'};
-  size_t len = 0;
+  cpp::StringView str_view;
 
-  constexpr void convert(UnsignedType val) {
-    size_t buffptr = BUFSIZE;
-    if (val == 0) {
-      strbuf[buffptr - 1] = '0';
+  static inline constexpr cpp::StringView
+  convert_alpha_numeric(T val, cpp::MutableArrayRef<char> &buffer,
+                        bool lowercase, const uint8_t conv_base) {
+    UnsignedType uval = val < 0 ? UnsignedType(-val) : UnsignedType(val);
+
+    const char a = lowercase ? 'a' : 'A';
+
+    size_t len = 0;
+
+    size_t buffptr = buffer.size();
+    if (uval == 0) {
+      buffer[buffptr - 1] = '0';
       --buffptr;
     } else {
-      for (; val > 0; --buffptr, val /= 10)
-        strbuf[buffptr - 1] = (val % 10) + '0';
+      for (; uval > 0; --buffptr, uval /= conv_base) {
+        UnsignedType digit = (uval % conv_base);
+        buffer[buffptr - 1] = digit < 10 ? digit + '0' : digit + a - 10;
+      }
     }
-    len = BUFSIZE - buffptr;
-  }
+    len = buffer.size() - buffptr;
 
-public:
-  constexpr explicit IntegerToString(T val) {
-    convert(val < 0 ? UnsignedType(-val) : UnsignedType(val));
     if (val < 0) {
       // This branch will be taken only for negative signed values.
       ++len;
-      strbuf[BUFSIZE - len] = '-';
+      buffer[buffer.size() - len] = '-';
     }
+    cpp::StringView buff_str(buffer.data() + buffer.size() - len, len);
+    return buff_str;
   }
 
-  cpp::StringView str() const {
-    return cpp::StringView(strbuf + BUFSIZE - len, len);
+  // This function exists to check at compile time that the base is valid, as
+  // well as to convert the templated call into a non-templated call. This
+  // allows the compiler to decide to do strength reduction and constant folding
+  // on the base or not, depending on if size or performance is required.
+  static inline constexpr cpp::StringView
+  convert_internal(T val, cpp::MutableArrayRef<char> &buffer, bool lowercase) {
+    return convert_alpha_numeric(val, buffer, lowercase, BASE);
   }
+
+public:
+  static inline cpp::optional<cpp::StringView>
+  convert(T val, cpp::MutableArrayRef<char> &buffer, bool lowercase) {
+    // If This function can actually be a constexpr, then the below "if" will be
+    // optimized out.
+    if (buffer.size() < bufsize())
+      return cpp::optional<cpp::StringView>();
+    return cpp::optional<cpp::StringView>(
+        convert_internal(val, buffer, lowercase));
+  }
+
+  constexpr explicit IntegerToString(T val) {
+    cpp::MutableArrayRef<char> bufref(strbuf, BUFSIZE);
+    str_view = convert_internal(val, bufref, true);
+  }
+
+  constexpr explicit IntegerToString(T val, bool lowercase) {
+    cpp::MutableArrayRef<char> bufref(strbuf, BUFSIZE);
+    str_view = convert_internal(val, bufref, lowercase);
+  }
+
+  cpp::StringView str() const { return str_view; }
 
   operator cpp::StringView() const { return str(); }
 };

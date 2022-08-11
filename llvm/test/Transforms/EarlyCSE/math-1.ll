@@ -22,7 +22,6 @@ define float @f_asinf() {
 declare double @atan(double) #0
 define double @f_atan() {
 ; CHECK-LABEL: @f_atan(
-; CHECK-NEXT:    [[RES:%.*]] = tail call fast double @atan(double 1.000000e+00)
 ; CHECK-NEXT:    ret double 0x3FE921FB
 ;
   %res = tail call fast double @atan(double 1.0)

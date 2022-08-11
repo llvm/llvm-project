@@ -48,6 +48,17 @@ void mlir::tblgen::emitDescription(StringRef description, raw_ostream &os) {
   ros.printReindented(description.rtrim(" \t"));
 }
 
+void mlir::tblgen::emitDescriptionComment(StringRef description,
+                                          raw_ostream &os, StringRef prefix) {
+  if (description.empty())
+    return;
+  raw_indented_ostream ros(os);
+  StringRef trimmed = description.rtrim(" \t");
+  ros.printReindented(trimmed, (Twine(prefix) + "/// ").str());
+  if (!trimmed.endswith("\n"))
+    ros << "\n";
+}
+
 // Emits `str` with trailing newline if not empty.
 static void emitIfNotEmpty(StringRef str, raw_ostream &os) {
   if (!str.empty()) {
