@@ -37,10 +37,15 @@ class Decorator: public __sanitizer::SanitizerCommonDecorator {
 static void DescribeStackOrigin(const char *so, uptr pc) {
   Decorator d;
   Printf("%s", d.Origin());
-  Printf(
-      "  %sUninitialized value was created by an allocation of '%s%s%s'"
-      " in the stack frame%s\n",
-      d.Origin(), d.Name(), so, d.Origin(), d.Default());
+  if (so == nullptr) {
+    Printf("  %sUninitialized value was created in the stack frame%s\n",
+           d.Origin(), d.Default());
+  } else {
+    Printf(
+        "  %sUninitialized value was created by an allocation of '%s%s%s'"
+        " in the stack frame%s\n",
+        d.Origin(), d.Name(), so, d.Origin(), d.Default());
+  }
 
   if (pc)
     StackTrace(&pc, 1).Print();
