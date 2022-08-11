@@ -57,4 +57,4 @@ int main(int argc, char *argv[]) {
 }
 
 // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
-// CHECK-ORIGIN: Uninitialized value was created by an allocation of 'uninit' in the stack frame of function 'main'
+// CHECK-ORIGIN: Uninitialized value was created by an allocation of 'uninit' in the stack frame

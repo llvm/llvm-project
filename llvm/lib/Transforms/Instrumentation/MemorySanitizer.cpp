@@ -3875,7 +3875,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // It will be printed by the run-time if stack-originated UMR is found.
     // The first 4 bytes of the string are set to '----' and will be replaced
     // by __msan_va_arg_overflow_size_tls at the first call.
-    StackDescription << "----" << I.getName() << "@" << F.getName();
+    StackDescription << "----" << I.getName();
     return createPrivateNonConstGlobalForString(*F.getParent(),
                                                 StackDescription.str());
   }

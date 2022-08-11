@@ -12,7 +12,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @charstr = constant [2 x i8] c"a\00"
 @empty = constant [1 x i8] c"\00"
 
-declare void @printf(i8*, ...)
+declare i32 @printf(i8*, ...)
 
 ; Check simplification of printf with void return type.
 
@@ -33,7 +33,7 @@ define void @test_simplify1() {
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [2 x i8], [2 x i8]* @h, i32 0, i32 0
-  call void (i8*, ...) @printf(i8* %fmt)
+  call i32 (i8*, ...) @printf(i8* %fmt)
   ret void
 }
 
@@ -43,7 +43,7 @@ define void @test_simplify2() {
 ; CHECK-NEXT:    ret void
 ;
   %fmt = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
-  call void (i8*, ...) @printf(i8* %fmt)
+  call i32 (i8*, ...) @printf(i8* %fmt)
   ret void
 }
 
@@ -54,7 +54,7 @@ define void @test_simplify6() {
 ;
   %fmt = getelementptr [4 x i8], [4 x i8]* @percent_s, i32 0, i32 0
   %str = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
-  call void (i8*, ...) @printf(i8* %fmt, i8* %str)
+  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str)
   ret void
 }
 
@@ -65,7 +65,7 @@ define void @test_simplify7() {
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0
   %str = getelementptr [2 x i8], [2 x i8]* @charstr, i32 0, i32 0
-  call void (i8*, ...) @printf(i8* %fmt, i8* %str)
+  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str)
   ret void
 }
 
@@ -77,7 +77,7 @@ define void @test_simplify8() {
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0
   %str = getelementptr [1 x i8], [1 x i8]* @empty, i32 0, i32 0
-  call void (i8*, ...) @printf(i8* %fmt, i8* %str)
+  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str)
   ret void
 }
 
@@ -90,7 +90,7 @@ define void @test_simplify9() {
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0
   %str = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
-  call void (i8*, ...) @printf(i8* %fmt, i8* %str)
+  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str)
   ret void
 }
 
@@ -106,11 +106,11 @@ define void @test_simplify10() {
 ;
   %fmt = getelementptr [3 x i8], [3 x i8]* @format_str, i32 0, i32 0
   %str1 = getelementptr [1 x i8], [1 x i8]* @empty, i32 0, i32 0
-  call void (i8*, ...) @printf(i8* %fmt, i8* %str1, i32 42, double 0x40091EB860000000)
+  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str1, i32 42, double 0x40091EB860000000)
   %str2 = getelementptr [2 x i8], [2 x i8]* @charstr, i32 0, i32 0
-  call void (i8*, ...) @printf(i8* %fmt, i8* %str2, i32 42, double 0x40091EB860000000)
+  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str2, i32 42, double 0x40091EB860000000)
   %str3 = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
-  call void (i8*, ...) @printf(i8* %fmt, i8* %str3, i32 42, double 0x40091EB860000000)
+  call i32 (i8*, ...) @printf(i8* %fmt, i8* %str3, i32 42, double 0x40091EB860000000)
   ret void
 }
 ;.

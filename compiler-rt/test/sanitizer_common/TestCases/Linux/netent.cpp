@@ -1,6 +1,6 @@
 // RUN: %clangxx -O0 -g %s -o %t
 //
-// REQUIRES: linux, freebsd
+// REQUIRES: (linux && !android) || freebsd || android-28
 
 #include <inttypes.h>
 #include <netdb.h>
