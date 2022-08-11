@@ -300,6 +300,11 @@ transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
                                        transform::TransformState &state) {
   SmallVector<Operation *> fusedOps;
   ArrayRef<Operation *> producerOps = state.getPayloadOps(getProducerOp());
+  // If nothing to fuse, propagate success.
+  if (producerOps.empty()) {
+    results.set(getResult().cast<OpResult>(), SmallVector<mlir::Operation *>{});
+    return DiagnosedSilenceableFailure::success();
+  }
   for (Operation *producerOp : producerOps) {
     if (producerOp->getNumResults() != 1) {
       Diagnostic diag(producerOp->getLoc(), DiagnosticSeverity::Note);
@@ -310,7 +315,8 @@ transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
   ArrayRef<Operation *> containingOps = state.getPayloadOps(getContainingOp());
   if (containingOps.size() != 1)
     return DiagnosedSilenceableFailure(
-        this->emitOpError("requires exactly one containing_op handle"));
+        this->emitOpError("requires exactly one containing_op handle (got ")
+        << containingOps.size() << ")");
   Operation *containingOp = containingOps.front();
 
   // Helper function to find the next producer that should be fused. Take any

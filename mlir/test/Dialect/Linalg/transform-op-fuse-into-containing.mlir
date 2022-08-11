@@ -36,6 +36,11 @@ module {
     func.return %2 : tensor<?xf32>
   }
 
+  // Check no failure when nothing happens.
+  func.func @dummy1() { return }
+  func.func @dummy2() { return }
+  func.func @dummy3() { return }
+
   transform.with_pdl_patterns {
   ^bb0(%arg0: !pdl.operation):
     transform.sequence %arg0 {
