@@ -107,77 +107,6 @@ getFlatDependencies(DependencyScanningWorker *Worker,
   return nullptr;
 }
 
-namespace {
-class FullDependencyConsumer : public DependencyConsumer {
-public:
-  FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen)
-      : AlreadySeen(AlreadySeen) {}
-
-  void
-  handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {
-    OutputPaths = Opts.Targets;
-  }
-
-  void handleFileDependency(StringRef File) override {
-    Dependencies.push_back(std::string(File));
-  }
-
-  void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {
-    PrebuiltModuleDeps.emplace_back(std::move(PMD));
-  }
-
-  void handleModuleDependency(ModuleDeps MD) override {
-    ClangModuleDeps[MD.ID.ContextHash + MD.ID.ModuleName] = std::move(MD);
-  }
-
-  void handleContextHash(std::string Hash) override {
-    ContextHash = std::move(Hash);
-  }
-
-  FullDependenciesResult
-  getFullDependencies(ArrayRef<std::string> OriginalCommandLine) const {
-    FullDependencies FD;
-
-    FD.OriginalCommandLine =
-        ArrayRef<std::string>(OriginalCommandLine).slice(1);
-
-    FD.ID.ContextHash = std::move(ContextHash);
-
-    FD.FileDeps.assign(Dependencies.begin(), Dependencies.end());
-
-    for (auto &&M : ClangModuleDeps) {
-      auto &MD = M.second;
-      if (MD.ImportedByMainFile)
-        FD.ClangModuleDeps.push_back(MD.ID);
-    }
-
-    FD.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
-
-    FullDependenciesResult FDR;
-
-    for (auto &&M : ClangModuleDeps) {
-      // TODO: Avoid handleModuleDependency even being called for modules
-      //   we've already seen.
-      if (AlreadySeen.count(M.first))
-        continue;
-      FDR.DiscoveredModules.push_back(std::move(M.second));
-    }
-
-    FDR.FullDeps = std::move(FD);
-    return FDR;
-  }
-
-private:
-  std::vector<std::string> Dependencies;
-  std::vector<PrebuiltModuleDep> PrebuiltModuleDeps;
-  llvm::MapVector<std::string, ModuleDeps, llvm::StringMap<unsigned>>
-      ClangModuleDeps;
-  std::string ContextHash;
-  std::vector<std::string> OutputPaths;
-  const llvm::StringSet<> &AlreadySeen;
-};
-} // namespace
-
 using FileBuildArgsFn =
     llvm::function_ref<std::vector<std::string>(const FullDependencies &)>;
 using ModuleBuildArgsFn =
@@ -195,23 +124,23 @@ static CXFileDependencies *getFullDependencies(
       WorkingDirectory, Compilation, Consumer, ModuleName);
 
   if (Result) {
-    std::string Str;
-    llvm::raw_string_ostream OS(Str);
-    llvm::handleAllErrors(std::move(Result),
-                          [&](const llvm::ErrorInfoBase &EI) { EI.log(OS); });
-    *error = cxstring::createDup(OS.str());
+    *error = cxstring::createDup(llvm::toString(std::move(Result)));
     return nullptr;
   }
 
-  FullDependenciesResult FDR = Consumer.getFullDependencies(Compilation);
+  auto FDR = Consumer.getFullDependencies(Compilation);
+  if (!FDR) {
+    *error = cxstring::createDup(llvm::toString(FDR.takeError()));
+    return nullptr;
+  }
 
-  if (!FDR.DiscoveredModules.empty()) {
+  if (!FDR->DiscoveredModules.empty()) {
     CXModuleDependencySet *MDS = new CXModuleDependencySet;
-    MDS->Count = FDR.DiscoveredModules.size();
+    MDS->Count = FDR->DiscoveredModules.size();
     MDS->Modules = new CXModuleDependency[MDS->Count];
     for (int I = 0; I < MDS->Count; ++I) {
       CXModuleDependency &M = MDS->Modules[I];
-      const ModuleDeps &MD = FDR.DiscoveredModules[I];
+      const ModuleDeps &MD = FDR->DiscoveredModules[I];
       M.Name = cxstring::createDup(MD.ID.ModuleName);
       M.ContextHash = cxstring::createDup(MD.ID.ContextHash);
       M.ModuleMapPath = cxstring::createDup(MD.ClangModuleMapFile);
@@ -225,7 +154,7 @@ static CXFileDependencies *getFullDependencies(
     MDC(Context, MDS);
   }
 
-  const FullDependencies &FD = FDR.FullDeps;
+  const FullDependencies &FD = FDR->FullDeps;
   CXFileDependencies *FDeps = new CXFileDependencies;
   FDeps->ContextHash = cxstring::createDup(FD.ID.ContextHash);
   FDeps->FileDeps = cxstring::createSet(FD.FileDeps);

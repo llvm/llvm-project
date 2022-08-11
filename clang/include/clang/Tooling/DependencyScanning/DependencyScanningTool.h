@@ -168,7 +168,10 @@ public:
   FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen)
       : AlreadySeen(AlreadySeen) {}
 
-  void handleDependencyOutputOpts(const DependencyOutputOptions &) override {}
+  void
+  handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {
+    OutputPaths = Opts.Targets;
+  }
 
   void handleFileDependency(StringRef File) override {
     Dependencies.push_back(std::string(File));
@@ -188,7 +191,7 @@ public:
 
   Expected<FullDependenciesResult>
   getFullDependencies(const std::vector<std::string> &OriginalCommandLine,
-                      llvm::cas::CachingOnDiskFileSystem *FS) const;
+                      llvm::cas::CachingOnDiskFileSystem *FS = nullptr) const;
 
 private:
   std::vector<std::string> Dependencies;
