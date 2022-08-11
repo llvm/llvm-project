@@ -15,8 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 class InputFile;
 
 extern std::unique_ptr<class LinkerDriver> driver;
@@ -71,7 +70,6 @@ llvm::Optional<std::string> searchScript(StringRef path);
 llvm::Optional<std::string> searchLibraryBaseName(StringRef path);
 llvm::Optional<std::string> searchLibrary(StringRef path);
 
-} // namespace elf
-} // namespace lld
+} // namespace lld::elf
 
 #endif

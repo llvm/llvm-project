@@ -13,8 +13,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include <vector>
 
-namespace lld {
-namespace elf {
+namespace lld::elf {
 
 class Defined;
 class InputSection;
@@ -43,7 +42,6 @@ private:
   bool initialized = false;
 };
 
-} // namespace elf
-} // namespace lld
+} // namespace lld::elf
 
 #endif

@@ -12,6 +12,7 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @percent_d = constant [3 x i8] c"%d\00"
 @percent_f = constant [3 x i8] c"%f\00"
 @percent_s = constant [3 x i8] c"%s\00"
+@percent_m = constant [3 x i8] c"%m\00"
 
 declare i32 @fprintf(%FILE*, i8*, ...)
 
@@ -95,4 +96,16 @@ define i32 @test_no_simplify3(%FILE* %fp) {
 ; CHECK-NEXT: call i32 (%FILE*, i8*, ...) @fprintf(%FILE* %fp, i8* getelementptr inbounds ([13 x i8], [13 x i8]* @hello_world, i32 0, i32 0))
   ret i32 %1
 ; CHECK-NEXT: ret i32 %1
+}
+
+; Verify that a call with a format string containing just the %m directive
+; and no arguments is not simplified.
+
+define void @test_no_simplify4(%FILE* %fp) {
+; CHECK-LABEL: @test_no_simplify4(
+  %fmt = getelementptr [3 x i8], [3 x i8]* @percent_m, i32 0, i32 0
+  call i32 (%FILE*, i8*, ...) @fprintf(%FILE* %fp, i8* %fmt)
+; CHECK-NEXT: call i32 (%FILE*, i8*, ...) @fprintf(%FILE* %fp, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @percent_m, i32 0, i32 0))
+  ret void
+; CHECK-NEXT: ret void
 }

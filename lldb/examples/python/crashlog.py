@@ -1090,6 +1090,13 @@ def CreateSymbolicateCrashLogOptions(
     option_parser = optparse.OptionParser(
         description=description, prog='crashlog', usage=usage)
     option_parser.add_option(
+        '--version',
+        '-V',
+        dest='version',
+        action='store_true',
+        help='Show crashlog version',
+        default=False)
+    option_parser.add_option(
         '--verbose',
         '-v',
         action='store_true',
@@ -1231,6 +1238,10 @@ def SymbolicateCrashLogs(debugger, command_args, result):
     try:
         (options, args) = option_parser.parse_args(command_args)
     except:
+        return
+
+    if options.version:
+        print(debugger.GetVersionString())
         return
 
     if options.debug:

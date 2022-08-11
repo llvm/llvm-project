@@ -154,7 +154,7 @@ Environment::Environment(DataflowAnalysisContext &DACtx)
     : DACtx(&DACtx), FlowConditionToken(&DACtx.makeFlowConditionToken()) {}
 
 Environment::Environment(const Environment &Other)
-    : DACtx(Other.DACtx), DeclCtx(Other.DeclCtx), ReturnLoc(Other.ReturnLoc),
+    : DACtx(Other.DACtx), ReturnLoc(Other.ReturnLoc),
       ThisPointeeLoc(Other.ThisPointeeLoc), DeclToLoc(Other.DeclToLoc),
       ExprToLoc(Other.ExprToLoc), LocToVal(Other.LocToVal),
       MemberLocToStruct(Other.MemberLocToStruct),
@@ -168,11 +168,9 @@ Environment &Environment::operator=(const Environment &Other) {
 }
 
 Environment::Environment(DataflowAnalysisContext &DACtx,
-                         const DeclContext &DeclCtxArg)
+                         const DeclContext &DeclCtx)
     : Environment(DACtx) {
-  setDeclCtx(&DeclCtxArg);
-
-  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(DeclCtx)) {
+  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(&DeclCtx)) {
     assert(FuncDecl->getBody() != nullptr);
     initGlobalVars(*FuncDecl->getBody(), *this);
     for (const auto *ParamDecl : FuncDecl->parameters()) {
@@ -187,7 +185,7 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
     ReturnLoc = &createStorageLocation(ReturnType);
   }
 
-  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(DeclCtx)) {
+  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(&DeclCtx)) {
     auto *Parent = MethodDecl->getParent();
     assert(Parent != nullptr);
     if (Parent->isLambda())
@@ -207,79 +205,59 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
 
 Environment Environment::pushCall(const CallExpr *Call) const {
   Environment Env(*this);
-
   // FIXME: Support references here.
-  Env.ReturnLoc = getStorageLocation(*Call, SkipPast::Reference);
+  Env.ReturnLoc = Env.getStorageLocation(*Call, SkipPast::Reference);
 
-  if (const auto *MethodCall = dyn_cast<CXXMemberCallExpr>(Call)) {
-    if (const Expr *Arg = MethodCall->getImplicitObjectArgument()) {
-      Env.ThisPointeeLoc = getStorageLocation(*Arg, SkipPast::Reference);
-    }
-  }
-
-  Env.pushCallInternal(Call->getDirectCallee(),
-                       llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
-
-  return Env;
-}
-
-Environment Environment::pushCall(const CXXConstructExpr *Call) const {
-  Environment Env(*this);
-
-  // FIXME: Support references here.
-  Env.ReturnLoc = getStorageLocation(*Call, SkipPast::Reference);
-
-  Env.ThisPointeeLoc = Env.ReturnLoc;
-
-  Env.pushCallInternal(Call->getConstructor(),
-                       llvm::makeArrayRef(Call->getArgs(), Call->getNumArgs()));
-
-  return Env;
-}
-
-void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
-                                   ArrayRef<const Expr *> Args) {
-  setDeclCtx(FuncDecl);
-
+  const auto *FuncDecl = Call->getDirectCallee();
+  assert(FuncDecl != nullptr);
   // FIXME: In order to allow the callee to reference globals, we probably need
   // to call `initGlobalVars` here in some way.
 
+  if (const auto *MethodCall = dyn_cast<CXXMemberCallExpr>(Call)) {
+    if (const Expr *Arg = MethodCall->getImplicitObjectArgument()) {
+      Env.ThisPointeeLoc = Env.getStorageLocation(*Arg, SkipPast::Reference);
+    }
+  }
+
   auto ParamIt = FuncDecl->param_begin();
+  auto ArgIt = Call->arg_begin();
+  auto ArgEnd = Call->arg_end();
 
   // FIXME: Parameters don't always map to arguments 1:1; examples include
   // overloaded operators implemented as member functions, and parameter packs.
-  for (unsigned ArgIndex = 0; ArgIndex < Args.size(); ++ParamIt, ++ArgIndex) {
+  for (; ArgIt != ArgEnd; ++ParamIt, ++ArgIt) {
     assert(ParamIt != FuncDecl->param_end());
 
-    const Expr *Arg = Args[ArgIndex];
-    auto *ArgLoc = getStorageLocation(*Arg, SkipPast::Reference);
-    if (ArgLoc == nullptr)
-      continue;
+    const Expr *Arg = *ArgIt;
+    auto *ArgLoc = Env.getStorageLocation(*Arg, SkipPast::Reference);
+    assert(ArgLoc != nullptr);
 
     const VarDecl *Param = *ParamIt;
-    auto &Loc = createStorageLocation(*Param);
-    setStorageLocation(*Param, Loc);
+    auto &Loc = Env.createStorageLocation(*Param);
+    Env.setStorageLocation(*Param, Loc);
 
     QualType ParamType = Param->getType();
     if (ParamType->isReferenceType()) {
-      auto &Val = takeOwnership(std::make_unique<ReferenceValue>(*ArgLoc));
-      setValue(Loc, Val);
-    } else if (auto *ArgVal = getValue(*ArgLoc)) {
-      setValue(Loc, *ArgVal);
-    } else if (Value *Val = createValue(ParamType)) {
-      setValue(Loc, *Val);
+      auto &Val = Env.takeOwnership(std::make_unique<ReferenceValue>(*ArgLoc));
+      Env.setValue(Loc, Val);
+    } else if (auto *ArgVal = Env.getValue(*ArgLoc)) {
+      Env.setValue(Loc, *ArgVal);
+    } else if (Value *Val = Env.createValue(ParamType)) {
+      Env.setValue(Loc, *Val);
     }
   }
+
+  return Env;
 }
 
 void Environment::popCall(const Environment &CalleeEnv) {
   // We ignore `DACtx` because it's already the same in both. We don't want the
-  // callee's `DeclCtx`, `ReturnLoc` or `ThisPointeeLoc`. We don't bring back
-  // `DeclToLoc` and `ExprToLoc` because we want to be able to later analyze the
-  // same callee in a different context, and `setStorageLocation` requires there
-  // to not already be a storage location assigned. Conceptually, these maps
-  // capture information from the local scope, so when popping that scope, we do
-  // not propagate the maps.
+  // callee's `ReturnLoc` or `ThisPointeeLoc`. We don't bring back `DeclToLoc`
+  // and `ExprToLoc` because we want to be able to later analyze the same callee
+  // in a different context, and `setStorageLocation` requires there to not
+  // already be a storage location assigned. Conceptually, these maps capture
+  // information from the local scope, so when popping that scope, we do not
+  // propagate the maps.
   this->LocToVal = std::move(CalleeEnv.LocToVal);
   this->MemberLocToStruct = std::move(CalleeEnv.MemberLocToStruct);
   this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
@@ -326,13 +304,11 @@ LatticeJoinEffect Environment::join(const Environment &Other,
   assert(DACtx == Other.DACtx);
   assert(ReturnLoc == Other.ReturnLoc);
   assert(ThisPointeeLoc == Other.ThisPointeeLoc);
-  assert(DeclCtx == Other.DeclCtx);
 
   auto Effect = LatticeJoinEffect::Unchanged;
 
   Environment JoinedEnv(*DACtx);
 
-  JoinedEnv.setDeclCtx(DeclCtx);
   JoinedEnv.ReturnLoc = ReturnLoc;
   JoinedEnv.ThisPointeeLoc = ThisPointeeLoc;
 

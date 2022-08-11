@@ -317,3 +317,273 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           }
 // CHECK:           return %{{.*}} : i32
 // CHECK:         }
+
+// -----
+
+func.func @dot_f32(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f32 {
+  %0 = fir.alloca f32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %c3_i32 = arith.constant 3 : i32
+  %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+  %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+  %4 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
+  %5 = fir.call @_FortranADotProductReal4(%2, %3, %4, %c3_i32) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f32
+  fir.store %5 to %0 : !fir.ref<f32>
+  %6 = fir.load %0 : !fir.ref<f32>
+  return %6 : f32
+}
+func.func private @_FortranADotProductReal4(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f32 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+  %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
+  fir.has_value %0 : !fir.char<1,10>
+}
+
+// CHECK-LABEL:   func.func @dot_f32(
+// CHECK-SAME:                      %[[A:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"},
+// CHECK-SAME:                      %[[B:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f32 {
+// CHECK:           %[[RESLOC:.*]] = fir.alloca f32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+// CHECK:           %[[ACAST:.*]] = fir.convert %[[A]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+// CHECK:           %[[BCAST:.*]] = fir.convert %[[B]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+// CHECK:           %[[RES:.*]] = fir.call @_FortranADotProductReal4_simplified(%[[ACAST]], %[[BCAST]]) : (!fir.box<none>, !fir.box<none>) -> f32
+// CHECK:           fir.store %[[RES]] to %[[RESLOC]] : !fir.ref<f32>
+// CHECK:           %[[RET:.*]] = fir.load %[[RESLOC]] : !fir.ref<f32>
+// CHECK:           return %[[RET]] : f32
+// CHECK:         }
+
+// CHECK-LABEL:   func.func private @_FortranADotProductReal4_simplified(
+// CHECK-SAME:                                                           %[[A:.*]]: !fir.box<none>,
+// CHECK-SAME:                                                           %[[B:.*]]: !fir.box<none>) -> f32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK:           %[[FZERO:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK:           %[[IZERO:.*]] = arith.constant 0 : index
+// CHECK:           %[[ACAST:.*]] = fir.convert %[[A]] : (!fir.box<none>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:           %[[BCAST:.*]] = fir.convert %[[B]] : (!fir.box<none>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ACAST]], %[[IZERO]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+// CHECK:           %[[IONE:.*]] = arith.constant 1 : index
+// CHECK:           %[[LEN:.*]] = arith.subi %[[DIMS]]#1, %[[IONE]] : index
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[IDX:.*]] = %[[IZERO]] to %[[LEN]] step %[[IONE]] iter_args(%[[SUM:.*]] = %[[FZERO]]) -> (f32) {
+// CHECK:             %[[ALOC:.*]] = fir.coordinate_of %[[ACAST]], %[[IDX]] : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+// CHECK:             %[[AVAL:.*]] = fir.load %[[ALOC]] : !fir.ref<f32>
+// CHECK:             %[[BLOC:.*]] = fir.coordinate_of %[[BCAST]], %[[IDX]] : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+// CHECK:             %[[BVAL:.*]] = fir.load %[[BLOC]] : !fir.ref<f32>
+// CHECK:             %[[MUL:.*]] = arith.mulf %[[AVAL]], %[[BVAL]] : f32
+// CHECK:             %[[NEWSUM:.*]] = arith.addf %[[MUL]], %[[SUM]] : f32
+// CHECK:             fir.result %[[NEWSUM]] : f32
+// CHECK:           }
+// CHECK:           return %[[RES]] : f32
+// CHECK:         }
+
+// -----
+
+func.func @dot_f64(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "b"}) -> f64 {
+  %0 = fir.alloca f64 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %c3_i32 = arith.constant 3 : i32
+  %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
+  %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
+  %4 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
+  %5 = fir.call @_FortranADotProductReal8(%2, %3, %4, %c3_i32) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f64
+  fir.store %5 to %0 : !fir.ref<f64>
+  %6 = fir.load %0 : !fir.ref<f64>
+  return %6 : f64
+}
+func.func private @_FortranADotProductReal8(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f64 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+  %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
+  fir.has_value %0 : !fir.char<1,10>
+}
+
+// The same code handles all FP types, so just check that there is no
+// call to runtime:
+// CHECK-LABEL:   func.func @dot_f64(
+// CHECK-SAME:                      %[[A:.*]]: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"},
+// CHECK-SAME:                      %[[B:.*]]: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "b"}) -> f64 {
+// CHECK-NOT: call{{.*}}_FortranADotProductReal8(
+
+// -----
+
+func.func @dot_f80(%arg0: !fir.box<!fir.array<?xf80>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf80>> {fir.bindc_name = "b"}) -> f80 {
+  %0 = fir.alloca f80 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %c3_i32 = arith.constant 3 : i32
+  %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf80>>) -> !fir.box<none>
+  %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf80>>) -> !fir.box<none>
+  %4 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
+  %5 = fir.call @_FortranADotProductReal10(%2, %3, %4, %c3_i32) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f80
+  fir.store %5 to %0 : !fir.ref<f80>
+  %6 = fir.load %0 : !fir.ref<f80>
+  return %6 : f80
+}
+func.func private @_FortranADotProductReal10(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f80 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+  %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
+  fir.has_value %0 : !fir.char<1,10>
+}
+
+// The same code handles all FP types, so just check that there is no
+// call to runtime:
+// CHECK-LABEL:   func.func @dot_f80(
+// CHECK-SAME:                      %[[A:.*]]: !fir.box<!fir.array<?xf80>> {fir.bindc_name = "a"},
+// CHECK-SAME:                      %[[B:.*]]: !fir.box<!fir.array<?xf80>> {fir.bindc_name = "b"}) -> f80 {
+// CHECK-NOT: call{{.*}}_FortranADotProductReal10(
+
+// -----
+
+func.func @dot_f128(%arg0: !fir.box<!fir.array<?xf128>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf128>> {fir.bindc_name = "b"}) -> f128 {
+  %0 = fir.alloca f128 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %c3_i32 = arith.constant 3 : i32
+  %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf128>>) -> !fir.box<none>
+  %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf128>>) -> !fir.box<none>
+  %4 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
+  %5 = fir.call @_FortranADotProductReal16(%2, %3, %4, %c3_i32) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f128
+  fir.store %5 to %0 : !fir.ref<f128>
+  %6 = fir.load %0 : !fir.ref<f128>
+  return %6 : f128
+}
+func.func private @_FortranADotProductReal16(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f128 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+  %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
+  fir.has_value %0 : !fir.char<1,10>
+}
+
+// The same code handles all FP types, so just check that there is no
+// call to runtime:
+// CHECK-LABEL:   func.func @dot_f128(
+// CHECK-SAME:                      %[[A:.*]]: !fir.box<!fir.array<?xf128>> {fir.bindc_name = "a"},
+// CHECK-SAME:                      %[[B:.*]]: !fir.box<!fir.array<?xf128>> {fir.bindc_name = "b"}) -> f128 {
+// CHECK-NOT: call{{.*}}_FortranADotProductReal16(
+
+// -----
+
+func.func @dot_i32(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) -> i32 {
+  %0 = fir.alloca i32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %c3_i32 = arith.constant 3 : i32
+  %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+  %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+  %4 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
+  %5 = fir.call @_FortranADotProductInteger4(%2, %3, %4, %c3_i32) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+  fir.store %5 to %0 : !fir.ref<i32>
+  %6 = fir.load %0 : !fir.ref<i32>
+  return %6 : i32
+}
+func.func private @_FortranADotProductInteger4(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i32 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+  %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
+  fir.has_value %0 : !fir.char<1,10>
+}
+
+// CHECK-LABEL:   func.func @dot_i32(
+// CHECK-SAME:                      %[[A:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"},
+// CHECK-SAME:                      %[[B:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "b"}) -> i32 {
+// CHECK:           %[[RESLOC:.*]] = fir.alloca i32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+// CHECK:           %[[ACAST:.*]] = fir.convert %[[A]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+// CHECK:           %[[BCAST:.*]] = fir.convert %[[B]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+// CHECK:           %[[RES:.*]] = fir.call @_FortranADotProductInteger4_simplified(%[[ACAST]], %[[BCAST]]) : (!fir.box<none>, !fir.box<none>) -> i32
+// CHECK:           fir.store %[[RES]] to %[[RESLOC]] : !fir.ref<i32>
+// CHECK:           %[[RET:.*]] = fir.load %[[RESLOC]] : !fir.ref<i32>
+// CHECK:           return %[[RET]] : i32
+// CHECK:         }
+
+// CHECK-LABEL:   func.func private @_FortranADotProductInteger4_simplified(
+// CHECK-SAME:                                                           %[[A:.*]]: !fir.box<none>,
+// CHECK-SAME:                                                           %[[B:.*]]: !fir.box<none>) -> i32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK:           %[[I32ZERO:.*]] = arith.constant 0 : i32
+// CHECK:           %[[IZERO:.*]] = arith.constant 0 : index
+// CHECK:           %[[ACAST:.*]] = fir.convert %[[A]] : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[BCAST:.*]] = fir.convert %[[B]] : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ACAST]], %[[IZERO]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+// CHECK:           %[[IONE:.*]] = arith.constant 1 : index
+// CHECK:           %[[LEN:.*]] = arith.subi %[[DIMS]]#1, %[[IONE]] : index
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[IDX:.*]] = %[[IZERO]] to %[[LEN]] step %[[IONE]] iter_args(%[[SUM:.*]] = %[[I32ZERO]]) -> (i32) {
+// CHECK:             %[[ALOC:.*]] = fir.coordinate_of %[[ACAST]], %[[IDX]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:             %[[AVAL:.*]] = fir.load %[[ALOC]] : !fir.ref<i32>
+// CHECK:             %[[BLOC:.*]] = fir.coordinate_of %[[BCAST]], %[[IDX]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:             %[[BVAL:.*]] = fir.load %[[BLOC]] : !fir.ref<i32>
+// CHECK:             %[[MUL:.*]] = arith.muli %[[AVAL]], %[[BVAL]] : i32
+// CHECK:             %[[NEWSUM:.*]] = arith.addi %[[MUL]], %[[SUM]] : i32
+// CHECK:             fir.result %[[NEWSUM]] : i32
+// CHECK:           }
+// CHECK:           return %[[RES]] : i32
+// CHECK:         }
+
+// -----
+
+func.func @dot_i8(%arg0: !fir.box<!fir.array<?xi8>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi8>> {fir.bindc_name = "b"}) -> i8 {
+  %0 = fir.alloca i8 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %c3_i32 = arith.constant 3 : i32
+  %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xi8>>) -> !fir.box<none>
+  %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xi8>>) -> !fir.box<none>
+  %4 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
+  %5 = fir.call @_FortranADotProductInteger1(%2, %3, %4, %c3_i32) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i8
+  fir.store %5 to %0 : !fir.ref<i8>
+  %6 = fir.load %0 : !fir.ref<i8>
+  return %6 : i8
+}
+func.func private @_FortranADotProductInteger1(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i8 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+  %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
+  fir.has_value %0 : !fir.char<1,10>
+}
+
+// The same code handles all integer types, so just check that there is no
+// call to runtime:
+// CHECK-LABEL:   func.func @dot_i8(
+// CHECK-SAME:                      %[[A:.*]]: !fir.box<!fir.array<?xi8>> {fir.bindc_name = "a"},
+// CHECK-SAME:                      %[[B:.*]]: !fir.box<!fir.array<?xi8>> {fir.bindc_name = "b"}) -> i8 {
+// CHECK-NOT: call{{.*}}_FortranADotProductInteger1(
+
+// -----
+
+func.func @dot_i16(%arg0: !fir.box<!fir.array<?xi16>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi16>> {fir.bindc_name = "b"}) -> i16 {
+  %0 = fir.alloca i16 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %c3_i32 = arith.constant 3 : i32
+  %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xi16>>) -> !fir.box<none>
+  %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xi16>>) -> !fir.box<none>
+  %4 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
+  %5 = fir.call @_FortranADotProductInteger2(%2, %3, %4, %c3_i32) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i16
+  fir.store %5 to %0 : !fir.ref<i16>
+  %6 = fir.load %0 : !fir.ref<i16>
+  return %6 : i16
+}
+func.func private @_FortranADotProductInteger2(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i16 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+  %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
+  fir.has_value %0 : !fir.char<1,10>
+}
+
+// The same code handles all integer types, so just check that there is no
+// call to runtime:
+// CHECK-LABEL:   func.func @dot_i16(
+// CHECK-SAME:                      %[[A:.*]]: !fir.box<!fir.array<?xi16>> {fir.bindc_name = "a"},
+// CHECK-SAME:                      %[[B:.*]]: !fir.box<!fir.array<?xi16>> {fir.bindc_name = "b"}) -> i16 {
+// CHECK-NOT: call{{.*}}_FortranADotProductInteger2(
+
+// -----
+
+func.func @dot_i64(%arg0: !fir.box<!fir.array<?xi64>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xi64>> {fir.bindc_name = "b"}) -> i64 {
+  %0 = fir.alloca i64 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %c3_i32 = arith.constant 3 : i32
+  %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xi64>>) -> !fir.box<none>
+  %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xi64>>) -> !fir.box<none>
+  %4 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
+  %5 = fir.call @_FortranADotProductInteger8(%2, %3, %4, %c3_i32) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i64
+  fir.store %5 to %0 : !fir.ref<i64>
+  %6 = fir.load %0 : !fir.ref<i64>
+  return %6 : i64
+}
+func.func private @_FortranADotProductInteger8(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> i64 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+  %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
+  fir.has_value %0 : !fir.char<1,10>
+}
+
+// The same code handles all integer types, so just check that there is no
+// call to runtime:
+// CHECK-LABEL:   func.func @dot_i64(
+// CHECK-SAME:                      %[[A:.*]]: !fir.box<!fir.array<?xi64>> {fir.bindc_name = "a"},
+// CHECK-SAME:                      %[[B:.*]]: !fir.box<!fir.array<?xi64>> {fir.bindc_name = "b"}) -> i64 {
+// CHECK-NOT: call{{.*}}_FortranADotProductInteger8(

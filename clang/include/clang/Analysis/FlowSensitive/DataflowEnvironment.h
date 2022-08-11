@@ -135,13 +135,14 @@ public:
   ///
   /// Requirements:
   ///
-  ///  The callee of `Call` must be a `FunctionDecl`.
+  ///  The callee of `Call` must be a `FunctionDecl` with a body.
   ///
   ///  The body of the callee must not reference globals.
   ///
   ///  The arguments of `Call` must map 1:1 to the callee's parameters.
+  ///
+  ///  Each argument of `Call` must already have a `StorageLocation`.
   Environment pushCall(const CallExpr *Call) const;
-  Environment pushCall(const CXXConstructExpr *Call) const;
 
   /// Moves gathered information back into `this` from a `CalleeEnv` created via
   /// `pushCall`.
@@ -346,13 +347,6 @@ public:
   /// imply that `Val` is true.
   bool flowConditionImplies(BoolValue &Val) const;
 
-  /// Returns the `DeclContext` of the block being analysed, if any. Otherwise,
-  /// returns null.
-  const DeclContext *getDeclCtx() { return DeclCtx; }
-
-  /// Sets the `DeclContext` of the block being analysed.
-  void setDeclCtx(const DeclContext *Ctx) { DeclCtx = Ctx; }
-
   /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
   /// returns null.
   const ControlFlowContext *getControlFlowContext(const FunctionDecl *F) {
@@ -380,17 +374,8 @@ private:
   StorageLocation &skip(StorageLocation &Loc, SkipPast SP) const;
   const StorageLocation &skip(const StorageLocation &Loc, SkipPast SP) const;
 
-  /// Shared implementation of `pushCall` overloads. Note that unlike
-  /// `pushCall`, this member is invoked on the environment of the callee, not
-  /// of the caller.
-  void pushCallInternal(const FunctionDecl *FuncDecl,
-                        ArrayRef<const Expr *> Args);
-
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
-
-  // `DeclContext` of the block being analysed if provided.
-  const DeclContext *DeclCtx;
 
   // In a properly initialized `Environment`, `ReturnLoc` should only be null if
   // its `DeclContext` could not be cast to a `FunctionDecl`.
