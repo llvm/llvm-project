@@ -19,6 +19,7 @@ class FPEvalTestCase(TestBase):
         # Find the line number to break inside main().
         self.line = line_number('main.c', '// Set break point at this line.')
 
+    @skipIf(archs=no_match(['amd64', 'x86_64', 'arm64'])) # lldb jitter incorrectly evals function with FP args on 32 bit arm
     def test(self):
         """Test floating point expressions while jitter is disabled."""
         self.build()

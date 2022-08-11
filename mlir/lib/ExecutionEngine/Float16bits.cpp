@@ -159,10 +159,12 @@ std::ostream &operator<<(std::ostream &os, const bf16 &d) {
 #endif
 
 #if defined(__x86_64__)
-// On x86 bfloat16 is passed in SSE2 registers. Since both float and _Float16
+// On x86 bfloat16 is passed in SSE registers. Since both float and __bf16
 // are passed in the same register we can use the wider type and careful casting
 // to conform to x86_64 psABI. This only works with the assumption that we're
 // dealing with little-endian values passed in wider registers.
+// Ideally this would directly use __bf16, but that type isn't supported by all
+// compilers.
 using BF16ABIType = float;
 #else
 // Default to uint16_t if we have nothing else.
@@ -184,9 +186,5 @@ extern "C" BF16ABIType ATTR_WEAK __truncsfbf2(float f) {
 extern "C" BF16ABIType ATTR_WEAK __truncdfbf2(double d) {
   // This does a double rounding step, but it's precise enough for our use
   // cases.
-  uint16_t bf = __truncsfbf2(static_cast<float>(d));
-  // The output can be a float type, bitcast it from uint16_t.
-  BF16ABIType ret = 0;
-  std::memcpy(&ret, &bf, sizeof(bf));
-  return ret;
+  return __truncsfbf2(static_cast<float>(d));
 }

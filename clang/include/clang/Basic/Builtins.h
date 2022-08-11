@@ -228,11 +228,16 @@ public:
                         llvm::SmallVectorImpl<int> &Encoding) const;
 
   /// Return true if this function has no side effects and doesn't
-  /// read memory, except for possibly errno.
+  /// read memory, except for possibly errno or raising FP exceptions.
   ///
-  /// Such functions can be const when the MathErrno lang option is disabled.
-  bool isConstWithoutErrno(unsigned ID) const {
+  /// Such functions can be const when the MathErrno lang option and FP
+  /// exceptions are disabled.
+  bool isConstWithoutErrnoAndExceptions(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'e') != nullptr;
+  }
+
+  bool isConstWithoutExceptions(unsigned ID) const {
+    return strchr(getRecord(ID).Attributes, 'g') != nullptr;
   }
 
   const char *getRequiredFeatures(unsigned ID) const {

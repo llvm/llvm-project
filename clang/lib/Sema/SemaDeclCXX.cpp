@@ -16663,14 +16663,14 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
       return;
 
     struct {
-      const clang::Expr *Expr;
+      const clang::Expr *Cond;
       Expr::EvalResult Result;
       SmallString<12> ValueString;
       bool Print;
     } DiagSide[2] = {{LHS, Expr::EvalResult(), {}, false},
                      {RHS, Expr::EvalResult(), {}, false}};
     for (unsigned I = 0; I < 2; I++) {
-      const Expr *Side = DiagSide[I].Expr;
+      const Expr *Side = DiagSide[I].Cond;
 
       Side->EvaluateAsRValue(DiagSide[I].Result, Context, true);
 
