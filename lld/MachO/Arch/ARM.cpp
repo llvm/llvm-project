@@ -37,6 +37,11 @@ struct ARM : TargetInfo {
   void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
 
+  void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
+                            uint64_t stubOffset, uint64_t selrefsVA,
+                            uint64_t selectorIndex, uint64_t gotAddr,
+                            uint64_t msgSendIndex) const override;
+
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
   uint64_t getPageSize() const override { return 4 * 1024; }
 
@@ -145,6 +150,13 @@ void ARM::writeStubHelperHeader(uint8_t *buf) const {
 
 void ARM::writeStubHelperEntry(uint8_t *buf, const Symbol &sym,
                                uint64_t entryAddr) const {
+  fatal("TODO: implement this");
+}
+
+void ARM::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
+                               uint64_t stubOffset, uint64_t selrefsVA,
+                               uint64_t selectorIndex, uint64_t gotAddr,
+                               uint64_t msgSendIndex) const {
   fatal("TODO: implement this");
 }
 
