@@ -18,51 +18,35 @@
 namespace __llvm_libc {
 
 // Exceptional values
-static constexpr int N_EXCEPTS = 10;
+static constexpr int N_EXCEPTS = 6;
 
 static constexpr uint32_t EXCEPT_INPUTS[N_EXCEPTS] = {
-    0x3b5637f5, // x = 0x1.ac6feap-9
-    0x3fa7832a, // x = 0x1.4f0654p0
-    0x46199998, // x = 0x1.33333p13
-    0x55325019, // x = 0x1.64a032p43
-    0x55cafb2a, // x = 0x1.95f654p44
-    0x5922aa80, // x = 0x1.4555p51
-    0x5aa4542c, // x = 0x1.48a858p54
-    0x5f18b878, // x = 0x1.3170fp63
-    0x6115cb11, // x = 0x1.2b9622p67
-    0x7beef5ef, // x = 0x1.ddebdep120
+    0x46199998, // x = 0x1.33333p13   x
+    0x55325019, // x = 0x1.64a032p43  x
+    0x5922aa80, // x = 0x1.4555p51    x
+    0x5f18b878, // x = 0x1.3170fp63   x
+    0x6115cb11, // x = 0x1.2b9622p67  x
+    0x7beef5ef, // x = 0x1.ddebdep120 x
 };
 
 static constexpr uint32_t EXCEPT_OUTPUTS_SIN[N_EXCEPTS][4] = {
-    {0x3b5637dc, 1, 0, 0}, // x = 0x1.ac6feap-9, sin(x) = 0x1.ac6fb8p-9 (RZ)
-    {0x3f7741b5, 1, 0, 1}, // x = 0x1.4f0654p0, sin(x) = 0x1.ee836ap-1 (RZ)
     {0xbeb1fa5d, 0, 1, 0}, // x = 0x1.33333p13, sin(x) = -0x1.63f4bap-2 (RZ)
     {0xbf171adf, 0, 1, 1}, // x = 0x1.64a032p43, sin(x) = -0x1.2e35bep-1 (RZ)
-    {0xbf7e7a16, 0, 1, 1}, // x = 0x1.95f654p44, sin(x) = -0x1.fcf42cp-1 (RZ)
     {0xbf587521, 0, 1, 1}, // x = 0x1.4555p51, sin(x) = -0x1.b0ea42p-1 (RZ)
-    {0x3f5f5646, 1, 0, 0}, // x = 0x1.48a858p54, sin(x) = 0x1.beac8cp-1 (RZ)
     {0x3dad60f6, 1, 0, 1}, // x = 0x1.3170fp63, sin(x) = 0x1.5ac1ecp-4 (RZ)
     {0xbe7cc1e0, 0, 1, 1}, // x = 0x1.2b9622p67, sin(x) = -0x1.f983cp-3 (RZ)
     {0xbf587d1b, 0, 1, 1}, // x = 0x1.ddebdep120, sin(x) = -0x1.b0fa36p-1 (RZ)
 };
 
 static constexpr uint32_t EXCEPT_OUTPUTS_COS[N_EXCEPTS][4] = {
-    {0x3f7fffa6, 1, 0, 0}, // x = 0x1.ac6feap-9, cos(x) = 0x1.ffff4cp-1 (RZ)
-    {0x3e84aabf, 1, 0, 1}, // x = 0x1.4f0654p0, cos(x) = 0x1.09557ep-2 (RZ)
     {0xbf70090b, 0, 1, 0}, // x = 0x1.33333p13, cos(x) = -0x1.e01216p-1 (RZ)
     {0x3f4ea5d2, 1, 0, 0}, // x = 0x1.64a032p43, cos(x) = 0x1.9d4ba4p-1 (RZ)
-    {0x3ddf11f3, 1, 0, 1}, // x = 0x1.95f654p44, cos(x) = 0x1.be23e6p-4 (RZ)
     {0x3f08aebe, 1, 0, 1}, // x = 0x1.4555p51, cos(x) = 0x1.115d7cp-1 (RZ)
-    {0x3efa40a4, 1, 0, 0}, // x = 0x1.48a858p54, cos(x) = 0x1.f48148p-2 (RZ)
     {0x3f7f14bb, 1, 0, 0}, // x = 0x1.3170fp63, cos(x) = 0x1.fe2976p-1 (RZ)
     {0x3f78142e, 1, 0, 1}, // x = 0x1.2b9622p67, cos(x) = 0x1.f0285cp-1 (RZ)
     {0x3f08a21c, 1, 0, 0}, // x = 0x1.ddebdep120, cos(x) = 0x1.114438p-1 (RZ)
 };
 
-// Fast sincosf implementation. Worst-case ULP is 0.5607, maximum relative
-// error is 0.5303 * 2^-23. A single-step range reduction is used for
-// small values. Large inputs have their range reduced using fast integer
-// arithmetic.
 LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
   using FPBits = typename fputil::FPBits<float>;
   FPBits xbits(x);
@@ -71,25 +55,25 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
   double xd = static_cast<double>(x);
 
   // Range reduction:
-  // For |x| > pi/16, we perform range reduction as follows:
+  // For |x| >= 2^-12, we perform range reduction as follows:
   // Find k and y such that:
-  //   x = (k + y) * pi/16
+  //   x = (k + y) * pi/32
   //   k is an integer
   //   |y| < 0.5
-  // For small range (|x| < 2^46 when FMA instructions are available, 2^22
+  // For small range (|x| < 2^45 when FMA instructions are available, 2^22
   // otherwise), this is done by performing:
-  //   k = round(x * 16/pi)
-  //   y = x * 16/pi - k
-  // For large range, we will omit all the higher parts of 16/pi such that the
-  // least significant bits of their full products with x are larger than 31,
+  //   k = round(x * 32/pi)
+  //   y = x * 32/pi - k
+  // For large range, we will omit all the higher parts of 32/pi such that the
+  // least significant bits of their full products with x are larger than 63,
   // since:
-  //     sin((k + y + 32*i) * pi/16) = sin(x + i * 2pi) = sin(x), and
-  //     cos((k + y + 32*i) * pi/16) = cos(x + i * 2pi) = cos(x).
+  //     sin((k + y + 64*i) * pi/32) = sin(x + i * 2pi) = sin(x), and
+  //     cos((k + y + 64*i) * pi/32) = cos(x + i * 2pi) = cos(x).
   //
-  // When FMA instructions are not available, we store the digits of 16/pi in
+  // When FMA instructions are not available, we store the digits of 32/pi in
   // chunks of 28-bit precision.  This will make sure that the products:
-  //   x * SIXTEEN_OVER_PI_28[i] are all exact.
-  // When FMA instructions are available, we simply store the digits of 16/pi in
+  //   x * THIRTYTWO_OVER_PI_28[i] are all exact.
+  // When FMA instructions are available, we simply store the digits of326/pi in
   // chunks of doubles (53-bit of precision).
   // So when multiplying by the largest values of single precision, the
   // resulting output should be correct up to 2^(-208 + 128) ~ 2^-80.  By the
@@ -102,13 +86,13 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
   //
   // Once k and y are computed, we then deduce the answer by the sine and cosine
   // of sum formulas:
-  //   sin(x) = sin((k + y)*pi/16)
-  //          = sin(y*pi/16) * cos(k*pi/16) + cos(y*pi/16) * sin(k*pi/16)
-  //   cos(x) = cos((k + y)*pi/16)
-  //          = cos(y*pi/16) * cos(k*pi/16) - sin(y*pi/16) * sin(k*pi/16)
-  // The values of sin(k*pi/16) and cos(k*pi/16) for k = 0..31 are precomputed
-  // and stored using a vector of 32 doubles. Sin(y*pi/16) and cos(y*pi/16) are
-  // computed using degree-7 and degree-8 minimax polynomials generated by
+  //   sin(x) = sin((k + y)*pi/32)
+  //          = sin(y*pi/32) * cos(k*pi/32) + cos(y*pi/32) * sin(k*pi/32)
+  //   cos(x) = cos((k + y)*pi/32)
+  //          = cos(y*pi/32) * cos(k*pi/32) - sin(y*pi/32) * sin(k*pi/32)
+  // The values of sin(k*pi/32) and cos(k*pi/32) for k = 0..63 are precomputed
+  // and stored using a vector of 32 doubles. Sin(y*pi/32) and cos(y*pi/32) are
+  // computed using degree-7 and degree-6 minimax polynomials generated by
   // Sollya respectively.
 
   // |x| < 0x1.0p-12f
@@ -195,12 +179,12 @@ LLVM_LIBC_FUNCTION(void, sincosf, (float x, float *sinp, float *cosp)) {
   }
 
   // Combine the results with the sine and cosine of sum formulas:
-  //   sin(x) = sin((k + y)*pi/16)
-  //          = sin(y*pi/16) * cos(k*pi/16) + cos(y*pi/16) * sin(k*pi/16)
+  //   sin(x) = sin((k + y)*pi/32)
+  //          = sin(y*pi/32) * cos(k*pi/32) + cos(y*pi/32) * sin(k*pi/32)
   //          = sin_y * cos_k + (1 + cosm1_y) * sin_k
   //          = sin_y * cos_k + (cosm1_y * sin_k + sin_k)
-  //   cos(x) = cos((k + y)*pi/16)
-  //          = cos(y*pi/16) * cos(k*pi/16) - sin(y*pi/16) * sin(k*pi/16)
+  //   cos(x) = cos((k + y)*pi/32)
+  //          = cos(y*pi/32) * cos(k*pi/32) - sin(y*pi/32) * sin(k*pi/32)
   //          = cosm1_y * cos_k + sin_y * sin_k
   //          = (cosm1_y * cos_k + cos_k) + sin_y * sin_k
   double sin_k, cos_k, sin_y, cosm1_y;
