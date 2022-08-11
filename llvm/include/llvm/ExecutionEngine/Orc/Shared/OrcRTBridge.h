@@ -47,6 +47,8 @@ extern const char *RegisterEHFrameSectionWrapperName;
 extern const char *DeregisterEHFrameSectionWrapperName;
 
 extern const char *RunAsMainWrapperName;
+extern const char *RunAsVoidFunctionWrapperName;
+extern const char *RunAsIntFunctionWrapperName;
 
 using SPSSimpleExecutorDylibManagerOpenSignature =
     shared::SPSExpected<uint64_t>(shared::SPSExecutorAddr, shared::SPSString,
@@ -81,7 +83,8 @@ using SPSExecutorSharedMemoryMapperServiceReleaseSignature = shared::SPSError(
 
 using SPSRunAsMainSignature = int64_t(shared::SPSExecutorAddr,
                                       shared::SPSSequence<shared::SPSString>);
-
+using SPSRunAsVoidFunctionSignature = int32_t(shared::SPSExecutorAddr);
+using SPSRunAsIntFunctionSignature = int32_t(shared::SPSExecutorAddr, int32_t);
 } // end namespace rt
 } // end namespace orc
 } // end namespace llvm
