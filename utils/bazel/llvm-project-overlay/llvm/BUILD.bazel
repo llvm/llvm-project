@@ -487,7 +487,10 @@ cc_library(
         "lib/DebugInfo/Symbolize/*.cpp",
         "lib/DebugInfo/Symbolize/*.h",
     ]),
-    hdrs = glob(["include/llvm/DebugInfo/Symbolize/*.h", "include/llvm/Debuginfod/*.h"]),
+    hdrs = glob([
+        "include/llvm/DebugInfo/Symbolize/*.h",
+        "include/llvm/Debuginfod/*.h",
+    ]),
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
@@ -2343,6 +2346,7 @@ cc_library(
         ":Support",
         ":Target",
         ":TransformUtils",
+        ":WindowsDriver",
         ":config",
     ],
 )
