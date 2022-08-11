@@ -379,7 +379,7 @@ struct AllocaOpConversion : public FIROpConversion<fir::AllocaOp> {
             "callee", mlir::SymbolRefAttr::get(memSizeFn));
         auto call = rewriter.create<mlir::LLVM::CallOp>(
             loc, ity, lenParams, llvm::ArrayRef<mlir::NamedAttribute>{attr});
-        size = call.getResult(0);
+        size = call.getResult();
         ty = ::getVoidPtrType(alloc.getContext());
       } else {
         return emitError(loc, "unexpected type ")
@@ -997,7 +997,7 @@ struct AllocMemOpConversion : public FIROpConversion<fir::AllocMemOp> {
     auto malloc = rewriter.create<mlir::LLVM::CallOp>(
         loc, ::getVoidPtrType(heap.getContext()), size, heap->getAttrs());
     rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(heap, ty,
-                                                       malloc.getResult(0));
+                                                       malloc.getResult());
     return mlir::success();
   }
 
