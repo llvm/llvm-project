@@ -22,8 +22,10 @@ entry:
 
 
 declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1)
+declare void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1)
 declare void @llvm.memmove.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1)
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1)
+declare void @llvm.memset.inline.p0i8.i64(i8* nocapture, i8, i64, i1)
 
 
 ; Check that tsan converts mem intrinsics back to function calls.
@@ -33,6 +35,15 @@ entry:
     tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %x, i8* align 4 %y, i64 16, i1 false)
     ret void
 ; CHECK: define void @MemCpyTest
+; CHECK: call i8* @memcpy
+; CHECK: ret void
+}
+
+define void @MemCpyInlineTest(i8* nocapture %x, i8* nocapture %y) sanitize_thread {
+entry:
+    tail call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* align 4 %x, i8* align 4 %y, i64 16, i1 false)
+    ret void
+; CHECK: define void @MemCpyInlineTest
 ; CHECK: call i8* @memcpy
 ; CHECK: ret void
 }
@@ -51,6 +62,15 @@ entry:
     tail call void @llvm.memset.p0i8.i64(i8* align 4 %x, i8 77, i64 16, i1 false)
     ret void
 ; CHECK: define void @MemSetTest
+; CHECK: call i8* @memset
+; CHECK: ret void
+}
+
+define void @MemSetInlineTest(i8* nocapture %x) sanitize_thread {
+entry:
+    tail call void @llvm.memset.inline.p0i8.i64(i8* align 4 %x, i8 77, i64 16, i1 false)
+    ret void
+; CHECK: define void @MemSetInlineTest
 ; CHECK: call i8* @memset
 ; CHECK: ret void
 }
