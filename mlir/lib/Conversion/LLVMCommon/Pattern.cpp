@@ -273,7 +273,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
     Value memory =
         toDynamic
             ? builder.create<LLVM::CallOp>(loc, mallocFunc, allocationSize)
-                  .getResult(0)
+                  .getResult()
             : builder.create<LLVM::AllocaOp>(loc, voidPtrType, allocationSize,
                                              /*alignment=*/0);
     Value source = desc.memRefDescPtr(builder, loc);

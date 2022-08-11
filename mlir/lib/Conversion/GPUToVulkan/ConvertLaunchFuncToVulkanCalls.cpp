@@ -374,7 +374,7 @@ void VulkanLaunchFuncToVulkanCallsPass::translateVulkanLaunchCall(
       loc, TypeRange{getPointerType()}, kInitVulkan);
   // The result of `initVulkan` function is a pointer to Vulkan runtime, we
   // need to pass that pointer to each Vulkan runtime call.
-  auto vulkanRuntime = initVulkanCall.getResult(0);
+  auto vulkanRuntime = initVulkanCall.getResult();
 
   // Create LLVM global with SPIR-V binary data, so we can pass a pointer with
   // that data to runtime call.

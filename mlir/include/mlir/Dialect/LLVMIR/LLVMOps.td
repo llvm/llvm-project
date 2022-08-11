@@ -645,14 +645,16 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// CallOp
+//===----------------------------------------------------------------------===//
+
 def LLVM_CallOp : LLVM_Op<"call",
                           [DeclareOpInterfaceMethods<FastmathFlagsInterface>,
                            DeclareOpInterfaceMethods<CallOpInterface>,
                            DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Call to an LLVM function.";
   let description = [{
-
-
     In LLVM IR, functions may return either 0 or 1 value. LLVM IR dialect
     implements this behavior by providing a variadic `call` operation for 0- and
     1-result functions. Even though MLIR supports multi-result functions, LLVM
@@ -678,29 +680,20 @@ def LLVM_CallOp : LLVM_Op<"call",
     llvm.call %1(%0) : (f32) -> ()
     ```
   }];
+
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
-                   Variadic<LLVM_Type>,
-                   DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
-  let results = (outs Variadic<LLVM_Type>);
+                       Variadic<LLVM_Type>,
+                       DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
+  let results = (outs Optional<LLVM_Type>:$result);
+
   let builders = [
-    OpBuilder<(ins "LLVMFuncOp":$func, "ValueRange":$operands,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes), [{
-      Type resultType = func.getFunctionType().getReturnType();
-      if (!resultType.isa<LLVM::LLVMVoidType>())
-        $_state.addTypes(resultType);
-      $_state.addAttribute("callee", SymbolRefAttr::get(func));
-      $_state.addAttributes(attributes);
-      $_state.addOperands(operands);
-    }]>,
+    OpBuilder<(ins "LLVMFuncOp":$func, "ValueRange":$args)>,
     OpBuilder<(ins "TypeRange":$results, "StringAttr":$callee,
-                   CArg<"ValueRange", "{}">:$operands), [{
-      build($_builder, $_state, results, SymbolRefAttr::get(callee), operands);
-    }]>,
+                   CArg<"ValueRange", "{}">:$args)>,
     OpBuilder<(ins "TypeRange":$results, "StringRef":$callee,
-                   CArg<"ValueRange", "{}">:$operands), [{
-      build($_builder, $_state, results,
-            StringAttr::get($_builder.getContext(), callee), operands);
-    }]>];
+                   CArg<"ValueRange", "{}">:$args)>
+  ];
+
   let hasCustomAssemblyFormat = 1;
 }
 
@@ -878,25 +871,38 @@ def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
             falseOperands);
   }]>, LLVM_TerminatorPassthroughOpBuilder];
 }
+
+//===----------------------------------------------------------------------===//
+// ReturnOp
+//===----------------------------------------------------------------------===//
+
 def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [NoSideEffect]> {
-  let arguments = (ins Variadic<LLVM_Type>:$args);
+  let arguments = (ins Optional<LLVM_Type>:$arg);
+  let assemblyFormat = "attr-dict ($arg^ `:` type($arg))?";
+
+  let builders = [
+    OpBuilder<(ins "ValueRange":$args), [{
+      build($_builder, $_state, TypeRange(), args);
+    }]>
+  ];
+
+  let hasVerifier = 1;
+
   string llvmBuilder = [{
     if ($_numOperands != 0)
-      builder.CreateRet($args[0]);
+      builder.CreateRet($arg[0]);
     else
       builder.CreateRetVoid();
   }];
-
-  let assemblyFormat = "attr-dict ($args^ `:` type($args))?";
-  let hasVerifier = 1;
 }
-def LLVM_ResumeOp : LLVM_TerminatorOp<"resume", []> {
+
+def LLVM_ResumeOp : LLVM_TerminatorOp<"resume"> {
   let arguments = (ins LLVM_Type:$value);
   string llvmBuilder = [{ builder.CreateResume($value); }];
   let assemblyFormat = "$value attr-dict `:` type($value)";
   let hasVerifier = 1;
 }
-def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable", []> {
+def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable"> {
   string llvmBuilder = [{ builder.CreateUnreachable(); }];
   let assemblyFormat = "attr-dict";
 }
