@@ -47,9 +47,11 @@ enum NodeType : unsigned {
   BSTRINS,
   BSTRPICK,
 
-  // Byte swapping operations
+  // Byte-swapping and bit-reversal
   REVB_2H,
   REVB_2W,
+  BITREV_4B,
+  BITREV_W,
 };
 } // end namespace LoongArchISD
 
