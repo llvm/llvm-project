@@ -10,6 +10,7 @@
 
 #include "NativeRegisterContextLinux_riscv64.h"
 
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -46,6 +47,11 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
   default:
     llvm_unreachable("have no register context for architecture");
   }
+}
+
+llvm::Expected<ArchSpec>
+NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
+  return HostInfo::GetArchitecture();
 }
 
 NativeRegisterContextLinux_riscv64::NativeRegisterContextLinux_riscv64(

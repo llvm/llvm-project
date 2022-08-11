@@ -124,7 +124,7 @@ enum {
   dwarf_gpr_fp = dwarf_gpr_x8,
 
   // mock pc regnum
-  dwarf_gpr_pc = UINT32_MAX,
+  dwarf_gpr_pc = 11451,
 };
 
 } // namespace riscv_dwarf
