@@ -1271,6 +1271,7 @@ def : Pat<(setne GPR:$rs1, simm12_plus1:$imm12),
           (SLTU X0, (ADDI GPR:$rs1, (NegImm simm12_plus1:$imm12)))>;
 def : Pat<(setne GPR:$rs1, -2048),
           (SLTU X0, (XORI GPR:$rs1, -2048))>;
+def : Pat<(setne GPR:$rs1, -1), (SLTIU GPR:$rs1, -1)>;
 def : Pat<(setugt GPR:$rs1, GPR:$rs2), (SLTU GPR:$rs2, GPR:$rs1)>;
 def : Pat<(setuge GPR:$rs1, GPR:$rs2), (XORI (SLTU GPR:$rs1, GPR:$rs2), 1)>;
 def : Pat<(setule GPR:$rs1, GPR:$rs2), (XORI (SLTU GPR:$rs2, GPR:$rs1), 1)>;
