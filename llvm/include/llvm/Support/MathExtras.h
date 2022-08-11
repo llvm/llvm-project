@@ -22,10 +22,6 @@
 #include <limits>
 #include <type_traits>
 
-#ifdef __ANDROID_NDK__
-#include <android/api-level.h>
-#endif
-
 #ifdef _MSC_VER
 // Declare these intrinsics manually rather including intrin.h. It's very
 // expensive, and MathExtras.h is popular.
@@ -607,15 +603,6 @@ template <size_t kValue> constexpr inline size_t CTLog2() {
 }
 
 template <> constexpr inline size_t CTLog2<1>() { return 0; }
-
-/// Return the log base 2 of the specified value.
-inline double Log2(double Value) {
-#if defined(__ANDROID_API__) && __ANDROID_API__ < 18
-  return __builtin_log(Value) / __builtin_log(2.0);
-#else
-  return log2(Value);
-#endif
-}
 
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (32 bit edition.)
