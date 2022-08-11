@@ -43,7 +43,7 @@ COFFVCRuntimeBootstrapper::loadStaticVCRuntime(JITDylib &JD,
   std::vector<std::string> ImportedLibraries;
   if (auto Err = loadVCRuntime(JD, ImportedLibraries, makeArrayRef(VCLibs),
                                makeArrayRef(UCRTLibs)))
-    return Err;
+    return std::move(Err);
   return ImportedLibraries;
 }
 
@@ -55,7 +55,7 @@ COFFVCRuntimeBootstrapper::loadDynamicVCRuntime(JITDylib &JD,
   std::vector<std::string> ImportedLibraries;
   if (auto Err = loadVCRuntime(JD, ImportedLibraries, makeArrayRef(VCLibs),
                                makeArrayRef(UCRTLibs)))
-    return Err;
+    return std::move(Err);
   return ImportedLibraries;
 }
 
