@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
 // CHECK-FULL-STACK: {{#2 .* in main.*chained_origin.cpp:}}[[@LINE-16]]
 // CHECK-SHORT-STACK: {{#0 .* in fn_g.*chained_origin.cpp:}}[[@LINE-37]]
 
-// CHECK-STACK: Uninitialized value was created by an allocation of 'z' in the stack frame of function 'main'
+// CHECK-STACK: Uninitialized value was created by an allocation of 'z' in the stack frame
 // CHECK-STACK: {{#0 .* in main.*chained_origin.cpp:}}[[@LINE-22]]
 
 // CHECK-HEAP: Uninitialized value was created by a heap allocation

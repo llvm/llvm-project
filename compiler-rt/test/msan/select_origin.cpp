@@ -17,6 +17,6 @@ int main(void) {
   int *volatile px = &x;
   int y = 43;
   int *p = max_by_ptr(px, &y);
-  // CHECK: Uninitialized value was created by an allocation of 'x' in the stack frame of function 'main'
+  // CHECK: Uninitialized value was created by an allocation of 'x' in the stack frame
   return *p;
 }
