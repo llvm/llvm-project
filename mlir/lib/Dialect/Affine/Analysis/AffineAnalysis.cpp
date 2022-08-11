@@ -609,6 +609,10 @@ DependenceResult mlir::checkMemrefAccessDependence(
       !isa<AffineWriteOpInterface>(dstAccess.opInst))
     return DependenceResult::NoDependence;
 
+  // We can't analyze further if the ops lie in different affine scopes.
+  if (getAffineScope(srcAccess.opInst) != getAffineScope(dstAccess.opInst))
+    return DependenceResult::Failure;
+
   // Create access relation from each MemRefAccess.
   FlatAffineRelation srcRel, dstRel;
   if (failed(srcAccess.getAccessRelation(srcRel)))
