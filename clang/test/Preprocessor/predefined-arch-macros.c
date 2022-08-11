@@ -3216,6 +3216,7 @@
 // CHECK_ZNVER2_M32: #define __POPCNT__ 1
 // CHECK_ZNVER2_M32: #define __PRFCHW__ 1
 // CHECK_ZNVER2_M32: #define __RDPID__ 1
+// CHECK_ZNVER2_M32: #define __RDPRU__ 1
 // CHECK_ZNVER2_M32: #define __RDRND__ 1
 // CHECK_ZNVER2_M32: #define __RDSEED__ 1
 // CHECK_ZNVER2_M32: #define __SHA__ 1
@@ -3266,6 +3267,7 @@
 // CHECK_ZNVER2_M64: #define __POPCNT__ 1
 // CHECK_ZNVER2_M64: #define __PRFCHW__ 1
 // CHECK_ZNVER2_M64: #define __RDPID__ 1
+// CHECK_ZNVER2_M64: #define __RDPRU__ 1
 // CHECK_ZNVER2_M64: #define __RDRND__ 1
 // CHECK_ZNVER2_M64: #define __RDSEED__ 1
 // CHECK_ZNVER2_M64: #define __SHA__ 1
@@ -3318,6 +3320,7 @@
 // CHECK_ZNVER3_M32: #define __POPCNT__ 1
 // CHECK_ZNVER3_M32: #define __PRFCHW__ 1
 // CHECK_ZNVER3_M32: #define __RDPID__ 1
+// CHECK_ZNVER3_M32: #define __RDPRU__ 1
 // CHECK_ZNVER3_M32: #define __RDRND__ 1
 // CHECK_ZNVER3_M32: #define __RDSEED__ 1
 // CHECK_ZNVER3_M32: #define __SHA__ 1
@@ -3368,6 +3371,7 @@
 // CHECK_ZNVER3_M64: #define __POPCNT__ 1
 // CHECK_ZNVER3_M64: #define __PRFCHW__ 1
 // CHECK_ZNVER3_M64: #define __RDPID__ 1
+// CHECK_ZNVER3_M64: #define __RDPRU__ 1
 // CHECK_ZNVER3_M64: #define __RDRND__ 1
 // CHECK_ZNVER3_M64: #define __RDSEED__ 1
 // CHECK_ZNVER3_M64: #define __SHA__ 1
