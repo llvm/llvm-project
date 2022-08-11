@@ -339,16 +339,15 @@ define i8* @two_stage_zext_trunc_mix(i32* %this, i32 %__pos1, i32 %__n1, i32** %
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast i32** [[__SIZE__I5_I_I]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, i32* [[CAST]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = lshr i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
 ; CHECK-NEXT:    [[COND_I_I:%.*]] = select i1 [[TOBOOL_I_I_I_I]], i32 [[TMP4]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[__SIZE__I_I_I_I_I:%.*]] = bitcast i32* [[THIS:%.*]] to i8*
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, i8* [[__SIZE__I_I_I_I_I]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = and i32 [[TMP7]], 1
-; CHECK-NEXT:    [[TOBOOL_I_I_I_I_I:%.*]] = icmp eq i32 [[TMP8]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, i8* [[__SIZE__I_I_I_I]], i32 [[__POS1:%.*]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, i8* [[__SIZE__I_I_I_I]], i32 [[__POS2:%.*]]
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TOBOOL_I_I_I_I_I]], i8* [[TMP9]], i8* [[TMP10]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i8, i8* [[__SIZE__I_I_I_I_I]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i32
+; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], 1
+; CHECK-NEXT:    [[TOBOOL_I_I_I_I_I:%.*]] = icmp eq i32 [[TMP7]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, i8* [[__SIZE__I_I_I_I]], i32 [[__POS1:%.*]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, i8* [[__SIZE__I_I_I_I]], i32 [[__POS2:%.*]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[TOBOOL_I_I_I_I_I]], i8* [[TMP8]], i8* [[TMP9]]
 ; CHECK-NEXT:    ret i8* [[RES]]
 ;
 entry:
@@ -1009,7 +1008,6 @@ define i32 @dont_return_inserted_trunc(i16* %a, i8* %b) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[OR]] to i8
 ; CHECK-NEXT:    store i8 [[TMP5]], i8* [[B]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[OR]] to i8
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
 entry:
@@ -1035,7 +1033,6 @@ define i32 @replace_trunk_with_mask(i16* %a) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = urem i32 535, [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], 255
 ; CHECK-NEXT:    [[TMP4:%.*]] = udiv i32 [[TMP3]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP4]] to i8
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP4]], [[COND_FALSE]] ], [ 0, [[ENTRY:%.*]] ]

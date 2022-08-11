@@ -551,8 +551,13 @@ void IRPromoter::TruncateSinks() {
     }
 
     // Don't insert a trunc for a zext which can still legally promote.
+    // Nor insert a trunc when the input value to that trunc has the same width
+    // as the zext we are inserting it for.  When this happens the input operand
+    // for the zext will be promoted to the same width as the zext's return type
+    // rendering that zext unnecessary.  This zext gets removed before the end
+    // of the pass.
     if (auto ZExt = dyn_cast<ZExtInst>(I))
-      if (ZExt->getType()->getScalarSizeInBits() > PromotedWidth)
+      if (ZExt->getType()->getScalarSizeInBits() >= PromotedWidth)
         continue;
 
     // Now handle the others.
