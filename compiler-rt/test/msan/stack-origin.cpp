@@ -24,8 +24,8 @@ int main(int argc, char **argv) {
   // CHECK: WARNING: MemorySanitizer: use-of-uninitialized-value
   // CHECK: {{#0 0x.* in main .*stack-origin.cpp:}}[[@LINE-2]]
 
-  // CHECK-ORIGINS: Uninitialized value was created by an allocation of 'x' in the stack frame of function 'main'
-  // CHECK-ORIGINS: {{#0 0x.* in main .*stack-origin.cpp:}}[[@LINE-8]]
+  // CHECK-ORIGINS: Uninitialized value was created by an allocation of 'x' in the stack frame
+  // CHECK-ORIGINS: {{#0 0x.* in main .*stack-origin.cpp:}}[[@LINE-7]]
 
   // CHECK: SUMMARY: MemorySanitizer: use-of-uninitialized-value {{.*stack-origin.cpp:.* main}}
 }

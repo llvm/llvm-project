@@ -5,13 +5,19 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 @G = constant [3 x i8] c"%s\00"		; <[3 x i8]*> [#uses=1]
 
+; A 32-bit compatible sprintf is not recognized as the standard library
+; function on 16-bit targets.
 declare i32 @sprintf(i8*, i8*, ...)
 
 define void @foo(i8* %P, i32* %X) {
-; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[CSTR:%.*]] = bitcast i32* [[X:%.*]] to i8*
-; CHECK-NEXT:    [[STRCPY:%.*]] = call i8* @strcpy(i8* noundef nonnull dereferenceable(1) [[P:%.*]], i8* noundef nonnull dereferenceable(1) [[CSTR]])
-; CHECK-NEXT:    ret void
+; CHECK32-LABEL: @foo(
+; CHECK32-NEXT:    [[CSTR:%.*]] = bitcast i32* [[X:%.*]] to i8*
+; CHECK32-NEXT:    [[STRCPY:%.*]] = call i8* @strcpy(i8* noundef nonnull dereferenceable(1) [[P:%.*]], i8* noundef nonnull dereferenceable(1) [[CSTR]])
+; CHECK32-NEXT:    ret void
+;
+; CHECK16-LABEL: @foo(
+; CHECK16-NEXT:    [[TMP1:%.*]] = call i32 (i8*, i8*, ...) @sprintf(i8* [[P:%.*]], i8* getelementptr inbounds ([3 x i8], [3 x i8]* @G, i32 0, i32 0), i32* [[X:%.*]])
+; CHECK16-NEXT:    ret void
 ;
   call i32 (i8*, i8*, ...) @sprintf( i8* %P, i8* getelementptr ([3 x i8], [3 x i8]* @G, i32 0, i32 0), i32* %X )		; <i32>:1 [#uses=0]
   ret void
@@ -23,27 +29,42 @@ define void @foo(i8* %P, i32* %X) {
 @str2 = internal constant [5 x i8] c"Ponk\00"
 
 define i8* @test1() {
-; CHECK-LABEL: @test1(
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([5 x i8], [5 x i8]* @str, i32 0, i32 3)
+; CHECK32-LABEL: @test1(
+; CHECK32-NEXT:    ret i8* getelementptr inbounds ([5 x i8], [5 x i8]* @str, i32 0, i32 3)
+;
+; CHECK16-LABEL: @test1(
+; CHECK16-NEXT:    [[TMP3:%.*]] = tail call i8* @strchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @str, i32 0, i32 2), i32 103)
+; CHECK16-NEXT:    ret i8* [[TMP3]]
 ;
   %tmp3 = tail call i8* @strchr( i8* getelementptr ([5 x i8], [5 x i8]* @str, i32 0, i32 2), i32 103 )              ; <i8*> [#uses=1]
   ret i8* %tmp3
 }
 
+; A 32-bit compatible strchr is not recognized as the standard library
+; function on 16-bit targets.
 declare i8* @strchr(i8*, i32)
 
 define i8* @test2() {
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([8 x i8], [8 x i8]* @str1, i32 0, i32 7)
+; CHECK32-LABEL: @test2(
+; CHECK32-NEXT:    ret i8* getelementptr inbounds ([8 x i8], [8 x i8]* @str1, i32 0, i32 7)
+;
+; CHECK16-LABEL: @test2(
+; CHECK16-NEXT:    [[TMP3:%.*]] = tail call i8* @strchr(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @str1, i32 0, i32 2), i32 0)
+; CHECK16-NEXT:    ret i8* [[TMP3]]
 ;
   %tmp3 = tail call i8* @strchr( i8* getelementptr ([8 x i8], [8 x i8]* @str1, i32 0, i32 2), i32 0 )               ; <i8*> [#uses=1]
   ret i8* %tmp3
 }
 
 define i8* @test3() {
-; CHECK-LABEL: @test3(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i8* null
+; CHECK32-LABEL: @test3(
+; CHECK32-NEXT:  entry:
+; CHECK32-NEXT:    ret i8* null
+;
+; CHECK16-LABEL: @test3(
+; CHECK16-NEXT:  entry:
+; CHECK16-NEXT:    [[TMP3:%.*]] = tail call i8* @strchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @str2, i32 0, i32 1), i32 80)
+; CHECK16-NEXT:    ret i8* [[TMP3]]
 ;
 entry:
   %tmp3 = tail call i8* @strchr( i8* getelementptr ([5 x i8], [5 x i8]* @str2, i32 0, i32 1), i32 80 )              ; <i8*> [#uses=1]
@@ -53,15 +74,24 @@ entry:
 
 @_2E_str = external constant [5 x i8]		; <[5 x i8]*> [#uses=1]
 
+; A 32-bit compatible memcmp is not recognized as the standard library
+; function on 16-bit targets.
 declare i32 @memcmp(i8*, i8*, i32) nounwind readonly
 
 define i1 @PR2341(i8** %start_addr) {
-; CHECK-LABEL: @PR2341(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[START_ADDR:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[TMP4]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([5 x i8], [5 x i8]* @_2E_str, i32 0, i32 0), i32 4) #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
-; CHECK-NEXT:    ret i1 [[TMP6]]
+; CHECK32-LABEL: @PR2341(
+; CHECK32-NEXT:  entry:
+; CHECK32-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[START_ADDR:%.*]], align 4
+; CHECK32-NEXT:    [[TMP5:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(4) [[TMP4]], i8* noundef nonnull dereferenceable(4) getelementptr inbounds ([5 x i8], [5 x i8]* @_2E_str, i32 0, i32 0), i32 4) #[[ATTR0:[0-9]+]]
+; CHECK32-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
+; CHECK32-NEXT:    ret i1 [[TMP6]]
+;
+; CHECK16-LABEL: @PR2341(
+; CHECK16-NEXT:  entry:
+; CHECK16-NEXT:    [[TMP4:%.*]] = load i8*, i8** [[START_ADDR:%.*]], align 4
+; CHECK16-NEXT:    [[TMP5:%.*]] = call i32 @memcmp(i8* [[TMP4]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @_2E_str, i32 0, i32 0), i32 4) #[[ATTR0:[0-9]+]]
+; CHECK16-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 0
+; CHECK16-NEXT:    ret i1 [[TMP6]]
 ;
 entry:
   %tmp4 = load i8*, i8** %start_addr, align 4		; <i8*> [#uses=1]
@@ -72,9 +102,18 @@ entry:
 }
 
 define i32 @PR4284() nounwind {
-; CHECK-LABEL: @PR4284(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i32 -65
+; CHECK32-LABEL: @PR4284(
+; CHECK32-NEXT:  entry:
+; CHECK32-NEXT:    ret i32 -65
+;
+; CHECK16-LABEL: @PR4284(
+; CHECK16-NEXT:  entry:
+; CHECK16-NEXT:    [[C0:%.*]] = alloca i8, align 1
+; CHECK16-NEXT:    [[C2:%.*]] = alloca i8, align 1
+; CHECK16-NEXT:    store i8 64, i8* [[C0]], align 1
+; CHECK16-NEXT:    store i8 -127, i8* [[C2]], align 1
+; CHECK16-NEXT:    [[CALL:%.*]] = call i32 @memcmp(i8* nonnull [[C0]], i8* nonnull [[C2]], i32 1)
+; CHECK16-NEXT:    ret i32 [[CALL]]
 ;
 entry:
   %c0 = alloca i8, align 1		; <i8*> [#uses=2]
@@ -111,6 +150,8 @@ entry:
 
 declare %struct.__sFILE* @fopen(i8*, i8*)
 
+; A 32-bit compatible exit is not recognized as the standard library
+; function on 16-bit targets.
 declare void @exit(i32)
 
 define i32 @PR4645(i1 %c1) {
@@ -168,11 +209,17 @@ define i32 @MemCpy() {
 
 declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
 
+; A 32-bit compatible strcmp is not recognized as the standard library
+; function on 16-bit targets.
 declare i32 @strcmp(i8*, i8*) #0
 
 define void @test9(i8* %x) {
-; CHECK-LABEL: @test9(
-; CHECK-NEXT:    ret void
+; CHECK32-LABEL: @test9(
+; CHECK32-NEXT:    ret void
+;
+; CHECK16-LABEL: @test9(
+; CHECK16-NEXT:    [[Y:%.*]] = call i32 @strcmp(i8* [[X:%.*]], i8* [[X]]) #[[ATTR5:[0-9]+]]
+; CHECK16-NEXT:    ret void
 ;
   %y = call i32 @strcmp(i8* %x, i8* %x) #1
   ret void
@@ -260,6 +307,8 @@ define double @fake_ldexp_16(i16 %x) {
 
 ; PR50885 - this would crash in ValueTracking.
 
+; A 32-bit compatible snprintf is not recognized as the standard library
+; function on 16-bit targets.
 declare i32 @snprintf(i8*, double, i32*)
 
 define i32 @fake_snprintf(i32 %buf, double %len, i32 * %str, i8* %ptr) {
