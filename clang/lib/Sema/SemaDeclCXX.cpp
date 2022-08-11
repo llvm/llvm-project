@@ -16554,6 +16554,137 @@ Decl *Sema::ActOnStaticAssertDeclaration(SourceLocation StaticAssertLoc,
                                       AssertMessage, RParenLoc, false);
 }
 
+/// Convert \V to a string we can present to the user in a diagnostic
+/// \T is the type of the expression that has been evaluated into \V
+static bool ConvertAPValueToString(const APValue &V, QualType T,
+                                   SmallVectorImpl<char> &Str) {
+  if (!V.hasValue())
+    return false;
+
+  switch (V.getKind()) {
+  case APValue::ValueKind::Int:
+    if (T->isBooleanType()) {
+      // Bools are reduced to ints during evaluation, but for
+      // diagnostic purposes we want to print them as
+      // true or false.
+      int64_t BoolValue = V.getInt().getExtValue();
+      assert((BoolValue == 0 || BoolValue == 1) &&
+             "Bool type, but value is not 0 or 1");
+      llvm::raw_svector_ostream OS(Str);
+      OS << (BoolValue ? "true" : "false");
+    } else if (T->isCharType()) {
+      // Same is true for chars.
+      Str.push_back('\'');
+      Str.push_back(V.getInt().getExtValue());
+      Str.push_back('\'');
+    } else
+      V.getInt().toString(Str);
+
+    break;
+
+  case APValue::ValueKind::Float:
+    V.getFloat().toString(Str);
+    break;
+
+  case APValue::ValueKind::LValue:
+    if (V.isNullPointer()) {
+      llvm::raw_svector_ostream OS(Str);
+      OS << "nullptr";
+    } else
+      return false;
+    break;
+
+  case APValue::ValueKind::ComplexFloat: {
+    llvm::raw_svector_ostream OS(Str);
+    OS << '(';
+    V.getComplexFloatReal().toString(Str);
+    OS << " + ";
+    V.getComplexFloatImag().toString(Str);
+    OS << "i)";
+  } break;
+
+  case APValue::ValueKind::ComplexInt: {
+    llvm::raw_svector_ostream OS(Str);
+    OS << '(';
+    V.getComplexIntReal().toString(Str);
+    OS << " + ";
+    V.getComplexIntImag().toString(Str);
+    OS << "i)";
+  } break;
+
+  default:
+    return false;
+  }
+
+  return true;
+}
+
+/// Some Expression types are not useful to print notes about,
+/// e.g. literals and values that have already been expanded
+/// before such as int-valued template parameters.
+static bool UsefulToPrintExpr(const Expr *E) {
+  E = E->IgnoreParenImpCasts();
+  // Literals are pretty easy for humans to understand.
+  if (isa<IntegerLiteral, FloatingLiteral, CharacterLiteral, CXXBoolLiteralExpr,
+          CXXNullPtrLiteralExpr, FixedPointLiteral, ImaginaryLiteral>(E))
+    return false;
+
+  // These have been substituted from template parameters
+  // and appear as literals in the static assert error.
+  if (isa<SubstNonTypeTemplateParmExpr>(E))
+    return false;
+
+  // -5 is also simple to understand.
+  if (const auto *UnaryOp = dyn_cast_or_null<UnaryOperator>(E))
+    return UsefulToPrintExpr(UnaryOp->getSubExpr());
+
+  // Ignore nested binary operators. This could be a FIXME for improvements
+  // to the diagnostics in the future.
+  if (isa<BinaryOperator>(E))
+    return false;
+
+  return true;
+}
+
+/// Try to print more useful information about a failed static_assert
+/// with expression \E
+void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
+  if (const auto *Op = dyn_cast_or_null<BinaryOperator>(E)) {
+    const Expr *LHS = Op->getLHS()->IgnoreParenImpCasts();
+    const Expr *RHS = Op->getRHS()->IgnoreParenImpCasts();
+
+    // Ignore comparisons of boolean expressions with a boolean literal.
+    if ((isa<CXXBoolLiteralExpr>(LHS) && RHS->getType()->isBooleanType()) ||
+        (isa<CXXBoolLiteralExpr>(RHS) && LHS->getType()->isBooleanType()))
+      return;
+
+    // Don't print obvious expressions.
+    if (!UsefulToPrintExpr(LHS) && !UsefulToPrintExpr(RHS))
+      return;
+
+    struct {
+      const clang::Expr *Expr;
+      Expr::EvalResult Result;
+      SmallString<12> ValueString;
+      bool Print;
+    } DiagSide[2] = {{LHS, Expr::EvalResult(), {}, false},
+                     {RHS, Expr::EvalResult(), {}, false}};
+    for (unsigned I = 0; I < 2; I++) {
+      const Expr *Side = DiagSide[I].Expr;
+
+      Side->EvaluateAsRValue(DiagSide[I].Result, Context, true);
+
+      DiagSide[I].Print = ConvertAPValueToString(
+          DiagSide[I].Result.Val, Side->getType(), DiagSide[I].ValueString);
+    }
+    if (DiagSide[0].Print && DiagSide[1].Print) {
+      Diag(Op->getExprLoc(), diag::note_expr_evaluates_to)
+          << DiagSide[0].ValueString << Op->getOpcodeStr()
+          << DiagSide[1].ValueString << Op->getSourceRange();
+    }
+  }
+}
+
 Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
                                          Expr *AssertExpr,
                                          StringLiteral *AssertMessage,
@@ -16612,6 +16743,7 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
         Diag(StaticAssertLoc, diag::err_static_assert_requirement_failed)
           << InnerCondDescription << !AssertMessage
           << Msg.str() << InnerCond->getSourceRange();
+        DiagnoseStaticAssertDetails(InnerCond);
       } else {
         Diag(StaticAssertLoc, diag::err_static_assert_failed)
           << !AssertMessage << Msg.str() << AssertExpr->getSourceRange();
