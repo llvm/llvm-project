@@ -32,6 +32,9 @@ namespace orc {
 int runAsMain(int (*Main)(int, char *[]), ArrayRef<std::string> Args,
               Optional<StringRef> ProgramName = None);
 
+int runAsVoidFunction(int (*Func)(void));
+int runAsIntFunction(int (*Func)(int), int Arg);
+
 } // end namespace orc
 } // end namespace llvm
 

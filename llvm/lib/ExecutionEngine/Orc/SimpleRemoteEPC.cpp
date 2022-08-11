@@ -54,6 +54,23 @@ Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
   return Result;
 }
 
+Expected<int32_t> SimpleRemoteEPC::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
+  int32_t Result = 0;
+  if (auto Err = callSPSWrapper<rt::SPSRunAsVoidFunctionSignature>(
+          RunAsVoidFunctionAddr, Result, ExecutorAddr(VoidFnAddr)))
+    return std::move(Err);
+  return Result;
+}
+
+Expected<int32_t> SimpleRemoteEPC::runAsIntFunction(ExecutorAddr IntFnAddr,
+                                                    int Arg) {
+  int32_t Result = 0;
+  if (auto Err = callSPSWrapper<rt::SPSRunAsIntFunctionSignature>(
+          RunAsIntFunctionAddr, Result, ExecutorAddr(IntFnAddr), Arg))
+    return std::move(Err);
+  return Result;
+}
+
 void SimpleRemoteEPC::callWrapperAsync(ExecutorAddr WrapperFnAddr,
                                        IncomingWFRHandler OnComplete,
                                        ArrayRef<char> ArgBuffer) {
@@ -312,7 +329,9 @@ Error SimpleRemoteEPC::setup(Setup S) {
   if (auto Err = getBootstrapSymbols(
           {{JDI.JITDispatchContext, ExecutorSessionObjectName},
            {JDI.JITDispatchFunction, DispatchFnName},
-           {RunAsMainAddr, rt::RunAsMainWrapperName}}))
+           {RunAsMainAddr, rt::RunAsMainWrapperName},
+           {RunAsVoidFunctionAddr, rt::RunAsVoidFunctionWrapperName},
+           {RunAsIntFunctionAddr, rt::RunAsIntFunctionWrapperName}}))
     return Err;
 
   if (auto DM =

@@ -3,6 +3,7 @@ if( CMAKE_HOST_UNIX AND HAVE_LIBRT )
 endif()
 
 add_llvm_component_library(LLVMOrcJIT
+  COFFVCRuntimeSupport.cpp
   CompileOnDemandLayer.cpp
   CompileUtils.cpp
   Core.cpp
@@ -59,6 +60,7 @@ add_llvm_component_library(LLVMOrcJIT
   Object
   OrcShared
   OrcTargetProcess
+  WindowsDriver
   MC
   MCDisassembler
   Passes
