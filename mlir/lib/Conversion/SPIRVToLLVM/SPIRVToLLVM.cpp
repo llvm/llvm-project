@@ -700,7 +700,7 @@ public:
       auto attr = values.getValue()[i];
       Value entry = rewriter.create<LLVM::ConstantOp>(loc, llvmI32Type, attr);
       structValue = rewriter.create<LLVM::InsertValueOp>(
-          loc, structValue, entry, llvm::makeArrayRef<int64_t>({1, i}));
+          loc, structValue, entry, ArrayRef<int64_t>({1, i}));
     }
     rewriter.create<LLVM::ReturnOp>(loc, ArrayRef<Value>({structValue}));
     rewriter.eraseOp(op);
