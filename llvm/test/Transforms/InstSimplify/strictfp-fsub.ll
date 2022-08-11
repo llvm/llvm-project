@@ -45,7 +45,7 @@ define float @fsub_x_p0_ebstrict(float %a) #0 {
   ret float %ret
 }
 
-; TODO: The instruction is expected to remain, but the result isn't used.
+; The instruction is expected to remain, but the result isn't used.
 define float @fsub_nnan_x_p0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_nnan_x_p0_ebstrict(
 ; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float 0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
@@ -145,7 +145,7 @@ define float @fold_fsub_nsz_x_n0_ebstrict(float %a) #0 {
   ret float %sub
 }
 
-; TODO: The instruction is expected to remain, but the result isn't used.
+; The instruction is expected to remain, but the result isn't used.
 define float @fold_fsub_nsz_nnan_x_n0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_nsz_nnan_x_n0_ebstrict(
 ; CHECK-NEXT:    [[SUB:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
@@ -204,7 +204,7 @@ define float @fold_fsub_fabs_x_n0_ebstrict(float %a) #0 {
   ret float %sub
 }
 
-; TODO: The instruction is expected to remain, but the result isn't used.
+; The instruction is expected to remain, but the result isn't used.
 define float @fold_fsub_fabs_nnan_x_n0_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fold_fsub_fabs_nnan_x_n0_ebstrict(
 ; CHECK-NEXT:    [[ABSA:%.*]] = call float @llvm.fabs.f32(float [[A:%.*]])
@@ -272,7 +272,7 @@ define float @fsub_fneg_n0_fnX_ebstrict(float %a) #0 {
   ret float %ret
 }
 
-; NOTE: The instruction is expected to remain, but the result isn't used.
+; The instruction is expected to remain, but the result isn't used.
 define float @fsub_fneg_nnan_n0_fnX_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_fneg_nnan_n0_fnX_ebstrict(
 ; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
@@ -373,12 +373,9 @@ define float @fsub_fneg_nsz_p0_fnX_ebmaytrap(float %a) #0 {
   ret float %ret
 }
 
-; TODO: This will fold if we allow non-default floating point environments.
 define float @fsub_fneg_nsz_nnan_p0_fnX_ebmaytrap(float %a) #0 {
 ; CHECK-LABEL: @fsub_fneg_nsz_nnan_p0_fnX_ebmaytrap(
-; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    [[RET:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[RET]]
+; CHECK-NEXT:    ret float [[A:%.*]]
 ;
   %nega = fneg float %a
   %ret = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
@@ -397,13 +394,12 @@ define float @fsub_fneg_nsz_p0_fnX_ebstrict(float %a) #0 {
   ret float %ret
 }
 
-; TODO: This will fold if we allow non-default floating point environments.
-; TODO: The instruction is expected to remain, but the result isn't used.
+; The instruction is expected to remain, but the result isn't used.
 define float @fsub_fneg_nnan_nsz_p0_fnX_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_fneg_nnan_nsz_p0_fnX_ebstrict(
 ; CHECK-NEXT:    [[NEGA:%.*]] = fneg float [[A:%.*]]
 ; CHECK-NEXT:    [[RET:%.*]] = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.000000e+00, float [[NEGA]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[RET]]
+; CHECK-NEXT:    ret float [[A]]
 ;
   %nega = fneg float %a
   %ret = call nnan nsz float @llvm.experimental.constrained.fsub.f32(float 0.0, float %nega, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -527,7 +523,7 @@ define float @fsub_x_x_ebstrict(float %a) #0 {
 }
 
 ; TODO: This will fold if we allow non-default floating point environments.
-; TODO: The instruction is expected to remain, but the result isn't used.
+; The instruction is expected to remain, but the result isn't used.
 define float @fsub_nnan_x_x_ebstrict(float %a) #0 {
 ; CHECK-LABEL: @fsub_nnan_x_x_ebstrict(
 ; CHECK-NEXT:    [[RET:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[A:%.*]], float [[A]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
