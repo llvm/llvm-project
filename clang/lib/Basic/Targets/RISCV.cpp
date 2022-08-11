@@ -285,44 +285,25 @@ bool RISCVTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   return true;
 }
 
-bool RISCV32TargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::RISCV::checkCPUKind(llvm::RISCV::parseCPUKind(Name),
-                                   /*Is64Bit=*/false);
+bool RISCVTargetInfo::isValidCPUName(StringRef Name) const {
+  bool Is64Bit = getTriple().isArch64Bit();
+  return llvm::RISCV::checkCPUKind(llvm::RISCV::parseCPUKind(Name), Is64Bit);
 }
 
-void RISCV32TargetInfo::fillValidCPUList(
+void RISCVTargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
-  llvm::RISCV::fillValidCPUArchList(Values, false);
+  bool Is64Bit = getTriple().isArch64Bit();
+  llvm::RISCV::fillValidCPUArchList(Values, Is64Bit);
 }
 
-bool RISCV32TargetInfo::isValidTuneCPUName(StringRef Name) const {
+bool RISCVTargetInfo::isValidTuneCPUName(StringRef Name) const {
+  bool Is64Bit = getTriple().isArch64Bit();
   return llvm::RISCV::checkTuneCPUKind(
-      llvm::RISCV::parseTuneCPUKind(Name, false),
-      /*Is64Bit=*/false);
+      llvm::RISCV::parseTuneCPUKind(Name, Is64Bit), Is64Bit);
 }
 
-void RISCV32TargetInfo::fillValidTuneCPUList(
+void RISCVTargetInfo::fillValidTuneCPUList(
     SmallVectorImpl<StringRef> &Values) const {
-  llvm::RISCV::fillValidTuneCPUArchList(Values, false);
-}
-
-bool RISCV64TargetInfo::isValidCPUName(StringRef Name) const {
-  return llvm::RISCV::checkCPUKind(llvm::RISCV::parseCPUKind(Name),
-                                   /*Is64Bit=*/true);
-}
-
-void RISCV64TargetInfo::fillValidCPUList(
-    SmallVectorImpl<StringRef> &Values) const {
-  llvm::RISCV::fillValidCPUArchList(Values, true);
-}
-
-bool RISCV64TargetInfo::isValidTuneCPUName(StringRef Name) const {
-  return llvm::RISCV::checkTuneCPUKind(
-      llvm::RISCV::parseTuneCPUKind(Name, true),
-      /*Is64Bit=*/true);
-}
-
-void RISCV64TargetInfo::fillValidTuneCPUList(
-    SmallVectorImpl<StringRef> &Values) const {
-  llvm::RISCV::fillValidTuneCPUArchList(Values, true);
+  bool Is64Bit = getTriple().isArch64Bit();
+  llvm::RISCV::fillValidTuneCPUArchList(Values, Is64Bit);
 }
