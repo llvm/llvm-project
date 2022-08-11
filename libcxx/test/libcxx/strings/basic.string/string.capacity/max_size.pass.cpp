@@ -74,7 +74,13 @@ bool test() {
 #   else
   full_size();
 #   endif
-# elif defined(__powerpc__) || defined(__powerpc64__) || defined(__sparc64__)
+# elif defined(__powerpc__) || defined(__powerpc64__)
+#   ifdef __BIG_ENDIAN__
+  half_size();
+#   else
+  full_size();
+#   endif
+# elif defined(__sparc64__)
   half_size();
 # elif defined(_WIN32)
   full_size();
