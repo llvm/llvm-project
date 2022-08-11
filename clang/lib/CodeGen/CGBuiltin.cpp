@@ -2204,7 +2204,15 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   // might. Also, math builtins have the same semantics as their math library
   // twins. Thus, we can transform math library and builtin calls to their
   // LLVM counterparts if the call is marked 'const' (known to never set errno).
-  if (FD->hasAttr<ConstAttr>()) {
+  // In case FP exceptions are enabled, the experimental versions of the
+  // intrinsics model those.
+  bool ConstWithoutErrnoAndExceptions =
+      getContext().BuiltinInfo.isConstWithoutErrnoAndExceptions(BuiltinID);
+  bool ConstWithoutExceptions =
+      getContext().BuiltinInfo.isConstWithoutExceptions(BuiltinID);
+  if (FD->hasAttr<ConstAttr>() ||
+      ((ConstWithoutErrnoAndExceptions || ConstWithoutExceptions) &&
+       (!ConstWithoutErrnoAndExceptions || (!getLangOpts().MathErrno)))) {
     switch (BuiltinIDIfNoAsmLabel) {
     case Builtin::BIceil:
     case Builtin::BIceilf:
