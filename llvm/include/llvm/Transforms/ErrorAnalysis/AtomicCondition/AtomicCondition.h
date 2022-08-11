@@ -83,6 +83,48 @@ typedef struct ACTable {
 ACTable *StorageTable;
 int NodeCounter;
 
+// ULP error introduced by each operation on x86_64 architecture as given in
+// https://www.gnu.org/software/libc/manual/html_node/Errors-in-Math-Functions.html
+float fp32OpError[] = {
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    2e-6,
+    2e-6,
+    2e-6,
+    1e-6,
+    1e-6,
+    1e-6, // Does not have a known error
+    1e-6, // Truncing is not a GNU library function. Giving it 1 ULP error
+};
+
+double fp64OpError[] = {
+    1e-17,
+    1e-17,
+    1e-17,
+    1e-17,
+    1e-17,
+    1e-17,
+    1e-17, // Does not have a known error
+    1e-17,
+    1e-17,
+    1e-17,
+    2e-17,
+    2e-17,
+    2e-17,
+    1e-17,
+    1e-17,
+    1e-17, // Does not have a known error
+    1e-17, // Truncing is not a GNU library function. Giving it 1 ULP error
+};
+
 /*----------------------------------------------------------------------------*/
 /* File Functions                                                             */
 /*----------------------------------------------------------------------------*/
