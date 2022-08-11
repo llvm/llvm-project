@@ -64,6 +64,8 @@ public:
 
   const LoongArchSubtarget &getSubtarget() const { return Subtarget; }
 
+  bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
+
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
