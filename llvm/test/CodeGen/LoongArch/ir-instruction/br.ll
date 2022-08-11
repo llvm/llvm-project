@@ -22,7 +22,7 @@ define void @foo_br_eq(i32 %a, ptr %b) nounwind {
 ; LA32-NEXT:  # %bb.1: # %test
 ; LA32-NEXT:    ld.w $a0, $a1, 0
 ; LA32-NEXT:  .LBB1_2: # %end
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: foo_br_eq:
 ; LA64:       # %bb.0:
@@ -32,7 +32,7 @@ define void @foo_br_eq(i32 %a, ptr %b) nounwind {
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
 ; LA64-NEXT:  .LBB1_2: # %end
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %val = load volatile i32, ptr %b
   %cc = icmp eq i32 %val, %a
   br i1 %cc, label %end, label %test
@@ -52,7 +52,7 @@ define void @foo_br_ne(i32 %a, ptr %b) nounwind {
 ; LA32-NEXT:  # %bb.1: # %test
 ; LA32-NEXT:    ld.w $a0, $a1, 0
 ; LA32-NEXT:  .LBB2_2: # %end
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: foo_br_ne:
 ; LA64:       # %bb.0:
@@ -62,7 +62,7 @@ define void @foo_br_ne(i32 %a, ptr %b) nounwind {
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
 ; LA64-NEXT:  .LBB2_2: # %end
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %val = load volatile i32, ptr %b
   %cc = icmp ne i32 %val, %a
   br i1 %cc, label %end, label %test
@@ -82,7 +82,7 @@ define void @foo_br_slt(i32 %a, ptr %b) nounwind {
 ; LA32-NEXT:  # %bb.1: # %test
 ; LA32-NEXT:    ld.w $a0, $a1, 0
 ; LA32-NEXT:  .LBB3_2: # %end
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: foo_br_slt:
 ; LA64:       # %bb.0:
@@ -92,7 +92,7 @@ define void @foo_br_slt(i32 %a, ptr %b) nounwind {
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
 ; LA64-NEXT:  .LBB3_2: # %end
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %val = load volatile i32, ptr %b
   %cc = icmp slt i32 %val, %a
   br i1 %cc, label %end, label %test
@@ -112,7 +112,7 @@ define void @foo_br_sge(i32 %a, ptr %b) nounwind {
 ; LA32-NEXT:  # %bb.1: # %test
 ; LA32-NEXT:    ld.w $a0, $a1, 0
 ; LA32-NEXT:  .LBB4_2: # %end
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: foo_br_sge:
 ; LA64:       # %bb.0:
@@ -122,7 +122,7 @@ define void @foo_br_sge(i32 %a, ptr %b) nounwind {
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
 ; LA64-NEXT:  .LBB4_2: # %end
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %val = load volatile i32, ptr %b
   %cc = icmp sge i32 %val, %a
   br i1 %cc, label %end, label %test
@@ -142,7 +142,7 @@ define void @foo_br_ult(i32 %a, ptr %b) nounwind {
 ; LA32-NEXT:  # %bb.1: # %test
 ; LA32-NEXT:    ld.w $a0, $a1, 0
 ; LA32-NEXT:  .LBB5_2: # %end
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: foo_br_ult:
 ; LA64:       # %bb.0:
@@ -152,7 +152,7 @@ define void @foo_br_ult(i32 %a, ptr %b) nounwind {
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
 ; LA64-NEXT:  .LBB5_2: # %end
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %val = load volatile i32, ptr %b
   %cc = icmp ult i32 %val, %a
   br i1 %cc, label %end, label %test
@@ -172,7 +172,7 @@ define void @foo_br_uge(i32 %a, ptr %b) nounwind {
 ; LA32-NEXT:  # %bb.1: # %test
 ; LA32-NEXT:    ld.w $a0, $a1, 0
 ; LA32-NEXT:  .LBB6_2: # %end
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: foo_br_uge:
 ; LA64:       # %bb.0:
@@ -182,7 +182,7 @@ define void @foo_br_uge(i32 %a, ptr %b) nounwind {
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
 ; LA64-NEXT:  .LBB6_2: # %end
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %val = load volatile i32, ptr %b
   %cc = icmp uge i32 %val, %a
   br i1 %cc, label %end, label %test
@@ -203,7 +203,7 @@ define void @foo_br_sgt(i32 %a, ptr %b) nounwind {
 ; LA32-NEXT:  # %bb.1: # %test
 ; LA32-NEXT:    ld.w $a0, $a1, 0
 ; LA32-NEXT:  .LBB7_2: # %end
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: foo_br_sgt:
 ; LA64:       # %bb.0:
@@ -213,7 +213,7 @@ define void @foo_br_sgt(i32 %a, ptr %b) nounwind {
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
 ; LA64-NEXT:  .LBB7_2: # %end
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %val = load volatile i32, ptr %b
   %cc = icmp sgt i32 %val, %a
   br i1 %cc, label %end, label %test
@@ -233,7 +233,7 @@ define void @foo_br_sle(i32 %a, ptr %b) nounwind {
 ; LA32-NEXT:  # %bb.1: # %test
 ; LA32-NEXT:    ld.w $a0, $a1, 0
 ; LA32-NEXT:  .LBB8_2: # %end
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: foo_br_sle:
 ; LA64:       # %bb.0:
@@ -243,7 +243,7 @@ define void @foo_br_sle(i32 %a, ptr %b) nounwind {
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
 ; LA64-NEXT:  .LBB8_2: # %end
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %val = load volatile i32, ptr %b
   %cc = icmp sle i32 %val, %a
   br i1 %cc, label %end, label %test
@@ -263,7 +263,7 @@ define void @foo_br_ugt(i32 %a, ptr %b) nounwind {
 ; LA32-NEXT:  # %bb.1: # %test
 ; LA32-NEXT:    ld.w $a0, $a1, 0
 ; LA32-NEXT:  .LBB9_2: # %end
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: foo_br_ugt:
 ; LA64:       # %bb.0:
@@ -273,7 +273,7 @@ define void @foo_br_ugt(i32 %a, ptr %b) nounwind {
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
 ; LA64-NEXT:  .LBB9_2: # %end
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %val = load volatile i32, ptr %b
   %cc = icmp ugt i32 %val, %a
   br i1 %cc, label %end, label %test
@@ -293,7 +293,7 @@ define void @foo_br_ule(i32 %a, ptr %b) nounwind {
 ; LA32-NEXT:  # %bb.1: # %test
 ; LA32-NEXT:    ld.w $a0, $a1, 0
 ; LA32-NEXT:  .LBB10_2: # %end
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: foo_br_ule:
 ; LA64:       # %bb.0:
@@ -303,7 +303,7 @@ define void @foo_br_ule(i32 %a, ptr %b) nounwind {
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
 ; LA64-NEXT:  .LBB10_2: # %end
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %val = load volatile i32, ptr %b
   %cc = icmp ule i32 %val, %a
   br i1 %cc, label %end, label %test
@@ -326,7 +326,7 @@ define void @foo_br_cc(ptr %a, i1 %cc) nounwind {
 ; ALL-NEXT:  # %bb.1: # %test
 ; ALL-NEXT:    ld.w $a0, $a0, 0
 ; ALL-NEXT:  .LBB11_2: # %end
-; ALL-NEXT:    jirl $zero, $ra, 0
+; ALL-NEXT:    ret
   %val = load volatile i32, ptr %a
   br i1 %cc, label %end, label %test
 test:

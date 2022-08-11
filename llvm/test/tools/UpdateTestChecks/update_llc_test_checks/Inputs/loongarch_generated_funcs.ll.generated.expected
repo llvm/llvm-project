@@ -109,7 +109,7 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
 ; CHECK-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
 ; CHECK-NEXT:    addi.w $sp, $sp, 32
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
 ;
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
@@ -143,4 +143,4 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
 ; CHECK-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
 ; CHECK-NEXT:    addi.w $sp, $sp, 32
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
