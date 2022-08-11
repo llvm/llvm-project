@@ -71,8 +71,6 @@ Attribute Parser::parseAttribute(Type type) {
   // Parse an array attribute.
   case Token::l_square: {
     consumeToken(Token::l_square);
-    if (consumeIf(Token::colon))
-      return parseDenseArrayAttr();
     SmallVector<Attribute, 4> elements;
     auto parseElt = [&]() -> ParseResult {
       elements.push_back(parseAttribute());
@@ -99,6 +97,10 @@ Attribute Parser::parseAttribute(Type type) {
   // Parse a dense resource elements attribute.
   case Token::kw_dense_resource:
     return parseDenseResourceElementsAttr(type);
+
+  // Parse a dense array attribute.
+  case Token::kw_array:
+    return parseDenseArrayAttr(type);
 
   // Parse a dictionary attribute.
   case Token::l_brace: {
@@ -833,15 +835,19 @@ public:
 } // namespace
 
 /// Parse a dense array attribute.
-Attribute Parser::parseDenseArrayAttr() {
-  auto typeLoc = getToken().getLoc();
-  auto type = parseType();
-  if (!type)
+Attribute Parser::parseDenseArrayAttr(Type type) {
+  consumeToken(Token::kw_array);
+  SMLoc typeLoc = getToken().getLoc();
+  if (parseToken(Token::less, "expected '<' after 'array'"))
+    return {};
+  if (!type &&
+      (!(type = parseType()) ||
+       parseToken(Token::colon, "expected ':' after dense array type")))
     return {};
   CustomAsmParser parser(*this);
   Attribute result;
   // Check for empty list.
-  bool isEmptyList = getToken().is(Token::r_square);
+  bool isEmptyList = getToken().is(Token::greater);
 
   if (auto intType = type.dyn_cast<IntegerType>()) {
     switch (type.getIntOrFloatBitWidth()) {
@@ -901,10 +907,8 @@ Attribute Parser::parseDenseArrayAttr() {
     emitError(typeLoc, "expected integer or float type, got: ") << type;
     return {};
   }
-  if (!consumeIf(Token::r_square)) {
-    emitError("expected ']' to close an array attribute");
+  if (parseToken(Token::greater, "expected '>' to close an array attribute"))
     return {};
-  }
   return result;
 }
 
