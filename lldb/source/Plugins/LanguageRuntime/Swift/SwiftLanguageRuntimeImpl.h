@@ -15,6 +15,7 @@
 
 #include "LLDBMemoryReader.h"
 #include "SwiftLanguageRuntime.h"
+#include "SwiftMetadataCache.h"
 #include "swift/Reflection/TypeLowering.h"
 #include "llvm/Support/Memory.h"
 
@@ -201,24 +202,26 @@ public:
     /// Return a 32-bit reflection context.
     static std::unique_ptr<ReflectionContextInterface>
     CreateReflectionContext32(
-        std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop);
+        std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop,
+        SwiftMetadataCache *swift_metadata_cache);
 
     /// Return a 64-bit reflection context.
     static std::unique_ptr<ReflectionContextInterface>
     CreateReflectionContext64(
-        std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop);
+        std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop,
+        SwiftMetadataCache *swift_metadata_cache);
 
     virtual ~ReflectionContextInterface();
 
-    virtual bool addImage(
+    virtual llvm::Optional<uint32_t> addImage(
         llvm::function_ref<std::pair<swift::remote::RemoteRef<void>, uint64_t>(
             swift::ReflectionSectionKind)>
             find_section,
         llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
-    virtual bool addImage(
+    virtual llvm::Optional<uint32_t> addImage(
         swift::remote::RemoteAddress image_start,
         llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
-    virtual bool
+    virtual llvm::Optional<uint32_t>
     readELF(swift::remote::RemoteAddress ImageStart,
             llvm::Optional<llvm::sys::MemoryBlock> FileBuffer,
             llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) = 0;
@@ -365,6 +368,8 @@ private:
   /// Lazily initialize and return \p m_SwiftNativeNSErrorISA.
   llvm::Optional<lldb::addr_t> GetSwiftNativeNSErrorISA();
 
+  SwiftMetadataCache *GetSwiftMetadataCache();
+
   /// These members are used to track and toggle the state of the "dynamic
   /// exclusivity enforcement flag" in the swift runtime. This flag is set to
   /// true when an LLDB expression starts running, and reset to its original
@@ -381,6 +386,8 @@ private:
   /// Reflection context.
   /// \{
   std::unique_ptr<ReflectionContextInterface> m_reflection_ctx;
+
+  SwiftMetadataCache m_swift_metadata_cache;
 
   /// Record modules added through ModulesDidLoad, which are to be
   /// added to the reflection context once it's being initialized.
@@ -400,8 +407,9 @@ private:
 
   /// Add the reflections sections to the reflection context by extracting
   /// the directly from the object file.
-  /// \return true on success.
-  bool AddObjectFileToReflectionContext(
+  /// \return the info id of the newly registered reflection info on success, or
+  /// llvm::None otherwise.
+  llvm::Optional<uint32_t> AddObjectFileToReflectionContext(
       lldb::ModuleSP module,
       llvm::SmallVector<llvm::StringRef, 1> likely_module_names);
 

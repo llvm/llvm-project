@@ -11,8 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "LLDBMemoryReader.h"
-#include "SwiftLanguageRuntimeImpl.h"
 #include "SwiftLanguageRuntime.h"
+#include "SwiftLanguageRuntimeImpl.h"
+#include "SwiftMetadataCache.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -24,12 +25,13 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
-#include "swift/AST/Types.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTMangler.h"
 #include "swift/AST/ASTWalker.h"
 #include "swift/AST/Decl.h"
+#include "swift/AST/Types.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Reflection/ReflectionContext.h"
 #include "swift/Reflection/TypeRefBuilder.h"
@@ -241,10 +243,11 @@ class TargetReflectionContext
 
 public:
   TargetReflectionContext(
-      std::shared_ptr<swift::reflection::MemoryReader> reader)
-      : m_reflection_ctx(reader) {}
+      std::shared_ptr<swift::reflection::MemoryReader> reader,
+      SwiftMetadataCache *swift_metadata_cache)
+      : m_reflection_ctx(reader, swift_metadata_cache) {}
 
-  bool addImage(
+  llvm::Optional<uint32_t> addImage(
       llvm::function_ref<std::pair<swift::remote::RemoteRef<void>, uint64_t>(
           swift::ReflectionSectionKind)>
           find_section,
@@ -252,13 +255,13 @@ public:
     return m_reflection_ctx.addImage(find_section, likely_module_names);
   }
 
-  bool
+  llvm::Optional<uint32_t>
   addImage(swift::remote::RemoteAddress image_start,
            llvm::SmallVector<llvm::StringRef, 1> likely_module_names) override {
     return m_reflection_ctx.addImage(image_start, likely_module_names);
   }
 
-  bool readELF(
+  llvm::Optional<uint32_t> readELF(
       swift::remote::RemoteAddress ImageStart,
       llvm::Optional<llvm::sys::MemoryBlock> FileBuffer,
       llvm::SmallVector<llvm::StringRef, 1> likely_module_names = {}) override {
@@ -361,21 +364,25 @@ public:
 
 std::unique_ptr<SwiftLanguageRuntimeImpl::ReflectionContextInterface>
 SwiftLanguageRuntimeImpl::ReflectionContextInterface::CreateReflectionContext32(
-    std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop) {
+    std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop,
+    SwiftMetadataCache *swift_metadata_cache) {
   using ReflectionContext32ObjCInterop =
       TargetReflectionContext<swift::reflection::ReflectionContext<
           swift::External<swift::WithObjCInterop<swift::RuntimeTarget<4>>>>>;
   using ReflectionContext32NoObjCInterop =
       TargetReflectionContext<swift::reflection::ReflectionContext<
           swift::External<swift::NoObjCInterop<swift::RuntimeTarget<4>>>>>;
-  if (ObjCInterop)    
-    return std::make_unique<ReflectionContext32ObjCInterop>(reader);
-  return std::make_unique<ReflectionContext32NoObjCInterop>(reader);
+  if (ObjCInterop)
+    return std::make_unique<ReflectionContext32ObjCInterop>(
+        reader, swift_metadata_cache);
+  return std::make_unique<ReflectionContext32NoObjCInterop>(
+      reader, swift_metadata_cache);
 }
 
 std::unique_ptr<SwiftLanguageRuntimeImpl::ReflectionContextInterface>
 SwiftLanguageRuntimeImpl::ReflectionContextInterface::CreateReflectionContext64(
-    std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop) {
+    std::shared_ptr<swift::remote::MemoryReader> reader, bool ObjCInterop,
+    SwiftMetadataCache *swift_metadata_cache) {
   using ReflectionContext64ObjCInterop =
       TargetReflectionContext<swift::reflection::ReflectionContext<
           swift::External<swift::WithObjCInterop<swift::RuntimeTarget<8>>>>>;
@@ -383,8 +390,10 @@ SwiftLanguageRuntimeImpl::ReflectionContextInterface::CreateReflectionContext64(
       TargetReflectionContext<swift::reflection::ReflectionContext<
           swift::External<swift::NoObjCInterop<swift::RuntimeTarget<8>>>>>;
   if (ObjCInterop)
-    return std::make_unique<ReflectionContext64ObjCInterop>(reader);
-  return std::make_unique<ReflectionContext64NoObjCInterop>(reader);
+    return std::make_unique<ReflectionContext64ObjCInterop>(
+        reader, swift_metadata_cache);
+  return std::make_unique<ReflectionContext64NoObjCInterop>(
+      reader, swift_metadata_cache);
 }
 
 SwiftLanguageRuntimeImpl::ReflectionContextInterface::

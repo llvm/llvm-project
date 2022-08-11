@@ -30,6 +30,22 @@ let Definition = "modulelist" in {
     DefaultEnumValue<"eSwiftModuleLoadingModePreferSerialized">,
     EnumValues<"OptionEnumValues(g_swift_module_loading_mode_enums)">,
     Desc<"The module loading mode to use when loading modules for Swift.">;
+  def EnableSwiftMetadataCache: Property<"enable-swift-metadata-cache", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"Enable caching for Swift reflection metadata in LLDB.">;
+  def SwiftMetadataCachePath: Property<"swift-metadata-cache-path", "FileSpec">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"The path to LLDB's Swift reflection cache directory.">;
+  def SwiftMetadataCacheMaxByteSize: Property<"swift-metadata-cache-max-byte-size", "UInt64">,
+    Global,
+    DefaultUnsignedValue<0>,
+    Desc<"The maximum size for LLDB's Swift reflection cache directory in bytes. A value over the amount of available space on the disk will be reduced to the amount of available space. A value of 0 disables the absolute size-based pruning.">;
+  def SwiftMetadataCacheExpirationDays: Property<"swift-metadata-cache-expiration-days", "UInt64">,
+    Global,
+    DefaultUnsignedValue<7>,
+    Desc<"The expiration time in days for a Swift reflection cache file. When a file hasn't been accessed for the specified amount of days, it is removed from the cache. A value of 0 disables the expiration-based pruning.">;
 // END SWIFT
   def SymLinkPaths: Property<"debug-info-symlink-paths", "FileSpecList">,
     Global,

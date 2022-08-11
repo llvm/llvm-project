@@ -729,6 +729,12 @@ class Base(unittest2.TestCase):
             'settings set symbols.clang-modules-cache-path "{}"'.format(
                 configuration.lldb_module_cache_dir),
 
+            # Enable the swift metadata cache in order to speed up tests.
+            'settings set symbols.enable-swift-metadata-cache true',
+
+            'settings set symbols.swift-metadata-cache-path "{}"'.format(
+                configuration.lldb_module_cache_dir),
+
             # Enable expensive validations in TypeSystemSwiftTypeRef.
             'settings set symbols.swift-validate-typesystem true',
 
