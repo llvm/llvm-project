@@ -125,8 +125,7 @@ void MemRefDescriptor::setConstantOffset(OpBuilder &builder, Location loc,
 /// Builds IR extracting the pos-th size from the descriptor.
 Value MemRefDescriptor::size(OpBuilder &builder, Location loc, unsigned pos) {
   return builder.create<LLVM::ExtractValueOp>(
-      loc, value,
-      llvm::makeArrayRef<int64_t>({kSizePosInMemRefDescriptor, pos}));
+      loc, value, ArrayRef<int64_t>({kSizePosInMemRefDescriptor, pos}));
 }
 
 Value MemRefDescriptor::size(OpBuilder &builder, Location loc, Value pos,
@@ -153,8 +152,7 @@ Value MemRefDescriptor::size(OpBuilder &builder, Location loc, Value pos,
 void MemRefDescriptor::setSize(OpBuilder &builder, Location loc, unsigned pos,
                                Value size) {
   value = builder.create<LLVM::InsertValueOp>(
-      loc, value, size,
-      llvm::makeArrayRef<int64_t>({kSizePosInMemRefDescriptor, pos}));
+      loc, value, size, ArrayRef<int64_t>({kSizePosInMemRefDescriptor, pos}));
 }
 
 void MemRefDescriptor::setConstantSize(OpBuilder &builder, Location loc,
@@ -166,8 +164,7 @@ void MemRefDescriptor::setConstantSize(OpBuilder &builder, Location loc,
 /// Builds IR extracting the pos-th stride from the descriptor.
 Value MemRefDescriptor::stride(OpBuilder &builder, Location loc, unsigned pos) {
   return builder.create<LLVM::ExtractValueOp>(
-      loc, value,
-      llvm::makeArrayRef<int64_t>({kStridePosInMemRefDescriptor, pos}));
+      loc, value, ArrayRef<int64_t>({kStridePosInMemRefDescriptor, pos}));
 }
 
 /// Builds IR inserting the pos-th stride into the descriptor
@@ -175,7 +172,7 @@ void MemRefDescriptor::setStride(OpBuilder &builder, Location loc, unsigned pos,
                                  Value stride) {
   value = builder.create<LLVM::InsertValueOp>(
       loc, value, stride,
-      llvm::makeArrayRef<int64_t>({kStridePosInMemRefDescriptor, pos}));
+      ArrayRef<int64_t>({kStridePosInMemRefDescriptor, pos}));
 }
 
 void MemRefDescriptor::setConstantStride(OpBuilder &builder, Location loc,
