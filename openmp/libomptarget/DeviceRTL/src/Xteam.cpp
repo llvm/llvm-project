@@ -20,11 +20,8 @@
 
 #define __XTEAM_MAX_FLOAT (__builtin_inff())
 #define __XTEAM_LOW_FLOAT -__XTEAM_MAX_FLOAT
-
-// #define __XTEAM_MAX_DOUBLE 0x1.fffffffffffffp1023
 #define __XTEAM_MAX_DOUBLE (__builtin_huge_val())
 #define __XTEAM_LOW_DOUBLE -__XTEAM_MAX_DOUBLE
-
 #define __XTEAM_MAX_INT 2147483647
 #define __XTEAM_LOW_INT (-__XTEAM_MAX_INT - 1)
 
@@ -203,6 +200,7 @@ void __kmpc_xteam_sum_d(double inval, double *result_value) {
     }
   }
 }
+
 void __kmpc_xteam_sum_f(float inval, float *result_value) {
   float val;
 #pragma omp allocate(val) allocator(omp_thread_mem_alloc)
@@ -273,6 +271,76 @@ void __kmpc_xteam_sum_f(float inval, float *result_value) {
   }
 }
 
+void __kmpc_xteam_sum_i(int inval, int *result_value) {
+  int val;
+#pragma omp allocate(val) allocator(omp_thread_mem_alloc)
+  val = inval;
+
+  const int32_t omp_thread_num = mapping::getThreadIdInBlock();
+  const int32_t omp_team_num = mapping::getBlockId();
+  const int32_t wave_num = mapping::getWarpId();         // 0 15
+  const int32_t lane_num = mapping::getThreadIdInWarp(); //  0 63
+  const int32_t wsz = mapping::getWarpSize();
+  const int32_t NumThreads = 1024; // omp_get_num_threads() is wrong here
+  const int32_t NumTeams = mapping::getNumberOfBlocks();
+  const int32_t num_waves = NumThreads / wsz;
+  // Allocate enough share for possible 32 waves per team (nvidia)
+  static volatile __attribute__((address_space(3))) int psums[32];
+
+  if (omp_thread_num == 0) {
+    int teamval = 0;
+    __xteam_set_mem(omp_team_num, &teamval, sizeof(int), 0);
+  }
+
+  // Reduce each wavefront to psums[wave_num]
+  __kmpc_impl_syncthreads();
+  for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1)
+    val += __shfl_xor_int(val, offset, wsz);
+
+  if (lane_num == 0)
+    psums[wave_num] = val;
+
+  for (unsigned int offset = num_waves / 2; offset > 0; offset >>= 1) {
+    __kmpc_impl_syncthreads();
+    if (wave_num < offset) {
+      psums[wave_num] += psums[wave_num + offset];
+    }
+  }
+  __is_last_team = false;
+  if (omp_thread_num == 0) {
+    int teamval = psums[0];
+    __xteam_set_mem(omp_team_num, &teamval, sizeof(int), 0);
+    uint32_t td = atomic::inc(&teams_done, NumTeams - 1u, __ATOMIC_SEQ_CST);
+    if (td == (NumTeams - 1u))
+      __is_last_team = true;
+  }
+
+  // Sync so all threads from last team know they are in the last team
+  __kmpc_impl_syncthreads();
+
+  if (__is_last_team) {
+    // All threads from last completed team enter here.
+    val = 0;
+    if (omp_thread_num < NumTeams) {
+      int teamval;
+      __xteam_get_mem(omp_thread_num, &teamval, sizeof(int), 0);
+      val = teamval;
+    }
+    for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
+      val += __shfl_xor_int(val, offset, wsz);
+    }
+    if (lane_num == 0) {
+      psums[wave_num] = val;
+    }
+    if (omp_thread_num == 0) {
+      unsigned int usableWaves = ((NumTeams - 1) / wsz) + 1;
+      for (unsigned int kk = 1; kk < usableWaves; kk++)
+        psums[0] += psums[kk];
+      *result_value = psums[0];
+    }
+  }
+}
+
 void __kmpc_xteam_max_d(double inval, double *result_value) {
   double val;
 #pragma omp allocate(val) allocator(omp_thread_mem_alloc)
@@ -298,7 +366,8 @@ void __kmpc_xteam_max_d(double inval, double *result_value) {
   __kmpc_impl_syncthreads();
   for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
     double otherval = __shfl_xor_d(val, offset, wsz);
-    val = (otherval > val) ? otherval : val;
+    if (otherval > val)
+      val = otherval;
   }
 
   if (lane_num == 0)
@@ -308,8 +377,8 @@ void __kmpc_xteam_max_d(double inval, double *result_value) {
     __kmpc_impl_syncthreads();
     if (wave_num < offset) {
       double otherval = psums[wave_num + offset];
-      psums[wave_num] =
-          (otherval > psums[wave_num]) ? otherval : psums[wave_num];
+      if (otherval > psums[wave_num])
+        psums[wave_num] = otherval;
     }
   }
   __is_last_team = false;
@@ -334,7 +403,8 @@ void __kmpc_xteam_max_d(double inval, double *result_value) {
     }
     for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
       double otherval = __shfl_xor_d(val, offset, wsz);
-      val = (otherval > val) ? otherval : val;
+      if (otherval > val)
+        val = otherval;
     }
     if (lane_num == 0) {
       psums[wave_num] = val;
@@ -343,7 +413,8 @@ void __kmpc_xteam_max_d(double inval, double *result_value) {
       unsigned int usableWaves = ((NumTeams - 1) / wsz) + 1;
       for (unsigned int kk = 1; kk < usableWaves; kk++) {
         double otherval = psums[kk];
-        psums[0] = (otherval > psums[0]) ? otherval : psums[0];
+        if (otherval > psums[0])
+          psums[0] = otherval;
       }
       *result_value = psums[0];
     }
@@ -375,7 +446,8 @@ void __kmpc_xteam_max_f(float inval, float *result_value) {
   __kmpc_impl_syncthreads();
   for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
     float otherval = __shfl_xor_f(val, offset, wsz);
-    val = (otherval > val) ? otherval : val;
+    if (otherval > val)
+      val = otherval;
   }
 
   if (lane_num == 0)
@@ -385,8 +457,8 @@ void __kmpc_xteam_max_f(float inval, float *result_value) {
     __kmpc_impl_syncthreads();
     if (wave_num < offset) {
       double otherval = psums[wave_num + offset];
-      psums[wave_num] =
-          (otherval > psums[wave_num]) ? otherval : psums[wave_num];
+      if (otherval > psums[wave_num])
+        psums[wave_num] = otherval;
     }
   }
   __is_last_team = false;
@@ -411,7 +483,8 @@ void __kmpc_xteam_max_f(float inval, float *result_value) {
     }
     for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
       float otherval = __shfl_xor_f(val, offset, wsz);
-      val = (otherval > val) ? otherval : val;
+      if (otherval > val)
+        val = otherval;
     }
     if (lane_num == 0) {
       psums[wave_num] = val;
@@ -420,7 +493,8 @@ void __kmpc_xteam_max_f(float inval, float *result_value) {
       unsigned int usableWaves = ((NumTeams - 1) / wsz) + 1;
       for (unsigned int kk = 1; kk < usableWaves; kk++) {
         double otherval = psums[kk];
-        psums[0] = (otherval > psums[0]) ? otherval : psums[0];
+        if (otherval > psums[0])
+          psums[0] = otherval;
       }
       *result_value = psums[0];
     }
@@ -452,7 +526,8 @@ void __kmpc_xteam_min_d(double inval, double *result_value) {
   __kmpc_impl_syncthreads();
   for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
     double otherval = __shfl_xor_d(val, offset, wsz);
-    val = (otherval < val) ? otherval : val;
+    if (otherval < val)
+      val = otherval;
   }
 
   if (lane_num == 0)
@@ -462,8 +537,8 @@ void __kmpc_xteam_min_d(double inval, double *result_value) {
     __kmpc_impl_syncthreads();
     if (wave_num < offset) {
       double otherval = psums[wave_num + offset];
-      psums[wave_num] =
-          (otherval < psums[wave_num]) ? otherval : psums[wave_num];
+      if (otherval < psums[wave_num])
+        psums[wave_num] = otherval;
     }
   }
   __is_last_team = false;
@@ -488,7 +563,8 @@ void __kmpc_xteam_min_d(double inval, double *result_value) {
     }
     for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
       double otherval = __shfl_xor_d(val, offset, wsz);
-      val = (otherval < val) ? otherval : val;
+      if (otherval < val)
+        val = otherval;
     }
     if (lane_num == 0) {
       psums[wave_num] = val;
@@ -529,7 +605,8 @@ void __kmpc_xteam_min_f(float inval, float *result_value) {
   __kmpc_impl_syncthreads();
   for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
     float otherval = __shfl_xor_f(val, offset, wsz);
-    val = (otherval < val) ? otherval : val;
+    if (otherval < val)
+      val = otherval;
   }
 
   if (lane_num == 0)
@@ -539,8 +616,8 @@ void __kmpc_xteam_min_f(float inval, float *result_value) {
     __kmpc_impl_syncthreads();
     if (wave_num < offset) {
       float otherval = psums[wave_num + offset];
-      psums[wave_num] =
-          (otherval < psums[wave_num]) ? otherval : psums[wave_num];
+      if (otherval < psums[wave_num])
+        psums[wave_num] = otherval;
     }
   }
   __is_last_team = false;
@@ -565,7 +642,8 @@ void __kmpc_xteam_min_f(float inval, float *result_value) {
     }
     for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
       float otherval = __shfl_xor_f(val, offset, wsz);
-      val = (otherval < val) ? otherval : val;
+      if (otherval < val)
+        val = otherval;
     }
     if (lane_num == 0) {
       psums[wave_num] = val;
@@ -574,7 +652,8 @@ void __kmpc_xteam_min_f(float inval, float *result_value) {
       unsigned int usableWaves = ((NumTeams - 1) / wsz) + 1;
       for (unsigned int kk = 1; kk < usableWaves; kk++) {
         float otherval = psums[kk];
-        psums[0] = (otherval < psums[0]) ? otherval : psums[0];
+        if (otherval < psums[0])
+          psums[0] = otherval;
       }
       *result_value = psums[0];
     }
@@ -606,7 +685,8 @@ void __kmpc_xteam_min_i(int inval, int *result_value) {
   __kmpc_impl_syncthreads();
   for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
     int otherval = __shfl_xor_int(val, offset, wsz);
-    val = (otherval < val) ? otherval : val;
+    if (otherval < val)
+      val = otherval;
   }
 
   if (lane_num == 0)
@@ -616,8 +696,8 @@ void __kmpc_xteam_min_i(int inval, int *result_value) {
     __kmpc_impl_syncthreads();
     if (wave_num < offset) {
       int otherval = psums[wave_num + offset];
-      psums[wave_num] =
-          (otherval > psums[wave_num]) ? otherval : psums[wave_num];
+      if (otherval < psums[wave_num])
+        psums[wave_num] = otherval;
     }
   }
   __is_last_team = false;
@@ -642,7 +722,8 @@ void __kmpc_xteam_min_i(int inval, int *result_value) {
     }
     for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
       int otherval = __shfl_xor_int(val, offset, wsz);
-      val = (otherval < val) ? otherval : val;
+      if (otherval < val)
+        val = otherval;
     }
     if (lane_num == 0) {
       psums[wave_num] = val;
@@ -651,7 +732,8 @@ void __kmpc_xteam_min_i(int inval, int *result_value) {
       unsigned int usableWaves = ((NumTeams - 1) / wsz) + 1;
       for (unsigned int kk = 1; kk < usableWaves; kk++) {
         int otherval = psums[kk];
-        psums[0] = (otherval < psums[0]) ? otherval : psums[0];
+        if (otherval < psums[0])
+          psums[0] = otherval;
       }
       *result_value = psums[0];
     }
@@ -683,7 +765,8 @@ void __kmpc_xteam_max_i(int inval, int *result_value) {
   __kmpc_impl_syncthreads();
   for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
     int otherval = __shfl_xor_int(val, offset, wsz);
-    val = (otherval > val) ? otherval : val;
+    if (otherval > val)
+      val = otherval;
   }
 
   if (lane_num == 0)
@@ -693,8 +776,8 @@ void __kmpc_xteam_max_i(int inval, int *result_value) {
     __kmpc_impl_syncthreads();
     if (wave_num < offset) {
       int otherval = psums[wave_num + offset];
-      psums[wave_num] =
-          (otherval > psums[wave_num]) ? otherval : psums[wave_num];
+      if (otherval > psums[wave_num])
+        psums[wave_num] = otherval;
     }
   }
   __is_last_team = false;
@@ -719,7 +802,8 @@ void __kmpc_xteam_max_i(int inval, int *result_value) {
     }
     for (unsigned int offset = wsz / 2; offset > 0; offset >>= 1) {
       int otherval = __shfl_xor_int(val, offset, wsz);
-      val = (otherval > val) ? otherval : val;
+      if (otherval > val)
+        val = otherval;
     }
     if (lane_num == 0) {
       psums[wave_num] = val;
@@ -728,7 +812,8 @@ void __kmpc_xteam_max_i(int inval, int *result_value) {
       unsigned int usableWaves = ((NumTeams - 1) / wsz) + 1;
       for (unsigned int kk = 1; kk < usableWaves; kk++) {
         int otherval = psums[kk];
-        psums[0] = (otherval > psums[0]) ? otherval : psums[0];
+        if (otherval > psums[0])
+          psums[0] = otherval;
       }
       *result_value = psums[0];
     }

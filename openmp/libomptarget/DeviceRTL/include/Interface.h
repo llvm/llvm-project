@@ -288,12 +288,13 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 ///{
 void __kmpc_xteam_sum_d(double, double *);
 void __kmpc_xteam_sum_f(float, float *);
+void __kmpc_xteam_sum_i(int, int *);
 void __kmpc_xteam_max_d(double, double *);
 void __kmpc_xteam_max_f(float, float *);
+void __kmpc_xteam_max_i(int, int *);
 void __kmpc_xteam_min_d(double, double *);
 void __kmpc_xteam_min_f(float, float *);
 void __kmpc_xteam_min_i(int, int *);
-void __kmpc_xteam_max_i(int, int *);
 ///}
 
 /// Synchronization
