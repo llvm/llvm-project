@@ -97,6 +97,18 @@ include(LLVMDistributionSupport)
 set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
 set(LLVM_INCLUDE_TESTS ON CACHE INTERNAL "")
 
+# Build the gtest library needed for unittests, if we have LLVM sources
+# handy.
+if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/unittest AND NOT TARGET llvm_gtest)
+  add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/unittest utils/unittest)
+endif()
+# LLVMTestingSupport library is needed for Process/gdb-remote.
+if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
+    AND NOT TARGET LLVMTestingSupport)
+  add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
+    lib/Testing/Support)
+endif()
+
 option(LLVM_USE_FOLDERS "Enable solution folders in Visual Studio. Disable for Express versions." ON)
 if(LLVM_USE_FOLDERS)
   set_property(GLOBAL PROPERTY USE_FOLDERS ON)
