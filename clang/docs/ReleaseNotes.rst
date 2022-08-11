@@ -65,7 +65,9 @@ Bug Fixes
 - Fix a crash when evaluating a multi-dimensional array's array filler
   expression is element-dependent. This fixes
   `Issue 50601 <https://github.com/llvm/llvm-project/issues/56016>`_.
-
+- Fixed a crash-on-valid with consteval evaluation of a list-initialized
+  constructor for a temporary object. This fixes
+  `Issue 55871 <https://github.com/llvm/llvm-project/issues/55871>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
