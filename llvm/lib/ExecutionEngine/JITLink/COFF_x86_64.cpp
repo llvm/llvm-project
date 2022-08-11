@@ -161,6 +161,9 @@ private:
       break;
     }
     case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_SECREL: {
+      // FIXME: SECREL to external symbol should be handled
+      if (!GraphSymbol->isDefined())
+        return Error::success();
       Kind = EdgeKind_coff_x86_64::SecRel32;
       Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
       break;
