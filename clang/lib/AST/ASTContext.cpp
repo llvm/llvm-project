@@ -298,6 +298,9 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
     return nullptr;
 
   const FileID File = SourceMgr.getDecomposedLoc(DeclLoc).first;
+  if (!File.isValid()) {
+    return nullptr;
+  }
   const auto CommentsInThisFile = Comments.getCommentsInFile(File);
   if (!CommentsInThisFile || CommentsInThisFile->empty())
     return nullptr;
