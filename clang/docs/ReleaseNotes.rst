@@ -101,6 +101,8 @@ Improvements to Clang's diagnostics
 - Clang will now print more information about failed static assertions. In
   particular, simple static assertion expressions are evaluated to their
   compile-time value and printed out if the assertion fails.
+- Diagnostics about uninitialized ``constexpr`` varaibles have been improved
+  to mention the missing constant initializer.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
