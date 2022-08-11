@@ -122,6 +122,9 @@ bool isBuildVectorOfConstantFPSDNodes(const SDNode *N);
 /// specified node are ISD::UNDEF.
 bool allOperandsUndef(const SDNode *N);
 
+/// Return true if the specified node is FREEZE(UNDEF).
+bool isFreezeUndef(const SDNode *N);
+
 } // end namespace ISD
 
 //===----------------------------------------------------------------------===//

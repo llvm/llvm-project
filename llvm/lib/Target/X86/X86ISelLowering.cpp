@@ -11461,6 +11461,7 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
           ResVT.is512BitVector()) && "Value type must be 256-/512-bit wide");
 
   unsigned NumOperands = Op.getNumOperands();
+  unsigned NumFreezeUndef = 0;
   unsigned NumZero = 0;
   unsigned NumNonZero = 0;
   unsigned NonZeros = 0;
@@ -11468,7 +11469,9 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
     SDValue SubVec = Op.getOperand(i);
     if (SubVec.isUndef())
       continue;
-    if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
+    if (ISD::isFreezeUndef(SubVec.getNode()) && SubVec.hasOneUse())
+      ++NumFreezeUndef;
+    else if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
       ++NumZero;
     else {
       assert(i < sizeof(NonZeros) * CHAR_BIT); // Ensure the shift is in range.
@@ -11490,7 +11493,8 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
 
   // Otherwise, build it up through insert_subvectors.
   SDValue Vec = NumZero ? getZeroVector(ResVT, Subtarget, DAG, dl)
-                        : DAG.getUNDEF(ResVT);
+                        : (NumFreezeUndef ? DAG.getFreeze(DAG.getUNDEF(ResVT))
+                                          : DAG.getUNDEF(ResVT));
 
   MVT SubVT = Op.getOperand(0).getSimpleValueType();
   unsigned NumSubElems = SubVT.getVectorNumElements();

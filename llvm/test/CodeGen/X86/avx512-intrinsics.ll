@@ -7510,7 +7510,6 @@ define <8 x double> @test_mm256_castpd256_pd256_freeze(<4 x double> %a0) nounwin
 ; CHECK-LABEL: test_mm256_castpd256_pd256_freeze:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %a1 = freeze <4 x double> poison
   %res = shufflevector <4 x double> %a0, <4 x double> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -7536,7 +7535,6 @@ define <16 x float> @test_mm256_castps256_ps512_freeze(<8 x float> %a0) nounwind
 ; CHECK-LABEL: test_mm256_castps256_ps512_freeze:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %a1 = freeze <8 x float> poison
   %res = shufflevector <8 x float> %a0, <8 x float> %a1, <16x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -7562,7 +7560,6 @@ define <8 x i64> @test_mm512_castsi256_si512_pd256_freeze(<4 x i64> %a0) nounwin
 ; CHECK-LABEL: test_mm512_castsi256_si512_pd256_freeze:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %a1 = freeze <4 x i64> poison
   %res = shufflevector <4 x i64> %a0, <4 x i64> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
