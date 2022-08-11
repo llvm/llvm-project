@@ -222,7 +222,7 @@ TEST(SerializationTest, BinaryConversions) {
   std::string Serialized = llvm::to_string(Out);
 
   auto In2 = readIndexFile(Serialized);
-  ASSERT_TRUE(bool(In2)) << In.takeError();
+  ASSERT_TRUE(bool(In2)) << In2.takeError();
   ASSERT_TRUE(In2->Symbols);
   ASSERT_TRUE(In2->Refs);
   ASSERT_TRUE(In2->Relations);
