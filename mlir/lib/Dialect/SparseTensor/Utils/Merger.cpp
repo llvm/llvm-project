@@ -40,6 +40,7 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v, Operation *o)
   // Unary operations.
   case kAbsF:
   case kAbsC:
+  case kAbsI:
   case kCeilF:
   case kFloorF:
   case kSqrtF:
@@ -310,6 +311,7 @@ bool Merger::isSingleCondition(unsigned t, unsigned e) const {
   // Unary operations.
   case kAbsF:
   case kAbsC:
+  case kAbsI:
   case kCeilF:
   case kFloorF:
   case kSqrtF:
@@ -398,6 +400,7 @@ static const char *kindToOpSymbol(Kind kind) {
   // Unary operations.
   case kAbsF:
   case kAbsC:
+  case kAbsI:
     return "abs";
   case kCeilF:
     return "ceil";
@@ -497,6 +500,7 @@ void Merger::dumpExp(unsigned e) const {
   // Unary operations.
   case kAbsF:
   case kAbsC:
+  case kAbsI:
   case kCeilF:
   case kFloorF:
   case kSqrtF:
@@ -630,6 +634,7 @@ unsigned Merger::buildLattices(unsigned e, unsigned i) {
   // Unary operations.
   case kAbsF:
   case kAbsC:
+  case kAbsI:
   case kCeilF:
   case kFloorF:
   case kSqrtF:
@@ -896,6 +901,8 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
         return addExp(kAbsF, e);
       if (isa<complex::AbsOp>(def))
         return addExp(kAbsC, e);
+      if (isa<math::AbsIOp>(def))
+        return addExp(kAbsI, e);
       if (isa<math::CeilOp>(def))
         return addExp(kCeilF, e);
       if (isa<math::FloorOp>(def))
@@ -1079,6 +1086,8 @@ Value Merger::buildExp(RewriterBase &rewriter, Location loc, unsigned e,
     auto eltType = type.getElementType().cast<FloatType>();
     return rewriter.create<complex::AbsOp>(loc, eltType, v0);
   }
+  case kAbsI:
+    return rewriter.create<math::AbsIOp>(loc, v0);
   case kCeilF:
     return rewriter.create<math::CeilOp>(loc, v0);
   case kFloorF:
