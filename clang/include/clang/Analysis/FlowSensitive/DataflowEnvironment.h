@@ -135,14 +135,13 @@ public:
   ///
   /// Requirements:
   ///
-  ///  The callee of `Call` must be a `FunctionDecl` with a body.
+  ///  The callee of `Call` must be a `FunctionDecl`.
   ///
   ///  The body of the callee must not reference globals.
   ///
   ///  The arguments of `Call` must map 1:1 to the callee's parameters.
-  ///
-  ///  Each argument of `Call` must already have a `StorageLocation`.
   Environment pushCall(const CallExpr *Call) const;
+  Environment pushCall(const CXXConstructExpr *Call) const;
 
   /// Moves gathered information back into `this` from a `CalleeEnv` created via
   /// `pushCall`.
@@ -380,6 +379,12 @@ private:
 
   StorageLocation &skip(StorageLocation &Loc, SkipPast SP) const;
   const StorageLocation &skip(const StorageLocation &Loc, SkipPast SP) const;
+
+  /// Shared implementation of `pushCall` overloads. Note that unlike
+  /// `pushCall`, this member is invoked on the environment of the callee, not
+  /// of the caller.
+  void pushCallInternal(const FunctionDecl *FuncDecl,
+                        ArrayRef<const Expr *> Args);
 
   // `DACtx` is not null and not owned by this object.
   DataflowAnalysisContext *DACtx;
