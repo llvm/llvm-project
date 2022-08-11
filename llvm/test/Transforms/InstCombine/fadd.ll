@@ -534,9 +534,7 @@ define float @fadd_fneg_reass_commute0(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fadd_fneg_reass_commute0(
 ; CHECK-NEXT:    [[N:%.*]] = fneg reassoc nsz float [[X:%.*]]
 ; CHECK-NEXT:    call void @use(float [[N]])
-; CHECK-NEXT:    [[S:%.*]] = fsub reassoc nsz float [[N]], [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = fadd reassoc nsz float [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz float [[S]], [[A]]
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float [[Z:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %n = fneg reassoc nsz float %x
@@ -553,8 +551,7 @@ define float @fadd_fneg_reass_commute1(float %x, float %y, float %z) {
 ; CHECK-NEXT:    call void @use(float [[N]])
 ; CHECK-NEXT:    [[S:%.*]] = fsub float [[N]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(float [[S]])
-; CHECK-NEXT:    [[A:%.*]] = fadd float [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz float [[A]], [[S]]
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz float [[Z:%.*]], [[Y]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %n = fneg float %x
@@ -574,7 +571,7 @@ define float @fadd_fneg_reass_commute2(float %x, float %y, float %z) {
 ; CHECK-NEXT:    call void @use(float [[S]])
 ; CHECK-NEXT:    [[A:%.*]] = fadd float [[Z:%.*]], [[X]]
 ; CHECK-NEXT:    call void @use(float [[A]])
-; CHECK-NEXT:    [[R:%.*]] = fadd fast float [[S]], [[A]]
+; CHECK-NEXT:    [[R:%.*]] = fsub fast float [[Z]], [[Y]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %n = fneg float %x
@@ -591,9 +588,7 @@ define <2 x float> @fadd_fneg_reass_commute3(<2 x float> %x, <2 x float> %y, <2 
 ; CHECK-LABEL: @fadd_fneg_reass_commute3(
 ; CHECK-NEXT:    [[N:%.*]] = fneg reassoc nsz <2 x float> [[X:%.*]]
 ; CHECK-NEXT:    call void @use_vec(<2 x float> [[N]])
-; CHECK-NEXT:    [[S:%.*]] = fsub reassoc nsz <2 x float> [[N]], [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = fadd reassoc nsz <2 x float> [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = fadd reassoc nsz <2 x float> [[A]], [[S]]
+; CHECK-NEXT:    [[R:%.*]] = fsub reassoc nsz <2 x float> [[Z:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %n = fneg reassoc nsz <2 x float> %x
@@ -603,6 +598,8 @@ define <2 x float> @fadd_fneg_reass_commute3(<2 x float> %x, <2 x float> %y, <2 
   %r = fadd reassoc nsz <2 x float> %a, %s
   ret <2 x float> %r
 }
+
+; negative test - need reassoc (+ nsz)
 
 define float @fadd_fneg_commute0(float %x, float %y, float %z) {
 ; CHECK-LABEL: @fadd_fneg_commute0(
