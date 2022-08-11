@@ -10,7 +10,7 @@ define i32 @rotl_32(i32 %x, i32 %y) nounwind {
 ; LA32-NEXT:    ori $a2, $zero, 32
 ; LA32-NEXT:    sub.w $a1, $a2, $a1
 ; LA32-NEXT:    rotr.w $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_32:
 ; LA64:       # %bb.0:
@@ -18,7 +18,7 @@ define i32 @rotl_32(i32 %x, i32 %y) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a0, $a1
 ; LA64-NEXT:    srl.w $a0, $a0, $a2
 ; LA64-NEXT:    or $a0, $a1, $a0
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %z = sub i32 32, %y
   %b = shl i32 %x, %y
   %c = lshr i32 %x, %z
@@ -30,12 +30,12 @@ define i32 @rotr_32(i32 %x, i32 %y) nounwind {
 ; LA32-LABEL: rotr_32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    rotr.w $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    rotr.w $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %z = sub i32 32, %y
   %b = lshr i32 %x, %y
   %c = shl i32 %x, %z
@@ -79,14 +79,14 @@ define i64 @rotl_64(i64 %x, i64 %y) nounwind {
 ; LA32-NEXT:    srai.w $a2, $a4, 31
 ; LA32-NEXT:    and $a0, $a2, $a0
 ; LA32-NEXT:    or $a0, $a0, $a3
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ori $a2, $zero, 64
 ; LA64-NEXT:    sub.d $a1, $a2, $a1
 ; LA64-NEXT:    rotr.d $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %z = sub i64 64, %y
   %b = shl i64 %x, %y
   %c = lshr i64 %x, %z
@@ -130,12 +130,12 @@ define i64 @rotr_64(i64 %x, i64 %y) nounwind {
 ; LA32-NEXT:    srai.w $a2, $a4, 31
 ; LA32-NEXT:    and $a1, $a2, $a1
 ; LA32-NEXT:    or $a1, $a1, $a3
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    rotr.d $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %z = sub i64 64, %y
   %b = lshr i64 %x, %y
   %c = shl i64 %x, %z
@@ -148,7 +148,7 @@ define i32 @rotl_32_mask(i32 %x, i32 %y) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sub.w $a1, $zero, $a1
 ; LA32-NEXT:    rotr.w $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_32_mask:
 ; LA64:       # %bb.0:
@@ -156,7 +156,7 @@ define i32 @rotl_32_mask(i32 %x, i32 %y) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a0, $a1
 ; LA64-NEXT:    srl.w $a0, $a0, $a2
 ; LA64-NEXT:    or $a0, $a1, $a0
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %z = sub i32 0, %y
   %and = and i32 %z, 31
   %b = shl i32 %x, %y
@@ -170,7 +170,7 @@ define i32 @rotl_32_mask_and_63_and_31(i32 %x, i32 %y) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sub.w $a1, $zero, $a1
 ; LA32-NEXT:    rotr.w $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_32_mask_and_63_and_31:
 ; LA64:       # %bb.0:
@@ -178,7 +178,7 @@ define i32 @rotl_32_mask_and_63_and_31(i32 %x, i32 %y) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a0, $a1
 ; LA64-NEXT:    srl.w $a0, $a0, $a2
 ; LA64-NEXT:    or $a0, $a1, $a0
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %a = and i32 %y, 63
   %b = shl i32 %x, %a
   %c = sub i32 0, %y
@@ -193,7 +193,7 @@ define i32 @rotl_32_mask_or_64_or_32(i32 %x, i32 %y) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    sub.w $a1, $zero, $a1
 ; LA32-NEXT:    rotr.w $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_32_mask_or_64_or_32:
 ; LA64:       # %bb.0:
@@ -201,7 +201,7 @@ define i32 @rotl_32_mask_or_64_or_32(i32 %x, i32 %y) nounwind {
 ; LA64-NEXT:    sll.w $a1, $a0, $a1
 ; LA64-NEXT:    srl.w $a0, $a0, $a2
 ; LA64-NEXT:    or $a0, $a1, $a0
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %a = or i32 %y, 64
   %b = shl i32 %x, %a
   %c = sub i32 0, %y
@@ -215,12 +215,12 @@ define i32 @rotr_32_mask(i32 %x, i32 %y) nounwind {
 ; LA32-LABEL: rotr_32_mask:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    rotr.w $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_32_mask:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    rotr.w $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %z = sub i32 0, %y
   %and = and i32 %z, 31
   %b = lshr i32 %x, %y
@@ -233,12 +233,12 @@ define i32 @rotr_32_mask_and_63_and_31(i32 %x, i32 %y) nounwind {
 ; LA32-LABEL: rotr_32_mask_and_63_and_31:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    rotr.w $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_32_mask_and_63_and_31:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    rotr.w $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %a = and i32 %y, 63
   %b = lshr i32 %x, %a
   %c = sub i32 0, %y
@@ -252,12 +252,12 @@ define i32 @rotr_32_mask_or_64_or_32(i32 %x, i32 %y) nounwind {
 ; LA32-LABEL: rotr_32_mask_or_64_or_32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    rotr.w $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_32_mask_or_64_or_32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    rotr.w $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %a = or i32 %y, 64
   %b = lshr i32 %x, %a
   %c = sub i32 0, %y
@@ -303,13 +303,13 @@ define i64 @rotl_64_mask(i64 %x, i64 %y) nounwind {
 ; LA32-NEXT:    and $a0, $a2, $a0
 ; LA32-NEXT:    or $a0, $a0, $a1
 ; LA32-NEXT:    move $a1, $a3
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_64_mask:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sub.d $a1, $zero, $a1
 ; LA64-NEXT:    rotr.d $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %z = sub i64 0, %y
   %and = and i64 %z, 63
   %b = shl i64 %x, %y
@@ -355,13 +355,13 @@ define i64 @rotl_64_mask_and_127_and_63(i64 %x, i64 %y) nounwind {
 ; LA32-NEXT:    and $a0, $a2, $a0
 ; LA32-NEXT:    or $a0, $a0, $a1
 ; LA32-NEXT:    move $a1, $a3
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_64_mask_and_127_and_63:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sub.d $a1, $zero, $a1
 ; LA64-NEXT:    rotr.d $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %a = and i64 %y, 127
   %b = shl i64 %x, %a
   %c = sub i64 0, %y
@@ -378,13 +378,13 @@ define i64 @rotl_64_mask_or_128_or_64(i64 %x, i64 %y) nounwind {
 ; LA32-NEXT:    sub.w $a0, $zero, $a2
 ; LA32-NEXT:    srl.w $a0, $a1, $a0
 ; LA32-NEXT:    move $a1, $a3
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_64_mask_or_128_or_64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sub.d $a1, $zero, $a1
 ; LA64-NEXT:    rotr.d $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %a = or i64 %y, 128
   %b = shl i64 %x, %a
   %c = sub i64 0, %y
@@ -430,12 +430,12 @@ define i64 @rotr_64_mask(i64 %x, i64 %y) nounwind {
 ; LA32-NEXT:    and $a1, $a2, $a1
 ; LA32-NEXT:    or $a1, $a1, $a0
 ; LA32-NEXT:    move $a0, $a3
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_64_mask:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    rotr.d $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %z = sub i64 0, %y
   %and = and i64 %z, 63
   %b = lshr i64 %x, %y
@@ -481,12 +481,12 @@ define i64 @rotr_64_mask_and_127_and_63(i64 %x, i64 %y) nounwind {
 ; LA32-NEXT:    and $a1, $a2, $a1
 ; LA32-NEXT:    or $a1, $a1, $a0
 ; LA32-NEXT:    move $a0, $a3
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_64_mask_and_127_and_63:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    rotr.d $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %a = and i64 %y, 127
   %b = lshr i64 %x, %a
   %c = sub i64 0, %y
@@ -503,12 +503,12 @@ define i64 @rotr_64_mask_or_128_or_64(i64 %x, i64 %y) nounwind {
 ; LA32-NEXT:    sub.w $a1, $zero, $a2
 ; LA32-NEXT:    sll.w $a1, $a0, $a1
 ; LA32-NEXT:    move $a0, $a3
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_64_mask_or_128_or_64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    rotr.d $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %a = or i64 %y, 128
   %b = lshr i64 %x, %a
   %c = sub i64 0, %y
@@ -522,12 +522,12 @@ define i32 @rotri_i32(i32 %a) nounwind {
 ; LA32-LABEL: rotri_i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    rotri.w $a0, $a0, 16
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotri_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    rotri.w $a0, $a0, 16
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %shl = shl i32 %a, 16
   %shr = lshr i32 %a, 16
   %or = or i32 %shl, %shr
@@ -540,12 +540,12 @@ define i64 @rotri_i64(i64 %a) nounwind {
 ; LA32-NEXT:    move $a2, $a0
 ; LA32-NEXT:    move $a0, $a1
 ; LA32-NEXT:    move $a1, $a2
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotri_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    rotri.d $a0, $a0, 32
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %shl = shl i64 %a, 32
   %shr = lshr i64 %a, 32
   %or = or i64 %shl, %shr
@@ -561,12 +561,12 @@ define signext i32 @rotl_i32_fshl(i32 signext %a) nounwind {
 ; LA32-LABEL: rotl_i32_fshl:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    rotri.w $a0, $a0, 20
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_i32_fshl:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    rotri.w $a0, $a0, 20
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %or = tail call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 12)
   ret i32 %or
 }
@@ -581,12 +581,12 @@ define i64 @rotl_i64_fshl(i64 %a) nounwind {
 ; LA32-NEXT:    slli.w $a1, $a1, 12
 ; LA32-NEXT:    or $a1, $a1, $a0
 ; LA32-NEXT:    move $a0, $a2
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotl_i64_fshl:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    rotri.d $a0, $a0, 52
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %or = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 12)
   ret i64 %or
 }
@@ -595,7 +595,7 @@ define signext i32 @rotr_i32_fshr(i32 signext %a) nounwind {
 ; LA32-LABEL: rotr_i32_fshr:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    rotri.w $a0, $a0, 12
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_i32_fshr:
 ; LA64:       # %bb.0:
@@ -603,7 +603,7 @@ define signext i32 @rotr_i32_fshr(i32 signext %a) nounwind {
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 12
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    addi.w $a0, $a0, 0
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %or = tail call i32 @llvm.fshr.i32(i32 %a, i32 %a, i32 12)
   ret i32 %or
 }
@@ -618,12 +618,12 @@ define i64 @rotr_i64_fshr(i64 %a) nounwind {
 ; LA32-NEXT:    slli.w $a0, $a0, 20
 ; LA32-NEXT:    or $a1, $a0, $a1
 ; LA32-NEXT:    move $a0, $a2
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: rotr_i64_fshr:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    rotri.d $a0, $a0, 12
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %or = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 12)
   ret i64 %or
 }

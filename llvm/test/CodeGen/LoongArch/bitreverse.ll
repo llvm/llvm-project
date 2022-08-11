@@ -18,12 +18,12 @@ define i8 @test_bitreverse_i8(i8 %a) nounwind {
 ; LA32-LABEL: test_bitreverse_i8:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    bitrev.4b $a0, $a0
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_bitreverse_i8:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bitrev.4b $a0, $a0
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %tmp = call i8 @llvm.bitreverse.i8(i8 %a)
   ret i8 %tmp
 }
@@ -33,13 +33,13 @@ define i16 @test_bitreverse_i16(i16 %a) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    bitrev.w $a0, $a0
 ; LA32-NEXT:    srli.w $a0, $a0, 16
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_bitreverse_i16:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bitrev.d $a0, $a0
 ; LA64-NEXT:    srli.d $a0, $a0, 48
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %tmp = call i16 @llvm.bitreverse.i16(i16 %a)
   ret i16 %tmp
 }
@@ -48,12 +48,12 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; LA32-LABEL: test_bitreverse_i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    bitrev.w $a0, $a0
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_bitreverse_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bitrev.w $a0, $a0
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %tmp = call i32 @llvm.bitreverse.i32(i32 %a)
   ret i32 %tmp
 }
@@ -64,12 +64,12 @@ define i64 @test_bitreverse_i64(i64 %a) nounwind {
 ; LA32-NEXT:    bitrev.w $a2, $a1
 ; LA32-NEXT:    bitrev.w $a1, $a0
 ; LA32-NEXT:    move $a0, $a2
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_bitreverse_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bitrev.d $a0, $a0
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %tmp = call i64 @llvm.bitreverse.i64(i64 %a)
   ret i64 %tmp
 }
@@ -81,13 +81,13 @@ define i7 @test_bitreverse_i7(i7 %a) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    bitrev.w $a0, $a0
 ; LA32-NEXT:    srli.w $a0, $a0, 25
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_bitreverse_i7:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bitrev.d $a0, $a0
 ; LA64-NEXT:    srli.d $a0, $a0, 57
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %tmp = call i7 @llvm.bitreverse.i7(i7 %a)
   ret i7 %tmp
 }
@@ -97,13 +97,13 @@ define i24 @test_bitreverse_i24(i24 %a) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    bitrev.w $a0, $a0
 ; LA32-NEXT:    srli.w $a0, $a0, 8
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_bitreverse_i24:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bitrev.d $a0, $a0
 ; LA64-NEXT:    srli.d $a0, $a0, 40
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %tmp = call i24 @llvm.bitreverse.i24(i24 %a)
   ret i24 %tmp
 }
@@ -117,13 +117,13 @@ define i48 @test_bitreverse_i48(i48 %a) nounwind {
 ; LA32-NEXT:    slli.w $a0, $a2, 16
 ; LA32-NEXT:    or $a0, $a1, $a0
 ; LA32-NEXT:    srli.w $a1, $a2, 16
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_bitreverse_i48:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bitrev.d $a0, $a0
 ; LA64-NEXT:    srli.d $a0, $a0, 16
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %tmp = call i48 @llvm.bitreverse.i48(i48 %a)
   ret i48 %tmp
 }
@@ -147,7 +147,7 @@ define i77 @test_bitreverse_i77(i77 %a) nounwind {
 ; LA32-NEXT:    srli.w $a1, $a1, 19
 ; LA32-NEXT:    or $a1, $a1, $a2
 ; LA32-NEXT:    st.w $a1, $a0, 0
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_bitreverse_i77:
 ; LA64:       # %bb.0:
@@ -157,7 +157,7 @@ define i77 @test_bitreverse_i77(i77 %a) nounwind {
 ; LA64-NEXT:    slli.d $a0, $a2, 13
 ; LA64-NEXT:    or $a0, $a1, $a0
 ; LA64-NEXT:    srli.d $a1, $a2, 51
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %tmp = call i77 @llvm.bitreverse.i77(i77 %a)
   ret i77 %tmp
 }
@@ -177,14 +177,14 @@ define i128 @test_bitreverse_i128(i128 %a) nounwind {
 ; LA32-NEXT:    ld.w $a1, $a1, 12
 ; LA32-NEXT:    bitrev.w $a1, $a1
 ; LA32-NEXT:    st.w $a1, $a0, 0
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_bitreverse_i128:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    bitrev.d $a2, $a1
 ; LA64-NEXT:    bitrev.d $a1, $a0
 ; LA64-NEXT:    move $a0, $a2
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %tmp = call i128 @llvm.bitreverse.i128(i128 %a)
   ret i128 %tmp
 }

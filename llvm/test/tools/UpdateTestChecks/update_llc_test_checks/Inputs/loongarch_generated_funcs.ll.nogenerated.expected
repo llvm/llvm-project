@@ -50,7 +50,7 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
 ; CHECK-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
 ; CHECK-NEXT:    addi.w $sp, $sp, 32
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -120,7 +120,7 @@ define dso_local i32 @main() #0 {
 ; CHECK-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
 ; CHECK-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
 ; CHECK-NEXT:    addi.w $sp, $sp, 32
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4

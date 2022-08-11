@@ -6,12 +6,12 @@ define i8 @nor_i8(i8 %a, i8 %b) nounwind {
 ; LA32-LABEL: nor_i8:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    nor $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: nor_i8:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    nor $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %or = or i8 %a, %b
   %neg = xor i8 %or, -1
   ret i8 %neg
@@ -21,12 +21,12 @@ define i16 @nor_i16(i16 %a, i16 %b) nounwind {
 ; LA32-LABEL: nor_i16:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    nor $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: nor_i16:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    nor $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %or = or i16 %a, %b
   %neg = xor i16 %or, -1
   ret i16 %neg
@@ -36,12 +36,12 @@ define i32 @nor_i32(i32 %a, i32 %b) nounwind {
 ; LA32-LABEL: nor_i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    nor $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: nor_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    nor $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %or = or i32 %a, %b
   %neg = xor i32 %or, -1
   ret i32 %neg
@@ -52,12 +52,12 @@ define i64 @nor_i64(i64 %a, i64 %b) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    nor $a0, $a0, $a2
 ; LA32-NEXT:    nor $a1, $a1, $a3
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: nor_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    nor $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %or = or i64 %a, %b
   %neg = xor i64 %or, -1
   ret i64 %neg
@@ -67,12 +67,12 @@ define i8 @nor_zero_i8(i8 %a) nounwind {
 ; LA32-LABEL: nor_zero_i8:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    nor $a0, $a0, $zero
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: nor_zero_i8:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    nor $a0, $a0, $zero
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %neg = xor i8 %a, -1
   ret i8 %neg
 }
@@ -81,12 +81,12 @@ define i16 @nor_zero_i16(i16 %a) nounwind {
 ; LA32-LABEL: nor_zero_i16:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    nor $a0, $a0, $zero
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: nor_zero_i16:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    nor $a0, $a0, $zero
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %neg = xor i16 %a, -1
   ret i16 %neg
 }
@@ -95,12 +95,12 @@ define i32 @nor_zero_i32(i32 %a) nounwind {
 ; LA32-LABEL: nor_zero_i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    nor $a0, $a0, $zero
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: nor_zero_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    nor $a0, $a0, $zero
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %neg = xor i32 %a, -1
   ret i32 %neg
 }
@@ -110,12 +110,12 @@ define i64 @nor_zero_i64(i64 %a) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    nor $a0, $a0, $zero
 ; LA32-NEXT:    nor $a1, $a1, $zero
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: nor_zero_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    nor $a0, $a0, $zero
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %neg = xor i64 %a, -1
   ret i64 %neg
 }
@@ -124,12 +124,12 @@ define i8 @orn_i8(i8 %a, i8 %b) nounwind {
 ; LA32-LABEL: orn_i8:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    orn $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: orn_i8:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    orn $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %neg = xor i8 %b, -1
   %or = or i8 %neg, %a
   ret i8 %or
@@ -139,12 +139,12 @@ define i16 @orn_i16(i16 %a, i16 %b) nounwind {
 ; LA32-LABEL: orn_i16:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    orn $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: orn_i16:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    orn $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %neg = xor i16 %b, -1
   %or = or i16 %neg, %a
   ret i16 %or
@@ -154,12 +154,12 @@ define i32 @orn_i32(i32 %a, i32 %b) nounwind {
 ; LA32-LABEL: orn_i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    orn $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: orn_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    orn $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %neg = xor i32 %b, -1
   %or = or i32 %neg, %a
   ret i32 %or
@@ -170,12 +170,12 @@ define i64 @orn_i64(i64 %a, i64 %b) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    orn $a0, $a0, $a2
 ; LA32-NEXT:    orn $a1, $a1, $a3
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: orn_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    orn $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %neg = xor i64 %b, -1
   %or = or i64 %neg, %a
   ret i64 %or
@@ -185,12 +185,12 @@ define i8 @andn_i8(i8 %a, i8 %b) nounwind {
 ; LA32-LABEL: andn_i8:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    andn $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: andn_i8:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andn $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %neg = xor i8 %b, -1
   %and = and i8 %neg, %a
   ret i8 %and
@@ -200,12 +200,12 @@ define i16 @andn_i16(i16 %a, i16 %b) nounwind {
 ; LA32-LABEL: andn_i16:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    andn $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: andn_i16:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andn $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %neg = xor i16 %b, -1
   %and = and i16 %neg, %a
   ret i16 %and
@@ -215,12 +215,12 @@ define i32 @andn_i32(i32 %a, i32 %b) nounwind {
 ; LA32-LABEL: andn_i32:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    andn $a0, $a0, $a1
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: andn_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andn $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %neg = xor i32 %b, -1
   %and = and i32 %neg, %a
   ret i32 %and
@@ -231,12 +231,12 @@ define i64 @andn_i64(i64 %a, i64 %b) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    andn $a0, $a0, $a2
 ; LA32-NEXT:    andn $a1, $a1, $a3
-; LA32-NEXT:    jirl $zero, $ra, 0
+; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: andn_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    andn $a0, $a0, $a1
-; LA64-NEXT:    jirl $zero, $ra, 0
+; LA64-NEXT:    ret
   %neg = xor i64 %b, -1
   %and = and i64 %neg, %a
   ret i64 %and

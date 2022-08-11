@@ -13,7 +13,7 @@ define i64 @pat1(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: pat1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bstrins.d $a0, $a1, 39, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %and1 = and i64 %a, -1099511562241  ; 0xffffff000000ffff
   %shl = shl i64 %b, 16
   %and2 = and i64 %shl, 1099511562240 ; 0x000000ffffff0000
@@ -25,7 +25,7 @@ define i64 @pat1_swap(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: pat1_swap:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bstrins.d $a0, $a1, 39, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %and1 = and i64 %a, -1099511562241  ; 0xffffff000000ffff
   %shl = shl i64 %b, 16
   %and2 = and i64 %shl, 1099511562240 ; 0x000000ffffff0000
@@ -41,7 +41,7 @@ define i64 @pat2(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: pat2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bstrins.d $a0, $a1, 39, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %and1 = and i64 %a, -1099511562241 ; 0xffffff000000ffff
   %and2 = and i64 %b, 16777215       ; 0x0000000000ffffff
   %shl = shl i64 %and2, 16
@@ -53,7 +53,7 @@ define i64 @pat2_swap(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: pat2_swap:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bstrins.d $a0, $a1, 39, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %and1 = and i64 %a, -1099511562241 ; 0xffffff000000ffff
   %and2 = and i64 %b, 16777215       ; 0x0000000000ffffff
   %shl = shl i64 %and2, 16
@@ -71,7 +71,7 @@ define i64 @pat3(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    andi $a1, $a1, 288
 ; CHECK-NEXT:    srli.d $a1, $a1, 4
 ; CHECK-NEXT:    bstrins.d $a0, $a1, 11, 4
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %and1 = and i64 %a, -4081 ; 0xfffffffffffff00f
   %and2 = and i64 %b, 288   ; 0x0000000000000120
   %or = or i64 %and1, %and2
@@ -84,7 +84,7 @@ define i64 @pat3_swap(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    andi $a1, $a1, 288
 ; CHECK-NEXT:    srli.d $a1, $a1, 4
 ; CHECK-NEXT:    bstrins.d $a0, $a1, 11, 4
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %and1 = and i64 %a, -4081 ; 0xfffffffffffff00f
   %and2 = and i64 %b, 288   ; 0x0000000000000120
   %or = or i64 %and2, %and1
@@ -99,7 +99,7 @@ define i64 @pat4(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: pat4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 8
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %and = and i64 %a, 255
   %shl = shl i64 %b, 8
   %or = or i64 %and, %shl
@@ -110,7 +110,7 @@ define i64 @pat4_swap(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: pat4_swap:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bstrins.d $a0, $a1, 63, 8
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %and = and i64 %a, 255
   %shl = shl i64 %b, 8
   %or = or i64 %shl, %and
@@ -127,7 +127,7 @@ define i64 @pat5(i64 %a) nounwind {
 ; CHECK-NEXT:    lu12i.w $a1, 74565
 ; CHECK-NEXT:    ori $a1, $a1, 1656
 ; CHECK-NEXT:    bstrins.d $a0, $a1, 47, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %and = and i64 %a, 18446462598732906495 ; 0xffff00000000ffff
   %or = or i64 %and, 20015998304256       ; 0x0000123456780000
   ret i64 %or
@@ -146,7 +146,7 @@ define i64 @pat6(i64 %c) nounwind {
 ; CHECK-NEXT:    lu52i.d $a1, $a1, 291
 ; CHECK-NEXT:    bstrins.d $a1, $a0, 39, 16
 ; CHECK-NEXT:    move $a0, $a1
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %and = and i64 %c, 16777215            ; 0x0000000000ffffff
   %shl = shl i64 %and, 16
   %or = or i64 %shl, 1311767949471676570 ; 0x123456000000789a
@@ -164,7 +164,7 @@ define i64 @pat7(i64 %c) nounwind {
 ; CHECK-NEXT:    lu52i.d $a1, $a1, 291
 ; CHECK-NEXT:    bstrins.d $a1, $a0, 39, 16
 ; CHECK-NEXT:    move $a0, $a1
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %shl = shl i64 %c, 16
   %and = and i64 %shl, 1099511562240     ; 0x000000ffffff0000
   %or = or i64 %and, 1311767949471676570 ; 0x123456000000789a
@@ -182,7 +182,7 @@ define i64 @pat8(i64 %c) nounwind {
 ; CHECK-NEXT:    lu32i.d $a0, 284160
 ; CHECK-NEXT:    lu52i.d $a0, $a0, 291
 ; CHECK-NEXT:    bstrins.d $a0, $a1, 39, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %and = and i64 %c, 1099511562240       ; 0x000000ffffff0000
   %or = or i64 %and, 1311767949471676570 ; 0x123456000000789a
   ret i64 %or
@@ -200,7 +200,7 @@ define i64 @no_bstrins_d(i64 %a) nounwind {
 ; CHECK-NEXT:    ori $a1, $a1, 4095
 ; CHECK-NEXT:    lu32i.d $a1, -60876
 ; CHECK-NEXT:    and $a0, $a0, $a1
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %and = and i64 %a, 18446462598732906495 ; 0xffff00000000ffff
   %or = or i64 %and, 20015998341120       ; 0x0000123456789000
   ret i64 %or
