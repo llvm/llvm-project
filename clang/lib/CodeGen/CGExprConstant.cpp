@@ -1395,15 +1395,12 @@ ConstantEmitter::tryEmitAbstract(const APValue &value, QualType destType) {
 llvm::Constant *ConstantEmitter::tryEmitConstantExpr(const ConstantExpr *CE) {
   if (!CE->hasAPValueResult())
     return nullptr;
-  const Expr *Inner = CE->getSubExpr()->IgnoreImplicit();
-  QualType RetType;
-  if (auto *Call = dyn_cast<CallExpr>(Inner))
-    RetType = Call->getCallReturnType(CGM.getContext());
-  else if (auto *Ctor = dyn_cast<CXXConstructExpr>(Inner))
-    RetType = Ctor->getType();
-  llvm::Constant *Res =
-      emitAbstract(CE->getBeginLoc(), CE->getAPValueResult(), RetType);
-  return Res;
+
+  QualType RetType = CE->getType();
+  if (CE->isGLValue())
+    RetType = CGM.getContext().getLValueReferenceType(RetType);
+
+  return emitAbstract(CE->getBeginLoc(), CE->getAPValueResult(), RetType);
 }
 
 llvm::Constant *

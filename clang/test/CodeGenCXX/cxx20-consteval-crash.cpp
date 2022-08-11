@@ -56,3 +56,18 @@ int foo() {
 // CHECK: define{{.*}} signext i8 @_ZN10Issue545782f2IcEEcT_(
 // CHECK: ret i8 4
 }
+
+namespace Issue55871 {
+struct Item {
+  consteval Item(char c) :_char{c}{}
+  char _char;
+};
+
+int function(const Item& item1, const Item& item2) {
+  return 0;
+}
+
+int foo() {
+  return function(Item{'a'}, Item{'a'});
+}
+} // namespace Issue58871
