@@ -1032,6 +1032,11 @@ const FunctionType *Decl::getFunctionType(bool BlocksToo) const {
   return Ty->getAs<FunctionType>();
 }
 
+DeclContext *Decl::getNonTransparentDeclContext() {
+  assert(getDeclContext());
+  return getDeclContext()->getNonTransparentContext();
+}
+
 /// Starting at a given context (a Decl or DeclContext), look for a
 /// code context that is not a closure (a lambda, block, etc.).
 template <class T> static Decl *getNonClosureContext(T *D) {
