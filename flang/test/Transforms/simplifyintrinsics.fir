@@ -344,15 +344,15 @@ fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
 // CHECK:           %[[RESLOC:.*]] = fir.alloca f32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
 // CHECK:           %[[ACAST:.*]] = fir.convert %[[A]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
 // CHECK:           %[[BCAST:.*]] = fir.convert %[[B]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
-// CHECK:           %[[RES:.*]] = fir.call @_FortranADotProductReal4_simplified(%[[ACAST]], %[[BCAST]]) : (!fir.box<none>, !fir.box<none>) -> f32
+// CHECK:           %[[RES:.*]] = fir.call @_FortranADotProductReal4_f32_f32_simplified(%[[ACAST]], %[[BCAST]]) : (!fir.box<none>, !fir.box<none>) -> f32
 // CHECK:           fir.store %[[RES]] to %[[RESLOC]] : !fir.ref<f32>
 // CHECK:           %[[RET:.*]] = fir.load %[[RESLOC]] : !fir.ref<f32>
 // CHECK:           return %[[RET]] : f32
 // CHECK:         }
 
-// CHECK-LABEL:   func.func private @_FortranADotProductReal4_simplified(
-// CHECK-SAME:                                                           %[[A:.*]]: !fir.box<none>,
-// CHECK-SAME:                                                           %[[B:.*]]: !fir.box<none>) -> f32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK-LABEL:   func.func private @_FortranADotProductReal4_f32_f32_simplified(
+// CHECK-SAME:      %[[A:.*]]: !fir.box<none>,
+// CHECK-SAME:      %[[B:.*]]: !fir.box<none>) -> f32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
 // CHECK:           %[[FZERO:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[IZERO:.*]] = arith.constant 0 : index
 // CHECK:           %[[ACAST:.*]] = fir.convert %[[A]] : (!fir.box<none>) -> !fir.box<!fir.array<?xf32>>
@@ -363,9 +363,11 @@ fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
 // CHECK:           %[[RES:.*]] = fir.do_loop %[[IDX:.*]] = %[[IZERO]] to %[[LEN]] step %[[IONE]] iter_args(%[[SUM:.*]] = %[[FZERO]]) -> (f32) {
 // CHECK:             %[[ALOC:.*]] = fir.coordinate_of %[[ACAST]], %[[IDX]] : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // CHECK:             %[[AVAL:.*]] = fir.load %[[ALOC]] : !fir.ref<f32>
+// CHECK:             %[[AVALCAST:.*]] = fir.convert %[[AVAL]] : (f32) -> f32
 // CHECK:             %[[BLOC:.*]] = fir.coordinate_of %[[BCAST]], %[[IDX]] : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // CHECK:             %[[BVAL:.*]] = fir.load %[[BLOC]] : !fir.ref<f32>
-// CHECK:             %[[MUL:.*]] = arith.mulf %[[AVAL]], %[[BVAL]] : f32
+// CHECK:             %[[BVALCAST:.*]] = fir.convert %[[BVAL]] : (f32) -> f32
+// CHECK:             %[[MUL:.*]] = arith.mulf %[[AVALCAST]], %[[BVALCAST]] : f32
 // CHECK:             %[[NEWSUM:.*]] = arith.addf %[[MUL]], %[[SUM]] : f32
 // CHECK:             fir.result %[[NEWSUM]] : f32
 // CHECK:           }
@@ -479,15 +481,15 @@ fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
 // CHECK:           %[[RESLOC:.*]] = fir.alloca i32 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
 // CHECK:           %[[ACAST:.*]] = fir.convert %[[A]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
 // CHECK:           %[[BCAST:.*]] = fir.convert %[[B]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
-// CHECK:           %[[RES:.*]] = fir.call @_FortranADotProductInteger4_simplified(%[[ACAST]], %[[BCAST]]) : (!fir.box<none>, !fir.box<none>) -> i32
+// CHECK:           %[[RES:.*]] = fir.call @_FortranADotProductInteger4_i32_i32_simplified(%[[ACAST]], %[[BCAST]]) : (!fir.box<none>, !fir.box<none>) -> i32
 // CHECK:           fir.store %[[RES]] to %[[RESLOC]] : !fir.ref<i32>
 // CHECK:           %[[RET:.*]] = fir.load %[[RESLOC]] : !fir.ref<i32>
 // CHECK:           return %[[RET]] : i32
 // CHECK:         }
 
-// CHECK-LABEL:   func.func private @_FortranADotProductInteger4_simplified(
-// CHECK-SAME:                                                           %[[A:.*]]: !fir.box<none>,
-// CHECK-SAME:                                                           %[[B:.*]]: !fir.box<none>) -> i32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK-LABEL:   func.func private @_FortranADotProductInteger4_i32_i32_simplified(
+// CHECK-SAME:      %[[A:.*]]: !fir.box<none>,
+// CHECK-SAME:      %[[B:.*]]: !fir.box<none>) -> i32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
 // CHECK:           %[[I32ZERO:.*]] = arith.constant 0 : i32
 // CHECK:           %[[IZERO:.*]] = arith.constant 0 : index
 // CHECK:           %[[ACAST:.*]] = fir.convert %[[A]] : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
@@ -498,9 +500,11 @@ fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
 // CHECK:           %[[RES:.*]] = fir.do_loop %[[IDX:.*]] = %[[IZERO]] to %[[LEN]] step %[[IONE]] iter_args(%[[SUM:.*]] = %[[I32ZERO]]) -> (i32) {
 // CHECK:             %[[ALOC:.*]] = fir.coordinate_of %[[ACAST]], %[[IDX]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[AVAL:.*]] = fir.load %[[ALOC]] : !fir.ref<i32>
+// CHECK:             %[[AVALCAST:.*]] = fir.convert %[[AVAL]] : (i32) -> i32
 // CHECK:             %[[BLOC:.*]] = fir.coordinate_of %[[BCAST]], %[[IDX]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[BVAL:.*]] = fir.load %[[BLOC]] : !fir.ref<i32>
-// CHECK:             %[[MUL:.*]] = arith.muli %[[AVAL]], %[[BVAL]] : i32
+// CHECK:             %[[BVALCAST:.*]] = fir.convert %[[BVAL]] : (i32) -> i32
+// CHECK:             %[[MUL:.*]] = arith.muli %[[AVALCAST]], %[[BVALCAST]] : i32
 // CHECK:             %[[NEWSUM:.*]] = arith.addi %[[MUL]], %[[SUM]] : i32
 // CHECK:             fir.result %[[NEWSUM]] : i32
 // CHECK:           }
@@ -587,3 +591,63 @@ fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
 // CHECK-SAME:                      %[[A:.*]]: !fir.box<!fir.array<?xi64>> {fir.bindc_name = "a"},
 // CHECK-SAME:                      %[[B:.*]]: !fir.box<!fir.array<?xi64>> {fir.bindc_name = "b"}) -> i64 {
 // CHECK-NOT: call{{.*}}_FortranADotProductInteger8(
+
+// -----
+
+// Test mixed types, e.g. when _FortranADotProductReal8 is called
+// with <?xf64> and <?xf32> arguments. The loaded elements must be converted
+// to the result type REAL(8) before the computations.
+
+func.func @dot_f64_f32(%arg0: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f64 {
+  %0 = fir.alloca f64 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+  %1 = fir.address_of(@_QQcl.2E2F646F742E66393000) : !fir.ref<!fir.char<1,10>>
+  %c3_i32 = arith.constant 3 : i32
+  %2 = fir.convert %arg0 : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
+  %3 = fir.convert %arg1 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+  %4 = fir.convert %1 : (!fir.ref<!fir.char<1,10>>) -> !fir.ref<i8>
+  %5 = fir.call @_FortranADotProductReal8(%2, %3, %4, %c3_i32) : (!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f64
+  fir.store %5 to %0 : !fir.ref<f64>
+  %6 = fir.load %0 : !fir.ref<f64>
+  return %6 : f64
+}
+func.func private @_FortranADotProductReal4(!fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> f32 attributes {fir.runtime}
+fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
+  %0 = fir.string_lit "./dot.f90\00"(10) : !fir.char<1,10>
+  fir.has_value %0 : !fir.char<1,10>
+}
+
+// CHECK-LABEL:   func.func @dot_f64_f32(
+// CHECK-SAME:      %[[A:.*]]: !fir.box<!fir.array<?xf64>> {fir.bindc_name = "a"},
+// CHECK-SAME:      %[[B:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f64 {
+// CHECK:           %[[RESLOC:.*]] = fir.alloca f64 {bindc_name = "dot", uniq_name = "_QFdotEdot"}
+// CHECK:           %[[ACAST:.*]] = fir.convert %[[A]] : (!fir.box<!fir.array<?xf64>>) -> !fir.box<none>
+// CHECK:           %[[BCAST:.*]] = fir.convert %[[B]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
+// CHECK:           %[[RES:.*]] = fir.call @_FortranADotProductReal8_f64_f32_simplified(%[[ACAST]], %[[BCAST]]) : (!fir.box<none>, !fir.box<none>) -> f64
+// CHECK:           fir.store %[[RES]] to %[[RESLOC]] : !fir.ref<f64>
+// CHECK:           %[[RET:.*]] = fir.load %[[RESLOC]] : !fir.ref<f64>
+// CHECK:           return %[[RET]] : f64
+// CHECK:         }
+
+// CHECK-LABEL:   func.func private @_FortranADotProductReal8_f64_f32_simplified(
+// CHECK-SAME:      %[[A:.*]]: !fir.box<none>,
+// CHECK-SAME:      %[[B:.*]]: !fir.box<none>) -> f64 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK:           %[[FZERO:.*]] = arith.constant 0.000000e+00 : f64
+// CHECK:           %[[IZERO:.*]] = arith.constant 0 : index
+// CHECK:           %[[ACAST:.*]] = fir.convert %[[A]] : (!fir.box<none>) -> !fir.box<!fir.array<?xf64>>
+// CHECK:           %[[BCAST:.*]] = fir.convert %[[B]] : (!fir.box<none>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ACAST]], %[[IZERO]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
+// CHECK:           %[[IONE:.*]] = arith.constant 1 : index
+// CHECK:           %[[LEN:.*]] = arith.subi %[[DIMS]]#1, %[[IONE]] : index
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[IDX:.*]] = %[[IZERO]] to %[[LEN]] step %[[IONE]] iter_args(%[[SUM:.*]] = %[[FZERO]]) -> (f64) {
+// CHECK:             %[[ALOC:.*]] = fir.coordinate_of %[[ACAST]], %[[IDX]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
+// CHECK:             %[[AVAL:.*]] = fir.load %[[ALOC]] : !fir.ref<f64>
+// CHECK:             %[[AVALCAST:.*]] = fir.convert %[[AVAL]] : (f64) -> f64
+// CHECK:             %[[BLOC:.*]] = fir.coordinate_of %[[BCAST]], %[[IDX]] : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
+// CHECK:             %[[BVAL:.*]] = fir.load %[[BLOC]] : !fir.ref<f32>
+// CHECK:             %[[BVALCAST:.*]] = fir.convert %[[BVAL]] : (f32) -> f64
+// CHECK:             %[[MUL:.*]] = arith.mulf %[[AVALCAST]], %[[BVALCAST]] : f64
+// CHECK:             %[[NEWSUM:.*]] = arith.addf %[[MUL]], %[[SUM]] : f64
+// CHECK:             fir.result %[[NEWSUM]] : f64
+// CHECK:           }
+// CHECK:           return %[[RES]] : f64
+// CHECK:         }
