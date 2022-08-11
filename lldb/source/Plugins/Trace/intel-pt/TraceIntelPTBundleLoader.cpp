@@ -12,7 +12,6 @@
 #include "TraceIntelPT.h"
 #include "TraceIntelPTConstants.h"
 #include "TraceIntelPTJSONStructs.h"
-
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Process.h"
