@@ -1567,15 +1567,19 @@ public:
   const ForStmt *getSingleForStmt(const Stmt *S);
 
   /// Does the loop init qualify for a NoLoop kernel?
-  bool checkDeclStmt(const ForStmt &FStmt);
-  bool checkInitExpr(const ForStmt &FStmt);
-  bool checkLoopInit(const ForStmt &FStmt);
+  const VarDecl *checkDeclStmt(const ForStmt &FStmt);
+  const VarDecl *checkInitExpr(const ForStmt &FStmt);
+  const VarDecl *checkLoopInit(const ForStmt &FStmt);
 
   /// Does the loop increment qualify for a NoLoop kernel?
-  bool checkLoopStep(const ForStmt &FStmt);
+  bool checkLoopStep(const ForStmt &FStmt, const VarDecl *VD);
 
   /// Does the loop condition qualify for a NoLoop kernel?
   bool checkLoopStop(const ForStmt &FStmt);
+
+  /// If the step is a binary expression, extract and return the step.
+  /// If the step is a unary expression, return nullptr.
+  const Expr *getBinaryExprStep(const ForStmt &FStmt, const VarDecl *VD);
 
   /// If we are able to generate a NoLoop kernel for this directive, return
   /// true, otherwise return false. If successful, a map is created from the
