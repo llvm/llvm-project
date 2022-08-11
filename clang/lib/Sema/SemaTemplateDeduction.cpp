@@ -55,6 +55,7 @@
 #include <algorithm>
 #include <cassert>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 namespace clang {
@@ -1100,6 +1101,18 @@ DeduceTemplateArguments(Sema &S,
       return Result;
   }
 
+  // DR692, DR1395
+  // C++0x [temp.deduct.type]p10:
+  // If the parameter-declaration corresponding to P_i ...
+  // During partial ordering, if Ai was originally a function parameter pack:
+  // - if P does not contain a function parameter type corresponding to Ai then
+  //   Ai is ignored;
+  bool ClangABICompat14 = S.Context.getLangOpts().getClangABICompat() <=
+                          LangOptions::ClangABI::Ver14;
+  if (!ClangABICompat14 && PartialOrdering && ArgIdx + 1 == NumArgs &&
+      isa<PackExpansionType>(Args[ArgIdx]))
+    return Sema::TDK_Success;
+
   // Make sure we don't have any extra arguments.
   if (ArgIdx < NumArgs)
     return Sema::TDK_MiscellaneousDeductionFailure;
@@ -1755,7 +1768,7 @@ static Sema::TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       if (auto Result = DeduceTemplateArguments(
               S, TemplateParams, FPP->param_type_begin(), FPP->getNumParams(),
               FPA->param_type_begin(), FPA->getNumParams(), Info, Deduced,
-              TDF & TDF_TopLevelParameterTypeList))
+              TDF & TDF_TopLevelParameterTypeList, PartialOrdering))
         return Result;
 
       if (TDF & TDF_AllowCompatibleFunctionType)
@@ -2422,6 +2435,7 @@ DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
 static bool isSameTemplateArg(ASTContext &Context,
                               TemplateArgument X,
                               const TemplateArgument &Y,
+                              bool PartialOrdering,
                               bool PackExpansionMatchesPack = false) {
   // If we're checking deduced arguments (X) against original arguments (Y),
   // we will have flattened packs to non-expansions in X.
@@ -2463,16 +2477,30 @@ static bool isSameTemplateArg(ASTContext &Context,
     }
 
     case TemplateArgument::Pack:
-      if (X.pack_size() != Y.pack_size())
-        return false;
-
-      for (TemplateArgument::pack_iterator XP = X.pack_begin(),
-                                        XPEnd = X.pack_end(),
-                                           YP = Y.pack_begin();
-           XP != XPEnd; ++XP, ++YP)
-        if (!isSameTemplateArg(Context, *XP, *YP, PackExpansionMatchesPack))
+      unsigned PackIterationSize = X.pack_size();
+      if (X.pack_size() != Y.pack_size()) {
+        if (!PartialOrdering)
           return false;
 
+        // C++0x [temp.deduct.type]p9:
+        // During partial ordering, if Ai was originally a pack expansion:
+        // - if P does not contain a template argument corresponding to Ai then
+        //   Ai is ignored;
+        bool XHasMoreArg = X.pack_size() > Y.pack_size();
+        if (!(XHasMoreArg && X.pack_elements().back().isPackExpansion()) &&
+            !(!XHasMoreArg && Y.pack_elements().back().isPackExpansion()))
+          return false;
+
+        if (XHasMoreArg)
+          PackIterationSize = Y.pack_size();
+      }
+
+      ArrayRef<TemplateArgument> XP = X.pack_elements();
+      ArrayRef<TemplateArgument> YP = Y.pack_elements();
+      for (unsigned i = 0; i < PackIterationSize; ++i)
+        if (!isSameTemplateArg(Context, XP[i], YP[i], PartialOrdering,
+                               PackExpansionMatchesPack))
+          return false;
       return true;
   }
 
@@ -2875,7 +2903,8 @@ FinishTemplateArgumentDeduction(
   TemplateParameterList *TemplateParams = Template->getTemplateParameters();
   for (unsigned I = 0, E = TemplateParams->size(); I != E; ++I) {
     TemplateArgument InstArg = ConvertedInstArgs.data()[I];
-    if (!isSameTemplateArg(S.Context, TemplateArgs[I], InstArg)) {
+    if (!isSameTemplateArg(S.Context, TemplateArgs[I], InstArg,
+                           IsPartialOrdering)) {
       Info.Param = makeTemplateParameter(TemplateParams->getParam(I));
       Info.FirstArg = TemplateArgs[I];
       Info.SecondArg = InstArg;
@@ -2919,8 +2948,8 @@ static Sema::TemplateDeductionResult FinishTemplateArgumentDeduction(
   TemplateParameterList *TemplateParams = Template->getTemplateParameters();
   for (unsigned I = 0, E = TemplateParams->size(); I != E; ++I) {
     TemplateArgument InstArg = Builder[I];
-    if (!isSameTemplateArg(S.Context, TemplateArgs[I], InstArg,
-                           /*PackExpansionMatchesPack*/true)) {
+    if (!isSameTemplateArg(S.Context, TemplateArgs[I], InstArg, PartialOrdering,
+                           /*PackExpansionMatchesPack*/ true)) {
       Info.Param = makeTemplateParameter(TemplateParams->getParam(I));
       Info.FirstArg = TemplateArgs[I];
       Info.SecondArg = InstArg;
@@ -5109,27 +5138,6 @@ static bool isAtLeastAsSpecializedAs(Sema &S,
   return true;
 }
 
-/// Determine whether this a function template whose parameter-type-list
-/// ends with a function parameter pack.
-static bool isVariadicFunctionTemplate(FunctionTemplateDecl *FunTmpl) {
-  FunctionDecl *Function = FunTmpl->getTemplatedDecl();
-  unsigned NumParams = Function->getNumParams();
-  if (NumParams == 0)
-    return false;
-
-  ParmVarDecl *Last = Function->getParamDecl(NumParams - 1);
-  if (!Last->isParameterPack())
-    return false;
-
-  // Make sure that no previous parameter is a parameter pack.
-  while (--NumParams > 0) {
-    if (Function->getParamDecl(NumParams - 1)->isParameterPack())
-      return false;
-  }
-
-  return true;
-}
-
 /// Returns the more specialized function template according
 /// to the rules of function template partial ordering (C++ [temp.func.order]).
 ///
@@ -5188,13 +5196,22 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
   if (!Better1 && !Better2) // Neither is better than the other
     return JudgeByConstraints();
 
-  // FIXME: This mimics what GCC implements, but doesn't match up with the
-  // proposed resolution for core issue 692. This area needs to be sorted out,
-  // but for now we attempt to maintain compatibility.
-  bool Variadic1 = isVariadicFunctionTemplate(FT1);
-  bool Variadic2 = isVariadicFunctionTemplate(FT2);
-  if (Variadic1 != Variadic2)
-    return Variadic1? FT2 : FT1;
+  // C++ [temp.deduct.partial]p11:
+  //   ... and if G has a trailing function parameter pack for which F does not
+  //   have a corresponding parameter, and if F does not have a trailing
+  //   function parameter pack, then F is more specialized than G.
+  FunctionDecl *FD1 = FT1->getTemplatedDecl();
+  FunctionDecl *FD2 = FT2->getTemplatedDecl();
+  unsigned NumParams1 = FD1->getNumParams();
+  unsigned NumParams2 = FD2->getNumParams();
+  bool Variadic1 = NumParams1 && FD1->parameters().back()->isParameterPack();
+  bool Variadic2 = NumParams2 && FD2->parameters().back()->isParameterPack();
+  if (Variadic1 != Variadic2) {
+    if (Variadic1 && NumParams1 > NumParams2)
+      return FT2;
+    if (Variadic2 && NumParams2 > NumParams1)
+      return FT1;
+  }
 
   return JudgeByConstraints();
 }
@@ -5373,6 +5390,109 @@ static bool isAtLeastAsSpecializedAs(Sema &S, QualType T1, QualType T2,
   return AtLeastAsSpecialized;
 }
 
+namespace {
+// A dummy pass to return nullptr instead of P2 when performing "more
+// specialized than primary" check.
+struct GetP2 {
+  template <typename T1, typename T2,
+            std::enable_if_t<std::is_same<T1, T2>::value, bool> = true>
+  T2 *operator()(T1 *, T2 *P2) {
+    return P2;
+  }
+  template <typename T1, typename T2,
+            std::enable_if_t<!std::is_same<T1, T2>::value, bool> = true>
+  T1 *operator()(T1 *, T2 *) {
+    return nullptr;
+  }
+};
+} // namespace
+
+/// Returns the more specialized template specialization between T1/P1 and
+/// T2/P2.
+/// - If IsMoreSpecialThanPrimaryCheck is true, T1/P1 is the partial
+///   specialization and T2/P2 is the primary template.
+/// - otherwise, both T1/P1 and T2/P2 are the partial specialization.
+///
+/// \param T1 the type of the first template partial specialization
+///
+/// \param T2 if IsMoreSpecialThanPrimaryCheck is true, the type of the second
+///           template partial specialization; otherwise, the type of the
+///           primary template.
+///
+/// \param P1 the first template partial specialization
+///
+/// \param P2 if IsMoreSpecialThanPrimaryCheck is true, the second template
+///           partial specialization; otherwise, the primary template.
+///
+/// \returns - If IsMoreSpecialThanPrimaryCheck is true, returns P1 if P1 is
+///            more specialized, returns nullptr if P1 is not more specialized.
+///          - otherwise, returns the more specialized template partial
+///            specialization. If neither partial specialization is more
+///            specialized, returns NULL.
+template <typename TemplateLikeDecl, typename PrimaryDel>
+static TemplateLikeDecl *
+getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
+                   PrimaryDel *P2, TemplateDeductionInfo &Info) {
+  constexpr bool IsMoreSpecialThanPrimaryCheck =
+      !std::is_same<TemplateLikeDecl, PrimaryDel>::value;
+
+  bool Better1 = isAtLeastAsSpecializedAs(S, T1, T2, P2, Info);
+  if (IsMoreSpecialThanPrimaryCheck && !Better1)
+    return nullptr;
+
+  bool Better2 = isAtLeastAsSpecializedAs(S, T2, T1, P1, Info);
+  if (IsMoreSpecialThanPrimaryCheck && !Better2)
+    return P1;
+
+  if (!Better1 && !Better2)
+    return nullptr;
+
+  if (Better1 && Better2) {
+    bool ClangABICompat14 = S.Context.getLangOpts().getClangABICompat() <=
+                            LangOptions::ClangABI::Ver14;
+    if (!ClangABICompat14) {
+      // Consider this a fix for CWG1432. Similar to the fix for CWG1395.
+      auto *TST1 = T1->castAs<TemplateSpecializationType>();
+      auto *TST2 = T2->castAs<TemplateSpecializationType>();
+      if (TST1->getNumArgs()) {
+        const TemplateArgument &TA1 = TST1->template_arguments().back();
+        if (TA1.getKind() == TemplateArgument::Pack) {
+          assert(TST1->getNumArgs() == TST2->getNumArgs());
+          const TemplateArgument &TA2 = TST2->template_arguments().back();
+          assert(TA2.getKind() == TemplateArgument::Pack);
+          unsigned PackSize1 = TA1.pack_size();
+          unsigned PackSize2 = TA2.pack_size();
+          bool IsPackExpansion1 =
+              PackSize1 && TA1.pack_elements().back().isPackExpansion();
+          bool IsPackExpansion2 =
+              PackSize2 && TA2.pack_elements().back().isPackExpansion();
+          if (PackSize1 != PackSize2 && IsPackExpansion1 != IsPackExpansion2) {
+            if (PackSize1 > PackSize2 && IsPackExpansion1)
+              return GetP2()(P1, P2);
+            if (PackSize1 < PackSize2 && IsPackExpansion2)
+              return P1;
+          }
+        }
+      }
+    }
+
+    llvm::SmallVector<const Expr *, 3> AC1, AC2;
+    P1->getAssociatedConstraints(AC1);
+    P2->getAssociatedConstraints(AC2);
+    bool AtLeastAsConstrained1, AtLeastAsConstrained2;
+    if (S.IsAtLeastAsConstrained(P1, AC1, P2, AC2, AtLeastAsConstrained1) ||
+        (IsMoreSpecialThanPrimaryCheck && !AtLeastAsConstrained1))
+      return nullptr;
+    if (S.IsAtLeastAsConstrained(P2, AC2, P1, AC1, AtLeastAsConstrained2))
+      return nullptr;
+    if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
+      return nullptr;
+    return AtLeastAsConstrained1 ? P1 : GetP2()(P1, P2);
+  }
+
+  return Better1 ? P1 : GetP2()(P1, P2);
+}
+
 /// Returns the more specialized class template partial specialization
 /// according to the rules of partial ordering of class template partial
 /// specializations (C++ [temp.class.order]).
@@ -5392,26 +5512,7 @@ Sema::getMoreSpecializedPartialSpecialization(
   QualType PT2 = PS2->getInjectedSpecializationType();
 
   TemplateDeductionInfo Info(Loc);
-  bool Better1 = isAtLeastAsSpecializedAs(*this, PT1, PT2, PS2, Info);
-  bool Better2 = isAtLeastAsSpecializedAs(*this, PT2, PT1, PS1, Info);
-
-  if (!Better1 && !Better2)
-      return nullptr;
-  if (Better1 && Better2) {
-    llvm::SmallVector<const Expr *, 3> AC1, AC2;
-    PS1->getAssociatedConstraints(AC1);
-    PS2->getAssociatedConstraints(AC2);
-    bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-    if (IsAtLeastAsConstrained(PS1, AC1, PS2, AC2, AtLeastAsConstrained1))
-      return nullptr;
-    if (IsAtLeastAsConstrained(PS2, AC2, PS1, AC1, AtLeastAsConstrained2))
-      return nullptr;
-    if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
-      return nullptr;
-    return AtLeastAsConstrained1 ? PS1 : PS2;
-  }
-
-  return Better1 ? PS1 : PS2;
+  return getMoreSpecialized(*this, PT1, PT2, PS1, PS2, Info);
 }
 
 bool Sema::isMoreSpecializedThanPrimary(
@@ -5419,24 +5520,12 @@ bool Sema::isMoreSpecializedThanPrimary(
   ClassTemplateDecl *Primary = Spec->getSpecializedTemplate();
   QualType PrimaryT = Primary->getInjectedClassNameSpecialization();
   QualType PartialT = Spec->getInjectedSpecializationType();
-  if (!isAtLeastAsSpecializedAs(*this, PartialT, PrimaryT, Primary, Info))
-    return false;
-  if (!isAtLeastAsSpecializedAs(*this, PrimaryT, PartialT, Spec, Info))
-    return true;
-  Info.clearSFINAEDiagnostic();
-  llvm::SmallVector<const Expr *, 3> PrimaryAC, SpecAC;
-  Primary->getAssociatedConstraints(PrimaryAC);
-  Spec->getAssociatedConstraints(SpecAC);
-  bool AtLeastAsConstrainedPrimary, AtLeastAsConstrainedSpec;
-  if (IsAtLeastAsConstrained(Spec, SpecAC, Primary, PrimaryAC,
-                             AtLeastAsConstrainedSpec))
-    return false;
-  if (!AtLeastAsConstrainedSpec)
-    return false;
-  if (IsAtLeastAsConstrained(Primary, PrimaryAC, Spec, SpecAC,
-                             AtLeastAsConstrainedPrimary))
-    return false;
-  return !AtLeastAsConstrainedPrimary;
+
+  ClassTemplatePartialSpecializationDecl *MaybeSpec =
+      getMoreSpecialized(*this, PartialT, PrimaryT, Spec, Primary, Info);
+  if (MaybeSpec)
+    Info.clearSFINAEDiagnostic();
+  return MaybeSpec;
 }
 
 VarTemplatePartialSpecializationDecl *
@@ -5456,26 +5545,7 @@ Sema::getMoreSpecializedPartialSpecialization(
       CanonTemplate, PS2->getTemplateArgs().asArray());
 
   TemplateDeductionInfo Info(Loc);
-  bool Better1 = isAtLeastAsSpecializedAs(*this, PT1, PT2, PS2, Info);
-  bool Better2 = isAtLeastAsSpecializedAs(*this, PT2, PT1, PS1, Info);
-
-  if (!Better1 && !Better2)
-    return nullptr;
-  if (Better1 && Better2) {
-    llvm::SmallVector<const Expr *, 3> AC1, AC2;
-    PS1->getAssociatedConstraints(AC1);
-    PS2->getAssociatedConstraints(AC2);
-    bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-    if (IsAtLeastAsConstrained(PS1, AC1, PS2, AC2, AtLeastAsConstrained1))
-      return nullptr;
-    if (IsAtLeastAsConstrained(PS2, AC2, PS1, AC1, AtLeastAsConstrained2))
-      return nullptr;
-    if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
-      return nullptr;
-    return AtLeastAsConstrained1 ? PS1 : PS2;
-  }
-
-  return Better1 ? PS1 : PS2;
+  return getMoreSpecialized(*this, PT1, PT2, PS1, PS2, Info);
 }
 
 bool Sema::isMoreSpecializedThanPrimary(
@@ -5494,24 +5564,11 @@ bool Sema::isMoreSpecializedThanPrimary(
   QualType PartialT = Context.getTemplateSpecializationType(
       CanonTemplate, Spec->getTemplateArgs().asArray());
 
-  if (!isAtLeastAsSpecializedAs(*this, PartialT, PrimaryT, Primary, Info))
-    return false;
-  if (!isAtLeastAsSpecializedAs(*this, PrimaryT, PartialT, Spec, Info))
-    return true;
-  Info.clearSFINAEDiagnostic();
-  llvm::SmallVector<const Expr *, 3> PrimaryAC, SpecAC;
-  Primary->getAssociatedConstraints(PrimaryAC);
-  Spec->getAssociatedConstraints(SpecAC);
-  bool AtLeastAsConstrainedPrimary, AtLeastAsConstrainedSpec;
-  if (IsAtLeastAsConstrained(Spec, SpecAC, Primary, PrimaryAC,
-                             AtLeastAsConstrainedSpec))
-    return false;
-  if (!AtLeastAsConstrainedSpec)
-    return false;
-  if (IsAtLeastAsConstrained(Primary, PrimaryAC, Spec, SpecAC,
-                             AtLeastAsConstrainedPrimary))
-    return false;
-  return !AtLeastAsConstrainedPrimary;
+  VarTemplatePartialSpecializationDecl *MaybeSpec =
+      getMoreSpecialized(*this, PartialT, PrimaryT, Spec, Primary, Info);
+  if (MaybeSpec)
+    Info.clearSFINAEDiagnostic();
+  return MaybeSpec;
 }
 
 bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
