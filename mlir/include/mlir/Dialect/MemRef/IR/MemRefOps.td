@@ -86,7 +86,7 @@ class AllocLikeOp<string mnemonic,
       $_state.addOperands(dynamicSizes);
       $_state.addOperands(symbolOperands);
       $_state.addAttribute(getOperandSegmentSizeAttr(),
-          $_builder.getI32VectorAttr({
+          $_builder.getDenseI32ArrayAttr({
               static_cast<int32_t>(dynamicSizes.size()),
               static_cast<int32_t>(symbolOperands.size())}));
       if (alignment)
