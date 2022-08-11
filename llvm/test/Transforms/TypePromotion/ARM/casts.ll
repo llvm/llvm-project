@@ -50,8 +50,7 @@ entry:
   ret i8 %4
 }
 
-; The pass perform the transform, but a uxtb will still be inserted to handle
-; the zext to the icmp.
+; The pass perform the transform.
 define i8 @icmp_i32_zext(i8* %ptr) {
 ; CHECK-LABEL: @icmp_i32_zext(
 ; CHECK-NEXT:  entry:
