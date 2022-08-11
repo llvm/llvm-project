@@ -1102,10 +1102,10 @@ public:
   Symbol &addAbsoluteSymbol(StringRef Name, orc::ExecutorAddr Address,
                             orc::ExecutorAddrDiff Size, Linkage L, Scope S,
                             bool IsLive) {
-    assert(S == Scope::Local || llvm::count_if(AbsoluteSymbols,
+    assert((S == Scope::Local || llvm::count_if(AbsoluteSymbols,
                                                [&](const Symbol *Sym) {
                                                  return Sym->getName() == Name;
-                                               }) == 0 &&
+                                               }) == 0) &&
                                     "Duplicate absolute symbol");
     auto &Sym = Symbol::constructAbsolute(Allocator.Allocate<Symbol>(),
                                           createAddressable(Address), Name,
