@@ -272,7 +272,6 @@ public:
         Lexer(Parser.getLexer()), SubtargetInfo(STI) {
     setAvailableFeatures(
         ComputeAvailableFeatures(SubtargetInfo.getFeatureBits()));
-llvm::dbgs() << "M88kAsmParser\n";
   }
 
 private:
@@ -342,7 +341,7 @@ bool M88kAsmParser::ParseDirective(AsmToken DirectiveID) {
 
   if (IDVal == ".requires_88110") {
     MCSubtargetInfo &STI = copySTI();
-    STI.setDefaultFeatures(/*CPU*/ "m88110", /*TuneCPU*/ "m88110", "");
+    STI.setDefaultFeatures(/*CPU*/ "mc88110", /*TuneCPU*/ "mc88110", "");
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
     getTargetStreamer().emitDirectiveRequires881100();
     return false;

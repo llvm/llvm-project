@@ -749,11 +749,10 @@ multiclass LoadAddr {
                   "lda">;
   def h : F_LADDR</*ty=*/ 0b10, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                   "lda.h">;
-// TODO
-//  let Predicates = [IsMC88100] in
-//    def b : F_LADDR</*ty=*/ 0b11, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-//                    "lda.b">;
-  let Predicates = [IsMC88110] in
+  let Predicates = [IsMC88100], DecoderNamespace = "MC88100" in
+    def b : F_LADDR</*ty=*/ 0b11, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                    "lda.b">;
+  let Predicates = [IsMC88110], DecoderNamespace = "MC88110" in
     def x : F_LADDR</*ty=*/ 0b11, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     "lda.x">;
 }
