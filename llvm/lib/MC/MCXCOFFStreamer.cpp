@@ -37,6 +37,10 @@ bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
   getAssembler().registerSymbol(*Symbol);
 
   switch (Attribute) {
+  // XCOFF doesn't support the cold feature.
+  case MCSA_Cold:
+    return false;
+
   case MCSA_Global:
   case MCSA_Extern:
     Symbol->setStorageClass(XCOFF::C_EXT);
