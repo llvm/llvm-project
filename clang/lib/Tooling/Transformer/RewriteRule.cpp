@@ -59,6 +59,12 @@ translateEdits(const MatchResult &Result, ArrayRef<ASTEdit> ASTEdits) {
         return Replacement.takeError();
       T.Replacement = std::move(*Replacement);
     }
+    if (E.Note) {
+      auto Note = E.Note->eval(Result);
+      if (!Note)
+        return Note.takeError();
+      T.Note = std::move(*Note);
+    }
     if (E.Metadata) {
       auto Metadata = E.Metadata(Result);
       if (!Metadata)
@@ -122,6 +128,13 @@ ASTEdit transformer::changeTo(RangeSelector Target, TextGenerator Replacement) {
   ASTEdit E;
   E.TargetRange = std::move(Target);
   E.Replacement = std::move(Replacement);
+  return E;
+}
+
+ASTEdit transformer::note(RangeSelector Anchor, TextGenerator Note) {
+  ASTEdit E;
+  E.TargetRange = transformer::before(Anchor);
+  E.Note = std::move(Note);
   return E;
 }
 

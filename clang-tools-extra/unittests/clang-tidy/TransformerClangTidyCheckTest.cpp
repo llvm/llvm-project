@@ -28,6 +28,7 @@ using transformer::IncludeFormat;
 using transformer::makeRule;
 using transformer::node;
 using transformer::noopEdit;
+using transformer::note;
 using transformer::RewriteRuleWith;
 using transformer::RootID;
 using transformer::statement;
@@ -85,6 +86,7 @@ TEST(TransformerClangTidyCheckTest, DiagnosticsCorrectlyGenerated) {
   EXPECT_EQ(Errors.size(), 1U);
   EXPECT_EQ(Errors[0].Message.Message, "message");
   EXPECT_THAT(Errors[0].Message.Ranges, testing::IsEmpty());
+  EXPECT_THAT(Errors[0].Notes, testing::IsEmpty());
 
   // The diagnostic is anchored to the match, "return 5".
   EXPECT_EQ(Errors[0].Message.FileOffset, 10U);
@@ -114,6 +116,27 @@ TEST(TransformerClangTidyCheckTest, EmptyReplacement) {
 
   // The diagnostic is anchored to the match, "return 5".
   EXPECT_EQ(Errors[0].Message.FileOffset, 10U);
+}
+
+TEST(TransformerClangTidyCheckTest, NotesCorrectlyGenerated) {
+  class DiagAndNoteCheck : public TransformerClangTidyCheck {
+  public:
+    DiagAndNoteCheck(StringRef Name, ClangTidyContext *Context)
+        : TransformerClangTidyCheck(
+              makeRule(returnStmt(),
+                       note(node(RootID), cat("some note")),
+                       cat("message")),
+              Name, Context) {}
+  };
+  std::string Input = "int h() { return 5; }";
+  std::vector<ClangTidyError> Errors;
+  EXPECT_EQ(Input, test::runCheckOnCode<DiagAndNoteCheck>(Input, &Errors));
+  EXPECT_EQ(Errors.size(), 1U);
+  EXPECT_EQ(Errors[0].Notes.size(), 1U);
+  EXPECT_EQ(Errors[0].Notes[0].Message, "some note");
+
+  // The note is anchored to the match, "return 5".
+  EXPECT_EQ(Errors[0].Notes[0].FileOffset, 10U);
 }
 
 TEST(TransformerClangTidyCheckTest, DiagnosticMessageEscaped) {
