@@ -45,8 +45,8 @@ define i32 @load_store_global_array(i32 %a) nounwind {
 ; LA32PIC-NEXT:     addi.w $a2, $a1, .Larr$local
 ; LA32-NEXT:        ld.w $a1, $a2, 0
 ; LA32-NEXT:        st.w $a0, $a2, 0
-; LA32NOPIC-NEXT:   ld.w $a3, $a2, 0
-; LA32NOPIC-NEXT:   st.w $a0, $a2, 0
+; LA32NOPIC-NEXT:   ld.w $a3, $a2, 36
+; LA32NOPIC-NEXT:   st.w $a0, $a2, 36
 ; LA32PIC-NEXT:     ld.w $a3, $a2, 36
 ; LA32PIC-NEXT:     st.w $a0, $a2, 36
 
@@ -56,8 +56,8 @@ define i32 @load_store_global_array(i32 %a) nounwind {
 ; LA64PIC-NEXT:     addi.d $a2, $a1, .Larr$local
 ; LA64-NEXT:        ld.w $a1, $a2, 0
 ; LA64-NEXT:        st.w $a0, $a2, 0
-; LA64NOPIC-NEXT:   ld.w $a3, $a2, 0
-; LA64NOPIC-NEXT:   st.w $a0, $a2, 0
+; LA64NOPIC-NEXT:   ld.w $a3, $a2, 36
+; LA64NOPIC-NEXT:   st.w $a0, $a2, 36
 ; LA64PIC-NEXT:     ld.w $a3, $a2, 36
 ; LA64PIC-NEXT:     st.w $a0, $a2, 36
 
