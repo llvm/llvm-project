@@ -426,6 +426,8 @@ void ClangDocBitcodeWriter::emitBlock(const MemberTypeInfo &T) {
   emitBlock(T.Type, FieldId::F_type);
   emitRecord(T.Name, MEMBER_TYPE_NAME);
   emitRecord(T.Access, MEMBER_TYPE_ACCESS);
+  for (const auto &CI : T.Description)
+    emitBlock(CI);
 }
 
 void ClangDocBitcodeWriter::emitBlock(const CommentInfo &I) {

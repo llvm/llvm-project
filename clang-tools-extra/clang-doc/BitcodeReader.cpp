@@ -350,6 +350,11 @@ template <> llvm::Expected<CommentInfo *> getCommentInfo(RecordInfo *I) {
   return &I->Description.back();
 }
 
+template <> llvm::Expected<CommentInfo *> getCommentInfo(MemberTypeInfo *I) {
+  I->Description.emplace_back();
+  return &I->Description.back();
+}
+
 template <> llvm::Expected<CommentInfo *> getCommentInfo(EnumInfo *I) {
   I->Description.emplace_back();
   return &I->Description.back();
