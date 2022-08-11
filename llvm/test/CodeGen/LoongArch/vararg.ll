@@ -26,7 +26,7 @@ define i64 @va1(ptr %fmt, ...) {
 ; LA64-FPELIM-NEXT:    st.d $a1, $sp, 8
 ; LA64-FPELIM-NEXT:    st.d $a0, $sp, 24
 ; LA64-FPELIM-NEXT:    addi.d $sp, $sp, 80
-; LA64-FPELIM-NEXT:    jirl $zero, $ra, 0
+; LA64-FPELIM-NEXT:    ret
 ;
 ; LA64-WITHFP-LABEL: va1:
 ; LA64-WITHFP:       # %bb.0:
@@ -51,7 +51,7 @@ define i64 @va1(ptr %fmt, ...) {
 ; LA64-WITHFP-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    addi.d $sp, $sp, 96
-; LA64-WITHFP-NEXT:    jirl $zero, $ra, 0
+; LA64-WITHFP-NEXT:    ret
   %va = alloca ptr, align 8
   call void @llvm.va_start(ptr %va)
   %argp.cur = load ptr, ptr %va, align 8
@@ -77,7 +77,7 @@ define i64 @va1_va_arg(ptr %fmt, ...) nounwind {
 ; LA64-FPELIM-NEXT:    st.d $a1, $sp, 8
 ; LA64-FPELIM-NEXT:    st.d $a0, $sp, 24
 ; LA64-FPELIM-NEXT:    addi.d $sp, $sp, 80
-; LA64-FPELIM-NEXT:    jirl $zero, $ra, 0
+; LA64-FPELIM-NEXT:    ret
 ;
 ; LA64-WITHFP-LABEL: va1_va_arg:
 ; LA64-WITHFP:       # %bb.0:
@@ -98,7 +98,7 @@ define i64 @va1_va_arg(ptr %fmt, ...) nounwind {
 ; LA64-WITHFP-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    addi.d $sp, $sp, 96
-; LA64-WITHFP-NEXT:    jirl $zero, $ra, 0
+; LA64-WITHFP-NEXT:    ret
   %va = alloca ptr, align 8
   call void @llvm.va_start(ptr %va)
   %1 = va_arg ptr %va, i64
@@ -139,7 +139,7 @@ define i64 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; LA64-FPELIM-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
 ; LA64-FPELIM-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; LA64-FPELIM-NEXT:    addi.d $sp, $sp, 96
-; LA64-FPELIM-NEXT:    jirl $zero, $ra, 0
+; LA64-FPELIM-NEXT:    ret
 ;
 ; LA64-WITHFP-LABEL: va1_va_arg_alloca:
 ; LA64-WITHFP:       # %bb.0:
@@ -170,7 +170,7 @@ define i64 @va1_va_arg_alloca(ptr %fmt, ...) nounwind {
 ; LA64-WITHFP-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    addi.d $sp, $sp, 96
-; LA64-WITHFP-NEXT:    jirl $zero, $ra, 0
+; LA64-WITHFP-NEXT:    ret
   %va = alloca ptr, align 8
   call void @llvm.va_start(ptr %va)
   %1 = va_arg ptr %va, i64
@@ -190,7 +190,7 @@ define void @va1_caller() nounwind {
 ; LA64-FPELIM-NEXT:    bl va1
 ; LA64-FPELIM-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-FPELIM-NEXT:    addi.d $sp, $sp, 16
-; LA64-FPELIM-NEXT:    jirl $zero, $ra, 0
+; LA64-FPELIM-NEXT:    ret
 ;
 ; LA64-WITHFP-LABEL: va1_caller:
 ; LA64-WITHFP:       # %bb.0:
@@ -204,7 +204,7 @@ define void @va1_caller() nounwind {
 ; LA64-WITHFP-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    addi.d $sp, $sp, 16
-; LA64-WITHFP-NEXT:    jirl $zero, $ra, 0
+; LA64-WITHFP-NEXT:    ret
   %1 = call i64 (ptr, ...) @va1(ptr undef, double 1.0, i64 2)
   ret void
 }
@@ -233,7 +233,7 @@ define void @va_aligned_register_caller() nounwind {
 ; LA64-FPELIM-NEXT:    bl va_aligned_register
 ; LA64-FPELIM-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-FPELIM-NEXT:    addi.d $sp, $sp, 16
-; LA64-FPELIM-NEXT:    jirl $zero, $ra, 0
+; LA64-FPELIM-NEXT:    ret
 ;
 ; LA64-WITHFP-LABEL: va_aligned_register_caller:
 ; LA64-WITHFP:       # %bb.0:
@@ -256,7 +256,7 @@ define void @va_aligned_register_caller() nounwind {
 ; LA64-WITHFP-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    addi.d $sp, $sp, 16
-; LA64-WITHFP-NEXT:    jirl $zero, $ra, 0
+; LA64-WITHFP-NEXT:    ret
  %1 = call i64 (i64, i128, ...) @va_aligned_register(i64 2, i128 1111,
    fp128 0xLEB851EB851EB851F400091EB851EB851)
  ret void
@@ -305,7 +305,7 @@ define void @va_aligned_stack_caller() nounwind {
 ; LA64-FPELIM-NEXT:    bl va_aligned_stack_callee
 ; LA64-FPELIM-NEXT:    ld.d $ra, $sp, 104 # 8-byte Folded Reload
 ; LA64-FPELIM-NEXT:    addi.d $sp, $sp, 112
-; LA64-FPELIM-NEXT:    jirl $zero, $ra, 0
+; LA64-FPELIM-NEXT:    ret
 ;
 ; LA64-WITHFP-LABEL: va_aligned_stack_caller:
 ; LA64-WITHFP:       # %bb.0:
@@ -347,7 +347,7 @@ define void @va_aligned_stack_caller() nounwind {
 ; LA64-WITHFP-NEXT:    ld.d $fp, $sp, 96 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    ld.d $ra, $sp, 104 # 8-byte Folded Reload
 ; LA64-WITHFP-NEXT:    addi.d $sp, $sp, 112
-; LA64-WITHFP-NEXT:    jirl $zero, $ra, 0
+; LA64-WITHFP-NEXT:    ret
   %1 = call i32 (i32, ...) @va_aligned_stack_callee(i32 1, i32 11,
     i256 1000, i32 12, i32 13, i128 18446744073709551616, i32 14,
     fp128 0xLEB851EB851EB851F400091EB851EB851, i64 15,
