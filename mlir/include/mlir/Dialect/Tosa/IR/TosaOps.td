@@ -1013,7 +1013,7 @@ def Tosa_LogOp : Tosa_Op<"log", [
 def Tosa_LogicalNotOp : Tosa_Op<"logical_not", [
     DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                               ["inferReturnTypeComponents"]>,
-    NoSideEffect]> {
+    NoSideEffect, SameOperandsAndResultType]> {
   let summary = "Returns the truth value of NOT x element-wise.";
 
   let description = [{
