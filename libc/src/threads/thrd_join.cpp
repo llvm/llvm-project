@@ -17,8 +17,8 @@ namespace __llvm_libc {
 static_assert(sizeof(thrd_t) == sizeof(__llvm_libc::Thread),
               "Mismatch between thrd_t and internal Thread.");
 
-LLVM_LIBC_FUNCTION(int, thrd_join, (thrd_t * th, int *retval)) {
-  auto *thread = reinterpret_cast<Thread *>(th);
+LLVM_LIBC_FUNCTION(int, thrd_join, (thrd_t th, int *retval)) {
+  auto *thread = reinterpret_cast<Thread *>(&th);
   int result = thread->join(retval);
   return result == 0 ? thrd_success : thrd_error;
 }
