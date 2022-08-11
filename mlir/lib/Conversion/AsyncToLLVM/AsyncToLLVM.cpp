@@ -350,8 +350,8 @@ public:
     // requires the size parameter be an integral multiple of the alignment
     // parameter.
     auto makeConstant = [&](uint64_t c) {
-      return rewriter.create<LLVM::ConstantOp>(
-          op->getLoc(), rewriter.getI64Type(), c);
+      return rewriter.create<LLVM::ConstantOp>(op->getLoc(),
+                                               rewriter.getI64Type(), c);
     };
     coroSize = rewriter.create<LLVM::AddOp>(op->getLoc(), coroSize, coroAlign);
     coroSize =
@@ -365,13 +365,12 @@ public:
     auto allocFuncOp = LLVM::lookupOrCreateAlignedAllocFn(
         op->getParentOfType<ModuleOp>(), rewriter.getI64Type());
     auto coroAlloc = rewriter.create<LLVM::CallOp>(
-        loc, i8Ptr, SymbolRefAttr::get(allocFuncOp),
-        ValueRange{coroAlign, coroSize});
+        loc, allocFuncOp, ValueRange{coroAlign, coroSize});
 
     // Begin a coroutine: @llvm.coro.begin.
     auto coroId = CoroBeginOpAdaptor(adaptor.getOperands()).id();
     rewriter.replaceOpWithNewOp<LLVM::CoroBeginOp>(
-        op, i8Ptr, ValueRange({coroId, coroAlloc.getResult(0)}));
+        op, i8Ptr, ValueRange({coroId, coroAlloc.getResult()}));
 
     return success();
   }
@@ -400,8 +399,7 @@ public:
     // Free the memory.
     auto freeFuncOp =
         LLVM::lookupOrCreateFreeFn(op->getParentOfType<ModuleOp>());
-    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, TypeRange(),
-                                              SymbolRefAttr::get(freeFuncOp),
+    rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFuncOp,
                                               ValueRange(coroMem.getResult()));
 
     return success();

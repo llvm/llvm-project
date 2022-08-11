@@ -14,6 +14,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
+class CallOpInterface;
 
 namespace LLVM {
 namespace detail {
