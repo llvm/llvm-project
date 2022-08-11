@@ -16704,7 +16704,7 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
       return;
 
     struct {
-      const Expr *Expr;
+      const clang::Expr *Expr;
       Expr::EvalResult Result;
       SmallString<12> ValueString;
       bool Print;
