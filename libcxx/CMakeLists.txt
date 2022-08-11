@@ -592,6 +592,7 @@ function(cxx_add_warning_flags target)
       -Wno-user-defined-literals
       -Wno-covered-switch-default
       -Wno-suggest-override
+      -Wno-ctad-maybe-unsupported
     )
     if (LIBCXX_TARGETING_CLANG_CL)
       target_add_compile_flags_if_supported(${target} PRIVATE
