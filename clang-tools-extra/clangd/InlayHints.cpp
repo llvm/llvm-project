@@ -141,8 +141,10 @@ void collectDesignators(const InitListExpr *Sem,
       Fields.next();       // Always advance to the next subobject name.
       Prefix.resize(Size); // Erase any designator we appended.
     });
-    if (llvm::isa<ImplicitValueInitExpr>(Init))
-      continue; // a "hole" for a subobject that was not explicitly initialized
+    // Skip for a broken initializer or if it is a "hole" in a subobject that
+    // was not explicitly initialized.
+    if (!Init || llvm::isa<ImplicitValueInitExpr>(Init))
+      continue;
 
     const auto *BraceElidedSubobject = llvm::dyn_cast<InitListExpr>(Init);
     if (BraceElidedSubobject &&
