@@ -12412,11 +12412,7 @@ static SDValue lowerShuffleWithVPMOV(const SDLoc &DL, MVT VT, SDValue V1,
         !Zeroable.extractBits(UpperElts, NumSrcElts).isAllOnes())
       continue;
 
-    SDValue Src = V1;
-    if (!Src.hasOneUse())
-      return SDValue();
-
-    Src = peekThroughOneUseBitcasts(Src);
+    SDValue Src = peekThroughBitcasts(V1);
     if (Src.getOpcode() != ISD::TRUNCATE ||
         Src.getScalarValueSizeInBits() != (EltSizeInBits * Scale))
       return SDValue();
