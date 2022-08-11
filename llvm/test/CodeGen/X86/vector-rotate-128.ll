@@ -1935,13 +1935,21 @@ define <4 x i16> @rot16_trunc(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
 ; AVX-NEXT:    retq
 ;
-; AVX512-LABEL: rot16_trunc:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsrld $11, %xmm0, %xmm1
-; AVX512-NEXT:    vpslld $5, %xmm0, %xmm0
-; AVX512-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX512-NEXT:    retq
+; AVX512NOVLX-LABEL: rot16_trunc:
+; AVX512NOVLX:       # %bb.0:
+; AVX512NOVLX-NEXT:    vpsrld $11, %xmm0, %xmm1
+; AVX512NOVLX-NEXT:    vpslld $5, %xmm0, %xmm0
+; AVX512NOVLX-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX512NOVLX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; AVX512NOVLX-NEXT:    retq
+;
+; AVX512VLX-LABEL: rot16_trunc:
+; AVX512VLX:       # %bb.0:
+; AVX512VLX-NEXT:    vpsrld $11, %xmm0, %xmm1
+; AVX512VLX-NEXT:    vpslld $5, %xmm0, %xmm0
+; AVX512VLX-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX512VLX-NEXT:    vpmovdw %xmm0, %xmm0
+; AVX512VLX-NEXT:    retq
 ;
 ; XOP-LABEL: rot16_trunc:
 ; XOP:       # %bb.0:
