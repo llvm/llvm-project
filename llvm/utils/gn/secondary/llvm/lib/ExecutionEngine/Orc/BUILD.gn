@@ -13,6 +13,7 @@ static_library("Orc") {
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [
+    "COFFVCRuntimeSupport.cpp",
     "CompileOnDemandLayer.cpp",
     "CompileUtils.cpp",
     "Core.cpp",
