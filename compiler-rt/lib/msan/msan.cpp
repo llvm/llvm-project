@@ -607,16 +607,14 @@ void __msan_set_origin(const void *a, uptr size, u32 origin) {
 }
 
 void __msan_set_alloca_origin(void *a, uptr size, char *descr) {
-  SetAllocaOrigin(a, size, descr,
-                  StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()));
+  SetAllocaOrigin(a, size, descr, GET_CALLER_PC());
 }
 
 void __msan_set_alloca_origin4(void *a, uptr size, char *descr, uptr pc) {
   // Intentionally ignore pc and use return address. This function is here for
   // compatibility, in case program is linked with library instrumented by
   // older clang.
-  SetAllocaOrigin(a, size, descr,
-                  StackTrace::GetPreviousInstructionPc(GET_CALLER_PC()));
+  SetAllocaOrigin(a, size, descr, GET_CALLER_PC());
 }
 
 u32 __msan_chain_origin(u32 id) {
