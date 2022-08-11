@@ -9,13 +9,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTJSONSTRUCTS_H
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTJSONSTRUCTS_H
 
-#include "lldb/lldb-types.h"
-
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
-
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
-
 #include <intel-pt.h>
 #include <vector>
 

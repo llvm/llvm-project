@@ -9,12 +9,9 @@
 // source/Plugins/Process/Linux/Procfs.h defines the symbols we need from
 // sys/procfs.h on Android/Linux for all supported architectures.
 
-#include <sys/ptrace.h>
-
 #include "lldb/lldb-types.h"
-
 #include "llvm/Support/Error.h"
-
+#include <sys/ptrace.h>
 #include <vector>
 
 #ifdef __ANDROID__

@@ -10,7 +10,6 @@
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TRACEINTELPTBUNDLESAVER_H
 
 #include "TraceIntelPT.h"
-
 #include "TraceIntelPTJSONStructs.h"
 
 namespace lldb_private {
