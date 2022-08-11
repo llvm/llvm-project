@@ -230,6 +230,7 @@ protected:
     // Unary operations.
     case kAbsF:
     case kAbsC:
+    case kAbsI:
     case kCeilF:
     case kFloorF:
     case kSqrtF:
