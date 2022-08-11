@@ -9,16 +9,13 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_DECODEDTHREAD_H
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_DECODEDTHREAD_H
 
-#include <utility>
-#include <vector>
-
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/Error.h"
-
+#include "intel-pt.h"
 #include "lldb/Target/Trace.h"
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
-
-#include "intel-pt.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
+#include <utility>
+#include <vector>
 
 namespace lldb_private {
 namespace trace_intel_pt {

@@ -7,12 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "TraceIntelPTBundleSaver.h"
-
 #include "PerfContextSwitchDecoder.h"
 #include "TraceIntelPT.h"
 #include "TraceIntelPTConstants.h"
 #include "TraceIntelPTJSONStructs.h"
-
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Target/Process.h"
@@ -23,7 +21,6 @@
 #include "llvm/ADT/None.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
-
 #include <fstream>
 #include <iostream>
 #include <sstream>
