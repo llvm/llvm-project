@@ -489,9 +489,12 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__FP_FAST_FMA", "1");
   Builder.defineMacro("__FP_FAST_FMAF", "1");
 
+  // C/C++ operators work on both VLS and VLA SVE types
+  if (FPU & SveMode)
+    Builder.defineMacro("__ARM_FEATURE_SVE_VECTOR_OPERATORS", "2");
+
   if (Opts.VScaleMin && Opts.VScaleMin == Opts.VScaleMax) {
     Builder.defineMacro("__ARM_FEATURE_SVE_BITS", Twine(Opts.VScaleMin * 128));
-    Builder.defineMacro("__ARM_FEATURE_SVE_VECTOR_OPERATORS");
   }
 }
 
