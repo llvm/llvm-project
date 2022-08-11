@@ -905,6 +905,30 @@ bool TypePromotion::runOnFunction(Function &F) {
       TII.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedSize();
   Ctx = &F.getParent()->getContext();
 
+  // Return the preferred integer width of the instruction, or zero if we
+  // shouldn't try.
+  auto GetPromoteWidth = [&](Instruction *I) -> uint32_t {
+    if (!isa<IntegerType>(I->getType()))
+      return 0;
+
+    EVT SrcVT = TLI->getValueType(DL, I->getType());
+    if (SrcVT.isSimple() && TLI->isTypeLegal(SrcVT.getSimpleVT()))
+      return 0;
+
+    if (TLI->getTypeAction(*Ctx, SrcVT) != TargetLowering::TypePromoteInteger)
+      return 0;
+
+    EVT PromotedVT = TLI->getTypeToTransformTo(*Ctx, SrcVT);
+    if (RegisterBitWidth < PromotedVT.getFixedSizeInBits()) {
+      LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target register "
+                        << "for promoted type\n");
+      return 0;
+    }
+
+    // TODO: Should we prefer to use RegisterBitWidth instead?
+    return PromotedVT.getFixedSizeInBits();
+  };
+
   // Search up from icmps to try to promote their operands.
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
@@ -915,30 +939,19 @@ bool TypePromotion::runOnFunction(Function &F) {
         continue;
 
       auto *ICmp = cast<ICmpInst>(&I);
-      // Skip signed or pointer compares
-      if (ICmp->isSigned() || !isa<IntegerType>(ICmp->getOperand(0)->getType()))
+
+      // Skip signed
+      if (ICmp->isSigned())
         continue;
 
       LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: " << *ICmp << "\n");
 
       for (auto &Op : ICmp->operands()) {
-        if (auto *I = dyn_cast<Instruction>(Op)) {
-          EVT SrcVT = TLI->getValueType(DL, I->getType());
-          if (SrcVT.isSimple() && TLI->isTypeLegal(SrcVT.getSimpleVT()))
-            break;
-
-          if (TLI->getTypeAction(*Ctx, SrcVT) !=
-              TargetLowering::TypePromoteInteger)
-            break;
-          EVT PromotedVT = TLI->getTypeToTransformTo(*Ctx, SrcVT);
-          if (RegisterBitWidth < PromotedVT.getFixedSizeInBits()) {
-            LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target register "
-                              << "for promoted type\n");
+        if (auto *OpI = dyn_cast<Instruction>(Op)) {
+          if (auto PromotedWidth = GetPromoteWidth(OpI)) {
+            MadeChange |= TryToPromote(OpI, PromotedWidth);
             break;
           }
-
-          MadeChange |= TryToPromote(I, PromotedVT.getFixedSizeInBits());
-          break;
         }
       }
     }
