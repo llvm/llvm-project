@@ -290,7 +290,7 @@ CPUKind parseCPUKind(StringRef CPU) {
 
 StringRef resolveTuneCPUAlias(StringRef TuneCPU, bool IsRV64) {
   return llvm::StringSwitch<StringRef>(TuneCPU)
-#define PROC_ALIAS(NAME, RV32, RV64) .Case(NAME, IsRV64 ? StringRef(RV64) : StringRef(RV32))
+#define TUNE_ALIAS(NAME, RV32, RV64) .Case(NAME, IsRV64 ? StringRef(RV64) : StringRef(RV32))
 #include "llvm/Support/RISCVTargetParser.def"
       .Default(TuneCPU);
 }
@@ -321,7 +321,7 @@ void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
     if (C.Kind != CK_INVALID && IsRV64 == C.is64Bit())
       Values.emplace_back(C.Name);
   }
-#define PROC_ALIAS(NAME, RV32, RV64) Values.emplace_back(StringRef(NAME));
+#define TUNE_ALIAS(NAME, RV32, RV64) Values.emplace_back(StringRef(NAME));
 #include "llvm/Support/RISCVTargetParser.def"
 }
 
