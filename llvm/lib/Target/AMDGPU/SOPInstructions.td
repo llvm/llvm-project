@@ -1509,6 +1509,10 @@ def S_SLEEP : SOPP_Pseudo <"s_sleep", (ins i32imm:$simm16),
   let hasSideEffects = 1;
 }
 
+def S_SLEEP_VAR : SOP1_0_32 <"s_sleep_var", [(int_amdgcn_s_sleep_var SSrc_b32:$src0)]> {
+  let hasSideEffects = 1;
+}
+
 def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_setprio timm:$simm16)]> {
   let hasSideEffects = 1;
@@ -1836,6 +1840,7 @@ defm S_SWAPPC_B64            : SOP1_Real_gfx11_gfx12<0x049>;
 defm S_RFE_B64               : SOP1_Real_gfx11_gfx12<0x04a>;
 defm S_SENDMSG_RTN_B32       : SOP1_Real_gfx11_gfx12<0x04c>;
 defm S_SENDMSG_RTN_B64       : SOP1_Real_gfx11_gfx12<0x04d>;
+defm S_SLEEP_VAR             : SOP1_Real_gfx12<0x058>;
 
 //===----------------------------------------------------------------------===//
 // SOP1 - GFX1150

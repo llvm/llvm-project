@@ -1411,6 +1411,12 @@ def int_amdgcn_s_sleep :
                                 IntrHasSideEffects, IntrWillReturn]> {
 }
 
+def int_amdgcn_s_sleep_var
+    : ClangBuiltin<"__builtin_amdgcn_s_sleep_var">,
+      Intrinsic<[], [llvm_i32_ty],
+                [IntrNoMem, IntrHasSideEffects, IntrWillReturn]> {
+}
+
 def int_amdgcn_s_incperflevel :
   ClangBuiltin<"__builtin_amdgcn_s_incperflevel">,
   Intrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrNoMem,
