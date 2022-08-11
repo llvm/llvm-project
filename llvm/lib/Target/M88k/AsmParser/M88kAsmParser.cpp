@@ -441,7 +441,7 @@ OperandMatchResultTy M88kAsmParser::parseBitField(OperandVector &Operands) {
   }
   if (Lexer.isNot(AsmToken::Less)) {
     if (WidthTok)
-      Lexer.UnLex(WidthTok.getValue());
+      Lexer.UnLex(WidthTok.value());
     return MatchOperand_NoMatch;
   }
   Parser.Lex();
@@ -477,7 +477,7 @@ OperandMatchResultTy M88kAsmParser::parseBFWidth(OperandVector &Operands) {
   }
   if (Lexer.isNot(AsmToken::Less)) {
     if (WidthTok)
-      Lexer.UnLex(WidthTok.getValue());
+      Lexer.UnLex(WidthTok.value());
     return MatchOperand_NoMatch;
   }
 

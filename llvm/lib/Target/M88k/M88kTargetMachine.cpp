@@ -89,7 +89,7 @@ std::string computeDataLayout(const Triple &TT, StringRef CPU, StringRef FS) {
 
 // TODO: Check.
 Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  if (!RM.hasValue() || *RM == Reloc::DynamicNoPIC)
+  if (!RM || *RM == Reloc::DynamicNoPIC)
     return Reloc::Static;
   return *RM;
 }
