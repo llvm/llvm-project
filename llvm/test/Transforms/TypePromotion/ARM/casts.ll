@@ -57,24 +57,26 @@ define i8 @icmp_i32_zext(i8* %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i32 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[GEP]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub nuw nsw i8 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nuw nsw i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[CONV44:%.*]] = zext i8 [[TMP0]] to i32
 ; CHECK-NEXT:    br label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
 ; CHECK-NEXT:    br label [[BODY:%.*]]
 ; CHECK:       body:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i8 [ [[TMP1]], [[PREHEADER]] ], [ [[TMP3:%.*]], [[IF_END:%.*]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP2]], [[PREHEADER]] ], [ [[TMP5:%.*]], [[IF_END:%.*]] ]
 ; CHECK-NEXT:    [[SI_0274:%.*]] = phi i32 [ [[CONV44]], [[PREHEADER]] ], [ [[INC:%.*]], [[IF_END]] ]
-; CHECK-NEXT:    [[CONV51266:%.*]] = zext i8 [[TMP2]] to i32
-; CHECK-NEXT:    [[CMP52267:%.*]] = icmp eq i32 [[SI_0274]], [[CONV51266]]
+; CHECK-NEXT:    [[CMP52267:%.*]] = icmp eq i32 [[SI_0274]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[CMP52267]], label [[IF_END]], label [[EXIT:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[INC]] = add i32 [[SI_0274]], 1
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i32 [[INC]]
-; CHECK-NEXT:    [[TMP3]] = load i8, i8* [[GEP1]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, i8* [[GEP1]], align 1
+; CHECK-NEXT:    [[TMP5]] = zext i8 [[TMP4]] to i32
 ; CHECK-NEXT:    br label [[BODY]]
 ; CHECK:       exit:
-; CHECK-NEXT:    ret i8 [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP3]] to i8
+; CHECK-NEXT:    ret i8 [[TMP6]]
 ;
 entry:
   %gep = getelementptr inbounds i8, i8* %ptr, i32 0
