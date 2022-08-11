@@ -60,7 +60,7 @@ typedef uint16_t dst_rep_t;
 static const int dstSigBits = 10;
 
 #elif defined DST_BFLOAT
-typedef uint16_t dst_t;
+typedef __bf16 dst_t;
 typedef uint16_t dst_rep_t;
 #define DST_REP_C UINT16_C
 static const int dstSigBits = 7;
