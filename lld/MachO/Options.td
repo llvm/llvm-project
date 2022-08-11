@@ -978,6 +978,12 @@ def mcpu : Separate<["-"], "mcpu">,
 def no_dtrace_dof : Flag<["-"], "no_dtrace_dof">,
     HelpText<"Disable dtrace-dof processing (default).">,
     Group<grp_rare>;
+def objc_stubs_fast : Flag<["-"], "objc_stubs_fast">,
+    HelpText<"Produce larger stubs for Objective-C method calls with fewer jumps (default).">,
+    Group<grp_rare>;
+def objc_stubs_small : Flag<["-"], "objc_stubs_small">,
+    HelpText<"Produce smaller stubs for Objective-C method calls with more jumps.">,
+    Group<grp_rare>;
 
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;
 

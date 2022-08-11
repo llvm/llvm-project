@@ -59,6 +59,8 @@ def loongarch_bstrpick
     : SDNode<"LoongArchISD::BSTRPICK", SDT_LoongArchBStrPick>;
 def loongarch_revb_2h : SDNode<"LoongArchISD::REVB_2H", SDTUnaryOp>;
 def loongarch_revb_2w : SDNode<"LoongArchISD::REVB_2W", SDTUnaryOp>;
+def loongarch_bitrev_4b : SDNode<"LoongArchISD::BITREV_4B", SDTUnaryOp>;
+def loongarch_bitrev_w : SDNode<"LoongArchISD::BITREV_W", SDTUnaryOp>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -840,17 +842,25 @@ def : Pat<(loongarch_bstrpick GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
           (BSTRPICK_D GPR:$rj, uimm6:$msbd, uimm6:$lsbd)>;
 } // Predicates = [IsLA64]
 
-/// Byte-swapping
+/// Byte-swapping and bit-reversal
 
 def : Pat<(loongarch_revb_2h GPR:$rj), (REVB_2H GPR:$rj)>;
+def : Pat<(loongarch_bitrev_4b GPR:$rj), (BITREV_4B GPR:$rj)>;
 
 let Predicates = [IsLA32] in {
 def : Pat<(bswap GPR:$rj), (ROTRI_W (REVB_2H GPR:$rj), 16)>;
+def : Pat<(bitreverse GPR:$rj), (BITREV_W GPR:$rj)>;
+def : Pat<(bswap (bitreverse GPR:$rj)), (BITREV_4B GPR:$rj)>;
+def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_4B GPR:$rj)>;
 } // Predicates = [IsLA32]
 
 let Predicates = [IsLA64] in {
 def : Pat<(loongarch_revb_2w GPR:$rj), (REVB_2W GPR:$rj)>;
 def : Pat<(bswap GPR:$rj), (REVB_D GPR:$rj)>;
+def : Pat<(loongarch_bitrev_w GPR:$rj), (BITREV_W GPR:$rj)>;
+def : Pat<(bitreverse GPR:$rj), (BITREV_D GPR:$rj)>;
+def : Pat<(bswap (bitreverse GPR:$rj)), (BITREV_8B GPR:$rj)>;
+def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_8B GPR:$rj)>;
 } // Predicates = [IsLA64]
 
 /// Loads
@@ -956,6 +966,10 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 
 def : InstAlias<"nop", (ANDI R0, R0, 0)>;
 def : InstAlias<"move $dst, $src", (OR GPR:$dst, GPR:$src, R0)>;
+// `ret` is supported since binutils commit 20f2e2686c79a5ac (version 2.40 and
+// later).
+def : InstAlias<"ret", (JIRL R0, R1, 0)>;
+def : InstAlias<"jr $rj", (JIRL R0, GPR:$rj, 0)>;
 
 //===----------------------------------------------------------------------===//
 // Basic Floating-Point Instructions
