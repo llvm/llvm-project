@@ -1,3 +1,6 @@
+// FIXME: see #57042
+// UNSUPPORTED: i386, x86_64
+
 // RUN: mlir-opt %s --sparse-compiler | \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
