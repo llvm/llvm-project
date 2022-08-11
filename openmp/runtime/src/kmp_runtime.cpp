@@ -1947,12 +1947,14 @@ int __kmp_fork_call(ident_t *loc, int gtid,
         }
       } else if (call_context == fork_context_gnu) {
 #if OMPT_SUPPORT
-        ompt_lw_taskteam_t lwt;
-        __ompt_lw_taskteam_init(&lwt, master_th, gtid, &ompt_parallel_data,
-                                return_address);
+        if (ompt_enabled.enabled) {
+          ompt_lw_taskteam_t lwt;
+          __ompt_lw_taskteam_init(&lwt, master_th, gtid, &ompt_parallel_data,
+                                  return_address);
 
-        lwt.ompt_task_info.frame.exit_frame = ompt_data_none;
-        __ompt_lw_taskteam_link(&lwt, master_th, 1);
+          lwt.ompt_task_info.frame.exit_frame = ompt_data_none;
+          __ompt_lw_taskteam_link(&lwt, master_th, 1);
+        }
 // don't use lw_taskteam after linking. content was swaped
 #endif
 
@@ -2396,6 +2398,9 @@ void __kmp_join_call(ident_t *loc, int gtid
 
 #if OMPT_SUPPORT
     if (ompt_enabled.enabled) {
+      if (fork_context == fork_context_gnu) {
+        __ompt_lw_taskteam_unlink(master_th);
+      }
       __kmp_join_restore_state(master_th, parent_team);
     }
 #endif
