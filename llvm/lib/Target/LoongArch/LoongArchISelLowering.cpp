@@ -80,6 +80,16 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BSWAP, MVT::i32, Custom);
   }
 
+  // Expand bitreverse.i16 with native-width bitrev and shift for now, before
+  // we get to know which of sll and revb.2h is faster.
+  setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
+  if (Subtarget.is64Bit()) {
+    setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
+    setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
+  } else {
+    setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
+  }
+
   static const ISD::CondCode FPCCToExpand[] = {ISD::SETOGT, ISD::SETOGE,
                                                ISD::SETUGT, ISD::SETUGE};
 
@@ -466,6 +476,27 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Tmp));
     break;
   }
+  case ISD::BITREVERSE: {
+    SDValue Src = N->getOperand(0);
+    EVT VT = N->getValueType(0);
+    assert((VT == MVT::i8 || (VT == MVT::i32 && Subtarget.is64Bit())) &&
+           "Unexpected custom legalization");
+    MVT GRLenVT = Subtarget.getGRLenVT();
+    SDValue NewSrc = DAG.getNode(ISD::ANY_EXTEND, DL, GRLenVT, Src);
+    SDValue Tmp;
+    switch (VT.getSizeInBits()) {
+    default:
+      llvm_unreachable("Unexpected operand width");
+    case 8:
+      Tmp = DAG.getNode(LoongArchISD::BITREV_4B, DL, GRLenVT, NewSrc);
+      break;
+    case 32:
+      Tmp = DAG.getNode(LoongArchISD::BITREV_W, DL, GRLenVT, NewSrc);
+      break;
+    }
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Tmp));
+    break;
+  }
   }
 }
 
@@ -791,6 +822,21 @@ Retry2:
   return SDValue();
 }
 
+// Combine (loongarch_bitrev_w (loongarch_revb_2w X)) to loongarch_bitrev_4b.
+static SDValue performBITREV_WCombine(SDNode *N, SelectionDAG &DAG,
+                                      TargetLowering::DAGCombinerInfo &DCI,
+                                      const LoongArchSubtarget &Subtarget) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  SDValue Src = N->getOperand(0);
+  if (Src.getOpcode() != LoongArchISD::REVB_2W)
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::BITREV_4B, SDLoc(N), N->getValueType(0),
+                     Src.getOperand(0));
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -803,6 +849,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performORCombine(N, DAG, DCI, Subtarget);
   case ISD::SRL:
     return performSRLCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::BITREV_W:
+    return performBITREV_WCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
 }
@@ -897,6 +945,8 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(FTINT)
     NODE_NAME_CASE(REVB_2H)
     NODE_NAME_CASE(REVB_2W)
+    NODE_NAME_CASE(BITREV_4B)
+    NODE_NAME_CASE(BITREV_W)
     NODE_NAME_CASE(ROTR_W)
     NODE_NAME_CASE(ROTL_W)
   }
