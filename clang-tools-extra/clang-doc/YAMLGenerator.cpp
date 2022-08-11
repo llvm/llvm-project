@@ -192,6 +192,7 @@ template <> struct MappingTraits<MemberTypeInfo> {
     // the AS that shouldn't be part of the output. Even though AS_public is the
     // default in the struct, it should be displayed in the YAML output.
     IO.mapOptional("Access", I.Access, clang::AccessSpecifier::AS_none);
+    IO.mapOptional("Description", I.Description);
   }
 };
 
