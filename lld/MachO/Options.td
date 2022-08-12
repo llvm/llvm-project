@@ -68,7 +68,7 @@ def lto_O: Joined<["--"], "lto-O">,
     HelpText<"Set optimization level for LTO (default: 2)">,
     MetaVarName<"<opt-level>">,
     Group<grp_lld>;
-def thinlto_cache_policy: Joined<["--"], "thinlto-cache-policy=">,
+def thinlto_cache_policy_eq: Joined<["--"], "thinlto-cache-policy=">,
     HelpText<"Pruning policy for the ThinLTO cache">,
     Group<grp_lld>;
 def O : JoinedOrSeparate<["-"], "O">,
@@ -89,7 +89,7 @@ def call_graph_profile_sort: Flag<["--"], "call-graph-profile-sort">,
 def no_call_graph_profile_sort : Flag<["--"], "no-call-graph-profile-sort">,
     HelpText<"Do not reorder sections with call graph profile">,
     Group<grp_lld>;
-def print_symbol_order: Joined<["--"], "print-symbol-order=">,
+def print_symbol_order_eq: Joined<["--"], "print-symbol-order=">,
     HelpText<"Print a symbol order specified by --call-graph-profile-sort into the specified file">,
     Group<grp_lld>;
 
