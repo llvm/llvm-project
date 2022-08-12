@@ -57,8 +57,7 @@ define i1 @cmp_ne_zero_and_ri(i32 %a) {
 define i1 @cmp_ne_zero_and_rsr(i32 %a, i32 %b, i32 %c) {
 ; ARM-LABEL: cmp_ne_zero_and_rsr:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    and r0, r0, r1, lsl r2
-; ARM-NEXT:    cmp r0, #0
+; ARM-NEXT:    ands r0, r0, r1, lsl r2
 ; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
@@ -86,8 +85,7 @@ define i1 @cmp_ne_zero_and_rsr(i32 %a, i32 %b, i32 %c) {
 define i1 @cmp_ne_zero_and_rsi(i32 %a, i32 %b) {
 ; ARM-LABEL: cmp_ne_zero_and_rsi:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    and r0, r0, r1, lsr #17
-; ARM-NEXT:    cmp r0, #0
+; ARM-NEXT:    ands r0, r0, r1, lsr #17
 ; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
@@ -101,8 +99,7 @@ define i1 @cmp_ne_zero_and_rsi(i32 %a, i32 %b) {
 ;
 ; THUMB2-LABEL: cmp_ne_zero_and_rsi:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    and.w r0, r0, r1, lsr #17
-; THUMB2-NEXT:    cmp r0, #0
+; THUMB2-NEXT:    ands.w r0, r0, r1, lsr #17
 ; THUMB2-NEXT:    it ne
 ; THUMB2-NEXT:    movne r0, #1
 ; THUMB2-NEXT:    bx lr
@@ -166,8 +163,7 @@ define i1 @cmp_ne_zero_or_ri(i32 %a) {
 define i1 @cmp_ne_zero_or_rsr(i32 %a, i32 %b, i32 %c) {
 ; ARM-LABEL: cmp_ne_zero_or_rsr:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    orr r0, r0, r1, lsl r2
-; ARM-NEXT:    cmp r0, #0
+; ARM-NEXT:    orrs r0, r0, r1, lsl r2
 ; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
@@ -195,8 +191,7 @@ define i1 @cmp_ne_zero_or_rsr(i32 %a, i32 %b, i32 %c) {
 define i1 @cmp_ne_zero_or_rsi(i32 %a, i32 %b) {
 ; ARM-LABEL: cmp_ne_zero_or_rsi:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    orr r0, r0, r1, lsr #17
-; ARM-NEXT:    cmp r0, #0
+; ARM-NEXT:    orrs r0, r0, r1, lsr #17
 ; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
@@ -210,8 +205,7 @@ define i1 @cmp_ne_zero_or_rsi(i32 %a, i32 %b) {
 ;
 ; THUMB2-LABEL: cmp_ne_zero_or_rsi:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    orr.w r0, r0, r1, lsr #17
-; THUMB2-NEXT:    cmp r0, #0
+; THUMB2-NEXT:    orrs.w r0, r0, r1, lsr #17
 ; THUMB2-NEXT:    it ne
 ; THUMB2-NEXT:    movne r0, #1
 ; THUMB2-NEXT:    bx lr
@@ -274,8 +268,7 @@ define i1 @cmp_ne_zero_xor_ri(i32 %a) {
 define i1 @cmp_ne_zero_xor_rsr(i32 %a, i32 %b, i32 %c) {
 ; ARM-LABEL: cmp_ne_zero_xor_rsr:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    eor r0, r0, r1, lsl r2
-; ARM-NEXT:    cmp r0, #0
+; ARM-NEXT:    eors r0, r0, r1, lsl r2
 ; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
@@ -303,8 +296,7 @@ define i1 @cmp_ne_zero_xor_rsr(i32 %a, i32 %b, i32 %c) {
 define i1 @cmp_ne_zero_xor_rsi(i32 %a, i32 %b) {
 ; ARM-LABEL: cmp_ne_zero_xor_rsi:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    eor r0, r0, r1, lsr #17
-; ARM-NEXT:    cmp r0, #0
+; ARM-NEXT:    eors r0, r0, r1, lsr #17
 ; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
@@ -318,8 +310,7 @@ define i1 @cmp_ne_zero_xor_rsi(i32 %a, i32 %b) {
 ;
 ; THUMB2-LABEL: cmp_ne_zero_xor_rsi:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    eor.w r0, r0, r1, lsr #17
-; THUMB2-NEXT:    cmp r0, #0
+; THUMB2-NEXT:    eors.w r0, r0, r1, lsr #17
 ; THUMB2-NEXT:    it ne
 ; THUMB2-NEXT:    movne r0, #1
 ; THUMB2-NEXT:    bx lr
@@ -332,8 +323,7 @@ define i1 @cmp_ne_zero_xor_rsi(i32 %a, i32 %b) {
 define i1 @cmp_ne_zero_and_not_rr(i32 %a, i32 %b) {
 ; ARM-LABEL: cmp_ne_zero_and_not_rr:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    bic r0, r0, r1
-; ARM-NEXT:    cmp r0, #0
+; ARM-NEXT:    bics r0, r0, r1
 ; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
@@ -347,7 +337,6 @@ define i1 @cmp_ne_zero_and_not_rr(i32 %a, i32 %b) {
 ; THUMB2-LABEL: cmp_ne_zero_and_not_rr:
 ; THUMB2:       @ %bb.0:
 ; THUMB2-NEXT:    bics r0, r1
-; THUMB2-NEXT:    cmp r0, #0
 ; THUMB2-NEXT:    it ne
 ; THUMB2-NEXT:    movne r0, #1
 ; THUMB2-NEXT:    bx lr
@@ -360,8 +349,7 @@ define i1 @cmp_ne_zero_and_not_rr(i32 %a, i32 %b) {
 define i1 @cmp_ne_zero_and_not_ri(i32 %a) {
 ; ARM-LABEL: cmp_ne_zero_and_not_ri:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    bic r0, r0, #42
-; ARM-NEXT:    cmp r0, #0
+; ARM-NEXT:    bics r0, r0, #42
 ; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
@@ -375,8 +363,7 @@ define i1 @cmp_ne_zero_and_not_ri(i32 %a) {
 ;
 ; THUMB2-LABEL: cmp_ne_zero_and_not_ri:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    bic r0, r0, #42
-; THUMB2-NEXT:    cmp r0, #0
+; THUMB2-NEXT:    bics r0, r0, #42
 ; THUMB2-NEXT:    it ne
 ; THUMB2-NEXT:    movne r0, #1
 ; THUMB2-NEXT:    bx lr
@@ -389,8 +376,7 @@ define i1 @cmp_ne_zero_and_not_ri(i32 %a) {
 define i1 @cmp_ne_zero_and_not_rsr(i32 %a, i32 %b, i32 %c) {
 ; ARM-LABEL: cmp_ne_zero_and_not_rsr:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    bic r0, r0, r1, lsl r2
-; ARM-NEXT:    cmp r0, #0
+; ARM-NEXT:    bics r0, r0, r1, lsl r2
 ; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
@@ -406,7 +392,6 @@ define i1 @cmp_ne_zero_and_not_rsr(i32 %a, i32 %b, i32 %c) {
 ; THUMB2:       @ %bb.0:
 ; THUMB2-NEXT:    lsls r1, r2
 ; THUMB2-NEXT:    bics r0, r1
-; THUMB2-NEXT:    cmp r0, #0
 ; THUMB2-NEXT:    it ne
 ; THUMB2-NEXT:    movne r0, #1
 ; THUMB2-NEXT:    bx lr
@@ -420,8 +405,7 @@ define i1 @cmp_ne_zero_and_not_rsr(i32 %a, i32 %b, i32 %c) {
 define i1 @cmp_ne_zero_and_not_rsi(i32 %a, i32 %b) {
 ; ARM-LABEL: cmp_ne_zero_and_not_rsi:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    bic r0, r0, r1, lsr #17
-; ARM-NEXT:    cmp r0, #0
+; ARM-NEXT:    bics r0, r0, r1, lsr #17
 ; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
@@ -435,8 +419,7 @@ define i1 @cmp_ne_zero_and_not_rsi(i32 %a, i32 %b) {
 ;
 ; THUMB2-LABEL: cmp_ne_zero_and_not_rsi:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    bic.w r0, r0, r1, lsr #17
-; THUMB2-NEXT:    cmp r0, #0
+; THUMB2-NEXT:    bics.w r0, r0, r1, lsr #17
 ; THUMB2-NEXT:    it ne
 ; THUMB2-NEXT:    movne r0, #1
 ; THUMB2-NEXT:    bx lr
@@ -450,11 +433,8 @@ define i1 @cmp_ne_zero_and_not_rsi(i32 %a, i32 %b) {
 define i1 @cmp_ne_zero_shl_rr(i32 %a, i32 %b) {
 ; ARM-LABEL: cmp_ne_zero_shl_rr:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    mov r3, #0
-; ARM-NEXT:    lsl r2, r0, r1
-; ARM-NEXT:    cmp r3, r0, lsl r1
-; ARM-NEXT:    movwne r2, #1
-; ARM-NEXT:    mov r0, r2
+; ARM-NEXT:    lsls r0, r0, r1
+; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: cmp_ne_zero_shl_rr:
@@ -478,11 +458,8 @@ define i1 @cmp_ne_zero_shl_rr(i32 %a, i32 %b) {
 define i1 @cmp_ne_zero_shl_ri(i32 %a) {
 ; ARM-LABEL: cmp_ne_zero_shl_ri:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    mov r2, #0
-; ARM-NEXT:    lsl r1, r0, #7
-; ARM-NEXT:    cmp r2, r0, lsl #7
-; ARM-NEXT:    movwne r1, #1
-; ARM-NEXT:    mov r0, r1
+; ARM-NEXT:    lsls r0, r0, #7
+; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: cmp_ne_zero_shl_ri:
@@ -506,11 +483,8 @@ define i1 @cmp_ne_zero_shl_ri(i32 %a) {
 define i1 @cmp_ne_zero_lshr_rr(i32 %a, i32 %b) {
 ; ARM-LABEL: cmp_ne_zero_lshr_rr:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    mov r3, #0
-; ARM-NEXT:    lsr r2, r0, r1
-; ARM-NEXT:    cmp r3, r0, lsr r1
-; ARM-NEXT:    movwne r2, #1
-; ARM-NEXT:    mov r0, r2
+; ARM-NEXT:    lsrs r0, r0, r1
+; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: cmp_ne_zero_lshr_rr:
@@ -534,11 +508,8 @@ define i1 @cmp_ne_zero_lshr_rr(i32 %a, i32 %b) {
 define i1 @cmp_ne_zero_lshr_ri(i32 %a) {
 ; ARM-LABEL: cmp_ne_zero_lshr_ri:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    mov r2, #0
-; ARM-NEXT:    lsr r1, r0, #7
-; ARM-NEXT:    cmp r2, r0, lsr #7
-; ARM-NEXT:    movwne r1, #1
-; ARM-NEXT:    mov r0, r1
+; ARM-NEXT:    lsrs r0, r0, #7
+; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: cmp_ne_zero_lshr_ri:
@@ -562,11 +533,8 @@ define i1 @cmp_ne_zero_lshr_ri(i32 %a) {
 define i1 @cmp_ne_zero_ashr_rr(i32 %a, i32 %b) {
 ; ARM-LABEL: cmp_ne_zero_ashr_rr:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    mov r3, #0
-; ARM-NEXT:    asr r2, r0, r1
-; ARM-NEXT:    cmp r3, r0, asr r1
-; ARM-NEXT:    movwne r2, #1
-; ARM-NEXT:    mov r0, r2
+; ARM-NEXT:    asrs r0, r0, r1
+; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: cmp_ne_zero_ashr_rr:
@@ -591,11 +559,8 @@ define i1 @cmp_ne_zero_ashr_rr(i32 %a, i32 %b) {
 define i1 @cmp_ne_zero_ashr_ri(i32 %a) {
 ; ARM-LABEL: cmp_ne_zero_ashr_ri:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    mov r2, #0
-; ARM-NEXT:    asr r1, r0, #7
-; ARM-NEXT:    cmp r2, r0, asr #7
-; ARM-NEXT:    movwne r1, #1
-; ARM-NEXT:    mov r0, r1
+; ARM-NEXT:    asrs r0, r0, #7
+; ARM-NEXT:    movwne r0, #1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: cmp_ne_zero_ashr_ri:
@@ -1520,8 +1485,7 @@ exit:
 define void @br_on_shift_eq_zero(i32 %a, i32 %b) {
 ; ARM-LABEL: br_on_shift_eq_zero:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    mov r2, #0
-; ARM-NEXT:    cmp r2, r0, lsl r1
+; ARM-NEXT:    lsls r1, r0, r1
 ; ARM-NEXT:    bxne lr
 ; ARM-NEXT:  .LBB51_1: @ %true_br
 ; ARM-NEXT:    push {r11, lr}
@@ -1564,8 +1528,7 @@ exit:
 define void @br_on_shift_ne_zero(i32 %a, i32 %b) {
 ; ARM-LABEL: br_on_shift_ne_zero:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    mov r2, #0
-; ARM-NEXT:    cmp r2, r0, lsr r1
+; ARM-NEXT:    lsrs r1, r0, r1
 ; ARM-NEXT:    bxeq lr
 ; ARM-NEXT:  .LBB52_1: @ %true_br
 ; ARM-NEXT:    push {r11, lr}
