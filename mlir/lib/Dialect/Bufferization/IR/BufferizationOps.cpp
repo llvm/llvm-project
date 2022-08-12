@@ -388,7 +388,7 @@ ParseResult AllocTensorOp::parse(OpAsmParser &parser, OperationState &result) {
     if (parser.resolveOperand(copyOperand, type, result.operands))
       return failure();
   result.addAttribute(AllocTensorOp::getOperandSegmentSizeAttr(),
-                      parser.getBuilder().getI32VectorAttr(
+                      parser.getBuilder().getDenseI32ArrayAttr(
                           {static_cast<int32_t>(dynamicSizesOperands.size()),
                            static_cast<int32_t>(copyKeyword.succeeded())}));
   return success();

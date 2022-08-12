@@ -111,8 +111,8 @@ static void buildStructuredOp(OpBuilder &b, OperationState &state,
   state.addAttributes(attributes);
   state.addAttribute(
       "operand_segment_sizes",
-      b.getI32VectorAttr({static_cast<int32_t>(inputs.size()),
-                          static_cast<int32_t>(outputs.size())}));
+      b.getDenseI32ArrayAttr({static_cast<int32_t>(inputs.size()),
+                              static_cast<int32_t>(outputs.size())}));
 
   // Create and fill the region of the structured operation.
   Region &region = *state.addRegion();
@@ -157,7 +157,7 @@ parseCommonStructuredOpParts(OpAsmParser &parser, OperationState &result,
     return failure();
 
   result.addAttribute("operand_segment_sizes",
-                      parser.getBuilder().getI32VectorAttr(
+                      parser.getBuilder().getDenseI32ArrayAttr(
                           {static_cast<int32_t>(inputsOperands.size()),
                            static_cast<int32_t>(outputsOperands.size())}));
   return success();

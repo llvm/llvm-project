@@ -1558,7 +1558,7 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
   if (!allOperands) {
     if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
       body << "  result.addAttribute(\"operand_segment_sizes\", "
-           << "parser.getBuilder().getI32VectorAttr({";
+           << "parser.getBuilder().getDenseI32ArrayAttr({";
       auto interleaveFn = [&](const NamedTypeConstraint &operand) {
         // If the operand is variadic emit the parsed size.
         if (operand.isVariableLength())
@@ -1574,7 +1574,7 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
         continue;
       body << llvm::formatv(
           "  result.addAttribute(\"{0}\", "
-          "parser.getBuilder().getI32TensorAttr({1}OperandGroupSizes));\n",
+          "parser.getBuilder().getDenseI32ArrayAttr({1}OperandGroupSizes));\n",
           operand.constraint.getVariadicOfVariadicSegmentSizeAttr(),
           operand.name);
     }
@@ -1583,7 +1583,7 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
   if (!allResultTypes &&
       op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
     body << "  result.addAttribute(\"result_segment_sizes\", "
-         << "parser.getBuilder().getI32VectorAttr({";
+         << "parser.getBuilder().getDenseI32ArrayAttr({";
     auto interleaveFn = [&](const NamedTypeConstraint &result) {
       // If the result is variadic emit the parsed size.
       if (result.isVariableLength())

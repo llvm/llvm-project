@@ -915,7 +915,7 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
     Variadic<AnyType>:$defaultOperands,
     VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
     OptionalAttr<ElementsAttr>:$case_values,
-    ElementsAttr:$case_operand_segments,
+    DenseI32ArrayAttr:$case_operand_segments,
     OptionalAttr<ElementsAttr>:$branch_weights
   );
   let successors = (successor

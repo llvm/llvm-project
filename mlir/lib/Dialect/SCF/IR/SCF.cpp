@@ -2105,10 +2105,10 @@ void ParallelOp::build(
   result.addOperands(initVals);
   result.addAttribute(
       ParallelOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({static_cast<int32_t>(lowerBounds.size()),
-                                static_cast<int32_t>(upperBounds.size()),
-                                static_cast<int32_t>(steps.size()),
-                                static_cast<int32_t>(initVals.size())}));
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(lowerBounds.size()),
+                                    static_cast<int32_t>(upperBounds.size()),
+                                    static_cast<int32_t>(steps.size()),
+                                    static_cast<int32_t>(initVals.size())}));
   result.addTypes(initVals.getTypes());
 
   OpBuilder::InsertionGuard guard(builder);
@@ -2258,10 +2258,10 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   // Set `operand_segment_sizes` attribute.
   result.addAttribute(
       ParallelOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({static_cast<int32_t>(lower.size()),
-                                static_cast<int32_t>(upper.size()),
-                                static_cast<int32_t>(steps.size()),
-                                static_cast<int32_t>(initVals.size())}));
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(lower.size()),
+                                    static_cast<int32_t>(upper.size()),
+                                    static_cast<int32_t>(steps.size()),
+                                    static_cast<int32_t>(initVals.size())}));
 
   // Parse attributes.
   if (parser.parseOptionalAttrDict(result.attributes) ||

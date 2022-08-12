@@ -1579,10 +1579,10 @@ ParseResult spirv::BranchConditionalOp::parse(OpAsmParser &parser,
     return failure();
   result.addSuccessors(dest);
   result.addOperands(falseOperands);
-  result.addAttribute(
-      spirv::BranchConditionalOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({1, static_cast<int32_t>(trueOperands.size()),
-                                static_cast<int32_t>(falseOperands.size())}));
+  result.addAttribute(spirv::BranchConditionalOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr(
+                          {1, static_cast<int32_t>(trueOperands.size()),
+                           static_cast<int32_t>(falseOperands.size())}));
 
   return success();
 }

@@ -3015,10 +3015,10 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
     if (parser.resolveOperand(maskInfo, maskType, result.operands))
       return failure();
   }
-  result.addAttribute(
-      TransferReadOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({1, static_cast<int32_t>(indexInfo.size()), 1,
-                                static_cast<int32_t>(hasMask.succeeded())}));
+  result.addAttribute(TransferReadOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr(
+                          {1, static_cast<int32_t>(indexInfo.size()), 1,
+                           static_cast<int32_t>(hasMask.succeeded())}));
   return parser.addTypeToList(vectorType, result.types);
 }
 
@@ -3465,10 +3465,10 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
     if (parser.resolveOperand(maskInfo, maskType, result.operands))
       return failure();
   }
-  result.addAttribute(
-      TransferWriteOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({1, 1, static_cast<int32_t>(indexInfo.size()),
-                                static_cast<int32_t>(hasMask.succeeded())}));
+  result.addAttribute(TransferWriteOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr(
+                          {1, 1, static_cast<int32_t>(indexInfo.size()),
+                           static_cast<int32_t>(hasMask.succeeded())}));
   return failure(shapedType.isa<RankedTensorType>() &&
                  parser.addTypeToList(shapedType, result.types));
 }
