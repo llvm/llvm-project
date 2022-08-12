@@ -254,7 +254,7 @@ def SwitchOp : CF_Op<"switch",
     Variadic<AnyType>:$defaultOperands,
     VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
     OptionalAttr<AnyIntElementsAttr>:$case_values,
-    DenseI32ArrayAttr:$case_operand_segments
+    I32ElementsAttr:$case_operand_segments
   );
   let successors = (successor
     AnySuccessor:$defaultDestination,
