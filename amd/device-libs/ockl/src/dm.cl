@@ -986,6 +986,33 @@ __ockl_dm_init_v1(ulong hp, ulong sp, uint hb, uint nis)
     }
 }
 
+// Retrieve some info about the current state of the heap
+//   Expecting the caller to limit the number of threads executing here to 1
+void
+__ockl_dm_hinfo(ulong *rp)
+{
+    __global heap_t *hp = get_heap_ptr();
+
+    *rp++ = NUM_KINDS;
+    for (kind_t k=0; k<NUM_KINDS; ++k) {
+        uint nas = AL(&hp->num_allocated_slabs[k].value, memory_order_relaxed);
+        *rp++ = (ulong)nas;
+        ulong nubs = 0;
+        for (uint i = 0; i<nas; ++i) {
+            __global sdata_t *sdp = sdata_for(hp, k, i);
+            uint nub = AL(&sdp->num_used_blocks, memory_order_relaxed);
+            nubs += nub;
+        }
+        *rp++ = nubs;
+        *rp++ = (ulong)nas * num_usable_blocks(k);
+    }
+#if defined NON_SLAB_TRACKING
+    *rp++ = AL(&hp->num_nonslab_allocations, memory_order_relaxed);
+#else
+    *rp++ = 0;
+#endif
+}
+
 #if defined NON_SLAB_TRACKING
 // return a snapshot of the current number of nonslab allocations
 // which haven't been deallocated
