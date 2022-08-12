@@ -81,7 +81,7 @@ public:
   }
 
   template <class... Args>
-  constexpr explicit OptionalStorage(in_place_t, Args &&...args)
+  constexpr explicit OptionalStorage(std::in_place_t, Args &&...args)
       : val(std::forward<Args>(args)...), hasVal(true) {}
 
   void reset() noexcept {
@@ -196,7 +196,7 @@ public:
   OptionalStorage &operator=(OptionalStorage &&other) = default;
 
   template <class... Args>
-  constexpr explicit OptionalStorage(in_place_t, Args &&...args)
+  constexpr explicit OptionalStorage(std::in_place_t, Args &&...args)
       : val(std::forward<Args>(args)...), hasVal(true) {}
 
   void reset() noexcept {
@@ -275,15 +275,15 @@ public:
   constexpr Optional() = default;
   constexpr Optional(NoneType) {}
 
-  constexpr Optional(const T &y) : Storage(in_place, y) {}
+  constexpr Optional(const T &y) : Storage(std::in_place, y) {}
   constexpr Optional(const Optional &O) = default;
 
-  constexpr Optional(T &&y) : Storage(in_place, std::move(y)) {}
+  constexpr Optional(T &&y) : Storage(std::in_place, std::move(y)) {}
   constexpr Optional(Optional &&O) = default;
 
   template <typename... ArgTypes>
-  constexpr Optional(in_place_t, ArgTypes &&...Args)
-      : Storage(in_place, std::forward<ArgTypes>(Args)...) {}
+  constexpr Optional(std::in_place_t, ArgTypes &&...Args)
+      : Storage(std::in_place, std::forward<ArgTypes>(Args)...) {}
 
   Optional &operator=(T &&y) {
     Storage = std::move(y);
