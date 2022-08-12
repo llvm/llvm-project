@@ -206,42 +206,58 @@ Iostat ExternalFileUnit::SetDirection(Direction direction) {
   }
 }
 
-UnitMap &ExternalFileUnit::GetUnitMap() {
-  if (unitMap) {
-    return *unitMap;
-  }
-  CriticalSection critical{unitMapLock};
-  if (unitMap) {
-    return *unitMap;
-  }
+UnitMap &ExternalFileUnit::CreateUnitMap() {
   Terminator terminator{__FILE__, __LINE__};
   IoErrorHandler handler{terminator};
-  UnitMap *newUnitMap{New<UnitMap>{terminator}().release()};
+  UnitMap &newUnitMap{*New<UnitMap>{terminator}().release()};
 
   bool wasExtant{false};
-  ExternalFileUnit &out{*newUnitMap->LookUpOrCreate(6, terminator, wasExtant)};
+  ExternalFileUnit &out{*newUnitMap.LookUpOrCreate(6, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   out.Predefine(1);
   handler.SignalError(out.SetDirection(Direction::Output));
   out.isUnformatted = false;
   defaultOutput = &out;
 
-  ExternalFileUnit &in{*newUnitMap->LookUpOrCreate(5, terminator, wasExtant)};
+  ExternalFileUnit &in{*newUnitMap.LookUpOrCreate(5, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   in.Predefine(0);
   handler.SignalError(in.SetDirection(Direction::Input));
   in.isUnformatted = false;
   defaultInput = &in;
 
-  ExternalFileUnit &error{
-      *newUnitMap->LookUpOrCreate(0, terminator, wasExtant)};
+  ExternalFileUnit &error{*newUnitMap.LookUpOrCreate(0, terminator, wasExtant)};
   RUNTIME_CHECK(terminator, !wasExtant);
   error.Predefine(2);
   handler.SignalError(error.SetDirection(Direction::Output));
   error.isUnformatted = false;
   errorOutput = &error;
 
-  unitMap = newUnitMap;
+  return newUnitMap;
+}
+
+// A back-up atexit() handler for programs that don't terminate with a main
+// program END or a STOP statement or other Fortran-initiated program shutdown,
+// such as programs with a C main() that terminate normally.  It flushes all
+// external I/O units.  It is registered once the first time that any external
+// I/O is attempted.
+static void CloseAllExternalUnits() {
+  IoErrorHandler handler{"Fortran program termination"};
+  ExternalFileUnit::CloseAll(handler);
+}
+
+UnitMap &ExternalFileUnit::GetUnitMap() {
+  if (unitMap) {
+    return *unitMap;
+  }
+  {
+    CriticalSection critical{unitMapLock};
+    if (unitMap) {
+      return *unitMap;
+    }
+    unitMap = &CreateUnitMap();
+  }
+  std::atexit(CloseAllExternalUnits);
   return *unitMap;
 }
 
