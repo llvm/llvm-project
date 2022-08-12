@@ -74,8 +74,8 @@ define dso_local i32 @v4i32(<4 x i32> %a) local_unnamed_addr #0 {
 ; PWR10LE-NEXT:    xxswapd v3, v2
 ; PWR10LE-NEXT:    li r3, 0
 ; PWR10LE-NEXT:    xxlor vs0, v2, v3
-; PWR10LE-NEXT:    xxspltw vs1, vs0, 2
-; PWR10LE-NEXT:    xxlor v2, vs0, vs1
+; PWR10LE-NEXT:    xxspltw vs0, vs0, 2
+; PWR10LE-NEXT:    xxeval v2, v2, v3, vs0, 127
 ; PWR10LE-NEXT:    vextuwrx r3, r3, v2
 ; PWR10LE-NEXT:    blr
 ;
@@ -84,8 +84,8 @@ define dso_local i32 @v4i32(<4 x i32> %a) local_unnamed_addr #0 {
 ; PWR10BE-NEXT:    xxswapd v3, v2
 ; PWR10BE-NEXT:    li r3, 0
 ; PWR10BE-NEXT:    xxlor vs0, v2, v3
-; PWR10BE-NEXT:    xxspltw vs1, vs0, 1
-; PWR10BE-NEXT:    xxlor v2, vs0, vs1
+; PWR10BE-NEXT:    xxspltw vs0, vs0, 1
+; PWR10BE-NEXT:    xxeval v2, v2, v3, vs0, 127
 ; PWR10BE-NEXT:    vextuwlx r3, r3, v2
 ; PWR10BE-NEXT:    blr
 entry:
@@ -120,10 +120,10 @@ define dso_local i32 @v8i32(<8 x i32> %a) local_unnamed_addr #0 {
 ; PWR10LE:       # %bb.0: # %entry
 ; PWR10LE-NEXT:    xxlor vs0, v2, v3
 ; PWR10LE-NEXT:    li r3, 0
-; PWR10LE-NEXT:    xxswapd v2, vs0
-; PWR10LE-NEXT:    xxlor vs0, vs0, v2
-; PWR10LE-NEXT:    xxspltw vs1, vs0, 2
-; PWR10LE-NEXT:    xxlor v2, vs0, vs1
+; PWR10LE-NEXT:    xxswapd v4, vs0
+; PWR10LE-NEXT:    xxeval vs1, v2, v3, v4, 127
+; PWR10LE-NEXT:    xxspltw vs1, vs1, 2
+; PWR10LE-NEXT:    xxeval v2, vs0, v4, vs1, 127
 ; PWR10LE-NEXT:    vextuwrx r3, r3, v2
 ; PWR10LE-NEXT:    blr
 ;
@@ -131,10 +131,10 @@ define dso_local i32 @v8i32(<8 x i32> %a) local_unnamed_addr #0 {
 ; PWR10BE:       # %bb.0: # %entry
 ; PWR10BE-NEXT:    xxlor vs0, v2, v3
 ; PWR10BE-NEXT:    li r3, 0
-; PWR10BE-NEXT:    xxswapd v2, vs0
-; PWR10BE-NEXT:    xxlor vs0, vs0, v2
-; PWR10BE-NEXT:    xxspltw vs1, vs0, 1
-; PWR10BE-NEXT:    xxlor v2, vs0, vs1
+; PWR10BE-NEXT:    xxswapd v4, vs0
+; PWR10BE-NEXT:    xxeval vs1, v2, v3, v4, 127
+; PWR10BE-NEXT:    xxspltw vs1, vs1, 1
+; PWR10BE-NEXT:    xxeval v2, vs0, v4, vs1, 127
 ; PWR10BE-NEXT:    vextuwlx r3, r3, v2
 ; PWR10BE-NEXT:    blr
 entry:
@@ -171,27 +171,27 @@ define dso_local i32 @v16i32(<16 x i32> %a) local_unnamed_addr #0 {
 ;
 ; PWR10LE-LABEL: v16i32:
 ; PWR10LE:       # %bb.0: # %entry
-; PWR10LE-NEXT:    xxlor vs0, v3, v5
 ; PWR10LE-NEXT:    xxlor vs1, v2, v4
+; PWR10LE-NEXT:    xxlor vs0, v3, v5
 ; PWR10LE-NEXT:    li r3, 0
-; PWR10LE-NEXT:    xxlor vs0, vs1, vs0
-; PWR10LE-NEXT:    xxswapd v2, vs0
-; PWR10LE-NEXT:    xxlor vs0, vs0, v2
-; PWR10LE-NEXT:    xxspltw vs1, vs0, 2
-; PWR10LE-NEXT:    xxlor v2, vs0, vs1
+; PWR10LE-NEXT:    xxeval vs2, vs1, v3, v5, 127
+; PWR10LE-NEXT:    xxswapd v2, vs2
+; PWR10LE-NEXT:    xxeval vs0, vs1, vs0, v2, 127
+; PWR10LE-NEXT:    xxspltw vs0, vs0, 2
+; PWR10LE-NEXT:    xxeval v2, vs2, v2, vs0, 127
 ; PWR10LE-NEXT:    vextuwrx r3, r3, v2
 ; PWR10LE-NEXT:    blr
 ;
 ; PWR10BE-LABEL: v16i32:
 ; PWR10BE:       # %bb.0: # %entry
-; PWR10BE-NEXT:    xxlor vs0, v3, v5
 ; PWR10BE-NEXT:    xxlor vs1, v2, v4
+; PWR10BE-NEXT:    xxlor vs0, v3, v5
 ; PWR10BE-NEXT:    li r3, 0
-; PWR10BE-NEXT:    xxlor vs0, vs1, vs0
-; PWR10BE-NEXT:    xxswapd v2, vs0
-; PWR10BE-NEXT:    xxlor vs0, vs0, v2
-; PWR10BE-NEXT:    xxspltw vs1, vs0, 1
-; PWR10BE-NEXT:    xxlor v2, vs0, vs1
+; PWR10BE-NEXT:    xxeval vs2, vs1, v3, v5, 127
+; PWR10BE-NEXT:    xxswapd v2, vs2
+; PWR10BE-NEXT:    xxeval vs0, vs1, vs0, v2, 127
+; PWR10BE-NEXT:    xxspltw vs0, vs0, 1
+; PWR10BE-NEXT:    xxeval v2, vs2, v2, vs0, 127
 ; PWR10BE-NEXT:    vextuwlx r3, r3, v2
 ; PWR10BE-NEXT:    blr
 entry:
@@ -260,16 +260,16 @@ define dso_local i64 @v4i64(<4 x i64> %a) local_unnamed_addr #0 {
 ; PWR10LE-LABEL: v4i64:
 ; PWR10LE:       # %bb.0: # %entry
 ; PWR10LE-NEXT:    xxlor vs0, v2, v3
-; PWR10LE-NEXT:    xxswapd v2, vs0
-; PWR10LE-NEXT:    xxlor vs0, vs0, v2
+; PWR10LE-NEXT:    xxswapd v4, vs0
+; PWR10LE-NEXT:    xxeval vs0, v2, v3, v4, 127
 ; PWR10LE-NEXT:    mfvsrld r3, vs0
 ; PWR10LE-NEXT:    blr
 ;
 ; PWR10BE-LABEL: v4i64:
 ; PWR10BE:       # %bb.0: # %entry
 ; PWR10BE-NEXT:    xxlor vs0, v2, v3
-; PWR10BE-NEXT:    xxswapd v2, vs0
-; PWR10BE-NEXT:    xxlor vs0, vs0, v2
+; PWR10BE-NEXT:    xxswapd v4, vs0
+; PWR10BE-NEXT:    xxeval vs0, v2, v3, v4, 127
 ; PWR10BE-NEXT:    mffprd r3, f0
 ; PWR10BE-NEXT:    blr
 entry:
@@ -300,21 +300,21 @@ define dso_local i64 @v8i64(<8 x i64> %a) local_unnamed_addr #0 {
 ;
 ; PWR10LE-LABEL: v8i64:
 ; PWR10LE:       # %bb.0: # %entry
-; PWR10LE-NEXT:    xxlor vs0, v3, v5
 ; PWR10LE-NEXT:    xxlor vs1, v2, v4
-; PWR10LE-NEXT:    xxlor vs0, vs1, vs0
-; PWR10LE-NEXT:    xxswapd v2, vs0
-; PWR10LE-NEXT:    xxlor vs0, vs0, v2
+; PWR10LE-NEXT:    xxlor vs0, v3, v5
+; PWR10LE-NEXT:    xxeval vs2, vs1, v3, v5, 127
+; PWR10LE-NEXT:    xxswapd v2, vs2
+; PWR10LE-NEXT:    xxeval vs0, vs1, vs0, v2, 127
 ; PWR10LE-NEXT:    mfvsrld r3, vs0
 ; PWR10LE-NEXT:    blr
 ;
 ; PWR10BE-LABEL: v8i64:
 ; PWR10BE:       # %bb.0: # %entry
-; PWR10BE-NEXT:    xxlor vs0, v3, v5
 ; PWR10BE-NEXT:    xxlor vs1, v2, v4
-; PWR10BE-NEXT:    xxlor vs0, vs1, vs0
-; PWR10BE-NEXT:    xxswapd v2, vs0
-; PWR10BE-NEXT:    xxlor vs0, vs0, v2
+; PWR10BE-NEXT:    xxlor vs0, v3, v5
+; PWR10BE-NEXT:    xxeval vs2, vs1, v3, v5, 127
+; PWR10BE-NEXT:    xxswapd v2, vs2
+; PWR10BE-NEXT:    xxeval vs0, vs1, vs0, v2, 127
 ; PWR10BE-NEXT:    mffprd r3, f0
 ; PWR10BE-NEXT:    blr
 entry:
@@ -353,29 +353,27 @@ define dso_local i64 @v16i64(<16 x i64> %a) local_unnamed_addr #0 {
 ;
 ; PWR10LE-LABEL: v16i64:
 ; PWR10LE:       # %bb.0: # %entry
-; PWR10LE-NEXT:    xxlor vs0, v4, v8
 ; PWR10LE-NEXT:    xxlor vs1, v2, v6
-; PWR10LE-NEXT:    xxlor vs2, v5, v9
-; PWR10LE-NEXT:    xxlor vs3, v3, v7
-; PWR10LE-NEXT:    xxlor vs2, vs3, vs2
-; PWR10LE-NEXT:    xxlor vs0, vs1, vs0
-; PWR10LE-NEXT:    xxlor vs0, vs0, vs2
+; PWR10LE-NEXT:    xxlor vs0, v5, v9
+; PWR10LE-NEXT:    xxlor vs2, v3, v7
+; PWR10LE-NEXT:    xxeval vs1, vs1, v4, v8, 127
+; PWR10LE-NEXT:    xxeval vs3, vs2, v5, v9, 127
+; PWR10LE-NEXT:    xxeval vs0, vs1, vs2, vs0, 127
 ; PWR10LE-NEXT:    xxswapd v2, vs0
-; PWR10LE-NEXT:    xxlor vs0, vs0, v2
+; PWR10LE-NEXT:    xxeval vs0, vs1, vs3, v2, 127
 ; PWR10LE-NEXT:    mfvsrld r3, vs0
 ; PWR10LE-NEXT:    blr
 ;
 ; PWR10BE-LABEL: v16i64:
 ; PWR10BE:       # %bb.0: # %entry
-; PWR10BE-NEXT:    xxlor vs0, v4, v8
 ; PWR10BE-NEXT:    xxlor vs1, v2, v6
-; PWR10BE-NEXT:    xxlor vs2, v5, v9
-; PWR10BE-NEXT:    xxlor vs3, v3, v7
-; PWR10BE-NEXT:    xxlor vs2, vs3, vs2
-; PWR10BE-NEXT:    xxlor vs0, vs1, vs0
-; PWR10BE-NEXT:    xxlor vs0, vs0, vs2
+; PWR10BE-NEXT:    xxlor vs0, v5, v9
+; PWR10BE-NEXT:    xxlor vs2, v3, v7
+; PWR10BE-NEXT:    xxeval vs1, vs1, v4, v8, 127
+; PWR10BE-NEXT:    xxeval vs3, vs2, v5, v9, 127
+; PWR10BE-NEXT:    xxeval vs0, vs1, vs2, vs0, 127
 ; PWR10BE-NEXT:    xxswapd v2, vs0
-; PWR10BE-NEXT:    xxlor vs0, vs0, v2
+; PWR10BE-NEXT:    xxeval vs0, vs1, vs3, v2, 127
 ; PWR10BE-NEXT:    mffprd r3, f0
 ; PWR10BE-NEXT:    blr
 entry:
