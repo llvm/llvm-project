@@ -855,30 +855,29 @@ void MCContext::addDebugPrefixMapEntry(const std::string &From,
   DebugPrefixMap.insert(std::make_pair(From, To));
 }
 
+void MCContext::remapDebugPath(SmallVectorImpl<char> &Path) {
+  for (const auto &[From, To] : DebugPrefixMap)
+    if (llvm::sys::path::replace_path_prefix(Path, From, To))
+      break;
+}
+
 void MCContext::RemapDebugPaths() {
   const auto &DebugPrefixMap = this->DebugPrefixMap;
   if (DebugPrefixMap.empty())
     return;
 
-  const auto RemapDebugPath = [&DebugPrefixMap](std::string &Path) {
-    SmallString<256> P(Path);
-    for (const auto &Entry : DebugPrefixMap) {
-      if (llvm::sys::path::replace_path_prefix(P, Entry.first, Entry.second)) {
-        Path = P.str().str();
-        break;
-      }
-    }
-  };
-
   // Remap compilation directory.
-  std::string CompDir = std::string(CompilationDir.str());
-  RemapDebugPath(CompDir);
-  CompilationDir = CompDir;
+  remapDebugPath(CompilationDir);
 
   // Remap MCDwarfDirs in all compilation units.
-  for (auto &CUIDTablePair : MCDwarfLineTablesCUMap)
-    for (auto &Dir : CUIDTablePair.second.getMCDwarfDirs())
-      RemapDebugPath(Dir);
+  SmallString<256> P;
+  for (auto &CUIDTablePair : MCDwarfLineTablesCUMap) {
+    for (auto &Dir : CUIDTablePair.second.getMCDwarfDirs()) {
+      P = Dir;
+      remapDebugPath(P);
+      Dir = std::string(P);
+    }
+  }
 }
 
 //===----------------------------------------------------------------------===//
