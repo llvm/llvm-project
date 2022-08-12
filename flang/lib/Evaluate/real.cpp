@@ -749,8 +749,7 @@ template <typename W, int P> Real<W, P> Real<W, P>::SPACING() const {
     return TINY();
   } else {
     Real result;
-    result.Normalize(
-        false, Exponent() - binaryPrecision + 1, Fraction::MASKL(1));
+    result.Normalize(false, Exponent(), Fraction::MASKR(1));
     return result;
   }
 }
