@@ -141,7 +141,10 @@ C++20 Feature Support
   `GH54300 <https://github.com/llvm/llvm-project/issues/54300>`_,
   `GH54301 <https://github.com/llvm/llvm-project/issues/54301>`_,
   and `GH49430 <https://github.com/llvm/llvm-project/issues/49430>`_.
-
+- Consider explicitly defaulted constexpr/consteval special member function
+  template instantiation to be constexpr/consteval even though a call to such
+  a function cannot appear in a constant expression.
+  (C++14 [dcl.constexpr]p6 (CWG DR647/CWG DR1358))
 
 
 

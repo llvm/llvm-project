@@ -17,6 +17,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/ComparisonCategories.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
@@ -7539,6 +7540,17 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
   // FIXME: This should not apply if the member is deleted.
   bool Constexpr = defaultedSpecialMemberIsConstexpr(*this, RD, CSM,
                                                      HasConstParam);
+
+  // C++14 [dcl.constexpr]p6 (CWG DR647/CWG DR1358):
+  //   If the instantiated template specialization of a constexpr function
+  //   template or member function of a class template would fail to satisfy
+  //   the requirements for a constexpr function or constexpr constructor, that
+  //   specialization is still a constexpr function or constexpr constructor,
+  //   even though a call to such a function cannot appear in a constant
+  //   expression.
+  if (MD->isTemplateInstantiation() && MD->isConstexpr())
+    Constexpr = true;
+
   if ((getLangOpts().CPlusPlus20 ||
        (getLangOpts().CPlusPlus14 ? !isa<CXXDestructorDecl>(MD)
                                   : isa<CXXConstructorDecl>(MD))) &&
