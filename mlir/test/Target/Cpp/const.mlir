@@ -7,7 +7,7 @@ func.func @emitc_constant() {
   %c2 = "emitc.constant"(){value = -1 : i32} : () -> i32
   %c3 = "emitc.constant"(){value = -1 : si8} : () -> si8
   %c4 = "emitc.constant"(){value = 255 : ui8} : () -> ui8
-  %c5 = "emitc.constant"(){value = #emitc.opaque<"CHAR_MIN"> : !emitc.opaque<"char">} : () -> !emitc.opaque<"char">
+  %c5 = "emitc.constant"(){value = #emitc.opaque<"CHAR_MIN">} : () -> !emitc.opaque<"char">
   return
 }
 // CPP-DEFAULT: void emitc_constant() {
