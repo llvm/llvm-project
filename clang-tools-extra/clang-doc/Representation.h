@@ -348,10 +348,15 @@ struct RecordInfo : public SymbolInfo {
 
   void merge(RecordInfo &&I);
 
-  TagTypeKind TagType = TagTypeKind::TTK_Struct; // Type of this record
-                                                 // (struct, class, union,
-                                                 // interface).
-  bool IsTypeDef = false; // Indicates if record was declared using typedef
+  // Type of this record (struct, class, union, interface).
+  TagTypeKind TagType = TagTypeKind::TTK_Struct;
+
+  // Indicates if the record was declared using a typedef. Things like anonymous
+  // structs in a typedef:
+  //   typedef struct { ... } foo_t;
+  // are converted into records with the typedef as the Name + this flag set.
+  bool IsTypeDef = false;
+
   llvm::SmallVector<MemberTypeInfo, 4>
       Members;                             // List of info about record members.
   llvm::SmallVector<Reference, 4> Parents; // List of base/parent records
