@@ -274,7 +274,7 @@ public:
   Attribute parseDenseResourceElementsAttr(Type attrType);
 
   /// Parse a DenseArrayAttr.
-  Attribute parseDenseArrayAttr();
+  Attribute parseDenseArrayAttr(Type type);
 
   /// Parse a sparse elements attribute.
   Attribute parseSparseElementsAttr(Type attrType);

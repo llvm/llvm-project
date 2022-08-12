@@ -176,9 +176,9 @@ def Builtin_DenseArrayBase : Builtin_Attr<
     Examples:
 
     ```mlir
-    [:i8]
-    [:i32 10, 42]
-    [:f64 42., 12.]
+    array<i8:>
+    array<i32: 10, 42>
+    array<f64: 42., 12.>
     ```
 
     when a specific subclass is used as argument of an operation, the declarative
