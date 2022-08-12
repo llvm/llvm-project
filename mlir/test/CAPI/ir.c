@@ -1186,6 +1186,40 @@ int printBuiltinAttributes(MlirContext ctx) {
   mlirAttributeDump(sparseAttr);
   // CHECK: sparse<{{\[}}[0, 1]], 0.000000e+00> : tensor<1x2xf32>
 
+  MlirAttribute boolArray = mlirDenseBoolArrayGet(ctx, 2, bools);
+  MlirAttribute int8Array = mlirDenseI8ArrayGet(ctx, 2, ints8);
+  MlirAttribute int16Array = mlirDenseI16ArrayGet(ctx, 2, ints16);
+  MlirAttribute int32Array = mlirDenseI32ArrayGet(ctx, 2, ints32);
+  MlirAttribute int64Array = mlirDenseI64ArrayGet(ctx, 2, ints64);
+  MlirAttribute floatArray = mlirDenseF32ArrayGet(ctx, 2, floats);
+  MlirAttribute doubleArray = mlirDenseF64ArrayGet(ctx, 2, doubles);
+  if (!mlirAttributeIsADenseBoolArray(boolArray) ||
+      !mlirAttributeIsADenseI8Array(int8Array) ||
+      !mlirAttributeIsADenseI16Array(int16Array) ||
+      !mlirAttributeIsADenseI32Array(int32Array) ||
+      !mlirAttributeIsADenseI64Array(int64Array) ||
+      !mlirAttributeIsADenseF32Array(floatArray) ||
+      !mlirAttributeIsADenseF64Array(doubleArray))
+    return 19;
+
+  if (mlirDenseArrayGetNumElements(boolArray) != 2 ||
+      mlirDenseArrayGetNumElements(int8Array) != 2 ||
+      mlirDenseArrayGetNumElements(int16Array) != 2 ||
+      mlirDenseArrayGetNumElements(int32Array) != 2 ||
+      mlirDenseArrayGetNumElements(int64Array) != 2 ||
+      mlirDenseArrayGetNumElements(floatArray) != 2 ||
+      mlirDenseArrayGetNumElements(doubleArray) != 2)
+    return 20;
+
+  if (mlirDenseBoolArrayGetElement(boolArray, 1) != 1 ||
+      mlirDenseI8ArrayGetElement(int8Array, 1) != 1 ||
+      mlirDenseI16ArrayGetElement(int16Array, 1) != 1 ||
+      mlirDenseI32ArrayGetElement(int32Array, 1) != 1 ||
+      mlirDenseI64ArrayGetElement(int64Array, 1) != 1 ||
+      fabsf(mlirDenseF32ArrayGetElement(floatArray, 1) - 1.0f) > 1E-6f ||
+      fabs(mlirDenseF64ArrayGetElement(doubleArray, 1) - 1.0) > 1E-6)
+    return 21;
+
   return 0;
 }
 
