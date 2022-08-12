@@ -340,30 +340,6 @@ def Tosa_ClampOp : Tosa_Op<"clamp", [
 }
 
 //===----------------------------------------------------------------------===//
-// Operator: reluN
-//===----------------------------------------------------------------------===//
-def Tosa_ReluNOp : Tosa_Op<"reluN", [
-    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-                              ["inferReturnTypeComponents"]>,
-    NoSideEffect]> {
-  let summary = "Computes rectified linear: `max(features, N)`.";
-
-  let description = [{
-     ReLU with a scalar maximum value.
-  }];
-
-  let arguments = (ins
-    Tosa_Tensor:$input,
-    I64Attr:$max_int,
-    F32Attr:$max_fp
-  );
-
-  let results = (outs
-    Tosa_Tensor:$output
-  );
-}
-
-//===----------------------------------------------------------------------===//
 // Operator: sigmoid
 //===----------------------------------------------------------------------===//
 def Tosa_SigmoidOp : Tosa_Op<"sigmoid", [
