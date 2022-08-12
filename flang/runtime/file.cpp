@@ -134,7 +134,7 @@ void OpenFile::Open(OpenStatus status, std::optional<Action> action,
   if (position == Position::Append && !RawSeekToEnd()) {
     handler.SignalError(IostatOpenBadAppend);
   }
-  isTerminal_ = ::isatty(fd_) == 1;
+  isTerminal_ = IsATerminal(fd_) == 1;
   mayRead_ = *action != Action::Write;
   mayWrite_ = *action != Action::Read;
   if (status == OpenStatus::Old || status == OpenStatus::Unknown) {
@@ -163,6 +163,7 @@ void OpenFile::Predefine(int fd) {
   knownSize_.reset();
   nextId_ = 0;
   pending_.reset();
+  isTerminal_ = IsATerminal(fd_) == 1;
   mayRead_ = fd == 0;
   mayWrite_ = fd != 0;
   mayPosition_ = false;
