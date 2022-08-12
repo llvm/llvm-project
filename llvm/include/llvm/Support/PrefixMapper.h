@@ -107,7 +107,7 @@ public:
   sys::path::Style getPathStyle() const { return PathStyle; }
 
   PrefixMapper(sys::path::Style PathStyle = sys::path::Style::native)
-      : PathStyle(PathStyle), Alloc(in_place), Saver(*Alloc) {}
+      : PathStyle(PathStyle), Alloc(std::in_place), Saver(*Alloc) {}
 
   PrefixMapper(BumpPtrAllocator &Alloc,
                sys::path::Style PathStyle = sys::path::Style::native)
