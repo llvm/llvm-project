@@ -467,8 +467,19 @@ transform::MatchOp::apply(transform::TransformResults &results,
         return WalkResult::advance();
     }
 
-    if (getAttribute().has_value() && !op->hasAttr(getAttribute().value()))
-      return WalkResult::advance();
+    // Check if all specified attributes match.
+    if (getOpAttrs().has_value()) {
+      DictionaryAttr opAttrs = getOpAttrs().value();
+      for (NamedAttribute attr : opAttrs) {
+        if (attr.getName() == getInterfaceAttrName() ||
+            attr.getName() == getOpsAttrName())
+          continue;
+        if (!op->hasAttr(attr.getName()))
+          return WalkResult::advance();
+        if (op->getAttr(attr.getName()) != attr.getValue())
+          return WalkResult::advance();
+      }
+    }
 
     // All constraints are satisfied.
     res.push_back(op);
