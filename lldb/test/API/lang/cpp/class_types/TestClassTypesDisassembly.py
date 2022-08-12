@@ -2,9 +2,6 @@
 Test the lldb disassemble command on each call frame when stopped on C's ctor.
 """
 
-from __future__ import print_function
-
-
 import os
 import lldb
 from lldbsuite.test.decorators import *

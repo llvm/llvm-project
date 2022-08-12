@@ -2,9 +2,6 @@
 Test SBValue.GetObjectDescription() with the value from SBTarget.FindGlobalVariables().
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

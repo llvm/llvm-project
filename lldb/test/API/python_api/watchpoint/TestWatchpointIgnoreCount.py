@@ -2,9 +2,6 @@
 Use lldb Python SBWatchpoint API to set the ignore count.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
