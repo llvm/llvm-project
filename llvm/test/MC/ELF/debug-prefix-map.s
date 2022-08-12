@@ -33,14 +33,12 @@ f:
 
 # MAP_V5:      DW_AT_name [DW_FORM_string] ("src.s")
 # MAP_V5:      DW_AT_comp_dir [DW_FORM_string] ("src_root")
-## FIXME llvm-dwarfdump incorrectly joins include_directories[0] to DW_AT_comp_dir,
-## so there are two src_root path components.
-# MAP_V5:      DW_AT_decl_file [DW_FORM_data4] ("src_root{{(/|\\)+}}src_root{{(/|\\)+}}src.s")
+# MAP_V5:      DW_AT_decl_file [DW_FORM_data4] ("src_root{{(/|\\)+}}src.s")
 # MAP_V5:      include_directories[ 0] = .debug_line_str[0x00000000] = "src_root"
 
 # MAPABS_V4:      DW_AT_name [DW_FORM_string] ("src.s")
 # MAPABS_V4:      DW_AT_comp_dir [DW_FORM_string] ("{{(/|\\)+}}src_root")
-# MAPABS_V4:      DW_AT_decl_file [DW_FORM_data4] ("{{(/|\\)+}}src_root{{(/|\\)+}}src.s")
+# MAPABS_V4:      DW_AT_decl_file [DW_FORM_data4] ("/src_root{{(/|\\)+}}src.s")
 # MAPABS_V4-NOT:  .foo
 
 # MAPABS_V5:      DW_AT_name [DW_FORM_string] ("src.s")
