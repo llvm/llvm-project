@@ -36,7 +36,6 @@ import sys
 import tempfile
 
 # Third-party modules
-import six
 import unittest2
 
 # LLDB Modules
