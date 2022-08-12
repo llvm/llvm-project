@@ -220,7 +220,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   // Use default lowering options for bbc.
   Fortran::lower::LoweringOptions loweringOptions{};
   auto burnside = Fortran::lower::LoweringBridge::create(
-      ctx, defKinds, semanticsContext.intrinsics(),
+      ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(), "",
       kindMap, loweringOptions);
   burnside.lower(parseTree, semanticsContext);
