@@ -65,8 +65,9 @@ public:
 
   /// Deprecated. Use the `DataflowAnalysisOptions` constructor instead.
   explicit DataflowAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
-      : DataflowAnalysis(Context, DataflowAnalysisOptions{ApplyBuiltinTransfer,
-                                                          TransferOptions{}}) {}
+      : DataflowAnalysis(Context, {ApplyBuiltinTransfer
+                                       ? TransferOptions{}
+                                       : llvm::Optional<TransferOptions>()}) {}
 
   explicit DataflowAnalysis(ASTContext &Context,
                             DataflowAnalysisOptions Options)
