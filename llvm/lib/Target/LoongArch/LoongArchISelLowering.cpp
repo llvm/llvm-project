@@ -144,8 +144,6 @@ bool LoongArchTargetLowering::isOffsetFoldingLegal(
 SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
                                                 SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
-  default:
-    report_fatal_error("unimplemented operand");
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
   case ISD::SHL_PARTS:
@@ -154,28 +152,18 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerShiftRightParts(Op, DAG, true);
   case ISD::SRL_PARTS:
     return lowerShiftRightParts(Op, DAG, false);
-  case ISD::SHL:
-  case ISD::SRA:
-  case ISD::SRL:
-    // This can be called for an i32 shift amount that needs to be promoted.
-    assert(Op.getOperand(1).getValueType() == MVT::i32 && Subtarget.is64Bit() &&
-           "Unexpected custom legalisation");
-    return SDValue();
-  case ISD::BSWAP:
-    return SDValue();
   case ISD::ConstantPool:
     return lowerConstantPool(Op, DAG);
   case ISD::FP_TO_SINT:
     return lowerFP_TO_SINT(Op, DAG);
   case ISD::BITCAST:
     return lowerBITCAST(Op, DAG);
-  case ISD::FP_TO_UINT:
-    return SDValue();
   case ISD::UINT_TO_FP:
     return lowerUINT_TO_FP(Op, DAG);
   case ISD::VASTART:
     return lowerVASTART(Op, DAG);
   }
+  return SDValue();
 }
 
 SDValue LoongArchTargetLowering::lowerVASTART(SDValue Op,
