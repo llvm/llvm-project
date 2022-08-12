@@ -13,6 +13,7 @@
 #ifndef MLIR_IR_VALUERANGE_H
 #define MLIR_IR_VALUERANGE_H
 
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -22,7 +23,6 @@ namespace mlir {
 class ValueRange;
 template <typename ValueRangeT>
 class ValueTypeRange;
-class ElementsAttr;
 class TypeRangeRange;
 template <typename ValueIteratorT>
 class ValueTypeIterator;
@@ -54,7 +54,7 @@ public:
 
   /// Split this range into a set of contiguous subranges using the given
   /// elements attribute, which contains the sizes of the sub ranges.
-  OperandRangeRange split(ElementsAttr segmentSizes) const;
+  OperandRangeRange split(DenseI32ArrayAttr segmentSizes) const;
 
 private:
   /// See `llvm::detail::indexed_accessor_range_base` for details.
@@ -114,8 +114,8 @@ private:
 class MutableOperandRange {
 public:
   /// A pair of a named attribute corresponding to an operand segment attribute,
-  /// and the index within that attribute. The attribute should correspond to an
-  /// i32 DenseElementsAttr.
+  /// and the index within that attribute. The attribute should correspond to a
+  /// dense i32 array attr.
   using OperandSegment = std::pair<unsigned, NamedAttribute>;
 
   /// Construct a new mutable range from the given operand, operand start index,

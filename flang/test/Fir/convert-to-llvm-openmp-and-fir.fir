@@ -28,7 +28,7 @@ func.func @_QPsb1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<!
 // CHECK:    %[[ONE_2:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK: omp.parallel   {
 // CHECK:      %[[ONE_3:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:      %[[I_VAR:.*]] = llvm.alloca %[[ONE_3]] x i32 {adapt.valuebyref, in_type = i32, operand_segment_sizes = dense<0> : vector<2xi32>, pinned} : (i64) -> !llvm.ptr<i32>
+// CHECK:      %[[I_VAR:.*]] = llvm.alloca %[[ONE_3]] x i32 {adapt.valuebyref, in_type = i32, operand_segment_sizes = array<i32: 0, 0>, pinned} : (i64) -> !llvm.ptr<i32>
 // CHECK:      %[[N:.*]] = llvm.load %[[N_REF]] : !llvm.ptr<i32>
 // CHECK: omp.wsloop nowait
 // CHECK-SAME: for (%[[I:.*]]) : i32 = (%[[ONE_2]]) to (%[[N]]) inclusive step (%[[ONE_2]]) {
@@ -201,7 +201,7 @@ func.func @_QPsimd1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref
 // CHECK:    %[[ONE_2:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK: omp.parallel   {
 // CHECK:      %[[ONE_3:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK:      %[[I_VAR:.*]] = llvm.alloca %[[ONE_3]] x i32 {adapt.valuebyref, in_type = i32, operand_segment_sizes = dense<0> : vector<2xi32>, pinned} : (i64) -> !llvm.ptr<i32>
+// CHECK:      %[[I_VAR:.*]] = llvm.alloca %[[ONE_3]] x i32 {adapt.valuebyref, in_type = i32, operand_segment_sizes = array<i32: 0, 0>, pinned} : (i64) -> !llvm.ptr<i32>
 // CHECK:      %[[N:.*]] = llvm.load %[[N_REF]] : !llvm.ptr<i32>
 // CHECK: omp.simdloop
 // CHECK-SAME: (%[[I:.*]]) : i32 = (%[[ONE_2]]) to (%[[N]]) step (%[[ONE_2]]) {

@@ -417,7 +417,7 @@ def PDLInterp_CreateOperationOp
     ```mlir
     // Create an instance of a `foo.op` operation.
     %op = pdl_interp.create_operation "foo.op"(%arg0 : !pdl.value) {"attrA" = %attr0} -> (%type : !pdl.type)
-    
+
     // Create an instance of a `foo.op` operation that has inferred result types
     // (using the InferTypeOpInterface).
     %op = pdl_interp.create_operation "foo.op"(%arg0 : !pdl.value) {"attrA" = %attr0} -> <inferred>
