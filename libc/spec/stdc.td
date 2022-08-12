@@ -422,6 +422,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"sin", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"sinf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"tan", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"tanf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
           FunctionSpec<"expf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"exp2f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
