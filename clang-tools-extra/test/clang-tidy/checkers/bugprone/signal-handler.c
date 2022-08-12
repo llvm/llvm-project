@@ -19,7 +19,6 @@ void f_extern_handler(int);
 void handler_printf(int) {
   printf("1234");
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: standard function 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
-  // CHECK-NOTES: :[[@LINE-2]]:3: note: function 'printf' called here from 'handler_printf'
   // CHECK-NOTES: :[[@LINE+4]]:18: note: function 'handler_printf' registered here as signal handler
 }
 
@@ -30,7 +29,6 @@ void test_printf(void) {
 void handler_extern(int) {
   f_extern();
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: cannot verify that external function 'f_extern' is asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
-  // CHECK-NOTES: :[[@LINE-2]]:3: note: function 'f_extern' called here from 'handler_extern'
   // CHECK-NOTES: :[[@LINE+4]]:18: note: function 'handler_extern' registered here as signal handler
 }
 
@@ -53,7 +51,6 @@ void test_ok(void) {
 void f_bad(void) {
   printf("1234");
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: standard function 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
-  // CHECK-NOTES: :[[@LINE-2]]:3: note: function 'printf' called here from 'f_bad'
   // CHECK-NOTES: :[[@LINE+5]]:3: note: function 'f_bad' called here from 'handler_bad'
   // CHECK-NOTES: :[[@LINE+8]]:18: note: function 'handler_bad' registered here as signal handler
 }
@@ -69,7 +66,6 @@ void test_bad(void) {
 void f_bad1(void) {
   printf("1234");
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: standard function 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
-  // CHECK-NOTES: :[[@LINE-2]]:3: note: function 'printf' called here from 'f_bad1'
   // CHECK-NOTES: :[[@LINE+6]]:3: note: function 'f_bad1' called here from 'f_bad2'
   // CHECK-NOTES: :[[@LINE+9]]:3: note: function 'f_bad2' called here from 'handler_bad1'
   // CHECK-NOTES: :[[@LINE+13]]:18: note: function 'handler_bad1' registered here as signal handler
@@ -101,7 +97,6 @@ void handler_false_condition(int) {
   if (0)
     printf("1234");
   // CHECK-NOTES: :[[@LINE-1]]:5: warning: standard function 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
-  // CHECK-NOTES: :[[@LINE-2]]:5: note: function 'printf' called here from 'handler_false_condition'
   // CHECK-NOTES: :[[@LINE+4]]:18: note: function 'handler_false_condition' registered here as signal handler
 }
 
@@ -112,11 +107,9 @@ void test_false_condition(void) {
 void handler_multiple_calls(int) {
   f_extern();
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: cannot verify that external function 'f_extern' is asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
-  // CHECK-NOTES: :[[@LINE-2]]:3: note: function 'f_extern' called here from 'handler_multiple_calls'
-  // CHECK-NOTES: :[[@LINE+10]]:18: note: function 'handler_multiple_calls' registered here as signal handler
+  // CHECK-NOTES: :[[@LINE+9]]:18: note: function 'handler_multiple_calls' registered here as signal handler
   printf("1234");
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: standard function 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
-  // CHECK-NOTES: :[[@LINE-2]]:3: note: function 'printf' called here from 'handler_multiple_calls'
   // CHECK-NOTES: :[[@LINE+6]]:18: note: function 'handler_multiple_calls' registered here as signal handler
   f_extern();
   // first 'f_extern' call found only
@@ -137,13 +130,11 @@ void handler_recursive(int) {
 void f_recursive(void) {
   f_extern();
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: cannot verify that external function 'f_extern' is asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
-  // CHECK-NOTES: :[[@LINE-2]]:3: note: function 'f_extern' called here from 'f_recursive'
-  // CHECK-NOTES: :[[@LINE-9]]:3: note: function 'f_recursive' called here from 'handler_recursive'
-  // CHECK-NOTES: :[[@LINE+10]]:18: note: function 'handler_recursive' registered here as signal handler
+  // CHECK-NOTES: :[[@LINE-8]]:3: note: function 'f_recursive' called here from 'handler_recursive'
+  // CHECK-NOTES: :[[@LINE+9]]:18: note: function 'handler_recursive' registered here as signal handler
   printf("");
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: standard function 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
-  // CHECK-NOTES: :[[@LINE-2]]:3: note: function 'printf' called here from 'f_recursive'
-  // CHECK-NOTES: :[[@LINE-14]]:3: note: function 'f_recursive' called here from 'handler_recursive'
+  // CHECK-NOTES: :[[@LINE-12]]:3: note: function 'f_recursive' called here from 'handler_recursive'
   // CHECK-NOTES: :[[@LINE+5]]:18: note: function 'handler_recursive' registered here as signal handler
   handler_recursive(2);
 }
@@ -155,7 +146,6 @@ void test_recursive(void) {
 void f_multiple_paths(void) {
   printf("");
   // CHECK-NOTES: :[[@LINE-1]]:3: warning: standard function 'printf' may not be asynchronous-safe; calling it from a signal handler may be dangerous [bugprone-signal-handler]
-  // CHECK-NOTES: :[[@LINE-2]]:3: note: function 'printf' called here from 'f_multiple_paths'
   // CHECK-NOTES: :[[@LINE+5]]:3: note: function 'f_multiple_paths' called here from 'handler_multiple_paths'
   // CHECK-NOTES: :[[@LINE+9]]:18: note: function 'handler_multiple_paths' registered here as signal handler
 }
