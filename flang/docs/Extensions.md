@@ -235,6 +235,11 @@ end
   respectively.
 * A digit count of d=0 is accepted in Ew.0, Dw.0, and Gw.0 output
   editing if no nonzero scale factor (kP) is in effect.
+* The name `IMAG` is accepted as an alias for the generic intrinsic
+  function `AIMAG`.
+* The legacy extension intrinsic functions `IZEXT` and `JZEXT`
+  are supported; `ZEXT` has different behavior with various older
+  compilers, so it is not supported.
 
 ### Extensions supported when enabled by options
 
