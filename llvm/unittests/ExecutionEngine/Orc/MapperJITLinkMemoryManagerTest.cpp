@@ -118,11 +118,17 @@ TEST(MapperJITLinkMemoryManagerTest, InProcess) {
   StringRef TargetHello2(TargetMem2, Hello.size());
   EXPECT_EQ(Hello, TargetHello2);
 
+  EXPECT_EQ(Counter->DeinitCount, 0);
+
   auto Err2 = MemMgr->deallocate(std::move(*FA1));
   EXPECT_THAT_ERROR(std::move(Err2), Succeeded());
 
+  EXPECT_EQ(Counter->DeinitCount, 1);
+
   auto Err3 = MemMgr->deallocate(std::move(*FA2));
   EXPECT_THAT_ERROR(std::move(Err3), Succeeded());
+
+  EXPECT_EQ(Counter->DeinitCount, 2);
 }
 
 } // namespace
