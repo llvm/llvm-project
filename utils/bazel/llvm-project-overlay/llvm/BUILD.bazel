@@ -4043,8 +4043,8 @@ cc_binary(
 cc_binary(
     name = "split-file",
     srcs = glob([
-        "tools/split-file/*.cpp",
-        "tools/split-file/*.h",
+        "utils/split-file/*.cpp",
+        "utils/split-file/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
