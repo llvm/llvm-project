@@ -42,7 +42,7 @@ typedef uint64_t __kmpc_impl_lanemask_t;
   __attribute__((weak))   /* We may have multiple definitions */               \
   __attribute__((retain)) /* Also needed to keep values alive */               \
   __attribute__((visibility("protected"))) /* Access via SHT_HASH */           \
-  __attribute__((section(".data")))        /* Not .bss, can write before load */
+  __attribute__((section(".bss")))         /* .bss, can write after load */
 
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
