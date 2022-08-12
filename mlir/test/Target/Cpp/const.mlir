@@ -2,7 +2,7 @@
 // RUN: mlir-translate -mlir-to-cpp -declare-variables-at-top %s | FileCheck %s -check-prefix=CPP-DECLTOP
 
 func.func @emitc_constant() {
-  %c0 = "emitc.constant"(){value = #emitc.opaque<""> : i32} : () -> i32
+  %c0 = "emitc.constant"(){value = #emitc.opaque<"">} : () -> i32
   %c1 = "emitc.constant"(){value = 42 : i32} : () -> i32
   %c2 = "emitc.constant"(){value = -1 : i32} : () -> i32
   %c3 = "emitc.constant"(){value = -1 : si8} : () -> si8
