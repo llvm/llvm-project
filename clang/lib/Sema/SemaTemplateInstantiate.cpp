@@ -168,7 +168,7 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
       // instead of its semantic parent, unless of course the pattern we're
       // instantiating actually comes from the file's context!
       if (Function->getFriendObjectKind() &&
-          Function->getDeclContext()->isFileContext() &&
+          Function->getNonTransparentDeclContext()->isFileContext() &&
           (!Pattern || !Pattern->getLexicalDeclContext()->isFileContext())) {
         Ctx = Function->getLexicalDeclContext();
         RelativeToPrimary = false;
