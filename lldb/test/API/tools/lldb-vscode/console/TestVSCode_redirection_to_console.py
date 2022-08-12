@@ -1,4 +1,3 @@
-import unittest2
 import vscode
 import json
 from lldbsuite.test.decorators import *

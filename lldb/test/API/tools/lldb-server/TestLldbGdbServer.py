@@ -14,7 +14,6 @@ import binascii
 import itertools
 import struct
 
-import unittest2
 import gdbremote_testcase
 import lldbgdbserverutils
 from lldbsuite.support import seven

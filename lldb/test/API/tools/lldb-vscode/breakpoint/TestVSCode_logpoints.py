@@ -3,7 +3,6 @@ Test lldb-vscode logpoints feature.
 """
 
 
-import unittest2
 import vscode
 import shutil
 from lldbsuite.test.decorators import *
