@@ -97,8 +97,9 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
   // Add derived `operand_segment_sizes` attribute based on parsed operands.
   int32_t numDependencies = dependencies.size();
   int32_t numOperands = operands.size();
-  auto operandSegmentSizes =
-      builder.getDenseI32ArrayAttr({numDependencies, numOperands});
+  auto operandSegmentSizes = DenseIntElementsAttr::get(
+      VectorType::get({2}, builder.getIntegerType(32)),
+      {numDependencies, numOperands});
   result.addAttribute(kOperandSegmentSizesAttr, operandSegmentSizes);
 
   // First result is always a token, and then `resultTypes` wrapped into
@@ -202,8 +203,9 @@ ParseResult ExecuteOp::parse(OpAsmParser &parser, OperationState &result) {
   int32_t numOperands = valueArgs.size();
 
   // Add derived `operand_segment_sizes` attribute based on parsed operands.
-  auto operandSegmentSizes =
-      parser.getBuilder().getDenseI32ArrayAttr({numDependencies, numOperands});
+  auto operandSegmentSizes = DenseIntElementsAttr::get(
+      VectorType::get({2}, parser.getBuilder().getI32Type()),
+      {numDependencies, numOperands});
   result.addAttribute(kOperandSegmentSizesAttr, operandSegmentSizes);
 
   // Parse the types of results returned from the async execute op.
