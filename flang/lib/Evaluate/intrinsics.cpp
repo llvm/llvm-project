@@ -507,6 +507,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultLogical, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"is_iostat_end", {{"i", AnyInt}}, DefaultLogical},
     {"is_iostat_eor", {{"i", AnyInt}}, DefaultLogical},
+    {"izext", {{"i", AnyInt}}, TypePattern{IntType, KindCode::exactKind, 2}},
+    {"jzext", {{"i", AnyInt}}, DefaultInt},
     {"kind", {{"x", AnyIntrinsic}}, DefaultInt, Rank::elemental,
         IntrinsicClass::inquiryFunction},
     {"lbound",
@@ -844,7 +846,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 // TODO: Coarray intrinsic functions
 //   LCOBOUND, UCOBOUND, IMAGE_INDEX, COSHAPE
 // TODO: Non-standard intrinsic functions
-//  LSHIFT, RSHIFT, SHIFT, ZEXT, IZEXT,
+//  LSHIFT, RSHIFT, SHIFT,
 //  COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT,
 //  QCMPLX, QEXT, QFLOAT, QREAL, DNUM,
 //  INUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN,
@@ -860,6 +862,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 // compatibility and builtins.
 static const std::pair<const char *, const char *> genericAlias[]{
     {"and", "iand"},
+    {"imag", "aimag"},
     {"or", "ior"},
     {"xor", "ieor"},
     {"__builtin_ieee_selected_real_kind", "selected_real_kind"},
