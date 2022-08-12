@@ -2096,6 +2096,52 @@ def : Pat<(f64 nzFPImmAsi64:$A),
   def : xxevalPattern<(or (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)),
                        !sub(255, 14)>;
 
+  // EQV
+  // (eqv A, B, C)
+  def : xxevalPattern<(or (and v4i32:$vA, (and v4i32:$vB, v4i32:$vC)),
+                          (vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)))),
+                       150>;
+  // (eqv A, (and B, C))
+  def : xxevalPattern<(vnot (xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 225>;
+  // (eqv A, (or B, C))
+  def : xxevalPattern<(vnot (xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 135>;
+
+  // NOR
+  // (nor A, B, C)
+  def : xxevalPattern<(vnot (or v4i32:$vA, (or v4i32:$vB, v4i32:$vC))), 128>;
+  // (nor A, (and B, C))
+  def : xxevalPattern<(vnot (or v4i32:$vA, (and v4i32:$vB, v4i32:$vC))), 224>;
+  // (nor A, (eqv B, C))
+  def : xxevalPattern<(and (vnot v4i32:$vA), (xor v4i32:$vB, v4i32:$vC)), 96>;
+  // (nor A, (nand B, C))
+  def : xxevalPattern<(and (vnot v4i32:$vA), (and v4i32:$vB, v4i32:$vC)), 16>;
+  // (nor A, (nor B, C))
+  def : xxevalPattern<(and (vnot v4i32:$vA), (or v4i32:$vB, v4i32:$vC)), 112>;
+  // (nor A, (xor B, C))
+  def : xxevalPattern<(vnot (or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC))), 144>;
+
+  // OR
+  // (or A, B, C)
+  def : xxevalPattern<(or v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 127>;
+  // (or A, (and B, C))
+  def : xxevalPattern<(or v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 31>;
+  // (or A, (eqv B, C))
+  def : xxevalPattern<(or v4i32:$vA, (vnot (xor v4i32:$vB, v4i32:$vC))), 159>;
+  // (or A, (nand B, C))
+  def : xxevalPattern<(or v4i32:$vA, (vnot (and v4i32:$vB, v4i32:$vC))), 239>;
+  // (or A, (nor B, C))
+  def : xxevalPattern<(or v4i32:$vA, (vnot (or v4i32:$vB, v4i32:$vC))), 143>;
+  // (or A, (xor B, C))
+  def : xxevalPattern<(or v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 111>;
+
+  // XOR
+  // (xor A, B, C)
+  def : xxevalPattern<(xor v4i32:$vA, (xor v4i32:$vB, v4i32:$vC)), 105>;
+  // (xor A, (and B, C))
+  def : xxevalPattern<(xor v4i32:$vA, (and v4i32:$vB, v4i32:$vC)), 30>;
+  // (xor A, (or B, C))
+  def : xxevalPattern<(xor v4i32:$vA, (or v4i32:$vB, v4i32:$vC)), 120>;
+
   // Anonymous patterns to select prefixed VSX loads and stores.
   // Load / Store f128
   def : Pat<(f128 (load PDForm:$src)),
