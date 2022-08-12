@@ -311,7 +311,6 @@ static inline void SetAllocaOrigin(void *a, uptr size, char *descr, uptr pc) {
   static const u32 first_timer =
       dash + (dash << 8) + (dash << 16) + (dash << 24);
   u32 *id_ptr = (u32 *)descr;
-  bool print = false;  // internal_strstr(descr + 4, "AllocaTOTest") != 0;
   u32 id = *id_ptr;
   if (id == first_timer) {
     u32 idx = atomic_fetch_add(&NumStackOriginDescrs, 1, memory_order_relaxed);
@@ -320,11 +319,7 @@ static inline void SetAllocaOrigin(void *a, uptr size, char *descr, uptr pc) {
     StackOriginPC[idx] = pc;
     id = Origin::CreateStackOrigin(idx).raw_id();
     *id_ptr = id;
-    if (print)
-      Printf("First time: idx=%d id=%d %s 0x%zx \n", idx, id, descr + 4, pc);
   }
-  if (print)
-    Printf("__msan_set_alloca_origin: descr=%s id=%x\n", descr + 4, id);
   __msan_set_origin(a, size, id);
 }
 
