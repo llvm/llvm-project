@@ -87,14 +87,6 @@ func.func @test_clamp(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
 }
 
 // -----
-// CHECK-LABEL: relu
-func.func @test_relu(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
-  %0 = "tosa.reluN"(%arg0) {max_fp = 3.40282347E+38 : f32, max_int = 0 : i64} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
-  return %0 : tensor<13x21x3xf32>
-}
-
-
-// -----
 // CHECK-LABEL: sigmoid
 func.func @test_sigmoid(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
   %0 = "tosa.sigmoid"(%arg0) : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
