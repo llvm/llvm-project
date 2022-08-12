@@ -512,7 +512,7 @@ multiclass StoreIndexImm {
                   (outs), (ins GPR64:$rd, GPR:$rs1, imm32zx16:$si16),
                   !strconcat(OpcStr, ".d"),
                   [(store (i64 GPR64:$rd), (ADDRri (i32 GPR:$rs1), imm32zx16:$si16))]>;
-  let Predicates = [MC88110] in {
+  let Predicates = [MC88110], DecoderNamespace = "MC88110" in {
     def xis  : F_LS<0b0011, /*ty=*/ 0b01,
                     (outs), (ins XR:$rd, GPR:$rs1, imm32zx16:$si16),
                     OpcStr,
@@ -744,19 +744,54 @@ multiclass StoreScaled<bits<4> Func, string OpcStr> {
   }
 }
 
-multiclass LoadAddr {
-  def d : F_LADDR</*ty=*/ 0b00, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                  "lda.d">;
-  def w : F_LADDR</*ty=*/ 0b01, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                  "lda">;
-  def h : F_LADDR</*ty=*/ 0b10, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                  "lda.h">;
+multiclass LoadAddr<string OpcStr> {
+  def ds : F_LADDR</*ty=*/ 0b00, /*scl=*/ 0b1,
+                   (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                   !strconcat(OpcStr, ".d")>;
+  def ws : F_LADDR</*ty=*/ 0b01, /*scl=*/ 0b1,
+                   (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                   OpcStr>;
+  def hs : F_LADDR</*ty=*/ 0b10, /*scl=*/ 0b1,
+                   (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                   !strconcat(OpcStr, ".h")>;
+
   let Predicates = [NotMC88110] in
-    def b : F_LADDR</*ty=*/ 0b11, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                    "lda.b">;
+    def bs : F_LADDR</*ty=*/ 0b11, /*scl=*/ 0b1,
+                     (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                     !strconcat(OpcStr, ".b")>;
   let Predicates = [MC88110], DecoderNamespace = "MC88110" in
-    def x : F_LADDR</*ty=*/ 0b11, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                    "lda.x">;
+    def xs : F_LADDR</*ty=*/ 0b11, /*scl=*/ 0b1,
+                     (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                     !strconcat(OpcStr, ".x")>;
+
+  // The unscaled versions with imm or register are only defined for MC88100.
+  let Predicates = [NotMC88110] in {
+    def du : F_LADDR</*ty=*/ 0b00, /*scl=*/ 0b0,
+                     (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                     !strconcat(OpcStr, ".d")>;
+    def wu : F_LADDR</*ty=*/ 0b01, /*scl=*/ 0b0,
+                     (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                     OpcStr>;
+    def hu : F_LADDR</*ty=*/ 0b10, /*scl=*/ 0b0,
+                     (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                     !strconcat(OpcStr, ".h")>;
+    def bu : F_LADDR</*ty=*/ 0b11, /*scl=*/ 0b0,
+                     (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+                     !strconcat(OpcStr, ".b")>;
+
+    def rid  : F_LS</*func=*/ 0b0011, /*ty=*/ 0b00,
+                    (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                    !strconcat(OpcStr, ".d")>;
+    def riw  : F_LS</*func=*/ 0b0011, /*ty=*/ 0b01,
+                    (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                    OpcStr>;
+    def rih  : F_LS</*func=*/ 0b0011, /*ty=*/ 0b10,
+                    (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                    !strconcat(OpcStr, ".h")>;
+    def rib  : F_LS</*func=*/ 0b0011, /*ty=*/ 0b11,
+                    (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                    !strconcat(OpcStr, ".b")>;
+  }
 }
 
 multiclass Xmem {
@@ -793,14 +828,14 @@ let mayLoad = 1 in {
   defm LD : LoadUnscaled<0b0001, "ld">;
   defm LD : LoadScaled<0b0001, "ld">;
 
-  defm LDA : LoadAddr<>; // TODO Does inst touch memory?
-
   let Predicates = [MC88110], DecoderNamespace = "MC88110" in {
     def LDxri : LoadXR<0b000001, "ld", f32>;
     def LDxrid : LoadXR<0b000000, "ld.d", f64>;
     def LDxrix : LoadXR<0b001111, "ld.x", f80>;
   }
 }
+
+defm LDA : LoadAddr<"lda">;
 
 let mayStore = 1 in {
   defm ST : StoreIndexImm;

@@ -245,8 +245,8 @@ body:             |
 
     ; Non-ABI compliant. Check that loading of target address does not move into
     ; delay slot.
-    $r1 = LDAw killed $r2, killed $r3
+    $r1 = LDAws killed $r2, killed $r3
     JMP $r1
-    ; CHECK:      $r1 = LDAw killed $r2, killed $r3
+    ; CHECK:      $r1 = LDAws killed $r2, killed $r3
     ; CHECK-NEXT: JMP $r1
 ...

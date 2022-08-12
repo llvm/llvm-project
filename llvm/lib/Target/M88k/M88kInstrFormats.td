@@ -328,9 +328,11 @@ class F_XMEMIMM<bits<2> ty, dag outs, dag ins, string asm,
 }
 
 // Format: Load/Store register indirect with scaled or unscaled index
-class F_LADDR<bits<2> ty, dag outs, dag ins, string asm,
+class F_LADDR<bits<2> ty, bits<1> scl, dag outs, dag ins, string asm,
               list<dag> pattern = []>
-   : InstM88k<outs, ins, asm, "$rd, $rs1[$rs2]", pattern> {
+   : InstM88k<outs, ins, asm,
+              !if(!eq(scl, 0b0), "$rd, $rs1, $rs2", "$rd, $rs1[$rs2]"),
+              pattern> {
   bits<5>  rd;
   bits<5>  rs1;
   bits<5>  rs2;
@@ -340,7 +342,8 @@ class F_LADDR<bits<2> ty, dag outs, dag ins, string asm,
   let Inst{20-16} = rs1;
   let Inst{15-12} = 0b0011;
   let Inst{11-10} = ty;
-  let Inst{9-5}   = 0b10000;
+  let Inst{9}     = scl;
+  let Inst{8-5}   = 0b0000;
   let Inst{4-0}   = rs2;
 }
 

@@ -523,10 +523,34 @@ isns:
 # CHECK: ld.d.usr     %r2, %r3[%r4]      | encoding: [0xf4,0x43,0x13,0x04]
 
 # load address
+  lda.b        %r0, %r1, 0
+  lda.b        %r0, %r1, 4096
+  lda.h        %r0, %r1, 0
+  lda.h        %r0, %r1, 4096
+  lda          %r1, %r2, 0
+  lda          %r1, %r2, 4096
+  lda.d        %r2, %r3, 0
+  lda.d        %r2, %r3, 4096
+  lda.b        %r0, %r1, %r2
+  lda.h        %r0, %r1, %r2
+  lda          %r1, %r2, %r3
+  lda.d        %r2, %r3, %r4
   lda.b        %r0, %r1[%r2]
   lda.h        %r0, %r1[%r2]
   lda          %r1, %r2[%r3]
   lda.d        %r2, %r3[%r4]
+# CHECK: lda.b        %r0, %r1, 0        | encoding: [0x3c,0x01,0x00,0x00]
+# CHECK: lda.b        %r0, %r1, 4096     | encoding: [0x3c,0x01,0x10,0x00]
+# CHECK: lda.h        %r0, %r1, 0        | encoding: [0x38,0x01,0x00,0x00]
+# CHECK: lda.h        %r0, %r1, 4096     | encoding: [0x38,0x01,0x10,0x00]
+# CHECK: lda          %r1, %r2, 0        | encoding: [0x34,0x22,0x00,0x00]
+# CHECK: lda          %r1, %r2, 4096     | encoding: [0x34,0x22,0x10,0x00]
+# CHECK: lda.d        %r2, %r3, 0        | encoding: [0x30,0x43,0x00,0x00]
+# CHECK: lda.d        %r2, %r3, 4096     | encoding: [0x30,0x43,0x10,0x00]
+# CHECK: lda.b        %r0, %r1, %r2      | encoding: [0xf4,0x01,0x3c,0x02]
+# CHECK: lda.h        %r0, %r1, %r2      | encoding: [0xf4,0x01,0x38,0x02]
+# CHECK: lda          %r1, %r2, %r3      | encoding: [0xf4,0x22,0x34,0x03]
+# CHECK: lda.d        %r2, %r3, %r4      | encoding: [0xf4,0x43,0x30,0x04]
 # CHECK: lda.b        %r0, %r1[%r2]      | encoding: [0xf4,0x01,0x3e,0x02]
 # CHECK: lda.h        %r0, %r1[%r2]      | encoding: [0xf4,0x01,0x3a,0x02]
 # CHECK: lda          %r1, %r2[%r3]      | encoding: [0xf4,0x22,0x36,0x03]
