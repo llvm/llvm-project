@@ -28,9 +28,9 @@ transform.test_consume_operand_if_matches_param_or_fail %2[42]
 
 // -----
 
-transform.sequence {
+transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 {
+  sequence %arg0 failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     // expected-remark @below {{applying transformation "a"}}
     test_transform_op "a"
@@ -47,10 +47,10 @@ transform.sequence {
 
 // -----
 
-transform.sequence {
+transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   %0 = test_produce_param_or_forward_operand 42
-  sequence %0 {
+  sequence %0 failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     // expected-remark @below {{succeeded}}
     test_consume_operand_if_matches_param_or_fail %arg1[42]
@@ -59,9 +59,9 @@ transform.sequence {
 
 // -----
 
-transform.sequence {
+transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  %0 = sequence %arg0 {
+  %0 = sequence %arg0 failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %1 = test_produce_param_or_forward_operand 42
     yield %1 : !pdl.operation
@@ -74,7 +74,7 @@ transform.sequence {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 {
+  sequence %arg0 failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @some in %arg1
     test_print_remark_at_operand %0, "matched"
@@ -120,7 +120,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %0 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %f = pdl_match @const in %arg1
     // CHECK: %{{.+}} = get_closest_isolated_parent %{{.+}}
@@ -145,7 +145,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     // This is necessary to run the transformation on something other than the
     // top-level module, "alternatives" cannot be run on that.
@@ -183,7 +183,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @match_call in %arg1
     %1 = get_closest_isolated_parent %0
@@ -216,7 +216,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @match_call in %arg1
     %1 = get_closest_isolated_parent %0
@@ -259,7 +259,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @match_call in %arg1
     %1 = get_closest_isolated_parent %0
@@ -295,7 +295,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @match_call in %arg1
     %1 = get_closest_isolated_parent %0
@@ -333,7 +333,7 @@ module {
     return
   }
 
-  transform.sequence {
+  transform.sequence failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     // expected-error @below {{scope must not contain the transforms being applied}}
     transform.alternatives %arg1 {
@@ -368,7 +368,7 @@ transform.with_pdl_patterns {
   }
 
 
-  sequence %arg0 {
+  sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.pdl_match @match_const in %arg1
     %1 = transform.loop.get_parent_for %0
@@ -395,7 +395,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @some in %arg1
     // expected-error @below {{applications of transform.test_wrong_number_of_results expected to produce 3 results (actually produced 1).}}
@@ -423,7 +423,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @some in %arg1
     // expected-error @below {{applications of transform.test_wrong_number_of_multi_results expected to produce 1 results (actually produced 0)}}
@@ -451,7 +451,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @some in %arg1
     // Transform matches 3 ops and produces 2 results.
@@ -475,7 +475,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @some in %arg1
     // Transform fails to match any but still produces 2 results.
@@ -500,7 +500,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @some in %arg1
     // expected-error @below {{unexpected application of transform.test_mixed_null_and_non_null_results produces both null and non null results.}}
@@ -537,7 +537,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @addi in %arg1
     %1 = pdl_match @subi in %arg1
@@ -563,12 +563,63 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @some in %arg1
     transform.test_mixed_sucess_and_silenceable %0
   }
 }
+
+// -----
+
+func.func @foo() {
+  "op" () : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "op"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 failures(suppress) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1
+    // Not expecting error here because we are suppressing it.
+    // expected-remark @below {{foo}}
+    test_emit_remark_and_erase_operand %0, "foo" {fail_after_erase}
+  }
+}
+
+// -----
+
+func.func @foo() {
+  "op" () : () -> ()
+  return
+}
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operands
+    %1 = pdl.types
+    %2 = pdl.operation "op"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+    pdl.rewrite %2 with "transform.dialect"
+  }
+
+  transform.sequence %arg0 failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1
+    // expected-error @below {{silenceable error}}
+    // expected-remark @below {{foo}}
+    test_emit_remark_and_erase_operand %0, "foo" {fail_after_erase}
+  }
+}
+
 
 // -----
 
@@ -585,7 +636,7 @@ module {
       pdl.rewrite %2 with "transform.dialect"
     }
 
-    transform.sequence %arg0 {
+    transform.sequence %arg0 failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
       %0 = pdl_match @func in %arg1
       %1 = replicate num(%0) %arg1
@@ -616,7 +667,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %0 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %f = pdl_match @const in %arg1
     transform.foreach %f {
@@ -662,7 +713,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %0 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %f = pdl_match @execute_region in %arg1
     %results = transform.foreach %f -> !pdl.operation {

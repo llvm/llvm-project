@@ -2,7 +2,7 @@
 
 // expected-note @below {{associated payload op}}
 module {
-  transform.sequence {
+  transform.sequence failures(propagate) {
   ^bb0(%arg0: !pdl.operation):
     // expected-remark @below {{extension absent}}
     test_check_if_test_extension_present %arg0
@@ -19,7 +19,7 @@ module {
 
 // expected-note @below {{associated payload op}}
 module {
-  transform.sequence {
+  transform.sequence failures(propagate) {
   ^bb0(%arg0: !pdl.operation):
     test_add_test_extension "A"
     test_remove_test_extension
@@ -33,7 +33,7 @@ module {
 
 // expected-note @below {{associated payload op}}
 module {
-  transform.sequence {
+  transform.sequence failures(propagate) {
   ^bb0(%arg0: !pdl.operation):
     test_add_test_extension "A"
     // expected-remark @below {{extension present, A}}
