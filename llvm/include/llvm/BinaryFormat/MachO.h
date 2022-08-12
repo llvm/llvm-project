@@ -1015,6 +1015,29 @@ enum {
   DYLD_CHAINED_SYMBOL_ZLIB = 1,
 };
 
+// Values for dyld_chained_starts_in_segment::page_start.
+enum {
+  DYLD_CHAINED_PTR_START_NONE = 0xFFFF,
+  DYLD_CHAINED_PTR_START_MULTI = 0x8000,
+  DYLD_CHAINED_PTR_START_LAST = 0x8000,
+};
+
+// Values for dyld_chained_starts_in_segment::pointer_format.
+enum {
+  DYLD_CHAINED_PTR_ARM64E = 1,
+  DYLD_CHAINED_PTR_64 = 2,
+  DYLD_CHAINED_PTR_32 = 3,
+  DYLD_CHAINED_PTR_32_CACHE = 4,
+  DYLD_CHAINED_PTR_32_FIRMWARE = 5,
+  DYLD_CHAINED_PTR_64_OFFSET = 6,
+  DYLD_CHAINED_PTR_ARM64E_KERNEL = 7,
+  DYLD_CHAINED_PTR_64_KERNEL_CACHE = 8,
+  DYLD_CHAINED_PTR_ARM64E_USERLAND = 9,
+  DYLD_CHAINED_PTR_ARM64E_FIRMWARE = 10,
+  DYLD_CHAINED_PTR_X86_64_KERNEL_CACHE = 11,
+  DYLD_CHAINED_PTR_ARM64E_USERLAND24 = 12,
+};
+
 /// Structs for dyld chained fixups.
 /// dyld_chained_fixups_header is the data pointed to by LC_DYLD_CHAINED_FIXUPS
 /// load command.
@@ -1032,10 +1055,21 @@ struct dyld_chained_fixups_header {
 /// Each each seg_info_offset entry is the offset into this struct for that
 /// segment followed by pool of dyld_chain_starts_in_segment data.
 struct dyld_chained_starts_in_image {
-  uint32_t    seg_count;
-  uint32_t    seg_info_offset[1];
+  uint32_t seg_count;
+  uint32_t seg_info_offset[1];
 };
-  
+
+struct dyld_chained_starts_in_segment {
+  uint32_t size;              ///< Size of this, including chain_starts entries
+  uint16_t page_size;         ///< Page size in bytes (0x1000 or 0x4000)
+  uint16_t pointer_format;    ///< DYLD_CHAINED_PTR*
+  uint64_t segment_offset;    ///< VM offset from the __TEXT segment
+  uint32_t max_valid_pointer; ///< Values beyond this are not pointers on 32-bit
+  uint16_t page_count;        ///< Length of the page_start array
+  uint16_t page_start[1];     ///< Page offset of first fixup on each page, or
+                              ///< DYLD_CHAINED_PTR_START_NONE if no fixups
+};
+
 // Byte order swapping functions for MachO structs
 
 inline void swapStruct(fat_header &mh) {
@@ -2051,6 +2085,22 @@ inline void swapStruct(dyld_chained_fixups_header &C) {
   sys::swapByteOrder(C.imports_count);
   sys::swapByteOrder(C.imports_format);
   sys::swapByteOrder(C.symbols_format);
+}
+
+inline void swapStruct(dyld_chained_starts_in_image &C) {
+  sys::swapByteOrder(C.seg_count);
+  // getStructOrErr() cannot copy the variable-length seg_info_offset array.
+  // Its elements must be byte swapped manually.
+}
+
+inline void swapStruct(dyld_chained_starts_in_segment &C) {
+  sys::swapByteOrder(C.size);
+  sys::swapByteOrder(C.page_size);
+  sys::swapByteOrder(C.pointer_format);
+  sys::swapByteOrder(C.segment_offset);
+  sys::swapByteOrder(C.max_valid_pointer);
+  sys::swapByteOrder(C.page_count);
+  // seg_info_offset entries must be byte swapped manually.
 }
 
 /* code signing attributes of a process */
