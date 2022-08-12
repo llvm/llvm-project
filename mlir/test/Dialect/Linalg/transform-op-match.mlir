@@ -11,7 +11,7 @@ func.func @bar() {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %match_name = transform.structured.match ops{["arith.constant"]} in %arg1
     transform.test_print_remark_at_operand %match_name, "matched op name"

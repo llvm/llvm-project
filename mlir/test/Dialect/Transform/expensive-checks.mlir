@@ -15,7 +15,7 @@ transform.with_pdl_patterns {
     rewrite %2 with "transform.dialect"
   }
 
-  sequence %arg0 {
+  sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     // expected-note @below {{other handle}}
     %0 = pdl_match @return in %arg1
@@ -49,7 +49,7 @@ transform.with_pdl_patterns {
     rewrite %2 with "transform.dialect"
   }
 
-  sequence %arg0 {
+  sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @func in %arg1
     %1 = pdl_match @return in %arg1
