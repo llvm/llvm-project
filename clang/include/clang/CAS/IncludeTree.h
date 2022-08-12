@@ -97,7 +97,7 @@ public:
   }
 
 private:
-  friend class IncludeTreeBase;
+  friend class IncludeTreeBase<IncludeFile>;
   friend class IncludeTree;
   friend class IncludeTreeRoot;
 
@@ -185,7 +185,7 @@ public:
   llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
 
 private:
-  friend class IncludeTreeBase;
+  friend class IncludeTreeBase<IncludeTree>;
   friend class IncludeTreeRoot;
 
   explicit IncludeTree(ObjectProxy Node) : IncludeTreeBase(std::move(Node)) {
@@ -250,7 +250,7 @@ public:
   }
 
 private:
-  friend class IncludeTreeBase;
+  friend class IncludeTreeBase<IncludeTreeRoot>;
 
   explicit IncludeTreeRoot(ObjectProxy Node)
       : IncludeTreeBase(std::move(Node)) {
