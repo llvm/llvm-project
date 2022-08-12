@@ -482,9 +482,8 @@ multiclass LoadIndexImm<bits<4> Func, string OpcStr> {
                   [(set (i64 GPR64:$rd), (load (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))]>;
 }
 
-multiclass StoreIndexImm {
+multiclass StoreIndexImm<string OpcStr> {
   defvar Func = 0b0010;
-  defvar OpcStr = "st";
   def riw  : F_LS<Func, /*ty=*/ 0b01,
                   (outs), (ins GPR:$rd, GPR:$rs1, imm32zx16:$si16),
                   OpcStr,
@@ -827,16 +826,12 @@ let mayLoad = 1 in {
 defm LDA : LoadAddr<"lda">;
 
 let mayStore = 1 in {
-  defm ST : StoreIndexImm;
+  defm ST : StoreIndexImm<"st">;
   defm ST : StoreUnscaled<0b0010, "st">;
   defm ST : StoreScaled<0b0010, "st">;
 }
 
 defm XMEM : Xmem<>;
-
-//def : Pat<(load (ADDRri GPR:$rs1, imm32zx16:$si16)),
-//          (LDriw GPR:$rs1, imm32zx16:$si16)>;
-
 
 
 // GlobalAddress, ExternalSymbol, Jumptable, ConstantPool
