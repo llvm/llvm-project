@@ -6157,6 +6157,43 @@ static SDValue foldLogicOfShifts(SDNode *N, SDValue LogicOp, SDValue ShiftOp,
   return DAG.getNode(LogicOpcode, DL, VT, NewShift, Z);
 }
 
+/// Given a tree of logic operations with shape like
+/// (LOGIC (LOGIC (X, Y), LOGIC (Z, Y)))
+/// try to match and fold shift operations with the same shift amount.
+/// For example:
+/// LOGIC (LOGIC (SH X0, Y), Z), (LOGIC (SH X1, Y), W) -->
+/// --> LOGIC (SH (LOGIC X0, X1), Y), (LOGIC Z, W)
+static SDValue foldLogicTreeOfShifts(SDNode *N, SDValue LeftHand,
+                                     SDValue RightHand, SelectionDAG &DAG) {
+  unsigned LogicOpcode = N->getOpcode();
+  assert((LogicOpcode == ISD::AND || LogicOpcode == ISD::OR ||
+          LogicOpcode == ISD::XOR));
+  if (LeftHand.getOpcode() != LogicOpcode ||
+      RightHand.getOpcode() != LogicOpcode)
+    return SDValue();
+  if (!LeftHand.hasOneUse() || !RightHand.hasOneUse())
+    return SDValue();
+
+  // Try to match one of following patterns:
+  // LOGIC (LOGIC (SH X0, Y), Z), (LOGIC (SH X1, Y), W)
+  // LOGIC (LOGIC (SH X0, Y), Z), (LOGIC W, (SH X1, Y))
+  // Note that foldLogicOfShifts will handle commuted versions of the left hand
+  // itself.
+  SDValue CombinedShifts, W;
+  SDValue R0 = RightHand.getOperand(0);
+  SDValue R1 = RightHand.getOperand(1);
+  if ((CombinedShifts = foldLogicOfShifts(N, LeftHand, R0, DAG)))
+    W = R1;
+  else if ((CombinedShifts = foldLogicOfShifts(N, LeftHand, R1, DAG)))
+    W = R0;
+  else
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  return DAG.getNode(LogicOpcode, DL, VT, CombinedShifts, W);
+}
+
 SDValue DAGCombiner::visitAND(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -6529,6 +6566,12 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   if (hasOperation(ISD::USUBSAT, VT))
     if (SDValue V = foldAndToUsubsat(N, DAG))
       return V;
+
+  // Postpone until legalization completed to avoid interference with bswap
+  // folding
+  if (LegalOperations || VT.isVector())
+    if (SDValue R = foldLogicTreeOfShifts(N, N0, N1, DAG))
+      return R;
 
   return SDValue();
 }
@@ -7129,6 +7172,12 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
       DAG.haveNoCommonBitsSet(N0, N1))
     if (SDValue Combined = visitADDLike(N))
       return Combined;
+
+  // Postpone until legalization completed to avoid interference with bswap
+  // folding
+  if (LegalOperations || VT.isVector())
+    if (SDValue R = foldLogicTreeOfShifts(N, N0, N1, DAG))
+      return R;
 
   return SDValue();
 }
@@ -8613,6 +8662,8 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   if (SDValue R = foldLogicOfShifts(N, N0, N1, DAG))
     return R;
   if (SDValue R = foldLogicOfShifts(N, N1, N0, DAG))
+    return R;
+  if (SDValue R = foldLogicTreeOfShifts(N, N0, N1, DAG))
     return R;
 
   // Unfold  ((x ^ y) & m) ^ y  into  (x & m) | (y & ~m)  if profitable
