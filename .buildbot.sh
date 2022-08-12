@@ -6,11 +6,14 @@ INST_DIR=`pwd`/inst
 
 mkdir -p build
 cd build
+# Disabling default PIE due to:
+# https://github.com/llvm/llvm-project/issues/57085
 cmake -DCMAKE_INSTALL_PREFIX=${INST_DIR} \
     -DLLVM_INSTALL_UTILS=On \
     -DCMAKE_BUILD_TYPE=release \
     -DLLVM_ENABLE_ASSERTIONS=On \
     -DLLVM_ENABLE_PROJECTS="lld;clang" \
+    -DCLANG_DEFAULT_PIE_ON_LINUX=OFF \
     ../llvm
 make -j `nproc` install
 
