@@ -432,6 +432,25 @@ function(add_integration_test test_name)
       libc.src.stdlib.atexit
       libc.src.stdlib.exit)
   list(REMOVE_DUPLICATES fq_deps_list)
+
+  # We don't want memory functions to be dependencies on integration tests.
+  # Memory functions should be tested using unittests. The main reason
+  # however is that compiler codegen can emit calls to memory functions. So,
+  # we add them explicitly to the integration test libc.a (see below). Adding
+  # explicit deps on the memory functions can potentially cause duplicate
+  # symbol errors.
+  set(memory_funcs "bcmp;bzero;memcmp;memcpy;memmove;memset")
+  foreach(dep IN LISTS fq_deps_list)
+    get_target_property(name ${dep} ENTRYPOINT_NAME)
+    if(NOT name)
+      continue()
+    endif()
+    list(FIND memory_funcs ${name} loc)
+    if(${loc} GREATER_EQUAL 0)
+      message(FATAL_ERROR "Memory function ${name} cannot be a dependency "
+                          "for integration tests.")
+    endif()
+  endforeach()
   # TODO: Instead of gathering internal object files from entrypoints,
   # collect the object files with public names of entrypoints.
   get_object_files_for_test(
@@ -474,6 +493,16 @@ function(add_integration_test test_name)
     ${fq_libc_target_name}
     STATIC
     ${link_object_files}
+    # We add the memory functions objects explicitly. Note that we
+    # are adding objects of the targets which contain the public
+    # C symbols. This is because compiler codegen can emit calls to
+    # the C memory functions.
+    $<TARGET_OBJECTS:libc.src.string.bcmp>
+    $<TARGET_OBJECTS:libc.src.string.bzero>
+    $<TARGET_OBJECTS:libc.src.string.memcmp>
+    $<TARGET_OBJECTS:libc.src.string.memcpy>
+    $<TARGET_OBJECTS:libc.src.string.memmove>
+    $<TARGET_OBJECTS:libc.src.string.memset>
   )
   set_target_properties(${fq_libc_target_name} PROPERTIES ARCHIVE_OUTPUT_NAME c)
   set_target_properties(${fq_libc_target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${sysroot_lib})
