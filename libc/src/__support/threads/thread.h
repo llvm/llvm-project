@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/StringView.h"
 #include "src/__support/CPP/atomic.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/stringstream.h"
 #include "src/__support/architectures.h"
 
@@ -104,6 +105,30 @@ struct alignas(STACK_ALIGNMENT) ThreadAttributes {
         style(ThreadStyle::POSIX), retval(), atexit_callback_mgr(nullptr),
         platform_data(nullptr) {}
 };
+
+using TSSDtor = void(void *);
+
+// Create a new TSS key and associate the |dtor| as the corresponding
+// destructor. Can be used to implement public functions like
+// pthread_key_create.
+cpp::optional<unsigned int> new_tss_key(TSSDtor *dtor);
+
+// Delete the |key|. Can be used to implement public functions like
+// pthread_key_delete.
+//
+// Return true on success, false on failure.
+bool tss_key_delete(unsigned int key);
+
+// Set the value associated with |key| for the current thread. Can be used
+// to implement public functions like pthread_setspecific.
+//
+// Return true on success, false on failure.
+bool set_tss_value(unsigned int key, void *value);
+
+// Return the value associated with |key| for the current thread. Return
+// nullptr if |key| is invalid. Can be used to implement public functions like
+// pthread_getspecific.
+void *get_tss_value(unsigned int key);
 
 struct Thread {
   ThreadAttributes *attrib;
