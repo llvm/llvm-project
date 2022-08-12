@@ -10,6 +10,7 @@
 #define LLVM_CLANG_FRONTEND_CASDEPENDENCYCOLLECTOR_H
 
 #include "clang/Frontend/Utils.h"
+#include "llvm/CAS/CASReference.h"
 
 namespace llvm::cas {
 class CASOutputBackend;
@@ -22,10 +23,25 @@ namespace clang {
 /// suitable to be replayed into a DependencyFileGenerator.
 class CASDependencyCollector : public DependencyFileGenerator {
 public:
+  /// Create a \CASDependencyCollector for the given output options.
+  ///
+  /// \param Opts Output options. Only options that affect the list of
+  ///             dependency files are significant.
+  /// \param CAS The CAS to write the dependency list to.
+  /// \param Callback Callback that receives the resulting dependencies on
+  ///                 completion, or \c None if an error occurred.
   CASDependencyCollector(
-      const DependencyOutputOptions &Opts,
-      IntrusiveRefCntPtr<llvm::cas::CASOutputBackend> OutputBackend);
+      const DependencyOutputOptions &Opts, cas::CASDB &CAS,
+      std::function<void(Optional<cas::ObjectRef>)> Callback);
 
+  /// Replay the given result, which should have been created by a
+  /// \c CASDependencyCollector instance.
+  ///
+  /// \param Opts Output options. Only options that affect the output format of
+  ///             a dependency file are signficant.
+  /// \param CAS The CAS to read the result from.
+  /// \param DepsRef The dependencies.
+  /// \param OS The output stream to write the dependency file to.
   static llvm::Error replay(const DependencyOutputOptions &Opts,
                             cas::CASDB &CAS, cas::ObjectRef DepsRef,
                             llvm::raw_ostream &OS);
@@ -33,8 +49,8 @@ public:
 private:
   void finishedMainFile(DiagnosticsEngine &Diags) override;
 
-  IntrusiveRefCntPtr<llvm::cas::CASOutputBackend> CASOutputs;
-  std::string OutputName;
+  cas::CASDB &CAS;
+  std::function<void(Optional<cas::ObjectRef>)> Callback;
 };
 
 } // namespace clang

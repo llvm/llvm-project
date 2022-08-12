@@ -16,10 +16,10 @@ using namespace clang;
 using namespace clang::cas;
 
 CASDependencyCollector::CASDependencyCollector(
-    const DependencyOutputOptions &Opts,
-    IntrusiveRefCntPtr<llvm::cas::CASOutputBackend> OutputBackend)
+    const DependencyOutputOptions &Opts, cas::CASDB &CAS,
+    std::function<void(Optional<cas::ObjectRef>)> Callback)
     : DependencyFileGenerator(Opts, llvm::vfs::makeNullOutputBackend()),
-      CASOutputs(std::move(OutputBackend)), OutputName(Opts.OutputFile) {}
+      CAS(CAS), Callback(std::move(Callback)) {}
 
 llvm::Error CASDependencyCollector::replay(const DependencyOutputOptions &Opts,
                                            CASDB &CAS, ObjectRef DepsRef,
@@ -28,7 +28,7 @@ llvm::Error CASDependencyCollector::replay(const DependencyOutputOptions &Opts,
   if (!Refs)
     return Refs.takeError();
 
-  CASDependencyCollector DC(Opts, nullptr);
+  CASDependencyCollector DC(Opts, CAS, nullptr);
   auto Err = CAS.forEachRef(*Refs, [&](ObjectRef Ref) -> llvm::Error {
     auto PathHandle = CAS.load(Ref);
     if (!PathHandle)
@@ -49,7 +49,6 @@ llvm::Error CASDependencyCollector::replay(const DependencyOutputOptions &Opts,
 }
 
 void CASDependencyCollector::finishedMainFile(DiagnosticsEngine &Diags) {
-  CASDB &CAS = CASOutputs->getCAS();
   ArrayRef<std::string> Files = getDependencies();
   std::vector<ObjectRef> Refs;
   Refs.reserve(Files.size());
@@ -63,11 +62,8 @@ void CASDependencyCollector::finishedMainFile(DiagnosticsEngine &Diags) {
   }
 
   auto Handle = CAS.store(Refs, {});
-  if (!Handle) {
+  if (Handle)
+    Callback(CAS.getReference(*Handle));
+  else
     Diags.Report({}, diag::err_cas_store) << toString(Handle.takeError());
-    return;
-  }
-
-  if (auto Err = CASOutputs->addObject(OutputName, CAS.getReference(*Handle)))
-    Diags.Report({}, diag::err_cas_store) << toString(std::move(Err));
 }
