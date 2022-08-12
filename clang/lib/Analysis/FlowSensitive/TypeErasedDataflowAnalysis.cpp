@@ -200,7 +200,7 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
   }
 
   llvm::Optional<TypeErasedDataflowAnalysisState> MaybeState;
-  bool ApplyBuiltinTransfer = Analysis.applyBuiltinTransfer();
+  auto BuiltinTransferOpts = Analysis.builtinTransferOptions();
 
   for (const CFGBlock *Pred : Preds) {
     // Skip if the `Block` is unreachable or control flow cannot get past it.
@@ -215,12 +215,12 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
       continue;
 
     TypeErasedDataflowAnalysisState PredState = MaybePredState.value();
-    if (ApplyBuiltinTransfer) {
+    if (BuiltinTransferOpts) {
       if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
         const StmtToEnvMapImpl StmtToEnv(CFCtx, BlockStates);
         TerminatorVisitor(StmtToEnv, PredState.Env,
                           blockIndexInPredecessor(*Pred, Block),
-                          Analysis.builtinTransferOptions())
+                          *BuiltinTransferOpts)
             .Visit(PredTerminatorStmt);
       }
     }
@@ -255,9 +255,10 @@ static void transferCFGStmt(
   const Stmt *S = CfgStmt.getStmt();
   assert(S != nullptr);
 
-  if (Analysis.applyBuiltinTransfer())
+  auto BuiltinTransferOpts = Analysis.builtinTransferOptions();
+  if (BuiltinTransferOpts)
     transfer(StmtToEnvMapImpl(CFCtx, BlockStates), *S, State.Env,
-             Analysis.builtinTransferOptions());
+             *BuiltinTransferOpts);
   Analysis.transferTypeErased(S, State.Lattice, State.Env);
 
   if (HandleTransferredStmt != nullptr)
@@ -318,7 +319,7 @@ TypeErasedDataflowAnalysisState transferBlock(
                       State, HandleTransferredStmt);
       break;
     case CFGElement::Initializer:
-      if (Analysis.applyBuiltinTransfer())
+      if (Analysis.builtinTransferOptions())
         transferCFGInitializer(*Element.getAs<CFGInitializer>(), State);
       break;
     default:
