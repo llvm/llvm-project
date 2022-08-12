@@ -11,13 +11,10 @@
 
 #include "IntelPTProcessTrace.h"
 #include "IntelPTSingleBufferTrace.h"
-
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
-
 #include "llvm/Support/Error.h"
-
 #include <memory>
 
 namespace lldb_private {

@@ -39,11 +39,7 @@ COFF Improvements
 MinGW Improvements
 ------------------
 
-* The ``--exclude-symbols`` option is now supported.
-  (`D130118 <https://reviews.llvm.org/D130118>`_)
-
-* Support for an entirely new object file directive, ``-exclude-symbols:``,
-  has been implemented. (`D130120 <https://reviews.llvm.org/D130120>`_)
+* ...
 
 MachO Improvements
 ------------------

@@ -233,15 +233,17 @@ func.func @scf_execute_region_yield_non_equivalent(%i: index, %j: index) -> f32 
 // CHECK-LABEL: func @scf_for_yield_non_equivalent(
 //  CHECK-SAME:     %[[t:.*]]: memref<?xf32
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}})
-//       CHECK:   %[[cloned:.*]] = bufferization.clone %[[alloc]]
-//       CHECK:   memref.dealloc %[[alloc]]
+//       CHECK:   memref.copy %[[t]], %[[alloc]]
+//       CHECK:   %[[cloned:.*]] = bufferization.clone %[[t]]
 //       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%[[iter:.*]] = %[[cloned]])
 //   CHECK-DAG:     memref.dealloc %[[iter]]
 //   CHECK-DAG:     %[[alloc2:.*]] = memref.alloc(%{{.*}})
-//       CHECK:     memref.copy %[[t]], %[[alloc2]]
-//       CHECK:     %[[cloned2:.*]] = bufferization.clone %[[alloc2]]
+//       CHECK:     memref.copy %[[alloc]], %[[alloc2]]
+//       CHECK:     %[[alloc2_casted:.*]] = memref.cast %[[alloc2]]
+//       CHECK:     %[[cloned2:.*]] = bufferization.clone %[[alloc2_casted]]
 //       CHECK:     memref.dealloc %[[alloc2]]
 //       CHECK:     scf.yield %[[cloned2]]
+//       CHECK:   memref.dealloc %[[alloc]]
 //       CHECK:   return %[[for]]
 func.func @scf_for_yield_non_equivalent(
     %t: tensor<?xf32>, %lb : index, %ub : index, %step : index) -> tensor<?xf32> {
@@ -708,4 +710,35 @@ func.func @scf_for_swapping_yields_memory_space(
   %f0 = tensor.extract %r0#0[%step] : tensor<?xf32>
   %f1 = tensor.extract %r0#1[%step] : tensor<?xf32>
   return %f0, %f1: f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: func @scf_for_yield_alias_of_non_equivalent(
+func.func @scf_for_yield_alias_of_non_equivalent(%sz: index) -> tensor<?xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 5.0 : f32
+
+  // CHECK: %[[generate:.*]] = memref.alloc
+  %0 = tensor.generate %sz {
+  ^bb0(%i: index):
+    tensor.yield %cst : f32
+  } : tensor<?xf32>
+
+  // A copy is inserted because %t is used inside the loop.
+  // CHECK: %[[generate_copy:.*]] = memref.alloc
+  // CHECK: memref.copy %[[generate]], %[[generate_copy]]
+  // CHECK: scf.for
+  %r = scf.for %iv = %c0 to %sz step %c1 iter_args(%t = %0) -> tensor<?xf32> {
+    %iv_sub = arith.subi %iv, %c1 : index
+    // CHECK: memref.subview %[[generate_copy]]
+    %ll = tensor.extract_slice %0[%iv_sub][%sz][1] : tensor<?xf32> to tensor<?xf32>
+    %l = tensor.extract %ll[%c0] : tensor<?xf32>
+    %double = arith.mulf %cst, %l : f32
+    // CHECK: memref.store %{{.*}}, %[[generate]]
+    %s = tensor.insert %double into %t[%iv] : tensor<?xf32>
+    scf.yield %s : tensor<?xf32>
+  }
+  return %r : tensor<?xf32>
 }

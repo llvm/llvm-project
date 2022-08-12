@@ -91,3 +91,22 @@ add_integration_test(
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_join
 )
+
+add_integration_test(
+  pthread_tss_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_tss_test.cpp
+  LOADER
+    libc.loader.linux.crt1
+  DEPENDS
+    libc.include.pthread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_exit
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_key_create
+    libc.src.pthread.pthread_key_delete
+    libc.src.pthread.pthread_getspecific
+    libc.src.pthread.pthread_setspecific
+)

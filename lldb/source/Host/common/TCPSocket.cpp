@@ -167,14 +167,14 @@ Status TCPSocket::Connect(llvm::StringRef name) {
 
     address.SetPort(host_port->port);
 
-    if (-1 == llvm::sys::RetryAfterSignal(-1, ::connect, GetNativeSocket(),
-                                          &address.sockaddr(),
-                                          address.GetLength())) {
+    if (llvm::sys::RetryAfterSignal(-1, ::connect, GetNativeSocket(),
+                                    &address.sockaddr(),
+                                    address.GetLength()) == -1) {
       Close();
       continue;
     }
 
-    if (-1 == SetOptionNoDelay()) {
+    if (SetOptionNoDelay() == -1) {
       Close();
       continue;
     }
@@ -210,8 +210,8 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
     int option_value = 1;
     set_socket_option_arg_type option_value_p =
         reinterpret_cast<set_socket_option_arg_type>(&option_value);
-    if (-1 == ::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, option_value_p,
-                           sizeof(option_value))) {
+    if (::setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, option_value_p,
+                     sizeof(option_value)) == -1) {
       CLOSE_SOCKET(fd);
       continue;
     }
@@ -224,10 +224,10 @@ Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
 
     int err =
         ::bind(fd, &listen_address.sockaddr(), listen_address.GetLength());
-    if (-1 != err)
+    if (err != -1)
       err = ::listen(fd, backlog);
 
-    if (-1 == err) {
+    if (err == -1) {
       error = GetLastSocketError();
       CLOSE_SOCKET(fd);
       continue;
@@ -294,7 +294,7 @@ Status TCPSocket::Accept(Socket *&conn_socket) {
 
     lldb_private::SocketAddress &AddrIn = m_listen_sockets[listen_sock];
     if (!AddrIn.IsAnyAddr() && AcceptAddr != AddrIn) {
-      if (kInvalidSocketValue != sock) {
+      if (sock != kInvalidSocketValue) {
         CLOSE_SOCKET(sock);
         sock = kInvalidSocketValue;
       }

@@ -44,6 +44,10 @@ enum NodeType : unsigned {
 
   FTINT,
 
+  // Bit counting operations
+  CLZ_W,
+  CTZ_W,
+
   BSTRINS,
   BSTRPICK,
 
@@ -92,6 +96,8 @@ public:
                       SelectionDAG &DAG) const override;
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
+  bool isCheapToSpeculateCttz() const override;
+  bool isCheapToSpeculateCtlz() const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.

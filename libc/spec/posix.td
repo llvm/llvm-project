@@ -11,6 +11,9 @@ def RestrictedStructSigactionPtr : RestrictedPtrType<StructSigaction>;
 def ConstRestrictedStructSigactionPtr : ConstType<RestrictedStructSigactionPtr>;
 
 def PThreadStartT : NamedType<"__pthread_start_t">;
+def PThreadTSSDtorT : NamedType<"__pthread_tss_dtor_t">;
+def PThreadKeyT : NamedType<"pthread_key_t">;
+def PThreadKeyTPtr : PtrType<PThreadKeyT>;
 
 def InoT : NamedType<"ino_t">;
 def DIR : NamedType<"DIR">;
@@ -406,7 +409,15 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec PThread = HeaderSpec<
     "pthread.h",
     [], // Macros
-    [PThreadAttrTType, PThreadMutexAttrTType, PThreadMutexTType, PThreadStartT, PThreadTType], // Types
+    [
+        PThreadAttrTType,
+        PThreadKeyT,
+        PThreadMutexAttrTType,
+        PThreadMutexTType,
+        PThreadStartT,
+        PThreadTSSDtorT,
+        PThreadTType,
+    ], // Types
     [], // Enumerations
     [
       FunctionSpec<
@@ -568,6 +579,26 @@ def POSIX : StandardSpec<"POSIX"> {
           "pthread_mutex_unlock",
           RetValSpec<IntType>,
           [ArgSpec<PThreadMutexTPtr>]
+      >,
+      FunctionSpec<
+          "pthread_key_create",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadKeyTPtr>, ArgSpec<PThreadTSSDtorT>]
+      >,
+      FunctionSpec<
+          "pthread_key_delete",
+          RetValSpec<IntType>,
+          [ArgSpec<PThreadKeyT>]
+      >,
+      FunctionSpec<
+          "pthread_getspecific",
+          RetValSpec<VoidPtr>,
+          [ArgSpec<PThreadKeyT>]
+      >,
+      FunctionSpec<
+          "pthread_setspecific",
+          RetValSpec<VoidPtr>,
+          [ArgSpec<PThreadKeyT>, ArgSpec<ConstVoidPtr>]
       >,
     ]
   >;

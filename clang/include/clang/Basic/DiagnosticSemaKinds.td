@@ -10387,6 +10387,9 @@ def err_omp_unexpected_clause_value : Error<
   "expected %0 in OpenMP clause '%1'">;
 def err_omp_expected_var_name_member_expr : Error<
   "expected variable name%select{| or data member of current class}0">;
+def err_omp_expected_var_name_member_expr_with_type : Error<
+  "expected variable%select{| or static data member|, static data member, "
+  "or non-static data member of current class}0 of type '%1'">;
 def err_omp_expected_var_name_member_expr_or_array_item : Error<
   "expected variable name%select{|, data member of current class}0, array element or array section">;
 def err_omp_expected_addressable_lvalue_or_array_item : Error<

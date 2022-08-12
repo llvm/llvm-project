@@ -661,7 +661,7 @@ private:
   // `F` of `S`. The type `E` must be either `CallExpr` or `CXXConstructExpr`.
   template <typename E>
   void transferInlineCall(const E *S, const FunctionDecl *F) {
-    if (!Options.ContextSensitive)
+    if (!Options.ContextSensitiveOpts)
       return;
 
     const ControlFlowContext *CFCtx = Env.getControlFlowContext(F);

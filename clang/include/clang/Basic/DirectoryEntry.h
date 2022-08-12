@@ -22,6 +22,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorOr.h"
 
+#include <utility>
+
 namespace clang {
 namespace FileMgr {
 
@@ -125,7 +127,7 @@ public:
   MapEntryOptionalStorage() : MaybeRef(optional_none_tag()) {}
 
   template <class... ArgTypes>
-  explicit MapEntryOptionalStorage(llvm::in_place_t, ArgTypes &&...Args)
+  explicit MapEntryOptionalStorage(std::in_place_t, ArgTypes &&...Args)
       : MaybeRef(std::forward<ArgTypes>(Args)...) {}
 
   void reset() { MaybeRef = optional_none_tag(); }
@@ -189,8 +191,8 @@ public:
   OptionalStorage() = default;
 
   template <class... ArgTypes>
-  explicit OptionalStorage(in_place_t, ArgTypes &&...Args)
-      : StorageImpl(in_place_t{}, std::forward<ArgTypes>(Args)...) {}
+  explicit OptionalStorage(std::in_place_t, ArgTypes &&...Args)
+      : StorageImpl(std::in_place_t{}, std::forward<ArgTypes>(Args)...) {}
 
   OptionalStorage &operator=(clang::DirectoryEntryRef Ref) {
     StorageImpl::operator=(Ref);

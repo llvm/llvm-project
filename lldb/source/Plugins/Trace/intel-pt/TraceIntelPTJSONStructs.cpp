@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "TraceIntelPTJSONStructs.h"
-
 #include "llvm/Support/JSON.h"
 #include <string>
 

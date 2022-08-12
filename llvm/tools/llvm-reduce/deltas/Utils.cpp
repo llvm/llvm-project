@@ -12,9 +12,14 @@
 
 #include "Utils.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/GlobalAlias.h"
 
 using namespace llvm;
 
 Value *llvm::getDefaultValue(Type *T) {
   return T->isVoidTy() ? PoisonValue::get(T) : Constant::getNullValue(T);
+}
+
+bool llvm::hasAliasUse(Function &F) {
+  return any_of(F.users(), [](User *U) { return isa<GlobalAlias>(U); });
 }

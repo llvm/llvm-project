@@ -5,6 +5,7 @@ And other SBFrame API tests.
 
 from __future__ import print_function
 
+import io
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -42,8 +43,7 @@ class FrameAPITestCase(TestBase):
         # depth of 3 of the 'c' leaf function.
         callsOfA = 0
 
-        from six import StringIO as SixStringIO
-        session = SixStringIO()
+        session = io.StringIO()
         while process.GetState() == lldb.eStateStopped:
             thread = lldbutil.get_stopped_thread(
                 process, lldb.eStopReasonBreakpoint)

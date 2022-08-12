@@ -76,7 +76,7 @@ protected:
 
   template <typename... ArgTypes>
   explicit HashBuilderBase(ArgTypes &&...Args)
-      : OptionalHasher(in_place, std::forward<ArgTypes>(Args)...),
+      : OptionalHasher(std::in_place, std::forward<ArgTypes>(Args)...),
         Hasher(*OptionalHasher) {}
 
 private:

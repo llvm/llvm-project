@@ -86,23 +86,34 @@ createPrivateVarSyms(Fortran::lower::AbstractConverter &converter,
 
 template <typename Op>
 static bool privatizeVars(Op &op, Fortran::lower::AbstractConverter &converter,
-                          const Fortran::parser::OmpClauseList &opClauseList) {
+                          const Fortran::parser::OmpClauseList &opClauseList,
+                          Fortran::lower::pft::Evaluation &eval) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto insPt = firOpBuilder.saveInsertionPoint();
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
   bool hasFirstPrivateOp = false;
   bool hasLastPrivateOp = false;
+  // Symbols in private and/or firstprivate clauses.
+  llvm::SetVector<const Fortran::semantics::Symbol *> privatizedSymbols;
+  auto collectOmpObjectListSymbol =
+      [&](const Fortran::parser::OmpObjectList &ompObjectList,
+          llvm::SetVector<const Fortran::semantics::Symbol *> &symbolSet) {
+        for (const Fortran::parser::OmpObject &ompObject : ompObjectList.v) {
+          Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
+          symbolSet.insert(sym);
+        }
+      };
   // We need just one ICmpOp for multiple LastPrivate clauses.
   mlir::arith::CmpIOp cmpOp;
 
   for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
     if (const auto &privateClause =
             std::get_if<Fortran::parser::OmpClause::Private>(&clause.u)) {
-      createPrivateVarSyms(converter, privateClause);
+      collectOmpObjectListSymbol(privateClause->v, privatizedSymbols);
     } else if (const auto &firstPrivateClause =
                    std::get_if<Fortran::parser::OmpClause::Firstprivate>(
                        &clause.u)) {
-      createPrivateVarSyms(converter, firstPrivateClause);
+      collectOmpObjectListSymbol(firstPrivateClause->v, privatizedSymbols);
       hasFirstPrivateOp = true;
     } else if (const auto &lastPrivateClause =
                    std::get_if<Fortran::parser::OmpClause::Lastprivate>(
@@ -167,6 +178,65 @@ static bool privatizeVars(Op &op, Fortran::lower::AbstractConverter &converter,
       hasLastPrivateOp = true;
     }
   }
+
+  // Symbols in regions with default(private/firstprivate) clause.
+  // FIXME: Collect the symbols with private/firstprivate flag in the region of
+  // the construct with default(private/firstprivate) clause excluding the
+  // symbols with the same private/firstprivate flag in the inner nested
+  // regions.
+  llvm::SetVector<const Fortran::semantics::Symbol *> defaultSymbols;
+  llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInNestedRegions;
+  llvm::SetVector<const Fortran::semantics::Symbol *> symbolsInParentRegions;
+  auto collectSymbols = [&](Fortran::semantics::Symbol::Flag flag) {
+    converter.collectSymbolSet(eval, defaultSymbols, flag,
+                               /*collectSymbols=*/true,
+                               /*collectHostAssociatedSymbols=*/true);
+    for (auto &e : eval.getNestedEvaluations()) {
+      if (e.hasNestedEvaluations())
+        converter.collectSymbolSet(e, symbolsInNestedRegions, flag,
+                                   /*collectSymbols=*/true,
+                                   /*collectHostAssociatedSymbols=*/false);
+      else
+        converter.collectSymbolSet(e, symbolsInParentRegions, flag,
+                                   /*collectSymbols=*/false,
+                                   /*collectHostAssociatedSymbols=*/true);
+    }
+  };
+
+  for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
+    if (const auto &defaultClause =
+            std::get_if<Fortran::parser::OmpClause::Default>(&clause.u)) {
+      if (defaultClause->v.v ==
+          Fortran::parser::OmpDefaultClause::Type::Private)
+        collectSymbols(Fortran::semantics::Symbol::Flag::OmpPrivate);
+      else if (defaultClause->v.v ==
+               Fortran::parser::OmpDefaultClause::Type::Firstprivate)
+        collectSymbols(Fortran::semantics::Symbol::Flag::OmpFirstPrivate);
+    }
+  }
+
+  auto privatizeSymbol = [&](const Fortran::semantics::Symbol *sym) {
+    // Privatization for symbols which are pre-determined (like loop index
+    // variables) happen separately, for everything else privatize here.
+    if (sym->test(Fortran::semantics::Symbol::Flag::OmpPreDetermined))
+      return;
+    bool success = converter.createHostAssociateVarClone(*sym);
+    (void)success;
+    assert(success && "Privatization failed due to existing binding");
+    if (sym->test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate)) {
+      converter.copyHostAssociateVar(*sym);
+      hasFirstPrivateOp = true;
+    }
+  };
+
+  for (auto sym : privatizedSymbols)
+    privatizeSymbol(sym);
+
+  for (auto sym : defaultSymbols)
+    if (!symbolsInNestedRegions.contains(sym) &&
+        !symbolsInParentRegions.contains(sym) &&
+        !privatizedSymbols.contains(sym))
+      privatizeSymbol(sym);
   if (hasFirstPrivateOp)
     firOpBuilder.create<mlir::omp::BarrierOp>(converter.getCurrentLocation());
   firOpBuilder.restoreInsertionPoint(insPt);
@@ -233,9 +303,9 @@ static void threadPrivatizeVars(Fortran::lower::AbstractConverter &converter,
   };
 
   llvm::SetVector<const Fortran::semantics::Symbol *> threadprivateSyms;
-  converter.collectSymbolSet(eval, threadprivateSyms,
-                             Fortran::semantics::Symbol::Flag::OmpThreadprivate,
-                             /*isUltimateSymbol=*/false);
+  converter.collectSymbolSet(
+      eval, threadprivateSyms,
+      Fortran::semantics::Symbol::Flag::OmpThreadprivate);
   std::set<Fortran::semantics::SourceName> threadprivateSymNames;
 
   // For a COMMON block, the ThreadprivateOp is generated for itself instead of
@@ -459,7 +529,7 @@ createBodyOfOp(Op &op, Fortran::lower::AbstractConverter &converter,
 
   // Handle privatization. Do not privatize if this is the outer operation.
   if (clauses && !outerCombined) {
-    bool lastPrivateOp = privatizeVars(op, converter, *clauses);
+    bool lastPrivateOp = privatizeVars(op, converter, *clauses, eval);
     // LastPrivatization, due to introduction of
     // new control flow, changes the insertion point,
     // thus restore it.

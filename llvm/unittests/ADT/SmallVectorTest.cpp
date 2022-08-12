@@ -203,7 +203,7 @@ template <typename VectorT> void makeSequence(VectorT &v, int start, int end) {
 }
 
 template <typename T, unsigned N>
-static unsigned NumBuiltinElts(const SmallVector<T, N> &) {
+constexpr static unsigned NumBuiltinElts(const SmallVector<T, N> &) {
   return N;
 }
 
@@ -1142,6 +1142,25 @@ TEST(SmallVectorTest, InitializerList) {
   EXPECT_TRUE(makeArrayRef(V2).equals({4, 5, 3, 2}));
 }
 
+TEST(SmallVectorTest, ToVector) {
+  {
+    std::vector<char> v = {'a', 'b', 'c'};
+    auto Vector = to_vector<4>(v);
+    static_assert(NumBuiltinElts(Vector) == 4u);
+    ASSERT_EQ(3u, Vector.size());
+    for (size_t I = 0; I < v.size(); ++I)
+      EXPECT_EQ(v[I], Vector[I]);
+  }
+  {
+    std::vector<char> v = {'a', 'b', 'c'};
+    auto Vector = to_vector(v);
+    static_assert(NumBuiltinElts(Vector) != 4u);
+    ASSERT_EQ(3u, Vector.size());
+    for (size_t I = 0; I < v.size(); ++I)
+      EXPECT_EQ(v[I], Vector[I]);
+  }
+}
+
 struct To {
   int Content;
   friend bool operator==(const To &LHS, const To &RHS) {
@@ -1177,6 +1196,26 @@ TEST(SmallVectorTest, ConstructFromArrayRefOfConvertibleType) {
     ASSERT_EQ(4u, NumBuiltinElts(Vector));
     for (size_t I = 0; I < Array.size(); ++I)
       EXPECT_EQ(Array[I], Vector[I]);
+  }
+}
+
+TEST(SmallVectorTest, ToVectorOf) {
+  To to1{1}, to2{2}, to3{3};
+  std::vector<From> StdVector = {From(to1), From(to2), From(to3)};
+  {
+    llvm::SmallVector<To> Vector = llvm::to_vector_of<To>(StdVector);
+
+    ASSERT_EQ(StdVector.size(), Vector.size());
+    for (size_t I = 0; I < StdVector.size(); ++I)
+      EXPECT_EQ(StdVector[I], Vector[I]);
+  }
+  {
+    auto Vector = llvm::to_vector_of<To, 4>(StdVector);
+
+    ASSERT_EQ(StdVector.size(), Vector.size());
+    static_assert(NumBuiltinElts(Vector) == 4u);
+    for (size_t I = 0; I < StdVector.size(); ++I)
+      EXPECT_EQ(StdVector[I], Vector[I]);
   }
 }
 
@@ -1475,11 +1514,6 @@ protected:
       "\"that invalidates it";
 
   VectorT V;
-
-  template <typename T, unsigned N>
-  static unsigned NumBuiltinElts(const SmallVector<T, N> &) {
-    return N;
-  }
 
   void SetUp() override {
     SmallVectorTestBase::SetUp();

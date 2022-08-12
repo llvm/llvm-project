@@ -201,8 +201,8 @@ struct MemberTypeInfo : public FieldTypeInfo {
       : FieldTypeInfo(RefName, Path, Name), Access(Access) {}
 
   bool operator==(const MemberTypeInfo &Other) const {
-    return std::tie(Type, Name, Access) ==
-           std::tie(Other.Type, Other.Name, Other.Access);
+    return std::tie(Type, Name, Access, Description) ==
+           std::tie(Other.Type, Other.Name, Other.Access, Other.Description);
   }
 
   // Access level associated with this info (public, protected, private, none).
@@ -210,6 +210,8 @@ struct MemberTypeInfo : public FieldTypeInfo {
   // with value 0 to be used as the default.
   // (AS_public = 0, AS_protected = 1, AS_private = 2, AS_none = 3)
   AccessSpecifier Access = AccessSpecifier::AS_public;
+
+  std::vector<CommentInfo> Description; // Comment description of this field.
 };
 
 struct Location {

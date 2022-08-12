@@ -7,9 +7,6 @@ end up with a dump of the WoW64 layer.  In that case, LLDB must do extra work to
 get the 32-bit register contexts.
 """
 
-from six import iteritems
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

@@ -260,3 +260,22 @@ TEST(Decl, ModuleAndInternalLinkage) {
   EXPECT_EQ(b->getLinkageInternal(), ModuleLinkage);
   EXPECT_EQ(g->getLinkageInternal(), ModuleLinkage);
 }
+
+TEST(Decl, GetNonTransparentDeclContext) {
+  llvm::Annotations Code(R"(
+    export module m3;
+    export template <class> struct X {
+      template <class Self> friend void f(Self &&self) {
+        (Self&)self;
+      }
+    };)");
+
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code.code(), /*Args=*/{"-std=c++20"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto *f = selectFirst<FunctionDecl>(
+      "f", match(functionDecl(hasName("f")).bind("f"), Ctx));
+
+  EXPECT_TRUE(f->getNonTransparentDeclContext()->isFileContext());
+}

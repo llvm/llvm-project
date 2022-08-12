@@ -13,6 +13,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
+include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
@@ -270,9 +271,20 @@ def SequenceOp : TransformDialectOp<"sequence",
     The transformations indicated by the sequence are applied in order of their
     appearance. Each value produced by a transformation within the sequence
     corresponds to an operation or a group of operations in the payload IR.
-    During application, if any transformation in the sequence fails, the entire
-    sequence fails immediately leaving the payload IR in potentially invalid
-    state, i.e., this operation offers no transformation rollback capabilities.
+    The behavior of the operation when a nested transformation produces a
+    silenceable error is controlled by the `failure_propagation_mode` attribute.
+    When set to `propagate`, the failure of any nested transformation in the
+    sequence implies immediate failure of the entire sequence with a silenceable
+    error, and no further transformation is attempted. When set to `suppress`,
+    silenceable errors in nested operations are ignored and further
+    transformations are applied. Beware that even silenceable errors may leave
+    the payload IR in a state unsuitable for further transformations. It is
+    the responsibility of the caller to ensure the following transformations
+    are robust enough when errors are suppressed. Definite errors reported by
+    nested transformations abort the sequence regardless of the propagation
+    mode. The set of modes may be extended in the future, e.g., to collect
+    silenceable errors and report them after attempting all transformations in
+    the sequence.
 
     The entry block of this operation has a single argument that maps to either
     the operand if provided or the top-level container operation of the payload
@@ -281,12 +293,13 @@ def SequenceOp : TransformDialectOp<"sequence",
     another sequence.
   }];
 
-  let arguments = (ins Optional<PDL_Operation>:$root);
+  let arguments = (ins FailurePropagationMode:$failure_propagation_mode,
+                       Optional<PDL_Operation>:$root);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$body);
 
   let assemblyFormat =
-    "($root^)? attr-dict-with-keyword regions (`:` type($results)^)?";
+    "($root^)? `failures` `(` $failure_propagation_mode `)` attr-dict-with-keyword regions (`:` type($results)^)?";
 
   let extraClassDeclaration = [{
     /// Allow the dialect prefix to be omitted.
@@ -316,7 +329,7 @@ def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
         pdl.rewrite %0 with "transform.dialect"
       }
 
-      sequence %arg0 {
+      sequence %arg0 failures(propagate) {
       ^bb0(%arg1: !pdl.operation):
         %1 = pdl_match @my_pattern in %arg1
         // Use %1 as handle

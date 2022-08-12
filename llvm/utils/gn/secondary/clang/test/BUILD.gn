@@ -45,6 +45,7 @@ write_lit_config("lit_site_cfg") {
   extra_values = [
     "LLVM_WITH_Z3=0",
     "CLANG_BUILD_EXAMPLES=0",
+    "CLANG_BUILT_STANDALONE=0",
     "CLANG_DEFAULT_CXX_STDLIB=",  # Empty string means "default value" here.
     "CLANG_DEFAULT_PIE_ON_LINUX=0",
     "CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL=1",
@@ -178,12 +179,12 @@ group("test") {
     "//llvm/tools/llvm-readobj:symlinks",
     "//llvm/tools/llvm-symbolizer:symlinks",
     "//llvm/tools/opt",
-    "//llvm/tools/split-file",
     "//llvm/tools/yaml2obj",
     "//llvm/utils/FileCheck",
     "//llvm/utils/count",
     "//llvm/utils/llvm-lit",
     "//llvm/utils/not",
+    "//llvm/utils/split-file",
   ]
   if (clang_enable_arcmt) {
     deps += [

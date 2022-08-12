@@ -2455,4 +2455,18 @@ void testValueInRangeOfEnumerationValues() {
   constexpr EMaxInt x20 = static_cast<EMaxInt>((long)__INT_MAX__+1);
   // expected-error@-1 {{integer value 2147483648 is outside the valid range of values [-2147483648, 2147483647] for this enumeration type}}
 }
+
+enum SortOrder {
+  AscendingOrder,
+  DescendingOrder
+};
+
+class A {
+  static void f(SortOrder order);
+};
+
+void A::f(SortOrder order) {
+  if (order == SortOrder(-1)) // ok, not a constant expression context
+    return;
+}
 }

@@ -351,8 +351,11 @@ if( LLVM_ENABLE_PIC )
   endif()
 endif()
 
-if(NOT WIN32 AND NOT CYGWIN AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX"))
-  # MinGW warns if -fvisibility-inlines-hidden is used.
+if((NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX")) AND
+   (NOT (WIN32 OR CYGWIN) OR (MINGW AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")))
+  # GCC for MinGW does nothing about -fvisibility-inlines-hidden, but warns
+  # about use of the attributes. As long as we don't use the attributes (to
+  # override the default) we shouldn't set the command line options either.
   # GCC on AIX warns if -fvisibility-inlines-hidden is used and Clang on AIX doesn't currently support visibility.
   check_cxx_compiler_flag("-fvisibility-inlines-hidden" SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG)
   append_if(SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG "-fvisibility-inlines-hidden" CMAKE_CXX_FLAGS)

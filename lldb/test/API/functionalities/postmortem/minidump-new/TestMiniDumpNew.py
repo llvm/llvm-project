@@ -2,8 +2,6 @@
 Test basics of Minidump debugging.
 """
 
-from six import iteritems
-
 import shutil
 
 import lldb
@@ -327,7 +325,7 @@ class MiniDumpNewTestCase(TestBase):
 
         expected_stack = {1: 'bar', 2: 'foo', 3: '_start'}
         self.assertGreaterEqual(thread.GetNumFrames(), len(expected_stack))
-        for index, name in iteritems(expected_stack):
+        for index, name in expected_stack.items():
             frame = thread.GetFrameAtIndex(index)
             self.assertTrue(frame.IsValid())
             function_name = frame.GetFunctionName()

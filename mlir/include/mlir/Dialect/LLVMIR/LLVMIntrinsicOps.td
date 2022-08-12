@@ -37,10 +37,13 @@ class LLVM_TernarySameArgsIntrinsicOp<string func, list<Trait> traits = []> :
 class LLVM_CountZerosIntrinsicOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([NoSideEffect], traits)> {
-  let arguments = (ins LLVM_Type:$in, I<1>:$zero_undefined);
+  let arguments = (ins LLVM_Type:$in, I1:$zero_undefined);
 }
 
-def LLVM_AbsOp : LLVM_UnaryIntrinsicOp<"abs">;
+def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [NoSideEffect]> {
+  let arguments = (ins LLVM_Type:$in, I1:$is_int_min_poison);
+}
+
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrinsicOp<"copysign">;
 def LLVM_CosOp : LLVM_UnaryIntrinsicOp<"cos">;
 def LLVM_ExpOp : LLVM_UnaryIntrinsicOp<"exp">;

@@ -88,6 +88,18 @@ TEST(BitcodeTest, emitRecordInfoBitcode) {
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
+  // Documentation for the data member.
+  CommentInfo TopComment;
+  TopComment.Kind = "FullComment";
+  TopComment.Children.emplace_back(std::make_unique<CommentInfo>());
+  CommentInfo *Brief = TopComment.Children.back().get();
+  Brief->Kind = "ParagraphComment";
+  Brief->Children.emplace_back(std::make_unique<CommentInfo>());
+  Brief->Children.back()->Kind = "TextComment";
+  Brief->Children.back()->Name = "ParagraphComment";
+  Brief->Children.back()->Text = "Value of the thing.";
+  I.Bases.back().Members.back().Description.emplace_back(std::move(TopComment));
+
   I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
   I.ChildFunctions.emplace_back();
   I.ChildEnums.emplace_back();

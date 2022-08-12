@@ -12,7 +12,6 @@
 #include "DecodedThread.h"
 #include "PerfContextSwitchDecoder.h"
 #include "forward-declarations.h"
-
 #include "intel-pt.h"
 
 namespace lldb_private {
