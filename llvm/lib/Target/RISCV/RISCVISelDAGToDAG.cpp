@@ -27,8 +27,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscv-isel"
 
-namespace llvm {
-namespace RISCV {
+namespace llvm::RISCV {
 #define GET_RISCVVSSEGTable_IMPL
 #define GET_RISCVVLSEGTable_IMPL
 #define GET_RISCVVLXSEGTable_IMPL
@@ -39,8 +38,7 @@ namespace RISCV {
 #define GET_RISCVVSXTable_IMPL
 #define GET_RISCVMaskedPseudosTable_IMPL
 #include "RISCVGenSearchableTables.inc"
-} // namespace RISCV
-} // namespace llvm
+} // namespace llvm::RISCV
 
 void RISCVDAGToDAGISel::PreprocessISelDAG() {
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
