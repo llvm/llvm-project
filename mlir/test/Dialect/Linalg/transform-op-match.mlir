@@ -43,7 +43,7 @@ func.func @match_complex_attribute(%arg0: tensor<12x128x32xf32>)
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %match_attr = transform.structured.match
         ops{["linalg.generic"]}
