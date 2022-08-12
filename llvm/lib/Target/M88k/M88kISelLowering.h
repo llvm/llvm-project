@@ -39,14 +39,6 @@ enum NodeType : unsigned {
 
   // Get the Lower 16 bits from a 32-bit immediate.
   Lo16,
-
-  // Bit-field instructions.
-  CLR,
-  SET,
-  EXT,
-  EXTU,
-  MAK,
-  ROT,
 };
 } // end namespace M88kISD
 

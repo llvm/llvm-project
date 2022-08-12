@@ -40,14 +40,6 @@ def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
 def callseq_end   : SDNode<"ISD::CALLSEQ_END", SDT_CallSeqEnd,
                                 [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
-
-def m88k_clr : SDNode<"M88kISD::CLR", SDTIntBinOp>;
-def m88k_set : SDNode<"M88kISD::SET", SDTIntBinOp>;
-def m88k_ext : SDNode<"M88kISD::EXT", SDTIntBinOp>;
-def m88k_extu : SDNode<"M88kISD::EXTU", SDTIntBinOp>;
-def m88k_mak : SDNode<"M88kISD::MAK", SDTIntBinOp>;
-def m88k_rot : SDNode<"M88kISD::ROT", SDTIntBinOp>;
-
 // Hi16 and Lo16 nodes are used to handle global addresses.
 def m88k_hi : SDNode<"M88kISD::Hi16", SDTIntUnaryOp>;
 def m88k_lo : SDNode<"M88kISD::Lo16", SDTIntUnaryOp>;
@@ -347,28 +339,25 @@ def : Pat<(i32 imm:$imm),
           (ORri (ORriu (i32 R0), (HI16 i32:$imm)), (LO16 i32:$imm))>;
 
 // Multiclass for bit-field instructions with triadic registers or immediates.
-multiclass Bitfield<bits<6> Func, string OpcStr, SDNode OpNode> {
-  def rr  : F_BR<Func, OpcStr,
-                 [(set GPR:$rd, (OpNode GPR:$rs1, GPR:$rs2))]>;
+multiclass Bitfield<bits<6> Func, string OpcStr> {
+  def rr  : F_BR<Func, OpcStr>;
   if !ne(OpcStr, "rot") then {
     def rwo : F_BI<Func,
                   (outs GPR:$rd), (ins GPR:$rs1, bfimm:$w5o5),
-                  OpcStr,
-                  [(set GPR:$rd, (OpNode GPR:$rs1, bfimm:$w5o5))]>;
+                  OpcStr>;
   } else {
     def rwo : F_BIOFS<Func,
                      (outs GPR:$rd), (ins GPR:$rs1, bfoffset:$o5),
-                     OpcStr,
-                     [(set GPR:$rd, (OpNode GPR:$rs1, bfoffset:$o5))]>;
+                     OpcStr>;
   }
 }
 
-defm CLR  : Bitfield<0b100000, "clr", m88k_clr>;
-defm SET  : Bitfield<0b100010, "set", m88k_set>;
-defm EXT  : Bitfield<0b100100, "ext", m88k_ext>;
-defm EXTU : Bitfield<0b100110, "extu", m88k_extu>;
-defm MAK  : Bitfield<0b101000, "mak", m88k_mak>;
-defm ROT  : Bitfield<0b101010, "rot", m88k_rot>;
+defm CLR  : Bitfield<0b100000, "clr">;
+defm SET  : Bitfield<0b100010, "set">;
+defm EXT  : Bitfield<0b100100, "ext">;
+defm EXTU : Bitfield<0b100110, "extu">;
+defm MAK  : Bitfield<0b101000, "mak">;
+defm ROT  : Bitfield<0b101010, "rot">;
 
 // Pattern for shifts
 def : Pat<(sra GPR:$rs1, GPR:$rs2), (EXTrr GPR:$rs1, GPR:$rs2)>;
