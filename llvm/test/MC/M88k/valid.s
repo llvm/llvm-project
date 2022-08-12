@@ -523,10 +523,11 @@ isns:
 # CHECK: ld.d.usr     %r2, %r3[%r4]      | encoding: [0xf4,0x43,0x13,0x04]
 
 # load address
-# TODO ld.b %r0, %r1[%r2]
+  lda.b        %r0, %r1[%r2]
   lda.h        %r0, %r1[%r2]
   lda          %r1, %r2[%r3]
   lda.d        %r2, %r3[%r4]
+# CHECK: lda.b        %r0, %r1[%r2]      | encoding: [0xf4,0x01,0x3e,0x02]
 # CHECK: lda.h        %r0, %r1[%r2]      | encoding: [0xf4,0x01,0x3a,0x02]
 # CHECK: lda          %r1, %r2[%r3]      | encoding: [0xf4,0x22,0x36,0x03]
 # CHECK: lda.d        %r2, %r3[%r4]      | encoding: [0xf4,0x43,0x32,0x04]
@@ -732,10 +733,10 @@ isns:
 # CHECK: xcr          %r0, %r3, %cr10    | encoding: [0x80,0x03,0xc1,0x43]
 
 # exchange register with memory
-#  xmem.bu      %r0, %r1, 0
-#  xmem.bu      %r0, %r1, 10
-#  xmem         %r0, %r1, 0
-#  xmem         %r1, %r2, 4096
+  xmem.bu      %r0, %r1, 0
+  xmem.bu      %r0, %r1, 10
+  xmem         %r0, %r1, 0
+  xmem         %r1, %r2, 4096
   xmem.bu      %r0, %r1, %r2
   xmem         %r1, %r2, %r3
   xmem.bu.usr  %r4, %r5, %r6
@@ -744,10 +745,10 @@ isns:
   xmem         %r3, %r4[%r5]
   xmem.bu.usr  %r4, %r5[%r9]
   xmem.usr     %r5, %r6[%r10]
-# COM: CHECK: xmem.bu      %r0, %r1, 0        | encoding: [0x]
-# COM: CHECK: xmem.bu      %r0, %r1, 10       | encoding: [0x]
-# COM: CHECK: xmem         %r0, %r1, 0        | encoding: [0x]
-# COM: CHECK: xmem         %r1, %r2, 4096     | encoding: [0x]
+# CHECK: xmem.bu      %r0, %r1, 0        | encoding: [0x00,0x01,0x00,0x00]
+# CHECK: xmem.bu      %r0, %r1, 10       | encoding: [0x00,0x01,0x00,0x0a]
+# CHECK: xmem         %r0, %r1, 0        | encoding: [0x04,0x01,0x00,0x00]
+# CHECK: xmem         %r1, %r2, 4096     | encoding: [0x04,0x22,0x10,0x00]
 # CHECK: xmem.bu      %r0, %r1, %r2      | encoding: [0xf4,0x01,0x00,0x02]
 # CHECK: xmem         %r1, %r2, %r3      | encoding: [0xf4,0x22,0x04,0x03]
 # CHECK: xmem.bu.usr  %r4, %r5, %r6      | encoding: [0xf4,0x85,0x01,0x06]

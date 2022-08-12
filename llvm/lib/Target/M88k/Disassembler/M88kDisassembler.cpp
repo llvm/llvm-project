@@ -261,9 +261,7 @@ DecodeStatus M88kDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (STI.getFeatureBits()[M88k::Proc88110])
       return decodeInstruction(DecoderTableMC8811032, MI, Inst, Address, this,
                                STI);
-    else
-      return decodeInstruction(DecoderTableMC8810032, MI, Inst, Address, this,
-                               STI);
+    return MCDisassembler::Fail;
   }
   return MCDisassembler::Success;
 }

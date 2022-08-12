@@ -50,7 +50,7 @@ def M88110SchedModel : SchedMachineModel {
   // In-order CPU.
   let MicroOpBufferSize = 0;
 
-  list<Predicate> UnsupportedFeatures = [IsMC88110];
+  list<Predicate> UnsupportedFeatures = [MC88110];
 
   // Not finished yet.
   let CompleteModel = 0;
