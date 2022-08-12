@@ -3500,19 +3500,19 @@ public:
 
     FileAction action;
     if (m_standard_input_field->IsSpecified()) {
-      action.Open(STDIN_FILENO, m_standard_input_field->GetFileSpec(), true,
-                  false);
-      launch_info.AppendFileAction(action);
+      if (action.Open(STDIN_FILENO, m_standard_input_field->GetFileSpec(), true,
+                      false))
+        launch_info.AppendFileAction(action);
     }
     if (m_standard_output_field->IsSpecified()) {
-      action.Open(STDOUT_FILENO, m_standard_output_field->GetFileSpec(), false,
-                  true);
-      launch_info.AppendFileAction(action);
+      if (action.Open(STDOUT_FILENO, m_standard_output_field->GetFileSpec(),
+                      false, true))
+        launch_info.AppendFileAction(action);
     }
     if (m_standard_error_field->IsSpecified()) {
-      action.Open(STDERR_FILENO, m_standard_error_field->GetFileSpec(), false,
-                  true);
-      launch_info.AppendFileAction(action);
+      if (action.Open(STDERR_FILENO, m_standard_error_field->GetFileSpec(),
+                      false, true))
+        launch_info.AppendFileAction(action);
     }
   }
 
@@ -6821,7 +6821,7 @@ public:
     bool set_selected_line_to_pc = false;
 
     if (update_location) {
-      const bool process_alive = process ? process->IsAlive() : false;
+      const bool process_alive = process->IsAlive();
       bool thread_changed = false;
       if (process_alive) {
         thread = exe_ctx.GetThreadPtr();
@@ -7209,8 +7209,10 @@ public:
                   window.Printf("%*s", desc_x - window.GetCursorX(), "");
                 window.MoveCursor(window_width - stop_description_len - 15,
                                   line_y);
-                window.PrintfTruncated(1, "<<< Thread %u: %s ",
-                                       thread->GetIndexID(), stop_description);
+                if (thread)
+                  window.PrintfTruncated(1, "<<< Thread %u: %s ",
+                                         thread->GetIndexID(),
+                                         stop_description);
               }
             } else {
               window.Printf("%*s", window_width - window.GetCursorX() - 1, "");
