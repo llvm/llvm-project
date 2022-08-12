@@ -147,17 +147,35 @@ void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
 
 void MapperJITLinkMemoryManager::deallocate(
     std::vector<FinalizedAlloc> Allocs, OnDeallocatedFunction OnDeallocated) {
-  std::lock_guard<std::mutex> Lock(Mutex);
-
+  std::vector<ExecutorAddr> Bases;
+  Bases.reserve(Allocs.size());
   for (auto &FA : Allocs) {
     ExecutorAddr Addr = FA.getAddress();
-    ExecutorAddrDiff Size = UsedMemory[Addr];
-    UsedMemory.erase(Addr);
-
-    AvailableMemory.push_back({Addr, Addr + Size});
-    FA.release();
+    Bases.push_back(Addr);
   }
-  OnDeallocated(Error::success());
+
+  Mapper->deinitialize(Bases, [this, Allocs = std::move(Allocs),
+                               OnDeallocated = std::move(OnDeallocated)](
+                                  llvm::Error Err) mutable {
+    if (Err)
+      OnDeallocated(std::move(Err));
+
+    {
+      std::lock_guard<std::mutex> Lock(Mutex);
+
+      for (auto &FA : Allocs) {
+        ExecutorAddr Addr = FA.getAddress();
+        ExecutorAddrDiff Size = UsedMemory[Addr];
+
+        UsedMemory.erase(Addr);
+        AvailableMemory.push_back({Addr, Addr + Size});
+
+        FA.release();
+      }
+    }
+
+    OnDeallocated(Error::success());
+  });
 }
 
 } // end namespace orc
