@@ -94,23 +94,27 @@ static const char *const sameVariadicSizeValueRangeCalcCode = R"(
 /// the op has an attribute specifying the size of each operand/result segment
 /// (variadic or not).
 static const char *const attrSizedSegmentValueRangeCalcCode = R"(
+  const uint32_t *sizeAttrValueIt = &*sizeAttr.value_begin<uint32_t>();
+  if (sizeAttr.isSplat())
+    return {*sizeAttrValueIt * index, *sizeAttrValueIt};
+
   unsigned start = 0;
   for (unsigned i = 0; i < index; ++i)
-    start += sizeAttr[i];
-  return {start, sizeAttr[index]};
+    start += sizeAttrValueIt[i];
+  return {start, sizeAttrValueIt[index]};
 )";
 /// The code snippet to initialize the sizes for the value range calculation.
 ///
 /// {0}: The code to get the attribute.
 static const char *const adapterSegmentSizeAttrInitCode = R"(
   assert(odsAttrs && "missing segment size attribute for op");
-  auto sizeAttr = {0}.cast<::mlir::DenseI32ArrayAttr>();
+  auto sizeAttr = {0}.cast<::mlir::DenseIntElementsAttr>();
 )";
 /// The code snippet to initialize the sizes for the value range calculation.
 ///
 /// {0}: The code to get the attribute.
 static const char *const opSegmentSizeAttrInitCode = R"(
-  auto sizeAttr = {0}.cast<::mlir::DenseI32ArrayAttr>();
+  auto sizeAttr = {0}.cast<::mlir::DenseIntElementsAttr>();
 )";
 
 /// The logic to calculate the actual value range for a declared operand
@@ -120,12 +124,13 @@ static const char *const opSegmentSizeAttrInitCode = R"(
 /// {1}: The index of the main operand.
 static const char *const variadicOfVariadicAdaptorCalcCode = R"(
   auto tblgenTmpOperands = getODSOperands({1});
-  auto sizes = {0}();
+  auto sizeAttrValues = {0}().getValues<uint32_t>();
+  auto sizeAttrIt = sizeAttrValues.begin();
 
   ::llvm::SmallVector<::mlir::ValueRange> tblgenTmpOperandGroups;
-  for (int i = 0, e = sizes.size(); i < e; ++i) {{
-    tblgenTmpOperandGroups.push_back(tblgenTmpOperands.take_front(sizes[i]));
-    tblgenTmpOperands = tblgenTmpOperands.drop_front(sizes[i]);
+  for (int i = 0, e = ::llvm::size(sizeAttrValues); i < e; ++i, ++sizeAttrIt) {{
+    tblgenTmpOperandGroups.push_back(tblgenTmpOperands.take_front(*sizeAttrIt));
+    tblgenTmpOperands = tblgenTmpOperands.drop_front(*sizeAttrIt);
   }
   return tblgenTmpOperandGroups;
 )";
@@ -603,8 +608,9 @@ static void genNativeTraitAttrVerifier(MethodBody &body,
   // {3}: Emit error prefix.
   const char *const checkAttrSizedValueSegmentsCode = R"(
   {
-    auto sizeAttr = tblgen_{0}.cast<::mlir::DenseI32ArrayAttr>();
-    auto numElements = sizeAttr.asArrayRef().size();
+    auto sizeAttr = tblgen_{0}.cast<::mlir::DenseIntElementsAttr>();
+    auto numElements =
+        sizeAttr.getType().cast<::mlir::ShapedType>().getNumElements();
     if (numElements != {1})
       return {3}"'{0}' attribute for specifying {2} segments must have {1} "
                 "elements, but got ") << numElements;
@@ -2050,7 +2056,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
            << op.getGetterName(
                   operand.constraint.getVariadicOfVariadicSegmentSizeAttr())
            << "AttrName(" << builderOpState << ".name), " << odsBuilder
-           << ".getDenseI32ArrayAttr(rangeSegments));"
+           << ".getI32TensorAttr(rangeSegments));"
            << "  }\n";
       continue;
     }
@@ -2065,7 +2071,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
     std::string sizes = op.getGetterName(operandSegmentAttrName);
     body << "  " << builderOpState << ".addAttribute(" << sizes << "AttrName("
          << builderOpState << ".name), "
-         << "odsBuilder.getDenseI32ArrayAttr({";
+         << "odsBuilder.getI32VectorAttr({";
     interleaveComma(llvm::seq<int>(0, op.getNumOperands()), body, [&](int i) {
       const NamedTypeConstraint &operand = op.getOperand(i);
       if (!operand.isVariableLength()) {

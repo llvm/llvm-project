@@ -716,14 +716,14 @@ def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",
     Variadic<I32>:$b,
     I32:$c,
     Variadic<I32>:$d,
-    DenseI32ArrayAttr:$operand_segment_sizes
+    I32ElementsAttr:$operand_segment_sizes
   );
 }
 
 def AttrSizedResultOp : TEST_Op<"attr_sized_results",
                                 [AttrSizedResultSegments]> {
   let arguments = (ins
-    DenseI32ArrayAttr:$result_segment_sizes
+    I32ElementsAttr:$result_segment_sizes
   );
   let results = (outs
     Variadic<I32>:$a,
@@ -2056,7 +2056,7 @@ def FormatVariadicOfVariadicOperand
    : TEST_Op<"format_variadic_of_variadic_operand"> {
   let arguments = (ins
     VariadicOfVariadic<I64, "operand_segments">:$operand,
-    DenseI32ArrayAttr:$operand_segments
+    I32ElementsAttr:$operand_segments
   );
   let assemblyFormat = [{ $operand `:` type($operand) attr-dict}];
 }

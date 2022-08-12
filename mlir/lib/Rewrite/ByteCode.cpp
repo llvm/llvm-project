@@ -1713,11 +1713,11 @@ executeGetOperandsResults(RangeT values, Operation *op, unsigned index,
     LLVM_DEBUG(llvm::dbgs()
                << "  * Extracting values from `" << attrSizedSegments << "`\n");
 
-    auto segmentAttr = op->getAttrOfType<DenseI32ArrayAttr>(attrSizedSegments);
-    if (!segmentAttr || segmentAttr.asArrayRef().size() <= index)
+    auto segmentAttr = op->getAttrOfType<DenseElementsAttr>(attrSizedSegments);
+    if (!segmentAttr || segmentAttr.getNumElements() <= index)
       return nullptr;
 
-    ArrayRef<int32_t> segments = segmentAttr;
+    auto segments = segmentAttr.getValues<int32_t>();
     unsigned startIndex =
         std::accumulate(segments.begin(), segments.begin() + index, 0);
     values = values.slice(startIndex, *std::next(segments.begin(), index));
