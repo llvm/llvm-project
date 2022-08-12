@@ -1051,7 +1051,7 @@ module @patterns {
 // CHECK-NEXT:  "test.success"(%[[INPUTS]]#4) : (i32) -> ()
 module @ir attributes { test.get_operands_2 } {
   %inputs:5 = "test.producer"() : () -> (i32, i32, i32, i32, i32)
-  "test.attr_sized_operands"(%inputs#0, %inputs#1, %inputs#2, %inputs#3, %inputs#4) {operand_segment_sizes = dense<[0, 4, 1, 0]> : vector<4xi32>} : (i32, i32, i32, i32, i32) -> ()
+  "test.attr_sized_operands"(%inputs#0, %inputs#1, %inputs#2, %inputs#3, %inputs#4) {operand_segment_sizes = array<i32: 0, 4, 1, 0>} : (i32, i32, i32, i32, i32) -> ()
 }
 
 // -----
@@ -1204,7 +1204,7 @@ module @patterns {
 // CHECK: %[[RESULTS_2_SINGLE:.*]] = "test.success"() : () -> i32
 // CHECK: "test.consumer"(%[[RESULTS_1]]#0, %[[RESULTS_1]]#1, %[[RESULTS_1]]#2, %[[RESULTS_1]]#3, %[[RESULTS_2]]) : (i32, i32, i32, i32, i32) -> ()
 module @ir attributes { test.get_results_2 } {
-  %results:5 = "test.attr_sized_results"() {result_segment_sizes = dense<[0, 4, 1, 0]> : vector<4xi32>} : () -> (i32, i32, i32, i32, i32)
+  %results:5 = "test.attr_sized_results"() {result_segment_sizes = array<i32: 0, 4, 1, 0>} : () -> (i32, i32, i32, i32, i32)
   "test.consumer"(%results#0, %results#1, %results#2, %results#3, %results#4) : (i32, i32, i32, i32, i32) -> ()
 }
 

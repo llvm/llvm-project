@@ -113,7 +113,7 @@ createRegionOp(fir::FirOpBuilder &builder, mlir::Location loc,
   builder.create<Terminator>(loc);
 
   op->setAttr(Op::getOperandSegmentSizeAttr(),
-              builder.getI32VectorAttr(operandSegments));
+              builder.getDenseI32ArrayAttr(operandSegments));
 
   // Place the insertion point to the start of the first block.
   builder.setInsertionPointToStart(&block);
@@ -129,7 +129,7 @@ createSimpleOp(fir::FirOpBuilder &builder, mlir::Location loc,
   llvm::ArrayRef<mlir::Type> argTy;
   Op op = builder.create<Op>(loc, argTy, operands);
   op->setAttr(Op::getOperandSegmentSizeAttr(),
-              builder.getI32VectorAttr(operandSegments));
+              builder.getDenseI32ArrayAttr(operandSegments));
   return op;
 }
 

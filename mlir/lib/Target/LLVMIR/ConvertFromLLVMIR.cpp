@@ -906,7 +906,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
 
     if (brInst->isConditional()) {
       state.addAttribute(LLVM::CondBrOp::getOperandSegmentSizeAttr(),
-                         b.getI32VectorAttr(operandSegmentSizes));
+                         b.getDenseI32ArrayAttr(operandSegmentSizes));
     }
 
     b.create(state);
