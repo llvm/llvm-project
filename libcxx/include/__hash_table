@@ -19,6 +19,7 @@
 #include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/swap_allocator.h>
+#include <__type_traits/can_extract_key.h>
 #include <__utility/swap.h>
 #include <cmath>
 #include <initializer_list>
