@@ -5412,6 +5412,8 @@ void DiagnoseBuiltinDeprecation(Sema& S, TypeTrait Kind,
       Replacement = BTT_IsTriviallyAssignable;
       break;
     case UTT_HasTrivialCopy:
+      Replacement = UTT_IsTriviallyCopyable;
+      break;
     case UTT_HasTrivialDefaultConstructor:
     case UTT_HasTrivialMoveConstructor:
       Replacement = TT_IsTriviallyConstructible;
