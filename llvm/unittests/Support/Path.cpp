@@ -816,6 +816,28 @@ TEST_F(FileSystemTest, RealPathNoReadPerm) {
 
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/noreadperm"));
 }
+TEST_F(FileSystemTest, RemoveDirectoriesNoExePerm) {
+  SmallString<64> Expanded;
+
+  ASSERT_NO_ERROR(
+      fs::create_directories(Twine(TestDirectory) + "/noexeperm/foo"));
+  ASSERT_TRUE(fs::exists(Twine(TestDirectory) + "/noexeperm/foo"));
+
+  fs::setPermissions(Twine(TestDirectory) + "/noexeperm",
+                     fs::all_read | fs::all_write);
+
+  ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/noexeperm",
+                                         /*IgnoreErrors=*/true));
+  ASSERT_TRUE(fs::exists(Twine(TestDirectory) + "/noexeperm"));
+  ASSERT_EQ(fs::remove_directories(Twine(TestDirectory) + "/noexeperm",
+                                   /*IgnoreErrors=*/false),
+            errc::permission_denied);
+
+  fs::setPermissions(Twine(TestDirectory) + "/noexeperm", fs::all_perms);
+
+  ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/noexeperm",
+                                         /*IgnoreErrors=*/false));
+}
 #endif
 
 
