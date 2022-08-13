@@ -32,6 +32,7 @@ enum Kind {
   // Unary operations.
   kAbsF,
   kAbsC,
+  kAbsI,
   kCeilF,
   kFloorF,
   kSqrtF,
