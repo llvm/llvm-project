@@ -68,6 +68,9 @@ Bug Fixes
 - Fixed a crash-on-valid with consteval evaluation of a list-initialized
   constructor for a temporary object. This fixes
   `Issue 55871 <https://github.com/llvm/llvm-project/issues/55871>`_.
+- Fix `#57008 <https://github.com/llvm/llvm-project/issues/57008>`_ - Builtin
+  C++ language extension type traits instantiated by a template with unexpected
+  number of arguments cause an assertion fault.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
