@@ -639,8 +639,7 @@ define i32 @PR45977_f2(i32 %a, i32 %b) {
 define i8 @or_xor_common_op_commute0(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_xor_common_op_commute0(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[OR]], [[XOR]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[OR]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %or = or i8 %x, %y
@@ -653,8 +652,7 @@ define i8 @or_xor_common_op_commute1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_xor_common_op_commute1(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[OR]])
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[OR]], [[XOR]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[OR]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %or = or i8 %y, %x
@@ -669,7 +667,7 @@ define i8 @or_xor_common_op_commute2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Z:%.*]], [[X]]
 ; CHECK-NEXT:    call void @use(i8 [[XOR]])
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[OR]], [[XOR]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[OR]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %or = or i8 %x, %y
@@ -685,7 +683,7 @@ define i8 @or_xor_common_op_commute3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    call void @use(i8 [[OR]])
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Z:%.*]], [[X]]
 ; CHECK-NEXT:    call void @use(i8 [[XOR]])
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[OR]], [[XOR]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[OR]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %or = or i8 %y, %x
@@ -699,8 +697,7 @@ define i8 @or_xor_common_op_commute3(i8 %x, i8 %y, i8 %z) {
 define <2 x i8> @or_xor_common_op_commute4(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @or_xor_common_op_commute4(
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i8> [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[XOR]], [[OR]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i8> [[OR]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %or = or <2 x i8> %x, %y
@@ -712,8 +709,7 @@ define <2 x i8> @or_xor_common_op_commute4(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z
 define i8 @or_xor_common_op_commute5(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_xor_common_op_commute5(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[XOR]], [[OR]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[OR]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %or = or i8 %y, %x
@@ -725,8 +721,7 @@ define i8 @or_xor_common_op_commute5(i8 %x, i8 %y, i8 %z) {
 define i8 @or_xor_common_op_commute6(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_xor_common_op_commute6(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[XOR]], [[OR]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[OR]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %or = or i8 %x, %y
@@ -738,8 +733,7 @@ define i8 @or_xor_common_op_commute6(i8 %x, i8 %y, i8 %z) {
 define i8 @or_xor_common_op_commute7(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_xor_common_op_commute7(
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Z:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = or i8 [[XOR]], [[OR]]
+; CHECK-NEXT:    [[R:%.*]] = or i8 [[OR]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %or = or i8 %y, %x
@@ -747,6 +741,8 @@ define i8 @or_xor_common_op_commute7(i8 %x, i8 %y, i8 %z) {
   %r = or i8 %xor, %or
   ret i8 %r
 }
+
+; negative test - need common operand
 
 define i8 @or_xor_notcommon_op(i8 %x, i8 %y, i8 %z, i8 %q) {
 ; CHECK-LABEL: @or_xor_notcommon_op(
