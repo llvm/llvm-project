@@ -524,16 +524,32 @@ bindRequiredArrayElementToEnvironment(ProgramStateRef State,
   //       |     `-DeclRefExpr
   //       `-ArrayInitIndexExpr
   //
+  // The resulting expression for a multidimensional array.
+  // ArrayInitLoopExpr                  <-- we're here
+  // |-OpaqueValueExpr
+  // | `-DeclRefExpr                    <-- match this
+  // `-ArrayInitLoopExpr
+  //   |-OpaqueValueExpr
+  //   | `-ArraySubscriptExpr
+  //   |   |-ImplicitCastExpr
+  //   |   | `-OpaqueValueExpr
+  //   |   |   `-DeclRefExpr
+  //   |   `-ArrayInitIndexExpr
+  //   `-CXXConstructExpr             <-- extract this
+  //     ` ...
+
+  const auto *OVESrc = AILE->getCommonExpr()->getSourceExpr();
+
   // HACK: There is no way we can put the index of the array element into the
   // CFG unless we unroll the loop, so we manually select and bind the required
   // parameter to the environment.
-  const auto *CE = cast<CXXConstructExpr>(AILE->getSubExpr());
-  const auto *OVESrc = AILE->getCommonExpr()->getSourceExpr();
+  const auto *CE =
+      cast<CXXConstructExpr>(extractElementInitializerFromNestedAILE(AILE));
 
   SVal Base = UnknownVal();
   if (const auto *ME = dyn_cast<MemberExpr>(OVESrc))
     Base = State->getSVal(ME, LCtx);
-  else if (const auto *DRE = cast<DeclRefExpr>(OVESrc))
+  else if (const auto *DRE = dyn_cast<DeclRefExpr>(OVESrc))
     Base = State->getLValue(cast<VarDecl>(DRE->getDecl()), LCtx);
   else
     llvm_unreachable("ArrayInitLoopExpr contains unexpected source expression");
@@ -596,8 +612,9 @@ void ExprEngine::handleConstructor(const Expr *E,
     if (AILE) {
       // Only set this once even though we loop through it multiple times.
       if (!getPendingInitLoop(State, CE, LCtx))
-        State = setPendingInitLoop(State, CE, LCtx,
-                                   AILE->getArraySize().getLimitedValue());
+        State = setPendingInitLoop(
+            State, CE, LCtx,
+            getContext().getArrayInitLoopExprElementCount(AILE));
 
       State = bindRequiredArrayElementToEnvironment(
           State, AILE, LCtx, svalBuilder.makeArrayIndex(Idx));

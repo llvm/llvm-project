@@ -6905,6 +6905,21 @@ ASTContext::getConstantArrayElementCount(const ConstantArrayType *CA)  const {
   return ElementCount;
 }
 
+uint64_t ASTContext::getArrayInitLoopExprElementCount(
+    const ArrayInitLoopExpr *AILE) const {
+  if (!AILE)
+    return 0;
+
+  uint64_t ElementCount = 1;
+
+  do {
+    ElementCount *= AILE->getArraySize().getZExtValue();
+    AILE = dyn_cast<ArrayInitLoopExpr>(AILE->getSubExpr());
+  } while (AILE);
+
+  return ElementCount;
+}
+
 /// getFloatingRank - Return a relative rank for floating point types.
 /// This routine will assert if passed a built-in type that isn't a float.
 static FloatingRank getFloatingRank(QualType T) {
