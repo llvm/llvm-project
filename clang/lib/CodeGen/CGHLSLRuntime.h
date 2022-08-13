@@ -18,13 +18,10 @@
 #include "clang/Basic/HLSLRuntime.h"
 
 namespace llvm {
-class Value;
 class GlobalVariable;
 class Function;
 } // namespace llvm
 namespace clang {
-class CallExpr;
-class Type;
 class VarDecl;
 
 class FunctionDecl;
