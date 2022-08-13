@@ -45,8 +45,9 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor",
   let results = (outs AnyTensor:$result);
 
   let assemblyFormat = [{
-    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes) attr-dict
-    `:` type($result)
+    custom<DynamicIndexList>($sizes, $static_sizes,
+                               "ShapedType::kDynamicSize")
+    attr-dict `:` type($result)
   }];
 
   let extraClassDeclaration = [{
