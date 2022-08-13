@@ -303,19 +303,21 @@ u32 ChainOrigin(u32 id, StackTrace *stack) {
   return chained.raw_id();
 }
 
-// 'descr' is created at compile time and contains '----' in the beginning.
-// When we see descr for the first time we replace '----' with a uniq id
-// and set the origin to (id | (31-th bit)).
-static inline void SetAllocaOrigin(void *a, uptr size, char *descr, uptr pc) {
+// Current implementation separates the 'id_ptr' from the 'descr' and makes
+// 'descr' constant.
+// Previous implementation 'descr' is created at compile time and contains
+// '----' in the beginning.  When we see descr for the first time we replace
+// '----' with a uniq id and set the origin to (id | (31-th bit)).
+static inline void SetAllocaOrigin(void *a, uptr size, u32 *id_ptr, char *descr,
+                                   uptr pc) {
   static const u32 dash = '-';
   static const u32 first_timer =
       dash + (dash << 8) + (dash << 16) + (dash << 24);
-  u32 *id_ptr = (u32 *)descr;
   u32 id = *id_ptr;
-  if (id == first_timer) {
+  if (id == 0 || id == first_timer) {
     u32 idx = atomic_fetch_add(&NumStackOriginDescrs, 1, memory_order_relaxed);
     CHECK_LT(idx, kNumStackOriginDescrs);
-    StackOriginDescr[idx] = descr + 4;
+    StackOriginDescr[idx] = descr;
     StackOriginPC[idx] = pc;
     id = Origin::CreateStackOrigin(idx).raw_id();
     *id_ptr = id;
@@ -602,14 +604,21 @@ void __msan_set_origin(const void *a, uptr size, u32 origin) {
 }
 
 void __msan_set_alloca_origin(void *a, uptr size, char *descr) {
-  SetAllocaOrigin(a, size, descr, GET_CALLER_PC());
+  SetAllocaOrigin(a, size, reinterpret_cast<u32 *>(descr), descr + 4,
+                  GET_CALLER_PC());
 }
 
 void __msan_set_alloca_origin4(void *a, uptr size, char *descr, uptr pc) {
   // Intentionally ignore pc and use return address. This function is here for
   // compatibility, in case program is linked with library instrumented by
   // older clang.
-  SetAllocaOrigin(a, size, descr, GET_CALLER_PC());
+  SetAllocaOrigin(a, size, reinterpret_cast<u32 *>(descr), descr + 4,
+                  GET_CALLER_PC());
+}
+
+void __msan_set_alloca_origin_with_descr(void *a, uptr size, u32 *id_ptr,
+                                         char *descr) {
+  SetAllocaOrigin(a, size, id_ptr, descr, GET_CALLER_PC());
 }
 
 u32 __msan_chain_origin(u32 id) {
