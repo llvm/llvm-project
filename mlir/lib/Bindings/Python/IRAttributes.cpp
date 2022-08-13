@@ -183,7 +183,6 @@ public:
     c.def("__iter__", [](const PyDenseArrayAttribute<EltTy, DerivedT> &arr) {
       return PyDenseArrayIterator(arr);
     });
-    // Bind a concat.
     c.def("__add__", [](PyDenseArrayAttribute<EltTy, DerivedT> &arr,
                         py::list extras) {
       std::vector<EltTy> values;
@@ -278,9 +277,9 @@ public:
     PyArrayAttributeIterator &dunderIter() { return *this; }
 
     PyAttribute dunderNext() {
-      if (nextIndex >= mlirArrayAttrGetNumElements(attr.get())) {
+      // TODO: Throw is an inefficient way to stop iteration.
+      if (nextIndex >= mlirArrayAttrGetNumElements(attr.get()))
         throw py::stop_iteration();
-      }
       return PyAttribute(attr.getContext(),
                          mlirArrayAttrGetElement(attr.get(), nextIndex++));
     }
