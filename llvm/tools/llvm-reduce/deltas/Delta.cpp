@@ -173,7 +173,8 @@ CheckChunk(Chunk &ChunkToCheckForUninterestingness,
   // Some reductions may result in invalid IR. Skip such reductions.
   if (verifyReducerWorkItem(*Clone, &errs())) {
     if (AbortOnInvalidReduction) {
-      errs() << "Invalid reduction\n";
+      errs() << "Invalid reduction, aborting.\n";
+      Clone->print(errs());
       exit(1);
     }
     errs() << " **** WARNING | reduction resulted in invalid module, "
