@@ -1287,6 +1287,15 @@ SmallVector<ValueTypeFromRangeType<R>> to_vector(R &&Range) {
   return {std::begin(Range), std::end(Range)};
 }
 
+template <typename Out, unsigned Size, typename R>
+SmallVector<Out, Size> to_vector_of(R &&Range) {
+  return {std::begin(Range), std::end(Range)};
+}
+
+template <typename Out, typename R> SmallVector<Out> to_vector_of(R &&Range) {
+  return {std::begin(Range), std::end(Range)};
+}
+
 } // end namespace llvm
 
 namespace std {
