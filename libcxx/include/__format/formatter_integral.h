@@ -217,7 +217,7 @@ _LIBCPP_HIDE_FROM_ABI auto __format_integer(
 
 #  ifndef _LIBCPP_HAS_NO_LOCALIZATION
   if (__specs.__std_.__locale_specific_form_) {
-    const auto& __np  = use_facet<numpunct<_CharT>>(__ctx.locale());
+    const auto& __np  = std::use_facet<numpunct<_CharT>>(__ctx.locale());
     string __grouping = __np.grouping();
     ptrdiff_t __size  = __last - __first;
     // Writing the grouped form has more overhead than the normal output
@@ -310,7 +310,7 @@ __format_integer(_Tp __value, auto& __ctx, __format_spec::__parsed_specification
   auto __r        = std::__to_unsigned_like(__value);
   bool __negative = __value < 0;
   if (__negative)
-    __r = __complement(__r);
+    __r = std::__complement(__r);
 
   return __formatter::__format_integer(__r, __ctx, __specs, __negative);
 }
@@ -342,7 +342,7 @@ __format_bool(bool __value, auto& __ctx, __format_spec::__parsed_specifications<
     -> decltype(__ctx.out()) {
 #  ifndef _LIBCPP_HAS_NO_LOCALIZATION
   if (__specs.__std_.__locale_specific_form_) {
-    const auto& __np           = use_facet<numpunct<_CharT>>(__ctx.locale());
+    const auto& __np           = std::use_facet<numpunct<_CharT>>(__ctx.locale());
     basic_string<_CharT> __str = __value ? __np.truename() : __np.falsename();
     return __formatter::__write_string_no_precision(basic_string_view<_CharT>{__str}, __ctx.out(), __specs);
   }

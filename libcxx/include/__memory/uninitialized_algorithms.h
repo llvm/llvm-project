@@ -293,7 +293,7 @@ template <class _ForwardIterator, class _Size>
 inline _LIBCPP_HIDE_FROM_ABI
 _ForwardIterator uninitialized_value_construct_n(_ForwardIterator __first, _Size __n) {
     using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
-    return __uninitialized_value_construct_n<_ValueType>(_VSTD::move(__first), __n);
+    return std::__uninitialized_value_construct_n<_ValueType>(_VSTD::move(__first), __n);
 }
 
 // uninitialized_move

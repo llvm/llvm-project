@@ -1157,8 +1157,8 @@ template <class _CharT>
 void
 regex_traits<_CharT>::__init()
 {
-    __ct_ = &use_facet<ctype<char_type> >(__loc_);
-    __col_ = &use_facet<collate<char_type> >(__loc_);
+    __ct_ = &std::use_facet<ctype<char_type> >(__loc_);
+    __col_ = &std::use_facet<collate<char_type> >(__loc_);
 }
 
 template <class _CharT>
@@ -1233,7 +1233,7 @@ regex_traits<_CharT>::__lookup_collatename(_ForwardIterator __f,
     string_type __r;
     if (!__s.empty())
     {
-        __r = __get_collation_name(__s.c_str());
+        __r = std::__get_collation_name(__s.c_str());
         if (__r.empty() && __s.size() <= 2)
         {
             __r = __col_->transform(__s.data(), __s.data() + __s.size());
@@ -1296,7 +1296,7 @@ regex_traits<_CharT>::__lookup_classname(_ForwardIterator __f,
 {
     string_type __s(__f, __l);
     __ct_->tolower(&__s[0], &__s[0] + __s.size());
-    return __get_classname(__s.c_str(), __icase);
+    return std::__get_classname(__s.c_str(), __icase);
 }
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -2094,7 +2094,7 @@ __l_anchor_multiline<_CharT>::__exec(__state& __s) const
     }
     else if (__multiline_ &&
              !__s.__at_first_ &&
-             __is_eol(*_VSTD::prev(__s.__current_)))
+             std::__is_eol(*_VSTD::prev(__s.__current_)))
     {
         __s.__do_ = __state::__accept_but_not_consume;
         __s.__node_ = this->first();
@@ -2136,7 +2136,7 @@ __r_anchor_multiline<_CharT>::__exec(__state& __s) const
         __s.__do_ = __state::__accept_but_not_consume;
         __s.__node_ = this->first();
     }
-    else if (__multiline_ && __is_eol(*__s.__current_))
+    else if (__multiline_ && std::__is_eol(*__s.__current_))
     {
         __s.__do_ = __state::__accept_but_not_consume;
         __s.__node_ = this->first();
@@ -2405,7 +2405,7 @@ public:
                     for (size_t __i = 0; __i < __e.size(); ++__i)
                         __e[__i] = __traits_.translate(__e[__i]);
                 }
-                __ranges_.push_back(make_pair(
+                __ranges_.push_back(std::make_pair(
                                   __traits_.transform(__b.begin(), __b.end()),
                                   __traits_.transform(__e.begin(), __e.end())));
             }
@@ -2418,20 +2418,20 @@ public:
                     __b[0] = __traits_.translate_nocase(__b[0]);
                     __e[0] = __traits_.translate_nocase(__e[0]);
                 }
-                __ranges_.push_back(make_pair(_VSTD::move(__b), _VSTD::move(__e)));
+                __ranges_.push_back(std::make_pair(_VSTD::move(__b), _VSTD::move(__e)));
             }
         }
     _LIBCPP_INLINE_VISIBILITY
     void __add_digraph(_CharT __c1, _CharT __c2)
         {
             if (__icase_)
-                __digraphs_.push_back(make_pair(__traits_.translate_nocase(__c1),
-                                                __traits_.translate_nocase(__c2)));
+                __digraphs_.push_back(std::make_pair(__traits_.translate_nocase(__c1),
+                                                     __traits_.translate_nocase(__c2)));
             else if (__collate_)
-                __digraphs_.push_back(make_pair(__traits_.translate(__c1),
-                                                __traits_.translate(__c2)));
+                __digraphs_.push_back(std::make_pair(__traits_.translate(__c1),
+                                                     __traits_.translate(__c2)));
             else
-                __digraphs_.push_back(make_pair(__c1, __c2));
+                __digraphs_.push_back(std::make_pair(__c1, __c2));
         }
     _LIBCPP_INLINE_VISIBILITY
     void __add_equivalence(const string_type& __s)
@@ -5523,7 +5523,7 @@ public:
                regex_constants::match_flag_type __flags = regex_constants::format_default) const
         {
             basic_string<char_type, _ST, _SA> __r;
-            format(back_inserter(__r), __fmt.data(), __fmt.data() + __fmt.size(),
+            format(std::back_inserter(__r), __fmt.data(), __fmt.data() + __fmt.size(),
                    __flags);
             return __r;
         }
@@ -5533,7 +5533,7 @@ public:
                regex_constants::match_flag_type __flags = regex_constants::format_default) const
         {
             string_type __r;
-            format(back_inserter(__r), __fmt,
+            format(std::back_inserter(__r), __fmt,
                    __fmt + char_traits<char_type>::length(__fmt), __flags);
             return __r;
         }
@@ -6794,7 +6794,7 @@ regex_replace(const basic_string<_CharT, _ST, _SA>& __s,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     basic_string<_CharT, _ST, _SA> __r;
-    _VSTD::regex_replace(back_inserter(__r), __s.begin(), __s.end(), __e,
+    _VSTD::regex_replace(std::back_inserter(__r), __s.begin(), __s.end(), __e,
                         __fmt.c_str(), __flags);
     return __r;
 }
@@ -6807,7 +6807,7 @@ regex_replace(const basic_string<_CharT, _ST, _SA>& __s,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     basic_string<_CharT, _ST, _SA> __r;
-    _VSTD::regex_replace(back_inserter(__r), __s.begin(), __s.end(), __e,
+    _VSTD::regex_replace(std::back_inserter(__r), __s.begin(), __s.end(), __e,
                         __fmt, __flags);
     return __r;
 }
@@ -6821,7 +6821,7 @@ regex_replace(const _CharT* __s,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     basic_string<_CharT> __r;
-    _VSTD::regex_replace(back_inserter(__r), __s,
+    _VSTD::regex_replace(std::back_inserter(__r), __s,
                         __s + char_traits<_CharT>::length(__s), __e,
                         __fmt.c_str(), __flags);
     return __r;
@@ -6836,7 +6836,7 @@ regex_replace(const _CharT* __s,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     basic_string<_CharT> __r;
-    _VSTD::regex_replace(back_inserter(__r), __s,
+    _VSTD::regex_replace(std::back_inserter(__r), __s,
                         __s + char_traits<_CharT>::length(__s), __e,
                         __fmt, __flags);
     return __r;

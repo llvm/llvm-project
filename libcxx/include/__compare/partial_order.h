@@ -29,6 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // [cmp.alg]
 namespace __partial_order {
     struct __fn {
+    // NOLINTBEGIN(libcpp-robust-against-adl) partial_order should use ADL, but only here
         template<class _Tp, class _Up>
             requires is_same_v<decay_t<_Tp>, decay_t<_Up>>
         _LIBCPP_HIDE_FROM_ABI static constexpr auto
@@ -36,6 +37,7 @@ namespace __partial_order {
             noexcept(noexcept(partial_ordering(partial_order(_VSTD::forward<_Tp>(__t), _VSTD::forward<_Up>(__u)))))
             -> decltype(      partial_ordering(partial_order(_VSTD::forward<_Tp>(__t), _VSTD::forward<_Up>(__u))))
             { return          partial_ordering(partial_order(_VSTD::forward<_Tp>(__t), _VSTD::forward<_Up>(__u))); }
+    // NOLINTEND(libcpp-robust-against-adl)
 
         template<class _Tp, class _Up>
             requires is_same_v<decay_t<_Tp>, decay_t<_Up>>

@@ -498,7 +498,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __format_locale_specific_form(
     const __float_result& __result,
     _VSTD::locale __loc,
     __format_spec::__parsed_specifications<_CharT> __specs) {
-  const auto& __np = use_facet<numpunct<_CharT>>(__loc);
+  const auto& __np = std::use_facet<numpunct<_CharT>>(__loc);
   string __grouping = __np.grouping();
   char* __first = __result.__integral;
   // When no radix point or exponent are present __last will be __result.__last.
