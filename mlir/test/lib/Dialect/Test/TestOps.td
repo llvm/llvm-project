@@ -170,15 +170,15 @@ def AnyAttrOfOp : TEST_Op<"any_attr_of_i32_str"> {
 
 def NonNegIntAttrOp : TEST_Op<"non_negative_int_attr"> {
   let arguments = (ins
-      Confined<I32Attr, [IntNonNegative]>:$i32attr,
-      Confined<I64Attr, [IntNonNegative]>:$i64attr
+      ConfinedAttr<I32Attr, [IntNonNegative]>:$i32attr,
+      ConfinedAttr<I64Attr, [IntNonNegative]>:$i64attr
   );
 }
 
 def PositiveIntAttrOp : TEST_Op<"positive_int_attr"> {
   let arguments = (ins
-      Confined<I32Attr, [IntPositive]>:$i32attr,
-      Confined<I64Attr, [IntPositive]>:$i64attr
+      ConfinedAttr<I32Attr, [IntPositive]>:$i32attr,
+      ConfinedAttr<I64Attr, [IntPositive]>:$i64attr
   );
 }
 
@@ -377,7 +377,7 @@ def OpWithBitEnumVerticalBar : TEST_Op<"op_with_bit_enum_vbar"> {
 
 def SymbolRefOp : TEST_Op<"symbol_ref_attr"> {
   let arguments = (ins
-    Confined<FlatSymbolRefAttr, [ReferToOp<"func::FuncOp">]>:$symbol
+    ConfinedAttr<FlatSymbolRefAttr, [ReferToOp<"func::FuncOp">]>:$symbol
   );
 }
 
@@ -1127,7 +1127,7 @@ def : Pattern<(OpNativeCodeCall6 $arg1, $arg2),
               [(OpNativeCodeCall7 (BindMultipleNativeCodeCallResult:$native__0 $arg1, $arg2)),
                (OpNativeCodeCall7 $native__1)]>;
 
-// Test AllAttrConstraintsOf.
+// Test AllAttrOf.
 def OpAllAttrConstraint1 : TEST_Op<"all_attr_constraint_of1"> {
   let arguments = (ins I64ArrayAttr:$attr);
   let results = (outs I32);
@@ -1144,7 +1144,7 @@ def Constraint1 : AttrConstraint<
     CPred<"$_self.cast<ArrayAttr>()[1].cast<::mlir::IntegerAttr>().getInt() == 1">,
     "[1] == 1">;
 def : Pat<(OpAllAttrConstraint1
-            AllAttrConstraintsOf<[Constraint0, Constraint1]>:$attr),
+            AllAttrOf<[Constraint0, Constraint1]>:$attr),
           (OpAllAttrConstraint2 $attr)>;
 
 // Op for testing RewritePattern removing op with inner ops.

@@ -240,7 +240,7 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments,
 def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
   let summary = "single directive";
   let description = [{
-    The single construct specifies that the associated structured block is 
+    The single construct specifies that the associated structured block is
     executed by only one of the threads in the team (not necessarily the
     master thread), in the context of its implicit task. The other threads
     in the team, which do not execute the block, wait at an implicit barrier
@@ -345,7 +345,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              OptionalAttr<ScheduleModifierAttr>:$schedule_modifier,
              UnitAttr:$simd_modifier,
              UnitAttr:$nowait,
-             Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
+             ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$ordered_val,
              OptionalAttr<OrderKindAttr>:$order_val,
              UnitAttr:$inclusive);
 
@@ -395,17 +395,17 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
 }
 
 //===----------------------------------------------------------------------===//
-// Simd construct [2.9.3.1] 
+// Simd construct [2.9.3.1]
 //===----------------------------------------------------------------------===//
 
 def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
                          AllTypesMatch<["lowerBound", "upperBound", "step"]>]> {
  let summary = "simd loop construct";
   let description = [{
-    The simd construct can be applied to a loop to indicate that the loop can be 
-    transformed into a SIMD loop (that is, multiple iterations of the loop can 
-    be executed concurrently using SIMD instructions).. The lower and upper 
-    bounds specify a half-open range: the range includes the lower bound but 
+    The simd construct can be applied to a loop to indicate that the loop can be
+    transformed into a SIMD loop (that is, multiple iterations of the loop can
+    be executed concurrently using SIMD instructions).. The lower and upper
+    bounds specify a half-open range: the range includes the lower bound but
     does not include the upper bound. If the `inclusive` attribute is specified
     then the upper bound is also included.
 
@@ -424,7 +424,7 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
       // block operations
       omp.yield
     }
-    ``` 
+    ```
   }];
 
   // TODO: Add other clauses
@@ -432,10 +432,10 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
              Variadic<IntLikeType>:$upperBound,
              Variadic<IntLikeType>:$step,
              Optional<I1>:$if_expr,
-             Confined<OptionalAttr<I64Attr>, [IntPositive]>:$simdlen,
+             ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$simdlen,
              UnitAttr:$inclusive
      );
- 
+
   let regions = (region AnyRegion:$region);
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `)`
@@ -449,15 +449,15 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
     unsigned getNumLoops() { return lowerBound().size(); }
 
   }];
- 
+
   let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1; 
+  let hasVerifier = 1;
 }
 
 
 def YieldOp : OpenMP_Op<"yield",
     [NoSideEffect, ReturnLike, Terminator,
-     ParentOneOf<["WsLoopOp", "ReductionDeclareOp", 
+     ParentOneOf<["WsLoopOp", "ReductionDeclareOp",
      "AtomicUpdateOp", "SimdLoopOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
@@ -967,7 +967,7 @@ def OrderedOp : OpenMP_Op<"ordered"> {
   }];
 
   let arguments = (ins OptionalAttr<ClauseDependAttr>:$depend_type_val,
-             Confined<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$num_loops_val,
+             ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$num_loops_val,
              Variadic<AnyType>:$depend_vec_vars);
 
   let assemblyFormat = [{
@@ -1046,7 +1046,7 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>]> {
                        DefaultValuedAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let assemblyFormat = [{
-    $v `=` $x 
+    $v `=` $x
     oilist( `memory_order` `(` custom<ClauseAttr>($memory_order_val) `)`
           | `hint` `(` custom<SynchronizationHint>($hint_val) `)`)
     `:` type($x) attr-dict
@@ -1329,7 +1329,7 @@ def CancellationPointOp : OpenMP_Op<"cancellationpoint"> {
 // 2.19.5.7 declare reduction Directive
 //===----------------------------------------------------------------------===//
 
-def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol, 
+def ReductionDeclareOp : OpenMP_Op<"reduction.declare", [Symbol,
                                                          IsolatedFromAbove]> {
   let summary = "declares a reduction kind";
 

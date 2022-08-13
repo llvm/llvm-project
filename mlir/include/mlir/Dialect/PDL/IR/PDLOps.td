@@ -369,7 +369,7 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
     /// Returns true if the operation type referenced supports result type
     /// inference.
     bool hasTypeInference();
-    
+
     /// Returns true if the operation type referenced might support result type
     /// inference, i.e. it supports type reference or is currently not
     /// registered in the context. Returns false if the root operation name
@@ -411,7 +411,7 @@ def PDL_PatternOp : PDL_Op<"pattern", [
     ```
   }];
 
-  let arguments = (ins Confined<I16Attr, [IntNonNegative]>:$benefit,
+  let arguments = (ins ConfinedAttr<I16Attr, [IntNonNegative]>:$benefit,
                        OptionalAttr<SymbolNameAttr>:$sym_name);
   let regions = (region SizedRegion<1>:$body);
   let assemblyFormat = [{
