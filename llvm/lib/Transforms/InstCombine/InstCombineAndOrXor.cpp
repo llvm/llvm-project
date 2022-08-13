@@ -2914,6 +2914,13 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     if (Op0 == A || Op0 == B)
       return BinaryOperator::CreateOr(A, B);
 
+    // (A | ?) | (A ^ B) --> (A | ?) | B
+    // (B | ?) | (A ^ B) --> (B | ?) | A
+    if (match(Op0, m_c_Or(m_Specific(A), m_Value())))
+      return BinaryOperator::CreateOr(Op0, B);
+    if (match(Op0, m_c_Or(m_Specific(B), m_Value())))
+      return BinaryOperator::CreateOr(Op0, A);
+
     // (A & B) | (A ^ B) --> A | B
     // (B & A) | (A ^ B) --> A | B
     if (match(Op0, m_And(m_Specific(A), m_Specific(B))) ||
