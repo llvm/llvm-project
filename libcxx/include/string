@@ -593,17 +593,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template<class _CharT, class _Traits, class _Allocator>
 basic_string<_CharT, _Traits, _Allocator>
-_LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __x,
           const basic_string<_CharT, _Traits, _Allocator>& __y);
 
 template<class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_HIDDEN _LIBCPP_CONSTEXPR_AFTER_CXX17
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const _CharT* __x, const basic_string<_CharT,_Traits,_Allocator>& __y);
 
 template<class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 basic_string<_CharT, _Traits, _Allocator>
 operator+(_CharT __x, const basic_string<_CharT,_Traits,_Allocator>& __y);
 
@@ -613,7 +613,7 @@ basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __x, const _CharT* __y);
 
 template<class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __x, _CharT __y);
 
@@ -4346,7 +4346,7 @@ operator>=(const _CharT* __lhs,
 // operator +
 
 template<class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
           const basic_string<_CharT, _Traits, _Allocator>& __rhs)
@@ -4365,7 +4365,7 @@ operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_HIDDEN _LIBCPP_CONSTEXPR_AFTER_CXX17
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const _CharT* __lhs , const basic_string<_CharT,_Traits,_Allocator>& __rhs)
 {
@@ -4383,7 +4383,7 @@ operator+(const _CharT* __lhs , const basic_string<_CharT,_Traits,_Allocator>& _
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 basic_string<_CharT, _Traits, _Allocator>
 operator+(_CharT __lhs, const basic_string<_CharT,_Traits,_Allocator>& __rhs)
 {
@@ -4418,7 +4418,7 @@ operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs, const _CharT* 
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-_LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
 basic_string<_CharT, _Traits, _Allocator>
 operator+(const basic_string<_CharT, _Traits, _Allocator>& __lhs, _CharT __rhs)
 {
@@ -4566,17 +4566,17 @@ struct _LIBCPP_TEMPLATE_VIS
 };
 
 template<class _CharT, class _Traits, class _Allocator>
-basic_ostream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os,
            const basic_string<_CharT, _Traits, _Allocator>& __str);
 
 template<class _CharT, class _Traits, class _Allocator>
-basic_istream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is,
            basic_string<_CharT, _Traits, _Allocator>& __str);
 
 template<class _CharT, class _Traits, class _Allocator>
-basic_istream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 getline(basic_istream<_CharT, _Traits>& __is,
         basic_string<_CharT, _Traits, _Allocator>& __str, _CharT __dlm);
 

@@ -33,7 +33,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _AlgPolicy, class _Compare,
           class _InputIterator, class _Sentinel1, class _RandomAccessIterator, class _Sentinel2,
           class _Proj1, class _Proj2>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 pair<_InputIterator, _RandomAccessIterator>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 pair<_InputIterator, _RandomAccessIterator>
 __partial_sort_copy(_InputIterator __first, _Sentinel1 __last,
                     _RandomAccessIterator __result_first, _Sentinel2 __result_last,
                     _Compare&& __comp, _Proj1&& __proj1, _Proj2&& __proj2)

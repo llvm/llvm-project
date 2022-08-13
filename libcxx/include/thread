@@ -328,7 +328,7 @@ struct __thread_invoke_pair {
 };
 
 template <class _Fp>
-void* __thread_proxy_cxx03(void* __vp)
+_LIBCPP_HIDE_FROM_ABI void* __thread_proxy_cxx03(void* __vp)
 {
     unique_ptr<_Fp> __p(static_cast<_Fp*>(__vp));
     __thread_local_data().set_pointer(__p->__tsp_.release());
@@ -361,7 +361,7 @@ namespace this_thread
 _LIBCPP_FUNC_VIS void sleep_for(const chrono::nanoseconds& __ns);
 
 template <class _Rep, class _Period>
-void
+_LIBCPP_HIDE_FROM_ABI void
 sleep_for(const chrono::duration<_Rep, _Period>& __d)
 {
     if (__d > chrono::duration<_Rep, _Period>::zero())
@@ -385,7 +385,7 @@ sleep_for(const chrono::duration<_Rep, _Period>& __d)
 }
 
 template <class _Clock, class _Duration>
-void
+_LIBCPP_HIDE_FROM_ABI void
 sleep_until(const chrono::time_point<_Clock, _Duration>& __t)
 {
     mutex __mut;

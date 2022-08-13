@@ -1886,7 +1886,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 #endif
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 operator==(const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
            const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
 {
@@ -2592,7 +2592,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 #endif
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 operator==(const unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
            const unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
 {
