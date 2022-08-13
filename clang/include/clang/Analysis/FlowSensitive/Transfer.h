@@ -16,17 +16,19 @@
 
 #include "clang/AST/Stmt.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
+#include "llvm/ADT/Optional.h"
 
 namespace clang {
 namespace dataflow {
 
+struct ContextSensitiveOptions {};
+
 struct TransferOptions {
-  /// Determines whether to analyze function bodies when present in the
-  /// translation unit. Note: this is currently only meant to be used for
-  /// inlining of specialized model code, not for context-sensitive analysis of
-  /// arbitrary subject code. In particular, some fundamentals such as recursion
-  /// are explicitly unsupported.
-  bool ContextSensitive = false;
+  /// Options for analyzing function bodies when present in the translation
+  /// unit, or empty to disable context-sensitive analysis. Note that this is
+  /// fundamentally limited: some constructs, such as recursion, are explicitly
+  /// unsupported.
+  llvm::Optional<ContextSensitiveOptions> ContextSensitiveOpts;
 };
 
 /// Maps statements to the environments of basic blocks that contain them.
