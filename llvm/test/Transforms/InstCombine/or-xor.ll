@@ -154,14 +154,55 @@ define i16 @test5_extra_use_not_xor(i16 %x, i16 %y, i16* %dst_not, i16* %dst_xor
   ret i16 %z
 }
 
-define i32 @test7(i32 %x, i32 %y) {
-; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[Z:%.*]] = or i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i32 [[Z]]
+define i8 @xor_common_op_commute0(i8 %x, i8 %y) {
+; CHECK-LABEL: @xor_common_op_commute0(
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[Z]]
 ;
-  %xor = xor i32 %x, %y
-  %z = or i32 %y, %xor
-  ret i32 %z
+  %xor = xor i8 %x, %y
+  %z = or i8 %xor, %x
+  ret i8 %z
+}
+
+define i8 @xor_common_op_commute1(i8 %x, i8 %y) {
+; CHECK-LABEL: @xor_common_op_commute1(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[XOR]])
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[Y]], [[X]]
+; CHECK-NEXT:    ret i8 [[Z]]
+;
+  %xor = xor i8 %y, %x
+  call void @use(i8 %xor)
+  %z = or i8 %xor, %x
+  ret i8 %z
+}
+
+define i8 @xor_common_op_commute2(i8 %p, i8 %y) {
+; CHECK-LABEL: @xor_common_op_commute2(
+; CHECK-NEXT:    [[X:%.*]] = xor i8 [[P:%.*]], 5
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[XOR]]
+; CHECK-NEXT:    ret i8 [[Z]]
+;
+  %x = xor i8 %p, 5 ; thwart complexity-based canonicalization
+  %xor = xor i8 %x, %y
+  %z = or i8 %x, %xor
+  ret i8 %z
+}
+
+define i8 @xor_common_op_commute3(i8 %p, i8 %q) {
+; CHECK-LABEL: @xor_common_op_commute3(
+; CHECK-NEXT:    [[X:%.*]] = xor i8 [[P:%.*]], 5
+; CHECK-NEXT:    [[Y:%.*]] = mul i8 [[Q:%.*]], [[Q]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[XOR]]
+; CHECK-NEXT:    ret i8 [[Z]]
+;
+  %x = xor i8 %p, 5  ; thwart complexity-based canonicalization
+  %y = mul i8 %q, %q ; thwart complexity-based canonicalization
+  %xor = xor i8 %y, %x
+  %z = or i8 %x, %xor
+  ret i8 %z
 }
 
 define i32 @test8(i32 %x, i32 %y) {
