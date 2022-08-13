@@ -244,8 +244,11 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
   return Error::success();
 }
 
+/// aarch64 pointer size.
+constexpr uint64_t PointerSize = 8;
+
 /// AArch64 null pointer content.
-extern const uint8_t NullGOTEntryContent[8];
+extern const uint8_t NullGOTEntryContent[PointerSize];
 
 /// AArch64 PLT stub content.
 extern const uint8_t StubContent[8];
