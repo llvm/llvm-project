@@ -9075,7 +9075,7 @@ public:
     // DeclComponentLists for generating components info.
     auto It = DevPointersMap.find(VD);
     if (It != DevPointersMap.end())
-      for (const auto MCL : It->second)
+      for (const auto& MCL : It->second)
         DeclComponentLists.emplace_back(
             MCL, OMPC_MAP_to, OMPC_MAP_MODIFIER_unknown, /*IsImpicit = */ true,
             nullptr, nullptr);
