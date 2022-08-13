@@ -118,3 +118,24 @@ define i1 @and_icmps_const_not1bit_diff(i32 %x) nounwind {
   %r = and i1 %a, %b
   ret i1 %r
 }
+
+define i32 @bar(i32 %n) {
+; RV32I-LABEL: bar:
+; RV32I:       # %bb.0: # %entry
+; RV32I-NEXT:    addi a0, a0, -9
+; RV32I-NEXT:    snez a0, a0
+; RV32I-NEXT:    addi a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: bar:
+; RV64I:       # %bb.0: # %entry
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    addi a0, a0, -9
+; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    addi a0, a0, 1
+; RV64I-NEXT:    ret
+entry:
+  %cmp = icmp eq i32 %n, 9
+  %a = select i1 %cmp, i32 1, i32 2
+  ret i32 %a
+}
