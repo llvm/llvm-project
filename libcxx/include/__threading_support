@@ -15,6 +15,7 @@
 #include <__chrono/duration.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__fwd/hash.h>
 #include <__thread/poll_with_backoff.h>
 #include <errno.h>
 #include <iosfwd>

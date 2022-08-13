@@ -18,6 +18,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
 #include <__memory/swap_allocator.h>
+#include <__type_traits/can_extract_key.h>
 #include <__utility/forward.h>
 #include <__utility/swap.h>
 #include <limits>

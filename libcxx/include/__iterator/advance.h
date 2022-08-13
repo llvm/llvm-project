@@ -15,6 +15,7 @@
 #include <__iterator/concepts.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
+#include <__utility/convert_to_integral.h>
 #include <__utility/move.h>
 #include <__utility/unreachable.h>
 #include <concepts>

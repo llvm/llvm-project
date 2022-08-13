@@ -118,6 +118,7 @@ template <size_t N> struct hash<std::bitset<N>>;
 #include <__config>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
+#include <__type_traits/is_char_like_type.h>
 #include <climits>
 #include <cstddef>
 #include <stdexcept>

@@ -206,6 +206,7 @@ namespace std {
 #include <__functional/operations.h>
 #include <__functional/unary_function.h>
 #include <__tuple>
+#include <__type_traits/dependent_type.h>
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
