@@ -131,13 +131,6 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
   if (!config->thinLTOCacheDir.empty())
     pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy);
 
-  if (config->saveTemps) {
-    if (!buf[0].empty())
-      saveBuffer(buf[0], config->outputFile + ".lto.o");
-    for (unsigned i = 1; i != maxTasks; ++i)
-      saveBuffer(buf[i], config->outputFile + Twine(i) + ".lto.o");
-  }
-
   // In ThinLTO mode, Clang passes a temporary directory in -object_path_lto,
   // while the argument is a single file in FullLTO mode.
   bool objPathIsDir = true;
@@ -156,9 +149,23 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
   }
 
   std::vector<ObjFile *> ret;
-  for (unsigned i = 0; i != maxTasks; ++i) {
-    if (buf[i].empty())
+  for (unsigned i = 0; i < maxTasks; ++i) {
+    // Get the native object contents either from the cache or from memory.  Do
+    // not use the cached MemoryBuffer directly to ensure dsymutil does not
+    // race with the cache pruner.
+    StringRef objBuf;
+    if (files[i])
+      objBuf = files[i]->getBuffer();
+    else
+      objBuf = buf[i];
+    if (objBuf.empty())
       continue;
+
+    // FIXME: should `saveTemps` and `ltoObjPath` use the same file name?
+    if (config->saveTemps)
+      saveBuffer(objBuf,
+                 config->outputFile + ((i == 0) ? "" : Twine(i)) + ".lto.o");
+
     SmallString<261> filePath("/tmp/lto.tmp");
     uint32_t modTime = 0;
     if (!config->ltoObjPath.empty()) {
@@ -167,14 +174,12 @@ std::vector<ObjFile *> BitcodeCompiler::compile() {
         path::append(filePath, Twine(i) + "." +
                                    getArchitectureName(config->arch()) +
                                    ".lto.o");
-      saveBuffer(buf[i], filePath);
+      saveBuffer(objBuf, filePath);
       modTime = getModTime(filePath);
     }
     ret.push_back(make<ObjFile>(
-        MemoryBufferRef(buf[i], saver().save(filePath.str())), modTime, ""));
+        MemoryBufferRef(objBuf, saver().save(filePath.str())), modTime, ""));
   }
-  for (std::unique_ptr<MemoryBuffer> &file : files)
-    if (file)
-      ret.push_back(make<ObjFile>(*file, 0, ""));
+
   return ret;
 }
