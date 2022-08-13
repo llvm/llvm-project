@@ -216,6 +216,12 @@ func.func @get_extent_on_extent_tensor(%arg : tensor<?xindex>) -> index {
   return %result : index
 }
 
+func.func @get_dim(%arg : memref<?x?xindex>) -> index {
+  %c0 = arith.constant 0 : index
+  %result = shape.dim %arg, %c0 : memref<?x?xindex>, index -> index
+  return %result : index
+}
+
 func.func @get_extent_on_mixed_operands(%arg : tensor<?xindex>) -> !shape.size {
   %c0 = shape.const_size 0
   %result = shape.get_extent %arg, %c0 : tensor<?xindex>, !shape.size -> !shape.size
