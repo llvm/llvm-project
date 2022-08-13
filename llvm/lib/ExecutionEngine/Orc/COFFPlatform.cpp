@@ -100,7 +100,7 @@ private:
 
   struct HeaderBlockContent {
     object::dos_header DOSHeader;
-    NTHeader NTHeader;
+    COFFHeaderMaterializationUnit::NTHeader NTHeader;
   };
 
   static jitlink::Block &createHeaderBlock(jitlink::LinkGraph &G,
