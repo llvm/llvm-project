@@ -80,6 +80,7 @@ struct _UnwrapAlgPolicy<_WrapAlgPolicy<_Ts...> > {
 // stable, 2-3 compares, 0-2 swaps
 
 template <class _AlgPolicy, class _Compare, class _ForwardIterator>
+_LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_AFTER_CXX11 unsigned __sort3(_ForwardIterator __x, _ForwardIterator __y, _ForwardIterator __z,
                                                _Compare __c) {
   using _Ops = _IterOps<_AlgPolicy>;
@@ -118,6 +119,7 @@ _LIBCPP_CONSTEXPR_AFTER_CXX11 unsigned __sort3(_ForwardIterator __x, _ForwardIte
 // stable, 3-6 compares, 0-5 swaps
 
 template <class _AlgPolicy, class _Compare, class _ForwardIterator>
+_LIBCPP_HIDE_FROM_ABI
 unsigned __sort4(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3, _ForwardIterator __x4,
                  _Compare __c) {
   using _Ops = _IterOps<_AlgPolicy>;
@@ -281,6 +283,7 @@ __sort5_maybe_branchless(_RandomAccessIterator __x1, _RandomAccessIterator __x2,
 
 // Assumes size > 0
 template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
+_LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_AFTER_CXX11 void __selection_sort(_BidirectionalIterator __first, _BidirectionalIterator __last,
                                                     _Compare __comp) {
   _BidirectionalIterator __lm1 = __last;
@@ -292,6 +295,7 @@ _LIBCPP_CONSTEXPR_AFTER_CXX11 void __selection_sort(_BidirectionalIterator __fir
 }
 
 template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
+_LIBCPP_HIDE_FROM_ABI
 void __insertion_sort(_BidirectionalIterator __first, _BidirectionalIterator __last, _Compare __comp) {
   using _Ops = _IterOps<_AlgPolicy>;
 
@@ -309,6 +313,7 @@ void __insertion_sort(_BidirectionalIterator __first, _BidirectionalIterator __l
 }
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
+_LIBCPP_HIDE_FROM_ABI
 void __insertion_sort_3(_RandomAccessIterator __first, _RandomAccessIterator __last, _Compare __comp) {
   using _Ops = _IterOps<_AlgPolicy>;
 
@@ -332,7 +337,7 @@ void __insertion_sort_3(_RandomAccessIterator __first, _RandomAccessIterator __l
 }
 
 template <class _WrappedComp, class _RandomAccessIterator>
-bool __insertion_sort_incomplete(
+_LIBCPP_HIDDEN bool __insertion_sort_incomplete(
     _RandomAccessIterator __first, _RandomAccessIterator __last, _WrappedComp __wrapped_comp) {
   using _Unwrap = _UnwrapAlgPolicy<_WrappedComp>;
   using _AlgPolicy = typename _Unwrap::_AlgPolicy;
@@ -387,6 +392,7 @@ bool __insertion_sort_incomplete(
 }
 
 template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
+_LIBCPP_HIDE_FROM_ABI
 void __insertion_sort_move(_BidirectionalIterator __first1, _BidirectionalIterator __last1,
                            typename iterator_traits<_BidirectionalIterator>::value_type* __first2, _Compare __comp) {
   using _Ops = _IterOps<_AlgPolicy>;
@@ -616,7 +622,7 @@ inline _LIBCPP_HIDE_FROM_ABI _Number __log2i(_Number __n) {
 }
 
 template <class _WrappedComp, class _RandomAccessIterator>
-void __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _WrappedComp __wrapped_comp) {
+_LIBCPP_HIDDEN void __sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _WrappedComp __wrapped_comp) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   difference_type __depth_limit = 2 * __log2i(__last - __first);
 

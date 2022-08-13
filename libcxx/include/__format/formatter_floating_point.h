@@ -103,7 +103,7 @@ template <class _Tp>
 struct __traits;
 
 template <floating_point _Fp>
-static constexpr size_t __float_buffer_size(int __precision) {
+_LIBCPP_HIDE_FROM_ABI constexpr size_t __float_buffer_size(int __precision) {
   using _Traits = __traits<_Fp>;
   return 4 + _Traits::__max_integral + __precision + _Traits::__max_fractional_value;
 }

@@ -320,7 +320,7 @@ struct _LIBCPP_TEMPLATE_VIS variant_alternative<_Ip, variant<_Types...>> {
 
 inline constexpr size_t variant_npos = static_cast<size_t>(-1);
 
-constexpr int __choose_index_type(unsigned int __num_elem) {
+_LIBCPP_HIDE_FROM_ABI constexpr int __choose_index_type(unsigned int __num_elem) {
   if (__num_elem < numeric_limits<unsigned char>::max())
     return 0;
   if (__num_elem < numeric_limits<unsigned short>::max())

@@ -24,6 +24,11 @@ def _hasSuitableClangTidy(cfg):
   except ConfigurationRuntimeError:
     return False
 
+def _hasSuitableClangQuery(cfg):
+  try:
+    return int(re.search('[0-9]+', commandOutput(cfg, ['clang-query --version'])).group()) >= 13
+  except ConfigurationRuntimeError:
+    return False
 
 DEFAULT_FEATURES = [
   Feature(name='fcoroutines-ts',
@@ -137,6 +142,8 @@ DEFAULT_FEATURES = [
           when=lambda cfg: runScriptExitCode(cfg, ['%{exec} bash -c \'bash --version\'']) != 0),
   Feature(name='has-clang-tidy',
           when=_hasSuitableClangTidy),
+  Feature(name='has-clang-query',
+          when=_hasSuitableClangQuery),
 
   Feature(name='apple-clang',                                                                                                      when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}'.format(**compilerMacros(cfg)),                                          when=_isAppleClang),

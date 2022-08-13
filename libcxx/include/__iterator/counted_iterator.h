@@ -263,7 +263,7 @@ public:
   }
 
   template<common_with<_Iter> _I2>
-  friend constexpr strong_ordering operator<=>(
+  _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering operator<=>(
     const counted_iterator& __lhs, const counted_iterator<_I2>& __rhs)
   {
     return __rhs.__count_ <=> __lhs.__count_;
