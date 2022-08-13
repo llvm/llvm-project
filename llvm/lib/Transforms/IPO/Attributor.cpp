@@ -473,7 +473,7 @@ static bool getPotentialCopiesOfMemoryValue(
   // Only if we were successful collection all potential copies we record
   // dependences (on non-fix AAPointerInfo AAs). We also only then modify the
   // given PotentialCopies container.
-  for (auto *PI : PIs) {
+  for (const auto *PI : PIs) {
     if (!PI->getState().isAtFixpoint())
       UsedAssumedInformation = true;
     A.recordDependence(*PI, QueryingAA, DepClassTy::OPTIONAL);

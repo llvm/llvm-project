@@ -3760,7 +3760,7 @@ bool MasmParser::emitIntegralValues(unsigned Size, unsigned *Count) {
   if (checkForValidSection() || parseScalarInstList(Size, Values))
     return true;
 
-  for (auto Value : Values) {
+  for (const auto *Value : Values) {
     emitIntValue(Value, Size);
   }
   if (Count)
