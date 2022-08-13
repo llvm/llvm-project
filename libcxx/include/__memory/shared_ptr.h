@@ -1383,7 +1383,7 @@ dynamic_pointer_cast(const shared_ptr<_Up>& __r) _NOEXCEPT
 }
 
 template<class _Tp, class _Up>
-shared_ptr<_Tp>
+_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
 const_pointer_cast(const shared_ptr<_Up>& __r) _NOEXCEPT
 {
     typedef typename shared_ptr<_Tp>::element_type _RTp;
@@ -1391,7 +1391,7 @@ const_pointer_cast(const shared_ptr<_Up>& __r) _NOEXCEPT
 }
 
 template<class _Tp, class _Up>
-shared_ptr<_Tp>
+_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
 reinterpret_pointer_cast(const shared_ptr<_Up>& __r) _NOEXCEPT
 {
     return shared_ptr<_Tp>(__r,
@@ -1825,7 +1825,7 @@ atomic_is_lock_free(const shared_ptr<_Tp>*)
 
 template <class _Tp>
 _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
-shared_ptr<_Tp>
+_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
 atomic_load(const shared_ptr<_Tp>* __p)
 {
     __sp_mut& __m = __get_sp_mut(__p);
@@ -1846,7 +1846,7 @@ atomic_load_explicit(const shared_ptr<_Tp>* __p, memory_order)
 
 template <class _Tp>
 _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
-void
+_LIBCPP_HIDE_FROM_ABI void
 atomic_store(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r)
 {
     __sp_mut& __m = __get_sp_mut(__p);
@@ -1866,7 +1866,7 @@ atomic_store_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order)
 
 template <class _Tp>
 _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
-shared_ptr<_Tp>
+_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
 atomic_exchange(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r)
 {
     __sp_mut& __m = __get_sp_mut(__p);
@@ -1887,7 +1887,7 @@ atomic_exchange_explicit(shared_ptr<_Tp>* __p, shared_ptr<_Tp> __r, memory_order
 
 template <class _Tp>
 _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 atomic_compare_exchange_strong(shared_ptr<_Tp>* __p, shared_ptr<_Tp>* __v, shared_ptr<_Tp> __w)
 {
     shared_ptr<_Tp> __temp;

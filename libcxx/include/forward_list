@@ -1702,6 +1702,7 @@ forward_list<_Tp, _Alloc>::reverse() _NOEXCEPT
 }
 
 template <class _Tp, class _Alloc>
+_LIBCPP_HIDE_FROM_ABI
 bool operator==(const forward_list<_Tp, _Alloc>& __x,
                 const forward_list<_Tp, _Alloc>& __y)
 {
