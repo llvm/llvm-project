@@ -1,6 +1,6 @@
 // RUN: %clangxx -O0 -g %s -o %t
 //
-// REQUIRES: linux, freebsd
+// REQUIRES: linux || freebsd
 
 #include <netdb.h>
 #include <stdio.h>
