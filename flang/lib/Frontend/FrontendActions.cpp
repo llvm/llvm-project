@@ -142,10 +142,11 @@ bool CodeGenAction::beginSourceFileAction() {
   // Create a LoweringBridge
   const common::IntrinsicTypeDefaultKinds &defKinds =
       ci.getInvocation().getSemanticsContext().defaultKinds();
-  fir::KindMapping kindMap(mlirCtx.get(),
-      llvm::ArrayRef<fir::KindTy>{fir::fromDefaultKinds(defKinds)});
+  fir::KindMapping kindMap(mlirCtx.get(), llvm::ArrayRef<fir::KindTy>{
+                                              fir::fromDefaultKinds(defKinds)});
   lower::LoweringBridge lb = Fortran::lower::LoweringBridge::create(
-      *mlirCtx, defKinds, ci.getInvocation().getSemanticsContext().intrinsics(),
+      *mlirCtx, ci.getInvocation().getSemanticsContext(), defKinds,
+      ci.getInvocation().getSemanticsContext().intrinsics(),
       ci.getInvocation().getSemanticsContext().targetCharacteristics(),
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
       kindMap, ci.getInvocation().getLoweringOpts());
@@ -425,8 +426,8 @@ void GetDefinitionAction::executeAction() {
       clang::DiagnosticsEngine::Error, "Symbol not found");
 
   auto gdv = ci.getInvocation().getFrontendOpts().getDefVals;
-  auto charBlock{cs.GetCharBlockFromLineAndColumns(
-      gdv.line, gdv.startColumn, gdv.endColumn)};
+  auto charBlock{cs.GetCharBlockFromLineAndColumns(gdv.line, gdv.startColumn,
+                                                   gdv.endColumn)};
   if (!charBlock) {
     ci.getDiagnostics().Report(diagID);
     return;
