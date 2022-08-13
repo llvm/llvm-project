@@ -66,7 +66,7 @@ class AllocLikeOp<string mnemonic,
                        // The symbolic operands (the ones in square brackets)
                        // bind to the symbols of the memref's layout map.
                        Variadic<Index>:$symbolOperands,
-                       Confined<OptionalAttr<I64Attr>,
+                       ConfinedAttr<OptionalAttr<I64Attr>,
                                 [IntMinValue<0>]>:$alignment);
   let results = (outs Res<AnyMemRef, "", [MemAlloc<resource>]>:$memref);
 
@@ -123,7 +123,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment"> {
     optimization only, and the optimization is best-effort.
   }];
   let arguments = (ins AnyMemRef:$memref,
-                       Confined<I32Attr, [IntPositive]>:$alignment);
+                       ConfinedAttr<I32Attr, [IntPositive]>:$alignment);
   let results = (outs);
 
   let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
@@ -965,7 +965,7 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
 
   let arguments = (ins AnyMemRef:$memref, Variadic<Index>:$indices,
                        BoolAttr:$isWrite,
-                       Confined<I32Attr, [IntMinValue<0>,
+                       ConfinedAttr<I32Attr, [IntMinValue<0>,
                                           IntMaxValue<3>]>:$localityHint,
                        BoolAttr:$isDataCache);
 

@@ -117,8 +117,8 @@ window in `value`.
   let arguments = (ins
     TF_FpTensor:$value,
 
-    Confined<I64ArrayAttr, [ArrayMinCount<4>]>:$ksize,
-    Confined<I64ArrayAttr, [ArrayMinCount<4>]>:$strides,
+    ConfinedAttr<I64ArrayAttr, [ArrayMinCount<4>]>:$ksize,
+    ConfinedAttr<I64ArrayAttr, [ArrayMinCount<4>]>:$strides,
     TF_AnyStrAttrOf<["SAME", "VALID"]>:$padding,
     DefaultValuedAttr<TF_ConvertDataFormatAttr, "NHWC">:$data_format
   );
@@ -275,11 +275,11 @@ like `"0.5f"`, and an integer array default value should be specified as like
 
 #### Confining attributes
 
-`Confined` is provided as a general mechanism to help modelling further
+`ConfinedAttr` is provided as a general mechanism to help modelling further
 constraints on attributes beyond the ones brought by value types. You can use
-`Confined` to compose complex constraints out of more primitive ones. For
+`ConfinedAttr` to compose complex constraints out of more primitive ones. For
 example, a 32-bit integer attribute whose minimum value must be 10 can be
-expressed as `Confined<I32Attr, [IntMinValue<10>]>`.
+expressed as `ConfinedAttr<I32Attr, [IntMinValue<10>]>`.
 
 Right now, the following primitive constraints are supported:
 
@@ -1287,7 +1287,7 @@ optionality, default values, etc.:
 *   `DefaultValuedAttr`: specifies the
     [default value](#attributes-with-default-values) for an attribute.
 *   `OptionalAttr`: specifies an attribute as [optional](#optional-attributes).
-*   `Confined`: adapts an attribute with
+*   `ConfinedAttr`: adapts an attribute with
     [further constraints](#confining-attributes).
 
 ### Enum attributes
