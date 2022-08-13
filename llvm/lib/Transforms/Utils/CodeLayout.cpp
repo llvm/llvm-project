@@ -827,8 +827,7 @@ private:
     }
 
     // Remove chain From from the list of active chains
-    auto Iter = std::remove(HotChains.begin(), HotChains.end(), From);
-    HotChains.erase(Iter, HotChains.end());
+    llvm::erase_value(HotChains, From);
 
     // Invalidate caches
     for (auto EdgeIter : Into->edges()) {
