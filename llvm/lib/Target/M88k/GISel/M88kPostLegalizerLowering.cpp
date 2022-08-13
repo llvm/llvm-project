@@ -59,7 +59,8 @@ void replaceMI(unsigned Opc, MachineInstr &MI, MachineRegisterInfo &MRI,
   const auto *TII = Subtarget.getInstrInfo();
   const auto *RBI = Subtarget.getRegBankInfo();
   auto Inst = MIB.buildInstr(Opc, {MI.getOperand(0).getReg()}, {SrcReg})
-                  .addImm((Width << 5) | Offset);
+                  .addImm(Width)
+                  .addImm(Offset);
   constrainSelectedInstRegOperands(*Inst, *TII, *TRI, *RBI);
   MI.eraseFromParent();
 }

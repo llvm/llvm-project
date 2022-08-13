@@ -286,31 +286,33 @@ bool M88kInstructionSelector::selectUbfx(MachineInstr &I,
 
   const unsigned NewOpc =
       I.getOpcode() == TargetOpcode::G_UBFX ? M88k::EXTUrwo : M88k::EXTrwo;
-  int64_t WO;
+  uint64_t Width, Offset;
   if (I.getOpcode() == TargetOpcode::G_SEXT_INREG) {
     // For G_SEXT_INREG, the width is the immediate in operand 2. The offset is
     // always 0.
-    int64_t Width = I.getOperand(2).getImm() + 1;
+    Width = I.getOperand(2).getImm() + 1;
     assert(Width < 32 && "Can't sign-extend 32bit value");
-    WO = Width << 5;
+    Offset = 0;
   } else {
-    auto Offset =
+    auto OffsetCst =
         getIConstantVRegValWithLookThrough(I.getOperand(2).getReg(), MRI, true);
-    if (!Offset)
+    if (!OffsetCst)
       return false;
+    Offset = OffsetCst->Value.getZExtValue();
 
-    auto Width =
+    auto WidthCst =
         getIConstantVRegValWithLookThrough(I.getOperand(3).getReg(), MRI, true);
-    if (!Width)
+    if (!WidthCst)
       return false;
 
-    WO = Width->Value.getZExtValue() << 5 | Offset->Value.getZExtValue();
+    Width = WidthCst->Value.getZExtValue();
   }
 
   MachineInstr *MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
                          .add(I.getOperand(0))
                          .add(I.getOperand(1))
-                         .addImm(WO);
+                         .addImm(Width)
+                         .addImm(Offset);
 
   I.eraseFromParent();
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
@@ -416,11 +418,11 @@ bool M88kInstructionSelector::selectICmp(MachineInstr &I,
   if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
     return false;
 
-  int64_t WO = 1 << 5 | int64_t(CCCode);
   MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::EXTUrwo))
            .add(I.getOperand(0))
            .addReg(Temp, RegState::Kill)
-           .addImm(WO);
+           .addImm(1)
+           .addImm(int64_t(CCCode));
 
   I.eraseFromParent();
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
@@ -678,7 +680,6 @@ bool M88kInstructionSelector::selectExt(MachineInstr &I, MachineBasicBlock &MBB,
       isInt<16>(SImm16)) {
     Register Temp = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
     ICC CCCode = getCCforICMP(Pred);
-    int64_t WO = (1 << 5) | int64_t(CCCode);
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::CMPri))
              .addReg(Temp, RegState::Define)
              .addReg(LHS)
@@ -687,12 +688,12 @@ bool M88kInstructionSelector::selectExt(MachineInstr &I, MachineBasicBlock &MBB,
       return false;
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc), DstReg)
              .addReg(Temp, RegState::Kill)
-             .addImm(WO);
+             .addImm(1)
+             .addImm(int64_t(CCCode));
   } else if (mi_match(SrcReg, MRI,
                       m_GICmp(m_Pred(Pred), m_Reg(LHS), m_Reg(RHS)))) {
     Register Temp = MRI.createVirtualRegister(&M88k::GPRRCRegClass);
     ICC CCCode = getCCforICMP(Pred);
-    int64_t WO = (1 << 5) | int64_t(CCCode);
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::CMPrr))
              .addReg(Temp, RegState::Define)
              .addReg(LHS)
@@ -701,7 +702,8 @@ bool M88kInstructionSelector::selectExt(MachineInstr &I, MachineBasicBlock &MBB,
       return false;
     MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc), DstReg)
              .addReg(Temp, RegState::Kill)
-             .addImm(WO);
+             .addImm(1)
+             .addImm(int64_t(CCCode));
   } else
     return false;
 
@@ -982,7 +984,8 @@ bool M88kInstructionSelector::earlySelect(MachineInstr &I) {
           MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::SETrwo),
                        I.getOperand(0).getReg())
                    .addReg(M88k::R0)
-                   .addImm((16 << 5)|16 /*16<16>*/);
+                   .addImm(16)
+                   .addImm(16);
         else
           MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::SUBUri),
                        I.getOperand(0).getReg())
@@ -1048,7 +1051,8 @@ bool M88kInstructionSelector::earlySelect(MachineInstr &I) {
       MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc))
                .add(I.getOperand(0))
                .addReg(SrcReg)
-               .addImm(((MaskWidth << 5) | MaskOffset) & 0x3ff);
+               .addImm(MaskWidth & 0x1f)
+               .addImm(MaskOffset);
     }
     I.eraseFromParent();
     return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);

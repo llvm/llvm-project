@@ -55,6 +55,7 @@ def M88kInstrInfo : InstrInfo;
 def M88kAsmParser : AsmParser;
 def M88kAsmParserVariant : AsmParserVariant {
   let RegisterPrefix = "%";
+  let TokenizingCharacters = "[]<>*!";
 }
 
 def M88kAsmWriter : AsmWriter {

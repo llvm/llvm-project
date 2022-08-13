@@ -41,14 +41,10 @@ public:
 
   void printU5ImmOperand(const MCInst *MI, int OpNum,
                          const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU5ImmOOperand(const MCInst *MI, int OpNum,
-                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printU16ImmOperand(const MCInst *MI, int OpNum,
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printVec9Operand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                         raw_ostream &O);
-  void printBitFieldOperand(const MCInst *MI, int OpNum,
-                            const MCSubtargetInfo &STI, raw_ostream &O);
   void printBFWidthOperand(const MCInst *MI, int OpNum,
                            const MCSubtargetInfo &STI, raw_ostream &O);
   void printBFOffsetOperand(const MCInst *MI, int OpNum,

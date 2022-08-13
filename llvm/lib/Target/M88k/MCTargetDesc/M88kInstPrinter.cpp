@@ -63,14 +63,6 @@ void M88kInstPrinter::printU5ImmOperand(const MCInst *MI, int OpNum,
   O << Value;
 }
 
-void M88kInstPrinter::printU5ImmOOperand(const MCInst *MI, int OpNum,
-                                         const MCSubtargetInfo &STI,
-                                         raw_ostream &O) {
-  int64_t Value = MI->getOperand(OpNum).getImm();
-  // assert(isUInt<N>(Value) && "Invalid uimm argument");
-  O << "<" << Value << ">";
-}
-
 void M88kInstPrinter::printU16ImmOperand(const MCInst *MI, int OpNum,
                                          const MCSubtargetInfo &STI,
                                          raw_ostream &O) {
@@ -95,23 +87,12 @@ void M88kInstPrinter::printVec9Operand(const MCInst *MI, int OpNum,
   }
 }
 
-void M88kInstPrinter::printBitFieldOperand(const MCInst *MI, int OpNum,
-                                           const MCSubtargetInfo &STI,
-                                           raw_ostream &O) {
-  int64_t Value = MI->getOperand(OpNum).getImm();
-  assert(isUInt<10>(Value) && "Invalid bitfield argument");
-  int64_t Width = (Value >> 5) & 0x1f;
-  int64_t Offset = Value & 0x1f;
-  O << Width << "<" << Offset << ">";
-}
-
 void M88kInstPrinter::printBFWidthOperand(const MCInst *MI, int OpNum,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
   int64_t Value = MI->getOperand(OpNum).getImm();
   assert(isUInt<5>(Value) && "Invalid bitfield width argument");
-  if (Value)
-    O << Value;
+  O << Value;
 }
 
 void M88kInstPrinter::printBFOffsetOperand(const MCInst *MI, int OpNum,
@@ -119,7 +100,7 @@ void M88kInstPrinter::printBFOffsetOperand(const MCInst *MI, int OpNum,
                                            raw_ostream &O) {
   int64_t Value = MI->getOperand(OpNum).getImm();
   assert(isUInt<5>(Value) && "Invalid bitfield offset argument");
-  O << "<" << Value << ">";
+  O << Value;
 }
 
 void M88kInstPrinter::printPixelRotOperand(const MCInst *MI, int OpNum,

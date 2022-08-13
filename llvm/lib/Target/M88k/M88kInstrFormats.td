@@ -131,18 +131,18 @@ class F_BF<bits<6> func, dag outs, dag ins, string asm, list<dag> pattern =[]>
 
 // Format: Bit-field with 10-bit width / offset.
 class F_BI<bits<6> func, dag outs, dag ins, string asm, list<dag> pattern = []>
-//   : F_B<func, outs, ins, asm, "$rd, $rs1, $w5$o5", pattern> {
-//  bits<5> w5;
-//  bits<5> o5;
-   : F_B<func, outs, ins, asm, "$rd, $rs1, $w5o5", pattern> {
-  bits<10> w5o5;
+   : F_B<func, outs, ins, asm, "$rd, $rs1, $w5<$o5>", pattern> {
+  bits<5> w5;
+  bits<5> o5;
+
   let Inst{26}  = 0b0;
-  let Inst{9-0} = w5o5;
+  let Inst{9-5} = w5;
+  let Inst{4-0} = o5;
 }
 
 // Format: Bit-field with 5-bit offset.
 class F_BIOFS<bits<6> func, dag outs, dag ins, string asm, list<dag> pattern = []>
-   : F_B<func, outs, ins, asm, "$rd, $rs1, $o5", pattern> {
+   : F_B<func, outs, ins, asm, "$rd, $rs1, <$o5>", pattern> {
   bits<5> o5;
   let Inst{26}  = 0b0;
   let Inst{9-5} = 0b00000;

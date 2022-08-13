@@ -157,11 +157,6 @@ public:
     addExpr(Inst, getImm());
   }
 
-  void addBitFieldOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands");
-    addExpr(Inst, getImm());
-  }
-
   void addBFWidthOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands");
     addExpr(Inst, getImm());
@@ -183,13 +178,10 @@ public:
   }
 
   bool isU5Imm() const { return isImm(0, 31); }
-  // TODO
-  bool isU5ImmO() const { return isImm(0, 31); }
   bool isU16Imm() const { return isImm(0, 65535); }
   bool isS16Imm() const { return isImm(-32768, 32767); }
   bool isVec9() const { return isImm(0, 511); }
 
-  bool isBitField() const { return isImm(0, 1023); }
   bool isBFWidth() const { return isImm(0, 31); }
   bool isBFOffset() const { return isImm(0, 31); }
   bool isPixelRot() const { return isImm(0, 60); }
@@ -238,7 +230,6 @@ class M88kAsmParser : public MCTargetAsmParser {
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
   bool parseScaledRegister(OperandVector &Operands);
 
-  OperandMatchResultTy parseBitField(OperandVector &Operands);
   OperandMatchResultTy parseBFWidth(OperandVector &Operands);
   OperandMatchResultTy parseBFOffset(OperandVector &Operands);
   OperandMatchResultTy parsePixelRot(OperandVector &Operands);
@@ -373,8 +364,18 @@ bool M88kAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       // Read the third operand or a scaled register.
       if (getLexer().is(AsmToken::Comma)) {
         Parser.Lex();
+        if (getLexer().is(AsmToken::Less) && Name == "rot")
+          Operands.push_back(M88kOperand::createToken("<", Parser.getTok().getLoc()));
+
         if (parseOperand(Operands, Name)) {
-          return Error(getLexer().getLoc(), "expected operand");
+          return Error(getLexer().getLoc(), "expected register or immediate");
+        }
+        // Parse bitfield width
+        if (getLexer().is(AsmToken::Less)) {
+          Operands.push_back(M88kOperand::createToken("<", Parser.getTok().getLoc()));
+          if (parseOperand(Operands, Name)) {
+            return Error(getLexer().getLoc(), "expected bitfield offset");
+          }
         }
       } else if (getLexer().is(AsmToken::LBrac)) {
         if (parseScaledRegister(Operands))
@@ -395,8 +396,9 @@ bool M88kAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   // Invoke a custom associated parser.
   OperandMatchResultTy Result = MatchOperandParserImpl(Operands, Mnemonic);
 
-  if (Result == MatchOperand_Success)
+  if (Result == MatchOperand_Success) {
     return Result;
+  }
   if (Result == MatchOperand_ParseFail) {
     Parser.eatToEndOfStatement();
     return Result;
@@ -427,63 +429,36 @@ bool M88kAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   return true;
 }
 
-OperandMatchResultTy M88kAsmParser::parseBitField(OperandVector &Operands) {
-  // Parses operands like 5<6> and <7>.
-  MCContext &Ctx = getContext();
-  SMLoc StartLoc = Parser.getTok().getLoc();
-  Optional<AsmToken> WidthTok;
-  int64_t Width = 0, Offset;
-  if (Lexer.is(AsmToken::Integer)) {
-    WidthTok = Parser.getTok();
-    Width = Parser.getTok().getIntVal();
-    Parser.Lex();
-  }
-  if (Lexer.isNot(AsmToken::Less)) {
-    if (WidthTok)
-      Lexer.UnLex(WidthTok.value());
-    return MatchOperand_NoMatch;
-  }
-  Parser.Lex();
-  if (Lexer.isNot(AsmToken::Integer))
-    return MatchOperand_ParseFail;
-  Offset = Parser.getTok().getIntVal();
-  Parser.Lex();
-  if (Lexer.isNot(AsmToken::Greater))
-    return MatchOperand_ParseFail;
-  Parser.Lex();
-
-  // TODO Check values.
-  int64_t Val = Width << 5 | Offset;
-  const MCExpr *Expr = MCConstantExpr::create(Val, Ctx);
-  SMLoc EndLoc =
-      SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-  Operands.push_back(M88kOperand::createImm(Expr, StartLoc, EndLoc));
-
-  // Announce match.
-  return MatchOperand_Success;
-}
-
 OperandMatchResultTy M88kAsmParser::parseBFWidth(OperandVector &Operands) {
-  // Parses an immediate. Can be empty, but must be followed by <O>.
+  // Parses the width of a bitfield. If empty and followed by <O>, then it is 0.
+  // If not followed by <O>, then it is the offset, and the width is 0.
   MCContext &Ctx = getContext();
   SMLoc StartLoc = Parser.getTok().getLoc();
   Optional<AsmToken> WidthTok;
   int64_t Width = 0;
+  bool IsReallyOffset = false;
   if (Lexer.is(AsmToken::Integer)) {
     WidthTok = Parser.getTok();
     Width = Parser.getTok().getIntVal();
     Parser.Lex();
   }
   if (Lexer.isNot(AsmToken::Less)) {
-    if (WidthTok)
-      Lexer.UnLex(WidthTok.value());
-    return MatchOperand_NoMatch;
+    if (!WidthTok)
+      return MatchOperand_NoMatch;
+    IsReallyOffset = true;
   }
 
   const MCExpr *Expr = MCConstantExpr::create(Width, Ctx);
   SMLoc EndLoc =
       SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-  Operands.push_back(M88kOperand::createImm(Expr, StartLoc, EndLoc));
+  if (IsReallyOffset) {
+    Operands.push_back(M88kOperand::createImm(MCConstantExpr::create(0, Ctx),
+                                              StartLoc, EndLoc));
+    Operands.push_back(M88kOperand::createToken("<", Parser.getTok().getLoc()));
+    Operands.push_back(M88kOperand::createImm(Expr, StartLoc, EndLoc));
+    Operands.push_back(M88kOperand::createToken(">", Parser.getTok().getLoc()));
+  } else
+    Operands.push_back(M88kOperand::createImm(Expr, StartLoc, EndLoc));
 
   // Announce match.
   return MatchOperand_Success;
@@ -494,9 +469,6 @@ OperandMatchResultTy M88kAsmParser::parseBFOffset(OperandVector &Operands) {
   MCContext &Ctx = getContext();
   SMLoc StartLoc = Parser.getTok().getLoc();
 
-  if (Lexer.isNot(AsmToken::Less)) {
-    return MatchOperand_NoMatch;
-  }
   Parser.Lex();
   if (Lexer.isNot(AsmToken::Integer))
     return MatchOperand_ParseFail;
@@ -510,6 +482,7 @@ OperandMatchResultTy M88kAsmParser::parseBFOffset(OperandVector &Operands) {
   SMLoc EndLoc =
       SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   Operands.push_back(M88kOperand::createImm(Expr, StartLoc, EndLoc));
+  Operands.push_back(M88kOperand::createToken(">", Parser.getTok().getLoc()));
 
   // Announce match.
   return MatchOperand_Success;
@@ -750,7 +723,6 @@ bool M88kAsmParser::MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
   }
 
   switch (MatchResult) {
-  case Match_InvalidBitfield:
   case Match_InvalidBitfieldWidth:
   case Match_InvalidBitfieldOffset:
   case Match_InvalidPixelRotationSize: {

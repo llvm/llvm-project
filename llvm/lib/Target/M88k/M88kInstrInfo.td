@@ -87,30 +87,9 @@ class PCRelOperand<ValueType vt, AsmOperandClass asmop> : Operand<vt> {
 
 // Signed and unsigned operands.
 def U5Imm : ImmediateAsmOperand<"U5Imm">;
-def U5ImmO : ImmediateAsmOperand<"U5ImmO">  {
-  let ParserMethod = "parseBitField";
-}
 def S16Imm : ImmediateAsmOperand<"S16Imm">;
 def U16Imm : ImmediateAsmOperand<"U16Imm">;
 def Vec9 : ImmediateAsmOperand<"Vec9">, ImmediateOp<i32, "Vec9">;
-
-// Bitfield operand.
-// TODO Replace usage with BFWidth/BFOffset.
-def BFImm : AsmOperandClass {
-  let Name = "BitField";
-  let RenderMethod = "addBitFieldOperands";
-  let ParserMethod = "parseBitField";
-  let DiagnosticString = "operand must between 0 and 31";
-  let DiagnosticType = "InvalidBitfield";
-}
-def bfimm : ImmOpWithPattern<i32, "BFImm", [{
-  return isUInt<10>(Imm.getZExtValue());
-}], NOOP_SDNodeXForm> {
-  let PrintMethod = "printBitFieldOperand";
-  let DecoderMethod = "decodeBitFieldOperand";
-  let OperandNamespace = "M88kOp";
-  let OperandType = "OPERAND_BITFIELD";
-}
 
 // Bitfield width operand.
 def BFWidth : AsmOperandClass {
@@ -237,10 +216,6 @@ defm imm32zx16 : Immediate<i32, [{
   return (Imm.getZExtValue() & ~0x00000000000000ffULL) == 0;
 }], NOOP_SDNodeXForm, "U16Imm">;
 
-defm imm32zx5O : Immediate<i32, [{
-  return (Imm.getZExtValue() & ~0x000000000000001fULL) == 0;
-}], NOOP_SDNodeXForm, "U5ImmO">;
-
 // Predicate: Arbitrary 32 bit value.
 def uimm32 : IntImmLeaf<i32, [{
   uint64_t Val = Imm.getZExtValue();
@@ -343,7 +318,7 @@ multiclass Bitfield<bits<6> Func, string OpcStr> {
   def rr  : F_BR<Func, OpcStr>;
   if !ne(OpcStr, "rot") then {
     def rwo : F_BI<Func,
-                  (outs GPR:$rd), (ins GPR:$rs1, bfimm:$w5o5),
+                  (outs GPR:$rd), (ins GPR:$rs1, bfwidth:$w5, bfoffset:$o5),
                   OpcStr>;
   } else {
     def rwo : F_BIOFS<Func,
@@ -364,9 +339,9 @@ def : Pat<(sra GPR:$rs1, GPR:$rs2), (EXTrr GPR:$rs1, GPR:$rs2)>;
 def : Pat<(srl GPR:$rs1, GPR:$rs2), (EXTUrr GPR:$rs1, GPR:$rs2)>;
 def : Pat<(shl GPR:$rs1, GPR:$rs2), (MAKrr GPR:$rs1, GPR:$rs2)>;
 def : Pat<(rotr GPR:$rs1, GPR:$rs2), (ROTrr GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sra GPR:$rs1, imm32zx5O:$o5), (EXTrwo GPR:$rs1, imm32zx5O:$o5)>;
-def : Pat<(srl GPR:$rs1, imm32zx5O:$o5), (EXTUrwo GPR:$rs1, imm32zx5O:$o5)>;
-def : Pat<(shl GPR:$rs1, imm32zx5O:$o5), (MAKrwo GPR:$rs1, imm32zx5O:$o5)>;
+def : Pat<(sra GPR:$rs1, bfoffset:$o5), (EXTrwo GPR:$rs1, 0, bfoffset:$o5)>;
+def : Pat<(srl GPR:$rs1, bfoffset:$o5), (EXTUrwo GPR:$rs1, 0, bfoffset:$o5)>;
+def : Pat<(shl GPR:$rs1, bfoffset:$o5), (MAKrwo GPR:$rs1, 0, bfoffset:$o5)>;
 def : Pat<(rotr GPR:$rs1, bfoffset:$o5), (ROTrwo GPR:$rs1, bfoffset:$o5)>;
 
 class FindBF<bits<6> Func, string OpcStr> :
@@ -434,23 +409,23 @@ defm : BinaryOpPat<"DIVS", sdiv>;
 //def : Pat<(umullohi GPR:$rs1, GPR:$rs2), (MULUrrd GPR:$rs1, GPR:$rs2)>;
 def : Pat<(ineg GPR:$rs2), (SUBUrr (i32 R0), GPR:$rs2)>;
 
-multiclass SetCCPat<CondCode CC, bits<10> w5o5> {
+multiclass SetCCPat<CondCode CC, bits<5> w5, bits<5> o5> {
   def : Pat<(setcc (i32 GPR:$lhs), (i32 GPR:$rhs), CC),
-            (EXTUrwo (CMPrr GPR:$lhs, GPR:$rhs), w5o5)>;
+            (EXTUrwo (CMPrr GPR:$lhs, GPR:$rhs), w5, o5)>;
   def : Pat<(setcc (i32 GPR:$lhs), imm32zx16:$rhs, CC),
-            (EXTUrwo (CMPrr GPR:$lhs, imm32zx16:$rhs), w5o5)>;
+            (EXTUrwo (CMPrr GPR:$lhs, imm32zx16:$rhs), w5, o5)>;
 }
 
-defm : SetCCPat<SETEQ, 34>;
-defm : SetCCPat<SETNE, 35>;
-defm : SetCCPat<SETGT, 36>;
-defm : SetCCPat<SETLE, 37>;
-defm : SetCCPat<SETLT, 38>;
-defm : SetCCPat<SETGE, 39>;
-defm : SetCCPat<SETUGT, 40>;
-defm : SetCCPat<SETULE, 41>;
-defm : SetCCPat<SETULT, 42>;
-defm : SetCCPat<SETUGE, 43>;
+defm : SetCCPat<SETEQ, 1, 2>;
+defm : SetCCPat<SETNE, 1, 3>;
+defm : SetCCPat<SETGT, 1, 4>;
+defm : SetCCPat<SETLE, 1, 5>;
+defm : SetCCPat<SETLT, 1, 6>;
+defm : SetCCPat<SETGE, 1, 7>;
+defm : SetCCPat<SETUGT, 1, 8>;
+defm : SetCCPat<SETULE, 1, 8>;
+defm : SetCCPat<SETULT, 1, 10>;
+defm : SetCCPat<SETUGE, 1, 11>;
 
 /*
 Addressing modes:
