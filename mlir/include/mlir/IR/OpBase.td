@@ -693,7 +693,7 @@ class UnrankedTensorOf<list<Type> allowedTypes>
 // list, and which additionally satisfies an optional list of predicates.
 //
 // TODO: use `Constraint` instead of `Pred`, so we can generate a better
-// default summary (a la `Confined`).
+// default summary (a la `ConfinedAttr`).
 class TensorOf<
     list<Type> allowedTypes,
     list<Pred> preds = [],
@@ -1585,7 +1585,7 @@ class ConstantStrAttr<Attr attribute, string val>
 // A general mechanism to further confine the given `attr` with all the
 // `constraints`. This allows to compose complex constraints out of a series
 // of more primitive ones.
-class Confined<Attr attr, list<AttrConstraint> constraints> : Attr<
+class ConfinedAttr<Attr attr, list<AttrConstraint> constraints> : Attr<
     And<!listconcat([attr.predicate],
                       !foreach(pred, constraints, pred.predicate))>,
     !foldl(/*init*/attr.summary, /*list*/constraints,
@@ -1603,9 +1603,9 @@ class Confined<Attr attr, list<AttrConstraint> constraints> : Attr<
 
 // An AttrConstraint that holds if all attr constraints specified in
 // 'constraints' hold.
-class AllAttrConstraintsOf<list<AttrConstraint> constraints> : AttrConstraint<
+class AllAttrOf<list<AttrConstraint> constraints> : AttrConstraint<
     And<!listconcat([!head(constraints).predicate],
-                      !foreach(pred, !tail(constraints), pred.predicate))>,
+                    !foreach(pred, !tail(constraints), pred.predicate))>,
     !interleave(!foreach(con, constraints, con.summary), " and ")> {
 }
 
