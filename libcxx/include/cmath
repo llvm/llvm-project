@@ -562,7 +562,7 @@ hypot(_A1 __lcpp_x, _A2 __lcpp_y, _A3 __lcpp_z) _NOEXCEPT
     static_assert((!(is_same<_A1, __result_type>::value &&
                      is_same<_A2, __result_type>::value &&
                      is_same<_A3, __result_type>::value)), "");
-    return hypot((__result_type)__lcpp_x, (__result_type)__lcpp_y, (__result_type)__lcpp_z);
+    return std::hypot((__result_type)__lcpp_x, (__result_type)__lcpp_y, (__result_type)__lcpp_z);
 }
 #endif
 
@@ -583,7 +583,7 @@ _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR typename enable_if<!is_floating_point<_A1>::value, bool>::type
 __constexpr_isnan(_A1 __lcpp_x) _NOEXCEPT
 {
-    return isnan(__lcpp_x);
+    return std::isnan(__lcpp_x);
 }
 
 template <class _A1>
@@ -603,7 +603,7 @@ _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR typename enable_if<!is_floating_point<_A1>::value, bool>::type
 __constexpr_isinf(_A1 __lcpp_x) _NOEXCEPT
 {
-    return isinf(__lcpp_x);
+    return std::isinf(__lcpp_x);
 }
 
 template <class _A1>
@@ -623,7 +623,7 @@ _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_CONSTEXPR typename enable_if<!is_floating_point<_A1>::value, bool>::type
 __constexpr_isfinite(_A1 __lcpp_x) _NOEXCEPT
 {
-    return isfinite(__lcpp_x);
+    return std::isfinite(__lcpp_x);
 }
 
 #if _LIBCPP_STD_VER > 17
@@ -665,7 +665,7 @@ lerp(_A1 __a, _A2 __b, _A3 __t) noexcept
     static_assert(!(_IsSame<_A1, __result_type>::value &&
                     _IsSame<_A2, __result_type>::value &&
                     _IsSame<_A3, __result_type>::value));
-    return __lerp((__result_type)__a, (__result_type)__b, (__result_type)__t);
+    return std::__lerp((__result_type)__a, (__result_type)__b, (__result_type)__t);
 }
 #endif // _LIBCPP_STD_VER > 17
 

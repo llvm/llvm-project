@@ -352,7 +352,7 @@ try_lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3)
     unique_lock<_L0> __u0(__l0, try_to_lock);
     if (__u0.owns_lock())
     {
-        __r = try_lock(__l1, __l2, __l3...);
+        __r = std::try_lock(__l1, __l2, __l3...);
         if (__r == -1)
             __u0.release();
         else
@@ -403,7 +403,7 @@ __lock_first(int __i, _L0& __l0, _L1& __l1, _L2& __l2, _L3& ...__l3)
         case 0:
             {
                 unique_lock<_L0> __u0(__l0);
-                __i = try_lock(__l1, __l2, __l3...);
+                __i = std::try_lock(__l1, __l2, __l3...);
                 if (__i == -1)
                 {
                     __u0.release();
@@ -416,7 +416,7 @@ __lock_first(int __i, _L0& __l0, _L1& __l1, _L2& __l2, _L3& ...__l3)
         case 1:
             {
                 unique_lock<_L1> __u1(__l1);
-                __i = try_lock(__l2, __l3..., __l0);
+                __i = std::try_lock(__l2, __l3..., __l0);
                 if (__i == -1)
                 {
                     __u1.release();
@@ -430,7 +430,7 @@ __lock_first(int __i, _L0& __l0, _L1& __l1, _L2& __l2, _L3& ...__l3)
             __libcpp_thread_yield();
             break;
         default:
-            __lock_first(__i - 2, __l2, __l3..., __l0, __l1);
+            std::__lock_first(__i - 2, __l2, __l3..., __l0, __l1);
             return;
         }
     }
@@ -441,7 +441,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 void
 lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3& ...__l3)
 {
-    __lock_first(0, __l0, __l1, __l2, __l3...);
+    std::__lock_first(0, __l0, __l1, __l2, __l3...);
 }
 
 template <class _L0>
@@ -667,7 +667,7 @@ call_once(once_flag& __flag, _Callable&& __func, _Args&&... __args)
         typedef tuple<_Callable&&, _Args&&...> _Gp;
         _Gp __f(_VSTD::forward<_Callable>(__func), _VSTD::forward<_Args>(__args)...);
         __call_once_param<_Gp> __p(__f);
-        __call_once(__flag.__state_, &__p, &__call_once_proxy<_Gp>);
+        std::__call_once(__flag.__state_, &__p, &__call_once_proxy<_Gp>);
     }
 }
 

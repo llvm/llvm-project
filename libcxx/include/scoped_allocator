@@ -373,7 +373,7 @@ template <class _Alloc>
 struct __has_outer_allocator
     : public common_type
              <
-                 decltype(__has_outer_allocator_test(declval<_Alloc&>()))
+                 decltype(std::__has_outer_allocator_test(declval<_Alloc&>()))
              >::type
 {
 };
