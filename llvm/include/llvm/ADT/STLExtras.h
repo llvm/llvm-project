@@ -155,12 +155,12 @@ struct function_traits<ReturnType (&)(Args...), false>
 /// traits class for checking whether type T is one of any of the given
 /// types in the variadic list.
 template <typename T, typename... Ts>
-using is_one_of = disjunction<std::is_same<T, Ts>...>;
+using is_one_of = std::disjunction<std::is_same<T, Ts>...>;
 
 /// traits class for checking whether type T is a base class for all
 ///  the given types in the variadic list.
 template <typename T, typename... Ts>
-using are_base_of = conjunction<std::is_base_of<T, Ts>...>;
+using are_base_of = std::conjunction<std::is_base_of<T, Ts>...>;
 
 namespace detail {
 template <typename T, typename... Us> struct TypesAreDistinct;
@@ -1386,12 +1386,12 @@ template <> struct rank<0> {};
 /// traits class for checking whether type T is one of any of the given
 /// types in the variadic list.
 template <typename T, typename... Ts>
-using is_one_of = disjunction<std::is_same<T, Ts>...>;
+using is_one_of = std::disjunction<std::is_same<T, Ts>...>;
 
 /// traits class for checking whether type T is a base class for all
 ///  the given types in the variadic list.
 template <typename T, typename... Ts>
-using are_base_of = conjunction<std::is_base_of<T, Ts>...>;
+using are_base_of = std::conjunction<std::is_base_of<T, Ts>...>;
 
 namespace detail {
 template <typename... Ts> struct Visitor;
@@ -1550,7 +1550,7 @@ namespace detail {
 template <typename T>
 // We can use qsort if the iterator type is a pointer and the underlying value
 // is trivially copyable.
-using sort_trivially_copyable = conjunction<
+using sort_trivially_copyable = std::conjunction<
     std::is_pointer<T>,
     std::is_trivially_copyable<typename std::iterator_traits<T>::value_type>>;
 } // namespace detail

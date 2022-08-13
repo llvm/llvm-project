@@ -24,6 +24,8 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 
+#include <utility>
+
 namespace llvm {
 
 class MemoryBuffer;
@@ -222,8 +224,8 @@ public:
   OptionalStorage() = default;
 
   template <class... ArgTypes>
-  explicit OptionalStorage(in_place_t, ArgTypes &&...Args)
-      : StorageImpl(in_place_t{}, std::forward<ArgTypes>(Args)...) {}
+  explicit OptionalStorage(std::in_place_t, ArgTypes &&...Args)
+      : StorageImpl(std::in_place_t{}, std::forward<ArgTypes>(Args)...) {}
 
   OptionalStorage &operator=(clang::FileEntryRef Ref) {
     StorageImpl::operator=(Ref);

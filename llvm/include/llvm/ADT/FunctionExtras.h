@@ -65,7 +65,7 @@ template <typename CallableT, typename ThisT>
 using EnableUnlessSameType =
     std::enable_if_t<!std::is_same<remove_cvref_t<CallableT>, ThisT>::value>;
 template <typename CallableT, typename Ret, typename... Params>
-using EnableIfCallable = std::enable_if_t<llvm::disjunction<
+using EnableIfCallable = std::enable_if_t<std::disjunction<
     std::is_void<Ret>,
     std::is_same<decltype(std::declval<CallableT>()(std::declval<Params>()...)),
                  Ret>,
