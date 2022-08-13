@@ -328,7 +328,7 @@ COFFPlatform::COFFPlatform(
   auto VCRT =
       COFFVCRuntimeBootstrapper::Create(ES, ObjLinkingLayer, VCRuntimePath);
   if (!VCRT) {
-    Err = std::move(VCRT.takeError());
+    Err = VCRT.takeError();
     return;
   }
   VCRuntimeBootstrap = std::move(*VCRT);
