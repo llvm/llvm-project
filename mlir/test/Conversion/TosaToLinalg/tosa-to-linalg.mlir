@@ -219,16 +219,11 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   %18 = "tosa.clamp"(%0) {min_int = 1 : i64, max_int = 5 : i64, min_fp = 1.0 : f32, max_fp = 5.0 : f32} : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
-  // CHECK: arith.minf
-  // CHECK: arith.maxf
-  %19 = "tosa.reluN"(%0) {max_int = 5 : i64, max_fp = 5.0 : f32} : (tensor<1xf32>) -> tensor<1xf32>
-
-  // CHECK: linalg.generic
   // CHECK: arith.negf
   // CHECK: exp
   // CHECK: arith.addf
   // CHECK: arith.divf
-  %20 = "tosa.sigmoid"(%0) : (tensor<1xf32>) -> tensor<1xf32>
+  %19 = "tosa.sigmoid"(%0) : (tensor<1xf32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
   // CHECK: arith.constant 0.000000e+00
@@ -242,20 +237,20 @@ func.func @test_simple_f32(%arg0: tensor<1xf32>) -> () {
   // CHECK: arith.minf
   // CHECK: arith.maxf
   // CHECK: arith.fptosi
-  %21 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi32>
+  %20 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
   // CHECK: arith.constant 0
   // CHECK: arith.cmpf
-  %22 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi1>
+  %21 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xi1>
 
   // CHECK: linalg.generic
   // CHECK: arith.truncf
-  %23 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xf16>
+  %22 = "tosa.cast"(%0) : (tensor<1xf32>) -> tensor<1xf16>
 
   // CHECK: linalg.generic
   // CHECK: arith.divf
-  %24 = "tosa.reciprocal"(%0) : (tensor<1xf32>) -> tensor<1xf32>
+  %23 = "tosa.reciprocal"(%0) : (tensor<1xf32>) -> tensor<1xf32>
 
   return
 }
@@ -393,11 +388,6 @@ func.func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   %19 = "tosa.clamp"(%0) {min_int = 1 : i64, max_int = 5 : i64, min_fp = 1.0 : f32, max_fp = 5.0 : f32} : (tensor<1xi32>) -> tensor<1xi32>
 
   // CHECK: linalg.generic
-  // CHECK: arith.cmpi
-  // CHECK: select
-  %20 = "tosa.reluN"(%0) {max_int = 5 : i64, max_fp = 5.0 : f32} : (tensor<1xi32>) -> tensor<1xi32>
-
-  // CHECK: linalg.generic
   // CHECK: arith.constant -32768
   // CHECK: arith.constant 32767
   // CHECK: arith.cmpi slt
@@ -405,27 +395,27 @@ func.func @test_simple_i32(%arg0: tensor<1xi32>) -> () {
   // CHECK: arith.cmpi slt
   // CHECK: select
   // CHECK: arith.trunci
-  %21 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi16>
+  %20 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi16>
 
   // CHECK: linalg.generic
   // CHECK: arith.extsi
-  %22 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi64>
+  %21 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi64>
 
   // CHECK: linalg.generic
   // CHECK: arith.constant 0
   // CHECK: arith.cmpi
-  %23 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi1>
+  %22 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xi1>
 
   // CHECK: linalg.generic
   // CHECK: arith.sitofp
-  %24 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xf32>
+  %23 = "tosa.cast"(%0) : (tensor<1xi32>) -> tensor<1xf32>
 
   // CHECK: linalg.generic
   // CHECK: arith.constant 0
   // CHECK: arith.cmpi sgt
   // CHECK: arith.subi
   // CHECK: select
-  %25 = "tosa.abs"(%arg0) : (tensor<1xi32>) -> tensor<1xi32>
+  %24 = "tosa.abs"(%arg0) : (tensor<1xi32>) -> tensor<1xi32>
 
   return
 }
@@ -474,7 +464,7 @@ func.func @test_i8(%arg0: tensor<1xi8>) -> () {
 // CHECK-LABEL: @test_clamp_f16
 func.func @test_clamp_f16(%arg0: tensor<1xf16>) -> () {
   // CHECK: linalg.generic
-  // CHECK: ^bb0(%[[ARG1:.+]]: f16, 
+  // CHECK: ^bb0(%[[ARG1:.+]]: f16,
   // CHECK-DAG: %[[C0:.+]] = arith.constant 0.0
   // CHECK-DAG: %[[C6:.+]] = arith.constant 6.0
   // CHECK-DAG: %[[MIN:.+]] = arith.minf %[[ARG1]], %[[C0]]
