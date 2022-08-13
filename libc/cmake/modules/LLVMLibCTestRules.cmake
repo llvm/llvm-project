@@ -387,6 +387,7 @@ endfunction(add_libc_fuzzer)
 #     DEPENDS <list of entrypoint or other object targets>
 #     ARGS <list of command line arguments to be passed to the test>
 #     ENV <list of environment variables to set before running the test>
+#     COMPILE_OPTIONS <list of special compile options for this target>
 #   )
 #
 # The loader target should provide a property named LOADER_OBJECT which is
@@ -404,7 +405,7 @@ function(add_integration_test test_name)
     "INTEGRATION_TEST"
     "" # No optional arguments
     "SUITE;LOADER" # Single value arguments
-    "SRCS;HDRS;DEPENDS;ARGS;ENV" # Multi-value arguments
+    "SRCS;HDRS;DEPENDS;ARGS;ENV;COMPILE_OPTIONS" # Multi-value arguments
     ${ARGN}
   )
 
@@ -522,7 +523,7 @@ function(add_integration_test test_name)
       ${LIBC_BUILD_DIR}
       ${LIBC_BUILD_DIR}/include
   )
-  target_compile_options(${fq_target_name} PRIVATE -ffreestanding)
+  target_compile_options(${fq_target_name} PRIVATE -ffreestanding ${INTEGRATION_TEST_COMPILE_OPTIONS})
   # We set a number of link options to prevent picking up system libc binaries.
   # Also, we restrict the integration tests to fully static executables. The
   # rtlib is set to compiler-rt to make the compiler drivers pick up the compiler
