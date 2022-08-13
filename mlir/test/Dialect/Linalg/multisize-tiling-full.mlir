@@ -3,7 +3,7 @@
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
   // This implements a 2D multisize tiling with target sizes [3, 10].
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1:3 = transform.structured.multitile_sizes %0 { dimension = 0, target_size = 3}
