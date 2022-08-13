@@ -76,11 +76,11 @@ end:
   ret i64 %res
 }
 
-; TODO: %x either uge 7 or is masked with 7
-define i64 @limit_i64_uge_7(i64 %x) {
-; CHECK-LABEL: @limit_i64_uge_7(
+; TODO: %x either uge 8 or is masked with 7
+define i64 @limit_i64_uge_8(i64 %x) {
+; CHECK-LABEL: @limit_i64_uge_8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], 6
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], 7
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BODY:%.*]], label [[END:%.*]]
 ; CHECK:       body:
 ; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[X]], 7
@@ -91,7 +91,7 @@ define i64 @limit_i64_uge_7(i64 %x) {
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
-  %cmp = icmp uge i64 %x, 7
+  %cmp = icmp uge i64 %x, 8
   br i1 %cmp, label %body, label %end
 body:
   %mask = and i64 %x, 7
@@ -128,11 +128,11 @@ end:
   ret i64 %res
 }
 
-; TODO: %x either ugt 8 or is masked with 7
-define i64 @limit_i64_ugt_8(i64 %x) {
-; CHECK-LABEL: @limit_i64_ugt_8(
+; TODO: %x either ugt 7 or is masked with 7
+define i64 @limit_i64_ugt_7(i64 %x) {
+; CHECK-LABEL: @limit_i64_ugt_7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[X:%.*]], 7
 ; CHECK-NEXT:    br i1 [[CMP]], label [[BODY:%.*]], label [[END:%.*]]
 ; CHECK:       body:
 ; CHECK-NEXT:    [[MASK:%.*]] = and i64 [[X]], 7
@@ -143,7 +143,7 @@ define i64 @limit_i64_ugt_8(i64 %x) {
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
 entry:
-  %cmp = icmp ugt i64 %x, 8
+  %cmp = icmp ugt i64 %x, 7
   br i1 %cmp, label %body, label %end
 body:
   %mask = and i64 %x, 7
