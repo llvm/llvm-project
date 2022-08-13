@@ -137,3 +137,9 @@ bool TraceCursorIntelPT::HasId(lldb::user_id_t id) const {
 }
 
 user_id_t TraceCursorIntelPT::GetId() const { return m_pos; }
+
+Optional<std::string> TraceCursorIntelPT::GetSyncPointMetadata() const {
+  return formatv("offset = 0x{0:x}",
+                 m_decoded_thread_sp->GetSyncPointOffsetByIndex(m_pos))
+      .str();
+}
