@@ -13927,7 +13927,8 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // conditions 1) one-use, 2) does not produce poison, and 3) has all but one
   // guaranteed-non-poison operands then push the freeze through to the one
   // operand that is not guaranteed non-poison.
-  if (!DAG.canCreateUndefOrPoison(N0, /*PoisonOnly*/ false) &&
+  if (!DAG.canCreateUndefOrPoison(N0, /*PoisonOnly*/ false,
+                                  /*ConsiderFlags*/ true) &&
       N0->getNumValues() == 1 && N0->hasOneUse()) {
     SDValue MaybePoisonOperand;
     for (SDValue Op : N0->ops()) {
@@ -13944,6 +13945,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     }
     if (MaybePoisonOperand) {
       // Recreate the node with the frozen maybe-poison operand.
+      // TODO: Disable ConsiderFlags and just strip poison generating flags?
       // TODO: Drop the isOnlyUserOf constraint and replace all users of
       // MaybePoisonOperand with FrozenMaybePoisonOperand
       // to match pushFreezeToPreventPoisonFromPropagating behavior.

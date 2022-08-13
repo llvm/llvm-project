@@ -6,15 +6,13 @@ define i32 @freeze_add(i32 %a0) nounwind {
 ; X86-LABEL: freeze_add:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    incl %eax
-; X86-NEXT:    incl %eax
+; X86-NEXT:    addl $2, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_add:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal 1(%rdi), %eax
-; X64-NEXT:    incl %eax
+; X64-NEXT:    leal 2(%rdi), %eax
 ; X64-NEXT:    retq
   %x = add i32 %a0, 1
   %y = freeze i32 %x
@@ -46,13 +44,12 @@ define <4 x i32> @freeze_add_vec(<4 x i32> %a0) nounwind {
 ; X86-LABEL: freeze_add_vec:
 ; X86:       # %bb.0:
 ; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_add_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [5,5,5,5]
+; X64-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = add <4 x i32> %a0, <i32 1, i32 2, i32 3, i32 4>
   %y = freeze <4 x i32> %x
@@ -82,15 +79,13 @@ define i32 @freeze_sub(i32 %a0) nounwind {
 ; X86-LABEL: freeze_sub:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    decl %eax
-; X86-NEXT:    decl %eax
+; X86-NEXT:    addl $-2, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_sub:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal -1(%rdi), %eax
-; X64-NEXT:    decl %eax
+; X64-NEXT:    leal -2(%rdi), %eax
 ; X64-NEXT:    retq
   %x = sub i32 %a0, 1
   %y = freeze i32 %x
@@ -102,15 +97,13 @@ define i32 @freeze_sub_nuw(i32 %a0) nounwind {
 ; X86-LABEL: freeze_sub_nuw:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    decl %eax
-; X86-NEXT:    decl %eax
+; X86-NEXT:    addl $-2, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_sub_nuw:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal -1(%rdi), %eax
-; X64-NEXT:    decl %eax
+; X64-NEXT:    leal -2(%rdi), %eax
 ; X64-NEXT:    retq
   %x = sub nuw i32 %a0, 1
   %y = freeze i32 %x
@@ -122,13 +115,12 @@ define <4 x i32> @freeze_sub_vec(<4 x i32> %a0) nounwind {
 ; X86-LABEL: freeze_sub_vec:
 ; X86:       # %bb.0:
 ; X86-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    psubd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_sub_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpsubd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [5,5,5,5]
+; X64-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = sub <4 x i32> %a0, <i32 1, i32 2, i32 3, i32 4>
   %y = freeze <4 x i32> %x
@@ -158,15 +150,13 @@ define i32 @freeze_mul(i32 %a0) nounwind {
 ; X86-LABEL: freeze_mul:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_mul:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rdi), %eax
-; X64-NEXT:    addl %eax, %eax
+; X64-NEXT:    leal (,%rdi,4), %eax
 ; X64-NEXT:    retq
   %x = mul i32 %a0, 2
   %y = freeze i32 %x
@@ -198,12 +188,10 @@ define <8 x i16> @freeze_mul_vec(<8 x i16> %a0) nounwind {
 ; X86-LABEL: freeze_mul_vec:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_mul_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = mul <8 x i16> %a0, <i16 1, i16 2, i16 3, i16 4, i16 4, i16 3, i16 2, i16 1>

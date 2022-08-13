@@ -4575,6 +4575,13 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BITCAST:
     return false;
 
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::MUL:
+    // Matches hasPoisonGeneratingFlags().
+    return ConsiderFlags && (Op->getFlags().hasNoSignedWrap() ||
+                             Op->getFlags().hasNoUnsignedWrap());
+
   default:
     // Allow the target to implement this method for its nodes.
     if (Opcode >= ISD::BUILTIN_OP_END || Opcode == ISD::INTRINSIC_WO_CHAIN ||
