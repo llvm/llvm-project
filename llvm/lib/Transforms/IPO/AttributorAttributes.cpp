@@ -9515,7 +9515,7 @@ private:
                         ArrayRef<const AACallEdges *> AAEdgesList) {
       ChangeStatus Change = ChangeStatus::UNCHANGED;
 
-      for (auto *AAEdges : AAEdgesList) {
+      for (const auto *AAEdges : AAEdgesList) {
         if (AAEdges->hasUnknownCallee()) {
           if (!CanReachUnknownCallee) {
             LLVM_DEBUG(dbgs()
@@ -9563,7 +9563,7 @@ private:
                           const Function &Fn) const {
 
       // Handle the most trivial case first.
-      for (auto *AAEdges : AAEdgesList) {
+      for (const auto *AAEdges : AAEdgesList) {
         const SetVector<Function *> &Edges = AAEdges->getOptimisticEdges();
 
         if (Edges.count(const_cast<Function *>(&Fn)))
@@ -9591,7 +9591,7 @@ private:
       }
 
       // The result is false for now, set dependencies and leave.
-      for (auto *Dep : Deps)
+      for (const auto *Dep : Deps)
         A.recordDependence(*Dep, AA, DepClassTy::REQUIRED);
 
       return false;

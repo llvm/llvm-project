@@ -1541,7 +1541,7 @@ bool ObjCARCOpt::VisitInstructionTopDown(
   if (const SmallPtrSet<const Value *, 2> *Roots =
           getRCIdentityRootsFromReleaseInsertPt(
               Inst, ReleaseInsertPtToRCIdentityRoots))
-    for (auto *Root : *Roots) {
+    for (const auto *Root : *Roots) {
       TopDownPtrState &S = MyStates.getPtrTopDownState(Root);
       // Disable code motion if the current position is S_Retain to prevent
       // moving the objc_retain call past objc_release calls. If it's
