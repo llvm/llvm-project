@@ -88,6 +88,10 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_EQ(Tokens.size(), 5u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::amp, TT_UnaryOperator);
 
+  Tokens = annotate("bool b = 3 == int{3} && true;\n");
+  EXPECT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::ampamp, TT_BinaryOperator);
+
   Tokens = annotate("struct {\n"
                     "} *ptr;");
   EXPECT_EQ(Tokens.size(), 7u) << Tokens;
