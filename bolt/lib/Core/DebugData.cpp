@@ -1593,7 +1593,7 @@ void DwarfLineTable::emit(BinaryContext &BC, MCStreamer &Streamer) {
   // Some versions of GCC output DWARF5 .debug_info, but DWARF4 or lower
   // .debug_line
   if (LineStrSection) {
-    LineStr = MCDwarfLineStr(*BC.Ctx);
+    LineStr.emplace(*BC.Ctx);
     parseAndPopulateDebugLineStr(*LineStrSection, *LineStr, BC, Streamer);
   }
 
