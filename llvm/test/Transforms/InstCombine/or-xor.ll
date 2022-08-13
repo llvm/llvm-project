@@ -168,7 +168,7 @@ define i8 @xor_common_op_commute1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @xor_common_op_commute1(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[XOR]])
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[Z]]
 ;
   %xor = xor i8 %y, %x
@@ -180,8 +180,7 @@ define i8 @xor_common_op_commute1(i8 %x, i8 %y) {
 define i8 @xor_common_op_commute2(i8 %p, i8 %y) {
 ; CHECK-LABEL: @xor_common_op_commute2(
 ; CHECK-NEXT:    [[X:%.*]] = xor i8 [[P:%.*]], 5
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[XOR]]
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[Z]]
 ;
   %x = xor i8 %p, 5 ; thwart complexity-based canonicalization
@@ -194,8 +193,7 @@ define i8 @xor_common_op_commute3(i8 %p, i8 %q) {
 ; CHECK-LABEL: @xor_common_op_commute3(
 ; CHECK-NEXT:    [[X:%.*]] = xor i8 [[P:%.*]], 5
 ; CHECK-NEXT:    [[Y:%.*]] = mul i8 [[Q:%.*]], [[Q]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[XOR]]
+; CHECK-NEXT:    [[Z:%.*]] = or i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[Z]]
 ;
   %x = xor i8 %p, 5  ; thwart complexity-based canonicalization

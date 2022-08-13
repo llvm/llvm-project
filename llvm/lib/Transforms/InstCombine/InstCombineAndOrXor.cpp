@@ -2799,6 +2799,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateMul(X, IncrementY);
   }
 
+  // X | (X ^ Y) --> X | Y (4 commuted patterns)
+  if (match(&I, m_c_Or(m_Value(X), m_c_Xor(m_Deferred(X), m_Value(Y)))))
+    return BinaryOperator::CreateOr(X, Y);
+
   // (A & C) | (B & D)
   Value *A, *B, *C, *D;
   if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
@@ -2909,11 +2913,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   }
 
   if (match(Op1, m_Xor(m_Value(A), m_Value(B)))) {
-    // A | (A ^ B) --> A | B
-    // B | (A ^ B) --> A | B
-    if (Op0 == A || Op0 == B)
-      return BinaryOperator::CreateOr(A, B);
-
     // (A | ?) | (A ^ B) --> (A | ?) | B
     // (B | ?) | (A ^ B) --> (B | ?) | A
     if (match(Op0, m_c_Or(m_Specific(A), m_Value())))
