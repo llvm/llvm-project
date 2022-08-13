@@ -166,6 +166,12 @@
 # define TEST_CONSTEXPR_CXX20
 #endif
 
+#if TEST_STD_VER > 20
+#  define TEST_CONSTEXPR_CXX23 constexpr
+#else
+#  define TEST_CONSTEXPR_CXX23
+#endif
+
 #define TEST_ALIGNAS_TYPE(...) TEST_ALIGNAS(TEST_ALIGNOF(__VA_ARGS__))
 
 #if !TEST_HAS_FEATURE(cxx_rtti) && !defined(__cpp_rtti) \

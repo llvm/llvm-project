@@ -155,7 +155,7 @@
 #    define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #  endif
 
-#  define _LIBCPP_TOSTRING2(x) #  x
+#  define _LIBCPP_TOSTRING2(x) #x
 #  define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
 
 #  if __cplusplus < 201103L
@@ -840,6 +840,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_CONSTEXPR_AFTER_CXX17 constexpr
 #  else
 #    define _LIBCPP_CONSTEXPR_AFTER_CXX17
+#  endif
+
+#  if _LIBCPP_STD_VER > 20
+#    define _LIBCPP_CONSTEXPR_AFTER_CXX20 constexpr
+#  else
+#    define _LIBCPP_CONSTEXPR_AFTER_CXX20
 #  endif
 
 #  if __has_cpp_attribute(nodiscard)

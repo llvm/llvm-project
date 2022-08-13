@@ -12,18 +12,20 @@
 #include <string>
 #include <vector>
 
+#include "test_macros.h"
+
 template <int N>
-std::vector<std::bitset<N> > get_test_cases();
+TEST_CONSTEXPR_CXX23 std::vector<std::bitset<N> > get_test_cases();
 
 template <>
-inline std::vector<std::bitset<0> > get_test_cases<0>() {
+TEST_CONSTEXPR_CXX23 inline std::vector<std::bitset<0> > get_test_cases<0>() {
     std::vector<std::bitset<0> > cases;
     cases.push_back(std::bitset<0>());
     return cases;
 }
 
 template <>
-inline std::vector<std::bitset<1> > get_test_cases<1>() {
+TEST_CONSTEXPR_CXX23 inline std::vector<std::bitset<1> > get_test_cases<1>() {
     std::vector<std::bitset<1> > cases;
     cases.push_back(std::bitset<1>("0"));
     cases.push_back(std::bitset<1>("1"));
@@ -31,7 +33,7 @@ inline std::vector<std::bitset<1> > get_test_cases<1>() {
 }
 
 template <>
-inline std::vector<std::bitset<2> > get_test_cases<2>() {
+TEST_CONSTEXPR_CXX23 inline std::vector<std::bitset<2> > get_test_cases<2>() {
     std::vector<std::bitset<2> > cases;
     cases.push_back(std::bitset<2>("00"));
     cases.push_back(std::bitset<2>("01"));
@@ -41,7 +43,7 @@ inline std::vector<std::bitset<2> > get_test_cases<2>() {
 }
 
 template <>
-inline std::vector<std::bitset<31> > get_test_cases<31>() {
+TEST_CONSTEXPR_CXX23 inline std::vector<std::bitset<31> > get_test_cases<31>() {
     std::vector<std::bitset<31> > cases;
     cases.push_back(std::bitset<31>("0000000000000000000000000000000"));
     cases.push_back(std::bitset<31>("0000000000000000000000000000001"));
@@ -59,7 +61,7 @@ inline std::vector<std::bitset<31> > get_test_cases<31>() {
 }
 
 template <>
-inline std::vector<std::bitset<32> > get_test_cases<32>() {
+TEST_CONSTEXPR_CXX23 inline std::vector<std::bitset<32> > get_test_cases<32>() {
     std::vector<std::bitset<32> > cases;
     cases.push_back(std::bitset<32>("00000000000000000000000000000000"));
     cases.push_back(std::bitset<32>("00000000000000000000000000000001"));
@@ -77,7 +79,7 @@ inline std::vector<std::bitset<32> > get_test_cases<32>() {
 }
 
 template <>
-inline std::vector<std::bitset<33> > get_test_cases<33>() {
+TEST_CONSTEXPR_CXX23 inline std::vector<std::bitset<33> > get_test_cases<33>() {
     std::vector<std::bitset<33> > cases;
     cases.push_back(std::bitset<33>("000000000000000000000000000000000"));
     cases.push_back(std::bitset<33>("000000000000000000000000000000001"));
@@ -95,7 +97,7 @@ inline std::vector<std::bitset<33> > get_test_cases<33>() {
 }
 
 template <>
-inline std::vector<std::bitset<63> > get_test_cases<63>() {
+TEST_CONSTEXPR_CXX23 inline std::vector<std::bitset<63> > get_test_cases<63>() {
     std::vector<std::bitset<63> > cases;
     cases.push_back(std::bitset<63>("000000000000000000000000000000000000000000000000000000000000000"));
     cases.push_back(std::bitset<63>("000000000000000000000000000000000000000000000000000000000000001"));
@@ -113,7 +115,7 @@ inline std::vector<std::bitset<63> > get_test_cases<63>() {
 }
 
 template <>
-inline std::vector<std::bitset<64> > get_test_cases<64>() {
+TEST_CONSTEXPR_CXX23 inline std::vector<std::bitset<64> > get_test_cases<64>() {
     std::vector<std::bitset<64> > cases;
     cases.push_back(std::bitset<64>("0000000000000000000000000000000000000000000000000000000000000000"));
     cases.push_back(std::bitset<64>("0000000000000000000000000000000000000000000000000000000000000001"));
@@ -131,7 +133,7 @@ inline std::vector<std::bitset<64> > get_test_cases<64>() {
 }
 
 template <>
-inline std::vector<std::bitset<65> > get_test_cases<65>() {
+TEST_CONSTEXPR_CXX23 inline std::vector<std::bitset<65> > get_test_cases<65>() {
     std::vector<std::bitset<65> > cases;
     cases.push_back(std::bitset<65>("00000000000000000000000000000000000000000000000000000000000000000"));
     cases.push_back(std::bitset<65>("00000000000000000000000000000000000000000000000000000000000000001"));
@@ -148,7 +150,7 @@ inline std::vector<std::bitset<65> > get_test_cases<65>() {
     return cases;
 }
 
-inline std::string str_repeat(std::string s, unsigned int n) {
+TEST_CONSTEXPR_CXX23 inline std::string str_repeat(std::string s, unsigned int n) {
     std::string res = s;
     for (; n != 0; --n)
         res += s;
@@ -156,7 +158,7 @@ inline std::string str_repeat(std::string s, unsigned int n) {
 }
 
 template <>
-inline std::vector<std::bitset<1000> > get_test_cases<1000>() {
+TEST_CONSTEXPR_CXX23 inline std::vector<std::bitset<1000> > get_test_cases<1000>() {
     std::vector<std::bitset<1000> > cases;
     cases.push_back(std::bitset<1000>(std::string(1000, '0')));
     cases.push_back(std::bitset<1000>(std::string(999, '0') + std::string(1, '1')));
