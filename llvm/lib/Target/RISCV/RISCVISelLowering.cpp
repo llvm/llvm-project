@@ -8276,10 +8276,32 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
-  // fold (sub x, (select lhs, rhs, cc, 0, y)) ->
-  //      (select lhs, rhs, cc, x, (sub x, y))
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
+  // Prefer to make this 'add 0/1' rather than 'sub 0/1'
+  // sub constant(!0), 0/1 -> add constant - 1, 1/0
+  // NODE: constant == 0, No redundant instructions are generated.
+  // (sub constant, (setcc x, y, eq/neq)) ->
+  // (add (setcc x, y, neq/eq), constant - 1)
+  auto *Nnz0 = dyn_cast<ConstantSDNode>(N0);
+  if (Nnz0 && N1.getOpcode() == ISD::SETCC && N1.hasOneUse()) {
+    const auto *CC = cast<CondCodeSDNode>(N1->getOperand(2));
+    ISD::CondCode CCVal = CC->get();
+    if (!Nnz0->isZero() && isIntEqualitySetCC(CCVal)) {
+      EVT VT = N->getValueType(0);
+      const APInt &ImmVal = Nnz0->getAPIntValue();
+      SDValue CCInverse =
+          DAG.getCondCode(ISD::getSetCCInverse(CCVal, N0.getValueType()));
+      SDValue NewN0 = DAG.getNode(ISD::SETCC, SDLoc(N), VT, N1->getOperand(0),
+                                  N1->getOperand(1), CCInverse);
+      SDValue NewN1 = DAG.getConstant(ImmVal - 1, SDLoc(N), VT);
+      return DAG.getNode(ISD::ADD, SDLoc(N), VT, NewN0, NewN1);
+    }
+  }
+
+  // fold (sub x, (select lhs, rhs, cc, 0, y)) ->
+  //      (select lhs, rhs, cc, x, (sub x, y))
   return combineSelectAndUse(N, N1, N0, DAG, /*AllOnes*/ false);
 }
 
