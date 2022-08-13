@@ -1860,9 +1860,9 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
     }
   } else if (auto denseArrayAttr = attr.dyn_cast<DenseArrayBaseAttr>()) {
     typeElision = AttrTypeElision::Must;
-    os << "array<" << denseArrayAttr.getType().getElementType() << ":";
+    os << "array<" << denseArrayAttr.getType().getElementType();
     if (denseArrayAttr.size())
-      os << " ";
+      os << ": ";
     denseArrayAttr.printWithoutBraces(os);
     os << ">";
   } else if (auto resourceAttr = attr.dyn_cast<DenseResourceElementsAttr>()) {
