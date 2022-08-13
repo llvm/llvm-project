@@ -252,12 +252,13 @@ struct ST {
 // CK2-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK2-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
+// CK2-DAG: [[A:%.*]] = getelementptr inbounds [[STRUCT_ST:%.*]], %struct.ST* [[THIS1:%.+]], i32 0, i32 0
 // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
 // CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-// CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
-// CK2-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-// CK2-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
+// CK2-DAG: store [[ST]]* [[THIS1]], [[ST]]** [[CBP0]]
+// CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to double**
+// CK2-DAG: store double** [[A]], double*** [[CP0]]
 #pragma omp target is_device_ptr(a)
     {
       a++;
@@ -268,15 +269,21 @@ struct ST {
 // CK2-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
 // CK2-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
 // CK2-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK2-DAG: [[SARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
+// CK2-DAG: store i64* [[SIZE:%.+]], i64** [[SARG]]
 // CK2-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK2-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
 
+// CK2-DAG: [[S:%[^,]+]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
+// CK2-DAG: [[SIZE:%[^,]+]] = getelementptr inbounds [2 x i64], [2 x i64]* %.offload_sizes, i32 0, i32 0
+// CK2-DAG: store i64 [[S]], i64* [[SIZE]]
+// CK2-DAG: [[B:%.*]] = getelementptr inbounds [[STRUCT_ST]], %struct.ST* [[THIS1]], i32 0, i32 1
 // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
 // CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-// CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
-// CK2-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-// CK2-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
+// CK2-DAG:  store %struct.ST* [[THIS1]], %struct.ST** [[CBP0]]
+// CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to double***
+// CK2-DAG: store double*** [[B]], double**** [[CP0]]
 #pragma omp target is_device_ptr(b)
     {
       b++;
@@ -287,15 +294,22 @@ struct ST {
 // CK2-DAG: store i8** [[BPGEP:%.+]], i8*** [[BPARG]]
 // CK2-DAG: [[PARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 3
 // CK2-DAG: store i8** [[PGEP:%.+]], i8*** [[PARG]]
+// CK2-DAG: [[SARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 4
+// CK2-DAG: store i64* [[SIZE:%.+]], i64** [[SARG]]
 // CK2-DAG: [[BPGEP]] = getelementptr inbounds {{.+}}[[BP:%[^,]+]]
 // CK2-DAG: [[PGEP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
+
+// CK2-DAG: [[A8:%.*]] = getelementptr inbounds [[STRUCT_ST]], %struct.ST* [[THIS1]], i32 0, i32 0
+// CK2-DAG: [[B9:%.*]] = getelementptr inbounds [[STRUCT_ST]], %struct.ST* [[THIS1]], i32 0, i32 1
+// CK2-DAG: [[S:%[^,]+]] = sdiv exact i64 [[SZ:%.+]], ptrtoint (i8* getelementptr (i8, i8* null, i32 1) to i64)
+// CK2-DAG: store i64 [[S]], i64* [[SIZE:%.+]]
 
 // CK2-DAG: [[BP0:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 0
 // CK2-DAG: [[P0:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 0
 // CK2-DAG: [[CBP0:%.+]] = bitcast i8** [[BP0]] to [[ST]]**
-// CK2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to [[ST]]**
-// CK2-DAG: store [[ST]]* [[VAR0:%.+]], [[ST]]** [[CBP0]]
-// CK2-DAG: store [[ST]]* [[VAR0]], [[ST]]** [[CP0]]
+// CK2-DAG:  store %struct.ST* [[THIS1]], %struct.ST** [[CBP0]]
+// CH2-DAG: [[CP0:%.+]] = bitcast i8** [[P0]] to to double***
+// CK2-DAG: store double** [[A8]], double*** [[TMP64:%.+]]
 #pragma omp target is_device_ptr(a, b)
     {
       a++;
