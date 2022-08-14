@@ -57,7 +57,8 @@ private:
 
 MapperJITLinkMemoryManager::MapperJITLinkMemoryManager(
     size_t ReservationGranularity, std::unique_ptr<MemoryMapper> Mapper)
-    : ReservationUnits(ReservationGranularity), Mapper(std::move(Mapper)) {}
+    : ReservationUnits(ReservationGranularity), AvailableMemory(AMAllocator),
+      Mapper(std::move(Mapper)) {}
 
 void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
                                           OnAllocatedFunction OnAllocated) {
@@ -71,20 +72,6 @@ void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
   }
 
   auto TotalSize = SegsSizes->total();
-
-  Mutex.lock();
-
-  // find an already reserved range that is large enough
-  ExecutorAddrRange SelectedRange{};
-  std::vector<ExecutorAddrRange>::iterator SelectedRangeIt;
-  SelectedRangeIt =
-      llvm::find_if(AvailableMemory, [TotalSize](ExecutorAddrRange Range) {
-        return TotalSize < Range.size();
-      });
-  if (SelectedRangeIt != AvailableMemory.end()) {
-    SelectedRange = *SelectedRangeIt;
-    AvailableMemory.erase(SelectedRangeIt);
-  }
 
   auto CompleteAllocation = [this, &G, BL = std::move(BL),
                              OnAllocated = std::move(OnAllocated)](
@@ -123,8 +110,7 @@ void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
 
     if (NextSegAddr < Result->End) {
       // Save the remaining memory for reuse in next allocation(s)
-      auto RemainingRange = ExecutorAddrRange(NextSegAddr, Result->End);
-      AvailableMemory.push_back(RemainingRange);
+      AvailableMemory.insert(NextSegAddr, Result->End - 1, true);
     }
     Mutex.unlock();
 
@@ -136,6 +122,20 @@ void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
     OnAllocated(std::make_unique<InFlightAlloc>(*this, G, Result->Start,
                                                 std::move(SegInfos)));
   };
+
+  Mutex.lock();
+
+  // find an already reserved range that is large enough
+  ExecutorAddrRange SelectedRange{};
+
+  for (AvailableMemoryMap::iterator It = AvailableMemory.begin();
+       It != AvailableMemory.end(); It++) {
+    if (It.stop() - It.start() + 1 >= TotalSize) {
+      SelectedRange = ExecutorAddrRange(It.start(), It.stop() + 1);
+      It.erase();
+      break;
+    }
+  }
 
   if (SelectedRange.empty()) { // no already reserved range was found
     auto TotalAllocation = alignTo(TotalSize, ReservationUnits);
@@ -168,7 +168,7 @@ void MapperJITLinkMemoryManager::deallocate(
         ExecutorAddrDiff Size = UsedMemory[Addr];
 
         UsedMemory.erase(Addr);
-        AvailableMemory.push_back({Addr, Addr + Size});
+        AvailableMemory.insert(Addr, Addr + Size - 1, true);
 
         FA.release();
       }
