@@ -1,5 +1,4 @@
 #include "clang/AST/JSONNodeDumper.h"
-#include "clang/AST/Type.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Lex/Lexer.h"
@@ -663,11 +662,9 @@ void JSONNodeDumper::VisitUnresolvedUsingType(const UnresolvedUsingType *UUT) {
 
 void JSONNodeDumper::VisitUnaryTransformType(const UnaryTransformType *UTT) {
   switch (UTT->getUTTKind()) {
-#define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
-  case UnaryTransformType::Enum:                                               \
-    JOS.attribute("transformKind", #Trait);                                    \
+  case UnaryTransformType::EnumUnderlyingType:
+    JOS.attribute("transformKind", "underlying_type");
     break;
-#include "clang/Basic/TransformTypeTraits.def"
   }
 }
 

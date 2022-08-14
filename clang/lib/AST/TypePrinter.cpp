@@ -22,7 +22,6 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
-#include "clang/AST/TextNodeDumper.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
@@ -33,7 +32,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -1142,19 +1140,29 @@ void TypePrinter::printUnaryTransformBefore(const UnaryTransformType *T,
                                             raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
 
-  static llvm::DenseMap<int, const char *> Transformation = {{
-#define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
-  {UnaryTransformType::Enum, "__" #Trait},
-#include "clang/Basic/TransformTypeTraits.def"
-  }};
-  OS << Transformation[T->getUTTKind()] << '(';
-  print(T->getBaseType(), OS, StringRef());
-  OS << ')';
-  spaceBeforePlaceHolder(OS);
+  switch (T->getUTTKind()) {
+    case UnaryTransformType::EnumUnderlyingType:
+      OS << "__underlying_type(";
+      print(T->getBaseType(), OS, StringRef());
+      OS << ')';
+      spaceBeforePlaceHolder(OS);
+      return;
+  }
+
+  printBefore(T->getBaseType(), OS);
 }
 
 void TypePrinter::printUnaryTransformAfter(const UnaryTransformType *T,
-                                           raw_ostream &OS) {}
+                                           raw_ostream &OS) {
+  IncludeStrongLifetimeRAII Strong(Policy);
+
+  switch (T->getUTTKind()) {
+    case UnaryTransformType::EnumUnderlyingType:
+      return;
+  }
+
+  printAfter(T->getBaseType(), OS);
+}
 
 void TypePrinter::printAutoBefore(const AutoType *T, raw_ostream &OS) {
   // If the type has been deduced, do not print 'auto'.

@@ -8674,10 +8674,6 @@ def err_typecheck_expect_flt_or_vector : Error<
   "a vector of such types is required">;
 def err_cast_selector_expr : Error<
   "cannot type cast @selector expression">;
-def err_make_signed_integral_only : Error<
-  "'%select{make_unsigned|make_signed}0' is only compatible with "
-  "non-%select{bool|_BitInt(1)}1 integers and enum types, but was given "
-  "%2%select{| whose underlying type is %4}3">;
 def ext_typecheck_cond_incompatible_pointers : ExtWarn<
   "pointer type mismatch%diff{ ($ and $)|}0,1">,
   InGroup<DiagGroup<"pointer-type-mismatch">>;

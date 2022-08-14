@@ -14,7 +14,6 @@
 #include "clang/AST/PrettyDeclStackTrace.h"
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/PrettyStackTrace.h"
-#include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/LoopHint.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -189,8 +188,7 @@ Retry:
     Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Statement);
     return StmtError();
 
-  case tok::identifier:
-  ParseIdentifier: {
+  case tok::identifier: {
     Token Next = NextToken();
     if (Next.is(tok::colon)) { // C99 6.8.1: labeled-statement
       // Both C++11 and GNU attributes preceding the label appertain to the
@@ -263,19 +261,7 @@ Retry:
       return StmtError();
     }
 
-    switch (Tok.getKind()) {
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
-      if (NextToken().is(tok::less)) {
-        Tok.setKind(tok::identifier);
-        Diag(Tok, diag::ext_keyword_as_ident)
-            << Tok.getIdentifierInfo()->getName() << 0;
-        goto ParseIdentifier;
-      }
-      LLVM_FALLTHROUGH;
-    default:
-      return ParseExprStatement(StmtCtx);
-    }
+    return ParseExprStatement(StmtCtx);
   }
 
   case tok::kw___attribute: {

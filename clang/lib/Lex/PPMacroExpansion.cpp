@@ -1663,8 +1663,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               .Case("__array_rank", true)
               .Case("__array_extent", true)
               .Case("__reference_binds_to_temporary", true)
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) .Case("__" #Trait, true)
-#include "clang/Basic/TransformTypeTraits.def"
+              .Case("__underlying_type", true)
               .Default(false);
         } else {
           return llvm::StringSwitch<bool>(II->getName())
