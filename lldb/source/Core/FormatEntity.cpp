@@ -711,9 +711,6 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     return false;
   }
 
-  if (valobj == nullptr)
-    return false;
-
   ValueObject::ExpressionPathAftermath what_next =
       (do_deref_pointer ? ValueObject::eExpressionPathAftermathDereference
                         : ValueObject::eExpressionPathAftermathNothing);
@@ -1695,7 +1692,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
               llvm::StringRef var_representation;
               const char *var_name = var_value_sp->GetName().GetCString();
               if (var_value_sp->GetCompilerType().IsValid()) {
-                if (var_value_sp && exe_scope->CalculateTarget())
+                if (exe_scope && exe_scope->CalculateTarget())
                   var_value_sp =
                       var_value_sp->GetQualifiedRepresentationIfAvailable(
                           exe_scope->CalculateTarget()
