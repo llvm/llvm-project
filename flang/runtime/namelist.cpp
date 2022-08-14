@@ -493,7 +493,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   return true;
 }
 
-bool IsNamelistName(IoStatementState &io) {
+bool IsNamelistNameOrSlash(IoStatementState &io) {
   if (auto *listInput{
           io.get_if<ListDirectedStatementState<Direction::Input>>()}) {
     if (listInput->inNamelistArray()) {
@@ -508,6 +508,8 @@ bool IsNamelistName(IoStatementState &io) {
           ch = io.GetNextNonBlank(byteCount);
           // TODO: how to deal with NaN(...) ambiguity?
           return ch && (*ch == '=' || *ch == '(' || *ch == '%');
+        } else {
+          return *ch == '/';
         }
       }
     }
