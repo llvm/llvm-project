@@ -828,15 +828,14 @@ TEST_F(FileSystemTest, RemoveDirectoriesNoExePerm) {
 
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/noexeperm",
                                          /*IgnoreErrors=*/true));
-  ASSERT_TRUE(fs::exists(Twine(TestDirectory) + "/noexeperm"));
-  ASSERT_EQ(fs::remove_directories(Twine(TestDirectory) + "/noexeperm",
-                                   /*IgnoreErrors=*/false),
-            errc::permission_denied);
 
-  fs::setPermissions(Twine(TestDirectory) + "/noexeperm", fs::all_perms);
-
-  ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/noexeperm",
-                                         /*IgnoreErrors=*/false));
+  // It's expected that the directory exists, but some environments appear to
+  // allow the removal despite missing the 'x' permission, so be flexible.
+  if (fs::exists(Twine(TestDirectory) + "/noexeperm")) {
+    fs::setPermissions(Twine(TestDirectory) + "/noexeperm", fs::all_perms);
+    ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/noexeperm",
+                                           /*IgnoreErrors=*/false));
+  }
 }
 #endif
 
