@@ -701,28 +701,37 @@ let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParm"> in {
   def : ReadHelper<[{
     auto parm = node.getAsSubstTemplateTemplateParm();
   }]>;
-  def : Property<"parameter", TemplateTemplateParmDeclRef> {
-    let Read = [{ parm->getParameter() }];
-  }
   def : Property<"replacement", TemplateName> {
     let Read = [{ parm->getReplacement() }];
   }
+  def : Property<"associatedDecl", DeclRef> {
+    let Read = [{ parm->getAssociatedDecl() }];
+  }
+  def : Property<"index", UInt32> {
+    let Read = [{ parm->getIndex() }];
+  }
+  def : Property<"packIndex", Optional<UInt32>> {
+    let Read = [{ parm->getPackIndex() }];
+  }
   def : Creator<[{
-    return ctx.getSubstTemplateTemplateParm(parameter, replacement);
+    return ctx.getSubstTemplateTemplateParm(replacement, associatedDecl, index, packIndex);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParmPack"> in {
   def : ReadHelper<[{
     auto parm = node.getAsSubstTemplateTemplateParmPack();
   }]>;
-  def : Property<"parameterPack", TemplateTemplateParmDeclRef> {
-    let Read = [{ parm->getParameterPack() }];
-  }
   def : Property<"argumentPack", TemplateArgument> {
     let Read = [{ parm->getArgumentPack() }];
   }
+  def : Property<"associatedDecl", DeclRef> {
+    let Read = [{ parm->getAssociatedDecl() }];
+  }
+  def : Property<"index", UInt32> {
+    let Read = [{ parm->getIndex() }];
+  }
   def : Creator<[{
-    return ctx.getSubstTemplateTemplateParmPack(parameterPack, argumentPack);
+    return ctx.getSubstTemplateTemplateParmPack(argumentPack, associatedDecl, index);
   }]>;
 }
 

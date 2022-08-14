@@ -382,7 +382,7 @@ namespace clang {
     void VisitDecompositionDecl(DecompositionDecl *DD);
     void VisitBindingDecl(BindingDecl *BD);
     void VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D);
-    DeclID VisitTemplateDecl(TemplateDecl *D);
+    void VisitTemplateDecl(TemplateDecl *D);
     void VisitConceptDecl(ConceptDecl *D);
     void VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D);
     RedeclarableResult VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D);
@@ -415,14 +415,15 @@ namespace clang {
     template<typename T>
     RedeclarableResult VisitRedeclarable(Redeclarable<T> *D);
 
-    template<typename T>
-    void mergeRedeclarable(Redeclarable<T> *D, RedeclarableResult &Redecl,
-                           DeclID TemplatePatternID = 0);
+    template <typename T>
+    void mergeRedeclarable(Redeclarable<T> *D, RedeclarableResult &Redecl);
 
-    template<typename T>
+    void mergeRedeclarableTemplate(RedeclarableTemplateDecl *D,
+                                   RedeclarableResult &Redecl);
+
+    template <typename T>
     void mergeRedeclarable(Redeclarable<T> *D, T *Existing,
-                           RedeclarableResult &Redecl,
-                           DeclID TemplatePatternID = 0);
+                           RedeclarableResult &Redecl);
 
     template<typename T>
     void mergeMergeable(Mergeable<T> *D);
@@ -431,7 +432,7 @@ namespace clang {
 
     void mergeTemplatePattern(RedeclarableTemplateDecl *D,
                               RedeclarableTemplateDecl *Existing,
-                              DeclID DsID, bool IsKeyDecl);
+                              bool IsKeyDecl);
 
     ObjCTypeParamList *ReadObjCTypeParamList();
 
@@ -887,90 +888,27 @@ void ASTDeclReader::VisitDeclaratorDecl(DeclaratorDecl *DD) {
 
 void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   RedeclarableResult Redecl = VisitRedeclarable(FD);
-  VisitDeclaratorDecl(FD);
 
-  // Attach a type to this function. Use the real type if possible, but fall
-  // back to the type as written if it involves a deduced return type.
-  if (FD->getTypeSourceInfo() &&
-      FD->getTypeSourceInfo()->getType()->castAs<FunctionType>()
-                             ->getReturnType()->getContainedAutoType()) {
-    // We'll set up the real type in Visit, once we've finished loading the
-    // function.
-    FD->setType(FD->getTypeSourceInfo()->getType());
-    Reader.PendingFunctionTypes.push_back({FD, DeferredTypeID});
-  } else {
-    FD->setType(Reader.GetType(DeferredTypeID));
-  }
-  DeferredTypeID = 0;
-
-  FD->DNLoc = Record.readDeclarationNameLoc(FD->getDeclName());
-  FD->IdentifierNamespace = Record.readInt();
-
-  // FunctionDecl's body is handled last at ASTDeclReader::Visit,
-  // after everything else is read.
-
-  FD->setStorageClass(static_cast<StorageClass>(Record.readInt()));
-  FD->setInlineSpecified(Record.readInt());
-  FD->setImplicitlyInline(Record.readInt());
-  FD->setVirtualAsWritten(Record.readInt());
-  // We defer calling `FunctionDecl::setPure()` here as for methods of
-  // `CXXTemplateSpecializationDecl`s, we may not have connected up the
-  // definition (which is required for `setPure`).
-  const bool Pure = Record.readInt();
-  FD->setHasInheritedPrototype(Record.readInt());
-  FD->setHasWrittenPrototype(Record.readInt());
-  FD->setDeletedAsWritten(Record.readInt());
-  FD->setTrivial(Record.readInt());
-  FD->setTrivialForCall(Record.readInt());
-  FD->setDefaulted(Record.readInt());
-  FD->setExplicitlyDefaulted(Record.readInt());
-  FD->setHasImplicitReturnZero(Record.readInt());
-  FD->setConstexprKind(static_cast<ConstexprSpecKind>(Record.readInt()));
-  FD->setUsesSEHTry(Record.readInt());
-  FD->setHasSkippedBody(Record.readInt());
-  FD->setIsMultiVersion(Record.readInt());
-  FD->setLateTemplateParsed(Record.readInt());
-  FD->setFriendConstraintRefersToEnclosingTemplate(Record.readInt());
-
-  FD->setCachedLinkage(static_cast<Linkage>(Record.readInt()));
-  FD->EndRangeLoc = readSourceLocation();
-  FD->setDefaultLoc(readSourceLocation());
-
-  FD->ODRHash = Record.readInt();
-  FD->setHasODRHash(true);
-
-  if (FD->isDefaulted()) {
-    if (unsigned NumLookups = Record.readInt()) {
-      SmallVector<DeclAccessPair, 8> Lookups;
-      for (unsigned I = 0; I != NumLookups; ++I) {
-        NamedDecl *ND = Record.readDeclAs<NamedDecl>();
-        AccessSpecifier AS = (AccessSpecifier)Record.readInt();
-        Lookups.push_back(DeclAccessPair::make(ND, AS));
-      }
-      FD->setDefaultedFunctionInfo(FunctionDecl::DefaultedFunctionInfo::Create(
-          Reader.getContext(), Lookups));
-    }
-  }
+  FunctionDecl *Existing = nullptr;
 
   switch ((FunctionDecl::TemplatedKind)Record.readInt()) {
   case FunctionDecl::TK_NonTemplate:
-    mergeRedeclarable(FD, Redecl);
     break;
   case FunctionDecl::TK_DependentNonTemplate:
-    mergeRedeclarable(FD, Redecl);
     FD->setInstantiatedFromDecl(readDeclAs<FunctionDecl>());
     break;
-  case FunctionDecl::TK_FunctionTemplate:
-    // Merged when we merge the template.
-    FD->setDescribedFunctionTemplate(readDeclAs<FunctionTemplateDecl>());
+  case FunctionDecl::TK_FunctionTemplate: {
+    auto *Template = readDeclAs<FunctionTemplateDecl>();
+    Template->init(FD);
+    FD->setDescribedFunctionTemplate(Template);
     break;
+  }
   case FunctionDecl::TK_MemberSpecialization: {
     auto *InstFD = readDeclAs<FunctionDecl>();
     auto TSK = (TemplateSpecializationKind)Record.readInt();
     SourceLocation POI = readSourceLocation();
     FD->setInstantiationOfMemberFunction(Reader.getContext(), InstFD, TSK);
     FD->getMemberSpecializationInfo()->setPointOfInstantiation(POI);
-    mergeRedeclarable(FD, Redecl);
     break;
   }
   case FunctionDecl::TK_FunctionTemplateSpecialization: {
@@ -1041,7 +979,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
       else {
         assert(Reader.getContext().getLangOpts().Modules &&
                "already deserialized this template specialization");
-        mergeRedeclarable(FD, ExistingInfo->getFunction(), Redecl);
+        Existing = ExistingInfo->getFunction();
       }
     }
     break;
@@ -1068,6 +1006,96 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     break;
   }
   }
+
+  VisitDeclaratorDecl(FD);
+
+  // Attach a type to this function. Use the real type if possible, but fall
+  // back to the type as written if it involves a deduced return type.
+  if (FD->getTypeSourceInfo() && FD->getTypeSourceInfo()
+                                     ->getType()
+                                     ->castAs<FunctionType>()
+                                     ->getReturnType()
+                                     ->getContainedAutoType()) {
+    // We'll set up the real type in Visit, once we've finished loading the
+    // function.
+    FD->setType(FD->getTypeSourceInfo()->getType());
+    Reader.PendingFunctionTypes.push_back({FD, DeferredTypeID});
+  } else {
+    FD->setType(Reader.GetType(DeferredTypeID));
+  }
+  DeferredTypeID = 0;
+
+  FD->DNLoc = Record.readDeclarationNameLoc(FD->getDeclName());
+  FD->IdentifierNamespace = Record.readInt();
+
+  // FunctionDecl's body is handled last at ASTDeclReader::Visit,
+  // after everything else is read.
+
+  FD->setStorageClass(static_cast<StorageClass>(Record.readInt()));
+  FD->setInlineSpecified(Record.readInt());
+  FD->setImplicitlyInline(Record.readInt());
+  FD->setVirtualAsWritten(Record.readInt());
+  // We defer calling `FunctionDecl::setPure()` here as for methods of
+  // `CXXTemplateSpecializationDecl`s, we may not have connected up the
+  // definition (which is required for `setPure`).
+  const bool Pure = Record.readInt();
+  FD->setHasInheritedPrototype(Record.readInt());
+  FD->setHasWrittenPrototype(Record.readInt());
+  FD->setDeletedAsWritten(Record.readInt());
+  FD->setTrivial(Record.readInt());
+  FD->setTrivialForCall(Record.readInt());
+  FD->setDefaulted(Record.readInt());
+  FD->setExplicitlyDefaulted(Record.readInt());
+  FD->setHasImplicitReturnZero(Record.readInt());
+  FD->setConstexprKind(static_cast<ConstexprSpecKind>(Record.readInt()));
+  FD->setUsesSEHTry(Record.readInt());
+  FD->setHasSkippedBody(Record.readInt());
+  FD->setIsMultiVersion(Record.readInt());
+  FD->setLateTemplateParsed(Record.readInt());
+  FD->setFriendConstraintRefersToEnclosingTemplate(Record.readInt());
+
+  FD->setCachedLinkage(static_cast<Linkage>(Record.readInt()));
+  FD->EndRangeLoc = readSourceLocation();
+  FD->setDefaultLoc(readSourceLocation());
+
+  FD->ODRHash = Record.readInt();
+  FD->setHasODRHash(true);
+
+  if (FD->isDefaulted()) {
+    if (unsigned NumLookups = Record.readInt()) {
+      SmallVector<DeclAccessPair, 8> Lookups;
+      for (unsigned I = 0; I != NumLookups; ++I) {
+        NamedDecl *ND = Record.readDeclAs<NamedDecl>();
+        AccessSpecifier AS = (AccessSpecifier)Record.readInt();
+        Lookups.push_back(DeclAccessPair::make(ND, AS));
+      }
+      FD->setDefaultedFunctionInfo(FunctionDecl::DefaultedFunctionInfo::Create(
+          Reader.getContext(), Lookups));
+    }
+  }
+
+  if (Existing)
+    mergeRedeclarable(FD, Existing, Redecl);
+  else if (auto Kind = FD->getTemplatedKind();
+           Kind == FunctionDecl::TK_FunctionTemplate ||
+           Kind == FunctionDecl::TK_FunctionTemplateSpecialization) {
+    // Function Templates have their FunctionTemplateDecls merged instead of
+    // their FunctionDecls.
+    auto merge = [this, &Redecl, FD](auto &&F) {
+      auto *Existing = cast_or_null<FunctionDecl>(Redecl.getKnownMergeTarget());
+      RedeclarableResult NewRedecl(Existing ? F(Existing) : nullptr,
+                                   Redecl.getFirstID(), Redecl.isKeyDecl());
+      mergeRedeclarableTemplate(F(FD), NewRedecl);
+    };
+    if (Kind == FunctionDecl::TK_FunctionTemplate)
+      merge(
+          [](FunctionDecl *FD) { return FD->getDescribedFunctionTemplate(); });
+    else
+      merge([](FunctionDecl *FD) {
+        return FD->getTemplateSpecializationInfo()->getTemplate();
+      });
+  } else
+    mergeRedeclarable(FD, Redecl);
 
   // Defer calling `setPure` until merging above has guaranteed we've set
   // `DefinitionData` (as this will need to access it).
@@ -2187,15 +2215,12 @@ void ASTDeclReader::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
   D->FriendLoc = readSourceLocation();
 }
 
-DeclID ASTDeclReader::VisitTemplateDecl(TemplateDecl *D) {
+void ASTDeclReader::VisitTemplateDecl(TemplateDecl *D) {
   VisitNamedDecl(D);
 
-  DeclID PatternID = readDeclID();
-  auto *TemplatedDecl = cast_or_null<NamedDecl>(Reader.GetDecl(PatternID));
-  TemplateParameterList *TemplateParams = Record.readTemplateParameterList();
-  D->init(TemplatedDecl, TemplateParams);
-
-  return PatternID;
+  assert(!D->TemplateParams && "TemplateParams already set!");
+  D->TemplateParams = Record.readTemplateParameterList();
+  D->init(readDeclAs<NamedDecl>());
 }
 
 void ASTDeclReader::VisitConceptDecl(ConceptDecl *D) {
@@ -2232,21 +2257,15 @@ ASTDeclReader::VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D) {
     }
   }
 
-  DeclID PatternID = VisitTemplateDecl(D);
+  VisitTemplateDecl(D);
   D->IdentifierNamespace = Record.readInt();
-
-  mergeRedeclarable(D, Redecl, PatternID);
-
-  // If we merged the template with a prior declaration chain, merge the common
-  // pointer.
-  // FIXME: Actually merge here, don't just overwrite.
-  D->Common = D->getCanonicalDecl()->Common;
 
   return Redecl;
 }
 
 void ASTDeclReader::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   RedeclarableResult Redecl = VisitRedeclarableTemplateDecl(D);
+  mergeRedeclarableTemplate(D, Redecl);
 
   if (ThisDeclID == Redecl.getFirstID()) {
     // This ClassTemplateDecl owns a CommonPtr; read it to keep track of all of
@@ -2274,6 +2293,7 @@ void ASTDeclReader::VisitBuiltinTemplateDecl(BuiltinTemplateDecl *D) {
 ///        VarTemplateDecl beyond TemplateDecl...
 void ASTDeclReader::VisitVarTemplateDecl(VarTemplateDecl *D) {
   RedeclarableResult Redecl = VisitRedeclarableTemplateDecl(D);
+  mergeRedeclarableTemplate(D, Redecl);
 
   if (ThisDeclID == Redecl.getFirstID()) {
     // This VarTemplateDecl owns a CommonPtr; read it to keep track of all of
@@ -2402,8 +2422,6 @@ void ASTDeclReader::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
 ASTDeclReader::RedeclarableResult
 ASTDeclReader::VisitVarTemplateSpecializationDeclImpl(
     VarTemplateSpecializationDecl *D) {
-  RedeclarableResult Redecl = VisitVarDeclImpl(D);
-
   ASTContext &C = Reader.getContext();
   if (Decl *InstD = readDecl()) {
     if (auto *VTD = dyn_cast<VarTemplateDecl>(InstD)) {
@@ -2439,6 +2457,8 @@ ASTDeclReader::VisitVarTemplateSpecializationDeclImpl(
   D->PointOfInstantiation = readSourceLocation();
   D->SpecializationKind = (TemplateSpecializationKind)Record.readInt();
   D->IsCompleteDefinition = Record.readInt();
+
+  RedeclarableResult Redecl = VisitVarDeclImpl(D);
 
   bool writtenAsCanonicalDecl = Record.readInt();
   if (writtenAsCanonicalDecl) {
@@ -2547,7 +2567,8 @@ void ASTDeclReader::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
 }
 
 void ASTDeclReader::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
-  VisitRedeclarableTemplateDecl(D);
+  RedeclarableResult Redecl = VisitRedeclarableTemplateDecl(D);
+  mergeRedeclarableTemplate(D, Redecl);
 }
 
 void ASTDeclReader::VisitStaticAssertDecl(StaticAssertDecl *D) {
@@ -2644,10 +2665,9 @@ ASTDeclReader::VisitRedeclarable(Redeclarable<T> *D) {
 
 /// Attempts to merge the given declaration (D) with another declaration
 /// of the same entity.
-template<typename T>
+template <typename T>
 void ASTDeclReader::mergeRedeclarable(Redeclarable<T> *DBase,
-                                      RedeclarableResult &Redecl,
-                                      DeclID TemplatePatternID) {
+                                      RedeclarableResult &Redecl) {
   // If modules are not available, there is no reason to perform this merge.
   if (!Reader.getContext().getLangOpts().Modules)
     return;
@@ -2660,10 +2680,19 @@ void ASTDeclReader::mergeRedeclarable(Redeclarable<T> *DBase,
 
   if (auto *Existing = Redecl.getKnownMergeTarget())
     // We already know of an existing declaration we should merge with.
-    mergeRedeclarable(D, cast<T>(Existing), Redecl, TemplatePatternID);
+    mergeRedeclarable(D, cast<T>(Existing), Redecl);
   else if (FindExistingResult ExistingRes = findExisting(D))
     if (T *Existing = ExistingRes)
-      mergeRedeclarable(D, Existing, Redecl, TemplatePatternID);
+      mergeRedeclarable(D, Existing, Redecl);
+}
+
+void ASTDeclReader::mergeRedeclarableTemplate(RedeclarableTemplateDecl *D,
+                                              RedeclarableResult &Redecl) {
+  mergeRedeclarable(D, Redecl);
+  // If we merged the template with a prior declaration chain, merge the
+  // common pointer.
+  // FIXME: Actually merge here, don't just overwrite.
+  D->Common = D->getCanonicalDecl()->Common;
 }
 
 /// "Cast" to type T, asserting if we don't have an implicit conversion.
@@ -2678,7 +2707,7 @@ template<typename T> static T assert_cast(...) {
 /// declarations.
 void ASTDeclReader::mergeTemplatePattern(RedeclarableTemplateDecl *D,
                                          RedeclarableTemplateDecl *Existing,
-                                         DeclID DsID, bool IsKeyDecl) {
+                                         bool IsKeyDecl) {
   auto *DPattern = D->getTemplatedDecl();
   auto *ExistingPattern = Existing->getTemplatedDecl();
   RedeclarableResult Result(/*MergeWith*/ ExistingPattern,
@@ -2718,17 +2747,13 @@ void ASTDeclReader::mergeTemplatePattern(RedeclarableTemplateDecl *D,
 
 /// Attempts to merge the given declaration (D) with another declaration
 /// of the same entity.
-template<typename T>
+template <typename T>
 void ASTDeclReader::mergeRedeclarable(Redeclarable<T> *DBase, T *Existing,
-                                      RedeclarableResult &Redecl,
-                                      DeclID TemplatePatternID) {
+                                      RedeclarableResult &Redecl) {
   auto *D = static_cast<T *>(DBase);
   T *ExistingCanon = Existing->getCanonicalDecl();
   T *DCanon = D->getCanonicalDecl();
   if (ExistingCanon != DCanon) {
-    assert(DCanon->getGlobalID() == Redecl.getFirstID() &&
-           "already merged this declaration");
-
     // Have our redeclaration link point back at the canonical declaration
     // of the existing declaration, so that this declaration has the
     // appropriate canonical declaration.
@@ -2747,8 +2772,8 @@ void ASTDeclReader::mergeRedeclarable(Redeclarable<T> *DBase, T *Existing,
     // When we merge a template, merge its pattern.
     if (auto *DTemplate = dyn_cast<RedeclarableTemplateDecl>(D))
       mergeTemplatePattern(
-          DTemplate, assert_cast<RedeclarableTemplateDecl*>(ExistingCanon),
-          TemplatePatternID, Redecl.isKeyDecl());
+          DTemplate, assert_cast<RedeclarableTemplateDecl *>(ExistingCanon),
+          Redecl.isKeyDecl());
 
     // If this declaration is a key declaration, make a note of that.
     if (Redecl.isKeyDecl())

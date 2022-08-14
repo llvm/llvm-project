@@ -671,7 +671,7 @@ public:
     }
   }
 
-  void AddDecl(Decl *D) {
+  void AddDecl(const Decl *D) {
     Hash.AddBoolean(D);
     if (D) {
       Hash.AddDecl(D);
@@ -995,13 +995,13 @@ public:
 
   void
   VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T) {
-    AddType(T->getReplacedParameter());
+    AddDecl(T->getAssociatedDecl());
     Hash.AddTemplateArgument(T->getArgumentPack());
     VisitType(T);
   }
 
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T) {
-    AddType(T->getReplacedParameter());
+    AddDecl(T->getAssociatedDecl());
     AddQualType(T->getReplacementType());
     VisitType(T);
   }
