@@ -53,11 +53,12 @@ public:
 };
 
 bool operator==(thread::id x, thread::id y) noexcept;
-bool operator!=(thread::id x, thread::id y) noexcept;
-bool operator< (thread::id x, thread::id y) noexcept;
-bool operator<=(thread::id x, thread::id y) noexcept;
-bool operator> (thread::id x, thread::id y) noexcept;
-bool operator>=(thread::id x, thread::id y) noexcept;
+bool operator!=(thread::id x, thread::id y) noexcept;             // removed in C++20
+bool operator< (thread::id x, thread::id y) noexcept;             // removed in C++20
+bool operator<=(thread::id x, thread::id y) noexcept;             // removed in C++20
+bool operator> (thread::id x, thread::id y) noexcept;             // removed in C++20
+bool operator>=(thread::id x, thread::id y) noexcept;             // removed in C++20
+strong_ordering operator<=>(thread::id x, thread::id y) noexcept; // C++20
 
 template<class charT, class traits>
 basic_ostream<charT, traits>&
