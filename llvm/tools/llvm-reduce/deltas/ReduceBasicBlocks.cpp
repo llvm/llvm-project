@@ -147,11 +147,9 @@ static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
   }
 
   // Remove out-of-chunk BB from successor phi nodes
-  for (auto &F : Program) {
-    for (auto &BB : F) {
-      for (auto *Succ : successors(&BB))
-        Succ->removePredecessor(&BB);
-    }
+  for (auto &BB : BBsToDelete) {
+    for (auto *Succ : successors(BB))
+      Succ->removePredecessor(BB, /*KeepOneInputPHIs=*/true);
   }
 
   // Replace terminators that reference out-of-chunk BBs
