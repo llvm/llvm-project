@@ -89,7 +89,7 @@ static Expected<size_t> readCFIRecordLength(const Block &B,
                                             BinaryStreamReader &R) {
   uint32_t Length;
   if (auto Err = R.readInteger(Length))
-    return Err;
+    return std::move(Err);
 
   // If Length < 0xffffffff then use the regular length field, otherwise
   // read the extended length field.
@@ -98,7 +98,7 @@ static Expected<size_t> readCFIRecordLength(const Block &B,
 
   uint64_t ExtendedLength;
   if (auto Err = R.readInteger(ExtendedLength))
-    return Err;
+    return std::move(Err);
 
   if (ExtendedLength > std::numeric_limits<size_t>::max())
     return make_error<JITLinkError>(
