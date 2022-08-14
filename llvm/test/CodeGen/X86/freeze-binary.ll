@@ -412,3 +412,221 @@ define <2 x i64> @freeze_shl_vec_outofrange(<2 x i64> %a0) nounwind {
   %z = shl <2 x i64> %y, <i64 2, i64 2>
   ret <2 x i64> %z
 }
+
+define i32 @freeze_ashr(i32 %a0) nounwind {
+; X86-LABEL: freeze_ashr:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sarl $3, %eax
+; X86-NEXT:    sarl $3, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_ashr:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    sarl $3, %eax
+; X64-NEXT:    sarl $3, %eax
+; X64-NEXT:    retq
+  %x = ashr i32 %a0, 3
+  %y = freeze i32 %x
+  %z = ashr i32 %y, 3
+  ret i32 %z
+}
+
+define i32 @freeze_ashr_exact(i32 %a0) nounwind {
+; X86-LABEL: freeze_ashr_exact:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    sarl $3, %eax
+; X86-NEXT:    sarl $6, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_ashr_exact:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    sarl $3, %eax
+; X64-NEXT:    sarl $6, %eax
+; X64-NEXT:    retq
+  %x = ashr exact i32 %a0, 3
+  %y = freeze i32 %x
+  %z = ashr i32 %y, 6
+  ret i32 %z
+}
+
+define i32 @freeze_ashr_outofrange(i32 %a0) nounwind {
+; X86-LABEL: freeze_ashr_outofrange:
+; X86:       # %bb.0:
+; X86-NEXT:    sarl $3, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_ashr_outofrange:
+; X64:       # %bb.0:
+; X64-NEXT:    sarl $3, %eax
+; X64-NEXT:    retq
+  %x = ashr i32 %a0, 32
+  %y = freeze i32 %x
+  %z = ashr i32 %y, 3
+  ret i32 %z
+}
+
+define <8 x i16> @freeze_ashr_vec(<8 x i16> %a0) nounwind {
+; X86-LABEL: freeze_ashr_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    psraw $1, %xmm2
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,0,65535,0,65535,0]
+; X86-NEXT:    movdqa %xmm1, %xmm3
+; X86-NEXT:    pandn %xmm2, %xmm3
+; X86-NEXT:    psraw $3, %xmm0
+; X86-NEXT:    pand %xmm1, %xmm0
+; X86-NEXT:    por %xmm3, %xmm0
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    psraw $3, %xmm2
+; X86-NEXT:    psraw $1, %xmm0
+; X86-NEXT:    pand %xmm1, %xmm0
+; X86-NEXT:    pandn %xmm2, %xmm1
+; X86-NEXT:    por %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_ashr_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsraw $1, %xmm0, %xmm1
+; X64-NEXT:    vpsraw $3, %xmm0, %xmm0
+; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; X64-NEXT:    vpsraw $3, %xmm0, %xmm1
+; X64-NEXT:    vpsraw $1, %xmm0, %xmm0
+; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; X64-NEXT:    retq
+  %x = ashr <8 x i16> %a0, <i16 3, i16 1, i16 3, i16 1, i16 3, i16 1, i16 3, i16 1>
+  %y = freeze <8 x i16> %x
+  %z = ashr <8 x i16> %y, <i16 1, i16 3, i16 1, i16 3, i16 1, i16 3, i16 1, i16 3>
+  ret <8 x i16> %z
+}
+
+define <4 x i32> @freeze_ashr_vec_outofrange(<4 x i32> %a0) nounwind {
+; X86-LABEL: freeze_ashr_vec_outofrange:
+; X86:       # %bb.0:
+; X86-NEXT:    psrad $1, %xmm0
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
+; X86-NEXT:    psrad $2, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_ashr_vec_outofrange:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsravd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpsrad $2, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %x = ashr <4 x i32> %a0, <i32 1, i32 33, i32 1, i32 1>
+  %y = freeze <4 x i32> %x
+  %z = ashr <4 x i32> %y, <i32 2, i32 2, i32 2, i32 2>
+  ret <4 x i32> %z
+}
+
+define i32 @freeze_lshr(i32 %a0) nounwind {
+; X86-LABEL: freeze_lshr:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shrl $2, %eax
+; X86-NEXT:    shrl %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_lshr:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shrl $2, %eax
+; X64-NEXT:    shrl %eax
+; X64-NEXT:    retq
+  %x = lshr i32 %a0, 2
+  %y = freeze i32 %x
+  %z = lshr i32 %y, 1
+  ret i32 %z
+}
+
+define i32 @freeze_lshr_exact(i32 %a0) nounwind {
+; X86-LABEL: freeze_lshr_exact:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shrl $3, %eax
+; X86-NEXT:    shrl $5, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_lshr_exact:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shrl $3, %eax
+; X64-NEXT:    shrl $5, %eax
+; X64-NEXT:    retq
+  %x = lshr exact i32 %a0, 3
+  %y = freeze i32 %x
+  %z = lshr i32 %y, 5
+  ret i32 %z
+}
+
+define i32 @freeze_lshr_outofrange(i32 %a0) nounwind {
+; X86-LABEL: freeze_lshr_outofrange:
+; X86:       # %bb.0:
+; X86-NEXT:    shrl %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_lshr_outofrange:
+; X64:       # %bb.0:
+; X64-NEXT:    shrl %eax
+; X64-NEXT:    retq
+  %x = lshr i32 %a0, 32
+  %y = freeze i32 %x
+  %z = lshr i32 %y, 1
+  ret i32 %z
+}
+
+define <8 x i16> @freeze_lshr_vec(<8 x i16> %a0) nounwind {
+; X86-LABEL: freeze_lshr_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    psrlw $1, %xmm2
+; X86-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,0,65535,0,65535,0]
+; X86-NEXT:    movdqa %xmm1, %xmm3
+; X86-NEXT:    pandn %xmm2, %xmm3
+; X86-NEXT:    psrlw $2, %xmm0
+; X86-NEXT:    pand %xmm1, %xmm0
+; X86-NEXT:    por %xmm3, %xmm0
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    psrlw $2, %xmm2
+; X86-NEXT:    psrlw $1, %xmm0
+; X86-NEXT:    pand %xmm1, %xmm0
+; X86-NEXT:    pandn %xmm2, %xmm1
+; X86-NEXT:    por %xmm1, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_lshr_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsrlw $1, %xmm0, %xmm1
+; X64-NEXT:    vpsrlw $2, %xmm0, %xmm0
+; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; X64-NEXT:    vpsrlw $2, %xmm0, %xmm1
+; X64-NEXT:    vpsrlw $1, %xmm0, %xmm0
+; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3],xmm0[4],xmm1[5],xmm0[6],xmm1[7]
+; X64-NEXT:    retq
+  %x = lshr <8 x i16> %a0, <i16 2, i16 1, i16 2, i16 1, i16 2, i16 1, i16 2, i16 1>
+  %y = freeze <8 x i16> %x
+  %z = lshr <8 x i16> %y, <i16 1, i16 2, i16 1, i16 2, i16 1, i16 2, i16 1, i16 2>
+  ret <8 x i16> %z
+}
+
+define <4 x i32> @freeze_lshr_vec_outofrange(<4 x i32> %a0) nounwind {
+; X86-LABEL: freeze_lshr_vec_outofrange:
+; X86:       # %bb.0:
+; X86-NEXT:    psrld $1, %xmm0
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
+; X86-NEXT:    psrld $2, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_lshr_vec_outofrange:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpsrld $2, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %x = lshr <4 x i32> %a0, <i32 1, i32 33, i32 1, i32 1>
+  %y = freeze <4 x i32> %x
+  %z = lshr <4 x i32> %y, <i32 2, i32 2, i32 2, i32 2>
+  ret <4 x i32> %z
+}
