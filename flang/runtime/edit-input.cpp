@@ -118,7 +118,7 @@ bool EditIntegerInput(
   RUNTIME_CHECK(io.GetIoErrorHandler(), kind >= 1 && !(kind & (kind - 1)));
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
-    if (IsNamelistName(io)) {
+    if (IsNamelistNameOrSlash(io)) {
       return false;
     }
     break;
@@ -171,6 +171,11 @@ bool EditIntegerInput(
     value *= 10;
     value += digit;
     any = true;
+  }
+  if (!any && !remaining) {
+    io.GetIoErrorHandler().SignalError(
+        "Integer value absent from NAMELIST or list-directed input");
+    return false;
   }
   auto maxForKind{common::UnsignedInt128{1} << ((8 * kind) - 1)};
   overflow |= value >= maxForKind && (value > maxForKind || !negate);
@@ -527,7 +532,7 @@ template <int KIND>
 bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
-    if (IsNamelistName(io)) {
+    if (IsNamelistNameOrSlash(io)) {
       return false;
     }
     return EditCommonRealInput<KIND>(io, edit, n);
@@ -561,7 +566,7 @@ bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
 bool EditLogicalInput(IoStatementState &io, const DataEdit &edit, bool &x) {
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
-    if (IsNamelistName(io)) {
+    if (IsNamelistNameOrSlash(io)) {
       return false;
     }
     break;
@@ -650,7 +655,7 @@ static bool EditListDirectedCharacterInput(
     io.HandleRelativePosition(byteCount);
     return EditDelimitedCharacterInput(io, x, length, *ch);
   }
-  if (IsNamelistName(io) || io.GetConnectionState().IsAtEOF()) {
+  if (IsNamelistNameOrSlash(io) || io.GetConnectionState().IsAtEOF()) {
     return false;
   }
   // Undelimited list-directed character input: stop at a value separator
