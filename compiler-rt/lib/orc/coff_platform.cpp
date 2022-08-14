@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #define NOMINMAX
-#include <Windows.h>
+#include <windows.h>
 
 #include "coff_platform.h"
 
