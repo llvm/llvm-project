@@ -23,18 +23,20 @@
 #ifndef TEST_COMPARISONS_H
 #define TEST_COMPARISONS_H
 
-#include <type_traits>
 #include <cassert>
 #include <concepts>
+#include <type_traits>
+#include <utility>
+
 #include "test_macros.h"
 
-//  Test all six comparison operations for sanity
+// Test the consistency of the six basic comparison operators for values that are ordered or unordered.
 template <class T, class U = T>
-TEST_NODISCARD TEST_CONSTEXPR_CXX14 bool testComparisons(const T& t1, const U& t2, bool isEqual, bool isLess)
-{
-    assert(!(isEqual && isLess) && "isEqual and isLess cannot be both true");
-    if (isEqual)
-        {
+TEST_NODISCARD TEST_CONSTEXPR_CXX14 bool
+testComparisonsComplete(const T& t1, const U& t2, bool isEqual, bool isLess, bool isGreater) {
+    assert(((isEqual ? 1 : 0) + (isLess ? 1 : 0) + (isGreater ? 1 : 0) <= 1) &&
+           "at most one of isEqual, isLess, and isGreater can be true");
+    if (isEqual) {
         if (!(t1 == t2)) return false;
         if (!(t2 == t1)) return false;
         if ( (t1 != t2)) return false;
@@ -47,9 +49,7 @@ TEST_NODISCARD TEST_CONSTEXPR_CXX14 bool testComparisons(const T& t1, const U& t
         if ( (t2  > t1)) return false;
         if (!(t1 >= t2)) return false;
         if (!(t2 >= t1)) return false;
-        }
-    else if (isLess)
-        {
+    } else if (isLess) {
         if ( (t1 == t2)) return false;
         if ( (t2 == t1)) return false;
         if (!(t1 != t2)) return false;
@@ -62,9 +62,7 @@ TEST_NODISCARD TEST_CONSTEXPR_CXX14 bool testComparisons(const T& t1, const U& t
         if (!(t2  > t1)) return false;
         if ( (t1 >= t2)) return false;
         if (!(t2 >= t1)) return false;
-        }
-    else /* greater */
-        {
+    } else if (isGreater) {
         if ( (t1 == t2)) return false;
         if ( (t2 == t1)) return false;
         if (!(t1 != t2)) return false;
@@ -77,19 +75,41 @@ TEST_NODISCARD TEST_CONSTEXPR_CXX14 bool testComparisons(const T& t1, const U& t
         if ( (t2  > t1)) return false;
         if (!(t1 >= t2)) return false;
         if ( (t2 >= t1)) return false;
-        }
+    } else { // unordered
+        if ( (t1 == t2)) return false;
+        if ( (t2 == t1)) return false;
+        if (!(t1 != t2)) return false;
+        if (!(t2 != t1)) return false;
+        if ( (t1  < t2)) return false;
+        if ( (t2  < t1)) return false;
+        if ( (t1 <= t2)) return false;
+        if ( (t2 <= t1)) return false;
+        if ( (t1  > t2)) return false;
+        if ( (t2  > t1)) return false;
+        if ( (t1 >= t2)) return false;
+        if ( (t2 >= t1)) return false;
+    }
 
     return true;
+}
+
+// Test the six basic comparison operators for ordered values.
+template <class T, class U = T>
+TEST_NODISCARD TEST_CONSTEXPR_CXX14 bool testComparisons(const T& t1, const U& t2, bool isEqual, bool isLess) {
+    assert(!(isEqual && isLess) && "isEqual and isLess cannot be both true");
+    bool isGreater = !isEqual && !isLess;
+    return testComparisonsComplete(t1, t2, isEqual, isLess, isGreater);
 }
 
 //  Easy call when you can init from something already comparable.
 template <class T, class Param>
 TEST_NODISCARD TEST_CONSTEXPR_CXX14 bool testComparisonsValues(Param val1, Param val2)
 {
-    const bool isEqual = val1 == val2;
-    const bool isLess  = val1  < val2;
+    const bool isEqual   = val1 == val2;
+    const bool isLess    = val1 <  val2;
+    const bool isGreater = val1  > val2;
 
-    return testComparisons(T(val1), T(val2), isEqual, isLess);
+    return testComparisonsComplete(T(val1), T(val2), isEqual, isLess, isGreater);
 }
 
 template <class T, class U = T>
@@ -138,10 +158,11 @@ constexpr void AssertOrderReturn() {
 
 template <class Order, class T, class U = T>
 TEST_NODISCARD constexpr bool testOrder(const T& t1, const U& t2, Order order) {
-    bool equal = order == Order::equivalent;
-    bool less = order == Order::less;
+    bool equal   = order == Order::equivalent;
+    bool less    = order == Order::less;
+    bool greater = order == Order::greater;
 
-    return (t1 <=> t2 == order) && testComparisons(t1, t2, equal, less);
+    return (t1 <=> t2 == order) && testComparisonsComplete(t1, t2, equal, less, greater);
 }
 
 template <class T, class Param>
