@@ -33,8 +33,8 @@ TEST_CONSTEXPR_CXX23 void test_to_ulong() {
         std::min(max, max-1),
         max
     };
-    for (unsigned long j : tests) {
-         std::bitset<N> v(j);
+    for (std::size_t j : tests) {
+        std::bitset<N> v(j);
         assert(j == v.to_ulong());
     }
 
