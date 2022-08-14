@@ -1,7 +1,7 @@
 ; Test shift instructions.
 ;
-; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88100 -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88110 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88100 -verify-machineinstrs | FileCheck --check-prefixes=CHECK,MC88100 %s
+; RUN: llc < %s -mtriple=m88k-openbsd -mcpu=mc88110 -verify-machineinstrs | FileCheck --check-prefixes=CHECK,MC88110 %s
 
 ; Check two register operands.
 define i32 @f1(i32 %a, i32 %b) {
@@ -133,6 +133,35 @@ define i32 @f14(i32 %a) {
 ; CHECK: jmp.n %r1
 ; CHECK: rot %r2, %r2, <3>
   %res = call i32 @llvm.fshl.i32(i32 %a, i32 %a, i32 29)
+  ret i32 %res
+}
+
+define i32 @f15(i32 %a, i32 %b) {
+; CHECK-LABEL: f15:
+; CHECK: jmp.n %r1
+; CHECK: lda.h %r2, %r2[%r3]
+  %shl = shl i32 %b, 1
+  %res = add i32 %a, %shl
+  ret i32 %res
+}
+
+define i32 @f16(i32 %a, i32 %b) {
+; CHECK-LABEL: f16:
+; CHECK: jmp.n %r1
+; CHECK: lda %r2, %r2[%r3]
+  %shl = shl i32 %b, 2
+  %res = add i32 %a, %shl
+  ret i32 %res
+}
+
+define i32 @f17(i32 %a, i32 %b) {
+; CHECK-LABEL: f17:
+; MC88100: mak %r3, %r3, 0<3>
+; CHECK:   jmp.n %r1
+; MC88100: addu %r2, %r2, %r3
+; MC88110: lda.x %r2, %r2[%r3]
+  %shl = shl i32 %b, 3
+  %res = add i32 %a, %shl
   ret i32 %res
 }
 

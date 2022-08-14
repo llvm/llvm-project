@@ -808,6 +808,11 @@ let mayStore = 1 in {
 
 defm XMEM : Xmem<>;
 
+def : Pat<(add GPR:$rs1, (shl GPR:$rs2, (i32 1))), (LDAhs GPR:$rs1, GPR:$rs2)>;
+def : Pat<(add GPR:$rs1, (shl GPR:$rs2, (i32 2))), (LDAws GPR:$rs1, GPR:$rs2)>;
+let Predicates = [MC88110] in
+  def : Pat<(add GPR:$rs1, (shl GPR:$rs2, (i32 3))), (LDAxs GPR:$rs1, GPR:$rs2)>;
+
 
 // GlobalAddress, ExternalSymbol, Jumptable, ConstantPool
 def : Pat<(m88k_hi tglobaladdr:$dst), (ORriu (i32 R0), tglobaladdr:$dst)>;
