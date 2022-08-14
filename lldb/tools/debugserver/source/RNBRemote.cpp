@@ -4861,8 +4861,8 @@ rnb_err_t RNBRemote::HandlePacket_qHostInfo(const char *p) {
 
   std::string maccatalyst_version = DNBGetMacCatalystVersionString();
   if (!maccatalyst_version.empty() &&
-      std::all_of(maccatalyst_version.begin(), maccatalyst_version.end(),
-                  [](char c) { return (c >= '0' && c <= '9') || c == '.'; }))
+      llvm::all_of(maccatalyst_version,
+                   [](char c) { return (c >= '0' && c <= '9') || c == '.'; }))
     strm << "maccatalyst_version:" << maccatalyst_version << ";";
 
 #if defined(__LITTLE_ENDIAN__)

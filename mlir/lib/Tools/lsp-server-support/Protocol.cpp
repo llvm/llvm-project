@@ -121,7 +121,7 @@ static bool isValidScheme(StringRef scheme) {
     return false;
   if (!llvm::isAlpha(scheme[0]))
     return false;
-  return std::all_of(scheme.begin() + 1, scheme.end(), [](char c) {
+  return llvm::all_of(llvm::drop_begin(scheme), [](char c) {
     return llvm::isAlnum(c) || c == '+' || c == '.' || c == '-';
   });
 }
