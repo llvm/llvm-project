@@ -193,7 +193,6 @@ private:
   CPUType CompilationCPUType = CPUType::X64;
 
   ScopedPrinter &Writer;
-  BinaryByteStream TypeContents;
   LazyRandomTypeCollection Types;
 };
 
