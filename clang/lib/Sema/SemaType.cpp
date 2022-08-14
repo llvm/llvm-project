@@ -9466,8 +9466,6 @@ QualType Sema::BuildUnaryTransformType(QualType BaseType, UTTKind UKind,
     Result = BuiltinChangeSignedness(BaseType, UKind, Loc);
     break;
   }
-  default:
-    llvm_unreachable("unknown unary transform type");
   }
 
   return !Result.isNull()
