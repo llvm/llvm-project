@@ -399,13 +399,13 @@ static void mergeAndAlignVars(unsigned offset, FlatAffineValueConstraints *a,
   assert(areVarsUnique(*a) && "A's values aren't unique");
   assert(areVarsUnique(*b) && "B's values aren't unique");
 
-  assert(std::all_of(a->getMaybeValues().begin() + offset,
-                     a->getMaybeValues().end(),
-                     [](Optional<Value> var) { return var.has_value(); }));
+  assert(
+      llvm::all_of(llvm::drop_begin(a->getMaybeValues(), offset),
+                   [](const Optional<Value> &var) { return var.has_value(); }));
 
-  assert(std::all_of(b->getMaybeValues().begin() + offset,
-                     b->getMaybeValues().end(),
-                     [](Optional<Value> var) { return var.has_value(); }));
+  assert(
+      llvm::all_of(llvm::drop_begin(b->getMaybeValues(), offset),
+                   [](const Optional<Value> &var) { return var.has_value(); }));
 
   SmallVector<Value, 4> aDimValues;
   a->getValues(offset, a->getNumDimVars(), &aDimValues);

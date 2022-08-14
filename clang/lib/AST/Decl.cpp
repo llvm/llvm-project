@@ -3486,8 +3486,8 @@ unsigned FunctionDecl::getMinRequiredArguments() const {
 bool FunctionDecl::hasOneParamOrDefaultArgs() const {
   return getNumParams() == 1 ||
          (getNumParams() > 1 &&
-          std::all_of(param_begin() + 1, param_end(),
-                      [](ParmVarDecl *P) { return P->hasDefaultArg(); }));
+          llvm::all_of(llvm::drop_begin(parameters()),
+                       [](ParmVarDecl *P) { return P->hasDefaultArg(); }));
 }
 
 /// The combination of the extern and inline keywords under MSVC forces
