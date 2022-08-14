@@ -272,19 +272,19 @@ define i32 @freeze_mul_nsw(i32 %a0) nounwind {
 ; X86-LABEL: freeze_mul_nsw:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    addl %eax, %eax
-; X86-NEXT:    shll $2, %eax
+; X86-NEXT:    leal (%eax,%eax,2), %eax
+; X86-NEXT:    leal (%eax,%eax,4), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_mul_nsw:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rdi), %eax
-; X64-NEXT:    shll $2, %eax
+; X64-NEXT:    leal (%rdi,%rdi,2), %eax
+; X64-NEXT:    leal (%rax,%rax,4), %eax
 ; X64-NEXT:    retq
-  %x = mul nsw i32 %a0, 2
+  %x = mul nsw i32 %a0, 3
   %y = freeze i32 %x
-  %z = mul i32 %y, 4
+  %z = mul i32 %y, 5
   ret i32 %z
 }
 
