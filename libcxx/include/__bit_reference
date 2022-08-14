@@ -263,7 +263,7 @@ find(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last
 // count
 
 template <class _Cp, bool _IsConst>
-_LIBCPP_HIDE_FROM_ABI typename __bit_iterator<_Cp, _IsConst>::difference_type
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX20 typename __bit_iterator<_Cp, _IsConst>::difference_type
 __count_bool_true(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
 {
     typedef __bit_iterator<_Cp, _IsConst> _It;
@@ -1344,6 +1344,7 @@ private:
     _LIBCPP_CONSTEXPR_AFTER_CXX17
     friend __bit_iterator<_Dp, _IC> __find_bool_false(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
     template <class _Dp, bool _IC> friend typename __bit_iterator<_Dp, _IC>::difference_type
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX20
                    __count_bool_true(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
     template <class _Dp, bool _IC> friend typename __bit_iterator<_Dp, _IC>::difference_type
                    __count_bool_false(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
