@@ -71,7 +71,7 @@ bool RISCVCodeGenPrepare::optimizeZExt(ZExtInst *ZExt) {
   // This often occurs with widened induction variables.
   if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
                               Constant::getNullValue(Src->getType()), ZExt,
-                              *DL)) {
+                              *DL).value_or(false)) {
     auto *SExt = new SExtInst(Src, ZExt->getType(), "", ZExt);
     SExt->takeName(ZExt);
     SExt->setDebugLoc(ZExt->getDebugLoc());
@@ -140,7 +140,7 @@ bool RISCVCodeGenPrepare::optimizeAndExt(BinaryOperator *BO) {
   // And mask constant.
   if (!isImpliedByDomCondition(ICmpInst::ICMP_SGE, LHSSrc,
                                Constant::getNullValue(LHSSrc->getType()),
-                               LHS, *DL))
+                               LHS, *DL).value_or(false))
     return false;
 
   // Sign extend the constant and replace the And operand.
