@@ -2506,23 +2506,8 @@ public:
   /// If AsUnevaluated is false, E is treated as though it were an evaluated
   /// context, such as when building a type for decltype(auto).
   QualType BuildDecltypeType(Expr *E, bool AsUnevaluated = true);
-
-  using UTTKind = UnaryTransformType::UTTKind;
-  QualType BuildUnaryTransformType(QualType BaseType, UTTKind UKind,
-                                   SourceLocation Loc);
-  QualType BuiltinEnumUnderlyingType(QualType BaseType, SourceLocation Loc);
-  QualType BuiltinAddPointer(QualType BaseType, SourceLocation Loc);
-  QualType BuiltinRemovePointer(QualType BaseType, SourceLocation Loc);
-  QualType BuiltinDecay(QualType BaseType, SourceLocation Loc);
-  QualType BuiltinAddReference(QualType BaseType, UTTKind UKind,
-                               SourceLocation Loc);
-  QualType BuiltinRemoveExtent(QualType BaseType, UTTKind UKind,
-                               SourceLocation Loc);
-  QualType BuiltinRemoveReference(QualType BaseType, UTTKind UKind,
-                                  SourceLocation Loc);
-  QualType BuiltinChangeCVRQualifiers(QualType BaseType, UTTKind UKind,
-                                      SourceLocation Loc);
-  QualType BuiltinChangeSignedness(QualType BaseType, UTTKind UKind,
+  QualType BuildUnaryTransformType(QualType BaseType,
+                                   UnaryTransformType::UTTKind UKind,
                                    SourceLocation Loc);
 
   //===--------------------------------------------------------------------===//

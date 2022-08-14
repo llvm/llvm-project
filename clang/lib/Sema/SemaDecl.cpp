@@ -145,8 +145,7 @@ bool Sema::isSimpleTypeSpecifier(tok::TokenKind Kind) const {
   case tok::kw___ibm128:
   case tok::kw_wchar_t:
   case tok::kw_bool:
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+  case tok::kw___underlying_type:
   case tok::kw___auto_type:
     return true;
 
@@ -5924,8 +5923,7 @@ static bool RebuildDeclaratorInCurrentInstantiation(Sema &S, Declarator &D,
   switch (DS.getTypeSpecType()) {
   case DeclSpec::TST_typename:
   case DeclSpec::TST_typeofType:
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case DeclSpec::TST_##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+  case DeclSpec::TST_underlyingType:
   case DeclSpec::TST_atomic: {
     // Grab the type from the parser.
     TypeSourceInfo *TSI = nullptr;

@@ -1038,10 +1038,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     return ParseCastExpression(ParseKind, isAddressOfOperand, isTypeCast,
                                isVectorLiteral, NotPrimaryExpression);
 
-  case tok::identifier:
-  ParseIdentifier: {    // primary-expression: identifier
-                        // unqualified-id: identifier
-                        // constant: enumeration-constant
+  case tok::identifier: {      // primary-expression: identifier
+                               // unqualified-id: identifier
+                               // constant: enumeration-constant
     // Turn a potentially qualified name into a annot_typename or
     // annot_cxxscope if it would be valid.  This handles things like x::y, etc.
     if (getLangOpts().CPlusPlus) {
@@ -1114,9 +1113,6 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_unsigned);
           REVERTIBLE_TYPE_TRAIT(__is_void);
           REVERTIBLE_TYPE_TRAIT(__is_volatile);
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
-  REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
-#include "clang/Basic/TransformTypeTraits.def"
 #undef REVERTIBLE_TYPE_TRAIT
 #undef RTT_JOIN
         }
@@ -1743,17 +1739,6 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                                    PreferredType.get(Tok.getLocation()));
     return ExprError();
   }
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
-    // HACK: libstdc++ uses some of the transform-type-traits as alias
-    // templates, so we need to work around this.
-    if (!NextToken().is(tok::l_paren)) {
-      Tok.setKind(tok::identifier);
-      Diag(Tok, diag::ext_keyword_as_ident)
-          << Tok.getIdentifierInfo()->getName() << 0;
-      goto ParseIdentifier;
-    }
-    goto ExpectedExpression;
   case tok::l_square:
     if (getLangOpts().CPlusPlus11) {
       if (getLangOpts().ObjC) {
@@ -1781,7 +1766,6 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     }
     [[fallthrough]];
   default:
-  ExpectedExpression:
     NotCastExpr = true;
     return ExprError();
   }
