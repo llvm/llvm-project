@@ -18,12 +18,19 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if __has_builtin(__remove_extent)
+template <class _Tp>
+struct remove_extent {
+  using type _LIBCPP_NODEBUG = __remove_extent(_Tp);
+};
+#else
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_extent
     {typedef _Tp type;};
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_extent<_Tp[]>
     {typedef _Tp type;};
 template <class _Tp, size_t _Np> struct _LIBCPP_TEMPLATE_VIS remove_extent<_Tp[_Np]>
     {typedef _Tp type;};
+#endif // __has_builtin(__remove_extent)
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using remove_extent_t = typename remove_extent<_Tp>::type;
