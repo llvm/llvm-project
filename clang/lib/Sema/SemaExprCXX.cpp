@@ -8960,13 +8960,13 @@ Sema::BuildExprRequirement(
         Context.getReferenceQualifiedType(E).getCanonicalType();
     llvm::SmallVector<TemplateArgument, 1> Args;
     Args.push_back(TemplateArgument(MatchedType));
+
+    auto *Param = cast<TemplateTypeParmDecl>(TPL->getParam(0));
+
     TemplateArgumentList TAL(TemplateArgumentList::OnStack, Args);
-    MultiLevelTemplateArgumentList MLTAL(TAL);
-    for (unsigned I = 0; I < TPL->getDepth(); ++I)
-      MLTAL.addOuterRetainedLevel();
-    Expr *IDC =
-        cast<TemplateTypeParmDecl>(TPL->getParam(0))->getTypeConstraint()
-            ->getImmediatelyDeclaredConstraint();
+    MultiLevelTemplateArgumentList MLTAL(Param, TAL.asArray());
+    MLTAL.addOuterRetainedLevels(TPL->getDepth());
+    Expr *IDC = Param->getTypeConstraint()->getImmediatelyDeclaredConstraint();
     ExprResult Constraint = SubstExpr(IDC, MLTAL);
     if (Constraint.isInvalid()) {
       Status = concepts::ExprRequirement::SS_ExprSubstitutionFailure;

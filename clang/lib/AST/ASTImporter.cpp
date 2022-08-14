@@ -1523,8 +1523,7 @@ ExpectedType ASTNodeImporter::VisitTemplateTypeParmType(
 
 ExpectedType ASTNodeImporter::VisitSubstTemplateTypeParmType(
     const SubstTemplateTypeParmType *T) {
-  Expected<const TemplateTypeParmType *> ReplacedOrErr =
-      import(T->getReplacedParameter());
+  Expected<Decl *> ReplacedOrErr = import(T->getAssociatedDecl());
   if (!ReplacedOrErr)
     return ReplacedOrErr.takeError();
 
@@ -1533,13 +1532,13 @@ ExpectedType ASTNodeImporter::VisitSubstTemplateTypeParmType(
     return ToReplacementTypeOrErr.takeError();
 
   return Importer.getToContext().getSubstTemplateTypeParmType(
-      *ReplacedOrErr, *ToReplacementTypeOrErr, T->getPackIndex());
+      *ToReplacementTypeOrErr, *ReplacedOrErr, T->getIndex(),
+      T->getPackIndex());
 }
 
 ExpectedType ASTNodeImporter::VisitSubstTemplateTypeParmPackType(
     const SubstTemplateTypeParmPackType *T) {
-  Expected<const TemplateTypeParmType *> ReplacedOrErr =
-      import(T->getReplacedParameter());
+  Expected<Decl *> ReplacedOrErr = import(T->getAssociatedDecl());
   if (!ReplacedOrErr)
     return ReplacedOrErr.takeError();
 
@@ -1548,7 +1547,7 @@ ExpectedType ASTNodeImporter::VisitSubstTemplateTypeParmPackType(
     return ToArgumentPack.takeError();
 
   return Importer.getToContext().getSubstTemplateTypeParmPackType(
-      *ReplacedOrErr, *ToArgumentPack);
+      *ReplacedOrErr, T->getIndex(), *ToArgumentPack);
 }
 
 ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
@@ -3753,6 +3752,10 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     }
   }
 
+  // If it is a template, import all related things.
+  if (Error Err = ImportTemplateInformation(D, ToFunction))
+    return std::move(Err);
+
   if (D->doesThisDeclarationHaveABody()) {
     Error Err = ImportFunctionDeclBody(D, ToFunction);
 
@@ -3773,10 +3776,6 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   // FIXME: Other bits to merge?
-
-  // If it is a template, import all related things.
-  if (Error Err = ImportTemplateInformation(D, ToFunction))
-    return std::move(Err);
 
   addDeclToContexts(D, ToFunction);
 
@@ -5998,6 +5997,30 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
 
   D2->setTemplateSpecializationKind(D->getTemplateSpecializationKind());
 
+  if (auto P = D->getInstantiatedFrom()) {
+    if (auto *CTD = P.dyn_cast<ClassTemplateDecl *>()) {
+      if (auto CTDorErr = import(CTD))
+        D2->setInstantiationOf(*CTDorErr);
+    } else {
+      auto *CTPSD = cast<ClassTemplatePartialSpecializationDecl *>(P);
+      auto CTPSDOrErr = import(CTPSD);
+      if (!CTPSDOrErr)
+        return CTPSDOrErr.takeError();
+      const TemplateArgumentList &DArgs = D->getTemplateInstantiationArgs();
+      SmallVector<TemplateArgument, 2> D2ArgsVec(DArgs.size());
+      for (unsigned I = 0; I < DArgs.size(); ++I) {
+        const TemplateArgument &DArg = DArgs[I];
+        if (auto ArgOrErr = import(DArg))
+          D2ArgsVec[I] = *ArgOrErr;
+        else
+          return ArgOrErr.takeError();
+      }
+      D2->setInstantiationOf(
+          *CTPSDOrErr,
+          TemplateArgumentList::CreateCopy(Importer.getToContext(), D2ArgsVec));
+    }
+  }
+
   if (D->isCompleteDefinition())
     if (Error Err = ImportDefinition(D, D2))
       return std::move(Err);
@@ -6161,15 +6184,6 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
       }
     }
   } else {
-    // Import the type.
-    QualType T;
-    if (Error Err = importInto(T, D->getType()))
-      return std::move(Err);
-
-    auto TInfoOrErr = import(D->getTypeSourceInfo());
-    if (!TInfoOrErr)
-      return TInfoOrErr.takeError();
-
     TemplateArgumentListInfo ToTAInfo;
     if (const ASTTemplateArgumentListInfo *Args = D->getTemplateArgsInfo()) {
       if (Error Err = ImportTemplateArgumentListInfo(*Args, ToTAInfo))
@@ -6194,7 +6208,7 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
       PartVarSpecDecl *ToPartial;
       if (GetImportedOrCreateDecl(ToPartial, D, Importer.getToContext(), DC,
                                   *BeginLocOrErr, *IdLocOrErr, *ToTPListOrErr,
-                                  VarTemplate, T, *TInfoOrErr,
+                                  VarTemplate, QualType(), nullptr,
                                   D->getStorageClass(), TemplateArgs, ArgInfos))
         return ToPartial;
 
@@ -6215,10 +6229,20 @@ ExpectedDecl ASTNodeImporter::VisitVarTemplateSpecializationDecl(
     } else { // Full specialization
       if (GetImportedOrCreateDecl(D2, D, Importer.getToContext(), DC,
                                   *BeginLocOrErr, *IdLocOrErr, VarTemplate,
-                                  T, *TInfoOrErr,
-                                  D->getStorageClass(), TemplateArgs))
+                                  QualType(), nullptr, D->getStorageClass(),
+                                  TemplateArgs))
         return D2;
     }
+
+    QualType T;
+    if (Error Err = importInto(T, D->getType()))
+      return std::move(Err);
+    D2->setType(T);
+
+    auto TInfoOrErr = import(D->getTypeSourceInfo());
+    if (!TInfoOrErr)
+      return TInfoOrErr.takeError();
+    D2->setTypeSourceInfo(*TInfoOrErr);
 
     if (D->getPointOfInstantiation().isValid()) {
       if (ExpectedSLoc POIOrErr = import(D->getPointOfInstantiation()))
@@ -8412,14 +8436,14 @@ ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmExpr(
   Error Err = Error::success();
   auto ToType = importChecked(Err, E->getType());
   auto ToExprLoc = importChecked(Err, E->getExprLoc());
-  auto ToParameter = importChecked(Err, E->getParameter());
+  auto ToAssociatedDecl = importChecked(Err, E->getAssociatedDecl());
   auto ToReplacement = importChecked(Err, E->getReplacement());
   if (Err)
     return std::move(Err);
 
   return new (Importer.getToContext()) SubstNonTypeTemplateParmExpr(
-      ToType, E->getValueKind(), ToExprLoc, ToParameter,
-      E->isReferenceParameter(), ToReplacement);
+      ToType, E->getValueKind(), ToExprLoc, ToReplacement, ToAssociatedDecl,
+      E->getIndex(), E->getPackIndex(), E->isReferenceParameter());
 }
 
 ExpectedStmt ASTNodeImporter::VisitTypeTraitExpr(TypeTraitExpr *E) {
@@ -9396,33 +9420,34 @@ Expected<TemplateName> ASTImporter::Import(TemplateName From) {
   case TemplateName::SubstTemplateTemplateParm: {
     SubstTemplateTemplateParmStorage *Subst =
         From.getAsSubstTemplateTemplateParm();
-    ExpectedDecl ParamOrErr = Import(Subst->getParameter());
-    if (!ParamOrErr)
-      return ParamOrErr.takeError();
-
     auto ReplacementOrErr = Import(Subst->getReplacement());
     if (!ReplacementOrErr)
       return ReplacementOrErr.takeError();
 
+    auto AssociatedDeclOrErr = Import(Subst->getAssociatedDecl());
+    if (!AssociatedDeclOrErr)
+      return AssociatedDeclOrErr.takeError();
+
     return ToContext.getSubstTemplateTemplateParm(
-        cast<TemplateTemplateParmDecl>(*ParamOrErr), *ReplacementOrErr);
+        *ReplacementOrErr, *AssociatedDeclOrErr, Subst->getIndex(),
+        Subst->getPackIndex());
   }
 
   case TemplateName::SubstTemplateTemplateParmPack: {
-    SubstTemplateTemplateParmPackStorage *SubstPack
-      = From.getAsSubstTemplateTemplateParmPack();
-    ExpectedDecl ParamOrErr = Import(SubstPack->getParameterPack());
-    if (!ParamOrErr)
-      return ParamOrErr.takeError();
-
+    SubstTemplateTemplateParmPackStorage *SubstPack =
+        From.getAsSubstTemplateTemplateParmPack();
     ASTNodeImporter Importer(*this);
     auto ArgPackOrErr =
         Importer.ImportTemplateArgument(SubstPack->getArgumentPack());
     if (!ArgPackOrErr)
       return ArgPackOrErr.takeError();
 
+    auto AssociatedDeclOrErr = Import(SubstPack->getAssociatedDecl());
+    if (!AssociatedDeclOrErr)
+      return AssociatedDeclOrErr.takeError();
+
     return ToContext.getSubstTemplateTemplateParmPack(
-        cast<TemplateTemplateParmDecl>(*ParamOrErr), *ArgPackOrErr);
+        *ArgPackOrErr, *AssociatedDeclOrErr, SubstPack->getIndex());
   }
   case TemplateName::UsingTemplate: {
     auto UsingOrError = Import(From.getAsUsingShadowDecl());
