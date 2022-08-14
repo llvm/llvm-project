@@ -844,8 +844,7 @@ void ProducersSection::addInfo(const WasmProducerInfo &info) {
        {std::make_pair(&info.Languages, &languages),
         std::make_pair(&info.Tools, &tools), std::make_pair(&info.SDKs, &sDKs)})
     for (auto &producer : *producers.first)
-      if (producers.second->end() ==
-          llvm::find_if(*producers.second,
+      if (llvm::none_of(*producers.second,
                         [&](std::pair<std::string, std::string> seen) {
                           return seen.first == producer.first;
                         }))
