@@ -32734,7 +32734,28 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                     N->getOpcode() == ISD::STRICT_FP_TO_SINT;
     EVT VT = N->getValueType(0);
     SDValue Src = N->getOperand(IsStrict ? 1 : 0);
+    SDValue Chain = IsStrict ? N->getOperand(0) : SDValue();
     EVT SrcVT = Src.getValueType();
+
+    SDValue Res;
+    if (isSoftFP16(SrcVT)) {
+      EVT NVT = VT.isVector() ? VT.changeVectorElementType(MVT::f32) : MVT::f32;
+      if (IsStrict) {
+        Res =
+            DAG.getNode(N->getOpcode(), dl, {VT, MVT::Other},
+                        {Chain, DAG.getNode(ISD::STRICT_FP_EXTEND, dl,
+                                            {NVT, MVT::Other}, {Chain, Src})});
+        Chain = Res.getValue(1);
+      } else {
+        Res = DAG.getNode(N->getOpcode(), dl, VT,
+                          DAG.getNode(ISD::FP_EXTEND, dl, NVT, Src));
+      }
+      Results.push_back(Res);
+      if (IsStrict)
+        Results.push_back(Chain);
+
+      return;
+    }
 
     if (VT.isVector() && Subtarget.hasFP16() &&
         SrcVT.getVectorElementType() == MVT::f16) {
@@ -32749,7 +32770,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8f16, Ops);
       }
 
-      SDValue Res, Chain;
       if (IsStrict) {
         unsigned Opc =
             IsSigned ? X86ISD::STRICT_CVTTP2SI : X86ISD::STRICT_CVTTP2UI;
@@ -32941,7 +32961,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    SDValue Chain;
     if (SDValue V = FP_TO_INTHelper(SDValue(N, 0), DAG, IsSigned, Chain)) {
       Results.push_back(V);
       if (IsStrict)
