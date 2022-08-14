@@ -797,7 +797,7 @@ struct spirv::detail::StructTypeStorage : public TypeStorage {
       StructType::MemberDecorationInfo const *memberDecorationsInfo)
       : memberTypesAndIsBodySet(memberTypes, false), offsetInfo(layoutInfo),
         numMembers(numMembers), numMemberDecorations(numMemberDecorations),
-        memberDecorationsInfo(memberDecorationsInfo), identifier(StringRef()) {}
+        memberDecorationsInfo(memberDecorationsInfo) {}
 
   /// A storage key is divided into 2 parts:
   /// - for identified structs:
@@ -1076,7 +1076,7 @@ llvm::hash_code spirv::hash_value(
 
 struct spirv::detail::MatrixTypeStorage : public TypeStorage {
   MatrixTypeStorage(Type columnType, uint32_t columnCount)
-      : TypeStorage(), columnType(columnType), columnCount(columnCount) {}
+      : columnType(columnType), columnCount(columnCount) {}
 
   using KeyTy = std::tuple<Type, uint32_t>;
 
