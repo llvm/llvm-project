@@ -891,7 +891,7 @@ protected:
     if (!isValidState())
       return false;
 
-    for (auto &It : AccessBins) {
+    for (const auto &It : AccessBins) {
       AAPointerInfo::OffsetAndSize ItOAS = It.getFirst();
       if (!OAS.mayOverlap(ItOAS))
         continue;
@@ -912,7 +912,7 @@ protected:
 
     // First find the offset and size of I.
     AAPointerInfo::OffsetAndSize OAS(-1, -1);
-    for (auto &It : AccessBins) {
+    for (const auto &It : AccessBins) {
       for (auto &Access : *It.getSecond()) {
         if (Access.getRemoteInst() == &I) {
           OAS = It.getFirst();
@@ -1148,7 +1148,7 @@ struct AAPointerInfoImpl
 
     // Combine the accesses bin by bin.
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
-    for (auto &It : OtherAAImpl.getState()) {
+    for (const auto &It : OtherAAImpl.getState()) {
       OffsetAndSize OAS = OffsetAndSize::getUnknown();
       if (Offset != OffsetAndSize::Unknown)
         OAS = OffsetAndSize(It.first.getOffset() + Offset, It.first.getSize());
@@ -1802,7 +1802,7 @@ bool AAReturnedValuesImpl::checkForAllReturnedValuesAndReturnInsts(
 
   // Check all returned values but ignore call sites as long as we have not
   // encountered an overdefined one during an update.
-  for (auto &It : ReturnedValues) {
+  for (const auto &It : ReturnedValues) {
     Value *RV = It.first;
     if (!Pred(*RV, It.second))
       return false;
@@ -3977,7 +3977,7 @@ identifyAliveSuccessors(Attributor &A, const SwitchInst &SI,
   if (!C || isa_and_nonnull<UndefValue>(C.value())) {
     // No value yet, assume all edges are dead.
   } else if (isa_and_nonnull<ConstantInt>(C.value())) {
-    for (auto &CaseIt : SI.cases()) {
+    for (const auto &CaseIt : SI.cases()) {
       if (CaseIt.getCaseValue() == C.value()) {
         AliveSuccessors.push_back(&CaseIt.getCaseSuccessor()->front());
         return UsedAssumedInformation;
@@ -5141,7 +5141,7 @@ ChangeStatus AANoCaptureImpl::updateImpl(Attributor &A) {
     if (!RVAA.getState().isValidState())
       return false;
     bool SeenConstant = false;
-    for (auto &It : RVAA.returned_values()) {
+    for (const auto &It : RVAA.returned_values()) {
       if (isa<Constant>(It.first)) {
         if (SeenConstant)
           return false;
@@ -5902,7 +5902,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     STATS_DECL(
         MallocCalls, Function,
         "Number of malloc/calloc/aligned_alloc calls converted to allocas");
-    for (auto &It : AllocationInfos)
+    for (const auto &It : AllocationInfos)
       if (It.second->Status != AllocationInfo::INVALID)
         ++BUILD_STAT_NAME(MallocCalls, Function);
   }
@@ -5919,7 +5919,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     if (!isValidState())
       return false;
 
-    for (auto &It : AllocationInfos) {
+    for (const auto &It : AllocationInfos) {
       AllocationInfo &AI = *It.second;
       if (AI.Status == AllocationInfo::INVALID)
         continue;
@@ -8980,7 +8980,7 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
       if (Undef)
         unionAssumedWithUndef();
       else {
-        for (auto &It : *OpAA)
+        for (const auto &It : *OpAA)
           unionAssumed(It);
       }
 
@@ -8988,9 +8988,9 @@ struct AAPotentialConstantValuesFloating : AAPotentialConstantValuesImpl {
       // select i1 *, undef , undef => undef
       unionAssumedWithUndef();
     } else {
-      for (auto &It : LHSAAPVS)
+      for (const auto &It : LHSAAPVS)
         unionAssumed(It);
-      for (auto &It : RHSAAPVS)
+      for (const auto &It : RHSAAPVS)
         unionAssumed(It);
     }
     return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
@@ -9416,7 +9416,7 @@ struct AACallEdgesCallSite : public AACallEdgesImpl {
 
     // Process callee metadata if available.
     if (auto *MD = getCtxI()->getMetadata(LLVMContext::MD_callees)) {
-      for (auto &Op : MD->operands()) {
+      for (const auto &Op : MD->operands()) {
         Function *Callee = mdconst::dyn_extract_or_null<Function>(Op);
         if (Callee)
           addCalledFunction(Callee, Change);
@@ -9571,7 +9571,7 @@ private:
       }
 
       SmallVector<const AAFunctionReachability *, 8> Deps;
-      for (auto &AAEdges : AAEdgesList) {
+      for (const auto &AAEdges : AAEdgesList) {
         const SetVector<Function *> &Edges = AAEdges->getOptimisticEdges();
 
         for (Function *Edge : Edges) {
@@ -9851,7 +9851,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
 
     IRPosition ValIRP = IRPosition::value(V);
     if (auto *CB = dyn_cast_or_null<CallBase>(CtxI)) {
-      for (auto &U : CB->args()) {
+      for (const auto &U : CB->args()) {
         if (U.get() != &V)
           continue;
         ValIRP = IRPosition::callsite_argument(*CB, CB->getArgOperandNo(&U));
@@ -9868,7 +9868,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
         auto &PotentialConstantsAA = A.getAAFor<AAPotentialConstantValues>(
             *this, ValIRP, DepClassTy::OPTIONAL);
         if (PotentialConstantsAA.isValidState()) {
-          for (auto &It : PotentialConstantsAA.getAssumedSet())
+          for (const auto &It : PotentialConstantsAA.getAssumedSet())
             State.unionAssumed({{*ConstantInt::get(&Ty, It), nullptr}, S});
           if (PotentialConstantsAA.undefIsContained())
             State.unionAssumed({{*UndefValue::get(&Ty), nullptr}, S});
@@ -9930,7 +9930,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
 
   void giveUpOnIntraprocedural(Attributor &A) {
     auto NewS = StateType::getBestState(getState());
-    for (auto &It : getAssumedSet()) {
+    for (const auto &It : getAssumedSet()) {
       if (It.second == AA::Intraprocedural)
         continue;
       addValue(A, NewS, *It.first.getValue(), It.first.getCtxI(),
@@ -9982,7 +9982,7 @@ struct AAPotentialValuesImpl : AAPotentialValues {
                                   AA::ValueScope S) const override {
     if (!isValidState())
       return false;
-    for (auto &It : getAssumedSet())
+    for (const auto &It : getAssumedSet())
       if (It.second & S)
         Values.push_back(It.first);
     assert(!undefIsContained() && "Undef should be an explicit value!");

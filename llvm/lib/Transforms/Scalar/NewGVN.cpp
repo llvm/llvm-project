@@ -207,7 +207,7 @@ private:
     Root[I] = ++DFSNum;
     // Store the DFS Number we had before it possibly gets incremented.
     unsigned int OurDFS = DFSNum;
-    for (auto &Op : I->operands()) {
+    for (const auto &Op : I->operands()) {
       if (auto *InstOp = dyn_cast<Instruction>(Op)) {
         if (Root.lookup(Op) == 0)
           FindSCC(InstOp);
@@ -3218,7 +3218,7 @@ void NewGVN::verifyMemoryCongruency() const {
         // We could have phi nodes which operands are all trivially dead,
         // so we don't process them.
         if (auto *MemPHI = dyn_cast<MemoryPhi>(Pair.first)) {
-          for (auto &U : MemPHI->incoming_values()) {
+          for (const auto &U : MemPHI->incoming_values()) {
             if (auto *I = dyn_cast<Instruction>(&*U)) {
               if (!isInstructionTriviallyDead(I))
                 return true;

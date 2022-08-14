@@ -1583,7 +1583,7 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
   // legality and profitability checks. This means running the loop unroller
   // will simplify all loops, regardless of whether anything end up being
   // unrolled.
-  for (auto &L : LI) {
+  for (const auto &L : LI) {
     Changed |=
         simplifyLoop(L, &DT, &LI, &SE, &AC, nullptr, false /* PreserveLCSSA */);
     Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
