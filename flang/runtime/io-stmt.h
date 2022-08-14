@@ -189,10 +189,10 @@ public:
     if (get_if<FormattedIoStatementState<D>>()) {
       return true;
     } else {
-      if (!get_if<ErroneousIoStatementState>()) {
-        GetIoErrorHandler().Crash(
-            "%s called for I/O statement that is not formatted %s", name,
-            D == Direction::Output ? "output" : "input");
+      auto &handler{GetIoErrorHandler()};
+      if (!handler.InError()) {
+        handler.Crash("%s called for I/O statement that is not formatted %s",
+            name, D == Direction::Output ? "output" : "input");
       }
       return false;
     }
