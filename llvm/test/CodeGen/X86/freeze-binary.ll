@@ -6,14 +6,12 @@ define i32 @freeze_and(i32 %a0) nounwind {
 ; X86-LABEL: freeze_and:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $15, %eax
 ; X86-NEXT:    andl $7, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_and:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andl $15, %eax
 ; X64-NEXT:    andl $7, %eax
 ; X64-NEXT:    retq
   %x = and i32 %a0, 15
@@ -26,12 +24,10 @@ define <2 x i64> @freeze_and_vec(<2 x i64> %a0) nounwind {
 ; X86-LABEL: freeze_and_vec:
 ; X86:       # %bb.0:
 ; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_and_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = and <2 x i64> %a0, <i64 15, i64 7>
@@ -44,15 +40,13 @@ define i32 @freeze_or(i32 %a0) nounwind {
 ; X86-LABEL: freeze_or:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    orl $3, %eax
-; X86-NEXT:    orl $12, %eax
+; X86-NEXT:    orl $15, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_or:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    orl $3, %eax
-; X64-NEXT:    orl $12, %eax
+; X64-NEXT:    orl $15, %eax
 ; X64-NEXT:    retq
   %x = or i32 %a0, 3
   %y = freeze i32 %x
@@ -64,12 +58,10 @@ define <2 x i64> @freeze_or_vec(<2 x i64> %a0) nounwind {
 ; X86-LABEL: freeze_or_vec:
 ; X86:       # %bb.0:
 ; X86-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_or_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = or <2 x i64> %a0, <i64 1, i64 3>
@@ -82,15 +74,13 @@ define i32 @freeze_xor(i32 %a0) nounwind {
 ; X86-LABEL: freeze_xor:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    xorl $3, %eax
-; X86-NEXT:    xorl $12, %eax
+; X86-NEXT:    xorl $15, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_xor:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    xorl $3, %eax
-; X64-NEXT:    xorl $12, %eax
+; X64-NEXT:    xorl $15, %eax
 ; X64-NEXT:    retq
   %x = xor i32 %a0, 3
   %y = freeze i32 %x
@@ -101,14 +91,14 @@ define i32 @freeze_xor(i32 %a0) nounwind {
 define <8 x i16> @freeze_xor_vec(<8 x i16> %a0) nounwind {
 ; X86-LABEL: freeze_xor_vec:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    pcmpeqd %xmm1, %xmm1
+; X86-NEXT:    pxor %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_xor_vec:
 ; X64:       # %bb.0:
-; X64-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
   %x = xor <8 x i16> %a0, <i16 -1, i16 0, i16 -1, i16 0, i16 -1, i16 0, i16 -1, i16 0>
   %y = freeze <8 x i16> %x
