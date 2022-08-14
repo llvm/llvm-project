@@ -2755,7 +2755,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
 
   // Replace the operands of the cloned instructions with their scalar
   // equivalents in the new loop.
-  for (auto &I : enumerate(RepRecipe->operands())) {
+  for (const auto &I : enumerate(RepRecipe->operands())) {
     auto InputInstance = Instance;
     VPValue *Operand = I.value();
     VPReplicateRecipe *OperandR = dyn_cast<VPReplicateRecipe>(Operand);
@@ -3100,7 +3100,7 @@ void InnerLoopVectorizer::createInductionResumeValues(
   // If we come from a bypass edge then we need to start from the original
   // start value.
   Instruction *OldInduction = Legal->getPrimaryInduction();
-  for (auto &InductionEntry : Legal->getInductionVars()) {
+  for (const auto &InductionEntry : Legal->getInductionVars()) {
     PHINode *OrigPhi = InductionEntry.first;
     InductionDescriptor II = InductionEntry.second;
 
@@ -3655,7 +3655,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
     // edge.
 
     // Fix-up external users of the induction variables.
-    for (auto &Entry : Legal->getInductionVars())
+    for (const auto &Entry : Legal->getInductionVars())
       fixupIVUsers(Entry.first, Entry.second,
                    getOrCreateVectorTripCount(VectorLoop->getLoopPreheader()),
                    IVEndValues[Entry.first], LoopMiddleBlock,
@@ -3665,7 +3665,7 @@ void InnerLoopVectorizer::fixVectorizedLoop(VPTransformState &State,
   // Fix LCSSA phis not already fixed earlier. Extracts may need to be generated
   // in the exit block, so update the builder.
   State.Builder.SetInsertPoint(State.CFG.ExitBB->getFirstNonPHI());
-  for (auto &KV : Plan.getLiveOuts())
+  for (const auto &KV : Plan.getLiveOuts())
     KV.second->fixPhi(Plan, State);
 
   for (Instruction *PI : PredicatedInstructions)
@@ -4182,7 +4182,7 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &CI, VPValue *Def,
   for (unsigned Part = 0; Part < UF; ++Part) {
     SmallVector<Type *, 2> TysForDecl = {CI.getType()};
     SmallVector<Value *, 4> Args;
-    for (auto &I : enumerate(ArgOperands.operands())) {
+    for (const auto &I : enumerate(ArgOperands.operands())) {
       // Some intrinsics have a scalar argument - don't replace it with a
       // vector.
       Value *Arg;
@@ -4359,7 +4359,7 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
   // An induction variable will remain scalar if all users of the induction
   // variable and induction variable update remain scalar.
-  for (auto &Induction : Legal->getInductionVars()) {
+  for (const auto &Induction : Legal->getInductionVars()) {
     auto *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
 
@@ -4749,7 +4749,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
   // nodes separately. An induction variable will remain uniform if all users
   // of the induction variable and induction variable update remain uniform.
   // The code below handles both pointer and non-pointer induction variables.
-  for (auto &Induction : Legal->getInductionVars()) {
+  for (const auto &Induction : Legal->getInductionVars()) {
     auto *Ind = Induction.first;
     auto *IndUpdate = cast<Instruction>(Ind->getIncomingValueForBlock(Latch));
 
@@ -5381,7 +5381,7 @@ VectorizationFactor LoopVectorizationCostModel::selectVectorizationFactor(
         raw_string_ostream OS(OutString);
         assert(!Subset.empty() && "Unexpected empty range");
         OS << "Instruction with invalid costs prevented vectorization at VF=(";
-        for (auto &Pair : Subset)
+        for (const auto &Pair : Subset)
           OS << (Pair.second == Subset.front().second ? "" : ", ")
              << Pair.second;
         OS << "):";
@@ -5424,7 +5424,7 @@ bool LoopVectorizationCostModel::isCandidateForEpilogueVectorization(
 
   // Phis with uses outside of the loop require special handling and are
   // currently unsupported.
-  for (auto &Entry : Legal->getInductionVars()) {
+  for (const auto &Entry : Legal->getInductionVars()) {
     // Look for uses of the value of the induction at the last iteration.
     Value *PostInc = Entry.first->getIncomingValueForBlock(L.getLoopLatch());
     for (User *U : PostInc->users())
@@ -5558,7 +5558,7 @@ LoopVectorizationCostModel::getSmallestAndWidestTypes() {
     // Reset MaxWidth so that we can find the smallest type used by recurrences
     // in the loop.
     MaxWidth = -1U;
-    for (auto &PhiDescriptorPair : Legal->getReductionVars()) {
+    for (const auto &PhiDescriptorPair : Legal->getReductionVars()) {
       const RecurrenceDescriptor &RdxDesc = PhiDescriptorPair.second;
       // When finding the min width used by the recurrence we need to account
       // for casts on the input operands of the recurrence.
@@ -7342,14 +7342,14 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 
   // Ignore type-promoting instructions we identified during reduction
   // detection.
-  for (auto &Reduction : Legal->getReductionVars()) {
+  for (const auto &Reduction : Legal->getReductionVars()) {
     const RecurrenceDescriptor &RedDes = Reduction.second;
     const SmallPtrSetImpl<Instruction *> &Casts = RedDes.getCastInsts();
     VecValuesToIgnore.insert(Casts.begin(), Casts.end());
   }
   // Ignore type-casting instructions we identified during induction
   // detection.
-  for (auto &Induction : Legal->getInductionVars()) {
+  for (const auto &Induction : Legal->getInductionVars()) {
     const InductionDescriptor &IndDes = Induction.second;
     const SmallVectorImpl<Instruction *> &Casts = IndDes.getCastInsts();
     VecValuesToIgnore.insert(Casts.begin(), Casts.end());
@@ -7357,7 +7357,7 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
 }
 
 void LoopVectorizationCostModel::collectInLoopReductions() {
-  for (auto &Reduction : Legal->getReductionVars()) {
+  for (const auto &Reduction : Legal->getReductionVars()) {
     PHINode *Phi = Reduction.first;
     const RecurrenceDescriptor &RdxDesc = Reduction.second;
 
@@ -8721,18 +8721,18 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
   // Mark instructions we'll need to sink later and their targets as
   // ingredients whose recipe we'll need to record.
-  for (auto &Entry : SinkAfter) {
+  for (const auto &Entry : SinkAfter) {
     RecipeBuilder.recordRecipeOf(Entry.first);
     RecipeBuilder.recordRecipeOf(Entry.second);
   }
-  for (auto &Reduction : CM.getInLoopReductionChains()) {
+  for (const auto &Reduction : CM.getInLoopReductionChains()) {
     PHINode *Phi = Reduction.first;
     RecurKind Kind =
         Legal->getReductionVars().find(Phi)->second.getRecurrenceKind();
     const SmallVector<Instruction *, 4> &ReductionOperations = Reduction.second;
 
     RecipeBuilder.recordRecipeOf(Phi);
-    for (auto &R : ReductionOperations) {
+    for (const auto &R : ReductionOperations) {
       RecipeBuilder.recordRecipeOf(R);
       // For min/max reductions, where we have a pair of icmp/select, we also
       // need to record the ICmp recipe, so it can be removed later.
@@ -8913,7 +8913,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     }
     return nullptr;
   };
-  for (auto &Entry : SinkAfter) {
+  for (const auto &Entry : SinkAfter) {
     VPRecipeBase *Sink = RecipeBuilder.getRecipe(Entry.first);
     VPRecipeBase *Target = RecipeBuilder.getRecipe(Entry.second);
 
@@ -9112,7 +9112,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
 void LoopVectorizationPlanner::adjustRecipesForReductions(
     VPBasicBlock *LatchVPBB, VPlanPtr &Plan, VPRecipeBuilder &RecipeBuilder,
     ElementCount MinVF) {
-  for (auto &Reduction : CM.getInLoopReductionChains()) {
+  for (const auto &Reduction : CM.getInLoopReductionChains()) {
     PHINode *Phi = Reduction.first;
     const RecurrenceDescriptor &RdxDesc =
         Legal->getReductionVars().find(Phi)->second;
@@ -10496,7 +10496,7 @@ LoopVectorizeResult LoopVectorizePass::runImpl(
   // legality and profitability checks. This means running the loop vectorizer
   // will simplify all loops, regardless of whether anything end up being
   // vectorized.
-  for (auto &L : *LI)
+  for (const auto &L : *LI)
     Changed |= CFGChanged |=
         simplifyLoop(L, DT, LI, SE, AC, nullptr, false /* PreserveLCSSA */);
 

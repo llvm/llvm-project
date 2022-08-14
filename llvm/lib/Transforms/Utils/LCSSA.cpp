@@ -417,7 +417,7 @@ bool llvm::formLCSSARecursively(Loop &L, const DominatorTree &DT,
 static bool formLCSSAOnAllLoops(const LoopInfo *LI, const DominatorTree &DT,
                                 ScalarEvolution *SE) {
   bool Changed = false;
-  for (auto &L : *LI)
+  for (const auto &L : *LI)
     Changed |= formLCSSARecursively(*L, DT, LI, SE);
   return Changed;
 }

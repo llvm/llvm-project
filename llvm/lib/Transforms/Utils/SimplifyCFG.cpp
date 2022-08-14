@@ -5272,7 +5272,7 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
   SmallVector<ConstantInt *, 8> DeadCases;
   SmallDenseMap<BasicBlock *, int, 8> NumPerSuccessorCases;
   SmallVector<BasicBlock *, 8> UniqueSuccessors;
-  for (auto &Case : SI->cases()) {
+  for (const auto &Case : SI->cases()) {
     auto *Successor = Case.getCaseSuccessor();
     if (DTU) {
       if (!NumPerSuccessorCases.count(Successor))
@@ -5372,7 +5372,7 @@ static bool ForwardSwitchConditionToPHI(SwitchInst *SI) {
   ForwardingNodesMap ForwardingNodes;
   BasicBlock *SwitchBlock = SI->getParent();
   bool Changed = false;
-  for (auto &Case : SI->cases()) {
+  for (const auto &Case : SI->cases()) {
     ConstantInt *CaseValue = Case.getCaseValue();
     BasicBlock *CaseDest = Case.getCaseSuccessor();
 
@@ -5588,7 +5588,7 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
                                   const DataLayout &DL,
                                   const TargetTransformInfo &TTI,
                                   uintptr_t MaxUniqueResults) {
-  for (auto &I : SI->cases()) {
+  for (const auto &I : SI->cases()) {
     ConstantInt *CaseVal = I.getCaseValue();
 
     // Resulting value at phi nodes for this case value.
@@ -6494,7 +6494,7 @@ static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   // cases such as a sequence crossing zero {-4,0,4,8} if we interpret case values
   // as signed.
   SmallVector<int64_t,4> Values;
-  for (auto &C : SI->cases())
+  for (const auto &C : SI->cases())
     Values.push_back(C.getCaseValue()->getValue().getSExtValue());
   llvm::sort(Values);
 
@@ -7043,7 +7043,7 @@ static bool removeUndefIntroducingPredecessor(BasicBlock *BB,
           Builder.SetInsertPoint(Unreachable);
           // The new block contains only one instruction: Unreachable
           Builder.CreateUnreachable();
-          for (auto &Case : SI->cases())
+          for (const auto &Case : SI->cases())
             if (Case.getCaseSuccessor() == BB) {
               BB->removePredecessor(Predecessor);
               Case.setSuccessor(Unreachable);

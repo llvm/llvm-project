@@ -363,7 +363,7 @@ private:
       FS->GUIDToFuncNameMap = Map;
       for (const auto &ICS : FS->getCallsiteSamples()) {
         const FunctionSamplesMap &FSMap = ICS.second;
-        for (auto &IFS : FSMap) {
+        for (const auto &IFS : FSMap) {
           FunctionSamples &FS = const_cast<FunctionSamples &>(IFS.second);
           FSToUpdate.push(&FS);
         }
