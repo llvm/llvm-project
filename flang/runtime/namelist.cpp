@@ -475,7 +475,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     }
     io.HandleRelativePosition(byteCount);
     // Read the values into the descriptor.  An array can be short.
-    listInput->ResetForNextNamelistItem();
+    listInput->ResetForNextNamelistItem(useDescriptor->rank() > 0);
     if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor)) {
       return false;
     }
@@ -494,8 +494,9 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
 }
 
 bool IsNamelistName(IoStatementState &io) {
-  if (io.get_if<ListDirectedStatementState<Direction::Input>>()) {
-    if (io.mutableModes().inNamelist) {
+  if (auto *listInput{
+          io.get_if<ListDirectedStatementState<Direction::Input>>()}) {
+    if (listInput->inNamelistArray()) {
       SavedPosition savedPosition{io};
       std::size_t byteCount{0};
       if (auto ch{io.GetNextNonBlank(byteCount)}) {
