@@ -321,3 +321,82 @@ define <8 x i16> @freeze_mul_vec_undef(<8 x i16> %a0) nounwind {
   %z = mul <8 x i16> %y, <i16 4, i16 3, i16 2, i16 1, i16 1, i16 2, i16 undef, i16 4>
   ret <8 x i16> %z
 }
+
+define i32 @freeze_shl(i32 %a0) nounwind {
+; X86-LABEL: freeze_shl:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl %eax, %eax
+; X86-NEXT:    shll $2, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_shl:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (%rdi,%rdi), %eax
+; X64-NEXT:    shll $2, %eax
+; X64-NEXT:    retq
+  %x = shl i32 %a0, 1
+  %y = freeze i32 %x
+  %z = shl i32 %y, 2
+  ret i32 %z
+}
+
+define i32 @freeze_shl_outofrange(i32 %a0) nounwind {
+; X86-LABEL: freeze_shl_outofrange:
+; X86:       # %bb.0:
+; X86-NEXT:    shll $2, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_shl_outofrange:
+; X64:       # %bb.0:
+; X64-NEXT:    shll $2, %eax
+; X64-NEXT:    retq
+  %x = shl i32 %a0, 32
+  %y = freeze i32 %x
+  %z = shl i32 %y, 2
+  ret i32 %z
+}
+
+define <2 x i64> @freeze_shl_vec(<2 x i64> %a0) nounwind {
+; X86-LABEL: freeze_shl_vec:
+; X86:       # %bb.0:
+; X86-NEXT:    movdqa %xmm0, %xmm1
+; X86-NEXT:    psllq $2, %xmm1
+; X86-NEXT:    psllq $1, %xmm0
+; X86-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X86-NEXT:    movapd %xmm0, %xmm1
+; X86-NEXT:    psllq $2, %xmm1
+; X86-NEXT:    psllq $1, %xmm0
+; X86-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_shl_vec:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovdqa {{.*#+}} xmm1 = [2,1]
+; X64-NEXT:    vpsllvq %xmm1, %xmm0, %xmm0
+; X64-NEXT:    vpsllvq %xmm1, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %x = shl <2 x i64> %a0, <i64 2, i64 1>
+  %y = freeze <2 x i64> %x
+  %z = shl <2 x i64> %y, <i64 2, i64 1>
+  ret <2 x i64> %z
+}
+
+define <2 x i64> @freeze_shl_vec_outofrange(<2 x i64> %a0) nounwind {
+; X86-LABEL: freeze_shl_vec_outofrange:
+; X86:       # %bb.0:
+; X86-NEXT:    psllq $1, %xmm0
+; X86-NEXT:    psllq $2, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_shl_vec_outofrange:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vpsllq $2, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %x = shl <2 x i64> %a0, <i64 1, i64 64>
+  %y = freeze <2 x i64> %x
+  %z = shl <2 x i64> %y, <i64 2, i64 2>
+  ret <2 x i64> %z
+}
