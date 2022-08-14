@@ -11,6 +11,7 @@
 #define _LIBCPP___ALGORITHM_FOR_EACH_N_H
 
 #include <__config>
+#include <__utility/convert_to_integral.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

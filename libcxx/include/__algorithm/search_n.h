@@ -19,6 +19,7 @@
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__ranges/concepts.h>
+#include <__utility/convert_to_integral.h>
 #include <__utility/pair.h>
 #include <type_traits>  // __convert_to_integral
 

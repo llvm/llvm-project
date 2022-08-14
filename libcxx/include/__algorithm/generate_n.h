@@ -10,6 +10,7 @@
 #define _LIBCPP___ALGORITHM_GENERATE_N_H
 
 #include <__config>
+#include <__utility/convert_to_integral.h>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

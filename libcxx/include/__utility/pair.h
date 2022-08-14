@@ -14,6 +14,7 @@
 #include <__config>
 #include <__functional/unwrap_ref.h>
 #include <__tuple>
+#include <__type_traits/is_implicitly_default_constructible.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/piecewise_construct.h>
