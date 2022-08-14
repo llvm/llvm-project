@@ -210,6 +210,7 @@ namespace {
     void removeInstr(MachineInstr &MI);
     void updateLiveness(const std::set<Register> &RegSet, bool Recalc,
                         bool UpdateKills, bool UpdateDeads);
+    void distributeLiveIntervals(const std::set<Register> &Regs);
 
     unsigned getCondTfrOpcode(const MachineOperand &SO, bool Cond);
     MachineInstr *genCondTfrFor(MachineOperand &SrcOp,
@@ -571,6 +572,27 @@ void HexagonExpandCondsets::updateLiveness(const std::set<Register> &RegSet,
     if (UpdateKills)
       updateKillFlags(R);
     LIS->getInterval(R).verify();
+  }
+}
+
+void HexagonExpandCondsets::distributeLiveIntervals(
+    const std::set<Register> &Regs) {
+  ConnectedVNInfoEqClasses EQC(*LIS);
+  for (Register R : Regs) {
+    if (!R.isVirtual())
+      continue;
+    LiveInterval &LI = LIS->getInterval(R);
+    unsigned NumComp = EQC.Classify(LI);
+    if (NumComp == 1)
+      continue;
+
+    SmallVector<LiveInterval*> NewLIs;
+    const TargetRegisterClass *RC = MRI->getRegClass(LI.reg());
+    for (unsigned I = 1; I < NumComp; ++I) {
+      Register NewR = MRI->createVirtualRegister(RC);
+      NewLIs.push_back(&LIS->createEmptyInterval(NewR));
+    }
+    EQC.Distribute(LI, NewLIs.begin(), *MRI);
   }
 }
 
@@ -1319,6 +1341,9 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
 
   PredUpd.insert(CoalUpd.begin(), CoalUpd.end());
   updateLiveness(PredUpd, true, true, true);
+
+  if (Changed)
+    distributeLiveIntervals(PredUpd);
 
   LLVM_DEBUG({
     if (Changed)
