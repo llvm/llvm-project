@@ -342,6 +342,26 @@ define i32 @freeze_shl(i32 %a0) nounwind {
   ret i32 %z
 }
 
+define i32 @freeze_shl_nsw(i32 %a0) nounwind {
+; X86-LABEL: freeze_shl_nsw:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $3, %eax
+; X86-NEXT:    shll $5, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_shl_nsw:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (,%rdi,8), %eax
+; X64-NEXT:    shll $5, %eax
+; X64-NEXT:    retq
+  %x = shl nsw i32 %a0, 3
+  %y = freeze i32 %x
+  %z = shl i32 %y, 5
+  ret i32 %z
+}
+
 define i32 @freeze_shl_outofrange(i32 %a0) nounwind {
 ; X86-LABEL: freeze_shl_outofrange:
 ; X86:       # %bb.0:
