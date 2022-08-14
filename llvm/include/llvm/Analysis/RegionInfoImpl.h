@@ -390,10 +390,10 @@ void RegionBase<Tr>::transferChildrenTo(RegionT *To) {
 template <class Tr>
 void RegionBase<Tr>::addSubRegion(RegionT *SubRegion, bool moveChildren) {
   assert(!SubRegion->parent && "SubRegion already has a parent!");
-  assert(llvm::find_if(*this,
+  assert(llvm::none_of(*this,
                        [&](const std::unique_ptr<RegionT> &R) {
                          return R.get() == SubRegion;
-                       }) == children.end() &&
+                       }) &&
          "Subregion already exists!");
 
   SubRegion->parent = static_cast<RegionT *>(this);

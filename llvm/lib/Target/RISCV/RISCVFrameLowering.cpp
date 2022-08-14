@@ -39,8 +39,8 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
   // Do not save RA to the SCS if it's not saved to the regular stack,
   // i.e. RA is not at risk of being overwritten.
   std::vector<CalleeSavedInfo> &CSI = MF.getFrameInfo().getCalleeSavedInfo();
-  if (std::none_of(CSI.begin(), CSI.end(),
-                   [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
+  if (llvm::none_of(
+          CSI, [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
     return;
 
   Register SCSPReg = RISCVABI::getSCSPReg();
@@ -89,8 +89,8 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   // See emitSCSPrologue() above.
   std::vector<CalleeSavedInfo> &CSI = MF.getFrameInfo().getCalleeSavedInfo();
-  if (std::none_of(CSI.begin(), CSI.end(),
-                   [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
+  if (llvm::none_of(
+          CSI, [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
     return;
 
   Register SCSPReg = RISCVABI::getSCSPReg();
