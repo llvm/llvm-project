@@ -1725,17 +1725,10 @@ define void @mscatter_v2i64_truncstore_v2i32(<2 x i64> %val, <2 x i32*> %ptrs, <
 ;
 ; RV64ZVE32F-LABEL: mscatter_v2i64_truncstore_v2i32:
 ; RV64ZVE32F:       # %bb.0:
-; RV64ZVE32F-NEXT:    addi sp, sp, -16
-; RV64ZVE32F-NEXT:    .cfi_def_cfa_offset 16
-; RV64ZVE32F-NEXT:    sw a1, 12(sp)
-; RV64ZVE32F-NEXT:    sw a0, 8(sp)
-; RV64ZVE32F-NEXT:    addi a0, sp, 12
-; RV64ZVE32F-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
-; RV64ZVE32F-NEXT:    vle32.v v9, (a0)
-; RV64ZVE32F-NEXT:    addi a0, sp, 8
-; RV64ZVE32F-NEXT:    vle32.v v8, (a0)
-; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, tu, mu
-; RV64ZVE32F-NEXT:    vslideup.vi v8, v9, 1
+; RV64ZVE32F-NEXT:    vsetivli zero, 2, e32, m1, ta, mu
+; RV64ZVE32F-NEXT:    vmv.v.x v8, a1
+; RV64ZVE32F-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; RV64ZVE32F-NEXT:    vmv.s.x v8, a0
 ; RV64ZVE32F-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
 ; RV64ZVE32F-NEXT:    vmv.x.s a0, v0
 ; RV64ZVE32F-NEXT:    andi a1, a0, 1
@@ -1744,7 +1737,6 @@ define void @mscatter_v2i64_truncstore_v2i32(<2 x i64> %val, <2 x i32*> %ptrs, <
 ; RV64ZVE32F-NEXT:    andi a0, a0, 2
 ; RV64ZVE32F-NEXT:    bnez a0, .LBB24_4
 ; RV64ZVE32F-NEXT:  .LBB24_2: # %else2
-; RV64ZVE32F-NEXT:    addi sp, sp, 16
 ; RV64ZVE32F-NEXT:    ret
 ; RV64ZVE32F-NEXT:  .LBB24_3: # %cond.store
 ; RV64ZVE32F-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
@@ -1755,7 +1747,6 @@ define void @mscatter_v2i64_truncstore_v2i32(<2 x i64> %val, <2 x i32*> %ptrs, <
 ; RV64ZVE32F-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
 ; RV64ZVE32F-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64ZVE32F-NEXT:    vse32.v v8, (a3)
-; RV64ZVE32F-NEXT:    addi sp, sp, 16
 ; RV64ZVE32F-NEXT:    ret
   %tval = trunc <2 x i64> %val to <2 x i32>
   call void @llvm.masked.scatter.v2i32.v2p0i32(<2 x i32> %tval, <2 x i32*> %ptrs, i32 4, <2 x i1> %m)
