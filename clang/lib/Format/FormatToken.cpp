@@ -56,8 +56,7 @@ bool FormatToken::isSimpleTypeSpecifier() const {
   case tok::kw___ibm128:
   case tok::kw_wchar_t:
   case tok::kw_bool:
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
+  case tok::kw___underlying_type:
   case tok::annot_typename:
   case tok::kw_char8_t:
   case tok::kw_char16_t:

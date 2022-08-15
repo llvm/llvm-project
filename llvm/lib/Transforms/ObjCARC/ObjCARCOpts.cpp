@@ -1503,7 +1503,7 @@ static void collectReleaseInsertPts(
     const BlotMapVector<Value *, RRInfo> &Retains,
     DenseMap<const Instruction *, SmallPtrSet<const Value *, 2>>
         &ReleaseInsertPtToRCIdentityRoots) {
-  for (auto &P : Retains) {
+  for (const auto &P : Retains) {
     // Retains is a map from an objc_retain call to a RRInfo of the RC identity
     // root of the call. Get the RC identity root of the objc_retain call.
     Instruction *Retain = cast<Instruction>(P.first);

@@ -14,7 +14,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/PrettyStackTrace.h"
-#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
@@ -22,7 +21,6 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <numeric>
 
@@ -2821,7 +2819,6 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
   //   identifier
   //   template-id (when it hasn't already been annotated)
   if (Tok.is(tok::identifier)) {
-  ParseIdentifier:
     // Consume the identifier.
     IdentifierInfo *Id = Tok.getIdentifierInfo();
     SourceLocation IdLoc = ConsumeToken();
@@ -3056,20 +3053,9 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
     return false;
   }
 
-  switch (Tok.getKind()) {
-#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
-#include "clang/Basic/TransformTypeTraits.def"
-    if (!NextToken().is(tok::l_paren)) {
-      Tok.setKind(tok::identifier);
-      Diag(Tok, diag::ext_keyword_as_ident)
-          << Tok.getIdentifierInfo()->getName() << 0;
-      goto ParseIdentifier;
-    }
-    LLVM_FALLTHROUGH;
-  default:
-    Diag(Tok, diag::err_expected_unqualified_id) << getLangOpts().CPlusPlus;
-    return true;
-  }
+  Diag(Tok, diag::err_expected_unqualified_id)
+    << getLangOpts().CPlusPlus;
+  return true;
 }
 
 /// ParseCXXNewExpression - Parse a C++ new-expression. New is used to allocate
