@@ -3,7 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_executable(clang-cas-test
+add_clang_tool(clang-cas-test
   ClangCASTest.cpp
   )
 
