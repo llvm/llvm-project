@@ -62,15 +62,13 @@ public:
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
-      case 'c': {
-        int32_t input_count = 0;
-        if (option_arg.getAsInteger(0, m_count)) {
+      case 'c':
+        if (option_arg.getAsInteger(0, m_count) || (m_count < 0)) {
           m_count = UINT32_MAX;
           error.SetErrorStringWithFormat(
               "invalid integer value for option '%c'", short_option);
-        } else if (input_count < 0)
-          m_count = UINT32_MAX;
-      } break;
+        }
+        break;
       case 's':
         if (option_arg.getAsInteger(0, m_start))
           error.SetErrorStringWithFormat(
@@ -1004,8 +1002,15 @@ protected:
 
         AddressRange fun_addr_range = sc.function->GetAddressRange();
         Address fun_start_addr = fun_addr_range.GetBaseAddress();
-        line_table->FindLineEntryByAddress(fun_start_addr, function_start,
-                                           &index_ptr);
+
+        if (!line_table->FindLineEntryByAddress(fun_start_addr, function_start,
+                                                &index_ptr)) {
+          result.AppendErrorWithFormat(
+              "Failed to find line entry by address for "
+              "frame %u of thread id %" PRIu64 ".\n",
+              m_options.m_frame_idx, thread->GetID());
+          return false;
+        }
 
         Address fun_end_addr(fun_start_addr.GetSection(),
                              fun_start_addr.GetOffset() +
@@ -1013,8 +1018,14 @@ protected:
 
         bool all_in_function = true;
 
-        line_table->FindLineEntryByAddress(fun_end_addr, function_start,
-                                           &end_ptr);
+        if (!line_table->FindLineEntryByAddress(fun_end_addr, function_start,
+                                                &end_ptr)) {
+          result.AppendErrorWithFormat(
+              "Failed to find line entry by address for "
+              "frame %u of thread id %" PRIu64 ".\n",
+              m_options.m_frame_idx, thread->GetID());
+          return false;
+        }
 
         // Since not all source lines will contribute code, check if we are
         // setting the breakpoint on the exact line number or the nearest
