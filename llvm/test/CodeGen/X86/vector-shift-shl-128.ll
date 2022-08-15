@@ -927,23 +927,23 @@ define <2 x i64> @constant_shift_v2i64(<2 x i64> %a) nounwind {
 ; SSE2-LABEL: constant_shift_v2i64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    psllq $1, %xmm1
-; SSE2-NEXT:    psllq $7, %xmm0
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE2-NEXT:    psllq $7, %xmm1
+; SSE2-NEXT:    paddq %xmm0, %xmm0
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: constant_shift_v2i64:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    psllq $7, %xmm1
-; SSE41-NEXT:    psllq $1, %xmm0
+; SSE41-NEXT:    paddq %xmm0, %xmm0
 ; SSE41-NEXT:    pblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: constant_shift_v2i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsllq $7, %xmm0, %xmm1
-; AVX1-NEXT:    vpsllq $1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
@@ -975,9 +975,9 @@ define <2 x i64> @constant_shift_v2i64(<2 x i64> %a) nounwind {
 ; X86-SSE-LABEL: constant_shift_v2i64:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movdqa %xmm0, %xmm1
-; X86-SSE-NEXT:    psllq $1, %xmm1
-; X86-SSE-NEXT:    psllq $7, %xmm0
-; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X86-SSE-NEXT:    psllq $7, %xmm1
+; X86-SSE-NEXT:    paddq %xmm0, %xmm0
+; X86-SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; X86-SSE-NEXT:    retl
   %shift = shl <2 x i64> %a, <i64 1, i64 7>
   ret <2 x i64> %shift

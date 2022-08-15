@@ -398,7 +398,7 @@ define <2 x i64> @freeze_shl_vec(<2 x i64> %a0) nounwind {
 define <2 x i64> @freeze_shl_vec_outofrange(<2 x i64> %a0) nounwind {
 ; X86-LABEL: freeze_shl_vec_outofrange:
 ; X86:       # %bb.0:
-; X86-NEXT:    psllq $1, %xmm0
+; X86-NEXT:    paddq %xmm0, %xmm0
 ; X86-NEXT:    psllq $2, %xmm0
 ; X86-NEXT:    retl
 ;
