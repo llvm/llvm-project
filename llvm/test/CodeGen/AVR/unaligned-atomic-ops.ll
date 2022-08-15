@@ -1,6 +1,6 @@
 ; RUN: llc -mattr=addsubiw < %s -march=avr | FileCheck %s
 
-; This verifies that the middle end can handle an unaligned atomic load.
+; This verifies that the backend can handle an unaligned atomic load and store.
 ;
 ; In the past, an assertion inside the SelectionDAGBuilder would always
 ; hit an assertion for unaligned loads and stores.
@@ -14,6 +14,7 @@ define void @foo(%AtomicI16* %self) {
 start:
   %a = getelementptr inbounds %AtomicI16, %AtomicI16* %self, i16 0, i32 0, i32 0
   load atomic i16, i16* %a seq_cst, align 1
+  store atomic i16 5, i16* %a seq_cst, align 1
   ret void
 }
 
