@@ -2868,6 +2868,11 @@ static Value *simplifyICmpOfBools(CmpInst::Predicate Pred, Value *LHS,
     if (isImpliedCondition(LHS, RHS, Q.DL).value_or(false))
       return getTrue(ITy);
     break;
+  case ICmpInst::ICMP_SLE:
+    /// SLE follows the same logic as SGE with the LHS and RHS swapped.
+    if (isImpliedCondition(RHS, LHS, Q.DL).value_or(false))
+      return getTrue(ITy);
+    break;
   }
 
   return nullptr;
