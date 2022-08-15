@@ -869,7 +869,7 @@ void MCContext::RemapDebugPaths() {
   // Remap compilation directory.
   remapDebugPath(CompilationDir);
 
-  // Remap MCDwarfDirs in all compilation units.
+  // Remap MCDwarfDirs and RootFile.Name in all compilation units.
   SmallString<256> P;
   for (auto &CUIDTablePair : MCDwarfLineTablesCUMap) {
     for (auto &Dir : CUIDTablePair.second.getMCDwarfDirs()) {
@@ -877,6 +877,12 @@ void MCContext::RemapDebugPaths() {
       remapDebugPath(P);
       Dir = std::string(P);
     }
+
+    // Used by DW_TAG_compile_unit's DT_AT_name and DW_TAG_label's
+    // DW_AT_decl_file for DWARF v5 generated for assembly source.
+    P = CUIDTablePair.second.getRootFile().Name;
+    remapDebugPath(P);
+    CUIDTablePair.second.getRootFile().Name = std::string(P);
   }
 }
 
