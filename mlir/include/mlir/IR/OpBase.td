@@ -2288,8 +2288,7 @@ class ElementCount<string name> :
 class ElementType<string name> : StrFunc<"getElementTypeOrSelf($" # name # ")">;
 
 class AllMatchPred<list<string> values> :
-    CPred<"::llvm::is_splat(::llvm::makeArrayRef({"
-          # !interleave(values, ", ") #"}))">;
+    CPred<"::llvm::is_splat({" # !interleave(values, ", ") # "})">;
 
 class AllMatch<list<string> values, string summary> :
     PredOpTrait<summary, AllMatchPred<values>>;
