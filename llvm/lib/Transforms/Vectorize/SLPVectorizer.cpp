@@ -10079,7 +10079,7 @@ bool SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
 
   InstructionCost Cost = R.getTreeCost();
 
-  LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost << " for VF =" << VF << "\n");
+  LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost << " for VF=" << VF << "\n");
   if (Cost < -SLPCostThreshold) {
     LLVM_DEBUG(dbgs() << "SLP: Decided to vectorize cost = " << Cost << "\n");
 
@@ -10380,6 +10380,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       CandidateFound = true;
       MinCost = std::min(MinCost, Cost);
 
+      LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost << " for VF=" << VF << "\n");
       if (Cost < -SLPCostThreshold) {
         LLVM_DEBUG(dbgs() << "SLP: Vectorizing list at cost:" << Cost << ".\n");
         R.getORE()->emit(OptimizationRemark(SV_NAME, "VectorizedList",
@@ -11219,8 +11220,8 @@ public:
         InstructionCost ReductionCost =
             getReductionCost(TTI, VL, ReduxWidth, RdxFMF);
         InstructionCost Cost = TreeCost + ReductionCost;
+        LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost << " for reduction\n");
         if (!Cost.isValid()) {
-          LLVM_DEBUG(dbgs() << "Encountered invalid baseline cost.\n");
           return nullptr;
         }
         if (Cost >= -SLPCostThreshold) {
