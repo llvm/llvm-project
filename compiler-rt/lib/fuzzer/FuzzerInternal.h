@@ -91,6 +91,7 @@ public:
 
   void HandleMalloc(size_t Size);
   static void MaybeExitGracefully();
+  static int InterruptExitCode();
   std::string WriteToOutputCorpus(const Unit &U);
 
 private:
