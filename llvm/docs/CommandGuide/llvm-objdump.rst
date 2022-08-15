@@ -312,6 +312,10 @@ MACH-O ONLY OPTIONS AND COMMANDS
 
   Disassemble just the specified symbol's instructions.
 
+.. option:: --chained-fixups
+
+  Print chained fixup information.
+
 .. option:: --dyld_info
 
   Print bind and rebase information used by dyld to resolve external

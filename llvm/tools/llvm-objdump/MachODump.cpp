@@ -81,6 +81,7 @@ bool objdump::DataInCode;
 bool objdump::FunctionStarts;
 bool objdump::LinkOptHints;
 bool objdump::InfoPlist;
+bool objdump::ChainedFixups;
 bool objdump::DyldInfo;
 bool objdump::DylibsUsed;
 bool objdump::DylibId;
@@ -112,6 +113,7 @@ void objdump::parseMachOOptions(const llvm::opt::InputArgList &InputArgs) {
   FunctionStarts = InputArgs.hasArg(OBJDUMP_function_starts);
   LinkOptHints = InputArgs.hasArg(OBJDUMP_link_opt_hints);
   InfoPlist = InputArgs.hasArg(OBJDUMP_info_plist);
+  ChainedFixups = InputArgs.hasArg(OBJDUMP_chained_fixups);
   DyldInfo = InputArgs.hasArg(OBJDUMP_dyld_info);
   DylibsUsed = InputArgs.hasArg(OBJDUMP_dylibs_used);
   DylibId = InputArgs.hasArg(OBJDUMP_dylib_id);
@@ -1193,6 +1195,48 @@ static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
     reportError(std::move(Err), Obj->getFileName());
 }
 
+static void
+PrintChainedFixupsHeader(const MachO::dyld_chained_fixups_header &H) {
+  outs() << "chained fixups header (LC_DYLD_CHAINED_FIXUPS)\n";
+  outs() << "  fixups_version = " << H.fixups_version << '\n';
+  outs() << "  starts_offset  = " << H.starts_offset << '\n';
+  outs() << "  imports_offset = " << H.imports_offset << '\n';
+  outs() << "  symbols_offset = " << H.symbols_offset << '\n';
+  outs() << "  imports_count  = " << H.imports_count << '\n';
+
+  outs() << "  imports_format = " << H.imports_format;
+  switch (H.imports_format) {
+  case llvm::MachO::DYLD_CHAINED_IMPORT:
+    outs() << " (DYLD_CHAINED_IMPORT)";
+    break;
+  case llvm::MachO::DYLD_CHAINED_IMPORT_ADDEND:
+    outs() << " (DYLD_CHAINED_IMPORT_ADDEND)";
+    break;
+  case llvm::MachO::DYLD_CHAINED_IMPORT_ADDEND64:
+    outs() << " (DYLD_CHAINED_IMPORT_ADDEND64)";
+    break;
+  }
+  outs() << '\n';
+
+  outs() << "  symbols_format = " << H.symbols_format;
+  if (H.symbols_format == llvm::MachO::DYLD_CHAINED_SYMBOL_ZLIB)
+    outs() << " (zlib compressed)";
+  outs() << '\n';
+}
+
+static void PrintChainedFixups(MachOObjectFile *O) {
+  // MachOObjectFile::getChainedFixupsHeader() reads LC_DYLD_CHAINED_FIXUPS.
+  // FIXME: Support chained fixups in __TEXT,__chain_starts section too.
+  auto ChainedFixupHeader =
+      unwrapOrError(O->getChainedFixupsHeader(), O->getFileName());
+  if (!ChainedFixupHeader)
+    return;
+
+  PrintChainedFixupsHeader(*ChainedFixupHeader);
+
+  // FIXME: Print more things.
+}
+
 static void PrintDyldInfo(MachOObjectFile *O) {
   outs() << "dyld information:" << '\n';
   printMachOChainedFixups(O);
@@ -1916,8 +1960,9 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
   // UniversalHeaders or ArchiveHeaders.
   if (Disassemble || Relocations || PrivateHeaders || ExportsTrie || Rebase ||
       Bind || SymbolTable || LazyBind || WeakBind || IndirectSymbols ||
-      DataInCode || FunctionStarts || LinkOptHints || DyldInfo || DylibsUsed ||
-      DylibId || Rpaths || ObjcMetaData || (!FilterSections.empty())) {
+      DataInCode || FunctionStarts || LinkOptHints || ChainedFixups ||
+      DyldInfo || DylibsUsed || DylibId || Rpaths || ObjcMetaData ||
+      (!FilterSections.empty())) {
     if (LeadingHeaders) {
       outs() << Name;
       if (!ArchiveMemberName.empty())
@@ -1986,6 +2031,8 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
     DumpSectionContents(FileName, MachOOF, Verbose);
   if (InfoPlist)
     DumpInfoPlistSectionContents(FileName, MachOOF);
+  if (ChainedFixups)
+    PrintChainedFixups(MachOOF);
   if (DyldInfo)
     PrintDyldInfo(MachOOF);
   if (DylibsUsed)
