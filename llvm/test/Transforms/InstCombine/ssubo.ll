@@ -4,6 +4,8 @@
 declare { i64, i1 } @llvm.ssub.with.overflow.i64(i64, i64)
 declare { i8, i1 } @llvm.ssub.with.overflow.i8(i8, i8)
 
+declare void @use(i1)
+
 define i1 @test_generic(i64 %a, i64 %b) {
 ; CHECK-LABEL: @test_generic(
 ; CHECK-NEXT:    [[RES:%.*]] = tail call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]])
@@ -95,3 +97,36 @@ define i1 @test_constant255(i8 %a) {
   ret i1 %overflow
 }
 
+define i1 @sub_eq0(i8 %x, i8 %y, i1 %b) {
+; CHECK-LABEL: @sub_eq0(
+; CHECK-NEXT:    [[SS:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[SS]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SS]], 0
+; CHECK-NEXT:    [[EQ0:%.*]] = icmp eq i8 [[SUB]], 0
+; CHECK-NEXT:    ret i1 [[EQ0]]
+;
+  %ss = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %x, i8 %y)
+  %ov = extractvalue { i8, i1 } %ss, 1
+  call void @use(i1 %ov)
+  %sub = extractvalue { i8, i1 } %ss, 0
+  %eq0 = icmp eq i8 %sub, 0
+  ret i1 %eq0
+}
+
+define i1 @sub_ne0(i8 %x, i8 %y, i1 %b) {
+; CHECK-LABEL: @sub_ne0(
+; CHECK-NEXT:    [[SS:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[SS]], 1
+; CHECK-NEXT:    call void @use(i1 [[OV]])
+; CHECK-NEXT:    [[SUB:%.*]] = extractvalue { i8, i1 } [[SS]], 0
+; CHECK-NEXT:    [[NE0:%.*]] = icmp ne i8 [[SUB]], 0
+; CHECK-NEXT:    ret i1 [[NE0]]
+;
+  %ss = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %x, i8 %y)
+  %ov = extractvalue { i8, i1 } %ss, 1
+  call void @use(i1 %ov)
+  %sub = extractvalue { i8, i1 } %ss, 0
+  %ne0 = icmp ne i8 %sub, 0
+  ret i1 %ne0
+}
