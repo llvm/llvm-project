@@ -7,7 +7,10 @@ group("lib") {
     deps += [ "//compiler-rt/lib/msan" ]
   }
   if (current_os == "linux" || current_os == "android") {
-    deps += [ "//compiler-rt/lib/ubsan_minimal" ]
+    deps += [
+      "//compiler-rt/lib/ubsan",
+      "//compiler-rt/lib/ubsan_minimal",
+    ]
   }
   if (current_os != "win" && current_os != "baremetal") {
     deps += [ "//compiler-rt/lib/asan" ]
