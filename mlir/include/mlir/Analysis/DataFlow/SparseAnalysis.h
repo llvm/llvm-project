@@ -93,11 +93,6 @@ public:
 
   /// Returns true if the value of this lattice hasn't yet been initialized.
   bool isUninitialized() const override { return !optimisticValue.has_value(); }
-  /// Force the initialization of the element by setting it to its pessimistic
-  /// fixpoint.
-  ChangeResult defaultInitialize() override {
-    return markPessimisticFixpoint();
-  }
 
   /// Join the information contained in the 'rhs' lattice into this
   /// lattice. Returns if the state of the current lattice changed.
