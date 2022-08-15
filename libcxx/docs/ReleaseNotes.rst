@@ -239,11 +239,6 @@ Build System Changes
   use the ``CMAKE_CXX_COMPILER_TARGET``, ``CMAKE_SYSROOT`` and ``CMAKE_CXX_COMPILER_EXTERNAL_TOOLCHAIN``
   variables provided by CMake.
 
-- When building for Windows, vendors who want to avoid dll-exporting symbols from the static libc++abi
-  library should set ``LIBCXXABI_HERMETIC_STATIC_LIBRARY=ON`` when configuring CMake. The current
-  behavior, which tries to guess the correct dll-export semantics based on whether we're building
-  the libc++ shared library, will be removed in LLVM 16.
-
 - Previously, the C++ ABI library headers would be installed inside ``<prefix>/include/c++/v1``
   alongside the libc++ headers as part of building libc++. This is not the case anymore -- the
   ABI library is expected to install its headers where it wants them as part of its own build.
