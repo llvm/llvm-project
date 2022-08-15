@@ -295,7 +295,9 @@ private:
         break;
       case ptev_overflow:
         // The CPU internal buffer had an overflow error and some instructions
-        // were lost.
+        // were lost. A OVF packet comes with an FUP packet (harcoded address)
+        // according to the documentation, so we'll continue seeing instructions
+        // after this event.
         m_decoded_thread.AppendError(IntelPTError(-pte_overflow));
         break;
       default:
