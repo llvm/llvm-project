@@ -1061,7 +1061,7 @@ define <4 x i64> @constant_shift_v4i64(<4 x i64> %a) nounwind {
 ; AVX1-NEXT:    vpsllq $31, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
 ; AVX1-NEXT:    vpsllq $7, %xmm0, %xmm2
-; AVX1-NEXT:    vpsllq $1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
@@ -1101,7 +1101,7 @@ define <4 x i64> @constant_shift_v4i64(<4 x i64> %a) nounwind {
 ; X86-AVX1-NEXT:    vpsllq $31, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
 ; X86-AVX1-NEXT:    vpsllq $7, %xmm0, %xmm2
-; X86-AVX1-NEXT:    vpsllq $1, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpaddq %xmm0, %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; X86-AVX1-NEXT:    retl
