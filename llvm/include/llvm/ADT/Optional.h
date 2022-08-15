@@ -348,6 +348,7 @@ public:
     return None;
   }
   template <class Function>
+  LLVM_DEPRECATED("Use transform instead.", "transform")
   auto map(const Function &F) const & -> Optional<decltype(F(value()))> {
     if (*this)
       return F(value());
@@ -378,6 +379,7 @@ public:
     return None;
   }
   template <class Function>
+  LLVM_DEPRECATED("Use transform instead.", "transform")
   auto map(const Function &F)
       && -> Optional<decltype(F(std::move(*this).value()))> {
     if (*this)
