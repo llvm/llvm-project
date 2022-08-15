@@ -8235,15 +8235,17 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
             Swap = true;
           }
         }
-        // 64-bit check whether we can use CSINC. To avoid signed integer
-        // overflow the condition ignores wrap around, which is already
-        // handled by CSINV above.
-      } else if (1 ==
-                 std::max(TrueVal, FalseVal) - std::min(TrueVal, FalseVal)) {
-        Opcode = AArch64ISD::CSINC;
+      } else {
+        // 64-bit check whether we can use CSINC.
+        const uint64_t TrueVal64 = TrueVal;
+        const uint64_t FalseVal64 = FalseVal;
 
-        if (TrueVal > FalseVal) {
-          Swap = true;
+        if ((TrueVal64 == FalseVal64 + 1) || (TrueVal64 + 1 == FalseVal64)) {
+          Opcode = AArch64ISD::CSINC;
+
+          if (TrueVal > FalseVal) {
+            Swap = true;
+          }
         }
       }
 
