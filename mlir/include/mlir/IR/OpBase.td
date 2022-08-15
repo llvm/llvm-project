@@ -2288,7 +2288,11 @@ class ElementCount<string name> :
 class ElementType<string name> : StrFunc<"getElementTypeOrSelf($" # name # ")">;
 
 class AllMatchPred<list<string> values> :
-    CPred<"::llvm::is_splat({" # !interleave(values, ", ") # "})">;
+  CPred<!if(!lt(!size(values), 2),
+            "true",
+            !foldl("(" # !head(values) # ")", !tail(values), acc, v,
+                   acc # " == (" # v # ") && (" # v # ")")
+              # " == (" # !head(values) # ")")>;
 
 class AllMatch<list<string> values, string summary> :
     PredOpTrait<summary, AllMatchPred<values>>;
