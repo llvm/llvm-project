@@ -1587,7 +1587,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
     WorkList.push_back(AI);
     while (!WorkList.empty()) {
       const Value *V = WorkList.pop_back_val();
-      for (auto &AIUse : V->uses()) {
+      for (const auto &AIUse : V->uses()) {
         User *U = AIUse.getUser();
         if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
           if (AIUse.getOperandNo() == 1)

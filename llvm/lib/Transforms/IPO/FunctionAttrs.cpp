@@ -517,7 +517,7 @@ bool llvm::thinLTOPropagateFunctionAttrs(
           ++NumThinLinkNoUnwind;
         }
 
-        for (auto &S : V.getSummaryList()) {
+        for (const auto &S : V.getSummaryList()) {
           if (auto *FS = dyn_cast<FunctionSummary>(S.get())) {
             if (InferredFlags.NoRecurse)
               FS->setNoRecurse();

@@ -3218,7 +3218,7 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
 
   // Compute the number of leading bits we can ignore.
   // TODO: A better way to determine this would use ComputeNumSignBits().
-  for (auto &C : SI.cases()) {
+  for (const auto &C : SI.cases()) {
     LeadingKnownZeros = std::min(
         LeadingKnownZeros, C.getCaseValue()->getValue().countLeadingZeros());
     LeadingKnownOnes = std::min(
@@ -4377,7 +4377,7 @@ public:
       const auto *MDScopeList = dyn_cast_or_null<MDNode>(ScopeList);
       if (!MDScopeList || !Container.insert(MDScopeList).second)
         return;
-      for (auto &MDOperand : MDScopeList->operands())
+      for (const auto &MDOperand : MDScopeList->operands())
         if (auto *MDScope = dyn_cast<MDNode>(MDOperand))
           Container.insert(MDScope);
     };

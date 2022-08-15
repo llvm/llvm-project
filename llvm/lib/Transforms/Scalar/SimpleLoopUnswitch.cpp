@@ -1592,7 +1592,7 @@ deleteDeadClonedBlocks(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
   // Find all the dead clones, and remove them from their successors.
   SmallVector<BasicBlock *, 16> DeadBlocks;
   for (BasicBlock *BB : llvm::concat<BasicBlock *const>(L.blocks(), ExitBlocks))
-    for (auto &VMap : VMaps)
+    for (const auto &VMap : VMaps)
       if (BasicBlock *ClonedBB = cast_or_null<BasicBlock>(VMap->lookup(BB)))
         if (!DT.isReachableFromEntry(ClonedBB)) {
           for (BasicBlock *SuccBB : successors(ClonedBB))
@@ -2247,7 +2247,7 @@ static void unswitchNontrivialInvariants(
       assert(SI->getDefaultDest() == RetainedSuccBB &&
              "Not retaining default successor!");
       SI->setDefaultDest(LoopPH);
-      for (auto &Case : SI->cases())
+      for (const auto &Case : SI->cases())
         if (Case.getCaseSuccessor() == RetainedSuccBB)
           Case.setSuccessor(LoopPH);
         else
@@ -2308,7 +2308,7 @@ static void unswitchNontrivialInvariants(
       SwitchInst *NewSI = cast<SwitchInst>(NewTI);
       assert(NewSI->getDefaultDest() == RetainedSuccBB &&
              "Not retaining default successor!");
-      for (auto &Case : NewSI->cases())
+      for (const auto &Case : NewSI->cases())
         Case.getCaseSuccessor()->removePredecessor(
             ParentBB,
             /*KeepOneInputPHIs*/ true);
