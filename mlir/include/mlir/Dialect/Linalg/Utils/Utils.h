@@ -369,7 +369,10 @@ enum class DistributionMethod {
   /// to
   ///
   /// %iv = %lb + %procId * %step
-  CyclicNumProcsEqNumIters = 2
+  CyclicNumProcsEqNumIters = 2,
+
+  /// No Distribution.
+  None = 3
 };
 
 /// Callback function type used to get processor ID, and number of processors
@@ -377,11 +380,10 @@ enum class DistributionMethod {
 struct ProcInfo {
   Value procId;
   Value nprocs;
+  DistributionMethod distributionMethod;
 };
-using ProcInfoCallBackFn = std::function<SmallVector<ProcInfo, 2>(
+using ProcInfoCallBackFn = std::function<SmallVector<ProcInfo>(
     OpBuilder &b, Location loc, ArrayRef<Range> parallelLoopRanges)>;
-using OneDimProcInfoCallBackFn =
-    std::function<ProcInfo(OpBuilder &b, Location loc)>;
 
 /// Options that allow distribution of loops generated in Linalg transforms to
 /// processors while generating the loops.
@@ -389,21 +391,10 @@ struct LinalgLoopDistributionOptions {
   /// Callback function that returns the Values for processor ID (`procId`), and
   /// number of processors (`nprocs`) used to execute the parallel loops. The
   /// number of `{procId, nprocs}` pairs returned must be equal to the number of
-  /// `parallelLoopRanges` passed into the callback, which in-turn is same as
-  /// the number of parallel loops for which the `distributionMethod` is
-  /// specified below.
+  /// `parallelLoopRanges` passed into the callback. The `parallelLoopRanges`
+  /// are ranges of the outer parallel loops of the operation that
+  /// do have non-zero tile sizes specified.
   ProcInfoCallBackFn procInfo;
-  /// Specification of how to distribute the `scf.parallel` loops that are
-  /// generated. As the `scf.parallel` loop is generated, the elements of this
-  /// vector is used (from left to right) and the specified distribution is
-  /// applied. If the vector is less than the number of `scf.parallel` loops
-  /// generated, then no distribution is applied.
-  SmallVector<DistributionMethod, 0> distributionMethod = {};
-
-  /// The map keyed by the distribution type that contains callback functions
-  /// that return the Values for processor ID (`procId`), and number of
-  /// processors (`nprocs`) used to execute the parallel loops.
-  DenseMap<StringRef, OneDimProcInfoCallBackFn> procInfoMap;
 };
 
 /// Update the `lb`, `ub` and `step` to get per processor `lb`, `ub` and `step`.
@@ -521,8 +512,7 @@ struct GenerateLoopNest {
                    function_ref<scf::ValueVector(OpBuilder &, Location,
                                                  ValueRange, ValueRange)>
                        bodyBuilderFn,
-                   Optional<LinalgLoopDistributionOptions> = None,
-                   ArrayRef<StringRef> distributionTypes = {});
+                   ArrayRef<linalg::ProcInfo> procInfo = {});
 };
 
 } // namespace linalg
