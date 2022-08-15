@@ -33,8 +33,6 @@ public:
 
   llvm::Optional<std::string> findAVRLibcInstallation() const;
   StringRef getGCCInstallPath() const { return GCCInstallPath; }
-  std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                            FileType Type) const override;
 
 protected:
   Tool *buildLinker() const override;
