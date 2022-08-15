@@ -367,7 +367,12 @@ def : Pat<(ctlz_zero_undef GPR:$rs), (XORri (FF1r GPR:$rs), 31)>;
 // Multiclass for arithmetic instructions with triadic registers or immediates.
 multiclass ArithTri<bits<6> Func, string OpcStr> {
   def rr : F_IRC<Func, 0b0, 0b0, OpcStr>;
-  def ri : F_II<Func, (ins GPR:$rs1, imm32zx16:$imm16),OpcStr>;
+  def ri : F_II<Func, (ins GPR:$rs1, imm32zx16:$imm16),OpcStr> {
+    let isReMaterializable = !if(!or(!eq(OpcStr,"addu"),
+                                     !eq(OpcStr,"add"),
+                                     !eq(OpcStr,"subu"),
+                                     !eq(OpcStr,"sub")), 1, 0);
+  }
 }
 
 // Multiclass for arithmetic instructions with triadic registers or immediates.
@@ -379,16 +384,14 @@ multiclass ArithTriCarry<bits<6> Func, string OpcStr>
 }
 
 let isCommutable = 1 in {
-  let isAdd = 1, isReMaterializable = 1 in {
+  let isAdd = 1 in {
     defm ADDU : ArithTriCarry<0b011000, "addu">;
     defm ADD : ArithTriCarry<0b011100, "add">;
   }
   defm MULU : ArithTri<0b011011, "mulu">;
 }
-let isReMaterializable = 1 in {
-  defm SUBU : ArithTriCarry<0b011001, "subu">;
-  defm SUB : ArithTriCarry<0b011101, "sub">;
-}
+defm SUBU : ArithTriCarry<0b011001, "subu">;
+defm SUB : ArithTriCarry<0b011101, "sub">;
 defm DIVU : ArithTri<0b011010, "divu">;
 defm DIVS : ArithTri<0b011110, "divs">;
 let isCompare = 1 in

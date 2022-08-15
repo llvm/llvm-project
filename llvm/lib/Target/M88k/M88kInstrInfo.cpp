@@ -617,7 +617,7 @@ bool M88kInstrInfo::isReallyTriviallyReMaterializable(
   case M88k::XORriu:
   case M88k::MASKri:
   case M88k::MASKriu:
-    return MI.getOperand(1).getReg() == M88k::R0;
+    return MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == M88k::R0;
   }
   return false;
 }
