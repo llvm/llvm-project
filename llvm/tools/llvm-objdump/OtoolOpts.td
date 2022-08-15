@@ -39,12 +39,13 @@ def X : Flag<["-"], "X">, HelpText<"omit leading addresses or headers">;
 
 def chained_fixups : Flag<["-"], "chained_fixups">,
   HelpText<"print chained fixup information">;
+def dyld_info : Flag<["-"], "dyld_info">,
+  HelpText<"print bind and rebase information">;
 
 // Not (yet?) implemented:
 // def a : Flag<["-"], "a">, HelpText<"print archive header">;
 // -c print argument strings of a core file
 // -m don't use archive(member) syntax
-// -dyld_info
 // -dyld_opcodes
 // -addr_slide=arg
 // -function_offsets
