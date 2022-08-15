@@ -92,8 +92,8 @@ protected:
 
 template <class T>
 using SmallVectorSizeType =
-    typename std::conditional<sizeof(T) < 4 && sizeof(void *) >= 8, uint64_t,
-                              uint32_t>::type;
+    std::conditional_t<sizeof(T) < 4 && sizeof(void *) >= 8, uint64_t,
+                       uint32_t>;
 
 /// Figure out the offset of the first element.
 template <class T, typename = void> struct SmallVectorAlignmentAndSize {
