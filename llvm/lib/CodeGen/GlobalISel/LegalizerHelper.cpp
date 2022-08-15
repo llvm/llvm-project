@@ -4944,12 +4944,72 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   }
 }
 
+/// Expand source vectors to the size of destination vector.
+static LegalizerHelper::LegalizeResult
+equalizeVectorShuffleLengths(MachineInstr &MI, MachineIRBuilder &MIRBuilder) {
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+  ArrayRef<int> Mask = MI.getOperand(3).getShuffleMask();
+  unsigned MaskNumElts = Mask.size();
+  unsigned SrcNumElts = SrcTy.getNumElements();
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DestEltTy = DstTy.getElementType();
+
+  // TODO: Normalize the shuffle vector since mask and vector length don't
+  // match.
+  if (MaskNumElts <= SrcNumElts) {
+    return LegalizerHelper::LegalizeResult::UnableToLegalize;
+  }
+
+  unsigned PaddedMaskNumElts = alignTo(MaskNumElts, SrcNumElts);
+  unsigned NumConcat = PaddedMaskNumElts / SrcNumElts;
+  LLT PaddedTy = LLT::fixed_vector(PaddedMaskNumElts, DestEltTy);
+
+  // Create new source vectors by concatenating the initial
+  // source vectors with undefined vectors of the same size.
+  auto Undef = MIRBuilder.buildUndef(SrcTy);
+  SmallVector<Register, 8> MOps1(NumConcat, Undef.getReg(0));
+  SmallVector<Register, 8> MOps2(NumConcat, Undef.getReg(0));
+  MOps1[0] = MI.getOperand(1).getReg();
+  MOps2[0] = MI.getOperand(2).getReg();
+
+  auto Src1 = MIRBuilder.buildConcatVectors(PaddedTy, MOps1);
+  auto Src2 = MIRBuilder.buildConcatVectors(PaddedTy, MOps2);
+
+  // Readjust mask for new input vector length.
+  SmallVector<int, 8> MappedOps(PaddedMaskNumElts, -1);
+  for (unsigned I = 0; I != MaskNumElts; ++I) {
+    int Idx = Mask[I];
+    if (Idx >= static_cast<int>(SrcNumElts))
+      Idx += PaddedMaskNumElts - SrcNumElts;
+    MappedOps[I] = Idx;
+  }
+
+  // If we got more elements than required, extract subvector.
+  if (MaskNumElts != PaddedMaskNumElts) {
+    auto Shuffle =
+        MIRBuilder.buildShuffleVector(PaddedTy, Src1, Src2, MappedOps);
+
+    SmallVector<Register, 16> Elts(MaskNumElts);
+    for (unsigned I = 0; I < MaskNumElts; ++I) {
+      Elts[I] =
+          MIRBuilder.buildExtractVectorElementConstant(DestEltTy, Shuffle, I)
+              .getReg(0);
+    }
+    MIRBuilder.buildBuildVector(DstReg, Elts);
+  } else {
+    MIRBuilder.buildShuffleVector(DstReg, Src1, Src2, MappedOps);
+  }
+
+  MI.eraseFromParent();
+  return LegalizerHelper::LegalizeResult::Legalized;
+}
+
 LegalizerHelper::LegalizeResult
 LegalizerHelper::moreElementsVectorShuffle(MachineInstr &MI,
                                            unsigned int TypeIdx, LLT MoreTy) {
-  if (TypeIdx != 0)
-    return UnableToLegalize;
-
   Register DstReg = MI.getOperand(0).getReg();
   Register Src1Reg = MI.getOperand(1).getReg();
   Register Src2Reg = MI.getOperand(2).getReg();
@@ -4959,6 +5019,14 @@ LegalizerHelper::moreElementsVectorShuffle(MachineInstr &MI,
   LLT Src2Ty = MRI.getType(Src2Reg);
   unsigned NumElts = DstTy.getNumElements();
   unsigned WidenNumElts = MoreTy.getNumElements();
+
+  if (DstTy.isVector() && Src1Ty.isVector() &&
+      DstTy.getNumElements() > Src1Ty.getNumElements()) {
+    return equalizeVectorShuffleLengths(MI, MIRBuilder);
+  }
+
+  if (TypeIdx != 0)
+    return UnableToLegalize;
 
   // Expect a canonicalized shuffle.
   if (DstTy != Src1Ty || DstTy != Src2Ty)
