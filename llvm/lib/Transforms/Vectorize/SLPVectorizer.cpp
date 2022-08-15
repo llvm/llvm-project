@@ -205,7 +205,7 @@ static bool isValidElementType(Type *Ty) {
 /// \returns True if the value is a constant (but not globals/constant
 /// expressions).
 static bool isConstant(Value *V) {
-  return isa<Constant>(V) && !isa<ConstantExpr>(V) && !isa<GlobalValue>(V);
+  return isa<Constant>(V) && !isa<ConstantExpr, GlobalValue>(V);
 }
 
 /// Checks if \p V is one of vector-like instructions, i.e. undef,
@@ -2994,7 +2994,7 @@ private:
           // okay.
           auto *In = BundleMember->Inst;
           assert(In &&
-                 (isa<ExtractValueInst>(In) || isa<ExtractElementInst>(In) ||
+                 (isa<ExtractValueInst, ExtractElementInst>(In) ||
                   In->getNumOperands() == TE->getNumOperands()) &&
                  "Missed TreeEntry operands?");
           (void)In; // fake use to avoid build failure when assertions disabled
@@ -4489,7 +4489,7 @@ static std::pair<size_t, size_t> generateKeySubkey(
   } else if (auto *I = dyn_cast<Instruction>(V)) {
     // Sort other instructions just by the opcodes except for CMPInst.
     // For CMP also sort by the predicate kind.
-    if ((isa<BinaryOperator>(I) || isa<CastInst>(I)) &&
+    if ((isa<BinaryOperator, CastInst>(I)) &&
         isValidForAlternation(I->getOpcode())) {
       if (AllowAlternate)
         Key = hash_value(isa<BinaryOperator>(I) ? 1 : 0);
@@ -5536,8 +5536,7 @@ unsigned BoUpSLP::canMapToVector(Type *T, const DataLayout &DL) const {
   unsigned N = 1;
   Type *EltTy = T;
 
-  while (isa<StructType>(EltTy) || isa<ArrayType>(EltTy) ||
-         isa<VectorType>(EltTy)) {
+  while (isa<StructType, ArrayType, VectorType>(EltTy)) {
     if (auto *ST = dyn_cast<StructType>(EltTy)) {
       // Check that struct is homogeneous.
       for (const auto *Ty : ST->elements())
@@ -5867,9 +5866,9 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // Take credit for instruction that will become dead.
       if (EE->hasOneUse()) {
         Instruction *Ext = EE->user_back();
-        if ((isa<SExtInst>(Ext) || isa<ZExtInst>(Ext)) &&
-            all_of(Ext->users(),
-                   [](User *U) { return isa<GetElementPtrInst>(U); })) {
+        if (isa<SExtInst, ZExtInst>(Ext) && all_of(Ext->users(), [](User *U) {
+              return isa<GetElementPtrInst>(U);
+            })) {
           // Use getExtractWithExtendCost() to calculate the cost of
           // extractelement/ext pair.
           Cost -=
@@ -6142,18 +6141,18 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
           // Take credit for instruction that will become dead.
           if (EI->hasOneUse()) {
             Instruction *Ext = EI->user_back();
-            if ((isa<SExtInst>(Ext) || isa<ZExtInst>(Ext)) &&
+            if (isa<SExtInst, ZExtInst>(Ext) &&
                 all_of(Ext->users(),
                        [](User *U) { return isa<GetElementPtrInst>(U); })) {
-              // Use getExtractWithExtendCost() to calculate the cost of
-              // extractelement/ext pair.
-              CommonCost -= TTI->getExtractWithExtendCost(
-                  Ext->getOpcode(), Ext->getType(), VecTy, I);
-              // Add back the cost of s|zext which is subtracted separately.
-              CommonCost += TTI->getCastInstrCost(
-                  Ext->getOpcode(), Ext->getType(), EI->getType(),
-                  TTI::getCastContextHint(Ext), CostKind, Ext);
-              continue;
+            // Use getExtractWithExtendCost() to calculate the cost of
+            // extractelement/ext pair.
+            CommonCost -= TTI->getExtractWithExtendCost(
+                Ext->getOpcode(), Ext->getType(), VecTy, I);
+            // Add back the cost of s|zext which is subtracted separately.
+            CommonCost += TTI->getCastInstrCost(
+                Ext->getOpcode(), Ext->getType(), EI->getType(),
+                TTI::getCastContextHint(Ext), CostKind, Ext);
+            continue;
             }
           }
           CommonCost -=
@@ -9001,8 +9000,8 @@ void BoUpSLP::optimizeGatherSequence() {
     for (Instruction &In : llvm::make_early_inc_range(*BB)) {
       if (isDeleted(&In))
         continue;
-      if (!isa<InsertElementInst>(&In) && !isa<ExtractElementInst>(&In) &&
-          !isa<ShuffleVectorInst>(&In) && !GatherShuffleSeq.contains(&In))
+      if (!isa<InsertElementInst, ExtractElementInst, ShuffleVectorInst>(&In) &&
+          !GatherShuffleSeq.contains(&In))
         continue;
 
       // Check if we can replace this instruction with any of the
@@ -9660,17 +9659,15 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
 
     // If the current instruction is a load, update MaxWidth to reflect the
     // width of the loaded value.
-    if (isa<LoadInst>(I) || isa<ExtractElementInst>(I) ||
-        isa<ExtractValueInst>(I))
+    if (isa<LoadInst, ExtractElementInst, ExtractValueInst>(I))
       Width = std::max<unsigned>(Width, DL->getTypeSizeInBits(Ty));
 
     // Otherwise, we need to visit the operands of the instruction. We only
     // handle the interesting cases from buildTree here. If an operand is an
     // instruction we haven't yet visited and from the same basic block as the
     // user or the use is a PHI node, we add it to the worklist.
-    else if (isa<PHINode>(I) || isa<CastInst>(I) || isa<GetElementPtrInst>(I) ||
-             isa<CmpInst>(I) || isa<SelectInst>(I) || isa<BinaryOperator>(I) ||
-             isa<UnaryOperator>(I)) {
+    else if (isa<PHINode, CastInst, GetElementPtrInst, CmpInst, SelectInst,
+                 BinaryOperator, UnaryOperator>(I)) {
       for (Use &U : I->operands())
         if (auto *J = dyn_cast<Instruction>(U.get()))
           if (Visited.insert(J).second &&
@@ -9723,8 +9720,7 @@ static bool collectValuesToDemote(Value *V, SmallPtrSetImpl<Value *> &Expr,
     break;
   case Instruction::ZExt:
   case Instruction::SExt:
-    if (isa<ExtractElementInst>(I->getOperand(0)) ||
-        isa<InsertElementInst>(I->getOperand(0)))
+    if (isa<ExtractElementInst, InsertElementInst>(I->getOperand(0)))
       return false;
     break;
 
@@ -10422,8 +10418,7 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
   if (!I)
     return false;
 
-  if ((!isa<BinaryOperator>(I) && !isa<CmpInst>(I)) ||
-      isa<VectorType>(I->getType()))
+  if (!isa<BinaryOperator, CmpInst>(I) || isa<VectorType>(I->getType()))
     return false;
 
   Value *P = I->getParent();
@@ -11533,8 +11528,7 @@ static void findBuildAggregate_rec(Instruction *LastInsertInst,
         getInsertIndex(LastInsertInst, OperandOffset);
     if (!OperandIndex)
       return;
-    if (isa<InsertElementInst>(InsertedOperand) ||
-        isa<InsertValueInst>(InsertedOperand)) {
+    if (isa<InsertElementInst, InsertValueInst>(InsertedOperand)) {
       findBuildAggregate_rec(cast<Instruction>(InsertedOperand), TTI,
                              BuildVectorOpds, InsertElts, *OperandIndex);
 
@@ -11544,8 +11538,7 @@ static void findBuildAggregate_rec(Instruction *LastInsertInst,
     }
     LastInsertInst = dyn_cast<Instruction>(LastInsertInst->getOperand(0));
   } while (LastInsertInst != nullptr &&
-           (isa<InsertValueInst>(LastInsertInst) ||
-            isa<InsertElementInst>(LastInsertInst)) &&
+           isa<InsertValueInst, InsertElementInst>(LastInsertInst) &&
            LastInsertInst->hasOneUse());
 }
 
@@ -12240,8 +12233,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     // Ran into an instruction without users, like terminator, or function call
     // with ignored return value, store. Ignore unused instructions (basing on
     // instruction type, except for CallInst and InvokeInst).
-    if (it->use_empty() && (it->getType()->isVoidTy() || isa<CallInst>(it) ||
-                            isa<InvokeInst>(it))) {
+    if (it->use_empty() &&
+        (it->getType()->isVoidTy() || isa<CallInst, InvokeInst>(it))) {
       KeyNodes.insert(&*it);
       bool OpsChanged = false;
       if (ShouldStartVectorizeHorAtStore || !isa<StoreInst>(it)) {
@@ -12265,8 +12258,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       }
     }
 
-    if (isa<InsertElementInst>(it) || isa<CmpInst>(it) ||
-        isa<InsertValueInst>(it))
+    if (isa<CmpInst, InsertElementInst, InsertValueInst>(it))
       PostProcessInstructions.push_back(&*it);
   }
 
