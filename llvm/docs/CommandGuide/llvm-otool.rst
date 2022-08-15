@@ -23,6 +23,10 @@ OPTIONS
 
  Select slice of universal Mach-O file.
 
+.. option:: -chained_fixups
+
+ Print chained fixup information.
+
 .. option:: -C
 
  Print linker optimization hints.
