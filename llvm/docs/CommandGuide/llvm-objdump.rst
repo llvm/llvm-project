@@ -316,7 +316,7 @@ MACH-O ONLY OPTIONS AND COMMANDS
 
   Print chained fixup information.
 
-.. option:: --dyld_info
+.. option:: --dyld-info
 
   Print bind and rebase information used by dyld to resolve external
   references in a final linked binary.

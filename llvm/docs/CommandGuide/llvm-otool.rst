@@ -31,6 +31,10 @@ OPTIONS
 
  Print linker optimization hints.
 
+.. option:: -dyld_info
+
+  Print bind and rebase information.
+
 .. option:: -D
 
  Print shared library id.
