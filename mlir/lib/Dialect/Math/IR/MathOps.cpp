@@ -135,6 +135,56 @@ OpFoldResult math::CtPopOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// IPowIOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::IPowIOp::fold(ArrayRef<Attribute> operands) {
+  return constFoldBinaryOpConditional<IntegerAttr>(
+      operands, [](const APInt &base, const APInt &power) -> Optional<APInt> {
+        unsigned width = base.getBitWidth();
+        auto zeroValue = APInt::getZero(width);
+        APInt oneValue{width, 1ULL, /*isSigned=*/true};
+        APInt minusOneValue{width, -1ULL, /*isSigned=*/true};
+
+        if (power.isZero())
+          return oneValue;
+
+        if (power.isNegative()) {
+          // Leave 0 raised to negative power not folded.
+          if (base.isZero())
+            return {};
+          if (base.eq(oneValue))
+            return oneValue;
+          // If abs(base) > 1, then the result is zero.
+          if (base.ne(minusOneValue))
+            return zeroValue;
+          // base == -1:
+          //   -1: power is odd
+          //    1: power is even
+          if (power[0] == 1)
+            return minusOneValue;
+
+          return oneValue;
+        }
+
+        // power is positive.
+        APInt result = oneValue;
+        APInt curBase = base;
+        APInt curPower = power;
+        while (true) {
+          if (curPower[0] == 1)
+            result *= curBase;
+          curPower.lshrInPlace(1);
+          if (curPower.isZero())
+            return result;
+          curBase *= curBase;
+        }
+      });
+
+  return Attribute();
+}
+
+//===----------------------------------------------------------------------===//
 // LogOp folder
 //===----------------------------------------------------------------------===//
 
