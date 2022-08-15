@@ -1,8 +1,9 @@
 ; RUN: llvm-reduce --delta-passes=simplify-cfg --test %python --test-arg %p/Inputs/remove-bbs.py -abort-on-invalid-reduction %s -o %t
 
 ; RUN: FileCheck --check-prefix=CHECK-FINAL %s --input-file=%t
-; CHECK-FINAL-NOT: x6
-; CHECK-FINAL-NOT: x10
+; CHECK-FINAL: @f1
+; CHECK-FINAL-NOT: x6:
+; CHECK-FINAL-NOT: x10:
 
 define void @f1(ptr %interesting3, i32 %interesting2) {
   %x3 = alloca ptr, i32 0, align 8
