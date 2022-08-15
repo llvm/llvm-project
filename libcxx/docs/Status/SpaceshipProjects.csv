@@ -15,7 +15,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[type.info] <https://wg21.link/type.info>`_,| `typeinfo <https://reviews.llvm.org/D130853>`_,None,Adrian Vogelsgesang,|Complete|
 | `[coroutine.handle.compare] <https://wg21.link/coroutine.handle.compare>`_,| `coroutine_handle <https://reviews.llvm.org/D109433>`_,[comparisons.three.way],Chuanqi Xu,|Complete|
 | `[pairs.spec] <https://wg21.link/pairs.spec>`_,| `pair <https://reviews.llvm.org/D107721>`_,[expos.only.func],Kent Ross,|Complete|
-| `[syserr.errcat.nonvirtuals] <https://wg21.link/syserr.errcat.nonvirtuals>`_,| `error_category <https://reviews.llvm.org/D131363>`_,[comparisons.three.way],Adrian Vogelsgesang,|In Progress|
+| `[syserr.errcat.nonvirtuals] <https://wg21.link/syserr.errcat.nonvirtuals>`_,| `error_category <https://reviews.llvm.org/D131363>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
 | `[syserr.compare] <https://wg21.link/syserr.compare>`_,"| `error_code <https://reviews.llvm.org/D131371>`_
 | `error_condition <https://reviews.llvm.org/D131371>`_",None,Adrian Vogelsgesang,|In Progress|
 | `[tuple.rel] <https://wg21.link/tuple.rel>`_,| `tuple <https://reviews.llvm.org/D108250>`_,[expos.only.func],Kent Ross,|Complete|
