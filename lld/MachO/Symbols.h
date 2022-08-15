@@ -75,6 +75,7 @@ public:
   bool isInStubs() const { return stubsIndex != UINT32_MAX; }
 
   uint64_t getStubVA() const;
+  uint64_t getLazyPtrVA() const;
   uint64_t getGotVA() const;
   uint64_t getTlvVA() const;
   uint64_t resolveBranchVA() const {
