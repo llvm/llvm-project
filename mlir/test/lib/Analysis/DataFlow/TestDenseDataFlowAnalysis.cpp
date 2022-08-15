@@ -73,9 +73,6 @@ public:
     return ChangeResult::Change;
   }
 
-  /// The lattice is never at a fixpoint.
-  bool isAtFixpoint() const override { return false; }
-
   /// Join the last modifications.
   ChangeResult join(const AbstractDenseLattice &lattice) override {
     const auto &rhs = static_cast<const LastModification &>(lattice);
