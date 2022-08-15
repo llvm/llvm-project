@@ -12,10 +12,6 @@
 #include "clang/Frontend/Utils.h"
 #include "llvm/CAS/CASReference.h"
 
-namespace llvm::cas {
-class CASOutputBackend;
-}
-
 namespace clang {
 
 /// Collects dependencies when attached to a Preprocessor (for includes) and
