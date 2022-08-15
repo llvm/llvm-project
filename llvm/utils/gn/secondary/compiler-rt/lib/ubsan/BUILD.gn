@@ -1,3 +1,12 @@
+import("//compiler-rt/target.gni")
+
+group("ubsan") {
+  deps = [
+    ":ubsan_standalone",
+    ":ubsan_standalone_cxx",
+  ]
+}
+
 source_set("sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs += [ "//llvm/utils/gn/build:crt_code" ]
@@ -46,7 +55,6 @@ source_set("dynamic_runtime_thunk") {
   sources = [ "ubsan_win_dynamic_runtime_thunk.cpp" ]
 }
 
-# Unreferenced; at the moment exists to make sync_source_lists_from_cmake happy.
 source_set("standalone_sources") {
   configs -= [ "//llvm/utils/gn/build:llvm_code" ]
   configs -= [ "//llvm/utils/gn/build:no_rtti" ]
@@ -56,6 +64,11 @@ source_set("standalone_sources") {
     "ubsan_diag_standalone.cpp",
     "ubsan_init_standalone.cpp",
     "ubsan_signals_standalone.cpp",
+  ]
+  deps = [
+    ":sources",
+    "//compiler-rt/lib/interception:sources",
+    "//compiler-rt/lib/sanitizer_common:sources",
   ]
 }
 
@@ -71,4 +84,32 @@ source_set("cxx_sources") {
     "ubsan_type_hash_itanium.cpp",
     "ubsan_type_hash_win.cpp",
   ]
+}
+
+static_library("ubsan_standalone") {
+  output_dir = crt_current_out_dir
+  output_name = "clang_rt.ubsan_standalone$crt_current_target_suffix"
+  complete_static_lib = true
+  configs -= [
+    "//llvm/utils/gn/build:llvm_code",
+    "//llvm/utils/gn/build:thin_archive",
+  ]
+  deps = [
+    ":sources",
+    ":standalone_sources",
+  ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  sources = [ "ubsan_init_standalone_preinit.cpp" ]
+}
+
+static_library("ubsan_standalone_cxx") {
+  output_dir = crt_current_out_dir
+  output_name = "clang_rt.ubsan_standalone_cxx$crt_current_target_suffix"
+  complete_static_lib = true
+  configs -= [
+    "//llvm/utils/gn/build:llvm_code",
+    "//llvm/utils/gn/build:thin_archive",
+  ]
+  deps = [ ":cxx_sources" ]
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
 }
