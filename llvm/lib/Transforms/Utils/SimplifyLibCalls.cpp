@@ -2908,6 +2908,60 @@ Value *LibCallSimplifier::optimizeSPrintF(CallInst *CI, IRBuilderBase &B) {
   return nullptr;
 }
 
+// Transform an snprintf call CI with the bound N to format the string Str
+// either to a call to memcpy, or to single character a store, or to nothing,
+// and fold the result to a constant.  A nonnull StrArg refers to the string
+// argument being formatted.  Otherwise the call is one with N < 2 and
+// the "%c" directive to format a single character.
+Value *LibCallSimplifier::emitSnPrintfMemCpy(CallInst *CI, Value *StrArg,
+                                             StringRef Str, uint64_t N,
+                                             IRBuilderBase &B) {
+  assert(StrArg || (N < 2 && Str.size() == 1));
+
+  unsigned IntBits = TLI->getIntSize();
+  uint64_t IntMax = maxIntN(IntBits);
+  if (Str.size() > IntMax)
+    // Bail if the string is longer than INT_MAX.  POSIX requires
+    // implementations to set errno to EOVERFLOW in this case, in
+    // addition to when N is larger than that (checked by the caller).
+    return nullptr;
+
+  Value *StrLen = ConstantInt::get(CI->getType(), Str.size());
+  if (N == 0)
+    return StrLen;
+
+  // Set to the number of bytes to copy fron StrArg which is also
+  // the offset of the terinating nul.
+  uint64_t NCopy;
+  if (N > Str.size())
+    // Copy the full string, including the terminating nul (which must
+    // be present regardless of the bound).
+    NCopy = Str.size() + 1;
+  else
+    NCopy = N - 1;
+
+  Value *DstArg = CI->getArgOperand(0);
+  if (NCopy && StrArg)
+    // Transform the call to lvm.memcpy(dst, fmt, N).
+    copyFlags(
+         *CI,
+          B.CreateMemCpy(
+                         DstArg, Align(1), StrArg, Align(1),
+              ConstantInt::get(DL.getIntPtrType(CI->getContext()), NCopy)));
+
+  if (N > Str.size())
+    // Return early when the whole format string, including the final nul,
+    // has been copied.
+    return StrLen;
+
+  // Otherwise, when truncating the string append a terminating nul.
+  Type *Int8Ty = B.getInt8Ty();
+  Value *NulOff = B.getIntN(IntBits, NCopy);
+  Value *DstEnd = B.CreateInBoundsGEP(Int8Ty, DstArg, NulOff, "endptr");
+  B.CreateStore(ConstantInt::get(Int8Ty, 0), DstEnd);
+  return StrLen;
+}
+
 Value *LibCallSimplifier::optimizeSnPrintFString(CallInst *CI,
                                                  IRBuilderBase &B) {
   // Check for size
@@ -2916,78 +2970,66 @@ Value *LibCallSimplifier::optimizeSnPrintFString(CallInst *CI,
     return nullptr;
 
   uint64_t N = Size->getZExtValue();
+  uint64_t IntMax = maxIntN(TLI->getIntSize());
+  if (N > IntMax)
+    // Bail if the bound exceeds INT_MAX.  POSIX requires implementations
+    // to set errno to EOVERFLOW in this case.
+    return nullptr;
+
+  Value *DstArg = CI->getArgOperand(0);
+  Value *FmtArg = CI->getArgOperand(2);
+
   // Check for a fixed format string.
   StringRef FormatStr;
-  if (!getConstantStringInfo(CI->getArgOperand(2), FormatStr))
+  if (!getConstantStringInfo(FmtArg, FormatStr))
     return nullptr;
 
   // If we just have a format string (nothing else crazy) transform it.
   if (CI->arg_size() == 3) {
-    // Make sure there's no % in the constant array.  We could try to handle
-    // %% -> % in the future if we cared.
     if (FormatStr.contains('%'))
-      return nullptr; // we found a format specifier, bail out.
-
-    if (N == 0)
-      return ConstantInt::get(CI->getType(), FormatStr.size());
-    else if (N < FormatStr.size() + 1)
+      // Bail if the format string contains a directive and there are
+      // no arguments.  We could handle "%%" in the future.
       return nullptr;
 
-    // snprintf(dst, size, fmt) -> llvm.memcpy(align 1 dst, align 1 fmt,
-    // strlen(fmt)+1)
-    copyFlags(
-        *CI,
-        B.CreateMemCpy(
-            CI->getArgOperand(0), Align(1), CI->getArgOperand(2), Align(1),
-            ConstantInt::get(DL.getIntPtrType(CI->getContext()),
-                             FormatStr.size() + 1))); // Copy the null byte.
-    return ConstantInt::get(CI->getType(), FormatStr.size());
+    return emitSnPrintfMemCpy(CI, FmtArg, FormatStr, N, B);
   }
 
   // The remaining optimizations require the format string to be "%s" or "%c"
   // and have an extra operand.
-  if (FormatStr.size() == 2 && FormatStr[0] == '%' && CI->arg_size() == 4) {
+  if (FormatStr.size() != 2 || FormatStr[0] != '%' || CI->arg_size() != 4)
+    return nullptr;
 
-    // Decode the second character of the format string.
-    if (FormatStr[1] == 'c') {
-      if (N == 0)
-        return ConstantInt::get(CI->getType(), 1);
-      else if (N == 1)
-        return nullptr;
-
-      // snprintf(dst, size, "%c", chr) --> *(i8*)dst = chr; *((i8*)dst+1) = 0
-      if (!CI->getArgOperand(3)->getType()->isIntegerTy())
-        return nullptr;
-      Value *V = B.CreateTrunc(CI->getArgOperand(3), B.getInt8Ty(), "char");
-      Value *Ptr = castToCStr(CI->getArgOperand(0), B);
-      B.CreateStore(V, Ptr);
-      Ptr = B.CreateInBoundsGEP(B.getInt8Ty(), Ptr, B.getInt32(1), "nul");
-      B.CreateStore(B.getInt8(0), Ptr);
-
-      return ConstantInt::get(CI->getType(), 1);
+  // Decode the second character of the format string.
+  if (FormatStr[1] == 'c') {
+    if (N <= 1) {
+      // Use an arbitary string of length 1 to transform the call into
+      // either a nul store (N == 1) or a no-op (N == 0) and fold it
+      // to one.
+      StringRef CharStr("*");
+      return emitSnPrintfMemCpy(CI, nullptr, CharStr, N, B);
     }
 
-    if (FormatStr[1] == 's') {
-      // snprintf(dest, size, "%s", str) to llvm.memcpy(dest, str, len+1, 1)
-      StringRef Str;
-      if (!getConstantStringInfo(CI->getArgOperand(3), Str))
-        return nullptr;
-
-      if (N == 0)
-        return ConstantInt::get(CI->getType(), Str.size());
-      else if (N < Str.size() + 1)
-        return nullptr;
-
-      copyFlags(
-          *CI, B.CreateMemCpy(CI->getArgOperand(0), Align(1),
-                              CI->getArgOperand(3), Align(1),
-                              ConstantInt::get(CI->getType(), Str.size() + 1)));
-
-      // The snprintf result is the unincremented number of bytes in the string.
-      return ConstantInt::get(CI->getType(), Str.size());
-    }
+    // snprintf(dst, size, "%c", chr) --> *(i8*)dst = chr; *((i8*)dst+1) = 0
+    if (!CI->getArgOperand(3)->getType()->isIntegerTy())
+      return nullptr;
+    Value *V = B.CreateTrunc(CI->getArgOperand(3), B.getInt8Ty(), "char");
+    Value *Ptr = castToCStr(DstArg, B);
+    B.CreateStore(V, Ptr);
+    Ptr = B.CreateInBoundsGEP(B.getInt8Ty(), Ptr, B.getInt32(1), "nul");
+    B.CreateStore(B.getInt8(0), Ptr);
+    return ConstantInt::get(CI->getType(), 1);
   }
-  return nullptr;
+
+  if (FormatStr[1] != 's')
+    return nullptr;
+
+  Value *StrArg = CI->getArgOperand(3);
+  // snprintf(dest, size, "%s", str) to llvm.memcpy(dest, str, len+1, 1)
+  StringRef Str;
+  if (!getConstantStringInfo(StrArg, Str))
+    return nullptr;
+
+  return emitSnPrintfMemCpy(CI, StrArg, Str, N, B);
 }
 
 Value *LibCallSimplifier::optimizeSnPrintF(CallInst *CI, IRBuilderBase &B) {
