@@ -140,6 +140,27 @@ void test_nested_fixits(void) {
   // CHECK: fix-it:{{.*}}:{[[@LINE-8]]:46-[[@LINE-8]]:46}:")"
 }
 
+
+void void_func();
+int int_func() { return 0; }
+
+void void_function_comma(){
+  void_func(), int_func(); // expected no -Wcomma because of the returning type `void` 
+  // Reported by https://github.com/llvm/llvm-project/issues/57151
+  // Descriptions about -Wcomma: https://reviews.llvm.org/D3976
+}
+
+typedef void Void;
+Void typedef_func();
+
+void whatever() {
+  // We don't get confused about type aliases.
+  typedef_func(), int_func();
+  // Even function pointers don't confuse us.
+  void (*fp)() = void_func;
+  fp(), int_func();
+}
+
 #ifdef __cplusplus
 class S2 {
 public:
@@ -296,4 +317,23 @@ void test_dependent_cast() {
   (void)T{}, 0;
   static_cast<void>(T{}), 0;
 }
+
+namespace {
+
+// issue #57151
+
+struct S {
+  void mem() {}
+};
+
+void whatever() {
+  struct S s;
+  // Member function calls also work as expected.
+  s.mem(), int_func();
+  // As do lambda calls.
+  []() { return; }(), int_func();
+}
+
+} // namespace
+
 #endif  // ifdef __cplusplus
