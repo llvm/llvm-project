@@ -191,7 +191,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithShortLengthModifier) {
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "%lld";
-  int arg1 = 12345;
+  long long arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
   __llvm_libc::printf_core::FormatSection expected;
@@ -208,7 +208,7 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier) {
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "% -056.78jd";
-  int arg1 = 12345;
+  intmax_t arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
   __llvm_libc::printf_core::FormatSection expected;
