@@ -119,7 +119,7 @@ TEST(StatisticTest, API) {
   }
 #else
   Counter2++;
-  auto &Range = GetStatistics();
+  auto Range = GetStatistics();
   EXPECT_EQ(Range.begin(), Range.end());
 #endif
 
