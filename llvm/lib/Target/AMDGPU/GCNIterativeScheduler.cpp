@@ -326,7 +326,7 @@ GCNIterativeScheduler::detachSchedule(ScheduleRef Schedule) const {
     Res.push_back(FirstDbgValue);
 
   const auto DbgB = DbgValues.begin(), DbgE = DbgValues.end();
-  for (auto SU : Schedule) {
+  for (const auto *SU : Schedule) {
     Res.push_back(SU->getInstr());
     const auto &D = std::find_if(DbgB, DbgE, [SU](decltype(*DbgB) &P) {
       return P.second == SU->getInstr();

@@ -489,8 +489,14 @@ transform::SequenceOp::apply(transform::TransformResults &results,
   for (Operation &transform : getBodyBlock()->without_terminator()) {
     DiagnosedSilenceableFailure result =
         state.applyTransform(cast<TransformOpInterface>(transform));
-    if (!result.succeeded())
+    if (result.isDefiniteFailure())
       return result;
+
+    if (result.isSilenceableFailure()) {
+      if (getFailurePropagationMode() == FailurePropagationMode::Propagate)
+        return result;
+      (void)result.silence();
+    }
   }
 
   // Forward the operation mapping for values yielded from the sequence to the

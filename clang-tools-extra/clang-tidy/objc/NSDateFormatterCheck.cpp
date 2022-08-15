@@ -38,14 +38,10 @@ static char ValidDatePatternChars[] = {
 // set of reserved characters. See:
 // https://www.unicode.org/reports/tr35/tr35.html#Invalid_Patterns
 bool isValidDatePattern(StringRef Pattern) {
-  for (auto &PatternChar : Pattern) {
-    if (isalpha(PatternChar)) {
-      if (!llvm::is_contained(ValidDatePatternChars, PatternChar)) {
-        return false;
-      }
-    }
-  }
-  return true;
+  return llvm::all_of(Pattern, [](const auto &PatternChar) {
+    return !isalpha(PatternChar) ||
+           llvm::is_contained(ValidDatePatternChars, PatternChar);
+  });
 }
 
 // Checks if the string pattern used as a date format specifier contains

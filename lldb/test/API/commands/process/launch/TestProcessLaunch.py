@@ -2,16 +2,12 @@
 Test lldb process launch flags.
 """
 
-from __future__ import print_function
-
 import os
 
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-
-import six
 
 
 class ProcessLaunchTestCase(TestBase):

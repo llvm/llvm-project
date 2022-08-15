@@ -8,7 +8,6 @@ import os
 import os.path
 import platform
 import re
-import six
 import socket
 import subprocess
 from lldbsuite.support import seven
@@ -803,7 +802,7 @@ def process_is_running(pid, unknown_value=True):
         If we don't know how to check running process ids on the given OS:
         return the value provided by the unknown_value arg.
     """
-    if not isinstance(pid, six.integer_types):
+    if not isinstance(pid, int):
         raise Exception(
             "pid must be an integral type (actual type: %s)" % str(
                 type(pid)))
@@ -878,7 +877,7 @@ class Server(object):
     @staticmethod
     def _checksum(packet):
         checksum = 0
-        for c in six.iterbytes(packet):
+        for c in iter(packet):
             checksum += c
         return checksum % 256
 

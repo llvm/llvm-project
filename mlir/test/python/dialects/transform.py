@@ -17,11 +17,12 @@ def run(f):
 
 @run
 def testSequenceOp():
-  sequence = transform.SequenceOp([pdl.OperationType.get()])
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
+                                  [pdl.OperationType.get()])
   with InsertionPoint(sequence.body):
     transform.YieldOp([sequence.bodyTarget])
   # CHECK-LABEL: TEST: testSequenceOp
-  # CHECK: = transform.sequence {
+  # CHECK: = transform.sequence failures(propagate) {
   # CHECK: ^{{.*}}(%[[ARG0:.+]]: !pdl.operation):
   # CHECK:   yield %[[ARG0]] : !pdl.operation
   # CHECK: } : !pdl.operation
@@ -29,22 +30,23 @@ def testSequenceOp():
 
 @run
 def testNestedSequenceOp():
-  sequence = transform.SequenceOp()
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
   with InsertionPoint(sequence.body):
-    nested = transform.SequenceOp(sequence.bodyTarget)
+    nested = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, sequence.bodyTarget)
     with InsertionPoint(nested.body):
-      doubly_nested = transform.SequenceOp([pdl.OperationType.get()],
-                                           nested.bodyTarget)
+      doubly_nested = transform.SequenceOp(
+          transform.FailurePropagationMode.PROPAGATE,
+          [pdl.OperationType.get()], nested.bodyTarget)
       with InsertionPoint(doubly_nested.body):
         transform.YieldOp([doubly_nested.bodyTarget])
       transform.YieldOp()
     transform.YieldOp()
   # CHECK-LABEL: TEST: testNestedSequenceOp
-  # CHECK: transform.sequence {
+  # CHECK: transform.sequence failures(propagate) {
   # CHECK: ^{{.*}}(%[[ARG0:.+]]: !pdl.operation):
-  # CHECK:   sequence %[[ARG0]] {
+  # CHECK:   sequence %[[ARG0]] failures(propagate) {
   # CHECK:   ^{{.*}}(%[[ARG1:.+]]: !pdl.operation):
-  # CHECK:     = sequence %[[ARG1]] {
+  # CHECK:     = sequence %[[ARG1]] failures(propagate) {
   # CHECK:     ^{{.*}}(%[[ARG2:.+]]: !pdl.operation):
   # CHECK:       yield %[[ARG2]] : !pdl.operation
   # CHECK:     } : !pdl.operation
@@ -56,7 +58,8 @@ def testNestedSequenceOp():
 def testTransformPDLOps():
   withPdl = transform.WithPDLPatternsOp()
   with InsertionPoint(withPdl.body):
-    sequence = transform.SequenceOp([pdl.OperationType.get()],
+    sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
+                                    [pdl.OperationType.get()],
                                     withPdl.bodyTarget)
     with InsertionPoint(sequence.body):
       match = transform.PDLMatchOp(sequence.bodyTarget, "pdl_matcher")
@@ -64,7 +67,7 @@ def testTransformPDLOps():
   # CHECK-LABEL: TEST: testTransformPDLOps
   # CHECK: transform.with_pdl_patterns {
   # CHECK: ^{{.*}}(%[[ARG0:.+]]: !pdl.operation):
-  # CHECK:   = sequence %[[ARG0]] {
+  # CHECK:   = sequence %[[ARG0]] failures(propagate) {
   # CHECK:   ^{{.*}}(%[[ARG1:.+]]: !pdl.operation):
   # CHECK:     %[[RES:.+]] = pdl_match @pdl_matcher in %[[ARG1]]
   # CHECK:     yield %[[RES]] : !pdl.operation
@@ -74,7 +77,7 @@ def testTransformPDLOps():
 
 @run
 def testGetClosestIsolatedParentOp():
-  sequence = transform.SequenceOp()
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
   with InsertionPoint(sequence.body):
     transform.GetClosestIsolatedParentOp(sequence.bodyTarget)
     transform.YieldOp()
@@ -86,7 +89,7 @@ def testGetClosestIsolatedParentOp():
 
 @run
 def testMergeHandlesOp():
-  sequence = transform.SequenceOp()
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
   with InsertionPoint(sequence.body):
     transform.MergeHandlesOp([sequence.bodyTarget])
     transform.YieldOp()
@@ -100,7 +103,8 @@ def testMergeHandlesOp():
 def testReplicateOp():
   with_pdl = transform.WithPDLPatternsOp()
   with InsertionPoint(with_pdl.body):
-    sequence = transform.SequenceOp(with_pdl.bodyTarget)
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, with_pdl.bodyTarget)
     with InsertionPoint(sequence.body):
       m1 = transform.PDLMatchOp(sequence.bodyTarget, "first")
       m2 = transform.PDLMatchOp(sequence.bodyTarget, "second")

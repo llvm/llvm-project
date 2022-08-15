@@ -35,15 +35,27 @@ enum NodeType : unsigned {
   SRA_W,
   SRL_W,
 
+  ROTL_W,
+  ROTR_W,
+
   // FPR<->GPR transfer operations
   MOVGR2FR_W_LA64,
   MOVFR2GR_S_LA64,
 
   FTINT,
 
+  // Bit counting operations
+  CLZ_W,
+  CTZ_W,
+
   BSTRINS,
   BSTRPICK,
 
+  // Byte-swapping and bit-reversal
+  REVB_2H,
+  REVB_2W,
+  BITREV_4B,
+  BITREV_W,
 };
 } // end namespace LoongArchISD
 
@@ -55,6 +67,8 @@ public:
                                    const LoongArchSubtarget &STI);
 
   const LoongArchSubtarget &getSubtarget() const { return Subtarget; }
+
+  bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
   // Provide custom lowering hooks for some operations.
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
@@ -82,6 +96,8 @@ public:
                       SelectionDAG &DAG) const override;
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
+  bool isCheapToSpeculateCttz() const override;
+  bool isCheapToSpeculateCtlz() const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.

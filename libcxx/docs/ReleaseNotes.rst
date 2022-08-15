@@ -38,6 +38,7 @@ What's New in Libc++ 16.0.0?
 Implemented Papers
 ------------------
 - P2499R0 - ``string_view`` range constructor should be ``explicit``
+- P2417R2 - A more constexpr bitset
 
 Improvements and New Features
 -----------------------------
@@ -47,6 +48,12 @@ Deprecations and Removals
 
 Upcoming Deprecations and Removals
 ----------------------------------
+
+API Changes
+-----------
+- The comparison operators on ``thread::id`` are now defined as free-standing
+  functions instead of as hidden friends, in conformance with the C++ standard.
+  Also see `issue 56187 <https://github.com/llvm/llvm-project/issues/56187>`_.
 
 ABI Affecting Changes
 ---------------------

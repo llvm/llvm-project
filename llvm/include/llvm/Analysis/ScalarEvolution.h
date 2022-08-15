@@ -529,11 +529,9 @@ public:
   bool containsAddRecurrence(const SCEV *S);
 
   /// Is operation \p BinOp between \p LHS and \p RHS provably does not have
-  /// a signed/unsigned overflow (\p Signed)? If \p CtxI is specified, the
-  /// no-overflow fact should be true in the context of this instruction.
+  /// a signed/unsigned overflow (\p Signed)?
   bool willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
-                       const SCEV *LHS, const SCEV *RHS,
-                       const Instruction *CtxI = nullptr);
+                       const SCEV *LHS, const SCEV *RHS);
 
   /// Parse NSW/NUW flags from add/sub/mul IR binary operation \p Op into
   /// SCEV no-wrap flags, and deduce flag[s] that aren't known yet.
@@ -1091,7 +1089,8 @@ public:
   /// invariants, available at L's entry. Otherwise, return None.
   Optional<LoopInvariantPredicate>
   getLoopInvariantPredicate(ICmpInst::Predicate Pred, const SCEV *LHS,
-                            const SCEV *RHS, const Loop *L);
+                            const SCEV *RHS, const Loop *L,
+                            const Instruction *CtxI = nullptr);
 
   /// If the result of the predicate LHS `Pred` RHS is loop invariant with
   /// respect to L at given Context during at least first MaxIter iterations,

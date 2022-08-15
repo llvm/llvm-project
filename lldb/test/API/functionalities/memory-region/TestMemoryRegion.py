@@ -37,6 +37,11 @@ class MemoryCommandRegion(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
+    # This test and the next build a large result string in such a way that
+    # when run under ASAN the test always times out.  Most of the time is in the asan
+    # checker under PyUnicode_Append.
+    # This seems to be a worst-case scenario for ASAN performance.
+    @skipIfAsan
     def test_command(self):
         self.setup_program()
 
@@ -88,6 +93,7 @@ class MemoryCommandRegion(TestBase):
         self.assertTrue(result.Succeeded())
         self.assertEqual(result.GetOutput(), all_regions)
 
+    @skipIfAsan
     def test_no_overlapping_regions(self):
         # In the past on Windows we were recording AllocationBase as the base address
         # of the current region, not BaseAddress. So if a range of pages was split

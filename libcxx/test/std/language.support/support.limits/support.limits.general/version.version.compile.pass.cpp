@@ -52,6 +52,7 @@
     __cpp_lib_complex_udls                         201309L [C++14]
     __cpp_lib_concepts                             202002L [C++20]
     __cpp_lib_constexpr_algorithms                 201806L [C++20]
+    __cpp_lib_constexpr_bitset                     202207L [C++2b]
     __cpp_lib_constexpr_cmath                      202202L [C++2b]
     __cpp_lib_constexpr_complex                    201711L [C++20]
     __cpp_lib_constexpr_dynamic_alloc              201907L [C++20]
@@ -322,6 +323,10 @@
 
 # ifdef __cpp_lib_constexpr_algorithms
 #   error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_bitset
+#   error "__cpp_lib_constexpr_bitset should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_constexpr_cmath
@@ -950,6 +955,10 @@
 
 # ifdef __cpp_lib_constexpr_algorithms
 #   error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_bitset
+#   error "__cpp_lib_constexpr_bitset should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_constexpr_cmath
@@ -1674,6 +1683,10 @@
 
 # ifdef __cpp_lib_constexpr_algorithms
 #   error "__cpp_lib_constexpr_algorithms should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_bitset
+#   error "__cpp_lib_constexpr_bitset should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_constexpr_cmath
@@ -2646,6 +2659,10 @@
 #   error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++20"
 # endif
 
+# ifdef __cpp_lib_constexpr_bitset
+#   error "__cpp_lib_constexpr_bitset should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_constexpr_cmath
 #   error "__cpp_lib_constexpr_cmath should not be defined before c++2b"
 # endif
@@ -3194,16 +3211,16 @@
 #   error "__cpp_lib_quoted_string_io should have the value 201304L in c++20"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 #   ifndef __cpp_lib_ranges
 #     error "__cpp_lib_ranges should be defined in c++20"
 #   endif
 #   if __cpp_lib_ranges != 201811L
 #     error "__cpp_lib_ranges should have the value 201811L in c++20"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_ranges should not be defined when !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES) is not defined!"
 #   endif
 # endif
 
@@ -3865,6 +3882,13 @@
 #   error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++2b"
 # endif
 
+# ifndef __cpp_lib_constexpr_bitset
+#   error "__cpp_lib_constexpr_bitset should be defined in c++2b"
+# endif
+# if __cpp_lib_constexpr_bitset != 202207L
+#   error "__cpp_lib_constexpr_bitset should have the value 202207L in c++2b"
+# endif
+
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_constexpr_cmath
 #     error "__cpp_lib_constexpr_cmath should be defined in c++2b"
@@ -4461,16 +4485,16 @@
 #   error "__cpp_lib_quoted_string_io should have the value 201304L in c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
+# if !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 #   ifndef __cpp_lib_ranges
 #     error "__cpp_lib_ranges should be defined in c++2b"
 #   endif
 #   if __cpp_lib_ranges != 201811L
 #     error "__cpp_lib_ranges should have the value 201811L in c++2b"
 #   endif
-# else // _LIBCPP_VERSION
+# else
 #   ifdef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should not be defined because it is unimplemented in libc++!"
+#     error "__cpp_lib_ranges should not be defined when !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES) is not defined!"
 #   endif
 # endif
 

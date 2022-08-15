@@ -92,6 +92,15 @@ configuration easier.
      $ make -C <build> cxx-test-depends
      $ <build>/bin/llvm-lit -sv libcxx/test # will use your custom config file
 
+Additional tools
+----------------
+
+The libc++ test suite uses a few optional tools to improve the code quality.
+
+These tools are:
+- clang-query
+- clang-tidy
+
 Writing Tests
 -------------
 

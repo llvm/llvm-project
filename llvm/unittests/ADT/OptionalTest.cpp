@@ -14,7 +14,7 @@
 #include "gtest/gtest.h"
 
 #include <array>
-
+#include <utility>
 
 using namespace llvm;
 
@@ -201,7 +201,7 @@ TEST(OptionalTest, NullCopyConstructionTest) {
 
 TEST(OptionalTest, InPlaceConstructionNonDefaultConstructibleTest) {
   NonDefaultConstructible::ResetCounts();
-  { Optional<NonDefaultConstructible> A{in_place, 1}; }
+  { Optional<NonDefaultConstructible> A{std::in_place, 1}; }
   EXPECT_EQ(0u, NonDefaultConstructible::CopyConstructions);
   EXPECT_EQ(0u, NonDefaultConstructible::CopyAssignments);
   EXPECT_EQ(1u, NonDefaultConstructible::Destructions);
@@ -247,7 +247,7 @@ static_assert(!std::is_trivially_copyable<Optional<MultiArgConstructor>>::value,
 TEST(OptionalTest, Emplace) {
   MultiArgConstructor::ResetCounts();
   Optional<MultiArgConstructor> A;
-  
+
   A.emplace(1, 2);
   EXPECT_TRUE(A.has_value());
   EXPECT_TRUE(A.has_value());
@@ -266,12 +266,12 @@ TEST(OptionalTest, Emplace) {
 TEST(OptionalTest, InPlaceConstructionMultiArgConstructorTest) {
   MultiArgConstructor::ResetCounts();
   {
-    Optional<MultiArgConstructor> A{in_place, 1, 2};
+    Optional<MultiArgConstructor> A{std::in_place, 1, 2};
     EXPECT_TRUE(A.has_value());
     EXPECT_TRUE(A.has_value());
     EXPECT_EQ(1, A->x);
     EXPECT_EQ(2, A->y);
-    Optional<MultiArgConstructor> B{in_place, 5, false};
+    Optional<MultiArgConstructor> B{std::in_place, 5, false};
     EXPECT_TRUE(B.has_value());
     EXPECT_TRUE(B.has_value());
     EXPECT_EQ(5, B->x);
@@ -284,7 +284,7 @@ TEST(OptionalTest, InPlaceConstructionMultiArgConstructorTest) {
 TEST(OptionalTest, InPlaceConstructionAndEmplaceEquivalentTest) {
   MultiArgConstructor::ResetCounts();
   {
-    Optional<MultiArgConstructor> A{in_place, 1, 2};
+    Optional<MultiArgConstructor> A{std::in_place, 1, 2};
     Optional<MultiArgConstructor> B;
     B.emplace(1, 2);
     EXPECT_EQ(0u, MultiArgConstructor::Destructions);
@@ -442,7 +442,7 @@ TEST(OptionalTest, ImmovableEmplace) {
 
 TEST(OptionalTest, ImmovableInPlaceConstruction) {
   Immovable::ResetCounts();
-  Optional<Immovable> A{in_place, 4};
+  Optional<Immovable> A{std::in_place, 4};
   EXPECT_TRUE((bool)A);
   EXPECT_EQ(4, A->val);
   EXPECT_EQ(1u, Immovable::Constructions);
@@ -601,6 +601,40 @@ TEST(OptionalTest, MoveValueOr) {
   EXPECT_EQ(1u, MoveOnly::MoveConstructions);
   EXPECT_EQ(0u, MoveOnly::MoveAssignments);
   EXPECT_EQ(2u, MoveOnly::Destructions);
+}
+
+TEST(OptionalTest, Transform) {
+  Optional<int> A;
+
+  Optional<int> B = A.transform([&](int N) { return N + 1; });
+  EXPECT_FALSE(B.has_value());
+
+  A = 3;
+  Optional<int> C = A.transform([&](int N) { return N + 1; });
+  EXPECT_TRUE(C.has_value());
+  EXPECT_EQ(4, C.value());
+}
+
+TEST(OptionalTest, MoveTransform) {
+  Optional<MoveOnly> A;
+
+  MoveOnly::ResetCounts();
+  Optional<int> B =
+      std::move(A).transform([&](const MoveOnly &M) { return M.val + 2; });
+  EXPECT_FALSE(B.has_value());
+  EXPECT_EQ(0u, MoveOnly::MoveConstructions);
+  EXPECT_EQ(0u, MoveOnly::MoveAssignments);
+  EXPECT_EQ(0u, MoveOnly::Destructions);
+
+  A = MoveOnly(5);
+  MoveOnly::ResetCounts();
+  Optional<int> C =
+      std::move(A).transform([&](const MoveOnly &M) { return M.val + 2; });
+  EXPECT_TRUE(C.has_value());
+  EXPECT_EQ(7, C.value());
+  EXPECT_EQ(0u, MoveOnly::MoveConstructions);
+  EXPECT_EQ(0u, MoveOnly::MoveAssignments);
+  EXPECT_EQ(0u, MoveOnly::Destructions);
 }
 
 struct EqualTo {

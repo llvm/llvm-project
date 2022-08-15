@@ -138,36 +138,11 @@ static llvm::cl::opt<ScanningOutputFormat> Format(
     llvm::cl::init(ScanningOutputFormat::Make),
     llvm::cl::cat(DependencyScannerCategory));
 
-// This mode is mostly useful for development of explicitly built modules.
-// Command lines will contain arguments specifying modulemap file paths and
-// absolute paths to PCM files in the module cache directory.
-//
-// Build tools that want to put the PCM files in a different location should use
-// the C++ APIs instead, of which there are two flavors:
-//
-// 1. APIs that generate arguments with paths PCM files via a callback provided
-//    by the client:
-//     * ModuleDeps::getCanonicalCommandLine(LookupPCMPath)
-//     * FullDependencies::getCommandLine(LookupPCMPath)
-//
-// 2. APIs that don't generate arguments with paths PCM files and instead expect
-//     the client to append them manually after the fact:
-//     * ModuleDeps::getCanonicalCommandLineWithoutModulePaths()
-//     * FullDependencies::getCommandLineWithoutModulePaths()
-//
-static llvm::cl::opt<bool> GenerateModulesPathArgs(
-    "generate-modules-path-args",
-    llvm::cl::desc(
-        "With '-format experimental-full', include arguments specifying "
-        "modules-related paths in the generated command lines: "
-        "'-fmodule-file=', '-o', '-fmodule-map-file='."),
-    llvm::cl::init(false), llvm::cl::cat(DependencyScannerCategory));
-
 static llvm::cl::opt<std::string> ModuleFilesDir(
     "module-files-dir",
-    llvm::cl::desc("With '-generate-modules-path-args', paths to module files "
-                   "in the generated command lines will begin with the "
-                   "specified directory instead the module cache directory."),
+    llvm::cl::desc(
+        "The build directory for modules. Defaults to the value of "
+        "'-fmodules-cache-path=' from command lines for implicit modules."),
     llvm::cl::cat(DependencyScannerCategory));
 
 static llvm::cl::opt<bool> OptimizeArgs(
@@ -198,8 +173,7 @@ llvm::cl::opt<std::string> ModuleName(
 
 llvm::cl::list<std::string> ModuleDepTargets(
     "dependency-target",
-    llvm::cl::desc("With '-generate-modules-path-args', the names of "
-                   "dependency targets for the dependency file"),
+    llvm::cl::desc("The names of dependency targets for the dependency file"),
     llvm::cl::cat(DependencyScannerCategory));
 
 enum ResourceDirRecipeKind {
@@ -295,11 +269,9 @@ public:
     }
 
     ID.CommandLine =
-        GenerateModulesPathArgs
-            ? FD.getCommandLine([&](const ModuleID &MID, ModuleOutputKind MOK) {
-                return lookupModuleOutput(MID, MOK);
-              })
-            : FD.getCommandLineWithoutModulePaths();
+        FD.getCommandLine([&](const ModuleID &MID, ModuleOutputKind MOK) {
+          return lookupModuleOutput(MID, MOK);
+        });
     Inputs.push_back(std::move(ID));
   }
 
@@ -329,13 +301,10 @@ public:
           {"file-deps", toJSONSorted(MD.FileDeps)},
           {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
           {"clang-modulemap-file", MD.ClangModuleMapFile},
-          {"command-line",
-           GenerateModulesPathArgs
-               ? MD.getCanonicalCommandLine(
-                     [&](const ModuleID &MID, ModuleOutputKind MOK) {
-                       return lookupModuleOutput(MID, MOK);
-                     })
-               : MD.getCanonicalCommandLineWithoutModulePaths()},
+          {"command-line", MD.getCanonicalCommandLine(
+                               [&](const ModuleID &MID, ModuleOutputKind MOK) {
+                                 return lookupModuleOutput(MID, MOK);
+                               })},
       };
       OutModules.push_back(std::move(O));
     }

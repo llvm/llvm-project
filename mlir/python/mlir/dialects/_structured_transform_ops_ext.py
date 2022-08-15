@@ -110,6 +110,24 @@ class InterchangeOp:
         ip=ip)
 
 
+class MatchOp:
+  """Specialization for MatchOp class."""
+
+  @classmethod
+  def match_op_names(MatchOp,
+                     target: Union[Operation, Value],
+                     names: Sequence[str],
+                     loc=None,
+                     ip=None):
+    pdl_operation_type = pdl.OperationType.get()
+    return MatchOp(
+        pdl_operation_type,
+        _get_op_result_or_value(target),
+        ops=ArrayAttr.get(list(map(lambda s: StringAttr.get(s), names))),
+        loc=loc,
+        ip=ip)
+
+
 class MultiTileSizesOp:
   """Specialization for MultitileSizesOp class."""
 

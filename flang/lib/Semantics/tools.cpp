@@ -456,9 +456,25 @@ const Symbol *FindInterface(const Symbol &symbol) {
   return common::visit(
       common::visitors{
           [](const ProcEntityDetails &details) {
-            return details.interface().symbol();
+            const Symbol *interface {
+              details.interface().symbol()
+            };
+            return interface ? FindInterface(*interface) : nullptr;
           },
-          [](const ProcBindingDetails &details) { return &details.symbol(); },
+          [](const ProcBindingDetails &details) {
+            return FindInterface(details.symbol());
+          },
+          [&](const SubprogramDetails &) { return &symbol; },
+          [](const UseDetails &details) {
+            return FindInterface(details.symbol());
+          },
+          [](const HostAssocDetails &details) {
+            return FindInterface(details.symbol());
+          },
+          [](const GenericDetails &details) {
+            return details.specific() ? FindInterface(*details.specific())
+                                      : nullptr;
+          },
           [](const auto &) -> const Symbol * { return nullptr; },
       },
       symbol.details());
@@ -483,6 +499,10 @@ const Symbol *FindSubprogram(const Symbol &symbol) {
           },
           [](const HostAssocDetails &details) {
             return FindSubprogram(details.symbol());
+          },
+          [](const GenericDetails &details) {
+            return details.specific() ? FindSubprogram(*details.specific())
+                                      : nullptr;
           },
           [](const auto &) -> const Symbol * { return nullptr; },
       },
@@ -1274,7 +1294,7 @@ template <ComponentKind componentKind>
 std::string
 ComponentIterator<componentKind>::const_iterator::BuildResultDesignatorName()
     const {
-  std::string designator{""};
+  std::string designator;
   for (const auto &node : componentPath_) {
     designator += "%" + DEREF(node.component()).name().ToString();
   }

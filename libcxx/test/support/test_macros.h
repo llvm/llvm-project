@@ -166,6 +166,12 @@
 # define TEST_CONSTEXPR_CXX20
 #endif
 
+#if TEST_STD_VER > 20
+#  define TEST_CONSTEXPR_CXX23 constexpr
+#else
+#  define TEST_CONSTEXPR_CXX23
+#endif
+
 #define TEST_ALIGNAS_TYPE(...) TEST_ALIGNAS(TEST_ALIGNOF(__VA_ARGS__))
 
 #if !TEST_HAS_FEATURE(cxx_rtti) && !defined(__cpp_rtti) \
@@ -209,11 +215,6 @@
 #define TEST_CONSTINIT
 #endif
 
-#if !defined(__cpp_impl_three_way_comparison) \
-    && (!defined(_MSC_VER) || defined(__clang__) || _MSC_VER < 1920 || _MSVC_LANG <= 201703L)
-#define TEST_HAS_NO_SPACESHIP_OPERATOR
-#endif
-
 #if TEST_STD_VER < 11
 #define ASSERT_NOEXCEPT(...)
 #define ASSERT_NOT_NOEXCEPT(...)
@@ -238,6 +239,12 @@
 #define LIBCPP_ASSERT_NOEXCEPT(...) static_assert(true, "")
 #define LIBCPP_ASSERT_NOT_NOEXCEPT(...) static_assert(true, "")
 #define LIBCPP_ONLY(...) static_assert(true, "")
+#endif
+
+#if __has_cpp_attribute(nodiscard)
+#  define TEST_NODISCARD [[nodiscard]]
+#else
+#  define TEST_NODISCARD
 #endif
 
 #define TEST_IGNORE_NODISCARD (void)

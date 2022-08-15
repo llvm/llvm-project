@@ -61,9 +61,8 @@ struct CodeGen {
         indices(numTensors, std::vector<Value>(numLoops)),
         highs(numTensors, std::vector<Value>(numLoops)),
         pidxs(numTensors, std::vector<Value>(numLoops)),
-        idxs(numTensors, std::vector<Value>(numLoops)), redVal(), sparseOut(op),
-        outerParNest(nest), lexIdx(), lexVal(), expValues(), expFilled(),
-        expAdded(), expCount(), curVecMask() {}
+        idxs(numTensors, std::vector<Value>(numLoops)), sparseOut(op),
+        outerParNest(nest) {}
   /// Sparsification options.
   SparsificationOptions options;
   /// Universal dense indices and upper bounds (by index). The loops array

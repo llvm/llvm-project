@@ -645,14 +645,16 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// CallOp
+//===----------------------------------------------------------------------===//
+
 def LLVM_CallOp : LLVM_Op<"call",
                           [DeclareOpInterfaceMethods<FastmathFlagsInterface>,
                            DeclareOpInterfaceMethods<CallOpInterface>,
                            DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Call to an LLVM function.";
   let description = [{
-
-
     In LLVM IR, functions may return either 0 or 1 value. LLVM IR dialect
     implements this behavior by providing a variadic `call` operation for 0- and
     1-result functions. Even though MLIR supports multi-result functions, LLVM
@@ -678,31 +680,26 @@ def LLVM_CallOp : LLVM_Op<"call",
     llvm.call %1(%0) : (f32) -> ()
     ```
   }];
+
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
-                   Variadic<LLVM_Type>,
-                   DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
-  let results = (outs Variadic<LLVM_Type>);
+                       Variadic<LLVM_Type>,
+                       DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
+  let results = (outs Optional<LLVM_Type>:$result);
+
   let builders = [
-    OpBuilder<(ins "LLVMFuncOp":$func, "ValueRange":$operands,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes), [{
-      Type resultType = func.getFunctionType().getReturnType();
-      if (!resultType.isa<LLVM::LLVMVoidType>())
-        $_state.addTypes(resultType);
-      $_state.addAttribute("callee", SymbolRefAttr::get(func));
-      $_state.addAttributes(attributes);
-      $_state.addOperands(operands);
-    }]>,
+    OpBuilder<(ins "LLVMFuncOp":$func, "ValueRange":$args)>,
     OpBuilder<(ins "TypeRange":$results, "StringAttr":$callee,
-                   CArg<"ValueRange", "{}">:$operands), [{
-      build($_builder, $_state, results, SymbolRefAttr::get(callee), operands);
-    }]>,
+                   CArg<"ValueRange", "{}">:$args)>,
     OpBuilder<(ins "TypeRange":$results, "StringRef":$callee,
-                   CArg<"ValueRange", "{}">:$operands), [{
-      build($_builder, $_state, results,
-            StringAttr::get($_builder.getContext(), callee), operands);
-    }]>];
+                   CArg<"ValueRange", "{}">:$args)>
+  ];
+
   let hasCustomAssemblyFormat = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// ExtractElementOp
+//===----------------------------------------------------------------------===//
 
 def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [NoSideEffect]> {
   let arguments = (ins LLVM_AnyVector:$vector, AnyInteger:$position);
@@ -716,20 +713,42 @@ def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [NoSideEffect]> {
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// ExtractValueOp
+//===----------------------------------------------------------------------===//
+
 def LLVM_ExtractValueOp : LLVM_Op<"extractvalue", [NoSideEffect]> {
-  let arguments = (ins LLVM_AnyAggregate:$container, ArrayAttr:$position);
+  let summary = "Extract a value from an LLVM struct.";
+
+  let arguments = (ins LLVM_AnyAggregate:$container, DenseI64ArrayAttr:$position);
   let results = (outs LLVM_Type:$res);
+
+  let builders = [
+    OpBuilder<(ins "Value":$container, "ArrayRef<int64_t>":$position)>
+  ];
+
+  let assemblyFormat = [{
+    $container `` $position attr-dict `:` type($container)
+    custom<InsertExtractValueElementType>(type($res), ref(type($container)),
+                                          ref($position))
+  }];
+
+  let hasFolder = 1;
+  let hasVerifier = 1;
+
   string llvmBuilder = [{
     $res = builder.CreateExtractValue($container, extractPosition($position));
   }];
-  let builders = [LLVM_OneResultOpBuilder];
-  let hasCustomAssemblyFormat = 1;
-  let hasFolder = 1;
-  let hasVerifier = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// InsertElementOp
+//===----------------------------------------------------------------------===//
+
 def LLVM_InsertElementOp : LLVM_Op<"insertelement", [NoSideEffect]> {
   let arguments = (ins LLVM_AnyVector:$vector, LLVM_PrimitiveType:$value,
-                   AnyInteger:$position);
+                       AnyInteger:$position);
   let results = (outs LLVM_AnyVector:$res);
   string llvmBuilder = [{
     $res = builder.CreateInsertElement($vector, $value, $position);
@@ -738,27 +757,44 @@ def LLVM_InsertElementOp : LLVM_Op<"insertelement", [NoSideEffect]> {
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
-def LLVM_InsertValueOp : LLVM_Op<"insertvalue", [NoSideEffect]> {
+
+//===----------------------------------------------------------------------===//
+// InsertValueOp
+//===----------------------------------------------------------------------===//
+
+def LLVM_InsertValueOp : LLVM_Op<
+    "insertvalue", [NoSideEffect, AllTypesMatch<["container", "res"]>]> {
+  let summary = "Insert a value into an LLVM struct.";
+
   let arguments = (ins LLVM_AnyAggregate:$container, LLVM_PrimitiveType:$value,
-                   ArrayAttr:$position);
+                       DenseI64ArrayAttr:$position);
   let results = (outs LLVM_AnyAggregate:$res);
+
+  let builders = [
+    OpBuilder<(ins "Value":$container, "Value":$value,
+                   "ArrayRef<int64_t>":$position)>
+  ];
+
+  let assemblyFormat = [{
+    $value `,` $container `` $position attr-dict `:` type($container)
+    custom<InsertExtractValueElementType>(type($value), ref(type($container)),
+                                          ref($position))
+  }];
+
+  let hasVerifier = 1;
+
   string llvmBuilder = [{
     $res = builder.CreateInsertValue($container, $value,
                                      extractPosition($position));
   }];
-  let builders = [
-    OpBuilder<(ins "Value":$container, "Value":$value, "ArrayAttr":$position),
-    [{
-      build($_builder, $_state, container.getType(), container, value, position);
-    }]>];
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
 }
+
 def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector", [NoSideEffect]> {
   let arguments = (ins LLVM_AnyVector:$v1, LLVM_AnyVector:$v2, ArrayAttr:$mask);
   let results = (outs LLVM_AnyVector:$res);
   string llvmBuilder = [{
-      SmallVector<unsigned, 4> position = extractPosition($mask);
+      SmallVector<unsigned, 4> position =
+          LLVM::convertArrayToIndices<unsigned>($mask);
       SmallVector<int, 4> mask(position.begin(), position.end());
       $res = builder.CreateShuffleVector($v1, $v2, mask);
   }];
@@ -835,25 +871,38 @@ def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
             falseOperands);
   }]>, LLVM_TerminatorPassthroughOpBuilder];
 }
+
+//===----------------------------------------------------------------------===//
+// ReturnOp
+//===----------------------------------------------------------------------===//
+
 def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [NoSideEffect]> {
-  let arguments = (ins Variadic<LLVM_Type>:$args);
+  let arguments = (ins Optional<LLVM_Type>:$arg);
+  let assemblyFormat = "attr-dict ($arg^ `:` type($arg))?";
+
+  let builders = [
+    OpBuilder<(ins "ValueRange":$args), [{
+      build($_builder, $_state, TypeRange(), args);
+    }]>
+  ];
+
+  let hasVerifier = 1;
+
   string llvmBuilder = [{
     if ($_numOperands != 0)
-      builder.CreateRet($args[0]);
+      builder.CreateRet($arg[0]);
     else
       builder.CreateRetVoid();
   }];
-
-  let assemblyFormat = "attr-dict ($args^ `:` type($args))?";
-  let hasVerifier = 1;
 }
-def LLVM_ResumeOp : LLVM_TerminatorOp<"resume", []> {
+
+def LLVM_ResumeOp : LLVM_TerminatorOp<"resume"> {
   let arguments = (ins LLVM_Type:$value);
   string llvmBuilder = [{ builder.CreateResume($value); }];
   let assemblyFormat = "$value attr-dict `:` type($value)";
   let hasVerifier = 1;
 }
-def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable", []> {
+def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable"> {
   string llvmBuilder = [{ builder.CreateUnreachable(); }];
   let assemblyFormat = "attr-dict";
 }
@@ -866,7 +915,7 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
     Variadic<AnyType>:$defaultOperands,
     VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
     OptionalAttr<ElementsAttr>:$case_values,
-    ElementsAttr:$case_operand_segments,
+    DenseI32ArrayAttr:$case_operand_segments,
     OptionalAttr<ElementsAttr>:$branch_weights
   );
   let successors = (successor
@@ -1152,7 +1201,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     UnitAttr:$thread_local_,
     OptionalAttr<AnyAttr>:$value,
     OptionalAttr<I64Attr>:$alignment,
-    DefaultValuedAttr<Confined<I32Attr, [IntNonNegative]>, "0">:$addr_space,
+    DefaultValuedAttr<ConfinedAttr<I32Attr, [IntNonNegative]>, "0">:$addr_space,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<StrAttr>:$section
   );
@@ -1521,8 +1570,25 @@ def LLVM_ConstantOp
 
   let arguments = (ins AnyAttr:$value);
   let results = (outs LLVM_Type:$res);
-  let builders = [LLVM_OneResultOpBuilder];
+
   let assemblyFormat = "`(` $value `)` attr-dict `:` type($res)";
+
+  let builders = [
+    LLVM_OneResultOpBuilder,
+    OpBuilder<(ins "Type":$type, "int64_t":$value), [{
+      build($_builder, $_state, type, $_builder.getIntegerAttr(type, value));
+    }]>,
+    OpBuilder<(ins "Type":$type, "const APInt &":$value), [{
+      build($_builder, $_state, type, $_builder.getIntegerAttr(type, value));
+    }]>,
+    OpBuilder<(ins "Type":$type, "const APFloat &":$value), [{
+      build($_builder, $_state, type, $_builder.getFloatAttr(type, value));
+    }]>,
+    OpBuilder<(ins "TypedAttr":$value), [{
+      build($_builder, $_state, value.getType(), value);
+    }]>
+  ];
+
   let hasFolder = 1;
   let hasVerifier = 1;
 }

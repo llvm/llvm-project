@@ -8,6 +8,10 @@ def StdC : StandardSpec<"stdc"> {
   NamedType LDivTType = NamedType<"ldiv_t">;
   NamedType LLDivTType = NamedType<"lldiv_t">;
 
+  NamedType TssTType = NamedType<"tss_t">;
+  PtrType TssTPtr = PtrType<TssTType>;
+  NamedType TssDtorTType = NamedType<"tss_dtor_t">;
+
   HeaderSpec Assert = HeaderSpec<
       "assert.h",
       [
@@ -418,6 +422,7 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"sin", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
           FunctionSpec<"sinf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"tan", RetValSpec<DoubleType>, [ArgSpec<DoubleType>]>,
+          FunctionSpec<"tanf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
 
           FunctionSpec<"expf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"exp2f", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
@@ -708,6 +713,8 @@ def StdC : StandardSpec<"stdc"> {
           MtxTType,
           ThrdStartTType,
           ThrdTType,
+          TssTType,
+          TssDtorTType,
       ],
       [
           EnumeratedNameValue<"mtx_plain">,
@@ -806,7 +813,7 @@ def StdC : StandardSpec<"stdc"> {
               "thrd_join",
               RetValSpec<IntType>,
               [
-                  ArgSpec<ThrdTTypePtr>,
+                  ArgSpec<ThrdTType>,
                   ArgSpec<IntPtr>,
               ]
           >,
@@ -824,7 +831,32 @@ def StdC : StandardSpec<"stdc"> {
               "thrd_equal",
               RetValSpec<IntType>,
               [ArgSpec<ThrdTType>, ArgSpec<ThrdTType>]
-          >
+          >,
+          FunctionSpec<
+              "thrd_exit",
+              RetValSpec<VoidType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
+              "tss_create",
+              RetValSpec<IntType>,
+              [ArgSpec<TssTPtr>, ArgSpec<TssDtorTType>]
+          >,
+          FunctionSpec<
+              "tss_delete",
+              RetValSpec<IntType>,
+              [ArgSpec<TssTType>]
+          >,
+          FunctionSpec<
+              "tss_get",
+              RetValSpec<VoidPtr>,
+              [ArgSpec<TssTType>]
+          >,
+          FunctionSpec<
+              "tss_set",
+              RetValSpec<IntType>,
+              [ArgSpec<TssTType>, ArgSpec<VoidPtr>]
+          >,
       ]
   >;
 

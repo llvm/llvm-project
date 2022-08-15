@@ -2469,6 +2469,13 @@ void TargetLoweringObjectFileXCOFF::Initialize(MCContext &Ctx,
   PersonalityEncoding = 0;
   LSDAEncoding = 0;
   CallSiteEncoding = dwarf::DW_EH_PE_udata4;
+
+  // AIX debug for thread local location is not ready. And for integrated as
+  // mode, the relocatable address for the thread local variable will cause
+  // linker error. So disable the location attribute generation for thread local
+  // variables for now.
+  // FIXME: when TLS debug on AIX is ready, remove this setting.
+  SupportDebugThreadLocalLocation = false;
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getStaticCtorSection(

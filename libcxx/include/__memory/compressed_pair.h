@@ -11,6 +11,7 @@
 #define _LIBCPP___MEMORY_COMPRESSED_PAIR_H
 
 #include <__config>
+#include <__type_traits/dependent_type.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <tuple> // needed in c++03 for some constructors

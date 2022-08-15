@@ -310,7 +310,6 @@ group("test") {
     "//llvm/tools/opt",
     "//llvm/tools/sancov",
     "//llvm/tools/sanstats",
-    "//llvm/tools/split-file",
     "//llvm/tools/verify-uselistorder",
     "//llvm/tools/yaml2obj",
     "//llvm/unittests",
@@ -320,6 +319,7 @@ group("test") {
     "//llvm/utils/llvm-lit",
     "//llvm/utils/llvm-locstats",
     "//llvm/utils/not",
+    "//llvm/utils/split-file",
 
     # llvm-config wants libgtest_main.a to exist at runtime when run as in
     # its tests, but nothing in the tree depends on them.

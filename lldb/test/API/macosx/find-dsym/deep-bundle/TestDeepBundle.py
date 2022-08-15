@@ -1,7 +1,6 @@
 """Test that a dSYM can be found when a binary is in a deep bundle with multiple pathname components."""
 
 
-#import unittest2
 from time import sleep
 
 import lldb

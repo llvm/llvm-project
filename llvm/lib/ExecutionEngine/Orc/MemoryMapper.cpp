@@ -60,6 +60,7 @@ char *InProcessMemoryMapper::prepare(ExecutorAddr Addr, size_t ContentSize) {
 void InProcessMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
                                        OnInitializedFunction OnInitialized) {
   ExecutorAddr MinAddr(~0ULL);
+  ExecutorAddr MaxAddr(0);
 
   for (auto &Segment : AI.Segments) {
     auto Base = AI.MappingBase + Segment.Offset;
@@ -67,6 +68,9 @@ void InProcessMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
 
     if (Base < MinAddr)
       MinAddr = Base;
+
+    if (Base + Size > MaxAddr)
+      MaxAddr = Base + Size;
 
     std::memset((Base + Segment.ContentSize).toPtr<void *>(), 0,
                 Segment.ZeroFillSize);
@@ -85,6 +89,9 @@ void InProcessMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
 
   {
     std::lock_guard<std::mutex> Lock(Mutex);
+
+    // This is the maximum range whose permission have been possibly modified
+    Allocations[MinAddr].Size = MaxAddr - MinAddr;
     Allocations[MinAddr].DeinitializationActions =
         std::move(*DeinitializeActions);
     Reservations[AI.MappingBase.toPtr<void *>()].Allocations.push_back(MinAddr);
@@ -106,6 +113,14 @@ void InProcessMemoryMapper::deinitialize(
       if (Error Err = shared::runDeallocActions(
               Allocations[Base].DeinitializationActions)) {
         AllErr = joinErrors(std::move(AllErr), std::move(Err));
+      }
+
+      // Reset protections to read/write so the area can be reused
+      if (auto EC = sys::Memory::protectMappedMemory(
+              {Base.toPtr<void *>(), Allocations[Base].Size},
+              sys::Memory::ProtectionFlags::MF_READ |
+                  sys::Memory::ProtectionFlags::MF_WRITE)) {
+        AllErr = joinErrors(std::move(AllErr), errorCodeToError(EC));
       }
 
       Allocations.erase(Base);

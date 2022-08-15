@@ -629,14 +629,12 @@ void DefFormat::genCustomParser(CustomDirective *el, FmtContext &ctx,
   os.indent();
   for (FormatElement *arg : el->getArguments()) {
     os << ",\n";
-    FormatElement *param;
-    if (auto *ref = dyn_cast<RefDirective>(arg)) {
-      os << "*";
-      param = ref->getArg();
-    } else {
-      param = arg;
-    }
-    os << "_result_" << cast<ParameterElement>(param)->getName();
+    if (auto *param = dyn_cast<ParameterElement>(arg))
+      os << "_result_" << param->getName();
+    else if (auto *ref = dyn_cast<RefDirective>(arg))
+      os << "*_result_" << cast<ParameterElement>(ref->getArg())->getName();
+    else
+      os << tgfmt(cast<StringElement>(arg)->getValue(), &ctx);
   }
   os.unindent() << ");\n";
   os << "if (::mlir::failed(odsCustomResult)) return {};\n";
@@ -845,11 +843,15 @@ void DefFormat::genCustomPrinter(CustomDirective *el, FmtContext &ctx,
   os << tgfmt("print$0($_printer", &ctx, el->getName());
   os.indent();
   for (FormatElement *arg : el->getArguments()) {
-    FormatElement *param = arg;
-    if (auto *ref = dyn_cast<RefDirective>(arg))
-      param = ref->getArg();
-    os << ",\n"
-       << cast<ParameterElement>(param)->getParam().getAccessorName() << "()";
+    os << ",\n";
+    if (auto *param = dyn_cast<ParameterElement>(arg)) {
+      os << param->getParam().getAccessorName() << "()";
+    } else if (auto *ref = dyn_cast<RefDirective>(arg)) {
+      os << cast<ParameterElement>(ref->getArg())->getParam().getAccessorName()
+         << "()";
+    } else {
+      os << tgfmt(cast<StringElement>(arg)->getValue(), &ctx);
+    }
   }
   os.unindent() << ");\n";
 }

@@ -391,6 +391,9 @@ public:
   /// Print all the profiles on stream \p OS.
   void dump(raw_ostream &OS = dbgs());
 
+  /// Print all the profiles on stream \p OS in the JSON format.
+  void dumpJson(raw_ostream &OS = dbgs());
+
   /// Return the samples collected for function \p F.
   FunctionSamples *getSamplesFor(const Function &F) {
     // The function name may have been updated by adding suffix. Call

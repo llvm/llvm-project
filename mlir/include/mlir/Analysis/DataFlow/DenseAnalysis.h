@@ -42,10 +42,6 @@ public:
   /// Reset the dense lattice to a pessimistic value. This occurs when the
   /// analysis cannot reason about the data-flow.
   virtual ChangeResult reset() = 0;
-
-  /// Returns true if the lattice state has reached a pessimistic fixpoint. That
-  /// is, no further modifications to the lattice can occur.
-  virtual bool isAtFixpoint() const = 0;
 };
 
 //===----------------------------------------------------------------------===//

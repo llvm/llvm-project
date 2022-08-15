@@ -165,7 +165,7 @@ parseLayoutMapOption(const std::string &s) {
 
 struct OneShotBufferizePass
     : public OneShotBufferizeBase<OneShotBufferizePass> {
-  OneShotBufferizePass() : OneShotBufferizeBase<OneShotBufferizePass>() {}
+  OneShotBufferizePass() {}
 
   explicit OneShotBufferizePass(const OneShotBufferizationOptions &options)
       : options(options) {}

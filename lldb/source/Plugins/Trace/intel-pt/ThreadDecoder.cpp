@@ -6,13 +6,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ThreadDecoder.h"
-
-#include "llvm/Support/MemoryBuffer.h"
-
 #include "../common/ThreadPostMortemTrace.h"
 #include "LibiptDecoder.h"
 #include "TraceIntelPT.h"
-
+#include "llvm/Support/MemoryBuffer.h"
 #include <utility>
 
 using namespace lldb;

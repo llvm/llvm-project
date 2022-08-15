@@ -118,6 +118,9 @@ LogicalResult emitc::CallOp::verify() {
 
 /// The constant op requires that the attribute's type matches the return type.
 LogicalResult emitc::ConstantOp::verify() {
+  if (getValueAttr().isa<emitc::OpaqueAttr>())
+    return success();
+
   TypedAttr value = getValueAttr();
   Type type = getType();
   if (!value.getType().isa<NoneType>() && type != value.getType())
@@ -172,6 +175,9 @@ ParseResult IncludeOp::parse(OpAsmParser &parser, OperationState &result) {
 
 /// The variable op requires that the attribute's type matches the return type.
 LogicalResult emitc::VariableOp::verify() {
+  if (getValueAttr().isa<emitc::OpaqueAttr>())
+    return success();
+
   TypedAttr value = getValueAttr();
   Type type = getType();
   if (!value.getType().isa<NoneType>() && type != value.getType())
@@ -206,8 +212,7 @@ Attribute emitc::OpaqueAttr::parse(AsmParser &parser, Type type) {
   if (parser.parseGreater())
     return Attribute();
 
-  return get(parser.getContext(),
-             type ? type : NoneType::get(parser.getContext()), value);
+  return get(parser.getContext(), value);
 }
 
 void emitc::OpaqueAttr::print(AsmPrinter &printer) const {

@@ -1,4 +1,4 @@
-//===-- llvm/BinaryFormat/MachO.h - The MachO file format -------*- C++/-*-===//
+//===-- llvm/BinaryFormat/MachO.h - The MachO file format -------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -1000,6 +1000,19 @@ struct nlist_64 {
   uint8_t n_sect;
   uint16_t n_desc;
   uint64_t n_value;
+};
+
+// Values for dyld_chained_fixups_header::imports_format.
+enum {
+  DYLD_CHAINED_IMPORT = 1,
+  DYLD_CHAINED_IMPORT_ADDEND = 2,
+  DYLD_CHAINED_IMPORT_ADDEND64 = 3,
+};
+
+// Values for dyld_chained_fixups_header::symbols_format.
+enum {
+  DYLD_CHAINED_SYMBOL_UNCOMPRESSED = 0,
+  DYLD_CHAINED_SYMBOL_ZLIB = 1,
 };
 
 /// Structs for dyld chained fixups.

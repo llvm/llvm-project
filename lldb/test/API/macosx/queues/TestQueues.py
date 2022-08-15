@@ -1,9 +1,5 @@
 """Test queues inspection SB APIs."""
 
-from __future__ import print_function
-
-
-import unittest2
 import os
 import lldb
 from lldbsuite.test.decorators import *

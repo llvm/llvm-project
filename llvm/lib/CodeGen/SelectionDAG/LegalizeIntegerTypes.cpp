@@ -1555,7 +1555,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_UNDEF(SDNode *N) {
 SDValue DAGTypeLegalizer::PromoteIntRes_VSCALE(SDNode *N) {
   EVT VT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
 
-  APInt MulImm = cast<ConstantSDNode>(N->getOperand(0))->getAPIntValue();
+  const APInt &MulImm = N->getConstantOperandAPInt(0);
   return DAG.getVScale(SDLoc(N), VT, MulImm.sext(VT.getSizeInBits()));
 }
 
@@ -5352,7 +5352,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_STEP_VECTOR(SDNode *N) {
   EVT NOutVT = TLI.getTypeToTransformTo(*DAG.getContext(), OutVT);
   assert(NOutVT.isScalableVector() &&
          "Type must be promoted to a scalable vector type");
-  APInt StepVal = cast<ConstantSDNode>(N->getOperand(0))->getAPIntValue();
+  const APInt &StepVal = N->getConstantOperandAPInt(0);
   return DAG.getStepVector(dl, NOutVT,
                            StepVal.sext(NOutVT.getScalarSizeInBits()));
 }

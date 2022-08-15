@@ -69,6 +69,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  thrd_exit
+  SRCS
+    thrd_exit.cpp
+  HDRS
+    thrd_exit.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
   mtx_init
   SRCS
     mtx_init.cpp
@@ -107,6 +118,50 @@ add_entrypoint_object(
     mtx_unlock.cpp
   HDRS
     mtx_unlock.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
+  tss_create
+  SRCS
+    tss_create.cpp
+  HDRS
+    tss_create.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
+  tss_delete
+  SRCS
+    tss_delete.cpp
+  HDRS
+    tss_delete.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
+  tss_get
+  SRCS
+    tss_get.cpp
+  HDRS
+    tss_get.h
+  DEPENDS
+    libc.include.threads
+    libc.src.__support.threads.mutex
+)
+
+add_entrypoint_object(
+  tss_set
+  SRCS
+    tss_set.cpp
+  HDRS
+    tss_set.h
   DEPENDS
     libc.include.threads
     libc.src.__support.threads.mutex

@@ -68,7 +68,7 @@ def lto_O: Joined<["--"], "lto-O">,
     HelpText<"Set optimization level for LTO (default: 2)">,
     MetaVarName<"<opt-level>">,
     Group<grp_lld>;
-def thinlto_cache_policy: Joined<["--"], "thinlto-cache-policy=">,
+def thinlto_cache_policy_eq: Joined<["--"], "thinlto-cache-policy=">,
     HelpText<"Pruning policy for the ThinLTO cache">,
     Group<grp_lld>;
 def O : JoinedOrSeparate<["-"], "O">,
@@ -77,11 +77,11 @@ def start_lib: Flag<["--"], "start-lib">,
     HelpText<"Start a grouping of objects that should be treated as if they were together in an archive">;
 def end_lib: Flag<["--"], "end-lib">,
     HelpText<"End a grouping of objects that should be treated as if they were together in an archive">;
-def no_warn_dylib_install_name: Joined<["--"], "no-warn-dylib-install-name">,
-    HelpText<"Do not warn on -install-name if -dylib is not passed (default)">,
+def no_warn_dylib_install_name: Flag<["--"], "no-warn-dylib-install-name">,
+    HelpText<"Do not warn on -install_name if -dylib is not passed (default)">,
     Group<grp_lld>;
-def warn_dylib_install_name: Joined<["--"], "warn-dylib-install-name">,
-    HelpText<"Warn on -install-name if -dylib is not passed">,
+def warn_dylib_install_name: Flag<["--"], "warn-dylib-install-name">,
+    HelpText<"Warn on -install_name if -dylib is not passed">,
     Group<grp_lld>;
 def call_graph_profile_sort: Flag<["--"], "call-graph-profile-sort">,
     HelpText<"Reorder sections with call graph profile (default)">,
@@ -89,7 +89,7 @@ def call_graph_profile_sort: Flag<["--"], "call-graph-profile-sort">,
 def no_call_graph_profile_sort : Flag<["--"], "no-call-graph-profile-sort">,
     HelpText<"Do not reorder sections with call graph profile">,
     Group<grp_lld>;
-def print_symbol_order: Joined<["--"], "print-symbol-order=">,
+def print_symbol_order_eq: Joined<["--"], "print-symbol-order=">,
     HelpText<"Print a symbol order specified by --call-graph-profile-sort into the specified file">,
     Group<grp_lld>;
 
@@ -977,6 +977,12 @@ def mcpu : Separate<["-"], "mcpu">,
     Group<grp_rare>;
 def no_dtrace_dof : Flag<["-"], "no_dtrace_dof">,
     HelpText<"Disable dtrace-dof processing (default).">,
+    Group<grp_rare>;
+def objc_stubs_fast : Flag<["-"], "objc_stubs_fast">,
+    HelpText<"Produce larger stubs for Objective-C method calls with fewer jumps (default).">,
+    Group<grp_rare>;
+def objc_stubs_small : Flag<["-"], "objc_stubs_small">,
+    HelpText<"Produce smaller stubs for Objective-C method calls with more jumps.">,
     Group<grp_rare>;
 
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;

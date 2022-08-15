@@ -73,10 +73,9 @@ define void @vf4(<8 x i16>* %in.vec, <4 x i16>* %out.vec0, <4 x i16>* %out.vec1)
 ; AVX512-LABEL: vf4:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX512-NEXT:    vpmovdw %xmm0, %xmm1
-; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[2,3,6,7,10,11,14,15,u,u,u,u,u,u,u,u]
-; AVX512-NEXT:    vmovq %xmm1, (%rsi)
-; AVX512-NEXT:    vmovq %xmm0, (%rdx)
+; AVX512-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[2,3,6,7,10,11,14,15,u,u,u,u,u,u,u,u]
+; AVX512-NEXT:    vpmovdw %xmm0, (%rsi)
+; AVX512-NEXT:    vmovq %xmm1, (%rdx)
 ; AVX512-NEXT:    retq
   %wide.vec = load <8 x i16>, <8 x i16>* %in.vec, align 32
 

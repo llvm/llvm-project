@@ -290,8 +290,24 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     switch (ISD) {
     case ISD::SIGN_EXTEND:
     case ISD::ZERO_EXTEND:
+      if (Src->getScalarSizeInBits() == 1) {
+        // We do not use vsext/vzext to extend from mask vector.
+        // Instead we use the following instructions to extend from mask vector:
+        // vmv.v.i v8, 0
+        // vmerge.vim v8, v8, -1, v0
+        return 2;
+      }
       return 1;
     case ISD::TRUNCATE:
+      if (Dst->getScalarSizeInBits() == 1) {
+        // We do not use several vncvt to truncate to mask vector. So we could
+        // not use PowDiff to calculate it.
+        // Instead we use the following instructions to truncate to mask vector:
+        // vand.vi v8, v8, 1
+        // vmsne.vi v0, v8, 0
+        return 2;
+      }
+      [[fallthrough]];
     case ISD::FP_EXTEND:
     case ISD::FP_ROUND:
       // Counts of narrow/widen instructions.
@@ -300,6 +316,20 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     case ISD::FP_TO_UINT:
     case ISD::SINT_TO_FP:
     case ISD::UINT_TO_FP:
+      if (Src->getScalarSizeInBits() == 1 || Dst->getScalarSizeInBits() == 1) {
+        // The cost of convert from or to mask vector is different from other
+        // cases. We could not use PowDiff to calculate it.
+        // For mask vector to fp, we should use the following instructions:
+        // vmv.v.i v8, 0
+        // vmerge.vim v8, v8, -1, v0
+        // vfcvt.f.x.v v8, v8
+
+        // And for fp vector to mask, we use:
+        // vfncvt.rtz.x.f.w v9, v8
+        // vand.vi v8, v9, 1
+        // vmsne.vi v0, v8, 0
+        return 3;
+      }
       if (std::abs(PowDiff) <= 1)
         return 1;
       // Backend could lower (v[sz]ext i8 to double) to vfcvt(v[sz]ext.f8 i8),

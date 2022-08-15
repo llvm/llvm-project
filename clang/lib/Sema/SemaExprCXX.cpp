@@ -5412,6 +5412,8 @@ void DiagnoseBuiltinDeprecation(Sema& S, TypeTrait Kind,
       Replacement = BTT_IsTriviallyAssignable;
       break;
     case UTT_HasTrivialCopy:
+      Replacement = UTT_IsTriviallyCopyable;
+      break;
     case UTT_HasTrivialDefaultConstructor:
     case UTT_HasTrivialMoveConstructor:
       Replacement = TT_IsTriviallyConstructible;
@@ -5427,9 +5429,26 @@ void DiagnoseBuiltinDeprecation(Sema& S, TypeTrait Kind,
 }
 }
 
+bool Sema::CheckTypeTraitArity(unsigned Arity, SourceLocation Loc, size_t N) {
+  if (Arity && N != Arity) {
+    Diag(Loc, diag::err_type_trait_arity)
+        << Arity << 0 << (Arity > 1) << (int)N << SourceRange(Loc);
+    return false;
+  }
+
+  if (!Arity && N == 0) {
+    Diag(Loc, diag::err_type_trait_arity)
+        << 1 << 1 << 1 << (int)N << SourceRange(Loc);
+    return false;
+  }
+  return true;
+}
+
 ExprResult Sema::BuildTypeTrait(TypeTrait Kind, SourceLocation KWLoc,
                                 ArrayRef<TypeSourceInfo *> Args,
                                 SourceLocation RParenLoc) {
+  if (!CheckTypeTraitArity(getTypeTraitArity(Kind), KWLoc, Args.size()))
+    return ExprError();
   QualType ResultType = Context.getLogicalOperationType();
 
   if (Kind <= UTT_Last && !CheckUnaryTypeTraitTypeCompleteness(

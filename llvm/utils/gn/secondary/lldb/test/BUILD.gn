@@ -165,12 +165,12 @@ group("test") {
     "//llvm/tools/llvm-objcopy:symlinks",
     "//llvm/tools/llvm-pdbutil",
     "//llvm/tools/llvm-readobj:symlinks",
-    "//llvm/tools/split-file",
     "//llvm/tools/yaml2obj",
     "//llvm/utils/FileCheck",
     "//llvm/utils/count",
     "//llvm/utils/llvm-lit",
     "//llvm/utils/not",
+    "//llvm/utils/split-file",
   ]
   testonly = true
 }

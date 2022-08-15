@@ -249,14 +249,16 @@ static void applyPatterns(func::FuncOp funcOp) {
 
 template <typename IdOp, typename NProcsOp>
 static SmallVector<ProcInfo, 2>
-getGpuProcIds(OpBuilder &b, Location loc, ArrayRef<Range> parallelLoopRanges) {
+getGpuProcIds(OpBuilder &b, Location loc, ArrayRef<Range> parallelLoopRanges,
+              ArrayRef<linalg::DistributionMethod> distributionMethod) {
   size_t count = std::min<size_t>(3, parallelLoopRanges.size());
   SmallVector<ProcInfo, 2> procInfo(count);
   Type indexType = b.getIndexType();
   for (unsigned i = 0; i < count; ++i) {
     gpu::Dimension dim = *gpu::symbolizeDimension(i);
     procInfo[count - 1 - i] = {b.create<IdOp>(loc, indexType, dim),
-                               b.create<NProcsOp>(loc, indexType, dim)};
+                               b.create<NProcsOp>(loc, indexType, dim),
+                               distributionMethod[count - 1 - i]};
   }
   return procInfo;
 }
@@ -265,10 +267,15 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
                                           RewritePatternSet &patterns) {
   {
     LinalgLoopDistributionOptions cyclicNprocsEqNiters;
-    cyclicNprocsEqNiters.distributionMethod.resize(
-        2, DistributionMethod::CyclicNumProcsEqNumIters);
+    SmallVector<linalg::DistributionMethod> distributionMethod = {
+        DistributionMethod::CyclicNumProcsEqNumIters,
+        DistributionMethod::CyclicNumProcsEqNumIters};
     cyclicNprocsEqNiters.procInfo =
-        getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
+        [distributionMethod](OpBuilder &b, Location loc,
+                             ArrayRef<Range> parallelLoopRanges) {
+          return getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>(
+              b, loc, parallelLoopRanges, distributionMethod);
+        };
     patterns.add<LinalgTilingPattern>(
         MatmulOp::getOperationName(), context,
         LinalgTilingOptions()
@@ -282,10 +289,15 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
 
   {
     LinalgLoopDistributionOptions cyclicNprocsGeNiters;
-    cyclicNprocsGeNiters.distributionMethod.resize(
-        2, DistributionMethod::CyclicNumProcsGeNumIters);
+    SmallVector<linalg::DistributionMethod> distributionMethod = {
+        DistributionMethod::CyclicNumProcsGeNumIters,
+        DistributionMethod::CyclicNumProcsGeNumIters};
     cyclicNprocsGeNiters.procInfo =
-        getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
+        [distributionMethod](OpBuilder &b, Location loc,
+                             ArrayRef<Range> parallelLoopRanges) {
+          return getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>(
+              b, loc, parallelLoopRanges, distributionMethod);
+        };
     patterns.add<LinalgTilingPattern>(
         MatmulOp::getOperationName(), context,
         LinalgTilingOptions()
@@ -299,10 +311,14 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
 
   {
     LinalgLoopDistributionOptions cyclicNprocsDefault;
-    cyclicNprocsDefault.distributionMethod.resize(2,
-                                                  DistributionMethod::Cyclic);
+    SmallVector<linalg::DistributionMethod> distributionMethod = {
+        DistributionMethod::Cyclic, DistributionMethod::Cyclic};
     cyclicNprocsDefault.procInfo =
-        getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
+        [distributionMethod](OpBuilder &b, Location loc,
+                             ArrayRef<Range> parallelLoopRanges) {
+          return getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>(
+              b, loc, parallelLoopRanges, distributionMethod);
+        };
     patterns.add<LinalgTilingPattern>(
         MatmulOp::getOperationName(), context,
         LinalgTilingOptions()
@@ -316,10 +332,15 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
 
   {
     LinalgLoopDistributionOptions cyclicNprocsMixed1;
-    cyclicNprocsMixed1.distributionMethod = {
+    SmallVector<linalg::DistributionMethod> distributionMethod = {
         DistributionMethod::CyclicNumProcsEqNumIters,
         DistributionMethod::CyclicNumProcsGeNumIters};
-    cyclicNprocsMixed1.procInfo = getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
+    cyclicNprocsMixed1.procInfo =
+        [distributionMethod](OpBuilder &b, Location loc,
+                             ArrayRef<Range> parallelLoopRanges) {
+          return getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>(
+              b, loc, parallelLoopRanges, distributionMethod);
+        };
     patterns.add<LinalgTilingPattern>(
         MatmulOp::getOperationName(), context,
         LinalgTilingOptions()
@@ -333,10 +354,15 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
 
   {
     LinalgLoopDistributionOptions cyclicNprocsMixed2;
-    cyclicNprocsMixed2.distributionMethod = {
+    SmallVector<linalg::DistributionMethod> distributionMethod = {
         DistributionMethod::CyclicNumProcsGeNumIters,
         DistributionMethod::Cyclic};
-    cyclicNprocsMixed2.procInfo = getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
+    cyclicNprocsMixed2.procInfo =
+        [distributionMethod](OpBuilder &b, Location loc,
+                             ArrayRef<Range> parallelLoopRanges) {
+          return getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>(
+              b, loc, parallelLoopRanges, distributionMethod);
+        };
     patterns.add<LinalgTilingPattern>(
         MatmulOp::getOperationName(), context,
         LinalgTilingOptions()
@@ -350,10 +376,15 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
 
   {
     LinalgLoopDistributionOptions cyclicNprocsMixed3;
-    cyclicNprocsMixed3.distributionMethod = {
+    SmallVector<linalg::DistributionMethod> distributionMethod = {
         DistributionMethod::Cyclic,
         DistributionMethod::CyclicNumProcsEqNumIters};
-    cyclicNprocsMixed3.procInfo = getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
+    cyclicNprocsMixed3.procInfo =
+        [distributionMethod](OpBuilder &b, Location loc,
+                             ArrayRef<Range> parallelLoopRanges) {
+          return getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>(
+              b, loc, parallelLoopRanges, distributionMethod);
+        };
 
     patterns.add<LinalgTilingPattern>(
         MatmulOp::getOperationName(), context,
@@ -368,10 +399,14 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
 
   {
     LinalgLoopDistributionOptions cyclicNprocsEqNiters;
-    cyclicNprocsEqNiters.distributionMethod.resize(2,
-                                                   DistributionMethod::Cyclic);
+    SmallVector<linalg::DistributionMethod> distributionMethod = {
+        DistributionMethod::Cyclic, DistributionMethod::Cyclic};
     cyclicNprocsEqNiters.procInfo =
-        getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
+        [distributionMethod](OpBuilder &b, Location loc,
+                             ArrayRef<Range> parallelLoopRanges) {
+          return getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>(
+              b, loc, parallelLoopRanges, distributionMethod);
+        };
     patterns.add<LinalgTilingPattern>(
         MatmulOp::getOperationName(), context,
         LinalgTilingOptions()
@@ -387,8 +422,14 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
 static void fillTileFuseAndDistributePatterns(MLIRContext *context,
                                               RewritePatternSet &patterns) {
   LinalgLoopDistributionOptions cyclicNprocsEqNiters;
-  cyclicNprocsEqNiters.distributionMethod.resize(2, DistributionMethod::Cyclic);
-  cyclicNprocsEqNiters.procInfo = getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>;
+  SmallVector<linalg::DistributionMethod> distributionMethod = {
+      DistributionMethod::Cyclic, DistributionMethod::Cyclic};
+  cyclicNprocsEqNiters.procInfo =
+      [distributionMethod](OpBuilder &b, Location loc,
+                           ArrayRef<Range> parallelLoopRanges) {
+        return getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>(
+            b, loc, parallelLoopRanges, distributionMethod);
+      };
   patterns.add<LinalgTileAndFuseTensorOpsPattern>(
       MatmulOp::getOperationName(), context,
       LinalgTilingAndFusionOptions()

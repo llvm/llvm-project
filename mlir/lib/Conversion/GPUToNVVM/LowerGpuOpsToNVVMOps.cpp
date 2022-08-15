@@ -74,9 +74,9 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   ///     %mask_and_clamp = llvm.sub %width, %one : i32
   ///     %shfl = nvvm.shfl.sync.bfly %active_mask, %value, %offset,
   ///         %mask_and_clamp : !llvm<"{ float, i1 }">
-  ///     %shfl_value = llvm.extractvalue %shfl[0 : index] :
+  ///     %shfl_value = llvm.extractvalue %shfl[0] :
   ///         !llvm<"{ float, i1 }">
-  ///     %shfl_pred = llvm.extractvalue %shfl[1 : index] :
+  ///     %shfl_pred = llvm.extractvalue %shfl[1] :
   ///         !llvm<"{ float, i1 }">
   LogicalResult
   matchAndRewrite(gpu::ShuffleOp op, OpAdaptor adaptor,
@@ -89,12 +89,9 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     auto resultTy = LLVM::LLVMStructType::getLiteral(rewriter.getContext(),
                                                      {valueTy, predTy});
 
-    Value one = rewriter.create<LLVM::ConstantOp>(
-        loc, int32Type, rewriter.getI32IntegerAttr(1));
-    Value minusOne = rewriter.create<LLVM::ConstantOp>(
-        loc, int32Type, rewriter.getI32IntegerAttr(-1));
-    Value thirtyTwo = rewriter.create<LLVM::ConstantOp>(
-        loc, int32Type, rewriter.getI32IntegerAttr(32));
+    Value one = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 1);
+    Value minusOne = rewriter.create<LLVM::ConstantOp>(loc, int32Type, -1);
+    Value thirtyTwo = rewriter.create<LLVM::ConstantOp>(loc, int32Type, 32);
     Value numLeadInactiveLane = rewriter.create<LLVM::SubOp>(
         loc, int32Type, thirtyTwo, adaptor.width());
     // Bit mask of active lanes: `(-1) >> (32 - activeWidth)`.
@@ -114,10 +111,8 @@ struct GPUShuffleOpLowering : public ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     Value shfl = rewriter.create<NVVM::ShflOp>(
         loc, resultTy, activeMask, adaptor.value(), adaptor.offset(),
         maskAndClamp, convertShflKind(op.mode()), returnValueAndIsValidAttr);
-    Value shflValue = rewriter.create<LLVM::ExtractValueOp>(
-        loc, valueTy, shfl, rewriter.getIndexArrayAttr(0));
-    Value isActiveSrcLane = rewriter.create<LLVM::ExtractValueOp>(
-        loc, predTy, shfl, rewriter.getIndexArrayAttr(1));
+    Value shflValue = rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 0);
+    Value isActiveSrcLane = rewriter.create<LLVM::ExtractValueOp>(loc, shfl, 1);
 
     rewriter.replaceOp(op, {shflValue, isActiveSrcLane});
     return success();

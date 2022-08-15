@@ -104,25 +104,32 @@ removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
 
 /// It's OK to add a block to the set of removed blocks if the first
 /// basic block in the function that survives all of the deletions is
-/// a legal entry block
+/// a legal entry block. Keep at least one block in a function.
 static bool okToRemove(BasicBlock &Candidate, Function &F,
                        const DenseSet<BasicBlock *> &BBsToDelete) {
+  size_t NumBlocksDeleted = 0;
+  bool FoundNewEntryBlock = false;
   for (auto &B : F) {
     if (&B == &Candidate)
       continue;
-    if (BBsToDelete.count(&B))
+    if (BBsToDelete.count(&B)) {
+      ++NumBlocksDeleted;
       continue;
-    /// Ok we've found the first block that's not going to be deleted,
-    /// it will be the new entry block -- that's only legal if this
-    /// block has no predecessors among blocks that survive the
-    /// deletions
-    for (BasicBlock *Pred : predecessors(&B)) {
-      if (!BBsToDelete.contains(Pred))
-        return false;
     }
-    return true;
+    if (!FoundNewEntryBlock) {
+      /// Ok we've found the first block that's not going to be deleted,
+      /// it will be the new entry block -- that's only legal if this
+      /// block has no predecessors among blocks that survive the
+      /// deletions
+      for (BasicBlock *Pred : predecessors(&B)) {
+        if (!BBsToDelete.contains(Pred))
+          return false;
+      }
+      FoundNewEntryBlock = true;
+    }
   }
-  return true;
+  // Don't delete the last block.
+  return NumBlocksDeleted + 1 < F.size();
 }
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
@@ -140,11 +147,9 @@ static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
   }
 
   // Remove out-of-chunk BB from successor phi nodes
-  for (auto &F : Program) {
-    for (auto &BB : F) {
-      for (auto *Succ : successors(&BB))
-        Succ->removePredecessor(&BB);
-    }
+  for (auto &BB : BBsToDelete) {
+    for (auto *Succ : successors(BB))
+      Succ->removePredecessor(BB, /*KeepOneInputPHIs=*/true);
   }
 
   // Replace terminators that reference out-of-chunk BBs
@@ -161,19 +166,13 @@ static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
     // Instructions might be referenced in other BBs
     for (auto &I : *BB)
       I.replaceAllUsesWith(getDefaultValue(I.getType()));
-    if (BB->getParent()->size() == 1) {
-      // this is the last basic block of the function, thus we must also make
-      // sure to remove comdat and set linkage to external
-      auto F = BB->getParent();
-      F->deleteBody();
-      F->setComdat(nullptr);
-    } else {
-      BB->eraseFromParent();
-    }
+    // Should not be completely removing the body of a function.
+    assert(BB->getParent()->size() > 1);
+    BB->eraseFromParent();
   }
 }
 
 void llvm::reduceBasicBlocksDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing Basic Blocks...\n";
+  errs() << "*** Reducing Basic Blocks...\n";
   runDeltaPass(Test, extractBasicBlocksFromModule);
 }

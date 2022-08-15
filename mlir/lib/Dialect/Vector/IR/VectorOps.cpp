@@ -2100,7 +2100,7 @@ void InsertStridedSliceOp::build(OpBuilder &builder, OperationState &result,
   result.addAttribute(getStridesAttrStrName(), stridesAttr);
 }
 
-// TODO: Should be moved to Tablegen Confined attributes.
+// TODO: Should be moved to Tablegen ConfinedAttr attributes.
 template <typename OpType>
 static LogicalResult isIntegerArrayAttrSmallerThanShape(OpType op,
                                                         ArrayAttr arrayAttr,
@@ -3015,10 +3015,10 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
     if (parser.resolveOperand(maskInfo, maskType, result.operands))
       return failure();
   }
-  result.addAttribute(
-      TransferReadOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({1, static_cast<int32_t>(indexInfo.size()), 1,
-                                static_cast<int32_t>(hasMask.succeeded())}));
+  result.addAttribute(TransferReadOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr(
+                          {1, static_cast<int32_t>(indexInfo.size()), 1,
+                           static_cast<int32_t>(hasMask.succeeded())}));
   return parser.addTypeToList(vectorType, result.types);
 }
 
@@ -3465,10 +3465,10 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
     if (parser.resolveOperand(maskInfo, maskType, result.operands))
       return failure();
   }
-  result.addAttribute(
-      TransferWriteOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({1, 1, static_cast<int32_t>(indexInfo.size()),
-                                static_cast<int32_t>(hasMask.succeeded())}));
+  result.addAttribute(TransferWriteOp::getOperandSegmentSizeAttr(),
+                      builder.getDenseI32ArrayAttr(
+                          {1, 1, static_cast<int32_t>(indexInfo.size()),
+                           static_cast<int32_t>(hasMask.succeeded())}));
   return failure(shapedType.isa<RankedTensorType>() &&
                  parser.addTypeToList(shapedType, result.types));
 }
@@ -4065,12 +4065,15 @@ LogicalResult GatherOp::verify() {
   VectorType indVType = getIndexVectorType();
   VectorType maskVType = getMaskVectorType();
   VectorType resVType = getVectorType();
-  MemRefType memType = getMemRefType();
+  ShapedType baseType = getBaseType();
 
-  if (resVType.getElementType() != memType.getElementType())
+  if (!baseType.isa<MemRefType, RankedTensorType>())
+    return emitOpError("requires base to be a memref or ranked tensor type");
+
+  if (resVType.getElementType() != baseType.getElementType())
     return emitOpError("base and result element type should match");
-  if (llvm::size(getIndices()) != memType.getRank())
-    return emitOpError("requires ") << memType.getRank() << " indices";
+  if (llvm::size(getIndices()) != baseType.getRank())
+    return emitOpError("requires ") << baseType.getRank() << " indices";
   if (resVType.getDimSize(0) != indVType.getDimSize(0))
     return emitOpError("expected result dim to match indices dim");
   if (resVType.getDimSize(0) != maskVType.getDimSize(0))

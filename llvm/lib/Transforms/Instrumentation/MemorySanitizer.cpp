@@ -237,6 +237,10 @@ static cl::opt<int> ClPoisonStackPattern("msan-poison-stack-pattern",
        cl::desc("poison uninitialized stack variables with the given pattern"),
        cl::Hidden, cl::init(0xff));
 
+static cl::opt<bool> ClPrintStackNames("msan-print-stack-names",
+       cl::desc("Print name of local stack variable"),
+       cl::Hidden, cl::init(true));
+
 static cl::opt<bool> ClPoisonUndef("msan-poison-undef",
        cl::desc("poison undef temps"),
        cl::Hidden, cl::init(true));
@@ -579,7 +583,9 @@ private:
 
   /// Run-time helper that generates a new origin value for a stack
   /// allocation.
-  FunctionCallee MsanSetAllocaOrigin4Fn;
+  FunctionCallee MsanSetAllocaOriginWithDescriptionFn;
+  // No description version
+  FunctionCallee MsanSetAllocaOriginNoDescriptionFn;
 
   /// Run-time helper that poisons stack on function entry.
   FunctionCallee MsanPoisonStackFn;
@@ -691,10 +697,10 @@ void MemorySanitizerPass::printPipeline(
 /// Creates a writable global for Str so that we can pass it to the
 /// run-time lib. Runtime uses first 4 bytes of the string to store the
 /// frame ID, so the string needs to be mutable.
-static GlobalVariable *createPrivateNonConstGlobalForString(Module &M,
-                                                            StringRef Str) {
+static GlobalVariable *createPrivateConstGlobalForString(Module &M,
+                                                         StringRef Str) {
   Constant *StrConst = ConstantDataArray::getString(M.getContext(), Str);
-  return new GlobalVariable(M, StrConst->getType(), /*isConstant=*/false,
+  return new GlobalVariable(M, StrConst->getType(), /*isConstant=*/true,
                             GlobalValue::PrivateLinkage, StrConst, "");
 }
 
@@ -825,9 +831,12 @@ void MemorySanitizer::createUserspaceApi(Module &M) {
         IRB.getInt32Ty());
   }
 
-  MsanSetAllocaOrigin4Fn = M.getOrInsertFunction(
-    "__msan_set_alloca_origin4", IRB.getVoidTy(), IRB.getInt8PtrTy(), IntptrTy,
-    IRB.getInt8PtrTy(), IntptrTy);
+  MsanSetAllocaOriginWithDescriptionFn = M.getOrInsertFunction(
+      "__msan_set_alloca_origin_with_descr", IRB.getVoidTy(),
+      IRB.getInt8PtrTy(), IntptrTy, IRB.getInt8PtrTy(), IRB.getInt8PtrTy());
+  MsanSetAllocaOriginNoDescriptionFn = M.getOrInsertFunction(
+      "__msan_set_alloca_origin_no_descr", IRB.getVoidTy(), IRB.getInt8PtrTy(),
+      IntptrTy, IRB.getInt8PtrTy());
   MsanPoisonStackFn =
       M.getOrInsertFunction("__msan_poison_stack", IRB.getVoidTy(),
                             IRB.getInt8PtrTy(), IntptrTy);
@@ -2545,10 +2554,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     I.eraseFromParent();
   }
 
-  // Similar to memmove: avoid copying shadow twice.
-  // This is somewhat unfortunate as it may slowdown small constant memcpys.
-  // FIXME: consider doing manual inline for small constant sizes and proper
-  // alignment.
+  /// Instrument memcpy
+  ///
+  /// Similar to memmove: avoid copying shadow twice. This is somewhat
+  /// unfortunate as it may slowdown small constant memcpys.
+  /// FIXME: consider doing manual inline for small constant sizes and proper
+  /// alignment.
+  ///
+  /// Note: This also handles memcpy.inline, which promises no calls to external
+  /// functions as an optimization. However, with instrumentation enabled this
+  /// is difficult to promise; additionally, we know that the MSan runtime
+  /// exists and provides __msan_memcpy(). Therefore, we assume that with
+  /// instrumentation it's safe to turn memcpy.inline into a call to
+  /// __msan_memcpy(). Should this be wrong, such as when implementing memcpy()
+  /// itself, instrumentation should be disabled with the no_sanitize attribute.
   void visitMemCpyInst(MemCpyInst &I) {
     getShadow(I.getArgOperand(1)); // Ensure shadow initialized
     IRBuilder<> IRB(&I);
@@ -3867,17 +3886,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                   "_msphi_o"));
   }
 
+  Value *getLocalVarIdptr(AllocaInst &I) {
+    ConstantInt *IntConst =
+        ConstantInt::get(Type::getInt32Ty((*F.getParent()).getContext()), 0);
+    return new GlobalVariable(*F.getParent(), IntConst->getType(),
+                              /*isConstant=*/false, GlobalValue::PrivateLinkage,
+                              IntConst);
+  }
+
   Value *getLocalVarDescription(AllocaInst &I) {
-    SmallString<2048> StackDescriptionStorage;
-    raw_svector_ostream StackDescription(StackDescriptionStorage);
-    // We create a string with a description of the stack allocation and
-    // pass it into __msan_set_alloca_origin.
-    // It will be printed by the run-time if stack-originated UMR is found.
-    // The first 4 bytes of the string are set to '----' and will be replaced
-    // by __msan_va_arg_overflow_size_tls at the first call.
-    StackDescription << "----" << I.getName() << "@" << F.getName();
-    return createPrivateNonConstGlobalForString(*F.getParent(),
-                                                StackDescription.str());
+    return createPrivateConstGlobalForString(*F.getParent(), I.getName());
   }
 
   void poisonAllocaUserspace(AllocaInst &I, IRBuilder<> &IRB, Value *Len) {
@@ -3894,11 +3912,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     if (PoisonStack && MS.TrackOrigins) {
-      Value *Descr = getLocalVarDescription(I);
-      IRB.CreateCall(MS.MsanSetAllocaOrigin4Fn,
-                     {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len,
-                      IRB.CreatePointerCast(Descr, IRB.getInt8PtrTy()),
-                      IRB.CreatePointerCast(&F, MS.IntptrTy)});
+      Value *Idptr = getLocalVarIdptr(I);
+      if (ClPrintStackNames) {
+        Value *Descr = getLocalVarDescription(I);
+        IRB.CreateCall(MS.MsanSetAllocaOriginWithDescriptionFn,
+                       {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len,
+                        IRB.CreatePointerCast(Idptr, IRB.getInt8PtrTy()),
+                        IRB.CreatePointerCast(Descr, IRB.getInt8PtrTy())});
+      } else {
+        IRB.CreateCall(MS.MsanSetAllocaOriginNoDescriptionFn,
+                       {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len,
+                        IRB.CreatePointerCast(Idptr, IRB.getInt8PtrTy())});
+      }
     }
   }
 
@@ -3918,6 +3943,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (!InsPoint)
       InsPoint = &I;
     IRBuilder<> IRB(InsPoint->getNextNode());
+    IRB.SetCurrentDebugLocation(InsPoint->getDebugLoc());
     const DataLayout &DL = F.getParent()->getDataLayout();
     uint64_t TypeSize = DL.getTypeAllocSize(I.getAllocatedType());
     Value *Len = ConstantInt::get(MS.IntptrTy, TypeSize);

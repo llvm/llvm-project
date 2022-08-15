@@ -68,7 +68,7 @@ multiclass subvector_subreg_lowering<RegisterClass subRC, ValueType subVT,
   def : Pat<(subVT (extract_subvector (VT RC:$src), (iPTR 0))),
             (subVT (EXTRACT_SUBREG RC:$src, subIdx))>;
 
-  def : Pat<(VT (insert_subvector undef, subRC:$src, (iPTR 0))),
+  def : Pat<(VT (insert_subvector undef_or_freeze_undef, subRC:$src, (iPTR 0))),
             (VT (INSERT_SUBREG (IMPLICIT_DEF), subRC:$src, subIdx))>;
 }
 

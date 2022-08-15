@@ -712,7 +712,7 @@ struct SemiNCAInfo {
     assert(IsPostDom && "This function is only for postdominators");
 
     // The tree has only trivial roots -- nothing to update.
-    if (std::none_of(DT.Roots.begin(), DT.Roots.end(), [BUI](const NodePtr N) {
+    if (llvm::none_of(DT.Roots, [BUI](const NodePtr N) {
           return HasForwardSuccessors(N, BUI);
         }))
       return;

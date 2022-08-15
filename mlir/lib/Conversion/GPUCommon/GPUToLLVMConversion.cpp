@@ -482,7 +482,7 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
   Type elementPtrType = this->getElementPtrType(memRefType);
   auto stream = adaptor.asyncDependencies().front();
   Value allocatedPtr =
-      allocCallBuilder.create(loc, rewriter, {sizeBytes, stream}).getResult(0);
+      allocCallBuilder.create(loc, rewriter, {sizeBytes, stream}).getResult();
   allocatedPtr =
       rewriter.create<LLVM::BitcastOp>(loc, elementPtrType, allocatedPtr);
 
@@ -539,7 +539,7 @@ LogicalResult ConvertAsyncYieldToGpuRuntimeCallPattern::matchAndRewrite(
       continue;
     auto idx = operand.getOperandNumber();
     auto stream = adaptor.getOperands()[idx];
-    auto event = eventCreateCallBuilder.create(loc, rewriter, {}).getResult(0);
+    auto event = eventCreateCallBuilder.create(loc, rewriter, {}).getResult();
     eventRecordCallBuilder.create(loc, rewriter, {event, stream});
     newOperands[idx] = event;
     streams.insert(stream);
@@ -612,8 +612,7 @@ LogicalResult ConvertWaitAsyncOpToGpuRuntimeCallPattern::matchAndRewrite(
       // into the stream just after the last use of the original token operand.
       auto *defOp = std::get<0>(pair).getDefiningOp();
       rewriter.setInsertionPointAfter(defOp);
-      auto event =
-          eventCreateCallBuilder.create(loc, rewriter, {}).getResult(0);
+      auto event = eventCreateCallBuilder.create(loc, rewriter, {}).getResult();
       eventRecordCallBuilder.create(loc, rewriter, {event, operand});
       events.push_back(event);
     } else {
@@ -623,7 +622,7 @@ LogicalResult ConvertWaitAsyncOpToGpuRuntimeCallPattern::matchAndRewrite(
     }
   }
   rewriter.restoreInsertionPoint(insertionPoint);
-  auto stream = streamCreateCallBuilder.create(loc, rewriter, {}).getResult(0);
+  auto stream = streamCreateCallBuilder.create(loc, rewriter, {}).getResult();
   for (auto event : events)
     streamWaitEventCallBuilder.create(loc, rewriter, {stream, event});
   for (auto event : events)
@@ -675,12 +674,11 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
     argumentTypes.push_back(argument.getType());
   auto structType = LLVM::LLVMStructType::getNewIdentified(context, StringRef(),
                                                            argumentTypes);
-  auto one = builder.create<LLVM::ConstantOp>(loc, llvmInt32Type,
-                                              builder.getI32IntegerAttr(1));
+  auto one = builder.create<LLVM::ConstantOp>(loc, llvmInt32Type, 1);
   auto structPtr = builder.create<LLVM::AllocaOp>(
       loc, LLVM::LLVMPointerType::get(structType), one, /*alignment=*/0);
-  auto arraySize = builder.create<LLVM::ConstantOp>(
-      loc, llvmInt32Type, builder.getI32IntegerAttr(numArguments));
+  auto arraySize =
+      builder.create<LLVM::ConstantOp>(loc, llvmInt32Type, numArguments);
   auto arrayPtr = builder.create<LLVM::AllocaOp>(loc, llvmPointerPointerType,
                                                  arraySize, /*alignment=*/0);
   for (const auto &en : llvm::enumerate(arguments)) {
@@ -785,12 +783,11 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
       launchOp.getKernelModuleName().getValue(),
       launchOp.getKernelName().getValue(), loc, rewriter);
   auto function = moduleGetFunctionCallBuilder.create(
-      loc, rewriter, {module.getResult(0), kernelName});
-  auto zero = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type,
-                                                rewriter.getI32IntegerAttr(0));
+      loc, rewriter, {module.getResult(), kernelName});
+  auto zero = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type, 0);
   Value stream =
       adaptor.asyncDependencies().empty()
-          ? streamCreateCallBuilder.create(loc, rewriter, {}).getResult(0)
+          ? streamCreateCallBuilder.create(loc, rewriter, {}).getResult()
           : adaptor.asyncDependencies().front();
   // Create array of pointers to kernel arguments.
   auto kernelParams = generateParamsArray(launchOp, adaptor, rewriter);
@@ -800,7 +797,7 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
                                       : zero;
   launchKernelCallBuilder.create(
       loc, rewriter,
-      {function.getResult(0), adaptor.gridSizeX(), adaptor.gridSizeY(),
+      {function.getResult(), adaptor.gridSizeX(), adaptor.gridSizeY(),
        adaptor.gridSizeZ(), adaptor.blockSizeX(), adaptor.blockSizeY(),
        adaptor.blockSizeZ(), dynamicSharedMemorySize, stream, kernelParams,
        /*extra=*/nullpointer});
@@ -816,7 +813,7 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
     streamDestroyCallBuilder.create(loc, rewriter, stream);
     rewriter.eraseOp(launchOp);
   }
-  moduleUnloadCallBuilder.create(loc, rewriter, module.getResult(0));
+  moduleUnloadCallBuilder.create(loc, rewriter, module.getResult());
 
   return success();
 }

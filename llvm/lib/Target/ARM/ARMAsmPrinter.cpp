@@ -82,8 +82,7 @@ void ARMAsmPrinter::emitFunctionEntryLabel() {
     OutStreamer->emitSymbolAttribute(S, MCSA_ELF_TypeFunction);
     OutStreamer->emitLabel(S);
   }
-
-  OutStreamer->emitLabel(CurrentFnSym);
+  AsmPrinter::emitFunctionEntryLabel();
 }
 
 void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
@@ -125,7 +124,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Collect all globals that had their storage promoted to a constant pool.
   // Functions are emitted before variables, so this accumulates promoted
   // globals from all functions in PromotedGlobals.
-  for (auto *GV : AFI->getGlobalsPromotedToConstantPool())
+  for (const auto *GV : AFI->getGlobalsPromotedToConstantPool())
     PromotedGlobals.insert(GV);
 
   // Calculate this function's optimization goal.
@@ -892,7 +891,7 @@ MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
 
     return MCSym;
   } else if (Subtarget->isTargetELF()) {
-    return getSymbol(GV);
+    return getSymbolPreferLocal(*GV);
   }
   llvm_unreachable("unexpected target");
 }

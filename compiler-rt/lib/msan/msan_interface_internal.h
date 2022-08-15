@@ -109,6 +109,11 @@ void __msan_set_alloca_origin(void *a, uptr size, char *descr);
 SANITIZER_INTERFACE_ATTRIBUTE
 void __msan_set_alloca_origin4(void *a, uptr size, char *descr, uptr pc);
 SANITIZER_INTERFACE_ATTRIBUTE
+void __msan_set_alloca_origin_with_descr(void *a, uptr size, u32 *id_ptr,
+                                         char *descr);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __msan_set_alloca_origin_no_descr(void *a, uptr size, u32 *id_ptr);
+SANITIZER_INTERFACE_ATTRIBUTE
 u32 __msan_chain_origin(u32 id);
 SANITIZER_INTERFACE_ATTRIBUTE
 u32 __msan_get_origin(const void *a);

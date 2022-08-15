@@ -575,9 +575,7 @@ define void @masked_gather_v2f16(<2 x half>* %a, <2 x half*>* %b) vscale_range(2
 ; CHECK-NEXT:    movi d0, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    fcmeq v1.4h, v1.4h, #0.0
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    shl v1.2s, v1.2s, #16
-; CHECK-NEXT:    sshr v1.2s, v1.2s, #16
+; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-NEXT:    fmov w8, s1
 ; CHECK-NEXT:    mov w9, v1.s[1]
 ; CHECK-NEXT:    ldr q1, [x1]

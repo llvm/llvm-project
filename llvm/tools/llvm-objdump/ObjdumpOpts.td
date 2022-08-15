@@ -299,11 +299,15 @@ def info_plist : Flag<["--"], "info-plist">,
            "Mach-O objects (requires --macho)">,
   Group<grp_mach_o>;
 
+def chained_fixups : Flag<["--"], "chained-fixups">,
+  HelpText<"Print chained fixup information (requires --macho)">,
+  Group<grp_mach_o>;
+
 def dyld_info : Flag<["--"], "dyld_info">,
-      HelpText<"Print bind and rebase information used by dyld to resolve "
-               "external references in a final linked binary "
-               "(requires --macho)">,
-      Group<grp_mach_o>;
+  HelpText<"Print bind and rebase information used by dyld to resolve "
+           "external references in a final linked binary "
+           "(requires --macho)">,
+  Group<grp_mach_o>;
 
 def dylibs_used : Flag<["--"], "dylibs-used">,
   HelpText<"Print the shared libraries used for linked "

@@ -85,6 +85,32 @@ Error EHFrameEdgeFixer::operator()(LinkGraph &G) {
   return Error::success();
 }
 
+static Expected<size_t> readCFIRecordLength(const Block &B,
+                                            BinaryStreamReader &R) {
+  uint32_t Length;
+  if (auto Err = R.readInteger(Length))
+    return std::move(Err);
+
+  // If Length < 0xffffffff then use the regular length field, otherwise
+  // read the extended length field.
+  if (Length != 0xffffffff)
+    return Length;
+
+  uint64_t ExtendedLength;
+  if (auto Err = R.readInteger(ExtendedLength))
+    return std::move(Err);
+
+  if (ExtendedLength > std::numeric_limits<size_t>::max())
+    return make_error<JITLinkError>(
+        "In CFI record at " +
+        formatv("{0:x}", B.getAddress() + R.getOffset() - 12) +
+        ", extended length of " + formatv("{0:x}", ExtendedLength) +
+        " exceeds address-range max (" +
+        formatv("{0:x}", std::numeric_limits<size_t>::max()));
+
+  return ExtendedLength;
+}
+
 Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
 
   LLVM_DEBUG(dbgs() << "  Processing block at " << B.getAddress() << "\n");
@@ -125,24 +151,11 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
     });
 
     // Get the record length.
-    size_t RecordRemaining;
-    {
-      uint32_t Length;
-      if (auto Err = BlockReader.readInteger(Length))
-        return Err;
-      // If Length < 0xffffffff then use the regular length field, otherwise
-      // read the extended length field.
-      if (Length != 0xffffffff)
-        RecordRemaining = Length;
-      else {
-        uint64_t ExtendedLength;
-        if (auto Err = BlockReader.readInteger(ExtendedLength))
-          return Err;
-        RecordRemaining = ExtendedLength;
-      }
-    }
+    Expected<size_t> RecordRemaining = readCFIRecordLength(B, BlockReader);
+    if (!RecordRemaining)
+      return RecordRemaining.takeError();
 
-    if (BlockReader.bytesRemaining() < RecordRemaining)
+    if (BlockReader.bytesRemaining() < *RecordRemaining)
       return make_error<JITLinkError>(
           "Incomplete CFI record at " +
           formatv("{0:x16}", B.getAddress() + RecordStartOffset));
@@ -155,19 +168,19 @@ Error EHFrameEdgeFixer::processBlock(ParseContext &PC, Block &B) {
 
     if (CIEDelta == 0) {
       if (auto Err = processCIE(PC, B, RecordStartOffset,
-                                CIEDeltaFieldOffset + RecordRemaining,
+                                CIEDeltaFieldOffset + *RecordRemaining,
                                 CIEDeltaFieldOffset, BlockEdges))
         return Err;
     } else {
       if (auto Err = processFDE(PC, B, RecordStartOffset,
-                                CIEDeltaFieldOffset + RecordRemaining,
+                                CIEDeltaFieldOffset + *RecordRemaining,
                                 CIEDeltaFieldOffset, CIEDelta, BlockEdges))
         return Err;
     }
 
     // Move to the next record.
     BlockReader.setOffset(RecordStartOffset + CIEDeltaFieldOffset +
-                          RecordRemaining);
+                          *RecordRemaining);
   }
 
   return Error::success();
@@ -358,14 +371,25 @@ Error EHFrameEdgeFixer::processFDE(ParseContext &PC, Block &B,
           PC, BlockEdges, CIEInfo->AddressEncoding, RecordReader, B,
           RecordReader.getOffset(), "PC begin")) {
     assert(*PCBegin && "PC-begin symbol not set");
-    // Add a keep-alive edge from the FDE target to the FDE to ensure that the
-    // FDE is kept alive if its target is.
-    LLVM_DEBUG({
-      dbgs() << "        Adding keep-alive edge from target at "
-             << (*PCBegin)->getBlock().getAddress() << " to FDE at "
-             << RecordAddress << "\n";
-    });
-    (*PCBegin)->getBlock().addEdge(Edge::KeepAlive, 0, FDESymbol, 0);
+    if ((*PCBegin)->isDefined()) {
+      // Add a keep-alive edge from the FDE target to the FDE to ensure that the
+      // FDE is kept alive if its target is.
+      LLVM_DEBUG({
+        dbgs() << "        Adding keep-alive edge from target at "
+               << (*PCBegin)->getBlock().getAddress() << " to FDE at "
+               << RecordAddress << "\n";
+      });
+      (*PCBegin)->getBlock().addEdge(Edge::KeepAlive, 0, FDESymbol, 0);
+    } else {
+      LLVM_DEBUG({
+        dbgs() << "        WARNING: Not adding keep-alive edge to FDE at "
+               << RecordAddress << ", which points to "
+               << ((*PCBegin)->isExternal() ? "external" : "absolute")
+               << " symbol \"" << (*PCBegin)->getName()
+               << "\" -- FDE must be kept alive manually or it will be "
+               << "dead stripped.\n";
+      });
+    }
   } else
     return PCBegin.takeError();
 
@@ -638,6 +662,31 @@ Error InProcessEHFrameRegistrar::deregisterEHFrames(
   return orc::deregisterEHFrameSection(EHFrameSection.Start.toPtr<void *>(),
                                        EHFrameSection.size());
 }
+
+EHFrameCFIBlockInspector EHFrameCFIBlockInspector::FromEdgeScan(Block &B) {
+  if (B.edges_empty())
+    return EHFrameCFIBlockInspector(nullptr);
+  if (B.edges_size() == 1)
+    return EHFrameCFIBlockInspector(&*B.edges().begin());
+  SmallVector<Edge *, 3> Es;
+  for (auto &E : B.edges())
+    Es.push_back(&E);
+  assert(Es.size() >= 2 && Es.size() <= 3 && "Unexpected number of edges");
+  llvm::sort(Es, [](const Edge *LHS, const Edge *RHS) {
+    return LHS->getOffset() < RHS->getOffset();
+  });
+  return EHFrameCFIBlockInspector(*Es[0], *Es[1],
+                                  Es.size() == 3 ? Es[2] : nullptr);
+  return EHFrameCFIBlockInspector(nullptr);
+}
+
+EHFrameCFIBlockInspector::EHFrameCFIBlockInspector(Edge *PersonalityEdge)
+    : PersonalityEdge(PersonalityEdge) {}
+
+EHFrameCFIBlockInspector::EHFrameCFIBlockInspector(Edge &CIEEdge,
+                                                   Edge &PCBeginEdge,
+                                                   Edge *LSDAEdge)
+    : CIEEdge(&CIEEdge), PCBeginEdge(&PCBeginEdge), LSDAEdge(LSDAEdge) {}
 
 LinkGraphPassFunction
 createEHFrameRecorderPass(const Triple &TT,

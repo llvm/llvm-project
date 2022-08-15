@@ -61,9 +61,6 @@ public:
   /// The lattice is always initialized.
   bool isUninitialized() const override { return false; }
 
-  /// Initialize the lattice. Does nothing.
-  ChangeResult defaultInitialize() override { return ChangeResult::NoChange; }
-
   /// Mark the lattice as having reached its pessimistic fixpoint. That is, the
   /// last modifications of all memory resources are unknown.
   ChangeResult reset() override {
@@ -72,9 +69,6 @@ public:
     lastMods.clear();
     return ChangeResult::Change;
   }
-
-  /// The lattice is never at a fixpoint.
-  bool isAtFixpoint() const override { return false; }
 
   /// Join the last modifications.
   ChangeResult join(const AbstractDenseLattice &lattice) override {

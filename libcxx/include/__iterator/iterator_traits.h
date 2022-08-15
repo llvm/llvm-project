@@ -11,9 +11,11 @@
 #define _LIBCPP___ITERATOR_ITERATOR_TRAITS_H
 
 #include <__config>
+#include <__fwd/pair.h>
 #include <__iterator/incrementable_traits.h>
 #include <__iterator/readable_traits.h>
 #include <concepts>
+#include <cstddef>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

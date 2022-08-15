@@ -306,7 +306,7 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   const uint8_t *Tables[] = {DecoderTable32, DecoderTableFallback32};
 
-  for (auto Table : Tables) {
+  for (const auto *Table : Tables) {
     DecodeStatus Result =
         decodeInstruction(Table, MI, Insn, Address, this, STI);
 

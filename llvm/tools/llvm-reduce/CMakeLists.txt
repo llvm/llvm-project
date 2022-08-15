@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   IRReader
   MC
   MIRParser
+  Passes
   Support
   Target
   TransformUtils
@@ -48,6 +49,7 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceRegisterMasks.cpp
   deltas/ReduceRegisterDefs.cpp
   deltas/ReduceRegisterUses.cpp
+  deltas/RunIRPasses.cpp
   deltas/SimplifyInstructions.cpp
   llvm-reduce.cpp
 

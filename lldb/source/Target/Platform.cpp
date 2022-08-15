@@ -1926,6 +1926,13 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     trap_opcode_size = sizeof(g_i386_opcode);
   } break;
 
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64: {
+    static const uint8_t g_riscv_opcode[] = {0x73, 0x00, 0x10, 0x00}; // ebreak
+    trap_opcode = g_riscv_opcode;
+    trap_opcode_size = sizeof(g_riscv_opcode);
+  } break;
+
   default:
     return 0;
   }
@@ -2053,10 +2060,9 @@ PlatformSP PlatformList::GetOrCreate(llvm::ArrayRef<ArchSpec> archs,
   // the same platform supports all architectures then that's the obvious next
   // best thing.
   if (candidates.size() == archs.size()) {
-    if (std::all_of(candidates.begin(), candidates.end(),
-                    [&](const PlatformSP &p) -> bool {
-                      return p->GetName() == candidates.front()->GetName();
-                    })) {
+    if (llvm::all_of(candidates, [&](const PlatformSP &p) -> bool {
+          return p->GetName() == candidates.front()->GetName();
+        })) {
       return candidates.front();
     }
   }

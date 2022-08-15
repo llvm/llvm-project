@@ -99,11 +99,27 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`cppcoreguidelines-avoid-const-or-ref-data-members
+  <clang-tidy/checks/cppcoreguidelines/avoid-const-or-ref-data-members>` check.
+
+  Warns when a struct or class uses const or reference (lvalue or rvalue) data members.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
+- New alias :doc:`cert-msc54-cpp
+  <clang-tidy/checks/cert/msc54-cpp>` to
+  :doc:`bugprone-signal-handler
+  <clang-tidy/checks/bugprone/signal-handler>` was added.
+
+
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-signal-handler
+  <clang-tidy/checks/bugprone/signal-handler>` check. Partial
+  support for C++14 signal handler rules was added. Bug report generation was
+  improved.
 
 Removed checks
 ^^^^^^^^^^^^^^

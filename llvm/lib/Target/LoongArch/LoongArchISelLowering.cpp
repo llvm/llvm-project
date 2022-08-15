@@ -52,6 +52,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRA_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::SRL_PARTS, GRLenVT, Custom);
   setOperationAction(ISD::FP_TO_SINT, GRLenVT, Custom);
+  setOperationAction(ISD::ROTL, GRLenVT, Expand);
+  setOperationAction(ISD::CTPOP, GRLenVT, Expand);
 
   setOperationAction({ISD::GlobalAddress, ISD::ConstantPool}, GRLenVT, Custom);
 
@@ -65,8 +67,30 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SRL, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
     setOperationAction(ISD::BITCAST, MVT::i32, Custom);
+    setOperationAction(ISD::ROTR, MVT::i32, Custom);
+    setOperationAction(ISD::ROTL, MVT::i32, Custom);
+    setOperationAction(ISD::CTTZ, MVT::i32, Custom);
+    setOperationAction(ISD::CTLZ, MVT::i32, Custom);
     if (Subtarget.hasBasicF() && !Subtarget.hasBasicD())
       setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
+  }
+
+  // LA32 does not have REVB.2W and REVB.D due to the 64-bit operands, and
+  // the narrower REVB.W does not exist. But LA32 does have REVB.2H, so i16
+  // and i32 could still be byte-swapped relatively cheaply.
+  setOperationAction(ISD::BSWAP, MVT::i16, Custom);
+  if (Subtarget.is64Bit()) {
+    setOperationAction(ISD::BSWAP, MVT::i32, Custom);
+  }
+
+  // Expand bitreverse.i16 with native-width bitrev and shift for now, before
+  // we get to know which of sll and revb.2h is faster.
+  setOperationAction(ISD::BITREVERSE, MVT::i8, Custom);
+  if (Subtarget.is64Bit()) {
+    setOperationAction(ISD::BITREVERSE, MVT::i32, Custom);
+    setOperationAction(ISD::BITREVERSE, MVT::i64, Legal);
+  } else {
+    setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   }
 
   static const ISD::CondCode FPCCToExpand[] = {ISD::SETOGT, ISD::SETOGE,
@@ -111,11 +135,18 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::SRL);
 }
 
+bool LoongArchTargetLowering::isOffsetFoldingLegal(
+    const GlobalAddressSDNode *GA) const {
+  // In order to maximise the opportunity for common subexpression elimination,
+  // keep a separate ADD node for the global address offset instead of folding
+  // it in the global address node. Later peephole optimisations may choose to
+  // fold it back in when profitable.
+  return false;
+}
+
 SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
                                                 SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
-  default:
-    report_fatal_error("unimplemented operand");
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
   case ISD::SHL_PARTS:
@@ -124,26 +155,18 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerShiftRightParts(Op, DAG, true);
   case ISD::SRL_PARTS:
     return lowerShiftRightParts(Op, DAG, false);
-  case ISD::SHL:
-  case ISD::SRA:
-  case ISD::SRL:
-    // This can be called for an i32 shift amount that needs to be promoted.
-    assert(Op.getOperand(1).getValueType() == MVT::i32 && Subtarget.is64Bit() &&
-           "Unexpected custom legalisation");
-    return SDValue();
   case ISD::ConstantPool:
     return lowerConstantPool(Op, DAG);
   case ISD::FP_TO_SINT:
     return lowerFP_TO_SINT(Op, DAG);
   case ISD::BITCAST:
     return lowerBITCAST(Op, DAG);
-  case ISD::FP_TO_UINT:
-    return SDValue();
   case ISD::UINT_TO_FP:
     return lowerUINT_TO_FP(Op, DAG);
   case ISD::VASTART:
     return lowerVASTART(Op, DAG);
   }
+  return SDValue();
 }
 
 SDValue LoongArchTargetLowering::lowerVASTART(SDValue Op,
@@ -353,6 +376,14 @@ static LoongArchISD::NodeType getLoongArchWOpcode(unsigned Opcode) {
     return LoongArchISD::SRA_W;
   case ISD::SRL:
     return LoongArchISD::SRL_W;
+  case ISD::ROTR:
+    return LoongArchISD::ROTR_W;
+  case ISD::ROTL:
+    return LoongArchISD::ROTL_W;
+  case ISD::CTTZ:
+    return LoongArchISD::CTZ_W;
+  case ISD::CTLZ:
+    return LoongArchISD::CLZ_W;
   }
 }
 
@@ -361,14 +392,31 @@ static LoongArchISD::NodeType getLoongArchWOpcode(unsigned Opcode) {
 // otherwise be promoted to i64, making it difficult to select the
 // SLL_W/.../*W later one because the fact the operation was originally of
 // type i8/i16/i32 is lost.
-static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG,
+static SDValue customLegalizeToWOp(SDNode *N, SelectionDAG &DAG, int NumOp,
                                    unsigned ExtOpc = ISD::ANY_EXTEND) {
   SDLoc DL(N);
   LoongArchISD::NodeType WOpcode = getLoongArchWOpcode(N->getOpcode());
-  SDValue NewOp0 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(0));
-  SDValue NewOp1 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(1));
-  SDValue NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp0, NewOp1);
-  // ReplaceNodeResults requires we maintain the same type for the return value.
+  SDValue NewOp0, NewRes;
+
+  switch (NumOp) {
+  default:
+    llvm_unreachable("Unexpected NumOp");
+  case 1: {
+    NewOp0 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(0));
+    NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp0);
+    break;
+  }
+  case 2: {
+    NewOp0 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(0));
+    SDValue NewOp1 = DAG.getNode(ExtOpc, DL, MVT::i64, N->getOperand(1));
+    NewRes = DAG.getNode(WOpcode, DL, MVT::i64, NewOp0, NewOp1);
+    break;
+  }
+    // TODO:Handle more NumOp.
+  }
+
+  // ReplaceNodeResults requires we maintain the same type for the return
+  // value.
   return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewRes);
 }
 
@@ -381,10 +429,18 @@ void LoongArchTargetLowering::ReplaceNodeResults(
   case ISD::SHL:
   case ISD::SRA:
   case ISD::SRL:
+  case ISD::ROTR:
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     if (N->getOperand(1).getOpcode() != ISD::Constant) {
-      Results.push_back(customLegalizeToWOp(N, DAG));
+      Results.push_back(customLegalizeToWOp(N, DAG, 2));
+      break;
+    }
+    break;
+  case ISD::ROTL:
+    ConstantSDNode *CN;
+    if ((CN = dyn_cast<ConstantSDNode>(N->getOperand(1)))) {
+      Results.push_back(customLegalizeToWOp(N, DAG, 2));
       break;
     }
     break;
@@ -416,6 +472,57 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     SDValue Tmp1, Tmp2;
     TLI.expandFP_TO_UINT(N, Tmp1, Tmp2, DAG);
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Tmp1));
+    break;
+  }
+  case ISD::BSWAP: {
+    SDValue Src = N->getOperand(0);
+    EVT VT = N->getValueType(0);
+    assert((VT == MVT::i16 || VT == MVT::i32) &&
+           "Unexpected custom legalization");
+    MVT GRLenVT = Subtarget.getGRLenVT();
+    SDValue NewSrc = DAG.getNode(ISD::ANY_EXTEND, DL, GRLenVT, Src);
+    SDValue Tmp;
+    switch (VT.getSizeInBits()) {
+    default:
+      llvm_unreachable("Unexpected operand width");
+    case 16:
+      Tmp = DAG.getNode(LoongArchISD::REVB_2H, DL, GRLenVT, NewSrc);
+      break;
+    case 32:
+      // Only LA64 will get to here due to the size mismatch between VT and
+      // GRLenVT, LA32 lowering is directly defined in LoongArchInstrInfo.
+      Tmp = DAG.getNode(LoongArchISD::REVB_2W, DL, GRLenVT, NewSrc);
+      break;
+    }
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Tmp));
+    break;
+  }
+  case ISD::BITREVERSE: {
+    SDValue Src = N->getOperand(0);
+    EVT VT = N->getValueType(0);
+    assert((VT == MVT::i8 || (VT == MVT::i32 && Subtarget.is64Bit())) &&
+           "Unexpected custom legalization");
+    MVT GRLenVT = Subtarget.getGRLenVT();
+    SDValue NewSrc = DAG.getNode(ISD::ANY_EXTEND, DL, GRLenVT, Src);
+    SDValue Tmp;
+    switch (VT.getSizeInBits()) {
+    default:
+      llvm_unreachable("Unexpected operand width");
+    case 8:
+      Tmp = DAG.getNode(LoongArchISD::BITREV_4B, DL, GRLenVT, NewSrc);
+      break;
+    case 32:
+      Tmp = DAG.getNode(LoongArchISD::BITREV_W, DL, GRLenVT, NewSrc);
+      break;
+    }
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, Tmp));
+    break;
+  }
+  case ISD::CTLZ:
+  case ISD::CTTZ: {
+    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
+           "Unexpected custom legalisation");
+    Results.push_back(customLegalizeToWOp(N, DAG, 1));
     break;
   }
   }
@@ -743,6 +850,21 @@ Retry2:
   return SDValue();
 }
 
+// Combine (loongarch_bitrev_w (loongarch_revb_2w X)) to loongarch_bitrev_4b.
+static SDValue performBITREV_WCombine(SDNode *N, SelectionDAG &DAG,
+                                      TargetLowering::DAGCombinerInfo &DCI,
+                                      const LoongArchSubtarget &Subtarget) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  SDValue Src = N->getOperand(0);
+  if (Src.getOpcode() != LoongArchISD::REVB_2W)
+    return SDValue();
+
+  return DAG.getNode(LoongArchISD::BITREV_4B, SDLoc(N), N->getValueType(0),
+                     Src.getOperand(0));
+}
+
 SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
                                                    DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -755,6 +877,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performORCombine(N, DAG, DCI, Subtarget);
   case ISD::SRL:
     return performSRLCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::BITREV_W:
+    return performBITREV_WCombine(N, DAG, DCI, Subtarget);
   }
   return SDValue();
 }
@@ -847,6 +971,14 @@ const char *LoongArchTargetLowering::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(MOVGR2FR_W_LA64)
     NODE_NAME_CASE(MOVFR2GR_S_LA64)
     NODE_NAME_CASE(FTINT)
+    NODE_NAME_CASE(REVB_2H)
+    NODE_NAME_CASE(REVB_2W)
+    NODE_NAME_CASE(BITREV_4B)
+    NODE_NAME_CASE(BITREV_W)
+    NODE_NAME_CASE(ROTR_W)
+    NODE_NAME_CASE(ROTL_W)
+    NODE_NAME_CASE(CLZ_W)
+    NODE_NAME_CASE(CTZ_W)
   }
 #undef NODE_NAME_CASE
   return nullptr;
@@ -1583,3 +1715,7 @@ bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     return false;
   return (Imm.isZero() || Imm.isExactlyValue(+1.0));
 }
+
+bool LoongArchTargetLowering::isCheapToSpeculateCttz() const { return true; }
+
+bool LoongArchTargetLowering::isCheapToSpeculateCtlz() const { return true; }

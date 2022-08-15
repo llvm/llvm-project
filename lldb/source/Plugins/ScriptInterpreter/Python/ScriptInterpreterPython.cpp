@@ -429,7 +429,7 @@ ScriptInterpreterPythonImpl::ScriptInterpreterPythonImpl(Debugger &debugger)
   // Reloading modules requires a different syntax in Python 2 and Python 3.
   // This provides a consistent syntax no matter what version of Python.
   run_string.Clear();
-  run_string.Printf("run_one_line (%s, 'from six.moves import reload_module')",
+  run_string.Printf("run_one_line (%s, 'from importlib import reload as reload_module')",
                     m_dictionary_name.c_str());
   PyRun_SimpleString(run_string.GetData());
 
@@ -2888,9 +2888,10 @@ bool ScriptInterpreterPythonImpl::RunScriptBasedCommand(
 
   if (!ret_val)
     error.SetErrorString("unable to execute script function");
-  else
-    error.Clear();
+  else if (cmd_retobj.GetStatus() == eReturnStatusFailed)
+    return false;
 
+  error.Clear();
   return ret_val;
 }
 
@@ -2932,9 +2933,10 @@ bool ScriptInterpreterPythonImpl::RunScriptBasedCommand(
 
   if (!ret_val)
     error.SetErrorString("unable to execute script function");
-  else
-    error.Clear();
+  else if (cmd_retobj.GetStatus() == eReturnStatusFailed)
+    return false;
 
+  error.Clear();
   return ret_val;
 }
 

@@ -302,6 +302,10 @@ bool ISD::allOperandsUndef(const SDNode *N) {
   return all_of(N->op_values(), [](SDValue Op) { return Op.isUndef(); });
 }
 
+bool ISD::isFreezeUndef(const SDNode *N) {
+  return N->getOpcode() == ISD::FREEZE && N->getOperand(0).isUndef();
+}
+
 bool ISD::matchUnaryPredicate(SDValue Op,
                               std::function<bool(ConstantSDNode *)> Match,
                               bool AllowUndefs) {
@@ -4506,6 +4510,9 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
     return true;
 
   switch (Opcode) {
+  case ISD::VALUETYPE:
+    return true;
+
   case ISD::UNDEF:
     return PoisonOnly;
 
@@ -4562,13 +4569,38 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
 
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
+  case ISD::AssertSext:
+  case ISD::AssertZext:
   case ISD::FREEZE:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
   case ISD::BSWAP:
+  case ISD::CTPOP:
   case ISD::BITREVERSE:
+  case ISD::PARITY:
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
+  case ISD::TRUNCATE:
+  case ISD::SIGN_EXTEND_INREG:
   case ISD::BITCAST:
     return false;
+
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::MUL:
+    // Matches hasPoisonGeneratingFlags().
+    return ConsiderFlags && (Op->getFlags().hasNoSignedWrap() ||
+                             Op->getFlags().hasNoUnsignedWrap());
+
+  case ISD::SHL:
+    // If the max shift amount isn't in range, then the shift can create poison.
+    if (!getValidMaximumShiftAmountConstant(Op, DemandedElts))
+      return true;
+
+    // Matches hasPoisonGeneratingFlags().
+    return ConsiderFlags && (Op->getFlags().hasNoSignedWrap() ||
+                             Op->getFlags().hasNoUnsignedWrap());
 
   default:
     // Allow the target to implement this method for its nodes.

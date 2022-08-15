@@ -7,9 +7,178 @@
 //===----------------------------------------------------------------------===//
 
 #include "thread.h"
+#include "mutex.h"
+
+#include "src/__support/CPP/array.h"
+#include "src/__support/CPP/optional.h"
+#include "src/__support/fixedvector.h"
 
 namespace __llvm_libc {
 
 thread_local Thread self;
+
+namespace {
+
+using AtExitCallback = void(void *);
+
+struct AtExitUnit {
+  AtExitCallback *callback = nullptr;
+  void *obj = nullptr;
+  constexpr AtExitUnit() = default;
+  constexpr AtExitUnit(AtExitCallback *cb, void *o) : callback(cb), obj(o) {}
+};
+
+constexpr size_t TSS_KEY_COUNT = 1024;
+
+struct TSSKeyUnit {
+  // Indicates whether is unit is active. Presence of a non-null dtor
+  // is not sufficient to indicate the same information as a TSS key can
+  // have a null destructor.
+  bool active = false;
+
+  TSSDtor *dtor = nullptr;
+
+  constexpr TSSKeyUnit() = default;
+  constexpr TSSKeyUnit(TSSDtor *d) : active(true), dtor(d) {}
+
+  void reset() {
+    active = false;
+    dtor = nullptr;
+  }
+};
+
+class TSSKeyMgr {
+  Mutex mtx;
+  cpp::array<TSSKeyUnit, TSS_KEY_COUNT> units;
+
+public:
+  constexpr TSSKeyMgr() : mtx(false, false, false) {}
+
+  cpp::optional<unsigned int> new_key(TSSDtor *dtor) {
+    MutexLock lock(&mtx);
+    for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
+      TSSKeyUnit &u = units[i];
+      if (!u.active) {
+        u = {dtor};
+        return i;
+      }
+    }
+    return cpp::optional<unsigned int>();
+  }
+
+  TSSDtor *get_dtor(unsigned int key) {
+    if (key >= TSS_KEY_COUNT)
+      return nullptr;
+    MutexLock lock(&mtx);
+    return units[key].dtor;
+  }
+
+  bool remove_key(unsigned int key) {
+    if (key >= TSS_KEY_COUNT)
+      return false;
+    MutexLock lock(&mtx);
+    units[key].reset();
+    return true;
+  }
+
+  bool is_valid_key(unsigned int key) {
+    MutexLock lock(&mtx);
+    return units[key].active;
+  }
+};
+
+TSSKeyMgr tss_key_mgr;
+
+struct TSSValueUnit {
+  bool active = false;
+  void *payload = nullptr;
+  TSSDtor *dtor = nullptr;
+
+  constexpr TSSValueUnit() = default;
+  constexpr TSSValueUnit(void *p, TSSDtor *d)
+      : active(true), payload(p), dtor(d) {}
+};
+
+static thread_local cpp::array<TSSValueUnit, TSS_KEY_COUNT> tss_values;
+
+} // anonymous namespace
+
+class ThreadAtExitCallbackMgr {
+  Mutex mtx;
+  // TODO: Use a BlockStore when compiled for production.
+  FixedVector<AtExitUnit, 1024> callback_list;
+
+public:
+  constexpr ThreadAtExitCallbackMgr() : mtx(false, false, false) {}
+
+  int add_callback(AtExitCallback *callback, void *obj) {
+    MutexLock lock(&mtx);
+    return callback_list.push_back({callback, obj});
+  }
+
+  void call() {
+    mtx.lock();
+    while (!callback_list.empty()) {
+      auto atexit_unit = callback_list.back();
+      callback_list.pop_back();
+      mtx.unlock();
+      atexit_unit.callback(atexit_unit.obj);
+      mtx.lock();
+    }
+  }
+};
+
+static thread_local ThreadAtExitCallbackMgr atexit_callback_mgr;
+
+// The function __cxa_thread_atexit is provided by C++ runtimes like libcxxabi.
+// It is used by thread local object runtime to register destructor calls. To
+// actually register destructor call with the threading library, it calls
+// __cxa_thread_atexit_impl, which is to be provided by the threading library.
+// The semantics are very similar to the __cxa_atexit function except for the
+// fact that the registered callback is thread specific.
+extern "C" int __cxa_thread_atexit_impl(AtExitCallback *callback, void *obj,
+                                        void *) {
+  return atexit_callback_mgr.add_callback(callback, obj);
+}
+
+namespace internal {
+
+ThreadAtExitCallbackMgr *get_thread_atexit_callback_mgr() {
+  return &atexit_callback_mgr;
+}
+
+void call_atexit_callbacks(ThreadAttributes *attrib) {
+  attrib->atexit_callback_mgr->call();
+  for (size_t i = 0; i < TSS_KEY_COUNT; ++i) {
+    TSSValueUnit &unit = tss_values[i];
+    if (unit.dtor != nullptr)
+      unit.dtor(unit.payload);
+  }
+}
+
+} // namespace internal
+
+cpp::optional<unsigned int> new_tss_key(TSSDtor *dtor) {
+  return tss_key_mgr.new_key(dtor);
+}
+
+bool tss_key_delete(unsigned int key) { return tss_key_mgr.remove_key(key); }
+
+bool set_tss_value(unsigned int key, void *val) {
+  if (!tss_key_mgr.is_valid_key(key))
+    return false;
+  tss_values[key] = {val, tss_key_mgr.get_dtor(key)};
+  return true;
+}
+
+void *get_tss_value(unsigned int key) {
+  if (key >= TSS_KEY_COUNT)
+    return nullptr;
+
+  auto &u = tss_values[key];
+  if (!u.active)
+    return nullptr;
+  return u.payload;
+}
 
 } // namespace __llvm_libc

@@ -18,7 +18,6 @@ import json
 import logging
 import os
 import re
-import sys
 
 
 #===-----------------------------------------------------------------------===#
@@ -423,10 +422,7 @@ class DotDumpVisitor:
 
     def output(self):
         assert not self._dump_dot_only
-        if sys.version_info[0] > 2 and sys.version_info[1] >= 5:
-            return ''.join(self._output).encode()
-        else:
-            return ''.join(self._output)
+        return ''.join(self._output)
 
     def _dump(self, s):
         s = s.replace('&', '&amp;') \
@@ -854,8 +850,8 @@ class DotDumpVisitor:
             import sys
             import tempfile
 
-            def write_temp_file(suffix, data):
-                fd, filename = tempfile.mkstemp(suffix=suffix)
+            def write_temp_file(suffix, prefix, data):
+                fd, filename = tempfile.mkstemp(suffix, prefix, '.', True)
                 print('Writing "%s"...' % filename)
                 with os.fdopen(fd, 'w') as fp:
                     fp.write(data)
@@ -873,13 +869,13 @@ class DotDumpVisitor:
                 print('You may also convert DOT to SVG manually via')
                 print('  $ dot -Tsvg input.dot -o output.svg')
                 print()
-                write_temp_file('.dot', self.output())
+                write_temp_file('.dot', 'egraph-', self.output())
                 return
 
-            svg = graphviz.pipe('dot', 'svg', self.output())
+            svg = graphviz.pipe('dot', 'svg', self.output().encode()).decode()
 
             filename = write_temp_file(
-                '.html', '<html><body bgcolor="%s">%s</body></html>' % (
+                '.html', 'egraph-', '<html><body bgcolor="%s">%s</body></html>' % (
                              '#1a1a1a' if self._dark_mode else 'white', svg))
             if sys.platform == 'win32':
                 os.startfile(filename)

@@ -992,7 +992,7 @@ struct UseBBInfo : public BBInfo {
 // Sum up the count values for all the edges.
 static uint64_t sumEdgeCount(const ArrayRef<PGOUseEdge *> Edges) {
   uint64_t Total = 0;
-  for (auto &E : Edges) {
+  for (const auto &E : Edges) {
     if (E->Removed)
       continue;
     Total += E->CountValue;
@@ -1204,7 +1204,7 @@ static void annotateFunctionWithHashMismatch(Function &F,
   auto *Existing = F.getMetadata(LLVMContext::MD_annotation);
   if (Existing) {
     MDTuple *Tuple = cast<MDTuple>(Existing);
-    for (auto &N : Tuple->operands()) {
+    for (const auto &N : Tuple->operands()) {
       if (cast<MDString>(N.get())->getString() ==  MetadataName)
         return;
       Names.push_back(N.get());

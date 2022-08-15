@@ -3112,7 +3112,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   }
   case ISD::EXTRACT_ELEMENT: {
     EVT OpTy = Node->getOperand(0).getValueType();
-    if (cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue()) {
+    if (Node->getConstantOperandVal(1)) {
       // 1 -> Hi
       Tmp1 = DAG.getNode(ISD::SRL, dl, OpTy, Node->getOperand(0),
                          DAG.getConstant(OpTy.getSizeInBits() / 2, dl,

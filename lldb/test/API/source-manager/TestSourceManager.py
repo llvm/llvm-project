@@ -9,8 +9,6 @@ o test_modify_source_file_while_debugging:
   Test the caching mechanism of the source manager.
 """
 
-from __future__ import print_function
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

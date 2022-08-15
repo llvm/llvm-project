@@ -430,7 +430,7 @@ MCSection *HexagonTargetObjectFile::selectSmallSectionForGlobal(
 const Function *
 HexagonTargetObjectFile::getLutUsedFunction(const GlobalObject *GO) const {
   const Function *ReturnFn = nullptr;
-  for (auto U : GO->users()) {
+  for (const auto *U : GO->users()) {
     // validate each instance of user to be a live function.
     auto *I = dyn_cast<Instruction>(U);
     if (!I)

@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringRef.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -34,6 +36,8 @@
 #include "MemoryManager.h"
 
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+
+using namespace llvm;
 
 // Utility for retrieving and printing CUDA error string.
 #ifdef OMPTARGET_DEBUG
@@ -1092,7 +1096,7 @@ public:
 
         PeerAccessMatrix[SrcDevId][DstDevId] = PeerAccessState::Yes;
 
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       }
       case PeerAccessState::Yes: {
         Err = cuMemcpyPeerAsync(
@@ -1541,6 +1545,47 @@ int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
 }
 
 int32_t __tgt_rtl_number_of_devices() { return DeviceRTL.getNumOfDevices(); }
+
+int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *image,
+                                       __tgt_image_info *info) {
+#if 0
+  if (!__tgt_rtl_is_valid_binary(image))
+    return false;
+
+  // A subarchitecture was not specified. Assume it is compatible.
+  if (!info || !info->Arch)
+    return true;
+
+  int32_t NumberOfDevices = 0;
+  if (cuDeviceGetCount(&NumberOfDevices) != CUDA_SUCCESS)
+    return false;
+
+  StringRef ArchStr = StringRef(info->Arch).drop_front(sizeof("sm_") - 1);
+  for (int32_t DeviceId = 0; DeviceId < NumberOfDevices; ++DeviceId) {
+    CUdevice Device;
+    if (cuDeviceGet(&Device, DeviceId) != CUDA_SUCCESS)
+      return false;
+
+    int32_t Major, Minor;
+    if (cuDeviceGetAttribute(&Major,
+                             CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR,
+                             Device) != CUDA_SUCCESS)
+      return false;
+    if (cuDeviceGetAttribute(&Minor,
+                             CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR,
+                             Device) != CUDA_SUCCESS)
+      return false;
+
+    // A cubin generated for a certain compute capability is supported to run on
+    // any GPU with the same major revision and same or higher minor revision.
+    int32_t ImageMajor = ArchStr[0] - '0';
+    int32_t ImageMinor = ArchStr[1] - '0';
+    if (Major != ImageMajor || Minor < ImageMinor)
+      return false;
+  }
+#endif
+  return false;
+}
 
 int32_t __tgt_rtl_number_of_team_procs(int devid) {
   return DeviceRTL.getNumOfTeamProcs(devid);

@@ -9,10 +9,9 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_THREAD_DECODER_H
 #define LLDB_SOURCE_PLUGINS_TRACE_THREAD_DECODER_H
 
-#include "intel-pt.h"
-
 #include "DecodedThread.h"
 #include "forward-declarations.h"
+#include "intel-pt.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
 

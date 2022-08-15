@@ -34,7 +34,7 @@ module {
 
   transform.with_pdl_patterns {
   ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 {
+    transform.sequence %arg0 failures(propagate) {
     ^bb1(%arg1: !pdl.operation):
       %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
       %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 20] (mapped to dims [1, 0])
@@ -64,12 +64,12 @@ func.func @matmul_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: t
   //  CHECK-NOT:   affine.min
   //  CHECK-NOT:   affine.max
   //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map2]](%[[IV0]])
+  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map3]](%[[IV1]])
+  //      CHECK:   %[[LB0_1:.+]] = affine.apply #[[$map2]](%[[IV0]])
+  //      CHECK:   %[[LB1_1:.+]] = affine.apply #[[$map3]](%[[IV1]])
   //      CHECK:   %[[tA:.+]] = tensor.extract_slice %[[A]][%[[LB0]], 0] [10, 200] [1, 1] :
-  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map3]](%[[IV1]])
   //      CHECK:   %[[tB:.+]] = tensor.extract_slice %[[B]][0, %[[LB1]]] [200, %[[TS]]] [1, 1] :
-  //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map2]](%[[IV0]])
-  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map3]](%[[IV1]])
-  //      CHECK:   %[[tC:.+]] = tensor.extract_slice %[[C]][%[[LB0]], %[[LB1]]] [10, %[[TS]]] [1, 1] :
+  //      CHECK:   %[[tC:.+]] = tensor.extract_slice %[[C]][%[[LB0_1]], %[[LB1_1]]] [10, %[[TS]]] [1, 1] :
   //      CHECK:   linalg.matmul
   //      CHECK:   scf.foreach_thread.perform_concurrently
   // CHECK-NEXT:    tensor.parallel_insert_slice
@@ -80,7 +80,7 @@ func.func @matmul_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: t
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 21]
@@ -128,7 +128,7 @@ func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):    
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [10, 20]
@@ -155,12 +155,12 @@ func.func @matmul_tile_size_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf
   //  CHECK-NOT:   affine.max
   //  CHECK-NOT:   affine.min
   //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map2]](%[[IV0]])
+  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map3]](%[[IV1]])
+  //      CHECK:   %[[LB0_1:.+]] = affine.apply #[[$map2]](%[[IV0]])
+  //      CHECK:   %[[LB1_1:.+]] = affine.apply #[[$map3]](%[[IV1]])
   //      CHECK:   %[[tA:.+]] = tensor.extract_slice %[[A]][%[[LB0]], 0] [10, 200] [1, 1] :
-  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map3]](%[[IV1]])
   //      CHECK:   %[[tB:.+]] = tensor.extract_slice %[[B]][0, %[[LB1]]] [200, %[[TS]]] [1, 1] :
-  //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map2]](%[[IV0]])
-  //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map3]](%[[IV1]])
-  //      CHECK:   %[[tC:.+]] = tensor.extract_slice %[[C]][%[[LB0]], %[[LB1]]] [10, %[[TS]]] [1, 1] :
+  //      CHECK:   %[[tC:.+]] = tensor.extract_slice %[[C]][%[[LB0_1]], %[[LB1_1]]] [10, %[[TS]]] [1, 1] :
   //      CHECK:   linalg.matmul
   //      CHECK:   scf.foreach_thread.perform_concurrently
   // CHECK-NEXT:    tensor.parallel_insert_slice
@@ -171,7 +171,7 @@ func.func @matmul_tile_size_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [10, 21]

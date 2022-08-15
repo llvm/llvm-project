@@ -856,6 +856,8 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     if (DemandedSubElts == 0)
       return Vec;
     // If this simply widens the lowest subvector, see if we can do it earlier.
+    // TODO: REMOVE ME - SimplifyMultipleUseDemandedBits shouldn't be creating
+    // general nodes like this.
     if (Idx == 0 && Vec.isUndef()) {
       if (SDValue NewSub = SimplifyMultipleUseDemandedBits(
               Sub, DemandedBits, DemandedSubElts, DAG, Depth + 1))
@@ -1107,7 +1109,7 @@ bool TargetLowering::SimplifyDemandedBits(
 
   // Other users may use these bits.
   bool HasMultiUse = false;
-  if (!Op.getNode()->hasOneUse() && !AssumeSingleUse) {
+  if (!AssumeSingleUse && !Op.getNode()->hasOneUse()) {
     if (Depth >= SelectionDAG::MaxRecursionDepth) {
       // Limit search depth.
       return false;
@@ -2827,7 +2829,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
   }
 
   // If Op has other users, assume that all elements are needed.
-  if (!Op.getNode()->hasOneUse() && !AssumeSingleUse)
+  if (!AssumeSingleUse && !Op.getNode()->hasOneUse())
     DemandedElts.setAllBits();
 
   // Not demanding any elements from Op.
@@ -3389,9 +3391,15 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     if (SimplifyDemandedVectorElts(Op1, DemandedElts, SrcUndef, SrcZero, TLO,
                                    Depth + 1))
       return true;
-    if (SimplifyDemandedVectorElts(Op0, DemandedElts, KnownUndef, KnownZero,
+    // If we know that a demanded element was zero in Op1 we don't need to
+    // demand it in Op0 - its guaranteed to be zero.
+    APInt DemandedElts0 = DemandedElts & ~SrcZero;
+    if (SimplifyDemandedVectorElts(Op0, DemandedElts0, KnownUndef, KnownZero,
                                    TLO, Depth + 1))
       return true;
+
+    KnownUndef &= DemandedElts0;
+    KnownZero &= DemandedElts0;
 
     // If every element pair has a zero/undef then just fold to zero.
     // fold (and x, undef) -> 0  /  (and x, 0) -> 0

@@ -39,9 +39,7 @@ LogicalResult AllocLikeOpLLVMLowering::matchAndRewrite(
                                  strides, sizeBytes);
 
   // Allocate the underlying buffer.
-  Value allocatedPtr;
-  Value alignedPtr;
-  std::tie(allocatedPtr, alignedPtr) =
+  auto [allocatedPtr, alignedPtr] =
       this->allocateBuffer(rewriter, loc, sizeBytes, op);
 
   // Create the MemRef descriptor.

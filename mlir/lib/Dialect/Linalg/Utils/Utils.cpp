@@ -518,25 +518,11 @@ void GenerateLoopNest<scf::ForOp>::doit(
     function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
                                   ValueRange)>
         bodyBuilderFn,
-    Optional<LinalgLoopDistributionOptions> distributionOptions,
-    ArrayRef<StringRef> distributionTypes) {
+    ArrayRef<linalg::ProcInfo> procInfo) {
+  assert((procInfo.empty() || (procInfo.size() == loopRanges.size())) &&
+         "expected as many entries for proc info as number of loops, even if "
+         "they are null entries");
   SmallVector<Value> iterArgInitValues = linalgOp.getOutputTensorOperands();
-  // Create procInfo so it dominates loops, if appropriate.
-  SmallVector<ProcInfo, 4> procInfo;
-  SmallVector<DistributionMethod, 0> distributionMethod;
-  if (distributionOptions) {
-    // Collect loop ranges for parallel dimensions.
-    SmallVector<Range, 2> parallelLoopRanges;
-    for (const auto &iteratorType : enumerate(iteratorTypes))
-      if (isParallelIterator(iteratorType.value()))
-        parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
-
-    // Get their distribution schemes.
-    distributionMethod = distributionOptions->distributionMethod;
-    if (distributionMethod.size() < parallelLoopRanges.size())
-      parallelLoopRanges.resize(distributionMethod.size());
-    procInfo = distributionOptions->procInfo(b, loc, parallelLoopRanges);
-  }
 
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(b, loc, loopRanges, lbs, ubs, steps);
@@ -554,20 +540,17 @@ void GenerateLoopNest<scf::ForOp>::doit(
         return bodyBuilderFn(b, loc, ivs, operandValuesToUse);
       });
 
-  if (!distributionOptions || loopNest.loops.empty())
+  if (loopNest.loops.empty() || procInfo.empty())
     return;
 
   // Filter out scf.for loops that were created out of parallel dimensions.
-  SmallVector<scf::ForOp, 4> loops;
-  for (const auto &iteratorType : enumerate(iteratorTypes))
-    if (isParallelIterator(iteratorType.value()))
-      loops.push_back(loopNest.loops[iteratorType.index()]);
-
-  // Distribute - only supports cyclic distribution for now.
-  for (auto it : llvm::zip(loops, procInfo, distributionMethod))
-    if (std::get<2>(it) == DistributionMethod::Cyclic)
-      mapLoopToProcessorIds(std::get<0>(it), std::get<1>(it).procId,
-                            std::get<1>(it).nprocs);
+  for (auto loop : llvm::enumerate(loopNest.loops)) {
+    if (procInfo[loop.index()].distributionMethod ==
+        DistributionMethod::Cyclic) {
+      mapLoopToProcessorIds(loop.value(), procInfo[loop.index()].procId,
+                            procInfo[loop.index()].nprocs);
+    }
+  }
 }
 
 /// Specialization to build affine "for" nest.
@@ -578,7 +561,7 @@ void GenerateLoopNest<AffineForOp>::doit(
     function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
                                   ValueRange)>
         bodyBuilderFn,
-    Optional<LinalgLoopDistributionOptions>, ArrayRef<StringRef>) {
+    ArrayRef<linalg::ProcInfo> /*procInfo*/) {
   SmallVector<Value> iterArgInitValues = linalgOp.getOutputTensorOperands();
   assert(iterArgInitValues.empty() && "unexpected AffineForOp init values");
   SmallVector<Value, 4> lbs, ubs, steps;
@@ -625,12 +608,13 @@ void updateBoundsForCyclicDistribution(OpBuilder &b, Location loc, Value procId,
 static void generateParallelLoopNest(
     OpBuilder &b, Location loc, ValueRange lbs, ValueRange ubs,
     ValueRange steps, ArrayRef<Attribute> iteratorTypes,
+    ArrayRef<linalg::ProcInfo> procInfo,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn,
-    SmallVectorImpl<Value> &ivStorage,
-    ArrayRef<DistributionMethod> distributionMethod = {}) {
+    SmallVectorImpl<Value> &ivStorage) {
   assert(lbs.size() == ubs.size());
   assert(lbs.size() == steps.size());
   assert(lbs.size() == iteratorTypes.size());
+  assert(procInfo.empty() || (lbs.size() == procInfo.size()));
 
   // If there are no (more) loops to be generated, generate the body and be
   // done with it.
@@ -639,55 +623,56 @@ static void generateParallelLoopNest(
     return;
   }
 
-  // Find the outermost parallel loops and drop their types from the list.
-  unsigned nLoops = iteratorTypes.size();
-  unsigned nOuterPar =
-      nLoops - iteratorTypes.drop_while(isParallelIterator).size();
-
   // If there are no outer parallel loops, generate one sequential loop and
-  // recurse. Note that we wouldn't have dropped anything from `iteratorTypes`
-  // in this case.
-  if (nOuterPar == 0) {
+  // recurse.
+  if (!isParallelIterator(iteratorTypes.front())) {
     LoopNest singleLoop = buildLoopNest(
         b, loc, lbs.take_front(), ubs.take_front(), steps.take_front(),
         [&](OpBuilder &b, Location loc, ValueRange ivs) {
           ivStorage.append(ivs.begin(), ivs.end());
-          generateParallelLoopNest(b, loc, lbs.drop_front(), ubs.drop_front(),
-                                   steps.drop_front(),
-                                   iteratorTypes.drop_front(), bodyBuilderFn,
-                                   ivStorage, distributionMethod);
+          generateParallelLoopNest(
+              b, loc, lbs.drop_front(), ubs.drop_front(), steps.drop_front(),
+              iteratorTypes.drop_front(),
+              procInfo.empty() ? procInfo : procInfo.drop_front(),
+              bodyBuilderFn, ivStorage);
         });
     return;
   }
-  if (distributionMethod.empty()) {
+
+  unsigned nLoops = iteratorTypes.size();
+  unsigned numProcessed = 0;
+  DistributionMethod distributionMethod = DistributionMethod::None;
+  if (procInfo.empty()) {
+    numProcessed = nLoops - iteratorTypes.drop_while(isParallelIterator).size();
+  } else {
+    distributionMethod = procInfo.front().distributionMethod;
+    numProcessed =
+        nLoops - procInfo
+                     .drop_while([&](linalg::ProcInfo p) {
+                       return p.distributionMethod == distributionMethod;
+                     })
+                     .size();
+  }
+
+  auto remainderProcInfo =
+      procInfo.empty() ? procInfo : procInfo.drop_front(numProcessed);
+  switch (distributionMethod) {
+  case DistributionMethod::None: {
     // Generate a single parallel loop-nest operation for all outermost
     // parallel loops and recurse.
     b.create<scf::ParallelOp>(
-        loc, lbs.take_front(nOuterPar), ubs.take_front(nOuterPar),
-        steps.take_front(nOuterPar),
+        loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
+        steps.take_front(numProcessed),
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange localIvs) {
           ivStorage.append(localIvs.begin(), localIvs.end());
           generateParallelLoopNest(
-              nestedBuilder, nestedLoc, lbs.drop_front(nOuterPar),
-              ubs.drop_front(nOuterPar), steps.drop_front(nOuterPar),
-              iteratorTypes.drop_front(nOuterPar), bodyBuilderFn, ivStorage,
-              (distributionMethod.size() < nOuterPar)
-                  ? ArrayRef<DistributionMethod>()
-                  : distributionMethod.drop_front(nOuterPar));
+              nestedBuilder, nestedLoc, lbs.drop_front(numProcessed),
+              ubs.drop_front(numProcessed), steps.drop_front(numProcessed),
+              iteratorTypes.drop_front(numProcessed), remainderProcInfo,
+              bodyBuilderFn, ivStorage);
         });
     return;
   }
-
-  // Process all consecutive similarly distributed loops simultaneously.
-  DistributionMethod methodToUse = distributionMethod[0];
-  unsigned numProcessed = 1;
-  for (unsigned i = 1; i < nOuterPar && i < distributionMethod.size(); ++i) {
-    if (distributionMethod[i] != methodToUse)
-      break;
-    numProcessed++;
-  }
-
-  switch (methodToUse) {
   case DistributionMethod::Cyclic: {
     // Generate a single parallel loop-nest operation for all outermost
     // parallel loops and recurse.
@@ -699,10 +684,8 @@ static void generateParallelLoopNest(
           generateParallelLoopNest(
               nestedBuilder, nestedLoc, lbs.drop_front(numProcessed),
               ubs.drop_front(numProcessed), steps.drop_front(numProcessed),
-              iteratorTypes.drop_front(numProcessed), bodyBuilderFn, ivStorage,
-              (distributionMethod.size() < numProcessed)
-                  ? ArrayRef<DistributionMethod>()
-                  : distributionMethod.drop_front(numProcessed));
+              iteratorTypes.drop_front(numProcessed), remainderProcInfo,
+              bodyBuilderFn, ivStorage);
         });
     return;
   }
@@ -714,11 +697,11 @@ static void generateParallelLoopNest(
       cond = ab._and(cond, ab.slt(lbs[i], ubs[i]));
     ivStorage.append(lbs.begin(), std::next(lbs.begin(), numProcessed));
     b.create<scf::IfOp>(loc, cond, [&](OpBuilder &b, Location loc) {
-      generateParallelLoopNest(
-          b, loc, lbs.drop_front(numProcessed), ubs.drop_front(numProcessed),
-          steps.drop_front(numProcessed),
-          iteratorTypes.drop_front(numProcessed), bodyBuilderFn, ivStorage,
-          distributionMethod.drop_front(numProcessed));
+      generateParallelLoopNest(b, loc, lbs.drop_front(numProcessed),
+                               ubs.drop_front(numProcessed),
+                               steps.drop_front(numProcessed),
+                               iteratorTypes.drop_front(numProcessed),
+                               remainderProcInfo, bodyBuilderFn, ivStorage);
       b.create<scf::YieldOp>(loc, ValueRange{});
     });
     return;
@@ -730,7 +713,7 @@ static void generateParallelLoopNest(
     generateParallelLoopNest(
         b, loc, lbs.drop_front(numProcessed), ubs.drop_front(numProcessed),
         steps.drop_front(numProcessed), iteratorTypes.drop_front(numProcessed),
-        bodyBuilderFn, ivStorage, distributionMethod.drop_front(numProcessed));
+        remainderProcInfo, bodyBuilderFn, ivStorage);
     return;
   }
 }
@@ -743,13 +726,14 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
     function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
                                   ValueRange)>
         bodyBuilderFn,
-    Optional<LinalgLoopDistributionOptions> distributionOptions,
-    ArrayRef<StringRef> distributionTypes) {
+    ArrayRef<linalg::ProcInfo> procInfo) {
   SmallVector<Value> iterArgInitValues = linalgOp.getOutputTensorOperands();
   assert(iterArgInitValues.empty() && "unexpected ParallelOp init values");
   // This function may be passed more iterator types than ranges.
   assert(iteratorTypes.size() >= loopRanges.size() &&
          "expected iterator type for all ranges");
+  assert((procInfo.empty() || (procInfo.size() == loopRanges.size())) &&
+         "expected proc information for all loops when present");
   iteratorTypes = iteratorTypes.take_front(loopRanges.size());
   SmallVector<Value, 8> lbsStorage, ubsStorage, stepsStorage, ivs;
   unsigned numLoops = iteratorTypes.size();
@@ -762,44 +746,45 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
   unpackRanges(b, loc, loopRanges, lbsStorage, ubsStorage, stepsStorage);
 
   // Modify the lb, ub, and step based on the distribution options.
-  SmallVector<DistributionMethod, 0> distributionMethod;
-  if (distributionOptions) {
-    auto &options = *distributionOptions;
-    distributionMethod.assign(distributionOptions->distributionMethod.begin(),
-                              distributionOptions->distributionMethod.end());
-    SmallVector<Range, 2> parallelLoopRanges;
-    for (const auto &iteratorType : enumerate(iteratorTypes)) {
-      if (isParallelIterator(iteratorType.value()))
-        parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
-    }
-    if (distributionMethod.size() < parallelLoopRanges.size())
-      parallelLoopRanges.resize(distributionMethod.size());
-    SmallVector<ProcInfo, 2> procInfo =
-        options.procInfo(b, loc, parallelLoopRanges);
-    unsigned index = 0;
-    for (const auto &iteratorType : enumerate(iteratorTypes)) {
-      if (index >= procInfo.size())
-        break;
-      if (isParallelIterator(iteratorType.value())) {
-        unsigned i = iteratorType.index();
-        updateBoundsForCyclicDistribution(b, loc, procInfo[index].procId,
-                                          procInfo[index].nprocs, lbsStorage[i],
-                                          ubsStorage[i], stepsStorage[i]);
-        index++;
-      }
+  for (auto it : llvm::enumerate(procInfo)) {
+    if (it.value().distributionMethod != linalg::DistributionMethod::None) {
+      updateBoundsForCyclicDistribution(
+          b, loc, it.value().procId, it.value().nprocs, lbsStorage[it.index()],
+          ubsStorage[it.index()], stepsStorage[it.index()]);
     }
   }
   ValueRange lbs(lbsStorage), ubs(ubsStorage), steps(stepsStorage);
   generateParallelLoopNest(
-      b, loc, lbs, ubs, steps, iteratorTypes,
+      b, loc, lbs, ubs, steps, iteratorTypes, procInfo,
       [&](OpBuilder &b, Location loc, ValueRange ivs) {
         SmallVector<Value> operandValuesToUse =
             linalgOp.getInputAndOutputOperands();
         bodyBuilderFn(b, loc, ivs, operandValuesToUse);
       },
-      ivs, distributionMethod);
+      ivs);
 
   assert(ivs.size() == iteratorTypes.size() && "did not generate enough loops");
+}
+
+static Value materializeTiledShape(OpBuilder &builder, Location loc,
+                                   Value valueToTile,
+                                   const SliceParameters &sliceParams) {
+  auto shapedType = valueToTile.getType().dyn_cast<ShapedType>();
+  auto *sliceOp = TypeSwitch<ShapedType, Operation *>(shapedType)
+                      .Case([&](MemRefType) {
+                        return builder.create<memref::SubViewOp>(
+                            loc, valueToTile, sliceParams.offsets,
+                            sliceParams.sizes, sliceParams.strides);
+                      })
+                      .Case([&](RankedTensorType) {
+                        return makeComposedExtractSliceOp(
+                            builder, loc, valueToTile, sliceParams.offsets,
+                            sliceParams.sizes, sliceParams.strides);
+                      })
+                      .Default([](ShapedType) -> Operation * {
+                        llvm_unreachable("Unexpected shaped type");
+                      });
+  return sliceOp->getResult(0);
 }
 
 Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
@@ -807,23 +792,35 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
                      ArrayRef<OpFoldResult> lbs, ArrayRef<OpFoldResult> ubs,
                      ArrayRef<OpFoldResult> subShapeSizes,
                      bool omitPartialTileCheck) {
+  SliceParameters sliceParams =
+      computeSliceParameters(builder, loc, valueToTile, tileSizes, map, lbs,
+                             ubs, subShapeSizes, omitPartialTileCheck);
+  return materializeTiledShape(builder, loc, valueToTile, sliceParams);
+}
+
+SliceParameters
+computeSliceParameters(OpBuilder &builder, Location loc, Value valueToTile,
+                       ArrayRef<OpFoldResult> tileSizes, AffineMap map,
+                       ArrayRef<OpFoldResult> lbs, ArrayRef<OpFoldResult> ubs,
+                       ArrayRef<OpFoldResult> subShapeSizes,
+                       bool omitPartialTileCheck) {
   auto shapedType = valueToTile.getType().dyn_cast<ShapedType>();
   assert(shapedType && "only shaped types can be tiled");
   ArrayRef<int64_t> shape = shapedType.getShape();
   int64_t rank = shapedType.getRank();
 
-  // Construct a new subview / extract_slice for the tile.
-  SmallVector<OpFoldResult, 4> offsets, sizes, strides;
-  offsets.reserve(rank);
-  sizes.reserve(rank);
-  strides.reserve(rank);
+  // Compute offsets/sizes/strides for the tile.
+  SliceParameters sliceParams;
+  sliceParams.offsets.reserve(rank);
+  sliceParams.sizes.reserve(rank);
+  sliceParams.strides.reserve(rank);
   for (unsigned r = 0; r < rank; ++r) {
-    LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: for dim#" << r);
+    LLVM_DEBUG(llvm::dbgs() << "computeSliceParameters: for dim#" << r);
     if (!isTiled(map.getSubMap({r}), tileSizes)) {
-      offsets.push_back(builder.getIndexAttr(0));
+      sliceParams.offsets.push_back(builder.getIndexAttr(0));
       OpFoldResult dim = createFoldedDimOp(builder, loc, valueToTile, r);
-      sizes.push_back(dim);
-      strides.push_back(builder.getIndexAttr(1));
+      sliceParams.sizes.push_back(dim);
+      sliceParams.strides.push_back(builder.getIndexAttr(1));
       LLVM_DEBUG(llvm::dbgs() << ": not tiled: use size: " << dim << "\n");
       continue;
     }
@@ -832,26 +829,27 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
     // Tiling creates a new slice at the proper index, the slice step is 1
     // (i.e. the op does not subsample, stepping occurs in the loop).
     auto m = map.getSubMap({r});
-    LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: submap: " << m << "\n");
+    LLVM_DEBUG(llvm::dbgs() << "computeSliceParameters: submap: " << m << "\n");
     IRRewriter rewriter(builder);
     OpFoldResult offset = makeComposedFoldedAffineApply(rewriter, loc, m, lbs);
-    offsets.push_back(offset);
+    sliceParams.offsets.push_back(offset);
     OpFoldResult closedIntSize =
         makeComposedFoldedAffineApply(rewriter, loc, m, subShapeSizes);
     // Resulting size needs to be made half open interval again.
     AffineExpr s0 = getAffineSymbolExpr(0, builder.getContext());
     OpFoldResult size =
         makeComposedFoldedAffineApply(rewriter, loc, s0 + 1, closedIntSize);
-    LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: raw size: " << size << "\n");
     LLVM_DEBUG(llvm::dbgs()
-               << "makeTiledShape: new offset: " << offset << "\n");
-    strides.push_back(builder.getIndexAttr(1));
+               << "computeSliceParameters: raw size: " << size << "\n");
+    LLVM_DEBUG(llvm::dbgs()
+               << "computeSliceParameters: new offset: " << offset << "\n");
+    sliceParams.strides.push_back(builder.getIndexAttr(1));
 
     if (omitPartialTileCheck) {
       // We statically know that the partial/boundary tile condition is
       // unnecessary.
       LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: new size: " << size << "\n");
-      sizes.push_back(size);
+      sliceParams.sizes.push_back(size);
       continue;
     }
 
@@ -903,22 +901,9 @@ Value makeTiledShape(OpBuilder &builder, Location loc, Value valueToTile,
           makeComposedFoldedAffineMin(rewriter, loc, minMap, {size, d, offset});
     }
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShape: new size: " << size << "\n");
-    sizes.push_back(size);
+    sliceParams.sizes.push_back(size);
   }
-
-  auto *sliceOp = TypeSwitch<ShapedType, Operation *>(shapedType)
-                      .Case([&](MemRefType) {
-                        return builder.create<memref::SubViewOp>(
-                            loc, valueToTile, offsets, sizes, strides);
-                      })
-                      .Case([&](RankedTensorType) {
-                        return makeComposedExtractSliceOp(
-                            builder, loc, valueToTile, offsets, sizes, strides);
-                      })
-                      .Default([](ShapedType) -> Operation * {
-                        llvm_unreachable("Unexpected shaped type");
-                      });
-  return sliceOp->getResult(0);
+  return sliceParams;
 }
 
 SmallVector<OpFoldResult> computeTileOffsets(OpBuilder &b, Location loc,
@@ -1003,12 +988,12 @@ Value materializeOpFoldResult(OpBuilder &builder, Location loc,
   return materializeOpFoldResult(b, opFoldResult);
 }
 
-SmallVector<Value> makeTiledShapes(OpBuilder &b, Location loc,
-                                   LinalgOp linalgOp, ValueRange valuesToTile,
-                                   ArrayRef<OpFoldResult> ivs,
-                                   ArrayRef<OpFoldResult> tileSizes,
-                                   ArrayRef<OpFoldResult> sizeBounds,
-                                   bool omitPartialTileCheck) {
+SmallVector<Optional<SliceParameters>>
+computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
+                          ValueRange valuesToTile, ArrayRef<OpFoldResult> ivs,
+                          ArrayRef<OpFoldResult> tileSizes,
+                          ArrayRef<OpFoldResult> sizeBounds,
+                          bool omitPartialTileCheck) {
   assert(ivs.size() == static_cast<size_t>(llvm::count_if(
                            llvm::make_range(tileSizes.begin(), tileSizes.end()),
                            [](OpFoldResult v) { return !isZero(v); })) &&
@@ -1016,15 +1001,16 @@ SmallVector<Value> makeTiledShapes(OpBuilder &b, Location loc,
 
   // Construct (potentially temporary) mins and maxes on which to apply maps
   // that define tile subshapes.
-  SmallVector<OpFoldResult> lbs = computeTileOffsets(b, loc, ivs, tileSizes);
+  SmallVector<OpFoldResult> lbs =
+      computeTileOffsets(builder, loc, ivs, tileSizes);
   SmallVector<OpFoldResult> subShapeSizes =
-      computeTileSizes(b, loc, tileSizes, sizeBounds);
+      computeTileSizes(builder, loc, tileSizes, sizeBounds);
 
   assert(static_cast<int64_t>(valuesToTile.size()) ==
              linalgOp.getNumInputsAndOutputs() &&
          "expected one value to tile for every operand");
-  SmallVector<Value> tiledShapes;
-  tiledShapes.reserve(valuesToTile.size());
+  SmallVector<Optional<SliceParameters>> allSliceParams;
+  allSliceParams.reserve(valuesToTile.size());
   for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
     Value shapedOp = valuesToTile[opOperand->getOperandNumber()];
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for operand " << shapedOp);
@@ -1035,18 +1021,39 @@ SmallVector<Value> makeTiledShapes(OpBuilder &b, Location loc,
     // extract/insert slice pairs make the accessed iteration argument
     // subdomains explicit.
     if (!isTiled(map, tileSizes) && !linalgOp.isOutputTensor(opOperand)) {
-      tiledShapes.push_back(shapedOp);
+      allSliceParams.push_back(llvm::None);
       LLVM_DEBUG(llvm::dbgs() << ": not tiled: use shape: "
                               << opOperand->get().getType() << "\n");
       continue;
     }
     LLVM_DEBUG(llvm::dbgs() << ": tiled: figure out subshape...\n");
 
-    tiledShapes.push_back(makeTiledShape(b, loc, shapedOp, tileSizes, map, lbs,
-                                         sizeBounds, subShapeSizes,
-                                         omitPartialTileCheck));
+    allSliceParams.push_back(computeSliceParameters(
+        builder, loc, shapedOp, tileSizes, map, lbs, sizeBounds, subShapeSizes,
+        omitPartialTileCheck));
   }
 
+  return allSliceParams;
+}
+
+SmallVector<Value> makeTiledShapes(OpBuilder &builder, Location loc,
+                                   LinalgOp linalgOp, ValueRange valuesToTile,
+                                   ArrayRef<OpFoldResult> ivs,
+                                   ArrayRef<OpFoldResult> tileSizes,
+                                   ArrayRef<OpFoldResult> sizeBounds,
+                                   bool omitPartialTileCheck) {
+  SmallVector<Optional<SliceParameters>> allSliceParameter =
+      computeAllSliceParameters(builder, loc, linalgOp, valuesToTile, ivs,
+                                tileSizes, sizeBounds, omitPartialTileCheck);
+  SmallVector<Value> tiledShapes;
+  for (auto item : llvm::zip(valuesToTile, allSliceParameter)) {
+    Value valueToTile = std::get<0>(item);
+    Optional<SliceParameters> sliceParams = std::get<1>(item);
+    tiledShapes.push_back(
+        sliceParams.has_value()
+            ? materializeTiledShape(builder, loc, valueToTile, *sliceParams)
+            : valueToTile);
+  }
   return tiledShapes;
 }
 

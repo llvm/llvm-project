@@ -38,8 +38,9 @@ _warningFlags = [
   # TODO(mordante) investigate a solution for this issue.
   '-Wno-tautological-compare',
 
-  # -Wstringop-overread seems to be a bit buggy currently
+  # -Wstringop-overread and -Wstringop-overflow seem to be a bit buggy currently
   '-Wno-stringop-overread',
+  '-Wno-stringop-overflow',
 
   # These warnings should be enabled in order to support the MSVC
   # team using the test suite; They enable the warnings below and
@@ -134,7 +135,7 @@ DEFAULT_PARAMETERS = [
               [AddCompileFlag('-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER')]
             ),
 
-  Parameter(name='use_sanitizer', choices=['', 'Address', 'Undefined', 'Memory', 'MemoryWithOrigins', 'Thread', 'DataFlow', 'Leaks'], type=str, default='',
+  Parameter(name='use_sanitizer', choices=['', 'Address', 'HWAddress', 'Undefined', 'Memory', 'MemoryWithOrigins', 'Thread', 'DataFlow', 'Leaks'], type=str, default='',
             help="An optional sanitizer to enable when building and running the test suite.",
             actions=lambda sanitizer: filter(None, [
               AddFlag('-g -fno-omit-frame-pointer') if sanitizer else None,
@@ -144,6 +145,10 @@ DEFAULT_PARAMETERS = [
 
               AddFlag('-fsanitize=address') if sanitizer == 'Address' else None,
               AddFeature('asan')            if sanitizer == 'Address' else None,
+
+              AddFlag('-fsanitize=hwaddress') if sanitizer == 'HWAddress' else None,
+              # FIXME: Use hwasan feature.
+              AddFeature('asan')            if sanitizer == 'HWAddress' else None,
 
               AddFlag('-fsanitize=memory')               if sanitizer in ['Memory', 'MemoryWithOrigins'] else None,
               AddFeature('msan')                         if sanitizer in ['Memory', 'MemoryWithOrigins'] else None,

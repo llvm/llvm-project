@@ -777,12 +777,11 @@ void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
                llvm::sys::path::end(Path)) <= MaxSuffixComponents;
   }));
   // ... and precise.
-  assert(llvm::find_if(SystemHeaderMap->keys(), [](llvm::StringRef Path) {
-           return std::distance(llvm::sys::path::begin(
-                                    Path, llvm::sys::path::Style::posix),
-                                llvm::sys::path::end(Path)) ==
-                  MaxSuffixComponents;
-         }) != SystemHeaderMap->keys().end());
+  assert(llvm::any_of(SystemHeaderMap->keys(), [](llvm::StringRef Path) {
+    return std::distance(
+               llvm::sys::path::begin(Path, llvm::sys::path::Style::posix),
+               llvm::sys::path::end(Path)) == MaxSuffixComponents;
+  }));
 
   // FIXME: Suffix mapping contains invalid entries for C, so only enable it for
   // CPP.

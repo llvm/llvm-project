@@ -26,9 +26,9 @@ class ConvertTensorToSPIRVPass
     : public ConvertTensorToSPIRVBase<ConvertTensorToSPIRVPass> {
   void runOnOperation() override {
     MLIRContext *context = &getContext();
-    ModuleOp module = getOperation();
+    Operation *op = getOperation();
 
-    auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
+    auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
     std::unique_ptr<ConversionTarget> target =
         SPIRVConversionTarget::get(targetAttr);
 
@@ -43,13 +43,12 @@ class ConvertTensorToSPIRVPass
                                   patterns);
     populateBuiltinFuncToSPIRVPatterns(typeConverter, patterns);
 
-    if (failed(applyPartialConversion(module, *target, std::move(patterns))))
+    if (failed(applyPartialConversion(op, *target, std::move(patterns))))
       return signalPassFailure();
   }
 };
 } // namespace
 
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::createConvertTensorToSPIRVPass() {
+std::unique_ptr<OperationPass<>> mlir::createConvertTensorToSPIRVPass() {
   return std::make_unique<ConvertTensorToSPIRVPass>();
 }

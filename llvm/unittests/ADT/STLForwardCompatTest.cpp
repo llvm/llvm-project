@@ -13,48 +13,6 @@
 
 namespace {
 
-TEST(STLForwardCompatTest, NegationTest) {
-  EXPECT_TRUE((llvm::negation<std::false_type>::value));
-  EXPECT_FALSE((llvm::negation<std::true_type>::value));
-}
-
-struct incomplete_type;
-
-TEST(STLForwardCompatTest, ConjunctionTest) {
-  EXPECT_TRUE((llvm::conjunction<>::value));
-  EXPECT_FALSE((llvm::conjunction<std::false_type>::value));
-  EXPECT_TRUE((llvm::conjunction<std::true_type>::value));
-  EXPECT_FALSE((llvm::conjunction<std::false_type, incomplete_type>::value));
-  EXPECT_FALSE((llvm::conjunction<std::false_type, std::true_type>::value));
-  EXPECT_FALSE((llvm::conjunction<std::true_type, std::false_type>::value));
-  EXPECT_TRUE((llvm::conjunction<std::true_type, std::true_type>::value));
-  EXPECT_TRUE((llvm::conjunction<std::true_type, std::true_type,
-                                 std::true_type>::value));
-}
-
-TEST(STLForwardCompatTest, DisjunctionTest) {
-  EXPECT_FALSE((llvm::disjunction<>::value));
-  EXPECT_FALSE((llvm::disjunction<std::false_type>::value));
-  EXPECT_TRUE((llvm::disjunction<std::true_type>::value));
-  EXPECT_TRUE((llvm::disjunction<std::true_type, incomplete_type>::value));
-  EXPECT_TRUE((llvm::disjunction<std::false_type, std::true_type>::value));
-  EXPECT_TRUE((llvm::disjunction<std::true_type, std::false_type>::value));
-  EXPECT_TRUE((llvm::disjunction<std::true_type, std::true_type>::value));
-  EXPECT_TRUE((llvm::disjunction<std::true_type, std::true_type,
-                                 std::true_type>::value));
-}
-
-TEST(STLForwardCompatTest, MakeArrayTest) {
-  ASSERT_EQ((llvm::make_array<int>()), (std::array<int, 0u>{}));
-  ASSERT_EQ((llvm::make_array<size_t>()), (std::array<size_t, 0u>{}));
-  ASSERT_EQ((llvm::make_array<size_t>(1u, 2u, 3u)),
-            (std::array<size_t, 3u>{1, 2, 3}));
-  ASSERT_EQ((llvm::make_array<size_t>(1u, 2u, 3u)),
-            (llvm::make_array(size_t(1), size_t(2u), size_t(3u))));
-  ASSERT_EQ((llvm::make_array(true, false, false, true)),
-            (std::array<bool, 4u>{true, false, false, true}));
-}
-
 template <typename T>
 class STLForwardCompatRemoveCVRefTest : public ::testing::Test {};
 

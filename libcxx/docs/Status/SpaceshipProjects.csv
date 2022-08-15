@@ -25,15 +25,15 @@ Section,Description,Dependencies,Assignee,Complete
 | nullopt",None,Kent Ross,|In Progress|
 "| `[variant.relops] <https://wg21.link/variant.relops>`_
 | `[variant.monostate.relops] <https://wg21.link/variant.monostate.relops>`_","| `monostate <https://reviews.llvm.org/D131372>`_
-| `variant <https://reviews.llvm.org/D131372>`_",None,Kent Ross,|In Progress|
+| `variant <https://reviews.llvm.org/D131372>`_",None,Kent Ross,|Complete|
 | `[unique.ptr.special] <https://wg21.link/unique.ptr.special>`_,| `unique_ptr <https://reviews.llvm.org/D130838>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
 | `[util.smartptr.shared.cmp] <https://wg21.link/util.smartptr.shared.cmp>`_,| `shared_ptr <https://reviews.llvm.org/D130852>`_,[comparisons.three.way],Adrian Vogelsgesang,|Complete|
-| `[type.index.members] <https://wg21.link/type.index.members>`_,| `type_index <https://reviews.llvm.org/D131357>`_,None,Adrian Vogelsgesang,|In Progress|
+| `[type.index.members] <https://wg21.link/type.index.members>`_,| `type_index <https://reviews.llvm.org/D131357>`_,None,Adrian Vogelsgesang,|Complete|
 | `[charconv.syn] <https://wg21.link/charconv.syn>`_,| to_chars_result,None,Mark de Wever,|Complete|
 | `[charconv.syn] <https://wg21.link/charconv.syn>`_,| from_chars_result,None,Mark de Wever,|Complete|
 | `[stacktrace.entry.cmp] <https://wg21.link/stacktrace.entry.cmp>`_,| stacktrace_entry,None,Unassigned,|Not Started|
 | `[stacktrace.basic.cmp] <https://wg21.link/stacktrace.basic.cmp>`_,| basic_stacktrace,[alg.three.way],Unassigned,|Not Started|
-| `[string.cmp] <https://wg21.link/string.cmp>`_,| basic_string,None,Mark de Wever,|In Progress|
+| `[string.cmp] <https://wg21.link/string.cmp>`_,| `basic_string <https://reviews.llvm.org/D131421>`,None,Mark de Wever,|Complete|
 | `[string.view.comparison] <https://wg21.link/string.view.comparison>`_,| `basic_string_view <https://reviews.llvm.org/D130295>`_,None,Mark de Wever,|Complete|
 | `[array.syn] <https://wg21.link/array.syn>`_ (`general <https://wg21.link/container.requirements.general#14>`_),| array,[expos.only.func],Unassigned,|Not Started|
 | `[deque.syn] <https://wg21.link/deque.syn>`_ (`general <https://wg21.link/container.requirements.general#14>`_),| deque,[expos.only.func],Unassigned,|Not Started|
@@ -78,4 +78,4 @@ Section,Description,Dependencies,Assignee,Complete
 | `[fs.path.nonmember] <https://wg21.link/fs.path.nonmember>`_,| `filesystem::path <https://reviews.llvm.org/D130859>`_,None,Adrian Vogelsgesang,|In Progress|
 | `[fs.dir.entry.obs] <https://wg21.link/fs.dir.entry.obs>`_,| `filesystem::directory_entry <https://reviews.llvm.org/D130860>`_,None,Adrian Vogelsgesang,|In Progress|
 | `[re.submatch.op] <https://wg21.link/re.submatch.op>`_,| sub_match,None,Mark de Wever,|In Progress|
-| `[thread.thread.id] <https://wg21.link/thread.thread.id>`_,| `thread::id <https://reviews.llvm.org/D131362>`_,None,Adrian Vogelsgesang,|In Progress|
+| `[thread.thread.id] <https://wg21.link/thread.thread.id>`_,| `thread::id <https://reviews.llvm.org/D131362>`_,None,Adrian Vogelsgesang,|Complete|

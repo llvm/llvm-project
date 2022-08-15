@@ -104,8 +104,7 @@ struct force_iteration_on_noniterable_enum_t {
   explicit force_iteration_on_noniterable_enum_t() = default;
 };
 
-// TODO: Make this `inline` once we update to C++17 to avoid ORD violations.
-constexpr force_iteration_on_noniterable_enum_t
+inline constexpr force_iteration_on_noniterable_enum_t
     force_iteration_on_noniterable_enum;
 
 namespace detail {

@@ -2,9 +2,6 @@
 Test basics of mini dump debugging.
 """
 
-from six import iteritems
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -130,7 +127,7 @@ class MiniDumpTestCase(TestBase):
 
             expected_stack = {0: 'bar', 1: 'foo', 2: 'main'}
             self.assertGreaterEqual(thread.GetNumFrames(), len(expected_stack))
-            for index, name in iteritems(expected_stack):
+            for index, name in expected_stack.items():
                 frame = thread.GetFrameAtIndex(index)
                 self.assertTrue(frame.IsValid())
                 function_name = frame.GetFunctionName()

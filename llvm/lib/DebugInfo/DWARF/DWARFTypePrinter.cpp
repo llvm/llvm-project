@@ -238,6 +238,37 @@ void DWARFTypePrinter::appendUnqualifiedNameAfter(
                                    DW_TAG_ptr_to_member_type);
     break;
   }
+#if 0 // seems to be missing upstream patches
+  case DW_TAG_LLVM_ptrauth_type: {
+    auto getValOrNull = [&](dwarf::Attribute Attr) -> uint64_t {
+      if (auto Form = D.find(Attr))
+        return *Form->getAsUnsignedConstant();
+      return 0;
+    };
+    SmallVector<const char *, 2> optionsVec;
+    if (getValOrNull(DW_AT_LLVM_ptrauth_isa_pointer))
+      optionsVec.push_back("isa-pointer");
+    if (getValOrNull(DW_AT_LLVM_ptrauth_authenticates_null_values))
+      optionsVec.push_back("authenticates-null-values");
+    std::string options;
+    for (const auto *option : optionsVec) {
+      if (options.size())
+        options += ",";
+      options += option;
+    }
+    if (options.size())
+      options = ", \"" + options + "\"";
+    std::string PtrauthString;
+    llvm::raw_string_ostream PtrauthStream(PtrauthString);
+    PtrauthStream
+        << "__ptrauth(" << getValOrNull(DW_AT_LLVM_ptrauth_key) << ", "
+        << getValOrNull(DW_AT_LLVM_ptrauth_address_discriminated) << ", 0x0"
+        << utohexstr(getValOrNull(DW_AT_LLVM_ptrauth_extra_discriminator), true)
+        << options << ")";
+    OS << PtrauthStream.str();
+    break;
+  }
+#endif //>>>>>>> 41bdb8cd36388ccd0c020798a7b9ce9014af753c
     /*
   case DW_TAG_structure_type:
   case DW_TAG_class_type:

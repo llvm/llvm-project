@@ -69,7 +69,7 @@
 "`P2374R4 <https://wg21.link/P2374R4>`__","LWG","``views::cartesian_product``","July 2022","",""
 "`P2404R3 <https://wg21.link/P2404R3>`__","LWG","Move-only types for ``equality_comparable_with``, ``totally_ordered_with``, and ``three_way_comparable_with``","July 2022","",""
 "`P2408R5 <https://wg21.link/P2408R5>`__","LWG","Ranges iterators as inputs to non-Ranges algorithms","July 2022","",""
-"`P2417R2 <https://wg21.link/P2417R2>`__","LWG","A more ``constexpr`` ``bitset``","July 2022","",""
+"`P2417R2 <https://wg21.link/P2417R2>`__","LWG","A more ``constexpr`` ``bitset``","July 2022","|Complete|","16.0"
 "`P2419R2 <https://wg21.link/P2419R2>`__","LWG","Clarify handling of encodings in localized formatting of chrono types","July 2022","",""
 "`P2438R2 <https://wg21.link/P2438R2>`__","LWG","``std::string::substr() &&``","July 2022","",""
 "`P2445R1 <https://wg21.link/P2445R1>`__","LWG","``forward_like``","July 2022","",""

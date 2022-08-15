@@ -1143,7 +1143,9 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 
     SVal InitVal;
     if (!FieldForCapture->hasCapturedVLAType()) {
-      Expr *InitExpr = *i;
+      const Expr *InitExpr = *i;
+
+      assert(InitExpr && "Capture missing initialization expression");
 
       if (const auto AILE = dyn_cast<ArrayInitLoopExpr>(InitExpr)) {
         // If the AILE initializes a POD array, we need to keep it as the
@@ -1152,7 +1154,12 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
           InitExpr = AILE->getSubExpr();
       }
 
-      assert(InitExpr && "Capture missing initialization expression");
+      // With C++17 copy elision this can happen.
+      if (const auto *FC = dyn_cast<CXXFunctionalCastExpr>(InitExpr))
+        InitExpr = FC->getSubExpr();
+
+      assert(InitExpr &&
+             "Extracted capture initialization expression is missing");
 
       if (dyn_cast<CXXConstructExpr>(InitExpr)) {
         InitVal = *getObjectUnderConstruction(State, {LE, Idx}, LocCtxt);

@@ -4205,6 +4205,10 @@ defm FCCMP  : FPCondComparison<0, "fccmp", AArch64fccmp>;
 
 defm FCSEL : FPCondSelect<"fcsel">;
 
+let Predicates = [HasFullFP16] in
+def : Pat<(bf16 (AArch64csel (bf16 FPR16:$Rn), (bf16 FPR16:$Rm), (i32 imm:$cond), NZCV)),
+          (FCSELHrrr FPR16:$Rn, FPR16:$Rm, imm:$cond)>;
+
 // CSEL instructions providing f128 types need to be handled by a
 // pseudo-instruction since the eventual code will need to introduce basic
 // blocks and control flow.

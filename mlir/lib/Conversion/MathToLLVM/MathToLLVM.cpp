@@ -19,7 +19,6 @@ using namespace mlir;
 
 namespace {
 using AbsFOpLowering = VectorConvertToLLVMPattern<math::AbsFOp, LLVM::FAbsOp>;
-using AbsIOpLowering = VectorConvertToLLVMPattern<math::AbsIOp, LLVM::AbsOp>;
 using CeilOpLowering = VectorConvertToLLVMPattern<math::CeilOp, LLVM::FCeilOp>;
 using CopySignOpLowering =
     VectorConvertToLLVMPattern<math::CopySignOp, LLVM::CopySignOp>;
@@ -41,11 +40,11 @@ using RoundOpLowering =
 using SinOpLowering = VectorConvertToLLVMPattern<math::SinOp, LLVM::SinOp>;
 using SqrtOpLowering = VectorConvertToLLVMPattern<math::SqrtOp, LLVM::SqrtOp>;
 
-// A `CtLz/CtTz(a)` is converted into `CtLz/CtTz(a, false)`.
+// A `CtLz/CtTz/absi(a)` is converted into `CtLz/CtTz/absi(a, false)`.
 template <typename MathOp, typename LLVMOp>
-struct CountOpLowering : public ConvertOpToLLVMPattern<MathOp> {
+struct IntOpWithFlagLowering : public ConvertOpToLLVMPattern<MathOp> {
   using ConvertOpToLLVMPattern<MathOp>::ConvertOpToLLVMPattern;
-  using Super = CountOpLowering<MathOp, LLVMOp>;
+  using Super = IntOpWithFlagLowering<MathOp, LLVMOp>;
 
   LogicalResult
   matchAndRewrite(MathOp op, typename MathOp::Adaptor adaptor,
@@ -57,12 +56,10 @@ struct CountOpLowering : public ConvertOpToLLVMPattern<MathOp> {
 
     auto loc = op.getLoc();
     auto resultType = op.getResult().getType();
-    auto boolType = rewriter.getIntegerType(1);
-    auto boolZero = rewriter.getIntegerAttr(boolType, 0);
+    auto boolZero = rewriter.getBoolAttr(false);
 
     if (!operandType.template isa<LLVM::LLVMArrayType>()) {
-      LLVM::ConstantOp zero =
-          rewriter.create<LLVM::ConstantOp>(loc, boolType, boolZero);
+      LLVM::ConstantOp zero = rewriter.create<LLVM::ConstantOp>(loc, boolZero);
       rewriter.replaceOpWithNewOp<LLVMOp>(op, resultType, adaptor.getOperand(),
                                           zero);
       return success();
@@ -76,7 +73,7 @@ struct CountOpLowering : public ConvertOpToLLVMPattern<MathOp> {
         op.getOperation(), adaptor.getOperands(), *this->getTypeConverter(),
         [&](Type llvm1DVectorTy, ValueRange operands) {
           LLVM::ConstantOp zero =
-              rewriter.create<LLVM::ConstantOp>(loc, boolType, boolZero);
+              rewriter.create<LLVM::ConstantOp>(loc, boolZero);
           return rewriter.create<LLVMOp>(loc, llvm1DVectorTy, operands[0],
                                          zero);
         },
@@ -85,9 +82,10 @@ struct CountOpLowering : public ConvertOpToLLVMPattern<MathOp> {
 };
 
 using CountLeadingZerosOpLowering =
-    CountOpLowering<math::CountLeadingZerosOp, LLVM::CountLeadingZerosOp>;
+    IntOpWithFlagLowering<math::CountLeadingZerosOp, LLVM::CountLeadingZerosOp>;
 using CountTrailingZerosOpLowering =
-    CountOpLowering<math::CountTrailingZerosOp, LLVM::CountTrailingZerosOp>;
+    IntOpWithFlagLowering<math::CountTrailingZerosOp, LLVM::CountTrailingZerosOp>;
+using AbsIOpLowering = IntOpWithFlagLowering<math::AbsIOp, LLVM::AbsOp>;
 
 // A `expm1` is converted into `exp - 1`.
 struct ExpM1OpLowering : public ConvertOpToLLVMPattern<math::ExpM1Op> {

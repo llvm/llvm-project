@@ -176,7 +176,7 @@ private:
 // find
 
 template <class _Cp, bool _IsConst>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 __bit_iterator<_Cp, _IsConst>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, _IsConst>
 __find_bool_true(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
 {
     typedef __bit_iterator<_Cp, _IsConst> _It;
@@ -212,7 +212,7 @@ __find_bool_true(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type 
 }
 
 template <class _Cp, bool _IsConst>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 __bit_iterator<_Cp, _IsConst>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, _IsConst>
 __find_bool_false(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
 {
     typedef __bit_iterator<_Cp, _IsConst> _It;
@@ -263,7 +263,7 @@ find(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last
 // count
 
 template <class _Cp, bool _IsConst>
-typename __bit_iterator<_Cp, _IsConst>::difference_type
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX20 typename __bit_iterator<_Cp, _IsConst>::difference_type
 __count_bool_true(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
 {
     typedef __bit_iterator<_Cp, _IsConst> _It;
@@ -294,7 +294,7 @@ __count_bool_true(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type
 }
 
 template <class _Cp, bool _IsConst>
-typename __bit_iterator<_Cp, _IsConst>::difference_type
+_LIBCPP_HIDE_FROM_ABI typename __bit_iterator<_Cp, _IsConst>::difference_type
 __count_bool_false(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
 {
     typedef __bit_iterator<_Cp, _IsConst> _It;
@@ -337,7 +337,7 @@ count(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __las
 // fill_n
 
 template <class _Cp>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 void
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void
 __fill_n_false(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n)
 {
     typedef __bit_iterator<_Cp, false> _It;
@@ -367,7 +367,7 @@ __fill_n_false(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n)
 }
 
 template <class _Cp>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 void
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void
 __fill_n_true(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n)
 {
     typedef __bit_iterator<_Cp, false> _It;
@@ -424,8 +424,7 @@ fill(__bit_iterator<_Cp, false> __first, __bit_iterator<_Cp, false> __last, bool
 // copy
 
 template <class _Cp, bool _IsConst>
-_LIBCPP_CONSTEXPR_AFTER_CXX17
-__bit_iterator<_Cp, false>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false>
 __copy_aligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last,
                                                      __bit_iterator<_Cp, false> __result)
 {
@@ -472,8 +471,7 @@ __copy_aligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsCon
 }
 
 template <class _Cp, bool _IsConst>
-_LIBCPP_CONSTEXPR_AFTER_CXX17
-__bit_iterator<_Cp, false>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false>
 __copy_unaligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last,
                                                        __bit_iterator<_Cp, false> __result)
 {
@@ -563,7 +561,7 @@ copy(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last
 // copy_backward
 
 template <class _Cp, bool _IsConst>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 __bit_iterator<_Cp, false>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false>
 __copy_backward_aligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last,
                                                      __bit_iterator<_Cp, false> __result)
 {
@@ -610,7 +608,7 @@ __copy_backward_aligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_C
 }
 
 template <class _Cp, bool _IsConst>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 __bit_iterator<_Cp, false>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false>
 __copy_backward_unaligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last,
                                                        __bit_iterator<_Cp, false> __result)
 {
@@ -728,7 +726,7 @@ move_backward(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsCons
 // swap_ranges
 
 template <class __C1, class __C2>
-__bit_iterator<__C2, false>
+_LIBCPP_HIDE_FROM_ABI __bit_iterator<__C2, false>
 __swap_ranges_aligned(__bit_iterator<__C1, false> __first, __bit_iterator<__C1, false> __last,
                       __bit_iterator<__C2, false> __result)
 {
@@ -778,7 +776,7 @@ __swap_ranges_aligned(__bit_iterator<__C1, false> __first, __bit_iterator<__C1, 
 }
 
 template <class __C1, class __C2>
-__bit_iterator<__C2, false>
+_LIBCPP_HIDE_FROM_ABI __bit_iterator<__C2, false>
 __swap_ranges_unaligned(__bit_iterator<__C1, false> __first, __bit_iterator<__C1, false> __last,
                         __bit_iterator<__C2, false> __result)
 {
@@ -923,7 +921,7 @@ struct __bit_array
 };
 
 template <class _Cp>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 __bit_iterator<_Cp, false>
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false>
 rotate(__bit_iterator<_Cp, false> __first, __bit_iterator<_Cp, false> __middle, __bit_iterator<_Cp, false> __last)
 {
     typedef __bit_iterator<_Cp, false> _I1;
@@ -974,7 +972,7 @@ rotate(__bit_iterator<_Cp, false> __first, __bit_iterator<_Cp, false> __middle, 
 // equal
 
 template <class _Cp, bool _IC1, bool _IC2>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI bool
 __equal_unaligned(__bit_iterator<_Cp, _IC1> __first1, __bit_iterator<_Cp, _IC1> __last1,
                   __bit_iterator<_Cp, _IC2> __first2)
 {
@@ -1056,7 +1054,7 @@ __equal_unaligned(__bit_iterator<_Cp, _IC1> __first1, __bit_iterator<_Cp, _IC1> 
 }
 
 template <class _Cp, bool _IC1, bool _IC2>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 bool
+_LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI bool
 __equal_aligned(__bit_iterator<_Cp, _IC1> __first1, __bit_iterator<_Cp, _IC1> __last1,
                 __bit_iterator<_Cp, _IC2> __first2)
 {
@@ -1346,6 +1344,7 @@ private:
     _LIBCPP_CONSTEXPR_AFTER_CXX17
     friend __bit_iterator<_Dp, _IC> __find_bool_false(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
     template <class _Dp, bool _IC> friend typename __bit_iterator<_Dp, _IC>::difference_type
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX20
                    __count_bool_true(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
     template <class _Dp, bool _IC> friend typename __bit_iterator<_Dp, _IC>::difference_type
                    __count_bool_false(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);

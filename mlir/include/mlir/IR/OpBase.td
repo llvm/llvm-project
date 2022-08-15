@@ -340,12 +340,28 @@ def NoneType : Type<CPred<"$_self.isa<::mlir::NoneType>()">, "none type",
 // Any type from the given list
 class AnyTypeOf<list<Type> allowedTypes, string summary = "",
                 string cppClassName = "::mlir::Type"> : Type<
-    // Satisfy any of the allowed type's condition
+    // Satisfy any of the allowed types' conditions.
     Or<!foreach(allowedtype, allowedTypes, allowedtype.predicate)>,
     !if(!eq(summary, ""),
         !interleave(!foreach(t, allowedTypes, t.summary), " or "),
         summary),
     cppClassName>;
+
+// A type that satisfies the constraints of all given types.
+class AllOfType<list<Type> allowedTypes, string summary = "",
+                string cppClassName = "::mlir::Type"> : Type<
+    // Satisfy all of the allowedf types' conditions.
+    And<!foreach(allowedType, allowedTypes, allowedType.predicate)>,
+    !if(!eq(summary, ""),
+        !interleave(!foreach(t, allowedTypes, t.summary), " and "),
+        summary),
+    cppClassName>;
+
+// A type that satisfies additional predicates.
+class ConfinedType<Type type, list<Pred> predicates, string summary = "",
+                   string cppClassName = "::mlir::Type"> : Type<
+    And<!listconcat([type.predicate], !foreach(pred, predicates, pred))>,
+    summary, cppClassName>;
 
 // Integer types.
 
@@ -475,21 +491,20 @@ def F128 : F<128>;
 def BF16 : Type<CPred<"$_self.isBF16()">, "bfloat16 type">,
            BuildableType<"$_builder.getBF16Type()">;
 
+def AnyComplex : Type<CPred<"$_self.isa<::mlir::ComplexType>()">,
+                      "complex-type", "::mlir::ComplexType">;
+
 class Complex<Type type>
-    : Type<And<[
-          CPred<"$_self.isa<::mlir::ComplexType>()">,
+    : ConfinedType<AnyComplex, [
           SubstLeaves<"$_self",
                       "$_self.cast<::mlir::ComplexType>().getElementType()",
-           type.predicate>]>,
+           type.predicate>],
            "complex type with " # type.summary # " elements",
            "::mlir::ComplexType">,
       SameBuildabilityAs<type, "::mlir::ComplexType::get($_builder.get" # type #
                                "Type())"> {
   Type elementType = type;
 }
-
-def AnyComplex : Type<CPred<"$_self.isa<::mlir::ComplexType>()">,
-                      "complex-type", "::mlir::ComplexType">;
 
 class OpaqueType<string dialect, string name, string summary>
   : Type<CPred<"isOpaqueTypeWithName($_self, \""#dialect#"\", \""#name#"\")">,
@@ -572,9 +587,8 @@ class VectorOfRank<list<int> allowedRanks> : Type<
 // Any vector where the rank is from the given `allowedRanks` list and the type
 // is from the given `allowedTypes` list
 class VectorOfRankAndType<list<int> allowedRanks,
-                          list<Type> allowedTypes> : Type<
-  And<[VectorOf<allowedTypes>.predicate,
-       VectorOfRank<allowedRanks>.predicate]>,
+                          list<Type> allowedTypes> : AllOfType<
+  [VectorOf<allowedTypes>, VectorOfRank<allowedRanks>],
   VectorOf<allowedTypes>.summary # VectorOfRank<allowedRanks>.summary,
   "::mlir::VectorType">;
 
@@ -630,18 +644,16 @@ class ScalableVectorOfLength<list<int> allowedLengths> : Type<
 // `allowedLengths` list and the type is from the given `allowedTypes`
 // list
 class VectorOfLengthAndType<list<int> allowedLengths,
-                            list<Type> allowedTypes> : Type<
-  And<[VectorOf<allowedTypes>.predicate,
-       VectorOfLength<allowedLengths>.predicate]>,
+                            list<Type> allowedTypes> : AllOfType<
+  [VectorOf<allowedTypes>, VectorOfLength<allowedLengths>],
   VectorOf<allowedTypes>.summary # VectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
 
 // Any fixed-length vector where the number of elements is from the given
 // `allowedLengths` list and the type is from the given `allowedTypes` list
 class FixedVectorOfLengthAndType<list<int> allowedLengths,
-                                    list<Type> allowedTypes> : Type<
-  And<[FixedVectorOf<allowedTypes>.predicate,
-       FixedVectorOfLength<allowedLengths>.predicate]>,
+                                    list<Type> allowedTypes> : AllOfType<
+  [FixedVectorOf<allowedTypes>, FixedVectorOfLength<allowedLengths>],
   FixedVectorOf<allowedTypes>.summary #
   FixedVectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
@@ -649,9 +661,8 @@ class FixedVectorOfLengthAndType<list<int> allowedLengths,
 // Any scalable vector where the number of elements is from the given
 // `allowedLengths` list and the type is from the given `allowedTypes` list
 class ScalableVectorOfLengthAndType<list<int> allowedLengths,
-                                    list<Type> allowedTypes> : Type<
-  And<[ScalableVectorOf<allowedTypes>.predicate,
-       ScalableVectorOfLength<allowedLengths>.predicate]>,
+                                    list<Type> allowedTypes> : AllOfType<
+  [ScalableVectorOf<allowedTypes>, ScalableVectorOfLength<allowedLengths>],
   ScalableVectorOf<allowedTypes>.summary #
   ScalableVectorOfLength<allowedLengths>.summary,
   "::mlir::VectorType">;
@@ -682,7 +693,7 @@ class UnrankedTensorOf<list<Type> allowedTypes>
 // list, and which additionally satisfies an optional list of predicates.
 //
 // TODO: use `Constraint` instead of `Pred`, so we can generate a better
-// default summary (a la `Confined`).
+// default summary (a la `ConfinedAttr`).
 class TensorOf<
     list<Type> allowedTypes,
     list<Pred> preds = [],
@@ -768,34 +779,33 @@ def F64MemRef  : MemRefOf<[F64]>;
 
 // TODO: Have an easy way to add another constraint to a type.
 class MemRefRankOf<list<Type> allowedTypes, list<int> ranks> :
-    Type<And<[MemRefOf<allowedTypes>.predicate, HasAnyRankOfPred<ranks>]>,
+    ConfinedType<MemRefOf<allowedTypes>, [HasAnyRankOfPred<ranks>],
          !interleave(!foreach(rank, ranks, rank # "D"), "/") # " " #
          MemRefOf<allowedTypes>.summary,
          "::mlir::MemRefType">;
 
-class StaticShapeMemRefOf<list<Type> allowedTypes>
-    : Type<And<[MemRefOf<allowedTypes>.predicate, HasStaticShapePred]>,
-           "statically shaped " # MemRefOf<allowedTypes>.summary,
-           "::mlir::MemRefType">;
+class StaticShapeMemRefOf<list<Type> allowedTypes> :
+    ConfinedType<MemRefOf<allowedTypes>, [HasStaticShapePred],
+         "statically shaped " # MemRefOf<allowedTypes>.summary,
+         "::mlir::MemRefType">;
 
 def AnyStaticShapeMemRef : StaticShapeMemRefOf<[AnyType]>;
 
 // For a MemRefType, verify that it has strides.
 def HasStridesPred : CPred<[{ isStrided($_self.cast<::mlir::MemRefType>()) }]>;
 
-class StridedMemRefOf<list<Type> allowedTypes>
-    : Type<And<[MemRefOf<allowedTypes>.predicate, HasStridesPred]>,
-           "strided " # MemRefOf<allowedTypes>.summary>;
+class StridedMemRefOf<list<Type> allowedTypes> :
+    ConfinedType<MemRefOf<allowedTypes>, [HasStridesPred],
+         "strided " # MemRefOf<allowedTypes>.summary>;
 
 def AnyStridedMemRef : StridedMemRefOf<[AnyType]>;
 
 class AnyStridedMemRefOfRank<int rank> :
-  Type<And<[AnyStridedMemRef.predicate,
-            MemRefRankOf<[AnyType], [rank]>.predicate]>,
+  AllOfType<[AnyStridedMemRef, MemRefRankOf<[AnyType], [rank]>],
        AnyStridedMemRef.summary # " of rank " # rank>;
 
 class StridedMemRefRankOf<list<Type> allowedTypes, list<int> ranks> :
-    Type<And<[MemRefOf<allowedTypes>.predicate, HasAnyRankOfPred<ranks>]>,
+    ConfinedType<MemRefOf<allowedTypes>, [HasAnyRankOfPred<ranks>],
          !interleave(!foreach(rank, ranks, rank # "D"), "/") # " " #
          MemRefOf<allowedTypes>.summary>;
 
@@ -1575,7 +1585,7 @@ class ConstantStrAttr<Attr attribute, string val>
 // A general mechanism to further confine the given `attr` with all the
 // `constraints`. This allows to compose complex constraints out of a series
 // of more primitive ones.
-class Confined<Attr attr, list<AttrConstraint> constraints> : Attr<
+class ConfinedAttr<Attr attr, list<AttrConstraint> constraints> : Attr<
     And<!listconcat([attr.predicate],
                       !foreach(pred, constraints, pred.predicate))>,
     !foldl(/*init*/attr.summary, /*list*/constraints,
@@ -1593,9 +1603,9 @@ class Confined<Attr attr, list<AttrConstraint> constraints> : Attr<
 
 // An AttrConstraint that holds if all attr constraints specified in
 // 'constraints' hold.
-class AllAttrConstraintsOf<list<AttrConstraint> constraints> : AttrConstraint<
+class AllAttrOf<list<AttrConstraint> constraints> : AttrConstraint<
     And<!listconcat([!head(constraints).predicate],
-                      !foreach(pred, !tail(constraints), pred.predicate))>,
+                    !foreach(pred, !tail(constraints), pred.predicate))>,
     !interleave(!foreach(con, constraints, con.summary), " and ")> {
 }
 
@@ -2278,8 +2288,7 @@ class ElementCount<string name> :
 class ElementType<string name> : StrFunc<"getElementTypeOrSelf($" # name # ")">;
 
 class AllMatchPred<list<string> values> :
-    CPred<"::llvm::is_splat(::llvm::makeArrayRef({"
-          # !interleave(values, ", ") #"}))">;
+    CPred<"::llvm::is_splat({" # !interleave(values, ", ") # "})">;
 
 class AllMatch<list<string> values, string summary> :
     PredOpTrait<summary, AllMatchPred<values>>;

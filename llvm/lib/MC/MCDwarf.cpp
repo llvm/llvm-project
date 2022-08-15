@@ -268,7 +268,7 @@ void MCDwarfLineTable::emit(MCStreamer *MCOS, MCDwarfLineTableParams Params) {
   // In a v5 non-split line table, put the strings in a separate section.
   Optional<MCDwarfLineStr> LineStr;
   if (context.getDwarfVersion() >= 5)
-    LineStr = MCDwarfLineStr(context);
+    LineStr.emplace(context);
 
   // Switch to the section where the table will be emitted into.
   MCOS->switchSection(context.getObjectFileInfo()->getDwarfLineSection());
@@ -418,9 +418,15 @@ void MCDwarfLineTableHeader::emitV5FileDirTables(
                                     : dwarf::DW_FORM_string);
   MCOS->emitULEB128IntValue(MCDwarfDirs.size() + 1);
   // Try not to emit an empty compilation directory.
-  const StringRef CompDir = CompilationDir.empty()
-                                ? MCOS->getContext().getCompilationDir()
-                                : StringRef(CompilationDir);
+  SmallString<256> Dir;
+  StringRef CompDir = MCOS->getContext().getCompilationDir();
+  if (!CompilationDir.empty()) {
+    Dir = CompilationDir;
+    MCOS->getContext().remapDebugPath(Dir);
+    CompDir = Dir.str();
+    if (LineStr)
+      CompDir = LineStr->getSaver().save(CompDir);
+  }
   if (LineStr) {
     // Record path strings, emit references here.
     LineStr->emitRef(MCOS, CompDir);

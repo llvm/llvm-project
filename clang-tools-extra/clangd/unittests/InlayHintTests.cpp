@@ -1417,6 +1417,17 @@ TEST(DesignatorHints, OnlyAggregateInit) {
   )cpp" /*no designator hints expected (but param hints!)*/);
 }
 
+TEST(DesignatorHints, NoCrash) {
+  assertDesignatorHints(R"cpp(
+    /*error-ok*/
+    struct A {};
+    struct Foo {int a; int b;};
+    void test() {
+      Foo f{A(), $b[[1]]};
+    }
+  )cpp", ExpectedHint{".b=", "b"});
+}
+
 TEST(InlayHints, RestrictRange) {
   Annotations Code(R"cpp(
     auto a = false;

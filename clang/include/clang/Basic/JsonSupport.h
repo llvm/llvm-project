@@ -101,12 +101,10 @@ inline void printSourceLocationAsJson(raw_ostream &Out, SourceLocation Loc,
     std::string filename(PLoc.getFilename());
     if (is_style_windows(llvm::sys::path::Style::native)) {
       // Remove forbidden Windows path characters
-      auto RemoveIt =
-          std::remove_if(filename.begin(), filename.end(), [](auto Char) {
-            static const char ForbiddenChars[] = "<>*?\"|";
-            return llvm::is_contained(ForbiddenChars, Char);
-          });
-      filename.erase(RemoveIt, filename.end());
+      llvm::erase_if(filename, [](auto Char) {
+        static const char ForbiddenChars[] = "<>*?\"|";
+        return llvm::is_contained(ForbiddenChars, Char);
+      });
       // Handle windows-specific path delimiters.
       std::replace(filename.begin(), filename.end(), '\\', '/');
     }

@@ -91,7 +91,7 @@ template <
     class _Sent2,
     class _Proj1,
     class _Proj2>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 _Iter1 __find_end(
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _Iter1 __find_end(
     _Iter1 __first1,
     _Sent1 __sent1,
     _Iter2 __first2,
@@ -144,7 +144,7 @@ template <
     class _Sent2,
     class _Proj1,
     class _Proj2>
-_LIBCPP_CONSTEXPR_AFTER_CXX11 _Iter1 __find_end(
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 _Iter1 __find_end(
     _Iter1 __first1,
     _Sent1 __sent1,
     _Iter2 __first2,

@@ -279,6 +279,10 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
   } else if (magic == file_magic::bitcode) {
     obj =
         make<BitcodeFile>(ctx, mb, parentName, offsetInArchive, /*lazy=*/false);
+  } else if (magic == file_magic::coff_cl_gl_object) {
+    error(mb.getBufferIdentifier() +
+          ": is not a native COFF file. Recompile without /GL?");
+    return;
   } else {
     error("unknown file type: " + mb.getBufferIdentifier());
     return;
@@ -370,6 +374,14 @@ void LinkerDriver::parseDirectives(InputFile *file) {
   // Handle /include: in bulk.
   for (StringRef inc : directives.includes)
     addUndefined(inc);
+
+  // Handle /exclude-symbols: in bulk.
+  for (StringRef e : directives.excludes) {
+    SmallVector<StringRef, 2> vec;
+    e.split(vec, ',');
+    for (StringRef sym : vec)
+      excludedSymbols.insert(mangle(sym));
+  }
 
   // https://docs.microsoft.com/en-us/cpp/preprocessor/comment-c-cpp?view=msvc-160
   for (auto *arg : directives.args) {
@@ -1305,11 +1317,18 @@ void LinkerDriver::maybeExportMinGWSymbols(const opt::InputArgList &args) {
       return;
   }
 
-  AutoExporter exporter;
+  AutoExporter exporter(excludedSymbols);
 
   for (auto *arg : args.filtered(OPT_wholearchive_file))
     if (Optional<StringRef> path = doFindFile(arg->getValue()))
       exporter.addWholeArchive(*path);
+
+  for (auto *arg : args.filtered(OPT_exclude_symbols)) {
+    SmallVector<StringRef, 2> vec;
+    StringRef(arg->getValue()).split(vec, ',');
+    for (StringRef sym : vec)
+      exporter.addExcludedSymbol(mangle(sym));
+  }
 
   ctx.symtab.forEachSymbol([&](Symbol *s) {
     auto *def = dyn_cast<Defined>(s);

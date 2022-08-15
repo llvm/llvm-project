@@ -118,7 +118,7 @@ std::string detectClangPath() {
 
 // On mac, /usr/bin/clang sets SDKROOT and then invokes the real clang.
 // The effect of this is to set -isysroot correctly. We do the same.
-const llvm::Optional<std::string> detectSysroot() {
+llvm::Optional<std::string> detectSysroot() {
 #ifndef __APPLE__
   return llvm::None;
 #endif

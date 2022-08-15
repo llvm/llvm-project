@@ -533,8 +533,13 @@ public:
       case GPRRegSet:
         // On ARM, the CPSR register is also included in the count but it is
         // not included in gpr.r so loop until (count-1).
-        for (uint32_t i = 0; i < (count - 1); ++i) {
-          gpr.r[i] = data.GetU32(&offset);
+
+        // Prevent static analysis warnings by explicitly contstraining 'count'
+        // to acceptable range. Handle possible underflow of count-1
+        if (count > 0 && count <= sizeof(gpr.r) / sizeof(gpr.r[0])) {
+          for (uint32_t i = 0; i < (count - 1); ++i) {
+            gpr.r[i] = data.GetU32(&offset);
+          }
         }
         // Save cpsr explicitly.
         gpr.cpsr = data.GetU32(&offset);
@@ -544,7 +549,7 @@ public:
         break;
 
       case FPURegSet: {
-        uint8_t *fpu_reg_buf = (uint8_t *)&fpu.floats.s[0];
+        uint8_t *fpu_reg_buf = (uint8_t *)&fpu.floats;
         const int fpu_reg_buf_size = sizeof(fpu.floats);
         if (data.ExtractBytes(offset, fpu_reg_buf_size, eByteOrderLittle,
                               fpu_reg_buf) == fpu_reg_buf_size) {
@@ -4109,7 +4114,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
         switch (n_type) {
         case N_INDR: {
           const char *reexport_name_cstr = strtab_data.PeekCStr(nlist.n_value);
-          if (reexport_name_cstr && reexport_name_cstr[0]) {
+          if (reexport_name_cstr && reexport_name_cstr[0] && symbol_name) {
             type = eSymbolTypeReExported;
             ConstString reexport_name(reexport_name_cstr +
                                       ((reexport_name_cstr[0] == '_') ? 1 : 0));
@@ -6335,6 +6340,11 @@ static offset_t CreateAllImageInfosPayload(
           continue;
         ConstString name = section->GetName();
         segment_vmaddr seg_vmaddr;
+        // This is the uncommon case where strncpy is exactly
+        // the right one, doesn't need to be nul terminated.
+        // The segment name in a Mach-O LC_SEGMENT/LC_SEGMENT_64 is char[16] and
+        // is not guaranteed to be nul-terminated if all 16 characters are
+        // used.
         strncpy(seg_vmaddr.segname, name.AsCString(),
                 sizeof(seg_vmaddr.segname));
         seg_vmaddr.vmaddr = vmaddr;
@@ -6726,8 +6736,10 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           buffer.PutHex32(sizeof(llvm::MachO::note_command));
           char namebuf[16];
           memset(namebuf, 0, sizeof(namebuf));
-          // this is the uncommon case where strncpy is exactly
+          // This is the uncommon case where strncpy is exactly
           // the right one, doesn't need to be nul terminated.
+          // LC_NOTE name field is char[16] and is not guaranteed to be
+          // nul-terminated.
           strncpy(namebuf, lcnote->name.c_str(), sizeof(namebuf));
           buffer.PutRawBytes(namebuf, sizeof(namebuf));
           buffer.PutHex64(lcnote->payload_file_offset);
@@ -6885,8 +6897,9 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
         }
         uint32_t imgcount = m_data.GetU32(&offset);
         uint64_t entries_fileoff = m_data.GetU64(&offset);
-        offset += 4; // uint32_t entries_size;
-        offset += 4; // uint32_t unused;
+        // 'entries_size' is not used, nor is the 'unused' entry.
+        //  offset += 4; // uint32_t entries_size;
+        //  offset += 4; // uint32_t unused;
 
         offset = entries_fileoff;
         for (uint32_t i = 0; i < imgcount; i++) {

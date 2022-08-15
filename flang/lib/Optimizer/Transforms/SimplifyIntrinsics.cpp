@@ -31,44 +31,57 @@
 #include "flang/Optimizer/Support/FIRContext.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/Optional.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
+
+#define DEBUG_TYPE "flang-simplify-intrinsics"
 
 namespace {
 
 class SimplifyIntrinsicsPass
     : public fir::SimplifyIntrinsicsBase<SimplifyIntrinsicsPass> {
+  using FunctionTypeGeneratorTy =
+      std::function<mlir::FunctionType(fir::FirOpBuilder &)>;
+  using FunctionBodyGeneratorTy =
+      std::function<void(fir::FirOpBuilder &, mlir::func::FuncOp &)>;
+
 public:
-  mlir::func::FuncOp getOrCreateFunction(const mlir::Location &loc,
-                                         fir::FirOpBuilder &builder,
-                                         const mlir::Type &type,
-                                         const mlir::StringRef &basename);
+  /// Generate a new function implementing a simplified version
+  /// of a Fortran runtime function defined by \p basename name.
+  /// \p typeGenerator is a callback that generates the new function's type.
+  /// \p bodyGenerator is a callback that generates the new function's body.
+  /// The new function is created in the \p builder's Module.
+  mlir::func::FuncOp getOrCreateFunction(fir::FirOpBuilder &builder,
+                                         const mlir::StringRef &basename,
+                                         FunctionTypeGeneratorTy typeGenerator,
+                                         FunctionBodyGeneratorTy bodyGenerator);
   void runOnOperation() override;
+  void getDependentDialects(mlir::DialectRegistry &registry) const override;
 };
 
 } // namespace
 
-mlir::func::FuncOp SimplifyIntrinsicsPass::getOrCreateFunction(
-    const mlir::Location &loc, fir::FirOpBuilder &builder,
-    const mlir::Type &type, const mlir::StringRef &baseName) {
-  // In future, the idea is that instead of building the function inside
-  // this function, this does the base creation, and calls a callback
-  // function (e.g. a lambda function) that fills in the actual content.
-  // For now, check that it's the ONLY the SUM runtime call.
-  assert(baseName.startswith("_FortranASum"));
+/// Generate function type for the simplified version of FortranASum
+/// operating on the given \p elementType.
+static mlir::FunctionType genFortranASumType(fir::FirOpBuilder &builder,
+                                             const mlir::Type &elementType) {
+  mlir::Type boxType = fir::BoxType::get(builder.getNoneType());
+  return mlir::FunctionType::get(builder.getContext(), {boxType},
+                                 {elementType});
+}
 
-  std::string replacementName = mlir::Twine{baseName, "_simplified"}.str();
-  mlir::ModuleOp module = builder.getModule();
-  // If we already have a function, just return it.
-  mlir::func::FuncOp newFunc =
-      fir::FirOpBuilder::getNamedFunction(module, replacementName);
-  if (newFunc)
-    return newFunc;
-
-  // Need to build the function!
-  // Basic idea:
+/// Generate function body of the simplified version of FortranASum
+/// with signature provided by \p funcOp. The caller is responsible
+/// for saving/restoring the original insertion point of \p builder.
+/// \p funcOp is expected to be empty on entry to this function.
+static void genFortranASumBody(fir::FirOpBuilder &builder,
+                               mlir::func::FuncOp &funcOp) {
   // function FortranASum<T>_simplified(arr)
   //   T, dimension(:) :: arr
   //   T sum = 0
@@ -78,35 +91,25 @@ mlir::func::FuncOp SimplifyIntrinsicsPass::getOrCreateFunction(
   //   end do
   //   FortranASum<T>_simplified = sum
   // end function FortranASum<T>_simplified
-  mlir::Type boxType = fir::BoxType::get(builder.getNoneType());
-  mlir::FunctionType fType =
-      mlir::FunctionType::get(builder.getContext(), {boxType}, {type});
-  newFunc =
-      fir::FirOpBuilder::createFunction(loc, module, replacementName, fType);
-  auto inlineLinkage = mlir::LLVM::linkage::Linkage::LinkonceODR;
-  auto linkage =
-      mlir::LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
-  newFunc->setAttr("llvm.linkage", linkage);
-
-  // Save the position of the original call.
-  mlir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
-  builder.setInsertionPointToEnd(newFunc.addEntryBlock());
+  auto loc = mlir::UnknownLoc::get(builder.getContext());
+  mlir::Type elementType = funcOp.getResultTypes()[0];
+  builder.setInsertionPointToEnd(funcOp.addEntryBlock());
 
   mlir::IndexType idxTy = builder.getIndexType();
 
-  mlir::Value zero = type.isa<mlir::FloatType>()
-                         ? builder.createRealConstant(loc, type, 0.0)
-                         : builder.createIntegerConstant(loc, type, 0);
-  mlir::Value sum = builder.create<fir::AllocaOp>(loc, type);
+  mlir::Value zero = elementType.isa<mlir::FloatType>()
+                         ? builder.createRealConstant(loc, elementType, 0.0)
+                         : builder.createIntegerConstant(loc, elementType, 0);
+  mlir::Value sum = builder.create<fir::AllocaOp>(loc, elementType);
   builder.create<fir::StoreOp>(loc, zero, sum);
 
-  mlir::Block::BlockArgListType args = newFunc.front().getArguments();
+  mlir::Block::BlockArgListType args = funcOp.front().getArguments();
   mlir::Value arg = args[0];
 
   mlir::Value zeroIdx = builder.createIntegerConstant(loc, idxTy, 0);
 
   fir::SequenceType::Shape flatShape = {fir::SequenceType::getUnknownExtent()};
-  mlir::Type arrTy = fir::SequenceType::get(flatShape, type);
+  mlir::Type arrTy = fir::SequenceType::get(flatShape, elementType);
   mlir::Type boxArrTy = fir::BoxType::get(arrTy);
   mlir::Value array = builder.create<fir::ConvertOp>(loc, boxArrTy, arg);
   auto dims =
@@ -123,7 +126,7 @@ mlir::func::FuncOp SimplifyIntrinsicsPass::getOrCreateFunction(
   mlir::OpBuilder::InsertPoint loopEndPt = builder.saveInsertionPoint();
   builder.setInsertionPointToStart(loop.getBody());
 
-  mlir::Type eleRefTy = builder.getRefType(type);
+  mlir::Type eleRefTy = builder.getRefType(elementType);
   mlir::Value index = loop.getInductionVar();
   mlir::Value addr =
       builder.create<fir::CoordinateOp>(loc, eleRefTy, array, index);
@@ -131,9 +134,9 @@ mlir::func::FuncOp SimplifyIntrinsicsPass::getOrCreateFunction(
   mlir::Value sumVal = builder.create<fir::LoadOp>(loc, sum);
 
   mlir::Value res;
-  if (type.isa<mlir::FloatType>())
+  if (elementType.isa<mlir::FloatType>())
     res = builder.create<mlir::arith::AddFOp>(loc, elem, sumVal);
-  else if (type.isa<mlir::IntegerType>())
+  else if (elementType.isa<mlir::IntegerType>())
     res = builder.create<mlir::arith::AddIOp>(loc, elem, sumVal);
   else
     TODO(loc, "Unsupported type");
@@ -144,6 +147,154 @@ mlir::func::FuncOp SimplifyIntrinsicsPass::getOrCreateFunction(
 
   mlir::Value resultVal = builder.create<fir::LoadOp>(loc, sum);
   builder.create<mlir::func::ReturnOp>(loc, resultVal);
+}
+
+/// Generate function type for the simplified version of FortranADotProduct
+/// operating on the given \p elementType.
+static mlir::FunctionType genFortranADotType(fir::FirOpBuilder &builder,
+                                             const mlir::Type &elementType) {
+  mlir::Type boxType = fir::BoxType::get(builder.getNoneType());
+  return mlir::FunctionType::get(builder.getContext(), {boxType, boxType},
+                                 {elementType});
+}
+
+/// Generate function body of the simplified version of FortranADotProduct
+/// with signature provided by \p funcOp. The caller is responsible
+/// for saving/restoring the original insertion point of \p builder.
+/// \p funcOp is expected to be empty on entry to this function.
+/// \p arg1ElementTy and \p arg2ElementTy specify elements types
+/// of the underlying array objects - they are used to generate proper
+/// element accesses.
+static void genFortranADotBody(fir::FirOpBuilder &builder,
+                               mlir::func::FuncOp &funcOp,
+                               mlir::Type arg1ElementTy,
+                               mlir::Type arg2ElementTy) {
+  // function FortranADotProduct<T>_simplified(arr1, arr2)
+  //   T, dimension(:) :: arr1, arr2
+  //   T product = 0
+  //   integer iter
+  //   do iter = 0, extent(arr1)
+  //     product = product + arr1[iter] * arr2[iter]
+  //   end do
+  //   FortranADotProduct<T>_simplified = product
+  // end function FortranADotProduct<T>_simplified
+  auto loc = mlir::UnknownLoc::get(builder.getContext());
+  mlir::Type resultElementType = funcOp.getResultTypes()[0];
+  builder.setInsertionPointToEnd(funcOp.addEntryBlock());
+
+  mlir::IndexType idxTy = builder.getIndexType();
+
+  mlir::Value zero =
+      resultElementType.isa<mlir::FloatType>()
+          ? builder.createRealConstant(loc, resultElementType, 0.0)
+          : builder.createIntegerConstant(loc, resultElementType, 0);
+
+  mlir::Block::BlockArgListType args = funcOp.front().getArguments();
+  mlir::Value arg1 = args[0];
+  mlir::Value arg2 = args[1];
+
+  mlir::Value zeroIdx = builder.createIntegerConstant(loc, idxTy, 0);
+
+  fir::SequenceType::Shape flatShape = {fir::SequenceType::getUnknownExtent()};
+  mlir::Type arrTy1 = fir::SequenceType::get(flatShape, arg1ElementTy);
+  mlir::Type boxArrTy1 = fir::BoxType::get(arrTy1);
+  mlir::Value array1 = builder.create<fir::ConvertOp>(loc, boxArrTy1, arg1);
+  mlir::Type arrTy2 = fir::SequenceType::get(flatShape, arg2ElementTy);
+  mlir::Type boxArrTy2 = fir::BoxType::get(arrTy2);
+  mlir::Value array2 = builder.create<fir::ConvertOp>(loc, boxArrTy2, arg2);
+  // This version takes the loop trip count from the first argument.
+  // If the first argument's box has unknown (at compilation time)
+  // extent, then it may be better to take the extent from the second
+  // argument - so that after inlining the loop may be better optimized, e.g.
+  // fully unrolled. This requires generating two versions of the simplified
+  // function and some analysis at the call site to choose which version
+  // is more profitable to call.
+  // Note that we can assume that both arguments have the same extent.
+  auto dims =
+      builder.create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, array1, zeroIdx);
+  mlir::Value len = dims.getResult(1);
+  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  mlir::Value step = one;
+
+  // We use C indexing here, so len-1 as loopcount
+  mlir::Value loopCount = builder.create<mlir::arith::SubIOp>(loc, len, one);
+  auto loop = builder.create<fir::DoLoopOp>(loc, zeroIdx, loopCount, step,
+                                            /*unordered=*/false,
+                                            /*finalCountValue=*/false, zero);
+  mlir::Value sumVal = loop.getRegionIterArgs()[0];
+
+  // Begin loop code
+  mlir::OpBuilder::InsertPoint loopEndPt = builder.saveInsertionPoint();
+  builder.setInsertionPointToStart(loop.getBody());
+
+  mlir::Type eleRef1Ty = builder.getRefType(arg1ElementTy);
+  mlir::Value index = loop.getInductionVar();
+  mlir::Value addr1 =
+      builder.create<fir::CoordinateOp>(loc, eleRef1Ty, array1, index);
+  mlir::Value elem1 = builder.create<fir::LoadOp>(loc, addr1);
+  // Convert to the result type.
+  elem1 = builder.create<fir::ConvertOp>(loc, resultElementType, elem1);
+
+  mlir::Type eleRef2Ty = builder.getRefType(arg2ElementTy);
+  mlir::Value addr2 =
+      builder.create<fir::CoordinateOp>(loc, eleRef2Ty, array2, index);
+  mlir::Value elem2 = builder.create<fir::LoadOp>(loc, addr2);
+  // Convert to the result type.
+  elem2 = builder.create<fir::ConvertOp>(loc, resultElementType, elem2);
+
+  if (resultElementType.isa<mlir::FloatType>())
+    sumVal = builder.create<mlir::arith::AddFOp>(
+        loc, builder.create<mlir::arith::MulFOp>(loc, elem1, elem2), sumVal);
+  else if (resultElementType.isa<mlir::IntegerType>())
+    sumVal = builder.create<mlir::arith::AddIOp>(
+        loc, builder.create<mlir::arith::MulIOp>(loc, elem1, elem2), sumVal);
+  else
+    llvm_unreachable("unsupported type");
+
+  builder.create<fir::ResultOp>(loc, sumVal);
+  // End of loop.
+  builder.restoreInsertionPoint(loopEndPt);
+
+  mlir::Value resultVal = loop.getResult(0);
+  builder.create<mlir::func::ReturnOp>(loc, resultVal);
+}
+
+mlir::func::FuncOp SimplifyIntrinsicsPass::getOrCreateFunction(
+    fir::FirOpBuilder &builder, const mlir::StringRef &baseName,
+    FunctionTypeGeneratorTy typeGenerator,
+    FunctionBodyGeneratorTy bodyGenerator) {
+  // WARNING: if the function generated here changes its signature
+  //          or behavior (the body code), we should probably embed some
+  //          versioning information into its name, otherwise libraries
+  //          statically linked with older versions of Flang may stop
+  //          working with object files created with newer Flang.
+  //          We can also avoid this by using internal linkage, but
+  //          this may increase the size of final executable/shared library.
+  std::string replacementName = mlir::Twine{baseName, "_simplified"}.str();
+  mlir::ModuleOp module = builder.getModule();
+  // If we already have a function, just return it.
+  mlir::func::FuncOp newFunc =
+      fir::FirOpBuilder::getNamedFunction(module, replacementName);
+  mlir::FunctionType fType = typeGenerator(builder);
+  if (newFunc) {
+    assert(newFunc.getFunctionType() == fType &&
+           "type mismatch for simplified function");
+    return newFunc;
+  }
+
+  // Need to build the function!
+  auto loc = mlir::UnknownLoc::get(builder.getContext());
+  newFunc =
+      fir::FirOpBuilder::createFunction(loc, module, replacementName, fType);
+  auto inlineLinkage = mlir::LLVM::linkage::Linkage::LinkonceODR;
+  auto linkage =
+      mlir::LLVM::LinkageAttr::get(builder.getContext(), inlineLinkage);
+  newFunc->setAttr("llvm.linkage", linkage);
+
+  // Save the position of the original call.
+  mlir::OpBuilder::InsertPoint insertPt = builder.saveInsertionPoint();
+
+  bodyGenerator(builder, newFunc);
 
   // Now back to where we were adding code earlier...
   builder.restoreInsertionPoint(insertPt);
@@ -183,7 +334,31 @@ static unsigned getDimCount(mlir::Value val) {
   return 0;
 }
 
+/// Given the call operation's box argument \p val, discover
+/// the element type of the underlying array object.
+/// \returns the element type or llvm::None if the type cannot
+/// be reliably found.
+/// We expect that the argument is a result of fir.convert
+/// with the destination type of !fir.box<none>.
+static llvm::Optional<mlir::Type> getArgElementType(mlir::Value val) {
+  mlir::Operation *defOp;
+  do {
+    defOp = val.getDefiningOp();
+    // Analyze only sequences of convert operations.
+    if (!mlir::isa<fir::ConvertOp>(defOp))
+      return llvm::None;
+    val = defOp->getOperand(0);
+    // The convert operation is expected to convert from one
+    // box type to another box type.
+    auto boxType = val.getType().cast<fir::BoxType>();
+    auto elementType = fir::unwrapSeqOrBoxedSeqType(boxType);
+    if (!elementType.isa<mlir::NoneType>())
+      return elementType;
+  } while (true);
+}
+
 void SimplifyIntrinsicsPass::runOnOperation() {
+  LLVM_DEBUG(llvm::dbgs() << "=== Begin " DEBUG_TYPE " ===\n");
   mlir::ModuleOp module = getOperation();
   fir::KindMapping kindMap = fir::getKindMapping(module);
   module.walk([&](mlir::Operation *op) {
@@ -218,20 +393,90 @@ void SimplifyIntrinsicsPass::runOnOperation() {
             } else {
               return;
             }
-            mlir::func::FuncOp newFunc =
-                getOrCreateFunction(loc, builder, type, funcName);
+            auto typeGenerator = [&type](fir::FirOpBuilder &builder) {
+              return genFortranASumType(builder, type);
+            };
+            mlir::func::FuncOp newFunc = getOrCreateFunction(
+                builder, funcName, typeGenerator, genFortranASumBody);
             auto newCall = builder.create<fir::CallOp>(
                 loc, newFunc, mlir::ValueRange{args[0]});
             call->replaceAllUsesWith(newCall.getResults());
             call->dropAllReferences();
             call->erase();
           }
+
+          return;
+        }
+        if (funcName.startswith("_FortranADotProduct")) {
+          LLVM_DEBUG(llvm::dbgs() << "Handling " << funcName << "\n");
+          LLVM_DEBUG(llvm::dbgs() << "Call operation:\n"; op->dump();
+                     llvm::dbgs() << "\n");
+          mlir::Operation::operand_range args = call.getArgs();
+          const mlir::Value &v1 = args[0];
+          const mlir::Value &v2 = args[1];
+          mlir::Location loc = call.getLoc();
+          fir::FirOpBuilder builder(op, kindMap);
+          mlir::Type type = call.getResult(0).getType();
+          if (!type.isa<mlir::FloatType>() && !type.isa<mlir::IntegerType>())
+            return;
+
+          // Try to find the element types of the boxed arguments.
+          auto arg1Type = getArgElementType(v1);
+          auto arg2Type = getArgElementType(v2);
+
+          if (!arg1Type || !arg2Type)
+            return;
+
+          // Support only floating point and integer arguments
+          // now (e.g. logical is skipped here).
+          if (!arg1Type->isa<mlir::FloatType>() &&
+              !arg1Type->isa<mlir::IntegerType>())
+            return;
+          if (!arg2Type->isa<mlir::FloatType>() &&
+              !arg2Type->isa<mlir::IntegerType>())
+            return;
+
+          auto typeGenerator = [&type](fir::FirOpBuilder &builder) {
+            return genFortranADotType(builder, type);
+          };
+          auto bodyGenerator = [&arg1Type,
+                                &arg2Type](fir::FirOpBuilder &builder,
+                                           mlir::func::FuncOp &funcOp) {
+            genFortranADotBody(builder, funcOp, *arg1Type, *arg2Type);
+          };
+
+          // Suffix the function name with the element types
+          // of the arguments.
+          std::string typedFuncName(funcName);
+          llvm::raw_string_ostream nameOS(typedFuncName);
+          nameOS << "_";
+          arg1Type->print(nameOS);
+          nameOS << "_";
+          arg2Type->print(nameOS);
+
+          mlir::func::FuncOp newFunc = getOrCreateFunction(
+              builder, typedFuncName, typeGenerator, bodyGenerator);
+          auto newCall = builder.create<fir::CallOp>(loc, newFunc,
+                                                     mlir::ValueRange{v1, v2});
+          call->replaceAllUsesWith(newCall.getResults());
+          call->dropAllReferences();
+          call->erase();
+
+          LLVM_DEBUG(llvm::dbgs() << "Replaced with:\n"; newCall.dump();
+                     llvm::dbgs() << "\n");
+          return;
         }
       }
     }
   });
+  LLVM_DEBUG(llvm::dbgs() << "=== End " DEBUG_TYPE " ===\n");
 }
 
+void SimplifyIntrinsicsPass::getDependentDialects(
+    mlir::DialectRegistry &registry) const {
+  // LLVM::LinkageAttr creation requires that LLVM dialect is loaded.
+  registry.insert<mlir::LLVM::LLVMDialect>();
+}
 std::unique_ptr<mlir::Pass> fir::createSimplifyIntrinsicsPass() {
   return std::make_unique<SimplifyIntrinsicsPass>();
 }

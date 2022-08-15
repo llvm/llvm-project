@@ -220,7 +220,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   // Use default lowering options for bbc.
   Fortran::lower::LoweringOptions loweringOptions{};
   auto burnside = Fortran::lower::LoweringBridge::create(
-      ctx, defKinds, semanticsContext.intrinsics(),
+      ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(), "",
       kindMap, loweringOptions);
   burnside.lower(parseTree, semanticsContext);
@@ -278,6 +278,7 @@ int main(int argc, char **argv) {
   registerAllPasses();
 
   mlir::registerMLIRContextCLOptions();
+  mlir::registerAsmPrinterCLOptions();
   mlir::registerPassManagerCLOptions();
   mlir::PassPipelineCLParser passPipe("", "Compiler passes to run");
   llvm::cl::ParseCommandLineOptions(argc, argv, "Burnside Bridge Compiler\n");

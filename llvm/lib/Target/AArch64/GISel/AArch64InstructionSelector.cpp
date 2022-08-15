@@ -907,6 +907,38 @@ getRegClassesForCopy(MachineInstr &I, const TargetInstrInfo &TII,
           getMinClassForRegBank(DstRegBank, DstSize, true)};
 }
 
+// FIXME: We need some sort of API in RBI/TRI to allow generic code to
+// constrain operands of simple instructions given a TargetRegisterClass
+// and LLT
+static bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI,
+                             const RegisterBankInfo &RBI) {
+  for (MachineOperand &MO : I.operands()) {
+    if (!MO.isReg())
+      continue;
+    Register Reg = MO.getReg();
+    if (!Reg)
+      continue;
+    if (Reg.isPhysical())
+      continue;
+    LLT Ty = MRI.getType(Reg);
+    const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
+    const TargetRegisterClass *RC =
+        RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+    if (!RC) {
+      const RegisterBank &RB = *RegClassOrBank.get<const RegisterBank *>();
+      RC = getRegClassForTypeOnBank(Ty, RB);
+      if (!RC) {
+        LLVM_DEBUG(
+            dbgs() << "Warning: DBG_VALUE operand has unexpected size/bank\n");
+        break;
+      }
+    }
+    RBI.constrainGenericRegister(Reg, *RC, MRI);
+  }
+
+  return true;
+}
+
 static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                        const RegisterBankInfo &RBI) {
@@ -2376,6 +2408,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     if (I.isCopy())
       return selectCopy(I, TII, MRI, TRI, RBI);
+
+    if (I.isDebugInstr())
+      return selectDebugInstr(I, MRI, RBI);
 
     return true;
   }
@@ -4821,13 +4856,8 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
   LLT OpTy = MRI.getType(LHS);
   assert(OpTy.getSizeInBits() == 32 || OpTy.getSizeInBits() == 64);
   unsigned CCmpOpc;
-  Optional<ValueAndVReg> C;
   if (CmpInst::isIntPredicate(CC)) {
-    C = getIConstantVRegValWithLookThrough(RHS, MRI);
-    if (C && C->Value.ult(32))
-      CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWi : AArch64::CCMPXi;
-    else
-      CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
+    CCmpOpc = OpTy.getSizeInBits() == 32 ? AArch64::CCMPWr : AArch64::CCMPXr;
   } else {
     switch (OpTy.getSizeInBits()) {
     case 16:
@@ -4846,12 +4876,7 @@ MachineInstr *AArch64InstructionSelector::emitConditionalComparison(
   AArch64CC::CondCode InvOutCC = AArch64CC::getInvertedCondCode(OutCC);
   unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvOutCC);
   auto CCmp =
-      MIB.buildInstr(CCmpOpc, {}, {LHS});
-  if (C)
-    CCmp.addImm(C->Value.getZExtValue());
-  else
-    CCmp.addReg(RHS);
-  CCmp.addImm(NZCV).addImm(Predicate);
+      MIB.buildInstr(CCmpOpc, {}, {LHS, RHS}).addImm(NZCV).addImm(Predicate);
   constrainSelectedInstRegOperands(*CCmp, TII, TRI, RBI);
   return &*CCmp;
 }

@@ -804,7 +804,7 @@ static Register buildScratchExecCopy(LivePhysRegs &LiveRegs,
                                      MachineFunction &MF,
                                      MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MBBI,
-                                     DebugLoc DL, bool IsProlog) {
+                                     const DebugLoc &DL, bool IsProlog) {
   Register ScratchExecCopy;
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -943,7 +943,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   MachineBasicBlock::iterator MBBI = MBB.begin();
 
-  // Debug location must be unknown since the first debug location is used
+  // DebugLoc must be unknown since the first instruction with DebugLoc is used
   // to determine the end of the prologue.
   DebugLoc DL;
 
@@ -1234,11 +1234,18 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const MCRegisterInfo *MCRI = MF.getMMI().getContext().getRegisterInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
-  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   LivePhysRegs LiveRegs;
-  // Copy DebugLoc of the insertion point so that breakpoint on function exit
-  // hits at the beginning of the epilogue.
-  DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
+  // Get the insert location for the epilogue. If there were no terminators in
+  // the block, get the last instruction.
+  MachineBasicBlock::iterator MBBI = MBB.end();
+  DebugLoc DL;
+  if (!MBB.empty()) {
+    MBBI = MBB.getLastNonDebugInstr();
+    if (MBBI != MBB.end())
+      DL = MBBI->getDebugLoc();
+
+    MBBI = MBB.getFirstTerminator();
+  }
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   uint32_t NumBytes = MFI.getStackSize();

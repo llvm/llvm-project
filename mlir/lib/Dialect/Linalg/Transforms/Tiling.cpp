@@ -415,9 +415,7 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
   if (!shapeSizesToLoopsMap)
     return failure();
 
-  SmallVector<Range, 4> loopRanges;
-  LoopIndexToRangeIndexMap loopIndexToRangeIndex;
-  std::tie(loopRanges, loopIndexToRangeIndex) = makeTiledLoopRanges(
+  auto [loopRanges, loopIndexToRangeIndex] = makeTiledLoopRanges(
       b, op.getLoc(), shapeSizesToLoopsMap, allShapeSizes, tileSizes);
 
   SmallVector<Attribute, 4> iteratorTypes;
@@ -450,6 +448,31 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
                                      interchangeVector.end());
     applyPermutationToVector(loopRanges, permutation);
     applyPermutationToVector(iteratorTypes, permutation);
+  }
+
+  // Handle distribution. Create a vector of the same size of loops that are to
+  // be tiled.
+  SmallVector<linalg::ProcInfo> procInfo;
+  if (options.distribution) {
+    procInfo.resize(
+        iteratorTypes.size(),
+        linalg::ProcInfo{nullptr, nullptr, linalg::DistributionMethod::None});
+    // Collect loop ranges of tiled loopss, loops that are parallel.
+    SmallVector<Range> parallelLoopRanges;
+    for (auto iteratorType : llvm::enumerate(iteratorTypes)) {
+      if (!isParallelIterator(iteratorType.value()))
+        break;
+      parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
+    }
+    auto returnedProcInfo =
+        options.distribution->procInfo(b, op.getLoc(), parallelLoopRanges);
+    unsigned procIdIdx = 0;
+    // Update the distribution information for the loops.
+    for (auto iteratorType : llvm::enumerate(iteratorTypes)) {
+      if (!isParallelIterator(iteratorType.value()))
+        break;
+      procInfo[iteratorType.index()] = returnedProcInfo[procIdIdx++];
+    }
   }
 
   // 2. Create the tiled loops.
@@ -491,8 +514,7 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
     return scf::ValueVector(tensorResults.begin(), tensorResults.end());
   };
   GenerateLoopNest<LoopTy>::doit(b, op.getLoc(), loopRanges, op, iteratorTypes,
-                                 tiledLoopBodyBuilder, options.distribution,
-                                 options.distributionTypes);
+                                 tiledLoopBodyBuilder, procInfo);
 
   // 3. Transform IndexOp results w.r.t. the tiling.
   transformIndexOps(b, res, ivs, loopIndexToRangeIndex);

@@ -18,8 +18,8 @@ class GlobalVariablesTestCase(TestBase):
             self.source, '// Set break point at this line.')
         self.shlib_names = ["a"]
 
+    @skipIfDarwin # Chained Fixups
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
-    @expectedFailureDarwin(archs=["arm64", "arm64e"]) # <rdar://problem/37773624>
     def test_without_process(self):
         """Test that static initialized variables can be inspected without
         process."""
