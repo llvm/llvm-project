@@ -12238,7 +12238,20 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         (it->getType()->isVoidTy() || isa<CallInst, InvokeInst>(it))) {
       KeyNodes.insert(&*it);
       bool OpsChanged = false;
-      if (ShouldStartVectorizeHorAtStore || !isa<StoreInst>(it)) {
+      auto *SI = dyn_cast<StoreInst>(it);
+      bool TryToVectorizeRoot = ShouldStartVectorizeHorAtStore || !SI;
+      if (SI) {
+        auto I = Stores.find(getUnderlyingObject(SI->getPointerOperand()));
+        // Try to vectorize chain in store, if this is the only store to the
+        // address in the block.
+        // TODO: This is just a temporarily solution to save compile time. Need
+        // to investigate if we can safely turn on slp-vectorize-hor-store
+        // instead to allow lookup for reduction chains in all non-vectorized
+        // stores (need to check side effects and compile time).
+        TryToVectorizeRoot = (I == Stores.end() || I->second.size() == 1) &&
+                             SI->getValueOperand()->hasOneUse();
+      }
+      if (TryToVectorizeRoot) {
         for (auto *V : it->operand_values()) {
           // Try to match and vectorize a horizontal reduction.
           OpsChanged |= vectorizeRootInstruction(nullptr, V, BB, R, TTI);
