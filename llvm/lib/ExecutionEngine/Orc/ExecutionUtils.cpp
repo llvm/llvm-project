@@ -509,10 +509,10 @@ DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
   Triple TT = ES.getExecutorProcessControl().getTargetTriple();
   auto PointerSize = getTargetEndianness(TT);
   if (!PointerSize)
-    return std::move(PointerSize.takeError());
+    return PointerSize.takeError();
   auto Endianness = getTargetEndianness(TT);
   if (!Endianness)
-    return std::move(Endianness.takeError());
+    return Endianness.takeError();
 
   auto G = std::make_unique<jitlink::LinkGraph>(
       "<DLLIMPORT_STUBS>", TT, *PointerSize, *Endianness,
