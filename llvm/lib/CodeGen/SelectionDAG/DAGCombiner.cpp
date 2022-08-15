@@ -13213,6 +13213,26 @@ SDValue DAGCombiner::visitSIGN_EXTEND_INREG(SDNode *N) {
       return DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N), VT, BSwap, N1);
   }
 
+  // Fold (iM_signext_inreg
+  //        (extract_subvector (zext|anyext|sext iN_v to _) _)
+  //        from iN)
+  //      -> (extract_subvector (signext iN_v to iM))
+  if (N0.getOpcode() == ISD::EXTRACT_SUBVECTOR && N0.hasOneUse() &&
+      ISD::isExtOpcode(N0.getOperand(0).getOpcode())) {
+    SDValue InnerExt = N0.getOperand(0);
+    EVT InnerExtVT = InnerExt->getValueType(0);
+    SDValue Extendee = InnerExt->getOperand(0);
+
+    if (ExtVTBits == Extendee.getValueType().getScalarSizeInBits() &&
+        (!LegalOperations ||
+         TLI.isOperationLegal(ISD::SIGN_EXTEND, InnerExtVT))) {
+      SDValue SignExtExtendee =
+          DAG.getNode(ISD::SIGN_EXTEND, SDLoc(N), InnerExtVT, Extendee);
+      return DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(N), VT, SignExtExtendee,
+                         N0.getOperand(1));
+    }
+  }
+
   return SDValue();
 }
 
