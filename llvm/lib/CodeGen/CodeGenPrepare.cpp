@@ -7754,14 +7754,14 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
     return false;
   // Check that GEP is used outside the block, meaning it's alive on the
   // IndirectBr edge(s).
-  if (find_if(GEPI->users(), [&](User *Usr) {
+  if (llvm::none_of(GEPI->users(), [&](User *Usr) {
         if (auto *I = dyn_cast<Instruction>(Usr)) {
           if (I->getParent() != SrcBlock) {
             return true;
           }
         }
         return false;
-      }) == GEPI->users().end())
+      }))
     return false;
   // The second elements of the GEP chains to be unmerged.
   std::vector<GetElementPtrInst *> UGEPIs;
