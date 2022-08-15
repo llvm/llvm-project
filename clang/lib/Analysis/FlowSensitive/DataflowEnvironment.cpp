@@ -154,10 +154,10 @@ Environment::Environment(DataflowAnalysisContext &DACtx)
     : DACtx(&DACtx), FlowConditionToken(&DACtx.makeFlowConditionToken()) {}
 
 Environment::Environment(const Environment &Other)
-    : DACtx(Other.DACtx), DeclCtx(Other.DeclCtx), ReturnLoc(Other.ReturnLoc),
-      ThisPointeeLoc(Other.ThisPointeeLoc), DeclToLoc(Other.DeclToLoc),
-      ExprToLoc(Other.ExprToLoc), LocToVal(Other.LocToVal),
-      MemberLocToStruct(Other.MemberLocToStruct),
+    : DACtx(Other.DACtx), CallStack(Other.CallStack),
+      ReturnLoc(Other.ReturnLoc), ThisPointeeLoc(Other.ThisPointeeLoc),
+      DeclToLoc(Other.DeclToLoc), ExprToLoc(Other.ExprToLoc),
+      LocToVal(Other.LocToVal), MemberLocToStruct(Other.MemberLocToStruct),
       FlowConditionToken(&DACtx->forkFlowCondition(*Other.FlowConditionToken)) {
 }
 
@@ -168,11 +168,11 @@ Environment &Environment::operator=(const Environment &Other) {
 }
 
 Environment::Environment(DataflowAnalysisContext &DACtx,
-                         const DeclContext &DeclCtxArg)
+                         const DeclContext &DeclCtx)
     : Environment(DACtx) {
-  setDeclCtx(&DeclCtxArg);
+  CallStack.push_back(&DeclCtx);
 
-  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(DeclCtx)) {
+  if (const auto *FuncDecl = dyn_cast<FunctionDecl>(&DeclCtx)) {
     assert(FuncDecl->getBody() != nullptr);
     initGlobalVars(*FuncDecl->getBody(), *this);
     for (const auto *ParamDecl : FuncDecl->parameters()) {
@@ -187,7 +187,7 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
     ReturnLoc = &createStorageLocation(ReturnType);
   }
 
-  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(DeclCtx)) {
+  if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(&DeclCtx)) {
     auto *Parent = MethodDecl->getParent();
     assert(Parent != nullptr);
     if (Parent->isLambda())
@@ -203,6 +203,13 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
       }
     }
   }
+}
+
+bool Environment::canDescend(unsigned MaxDepth,
+                             const DeclContext *Callee) const {
+  return CallStack.size() <= MaxDepth &&
+         std::find(CallStack.begin(), CallStack.end(), Callee) ==
+             CallStack.end();
 }
 
 Environment Environment::pushCall(const CallExpr *Call) const {
@@ -239,7 +246,7 @@ Environment Environment::pushCall(const CXXConstructExpr *Call) const {
 
 void Environment::pushCallInternal(const FunctionDecl *FuncDecl,
                                    ArrayRef<const Expr *> Args) {
-  setDeclCtx(FuncDecl);
+  CallStack.push_back(FuncDecl);
 
   // FIXME: In order to allow the callee to reference globals, we probably need
   // to call `initGlobalVars` here in some way.
@@ -326,13 +333,13 @@ LatticeJoinEffect Environment::join(const Environment &Other,
   assert(DACtx == Other.DACtx);
   assert(ReturnLoc == Other.ReturnLoc);
   assert(ThisPointeeLoc == Other.ThisPointeeLoc);
-  assert(DeclCtx == Other.DeclCtx);
+  assert(CallStack == Other.CallStack);
 
   auto Effect = LatticeJoinEffect::Unchanged;
 
   Environment JoinedEnv(*DACtx);
 
-  JoinedEnv.setDeclCtx(DeclCtx);
+  JoinedEnv.CallStack = CallStack;
   JoinedEnv.ReturnLoc = ReturnLoc;
   JoinedEnv.ThisPointeeLoc = ThisPointeeLoc;
 
