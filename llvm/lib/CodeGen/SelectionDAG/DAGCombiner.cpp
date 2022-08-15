@@ -22866,25 +22866,31 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       SDLoc DL(N);
       EVT IntVT = VT.changeVectorElementTypeToInteger();
       EVT IntSVT = VT.getVectorElementType().changeTypeToInteger();
-      IntSVT = TLI.getTypeToTransformTo(*DAG.getContext(), IntSVT);
-      SDValue ZeroElt = DAG.getConstant(0, DL, IntSVT);
-      SDValue AllOnesElt = DAG.getAllOnesConstant(DL, IntSVT);
-      SmallVector<SDValue, 16> AndMask(NumElts, DAG.getUNDEF(IntSVT));
-      for (int I = 0; I != (int)NumElts; ++I)
-        if (0 <= Mask[I])
-          AndMask[I] = Mask[I] == I ? AllOnesElt : ZeroElt;
+      // Transform the type to a legal type so that the buildvector constant
+      // elements are not illegal. Make sure that the result is larger than the
+      // original type, incase the value is split into two (eg i64->i32).
+      if (!TLI.isTypeLegal(IntSVT) && LegalTypes)
+        IntSVT = TLI.getTypeToTransformTo(*DAG.getContext(), IntSVT);
+      if (IntSVT.getSizeInBits() >= IntVT.getScalarSizeInBits()) {
+        SDValue ZeroElt = DAG.getConstant(0, DL, IntSVT);
+        SDValue AllOnesElt = DAG.getAllOnesConstant(DL, IntSVT);
+        SmallVector<SDValue, 16> AndMask(NumElts, DAG.getUNDEF(IntSVT));
+        for (int I = 0; I != (int)NumElts; ++I)
+          if (0 <= Mask[I])
+            AndMask[I] = Mask[I] == I ? AllOnesElt : ZeroElt;
 
-      // See if a clear mask is legal instead of going via
-      // XformToShuffleWithZero which loses UNDEF mask elements.
-      if (TLI.isVectorClearMaskLegal(ClearMask, IntVT))
-        return DAG.getBitcast(
-            VT, DAG.getVectorShuffle(IntVT, DL, DAG.getBitcast(IntVT, N0),
-                                     DAG.getConstant(0, DL, IntVT), ClearMask));
+        // See if a clear mask is legal instead of going via
+        // XformToShuffleWithZero which loses UNDEF mask elements.
+        if (TLI.isVectorClearMaskLegal(ClearMask, IntVT))
+          return DAG.getBitcast(
+              VT, DAG.getVectorShuffle(IntVT, DL, DAG.getBitcast(IntVT, N0),
+                                      DAG.getConstant(0, DL, IntVT), ClearMask));
 
-      if (TLI.isOperationLegalOrCustom(ISD::AND, IntVT))
-        return DAG.getBitcast(
-            VT, DAG.getNode(ISD::AND, DL, IntVT, DAG.getBitcast(IntVT, N0),
-                            DAG.getBuildVector(IntVT, DL, AndMask)));
+        if (TLI.isOperationLegalOrCustom(ISD::AND, IntVT))
+          return DAG.getBitcast(
+              VT, DAG.getNode(ISD::AND, DL, IntVT, DAG.getBitcast(IntVT, N0),
+                              DAG.getBuildVector(IntVT, DL, AndMask)));
+      }
     }
   }
 
