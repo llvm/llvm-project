@@ -94,7 +94,7 @@ func.func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tens
 //      CHECK: func @insertion_point_outside_loop(
 // CHECK-SAME:     %[[t:.*]]: memref<?xf32, #{{.*}}>, %[[sz:.*]]: index, %[[idx:.*]]: index)
 func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
-                                   %idx : index) -> (tensor<?xf32>) {
+                                        %idx : index) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c5 = arith.constant 5 : index
@@ -117,4 +117,22 @@ func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
   }
 
   return %r : tensor<?xf32>
+}
+
+// -----
+
+// AllocTensorElimination does currently not apply to chains where the type is
+// changing. This test just ensures that we do not crash or generate IR that
+// does not verify.
+
+// CHECK-LABEL: func @shape_mismatch
+func.func @shape_mismatch(%t: tensor<5x6x128xf32>) -> tensor<5x6x128xf32> {
+  %cst = arith.constant 8.0 : f32
+  %0 = bufferization.alloc_tensor() : tensor<128xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<128xf32>) -> tensor<128xf32>
+  %2 = tensor.expand_shape %1 [[0, 1, 2]]
+      : tensor<128xf32> into tensor<1x1x128xf32>
+  %3 = tensor.insert_slice %2 into %t[2, 3, 0][1, 1, 128][1, 1, 1]
+      : tensor<1x1x128xf32> into tensor<5x6x128xf32>
+  return %3 : tensor<5x6x128xf32>
 }
