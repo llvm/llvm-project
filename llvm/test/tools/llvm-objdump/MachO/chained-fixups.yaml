@@ -25,6 +25,7 @@
 ##   clang -target=x86_64-apple-macos12 -dynamiclib -isysroot Inputs/MacOSX.sdk dylib.s -o libdylib.dylib
 ##   obj2yaml --raw-segment=data libdylib.dylib
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007
