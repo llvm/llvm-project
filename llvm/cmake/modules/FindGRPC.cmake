@@ -132,7 +132,7 @@ function(generate_protos LibraryName ProtoFile)
         ARGS ${Flags} "${ProtoSourceAbsolutePath}"
         DEPENDS "${ProtoSourceAbsolutePath}")
 
-  add_clang_library(${LibraryName} ${GeneratedProtoSource}
+  add_llvm_library(${LibraryName} ${GeneratedProtoSource}
     PARTIAL_SOURCES_INTENDED
     LINK_LIBS PUBLIC grpc++ protobuf)
 
