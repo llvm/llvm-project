@@ -86,30 +86,33 @@ source_set("cxx_sources") {
   ]
 }
 
-static_library("ubsan_standalone") {
-  output_dir = crt_current_out_dir
-  output_name = "clang_rt.ubsan_standalone$crt_current_target_suffix"
-  complete_static_lib = true
-  configs -= [
-    "//llvm/utils/gn/build:llvm_code",
-    "//llvm/utils/gn/build:thin_archive",
-  ]
-  deps = [
-    ":sources",
-    ":standalone_sources",
-  ]
-  configs += [ "//llvm/utils/gn/build:crt_code" ]
-  sources = [ "ubsan_init_standalone_preinit.cpp" ]
-}
+# FIXME: Make ubsan_standalone work on mac.
+if (current_os != "mac") {
+  static_library("ubsan_standalone") {
+    output_dir = crt_current_out_dir
+    output_name = "clang_rt.ubsan_standalone$crt_current_target_suffix"
+    complete_static_lib = true
+    configs -= [
+      "//llvm/utils/gn/build:llvm_code",
+      "//llvm/utils/gn/build:thin_archive",
+    ]
+    deps = [
+      ":sources",
+      ":standalone_sources",
+    ]
+    configs += [ "//llvm/utils/gn/build:crt_code" ]
+    sources = [ "ubsan_init_standalone_preinit.cpp" ]
+  }
 
-static_library("ubsan_standalone_cxx") {
-  output_dir = crt_current_out_dir
-  output_name = "clang_rt.ubsan_standalone_cxx$crt_current_target_suffix"
-  complete_static_lib = true
-  configs -= [
-    "//llvm/utils/gn/build:llvm_code",
-    "//llvm/utils/gn/build:thin_archive",
-  ]
-  deps = [ ":cxx_sources" ]
-  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  static_library("ubsan_standalone_cxx") {
+    output_dir = crt_current_out_dir
+    output_name = "clang_rt.ubsan_standalone_cxx$crt_current_target_suffix"
+    complete_static_lib = true
+    configs -= [
+      "//llvm/utils/gn/build:llvm_code",
+      "//llvm/utils/gn/build:thin_archive",
+    ]
+    deps = [ ":cxx_sources" ]
+    configs += [ "//llvm/utils/gn/build:crt_code" ]
+  }
 }
