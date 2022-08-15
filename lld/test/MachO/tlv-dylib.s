@@ -13,6 +13,13 @@
 # DYLIB-NEXT:  segment  section            address     type
 # DYLIB-EMPTY:
 
+# RUN: %lld -dylib -install_name @executable_path/libtlv.dylib \
+# RUN:   -lSystem -fixup_chains -o %t/libtlv.dylib %t/libtlv.o
+## Make sure we don't emit fixups in __thread_vars.
+# RUN: llvm-objdump --macho --chained-fixups %t/libtlv.dylib | \
+# RUN:   FileCheck %s --check-prefix=CHAINED
+# CHAINED-NOT: __thread_vars
+
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: %lld -lSystem -L%t -ltlv %t/test.o -o %t/test
 # RUN: llvm-objdump --bind -d --no-show-raw-insn %t/test | FileCheck %s
