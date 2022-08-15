@@ -1609,7 +1609,7 @@ bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {
     switch (cvt.in(state, input.begin(), input.end(), from_next, &out, &out + 1,
                    to_next)) {
     case std::codecvt_base::ok:
-      return out != (int)WEOF;
+      return out != (EditLineGetCharType)WEOF;
 
     case std::codecvt_base::error:
     case std::codecvt_base::noconv:
