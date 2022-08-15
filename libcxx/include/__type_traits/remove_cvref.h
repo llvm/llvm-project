@@ -20,8 +20,13 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if __has_builtin(__remove_cvref)
+template <class _Tp>
+using __uncvref_t _LIBCPP_NODEBUG = __remove_cvref(_Tp);
+#else
 template <class _Tp>
 using __uncvref_t _LIBCPP_NODEBUG = typename remove_cv<typename remove_reference<_Tp>::type>::type;
+#endif // __has_builtin(__remove_cvref)
 
 template <class _Tp, class _Up>
 struct __is_same_uncvref : _IsSame<__uncvref_t<_Tp>, __uncvref_t<_Up> > {};
