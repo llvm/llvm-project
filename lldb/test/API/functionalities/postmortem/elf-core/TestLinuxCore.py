@@ -2,8 +2,6 @@
 Test basics of linux core file debugging.
 """
 
-from __future__ import division, print_function
-
 import shutil
 import struct
 import os

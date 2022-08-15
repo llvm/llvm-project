@@ -2,9 +2,6 @@
 Test that breakpoint by symbol name works correctly with dynamic libs.
 """
 
-from __future__ import print_function
-
-
 import os
 import re
 import lldb

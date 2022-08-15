@@ -2,8 +2,6 @@
 Use lldb Python API to disassemble raw machine code bytes
 """
 
-from __future__ import print_function
-
 from io import StringIO
 import sys
 

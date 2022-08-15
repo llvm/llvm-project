@@ -2,9 +2,6 @@
 Test the iteration protocol for some lldb container objects.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

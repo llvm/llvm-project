@@ -1,8 +1,5 @@
 """Test the lldb public C++ api when creating multiple targets simultaneously."""
 
-from __future__ import print_function
-
-
 import os
 
 import lldb

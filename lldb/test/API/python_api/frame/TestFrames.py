@@ -3,8 +3,6 @@ Use lldb Python SBFrame API to get the argument values of the call stacks.
 And other SBFrame API tests.
 """
 
-from __future__ import print_function
-
 import io
 
 import lldb
