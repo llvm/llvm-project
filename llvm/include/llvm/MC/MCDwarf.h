@@ -387,6 +387,7 @@ public:
 
   bool hasRootFile() const { return !Header.RootFile.Name.empty(); }
 
+  MCDwarfFile &getRootFile() { return Header.RootFile; }
   const MCDwarfFile &getRootFile() const { return Header.RootFile; }
 
   // Report whether MD5 usage has been consistent (all-or-none).
