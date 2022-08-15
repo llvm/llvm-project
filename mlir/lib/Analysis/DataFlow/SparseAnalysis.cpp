@@ -87,16 +87,10 @@ void AbstractSparseDataFlowAnalysis::visitOperation(Operation *op) {
   // Get the result lattices.
   SmallVector<AbstractSparseLattice *> resultLattices;
   resultLattices.reserve(op->getNumResults());
-  // Track whether all results have reached their fixpoint.
-  bool allAtFixpoint = true;
   for (Value result : op->getResults()) {
     AbstractSparseLattice *resultLattice = getLatticeElement(result);
-    allAtFixpoint &= resultLattice->isAtFixpoint();
     resultLattices.push_back(resultLattice);
   }
-  // If all result lattices have reached a fixpoint, there is nothing to do.
-  if (allAtFixpoint)
-    return;
 
   // The results of a region branch operation are determined by control-flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
@@ -145,16 +139,10 @@ void AbstractSparseDataFlowAnalysis::visitBlock(Block *block) {
   // Get the argument lattices.
   SmallVector<AbstractSparseLattice *> argLattices;
   argLattices.reserve(block->getNumArguments());
-  bool allAtFixpoint = true;
   for (BlockArgument argument : block->getArguments()) {
     AbstractSparseLattice *argLattice = getLatticeElement(argument);
-    allAtFixpoint &= argLattice->isAtFixpoint();
     argLattices.push_back(argLattice);
   }
-  // If all argument lattices have reached their fixpoints, then there is
-  // nothing to do.
-  if (allAtFixpoint)
-    return;
 
   // The argument lattices of entry blocks are set by region control-flow or the
   // callgraph.
