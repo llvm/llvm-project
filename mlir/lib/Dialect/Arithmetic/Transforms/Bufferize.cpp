@@ -24,8 +24,7 @@ namespace {
 struct ArithmeticBufferizePass
     : public ArithmeticBufferizeBase<ArithmeticBufferizePass> {
   ArithmeticBufferizePass(uint64_t alignment = 0, bool constantOpOnly = false)
-      : ArithmeticBufferizeBase<ArithmeticBufferizePass>(),
-        constantOpOnly(constantOpOnly) {
+      : constantOpOnly(constantOpOnly) {
     this->alignment = alignment;
   }
 

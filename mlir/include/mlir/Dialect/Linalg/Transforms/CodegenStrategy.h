@@ -128,7 +128,7 @@ struct Decompose : public Transformation {
 struct Peel : public Transformation {
   explicit Peel(linalg::LinalgPeelOptions options,
                 LinalgTransformationFilter::FilterFunction f = nullptr)
-      : Transformation(std::move(f)), opName(), options(options) {}
+      : Transformation(std::move(f)), options(options) {}
 
   Peel(StringRef name, linalg::LinalgPeelOptions options,
        LinalgTransformationFilter::FilterFunction f = nullptr)
@@ -149,7 +149,7 @@ struct Vectorize : public Transformation {
   explicit Vectorize(linalg::LinalgVectorizationOptions options,
                      LinalgTransformationFilter::FilterFunction f = nullptr,
                      bool padVectorize = false)
-      : Transformation(std::move(f)), opName(), options(options),
+      : Transformation(std::move(f)), options(options),
         vectorizePadding(padVectorize) {}
 
   Vectorize(StringRef name, linalg::LinalgVectorizationOptions options,

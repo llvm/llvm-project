@@ -122,12 +122,11 @@ TensorExp::TensorExp(Kind k, unsigned x, unsigned y, Value v, Operation *o)
 }
 
 LatPoint::LatPoint(unsigned n, unsigned e, unsigned b)
-    : bits(n, false), simple(), exp(e) {
+    : bits(n, false), exp(e) {
   bits.set(b);
 }
 
-LatPoint::LatPoint(const BitVector &b, unsigned e)
-    : bits(b), simple(), exp(e) {}
+LatPoint::LatPoint(const BitVector &b, unsigned e) : bits(b), exp(e) {}
 
 //===----------------------------------------------------------------------===//
 // Lattice methods.

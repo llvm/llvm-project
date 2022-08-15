@@ -59,8 +59,7 @@ mlir::linalg::LinalgTransformationFilter::LinalgTransformationFilter(
 mlir::linalg::LinalgTransformationFilter::LinalgTransformationFilter(
     const FilterFunction &f, ArrayRef<StringAttr> matchDisjunction,
     Optional<StringAttr> replacement)
-    : filters(),
-      matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
+    : matchDisjunction(matchDisjunction.begin(), matchDisjunction.end()),
       replacement(replacement), matchByDefault(false) {
   if (f)
     filters.push_back(f);
