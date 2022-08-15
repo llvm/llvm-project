@@ -268,8 +268,9 @@ def Vector_ReductionOp :
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      DeclareOpInterfaceMethods<VectorUnrollOpInterface,
                                ["getShapeForUnroll"]>]>,
-    Arguments<(ins Vector_CombiningKindAttr:$kind, AnyVector:$vector,
-                   Optional<AnyType>:$acc)>,
+    Arguments<(ins Vector_CombiningKindAttr:$kind,
+               AnyVectorOfAnyRank:$vector,
+               Optional<AnyType>:$acc)>,
     Results<(outs AnyType:$dest)> {
   let summary = "reduction operation";
   let description = [{
