@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Demangle/StringView.h"
 #include "llvm/Demangle/Utility.h"
 
@@ -866,7 +865,7 @@ Identifier Demangler::parseIdentifier() {
   StringView S = Input.substr(Position, Bytes);
   Position += Bytes;
 
-  if (!llvm::all_of(S, isValid)) {
+  if (!std::all_of(S.begin(), S.end(), isValid)) {
     Error = true;
     return {};
   }
