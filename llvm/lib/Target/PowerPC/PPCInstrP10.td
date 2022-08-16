@@ -1319,23 +1319,31 @@ let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1, Predicates = [P
 
 let Predicates = [IsISA3_1] in {
   def SETBC : XForm_XT5_BI5<31, 384, (outs gprc:$RT), (ins crbitrc:$BI),
-                            "setbc $RT, $BI", IIC_IntCompare, []>;
+                            "setbc $RT, $BI", IIC_IntCompare, []>,
+                            SExt32To64, ZExt32To64;
   def SETBCR : XForm_XT5_BI5<31, 416, (outs gprc:$RT), (ins crbitrc:$BI),
-                             "setbcr $RT, $BI", IIC_IntCompare, []>;
+                             "setbcr $RT, $BI", IIC_IntCompare, []>,
+                             SExt32To64, ZExt32To64;
   def SETNBC : XForm_XT5_BI5<31, 448, (outs gprc:$RT), (ins crbitrc:$BI),
-                             "setnbc $RT, $BI", IIC_IntCompare, []>;
+                             "setnbc $RT, $BI", IIC_IntCompare, []>,
+                             SExt32To64;
   def SETNBCR : XForm_XT5_BI5<31, 480, (outs gprc:$RT), (ins crbitrc:$BI),
-                              "setnbcr $RT, $BI", IIC_IntCompare, []>;
+                              "setnbcr $RT, $BI", IIC_IntCompare, []>,
+                              SExt32To64;
 
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
     def SETBC8 : XForm_XT5_BI5<31, 384, (outs g8rc:$RT), (ins crbitrc:$BI),
-                               "setbc $RT, $BI", IIC_IntCompare, []>;
+                               "setbc $RT, $BI", IIC_IntCompare, []>,
+                               SExt32To64, ZExt32To64;
     def SETBCR8 : XForm_XT5_BI5<31, 416, (outs g8rc:$RT), (ins crbitrc:$BI),
-                                "setbcr $RT, $BI", IIC_IntCompare, []>;
+                                "setbcr $RT, $BI", IIC_IntCompare, []>,
+                                SExt32To64, ZExt32To64;
     def SETNBC8 : XForm_XT5_BI5<31, 448, (outs g8rc:$RT), (ins crbitrc:$BI),
-                                "setnbc $RT, $BI", IIC_IntCompare, []>;
+                                "setnbc $RT, $BI", IIC_IntCompare, []>,
+                                SExt32To64;
     def SETNBCR8 : XForm_XT5_BI5<31, 480, (outs g8rc:$RT), (ins crbitrc:$BI),
-                                 "setnbcr $RT, $BI", IIC_IntCompare, []>;
+                                 "setnbcr $RT, $BI", IIC_IntCompare, []>,
+                                 SExt32To64;
   }
 
   def VSLDBI : VNForm_VTAB5_SD3<22, 0, (outs vrrc:$VRT),
@@ -1457,19 +1465,23 @@ let Predicates = [IsISA3_1] in {
   def VEXTRACTBM : VXForm_RD5_XO5_RS5<1602, 8, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextractbm $rD, $vB", IIC_VecGeneral,
                                       [(set i32:$rD,
-                                      (int_ppc_altivec_vextractbm v16i8:$vB))]>;
+                                      (int_ppc_altivec_vextractbm v16i8:$vB))]>,
+                                      ZExt32To64;
   def VEXTRACTHM : VXForm_RD5_XO5_RS5<1602, 9, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextracthm $rD, $vB", IIC_VecGeneral,
                                       [(set i32:$rD,
-                                      (int_ppc_altivec_vextracthm v8i16:$vB))]>;
+                                      (int_ppc_altivec_vextracthm v8i16:$vB))]>,
+                                      ZExt32To64;
   def VEXTRACTWM : VXForm_RD5_XO5_RS5<1602, 10, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextractwm $rD, $vB", IIC_VecGeneral,
                                       [(set i32:$rD,
-                                      (int_ppc_altivec_vextractwm v4i32:$vB))]>;
+                                      (int_ppc_altivec_vextractwm v4i32:$vB))]>,
+                                      ZExt32To64;
   def VEXTRACTDM : VXForm_RD5_XO5_RS5<1602, 11, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextractdm $rD, $vB", IIC_VecGeneral,
                                       [(set i32:$rD,
-                                      (int_ppc_altivec_vextractdm v2i64:$vB))]>;
+                                      (int_ppc_altivec_vextractdm v2i64:$vB))]>,
+                                      ZExt32To64;
   def VEXTRACTQM : VXForm_RD5_XO5_RS5<1602, 12, (outs gprc:$rD), (ins vrrc:$vB),
                                       "vextractqm $rD, $vB", IIC_VecGeneral,
                                       [(set i32:$rD,
