@@ -4309,11 +4309,21 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
       }
 
       if (getLangOpts().MSVCCompat && !getLangOpts().CPlusPlus20) {
-        auto UnqualifiedBase = R.getAsSingle<ClassTemplateDecl>();
-        if (UnqualifiedBase) {
-          Diag(IdLoc, diag::ext_unqualified_base_class)
-              << SourceRange(IdLoc, Init->getSourceRange().getEnd());
-          BaseType = UnqualifiedBase->getInjectedClassNameSpecialization();
+        if (auto UnqualifiedBase = R.getAsSingle<ClassTemplateDecl>()) {
+          auto *TempSpec = cast<TemplateSpecializationType>(
+              UnqualifiedBase->getInjectedClassNameSpecialization());
+          TemplateName TN = TempSpec->getTemplateName();
+          for (auto const &Base : ClassDecl->bases()) {
+            auto BaseTemplate =
+                Base.getType()->getAs<TemplateSpecializationType>();
+            if (BaseTemplate && Context.hasSameTemplateName(
+                                    BaseTemplate->getTemplateName(), TN)) {
+              Diag(IdLoc, diag::ext_unqualified_base_class)
+                  << SourceRange(IdLoc, Init->getSourceRange().getEnd());
+              BaseType = Base.getType();
+              break;
+            }
+          }
         }
       }
 
