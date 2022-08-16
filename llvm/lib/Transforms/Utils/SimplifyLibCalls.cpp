@@ -740,7 +740,7 @@ Value *LibCallSimplifier::optimizeStrLCpy(CallInst *CI, IRBuilderBase &B) {
   else {
     // Set the length of the source for the function to return to its
     // size, and cap NBytes at the same.
-    SrcLen = std::min(SrcLen, Str.size());
+    SrcLen = std::min(SrcLen, uint64_t(Str.size()));
     NBytes = std::min(NBytes - 1, SrcLen);
   }
 
