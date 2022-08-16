@@ -4,7 +4,7 @@
 define <4 x double> @test_ldnp_v4f64(<4 x double>* %A) {
 ; CHECK-LABEL: test_ldnp_v4f64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldnp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %lv = load <4 x double>, <4 x double>* %A, align 8, !nontemporal !0
   ret <4 x double> %lv
@@ -13,7 +13,7 @@ define <4 x double> @test_ldnp_v4f64(<4 x double>* %A) {
 define <4 x i64> @test_ldnp_v4i64(<4 x i64>* %A) {
 ; CHECK-LABEL: test_ldnp_v4i64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldnp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %lv = load <4 x i64>, <4 x i64>* %A, align 8, !nontemporal !0
   ret <4 x i64> %lv
@@ -22,7 +22,7 @@ define <4 x i64> @test_ldnp_v4i64(<4 x i64>* %A) {
 define <8 x i32> @test_ldnp_v8i32(<8 x i32>* %A) {
 ; CHECK-LABEL: test_ldnp_v8i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldnp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %lv = load <8 x i32>, <8 x i32>* %A, align 8, !nontemporal !0
   ret <8 x i32> %lv
@@ -31,7 +31,7 @@ define <8 x i32> @test_ldnp_v8i32(<8 x i32>* %A) {
 define <8 x float> @test_ldnp_v8f32(<8 x float>* %A) {
 ; CHECK-LABEL: test_ldnp_v8f32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldnp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %lv = load <8 x float>, <8 x float>* %A, align 8, !nontemporal !0
   ret <8 x float> %lv
@@ -40,7 +40,7 @@ define <8 x float> @test_ldnp_v8f32(<8 x float>* %A) {
 define <16 x i16> @test_ldnp_v16i16(<16 x i16>* %A) {
 ; CHECK-LABEL: test_ldnp_v16i16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldnp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %lv = load <16 x i16>, <16 x i16>* %A, align 8, !nontemporal !0
   ret <16 x i16> %lv
@@ -49,7 +49,7 @@ define <16 x i16> @test_ldnp_v16i16(<16 x i16>* %A) {
 define <16 x half> @test_ldnp_v16f16(<16 x half>* %A) {
 ; CHECK-LABEL: test_ldnp_v16f16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldnp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %lv = load <16 x half>, <16 x half>* %A, align 8, !nontemporal !0
   ret <16 x half> %lv
@@ -58,7 +58,7 @@ define <16 x half> @test_ldnp_v16f16(<16 x half>* %A) {
 define <32 x i8> @test_ldnp_v32i8(<32 x i8>* %A) {
 ; CHECK-LABEL: test_ldnp_v32i8:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldnp q0, q1, [x0]
 ; CHECK-NEXT:    ret
   %lv = load <32 x i8>, <32 x i8>* %A, align 8, !nontemporal !0
   ret <32 x i8> %lv
@@ -165,8 +165,8 @@ define <1 x i64> @test_ldnp_v1i64(<1 x i64>* %A) {
 define <32 x i16> @test_ldnp_v32i16(<32 x i16>* %A) {
 ; CHECK-LABEL: test_ldnp_v32i16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldnp q0, q1, [x0]
+; CHECK-NEXT:    ldnp q2, q3, [x0, #32]
 ; CHECK-NEXT:    ret
   %lv = load <32 x i16>, <32 x i16>* %A, align 8, !nontemporal !0
   ret <32 x i16> %lv
@@ -175,8 +175,8 @@ define <32 x i16> @test_ldnp_v32i16(<32 x i16>* %A) {
 define <32 x half> @test_ldnp_v32f16(<32 x half>* %A) {
 ; CHECK-LABEL: test_ldnp_v32f16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldnp q0, q1, [x0]
+; CHECK-NEXT:    ldnp q2, q3, [x0, #32]
 ; CHECK-NEXT:    ret
   %lv = load <32 x half>, <32 x half>* %A, align 8, !nontemporal !0
   ret <32 x half> %lv
@@ -185,8 +185,8 @@ define <32 x half> @test_ldnp_v32f16(<32 x half>* %A) {
 define <16 x i32> @test_ldnp_v16i32(<16 x i32>* %A) {
 ; CHECK-LABEL: test_ldnp_v16i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldnp q0, q1, [x0]
+; CHECK-NEXT:    ldnp q2, q3, [x0, #32]
 ; CHECK-NEXT:    ret
   %lv = load <16 x i32>, <16 x i32>* %A, align 8, !nontemporal !0
   ret <16 x i32> %lv
@@ -195,8 +195,8 @@ define <16 x i32> @test_ldnp_v16i32(<16 x i32>* %A) {
 define <16 x float> @test_ldnp_v16f32(<16 x float>* %A) {
 ; CHECK-LABEL: test_ldnp_v16f32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldnp q0, q1, [x0]
+; CHECK-NEXT:    ldnp q2, q3, [x0, #32]
 ; CHECK-NEXT:    ret
   %lv = load <16 x float>, <16 x float>* %A, align 8, !nontemporal !0
   ret <16 x float> %lv
@@ -312,10 +312,10 @@ define <5 x double> @test_ldnp_v5f64(<5 x double>* %A) {
 define <16 x i64> @test_ldnp_v16i64(<16 x i64>* %A) {
 ; CHECK-LABEL: test_ldnp_v16i64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x0, #32]
-; CHECK-NEXT:    ldp q4, q5, [x0, #64]
-; CHECK-NEXT:    ldp q6, q7, [x0, #96]
+; CHECK-NEXT:    ldnp q0, q1, [x0]
+; CHECK-NEXT:    ldnp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldnp q4, q5, [x0, #64]
+; CHECK-NEXT:    ldnp q6, q7, [x0, #96]
 ; CHECK-NEXT:    ret
   %lv = load <16 x i64>, <16 x i64>* %A, align 8, !nontemporal !0
   ret <16 x i64> %lv
@@ -324,10 +324,10 @@ define <16 x i64> @test_ldnp_v16i64(<16 x i64>* %A) {
 define <16 x double> @test_ldnp_v16f64(<16 x double>* %A) {
 ; CHECK-LABEL: test_ldnp_v16f64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0]
-; CHECK-NEXT:    ldp q2, q3, [x0, #32]
-; CHECK-NEXT:    ldp q4, q5, [x0, #64]
-; CHECK-NEXT:    ldp q6, q7, [x0, #96]
+; CHECK-NEXT:    ldnp q0, q1, [x0]
+; CHECK-NEXT:    ldnp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldnp q4, q5, [x0, #64]
+; CHECK-NEXT:    ldnp q6, q7, [x0, #96]
 ; CHECK-NEXT:    ret
   %lv = load <16 x double>, <16 x double>* %A, align 8, !nontemporal !0
   ret <16 x double> %lv
