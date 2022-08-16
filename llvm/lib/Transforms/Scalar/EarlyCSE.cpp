@@ -120,7 +120,15 @@ struct SimpleValue {
         case Intrinsic::experimental_constrained_fcmp:
         case Intrinsic::experimental_constrained_fcmps: {
           auto *CFP = cast<ConstrainedFPIntrinsic>(CI);
-          return CFP->isDefaultFPEnvironment();
+          if (CFP->getExceptionBehavior() &&
+              CFP->getExceptionBehavior().getValue() == fp::ebStrict)
+            return false;
+          // Since we CSE across function calls we must not allow
+          // the rounding mode to change.
+          if (CFP->getRoundingMode() &&
+              CFP->getRoundingMode().getValue() == RoundingMode::Dynamic)
+            return false;
+          return true;
         }
         }
       }
@@ -1374,6 +1382,13 @@ bool EarlyCSE::processNode(DomTreeNode *Node) {
 
     // If this is a simple instruction that we can value number, process it.
     if (SimpleValue::canHandle(&Inst)) {
+      if (auto *CI = dyn_cast<ConstrainedFPIntrinsic>(&Inst)) {
+        assert(CI->getExceptionBehavior().getValue() != fp::ebStrict &&
+               "Unexpected ebStrict from SimpleValue::canHandle()");
+        assert((!CI->getRoundingMode() ||
+                CI->getRoundingMode().getValue() != RoundingMode::Dynamic) &&
+               "Unexpected dynamic rounding from SimpleValue::canHandle()");
+      }
       // See if the instruction has an available value.  If so, use it.
       if (Value *V = AvailableValues.lookup(&Inst)) {
         LLVM_DEBUG(dbgs() << "EarlyCSE CSE: " << Inst << "  to: " << *V
