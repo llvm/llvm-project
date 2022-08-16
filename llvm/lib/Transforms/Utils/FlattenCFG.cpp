@@ -431,6 +431,9 @@ bool FlattenCFGOpt::MergeIfRegion(BasicBlock *BB, IRBuilder<> &Builder) {
     return false;
 
   BasicBlock *FirstEntryBlock = CInst1->getParent();
+  // Don't die trying to process degenerate/unreachable code.
+  if (FirstEntryBlock == SecondEntryBlock)
+    return false;
 
   // Either then-path or else-path should be empty.
   bool InvertCond2 = false;
