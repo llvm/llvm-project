@@ -8298,8 +8298,8 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
       // and may increase the number of constants we need.
       if (ImmValMinus1.isSignedIntN(12)) {
         CCVal = ISD::getSetCCInverse(CCVal, SetCCOpVT);
-        SDValue NewN0 =
-            DAG.getSetCC(SDLoc(N), VT, N1.getOperand(0), N1.getOperand(1), CCVal);
+        SDValue NewN0 = DAG.getSetCC(SDLoc(N0), VT, N1.getOperand(0),
+                                     N1.getOperand(1), CCVal);
         SDValue NewN1 = DAG.getConstant(ImmValMinus1, SDLoc(N), VT);
         return DAG.getNode(ISD::ADD, SDLoc(N), VT, NewN0, NewN1);
       }
