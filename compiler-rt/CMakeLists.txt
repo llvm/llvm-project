@@ -68,6 +68,10 @@ set(COMPILER_RT_BAREMETAL_BUILD OFF CACHE BOOL
   "Build for a bare-metal target.")
 
 if (COMPILER_RT_STANDALONE_BUILD)
+  set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
+  set(CMAKE_CXX_STANDARD_REQUIRED YES)
+  set(CMAKE_CXX_EXTENSIONS NO)
+
   load_llvm_config()
   if (TARGET intrinsics_gen)
     # Loading the llvm config causes this target to be imported so place it
