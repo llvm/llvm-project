@@ -355,20 +355,16 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x8, x2, x6
 ; CHECK-NEXT:    sbcs x9, x3, x7
-; CHECK-NEXT:    cset w10, vs
-; CHECK-NEXT:    asr x11, x9, #63
-; CHECK-NEXT:    cmp w10, #0
-; CHECK-NEXT:    csel x2, x11, x8, ne
-; CHECK-NEXT:    eor x8, x11, #0x8000000000000000
-; CHECK-NEXT:    csel x3, x8, x9, ne
+; CHECK-NEXT:    asr x10, x9, #63
+; CHECK-NEXT:    csel x2, x10, x8, vs
+; CHECK-NEXT:    eor x8, x10, #0x8000000000000000
+; CHECK-NEXT:    csel x3, x8, x9, vs
 ; CHECK-NEXT:    subs x8, x0, x4
 ; CHECK-NEXT:    sbcs x9, x1, x5
-; CHECK-NEXT:    cset w10, vs
-; CHECK-NEXT:    asr x11, x9, #63
-; CHECK-NEXT:    cmp w10, #0
-; CHECK-NEXT:    eor x10, x11, #0x8000000000000000
-; CHECK-NEXT:    csel x8, x11, x8, ne
-; CHECK-NEXT:    csel x1, x10, x9, ne
+; CHECK-NEXT:    asr x10, x9, #63
+; CHECK-NEXT:    csel x8, x10, x8, vs
+; CHECK-NEXT:    eor x10, x10, #0x8000000000000000
+; CHECK-NEXT:    csel x1, x10, x9, vs
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    mov v0.d[1], x1
 ; CHECK-NEXT:    fmov x0, d0
