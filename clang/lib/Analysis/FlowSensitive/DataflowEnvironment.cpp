@@ -20,6 +20,7 @@
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -207,9 +208,7 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
 
 bool Environment::canDescend(unsigned MaxDepth,
                              const DeclContext *Callee) const {
-  return CallStack.size() <= MaxDepth &&
-         std::find(CallStack.begin(), CallStack.end(), Callee) ==
-             CallStack.end();
+  return CallStack.size() <= MaxDepth && !llvm::is_contained(CallStack, Callee);
 }
 
 Environment Environment::pushCall(const CallExpr *Call) const {
