@@ -37,5 +37,5 @@ entry:
   ret i32 %3
 }
 
-declare ptr @llvm.threadlocal.address(ptr) nounwind readnone willreturn
-declare ptr addrspace(1) @llvm.threadlocal.address.p1(ptr addrspace(1)) nounwind readnone willreturn
+declare nonnull ptr @llvm.threadlocal.address(ptr nonnull) nounwind readnone willreturn
+declare nonnull ptr addrspace(1) @llvm.threadlocal.address.p1(ptr addrspace(1) nonnull) nounwind readnone willreturn
