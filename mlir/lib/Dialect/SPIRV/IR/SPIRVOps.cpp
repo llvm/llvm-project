@@ -436,6 +436,13 @@ static LogicalResult verifyCastOp(Operation *op,
         resultType.cast<spirv::CooperativeMatrixNVType>().getElementType();
   }
 
+  if (auto jointMatrixType =
+          operandType.dyn_cast<spirv::JointMatrixINTELType>()) {
+    operandType = jointMatrixType.getElementType();
+    resultType =
+        resultType.cast<spirv::JointMatrixINTELType>().getElementType();
+  }
+
   auto operandTypeBitWidth = operandType.getIntOrFloatBitWidth();
   auto resultTypeBitWidth = resultType.getIntOrFloatBitWidth();
   auto isSameBitWidth = operandTypeBitWidth == resultTypeBitWidth;
@@ -1633,6 +1640,17 @@ LogicalResult spirv::CompositeConstructOp::verify() {
     if (coopType.getElementType() != constituents.front().getType())
       return emitOpError("operand type mismatch: expected operand type ")
              << coopType.getElementType() << ", but provided "
+             << constituents.front().getType();
+    return success();
+  }
+
+  if (auto jointType = cType.dyn_cast<spirv::JointMatrixINTELType>()) {
+    if (constituents.size() != 1)
+      return emitOpError("has incorrect number of operands: expected ")
+             << "1, but provided " << constituents.size();
+    if (jointType.getElementType() != constituents.front().getType())
+      return emitOpError("operand type mismatch: expected operand type ")
+             << jointType.getElementType() << ", but provided "
              << constituents.front().getType();
     return success();
   }
@@ -3893,6 +3911,70 @@ LogicalResult spirv::CooperativeMatrixMulAddNVOp::verify() {
   return verifyCoopMatrixMulAdd(*this);
 }
 
+static LogicalResult
+verifyPointerAndJointMatrixType(Operation *op, Type pointer, Type jointMatrix) {
+  Type pointeeType = pointer.cast<spirv::PointerType>().getPointeeType();
+  if (!pointeeType.isa<spirv::ScalarType>() && !pointeeType.isa<VectorType>())
+    return op->emitError(
+               "Pointer must point to a scalar or vector type but provided ")
+           << pointeeType;
+  spirv::StorageClass storage =
+      pointer.cast<spirv::PointerType>().getStorageClass();
+  if (storage != spirv::StorageClass::Workgroup &&
+      storage != spirv::StorageClass::CrossWorkgroup)
+    return op->emitError("Pointer storage class must be Workgroup or "
+                         "CrossWorkgroup but provided ")
+           << stringifyStorageClass(storage);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spv.JointMatrixLoadINTEL
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::JointMatrixLoadINTELOp::verify() {
+  return verifyPointerAndJointMatrixType(*this, pointer().getType(),
+                                         result().getType());
+}
+
+//===----------------------------------------------------------------------===//
+// spv.JointMatrixStoreINTEL
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::JointMatrixStoreINTELOp::verify() {
+  return verifyPointerAndJointMatrixType(*this, pointer().getType(),
+                                         object().getType());
+}
+
+//===----------------------------------------------------------------------===//
+// spv.JointMatrixMadINTEL
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyJointMatrixMad(spirv::JointMatrixMadINTELOp op) {
+  if (op.c().getType() != op.result().getType())
+    return op.emitOpError("result and third operand must have the same type");
+  auto typeA = op.a().getType().cast<spirv::JointMatrixINTELType>();
+  auto typeB = op.b().getType().cast<spirv::JointMatrixINTELType>();
+  auto typeC = op.c().getType().cast<spirv::JointMatrixINTELType>();
+  auto typeR = op.result().getType().cast<spirv::JointMatrixINTELType>();
+  if (typeA.getRows() != typeR.getRows() ||
+      typeA.getColumns() != typeB.getRows() ||
+      typeB.getColumns() != typeR.getColumns())
+    return op.emitOpError("matrix size must match");
+  if (typeR.getScope() != typeA.getScope() ||
+      typeR.getScope() != typeB.getScope() ||
+      typeR.getScope() != typeC.getScope())
+    return op.emitOpError("matrix scope must match");
+  if (typeA.getElementType() != typeB.getElementType() ||
+      typeR.getElementType() != typeC.getElementType())
+    return op.emitOpError("matrix element type must match");
+  return success();
+}
+
+LogicalResult spirv::JointMatrixMadINTELOp::verify() {
+  return verifyJointMatrixMad(*this);
+}
+
 //===----------------------------------------------------------------------===//
 // spv.MatrixTimesScalar
 //===----------------------------------------------------------------------===//
@@ -4149,6 +4231,8 @@ LogicalResult spirv::SpecConstantCompositeOp::verify() {
            << type();
 
   if (cType.isa<spirv::CooperativeMatrixNVType>())
+    return emitError("unsupported composite type  ") << cType;
+  if (cType.isa<spirv::JointMatrixINTELType>())
     return emitError("unsupported composite type  ") << cType;
   if (constituents.size() != cType.getNumElements())
     return emitError("has incorrect number of operands: expected ")

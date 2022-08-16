@@ -89,9 +89,9 @@ Optional<int64_t> ArrayType::getSizeInBytes() {
 bool CompositeType::classof(Type type) {
   if (auto vectorType = type.dyn_cast<VectorType>())
     return isValid(vectorType);
-  return type
-      .isa<spirv::ArrayType, spirv::CooperativeMatrixNVType, spirv::MatrixType,
-           spirv::RuntimeArrayType, spirv::StructType>();
+  return type.isa<spirv::ArrayType, spirv::CooperativeMatrixNVType,
+                  spirv::JointMatrixINTELType, spirv::MatrixType,
+                  spirv::RuntimeArrayType, spirv::StructType>();
 }
 
 bool CompositeType::isValid(VectorType type) {
@@ -110,7 +110,8 @@ bool CompositeType::isValid(VectorType type) {
 
 Type CompositeType::getElementType(unsigned index) const {
   return TypeSwitch<Type, Type>(*this)
-      .Case<ArrayType, CooperativeMatrixNVType, RuntimeArrayType, VectorType>(
+      .Case<ArrayType, CooperativeMatrixNVType, JointMatrixINTELType,
+            RuntimeArrayType, VectorType>(
           [](auto type) { return type.getElementType(); })
       .Case<MatrixType>([](MatrixType type) { return type.getColumnType(); })
       .Case<StructType>(
@@ -132,6 +133,10 @@ unsigned CompositeType::getNumElements() const {
     llvm_unreachable(
         "invalid to query number of elements of spirv::CooperativeMatrix type");
   }
+  if (isa<JointMatrixINTELType>()) {
+    llvm_unreachable(
+        "invalid to query number of elements of spirv::JointMatrix type");
+  }
   if (isa<RuntimeArrayType>()) {
     llvm_unreachable(
         "invalid to query number of elements of spirv::RuntimeArray type");
@@ -140,15 +145,16 @@ unsigned CompositeType::getNumElements() const {
 }
 
 bool CompositeType::hasCompileTimeKnownNumElements() const {
-  return !isa<CooperativeMatrixNVType, RuntimeArrayType>();
+  return !isa<CooperativeMatrixNVType, JointMatrixINTELType,
+              RuntimeArrayType>();
 }
 
 void CompositeType::getExtensions(
     SPIRVType::ExtensionArrayRefVector &extensions,
     Optional<StorageClass> storage) {
   TypeSwitch<Type>(*this)
-      .Case<ArrayType, CooperativeMatrixNVType, MatrixType, RuntimeArrayType,
-            StructType>(
+      .Case<ArrayType, CooperativeMatrixNVType, JointMatrixINTELType,
+            MatrixType, RuntimeArrayType, StructType>(
           [&](auto type) { type.getExtensions(extensions, storage); })
       .Case<VectorType>([&](VectorType type) {
         return type.getElementType().cast<ScalarType>().getExtensions(
@@ -161,8 +167,8 @@ void CompositeType::getCapabilities(
     SPIRVType::CapabilityArrayRefVector &capabilities,
     Optional<StorageClass> storage) {
   TypeSwitch<Type>(*this)
-      .Case<ArrayType, CooperativeMatrixNVType, MatrixType, RuntimeArrayType,
-            StructType>(
+      .Case<ArrayType, CooperativeMatrixNVType, JointMatrixINTELType,
+            MatrixType, RuntimeArrayType, StructType>(
           [&](auto type) { type.getCapabilities(capabilities, storage); })
       .Case<VectorType>([&](VectorType type) {
         auto vecSize = getNumElements();
@@ -251,6 +257,74 @@ void CooperativeMatrixNVType::getCapabilities(
     Optional<StorageClass> storage) {
   getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
   static const Capability caps[] = {Capability::CooperativeMatrixNV};
+  ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));
+  capabilities.push_back(ref);
+}
+
+//===----------------------------------------------------------------------===//
+// JointMatrixType
+//===----------------------------------------------------------------------===//
+
+struct spirv::detail::JointMatrixTypeStorage : public TypeStorage {
+  using KeyTy = std::tuple<Type, unsigned, unsigned, MatrixLayout, Scope>;
+
+  static JointMatrixTypeStorage *construct(TypeStorageAllocator &allocator,
+                                           const KeyTy &key) {
+    return new (allocator.allocate<JointMatrixTypeStorage>())
+        JointMatrixTypeStorage(key);
+  }
+
+  bool operator==(const KeyTy &key) const {
+    return key == KeyTy(elementType, rows, columns, matrixLayout, scope);
+  }
+
+  JointMatrixTypeStorage(const KeyTy &key)
+      : elementType(std::get<0>(key)), rows(std::get<1>(key)),
+        columns(std::get<2>(key)), scope(std::get<4>(key)),
+        matrixLayout(std::get<3>(key)) {}
+
+  Type elementType;
+  unsigned rows;
+  unsigned columns;
+  Scope scope;
+  MatrixLayout matrixLayout;
+};
+
+JointMatrixINTELType JointMatrixINTELType::get(Type elementType, Scope scope,
+                                               unsigned rows, unsigned columns,
+                                               MatrixLayout matrixLayout) {
+  return Base::get(elementType.getContext(), elementType, rows, columns,
+                   matrixLayout, scope);
+}
+
+Type JointMatrixINTELType::getElementType() const {
+  return getImpl()->elementType;
+}
+
+Scope JointMatrixINTELType::getScope() const { return getImpl()->scope; }
+
+unsigned JointMatrixINTELType::getRows() const { return getImpl()->rows; }
+
+unsigned JointMatrixINTELType::getColumns() const { return getImpl()->columns; }
+
+MatrixLayout JointMatrixINTELType::getMatrixLayout() const {
+  return getImpl()->matrixLayout;
+}
+
+void JointMatrixINTELType::getExtensions(
+    SPIRVType::ExtensionArrayRefVector &extensions,
+    Optional<StorageClass> storage) {
+  getElementType().cast<SPIRVType>().getExtensions(extensions, storage);
+  static const Extension exts[] = {Extension::SPV_INTEL_joint_matrix};
+  ArrayRef<Extension> ref(exts, llvm::array_lengthof(exts));
+  extensions.push_back(ref);
+}
+
+void JointMatrixINTELType::getCapabilities(
+    SPIRVType::CapabilityArrayRefVector &capabilities,
+    Optional<StorageClass> storage) {
+  getElementType().cast<SPIRVType>().getCapabilities(capabilities, storage);
+  static const Capability caps[] = {Capability::JointMatrixINTEL};
   ArrayRef<Capability> ref(caps, llvm::array_lengthof(caps));
   capabilities.push_back(ref);
 }
@@ -1172,6 +1246,7 @@ void MatrixType::getCapabilities(
 //===----------------------------------------------------------------------===//
 
 void SPIRVDialect::registerTypes() {
-  addTypes<ArrayType, CooperativeMatrixNVType, ImageType, MatrixType,
-           PointerType, RuntimeArrayType, SampledImageType, StructType>();
+  addTypes<ArrayType, CooperativeMatrixNVType, ImageType, JointMatrixINTELType,
+           MatrixType, PointerType, RuntimeArrayType, SampledImageType,
+           StructType>();
 }

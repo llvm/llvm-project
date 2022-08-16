@@ -64,6 +64,27 @@ def SPV_CooperativeMatrixPropertiesNVArrayAttr :
     TypedArrayAttrBase<SPV_CooperativeMatrixPropertiesNVAttr,
                        "CooperativeMatrixPropertiesNV array attribute">;
 
+// Description of the supported joint matrix operations. See
+// https://github.com/intel/llvm/blob/sycl/sycl/doc/design/spirv-extensions/SPV_INTEL_joint_matrix.asciidoc
+def SPV_JointMatrixPropertiesINTELAttr :
+    SPV_Attr<"JointMatrixPropertiesINTEL", "joint_matrix_props"> {
+  let parameters = (ins
+    "int":$m_size,
+    "int":$n_size,
+    "int":$k_size,
+    "mlir::Type":$a_type,
+    "mlir::Type":$b_type,
+    "mlir::Type":$c_type,
+    "mlir::Type":$result_type,
+    "mlir::spirv::ScopeAttr":$scope
+  );
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def SPV_JointMatrixPropertiesINTELArrayAttr :
+    TypedArrayAttrBase<SPV_JointMatrixPropertiesINTELAttr,
+                       "JointMatrixPropertiesINTEL array attribute">;
+
 // This attribute specifies the limits for various resources on the target
 // architecture.
 //
