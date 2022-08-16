@@ -13,6 +13,7 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ModuleList.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/Core/StreamFile.h"
@@ -1413,6 +1414,18 @@ void Debugger::ReportError(std::string message,
                        debugger_id, once);
 }
 
+void Debugger::ReportSymbolChange(const ModuleSpec &module_spec) {
+  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
+    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
+    for (DebuggerSP debugger_sp : *g_debugger_list_ptr) {
+      EventSP event_sp = std::make_shared<Event>(
+          Debugger::eBroadcastSymbolChange,
+          new SymbolChangeEventData(debugger_sp, module_spec));
+      debugger_sp->GetBroadcaster().BroadcastEvent(event_sp);
+    }
+  }
+}
+
 static std::shared_ptr<LogHandler>
 CreateLogHandler(LogHandlerKind log_handler_kind, int fd, bool should_close,
                  size_t buffer_size) {
@@ -1709,8 +1722,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
           CommandInterpreter::eBroadcastBitAsynchronousErrorData);
 
   listener_sp->StartListeningForEvents(
-      &m_broadcaster,
-      eBroadcastBitProgress | eBroadcastBitWarning | eBroadcastBitError);
+      &m_broadcaster, eBroadcastBitProgress | eBroadcastBitWarning |
+                          eBroadcastBitError | eBroadcastSymbolChange);
 
   // Let the thread that spawned us know that we have started up and that we
   // are now listening to all required events so no events get missed
