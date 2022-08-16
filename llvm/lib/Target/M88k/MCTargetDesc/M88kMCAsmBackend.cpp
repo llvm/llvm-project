@@ -10,6 +10,8 @@
 #include "MCTargetDesc/M88kMCTargetDesc.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInst.h"
@@ -19,6 +21,52 @@
 using namespace llvm;
 
 namespace {
+// Value is a fully-resolved relocation value: Symbol + Addend [- Pivot].
+// Return the bits that should be installed in a relocation field for
+// fixup kind Kind.
+uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
+                             const MCFixup &Fixup, MCContext &Ctx) {
+  if (Kind < FirstTargetFixupKind)
+    return Value;
+
+  auto checkFixupInRange = [&](int64_t Min, int64_t Max) -> bool {
+    int64_t SVal = int64_t(Value);
+    if (SVal < Min || SVal > Max) {
+      Ctx.reportError(Fixup.getLoc(), "operand out of range (" + Twine(SVal) +
+                                          " not between " + Twine(Min) +
+                                          " and " + Twine(Max) + ")");
+      return false;
+    }
+    return true;
+  };
+
+  auto handlePCRelFixupValue = [&](unsigned W) -> uint64_t {
+    if (Value % 4 != 0)
+      Ctx.reportError(Fixup.getLoc(), "Non-even PC relative offset.");
+    if (!checkFixupInRange(minIntN(W) * 2, maxIntN(W) * 2))
+      return 0;
+    return (int64_t)Value >> 2;
+  };
+
+  switch (unsigned(Kind)) {
+  case M88k::FK_88K_DISP16:
+    return handlePCRelFixupValue(16);
+  case M88k::FK_88K_DISP26:
+    return handlePCRelFixupValue(26);
+
+  case M88k::FK_88K_HI:
+  case M88k::FK_88K_LO:
+    if (!checkFixupInRange(0, maxUIntN(16)))
+      return 0;
+    return Value;
+
+  case M88k::FK_88K_NONE:
+    return 0;
+  }
+
+  llvm_unreachable("Unknown fixup kind!");
+}
+
 class M88kMCAsmBackend : public MCAsmBackend {
   uint8_t OSABI;
 
@@ -92,36 +140,22 @@ void M88kMCAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                   bool IsResolved,
                                   const MCSubtargetInfo *STI) const {
   MCFixupKind Kind = Fixup.getKind();
-  /*
-  Value = adjustFixupValue(static_cast<unsigned>(Kind), Value);
-
-  if (!Value)
-    return; // This value doesn't change the encoding
-  */
-
-  // Where in the object and where the number of bytes that need fixing up.
+  if (Kind >= FirstLiteralRelocationKind)
+    return;
   unsigned Offset = Fixup.getOffset();
-  unsigned NumBytes = (getFixupKindInfo(Kind).TargetSize + 7) / 8;
-  unsigned FullSize = 4;
+  unsigned BitSize = getFixupKindInfo(Kind).TargetSize;
+  unsigned Size = (BitSize + 7) / 8;
 
-  // Grab current value, if any, from bits.
-  uint64_t CurVal = 0;
+  assert(Offset + Size <= Data.size() && "Invalid fixup offset!");
 
-  // Load instruction and apply value
-  for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned Idx = (FullSize - 1 - i);
-    CurVal |= static_cast<uint64_t>(static_cast<uint8_t>(Data[Offset + Idx]))
-              << (i * 8);
-  }
-
-  uint64_t Mask =
-      (static_cast<uint64_t>(-1) >> (64 - getFixupKindInfo(Kind).TargetSize));
-  CurVal |= Value & Mask;
-
-  // Write out the fixed up bytes back to the code/data bits.
-  for (unsigned i = 0; i != NumBytes; ++i) {
-    unsigned Idx = (FullSize - 1 - i);
-    Data[Offset + Idx] = static_cast<uint8_t>((CurVal >> (i * 8)) & 0xff);
+  // Big-endian insertion of Size bytes.
+  Value = extractBitsForFixup(Kind, Value, Fixup, Asm.getContext());
+  if (BitSize < 64)
+    Value &= ((uint64_t)1 << BitSize) - 1;
+  unsigned ShiftValue = (Size * 8) - 8;
+  for (unsigned I = 0; I != Size; ++I) {
+    Data[Offset + I] |= uint8_t(Value >> ShiftValue);
+    ShiftValue -= 8;
   }
 }
 
