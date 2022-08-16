@@ -15,6 +15,7 @@ _warningFlags = [
   '-Wall',
   '-Wextra',
   '-Wshadow',
+  '-Wshift-sign-overflow',
   '-Wundef',
   '-Wno-unused-command-line-argument',
   '-Wno-attributes',
