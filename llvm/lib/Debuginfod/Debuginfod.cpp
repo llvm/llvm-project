@@ -40,6 +40,7 @@
 #include "llvm/Support/xxhash.h"
 
 #include <atomic>
+#include <thread>
 
 namespace llvm {
 static std::string uniqueKey(llvm::StringRef S) { return utostr(xxHash64(S)); }
