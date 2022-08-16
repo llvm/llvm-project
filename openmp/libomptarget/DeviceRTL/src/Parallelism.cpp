@@ -67,8 +67,10 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
 
 // Invoke an outlined parallel function unwrapping arguments (up to 32).
 void invokeMicrotask(int32_t global_tid, int32_t bound_tid, void *fn,
-                     void **args, int64_t nargs) {
+                     void **args, const int64_t nargs) {
+#ifdef OMPTARGET_DEBUG
   DebugEntryRAII Entry(__FILE__, __LINE__, "<OpenMP Outlined Function>");
+#endif
   switch (nargs) {
 #include "generated_microtask_cases.gen"
   default:
@@ -83,7 +85,7 @@ extern "C" {
 
 void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
                         int32_t num_threads, int proc_bind, void *fn,
-                        void *wrapper_fn, void **args, int64_t nargs) {
+                        void *wrapper_fn, void **args, const int64_t nargs) {
   FunctionTracingRAII();
 
   uint32_t TId = mapping::getThreadIdInBlock();
