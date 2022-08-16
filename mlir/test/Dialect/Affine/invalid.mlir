@@ -485,3 +485,19 @@ func.func @missing_for_min(%arg0: index, %arg1: index, %arg2: memref<100xf32>) {
   }
   return
 }
+
+// -----
+
+func.func @delinearize(%idx: index, %basis0: index, %basis1 :index) {
+  // expected-error@+1 {{'affine.delinearize_index' op should return an index for each basis element}}
+  %1 = affine.delinearize_index %idx into (%basis0, %basis1) : index
+  return
+}
+
+// -----
+
+func.func @delinearize(%idx: index, %basis0: index, %basis1 :index) {
+  // expected-error@+1 {{'affine.delinearize_index' op basis should not be empty}}
+  affine.delinearize_index %idx into () : index
+  return
+}

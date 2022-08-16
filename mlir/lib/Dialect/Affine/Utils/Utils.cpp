@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
+#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineExprVisitor.h"
@@ -1820,4 +1821,53 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
           .setLayout(AffineMapAttr::get(b.getMultiDimIdentityMap(newRank)));
 
   return newMemRefType;
+}
+
+DivModValue mlir::getDivMod(OpBuilder &b, Location loc, Value lhs, Value rhs) {
+  DivModValue result;
+  AffineExpr d0, d1;
+  bindDims(b.getContext(), d0, d1);
+  result.quotient =
+      makeComposedAffineApply(b, loc, d0.floorDiv(d1), {lhs, rhs});
+  result.remainder = makeComposedAffineApply(b, loc, d0 % d1, {lhs, rhs});
+  return result;
+}
+
+/// Create IR that computes the product of all elements in the set.
+static FailureOr<OpFoldResult> getIndexProduct(OpBuilder &b, Location loc,
+                                               ArrayRef<Value> set) {
+  if (set.empty())
+    return failure();
+  OpFoldResult result = set[0];
+  AffineExpr s0, s1;
+  bindSymbols(b.getContext(), s0, s1);
+  for (unsigned i = 1, e = set.size(); i < e; i++)
+    result = makeComposedFoldedAffineApply(b, loc, s0 * s1, {result, set[i]});
+  return result;
+}
+
+FailureOr<SmallVector<Value>> mlir::delinearizeIndex(OpBuilder &b, Location loc,
+                                                     Value linearIndex,
+                                                     ArrayRef<Value> dimSizes) {
+  unsigned numDims = dimSizes.size();
+
+  SmallVector<Value> divisors;
+  for (unsigned i = 1; i < numDims; i++) {
+    ArrayRef<Value> slice = dimSizes.drop_front(i);
+    FailureOr<OpFoldResult> prod = getIndexProduct(b, loc, slice);
+    if (failed(prod))
+      return failure();
+    divisors.push_back(getValueOrCreateConstantIndexOp(b, loc, *prod));
+  }
+
+  SmallVector<Value> results;
+  results.reserve(divisors.size() + 1);
+  Value residual = linearIndex;
+  for (Value divisor : divisors) {
+    DivModValue divMod = getDivMod(b, loc, residual, divisor);
+    results.push_back(divMod.quotient);
+    residual = divMod.remainder;
+  }
+  results.push_back(residual);
+  return results;
 }
