@@ -113,27 +113,31 @@ PowFStrengthReduction::matchAndRewrite(math::PowFOp op,
 }
 
 //----------------------------------------------------------------------------//
-// IPowIOp strength reduction.
+// FPowIOp/IPowIOp strength reduction.
 //----------------------------------------------------------------------------//
 
 namespace {
-struct IPowIStrengthReduction : public OpRewritePattern<math::IPowIOp> {
+template <typename PowIOpTy, typename DivOpTy, typename MulOpTy>
+struct PowIStrengthReduction : public OpRewritePattern<PowIOpTy> {
+
   unsigned exponentThreshold;
 
 public:
-  IPowIStrengthReduction(MLIRContext *context, unsigned exponentThreshold = 3,
-                         PatternBenefit benefit = 1,
-                         ArrayRef<StringRef> generatedNames = {})
-      : OpRewritePattern<math::IPowIOp>(context, benefit, generatedNames),
+  PowIStrengthReduction(MLIRContext *context, unsigned exponentThreshold = 3,
+                        PatternBenefit benefit = 1,
+                        ArrayRef<StringRef> generatedNames = {})
+      : OpRewritePattern<PowIOpTy>(context, benefit, generatedNames),
         exponentThreshold(exponentThreshold) {}
-  LogicalResult matchAndRewrite(math::IPowIOp op,
+
+  LogicalResult matchAndRewrite(PowIOpTy op,
                                 PatternRewriter &rewriter) const final;
 };
 } // namespace
 
+template <typename PowIOpTy, typename DivOpTy, typename MulOpTy>
 LogicalResult
-IPowIStrengthReduction::matchAndRewrite(math::IPowIOp op,
-                                        PatternRewriter &rewriter) const {
+PowIStrengthReduction<PowIOpTy, DivOpTy, MulOpTy>::matchAndRewrite(
+    PowIOpTy op, PatternRewriter &rewriter) const {
   Location loc = op.getLoc();
   Value base = op.getLhs();
 
@@ -153,16 +157,23 @@ IPowIStrengthReduction::matchAndRewrite(math::IPowIOp op,
     return failure();
 
   // Maybe broadcasts scalar value into vector type compatible with `op`.
-  auto bcast = [&](Value value) -> Value {
-    if (auto vec = op.getType().dyn_cast<VectorType>())
+  auto bcast = [&loc, &op, &rewriter](Value value) -> Value {
+    if (auto vec = op.getType().template dyn_cast<VectorType>())
       return rewriter.create<vector::BroadcastOp>(loc, vec, value);
     return value;
   };
 
+  Value one;
+  Type opType = getElementTypeOrSelf(op.getType());
+  if constexpr (std::is_same_v<PowIOpTy, math::FPowIOp>)
+    one = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getFloatAttr(opType, 1.0));
+  else
+    one = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getIntegerAttr(opType, 1));
+
+  // Replace `[fi]powi(x, 0)` with `1`.
   if (exponentValue == 0) {
-    // Replace `ipowi(x, 0)` with `1`.
-    Value one = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getIntegerAttr(getElementTypeOrSelf(op.getType()), 1));
     rewriter.replaceOp(op, bcast(one));
     return success();
   }
@@ -178,25 +189,22 @@ IPowIStrengthReduction::matchAndRewrite(math::IPowIOp op,
     return failure();
 
   // Inverse the base for negative exponent, i.e. for
-  // `ipowi(x, negative_exponent)` set `x` to `1 / x`.
-  if (exponentIsNegative) {
-    Value one = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getIntegerAttr(getElementTypeOrSelf(op.getType()), 1));
-    base = rewriter.create<arith::DivSIOp>(loc, bcast(one), base);
-  }
+  // `[fi]powi(x, negative_exponent)` set `x` to `1 / x`.
+  if (exponentIsNegative)
+    base = rewriter.create<DivOpTy>(loc, bcast(one), base);
 
   Value result = base;
   // Transform to naive sequence of multiplications:
   //   * For positive exponent case replace:
-  //       `ipowi(x, positive_exponent)`
+  //       `[fi]powi(x, positive_exponent)`
   //     with:
   //       x * x * x * ...
   //   * For negative exponent case replace:
-  //       `ipowi(x, negative_exponent)`
+  //       `[fi]powi(x, negative_exponent)`
   //     with:
   //       (1 / x) * (1 / x) * (1 / x) * ...
   for (unsigned i = 1; i < exponentValue; ++i)
-    result = rewriter.create<arith::MulIOp>(loc, result, base);
+    result = rewriter.create<MulOpTy>(loc, result, base);
 
   rewriter.replaceOp(op, result);
   return success();
@@ -206,6 +214,9 @@ IPowIStrengthReduction::matchAndRewrite(math::IPowIOp op,
 
 void mlir::populateMathAlgebraicSimplificationPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<PowFStrengthReduction, IPowIStrengthReduction>(
-      patterns.getContext());
+  patterns
+      .add<PowFStrengthReduction,
+           PowIStrengthReduction<math::IPowIOp, arith::DivSIOp, arith::MulIOp>,
+           PowIStrengthReduction<math::FPowIOp, arith::DivFOp, arith::MulFOp>>(
+          patterns.getContext());
 }
