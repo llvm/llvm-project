@@ -4,7 +4,9 @@ set(LLVM_LINK_COMPONENTS
   TableGen
 )
 
-add_tablegen(mlir-tblgen MLIR DESTINATION "${MLIR_TOOLS_INSTALL_DIR}"
+add_tablegen(mlir-tblgen MLIR
+  DESTINATION "${MLIR_TOOLS_INSTALL_DIR}"
+  EXPORT MLIR
   AttrOrTypeDefGen.cpp
   AttrOrTypeFormatGen.cpp
   CodeGenHelpers.cpp
