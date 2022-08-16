@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_HEX_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_FLOAT_HEX_CONVERTER_H
 
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/stdio/printf_core/converter_utils.h"
@@ -193,6 +194,7 @@ int inline convert_float_hex_exp(Writer *writer, const FormatSection &to_conv) {
   char prefix[PREFIX_LEN];
   prefix[0] = '0';
   prefix[1] = a + ('x' - 'a');
+  const cpp::string_view prefix_str(prefix, PREFIX_LEN);
 
   // If the precision is greater than the actual result, pad with 0s
   if (to_conv.precision > static_cast<int>(mant_digits - 1))
@@ -201,7 +203,7 @@ int inline convert_float_hex_exp(Writer *writer, const FormatSection &to_conv) {
   bool has_hexadecimal_point =
       (mant_digits > 1) || ((to_conv.flags & FormatFlags::ALTERNATE_FORM) ==
                             FormatFlags::ALTERNATE_FORM);
-  constexpr char HEXADECIMAL_POINT = '.';
+  constexpr cpp::string_view HEXADECIMAL_POINT(".");
 
   // This is for the letter 'p' before the exponent.
   const char exp_seperator = a + ('p' - 'a');
@@ -218,42 +220,42 @@ int inline convert_float_hex_exp(Writer *writer, const FormatSection &to_conv) {
     // The pattern is (sign), 0x, digit, (.), (other digits), (zeroes), p,
     // exponent, (spaces)
     if (sign_char > 0)
-      RET_IF_RESULT_NEGATIVE(writer->write(&sign_char, 1));
-    RET_IF_RESULT_NEGATIVE(writer->write(prefix, PREFIX_LEN));
-    RET_IF_RESULT_NEGATIVE(writer->write(mant_buffer, 1));
+      RET_IF_RESULT_NEGATIVE(writer->write(sign_char));
+    RET_IF_RESULT_NEGATIVE(writer->write(prefix_str));
+    RET_IF_RESULT_NEGATIVE(writer->write(mant_buffer[0]));
     if (has_hexadecimal_point)
-      RET_IF_RESULT_NEGATIVE(writer->write(&HEXADECIMAL_POINT, 1));
+      RET_IF_RESULT_NEGATIVE(writer->write(HEXADECIMAL_POINT));
     if (mant_digits > 1)
-      RET_IF_RESULT_NEGATIVE(writer->write(mant_buffer + 1, mant_digits - 1));
+      RET_IF_RESULT_NEGATIVE(writer->write({mant_buffer + 1, mant_digits - 1}));
     if (trailing_zeroes > 0)
-      RET_IF_RESULT_NEGATIVE(writer->write_chars('0', trailing_zeroes));
-    RET_IF_RESULT_NEGATIVE(writer->write(&exp_seperator, EXP_SEPERATOR_LEN));
+      RET_IF_RESULT_NEGATIVE(writer->write('0', trailing_zeroes));
+    RET_IF_RESULT_NEGATIVE(writer->write(exp_seperator));
     RET_IF_RESULT_NEGATIVE(
-        writer->write(exp_buffer + exp_cur, EXP_LEN - exp_cur));
+        writer->write({exp_buffer + exp_cur, EXP_LEN - exp_cur}));
     if (padding > 0)
-      RET_IF_RESULT_NEGATIVE(writer->write_chars(' ', padding));
+      RET_IF_RESULT_NEGATIVE(writer->write(' ', padding));
   } else {
     // The pattern is (spaces), (sign), 0x, (zeroes), digit, (.), (other
     // digits), (zeroes), p, exponent
     if ((padding > 0) && ((to_conv.flags & FormatFlags::LEADING_ZEROES) !=
                           FormatFlags::LEADING_ZEROES))
-      RET_IF_RESULT_NEGATIVE(writer->write_chars(' ', padding));
+      RET_IF_RESULT_NEGATIVE(writer->write(' ', padding));
     if (sign_char > 0)
-      RET_IF_RESULT_NEGATIVE(writer->write(&sign_char, 1));
-    RET_IF_RESULT_NEGATIVE(writer->write(prefix, PREFIX_LEN));
+      RET_IF_RESULT_NEGATIVE(writer->write(sign_char));
+    RET_IF_RESULT_NEGATIVE(writer->write(prefix_str));
     if ((padding > 0) && ((to_conv.flags & FormatFlags::LEADING_ZEROES) ==
                           FormatFlags::LEADING_ZEROES))
-      RET_IF_RESULT_NEGATIVE(writer->write_chars('0', padding));
-    RET_IF_RESULT_NEGATIVE(writer->write(mant_buffer, 1));
+      RET_IF_RESULT_NEGATIVE(writer->write('0', padding));
+    RET_IF_RESULT_NEGATIVE(writer->write(mant_buffer[0]));
     if (has_hexadecimal_point)
-      RET_IF_RESULT_NEGATIVE(writer->write(&HEXADECIMAL_POINT, 1));
+      RET_IF_RESULT_NEGATIVE(writer->write(HEXADECIMAL_POINT));
     if (mant_digits > 1)
-      RET_IF_RESULT_NEGATIVE(writer->write(mant_buffer + 1, mant_digits - 1));
+      RET_IF_RESULT_NEGATIVE(writer->write({mant_buffer + 1, mant_digits - 1}));
     if (trailing_zeroes > 0)
-      RET_IF_RESULT_NEGATIVE(writer->write_chars('0', trailing_zeroes));
-    RET_IF_RESULT_NEGATIVE(writer->write(&exp_seperator, EXP_SEPERATOR_LEN));
+      RET_IF_RESULT_NEGATIVE(writer->write('0', trailing_zeroes));
+    RET_IF_RESULT_NEGATIVE(writer->write(exp_seperator));
     RET_IF_RESULT_NEGATIVE(
-        writer->write(exp_buffer + exp_cur, EXP_LEN - exp_cur));
+        writer->write({exp_buffer + exp_cur, EXP_LEN - exp_cur}));
   }
   return WRITE_OK;
 }

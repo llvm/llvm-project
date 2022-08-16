@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PTR_CONVERTER_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_PTR_CONVERTER_H
 
+#include "src/__support/CPP/string_view.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/int_converter.h"
@@ -19,9 +20,7 @@ namespace printf_core {
 
 int inline convert_pointer(Writer *writer, const FormatSection &to_conv) {
   if (to_conv.conv_val_ptr == (void *)(nullptr)) {
-    const char ZERO_STR[] = "(nullptr)";
-    // subtract 1 from sizeof to remove the null byte at the end.
-    RET_IF_RESULT_NEGATIVE(writer->write(ZERO_STR, sizeof(ZERO_STR) - 1));
+    RET_IF_RESULT_NEGATIVE(writer->write("(nullptr)"));
   } else {
     FormatSection hex_conv;
     hex_conv.has_conv = true;
