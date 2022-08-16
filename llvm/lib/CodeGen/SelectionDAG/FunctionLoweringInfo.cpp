@@ -270,7 +270,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     // be multiple MachineBasicBlocks corresponding to one BasicBlock, and only
     // the first one should be marked.
     if (BB.hasAddressTaken())
-      MBB->setHasAddressTaken();
+      MBB->setAddressTakenIRBlock(const_cast<BasicBlock *>(&BB));
 
     // Mark landing pad blocks.
     if (BB.isEHPad())

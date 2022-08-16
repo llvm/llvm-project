@@ -114,7 +114,6 @@ struct MIToken {
     kw_call_entry,
     kw_custom,
     kw_liveout,
-    kw_address_taken,
     kw_landing_pad,
     kw_inlineasm_br_indirect_target,
     kw_ehfunclet_entry,
@@ -129,6 +128,8 @@ struct MIToken {
     kw_bbsections,
     kw_unknown_size,
     kw_unknown_address,
+    kw_ir_block_address_taken,
+    kw_machine_block_address_taken,
 
     // Metadata types.
     kw_distinct,

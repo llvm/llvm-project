@@ -38,7 +38,7 @@ define ptr @test1(ptr %arg1, ptr %arg2) {
   ; CHECK-NEXT:   INLINEASM_BR &"#$0 $1 $2", 9 /* sideeffect mayload attdialect */, 13 /* imm */, 42, 13 /* imm */, 0, 13 /* imm */, blockaddress(@test1, %ir-block.bb17.i.i.i), 12 /* clobber */, implicit-def early-clobber $df, 12 /* clobber */, implicit-def early-clobber $fpsw, 12 /* clobber */, implicit-def early-clobber $eflags
   ; CHECK-NEXT:   JMP_1 %bb.5
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.4.bb17.i.i.i (address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.4.bb17.i.i.i (machine-block-address-taken, ir-block-address-taken %ir-block.bb17.i.i.i, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: {{  $}}
