@@ -76,10 +76,6 @@ private:
 };
 
 template <typename PA>
-InstrumentedParser(const MessageFixedText &, const PA &)
-    -> InstrumentedParser<PA>;
-
-template <typename PA>
 inline constexpr auto instrumented(
     const MessageFixedText &tag, const PA &parser) {
   return InstrumentedParser{tag, parser};
