@@ -23,7 +23,6 @@ define i1 @test_signed_i1_f32(float %f) nounwind {
 ; CHECK-NEXT:    fcvtzs w8, s0
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel w8, w8, wzr, lt
-; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csinv w8, w8, wzr, ge
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
@@ -201,7 +200,6 @@ define i1 @test_signed_i1_f64(double %f) nounwind {
 ; CHECK-NEXT:    fcvtzs w8, d0
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel w8, w8, wzr, lt
-; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csinv w8, w8, wzr, ge
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
@@ -382,7 +380,6 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; CHECK-CVT-NEXT:    fcvtzs w8, s0
 ; CHECK-CVT-NEXT:    cmp w8, #0
 ; CHECK-CVT-NEXT:    csel w8, w8, wzr, lt
-; CHECK-CVT-NEXT:    cmp w8, #0
 ; CHECK-CVT-NEXT:    csinv w8, w8, wzr, ge
 ; CHECK-CVT-NEXT:    and w0, w8, #0x1
 ; CHECK-CVT-NEXT:    ret
@@ -392,7 +389,6 @@ define i1 @test_signed_i1_f16(half %f) nounwind {
 ; CHECK-FP16-NEXT:    fcvtzs w8, h0
 ; CHECK-FP16-NEXT:    cmp w8, #0
 ; CHECK-FP16-NEXT:    csel w8, w8, wzr, lt
-; CHECK-FP16-NEXT:    cmp w8, #0
 ; CHECK-FP16-NEXT:    csinv w8, w8, wzr, ge
 ; CHECK-FP16-NEXT:    and w0, w8, #0x1
 ; CHECK-FP16-NEXT:    ret
