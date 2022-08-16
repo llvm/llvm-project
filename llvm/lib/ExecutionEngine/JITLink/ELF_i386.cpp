@@ -63,8 +63,6 @@ private:
 
   Error addRelocations() override {
     LLVM_DEBUG(dbgs() << "Adding relocations\n");
-    using Base = ELFLinkGraphBuilder<ELFT>;
-
     return Error::success();
   }
 
