@@ -11078,6 +11078,15 @@ static bool CC_RISCV(const DataLayout &DL, RISCVABI::ABI ABI, unsigned ValNo,
   assert(XLen == 32 || XLen == 64);
   MVT XLenVT = XLen == 32 ? MVT::i32 : MVT::i64;
 
+  // Static chain parameter must not be passed in normal argument registers,
+  // so we assign t2 for it as done in GCC's __builtin_call_with_static_chain
+  if (ArgFlags.isNest()) {
+    if (unsigned Reg = State.AllocateReg(RISCV::X7)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+  }
+
   // Any return value split in to more than two values can't be returned
   // directly. Vectors are returned via the available vector registers.
   if (!LocVT.isVector() && IsRet && ValNo > 1)
@@ -11617,6 +11626,11 @@ static bool CC_RISCV_FastCC(const DataLayout &DL, RISCVABI::ABI ABI,
 static bool CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                          CCValAssign::LocInfo LocInfo,
                          ISD::ArgFlagsTy ArgFlags, CCState &State) {
+
+  if (ArgFlags.isNest()) {
+    report_fatal_error(
+        "Attribute 'nest' is not supported in GHC calling convention");
+  }
 
   if (LocVT == MVT::i32 || LocVT == MVT::i64) {
     // Pass in STG registers: Base, Sp, Hp, R1, R2, R3, R4, R5, R6, R7, SpLim
