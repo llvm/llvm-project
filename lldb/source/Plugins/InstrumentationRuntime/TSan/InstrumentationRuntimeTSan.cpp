@@ -212,10 +212,10 @@ for (int i = 0; i < t.unique_tid_count; i++) {
 t;
 )";
 
-static StructuredData::Array *
+static StructuredData::ArraySP
 CreateStackTrace(ValueObjectSP o,
                  const std::string &trace_item_name = ".trace") {
-  StructuredData::Array *trace = new StructuredData::Array();
+  auto trace_sp = std::make_shared<StructuredData::Array>();
   ValueObjectSP trace_value_object =
       o->GetValueForExpressionPath(trace_item_name.c_str());
   size_t count = trace_value_object->GetNumChildren();
@@ -224,18 +224,18 @@ CreateStackTrace(ValueObjectSP o,
         trace_value_object->GetChildAtIndex(j, true)->GetValueAsUnsigned(0);
     if (trace_addr == 0)
       break;
-    trace->AddItem(
-        StructuredData::ObjectSP(new StructuredData::Integer(trace_addr)));
+    trace_sp->AddItem(std::make_shared<StructuredData::Integer>(trace_addr));
   }
-  return trace;
+  return trace_sp;
 }
 
-static StructuredData::Array *ConvertToStructuredArray(
+static StructuredData::ArraySP ConvertToStructuredArray(
     ValueObjectSP return_value_sp, const std::string &items_name,
     const std::string &count_name,
-    std::function<void(ValueObjectSP o, StructuredData::Dictionary *dict)> const
+    std::function<void(const ValueObjectSP &o,
+                       const StructuredData::DictionarySP &dict)> const
         &callback) {
-  StructuredData::Array *array = new StructuredData::Array();
+  auto array_sp = std::make_shared<StructuredData::Array>();
   unsigned int count =
       return_value_sp->GetValueForExpressionPath(count_name.c_str())
           ->GetValueAsUnsigned(0);
@@ -243,13 +243,13 @@ static StructuredData::Array *ConvertToStructuredArray(
       return_value_sp->GetValueForExpressionPath(items_name.c_str());
   for (unsigned int i = 0; i < count; i++) {
     ValueObjectSP o = objects->GetChildAtIndex(i, true);
-    StructuredData::Dictionary *dict = new StructuredData::Dictionary();
+    auto dict_sp = std::make_shared<StructuredData::Dictionary>();
 
-    callback(o, dict);
+    callback(o, dict_sp);
 
-    array->AddItem(StructuredData::ObjectSP(dict));
+    array_sp->AddItem(dict_sp);
   }
-  return array;
+  return array_sp;
 }
 
 static std::string RetrieveString(ValueObjectSP return_value_sp,
@@ -269,8 +269,8 @@ GetRenumberedThreadIds(ProcessSP process_sp, ValueObjectSP data,
                        std::map<uint64_t, user_id_t> &thread_id_map) {
   ConvertToStructuredArray(
       data, ".threads", ".thread_count",
-      [process_sp, &thread_id_map](ValueObjectSP o,
-                                   StructuredData::Dictionary *dict) {
+      [process_sp, &thread_id_map](const ValueObjectSP &o,
+                                   const StructuredData::DictionarySP &dict) {
         uint64_t thread_id =
             o->GetValueForExpressionPath(".tid")->GetValueAsUnsigned(0);
         uint64_t thread_os_id =
@@ -344,7 +344,7 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
   std::map<uint64_t, user_id_t> thread_id_map;
   GetRenumberedThreadIds(process_sp, main_value, thread_id_map);
 
-  StructuredData::Dictionary *dict = new StructuredData::Dictionary();
+  auto dict = std::make_shared<StructuredData::Dictionary>();
   dict->AddStringItem("instrumentation_class", "ThreadSanitizer");
   dict->AddStringItem("issue_type",
                       RetrieveString(main_value, process_sp, ".description"));
@@ -357,21 +357,23 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
       "tag",
       main_value->GetValueForExpressionPath(".tag")->GetValueAsUnsigned(0));
 
-  StructuredData::Array *stacks = ConvertToStructuredArray(
+  StructuredData::ArraySP stacks = ConvertToStructuredArray(
       main_value, ".stacks", ".stack_count",
-      [thread_sp](ValueObjectSP o, StructuredData::Dictionary *dict) {
+      [thread_sp](const ValueObjectSP &o,
+                  const StructuredData::DictionarySP &dict) {
         dict->AddIntegerItem(
             "index",
             o->GetValueForExpressionPath(".idx")->GetValueAsUnsigned(0));
-        dict->AddItem("trace", StructuredData::ObjectSP(CreateStackTrace(o)));
+        dict->AddItem("trace", CreateStackTrace(o));
         // "stacks" happen on the current thread
         dict->AddIntegerItem("thread_id", thread_sp->GetIndexID());
       });
-  dict->AddItem("stacks", StructuredData::ObjectSP(stacks));
+  dict->AddItem("stacks", stacks);
 
-  StructuredData::Array *mops = ConvertToStructuredArray(
+  StructuredData::ArraySP mops = ConvertToStructuredArray(
       main_value, ".mops", ".mop_count",
-      [&thread_id_map](ValueObjectSP o, StructuredData::Dictionary *dict) {
+      [&thread_id_map](const ValueObjectSP &o,
+                       const StructuredData::DictionarySP &dict) {
         dict->AddIntegerItem(
             "index",
             o->GetValueForExpressionPath(".idx")->GetValueAsUnsigned(0));
@@ -392,14 +394,14 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
         dict->AddIntegerItem(
             "address",
             o->GetValueForExpressionPath(".addr")->GetValueAsUnsigned(0));
-        dict->AddItem("trace", StructuredData::ObjectSP(CreateStackTrace(o)));
+        dict->AddItem("trace", CreateStackTrace(o));
       });
-  dict->AddItem("mops", StructuredData::ObjectSP(mops));
+  dict->AddItem("mops", mops);
 
-  StructuredData::Array *locs = ConvertToStructuredArray(
+  StructuredData::ArraySP locs = ConvertToStructuredArray(
       main_value, ".locs", ".loc_count",
-      [process_sp, &thread_id_map](ValueObjectSP o,
-                                   StructuredData::Dictionary *dict) {
+      [process_sp, &thread_id_map](const ValueObjectSP &o,
+                                   const StructuredData::DictionarySP &dict) {
         dict->AddIntegerItem(
             "index",
             o->GetValueForExpressionPath(".idx")->GetValueAsUnsigned(0));
@@ -424,15 +426,15 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
         dict->AddIntegerItem("suppressable",
                              o->GetValueForExpressionPath(".suppressable")
                                  ->GetValueAsUnsigned(0));
-        dict->AddItem("trace", StructuredData::ObjectSP(CreateStackTrace(o)));
+        dict->AddItem("trace", CreateStackTrace(o));
         dict->AddStringItem("object_type",
                             RetrieveString(o, process_sp, ".object_type"));
       });
-  dict->AddItem("locs", StructuredData::ObjectSP(locs));
+  dict->AddItem("locs", locs);
 
-  StructuredData::Array *mutexes = ConvertToStructuredArray(
+  StructuredData::ArraySP mutexes = ConvertToStructuredArray(
       main_value, ".mutexes", ".mutex_count",
-      [](ValueObjectSP o, StructuredData::Dictionary *dict) {
+      [](const ValueObjectSP &o, const StructuredData::DictionarySP &dict) {
         dict->AddIntegerItem(
             "index",
             o->GetValueForExpressionPath(".idx")->GetValueAsUnsigned(0));
@@ -445,14 +447,14 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
         dict->AddIntegerItem(
             "destroyed",
             o->GetValueForExpressionPath(".destroyed")->GetValueAsUnsigned(0));
-        dict->AddItem("trace", StructuredData::ObjectSP(CreateStackTrace(o)));
+        dict->AddItem("trace", CreateStackTrace(o));
       });
-  dict->AddItem("mutexes", StructuredData::ObjectSP(mutexes));
+  dict->AddItem("mutexes", mutexes);
 
-  StructuredData::Array *threads = ConvertToStructuredArray(
+  StructuredData::ArraySP threads = ConvertToStructuredArray(
       main_value, ".threads", ".thread_count",
-      [process_sp, &thread_id_map](ValueObjectSP o,
-                                   StructuredData::Dictionary *dict) {
+      [process_sp, &thread_id_map](const ValueObjectSP &o,
+                                   const StructuredData::DictionarySP &dict) {
         dict->AddIntegerItem(
             "index",
             o->GetValueForExpressionPath(".idx")->GetValueAsUnsigned(0));
@@ -473,13 +475,14 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
             Renumber(o->GetValueForExpressionPath(".parent_tid")
                          ->GetValueAsUnsigned(0),
                      thread_id_map));
-        dict->AddItem("trace", StructuredData::ObjectSP(CreateStackTrace(o)));
+        dict->AddItem("trace", CreateStackTrace(o));
       });
-  dict->AddItem("threads", StructuredData::ObjectSP(threads));
+  dict->AddItem("threads", threads);
 
-  StructuredData::Array *unique_tids = ConvertToStructuredArray(
+  StructuredData::ArraySP unique_tids = ConvertToStructuredArray(
       main_value, ".unique_tids", ".unique_tid_count",
-      [&thread_id_map](ValueObjectSP o, StructuredData::Dictionary *dict) {
+      [&thread_id_map](const ValueObjectSP &o,
+                       const StructuredData::DictionarySP &dict) {
         dict->AddIntegerItem(
             "index",
             o->GetValueForExpressionPath(".idx")->GetValueAsUnsigned(0));
@@ -489,9 +492,9 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
                 o->GetValueForExpressionPath(".tid")->GetValueAsUnsigned(0),
                 thread_id_map));
       });
-  dict->AddItem("unique_tids", StructuredData::ObjectSP(unique_tids));
+  dict->AddItem("unique_tids", unique_tids);
 
-  return StructuredData::ObjectSP(dict);
+  return dict;
 }
 
 std::string
@@ -1058,9 +1061,8 @@ static void AddThreadsForPath(const std::string &path,
             o->GetObjectForDotSeparatedPath("thread_os_id");
         tid_t tid = thread_id_obj ? thread_id_obj->GetIntegerValue() : 0;
 
-        HistoryThread *history_thread =
-            new HistoryThread(*process_sp, tid, pcs);
-        ThreadSP new_thread_sp(history_thread);
+        ThreadSP new_thread_sp =
+            std::make_shared<HistoryThread>(*process_sp, tid, pcs);
         new_thread_sp->SetName(GenerateThreadName(path, o, info).c_str());
 
         // Save this in the Process' ExtendedThreadList so a strong pointer
@@ -1075,8 +1077,8 @@ static void AddThreadsForPath(const std::string &path,
 lldb::ThreadCollectionSP
 InstrumentationRuntimeTSan::GetBacktracesFromExtendedStopInfo(
     StructuredData::ObjectSP info) {
-  ThreadCollectionSP threads;
-  threads = std::make_shared<ThreadCollection>();
+
+  ThreadCollectionSP threads = std::make_shared<ThreadCollection>();
 
   if (info->GetObjectForDotSeparatedPath("instrumentation_class")
           ->GetStringValue() != "ThreadSanitizer")
