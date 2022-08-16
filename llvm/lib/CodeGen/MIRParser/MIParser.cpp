@@ -495,6 +495,7 @@ public:
                                          MachineOperand &Dest,
                                          Optional<unsigned> &TiedDefIdx);
   bool parseOffset(int64_t &Offset);
+  bool parseIRBlockAddressTaken(BasicBlock *&BB);
   bool parseAlignment(uint64_t &Alignment);
   bool parseAddrspace(unsigned &Addrspace);
   bool parseSectionID(Optional<MBBSectionID> &SID);
@@ -669,7 +670,8 @@ bool MIParser::parseBasicBlockDefinition(
   auto Loc = Token.location();
   auto Name = Token.stringValue();
   lex();
-  bool HasAddressTaken = false;
+  bool MachineBlockAddressTaken = false;
+  BasicBlock *AddressTakenIRBlock = nullptr;
   bool IsLandingPad = false;
   bool IsInlineAsmBrIndirectTarget = false;
   bool IsEHFuncletEntry = false;
@@ -680,9 +682,13 @@ bool MIParser::parseBasicBlockDefinition(
     do {
       // TODO: Report an error when multiple same attributes are specified.
       switch (Token.kind()) {
-      case MIToken::kw_address_taken:
-        HasAddressTaken = true;
+      case MIToken::kw_machine_block_address_taken:
+        MachineBlockAddressTaken = true;
         lex();
+        break;
+      case MIToken::kw_ir_block_address_taken:
+        if (parseIRBlockAddressTaken(AddressTakenIRBlock))
+          return true;
         break;
       case MIToken::kw_landing_pad:
         IsLandingPad = true;
@@ -701,6 +707,7 @@ bool MIParser::parseBasicBlockDefinition(
           return true;
         break;
       case MIToken::IRBlock:
+      case MIToken::NamedIRBlock:
         // TODO: Report an error when both name and ir block are specified.
         if (parseIRBlock(BB, MF.getFunction()))
           return true;
@@ -736,8 +743,10 @@ bool MIParser::parseBasicBlockDefinition(
                           Twine(ID));
   if (Alignment)
     MBB->setAlignment(Align(Alignment));
-  if (HasAddressTaken)
-    MBB->setHasAddressTaken();
+  if (MachineBlockAddressTaken)
+    MBB->setMachineBlockAddressTaken();
+  if (AddressTakenIRBlock)
+    MBB->setAddressTakenIRBlock(AddressTakenIRBlock);
   MBB->setIsEHPad(IsLandingPad);
   MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
@@ -2914,6 +2923,19 @@ bool MIParser::parseOffset(int64_t &Offset) {
   Offset = Token.integerValue().getExtValue();
   if (IsNegative)
     Offset = -Offset;
+  lex();
+  return false;
+}
+
+bool MIParser::parseIRBlockAddressTaken(BasicBlock *&BB) {
+  assert(Token.is(MIToken::kw_ir_block_address_taken));
+  lex();
+  if (Token.isNot(MIToken::IRBlock) && Token.isNot(MIToken::NamedIRBlock))
+    return error("expected basic block after 'ir_block_address_taken'");
+
+  if (parseIRBlock(BB, MF.getFunction()))
+    return true;
+
   lex();
   return false;
 }

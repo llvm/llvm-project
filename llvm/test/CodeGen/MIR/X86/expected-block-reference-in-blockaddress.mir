@@ -1,4 +1,5 @@
 # RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+#
 
 --- |
 
@@ -25,6 +26,6 @@ body: |
     MOV64mr $rip, 1, _, @addr, _, killed $rax
     JMP64m $rip, 1, _, @addr, _
 
-  bb.1.block (address-taken):
+  bb.1.block (ir-block-address-taken %ir-block.block):
     RET64
 ...
