@@ -31,7 +31,6 @@ public:
       return true;
     case eInstructionTypePrologueEpilogue:
     case eInstructionTypeAll:
-    default:
       return false;
     }
   }
