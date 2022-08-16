@@ -501,6 +501,8 @@ clang::Decl *PdbAstBuilder::GetOrCreateSymbolForId(PdbCompilandSymId id) {
 
   if (isLocalVariableType(cvs.kind())) {
     clang::DeclContext *scope = GetParentDeclContext(id);
+    if (!scope)
+      return nullptr;
     clang::Decl *scope_decl = clang::Decl::castFromDeclContext(scope);
     PdbCompilandSymId scope_id =
         PdbSymUid(m_decl_to_status[scope_decl].uid).asCompilandSym();
@@ -1010,7 +1012,7 @@ PdbAstBuilder::GetOrCreateTypedefDecl(PdbGlobalSymId id) {
 
   PdbTypeSymId real_type_id{udt.Type, false};
   clang::QualType qt = GetOrCreateType(real_type_id);
-  if (qt.isNull())
+  if (qt.isNull() || !scope)
     return nullptr;
 
   std::string uname = std::string(DropNameScope(udt.Name));
@@ -1265,7 +1267,7 @@ PdbAstBuilder::CreateFunctionDeclFromId(PdbTypeSymId func_tid,
     lldbassert(false && "Invalid function id type!");
   }
   clang::QualType func_qt = GetOrCreateType(func_ti);
-  if (func_qt.isNull())
+  if (func_qt.isNull() || !parent)
     return nullptr;
   CompilerType func_ct = ToCompilerType(func_qt);
   uint32_t param_count =
@@ -1280,6 +1282,8 @@ PdbAstBuilder::GetOrCreateFunctionDecl(PdbCompilandSymId func_id) {
     return llvm::dyn_cast<clang::FunctionDecl>(decl);
 
   clang::DeclContext *parent = GetParentDeclContext(PdbSymUid(func_id));
+  if (!parent)
+    return nullptr;
   std::string context_name;
   if (clang::NamespaceDecl *ns = llvm::dyn_cast<clang::NamespaceDecl>(parent)) {
     context_name = ns->getQualifiedNameAsString();
