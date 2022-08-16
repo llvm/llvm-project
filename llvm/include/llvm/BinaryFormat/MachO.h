@@ -1079,6 +1079,30 @@ struct dyld_chained_starts_in_segment {
                               ///< DYLD_CHAINED_PTR_START_NONE if no fixups
 };
 
+// DYLD_CHAINED_IMPORT
+struct dyld_chained_import {
+  uint32_t lib_ordinal : 8;
+  uint32_t weak_import : 1;
+  uint32_t name_offset : 23;
+};
+
+// DYLD_CHAINED_IMPORT_ADDEND
+struct dyld_chained_import_addend {
+  uint32_t lib_ordinal : 8;
+  uint32_t weak_import : 1;
+  uint32_t name_offset : 23;
+  int32_t addend;
+};
+
+// DYLD_CHAINED_IMPORT_ADDEND64
+struct dyld_chained_import_addend64 {
+  uint64_t lib_ordinal : 16;
+  uint64_t weak_import : 1;
+  uint64_t reserved : 15;
+  uint64_t name_offset : 32;
+  uint64_t addend;
+};
+
 // Byte order swapping functions for MachO structs
 
 inline void swapStruct(fat_header &mh) {
