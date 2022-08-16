@@ -147,8 +147,7 @@ DEFAULT_PARAMETERS = [
               AddFeature('asan')            if sanitizer == 'Address' else None,
 
               AddFlag('-fsanitize=hwaddress') if sanitizer == 'HWAddress' else None,
-              # FIXME: Use hwasan feature.
-              AddFeature('asan')            if sanitizer == 'HWAddress' else None,
+              AddFeature('hwasan')            if sanitizer == 'HWAddress' else None,
 
               AddFlag('-fsanitize=memory')               if sanitizer in ['Memory', 'MemoryWithOrigins'] else None,
               AddFeature('msan')                         if sanitizer in ['Memory', 'MemoryWithOrigins'] else None,
