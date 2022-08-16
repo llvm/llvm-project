@@ -168,10 +168,7 @@ public:
   FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen)
       : AlreadySeen(AlreadySeen) {}
 
-  void
-  handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {
-    OutputPaths = Opts.Targets;
-  }
+  void handleDependencyOutputOpts(const DependencyOutputOptions &) override {}
 
   void handleFileDependency(StringRef File) override {
     Dependencies.push_back(std::string(File));
@@ -189,9 +186,9 @@ public:
     ContextHash = std::move(Hash);
   }
 
-  Expected<FullDependenciesResult>
-  getFullDependencies(const std::vector<std::string> &OriginalCommandLine,
-                      llvm::cas::CachingOnDiskFileSystem *FS = nullptr) const;
+  FullDependenciesResult getFullDependencies(
+      const std::vector<std::string> &OriginalCommandLine,
+      Optional<cas::CASID> CASFileSystemRootID = None) const;
 
 private:
   std::vector<std::string> Dependencies;

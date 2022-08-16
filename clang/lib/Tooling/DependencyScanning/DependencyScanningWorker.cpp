@@ -196,19 +196,20 @@ class DependencyScanningAction : public tooling::ToolAction {
 public:
   DependencyScanningAction(
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
-      const CASOptions &CASOpts,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS,
-      ScanningOutputFormat Format, bool OptimizeArgs, bool EmitDependencyFile,
-      bool DiagGenerationAsCompilation, bool DisableFree,
+      ScanningOutputFormat Format, bool OptimizeArgs, bool DisableFree,
+      bool EmitDependencyFile, bool DiagGenerationAsCompilation,
+      const CASOptions &CASOpts,
       llvm::Optional<StringRef> ModuleName = None,
       raw_ostream *VerboseOS = nullptr)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
-        CASOpts(CASOpts), DepFS(std::move(DepFS)),
-        DepCASFS(std::move(DepCASFS)), Format(Format),
-        OptimizeArgs(OptimizeArgs), EmitDependencyFile(EmitDependencyFile),
+        DepFS(std::move(DepFS)), DepCASFS(std::move(DepCASFS)), Format(Format),
+        OptimizeArgs(OptimizeArgs), DisableFree(DisableFree),
+        CASOpts(CASOpts),
+        EmitDependencyFile(EmitDependencyFile),
         DiagGenerationAsCompilation(DiagGenerationAsCompilation),
-        DisableFree(DisableFree), ModuleName(ModuleName), VerboseOS(VerboseOS) {
+        ModuleName(ModuleName), VerboseOS(VerboseOS) {
   }
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
@@ -365,14 +366,14 @@ public:
 private:
   StringRef WorkingDirectory;
   DependencyConsumer &Consumer;
-  const CASOptions &CASOpts;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
   ScanningOutputFormat Format;
   bool OptimizeArgs;
+  bool DisableFree;
+  const CASOptions &CASOpts;
   bool EmitDependencyFile = false;
   bool DiagGenerationAsCompilation;
-  bool DisableFree;
   llvm::Optional<StringRef> ModuleName;
   raw_ostream *VerboseOS;
 };
@@ -472,10 +473,11 @@ llvm::Error DependencyScanningWorker::computeDependencies(
                         // always true for a driver invocation.
                         bool DisableFree = true;
                         DependencyScanningAction Action(
-                            WorkingDirectory, Consumer, getCASOpts(), DepFS,
-                            DepCASFS, Format, OptimizeArgs,
+                            WorkingDirectory, Consumer, DepFS, DepCASFS, Format,
+                            OptimizeArgs, DisableFree,
                             /*EmitDependencyFile=*/false,
-                            /*DiagGenerationAsCompilation=*/false, DisableFree,
+                            /*DiagGenerationAsCompilation=*/false,
+                            getCASOpts(),
                             ModuleName);
                         // Create an invocation that uses the underlying file
                         // system to ensure that any file system requests that
@@ -520,10 +522,10 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
   // FIXME: EmitDependencyFile should only be set when it's for a real
   // compilation.
   DependencyScanningAction Action(
-      WorkingDirectory, DepsConsumer, getCASOpts(), DepFS, DepCASFS, Format,
-      /*OptimizeArgs=*/false,
+      WorkingDirectory, DepsConsumer, DepFS, DepCASFS, Format,
+      /*OptimizeArgs=*/false, /*DisableFree=*/false,
       /*EmitDependencyFile=*/!DepFile.empty(), DiagGenerationAsCompilation,
-      /*DisableFree=*/false, /*ModuleName=*/None, VerboseOS);
+      getCASOpts(), /*ModuleName=*/None, VerboseOS);
 
   // Ignore result; we're just collecting dependencies.
   //
