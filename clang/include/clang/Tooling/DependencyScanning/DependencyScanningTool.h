@@ -23,6 +23,10 @@ namespace clang {
 namespace tooling {
 namespace dependencies {
 
+/// A callback to lookup module outputs for "-fmodule-file=", "-o" etc.
+using LookupModuleOutputCallback =
+    llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>;
+
 /// The full dependencies and module graph for a specific input.
 struct FullDependencies {
   /// The identifier of the C++20 module this translation unit exports.
@@ -45,17 +49,8 @@ struct FullDependencies {
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
 
-  /// The original command line of the TU (excluding the compiler executable).
-  std::vector<std::string> OriginalCommandLine;
-
-  /// Get the full command line.
-  ///
-  /// \param LookupModuleOutput This function is called to fill in
-  ///                           "-fmodule-file=", "-o" and other output
-  ///                           arguments for dependencies.
-  std::vector<std::string> getCommandLine(
-      llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>
-          LookupModuleOutput) const;
+  /// The command line of the TU (excluding the compiler executable).
+  std::vector<std::string> CommandLine;
 };
 
 struct FullDependenciesResult {
@@ -92,12 +87,16 @@ public:
   ///                    function for a single \c DependencyScanningTool in a
   ///                    single build. Use a different one for different tools,
   ///                    and clear it between builds.
+  /// \param LookupModuleOutput This function is called to fill in
+  ///                           "-fmodule-file=", "-o" and other output
+  ///                           arguments for dependencies.
   ///
   /// \returns a \c StringError with the diagnostic output if clang errors
   /// occurred, \c FullDependencies otherwise.
   llvm::Expected<FullDependenciesResult>
   getFullDependencies(const std::vector<std::string> &CommandLine,
                       StringRef CWD, const llvm::StringSet<> &AlreadySeen,
+                      LookupModuleOutputCallback LookupModuleOutput,
                       llvm::Optional<StringRef> ModuleName = None);
 
 private:
@@ -106,8 +105,9 @@ private:
 
 class FullDependencyConsumer : public DependencyConsumer {
 public:
-  FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen)
-      : AlreadySeen(AlreadySeen) {}
+  FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen,
+                         LookupModuleOutputCallback LookupModuleOutput)
+      : AlreadySeen(AlreadySeen), LookupModuleOutput(LookupModuleOutput) {}
 
   void handleDependencyOutputOpts(const DependencyOutputOptions &) override {}
 
@@ -127,6 +127,11 @@ public:
     ContextHash = std::move(Hash);
   }
 
+  std::string lookupModuleOutput(const ModuleID &ID,
+                                 ModuleOutputKind Kind) override {
+    return LookupModuleOutput(ID, Kind);
+  }
+
   FullDependenciesResult getFullDependencies(
       const std::vector<std::string> &OriginalCommandLine) const;
 
@@ -138,6 +143,7 @@ private:
   std::string ContextHash;
   std::vector<std::string> OutputPaths;
   const llvm::StringSet<> &AlreadySeen;
+  LookupModuleOutputCallback LookupModuleOutput;
 };
 
 } // end namespace dependencies
