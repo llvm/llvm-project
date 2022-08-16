@@ -204,7 +204,7 @@ void ARMTargetAsmStreamer::emitTextAttribute(unsigned Attribute,
   default:
     OS << "\t.eabi_attribute\t" << Attribute << ", \"";
     if (Attribute == ARMBuildAttrs::also_compatible_with)
-      OS << ARMBuildAttrs::encodeAttrTagValuePair(String);
+      OS.write_escaped(String);
     else
       OS << String;
     OS << "\"";

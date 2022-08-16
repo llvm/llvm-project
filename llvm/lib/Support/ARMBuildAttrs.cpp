@@ -76,39 +76,3 @@ constexpr TagNameMap ARMAttributeTags{tagData};
 const TagNameMap &llvm::ARMBuildAttrs::getARMAttributeTags() {
   return ARMAttributeTags;
 }
-
-static std::string getEncodedULEB128AsText(const uint8_t *Value,
-                                           unsigned Size) {
-  std::stringstream SS;
-  for (unsigned i = 0; i < Size; ++i) {
-    SS << "\\" << std::setfill('0') << std::setw(3) << std::oct
-       << int(Value[i]);
-  }
-  return SS.str();
-}
-
-std::string
-llvm::ARMBuildAttrs::encodeAttrTagValuePair(StringRef OriginalString) {
-  auto BytesBegin = reinterpret_cast<const uint8_t *>(OriginalString.data());
-  auto BytesEnd = BytesBegin + OriginalString.size();
-
-  unsigned N = 0;
-  const char *Error = nullptr;
-  unsigned Tag = decodeULEB128(BytesBegin, &N, BytesEnd, &Error);
-  if (Error)
-    report_fatal_error("Could not decode Tag value: " + Twine(Error));
-
-  std::string EncodedPair = getEncodedULEB128AsText(BytesBegin, N);
-  switch (Tag) {
-  case ARMBuildAttrs::CPU_raw_name:
-  case ARMBuildAttrs::CPU_name:
-  case ARMBuildAttrs::compatibility:
-  case ARMBuildAttrs::conformance:
-    EncodedPair += OriginalString.substr(N);
-    break;
-  default:
-    EncodedPair +=
-        getEncodedULEB128AsText(BytesBegin + N, OriginalString.size() - N);
-  }
-  return EncodedPair;
-}
