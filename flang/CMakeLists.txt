@@ -355,6 +355,10 @@ check_compiler_flag("-Wstring-conversion" CXX_SUPPORTS_NO_STRING_CONVERSION_FLAG
 if (CXX_SUPPORTS_NO_STRING_CONVERSION_FLAG)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-string-conversion")
 endif()
+check_compiler_flag("-Wno-ctad-maybe-unsupported" CXX_SUPPORTS_NO_CTAD_MAYBE_UNSUPPORTED_FLAG)
+if (CXX_SUPPORTS_NO_CTAD_MAYBE_UNSUPPORTED_FLAG)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-ctad-maybe-unsupported")
+endif()
 
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
