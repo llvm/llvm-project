@@ -216,8 +216,8 @@ define double @test_multiple_phi_operands(ptr %arr_d, i1 %entry_cond) {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1000 x double], ptr [[ARR_D:%.*]], i64 0, i64 [[I_02]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[MUL]] = fmul fast double [[F_PROD_01]], [[TMP0]]
-; CHECK-NEXT:    [[INC]] = add i64 [[I_02]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 1000
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_02]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_02]], 999
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret double [[MUL]]
@@ -255,8 +255,8 @@ define double @test_multiple_phi_operands_with_non_zero(ptr %arr_d, i1 %entry_co
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1000 x double], ptr [[ARR_D:%.*]], i64 0, i64 [[I_02]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[MUL]] = fmul fast double [[F_PROD_01]], [[TMP0]]
-; CHECK-NEXT:    [[INC]] = add i64 [[I_02]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 1000
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_02]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[I_02]], 999
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END:%.*]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret double [[MUL]]
