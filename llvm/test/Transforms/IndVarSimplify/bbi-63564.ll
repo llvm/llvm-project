@@ -19,7 +19,7 @@ define void @f() {
 ; CHECK-NEXT:    br label [[FOR_BODY2:%.*]]
 ; CHECK:       for.body2:
 ; CHECK-NEXT:    [[INC2:%.*]] = phi i16 [ undef, [[FOR_BODY]] ], [ [[INC:%.*]], [[FOR_BODY2]] ]
-; CHECK-NEXT:    [[INC]] = add nsw i16 [[INC2]], 1
+; CHECK-NEXT:    [[INC]] = add nuw nsw i16 [[INC2]], 1
 ; CHECK-NEXT:    store i16 [[INC]], i16* undef, align 1
 ; CHECK-NEXT:    br i1 true, label [[FOR_BODY2]], label [[CRIT_EDGE:%.*]]
 ; CHECK:       crit_edge:
