@@ -236,15 +236,15 @@ define signext i32 @select_eq_zero_negone(i32 signext %a, i32 signext %b) nounwi
 ; RV32-LABEL: select_eq_zero_negone:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    xor a0, a0, a1
-; RV32-NEXT:    seqz a0, a0
-; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    snez a0, a0
+; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: select_eq_zero_negone:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    xor a0, a0, a1
-; RV64-NEXT:    seqz a0, a0
-; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    addi a0, a0, -1
 ; RV64-NEXT:    ret
   %1 = icmp eq i32 %a, %b
   %2 = select i1 %1, i32 -1, i32 0
@@ -255,15 +255,15 @@ define signext i32 @select_ne_zero_negone(i32 signext %a, i32 signext %b) nounwi
 ; RV32-LABEL: select_ne_zero_negone:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    xor a0, a0, a1
-; RV32-NEXT:    snez a0, a0
-; RV32-NEXT:    neg a0, a0
+; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    addi a0, a0, -1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: select_ne_zero_negone:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    xor a0, a0, a1
-; RV64-NEXT:    snez a0, a0
-; RV64-NEXT:    neg a0, a0
+; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    addi a0, a0, -1
 ; RV64-NEXT:    ret
   %1 = icmp ne i32 %a, %b
   %2 = select i1 %1, i32 -1, i32 0
