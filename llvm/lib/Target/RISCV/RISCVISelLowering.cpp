@@ -8291,10 +8291,11 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
   auto *N0C = dyn_cast<ConstantSDNode>(N0);
   if (N0C && N1.getOpcode() == ISD::SETCC && N1.hasOneUse()) {
     ISD::CondCode CCVal = cast<CondCodeSDNode>(N1.getOperand(2))->get();
-    if (!N0C->isZero() && isIntEqualitySetCC(CCVal)) {
+    EVT SetCCOpVT = N1.getOperand(0).getValueType();
+    if (!N0C->isZero() && SetCCOpVT.isInteger() && isIntEqualitySetCC(CCVal)) {
       EVT VT = N->getValueType(0);
       const APInt &ImmVal = N0C->getAPIntValue();
-      CCVal = ISD::getSetCCInverse(CCVal, N0.getValueType());
+      CCVal = ISD::getSetCCInverse(CCVal, SetCCOpVT);
       SDValue NewN0 =
           DAG.getSetCC(SDLoc(N), VT, N1.getOperand(0), N1.getOperand(1), CCVal);
       SDValue NewN1 = DAG.getConstant(ImmVal - 1, SDLoc(N), VT);
