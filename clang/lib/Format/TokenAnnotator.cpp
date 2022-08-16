@@ -2065,6 +2065,11 @@ private:
     if (PreviousNotConst->isSimpleTypeSpecifier())
       return true;
 
+    // type[] a in Java
+    if (Style.Language == FormatStyle::LK_Java &&
+        PreviousNotConst->is(tok::r_square))
+      return true;
+
     // const a = in JavaScript.
     return Style.isJavaScript() && PreviousNotConst->is(tok::kw_const);
   }
