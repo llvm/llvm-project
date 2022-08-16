@@ -634,40 +634,73 @@ entry:
 }
 
 
-; CHECK: Ltmp0-_test1
-; CHECK:      .byte	1
-; CHECK-NEXT:   .byte   0
-; CHECK-NEXT: .short 4
-; CHECK-NEXT: .short	5
-; CHECK-NEXT:   .short  0
+; CHECK: .quad	2882400000
+; CHECK-NEXT: .long	Ltmp0-_test1
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	2
+; CHECK-NEXT: .byte	3
+; CHECK-NEXT: .byte	4
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	8
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .long	0
+; CHECK-NEXT: .byte	4
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	8
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .long	2
+; CHECK-NEXT: .byte	4
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	8
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .long	1
+; CHECK-NEXT: .byte	1
+; CHECK-NEXT: .byte	1
 
-; CHECK: Ltmp1-_test2
-; CHECK:      .byte	1
-; CHECK-NEXT:   .byte   0
-; CHECK-NEXT: .short 4
-; CHECK-NEXT: .short	6
-; CHECK-NEXT:   .short  0
-; CHECK-NEXT: .long	0
-; CHECK:      .byte	1
-; CHECK-NEXT:   .byte   0
-; CHECK-NEXT: .short 4
+; CHECK: .long	Ltmp1-_test2
+; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .short	3
-; CHECK-NEXT:   .short  0
+; CHECK-NEXT: .byte	3
+; CHECK-NEXT: .byte	4
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	8
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .long	0
-; CHECK: Ltmp2-_test2
-; CHECK:      .byte	1
-; CHECK-NEXT:   .byte   0
-; CHECK-NEXT: .short 4
-; CHECK-NEXT: .short	3
-; CHECK-NEXT:   .short  0
-; CHECK-NEXT: .long	0
-; CHECK:      .byte	1
-; CHECK-NEXT:   .byte   0
-; CHECK-NEXT: .short 4
+; CHECK-NEXT: .byte	4
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	8
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .long	2
+; CHECK-NEXT: .byte	4
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	8
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .long	2
+; CHECK-NEXT: .byte	1
+; CHECK-NEXT: .byte	1
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	4
 ; CHECK-NEXT: .short	6
-; CHECK-NEXT:   .short  0
+; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .long	0
+; CHECK-NEXT: .byte	1
+; CHECK-NEXT: .byte	1
+; CHECK-NEXT: .byte	0
+; CHECK-NEXT: .short	4
+; CHECK-NEXT: .short	3
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .long	0
+; CHECK-NEXT: .p2align	3
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .short	0
+; CHECK-NEXT: .p2align	3
+
 
 declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)

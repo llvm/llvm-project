@@ -50,6 +50,7 @@
 ; CHECK-NEXT:   .short  3
 ; Loc 0: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 4
 ; CHECK-NEXT:   .short {{[0-9]+}}
@@ -57,12 +58,14 @@
 ; CHECK-NEXT:   .long 0
 ; Loc 1: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 4
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 2: Constant 3
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 4
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -82,12 +85,14 @@ entry:
 ; CHECK-NEXT:   .short  2
 ; Loc 0: Register <-- this is the return register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 1: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -108,12 +113,14 @@ entry:
 ; CHECK-NEXT:   .short  2
 ; Loc 0: Register <-- this is the return register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 1: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -135,12 +142,14 @@ entry:
 ; CHECK-NEXT:   .short  2
 ; Loc 0: Register <-- this is the return register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 1: Direct %r15 + 160
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 2
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -162,12 +171,14 @@ entry:
 ; CHECK-NEXT:   .short  13
 ; Loc 0: Register <-- this is the return register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 1: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -176,12 +187,14 @@ entry:
 ; CHECK-NEXT:   .long 0
 ; Loc 2: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 3: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -190,12 +203,14 @@ entry:
 ; CHECK-NEXT:   .long 0
 ; Loc 4: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 5: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -204,12 +219,14 @@ entry:
 ; CHECK-NEXT:   .long 0
 ; Loc 6: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 7: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -218,12 +235,14 @@ entry:
 ; CHECK-NEXT:   .long 0
 ; Loc 8: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 9: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -232,6 +251,7 @@ entry:
 ; CHECK-NEXT:   .long 0
 ; Loc 10: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
@@ -239,12 +259,14 @@ entry:
 ; CHECK-NEXT:   .long 0
 ; Loc 11: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 12: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -265,12 +287,14 @@ entry:
 ; CHECK-NEXT:   .short  13
 ; Loc 0: Register <-- this is the return register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 1: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -279,12 +303,14 @@ entry:
 ; CHECK-NEXT:   .long 0
 ; Loc 2: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 3: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -293,12 +319,14 @@ entry:
 ; CHECK-NEXT:   .long 0
 ; Loc 4: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 5: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -307,12 +335,14 @@ entry:
 ; CHECK-NEXT:   .long 0
 ; Loc 6: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 7: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -321,12 +351,14 @@ entry:
 ; CHECK-NEXT:   .long 0
 ; Loc 8: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 9: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -335,6 +367,7 @@ entry:
 ; CHECK-NEXT:   .long 0
 ; Loc 10: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
@@ -342,12 +375,14 @@ entry:
 ; CHECK-NEXT:   .long 0
 ; Loc 11: Register
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
 ; CHECK-NEXT:   .short {{[0-9]+}}
 ; CHECK-NEXT:   .short 0
 ; CHECK-NEXT:   .long 0
 ; Loc 12: Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 8
@@ -369,6 +404,7 @@ entry:
 ; CHECK-NEXT: .short 0
 ; CHECK-NEXT: .short 3
 ; Loc 0: Register (some register that will be spilled to the stack)
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT: .byte  1
 ; CHECK-NEXT: .byte  0
 ; CHECK-NEXT: .short  8
@@ -376,6 +412,7 @@ entry:
 ; CHECK-NEXT: .short 0
 ; CHECK-NEXT: .long  0
 ; Loc 1: Register %r2
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT: .byte  1
 ; CHECK-NEXT: .byte  0
 ; CHECK-NEXT: .short  8
@@ -383,6 +420,7 @@ entry:
 ; CHECK-NEXT: .short 0
 ; CHECK-NEXT: .long  0
 ; Loc 1: Register %r3
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT: .byte  1
 ; CHECK-NEXT: .byte  0
 ; CHECK-NEXT: .short  8
@@ -404,6 +442,7 @@ entry:
 ; CHECK-NEXT: .short 0
 ; CHECK-NEXT: .short 5
 ; Loc 0: Return a register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT: .byte  1
 ; CHECK-NEXT: .byte  0
 ; CHECK-NEXT: .short  8
@@ -411,6 +450,7 @@ entry:
 ; CHECK-NEXT: .short 0
 ; CHECK-NEXT: .long  0
 ; Loc 1: Arg0 in a Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT: .byte  1
 ; CHECK-NEXT: .byte  0
 ; CHECK-NEXT: .short  8
@@ -418,6 +458,7 @@ entry:
 ; CHECK-NEXT: .short 0
 ; CHECK-NEXT: .long  0
 ; Loc 2: Arg1 in a Register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT: .byte  1
 ; CHECK-NEXT: .byte  0
 ; CHECK-NEXT: .short  8
@@ -425,6 +466,7 @@ entry:
 ; CHECK-NEXT: .short 0
 ; CHECK-NEXT: .long  0
 ; Loc 3: Arg2 spilled to %r15 +
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT: .byte  3
 ; CHECK-NEXT: .byte  0
 ; CHECK-NEXT: .short  8
@@ -432,6 +474,7 @@ entry:
 ; CHECK-NEXT: .short 0
 ; CHECK-NEXT: .long
 ; Loc 4: Arg3 spilled to %r15 +
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT: .byte  3
 ; CHECK-NEXT: .byte  0
 ; CHECK-NEXT: .short  8

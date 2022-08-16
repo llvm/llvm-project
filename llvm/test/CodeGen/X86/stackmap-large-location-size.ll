@@ -6,7 +6,9 @@ define void @f_0(<1024 x i64> %val) {
 ; CHECK:      .quad	2882400015
 ; CHECK-NEXT: .long	.Ltmp0-f_0
 ; CHECK-NEXT: .short	0
-; CHECK-NEXT: .short	4
+; CHECK-NEXT: .short	2
+; LiveVar[0]
+; CHECK-NEXT: .byte	3
 ; Constant(0)
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	0 
@@ -29,6 +31,8 @@ define void @f_0(<1024 x i64> %val) {
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .long	1
 ; Indirect
+; CHECK-NEXT: .byte	1
+; LiveVar[1]
 ; CHECK-NEXT: .byte	3
 ; CHECK-NEXT: .byte	0
 ; CHECK-NEXT: .short	8192
@@ -45,7 +49,9 @@ define void @f_1(<1024 x ptr> %val) {
 ; CHECK:      .quad	2882400015
 ; CHECK-NEXT: .long	.Ltmp1-f_1
 ; CHECK-NEXT: .short	0
-; CHECK-NEXT: .short	4
+; CHECK-NEXT: .short	2
+; LiveVar[0]
+; CHECK-NEXT: .byte	3
 ; Constant(0)
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	0
@@ -67,6 +73,8 @@ define void @f_1(<1024 x ptr> %val) {
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .long	1
+; LiveVar[1]
+; CHECK-NEXT: .byte	1
 ; Indirect
 ; CHECK-NEXT: .byte	3
 ; CHECK-NEXT: .byte	0
@@ -84,7 +92,9 @@ define void @f_2(<99 x ptr> %val) {
 ; CHECK:      .quad	2882400015
 ; CHECK-NEXT: .long	.Ltmp2-f_2
 ; CHECK-NEXT: .short	0
-; CHECK-NEXT: .short	4
+; CHECK-NEXT: .short	2
+; LiveVar[0]
+; CHECK-NEXT: .byte	3
 ; Constant(0)
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	0
@@ -106,6 +116,8 @@ define void @f_2(<99 x ptr> %val) {
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .long	1
+; LiveVar[0]
+; CHECK-NEXT: .byte	1
 ; Indirect
 ; CHECK-NEXT: .byte	3
 ; CHECK-NEXT: .byte	0
@@ -123,7 +135,9 @@ define <400 x ptr addrspace(1)> @f_3(<400 x ptr addrspace(1)> %obj) gc "statepoi
 ; CHECK:      .quad	4242
 ; CHECK-NEXT: .long	.Ltmp3-f_3
 ; CHECK-NEXT: .short	0
-; CHECK-NEXT: .short	5
+; CHECK-NEXT: .short	3
+; LiveVar[0]
+; CHECK-NEXT: .byte	3
 ; Constant(0)
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	0
@@ -145,6 +159,8 @@ define <400 x ptr addrspace(1)> @f_3(<400 x ptr addrspace(1)> %obj) gc "statepoi
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .long	0
+; LiveVar[1]
+; CHECK-NEXT: .byte	1
 ; Indirect
 ; CHECK-NEXT: .byte	3
 ; CHECK-NEXT: .byte	0
@@ -152,6 +168,8 @@ define <400 x ptr addrspace(1)> @f_3(<400 x ptr addrspace(1)> %obj) gc "statepoi
 ; CHECK-NEXT: .short	7
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .long	0
+; LiveVar[2]
+; CHECK-NEXT: .byte	1
 ; Indirect
 ; CHECK-NEXT: .byte	3
 ; CHECK-NEXT: .byte	0

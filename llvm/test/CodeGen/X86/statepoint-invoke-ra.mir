@@ -1,3 +1,6 @@
+# XFAIL: *
+# YKFIXME: needs StackMaps::NextLive markers in STATEPOINT instructions.
+#
 # RUN: llc -x mir -o - %s -run-pass=twoaddressinstruction,simple-register-coalescing,greedy -verify-regalloc 2>&1 | FileCheck %s
 
 # The test checks no verification errors happen in the case of

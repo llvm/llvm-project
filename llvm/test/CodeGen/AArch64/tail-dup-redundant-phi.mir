@@ -262,7 +262,7 @@ body:             |
   ; CHECK-NEXT:   [[DEF4:%[0-9]+]]:gpr64all = IMPLICIT_DEF
   ; CHECK-NEXT:   $x0 = COPY [[DEF4]]
   ; CHECK-NEXT:   [[DEF5:%[0-9]+]]:gpr64all = IMPLICIT_DEF
-  ; CHECK-NEXT:   STATEPOINT 2, 4, 1, [[DEF5]], $x0, 2, 0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def $x0, implicit-def dead early-clobber $lr
+  ; CHECK-NEXT:   STATEPOINT 2, 4, 1, %23, $x0, 2, 0, 2, 0, 2, 0, 2, 1, 2, 0, 3, 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def $x0, implicit-def dead early-clobber $lr
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gpr64all = COPY $x0
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gpr64 = COPY [[COPY7]]
@@ -332,7 +332,7 @@ body:             |
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[MOVi32imm4:%[0-9]+]]:gpr32 = MOVi32imm 14
   ; CHECK-NEXT:   $w0 = COPY [[MOVi32imm4]]
-  ; CHECK-NEXT:   [[STATEPOINT:%[0-9]+]]:gpr64all, [[STATEPOINT1:%[0-9]+]]:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 2, [[PHI1]], [[PHI]], 2, 2, [[PHI1]](tied-def 0), [[PHI]](tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
+  ; CHECK-NEXT:   [[STATEPOINT:%[0-9]+]]:gpr64all, [[STATEPOINT1:%[0-9]+]]:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 2, [[PHI1]], 3, [[PHI]], 3, 2, 2, [[PHI1]](tied-def 0), 3, [[PHI]](tied-def 1), 3, 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.17.bb49:
@@ -341,7 +341,7 @@ body:             |
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[MOVi32imm5:%[0-9]+]]:gpr32 = MOVi32imm 10
   ; CHECK-NEXT:   $w0 = COPY [[MOVi32imm5]]
-  ; CHECK-NEXT:   [[STATEPOINT2:%[0-9]+]]:gpr64all, [[STATEPOINT3:%[0-9]+]]:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 3, [[PHI1]], [[PHI]], [[PHI]], 2, 2, [[PHI1]](tied-def 0), [[PHI]](tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
+  ; CHECK-NEXT:   [[STATEPOINT2:%[0-9]+]]:gpr64all, [[STATEPOINT3:%[0-9]+]]:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 3, [[PHI1]], 3, [[PHI]], 3, [[PHI]], 3, 2, 2, [[PHI1]](tied-def 0), 3, [[PHI]](tied-def 1), 3, 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.18.bb51:
@@ -349,7 +349,7 @@ body:             |
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   [[MOVi32imm6:%[0-9]+]]:gpr32 = MOVi32imm 24
   ; CHECK-NEXT:   $w0 = COPY [[MOVi32imm6]]
-  ; CHECK-NEXT:   [[STATEPOINT4:%[0-9]+]]:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 1, [[PHI2]], 2, 1, [[PHI2]](tied-def 0), 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
+  ; CHECK-NEXT:   [[STATEPOINT4:%[0-9]+]]:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 1, [[PHI2]], 3, 2, 1, [[PHI2]](tied-def 0), 3, 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
   bb.0.bb:
     successors: %bb.2(0x2aaaaaab), %bb.15(0x55555555)
@@ -429,7 +429,7 @@ body:             |
     %22:gpr64all = IMPLICIT_DEF
     $x0 = COPY %22
     %23:gpr64all = IMPLICIT_DEF
-    STATEPOINT 2, 4, 1, %23, $x0, 2, 0, 2, 0, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def $x0, implicit-def dead early-clobber $lr
+    STATEPOINT 2, 4, 1, %23, $x0, 2, 0, 2, 0, 2, 0, 2, 1, 2, 0, 3, 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def $x0, implicit-def dead early-clobber $lr
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     %24:gpr64all = COPY $x0
     %0:gpr64all = COPY %24
@@ -500,7 +500,7 @@ body:             |
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     %28:gpr32 = MOVi32imm 14
     $w0 = COPY %28
-    %29:gpr64all, %30:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 2, %2, %3, 2, 2, %2(tied-def 0), %3(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
+    %29:gpr64all, %30:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 2, %2, 3, %3, 3, 2, 2, %2(tied-def 0), 3, %3(tied-def 1), 3, 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
 
   bb.13.bb49:
@@ -509,14 +509,14 @@ body:             |
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     %31:gpr32 = MOVi32imm 10
     $w0 = COPY %31
-    %32:gpr64all, %33:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 3, %2, %3, %3, 2, 2, %2(tied-def 0), %3(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
+    %32:gpr64all, %33:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 3, %2, 3, %3, 3, %3, 3, 2, 2, %2(tied-def 0), 3, %3(tied-def 1), 3, 2, 0, 2, 2, 0, 0, 1, 1, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
 
   bb.14.bb51:
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
     %34:gpr32 = MOVi32imm 24
     $w0 = COPY %34
-    %35:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 1, %2, 2, 1, %2(tied-def 0), 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
+    %35:gpr64all = STATEPOINT 2882400000, 0, 1, @wombat, $w0, 2, 0, 2, 0, 2, 1, %2, 3, 2, 1, %2(tied-def 0), 3, 2, 0, 2, 1, 0, 0, csr_aarch64_aapcs, implicit-def $sp, implicit-def dead early-clobber $lr
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
 
 ...

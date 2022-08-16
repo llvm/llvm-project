@@ -103,7 +103,7 @@ body:             |
     %14:gpr32all = IMPLICIT_DEF
     $w0 = COPY %14
     %15:gpr64all = IMPLICIT_DEF
-    STATEPOINT 2, 4, 1, killed %15, $w0, 2, 0, 2, 0, 2, 4, 1, 4, %stack.0, 0, 1, 2, %stack.1, 0, 1, 1, %stack.2, 0, 1, 8, %stack.3, 0, 2, 0, 2, 0, 2, 0, csr_aarch64_aapcs, implicit-def $sp :: (volatile load store (s32) on %stack.0), (volatile load store (s16) on %stack.1, align 4), (volatile load store (s8) on %stack.2, align 4), (volatile load store (s64) on %stack.3)
+    STATEPOINT 2, 4, 1, killed %15, $w0, 2, 0, 2, 0, 2, 4, 1, 4, %stack.0, 0, 3, 1, 2, %stack.1, 0, 3, 1, 1, %stack.2, 0, 3, 1, 8, %stack.3, 0, 3, 2, 0, 2, 0, 2, 0, csr_aarch64_aapcs, implicit-def $sp :: (volatile load store (s32) on %stack.0), (volatile load store (s16) on %stack.1, align 4), (volatile load store (s8) on %stack.2, align 4), (volatile load store (s64) on %stack.3)
     ADJCALLSTACKUP 0, 0, implicit-def dead $sp, implicit $sp
     RET_ReallyLR
 

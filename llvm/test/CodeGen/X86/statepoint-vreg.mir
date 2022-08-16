@@ -55,7 +55,8 @@
   ; CHECK-NEXT:    .quad	2882400000
   ; CHECK-NEXT:    .long	.Ltmp0-test_basic
   ; CHECK-NEXT:    .short	0
-  ; CHECK-NEXT:    .short	8
+  ; CHECK-NEXT:    .short	6
+  ; CHECK-NEXT:    .byte	3
   ; CHECK-NEXT:    .byte	4
   ; CHECK-NEXT:    .byte	0
   ; CHECK-NEXT:    .short	8
@@ -74,6 +75,7 @@
   ; CHECK-NEXT:    .short	0
   ; CHECK-NEXT:    .short	0
   ; CHECK-NEXT:    .long	1
+  ; CHECK-NEXT:    .byte	1
   ; CHECK-NEXT:    .byte	4
   ; CHECK-NEXT:    .byte	0
   ; CHECK-NEXT:    .short	8
@@ -81,23 +83,27 @@
   ; CHECK-NEXT:    .short	0
   ; CHECK-NEXT:    .long	0
   ; CHECK-NEXT:    .byte	1
-  ; CHECK-NEXT:    .byte	0
-  ; CHECK-NEXT:    .short	8
-  ; CHECK-NEXT:    .short	14
-  ; CHECK-NEXT:    .short	0
-  ; CHECK-NEXT:    .long	0
   ; CHECK-NEXT:    .byte	1
   ; CHECK-NEXT:    .byte	0
   ; CHECK-NEXT:    .short	8
   ; CHECK-NEXT:    .short	14
   ; CHECK-NEXT:    .short	0
   ; CHECK-NEXT:    .long	0
+  ; CHECK-NEXT:    .byte	1
+  ; CHECK-NEXT:    .byte	1
+  ; CHECK-NEXT:    .byte	0
+  ; CHECK-NEXT:    .short	8
+  ; CHECK-NEXT:    .short	14
+  ; CHECK-NEXT:    .short	0
+  ; CHECK-NEXT:    .long	0
+  ; CHECK-NEXT:    .byte	1
   ; CHECK-NEXT:    .byte	1
   ; CHECK-NEXT:    .byte	0
   ; CHECK-NEXT:    .short	8
   ; CHECK-NEXT:    .short	3
   ; CHECK-NEXT:    .short	0
   ; CHECK-NEXT:    .long	0
+  ; CHECK-NEXT:    .byte	1
   ; CHECK-NEXT:    .byte	1
   ; CHECK-NEXT:    .byte	0
   ; CHECK-NEXT:    .short	8
@@ -146,7 +152,7 @@ body:             |
     %1:gr64 = COPY $rsi
     %0:gr64 = COPY $rdi
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    %2:gr64, %3:gr64 = STATEPOINT 2882400000, 0, 0, @bar, 2, 0, 2, 0, 2, 1, 2, 0, 2, 2, %1(tied-def 0), %0(tied-def 1), 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp
+    %2:gr64, %3:gr64 = STATEPOINT 2882400000, 0, 0, @bar, 2, 0, 2, 0, 2, 1, 2, 0, 3, 2, 2, %1(tied-def 0), 3, %0(tied-def 1), 3, 2, 0, 2, 2, 0, 0, 3, 1, 1, 3, csr_64, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %4:gr32 = MOV32rm killed %3, 1, $noreg, 0, $noreg :: (load (s32) from %ir.rel1, addrspace 1)
     %5:gr32 = ADD32rm %4, killed %2, 1, $noreg, 0, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.rel2, addrspace 1)

@@ -83,7 +83,9 @@ declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 ; The GC one
 ; CHECK: .long	.Ltmp0-test
 ; CHECK: .short	0
-; CHECK: .short	4
+; CHECK: .short	2
+; LiveVar[0]
+; CHECK: .byte	3
 ; SmallConstant (0)
 ; CHECK: .byte	4
 ; CHECK: .byte	0
@@ -105,6 +107,8 @@ declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	0
+; LiveVar[1]
+; CHECK: .byte	1
 ; Direct Spill Slot [rsp+0]
 ; CHECK: .byte	2
 ; CHECK: .byte	0
@@ -120,7 +124,9 @@ declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 ; The Deopt one
 ; CHECK: .long	.Ltmp1-test2
 ; CHECK: .short	0
-; CHECK: .short	4
+; CHECK: .short	2
+; LiveVar[0]
+; CHECK: .byte	3
 ; SmallConstant (0)
 ; CHECK: .byte	4
 ; CHECK: .byte	0
@@ -142,6 +148,8 @@ declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1
+; LiveVar[1]
+; CHECK: .byte	1
 ; Direct Spill Slot [rsp+0]
 ; CHECK: .byte	2
 ; CHECK: .byte	0

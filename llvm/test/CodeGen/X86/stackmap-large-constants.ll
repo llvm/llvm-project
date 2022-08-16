@@ -36,6 +36,7 @@
 ; # locations
 ; CHECK-NEXT: 	.short	1
 ; ConstantIndex
+; CHECK-NEXT: 	.byte	1
 ; CHECK-NEXT: 	.byte	5
 ; reserved
 ; CHECK-NEXT:   .byte	0
@@ -71,6 +72,7 @@ define void @foo() {
 ; # locations
 ; CHECK-NEXT: 	.short	1
 ; ConstantIndex
+; CHECK-NEXT: 	.byte	1
 ; CHECK-NEXT: 	.byte	5
 ; reserved
 ; CHECK-NEXT:   .byte	0
