@@ -8294,12 +8294,16 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
     EVT SetCCOpVT = N1.getOperand(0).getValueType();
     if (!N0C->isZero() && SetCCOpVT.isInteger() && isIntEqualitySetCC(CCVal)) {
       EVT VT = N->getValueType(0);
-      const APInt &ImmVal = N0C->getAPIntValue();
-      CCVal = ISD::getSetCCInverse(CCVal, SetCCOpVT);
-      SDValue NewN0 =
-          DAG.getSetCC(SDLoc(N), VT, N1.getOperand(0), N1.getOperand(1), CCVal);
-      SDValue NewN1 = DAG.getConstant(ImmVal - 1, SDLoc(N), VT);
-      return DAG.getNode(ISD::ADD, SDLoc(N), VT, NewN0, NewN1);
+      APInt ImmValMinus1 = N0C->getAPIntValue() - 1;
+      // If this doesn't form ADDI, the transform won't save any instructions
+      // and may increase the number of constants we need.
+      if (ImmValMinus1.isSignedIntN(12)) {
+        CCVal = ISD::getSetCCInverse(CCVal, SetCCOpVT);
+        SDValue NewN0 =
+            DAG.getSetCC(SDLoc(N), VT, N1.getOperand(0), N1.getOperand(1), CCVal);
+        SDValue NewN1 = DAG.getConstant(ImmValMinus1, SDLoc(N), VT);
+        return DAG.getNode(ISD::ADD, SDLoc(N), VT, NewN0, NewN1);
+      }
     }
   }
 

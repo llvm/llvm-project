@@ -48,6 +48,9 @@ public:
   virtual void handleModuleDependency(ModuleDeps MD) = 0;
 
   virtual void handleContextHash(std::string Hash) = 0;
+
+  virtual std::string lookupModuleOutput(const ModuleID &ID,
+                                         ModuleOutputKind Kind) = 0;
 };
 
 // FIXME: This may need to merge with \p DependencyConsumer in order to support
