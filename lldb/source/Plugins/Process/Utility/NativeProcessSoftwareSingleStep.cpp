@@ -128,8 +128,10 @@ Status NativeProcessSoftwareSingleStep::SetupSoftwareSingleStepping(
 
   auto pc_it =
       baton.m_register_values.find(reg_info_pc->kinds[eRegisterKindDWARF]);
-  auto flags_it =
-      baton.m_register_values.find(reg_info_flags->kinds[eRegisterKindDWARF]);
+  auto flags_it = reg_info_flags == nullptr
+                      ? baton.m_register_values.end()
+                      : baton.m_register_values.find(
+                            reg_info_flags->kinds[eRegisterKindDWARF]);
 
   lldb::addr_t next_pc;
   lldb::addr_t next_flags;
