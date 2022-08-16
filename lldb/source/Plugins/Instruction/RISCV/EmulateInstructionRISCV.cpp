@@ -191,8 +191,7 @@ static InstrPattern PATTERNS[] = {
 bool EmulateInstructionRISCV::DecodeAndExecute(uint32_t inst,
                                                bool ignore_cond) {
   Log *log = GetLog(LLDBLog::Process | LLDBLog::Breakpoints);
-  for (int i = 0; i < llvm::array_lengthof(PATTERNS); ++i) {
-    const InstrPattern &pat = PATTERNS[i];
+  for (const InstrPattern &pat : PATTERNS) {
     if ((inst & pat.type_mask) == pat.eigen) {
       LLDB_LOGF(log, "EmulateInstructionRISCV::%s: inst(%x) was decoded to %s",
                 __FUNCTION__, inst, pat.name);
