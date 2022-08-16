@@ -6,7 +6,7 @@
 ; the known bits of a phi edge based off a conditional branch feeding the phi.
 ;
 
-; TODO: %x either eq 7 or is set to 7
+; %x either eq 7 or is set to 7
 define i64 @limit_i64_eq_7(i64 %x) {
 ; CHECK-LABEL: @limit_i64_eq_7(
 ; CHECK-NEXT:  entry:
@@ -15,8 +15,7 @@ define i64 @limit_i64_eq_7(i64 %x) {
 ; CHECK:       body:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[X]], [[ENTRY:%.*]] ], [ 7, [[BODY]] ]
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 7
 ;
 entry:
   %cmp = icmp eq i64 %x, 7
@@ -28,20 +27,21 @@ end:
   ret i64 %res
 }
 
-; TODO: %x either eq 255 or is set to 255
+; %x either eq 255 or is set to 255
 define i64 @limit_i64_ne_255(i64 %x) {
 ; CHECK-LABEL: @limit_i64_ne_255(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[X:%.*]], 255
-; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[END:%.*]], label [[BODY:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[X:%.*]], 255
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    br i1 [[CMP]], label [[BODY:%.*]], label [[END:%.*]]
 ; CHECK:       body:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[X]], [[ENTRY:%.*]] ], [ 255, [[BODY]] ]
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 255
 ;
 entry:
   %cmp = icmp ne i64 %x, 255
+  call void @use(i1 %cmp)
   br i1 %cmp, label %body, label %end
 body:
   br label %end
@@ -49,8 +49,9 @@ end:
   %res = phi i64 [ %x, %entry ], [ 255, %body ]
   ret i64 %res
 }
+declare void @use(i1)
 
-; TODO: %x either ule 15 or is masked with 15
+; %x either ule 15 or is masked with 15
 define i64 @limit_i64_ule_15(i64 %x) {
 ; CHECK-LABEL: @limit_i64_ule_15(
 ; CHECK-NEXT:  entry:
@@ -61,8 +62,7 @@ define i64 @limit_i64_ule_15(i64 %x) {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[X_MASK:%.*]] = phi i64 [ [[X]], [[ENTRY:%.*]] ], [ [[MASK]], [[BODY]] ]
-; CHECK-NEXT:    [[RES:%.*]] = and i64 [[X_MASK]], 15
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 [[X_MASK]]
 ;
 entry:
   %cmp = icmp ule i64 %x, 15
@@ -76,7 +76,7 @@ end:
   ret i64 %res
 }
 
-; TODO: %x either uge 8 or is masked with 7
+; %x either uge 8 or is masked with 7
 define i64 @limit_i64_uge_8(i64 %x) {
 ; CHECK-LABEL: @limit_i64_uge_8(
 ; CHECK-NEXT:  entry:
@@ -87,8 +87,7 @@ define i64 @limit_i64_uge_8(i64 %x) {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[X_MASK:%.*]] = phi i64 [ [[X]], [[ENTRY:%.*]] ], [ [[MASK]], [[BODY]] ]
-; CHECK-NEXT:    [[RES:%.*]] = and i64 [[X_MASK]], 7
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 [[X_MASK]]
 ;
 entry:
   %cmp = icmp uge i64 %x, 8
@@ -102,7 +101,7 @@ end:
   ret i64 %res
 }
 
-; TODO: %x either ult 8 or is masked with 7
+; %x either ult 8 or is masked with 7
 define i64 @limit_i64_ult_8(i64 %x) {
 ; CHECK-LABEL: @limit_i64_ult_8(
 ; CHECK-NEXT:  entry:
@@ -113,8 +112,7 @@ define i64 @limit_i64_ult_8(i64 %x) {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[X_MASK:%.*]] = phi i64 [ [[X]], [[ENTRY:%.*]] ], [ [[MASK]], [[BODY]] ]
-; CHECK-NEXT:    [[RES:%.*]] = and i64 [[X_MASK]], 7
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 [[X_MASK]]
 ;
 entry:
   %cmp = icmp ult i64 %x, 8
@@ -128,7 +126,7 @@ end:
   ret i64 %res
 }
 
-; TODO: %x either ugt 7 or is masked with 7
+; %x either ugt 7 or is masked with 7
 define i64 @limit_i64_ugt_7(i64 %x) {
 ; CHECK-LABEL: @limit_i64_ugt_7(
 ; CHECK-NEXT:  entry:
@@ -139,8 +137,7 @@ define i64 @limit_i64_ugt_7(i64 %x) {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[X_MASK:%.*]] = phi i64 [ [[X]], [[ENTRY:%.*]] ], [ [[MASK]], [[BODY]] ]
-; CHECK-NEXT:    [[RES:%.*]] = and i64 [[X_MASK]], 7
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 [[X_MASK]]
 ;
 entry:
   %cmp = icmp ugt i64 %x, 7

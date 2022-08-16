@@ -1575,9 +1575,45 @@ static void computeKnownBitsFromOperator(const Operator *I,
         RecQ.CxtI = P->getIncomingBlock(u)->getTerminator();
 
         Known2 = KnownBits(BitWidth);
+
         // Recurse, but cap the recursion to one level, because we don't
         // want to waste time spinning around in loops.
         computeKnownBits(IncValue, Known2, MaxAnalysisRecursionDepth - 1, RecQ);
+
+        // If this failed, see if we can use a conditional branch into the phi
+        // to help us determine the range of the value.
+        if (Known2.isUnknown()) {
+          ICmpInst::Predicate Pred;
+          const APInt *RHSC;
+          BasicBlock *TrueSucc, *FalseSucc;
+          // TODO: Use RHS Value and compute range from its known bits.
+          if (match(RecQ.CxtI,
+                    m_Br(m_c_ICmp(Pred, m_Specific(IncValue), m_APInt(RHSC)),
+                         m_BasicBlock(TrueSucc), m_BasicBlock(FalseSucc)))) {
+            // Check for cases of duplicate successors.
+            if ((TrueSucc == P->getParent()) != (FalseSucc == P->getParent())) {
+              // If we're using the false successor, invert the predicate.
+              if (FalseSucc == P->getParent())
+                Pred = CmpInst::getInversePredicate(Pred);
+
+              switch (Pred) {
+              case CmpInst::Predicate::ICMP_EQ:
+                Known2 = KnownBits::makeConstant(*RHSC);
+                break;
+              case CmpInst::Predicate::ICMP_ULE:
+                Known2.Zero.setHighBits(RHSC->countLeadingZeros());
+                break;
+              case CmpInst::Predicate::ICMP_ULT:
+                Known2.Zero.setHighBits((*RHSC - 1).countLeadingZeros());
+                break;
+              default:
+                // TODO - add additional integer predicate handling.
+                break;
+              }
+            }
+          }
+        }
+
         Known = KnownBits::commonBits(Known, Known2);
         // If all bits have been ruled out, there's no need to check
         // more operands.
