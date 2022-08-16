@@ -160,7 +160,7 @@ DEFAULT_PARAMETERS = [
               AddFlag('-fsanitize=dataflow') if sanitizer == 'DataFlow' else None,
               AddFlag('-fsanitize=leaks') if sanitizer == 'Leaks' else None,
 
-              AddFeature('sanitizer-new-delete') if sanitizer in ['Address', 'Memory', 'MemoryWithOrigins', 'Thread'] else None,
+              AddFeature('sanitizer-new-delete') if sanitizer in ['Address', 'HWAddress', 'Memory', 'MemoryWithOrigins', 'Thread'] else None,
             ])),
 
   Parameter(name='enable_experimental', choices=[True, False], type=bool, default=True,
