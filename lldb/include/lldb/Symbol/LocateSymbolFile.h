@@ -14,6 +14,7 @@
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/lldb-forward.h"
 
 namespace lldb_private {
 
@@ -52,7 +53,15 @@ public:
   //
   static bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                                           Status &error,
-                                          bool force_lookup = true);
+                                          bool force_lookup = true,
+                                          bool copy_executable = true);
+
+  /// Locate the symbol file for the given UUID on a background thread. This
+  /// function returns immediately. Under the hood it uses the debugger's
+  /// thread pool to call DownloadObjectAndSymbolFile. If a symbol file is
+  /// found, this will notify all target which contain the module with the
+  /// given UUID.
+  static void DownloadSymbolFileAsync(const UUID &uuid);
 };
 
 } // namespace lldb_private

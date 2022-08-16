@@ -24,6 +24,7 @@
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
+#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -770,7 +771,7 @@ void Module::LookupInfo::Prune(SymbolContextList &sc_list,
     while (i < sc_list.GetSize()) {
       if (!sc_list.GetContextAtIndex(i, sc))
         break;
-      
+
       bool keep_it =
           NameMatchesLookupInfo(sc.GetFunctionName(), sc.GetLanguage());
       if (keep_it)
@@ -1317,8 +1318,11 @@ void Module::SectionFileAddressesChanged() {
 }
 
 UnwindTable &Module::GetUnwindTable() {
-  if (!m_unwind_table)
+  if (!m_unwind_table) {
     m_unwind_table.emplace(*this);
+    if (!m_symfile_spec)
+      Symbols::DownloadSymbolFileAsync(GetUUID());
+  }
   return *m_unwind_table;
 }
 

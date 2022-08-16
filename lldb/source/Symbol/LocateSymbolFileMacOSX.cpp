@@ -554,7 +554,8 @@ static FileSpec GetDsymForUUIDExecutable() {
 }
 
 bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
-                                          Status &error, bool force_lookup) {
+                                          Status &error, bool force_lookup,
+                                          bool copy_executable) {
   const UUID *uuid_ptr = module_spec.GetUUIDPtr();
   const FileSpec *file_spec_ptr = module_spec.GetFileSpecPtr();
 
@@ -584,15 +585,18 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
 
   // Create the dsymForUUID command.
   StreamString command;
+  const char *copy_executable_arg = copy_executable ? "--copyExecutable " : "";
   if (!uuid_str.empty()) {
-    command.Printf("%s --ignoreNegativeCache --copyExecutable %s",
-                   dsymForUUID_exe_path.c_str(), uuid_str.c_str());
+    command.Printf("%s --ignoreNegativeCache %s%s",
+                   dsymForUUID_exe_path.c_str(), copy_executable_arg,
+                   uuid_str.c_str());
     LLDB_LOGF(log, "Calling %s with UUID %s to find dSYM: %s",
               dsymForUUID_exe_path.c_str(), uuid_str.c_str(),
               command.GetString().data());
   } else if (!file_path_str.empty()) {
-    command.Printf("%s --ignoreNegativeCache --copyExecutable %s",
-                   dsymForUUID_exe_path.c_str(), file_path_str.c_str());
+    command.Printf("%s --ignoreNegativeCache %s%s",
+                   dsymForUUID_exe_path.c_str(), copy_executable_arg,
+                   file_path_str.c_str());
     LLDB_LOGF(log, "Calling %s with file %s to find dSYM: %s",
               dsymForUUID_exe_path.c_str(), file_path_str.c_str(),
               command.GetString().data());
