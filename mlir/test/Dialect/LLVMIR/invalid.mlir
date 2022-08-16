@@ -458,14 +458,14 @@ func.func @extractvalue_wrong_nesting() {
 // -----
 
 func.func @invalid_vector_type_1(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{expected LLVM dialect-compatible vector type for operand #1}}
+  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
   %0 = llvm.extractelement %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_2(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{expected LLVM dialect-compatible vector type for operand #1}}
+  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
   %0 = llvm.insertelement %arg2, %arg2[%arg1 : i32] : f32
 }
 
@@ -479,7 +479,7 @@ func.func @invalid_vector_type_3(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
 // -----
 
 func.func @invalid_vector_type_4(%a : vector<4xf32>, %idx : i32) -> vector<4xf32> {
-  // expected-error@+1 {{'llvm.extractelement' op Type mismatch: extracting from 'vector<4xf32>' should produce 'f32' but this op returns 'vector<4xf32>'}}
+  // expected-error@+1 {{failed to verify that result type matches vector element type}}
   %b = "llvm.extractelement"(%a, %idx) : (vector<4xf32>, i32) -> vector<4xf32>
   return %b : vector<4xf32>
 }
@@ -487,7 +487,7 @@ func.func @invalid_vector_type_4(%a : vector<4xf32>, %idx : i32) -> vector<4xf32
 // -----
 
 func.func @invalid_vector_type_5(%a : vector<4xf32>, %idx : i32) -> vector<4xf32> {
-  // expected-error@+1 {{'llvm.insertelement' op Type mismatch: cannot insert 'vector<4xf32>' into 'vector<4xf32>'}}
+  // expected-error@+1 {{failed to verify that argument type matches vector element type}}
   %b = "llvm.insertelement"(%a, %a, %idx) : (vector<4xf32>, vector<4xf32>, i32) -> vector<4xf32>
   return %b : vector<4xf32>
 }
