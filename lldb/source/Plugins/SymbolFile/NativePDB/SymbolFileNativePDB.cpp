@@ -345,10 +345,13 @@ Block &SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
     // This is a function.  It must be global.  Creating the Function entry
     // for it automatically creates a block for it.
     FunctionSP func = GetOrCreateFunction(block_id, *comp_unit);
-    Block &block = func->GetBlock(false);
-    if (block.GetNumRanges() == 0)
-      block.AddRange(Block::Range(0, func->GetAddressRange().GetByteSize()));
-    return block;
+    if (func) {
+      Block &block = func->GetBlock(false);
+      if (block.GetNumRanges() == 0)
+        block.AddRange(Block::Range(0, func->GetAddressRange().GetByteSize()));
+      return block;
+    }
+    break;
   }
   case S_BLOCK32: {
     // This is a block.  Its parent is either a function or another block.  In
@@ -1024,11 +1027,13 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
         continue;
       if (type == PDB_SymType::Function) {
         sc.function = GetOrCreateFunction(csid, *sc.comp_unit).get();
-        Block &block = sc.function->GetBlock(true);
-        addr_t func_base =
-            sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
-        addr_t offset = file_addr - func_base;
-        sc.block = block.FindInnermostBlockByOffset(offset);
+        if (sc.function) {
+          Block &block = sc.function->GetBlock(true);
+          addr_t func_base =
+              sc.function->GetAddressRange().GetBaseAddress().GetFileAddress();
+          addr_t offset = file_addr - func_base;
+          sc.block = block.FindInnermostBlockByOffset(offset);
+        }
       }
 
       if (type == PDB_SymType::Block) {
@@ -1908,6 +1913,8 @@ SymbolFileNativePDB::GetDeclContextForUID(lldb::user_id_t uid) {
 CompilerDeclContext
 SymbolFileNativePDB::GetDeclContextContainingUID(lldb::user_id_t uid) {
   clang::DeclContext *context = m_ast->GetParentDeclContext(PdbSymUid(uid));
+  if (!context)
+    return CompilerDeclContext();
   return m_ast->ToCompilerDeclContext(*context);
 }
 
@@ -1929,6 +1936,8 @@ Type *SymbolFileNativePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
     return nullptr;
 
   TypeSP type_sp = CreateAndCacheType(type_id);
+  if (!type_sp)
+    return nullptr;
   return &*type_sp;
 }
 
