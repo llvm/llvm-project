@@ -1147,23 +1147,12 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 
       assert(InitExpr && "Capture missing initialization expression");
 
-      if (const auto AILE = dyn_cast<ArrayInitLoopExpr>(InitExpr)) {
-        // If the AILE initializes a POD array, we need to keep it as the
-        // InitExpr.
-        if (dyn_cast<CXXConstructExpr>(AILE->getSubExpr()))
-          InitExpr = AILE->getSubExpr();
-      }
-
-      // With C++17 copy elision this can happen.
-      if (const auto *FC = dyn_cast<CXXFunctionalCastExpr>(InitExpr))
-        InitExpr = FC->getSubExpr();
-
-      assert(InitExpr &&
-             "Extracted capture initialization expression is missing");
-
-      if (dyn_cast<CXXConstructExpr>(InitExpr)) {
-        InitVal = *getObjectUnderConstruction(State, {LE, Idx}, LocCtxt);
-        InitVal = State->getSVal(InitVal.getAsRegion());
+      // With C++17 copy elision the InitExpr can be anything, so instead of
+      // pattern matching all cases, we simple check if the current field is
+      // under construction or not, regardless what it's InitExpr is.
+      if (const auto OUC =
+              getObjectUnderConstruction(State, {LE, Idx}, LocCtxt)) {
+        InitVal = State->getSVal(OUC->getAsRegion());
 
         State = finishObjectConstruction(State, {LE, Idx}, LocCtxt);
       } else
