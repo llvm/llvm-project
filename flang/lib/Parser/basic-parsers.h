@@ -194,6 +194,9 @@ private:
 };
 
 template <typename PA>
+MessageContextParser(MessageFixedText, PA) -> MessageContextParser<PA>;
+
+template <typename PA>
 inline constexpr auto inContext(MessageFixedText context, PA parser) {
   return MessageContextParser{context, parser};
 }
@@ -240,6 +243,9 @@ private:
   const MessageFixedText text_;
   const PA parser_;
 };
+
+template <typename PA>
+WithMessageParser(MessageFixedWidth, PA) -> WithMessageParser<PA>;
 
 template <typename PA>
 inline constexpr auto withMessage(MessageFixedText msg, PA parser) {
