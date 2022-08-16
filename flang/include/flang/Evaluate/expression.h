@@ -264,14 +264,6 @@ struct ComplexComponent
 };
 
 template <int KIND>
-ComplexComponent(bool, const Expr<Type<TypeCategory::Complex, KIND>> &)
-    -> ComplexComponent<KIND>;
-
-template <int KIND>
-ComplexComponent(bool, Expr<Type<TypeCategory::Complex, KIND>> &&)
-    -> ComplexComponent<KIND>;
-
-template <int KIND>
 struct Not : public Operation<Not<KIND>, Type<TypeCategory::Logical, KIND>,
                  Type<TypeCategory::Logical, KIND>> {
   using Result = Type<TypeCategory::Logical, KIND>;
