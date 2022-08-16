@@ -66,58 +66,58 @@ define ptr addrspace(1) @test_invoke_same_val(i1 %cond, ptr addrspace(1) %val1, 
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT:   liveins: $edi, $rcx, $rdx, $rsi
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $rbx = COPY $rcx
-  ; CHECK-NEXT:   renamable $rbp = COPY $rdx
-  ; CHECK-NEXT:   renamable $r14d = COPY $edi
-  ; CHECK-NEXT:   TEST8ri renamable $r14b, 1, implicit-def $eflags
+  ; CHECK-NEXT:   renamable $r14 = COPY $rcx
+  ; CHECK-NEXT:   renamable $r15 = COPY $rdx
+  ; CHECK-NEXT:   renamable $ebx = COPY $edi
+  ; CHECK-NEXT:   TEST8ri renamable $bl, 1, implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.3, 4, implicit killed $eflags
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.left:
   ; CHECK-NEXT:   successors: %bb.2(0x7ffff800), %bb.6(0x00000800)
-  ; CHECK-NEXT:   liveins: $rbp, $rsi, $r14d
+  ; CHECK-NEXT:   liveins: $ebx, $rsi, $r15
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   MOV64mr %stack.0, 1, $noreg, 0, $noreg, renamable $rsi :: (store (s64) into %stack.0)
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   $rdi = COPY killed renamable $rsi
-  ; CHECK-NEXT:   renamable $rbp = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $rbp(tied-def 0), 1, 8, %stack.0, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0)
+  ; CHECK-NEXT:   renamable $r15 = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $r15(tied-def 0), 1, 8, %stack.0, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0)
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.left.relocs:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
-  ; CHECK-NEXT:   liveins: $rbp, $r14d
+  ; CHECK-NEXT:   liveins: $ebx, $r15
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $rbx = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
+  ; CHECK-NEXT:   renamable $r14 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
   ; CHECK-NEXT:   JMP_1 %bb.5
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.right:
   ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.7(0x00000800)
-  ; CHECK-NEXT:   liveins: $rbp, $rbx, $rsi, $r14d
+  ; CHECK-NEXT:   liveins: $ebx, $rsi, $r14, $r15
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rbp :: (store (s64) into %stack.0)
+  ; CHECK-NEXT:   MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $r15 :: (store (s64) into %stack.0)
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   $rdi = COPY killed renamable $rsi
-  ; CHECK-NEXT:   renamable $rbx = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $rbx(tied-def 0), 1, 8, %stack.0, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0)
+  ; CHECK-NEXT:   renamable $r14 = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $r14(tied-def 0), 1, 8, %stack.0, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0)
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   EH_LABEL <mcsymbol >
   ; CHECK-NEXT:   JMP_1 %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.right.relocs:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
-  ; CHECK-NEXT:   liveins: $rbx, $r14d
+  ; CHECK-NEXT:   liveins: $ebx, $r14
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $rbp = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
+  ; CHECK-NEXT:   renamable $r15 = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5.normal_return:
-  ; CHECK-NEXT:   liveins: $rbp, $rbx, $r14d
+  ; CHECK-NEXT:   liveins: $ebx, $r14, $r15
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   TEST8ri renamable $r14b, 1, implicit-def $eflags, implicit killed $r14d
-  ; CHECK-NEXT:   renamable $rbx = CMOV64rr killed renamable $rbx, killed renamable $rbp, 4, implicit killed $eflags
-  ; CHECK-NEXT:   $rax = COPY killed renamable $rbx
+  ; CHECK-NEXT:   TEST8ri renamable $bl, 1, implicit-def $eflags, implicit killed $ebx
+  ; CHECK-NEXT:   renamable $r14 = CMOV64rr killed renamable $r14, killed renamable $r15, 4, implicit killed $eflags
+  ; CHECK-NEXT:   $rax = COPY killed renamable $r14
   ; CHECK-NEXT:   RET 0, $rax
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.6.exceptional_return.left (landing-pad):

@@ -9,9 +9,9 @@ define void @test_256_load(ptr nocapture %d, ptr nocapture %f, ptr nocapture %i)
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    subq $96, %rsp
-; CHECK-NEXT:    movq %rdx, %r14
-; CHECK-NEXT:    movq %rsi, %r15
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rdx, %rbx
+; CHECK-NEXT:    movq %rsi, %r14
+; CHECK-NEXT:    movq %rdi, %r15
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0
 ; CHECK-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-NEXT:    vmovaps (%rsi), %ymm1
@@ -20,11 +20,11 @@ define void @test_256_load(ptr nocapture %d, ptr nocapture %f, ptr nocapture %i)
 ; CHECK-NEXT:    vmovups %ymm2, (%rsp) # 32-byte Spill
 ; CHECK-NEXT:    callq dummy@PLT
 ; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; CHECK-NEXT:    vmovaps %ymm0, (%rbx)
-; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; CHECK-NEXT:    vmovaps %ymm0, (%r15)
-; CHECK-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; CHECK-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; CHECK-NEXT:    vmovaps %ymm0, (%r14)
+; CHECK-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; CHECK-NEXT:    vmovaps %ymm0, (%rbx)
 ; CHECK-NEXT:    addq $96, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14

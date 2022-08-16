@@ -139,14 +139,14 @@ body:             |
   ; Verify that the vreg is different immediately after register coalescing.
   ; DOESCOALESCE-NOT:   %10:gr64 ADD64ri32
   ; DOESCOALESCE:       %{{[0-9]+}}:gr64 = ADD64ri32
-  ; Verify that all these registers land in rbx.
-  ; CHECK:              renamable $rbx = ADD64ri32 killed renamable $rbx
+  ; Verify that all these registers land in r14.
+  ; CHECK:              renamable $r14 = ADD64ri32 killed renamable $r14
   
   ; DOESCOALESCE-LABEL: bb.2.if.end:
   ; CHECK-LABEL:        bb.2.if.end:
   bb.2.if.end:
     %2:gr64 = PHI %9, %bb.0, %10, %bb.1, debug-instr-number 1, debug-location !13
-  ; CHECK:              DBG_PHI $rbx, 1
+  ; CHECK:              DBG_PHI $r14, 1
     DBG_INSTR_REF 1, 0, !12, !DIExpression(), debug-location !13
     %14:gr64 = ADD64rr killed %2, %6, implicit-def $eflags, debug-location !13
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp, debug-location !13

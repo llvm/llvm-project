@@ -181,18 +181,18 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X64-NEXT:    pushq %r13
 ; X64-NEXT:    pushq %r12
 ; X64-NEXT:    pushq %rbx
-; X64-NEXT:    movq %r8, %r14
-; X64-NEXT:    movq %rcx, %rbx
+; X64-NEXT:    movq %r8, %rbx
+; X64-NEXT:    movq %rcx, %r14
 ; X64-NEXT:    movq %rdx, %r15
 ; X64-NEXT:    movq %rsi, %r12
 ; X64-NEXT:    movq %rdi, %r13
 ; X64-NEXT:    callq __udivti3@PLT
 ; X64-NEXT:    movq %rdx, %rcx
-; X64-NEXT:    movq %rdx, 8(%r14)
-; X64-NEXT:    movq %rax, (%r14)
-; X64-NEXT:    imulq %rax, %rbx
+; X64-NEXT:    movq %rdx, 8(%rbx)
+; X64-NEXT:    movq %rax, (%rbx)
+; X64-NEXT:    imulq %rax, %r14
 ; X64-NEXT:    mulq %r15
-; X64-NEXT:    addq %rbx, %rdx
+; X64-NEXT:    addq %r14, %rdx
 ; X64-NEXT:    imulq %r15, %rcx
 ; X64-NEXT:    addq %rdx, %rcx
 ; X64-NEXT:    subq %rax, %r13
@@ -343,6 +343,12 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, ptr %divdst) nounwi
 ; X64-NEXT:    movd %eax, %xmm2
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl %al, %edi
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl %al, %esi
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %r8d
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
@@ -353,6 +359,12 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, ptr %divdst) nounwi
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %r11d
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl %al, %ebx
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl %al, %ebp
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %r14d
@@ -367,44 +379,32 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, ptr %divdst) nounwi
 ; X64-NEXT:    movzbl %al, %r13d
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movzbl %al, %edi
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movzbl %al, %esi
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movzbl %al, %ebx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movzbl %al, %ebp
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movzbl %al, %edx
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    movl %eax, %ecx
 ; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    divb -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movd %r8d, %xmm3
-; X64-NEXT:    movd %r9d, %xmm4
-; X64-NEXT:    movd %r10d, %xmm5
-; X64-NEXT:    movd %r11d, %xmm6
+; X64-NEXT:    movd %edi, %xmm3
+; X64-NEXT:    movd %esi, %xmm4
+; X64-NEXT:    movd %r8d, %xmm5
+; X64-NEXT:    movd %r9d, %xmm6
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3],xmm3[4],xmm2[4],xmm3[5],xmm2[5],xmm3[6],xmm2[6],xmm3[7],xmm2[7]
-; X64-NEXT:    movd %r14d, %xmm2
+; X64-NEXT:    movd %r10d, %xmm2
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3],xmm5[4],xmm4[4],xmm5[5],xmm4[5],xmm5[6],xmm4[6],xmm5[7],xmm4[7]
-; X64-NEXT:    movd %r15d, %xmm4
+; X64-NEXT:    movd %r11d, %xmm4
 ; X64-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1],xmm5[2],xmm3[2],xmm5[3],xmm3[3]
-; X64-NEXT:    movd %r12d, %xmm3
+; X64-NEXT:    movd %ebx, %xmm3
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm6[0],xmm2[1],xmm6[1],xmm2[2],xmm6[2],xmm2[3],xmm6[3],xmm2[4],xmm6[4],xmm2[5],xmm6[5],xmm2[6],xmm6[6],xmm2[7],xmm6[7]
-; X64-NEXT:    movd %r13d, %xmm6
-; X64-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3],xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
-; X64-NEXT:    movd %edi, %xmm4
-; X64-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; X64-NEXT:    movd %esi, %xmm2
-; X64-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1]
-; X64-NEXT:    movd %ebx, %xmm5
-; X64-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm6[0],xmm4[1],xmm6[1],xmm4[2],xmm6[2],xmm4[3],xmm6[3],xmm4[4],xmm6[4],xmm4[5],xmm6[5],xmm4[6],xmm6[6],xmm4[7],xmm6[7]
 ; X64-NEXT:    movd %ebp, %xmm6
+; X64-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3],xmm3[4],xmm4[4],xmm3[5],xmm4[5],xmm3[6],xmm4[6],xmm3[7],xmm4[7]
+; X64-NEXT:    movd %r14d, %xmm4
+; X64-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; X64-NEXT:    movd %r15d, %xmm2
+; X64-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1]
+; X64-NEXT:    movd %r12d, %xmm5
+; X64-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm6[0],xmm4[1],xmm6[1],xmm4[2],xmm6[2],xmm4[3],xmm6[3],xmm4[4],xmm6[4],xmm4[5],xmm6[5],xmm4[6],xmm6[6],xmm4[7],xmm6[7]
+; X64-NEXT:    movd %r13d, %xmm6
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm5 = xmm5[0],xmm2[0],xmm5[1],xmm2[1],xmm5[2],xmm2[2],xmm5[3],xmm2[3],xmm5[4],xmm2[4],xmm5[5],xmm2[5],xmm5[6],xmm2[6],xmm5[7],xmm2[7]
 ; X64-NEXT:    movd %edx, %xmm2
 ; X64-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]

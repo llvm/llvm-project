@@ -20,12 +20,12 @@
   ; CHECK-NEXT:    .cfi_def_cfa_offset 32
   ; CHECK-NEXT:    .cfi_offset %rbx, -24
   ; CHECK-NEXT:    .cfi_offset %r14, -16
-  ; CHECK-NEXT:    movq %rsi, %r14
-  ; CHECK-NEXT:    movq %rdi, %rbx
+  ; CHECK-NEXT:    movq %rsi, %rbx
+  ; CHECK-NEXT:    movq %rdi, %r14
   ; CHECK-NEXT:    callq bar
   ; CHECK-NEXT:  .Ltmp0:
-  ; CHECK-NEXT:    movl (%rbx), %eax
-  ; CHECK-NEXT:    addl (%r14), %eax
+  ; CHECK-NEXT:    movl (%r14), %eax
+  ; CHECK-NEXT:    addl (%rbx), %eax
   ; CHECK-NEXT:    addq $8, %rsp
   ; CHECK-NEXT:    .cfi_def_cfa_offset 24
   ; CHECK-NEXT:    popq %rbx
@@ -83,18 +83,6 @@
   ; CHECK-NEXT:    .byte	1
   ; CHECK-NEXT:    .byte	0
   ; CHECK-NEXT:    .short	8
-  ; CHECK-NEXT:    .short	14
-  ; CHECK-NEXT:    .short	0
-  ; CHECK-NEXT:    .long	0
-  ; CHECK-NEXT:    .byte	1
-  ; CHECK-NEXT:    .byte	0
-  ; CHECK-NEXT:    .short	8
-  ; CHECK-NEXT:    .short	14
-  ; CHECK-NEXT:    .short	0
-  ; CHECK-NEXT:    .long	0
-  ; CHECK-NEXT:    .byte	1
-  ; CHECK-NEXT:    .byte	0
-  ; CHECK-NEXT:    .short	8
   ; CHECK-NEXT:    .short	3
   ; CHECK-NEXT:    .short	0
   ; CHECK-NEXT:    .long	0
@@ -102,6 +90,18 @@
   ; CHECK-NEXT:    .byte	0
   ; CHECK-NEXT:    .short	8
   ; CHECK-NEXT:    .short	3
+  ; CHECK-NEXT:    .short	0
+  ; CHECK-NEXT:    .long	0
+  ; CHECK-NEXT:    .byte	1
+  ; CHECK-NEXT:    .byte	0
+  ; CHECK-NEXT:    .short	8
+  ; CHECK-NEXT:    .short	14
+  ; CHECK-NEXT:    .short	0
+  ; CHECK-NEXT:    .long	0
+  ; CHECK-NEXT:    .byte	1
+  ; CHECK-NEXT:    .byte	0
+  ; CHECK-NEXT:    .short	8
+  ; CHECK-NEXT:    .short	14
   ; CHECK-NEXT:    .short	0
   ; CHECK-NEXT:    .long	0
   ; CHECK-NEXT:    .p2align	3

@@ -19,15 +19,15 @@ define void @func(ptr %a, ptr %b, ptr %c, ptr %d) nounwind {
 ; CHECK-NEXT:    imull %edx, %eax
 ; CHECK-NEXT:    addl $2138875574, %eax # imm = 0x7F7CA6B6
 ; CHECK-NEXT:    cmpl $2138875574, %eax # imm = 0x7F7CA6B6
-; CHECK-NEXT:    setl %sil
+; CHECK-NEXT:    setl %dl
 ; CHECK-NEXT:    cmpl $-8608074, %eax # imm = 0xFF7CA6B6
-; CHECK-NEXT:    setge %dl
-; CHECK-NEXT:    andb %sil, %dl
+; CHECK-NEXT:    setge %sil
+; CHECK-NEXT:    andb %dl, %sil
+; CHECK-NEXT:    movzbl %sil, %edx
 ; CHECK-NEXT:    movslq %eax, %rsi
-; CHECK-NEXT:    movzbl %dl, %edx
 ; CHECK-NEXT:    movq %rsi, %rdi
-; CHECK-NEXT:    subq %rax, %rdi
 ; CHECK-NEXT:    negl %edx
+; CHECK-NEXT:    subq %rax, %rdi
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl $-2, %edx
 ; CHECK-NEXT:    cmovneq %rax, %rdi
