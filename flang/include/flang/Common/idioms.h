@@ -123,6 +123,9 @@ template <typename A> struct ListItemCount {
   const std::size_t value;
 };
 
+template<typename A>
+ListItemCount(std::initializer_list<A>) -> ListItemCount<A>;
+
 #define ENUM_CLASS(NAME, ...) \
   enum class NAME { __VA_ARGS__ }; \
   LLVM_ATTRIBUTE_UNUSED static constexpr std::size_t NAME##_enumSize{[] { \
