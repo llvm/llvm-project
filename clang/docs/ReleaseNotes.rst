@@ -73,7 +73,8 @@ Bug Fixes
   number of arguments cause an assertion fault.
 - Fix multi-level pack expansion of undeclared function parameters.
   This fixes `Issue 56094 <https://github.com/llvm/llvm-project/issues/56094>`_.
-
+- Fix `#57151 <https://github.com/llvm/llvm-project/issues/57151>`_.
+  ``-Wcomma`` is emitted for void returning functions.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
