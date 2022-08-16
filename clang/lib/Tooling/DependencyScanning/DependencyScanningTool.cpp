@@ -136,6 +136,10 @@ public:
 
   void handleContextHash(std::string) override {}
 
+  std::string lookupModuleOutput(const ModuleID &, ModuleOutputKind) override {
+    llvm::report_fatal_error("unexpected call to lookupModuleOutput");
+  }
+
   Expected<llvm::cas::ObjectProxy> makeTree() {
     if (E)
       return std::move(E);

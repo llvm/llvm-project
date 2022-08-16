@@ -80,6 +80,9 @@ protected:
   void handleContextHash(std::string Hash) override {
     llvm::report_fatal_error("unexpected callback for include-tree");
   }
+  std::string lookupModuleOutput(const ModuleID &, ModuleOutputKind) override {
+    llvm::report_fatal_error("unexpected callback for include-tree");
+  }
 };
 
 /// An individual dependency scanning worker that is able to run on its own
