@@ -456,6 +456,8 @@ __OMP_RTL(__kmpc_target_deinit, false, Void, IdentPtr, Int8, Int1)
 __OMP_RTL(__kmpc_kernel_prepare_parallel, false, Void, VoidPtr)
 __OMP_RTL(__kmpc_parallel_51, false, Void, IdentPtr, Int32, Int32, Int32, Int32,
           VoidPtr, VoidPtr, VoidPtrPtr, SizeTy)
+__OMP_RTL(__kmpc_parallel_spmd, false, Void, IdentPtr, Int32, Int32, Int32, Int32,
+          VoidPtr, VoidPtr, VoidPtrPtr, SizeTy)
 __OMP_RTL(__kmpc_kernel_parallel, false, Int1, VoidPtrPtr)
 __OMP_RTL(__kmpc_kernel_end_parallel, false, Void, )
 __OMP_RTL(__kmpc_serialized_parallel, false, Void, IdentPtr, Int32)
@@ -988,6 +990,8 @@ __OMP_RTL_ATTRS(__kmpc_task_allow_completion_event, DefaultAttrs,
                 ReturnPtrAttrs, ParamAttrs(ReadOnlyPtrAttrs))
 
 __OMP_RTL_ATTRS(__kmpc_parallel_51, AlwaysInlineAttrs, AttributeSet(),
+                ParamAttrs())
+__OMP_RTL_ATTRS(__kmpc_parallel_spmd, AlwaysInlineAttrs, AttributeSet(),
                 ParamAttrs())
 
 #undef __OMP_RTL_ATTRS

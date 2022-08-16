@@ -83,6 +83,54 @@ void invokeMicrotask(int32_t global_tid, int32_t bound_tid, void *fn,
 
 extern "C" {
 
+void __kmpc_parallel_spmd(IdentTy *ident, int32_t, int32_t if_expr,
+                          int32_t num_threads, int proc_bind, void *fn,
+                          void *wrapper_fn, void **args, const int64_t nargs) {
+  FunctionTracingRAII();
+  uint32_t TId = mapping::getThreadIdInBlock();
+  uint32_t NumThreads = determineNumberOfThreads(num_threads);
+  // Avoid the race between the read of the `icv::Level` above and the write
+  // below by synchronizing all threads here.
+  synchronize::threadsAligned();
+  {
+    // Note that the order here is important. `icv::Level` has to be updated
+    // last or the other updates will cause a thread specific state to be
+    // created.
+    state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, NumThreads,
+                                          1u, TId == 0, ident,
+                                          /* ForceTeamState */ true);
+    state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, TId == 0, ident,
+                                     /* ForceTeamState */ true);
+    state::ValueRAII LevelRAII(icv::Level, 1u, 0u, TId == 0, ident,
+                               /* ForceTeamState */ true);
+
+    // Synchronize all threads after the main thread (TId == 0) set up the
+    // team state properly.
+    synchronize::threadsAligned();
+
+    state::ParallelTeamSize.assert_eq(NumThreads, ident,
+                                      /* ForceTeamState */ true);
+    icv::ActiveLevel.assert_eq(1u, ident, /* ForceTeamState */ true);
+    icv::Level.assert_eq(1u, ident, /* ForceTeamState */ true);
+
+    if (TId < NumThreads)
+      invokeMicrotask(TId, 0, fn, args, nargs);
+
+    // Synchronize all threads at the end of a parallel region.
+    synchronize::threadsAligned();
+  }
+
+  // Synchronize all threads to make sure every thread exits the scope above;
+  // otherwise the following assertions and the assumption in
+  // __kmpc_target_deinit may not hold.
+  synchronize::threadsAligned();
+
+  state::ParallelTeamSize.assert_eq(1u, ident, /* ForceTeamState */ true);
+  icv::ActiveLevel.assert_eq(0u, ident, /* ForceTeamState */ true);
+  icv::Level.assert_eq(0u, ident, /* ForceTeamState */ true);
+  return;
+}
+
 void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
                         int32_t num_threads, int proc_bind, void *fn,
                         void *wrapper_fn, void **args, const int64_t nargs) {
@@ -106,45 +154,11 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
 
   uint32_t NumThreads = determineNumberOfThreads(num_threads);
   if (mapping::isSPMDMode()) {
-    // Avoid the race between the read of the `icv::Level` above and the write
-    // below by synchronizing all threads here.
-    synchronize::threadsAligned();
-    {
-      // Note that the order here is important. `icv::Level` has to be updated
-      // last or the other updates will cause a thread specific state to be
-      // created.
-      state::ValueRAII ParallelTeamSizeRAII(state::ParallelTeamSize, NumThreads,
-                                            1u, TId == 0, ident,
-                                            /* ForceTeamState */ true);
-      state::ValueRAII ActiveLevelRAII(icv::ActiveLevel, 1u, 0u, TId == 0,
-                                       ident, /* ForceTeamState */ true);
-      state::ValueRAII LevelRAII(icv::Level, 1u, 0u, TId == 0, ident,
-                                 /* ForceTeamState */ true);
-
-      // Synchronize all threads after the main thread (TId == 0) set up the
-      // team state properly.
-      synchronize::threadsAligned();
-
-      state::ParallelTeamSize.assert_eq(NumThreads, ident,
-                                        /* ForceTeamState */ true);
-      icv::ActiveLevel.assert_eq(1u, ident, /* ForceTeamState */ true);
-      icv::Level.assert_eq(1u, ident, /* ForceTeamState */ true);
-
-      if (TId < NumThreads)
-        invokeMicrotask(TId, 0, fn, args, nargs);
-
-      // Synchronize all threads at the end of a parallel region.
-      synchronize::threadsAligned();
-    }
-
-    // Synchronize all threads to make sure every thread exits the scope above;
-    // otherwise the following assertions and the assumption in
-    // __kmpc_target_deinit may not hold.
-    synchronize::threadsAligned();
-
-    state::ParallelTeamSize.assert_eq(1u, ident, /* ForceTeamState */ true);
-    icv::ActiveLevel.assert_eq(0u, ident, /* ForceTeamState */ true);
-    icv::Level.assert_eq(0u, ident, /* ForceTeamState */ true);
+    // This was moved to its own routine so it could be called directly
+    // in certain situations to avoid resource consumption of unused
+    // logic in parallel_51.
+    __kmpc_parallel_spmd(ident, 0, if_expr, num_threads, proc_bind, fn,
+                         wrapper_fn, args, nargs);
     return;
   }
 
