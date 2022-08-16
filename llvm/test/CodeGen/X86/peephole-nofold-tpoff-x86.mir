@@ -33,7 +33,7 @@
   }
 
   ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
-  declare ptr @llvm.threadlocal.address.p0(ptr) #0
+  declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull) #0
 
   attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 
