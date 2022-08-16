@@ -129,18 +129,13 @@ static CXFileDependencies *getFullDependencies(
   }
 
   auto FDR = Consumer.getFullDependencies(Compilation);
-  if (!FDR) {
-    *error = cxstring::createDup(llvm::toString(FDR.takeError()));
-    return nullptr;
-  }
-
-  if (!FDR->DiscoveredModules.empty()) {
+  if (!FDR.DiscoveredModules.empty()) {
     CXModuleDependencySet *MDS = new CXModuleDependencySet;
-    MDS->Count = FDR->DiscoveredModules.size();
+    MDS->Count = FDR.DiscoveredModules.size();
     MDS->Modules = new CXModuleDependency[MDS->Count];
     for (int I = 0; I < MDS->Count; ++I) {
       CXModuleDependency &M = MDS->Modules[I];
-      const ModuleDeps &MD = FDR->DiscoveredModules[I];
+      const ModuleDeps &MD = FDR.DiscoveredModules[I];
       M.Name = cxstring::createDup(MD.ID.ModuleName);
       M.ContextHash = cxstring::createDup(MD.ID.ContextHash);
       M.ModuleMapPath = cxstring::createDup(MD.ClangModuleMapFile);
@@ -154,7 +149,7 @@ static CXFileDependencies *getFullDependencies(
     MDC(Context, MDS);
   }
 
-  const FullDependencies &FD = FDR->FullDeps;
+  const FullDependencies &FD = FDR.FullDeps;
   CXFileDependencies *FDeps = new CXFileDependencies;
   FDeps->ContextHash = cxstring::createDup(FD.ID.ContextHash);
   FDeps->FileDeps = cxstring::createSet(FD.FileDeps);
