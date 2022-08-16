@@ -947,7 +947,7 @@ bool TypePromotion::runOnFunction(Function &F) {
         continue;
 
       if (isa<ZExtInst>(&I) && isa<PHINode>(I.getOperand(0)) &&
-          BBIsInLoop(&BB)) {
+          isa<IntegerType>(I.getType()) && BBIsInLoop(&BB)) {
         LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: " << I.getOperand(0)
                           << "\n");
         EVT ZExtVT = TLI->getValueType(DL, I.getType());
