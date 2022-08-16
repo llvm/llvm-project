@@ -82,7 +82,6 @@ define dso_local signext i32 @ClobberLR_BR(i32 signext %in) #0 {
 ; PPC64LE-NEXT:    nop
 ; PPC64LE-NEXT:    #NO_APP
 ; PPC64LE-NEXT:  .LBB3_1: # %return
-; PPC64LE-NEXT:    extsw r3, r3
 ; PPC64LE-NEXT:    addi r1, r1, 32
 ; PPC64LE-NEXT:    ld r0, 16(r1)
 ; PPC64LE-NEXT:    mtlr r0
@@ -102,7 +101,6 @@ define dso_local signext i32 @ClobberLR_BR(i32 signext %in) #0 {
 ; PPC64BE-NEXT:    nop
 ; PPC64BE-NEXT:    #NO_APP
 ; PPC64BE-NEXT:  .LBB3_1: # %return
-; PPC64BE-NEXT:    extsw r3, r3
 ; PPC64BE-NEXT:    addi r1, r1, 48
 ; PPC64BE-NEXT:    ld r0, 16(r1)
 ; PPC64BE-NEXT:    mtlr r0
@@ -131,13 +129,11 @@ define dso_local signext i32 @ClobberR5_BR(i32 signext %in) #0 {
 ; PPC64LE-NEXT:    nop
 ; PPC64LE-NEXT:    #NO_APP
 ; PPC64LE-NEXT:  # %bb.1: # %return
-; PPC64LE-NEXT:    extsw r3, r3
 ; PPC64LE-NEXT:    blr
 ; PPC64LE-NEXT:  .LBB4_2: # Block address taken
 ; PPC64LE-NEXT:    # %return_early
 ; PPC64LE-NEXT:    # Label of block must be emitted
 ; PPC64LE-NEXT:    li r3, 0
-; PPC64LE-NEXT:    extsw r3, r3
 ; PPC64LE-NEXT:    blr
 ;
 ; PPC64BE-LABEL: ClobberR5_BR:
@@ -146,13 +142,11 @@ define dso_local signext i32 @ClobberR5_BR(i32 signext %in) #0 {
 ; PPC64BE-NEXT:    nop
 ; PPC64BE-NEXT:    #NO_APP
 ; PPC64BE-NEXT:  # %bb.1: # %return
-; PPC64BE-NEXT:    extsw r3, r3
 ; PPC64BE-NEXT:    blr
 ; PPC64BE-NEXT:  .LBB4_2: # Block address taken
 ; PPC64BE-NEXT:    # %return_early
 ; PPC64BE-NEXT:    # Label of block must be emitted
 ; PPC64BE-NEXT:    li r3, 0
-; PPC64BE-NEXT:    extsw r3, r3
 ; PPC64BE-NEXT:    blr
 entry:
   callbr void asm sideeffect "nop", "!i,~{r5}"()

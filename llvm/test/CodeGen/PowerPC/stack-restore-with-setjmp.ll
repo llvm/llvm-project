@@ -39,7 +39,7 @@ define dso_local signext i32 @main(i32 signext %argc, i8** nocapture readnone %a
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $x3
 ; CHECK-NEXT:  .LBB0_3: # %return
-; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    # kill: def $r3 killed $r3 def $x3
 ; CHECK-NEXT:    addi 1, 31, 784
 ; CHECK-NEXT:    ld 0, 16(1)
 ; CHECK-NEXT:    lwz 12, 8(1)
@@ -88,7 +88,7 @@ define dso_local signext i32 @main(i32 signext %argc, i8** nocapture readnone %a
 ; BE-NEXT:    nop
 ; BE-NEXT:    # kill: def $r3 killed $r3 killed $x3
 ; BE-NEXT:  .LBB0_3: # %return
-; BE-NEXT:    extsw 3, 3
+; BE-NEXT:    # kill: def $r3 killed $r3 def $x3
 ; BE-NEXT:    addi 1, 31, 800
 ; BE-NEXT:    ld 0, 16(1)
 ; BE-NEXT:    lwz 12, 8(1)
