@@ -448,19 +448,19 @@ define i32 @select_eq_10000_10001(i32 signext %a, i32 signext %b) {
 ; RV32-LABEL: select_eq_10000_10001:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    xor a0, a0, a1
-; RV32-NEXT:    snez a0, a0
+; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    lui a1, 2
-; RV32-NEXT:    addi a1, a1, 1809
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    addi a1, a1, 1810
+; RV32-NEXT:    sub a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: select_eq_10000_10001:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    xor a0, a0, a1
-; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    lui a1, 2
-; RV64-NEXT:    addiw a1, a1, 1809
-; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    addiw a1, a1, 1810
+; RV64-NEXT:    sub a0, a1, a0
 ; RV64-NEXT:    ret
   %1 = icmp eq i32 %a, %b
   %2 = select i1 %1, i32 10001, i32 10002
@@ -471,19 +471,19 @@ define i32 @select_ne_10001_10002(i32 signext %a, i32 signext %b) {
 ; RV32-LABEL: select_ne_10001_10002:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    xor a0, a0, a1
-; RV32-NEXT:    seqz a0, a0
+; RV32-NEXT:    snez a0, a0
 ; RV32-NEXT:    lui a1, 2
-; RV32-NEXT:    addi a1, a1, 1809
-; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    addi a1, a1, 1810
+; RV32-NEXT:    sub a0, a1, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: select_ne_10001_10002:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    xor a0, a0, a1
-; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    snez a0, a0
 ; RV64-NEXT:    lui a1, 2
-; RV64-NEXT:    addiw a1, a1, 1809
-; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    addiw a1, a1, 1810
+; RV64-NEXT:    sub a0, a1, a0
 ; RV64-NEXT:    ret
   %1 = icmp ne i32 %a, %b
   %2 = select i1 %1, i32 10001, i32 10002
