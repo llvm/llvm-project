@@ -17,6 +17,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/MC/TargetRegistry.h"

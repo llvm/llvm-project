@@ -19,6 +19,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "llvm/CAS/CachingOnDiskFileSystem.h"
 
 using namespace clang;
 using namespace clang::tooling::dependencies;
