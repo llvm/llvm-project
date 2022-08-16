@@ -65,12 +65,12 @@ declare void @OSMemoryBarrier() optsize
 
 ; NOFP-CU:      Entry at offset 0x20:
 ; NOFP-CU-NEXT:        start:                0x1d _test1
-; NOFP-CU-NEXT:        length:               0x42
+; NOFP-CU-NEXT:        length:               0x44
 ; NOFP-CU-NEXT:        compact encoding:     0x02040c0a
 
 ; NOFP-FROM-ASM:      Entry at offset 0x20:
 ; NOFP-FROM-ASM-NEXT:        start:                0x1d _test1
-; NOFP-FROM-ASM-NEXT:        length:               0x42
+; NOFP-FROM-ASM-NEXT:        length:               0x44
 ; NOFP-FROM-ASM-NEXT:        compact encoding:     0x02040c0a
 
 define void @test1(ptr %image) optsize ssp uwtable {

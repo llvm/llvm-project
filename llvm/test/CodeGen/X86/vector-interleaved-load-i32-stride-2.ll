@@ -156,34 +156,34 @@ define void @load_i32_stride2_vf8(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) nou
 define void @load_i32_stride2_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) nounwind {
 ; SSE-LABEL: load_i32_stride2_vf16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps (%rdi), %xmm6
-; SSE-NEXT:    movaps 16(%rdi), %xmm8
-; SSE-NEXT:    movaps 32(%rdi), %xmm4
-; SSE-NEXT:    movaps 48(%rdi), %xmm9
-; SSE-NEXT:    movaps 80(%rdi), %xmm10
+; SSE-NEXT:    movaps (%rdi), %xmm0
+; SSE-NEXT:    movaps 16(%rdi), %xmm1
+; SSE-NEXT:    movaps 32(%rdi), %xmm2
+; SSE-NEXT:    movaps 48(%rdi), %xmm3
+; SSE-NEXT:    movaps 80(%rdi), %xmm4
 ; SSE-NEXT:    movaps 64(%rdi), %xmm5
-; SSE-NEXT:    movaps 112(%rdi), %xmm11
+; SSE-NEXT:    movaps 112(%rdi), %xmm6
 ; SSE-NEXT:    movaps 96(%rdi), %xmm7
-; SSE-NEXT:    movaps %xmm7, %xmm1
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm11[0,2]
-; SSE-NEXT:    movaps %xmm5, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,2],xmm10[0,2]
-; SSE-NEXT:    movaps %xmm4, %xmm2
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm9[0,2]
-; SSE-NEXT:    movaps %xmm6, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm8[0,2]
-; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[1,3],xmm11[1,3]
-; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,3],xmm10[1,3]
-; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,3],xmm9[1,3]
-; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[1,3],xmm8[1,3]
-; SSE-NEXT:    movaps %xmm3, 32(%rsi)
-; SSE-NEXT:    movaps %xmm0, (%rsi)
-; SSE-NEXT:    movaps %xmm1, 48(%rsi)
-; SSE-NEXT:    movaps %xmm2, 16(%rsi)
+; SSE-NEXT:    movaps %xmm7, %xmm8
+; SSE-NEXT:    shufps {{.*#+}} xmm8 = xmm8[0,2],xmm6[0,2]
+; SSE-NEXT:    movaps %xmm5, %xmm9
+; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[0,2],xmm4[0,2]
+; SSE-NEXT:    movaps %xmm2, %xmm10
+; SSE-NEXT:    shufps {{.*#+}} xmm10 = xmm10[0,2],xmm3[0,2]
+; SSE-NEXT:    movaps %xmm0, %xmm11
+; SSE-NEXT:    shufps {{.*#+}} xmm11 = xmm11[0,2],xmm1[0,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[1,3],xmm6[1,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,3],xmm4[1,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,3],xmm3[1,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
+; SSE-NEXT:    movaps %xmm9, 32(%rsi)
+; SSE-NEXT:    movaps %xmm11, (%rsi)
+; SSE-NEXT:    movaps %xmm8, 48(%rsi)
+; SSE-NEXT:    movaps %xmm10, 16(%rsi)
 ; SSE-NEXT:    movaps %xmm5, 32(%rdx)
-; SSE-NEXT:    movaps %xmm6, (%rdx)
+; SSE-NEXT:    movaps %xmm0, (%rdx)
 ; SSE-NEXT:    movaps %xmm7, 48(%rdx)
-; SSE-NEXT:    movaps %xmm4, 16(%rdx)
+; SSE-NEXT:    movaps %xmm2, 16(%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: load_i32_stride2_vf16:
@@ -252,8 +252,8 @@ define void @load_i32_stride2_vf16(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 define void @load_i32_stride2_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) nounwind {
 ; SSE-LABEL: load_i32_stride2_vf32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps (%rdi), %xmm9
-; SSE-NEXT:    movaps 32(%rdi), %xmm14
+; SSE-NEXT:    movaps (%rdi), %xmm0
+; SSE-NEXT:    movaps 32(%rdi), %xmm1
 ; SSE-NEXT:    movaps 48(%rdi), %xmm8
 ; SSE-NEXT:    movaps 208(%rdi), %xmm10
 ; SSE-NEXT:    movaps 192(%rdi), %xmm2
@@ -263,18 +263,18 @@ define void @load_i32_stride2_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    movaps 64(%rdi), %xmm6
 ; SSE-NEXT:    movaps 240(%rdi), %xmm13
 ; SSE-NEXT:    movaps 224(%rdi), %xmm4
-; SSE-NEXT:    movaps 176(%rdi), %xmm15
+; SSE-NEXT:    movaps 176(%rdi), %xmm14
 ; SSE-NEXT:    movaps 160(%rdi), %xmm5
-; SSE-NEXT:    movaps 112(%rdi), %xmm1
+; SSE-NEXT:    movaps 112(%rdi), %xmm15
 ; SSE-NEXT:    movaps 96(%rdi), %xmm7
-; SSE-NEXT:    movaps %xmm7, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[1,3],xmm1[1,3]
-; SSE-NEXT:    movaps %xmm5, %xmm1
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm15[0,2]
-; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,3],xmm15[1,3]
-; SSE-NEXT:    movaps %xmm4, %xmm15
-; SSE-NEXT:    shufps {{.*#+}} xmm15 = xmm15[0,2],xmm13[0,2]
+; SSE-NEXT:    movaps %xmm7, %xmm9
+; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[0,2],xmm15[0,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[1,3],xmm15[1,3]
+; SSE-NEXT:    movaps %xmm5, %xmm15
+; SSE-NEXT:    shufps {{.*#+}} xmm15 = xmm15[0,2],xmm14[0,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[1,3],xmm14[1,3]
+; SSE-NEXT:    movaps %xmm4, %xmm14
+; SSE-NEXT:    shufps {{.*#+}} xmm14 = xmm14[0,2],xmm13[0,2]
 ; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,3],xmm13[1,3]
 ; SSE-NEXT:    movaps %xmm2, %xmm13
 ; SSE-NEXT:    shufps {{.*#+}} xmm13 = xmm13[0,2],xmm10[0,2]
@@ -285,23 +285,23 @@ define void @load_i32_stride2_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    movaps %xmm6, %xmm11
 ; SSE-NEXT:    shufps {{.*#+}} xmm11 = xmm11[0,2],xmm12[0,2]
 ; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[1,3],xmm12[1,3]
-; SSE-NEXT:    movaps %xmm14, %xmm12
+; SSE-NEXT:    movaps %xmm1, %xmm12
 ; SSE-NEXT:    shufps {{.*#+}} xmm12 = xmm12[0,2],xmm8[0,2]
-; SSE-NEXT:    shufps {{.*#+}} xmm14 = xmm14[1,3],xmm8[1,3]
-; SSE-NEXT:    movaps %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm8[1,3]
+; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps 16(%rdi), %xmm8
-; SSE-NEXT:    movaps %xmm9, %xmm14
-; SSE-NEXT:    shufps {{.*#+}} xmm14 = xmm14[0,2],xmm8[0,2]
-; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[1,3],xmm8[1,3]
+; SSE-NEXT:    movaps %xmm0, %xmm1
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm8[0,2]
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm8[1,3]
 ; SSE-NEXT:    movaps %xmm13, 96(%rsi)
 ; SSE-NEXT:    movaps %xmm10, 64(%rsi)
 ; SSE-NEXT:    movaps %xmm11, 32(%rsi)
-; SSE-NEXT:    movaps %xmm14, (%rsi)
-; SSE-NEXT:    movaps %xmm15, 112(%rsi)
-; SSE-NEXT:    movaps %xmm1, 80(%rsi)
-; SSE-NEXT:    movaps %xmm0, 48(%rsi)
+; SSE-NEXT:    movaps %xmm1, (%rsi)
+; SSE-NEXT:    movaps %xmm14, 112(%rsi)
+; SSE-NEXT:    movaps %xmm15, 80(%rsi)
+; SSE-NEXT:    movaps %xmm9, 48(%rsi)
 ; SSE-NEXT:    movaps %xmm12, 16(%rsi)
-; SSE-NEXT:    movaps %xmm9, (%rdx)
+; SSE-NEXT:    movaps %xmm0, (%rdx)
 ; SSE-NEXT:    movaps %xmm6, 32(%rdx)
 ; SSE-NEXT:    movaps %xmm3, 64(%rdx)
 ; SSE-NEXT:    movaps %xmm2, 96(%rdx)
