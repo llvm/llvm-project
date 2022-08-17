@@ -9,8 +9,10 @@
 #include "oclc.h"
 #include "ockl.h"
 
-#define AL(P) __opencl_atomic_load((__global atomic_uint *)P, memory_order_relaxed, memory_scope_all_svm_devices)
-#define AA(P,V) __opencl_atomic_fetch_add((__global atomic_uint *)P, V, memory_order_relaxed, memory_scope_all_svm_devices)
+#define AL(P,S) __opencl_atomic_load((__global atomic_uint *)P, memory_order_relaxed, S)
+#define AA(P,V,S) __opencl_atomic_fetch_add((__global atomic_uint *)P, V, memory_order_relaxed, S)
+
+#define AVOID_GWS() (__oclc_ISA_version == 9400)
 
 // XXX do not change these two structs without changing the language runtime
 struct mg_sync {
@@ -24,6 +26,9 @@ struct mg_info {
     uint num_grids;
     ulong prev_sum;
     ulong all_sum;
+
+    struct mg_sync sgs;
+    uint num_wg;
 };
 
 static inline size_t
@@ -51,17 +56,32 @@ choose_one_grid_workitem(void)
 }
 
 static inline void
+single_grid_sync(__global struct mg_sync *s, uint members)
+{
+    // Assumes 65535 or fewer workgroups in the grid
+    uint v = AA(&s->w0, 1U, memory_scope_device);
+    if ((v & 0xffff) == members-1) {
+        AA(&s->w0, 0x10000 - members, memory_scope_device);
+    } else {
+        v &= ~0xffff;
+        do {
+            __builtin_amdgcn_s_sleep(1);
+        } while ((AL(&s->w0, memory_scope_device) & ~0xffff) == v);
+    }
+}
+
+static inline void
 multi_grid_sync(__global struct mg_sync *s, uint members)
 {
-    // Assumes 255 or fewer GPUs in multi_grid
-    uint v = AA(&s->w0, 1U);
+    // Assumes 255 or fewer GPUs in the multi grid
+    uint v = AA(&s->w0, 1U, memory_scope_all_svm_devices);
     if ((v & 0xff) == members-1) {
-        AA(&s->w0, 0x100 - members);
+        AA(&s->w0, 0x100 - members, memory_scope_all_svm_devices);
     } else {
         v &= ~0xff;
         do {
             __builtin_amdgcn_s_sleep(2);
-        } while ((AL(&s->w0) & ~0xff) == v);
+        } while ((AL(&s->w0, memory_scope_all_svm_devices) & ~0xff) == v);
     }
 }
 
@@ -89,8 +109,13 @@ __ockl_grid_sync(void)
     __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");
     __builtin_amdgcn_s_barrier();
     if (choose_one_workgroup_workitem()) {
-        uint nwm1 = (uint)__ockl_get_num_groups(0) * (uint)__ockl_get_num_groups(1) * (uint)__ockl_get_num_groups(2) - 1;
-        __ockl_gws_barrier(nwm1, 0);
+        if (AVOID_GWS()) {
+            __global struct mg_info *mi = (__global struct mg_info *)get_mg_info_arg();
+            single_grid_sync(&mi->sgs, mi->num_wg);
+        } else {
+            uint nwm1 = (uint)__ockl_get_num_groups(0) * (uint)__ockl_get_num_groups(1) * (uint)__ockl_get_num_groups(2) - 1;
+            __ockl_gws_barrier(nwm1, 0);
+        }
     }
     __builtin_amdgcn_s_barrier();
 }
@@ -124,8 +149,12 @@ __ockl_multi_grid_thread_rank(void)
 __attribute__((const)) int
 __ockl_multi_grid_is_valid(void)
 {
-    size_t mi = get_mg_info_arg();
-    return (mi != 0UL) & (mi != 1UL);
+    if (AVOID_GWS()) {
+         __constant struct mg_info *mi = (__constant struct mg_info *)get_mg_info_arg();
+        return mi && mi->num_grids > 0;
+    } else {
+        return get_mg_info_arg() > 1;
+    }
 }
 
 __attribute__((convergent)) void
@@ -133,21 +162,32 @@ __ockl_multi_grid_sync(void)
 {
     __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "");
     __builtin_amdgcn_s_barrier();
-    uint nwm1 = (uint)__ockl_get_num_groups(0) * (uint)__ockl_get_num_groups(1) * (uint)__ockl_get_num_groups(2) - 1;
+
     bool cwwi = choose_one_workgroup_workitem();
+    uint nwm1 = (uint)__ockl_get_num_groups(0) * (uint)__ockl_get_num_groups(1) * (uint)__ockl_get_num_groups(2) - 1;
+    __global struct mg_info *mi = (global struct mg_info *)get_mg_info_arg();
+    uint nwg = mi->num_wg;
+    __global struct mg_sync *sgs = &mi->sgs;
 
-    if (cwwi)
-        __ockl_gws_barrier(nwm1, 0);
-
-    // Need another barrier here if the following choose doesn't see cwwi set
-
-    if (choose_one_grid_workitem()) {
-        __constant struct mg_info *m = (__constant struct mg_info *)get_mg_info_arg();
-        multi_grid_sync(m->mgs, m->num_grids);
+    if (cwwi) {
+        if (AVOID_GWS()) {
+            single_grid_sync(sgs, nwg);
+        } else {
+            __ockl_gws_barrier(nwm1, 0);
+        }
     }
 
-    if (cwwi)
-        __ockl_gws_barrier(nwm1, 0);
+    if (choose_one_grid_workitem()) {
+        multi_grid_sync(mi->mgs, mi->num_grids);
+    }
+
+    if (cwwi) {
+        if (AVOID_GWS()) {
+            single_grid_sync(sgs, nwg);
+        } else {
+            __ockl_gws_barrier(nwm1, 0);
+        }
+    }
 
     __builtin_amdgcn_s_barrier();
 }
