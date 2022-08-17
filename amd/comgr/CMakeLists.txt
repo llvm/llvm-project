@@ -147,8 +147,8 @@ if (UNIX)
   list(APPEND AMD_COMGR_PUBLIC_LINKER_OPTIONS -pthread)
   if (NOT APPLE AND COMGR_BUILD_SHARED_LIBS)
     configure_file(
-      ${CMAKE_CURRENT_SOURCE_DIR}/src/exportmap.in
-      ${CMAKE_CURRENT_BINARY_DIR}/src/exportmap @ONLY)
+      src/exportmap.in
+      src/exportmap @ONLY)
     list(APPEND AMD_COMGR_PRIVATE_LINKER_OPTIONS
       "-Wl,--version-script=${CMAKE_CURRENT_BINARY_DIR}/src/exportmap")
     # When building a shared library with -fsanitize=address we can't be
@@ -174,10 +174,6 @@ endif()
 # GCC/Clang to also be strict, and then explicitly mark each exported symbol in
 # the shared header.
 list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS AMD_COMGR_EXPORT)
-
-configure_file(
-  ${CMAKE_CURRENT_SOURCE_DIR}/include/amd_comgr.h.in
-  ${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h @ONLY)
 
 include(bc2h)
 include(opencl_pch)
@@ -212,10 +208,14 @@ target_include_directories(amd_comgr
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
+configure_file(
+  include/amd_comgr.h.in
+  include/amd_comgr.h @ONLY)
+
 set(AMD_COMGR_CONFIG_NAME amd_comgr-config.cmake)
 set(AMD_COMGR_TARGETS_NAME amd_comgr-targets.cmake)
 set(AMD_COMGR_VERSION_NAME amd_comgr-config-version.cmake)
-set(AMD_COMGR_PACKAGE_PREFIX ${CMAKE_INSTALL_LIBDIR}/cmake/amd_comgr)
+set(AMD_COMGR_PACKAGE_PREFIX cmake/amd_comgr)
 
 # Generate the build-tree package.
 set(AMD_COMGR_PREFIX_CODE)
@@ -226,13 +226,13 @@ if (NOT COMGR_BUILD_SHARED_LIBS)
 endif()
 
 set(AMD_COMGR_TARGETS_PATH
-  "${CMAKE_CURRENT_BINARY_DIR}/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_TARGETS_NAME}")
+  "${CMAKE_CURRENT_BINARY_DIR}/lib/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_TARGETS_NAME}")
 set(AMD_COMGR_VERSION_PATH
-  "${CMAKE_CURRENT_BINARY_DIR}/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_VERSION_NAME}")
+  "${CMAKE_CURRENT_BINARY_DIR}/lib/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_VERSION_NAME}")
 export(TARGETS amd_comgr
-  FILE "${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_TARGETS_NAME}")
+  FILE "lib/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_TARGETS_NAME}")
 configure_file("cmake/${AMD_COMGR_CONFIG_NAME}.in"
-  "${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_CONFIG_NAME}"
+  "lib/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_CONFIG_NAME}"
   @ONLY)
 write_basic_package_version_file("${AMD_COMGR_VERSION_PATH}"
   VERSION "${amd_comgr_VERSION}"
@@ -266,7 +266,7 @@ install(FILES
 set(AMD_COMGR_PREFIX_CODE "
 # Derive absolute install prefix from config file path.
 get_filename_component(AMD_COMGR_PREFIX \"\${CMAKE_CURRENT_LIST_FILE}\" PATH)")
-string(REGEX REPLACE "/" ";" count "${AMD_COMGR_PACKAGE_PREFIX}")
+string(REGEX REPLACE "/" ";" count "${CMAKE_INSTALL_LIBDIR}/${AMD_COMGR_PACKAGE_PREFIX}")
 foreach(p ${count})
   set(AMD_COMGR_PREFIX_CODE "${AMD_COMGR_PREFIX_CODE}
 get_filename_component(AMD_COMGR_PREFIX \"\${AMD_COMGR_PREFIX}\" PATH)")
@@ -278,20 +278,20 @@ if (NOT COMGR_BUILD_SHARED_LIBS)
   string(APPEND AMD_COMGR_PREFIX_CODE "find_dependency(LLD REQUIRED)\n")
 endif()
 
-set(AMD_COMGR_TARGETS_PATH "\${AMD_COMGR_PREFIX}/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_TARGETS_NAME}")
+set(AMD_COMGR_TARGETS_PATH "\${AMD_COMGR_PREFIX}/${CMAKE_INSTALL_LIBDIR}/${AMD_COMGR_PACKAGE_PREFIX}/${AMD_COMGR_TARGETS_NAME}")
 configure_file("cmake/${AMD_COMGR_CONFIG_NAME}.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/${AMD_COMGR_CONFIG_NAME}.install"
+  "${AMD_COMGR_CONFIG_NAME}.install"
   @ONLY)
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/${AMD_COMGR_CONFIG_NAME}.install"
-  DESTINATION "${AMD_COMGR_PACKAGE_PREFIX}"
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/${AMD_COMGR_PACKAGE_PREFIX}"
   RENAME "${AMD_COMGR_CONFIG_NAME}")
 install(EXPORT amd_comgr_export
-  DESTINATION "${AMD_COMGR_PACKAGE_PREFIX}"
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/${AMD_COMGR_PACKAGE_PREFIX}"
   FILE "${AMD_COMGR_TARGETS_NAME}")
 install(FILES
   "${AMD_COMGR_VERSION_PATH}"
-  DESTINATION "${AMD_COMGR_PACKAGE_PREFIX}")
+  DESTINATION "${CMAKE_INSTALL_LIBDIR}/${AMD_COMGR_PACKAGE_PREFIX}")
 
 if(TARGET clangFrontendTool)
   set(CLANG_LIBS
