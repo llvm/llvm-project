@@ -48,6 +48,8 @@ typedef struct FloatACItem {
   enum Operation OP;
   float ACWRTX;
   float ACWRTY;
+  const char *ACWRTXstring;
+  const char *ACWRTYstring;
 } FloatACItem;
 
 typedef struct DoubleACItem {
@@ -59,6 +61,8 @@ typedef struct DoubleACItem {
   enum Operation OP;
   double ACWRTX;
   double ACWRTY;
+  const char *ACWRTXstring;
+  const char *ACWRTYstring;
 } DoubleACItem;
 
 typedef struct ACTable {
@@ -106,24 +110,672 @@ float fp32OpError[] = {
 };
 
 double fp64OpError[] = {
-    1e-17,
-    1e-17,
-    1e-17,
-    1e-17,
-    1e-17,
-    1e-17,
-    1e-17, // Does not have a known error
-    1e-17,
-    1e-17,
-    1e-17,
-    2e-17,
-    2e-17,
-    2e-17,
-    1e-17,
-    1e-17,
-    1e-17, // Does not have a known error
-    1e-17, // Truncing is not a GNU library function. Giving it 1 ULP error
+    1e-16,
+    1e-16,
+    1e-16,
+    1e-16,
+    1e-16,
+    1e-16,
+    1e-16, // Does not have a known error
+    1e-16,
+    1e-16,
+    1e-16,
+    2e-16,
+    2e-16,
+    2e-16,
+    1e-16,
+    1e-16,
+    1e-16, // Does not have a known error
+    1e-16, // Truncing is not a GNU library function. Giving it 1 ULP error
 };
+
+
+// ---------------------------------------------------------------------------
+// ---------------------------- Utility Functions ----------------------------
+// ---------------------------------------------------------------------------
+int fACIsBinaryOperation(enum Operation Op) {
+  return (Op == 0 ||
+          Op == 1 ||
+          Op == 2 ||
+          Op == 3);
+
+}
+
+char *fACFloatDumpAtomicConditionString(const char *Op1, float Op1Val, const char *Op2, float Op2Val, enum Operation OP, int WRT) {
+  char *ACstring;
+  if((ACstring = (char *)malloc(sizeof(char) * 150)) == NULL) {
+    printf("#fAC: Out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+
+  ACstring[0] = '\0';
+  switch (OP) {
+  case 0:
+    // Appending Numerator
+    if(!WRT) {
+      if (strlen(Op1) != 0) {
+        strcat(ACstring, "(");
+        strcat(ACstring, Op1);
+      }
+      else
+        break;
+    }
+    else if(WRT==1) {
+      if (strlen(Op2) != 0) {
+        strcat(ACstring, "(");
+        strcat(ACstring, Op2);
+      }
+      else
+        break;
+    }
+
+    strcat(ACstring, "/");
+    
+    // Appending Denominator
+    strcat(ACstring, "(");
+    if (strlen(Op1) != 0)
+      strcat(ACstring, Op1);
+    else {
+      char Op1ValString[30];
+      Op1ValString[0] = '\0';
+      sprintf(Op1ValString, "%0.7f", Op1Val);
+      strcat(ACstring, Op1ValString);
+    }
+    
+    strcat(ACstring, "+");
+    
+    if (strlen(Op2) != 0)
+      strcat(ACstring, Op2);
+    else {
+      char Op2ValString[30];
+      Op2ValString[0] = '\0';
+      sprintf(Op2ValString, "%0.7f", Op2Val);
+      strcat(ACstring, Op2ValString);
+    }
+    strcat(ACstring, ")");
+    strcat(ACstring, ")");
+    break;
+  case 1:
+    // Appending Numerator
+    if(!WRT) {
+      if (strlen(Op1) != 0) {
+        strcat(ACstring, "(");
+        strcat(ACstring, Op1);
+      }
+      else
+        break;
+    }
+    else if(WRT==1) {
+      if (strlen(Op2) != 0) {
+        strcat(ACstring, "(");
+        strcat(ACstring, Op2);
+        }
+      else
+        break;
+    }
+
+    strcat(ACstring, "/");
+    
+    // Appending Denominator
+    strcat(ACstring, "(");
+    if(!WRT) {
+      if (strlen(Op1) != 0)
+        strcat(ACstring, Op1);
+      else {
+        char Op1ValString[30];
+        Op1ValString[0] = '\0';
+        sprintf(Op1ValString, "%0.7f", Op1Val);
+        strcat(ACstring, Op1ValString);
+      }
+    }
+    else if(WRT==1) {
+      if (strlen(Op2) != 0)
+        strcat(ACstring, Op2);
+      else {
+        char Op2ValString[30];
+        Op2ValString[0] = '\0';
+        sprintf(Op2ValString, "%0.7f", Op2Val);
+        strcat(ACstring, Op2ValString);
+      }
+    }
+
+    strcat(ACstring, "-");
+
+    if(!WRT) {
+      if (strlen(Op2) != 0)
+        strcat(ACstring, Op2);
+      else {
+        char Op2ValString[30];
+        Op2ValString[0] = '\0';
+        sprintf(Op2ValString, "%0.7f", Op2Val);
+        strcat(ACstring, Op2ValString);
+      }
+    }
+    else if(WRT==1) {
+      if (strlen(Op1) != 0)
+        strcat(ACstring, Op1);
+      else {
+        char Op1ValString[30];
+        Op1ValString[0] = '\0';
+        sprintf(Op1ValString, "%0.7f", Op1Val);
+        strcat(ACstring, Op1ValString);
+      }
+    }
+
+    strcat(ACstring, ")");
+    strcat(ACstring, ")");
+    break;
+  case 2:
+    break;
+  case 3:
+    break;
+  case 4:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, "cos(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")/");
+    strcat(ACstring, "sin(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")");
+
+    strcat(ACstring, ")");
+    break;
+  case 5:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, "tan(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")");
+
+    strcat(ACstring, ")");
+    break;
+  case 6:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "/(");
+    strcat(ACstring, "sin(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")*");
+    strcat(ACstring, "cos(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))");
+
+    strcat(ACstring, ")");
+    break;
+  case 7:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "/(");
+    strcat(ACstring, "sqrt(1-(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))*arcsin(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))");
+
+    strcat(ACstring, ")");
+    break;
+  case 8:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(-");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "/(");
+    strcat(ACstring, "sqrt(1-(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))*arccos(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))");
+
+    strcat(ACstring, ")");
+    break;
+  case 9:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "/(((");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")+1)*arctan(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))");
+
+    strcat(ACstring, ")");
+    break;
+  case 10:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, "cosh(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")/");
+    strcat(ACstring, "sinh(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")");
+
+    strcat(ACstring, ")");
+    break;
+  case 11:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, "tanh(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")");
+
+    strcat(ACstring, ")");
+    break;
+  case 12:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "/(");
+    strcat(ACstring, "sinh(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")*");
+    strcat(ACstring, "cosh(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))");
+
+    strcat(ACstring, ")");
+    break;
+  case 13:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+
+    strcat(ACstring, ")");
+    break;
+  case 14:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, "1/log(");
+    strcat(ACstring, Op1);
+
+    strcat(ACstring, "))");
+    break;
+  case 15:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, "0.5");
+
+    strcat(ACstring, ")");
+    break;
+  case 16:
+    break;
+  default:
+    printf("No such operation %d\n", OP);
+    exit(1);
+  }
+
+  return ACstring;
+}
+
+char *fACDoubleDumpAtomicConditionString(const char *Op1, double Op1Val, const char *Op2, double Op2Val, enum Operation OP, int WRT) {
+  char *ACstring;
+  if((ACstring = (char *)malloc(sizeof(char) * 150)) == NULL) {
+    printf("#fAC: Out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+  
+  ACstring[0] = '\0';
+  switch (OP) {
+  case 0:
+    // Appending Numerator
+    if(!WRT) {
+      if (strlen(Op1) != 0) {
+        strcat(ACstring, "(");
+        strcat(ACstring, Op1);
+      }
+      else
+        break;
+    }
+    else if(WRT==1) {
+      if (strlen(Op2) != 0) {
+        strcat(ACstring, "(");
+        strcat(ACstring, Op2);
+      }
+      else
+        break;
+    }
+
+    strcat(ACstring, "/");
+    
+    // Appending Denominator
+    strcat(ACstring, "(");
+    if (strlen(Op1) != 0)
+      strcat(ACstring, Op1);
+    else {
+      char Op1ValString[30];
+      Op1ValString[0] = '\0';
+      sprintf(Op1ValString, "%0.16lf", Op1Val);
+      strcat(ACstring, Op1ValString);
+    }
+    
+    strcat(ACstring, "+");
+    
+    if (strlen(Op2) != 0)
+      strcat(ACstring, Op2);
+    else {
+      char Op2ValString[30];
+      Op2ValString[0] = '\0';
+      sprintf(Op2ValString, "%0.16lf", Op2Val);
+      strcat(ACstring, Op2ValString);
+    }
+    strcat(ACstring, ")");
+    strcat(ACstring, ")");
+    break;
+  case 1:
+    // Appending Numerator
+    if(!WRT) {
+      if (strlen(Op1) != 0) {
+        strcat(ACstring, "(");
+        strcat(ACstring, Op1);
+      }
+      else
+        break;
+    }
+    else if(WRT==1) {
+      if (strlen(Op2) != 0) {
+        strcat(ACstring, "(");
+        strcat(ACstring, Op2);
+      }
+      else
+        break;
+    }
+
+    strcat(ACstring, "/");
+    
+    // Appending Denominator
+    strcat(ACstring, "(");
+    if(!WRT) {
+      if (strlen(Op1) != 0)
+        strcat(ACstring, Op1);
+      else {
+        char Op1ValString[30];
+        Op1ValString[0] = '\0';
+        sprintf(Op1ValString, "%0.16lf", Op1Val);
+        strcat(ACstring, Op1ValString);
+      }
+    }
+    else if(WRT==1) {
+      if (strlen(Op2) != 0)
+        strcat(ACstring, Op2);
+      else {
+        char Op2ValString[30];
+        Op2ValString[0] = '\0';
+        sprintf(Op2ValString, "%0.16lf", Op2Val);
+        strcat(ACstring, Op2ValString);
+      }
+    }
+
+    strcat(ACstring, "-");
+
+    if(!WRT) {
+      if (strlen(Op2) != 0)
+        strcat(ACstring, Op2);
+      else {
+        char Op2ValString[30];
+        Op2ValString[0] = '\0';
+        sprintf(Op2ValString, "%0.16lf", Op2Val);
+        strcat(ACstring, Op2ValString);
+      }
+    }
+    else if(WRT==1) {
+      if (strlen(Op1) != 0)
+        strcat(ACstring, Op1);
+      else {
+        char Op1ValString[30];
+        Op1ValString[0] = '\0';
+        sprintf(Op1ValString, "%0.7f", Op1Val);
+        strcat(ACstring, Op1ValString);
+      }
+    }
+
+    strcat(ACstring, ")");
+    strcat(ACstring, ")");
+    break;
+  case 2:
+    break;
+  case 3:
+    break;
+  case 4:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, "cos(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")/");
+    strcat(ACstring, "sin(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")");
+
+    strcat(ACstring, ")");
+    break;
+  case 5:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, "tan(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")");
+
+    strcat(ACstring, ")");
+    break;
+  case 6:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "/(");
+    strcat(ACstring, "sin(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")*");
+    strcat(ACstring, "cos(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))");
+
+    strcat(ACstring, ")");
+    break;
+  case 7:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "/(");
+    strcat(ACstring, "sqrt(1-(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))*arcsin(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))");
+
+    strcat(ACstring, ")");
+    break;
+  case 8:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(-");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "/(");
+    strcat(ACstring, "sqrt(1-(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))*arccos(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))");
+
+    strcat(ACstring, ")");
+    break;
+  case 9:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "/(((");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")+1)*arctan(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))");
+
+    strcat(ACstring, ")");
+    break;
+  case 10:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, "cosh(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")/");
+    strcat(ACstring, "sinh(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")");
+
+    strcat(ACstring, ")");
+    break;
+  case 11:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "*");
+    strcat(ACstring, "tanh(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")");
+
+    strcat(ACstring, ")");
+    break;
+  case 12:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+    strcat(ACstring, "/(");
+    strcat(ACstring, "sinh(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, ")*");
+    strcat(ACstring, "cosh(");
+    strcat(ACstring, Op1);
+    strcat(ACstring, "))");
+
+    strcat(ACstring, ")");
+    break;
+  case 13:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, Op1);
+
+    strcat(ACstring, ")");
+    break;
+  case 14:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, "1/log(");
+    strcat(ACstring, Op1);
+
+    strcat(ACstring, "))");
+    break;
+  case 15:
+    if (strlen(Op1) == 0)
+      break;
+
+    strcat(ACstring, "(");
+
+    strcat(ACstring, "0.5");
+
+    strcat(ACstring, ")");
+    break;
+  case 16:
+    break;
+  default:
+    printf("No such operation %d\n", OP);
+    exit(1);
+  }
+
+  return ACstring;
+}
 
 /*----------------------------------------------------------------------------*/
 /* File Functions                                                             */
@@ -191,6 +843,18 @@ FloatACItem *fCreateFloatACItem(FloatACItem *NewValue) {
   NewItem->OP = NewValue->OP;
   NewItem->ACWRTX = NewValue->ACWRTX;
   NewItem->ACWRTY = NewValue->ACWRTY;
+  NewItem->ACWRTXstring = fACFloatDumpAtomicConditionString(NewValue->XName, NewValue->X, NewValue->YName, NewValue->Y, NewValue->OP, 0);
+  if(!fACIsBinaryOperation(NewValue->OP)) {
+    char *ACstring;
+    if((ACstring = (char *)malloc(sizeof(char) * 150)) == NULL) {
+      printf("#fAC: Out of memory error!");
+      exit(EXIT_FAILURE);
+    }
+    ACstring[0] = '\0';
+    NewItem->ACWRTYstring = ACstring;
+  }
+  else
+    NewItem->ACWRTYstring = fACFloatDumpAtomicConditionString(NewValue->XName, NewValue->X, NewValue->YName, NewValue->Y, NewValue->OP, 1);
 
   return NewItem;
 }
@@ -211,6 +875,18 @@ DoubleACItem *fCreateDoubleACItem(DoubleACItem *NewValue) {
   NewItem->OP = NewValue->OP;
   NewItem->ACWRTX = NewValue->ACWRTX;
   NewItem->ACWRTY = NewValue->ACWRTY;
+  NewItem->ACWRTXstring = fACDoubleDumpAtomicConditionString(NewValue->XName, NewValue->X, NewValue->YName, NewValue->Y, NewValue->OP, 0);
+  if(!fACIsBinaryOperation(NewValue->OP)) {
+    char *ACstring;
+    if((ACstring = (char *)malloc(sizeof(char) * 150)) == NULL) {
+      printf("#fAC: Out of memory error!");
+      exit(EXIT_FAILURE);
+    }
+    ACstring[0] = '\0';
+    NewItem->ACWRTYstring = ACstring;
+  }
+  else
+    NewItem->ACWRTYstring = fACDoubleDumpAtomicConditionString(NewValue->XName, NewValue->X, NewValue->YName, NewValue->Y, NewValue->OP, 1);
 
   return NewItem;
 }
@@ -245,7 +921,6 @@ void fACSetFloatItem(ACTable *AtomicConditionsTable, FloatACItem *NewValue)
 
   // There's already a pair
   if(FoundItem != NULL && fFloatACItemsEqual(NewValue, FoundItem)) {
-    // Increment values
     FoundItem->XName = NewValue->XName;
     FoundItem->X = NewValue->X;
     FoundItem->YName = NewValue->YName;
@@ -253,6 +928,18 @@ void fACSetFloatItem(ACTable *AtomicConditionsTable, FloatACItem *NewValue)
     FoundItem->OP = NewValue->OP;
     FoundItem->ACWRTX = NewValue->ACWRTX;
     FoundItem->ACWRTY = NewValue->ACWRTY;
+    FoundItem->ACWRTXstring = fACFloatDumpAtomicConditionString(NewValue->XName, NewValue->X, NewValue->YName, NewValue->Y, NewValue->OP, 0);
+    if(!fACIsBinaryOperation(NewValue->OP)) {
+      char *ACstring;
+      if((ACstring = (char *)malloc(sizeof(char) * 150)) == NULL) {
+        printf("#fAC: Out of memory error!");
+        exit(EXIT_FAILURE);
+      }
+      ACstring[0] = '\0';
+      FoundItem->ACWRTYstring = ACstring;
+    }
+    else
+      FoundItem->ACWRTYstring = fACFloatDumpAtomicConditionString(NewValue->XName, NewValue->X, NewValue->YName, NewValue->Y, NewValue->OP, 1);
   } else  { // Nope, could't find it
     FloatACItem *NewItem = NULL;
     NewItem = fCreateFloatACItem(NewValue);
@@ -273,7 +960,6 @@ void fACSetDoubleItem(ACTable *AtomicConditionsTable, DoubleACItem *NewValue)
 
   // There's already a pair
   if(FoundItem != NULL && fDoubleACItemsEqual(NewValue, FoundItem)) {
-    // Increment values
     FoundItem->XName = NewValue->XName;
     FoundItem->X = NewValue->X;
     FoundItem->YName = NewValue->YName;
@@ -281,6 +967,18 @@ void fACSetDoubleItem(ACTable *AtomicConditionsTable, DoubleACItem *NewValue)
     FoundItem->OP = NewValue->OP;
     FoundItem->ACWRTX = NewValue->ACWRTX;
     FoundItem->ACWRTY = NewValue->ACWRTY;
+    FoundItem->ACWRTXstring = fACDoubleDumpAtomicConditionString(NewValue->XName, NewValue->X, NewValue->YName, NewValue->Y, NewValue->OP, 0);
+    if(!fACIsBinaryOperation(NewValue->OP)) {
+      char *ACstring;
+      if((ACstring = (char *)malloc(sizeof(char) * 150)) == NULL) {
+        printf("#fAC: Out of memory error!");
+        exit(EXIT_FAILURE);
+      }
+      ACstring[0] = '\0';
+      FoundItem->ACWRTYstring = ACstring;
+    }
+    else
+      FoundItem->ACWRTYstring = fACDoubleDumpAtomicConditionString(NewValue->XName, NewValue->X, NewValue->YName, NewValue->Y, NewValue->OP, 1);
   } else  { // Nope, could't find it
     DoubleACItem *NewItem = NULL;
     NewItem = fCreateDoubleACItem(NewValue);
@@ -594,6 +1292,7 @@ void fACStoreResult() {
 
   fprintf(FP, "\t\"FP32\": [\n");
   int I = 0;
+
   while ((uint64_t)I < StorageTable->Size) {
     if (StorageTable->FP32ACItems[I].NodeId != -1) {
       if (fprintf(FP,
@@ -605,7 +1304,9 @@ void fACStoreResult() {
                   "\t\t\t\"Y\": %0.7f,\n"
                   "\t\t\t\"Operation\": %d,\n"
                   "\t\t\t\"ACWRTX\": %0.7f,\n"
-                  "\t\t\t\"ACWRTY\": %0.7f\n",
+                  "\t\t\t\"ACWRTY\": %0.7f,\n"
+                  "\t\t\t\"ACWRTXstring\": \"%s\",\n"
+                  "\t\t\t\"ACWRTYstring\": \"%s\"\n",
                   StorageTable->FP32ACItems[I].NodeId,
                   StorageTable->FP32ACItems[I].XName,
                   StorageTable->FP32ACItems[I].X,
@@ -613,7 +1314,9 @@ void fACStoreResult() {
                   StorageTable->FP32ACItems[I].Y,
                   StorageTable->FP32ACItems[I].OP,
                   StorageTable->FP32ACItems[I].ACWRTX,
-                  StorageTable->FP32ACItems[I].ACWRTY) > 0)
+                  StorageTable->FP32ACItems[I].ACWRTY,
+                  StorageTable->FP32ACItems[I].ACWRTXstring,
+                  StorageTable->FP32ACItems[I].ACWRTYstring) > 0)
         RecordsStored++;
 
       if (RecordsStored != StorageTable->FP32ListSize)
@@ -640,7 +1343,9 @@ void fACStoreResult() {
                   "\t\t\t\"Y\": %0.15f,\n"
                   "\t\t\t\"Operation\": %d,\n"
                   "\t\t\t\"ACWRTX\": %0.15f,\n"
-                  "\t\t\t\"ACWRTY\": %0.15f\n",
+                  "\t\t\t\"ACWRTY\": %0.15f,\n"
+                  "\t\t\t\"ACWRTXstring\": \"%s\",\n"
+                  "\t\t\t\"ACWRTYstring\": \"%s\"\n",
                   StorageTable->FP64ACItems[I].NodeId,
                   StorageTable->FP64ACItems[I].XName,
                   StorageTable->FP64ACItems[I].X,
@@ -648,7 +1353,9 @@ void fACStoreResult() {
                   StorageTable->FP64ACItems[I].Y,
                   StorageTable->FP64ACItems[I].OP,
                   StorageTable->FP64ACItems[I].ACWRTX,
-                  StorageTable->FP64ACItems[I].ACWRTY) > 0)
+                  StorageTable->FP64ACItems[I].ACWRTY,
+                  StorageTable->FP64ACItems[I].ACWRTXstring,
+                  StorageTable->FP64ACItems[I].ACWRTYstring) > 0)
         RecordsStored++;
 
       if (RecordsStored != StorageTable->FP64ListSize)

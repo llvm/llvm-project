@@ -5,14 +5,14 @@
 #include<stdio.h>
 
 int main() {
-  float a, b, res;
+  double a, b, res;
   res=0;
 
   printf("Multiply Accumulator\n");
   printf("Enter value of a: ");
-  scanf("%f", &a);
+  scanf("%lf", &a);
   printf("Enter value of b: ");
-  scanf("%f", &b);
+  scanf("%lf", &b);
 
   for(int i = 0; i < b/2; i++)
     res+=a;
@@ -21,7 +21,7 @@ int main() {
     res+=a;
 
   printf("Product = %f\n", res);
-  fAFfp32markForResult(res);
+  fAFfp64markForResult(res);
 
   return 0;
 }

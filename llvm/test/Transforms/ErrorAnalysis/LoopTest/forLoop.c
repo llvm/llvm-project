@@ -18,6 +18,7 @@ int main() {
     res+=a;
 
   printf("Product = %f\n", res);
+  fAFfp32markForResult(res);
 
   return 0;
 }

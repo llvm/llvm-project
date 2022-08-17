@@ -401,16 +401,19 @@ char *fCGperformPHIResolution(char *PHIInstruction) {
   printf("\n\tLooking for Register %s in Nodes List.\n", ResolvedValue);
 #endif
 
+  CGNode *CurrNode = NULL;
   // Finding instruction in Nodes List
-  CGNode *CurrNode = CG->NodesLinkedListHead;
-  while (CurrNode != NULL && strncmp(ResolvedValue,
-                                     CurrNode->InstructionString,
-                                     strlen(ResolvedValue))!=0) {
+  if (CG->LinkedListSize != 0) {
+    CurrNode = CG->NodesLinkedListHead;
+    while (CurrNode != NULL &&
+           strncmp(ResolvedValue, CurrNode->InstructionString,
+                   strlen(ResolvedValue)) != 0) {
 
 #if FAF_DEBUG
-    printf("\t\tNodes List:%s\n", CurrNode->InstructionString);
+      printf("\t\tNodes List:%s\n", CurrNode->InstructionString);
 #endif
-    CurrNode = CurrNode->Next;
+      CurrNode = CurrNode->Next;
+    }
   }
 
   if(CurrNode != NULL)

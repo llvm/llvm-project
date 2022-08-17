@@ -132,8 +132,8 @@ void ACInstrumentation::instrumentCallRecordingBasicBlock(BasicBlock* CurrentBB,
   while(NextInst->getOpcode() == 56 &&
          (!static_cast<CallInst*>(&*NextInst)->getCalledFunction() ||
           (static_cast<CallInst*>(&*NextInst)->getCalledFunction() &&
-           (static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
-            static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate"))))
+           (static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() == "fCGInitialize" ||
+            static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() == "fACCreate"))))
     NextInst++;
   IRBuilder<> InstructionBuilder( &(*NextInst) );
   std::vector<Value *> Args;
@@ -154,8 +154,8 @@ void ACInstrumentation::instrumentCallRecordingPHIInstructions(BasicBlock* Curre
   while(NextInst->getOpcode() == 56 &&
          (!static_cast<CallInst*>(&*NextInst)->getCalledFunction() ||
           (static_cast<CallInst*>(&*NextInst)->getCalledFunction() &&
-           (static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fCGInitialize" ||
-            static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() != "fACCreate"))))
+           (static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() == "fCGInitialize" ||
+            static_cast<CallInst*>(&*NextInst)->getCalledFunction()->getName().str() == "fACCreate"))))
       NextInst++;
   IRBuilder<> InstructionBuilder( &(*NextInst) );
 

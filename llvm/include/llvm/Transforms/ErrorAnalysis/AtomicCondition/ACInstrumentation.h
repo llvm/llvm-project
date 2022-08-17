@@ -36,6 +36,8 @@ private:
 
   Function *AFfp32AnalysisFunction;
   Function *AFfp64AnalysisFunction;
+  Function *AFfp32DumpRelativeErrorExpression;
+  Function *AFfp64DumpRelativeErrorExpression;
 
   // Additional Utilities
   Function *CGDotGraphFunction;
@@ -75,7 +77,7 @@ public:
   static bool isNonACInstrinsicFunction(const Instruction *Inst);
 
   // Categorized by Data Type
-  static bool isFPOperation(const Instruction *Inst);
+//  static bool isFPOperation(const Instruction *Inst);
   static bool isSingleFPOperation(const Instruction *Inst);
   static bool isDoubleFPOperation(const Instruction *Inst);
 
