@@ -3,20 +3,28 @@
 
 #if defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 14
 
+// CHECK-14: %"struct.temp_func_order_example3::S" = type { i8 }
+
 // CHECK-14: define dso_local void @_ZN24temp_func_order_example31hEi(i32 noundef %i)
-// CHECK-14-NEXT: entry:
-// CHECK-14-NEXT:   %i.addr = alloca i32, align 4
-// CHECK-14-NEXT:   %r = alloca ptr, align 8
-// CHECK-14-NEXT:   store i32 %i, ptr %i.addr, align 4
-// CHECK-14-NEXT:   %call = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN24temp_func_order_example31gIiJEEERiPT_DpT0_(ptr noundef %i.addr)
-// CHECK-14-NEXT:   store ptr %call, ptr %r, align 8
-// CHECK-14-NEXT:   ret void
+// CHECK-14-NEXT:  entry:
+// CHECK-14-NEXT:    %i.addr = alloca i32, align 4
+// CHECK-14-NEXT:    %r = alloca ptr, align 8
+// CHECK-14-NEXT:    %a = alloca %"struct.temp_func_order_example3::S", align 1
+// CHECK-14-NEXT:    store i32 %i, ptr %i.addr, align 4
+// CHECK-14-NEXT:    %call = call noundef nonnull align 4 dereferenceable(4) ptr @_ZN24temp_func_order_example31gIiJEEERiPT_DpT0_(ptr noundef %i.addr)
+// CHECK-14-NEXT:    store ptr %call, ptr %r, align 8
+// CHECK-14-NEXT:    ret void
 
 namespace temp_func_order_example3 {
   template <typename T, typename... U> int &g(T *, U...);
   template <typename T> void g(T);
+
+  template <typename T, typename... Ts> struct S;
+  template <typename T> struct S<T> {};
+
   void h(int i) {
     int &r = g(&i);
+    S<int> a;
   }
 }
 

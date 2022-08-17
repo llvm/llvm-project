@@ -2445,6 +2445,9 @@ static bool isSameTemplateArg(ASTContext &Context,
   if (X.getKind() != Y.getKind())
     return false;
 
+  bool ClangABICompat14 =
+      Context.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver14;
+
   switch (X.getKind()) {
     case TemplateArgument::Null:
       llvm_unreachable("Comparing NULL template argument");
@@ -2477,30 +2480,42 @@ static bool isSameTemplateArg(ASTContext &Context,
     }
 
     case TemplateArgument::Pack:
-      unsigned PackIterationSize = X.pack_size();
-      if (X.pack_size() != Y.pack_size()) {
-        if (!PartialOrdering)
+      if (ClangABICompat14) {
+        if (X.pack_size() != Y.pack_size())
           return false;
 
-        // C++0x [temp.deduct.type]p9:
-        // During partial ordering, if Ai was originally a pack expansion:
-        // - if P does not contain a template argument corresponding to Ai then
-        //   Ai is ignored;
-        bool XHasMoreArg = X.pack_size() > Y.pack_size();
-        if (!(XHasMoreArg && X.pack_elements().back().isPackExpansion()) &&
-            !(!XHasMoreArg && Y.pack_elements().back().isPackExpansion()))
-          return false;
+        for (TemplateArgument::pack_iterator XP = X.pack_begin(),
+                                             XPEnd = X.pack_end(),
+                                             YP = Y.pack_begin();
+             XP != XPEnd; ++XP, ++YP)
+          if (!isSameTemplateArg(Context, *XP, *YP, PackExpansionMatchesPack))
+            return false;
+      } else {
+        unsigned PackIterationSize = X.pack_size();
+        if (X.pack_size() != Y.pack_size()) {
+          if (!PartialOrdering)
+            return false;
 
-        if (XHasMoreArg)
-          PackIterationSize = Y.pack_size();
+          // C++0x [temp.deduct.type]p9:
+          // During partial ordering, if Ai was originally a pack expansion:
+          // - if P does not contain a template argument corresponding to Ai
+          //   then Ai is ignored;
+          bool XHasMoreArg = X.pack_size() > Y.pack_size();
+          if (!(XHasMoreArg && X.pack_elements().back().isPackExpansion()) &&
+              !(!XHasMoreArg && Y.pack_elements().back().isPackExpansion()))
+            return false;
+
+          if (XHasMoreArg)
+            PackIterationSize = Y.pack_size();
+        }
+
+        ArrayRef<TemplateArgument> XP = X.pack_elements();
+        ArrayRef<TemplateArgument> YP = Y.pack_elements();
+        for (unsigned i = 0; i < PackIterationSize; ++i)
+          if (!isSameTemplateArg(Context, XP[i], YP[i], PartialOrdering,
+                                 PackExpansionMatchesPack))
+            return false;
       }
-
-      ArrayRef<TemplateArgument> XP = X.pack_elements();
-      ArrayRef<TemplateArgument> YP = Y.pack_elements();
-      for (unsigned i = 0; i < PackIterationSize; ++i)
-        if (!isSameTemplateArg(Context, XP[i], YP[i], PartialOrdering,
-                               PackExpansionMatchesPack))
-          return false;
       return true;
   }
 
