@@ -258,8 +258,7 @@ define signext i32 @select_fcmp_uge_negone_zero(double %a, double %b) nounwind {
 ; CHECK-LABEL: select_fcmp_uge_negone_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fle.d a0, fa0, fa1
-; CHECK-NEXT:    xori a0, a0, 1
-; CHECK-NEXT:    neg a0, a0
+; CHECK-NEXT:    addi a0, a0, -1
 ; CHECK-NEXT:    ret
   %1 = fcmp ugt double %a, %b
   %2 = select i1 %1, i32 -1, i32 0
@@ -270,9 +269,7 @@ define signext i32 @select_fcmp_uge_1_2(double %a, double %b) nounwind {
 ; CHECK-LABEL: select_fcmp_uge_1_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fle.d a0, fa0, fa1
-; CHECK-NEXT:    xori a0, a0, 1
-; CHECK-NEXT:    li a1, 2
-; CHECK-NEXT:    sub a0, a1, a0
+; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    ret
   %1 = fcmp ugt double %a, %b
   %2 = select i1 %1, i32 1, i32 2
