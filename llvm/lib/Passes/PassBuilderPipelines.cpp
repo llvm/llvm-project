@@ -182,6 +182,10 @@ static cl::opt<bool> EnableMergeFunctions(
     "enable-merge-functions", cl::init(false), cl::Hidden,
     cl::desc("Enable function merging as part of the optimization pipeline"));
 
+static cl::opt<bool> EnablePostPGOLoopRotation(
+    "enable-post-pgo-loop-rotation", cl::init(true), cl::Hidden,
+    cl::desc("Run the loop rotation transformation after PGO instrumentation"));
+
 PipelineTuningOptions::PipelineTuningOptions() {
   LoopInterleaving = true;
   LoopVectorization = true;
@@ -664,13 +668,15 @@ void PassBuilder::addPGOInstrPasses(ModulePassManager &MPM,
   // Perform PGO instrumentation.
   MPM.addPass(PGOInstrumentationGen(IsCS));
 
-  // Disable header duplication in loop rotation at -Oz.
-  MPM.addPass(createModuleToFunctionPassAdaptor(
-      createFunctionToLoopPassAdaptor(
-          LoopRotatePass(Level != OptimizationLevel::Oz),
-          /*UseMemorySSA=*/false,
-          /*UseBlockFrequencyInfo=*/false),
-      PTO.EagerlyInvalidateAnalyses));
+  if (EnablePostPGOLoopRotation) {
+    // Disable header duplication in loop rotation at -Oz.
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        createFunctionToLoopPassAdaptor(
+            LoopRotatePass(Level != OptimizationLevel::Oz),
+            /*UseMemorySSA=*/false,
+            /*UseBlockFrequencyInfo=*/false),
+        PTO.EagerlyInvalidateAnalyses));
+  }
 
   // Add the profile lowering pass.
   InstrProfOptions Options;
