@@ -748,7 +748,7 @@ basic_ostream<_CharT, _Traits>::operator<<(const void* __n)
 }
 
 template<class _CharT, class _Traits>
-basic_ostream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 __put_character_sequence(basic_ostream<_CharT, _Traits>& __os,
                           const _CharT* __str, size_t __len)
 {
@@ -782,14 +782,14 @@ __put_character_sequence(basic_ostream<_CharT, _Traits>& __os,
 
 
 template<class _CharT, class _Traits>
-basic_ostream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, _CharT __c)
 {
     return _VSTD::__put_character_sequence(__os, &__c, 1);
 }
 
 template<class _CharT, class _Traits>
-basic_ostream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, char __cn)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -822,35 +822,35 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, char __cn)
 }
 
 template<class _Traits>
-basic_ostream<char, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<char, _Traits>&
 operator<<(basic_ostream<char, _Traits>& __os, char __c)
 {
     return _VSTD::__put_character_sequence(__os, &__c, 1);
 }
 
 template<class _Traits>
-basic_ostream<char, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<char, _Traits>&
 operator<<(basic_ostream<char, _Traits>& __os, signed char __c)
 {
     return _VSTD::__put_character_sequence(__os, (char *) &__c, 1);
 }
 
 template<class _Traits>
-basic_ostream<char, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<char, _Traits>&
 operator<<(basic_ostream<char, _Traits>& __os, unsigned char __c)
 {
     return _VSTD::__put_character_sequence(__os, (char *) &__c, 1);
 }
 
 template<class _CharT, class _Traits>
-basic_ostream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const _CharT* __str)
 {
     return _VSTD::__put_character_sequence(__os, __str, _Traits::length(__str));
 }
 
 template<class _CharT, class _Traits>
-basic_ostream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const char* __strn)
 {
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -896,14 +896,14 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const char* __strn)
 }
 
 template<class _Traits>
-basic_ostream<char, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<char, _Traits>&
 operator<<(basic_ostream<char, _Traits>& __os, const char* __str)
 {
     return _VSTD::__put_character_sequence(__os, __str, _Traits::length(__str));
 }
 
 template<class _Traits>
-basic_ostream<char, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<char, _Traits>&
 operator<<(basic_ostream<char, _Traits>& __os, const signed char* __str)
 {
     const char *__s = (const char *) __str;
@@ -911,7 +911,7 @@ operator<<(basic_ostream<char, _Traits>& __os, const signed char* __str)
 }
 
 template<class _Traits>
-basic_ostream<char, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<char, _Traits>&
 operator<<(basic_ostream<char, _Traits>& __os, const unsigned char* __str)
 {
     const char *__s = (const char *) __str;
@@ -1032,7 +1032,7 @@ basic_ostream<_CharT, _Traits>::seekp(off_type __off, ios_base::seekdir __dir)
 }
 
 template <class _CharT, class _Traits>
-inline
+_LIBCPP_HIDE_FROM_ABI inline
 basic_ostream<_CharT, _Traits>&
 endl(basic_ostream<_CharT, _Traits>& __os)
 {
@@ -1042,7 +1042,7 @@ endl(basic_ostream<_CharT, _Traits>& __os)
 }
 
 template <class _CharT, class _Traits>
-inline
+_LIBCPP_HIDE_FROM_ABI inline
 basic_ostream<_CharT, _Traits>&
 ends(basic_ostream<_CharT, _Traits>& __os)
 {
@@ -1051,7 +1051,7 @@ ends(basic_ostream<_CharT, _Traits>& __os)
 }
 
 template <class _CharT, class _Traits>
-inline
+_LIBCPP_HIDE_FROM_ABI inline
 basic_ostream<_CharT, _Traits>&
 flush(basic_ostream<_CharT, _Traits>& __os)
 {
@@ -1087,7 +1087,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os,
 }
 
 template<class _CharT, class _Traits>
-basic_ostream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os,
            basic_string_view<_CharT, _Traits> __sv)
 {
@@ -1123,7 +1123,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, unique_ptr<_Yp, _Dp> const& __p
 }
 
 template <class _CharT, class _Traits, size_t _Size>
-basic_ostream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const bitset<_Size>& __x)
 {
     return __os << __x.template to_string<_CharT, _Traits>

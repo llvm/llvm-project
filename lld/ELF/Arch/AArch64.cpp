@@ -228,9 +228,9 @@ void AArch64::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
 void AArch64::writePltHeader(uint8_t *buf) const {
   const uint8_t pltData[] = {
       0xf0, 0x7b, 0xbf, 0xa9, // stp    x16, x30, [sp,#-16]!
-      0x10, 0x00, 0x00, 0x90, // adrp   x16, Page(&(.plt.got[2]))
-      0x11, 0x02, 0x40, 0xf9, // ldr    x17, [x16, Offset(&(.plt.got[2]))]
-      0x10, 0x02, 0x00, 0x91, // add    x16, x16, Offset(&(.plt.got[2]))
+      0x10, 0x00, 0x00, 0x90, // adrp   x16, Page(&(.got.plt[2]))
+      0x11, 0x02, 0x40, 0xf9, // ldr    x17, [x16, Offset(&(.got.plt[2]))]
+      0x10, 0x02, 0x00, 0x91, // add    x16, x16, Offset(&(.got.plt[2]))
       0x20, 0x02, 0x1f, 0xd6, // br     x17
       0x1f, 0x20, 0x03, 0xd5, // nop
       0x1f, 0x20, 0x03, 0xd5, // nop
@@ -249,9 +249,9 @@ void AArch64::writePltHeader(uint8_t *buf) const {
 void AArch64::writePlt(uint8_t *buf, const Symbol &sym,
                        uint64_t pltEntryAddr) const {
   const uint8_t inst[] = {
-      0x10, 0x00, 0x00, 0x90, // adrp x16, Page(&(.plt.got[n]))
-      0x11, 0x02, 0x40, 0xf9, // ldr  x17, [x16, Offset(&(.plt.got[n]))]
-      0x10, 0x02, 0x00, 0x91, // add  x16, x16, Offset(&(.plt.got[n]))
+      0x10, 0x00, 0x00, 0x90, // adrp x16, Page(&(.got.plt[n]))
+      0x11, 0x02, 0x40, 0xf9, // ldr  x17, [x16, Offset(&(.got.plt[n]))]
+      0x10, 0x02, 0x00, 0x91, // add  x16, x16, Offset(&(.got.plt[n]))
       0x20, 0x02, 0x1f, 0xd6  // br   x17
   };
   memcpy(buf, inst, sizeof(inst));
@@ -806,9 +806,9 @@ void AArch64BtiPac::writePltHeader(uint8_t *buf) const {
   const uint8_t btiData[] = { 0x5f, 0x24, 0x03, 0xd5 }; // bti c
   const uint8_t pltData[] = {
       0xf0, 0x7b, 0xbf, 0xa9, // stp    x16, x30, [sp,#-16]!
-      0x10, 0x00, 0x00, 0x90, // adrp   x16, Page(&(.plt.got[2]))
-      0x11, 0x02, 0x40, 0xf9, // ldr    x17, [x16, Offset(&(.plt.got[2]))]
-      0x10, 0x02, 0x00, 0x91, // add    x16, x16, Offset(&(.plt.got[2]))
+      0x10, 0x00, 0x00, 0x90, // adrp   x16, Page(&(.got.plt[2]))
+      0x11, 0x02, 0x40, 0xf9, // ldr    x17, [x16, Offset(&(.got.plt[2]))]
+      0x10, 0x02, 0x00, 0x91, // add    x16, x16, Offset(&(.got.plt[2]))
       0x20, 0x02, 0x1f, 0xd6, // br     x17
       0x1f, 0x20, 0x03, 0xd5, // nop
       0x1f, 0x20, 0x03, 0xd5  // nop
@@ -842,9 +842,9 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
   // [btiData] addrInst (pacBr | stdBr) [nopData]
   const uint8_t btiData[] = { 0x5f, 0x24, 0x03, 0xd5 }; // bti c
   const uint8_t addrInst[] = {
-      0x10, 0x00, 0x00, 0x90,  // adrp x16, Page(&(.plt.got[n]))
-      0x11, 0x02, 0x40, 0xf9,  // ldr  x17, [x16, Offset(&(.plt.got[n]))]
-      0x10, 0x02, 0x00, 0x91   // add  x16, x16, Offset(&(.plt.got[n]))
+      0x10, 0x00, 0x00, 0x90,  // adrp x16, Page(&(.got.plt[n]))
+      0x11, 0x02, 0x40, 0xf9,  // ldr  x17, [x16, Offset(&(.got.plt[n]))]
+      0x10, 0x02, 0x00, 0x91   // add  x16, x16, Offset(&(.got.plt[n]))
   };
   const uint8_t pacBr[] = {
       0x9f, 0x21, 0x03, 0xd5,  // autia1716

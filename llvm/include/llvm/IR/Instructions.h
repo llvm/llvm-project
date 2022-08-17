@@ -4171,8 +4171,6 @@ public:
 
   unsigned getNumSuccessors() const { return getNumIndirectDests() + 1; }
 
-  BlockAddress *getBlockAddressForIndirectDest(unsigned DestNo) const;
-
   // Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Instruction *I) {
     return (I->getOpcode() == Instruction::CallBr);

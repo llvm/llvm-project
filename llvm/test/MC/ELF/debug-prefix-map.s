@@ -31,19 +31,17 @@ f:
 # MAP_V4:      DW_AT_decl_file [DW_FORM_data4] ("src_root{{(/|\\)+}}src.s")
 # MAP_V4-NOT:  .foo
 
-## FIXME DW_AT_decl_file and include_directories are not mapped
 # MAP_V5:      DW_AT_name [DW_FORM_string] ("src.s")
 # MAP_V5:      DW_AT_comp_dir [DW_FORM_string] ("src_root")
-# MAP_V5:      DW_AT_decl_file [DW_FORM_data4] ("{{.*}}.foo{{(/|\\)+}}src.s")
-# MAP_V5:      include_directories[ 0] = .debug_line_str[0x00000000] = "{{.*}}.foo"
+# MAP_V5:      DW_AT_decl_file [DW_FORM_data4] ("src_root{{(/|\\)+}}src.s")
+# MAP_V5:      include_directories[ 0] = .debug_line_str[0x00000000] = "src_root"
 
 # MAPABS_V4:      DW_AT_name [DW_FORM_string] ("src.s")
 # MAPABS_V4:      DW_AT_comp_dir [DW_FORM_string] ("{{(/|\\)+}}src_root")
-# MAPABS_V4:      DW_AT_decl_file [DW_FORM_data4] ("{{(/|\\)+}}src_root{{(/|\\)+}}src.s")
+# MAPABS_V4:      DW_AT_decl_file [DW_FORM_data4] ("/src_root{{(/|\\)+}}src.s")
 # MAPABS_V4-NOT:  .foo
 
-## FIXME DW_AT_decl_file and include_directories are not mapped
 # MAPABS_V5:      DW_AT_name [DW_FORM_string] ("src.s")
 # MAPABS_V5:      DW_AT_comp_dir [DW_FORM_string] ("{{(/|\\)+}}src_root")
-# MAPABS_V5:      DW_AT_decl_file [DW_FORM_data4] ("{{.*}}.foo{{(/|\\)+}}src.s")
-# MAPABS_V5:      include_directories[ 0] = .debug_line_str[0x00000000] = "{{.*}}.foo"
+# MAPABS_V5:      DW_AT_decl_file [DW_FORM_data4] ("/src_root{{(/|\\)+}}src.s")
+# MAPABS_V5:      include_directories[ 0] = .debug_line_str[0x00000000] = "/src_root"

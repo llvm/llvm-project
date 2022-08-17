@@ -1,6 +1,9 @@
 // RUN: %clangxx -O0 -g %s -o %t
-//
-// REQUIRES: (linux && !android) || freebsd || android-28
+
+// bionic/netdb.cpp is not implemented.
+// UNSUPPORTED: android
+
+// REQUIRES: linux || freebsd
 
 #include <inttypes.h>
 #include <netdb.h>

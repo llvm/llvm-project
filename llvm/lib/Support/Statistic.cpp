@@ -253,7 +253,7 @@ void llvm::PrintStatistics() {
 #endif
 }
 
-const std::vector<std::pair<StringRef, uint64_t>> llvm::GetStatistics() {
+std::vector<std::pair<StringRef, uint64_t>> llvm::GetStatistics() {
   sys::SmartScopedLock<true> Reader(*StatLock);
   std::vector<std::pair<StringRef, uint64_t>> ReturnStats;
 

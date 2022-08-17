@@ -4,6 +4,7 @@ endif()
 
 add_llvm_component_library(LLVMOrcJIT
   COFFVCRuntimeSupport.cpp
+  COFFPlatform.cpp
   CompileOnDemandLayer.cpp
   CompileUtils.cpp
   Core.cpp

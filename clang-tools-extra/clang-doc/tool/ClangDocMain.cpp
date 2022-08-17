@@ -231,9 +231,10 @@ Example usage for a project using a compile commands database:
   if (Format == "html") {
     void *MainAddr = (void *)(intptr_t)GetExecutablePath;
     std::string ClangDocPath = GetExecutablePath(argv[0], MainAddr);
+    llvm::SmallString<128> NativeClangDocPath;
+    llvm::sys::path::native(ClangDocPath, NativeClangDocPath);
     llvm::SmallString<128> AssetsPath;
-    llvm::sys::path::native(ClangDocPath, AssetsPath);
-    AssetsPath = llvm::sys::path::parent_path(AssetsPath);
+    AssetsPath = llvm::sys::path::parent_path(NativeClangDocPath);
     llvm::sys::path::append(AssetsPath, "..", "share", "clang");
     llvm::SmallString<128> DefaultStylesheet;
     llvm::sys::path::native(AssetsPath, DefaultStylesheet);

@@ -13,18 +13,12 @@ using namespace clang;
 using namespace tooling;
 using namespace dependencies;
 
-std::vector<std::string> FullDependencies::getCommandLine(
-    llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>
-        LookupModuleOutput) const {
+static std::vector<std::string>
+makeTUCommandLineWithoutPaths(ArrayRef<std::string> OriginalCommandLine) {
   std::vector<std::string> Args = OriginalCommandLine;
 
   Args.push_back("-fno-implicit-modules");
   Args.push_back("-fno-implicit-module-maps");
-  for (const PrebuiltModuleDep &PMD : PrebuiltModuleDeps)
-    Args.push_back("-fmodule-file=" + PMD.PCMFile);
-  for (ModuleID MID : ClangModuleDeps)
-    Args.push_back("-fmodule-file=" +
-                   LookupModuleOutput(MID, ModuleOutputKind::ModuleFile));
 
   // These arguments are unused in explicit compiles.
   llvm::erase_if(Args, [](StringRef Arg) {
@@ -72,6 +66,11 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
 
     void handleContextHash(std::string Hash) override {}
 
+    std::string lookupModuleOutput(const ModuleID &ID,
+                                   ModuleOutputKind Kind) override {
+      llvm::report_fatal_error("unexpected call to lookupModuleOutput");
+    }
+
     void printDependencies(std::string &S) {
       assert(Opts && "Handled dependency output options.");
 
@@ -113,8 +112,9 @@ llvm::Expected<FullDependenciesResult>
 DependencyScanningTool::getFullDependencies(
     const std::vector<std::string> &CommandLine, StringRef CWD,
     const llvm::StringSet<> &AlreadySeen,
+    LookupModuleOutputCallback LookupModuleOutput,
     llvm::Optional<StringRef> ModuleName) {
-  FullDependencyConsumer Consumer(AlreadySeen);
+  FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput);
   llvm::Error Result =
       Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
   if (Result)
@@ -126,16 +126,24 @@ FullDependenciesResult FullDependencyConsumer::getFullDependencies(
     const std::vector<std::string> &OriginalCommandLine) const {
   FullDependencies FD;
 
-  FD.OriginalCommandLine = ArrayRef<std::string>(OriginalCommandLine).slice(1);
+  FD.CommandLine = makeTUCommandLineWithoutPaths(
+      ArrayRef<std::string>(OriginalCommandLine).slice(1));
 
   FD.ID.ContextHash = std::move(ContextHash);
 
   FD.FileDeps.assign(Dependencies.begin(), Dependencies.end());
 
+  for (const PrebuiltModuleDep &PMD : PrebuiltModuleDeps)
+    FD.CommandLine.push_back("-fmodule-file=" + PMD.PCMFile);
+
   for (auto &&M : ClangModuleDeps) {
     auto &MD = M.second;
-    if (MD.ImportedByMainFile)
+    if (MD.ImportedByMainFile) {
       FD.ClangModuleDeps.push_back(MD.ID);
+      FD.CommandLine.push_back(
+          "-fmodule-file=" +
+          LookupModuleOutput(MD.ID, ModuleOutputKind::ModuleFile));
+    }
   }
 
   FD.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);

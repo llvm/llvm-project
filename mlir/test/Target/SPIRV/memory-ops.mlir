@@ -1,13 +1,23 @@
 // RUN: mlir-translate -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
-// CHECK:           spv.func {{@.*}}([[ARG1:%.*]]: !spv.ptr<f32, Input>, [[ARG2:%.*]]: !spv.ptr<f32, Output>) "None" {
-// CHECK-NEXT:        [[VALUE:%.*]] = spv.Load "Input" [[ARG1]] : f32
-// CHECK-NEXT:        spv.Store "Output" [[ARG2]], [[VALUE]] : f32
 
 spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
+  // CHECK-LABEL: spv.func @load_store
+  //  CHECK-SAME: ([[ARG1:%.*]]: !spv.ptr<f32, Input>, [[ARG2:%.*]]: !spv.ptr<f32, Output>)
   spv.func @load_store(%arg0 : !spv.ptr<f32, Input>, %arg1 : !spv.ptr<f32, Output>) "None" {
+    // CHECK-NEXT: [[VALUE:%.*]] = spv.Load "Input" [[ARG1]] : f32
     %1 = spv.Load "Input" %arg0 : f32
+    // CHECK-NEXT: spv.Store "Output" [[ARG2]], [[VALUE]] : f32
     spv.Store "Output" %arg1, %1 : f32
+    spv.Return
+  }
+
+  // CHECK-LABEL: spv.func @load_store_memory_operands
+  spv.func @load_store_memory_operands(%arg0 : !spv.ptr<f32, Input>, %arg1 : !spv.ptr<f32, Output>) "None" {
+    // CHECK: spv.Load "Input" %{{.+}} ["Volatile|Aligned", 4] : f32
+    %1 = spv.Load "Input" %arg0 ["Volatile|Aligned", 4]: f32
+    // CHECK: spv.Store "Output" %{{.+}}, %{{.+}} ["Volatile|Aligned", 4] : f32
+    spv.Store "Output" %arg1, %1 ["Volatile|Aligned", 4]: f32
     spv.Return
   }
 }

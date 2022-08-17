@@ -2060,10 +2060,9 @@ PlatformSP PlatformList::GetOrCreate(llvm::ArrayRef<ArchSpec> archs,
   // the same platform supports all architectures then that's the obvious next
   // best thing.
   if (candidates.size() == archs.size()) {
-    if (std::all_of(candidates.begin(), candidates.end(),
-                    [&](const PlatformSP &p) -> bool {
-                      return p->GetName() == candidates.front()->GetName();
-                    })) {
+    if (llvm::all_of(candidates, [&](const PlatformSP &p) -> bool {
+          return p->GetName() == candidates.front()->GetName();
+        })) {
       return candidates.front();
     }
   }

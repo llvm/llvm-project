@@ -2,8 +2,6 @@
 Test NetBSD core file debugging.
 """
 
-from __future__ import division, print_function
-
 import signal
 import os
 

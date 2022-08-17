@@ -258,7 +258,6 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("call-entry", MIToken::kw_call_entry)
       .Case("custom", MIToken::kw_custom)
       .Case("liveout", MIToken::kw_liveout)
-      .Case("address-taken", MIToken::kw_address_taken)
       .Case("landing-pad", MIToken::kw_landing_pad)
       .Case("inlineasm-br-indirect-target",
             MIToken::kw_inlineasm_br_indirect_target)
@@ -275,6 +274,8 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("unknown-size", MIToken::kw_unknown_size)
       .Case("unknown-address", MIToken::kw_unknown_address)
       .Case("distinct", MIToken::kw_distinct)
+      .Case("ir-block-address-taken", MIToken::kw_ir_block_address_taken)
+      .Case("machine-block-address-taken", MIToken::kw_machine_block_address_taken)
       .Default(MIToken::Identifier);
 }
 

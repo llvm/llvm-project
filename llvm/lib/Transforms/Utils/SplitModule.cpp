@@ -74,7 +74,7 @@ static void addNonConstUser(ClusterMapType &GVtoClusterMap,
 // Adds all GlobalValue users of V to the same cluster as GV.
 static void addAllGlobalValueUsers(ClusterMapType &GVtoClusterMap,
                                    const GlobalValue *GV, const Value *V) {
-  for (auto *U : V->users()) {
+  for (const auto *U : V->users()) {
     SmallVector<const User *, 4> Worklist;
     Worklist.push_back(U);
     while (!Worklist.empty()) {

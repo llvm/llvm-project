@@ -32,8 +32,6 @@ public:
 
   void ClearPseudoMemory();
 
-  bool LoadPseudoRegistersFromFrame(lldb_private::StackFrame &frame);
-
   bool LoadStateFromDictionary(lldb_private::OptionValueDictionary *test_data);
 
   bool CompareState(EmulationStateARM &other_state,

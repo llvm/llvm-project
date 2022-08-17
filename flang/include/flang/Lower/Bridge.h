@@ -49,14 +49,16 @@ public:
   /// Create a lowering bridge instance.
   static LoweringBridge
   create(mlir::MLIRContext &ctx,
+         Fortran::semantics::SemanticsContext &semanticsContext,
          const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
          const Fortran::evaluate::IntrinsicProcTable &intrinsics,
          const Fortran::evaluate::TargetCharacteristics &targetCharacteristics,
          const Fortran::parser::AllCookedSources &allCooked,
          llvm::StringRef triple, fir::KindMapping &kindMap,
          const Fortran::lower::LoweringOptions &loweringOptions) {
-    return LoweringBridge(ctx, defaultKinds, intrinsics, targetCharacteristics,
-                          allCooked, triple, kindMap, loweringOptions);
+    return LoweringBridge(ctx, semanticsContext, defaultKinds, intrinsics,
+                          targetCharacteristics, allCooked, triple, kindMap,
+                          loweringOptions);
   }
 
   //===--------------------------------------------------------------------===//
@@ -92,6 +94,10 @@ public:
   /// Create a folding context. Careful: this is very expensive.
   Fortran::evaluate::FoldingContext createFoldingContext() const;
 
+  Fortran::semantics::SemanticsContext &getSemanticsContext() const {
+    return semanticsContext;
+  }
+
   bool validModule() { return getModule(); }
 
   //===--------------------------------------------------------------------===//
@@ -109,6 +115,7 @@ public:
 private:
   explicit LoweringBridge(
       mlir::MLIRContext &ctx,
+      Fortran::semantics::SemanticsContext &semanticsContext,
       const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds,
       const Fortran::evaluate::IntrinsicProcTable &intrinsics,
       const Fortran::evaluate::TargetCharacteristics &targetCharacteristics,
@@ -118,6 +125,7 @@ private:
   LoweringBridge() = delete;
   LoweringBridge(const LoweringBridge &) = delete;
 
+  Fortran::semantics::SemanticsContext &semanticsContext;
   const Fortran::common::IntrinsicTypeDefaultKinds &defaultKinds;
   const Fortran::evaluate::IntrinsicProcTable &intrinsics;
   const Fortran::evaluate::TargetCharacteristics &targetCharacteristics;

@@ -67,12 +67,6 @@ class TestCase(TestBase):
         self.expect_expr("A::scoped_ll_enum_val_neg", result_value="case0")
         self.expect_expr("A::scoped_ll_enum_val", result_value="case2")
 
-        # Test an aliased enum with fixed underlying type.
-        self.expect_expr("ClassWithEnumAlias::enum_alias",
-                         result_value="scoped_enum_case2")
-        self.expect_expr("ClassWithEnumAlias::enum_alias_alias",
-                         result_value="scoped_enum_case1")
-
         # Test taking address.
         if lldbplatformutil.getPlatform() == "windows":
             # On Windows data members without the out-of-class definitions still have
@@ -98,7 +92,20 @@ class TestCase(TestBase):
 
         self.expect_expr("ClassWithOnlyConstStatic::member", result_value="3")
 
+    # With older versions of Clang, LLDB fails to evaluate classes with only
+    # constexpr members when dsymutil is enabled
+    @expectedFailureAll(debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "14.0"])
+    def test_class_with_only_constexpr_static(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
+
         # Test `constexpr static`.
         self.expect_expr("ClassWithConstexprs::member", result_value="2")
         self.expect_expr("ClassWithConstexprs::enum_val", result_value="enum_case2")
         self.expect_expr("ClassWithConstexprs::scoped_enum_val", result_value="scoped_enum_case2")
+
+        # Test an aliased enum with fixed underlying type.
+        self.expect_expr("ClassWithEnumAlias::enum_alias",
+                         result_value="scoped_enum_case2")
+        self.expect_expr("ClassWithEnumAlias::enum_alias_alias",
+                         result_value="scoped_enum_case1")

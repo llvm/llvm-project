@@ -1068,10 +1068,10 @@ OpFoldResult CstrRequireOp::fold(ArrayRef<Attribute> operands) {
 // DimOp
 //===----------------------------------------------------------------------===//
 
-Optional<int64_t> DimOp::getConstantDim() {
-  if (auto constSizeOp = getDim().getDefiningOp<ConstSizeOp>())
+Optional<int64_t> DimOp::getConstantIndex() {
+  if (auto constSizeOp = getIndex().getDefiningOp<ConstSizeOp>())
     return constSizeOp.getValue().getLimitedValue();
-  if (auto constantOp = getDim().getDefiningOp<arith::ConstantOp>())
+  if (auto constantOp = getIndex().getDefiningOp<arith::ConstantOp>())
     return constantOp.getValue().cast<IntegerAttr>().getInt();
   return llvm::None;
 }
@@ -1081,12 +1081,12 @@ OpFoldResult DimOp::fold(ArrayRef<Attribute> operands) {
   auto valShapedType = valType.dyn_cast<ShapedType>();
   if (!valShapedType || !valShapedType.hasRank())
     return nullptr;
-  Optional<int64_t> dim = getConstantDim();
-  if (!dim.has_value())
+  Optional<int64_t> index = getConstantIndex();
+  if (!index.has_value())
     return nullptr;
-  if (dim.value() >= valShapedType.getRank())
+  if (index.value() >= valShapedType.getRank())
     return nullptr;
-  auto extent = valShapedType.getDimSize(*dim);
+  auto extent = valShapedType.getDimSize(*index);
   if (ShapedType::isDynamic(extent))
     return nullptr;
   return IntegerAttr::get(IndexType::get(getContext()), extent);
@@ -1097,7 +1097,7 @@ LogicalResult mlir::shape::DimOp::inferReturnTypes(
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes) {
   DimOpAdaptor dimOp(operands);
-  inferredReturnTypes.assign({dimOp.getDim().getType()});
+  inferredReturnTypes.assign({dimOp.getIndex().getType()});
   return success();
 }
 
@@ -1109,8 +1109,8 @@ LogicalResult mlir::shape::DimOp::verify() {
   auto st = getValue().getType().cast<ShapedType>();
   if (!st.hasRank())
     return success();
-  if (auto dim = getConstantDim()) {
-    if (*dim < 0 || *dim >= st.getRank())
+  if (auto index = getConstantIndex()) {
+    if (*index < 0 || *index >= st.getRank())
       return emitOpError("index is out of range");
   }
   return success();

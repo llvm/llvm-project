@@ -38,10 +38,6 @@ public:
   /// if the value of the lattice changed.
   virtual ChangeResult join(const AbstractSparseLattice &rhs) = 0;
 
-  /// Returns true if the lattice element is at fixpoint and further calls to
-  /// `join` will not update the value of the element.
-  virtual bool isAtFixpoint() const = 0;
-
   /// Mark the lattice element as having reached a pessimistic fixpoint. This
   /// means that the lattice may potentially have conflicting value states, and
   /// only the most conservative value should be relied on.
@@ -97,16 +93,6 @@ public:
 
   /// Returns true if the value of this lattice hasn't yet been initialized.
   bool isUninitialized() const override { return !optimisticValue.has_value(); }
-  /// Force the initialization of the element by setting it to its pessimistic
-  /// fixpoint.
-  ChangeResult defaultInitialize() override {
-    return markPessimisticFixpoint();
-  }
-
-  /// Returns true if the lattice has reached a fixpoint. A fixpoint is when
-  /// the information optimistically assumed to be true is the same as the
-  /// information known to be true.
-  bool isAtFixpoint() const override { return optimisticValue == knownValue; }
 
   /// Join the information contained in the 'rhs' lattice into this
   /// lattice. Returns if the state of the current lattice changed.
@@ -114,8 +100,8 @@ public:
     const Lattice<ValueT> &rhsLattice =
         static_cast<const Lattice<ValueT> &>(rhs);
 
-    // If we are at a fixpoint, or rhs is uninitialized, there is nothing to do.
-    if (isAtFixpoint() || rhsLattice.isUninitialized())
+    // If rhs is uninitialized, there is nothing to do.
+    if (rhsLattice.isUninitialized())
       return ChangeResult::NoChange;
 
     // Join the rhs value into this lattice.
@@ -150,7 +136,7 @@ public:
   /// means that the lattice may potentially have conflicting value states,
   /// and only the conservatively known value state should be relied on.
   ChangeResult markPessimisticFixpoint() override {
-    if (isAtFixpoint())
+    if (optimisticValue == knownValue)
       return ChangeResult::NoChange;
 
     // For this fixed point, we take whatever we knew to be true and set that

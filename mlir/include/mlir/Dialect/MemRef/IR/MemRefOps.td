@@ -66,7 +66,7 @@ class AllocLikeOp<string mnemonic,
                        // The symbolic operands (the ones in square brackets)
                        // bind to the symbols of the memref's layout map.
                        Variadic<Index>:$symbolOperands,
-                       Confined<OptionalAttr<I64Attr>,
+                       ConfinedAttr<OptionalAttr<I64Attr>,
                                 [IntMinValue<0>]>:$alignment);
   let results = (outs Res<AnyMemRef, "", [MemAlloc<resource>]>:$memref);
 
@@ -86,7 +86,7 @@ class AllocLikeOp<string mnemonic,
       $_state.addOperands(dynamicSizes);
       $_state.addOperands(symbolOperands);
       $_state.addAttribute(getOperandSegmentSizeAttr(),
-          $_builder.getI32VectorAttr({
+          $_builder.getDenseI32ArrayAttr({
               static_cast<int32_t>(dynamicSizes.size()),
               static_cast<int32_t>(symbolOperands.size())}));
       if (alignment)
@@ -123,7 +123,7 @@ def AssumeAlignmentOp : MemRef_Op<"assume_alignment"> {
     optimization only, and the optimization is best-effort.
   }];
   let arguments = (ins AnyMemRef:$memref,
-                       Confined<I32Attr, [IntPositive]>:$alignment);
+                       ConfinedAttr<I32Attr, [IntPositive]>:$alignment);
   let results = (outs);
 
   let assemblyFormat = "$memref `,` $alignment attr-dict `:` type($memref)";
@@ -965,7 +965,7 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
 
   let arguments = (ins AnyMemRef:$memref, Variadic<Index>:$indices,
                        BoolAttr:$isWrite,
-                       Confined<I32Attr, [IntMinValue<0>,
+                       ConfinedAttr<I32Attr, [IntMinValue<0>,
                                           IntMaxValue<3>]>:$localityHint,
                        BoolAttr:$isDataCache);
 
@@ -1023,11 +1023,14 @@ def MemRef_ReinterpretCastOp
 
   let assemblyFormat = [{
     $source `to` `offset` `` `:`
-    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
+    custom<DynamicIndexList>($offsets, $static_offsets,
+                               "ShapedType::kDynamicStrideOrOffset")
     `` `,` `sizes` `` `:`
-    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes) `` `,` `strides`
-    `` `:`
-    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    custom<DynamicIndexList>($sizes, $static_sizes,
+                               "ShapedType::kDynamicSize")
+    `` `,` `strides` `` `:`
+    custom<DynamicIndexList>($strides, $static_strides,
+                               "ShapedType::kDynamicStrideOrOffset")
     attr-dict `:` type($source) `to` type($result)
   }];
 
@@ -1586,9 +1589,12 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
 
   let assemblyFormat = [{
     $source ``
-    custom<OperandsOrIntegersOffsetsOrStridesList>($offsets, $static_offsets)
-    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes)
-    custom<OperandsOrIntegersOffsetsOrStridesList>($strides, $static_strides)
+    custom<DynamicIndexList>($offsets, $static_offsets,
+                               "ShapedType::kDynamicStrideOrOffset")
+    custom<DynamicIndexList>($sizes, $static_sizes,
+                               "ShapedType::kDynamicSize")
+    custom<DynamicIndexList>($strides, $static_strides,
+                               "ShapedType::kDynamicStrideOrOffset")
     attr-dict `:` type($source) `to` type($result)
   }];
 

@@ -1,4 +1,4 @@
-//===-------------- MapperJITLinkMemoryManagerTest.cpp ----------------===//
+//===---------------- MapperJITLinkMemoryManagerTest.cpp ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -118,11 +118,59 @@ TEST(MapperJITLinkMemoryManagerTest, InProcess) {
   StringRef TargetHello2(TargetMem2, Hello.size());
   EXPECT_EQ(Hello, TargetHello2);
 
+  EXPECT_EQ(Counter->DeinitCount, 0);
+
+  auto Err2 = MemMgr->deallocate(std::move(*FA1));
+  EXPECT_THAT_ERROR(std::move(Err2), Succeeded());
+
+  EXPECT_EQ(Counter->DeinitCount, 1);
+
+  auto Err3 = MemMgr->deallocate(std::move(*FA2));
+  EXPECT_THAT_ERROR(std::move(Err3), Succeeded());
+
+  EXPECT_EQ(Counter->DeinitCount, 2);
+}
+
+TEST(MapperJITLinkMemoryManagerTest, Coalescing) {
+  auto Mapper = cantFail(InProcessMemoryMapper::Create());
+  auto MemMgr = std::make_unique<MapperJITLinkMemoryManager>(16 * 1024 * 1024,
+                                                             std::move(Mapper));
+
+  auto SSA1 = jitlink::SimpleSegmentAlloc::Create(
+      *MemMgr, nullptr, {{jitlink::MemProt::Read, {1024, Align(1)}}});
+  EXPECT_THAT_EXPECTED(SSA1, Succeeded());
+  auto SegInfo1 = SSA1->getSegInfo(jitlink::MemProt::Read);
+  ExecutorAddr TargetAddr1(SegInfo1.Addr);
+  auto FA1 = SSA1->finalize();
+  EXPECT_THAT_EXPECTED(FA1, Succeeded());
+
+  auto SSA2 = jitlink::SimpleSegmentAlloc::Create(
+      *MemMgr, nullptr, {{jitlink::MemProt::Read, {1024, Align(1)}}});
+  EXPECT_THAT_EXPECTED(SSA2, Succeeded());
+  auto FA2 = SSA2->finalize();
+  EXPECT_THAT_EXPECTED(FA2, Succeeded());
+
   auto Err2 = MemMgr->deallocate(std::move(*FA1));
   EXPECT_THAT_ERROR(std::move(Err2), Succeeded());
 
   auto Err3 = MemMgr->deallocate(std::move(*FA2));
   EXPECT_THAT_ERROR(std::move(Err3), Succeeded());
+
+  auto SSA3 = jitlink::SimpleSegmentAlloc::Create(
+      *MemMgr, nullptr, {{jitlink::MemProt::Read, {2048, Align(1)}}});
+  EXPECT_THAT_EXPECTED(SSA3, Succeeded());
+
+  auto SegInfo3 = SSA3->getSegInfo(jitlink::MemProt::Read);
+  ExecutorAddr TargetAddr3(SegInfo3.Addr);
+
+  auto FA3 = SSA3->finalize();
+  EXPECT_THAT_EXPECTED(FA3, Succeeded());
+
+  // previous two freed 1024 blocks should be fused to form a 2048 block
+  EXPECT_EQ(TargetAddr1, TargetAddr3);
+
+  auto Err4 = MemMgr->deallocate(std::move(*FA3));
+  EXPECT_THAT_ERROR(std::move(Err4), Succeeded());
 }
 
 } // namespace

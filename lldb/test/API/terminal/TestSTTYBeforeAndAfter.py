@@ -2,9 +2,6 @@
 Test that 'stty -a' displays the same output before and after running the lldb command.
 """
 
-from __future__ import print_function
-
-
 import lldb
 import io
 import sys

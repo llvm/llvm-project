@@ -158,6 +158,20 @@ func.func @powf(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
   return
 }
 
+// CHECK-LABEL: func @fpowi(
+// CHECK-SAME: %[[SB:.*]]: f32, %[[SP:.*]]: i32,
+// CHECK-SAME: %[[VB:.*]]: vector<4xf64>, %[[VP:.*]]: vector<4xi16>,
+// CHECK-SAME: %[[TB:.*]]: tensor<4x3x?xf16>, %[[TP:.*]]: tensor<4x3x?xi64>) {
+func.func @fpowi(%b: f32, %p: i32, %vb: vector<4xf64>, %vp: vector<4xi16>, %tb: tensor<4x3x?xf16>, %tp: tensor<4x3x?xi64>) {
+// CHECK: {{.*}} = math.fpowi %[[SB]], %[[SP]] : f32, i32
+  %0 = math.fpowi %b, %p : f32, i32
+// CHECK: {{.*}} = math.fpowi %[[VB]], %[[VP]] : vector<4xf64>, vector<4xi16>
+  %1 = math.fpowi %vb, %vp : vector<4xf64>, vector<4xi16>
+// CHECK: {{.*}} = math.fpowi %[[TB]], %[[TP]] : tensor<4x3x?xf16>, tensor<4x3x?xi64>
+  %2 = math.fpowi %tb, %tp : tensor<4x3x?xf16>, tensor<4x3x?xi64>
+  return
+}
+
 // CHECK-LABEL: func @rsqrt(
 // CHECK-SAME:              %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
 func.func @rsqrt(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {

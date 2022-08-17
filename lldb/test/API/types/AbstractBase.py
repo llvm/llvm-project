@@ -2,8 +2,6 @@
 Abstract base class of basic types provides a generic type tester method.
 """
 
-from __future__ import print_function
-
 import os
 import re
 import lldb

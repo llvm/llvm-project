@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_MAPPERJITLINKMEMORYMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_MAPPERJITLINKMEMORYMANAGER_H
 
+#include "llvm/ADT/IntervalMap.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
 
@@ -52,8 +53,12 @@ private:
 
   // We reserve multiples of this from the executor address space
   size_t ReservationUnits;
+
   // Ranges that have been reserved in executor but not yet allocated
-  std::vector<ExecutorAddrRange> AvailableMemory;
+  using AvailableMemoryMap = IntervalMap<ExecutorAddr, bool>;
+  AvailableMemoryMap::Allocator AMAllocator;
+  IntervalMap<ExecutorAddr, bool> AvailableMemory;
+
   // Ranges that have been reserved in executor and already allocated
   DenseMap<ExecutorAddr, ExecutorAddrDiff> UsedMemory;
 

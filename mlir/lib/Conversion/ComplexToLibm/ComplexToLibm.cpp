@@ -131,7 +131,8 @@ void ConvertComplexToLibmPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addLegalDialect<func::FuncDialect>();
   target.addIllegalOp<complex::PowOp, complex::SqrtOp, complex::TanhOp,
-                      complex::AbsOp, complex::AngleOp>();
+                      complex::CosOp, complex::SinOp, complex::ConjOp,
+                      complex::LogOp, complex::AbsOp, complex::AngleOp>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }

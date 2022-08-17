@@ -2287,10 +2287,8 @@ exportSymbolNamesFromFiles(const std::vector<std::string> &InputFilenames) {
   }
 
   // Delete symbols which should not be printed from SymolList.
-  SymbolList.erase(
-      llvm::remove_if(SymbolList,
-                      [](const NMSymbol &s) { return !s.shouldPrint(); }),
-      SymbolList.end());
+  llvm::erase_if(SymbolList,
+                 [](const NMSymbol &s) { return !s.shouldPrint(); });
   sortSymbolList(SymbolList);
   SymbolList.erase(std::unique(SymbolList.begin(), SymbolList.end()),
                    SymbolList.end());

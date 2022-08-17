@@ -11,6 +11,7 @@
 #define _LIBCPP___TUPLE
 
 #include <__config>
+#include <__fwd/pair.h>
 #include <cstddef>
 #include <type_traits>
 

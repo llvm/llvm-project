@@ -76,6 +76,7 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   RecordInfo I;
   I.Name = "r";
   I.Path = "path/to/A";
+  I.IsTypeDef = true;
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
@@ -136,6 +137,7 @@ Location:
   - LineNumber:      12
     Filename:        'test.cpp'
 TagType:         Class
+IsTypeDef:       true
 Members:
   - Type:
       Name:            'int'
@@ -154,6 +156,7 @@ Bases:
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'F'
     Path:            'path/to/F'
+    TagType:         Struct
     Members:
       - Type:
           Name:            'int'

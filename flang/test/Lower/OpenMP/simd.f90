@@ -89,3 +89,26 @@ integer, parameter :: simdlen = 2;
   end do
   !$OMP END SIMD
 end subroutine
+
+!CHECK-LABEL: func @_QPsimdloop_with_collapse_clause
+subroutine simdloop_with_collapse_clause(n)
+integer :: i, j, n
+integer :: A(n,n)
+! CHECK: %[[LOWER_I:.*]] = arith.constant 1 : i32
+! CHECK: %[[UPPER_I:.*]] = fir.load %[[PARAM_ARG:.*]] : !fir.ref<i32>
+! CHECK: %[[STEP_I:.*]] = arith.constant 1 : i32
+! CHECK: %[[LOWER_J:.*]] = arith.constant 1 : i32
+! CHECK: %[[UPPER_J:.*]] = fir.load %[[PARAM_ARG:.*]] : !fir.ref<i32>
+! CHECK: %[[STEP_J:.*]] = arith.constant 1 : i32
+! CHECK: omp.simdloop  for (%[[ARG_0:.*]], %[[ARG_1:.*]]) : i32 = (
+! CHECK-SAME:               %[[LOWER_I]], %[[LOWER_J]]) to (
+! CHECK-SAME:               %[[UPPER_I]], %[[UPPER_J]]) inclusive step (
+! CHECK-SAME:               %[[STEP_I]], %[[STEP_J]]) {
+  !$OMP SIMD COLLAPSE(2)
+  do i = 1, n
+    do j = 1, n
+       A(i,j) = i + j
+    end do
+  end do
+  !$OMP END SIMD
+end subroutine

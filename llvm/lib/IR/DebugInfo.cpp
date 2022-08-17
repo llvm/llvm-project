@@ -412,21 +412,20 @@ static MDNode *stripDebugLocFromLoopID(MDNode *N) {
   // MDNode. This loop also initializes DILocationReachable, later
   // needed by updateLoopMetadataDebugLocationsImpl; the use of
   // count_if avoids an early exit.
-  if (!std::count_if(N->op_begin() + 1, N->op_end(),
-                     [&Visited, &DILocationReachable](const MDOperand &Op) {
-                       return isDILocationReachable(
-                                  Visited, DILocationReachable, Op.get());
-                     }))
+  if (llvm::none_of(llvm::drop_begin(N->operands()),
+                    [&Visited, &DILocationReachable](const MDOperand &Op) {
+                      return isDILocationReachable(Visited, DILocationReachable,
+                                                   Op.get());
+                    }))
     return N;
 
   // If there is only the debug location without any actual loop metadata, we
   // can remove the metadata.
-  if (std::all_of(
-          N->op_begin() + 1, N->op_end(),
-          [&Visited, &DILocationReachable](const MDOperand &Op) {
-            return isDILocationReachable(Visited, DILocationReachable,
-                                         Op.get());
-          }))
+  if (llvm::all_of(llvm::drop_begin(N->operands()),
+                   [&Visited, &DILocationReachable](const MDOperand &Op) {
+                     return isDILocationReachable(Visited, DILocationReachable,
+                                                  Op.get());
+                   }))
     return nullptr;
 
   return updateLoopMetadataDebugLocationsImpl(

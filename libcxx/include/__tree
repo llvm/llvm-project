@@ -18,6 +18,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
 #include <__memory/swap_allocator.h>
+#include <__type_traits/can_extract_key.h>
 #include <__utility/forward.h>
 #include <__utility/swap.h>
 #include <limits>
@@ -126,7 +127,7 @@ __tree_sub_invariant(_NodePtr __x)
 //    __root == nullptr is a proper tree.  Returns true is __root is a proper
 //    red black tree, else returns false.
 template <class _NodePtr>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 __tree_invariant(_NodePtr __root)
 {
     if (__root == nullptr)
@@ -169,7 +170,7 @@ __tree_max(_NodePtr __x) _NOEXCEPT
 
 // Returns:  pointer to the next in-order node after __x.
 template <class _NodePtr>
-_NodePtr
+_LIBCPP_HIDE_FROM_ABI _NodePtr
 __tree_next(_NodePtr __x) _NOEXCEPT
 {
     _LIBCPP_ASSERT(__x != nullptr, "node shouldn't be null");
@@ -211,7 +212,7 @@ __tree_prev_iter(_EndNodePtr __x) _NOEXCEPT
 
 // Returns:  pointer to a node which has no children
 template <class _NodePtr>
-_NodePtr
+_LIBCPP_HIDE_FROM_ABI _NodePtr
 __tree_leaf(_NodePtr __x) _NOEXCEPT
 {
     _LIBCPP_ASSERT(__x != nullptr, "node shouldn't be null");
@@ -235,7 +236,7 @@ __tree_leaf(_NodePtr __x) _NOEXCEPT
 // Effects:  Makes __x->__right_ the subtree root with __x as its left child
 //           while preserving in-order order.
 template <class _NodePtr>
-void
+_LIBCPP_HIDE_FROM_ABI void
 __tree_left_rotate(_NodePtr __x) _NOEXCEPT
 {
     _LIBCPP_ASSERT(__x != nullptr, "node shouldn't be null");
@@ -256,7 +257,7 @@ __tree_left_rotate(_NodePtr __x) _NOEXCEPT
 // Effects:  Makes __x->__left_ the subtree root with __x as its right child
 //           while preserving in-order order.
 template <class _NodePtr>
-void
+_LIBCPP_HIDE_FROM_ABI void
 __tree_right_rotate(_NodePtr __x) _NOEXCEPT
 {
     _LIBCPP_ASSERT(__x != nullptr, "node shouldn't be null");
@@ -282,7 +283,7 @@ __tree_right_rotate(_NodePtr __x) _NOEXCEPT
 // Postcondition: __tree_invariant(end_node->__left_) == true.  end_node->__left_
 //                may be different than the value passed in as __root.
 template <class _NodePtr>
-void
+_LIBCPP_HIDE_FROM_ABI void
 __tree_balance_after_insert(_NodePtr __root, _NodePtr __x) _NOEXCEPT
 {
     _LIBCPP_ASSERT(__root != nullptr, "Root of the tree shouldn't be null");
@@ -352,7 +353,7 @@ __tree_balance_after_insert(_NodePtr __root, _NodePtr __x) _NOEXCEPT
 //                nor any of its children refer to __z.  end_node->__left_
 //                may be different than the value passed in as __root.
 template <class _NodePtr>
-void
+_LIBCPP_HIDE_FROM_ABI void
 __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEPT
 {
     _LIBCPP_ASSERT(__root != nullptr, "Root node should not be null");

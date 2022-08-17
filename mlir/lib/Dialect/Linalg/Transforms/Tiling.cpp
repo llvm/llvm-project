@@ -450,6 +450,31 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
     applyPermutationToVector(iteratorTypes, permutation);
   }
 
+  // Handle distribution. Create a vector of the same size of loops that are to
+  // be tiled.
+  SmallVector<linalg::ProcInfo> procInfo;
+  if (options.distribution) {
+    procInfo.resize(
+        iteratorTypes.size(),
+        linalg::ProcInfo{nullptr, nullptr, linalg::DistributionMethod::None});
+    // Collect loop ranges of tiled loopss, loops that are parallel.
+    SmallVector<Range> parallelLoopRanges;
+    for (auto iteratorType : llvm::enumerate(iteratorTypes)) {
+      if (!isParallelIterator(iteratorType.value()))
+        break;
+      parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
+    }
+    auto returnedProcInfo =
+        options.distribution->procInfo(b, op.getLoc(), parallelLoopRanges);
+    unsigned procIdIdx = 0;
+    // Update the distribution information for the loops.
+    for (auto iteratorType : llvm::enumerate(iteratorTypes)) {
+      if (!isParallelIterator(iteratorType.value()))
+        break;
+      procInfo[iteratorType.index()] = returnedProcInfo[procIdIdx++];
+    }
+  }
+
   // 2. Create the tiled loops.
   LinalgOp res = op;
   SmallVector<Value, 4> ivs, tensorResults;
@@ -489,8 +514,7 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
     return scf::ValueVector(tensorResults.begin(), tensorResults.end());
   };
   GenerateLoopNest<LoopTy>::doit(b, op.getLoc(), loopRanges, op, iteratorTypes,
-                                 tiledLoopBodyBuilder, options.distribution,
-                                 options.distributionTypes);
+                                 tiledLoopBodyBuilder, procInfo);
 
   // 3. Transform IndexOp results w.r.t. the tiling.
   transformIndexOps(b, res, ivs, loopIndexToRangeIndex);

@@ -518,25 +518,11 @@ void GenerateLoopNest<scf::ForOp>::doit(
     function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
                                   ValueRange)>
         bodyBuilderFn,
-    Optional<LinalgLoopDistributionOptions> distributionOptions,
-    ArrayRef<StringRef> distributionTypes) {
+    ArrayRef<linalg::ProcInfo> procInfo) {
+  assert((procInfo.empty() || (procInfo.size() == loopRanges.size())) &&
+         "expected as many entries for proc info as number of loops, even if "
+         "they are null entries");
   SmallVector<Value> iterArgInitValues = linalgOp.getOutputTensorOperands();
-  // Create procInfo so it dominates loops, if appropriate.
-  SmallVector<ProcInfo, 4> procInfo;
-  SmallVector<DistributionMethod, 0> distributionMethod;
-  if (distributionOptions) {
-    // Collect loop ranges for parallel dimensions.
-    SmallVector<Range, 2> parallelLoopRanges;
-    for (const auto &iteratorType : enumerate(iteratorTypes))
-      if (isParallelIterator(iteratorType.value()))
-        parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
-
-    // Get their distribution schemes.
-    distributionMethod = distributionOptions->distributionMethod;
-    if (distributionMethod.size() < parallelLoopRanges.size())
-      parallelLoopRanges.resize(distributionMethod.size());
-    procInfo = distributionOptions->procInfo(b, loc, parallelLoopRanges);
-  }
 
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(b, loc, loopRanges, lbs, ubs, steps);
@@ -554,20 +540,17 @@ void GenerateLoopNest<scf::ForOp>::doit(
         return bodyBuilderFn(b, loc, ivs, operandValuesToUse);
       });
 
-  if (!distributionOptions || loopNest.loops.empty())
+  if (loopNest.loops.empty() || procInfo.empty())
     return;
 
   // Filter out scf.for loops that were created out of parallel dimensions.
-  SmallVector<scf::ForOp, 4> loops;
-  for (const auto &iteratorType : enumerate(iteratorTypes))
-    if (isParallelIterator(iteratorType.value()))
-      loops.push_back(loopNest.loops[iteratorType.index()]);
-
-  // Distribute - only supports cyclic distribution for now.
-  for (auto it : llvm::zip(loops, procInfo, distributionMethod))
-    if (std::get<2>(it) == DistributionMethod::Cyclic)
-      mapLoopToProcessorIds(std::get<0>(it), std::get<1>(it).procId,
-                            std::get<1>(it).nprocs);
+  for (auto loop : llvm::enumerate(loopNest.loops)) {
+    if (procInfo[loop.index()].distributionMethod ==
+        DistributionMethod::Cyclic) {
+      mapLoopToProcessorIds(loop.value(), procInfo[loop.index()].procId,
+                            procInfo[loop.index()].nprocs);
+    }
+  }
 }
 
 /// Specialization to build affine "for" nest.
@@ -578,7 +561,7 @@ void GenerateLoopNest<AffineForOp>::doit(
     function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
                                   ValueRange)>
         bodyBuilderFn,
-    Optional<LinalgLoopDistributionOptions>, ArrayRef<StringRef>) {
+    ArrayRef<linalg::ProcInfo> /*procInfo*/) {
   SmallVector<Value> iterArgInitValues = linalgOp.getOutputTensorOperands();
   assert(iterArgInitValues.empty() && "unexpected AffineForOp init values");
   SmallVector<Value, 4> lbs, ubs, steps;
@@ -625,12 +608,13 @@ void updateBoundsForCyclicDistribution(OpBuilder &b, Location loc, Value procId,
 static void generateParallelLoopNest(
     OpBuilder &b, Location loc, ValueRange lbs, ValueRange ubs,
     ValueRange steps, ArrayRef<Attribute> iteratorTypes,
+    ArrayRef<linalg::ProcInfo> procInfo,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn,
-    SmallVectorImpl<Value> &ivStorage,
-    ArrayRef<DistributionMethod> distributionMethod = {}) {
+    SmallVectorImpl<Value> &ivStorage) {
   assert(lbs.size() == ubs.size());
   assert(lbs.size() == steps.size());
   assert(lbs.size() == iteratorTypes.size());
+  assert(procInfo.empty() || (lbs.size() == procInfo.size()));
 
   // If there are no (more) loops to be generated, generate the body and be
   // done with it.
@@ -639,55 +623,56 @@ static void generateParallelLoopNest(
     return;
   }
 
-  // Find the outermost parallel loops and drop their types from the list.
-  unsigned nLoops = iteratorTypes.size();
-  unsigned nOuterPar =
-      nLoops - iteratorTypes.drop_while(isParallelIterator).size();
-
   // If there are no outer parallel loops, generate one sequential loop and
-  // recurse. Note that we wouldn't have dropped anything from `iteratorTypes`
-  // in this case.
-  if (nOuterPar == 0) {
+  // recurse.
+  if (!isParallelIterator(iteratorTypes.front())) {
     LoopNest singleLoop = buildLoopNest(
         b, loc, lbs.take_front(), ubs.take_front(), steps.take_front(),
         [&](OpBuilder &b, Location loc, ValueRange ivs) {
           ivStorage.append(ivs.begin(), ivs.end());
-          generateParallelLoopNest(b, loc, lbs.drop_front(), ubs.drop_front(),
-                                   steps.drop_front(),
-                                   iteratorTypes.drop_front(), bodyBuilderFn,
-                                   ivStorage, distributionMethod);
+          generateParallelLoopNest(
+              b, loc, lbs.drop_front(), ubs.drop_front(), steps.drop_front(),
+              iteratorTypes.drop_front(),
+              procInfo.empty() ? procInfo : procInfo.drop_front(),
+              bodyBuilderFn, ivStorage);
         });
     return;
   }
-  if (distributionMethod.empty()) {
+
+  unsigned nLoops = iteratorTypes.size();
+  unsigned numProcessed = 0;
+  DistributionMethod distributionMethod = DistributionMethod::None;
+  if (procInfo.empty()) {
+    numProcessed = nLoops - iteratorTypes.drop_while(isParallelIterator).size();
+  } else {
+    distributionMethod = procInfo.front().distributionMethod;
+    numProcessed =
+        nLoops - procInfo
+                     .drop_while([&](linalg::ProcInfo p) {
+                       return p.distributionMethod == distributionMethod;
+                     })
+                     .size();
+  }
+
+  auto remainderProcInfo =
+      procInfo.empty() ? procInfo : procInfo.drop_front(numProcessed);
+  switch (distributionMethod) {
+  case DistributionMethod::None: {
     // Generate a single parallel loop-nest operation for all outermost
     // parallel loops and recurse.
     b.create<scf::ParallelOp>(
-        loc, lbs.take_front(nOuterPar), ubs.take_front(nOuterPar),
-        steps.take_front(nOuterPar),
+        loc, lbs.take_front(numProcessed), ubs.take_front(numProcessed),
+        steps.take_front(numProcessed),
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange localIvs) {
           ivStorage.append(localIvs.begin(), localIvs.end());
           generateParallelLoopNest(
-              nestedBuilder, nestedLoc, lbs.drop_front(nOuterPar),
-              ubs.drop_front(nOuterPar), steps.drop_front(nOuterPar),
-              iteratorTypes.drop_front(nOuterPar), bodyBuilderFn, ivStorage,
-              (distributionMethod.size() < nOuterPar)
-                  ? ArrayRef<DistributionMethod>()
-                  : distributionMethod.drop_front(nOuterPar));
+              nestedBuilder, nestedLoc, lbs.drop_front(numProcessed),
+              ubs.drop_front(numProcessed), steps.drop_front(numProcessed),
+              iteratorTypes.drop_front(numProcessed), remainderProcInfo,
+              bodyBuilderFn, ivStorage);
         });
     return;
   }
-
-  // Process all consecutive similarly distributed loops simultaneously.
-  DistributionMethod methodToUse = distributionMethod[0];
-  unsigned numProcessed = 1;
-  for (unsigned i = 1; i < nOuterPar && i < distributionMethod.size(); ++i) {
-    if (distributionMethod[i] != methodToUse)
-      break;
-    numProcessed++;
-  }
-
-  switch (methodToUse) {
   case DistributionMethod::Cyclic: {
     // Generate a single parallel loop-nest operation for all outermost
     // parallel loops and recurse.
@@ -699,10 +684,8 @@ static void generateParallelLoopNest(
           generateParallelLoopNest(
               nestedBuilder, nestedLoc, lbs.drop_front(numProcessed),
               ubs.drop_front(numProcessed), steps.drop_front(numProcessed),
-              iteratorTypes.drop_front(numProcessed), bodyBuilderFn, ivStorage,
-              (distributionMethod.size() < numProcessed)
-                  ? ArrayRef<DistributionMethod>()
-                  : distributionMethod.drop_front(numProcessed));
+              iteratorTypes.drop_front(numProcessed), remainderProcInfo,
+              bodyBuilderFn, ivStorage);
         });
     return;
   }
@@ -714,11 +697,11 @@ static void generateParallelLoopNest(
       cond = ab._and(cond, ab.slt(lbs[i], ubs[i]));
     ivStorage.append(lbs.begin(), std::next(lbs.begin(), numProcessed));
     b.create<scf::IfOp>(loc, cond, [&](OpBuilder &b, Location loc) {
-      generateParallelLoopNest(
-          b, loc, lbs.drop_front(numProcessed), ubs.drop_front(numProcessed),
-          steps.drop_front(numProcessed),
-          iteratorTypes.drop_front(numProcessed), bodyBuilderFn, ivStorage,
-          distributionMethod.drop_front(numProcessed));
+      generateParallelLoopNest(b, loc, lbs.drop_front(numProcessed),
+                               ubs.drop_front(numProcessed),
+                               steps.drop_front(numProcessed),
+                               iteratorTypes.drop_front(numProcessed),
+                               remainderProcInfo, bodyBuilderFn, ivStorage);
       b.create<scf::YieldOp>(loc, ValueRange{});
     });
     return;
@@ -730,7 +713,7 @@ static void generateParallelLoopNest(
     generateParallelLoopNest(
         b, loc, lbs.drop_front(numProcessed), ubs.drop_front(numProcessed),
         steps.drop_front(numProcessed), iteratorTypes.drop_front(numProcessed),
-        bodyBuilderFn, ivStorage, distributionMethod.drop_front(numProcessed));
+        remainderProcInfo, bodyBuilderFn, ivStorage);
     return;
   }
 }
@@ -743,13 +726,14 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
     function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
                                   ValueRange)>
         bodyBuilderFn,
-    Optional<LinalgLoopDistributionOptions> distributionOptions,
-    ArrayRef<StringRef> distributionTypes) {
+    ArrayRef<linalg::ProcInfo> procInfo) {
   SmallVector<Value> iterArgInitValues = linalgOp.getOutputTensorOperands();
   assert(iterArgInitValues.empty() && "unexpected ParallelOp init values");
   // This function may be passed more iterator types than ranges.
   assert(iteratorTypes.size() >= loopRanges.size() &&
          "expected iterator type for all ranges");
+  assert((procInfo.empty() || (procInfo.size() == loopRanges.size())) &&
+         "expected proc information for all loops when present");
   iteratorTypes = iteratorTypes.take_front(loopRanges.size());
   SmallVector<Value, 8> lbsStorage, ubsStorage, stepsStorage, ivs;
   unsigned numLoops = iteratorTypes.size();
@@ -762,42 +746,22 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
   unpackRanges(b, loc, loopRanges, lbsStorage, ubsStorage, stepsStorage);
 
   // Modify the lb, ub, and step based on the distribution options.
-  SmallVector<DistributionMethod, 0> distributionMethod;
-  if (distributionOptions) {
-    auto &options = *distributionOptions;
-    distributionMethod.assign(distributionOptions->distributionMethod.begin(),
-                              distributionOptions->distributionMethod.end());
-    SmallVector<Range, 2> parallelLoopRanges;
-    for (const auto &iteratorType : enumerate(iteratorTypes)) {
-      if (isParallelIterator(iteratorType.value()))
-        parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
-    }
-    if (distributionMethod.size() < parallelLoopRanges.size())
-      parallelLoopRanges.resize(distributionMethod.size());
-    SmallVector<ProcInfo, 2> procInfo =
-        options.procInfo(b, loc, parallelLoopRanges);
-    unsigned index = 0;
-    for (const auto &iteratorType : enumerate(iteratorTypes)) {
-      if (index >= procInfo.size())
-        break;
-      if (isParallelIterator(iteratorType.value())) {
-        unsigned i = iteratorType.index();
-        updateBoundsForCyclicDistribution(b, loc, procInfo[index].procId,
-                                          procInfo[index].nprocs, lbsStorage[i],
-                                          ubsStorage[i], stepsStorage[i]);
-        index++;
-      }
+  for (auto it : llvm::enumerate(procInfo)) {
+    if (it.value().distributionMethod != linalg::DistributionMethod::None) {
+      updateBoundsForCyclicDistribution(
+          b, loc, it.value().procId, it.value().nprocs, lbsStorage[it.index()],
+          ubsStorage[it.index()], stepsStorage[it.index()]);
     }
   }
   ValueRange lbs(lbsStorage), ubs(ubsStorage), steps(stepsStorage);
   generateParallelLoopNest(
-      b, loc, lbs, ubs, steps, iteratorTypes,
+      b, loc, lbs, ubs, steps, iteratorTypes, procInfo,
       [&](OpBuilder &b, Location loc, ValueRange ivs) {
         SmallVector<Value> operandValuesToUse =
             linalgOp.getInputAndOutputOperands();
         bodyBuilderFn(b, loc, ivs, operandValuesToUse);
       },
-      ivs, distributionMethod);
+      ivs);
 
   assert(ivs.size() == iteratorTypes.size() && "did not generate enough loops");
 }

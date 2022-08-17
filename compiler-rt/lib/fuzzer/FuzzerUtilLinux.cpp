@@ -11,6 +11,7 @@
 #if LIBFUZZER_LINUX || LIBFUZZER_NETBSD || LIBFUZZER_FREEBSD ||                \
     LIBFUZZER_EMSCRIPTEN
 #include "FuzzerCommand.h"
+#include "FuzzerInternal.h"
 
 #include <stdlib.h>
 #include <sys/types.h>
@@ -25,6 +26,8 @@ int ExecuteCommand(const Command &Cmd) {
   int exit_code = system(CmdLine.c_str());
   if (WIFEXITED(exit_code))
     return WEXITSTATUS(exit_code);
+  if (WIFSIGNALED(exit_code) && WTERMSIG(exit_code) == SIGINT)
+    return Fuzzer::InterruptExitCode();
   return exit_code;
 }
 

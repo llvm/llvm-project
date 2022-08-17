@@ -895,6 +895,19 @@ void printStringParam(AsmPrinter &printer, StringRef value);
 The custom parser is considered to have failed if it returns failure or if any
 bound parameters have failure values afterwards.
 
+A string of C++ code can be used as a `custom` directive argument. When
+generating the custom parser and printer call, the string is pasted as a
+function argument. For example, `parseBar` and `printBar` can be re-used with
+a constant integer:
+
+```tablegen
+let parameters = (ins "int":$bar);
+let assemblyFormat = [{ custom<Bar>($foo, "1") }];
+```
+
+The string is pasted verbatim but with substitutions for `$_builder` and
+`$_ctxt`. String literals can be used to parameterize custom directives.
+
 ### Verification
 
 If the `genVerifyDecl` field is set, additional verification methods are

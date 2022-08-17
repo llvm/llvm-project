@@ -1130,7 +1130,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 #endif
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 operator==(const unordered_set<_Value, _Hash, _Pred, _Alloc>& __x,
            const unordered_set<_Value, _Hash, _Pred, _Alloc>& __y)
 {
@@ -1768,7 +1768,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 #endif
 
 template <class _Value, class _Hash, class _Pred, class _Alloc>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 operator==(const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
            const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __y)
 {

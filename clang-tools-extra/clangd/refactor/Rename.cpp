@@ -757,12 +757,12 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return StartOffset.takeError();
   if (!EndOffset)
     return EndOffset.takeError();
-  if (llvm::find_if(
+  if (llvm::none_of(
           *MainFileRenameEdit,
           [&StartOffset, &EndOffset](const clang::tooling::Replacement &R) {
             return R.getOffset() == *StartOffset &&
                    R.getLength() == *EndOffset - *StartOffset;
-          }) == MainFileRenameEdit->end()) {
+          })) {
     return makeError(ReasonToReject::NoSymbolFound);
   }
   RenameResult Result;

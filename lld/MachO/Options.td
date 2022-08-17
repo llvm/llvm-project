@@ -77,11 +77,11 @@ def start_lib: Flag<["--"], "start-lib">,
     HelpText<"Start a grouping of objects that should be treated as if they were together in an archive">;
 def end_lib: Flag<["--"], "end-lib">,
     HelpText<"End a grouping of objects that should be treated as if they were together in an archive">;
-def no_warn_dylib_install_name: Joined<["--"], "no-warn-dylib-install-name">,
-    HelpText<"Do not warn on -install-name if -dylib is not passed (default)">,
+def no_warn_dylib_install_name: Flag<["--"], "no-warn-dylib-install-name">,
+    HelpText<"Do not warn on -install_name if -dylib is not passed (default)">,
     Group<grp_lld>;
-def warn_dylib_install_name: Joined<["--"], "warn-dylib-install-name">,
-    HelpText<"Warn on -install-name if -dylib is not passed">,
+def warn_dylib_install_name: Flag<["--"], "warn-dylib-install-name">,
+    HelpText<"Warn on -install_name if -dylib is not passed">,
     Group<grp_lld>;
 def call_graph_profile_sort: Flag<["--"], "call-graph-profile-sort">,
     HelpText<"Reorder sections with call graph profile (default)">,

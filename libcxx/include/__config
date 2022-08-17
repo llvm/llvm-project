@@ -155,7 +155,7 @@
 #    define _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
 #  endif
 
-#  define _LIBCPP_TOSTRING2(x) #  x
+#  define _LIBCPP_TOSTRING2(x) #x
 #  define _LIBCPP_TOSTRING(x) _LIBCPP_TOSTRING2(x)
 
 #  if __cplusplus < 201103L
@@ -418,17 +418,21 @@ If there are users of this configuration we are happy to provide support.
 #    define _LIBCPP_NORETURN [[noreturn]]
 #    define _NOEXCEPT noexcept
 #    define _NOEXCEPT_(x) noexcept(x)
+#    define _LIBCPP_CONSTEXPR constexpr
 
 #  else
 
 #    define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
 #    define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
 #    define _ALIGNAS(x) __attribute__((__aligned__(x)))
-#    define _LIBCPP_NORETURN __attribute__((noreturn))
+#    define _LIBCPP_NORETURN __attribute__((__noreturn__))
 #    define _LIBCPP_HAS_NO_NOEXCEPT
 #    define nullptr __nullptr
 #    define _NOEXCEPT throw()
 #    define _NOEXCEPT_(x)
+#    define static_assert(...) _Static_assert(__VA_ARGS__)
+#    define decltype(...) __decltype(__VA_ARGS__)
+#    define _LIBCPP_CONSTEXPR
 
 typedef __char16_t char16_t;
 typedef __char32_t char32_t;
@@ -680,31 +684,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_HAS_NO_INT128
 #  endif
 
-#  ifdef _LIBCPP_CXX03_LANG
-#    define static_assert(...) _Static_assert(__VA_ARGS__)
-#    define decltype(...) __decltype(__VA_ARGS__)
-#  endif // _LIBCPP_CXX03_LANG
-
-#  ifdef _LIBCPP_CXX03_LANG
-#    define _LIBCPP_CONSTEXPR
-#  else
-#    define _LIBCPP_CONSTEXPR constexpr
-#  endif
-
 #  ifndef __cpp_consteval
 #    define _LIBCPP_CONSTEVAL _LIBCPP_CONSTEXPR
 #  else
 #    define _LIBCPP_CONSTEVAL consteval
 #  endif
 
-#  ifdef __GNUC__
+#  if __has_attribute(__malloc__)
 #    define _LIBCPP_NOALIAS __attribute__((__malloc__))
 #  else
 #    define _LIBCPP_NOALIAS
 #  endif
 
-#  if __has_attribute(using_if_exists)
-#    define _LIBCPP_USING_IF_EXISTS __attribute__((using_if_exists))
+#  if __has_attribute(__using_if_exists__)
+#    define _LIBCPP_USING_IF_EXISTS __attribute__((__using_if_exists__))
 #  else
 #    define _LIBCPP_USING_IF_EXISTS
 #  endif
@@ -849,10 +842,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_CONSTEXPR_AFTER_CXX17
 #  endif
 
-#  if __has_cpp_attribute(nodiscard) || defined(_LIBCPP_COMPILER_MSVC)
+#  if _LIBCPP_STD_VER > 20
+#    define _LIBCPP_CONSTEXPR_AFTER_CXX20 constexpr
+#  else
+#    define _LIBCPP_CONSTEXPR_AFTER_CXX20
+#  endif
+
+#  if __has_cpp_attribute(nodiscard)
 #    define _LIBCPP_NODISCARD [[nodiscard]]
-#  elif defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(_LIBCPP_CXX03_LANG)
-#    define _LIBCPP_NODISCARD [[clang::warn_unused_result]]
 #  else
 // We can't use GCC's [[gnu::warn_unused_result]] and
 // __attribute__((warn_unused_result)), because GCC does not silence them via
@@ -874,7 +871,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_NODISCARD_AFTER_CXX17
 #  endif
 
-#  if __has_attribute(no_destroy)
+#  if __has_attribute(__no_destroy__)
 #    define _LIBCPP_NO_DESTROY __attribute__((__no_destroy__))
 #  else
 #    define _LIBCPP_NO_DESTROY
@@ -1036,18 +1033,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
 #  if _LIBCPP_STD_VER > 17
 #    define _LIBCPP_CONSTINIT constinit
-#  elif __has_attribute(require_constant_initialization)
+#  elif __has_attribute(__require_constant_initialization__)
 #    define _LIBCPP_CONSTINIT __attribute__((__require_constant_initialization__))
 #  else
 #    define _LIBCPP_CONSTINIT
 #  endif
 
-#  if __has_attribute(diagnose_if) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
-#    define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((diagnose_if(__VA_ARGS__, "warning")))
-#    define _LIBCPP_DIAGNOSE_ERROR(...) __attribute__((diagnose_if(__VA_ARGS__, "error")))
+#  if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_DISABLE_ADDITIONAL_DIAGNOSTICS)
+#    define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((__diagnose_if__(__VA_ARGS__, "warning")))
 #  else
 #    define _LIBCPP_DIAGNOSE_WARNING(...)
-#    define _LIBCPP_DIAGNOSE_ERROR(...)
 #  endif
 
 // Use a function like macro to imply that it must be followed by a semicolon
@@ -1145,19 +1140,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_HAS_NO_FGETPOS_FSETPOS
 #  endif
 
-#  if __has_attribute(init_priority)
-// TODO: Remove this once we drop support for building libc++ with old Clangs
-#    if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1200) ||                                                    \
-        (defined(__apple_build_version__) && __apple_build_version__ < 13000000)
-#      define _LIBCPP_INIT_PRIORITY_MAX __attribute__((init_priority(101)))
-#    else
-#      define _LIBCPP_INIT_PRIORITY_MAX __attribute__((init_priority(100)))
-#    endif
+#  if __has_attribute(__init_priority__)
+#    define _LIBCPP_INIT_PRIORITY_MAX __attribute__((__init_priority__(100)))
 #  else
 #    define _LIBCPP_INIT_PRIORITY_MAX
 #  endif
 
-#  if defined(__GNUC__) || defined(__clang__)
+#  if __has_attribute(__format__)
 // The attribute uses 1-based indices for ordinary and static member functions.
 // The attribute uses 2-based indices for non-static member functions.
 #    define _LIBCPP_ATTRIBUTE_FORMAT(archetype, format_string_index, first_format_arg_index)                           \

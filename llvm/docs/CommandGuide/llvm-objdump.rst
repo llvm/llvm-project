@@ -312,7 +312,11 @@ MACH-O ONLY OPTIONS AND COMMANDS
 
   Disassemble just the specified symbol's instructions.
 
-.. option:: --dyld_info
+.. option:: --chained-fixups
+
+  Print chained fixup information.
+
+.. option:: --dyld-info
 
   Print bind and rebase information used by dyld to resolve external
   references in a final linked binary.

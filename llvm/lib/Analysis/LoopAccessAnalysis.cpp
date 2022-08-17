@@ -825,6 +825,17 @@ findForkedSCEVs(ScalarEvolution *SE, const Loop *L, Value *Ptr,
     return S.second;
   };
 
+  auto GetBinOpExpr = [&SE](unsigned Opcode, const SCEV *L, const SCEV *R) {
+    switch (Opcode) {
+    case Instruction::Add:
+      return SE->getAddExpr(L, R);
+    case Instruction::Sub:
+      return SE->getMinusSCEV(L, R);
+    default:
+      llvm_unreachable("Unexpected binary operator when walking ForkedPtrs");
+    }
+  };
+
   Instruction *I = cast<Instruction>(Ptr);
   unsigned Opcode = I->getOpcode();
   switch (Opcode) {
@@ -892,6 +903,35 @@ findForkedSCEVs(ScalarEvolution *SE, const Loop *L, Value *Ptr,
     } else
       ScevList.push_back(
           std::make_pair(Scev, !isGuaranteedNotToBeUndefOrPoison(Ptr)));
+    break;
+  }
+  case Instruction::Add:
+  case Instruction::Sub: {
+    SmallVector<std::pair<const SCEV *, bool>> LScevs;
+    SmallVector<std::pair<const SCEV *, bool>> RScevs;
+    findForkedSCEVs(SE, L, I->getOperand(0), LScevs, Depth);
+    findForkedSCEVs(SE, L, I->getOperand(1), RScevs, Depth);
+
+    // See if we need to freeze our fork...
+    bool NeedsFreeze =
+        any_of(LScevs, UndefPoisonCheck) || any_of(RScevs, UndefPoisonCheck);
+
+    // Check that we only have a single fork, on either the left or right side.
+    // Copy the SCEV across for the one without a fork in order to generate
+    // the full SCEV for both sides of the BinOp.
+    if (LScevs.size() == 2 && RScevs.size() == 1)
+      RScevs.push_back(RScevs[0]);
+    else if (RScevs.size() == 2 && LScevs.size() == 1)
+      LScevs.push_back(LScevs[0]);
+    else {
+      ScevList.push_back(std::make_pair(Scev, NeedsFreeze));
+      break;
+    }
+
+    ScevList.push_back(std::make_pair(
+        GetBinOpExpr(Opcode, LScevs[0].first, RScevs[0].first), NeedsFreeze));
+    ScevList.push_back(std::make_pair(
+        GetBinOpExpr(Opcode, LScevs[1].first, RScevs[1].first), NeedsFreeze));
     break;
   }
   default:

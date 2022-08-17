@@ -253,7 +253,7 @@ void DWARFTypePrinter::appendUnqualifiedNameAfter(
     if (getValOrNull(DW_AT_LLVM_ptrauth_authenticates_null_values))
       optionsVec.push_back("authenticates-null-values");
     std::string options;
-    for (auto option : optionsVec) {
+    for (const auto *option : optionsVec) {
       if (options.size())
         options += ",";
       options += option;

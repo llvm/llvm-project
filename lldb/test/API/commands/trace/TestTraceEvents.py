@@ -16,6 +16,7 @@ class TestTraceEvents(TraceIntelPTTestCaseBase):
     0: (event) HW clock tick [40450075477621505]
     1: (event) CPU core changed [new CPU=51]
     2: (event) HW clock tick [40450075477657246]
+    3: (event) trace synchronization point [offset = 0x0x1331]
   m.out`foo() + 65 at multi_thread.cpp:12:21'''])
 
       self.expect("thread trace dump instructions 3 -e --forward -c 5 -J",
@@ -50,55 +51,57 @@ class TestTraceEvents(TraceIntelPTTestCaseBase):
       # We ensure that the paused events are printed correctly forward
       self.expect("thread trace dump instructions -e -f",
         patterns=[f'''thread #1: tid = .*
+    0: \(event\) trace synchronization point \[offset \= 0x0xec0\]
   a.out`main \+ 23 at main.cpp:12
-    0: {ADDRESS_REGEX}    movl .*
-    1: \(event\) software disabled tracing
-    2: {ADDRESS_REGEX}    addl .*
-    3: {ADDRESS_REGEX}    movl .*
-    4: \(event\) software disabled tracing
+    1: {ADDRESS_REGEX}    movl .*
+    2: \(event\) software disabled tracing
+    3: {ADDRESS_REGEX}    addl .*
+    4: {ADDRESS_REGEX}    movl .*
+    5: \(event\) software disabled tracing
   a.out`main \+ 34 \[inlined\] inline_function\(\) at main.cpp:4
-    5: {ADDRESS_REGEX}    movl .*
-  a.out`main \+ 41 \[inlined\] inline_function\(\) \+ 7 at main.cpp:5
     6: {ADDRESS_REGEX}    movl .*
-    7: {ADDRESS_REGEX}    addl .*
-    8: {ADDRESS_REGEX}    movl .*
-  a.out`main \+ 52 \[inlined\] inline_function\(\) \+ 18 at main.cpp:6
+  a.out`main \+ 41 \[inlined\] inline_function\(\) \+ 7 at main.cpp:5
+    7: {ADDRESS_REGEX}    movl .*
+    8: {ADDRESS_REGEX}    addl .*
     9: {ADDRESS_REGEX}    movl .*
-  a.out`main \+ 55 at main.cpp:14
+  a.out`main \+ 52 \[inlined\] inline_function\(\) \+ 18 at main.cpp:6
     10: {ADDRESS_REGEX}    movl .*
-    11: {ADDRESS_REGEX}    addl .*
-    12: {ADDRESS_REGEX}    movl .*
-    13: \(event\) software disabled tracing
+  a.out`main \+ 55 at main.cpp:14
+    11: {ADDRESS_REGEX}    movl .*
+    12: {ADDRESS_REGEX}    addl .*
+    13: {ADDRESS_REGEX}    movl .*
+    14: \(event\) software disabled tracing
   a.out`main \+ 63 at main.cpp:16
-    14: {ADDRESS_REGEX}    callq  .* ; symbol stub for: foo\(\)
-    15: \(event\) software disabled tracing
+    15: {ADDRESS_REGEX}    callq  .* ; symbol stub for: foo\(\)
+    16: \(event\) software disabled tracing
   a.out`symbol stub for: foo\(\)
-    16: {ADDRESS_REGEX}    jmpq'''])
+    17: {ADDRESS_REGEX}    jmpq'''])
 
       # We ensure that the paused events are printed correctly backward
-      self.expect("thread trace dump instructions -e --id 16",
+      self.expect("thread trace dump instructions -e --id 17",
         patterns=[f'''thread #1: tid = .*
   a.out`symbol stub for: foo\(\)
-    16: {ADDRESS_REGEX}    jmpq .*
-    15: \(event\) software disabled tracing
+    17: {ADDRESS_REGEX}    jmpq .*
+    16: \(event\) software disabled tracing
   a.out`main \+ 63 at main.cpp:16
-    14: {ADDRESS_REGEX}    callq  .* ; symbol stub for: foo\(\)
-    13: \(event\) software disabled tracing
+    15: {ADDRESS_REGEX}    callq  .* ; symbol stub for: foo\(\)
+    14: \(event\) software disabled tracing
   a.out`main \+ 60 at main.cpp:14
-    12: {ADDRESS_REGEX}    movl .*
-    11: {ADDRESS_REGEX}    addl .*
-    10: {ADDRESS_REGEX}    movl .*
+    13: {ADDRESS_REGEX}    movl .*
+    12: {ADDRESS_REGEX}    addl .*
+    11: {ADDRESS_REGEX}    movl .*
   a.out`main \+ 52 \[inlined\] inline_function\(\) \+ 18 at main.cpp:6
-    9: {ADDRESS_REGEX}    movl .*
+    10: {ADDRESS_REGEX}    movl .*
   a.out`main \+ 49 \[inlined\] inline_function\(\) \+ 15 at main.cpp:5
-    8: {ADDRESS_REGEX}    movl .*
-    7: {ADDRESS_REGEX}    addl .*
-    6: {ADDRESS_REGEX}    movl .*
+    9: {ADDRESS_REGEX}    movl .*
+    8: {ADDRESS_REGEX}    addl .*
+    7: {ADDRESS_REGEX}    movl .*
   a.out`main \+ 34 \[inlined\] inline_function\(\) at main.cpp:4
-    5: {ADDRESS_REGEX}    movl .*
-    4: \(event\) software disabled tracing
+    6: {ADDRESS_REGEX}    movl .*
+    5: \(event\) software disabled tracing
   a.out`main \+ 31 at main.cpp:12
-    3: {ADDRESS_REGEX}    movl .*
-    2: {ADDRESS_REGEX}    addl .*
-    1: \(event\) software disabled tracing
-    0: {ADDRESS_REGEX}    movl .*'''])
+    4: {ADDRESS_REGEX}    movl .*
+    3: {ADDRESS_REGEX}    addl .*
+    2: \(event\) software disabled tracing
+    1: {ADDRESS_REGEX}    movl .*
+    0: \(event\) trace synchronization point \[offset \= 0x0xec0\]'''])

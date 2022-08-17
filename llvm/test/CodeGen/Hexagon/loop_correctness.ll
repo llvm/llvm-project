@@ -8,8 +8,8 @@ define void @f0(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
 ; CHECK-NEXT:     loop0(.LBB0_1,#3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .Ltmp0: // Block address taken
-; CHECK-NEXT:  .LBB0_1: // %b2
+; CHECK-NEXT:  .LBB0_1: // Block address taken
+; CHECK-NEXT:    // %b2
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     nop
@@ -42,8 +42,8 @@ define void @f1(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
 ; CHECK-NEXT:     loop0(.LBB1_1,#2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .Ltmp1: // Block address taken
-; CHECK-NEXT:  .LBB1_1: // %b2
+; CHECK-NEXT:  .LBB1_1: // Block address taken
+; CHECK-NEXT:    // %b2
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     nop
@@ -76,8 +76,8 @@ define void @f2(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
 ; CHECK-NEXT:     loop0(.LBB2_1,#1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .Ltmp2: // Block address taken
-; CHECK-NEXT:  .LBB2_1: // %b2
+; CHECK-NEXT:  .LBB2_1: // Block address taken
+; CHECK-NEXT:    // %b2
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     nop
@@ -110,8 +110,8 @@ define void @f3(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
 ; CHECK-NEXT:     loop0(.LBB3_1,#4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .Ltmp3: // Block address taken
-; CHECK-NEXT:  .LBB3_1: // %b2
+; CHECK-NEXT:  .LBB3_1: // Block address taken
+; CHECK-NEXT:    // %b2
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     nop
@@ -144,8 +144,8 @@ define void @f4(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
 ; CHECK-NEXT:     loop0(.LBB4_1,#2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .Ltmp4: // Block address taken
-; CHECK-NEXT:  .LBB4_1: // %b2
+; CHECK-NEXT:  .LBB4_1: // Block address taken
+; CHECK-NEXT:    // %b2
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     nop
@@ -178,8 +178,8 @@ define void @f5(i8* nocapture %a0, i32 %a1, i32 %a2) #0 {
 ; CHECK-NEXT:     loop0(.LBB5_1,#2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .Ltmp5: // Block address taken
-; CHECK-NEXT:  .LBB5_1: // %b2
+; CHECK-NEXT:  .LBB5_1: // Block address taken
+; CHECK-NEXT:    // %b2
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     nop

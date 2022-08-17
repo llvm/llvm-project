@@ -297,6 +297,61 @@ mlirElementsAttrIsValidIndex(MlirAttribute attr, intptr_t rank, uint64_t *idxs);
 MLIR_CAPI_EXPORTED int64_t mlirElementsAttrGetNumElements(MlirAttribute attr);
 
 //===----------------------------------------------------------------------===//
+// Dense array attribute.
+//===----------------------------------------------------------------------===//
+
+/// Checks whether the given attribute is a dense array attribute.
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseBoolArray(MlirAttribute attr);
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseI8Array(MlirAttribute attr);
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseI16Array(MlirAttribute attr);
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseI32Array(MlirAttribute attr);
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseI64Array(MlirAttribute attr);
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseF32Array(MlirAttribute attr);
+MLIR_CAPI_EXPORTED bool mlirAttributeIsADenseF64Array(MlirAttribute attr);
+
+/// Create a dense array attribute with the given elements.
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseBoolArrayGet(MlirContext ctx,
+                                                       intptr_t size,
+                                                       int const *values);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseI8ArrayGet(MlirContext ctx,
+                                                     intptr_t size,
+                                                     int8_t const *values);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseI16ArrayGet(MlirContext ctx,
+                                                      intptr_t size,
+                                                      int16_t const *values);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseI32ArrayGet(MlirContext ctx,
+                                                      intptr_t size,
+                                                      int32_t const *values);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseI64ArrayGet(MlirContext ctx,
+                                                      intptr_t size,
+                                                      int64_t const *values);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseF32ArrayGet(MlirContext ctx,
+                                                      intptr_t size,
+                                                      float const *values);
+MLIR_CAPI_EXPORTED MlirAttribute mlirDenseF64ArrayGet(MlirContext ctx,
+                                                      intptr_t size,
+                                                      double const *values);
+
+/// Get the size of a dense array.
+MLIR_CAPI_EXPORTED intptr_t mlirDenseArrayGetNumElements(MlirAttribute attr);
+
+/// Get an element of a dense array.
+MLIR_CAPI_EXPORTED bool mlirDenseBoolArrayGetElement(MlirAttribute attr,
+                                                     intptr_t pos);
+MLIR_CAPI_EXPORTED int8_t mlirDenseI8ArrayGetElement(MlirAttribute attr,
+                                                     intptr_t pos);
+MLIR_CAPI_EXPORTED int16_t mlirDenseI16ArrayGetElement(MlirAttribute attr,
+                                                       intptr_t pos);
+MLIR_CAPI_EXPORTED int32_t mlirDenseI32ArrayGetElement(MlirAttribute attr,
+                                                       intptr_t pos);
+MLIR_CAPI_EXPORTED int64_t mlirDenseI64ArrayGetElement(MlirAttribute attr,
+                                                       intptr_t pos);
+MLIR_CAPI_EXPORTED float mlirDenseF32ArrayGetElement(MlirAttribute attr,
+                                                     intptr_t pos);
+MLIR_CAPI_EXPORTED double mlirDenseF64ArrayGetElement(MlirAttribute attr,
+                                                      intptr_t pos);
+
+//===----------------------------------------------------------------------===//
 // Dense elements attribute.
 //===----------------------------------------------------------------------===//
 

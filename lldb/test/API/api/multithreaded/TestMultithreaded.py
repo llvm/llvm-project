@@ -1,7 +1,5 @@
 """Test the lldb public C++ api breakpoint callbacks."""
 
-from __future__ import print_function
-
 # __package__ = "lldbsuite.test"
 
 

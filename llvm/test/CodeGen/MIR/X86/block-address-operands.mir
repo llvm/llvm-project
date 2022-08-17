@@ -62,7 +62,7 @@ body: |
     MOV64mr $rip, 1, _, @addr, _, killed $rax
     JMP64m $rip, 1, _, @addr, _
 
-  bb.1.block (address-taken):
+  bb.1.block (ir-block-address-taken %ir-block.block):
     RET64
 ...
 ---
@@ -76,7 +76,7 @@ body: |
     MOV64mr $rip, 1, _, @addr, _, killed $rax
     JMP64m $rip, 1, _, @addr, _
 
-  bb.1 (address-taken):
+  bb.1 (%ir-block."quoted block", ir-block-address-taken %ir-block."quoted block"):
     RET64
 ...
 ---
@@ -103,7 +103,7 @@ body: |
     MOV64mr $rip, 1, _, @addr, _, killed $rax
     JMP64m $rip, 1, _, @addr, _
 
-  bb.1 (address-taken):
+  bb.1 (%ir-block.0, ir-block-address-taken %ir-block.0):
     RET64
 ...
 ---
@@ -116,6 +116,6 @@ body: |
     MOV64mr $rip, 1, _, @addr, _, killed $rax
     JMP64m $rip, 1, _, @addr, _
 
-  bb.1.block (address-taken):
+  bb.1.block (ir-block-address-taken %ir-block.block):
     RET64
 ...

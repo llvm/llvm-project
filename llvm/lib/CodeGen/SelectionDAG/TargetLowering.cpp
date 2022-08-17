@@ -5369,11 +5369,7 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
       OpInfo.CallOperandVal = Call.getArgOperand(ArgNo);
       break;
     case InlineAsm::isLabel:
-      OpInfo.CallOperandVal =
-          cast<CallBrInst>(&Call)->getBlockAddressForIndirectDest(LabelNo);
-      OpInfo.ConstraintVT =
-          getAsmOperandValueType(DL, OpInfo.CallOperandVal->getType())
-              .getSimpleVT();
+      OpInfo.CallOperandVal = cast<CallBrInst>(&Call)->getIndirectDest(LabelNo);
       ++LabelNo;
       continue;
     case InlineAsm::isClobber:

@@ -632,6 +632,13 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     }
   }
 
+  if (MBB->isIRBlockAddressTaken()) {
+    if (!MBB->getAddressTakenIRBlock()->hasAddressTaken())
+      report("ir-block-address-taken is associated with basic block not used by "
+             "a blockaddress.",
+             MBB);
+  }
+
   // Count the number of landing pad successors.
   SmallPtrSet<const MachineBasicBlock*, 4> LandingPadSuccs;
   for (const auto *succ : MBB->successors()) {

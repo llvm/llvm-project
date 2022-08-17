@@ -15,6 +15,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -671,6 +672,15 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
       return BinaryOperator::CreateFSubFMF(LogXTimesY, Y, &I);
     }
   }
+
+  // Simplify FMUL recurrences starting with 0.0 to 0.0 if nnan and nsz are set.
+  // Given a phi node with entry value as 0 and it used in fmul operation,
+  // we can replace fmul with 0 safely and eleminate loop operation.
+  PHINode *PN = nullptr;
+  Value *Start = nullptr, *Step = nullptr;
+  if (matchSimpleRecurrence(&I, PN, Start, Step) && I.hasNoNaNs() &&
+      I.hasNoSignedZeros() && match(Start, m_Zero()))
+    return replaceInstUsesWith(I, Start);
 
   return nullptr;
 }
