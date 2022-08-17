@@ -62,15 +62,13 @@ public:
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
-      case 'c': {
-        int32_t input_count = 0;
-        if (option_arg.getAsInteger(0, m_count)) {
+      case 'c':
+        if (option_arg.getAsInteger(0, m_count) || (m_count < 0)) {
           m_count = UINT32_MAX;
           error.SetErrorStringWithFormat(
               "invalid integer value for option '%c'", short_option);
-        } else if (input_count < 0)
-          m_count = UINT32_MAX;
-      } break;
+        }
+        break;
       case 's':
         if (option_arg.getAsInteger(0, m_start))
           error.SetErrorStringWithFormat(
@@ -991,7 +989,7 @@ protected:
         }
 
         LineEntry function_start;
-        uint32_t index_ptr = 0, end_ptr;
+        uint32_t index_ptr = 0, end_ptr = UINT32_MAX;
         std::vector<addr_t> address_list;
 
         // Find the beginning & end index of the function, but first make
