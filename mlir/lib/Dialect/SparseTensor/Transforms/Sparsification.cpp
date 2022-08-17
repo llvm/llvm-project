@@ -50,7 +50,7 @@ enum SortMask {
 };
 
 // Reduction kinds.
-enum Reduction { kNoReduc, kSum, kProduct, kAnd, kOr, kXor };
+enum Reduction { kNoReduc, kSum, kProduct, kAnd, kOr, kXor, kCustom };
 
 // Code generation.
 struct CodeGen {
@@ -87,6 +87,7 @@ struct CodeGen {
   unsigned redExp = -1u;
   Value redVal;
   Reduction redKind = kNoReduc;
+  unsigned redCustom = -1u;
   // Sparse tensor as output. Implemented either through direct injective
   // insertion in lexicographic index order (where indices are updated
   // in the temporary array `lexIdx`) or through access pattern expansion
@@ -373,6 +374,7 @@ static bool isAdmissableTensorExp(Merger &merger, linalg::GenericOp op,
 static vector::CombiningKind getCombiningKind(Reduction kind) {
   switch (kind) {
   case kNoReduc:
+  case kCustom:
     break;
   case kSum:
     return vector::CombiningKind::ADD;
@@ -408,6 +410,8 @@ static Reduction getReduction(Kind kind) {
     return kOr;
   case Kind::kXorI:
     return kXor;
+  case Kind::kReduce:
+    return kCustom;
   default:
     llvm_unreachable("unexpected reduction operator");
   }
@@ -422,6 +426,7 @@ static Value genVectorReducInit(CodeGen &codegen, OpBuilder &builder,
   Value r = codegen.redVal;
   switch (codegen.redKind) {
   case kNoReduc:
+  case kCustom:
     break;
   case kSum:
   case kXor:
@@ -452,6 +457,11 @@ static Value genVectorReducEnd(CodeGen &codegen, OpBuilder &builder,
 static void updateReduc(Merger &merger, CodeGen &codegen, Value reduc) {
   assert(codegen.redKind != kNoReduc);
   codegen.redVal = merger.exp(codegen.redExp).val = reduc;
+}
+
+/// Extracts identity from custom reduce.
+static Value getCustomRedId(Operation *op) {
+  return dyn_cast<sparse_tensor::ReduceOp>(op).getIdentity();
 }
 
 //===----------------------------------------------------------------------===//
@@ -726,6 +736,25 @@ static Value genInsertionLoad(CodeGen &codegen, OpBuilder &builder,
   return builder.create<memref::LoadOp>(loc, codegen.expValues, index);
 }
 
+/// Generates insertion code to implement dynamic tensor load for reduction.
+static Value genInsertionLoadReduce(Merger &merger, CodeGen &codegen,
+                                    OpBuilder &builder, linalg::GenericOp op,
+                                    OpOperand *t) {
+  Location loc = op.getLoc();
+  Value identity = getCustomRedId(merger.exp(codegen.redCustom).op);
+  // Direct lexicographic index order, tensor loads as identity.
+  if (!codegen.expValues) {
+    return identity;
+  }
+  // Load from expanded access pattern if filled, identity otherwise.
+  Value index = genIndex(codegen, op, t);
+  Value isFilled =
+      builder.create<memref::LoadOp>(loc, codegen.expFilled, index);
+  Value valAtIndex =
+      builder.create<memref::LoadOp>(loc, codegen.expValues, index);
+  return builder.create<arith::SelectOp>(loc, isFilled, valAtIndex, identity);
+}
+
 /// Generates insertion code to implement dynamic tensor store.
 static void genInsertionStore(CodeGen &codegen, OpBuilder &builder,
                               linalg::GenericOp op, OpOperand *t, Value rhs) {
@@ -780,8 +809,11 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   }
   // Load during insertion.
   OpOperand *t = op.getInputAndOutputOperands()[merger.exp(exp).tensor];
-  if (t == codegen.sparseOut)
+  if (t == codegen.sparseOut) {
+    if (codegen.redCustom != -1u)
+      return genInsertionLoadReduce(merger, codegen, builder, op, t);
     return genInsertionLoad(codegen, builder, op, t);
+  }
   // Actual load.
   SmallVector<Value, 4> args;
   Value ptr = genSubscript(codegen, builder, op, t, args);
@@ -953,6 +985,11 @@ static Value genExp(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
     return genInvariantValue(merger, codegen, rewriter, exp);
   if (merger.exp(exp).kind == Kind::kIndex)
     return genIndexValue(codegen, rewriter, merger.exp(exp).index, ldx);
+  if (merger.exp(exp).kind == Kind::kReduce) {
+    // Make custom reduction identity accessible for expanded access pattern.
+    assert(codegen.redCustom == -1u);
+    codegen.redCustom = exp;
+  }
   Value v0 =
       genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e0, ldx);
   Value v1 =
@@ -960,8 +997,11 @@ static Value genExp(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
   Value ee = merger.buildExp(rewriter, loc, exp, v0, v1);
   if (ee && (merger.exp(exp).kind == Kind::kUnary ||
              merger.exp(exp).kind == Kind::kBinary ||
-             merger.exp(exp).kind == Kind::kBinaryBranch))
+             merger.exp(exp).kind == Kind::kBinaryBranch ||
+             merger.exp(exp).kind == Kind::kReduce))
     ee = relinkBranch(codegen, rewriter, ee.getParentBlock(), ee, ldx);
+  if (merger.exp(exp).kind == Kind::kReduce)
+    codegen.redCustom = -1u;
   return ee;
 }
 
@@ -989,7 +1029,7 @@ static bool isInvariantAffine(const CodeGen &codegen, AffineExpr a,
 /// Hoists loop invariant tensor loads for which indices have been exhausted.
 static void genInvariants(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                           linalg::GenericOp op, unsigned exp, unsigned ldx,
-                          bool atStart, Kind last = Kind::kTensor) {
+                          bool atStart, unsigned last = 0) {
   if (exp == -1u)
     return;
   if (merger.exp(exp).kind == Kind::kTensor) {
@@ -1010,8 +1050,11 @@ static void genInvariants(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     if (lhs == t) {
       // Start or end a scalarized reduction
       if (atStart) {
-        Value load = genTensorLoad(merger, codegen, builder, op, exp);
-        codegen.redKind = getReduction(last);
+        Kind kind = merger.exp(last).kind;
+        Value load = kind == Kind::kReduce
+                         ? getCustomRedId(merger.exp(last).op)
+                         : genTensorLoad(merger, codegen, builder, op, exp);
+        codegen.redKind = getReduction(kind);
         codegen.redExp = exp;
         updateReduc(merger, codegen, load);
       } else {
@@ -1031,11 +1074,10 @@ static void genInvariants(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     // Traverse into the binary operations. Note that we only hoist
     // tensor loads, since subsequent MLIR/LLVM passes know how to
     // deal with all other kinds of derived loop invariants.
-    Kind last = merger.exp(exp).kind;
     unsigned e0 = merger.exp(exp).children.e0;
     unsigned e1 = merger.exp(exp).children.e1;
-    genInvariants(merger, codegen, builder, op, e0, ldx, atStart, last);
-    genInvariants(merger, codegen, builder, op, e1, ldx, atStart, last);
+    genInvariants(merger, codegen, builder, op, e0, ldx, atStart, exp);
+    genInvariants(merger, codegen, builder, op, e1, ldx, atStart, exp);
   }
 }
 
