@@ -3008,6 +3008,7 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
     MachineBasicBlock *Target = FuncInfo.MBBMap[Dest];
     Target->setIsInlineAsmBrIndirectTarget();
     Target->setMachineBlockAddressTaken();
+    Target->setLabelMustBeEmitted();
     // Don't add duplicate machine successors.
     if (Dests.insert(Dest).second)
       addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
