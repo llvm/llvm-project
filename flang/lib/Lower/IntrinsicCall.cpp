@@ -3486,6 +3486,9 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
                                                  remainder);
   }
   // Real case
+  if (resultType == mlir::FloatType::getF128(builder.getContext()))
+
+    TODO(loc, "intrinsic: MODULO for floating point of KIND=16");
   auto remainder = builder.create<mlir::arith::RemFOp>(loc, args[0], args[1]);
   mlir::Value zero = builder.createRealZeroConstant(loc, remainder.getType());
   auto remainderIsNotZero = builder.create<mlir::arith::CmpFOp>(
