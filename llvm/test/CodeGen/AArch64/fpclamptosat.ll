@@ -396,9 +396,10 @@ define i64 @ustest_f64i64(double %x) {
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    cmp x1, #1
-; CHECK-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-NEXT:    csel x8, x0, xzr, lt
-; CHECK-NEXT:    cset w10, lt
+; CHECK-NEXT:    csinc x9, x1, xzr, lt
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w10, ne
 ; CHECK-NEXT:    cmp x9, #0
 ; CHECK-NEXT:    cset w9, gt
 ; CHECK-NEXT:    csel w9, w10, w9, eq
@@ -458,9 +459,10 @@ define i64 @ustest_f32i64(float %x) {
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    cmp x1, #1
-; CHECK-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-NEXT:    csel x8, x0, xzr, lt
-; CHECK-NEXT:    cset w10, lt
+; CHECK-NEXT:    csinc x9, x1, xzr, lt
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w10, ne
 ; CHECK-NEXT:    cmp x9, #0
 ; CHECK-NEXT:    cset w9, gt
 ; CHECK-NEXT:    csel w9, w10, w9, eq
@@ -526,9 +528,10 @@ define i64 @ustest_f16i64(half %x) {
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl __fixhfti
 ; CHECK-NEXT:    cmp x1, #1
-; CHECK-NEXT:    csinc x9, x1, xzr, lt
 ; CHECK-NEXT:    csel x8, x0, xzr, lt
-; CHECK-NEXT:    cset w10, lt
+; CHECK-NEXT:    csinc x9, x1, xzr, lt
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w10, ne
 ; CHECK-NEXT:    cmp x9, #0
 ; CHECK-NEXT:    cset w9, gt
 ; CHECK-NEXT:    csel w9, w10, w9, eq
