@@ -167,7 +167,8 @@ namespace DependentMemberExpr {
   // This used to mark 'f' invalid without producing any diagnostic. That's a
   // little hard to detect, but we can make sure that constexpr evaluation
   // fails when it should.
-  static_assert(A<int>().f() == 1); // expected-error {{static assertion failed}}
+  static_assert(A<int>().f() == 1); // expected-error {{static assertion failed}} \
+                                    // expected-note {{evaluates to '0 == 1'}}
 #endif
 }
 

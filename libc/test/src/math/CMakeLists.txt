@@ -73,6 +73,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  tanf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    tanf_test.cpp
+  HDRS
+    sdcomp26094.h
+  DEPENDS
+    libc.include.errno
+    libc.src.math.tanf
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
   fabs_test
   NEED_MPFR
   SUITE

@@ -25,6 +25,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <climits>
 #include <functional>
 #include <initializer_list>
 #include <memory>

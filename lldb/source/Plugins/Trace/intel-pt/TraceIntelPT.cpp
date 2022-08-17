@@ -8,11 +8,10 @@
 
 #include "TraceIntelPT.h"
 
-#include "TraceCursorIntelPT.h"
-
 #include "../common/ThreadPostMortemTrace.h"
 #include "CommandObjectTraceStartIntelPT.h"
 #include "DecodedThread.h"
+#include "TraceCursorIntelPT.h"
 #include "TraceIntelPTBundleLoader.h"
 #include "TraceIntelPTBundleSaver.h"
 #include "TraceIntelPTConstants.h"

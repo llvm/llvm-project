@@ -26,7 +26,7 @@ class EmitC_Attr<string name, string attrMnemonic, list<Trait> traits = []>
   let mnemonic = attrMnemonic;
 }
 
-def EmitC_OpaqueAttr : EmitC_Attr<"Opaque", "opaque", [TypedAttrInterface]> {
+def EmitC_OpaqueAttr : EmitC_Attr<"Opaque", "opaque"> {
   let summary = "An opaque attribute";
 
   let description = [{
@@ -41,10 +41,11 @@ def EmitC_OpaqueAttr : EmitC_Attr<"Opaque", "opaque", [TypedAttrInterface]> {
     ```
   }];
 
-  let parameters = (ins "Type":$type,
-                        StringRefParameter<"the opaque value">:$value);
+  let parameters = (ins StringRefParameter<"the opaque value">:$value);
 
   let hasCustomAssemblyFormat = 1;
 }
+
+def EmitC_OpaqueOrTypedAttr : AnyAttrOf<[EmitC_OpaqueAttr, TypedAttrInterface]>;
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITCATTRIBUTES

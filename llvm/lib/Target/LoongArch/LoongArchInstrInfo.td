@@ -59,6 +59,10 @@ def loongarch_bstrpick
     : SDNode<"LoongArchISD::BSTRPICK", SDT_LoongArchBStrPick>;
 def loongarch_revb_2h : SDNode<"LoongArchISD::REVB_2H", SDTUnaryOp>;
 def loongarch_revb_2w : SDNode<"LoongArchISD::REVB_2W", SDTUnaryOp>;
+def loongarch_bitrev_4b : SDNode<"LoongArchISD::BITREV_4B", SDTUnaryOp>;
+def loongarch_bitrev_w : SDNode<"LoongArchISD::BITREV_W", SDTUnaryOp>;
+def loongarch_clzw : SDNode<"LoongArchISD::CLZ_W", SDTIntBitCountUnaryOp>;
+def loongarch_ctzw : SDNode<"LoongArchISD::CTZ_W", SDTIntBitCountUnaryOp>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -589,6 +593,8 @@ class PatGprGpr<SDPatternOperator OpNode, LAInst Inst>
     : Pat<(OpNode GPR:$rj, GPR:$rk), (Inst GPR:$rj, GPR:$rk)>;
 class PatGprGpr_32<SDPatternOperator OpNode, LAInst Inst>
     : Pat<(sext_inreg (OpNode GPR:$rj, GPR:$rk), i32), (Inst GPR:$rj, GPR:$rk)>;
+class PatGpr<SDPatternOperator OpNode, LAInst Inst>
+    : Pat<(OpNode GPR:$rj), (Inst GPR:$rj)>;
 
 class PatGprImm<SDPatternOperator OpNode, LAInst Inst, Operand ImmOpnd>
     : Pat<(OpNode GPR:$rj, ImmOpnd:$imm),
@@ -683,6 +689,26 @@ def : Pat<(not GPR:$rj), (NOR GPR:$rj, R0)>;
 def : Pat<(not (or GPR:$rj, GPR:$rk)), (NOR GPR:$rj, GPR:$rk)>;
 def : Pat<(or GPR:$rj, (not GPR:$rk)), (ORN GPR:$rj, GPR:$rk)>;
 def : Pat<(and GPR:$rj, (not GPR:$rk)), (ANDN GPR:$rj, GPR:$rk)>;
+
+/// Bit counting operations
+
+let Predicates = [IsLA64] in {
+def : PatGpr<ctlz, CLZ_D>;
+def : PatGpr<cttz, CTZ_D>;
+def : Pat<(ctlz (not GPR:$rj)), (CLO_D GPR:$rj)>;
+def : Pat<(cttz (not GPR:$rj)), (CTO_D GPR:$rj)>;
+def : PatGpr<loongarch_clzw, CLZ_W>;
+def : PatGpr<loongarch_ctzw, CTZ_W>;
+def : Pat<(loongarch_clzw (not GPR:$rj)), (CLO_W GPR:$rj)>;
+def : Pat<(loongarch_ctzw (not GPR:$rj)), (CTO_W GPR:$rj)>;
+} // Predicates = [IsLA64]
+
+let Predicates = [IsLA32] in {
+def : PatGpr<ctlz, CLZ_W>;
+def : PatGpr<cttz, CTZ_W>;
+def : Pat<(ctlz (not GPR:$rj)), (CLO_W GPR:$rj)>;
+def : Pat<(cttz (not GPR:$rj)), (CTO_W GPR:$rj)>;
+} // Predicates = [IsLA32]
 
 /// FrameIndex calculations
 let Predicates = [IsLA32] in {
@@ -840,17 +866,25 @@ def : Pat<(loongarch_bstrpick GPR:$rj, uimm6:$msbd, uimm6:$lsbd),
           (BSTRPICK_D GPR:$rj, uimm6:$msbd, uimm6:$lsbd)>;
 } // Predicates = [IsLA64]
 
-/// Byte-swapping
+/// Byte-swapping and bit-reversal
 
 def : Pat<(loongarch_revb_2h GPR:$rj), (REVB_2H GPR:$rj)>;
+def : Pat<(loongarch_bitrev_4b GPR:$rj), (BITREV_4B GPR:$rj)>;
 
 let Predicates = [IsLA32] in {
 def : Pat<(bswap GPR:$rj), (ROTRI_W (REVB_2H GPR:$rj), 16)>;
+def : Pat<(bitreverse GPR:$rj), (BITREV_W GPR:$rj)>;
+def : Pat<(bswap (bitreverse GPR:$rj)), (BITREV_4B GPR:$rj)>;
+def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_4B GPR:$rj)>;
 } // Predicates = [IsLA32]
 
 let Predicates = [IsLA64] in {
 def : Pat<(loongarch_revb_2w GPR:$rj), (REVB_2W GPR:$rj)>;
 def : Pat<(bswap GPR:$rj), (REVB_D GPR:$rj)>;
+def : Pat<(loongarch_bitrev_w GPR:$rj), (BITREV_W GPR:$rj)>;
+def : Pat<(bitreverse GPR:$rj), (BITREV_D GPR:$rj)>;
+def : Pat<(bswap (bitreverse GPR:$rj)), (BITREV_8B GPR:$rj)>;
+def : Pat<(bitreverse (bswap GPR:$rj)), (BITREV_8B GPR:$rj)>;
 } // Predicates = [IsLA64]
 
 /// Loads
@@ -956,6 +990,10 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 
 def : InstAlias<"nop", (ANDI R0, R0, 0)>;
 def : InstAlias<"move $dst, $src", (OR GPR:$dst, GPR:$src, R0)>;
+// `ret` is supported since binutils commit 20f2e2686c79a5ac (version 2.40 and
+// later).
+def : InstAlias<"ret", (JIRL R0, R1, 0)>;
+def : InstAlias<"jr $rj", (JIRL R0, GPR:$rj, 0)>;
 
 //===----------------------------------------------------------------------===//
 // Basic Floating-Point Instructions

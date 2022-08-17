@@ -744,3 +744,48 @@ func.func @affine_store_load_in_scope(%memref: memref<1x4094x510x1xf32>, %memref
   }
   return
 }
+
+// No scalrep will be performed here but we ensure dependence correctly fails.
+
+// CHECK-LABEL: func @affine_load_store_in_different_scopes
+func.func @affine_load_store_in_different_scopes() -> memref<1xf32> {
+  %A = memref.alloc() : memref<1xf32>
+  %cf0 = arith.constant 0.0 : f32
+  %cf5 = arith.constant 5.0 : f32
+
+  affine.store %cf0, %A[0] : memref<1xf32>
+  test.affine_scope {
+    affine.store %cf5, %A[0] : memref<1xf32>
+    "test.terminate"() : () -> ()
+  }
+  %v = affine.load %A[0] : memref<1xf32>
+  // CHECK:      affine.store
+  // CHECK-NEXT: test.affine_scope
+  // CHECK:        affine.store
+  // CHECK:      affine.load
+  return %A : memref<1xf32>
+}
+
+// No forwarding should again happen here.
+
+// CHECK-LABEL: func.func @no_forwarding_across_scopes
+func.func @no_forwarding_across_scopes() -> memref<1xf32> {
+  %A = memref.alloc() : memref<1xf32>
+  %cf0 = arith.constant 0.0 : f32
+  %cf5 = arith.constant 5.0 : f32
+  %c0 = arith.constant 0 : index
+  %c100 = arith.constant 100 : index
+  %c1 = arith.constant 1 : index
+
+  // Store shouldn't be forwarded to the load.
+  affine.store %cf0, %A[0] : memref<1xf32>
+  // CHECK:      test.affine_scope
+  // CHECK-NEXT:   affine.load
+  test.affine_scope {
+    %l = affine.load %A[0] : memref<1xf32>
+    %s = arith.addf %l, %cf5 : f32
+    affine.store %s, %A[0] : memref<1xf32>
+    "terminator"() : () -> ()
+  }
+  return %A : memref<1xf32>
+}

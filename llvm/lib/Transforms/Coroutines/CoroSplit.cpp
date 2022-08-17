@@ -1555,6 +1555,8 @@ static void simplifySuspendPoints(coro::Shape &Shape) {
   size_t I = 0, N = S.size();
   if (N == 0)
     return;
+
+  size_t ChangedFinalIndex = std::numeric_limits<size_t>::max();
   while (true) {
     auto SI = cast<CoroSuspendInst>(S[I]);
     // Leave final.suspend to handleFinalSuspend since it is undefined behavior
@@ -1562,13 +1564,27 @@ static void simplifySuspendPoints(coro::Shape &Shape) {
     if (!SI->isFinal() && simplifySuspendPoint(SI, Shape.CoroBegin)) {
       if (--N == I)
         break;
+
       std::swap(S[I], S[N]);
+
+      if (cast<CoroSuspendInst>(S[I])->isFinal()) {
+        assert(Shape.SwitchLowering.HasFinalSuspend);
+        ChangedFinalIndex = I;
+      }
+
       continue;
     }
     if (++I == N)
       break;
   }
   S.resize(N);
+
+  // Maintain final.suspend in case final suspend was swapped.
+  // Due to we requrie the final suspend to be the last element of CoroSuspends.
+  if (ChangedFinalIndex < N) {
+    assert(cast<CoroSuspendInst>(S[ChangedFinalIndex])->isFinal());
+    std::swap(S[ChangedFinalIndex], S.back());
+  }
 }
 
 static void splitSwitchCoroutine(Function &F, coro::Shape &Shape,

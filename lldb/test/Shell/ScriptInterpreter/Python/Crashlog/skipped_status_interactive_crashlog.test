@@ -10,34 +10,34 @@
 
 process status
 # CHECK: Process 22511 stopped
-# CHECK-NEXT: * thread #3, stop reason = EXC_BAD_ACCESS
+# CHECK-NEXT: * thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
 # CHECK-NEXT:     frame #0: 0x0000000100ec58f4 multithread-test`bar
 
 thread backtrace
-# CHECK: * thread #3, stop reason = EXC_BAD_ACCESS
+# CHECK: * thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
 # CHECK-NEXT:   * frame #0: 0x0000000100ec58f4 multithread-test`bar{{.*}} [artificial]
 # CHECK-NEXT:     frame #1: 0x0000000100ec591b multithread-test`foo{{.*}} [artificial]
 # CHECK-NEXT:     frame #2: 0x0000000100ec5a87 multithread-test`compute_pow{{.*}} [artificial]
 
 thread list
 # CHECK: Process 22511 stopped
-# CHECK-NEXT:   thread #1: tid = 0x23c7fe, 0x000000019cc40b84 libsystem_kernel.dylib`__ulock_wait{{.*}}, queue = 'com.apple.main-thread'
-# CHECK-NEXT:   thread #2: tid = 0x23c800, 0x000000019cc42c9c libsystem_kernel.dylib`{{.*}}
-# CHECK-NEXT: * thread #3: tid = 0x23c801, 0x0000000100ec58f4 multithread-test`bar{{.*}}, stop reason = EXC_BAD_ACCESS
+# CHECK-NEXT:   thread #1: tid = 0x23c7fe, 0x000000019cc40b84{{.*}}, queue = 'com.apple.main-thread'
+# CHECK-NEXT:   thread #2: tid = 0x23c800, 0x000000019cc42c9c{{.*}}
+# CHECK-NEXT: * thread #3: tid = 0x23c801, 0x0000000100ec58f4 multithread-test`bar{{.*}}, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
 
 bt all
 # CHECK:  thread #1, queue = 'com.apple.main-thread'
-# CHECK:    frame #{{[0-9]+}}: 0x000000019cc40b84 libsystem_kernel.dylib`__ulock_wait{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc40b84{{.*}} [artificial]
 # CHECK:    frame #{{[0-9]+}}: 0x0000000100ec5b3b multithread-test`main{{.*}} [artificial]
-# CHECK:    frame #{{[0-9]+}}: 0x00000002230f8da7 dyld`start{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x00000002230f8da7{{.*}} [artificial]
 # CHECK-NEXT:  thread #2
-# CHECK-NEXT:    frame #0: 0x000000019cc42c9c libsystem_kernel.dylib`__write_nocancel{{.*}} [artificial]
+# CHECK-NEXT:    frame #0: 0x000000019cc42c9c{{.*}} [artificial]
 # CHECK:    frame #{{[0-9]+}}: 0x0000000100ec5957 multithread-test`call_and_wait{{.*}} [artificial]
-# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b libsystem_pthread.dylib`_pthread_start{{.*}} [artificial]
-# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b libsystem_pthread.dylib`thread_start{{.*}} [artificial]
-# CHECK-NEXT:* thread #3, stop reason = EXC_BAD_ACCESS
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b{{.*}} [artificial]
+# CHECK-NEXT:* thread #3, stop reason = EXC_BAD_ACCESS (code=1, address=0x0)
 # CHECK-NEXT:  * frame #0: 0x0000000100ec58f4 multithread-test`bar{{.*}} [artificial]
 # CHECK-NEXT:    frame #1: 0x0000000100ec591b multithread-test`foo{{.*}} [artificial]
 # CHECK-NEXT:    frame #2: 0x0000000100ec5a87 multithread-test`compute_pow{{.*}} [artificial]
-# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b libsystem_pthread.dylib`_pthread_start{{.*}} [artificial]
-# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b libsystem_pthread.dylib`thread_start{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc7e06b{{.*}} [artificial]
+# CHECK:    frame #{{[0-9]+}}: 0x000000019cc78e2b{{.*}} [artificial]

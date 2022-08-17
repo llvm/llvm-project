@@ -695,6 +695,9 @@ void Writer::scanSymbols() {
         continue;
       dysym->getFile()->refState =
           std::max(dysym->getFile()->refState, dysym->getRefState());
+    } else if (const auto *undefined = dyn_cast<Undefined>(sym)) {
+      if (sym->getName().startswith(ObjCStubsSection::symbolPrefix))
+        in.objcStubs->addEntry(sym);
     }
   }
 
@@ -1165,6 +1168,8 @@ template <class LP> void Writer::run() {
   // these two scan* methods. I.e. from this point onward, for all live
   // InputSections, we should have `isec->canonical() == isec`.
   scanSymbols();
+  if (in.objcStubs->isNeeded())
+    in.objcStubs->setup();
   scanRelocations();
 
   // Do not proceed if there was an undefined symbol.
@@ -1208,9 +1213,12 @@ void macho::resetWriter() { LCDylib::resetInstanceCount(); }
 void macho::createSyntheticSections() {
   in.header = make<MachHeaderSection>();
   if (config->dedupLiterals)
-    in.cStringSection = make<DeduplicatedCStringSection>();
+    in.cStringSection =
+        make<DeduplicatedCStringSection>(section_names::cString);
   else
-    in.cStringSection = make<CStringSection>();
+    in.cStringSection = make<CStringSection>(section_names::cString);
+  in.objcMethnameSection =
+      make<DeduplicatedCStringSection>(section_names::objcMethname);
   in.wordLiteralSection =
       config->dedupLiterals ? make<WordLiteralSection>() : nullptr;
   in.rebase = make<RebaseSection>();
@@ -1223,6 +1231,7 @@ void macho::createSyntheticSections() {
   in.lazyPointers = make<LazyPointerSection>();
   in.stubs = make<StubsSection>();
   in.stubHelper = make<StubHelperSection>();
+  in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();
   in.objCImageInfo = make<ObjCImageInfoSection>();
 

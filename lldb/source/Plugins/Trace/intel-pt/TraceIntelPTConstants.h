@@ -9,8 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_CONSTANTS_H
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_CONSTANTS_H
 
+#include "lldb/lldb-types.h"
 #include <cstddef>
-
 #include <llvm/ADT/Optional.h>
 
 namespace lldb_private {

@@ -118,8 +118,7 @@ define i32 @utest_f64i32(double %x) {
 ; RV32IF-NEXT:    beqz a1, .LBB1_3
 ; RV32IF-NEXT:    j .LBB1_4
 ; RV32IF-NEXT:  .LBB1_2:
-; RV32IF-NEXT:    addi a1, a0, 1
-; RV32IF-NEXT:    snez a1, a1
+; RV32IF-NEXT:    sltiu a1, a0, -1
 ; RV32IF-NEXT:    bnez a1, .LBB1_4
 ; RV32IF-NEXT:  .LBB1_3: # %entry
 ; RV32IF-NEXT:    li a0, -1
@@ -186,8 +185,7 @@ define i32 @ustest_f64i32(double %x) {
 ; RV32IF-NEXT:    beqz a2, .LBB2_3
 ; RV32IF-NEXT:    j .LBB2_4
 ; RV32IF-NEXT:  .LBB2_2:
-; RV32IF-NEXT:    addi a2, a0, 1
-; RV32IF-NEXT:    snez a2, a2
+; RV32IF-NEXT:    sltiu a2, a0, -1
 ; RV32IF-NEXT:    bnez a2, .LBB2_4
 ; RV32IF-NEXT:  .LBB2_3: # %entry
 ; RV32IF-NEXT:    li a1, 0
@@ -452,8 +450,7 @@ define i32 @utesth_f16i32(half %x) {
 ; RV32-NEXT:    beqz a1, .LBB7_3
 ; RV32-NEXT:    j .LBB7_4
 ; RV32-NEXT:  .LBB7_2:
-; RV32-NEXT:    addi a1, a0, 1
-; RV32-NEXT:    snez a1, a1
+; RV32-NEXT:    sltiu a1, a0, -1
 ; RV32-NEXT:    bnez a1, .LBB7_4
 ; RV32-NEXT:  .LBB7_3: # %entry
 ; RV32-NEXT:    li a0, -1
@@ -504,8 +501,7 @@ define i32 @ustest_f16i32(half %x) {
 ; RV32-NEXT:    beqz a2, .LBB8_3
 ; RV32-NEXT:    j .LBB8_4
 ; RV32-NEXT:  .LBB8_2:
-; RV32-NEXT:    addi a2, a0, 1
-; RV32-NEXT:    snez a2, a2
+; RV32-NEXT:    sltiu a2, a0, -1
 ; RV32-NEXT:    bnez a2, .LBB8_4
 ; RV32-NEXT:  .LBB8_3: # %entry
 ; RV32-NEXT:    li a1, 0
@@ -1110,8 +1106,7 @@ define i64 @stest_f64i64(double %x) {
 ; RV32IF-NEXT:    bnez a6, .LBB18_3
 ; RV32IF-NEXT:    j .LBB18_4
 ; RV32IF-NEXT:  .LBB18_2:
-; RV32IF-NEXT:    addi a6, a0, 1
-; RV32IF-NEXT:    snez a7, a6
+; RV32IF-NEXT:    sltiu a7, a0, -1
 ; RV32IF-NEXT:    or a6, a3, a2
 ; RV32IF-NEXT:    beqz a6, .LBB18_4
 ; RV32IF-NEXT:  .LBB18_3: # %entry
@@ -1206,8 +1201,7 @@ define i64 @stest_f64i64(double %x) {
 ; RV32IFD-NEXT:    bnez a6, .LBB18_3
 ; RV32IFD-NEXT:    j .LBB18_4
 ; RV32IFD-NEXT:  .LBB18_2:
-; RV32IFD-NEXT:    addi a6, a0, 1
-; RV32IFD-NEXT:    snez a7, a6
+; RV32IFD-NEXT:    sltiu a7, a0, -1
 ; RV32IFD-NEXT:    or a6, a3, a2
 ; RV32IFD-NEXT:    beqz a6, .LBB18_4
 ; RV32IFD-NEXT:  .LBB18_3: # %entry
@@ -1542,8 +1536,7 @@ define i64 @stest_f32i64(float %x) {
 ; RV32-NEXT:    bnez a6, .LBB21_3
 ; RV32-NEXT:    j .LBB21_4
 ; RV32-NEXT:  .LBB21_2:
-; RV32-NEXT:    addi a6, a0, 1
-; RV32-NEXT:    snez a7, a6
+; RV32-NEXT:    sltiu a7, a0, -1
 ; RV32-NEXT:    or a6, a3, a2
 ; RV32-NEXT:    beqz a6, .LBB21_4
 ; RV32-NEXT:  .LBB21_3: # %entry
@@ -1779,8 +1772,7 @@ define i64 @stest_f16i64(half %x) {
 ; RV32-NEXT:    bnez a6, .LBB24_3
 ; RV32-NEXT:    j .LBB24_4
 ; RV32-NEXT:  .LBB24_2:
-; RV32-NEXT:    addi a6, a0, 1
-; RV32-NEXT:    snez a7, a6
+; RV32-NEXT:    sltiu a7, a0, -1
 ; RV32-NEXT:    or a6, a3, a2
 ; RV32-NEXT:    beqz a6, .LBB24_4
 ; RV32-NEXT:  .LBB24_3: # %entry

@@ -266,7 +266,7 @@ void MCDwarfLineTable::emit(MCStreamer *MCOS, MCDwarfLineTableParams Params) {
   // In a v5 non-split line table, put the strings in a separate section.
   Optional<MCDwarfLineStr> LineStr;
   if (context.getDwarfVersion() >= 5)
-    LineStr = MCDwarfLineStr(context);
+    LineStr.emplace(context);
 
   // Switch to the section where the table will be emitted into.
   MCOS->switchSection(context.getObjectFileInfo()->getDwarfLineSection());

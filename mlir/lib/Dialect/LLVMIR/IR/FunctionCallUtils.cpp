@@ -149,13 +149,3 @@ mlir::LLVM::lookupOrCreateMemRefCopyFn(ModuleOp moduleOp, Type indexType,
       ArrayRef<Type>{indexType, unrankedDescriptorType, unrankedDescriptorType},
       LLVM::LLVMVoidType::get(moduleOp->getContext()));
 }
-
-Operation::result_range mlir::LLVM::createLLVMCall(OpBuilder &b, Location loc,
-                                                   LLVM::LLVMFuncOp fn,
-                                                   ValueRange paramTypes,
-                                                   ArrayRef<Type> resultTypes) {
-  return b
-      .create<LLVM::CallOp>(loc, resultTypes, SymbolRefAttr::get(fn),
-                            paramTypes)
-      ->getResults();
-}

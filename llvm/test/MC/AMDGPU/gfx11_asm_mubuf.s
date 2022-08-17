@@ -3091,9 +3091,6 @@ buffer_atomic_cmpswap_f32 v[5:6], off, s[8:11], s3 offset:4095 glc slc dlc
 buffer_atomic_csub_u32 v5, off, s[8:11], s3 offset:4095
 // GFX11-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction must use glc
 
-buffer_atomic_csub_u32 v5, off, s[8:11], s3 offset:4095 glc
-// GFX11: encoding: [0xff,0x4f,0xdc,0xe0,0x00,0x05,0x02,0x03]
-
 buffer_atomic_csub_u32 v255, off, s[8:11], s3 offset:4095 glc
 // GFX11: encoding: [0xff,0x4f,0xdc,0xe0,0x00,0xff,0x02,0x03]
 

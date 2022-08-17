@@ -701,11 +701,12 @@ static bool hasNoInterveningEffect(Operation *start, T memOp) {
       if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op)) {
         MemRefAccess srcAccess(op);
         MemRefAccess destAccess(memOp);
-        // Dependence analysis is only correct if both ops operate on the same
-        // memref.
-        if (srcAccess.memref == destAccess.memref) {
-          FlatAffineValueConstraints dependenceConstraints;
-
+        // Affine dependence analysis here is applicable only if both ops
+        // operate on the same memref and if `op`, `memOp`, and `start` are in
+        // the same AffineScope.
+        if (srcAccess.memref == destAccess.memref &&
+            getAffineScope(op) == getAffineScope(memOp) &&
+            getAffineScope(op) == getAffineScope(start)) {
           // Number of loops containing the start op and the ending operation.
           unsigned minSurroundingLoops =
               getNumCommonSurroundingLoops(*start, *memOp);
@@ -722,11 +723,14 @@ static bool hasNoInterveningEffect(Operation *start, T memOp) {
           // minSurrounding loops since `start` would overwrite any store with a
           // smaller number of surrounding loops before.
           unsigned d;
+          FlatAffineValueConstraints dependenceConstraints;
           for (d = nsLoops + 1; d > minSurroundingLoops; d--) {
             DependenceResult result = checkMemrefAccessDependence(
                 srcAccess, destAccess, d, &dependenceConstraints,
                 /*dependenceComponents=*/nullptr);
-            if (hasDependence(result)) {
+            // A dependence failure or the presence of a dependence implies a
+            // side effect.
+            if (!noDependence(result)) {
               hasSideEffect = true;
               return;
             }
@@ -735,7 +739,11 @@ static bool hasNoInterveningEffect(Operation *start, T memOp) {
           // No side effect was seen, simply return.
           return;
         }
+        // TODO: Check here if the memrefs alias: there is no side effect if
+        // `srcAccess.memref` and `destAccess.memref` don't alias.
       }
+      // We have an op with a memory effect and we cannot prove if it
+      // intervenes.
       hasSideEffect = true;
       return;
     }

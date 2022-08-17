@@ -10,12 +10,9 @@
 #define liblldb_IntelPTSingleBufferTrace_H_
 
 #include "Perf.h"
-
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
-
 #include "llvm/Support/Error.h"
-
 #include <memory>
 
 namespace lldb_private {

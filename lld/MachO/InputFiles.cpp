@@ -342,7 +342,10 @@ void ObjFile::parseSections(ArrayRef<SectionHeader> sectionHeaders) {
 
       InputSection *isec;
       if (sectionType(sec.flags) == S_CSTRING_LITERALS) {
-        isec = make<CStringInputSection>(section, data, align);
+        isec = make<CStringInputSection>(section, data, align,
+                                         /*dedupLiterals=*/name ==
+                                                 section_names::objcMethname ||
+                                             config->dedupLiterals);
         // FIXME: parallelize this?
         cast<CStringInputSection>(isec)->splitIntoPieces();
       } else {

@@ -9,7 +9,6 @@
 #include "TraceCursorIntelPT.h"
 #include "DecodedThread.h"
 #include "TraceIntelPT.h"
-
 #include <cstdlib>
 
 using namespace lldb;

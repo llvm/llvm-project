@@ -2,9 +2,6 @@
 Test basics of Minidump debugging.
 """
 
-from six import iteritems
-
-
 import lldb
 import os
 from lldbsuite.test.decorators import *

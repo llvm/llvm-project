@@ -23,7 +23,7 @@ define void @test_bcc_fallthrough_taken(i64 %in) nounwind {
 ; CHECK-NEXT:  .LBB0_2: # %true
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_3: # %false
 ; CHECK-NEXT:    bl test_false
 ; CHECK-NEXT:    b .LBB0_2
@@ -55,7 +55,7 @@ define void @test_bcc_fallthrough_nottaken(i64 %in) nounwind {
 ; CHECK-NEXT:  .LBB1_2: # %true
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_1: # %true
 ; CHECK-NEXT:    bl test_true
 ; CHECK-NEXT:    b .LBB1_2

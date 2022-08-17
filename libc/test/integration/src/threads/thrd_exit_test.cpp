@@ -42,7 +42,7 @@ TEST_MAIN() {
   int retval;
 
   ASSERT_EQ(__llvm_libc::thrd_create(&th, func, nullptr), thrd_success);
-  ASSERT_EQ(__llvm_libc::thrd_join(&th, &retval), thrd_success);
+  ASSERT_EQ(__llvm_libc::thrd_join(th, &retval), thrd_success);
 
   ASSERT_TRUE(dtor_called);
   __llvm_libc::thrd_exit(0);

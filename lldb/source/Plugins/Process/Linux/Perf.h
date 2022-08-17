@@ -17,9 +17,7 @@
 
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
-
 #include "llvm/Support/Error.h"
-
 #include <chrono>
 #include <cstdint>
 #include <linux/perf_event.h>

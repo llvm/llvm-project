@@ -80,6 +80,26 @@ void ExtractInfosFromCodeWithArgs(StringRef Code, size_t NumExpectedInfos,
   ASSERT_EQ(NumExpectedInfos, EmittedInfos.size());
 }
 
+// Constructs a comment definition as the parser would for one comment line.
+/* TODO uncomment this when the missing comment is fixed in emitRecordInfo and
+   the code that calls this is re-enabled.
+CommentInfo MakeOneLineCommentInfo(const std::string &Text) {
+  CommentInfo TopComment;
+  TopComment.Kind = "FullComment";
+  TopComment.Children.emplace_back(std::make_unique<CommentInfo>());
+
+  CommentInfo *Brief = TopComment.Children.back().get();
+  Brief->Kind = "ParagraphComment";
+
+  Brief->Children.emplace_back(std::make_unique<CommentInfo>());
+  Brief->Children.back()->Kind = "TextComment";
+  Brief->Children.back()->Name = "ParagraphComment";
+  Brief->Children.back()->Text = Text;
+
+  return TopComment;
+}
+*/
+
 // Test serialization of namespace declarations.
 TEST(SerializeTest, emitNamespaceInfo) {
   EmittedInfoList Infos;
@@ -124,6 +144,9 @@ TEST(SerializeTest, emitRecordInfo) {
   ExtractInfosFromCode(R"raw(class E {
 public:
   E() {}
+
+  // Some docs.
+  int value;
 protected:
   void ProtectedMethod();
 };
@@ -142,6 +165,9 @@ typedef struct {} G;)raw",
                                    InfoType::IT_namespace);
   ExpectedE.TagType = TagTypeKind::TTK_Class;
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
+  ExpectedE.Members.emplace_back("int", "value", AccessSpecifier::AS_public);
+  // TODO the data member should have the docstring on it:
+  //ExpectedE.Members.back().Description.push_back(MakeOneLineCommentInfo(" Some docs"));
   CheckRecordInfo(&ExpectedE, E);
 
   RecordInfo *RecordWithEConstructor = InfoAsRecord(Infos[2].get());

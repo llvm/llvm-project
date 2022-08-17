@@ -83,6 +83,19 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
 
   I.Members.emplace_back("int", "path/to/int", "X",
                          AccessSpecifier::AS_private);
+
+  // Member documentation.
+  CommentInfo TopComment;
+  TopComment.Kind = "FullComment";
+  TopComment.Children.emplace_back(std::make_unique<CommentInfo>());
+  CommentInfo *Brief = TopComment.Children.back().get();
+  Brief->Kind = "ParagraphComment";
+  Brief->Children.emplace_back(std::make_unique<CommentInfo>());
+  Brief->Children.back()->Kind = "TextComment";
+  Brief->Children.back()->Name = "ParagraphComment";
+  Brief->Children.back()->Text = "Value of the thing.";
+  I.Members.back().Description.push_back(std::move(TopComment));
+
   I.TagType = TagTypeKind::TTK_Class;
   I.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
                        AccessSpecifier::AS_public, true);
@@ -129,6 +142,14 @@ Members:
       Path:            'path/to/int'
     Name:            'X'
     Access:          Private
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            'Value of the thing.'
+                Name:            'ParagraphComment'
 Bases:
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'F'
