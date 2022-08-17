@@ -1353,16 +1353,13 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
   if (Cloner.OutlinedFunctions.empty())
     return false;
 
-  int SizeCost = 0;
-  BlockFrequency WeightedRcost;
-  int NonWeightedRcost;
-
   auto OutliningCosts = computeOutliningCosts(Cloner);
-  assert(std::get<0>(OutliningCosts).isValid() &&
-         std::get<1>(OutliningCosts).isValid() && "Expected valid costs");
 
-  SizeCost = *std::get<0>(OutliningCosts).getValue();
-  NonWeightedRcost = *std::get<1>(OutliningCosts).getValue();
+  InstructionCost SizeCost = std::get<0>(OutliningCosts);
+  InstructionCost NonWeightedRcost = std::get<1>(OutliningCosts);
+
+  assert(SizeCost.isValid() && NonWeightedRcost.isValid() &&
+         "Expected valid costs");
 
   // Only calculate RelativeToEntryFreq when we are doing single region
   // outlining.
@@ -1377,7 +1374,8 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     // execute the calls to outlined functions.
     RelativeToEntryFreq = BranchProbability(0, 1);
 
-  WeightedRcost = BlockFrequency(NonWeightedRcost) * RelativeToEntryFreq;
+  BlockFrequency WeightedRcost =
+      BlockFrequency(*NonWeightedRcost.getValue()) * RelativeToEntryFreq;
 
   // The call sequence(s) to the outlined function(s) are larger than the sum of
   // the original outlined region size(s), it does not increase the chances of
