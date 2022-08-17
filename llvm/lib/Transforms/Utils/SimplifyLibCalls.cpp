@@ -692,6 +692,89 @@ Value *LibCallSimplifier::optimizeStpCpy(CallInst *CI, IRBuilderBase &B) {
   return DstEnd;
 }
 
+// Optimize a call to size_t strlcpy(char*, const char*, size_t).
+
+Value *LibCallSimplifier::optimizeStrLCpy(CallInst *CI, IRBuilderBase &B) {
+  Value *Size = CI->getArgOperand(2);
+  if (isKnownNonZero(Size, DL))
+    // Like snprintf, the function stores into the destination only when
+    // the size argument is nonzero.
+    annotateNonNullNoUndefBasedOnAccess(CI, 0);
+  // The function reads the source argument regardless of Size (it returns
+  // its length).
+  annotateNonNullNoUndefBasedOnAccess(CI, 1);
+
+  uint64_t NBytes;
+  if (ConstantInt *SizeC = dyn_cast<ConstantInt>(Size))
+    NBytes = SizeC->getZExtValue();
+  else
+    return nullptr;
+
+  Value *Dst = CI->getArgOperand(0);
+  Value *Src = CI->getArgOperand(1);
+  if (NBytes <= 1) {
+    if (NBytes == 1)
+      // For a call to strlcpy(D, S, 1) first store a nul in *D.
+      B.CreateStore(B.getInt8(0), Dst);
+
+    // Transform strlcpy(D, S, 0) to a call to strlen(S).
+    return copyFlags(*CI, emitStrLen(Src, B, DL, TLI));
+  }
+
+  // Try to determine the length of the source, substituting its size
+  // when it's not nul-terminated (as it's required to be) to avoid
+  // reading past its end.
+  StringRef Str;
+  if (!getConstantStringInfo(Src, Str, 0, /*TrimAtNul=*/false))
+    return nullptr;
+
+  uint64_t SrcLen = Str.find('\0');
+  // Set if the terminating nul should be copied by the call to memcpy
+  // below.
+  bool NulTerm = SrcLen < NBytes;
+
+  if (NulTerm)
+    // Overwrite NBytes with the number of bytes to copy, including
+    // the terminating nul.
+    NBytes = SrcLen + 1;
+  else {
+    // Set the length of the source for the function to return to its
+    // size, and cap NBytes at the same.
+    SrcLen = std::min(SrcLen, Str.size());
+    NBytes = std::min(NBytes - 1, SrcLen);
+  }
+
+  if (SrcLen == 0) {
+    // Transform strlcpy(D, "", N) to (*D = '\0, 0).
+    B.CreateStore(B.getInt8(0), Dst);
+    return ConstantInt::get(CI->getType(), 0);
+  }
+
+  Function *Callee = CI->getCalledFunction();
+  Type *PT = Callee->getFunctionType()->getParamType(0);
+  // Transform strlcpy(D, S, N) to memcpy(D, S, N') where N' is the lower
+  // bound on strlen(S) + 1 and N, optionally followed by a nul store to
+  // D[N' - 1] if necessary.
+  CallInst *NewCI = B.CreateMemCpy(Dst, Align(1), Src, Align(1),
+                        ConstantInt::get(DL.getIntPtrType(PT), NBytes));
+  NewCI->setAttributes(CI->getAttributes());
+  NewCI->removeRetAttrs(AttributeFuncs::typeIncompatible(NewCI->getType()));
+  copyFlags(*CI, NewCI);
+
+  if (!NulTerm) {
+    Value *EndOff = ConstantInt::get(CI->getType(), NBytes);
+    Value *EndPtr = B.CreateInBoundsGEP(B.getInt8Ty(), Dst, EndOff);
+    B.CreateStore(B.getInt8(0), EndPtr);
+  }
+
+  // Like snprintf, strlcpy returns the number of nonzero bytes that would
+  // have been copied if the bound had been sufficiently big (which in this
+  // case is strlen(Src)).
+  return ConstantInt::get(CI->getType(), SrcLen);
+}
+
+// Optimize a call to strncpy.
+
 Value *LibCallSimplifier::optimizeStrNCpy(CallInst *CI, IRBuilderBase &B) {
   Function *Callee = CI->getCalledFunction();
   Value *Dst = CI->getArgOperand(0);
@@ -3264,6 +3347,8 @@ Value *LibCallSimplifier::optimizeStringMemoryLibCall(CallInst *CI,
       return optimizeStrCpy(CI, Builder);
     case LibFunc_stpcpy:
       return optimizeStpCpy(CI, Builder);
+    case LibFunc_strlcpy:
+      return optimizeStrLCpy(CI, Builder);
     case LibFunc_strncpy:
       return optimizeStrNCpy(CI, Builder);
     case LibFunc_strlen:
