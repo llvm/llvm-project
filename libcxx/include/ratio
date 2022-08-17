@@ -79,8 +79,8 @@ typedef ratio<1000000000000000000000000, 1> yotta;  // not supported
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <climits>
 #include <cstdint>
-#include <limits>
 #include <type_traits>
 #include <version>
 
@@ -140,8 +140,8 @@ class __ll_add;
 template <intmax_t _Xp, intmax_t _Yp>
 class __ll_add<_Xp, _Yp, 1>
 {
-    static const intmax_t min = numeric_limits<intmax_t>::min() + 1;
-    static const intmax_t max = numeric_limits<intmax_t>::max();
+    static const intmax_t min = (1LL << (sizeof(intmax_t) * CHAR_BIT - 1)) + 1;
+    static const intmax_t max = -min;
 
     static_assert(_Xp <= max - _Yp, "overflow in __ll_add");
 public:
@@ -158,8 +158,8 @@ public:
 template <intmax_t _Xp, intmax_t _Yp>
 class __ll_add<_Xp, _Yp, -1>
 {
-    static const intmax_t min = numeric_limits<intmax_t>::min() + 1;
-    static const intmax_t max = numeric_limits<intmax_t>::max();
+    static const intmax_t min = (1LL << (sizeof(intmax_t) * CHAR_BIT - 1)) + 1;
+    static const intmax_t max = -min;
 
     static_assert(min - _Yp <= _Xp, "overflow in __ll_add");
 public:
@@ -172,8 +172,8 @@ class __ll_sub;
 template <intmax_t _Xp, intmax_t _Yp>
 class __ll_sub<_Xp, _Yp, 1>
 {
-    static const intmax_t min = numeric_limits<intmax_t>::min() + 1;
-    static const intmax_t max = numeric_limits<intmax_t>::max();
+    static const intmax_t min = (1LL << (sizeof(intmax_t) * CHAR_BIT - 1)) + 1;
+    static const intmax_t max = -min;
 
     static_assert(min + _Yp <= _Xp, "overflow in __ll_sub");
 public:
@@ -190,8 +190,8 @@ public:
 template <intmax_t _Xp, intmax_t _Yp>
 class __ll_sub<_Xp, _Yp, -1>
 {
-    static const intmax_t min = numeric_limits<intmax_t>::min() + 1;
-    static const intmax_t max = numeric_limits<intmax_t>::max();
+    static const intmax_t min = (1LL << (sizeof(intmax_t) * CHAR_BIT - 1)) + 1;
+    static const intmax_t max = -min;
 
     static_assert(_Xp <= max + _Yp, "overflow in __ll_sub");
 public:
@@ -201,9 +201,9 @@ public:
 template <intmax_t _Xp, intmax_t _Yp>
 class __ll_mul
 {
-    static const intmax_t nan = numeric_limits<intmax_t>::min();
-    static const intmax_t min = numeric_limits<intmax_t>::min() + 1;
-    static const intmax_t max = numeric_limits<intmax_t>::max();
+    static const intmax_t nan = (1LL << (sizeof(intmax_t) * CHAR_BIT - 1));
+    static const intmax_t min = nan + 1;
+    static const intmax_t max = -min;
     static const intmax_t __a_x = __static_abs<_Xp>::value;
     static const intmax_t __a_y = __static_abs<_Yp>::value;
 
@@ -237,9 +237,9 @@ public:
 template <intmax_t _Xp, intmax_t _Yp>
 class __ll_div
 {
-    static const intmax_t nan = numeric_limits<intmax_t>::min();
-    static const intmax_t min = numeric_limits<intmax_t>::min() + 1;
-    static const intmax_t max = numeric_limits<intmax_t>::max();
+    static const intmax_t nan = (1LL << (sizeof(intmax_t) * CHAR_BIT - 1));
+    static const intmax_t min = nan + 1;
+    static const intmax_t max = -min;
 
     static_assert(_Xp != nan && _Yp != nan && _Yp != 0, "overflow in __ll_div");
 public:
