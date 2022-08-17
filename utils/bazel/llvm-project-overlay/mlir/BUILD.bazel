@@ -7962,6 +7962,28 @@ td_library(
 )
 
 gentbl_cc_library(
+    name = "TransformDialectEnumsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            [
+                "-gen-enum-decls",
+            ],
+            "include/mlir/Dialect/Transform/IR/TransformDialectEnums.h.inc",
+        ),
+        (
+            [
+                "-gen-enum-defs",
+            ],
+            "include/mlir/Dialect/Transform/IR/TransformDialectEnums.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/IR/TransformAttrs.td",
+    deps = [":TransformDialectTdFiles"],
+)
+
+gentbl_cc_library(
     name = "TransformDialectInterfacesIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
@@ -8035,6 +8057,7 @@ cc_library(
         ":Rewrite",
         ":SideEffectInterfaces",
         ":Support",
+        ":TransformDialectEnumsIncGen",
         ":TransformDialectIncGen",
         ":TransformDialectInterfacesIncGen",
         ":TransformOpsIncGen",

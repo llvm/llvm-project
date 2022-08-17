@@ -35,3 +35,5 @@ const llvm::StringMap<PDLConstraintFunction> &
 transform::TransformDialect::getPDLConstraintHooks() const {
   return pdlMatchHooks.getConstraintFunctions();
 }
+
+#include "mlir/Dialect/Transform/IR/TransformDialectEnums.cpp.inc"

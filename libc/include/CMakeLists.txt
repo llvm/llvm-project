@@ -104,6 +104,8 @@ add_gen_header(
     .llvm-libc-types.once_flag
     .llvm-libc-types.thrd_start_t
     .llvm-libc-types.thrd_t
+    .llvm-libc-types.tss_t
+    .llvm-libc-types.tss_dtor_t
 )
 
 add_gen_header(
@@ -174,7 +176,9 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.__pthread_start_t
+    .llvm-libc-types.__pthread_tss_dtor_t
     .llvm-libc-types.pthread_attr_t
+    .llvm-libc-types.pthread_key_t
     .llvm-libc-types.pthread_mutex_t
     .llvm-libc-types.pthread_mutexattr_t
     .llvm-libc-types.pthread_t

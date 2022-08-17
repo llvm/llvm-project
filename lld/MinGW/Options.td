@@ -62,6 +62,8 @@ def enable_stdcall_fixup: F<"enable-stdcall-fixup">,
 defm entry: Eq<"entry", "Name of entry point symbol">, MetaVarName<"<entry>">;
 def exclude_all_symbols: F<"exclude-all-symbols">,
     HelpText<"Don't automatically export any symbols">;
+defm exclude_symbols: Eq<"exclude-symbols",
+    "Exclude symbols from automatic export">, MetaVarName<"<symbol[,symbol,...]>">;
 def export_all_symbols: F<"export-all-symbols">,
     HelpText<"Export all symbols even if a def file or dllexport attributes are used">;
 defm fatal_warnings: B<"fatal-warnings",

@@ -10756,8 +10756,8 @@ ScalarEvolution::getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
 Optional<ScalarEvolution::LoopInvariantPredicate>
 ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
                                            const SCEV *LHS, const SCEV *RHS,
-                                           const Loop *L) {
-
+                                           const Loop *L,
+                                           const Instruction *CtxI) {
   // If there is a loop-invariant, force it into the RHS, otherwise bail out.
   if (!isLoopInvariant(RHS, L)) {
     if (!isLoopInvariant(LHS, L))
@@ -10794,10 +10794,43 @@ ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
   bool Increasing = *MonotonicType == ScalarEvolution::MonotonicallyIncreasing;
   auto P = Increasing ? Pred : ICmpInst::getInversePredicate(Pred);
 
-  if (!isLoopBackedgeGuardedByCond(L, P, LHS, RHS))
-    return None;
+  if (isLoopBackedgeGuardedByCond(L, P, LHS, RHS))
+    return ScalarEvolution::LoopInvariantPredicate(Pred, ArLHS->getStart(),
+                                                   RHS);
 
-  return ScalarEvolution::LoopInvariantPredicate(Pred, ArLHS->getStart(), RHS);
+  if (!CtxI)
+    return None;
+  // Try to prove via context.
+  // TODO: Support other cases.
+  switch (Pred) {
+  default:
+    break;
+  case ICmpInst::ICMP_ULE:
+  case ICmpInst::ICMP_ULT: {
+    assert(ArLHS->hasNoUnsignedWrap() && "Is a requirement of monotonicity!");
+    // Given preconditions
+    // (1) ArLHS does not cross 0 (due to NoUnsignedWrap)
+    // (2) ArLHS <s RHS
+    // (3) RHS >=s 0
+    // we can replace the loop variant ArLHS <u RHS condition with loop
+    // invariant Start(ArLHS) <u RHS.
+    //
+    // Because of (1) there are two options:
+    // - ArLHS is always negative. It means that ArLHS <u RHS is always false;
+    // - ArLHS is always non-negative. Because of (3) RHS is also non-negative.
+    //   It means that ArLHS <s RHS <=> ArLHS <u RHS.
+    //   Because of (2) ArLHS <u RHS is trivially true.
+    // All together it means that ArLHS <u RHS <=> Start(ArLHS) >=s 0.
+    // We can strengthen this to Start(ArLHS) <u RHS.
+    auto SignFlippedPred = ICmpInst::getFlippedSignednessPredicate(Pred);
+    if (isKnownNonNegative(RHS) &&
+        isKnownPredicateAt(SignFlippedPred, ArLHS, RHS, CtxI))
+      return ScalarEvolution::LoopInvariantPredicate(Pred, ArLHS->getStart(),
+                                                     RHS);
+  }
+  }
+
+  return None;
 }
 
 Optional<ScalarEvolution::LoopInvariantPredicate>

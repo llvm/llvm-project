@@ -16,6 +16,38 @@
 
 namespace __llvm_libc {
 
+template <typename T>
+inline constexpr cpp::StringView
+convert_alpha_numeric(T val, cpp::MutableArrayRef<char> &buffer, bool lowercase,
+                      const uint8_t conv_base) {
+  using UnsignedType = cpp::make_unsigned_t<T>;
+  UnsignedType uval = val < 0 ? UnsignedType(-val) : UnsignedType(val);
+
+  const char a = lowercase ? 'a' : 'A';
+
+  size_t len = 0;
+
+  size_t buffptr = buffer.size();
+  if (uval == 0) {
+    buffer[buffptr - 1] = '0';
+    --buffptr;
+  } else {
+    for (; uval > 0; --buffptr, uval /= conv_base) {
+      UnsignedType digit = (uval % conv_base);
+      buffer[buffptr - 1] = digit < 10 ? digit + '0' : digit + a - 10;
+    }
+  }
+  len = buffer.size() - buffptr;
+
+  if (val < 0) {
+    // This branch will be taken only for negative signed values.
+    ++len;
+    buffer[buffer.size() - len] = '-';
+  }
+  cpp::StringView buff_str(buffer.data() + buffer.size() - len, len);
+  return buff_str;
+}
+
 template <typename T, uint8_t BASE = 10,
           cpp::enable_if_t<2 <= BASE && BASE <= 36, int> = 0>
 class IntegerToString {
@@ -69,50 +101,18 @@ private:
   char strbuf[BUFSIZE] = {'\0'};
   cpp::StringView str_view;
 
-  static inline constexpr cpp::StringView
-  convert_alpha_numeric(T val, cpp::MutableArrayRef<char> &buffer,
-                        bool lowercase, const uint8_t conv_base) {
-    UnsignedType uval = val < 0 ? UnsignedType(-val) : UnsignedType(val);
-
-    const char a = lowercase ? 'a' : 'A';
-
-    size_t len = 0;
-
-    size_t buffptr = buffer.size();
-    if (uval == 0) {
-      buffer[buffptr - 1] = '0';
-      --buffptr;
-    } else {
-      for (; uval > 0; --buffptr, uval /= conv_base) {
-        UnsignedType digit = (uval % conv_base);
-        buffer[buffptr - 1] = digit < 10 ? digit + '0' : digit + a - 10;
-      }
-    }
-    len = buffer.size() - buffptr;
-
-    if (val < 0) {
-      // This branch will be taken only for negative signed values.
-      ++len;
-      buffer[buffer.size() - len] = '-';
-    }
-    cpp::StringView buff_str(buffer.data() + buffer.size() - len, len);
-    return buff_str;
-  }
-
-  // This function exists to check at compile time that the base is valid, as
-  // well as to convert the templated call into a non-templated call. This
-  // allows the compiler to decide to do strength reduction and constant folding
-  // on the base or not, depending on if size or performance is required.
+  // This function exists to convert the templated call into a non-templated
+  // call. This allows the compiler to decide to do strength reduction and
+  // constant folding on the base or not, depending on if size or performance is
+  // required.
   static inline constexpr cpp::StringView
   convert_internal(T val, cpp::MutableArrayRef<char> &buffer, bool lowercase) {
-    return convert_alpha_numeric(val, buffer, lowercase, BASE);
+    return convert_alpha_numeric<T>(val, buffer, lowercase, BASE);
   }
 
 public:
   static inline cpp::optional<cpp::StringView>
   convert(T val, cpp::MutableArrayRef<char> &buffer, bool lowercase) {
-    // If This function can actually be a constexpr, then the below "if" will be
-    // optimized out.
     if (buffer.size() < bufsize())
       return cpp::optional<cpp::StringView>();
     return cpp::optional<cpp::StringView>(

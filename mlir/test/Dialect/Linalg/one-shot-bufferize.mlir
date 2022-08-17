@@ -168,7 +168,8 @@ func.func @matmul(
   %c16 = arith.constant 16 : index
 
   // Hoisted alloc.
-  // CHECK: %[[ALLOC:.*]] = memref.alloc() {alignment = 128 : i64} : memref<8x16xf32>
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() {alignment = 128 : i64} : memref<128x192xf32>
+  // CHECK: memref.copy %[[C]], %[[ALLOC]]
 
   // CHECK: scf.for %[[I:.*]] =
   %0 = scf.for %arg3 = %c0 to %c128 step %c8 iter_args(%arg4 = %C) -> (tensor<128x192xf32>) {
@@ -180,12 +181,14 @@ func.func @matmul(
       %3 = tensor.extract_slice %B[0, %arg5] [256, 16] [1, 1] :
         tensor<256x192xf32> to tensor<256x16xf32>
 
-      // %4 does not match an insert_slice, it cannot be bufferized inplace and needs to alloc.
+      // C was already replaced with a copy by preprocessing, so no copy is
+      // needed here.
+      // CHECK: %[[C_SLICE:.*]] = memref.subview %[[ALLOC]]
       %4 = tensor.extract_slice %C[%arg3, %arg5] [8, 16] [1, 1] :
         tensor<128x192xf32> to tensor<8x16xf32>
 
       // linalg.fill is inplace.
-      // CHECK: linalg.fill ins(%{{.*}} : f32) outs(%[[ALLOC]] : memref<8x16xf32>)
+      // CHECK: linalg.fill ins(%{{.*}} : f32) outs(%[[C_SLICE]]
       %5 = linalg.fill ins(%cst : f32) outs(%4 : tensor<8x16xf32>) -> tensor<8x16xf32>
 
       // CHECK: scf.for %[[K:.*]] =
@@ -196,7 +199,7 @@ func.func @matmul(
           tensor<256x16xf32> to tensor<32x16xf32>
 
         // linalg.matmul is inplace as well as the enclosing scf.for.
-        // CHECK: linalg.matmul ins({{.*}} outs(%[[ALLOC]]
+        // CHECK: linalg.matmul ins({{.*}} outs(%[[C_SLICE]]
         %10 = linalg.matmul ins(%8, %9 : tensor<8x32xf32>, tensor<32x16xf32>)
                            outs(%arg8 : tensor<8x16xf32>)
           -> tensor<8x16xf32>
@@ -207,15 +210,16 @@ func.func @matmul(
       // that is not in place. So we must insert a copy of the small buffer into
       // the bigger buffer.
       // CHECK: %[[T:.*]] = memref.subview %[[C]][%[[I]], %[[J]]] [8, 16] [1, 1]
-      // CHECK: memref.copy %[[ALLOC]], %[[T]]
+      // CHECK: memref.copy %[[C_SLICE]], %[[T]]
       %7 = tensor.insert_slice %6 into %arg6[%arg3, %arg5] [8, 16] [1, 1] :
         tensor<8x16xf32> into tensor<128x192xf32>
 
-      // CHECK: memref.dealloc %[[ALLOC]]
       scf.yield %7 : tensor<128x192xf32>
     }
     scf.yield %2 : tensor<128x192xf32>
   }
+
+  // CHECK: memref.dealloc %[[ALLOC]]
   return %0 : tensor<128x192xf32>
 }
 

@@ -42,11 +42,11 @@ module {
 
   transform.with_pdl_patterns {
   ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 {
+    transform.sequence %arg0 failures(propagate) {
     ^bb1(%arg1: !pdl.operation):
       // Find the root and all producers.
-      %root = transform.structured.match attribute{"__root__"} in %arg1
-      %producers = transform.structured.match attribute{"__producer__"} in %arg1
+      %root = transform.structured.match attributes{"__root__"} in %arg1
+      %producers = transform.structured.match attributes{"__producer__"} in %arg1
 
       // Tile the root.
       %foreach_thread_op, %tiled_op = transform.structured.tile_to_foreach_thread_op %root num_threads [10, 20]
@@ -102,11 +102,11 @@ module {
 
   transform.with_pdl_patterns {
   ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 {
+    transform.sequence %arg0 failures(propagate) {
     ^bb1(%arg1: !pdl.operation):
       // Find the root and all producers.
-      %root = transform.structured.match attribute{"__root__"} in %arg1
-      %producers = transform.structured.match attribute{"__producer__"} in %arg1
+      %root = transform.structured.match attributes{"__root__"} in %arg1
+      %producers = transform.structured.match attributes{"__producer__"} in %arg1
       %reversed_producers = transform.test_reverse_payload_ops %producers
 
       // Tile the root.

@@ -168,8 +168,7 @@ struct StructFieldInfo {
   StructInfo Structure;
 
   StructFieldInfo() = default;
-  StructFieldInfo(const std::vector<StructInitializer> &V, StructInfo S);
-  StructFieldInfo(std::vector<StructInitializer> &&V, StructInfo S);
+  StructFieldInfo(std::vector<StructInitializer> V, StructInfo S);
 };
 
 class FieldInitializer {
@@ -218,15 +217,9 @@ struct FieldInfo {
   FieldInfo(FieldType FT) : Contents(FT) {}
 };
 
-StructFieldInfo::StructFieldInfo(const std::vector<StructInitializer> &V,
+StructFieldInfo::StructFieldInfo(std::vector<StructInitializer> V,
                                  StructInfo S) {
-  Initializers = V;
-  Structure = S;
-}
-
-StructFieldInfo::StructFieldInfo(std::vector<StructInitializer> &&V,
-                                 StructInfo S) {
-  Initializers = V;
+  Initializers = std::move(V);
   Structure = S;
 }
 
@@ -290,7 +283,7 @@ FieldInitializer::FieldInitializer(SmallVector<APInt, 1> &&AsIntValues)
 FieldInitializer::FieldInitializer(
     std::vector<StructInitializer> &&Initializers, struct StructInfo Structure)
     : FT(FT_STRUCT) {
-  new (&StructInfo) StructFieldInfo(Initializers, Structure);
+  new (&StructInfo) StructFieldInfo(std::move(Initializers), Structure);
 }
 
 FieldInitializer::FieldInitializer(const FieldInitializer &Initializer)

@@ -12,8 +12,8 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class CxxChar8_tTestCase(TestBase):
 
+    @skipIfDarwin # Chained Fixups
     @skipIf(compiler="clang", compiler_version=['<', '7.0'])
-    @expectedFailureDarwin(archs=["arm64", "arm64e"]) # <rdar://problem/37773624>
     def test_without_process(self):
         """Test that C++ supports char8_t without a running process."""
         self.build()

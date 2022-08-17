@@ -265,18 +265,21 @@ Error ExecutorSharedMemoryMapperService::release(
 
 Error ExecutorSharedMemoryMapperService::shutdown() {
   std::vector<ExecutorAddr> ReservationAddrs;
-  if (!Reservations.empty()) {
+  {
     std::lock_guard<std::mutex> Lock(Mutex);
-    {
-      ReservationAddrs.reserve(Reservations.size());
-      for (const auto &R : Reservations) {
-        ReservationAddrs.push_back(ExecutorAddr::fromPtr(R.getFirst()));
-      }
-    }
-  }
-  return release(ReservationAddrs);
 
-  return Error::success();
+    if (Reservations.empty())
+      return Error::success();
+
+    ReservationAddrs.reserve(Reservations.size());
+    for (const auto &R : Reservations) {
+      ReservationAddrs.push_back(ExecutorAddr::fromPtr(R.getFirst()));
+    }
+
+    Reservations.clear();
+  }
+
+  return release(ReservationAddrs);
 }
 
 void ExecutorSharedMemoryMapperService::addBootstrapSymbols(

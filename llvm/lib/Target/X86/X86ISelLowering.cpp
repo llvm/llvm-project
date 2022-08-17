@@ -11461,6 +11461,7 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
           ResVT.is512BitVector()) && "Value type must be 256-/512-bit wide");
 
   unsigned NumOperands = Op.getNumOperands();
+  unsigned NumFreezeUndef = 0;
   unsigned NumZero = 0;
   unsigned NumNonZero = 0;
   unsigned NonZeros = 0;
@@ -11468,7 +11469,9 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
     SDValue SubVec = Op.getOperand(i);
     if (SubVec.isUndef())
       continue;
-    if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
+    if (ISD::isFreezeUndef(SubVec.getNode()) && SubVec.hasOneUse())
+      ++NumFreezeUndef;
+    else if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
       ++NumZero;
     else {
       assert(i < sizeof(NonZeros) * CHAR_BIT); // Ensure the shift is in range.
@@ -11490,7 +11493,8 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
 
   // Otherwise, build it up through insert_subvectors.
   SDValue Vec = NumZero ? getZeroVector(ResVT, Subtarget, DAG, dl)
-                        : DAG.getUNDEF(ResVT);
+                        : (NumFreezeUndef ? DAG.getFreeze(DAG.getUNDEF(ResVT))
+                                          : DAG.getUNDEF(ResVT));
 
   MVT SubVT = Op.getOperand(0).getSimpleValueType();
   unsigned NumSubElems = SubVT.getVectorNumElements();
@@ -12402,26 +12406,33 @@ static SDValue lowerShuffleWithVPMOV(const SDLoc &DL, MVT VT, SDValue V1,
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
   unsigned MaxScale = 64 / EltSizeInBits;
   for (unsigned Scale = 2; Scale <= MaxScale; Scale += Scale) {
+    unsigned SrcEltBits = EltSizeInBits * Scale;
     unsigned NumSrcElts = NumElts / Scale;
     unsigned UpperElts = NumElts - NumSrcElts;
     if (!isSequentialOrUndefInRange(Mask, 0, NumSrcElts, 0, Scale) ||
         !Zeroable.extractBits(UpperElts, NumSrcElts).isAllOnes())
       continue;
 
-    SDValue Src = V1;
-    if (!Src.hasOneUse())
+    // Attempt to find a matching source truncation, but as a fall back VLX
+    // cases can use the VPMOV directly.
+    SDValue Src = peekThroughBitcasts(V1);
+    if (Src.getOpcode() == ISD::TRUNCATE &&
+        Src.getScalarValueSizeInBits() == SrcEltBits) {
+      Src = Src.getOperand(0);
+    } else if (Subtarget.hasVLX()) {
+      MVT SrcSVT = MVT::getIntegerVT(SrcEltBits);
+      MVT SrcVT = MVT::getVectorVT(SrcSVT, NumSrcElts);
+      Src = DAG.getBitcast(SrcVT, Src);
+      // Don't do this if PACKSS/PACKUS could perform it cheaper.
+      if (Scale == 2 &&
+          ((DAG.ComputeNumSignBits(Src) > EltSizeInBits) ||
+           (DAG.computeKnownBits(Src).countMinLeadingZeros() >= EltSizeInBits)))
+        return SDValue();
+    } else
       return SDValue();
-
-    Src = peekThroughOneUseBitcasts(Src);
-    if (Src.getOpcode() != ISD::TRUNCATE ||
-        Src.getScalarValueSizeInBits() != (EltSizeInBits * Scale))
-      return SDValue();
-    Src = Src.getOperand(0);
 
     // VPMOVWB is only available with avx512bw.
-    MVT SrcVT = Src.getSimpleValueType();
-    if (SrcVT.getVectorElementType() == MVT::i16 && VT == MVT::v16i8 &&
-        !Subtarget.hasBWI())
+    if (!Subtarget.hasBWI() && Src.getScalarValueSizeInBits() < 32)
       return SDValue();
 
     bool UndefUppers = isUndefInRange(Mask, NumSrcElts, UpperElts);

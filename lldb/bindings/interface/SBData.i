@@ -157,7 +157,7 @@ public:
                     for x in range(*key.indices(self.__len__())):
                         list.append(self.__getitem__(x))
                     return list
-                if not (isinstance(key,six.integer_types)):
+                if not (isinstance(key, int)):
                     raise TypeError('must be int')
                 key = key * self.item_size # SBData uses byte-based indexes, but we want to use itemsize-based indexes here
                 error = SBError()

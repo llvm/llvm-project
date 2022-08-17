@@ -8,7 +8,9 @@
 
 // REQUIRES: target={{.+}}-windows-gnu
 
-// This file checks that the built static library doesn't contain dllexport
+// This file checks that the built static libraries don't contain dllexport
 // directives in MinGW builds.
 
 // RUN: llvm-readobj --coff-directives "%{lib}/libc++.a" | not grep -i "export:" > /dev/null
+
+// RUN: llvm-readobj --coff-directives "%{lib}/libc++experimental.a" | not grep -i "export:" > /dev/null

@@ -48,9 +48,6 @@ import traceback
 
 # Third-party modules
 import unittest2
-from six import add_metaclass
-from six import StringIO as SixStringIO
-import six
 
 # LLDB modules
 import lldb
@@ -320,7 +317,7 @@ class ValueCheck:
             child_error = "Checking child with index " + str(i) + ":\n" + error_msg
             expected_child.check_value(test_base, actual_child, child_error)
 
-class recording(SixStringIO):
+class recording(io.StringIO):
     """
     A nice little context manager for recording the debugger interactions into
     our session object.  If trace flag is ON, it also emits the interactions
@@ -328,8 +325,8 @@ class recording(SixStringIO):
     """
 
     def __init__(self, test, trace):
-        """Create a SixStringIO instance; record the session obj and trace flag."""
-        SixStringIO.__init__(self)
+        """Create a io.StringIO instance; record the session obj and trace flag."""
+        io.StringIO.__init__(self)
         # The test might not have undergone the 'setUp(self)' phase yet, so that
         # the attribute 'session' might not even exist yet.
         self.session = getattr(test, "session", None) if test else None
@@ -338,7 +335,7 @@ class recording(SixStringIO):
     def __enter__(self):
         """
         Context management protocol on entry to the body of the with statement.
-        Just return the SixStringIO object.
+        Just return the io.StringIO object.
         """
         return self
 
@@ -346,7 +343,7 @@ class recording(SixStringIO):
         """
         Context management protocol on exit from the body of the with statement.
         If trace is ON, it emits the recordings into stderr.  Always add the
-        recordings to our session object.  And close the SixStringIO object, too.
+        recordings to our session object.  And close the io.StringIO object, too.
         """
         if self.trace:
             print(self.getvalue(), file=sys.stderr)
@@ -355,8 +352,7 @@ class recording(SixStringIO):
         self.close()
 
 
-@add_metaclass(abc.ABCMeta)
-class _BaseProcess(object):
+class _BaseProcess(object, metaclass=abc.ABCMeta):
 
     @abc.abstractproperty
     def pid(self):
@@ -945,7 +941,7 @@ class Base(unittest2.TestCase):
 
         Hooks are executed in a first come first serve manner.
         """
-        if six.callable(hook):
+        if callable(hook):
             with recording(self, traceAlways) as sbuf:
                 print(
                     "Adding tearDown hook:",
@@ -1691,8 +1687,7 @@ class LLDBTestCaseFactory(type):
 # methods when a new class is loaded
 
 
-@add_metaclass(LLDBTestCaseFactory)
-class TestBase(Base):
+class TestBase(Base, metaclass=LLDBTestCaseFactory):
     """
     This abstract base class is meant to be subclassed.  It provides default
     implementations for setUpClass(), tearDownClass(), setUp(), and tearDown(),
@@ -2230,7 +2225,7 @@ FileCheck output:
 
     def expect(
             self,
-            str,
+            string,
             msg=None,
             patterns=None,
             startstr=None,
@@ -2264,9 +2259,9 @@ FileCheck output:
         client is expecting the output of the command not to match the golden
         input.
 
-        Finally, the required argument 'str' represents the lldb command to be
+        Finally, the required argument 'string' represents the lldb command to be
         sent to the command interpreter.  In case the keyword argument 'exe' is
-        set to False, the 'str' is treated as a string to be matched/not-matched
+        set to False, the 'string' is treated as a string to be matched/not-matched
         against the golden input.
         """
         # Catch cases where `expect` has been miscalled. Specifically, prevent
@@ -2280,9 +2275,9 @@ FileCheck output:
             assert False, "expect() missing a matcher argument"
 
         # Check `patterns` and `substrs` are not accidentally given as strings.
-        assert not isinstance(patterns, six.string_types), \
+        assert not isinstance(patterns, str), \
             "patterns must be a collection of strings"
-        assert not isinstance(substrs, six.string_types), \
+        assert not isinstance(substrs, str), \
             "substrs must be a collection of strings"
 
         trace = (True if traceAlways else trace)
@@ -2292,7 +2287,7 @@ FileCheck output:
             # Pass the assert message along since it provides more semantic
             # info.
             self.runCmd(
-                str,
+                string,
                 msg=msg,
                 trace=(
                     True if trace else False),
@@ -2305,13 +2300,13 @@ FileCheck output:
             # If error is True, the API client expects the command to fail!
             if error:
                 self.assertFalse(self.res.Succeeded(),
-                                 "Command '" + str + "' is expected to fail!")
+                                 "Command '" + string + "' is expected to fail!")
         else:
-            # No execution required, just compare str against the golden input.
-            if isinstance(str, lldb.SBCommandReturnObject):
-                output = str.GetOutput()
+            # No execution required, just compare string against the golden input.
+            if isinstance(string, lldb.SBCommandReturnObject):
+                output = string.GetOutput()
             else:
-                output = str
+                output = string
             with recording(self, trace) as sbuf:
                 print("looking at:", output, file=sbuf)
 
@@ -2322,7 +2317,7 @@ FileCheck output:
         # To be used as assert fail message and/or trace content
         log_lines = [
                 "{}:".format("Ran command" if exe else "Checking string"),
-                "\"{}\"".format(str),
+                "\"{}\"".format(string),
                 # Space out command and output
                 "",
         ]

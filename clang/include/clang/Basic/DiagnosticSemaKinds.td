@@ -1532,6 +1532,8 @@ def err_constexpr_if_condition_expression_is_not_constant : Error<
 def err_static_assert_failed : Error<"static assertion failed%select{: %1|}0">;
 def err_static_assert_requirement_failed : Error<
   "static assertion failed due to requirement '%0'%select{: %2|}1">;
+def note_expr_evaluates_to : Note<
+  "expression evaluates to '%0 %1 %2'">;
 
 def warn_consteval_if_always_true : Warning<
   "consteval if is always true in an %select{unevaluated|immediate}0 context">,
@@ -10385,6 +10387,9 @@ def err_omp_unexpected_clause_value : Error<
   "expected %0 in OpenMP clause '%1'">;
 def err_omp_expected_var_name_member_expr : Error<
   "expected variable name%select{| or data member of current class}0">;
+def err_omp_expected_var_name_member_expr_with_type : Error<
+  "expected variable%select{| or static data member|, static data member, "
+  "or non-static data member of current class}0 of type '%1'">;
 def err_omp_expected_var_name_member_expr_or_array_item : Error<
   "expected variable name%select{|, data member of current class}0, array element or array section">;
 def err_omp_expected_addressable_lvalue_or_array_item : Error<

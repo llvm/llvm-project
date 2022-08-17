@@ -13930,7 +13930,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
 
             R = CreateOverloadedBinOp(
                 OpLoc, Opc, Fns, IsReversed ? ZeroLiteral : R.get(),
-                IsReversed ? R.get() : ZeroLiteral, PerformADL,
+                IsReversed ? R.get() : ZeroLiteral, /*PerformADL=*/true,
                 /*AllowRewrittenCandidates=*/false);
 
             popCodeSynthesisContext();

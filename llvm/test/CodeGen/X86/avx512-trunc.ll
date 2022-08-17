@@ -187,7 +187,7 @@ define <2 x i16> @trunc_qw_128(<2 x i64> %i) #0 {
 ;
 ; SKX-LABEL: trunc_qw_128:
 ; SKX:       ## %bb.0:
-; SKX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,8,9,8,9,10,11,8,9,10,11,12,13,14,15]
+; SKX-NEXT:    vpmovqw %xmm0, %xmm0
 ; SKX-NEXT:    retq
   %x = trunc <2 x i64> %i to <2 x i16>
   ret <2 x i16> %x

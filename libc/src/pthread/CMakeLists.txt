@@ -338,3 +338,51 @@ add_entrypoint_object(
     libc.src.__support.CPP.stringstream
     libc.src.__support.threads.thread
 )
+
+add_entrypoint_object(
+  pthread_key_create
+  SRCS
+    pthread_key_create.cpp
+  HDRS
+    pthread_key_create.h
+  DEPENDS
+    libc.include.errno
+    libc.include.pthread
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
+  pthread_key_delete
+  SRCS
+    pthread_key_delete.cpp
+  HDRS
+    pthread_key_delete.h
+  DEPENDS
+    libc.include.errno
+    libc.include.pthread
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
+  pthread_getspecific
+  SRCS
+    pthread_getspecific.cpp
+  HDRS
+    pthread_getspecific.h
+  DEPENDS
+    libc.include.errno
+    libc.include.pthread
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
+  pthread_setspecific
+  SRCS
+    pthread_setspecific.cpp
+  HDRS
+    pthread_setspecific.h
+  DEPENDS
+    libc.include.errno
+    libc.include.pthread
+    libc.src.__support.threads.thread
+)

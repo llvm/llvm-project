@@ -856,6 +856,8 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     if (DemandedSubElts == 0)
       return Vec;
     // If this simply widens the lowest subvector, see if we can do it earlier.
+    // TODO: REMOVE ME - SimplifyMultipleUseDemandedBits shouldn't be creating
+    // general nodes like this.
     if (Idx == 0 && Vec.isUndef()) {
       if (SDValue NewSub = SimplifyMultipleUseDemandedBits(
               Sub, DemandedBits, DemandedSubElts, DAG, Depth + 1))

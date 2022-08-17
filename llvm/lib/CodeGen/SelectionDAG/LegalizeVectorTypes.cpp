@@ -3033,8 +3033,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
   SDValue Idx = N->getOperand(1);
   EVT VecVT = Vec.getValueType();
 
-  if (isa<ConstantSDNode>(Idx)) {
-    uint64_t IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  if (const ConstantSDNode *Index = dyn_cast<ConstantSDNode>(Idx)) {
+    uint64_t IdxVal = Index->getZExtValue();
 
     SDValue Lo, Hi;
     GetSplitVector(Vec, Lo, Hi);

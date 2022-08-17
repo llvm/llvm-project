@@ -3,7 +3,6 @@ Test lldb-vscode setBreakpoints request
 """
 
 
-import unittest2
 import vscode
 import shutil
 from lldbsuite.test.decorators import *

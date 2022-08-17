@@ -71,13 +71,12 @@ define i64 @test_integer(i64  %in) {
 define float @test_f16(half %in) {
 ; CHECK-LABEL: test_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvt s0, h0
-; CHECK-NEXT:    movi d1, #0000000000000000
-; CHECK-NEXT:    fcmp s0, #0.0
-; CHECK-NEXT:    cset w8, lt
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    fcsel s0, s0, s1, ne
-; CHECK-NEXT:    fcvt h0, s0
+; CHECK-NEXT:    // kill: def $h0 killed $h0 def $s0
+; CHECK-NEXT:    fcvt s1, h0
+; CHECK-NEXT:    adrp x8, .LCPI5_0
+; CHECK-NEXT:    ldr h2, [x8, :lo12:.LCPI5_0]
+; CHECK-NEXT:    fcmp s1, #0.0
+; CHECK-NEXT:    fcsel s0, s0, s2, lt
 ; CHECK-NEXT:    fcvt s0, h0
 ; CHECK-NEXT:    ret
   %cmp = fcmp nnan ult half %in, 0.000000e+00

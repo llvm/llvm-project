@@ -197,21 +197,21 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
       - ops: an optional StrArrayAttr specifying the concrete name of an op.
         Multiple names can be specified. Matched ops must have one of specified
         names.
-      - attribute: an optional Str specifying the name of an attribute that
-        matched ops must have.
+      - attribute: the matched op must have all specified attributes (with their
+        specified values).
       
     Note: Only ops that satisfy all specified constraints are matched.
 
     TODO: Extend with regions to allow a limited form of constraints.
 
     #### Return modes
-    
+
     This op traverses the ops nested under `target` and returns the handles to
     all the operations that match the requirements.
 
     This op fails if the target is not a handle to exactly one operation. 
     Otherwise it succeeds.
-  
+
     This operation does not consume the target handle and produces new handles:
     it is a navigation op.
   }];
@@ -219,14 +219,14 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
   let arguments = (ins PDL_Operation:$target,
                        OptionalAttr<StrArrayAttr>:$ops,
                        OptionalAttr<MatchInterfaceEnum>:$interface,
-                       OptionalAttr<StrAttr>:$attribute);
+                       OptionalAttr<DictionaryAttr>:$op_attrs);
   // TODO: variadic results when needed.
   let results = (outs PDL_Operation:$results);
 
   let assemblyFormat = [{
-    (`ops` `{` $ops^ `}`)? 
-    (`interface` `{` $interface^ `}`)? 
-    (`attribute` `{` $attribute^ `}`)? 
+    (`ops` `{` $ops^ `}`)?
+    (`interface` `{` $interface^ `}`)?
+    (`attributes` $op_attrs^)?
     `in` $target attr-dict
   }];
 }

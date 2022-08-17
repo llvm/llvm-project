@@ -57,7 +57,7 @@ TEST_MAIN() {
   ASSERT_EQ(__llvm_libc::mtx_unlock(&mutex), int(thrd_success));
 
   int retval;
-  ASSERT_EQ(__llvm_libc::thrd_join(&th, &retval), int(thrd_success));
+  ASSERT_EQ(__llvm_libc::thrd_join(th, &retval), int(thrd_success));
   ASSERT_EQ(retval, 0);
   // The child thread should see that thrd_current return value is the same as
   // |child_thread|.

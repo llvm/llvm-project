@@ -27,9 +27,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
   // HAS_ERRNO: declare double @atan2(double noundef, double noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare float @atan2f(float noundef, float noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare double @atan2(double noundef, double noundef) [[READNONE:#[0-9]+]]
-  // HAS_MAYTRAP: declare float @atan2f(float noundef, float noundef) [[READNONE]]
-  // HAS_MAYTRAP: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[READNONE]]
+  // HAS_MAYTRAP: declare double @atan2(double noundef, double noundef) [[NOT_READNONE:#[0-9]+]]
+  // HAS_MAYTRAP: declare float @atan2f(float noundef, float noundef) [[NOT_READNONE]]
+  // HAS_MAYTRAP: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
 
   copysign(f,f); copysignf(f,f);copysignl(f,f);
 
@@ -63,7 +63,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
   // HAS_ERRNO: declare double @frexp(double noundef, i32* noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare float @frexpf(float noundef, i32* noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, i32* noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare double @frexp(double noundef, i32* noundef) [[NOT_READNONE:#[0-9]+]]
+  // HAS_MAYTRAP: declare double @frexp(double noundef, i32* noundef) [[NOT_READNONE]]
   // HAS_MAYTRAP: declare float @frexpf(float noundef, i32* noundef) [[NOT_READNONE]]
   // HAS_MAYTRAP: declare x86_fp80 @frexpl(x86_fp80 noundef, i32* noundef) [[NOT_READNONE]]
 
@@ -75,9 +75,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
   // HAS_ERRNO: declare double @ldexp(double noundef, i32 noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare float @ldexpf(float noundef, i32 noundef) [[NOT_READNONE]]
   // HAS_ERRNO: declare x86_fp80 @ldexpl(x86_fp80 noundef, i32 noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare double @ldexp(double noundef, i32 noundef) [[READNONE]]
-  // HAS_MAYTRAP: declare float @ldexpf(float noundef, i32 noundef) [[READNONE]]
-  // HAS_MAYTRAP: declare x86_fp80 @ldexpl(x86_fp80 noundef, i32 noundef) [[READNONE]]
+  // HAS_MAYTRAP: declare double @ldexp(double noundef, i32 noundef) [[NOT_READNONE]]
+  // HAS_MAYTRAP: declare float @ldexpf(float noundef, i32 noundef) [[NOT_READNONE]]
+  // HAS_MAYTRAP: declare x86_fp80 @ldexpl(x86_fp80 noundef, i32 noundef) [[NOT_READNONE]]
 
   modf(f,d);       modff(f,fp);      modfl(f,l);
 
@@ -125,9 +125,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @acos(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @acosf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @acosl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @acos(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @acosf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @acosl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @acos(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @acosf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @acosl(x86_fp80 noundef) [[NOT_READNONE]]
 
 
   acosh(f);      acoshf(f);     acoshl(f);
@@ -138,9 +138,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @acosh(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @acoshf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @acoshl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @acosh(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @acoshf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @acoshl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @acosh(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @acoshf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @acoshl(x86_fp80 noundef) [[NOT_READNONE]]
 
   asin(f);       asinf(f);      asinl(f);
 
@@ -150,9 +150,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @asin(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @asinf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @asinl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @asin(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @asinf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @asinl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @asin(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @asinf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @asinl(x86_fp80 noundef) [[NOT_READNONE]]
 
   asinh(f);      asinhf(f);     asinhl(f);
 
@@ -162,9 +162,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @asinh(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @asinhf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @asinhl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @asinh(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @asinhf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @asinhl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @asinh(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @asinhf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @asinhl(x86_fp80 noundef) [[NOT_READNONE]]
 
   atan(f);       atanf(f);      atanl(f);
 
@@ -174,9 +174,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @atan(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @atanf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @atanl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @atan(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @atanf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @atanl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @atan(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @atanf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @atanl(x86_fp80 noundef) [[NOT_READNONE]]
 
   atanh(f);      atanhf(f);     atanhl(f);
 
@@ -186,9 +186,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @atanh(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @atanhf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @atanhl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @atanh(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @atanhf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @atanhl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @atanh(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @atanhf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @atanhl(x86_fp80 noundef) [[NOT_READNONE]]
 
   cbrt(f);       cbrtf(f);      cbrtl(f);
 
@@ -198,7 +198,7 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @cbrt(double noundef) [[READNONE:#[0-9]+]]
 // HAS_ERRNO: declare float @cbrtf(float noundef) [[READNONE]]
 // HAS_ERRNO: declare x86_fp80 @cbrtl(x86_fp80 noundef) [[READNONE]]
-// HAS_MAYTRAP: declare double @cbrt(double noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @cbrt(double noundef) [[READNONE:#[0-9]+]]
 // HAS_MAYTRAP: declare float @cbrtf(float noundef) [[READNONE]]
 // HAS_MAYTRAP: declare x86_fp80 @cbrtl(x86_fp80 noundef) [[READNONE]]
 
@@ -234,9 +234,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @cosh(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @coshf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @coshl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @cosh(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @coshf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @coshl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @cosh(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @coshf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @coshl(x86_fp80 noundef) [[NOT_READNONE]]
 
   erf(f);        erff(f);       erfl(f);
 
@@ -246,9 +246,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @erf(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @erff(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @erfl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @erf(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @erff(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @erfl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @erf(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @erff(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @erfl(x86_fp80 noundef) [[NOT_READNONE]]
 
   erfc(f);       erfcf(f);      erfcl(f);
 
@@ -258,9 +258,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @erfc(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @erfcf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @erfcl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @erfc(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @erfcf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @erfcl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @erfc(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @erfcf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @erfcl(x86_fp80 noundef) [[NOT_READNONE]]
 
   exp(f);        expf(f);       expl(f);
 
@@ -294,9 +294,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @expm1(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @expm1f(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @expm1l(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @expm1(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @expm1f(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @expm1l(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @expm1(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @expm1f(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @expm1l(x86_fp80 noundef) [[NOT_READNONE]]
 
   fdim(f,f);       fdimf(f,f);      fdiml(f,f);
 
@@ -306,9 +306,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @fdim(double noundef, double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @fdimf(float noundef, float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @fdiml(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @fdim(double noundef, double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @fdimf(float noundef, float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @fdiml(x86_fp80 noundef, x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @fdim(double noundef, double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @fdimf(float noundef, float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @fdiml(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
 
   floor(f);      floorf(f);     floorl(f);
 
@@ -378,9 +378,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @hypot(double noundef, double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @hypotf(float noundef, float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @hypotl(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @hypot(double noundef, double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @hypotf(float noundef, float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @hypotl(x86_fp80 noundef, x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @hypot(double noundef, double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @hypotf(float noundef, float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @hypotl(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
 
   ilogb(f);      ilogbf(f);     ilogbl(f);
 
@@ -390,9 +390,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare i32 @ilogb(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare i32 @ilogbf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare i32 @ilogbl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare i32 @ilogb(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare i32 @ilogbf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare i32 @ilogbl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare i32 @ilogb(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare i32 @ilogbf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare i32 @ilogbl(x86_fp80 noundef) [[NOT_READNONE]]
 
   lgamma(f);     lgammaf(f);    lgammal(f);
 
@@ -462,9 +462,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @log1p(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @log1pf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @log1pl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @log1p(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @log1pf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @log1pl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @log1p(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @log1pf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @log1pl(x86_fp80 noundef) [[NOT_READNONE]]
 
   log2(f);       log2f(f);      log2l(f);
 
@@ -486,9 +486,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @logb(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @logbf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @logbl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @logb(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @logbf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @logbl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @logb(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @logbf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @logbl(x86_fp80 noundef) [[NOT_READNONE]]
 
   lrint(f);      lrintf(f);     lrintl(f);
 
@@ -534,9 +534,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @nextafter(double noundef, double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @nextafterf(float noundef, float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @nextafterl(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @nextafter(double noundef, double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @nextafterf(float noundef, float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @nextafterl(x86_fp80 noundef, x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @nextafter(double noundef, double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @nextafterf(float noundef, float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @nextafterl(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
 
   nexttoward(f,f); nexttowardf(f,f);nexttowardl(f,f);
 
@@ -546,9 +546,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @nexttoward(double noundef, x86_fp80 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @nexttowardf(float noundef, x86_fp80 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @nexttowardl(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @nexttoward(double noundef, x86_fp80 noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @nexttowardf(float noundef, x86_fp80 noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @nexttowardl(x86_fp80 noundef, x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @nexttoward(double noundef, x86_fp80 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @nexttowardf(float noundef, x86_fp80 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @nexttowardl(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
 
   remainder(f,f);  remainderf(f,f); remainderl(f,f);
 
@@ -558,9 +558,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @remainder(double noundef, double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @remainderf(float noundef, float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @remainderl(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @remainder(double noundef, double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @remainderf(float noundef, float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @remainderl(x86_fp80 noundef, x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @remainder(double noundef, double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @remainderf(float noundef, float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @remainderl(x86_fp80 noundef, x86_fp80 noundef) [[NOT_READNONE]]
 
   remquo(f,f,i);  remquof(f,f,i); remquol(f,f,i);
 
@@ -606,9 +606,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @scalbln(double noundef, i64 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @scalblnf(float noundef, i64 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @scalblnl(x86_fp80 noundef, i64 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @scalbln(double noundef, i64 noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @scalblnf(float noundef, i64 noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @scalblnl(x86_fp80 noundef, i64 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @scalbln(double noundef, i64 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @scalblnf(float noundef, i64 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @scalblnl(x86_fp80 noundef, i64 noundef) [[NOT_READNONE]]
 
   scalbn(f,f);     scalbnf(f,f);    scalbnl(f,f);
 
@@ -618,9 +618,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @scalbn(double noundef, i32 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @scalbnf(float noundef, i32 noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @scalbnl(x86_fp80 noundef, i32 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @scalbn(double noundef, i32 noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @scalbnf(float noundef, i32 noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @scalbnl(x86_fp80 noundef, i32 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @scalbn(double noundef, i32 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @scalbnf(float noundef, i32 noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @scalbnl(x86_fp80 noundef, i32 noundef) [[NOT_READNONE]]
 
   sin(f);        sinf(f);       sinl(f);
 
@@ -642,9 +642,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @sinh(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @sinhf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @sinhl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @sinh(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @sinhf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @sinhl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @sinh(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @sinhf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @sinhl(x86_fp80 noundef) [[NOT_READNONE]]
 
   sqrt(f);       sqrtf(f);      sqrtl(f);
 
@@ -666,9 +666,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @tan(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @tanf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @tanl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @tan(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @tanf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @tanl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @tan(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @tanf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @tanl(x86_fp80 noundef) [[NOT_READNONE]]
 
   tanh(f);       tanhf(f);      tanhl(f);
 
@@ -678,9 +678,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @tanh(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @tanhf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @tanhl(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @tanh(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @tanhf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @tanhl(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @tanh(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @tanhf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @tanhl(x86_fp80 noundef) [[NOT_READNONE]]
 
   tgamma(f);     tgammaf(f);    tgammal(f);
 
@@ -690,9 +690,9 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: declare double @tgamma(double noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare float @tgammaf(float noundef) [[NOT_READNONE]]
 // HAS_ERRNO: declare x86_fp80 @tgammal(x86_fp80 noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @tgamma(double noundef) [[READNONE]]
-// HAS_MAYTRAP: declare float @tgammaf(float noundef) [[READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @tgammal(x86_fp80 noundef) [[READNONE]]
+// HAS_MAYTRAP: declare double @tgamma(double noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @tgammaf(float noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @tgammal(x86_fp80 noundef) [[NOT_READNONE]]
 
   trunc(f);      truncf(f);     truncl(f);
 
@@ -714,8 +714,8 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 // HAS_ERRNO: attributes [[READONLY]] = { {{.*}}readonly{{.*}} }
 // HAS_ERRNO: attributes [[READNONE]] = { {{.*}}readnone{{.*}} }
 
-// HAS_MAYTRAP: attributes [[READNONE]] = { {{.*}}readnone{{.*}} }
 // HAS_MAYTRAP: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
+// HAS_MAYTRAP: attributes [[READNONE]] = { {{.*}}readnone{{.*}} }
 
 // HAS_ERRNO_GNU: attributes [[READNONE_INTRINSIC]] = { {{.*}}readnone{{.*}} }
 // HAS_ERRNO_WIN: attributes [[READNONE_INTRINSIC]] = { {{.*}}readnone{{.*}} }

@@ -220,7 +220,7 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
   /// Start the printf hostcall
   Value zeroI64 = rewriter.create<LLVM::ConstantOp>(loc, llvmI64, 0);
   auto printfBeginCall = rewriter.create<LLVM::CallOp>(loc, ocklBegin, zeroI64);
-  Value printfDesc = printfBeginCall.getResult(0);
+  Value printfDesc = printfBeginCall.getResult();
 
   // Create a global constant for the format string
   unsigned stringNumber = 0;
@@ -259,7 +259,7 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
       loc, ocklAppendStringN,
       ValueRange{printfDesc, stringStart, stringLen,
                  adaptor.args().empty() ? oneI32 : zeroI32});
-  printfDesc = appendFormatCall.getResult(0);
+  printfDesc = appendFormatCall.getResult();
 
   // __ockl_printf_append_args takes 7 values per append call
   constexpr size_t argsPerAppend = 7;
@@ -293,7 +293,7 @@ LogicalResult GPUPrintfOpToHIPLowering::matchAndRewrite(
     auto isLast = (bound == nArgs) ? oneI32 : zeroI32;
     arguments.push_back(isLast);
     auto call = rewriter.create<LLVM::CallOp>(loc, ocklAppendArgs, arguments);
-    printfDesc = call.getResult(0);
+    printfDesc = call.getResult();
   }
   rewriter.eraseOp(gpuPrintfOp);
   return success();

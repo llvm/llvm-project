@@ -4,7 +4,6 @@ Test lldb-vscode setBreakpoints request
 
 from __future__ import print_function
 
-import unittest2
 import vscode
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
