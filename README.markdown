@@ -42,38 +42,27 @@ files on top of `main`, which means that I often rebase. Sorry!
 
 ## Status
 
-It is already possible to cross-compile small applications. For example, save the
-following C source on your development machine as `hello.c`:
+The benchnark [MiBench/security-sha](https://github.com/llvm/llvm-test-suite/tree/main/MultiSource/Benchmarks/MiBench/security-sha)
+from the [LLVM test suite](https://github.com/llvm/llvm-test-suite/) can be
+cross-compiled with optimization level -O0, and gives the same results as the
+gcc-compiled version.
 
-```
-int printf(const char * __restrict, ...);
+1. Create a directory for the header files. From here I name it `$SYSROOT`.
+2. Copy directory `/usr/include` (with all subdirectories) from your OpenBSD system
+   to your development system into the directory `$SYSROOT/usr/include`.
+3. Change into the LLVM test suite into directory `MultiSource/Benchmarks/MiBench/security-sha`,
+   and compile the test case:
+   `clang -target m88k-openbsd --sysroot=$SYSROOT -c sha*.c`
+4. Copy the object files back to your OpenBSD system.
+5. Link the object files:
+   `gcc -o sha sha*.o`
+6. Run the test case, e.g. `./sha /etc/rc`
+7. To verify the result you can copy the test case source to your OpenBSD system,
+   compile the files with gcc, run the programm on the same file and compare the
+   result.
 
-int gcd_sub(int a, int b) {
-  while (a != b) {
-    if (a > b)
-      a -= b;
-    else
-      b -= a;
-  }
-  return a;
-}
-
-int main(int argc, char *argv[]) {
-  int gcd = gcd_sub(123, 99);
-  printf("gcd(123, 99) = %d\n", gcd);
-  return 0;
-}
-```
-
-Compile the file with clang using `clang -target m88k-openbsd -c hello.c`
-and copy the resulting object file `hello.o` to your OpenBSD m88k system.
-
-On the m88k system, you can link the program and run it:
-
-```
-gcc hello.o && ./a.out
-gcd(123, 99) = 3
-```
+Other test cases and optimization levels may work but there is still a lot to
+implement before significant more test cases function correctly.
 
 ## Support
 
@@ -114,7 +103,10 @@ not yet found that documents. If you have some of them then please contact me!
 The [OpenBSD/luna88k](https://www.openbsd.org/luna88k.html) port is still active
 and provides the latest OS releases.
 On a Linux or FreeBSD machine, you can use [GXemul](http://gavare.se/gxemul/) to
-run OpenBSD/luna88k.
+run OpenBSD/luna88k. Alternatively you can use the
+[LUNA emulator nono](http://www.pastel-flower.jp/~isaki/nono/).
+Kenji Aoyama provides a [live image](http://www.nk-home.net/~aoyama/liveimage/)
+which can be used with both emulators.
 
 You can find information about real hardware at [m88k.com](http://m88k.com/).
 
