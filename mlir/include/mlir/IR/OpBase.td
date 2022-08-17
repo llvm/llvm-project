@@ -297,7 +297,7 @@ class Variadic<Type type> : TypeConstraint<type.predicate, type.summary,
 // A nested variadic type constraint. It expands to zero or more variadic ranges
 // of the base type. This class is used for supporting variadic operands and
 // results. `variadicSegmentAttrName` should correspond to the name of an
-// I32ElementsAttr argument that provides the sizes of the inner variadic
+// DenseI32ArrayAttr argument that provides the sizes of the inner variadic
 // operand groups.
 class VariadicOfVariadic<Type type, string variadicSegmentAttrName>
     : Variadic<type> {
@@ -1291,6 +1291,7 @@ class DenseArrayAttrBase<string denseAttrName, string cppType, string summaryNam
                      summaryName # " dense array attribute"> {
   let storageType = "::mlir::" # denseAttrName;
   let returnType = "::llvm::ArrayRef<" # cppType # ">";
+  let constBuilderCall = "$_builder.get" # denseAttrName # "($0)";
 }
 def DenseBoolArrayAttr : DenseArrayAttrBase<"DenseBoolArrayAttr", "bool", "i1">;
 def DenseI8ArrayAttr : DenseArrayAttrBase<"DenseI8ArrayAttr", "int8_t", "i8">;
@@ -2288,7 +2289,11 @@ class ElementCount<string name> :
 class ElementType<string name> : StrFunc<"getElementTypeOrSelf($" # name # ")">;
 
 class AllMatchPred<list<string> values> :
-    CPred<"::llvm::is_splat({" # !interleave(values, ", ") # "})">;
+  CPred<!if(!lt(!size(values), 2),
+            "true",
+            !foldl("(" # !head(values) # ")", !tail(values), acc, v,
+                   acc # " == (" # v # ") && (" # v # ")")
+              # " == (" # !head(values) # ")")>;
 
 class AllMatch<list<string> values, string summary> :
     PredOpTrait<summary, AllMatchPred<values>>;

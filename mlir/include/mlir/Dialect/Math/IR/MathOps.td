@@ -770,4 +770,51 @@ def Math_RoundOp : Math_FloatUnaryOp<"round"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// FPowIOp
+//===----------------------------------------------------------------------===//
+
+def Math_FPowIOp : Math_Op<"fpowi",
+    [SameOperandsAndResultShape, AllTypesMatch<["lhs", "result"]>]> {
+  let summary = "floating point raised to the signed integer power";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.fpowi` ssa-use `,` ssa-use `:` type
+    ```
+
+    The `fpowi` operation takes a `base` operand of floating point type
+    (i.e. scalar, tensor or vector) and a `power` operand of integer type
+    (also scalar, tensor or vector) and returns one result of the same type
+    as `base`. The result is `base` raised to the power of `power`.
+    The operation is elementwise for non-scalars, e.g.:
+
+    ```mlir
+    %v = math.fpowi %base, %power : vector<2xf32>, vector<2xi32
+    ```
+
+    The result is a vector of:
+
+    ```
+    [<math.fpowi %base[0], %power[0]>, <math.fpowi %base[1], %power[1]>]
+    ```
+
+    Example:
+
+    ```mlir
+    // Scalar exponentiation.
+    %a = math.fpowi %base, %power : f64, i32
+    ```
+  }];
+
+  let arguments = (ins FloatLike:$lhs, SignlessIntegerLike:$rhs);
+  let results = (outs FloatLike:$result);
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($lhs) `,` type($rhs)";
+
+  // TODO: add a constant folder using pow[f] for cases, when
+  //       the power argument is exactly representable in floating
+  //       point type of the base.
+}
+
 #endif // MATH_OPS

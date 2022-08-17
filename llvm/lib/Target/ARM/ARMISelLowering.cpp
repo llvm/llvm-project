@@ -19147,18 +19147,6 @@ bool ARMTargetLowering::allowTruncateForTailCall(Type *Ty1, Type *Ty2) const {
   return true;
 }
 
-InstructionCost ARMTargetLowering::getScalingFactorCost(const DataLayout &DL,
-                                                        const AddrMode &AM,
-                                                        Type *Ty,
-                                                        unsigned AS) const {
-  if (isLegalAddressingMode(DL, AM, Ty, AS)) {
-    if (Subtarget->hasFPAO())
-      return AM.Scale < 0 ? 1 : 0; // positive offsets execute faster
-    return 0;
-  }
-  return -1;
-}
-
 /// isFMAFasterThanFMulAndFAdd - Return true if an FMA operation is faster
 /// than a pair of fmul and fadd instructions. fmuladd intrinsics will be
 /// expanded to FMAs when this method returns true, otherwise fmuladd is

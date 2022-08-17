@@ -500,18 +500,24 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
   for (CompilerType t : {type, typedef_type, auto_type}) {
     SCOPED_TRACE(t.GetTypeName().AsCString());
 
-    EXPECT_EQ(m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 0),
-              eTemplateArgumentKindType);
-    EXPECT_EQ(m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 0),
-              int_type);
-    EXPECT_EQ(llvm::None,
-              m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 0));
+    const bool expand_pack = false;
+    EXPECT_EQ(
+        m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 0, expand_pack),
+        eTemplateArgumentKindType);
+    EXPECT_EQ(
+        m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 0, expand_pack),
+        int_type);
+    EXPECT_EQ(llvm::None, m_ast->GetIntegralTemplateArgument(
+                              t.GetOpaqueQualType(), 0, expand_pack));
 
-    EXPECT_EQ(m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 1),
-              eTemplateArgumentKindIntegral);
-    EXPECT_EQ(m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 1),
-              CompilerType());
-    auto result = m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 1);
+    EXPECT_EQ(
+        m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 1, expand_pack),
+        eTemplateArgumentKindIntegral);
+    EXPECT_EQ(
+        m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 1, expand_pack),
+        CompilerType());
+    auto result = m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 1,
+                                                     expand_pack);
     ASSERT_NE(llvm::None, result);
     EXPECT_EQ(arg, result->value);
     EXPECT_EQ(int_type, result->type);

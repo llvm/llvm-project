@@ -712,7 +712,22 @@ llvm.func @simdloop_simple_multiple(%lb1 : i64, %ub1 : i64, %step1 : i64, %lb2 :
   omp.simdloop for (%iv1, %iv2) : i64 = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
     %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
     // The form of the emitted IR is controlled by OpenMPIRBuilder and
-    // tested there. Just check that the right metadata is added.
+    // tested there. Just check that the right metadata is added and collapsed
+    // loop bound is generated (Collapse clause is represented as a loop with
+    // list of indices, bounds and steps where the size of the list is equal
+    // to the collapse value.)
+    // CHECK: icmp slt i64
+    // CHECK-COUNT-3: select
+    // CHECK: %[[TRIPCOUNT0:.*]] = select
+    // CHECK: br label %[[PREHEADER:.*]]
+    // CHECK: [[PREHEADER]]:
+    // CHECK: icmp slt i64
+    // CHECK-COUNT-3: select
+    // CHECK: %[[TRIPCOUNT1:.*]] = select
+    // CHECK: mul nuw i64 %[[TRIPCOUNT0]], %[[TRIPCOUNT1]]
+    // CHECK: br label %[[COLLAPSED_PREHEADER:.*]]
+    // CHECK: [[COLLAPSED_PREHEADER]]:
+    // CHECK: br label %[[COLLAPSED_HEADER:.*]]
     // CHECK: llvm.access.group
     // CHECK-NEXT: llvm.access.group
     %4 = llvm.getelementptr %arg0[%iv1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>

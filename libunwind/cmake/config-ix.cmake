@@ -31,7 +31,7 @@ endif()
 # required for the link to go through. We remove sanitizers from the
 # configuration checks to avoid spurious link errors.
 
-llvm_check_compiler_linker_flag(C "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
+llvm_check_compiler_linker_flag(CXX "-nostdlib++" CXX_SUPPORTS_NOSTDLIBXX_FLAG)
 if (CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nostdlib++")
 else()

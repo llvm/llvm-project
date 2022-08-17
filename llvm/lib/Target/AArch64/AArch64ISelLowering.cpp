@@ -792,6 +792,17 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STORE, MVT::v4f64, Custom);
   setOperationAction(ISD::STORE, MVT::v4i64, Custom);
 
+  // 256 bit non-temporal loads can be lowered to LDNP. This is done using
+  // custom lowering, as there are no un-paired non-temporal loads legalization
+  // will break up 256 bit inputs.
+  setOperationAction(ISD::LOAD, MVT::v32i8, Custom);
+  setOperationAction(ISD::LOAD, MVT::v16i16, Custom);
+  setOperationAction(ISD::LOAD, MVT::v16f16, Custom);
+  setOperationAction(ISD::LOAD, MVT::v8i32, Custom);
+  setOperationAction(ISD::LOAD, MVT::v8f32, Custom);
+  setOperationAction(ISD::LOAD, MVT::v4f64, Custom);
+  setOperationAction(ISD::LOAD, MVT::v4i64, Custom);
+
   // Lower READCYCLECOUNTER using an mrs from PMCCNTR_EL0.
   // This requires the Performance Monitors extension.
   if (Subtarget->hasPerfMon())
@@ -2314,6 +2325,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::SSTNT1_PRED)
     MAKE_CASE(AArch64ISD::SSTNT1_INDEX_PRED)
     MAKE_CASE(AArch64ISD::LDP)
+    MAKE_CASE(AArch64ISD::LDNP)
     MAKE_CASE(AArch64ISD::STP)
     MAKE_CASE(AArch64ISD::STNP)
     MAKE_CASE(AArch64ISD::BITREVERSE_MERGE_PASSTHRU)
@@ -8235,15 +8247,17 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
             Swap = true;
           }
         }
-        // 64-bit check whether we can use CSINC. To avoid signed integer
-        // overflow the condition ignores wrap around, which is already
-        // handled by CSINV above.
-      } else if (1 ==
-                 std::max(TrueVal, FalseVal) - std::min(TrueVal, FalseVal)) {
-        Opcode = AArch64ISD::CSINC;
+      } else {
+        // 64-bit check whether we can use CSINC.
+        const uint64_t TrueVal64 = TrueVal;
+        const uint64_t FalseVal64 = FalseVal;
 
-        if (TrueVal > FalseVal) {
-          Swap = true;
+        if ((TrueVal64 == FalseVal64 + 1) || (TrueVal64 + 1 == FalseVal64)) {
+          Opcode = AArch64ISD::CSINC;
+
+          if (TrueVal > FalseVal) {
+            Swap = true;
+          }
         }
       }
 
@@ -13664,22 +13678,6 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
 bool AArch64TargetLowering::shouldConsiderGEPOffsetSplit() const {
   // Consider splitting large offset of struct or array.
   return true;
-}
-
-InstructionCost AArch64TargetLowering::getScalingFactorCost(
-    const DataLayout &DL, const AddrMode &AM, Type *Ty, unsigned AS) const {
-  // Scaling factors are not free at all.
-  // Operands                     | Rt Latency
-  // -------------------------------------------
-  // Rt, [Xn, Xm]                 | 4
-  // -------------------------------------------
-  // Rt, [Xn, Xm, lsl #imm]       | Rn: 4 Rm: 5
-  // Rt, [Xn, Wm, <extend> #imm]  |
-  if (isLegalAddressingMode(DL, AM, Ty, AS))
-    // Scale represents reg2 * scale, thus account for 1 if
-    // it is not equal to 0 or 1.
-    return AM.Scale != 0 && AM.Scale != 1;
-  return -1;
 }
 
 bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
@@ -20404,9 +20402,29 @@ void AArch64TargetLowering::ReplaceNodeResults(
     return;
   case ISD::ATOMIC_LOAD:
   case ISD::LOAD: {
-    assert(SDValue(N, 0).getValueType() == MVT::i128 &&
-           "unexpected load's value type");
     MemSDNode *LoadNode = cast<MemSDNode>(N);
+    EVT MemVT = LoadNode->getMemoryVT();
+    // Handle lowering 256 bit non temporal loads into LDNP.
+    if (LoadNode->isNonTemporal() && MemVT.getSizeInBits() == 256u &&
+        (MemVT.getScalarSizeInBits() == 8u ||
+         MemVT.getScalarSizeInBits() == 16u ||
+         MemVT.getScalarSizeInBits() == 32u ||
+         MemVT.getScalarSizeInBits() == 64u)) {
+
+      SDValue Result = DAG.getMemIntrinsicNode(
+          AArch64ISD::LDNP, SDLoc(N),
+          DAG.getVTList({MemVT.getHalfNumVectorElementsVT(*DAG.getContext()),
+                         MemVT.getHalfNumVectorElementsVT(*DAG.getContext()),
+                         MVT::Other}),
+          {LoadNode->getChain(), LoadNode->getBasePtr()},
+          LoadNode->getMemoryVT(), LoadNode->getMemOperand());
+
+      SDValue Pair = DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), MemVT,
+                                 Result.getValue(0), Result.getValue(1));
+      Results.append({Pair, Result.getValue(2) /* Chain */});
+      return;
+    }
+
     if ((!LoadNode->isVolatile() && !LoadNode->isAtomic()) ||
         LoadNode->getMemoryVT() != MVT::i128) {
       // Non-volatile or atomic loads are optimized later in AArch64's load/store
@@ -20414,15 +20432,17 @@ void AArch64TargetLowering::ReplaceNodeResults(
       return;
     }
 
-    SDValue Result = DAG.getMemIntrinsicNode(
-        AArch64ISD::LDP, SDLoc(N),
-        DAG.getVTList({MVT::i64, MVT::i64, MVT::Other}),
-        {LoadNode->getChain(), LoadNode->getBasePtr()}, LoadNode->getMemoryVT(),
-        LoadNode->getMemOperand());
+    if (SDValue(N, 0).getValueType() == MVT::i128) {
+      SDValue Result = DAG.getMemIntrinsicNode(
+          AArch64ISD::LDP, SDLoc(N),
+          DAG.getVTList({MVT::i64, MVT::i64, MVT::Other}),
+          {LoadNode->getChain(), LoadNode->getBasePtr()},
+          LoadNode->getMemoryVT(), LoadNode->getMemOperand());
 
-    SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, SDLoc(N), MVT::i128,
-                               Result.getValue(0), Result.getValue(1));
-    Results.append({Pair, Result.getValue(2) /* Chain */});
+      SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, SDLoc(N), MVT::i128,
+                                 Result.getValue(0), Result.getValue(1));
+      Results.append({Pair, Result.getValue(2) /* Chain */});
+    }
     return;
   }
   case ISD::EXTRACT_SUBVECTOR:

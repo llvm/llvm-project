@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test libc++'s implementation of align_val_t, and the relevant new/delete
+// test libc++'s implementation of align_val_t, and the relevant new/delete && !hwasan
 // overloads in all dialects when -faligned-allocation is present.
 
 // The dylibs shipped before macosx10.13 do not contain the aligned allocation
@@ -18,7 +18,7 @@
 // nor does the dynamic library shipped with z/OS.
 // UNSUPPORTED: target={{.+}}-zos{{.*}}
 
-// XFAIL: sanitizer-new-delete, ubsan
+// XFAIL: sanitizer-new-delete && !hwasan, ubsan
 
 // GCC doesn't support the aligned-allocation flags.
 // XFAIL: gcc

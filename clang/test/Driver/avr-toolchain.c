@@ -73,7 +73,6 @@
 // LDS1: "-T" "avr.lds"
 // LDS1-NOT: "-mavr5"
 
-// RUN: %clang %s -### --target=avr -mmcu=atmega328 --sysroot=%S/Inputs/basic_avr_tree/ -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir 2>&1 | FileCheck --check-prefix=LIBGCC %s
 // RUN: %clang %s -### --target=avr -mmcu=atmega328 --sysroot=%S/Inputs/basic_avr_tree/ -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir --rtlib=libgcc 2>&1 | FileCheck --check-prefix=LIBGCC %s
 // LIBGCC: "-lgcc"
 // LIBGCC-NOT: libclang_rt

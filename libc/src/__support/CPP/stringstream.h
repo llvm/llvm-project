@@ -58,8 +58,11 @@ public:
   // Write the |val| as string.
   template <typename T, enable_if_t<is_integral_v<T>, int> = 0>
   StringStream &operator<<(T val) {
-    const auto int_to_str = integer_to_string(val);
-    return operator<<(int_to_str.str());
+    char buffer[IntegerToString::dec_bufsize<T>()];
+    auto int_to_str = IntegerToString::dec(val, buffer);
+    if (int_to_str)
+      return operator<<(*int_to_str);
+    return *this;
   }
 
   template <typename T, enable_if_t<is_floating_point_v<T>, int> = 0>

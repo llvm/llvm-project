@@ -11514,16 +11514,25 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
     if (CXXConstructorDecl *Constructor = dyn_cast<CXXConstructorDecl>(NewFD)) {
       CheckConstructor(Constructor);
     } else if (CXXDestructorDecl *Destructor =
-                dyn_cast<CXXDestructorDecl>(NewFD)) {
-      CXXRecordDecl *Record = Destructor->getParent();
-      QualType ClassType = Context.getTypeDeclType(Record);
+                   dyn_cast<CXXDestructorDecl>(NewFD)) {
+      // We check here for invalid destructor names.
+      // If we have a friend destructor declaration that is dependent, we can't
+      // diagnose right away because cases like this are still valid:
+      // template <class T> struct A { friend T::X::~Y(); };
+      // struct B { struct Y { ~Y(); }; using X = Y; };
+      // template struct A<B>;
+      if (NewFD->getFriendObjectKind() == Decl::FriendObjectKind::FOK_None ||
+          !Destructor->getThisType()->isDependentType()) {
+        CXXRecordDecl *Record = Destructor->getParent();
+        QualType ClassType = Context.getTypeDeclType(Record);
 
-      DeclarationName Name = Context.DeclarationNames.getCXXDestructorName(
-          Context.getCanonicalType(ClassType));
-      if (NewFD->getDeclName() != Name) {
-        Diag(NewFD->getLocation(), diag::err_destructor_name);
-        NewFD->setInvalidDecl();
-        return Redeclaration;
+        DeclarationName Name = Context.DeclarationNames.getCXXDestructorName(
+            Context.getCanonicalType(ClassType));
+        if (NewFD->getDeclName() != Name) {
+          Diag(NewFD->getLocation(), diag::err_destructor_name);
+          NewFD->setInvalidDecl();
+          return Redeclaration;
+        }
       }
     } else if (auto *Guide = dyn_cast<CXXDeductionGuideDecl>(NewFD)) {
       if (auto *TD = Guide->getDescribedFunctionTemplate())

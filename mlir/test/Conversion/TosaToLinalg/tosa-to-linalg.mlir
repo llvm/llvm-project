@@ -467,8 +467,8 @@ func.func @test_clamp_f16(%arg0: tensor<1xf16>) -> () {
   // CHECK: ^bb0(%[[ARG1:.+]]: f16,
   // CHECK-DAG: %[[C0:.+]] = arith.constant 0.0
   // CHECK-DAG: %[[C6:.+]] = arith.constant 6.0
-  // CHECK-DAG: %[[MIN:.+]] = arith.minf %[[ARG1]], %[[C0]]
-  // CHECK-DAG: %[[MAX:.+]] = arith.maxf %[[MIN]], %[[C6]]
+  // CHECK-DAG: %[[MIN:.+]] = arith.minf %[[ARG1]], %[[C6]]
+  // CHECK-DAG: %[[MAX:.+]] = arith.maxf %[[MIN]], %[[C0]]
   %0 = "tosa.clamp"(%arg0) {min_int = 0 : i64, max_int = 0 : i64, min_fp = 0.0 : f32, max_fp = 6.0 : f32} : (tensor<1xf16>) -> tensor<1xf16>
 
   return

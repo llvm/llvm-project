@@ -243,7 +243,7 @@ _LIBCPP_HIDE_FROM_ABI auto __format_integer(
     // The zero padding is done like:
     // - Write [sign][prefix]
     // - Write data right aligned with '0' as fill character.
-    __out_it             = _VSTD::copy(__begin, __first, _VSTD::move(__out_it));
+    __out_it             = __formatter::__copy(__begin, __first, _VSTD::move(__out_it));
     __specs.__alignment_ = __format_spec::__alignment::__right;
     __specs.__fill_      = _CharT('0');
     int32_t __size       = __first - __begin;

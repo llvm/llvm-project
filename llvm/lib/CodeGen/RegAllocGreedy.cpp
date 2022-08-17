@@ -2369,11 +2369,25 @@ RAGreedy::RAGreedyStats RAGreedy::computeStats(MachineBasicBlock &MBB) {
   };
   for (MachineInstr &MI : MBB) {
     if (MI.isCopy()) {
-      MachineOperand &Dest = MI.getOperand(0);
-      MachineOperand &Src = MI.getOperand(1);
-      if (Dest.isReg() && Src.isReg() && Dest.getReg().isVirtual() &&
-          Src.getReg().isVirtual())
-        ++Stats.Copies;
+      const MachineOperand &Dest = MI.getOperand(0);
+      const MachineOperand &Src = MI.getOperand(1);
+      Register SrcReg = Src.getReg();
+      Register DestReg = Dest.getReg();
+      // Only count `COPY`s with a virtual register as source or destination.
+      if (SrcReg.isVirtual() || DestReg.isVirtual()) {
+        if (SrcReg.isVirtual()) {
+          SrcReg = VRM->getPhys(SrcReg);
+          if (Src.getSubReg())
+            SrcReg = TRI->getSubReg(SrcReg, Src.getSubReg());
+        }
+        if (DestReg.isVirtual()) {
+          DestReg = VRM->getPhys(DestReg);
+          if (Dest.getSubReg())
+            DestReg = TRI->getSubReg(DestReg, Dest.getSubReg());
+        }
+        if (SrcReg != DestReg)
+          ++Stats.Copies;
+      }
       continue;
     }
 

@@ -3990,18 +3990,16 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
   }
 
-  // If the result type is XLenVT and CondV is the output of a SETCC node
-  // which also operated on XLenVT inputs, then merge the SETCC node into the
-  // lowered RISCVISD::SELECT_CC to take advantage of the integer
-  // compare+branch instructions. i.e.:
+  // If the CondV is the output of a SETCC node which operates on XLenVT inputs,
+  // then merge the SETCC node into the lowered RISCVISD::SELECT_CC to take
+  // advantage of the integer compare+branch instructions. i.e.:
   // (select (setcc lhs, rhs, cc), truev, falsev)
   // -> (riscvisd::select_cc lhs, rhs, cc, truev, falsev)
-  if (VT == XLenVT && CondV.getOpcode() == ISD::SETCC &&
+  if (CondV.getOpcode() == ISD::SETCC &&
       CondV.getOperand(0).getSimpleValueType() == XLenVT) {
     SDValue LHS = CondV.getOperand(0);
     SDValue RHS = CondV.getOperand(1);
-    const auto *CC = cast<CondCodeSDNode>(CondV.getOperand(2));
-    ISD::CondCode CCVal = CC->get();
+    ISD::CondCode CCVal = cast<CondCodeSDNode>(CondV.getOperand(2))->get();
 
     // Special case for a select of 2 constants that have a diffence of 1.
     // Normally this is done by DAGCombine, but if the select is introduced by
@@ -4015,16 +4013,16 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       const APInt &TrueVal = cast<ConstantSDNode>(TrueV)->getAPIntValue();
       const APInt &FalseVal = cast<ConstantSDNode>(FalseV)->getAPIntValue();
       if (TrueVal - 1 == FalseVal)
-        return DAG.getNode(ISD::ADD, DL, Op.getValueType(), CondV, FalseV);
+        return DAG.getNode(ISD::ADD, DL, VT, CondV, FalseV);
       if (TrueVal + 1 == FalseVal)
-        return DAG.getNode(ISD::SUB, DL, Op.getValueType(), FalseV, CondV);
+        return DAG.getNode(ISD::SUB, DL, VT, FalseV, CondV);
     }
 
     translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
 
     SDValue TargetCC = DAG.getCondCode(CCVal);
     SDValue Ops[] = {LHS, RHS, TargetCC, TrueV, FalseV};
-    return DAG.getNode(RISCVISD::SELECT_CC, DL, Op.getValueType(), Ops);
+    return DAG.getNode(RISCVISD::SELECT_CC, DL, VT, Ops);
   }
 
   // Otherwise:
@@ -4035,7 +4033,7 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue Ops[] = {CondV, Zero, SetNE, TrueV, FalseV};
 
-  return DAG.getNode(RISCVISD::SELECT_CC, DL, Op.getValueType(), Ops);
+  return DAG.getNode(RISCVISD::SELECT_CC, DL, VT, Ops);
 }
 
 SDValue RISCVTargetLowering::lowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
@@ -8279,33 +8277,55 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
 }
 
-static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
+// Try to turn a sub boolean RHS and constant LHS into an addi.
+static SDValue combineSubOfBoolean(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
-  // Prefer to make this 'add 0/1' rather than 'sub 0/1'
-  // sub constant(!0), 0/1 -> add constant - 1, 1/0
-  // NODE: constant == 0, No redundant instructions are generated.
-  // (sub constant, (setcc x, y, eq/neq)) ->
-  // (add (setcc x, y, neq/eq), constant - 1)
-  auto *Nnz0 = dyn_cast<ConstantSDNode>(N0);
-  if (Nnz0 && N1.getOpcode() == ISD::SETCC && N1.hasOneUse()) {
-    const auto *CC = cast<CondCodeSDNode>(N1->getOperand(2));
-    ISD::CondCode CCVal = CC->get();
-    if (!Nnz0->isZero() && isIntEqualitySetCC(CCVal)) {
-      EVT VT = N->getValueType(0);
-      const APInt &ImmVal = Nnz0->getAPIntValue();
-      SDValue CCInverse =
-          DAG.getCondCode(ISD::getSetCCInverse(CCVal, N0.getValueType()));
-      SDValue NewN0 = DAG.getNode(ISD::SETCC, SDLoc(N), VT, N1->getOperand(0),
-                                  N1->getOperand(1), CCInverse);
-      SDValue NewN1 = DAG.getConstant(ImmVal - 1, SDLoc(N), VT);
-      return DAG.getNode(ISD::ADD, SDLoc(N), VT, NewN0, NewN1);
-    }
-  }
+  // Require a constant LHS.
+  auto *N0C = dyn_cast<ConstantSDNode>(N0);
+  if (!N0C)
+    return SDValue();
+
+  // All our optimizations involve subtracting 1 from the immediate and forming
+  // an ADDI. Make sure the new immediate is valid for an ADDI.
+  APInt ImmValMinus1 = N0C->getAPIntValue() - 1;
+  if (!ImmValMinus1.isSignedIntN(12))
+    return SDValue();
+
+  SDValue NewLHS;
+  if (N1.getOpcode() == ISD::SETCC && N1.hasOneUse()) {
+    // (sub constant, (setcc x, y, eq/neq)) ->
+    // (add (setcc x, y, neq/eq), constant - 1)
+    ISD::CondCode CCVal = cast<CondCodeSDNode>(N1.getOperand(2))->get();
+    EVT SetCCOpVT = N1.getOperand(0).getValueType();
+    if (!isIntEqualitySetCC(CCVal) || !SetCCOpVT.isInteger())
+      return SDValue();
+    CCVal = ISD::getSetCCInverse(CCVal, SetCCOpVT);
+    NewLHS =
+        DAG.getSetCC(SDLoc(N1), VT, N1.getOperand(0), N1.getOperand(1), CCVal);
+  } else if (N1.getOpcode() == ISD::XOR && isOneConstant(N1.getOperand(1)) &&
+             N1.getOperand(0).getOpcode() == ISD::SETCC) {
+    // (sub C, (xor (setcc), 1)) -> (add (setcc), C-1).
+    // Since setcc returns a bool the xor is equivalent to 1-setcc.
+    NewLHS = N1.getOperand(0);
+  } else
+    return SDValue();
+
+  SDValue NewRHS = DAG.getConstant(ImmValMinus1, DL, VT);
+  return DAG.getNode(ISD::ADD, DL, VT, NewLHS, NewRHS);
+}
+
+static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
+  if (SDValue V = combineSubOfBoolean(N, DAG))
+    return V;
 
   // fold (sub x, (select lhs, rhs, cc, 0, y)) ->
   //      (select lhs, rhs, cc, x, (sub x, y))
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
   return combineSelectAndUse(N, N1, N0, DAG, /*AllOnes*/ false);
 }
 

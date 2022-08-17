@@ -331,8 +331,7 @@ InstructionCost PPCTTIImpl::getUserCost(const User *U,
 
   if (U->getType()->isVectorTy()) {
     // Instructions that need to be split should cost more.
-    std::pair<InstructionCost, MVT> LT =
-        TLI->getTypeLegalizationCost(DL, U->getType());
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(U->getType());
     return LT.first * BaseT::getUserCost(U, Operands, CostKind);
   }
 
@@ -960,7 +959,7 @@ InstructionCost PPCTTIImpl::vectorCostAdjustmentFactor(unsigned Opcode,
   if (!ST->vectorsUseTwoUnits() || !Ty1->isVectorTy())
     return InstructionCost(1);
 
-  std::pair<InstructionCost, MVT> LT1 = TLI->getTypeLegalizationCost(DL, Ty1);
+  std::pair<InstructionCost, MVT> LT1 = getTypeLegalizationCost(Ty1);
   // If type legalization involves splitting the vector, we don't want to
   // double the cost at every step - only the last step.
   if (LT1.first != 1 || !LT1.second.isVector())
@@ -971,7 +970,7 @@ InstructionCost PPCTTIImpl::vectorCostAdjustmentFactor(unsigned Opcode,
     return InstructionCost(1);
 
   if (Ty2) {
-    std::pair<InstructionCost, MVT> LT2 = TLI->getTypeLegalizationCost(DL, Ty2);
+    std::pair<InstructionCost, MVT> LT2 = getTypeLegalizationCost(Ty2);
     if (LT2.first != 1 || !LT2.second.isVector())
       return InstructionCost(1);
   }
@@ -1014,7 +1013,7 @@ InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
     return InstructionCost::getMax();
 
   // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
 
   // PPC, for both Altivec/VSX, support cheap arbitrary permutations
   // (at least in the sense that there need only be one non-loop-invariant
@@ -1156,7 +1155,7 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                   CostKind);
   // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Src);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
   assert((Opcode == Instruction::Load || Opcode == Instruction::Store) &&
          "Invalid Opcode");
 
@@ -1246,7 +1245,7 @@ InstructionCost PPCTTIImpl::getInterleavedMemoryOpCost(
          "Expect a vector type for interleaved memory op");
 
   // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, VecTy);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
 
   // Firstly, the cost of load/store operation.
   InstructionCost Cost = getMemoryOpCost(Opcode, VecTy, MaybeAlign(Alignment),
@@ -1427,8 +1426,7 @@ InstructionCost PPCTTIImpl::getVPMemoryOpCost(unsigned Opcode, Type *Src,
   assert(SrcVTy && "Expected a vector type for VP memory operations");
 
   if (hasActiveVectorLength(Opcode, Src, Alignment)) {
-    std::pair<InstructionCost, MVT> LT =
-        TLI->getTypeLegalizationCost(DL, SrcVTy);
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcVTy);
 
     InstructionCost CostFactor =
         vectorCostAdjustmentFactor(Opcode, Src, nullptr);

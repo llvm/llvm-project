@@ -134,7 +134,7 @@ if config.clang_enable_opaque_pointers:
 # Set available features we allow tests to conditionalize on.
 #
 if config.clang_default_cxx_stdlib != '':
-    config.available_features.add('default-cxx-stdlib-set')
+    config.available_features.add('default-cxx-stdlib={}'.format(config.clang_default_cxx_stdlib))
 
 # As of 2011.08, crash-recovery tests still do not pass on FreeBSD.
 if platform.system() not in ['FreeBSD']:

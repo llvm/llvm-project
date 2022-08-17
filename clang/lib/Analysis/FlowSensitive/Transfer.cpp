@@ -661,7 +661,8 @@ private:
   // `F` of `S`. The type `E` must be either `CallExpr` or `CXXConstructExpr`.
   template <typename E>
   void transferInlineCall(const E *S, const FunctionDecl *F) {
-    if (!Options.ContextSensitiveOpts)
+    if (!(Options.ContextSensitiveOpts &&
+          Env.canDescend(Options.ContextSensitiveOpts->Depth, F)))
       return;
 
     const ControlFlowContext *CFCtx = Env.getControlFlowContext(F);
@@ -689,7 +690,7 @@ private:
     assert(CFCtx->getDecl() != nullptr &&
            "ControlFlowContexts in the environment should always carry a decl");
     auto Analysis = NoopAnalysis(CFCtx->getDecl()->getASTContext(),
-                                 DataflowAnalysisOptions());
+                                 DataflowAnalysisOptions{Options});
 
     auto BlockToOutputState =
         dataflow::runDataflowAnalysis(*CFCtx, Analysis, CalleeEnv);

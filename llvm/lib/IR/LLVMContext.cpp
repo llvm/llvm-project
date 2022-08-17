@@ -148,10 +148,10 @@ uint64_t LLVMContext::getDiagnosticsHotnessThreshold() const {
   return pImpl->DiagnosticsHotnessThreshold.value_or(UINT64_MAX);
 }
 void LLVMContext::setDiagnosticsMisExpectTolerance(
-    Optional<uint64_t> Tolerance) {
+    Optional<uint32_t> Tolerance) {
   pImpl->DiagnosticsMisExpectTolerance = Tolerance;
 }
-uint64_t LLVMContext::getDiagnosticsMisExpectTolerance() const {
+uint32_t LLVMContext::getDiagnosticsMisExpectTolerance() const {
   return pImpl->DiagnosticsMisExpectTolerance.value_or(0);
 }
 

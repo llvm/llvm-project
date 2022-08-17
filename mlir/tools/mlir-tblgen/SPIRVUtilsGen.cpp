@@ -518,7 +518,8 @@ static void emitAttributeSerialization(const Attribute &attr,
   os << tabs
      << formatv("if (auto attr = {0}->getAttr(\"{1}\")) {{\n", opVar, attrName);
   if (attr.getAttrDefName() == "SPV_ScopeAttr" ||
-      attr.getAttrDefName() == "SPV_MemorySemanticsAttr") {
+      attr.getAttrDefName() == "SPV_MemorySemanticsAttr" ||
+      attr.getAttrDefName() == "SPV_MatrixLayoutAttr") {
     // These two enums are encoded as <id> to constant values in SPIR-V blob,
     // but we directly use the constant value as attribute in SPIR-V dialect. So
     // need to handle them separately from normal enum attributes.
@@ -810,7 +811,8 @@ static void emitAttributeDeserialization(const Attribute &attr,
                                          StringRef words, StringRef wordIndex,
                                          raw_ostream &os) {
   if (attr.getAttrDefName() == "SPV_ScopeAttr" ||
-      attr.getAttrDefName() == "SPV_MemorySemanticsAttr") {
+      attr.getAttrDefName() == "SPV_MemorySemanticsAttr" ||
+      attr.getAttrDefName() == "SPV_MatrixLayoutAttr") {
     // These two enums are encoded as <id> to constant values in SPIR-V blob,
     // but we directly use the constant value as attribute in SPIR-V dialect. So
     // need to handle them separately from normal enum attributes.

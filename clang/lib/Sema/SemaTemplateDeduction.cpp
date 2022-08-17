@@ -2445,6 +2445,9 @@ static bool isSameTemplateArg(ASTContext &Context,
   if (X.getKind() != Y.getKind())
     return false;
 
+  bool ClangABICompat14 =
+      Context.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver14;
+
   switch (X.getKind()) {
     case TemplateArgument::Null:
       llvm_unreachable("Comparing NULL template argument");
@@ -2477,30 +2480,43 @@ static bool isSameTemplateArg(ASTContext &Context,
     }
 
     case TemplateArgument::Pack:
-      unsigned PackIterationSize = X.pack_size();
-      if (X.pack_size() != Y.pack_size()) {
-        if (!PartialOrdering)
+      if (ClangABICompat14) {
+        if (X.pack_size() != Y.pack_size())
           return false;
 
-        // C++0x [temp.deduct.type]p9:
-        // During partial ordering, if Ai was originally a pack expansion:
-        // - if P does not contain a template argument corresponding to Ai then
-        //   Ai is ignored;
-        bool XHasMoreArg = X.pack_size() > Y.pack_size();
-        if (!(XHasMoreArg && X.pack_elements().back().isPackExpansion()) &&
-            !(!XHasMoreArg && Y.pack_elements().back().isPackExpansion()))
-          return false;
+        for (TemplateArgument::pack_iterator XP = X.pack_begin(),
+                                             XPEnd = X.pack_end(),
+                                             YP = Y.pack_begin();
+             XP != XPEnd; ++XP, ++YP)
+          if (!isSameTemplateArg(Context, *XP, *YP, PartialOrdering,
+                                 PackExpansionMatchesPack))
+            return false;
+      } else {
+        unsigned PackIterationSize = X.pack_size();
+        if (X.pack_size() != Y.pack_size()) {
+          if (!PartialOrdering)
+            return false;
 
-        if (XHasMoreArg)
-          PackIterationSize = Y.pack_size();
+          // C++0x [temp.deduct.type]p9:
+          // During partial ordering, if Ai was originally a pack expansion:
+          // - if P does not contain a template argument corresponding to Ai
+          //   then Ai is ignored;
+          bool XHasMoreArg = X.pack_size() > Y.pack_size();
+          if (!(XHasMoreArg && X.pack_elements().back().isPackExpansion()) &&
+              !(!XHasMoreArg && Y.pack_elements().back().isPackExpansion()))
+            return false;
+
+          if (XHasMoreArg)
+            PackIterationSize = Y.pack_size();
+        }
+
+        ArrayRef<TemplateArgument> XP = X.pack_elements();
+        ArrayRef<TemplateArgument> YP = Y.pack_elements();
+        for (unsigned i = 0; i < PackIterationSize; ++i)
+          if (!isSameTemplateArg(Context, XP[i], YP[i], PartialOrdering,
+                                 PackExpansionMatchesPack))
+            return false;
       }
-
-      ArrayRef<TemplateArgument> XP = X.pack_elements();
-      ArrayRef<TemplateArgument> YP = Y.pack_elements();
-      for (unsigned i = 0; i < PackIterationSize; ++i)
-        if (!isSameTemplateArg(Context, XP[i], YP[i], PartialOrdering,
-                               PackExpansionMatchesPack))
-          return false;
       return true;
   }
 
@@ -2811,6 +2827,20 @@ template<>
 struct IsPartialSpecialization<VarTemplatePartialSpecializationDecl> {
   static constexpr bool value = true;
 };
+template <typename TemplateDeclT>
+static bool DeducedArgsNeedReplacement(TemplateDeclT *Template) {
+  return false;
+}
+template <>
+bool DeducedArgsNeedReplacement<VarTemplatePartialSpecializationDecl>(
+    VarTemplatePartialSpecializationDecl *Spec) {
+  return !Spec->isClassScopeExplicitSpecialization();
+}
+template <>
+bool DeducedArgsNeedReplacement<ClassTemplatePartialSpecializationDecl>(
+    ClassTemplatePartialSpecializationDecl *Spec) {
+  return !Spec->isClassScopeExplicitSpecialization();
+}
 
 template<typename TemplateDeclT>
 static Sema::TemplateDeductionResult
@@ -2819,13 +2849,25 @@ CheckDeducedArgumentConstraints(Sema& S, TemplateDeclT *Template,
                                 TemplateDeductionInfo& Info) {
   llvm::SmallVector<const Expr *, 3> AssociatedConstraints;
   Template->getAssociatedConstraints(AssociatedConstraints);
-  // FIXME: This will change quite a bit once deferred concept instantiation is
-  // implemented.
   MultiLevelTemplateArgumentList MLTAL;
-  MLTAL.addOuterTemplateArguments(DeducedArgs);
 
-  if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints,
-                                    MLTAL, Info.getLocation(),
+  bool NeedsReplacement = DeducedArgsNeedReplacement(Template);
+  TemplateArgumentList DeducedTAL{TemplateArgumentList::OnStack, DeducedArgs};
+
+  MLTAL = S.getTemplateInstantiationArgs(
+      Template, /*InnerMost*/ NeedsReplacement ? nullptr : &DeducedTAL,
+      /*RelativeToPrimary*/ true, /*Pattern*/
+      nullptr, /*LookBeyondLambda*/ true);
+
+  // getTemplateInstantiationArgs picks up the non-deduced version of the
+  // template args when this is a variable template partial specialization and
+  // not class-scope explicit specialization, so replace with Deduced Args
+  // instead of adding to inner-most.
+  if (NeedsReplacement)
+    MLTAL.replaceInnermostTemplateArguments(DeducedArgs);
+
+  if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints, MLTAL,
+                                    Info.getLocation(),
                                     Info.AssociatedConstraintsSatisfaction) ||
       !Info.AssociatedConstraintsSatisfaction.IsSatisfied) {
     Info.reset(TemplateArgumentList::CreateCopy(S.Context, DeducedArgs));

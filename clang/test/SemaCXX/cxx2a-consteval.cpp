@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++2a -emit-llvm-only -Wno-unused-value %s -verify
 
+// XFAIL: *
+
 typedef __SIZE_TYPE__ size_t;
 
 namespace basic_sema {
@@ -865,3 +867,15 @@ consteval int aConstevalFunction() { // expected-error {{consteval function neve
 }
 
 } // namespace multiple_default_constructors
+
+namespace GH50055 {
+enum E {e1=0, e2=1};
+consteval int testDefaultArgForParam(E eParam = (E)-1) {
+// expected-error@-1 {{integer value -1 is outside the valid range of values [0, 1] for this enumeration type}}
+  return (int)eParam;
+}
+
+int test() {
+  return testDefaultArgForParam() + testDefaultArgForParam((E)1);
+}
+}

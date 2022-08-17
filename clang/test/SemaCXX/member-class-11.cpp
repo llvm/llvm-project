@@ -26,4 +26,56 @@ struct C {
   ~B(); // expected-error {{expected the class name after '~' to name the enclosing class}}
 };
 
+template <typename T>
+struct D {
+  friend T::S::~S();
+private:
+  static constexpr int secret = 42;
+};
+
+template <typename T>
+struct E {
+  friend T::S::~V();
+};
+
+struct BadInstantiation {
+  struct S {
+    struct V {};
+  };
+};
+
+struct GoodInstantiation {
+  struct V {
+    ~V();
+  };
+  using S = V;
+};
+
+// FIXME: We should diagnose this while instantiating.
+E<BadInstantiation> x;
+E<GoodInstantiation> y;
+
+struct Q {
+  struct S { ~S(); };
+};
+
+Q::S::~S() {
+  void foo(int);
+  foo(D<Q>::secret);
+}
+
+struct X {
+  ~X();
+};
+struct Y;
+
+struct Z1 {
+  friend X::~Y(); // expected-error {{expected the class name after '~' to name the enclosing class}}
+};
+
+template <class T>
+struct Z2 {
+  friend X::~Y(); // expected-error {{expected the class name after '~' to name the enclosing class}}
+};
+
 }

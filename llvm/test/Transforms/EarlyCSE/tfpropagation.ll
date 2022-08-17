@@ -128,6 +128,38 @@ define double @branching_maytrap(i64 %a) #0 {
 ; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt", metadata !"fpexcept.maytrap") #[[ATTR0]]
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END3:%.*]]
 ; CHECK:       if.then3:
+; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 true) #[[ATTR0]]
+; CHECK-NEXT:    br label [[OUT:%.*]]
+; CHECK:       if.end3:
+; CHECK-NEXT:    [[D:%.*]] = call double @falsefunc.f64.i1(i1 false) #[[ATTR0]]
+; CHECK-NEXT:    br label [[OUT]]
+; CHECK:       out:
+; CHECK-NEXT:    ret double [[CONV1]]
+;
+  %conv1 = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %cmp2 = call i1 @llvm.experimental.constrained.fcmps.f64(double 1.000000e+00, double %conv1, metadata !"ogt", metadata !"fpexcept.maytrap") #0
+  br i1 %cmp2, label %if.then3, label %if.end3
+
+if.then3:
+  %c = call double @truefunc.f64.i1(i1 %cmp2) #0
+  br label %out
+
+if.end3:
+  %d = call double @falsefunc.f64.i1(i1 %cmp2) #0
+  br label %out
+
+out:
+  ret double %conv1
+}
+
+; TODO: Fix this optimization so it works with strict exception behavior.
+; TODO: This may or may not be worth the added complication and risk.
+define double @branching_ebstrict(i64 %a) #0 {
+; CHECK-LABEL: @branching_ebstrict(
+; CHECK-NEXT:    [[CONV1:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @llvm.experimental.constrained.fcmps.f64(double 1.000000e+00, double [[CONV1]], metadata !"ogt", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_END3:%.*]]
+; CHECK:       if.then3:
 ; CHECK-NEXT:    [[C:%.*]] = call double @truefunc.f64.i1(i1 [[CMP2]]) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[OUT:%.*]]
 ; CHECK:       if.end3:
@@ -136,8 +168,8 @@ define double @branching_maytrap(i64 %a) #0 {
 ; CHECK:       out:
 ; CHECK-NEXT:    ret double [[CONV1]]
 ;
-  %conv1 = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
-  %cmp2 = call i1 @llvm.experimental.constrained.fcmps.f64(double 1.000000e+00, double %conv1, metadata !"ogt", metadata !"fpexcept.maytrap") #0
+  %conv1 = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %cmp2 = call i1 @llvm.experimental.constrained.fcmps.f64(double 1.000000e+00, double %conv1, metadata !"ogt", metadata !"fpexcept.strict") #0
   br i1 %cmp2, label %if.then3, label %if.end3
 
 if.then3:

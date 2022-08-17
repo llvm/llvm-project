@@ -141,6 +141,15 @@ build:clang-cl --copt=/clang:-Wno-inconsistent-dllimport --host_copt=/clang:-Wno
 build:clang-cl --cxxopt=/clang:-Wno-c++11-narrowing --host_cxxopt=/clang:-Wno-c++11-narrowing
 
 ###############################################################################
+# Options for continuous integration.
+###############################################################################
+
+# -O1 tries to provide a reasonable tradeoff between compile times and runtime
+# performance. However, if we start running more tests (e.g. all of
+# check-clang) we may want more optimizations.
+build:ci --copt=-O1
+
+###############################################################################
 
 # The user.bazelrc file is not checked in but available for local mods.
 # Always keep this at the end of the file so that user flags override.

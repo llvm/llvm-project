@@ -84,6 +84,7 @@ enum Kind {
   kShrU, // unsigned
   kShlI,
   kBinary, // semiring binary op
+  kReduce, // semiring reduction op
 };
 
 /// Children subexpressions of tensor operations.
@@ -115,8 +116,8 @@ struct TensorExp {
   /// this field may be used to cache "hoisted" loop invariant tensor loads.
   Value val;
 
-  /// Code blocks used by semirings. For the case of kUnary and
-  /// kBinary, this holds the original operation with all regions. For
+  /// Code blocks used by semirings. For the case of kUnary, kBinary, and
+  /// kReduce, this holds the original operation with all regions. For
   /// kBinaryBranch, this holds the YieldOp for the left or right half
   /// to be merged into a nested scf loop.
   Operation *op;
