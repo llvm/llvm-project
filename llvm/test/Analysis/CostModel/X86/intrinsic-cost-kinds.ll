@@ -16,6 +16,9 @@ declare {<16 x i32>, <16 x i1>} @llvm.umul.with.overflow.v16i32(<16 x i32>, <16 
 declare i32 @llvm.smax.i32(i32, i32)
 declare <16 x i32> @llvm.smax.v16i32(<16 x i32>, <16 x i32>)
 
+declare float @llvm.copysign.f32(float, float)
+declare <16 x float> @llvm.copysign.v16f32(<16 x float>, <16 x float>)
+
 declare float @llvm.fmuladd.f32(float, float, float)
 declare <16 x float> @llvm.fmuladd.v16f32(<16 x float>, <16 x float>, <16 x float>)
 
@@ -94,6 +97,32 @@ define void @smax(i32 %a, i32 %b, <16 x i32> %va, <16 x i32> %vb) {
 ;
   %s = call i32 @llvm.smax.i32(i32 %a, i32 %b)
   %v = call <16 x i32> @llvm.smax.v16i32(<16 x i32> %va, <16 x i32> %vb)
+  ret void
+}
+
+define void @fcopysign(float %a, float %b, <16 x float> %va, <16 x float> %vb) {
+; THRU-LABEL: 'fcopysign'
+; THRU-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call float @llvm.copysign.f32(float %a, float %b)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <16 x float> @llvm.copysign.v16f32(<16 x float> %va, <16 x float> %vb)
+; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+; LATE-LABEL: 'fcopysign'
+; LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %s = call float @llvm.copysign.f32(float %a, float %b)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v = call <16 x float> @llvm.copysign.v16f32(<16 x float> %va, <16 x float> %vb)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; SIZE-LABEL: 'fcopysign'
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call float @llvm.copysign.f32(float %a, float %b)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <16 x float> @llvm.copysign.v16f32(<16 x float> %va, <16 x float> %vb)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+; SIZE_LATE-LABEL: 'fcopysign'
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call float @llvm.copysign.f32(float %a, float %b)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <16 x float> @llvm.copysign.v16f32(<16 x float> %va, <16 x float> %vb)
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+;
+  %s = call float @llvm.copysign.f32(float %a, float %b)
+  %v = call <16 x float> @llvm.copysign.v16f32(<16 x float> %va, <16 x float> %vb)
   ret void
 }
 
