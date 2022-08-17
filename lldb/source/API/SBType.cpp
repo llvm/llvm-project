@@ -559,7 +559,8 @@ uint32_t SBType::GetNumberOfTemplateArguments() {
   LLDB_INSTRUMENT_VA(this);
 
   if (IsValid())
-    return m_opaque_sp->GetCompilerType(false).GetNumTemplateArguments();
+    return m_opaque_sp->GetCompilerType(false).GetNumTemplateArguments(
+        /*expand_pack=*/true);
   return 0;
 }
 
@@ -570,13 +571,15 @@ lldb::SBType SBType::GetTemplateArgumentType(uint32_t idx) {
     return SBType();
 
   CompilerType type;
+  const bool expand_pack = true;
   switch(GetTemplateArgumentKind(idx)) {
     case eTemplateArgumentKindType:
-      type = m_opaque_sp->GetCompilerType(false).GetTypeTemplateArgument(idx);
+      type = m_opaque_sp->GetCompilerType(false).GetTypeTemplateArgument(
+          idx, expand_pack);
       break;
     case eTemplateArgumentKindIntegral:
       type = m_opaque_sp->GetCompilerType(false)
-                 .GetIntegralTemplateArgument(idx)
+                 .GetIntegralTemplateArgument(idx, expand_pack)
                  ->type;
       break;
     default:
@@ -591,7 +594,8 @@ lldb::TemplateArgumentKind SBType::GetTemplateArgumentKind(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
   if (IsValid())
-    return m_opaque_sp->GetCompilerType(false).GetTemplateArgumentKind(idx);
+    return m_opaque_sp->GetCompilerType(false).GetTemplateArgumentKind(
+        idx, /*expand_pack=*/true);
   return eTemplateArgumentKindNull;
 }
 
