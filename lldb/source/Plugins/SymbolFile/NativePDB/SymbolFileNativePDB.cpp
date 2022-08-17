@@ -1718,6 +1718,8 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
   CompilandIndexItem *cii = m_index->compilands().GetCompiland(var_id.modi);
   CompUnitSP comp_unit_sp = GetOrCreateCompileUnit(*cii);
   TypeSP type_sp = GetOrCreateType(var_info.type);
+  if (!type_sp)
+    return nullptr;
   std::string name = var_info.name.str();
   Declaration decl;
   SymbolFileTypeSP sftype =
