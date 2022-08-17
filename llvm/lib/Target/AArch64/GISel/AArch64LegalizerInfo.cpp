@@ -1025,6 +1025,30 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     Value.setReg(ZExtValueReg);
     return true;
   }
+  case Intrinsic::prefetch: {
+    MachineIRBuilder MIB(MI);
+    auto &AddrVal = MI.getOperand(1);
+
+    int64_t IsWrite = MI.getOperand(2).getImm();
+    int64_t Locality = MI.getOperand(3).getImm();
+    int64_t IsData = MI.getOperand(4).getImm();
+
+    bool IsStream = Locality == 0;
+    if (Locality != 0) {
+      assert(Locality <= 3 && "Prefetch locality out-of-range");
+      // The locality degree is the opposite of the cache speed.
+      // Put the number the other way around.
+      // The encoding starts at 0 for level 1
+      Locality = 3 - Locality;
+    }
+
+    unsigned PrfOp =
+        (IsWrite << 4) | (!IsData << 3) | (Locality << 1) | IsStream;
+
+    MIB.buildInstr(AArch64::G_PREFETCH).addImm(PrfOp).add(AddrVal);
+    MI.eraseFromParent();
+    return true;
+  }
   }
 
   return true;
