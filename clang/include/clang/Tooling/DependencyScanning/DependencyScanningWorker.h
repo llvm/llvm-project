@@ -38,6 +38,8 @@ class DependencyConsumer {
 public:
   virtual ~DependencyConsumer() {}
 
+  virtual void finalize(CompilerInstance &CI) {}
+
   virtual void
   handleDependencyOutputOpts(const DependencyOutputOptions &Opts) = 0;
 

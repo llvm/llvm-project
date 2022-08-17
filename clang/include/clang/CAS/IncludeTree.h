@@ -288,6 +288,12 @@ public:
 
   ObjectRef getFileListRef() const { return getReference(1); }
 
+  Optional<ObjectRef> getPCHRef() const {
+    if (getNumReferences() > 2)
+      return getReference(2);
+    return None;
+  }
+
   Expected<IncludeTree> getMainFileTree() {
     auto Node = getCAS().getProxy(getMainFileTreeRef());
     if (!Node)
@@ -302,8 +308,19 @@ public:
     return IncludeFileList(std::move(*Node));
   }
 
+  Expected<Optional<StringRef>> getPCHBuffer() {
+    if (Optional<ObjectRef> Ref = getPCHRef()) {
+      auto Node = getCAS().getProxy(*Ref);
+      if (!Node)
+        return Node.takeError();
+      return Node->getData();
+    }
+    return None;
+  }
+
   static Expected<IncludeTreeRoot> create(CASDB &DB, ObjectRef MainFileTree,
-                                          ObjectRef FileList);
+                                          ObjectRef FileList,
+                                          Optional<ObjectRef> PCHRef);
 
   static Expected<IncludeTreeRoot> get(CASDB &DB, ObjectRef Ref);
 
@@ -313,7 +330,8 @@ public:
     if (!IncludeTreeBase::isValid(Node))
       return false;
     IncludeTreeBase Base(Node);
-    return Base.getNumReferences() == 2 && Base.getData().empty();
+    return (Base.getNumReferences() == 2 || Base.getNumReferences() == 3) &&
+           Base.getData().empty();
   }
   static bool isValid(CASDB &DB, ObjectRef Ref) {
     auto Node = DB.getProxy(Ref);

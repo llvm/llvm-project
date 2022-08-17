@@ -844,6 +844,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     CI.getLangOpts().CurrentModule = CI.getLangOpts().ModuleName;
   }
 
+  Optional<StringRef> IncludeTreePCHBuffer;
   if (Input.isIncludeTree()) {
     auto reportError = [&](llvm::Error &&E) -> bool {
       std::string IncludeTreeID =
@@ -867,6 +868,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       return reportError(PPCachedAct.takeError());
     CI.getPreprocessor().setPPCachedActions(std::move(*PPCachedAct));
     CI.getFrontendOpts().IncludeTimestamps = false;
+
+    if (llvm::Error E = Root->getPCHBuffer().moveInto(IncludeTreePCHBuffer))
+      return reportError(std::move(E));
   }
 
   if (!CI.InitializeSourceManager(Input))
@@ -974,7 +978,8 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       CI.setASTReader(static_cast<ASTReader *>(FinalReader.get()));
       CI.getASTContext().setExternalSource(source);
     } else if (CI.getLangOpts().Modules ||
-               !CI.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
+               !CI.getPreprocessorOpts().ImplicitPCHInclude.empty() ||
+               IncludeTreePCHBuffer) {
       // Use PCM or PCH.
       assert(hasPCHSupport() && "This action does not have PCH support!");
       ASTDeserializationListener *DeserialListener =
@@ -992,12 +997,26 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
             DeserialListener, DeleteDeserialListener);
         DeleteDeserialListener = true;
       }
-      if (!CI.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
+      if (!CI.getPreprocessorOpts().ImplicitPCHInclude.empty() ||
+          IncludeTreePCHBuffer) {
+        StringRef PCHPath;
+        DisableValidationForModuleKind DisableValidation;
+        std::unique_ptr<llvm::MemoryBuffer> PCHBuffer;
+        if (IncludeTreePCHBuffer) {
+          PCHPath = "<PCH>";
+          // No need to do any validation.
+          DisableValidation = DisableValidationForModuleKind::All;
+          PCHBuffer =
+              llvm::MemoryBuffer::getMemBuffer(*IncludeTreePCHBuffer, PCHPath);
+        } else {
+          PCHPath = CI.getPreprocessorOpts().ImplicitPCHInclude;
+          DisableValidation =
+              CI.getPreprocessorOpts().DisablePCHOrModuleValidation;
+        }
         CI.createPCHExternalASTSource(
-            CI.getPreprocessorOpts().ImplicitPCHInclude,
-            CI.getPreprocessorOpts().DisablePCHOrModuleValidation,
+            PCHPath, DisableValidation,
             CI.getPreprocessorOpts().AllowPCHWithCompilerErrors,
-            DeserialListener, DeleteDeserialListener);
+            DeserialListener, DeleteDeserialListener, std::move(PCHBuffer));
         if (!CI.getASTContext().getExternalSource())
           return false;
       }

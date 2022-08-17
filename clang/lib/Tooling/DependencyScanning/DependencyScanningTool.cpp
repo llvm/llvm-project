@@ -217,10 +217,13 @@ private:
 
   void handleHasIncludeCheck(Preprocessor &PP, bool Result) override;
 
+  void finalize(CompilerInstance &CI) override;
+
   Expected<cas::ObjectRef> getObjectForFile(Preprocessor &PP, FileID FID);
   Expected<cas::ObjectRef>
   getObjectForFileNonCached(FileManager &FM, const SrcMgr::FileInfo &FI);
   Expected<cas::ObjectRef> getObjectForBuffer(const SrcMgr::FileInfo &FI);
+  Expected<cas::ObjectRef> addToFileList(FileManager &FM, const FileEntry *FE);
 
   struct FilePPState {
     SrcMgr::CharacteristicKind FileCharacteristic;
@@ -290,6 +293,43 @@ void IncludeTreePPConsumer::handleHasIncludeCheck(Preprocessor &PP,
   IncludeStack.back().HasIncludeChecks.push_back(Result);
 }
 
+void IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
+  PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
+  if (PPOpts.ImplicitPCHInclude.empty())
+    return; // no need for additional work.
+
+  // Go through all the recorded included files; we'll get additional files from
+  // the PCH that we need to include in the file list, in case they are
+  // referenced while replaying the include-tree.
+  SmallVector<const FileEntry *, 32> NotSeenIncludes;
+  for (const FileEntry *FE : CI.getPreprocessor().getIncludedFiles()) {
+    if (FE->getUID() >= SeenIncludeFiles.size() ||
+        !SeenIncludeFiles[FE->getUID()])
+      NotSeenIncludes.push_back(FE);
+  }
+  // Sort so we can visit the files in deterministic order.
+  llvm::sort(NotSeenIncludes, [](const FileEntry *LHS, const FileEntry *RHS) {
+    return LHS->getUID() < RHS->getUID();
+  });
+
+  FileManager &FM = CI.getFileManager();
+  for (const FileEntry *FE : NotSeenIncludes) {
+    auto FileNode = addToFileList(FM, FE);
+    if (!FileNode) {
+      ErrorToReport = FileNode.takeError();
+      return;
+    }
+  }
+
+  llvm::ErrorOr<Optional<cas::ObjectRef>> CASContents =
+      FM.getObjectRefForFileContent(PPOpts.ImplicitPCHInclude);
+  if (!CASContents) {
+    ErrorToReport = llvm::errorCodeToError(CASContents.getError());
+    return;
+  }
+  PCHRef = **CASContents;
+}
+
 Expected<cas::ObjectRef>
 IncludeTreePPConsumer::getObjectForFile(Preprocessor &PP, FileID FID) {
   SourceManager &SM = PP.getSourceManager();
@@ -317,18 +357,15 @@ IncludeTreePPConsumer::getObjectForFile(Preprocessor &PP, FileID FID) {
 Expected<cas::ObjectRef>
 IncludeTreePPConsumer::getObjectForFileNonCached(FileManager &FM,
                                                  const SrcMgr::FileInfo &FI) {
-  StringRef Filename = FI.getName();
-  llvm::ErrorOr<Optional<cas::ObjectRef>> CASContents =
-      FM.getObjectRefForFileContent(Filename);
-  if (!CASContents)
-    return llvm::errorCodeToError(CASContents.getError());
-  assert(*CASContents);
-  Expected<cas::IncludeFile> FileNode =
-      cas::IncludeFile::create(DB, Filename, **CASContents);
-  if (!FileNode)
-    return FileNode.takeError();
-  IncludedFiles.push_back({FileNode->getRef(), FI.getContentCache().getSize()});
-  return FileNode->getRef();
+  const FileEntry *FE = FI.getContentCache().OrigEntry;
+  assert(FE);
+
+  // Mark the include as already seen.
+  if (FE->getUID() >= SeenIncludeFiles.size())
+    SeenIncludeFiles.resize(FE->getUID() + 1);
+  SeenIncludeFiles.set(FE->getUID());
+
+  return addToFileList(FM, FE);
 }
 
 Expected<cas::ObjectRef>
@@ -344,6 +381,42 @@ IncludeTreePPConsumer::getObjectForBuffer(const SrcMgr::FileInfo &FI) {
   if (!FileNode)
     return FileNode.takeError();
   return FileNode->getRef();
+}
+
+Expected<cas::ObjectRef>
+IncludeTreePPConsumer::addToFileList(FileManager &FM, const FileEntry *FE) {
+  StringRef Filename = FE->getName();
+  llvm::ErrorOr<Optional<cas::ObjectRef>> CASContents =
+      FM.getObjectRefForFileContent(Filename);
+  if (!CASContents)
+    return llvm::errorCodeToError(CASContents.getError());
+  assert(*CASContents);
+
+  auto addFile = [&](StringRef Filename) -> Expected<cas::ObjectRef> {
+    assert(!Filename.empty());
+    auto FileNode = cas::IncludeFile::create(DB, Filename, **CASContents);
+    if (!FileNode)
+      return FileNode.takeError();
+    IncludedFiles.push_back(
+        {FileNode->getRef(),
+         static_cast<cas::IncludeFileList::FileSizeTy>(FE->getSize())});
+    return FileNode->getRef();
+  };
+
+  StringRef OtherPath = FE->tryGetRealPathName();
+  if (!OtherPath.empty()) {
+    // Check whether another path is associated due to a symlink.
+    llvm::SmallString<128> AbsPath(Filename);
+    FM.makeAbsolutePath(AbsPath);
+    llvm::sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
+    if (OtherPath != AbsPath) {
+      auto FileNode = addFile(OtherPath);
+      if (!FileNode)
+        return FileNode.takeError();
+    }
+  }
+
+  return addFile(Filename);
 }
 
 Expected<cas::IncludeTree>
@@ -366,7 +439,7 @@ Expected<cas::IncludeTreeRoot> IncludeTreePPConsumer::getIncludeTree() {
     return FileList.takeError();
 
   return cas::IncludeTreeRoot::create(DB, MainIncludeTree->getRef(),
-                                      FileList->getRef());
+                                      FileList->getRef(), PCHRef);
 }
 
 Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(

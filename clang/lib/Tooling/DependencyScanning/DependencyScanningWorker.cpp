@@ -346,6 +346,7 @@ public:
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
     const bool Result = ScanInstance.ExecuteAction(*Action);
+    Consumer.finalize(ScanInstance);
     if (!getDepScanFS())
       FileMgr->clearStatCache();
     return Result;

@@ -209,11 +209,17 @@ bool IncludeFileList::isValid(const ObjectProxy &Node) {
          Base.getData().size() == NumFiles * sizeof(FileSizeTy);
 }
 
-Expected<IncludeTreeRoot>
-IncludeTreeRoot::create(CASDB &DB, ObjectRef MainFileTree, ObjectRef FileList) {
+Expected<IncludeTreeRoot> IncludeTreeRoot::create(CASDB &DB,
+                                                  ObjectRef MainFileTree,
+                                                  ObjectRef FileList,
+                                                  Optional<ObjectRef> PCHRef) {
   assert(IncludeTree::isValid(DB, MainFileTree));
   assert(IncludeFileList::isValid(DB, FileList));
-  return IncludeTreeBase::create(DB, {MainFileTree, FileList}, {});
+  if (PCHRef) {
+    return IncludeTreeBase::create(DB, {MainFileTree, FileList, *PCHRef}, {});
+  } else {
+    return IncludeTreeBase::create(DB, {MainFileTree, FileList}, {});
+  }
 }
 
 Expected<IncludeTreeRoot> IncludeTreeRoot::get(CASDB &DB, ObjectRef Ref) {
@@ -267,6 +273,11 @@ llvm::Error IncludeFileList::print(llvm::raw_ostream &OS, unsigned Indent) {
 }
 
 llvm::Error IncludeTreeRoot::print(llvm::raw_ostream &OS, unsigned Indent) {
+  if (Optional<ObjectRef> PCHRef = getPCHRef()) {
+    OS.indent(Indent) << "(PCH) ";
+    CAS->getID(*PCHRef).print(OS);
+    OS << '\n';
+  }
   Optional<cas::IncludeTree> MainTree;
   if (llvm::Error E = getMainFileTree().moveInto(MainTree))
     return E;
