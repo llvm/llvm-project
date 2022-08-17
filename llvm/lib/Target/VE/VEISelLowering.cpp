@@ -2214,7 +2214,7 @@ VETargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   MF->insert(I, MainMBB);
   MF->insert(I, SinkMBB);
   MF->push_back(RestoreMBB);
-  RestoreMBB->setHasAddressTaken();
+  RestoreMBB->setMachineBlockAddressTaken();
 
   // Transfer the remainder of BB and its successor edges to SinkMBB.
   SinkMBB->splice(SinkMBB->begin(), MBB,

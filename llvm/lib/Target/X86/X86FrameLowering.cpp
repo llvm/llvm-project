@@ -2777,7 +2777,7 @@ void X86FrameLowering::emitCatchRetReturnValue(MachineBasicBlock &MBB,
 
   // Record that we've taken the address of CatchRetTarget and no longer just
   // reference it in a terminator.
-  CatchRetTarget->setHasAddressTaken();
+  CatchRetTarget->setMachineBlockAddressTaken();
 }
 
 bool X86FrameLowering::restoreCalleeSavedRegisters(

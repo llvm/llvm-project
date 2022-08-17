@@ -30,32 +30,34 @@ registers:
 body:             |
   ; CHECK-LABEL: name: test_blockaddress
   ; CHECK: bb.0 (%ir-block.0):
-  ; CHECK:   [[MOVaddrBA:%[0-9]+]]:gpr64common = MOVaddrBA target-flags(aarch64-page) blockaddress(@test_blockaddress, %ir-block.block), target-flags(aarch64-pageoff, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block)
-  ; CHECK:   [[MOVaddr:%[0-9]+]]:gpr64common = MOVaddr target-flags(aarch64-page) @addr, target-flags(aarch64-pageoff, aarch64-nc) @addr
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr64 = COPY [[MOVaddrBA]]
-  ; CHECK:   STRXui [[COPY]], [[MOVaddr]], 0 :: (store (p0) into @addr)
-  ; CHECK:   BR [[MOVaddrBA]]
-  ; CHECK: bb.1.block (address-taken):
+  ; CHECK-NEXT:   [[MOVaddrBA:%[0-9]+]]:gpr64common = MOVaddrBA target-flags(aarch64-page) blockaddress(@test_blockaddress, %ir-block.block), target-flags(aarch64-pageoff, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block)
+  ; CHECK-NEXT:   [[MOVaddr:%[0-9]+]]:gpr64common = MOVaddr target-flags(aarch64-page) @addr, target-flags(aarch64-pageoff, aarch64-nc) @addr
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY [[MOVaddrBA]]
+  ; CHECK-NEXT:   STRXui [[COPY]], [[MOVaddr]], 0 :: (store (p0) into @addr)
+  ; CHECK-NEXT:   BR [[MOVaddrBA]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.block (ir-block-address-taken %ir-block.block):
   ; LARGE-LABEL: name: test_blockaddress
   ; LARGE: bb.0 (%ir-block.0):
-  ; LARGE:   [[MOVZXi:%[0-9]+]]:gpr64 = MOVZXi target-flags(aarch64-g0, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block), 0
-  ; LARGE:   [[MOVKXi:%[0-9]+]]:gpr64 = MOVKXi [[MOVZXi]], target-flags(aarch64-g1, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block), 16
-  ; LARGE:   [[MOVKXi1:%[0-9]+]]:gpr64 = MOVKXi [[MOVKXi]], target-flags(aarch64-g2, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block), 32
-  ; LARGE:   [[MOVKXi2:%[0-9]+]]:gpr64 = MOVKXi [[MOVKXi1]], target-flags(aarch64-g3) blockaddress(@test_blockaddress, %ir-block.block), 48
-  ; LARGE:   [[MOVZXi1:%[0-9]+]]:gpr64 = MOVZXi target-flags(aarch64-g0, aarch64-nc) @addr, 0
-  ; LARGE:   [[MOVKXi3:%[0-9]+]]:gpr64 = MOVKXi [[MOVZXi1]], target-flags(aarch64-g1, aarch64-nc) @addr, 16
-  ; LARGE:   [[MOVKXi4:%[0-9]+]]:gpr64 = MOVKXi [[MOVKXi3]], target-flags(aarch64-g2, aarch64-nc) @addr, 32
-  ; LARGE:   [[MOVKXi5:%[0-9]+]]:gpr64common = MOVKXi [[MOVKXi4]], target-flags(aarch64-g3) @addr, 48
-  ; LARGE:   STRXui [[MOVKXi2]], [[MOVKXi5]], 0 :: (store (p0) into @addr)
-  ; LARGE:   BR [[MOVKXi2]]
-  ; LARGE: bb.1.block (address-taken):
+  ; LARGE-NEXT:   [[MOVZXi:%[0-9]+]]:gpr64 = MOVZXi target-flags(aarch64-g0, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block), 0
+  ; LARGE-NEXT:   [[MOVKXi:%[0-9]+]]:gpr64 = MOVKXi [[MOVZXi]], target-flags(aarch64-g1, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block), 16
+  ; LARGE-NEXT:   [[MOVKXi1:%[0-9]+]]:gpr64 = MOVKXi [[MOVKXi]], target-flags(aarch64-g2, aarch64-nc) blockaddress(@test_blockaddress, %ir-block.block), 32
+  ; LARGE-NEXT:   [[MOVKXi2:%[0-9]+]]:gpr64 = MOVKXi [[MOVKXi1]], target-flags(aarch64-g3) blockaddress(@test_blockaddress, %ir-block.block), 48
+  ; LARGE-NEXT:   [[MOVZXi1:%[0-9]+]]:gpr64 = MOVZXi target-flags(aarch64-g0, aarch64-nc) @addr, 0
+  ; LARGE-NEXT:   [[MOVKXi3:%[0-9]+]]:gpr64 = MOVKXi [[MOVZXi1]], target-flags(aarch64-g1, aarch64-nc) @addr, 16
+  ; LARGE-NEXT:   [[MOVKXi4:%[0-9]+]]:gpr64 = MOVKXi [[MOVKXi3]], target-flags(aarch64-g2, aarch64-nc) @addr, 32
+  ; LARGE-NEXT:   [[MOVKXi5:%[0-9]+]]:gpr64common = MOVKXi [[MOVKXi4]], target-flags(aarch64-g3) @addr, 48
+  ; LARGE-NEXT:   STRXui [[MOVKXi2]], [[MOVKXi5]], 0 :: (store (p0) into @addr)
+  ; LARGE-NEXT:   BR [[MOVKXi2]]
+  ; LARGE-NEXT: {{  $}}
+  ; LARGE-NEXT: bb.1.block (ir-block-address-taken %ir-block.block):
   bb.1 (%ir-block.0):
     %0:gpr(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
     %1:gpr(p0) = G_GLOBAL_VALUE @addr
     G_STORE %0(p0), %1(p0) :: (store (p0) into @addr)
     G_BRINDIRECT %0(p0)
 
-  bb.2.block (address-taken):
+  bb.2.block (ir-block-address-taken %ir-block.block):
     RET_ReallyLR
 
 ...

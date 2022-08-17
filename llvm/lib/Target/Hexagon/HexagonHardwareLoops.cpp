@@ -1263,13 +1263,8 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
         .addMBB(LoopStart).addImm(CountImm);
   }
 
-  // Make sure the loop start always has a reference in the CFG.  We need
-  // to create a BlockAddress operand to get this mechanism to work both the
-  // MachineBasicBlock and BasicBlock objects need the flag set.
-  LoopStart->setHasAddressTaken();
-  // This line is needed to set the hasAddressTaken flag on the BasicBlock
-  // object.
-  BlockAddress::get(const_cast<BasicBlock *>(LoopStart->getBasicBlock()));
+  // Make sure the loop start always has a reference in the CFG.
+  LoopStart->setMachineBlockAddressTaken();
 
   // Replace the loop branch with an endloop instruction.
   DebugLoc LastIDL = LastI->getDebugLoc();
