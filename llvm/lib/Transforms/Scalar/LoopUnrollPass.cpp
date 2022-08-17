@@ -682,7 +682,7 @@ InstructionCost llvm::ApproximateLoopSize(
   // that each loop has at least three instructions (likely a conditional
   // branch, a comparison feeding that branch, and some kind of loop increment
   // feeding that comparison instruction).
-  if (LoopSize.isValid() && *LoopSize.getValue() < BEInsns + 1)
+  if (LoopSize.isValid() && LoopSize < BEInsns + 1)
     // This is an open coded max() on InstructionCost
     LoopSize = BEInsns + 1;
 

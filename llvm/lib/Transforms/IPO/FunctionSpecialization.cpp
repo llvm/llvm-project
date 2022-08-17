@@ -552,7 +552,7 @@ private:
     // inlined so that we shouldn't specialize it.
     if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
         (!ForceFunctionSpecialization &&
-         *Metrics.NumInsts.getValue() < SmallFunctionThreshold)) {
+         Metrics.NumInsts < SmallFunctionThreshold)) {
       InstructionCost C{};
       C.setInvalid();
       return C;
