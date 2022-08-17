@@ -878,7 +878,7 @@ PreservedCFGCheckerInstrumentation::CFG::CFG(const Function *F,
   for (const auto &BB : *F) {
     if (BBGuards)
       BBGuards->try_emplace(intptr_t(&BB), &BB);
-    for (auto *Succ : successors(&BB)) {
+    for (const auto *Succ : successors(&BB)) {
       Graph[&BB][Succ]++;
       if (BBGuards)
         BBGuards->try_emplace(intptr_t(Succ), Succ);

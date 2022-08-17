@@ -129,6 +129,8 @@ FormatToken FormatLexer::lexToken() {
     return lexLiteral(tokStart);
   case '$':
     return lexVariable(tokStart);
+  case '"':
+    return lexString(tokStart);
   }
 }
 
@@ -151,6 +153,17 @@ FormatToken FormatLexer::lexVariable(const char *tokStart) {
   while (isalnum(*curPtr) || *curPtr == '_')
     ++curPtr;
   return formToken(FormatToken::variable, tokStart);
+}
+
+FormatToken FormatLexer::lexString(const char *tokStart) {
+  // Lex until another quote, respecting escapes.
+  bool escape = false;
+  while (const char curChar = *curPtr++) {
+    if (!escape && curChar == '"')
+      return formToken(FormatToken::string, tokStart);
+    escape = curChar == '\\';
+  }
+  return emitError(curPtr - 1, "unexpected end of file in string");
 }
 
 FormatToken FormatLexer::lexIdentifier(const char *tokStart) {
@@ -212,6 +225,8 @@ FailureOr<std::vector<FormatElement *>> FormatParser::parse() {
 FailureOr<FormatElement *> FormatParser::parseElement(Context ctx) {
   if (curToken.is(FormatToken::literal))
     return parseLiteral(ctx);
+  if (curToken.is(FormatToken::string))
+    return parseString(ctx);
   if (curToken.is(FormatToken::variable))
     return parseVariable(ctx);
   if (curToken.isKeyword())
@@ -251,6 +266,28 @@ FailureOr<FormatElement *> FormatParser::parseLiteral(Context ctx) {
       }))
     return failure();
   return create<LiteralElement>(value);
+}
+
+FailureOr<FormatElement *> FormatParser::parseString(Context ctx) {
+  FormatToken tok = curToken;
+  SMLoc loc = tok.getLoc();
+  consumeToken();
+
+  if (ctx != CustomDirectiveContext) {
+    return emitError(
+        loc, "strings may only be used as 'custom' directive arguments");
+  }
+  // Escape the string.
+  std::string value;
+  StringRef contents = tok.getSpelling().drop_front().drop_back();
+  value.reserve(contents.size());
+  bool escape = false;
+  for (char c : contents) {
+    escape = c == '\\';
+    if (!escape)
+      value.push_back(c);
+  }
+  return create<StringElement>(std::move(value));
 }
 
 FailureOr<FormatElement *> FormatParser::parseVariable(Context ctx) {

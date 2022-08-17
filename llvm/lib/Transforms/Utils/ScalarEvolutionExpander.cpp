@@ -2519,7 +2519,7 @@ Value *SCEVExpander::expandUnionPredicate(const SCEVUnionPredicate *Union,
                                           Instruction *IP) {
   // Loop over all checks in this set.
   SmallVector<Value *> Checks;
-  for (auto Pred : Union->getPredicates()) {
+  for (const auto *Pred : Union->getPredicates()) {
     Checks.push_back(expandCodeForPredicate(Pred, IP));
     Builder.SetInsertPoint(IP);
   }

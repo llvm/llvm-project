@@ -332,8 +332,7 @@ static void selectInterestingSourceRegion(std::string &SourceLine,
     return;
 
   // No special characters are allowed in CaretLine.
-  assert(CaretLine.end() ==
-         llvm::find_if(CaretLine, [](char c) { return c < ' ' || '~' < c; }));
+  assert(llvm::none_of(CaretLine, [](char c) { return c < ' ' || '~' < c; }));
 
   // Find the slice that we need to display the full caret line
   // correctly.

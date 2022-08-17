@@ -72,9 +72,8 @@ std::string computeDataLayout(const Triple &TT, StringRef CPU,
 Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                     Optional<Reloc::Model> RM) {
   // If not defined we default to static
-  if (!RM.hasValue()) {
+  if (!RM.has_value())
     return Reloc::Static;
-  }
 
   return *RM;
 }
@@ -88,7 +87,7 @@ CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM,
   } else if (CM == CodeModel::Kernel) {
     llvm_unreachable("Kernel code model is not implemented yet");
   }
-  return CM.getValue();
+  return CM.value();
 }
 } // end anonymous namespace
 

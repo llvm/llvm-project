@@ -947,12 +947,18 @@ bool TypePromotion::runOnFunction(Function &F) {
         continue;
 
       if (isa<ZExtInst>(&I) && isa<PHINode>(I.getOperand(0)) &&
-          BBIsInLoop(&BB)) {
+          isa<IntegerType>(I.getType()) && BBIsInLoop(&BB)) {
         LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: " << I.getOperand(0)
                           << "\n");
         EVT ZExtVT = TLI->getValueType(DL, I.getType());
         Instruction *Phi = static_cast<Instruction *>(I.getOperand(0));
-        MadeChange |= TryToPromote(Phi, ZExtVT.getFixedSizeInBits());
+        auto PromoteWidth = ZExtVT.getFixedSizeInBits();
+        if (RegisterBitWidth < PromoteWidth) {
+          LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target "
+                            << "register for ZExt type\n");
+          continue;
+        }
+        MadeChange |= TryToPromote(Phi, PromoteWidth);
       } else if (auto *ICmp = dyn_cast<ICmpInst>(&I)) {
         // Search up from icmps to try to promote their operands.
         // Skip signed or pointer compares

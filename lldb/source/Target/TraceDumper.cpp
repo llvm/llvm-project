@@ -148,6 +148,9 @@ public:
       case eTraceEventDisabledHW:
       case eTraceEventDisabledSW:
         break;
+      case eTraceEventSyncPoint:
+        m_s.Format(" [{0}]", item.sync_point_metadata);
+        break;
       }
     } else if (item.error) {
       m_s << "(error) " << *item.error;
@@ -192,6 +195,7 @@ class OutputWriterJSON : public TraceDumper::OutputWriter {
       "loadAddress": string decimal,
       "id": decimal,
       "hwClock"?: string decimal,
+      "syncPointMetadata"?: string,
       "timestamp_ns"?: string decimal,
       "module"?: string,
       "symbol"?: string,
@@ -223,6 +227,9 @@ public:
       break;
     case eTraceEventDisabledHW:
     case eTraceEventDisabledSW:
+      break;
+    case eTraceEventSyncPoint:
+      m_j.attribute("syncPointMetadata", item.sync_point_metadata);
       break;
     }
   }
@@ -392,9 +399,7 @@ Optional<lldb::user_id_t> TraceDumper::DumpInstructions(size_t count) {
     last_id = m_cursor_sp->GetId();
     TraceItem item = CreatRawTraceItem();
 
-    if (m_cursor_sp->IsEvent()) {
-      if (!m_options.show_events)
-        continue;
+    if (m_cursor_sp->IsEvent() && m_options.show_events) {
       item.event = m_cursor_sp->GetEventType();
       switch (*item.event) {
       case eTraceEventCPUChanged:
@@ -406,10 +411,15 @@ Optional<lldb::user_id_t> TraceDumper::DumpInstructions(size_t count) {
       case eTraceEventDisabledHW:
       case eTraceEventDisabledSW:
         break;
+      case eTraceEventSyncPoint:
+        item.sync_point_metadata = m_cursor_sp->GetSyncPointMetadata();
+        break;
       }
+      m_writer_up->TraceItem(item);
     } else if (m_cursor_sp->IsError()) {
       item.error = m_cursor_sp->GetError();
-    } else {
+      m_writer_up->TraceItem(item);
+    } else if (m_cursor_sp->IsInstruction() && !m_options.only_events) {
       insn_seen++;
       item.load_address = m_cursor_sp->GetLoadAddress();
 
@@ -426,8 +436,8 @@ Optional<lldb::user_id_t> TraceDumper::DumpInstructions(size_t count) {
         item.symbol_info = symbol_info;
         prev_symbol_info = symbol_info;
       }
+      m_writer_up->TraceItem(item);
     }
-    m_writer_up->TraceItem(item);
   }
   if (!m_cursor_sp->HasValue())
     m_writer_up->NoMoreData();

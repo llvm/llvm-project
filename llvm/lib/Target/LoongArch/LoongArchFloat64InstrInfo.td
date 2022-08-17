@@ -149,6 +149,7 @@ def : PatFprFpr<fsub, FSUB_D, FPR64>;
 def : PatFprFpr<fmul, FMUL_D, FPR64>;
 def : PatFprFpr<fdiv, FDIV_D, FPR64>;
 def : PatFpr<fneg, FNEG_D, FPR64>;
+def : PatFpr<fabs, FABS_D, FPR64>;
 
 /// Setcc
 

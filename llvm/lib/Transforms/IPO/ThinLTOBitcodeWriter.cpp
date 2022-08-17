@@ -546,53 +546,7 @@ void writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
     writeThinLinkBitcodeToFile(M, *ThinLinkOS, *Index, ModHash);
 }
 
-class WriteThinLTOBitcode : public ModulePass {
-  raw_ostream &OS; // raw_ostream to print on
-  // The output stream on which to emit a minimized module for use
-  // just in the thin link, if requested.
-  raw_ostream *ThinLinkOS = nullptr;
-
-public:
-  static char ID; // Pass identification, replacement for typeid
-  WriteThinLTOBitcode() : ModulePass(ID), OS(dbgs()) {
-    initializeWriteThinLTOBitcodePass(*PassRegistry::getPassRegistry());
-  }
-
-  explicit WriteThinLTOBitcode(raw_ostream &o, raw_ostream *ThinLinkOS)
-      : ModulePass(ID), OS(o), ThinLinkOS(ThinLinkOS) {
-    initializeWriteThinLTOBitcodePass(*PassRegistry::getPassRegistry());
-  }
-
-  StringRef getPassName() const override { return "ThinLTO Bitcode Writer"; }
-
-  bool runOnModule(Module &M) override {
-    const ModuleSummaryIndex *Index =
-        &(getAnalysis<ModuleSummaryIndexWrapperPass>().getIndex());
-    writeThinLTOBitcode(OS, ThinLinkOS, LegacyAARGetter(*this), M, Index);
-    return true;
-  }
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<ModuleSummaryIndexWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-};
 } // anonymous namespace
-
-char WriteThinLTOBitcode::ID = 0;
-INITIALIZE_PASS_BEGIN(WriteThinLTOBitcode, "write-thinlto-bitcode",
-                      "Write ThinLTO Bitcode", false, true)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(ModuleSummaryIndexWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(WriteThinLTOBitcode, "write-thinlto-bitcode",
-                    "Write ThinLTO Bitcode", false, true)
-
-ModulePass *llvm::createWriteThinLTOBitcodePass(raw_ostream &Str,
-                                                raw_ostream *ThinLinkOS) {
-  return new WriteThinLTOBitcode(Str, ThinLinkOS);
-}
 
 PreservedAnalyses
 llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {

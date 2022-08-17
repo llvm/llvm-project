@@ -563,11 +563,8 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
     // Add eh-frame passses.
     // FIXME: Prune eh-frames for which compact-unwind is available once
     // we support compact-unwind registration with libunwind.
-    Config.PrePrunePasses.push_back(
-        DWARFRecordSectionSplitter("__TEXT,__eh_frame"));
-    Config.PrePrunePasses.push_back(EHFrameEdgeFixer(
-        "__TEXT,__eh_frame", 8, aarch64::Pointer32, aarch64::Pointer64,
-        aarch64::Delta32, aarch64::Delta64, aarch64::NegDelta32));
+    Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_arm64());
+    Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_arm64());
 
     // Add an in-place GOT/Stubs pass.
     Config.PostPrunePasses.push_back(buildTables_MachO_arm64);
@@ -578,6 +575,17 @@ void link_MachO_arm64(std::unique_ptr<LinkGraph> G,
 
   // Construct a JITLinker and run the link function.
   MachOJITLinker_arm64::link(std::move(Ctx), std::move(G), std::move(Config));
+}
+
+LinkGraphPassFunction createEHFrameSplitterPass_MachO_arm64() {
+  return DWARFRecordSectionSplitter("__TEXT,__eh_frame");
+}
+
+LinkGraphPassFunction createEHFrameEdgeFixerPass_MachO_arm64() {
+  return EHFrameEdgeFixer("__TEXT,__eh_frame", aarch64::PointerSize,
+                          aarch64::Pointer32, aarch64::Pointer64,
+                          aarch64::Delta32, aarch64::Delta64,
+                          aarch64::NegDelta32);
 }
 
 } // end namespace jitlink

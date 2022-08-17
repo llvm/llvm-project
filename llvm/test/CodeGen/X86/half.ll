@@ -228,13 +228,24 @@ define i64 @test_fptosi_i64(ptr %p) #0 {
 ;
 ; CHECK-I686-LABEL: test_fptosi_i64:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    subl $12, %esp
+; CHECK-I686-NEXT:    subl $28, %esp
 ; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-I686-NEXT:    pinsrw $0, (%eax), %xmm0
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
-; CHECK-I686-NEXT:    calll __fixhfdi
-; CHECK-I686-NEXT:    addl $12, %esp
+; CHECK-I686-NEXT:    calll __extendhfsf2
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    orl $3072, %eax # imm = 0xC00
+; CHECK-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fistpll {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-I686-NEXT:    addl $28, %esp
 ; CHECK-I686-NEXT:    retl
   %a = load half, ptr %p, align 2
   %r = fptosi half %a to i64
@@ -315,13 +326,36 @@ define i64 @test_fptoui_i64(ptr %p) #0 {
 ;
 ; CHECK-I686-LABEL: test_fptoui_i64:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    subl $12, %esp
+; CHECK-I686-NEXT:    subl $28, %esp
 ; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-I686-NEXT:    pinsrw $0, (%eax), %xmm0
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
-; CHECK-I686-NEXT:    calll __fixunshfdi
-; CHECK-I686-NEXT:    addl $12, %esp
+; CHECK-I686-NEXT:    calll __extendhfsf2
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-I686-NEXT:    jae .LBB9_2
+; CHECK-I686-NEXT:  # %bb.1:
+; CHECK-I686-NEXT:    xorps %xmm1, %xmm1
+; CHECK-I686-NEXT:  .LBB9_2:
+; CHECK-I686-NEXT:    subss %xmm1, %xmm0
+; CHECK-I686-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    setae %al
+; CHECK-I686-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; CHECK-I686-NEXT:    orl $3072, %ecx # imm = 0xC00
+; CHECK-I686-NEXT:    movw %cx, {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fistpll {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movzbl %al, %edx
+; CHECK-I686-NEXT:    shll $31, %edx
+; CHECK-I686-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    addl $28, %esp
 ; CHECK-I686-NEXT:    retl
   %a = load half, ptr %p, align 2
   %r = fptoui half %a to i64

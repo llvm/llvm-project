@@ -21,7 +21,11 @@
 namespace clang {
 namespace dataflow {
 
-struct ContextSensitiveOptions {};
+struct ContextSensitiveOptions {
+  /// The maximum depth to analyze. A value of zero is equivalent to disabling
+  /// context-sensitive analysis entirely.
+  unsigned Depth = 2;
+};
 
 struct TransferOptions {
   /// Options for analyzing function bodies when present in the translation

@@ -538,9 +538,7 @@ define void @masked_scatter_v2f16(<2 x half>* %a, <2 x half*>* %b) vscale_range(
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    fcmeq v2.4h, v1.4h, #0.0
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
-; CHECK-NEXT:    shl v2.2s, v2.2s, #16
-; CHECK-NEXT:    sshr v2.2s, v2.2s, #16
+; CHECK-NEXT:    sshll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    fmov w8, s2
 ; CHECK-NEXT:    mov w9, v2.s[1]
 ; CHECK-NEXT:    ldr q2, [x1]

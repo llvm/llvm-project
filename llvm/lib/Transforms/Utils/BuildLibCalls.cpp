@@ -1756,22 +1756,19 @@ Value *llvm::emitBinaryFloatFnCall(Value *Op1, Value *Op2,
   return emitBinaryFloatFnCallHelper(Op1, Op2, TheLibFunc, Name, B, Attrs, TLI);
 }
 
+// Emit a call to putchar(int) with Char as the argument.  Char must have
+// the same precision as int, which need not be 32 bits.
 Value *llvm::emitPutChar(Value *Char, IRBuilderBase &B,
                          const TargetLibraryInfo *TLI) {
   Module *M = B.GetInsertBlock()->getModule();
   if (!isLibFuncEmittable(M, TLI, LibFunc_putchar))
     return nullptr;
 
+  Type *Ty = Char->getType();
   StringRef PutCharName = TLI->getName(LibFunc_putchar);
-  FunctionCallee PutChar = getOrInsertLibFunc(M, *TLI, LibFunc_putchar,
-                                              B.getInt32Ty(), B.getInt32Ty());
+  FunctionCallee PutChar = getOrInsertLibFunc(M, *TLI, LibFunc_putchar, Ty, Ty);
   inferNonMandatoryLibFuncAttrs(M, PutCharName, *TLI);
-  CallInst *CI = B.CreateCall(PutChar,
-                              B.CreateIntCast(Char,
-                              B.getInt32Ty(),
-                              /*isSigned*/true,
-                              "chari"),
-                              PutCharName);
+  CallInst *CI = B.CreateCall(PutChar, Char, PutCharName);
 
   if (const Function *F =
           dyn_cast<Function>(PutChar.getCallee()->stripPointerCasts()))

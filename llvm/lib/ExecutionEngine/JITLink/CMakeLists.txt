@@ -22,6 +22,7 @@ add_llvm_component_library(LLVMJITLink
   ELF.cpp
   ELFLinkGraphBuilder.cpp
   ELF_aarch64.cpp
+  ELF_i386.cpp
   ELF_riscv.cpp
   ELF_x86_64.cpp
 
@@ -33,6 +34,7 @@ add_llvm_component_library(LLVMJITLink
 
   # Architectures:
   aarch64.cpp
+  i386.cpp
   riscv.cpp
   x86_64.cpp
 

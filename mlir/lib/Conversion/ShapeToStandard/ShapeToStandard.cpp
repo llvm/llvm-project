@@ -340,7 +340,7 @@ DimOpConverter::matchAndRewrite(DimOp op, OpAdaptor adaptor,
   // steps.
   auto shapeOf = rewriter.create<shape::ShapeOfOp>(op.getLoc(), op.getValue());
   rewriter.replaceOpWithNewOp<shape::GetExtentOp>(op, op.getType(), shapeOf,
-                                                  op.getDim());
+                                                  op.getIndex());
   return success();
 }
 

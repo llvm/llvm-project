@@ -57,7 +57,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY killed $rdi
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY killed [[COPY1]]
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.1.loop (address-taken, inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.1.loop (ir-block-address-taken %ir-block.loop, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   successors: %bb.2(0x80000000), %bb.1(0x00000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY killed [[COPY2]]
@@ -78,7 +78,7 @@ body:             |
     %3:gr64 = COPY killed $rsi
     %2:gr64 = COPY killed $rdi
 
-  bb.1.loop (address-taken, inlineasm-br-indirect-target):
+  bb.1.loop (ir-block-address-taken %ir-block.loop, inlineasm-br-indirect-target):
     successors: %bb.2(0x80000000), %bb.1(0x00000000)
 
     %0:gr64 = PHI %2, %bb.0, %1, %bb.1

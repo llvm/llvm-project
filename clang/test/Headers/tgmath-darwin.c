@@ -1,5 +1,5 @@
 // REQUIRES: system-darwin
-// RUN: %clang -target x86_64-apple-darwin10 -fsyntax-only -std=c11 -isysroot %S/Inputs %s
+// RUN: %clang -target x86_64-apple-darwin11 -fsyntax-only -std=c11 -isysroot %S/Inputs %s
 #include <tgmath.h>
 
 // Test the #include_next of tgmath.h works on Darwin.

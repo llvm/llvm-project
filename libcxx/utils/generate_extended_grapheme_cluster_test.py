@@ -17,6 +17,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional, TextIO
 from array import array
+import sys
 
 
 @dataclass
@@ -229,7 +230,9 @@ This script looks for GraphemeBreakTest.txt in same directory as this script
 def generate_all() -> str:
     test_data_path = Path(__file__)
     test_data_path = test_data_path.absolute()
-    test_data_path = test_data_path.with_name("GraphemeBreakTest.txt")
+    test_data_path = (
+        test_data_path.parent / "data" / "unicode" / "GraphemeBreakTest.txt"
+    )
     lines = list()
     with open(test_data_path, mode="rt", encoding="utf-8") as file:
         while line := parseBreakTestLine(file):
@@ -244,4 +247,6 @@ def generate_all() -> str:
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 2:
+        sys.stdout = open(sys.argv[1], "w")
     print(generate_all())

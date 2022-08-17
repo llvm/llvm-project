@@ -92,6 +92,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.aligned_alloc
     libc.src.stdlib.free
 
+    # stdio.h entrypoints
+    libc.src.stdio.sprintf
+    libc.src.stdio.snprintf
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
@@ -298,8 +302,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.funlockfile
     libc.src.stdio.fwrite
     libc.src.stdio.fwrite_unlocked
-    libc.src.stdio.sprintf
-    libc.src.stdio.snprintf
     libc.src.stdio.fprintf
     libc.src.stdio.printf
     libc.src.stdio.stderr

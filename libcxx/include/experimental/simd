@@ -720,12 +720,12 @@ public:
 
 #ifndef _LIBCPP_HAS_NO_VECTOR_EXTENSION
 
-constexpr size_t __floor_pow_of_2(size_t __val) {
+_LIBCPP_HIDE_FROM_ABI constexpr size_t __floor_pow_of_2(size_t __val) {
   return ((__val - 1) & __val) == 0 ? __val
                                     : __floor_pow_of_2((__val - 1) & __val);
 }
 
-constexpr size_t __ceil_pow_of_2(size_t __val) {
+_LIBCPP_HIDE_FROM_ABI constexpr size_t __ceil_pow_of_2(size_t __val) {
   return __val == 1 ? 1 : __floor_pow_of_2(__val - 1) << 1;
 }
 
@@ -913,17 +913,18 @@ public:
 };
 
 template <class _To, class _From>
-constexpr decltype(_To{std::declval<_From>()}, true)
+_LIBCPP_HIDE_FROM_ABI constexpr decltype(_To{std::declval<_From>()}, true)
 __is_non_narrowing_convertible_impl(_From) {
   return true;
 }
 
 template <class _To>
-constexpr bool __is_non_narrowing_convertible_impl(...) {
+_LIBCPP_HIDE_FROM_ABI constexpr bool __is_non_narrowing_convertible_impl(...) {
   return false;
 }
 
 template <class _From, class _To>
+_LIBCPP_HIDE_FROM_ABI
 constexpr typename std::enable_if<std::is_arithmetic<_To>::value &&
                                       std::is_arithmetic<_From>::value,
                                   bool>::type
@@ -932,6 +933,7 @@ __is_non_narrowing_arithmetic_convertible() {
 }
 
 template <class _From, class _To>
+_LIBCPP_HIDE_FROM_ABI
 constexpr typename std::enable_if<!(std::is_arithmetic<_To>::value &&
                                     std::is_arithmetic<_From>::value),
                                   bool>::type
@@ -940,12 +942,12 @@ __is_non_narrowing_arithmetic_convertible() {
 }
 
 template <class _Tp>
-constexpr _Tp __variadic_sum() {
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp __variadic_sum() {
   return _Tp{};
 }
 
 template <class _Tp, class _Up, class... _Args>
-constexpr _Tp __variadic_sum(_Up __first, _Args... __rest) {
+_LIBCPP_HIDE_FROM_ABI constexpr _Tp __variadic_sum(_Up __first, _Args... __rest) {
   return static_cast<_Tp>(__first) + __variadic_sum<_Tp>(__rest...);
 }
 
@@ -955,7 +957,7 @@ struct __nodeduce {
 };
 
 template <class _Tp>
-constexpr bool __vectorizable() {
+_LIBCPP_HIDE_FROM_ABI constexpr bool __vectorizable() {
   return std::is_arithmetic<_Tp>::value && !std::is_const<_Tp>::value &&
          !std::is_volatile<_Tp>::value && !std::is_same<_Tp, bool>::value;
 }
@@ -1123,13 +1125,13 @@ struct __simd_cast_traits<simd<_Tp, _NewAbi>> {
 };
 
 template <class _Tp, class _Up, class _Abi>
-auto simd_cast(const simd<_Up, _Abi>& __v)
+_LIBCPP_HIDE_FROM_ABI auto simd_cast(const simd<_Up, _Abi>& __v)
     -> decltype(__simd_cast_traits<_Tp>::__apply(__v)) {
   return __simd_cast_traits<_Tp>::__apply(__v);
 }
 
 template <class _Tp, class _Up, class _Abi>
-auto static_simd_cast(const simd<_Up, _Abi>& __v)
+_LIBCPP_HIDE_FROM_ABI auto static_simd_cast(const simd<_Up, _Abi>& __v)
     -> decltype(__static_simd_cast_traits<_Tp>::__apply(__v)) {
   return __static_simd_cast_traits<_Tp>::__apply(__v);
 }

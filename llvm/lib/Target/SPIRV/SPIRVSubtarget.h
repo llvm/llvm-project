@@ -30,14 +30,15 @@
 
 namespace llvm {
 class StringRef;
-class SPIRVGlobalRegistry;
 class SPIRVTargetMachine;
 
 class SPIRVSubtarget : public SPIRVGenSubtargetInfo {
 private:
   const unsigned PointerSize;
   uint32_t SPIRVVersion;
+  uint32_t OpenCLVersion;
 
+  SmallSet<SPIRV::Extension::Extension, 4> AvailableExtensions;
   std::unique_ptr<SPIRVGlobalRegistry> GR;
 
   SPIRVInstrInfo InstrInfo;
@@ -49,6 +50,10 @@ private:
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<InstructionSelector> InstSelector;
+
+  // TODO: Initialise the available extensions based on
+  // the environment settings.
+  void initAvailableExtensions();
 
 public:
   // This constructor initializes the data members to match that
@@ -62,7 +67,18 @@ public:
   void ParseSubtargetFeatures(StringRef CPU, StringRef TuneCPU, StringRef FS);
   unsigned getPointerSize() const { return PointerSize; }
   bool canDirectlyComparePointers() const;
+  // TODO: this environment is not implemented in Triple, we need to decide
+  // how to standartize its support. For now, let's assume that we always
+  // operate with OpenCL.
+  bool isOpenCLEnv() const { return true; }
   uint32_t getSPIRVVersion() const { return SPIRVVersion; };
+  bool isAtLeastSPIRVVer(uint32_t VerToCompareTo) const;
+  bool isAtLeastOpenCLVer(uint32_t VerToCompareTo) const;
+  // TODO: implement command line args or other ways to determine this.
+  bool hasOpenCLFullProfile() const { return true; }
+  bool hasOpenCLImageSupport() const { return true; }
+  bool canUseExtension(SPIRV::Extension::Extension E) const;
+
   SPIRVGlobalRegistry *getSPIRVGlobalRegistry() const { return GR.get(); }
 
   const CallLowering *getCallLowering() const override {

@@ -178,8 +178,10 @@ public:
         result_type a() const {return __a_;}
         result_type b() const {return __b_;}
 
+        _LIBCPP_HIDE_FROM_ABI
         friend bool operator==(const param_type& __x, const param_type& __y)
             {return __x.__a_ == __y.__a_ && __x.__b_ == __y.__b_;}
+        _LIBCPP_HIDE_FROM_ABI
         friend bool operator!=(const param_type& __x, const param_type& __y)
             {return !(__x == __y);}
     };
@@ -218,9 +220,11 @@ public:
     result_type min() const {return a();}
     result_type max() const {return b();}
 
+    _LIBCPP_HIDE_FROM_ABI
     friend bool operator==(const uniform_int_distribution& __x,
                            const uniform_int_distribution& __y)
         {return __x.__p_ == __y.__p_;}
+    _LIBCPP_HIDE_FROM_ABI
     friend bool operator!=(const uniform_int_distribution& __x,
                            const uniform_int_distribution& __y)
             {return !(__x == __y);}
@@ -255,7 +259,7 @@ _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 }
 
 template <class _CharT, class _Traits, class _IT>
-basic_ostream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os,
            const uniform_int_distribution<_IT>& __x)
 {
@@ -268,7 +272,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os,
 }
 
 template <class _CharT, class _Traits, class _IT>
-basic_istream<_CharT, _Traits>&
+_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is,
            uniform_int_distribution<_IT>& __x)
 {

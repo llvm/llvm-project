@@ -2,8 +2,6 @@
 Test lldb process launch flags.
 """
 
-from __future__ import print_function
-
 import os
 
 import lldb

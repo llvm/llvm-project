@@ -45,8 +45,9 @@ def Linalg_InitTensorOp : Linalg_Op<"init_tensor",
   let results = (outs AnyTensor:$result);
 
   let assemblyFormat = [{
-    custom<OperandsOrIntegersSizesList>($sizes, $static_sizes) attr-dict
-    `:` type($result)
+    custom<DynamicIndexList>($sizes, $static_sizes,
+                               "ShapedType::kDynamicSize")
+    attr-dict `:` type($result)
   }];
 
   let extraClassDeclaration = [{
@@ -147,7 +148,7 @@ def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,
 }
 
 def Linalg_IndexOp : Linalg_Op<"index", [NoSideEffect]>,
-    Arguments<(ins Confined<I64Attr, [IntMinValue<0>]>:$dim)>,
+    Arguments<(ins ConfinedAttr<I64Attr, [IntMinValue<0>]>:$dim)>,
     Results<(outs Index:$result)> {
   let summary = "linalg index operation";
   let description = [{

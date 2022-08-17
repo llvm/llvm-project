@@ -5338,7 +5338,7 @@ void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {
   // Emit global alias debug information.
   if (isa<VarDecl>(D))
     if (CGDebugInfo *DI = getModuleDebugInfo())
-      DI->EmitGlobalAlias(cast<llvm::GlobalValue>(GA->getAliasee()), GD);
+      DI->EmitGlobalAlias(cast<llvm::GlobalValue>(GA->getAliasee()->stripPointerCasts()), GD);
 }
 
 void CodeGenModule::emitIFuncDefinition(GlobalDecl GD) {

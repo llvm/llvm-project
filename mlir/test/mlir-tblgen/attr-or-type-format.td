@@ -555,3 +555,19 @@ def TypeK : TestType<"TestM"> {
   let mnemonic = "type_k";
   let assemblyFormat = "$a";
 }
+
+// TYPE-LABEL: ::mlir::Type TestNType::parse
+// TYPE: parseFoo(
+// TYPE-NEXT: _result_a,
+// TYPE-NEXT: 1);
+
+// TYPE-LABEL: void TestNType::print
+// TYPE: printFoo(
+// TYPE-NEXT: getA(),
+// TYPE-NEXT: 1);
+
+def TypeL : TestType<"TestN"> {
+  let parameters = (ins "int":$a);
+  let mnemonic = "type_l";
+  let assemblyFormat = [{ custom<Foo>($a, "1") }];
+}

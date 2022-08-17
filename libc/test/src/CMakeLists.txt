@@ -34,6 +34,7 @@ add_subdirectory(inttypes)
 add_subdirectory(math)
 add_subdirectory(string)
 add_subdirectory(stdlib)
+add_subdirectory(stdio)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(fcntl)
@@ -50,7 +51,6 @@ add_subdirectory(dirent)
 # since assert uses the signal API, we disable assert also.
 # add_subdirectory(assert)
 # add_subdirectory(signal)
-add_subdirectory(stdio)
 add_subdirectory(time)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")

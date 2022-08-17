@@ -106,6 +106,12 @@ bool ModuleListProperties::SetEnableExternalLookup(bool new_value) {
       nullptr, ePropertyEnableExternalLookup, new_value);
 }
 
+bool ModuleListProperties::GetEnableBackgroundLookup() const {
+  const uint32_t idx = ePropertyEnableBackgroundLookup;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
 FileSpec ModuleListProperties::GetClangModulesCachePath() const {
   return m_collection_sp
       ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
@@ -766,6 +772,10 @@ bool ModuleList::ModuleIsInCache(const Module *module_ptr) {
 void ModuleList::FindSharedModules(const ModuleSpec &module_spec,
                                    ModuleList &matching_module_list) {
   GetSharedModuleList().FindModules(module_spec, matching_module_list);
+}
+
+lldb::ModuleSP ModuleList::FindSharedModule(const UUID &uuid) {
+  return GetSharedModuleList().FindModule(uuid);
 }
 
 size_t ModuleList::RemoveOrphanSharedModules(bool mandatory) {

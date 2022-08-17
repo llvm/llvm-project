@@ -779,7 +779,7 @@ def AffinePrefetchOp : Affine_Op<"prefetch",
 
   let arguments = (ins AnyMemRef:$memref, Variadic<Index>:$indices,
                    BoolAttr:$isWrite,
-                   Confined<I32Attr, [IntMinValue<0>,
+                   ConfinedAttr<I32Attr, [IntMinValue<0>,
                      IntMaxValue<3>]>:$localityHint,
                    BoolAttr:$isDataCache);
 

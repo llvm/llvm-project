@@ -292,6 +292,10 @@ static cl::opt<std::string> PGOTraceFuncHash(
     cl::value_desc("function name"),
     cl::desc("Trace the hash of the function with this name."));
 
+static cl::opt<unsigned> PGOFunctionSizeThreshold(
+    "pgo-function-size-threshold", cl::Hidden,
+    cl::desc("Do not instrument functions smaller than this threshold"));
+
 namespace llvm {
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
@@ -992,7 +996,7 @@ struct UseBBInfo : public BBInfo {
 // Sum up the count values for all the edges.
 static uint64_t sumEdgeCount(const ArrayRef<PGOUseEdge *> Edges) {
   uint64_t Total = 0;
-  for (auto &E : Edges) {
+  for (const auto &E : Edges) {
     if (E->Removed)
       continue;
     Total += E->CountValue;
@@ -1204,7 +1208,7 @@ static void annotateFunctionWithHashMismatch(Function &F,
   auto *Existing = F.getMetadata(LLVMContext::MD_annotation);
   if (Existing) {
     MDTuple *Tuple = cast<MDTuple>(Existing);
-    for (auto &N : Tuple->operands()) {
+    for (const auto &N : Tuple->operands()) {
       if (cast<MDString>(N.get())->getString() ==  MetadataName)
         return;
       Names.push_back(N.get());
@@ -1575,6 +1579,8 @@ static bool InstrumentAllFunctions(
     if (F.hasFnAttribute(llvm::Attribute::NoProfile))
       continue;
     if (F.hasFnAttribute(llvm::Attribute::SkipProfile))
+      continue;
+    if (F.getInstructionCount() < PGOFunctionSizeThreshold)
       continue;
     auto &TLI = LookupTLI(F);
     auto *BPI = LookupBPI(F);

@@ -17,9 +17,11 @@
 
 #include <array>
 #include <concepts>
+#include <functional>
 #include <iterator>
 #include <ranges>
 #include <random>
+#include <utility>
 
 #include "test_iterators.h"
 

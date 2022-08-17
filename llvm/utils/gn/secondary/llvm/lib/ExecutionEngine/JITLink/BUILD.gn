@@ -25,6 +25,7 @@ static_library("JITLink") {
     "ELF.cpp",
     "ELFLinkGraphBuilder.cpp",
     "ELF_aarch64.cpp",
+    "ELF_i386.cpp",
     "ELF_riscv.cpp",
     "ELF_x86_64.cpp",
     "JITLink.cpp",
@@ -36,6 +37,7 @@ static_library("JITLink") {
     "MachO_x86_64.cpp",
     "MemoryFlags.cpp",
     "aarch64.cpp",
+    "i386.cpp",
     "riscv.cpp",
     "x86_64.cpp",
   ]

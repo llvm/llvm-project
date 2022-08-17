@@ -2,8 +2,6 @@
 Test lldb-vscode variables/stackTrace request for optimized code
 """
 
-from __future__ import print_function
-
 import vscode
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

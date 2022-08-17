@@ -64,6 +64,7 @@ __uninitialized_copy(_InputIterator __ifirst, _Sentinel1 __ilast,
 }
 
 template <class _InputIterator, class _ForwardIterator>
+_LIBCPP_HIDE_FROM_ABI
 _ForwardIterator uninitialized_copy(_InputIterator __ifirst, _InputIterator __ilast,
                                     _ForwardIterator __ofirst) {
   typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;

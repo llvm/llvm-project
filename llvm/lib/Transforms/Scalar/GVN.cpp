@@ -1900,7 +1900,7 @@ bool GVNPass::processAssumeIntrinsic(AssumeInst *IntrinsicI) {
         // after the found access or before the terminator if no such access is
         // found.
         if (AL) {
-          for (auto &Acc : *AL) {
+          for (const auto &Acc : *AL) {
             if (auto *Current = dyn_cast<MemoryUseOrDef>(&Acc))
               if (!Current->getMemoryInst()->comesBefore(NewS)) {
                 FirstNonDom = Current;

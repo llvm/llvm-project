@@ -698,6 +698,9 @@ public:
   /// Add an entry to the debug prefix map.
   void addDebugPrefixMapEntry(const std::string &From, const std::string &To);
 
+  /// Remap one path in-place as per the debug prefix map.
+  void remapDebugPath(SmallVectorImpl<char> &Path);
+
   // Remaps all debug directory paths in-place as per the debug prefix map.
   void RemapDebugPaths();
 

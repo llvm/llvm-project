@@ -21,9 +21,6 @@ This bug doesn't reproduce through an LLDB interpretator, however it happens
 when using API directly, for example in LLDB-MI.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

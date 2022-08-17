@@ -56,6 +56,7 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
   const AVRInstrInfo &TII = *STI.getInstrInfo();
   const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   bool HasFP = hasFP(MF);
 
   // Interrupt handlers re-enable interrupts in function entry.
@@ -68,8 +69,8 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
   // Emit special prologue code to save R1, R0 and SREG in interrupt/signal
   // handlers before saving any other registers.
   if (AFI->isInterruptOrSignalHandler()) {
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHWRr))
-        .addReg(AVR::R1R0, RegState::Kill)
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
+        .addReg(AVR::R0, RegState::Kill)
         .setMIFlag(MachineInstr::FrameSetup);
 
     BuildMI(MBB, MBBI, DL, TII.get(AVR::INRdA), AVR::R0)
@@ -78,11 +79,16 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
         .addReg(AVR::R0, RegState::Kill)
         .setMIFlag(MachineInstr::FrameSetup);
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::EORRdRr))
-        .addReg(AVR::R1, RegState::Define)
-        .addReg(AVR::R1, RegState::Kill)
-        .addReg(AVR::R1, RegState::Kill)
-        .setMIFlag(MachineInstr::FrameSetup);
+    if (!MRI.reg_empty(AVR::R1)) {
+      BuildMI(MBB, MBBI, DL, TII.get(AVR::PUSHRr))
+          .addReg(AVR::R1, RegState::Kill)
+          .setMIFlag(MachineInstr::FrameSetup);
+      BuildMI(MBB, MBBI, DL, TII.get(AVR::EORRdRr))
+          .addReg(AVR::R1, RegState::Define)
+          .addReg(AVR::R1, RegState::Kill)
+          .addReg(AVR::R1, RegState::Kill)
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
   }
 
   // Early exit if the frame pointer is not needed in this function.
@@ -132,6 +138,7 @@ void AVRFrameLowering::emitPrologue(MachineFunction &MF,
 
 static void restoreStatusRegister(MachineFunction &MF, MachineBasicBlock &MBB) {
   const AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
 
   MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
 
@@ -142,11 +149,14 @@ static void restoreStatusRegister(MachineFunction &MF, MachineBasicBlock &MBB) {
   // Emit special epilogue code to restore R1, R0 and SREG in interrupt/signal
   // handlers at the very end of the function, just before reti.
   if (AFI->isInterruptOrSignalHandler()) {
+    if (!MRI.reg_empty(AVR::R1)) {
+      BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R1);
+    }
     BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R0);
     BuildMI(MBB, MBBI, DL, TII.get(AVR::OUTARr))
         .addImm(STI.getIORegSREG())
         .addReg(AVR::R0, RegState::Kill);
-    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPWRd), AVR::R1R0);
+    BuildMI(MBB, MBBI, DL, TII.get(AVR::POPRd), AVR::R0);
   }
 }
 

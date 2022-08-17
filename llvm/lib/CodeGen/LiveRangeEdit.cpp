@@ -134,9 +134,11 @@ bool LiveRangeEdit::allUsesAvailableAt(const MachineInstr *OrigMI,
       return false;
 
     // Check that subrange is live at UseIdx.
-    if (MO.getSubReg()) {
+    if (li.hasSubRanges()) {
       const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-      LaneBitmask LM = TRI->getSubRegIndexLaneMask(MO.getSubReg());
+      unsigned SubReg = MO.getSubReg();
+      LaneBitmask LM = SubReg ? TRI->getSubRegIndexLaneMask(SubReg)
+                              : MRI.getMaxLaneMaskForVReg(MO.getReg());
       for (LiveInterval::SubRange &SR : li.subranges()) {
         if ((SR.LaneMask & LM).none())
           continue;

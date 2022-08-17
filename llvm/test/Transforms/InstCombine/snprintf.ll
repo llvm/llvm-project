@@ -92,10 +92,10 @@ define i32 @test_char_zero_size(i8* %buf) #0 {
   ret i32 %call
 }
 
-define i32 @test_char_wrong_size(i8* %buf) #0 {
-; CHECK-LABEL: @test_char_wrong_size(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* noundef nonnull dereferenceable(1) [[BUF:%.*]], i64 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.2, i64 0, i64 0), i32 65)
-; CHECK-NEXT:    ret i32 [[CALL]]
+define i32 @test_char_small_size(i8* %buf) #0 {
+; CHECK-LABEL: @test_char_small_size(
+; CHECK-NEXT:    store i8 0, i8* [[BUF:%.*]], align 1
+; CHECK-NEXT:    ret i32 1
 ;
   %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.2, i64 0, i64 0), i32 65) #2
   ret i32 %call
@@ -120,10 +120,10 @@ define i32 @test_str_zero_size(i8* %buf) #0 {
   ret i32 %call
 }
 
-define i32 @test_str_wrong_size(i8* %buf) #0 {
-; CHECK-LABEL: @test_str_wrong_size(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* noundef nonnull dereferenceable(1) [[BUF:%.*]], i64 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0))
-; CHECK-NEXT:    ret i32 [[CALL]]
+define i32 @test_str_small_size(i8* %buf) #0 {
+; CHECK-LABEL: @test_str_small_size(
+; CHECK-NEXT:    store i8 0, i8* [[BUF:%.*]], align 1
+; CHECK-NEXT:    ret i32 3
 ;
   %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0)) #2
   ret i32 %call

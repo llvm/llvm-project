@@ -111,6 +111,7 @@ void registerTestSCFUtilsPass();
 void registerTestSliceAnalysisPass();
 void registerTestTensorTransforms();
 void registerTestTilingInterface();
+void registerTestTopologicalSortAnalysisPass();
 void registerTestTransformDialectInterpreterPass();
 void registerTestVectorLowerings();
 void registerTestNvgpuLowerings();
@@ -207,6 +208,7 @@ void registerTestPasses() {
   mlir::test::registerTestSliceAnalysisPass();
   mlir::test::registerTestTensorTransforms();
   mlir::test::registerTestTilingInterface();
+  mlir::test::registerTestTopologicalSortAnalysisPass();
   mlir::test::registerTestTransformDialectInterpreterPass();
   mlir::test::registerTestVectorLowerings();
   mlir::test::registerTestNvgpuLowerings();

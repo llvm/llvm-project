@@ -833,7 +833,7 @@ enum syntax_option_type
     multiline  = 1 << 10
 };
 
-inline _LIBCPP_CONSTEXPR
+_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR
 syntax_option_type __get_grammar(syntax_option_type __g)
 {
 #ifdef _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO
@@ -5732,7 +5732,7 @@ match_results<_BidirectionalIterator, _Allocator>::swap(match_results& __m)
 }
 
 template <class _BidirectionalIterator, class _Allocator>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 operator==(const match_results<_BidirectionalIterator, _Allocator>& __x,
            const match_results<_BidirectionalIterator, _Allocator>& __y)
 {
@@ -6224,7 +6224,7 @@ regex_search(const basic_string<_Cp, _ST, _SA>&& __s,
 // regex_match
 
 template <class _BidirectionalIterator, class _Allocator, class _CharT, class _Traits>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 regex_match(_BidirectionalIterator __first, _BidirectionalIterator __last,
             match_results<_BidirectionalIterator, _Allocator>& __m,
             const basic_regex<_CharT, _Traits>& __e,
@@ -6737,7 +6737,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++()
 
 template <class _OutputIterator, class _BidirectionalIterator,
           class _Traits, class _CharT>
-_OutputIterator
+_LIBCPP_HIDE_FROM_ABI _OutputIterator
 regex_replace(_OutputIterator __output_iter,
               _BidirectionalIterator __first, _BidirectionalIterator __last,
               const basic_regex<_CharT, _Traits>& __e, const _CharT* __fmt,

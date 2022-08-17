@@ -222,6 +222,7 @@ void RecordInfo::merge(RecordInfo &&Other) {
   assert(mergeable(Other));
   if (!TagType)
     TagType = Other.TagType;
+  IsTypeDef = IsTypeDef || Other.IsTypeDef;
   if (Members.empty())
     Members = std::move(Other.Members);
   if (Bases.empty())

@@ -276,8 +276,8 @@ bool Thread::operator==(const Thread &thread) const {
 static constexpr cpp::StringView THREAD_NAME_PATH_PREFIX("/proc/self/task/");
 static constexpr size_t THREAD_NAME_PATH_SIZE =
     THREAD_NAME_PATH_PREFIX.size() +
-    IntegerToString<int>::BUFSIZE + // Size of tid
-    1 +                             // For '/' character
+    IntegerToString::dec_bufsize<int>() + // Size of tid
+    1 +                                   // For '/' character
     5; // For the file name "comm" and the nullterminator.
 
 static void construct_thread_name_file_path(cpp::StringStream &stream,

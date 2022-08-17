@@ -621,6 +621,10 @@ void __msan_set_alloca_origin_with_descr(void *a, uptr size, u32 *id_ptr,
   SetAllocaOrigin(a, size, id_ptr, descr, GET_CALLER_PC());
 }
 
+void __msan_set_alloca_origin_no_descr(void *a, uptr size, u32 *id_ptr) {
+  SetAllocaOrigin(a, size, id_ptr, nullptr, GET_CALLER_PC());
+}
+
 u32 __msan_chain_origin(u32 id) {
   GET_CALLER_PC_BP_SP;
   (void)sp;

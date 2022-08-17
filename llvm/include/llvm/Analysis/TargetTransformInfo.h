@@ -230,12 +230,10 @@ public:
                                      enum TargetCostKind kind) const {
     InstructionCost Cost;
     switch (kind) {
-    case TCK_RecipThroughput:
-      Cost = getInstructionThroughput(I);
-      break;
     case TCK_Latency:
       Cost = getInstructionLatency(I);
       break;
+    case TCK_RecipThroughput:
     case TCK_CodeSize:
     case TCK_SizeAndLatency:
       Cost = getUserCost(I, kind);
@@ -1524,10 +1522,6 @@ private:
   /// Estimate the latency of specified instruction.
   /// Returns 1 as the default value.
   InstructionCost getInstructionLatency(const Instruction *I) const;
-
-  /// Returns the expected throughput cost of the instruction.
-  /// Returns -1 if the cost is unknown.
-  InstructionCost getInstructionThroughput(const Instruction *I) const;
 
   /// The abstract base class used to type erase specific TTI
   /// implementations.

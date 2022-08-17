@@ -1160,6 +1160,10 @@ let Command = "thread trace dump instructions" in {
   def thread_trace_dump_instructions_show_events : Option<"events", "e">,
     Group<1>,
     Desc<"Dump the events that happened during the execution of the target.">;
+  def thread_trace_dump_instruction_only_events : Option<"only-events", "E">,
+    Group<1>,
+    Desc<"Dump only the events that happened during the execution of the "
+    "target. No instrutions are dumped.">;
   def thread_trace_dump_instructions_continue: Option<"continue", "C">,
     Group<1>,
     Desc<"Continue dumping instructions right where the previous invocation of "

@@ -882,7 +882,8 @@ bool NativeProcessLinux::MonitorClone(NativeThreadLinux &parent,
 }
 
 bool NativeProcessLinux::SupportHardwareSingleStepping() const {
-  if (m_arch.GetMachine() == llvm::Triple::arm || m_arch.IsMIPS())
+  if (m_arch.IsMIPS() || m_arch.GetMachine() == llvm::Triple::arm ||
+      m_arch.GetTriple().isRISCV())
     return false;
   return true;
 }
@@ -933,8 +934,14 @@ Status NativeProcessLinux::Resume(const ResumeActionList &resume_actions) {
     case eStateStepping: {
       // Run the thread, possibly feeding it the signal.
       const int signo = action->signal;
-      ResumeThread(static_cast<NativeThreadLinux &>(*thread), action->state,
-                   signo);
+      Status error = ResumeThread(static_cast<NativeThreadLinux &>(*thread),
+                                  action->state, signo);
+      if (error.Fail())
+        return Status("NativeProcessLinux::%s: failed to resume thread "
+                      "for pid %" PRIu64 ", tid %" PRIu64 ", error = %s",
+                      __FUNCTION__, GetID(), thread->GetID(),
+                      error.AsCString());
+
       break;
     }
 

@@ -78,6 +78,7 @@ TEST(MergeTest, mergeNamespaceInfos) {
 TEST(MergeTest, mergeRecordInfos) {
   RecordInfo One;
   One.Name = "r";
+  One.IsTypeDef = true;
   One.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   One.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
@@ -119,6 +120,7 @@ TEST(MergeTest, mergeRecordInfos) {
 
   auto Expected = std::make_unique<RecordInfo>();
   Expected->Name = "r";
+  Expected->IsTypeDef = true;
   Expected->Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   Expected->DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});

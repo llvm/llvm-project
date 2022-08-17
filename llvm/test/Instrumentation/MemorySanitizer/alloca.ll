@@ -6,6 +6,8 @@
 ; RUN: -passes=msan 2>&1 | FileCheck %s "--check-prefixes=CHECK,ORIGIN"
 ; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=2 -S          \
 ; RUN: -passes=msan 2>&1 | FileCheck %s "--check-prefixes=CHECK,ORIGIN"
+; RUN: opt < %s -msan-check-access-address=0 -msan-track-origins=2 -msan-print-stack-names=false -S  \
+; RUN: -passes=msan 2>&1 | FileCheck %s "--check-prefixes=CHECK,ORIGIN-LEAN"
 ; RUN: opt < %s -S -passes="msan<kernel>" 2>&1 | FileCheck %s             \
 ; RUN: "--check-prefixes=CHECK,KMSAN"
 ; RUN: opt < %s -msan-kernel=1 -S -passes=msan 2>&1 | FileCheck %s             \
@@ -15,6 +17,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-unknown-linux-gnu"
 
 ; ORIGIN: [[IDPTR:@[0-9]+]] = private global i32 0
+; ORIGIN-LEAN: [[IDPTR:@[0-9]+]] = private global i32 0
 ; ORIGIN: [[DESCR:@[0-9]+]] = private constant [9 x i8] c"unique_x\00"
 
 define void @static() sanitize_memory {
@@ -27,6 +30,7 @@ entry:
 ; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
 ; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
 ; ORIGIN: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 4, i8* {{.*}} [[IDPTR]] {{.*}}, i8* {{.*}} [[DESCR]],
+; ORIGIN-LEAN: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 4, i8* {{.*}} [[IDPTR]]
 ; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
 ; CHECK: ret void
 
@@ -43,6 +47,7 @@ l:
 ; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
 ; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
 ; ORIGIN: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 4,
+; ORIGIN-LEAN: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 4,
 ; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
 ; CHECK: ret void
 
@@ -56,6 +61,7 @@ entry:
 ; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 20, i1 false)
 ; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 20)
 ; ORIGIN: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 20,
+; ORIGIN-LEAN: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 20,
 ; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 20,
 ; CHECK: ret void
 
@@ -70,6 +76,7 @@ entry:
 ; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 %[[A]], i1 false)
 ; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 %[[A]])
 ; ORIGIN: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 %[[A]],
+; ORIGIN-LEAN: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 %[[A]],
 ; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 %[[A]],
 ; CHECK: ret void
 
@@ -84,6 +91,7 @@ entry:
 ; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 0, i64 20, i1 false)
 ; CALL: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 0, i64 20, i1 false)
 ; ORIGIN-NOT: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 20,
+; ORIGIN-LEAN-NOT: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 20,
 ; KMSAN: call void @__msan_unpoison_alloca(i8* {{.*}}, i64 20)
 ; CHECK: ret void
 
@@ -113,12 +121,14 @@ another_bb:
 ; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
 ; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
 ; ORIGIN: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 4,
+; ORIGIN-LEAN: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 4,
 ; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
 
 ; CHECK: call void @llvm.lifetime.start
 ; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
 ; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
 ; ORIGIN: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 4,
+; ORIGIN-LEAN: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 4,
 ; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
 ; CHECK: ret void
 
@@ -140,6 +150,7 @@ entry:
 ; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 %[[A]], i1 false)
 ; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 %[[A]])
 ; ORIGIN: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 %[[A]],
+; ORIGIN-LEAN: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 %[[A]],
 ; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 %[[A]],
 ; CHECK: call void @llvm.lifetime.end
 ; CHECK: ret void
@@ -180,22 +191,26 @@ another_bb:
 ; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
 ; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
 ; ORIGIN: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 4,
+; ORIGIN-LEAN: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 4,
 ; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
 ; CHECK: %y = alloca i32
 ; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
 ; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
 ; ORIGIN: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 4,
+; ORIGIN-LEAN: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 4,
 ; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
 ; CHECK: %z = alloca i32
 ; INLINE: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
 ; CALL: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
 ; ORIGIN: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 4,
+; ORIGIN-LEAN: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 4,
 ; KMSAN: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
 
 ; There're two lifetime intrinsics for %z, but we must instrument it only once.
 ; INLINE-NOT: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
 ; CALL-NOT: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
 ; ORIGIN-NOT: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 4,
+; ORIGIN-LEAN-NOT: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 4,
 ; KMSAN-NOT: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
 ; CHECK-LABEL: another_bb:
 
@@ -203,12 +218,14 @@ another_bb:
 ; INLINE-NOT: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
 ; CALL-NOT: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
 ; ORIGIN-NOT: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 4,
+; ORIGIN-LEAN-NOT: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 4,
 ; KMSAN-NOT: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
 ; CHECK: call void @llvm.lifetime.end
 ; CHECK: call void @llvm.lifetime.start
 ; INLINE-NOT: call void @llvm.memset.p0i8.i64(i8* align 4 {{.*}}, i8 -1, i64 4, i1 false)
 ; CALL-NOT: call void @__msan_poison_stack(i8* {{.*}}, i64 4)
 ; ORIGIN-NOT: call void @__msan_set_alloca_origin_with_descr(i8* {{.*}}, i64 4,
+; ORIGIN-LEAN-NOT: call void @__msan_set_alloca_origin_no_descr(i8* {{.*}}, i64 4,
 ; KMSAN-NOT: call void @__msan_poison_alloca(i8* {{.*}}, i64 4,
 ; CHECK: call void @llvm.lifetime.end
 
