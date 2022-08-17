@@ -952,7 +952,13 @@ bool TypePromotion::runOnFunction(Function &F) {
                           << "\n");
         EVT ZExtVT = TLI->getValueType(DL, I.getType());
         Instruction *Phi = static_cast<Instruction *>(I.getOperand(0));
-        MadeChange |= TryToPromote(Phi, ZExtVT.getFixedSizeInBits());
+        auto PromoteWidth = ZExtVT.getFixedSizeInBits();
+        if (RegisterBitWidth < PromoteWidth) {
+          LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target "
+                            << "register for ZExt type\n");
+          continue;
+        }
+        MadeChange |= TryToPromote(Phi, PromoteWidth);
       } else if (auto *ICmp = dyn_cast<ICmpInst>(&I)) {
         // Search up from icmps to try to promote their operands.
         // Skip signed or pointer compares
