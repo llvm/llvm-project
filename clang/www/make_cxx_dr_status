@@ -21,7 +21,7 @@ class DR:
     return '%s (%s): %s' % (self.issue, self.status, self.title)
 
 def parse(dr):
-  section, issue_link, status, title = [
+  section, issue_link, status, liaison, title = [
       col.split('>', 1)[1].split('</TD>')[0]
       for col in dr.split('</TR>', 1)[0].split('<TD')[1:]
   ]

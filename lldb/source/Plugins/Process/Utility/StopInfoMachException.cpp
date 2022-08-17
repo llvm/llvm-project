@@ -522,6 +522,78 @@ static StopInfoSP GetStopInfoForHardwareBP(Thread &thread, Target *target,
   return nullptr;
 }
 
+#if defined(__APPLE__)
+const char *
+StopInfoMachException::MachException::Name(exception_type_t exc_type) {
+  switch (exc_type) {
+  case EXC_BAD_ACCESS:
+    return "EXC_BAD_ACCESS";
+  case EXC_BAD_INSTRUCTION:
+    return "EXC_BAD_INSTRUCTION";
+  case EXC_ARITHMETIC:
+    return "EXC_ARITHMETIC";
+  case EXC_EMULATION:
+    return "EXC_EMULATION";
+  case EXC_SOFTWARE:
+    return "EXC_SOFTWARE";
+  case EXC_BREAKPOINT:
+    return "EXC_BREAKPOINT";
+  case EXC_SYSCALL:
+    return "EXC_SYSCALL";
+  case EXC_MACH_SYSCALL:
+    return "EXC_MACH_SYSCALL";
+  case EXC_RPC_ALERT:
+    return "EXC_RPC_ALERT";
+#ifdef EXC_CRASH
+  case EXC_CRASH:
+    return "EXC_CRASH";
+#endif
+  case EXC_RESOURCE:
+    return "EXC_RESOURCE";
+#ifdef EXC_GUARD
+  case EXC_GUARD:
+    return "EXC_GUARD";
+#endif
+#ifdef EXC_CORPSE_NOTIFY
+  case EXC_CORPSE_NOTIFY:
+    return "EXC_CORPSE_NOTIFY";
+#endif
+#ifdef EXC_CORPSE_VARIANT_BIT
+  case EXC_CORPSE_VARIANT_BIT:
+    return "EXC_CORPSE_VARIANT_BIT";
+#endif
+  default:
+    break;
+  }
+  return NULL;
+}
+
+llvm::Optional<exception_type_t>
+StopInfoMachException::MachException::ExceptionCode(const char *name) {
+  return llvm::StringSwitch<llvm::Optional<exception_type_t>>(name)
+      .Case("EXC_BAD_ACCESS", EXC_BAD_ACCESS)
+      .Case("EXC_BAD_INSTRUCTION", EXC_BAD_INSTRUCTION)
+      .Case("EXC_ARITHMETIC", EXC_ARITHMETIC)
+      .Case("EXC_EMULATION", EXC_EMULATION)
+      .Case("EXC_SOFTWARE", EXC_SOFTWARE)
+      .Case("EXC_BREAKPOINT", EXC_BREAKPOINT)
+      .Case("EXC_SYSCALL", EXC_SYSCALL)
+      .Case("EXC_MACH_SYSCALL", EXC_MACH_SYSCALL)
+      .Case("EXC_RPC_ALERT", EXC_RPC_ALERT)
+#ifdef EXC_CRASH
+      .Case("EXC_CRASH", EXC_CRASH)
+#endif
+      .Case("EXC_RESOURCE", EXC_RESOURCE)
+#ifdef EXC_GUARD
+      .Case("EXC_GUARD", EXC_GUARD)
+#endif
+#ifdef EXC_CORPSE_NOTIFY
+      .Case("EXC_CORPSE_NOTIFY", EXC_CORPSE_NOTIFY)
+#endif
+      .Default(llvm::None);
+}
+#endif
+
 StopInfoSP StopInfoMachException::CreateStopReasonWithMachException(
     Thread &thread, uint32_t exc_type, uint32_t exc_data_count,
     uint64_t exc_code, uint64_t exc_sub_code, uint64_t exc_sub_sub_code,

@@ -1140,6 +1140,7 @@ if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/not)
   add_subdirectory(utils/UnicodeData)
   add_subdirectory(utils/yaml-bench)
+  add_subdirectory(utils/split-file)
 else()
   if ( LLVM_INCLUDE_TESTS )
     message(FATAL_ERROR "Including tests when not building utils will not work.

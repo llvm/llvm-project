@@ -39,5 +39,9 @@ int runAsMain(int (*Main)(int, char *[]), ArrayRef<std::string> Args,
   return Main(Args.size() + !!ProgramName, ArgV.data());
 }
 
+int runAsVoidFunction(int (*Func)(void)) { return Func(); }
+
+int runAsIntFunction(int (*Func)(int), int Arg) { return Func(Arg); }
+
 } // End namespace orc.
 } // End namespace llvm.

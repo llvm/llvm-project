@@ -13,11 +13,13 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_UTILS_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_UTILS_H
 
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Value.h"
 
 namespace llvm {
 
 Value *getDefaultValue(Type *T);
+bool hasAliasUse(Function &F);
 
 } // namespace llvm
 

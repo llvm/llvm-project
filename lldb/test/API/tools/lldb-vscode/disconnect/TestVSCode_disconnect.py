@@ -3,7 +3,6 @@ Test lldb-vscode disconnect request
 """
 
 
-import unittest2
 import vscode
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

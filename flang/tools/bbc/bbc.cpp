@@ -278,6 +278,7 @@ int main(int argc, char **argv) {
   registerAllPasses();
 
   mlir::registerMLIRContextCLOptions();
+  mlir::registerAsmPrinterCLOptions();
   mlir::registerPassManagerCLOptions();
   mlir::PassPipelineCLParser passPipe("", "Compiler passes to run");
   llvm::cl::ParseCommandLineOptions(argc, argv, "Burnside Bridge Compiler\n");

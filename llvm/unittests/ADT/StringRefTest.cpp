@@ -59,16 +59,12 @@ TEST(StringRefTest, Construction) {
   EXPECT_EQ("hello", StringRef("hello"));
   EXPECT_EQ("hello", StringRef("hello world", 5));
   EXPECT_EQ("hello", StringRef(std::string("hello")));
-#if __cplusplus > 201402L
   EXPECT_EQ("hello", StringRef(std::string_view("hello")));
-#endif
 }
 
 TEST(StringRefTest, Conversion) {
   EXPECT_EQ("hello", std::string(StringRef("hello")));
-#if __cplusplus > 201402L
   EXPECT_EQ("hello", std::string_view(StringRef("hello")));
-#endif
 }
 
 TEST(StringRefTest, EmptyInitializerList) {

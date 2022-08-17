@@ -11,9 +11,7 @@
 
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
-
 #include "llvm/Support/Error.h"
-
 #include <set>
 #include <vector>
 

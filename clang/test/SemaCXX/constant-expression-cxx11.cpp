@@ -1913,11 +1913,13 @@ namespace VirtualFromBase {
   // cxx11-error@-1    {{not an integral constant expression}}
   // cxx11-note@-2     {{call to virtual function}}
   // cxx20_2b-error@-3 {{static assertion failed}}
+  // cxx20_2b-note@-4 {{8 == 16}}
 
   // Non-virtual f(), OK.
   constexpr X<X<S2>> xxs2;
   constexpr X<S2> *q = const_cast<X<X<S2>>*>(&xxs2);
-  static_assert(q->f() == sizeof(S2), ""); // cxx20_2b-error {{static assertion failed}}
+  static_assert(q->f() == sizeof(S2), ""); // cxx20_2b-error {{static assertion failed}} \
+                                           // cxx20_2b-note {{16 == 8}}
 }
 
 namespace ConstexprConstructorRecovery {
@@ -2452,5 +2454,19 @@ void testValueInRangeOfEnumerationValues() {
   constexpr EMaxInt x19 = static_cast<EMaxInt>(__INT_MAX__-1);
   constexpr EMaxInt x20 = static_cast<EMaxInt>((long)__INT_MAX__+1);
   // expected-error@-1 {{integer value 2147483648 is outside the valid range of values [-2147483648, 2147483647] for this enumeration type}}
+}
+
+enum SortOrder {
+  AscendingOrder,
+  DescendingOrder
+};
+
+class A {
+  static void f(SortOrder order);
+};
+
+void A::f(SortOrder order) {
+  if (order == SortOrder(-1)) // ok, not a constant expression context
+    return;
 }
 }

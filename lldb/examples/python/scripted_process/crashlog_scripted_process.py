@@ -17,6 +17,7 @@ class CrashLogScriptedProcess(ScriptedProcess):
         self.addr_mask = crash_log.addr_mask
         self.crashed_thread_idx = crash_log.crashed_thread_idx
         self.loaded_images = []
+        self.exception = crash_log.exception
 
         def load_images(self, images):
             #TODO: Add to self.loaded_images and load images in lldb
@@ -69,6 +70,7 @@ class CrashLogScriptedProcess(ScriptedProcess):
 
         self.pid = super().get_process_id()
         self.crashed_thread_idx = 0
+        self.exception = None
         self.parse_crashlog()
 
     def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:
@@ -154,9 +156,12 @@ class CrashLogScriptedThread(ScriptedThread):
 
     def get_stop_reason(self) -> Dict[str, Any]:
         if not self.has_crashed:
-            return { "type": lldb.eStopReasonNone, "data": {  }}
+            return { "type": lldb.eStopReasonNone }
         # TODO: Investigate what stop reason should be reported when crashed
-        return { "type": lldb.eStopReasonException, "data": { "desc": "EXC_BAD_ACCESS" }}
+        stop_reason = { "type": lldb.eStopReasonException, "data": {  }}
+        if self.scripted_process.exception:
+            stop_reason['data']['mach_exception'] = self.scripted_process.exception
+        return stop_reason
 
     def get_register_context(self) -> str:
         if not self.register_ctx:

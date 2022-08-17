@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TraceIntelPTMultiCpuDecoder.h"
-
 #include "TraceIntelPT.h"
-
 #include "llvm/Support/Error.h"
 
 using namespace lldb;

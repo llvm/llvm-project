@@ -308,8 +308,6 @@ protected:
 
   bool HasExited(lldb::StateType state) { return state == lldb::eStateExited; }
 
-  bool ProcessIDIsValid() const;
-
   void Clear();
 
   bool DoUpdateThreadList(ThreadList &old_thread_list,

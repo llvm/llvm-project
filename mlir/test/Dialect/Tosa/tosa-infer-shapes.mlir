@@ -106,15 +106,6 @@ func.func @test_unary_i32(%arg0 : tensor<4xi32>) -> () {
 
 // -----
 
-// CHECK-LABEL: @test_unary_i1
-func.func @test_unary_i1(%arg0 : tensor<4xi1>) -> () {
-  // CHECK: "tosa.logical_not"(%arg0) : (tensor<4xi1>) -> tensor<4xi1>
-  %0 = "tosa.logical_not"(%arg0) : (tensor<4xi1>) -> tensor<*xi1>
-  return
-}
-
-// -----
-
 // CHECK-LABEL: @test_binary_scalar_f32
 func.func @test_binary_scalar_f32(%arg0 : tensor<4xf32>, %arg1 : tensor<f32>) -> () {
   // CHECK: "tosa.add"(%arg0, %arg1) : (tensor<4xf32>, tensor<f32>) -> tensor<4xf32>

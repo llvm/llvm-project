@@ -9,15 +9,12 @@ from __future__ import absolute_import
 
 # System modules
 import errno
+import io
 import os
 import re
 import sys
 import subprocess
 from typing import Dict
-
-# Third-party modules
-from six import StringIO as SixStringIO
-import six
 
 # LLDB modules
 import lldb
@@ -111,7 +108,7 @@ def disassemble(target, function_or_symbol):
 
     It returns the disassembly content in a string object.
     """
-    buf = SixStringIO()
+    buf = io.StringIO()
     insts = function_or_symbol.GetInstructions(target)
     for i in insts:
         print(i, file=buf)
@@ -1080,7 +1077,7 @@ def get_stack_frames(thread):
 def print_stacktrace(thread, string_buffer=False):
     """Prints a simple stack trace of this thread."""
 
-    output = SixStringIO() if string_buffer else sys.stdout
+    output = io.StringIO() if string_buffer else sys.stdout
     target = thread.GetProcess().GetTarget()
 
     depth = thread.GetNumFrames()
@@ -1142,7 +1139,7 @@ def print_stacktrace(thread, string_buffer=False):
 def print_stacktraces(process, string_buffer=False):
     """Prints the stack traces of all the threads."""
 
-    output = SixStringIO() if string_buffer else sys.stdout
+    output = io.StringIO() if string_buffer else sys.stdout
 
     print("Stack traces for " + str(process), file=output)
 
@@ -1258,7 +1255,7 @@ def get_args_as_string(frame, showFuncName=True):
 def print_registers(frame, string_buffer=False):
     """Prints all the register sets of the frame."""
 
-    output = SixStringIO() if string_buffer else sys.stdout
+    output = io.StringIO() if string_buffer else sys.stdout
 
     print("Register sets for " + str(frame), file=output)
 
@@ -1344,7 +1341,7 @@ class BasicFormatter(object):
 
     def format(self, value, buffer=None, indent=0):
         if not buffer:
-            output = SixStringIO()
+            output = io.StringIO()
         else:
             output = buffer
         # If there is a summary, it suffices.
@@ -1374,7 +1371,7 @@ class ChildVisitingFormatter(BasicFormatter):
 
     def format(self, value, buffer=None):
         if not buffer:
-            output = SixStringIO()
+            output = io.StringIO()
         else:
             output = buffer
 
@@ -1401,7 +1398,7 @@ class RecursiveDecentFormatter(BasicFormatter):
 
     def format(self, value, buffer=None):
         if not buffer:
-            output = SixStringIO()
+            output = io.StringIO()
         else:
             output = buffer
 
@@ -1511,7 +1508,7 @@ class PrintableRegex(object):
 
 
 def skip_if_callable(test, mycallable, reason):
-    if six.callable(mycallable):
+    if callable(mycallable):
         if mycallable(test):
             test.skipTest(reason)
             return True

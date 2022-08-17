@@ -42,12 +42,8 @@ static void DescribeStackOrigin(const char *so, uptr pc) {
       " in the stack frame%s\n",
       d.Origin(), d.Name(), so, d.Origin(), d.Default());
 
-  if (pc) {
-    // For some reason function address in LLVM IR is 1 less then the address
-    // of the first instruction.
-    pc = StackTrace::GetNextInstructionPc(pc);
+  if (pc)
     StackTrace(&pc, 1).Print();
-  }
 }
 
 static void DescribeOrigin(u32 id) {
