@@ -346,14 +346,18 @@ public:
                                 const char *name, bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) = 0;
 
-  virtual size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type);
+  virtual size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
+                                         bool expand_pack);
 
   virtual lldb::TemplateArgumentKind
-  GetTemplateArgumentKind(lldb::opaque_compiler_type_t type, size_t idx);
-  virtual CompilerType GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
-                                           size_t idx);
+  GetTemplateArgumentKind(lldb::opaque_compiler_type_t type, size_t idx,
+                          bool expand_pack);
+  virtual CompilerType
+  GetTypeTemplateArgument(lldb::opaque_compiler_type_t type, size_t idx,
+                          bool expand_pack);
   virtual llvm::Optional<CompilerType::IntegralTemplateArgument>
-  GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type, size_t idx);
+  GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type, size_t idx,
+                              bool expand_pack);
 
   // Dumping types
 

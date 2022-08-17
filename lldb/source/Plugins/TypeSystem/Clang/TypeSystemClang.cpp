@@ -7096,7 +7096,8 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
 }
 
 size_t
-TypeSystemClang::GetNumTemplateArguments(lldb::opaque_compiler_type_t type) {
+TypeSystemClang::GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
+                                         bool expand_pack) {
   if (!type)
     return 0;
 
@@ -7111,8 +7112,17 @@ TypeSystemClang::GetNumTemplateArguments(lldb::opaque_compiler_type_t type) {
         const clang::ClassTemplateSpecializationDecl *template_decl =
             llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(
                 cxx_record_decl);
-        if (template_decl)
-          return template_decl->getTemplateArgs().size();
+        if (template_decl) {
+          const auto &template_arg_list = template_decl->getTemplateArgs();
+          size_t num_args = template_arg_list.size();
+          assert(num_args && "template specialization without any args");
+          if (expand_pack && num_args) {
+            const auto &pack = template_arg_list[num_args - 1];
+            if (pack.getKind() == clang::TemplateArgument::Pack)
+              num_args += pack.pack_size() - 1;
+          }
+          return num_args;
+        }
       }
     }
     break;
@@ -7149,15 +7159,51 @@ TypeSystemClang::GetAsTemplateSpecialization(
   }
 }
 
+const TemplateArgument *
+GetNthTemplateArgument(const clang::ClassTemplateSpecializationDecl *decl,
+                       size_t idx, bool expand_pack) {
+  const auto &args = decl->getTemplateArgs();
+  const size_t args_size = args.size();
+
+  assert(args_size && "template specialization without any args");
+  if (!args_size)
+    return nullptr;
+
+  const size_t last_idx = args_size - 1;
+
+  // We're asked for a template argument that can't be a parameter pack, so
+  // return it without worrying about 'expand_pack'.
+  if (idx < last_idx)
+    return &args[idx];
+
+  // We're asked for the last template argument but we don't want/need to
+  // expand it.
+  if (!expand_pack || args[last_idx].getKind() != clang::TemplateArgument::Pack)
+    return idx >= args.size() ? nullptr : &args[idx];
+
+  // Index into the expanded pack.
+  // Note that 'idx' counts from the beginning of all template arguments
+  // (including the ones preceding the parameter pack).
+  const auto &pack = args[last_idx];
+  const size_t pack_idx = idx - last_idx;
+  const size_t pack_size = pack.pack_size();
+  assert(pack_idx < pack_size && "parameter pack index out-of-bounds");
+  return &pack.pack_elements()[pack_idx];
+}
+
 lldb::TemplateArgumentKind
 TypeSystemClang::GetTemplateArgumentKind(lldb::opaque_compiler_type_t type,
-                                         size_t arg_idx) {
+                                         size_t arg_idx, bool expand_pack) {
   const clang::ClassTemplateSpecializationDecl *template_decl =
       GetAsTemplateSpecialization(type);
-  if (! template_decl || arg_idx >= template_decl->getTemplateArgs().size())
+  if (!template_decl)
     return eTemplateArgumentKindNull;
 
-  switch (template_decl->getTemplateArgs()[arg_idx].getKind()) {
+  const auto *arg = GetNthTemplateArgument(template_decl, arg_idx, expand_pack);
+  if (!arg)
+    return eTemplateArgumentKindNull;
+
+  switch (arg->getKind()) {
   case clang::TemplateArgument::Null:
     return eTemplateArgumentKindNull;
 
@@ -7190,35 +7236,32 @@ TypeSystemClang::GetTemplateArgumentKind(lldb::opaque_compiler_type_t type,
 
 CompilerType
 TypeSystemClang::GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
-                                         size_t idx) {
+                                         size_t idx, bool expand_pack) {
   const clang::ClassTemplateSpecializationDecl *template_decl =
       GetAsTemplateSpecialization(type);
-  if (!template_decl || idx >= template_decl->getTemplateArgs().size())
+  if (!template_decl)
     return CompilerType();
 
-  const clang::TemplateArgument &template_arg =
-      template_decl->getTemplateArgs()[idx];
-  if (template_arg.getKind() != clang::TemplateArgument::Type)
+  const auto *arg = GetNthTemplateArgument(template_decl, idx, expand_pack);
+  if (!arg || arg->getKind() != clang::TemplateArgument::Type)
     return CompilerType();
 
-  return GetType(template_arg.getAsType());
+  return GetType(arg->getAsType());
 }
 
 Optional<CompilerType::IntegralTemplateArgument>
 TypeSystemClang::GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type,
-                                             size_t idx) {
+                                             size_t idx, bool expand_pack) {
   const clang::ClassTemplateSpecializationDecl *template_decl =
       GetAsTemplateSpecialization(type);
-  if (! template_decl || idx >= template_decl->getTemplateArgs().size())
+  if (!template_decl)
     return llvm::None;
 
-  const clang::TemplateArgument &template_arg =
-      template_decl->getTemplateArgs()[idx];
-  if (template_arg.getKind() != clang::TemplateArgument::Integral)
+  const auto *arg = GetNthTemplateArgument(template_decl, idx, expand_pack);
+  if (!arg || arg->getKind() != clang::TemplateArgument::Integral)
     return llvm::None;
 
-  return {
-      {template_arg.getAsIntegral(), GetType(template_arg.getIntegralType())}};
+  return {{arg->getAsIntegral(), GetType(arg->getIntegralType())}};
 }
 
 CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {
