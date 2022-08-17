@@ -856,8 +856,8 @@ void MCContext::addDebugPrefixMapEntry(const std::string &From,
 }
 
 void MCContext::remapDebugPath(SmallVectorImpl<char> &Path) {
-  for (const auto &[From, To] : DebugPrefixMap)
-    if (llvm::sys::path::replace_path_prefix(Path, From, To))
+  for (const auto &V : DebugPrefixMap)
+    if (llvm::sys::path::replace_path_prefix(Path, V.first, V.second))
       break;
 }
 
