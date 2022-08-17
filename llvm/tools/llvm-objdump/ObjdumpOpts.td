@@ -303,7 +303,7 @@ def chained_fixups : Flag<["--"], "chained-fixups">,
   HelpText<"Print chained fixup information (requires --macho)">,
   Group<grp_mach_o>;
 
-def dyld_info : Flag<["--"], "dyld_info">,
+def dyld_info : Flag<["--"], "dyld-info">,
   HelpText<"Print bind and rebase information used by dyld to resolve "
            "external references in a final linked binary "
            "(requires --macho)">,
