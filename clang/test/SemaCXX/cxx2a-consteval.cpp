@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -std=c++2a -emit-llvm-only -Wno-unused-value %s -verify
 
-// XFAIL: *
-
 typedef __SIZE_TYPE__ size_t;
 
 namespace basic_sema {
