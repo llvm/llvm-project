@@ -202,6 +202,41 @@ def Arith_AddIOp : Arith_IntBinaryOp<"addi", [Commutative]> {
   let hasCanonicalizer = 1;
 }
 
+
+def Arith_AddICarryOp : Arith_Op<"addi_carry", [Commutative,
+    AllTypesMatch<["lhs", "rhs", "sum"]>]> {
+  let summary = "integer addition operation returning both the sum and carry";
+  let description = [{
+    The `addi_carry` operation takes two operands and returns two results: the
+    sum (same type as both operands), and the carry (boolean-like).
+
+    Example:
+
+    ```mlir
+    // Scalar addition.
+    %sum, %carry = arith.addi_carry %b, %c : i64, i1
+
+    // Vector element-wise addition.
+    %b:2 = arith.addi_carry %g, %h : vector<4xi32>, vector<4xi1>
+
+    // Tensor element-wise addition.
+    %c:2 = arith.addi_carry %y, %z : tensor<4x?xi8>, tensor<4x?xi1>
+    ```
+  }];
+
+  let arguments = (ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs);
+  let results = (outs SignlessIntegerLike:$sum, BoolLike:$carry);
+  let assemblyFormat = [{
+    $lhs `,` $rhs attr-dict `:` type($sum) `,` type($carry)
+  }];
+
+  let hasFolder = 1;
+
+  let extraClassDeclaration = [{
+    ::llvm::Optional<::llvm::SmallVector<int64_t, 4>> getShapeForUnroll();
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // SubIOp
 //===----------------------------------------------------------------------===//
