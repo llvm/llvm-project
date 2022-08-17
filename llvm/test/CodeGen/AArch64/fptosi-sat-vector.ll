@@ -1306,9 +1306,11 @@ define <2 x i1> @test_signed_v2f64_v2i1(<2 x double> %f) {
 ; CHECK-NEXT:    fcvtzs w8, d1
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csel w8, w8, wzr, lt
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    csinv w8, w8, wzr, ge
 ; CHECK-NEXT:    cmp w9, #0
 ; CHECK-NEXT:    csel w9, w9, wzr, lt
+; CHECK-NEXT:    cmp w9, #0
 ; CHECK-NEXT:    csinv w9, w9, wzr, ge
 ; CHECK-NEXT:    fmov s0, w9
 ; CHECK-NEXT:    mov v0.s[1], w8
@@ -2060,49 +2062,57 @@ define <8 x i1> @test_signed_v8f16_v8i1(<8 x half> %f) {
 ; CHECK-CVT-NEXT:    fcvtl2 v1.4s, v0.8h
 ; CHECK-CVT-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-CVT-NEXT:    mov s2, v1.s[1]
-; CHECK-CVT-NEXT:    mov s3, v1.s[2]
 ; CHECK-CVT-NEXT:    fcvtzs w9, s1
-; CHECK-CVT-NEXT:    mov s1, v1.s[3]
 ; CHECK-CVT-NEXT:    fcvtzs w13, s0
 ; CHECK-CVT-NEXT:    fcvtzs w8, s2
-; CHECK-CVT-NEXT:    mov s2, v0.s[1]
-; CHECK-CVT-NEXT:    fcvtzs w10, s3
-; CHECK-CVT-NEXT:    fcvtzs w11, s1
-; CHECK-CVT-NEXT:    mov s1, v0.s[2]
-; CHECK-CVT-NEXT:    mov s0, v0.s[3]
+; CHECK-CVT-NEXT:    mov s2, v1.s[2]
+; CHECK-CVT-NEXT:    mov s1, v1.s[3]
 ; CHECK-CVT-NEXT:    cmp w8, #0
 ; CHECK-CVT-NEXT:    csel w8, w8, wzr, lt
-; CHECK-CVT-NEXT:    fcvtzs w12, s2
+; CHECK-CVT-NEXT:    fcvtzs w10, s2
+; CHECK-CVT-NEXT:    cmp w8, #0
+; CHECK-CVT-NEXT:    mov s2, v0.s[1]
 ; CHECK-CVT-NEXT:    csinv w8, w8, wzr, ge
 ; CHECK-CVT-NEXT:    cmp w9, #0
 ; CHECK-CVT-NEXT:    csel w9, w9, wzr, lt
+; CHECK-CVT-NEXT:    fcvtzs w11, s1
+; CHECK-CVT-NEXT:    cmp w9, #0
+; CHECK-CVT-NEXT:    mov s1, v0.s[2]
 ; CHECK-CVT-NEXT:    csinv w9, w9, wzr, ge
 ; CHECK-CVT-NEXT:    cmp w10, #0
 ; CHECK-CVT-NEXT:    csel w10, w10, wzr, lt
+; CHECK-CVT-NEXT:    fcvtzs w12, s2
+; CHECK-CVT-NEXT:    cmp w10, #0
+; CHECK-CVT-NEXT:    mov s0, v0.s[3]
 ; CHECK-CVT-NEXT:    csinv w10, w10, wzr, ge
 ; CHECK-CVT-NEXT:    cmp w11, #0
 ; CHECK-CVT-NEXT:    csel w11, w11, wzr, lt
 ; CHECK-CVT-NEXT:    fmov s2, w9
+; CHECK-CVT-NEXT:    cmp w11, #0
 ; CHECK-CVT-NEXT:    csinv w11, w11, wzr, ge
 ; CHECK-CVT-NEXT:    cmp w12, #0
 ; CHECK-CVT-NEXT:    csel w12, w12, wzr, lt
-; CHECK-CVT-NEXT:    fcvtzs w9, s1
+; CHECK-CVT-NEXT:    cmp w12, #0
 ; CHECK-CVT-NEXT:    csinv w12, w12, wzr, ge
 ; CHECK-CVT-NEXT:    cmp w13, #0
 ; CHECK-CVT-NEXT:    csel w13, w13, wzr, lt
-; CHECK-CVT-NEXT:    csinv w13, w13, wzr, ge
-; CHECK-CVT-NEXT:    cmp w9, #0
+; CHECK-CVT-NEXT:    cmp w13, #0
+; CHECK-CVT-NEXT:    csinv w9, w13, wzr, ge
+; CHECK-CVT-NEXT:    fcvtzs w13, s1
 ; CHECK-CVT-NEXT:    mov v2.s[1], w8
-; CHECK-CVT-NEXT:    csel w8, w9, wzr, lt
+; CHECK-CVT-NEXT:    fmov s1, w9
+; CHECK-CVT-NEXT:    cmp w13, #0
+; CHECK-CVT-NEXT:    csel w8, w13, wzr, lt
 ; CHECK-CVT-NEXT:    fcvtzs w9, s0
-; CHECK-CVT-NEXT:    csinv w8, w8, wzr, ge
-; CHECK-CVT-NEXT:    fmov s1, w13
-; CHECK-CVT-NEXT:    cmp w9, #0
+; CHECK-CVT-NEXT:    cmp w8, #0
 ; CHECK-CVT-NEXT:    mov v1.s[1], w12
-; CHECK-CVT-NEXT:    mov v2.s[2], w10
-; CHECK-CVT-NEXT:    mov v1.s[2], w8
-; CHECK-CVT-NEXT:    csel w8, w9, wzr, lt
 ; CHECK-CVT-NEXT:    csinv w8, w8, wzr, ge
+; CHECK-CVT-NEXT:    cmp w9, #0
+; CHECK-CVT-NEXT:    csel w9, w9, wzr, lt
+; CHECK-CVT-NEXT:    mov v2.s[2], w10
+; CHECK-CVT-NEXT:    cmp w9, #0
+; CHECK-CVT-NEXT:    mov v1.s[2], w8
+; CHECK-CVT-NEXT:    csinv w8, w9, wzr, ge
 ; CHECK-CVT-NEXT:    mov v2.s[3], w11
 ; CHECK-CVT-NEXT:    mov v1.s[3], w8
 ; CHECK-CVT-NEXT:    uzp1 v0.8h, v1.8h, v2.8h
