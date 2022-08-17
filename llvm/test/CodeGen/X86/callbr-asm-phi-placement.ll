@@ -16,9 +16,10 @@ define void @test1(ptr %arg, ptr %mem) nounwind {
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movq %rsi, %r14
-; CHECK-NEXT:  .Ltmp0: # Block address taken
-; CHECK-NEXT:  .LBB0_1: # %loop
+; CHECK-NEXT:  .LBB0_1: # Block address taken
+; CHECK-NEXT:    # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movq (%r14), %rbx
 ; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:    movq %rbx, %rdi
