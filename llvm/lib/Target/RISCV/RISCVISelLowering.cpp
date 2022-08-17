@@ -8306,6 +8306,11 @@ static SDValue combineSubOfBoolean(SDNode *N, SelectionDAG &DAG) {
     CCVal = ISD::getSetCCInverse(CCVal, SetCCOpVT);
     NewLHS =
         DAG.getSetCC(SDLoc(N1), VT, N1.getOperand(0), N1.getOperand(1), CCVal);
+  } else if (N1.getOpcode() == ISD::XOR && isOneConstant(N1.getOperand(1)) &&
+             N1.getOperand(0).getOpcode() == ISD::SETCC) {
+    // (sub C, (xor (setcc), 1)) -> (add (setcc), C-1).
+    // Since setcc returns a bool the xor is equivalent to 1-setcc.
+    NewLHS = N1.getOperand(0);
   } else
     return SDValue();
 
