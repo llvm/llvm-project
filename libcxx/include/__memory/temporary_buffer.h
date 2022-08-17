@@ -14,7 +14,6 @@
 #include <__type_traits/alignment_of.h>
 #include <__utility/pair.h>
 #include <cstddef>
-#include <limits>
 #include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -29,7 +28,9 @@ pair<_Tp*, ptrdiff_t>
 get_temporary_buffer(ptrdiff_t __n) _NOEXCEPT
 {
     pair<_Tp*, ptrdiff_t> __r(0, 0);
-    const ptrdiff_t __m = (~ptrdiff_t(0) ^ numeric_limits<ptrdiff_t>::min()) / sizeof(_Tp);
+    const ptrdiff_t __m = (~ptrdiff_t(0) ^
+                           ptrdiff_t(ptrdiff_t(1) << (sizeof(ptrdiff_t) * __CHAR_BIT__ - 1)))
+                           / sizeof(_Tp);
     if (__n > __m)
         __n = __m;
     while (__n > 0)
