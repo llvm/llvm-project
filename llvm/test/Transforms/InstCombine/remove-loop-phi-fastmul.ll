@@ -6,15 +6,11 @@ define double @test_mul_fast_flags(ptr %arr_d) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[F_PROD_01:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[MUL:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1000 x double], ptr [[ARR_D:%.*]], i64 0, i64 [[I_02]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[MUL]] = fmul fast double [[F_PROD_01]], [[TMP0]]
 ; CHECK-NEXT:    [[INC]] = add i64 [[I_02]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    ret double [[MUL]]
+; CHECK-NEXT:    ret double 0.000000e+00
 ;
 entry:
   br label %for.body
@@ -40,15 +36,11 @@ define double @test_nsz_nnan_flags_enabled(ptr %arr_d) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I_02:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[F_PROD_01:%.*]] = phi double [ 0.000000e+00, [[ENTRY]] ], [ [[MUL:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1000 x double], ptr [[ARR_D:%.*]], i64 0, i64 [[I_02]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[MUL]] = fmul nnan nsz double [[F_PROD_01]], [[TMP0]]
 ; CHECK-NEXT:    [[INC]] = add i64 [[I_02]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], 1000
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[END:%.*]]
 ; CHECK:       end:
-; CHECK-NEXT:    ret double [[MUL]]
+; CHECK-NEXT:    ret double 0.000000e+00
 ;
 entry:
   br label %for.body
