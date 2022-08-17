@@ -577,6 +577,17 @@ clang-cl-static)
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
+clang-cl-no-vcruntime)
+    clean
+    # Building libc++ in the same way as in clang-cl-dll above, but running
+    # tests with -D_HAS_EXCEPTIONS=0, which users might set in certain
+    # translation units while using libc++, even if libc++ is built with
+    # exceptions enabled.
+    generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False" \
+                              -DLIBCXX_TEST_CONFIG="llvm-libc++-shared-no-vcruntime-clangcl.cfg.in"
+    echo "+++ Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+;;
 mingw-dll)
     clean
     # Explicitly specify the compiler with a triple prefix. The CI
