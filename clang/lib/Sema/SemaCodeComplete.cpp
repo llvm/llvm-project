@@ -1055,7 +1055,8 @@ void ResultBuilder::MaybeAddResult(Result R, DeclContext *CurContext) {
                                 getBasePriority(Using->getTargetDecl()),
                                 R.Qualifier, false,
                                 (R.Availability == CXAvailability_Available ||
-                                 R.Availability == CXAvailability_Deprecated));
+                                 R.Availability == CXAvailability_Deprecated),
+                                std::move(R.FixIts));
     Result.ShadowDecl = Using;
     MaybeAddResult(Result, CurContext);
     return;
@@ -1230,7 +1231,8 @@ void ResultBuilder::AddResult(Result R, DeclContext *CurContext,
                                 getBasePriority(Using->getTargetDecl()),
                                 R.Qualifier, false,
                                 (R.Availability == CXAvailability_Available ||
-                                 R.Availability == CXAvailability_Deprecated));
+                                 R.Availability == CXAvailability_Deprecated),
+                                std::move(R.FixIts));
     Result.ShadowDecl = Using;
     AddResult(Result, CurContext, Hiding);
     return;
