@@ -5353,9 +5353,21 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
 }
 
 void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
-  llvm::AtomicOrdering AO = S.getSingleClause<OMPFlushClause>()
-                                ? llvm::AtomicOrdering::NotAtomic
-                                : llvm::AtomicOrdering::AcquireRelease;
+  // assume implicit FlushClause is used and change to AcquireRelease if not
+  // used
+  llvm::AtomicOrdering AO = llvm::AtomicOrdering::NotAtomic;
+  if (!S.getSingleClause<OMPFlushClause>()) {
+    AO = llvm::AtomicOrdering::AcquireRelease;
+    if (S.getSingleClause<OMPSeqCstClause>())
+      AO = llvm::AtomicOrdering::SequentiallyConsistent;
+    else if (S.getSingleClause<OMPAcqRelClause>())
+      AO = llvm::AtomicOrdering::AcquireRelease;
+    else if (S.getSingleClause<OMPAcquireClause>())
+      AO = llvm::AtomicOrdering::Acquire;
+    else if (S.getSingleClause<OMPReleaseClause>())
+      AO = llvm::AtomicOrdering::Release;
+  }
+
   CGM.getOpenMPRuntime().emitFlush(
       *this,
       [&S]() -> ArrayRef<const Expr *> {

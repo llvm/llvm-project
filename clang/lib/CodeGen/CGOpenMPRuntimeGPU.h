@@ -409,6 +409,11 @@ public:
   /// space.
   bool hasAllocateAttributeForGlobalVar(const VarDecl *VD, LangAS &AS) override;
 
+  /// Emit flush of the variables specified in 'omp flush' directive.
+  /// \param Vars List of variables to flush.
+  void emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *> Vars,
+                 SourceLocation Loc, llvm::AtomicOrdering AO) override;
+
 private:
   /// Track the execution mode when codegening directives within a target
   /// region. The appropriate mode (SPMD/NON-SPMD) is set on entry to the

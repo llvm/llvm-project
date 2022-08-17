@@ -469,6 +469,21 @@ void __kmpc_flush(IdentTy *Loc) {
   fence::kernel(__ATOMIC_SEQ_CST);
 }
 
+void __kmpc_flush_acquire(IdentTy *Loc) {
+  FunctionTracingRAII();
+  fence::kernel(__ATOMIC_ACQUIRE);
+}
+
+void __kmpc_flush_release(IdentTy *Loc) {
+  FunctionTracingRAII();
+  fence::kernel(__ATOMIC_RELEASE);
+}
+
+void __kmpc_flush_acqrel(IdentTy *Loc) {
+  FunctionTracingRAII();
+  fence::kernel(__ATOMIC_ACQ_REL);
+}
+
 uint64_t __kmpc_warp_active_thread_mask(void) {
   FunctionTracingRAII();
   return mapping::activemask();

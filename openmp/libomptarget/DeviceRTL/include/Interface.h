@@ -337,6 +337,12 @@ void __kmpc_end_single(IdentTy *Loc, int32_t TId);
 
 void __kmpc_flush(IdentTy *Loc);
 
+void __kmpc_flush_acquire(IdentTy *Loc);
+
+void __kmpc_flush_release(IdentTy *Loc);
+
+void __kmpc_flush_acqrel(IdentTy *Loc);
+
 uint64_t __kmpc_warp_active_thread_mask(void);
 
 void __kmpc_syncwarp(uint64_t Mask);

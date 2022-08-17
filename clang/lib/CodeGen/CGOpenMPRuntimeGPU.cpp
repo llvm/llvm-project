@@ -4298,3 +4298,41 @@ std::pair<bool, RValue> CGOpenMPRuntimeGPU::emitFastFPAtomicCall(
   }
   return std::make_pair(true, RValue::get(CallInst));
 }
+
+void CGOpenMPRuntimeGPU::emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *>,
+                                   SourceLocation Loc,
+                                   llvm::AtomicOrdering AO) {
+  if (CGF.CGM.getLangOpts().OpenMPIRBuilder) {
+    OMPBuilder.createFlush(CGF.Builder);
+  } else {
+    if (!CGF.HaveInsertPoint())
+      return;
+    // Build call void __kmpc_flush(ident_t *loc) and variants
+    //__kmpc_flush_acquire, __kmpc_flush_release, __kmpc_flush_acqrel
+    if (AO == llvm::AtomicOrdering::NotAtomic ||
+        AO == llvm::AtomicOrdering::SequentiallyConsistent)
+      CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                              CGM.getModule(), OMPRTL___kmpc_flush),
+                          emitUpdateLocation(CGF, Loc));
+    else
+      switch (AO) {
+      case llvm::AtomicOrdering::Acquire:
+        CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                                CGM.getModule(), OMPRTL___kmpc_flush_acquire),
+                            emitUpdateLocation(CGF, Loc));
+        return;
+      case llvm::AtomicOrdering::Release:
+        CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                                CGM.getModule(), OMPRTL___kmpc_flush_release),
+                            emitUpdateLocation(CGF, Loc));
+        return;
+      case llvm::AtomicOrdering::AcquireRelease:
+        CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                                CGM.getModule(), OMPRTL___kmpc_flush_acqrel),
+                            emitUpdateLocation(CGF, Loc));
+        return;
+      default:
+        llvm_unreachable("Unexpected atomic ordering for flush directive.");
+      }
+  }
+}
