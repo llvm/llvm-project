@@ -34,14 +34,9 @@ _ := statement-seq
 _ := declaration-seq
 
 # gram.key
-typedef-name := IDENTIFIER
-typedef-name := simple-template-id
+#! we don't distinguish between namespaces and namespace aliases, as it's hard
+#! and uninteresting.
 namespace-name := IDENTIFIER
-namespace-name := namespace-alias
-namespace-alias := IDENTIFIER
-class-name := IDENTIFIER
-class-name := simple-template-id
-enum-name := IDENTIFIER
 template-name := IDENTIFIER
 
 # gram.basic
@@ -391,9 +386,12 @@ builtin-type := INT
 builtin-type := FLOAT
 builtin-type := DOUBLE
 builtin-type := VOID
-type-name := class-name
-type-name := enum-name
-type-name := typedef-name
+#! Unlike C++ standard grammar, we don't distinguish the underlying type (class,
+#! enum, typedef) of the IDENTIFIER, as these ambiguities are "local" and don't
+#! affect the final parse tree. Eliminating them gives a significant performance
+#! boost to the parser.
+type-name := IDENTIFIER
+type-name := simple-template-id
 elaborated-type-specifier := class-key nested-name-specifier_opt IDENTIFIER
 elaborated-type-specifier := class-key simple-template-id
 elaborated-type-specifier := class-key nested-name-specifier TEMPLATE_opt simple-template-id
@@ -551,7 +549,7 @@ private-module-fragment := module-keyword : PRIVATE ; declaration-seq_opt
 class-specifier := class-head { member-specification_opt [recover=Brackets] }
 class-head := class-key class-head-name class-virt-specifier_opt base-clause_opt
 class-head := class-key base-clause_opt
-class-head-name := nested-name-specifier_opt class-name
+class-head-name := nested-name-specifier_opt type-name
 class-virt-specifier := contextual-final
 class-key := CLASS
 class-key := STRUCT
