@@ -34,6 +34,10 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+// __split_buffer allocates a contiguous chunk of memory and stores objects in the range [__begin_, __end_).
+// It has uninitialized memory in the ranges  [__first_, __begin_) and [__end_, __end_cap_.first()). That allows
+// it to grow both in the front and back without having to move the data.
+
 template <class _Tp, class _Allocator = allocator<_Tp> >
 struct __split_buffer
 {
