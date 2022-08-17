@@ -1619,13 +1619,6 @@ LogicalResult InsertValueOp::verify() {
   return success();
 }
 
-void InsertValueOp::build(OpBuilder &builder, OperationState &state,
-                          Value container, Value value,
-                          ArrayRef<int64_t> position) {
-  build(builder, state, container.getType(), container, value,
-        builder.getAttr<DenseI64ArrayAttr>(position));
-}
-
 //===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
