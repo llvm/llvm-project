@@ -566,8 +566,7 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
     }
 
     if (getLexer().isNot(AsmToken::String)) {
-      if (!getContext().getAsmInfo()->usesSunStyleELFSectionSwitchSyntax()
-          || getLexer().isNot(AsmToken::Hash))
+      if (getLexer().isNot(AsmToken::Hash))
         return TokError("expected string in directive");
       extraFlags = parseSunStyleSectionFlags();
     } else {
