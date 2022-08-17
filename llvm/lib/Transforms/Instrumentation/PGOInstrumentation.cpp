@@ -292,6 +292,10 @@ static cl::opt<std::string> PGOTraceFuncHash(
     cl::value_desc("function name"),
     cl::desc("Trace the hash of the function with this name."));
 
+static cl::opt<unsigned> PGOFunctionSizeThreshold(
+    "pgo-function-size-threshold", cl::Hidden,
+    cl::desc("Do not instrument functions smaller than this threshold"));
+
 namespace llvm {
 // Command line option to turn on CFG dot dump after profile annotation.
 // Defined in Analysis/BlockFrequencyInfo.cpp:  -pgo-view-counts
@@ -1575,6 +1579,8 @@ static bool InstrumentAllFunctions(
     if (F.hasFnAttribute(llvm::Attribute::NoProfile))
       continue;
     if (F.hasFnAttribute(llvm::Attribute::SkipProfile))
+      continue;
+    if (F.getInstructionCount() < PGOFunctionSizeThreshold)
       continue;
     auto &TLI = LookupTLI(F);
     auto *BPI = LookupBPI(F);
