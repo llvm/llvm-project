@@ -412,6 +412,9 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
     The body region can contain any number of blocks. The region is terminated
     by "omp.yield" instruction without operands.
 
+    Collapsed loops are represented by the simd-loop having a list of indices,
+    bounds and steps where the size of the list is equal to the collapse value.
+
     When an if clause is present and evaluates to false, the preferred number of
     iterations to be executed concurrently is one, regardless of whether
     a simdlen clause is speciﬁed.
