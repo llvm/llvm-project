@@ -297,7 +297,7 @@ class Variadic<Type type> : TypeConstraint<type.predicate, type.summary,
 // A nested variadic type constraint. It expands to zero or more variadic ranges
 // of the base type. This class is used for supporting variadic operands and
 // results. `variadicSegmentAttrName` should correspond to the name of an
-// I32ElementsAttr argument that provides the sizes of the inner variadic
+// DenseI32ArrayAttr argument that provides the sizes of the inner variadic
 // operand groups.
 class VariadicOfVariadic<Type type, string variadicSegmentAttrName>
     : Variadic<type> {
