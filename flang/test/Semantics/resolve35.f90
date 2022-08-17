@@ -78,6 +78,7 @@ subroutine s7
   do concurrent(integer::i=1:5) local(j, i) &
       !ERROR: 'j' is already declared in this scoping unit
       local_init(k, j) &
+      !WARNING: Variable 'a' with SHARED locality implicitly declared
       shared(a)
     a = j + 1
   end do
