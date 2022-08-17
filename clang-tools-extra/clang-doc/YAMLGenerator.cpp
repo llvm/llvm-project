@@ -127,7 +127,8 @@ static void SymbolInfoMapping(IO &IO, SymbolInfo &I) {
 
 static void RecordInfoMapping(IO &IO, RecordInfo &I) {
   SymbolInfoMapping(IO, I);
-  IO.mapOptional("TagType", I.TagType, clang::TagTypeKind::TTK_Struct);
+  IO.mapOptional("TagType", I.TagType);
+  IO.mapOptional("IsTypeDef", I.IsTypeDef, false);
   IO.mapOptional("Members", I.Members);
   IO.mapOptional("Bases", I.Bases);
   IO.mapOptional("Parents", I.Parents, llvm::SmallVector<Reference, 4>());

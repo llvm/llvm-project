@@ -18,6 +18,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Optional
 import re
+import sys
 
 
 @dataclass
@@ -298,8 +299,15 @@ def generate_data_tables() -> str:
 
     Both files are expected to be in the same directory as this script.
     """
-    gbp_data_path = Path(__file__).absolute().with_name("GraphemeBreakProperty.txt")
-    emoji_data_path = Path(__file__).absolute().with_name("emoji-data.txt")
+    gbp_data_path = (
+        Path(__file__).absolute().parent
+        / "data"
+        / "unicode"
+        / "GraphemeBreakProperty.txt"
+    )
+    emoji_data_path = (
+        Path(__file__).absolute().parent / "data" / "unicode" / "emoji-data.txt"
+    )
     gbp_ranges = list()
     emoji_ranges = list()
     with gbp_data_path.open(encoding="utf-8") as f:
@@ -317,6 +325,8 @@ def generate_data_tables() -> str:
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 2:
+        sys.stdout = open(sys.argv[1], "w")
     print(
         MSVC_FORMAT_UCD_TABLES_HPP_TEMPLATE.lstrip().format(
             content=generate_data_tables()

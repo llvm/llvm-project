@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__functional/unary_function.h>
+#include <__fwd/hash.h>
 #include <__tuple>
 #include <__utility/forward.h>
 #include <__utility/move.h>

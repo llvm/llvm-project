@@ -1,12 +1,8 @@
 # RUN: %PYTHON %s | FileCheck %s
 
-from mlir.ir import *
-from mlir.dialects import arith
-from mlir.dialects import builtin
-from mlir.dialects import func
-from mlir.dialects import linalg
-
+from mlir.dialects import arith, builtin, func, linalg
 from mlir.dialects.linalg.opdsl.lang import *
+from mlir.ir import *
 
 
 def run(f):
@@ -138,7 +134,7 @@ def testNamedStructuredOpGenericForm():
         # CHECK-NEXT:    arith.addf{{.*}} (f32, f32) -> f32
         # CHECK-NEXT:    linalg.yield{{.*}} (f32) -> ()
         # CHECK-NEXT:    cast = #linalg.type_fn<cast_signed>
-        # CHECK-SAME:    operand_segment_sizes = dense<[2, 1]> : vector<2xi32>
+        # CHECK-SAME:    operand_segment_sizes = array<i32: 2, 1>
         # CHECK-SAME: (tensor<4x16xf32>, tensor<16x8xf32>, tensor<4x8xf32>) -> tensor<4x8xf32>
         return linalg.matmul(lhs, rhs, outs=[init_result.result])
 

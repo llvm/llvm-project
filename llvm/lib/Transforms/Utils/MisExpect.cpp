@@ -58,7 +58,7 @@ static cl::opt<bool> PGOWarnMisExpect(
     cl::desc("Use this option to turn on/off "
              "warnings about incorrect usage of llvm.expect intrinsics."));
 
-static cl::opt<unsigned> MisExpectTolerance(
+static cl::opt<uint32_t> MisExpectTolerance(
     "misexpect-tolerance", cl::init(0),
     cl::desc("Prevents emiting diagnostics when profile counts are "
              "within N% of the threshold.."));
@@ -72,7 +72,7 @@ bool isMisExpectDiagEnabled(LLVMContext &Ctx) {
 }
 
 uint64_t getMisExpectTolerance(LLVMContext &Ctx) {
-  return std::max(static_cast<uint64_t>(MisExpectTolerance),
+  return std::max(static_cast<uint32_t>(MisExpectTolerance),
                   Ctx.getDiagnosticsMisExpectTolerance());
 }
 

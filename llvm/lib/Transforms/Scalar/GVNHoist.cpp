@@ -435,7 +435,7 @@ private:
         continue;
       const VNType &VN = R;
       SmallPtrSet<BasicBlock *, 2> VNBlocks;
-      for (auto &I : V) {
+      for (const auto &I : V) {
         BasicBlock *BBI = I->getParent();
         if (!hasEH(BBI))
           VNBlocks.insert(BBI);
@@ -563,7 +563,7 @@ bool GVNHoist::run(Function &F) {
   for (const BasicBlock *BB : depth_first(&F.getEntryBlock())) {
     DFSNumber[BB] = ++BBI;
     unsigned I = 0;
-    for (auto &Inst : *BB)
+    for (const auto &Inst : *BB)
       DFSNumber[&Inst] = ++I;
   }
 

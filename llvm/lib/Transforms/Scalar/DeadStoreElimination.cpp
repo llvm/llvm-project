@@ -1967,7 +1967,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 
     Optional<MemoryLocation> MaybeKillingLoc;
     if (State.isMemTerminatorInst(KillingI))
-      MaybeKillingLoc = State.getLocForTerminator(KillingI).map(
+      MaybeKillingLoc = State.getLocForTerminator(KillingI).transform(
           [](const std::pair<MemoryLocation, bool> &P) { return P.first; });
     else
       MaybeKillingLoc = State.getLocForWrite(KillingI);

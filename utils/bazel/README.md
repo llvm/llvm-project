@@ -75,7 +75,7 @@ configuration you'd like to use that isn't supported, please send a patch.
 
 # Continuous Testing
 
-A [Buildkite pipeline](https://buildkite.com/llvm-project/upstream-bazel-rbe)
+A [Buildkite pipeline](https://buildkite.com/llvm-project/upstream-bazel)
 runs the full Bazel build on every commit to the main branch. Notifications of
 failures are sent to the
 [llvm-bazel-alerts google group](https://groups.google.com/g/llvm-bazel-alerts),

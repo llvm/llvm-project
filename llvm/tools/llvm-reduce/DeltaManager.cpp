@@ -39,6 +39,7 @@
 #include "deltas/ReduceRegisterMasks.h"
 #include "deltas/ReduceRegisterUses.h"
 #include "deltas/ReduceSpecialGlobals.h"
+#include "deltas/ReduceUsingSimplifyCFG.h"
 #include "deltas/ReduceVirtualRegisters.h"
 #include "deltas/RunIRPasses.h"
 #include "deltas/SimplifyInstructions.h"
@@ -75,6 +76,7 @@ static cl::opt<std::string>
     DELTA_PASS("operands-to-args", reduceOperandsToArgsDeltaPass)              \
     DELTA_PASS("operands-skip", reduceOperandsSkipDeltaPass)                   \
     DELTA_PASS("operand-bundles", reduceOperandBundesDeltaPass)                \
+    DELTA_PASS("simplify-cfg", reduceUsingSimplifyCFGDeltaPass)                \
     DELTA_PASS("attributes", reduceAttributesDeltaPass)                        \
     DELTA_PASS("module-data", reduceModuleDataDeltaPass)                       \
   } while (false)

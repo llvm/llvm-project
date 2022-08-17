@@ -3,9 +3,6 @@ Set breakpoints on objective-c class and instance methods in foundation.
 Also lookup objective-c data types and evaluate expressions.
 """
 
-from __future__ import print_function
-
-
 import os
 import os.path
 import lldb

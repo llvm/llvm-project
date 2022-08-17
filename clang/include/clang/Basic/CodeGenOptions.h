@@ -424,7 +424,7 @@ public:
 
   /// The maximum percentage profiling weights can deviate from the expected
   /// values in order to be included in misexpect diagnostics.
-  Optional<uint64_t> DiagnosticsMisExpectTolerance = 0;
+  Optional<uint32_t> DiagnosticsMisExpectTolerance = 0;
 
 public:
   // Define accessors/mutators for code generation options of enumeration type.

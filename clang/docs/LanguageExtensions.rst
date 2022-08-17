@@ -1373,7 +1373,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__has_trivial_move_assign`` (GNU, Microsoft):
   Deprecated, use ``__is_trivially_assignable`` instead.
 * ``__has_trivial_copy`` (GNU, Microsoft):
-  Deprecated, use ``__is_trivially_constructible`` instead.
+  Deprecated, use ``__is_trivially_copyable`` instead.
 * ``__has_trivial_constructor`` (GNU, Microsoft):
   Deprecated, use ``__is_trivially_constructible`` instead.
 * ``__has_trivial_move_constructor`` (GNU, Microsoft):

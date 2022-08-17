@@ -13,6 +13,7 @@
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/ModuleList.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/Core/StreamFile.h"
@@ -104,6 +105,7 @@ static std::recursive_mutex *g_debugger_list_mutex_ptr =
     nullptr; // NOTE: intentional leak to avoid issues with C++ destructor chain
 static DebuggerList *g_debugger_list_ptr =
     nullptr; // NOTE: intentional leak to avoid issues with C++ destructor chain
+static llvm::ThreadPool *g_thread_pool = nullptr;
 
 static constexpr OptionEnumValueElement g_show_disassembly_enum_values[] = {
     {
@@ -538,12 +540,18 @@ void Debugger::Initialize(LoadPluginCallbackType load_plugin_callback) {
          "Debugger::Initialize called more than once!");
   g_debugger_list_mutex_ptr = new std::recursive_mutex();
   g_debugger_list_ptr = new DebuggerList();
+  g_thread_pool = new llvm::ThreadPool(llvm::optimal_concurrency());
   g_load_plugin_callback = load_plugin_callback;
 }
 
 void Debugger::Terminate() {
   assert(g_debugger_list_ptr &&
          "Debugger::Terminate called without a matching Debugger::Initialize!");
+
+  if (g_thread_pool) {
+    // The destructor will wait for all the threads to complete.
+    delete g_thread_pool;
+  }
 
   if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
     // Clear our global list of debugger objects
@@ -1406,6 +1414,18 @@ void Debugger::ReportError(std::string message,
                        debugger_id, once);
 }
 
+void Debugger::ReportSymbolChange(const ModuleSpec &module_spec) {
+  if (g_debugger_list_ptr && g_debugger_list_mutex_ptr) {
+    std::lock_guard<std::recursive_mutex> guard(*g_debugger_list_mutex_ptr);
+    for (DebuggerSP debugger_sp : *g_debugger_list_ptr) {
+      EventSP event_sp = std::make_shared<Event>(
+          Debugger::eBroadcastSymbolChange,
+          new SymbolChangeEventData(debugger_sp, module_spec));
+      debugger_sp->GetBroadcaster().BroadcastEvent(event_sp);
+    }
+  }
+}
+
 static std::shared_ptr<LogHandler>
 CreateLogHandler(LogHandlerKind log_handler_kind, int fd, bool should_close,
                  size_t buffer_size) {
@@ -1702,8 +1722,8 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
           CommandInterpreter::eBroadcastBitAsynchronousErrorData);
 
   listener_sp->StartListeningForEvents(
-      &m_broadcaster,
-      eBroadcastBitProgress | eBroadcastBitWarning | eBroadcastBitError);
+      &m_broadcaster, eBroadcastBitProgress | eBroadcastBitWarning |
+                          eBroadcastBitError | eBroadcastSymbolChange);
 
   // Let the thread that spawned us know that we have started up and that we
   // are now listening to all required events so no events get missed
@@ -2005,11 +2025,7 @@ Status Debugger::RunREPL(LanguageType language, const char *repl_options) {
 }
 
 llvm::ThreadPool &Debugger::GetThreadPool() {
-  // NOTE: intentional leak to avoid issues with C++ destructor chain
-  static llvm::ThreadPool *g_thread_pool = nullptr;
-  static llvm::once_flag g_once_flag;
-  llvm::call_once(g_once_flag, []() {
-    g_thread_pool = new llvm::ThreadPool(llvm::optimal_concurrency());
-  });
+  assert(g_thread_pool &&
+         "Debugger::GetThreadPool called before Debugger::Initialize");
   return *g_thread_pool;
 }

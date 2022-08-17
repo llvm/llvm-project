@@ -1,8 +1,5 @@
 """Test evaluating expressions repeatedly comparing lldb against gdb."""
 
-from __future__ import print_function
-
-
 import sys
 import lldb
 from lldbsuite.test.lldbbench import BenchBase

@@ -88,4 +88,6 @@ add_flang_library(FortranRuntime
 
   LINK_LIBS
   FortranDecimal
+
+  INSTALL_WITH_TOOLCHAIN
 )

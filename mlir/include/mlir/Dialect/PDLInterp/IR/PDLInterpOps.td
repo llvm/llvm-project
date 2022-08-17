@@ -236,7 +236,7 @@ def PDLInterp_CheckOperandCountOp
   }];
 
   let arguments = (ins PDL_Operation:$inputOp,
-                       Confined<I32Attr, [IntNonNegative]>:$count,
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$count,
                        UnitAttr:$compareAtLeast);
   let assemblyFormat = [{
     `of` $inputOp `is` (`at_least` $compareAtLeast^)? $count attr-dict
@@ -293,7 +293,7 @@ def PDLInterp_CheckResultCountOp
   }];
 
   let arguments = (ins PDL_Operation:$inputOp,
-                       Confined<I32Attr, [IntNonNegative]>:$count,
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$count,
                        UnitAttr:$compareAtLeast);
   let assemblyFormat = [{
     `of` $inputOp `is` (`at_least` $compareAtLeast^)? $count attr-dict
@@ -417,7 +417,7 @@ def PDLInterp_CreateOperationOp
     ```mlir
     // Create an instance of a `foo.op` operation.
     %op = pdl_interp.create_operation "foo.op"(%arg0 : !pdl.value) {"attrA" = %attr0} -> (%type : !pdl.type)
-    
+
     // Create an instance of a `foo.op` operation that has inferred result types
     // (using the InferTypeOpInterface).
     %op = pdl_interp.create_operation "foo.op"(%arg0 : !pdl.value) {"attrA" = %attr0} -> <inferred>
@@ -552,7 +552,7 @@ def PDLInterp_ExtractOp
   }];
 
   let arguments = (ins PDL_RangeOf<PDL_AnyType>:$range,
-                       Confined<I32Attr, [IntNonNegative]>:$index);
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$index);
   let results = (outs PDL_AnyType:$result);
   let assemblyFormat = "$index `of` $range `:` type($result) attr-dict";
 
@@ -774,7 +774,7 @@ def PDLInterp_GetOperandOp : PDLInterp_Op<"get_operand", [NoSideEffect]> {
   }];
 
   let arguments = (ins PDL_Operation:$inputOp,
-                       Confined<I32Attr, [IntNonNegative]>:$index);
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$index);
   let results = (outs PDL_Value:$value);
   let assemblyFormat = "$index `of` $inputOp attr-dict";
 }
@@ -809,7 +809,7 @@ def PDLInterp_GetOperandsOp : PDLInterp_Op<"get_operands", [NoSideEffect]> {
 
   let arguments = (ins
     PDL_Operation:$inputOp,
-    OptionalAttr<Confined<I32Attr, [IntNonNegative]>>:$index
+    OptionalAttr<ConfinedAttr<I32Attr, [IntNonNegative]>>:$index
   );
   let results = (outs PDL_InstOrRangeOf<PDL_Value>:$value);
   let assemblyFormat = "($index^)? `of` $inputOp `:` type($value) attr-dict";
@@ -841,7 +841,7 @@ def PDLInterp_GetResultOp : PDLInterp_Op<"get_result", [NoSideEffect]> {
   }];
 
   let arguments = (ins PDL_Operation:$inputOp,
-                       Confined<I32Attr, [IntNonNegative]>:$index);
+                       ConfinedAttr<I32Attr, [IntNonNegative]>:$index);
   let results = (outs PDL_Value:$value);
   let assemblyFormat = "$index `of` $inputOp attr-dict";
 }
@@ -876,7 +876,7 @@ def PDLInterp_GetResultsOp : PDLInterp_Op<"get_results", [NoSideEffect]> {
 
   let arguments = (ins
     PDL_Operation:$inputOp,
-    OptionalAttr<Confined<I32Attr, [IntNonNegative]>>:$index
+    OptionalAttr<ConfinedAttr<I32Attr, [IntNonNegative]>>:$index
   );
   let results = (outs PDL_InstOrRangeOf<PDL_Value>:$value);
   let assemblyFormat = "($index^)? `of` $inputOp `:` type($value) attr-dict";
@@ -1019,7 +1019,7 @@ def PDLInterp_RecordMatchOp
                        SymbolRefAttr:$rewriter,
                        OptionalAttr<StrAttr>:$rootKind,
                        OptionalAttr<StrArrayAttr>:$generatedOps,
-                       Confined<I16Attr, [IntNonNegative]>:$benefit);
+                       ConfinedAttr<I16Attr, [IntNonNegative]>:$benefit);
   let successors = (successor AnySuccessor:$dest);
   let assemblyFormat = [{
     $rewriter (`(` $inputs^ `:` type($inputs) `)`)? `:`

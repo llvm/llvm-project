@@ -722,8 +722,8 @@ static std::string getThinLTOObjectFileName(StringRef Path, StringRef OldSuffix,
 // Returns true if S is valid as a C language identifier.
 static bool isValidCIdentifier(StringRef S) {
   return !S.empty() && (isAlpha(S[0]) || S[0] == '_') &&
-         std::all_of(S.begin() + 1, S.end(),
-                     [](char C) { return C == '_' || isAlnum(C); });
+         llvm::all_of(llvm::drop_begin(S),
+                      [](char C) { return C == '_' || isAlnum(C); });
 }
 
 static bool isUndefined(ld_plugin_symbol &Sym) {

@@ -34,6 +34,8 @@ struct TraceDumperOptions {
   bool show_timestamps = false;
   /// Dump the events that happened between instructions.
   bool show_events = false;
+  /// Dump events and none of the instructions.
+  bool only_events = false;
   /// For each instruction, print the instruction kind.
   bool show_control_flow_kind = false;
   /// Optional custom id to start traversing from.
@@ -63,6 +65,7 @@ public:
     lldb::addr_t load_address;
     llvm::Optional<double> timestamp;
     llvm::Optional<uint64_t> hw_clock;
+    llvm::Optional<std::string> sync_point_metadata;
     llvm::Optional<llvm::StringRef> error;
     llvm::Optional<lldb::TraceEvent> event;
     llvm::Optional<SymbolInfo> symbol_info;

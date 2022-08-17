@@ -223,7 +223,7 @@ class _LIBCPP_TEMPLATE_VIS __deque_iterator;
 
 template <class _RAIter,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 copy(_RAIter __f,
      _RAIter __l,
      __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
@@ -231,21 +231,21 @@ copy(_RAIter __f,
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _OutputIterator>
-_OutputIterator
+_LIBCPP_HIDE_FROM_ABI _OutputIterator
 copy(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
      __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
      _OutputIterator __r);
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 copy(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
      __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
      __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r);
 
 template <class _RAIter,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 copy_backward(_RAIter __f,
               _RAIter __l,
               __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
@@ -253,21 +253,21 @@ copy_backward(_RAIter __f,
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _OutputIterator>
-_OutputIterator
+_LIBCPP_HIDE_FROM_ABI _OutputIterator
 copy_backward(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
               __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
               _OutputIterator __r);
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 copy_backward(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
               __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
               __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r);
 
 template <class _RAIter,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 move(_RAIter __f,
      _RAIter __l,
      __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
@@ -275,21 +275,21 @@ move(_RAIter __f,
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _OutputIterator>
-_OutputIterator
+_LIBCPP_HIDE_FROM_ABI _OutputIterator
 move(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
      __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
      _OutputIterator __r);
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 move(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
      __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
      __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r);
 
 template <class _RAIter,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 move_backward(_RAIter __f,
               _RAIter __l,
               __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
@@ -297,14 +297,14 @@ move_backward(_RAIter __f,
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _OutputIterator>
-_OutputIterator
+_LIBCPP_HIDE_FROM_ABI _OutputIterator
 move_backward(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
               __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
               _OutputIterator __r);
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 move_backward(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
               __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
               __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r);
@@ -591,7 +591,7 @@ const _DiffType __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer,
 
 template <class _RAIter,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 copy(_RAIter __f,
      _RAIter __l,
      __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
@@ -621,7 +621,7 @@ copy(_RAIter __f,
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _OutputIterator>
-_OutputIterator
+_LIBCPP_HIDE_FROM_ABI _OutputIterator
 copy(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
      __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
      _OutputIterator __r)
@@ -649,7 +649,7 @@ copy(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 copy(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
      __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
      __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r)
@@ -679,7 +679,7 @@ copy(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
 
 template <class _RAIter,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 copy_backward(_RAIter __f,
               _RAIter __l,
               __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
@@ -709,7 +709,7 @@ copy_backward(_RAIter __f,
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _OutputIterator>
-_OutputIterator
+_LIBCPP_HIDE_FROM_ABI _OutputIterator
 copy_backward(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
               __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
               _OutputIterator __r)
@@ -737,7 +737,7 @@ copy_backward(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 copy_backward(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
               __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
               __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r)
@@ -767,7 +767,7 @@ copy_backward(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
 
 template <class _RAIter,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 move(_RAIter __f,
      _RAIter __l,
      __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
@@ -797,7 +797,7 @@ move(_RAIter __f,
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _OutputIterator>
-_OutputIterator
+_LIBCPP_HIDE_FROM_ABI _OutputIterator
 move(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
      __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
      _OutputIterator __r)
@@ -825,7 +825,7 @@ move(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 move(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
      __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
      __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r)
@@ -855,7 +855,7 @@ move(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
 
 template <class _RAIter,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 move_backward(_RAIter __f,
               _RAIter __l,
               __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r,
@@ -885,7 +885,7 @@ move_backward(_RAIter __f,
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _OutputIterator>
-_OutputIterator
+_LIBCPP_HIDE_FROM_ABI _OutputIterator
 move_backward(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
               __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
               _OutputIterator __r)
@@ -913,7 +913,7 @@ move_backward(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
 
 template <class _V1, class _P1, class _R1, class _M1, class _D1, _D1 _B1,
           class _V2, class _P2, class _R2, class _M2, class _D2, _D2 _B2>
-__deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
+_LIBCPP_HIDE_FROM_ABI __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2>
 move_backward(__deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __f,
               __deque_iterator<_V1, _P1, _R1, _M1, _D1, _B1> __l,
               __deque_iterator<_V2, _P2, _R2, _M2, _D2, _B2> __r)
@@ -1012,10 +1012,10 @@ public:
       }
 
 
-      friend bool operator==(__deque_range const& __lhs, __deque_range const& __rhs) {
+      _LIBCPP_HIDE_FROM_ABI friend bool operator==(__deque_range const& __lhs, __deque_range const& __rhs) {
         return __lhs.__pos_ == __rhs.__pos_;
       }
-      friend bool operator!=(__deque_range const& __lhs, __deque_range const& __rhs) {
+      _LIBCPP_HIDE_FROM_ABI friend bool operator!=(__deque_range const& __lhs, __deque_range const& __rhs) {
         return !(__lhs == __rhs);
       }
     };

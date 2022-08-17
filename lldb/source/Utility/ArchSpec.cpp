@@ -583,7 +583,6 @@ void ArchSpec::SetFlags(const std::string &elf_abi) {
 
 std::string ArchSpec::GetClangTargetCPU() const {
   std::string cpu;
-
   if (IsMIPS()) {
     switch (m_core) {
     case ArchSpec::eCore_mips32:
@@ -630,6 +629,9 @@ std::string ArchSpec::GetClangTargetCPU() const {
       break;
     }
   }
+
+  if (GetTriple().isARM())
+    cpu = GetTriple().getARMCPUForArch("").str();
   return cpu;
 }
 

@@ -934,6 +934,8 @@ namespace rdf {
     const DataFlowGraph &G;
   };
 
+  template <typename T> Print(const T &, const DataFlowGraph &) -> Print<T>;
+
   template <typename T>
   struct PrintNode : Print<NodeAddr<T>> {
     PrintNode(const NodeAddr<T> &x, const DataFlowGraph &g)

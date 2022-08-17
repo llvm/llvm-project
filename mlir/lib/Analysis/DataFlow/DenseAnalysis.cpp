@@ -49,8 +49,6 @@ void AbstractDenseDataFlowAnalysis::visitOperation(Operation *op) {
 
   // Get the dense lattice to update.
   AbstractDenseLattice *after = getLattice(op);
-  if (after->isAtFixpoint())
-    return;
 
   // If this op implements region control-flow, then control-flow dictates its
   // transfer function.
@@ -91,8 +89,6 @@ void AbstractDenseDataFlowAnalysis::visitBlock(Block *block) {
 
   // Get the dense lattice to update.
   AbstractDenseLattice *after = getLattice(block);
-  if (after->isAtFixpoint())
-    return;
 
   // The dense lattices of entry blocks are set by region control-flow or the
   // callgraph.

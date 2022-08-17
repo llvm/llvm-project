@@ -40,8 +40,8 @@ protected:
     // some systems.
     return (Host.isOSWindows() && llvm_is_multithreaded()) ||
            Host.isOSDarwin() || (Host.isX86() && Host.isOSLinux()) ||
-           (Host.isPPC64() && Host.isOSLinux()) ||
-           (Host.isSystemZ() && (Host.isOSLinux() || Host.isOSzOS()));
+           (Host.isOSLinux() && !Host.isAndroid()) ||
+           (Host.isSystemZ() && Host.isOSzOS());
   }
 
   HostTest() : Host(Triple::normalize(sys::getProcessTriple())) {}

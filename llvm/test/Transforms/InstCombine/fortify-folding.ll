@@ -246,7 +246,7 @@ define i8* @test_strncat_tail() {
 
 define i64 @test_strlcpy() {
 ; CHECK-LABEL: @test_strlcpy(
-; CHECK-NEXT:    [[STRLCPY:%.*]] = call i64 @strlcpy(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 22)
+; CHECK-NEXT:    [[STRLCPY:%.*]] = call i64 @strlcpy(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 22)
 ; CHECK-NEXT:    ret i64 [[STRLCPY]]
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
@@ -268,7 +268,7 @@ define i64 @test_not_strlcpy() {
 
 define i64 @test_strlcpy_tail() {
 ; CHECK-LABEL: @test_strlcpy_tail(
-; CHECK-NEXT:    [[STRLCPY:%.*]] = tail call i64 @strlcpy(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 22)
+; CHECK-NEXT:    [[STRLCPY:%.*]] = tail call i64 @strlcpy(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i64 0, i64 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i64 0, i64 0), i64 22)
 ; CHECK-NEXT:    ret i64 [[STRLCPY]]
 ;
   %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0

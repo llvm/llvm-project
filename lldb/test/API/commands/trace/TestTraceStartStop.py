@@ -168,29 +168,29 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect("thread trace dump instructions -f",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 4 at main.cpp:2
-    0: {ADDRESS_REGEX}    movl'''])
+    1: {ADDRESS_REGEX}    movl'''])
 
         # We can reconstruct the instructions up to the second line
         self.expect("n")
         self.expect("thread trace dump instructions -f",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 4 at main.cpp:2
-    0: {ADDRESS_REGEX}    movl .*
+    1: {ADDRESS_REGEX}    movl .*
   a.out`main \+ 11 at main.cpp:4
-    2: {ADDRESS_REGEX}    movl .*
-    4: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
-    6: {ADDRESS_REGEX}    cmpl .*
-    8: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5'''])
+    3: {ADDRESS_REGEX}    movl .*
+    5: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
+    7: {ADDRESS_REGEX}    cmpl .*
+    9: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5'''])
 
         self.expect("thread trace dump instructions",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 32 at main.cpp:4
-    8: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5
-    6: {ADDRESS_REGEX}    cmpl .*
-    4: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
-    2: {ADDRESS_REGEX}    movl .*
+    9: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5
+    7: {ADDRESS_REGEX}    cmpl .*
+    5: {ADDRESS_REGEX}    jmp  .* ; <\+28> at main.cpp:4
+    3: {ADDRESS_REGEX}    movl .*
   a.out`main \+ 4 at main.cpp:2
-    0: {ADDRESS_REGEX}    movl .* '''])
+    1: {ADDRESS_REGEX}    movl .* '''])
 
         # We stop tracing
         self.expect("thread trace stop")
@@ -206,12 +206,12 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect("thread trace dump instructions -f",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 20 at main.cpp:5
-    0: {ADDRESS_REGEX}    xorl'''])
+    1: {ADDRESS_REGEX}    xorl'''])
 
         self.expect("thread trace dump instructions",
             patterns=[f'''thread #1: tid = .*
   a.out`main \+ 20 at main.cpp:5
-    0: {ADDRESS_REGEX}    xorl'''])
+    1: {ADDRESS_REGEX}    xorl'''])
 
         self.expect("c")
         # Now the process has finished, so the commands should fail

@@ -838,16 +838,16 @@ public:
 Attribute Parser::parseDenseArrayAttr(Type type) {
   consumeToken(Token::kw_array);
   SMLoc typeLoc = getToken().getLoc();
-  if (parseToken(Token::less, "expected '<' after 'array'"))
-    return {};
-  if (!type &&
-      (!(type = parseType()) ||
-       parseToken(Token::colon, "expected ':' after dense array type")))
+  if (parseToken(Token::less, "expected '<' after 'array'") ||
+      (!type && !(type = parseType())))
     return {};
   CustomAsmParser parser(*this);
   Attribute result;
   // Check for empty list.
   bool isEmptyList = getToken().is(Token::greater);
+  if (!isEmptyList &&
+      parseToken(Token::colon, "expected ':' after dense array type"))
+    return {};
 
   if (auto intType = type.dyn_cast<IntegerType>()) {
     switch (type.getIntOrFloatBitWidth()) {

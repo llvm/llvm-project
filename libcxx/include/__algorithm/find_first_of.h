@@ -21,6 +21,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+_LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR_AFTER_CXX11 _ForwardIterator1 __find_first_of_ce(_ForwardIterator1 __first1,
                                                                    _ForwardIterator1 __last1,
                                                                    _ForwardIterator2 __first2,

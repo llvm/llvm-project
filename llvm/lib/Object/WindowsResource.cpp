@@ -938,7 +938,7 @@ void WindowsResourceCOFFWriter::writeDirectoryTree() {
 
   RelocationAddresses.resize(Data.size());
   // Now write all the resource data entries.
-  for (auto DataNodes : DataEntriesTreeOrder) {
+  for (const auto *DataNodes : DataEntriesTreeOrder) {
     auto *Entry = reinterpret_cast<coff_resource_data_entry *>(BufferStart +
                                                                CurrentOffset);
     RelocationAddresses[DataNodes->getDataIndex()] = CurrentRelativeOffset;

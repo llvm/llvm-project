@@ -1004,10 +1004,10 @@ public:
 
   /// Create a section with the given name, protection flags, and alignment.
   Section &createSection(StringRef Name, MemProt Prot) {
-    assert(llvm::find_if(Sections,
+    assert(llvm::none_of(Sections,
                          [&](std::unique_ptr<Section> &Sec) {
                            return Sec->getName() == Name;
-                         }) == Sections.end() &&
+                         }) &&
            "Duplicate section name");
     std::unique_ptr<Section> Sec(new Section(Name, Prot, Sections.size()));
     Sections.push_back(std::move(Sec));
@@ -1349,9 +1349,8 @@ public:
     assert(ExternalSymbols.count(&Sym) && "Symbol is not in the externals set");
     ExternalSymbols.erase(&Sym);
     Addressable &Base = *Sym.Base;
-    assert(llvm::find_if(ExternalSymbols,
-                         [&](Symbol *AS) { return AS->Base == &Base; }) ==
-               ExternalSymbols.end() &&
+    assert(llvm::none_of(ExternalSymbols,
+                         [&](Symbol *AS) { return AS->Base == &Base; }) &&
            "Base addressable still in use");
     destroySymbol(Sym);
     destroyAddressable(Base);
@@ -1365,9 +1364,8 @@ public:
            "Symbol is not in the absolute symbols set");
     AbsoluteSymbols.erase(&Sym);
     Addressable &Base = *Sym.Base;
-    assert(llvm::find_if(ExternalSymbols,
-                         [&](Symbol *AS) { return AS->Base == &Base; }) ==
-               ExternalSymbols.end() &&
+    assert(llvm::none_of(ExternalSymbols,
+                         [&](Symbol *AS) { return AS->Base == &Base; }) &&
            "Base addressable still in use");
     destroySymbol(Sym);
     destroyAddressable(Base);

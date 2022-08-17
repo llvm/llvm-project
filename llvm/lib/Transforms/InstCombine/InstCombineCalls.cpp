@@ -3461,7 +3461,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
       }
       Worklist.pushUsersToWorkList(*Caller);
     } else {
-      NV = UndefValue::get(Caller->getType());
+      NV = PoisonValue::get(Caller->getType());
     }
   }
 
