@@ -126,6 +126,7 @@ size_t RegisterInfoPOSIX_riscv64::GetRegisterSetCount() const {
 
 size_t RegisterInfoPOSIX_riscv64::GetRegisterSetFromRegisterIndex(
     uint32_t reg_index) const {
+  // coverity[unsigned_compare]
   if (reg_index >= gpr_first_riscv && reg_index <= gpr_last_riscv)
     return GPRegSet;
   if (reg_index >= fpr_first_riscv && reg_index <= fpr_last_riscv)

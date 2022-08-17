@@ -770,11 +770,6 @@ def LLVM_InsertValueOp : LLVM_Op<
                        DenseI64ArrayAttr:$position);
   let results = (outs LLVM_AnyAggregate:$res);
 
-  let builders = [
-    OpBuilder<(ins "Value":$container, "Value":$value,
-                   "ArrayRef<int64_t>":$position)>
-  ];
-
   let assemblyFormat = [{
     $value `,` $container `` $position attr-dict `:` type($container)
     custom<InsertExtractValueElementType>(type($value), ref(type($container)),

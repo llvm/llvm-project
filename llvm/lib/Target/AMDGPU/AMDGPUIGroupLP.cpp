@@ -27,7 +27,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "machine-scheduler"
+#define DEBUG_TYPE "igrouplp"
 
 namespace {
 
@@ -37,29 +37,35 @@ static cl::opt<bool>
                             "their ordering for scheduling"),
                    cl::init(false));
 
-static cl::opt<Optional<unsigned>>
-    VMEMGroupMaxSize("amdgpu-igrouplp-vmem-group-size", cl::init(None),
-                     cl::Hidden,
-                     cl::desc("The maximum number of instructions to include "
-                              "in VMEM group."));
+static cl::opt<bool> EnableExactSolver(
+    "amdgpu-igrouplp-exact-solver", cl::Hidden,
+    cl::desc("Whether to use the exponential time solver to fit "
+             "the instructions to the pipeline as closely as "
+             "possible."),
+    cl::init(false));
 
-static cl::opt<Optional<unsigned>>
-    MFMAGroupMaxSize("amdgpu-igrouplp-mfma-group-size", cl::init(None),
-                     cl::Hidden,
-                     cl::desc("The maximum number of instructions to include "
-                              "in MFMA group."));
+static cl::opt<unsigned> CutoffForExact(
+    "amdgpu-igrouplp-exact-solver-cutoff", cl::init(0), cl::Hidden,
+    cl::desc("The maximum number of scheduling group conflicts "
+             "which we attempt to solve with the exponential time "
+             "exact solver. Problem sizes greater than this will"
+             "be solved by the less accurate greedy algorithm. Selecting "
+             "solver by size is superseded by manually selecting "
+             "the solver (e.g. by amdgpu-igrouplp-exact-solver"));
 
-static cl::opt<Optional<unsigned>>
-    LDRGroupMaxSize("amdgpu-igrouplp-ldr-group-size", cl::init(None),
-                    cl::Hidden,
-                    cl::desc("The maximum number of instructions to include "
-                             "in lds/gds read group."));
+static cl::opt<uint64_t> MaxBranchesExplored(
+    "amdgpu-igrouplp-exact-solver-max-branches", cl::init(0), cl::Hidden,
+    cl::desc("The amount of branches that we are willing to explore with"
+             "the exact algorithm before giving up."));
 
-static cl::opt<Optional<unsigned>>
-    LDWGroupMaxSize("amdgpu-igrouplp-ldw-group-size", cl::init(None),
-                    cl::Hidden,
-                    cl::desc("The maximum number of instructions to include "
-                             "in lds/gds write group."));
+static cl::opt<bool> UseCostHeur(
+    "amdgpu-igrouplp-exact-solver-cost-heur", cl::init(true), cl::Hidden,
+    cl::desc("Whether to use the cost heuristic to make choices as we "
+             "traverse the search space using the exact solver. Defaulted "
+             "to on, and if turned off, we will use the node order -- "
+             "attempting to put the later nodes in the later sched groups. "
+             "Experimentally, results are mixed, so this should be set on a "
+             "case-by-case basis."));
 
 // Components of the mask that determines which instruction types may be may be
 // classified into a SchedGroup.
@@ -80,6 +86,8 @@ enum class SchedGroupMask {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
 };
 
+typedef DenseMap<SUnit *, SmallVector<int, 4>> SUnitsToCandidateSGsMap;
+
 // Classify instructions into groups to enable fine tuned control over the
 // scheduler. These groups may be more specific than current SchedModel
 // instruction classes.
@@ -97,8 +105,8 @@ private:
   // SyncID.
   int SyncID = 0;
 
-  // Collection of SUnits that are classified as members of this group.
-  SmallVector<SUnit *, 32> Collection;
+  // SGID is used to map instructions to candidate SchedGroups
+  int SGID;
 
   ScheduleDAGInstrs *DAG;
 
@@ -111,11 +119,34 @@ private:
   // SchedGroup object.
   bool canAddMI(const MachineInstr &MI) const;
 
+public:
+  // Collection of SUnits that are classified as members of this group.
+  SmallVector<SUnit *, 32> Collection;
+
   // Returns true if SU can be added to this SchedGroup.
   bool canAddSU(SUnit &SU) const;
 
+  // Add DAG dependencies from all SUnits in this SchedGroup and this SU. If
+  // MakePred is true, SU will be a predecessor of the SUnits in this
+  // SchedGroup, otherwise SU will be a successor.
+  void link(SUnit &SU, bool MakePred = false);
+
+  // Add DAG dependencies and track which edges are added, and the count of
+  // missed edges
+  int link(SUnit &SU, bool MakePred,
+           std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
+
+  // Add DAG dependencies from all SUnits in this SchedGroup and this SU.
+  // Use the predicate to determine whether SU should be a predecessor (P =
+  // true) or a successor (P = false) of this SchedGroup.
+  void link(SUnit &SU, function_ref<bool(const SUnit *A, const SUnit *B)> P);
+
+  // Add DAG dependencies such that SUnits in this group shall be ordered
+  // before SUnits in OtherGroup.
+  void link(SchedGroup &OtherGroup);
+
   // Returns true if no more instructions may be added to this group.
-  bool isFull() const;
+  bool isFull() const { return MaxSize && Collection.size() >= *MaxSize; }
 
   // Add SU to the SchedGroup.
   void add(SUnit &SU) {
@@ -125,44 +156,588 @@ private:
     Collection.push_back(&SU);
   }
 
-public:
-  // Add DAG dependencies from all SUnits in this SchedGroup and this SU. If
-  // MakePred is true, SU will be a predecessor of the SUnits in this
-  // SchedGroup, otherwise SU will be a successor.
-  void link(SUnit &SU, bool MakePred = false);
-
-  // Add DAG dependencies from all SUnits in this SchedGroup and this SU. Use
-  // the predicate to determine whether SU should be a predecessor (P = true)
-  // or a successor (P = false) of this SchedGroup.
-  void link(SUnit &SU, function_ref<bool(const SUnit *A, const SUnit *B)> P);
-
-  // Add DAG dependencies such that SUnits in this group shall be ordered
-  // before SUnits in OtherGroup.
-  void link(SchedGroup &OtherGroup);
+  // Remove last element in the SchedGroup
+  void pop() { Collection.pop_back(); }
 
   // Identify and add all relevant SUs from the DAG to this SchedGroup.
   void initSchedGroup();
 
   // Add instructions to the SchedGroup bottom up starting from RIter.
-  // ConflictedInstrs is a set of instructions that should not be added to the
+  // PipelineInstrs is a set of instructions that should not be added to the
   // SchedGroup even when the other conditions for adding it are satisfied.
   // RIter will be added to the SchedGroup as well, and dependencies will be
   // added so that RIter will always be scheduled at the end of the group.
   void initSchedGroup(std::vector<SUnit>::reverse_iterator RIter,
-                      DenseSet<SUnit *> &ConflictedInstrs);
+                      SUnitsToCandidateSGsMap &SyncedInstrs);
+
+  void initSchedGroup(SUnitsToCandidateSGsMap &SyncedInstrs);
 
   int getSyncID() { return SyncID; }
+
+  int getSGID() { return SGID; }
+
+  SchedGroupMask getMask() { return SGMask; }
 
   SchedGroup(SchedGroupMask SGMask, Optional<unsigned> MaxSize,
              ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
       : SGMask(SGMask), MaxSize(MaxSize), DAG(DAG), TII(TII) {}
 
   SchedGroup(SchedGroupMask SGMask, Optional<unsigned> MaxSize, int SyncID,
-             ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
-      : SGMask(SGMask), MaxSize(MaxSize), SyncID(SyncID), DAG(DAG), TII(TII) {}
+             int SGID, ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
+      : SGMask(SGMask), MaxSize(MaxSize), SyncID(SyncID), SGID(SGID), DAG(DAG),
+        TII(TII) {}
 };
 
+// Remove all existing edges from a SCHED_BARRIER or SCHED_GROUP_BARRIER.
+static void resetEdges(SUnit &SU, ScheduleDAGInstrs *DAG) {
+  assert(SU.getInstr()->getOpcode() == AMDGPU::SCHED_BARRIER ||
+         SU.getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER);
+
+  while (!SU.Preds.empty())
+    for (auto &P : SU.Preds)
+      SU.removePred(P);
+
+  while (!SU.Succs.empty())
+    for (auto &S : SU.Succs)
+      for (auto &SP : S.getSUnit()->Preds)
+        if (SP.getSUnit() == &SU)
+          S.getSUnit()->removePred(SP);
+}
+
+typedef std::pair<SUnit *, SmallVector<int, 4>> SUToCandSGsPair;
+typedef SmallVector<SUToCandSGsPair, 4> SUsToCandSGsVec;
+
+// The PipelineSolver is used to assign SUnits to SchedGroups in a pipeline
+// in non-trivial cases. For example, if the requested pipeline is
+// {VMEM_READ, VALU, MFMA, VMEM_READ} and we encounter a VMEM_READ instruction
+// in the DAG, then we will have an instruction that can not be trivially
+// assigned to a SchedGroup. The PipelineSolver class implements two algorithms
+// to find a good solution to the pipeline -- a greedy algorithm and an exact
+// algorithm. The exact algorithm has an exponential time complexity and should
+// only be used for small sized problems or medium sized problems where an exact
+// solution is highly desired.
+class PipelineSolver {
+  ScheduleDAGMI *DAG;
+
+  // Instructions that can be assigned to multiple SchedGroups
+  DenseMap<int, SUnitsToCandidateSGsMap> SyncedInstrs;
+  SmallVector<SUsToCandSGsVec, 4> PipelineInstrs;
+  DenseMap<int, SmallVector<SchedGroup, 4>> SyncedSchedGroups;
+  // The current working pipeline
+  SmallVector<SmallVector<SchedGroup, 4>, 4> CurrPipeline;
+  // The pipeline that has the best solution found so far
+  SmallVector<SmallVector<SchedGroup, 4>, 4> BestPipeline;
+
+  // Whether or not we actually have any SyncedInstrs to try to solve.
+  bool NeedsSolver = false;
+
+  // Compute an estimate of the size of search tree -- the true size is
+  // the product of each conflictedInst.Matches.size() across all SyncPipelines
+  unsigned computeProblemSize();
+
+  // The cost penalty of not assigning a SU to a SchedGroup
+  int MissPenalty = 0;
+
+  // Costs in terms of the number of edges we are unable to add
+  int BestCost = -1;
+  int CurrCost = 0;
+
+  // Index pointing to the conflicting instruction that is currently being
+  // fitted
+  int CurrConflInstNo = 0;
+  // Index to the pipeline that is currently being fitted
+  int CurrSyncGroupIdx = 0;
+  // The first non trivial pipeline
+  int BeginSyncGroupIdx = 0;
+
+  // How many branches we have explored
+  uint64_t BranchesExplored = 0;
+
+  // Update indices to fit next conflicting instruction
+  void advancePosition();
+  // Recede indices to attempt to find better fit for previous conflicting
+  // instruction
+  void retreatPosition();
+
+  // The exponential time algorithm which finds the provably best fit
+  bool solveExact();
+  // The polynomial time algorithm which attempts to find a good fit
+  bool solveGreedy();
+  // Whether or not the current solution is optimal
+  bool checkOptimal();
+  // Populate the ready list, prioiritizing fewest missed edges first
+  void populateReadyList(SUToCandSGsPair &CurrSU,
+                         SmallVectorImpl<std::pair<int, int>> &ReadyList,
+                         SmallVectorImpl<SchedGroup> &SyncPipeline);
+  // Add edges corresponding to the SchedGroups as assigned by solver
+  void makePipeline();
+  // Add the edges from the SU to the other SchedGroups in pipeline, and
+  // return the number of edges missed.
+  int addEdges(SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
+               std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
+  // Remove the edges passed via AddedEdges
+  void removeEdges(const std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
+  // Convert the passed in maps to arrays for bidirectional iterators
+  void convertSyncMapsToArrays();
+
+  void reset();
+
+public:
+  // Invoke the solver to map instructions to instruction groups. Heuristic &&
+  // command-line-option determines to use exact or greedy algorithm.
+  void solve();
+
+  PipelineSolver(DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+                 DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+                 ScheduleDAGMI *DAG)
+      : DAG(DAG), SyncedInstrs(SyncedInstrs),
+        SyncedSchedGroups(SyncedSchedGroups) {
+
+    for (auto &PipelineInstrs : SyncedInstrs) {
+      if (PipelineInstrs.second.size() > 0) {
+        NeedsSolver = true;
+        break;
+      }
+    }
+
+    if (!NeedsSolver)
+      return;
+
+    convertSyncMapsToArrays();
+
+    CurrPipeline = BestPipeline;
+
+    while (static_cast<size_t>(BeginSyncGroupIdx) < PipelineInstrs.size() &&
+           PipelineInstrs[BeginSyncGroupIdx].size() == 0)
+      ++BeginSyncGroupIdx;
+
+    if (static_cast<size_t>(BeginSyncGroupIdx) >= PipelineInstrs.size())
+      return;
+  }
+};
+
+void PipelineSolver::reset() {
+
+  for (auto &SyncPipeline : CurrPipeline) {
+    for (auto &SG : SyncPipeline) {
+      SmallVector<SUnit *, 32> TempCollection = SG.Collection;
+      SG.Collection.clear();
+      auto SchedBarr = std::find_if(
+          TempCollection.begin(), TempCollection.end(), [](SUnit *SU) {
+            return SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER;
+          });
+      if (SchedBarr != TempCollection.end())
+        SG.Collection.push_back(*SchedBarr);
+    }
+  }
+
+  CurrSyncGroupIdx = BeginSyncGroupIdx;
+  CurrConflInstNo = 0;
+  CurrCost = 0;
+}
+
+void PipelineSolver::convertSyncMapsToArrays() {
+  for (auto &SyncPipe : SyncedSchedGroups) {
+    BestPipeline.insert(BestPipeline.begin(), SyncPipe.second);
+  }
+
+  int PipelineIDx = SyncedInstrs.size() - 1;
+  PipelineInstrs.resize(SyncedInstrs.size());
+  for (auto &SyncInstrMap : SyncedInstrs) {
+    for (auto &SUsToCandSGs : SyncInstrMap.second) {
+      if (PipelineInstrs[PipelineIDx].size() == 0) {
+        PipelineInstrs[PipelineIDx].push_back(
+            std::make_pair(SUsToCandSGs.first, SUsToCandSGs.second));
+        continue;
+      }
+      auto SortPosition = PipelineInstrs[PipelineIDx].begin();
+      // Insert them in sorted order -- this allows for good parsing order in
+      // the greedy algorithm
+      while (SortPosition != PipelineInstrs[PipelineIDx].end() &&
+             SUsToCandSGs.first->NodeNum > SortPosition->first->NodeNum)
+        ++SortPosition;
+      PipelineInstrs[PipelineIDx].insert(
+          SortPosition,
+          std::make_pair(SUsToCandSGs.first, SUsToCandSGs.second));
+    }
+    --PipelineIDx;
+  }
+}
+
+void PipelineSolver::makePipeline() {
+  // Preserve the order of barrier for subsequent SchedGroupBarrier mutations
+  for (auto &SyncPipeline : BestPipeline) {
+    for (auto &SG : SyncPipeline) {
+      SUnit *SGBarr = nullptr;
+      for (auto &SU : SG.Collection) {
+        if (SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
+          SGBarr = SU;
+      }
+      // Command line requested IGroupLP doesn't have SGBarr
+      if (!SGBarr)
+        continue;
+      resetEdges(*SGBarr, DAG);
+      SG.link(*SGBarr, false);
+    }
+  }
+
+  for (auto &SyncPipeline : BestPipeline) {
+    auto I = SyncPipeline.rbegin();
+    auto E = SyncPipeline.rend();
+    for (; I != E; ++I) {
+      auto &GroupA = *I;
+      for (auto J = std::next(I); J != E; ++J) {
+        auto &GroupB = *J;
+        GroupA.link(GroupB);
+      }
+    }
+  }
+}
+
+int PipelineSolver::addEdges(
+    SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
+    std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges) {
+  int AddedCost = 0;
+  bool MakePred = false;
+
+  // The groups in the pipeline are in reverse order. Thus,
+  // by traversing them from last to first, we are traversing
+  // them in the order as they were introduced in the code. After we
+  // pass the group the SU is being assigned to, it should be
+  // linked as a predecessor of the subsequent SchedGroups
+  auto GroupNo = (int)SyncPipeline.size() - 1;
+  for (; GroupNo >= 0; GroupNo--) {
+    if (SyncPipeline[GroupNo].getSGID() == SGID) {
+      MakePred = true;
+      continue;
+    }
+    auto Group = &SyncPipeline[GroupNo];
+    AddedCost += Group->link(*SU, MakePred, AddedEdges);
+    assert(AddedCost >= 0);
+  }
+
+  return AddedCost;
+}
+
+void PipelineSolver::removeEdges(
+    const std::vector<std::pair<SUnit *, SUnit *>> &EdgesToRemove) {
+  // Only remove the edges that we have added when testing
+  // the fit.
+  for (auto &PredSuccPair : EdgesToRemove) {
+    SUnit *Pred = PredSuccPair.first;
+    SUnit *Succ = PredSuccPair.second;
+
+    auto Match =
+        std::find_if(Succ->Preds.begin(), Succ->Preds.end(),
+                     [&Pred](SDep &P) { return P.getSUnit() == Pred; });
+    if (Match != Succ->Preds.end()) {
+      assert(Match->isArtificial());
+      Succ->removePred(*Match);
+    }
+  }
+}
+
+void PipelineSolver::advancePosition() {
+  ++CurrConflInstNo;
+
+  if (static_cast<size_t>(CurrConflInstNo) >=
+      PipelineInstrs[CurrSyncGroupIdx].size()) {
+    CurrConflInstNo = 0;
+    ++CurrSyncGroupIdx;
+    // Advance to next non-trivial pipeline
+    while (static_cast<size_t>(CurrSyncGroupIdx) < PipelineInstrs.size() &&
+           PipelineInstrs[CurrSyncGroupIdx].size() == 0)
+      ++CurrSyncGroupIdx;
+  }
+}
+
+void PipelineSolver::retreatPosition() {
+  assert(CurrConflInstNo >= 0);
+  assert(CurrSyncGroupIdx >= 0);
+
+  if (CurrConflInstNo > 0) {
+    --CurrConflInstNo;
+    return;
+  }
+
+  if (CurrConflInstNo == 0) {
+    // If we return to the starting position, we have explored
+    // the entire tree
+    if (CurrSyncGroupIdx == BeginSyncGroupIdx)
+      return;
+
+    --CurrSyncGroupIdx;
+    // Go to previous non-trivial pipeline
+    while (PipelineInstrs[CurrSyncGroupIdx].size() == 0)
+      --CurrSyncGroupIdx;
+
+    CurrConflInstNo = PipelineInstrs[CurrSyncGroupIdx].size() - 1;
+  }
+}
+
+bool PipelineSolver::checkOptimal() {
+  if (static_cast<size_t>(CurrSyncGroupIdx) == PipelineInstrs.size()) {
+    if (BestCost == -1 || CurrCost < BestCost) {
+      BestPipeline = CurrPipeline;
+      BestCost = CurrCost;
+      LLVM_DEBUG(dbgs() << "Found Fit with cost " << BestCost << "\n");
+    }
+    assert(BestCost >= 0);
+  }
+
+  bool DoneExploring = false;
+  if (MaxBranchesExplored > 0 && BranchesExplored >= MaxBranchesExplored)
+    DoneExploring = true;
+
+  return (DoneExploring || BestCost == 0);
+}
+
+void PipelineSolver::populateReadyList(
+    SUToCandSGsPair &CurrSU, SmallVectorImpl<std::pair<int, int>> &ReadyList,
+    SmallVectorImpl<SchedGroup> &SyncPipeline) {
+  assert(CurrSU.second.size() >= 1);
+  auto I = CurrSU.second.rbegin();
+  auto E = CurrSU.second.rend();
+  for (; I != E; ++I) {
+    std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
+    int CandSGID = *I;
+    SchedGroup *Match;
+    for (auto &SG : SyncPipeline) {
+      if (SG.getSGID() == CandSGID)
+        Match = &SG;
+    }
+
+    if (UseCostHeur) {
+      if (Match->isFull()) {
+        ReadyList.push_back(std::make_pair(*I, MissPenalty));
+        continue;
+      }
+
+      int TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, AddedEdges);
+      ReadyList.push_back(std::make_pair(*I, TempCost));
+      removeEdges(AddedEdges);
+    } else
+      ReadyList.push_back(std::make_pair(*I, -1));
+  }
+
+  if (UseCostHeur) {
+    std::sort(ReadyList.begin(), ReadyList.end(),
+              [](std::pair<int, int> A, std::pair<int, int> B) {
+                return A.second < B.second;
+              });
+  }
+
+  assert(ReadyList.size() == CurrSU.second.size());
+}
+
+bool PipelineSolver::solveExact() {
+  if (checkOptimal())
+    return true;
+
+  if (static_cast<size_t>(CurrSyncGroupIdx) == PipelineInstrs.size())
+    return false;
+
+  assert(static_cast<size_t>(CurrSyncGroupIdx) < PipelineInstrs.size());
+  assert(static_cast<size_t>(CurrConflInstNo) <
+         PipelineInstrs[CurrSyncGroupIdx].size());
+  SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
+  LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
+                    << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
+
+  // SchedGroup -> Cost pairs
+  SmallVector<std::pair<int, int>, 4> ReadyList;
+  // Prioritize the candidate sched groups in terms of lowest cost first
+  populateReadyList(CurrSU, ReadyList, CurrPipeline[CurrSyncGroupIdx]);
+
+  auto I = ReadyList.begin();
+  auto E = ReadyList.end();
+  for (; I != E; ++I) {
+    // If we are trying SGs in least cost order, and the current SG is cost
+    // infeasible, then all subsequent SGs will also be cost infeasible, so we
+    // can prune.
+    if (BestCost != -1 && (CurrCost + I->second > BestCost))
+      return false;
+
+    int CandSGID = I->first;
+    int AddedCost = 0;
+    std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
+    auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
+    SchedGroup *Match;
+    for (auto &SG : SyncPipeline) {
+      if (SG.getSGID() == CandSGID)
+        Match = &SG;
+    }
+
+    if (Match->isFull())
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Assigning to SchedGroup with Mask "
+                      << (int)Match->getMask() << "and ID " << CandSGID
+                      << "\n");
+    Match->add(*CurrSU.first);
+    AddedCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, AddedEdges);
+    LLVM_DEBUG(dbgs() << "Cost of Assignment: " << AddedCost << "\n");
+    CurrCost += AddedCost;
+    advancePosition();
+    ++BranchesExplored;
+    bool FinishedExploring = false;
+    // If the Cost after adding edges is greater than a known solution,
+    // backtrack
+    if (CurrCost < BestCost || BestCost == -1) {
+      if (solveExact()) {
+        FinishedExploring = BestCost != 0;
+        if (!FinishedExploring)
+          return true;
+      }
+    }
+
+    retreatPosition();
+    CurrCost -= AddedCost;
+    removeEdges(AddedEdges);
+    Match->pop();
+    CurrPipeline[CurrSyncGroupIdx] = SyncPipeline;
+    if (FinishedExploring)
+      return true;
+  }
+
+  // Try the pipeline where the current instruction is omitted
+  // Potentially if we omit a problematic instruction from the pipeline,
+  // all the other instructions can nicely fit.
+  CurrCost += MissPenalty;
+  advancePosition();
+
+  LLVM_DEBUG(dbgs() << "NOT Assigned (" << CurrSU.first->NodeNum << ")\n");
+
+  bool FinishedExploring = false;
+  if (CurrCost < BestCost || BestCost == -1) {
+    if (solveExact()) {
+      bool FinishedExploring = BestCost != 0;
+      if (!FinishedExploring)
+        return true;
+    }
+  }
+
+  retreatPosition();
+  CurrCost -= MissPenalty;
+  return FinishedExploring;
+}
+
+bool PipelineSolver::solveGreedy() {
+  BestCost = 0;
+  std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
+
+  while (static_cast<size_t>(CurrSyncGroupIdx) < PipelineInstrs.size()) {
+    SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
+    int BestNodeCost = -1;
+    int TempCost;
+    SchedGroup *BestGroup = nullptr;
+    int BestGroupID = -1;
+    auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
+    LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
+                      << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
+
+    // Since we have added the potential SchedGroups from bottom up, but
+    // traversed the DAG from top down, parse over the groups from last to
+    // first. If we fail to do this for the greedy algorithm, the solution will
+    // likely not be good in more complex cases.
+    auto I = CurrSU.second.rbegin();
+    auto E = CurrSU.second.rend();
+    for (; I != E; ++I) {
+      std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
+      int CandSGID = *I;
+      SchedGroup *Match;
+      for (auto &SG : SyncPipeline) {
+        if (SG.getSGID() == CandSGID)
+          Match = &SG;
+      }
+
+      LLVM_DEBUG(dbgs() << "Trying SGID # " << CandSGID << " with Mask "
+                        << (int)Match->getMask() << "\n");
+
+      if (Match->isFull()) {
+        LLVM_DEBUG(dbgs() << "SGID # " << CandSGID << " is full\n");
+        continue;
+      }
+      TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, AddedEdges);
+      LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
+      if (TempCost < BestNodeCost || BestNodeCost == -1) {
+        BestGroup = Match;
+        BestNodeCost = TempCost;
+        BestGroupID = CandSGID;
+      }
+      removeEdges(AddedEdges);
+      if (BestNodeCost == 0)
+        break;
+    }
+
+    if (BestGroupID != -1) {
+      BestGroup->add(*CurrSU.first);
+      addEdges(SyncPipeline, CurrSU.first, BestGroupID, AddedEdges);
+      LLVM_DEBUG(dbgs() << "Best Group has ID: " << BestGroupID << " and Mask"
+                        << (int)BestGroup->getMask() << "\n");
+      BestCost += TempCost;
+    } else
+      BestCost += MissPenalty;
+
+    CurrPipeline[CurrSyncGroupIdx] = SyncPipeline;
+    advancePosition();
+  }
+  BestPipeline = CurrPipeline;
+  removeEdges(AddedEdges);
+  return false;
+}
+
+unsigned PipelineSolver::computeProblemSize() {
+  unsigned ProblemSize = 0;
+  for (auto &PipeConflicts : PipelineInstrs) {
+    ProblemSize += PipeConflicts.size();
+  }
+
+  return ProblemSize;
+}
+
+void PipelineSolver::solve() {
+  if (!NeedsSolver)
+    return;
+
+  unsigned ProblemSize = computeProblemSize();
+  assert(ProblemSize > 0);
+
+  bool BelowCutoff = (CutoffForExact > 0) && ProblemSize <= CutoffForExact;
+  MissPenalty = (ProblemSize / 2) + 1;
+
+  LLVM_DEBUG(DAG->dump());
+  if (EnableExactSolver || BelowCutoff) {
+    LLVM_DEBUG(dbgs() << "Starting Greedy pipeline solver\n");
+    solveGreedy();
+    reset();
+    LLVM_DEBUG(dbgs() << "Greedy produced best cost of " << BestCost << "\n");
+    if (BestCost > 0) {
+      LLVM_DEBUG(dbgs() << "Starting EXACT pipeline solver\n");
+      solveExact();
+      LLVM_DEBUG(dbgs() << "Exact produced best cost of " << BestCost << "\n");
+    }
+  } else { // Use the Greedy Algorithm by default
+    LLVM_DEBUG(dbgs() << "Starting GREEDY pipeline solver\n");
+    solveGreedy();
+  }
+
+  makePipeline();
+}
+
 class IGroupLPDAGMutation : public ScheduleDAGMutation {
+private:
+  // Organize lists of SchedGroups by their SyncID. SchedGroups /
+  // SCHED_GROUP_BARRIERs with different SyncIDs will have no edges added
+  // between then.
+  DenseMap<int, SmallVector<SchedGroup, 4>> SyncedSchedGroups;
+
+  // The number of created sched groups -- also used as SGID
+  int NumCreatedSchedGroups = 0;
+
+  // Used to track instructions that can be mapped to multiple sched groups
+  DenseMap<int, SUnitsToCandidateSGsMap> SyncedInstrs;
+
 public:
   const SIInstrInfo *TII;
   ScheduleDAGMI *DAG;
@@ -183,11 +758,13 @@ private:
   // Organize lists of SchedGroups by their SyncID. SchedGroups /
   // SCHED_GROUP_BARRIERs with different SyncIDs will have no edges added
   // between then.
-  DenseMap<int, SmallVector<SchedGroup, 4>> SyncedSchedGroupsMap;
+  DenseMap<int, SmallVector<SchedGroup, 4>> SyncedSchedGroups;
 
-  // Used to track instructions that are already to added to a different
-  // SchedGroup with the same SyncID.
-  DenseMap<int, DenseSet<SUnit *>> SyncedInstrsMap;
+  // The number of create sched groups -- also used as SGID
+  int NumCreatedSchedGroups = 0;
+
+  // Used to track instructions that can be mapped to multiple sched groups
+  DenseMap<int, SUnitsToCandidateSGsMap> SyncedInstrs;
 
   // Add DAG edges that enforce SCHED_BARRIER ordering.
   void addSchedBarrierEdges(SUnit &SU);
@@ -204,11 +781,8 @@ private:
   SchedGroupMask invertSchedBarrierMask(SchedGroupMask Mask) const;
 
   // Create SchedGroups for a SCHED_GROUP_BARRIER.
-  void initSchedGroupBarrier(std::vector<SUnit>::reverse_iterator RIter);
-
-  // Add DAG edges that try to enforce ordering defined by SCHED_GROUP_BARRIER
-  // instructions.
-  void addSchedGroupBarrierEdges();
+  void initSchedGroupBarrierPipelineStage(
+      std::vector<SUnit>::reverse_iterator RIter);
 
 public:
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
@@ -219,9 +793,6 @@ public:
 bool SchedGroup::tryAddEdge(SUnit *A, SUnit *B) {
   if (A != B && DAG->canAddEdge(B, A)) {
     DAG->addEdge(B, SDep(A, SDep::Artificial));
-    LLVM_DEBUG(dbgs() << "Adding edge...\n"
-                      << "from: SU(" << A->NodeNum << ") " << *A->getInstr()
-                      << "to: SU(" << B->NodeNum << ") " << *B->getInstr());
     return true;
   }
   return false;
@@ -281,9 +852,35 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
   return Result;
 }
 
+int SchedGroup::link(SUnit &SU, bool MakePred,
+                     std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges) {
+  int MissedEdges = 0;
+  for (auto A : Collection) {
+    SUnit *B = &SU;
+    if (A == B || A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
+      continue;
+    if (MakePred)
+      std::swap(A, B);
+
+    if (DAG->IsReachable(B, A))
+      continue;
+    // tryAddEdge returns false if there is a dependency that makes adding
+    // the A->B edge impossible, otherwise it returns true;
+    bool Added = tryAddEdge(A, B);
+    if (Added)
+      AddedEdges.push_back(std::make_pair(A, B));
+    else
+      ++MissedEdges;
+  }
+
+  return MissedEdges;
+}
+
 void SchedGroup::link(SUnit &SU, bool MakePred) {
   for (auto A : Collection) {
     SUnit *B = &SU;
+    if (A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
+      continue;
     if (MakePred)
       std::swap(A, B);
 
@@ -305,10 +902,6 @@ void SchedGroup::link(SUnit &SU,
 void SchedGroup::link(SchedGroup &OtherGroup) {
   for (auto B : OtherGroup.Collection)
     link(*B);
-}
-
-bool SchedGroup::isFull() const {
-  return MaxSize && Collection.size() >= *MaxSize;
 }
 
 bool SchedGroup::canAddSU(SUnit &SU) const {
@@ -336,27 +929,16 @@ void SchedGroup::initSchedGroup() {
   }
 }
 
-static bool canFitIntoPipeline(SUnit &SU, ScheduleDAGInstrs *DAG,
-                               DenseSet<SUnit *> &ConflictedInstrs) {
-  return llvm::all_of(ConflictedInstrs, [DAG, &SU](SUnit *SuccSU) {
-    return DAG->canAddEdge(SuccSU, &SU);
-  });
-}
-
 void SchedGroup::initSchedGroup(std::vector<SUnit>::reverse_iterator RIter,
-                                DenseSet<SUnit *> &ConflictedInstrs) {
+                                SUnitsToCandidateSGsMap &SyncedInstrs) {
   SUnit &InitSU = *RIter;
   for (auto E = DAG->SUnits.rend(); RIter != E; ++RIter) {
     auto &SU = *RIter;
     if (isFull())
       break;
 
-    if (canAddSU(SU) && !ConflictedInstrs.count(&SU) &&
-        canFitIntoPipeline(SU, DAG, ConflictedInstrs)) {
-      add(SU);
-      ConflictedInstrs.insert(&SU);
-      tryAddEdge(&SU, &InitSU);
-    }
+    if (canAddSU(SU))
+      SyncedInstrs[&SU].push_back(SGID);
   }
 
   add(InitSU);
@@ -364,31 +946,16 @@ void SchedGroup::initSchedGroup(std::vector<SUnit>::reverse_iterator RIter,
   (*MaxSize)++;
 }
 
-// Create a pipeline from the SchedGroups in PipelineOrderGroups such that we
-// try to enforce the relative ordering of instructions in each group.
-static void makePipeline(SmallVectorImpl<SchedGroup> &PipelineOrderGroups) {
-  auto I = PipelineOrderGroups.begin();
-  auto E = PipelineOrderGroups.end();
+void SchedGroup::initSchedGroup(SUnitsToCandidateSGsMap &SyncedInstrs) {
+  auto I = DAG->SUnits.rbegin();
+  auto E = DAG->SUnits.rend();
   for (; I != E; ++I) {
-    auto &GroupA = *I;
-    for (auto J = std::next(I); J != E; ++J) {
-      auto &GroupB = *J;
-      GroupA.link(GroupB);
-    }
-  }
-}
+    auto &SU = *I;
+    if (isFull())
+      break;
 
-// Same as makePipeline but with reverse ordering.
-static void
-makeReversePipeline(SmallVectorImpl<SchedGroup> &PipelineOrderGroups) {
-  auto I = PipelineOrderGroups.rbegin();
-  auto E = PipelineOrderGroups.rend();
-  for (; I != E; ++I) {
-    auto &GroupA = *I;
-    for (auto J = std::next(I); J != E; ++J) {
-      auto &GroupB = *J;
-      GroupA.link(GroupB);
-    }
+    if (canAddSU(SU))
+      SyncedInstrs[&SU].push_back(SGID);
   }
 }
 
@@ -396,6 +963,17 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   const GCNSubtarget &ST = DAGInstrs->MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   DAG = static_cast<ScheduleDAGMI *>(DAGInstrs);
+
+  // IGroupLP and sched_group_barrier are mutually exclusive mutations.
+  // Check for sched_group_barriers as that mutation gets priority.
+  for (auto R = DAG->SUnits.rbegin(), E = DAG->SUnits.rend(); R != E; ++R) {
+    if (R->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER) {
+      return;
+    }
+  }
+
+  SyncedSchedGroups.clear();
+  SyncedInstrs.clear();
   const TargetSchedModel *TSchedModel = DAGInstrs->getSchedModel();
   if (!TSchedModel || DAG->SUnits.empty())
     return;
@@ -406,32 +984,36 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   // order in which edges will be added. In other words, given the
   // present ordering, we will try to make each VMEMRead instruction
   // a predecessor of each DSRead instruction, and so on.
-  SmallVector<SchedGroup, 4> PipelineOrderGroups = {
-      SchedGroup(SchedGroupMask::VMEM, VMEMGroupMaxSize, DAG, TII),
-      SchedGroup(SchedGroupMask::DS_READ, LDRGroupMaxSize, DAG, TII),
-      SchedGroup(SchedGroupMask::MFMA, MFMAGroupMaxSize, DAG, TII),
-      SchedGroup(SchedGroupMask::DS_WRITE, LDWGroupMaxSize, DAG, TII)};
 
-  for (auto &SG : PipelineOrderGroups)
-    SG.initSchedGroup();
+  struct SGParams {
+    SchedGroupMask Mask;
+    Optional<unsigned> Size;
+    int SyncID;
 
-  makePipeline(PipelineOrderGroups);
-}
+    SGParams(SchedGroupMask Mask, Optional<unsigned> Size, int SyncID)
+        : Mask(Mask), Size(Size), SyncID(SyncID) {}
+  };
 
-// Remove all existing edges from a SCHED_BARRIER or SCHED_GROUP_BARRIER.
-static void resetEdges(SUnit &SU, ScheduleDAGInstrs *DAG) {
-  assert(SU.getInstr()->getOpcode() == AMDGPU::SCHED_BARRIER ||
-         SU.getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER);
+  SmallVector<SGParams, 16> PipelineOrderGroups;
 
-  while (!SU.Preds.empty())
-    for (auto &P : SU.Preds)
-      SU.removePred(P);
+  for (size_t i = 0; i < DAG->SUnits.size() / 4; i++) {
+    PipelineOrderGroups.push_back({SchedGroupMask::DS_READ, 8, 0});
+    PipelineOrderGroups.push_back({SchedGroupMask::MFMA, 1, 0});
+    PipelineOrderGroups.push_back({SchedGroupMask::DS_WRITE, 8, 0});
+  }
 
-  while (!SU.Succs.empty())
-    for (auto &S : SU.Succs)
-      for (auto &SP : S.getSUnit()->Preds)
-        if (SP.getSUnit() == &SU)
-          S.getSUnit()->removePred(SP);
+  auto I = PipelineOrderGroups.rbegin();
+  auto E = PipelineOrderGroups.rend();
+  for (; I < E; I++) {
+    auto &SG = SyncedSchedGroups[I->SyncID].emplace_back(
+        I->Mask, I->Size, I->SyncID, NumCreatedSchedGroups++, DAG, TII);
+    SG.initSchedGroup(SyncedInstrs[SG.getSyncID()]);
+  }
+
+  PipelineSolver PS(SyncedSchedGroups, SyncedInstrs, DAG);
+  // PipelineSolver performs the mutation by adding the edges it
+  // determined as the best
+  PS.solve();
 }
 
 void SchedBarrierDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
@@ -443,19 +1025,20 @@ void SchedBarrierDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   const GCNSubtarget &ST = DAGInstrs->MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   DAG = static_cast<ScheduleDAGMI *>(DAGInstrs);
-  SyncedInstrsMap.clear();
-  SyncedSchedGroupsMap.clear();
+  SyncedSchedGroups.clear();
+  SyncedInstrs.clear();
   for (auto R = DAG->SUnits.rbegin(), E = DAG->SUnits.rend(); R != E; ++R) {
     if (R->getInstr()->getOpcode() == AMDGPU::SCHED_BARRIER)
       addSchedBarrierEdges(*R);
 
     else if (R->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
-      initSchedGroupBarrier(R);
+      initSchedGroupBarrierPipelineStage(R);
   }
 
-  // SCHED_GROUP_BARRIER edges can only be added after we have found and
-  // initialized all of the SCHED_GROUP_BARRIER SchedGroups.
-  addSchedGroupBarrierEdges();
+  PipelineSolver PS(SyncedSchedGroups, SyncedInstrs, DAG);
+  // PipelineSolver performs the mutation by adding the edges it
+  // determined as the best
+  PS.solve();
 }
 
 void SchedBarrierDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
@@ -510,7 +1093,7 @@ SchedBarrierDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
   return InvertedMask;
 }
 
-void SchedBarrierDAGMutation::initSchedGroupBarrier(
+void SchedBarrierDAGMutation::initSchedGroupBarrierPipelineStage(
     std::vector<SUnit>::reverse_iterator RIter) {
   // Remove all existing edges from the SCHED_GROUP_BARRIER that were added due
   // to the instruction having side effects.
@@ -520,23 +1103,11 @@ void SchedBarrierDAGMutation::initSchedGroupBarrier(
   int32_t SGMask = SGB.getOperand(0).getImm();
   int32_t Size = SGB.getOperand(1).getImm();
   int32_t SyncID = SGB.getOperand(2).getImm();
-  // Create a new SchedGroup and add it to a list that is mapped to the SyncID.
-  // SchedGroups only enforce ordering between SchedGroups with the same SyncID.
-  auto &SG = SyncedSchedGroupsMap[SyncID].emplace_back((SchedGroupMask)SGMask,
-                                                       Size, SyncID, DAG, TII);
 
-  // SyncedInstrsMap is used here is used to avoid adding the same SUs in
-  // multiple SchedGroups that have the same SyncID. This only matters for
-  // SCHED_GROUP_BARRIER and not SCHED_BARRIER.
-  SG.initSchedGroup(RIter, SyncedInstrsMap[SG.getSyncID()]);
-}
+  auto &SG = SyncedSchedGroups[SyncID].emplace_back(
+      (SchedGroupMask)SGMask, Size, SyncID, NumCreatedSchedGroups++, DAG, TII);
 
-void SchedBarrierDAGMutation::addSchedGroupBarrierEdges() {
-  // Since we traversed the DAG in reverse order when initializing
-  // SCHED_GROUP_BARRIERs we need to reverse the order in the vector to maintain
-  // user intentions and program order.
-  for (auto &SchedGroups : SyncedSchedGroupsMap)
-    makeReversePipeline(SchedGroups.second);
+  SG.initSchedGroup(RIter, SyncedInstrs[SG.getSyncID()]);
 }
 
 } // namespace

@@ -168,7 +168,7 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
 }
 
 InstructionCost RISCVTTIImpl::getSpliceCost(VectorType *Tp, int Index) {
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
 
   unsigned Cost = 2; // vslidedown+vslideup.
   // TODO: LMUL should increase cost.
@@ -182,7 +182,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              int Index, VectorType *SubTp,
                                              ArrayRef<const Value *> Args) {
   if (isa<ScalableVectorType>(Tp)) {
-    std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
     switch (Kind) {
     default:
       // Fallthrough to generic handling.
@@ -257,7 +257,7 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   // TODO: add more intrinsic
   case Intrinsic::experimental_stepvector: {
     unsigned Cost = 1; // vid
-    auto LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    auto LT = getTypeLegalizationCost(RetTy);
     return Cost + (LT.first - 1);
   }
   default:
@@ -364,7 +364,7 @@ RISCVTTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
   if (Ty->getScalarSizeInBits() > ST->getELEN())
     return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, CostKind);
 
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   if (Ty->getElementType()->isIntegerTy(1))
     // vcpop sequences, see vreduction-mask.ll.  umax, smin actually only
     // cost 2, but we don't have enough info here so we slightly over cost.
@@ -394,7 +394,7 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
       ISD != ISD::FADD)
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   if (Ty->getElementType()->isIntegerTy(1))
     // vcpop sequences, see vreduction-mask.ll
     return (LT.first - 1) + (ISD == ISD::AND ? 3 : 2);
@@ -423,7 +423,7 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
     return BaseT::getExtendedReductionCost(Opcode, IsUnsigned, ResTy, ValTy,
                                            FMF, CostKind);
 
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, ValTy);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
   if (ResTy->getScalarSizeInBits() != 2 * LT.second.getScalarSizeInBits())
     return BaseT::getExtendedReductionCost(Opcode, IsUnsigned, ResTy, ValTy,
