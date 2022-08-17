@@ -1,10 +1,14 @@
 import("//compiler-rt/target.gni")
 
 group("ubsan") {
-  deps = [
-    ":ubsan_standalone",
-    ":ubsan_standalone_cxx",
-  ]
+  if (current_os == "mac") {
+    deps = [ ":ubsan_shared_library" ]
+  } else {
+    deps = [
+      ":ubsan_standalone",
+      ":ubsan_standalone_cxx",
+    ]
+  }
 }
 
 source_set("sources") {
@@ -86,8 +90,43 @@ source_set("cxx_sources") {
   ]
 }
 
-# FIXME: Make ubsan_standalone work on mac.
-if (current_os != "mac") {
+if (current_os == "mac") {
+  shared_library("ubsan_shared_library") {
+    output_dir = crt_current_out_dir
+    output_name = "clang_rt.ubsan_osx_dynamic"
+    deps = [
+      ":cxx_sources",
+      ":sources",
+      ":standalone_sources",
+      "//compiler-rt/lib/interception:sources",
+      "//compiler-rt/lib/sanitizer_common:sources",
+    ]
+    # The -U flags below correspond to the add_weak_symbols() calls in CMake.
+    ldflags = [
+      "-lc++",
+      "-lc++abi",
+
+      # ubsan
+      "-Wl,-U,___ubsan_default_options",
+
+      # sanitizer_common
+      "-Wl,-U,___sanitizer_free_hook",
+      "-Wl,-U,___sanitizer_malloc_hook",
+      "-Wl,-U,___sanitizer_report_error_summary",
+      "-Wl,-U,___sanitizer_sandbox_on_notify",
+      "-Wl,-U,___sanitizer_symbolize_code",
+      "-Wl,-U,___sanitizer_symbolize_data",
+      "-Wl,-U,___sanitizer_symbolize_demangle",
+      "-Wl,-U,___sanitizer_symbolize_flush",
+      "-Wl,-U,___sanitizer_symbolize_set_demangle",
+      "-Wl,-U,___sanitizer_symbolize_set_inline_frames",
+
+      # FIXME: better
+      "-Wl,-install_name,@rpath/libclang_rt.ubsan_osx_dynamic.dylib",
+    ]
+    # FIXME: -Wl,-rpath
+  }
+} else {
   static_library("ubsan_standalone") {
     output_dir = crt_current_out_dir
     output_name = "clang_rt.ubsan_standalone$crt_current_target_suffix"
