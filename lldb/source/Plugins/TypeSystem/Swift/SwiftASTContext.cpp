@@ -7396,7 +7396,8 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
   return 0;
 }
 
-size_t SwiftASTContext::GetNumTemplateArguments(opaque_compiler_type_t type) {
+size_t SwiftASTContext::GetNumTemplateArguments(opaque_compiler_type_t type,
+                                                bool expand_pack) {
   VALID_OR_RETURN_CHECK_TYPE(type, 0);
 
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));

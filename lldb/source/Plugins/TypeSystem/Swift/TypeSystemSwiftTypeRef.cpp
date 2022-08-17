@@ -3067,7 +3067,8 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
 }
 
 size_t
-TypeSystemSwiftTypeRef::GetNumTemplateArguments(opaque_compiler_type_t type) {
+TypeSystemSwiftTypeRef::GetNumTemplateArguments(opaque_compiler_type_t type,
+                                                bool expand_pack) {
   auto impl = [&]() -> size_t {
     using namespace swift::Demangle;
     Demangler dem;
@@ -3096,7 +3097,8 @@ TypeSystemSwiftTypeRef::GetNumTemplateArguments(opaque_compiler_type_t type) {
     return 0;
   };
   VALIDATE_AND_RETURN(impl, GetNumTemplateArguments, type, g_no_exe_ctx,
-                      (ReconstructType(type)), (ReconstructType(type)));
+                      (ReconstructType(type), expand_pack),
+                      (ReconstructType(type), expand_pack));
 }
 
 CompilerType
