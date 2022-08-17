@@ -148,7 +148,7 @@ func.func @gep_non_function_type(%pos : i64, %base : !llvm.ptr<f32>) {
 
 func.func @gep_too_few_dynamic(%base : !llvm.ptr<f32>) {
   // expected-error@+1 {{expected as many dynamic indices as specified in 'rawConstantIndices'}}
-  %1 = "llvm.getelementptr"(%base) {rawConstantIndices = [:i32 -2147483648]} : (!llvm.ptr<f32>) -> !llvm.ptr<f32>
+  %1 = "llvm.getelementptr"(%base) {rawConstantIndices = array<i32: -2147483648>} : (!llvm.ptr<f32>) -> !llvm.ptr<f32>
 }
 
 // -----
@@ -414,7 +414,7 @@ func.func @insertvalue_wrong_nesting() {
 
 func.func @insertvalue_invalid_type(%a : !llvm.array<1 x i32>) -> !llvm.array<1 x i32> {
   // expected-error@+1 {{'llvm.insertvalue' op Type mismatch: cannot insert '!llvm.array<1 x i32>' into '!llvm.array<1 x i32>'}}
-  %b = "llvm.insertvalue"(%a, %a) {position = [:i64 0]} : (!llvm.array<1 x i32>, !llvm.array<1 x i32>) -> !llvm.array<1 x i32>
+  %b = "llvm.insertvalue"(%a, %a) {position = array<i64: 0>} : (!llvm.array<1 x i32>, !llvm.array<1 x i32>) -> !llvm.array<1 x i32>
   return %b : !llvm.array<1 x i32>
 }
 
@@ -422,7 +422,7 @@ func.func @insertvalue_invalid_type(%a : !llvm.array<1 x i32>) -> !llvm.array<1 
 
 func.func @extractvalue_invalid_type(%a : !llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>> {
   // expected-error@+1 {{'llvm.extractvalue' op Type mismatch: extracting from '!llvm.array<4 x vector<8xf32>>' should produce 'vector<8xf32>' but this op returns '!llvm.array<4 x vector<8xf32>>'}}
-  %b = "llvm.extractvalue"(%a) {position = [:i64 1]}
+  %b = "llvm.extractvalue"(%a) {position = array<i64: 1>}
             : (!llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>>
   return %b : !llvm.array<4 x vector<8xf32>>
 }

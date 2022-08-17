@@ -59,8 +59,7 @@ class GdbRemoteTestCaseFactory(type):
         return super(GdbRemoteTestCaseFactory, cls).__new__(
                 cls, name, bases, newattrs)
 
-@add_metaclass(GdbRemoteTestCaseFactory)
-class GdbRemoteTestCaseBase(Base):
+class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
 
     # Default time out in seconds. The timeout is increased tenfold under Asan.
     DEFAULT_TIMEOUT =  20 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)

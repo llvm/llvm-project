@@ -5552,6 +5552,8 @@ public:
   bool isQualifiedMemberAccess(Expr *E);
   QualType CheckAddressOfOperand(ExprResult &Operand, SourceLocation OpLoc);
 
+  bool CheckTypeTraitArity(unsigned Arity, SourceLocation Loc, size_t N);
+
   ExprResult CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
                                             SourceLocation OpLoc,
                                             UnaryExprOrTypeTrait ExprKind,
@@ -7480,6 +7482,7 @@ public:
                                      StringLiteral *AssertMessageExpr,
                                      SourceLocation RParenLoc,
                                      bool Failed);
+  void DiagnoseStaticAssertDetails(const Expr *E);
 
   FriendDecl *CheckFriendTypeDecl(SourceLocation LocStart,
                                   SourceLocation FriendLoc,

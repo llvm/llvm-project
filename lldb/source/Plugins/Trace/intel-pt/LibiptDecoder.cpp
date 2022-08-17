@@ -6,9 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LibiptDecoder.h"
-
 #include "TraceIntelPT.h"
-
 #include "lldb/Target/Process.h"
 
 using namespace lldb;

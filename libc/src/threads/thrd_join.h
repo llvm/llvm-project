@@ -13,7 +13,7 @@
 
 namespace __llvm_libc {
 
-int thrd_join(thrd_t *thread, int *retval);
+int thrd_join(thrd_t thread, int *retval);
 
 } // namespace __llvm_libc
 

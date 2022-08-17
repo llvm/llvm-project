@@ -310,6 +310,30 @@ public:
   Defined *dyldPrivate = nullptr;
 };
 
+// Objective-C stubs are hoisted objc_msgSend calls per selector called in the
+// program. Apple Clang produces undefined symbols to each stub, such as
+// '_objc_msgSend$foo', which are then synthesized by the linker. The stubs
+// load the particular selector 'foo' from __objc_selrefs, setting it to the
+// first argument of the objc_msgSend call, and then jumps to objc_msgSend. The
+// actual stub contents are mirrored from ld64.
+class ObjCStubsSection final : public SyntheticSection {
+public:
+  ObjCStubsSection();
+  void addEntry(Symbol *sym);
+  uint64_t getSize() const override;
+  bool isNeeded() const override { return !symbols.empty(); }
+  void finalize() override { isec->isFinal = true; }
+  void writeTo(uint8_t *buf) const override;
+  void setup();
+
+  static constexpr llvm::StringLiteral symbolPrefix = "_objc_msgSend$";
+
+private:
+  std::vector<Defined *> symbols;
+  std::vector<uint32_t> offsets;
+  int objcMsgSendGotIndex = 0;
+};
+
 // Note that this section may also be targeted by non-lazy bindings. In
 // particular, this happens when branch relocations target weak symbols.
 class LazyPointerSection final : public SyntheticSection {
@@ -514,7 +538,7 @@ private:
 
 class CStringSection : public SyntheticSection {
 public:
-  CStringSection();
+  CStringSection(const char *name);
   void addInput(CStringInputSection *);
   uint64_t getSize() const override { return size; }
   virtual void finalizeContents();
@@ -529,17 +553,21 @@ private:
 
 class DeduplicatedCStringSection final : public CStringSection {
 public:
+  DeduplicatedCStringSection(const char *name) : CStringSection(name){};
   uint64_t getSize() const override { return size; }
   void finalizeContents() override;
   void writeTo(uint8_t *buf) const override;
 
-private:
   struct StringOffset {
     uint8_t trailingZeros;
     uint64_t outSecOff = UINT64_MAX;
 
     explicit StringOffset(uint8_t zeros) : trailingZeros(zeros) {}
   };
+
+  StringOffset getStringOffset(StringRef str) const;
+
+private:
   llvm::DenseMap<llvm::CachedHashStringRef, StringOffset> stringOffsetMap;
   size_t size = 0;
 };
@@ -623,6 +651,7 @@ struct InStruct {
   const uint8_t *bufferStart = nullptr;
   MachHeaderSection *header = nullptr;
   CStringSection *cStringSection = nullptr;
+  DeduplicatedCStringSection *objcMethnameSection = nullptr;
   WordLiteralSection *wordLiteralSection = nullptr;
   RebaseSection *rebase = nullptr;
   BindingSection *binding = nullptr;
@@ -634,6 +663,8 @@ struct InStruct {
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;
+  ObjCStubsSection *objcStubs = nullptr;
+  ConcatInputSection *objcSelrefs = nullptr;
   UnwindInfoSection *unwindInfo = nullptr;
   ObjCImageInfoSection *objCImageInfo = nullptr;
   ConcatInputSection *imageLoaderCache = nullptr;

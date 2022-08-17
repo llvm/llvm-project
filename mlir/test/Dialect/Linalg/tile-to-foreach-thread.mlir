@@ -34,7 +34,7 @@ module {
 
   transform.with_pdl_patterns {
   ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 {
+    transform.sequence %arg0 failures(propagate) {
     ^bb1(%arg1: !pdl.operation):
       %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
       %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 20] (mapped to dims [1, 0])
@@ -80,7 +80,7 @@ func.func @matmul_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: t
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 21]
@@ -128,7 +128,7 @@ func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):    
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [10, 20]
@@ -171,7 +171,7 @@ func.func @matmul_tile_size_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [10, 21]

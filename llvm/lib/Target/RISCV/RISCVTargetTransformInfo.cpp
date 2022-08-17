@@ -290,8 +290,24 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     switch (ISD) {
     case ISD::SIGN_EXTEND:
     case ISD::ZERO_EXTEND:
+      if (Src->getScalarSizeInBits() == 1) {
+        // We do not use vsext/vzext to extend from mask vector.
+        // Instead we use the following instructions to extend from mask vector:
+        // vmv.v.i v8, 0
+        // vmerge.vim v8, v8, -1, v0
+        return 2;
+      }
       return 1;
     case ISD::TRUNCATE:
+      if (Dst->getScalarSizeInBits() == 1) {
+        // We do not use several vncvt to truncate to mask vector. So we could
+        // not use PowDiff to calculate it.
+        // Instead we use the following instructions to truncate to mask vector:
+        // vand.vi v8, v8, 1
+        // vmsne.vi v0, v8, 0
+        return 2;
+      }
+      [[fallthrough]];
     case ISD::FP_EXTEND:
     case ISD::FP_ROUND:
       // Counts of narrow/widen instructions.

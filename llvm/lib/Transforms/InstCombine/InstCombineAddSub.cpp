@@ -1665,6 +1665,11 @@ Instruction *InstCombinerImpl::visitFAdd(BinaryOperator &I) {
         return BinaryOperator::CreateFMulFMF(X, NewMulC, &I);
     }
 
+    // (-X - Y) + (X + Z) --> Z - Y
+    if (match(&I, m_c_FAdd(m_FSub(m_FNeg(m_Value(X)), m_Value(Y)),
+                           m_c_FAdd(m_Deferred(X), m_Value(Z)))))
+      return BinaryOperator::CreateFSubFMF(Z, Y, &I);
+
     if (Value *V = FAddCombine(Builder).simplify(&I))
       return replaceInstUsesWith(I, V);
   }

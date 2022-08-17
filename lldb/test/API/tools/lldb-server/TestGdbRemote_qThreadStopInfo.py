@@ -1,4 +1,3 @@
-import unittest2
 import gdbremote_testcase
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

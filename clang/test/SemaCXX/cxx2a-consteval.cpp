@@ -766,3 +766,102 @@ void test() {
   static_assert(c == 8);
 }
 }
+
+namespace defaulted_special_member_template {
+template <typename T>
+struct default_ctor {
+  T data;
+  consteval default_ctor() = default; // expected-note {{non-constexpr constructor 'foo' cannot be used in a constant expression}}
+};
+
+template <typename T>
+struct copy {
+  T data;
+
+  consteval copy(const copy &) = default;            // expected-note {{non-constexpr constructor 'foo' cannot be used in a constant expression}}
+  consteval copy &operator=(const copy &) = default; // expected-note {{non-constexpr function 'operator=' cannot be used in a constant expression}}
+  copy() = default;
+};
+
+template <typename T>
+struct move {
+  T data;
+
+  consteval move(move &&) = default;            // expected-note {{non-constexpr constructor 'foo' cannot be used in a constant expression}}
+  consteval move &operator=(move &&) = default; // expected-note {{non-constexpr function 'operator=' cannot be used in a constant expression}}
+  move() = default;
+};
+
+struct foo {
+  foo() {}            // expected-note {{declared here}}
+  foo(const foo &) {} // expected-note {{declared here}}
+  foo(foo &&) {}      // expected-note {{declared here}}
+
+  foo& operator=(const foo &) { return *this; } // expected-note {{declared here}}
+  foo& operator=(foo &&) { return *this; }      // expected-note {{declared here}}
+};
+
+void func() {
+  default_ctor<foo> fail0; // expected-error {{call to consteval function 'defaulted_special_member_template::default_ctor<defaulted_special_member_template::foo>::default_ctor' is not a constant expression}} \
+                              expected-note {{in call to 'default_ctor()'}}
+
+  copy<foo> good0;
+  copy<foo> fail1{good0}; // expected-error {{call to consteval function 'defaulted_special_member_template::copy<defaulted_special_member_template::foo>::copy' is not a constant expression}} \
+                             expected-note {{in call to 'copy(good0)'}}
+  fail1 = good0;          // expected-error {{call to consteval function 'defaulted_special_member_template::copy<defaulted_special_member_template::foo>::operator=' is not a constant expression}} \
+                             expected-note {{in call to '&fail1->operator=(good0)'}}
+
+  move<foo> good1;
+  move<foo> fail2{static_cast<move<foo>&&>(good1)}; // expected-error {{call to consteval function 'defaulted_special_member_template::move<defaulted_special_member_template::foo>::move' is not a constant expression}} \
+                                                       expected-note {{in call to 'move(good1)'}}
+  fail2 = static_cast<move<foo>&&>(good1);          // expected-error {{call to consteval function 'defaulted_special_member_template::move<defaulted_special_member_template::foo>::operator=' is not a constant expression}} \
+                                                       expected-note {{in call to '&fail2->operator=(good1)'}}
+}
+} // namespace defaulted_special_member_template
+
+namespace multiple_default_constructors {
+struct Foo {
+  Foo() {} // expected-note {{declared here}}
+};
+struct Bar {
+  Bar() = default;
+};
+struct Baz {
+  consteval Baz() {}
+};
+
+template <typename T, unsigned N>
+struct S {
+  T data;
+  S() requires (N==1) = default;
+  // This cannot be used in constexpr context.
+  S() requires (N==2) {}  // expected-note {{declared here}}
+  consteval S() requires (N==3) = default;  // expected-note {{non-constexpr constructor 'Foo' cannot be used in a constant expression}}
+};
+
+void func() {
+  // Explictly defaulted constructor.
+  S<Foo, 1> s1;
+  S<Bar, 1> s2;
+  // User provided constructor.
+  S<Foo, 2> s3;
+  S<Bar, 2> s4;
+  // Consteval explictly defaulted constructor.
+  S<Foo, 3> s5; // expected-error {{call to consteval function 'multiple_default_constructors::S<multiple_default_constructors::Foo, 3>::S' is not a constant expression}} \
+                   expected-note {{in call to 'S()'}}
+  S<Bar, 3> s6;
+  S<Baz, 3> s7;
+}
+
+consteval int aConstevalFunction() { // expected-error {{consteval function never produces a constant expression}}
+  // Defaulted default constructors are implicitly consteval.
+  S<Bar, 1> s1;
+
+  S<Baz, 2> s4; // expected-note {{non-constexpr constructor 'S' cannot be used in a constant expression}}
+
+  S<Bar, 3> s2;
+  S<Baz, 3> s3;
+  return 0;
+}
+
+} // namespace multiple_default_constructors

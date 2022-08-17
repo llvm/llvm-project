@@ -232,7 +232,7 @@ DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
     op->erase();
 
   if (getFailAfterErase())
-    return emitSilenceableError() << "silencable error";
+    return emitSilenceableError() << "silenceable error";
   return DiagnosedSilenceableFailure::success();
 }
 

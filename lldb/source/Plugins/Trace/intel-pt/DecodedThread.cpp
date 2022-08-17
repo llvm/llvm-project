@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DecodedThread.h"
-
-#include <intel-pt.h>
-
 #include "TraceCursorIntelPT.h"
-
+#include <intel-pt.h>
 #include <memory>
 
 using namespace lldb;

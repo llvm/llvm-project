@@ -53,6 +53,17 @@ enum EdgeKind_x86_64 : Edge::Kind {
   ///   the address space, otherwise an out-of-range error will be returned.
   Pointer32Signed,
 
+  /// A plain 16-bit pointer value relocation.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target + Addend : uint16
+  ///
+  /// Errors:
+  ///   - The target must reside in the low 16-bits of the address space,
+  ///     otherwise an out-of-range error will be returned.
+  ///
+  Pointer16,
+
   /// A 64-bit delta.
   ///
   /// Delta from the fixup to the target.
@@ -410,6 +421,15 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
     int64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
     if (LLVM_LIKELY(isInRangeForImmS32(Value)))
       *(little32_t *)FixupPtr = Value;
+    else
+      return makeTargetOutOfRangeError(G, B, E);
+    break;
+  }
+
+  case Pointer16: {
+    uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
+    if (LLVM_LIKELY(isUInt<16>(Value)))
+      *(ulittle16_t *)FixupPtr = Value;
     else
       return makeTargetOutOfRangeError(G, B, E);
     break;

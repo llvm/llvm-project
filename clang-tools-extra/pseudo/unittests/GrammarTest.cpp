@@ -136,6 +136,18 @@ TEST_F(GrammarTest, Diagnostics) {
                          "Unknown attribute 'unknown'"));
 }
 
+TEST_F(GrammarTest, DuplicatedDiagnostics) {
+  build(R"cpp(
+    _ := test
+
+    test := INT
+    test := DOUBLE
+    test := INT
+  )cpp");
+
+  EXPECT_THAT(Diags, UnorderedElementsAre("Duplicate rule: `test := INT`"));
+}
+
 TEST_F(GrammarTest, FirstAndFollowSets) {
   build(
       R"bnf(

@@ -207,8 +207,9 @@ class COFFMasmParser : public MCAsmParserExtension {
                               SectionKind::getBSS());
   }
 
-  StringRef CurrentProcedure;
-  bool CurrentProcedureFramed;
+  /// Stack of active procedure definitions.
+  SmallVector<StringRef, 1> CurrentProcedures;
+  SmallVector<bool, 1> CurrentProceduresFramed;
 
 public:
   COFFMasmParser() = default;
@@ -478,8 +479,8 @@ bool COFFMasmParser::ParseDirectiveProc(StringRef Directive, SMLoc Loc) {
   }
   getStreamer().emitLabel(Sym, Loc);
 
-  CurrentProcedure = Label;
-  CurrentProcedureFramed = Framed;
+  CurrentProcedures.push_back(Label);
+  CurrentProceduresFramed.push_back(Framed);
   return false;
 }
 bool COFFMasmParser::ParseDirectiveEndProc(StringRef Directive, SMLoc Loc) {
@@ -488,17 +489,17 @@ bool COFFMasmParser::ParseDirectiveEndProc(StringRef Directive, SMLoc Loc) {
   if (getParser().parseIdentifier(Label))
     return Error(LabelLoc, "expected identifier for procedure end");
 
-  if (CurrentProcedure.empty())
+  if (CurrentProcedures.empty())
     return Error(Loc, "endp outside of procedure block");
-  else if (CurrentProcedure != Label)
+  else if (!CurrentProcedures.back().equals_insensitive(Label))
     return Error(LabelLoc, "endp does not match current procedure '" +
-                               CurrentProcedure + "'");
+                               CurrentProcedures.back() + "'");
 
-  if (CurrentProcedureFramed) {
+  if (CurrentProceduresFramed.back()) {
     getStreamer().emitWinCFIEndProc(Loc);
   }
-  CurrentProcedure = "";
-  CurrentProcedureFramed = false;
+  CurrentProcedures.pop_back();
+  CurrentProceduresFramed.pop_back();
   return false;
 }
 

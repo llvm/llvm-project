@@ -235,6 +235,12 @@
 #define LIBCPP_ONLY(...) static_assert(true, "")
 #endif
 
+#if __has_cpp_attribute(nodiscard)
+#  define TEST_NODISCARD [[nodiscard]]
+#else
+#  define TEST_NODISCARD
+#endif
+
 #define TEST_IGNORE_NODISCARD (void)
 
 namespace test_macros_detail {

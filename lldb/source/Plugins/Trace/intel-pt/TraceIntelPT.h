@@ -13,7 +13,6 @@
 #include "ThreadDecoder.h"
 #include "TraceIntelPTBundleLoader.h"
 #include "TraceIntelPTMultiCpuDecoder.h"
-
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/raw_ostream.h"

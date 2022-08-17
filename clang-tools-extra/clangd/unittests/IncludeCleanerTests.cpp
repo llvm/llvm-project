@@ -571,9 +571,6 @@ TEST(IncludeCleaner, RecursiveInclusion) {
   )cpp");
   ParsedAST AST = TU.build();
 
-  auto ReferencedFiles = findReferencedFiles(
-      findReferencedLocations(AST), AST.getIncludeStructure(),
-      AST.getCanonicalIncludes(), AST.getSourceManager());
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
   EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
 }
@@ -596,9 +593,6 @@ TEST(IncludeCleaner, IWYUPragmaExport) {
   )cpp");
   ParsedAST AST = TU.build();
 
-  auto ReferencedFiles = findReferencedFiles(
-      findReferencedLocations(AST), AST.getIncludeStructure(),
-      AST.getCanonicalIncludes(), AST.getSourceManager());
   EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
   // FIXME: This is not correct: foo.h is unused but is not diagnosed as such
   // because we ignore headers with IWYU export pragmas for now.

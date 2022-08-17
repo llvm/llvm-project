@@ -386,13 +386,10 @@ void NORETURN CheckFailed(const char *file, int line, const char *cond,
 enum LinkerInitialized { LINKER_INITIALIZED = 0 };
 
 #if !defined(_MSC_VER) || defined(__clang__)
-#if SANITIZER_S390_31
-#define GET_CALLER_PC() \
-  (__sanitizer::uptr) __builtin_extract_return_addr(__builtin_return_address(0))
-#else
-#define GET_CALLER_PC() (__sanitizer::uptr) __builtin_return_address(0)
-#endif
-#define GET_CURRENT_FRAME() (__sanitizer::uptr) __builtin_frame_address(0)
+#  define GET_CALLER_PC()                              \
+    ((__sanitizer::uptr)__builtin_extract_return_addr( \
+        __builtin_return_address(0)))
+#  define GET_CURRENT_FRAME() ((__sanitizer::uptr)__builtin_frame_address(0))
 inline void Trap() {
   __builtin_trap();
 }
@@ -401,13 +398,13 @@ extern "C" void* _ReturnAddress(void);
 extern "C" void* _AddressOfReturnAddress(void);
 # pragma intrinsic(_ReturnAddress)
 # pragma intrinsic(_AddressOfReturnAddress)
-#define GET_CALLER_PC() (__sanitizer::uptr) _ReturnAddress()
+#  define GET_CALLER_PC() ((__sanitizer::uptr)_ReturnAddress())
 // CaptureStackBackTrace doesn't need to know BP on Windows.
-#define GET_CURRENT_FRAME() \
-  (((__sanitizer::uptr)_AddressOfReturnAddress()) + sizeof(__sanitizer::uptr))
+#  define GET_CURRENT_FRAME() \
+    (((__sanitizer::uptr)_AddressOfReturnAddress()) + sizeof(__sanitizer::uptr))
 
 extern "C" void __ud2(void);
-# pragma intrinsic(__ud2)
+#  pragma intrinsic(__ud2)
 inline void Trap() {
   __ud2();
 }

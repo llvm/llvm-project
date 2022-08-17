@@ -224,10 +224,10 @@ static llvm::CachePruningPolicy getLTOCachePolicy(InputArgList &args) {
     val.toVector(ltoPolicy);
   };
   for (const Arg *arg :
-       args.filtered(OPT_thinlto_cache_policy, OPT_prune_interval_lto,
+       args.filtered(OPT_thinlto_cache_policy_eq, OPT_prune_interval_lto,
                      OPT_prune_after_lto, OPT_max_relative_cache_size_lto)) {
     switch (arg->getOption().getID()) {
-    case OPT_thinlto_cache_policy:
+    case OPT_thinlto_cache_policy_eq:
       add(arg->getValue());
       break;
     case OPT_prune_interval_lto:
@@ -781,6 +781,17 @@ static ICFLevel getICFLevel(const ArgList &args) {
   return icfLevel;
 }
 
+static ObjCStubsMode getObjCStubsMode(const ArgList &args) {
+  const Arg *arg = args.getLastArg(OPT_objc_stubs_fast, OPT_objc_stubs_small);
+  if (!arg)
+    return ObjCStubsMode::fast;
+
+  if (arg->getOption().getID() == OPT_objc_stubs_small)
+    warn("-objc_stubs_small is not yet implemented, defaulting to "
+         "-objc_stubs_fast");
+  return ObjCStubsMode::fast;
+}
+
 static void warnIfDeprecatedOption(const Option &opt) {
   if (!opt.getGroup().isValid())
     return;
@@ -1099,9 +1110,15 @@ static void gatherInputSections() {
           inputSections.push_back(isec);
         } else if (auto *isec =
                        dyn_cast<CStringInputSection>(subsection.isec)) {
-          if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
-            in.cStringSection->inputOrder = inputOrder++;
-          in.cStringSection->addInput(isec);
+          if (isec->getName() == section_names::objcMethname) {
+            if (in.objcMethnameSection->inputOrder == UnspecifiedInputOrder)
+              in.objcMethnameSection->inputOrder = inputOrder++;
+            in.objcMethnameSection->addInput(isec);
+          } else {
+            if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
+              in.cStringSection->inputOrder = inputOrder++;
+            in.cStringSection->addInput(isec);
+          }
         } else if (auto *isec =
                        dyn_cast<WordLiteralInputSection>(subsection.isec)) {
           if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
@@ -1124,8 +1141,37 @@ static void foldIdenticalLiterals() {
   // true. If it isn't, we simply create a non-deduplicating CStringSection.
   // Either way, we must unconditionally finalize it here.
   in.cStringSection->finalizeContents();
+  in.objcMethnameSection->finalizeContents();
   if (in.wordLiteralSection)
     in.wordLiteralSection->finalizeContents();
+}
+
+static void addSynthenticMethnames() {
+  std::string &data = *make<std::string>();
+  llvm::raw_string_ostream os(data);
+  const int prefixLength = ObjCStubsSection::symbolPrefix.size();
+  for (Symbol *sym : symtab->getSymbols())
+    if (const auto *undefined = dyn_cast<Undefined>(sym))
+      if (sym->getName().startswith(ObjCStubsSection::symbolPrefix))
+        os << sym->getName().drop_front(prefixLength) << '\0';
+
+  if (data.empty())
+    return;
+
+  const auto *buf = reinterpret_cast<const uint8_t *>(data.c_str());
+  Section &section = *make<Section>(/*file=*/nullptr, segment_names::text,
+                                    section_names::objcMethname,
+                                    S_CSTRING_LITERALS, /*addr=*/0);
+
+  auto *isec =
+      make<CStringInputSection>(section, ArrayRef<uint8_t>{buf, data.size()},
+                                /*align=*/1, /*dedupLiterals=*/true);
+  isec->splitIntoPieces();
+  for (auto &piece : isec->pieces)
+    piece.live = true;
+  section.subsections.push_back({0, isec});
+  in.objcMethnameSection->addInput(isec);
+  in.objcMethnameSection->isec->markLive(0);
 }
 
 static void referenceStubBinder() {
@@ -1395,9 +1441,10 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->ignoreOptimizationHints = args.hasArg(OPT_ignore_optimization_hints);
   config->callGraphProfileSort = args.hasFlag(
       OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
-  config->printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
+  config->printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order_eq);
   config->forceExactCpuSubtypeMatch =
       getenv("LD_DYLIB_CPU_SUBTYPES_MUST_MATCH");
+  config->objcStubsMode = getObjCStubsMode(args);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(
@@ -1643,6 +1690,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     createSyntheticSections();
     createSyntheticSymbols();
+    addSynthenticMethnames();
 
     createAliases();
     // If we are in "explicit exports" mode, hide everything that isn't
