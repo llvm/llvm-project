@@ -212,7 +212,7 @@ class _LIBCPP_TEMPLATE_VIS duration
         static const intmax_t __d1 = _R1::den / __gcd_d1_d2;
         static const intmax_t __n2 = _R2::num / __gcd_n1_n2;
         static const intmax_t __d2 = _R2::den / __gcd_d1_d2;
-        static const intmax_t max = -((intmax_t(1) << (sizeof(intmax_t) * CHAR_BIT - 1)) + 1);
+        static const intmax_t max = numeric_limits<intmax_t>::max();
 
         template <intmax_t _Xp, intmax_t _Yp, bool __overflow>
         struct __mul    // __overflow == false
