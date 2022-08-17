@@ -1174,7 +1174,7 @@ llvm.func @vect(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
   // CHECK-NEXT: shufflevector <4 x float> {{.*}}, <4 x float> {{.*}}, <5 x i32> <i32 0, i32 0, i32 0, i32 0, i32 7>
   %0 = llvm.extractelement %arg0[%arg1 : i32] : vector<4xf32>
   %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : vector<4xf32>
-  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : vector<4xf32>, vector<4xf32>
+  %2 = llvm.shufflevector %arg0, %arg0 [0, 0, 0, 0, 7] : vector<4xf32>
   llvm.return
 }
 
@@ -1194,7 +1194,7 @@ llvm.func @scalable_vect(%arg0: vector<[4]xf32>, %arg1: i32, %arg2: f32) {
   // CHECK-NEXT: shufflevector <vscale x 4 x float> %0, <vscale x 4 x float> %0, <vscale x 4 x i32> zeroinitializer
   %0 = llvm.extractelement %arg0[%arg1 : i32] : vector<[4]xf32>
   %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : vector<[4]xf32>
-  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32] : vector<[4]xf32>, vector<[4]xf32>
+  %2 = llvm.shufflevector %arg0, %arg0 [0, 0, 0, 0] : vector<[4]xf32>
   llvm.return
 }
 
