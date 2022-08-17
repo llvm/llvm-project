@@ -27,12 +27,12 @@ class SPV_ArithmeticBinaryOp<string mnemonic, Type type,
   // In addition to normal types arithmetic instructions can support cooperative
   // matrix.
   let arguments = (ins
-    SPV_ScalarOrVectorOrCoopMatrixOfOrJointMatrixOf<type>:$operand1,
-    SPV_ScalarOrVectorOrCoopMatrixOfOrJointMatrixOf<type>:$operand2
+    SPV_ScalarOrVectorOrCoopMatrixOf<type>:$operand1,
+    SPV_ScalarOrVectorOrCoopMatrixOf<type>:$operand2
   );
 
   let results = (outs
-    SPV_ScalarOrVectorOrCoopMatrixOfOrJointMatrixOf<type>:$result
+    SPV_ScalarOrVectorOrCoopMatrixOf<type>:$result
   );
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
