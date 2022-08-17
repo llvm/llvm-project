@@ -652,9 +652,8 @@ static void genDenseTensorIterationLoop(
     ConversionPatternRewriter &rewriter, Location loc, Value t,
     RankedTensorType tensorTp,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
-  auto enc = getSparseTensorEncoding(tensorTp);
-  (void) enc;
-  assert(!enc && "Generating Densor Tensor Loop on a Sparse Tensor!");
+  assert(!getSparseTensorEncoding(tensorTp) &&
+         "Generating Dense Tensor Loop on a Sparse Tensor!");
 
   unsigned rank = tensorTp.getRank();
   Value zero = constantIndex(rewriter, loc, 0);
