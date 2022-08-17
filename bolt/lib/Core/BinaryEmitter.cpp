@@ -400,6 +400,17 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, bool EmitColdPart,
   const FunctionFragment FF = BF.getLayout().getFragment(
       EmitColdPart ? FragmentNum::cold() : FragmentNum::hot());
 
+  if (!FF.empty() && FF.front()->isLandingPad()) {
+    assert(!FF.front()->isEntryPoint() &&
+           "Landing pad cannot be entry point of function");
+    // If the first block of the fragment is a landing pad, it's offset from the
+    // start of the area that the corresponding LSDA describes is zero. In this
+    // case, the call site entries in that LSDA have 0 as offset to the landing
+    // pad, which the runtime interprets as "no handler". To prevent this,
+    // insert some padding.
+    Streamer.emitIntValue(BC.MIB->getTrapFillValue(), 1);
+  }
+
   // Track the first emitted instruction with debug info.
   bool FirstInstr = true;
   for (BinaryBasicBlock *const BB : FF) {
