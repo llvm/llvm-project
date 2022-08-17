@@ -102,7 +102,7 @@ def OpI : NS_Op<"mix_variadic_and_normal_results_op", [SameVariadicResultSize]> 
 // CHECK-LABEL: ::mlir::Operation::result_range OpI::output1
 // CHECK-NEXT:    return getODSResults(0);
 
-// CHECK-LABEL: ::mlir::Value OpI::output2
+// CHECK-LABEL: ::mlir::TypedValue<::mlir::TensorType> OpI::output2
 // CHECK-NEXT:    return *getODSResults(1).begin();
 
 // CHECK-LABEL: OpI::build
