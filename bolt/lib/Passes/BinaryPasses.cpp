@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/BinaryPasses.h"
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Passes/ReorderAlgorithm.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "llvm/Support/CommandLine.h"
-
+#include <atomic>
+#include <mutex>
 #include <numeric>
 #include <vector>
 
@@ -388,12 +390,25 @@ void ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
   if (opts::ReorderBlocks == ReorderBasicBlocks::LT_NONE)
     return;
 
-  std::atomic<uint64_t> ModifiedFuncCount{0};
+  std::atomic_uint64_t ModifiedFuncCount(0);
+  std::mutex FunctionEditDistanceMutex;
+  DenseMap<const BinaryFunction *, uint64_t> FunctionEditDistance;
 
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-    modifyFunctionLayout(BF, opts::ReorderBlocks, opts::MinBranchClusters);
-    if (BF.getLayout().hasLayoutChanged())
-      ++ModifiedFuncCount;
+    SmallVector<const BinaryBasicBlock *, 0> OldBlockOrder;
+    if (opts::PrintFuncStat > 0)
+      llvm::copy(BF.getLayout().blocks(), std::back_inserter(OldBlockOrder));
+
+    const bool LayoutChanged =
+        modifyFunctionLayout(BF, opts::ReorderBlocks, opts::MinBranchClusters);
+    if (LayoutChanged) {
+      ModifiedFuncCount.fetch_add(1, std::memory_order_relaxed);
+      if (opts::PrintFuncStat > 0) {
+        const uint64_t Distance = BF.getLayout().getEditDistance(OldBlockOrder);
+        std::lock_guard<std::mutex> Lock(FunctionEditDistanceMutex);
+        FunctionEditDistance[&BF] = Distance;
+      }
+    }
   };
 
   ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
@@ -405,8 +420,9 @@ void ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
       "ReorderBasicBlocks");
 
   outs() << "BOLT-INFO: basic block reordering modified layout of "
-         << format("%zu (%.2lf%%) functions\n", ModifiedFuncCount.load(),
-                   100.0 * ModifiedFuncCount.load() /
+         << format("%zu (%.2lf%%) functions\n",
+                   ModifiedFuncCount.load(std::memory_order_relaxed),
+                   100.0 * ModifiedFuncCount.load(std::memory_order_relaxed) /
                        BC.getBinaryFunctions().size());
 
   if (opts::PrintFuncStat > 0) {
@@ -421,7 +437,7 @@ void ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
     OS << "\nBOLT-INFO: Printing Function Statistics:\n\n";
     OS << "           There are " << BFs.size() << " functions in total. \n";
     OS << "           Number of functions being modified: "
-       << ModifiedFuncCount.load() << "\n";
+       << ModifiedFuncCount.load(std::memory_order_relaxed) << "\n";
     OS << "           User asks for detailed information on top "
        << opts::PrintFuncStat << " functions. (Ranked by function score)"
        << "\n\n";
@@ -439,23 +455,23 @@ void ReorderBasicBlocks::runOnFunctions(BinaryContext &BC) {
       OS << "             There are " << Function.getInstructionCount()
          << " number of instructions in this function.\n";
       OS << "             The edit distance for this function is: "
-         << Function.getLayout().getEditDistance() << "\n\n";
+         << FunctionEditDistance.lookup(&Function) << "\n\n";
     }
   }
 }
 
-void ReorderBasicBlocks::modifyFunctionLayout(BinaryFunction &BF,
+bool ReorderBasicBlocks::modifyFunctionLayout(BinaryFunction &BF,
                                               LayoutType Type,
                                               bool MinBranchClusters) const {
   if (BF.size() == 0 || Type == LT_NONE)
-    return;
+    return false;
 
   BinaryFunction::BasicBlockOrderType NewLayout;
   std::unique_ptr<ReorderAlgorithm> Algo;
 
   // Cannot do optimal layout without profile.
   if (Type != LT_REVERSE && !BF.hasValidProfile())
-    return;
+    return false;
 
   if (Type == LT_REVERSE) {
     Algo.reset(new ReverseReorderAlgorithm());
@@ -500,7 +516,7 @@ void ReorderBasicBlocks::modifyFunctionLayout(BinaryFunction &BF,
 
   Algo->reorderBasicBlocks(BF, NewLayout);
 
-  BF.getLayout().update(NewLayout);
+  return BF.getLayout().update(NewLayout);
 }
 
 void FixupBranches::runOnFunctions(BinaryContext &BC) {
