@@ -176,6 +176,20 @@ BinarySection::~BinarySection() {
 
 void BinarySection::clearRelocations() { clearList(Relocations); }
 
+void BinarySection::addRelocation(uint64_t Offset, MCSymbol *Symbol,
+                                  uint64_t Type, uint64_t Addend,
+                                  uint64_t Value, bool Pending) {
+  assert(Offset < getSize() && "offset not within section bounds");
+  LLVM_DEBUG(dbgs() << formatv(
+                 "BOLT-DEBUG: addRelocation in {0}, @{1:x} against {2}\n",
+                 getName(), Offset, Symbol->getName()));
+  Relocation R{Offset, Symbol, Type, Addend, Value};
+  if (Pending)
+    PendingRelocations.emplace_back(R);
+  else
+    Relocations.emplace(R);
+}
+
 void BinarySection::print(raw_ostream &OS) const {
   OS << getName() << ", "
      << "0x" << Twine::utohexstr(getAddress()) << ", " << getSize() << " (0x"
