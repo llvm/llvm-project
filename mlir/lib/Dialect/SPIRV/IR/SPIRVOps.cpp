@@ -3921,7 +3921,9 @@ verifyPointerAndJointMatrixType(Operation *op, Type pointer, Type jointMatrix) {
   spirv::StorageClass storage =
       pointer.cast<spirv::PointerType>().getStorageClass();
   if (storage != spirv::StorageClass::Workgroup &&
-      storage != spirv::StorageClass::CrossWorkgroup)
+      storage != spirv::StorageClass::CrossWorkgroup &&
+      storage != spirv::StorageClass::UniformConstant &&
+      storage != spirv::StorageClass::Generic)
     return op->emitError("Pointer storage class must be Workgroup or "
                          "CrossWorkgroup but provided ")
            << stringifyStorageClass(storage);
