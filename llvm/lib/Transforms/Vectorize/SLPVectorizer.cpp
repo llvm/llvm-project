@@ -345,7 +345,7 @@ static bool isUndefVector(const Value *V) {
 /// InstCombiner transforms this into a shuffle and vector mul
 /// Mask will return the Shuffle Mask equivalent to the extracted elements.
 /// TODO: Can we split off and reuse the shuffle mask detection from
-/// TargetTransformInfo::getInstructionThroughput?
+/// ShuffleVectorInst/getShuffleCost?
 static Optional<TargetTransformInfo::ShuffleKind>
 isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) {
   const auto *It =
