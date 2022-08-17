@@ -15,6 +15,7 @@
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/DebugData.h"
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
@@ -396,12 +397,12 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, bool EmitColdPart,
   if (!EmitCodeOnly && EmitColdPart && BF.hasConstantIsland())
     BF.duplicateConstantIslands();
 
+  const FunctionFragment FF = BF.getLayout().getFragment(
+      EmitColdPart ? FragmentNum::cold() : FragmentNum::hot());
+
   // Track the first emitted instruction with debug info.
   bool FirstInstr = true;
-  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
-    if (EmitColdPart != BB->isCold())
-      continue;
-
+  for (BinaryBasicBlock *const BB : FF) {
     if ((opts::AlignBlocks || opts::PreserveBlocksAlignment) &&
         BB->getAlignment() > 1)
       Streamer.emitCodeAlignment(BB->getAlignment(), &*BC.STI,
