@@ -134,6 +134,11 @@ private:
   /// Read relocations from a given section.
   void readDynamicRelocations(const object::SectionRef &Section, bool IsJmpRel);
 
+  /// Print relocation information.
+  void printRelocationInfo(const RelocationRef &Rel, StringRef SymbolName,
+                           uint64_t SymbolAddress, uint64_t Addend,
+                           uint64_t ExtractedValue) const;
+
   /// Read relocations from a given section.
   void readRelocations(const object::SectionRef &Section);
 

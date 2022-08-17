@@ -2264,6 +2264,30 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
   }
 }
 
+void RewriteInstance::printRelocationInfo(const RelocationRef &Rel,
+                                          StringRef SymbolName,
+                                          uint64_t SymbolAddress,
+                                          uint64_t Addend,
+                                          uint64_t ExtractedValue) const {
+  SmallString<16> TypeName;
+  Rel.getTypeName(TypeName);
+  const uint64_t Address = SymbolAddress + Addend;
+  const uint64_t Offset = Rel.getOffset();
+  ErrorOr<BinarySection &> Section = BC->getSectionForAddress(SymbolAddress);
+  BinaryFunction *Func =
+      BC->getBinaryFunctionContainingAddress(Offset, false, BC->isAArch64());
+  dbgs() << formatv("Relocation: offset = {0:x}; type = {1}; value = {2:x}; ",
+                    Offset, TypeName, ExtractedValue)
+         << formatv("symbol = {0} ({1}); symbol address = {2:x}; ", SymbolName,
+                    Section ? Section->getName() : "", SymbolAddress)
+         << formatv("addend = {0:x}; address = {1:x}; in = ", Addend, Address);
+  if (Func)
+    dbgs() << Func->getPrintName();
+  else
+    dbgs() << BC->getSectionForAddress(Rel.getOffset())->getName();
+  dbgs() << '\n';
+}
+
 void RewriteInstance::readRelocations(const SectionRef &Section) {
   LLVM_DEBUG({
     StringRef SectionName = cantFail(Section.getName());
@@ -2299,32 +2323,6 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
 
   const bool IsAArch64 = BC->isAArch64();
   const bool IsFromCode = RelocatedSection.isText();
-
-  auto printRelocationInfo = [&](const RelocationRef &Rel,
-                                 StringRef SymbolName,
-                                 uint64_t SymbolAddress,
-                                 uint64_t Addend,
-                                 uint64_t ExtractedValue) {
-    SmallString<16> TypeName;
-    Rel.getTypeName(TypeName);
-    const uint64_t Address = SymbolAddress + Addend;
-    ErrorOr<BinarySection &> Section = BC->getSectionForAddress(SymbolAddress);
-    dbgs() << "Relocation: offset = 0x"
-           << Twine::utohexstr(Rel.getOffset())
-           << "; type = " << TypeName
-           << "; value = 0x" << Twine::utohexstr(ExtractedValue)
-           << "; symbol = " << SymbolName
-           << " (" << (Section ? Section->getName() : "") << ")"
-           << "; symbol address = 0x" << Twine::utohexstr(SymbolAddress)
-           << "; addend = 0x" << Twine::utohexstr(Addend)
-           << "; address = 0x" << Twine::utohexstr(Address)
-           << "; in = ";
-    if (BinaryFunction *Func = BC->getBinaryFunctionContainingAddress(
-            Rel.getOffset(), false, IsAArch64))
-      dbgs() << Func->getPrintName() << "\n";
-    else
-      dbgs() << BC->getSectionForAddress(Rel.getOffset())->getName() << "\n";
-  };
 
   for (const RelocationRef &Rel : Section.relocations()) {
     SmallString<16> TypeName;
