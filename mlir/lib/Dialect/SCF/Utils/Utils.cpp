@@ -428,7 +428,7 @@ LogicalResult mlir::loopUnrollByFactor(
   // 'upperBoundUnrolled' and 'stepUnrolled' for static and dynamic cases.
   OpBuilder boundsBuilder(forOp);
   auto loc = forOp.getLoc();
-  auto step = forOp.getStep();
+  Value step = forOp.getStep();
   Value upperBoundUnrolled;
   Value stepUnrolled;
   bool generateEpilogueLoop = true;
