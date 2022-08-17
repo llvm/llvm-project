@@ -4428,7 +4428,10 @@ void DAGTypeLegalizer::ExpandIntRes_XMULO(SDNode *N,
   else if (VT == MVT::i128)
     LC = RTLIB::MULO_I128;
 
-  if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC)) {
+  // If we don't have the libcall or if the function we are compiling is the
+  // implementation of the expected libcall (avoid inf-loop), expand inline.
+  if (LC == RTLIB::UNKNOWN_LIBCALL || !TLI.getLibcallName(LC) ||
+      TLI.getLibcallName(LC) == DAG.getMachineFunction().getName()) {
     // FIXME: This is not an optimal expansion, but better than crashing.
     EVT WideVT =
         EVT::getIntegerVT(*DAG.getContext(), VT.getScalarSizeInBits() * 2);
