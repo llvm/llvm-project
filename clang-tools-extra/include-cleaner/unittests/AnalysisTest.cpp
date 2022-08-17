@@ -31,9 +31,9 @@ TEST(WalkUsed, Basic) {
   void foo();
   namespace std { class vector {}; })cpp");
   llvm::Annotations Code(R"cpp(
-  void bar() {
+  void $bar^bar() {
     $foo^foo();
-    std::$vector^vector v;
+    std::$vector^vector $vconstructor^v;
   }
   )cpp");
   TestInputs Inputs(Code.code());
@@ -55,14 +55,16 @@ TEST(WalkUsed, Basic) {
     EXPECT_EQ(FID, SM.getMainFileID());
     OffsetToProviders.try_emplace(Offset, Providers.vec());
   });
-  auto HeaderFile = AST.fileManager().getFile("header.h").get();
+  auto HeaderFile = Header(AST.fileManager().getFile("header.h").get());
+  auto MainFile = Header(SM.getFileEntryForID(SM.getMainFileID()));
+  auto VectorSTL = Header(tooling::stdlib::Header::named("<vector>").value());
   EXPECT_THAT(
       OffsetToProviders,
       UnorderedElementsAre(
-          Pair(Code.point("foo"), UnorderedElementsAre(Header(HeaderFile))),
-          Pair(Code.point("vector"),
-               UnorderedElementsAre(Header(
-                   tooling::stdlib::Header::named("<vector>").value())))));
+          Pair(Code.point("bar"), UnorderedElementsAre(MainFile)),
+          Pair(Code.point("foo"), UnorderedElementsAre(HeaderFile)),
+          Pair(Code.point("vector"), UnorderedElementsAre(VectorSTL)),
+          Pair(Code.point("vconstructor"), UnorderedElementsAre(VectorSTL))));
 }
 
 } // namespace
