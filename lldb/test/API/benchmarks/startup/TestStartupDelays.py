@@ -1,8 +1,5 @@
 """Test lldb's startup delays creating a target, setting a breakpoint, and run to breakpoint stop."""
 
-from __future__ import print_function
-
-
 import sys
 import lldb
 from lldbsuite.test import configuration

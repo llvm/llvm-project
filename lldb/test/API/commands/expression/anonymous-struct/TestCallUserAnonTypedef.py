@@ -14,10 +14,6 @@ from lldbsuite.test import lldbutil
 
 class TestExprLookupAnonStructTypedef(TestBase):
 
-    @expectedFailureAll(
-        oslist=['linux'],
-        archs=['arm'],
-        bugnumber="llvm.org/pr27868")
     def test(self):
         """Test typedeffed untagged struct arguments for function call expressions"""
         self.build()

@@ -419,3 +419,20 @@ define void @v3i8store(<3 x i8> *%p) {
   store <3 x i8> zeroinitializer, <3 x i8> *%p, align 4
   ret void
 }
+
+define void @v3i64shuffle(<3 x i64> *%p, <3 x i64> %a) {
+; CHECK-LABEL: v3i64shuffle:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i32 q8, #0x0
+; CHECK-NEXT:    ldrd r12, r1, [sp, #8]
+; CHECK-NEXT:    vmov d18, r2, r3
+; CHECK-NEXT:    vorr d19, d16, d16
+; CHECK-NEXT:    str r1, [r0, #20]
+; CHECK-NEXT:    vst1.32 {d18, d19}, [r0]!
+; CHECK-NEXT:    str.w r12, [r0]
+; CHECK-NEXT:    bx lr
+  %b = shufflevector <3 x i64> %a, <3 x i64> zeroinitializer, <3 x i32> <i32 0, i32 3, i32 2>
+  store <3 x i64> %b, <3 x i64> *%p, align 4
+  ret void
+}
+

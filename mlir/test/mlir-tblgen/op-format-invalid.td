@@ -208,6 +208,13 @@ def DirectiveRegionsInvalidB : TestFormat_Op<[{
 def DirectiveRegionsInvalidC : TestFormat_Op<[{
   type(regions)
 }]>;
+// CHECK: error: format ambiguity caused by `attr-dict` directive followed by region `foo`
+// CHECK: note: try using `attr-dict-with-keyword` instead
+def DirectiveRegionsInvalidD : TestFormat_Op<[{
+  attr-dict $foo
+}]> {
+  let regions = (region AnyRegion:$foo);
+}
 
 //===----------------------------------------------------------------------===//
 // results
@@ -402,6 +409,13 @@ def OptionalInvalidO : TestFormat_Op<[{
 def OptionalInvalidP : TestFormat_Op<[{
   ($arg^):(`test`)
 }]>, Arguments<(ins Variadic<I64>:$arg)>;
+
+//===----------------------------------------------------------------------===//
+// Strings
+//===----------------------------------------------------------------------===//
+
+// CHECK: error: strings may only be used as 'custom' directive arguments
+def StringInvalidA : TestFormat_Op<[{ "foo" }]>;
 
 //===----------------------------------------------------------------------===//
 // Variables

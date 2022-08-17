@@ -539,7 +539,7 @@ BitSetInfo LowerTypeTestsModule::buildBitSet(
 
   // Compute the byte offset of each address associated with this type
   // identifier.
-  for (auto &GlobalAndOffset : GlobalLayout) {
+  for (const auto &GlobalAndOffset : GlobalLayout) {
     for (MDNode *Type : GlobalAndOffset.first->types()) {
       if (Type->getOperand(1) != TypeId)
         continue;
@@ -1912,7 +1912,7 @@ bool LowerTypeTestsModule::lower() {
     for (auto &I : *ExportSummary)
       for (auto &GVS : I.second.SummaryList)
         if (GVS->isLive())
-          for (auto &Ref : GVS->refs())
+          for (const auto &Ref : GVS->refs())
             AddressTaken.insert(Ref.getGUID());
 
     NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
@@ -1938,7 +1938,7 @@ bool LowerTypeTestsModule::lower() {
 
           bool Exported = false;
           if (auto VI = ExportSummary->getValueInfo(GUID))
-            for (auto &GVS : VI.getSummaryList())
+            for (const auto &GVS : VI.getSummaryList())
               if (GVS->isLive() && !GlobalValue::isLocalLinkage(GVS->linkage()))
                 Exported = true;
 

@@ -3007,7 +3007,8 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
     BasicBlock *Dest = I.getIndirectDest(i);
     MachineBasicBlock *Target = FuncInfo.MBBMap[Dest];
     Target->setIsInlineAsmBrIndirectTarget();
-    Target->setHasAddressTaken();
+    Target->setMachineBlockAddressTaken();
+    Target->setLabelMustBeEmitted();
     // Don't add duplicate machine successors.
     if (Dests.insert(Dest).second)
       addSuccessorWithProb(CallBrMBB, Target, BranchProbability::getZero());
@@ -4733,7 +4734,8 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
   EVT MemVT =
       TLI.getMemValueType(DAG.getDataLayout(), I.getValueOperand()->getType());
 
-  if (I.getAlign().value() < MemVT.getSizeInBits() / 8)
+  if (!TLI.supportsUnalignedAtomics() &&
+      I.getAlign().value() < MemVT.getSizeInBits() / 8)
     report_fatal_error("Cannot generate unaligned atomic store");
 
   auto Flags = TLI.getStoreMemOperandFlags(I, DAG.getDataLayout());

@@ -406,27 +406,6 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     return clampIntHelper(loc, args[0], minVal, maxVal, rewriter);
   }
 
-  // tosa::ReluNOp
-  if (isa<tosa::ReluNOp>(op) && elementTy.isa<FloatType>()) {
-    auto zero =
-        rewriter.create<arith::ConstantOp>(loc, FloatAttr::get(elementTy, 0));
-    bool losesInfo = false;
-    APFloat max_apf = op->getAttr("max_fp").cast<FloatAttr>().getValue();
-    max_apf.convert(elementTy.cast<FloatType>().getFloatSemantics(),
-                    APFloat::rmNearestTiesToEven, &losesInfo);
-    auto n = rewriter.create<arith::ConstantOp>(
-        loc, elementTy, rewriter.getFloatAttr(elementTy, max_apf));
-    return clampFloatHelper(loc, args[0], zero, n, rewriter);
-  }
-
-  if (isa<tosa::ReluNOp>(op) && elementTy.isa<IntegerType>()) {
-    auto zero =
-        rewriter.create<arith::ConstantOp>(loc, IntegerAttr::get(elementTy, 0));
-    auto n = createConstFromIntAttribute<int32_t>(op, "max_int", elementTy,
-                                                  rewriter);
-    return clampIntHelper(loc, args[0], zero, n, rewriter);
-  }
-
   // tosa::SigmoidOp
   if (isa<tosa::SigmoidOp>(op) && elementTy.isa<FloatType>()) {
     auto one =
@@ -2235,7 +2214,6 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       PointwiseConverter<tosa::CeilOp>,
       PointwiseConverter<tosa::FloorOp>,
       PointwiseConverter<tosa::ClampOp>,
-      PointwiseConverter<tosa::ReluNOp>,
       PointwiseConverter<tosa::SigmoidOp>,
       IdentityNConverter<tosa::IdentityOp>,
       ReduceConverter<tosa::ReduceAllOp>,

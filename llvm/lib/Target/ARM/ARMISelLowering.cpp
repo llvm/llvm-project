@@ -7679,10 +7679,9 @@ static SDValue LowerBUILD_VECTOR_i1(SDValue Op, SelectionDAG &DAG,
   // extend that single value
   SDValue FirstOp = Op.getOperand(0);
   if (!isa<ConstantSDNode>(FirstOp) &&
-      std::all_of(std::next(Op->op_begin()), Op->op_end(),
-                  [&FirstOp](SDUse &U) {
-                    return U.get().isUndef() || U.get() == FirstOp;
-                  })) {
+      llvm::all_of(llvm::drop_begin(Op->ops()), [&FirstOp](const SDUse &U) {
+        return U.get().isUndef() || U.get() == FirstOp;
+      })) {
     SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, MVT::i32, FirstOp,
                               DAG.getValueType(MVT::i1));
     return DAG.getNode(ARMISD::PREDICATE_CAST, dl, Op.getValueType(), Ext);

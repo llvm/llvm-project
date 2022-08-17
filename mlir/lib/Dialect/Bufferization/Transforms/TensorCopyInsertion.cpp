@@ -160,11 +160,9 @@ mlir::bufferization::insertTensorCopies(Operation *op,
 namespace {
 struct TensorCopyInsertionPass
     : TensorCopyInsertionBase<TensorCopyInsertionPass> {
-  TensorCopyInsertionPass()
-      : TensorCopyInsertionBase<TensorCopyInsertionPass>(),
-        options(llvm::None) {}
+  TensorCopyInsertionPass() : options(llvm::None) {}
   TensorCopyInsertionPass(const OneShotBufferizationOptions &options)
-      : TensorCopyInsertionBase<TensorCopyInsertionPass>(), options(options) {}
+      : options(options) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<bufferization::BufferizationDialect>();

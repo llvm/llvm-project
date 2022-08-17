@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test unsigned long to_ulong() const;
+// unsigned long to_ulong() const; // constexpr since C++23
 
 #include <bitset>
 #include <algorithm>
@@ -18,7 +18,7 @@
 #include "test_macros.h"
 
 template <std::size_t N>
-void test_to_ulong() {
+TEST_CONSTEXPR_CXX23 void test_to_ulong() {
     const std::size_t M = sizeof(unsigned long) * CHAR_BIT < N ? sizeof(unsigned long) * CHAR_BIT : N;
     const bool is_M_zero = std::integral_constant<bool, M == 0>::value; // avoid compiler warnings
     const std::size_t X = is_M_zero ? sizeof(unsigned long) * CHAR_BIT - 1 : sizeof(unsigned long) * CHAR_BIT - M;
@@ -33,8 +33,7 @@ void test_to_ulong() {
         std::min(max, max-1),
         max
     };
-    for (std::size_t i = 0; i < sizeof(tests)/sizeof(tests[0]); ++i) {
-        std::size_t j = tests[i];
+    for (std::size_t j : tests) {
         std::bitset<N> v(j);
         assert(j == v.to_ulong());
     }
@@ -48,16 +47,25 @@ void test_to_ulong() {
     }
 }
 
-int main(int, char**) {
-    test_to_ulong<0>();
-    test_to_ulong<1>();
-    test_to_ulong<31>();
-    test_to_ulong<32>();
-    test_to_ulong<33>();
-    test_to_ulong<63>();
-    test_to_ulong<64>();
-    test_to_ulong<65>();
-    test_to_ulong<1000>();
+TEST_CONSTEXPR_CXX23 bool test() {
+  test_to_ulong<0>();
+  test_to_ulong<1>();
+  test_to_ulong<31>();
+  test_to_ulong<32>();
+  test_to_ulong<33>();
+  test_to_ulong<63>();
+  test_to_ulong<64>();
+  test_to_ulong<65>();
+  test_to_ulong<1000>();
 
-    return 0;
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER > 20
+  static_assert(test());
+#endif
+
+  return 0;
 }

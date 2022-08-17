@@ -9,6 +9,8 @@
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/ADT/STLArrayExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ARMBuildAttributes.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -62,6 +64,7 @@ const ARMAttributeParser::DisplayHandler ARMAttributeParser::displayRoutines[] =
         ATTRIBUTE_HANDLER(PACRET_use),
         ATTRIBUTE_HANDLER(BTI_use),
         ATTRIBUTE_HANDLER(nodefaults),
+        ATTRIBUTE_HANDLER(also_compatible_with),
 };
 
 #undef ATTRIBUTE_HANDLER
@@ -81,15 +84,15 @@ Error ARMAttributeParser::stringAttribute(AttrType tag) {
   return Error::success();
 }
 
+static const char *CPU_arch_strings[] = {
+    "Pre-v4", "ARM v4", "ARM v4T", "ARM v5T", "ARM v5TE", "ARM v5TEJ",
+    "ARM v6", "ARM v6KZ", "ARM v6T2", "ARM v6K", "ARM v7", "ARM v6-M",
+    "ARM v6S-M", "ARM v7E-M", "ARM v8-A", "ARM v8-R", "ARM v8-M Baseline",
+    "ARM v8-M Mainline", nullptr, nullptr, nullptr, "ARM v8.1-M Mainline",
+    "ARM v9-A"};
+
 Error ARMAttributeParser::CPU_arch(AttrType tag) {
-  static const char *strings[] = {
-    "Pre-v4", "ARM v4", "ARM v4T", "ARM v5T", "ARM v5TE", "ARM v5TEJ", "ARM v6",
-    "ARM v6KZ", "ARM v6T2", "ARM v6K", "ARM v7", "ARM v6-M", "ARM v6S-M",
-    "ARM v7E-M", "ARM v8-A", "ARM v8-R",
-    "ARM v8-M Baseline", "ARM v8-M Mainline", nullptr, nullptr, nullptr,
-    "ARM v8.1-M Mainline", "ARM v9-A"
-  };
-  return parseStringAttribute("CPU_arch", tag, makeArrayRef(strings));
+  return parseStringAttribute("CPU_arch", tag, makeArrayRef(CPU_arch_strings));
 }
 
 Error ARMAttributeParser::CPU_arch_profile(AttrType tag) {
@@ -378,6 +381,84 @@ Error ARMAttributeParser::nodefaults(AttrType tag) {
   uint64_t value = de.getULEB128(cursor);
   printAttribute(tag, value, "Unspecified Tags UNDEFINED");
   return Error::success();
+}
+
+Error ARMAttributeParser::also_compatible_with(AttrType tag) {
+  // Parse value as a C string first in order to print it in escaped form later.
+  // Then, parse it again to catch errors or to pretty print if Tag_CPU_arch.
+  Optional<Error> returnValue;
+
+  SmallString<8> Description;
+  raw_svector_ostream DescStream(Description);
+
+  uint64_t InitialOffset = cursor.tell();
+  StringRef RawStringValue = de.getCStrRef(cursor);
+  uint64_t FinalOffset = cursor.tell();
+  cursor.seek(InitialOffset);
+  uint64_t InnerTag = de.getULEB128(cursor);
+
+  bool ValidInnerTag =
+      any_of(tagToStringMap, [InnerTag](const TagNameItem &Item) {
+        return Item.attr == InnerTag;
+      });
+
+  if (!ValidInnerTag) {
+    returnValue =
+        createStringError(errc::argument_out_of_domain,
+                          Twine(InnerTag) + " is not a valid tag number");
+  } else {
+    switch (InnerTag) {
+    case ARMBuildAttrs::CPU_arch: {
+      uint64_t InnerValue = de.getULEB128(cursor);
+      auto strings = makeArrayRef(CPU_arch_strings);
+      if (InnerValue >= strings.size()) {
+        returnValue = createStringError(
+            errc::argument_out_of_domain,
+            Twine(InnerValue) + " is not a valid " +
+                ELFAttrs::attrTypeAsString(InnerTag, tagToStringMap) +
+                " value");
+      } else {
+        DescStream << ELFAttrs::attrTypeAsString(InnerTag, tagToStringMap)
+                   << " = " << InnerValue;
+        if (strings[InnerValue])
+          DescStream << " (" << strings[InnerValue] << ')';
+      }
+      break;
+    }
+    case ARMBuildAttrs::also_compatible_with:
+      returnValue = createStringError(
+          errc::invalid_argument,
+          ELFAttrs::attrTypeAsString(InnerTag, tagToStringMap) +
+              " cannot be recursively defined");
+      break;
+    case ARMBuildAttrs::CPU_raw_name:
+    case ARMBuildAttrs::CPU_name:
+    case ARMBuildAttrs::compatibility:
+    case ARMBuildAttrs::conformance: {
+      StringRef InnerValue = de.getCStrRef(cursor);
+      DescStream << ELFAttrs::attrTypeAsString(InnerTag, tagToStringMap)
+                 << " = " << InnerValue;
+      break;
+    }
+    default: {
+      uint64_t InnerValue = de.getULEB128(cursor);
+      DescStream << ELFAttrs::attrTypeAsString(InnerTag, tagToStringMap)
+                 << " = " << InnerValue;
+    }
+    }
+  }
+
+  DictScope scope(*sw, "Attribute");
+  sw->printNumber("Tag", tag);
+  sw->printString("TagName",
+                  ELFAttrs::attrTypeAsString(tag, tagToStringMap, false));
+  sw->printStringEscaped("Value", RawStringValue);
+  if (!Description.empty()) {
+    sw->printString("Description", Description);
+  }
+  cursor.seek(FinalOffset);
+
+  return returnValue ? std::move(*returnValue) : Error::success();
 }
 
 Error ARMAttributeParser::handler(uint64_t tag, bool &handled) {

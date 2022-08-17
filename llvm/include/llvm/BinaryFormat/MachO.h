@@ -1002,6 +1002,19 @@ struct nlist_64 {
   uint64_t n_value;
 };
 
+// Values for dyld_chained_fixups_header::imports_format.
+enum {
+  DYLD_CHAINED_IMPORT = 1,
+  DYLD_CHAINED_IMPORT_ADDEND = 2,
+  DYLD_CHAINED_IMPORT_ADDEND64 = 3,
+};
+
+// Values for dyld_chained_fixups_header::symbols_format.
+enum {
+  DYLD_CHAINED_SYMBOL_UNCOMPRESSED = 0,
+  DYLD_CHAINED_SYMBOL_ZLIB = 1,
+};
+
 /// Structs for dyld chained fixups.
 /// dyld_chained_fixups_header is the data pointed to by LC_DYLD_CHAINED_FIXUPS
 /// load command.

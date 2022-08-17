@@ -538,8 +538,12 @@ bool BinaryContext::analyzeJumpTable(
   if (NextJTAddress)
     UpperBound = std::min(NextJTAddress, UpperBound);
 
-  LLVM_DEBUG(dbgs() << "BOLT-DEBUG: analyzeJumpTable in " << BF.getPrintName()
-                    << '\n');
+  LLVM_DEBUG({
+    using JTT = JumpTable::JumpTableType;
+    dbgs() << formatv("BOLT-DEBUG: analyzeJumpTable @{0:x} in {1}, JTT={2}\n",
+                      Address, BF.getPrintName(),
+                      Type == JTT::JTT_PIC ? "PIC" : "Normal");
+  });
   const uint64_t EntrySize = getJumpTableEntrySize(Type);
   for (uint64_t EntryAddress = Address; EntryAddress <= UpperBound - EntrySize;
        EntryAddress += EntrySize) {
@@ -570,7 +574,7 @@ bool BinaryContext::analyzeJumpTable(
     if (Value == BF.getAddress() + BF.getSize()) {
       addEntryAddress(Value);
       HasUnreachable = true;
-      LLVM_DEBUG(dbgs() << "OK: __builtin_unreachable\n");
+      LLVM_DEBUG(dbgs() << formatv("OK: {0:x} __builtin_unreachable\n", Value));
       continue;
     }
 
@@ -585,12 +589,12 @@ bool BinaryContext::analyzeJumpTable(
           if (TargetBF) {
             dbgs() << "  ! function containing this address: "
                    << TargetBF->getPrintName() << '\n';
-            if (TargetBF->isFragment())
-              dbgs() << "  ! is a fragment\n";
-            for (BinaryFunction *TargetParent : TargetBF->ParentFragments)
-              dbgs() << "  ! its parent is "
-                     << (TargetParent ? TargetParent->getPrintName() : "(none)")
-                     << '\n';
+            if (TargetBF->isFragment()) {
+              dbgs() << "  ! is a fragment";
+              for (BinaryFunction *Parent : TargetBF->ParentFragments)
+                dbgs() << ", parent: " << Parent->getPrintName();
+              dbgs() << '\n';
+            }
           }
         }
         if (Value == BF.getAddress())
@@ -602,11 +606,12 @@ bool BinaryContext::analyzeJumpTable(
     // Check there's an instruction at this offset.
     if (TargetBF->getState() == BinaryFunction::State::Disassembled &&
         !TargetBF->getInstructionAtOffset(Value - TargetBF->getAddress())) {
-      LLVM_DEBUG(dbgs() << "FAIL: no instruction at this offset\n");
+      LLVM_DEBUG(dbgs() << formatv("FAIL: no instruction at {0:x}\n", Value));
       break;
     }
 
     ++NumRealEntries;
+    LLVM_DEBUG(dbgs() << formatv("OK: {0:x} real entry\n", Value));
 
     if (TargetBF != &BF)
       BF.setHasIndirectTargetToSplitFragment(true);

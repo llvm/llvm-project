@@ -29,8 +29,13 @@ config.substitutions.append(
 config.substitutions.append(
     ('%clangxx ',
      build_invocation(config.cxx_mode_flags + [config.target_cflags])))
-config.substitutions.append(
-    ('%llvm_jitlink', (llvm_jitlink + ' -orc-runtime=' + orc_rt_path)))
+if config.host_os == 'Windows':
+  config.substitutions.append(
+      ('%llvm_jitlink', (llvm_jitlink + ' -orc-runtime=' +
+       orc_rt_path + ' -no-process-syms=true -slab-allocate=64MB')))
+else:
+  config.substitutions.append(
+      ('%llvm_jitlink', (llvm_jitlink + ' -orc-runtime=' + orc_rt_path)))
 config.substitutions.append(
     ('%lli_orc_jitlink', (lli + ' -jit-kind=orc -jit-linker=jitlink -orc-runtime=' + orc_rt_path)))
 
@@ -40,5 +45,5 @@ config.suffixes = ['.c', '.cpp', '.S', '.ll']
 # Exclude Inputs directories.
 config.excludes = ['Inputs']
 
-if config.host_os not in ['Darwin', 'FreeBSD', 'Linux']:
+if config.host_os not in ['Darwin', 'FreeBSD', 'Linux', 'Windows']:
   config.unsupported = True

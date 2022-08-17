@@ -168,7 +168,7 @@ body:             |
     TEST8rr killed renamable $r8b, renamable $r8b, implicit-def $eflags
     JCC_1 %bb.6, 5, implicit $eflags
 
-  bb.8.return (address-taken):
+  bb.8.return (machine-block-address-taken):
     $eax = MOV32rm $rbp, 1, $noreg, -12, $noreg :: (load (s32) from %stack.0)
     SEH_Epilogue
     $rsp = frame-destroy ADD64ri8 $rsp, 48, implicit-def dead $eflags

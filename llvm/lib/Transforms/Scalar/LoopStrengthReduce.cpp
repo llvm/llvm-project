@@ -5980,7 +5980,7 @@ struct SCEVDbgValueBuilder {
            "Expected arithmetic SCEV type");
     bool Success = true;
     unsigned EmitOperator = 0;
-    for (auto &Op : CommExpr->operands()) {
+    for (const auto &Op : CommExpr->operands()) {
       Success &= pushSCEV(Op);
 
       if (EmitOperator >= 1)
@@ -6490,7 +6490,7 @@ static void DbgGatherSalvagableDVI(
     Loop *L, ScalarEvolution &SE,
     SmallVector<std::unique_ptr<DVIRecoveryRec>, 2> &SalvageableDVISCEVs,
     SmallSet<AssertingVH<DbgValueInst>, 2> &DVIHandles) {
-  for (auto &B : L->getBlocks()) {
+  for (const auto &B : L->getBlocks()) {
     for (auto &I : *B) {
       auto DVI = dyn_cast<DbgValueInst>(&I);
       if (!DVI)
@@ -6637,7 +6637,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   // Obtain relevant IVs and attempt to rewrite the salvageable DVIs with
   // expressions composed using the derived iteration count.
   // TODO: Allow for multiple IV references for nested AddRecSCEVs
-  for (auto &L : LI) {
+  for (const auto &L : LI) {
     if (llvm::PHINode *IV = GetInductionVariable(*L, SE, Reducer))
       DbgRewriteSalvageableDVIs(L, SE, IV, SalvageableDVIRecords);
     else {

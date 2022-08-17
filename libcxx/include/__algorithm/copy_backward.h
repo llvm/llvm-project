@@ -20,6 +20,7 @@
 #include <__ranges/subrange.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
+#include <cstring>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

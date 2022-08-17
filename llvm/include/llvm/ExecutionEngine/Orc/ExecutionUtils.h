@@ -18,6 +18,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Object/Archive.h"
@@ -312,6 +313,40 @@ private:
   std::unique_ptr<MemoryBuffer> ArchiveBuffer;
   std::unique_ptr<object::Archive> Archive;
   DenseMap<SymbolStringPtr, MemoryBufferRef> ObjectFilesMap;
+};
+
+/// A utility class to create COFF dllimport GOT symbols (__imp_*) and PLT
+/// stubs.
+///
+/// If an instance of this class is attached to a JITDylib as a fallback
+/// definition generator, PLT stubs and dllimport __imp_ symbols will be
+/// generated for external symbols found outside the given jitdylib. Currently
+/// only supports x86_64 architecture.
+class DLLImportDefinitionGenerator : public DefinitionGenerator {
+public:
+  /// Creates a DLLImportDefinitionGenerator instance.
+  static std::unique_ptr<DLLImportDefinitionGenerator>
+  Create(ExecutionSession &ES, ObjectLinkingLayer &L);
+
+  Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
+                      JITDylibLookupFlags JDLookupFlags,
+                      const SymbolLookupSet &Symbols) override;
+
+private:
+  DLLImportDefinitionGenerator(ExecutionSession &ES, ObjectLinkingLayer &L)
+      : ES(ES), L(L) {}
+
+  static Expected<unsigned> getTargetPointerSize(const Triple &TT);
+  static Expected<support::endianness> getTargetEndianness(const Triple &TT);
+  Expected<std::unique_ptr<jitlink::LinkGraph>>
+  createStubsGraph(const SymbolMap &Resolved);
+
+  static StringRef getImpPrefix() { return "__imp_"; }
+
+  static StringRef getSectionName() { return "$__DLLIMPORT_STUBS"; }
+
+  ExecutionSession &ES;
+  ObjectLinkingLayer &L;
 };
 
 } // end namespace orc

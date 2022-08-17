@@ -751,7 +751,7 @@ void ClangdServer::findHover(PathRef File, Position Pos,
 
 void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
                                  TypeHierarchyDirection Direction,
-                                 Callback<Optional<TypeHierarchyItem>> CB) {
+                                 Callback<std::vector<TypeHierarchyItem>> CB) {
   auto Action = [File = File.str(), Pos, Resolve, Direction, CB = std::move(CB),
                  this](Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
@@ -761,6 +761,22 @@ void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
   };
 
   WorkScheduler->runWithAST("TypeHierarchy", File, std::move(Action));
+}
+
+void ClangdServer::superTypes(
+    const TypeHierarchyItem &Item,
+    Callback<llvm::Optional<std::vector<TypeHierarchyItem>>> CB) {
+  WorkScheduler->run("typeHierarchy/superTypes", /*Path=*/"",
+                     [=, CB = std::move(CB)]() mutable {
+                       CB(clangd::superTypes(Item, Index));
+                     });
+}
+
+void ClangdServer::subTypes(const TypeHierarchyItem &Item,
+                            Callback<std::vector<TypeHierarchyItem>> CB) {
+  WorkScheduler->run(
+      "typeHierarchy/subTypes", /*Path=*/"",
+      [=, CB = std::move(CB)]() mutable { CB(clangd::subTypes(Item, Index)); });
 }
 
 void ClangdServer::resolveTypeHierarchy(

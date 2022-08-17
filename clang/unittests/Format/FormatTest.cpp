@@ -10474,6 +10474,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("class {\n"
                "}&& ptr = {};",
                Style);
+  verifyFormat("bool b = 3 == int{3} && true;");
 
   Style.PointerAlignment = FormatStyle::PAS_Middle;
   verifyFormat("struct {\n"
@@ -24798,6 +24799,11 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                "    int i;\n"
                "};\n",
                Style);
+  verifyFormat("class C {\n"
+               "  public /* comment */:\n"
+               "    int i;\n"
+               "};",
+               Style);
   verifyFormat("struct S {\n"
                "  private:\n"
                "    class C {\n"
@@ -24825,6 +24831,11 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                "   public:\n"
                "      int i;\n"
                "};\n",
+               Style);
+  verifyFormat("class C {\n"
+               "   public /**/:\n"
+               "      int i;\n"
+               "};",
                Style);
 }
 

@@ -1,4 +1,3 @@
-from __future__ import print_function
 from textwrap import dedent
 import lldb
 from lldbsuite.test.lldbtest import *

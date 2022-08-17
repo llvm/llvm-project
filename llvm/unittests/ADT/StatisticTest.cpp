@@ -119,7 +119,7 @@ TEST(StatisticTest, API) {
   }
 #else
   Counter2++;
-  auto &Range = GetStatistics();
+  auto Range = GetStatistics();
   EXPECT_EQ(Range.begin(), Range.end());
 #endif
 
@@ -128,7 +128,7 @@ TEST(StatisticTest, API) {
   // It should empty the list and zero the counters.
   ResetStatistics();
   {
-    auto &Range = GetStatistics();
+    auto Range = GetStatistics();
     EXPECT_EQ(Range.begin(), Range.end());
     EXPECT_EQ(Counter, 0u);
     EXPECT_EQ(Counter2, 0u);
@@ -144,7 +144,7 @@ TEST(StatisticTest, API) {
   Counter2++;
 
   {
-    auto &Range = GetStatistics();
+    auto Range = GetStatistics();
     EXPECT_EQ(Range.begin() + 2, Range.end());
     EXPECT_EQ(Counter, 1u);
     EXPECT_EQ(Counter2, 1u);

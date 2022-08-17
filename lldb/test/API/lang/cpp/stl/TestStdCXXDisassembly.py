@@ -2,9 +2,6 @@
 Test the lldb disassemble command on lib stdc++.
 """
 
-from __future__ import print_function
-
-
 import os
 import lldb
 from lldbsuite.test.lldbtest import *

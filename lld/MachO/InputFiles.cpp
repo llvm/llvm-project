@@ -1945,14 +1945,15 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   checkAppExtensionSafety(interface.isApplicationExtensionSafe());
 
   exportingFile = isImplicitlyLinked(installName) ? this : umbrella;
-  auto addSymbol = [&](const Twine &name) -> void {
+  auto addSymbol = [&](const llvm::MachO::Symbol &symbol,
+                       const Twine &name) -> void {
     StringRef savedName = saver().save(name);
     if (exportingFile->hiddenSymbols.contains(CachedHashStringRef(savedName)))
       return;
 
     symbols.push_back(symtab->addDylib(savedName, exportingFile,
-                                       /*isWeakDef=*/false,
-                                       /*isTlv=*/false));
+                                       symbol.isWeakDefined(),
+                                       symbol.isThreadLocalValue()));
   };
 
   std::vector<const llvm::MachO::Symbol *> normalSymbols;
@@ -1973,23 +1974,22 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   }
 
   // TODO(compnerd) filter out symbols based on the target platform
-  // TODO: handle weak defs, thread locals
   for (const auto *symbol : normalSymbols) {
     switch (symbol->getKind()) {
     case SymbolKind::GlobalSymbol:
-      addSymbol(symbol->getName());
+      addSymbol(*symbol, symbol->getName());
       break;
     case SymbolKind::ObjectiveCClass:
       // XXX ld64 only creates these symbols when -ObjC is passed in. We may
       // want to emulate that.
-      addSymbol(objc::klass + symbol->getName());
-      addSymbol(objc::metaclass + symbol->getName());
+      addSymbol(*symbol, objc::klass + symbol->getName());
+      addSymbol(*symbol, objc::metaclass + symbol->getName());
       break;
     case SymbolKind::ObjectiveCClassEHType:
-      addSymbol(objc::ehtype + symbol->getName());
+      addSymbol(*symbol, objc::ehtype + symbol->getName());
       break;
     case SymbolKind::ObjectiveCInstanceVariable:
-      addSymbol(objc::ivar + symbol->getName());
+      addSymbol(*symbol, objc::ivar + symbol->getName());
       break;
     }
   }

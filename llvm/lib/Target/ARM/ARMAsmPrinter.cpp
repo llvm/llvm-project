@@ -124,7 +124,7 @@ bool ARMAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   // Collect all globals that had their storage promoted to a constant pool.
   // Functions are emitted before variables, so this accumulates promoted
   // globals from all functions in PromotedGlobals.
-  for (auto *GV : AFI->getGlobalsPromotedToConstantPool())
+  for (const auto *GV : AFI->getGlobalsPromotedToConstantPool())
     PromotedGlobals.insert(GV);
 
   // Calculate this function's optimization goal.

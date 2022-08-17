@@ -633,7 +633,7 @@ public:
     Accesses.append(Instructions.begin(), Instructions.end());
 
     LLVM_DEBUG(dbgs() << "Backward dependences:\n");
-    for (auto &Dep : Dependences)
+    for (const auto &Dep : Dependences)
       if (Dep.isPossiblyBackward()) {
         // Note that the designations source and destination follow the program
         // order, i.e. source is always first.  (The direction is given by the
@@ -715,7 +715,7 @@ public:
                                      *Dependences);
 
     int NumUnsafeDependencesActive = 0;
-    for (auto &InstDep : MID) {
+    for (const auto &InstDep : MID) {
       Instruction *I = InstDep.Inst;
       // We update NumUnsafeDependencesActive post-instruction, catch the
       // start of a dependence directly via NumUnsafeDependencesStartOrEnd.

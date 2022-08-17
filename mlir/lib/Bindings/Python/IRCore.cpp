@@ -1285,8 +1285,8 @@ py::object PyOpView::buildGeneric(
   py::object operandSegmentSpecObj = cls.attr("_ODS_OPERAND_SEGMENTS");
   py::object resultSegmentSpecObj = cls.attr("_ODS_RESULT_SEGMENTS");
 
-  std::vector<uint32_t> operandSegmentLengths;
-  std::vector<uint32_t> resultSegmentLengths;
+  std::vector<int32_t> operandSegmentLengths;
+  std::vector<int32_t> resultSegmentLengths;
 
   // Validate/determine region count.
   auto opRegionSpec = py::cast<std::tuple<int, bool>>(cls.attr("_ODS_REGIONS"));
@@ -1497,20 +1497,18 @@ py::object PyOpView::buildGeneric(
 
     // Add result_segment_sizes attribute.
     if (!resultSegmentLengths.empty()) {
-      int64_t size = resultSegmentLengths.size();
-      MlirAttribute segmentLengthAttr = mlirDenseElementsAttrUInt32Get(
-          mlirVectorTypeGet(1, &size, mlirIntegerTypeGet(context->get(), 32)),
-          resultSegmentLengths.size(), resultSegmentLengths.data());
+      MlirAttribute segmentLengthAttr =
+          mlirDenseI32ArrayGet(context->get(), resultSegmentLengths.size(),
+                               resultSegmentLengths.data());
       (*attributes)["result_segment_sizes"] =
           PyAttribute(context, segmentLengthAttr);
     }
 
     // Add operand_segment_sizes attribute.
     if (!operandSegmentLengths.empty()) {
-      int64_t size = operandSegmentLengths.size();
-      MlirAttribute segmentLengthAttr = mlirDenseElementsAttrUInt32Get(
-          mlirVectorTypeGet(1, &size, mlirIntegerTypeGet(context->get(), 32)),
-          operandSegmentLengths.size(), operandSegmentLengths.data());
+      MlirAttribute segmentLengthAttr =
+          mlirDenseI32ArrayGet(context->get(), operandSegmentLengths.size(),
+                               operandSegmentLengths.data());
       (*attributes)["operand_segment_sizes"] =
           PyAttribute(context, segmentLengthAttr);
     }

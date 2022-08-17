@@ -3567,7 +3567,7 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: yaml
 
-      QualifierOrder: ['inline', 'static' , 'type', 'const']
+      QualifierOrder: ['inline', 'static', 'type', 'const']
 
 
     .. code-block:: c++

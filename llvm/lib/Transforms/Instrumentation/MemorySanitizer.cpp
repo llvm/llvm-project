@@ -237,6 +237,10 @@ static cl::opt<int> ClPoisonStackPattern("msan-poison-stack-pattern",
        cl::desc("poison uninitialized stack variables with the given pattern"),
        cl::Hidden, cl::init(0xff));
 
+static cl::opt<bool> ClPrintStackNames("msan-print-stack-names",
+       cl::desc("Print name of local stack variable"),
+       cl::Hidden, cl::init(true));
+
 static cl::opt<bool> ClPoisonUndef("msan-poison-undef",
        cl::desc("poison undef temps"),
        cl::Hidden, cl::init(true));
@@ -580,6 +584,8 @@ private:
   /// Run-time helper that generates a new origin value for a stack
   /// allocation.
   FunctionCallee MsanSetAllocaOriginWithDescriptionFn;
+  // No description version
+  FunctionCallee MsanSetAllocaOriginNoDescriptionFn;
 
   /// Run-time helper that poisons stack on function entry.
   FunctionCallee MsanPoisonStackFn;
@@ -828,6 +834,9 @@ void MemorySanitizer::createUserspaceApi(Module &M) {
   MsanSetAllocaOriginWithDescriptionFn = M.getOrInsertFunction(
       "__msan_set_alloca_origin_with_descr", IRB.getVoidTy(),
       IRB.getInt8PtrTy(), IntptrTy, IRB.getInt8PtrTy(), IRB.getInt8PtrTy());
+  MsanSetAllocaOriginNoDescriptionFn = M.getOrInsertFunction(
+      "__msan_set_alloca_origin_no_descr", IRB.getVoidTy(), IRB.getInt8PtrTy(),
+      IntptrTy, IRB.getInt8PtrTy());
   MsanPoisonStackFn =
       M.getOrInsertFunction("__msan_poison_stack", IRB.getVoidTy(),
                             IRB.getInt8PtrTy(), IntptrTy);
@@ -3904,11 +3913,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     if (PoisonStack && MS.TrackOrigins) {
       Value *Idptr = getLocalVarIdptr(I);
-      Value *Descr = getLocalVarDescription(I);
-      IRB.CreateCall(MS.MsanSetAllocaOriginWithDescriptionFn,
-                     {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len,
-                      IRB.CreatePointerCast(Idptr, IRB.getInt8PtrTy()),
-                      IRB.CreatePointerCast(Descr, IRB.getInt8PtrTy())});
+      if (ClPrintStackNames) {
+        Value *Descr = getLocalVarDescription(I);
+        IRB.CreateCall(MS.MsanSetAllocaOriginWithDescriptionFn,
+                       {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len,
+                        IRB.CreatePointerCast(Idptr, IRB.getInt8PtrTy()),
+                        IRB.CreatePointerCast(Descr, IRB.getInt8PtrTy())});
+      } else {
+        IRB.CreateCall(MS.MsanSetAllocaOriginNoDescriptionFn,
+                       {IRB.CreatePointerCast(&I, IRB.getInt8PtrTy()), Len,
+                        IRB.CreatePointerCast(Idptr, IRB.getInt8PtrTy())});
+      }
     }
   }
 

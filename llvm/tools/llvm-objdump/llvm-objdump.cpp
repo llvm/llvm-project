@@ -2787,6 +2787,9 @@ static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
     FilterSections.push_back(",__text");
   LeadingAddr = LeadingHeaders = !InputArgs.hasArg(OTOOL_X);
 
+  ChainedFixups = InputArgs.hasArg(OTOOL_chained_fixups);
+  DyldInfo = InputArgs.hasArg(OTOOL_dyld_info);
+
   InputFilenames = InputArgs.getAllArgValues(OTOOL_INPUT);
   if (InputFilenames.empty())
     reportCmdLineError("no input file");
@@ -2990,11 +2993,12 @@ int main(int argc, char **argv) {
       !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
       !Relocations && !SectionHeaders && !SectionContents && !SymbolTable &&
       !DynamicSymbolTable && !UnwindInfo && !FaultMapSection && !Offloading &&
-      !(MachOOpt && (Bind || DataInCode || DyldInfo || DylibId || DylibsUsed ||
-                     ExportsTrie || FirstPrivateHeader || FunctionStarts ||
-                     IndirectSymbols || InfoPlist || LazyBind || LinkOptHints ||
-                     ObjcMetaData || Rebase || Rpaths || UniversalHeaders ||
-                     WeakBind || !FilterSections.empty()))) {
+      !(MachOOpt &&
+        (Bind || DataInCode || ChainedFixups || DyldInfo || DylibId ||
+         DylibsUsed || ExportsTrie || FirstPrivateHeader || FunctionStarts ||
+         IndirectSymbols || InfoPlist || LazyBind || LinkOptHints ||
+         ObjcMetaData || Rebase || Rpaths || UniversalHeaders || WeakBind ||
+         !FilterSections.empty()))) {
     T->printHelp(ToolName);
     return 2;
   }

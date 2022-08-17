@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/Driver.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
@@ -268,10 +269,7 @@ public:
       Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
     }
 
-    ID.CommandLine =
-        FD.getCommandLine([&](const ModuleID &MID, ModuleOutputKind MOK) {
-          return lookupModuleOutput(MID, MOK);
-        });
+    ID.CommandLine = FD.CommandLine;
     Inputs.push_back(std::move(ID));
   }
 
@@ -301,10 +299,7 @@ public:
           {"file-deps", toJSONSorted(MD.FileDeps)},
           {"clang-module-deps", toJSONSorted(MD.ClangModuleDeps)},
           {"clang-modulemap-file", MD.ClangModuleMapFile},
-          {"command-line", MD.getCanonicalCommandLine(
-                               [&](const ModuleID &MID, ModuleOutputKind MOK) {
-                                 return lookupModuleOutput(MID, MOK);
-                               })},
+          {"command-line", MD.getCanonicalCommandLine()},
       };
       OutModules.push_back(std::move(O));
     }
@@ -330,42 +325,6 @@ public:
   }
 
 private:
-  std::string lookupModuleOutput(const ModuleID &MID, ModuleOutputKind MOK) {
-    // Cache the PCM path, since it will be queried repeatedly for each module.
-    // The other outputs are only queried once during getCanonicalCommandLine.
-    auto PCMPath = PCMPaths.insert({MID, ""});
-    if (PCMPath.second)
-      PCMPath.first->second = constructPCMPath(MID);
-    switch (MOK) {
-    case ModuleOutputKind::ModuleFile:
-      return PCMPath.first->second;
-    case ModuleOutputKind::DependencyFile:
-      return PCMPath.first->second + ".d";
-    case ModuleOutputKind::DependencyTargets:
-      // Null-separate the list of targets.
-      return join(ModuleDepTargets, StringRef("\0", 1));
-    case ModuleOutputKind::DiagnosticSerializationFile:
-      return PCMPath.first->second + ".diag";
-    }
-    llvm_unreachable("Fully covered switch above!");
-  }
-
-  /// Construct a path for the explicitly built PCM.
-  std::string constructPCMPath(ModuleID MID) const {
-    auto MDIt = Modules.find(IndexedModuleID{MID, 0});
-    assert(MDIt != Modules.end());
-    const ModuleDeps &MD = MDIt->second;
-
-    StringRef Filename = llvm::sys::path::filename(MD.ImplicitModulePCMPath);
-    StringRef ModuleCachePath = llvm::sys::path::parent_path(
-        llvm::sys::path::parent_path(MD.ImplicitModulePCMPath));
-
-    SmallString<256> ExplicitPCMPath(!ModuleFilesDir.empty() ? ModuleFilesDir
-                                                             : ModuleCachePath);
-    llvm::sys::path::append(ExplicitPCMPath, MD.ID.ContextHash, Filename);
-    return std::string(ExplicitPCMPath);
-  }
-
   struct IndexedModuleID {
     ModuleID ID;
     mutable size_t InputIndex;
@@ -395,7 +354,6 @@ private:
   std::mutex Lock;
   std::unordered_map<IndexedModuleID, ModuleDeps, IndexedModuleIDHasher>
       Modules;
-  std::unordered_map<ModuleID, std::string, ModuleIDHasher> PCMPaths;
   std::vector<InputDeps> Inputs;
 };
 
@@ -415,6 +373,42 @@ static bool handleFullDependencyToolResult(
   }
   FD.mergeDeps(Input, std::move(*MaybeFullDeps), InputIndex);
   return false;
+}
+
+/// Construct a path for the explicitly built PCM.
+static std::string constructPCMPath(ModuleID MID, StringRef OutputDir) {
+  SmallString<256> ExplicitPCMPath(OutputDir);
+  llvm::sys::path::append(ExplicitPCMPath, MID.ContextHash,
+                          MID.ModuleName + "-" + MID.ContextHash + ".pcm");
+  return std::string(ExplicitPCMPath);
+}
+
+static std::string lookupModuleOutput(const ModuleID &MID, ModuleOutputKind MOK,
+                                      StringRef OutputDir) {
+  std::string PCMPath = constructPCMPath(MID, OutputDir);
+  switch (MOK) {
+  case ModuleOutputKind::ModuleFile:
+    return PCMPath;
+  case ModuleOutputKind::DependencyFile:
+    return PCMPath + ".d";
+  case ModuleOutputKind::DependencyTargets:
+    // Null-separate the list of targets.
+    return join(ModuleDepTargets, StringRef("\0", 1));
+  case ModuleOutputKind::DiagnosticSerializationFile:
+    return PCMPath + ".diag";
+  }
+  llvm_unreachable("Fully covered switch above!");
+}
+
+static std::string getModuleCachePath(ArrayRef<std::string> Args) {
+  for (StringRef Arg : llvm::reverse(Args)) {
+    Arg.consume_front("/clang:");
+    if (Arg.consume_front("-fmodules-cache-path="))
+      return std::string(Arg);
+  }
+  SmallString<128> Path;
+  driver::Driver::getDefaultModuleCachePath(Path);
+  return std::string(Path);
 }
 
 int main(int argc, const char **argv) {
@@ -545,6 +539,14 @@ int main(int argc, const char **argv) {
         Optional<StringRef> MaybeModuleName;
         if (!ModuleName.empty())
           MaybeModuleName = ModuleName;
+
+        std::string OutputDir(ModuleFilesDir);
+        if (OutputDir.empty())
+          OutputDir = getModuleCachePath(Input->CommandLine);
+        auto LookupOutput = [&](const ModuleID &MID, ModuleOutputKind MOK) {
+          return ::lookupModuleOutput(MID, MOK, OutputDir);
+        };
+
         // Run the tool on it.
         if (Format == ScanningOutputFormat::Make) {
           auto MaybeFile = WorkerTools[I]->getDependencyFile(
@@ -554,7 +556,8 @@ int main(int argc, const char **argv) {
             HadErrors = true;
         } else {
           auto MaybeFullDeps = WorkerTools[I]->getFullDependencies(
-              Input->CommandLine, CWD, AlreadySeenModules, MaybeModuleName);
+              Input->CommandLine, CWD, AlreadySeenModules, LookupOutput,
+              MaybeModuleName);
           if (handleFullDependencyToolResult(Filename, MaybeFullDeps, FD,
                                              LocalIndex, DependencyOS, Errs))
             HadErrors = true;

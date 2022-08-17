@@ -176,7 +176,7 @@ def Builtin_DenseArrayBase : Builtin_Attr<
     Examples:
 
     ```mlir
-    array<i8:>
+    array<i8>
     array<i32: 10, 42>
     array<f64: 42., 12.>
     ```

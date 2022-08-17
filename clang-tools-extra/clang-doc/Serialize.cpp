@@ -168,7 +168,7 @@ void ClangDocCommentVisitor::visitVerbatimLineComment(
 }
 
 bool ClangDocCommentVisitor::isWhitespaceOnly(llvm::StringRef S) const {
-  return std::all_of(S.begin(), S.end(), isspace);
+  return llvm::all_of(S, isspace);
 }
 
 std::string ClangDocCommentVisitor::getCommandName(unsigned CommandID) const {

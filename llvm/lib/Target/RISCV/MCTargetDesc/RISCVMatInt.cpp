@@ -172,8 +172,7 @@ static unsigned extractRotateInfo(int64_t Val) {
   return 0;
 }
 
-namespace llvm {
-namespace RISCVMatInt {
+namespace llvm::RISCVMatInt {
 InstSeq generateInstSeq(int64_t Val, const FeatureBitset &ActiveFeatures) {
   RISCVMatInt::InstSeq Res;
   generateInstSeqImpl(Val, ActiveFeatures, Res);
@@ -419,5 +418,4 @@ OpndKind Inst::getOpndKind() const {
   }
 }
 
-} // namespace RISCVMatInt
-} // namespace llvm
+} // namespace llvm::RISCVMatInt

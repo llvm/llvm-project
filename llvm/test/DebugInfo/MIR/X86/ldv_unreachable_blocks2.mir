@@ -29,4 +29,4 @@ body:             |
   bb.2:
     successors: 
     TRAP
-  bb.21.do.body.i129.i (address-taken):
+  bb.21.do.body.i129.i (machine-block-address-taken):

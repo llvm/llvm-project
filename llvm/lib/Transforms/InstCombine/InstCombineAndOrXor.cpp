@@ -2799,6 +2799,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return BinaryOperator::CreateMul(X, IncrementY);
   }
 
+  // X | (X ^ Y) --> X | Y (4 commuted patterns)
+  if (match(&I, m_c_Or(m_Value(X), m_c_Xor(m_Deferred(X), m_Value(Y)))))
+    return BinaryOperator::CreateOr(X, Y);
+
   // (A & C) | (B & D)
   Value *A, *B, *C, *D;
   if (match(Op0, m_And(m_Value(A), m_Value(C))) &&
@@ -2908,30 +2912,36 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     SwappedForXor = true;
   }
 
-  // A | ( A ^ B) -> A |  B
-  // A | (~A ^ B) -> A | ~B
-  // (A & B) | (A ^ B)
-  // ~A | (A ^ B) -> ~(A & B)
-  // The swap above should always make Op0 the 'not' for the last case.
   if (match(Op1, m_Xor(m_Value(A), m_Value(B)))) {
-    if (Op0 == A || Op0 == B)
-      return BinaryOperator::CreateOr(A, B);
+    // (A | ?) | (A ^ B) --> (A | ?) | B
+    // (B | ?) | (A ^ B) --> (B | ?) | A
+    if (match(Op0, m_c_Or(m_Specific(A), m_Value())))
+      return BinaryOperator::CreateOr(Op0, B);
+    if (match(Op0, m_c_Or(m_Specific(B), m_Value())))
+      return BinaryOperator::CreateOr(Op0, A);
 
+    // (A & B) | (A ^ B) --> A | B
+    // (B & A) | (A ^ B) --> A | B
     if (match(Op0, m_And(m_Specific(A), m_Specific(B))) ||
         match(Op0, m_And(m_Specific(B), m_Specific(A))))
       return BinaryOperator::CreateOr(A, B);
 
+    // ~A | (A ^ B) --> ~(A & B)
+    // ~B | (A ^ B) --> ~(A & B)
+    // The swap above should always make Op0 the 'not'.
     if ((Op0->hasOneUse() || Op1->hasOneUse()) &&
         (match(Op0, m_Not(m_Specific(A))) || match(Op0, m_Not(m_Specific(B)))))
       return BinaryOperator::CreateNot(Builder.CreateAnd(A, B));
 
+    // A | (~A ^ B) --> ~B | A
+    // B | (A ^ ~B) --> ~A | B
     if (Op1->hasOneUse() && match(A, m_Not(m_Specific(Op0)))) {
-      Value *Not = Builder.CreateNot(B, B->getName() + ".not");
-      return BinaryOperator::CreateOr(Not, Op0);
+      Value *NotB = Builder.CreateNot(B, B->getName() + ".not");
+      return BinaryOperator::CreateOr(NotB, Op0);
     }
     if (Op1->hasOneUse() && match(B, m_Not(m_Specific(Op0)))) {
-      Value *Not = Builder.CreateNot(A, A->getName() + ".not");
-      return BinaryOperator::CreateOr(Not, Op0);
+      Value *NotA = Builder.CreateNot(A, A->getName() + ".not");
+      return BinaryOperator::CreateOr(NotA, Op0);
     }
   }
 

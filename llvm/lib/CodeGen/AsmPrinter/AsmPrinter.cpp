@@ -3545,21 +3545,21 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
   // reference the block.  It is possible that there is more than one label
   // here, because multiple LLVM BB's may have been RAUW'd to this block after
   // the references were generated.
-  const BasicBlock *BB = MBB.getBasicBlock();
-  if (MBB.hasAddressTaken()) {
+  if (MBB.isIRBlockAddressTaken()) {
     if (isVerbose())
       OutStreamer->AddComment("Block address taken");
 
-    // MBBs can have their address taken as part of CodeGen without having
-    // their corresponding BB's address taken in IR
-    if (BB && BB->hasAddressTaken())
-      for (MCSymbol *Sym : getAddrLabelSymbolToEmit(BB))
-        OutStreamer->emitLabel(Sym);
+    BasicBlock *BB = MBB.getAddressTakenIRBlock();
+    assert(BB && BB->hasAddressTaken() && "Missing BB");
+    for (MCSymbol *Sym : getAddrLabelSymbolToEmit(BB))
+      OutStreamer->emitLabel(Sym);
+  } else if (isVerbose() && MBB.isMachineBlockAddressTaken()) {
+    OutStreamer->AddComment("Block address taken");
   }
 
   // Print some verbose block comments.
   if (isVerbose()) {
-    if (BB) {
+    if (const BasicBlock *BB = MBB.getBasicBlock()) {
       if (BB->hasName()) {
         BB->printAsOperand(OutStreamer->getCommentOS(),
                            /*PrintType=*/false, BB->getModule());

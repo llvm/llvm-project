@@ -18,7 +18,7 @@ define <4 x i16> @smulfix(<4 x i16> %a) {
 ; CHECK-NEXT:    pmullw %xmm1, %xmm2
 ; CHECK-NEXT:    psrlw $15, %xmm2
 ; CHECK-NEXT:    pmulhw %xmm1, %xmm0
-; CHECK-NEXT:    psllw $1, %xmm0
+; CHECK-NEXT:    paddw %xmm0, %xmm0
 ; CHECK-NEXT:    por %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %t = call <4 x i16> @llvm.smul.fix.v4i16(<4 x i16> <i16 1, i16 2, i16 3, i16 4>, <4 x i16> %a, i32 15)
@@ -33,7 +33,7 @@ define <4 x i16> @umulfix(<4 x i16> %a) {
 ; CHECK-NEXT:    pmullw %xmm1, %xmm2
 ; CHECK-NEXT:    psrlw $15, %xmm2
 ; CHECK-NEXT:    pmulhuw %xmm1, %xmm0
-; CHECK-NEXT:    psllw $1, %xmm0
+; CHECK-NEXT:    paddw %xmm0, %xmm0
 ; CHECK-NEXT:    por %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %t = call <4 x i16> @llvm.umul.fix.v4i16(<4 x i16> <i16 1, i16 2, i16 3, i16 4>, <4 x i16> %a, i32 15)

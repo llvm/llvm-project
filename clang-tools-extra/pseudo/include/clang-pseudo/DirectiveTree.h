@@ -34,7 +34,6 @@
 #include <vector>
 
 namespace clang {
-class LangOptions;
 namespace pseudo {
 
 /// Describes the structure of a source file, as seen by the preprocessor.

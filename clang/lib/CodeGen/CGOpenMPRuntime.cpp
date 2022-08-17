@@ -9052,7 +9052,7 @@ public:
     // If this declaration appears in a is_device_ptr clause we just have to
     // pass the pointer by value. If it is a reference to a declaration, we just
     // pass its value.
-    if (DevPointersMap.count(VD)) {
+    if (VD && DevPointersMap.count(VD)) {
       CombinedInfo.Exprs.push_back(VD);
       CombinedInfo.BasePointers.emplace_back(Arg, VD);
       CombinedInfo.Pointers.push_back(Arg);
@@ -9070,7 +9070,18 @@ public:
         std::tuple<OMPClauseMappableExprCommon::MappableExprComponentListRef,
                    OpenMPMapClauseKind, ArrayRef<OpenMPMapModifierKind>, bool,
                    const ValueDecl *, const Expr *>;
+    static const OpenMPMapModifierKind ModifierKinds[] = {
+        OMPC_MAP_MODIFIER_unknown,
+    };
     SmallVector<MapData, 4> DeclComponentLists;
+    // For member fields list in is_device_ptr, store it in
+    // DeclComponentLists for generating components info.
+    auto It = DevPointersMap.find(VD);
+    if (It != DevPointersMap.end())
+      for (const auto& MCL : It->second)
+        DeclComponentLists.emplace_back(MCL, OMPC_MAP_to, ModifierKinds,
+                                        /*IsImpicit = */ true, nullptr,
+                                        nullptr);
     assert(CurDir.is<const OMPExecutableDirective *>() &&
            "Expect a executable directive");
     const auto *CurExecDir = CurDir.get<const OMPExecutableDirective *>();

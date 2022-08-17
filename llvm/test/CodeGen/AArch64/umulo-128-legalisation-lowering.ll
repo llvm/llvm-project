@@ -30,9 +30,64 @@ start:
   ret { i128, i8 } %5
 }
 
-; Function Attrs: nounwind readnone speculatable
+define i128 @__muloti4(i128 %0, i128 %1, i32* nocapture nonnull writeonly align 4 %2) #4 {
+; AARCH-LABEL: __muloti4:
+; AARCH:       // %bb.0: // %Entry
+; AARCH-NEXT:    str x30, [sp, #-48]! // 8-byte Folded Spill
+; AARCH-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; AARCH-NEXT:    mov x19, x4
+; AARCH-NEXT:    str wzr, [x4]
+; AARCH-NEXT:    add x4, sp, #8
+; AARCH-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
+; AARCH-NEXT:    mov x21, x3
+; AARCH-NEXT:    mov x20, x2
+; AARCH-NEXT:    mov x22, x1
+; AARCH-NEXT:    str xzr, [sp, #8]
+; AARCH-NEXT:    bl __muloti4
+; AARCH-NEXT:    ldr x8, [sp, #8]
+; AARCH-NEXT:    cmp x8, #0
+; AARCH-NEXT:    cset w8, ne
+; AARCH-NEXT:    tbz x22, #63, .LBB1_2
+; AARCH-NEXT:  // %bb.1: // %Entry
+; AARCH-NEXT:    eor x9, x21, #0x8000000000000000
+; AARCH-NEXT:    orr x9, x20, x9
+; AARCH-NEXT:    cbz x9, .LBB1_3
+; AARCH-NEXT:  .LBB1_2: // %Else2
+; AARCH-NEXT:    cbz w8, .LBB1_4
+; AARCH-NEXT:  .LBB1_3: // %Then7
+; AARCH-NEXT:    mov w8, #1
+; AARCH-NEXT:    str w8, [x19]
+; AARCH-NEXT:  .LBB1_4: // %Block9
+; AARCH-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; AARCH-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
+; AARCH-NEXT:    ldr x30, [sp], #48 // 8-byte Folded Reload
+; AARCH-NEXT:    ret
+Entry:
+  store i32 0, i32* %2, align 4
+  %.fr = freeze i128 %1
+  %mul = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %0, i128 %.fr)
+  %3 = icmp slt i128 %0, 0
+  %4 = icmp eq i128 %.fr, -170141183460469231731687303715884105728
+  %5 = and i1 %3, %4
+  br i1 %5, label %Then7, label %Else2
+
+Else2:                                            ; preds = %Entry
+  %mul.ov = extractvalue { i128, i1 } %mul, 1
+  br i1 %mul.ov, label %Then7, label %Block9
+
+Then7:                                            ; preds = %Else2, %Entry
+  store i32 1, i32* %2, align 4
+  br label %Block9
+
+Block9:                                           ; preds = %Else2, %Then7
+  %mul.val = extractvalue { i128, i1 } %mul, 0
+  ret i128 %mul.val
+}
+
 declare { i128, i1 } @llvm.umul.with.overflow.i128(i128, i128) #1
+declare { i128, i1 } @llvm.smul.with.overflow.i128(i128, i128) #1
 
 attributes #0 = { nounwind readnone uwtable }
 attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { nounwind }
+attributes #4 = { nounwind mustprogress nobuiltin }

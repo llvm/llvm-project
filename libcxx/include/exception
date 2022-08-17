@@ -282,7 +282,7 @@ struct __throw_with_nested<_Tp, _Up, false> {
 #endif
 
 template <class _Tp>
-_LIBCPP_NORETURN
+_LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI
 void
 throw_with_nested(_Tp&& __t)
 {

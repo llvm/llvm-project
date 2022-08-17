@@ -727,9 +727,9 @@ define i64 @zext_abs32(i32 %x) {
 ;
 ; RV64ZBB-LABEL: zext_abs32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    sext.w a0, a0
-; RV64ZBB-NEXT:    negw a1, a0
-; RV64ZBB-NEXT:    max a0, a0, a1
+; RV64ZBB-NEXT:    sext.w a1, a0
+; RV64ZBB-NEXT:    negw a0, a0
+; RV64ZBB-NEXT:    max a0, a1, a0
 ; RV64ZBB-NEXT:    ret
 ;
 ; RV64ZBT-LABEL: zext_abs32:

@@ -138,7 +138,7 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
       if (auto *UBB = CSI->getUnwindDest())
         if (!Result.count(UBB))
           return false;
-      for (auto *HBB : CSI->handlers())
+      for (const auto *HBB : CSI->handlers())
         if (!Result.count(const_cast<BasicBlock*>(HBB)))
           return false;
       continue;

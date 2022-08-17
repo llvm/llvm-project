@@ -148,7 +148,7 @@ public:
   /// Returns a list of pairs (target node, amount of flow to the target).
   const std::vector<std::pair<uint64_t, int64_t>> getFlow(uint64_t Src) const {
     std::vector<std::pair<uint64_t, int64_t>> Flow;
-    for (auto &Edge : Edges[Src]) {
+    for (const auto &Edge : Edges[Src]) {
       if (Edge.Flow > 0)
         Flow.push_back(std::make_pair(Edge.Dst, Edge.Flow));
     }
@@ -158,7 +158,7 @@ public:
   /// Get the total flow between a pair of nodes.
   int64_t getFlow(uint64_t Src, uint64_t Dst) const {
     int64_t Flow = 0;
-    for (auto &Edge : Edges[Src]) {
+    for (const auto &Edge : Edges[Src]) {
       if (Edge.Dst == Dst) {
         Flow += Edge.Flow;
       }
@@ -1137,7 +1137,7 @@ void extractWeights(MinCostMaxFlow &Network, FlowFunction &Func) {
     auto &Block = Func.Blocks[Src];
     uint64_t SrcOut = 3 * Src + 1;
     int64_t Flow = 0;
-    for (auto &Adj : Network.getFlow(SrcOut)) {
+    for (const auto &Adj : Network.getFlow(SrcOut)) {
       uint64_t DstIn = Adj.first;
       int64_t DstFlow = Adj.second;
       bool IsAuxNode = (DstIn < 3 * NumBlocks && DstIn % 3 == 2);
@@ -1176,7 +1176,7 @@ void verifyWeights(const FlowFunction &Func) {
   const uint64_t NumBlocks = Func.Blocks.size();
   auto InFlow = std::vector<uint64_t>(NumBlocks, 0);
   auto OutFlow = std::vector<uint64_t>(NumBlocks, 0);
-  for (auto &Jump : Func.Jumps) {
+  for (const auto &Jump : Func.Jumps) {
     InFlow[Jump.Target] += Jump.Flow;
     OutFlow[Jump.Source] += Jump.Flow;
   }
@@ -1202,7 +1202,7 @@ void verifyWeights(const FlowFunction &Func) {
   // One could modify FlowFunction to hold edges indexed by the sources, which
   // will avoid a creation of the object
   auto PositiveFlowEdges = std::vector<std::vector<uint64_t>>(NumBlocks);
-  for (auto &Jump : Func.Jumps) {
+  for (const auto &Jump : Func.Jumps) {
     if (Jump.Flow > 0) {
       PositiveFlowEdges[Jump.Source].push_back(Jump.Target);
     }
