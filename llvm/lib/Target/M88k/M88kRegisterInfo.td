@@ -43,7 +43,8 @@ let Namespace = "M88k" in {
 
 // General-purpose registers
 foreach I = 0-31 in {
-  def R#I : M88kReg<I, "r"#I>;
+  let isConstant = !eq(I, 0) in
+    def R#I : M88kReg<I, "r"#I>;
 }
 
 // Register pairs.
@@ -76,7 +77,8 @@ defm GPR64 : M88kRegisterClass<[i64, f64, v8i8, v4i16, v2i32], 64, 32,
 
 // Extended (floating point) registers.
 foreach I = 0-31 in {
-  def X#I : M88kReg<I, "x"#I>;
+  let isConstant = !eq(I, 0) in
+    def X#I : M88kReg<I, "x"#I>;
 }
 
 defm XR : M88kRegisterClass<[f32, f64, f80], 128, 32,
