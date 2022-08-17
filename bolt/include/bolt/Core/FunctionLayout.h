@@ -145,8 +145,6 @@ private:
   /// `Fragments.size()` equals `this->size() + 1`. Always contains at least one
   /// fragment.
   FragmentListType Fragments = {0, 0};
-  BasicBlockListType PreviousBlocks;
-  FragmentListType PreviousFragments;
 
 public:
   /// Add an empty fragment.
@@ -174,12 +172,9 @@ public:
 
   /// Replace the current layout with NewLayout. Uses the block's
   /// self-identifying fragment number to assign blocks to infer function
-  /// fragments.
-  void update(const ArrayRef<BinaryBasicBlock *> NewLayout);
-
-  /// Return true if the layout has been changed by basic block reordering,
-  /// false otherwise.
-  bool hasLayoutChanged() const { return !PreviousBlocks.empty(); }
+  /// fragments. Returns `true` if the new layout is different from the current
+  /// layout.
+  bool update(ArrayRef<BinaryBasicBlock *> NewLayout);
 
   /// Clear layout releasing memory.
   void clear();
@@ -196,7 +191,8 @@ public:
 
   /// Get the edit distance of the new layout with respect to the previous
   /// layout after basic block reordering.
-  uint64_t getEditDistance() const;
+  uint64_t
+  getEditDistance(ArrayRef<const BinaryBasicBlock *> OldBlockOrder) const;
 
   /// True if the function is split into at most 2 fragments. Mostly used for
   /// checking whether a function can be processed in places that do not support
