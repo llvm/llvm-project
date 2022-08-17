@@ -8277,35 +8277,50 @@ static SDValue performADDCombine(SDNode *N, SelectionDAG &DAG,
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
 }
 
-static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
+// Try to turn a sub boolean RHS and constant LHS into an addi.
+static SDValue combineSubOfBoolean(SDNode *N, SelectionDAG &DAG) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
-  // Prefer to make this 'add 0/1' rather than 'sub 0/1'
-  // sub constant, 0/1 -> add constant - 1, 1/0
-  // (sub constant, (setcc x, y, eq/neq)) ->
-  // (add (setcc x, y, neq/eq), constant - 1)
+  // Require a constant LHS.
   auto *N0C = dyn_cast<ConstantSDNode>(N0);
-  if (N0C && N1.getOpcode() == ISD::SETCC && N1.hasOneUse()) {
+  if (!N0C)
+    return SDValue();
+
+  // All our optimizations involve subtracting 1 from the immediate and forming
+  // an ADDI. Make sure the new immediate is valid for an ADDI.
+  APInt ImmValMinus1 = N0C->getAPIntValue() - 1;
+  if (!ImmValMinus1.isSignedIntN(12))
+    return SDValue();
+
+  SDValue NewLHS;
+  if (N1.getOpcode() == ISD::SETCC && N1.hasOneUse()) {
+    // (sub constant, (setcc x, y, eq/neq)) ->
+    // (add (setcc x, y, neq/eq), constant - 1)
     ISD::CondCode CCVal = cast<CondCodeSDNode>(N1.getOperand(2))->get();
     EVT SetCCOpVT = N1.getOperand(0).getValueType();
-    if (SetCCOpVT.isInteger() && isIntEqualitySetCC(CCVal)) {
-      EVT VT = N->getValueType(0);
-      APInt ImmValMinus1 = N0C->getAPIntValue() - 1;
-      // If this doesn't form ADDI, the transform won't save any instructions
-      // and may increase the number of constants we need.
-      if (ImmValMinus1.isSignedIntN(12)) {
-        CCVal = ISD::getSetCCInverse(CCVal, SetCCOpVT);
-        SDValue NewN0 = DAG.getSetCC(SDLoc(N1), VT, N1.getOperand(0),
-                                     N1.getOperand(1), CCVal);
-        SDValue NewN1 = DAG.getConstant(ImmValMinus1, SDLoc(N), VT);
-        return DAG.getNode(ISD::ADD, SDLoc(N), VT, NewN0, NewN1);
-      }
-    }
-  }
+    if (!isIntEqualitySetCC(CCVal) || !SetCCOpVT.isInteger())
+      return SDValue();
+    CCVal = ISD::getSetCCInverse(CCVal, SetCCOpVT);
+    NewLHS =
+        DAG.getSetCC(SDLoc(N1), VT, N1.getOperand(0), N1.getOperand(1), CCVal);
+  } else
+    return SDValue();
+
+  SDValue NewRHS = DAG.getConstant(ImmValMinus1, DL, VT);
+  return DAG.getNode(ISD::ADD, DL, VT, NewLHS, NewRHS);
+}
+
+static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
+  if (SDValue V = combineSubOfBoolean(N, DAG))
+    return V;
 
   // fold (sub x, (select lhs, rhs, cc, 0, y)) ->
   //      (select lhs, rhs, cc, x, (sub x, y))
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
   return combineSelectAndUse(N, N1, N0, DAG, /*AllOnes*/ false);
 }
 
