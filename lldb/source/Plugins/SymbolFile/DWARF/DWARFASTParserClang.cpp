@@ -1248,6 +1248,20 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
         lldbassert(function_decl);
 
         if (function_decl) {
+          // Attach an asm(<mangled_name>) label to the FunctionDecl.
+          // This ensures that clang::CodeGen emits function calls
+          // using symbols that are mangled according to the DW_AT_linkage_name.
+          // If we didn't do this, the external symbols wouldn't exactly
+          // match the mangled name LLDB knows about and the IRExecutionUnit
+          // would have to fall back to searching object files for
+          // approximately matching function names. The motivating
+          // example is generating calls to ABI-tagged template functions.
+          // This is done separately for member functions in
+          // AddMethodToCXXRecordType.
+          if (attrs.mangled_name && attrs.storage == clang::SC_Extern)
+            function_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
+                m_ast.getASTContext(), attrs.mangled_name, /*literal=*/false));
+
           LinkDeclContextToDIE(function_decl, die);
 
           if (!function_param_decls.empty()) {
