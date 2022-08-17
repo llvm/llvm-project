@@ -355,70 +355,6 @@ for.exit:                                         ; preds = %for.body
   ret double %x2
 }
 
-;; Use of a branch in this test would avoid executing a load and several
-;; floating-point operations for most cases (70% of the time).
-;; Yet, the gain is not increasing much per iteration (small gradient gain).
-;; Loop-level analysis should decide not to form a branch.
-;;
-;;double small_gradient(int n, double x, ptr a) {
-;;  for (int i = 0; i < n; i++) {
-;;    double r = 2 * a[i] + i;
-;;    if (r > 0)
-;;      // 30% of iterations
-;;      x -= r;
-;;  }
-;;  return x;
-;;}
-define double @small_gradient(i32 %n, double %x, ptr nocapture %a) {
-; CHECK-LABEL: @small_gradient(
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP8:%.*]] = icmp sgt i32 [[N:%.*]], 0
-; CHECK-NEXT:    br i1 [[CMP8]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
-; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[X_ADDR_0_LCSSA:%.*]] = phi double [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[X_ADDR_1:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    ret double [[X_ADDR_0_LCSSA]]
-; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[X_ADDR_010:%.*]] = phi double [ [[X]], [[FOR_BODY_PREHEADER]] ], [ [[X_ADDR_1]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fmuladd.f64(double [[TMP0]], double 2.000000e+00, double 1.000000e+00)
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt double [[TMP1]], 0.000000e+00
-; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[CMP1]], double [[TMP1]], double 0.000000e+00, !prof [[PROF28:![0-9]+]]
-; CHECK-NEXT:    [[X_ADDR_1]] = fsub double [[X_ADDR_010]], [[SUB]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]]
-;
-entry:
-  %cmp8 = icmp sgt i32 %n, 0
-  br i1 %cmp8, label %for.body.preheader, label %for.cond.cleanup
-
-for.body.preheader:                               ; preds = %entry
-  %wide.trip.count = zext i32 %n to i64
-  br label %for.body
-
-for.cond.cleanup:                                 ; preds = %for.body, %entry
-  %x.addr.0.lcssa = phi double [ %x, %entry ], [ %x.addr.1, %for.body ]
-  ret double %x.addr.0.lcssa
-
-for.body:                                         ; preds = %for.body.preheader, %for.body
-  %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %x.addr.010 = phi double [ %x, %for.body.preheader ], [ %x.addr.1, %for.body ]
-  %arrayidx = getelementptr inbounds double, ptr %a, i64 %indvars.iv
-  %0 = load double, ptr %arrayidx, align 8
-  %1 = call double @llvm.fmuladd.f64(double %0, double 2.000000e+00, double 1.000000e+00)
-  %cmp1 = fcmp ogt double %1, 0.000000e+00
-  %sub = select i1 %cmp1, double %1, double 0.000000e+00, !prof !28
-  %x.addr.1 = fsub double %x.addr.010, %sub
-  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %exitcond.not = icmp eq i64 %indvars.iv.next, %wide.trip.count
-  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
-}
-
 ;; One select on the critical path and one off the critical path.
 ;; Loop-level analysis should decide to form a branch only for
 ;; the select on the critical path.
@@ -510,9 +446,6 @@ for.body:                                         ; preds = %for.body.preheader,
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata)
-
-; Function Attrs: mustprogress nofree nosync nounwind readnone speculatable willreturn
-declare double @llvm.fmuladd.f64(double, double, double)
 
 !llvm.module.flags = !{!0, !26, !27}
 !0 = !{i32 1, !"ProfileSummary", !1}
