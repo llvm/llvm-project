@@ -2488,7 +2488,8 @@ static bool isSameTemplateArg(ASTContext &Context,
                                              XPEnd = X.pack_end(),
                                              YP = Y.pack_begin();
              XP != XPEnd; ++XP, ++YP)
-          if (!isSameTemplateArg(Context, *XP, *YP, PackExpansionMatchesPack))
+          if (!isSameTemplateArg(Context, *XP, *YP, PartialOrdering,
+                                 PackExpansionMatchesPack))
             return false;
       } else {
         unsigned PackIterationSize = X.pack_size();
