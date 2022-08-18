@@ -2321,347 +2321,349 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
     return;
   }
 
+  for (const RelocationRef &Rel : Section.relocations())
+    handleRelocation(RelocatedSection, Rel);
+}
+
+void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
+                                       const RelocationRef &Rel) {
   const bool IsAArch64 = BC->isAArch64();
   const bool IsFromCode = RelocatedSection.isText();
 
-  for (const RelocationRef &Rel : Section.relocations()) {
-    SmallString<16> TypeName;
-    Rel.getTypeName(TypeName);
-    uint64_t RType = Rel.getType();
-    if (Relocation::skipRelocationType(RType))
-      continue;
+  SmallString<16> TypeName;
+  Rel.getTypeName(TypeName);
+  uint64_t RType = Rel.getType();
+  if (Relocation::skipRelocationType(RType))
+    return;
 
-    // Adjust the relocation type as the linker might have skewed it.
-    if (BC->isX86() && (RType & ELF::R_X86_64_converted_reloc_bit)) {
+  // Adjust the relocation type as the linker might have skewed it.
+  if (BC->isX86() && (RType & ELF::R_X86_64_converted_reloc_bit)) {
+    if (opts::Verbosity >= 1)
+      dbgs() << "BOLT-WARNING: ignoring R_X86_64_converted_reloc_bit\n";
+    RType &= ~ELF::R_X86_64_converted_reloc_bit;
+  }
+
+  if (Relocation::isTLS(RType)) {
+    // No special handling required for TLS relocations on X86.
+    if (BC->isX86())
+      return;
+
+    // The non-got related TLS relocations on AArch64 also could be skipped.
+    if (!Relocation::isGOT(RType))
+      return;
+  }
+
+  if (!IsAArch64 && BC->getDynamicRelocationAt(Rel.getOffset())) {
+    LLVM_DEBUG(
+        dbgs() << "BOLT-DEBUG: address 0x" << Twine::utohexstr(Rel.getOffset())
+               << " has a dynamic relocation against it. Ignoring static "
+                  "relocation.\n");
+    return;
+  }
+
+  std::string SymbolName;
+  uint64_t SymbolAddress;
+  int64_t Addend;
+  uint64_t ExtractedValue;
+  bool IsSectionRelocation;
+  bool Skip;
+  if (!analyzeRelocation(Rel, RType, SymbolName, IsSectionRelocation,
+                         SymbolAddress, Addend, ExtractedValue, Skip)) {
+    LLVM_DEBUG(dbgs() << "BOLT-WARNING: failed to analyze relocation @ "
+                      << "offset = 0x" << Twine::utohexstr(Rel.getOffset())
+                      << "; type name = " << TypeName << '\n');
+    ++NumFailedRelocations;
+    return;
+  }
+
+  if (Skip) {
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: skipping relocation @ offset = 0x"
+                      << Twine::utohexstr(Rel.getOffset())
+                      << "; type name = " << TypeName << '\n');
+    return;
+  }
+
+  const uint64_t Address = SymbolAddress + Addend;
+
+  LLVM_DEBUG({
+    dbgs() << "BOLT-DEBUG: ";
+    printRelocationInfo(Rel, SymbolName, SymbolAddress, Addend, ExtractedValue);
+  });
+
+  BinaryFunction *ContainingBF = nullptr;
+  if (IsFromCode) {
+    ContainingBF =
+        BC->getBinaryFunctionContainingAddress(Rel.getOffset(),
+                                               /*CheckPastEnd*/ false,
+                                               /*UseMaxSize*/ true);
+    assert(ContainingBF && "cannot find function for address in code");
+    if (!IsAArch64 && !ContainingBF->containsAddress(Rel.getOffset())) {
       if (opts::Verbosity >= 1)
-        dbgs() << "BOLT-WARNING: ignoring R_X86_64_converted_reloc_bit\n";
-      RType &= ~ELF::R_X86_64_converted_reloc_bit;
+        outs() << "BOLT-INFO: " << *ContainingBF
+               << " has relocations in padding area\n";
+      ContainingBF->setSize(ContainingBF->getMaxSize());
+      ContainingBF->setSimple(false);
+      return;
     }
+  }
 
-    if (Relocation::isTLS(RType)) {
-      // No special handling required for TLS relocations on X86.
-      if (BC->isX86())
-        continue;
+  MCSymbol *ReferencedSymbol = nullptr;
+  if (!IsSectionRelocation)
+    if (BinaryData *BD = BC->getBinaryDataByName(SymbolName))
+      ReferencedSymbol = BD->getSymbol();
 
-      // The non-got related TLS relocations on AArch64 also could be skipped.
-      if (!Relocation::isGOT(RType))
-        continue;
-    }
+  ErrorOr<BinarySection &> ReferencedSection =
+      BC->getSectionForAddress(SymbolAddress);
 
-    if (!IsAArch64 && BC->getDynamicRelocationAt(Rel.getOffset())) {
-      LLVM_DEBUG(
-          dbgs() << "BOLT-DEBUG: address 0x"
-                 << Twine::utohexstr(Rel.getOffset())
-                 << " has a dynamic relocation against it. Ignoring static "
-                    "relocation.\n");
-      continue;
-    }
+  const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 
-    std::string SymbolName;
-    uint64_t SymbolAddress;
-    int64_t Addend;
-    uint64_t ExtractedValue;
-    bool IsSectionRelocation;
-    bool Skip;
-    if (!analyzeRelocation(Rel, RType, SymbolName, IsSectionRelocation,
-                           SymbolAddress, Addend, ExtractedValue, Skip)) {
-      LLVM_DEBUG(dbgs() << "BOLT-WARNING: failed to analyze relocation @ "
-                        << "offset = 0x" << Twine::utohexstr(Rel.getOffset())
-                        << "; type name = " << TypeName << '\n');
-      ++NumFailedRelocations;
-      continue;
-    }
-
-    if (Skip) {
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: skipping relocation @ offset = 0x"
-                        << Twine::utohexstr(Rel.getOffset())
-                        << "; type name = " << TypeName << '\n');
-      continue;
-    }
-
-    const uint64_t Address = SymbolAddress + Addend;
-
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: "; printRelocationInfo(
-                   Rel, SymbolName, SymbolAddress, Addend, ExtractedValue));
-
-    BinaryFunction *ContainingBF = nullptr;
-    if (IsFromCode) {
-      ContainingBF =
-          BC->getBinaryFunctionContainingAddress(Rel.getOffset(),
-                                                 /*CheckPastEnd*/ false,
-                                                 /*UseMaxSize*/ true);
-      assert(ContainingBF && "cannot find function for address in code");
-      if (!IsAArch64 && !ContainingBF->containsAddress(Rel.getOffset())) {
-        if (opts::Verbosity >= 1)
-          outs() << "BOLT-INFO: " << *ContainingBF
-                 << " has relocations in padding area\n";
-        ContainingBF->setSize(ContainingBF->getMaxSize());
-        ContainingBF->setSimple(false);
-        continue;
-      }
-    }
-
-    MCSymbol *ReferencedSymbol = nullptr;
-    if (!IsSectionRelocation)
-      if (BinaryData *BD = BC->getBinaryDataByName(SymbolName))
-        ReferencedSymbol = BD->getSymbol();
-
-    ErrorOr<BinarySection &> ReferencedSection =
-        BC->getSectionForAddress(SymbolAddress);
-
-    const bool IsToCode = ReferencedSection && ReferencedSection->isText();
-
-    // Special handling of PC-relative relocations.
-    if (!IsAArch64 && Relocation::isPCRelative(RType)) {
-      if (!IsFromCode && IsToCode) {
-        // PC-relative relocations from data to code are tricky since the
-        // original information is typically lost after linking, even with
-        // '--emit-relocs'. Such relocations are normally used by PIC-style
-        // jump tables and they reference both the jump table and jump
-        // targets by computing the difference between the two. If we blindly
-        // apply the relocation, it will appear that it references an arbitrary
-        // location in the code, possibly in a different function from the one
-        // containing the jump table.
-        //
-        // For that reason, we only register the fact that there is a
-        // PC-relative relocation at a given address against the code.
-        // The actual referenced label/address will be determined during jump
-        // table analysis.
-        BC->addPCRelativeDataRelocation(Rel.getOffset());
-      } else if (ContainingBF && !IsSectionRelocation && ReferencedSymbol) {
-        // If we know the referenced symbol, register the relocation from
-        // the code. It's required  to properly handle cases where
-        // "symbol + addend" references an object different from "symbol".
-        ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
-                                    Addend, ExtractedValue);
-      } else {
-        LLVM_DEBUG(
-            dbgs() << "BOLT-DEBUG: not creating PC-relative relocation at 0x"
-                   << Twine::utohexstr(Rel.getOffset()) << " for " << SymbolName
-                   << "\n");
-      }
-
-      continue;
-    }
-
-    bool ForceRelocation = BC->forceSymbolRelocations(SymbolName);
-    if (BC->isAArch64() && Relocation::isGOT(RType))
-      ForceRelocation = true;
-
-    if (!ReferencedSection && !ForceRelocation) {
-      LLVM_DEBUG(
-          dbgs() << "BOLT-DEBUG: cannot determine referenced section.\n");
-      continue;
-    }
-
-    // Occasionally we may see a reference past the last byte of the function
-    // typically as a result of __builtin_unreachable(). Check it here.
-    BinaryFunction *ReferencedBF = BC->getBinaryFunctionContainingAddress(
-        Address, /*CheckPastEnd*/ true, /*UseMaxSize*/ IsAArch64);
-
-    if (!IsSectionRelocation) {
-      if (BinaryFunction *BF =
-              BC->getBinaryFunctionContainingAddress(SymbolAddress)) {
-        if (BF != ReferencedBF) {
-          // It's possible we are referencing a function without referencing any
-          // code, e.g. when taking a bitmask action on a function address.
-          errs() << "BOLT-WARNING: non-standard function reference (e.g. "
-                    "bitmask) detected against function "
-                 << *BF;
-          if (IsFromCode)
-            errs() << " from function " << *ContainingBF << '\n';
-          else
-            errs() << " from data section at 0x"
-                   << Twine::utohexstr(Rel.getOffset()) << '\n';
-          LLVM_DEBUG(printRelocationInfo(Rel, SymbolName, SymbolAddress, Addend,
-                                         ExtractedValue));
-          ReferencedBF = BF;
-        }
-      }
-    } else if (ReferencedBF) {
-      assert(ReferencedSection && "section expected for section relocation");
-      if (*ReferencedBF->getOriginSection() != *ReferencedSection) {
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring false function reference\n");
-        ReferencedBF = nullptr;
-      }
-    }
-
-    // Workaround for a member function pointer de-virtualization bug. We check
-    // if a non-pc-relative relocation in the code is pointing to (fptr - 1).
-    if (IsToCode && ContainingBF && !Relocation::isPCRelative(RType) &&
-        (!ReferencedBF || (ReferencedBF->getAddress() != Address))) {
-      if (const BinaryFunction *RogueBF =
-              BC->getBinaryFunctionAtAddress(Address + 1)) {
-        // Do an extra check that the function was referenced previously.
-        // It's a linear search, but it should rarely happen.
-        bool Found = false;
-        for (const auto &RelKV : ContainingBF->Relocations) {
-          const Relocation &Rel = RelKV.second;
-          if (Rel.Symbol == RogueBF->getSymbol() &&
-              !Relocation::isPCRelative(Rel.Type)) {
-            Found = true;
-            break;
-          }
-        }
-
-        if (Found) {
-          errs() << "BOLT-WARNING: detected possible compiler "
-                    "de-virtualization bug: -1 addend used with "
-                    "non-pc-relative relocation against function "
-                 << *RogueBF << " in function " << *ContainingBF << '\n';
-          continue;
-        }
-      }
-    }
-
-    if (ForceRelocation) {
-      std::string Name = Relocation::isGOT(RType) ? "Zero" : SymbolName;
-      ReferencedSymbol = BC->registerNameAtAddress(Name, 0, 0, 0);
-      SymbolAddress = 0;
-      if (Relocation::isGOT(RType))
-        Addend = Address;
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: forcing relocation against symbol "
-                        << SymbolName << " with addend " << Addend << '\n');
-    } else if (ReferencedBF) {
-      ReferencedSymbol = ReferencedBF->getSymbol();
-      uint64_t RefFunctionOffset = 0;
-
-      // Adjust the point of reference to a code location inside a function.
-      if (ReferencedBF->containsAddress(Address, /*UseMaxSize = */true)) {
-        RefFunctionOffset = Address - ReferencedBF->getAddress();
-        if (RefFunctionOffset) {
-          if (ContainingBF && ContainingBF != ReferencedBF) {
-            ReferencedSymbol =
-                ReferencedBF->addEntryPointAtOffset(RefFunctionOffset);
-          } else {
-            ReferencedSymbol =
-                ReferencedBF->getOrCreateLocalLabel(Address,
-                                                    /*CreatePastEnd =*/true);
-            ReferencedBF->registerReferencedOffset(RefFunctionOffset);
-          }
-          if (opts::Verbosity > 1 &&
-              !BinarySection(*BC, RelocatedSection).isReadOnly())
-            errs() << "BOLT-WARNING: writable reference into the middle of "
-                   << "the function " << *ReferencedBF
-                   << " detected at address 0x"
-                   << Twine::utohexstr(Rel.getOffset()) << '\n';
-        }
-        SymbolAddress = Address;
-        Addend = 0;
-      }
-      LLVM_DEBUG(
-        dbgs() << "  referenced function " << *ReferencedBF;
-        if (Address != ReferencedBF->getAddress())
-          dbgs() << " at offset 0x" << Twine::utohexstr(RefFunctionOffset);
-        dbgs() << '\n'
-      );
-    } else {
-      if (IsToCode && SymbolAddress) {
-        // This can happen e.g. with PIC-style jump tables.
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: no corresponding function for "
-                             "relocation against code\n");
-      }
-
-      // In AArch64 there are zero reasons to keep a reference to the
-      // "original" symbol plus addend. The original symbol is probably just a
-      // section symbol. If we are here, this means we are probably accessing
-      // data, so it is imperative to keep the original address.
-      if (IsAArch64) {
-        SymbolName = ("SYMBOLat0x" + Twine::utohexstr(Address)).str();
-        SymbolAddress = Address;
-        Addend = 0;
-      }
-
-      if (BinaryData *BD = BC->getBinaryDataContainingAddress(SymbolAddress)) {
-        // Note: this assertion is trying to check sanity of BinaryData objects
-        // but AArch64 has inferred and incomplete object locations coming from
-        // GOT/TLS or any other non-trivial relocation (that requires creation
-        // of sections and whose symbol address is not really what should be
-        // encoded in the instruction). So we essentially disabled this check
-        // for AArch64 and live with bogus names for objects.
-        assert((IsAArch64 || IsSectionRelocation ||
-                BD->nameStartsWith(SymbolName) ||
-                BD->nameStartsWith("PG" + SymbolName) ||
-                (BD->nameStartsWith("ANONYMOUS") &&
-                 (BD->getSectionName().startswith(".plt") ||
-                  BD->getSectionName().endswith(".plt")))) &&
-               "BOLT symbol names of all non-section relocations must match "
-               "up with symbol names referenced in the relocation");
-
-        if (IsSectionRelocation)
-          BC->markAmbiguousRelocations(*BD, Address);
-
-        ReferencedSymbol = BD->getSymbol();
-        Addend += (SymbolAddress - BD->getAddress());
-        SymbolAddress = BD->getAddress();
-        assert(Address == SymbolAddress + Addend);
-      } else {
-        // These are mostly local data symbols but undefined symbols
-        // in relocation sections can get through here too, from .plt.
-        assert(
-            (IsAArch64 || IsSectionRelocation ||
-             BC->getSectionNameForAddress(SymbolAddress)->startswith(".plt")) &&
-            "known symbols should not resolve to anonymous locals");
-
-        if (IsSectionRelocation) {
-          ReferencedSymbol =
-              BC->getOrCreateGlobalSymbol(SymbolAddress, "SYMBOLat");
-        } else {
-          SymbolRef Symbol = *Rel.getSymbol();
-          const uint64_t SymbolSize =
-              IsAArch64 ? 0 : ELFSymbolRef(Symbol).getSize();
-          const uint64_t SymbolAlignment =
-              IsAArch64 ? 1 : Symbol.getAlignment();
-          const uint32_t SymbolFlags = cantFail(Symbol.getFlags());
-          std::string Name;
-          if (SymbolFlags & SymbolRef::SF_Global) {
-            Name = SymbolName;
-          } else {
-            if (StringRef(SymbolName)
-                    .startswith(BC->AsmInfo->getPrivateGlobalPrefix()))
-              Name = NR.uniquify("PG" + SymbolName);
-            else
-              Name = NR.uniquify(SymbolName);
-          }
-          ReferencedSymbol = BC->registerNameAtAddress(
-              Name, SymbolAddress, SymbolSize, SymbolAlignment, SymbolFlags);
-        }
-
-        if (IsSectionRelocation) {
-          BinaryData *BD = BC->getBinaryDataByName(ReferencedSymbol->getName());
-          BC->markAmbiguousRelocations(*BD, Address);
-        }
-      }
-    }
-
-    auto checkMaxDataRelocations = [&]() {
-      ++NumDataRelocations;
-      if (opts::MaxDataRelocations &&
-          NumDataRelocations + 1 == opts::MaxDataRelocations) {
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: processing ending on data relocation "
-                          << NumDataRelocations << ": ");
-        printRelocationInfo(Rel, ReferencedSymbol->getName(), SymbolAddress,
-                            Addend, ExtractedValue);
-      }
-
-      return (!opts::MaxDataRelocations ||
-              NumDataRelocations < opts::MaxDataRelocations);
-    };
-
-    if ((ReferencedSection && refersToReorderedSection(ReferencedSection)) ||
-        (opts::ForceToDataRelocations && checkMaxDataRelocations()))
-      ForceRelocation = true;
-
-    if (IsFromCode) {
+  // Special handling of PC-relative relocations.
+  if (!IsAArch64 && Relocation::isPCRelative(RType)) {
+    if (!IsFromCode && IsToCode) {
+      // PC-relative relocations from data to code are tricky since the
+      // original information is typically lost after linking, even with
+      // '--emit-relocs'. Such relocations are normally used by PIC-style
+      // jump tables and they reference both the jump table and jump
+      // targets by computing the difference between the two. If we blindly
+      // apply the relocation, it will appear that it references an arbitrary
+      // location in the code, possibly in a different function from the one
+      // containing the jump table.
+      //
+      // For that reason, we only register the fact that there is a
+      // PC-relative relocation at a given address against the code.
+      // The actual referenced label/address will be determined during jump
+      // table analysis.
+      BC->addPCRelativeDataRelocation(Rel.getOffset());
+    } else if (ContainingBF && !IsSectionRelocation && ReferencedSymbol) {
+      // If we know the referenced symbol, register the relocation from
+      // the code. It's required  to properly handle cases where
+      // "symbol + addend" references an object different from "symbol".
       ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
                                   Addend, ExtractedValue);
-    } else if (IsToCode || ForceRelocation) {
-      BC->addRelocation(Rel.getOffset(), ReferencedSymbol, RType, Addend,
-                        ExtractedValue);
     } else {
       LLVM_DEBUG(
-          dbgs() << "BOLT-DEBUG: ignoring relocation from data to data\n");
+          dbgs() << "BOLT-DEBUG: not creating PC-relative relocation at 0x"
+                 << Twine::utohexstr(Rel.getOffset()) << " for " << SymbolName
+                 << "\n");
     }
+
+    return;
+  }
+
+  bool ForceRelocation = BC->forceSymbolRelocations(SymbolName);
+  if (BC->isAArch64() && Relocation::isGOT(RType))
+    ForceRelocation = true;
+
+  if (!ReferencedSection && !ForceRelocation) {
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: cannot determine referenced section.\n");
+    return;
+  }
+
+  // Occasionally we may see a reference past the last byte of the function
+  // typically as a result of __builtin_unreachable(). Check it here.
+  BinaryFunction *ReferencedBF = BC->getBinaryFunctionContainingAddress(
+      Address, /*CheckPastEnd*/ true, /*UseMaxSize*/ IsAArch64);
+
+  if (!IsSectionRelocation) {
+    if (BinaryFunction *BF =
+            BC->getBinaryFunctionContainingAddress(SymbolAddress)) {
+      if (BF != ReferencedBF) {
+        // It's possible we are referencing a function without referencing any
+        // code, e.g. when taking a bitmask action on a function address.
+        errs() << "BOLT-WARNING: non-standard function reference (e.g. "
+                  "bitmask) detected against function "
+               << *BF;
+        if (IsFromCode)
+          errs() << " from function " << *ContainingBF << '\n';
+        else
+          errs() << " from data section at 0x"
+                 << Twine::utohexstr(Rel.getOffset()) << '\n';
+        LLVM_DEBUG(printRelocationInfo(Rel, SymbolName, SymbolAddress, Addend,
+                                       ExtractedValue));
+        ReferencedBF = BF;
+      }
+    }
+  } else if (ReferencedBF) {
+    assert(ReferencedSection && "section expected for section relocation");
+    if (*ReferencedBF->getOriginSection() != *ReferencedSection) {
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring false function reference\n");
+      ReferencedBF = nullptr;
+    }
+  }
+
+  // Workaround for a member function pointer de-virtualization bug. We check
+  // if a non-pc-relative relocation in the code is pointing to (fptr - 1).
+  if (IsToCode && ContainingBF && !Relocation::isPCRelative(RType) &&
+      (!ReferencedBF || (ReferencedBF->getAddress() != Address))) {
+    if (const BinaryFunction *RogueBF =
+            BC->getBinaryFunctionAtAddress(Address + 1)) {
+      // Do an extra check that the function was referenced previously.
+      // It's a linear search, but it should rarely happen.
+      bool Found = false;
+      for (const auto &RelKV : ContainingBF->Relocations) {
+        const Relocation &Rel = RelKV.second;
+        if (Rel.Symbol == RogueBF->getSymbol() &&
+            !Relocation::isPCRelative(Rel.Type)) {
+          Found = true;
+          break;
+        }
+      }
+
+      if (Found) {
+        errs() << "BOLT-WARNING: detected possible compiler "
+                  "de-virtualization bug: -1 addend used with "
+                  "non-pc-relative relocation against function "
+               << *RogueBF << " in function " << *ContainingBF << '\n';
+        return;
+      }
+    }
+  }
+
+  if (ForceRelocation) {
+    std::string Name = Relocation::isGOT(RType) ? "Zero" : SymbolName;
+    ReferencedSymbol = BC->registerNameAtAddress(Name, 0, 0, 0);
+    SymbolAddress = 0;
+    if (Relocation::isGOT(RType))
+      Addend = Address;
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: forcing relocation against symbol "
+                      << SymbolName << " with addend " << Addend << '\n');
+  } else if (ReferencedBF) {
+    ReferencedSymbol = ReferencedBF->getSymbol();
+    uint64_t RefFunctionOffset = 0;
+
+    // Adjust the point of reference to a code location inside a function.
+    if (ReferencedBF->containsAddress(Address, /*UseMaxSize = */ true)) {
+      RefFunctionOffset = Address - ReferencedBF->getAddress();
+      if (RefFunctionOffset) {
+        if (ContainingBF && ContainingBF != ReferencedBF) {
+          ReferencedSymbol =
+              ReferencedBF->addEntryPointAtOffset(RefFunctionOffset);
+        } else {
+          ReferencedSymbol =
+              ReferencedBF->getOrCreateLocalLabel(Address,
+                                                  /*CreatePastEnd =*/true);
+          ReferencedBF->registerReferencedOffset(RefFunctionOffset);
+        }
+        if (opts::Verbosity > 1 &&
+            !BinarySection(*BC, RelocatedSection).isReadOnly())
+          errs() << "BOLT-WARNING: writable reference into the middle of "
+                 << "the function " << *ReferencedBF
+                 << " detected at address 0x"
+                 << Twine::utohexstr(Rel.getOffset()) << '\n';
+      }
+      SymbolAddress = Address;
+      Addend = 0;
+    }
+    LLVM_DEBUG({
+      dbgs() << "  referenced function " << *ReferencedBF;
+      if (Address != ReferencedBF->getAddress())
+        dbgs() << " at offset 0x" << Twine::utohexstr(RefFunctionOffset);
+      dbgs() << '\n';
+    });
+  } else {
+    if (IsToCode && SymbolAddress) {
+      // This can happen e.g. with PIC-style jump tables.
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: no corresponding function for "
+                           "relocation against code\n");
+    }
+
+    // In AArch64 there are zero reasons to keep a reference to the
+    // "original" symbol plus addend. The original symbol is probably just a
+    // section symbol. If we are here, this means we are probably accessing
+    // data, so it is imperative to keep the original address.
+    if (IsAArch64) {
+      SymbolName = ("SYMBOLat0x" + Twine::utohexstr(Address)).str();
+      SymbolAddress = Address;
+      Addend = 0;
+    }
+
+    if (BinaryData *BD = BC->getBinaryDataContainingAddress(SymbolAddress)) {
+      // Note: this assertion is trying to check sanity of BinaryData objects
+      // but AArch64 has inferred and incomplete object locations coming from
+      // GOT/TLS or any other non-trivial relocation (that requires creation
+      // of sections and whose symbol address is not really what should be
+      // encoded in the instruction). So we essentially disabled this check
+      // for AArch64 and live with bogus names for objects.
+      assert((IsAArch64 || IsSectionRelocation ||
+              BD->nameStartsWith(SymbolName) ||
+              BD->nameStartsWith("PG" + SymbolName) ||
+              (BD->nameStartsWith("ANONYMOUS") &&
+               (BD->getSectionName().startswith(".plt") ||
+                BD->getSectionName().endswith(".plt")))) &&
+             "BOLT symbol names of all non-section relocations must match "
+             "up with symbol names referenced in the relocation");
+
+      if (IsSectionRelocation)
+        BC->markAmbiguousRelocations(*BD, Address);
+
+      ReferencedSymbol = BD->getSymbol();
+      Addend += (SymbolAddress - BD->getAddress());
+      SymbolAddress = BD->getAddress();
+      assert(Address == SymbolAddress + Addend);
+    } else {
+      // These are mostly local data symbols but undefined symbols
+      // in relocation sections can get through here too, from .plt.
+      assert(
+          (IsAArch64 || IsSectionRelocation ||
+           BC->getSectionNameForAddress(SymbolAddress)->startswith(".plt")) &&
+          "known symbols should not resolve to anonymous locals");
+
+      if (IsSectionRelocation) {
+        ReferencedSymbol =
+            BC->getOrCreateGlobalSymbol(SymbolAddress, "SYMBOLat");
+      } else {
+        SymbolRef Symbol = *Rel.getSymbol();
+        const uint64_t SymbolSize =
+            IsAArch64 ? 0 : ELFSymbolRef(Symbol).getSize();
+        const uint64_t SymbolAlignment = IsAArch64 ? 1 : Symbol.getAlignment();
+        const uint32_t SymbolFlags = cantFail(Symbol.getFlags());
+        std::string Name;
+        if (SymbolFlags & SymbolRef::SF_Global) {
+          Name = SymbolName;
+        } else {
+          if (StringRef(SymbolName)
+                  .startswith(BC->AsmInfo->getPrivateGlobalPrefix()))
+            Name = NR.uniquify("PG" + SymbolName);
+          else
+            Name = NR.uniquify(SymbolName);
+        }
+        ReferencedSymbol = BC->registerNameAtAddress(
+            Name, SymbolAddress, SymbolSize, SymbolAlignment, SymbolFlags);
+      }
+
+      if (IsSectionRelocation) {
+        BinaryData *BD = BC->getBinaryDataByName(ReferencedSymbol->getName());
+        BC->markAmbiguousRelocations(*BD, Address);
+      }
+    }
+  }
+
+  auto checkMaxDataRelocations = [&]() {
+    ++NumDataRelocations;
+    if (opts::MaxDataRelocations &&
+        NumDataRelocations + 1 == opts::MaxDataRelocations) {
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: processing ending on data relocation "
+                        << NumDataRelocations << ": ");
+      printRelocationInfo(Rel, ReferencedSymbol->getName(), SymbolAddress,
+                          Addend, ExtractedValue);
+    }
+
+    return (!opts::MaxDataRelocations ||
+            NumDataRelocations < opts::MaxDataRelocations);
+  };
+
+  if ((ReferencedSection && refersToReorderedSection(ReferencedSection)) ||
+      (opts::ForceToDataRelocations && checkMaxDataRelocations()))
+    ForceRelocation = true;
+
+  if (IsFromCode) {
+    ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
+                                Addend, ExtractedValue);
+  } else if (IsToCode || ForceRelocation) {
+    BC->addRelocation(Rel.getOffset(), ReferencedSymbol, RType, Addend,
+                      ExtractedValue);
+  } else {
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring relocation from data to data\n");
   }
 }
 
