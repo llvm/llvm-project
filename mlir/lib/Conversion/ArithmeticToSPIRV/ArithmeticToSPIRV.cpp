@@ -13,8 +13,11 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "arith-to-spirv-pattern"
@@ -189,6 +192,15 @@ public:
 
   LogicalResult
   matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Converts arith.addi_carry to spv.IAddCarry.
+class AddICarryOpPattern final : public OpConversionPattern<arith::AddICarryOp> {
+public:
+  using OpConversionPattern<arith::AddICarryOp>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(arith::AddICarryOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -834,6 +846,34 @@ LogicalResult CmpFOpNanNonePattern::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// AddICarryOpPattern
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+AddICarryOpPattern::matchAndRewrite(arith::AddICarryOp op, OpAdaptor adaptor,
+                                    ConversionPatternRewriter &rewriter) const {
+  Type dstElemTy = adaptor.getLhs().getType();
+  auto resultTy = spirv::StructType::get({dstElemTy, dstElemTy});
+
+  Location loc = op->getLoc();
+  Value result = rewriter.create<spirv::IAddCarryOp>(
+      loc, resultTy, adaptor.getLhs(), adaptor.getRhs());
+
+  Value sumResult = rewriter.create<spirv::CompositeExtractOp>(
+      loc, result, llvm::makeArrayRef(0));
+  Value carryValue = rewriter.create<spirv::CompositeExtractOp>(
+      loc, result, llvm::makeArrayRef(1));
+
+  // Convert the carry value to boolean.
+  Value one = spirv::ConstantOp::getOne(dstElemTy, loc, rewriter);
+  Value carryResult =
+      rewriter.create<spirv::IEqualOp>(loc, carryValue, one);
+
+  rewriter.replaceOp(op, {sumResult, carryResult});
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // SelectOpPattern
 //===----------------------------------------------------------------------===//
 
@@ -887,7 +927,7 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
     TypeCastingOpPattern<arith::BitcastOp, spirv::BitcastOp>,
     CmpIOpBooleanPattern, CmpIOpPattern,
     CmpFOpNanNonePattern, CmpFOpPattern,
-    SelectOpPattern,
+    AddICarryOpPattern, SelectOpPattern,
 
     spirv::ElementwiseOpPattern<arith::MaxFOp, spirv::GLFMaxOp>,
     spirv::ElementwiseOpPattern<arith::MaxSIOp, spirv::GLSMaxOp>,

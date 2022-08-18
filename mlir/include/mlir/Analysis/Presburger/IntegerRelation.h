@@ -238,10 +238,10 @@ public:
   /// of the first added variable.
   virtual unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1);
 
-  /// Append `num` variables of the specified kind after the last variable.
-  /// of that kind. Return the position of the first appended column relative to
-  /// the kind of variable. The coefficient columns corresponding to the added
-  /// variables are initialized to zero.
+  /// Append `num` variables of the specified kind after the last variable
+  /// of that kind. The coefficient columns corresponding to the added variables
+  /// are initialized to zero. Return the absolute column position (i.e., not
+  /// relative to the kind of variable) of the first appended variable.
   unsigned appendVar(VarKind kind, unsigned num = 1);
 
   /// Adds an inequality (>= 0) from the coefficients specified in `inEq`.

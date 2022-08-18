@@ -9,7 +9,7 @@
 
 /* RUN: mlir-capi-execution-engine-test 2>&1 | FileCheck %s
  */
-/* REQUIRES: native
+/* REQUIRES: host-supports-jit
  */
 
 #include "mlir-c/Conversion.h"

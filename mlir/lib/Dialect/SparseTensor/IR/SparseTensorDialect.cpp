@@ -49,7 +49,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
     return {};
   // Process the data from the parsed dictionary value into struct-like data.
   SmallVector<SparseTensorEncodingAttr::DimLevelType, 4> dlt;
-  AffineMap map = {};
+  AffineMap dimOrd = {};
   unsigned ptr = 0;
   unsigned ind = 0;
   for (const NamedAttribute &attr : dict) {
@@ -86,7 +86,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
                          "expected an affine map for dimension ordering");
         return {};
       }
-      map = affineAttr.getValue();
+      dimOrd = affineAttr.getValue();
     } else if (attr.getName() == "pointerBitWidth") {
       auto intAttr = attr.getValue().dyn_cast<IntegerAttr>();
       if (!intAttr) {
@@ -111,7 +111,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   }
   // Construct struct-like storage for attribute.
   return parser.getChecked<SparseTensorEncodingAttr>(parser.getContext(), dlt,
-                                                     map, ptr, ind);
+                                                     dimOrd, ptr, ind);
 }
 
 void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
@@ -130,10 +130,14 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
       printer << ", ";
   }
   printer << " ]";
-  if (getDimOrdering())
+  // Print remaining members only for non-default values.
+  if (getDimOrdering() && !getDimOrdering().isIdentity())
     printer << ", dimOrdering = affine_map<" << getDimOrdering() << ">";
-  printer << ", pointerBitWidth = " << getPointerBitWidth()
-          << ", indexBitWidth = " << getIndexBitWidth() << " }>";
+  if (getPointerBitWidth())
+    printer << ", pointerBitWidth = " << getPointerBitWidth();
+  if (getIndexBitWidth())
+    printer << ", indexBitWidth = " << getIndexBitWidth();
+  printer << " }>";
 }
 
 LogicalResult SparseTensorEncodingAttr::verify(

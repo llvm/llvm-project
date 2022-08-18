@@ -141,6 +141,22 @@ if(LLVM_LIBC_FULL_BUILD)
   add_subdirectory(utils/HdrGen)
 endif()
 
+set(LIBC_TARGET)
+set(LIBC_COMPONENT)
+set(LIBC_INSTALL_DEPENDS)
+set(LIBC_INSTALL_TARGET)
+if(LLVM_LIBC_FULL_BUILD)
+  set(LIBC_TARGET c)
+  set(LIBC_COMPONENT libc)
+  set(LIBC_INSTALL_DEPENDS "c;libc-headers")
+  set(LIBC_INSTALL_TARGET install-libc)
+else()
+  set(LIBC_TARGET llvmlibc)
+  set(LIBC_COMPONENT llvmlibc)
+  set(LIBC_INSTALL_DEPENDS llvmlibc)
+  set(LIBC_INSTALL_TARGET install-llvmlibc)
+endif()
+
 add_subdirectory(include)
 add_subdirectory(config)
 add_subdirectory(src)
@@ -168,3 +184,9 @@ endif()
 if (LIBC_INCLUDE_DOCS)
   add_subdirectory(docs)
 endif()
+
+add_llvm_install_targets(
+  ${LIBC_INSTALL_TARGET}
+  DEPENDS ${LIBC_INSTALL_DEPENDS}
+  COMPONENT ${LIBC_COMPONENT}
+)

@@ -440,24 +440,17 @@ void MachOPlatform::pushInitializersLoop(
   if (NewInitSymbols.empty()) {
 
     // To make the list intelligible to the runtime we need to convert all
-    // JITDylib pointers to their header addresses.
+    // JITDylib pointers to their header addresses. Only include JITDylibs
+    // that appear in the JITDylibToHeaderAddr map (i.e. those that have been
+    // through setupJITDylib) -- bare JITDylibs aren't managed by the platform.
     DenseMap<JITDylib *, ExecutorAddr> HeaderAddrs;
     HeaderAddrs.reserve(JDDepMap.size());
     {
       std::lock_guard<std::mutex> Lock(PlatformMutex);
       for (auto &KV : JDDepMap) {
         auto I = JITDylibToHeaderAddr.find(KV.first);
-        if (I == JITDylibToHeaderAddr.end()) {
-          // The header address should have been materialized by the previous
-          // round, but we need to handle the pathalogical case where someone
-          // removes the symbol on another thread while we're running.
-          SendResult(
-              make_error<StringError>("JITDylib " + KV.first->getName() +
-                                          " has no registered header address",
-                                      inconvertibleErrorCode()));
-          return;
-        }
-        HeaderAddrs[KV.first] = I->second;
+        if (I != JITDylibToHeaderAddr.end())
+          HeaderAddrs[KV.first] = I->second;
       }
     }
 
@@ -465,12 +458,16 @@ void MachOPlatform::pushInitializersLoop(
     MachOJITDylibDepInfoMap DIM;
     DIM.reserve(JDDepMap.size());
     for (auto &KV : JDDepMap) {
-      assert(HeaderAddrs.count(KV.first) && "Missing header addr");
-      auto H = HeaderAddrs[KV.first];
+      auto HI = HeaderAddrs.find(KV.first);
+      // Skip unmanaged JITDylibs.
+      if (HI == HeaderAddrs.end())
+        continue;
+      auto H = HI->second;
       MachOJITDylibDepInfo DepInfo;
       for (auto &Dep : KV.second) {
-        assert(HeaderAddrs.count(Dep) && "Missing header addr");
-        DepInfo.DepHeaders.push_back(HeaderAddrs[Dep]);
+        auto HJ = HeaderAddrs.find(Dep);
+        if (HJ != HeaderAddrs.end())
+          DepInfo.DepHeaders.push_back(HJ->second);
       }
       DIM.push_back(std::make_pair(H, std::move(DepInfo)));
     }
