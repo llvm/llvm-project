@@ -108,6 +108,13 @@ ModuleListProperties::ModuleListProperties() {
 
   // BEGIN SWIFT
   SetSwiftModuleLoadingMode(eSwiftModuleLoadingModePreferSerialized);
+
+  path.clear();
+  if (llvm::sys::path::cache_directory(path)) {
+    llvm::sys::path::append(path, "lldb");
+    llvm::sys::path::append(path, "SwiftMetadataCache");
+    lldbassert(SetLLDBIndexCachePath(FileSpec(path)));
+  }
   // END SWIFT
   
   path.clear();
@@ -193,6 +200,36 @@ SwiftModuleLoadingMode ModuleListProperties::GetSwiftModuleLoadingMode() const {
 bool ModuleListProperties::SetSwiftModuleLoadingMode(SwiftModuleLoadingMode mode) {
   return m_collection_sp->SetPropertyAtIndexAsEnumeration(
       nullptr, ePropertySwiftModuleLoadingMode, mode);
+}
+
+FileSpec ModuleListProperties::GetSwiftMetadataCachePath() const {
+  return m_collection_sp
+      ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
+                                                ePropertySwiftMetadataCachePath)
+      ->GetCurrentValue();
+}
+
+bool ModuleListProperties::SetSwiftMetadataCachePath(const FileSpec &path) {
+  return m_collection_sp->SetPropertyAtIndexAsFileSpec(
+      nullptr, ePropertySwiftMetadataCachePath, path);
+}
+
+bool ModuleListProperties::GetEnableSwiftMetadataCache() const {
+  const uint32_t idx = ePropertyEnableSwiftMetadataCache;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+uint64_t ModuleListProperties::GetSwiftMetadataCacheMaxByteSize() {
+  const uint32_t idx = ePropertySwiftMetadataCacheMaxByteSize;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_modulelist_properties[idx].default_uint_value);
+}
+
+uint64_t ModuleListProperties::GetSwiftMetadataCacheExpirationDays() {
+  const uint32_t idx = ePropertySwiftMetadataCacheExpirationDays;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_modulelist_properties[idx].default_uint_value);
 }
 // END SWIFT
 

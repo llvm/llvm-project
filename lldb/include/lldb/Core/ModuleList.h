@@ -65,6 +65,12 @@ public:
   bool GetSwiftValidateTypeSystem() const;
   SwiftModuleLoadingMode GetSwiftModuleLoadingMode() const;
   bool SetSwiftModuleLoadingMode(SwiftModuleLoadingMode);
+
+  bool GetEnableSwiftMetadataCache() const;
+  uint64_t GetSwiftMetadataCacheMaxByteSize();
+  uint64_t GetSwiftMetadataCacheExpirationDays();
+  FileSpec GetSwiftMetadataCachePath() const;
+  bool SetSwiftMetadataCachePath(const FileSpec &path);
   // END SWIFT
 
   FileSpec GetClangModulesCachePath() const;
