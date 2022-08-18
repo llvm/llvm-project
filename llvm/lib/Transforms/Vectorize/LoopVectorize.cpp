@@ -1435,16 +1435,16 @@ public:
     }));
   }
 
-  /// Returns true if \p I is an instruction that will be scalarized with
-  /// predication when vectorizing \p I with vectorization factor \p VF. Such
-  /// instructions include conditional stores and instructions that may divide
-  /// by zero.
+  /// Returns true if \p I is an instruction which requires predication and
+  /// for which our chosen predication strategy is scalarization (i.e. we
+  /// don't have an alternate strategy such as masking available).
+  /// \p VF is the vectorization factor that will be used to vectorize \p I.
   bool isScalarWithPredication(Instruction *I, ElementCount VF) const;
 
-  // Returns true if \p I is an instruction that will be predicated either
-  // through scalar predication or masked load/store or masked gather/scatter.
-  // \p VF is the vectorization factor that will be used to vectorize \p I.
-  // Superset of instructions that return true for isScalarWithPredication.
+  /// Returns true if \p I is an instruction that needs to be predicated
+  /// at runtime.  The result is independent of the predication mechanism.
+  /// \p VF is the vectorization factor that will be used to vectorize \p I.
+  /// Superset of instructions that return true for isScalarWithPredication.
   bool isPredicatedInst(Instruction *I, ElementCount VF) const;
 
   /// Returns true if \p I is a memory instruction with consecutive memory
@@ -4412,15 +4412,16 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
 bool LoopVectorizationCostModel::isScalarWithPredication(
     Instruction *I, ElementCount VF) const {
-  if (!blockNeedsPredicationForAnyReason(I->getParent()))
+  if (!isPredicatedInst(I, VF))
     return false;
+
+  // Do we have a non-scalar lowering for this predicated
+  // instruction? No - it is scalar with predication.
   switch(I->getOpcode()) {
   default:
-    break;
+    return true;
   case Instruction::Load:
   case Instruction::Store: {
-    if (!Legal->isMaskRequired(I))
-      return false;
     auto *Ptr = getLoadStorePointerOperand(I);
     auto *Ty = getLoadStoreType(I);
     Type *VTy = Ty;
@@ -4432,6 +4433,40 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
                             : !(isLegalMaskedStore(Ty, Ptr, Alignment) ||
                                 TTI.isLegalMaskedScatter(VTy, Alignment));
   }
+  }
+}
+
+bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I,
+                                                  ElementCount VF) const {
+  if (!blockNeedsPredicationForAnyReason(I->getParent()))
+    return false;
+
+  // Can we prove this instruction is safe to unconditionally execute?
+  // If not, we must use some form of predication.
+  switch(I->getOpcode()) {
+  default:
+    return false;
+  case Instruction::Load:
+  case Instruction::Store: {
+    if (!Legal->isMaskRequired(I))
+      return false;
+    // When we know the load's address is loop invariant and the instruction
+    // in the original scalar loop was unconditionally executed then we
+    // don't need to mark it as a predicated instruction. Tail folding may
+    // introduce additional predication, but we're guaranteed to always have
+    // at least one active lane.  We call Legal->blockNeedsPredication here
+    // because it doesn't query tail-folding.  For stores, we need to prove
+    // both speculation safety (which follows from the same argument as loads),
+    // but also must prove the value being stored is correct.  The easiest
+    // form of the later is to require that all values stored are the same.
+    if (Legal->isUniformMemOp(*I) &&
+      (isa<LoadInst>(I) ||
+       (isa<StoreInst>(I) &&
+        TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()))) &&
+        !Legal->blockNeedsPredication(I->getParent()))
+      return false;
+    return true;
+  }
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::SRem:
@@ -4440,33 +4475,6 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
     // context sensitive reasoning
     return !isSafeToSpeculativelyExecute(I);
   }
-  return false;
-}
-
-bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I,
-                                                  ElementCount VF) const {
-  // When we know the load's address is loop invariant and the instruction
-  // in the original scalar loop was unconditionally executed then we
-  // don't need to mark it as a predicated instruction. Tail folding may
-  // introduce additional predication, but we're guaranteed to always have
-  // at least one active lane.  We call Legal->blockNeedsPredication here
-  // because it doesn't query tail-folding.  For stores, we need to prove
-  // both speculation safety (which follows from the same argument as loads),
-  // but also must prove the value being stored is correct.  The easiest
-  // form of the later is to require that all values stored are the same.
-  if (Legal->isUniformMemOp(*I) &&
-      (isa<LoadInst>(I) ||
-       (isa<StoreInst>(I) &&
-        TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()))) &&
-      !Legal->blockNeedsPredication(I->getParent()))
-    return false;
-  if (!blockNeedsPredicationForAnyReason(I->getParent()))
-    return false;
-  // Loads and stores that need some form of masked operation are predicated
-  // instructions.
-  if (isa<LoadInst>(I) || isa<StoreInst>(I))
-    return Legal->isMaskRequired(I);
-  return isScalarWithPredication(I, VF);
 }
 
 bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
@@ -6070,7 +6078,7 @@ bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
   // from moving "masked load/store" check from legality to cost model.
   // Masked Load/Gather emulation was previously never allowed.
   // Limited number of Masked Store/Scatter emulation was allowed.
-  assert((isPredicatedInst(I, VF) || Legal->isUniformMemOp(*I)) &&
+  assert((isPredicatedInst(I, VF)) &&
          "Expecting a scalar emulated instruction");
   return isa<LoadInst>(I) ||
          (isa<StoreInst>(I) &&
