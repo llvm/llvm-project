@@ -265,7 +265,7 @@ attributes #5 = { convergent }
 !4 = !{i32 1, !"wchar_size", i32 4}
 !5 = !{i32 7, !"openmp", i32 50}
 !6 = !{i32 7, !"openmp-device", i32 50}
-!7 = !{i32 7, !"PIC Level", i32 2}
+!7 = !{i32 8, !"PIC Level", i32 2}
 !8 = !{i32 7, !"frame-pointer", i32 2}
 !9 = !{!"clang version 14.0.0"}
 ;.
@@ -285,7 +285,7 @@ attributes #5 = { convergent }
 ; CHECK: [[META4:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; CHECK: [[META5:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META6:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META7:![0-9]+]] = !{i32 7, !"PIC Level", i32 2}
+; CHECK: [[META7:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
 ; CHECK: [[META8:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
 ; CHECK: [[META9:![0-9]+]] = !{!"clang version 14.0.0"}
 ;.

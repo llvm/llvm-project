@@ -4391,26 +4391,34 @@ bool llvm::UpgradeModuleFlags(Module &M) {
     MDString *ID = dyn_cast_or_null<MDString>(Op->getOperand(1));
     if (!ID)
       continue;
+    auto SetBehavior = [&](Module::ModFlagBehavior B) {
+      Metadata *Ops[3] = {ConstantAsMetadata::get(ConstantInt::get(
+                              Type::getInt32Ty(M.getContext()), B)),
+                          MDString::get(M.getContext(), ID->getString()),
+                          Op->getOperand(2)};
+      ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
+      Changed = true;
+    };
+
     if (ID->getString() == "Objective-C Image Info Version")
       HasObjCFlag = true;
     if (ID->getString() == "Objective-C Class Properties")
       HasClassProperties = true;
-    // Upgrade PIC/PIE Module Flags. The module flag behavior for these two
-    // field was Error and now they are Max.
-    if (ID->getString() == "PIC Level" || ID->getString() == "PIE Level") {
+    // Upgrade PIC from Error/Max to Min.
+    if (ID->getString() == "PIC Level") {
       if (auto *Behavior =
               mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(0))) {
-        if (Behavior->getLimitedValue() == Module::Error) {
-          Type *Int32Ty = Type::getInt32Ty(M.getContext());
-          Metadata *Ops[3] = {
-              ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Module::Max)),
-              MDString::get(M.getContext(), ID->getString()),
-              Op->getOperand(2)};
-          ModFlags->setOperand(I, MDNode::get(M.getContext(), Ops));
-          Changed = true;
-        }
+        uint64_t V = Behavior->getLimitedValue();
+        if (V == Module::Error || V == Module::Max)
+          SetBehavior(Module::Min);
       }
     }
+    // Upgrade "PIE Level" from Error to Max.
+    if (ID->getString() == "PIE Level")
+      if (auto *Behavior =
+              mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(0)))
+        if (Behavior->getLimitedValue() == Module::Error)
+          SetBehavior(Module::Max);
 
     // Upgrade branch protection and return address signing module flags. The
     // module flag behavior for these fields were Error and now they are Min.
