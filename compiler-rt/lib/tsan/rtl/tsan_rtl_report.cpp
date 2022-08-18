@@ -288,9 +288,7 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
     loc->tid = creat_tid;
     loc->stack = SymbolizeStackId(creat_stack);
     rep_->locs.PushBack(loc);
-    ThreadContext *tctx = FindThreadByTidLocked(creat_tid);
-    if (tctx)
-      AddThread(tctx);
+    AddThread(creat_tid);
     return;
   }
   MBlock *b = 0;
@@ -312,8 +310,7 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
     loc->tid = b->tid;
     loc->stack = SymbolizeStackId(b->stk);
     rep_->locs.PushBack(loc);
-    if (ThreadContext *tctx = FindThreadByTidLocked(b->tid))
-      AddThread(tctx);
+    AddThread(b->tid);
     return;
   }
   bool is_stack = false;
