@@ -1317,13 +1317,13 @@ static bool isTriviallyReplaceablePHI(const PHINode &PN, const Instruction &I) {
 static bool isFreeInLoop(const Instruction &I, const Loop *CurLoop,
                          const TargetTransformInfo *TTI) {
   InstructionCost CostI =
-      TTI->getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
+      TTI->getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
 
   if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
     if (CostI != TargetTransformInfo::TCC_Free)
       return false;
-    // For a GEP, we cannot simply use getUserCost because currently it
-    // optimistically assumes that a GEP will fold into addressing mode
+    // For a GEP, we cannot simply use getInstructionCost because currently
+    // it optimistically assumes that a GEP will fold into addressing mode
     // regardless of its users.
     const BasicBlock *BB = GEP->getParent();
     for (const User *U : GEP->users()) {
