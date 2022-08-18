@@ -240,12 +240,12 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
                                          Alignment, CostKind, I);
 
   // Cost is proportional to the number of memory operations implied.  For
-  // scalable vectors, we use an upper bound on that number since we don't
+  // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
   auto &VTy = *cast<VectorType>(DataTy);
   InstructionCost MemOpCost = getMemoryOpCost(Opcode, VTy.getElementType(),
                                               Alignment, 0, CostKind, I);
-  unsigned NumLoads = getMaxVLFor(&VTy);
+  unsigned NumLoads = getEstimatedVLFor(&VTy);
   return NumLoads * MemOpCost;
 }
 
@@ -343,12 +343,12 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 }
 
-unsigned RISCVTTIImpl::getMaxVLFor(VectorType *Ty) {
+unsigned RISCVTTIImpl::getEstimatedVLFor(VectorType *Ty) {
   if (isa<ScalableVectorType>(Ty)) {
     const unsigned EltSize = DL.getTypeSizeInBits(Ty->getElementType());
     const unsigned MinSize = DL.getTypeSizeInBits(Ty).getKnownMinValue();
-    const unsigned VectorBitsMax = ST->getRealMaxVLen();
-    return RISCVTargetLowering::computeVLMAX(VectorBitsMax, EltSize, MinSize);
+    const unsigned VectorBits = *getVScaleForTuning() * RISCV::RVVBitsPerBlock;
+    return RISCVTargetLowering::computeVLMAX(VectorBits, EltSize, MinSize);
   }
   return cast<FixedVectorType>(Ty)->getNumElements();
 }
@@ -372,7 +372,7 @@ RISCVTTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
   InstructionCost BaseCost = 2;
-  unsigned VL = getMaxVLFor(Ty);
+  unsigned VL = getEstimatedVLFor(Ty);
   return (LT.first - 1) + BaseCost + Log2_32_Ceil(VL);
 }
 
@@ -401,7 +401,7 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
   InstructionCost BaseCost = 2;
-  unsigned VL = getMaxVLFor(Ty);
+  unsigned VL = getEstimatedVLFor(Ty);
   if (TTI::requiresOrderedReduction(FMF))
     return (LT.first - 1) + BaseCost + VL;
   return (LT.first - 1) + BaseCost + Log2_32_Ceil(VL);
