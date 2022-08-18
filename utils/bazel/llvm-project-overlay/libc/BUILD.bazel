@@ -124,6 +124,8 @@ cc_library(
         "__support_cpp_array",
         "__support_cpp_limits",
         "__support_cpp_type_traits",
+        "__support_cpp_optional",
+        "__support_builtin_wrappers",
         ":libc_root",
     ],
 )
