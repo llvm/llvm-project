@@ -475,6 +475,7 @@ public:
       return;
     llvm::SmallVector<mlir::Type> newResTys;
     llvm::SmallVector<mlir::Type> newInTys;
+    llvm::SmallVector<std::pair<unsigned, mlir::NamedAttribute>> extraAttrs;
     llvm::SmallVector<FixupTy> fixups;
 
     // Convert return value(s)
@@ -552,9 +553,12 @@ public:
             }
           })
           .Default([&](mlir::Type ty) { newInTys.push_back(ty); });
+
       if (func.getArgAttrOfType<mlir::UnitAttr>(index,
                                                 fir::getHostAssocAttrName())) {
-        func.setArgAttr(index, "llvm.nest", rewriter->getUnitAttr());
+        extraAttrs.push_back(
+            {newInTys.size() - 1,
+             rewriter->getNamedAttr("llvm.nest", rewriter->getUnitAttr())});
       }
     }
 
@@ -715,6 +719,10 @@ public:
         mlir::FunctionType::get(func.getContext(), newInTys, newResTys);
     LLVM_DEBUG(llvm::dbgs() << "new func: " << newFuncTy << '\n');
     func.setType(newFuncTy);
+
+    for (std::pair<unsigned, mlir::NamedAttribute> extraAttr : extraAttrs)
+      func.setArgAttr(extraAttr.first, extraAttr.second.getName(),
+                      extraAttr.second.getValue());
 
     for (auto &fixup : fixups)
       if (fixup.finalizer)
