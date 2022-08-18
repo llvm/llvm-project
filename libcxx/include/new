@@ -164,7 +164,7 @@ class bad_array_new_length : public bad_alloc {
 public:
   bad_array_new_length() noexcept : bad_alloc("bad array new length") {}
 };
-#endif // defined(_LIBCPP_ABI_VCRUNTIME) && defined(_HAS_EXCEPTIONS) &&_HAS_EXCEPTIONS == 0 
+#endif // defined(_LIBCPP_ABI_VCRUNTIME) && defined(_HAS_EXCEPTIONS) && _HAS_EXCEPTIONS == 0
 
 _LIBCPP_NORETURN _LIBCPP_FUNC_VIS void __throw_bad_alloc();  // not in C++ spec
 
