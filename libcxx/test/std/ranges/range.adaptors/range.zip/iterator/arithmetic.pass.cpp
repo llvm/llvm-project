@@ -16,7 +16,7 @@
 // x - y;
 // All the arithmetic operators have the constraint `requires all-random-access<Const, Views...>;`,
 // except `operator-(x, y)` which instead has the constraint
-//    `requires (sized_­sentinel_­for<iterator_t<maybe-const<Const, Views>>,
+//    `requires (sized_sentinel_for<iterator_t<maybe-const<Const, Views>>,
 //                                  iterator_t<maybe-const<Const, Views>>> && ...);`
 
 #include <ranges>

@@ -17,7 +17,7 @@
 
 int main(int, char**)
 {
-	std::basic_fstream<char, std::char_traits<wchar_t> > f;
+  std::basic_fstream<char, std::char_traits<wchar_t> > f;
 //  expected-error-re@ios:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
 //  expected-error-re@streambuf:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
 

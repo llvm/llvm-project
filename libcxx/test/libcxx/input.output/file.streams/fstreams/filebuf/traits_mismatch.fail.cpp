@@ -17,8 +17,8 @@
 
 int main(int, char**)
 {
-	std::basic_filebuf<char, std::char_traits<wchar_t> > f;
-//  expected-error-re@streambuf:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
+  std::basic_filebuf<char, std::char_traits<wchar_t> > f;
+  // expected-error-re@streambuf:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
 
   return 0;
 }
