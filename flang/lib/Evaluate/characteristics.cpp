@@ -875,6 +875,23 @@ bool FunctionResult::CanBeReturnedViaImplicitInterface() const {
   }
 }
 
+static bool AreCompatibleFunctionResultShapes(const Shape &x, const Shape &y) {
+  int rank{GetRank(x)};
+  if (GetRank(y) != rank) {
+    return false;
+  }
+  for (int j{0}; j < rank; ++j) {
+    if (auto xDim{ToInt64(x[j])}) {
+      if (auto yDim{ToInt64(y[j])}) {
+        if (*xDim != *yDim) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+
 bool FunctionResult::IsCompatibleWith(
     const FunctionResult &actual, std::string *whyNot) const {
   Attrs actualAttrs{actual.attrs};
@@ -892,9 +909,10 @@ bool FunctionResult::IsCompatibleWith(
           *whyNot = "function results have distinct ranks";
         }
       } else if (!attrs.test(Attr::Allocatable) && !attrs.test(Attr::Pointer) &&
-          ifaceTypeShape->shape() != actualTypeShape->shape()) {
+          !AreCompatibleFunctionResultShapes(
+              ifaceTypeShape->shape(), actualTypeShape->shape())) {
         if (whyNot) {
-          *whyNot = "function results have distinct extents";
+          *whyNot = "function results have distinct constant extents";
         }
       } else if (!ifaceTypeShape->type().IsTkCompatibleWith(
                      actualTypeShape->type())) {

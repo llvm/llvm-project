@@ -3353,17 +3353,20 @@ void ArgumentAnalyzer::Analyze(const parser::Variable &x) {
     if (!symbol) {
       context_.SayAt(x, "Assignment to constant '%s' is not allowed"_err_en_US,
           x.GetSource());
-    } else if (auto *subp{symbol->detailsIf<semantics::SubprogramDetails>()}) {
-      auto *msg{context_.SayAt(x,
-          "Assignment to subprogram '%s' is not allowed"_err_en_US,
-          symbol->name())};
-      if (subp->isFunction()) {
-        const auto &result{subp->result().name()};
-        msg->Attach(result, "Function result is '%s'"_en_US, result);
+    } else if (IsProcedure(*symbol)) {
+      if (auto *msg{context_.SayAt(x,
+              "Assignment to procedure '%s' is not allowed"_err_en_US,
+              symbol->name())}) {
+        if (auto *subp{symbol->detailsIf<semantics::SubprogramDetails>()}) {
+          if (subp->isFunction()) {
+            const auto &result{subp->result().name()};
+            msg->Attach(result, "Function result is '%s'"_en_US, result);
+          }
+        }
       }
     } else {
-      context_.SayAt(x, "Assignment to constant '%s' is not allowed"_err_en_US,
-          symbol->name());
+      context_.SayAt(
+          x, "Assignment to '%s' is not allowed"_err_en_US, symbol->name());
     }
   }
   fatalErrors_ = true;

@@ -191,6 +191,12 @@ CUDA Support in Clang
 
 - ...
 
+RISC-V Support in Clang
+-----------------------
+
+- ``sifive-7-rv32`` and ``sifive-7-rv64`` are no longer supported for `-mcpu`.
+  Use `sifive-e76`, `sifive-s76`, or `sifive-u74` instead.
+
 X86 Support in Clang
 --------------------
 

@@ -279,7 +279,7 @@ void ExternalFileUnit::FlushAll(IoErrorHandler &handler) {
   }
 }
 
-static void SwapEndianness(
+static inline void SwapEndianness(
     char *data, std::size_t bytes, std::size_t elementBytes) {
   if (elementBytes > 1) {
     auto half{elementBytes >> 1};
@@ -733,7 +733,7 @@ void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(
               "record #%jd (file offset %jd): truncated record header";
     }
   } else {
-    std::memcpy(&header, Frame() + recordOffsetInFrame_, sizeof header);
+    header = ReadHeaderOrFooter(recordOffsetInFrame_);
     recordLength = sizeof header + header; // does not include footer
     need = recordOffsetInFrame_ + *recordLength + sizeof footer;
     got = ReadFrame(frameOffsetInFile_, need, handler);
@@ -742,8 +742,7 @@ void ExternalFileUnit::BeginSequentialVariableUnformattedInputRecord(
               "record #%jd (file offset %jd): hit EOF reading record with "
               "length %jd bytes";
     } else {
-      std::memcpy(&footer, Frame() + recordOffsetInFrame_ + *recordLength,
-          sizeof footer);
+      footer = ReadHeaderOrFooter(recordOffsetInFrame_ + *recordLength);
       if (footer != header) {
         error = "Unformatted variable-length sequential file input failed at "
                 "record #%jd (file offset %jd): record header has length %jd "
@@ -800,7 +799,7 @@ void ExternalFileUnit::BackspaceFixedRecord(IoErrorHandler &handler) {
 
 void ExternalFileUnit::BackspaceVariableUnformattedRecord(
     IoErrorHandler &handler) {
-  std::int32_t header{0}, footer{0};
+  std::int32_t header{0};
   auto headerBytes{static_cast<std::int64_t>(sizeof header)};
   frameOffsetInFile_ += recordOffsetInFrame_;
   recordOffsetInFrame_ = 0;
@@ -817,8 +816,7 @@ void ExternalFileUnit::BackspaceVariableUnformattedRecord(
     handler.SignalError(IostatShortRead);
     return;
   }
-  std::memcpy(&footer, Frame(), sizeof footer);
-  recordLength = footer;
+  recordLength = ReadHeaderOrFooter(0);
   if (frameOffsetInFile_ < *recordLength + 2 * headerBytes) {
     handler.SignalError(IostatBadUnformattedRecord);
     return;
@@ -835,7 +833,7 @@ void ExternalFileUnit::BackspaceVariableUnformattedRecord(
     handler.SignalError(IostatShortRead);
     return;
   }
-  std::memcpy(&header, Frame() + recordOffsetInFrame_, sizeof header);
+  header = ReadHeaderOrFooter(recordOffsetInFrame_);
   if (header != *recordLength) {
     handler.SignalError(IostatBadUnformattedRecord);
     return;
@@ -991,6 +989,16 @@ bool ExternalFileUnit::Wait(int id) {
     }
     return true;
   }
+}
+
+std::int32_t ExternalFileUnit::ReadHeaderOrFooter(std::int64_t frameOffset) {
+  std::int32_t word;
+  char *wordPtr{reinterpret_cast<char *>(&word)};
+  std::memcpy(wordPtr, Frame() + frameOffset, sizeof word);
+  if (swapEndianness_) {
+    SwapEndianness(wordPtr, sizeof word, sizeof word);
+  }
+  return word;
 }
 
 void ChildIo::EndIoStatement() {
