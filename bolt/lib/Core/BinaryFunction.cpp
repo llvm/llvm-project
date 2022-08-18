@@ -1470,15 +1470,11 @@ bool BinaryFunction::scanExternalRefs() {
     bool IsPCRel = false;
     bool IsBranch = false;
     if (BC.MIB->hasPCRelOperand(Instruction)) {
-      if (BC.MIB->evaluateMemOperandTarget(Instruction, TargetAddress,
-                                           AbsoluteInstrAddr, Size)) {
-        IsPCRel = true;
-      }
+      IsPCRel = BC.MIB->evaluateMemOperandTarget(Instruction, TargetAddress,
+                                                 AbsoluteInstrAddr, Size);
     } else if (BC.MIB->isCall(Instruction) || BC.MIB->isBranch(Instruction)) {
-      if (BC.MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
-                                 TargetAddress)) {
-        IsBranch = true;
-      }
+      IsBranch = BC.MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
+                                        TargetAddress);
     }
 
     MCSymbol *TargetSymbol = nullptr;
