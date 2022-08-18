@@ -321,6 +321,35 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
 
 } // end namespace yaml
 
+// A CSR SGPR value can be preserved inside a callee using one of the following
+// methods.
+//   1. Copy to an unused scratch SGPR.
+//   2. Spill to a VGPR lane.
+//   3. Spill to memory via. a scratch VGPR.
+// class PrologEpilogSGPRSaveRestoreInfo represents the save/restore method used
+// for an SGPR at function prolog/epilog.
+enum class SGPRSaveKind : uint8_t {
+  COPY_TO_SCRATCH_SGPR,
+  SPILL_TO_VGPR_LANE,
+  SPILL_TO_MEM
+};
+
+class PrologEpilogSGPRSaveRestoreInfo {
+  SGPRSaveKind Kind;
+  union {
+    int Index;
+    Register Reg;
+  };
+
+public:
+  PrologEpilogSGPRSaveRestoreInfo(SGPRSaveKind K, int I) : Kind(K), Index(I) {}
+  PrologEpilogSGPRSaveRestoreInfo(SGPRSaveKind K, Register R)
+      : Kind(K), Reg(R) {}
+  Register getReg() const { return Reg; }
+  int getIndex() const { return Index; }
+  SGPRSaveKind getKind() const { return Kind; }
+};
+
 /// This class keeps track of the SPI_SP_INPUT_ADDR config register, which
 /// tells the hardware which interpolation parameters to load.
 class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
@@ -464,6 +493,14 @@ private:
   // the serialization easier.
   ReservedRegSet WWMReservedRegs;
 
+  using PrologEpilogSGPRSpillsMap =
+      DenseMap<Register, PrologEpilogSGPRSaveRestoreInfo>;
+  // To track the SGPR spill method used for a CSR SGPR register during
+  // frame lowering. Even though the SGPR spills are handled during
+  // SILowerSGPRSpills pass, some special handling needed later during the
+  // PrologEpilogInserter.
+  PrologEpilogSGPRSpillsMap PrologEpilogSGPRSpills;
+
   DenseMap<int, VGPRSpillToAGPR> VGPRToAGPRSpills;
 
   // AGPRs used for VGPR spills.
@@ -492,17 +529,6 @@ public:
   void setVGPRForAGPRCopy(Register NewVGPRForAGPRCopy) {
     VGPRForAGPRCopy = NewVGPRForAGPRCopy;
   }
-
-public: // FIXME
-  /// If this is set, an SGPR used for save/restore of the register used for the
-  /// frame pointer.
-  Register SGPRForFPSaveRestoreCopy;
-  std::optional<int> FramePointerSaveIndex;
-
-  /// If this is set, an SGPR used for save/restore of the register used for the
-  /// base pointer.
-  Register SGPRForBPSaveRestoreCopy;
-  std::optional<int> BasePointerSaveIndex;
 
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg);
 
@@ -537,6 +563,50 @@ public:
   ArrayRef<Register> getSGPRSpillVGPRs() const { return SpillVGPRs; }
   const WWMSpillsMap &getWWMSpills() const { return WWMSpills; }
   const ReservedRegSet &getWWMReservedRegs() const { return WWMReservedRegs; }
+
+  const PrologEpilogSGPRSpillsMap &getPrologEpilogSGPRSpills() const {
+    return PrologEpilogSGPRSpills;
+  }
+
+  void addToPrologEpilogSGPRSpills(Register Reg,
+                                   PrologEpilogSGPRSaveRestoreInfo SI) {
+    PrologEpilogSGPRSpills.insert(std::make_pair(Reg, SI));
+  }
+
+  // Check if an entry created for \p Reg in PrologEpilogSGPRSpills. Return true
+  // on success and false otherwise.
+  bool hasPrologEpilogSGPRSpillEntry(Register Reg) const {
+    return PrologEpilogSGPRSpills.find(Reg) != PrologEpilogSGPRSpills.end();
+  }
+
+  // Get the scratch SGPR if allocated to save/restore \p Reg.
+  Register getScratchSGPRCopyDstReg(Register Reg) const {
+    auto I = PrologEpilogSGPRSpills.find(Reg);
+    if (I != PrologEpilogSGPRSpills.end() &&
+        I->second.getKind() == SGPRSaveKind::COPY_TO_SCRATCH_SGPR)
+      return I->second.getReg();
+
+    return AMDGPU::NoRegister;
+  }
+
+  // Get all scratch SGPRs allocated to copy/restore the SGPR spills.
+  void getAllScratchSGPRCopyDstRegs(SmallVectorImpl<Register> &Regs) const {
+    for (const auto &SI : PrologEpilogSGPRSpills) {
+      if (SI.second.getKind() == SGPRSaveKind::COPY_TO_SCRATCH_SGPR)
+        Regs.push_back(SI.second.getReg());
+    }
+  }
+
+  // Check if \p FI is allocated for any SGPR spill to a VGPR lane during PEI.
+  bool checkIndexInPrologEpilogSGPRSpills(int FI) const {
+    return find_if(PrologEpilogSGPRSpills,
+                   [FI](const std::pair<Register,
+                                        PrologEpilogSGPRSaveRestoreInfo> &SI) {
+                     return SI.second.getKind() ==
+                                SGPRSaveKind::SPILL_TO_VGPR_LANE &&
+                            SI.second.getIndex() == FI;
+                   }) != PrologEpilogSGPRSpills.end();
+  }
 
   ArrayRef<SIRegisterInfo::SpilledReg>
   getPrologEpilogSGPRSpillToVGPRLanes(int FrameIndex) const {
