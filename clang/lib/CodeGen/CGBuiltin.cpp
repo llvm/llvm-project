@@ -17054,6 +17054,15 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
 
     return Builder.CreateCall(F, {Ptr, Val, MemOrder, MemScope, IsVolatile});
   }
+  case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtn:
+  case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtnl: {
+    llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ResultType = ConvertType(E->getType());
+    // s_sendmsg_rtn is mangled using return type only.
+    Function *F =
+        CGM.getIntrinsic(Intrinsic::amdgcn_s_sendmsg_rtn, {ResultType});
+    return Builder.CreateCall(F, {Arg});
+  }
   default:
     return nullptr;
   }
