@@ -283,10 +283,10 @@ func.func @vect(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32, %arg3: !llvm.vec<2
   %0 = llvm.extractelement %arg0[%arg1 : i32] : vector<4xf32>
 // CHECK:  = llvm.insertelement {{.*}} : vector<4xf32>
   %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : vector<4xf32>
-// CHECK:  = llvm.shufflevector {{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : vector<4xf32>, vector<4xf32>
-  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : vector<4xf32>, vector<4xf32>
-// CHECK:  = llvm.shufflevector %{{.+}}, %{{.+}} [1 : i32, 0 : i32] : !llvm.vec<2 x ptr<i32>>, !llvm.vec<2 x ptr<i32>>
-  %3 = llvm.shufflevector %arg3, %arg3 [1 : i32, 0 : i32] : !llvm.vec<2 x ptr<i32>>, !llvm.vec<2 x ptr<i32>>
+// CHECK:  = llvm.shufflevector {{.*}} [0, 0, 0, 0, 7] : vector<4xf32>
+  %2 = llvm.shufflevector %arg0, %arg0 [0, 0, 0, 0, 7] : vector<4xf32>
+// CHECK:  = llvm.shufflevector %{{.+}}, %{{.+}} [1, 0] : !llvm.vec<2 x ptr<i32>>
+  %3 = llvm.shufflevector %arg3, %arg3 [1, 0] : !llvm.vec<2 x ptr<i32>>
 // CHECK:  = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
   %4 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : vector<4xf32>
   return
@@ -298,8 +298,8 @@ func.func @scalable_vect(%arg0: vector<[4]xf32>, %arg1: i32, %arg2: f32) {
   %0 = llvm.extractelement %arg0[%arg1 : i32] : vector<[4]xf32>
 // CHECK:  = llvm.insertelement {{.*}} : vector<[4]xf32>
   %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : vector<[4]xf32>
-// CHECK:  = llvm.shufflevector {{.*}} [0 : i32, 0 : i32, 0 : i32, 0 : i32] : vector<[4]xf32>, vector<[4]xf32>
-  %2 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 0 : i32] : vector<[4]xf32>, vector<[4]xf32>
+// CHECK:  = llvm.shufflevector {{.*}} [0, 0, 0, 0] : vector<[4]xf32>
+  %2 = llvm.shufflevector %arg0, %arg0 [0, 0, 0, 0] : vector<[4]xf32>
 // CHECK:  = llvm.mlir.constant(dense<1.000000e+00> : vector<[4]xf32>) : vector<[4]xf32>
   %3 = llvm.mlir.constant(dense<1.0> : vector<[4]xf32>) : vector<[4]xf32>
   return

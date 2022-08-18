@@ -784,20 +784,34 @@ def LLVM_InsertValueOp : LLVM_Op<
   }];
 }
 
-def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector", [NoSideEffect]> {
-  let arguments = (ins LLVM_AnyVector:$v1, LLVM_AnyVector:$v2, ArrayAttr:$mask);
+//===----------------------------------------------------------------------===//
+// ShuffleVectorOp
+//===----------------------------------------------------------------------===//
+
+def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector",
+    [NoSideEffect, AllTypesMatch<["v1", "v2"]>]> {
+  let summary = "Construct a permutation of two vectors.";
+
+  let arguments = (ins LLVM_AnyVector:$v1, LLVM_AnyVector:$v2,
+                       DenseI32ArrayAttr:$mask);
   let results = (outs LLVM_AnyVector:$res);
-  string llvmBuilder = [{
-      SmallVector<unsigned, 4> position =
-          LLVM::convertArrayToIndices<unsigned>($mask);
-      SmallVector<int, 4> mask(position.begin(), position.end());
-      $res = builder.CreateShuffleVector($v1, $v2, mask);
-  }];
+
   let builders = [
-    OpBuilder<(ins "Value":$v1, "Value":$v2, "ArrayAttr":$mask,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
-  let hasCustomAssemblyFormat = 1;
+    OpBuilder<(ins "Value":$v1, "Value":$v2, "DenseI32ArrayAttr":$mask,
+                   CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    OpBuilder<(ins "Value":$v1, "Value":$v2, "ArrayRef<int32_t>":$mask)>
+  ];
+
+  let assemblyFormat = [{
+    $v1 `,` $v2 $mask attr-dict `:` type($v1)
+    custom<ShuffleType>(ref(type($v1)), type($res), ref($mask))
+  }];
+
   let hasVerifier = 1;
+
+  string llvmBuilder = [{
+    $res = builder.CreateShuffleVector($v1, $v2, $mask);
+  }];
 }
 
 // Misc operations.

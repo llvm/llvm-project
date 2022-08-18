@@ -2038,65 +2038,44 @@ LogicalResult GlobalDtorsOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::ShuffleVectorOp.
+// ShuffleVectorOp
 //===----------------------------------------------------------------------===//
-// Expects vector to be of wrapped LLVM vector type and position to be of
-// wrapped LLVM i32 type.
-void LLVM::ShuffleVectorOp::build(OpBuilder &b, OperationState &result,
-                                  Value v1, Value v2, ArrayAttr mask,
-                                  ArrayRef<NamedAttribute> attrs) {
+
+void ShuffleVectorOp::build(OpBuilder &builder, OperationState &state, Value v1,
+                            Value v2, DenseI32ArrayAttr mask,
+                            ArrayRef<NamedAttribute> attrs) {
   auto containerType = v1.getType();
   auto vType = LLVM::getVectorType(LLVM::getVectorElementType(containerType),
                                    mask.size(),
                                    LLVM::isScalableVectorType(containerType));
-  build(b, result, vType, v1, v2, mask);
-  result.addAttributes(attrs);
+  build(builder, state, vType, v1, v2, mask);
+  state.addAttributes(attrs);
 }
 
-void ShuffleVectorOp::print(OpAsmPrinter &p) {
-  p << ' ' << getV1() << ", " << getV2() << " " << getMask();
-  p.printOptionalAttrDict((*this)->getAttrs(), {"mask"});
-  p << " : " << getV1().getType() << ", " << getV2().getType();
+void ShuffleVectorOp::build(OpBuilder &builder, OperationState &state, Value v1,
+                            Value v2, ArrayRef<int32_t> mask) {
+  build(builder, state, v1, v2, builder.getDenseI32ArrayAttr(mask));
 }
 
-// <operation> ::= `llvm.shufflevector` ssa-use `, ` ssa-use
-//                 `[` integer-literal (`,` integer-literal)* `]`
-//                 attribute-dict? `:` type
-ParseResult ShuffleVectorOp::parse(OpAsmParser &parser,
-                                   OperationState &result) {
-  SMLoc loc;
-  OpAsmParser::UnresolvedOperand v1, v2;
-  ArrayAttr maskAttr;
-  Type typeV1, typeV2;
-  if (parser.getCurrentLocation(&loc) || parser.parseOperand(v1) ||
-      parser.parseComma() || parser.parseOperand(v2) ||
-      parser.parseAttribute(maskAttr, "mask", result.attributes) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(typeV1) || parser.parseComma() ||
-      parser.parseType(typeV2) ||
-      parser.resolveOperand(v1, typeV1, result.operands) ||
-      parser.resolveOperand(v2, typeV2, result.operands))
-    return failure();
-  if (!LLVM::isCompatibleVectorType(typeV1))
-    return parser.emitError(
-        loc, "expected LLVM IR dialect vector type for operand #1");
-  auto vType =
-      LLVM::getVectorType(LLVM::getVectorElementType(typeV1), maskAttr.size(),
-                          LLVM::isScalableVectorType(typeV1));
-  result.addTypes(vType);
+/// Build the result type of a shuffle vector operation.
+static ParseResult parseShuffleType(AsmParser &parser, Type v1Type,
+                                    Type &resType, DenseI32ArrayAttr mask) {
+  if (!LLVM::isCompatibleVectorType(v1Type))
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected an LLVM compatible vector type");
+  resType = LLVM::getVectorType(LLVM::getVectorElementType(v1Type), mask.size(),
+                                LLVM::isScalableVectorType(v1Type));
   return success();
 }
 
+/// Nothing to do when the result type is inferred.
+static void printShuffleType(AsmPrinter &printer, Operation *op, Type v1Type,
+                             Type resType, DenseI32ArrayAttr mask) {}
+
 LogicalResult ShuffleVectorOp::verify() {
-  Type type1 = getV1().getType();
-  Type type2 = getV2().getType();
-  if (LLVM::getVectorElementType(type1) != LLVM::getVectorElementType(type2))
-    return emitOpError("expected matching LLVM IR Dialect element types");
-  if (LLVM::isScalableVectorType(type1))
-    if (llvm::any_of(getMask(), [](Attribute attr) {
-          return attr.cast<IntegerAttr>().getInt() != 0;
-        }))
-      return emitOpError("expected a splat operation for scalable vectors");
+  if (LLVM::isScalableVectorType(getV1().getType()) &&
+      llvm::any_of(getMask(), [](int32_t v) { return v != 0; }))
+    return emitOpError("expected a splat operation for scalable vectors");
   return success();
 }
 
