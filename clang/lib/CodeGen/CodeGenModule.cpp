@@ -65,6 +65,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -7137,8 +7138,7 @@ const VarDecl *CodeGenModule::checkLoopInit(const ForStmt &FStmt) {
 
 // Return true if the step is either a unary increment of the provided loop
 // index or a binary add on the loop index. Otherwise return false.
-bool CodeGenModule::checkLoopStep(const ForStmt &FStmt, const VarDecl *VD) {
-  const Expr *Inc = FStmt.getInc();
+bool CodeGenModule::checkLoopStep(const Expr *Inc, const VarDecl *VD) {
   if (Inc == nullptr)
     return false;
   if (Inc->getStmtClass() == Expr::UnaryOperatorClass &&
@@ -7231,9 +7231,8 @@ bool CodeGenModule::checkLoopStep(const ForStmt &FStmt, const VarDecl *VD) {
 // If the step is a unary expression, we already ensure it is an increment. So
 // no more processing is required for a unary expression. For a binary
 // expression, return the step.
-const Expr *CodeGenModule::getBinaryExprStep(const ForStmt &FStmt,
+const Expr *CodeGenModule::getBinaryExprStep(const Expr *Inc,
                                              const VarDecl *VD) {
-  const Expr *Inc = FStmt.getInc();
   if (isa<UnaryOperator>(Inc))
     return nullptr;
   // Found step += val, return val
@@ -7304,7 +7303,7 @@ bool CodeGenModule::isForStmtNoLoopConforming(const Stmt *OMPStmt) {
   if (VD == nullptr)
     return false;
 
-  if (!checkLoopStep(*FStmt, VD) || !checkLoopStop(*FStmt))
+  if (!checkLoopStep(FStmt->getInc(), VD) || !checkLoopStop(*FStmt))
     return false;
 
   return true;
@@ -7347,7 +7346,6 @@ bool CodeGenModule::areCombinedClausesNoLoopCompatible(
       D.hasClausesOfKind<OMPNumTeamsClause>() ||
       D.hasClausesOfKind<OMPReductionClause>() ||
       D.hasClausesOfKind<OMPSharedClause>() ||
-      D.hasClausesOfKind<OMPCollapseClause>() ||
       D.hasClausesOfKind<OMPDistScheduleClause>() ||
       D.hasClausesOfKind<OMPLastprivateClause>() ||
       D.hasClausesOfKind<OMPOrderClause>() || // concurrent would be ok
@@ -7355,6 +7353,8 @@ bool CodeGenModule::areCombinedClausesNoLoopCompatible(
       D.hasClausesOfKind<OMPProcBindClause>() ||
       D.hasClausesOfKind<OMPOrderedClause>() ||
       D.hasClausesOfKind<OMPScheduleClause>())
+    return false;
+  if (!isa<OMPLoopDirective>(D))
     return false;
   return true;
 }
@@ -7465,11 +7465,7 @@ bool CodeGenModule::checkAndSetNoLoopTargetConstruct(
   assert(NoLoopOutermostStmt != AssocStmt);
   NoLoopIntermediateStmts IntermediateStmts;
   IntermediateStmts.push_back(AssocDir);
-  NoLoopKernelMetadata NoLoopKernelMD;
-  // Create a map from the associated statement, the corresponding info will be
-  // populated later
-  setNoLoopKernel(NoLoopOutermostStmt,
-                  std::make_pair(IntermediateStmts, NoLoopKernelMD));
+  setNoLoopKernel(NoLoopOutermostStmt, IntermediateStmts);
 
   // All checks passed
   return true;
@@ -7504,11 +7500,7 @@ bool CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
       return false;
 
     NoLoopIntermediateStmts IntermediateStmts;
-    NoLoopKernelMetadata NoLoopKernelMD;
-    // Create a map from the associated statement, the corresponding info will
-    // be populated later
-    setNoLoopKernel(AssocStmt,
-                    std::make_pair(IntermediateStmts, NoLoopKernelMD));
+    setNoLoopKernel(AssocStmt, IntermediateStmts);
 
     // All checks passed
     return true;

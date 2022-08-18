@@ -3232,8 +3232,7 @@ public:
   ///
   /// This function should be called after ensuring that legality
   /// conditions for a no-loop kernel are met.
-  void EmitNoLoopKernel(const OMPExecutableDirective &D, const Stmt *S,
-                        SourceLocation Loc);
+  void EmitNoLoopKernel(const OMPExecutableDirective &D, SourceLocation Loc);
 
   /// EmitXteamRedKernel - For an OpenMP target reduction directive, emit the
   /// kernel code assuming that related runtime environment variables can be
@@ -3687,6 +3686,9 @@ public:
 
   /// Helper for the OpenMP loop directives.
   void EmitOMPLoopBody(const OMPLoopDirective &D, JumpDest LoopExit);
+
+  /// Helper for OpenMP NoLoop kernel CodeGen
+  void EmitOMPNoLoopBody(const OMPLoopDirective &D);
 
   /// Emit code for the worksharing loop-based directive.
   /// \return true, if this construct has any lastprivate clause, false -
@@ -4856,6 +4858,8 @@ private:
 
   Address getAddressFromDeclStmt(const ForStmt &FStmt);
   Address getAddressFromExpr(const ForStmt &FStmt);
+  llvm::Value *applyNoLoopInc(const Expr *Inc, const VarDecl *IVDecl,
+                              llvm::Value *CurrVal);
   std::pair<const VarDecl *, Address>
   EmitXteamRedStartingIndex(const ForStmt &FStmt);
   void EmitXteamRedInc(const ForStmt &FStmt, const VarDecl *LoopVar,

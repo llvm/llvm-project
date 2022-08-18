@@ -57,8 +57,8 @@ Address CodeGenFunction::getAddressFromDeclStmt(const ForStmt &FStmt) {
   const Stmt *InitStmt = FStmt.getInit();
   const DeclStmt &InitDeclStmt = cast<DeclStmt>(*InitStmt);
   const Decl *InitDecl = InitDeclStmt.getSingleDecl();
-  // Do an emit so as to populate the appropriate data structures.
-  EmitAutoVarDecl(cast<VarDecl>(*InitDecl));
+  if (!hasAddrOfLocalVar(cast<VarDecl>(InitDecl)))
+    EmitAutoVarDecl(cast<VarDecl>(*InitDecl));
   return GetAddrOfLocalVar(cast<VarDecl>(InitDecl));
 }
 
@@ -76,6 +76,21 @@ Address CodeGenFunction::getAddressFromExpr(const ForStmt &FStmt) {
       EmitScalarExpr(cast<BinaryOperator>(InitExpr)->getRHS());
   Builder.CreateStore(InitVal, IvAddr);
   return IvAddr;
+}
+
+llvm::Value *CodeGenFunction::applyNoLoopInc(const Expr *Inc,
+                                             const VarDecl *IVDecl,
+                                             llvm::Value *CurrVal) {
+  // If we reach here, it must be a unary increment or a binary
+  // step expression. For a binary expression, generate myid = step * myid
+  const Expr *StepExpr = CGM.getBinaryExprStep(Inc, IVDecl);
+  if (StepExpr == nullptr)
+    return CurrVal; // nothing to do
+  llvm::Value *StepVal = EmitScalarExpr(StepExpr);
+  return Builder.CreateMul(
+      Builder.CreateIntCast(CurrVal, ConvertTypeForMem(StepExpr->getType()),
+                            false),
+      StepVal);
 }
 
 std::pair<const VarDecl *, Address>
@@ -107,15 +122,10 @@ CodeGenFunction::EmitXteamRedStartingIndex(const ForStmt &FStmt) {
   llvm::Value *GlobalGpuThreadId = Builder.CreateAdd(WorkGroup, GpuThreadId);
 
   // Check the loop increment
-  assert(CGM.checkLoopStep(FStmt, LoopVD) && "Loop incr check failed");
+  assert(CGM.checkLoopStep(FStmt.getInc(), LoopVD) && "Loop incr check failed");
 
-  // If we reach here, it must be a unary increment or a binary
-  // step expression. For a binary expression, generate myid = step * myid
-  const Expr *StepExpr = CGM.getBinaryExprStep(FStmt, LoopVD);
-  if (StepExpr != nullptr) {
-    llvm::Value *StepVal = EmitScalarExpr(StepExpr);
-    GlobalGpuThreadId = Builder.CreateMul(GlobalGpuThreadId, StepVal);
-  }
+  // Handle stride
+  GlobalGpuThreadId = applyNoLoopInc(FStmt.getInc(), LoopVD, GlobalGpuThreadId);
 
   // Generate my_index = my_index + myid. Note that my_index was already
   // initialized
@@ -137,14 +147,10 @@ void CodeGenFunction::EmitXteamRedInc(const ForStmt &FStmt,
   llvm::Value *Prod = Builder.CreateMul(BlockSize, NumBlocks);
 
   // Check the loop increment
-  assert(CGM.checkLoopStep(FStmt, LoopVD) && "Loop incr check failed");
-  // If we reach here, it must be a unary increment or a binary
-  // step expression. For a binary expression, apply the step
-  const Expr *StepExpr = CGM.getBinaryExprStep(FStmt, LoopVD);
-  if (StepExpr != nullptr) {
-    llvm::Value *StepVal = EmitScalarExpr(StepExpr);
-    Prod = Builder.CreateMul(Prod, StepVal);
-  }
+  assert(CGM.checkLoopStep(FStmt.getInc(), LoopVD) && "Loop incr check failed");
+
+  // Handle stride
+  Prod = applyNoLoopInc(FStmt.getInc(), LoopVD, Prod);
 
   // *iv = *iv + prod
   llvm::Value *ProdRes =
@@ -155,34 +161,51 @@ void CodeGenFunction::EmitXteamRedInc(const ForStmt &FStmt,
 }
 
 void CodeGenFunction::EmitNoLoopKernel(const OMPExecutableDirective &D,
-                                       const Stmt *S, SourceLocation Loc) {
-  assert(S && "Null statement?");
-
-  /// This is the top level statement for which a No-Loop kernel is being
-  /// generated
-  CGM.setCurrentNoLoopStmt(S);
-
+                                       SourceLocation Loc) {
   if (!HaveInsertPoint())
     EnsureInsertPoint();
 
-  auto emitNoLoopStmt = [this](const Stmt *CapturedStmt) {
-    const ForStmt *FStmt = CGM.getSingleForStmt(CapturedStmt);
-    assert(FStmt && "Cannot generate kernel for null captured stmt");
+  auto emitNoLoopCodeForDirective = [this](const OMPExecutableDirective &D) {
+    assert(isa<OMPLoopDirective>(D) && "Unexpected directive");
+    const OMPLoopDirective &LD = cast<OMPLoopDirective>(D);
 
-    Address IvAddr = Address::invalid();
-    const VarDecl *LoopVD = CGM.checkDeclStmt(*FStmt);
-    if (LoopVD != nullptr)
-      IvAddr = getAddressFromDeclStmt(*FStmt);
-    else {
-      LoopVD = CGM.checkInitExpr(*FStmt);
-      assert(LoopVD != nullptr &&
-             "Cannot generate no-loop with a null loop var");
-      IvAddr = getAddressFromExpr(*FStmt);
+    // Emit the original loop indices
+    for (const Expr *CE : LD.counters()) {
+      const auto *CEDecl = cast<VarDecl>(cast<DeclRefExpr>(CE)->getDecl());
+      if (!hasAddrOfLocalVar(CEDecl))
+        EmitVarDecl(*CEDecl);
     }
 
-    // We generate NoLoop kernel for the device, not the host
-    assert(CGM.getLangOpts().OpenMPIsDevice);
+    // Emit the preinits
+    const DeclStmt *PreInits = cast_or_null<DeclStmt>(LD.getPreInits());
+    if (PreInits) {
+      for (const auto *I : PreInits->decls()) {
+        EmitVarDecl(cast<VarDecl>(*I));
+      }
+    }
 
+    // Emit the inits of original loop indices
+    for (const Expr *CIE : LD.inits()) {
+      EmitIgnoredExpr(CIE);
+    }
+
+    // Emit the lower and upper bounds
+    const auto *LBDecl =
+        cast<VarDecl>(cast<DeclRefExpr>(LD.getLowerBoundVariable())->getDecl());
+    EmitVarDecl(*LBDecl);
+    const auto *UBDecl =
+        cast<VarDecl>(cast<DeclRefExpr>(LD.getUpperBoundVariable())->getDecl());
+    EmitVarDecl(*UBDecl);
+
+    // Emit the iteration variable of the collapsed loop
+    const auto *IVDecl =
+        cast<VarDecl>(cast<DeclRefExpr>(LD.getIterationVariable())->getDecl());
+    EmitVarDecl(*IVDecl);
+
+    // Emit init of the iteration variable
+    EmitIgnoredExpr(LD.getInit());
+
+    Address IvAddr = GetAddrOfLocalVar(IVDecl);
     // Generate myid = workgroup_id * workgroup_size + workitem_id
     auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
 
@@ -199,15 +222,10 @@ void CodeGenFunction::EmitNoLoopKernel(const OMPExecutableDirective &D,
     llvm::Value *GlobalGpuThreadId = Builder.CreateAdd(WorkGroup, GpuThreadId);
 
     // Check the loop increment
-    assert(CGM.checkLoopStep(*FStmt, LoopVD) && "Loop incr check failed");
+    assert(CGM.checkLoopStep(LD.getInc(), IVDecl) && "Loop incr check failed");
 
-    // If we reach here, it must be a unary increment or a binary
-    // step expression. For a binary expression, generate myid = step * myid
-    const Expr *StepExpr = CGM.getBinaryExprStep(*FStmt, LoopVD);
-    if (StepExpr != nullptr) {
-      llvm::Value *StepVal = EmitScalarExpr(StepExpr);
-      GlobalGpuThreadId = Builder.CreateMul(GlobalGpuThreadId, StepVal);
-    }
+    // Handle stride
+    GlobalGpuThreadId = applyNoLoopInc(LD.getInc(), IVDecl, GlobalGpuThreadId);
 
     // Generate my_index = my_index + myid. Note that my_index was already
     // initialized
@@ -216,60 +234,35 @@ void CodeGenFunction::EmitNoLoopKernel(const OMPExecutableDirective &D,
     llvm::Value *Iv = Builder.CreateAdd(Gtid, Builder.CreateLoad(IvAddr));
     Builder.CreateStore(Iv, IvAddr);
 
-    // Check the loop condition
-    assert(CGM.checkLoopStop(*FStmt) && "Loop cond check failed");
+    // Emit updates of the original loop indices
+    for (const Expr *UE : LD.updates())
+      EmitIgnoredExpr(UE);
 
-    // Now branch to the appropriate code block if my_index is within upper
-    // bound
-    const BinaryOperator &FCondOp = cast<BinaryOperator>(*FStmt->getCond());
-    llvm::Value *RhsVal = EmitScalarExpr(FCondOp.getRHS());
-
-    assert(Iv->getType()->isIntegerTy());
-    llvm::CmpInst::Predicate IvCmpOp;
-    switch (FCondOp.getOpcode()) {
-    case BO_LT:
-      IvCmpOp = llvm::CmpInst::ICMP_ULT;
-      break;
-    case BO_GT:
-      IvCmpOp = llvm::CmpInst::ICMP_UGT;
-      break;
-    case BO_LE:
-      IvCmpOp = llvm::CmpInst::ICMP_ULE;
-      break;
-    case BO_GE:
-      IvCmpOp = llvm::CmpInst::ICMP_UGE;
-      break;
-    case BO_EQ:
-      IvCmpOp = llvm::CmpInst::ICMP_EQ;
-      break;
-    case BO_NE:
-      IvCmpOp = llvm::CmpInst::ICMP_NE;
-      break;
-    default:
-      assert(0 && "Unsupported opcode");
-      break;
-    }
-
-    llvm::Value *IvCmp = Builder.CreateICmp(
-        IvCmpOp, Iv, Builder.CreateIntCast(RhsVal, Iv->getType(), false));
+    // Branch to end if original loop condition not satisfied
+    llvm::Value *IvCmp = EvaluateExprAsBool(LD.getCond());
 
     llvm::BasicBlock *ExecBB = createBasicBlock("omp.kernel.body");
     llvm::BasicBlock *DoneBB = createBasicBlock("omp.kernel.done");
+
     Builder.CreateCondBr(IvCmp, ExecBB, DoneBB);
 
-    /// Update the metadata as applicable now
-    CGM.updateNoLoopKernelMetadata(FStmt, FStmt, DoneBB);
+    // On a continue in the body, jump to the end.
+    // A break is not allowed in this scope but it would be the end anyways
+    JumpDest Continue = getJumpDestInCurrentScope(DoneBB);
+    BreakContinueStack.push_back(BreakContinue(Continue, Continue));
 
     // Emit the kernel body block
     EmitBlock(ExecBB);
-    EmitStmt(FStmt->getBody());
+    EmitOMPNoLoopBody(LD);
     EmitBranch(DoneBB);
 
     EmitBlock(DoneBB);
     Builder.CreateRetVoid();
     Builder.ClearInsertionPoint();
+    BreakContinueStack.pop_back();
   };
 
+  const Stmt *S = D.getAssociatedStmt();
   // For non-combined constructs, the for loop has to be retrieved from
   // the intermediate statements
   const CodeGenModule::NoLoopIntermediateStmts &IntermediateStmts =
@@ -282,12 +275,10 @@ void CodeGenFunction::EmitNoLoopKernel(const OMPExecutableDirective &D,
     EmitOMPPrivateClause(*NoLoopDir, PrivateScope);
     (void)PrivateScope.Privatize();
     S = NoLoopDir->getAssociatedStmt();
-    emitNoLoopStmt(S);
+    emitNoLoopCodeForDirective(*NoLoopDir);
   } else {
-    emitNoLoopStmt(S);
+    emitNoLoopCodeForDirective(D);
   }
-  // No-Loop codegen done
-  CGM.setCurrentNoLoopStmt(nullptr);
 }
 
 void CodeGenFunction::EmitXteamRedKernel(
@@ -329,8 +320,7 @@ void CodeGenFunction::EmitXteamRedKernel(
 
   Address XteamRedAddr(XteamRedInst, LHSType,
                        getContext().getTypeAlignInChars(LHS->getType()));
-  llvm::StoreInst *XteamRedInstInit =
-      Builder.CreateStore(InitVal, XteamRedAddr);
+  Builder.CreateStore(InitVal, XteamRedAddr);
   // Done local var init to 0
 
   CodeGenModule::XteamRedKernelMetadata MD;
@@ -1318,11 +1308,6 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
 
   LexicalScope ForScope(*this, S.getSourceRange());
 
-  /// If the current No-Loop statement is valid, we are generating a No-Loop
-  /// kernel. Hence, update the current immediately enclosing loop statement
-  if (CGM.getLangOpts().OpenMPIsDevice && CGM.getCurrentNoLoopStmt() != nullptr)
-    CGM.updateImmediateForStmtInNoLoopKernelMetadata(&S);
-
   Address XteamRedIvAddr = Address::invalid();
   const VarDecl *LoopVar = nullptr;
   if (CGM.getLangOpts().OpenMPIsDevice && CGM.isXteamRedKernel(&S)) {
@@ -1432,8 +1417,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
       llvm::Value *RedRHS =
           Builder.CreateFAdd(RHSValue, Builder.CreateLoad(XteamRedLocalAddr));
       // *xteam_red_local_addr = *xteam_red_local_addr + rhs_value
-      llvm::StoreInst *NewBodyRedStmt =
-          Builder.CreateStore(RedRHS, XteamRedLocalAddr);
+      Builder.CreateStore(RedRHS, XteamRedLocalAddr);
     } else
       EmitStmt(S.getBody());
   }
@@ -1727,15 +1711,6 @@ void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
 }
 
 void CodeGenFunction::EmitContinueStmt(const ContinueStmt &S) {
-  /// If the current No-Loop statement is valid, we are generating a No-Loop
-  /// kernel. Just branch to the end of the kernel for a continue statement.
-  if (CGM.getLangOpts().OpenMPIsDevice &&
-      CGM.getCurrentNoLoopStmt() != nullptr &&
-      CGM.isImmediateForStmtNoLoopCandidate()) {
-    EmitBranch(CGM.getNoLoopExitBB());
-    return;
-  }
-
   assert(!BreakContinueStack.empty() && "continue stmt not in a loop!");
 
   // If this code is reachable then emit a stop point (if generating

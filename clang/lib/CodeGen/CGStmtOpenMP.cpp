@@ -694,7 +694,7 @@ llvm::Function *CodeGenFunction::GenerateOpenMPCapturedStmtFunction(
     EmitOMPPrivateClause(D, PrivateScope);
     (void)PrivateScope.Privatize();
 
-    EmitNoLoopKernel(D, D.getAssociatedStmt(), Loc);
+    EmitNoLoopKernel(D, Loc);
   } else if (D.hasAssociatedStmt() && CGM.isXteamRedKernel(CGM.getSingleForStmt(
                                           D.getAssociatedStmt()))) {
     OMPPrivateScope PrivateScope(*this);
@@ -2011,6 +2011,16 @@ void CodeGenFunction::EmitOMPLoopBody(const OMPLoopDirective &D,
   // The end (updates/cleanups).
   EmitBlock(Continue.getBlock());
   BreakContinueStack.pop_back();
+}
+
+void CodeGenFunction::EmitOMPNoLoopBody(const OMPLoopDirective &D) {
+  const Stmt *Body =
+      D.getInnermostCapturedStmt()->getCapturedStmt()->IgnoreContainers();
+  // Emit loop body.
+  emitBody(*this, Body,
+           OMPLoopBasedDirective::tryToFindNextInnerLoop(
+               Body, /*TryImperfectlyNestedLoops=*/true),
+           D.getLoopsNumber());
 }
 
 using EmittedClosureTy = std::pair<llvm::Function *, llvm::Value *>;
