@@ -180,12 +180,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
-  // TODO: Handle more cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Opd1PropInfo,
-                                         Opd2PropInfo, Args, CxtI);
-
   // vXi8 multiplications are always promoted to vXi16.
   if (Opcode == Instruction::Mul && Ty->isVectorTy() &&
       Ty->getScalarSizeInBits() == 8) {
@@ -290,6 +284,12 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
                                   Op2Info, TargetTransformInfo::OP_None,
                                   TargetTransformInfo::OP_None);
   }
+
+  // TODO: Handle more cost kinds.
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                         Opd1PropInfo, Opd2PropInfo, Args,
+                                         CxtI);
 
   static const CostTblEntry GLMCostTable[] = {
     { ISD::FDIV,  MVT::f32,   18 }, // divss
