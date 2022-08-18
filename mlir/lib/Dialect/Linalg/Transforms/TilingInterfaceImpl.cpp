@@ -161,15 +161,12 @@ struct LinalgOpTilingInterface
         }));
 
     OpOperand *outOperand = linalgOp.getOutputOperand(resultNumber);
-    Value sliceOpResult =
-        makeTiledShape(b, loc, outOperand->get(), sizes,
-                       linalgOp.getTiedIndexingMap(outOperand), offsets,
-                       /*ubs*/ {}, subShapeSizes, true);
-    auto sliceOp = sliceOpResult.getDefiningOp<tensor::ExtractSliceOp>();
-    if (!sliceOp)
-      return failure();
-    resultOffsets = sliceOp.getMixedOffsets();
-    resultSizes = sliceOp.getMixedSizes();
+    SliceParameters sliceParams =
+        computeSliceParameters(b, loc, outOperand->get(), sizes,
+                               linalgOp.getTiedIndexingMap(outOperand), offsets,
+                               /*ubs*/ {}, subShapeSizes, true);
+    resultOffsets = sliceParams.offsets;
+    resultSizes = sliceParams.sizes;
     return success();
   }
 
