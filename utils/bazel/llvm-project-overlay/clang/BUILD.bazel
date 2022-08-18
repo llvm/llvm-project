@@ -2189,6 +2189,7 @@ cc_binary(
     srcs = glob(["tools/clang-scan-deps/*.cpp"]),
     stamp = 0,
     deps = [
+        ":driver",
         ":frontend",
         ":tooling",
         ":tooling_dependency_scanning",
