@@ -154,7 +154,7 @@ TEST(InstSizes, STATEPOINT) {
 
   runChecks(TM.get(), II.get(), "",
             "    STATEPOINT 0, 0, 0, @sizes, 2, 0, 2, 0, 2, 0, 2, 1, 1, 8,"
-            " $sp, 24, 2, 0, 2, 1, 0, 0\n",
+            " $sp, 24, 3, 2, 0, 2, 1, 0, 0\n",
             [](AArch64InstrInfo &II, MachineFunction &MF) {
               auto I = MF.begin()->begin();
               EXPECT_EQ(4u, II.getInstSizeInBytes(*I));

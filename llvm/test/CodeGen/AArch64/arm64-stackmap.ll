@@ -70,6 +70,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  6
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -77,6 +78,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   65535
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -84,6 +86,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   65536
 ; LargeConstant at index 0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -91,6 +94,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
 ; LargeConstant at index 1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -98,6 +102,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   1
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -105,6 +110,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   66
 ; LargeConstant at index 2
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -125,11 +131,13 @@ entry:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  {{[0-9]+}}
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -153,11 +161,13 @@ entry:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  {{[0-9]+}}
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -197,11 +207,13 @@ entry:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  {{[0-9]+}}
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -223,11 +235,13 @@ entry:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  {{[0-9]+}}
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -249,11 +263,13 @@ entry:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  {{[0-9]+}}
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -320,6 +336,7 @@ entry:
 ; 1 location
 ; CHECK-NEXT:   .short 1
 ; Loc 0: SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -339,6 +356,7 @@ define void @liveConstant() {
 ; 1 location
 ; CHECK-NEXT:   .short 1
 ; Loc 0: Indirect FP (r29) - offset
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   3
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  4
@@ -357,12 +375,14 @@ define void @clobberLR(i32 %a) {
 ; CHECK-NEXT:   .short 6
 ; Loc 0: constant float stored to FP register
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  4
 ; CHECK-NEXT:   .short  {{.*}}
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
 ; Loc 0: constant double stored to FP register
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -371,6 +391,7 @@ define void @clobberLR(i32 %a) {
 ; CHECK-NEXT:   .long   0
 ; Loc 1: float value in FP register
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  4
 ; CHECK-NEXT:   .short  {{.*}}
@@ -378,12 +399,14 @@ define void @clobberLR(i32 %a) {
 ; CHECK-NEXT:   .long   0
 ; Loc 2: double value in FP register
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  {{.*}}
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
 ; Loc 3: float on stack
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -391,6 +414,7 @@ define void @clobberLR(i32 %a) {
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -{{.*}}
 ; Loc 4: double on stack
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8

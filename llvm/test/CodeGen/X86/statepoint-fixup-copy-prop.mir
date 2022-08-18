@@ -25,10 +25,10 @@ body:             |
     ; CHECK:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, killed $rax :: (store (s64) into %stack.1)
     ; CHECK:   renamable $rax = MOV64rm renamable $rdi, 1, $noreg, 16, $noreg
     ; CHECK:   MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed $rax :: (store (s64) into %stack.0)
-    ; CHECK:   STATEPOINT 0, 0, 0, @foo, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 2, 1, 1, 8, %stack.1, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (load (s64) from %stack.0), (load store (s64) on %stack.1)
+    ; CHECK:   STATEPOINT 0, 0, 0, @foo, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 3, 2, 1, 1, 8, %stack.1, 0, 3, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp :: (load (s64) from %stack.0), (load store (s64) on %stack.1)
     renamable $rdi = COPY killed renamable $rax
     renamable $rax = MOV64rm renamable $rdi, 1, $noreg, 16, $noreg
-    renamable $rdi = STATEPOINT 0, 0, 0, @foo, 2, 0, 2, 0, 2, 1, renamable $rax, 2, 1, killed renamable $rdi(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+    renamable $rdi = STATEPOINT 0, 0, 0, @foo, 2, 0, 2, 0, 2, 1, renamable $rax, 3, 2, 1, killed renamable $rdi(tied-def 0), 3, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
     $rax = COPY killed renamable $rdi
     RET 0, killed $rax
 ...

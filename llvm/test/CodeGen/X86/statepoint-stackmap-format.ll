@@ -165,7 +165,9 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; Constant arguments
 ; CHECK-NEXT: .long	.Ltmp0-test
 ; CHECK: .short	0
-; CHECK: .short	11
+; CHECK: .short	9
+; LiveVar[0]
+; CHECK: .byte 3
 ; SmallConstant (0)
 ; CHECK: .byte	4
 ; CHECK-NEXT:   .byte   0
@@ -188,6 +190,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	2
 ; Indirect Spill Slot [RSP+0]
+; CHECK: .byte  1
 ; CHECK: .byte	3
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -195,6 +198,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 ; SmallConstant  (0)
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -202,6 +206,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; SmallConstant  (0)
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -209,6 +214,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; SmallConstant  (0)
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -216,6 +222,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; Indirect Spill Slot [RSP+16]
+; CHECK: .byte  1
 ; CHECK: .byte	3
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -223,6 +230,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 ; Indirect Spill Slot [RSP+8]
+; CHECK: .byte  1
 ; CHECK: .byte	3
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -230,6 +238,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	8
 ; Indirect Spill Slot [RSP+16]
+; CHECK: .byte  1
 ; CHECK: .byte	3
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -237,6 +246,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 ; Indirect Spill Slot [RSP+16]
+; CHECK: .byte  1
 ; CHECK: .byte	3
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -259,7 +269,15 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; Constant arguments
 ; CHECK-NEXT: .long	.Ltmp1-test_derived_arg
 ; CHECK: .short	0
-; CHECK: .short	11
+; CHECK: .short	9
+; CHECK-NEXT: .byte 3
+; SmallConstant (0)
+; CHECK: .byte	4
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
+; CHECK: .short	0
+; CHECK-NEXT:   .short  0
+; CHECK: .long	0
 ; SmallConstant (0)
 ; CHECK: .byte	4
 ; CHECK-NEXT:   .byte   0
@@ -275,6 +293,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	2
 ; Indirect Spill Slot [RSP+0]
+; CHECK-NEXT: .byte 1
 ; CHECK: .byte	3
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -282,6 +301,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 ; SmallConstant  (0)
+; CHECK-NEXT: .byte 1
 ; CHECK: .byte	4
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -289,6 +309,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; SmallConstant  (0)
+; CHECK-NEXT: .byte 1
 ; CHECK: .byte	4
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -296,6 +317,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; SmallConstant  (0)
+; CHECK-NEXT: .byte 1
 ; CHECK: .byte	4
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -303,6 +325,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
 ; Indirect Spill Slot [RSP+16]
+; CHECK-NEXT: .byte 1
 ; CHECK: .byte	3
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -310,6 +333,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 ; Indirect Spill Slot [RSP+8]
+; CHECK-NEXT: .byte 1
 ; CHECK: .byte	3
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -317,6 +341,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	8
 ; Indirect Spill Slot [RSP+16]
+; CHECK-NEXT: .byte 1
 ; CHECK: .byte	3
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -324,6 +349,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	16
 ; Indirect Spill Slot [RSP+16]
+; CHECK-NEXT: .byte 1
 ; CHECK: .byte	3
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -348,7 +374,8 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK: .short	0
 
 ; NumLocations:
-; CHECK: .short	3
+; CHECK: .short	1
+; CHECK: .byte  3
 
 ; StkMapRecord[0]:
 ; SmallConstant(0):
@@ -395,8 +422,8 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK: .short	0
 
 ; NumLocations:
-; CHECK: .short	5
-
+; CHECK: .short	3
+; CHECK: .byte  3
 ; StkMapRecord[0]:
 ; SmallConstant(0):
 ; CHECK: .byte	4
@@ -426,6 +453,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 
 ; StkMapRecord[3]:
 ; Indirect Spill Slot [RSP+16]
+; CHECK: .byte  1
 ; CHECK: .byte	3
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -435,6 +463,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 
 ; StkMapRecord[4]:
 ; Indirect Spill Slot [RSP+16]
+; CHECK: .byte  1
 ; CHECK: .byte	3
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8
@@ -460,8 +489,9 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 ; CHECK: .short	0
 
 ; NumLocations:
-; CHECK: .short	4
+; CHECK: .short	2
 
+; CHECK-NEXT: .byte 3
 ; StkMapRecord[0]:
 ; SmallConstant(0):
 ; CHECK: .byte	4
@@ -491,6 +521,7 @@ declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32) #3
 
 ; StkMapRecord[3]:
 ; Direct RSP+16
+; CHECK: .byte	1
 ; CHECK: .byte	2
 ; CHECK-NEXT:   .byte   0
 ; CHECK: .short 8

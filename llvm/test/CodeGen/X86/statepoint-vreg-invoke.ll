@@ -12,7 +12,7 @@ define ptr addrspace(1) @test_basic_invoke(ptr addrspace(1) %obj, ptr addrspace(
 ; CHECK:          bb.0.entry:
 ; CHECK:          MOV64mr %stack.1, 1, $noreg, 0, $noreg, renamable $rdi :: (store (s64) into %stack.1)
 ; CHECK:          MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rsi :: (store (s64) into %stack.0)
-; CHECK:          STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 5, 2, 0, 2, -1, 2, 0, 2, 0, 2, 0, 2, 2, 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0), (volatile load store (s64) on %stack.1)
+; CHECK:          STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 5, 2, 0, 3, 2, -1, 3, 2, 0, 3, 2, 0, 3, 2, 0, 3, 2, 2, 1, 8, %stack.0, 0, 3, 1, 8, %stack.1, 0, 3, 2, 0, 2, 2, 0, 0, 3, 1, 1, 3, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0), (volatile load store (s64) on %stack.1)
 ; CHECK:          JMP_1 %bb.1
 ; CHECK:          bb.1.safepoint_normal_dest:
 ; CHECK:          renamable $rax = MOV64rm %stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %stack.1)
@@ -54,7 +54,7 @@ define ptr addrspace(1) @test_invoke_same_val(i1 %cond, ptr addrspace(1) %val1, 
 ; CHECK:          bb.1.left:
 ; CHECK:          MOV64mr %stack.0, 1, $noreg, 0, $noreg, renamable $rsi :: (store (s64) into %stack.0)
 ; CHECK:          $rdi = COPY killed renamable $rsi
-; CHECK:          renamable $rbp = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $rbp(tied-def 0), 1, 8, %stack.0, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0)
+; CHECK:          renamable $rbp = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $rbp(tied-def 0), 3, 1, 8, %stack.0, 0, 3, 2, 0, 2, 2, 0, 0, 3, 1, 1, 3, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0)
 ; CHECK:          JMP_1 %bb.2
 ; CHECK:          bb.2.left.relocs:
 ; CHECK:          renamable $rbx = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
@@ -62,7 +62,7 @@ define ptr addrspace(1) @test_invoke_same_val(i1 %cond, ptr addrspace(1) %val1, 
 ; CHECK:          bb.3.right:
 ; CHECK:          MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rbp :: (store (s64) into %stack.0)
 ; CHECK:          $rdi = COPY killed renamable $rsi
-; CHECK:          renamable $rbx = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $rbx(tied-def 0), 1, 8, %stack.0, 0, 2, 0, 2, 2, 0, 0, 1, 1, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0)
+; CHECK:          renamable $rbx = STATEPOINT 0, 0, 1, @some_call, $rdi, 2, 0, 2, 0, 2, 0, 2, 2, killed renamable $rbx(tied-def 0), 3, 1, 8, %stack.0, 0, 3, 2, 0, 2, 2, 0, 0, 3, 1, 1, 3, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0)
 ; CHECK:          JMP_1 %bb.4
 ; CHECK:          bb.4.right.relocs:
 ; CHECK:          renamable $rbp = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
@@ -123,16 +123,16 @@ define void @test_duplicate_ir_values() gc "statepoint-example" personality ptr 
 ; CHECK:          bb.0.entry:
 ; CHECK:          renamable $rax = MOV64rm undef renamable $rax, 1, $noreg, 0, $noreg :: (load (s64) from `ptr addrspace(1) undef`, addrspace 1)
 ; CHECK:          MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rax :: (store (s64) into %stack.0)
-; CHECK:          STATEPOINT 1, 16, 5, undef renamable $rax, undef $edi, undef $rsi, undef $edx, undef $ecx, undef $r8d, 2, 0, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax :: (volatile load store (s64) on %stack.0)
+; CHECK:          STATEPOINT 1, 16, 5, undef renamable $rax, undef $edi, undef $rsi, undef $edx, undef $ecx, undef $r8d, 2, 0, 2, 0, 2, 0, 2, 1, 1, 8, %stack.0, 0, 3, 2, 0, 2, 1, 0, 0, 3, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax :: (volatile load store (s64) on %stack.0)
 ; CHECK:          JMP_1 %bb.1
 ; CHECK:          bb.1.normal_continue:
 ; CHECK:          renamable $rbx = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
 ; CHECK:          $edi = MOV32ri 10
-; CHECK:          dead renamable $rbx = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @__llvm_deoptimize, killed $edi, 2, 0, 2, 2, 2, 2, killed renamable $rbx, renamable $rbx, 2, 1, renamable $rbx(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+; CHECK:          dead renamable $rbx = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @__llvm_deoptimize, killed $edi, 2, 0, 2, 2, 2, 2, killed renamable $rbx, 3, renamable $rbx, 3, 2, 1, renamable $rbx(tied-def 0), 3, 2, 0, 2, 1, 0, 0, 3, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK:          bb.2.exceptional_return (landing-pad):
 ; CHECK:          renamable $rbx = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
 ; CHECK:          $edi = MOV32ri -271
-; CHECK:          dead renamable $rbx = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @__llvm_deoptimize, killed $edi, 2, 0, 2, 0, 2, 1, killed renamable $rbx, 2, 1, renamable $rbx(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+; CHECK:          dead renamable $rbx = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @__llvm_deoptimize, killed $edi, 2, 0, 2, 0, 2, 1, killed renamable $rbx, 3, 2, 1, renamable $rbx(tied-def 0), 3, 2, 0, 2, 1, 0, 0, 3, csr_64, implicit-def $rsp, implicit-def $ssp
 entry:
   %val1 = load ptr addrspace(1), ptr addrspace(1) undef, align 8
   %val2 = load ptr addrspace(1), ptr addrspace(1) undef, align 8

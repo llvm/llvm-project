@@ -9306,10 +9306,12 @@ void SelectionDAGBuilder::populateCallLoweringInfo(
 /// only available in a register, then the runtime would need to trap when
 /// execution reaches the StackMap in order to read the alloca's location.
 static void addStackMapLiveVars(const CallBase &Call, unsigned StartIdx,
-                                const SDLoc &DL, SmallVectorImpl<SDValue> &Ops,
-                                SelectionDAGBuilder &Builder) {
+                                unsigned EndIdx, const SDLoc &DL,
+                                SmallVectorImpl<SDValue> &Ops,
+                                SelectionDAGBuilder &Builder,
+                                bool ForceReg = false) {
   SelectionDAG &DAG = Builder.DAG;
-  for (unsigned I = StartIdx; I < Call.arg_size(); I++) {
+  for (unsigned I = StartIdx; I < EndIdx; I++) {
     SDValue Op = Builder.getValue(Call.getArgOperand(I));
 
     // Things on the stack are pointer-typed, meaning that they are already
@@ -9318,8 +9320,14 @@ static void addStackMapLiveVars(const CallBase &Call, unsigned StartIdx,
       Ops.push_back(DAG.getTargetFrameIndex(FI->getIndex(), Op.getValueType()));
     } else {
       // Otherwise emit a target independent node to be legalised.
-      Ops.push_back(Builder.getValue(Call.getArgOperand(I)));
+      if (Op.getOpcode() == ISD::MERGE_VALUES) {
+        for (unsigned J = 0; J < Op.getNumOperands(); J++)
+          Ops.push_back(Op.getOperand(J));
+      } else {
+        Ops.push_back(Op);
+      }
     }
+    Ops.push_back(DAG.getTargetConstant(StackMaps::NextLive, DL, MVT::i64));
   }
 }
 
@@ -9371,7 +9379,7 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
   Ops.push_back(ShadConst);
 
   // Add the live variables.
-  addStackMapLiveVars(CI, 2, DL, Ops, *this);
+  addStackMapLiveVars(CI, 2, CI.arg_size(), DL, Ops, *this);
 
   // Create the STACKMAP node.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
@@ -9485,16 +9493,20 @@ void SelectionDAGBuilder::visitPatchpoint(const CallBase &CB,
 
   // Add the arguments we omitted previously. The register allocator should
   // place these in any free register.
-  if (IsAnyRegCC)
-    for (unsigned i = NumMetaOpers, e = NumMetaOpers + NumArgs; i != e; ++i)
+  if (IsAnyRegCC) {
+    for (unsigned i = NumMetaOpers, e = NumMetaOpers + NumArgs; i != e; ++i) {
       Ops.push_back(getValue(CB.getArgOperand(i)));
+      Ops.push_back(DAG.getTargetConstant(StackMaps::NextLive, dl, MVT::i64));
+    }
+  }
 
   // Push the arguments from the call instruction.
   SDNode::op_iterator e = HasGlue ? Call->op_end()-2 : Call->op_end()-1;
   Ops.append(Call->op_begin() + 2, e);
 
   // Push live variables for the stack map.
-  addStackMapLiveVars(CB, NumMetaOpers + NumArgs, dl, Ops, *this);
+  addStackMapLiveVars(CB, NumMetaOpers + NumArgs, CB.arg_size(), dl, Ops,
+                      *this);
 
   SDVTList NodeTys;
   if (IsAnyRegCC && HasDef) {

@@ -76,6 +76,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .hword  14
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -83,6 +84,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   65535
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -90,6 +92,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   65535
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -97,6 +100,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   65536
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -104,6 +108,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   2000000000
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -111,6 +116,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   2147483647
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -118,6 +124,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   -1
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -125,6 +132,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   -1
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -132,6 +140,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
 ; LargeConstant at index 0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -139,6 +148,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
 ; LargeConstant at index 1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -146,6 +156,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   1
 ; LargeConstant at index 2
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -153,6 +164,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   2
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -160,6 +172,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   -1
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -167,6 +180,7 @@
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   66
 ; LargeConstant at index 2
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -187,11 +201,13 @@ entry:
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .hword  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
 ; CHECK-NEXT:   .hword  {{[0-9]+}}
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -215,11 +231,13 @@ entry:
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .hword  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
 ; CHECK-NEXT:   .hword  {{[0-9]+}}
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -244,11 +262,13 @@ ret:
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .hword  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
 ; CHECK-NEXT:   .hword  {{[0-9]+}}
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -268,11 +288,13 @@ entry:
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .hword  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
 ; CHECK-NEXT:   .hword  {{[0-9]+}}
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -294,11 +316,13 @@ entry:
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .hword  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
 ; CHECK-NEXT:   .hword  {{[0-9]+}}
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -320,11 +344,13 @@ entry:
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .hword  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
 ; CHECK-NEXT:   .hword  {{[0-9]+}}
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -390,6 +416,7 @@ entry:
 ; 1 location
 ; CHECK-NEXT:   .hword 1
 ; Loc 0: SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -410,6 +437,7 @@ define void @liveConstant() {
 ; 1 location
 ; CHECK-NEXT:   .hword  1
 ; Loc 0: Direct RBP - ofs
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -423,6 +451,7 @@ define void @liveConstant() {
 ; 2 locations
 ; CHECK-NEXT:   .hword  2
 ; Loc 0: Direct RBP - ofs
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -430,6 +459,7 @@ define void @liveConstant() {
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word
 ; Loc 1: Direct RBP - ofs
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -476,6 +506,7 @@ entry:
 ; 1 location
 ; CHECK-NEXT:   .hword 1
 ; Loc 0: Indirect fp - offset
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   3
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  4
@@ -511,12 +542,14 @@ declare void @escape_values(...)
 ; CHECK-NEXT:   .hword 6
 ; Loc 0: constant float stored to FP register
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  4
 ; CHECK-NEXT:   .hword  {{.*}}
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
 ; Loc 0: constant double stored to FP register
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -525,6 +558,7 @@ declare void @escape_values(...)
 ; CHECK-NEXT:   .word   0
 ; Loc 1: float value in FP register
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  4
 ; CHECK-NEXT:   .hword  {{.*}}
@@ -532,12 +566,14 @@ declare void @escape_values(...)
 ; CHECK-NEXT:   .word   0
 ; Loc 2: double value in FP register
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
 ; CHECK-NEXT:   .hword  {{.*}}
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   0
 ; Loc 3: float on stack
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8
@@ -545,6 +581,7 @@ declare void @escape_values(...)
 ; CHECK-NEXT:   .hword  0
 ; CHECK-NEXT:   .word   -{{.*}}
 ; Loc 4: double on stack
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .hword  8

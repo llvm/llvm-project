@@ -8,47 +8,65 @@ target triple = "x86_64-apple-macosx10.11.0"
 
 
 ; STACKMAPS: Stack Maps: callsite 2882400015
-; STACKMAPS-NEXT: Stack Maps:   has 4 locations
-; STACKMAPS-NEXT: Stack Maps: 		Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:   has 2 live variables
+; STACKMAPS-NEXT: Stack Maps:     Live var 0:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
+; STACKMAPS-NEXT: Stack Maps:     Live var 1:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
 ; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
 ; STACKMAPS-NEXT: Stack Maps: callsite 4242
-; STACKMAPS-NEXT: Stack Maps:   has 4 locations
-; STACKMAPS-NEXT: Stack Maps: 		Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
+; STACKMAPS-NEXT: Stack Maps:   has 2 live variables
+; STACKMAPS-NEXT: Stack Maps:     Live var 0:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
+; STACKMAPS-NEXT: Stack Maps:     Live var 1:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
 ; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
 ; STACKMAPS-NEXT: Stack Maps: callsite 4243
-; STACKMAPS-NEXT: Stack Maps:   has 4 locations
-; STACKMAPS-NEXT: Stack Maps: 		Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Constant 16	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 16]
+; STACKMAPS-NEXT: Stack Maps:   has 2 live variables
+; STACKMAPS-NEXT: Stack Maps:     Live var 0:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
+; STACKMAPS-NEXT: Stack Maps:     Live var 1:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 16	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 16]
 ; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
 ; STACKMAPS-NEXT: Stack Maps: callsite 2882400015
-; STACKMAPS-NEXT: Stack Maps:   has 4 locations
-; STACKMAPS-NEXT: Stack Maps: 		Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Constant 2	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 2]
+; STACKMAPS-NEXT: Stack Maps:   has 2 live variables
+; STACKMAPS-NEXT: Stack Maps:     Live var 0:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
+; STACKMAPS-NEXT: Stack Maps:     Live var 1:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 2	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 2]
 ; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
 ; STACKMAPS-NEXT: Stack Maps: callsite 2882400015
-; STACKMAPS-NEXT: Stack Maps:   has 4 locations
-; STACKMAPS-NEXT: Stack Maps: 		Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Constant 3	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 3]
+; STACKMAPS-NEXT: Stack Maps:   has 2 live variables
+; STACKMAPS-NEXT: Stack Maps:     Live var 0:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
+; STACKMAPS-NEXT: Stack Maps:     Live var 1:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 3	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 3]
 ; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
 ; STACKMAPS-NEXT: Stack Maps: callsite 4243
-; STACKMAPS-NEXT: Stack Maps:   has 4 locations
-; STACKMAPS-NEXT: Stack Maps: 		Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Constant 55	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 55]
+; STACKMAPS-NEXT: Stack Maps:   has 2 live variables
+; STACKMAPS-NEXT: Stack Maps:     Live var 0:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
+; STACKMAPS-NEXT: Stack Maps:     Live var 1:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 55	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 55]
 ; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
+; STACKMAPS-NEXT: Stack Maps: callsite 2882400015
+; STACKMAPS-NEXT: Stack Maps:   has 2 live variables
+; STACKMAPS-NEXT: Stack Maps:     Live var 0:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
 
 declare i32 @callee_0()
 declare i32 @callee_1(i32)
@@ -152,7 +170,8 @@ define void @f_0(i64 %n) {
   %vl = alloca i64, i64 %n
   ; Check that the stackmap does not reference %s through
   ; SP since the offset is not static because of %vl.
-  ; STACKMAPS: Loc 3: Direct 6
+  ; STACKMAPS: Stack Maps:     Live var 1:
+  ; STACKMAPS: Stack Maps:       Loc 0: Direct 6
   call void @g_0(ptr %vl) [ "deopt"(ptr %s) ]
   ret void
 }
@@ -188,11 +207,13 @@ define void @vector_deopt_bundle(<32 x ptr addrspace(1)> %val) {
   call void @unknown() [ "deopt"(<32 x ptr addrspace(1)> %val) ]
   ret void
 ; STACKMAPS: Stack Maps: callsite 2882400015
-; STACKMAPS-NEXT: Stack Maps:   has 4 locations
-; STACKMAPS-NEXT: Stack Maps: 		Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
-; STACKMAPS-NEXT: Stack Maps: 		Loc 3: Indirect 7+0	[encoding: .byte 3, .byte 0, .short 256, .short 7, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:   has 2 live variables
+; STACKMAPS-NEXT: Stack Maps:     Live var 0:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 1: Constant 0	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 0]
+; STACKMAPS-NEXT: Stack Maps:       Loc 2: Constant 1	[encoding: .byte 4, .byte 0, .short 8, .short 0, .short 0, .int 1]
+; STACKMAPS-NEXT: Stack Maps:     Live var 1:
+; STACKMAPS-NEXT: Stack Maps:       Loc 0: Indirect 7+0	[encoding: .byte 3, .byte 0, .short 256, .short 7, .short 0, .int 0]
 ; STACKMAPS-NEXT: Stack Maps: 	has 0 live-out registers
 }
 

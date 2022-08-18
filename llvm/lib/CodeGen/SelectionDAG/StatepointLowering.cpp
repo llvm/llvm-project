@@ -426,7 +426,7 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
                              SmallVectorImpl<SDValue> &Ops,
                              SmallVectorImpl<MachineMemOperand *> &MemRefs,
                              SelectionDAGBuilder &Builder) {
-  
+  SDLoc DL = Builder.getCurSDLoc();
   if (willLowerDirectly(Incoming)) {
     if (FrameIndexSDNode *FI = dyn_cast<FrameIndexSDNode>(Incoming)) {
       // This handles allocas as arguments to the statepoint (this is only
@@ -436,6 +436,8 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
              "Incoming value is a frame index!");
       Ops.push_back(Builder.DAG.getTargetFrameIndex(FI->getIndex(),
                                                     Builder.getFrameIndexTy()));
+      Ops.push_back(
+          Builder.DAG.getTargetConstant(StackMaps::NextLive, DL, MVT::i64));
 
       auto &MF = Builder.DAG.getMachineFunction();
       auto *MMO = getMachineMemOperand(MF, *FI);
@@ -451,6 +453,8 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
       // easily recognized. This is legal since the compiler is always
       // allowed to chose an arbitrary value for undef.
       pushStackMapConstant(Ops, Builder, 0xFEFEFEFE);
+      Ops.push_back(
+          Builder.DAG.getTargetConstant(StackMaps::NextLive, DL, MVT::i64));
       return;
     }
 
@@ -460,10 +464,14 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
     // pointers and other constant pointers in GC states.
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Incoming)) {
       pushStackMapConstant(Ops, Builder, C->getSExtValue());
+      Ops.push_back(
+          Builder.DAG.getTargetConstant(StackMaps::NextLive, DL, MVT::i64));
       return;
     } else if (ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(Incoming)) {
       pushStackMapConstant(Ops, Builder,
                            C->getValueAPF().bitcastToAPInt().getZExtValue());
+      Ops.push_back(
+          Builder.DAG.getTargetConstant(StackMaps::NextLive, DL, MVT::i64));
       return;
     }
 
@@ -481,6 +489,8 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
     // clobbered by the call.  This is fine for live-in. For live-through
     // fix-up pass should be executed to force spilling of such registers.
     Ops.push_back(Incoming);
+    Ops.push_back(
+        Builder.DAG.getTargetConstant(StackMaps::NextLive, DL, MVT::i64));
   } else {
     // Otherwise, locate a spill slot and explicitly spill it so it can be
     // found by the runtime later.  Note: We know all of these spills are
@@ -490,6 +500,8 @@ lowerIncomingStatepointValue(SDValue Incoming, bool RequireSpillSlot,
     SDValue Chain = Builder.getRoot();
     auto Res = spillIncomingStatepointValue(Incoming, Chain, Builder);
     Ops.push_back(std::get<0>(Res));
+    Ops.push_back(
+        Builder.DAG.getTargetConstant(StackMaps::NextLive, DL, MVT::i64));
     if (auto *MMO = std::get<2>(Res))
       MemRefs.push_back(MMO);
     Chain = std::get<1>(Res);;
@@ -730,6 +742,8 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     assert(GCPtrIndexMap.count(Derived) && "derived not found in index map");
     Ops.push_back(
         Builder.DAG.getTargetConstant(GCPtrIndexMap[Derived], L, MVT::i64));
+    Ops.push_back(
+        Builder.DAG.getTargetConstant(StackMaps::NextLive, L, MVT::i64));
   }
 }
 

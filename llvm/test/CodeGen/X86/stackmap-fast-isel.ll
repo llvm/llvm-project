@@ -41,6 +41,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  12
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -48,6 +49,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -55,6 +57,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -62,6 +65,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   65536
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -69,6 +73,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   2000000000
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -76,6 +81,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   2147483647
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -83,6 +89,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -90,6 +97,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -97,6 +105,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
 ; LargeConstant at index 0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -104,6 +113,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
 ; LargeConstant at index 1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -111,6 +121,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   1
 ; LargeConstant at index 2
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -118,6 +129,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   2
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -138,6 +150,7 @@ entry:
 ; 1 location
 ; CHECK-NEXT:   .short 1
 ; Loc 0: SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -158,6 +171,7 @@ define void @liveConstant() {
 ; 1 location
 ; CHECK-NEXT:   .short	1
 ; Loc 0: Direct rbp - ofs
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte	2
 ; CHECK-NEXT:   .byte	0
 ; CHECK-NEXT:   .short	8

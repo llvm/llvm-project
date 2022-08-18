@@ -770,7 +770,9 @@ define ptr addrspace(1)  @test_fpconst_deopt(ptr addrspace(1) %in) gc "statepoin
 ; CHECK-LABEL: __LLVM_StackMaps:
 ; CHECK: .long   Ltmp18-_test_fpconst_deopt
 ; CHECK-NEXT: .short	0
-; CHECK-NEXT: .short	25
+; CHECK-NEXT: .short	23
+; LiveVar
+; CHECK-NEXT: .byte	3
 ; CHECK-NEXT: .byte	4
 ; CHECK-NEXT: .byte	0
 ; CHECK-NEXT: .short	8
@@ -789,120 +791,160 @@ define ptr addrspace(1)  @test_fpconst_deopt(ptr addrspace(1) %in) gc "statepoin
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .short	0
 ; CHECK-NEXT: .long	20
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1108398309
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1110233317
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1107349733
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1111281893
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1105306058
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1106354634
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1110757605
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1111806181
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1112854757
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1112330469
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	5
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	0
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	5
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	1
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	5
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	2
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	5
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	3
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	5
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	4
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	5
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	5
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	5
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	6
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	5
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	7
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	5
 ; CHECK: .byte	0
 ; CHECK: .short	8
 ; CHECK: .short	0
 ; CHECK: .short	0
 ; CHECK: .long	8
+; LiveVar
+; CHECK: .byte  1
 ; CHECK: .byte	4
 ; CHECK: .byte	0
 ; CHECK: .short	8

@@ -82,6 +82,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  14
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -89,6 +90,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -96,6 +98,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -103,6 +106,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   65536
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -110,6 +114,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   2000000000
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -117,6 +122,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   2147483647
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -124,6 +130,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -131,6 +138,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -138,6 +146,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
 ; LargeConstant at index 0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -145,6 +154,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
 ; LargeConstant at index 1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -152,6 +162,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   1
 ; LargeConstant at index 2
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -159,6 +170,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   2
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -166,6 +178,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -1
 ; SmallConstant
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -173,6 +186,7 @@
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   66
 ; LargeConstant at index 3
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   5
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -193,11 +207,13 @@ entry:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  {{[0-9]+}}
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -221,11 +237,13 @@ entry:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  {{[0-9]+}}
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -250,11 +268,13 @@ ret:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  {{[0-9]+}}
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -274,11 +294,13 @@ entry:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  {{[0-9]+}}
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -300,11 +322,13 @@ entry:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  {{[0-9]+}}
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -326,11 +350,13 @@ entry:
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .short  2
 ; CHECK-NEXT:   .byte   1
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
 ; CHECK-NEXT:   .short  {{[0-9]+}}
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
+; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -442,6 +468,7 @@ bb61:
 ; Check that the subregister operands are 1-byte spills.
 ; Location 0: Register, 4-byte, AL
 ; CHECK-NEXT:   .byte 1
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short 1
 ; CHECK-NEXT:   .short 0
@@ -449,6 +476,7 @@ bb61:
 ; CHECK-NEXT:   .long 0
 ;
 ; Location 1: Register, 4-byte, BL
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 1
@@ -473,6 +501,7 @@ define void @subRegOffset(i16 %arg) {
 ; 1 location
 ; CHECK-NEXT:   .short 1
 ; Loc 0: SmallConstant
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte   4
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -493,6 +522,7 @@ define void @liveConstant() {
 ; 1 location
 ; CHECK-NEXT:   .short	1
 ; Loc 0: Direct RBP - ofs
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte	2
 ; CHECK-NEXT:   .byte	0
 ; CHECK-NEXT:   .short	8
@@ -506,6 +536,7 @@ define void @liveConstant() {
 ; 2 locations
 ; CHECK-NEXT:   .short	2
 ; Loc 0: Direct RBP - ofs
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte	2
 ; CHECK-NEXT:   .byte	0
 ; CHECK-NEXT:   .short	8
@@ -513,6 +544,7 @@ define void @liveConstant() {
 ; CHECK-NEXT:   .short	0
 ; CHECK-NEXT:   .long
 ; Loc 1: Direct RBP - ofs
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte	2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -559,6 +591,7 @@ entry:
 ; 1 location
 ; CHECK-NEXT:   .short 1
 ; Loc 0: Indirect fp - offset
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte   3
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  4
@@ -593,6 +626,7 @@ declare void @escape_values(...)
 ; Num Locations
 ; CHECK-NEXT:   .short 6
 ; Loc 0: constant float stored to FP register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  16
@@ -600,6 +634,7 @@ declare void @escape_values(...)
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
 ; Loc 0: constant double stored to FP register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  16
@@ -607,6 +642,7 @@ declare void @escape_values(...)
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
 ; Loc 1: float value in FP register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  16
@@ -614,6 +650,7 @@ declare void @escape_values(...)
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
 ; Loc 2: double value in FP register
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte   1
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  16
@@ -621,6 +658,7 @@ declare void @escape_values(...)
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   0
 ; Loc 3: float on stack
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8
@@ -628,6 +666,7 @@ declare void @escape_values(...)
 ; CHECK-NEXT:   .short  0
 ; CHECK-NEXT:   .long   -{{.*}}
 ; Loc 4: double on stack
+; CHECK-NEXT:   .byte 1
 ; CHECK-NEXT:   .byte   2
 ; CHECK-NEXT:   .byte   0
 ; CHECK-NEXT:   .short  8

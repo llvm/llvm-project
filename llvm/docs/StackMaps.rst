@@ -338,14 +338,17 @@ format of this section follows:
     uint64 : PatchPoint ID
     uint32 : Instruction Offset
     uint16 : Reserved (record flags)
-    uint16 : NumLocations
-    Location[NumLocations] {
-      uint8  : Register | Direct | Indirect | Constant | ConstantIndex
-      uint8  : Reserved (expected to be 0)
-      uint16 : Location Size
-      uint16 : Dwarf RegNum
-      uint16 : Reserved (expected to be 0)
-      int32  : Offset or SmallConstant
+    uint16 : NumLiveVars
+    LiveVars[NumLiveVars] {
+      uint8  : NumLocations
+      Locations[NumLocations] {
+        uint8  : Register | Direct | Indirect | Constant | ConstantIndex
+        uint8  : Reserved (expected to be 0)
+        uint16 : Location Size
+        uint16 : Dwarf RegNum
+        uint16 : Reserved (expected to be 0)
+        int32  : Offset or SmallConstant
+      }
     }
     uint32 : Padding (only if required to align to 8 byte)
     uint16 : Padding
