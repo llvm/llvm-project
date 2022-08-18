@@ -26,6 +26,7 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: Canonicalizer
 // PASSES-NEXT: SimplifyRegionLite
+// PASSES-NEXT: SimplifyIntrinsics
 // PASSES-NEXT: AlgebraicSimplification
 // PASSES-NEXT: CSE
 // PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
