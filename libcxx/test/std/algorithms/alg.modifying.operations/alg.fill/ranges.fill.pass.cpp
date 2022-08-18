@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class T, output_iterator<const T&> O, sentinel_for<O> S>
 //   constexpr O ranges::fill(O first, S last, const T& value);

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<input_iterator I, sentinel_for<I> S, class T1, class T2,
 //          output_iterator<const T2&> O, class Proj = identity>
