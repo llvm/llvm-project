@@ -960,12 +960,6 @@ void CallBrInst::init(FunctionType *FTy, Value *Fn, BasicBlock *Fallthrough,
   setName(NameStr);
 }
 
-BlockAddress *
-CallBrInst::getBlockAddressForIndirectDest(unsigned DestNo) const {
-  return BlockAddress::get(const_cast<Function *>(getFunction()),
-                           getIndirectDest(DestNo));
-}
-
 CallBrInst::CallBrInst(const CallBrInst &CBI)
     : CallBase(CBI.Attrs, CBI.FTy, CBI.getType(), Instruction::CallBr,
                OperandTraits<CallBase>::op_end(this) - CBI.getNumOperands(),

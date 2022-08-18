@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
+#include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/Object/COFF.h"
@@ -214,7 +215,16 @@ getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
     I.SymbolFlags[ES.intern(*Name)] = std::move(*SymFlags);
   }
 
-  // FIXME: handle init symbols
+  SymbolStringPtr InitSymbol;
+  for (auto &Sec : Obj.sections()) {
+    if (auto SecName = Sec.getName()) {
+      if (COFFPlatform::isInitializerSection(*SecName)) {
+        addInitSymbol(I, ES, Obj.getFileName());
+        break;
+      }
+    } else
+      return SecName.takeError();
+  }
 
   return I;
 }

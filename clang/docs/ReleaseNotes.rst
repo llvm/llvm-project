@@ -71,6 +71,10 @@ Bug Fixes
 - Fix `#57008 <https://github.com/llvm/llvm-project/issues/57008>`_ - Builtin
   C++ language extension type traits instantiated by a template with unexpected
   number of arguments cause an assertion fault.
+- Fix multi-level pack expansion of undeclared function parameters.
+  This fixes `Issue 56094 <https://github.com/llvm/llvm-project/issues/56094>`_.
+- Fix `#57151 <https://github.com/llvm/llvm-project/issues/57151>`_.
+  ``-Wcomma`` is emitted for void returning functions.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -135,8 +139,15 @@ C2x Feature Support
 C++ Language Changes in Clang
 -----------------------------
 
+- Implemented DR692, DR1395 and DR1432. Use the ``-fclang-abi-compat=14`` option
+  to get the old partial ordering behavior regarding packs.
+
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Clang now correctly delays the instantiation of function constraints until
+  the time of checking, which should now allow the libstdc++ ranges implementation
+  to work for at least trivial examples.  This fixes
+  `Issue 44178 <https://github.com/llvm/llvm-project/issues/44178>`_.
 
 - Support capturing structured bindings in lambdas
   (`P1091R3 <https://wg21.link/p1091r3>`_ and `P1381R1 <https://wg21.link/P1381R1>`).

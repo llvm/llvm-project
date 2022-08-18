@@ -230,6 +230,7 @@ protected:
     // Unary operations.
     case kAbsF:
     case kAbsC:
+    case kAbsI:
     case kCeilF:
     case kFloorF:
     case kSqrtF:
@@ -282,6 +283,7 @@ protected:
     case kShrU:
     case kShlI:
     case kBinary:
+    case kReduce:
       return compareExpression(tensorExp.children.e0, pattern->e0) &&
              compareExpression(tensorExp.children.e1, pattern->e1);
     }

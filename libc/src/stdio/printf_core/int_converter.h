@@ -30,12 +30,11 @@ constexpr bool inline is_lower(char a) { return (a & 32) > 0; }
 cpp::optional<cpp::StringView> inline num_to_strview(
     uintmax_t num, cpp::MutableArrayRef<char> bufref, char conv_name) {
   if (to_lower(conv_name) == 'x') {
-    return IntegerToString<uintmax_t, 16>::convert(num, bufref,
-                                                   is_lower(conv_name));
+    return IntegerToString::hex(num, bufref, is_lower(conv_name));
   } else if (conv_name == 'o') {
-    return IntegerToString<uintmax_t, 8>::convert(num, bufref, true);
+    return IntegerToString::oct(num, bufref);
   } else {
-    return IntegerToString<uintmax_t, 10>::convert(num, bufref, true);
+    return IntegerToString::dec(num, bufref);
   }
 }
 
@@ -66,10 +65,8 @@ int inline convert_int(Writer *writer, const FormatSection &to_conv) {
 
   num = apply_length_modifier(num, to_conv.length_modifier);
 
-  static constexpr size_t BUFSIZE = IntegerToString<uintmax_t, 8>::BUFSIZE;
-  char buff[BUFSIZE];
-  cpp::MutableArrayRef<char> bufref(buff, BUFSIZE);
-  auto str = num_to_strview(num, bufref, to_conv.conv_name);
+  char buf[IntegerToString::oct_bufsize<intmax_t>()];
+  auto str = num_to_strview(num, buf, to_conv.conv_name);
   if (!str)
     return INT_CONVERSION_ERROR;
 

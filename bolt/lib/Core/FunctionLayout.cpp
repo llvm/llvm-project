@@ -71,8 +71,7 @@ void FunctionLayout::eraseBasicBlocks(
     unsigned NewFragment = NewFragments.back() + F.size() - ErasedBlocks;
     NewFragments.emplace_back(NewFragment);
   }
-  Blocks.erase(std::remove_if(Blocks.begin(), Blocks.end(), IsErased),
-               Blocks.end());
+  llvm::erase_if(Blocks, IsErased);
   Fragments = std::move(NewFragments);
 }
 

@@ -207,7 +207,7 @@ private:
     Root[I] = ++DFSNum;
     // Store the DFS Number we had before it possibly gets incremented.
     unsigned int OurDFS = DFSNum;
-    for (auto &Op : I->operands()) {
+    for (const auto &Op : I->operands()) {
       if (auto *InstOp = dyn_cast<Instruction>(Op)) {
         if (Root.lookup(Op) == 0)
           FindSCC(InstOp);
@@ -1699,7 +1699,7 @@ bool NewGVN::isCycleFree(const Instruction *I) const {
         return isa<PHINode>(V) || isCopyOfAPHI(V);
       });
       ICS = AllPhis ? ICS_CycleFree : ICS_Cycle;
-      for (auto *Member : SCC)
+      for (const auto *Member : SCC)
         if (auto *MemberPhi = dyn_cast<PHINode>(Member))
           InstCycleState.insert({MemberPhi, ICS});
     }
@@ -2090,7 +2090,7 @@ void NewGVN::markMemoryDefTouched(const MemoryAccess *MA) {
 void NewGVN::markMemoryUsersTouched(const MemoryAccess *MA) {
   if (isa<MemoryUse>(MA))
     return;
-  for (auto U : MA->users())
+  for (const auto *U : MA->users())
     TouchedInstructions.set(MemoryToDFSNum(U));
   touchAndErase(MemoryToUsers, MA);
 }
@@ -2102,7 +2102,7 @@ void NewGVN::markPredicateUsersTouched(Instruction *I) {
 
 // Mark users affected by a memory leader change.
 void NewGVN::markMemoryLeaderChangeTouched(CongruenceClass *CC) {
-  for (auto M : CC->memory())
+  for (const auto *M : CC->memory())
     markMemoryDefTouched(M);
 }
 
@@ -3151,7 +3151,7 @@ bool NewGVN::singleReachablePHIPath(
     return true;
 
   const auto *EndDef = First;
-  for (auto *ChainDef : optimized_def_chain(First)) {
+  for (const auto *ChainDef : optimized_def_chain(First)) {
     if (ChainDef == Second)
       return true;
     if (MSSA->isLiveOnEntryDef(ChainDef))
@@ -3196,7 +3196,7 @@ void NewGVN::verifyMemoryCongruency() const {
       assert(MemoryAccessToClass.lookup(CC->getMemoryLeader()) == CC &&
              "Representative MemoryAccess does not appear to be reverse "
              "mapped properly");
-    for (auto M : CC->memory())
+    for (const auto *M : CC->memory())
       assert(MemoryAccessToClass.lookup(M) == CC &&
              "Memory member does not appear to be reverse mapped properly");
   }
@@ -3218,7 +3218,7 @@ void NewGVN::verifyMemoryCongruency() const {
         // We could have phi nodes which operands are all trivially dead,
         // so we don't process them.
         if (auto *MemPHI = dyn_cast<MemoryPhi>(Pair.first)) {
-          for (auto &U : MemPHI->incoming_values()) {
+          for (const auto &U : MemPHI->incoming_values()) {
             if (auto *I = dyn_cast<Instruction>(&*U)) {
               if (!isInstructionTriviallyDead(I))
                 return true;

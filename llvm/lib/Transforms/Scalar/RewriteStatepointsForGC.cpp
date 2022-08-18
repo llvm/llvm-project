@@ -2082,8 +2082,12 @@ static void relocationViaAlloca(
 
       auto InsertClobbersAt = [&](Instruction *IP) {
         for (auto *AI : ToClobber) {
-          auto PT = cast<PointerType>(AI->getAllocatedType());
-          Constant *CPN = ConstantPointerNull::get(PT);
+          auto AT = AI->getAllocatedType();
+          Constant *CPN;
+          if (AT->isVectorTy())
+            CPN = ConstantAggregateZero::get(AT);
+          else
+            CPN = ConstantPointerNull::get(cast<PointerType>(AT));
           new StoreInst(CPN, AI, IP);
         }
       };

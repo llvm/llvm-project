@@ -233,9 +233,9 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
   result.addTypes(resultType);
   result.addAttribute(
       MmaOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({static_cast<int32_t>(operandA.size()),
-                                static_cast<int32_t>(operandB.size()),
-                                static_cast<int32_t>(operandC.size())}));
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(operandA.size()),
+                                    static_cast<int32_t>(operandB.size()),
+                                    static_cast<int32_t>(operandC.size())}));
 }
 
 // <operation> :=
@@ -326,7 +326,7 @@ ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
   if (!namedAttributes.empty())
     result.addAttributes(namedAttributes);
   result.addAttribute(MmaOp::getOperandSegmentSizeAttr(),
-                      builder.getI32VectorAttr({
+                      builder.getDenseI32ArrayAttr({
                           static_cast<int32_t>(frags[0].regs.size()),
                           static_cast<int32_t>(frags[1].regs.size()),
                           static_cast<int32_t>(frags[2].regs.size()),

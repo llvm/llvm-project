@@ -93,8 +93,6 @@
 #
 #     (lldb) thread step-scripted -C scripted_step.StepWithPlan
 
-from __future__ import print_function
-
 import lldb
 
 

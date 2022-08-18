@@ -5,6 +5,7 @@ add_mlir_library(MLIRTestTransforms
   TestControlFlowSink.cpp
   TestInlining.cpp
   TestIntRangeInference.cpp
+  TestTopologicalSort.cpp
 
   EXCLUDE_FROM_LIBMLIR
 

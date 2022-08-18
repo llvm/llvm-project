@@ -796,6 +796,9 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
   # Prevent bugs that can happen with llvm's brace style.
   add_flag_if_supported("-Wmisleading-indentation" MISLEADING_INDENTATION_FLAG)
+
+  # Enable -Wctad-maybe-unsupported to catch unintended use of CTAD.
+  add_flag_if_supported("-Wctad-maybe-unsupported" CTAD_MAYBE_UNSPPORTED_FLAG)
 endif (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT LLVM_ENABLE_WARNINGS)
@@ -914,10 +917,6 @@ if(LLVM_USE_SANITIZER)
     endif()
   else()
     message(FATAL_ERROR "LLVM_USE_SANITIZER is not supported on this platform.")
-  endif()
-  if (LLVM_USE_SANITIZER MATCHES "(Undefined;)?Address(;Undefined)?")
-    add_flag_if_supported("-fsanitize-address-use-after-scope"
-                          FSANITIZE_USE_AFTER_SCOPE_FLAG)
   endif()
   if (LLVM_USE_SANITIZE_COVERAGE)
     append("-fsanitize=fuzzer-no-link" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)

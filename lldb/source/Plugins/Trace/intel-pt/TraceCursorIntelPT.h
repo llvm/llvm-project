@@ -47,6 +47,8 @@ public:
 
   llvm::Optional<double> GetWallClockTime() const override;
 
+  llvm::Optional<std::string> GetSyncPointMetadata() const override;
+
 private:
   /// Clear the current TSC and nanoseconds ranges if after moving they are not
   /// valid anymore.

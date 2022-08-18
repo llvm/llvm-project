@@ -31,7 +31,7 @@ def GetParentForOp : Op<Transform_Dialect, "loop.get_parent_for",
 
   let arguments =
     (ins PDL_Operation:$target,
-         DefaultValuedAttr<Confined<I64Attr, [IntPositive]>,
+         DefaultValuedAttr<ConfinedAttr<I64Attr, [IntPositive]>,
                            "1">:$num_loops);
   let results = (outs PDL_Operation:$parent);
 
@@ -74,7 +74,7 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
      even if the step always divides the range evenly at runtime.
 
      #### Return modes
-     
+
      This operation ignores non-scf::ForOp ops and drops them in the return.
 
      This operation always succeeds and returns the scf::ForOp with the
@@ -92,19 +92,19 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
   let arguments =
       (ins PDL_Operation:$target,
            DefaultValuedAttr<BoolAttr, "false">:$fail_if_already_divisible);
-  // TODO: Return both the peeled loop and the remainder loop. 
+  // TODO: Return both the peeled loop and the remainder loop.
   let results = (outs PDL_Operation:$transformed);
 
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
-        ::mlir::scf::ForOp target, 
-        ::llvm::SmallVector<::mlir::Operation *> &results, 
+        ::mlir::scf::ForOp target,
+        ::llvm::SmallVector<::mlir::Operation *> &results,
         ::mlir::transform::TransformState &state);
   }];
 }
- 
+
 def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformOpInterface, TransformEachOpTrait]> {
@@ -114,20 +114,20 @@ def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
     each of them. That is, performs some amount of reads from memory before the
     loop rather than inside the loop, the same amount of writes into memory
     after the loop, and updates each iteration to read the data for a following
-    iteration rather than the current one. 
-    
-    The amount is specified by the attributes. 
-    
+    iteration rather than the current one.
+
+    The amount is specified by the attributes.
+
     The values read and about to be stored are transferred as loop iteration
-    arguments. Currently supports memref and vector transfer operations as 
+    arguments. Currently supports memref and vector transfer operations as
     memory reads/writes.
 
     #### Return modes
-    
+
     This operation ignores non-scf::For ops and drops them in the return.
     If all the operations referred to by the `target` PDLOperation pipeline
     properly, the transform succeeds. Otherwise the transform silently fails.
-    The return handle points to only the subset of successfully produced 
+    The return handle points to only the subset of successfully produced
     pipelined loops, which can be empty.
   }];
 
@@ -140,8 +140,8 @@ def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
-        ::mlir::scf::ForOp target, 
-        ::llvm::SmallVector<::mlir::Operation *> &results, 
+        ::mlir::scf::ForOp target,
+        ::llvm::SmallVector<::mlir::Operation *> &results,
         ::mlir::transform::TransformState &state);
   }];
 }
@@ -156,24 +156,24 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
     than the loop trip count, the latter is used as the unroll factor instead.
 
     #### Return modes
-    
+
     This operation ignores non-scf::For ops and drops them in the return.
     If all the operations referred to by the `target` PDLOperation unroll
     properly, the transform succeeds. Otherwise the transform silently fails.
-    
+
     Does not return handles as the operation may result in the loop being
     removed after a full unrolling.
   }];
 
   let arguments = (ins PDL_Operation:$target,
-                       Confined<I64Attr, [IntPositive]>:$factor);
+                       ConfinedAttr<I64Attr, [IntPositive]>:$factor);
 
   let assemblyFormat = "$target attr-dict";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
-        ::mlir::scf::ForOp target, 
-        ::llvm::SmallVector<::mlir::Operation *> &results, 
+        ::mlir::scf::ForOp target,
+        ::llvm::SmallVector<::mlir::Operation *> &results,
         ::mlir::transform::TransformState &state);
   }];
 }

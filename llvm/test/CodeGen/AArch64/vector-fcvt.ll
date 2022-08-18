@@ -326,26 +326,16 @@ define <16 x double> @sitofp_v16i8_double(<16 x i8> %a) {
 define <8 x double> @sitofp_i16_double(<8 x i16> %a) {
 ; CHECK-LABEL: sitofp_i16_double:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll2 v1.4s, v0.8h, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    shl v2.2s, v1.2s, #16
-; CHECK-NEXT:    shl v3.2s, v0.2s, #16
-; CHECK-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-NEXT:    sshr v2.2s, v2.2s, #16
-; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    sshr v3.2s, v3.2s, #16
-; CHECK-NEXT:    sshll v2.2d, v2.2s, #0
-; CHECK-NEXT:    shl v1.2s, v1.2s, #16
-; CHECK-NEXT:    shl v0.2s, v0.2s, #16
-; CHECK-NEXT:    scvtf v2.2d, v2.2d
-; CHECK-NEXT:    sshr v1.2s, v1.2s, #16
-; CHECK-NEXT:    sshr v0.2s, v0.2s, #16
-; CHECK-NEXT:    sshll v3.2d, v3.2s, #0
+; CHECK-NEXT:    sshll2 v1.4s, v0.8h, #0
+; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
+; CHECK-NEXT:    sshll2 v2.2d, v1.4s, #0
+; CHECK-NEXT:    sshll2 v3.2d, v0.4s, #0
 ; CHECK-NEXT:    sshll v4.2d, v1.2s, #0
-; CHECK-NEXT:    sshll v1.2d, v0.2s, #0
-; CHECK-NEXT:    scvtf v0.2d, v3.2d
-; CHECK-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-NEXT:    scvtf v3.2d, v4.2d
+; CHECK-NEXT:    sshll v0.2d, v0.2s, #0
+; CHECK-NEXT:    scvtf v1.2d, v3.2d
+; CHECK-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-NEXT:    scvtf v3.2d, v2.2d
+; CHECK-NEXT:    scvtf v2.2d, v4.2d
 ; CHECK-NEXT:    ret
   %1 = sitofp <8 x i16> %a to <8 x double>
   ret <8 x double> %1

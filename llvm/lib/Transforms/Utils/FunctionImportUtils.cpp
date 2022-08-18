@@ -226,7 +226,7 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
     if (VI && ImportIndex.hasSyntheticEntryCounts()) {
       if (Function *F = dyn_cast<Function>(&GV)) {
         if (!F->isDeclaration()) {
-          for (auto &S : VI.getSummaryList()) {
+          for (const auto &S : VI.getSummaryList()) {
             auto *FS = cast<FunctionSummary>(S->getBaseObject());
             if (FS->modulePath() == M.getModuleIdentifier()) {
               F->setEntryCount(Function::ProfileCount(FS->entryCount(),

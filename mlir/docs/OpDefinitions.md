@@ -117,8 +117,8 @@ window in `value`.
   let arguments = (ins
     TF_FpTensor:$value,
 
-    Confined<I64ArrayAttr, [ArrayMinCount<4>]>:$ksize,
-    Confined<I64ArrayAttr, [ArrayMinCount<4>]>:$strides,
+    ConfinedAttr<I64ArrayAttr, [ArrayMinCount<4>]>:$ksize,
+    ConfinedAttr<I64ArrayAttr, [ArrayMinCount<4>]>:$strides,
     TF_AnyStrAttrOf<["SAME", "VALID"]>:$padding,
     DefaultValuedAttr<TF_ConvertDataFormatAttr, "NHWC">:$data_format
   );
@@ -275,11 +275,11 @@ like `"0.5f"`, and an integer array default value should be specified as like
 
 #### Confining attributes
 
-`Confined` is provided as a general mechanism to help modelling further
+`ConfinedAttr` is provided as a general mechanism to help modelling further
 constraints on attributes beyond the ones brought by value types. You can use
-`Confined` to compose complex constraints out of more primitive ones. For
+`ConfinedAttr` to compose complex constraints out of more primitive ones. For
 example, a 32-bit integer attribute whose minimum value must be 10 can be
-expressed as `Confined<I32Attr, [IntMinValue<10>]>`.
+expressed as `ConfinedAttr<I32Attr, [IntMinValue<10>]>`.
 
 Right now, the following primitive constraints are supported:
 
@@ -768,9 +768,9 @@ when generating the C++ code for the format. The `UserDirective` is an
 identifier used as a suffix to these two calls, i.e., `custom<MyDirective>(...)`
 would result in calls to `parseMyDirective` and `printMyDirective` within the
 parser and printer respectively. `Params` may be any combination of variables
-(i.e. Attribute, Operand, Successor, etc.), type directives, and `attr-dict`.
-The type directives must refer to a variable, but that variable need not also be
-a parameter to the custom directive.
+(i.e. Attribute, Operand, Successor, etc.), type directives, `attr-dict`, and
+strings of C++ code. The type directives must refer to a variable, but that
+variable need not also be a parameter to the custom directive.
 
 The arguments to the `parse<UserDirective>` method are firstly a reference to
 the `OpAsmParser`(`OpAsmParser &`), and secondly a set of output parameters
@@ -837,7 +837,16 @@ declarative parameter to `print` method argument is detailed below:
     -   VariadicOfVariadic: `TypeRangeRange`
 *   `attr-dict` Directive: `DictionaryAttr`
 
-When a variable is optional, the provided value may be null.
+When a variable is optional, the provided value may be null. When a variable is
+referenced in a custom directive parameter using `ref`, it is passed in by
+value. Referenced variables to `print<UserDirective>` are passed as the same as
+bound variables, but referenced variables to `parse<UserDirective>` are passed
+like to the printer.
+
+A custom directive can take a string of C++ code as a parameter. The code is
+pasted verbatim in the calls to the custom parser and printers, with the
+substitutions `$_builder` and `$_ctxt`. String literals can be used to
+parameterize custom directives.
 
 #### Optional Groups
 
@@ -1278,7 +1287,7 @@ optionality, default values, etc.:
 *   `DefaultValuedAttr`: specifies the
     [default value](#attributes-with-default-values) for an attribute.
 *   `OptionalAttr`: specifies an attribute as [optional](#optional-attributes).
-*   `Confined`: adapts an attribute with
+*   `ConfinedAttr`: adapts an attribute with
     [further constraints](#confining-attributes).
 
 ### Enum attributes
@@ -1462,7 +1471,7 @@ std::string stringifyMyBitEnum(MyBitEnum symbol) {
   if (2u == (2u & val)) { strs.push_back("Bit1"); }
   if (4u == (4u & val)) { strs.push_back("Bit2"); }
   if (8u == (8u & val)) { strs.push_back("Bit3"); }
-  
+
   return llvm::join(strs, "|");
 }
 

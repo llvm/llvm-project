@@ -166,7 +166,7 @@ char_traits<_CharT>::assign(char_type* __s, size_t __n, char_type __a)
 }
 
 template <class _CharT>
-static inline _LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_HIDE_FROM_ABI static inline _LIBCPP_CONSTEXPR_AFTER_CXX17
 _CharT* __char_traits_move(_CharT* __dest, const _CharT* __source, size_t __n) _NOEXCEPT
 {
 #ifdef _LIBCPP_COMPILER_GCC
@@ -729,7 +729,7 @@ __str_find(const _CharT *__p, _SizeT __sz,
 }
 
 template <class _CharT, class _Traits>
-inline _LIBCPP_CONSTEXPR_AFTER_CXX11 const _CharT *
+_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR_AFTER_CXX11 const _CharT *
 __search_substring(const _CharT *__first1, const _CharT *__last1,
                    const _CharT *__first2, const _CharT *__last2) _NOEXCEPT {
   // Take advantage of knowing source and pattern lengths.

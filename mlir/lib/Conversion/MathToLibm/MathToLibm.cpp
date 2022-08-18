@@ -138,8 +138,9 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
   return success();
 }
 
-void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
-                                                PatternBenefit benefit) {
+void mlir::populateMathToLibmConversionPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit,
+    llvm::Optional<PatternBenefit> log1pBenefit) {
   patterns.add<VecOpToScalarOp<math::Atan2Op>, VecOpToScalarOp<math::ExpM1Op>,
                VecOpToScalarOp<math::TanhOp>, VecOpToScalarOp<math::CosOp>,
                VecOpToScalarOp<math::SinOp>, VecOpToScalarOp<math::ErfOp>,
@@ -168,6 +169,8 @@ void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
                                                 "cos", benefit);
   patterns.add<ScalarOpToLibmCall<math::SinOp>>(patterns.getContext(), "sinf",
                                                 "sin", benefit);
+  patterns.add<ScalarOpToLibmCall<math::Log1pOp>>(
+      patterns.getContext(), "log1pf", "log1p", log1pBenefit.value_or(benefit));
 }
 
 namespace {

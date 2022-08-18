@@ -666,7 +666,7 @@ private:
     });
 
     double Score = 0;
-    for (auto &Jump : Jumps) {
+    for (const auto &Jump : Jumps) {
       const auto SrcBlock = Jump->Source;
       const auto DstBlock = Jump->Target;
       Score += ::extTSPScore(SrcBlock->EstimatedAddr, SrcBlock->Size,
@@ -711,7 +711,7 @@ private:
         return;
       // Apply the merge, compute the corresponding gain, and update the best
       // value, if the merge is beneficial
-      for (auto &MergeType : MergeTypes) {
+      for (const auto &MergeType : MergeTypes) {
         Gain.updateIfLessThan(
             computeMergeGain(ChainPred, ChainSucc, Jumps, Offset, MergeType));
       }
@@ -827,8 +827,7 @@ private:
     }
 
     // Remove chain From from the list of active chains
-    auto Iter = std::remove(HotChains.begin(), HotChains.end(), From);
-    HotChains.erase(Iter, HotChains.end());
+    llvm::erase_value(HotChains, From);
 
     // Invalidate caches
     for (auto EdgeIter : Into->edges()) {

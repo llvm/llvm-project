@@ -20,11 +20,11 @@ int g() {
 // CHECK-NEXT: %[[RET:.+]] = load i32, ptr %[[IA2]], align 4
 // CHECK-NEXT: ret i32 %[[RET]]
 //
-// CHECK: declare ptr @llvm.threadlocal.address.p0(ptr) #[[ATTR_NUM:.+]]
+// CHECK: declare nonnull ptr @llvm.threadlocal.address.p0(ptr nonnull) #[[ATTR_NUM:.+]]
 //
 // CHECK-O1-LABEL: @_Z1gv
 // CHECK-O1-NEXT: entry:
-// CHECK-O1-NEXT:   %[[I_ADDR:.+]] = {{.*}}call ptr @llvm.threadlocal.address.p0(ptr nonnull @i)
+// CHECK-O1-NEXT:   %[[I_ADDR:.+]] = {{.*}}call ptr @llvm.threadlocal.address.p0(ptr @i)
 // CHECK-O1-NEXT:   %[[VAL:.+]] = load i32, ptr %[[I_ADDR]]
 // CHECK-O1-NEXT:   %[[INC:.+]] = add nsw i32 %[[VAL]], 1
 // CHECK-O1-NEXT:   store i32 %[[INC]], ptr %[[I_ADDR]]
@@ -56,7 +56,7 @@ int f() {
 //
 // CHECK-O1-LABEL: @_Z1fv
 // CHECK-O1-NEXT: entry:
-// CHECK-O1-NEXT:   %[[J_ADDR:.+]] = {{.*}}call ptr @llvm.threadlocal.address.p0(ptr nonnull @_ZZ1fvE1j)
+// CHECK-O1-NEXT:   %[[J_ADDR:.+]] = {{.*}}call ptr @llvm.threadlocal.address.p0(ptr @_ZZ1fvE1j)
 // CHECK-O1-NEXT:   %[[VAL:.+]] = load i32, ptr %[[J_ADDR]]
 // CHECK-O1-NEXT:   %[[INC:.+]] = add nsw i32 %[[VAL]], 1
 // CHECK-O1-NEXT:   store i32 %[[INC]], ptr %[[J_ADDR]]

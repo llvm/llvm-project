@@ -221,6 +221,7 @@ namespace ranges {
         return !(__x < __y);
       }
 
+      _LIBCPP_HIDE_FROM_ABI
       friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
         requires totally_ordered<_Start> && three_way_comparable<_Start>
       {

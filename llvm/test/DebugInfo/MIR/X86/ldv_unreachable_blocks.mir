@@ -34,5 +34,5 @@ body:             |
     RET64 $al, debug-location !10
   bb.1:
     successors: 
-  bb.25.if.else.i103.i (address-taken):
+  bb.25.if.else.i103.i (machine-block-address-taken):
     JMP_1 %bb.28

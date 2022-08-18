@@ -338,9 +338,9 @@ void SchedGroup::initSchedGroup() {
 
 static bool canFitIntoPipeline(SUnit &SU, ScheduleDAGInstrs *DAG,
                                DenseSet<SUnit *> &ConflictedInstrs) {
-  return std::all_of(
-      ConflictedInstrs.begin(), ConflictedInstrs.end(),
-      [DAG, &SU](SUnit *SuccSU) { return DAG->canAddEdge(SuccSU, &SU); });
+  return llvm::all_of(ConflictedInstrs, [DAG, &SU](SUnit *SuccSU) {
+    return DAG->canAddEdge(SuccSU, &SU);
+  });
 }
 
 void SchedGroup::initSchedGroup(std::vector<SUnit>::reverse_iterator RIter,

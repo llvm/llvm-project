@@ -10,9 +10,7 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_FLOATING_POINT_H
 #define _LIBCPP___FORMAT_FORMATTER_FLOATING_POINT_H
 
-#include <__algorithm/copy.h>
 #include <__algorithm/copy_n.h>
-#include <__algorithm/fill_n.h>
 #include <__algorithm/find.h>
 #include <__algorithm/min.h>
 #include <__algorithm/rotate.h>
@@ -103,7 +101,7 @@ template <class _Tp>
 struct __traits;
 
 template <floating_point _Fp>
-static constexpr size_t __float_buffer_size(int __precision) {
+_LIBCPP_HIDE_FROM_ABI constexpr size_t __float_buffer_size(int __precision) {
   using _Traits = __traits<_Fp>;
   return 4 + _Traits::__max_integral + __precision + _Traits::__max_fractional_value;
 }
@@ -528,13 +526,13 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __format_locale_specific_form(
   // sign and (zero padding or alignment)
   if (__zero_padding && __first != __buffer.begin())
     *__out_it++ = *__buffer.begin();
-  __out_it = _VSTD::fill_n(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
+  __out_it = __formatter::__fill(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
   if (!__zero_padding && __first != __buffer.begin())
     *__out_it++ = *__buffer.begin();
 
   // integral part
   if (__grouping.empty()) {
-    __out_it = _VSTD::copy_n(__first, __digits, _VSTD::move(__out_it));
+    __out_it = __formatter::__copy(__first, __digits, _VSTD::move(__out_it));
   } else {
     auto __r = __grouping.rbegin();
     auto __e = __grouping.rend() - 1;
@@ -546,7 +544,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __format_locale_specific_form(
     // This loop achieves that process by testing the termination condition
     // midway in the loop.
     while (true) {
-      __out_it = _VSTD::copy_n(__first, *__r, _VSTD::move(__out_it));
+      __out_it = __formatter::__copy(__first, *__r, _VSTD::move(__out_it));
       __first += *__r;
 
       if (__r == __e)
@@ -560,16 +558,16 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __format_locale_specific_form(
   // fractional part
   if (__result.__radix_point != __result.__last) {
     *__out_it++ = __np.decimal_point();
-    __out_it = _VSTD::copy(__result.__radix_point + 1, __result.__exponent, _VSTD::move(__out_it));
-    __out_it = _VSTD::fill_n(_VSTD::move(__out_it), __buffer.__num_trailing_zeros(), _CharT('0'));
+    __out_it    = __formatter::__copy(__result.__radix_point + 1, __result.__exponent, _VSTD::move(__out_it));
+    __out_it    = __formatter::__fill(_VSTD::move(__out_it), __buffer.__num_trailing_zeros(), _CharT('0'));
   }
 
   // exponent
   if (__result.__exponent != __result.__last)
-    __out_it = _VSTD::copy(__result.__exponent, __result.__last, _VSTD::move(__out_it));
+    __out_it = __formatter::__copy(__result.__exponent, __result.__last, _VSTD::move(__out_it));
 
   // alignment
-  return _VSTD::fill_n(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
+  return __formatter::__fill(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
 }
 #  endif // _LIBCPP_HAS_NO_LOCALIZATION
 
@@ -651,14 +649,15 @@ __format_floating_point(_Tp __value, auto& __ctx, __format_spec::__parsed_specif
   if (__size + __num_trailing_zeros >= __specs.__width_) {
     if (__num_trailing_zeros && __result.__exponent != __result.__last)
       // Insert trailing zeros before exponent character.
-      return _VSTD::copy(
+      return __formatter::__copy(
           __result.__exponent,
           __result.__last,
-          _VSTD::fill_n(
-              _VSTD::copy(__buffer.begin(), __result.__exponent, __ctx.out()), __num_trailing_zeros, _CharT('0')));
+          __formatter::__fill(__formatter::__copy(__buffer.begin(), __result.__exponent, __ctx.out()),
+                              __num_trailing_zeros,
+                              _CharT('0')));
 
-    return _VSTD::fill_n(
-        _VSTD::copy(__buffer.begin(), __result.__last, __ctx.out()), __num_trailing_zeros, _CharT('0'));
+    return __formatter::__fill(
+        __formatter::__copy(__buffer.begin(), __result.__last, __ctx.out()), __num_trailing_zeros, _CharT('0'));
   }
 
   auto __out_it = __ctx.out();

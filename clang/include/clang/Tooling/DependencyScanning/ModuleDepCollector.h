@@ -119,25 +119,11 @@ struct ModuleDeps {
   // the primary TU.
   bool ImportedByMainFile = false;
 
-  /// Whether the TU had a dependency file. The path in \c BuildInvocation is
-  /// cleared to avoid leaking the specific path from the TU into the module.
-  bool HadDependencyFile = false;
-
-  /// Whether the TU had serialized diagnostics. The path in \c BuildInvocation
-  /// is cleared to avoid leaking the specific path from the TU into the module.
-  bool HadSerializedDiagnostics = false;
-
   /// Compiler invocation that can be used to build this module (without paths).
   CompilerInvocation BuildInvocation;
 
   /// Gets the canonical command line suitable for passing to clang.
-  ///
-  /// \param LookupModuleOutput This function is called to fill in
-  ///                           "-fmodule-file=", "-o" and other output
-  ///                           arguments.
-  std::vector<std::string> getCanonicalCommandLine(
-      llvm::function_ref<std::string(const ModuleID &, ModuleOutputKind)>
-          LookupModuleOutput) const;
+  std::vector<std::string> getCanonicalCommandLine() const;
 };
 
 class ModuleDepCollector;
@@ -237,9 +223,12 @@ private:
   /// Constructs a CompilerInvocation that can be used to build the given
   /// module, excluding paths to discovered modular dependencies that are yet to
   /// be built.
-  CompilerInvocation makeInvocationForModuleBuildWithoutPaths(
+  CompilerInvocation makeInvocationForModuleBuildWithoutOutputs(
       const ModuleDeps &Deps,
       llvm::function_ref<void(CompilerInvocation &)> Optimize) const;
+
+  /// Add paths that require looking up outputs to the given dependencies.
+  void addOutputPaths(ModuleDeps &Deps);
 };
 
 } // end namespace dependencies

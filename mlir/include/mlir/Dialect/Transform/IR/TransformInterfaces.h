@@ -156,7 +156,7 @@ public:
 
 private:
   explicit DiagnosedSilenceableFailure(Diagnostic &&diagnostic)
-      : diagnostics(), result(failure()) {
+      : result(failure()) {
     diagnostics.emplace_back(std::move(diagnostic));
   }
   explicit DiagnosedSilenceableFailure(SmallVector<Diagnostic> &&diagnostics)

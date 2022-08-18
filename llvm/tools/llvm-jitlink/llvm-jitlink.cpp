@@ -15,6 +15,8 @@
 #include "llvm-jitlink.h"
 
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
+#include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/DebuggerSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
@@ -810,10 +812,8 @@ static Error loadDylibs(Session &S) {
   LLVM_DEBUG(dbgs() << "Loading dylibs...\n");
   for (const auto &Dylib : Dylibs) {
     LLVM_DEBUG(dbgs() << "  " << Dylib << "\n");
-    auto G = orc::EPCDynamicLibrarySearchGenerator::Load(S.ES, Dylib.c_str());
-    if (!G)
-      return G.takeError();
-    S.MainJD->addGenerator(std::move(*G));
+    if (auto Err = S.loadAndLinkDynamicLibrary(*S.MainJD, Dylib))
+      return Err;
   }
 
   return Error::success();
@@ -1067,6 +1067,14 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
 
   if (!NoProcessSymbols)
     ExitOnErr(loadProcessSymbols(*this));
+  else {
+    // This symbol is used in testcases.
+    ExitOnErr(MainJD->define(absoluteSymbols(
+        {{ES.intern("llvm_jitlink_setTestResultOverride"),
+          {pointerToJITTargetAddress(llvm_jitlink_setTestResultOverride),
+           JITSymbolFlags::Exported}}})));
+  }
+
   ExitOnErr(loadDylibs(*this));
 
   auto &TT = ES.getExecutorProcessControl().getTargetTriple();
@@ -1089,6 +1097,28 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
             ELFNixPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str()))
       ES.setPlatform(std::move(*P));
     else {
+      Err = P.takeError();
+      return;
+    }
+  } else if (TT.isOSBinFormatCOFF() && !OrcRuntime.empty()) {
+    auto LoadDynLibrary = [&, this](JITDylib &JD, StringRef DLLName) -> Error {
+      if (!DLLName.endswith_insensitive(".dll"))
+        return make_error<StringError>("DLLName not ending with .dll",
+                                       inconvertibleErrorCode());
+      return loadAndLinkDynamicLibrary(JD, DLLName);
+    };
+
+    if (auto P = COFFPlatform::Create(ES, ObjLayer, *MainJD, OrcRuntime.c_str(),
+                                      std::move(LoadDynLibrary))) {
+      // Set platform early to register jitdylib of dynamic libraries.
+      auto &CP = **P;
+      ES.setPlatform(std::move(*P));
+
+      if (auto E2 = CP.bootstrap(*MainJD)) {
+        Err = std::move(E2);
+        return;
+      }
+    } else {
       Err = P.takeError();
       return;
     }
@@ -1189,6 +1219,37 @@ void Session::modifyPassConfig(const Triple &TT,
 
   if (AddSelfRelocations)
     PassConfig.PostPrunePasses.push_back(addSelfRelocations);
+}
+
+Expected<JITDylib *> Session::getOrLoadDynamicLibrary(StringRef LibPath) {
+  auto It = DynLibJDs.find(LibPath.str());
+  if (It != DynLibJDs.end()) {
+    return It->second;
+  }
+  auto G = EPCDynamicLibrarySearchGenerator::Load(ES, LibPath.data());
+  if (!G)
+    return G.takeError();
+  auto JD = &ES.createBareJITDylib(LibPath.str());
+
+  JD->addGenerator(std::move(*G));
+  DynLibJDs.emplace(LibPath.str(), JD);
+  LLVM_DEBUG({
+    dbgs() << "Loaded dynamic library " << LibPath.data() << " for " << LibPath
+           << "\n";
+  });
+  return JD;
+}
+
+Error Session::loadAndLinkDynamicLibrary(JITDylib &JD, StringRef LibPath) {
+  auto DL = getOrLoadDynamicLibrary(LibPath);
+  if (!DL)
+    return DL.takeError();
+  JD.addToLinkOrder(**DL);
+  LLVM_DEBUG({
+    dbgs() << "Linking dynamic library " << LibPath << " to " << JD.getName()
+           << "\n";
+  });
+  return Error::success();
 }
 
 Expected<Session::FileInfo &> Session::findFileInfo(StringRef FileName) {
@@ -1762,18 +1823,8 @@ static Error addLibraries(Session &S,
         case file_magic::pecoff_executable:
         case file_magic::elf_shared_object:
         case file_magic::macho_dynamically_linked_shared_lib: {
-          // TODO: On first reference to LibPath this should create a JITDylib
-          // with a generator and add it to JD's links-against list. Subsquent
-          // references should use the JITDylib created on the first
-          // reference.
-          auto G = EPCDynamicLibrarySearchGenerator::Load(S.ES, LibPath.data());
-          if (!G)
-            return G.takeError();
-          LLVM_DEBUG({
-            dbgs() << "Adding generator for dynamic library " << LibPath.data()
-                   << " to " << JD.getName() << "\n";
-          });
-          JD.addGenerator(std::move(*G));
+          if (auto Err = S.loadAndLinkDynamicLibrary(JD, LibPath.data()))
+            return Err;
           break;
         }
         case file_magic::archive:

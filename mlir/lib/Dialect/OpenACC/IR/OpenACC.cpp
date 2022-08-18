@@ -361,7 +361,7 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
 
   result.addAttribute(
       ParallelOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr(
+      builder.getDenseI32ArrayAttr(
           {static_cast<int32_t>(async.has_value() ? 1 : 0),
            static_cast<int32_t>(waitOperands.size()),
            static_cast<int32_t>(numGangs.has_value() ? 1 : 0),
@@ -590,7 +590,7 @@ ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   result.addAttribute(LoopOp::getOperandSegmentSizeAttr(),
-                      builder.getI32VectorAttr(
+                      builder.getDenseI32ArrayAttr(
                           {static_cast<int32_t>(gangNum.has_value() ? 1 : 0),
                            static_cast<int32_t>(gangStatic.has_value() ? 1 : 0),
                            static_cast<int32_t>(worker.has_value() ? 1 : 0),

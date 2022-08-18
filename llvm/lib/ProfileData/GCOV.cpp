@@ -491,12 +491,12 @@ uint64_t GCOVBlock::getCyclesCount(const BlockVector &blocks) {
   uint64_t count = 0, d;
   for (;;) {
     // Make blocks on the line traversable and try finding a cycle.
-    for (auto b : blocks) {
+    for (const auto *b : blocks) {
       const_cast<GCOVBlock *>(b)->traversable = true;
       const_cast<GCOVBlock *>(b)->incoming = nullptr;
     }
     d = 0;
-    for (auto block : blocks) {
+    for (const auto *block : blocks) {
       auto *b = const_cast<GCOVBlock *>(block);
       if (b->traversable && (d = augmentOneCycle(b, stack)) > 0)
         break;
@@ -507,7 +507,7 @@ uint64_t GCOVBlock::getCyclesCount(const BlockVector &blocks) {
   }
   // If there is no more loop, all traversable bits should have been cleared.
   // This property is needed by subsequent calls.
-  for (auto b : blocks) {
+  for (const auto *b : blocks) {
     assert(!b->traversable);
     (void)b;
   }

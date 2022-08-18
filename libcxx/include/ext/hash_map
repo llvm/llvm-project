@@ -714,7 +714,7 @@ swap(hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 operator==(const hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
            const hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
 {
@@ -954,7 +954,7 @@ swap(hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 }
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 operator==(const hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
            const hash_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
 {

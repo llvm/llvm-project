@@ -450,6 +450,7 @@ enum NodeType : unsigned {
   STZ2G,
 
   LDP,
+  LDNP,
   STP,
   STNP,
 

@@ -361,7 +361,7 @@ int main(int argc, char **argv) {
     char32_t Codepoint = Entry.first;
     const std::string &Name = Entry.second;
     // Ignore names which are not valid.
-    if (Name.empty() || !std::all_of(Name.begin(), Name.end(), [](char C) {
+    if (Name.empty() || !llvm::all_of(Name, [](char C) {
           return llvm::is_contained(Letters, C);
         })) {
       continue;
