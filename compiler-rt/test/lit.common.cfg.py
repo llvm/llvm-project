@@ -175,8 +175,8 @@ if config.memprof_shadow_scale != '':
 config.environment = dict(os.environ)
 
 # Clear some environment variables that might affect Clang.
-possibly_dangerous_env_vars = ['ASAN_OPTIONS', 'DFSAN_OPTIONS', 'LSAN_OPTIONS',
-                               'MSAN_OPTIONS', 'UBSAN_OPTIONS',
+possibly_dangerous_env_vars = ['ASAN_OPTIONS', 'DFSAN_OPTIONS', 'HWASAN_OPTIONS',
+                               'LSAN_OPTIONS', 'MSAN_OPTIONS', 'UBSAN_OPTIONS',
                                'COMPILER_PATH', 'RC_DEBUG_OPTIONS',
                                'CINDEXTEST_PREAMBLE_FILE', 'LIBRARY_PATH',
                                'CPATH', 'C_INCLUDE_PATH', 'CPLUS_INCLUDE_PATH',
