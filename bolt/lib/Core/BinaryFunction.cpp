@@ -503,10 +503,10 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
   }
 
   StringRef SplitPointMsg = "";
-  for (const FunctionFragment F : Layout) {
+  for (const FunctionFragment FF : Layout.fragments()) {
     OS << SplitPointMsg;
     SplitPointMsg = "-------   HOT-COLD SPLIT POINT   -------\n\n";
-    for (const BinaryBasicBlock *BB : F) {
+    for (const BinaryBasicBlock *BB : FF) {
       OS << BB->getName() << " (" << BB->size()
          << " instructions, align : " << BB->getAlignment() << ")\n";
 
@@ -2782,12 +2782,12 @@ bool BinaryFunction::finalizeCFIState() {
 
   const char *Sep = "";
   (void)Sep;
-  for (const FunctionFragment F : Layout) {
+  for (const FunctionFragment FF : Layout.fragments()) {
     // Hot-cold border: at start of each region (with a different FDE) we need
     // to reset the CFI state.
     int32_t State = 0;
 
-    for (BinaryBasicBlock *BB : F) {
+    for (BinaryBasicBlock *BB : FF) {
       const int32_t CFIStateAtExit = BB->getCFIStateAtExit();
 
       // We need to recover the correct state if it doesn't match expected

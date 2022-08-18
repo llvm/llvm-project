@@ -23,6 +23,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 
 namespace llvm {
 namespace bolt {
@@ -100,7 +101,10 @@ public:
     const FunctionLayout *Layout;
 
     FragmentIterator(FragmentNum Num, const FunctionLayout *Layout)
-        : Num(Num), Layout(Layout) {}
+        : Num(Num), Layout(Layout) {
+      assert(Num.get() <= Layout->fragment_size() &&
+             "Initializing iterator out of bounds");
+    }
 
   public:
     bool operator==(const FragmentIterator &Other) const {
@@ -108,15 +112,20 @@ public:
     }
 
     FunctionFragment operator*() const {
+      assert(Num.get() < Layout->fragment_size() &&
+             "Dereferencing end() iterator (or past it)");
       return FunctionFragment(Num, *Layout);
     }
 
     FragmentIterator &operator++() {
+      assert(Num.get() < Layout->fragment_size() &&
+             "Incrementing iterator past end()");
       Num = FragmentNum(Num.get() + 1);
       return *this;
     }
 
     FragmentIterator &operator--() {
+      assert(Num.get() > 0 && "Decrementing iterator past begin()");
       Num = FragmentNum(Num.get() - 1);
       return *this;
     }
@@ -133,8 +142,9 @@ private:
   BasicBlockListType Blocks;
   /// List of indices dividing block list into fragments. To simplify iteration,
   /// we have `Fragments.back()` equals `Blocks.size()`. Hence,
-  /// `Fragments.size()` equals `this->size() + 1`.
-  FragmentListType Fragments = {0};
+  /// `Fragments.size()` equals `this->size() + 1`. Always contains at least one
+  /// fragment.
+  FragmentListType Fragments = {0, 0};
   BasicBlockListType PreviousBlocks;
   FragmentListType PreviousFragments;
 
@@ -188,14 +198,23 @@ public:
   /// layout after basic block reordering.
   uint64_t getEditDistance() const;
 
-  size_t size() const { return Fragments.size() - 1; }
-  bool empty() const { return Fragments.size() == 1; }
-  const_iterator begin() const { return {FragmentNum(0), this}; }
-  const_iterator end() const { return {FragmentNum(size()), this}; }
-  FunctionFragment front() const { return *begin(); }
-  FunctionFragment back() const { return *std::prev(end()); }
-  FunctionFragment operator[](const FragmentNum Num) const {
-    return getFragment(Num);
+  /// True if the function is split into at most 2 fragments. Mostly used for
+  /// checking whether a function can be processed in places that do not support
+  /// multiple fragments yet.
+  bool isHotColdSplit() const { return fragment_size() <= 2; }
+
+  size_t fragment_size() const {
+    assert(Fragments.size() >= 2 &&
+           "Layout should have at least one fragment.");
+    return Fragments.size() - 1;
+  }
+  bool fragment_empty() const { return Fragments.size() == 1; }
+  const_iterator fragment_begin() const { return {FragmentNum(0), this}; }
+  const_iterator fragment_end() const {
+    return {FragmentNum(fragment_size()), this};
+  }
+  iterator_range<const_iterator> fragments() const {
+    return {fragment_begin(), fragment_end()};
   }
 
   size_t block_size() const { return Blocks.size(); }
