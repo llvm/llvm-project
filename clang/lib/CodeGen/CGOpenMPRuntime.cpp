@@ -9070,18 +9070,17 @@ public:
         std::tuple<OMPClauseMappableExprCommon::MappableExprComponentListRef,
                    OpenMPMapClauseKind, ArrayRef<OpenMPMapModifierKind>, bool,
                    const ValueDecl *, const Expr *>;
-    static const OpenMPMapModifierKind ModifierKinds[] = {
-        OMPC_MAP_MODIFIER_unknown,
-    };
     SmallVector<MapData, 4> DeclComponentLists;
     // For member fields list in is_device_ptr, store it in
     // DeclComponentLists for generating components info.
     auto It = DevPointersMap.find(VD);
     if (It != DevPointersMap.end())
-      for (const auto& MCL : It->second)
-        DeclComponentLists.emplace_back(MCL, OMPC_MAP_to, ModifierKinds,
+      for (const auto &MCL : It->second) {
+        static const OpenMPMapModifierKind Unknown = OMPC_MAP_MODIFIER_unknown;
+        DeclComponentLists.emplace_back(MCL, OMPC_MAP_to, Unknown,
                                         /*IsImpicit = */ true, nullptr,
                                         nullptr);
+      }
     assert(CurDir.is<const OMPExecutableDirective *>() &&
            "Expect a executable directive");
     const auto *CurExecDir = CurDir.get<const OMPExecutableDirective *>();
