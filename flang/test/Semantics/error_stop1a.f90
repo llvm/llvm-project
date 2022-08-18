@@ -14,7 +14,7 @@ program test_error_stop
   !___ standard-conforming statements ____________________________
   error stop
 
-  !___ standard-conforming statement with stop-code ______________
+  !___ standard-conforming statements with stop-code ______________
   error stop int_code
   error stop 5
   error stop (5)
@@ -32,7 +32,7 @@ program test_error_stop
   error stop array_coarray(1)
   error stop array_coarray(1)[1]
 
-  !___ standard-conforming statement with stop-code and quiet= ___
+  !___ standard-conforming statements with stop-code and quiet= ___
   error stop int_code, quiet=bool
   error stop int_code, quiet=logical_array(1)
   error stop int_code, quiet=logical_coarray
@@ -40,35 +40,11 @@ program test_error_stop
   error stop int_code, quiet=.true.
   error stop (int_code), quiet=.false.
 
-  !___ non-standard-conforming statement _________________________
+  !___ non-standard-conforming statements _________________________
 
   ! unknown stop-code
   !ERROR: expected execution part construct
   error stop code=int_code
-
-  ! invalid stop-code typing
-  error stop non_integer
-
-  ! invalid stop-code typing
-  error stop non_character
-
-  ! stop-code must be of default kind
-  error stop non_default_int_kind
-
-  ! stop-code must be of default kind
-  error stop non_default_char_kind
-
-  ! stop-code must be scalar
-  error stop char_array
-
-  ! stop-code must be scalar
-  error stop array_coarray[1]
-
-  ! invalid quiet= typing
-  error stop int_code, quiet=non_logical
-
-  ! quiet= must be scalar
-  error stop int_code, quiet=logical_array
 
   ! missing 'quiet='
   !ERROR: expected execution part construct
