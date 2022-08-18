@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
+#include "clang/CAS/IncludeTree.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
-#include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/Support/PrefixMapper.h"
@@ -74,14 +75,28 @@ computeFullMapping(llvm::StringSaver &Saver, StringRef ClangPath,
 
 static void updateCompilerInvocation(CompilerInvocation &Invocation,
                                      llvm::StringSaver &Saver,
+                                     bool ProduceIncludeTree,
                                      llvm::cas::CachingOnDiskFileSystem &FS,
                                      std::string RootID,
                                      StringRef CASWorkingDirectory,
                                      llvm::TreePathPrefixMapper &Mapper) {
   // "Fix" the CAS options.
   auto &FileSystemOpts = Invocation.getFileSystemOpts();
-  FileSystemOpts.CASFileSystemRootID = RootID;
-  FileSystemOpts.CASFileSystemWorkingDirectory = CASWorkingDirectory.str();
+  if (ProduceIncludeTree) {
+    Invocation.getFrontendOpts().CASIncludeTreeID = RootID;
+    Invocation.getFrontendOpts().Inputs.clear();
+    Invocation.getHeaderSearchOpts() = HeaderSearchOptions();
+    auto &PPOpts = Invocation.getPreprocessorOpts();
+    // We don't need these because we save the contents of the predefines buffer
+    // and the PCH file in the include tree root.
+    PPOpts.Macros.clear();
+    PPOpts.MacroIncludes.clear();
+    PPOpts.ImplicitPCHInclude.clear();
+    PPOpts.Includes.clear();
+  } else {
+    FileSystemOpts.CASFileSystemRootID = RootID;
+    FileSystemOpts.CASFileSystemWorkingDirectory = CASWorkingDirectory.str();
+  }
   auto &FrontendOpts = Invocation.getFrontendOpts();
   FrontendOpts.CacheCompileJob = true; // FIXME: Don't set.
 
@@ -183,7 +198,8 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
     tooling::dependencies::DependencyScanningTool &Tool,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS, const char *Exec,
     CompilerInvocation &Invocation, StringRef WorkingDirectory,
-    const cc1depscand::DepscanPrefixMapping &PrefixMapping) {
+    const cc1depscand::DepscanPrefixMapping &PrefixMapping,
+    llvm::cas::CASDB &DB) {
   llvm::cas::CachingOnDiskFileSystem &FS = Tool.getCachingFileSystem();
 
   // Override the CASOptions. They may match (the caller having sniffed them
@@ -203,16 +219,28 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
   ScanInvocation->getDiagnosticOpts().IgnoreWarnings = true;
 
   Optional<llvm::cas::CASID> Root;
-  if (Error E = Tool.getDependencyTreeFromCompilerInvocation(
-                        std::move(ScanInvocation),
-                        WorkingDirectory, DiagsConsumer, VerboseOS,
-                        /*DiagGenerationAsCompilation*/ true,
-                        [&](const llvm::vfs::CachedDirectoryEntry &Entry) {
-                          return Mapper.map(Entry);
-                        })
-                    .moveInto(Root))
-    return std::move(E);
-  updateCompilerInvocation(Invocation, Saver, FS, Root->toString(),
-                           WorkingDirectory, Mapper);
+  bool ProduceIncludeTree =
+      Tool.getScanningFormat() ==
+      tooling::dependencies::ScanningOutputFormat::IncludeTree;
+  if (ProduceIncludeTree) {
+    if (Error E = Tool.getIncludeTreeFromCompilerInvocation(
+                          DB, std::move(ScanInvocation), WorkingDirectory,
+                          DiagsConsumer, VerboseOS,
+                          /*DiagGenerationAsCompilation*/ true)
+                      .moveInto(Root))
+      return std::move(E);
+  } else {
+    if (Error E = Tool.getDependencyTreeFromCompilerInvocation(
+                          std::move(ScanInvocation), WorkingDirectory,
+                          DiagsConsumer, VerboseOS,
+                          /*DiagGenerationAsCompilation*/ true,
+                          [&](const llvm::vfs::CachedDirectoryEntry &Entry) {
+                            return Mapper.map(Entry);
+                          })
+                      .moveInto(Root))
+      return std::move(E);
+  }
+  updateCompilerInvocation(Invocation, Saver, ProduceIncludeTree, FS,
+                           Root->toString(), WorkingDirectory, Mapper);
   return *Root;
 }

@@ -29,6 +29,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
 #include "llvm/Option/ArgList.h"
@@ -359,14 +360,13 @@ makeDepscanDaemonPath(StringRef Mode, const DepscanSharing &Sharing) {
   return None;
 }
 
-static Expected<llvm::cas::CASID>
-scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
-                       StringRef WorkingDirectory,
-                       SmallVectorImpl<const char *> &OutputArgs,
-                       bool &DiagnosticErrorOccurred,
-                       const cc1depscand::DepscanPrefixMapping &PrefixMapping,
-                       llvm::function_ref<const char *(const Twine &)> SaveArg,
-                       const CASOptions &CASOpts, llvm::cas::CASDB &CAS);
+static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
+    const char *Exec, ArrayRef<const char *> InputArgs,
+    StringRef WorkingDirectory, SmallVectorImpl<const char *> &OutputArgs,
+    bool ProduceIncludeTree, bool &DiagnosticErrorOccurred,
+    const cc1depscand::DepscanPrefixMapping &PrefixMapping,
+    llvm::function_ref<const char *(const Twine &)> SaveArg,
+    const CASOptions &CASOpts, std::shared_ptr<llvm::cas::CASDB> DB);
 
 static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     tooling::dependencies::DependencyScanningTool &Tool,
@@ -374,6 +374,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     ArrayRef<const char *> InputArgs, StringRef WorkingDirectory,
     SmallVectorImpl<const char *> &OutputArgs,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping,
+    llvm::cas::CASDB &DB,
     llvm::function_ref<const char *(const Twine &)> SaveArg);
 
 static void shutdownCC1ScanDepsDaemon(StringRef Path) {
@@ -504,7 +505,8 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
                             SmallVectorImpl<const char *> &NewArgs,
                             DiagnosticsEngine &Diag,
                             const llvm::opt::ArgList &Args,
-                            const CASOptions &CASOpts, llvm::cas::CASDB &CAS,
+                            const CASOptions &CASOpts,
+                            std::shared_ptr<llvm::cas::CASDB> DB,
                             llvm::Optional<llvm::cas::CASID> &RootID) {
   using namespace clang::driver;
 
@@ -558,21 +560,25 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
     }
   }
 
+  bool ProduceIncludeTree = Args.hasArg(options::OPT_fdepscan_include_tree);
+
   cc1depscand::DepscanPrefixMapping PrefixMapping =
       parseCASFSAutoPrefixMappings(Diag, Args);
 
   auto SaveArg = [&Args](const Twine &T) { return Args.MakeArgString(T); };
   CompilerInvocation::GenerateCASArgs(CASOpts, Sharing.CASArgs, SaveArg);
+  if (ProduceIncludeTree)
+    Sharing.CASArgs.push_back("-fdepscan-include-tree");
 
   bool DiagnosticErrorOccurred = false;
   auto ScanAndUpdate = [&]() {
     if (Optional<std::string> DaemonPath = makeDepscanDaemonPath(Mode, Sharing))
       return scanAndUpdateCC1UsingDaemon(
           Exec, OldArgs, WorkingDirectory, NewArgs, DiagnosticErrorOccurred,
-          PrefixMapping, *DaemonPath, Sharing, SaveArg, CAS);
+          PrefixMapping, *DaemonPath, Sharing, SaveArg, *DB);
     return scanAndUpdateCC1Inline(Exec, OldArgs, WorkingDirectory, NewArgs,
-                                  DiagnosticErrorOccurred, PrefixMapping,
-                                  SaveArg, CASOpts, CAS);
+                                  ProduceIncludeTree, DiagnosticErrorOccurred,
+                                  PrefixMapping, SaveArg, CASOpts, DB);
   };
   if (llvm::Error E = ScanAndUpdate().moveInto(RootID)) {
     Diag.Report(diag::err_cas_depscan_failed) << toString(std::move(E));
@@ -626,7 +632,7 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
     return 1;
 
   if (int Ret = scanAndUpdateCC1(Argv0, CC1Args->getValues(), NewArgs, Diags,
-                                 Args, CASOpts, *CAS, RootID))
+                                 Args, CASOpts, CAS, RootID))
     return Ret;
 
   // FIXME: Use OutputBackend to OnDisk only now.
@@ -856,16 +862,22 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
       Opts.ParseArgs(CASArgs, MissingArgIndex, MissingArgCount);
   CompilerInvocation::ParseCASArgs(CASOpts, ParsedCASArgs, Diags);
   CASOpts.ensurePersistentCAS();
+  bool ProduceIncludeTree =
+      ParsedCASArgs.hasArg(driver::options::OPT_fdepscan_include_tree);
 
   std::shared_ptr<llvm::cas::CASDB> CAS = CASOpts.getOrCreateCAS(Diags);
   if (!CAS)
     llvm::report_fatal_error("clang -cc1depscand: cannot create CAS");
 
-  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS =
-      llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(*CAS));
+  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
+  if (!ProduceIncludeTree)
+    FS = llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(*CAS));
   tooling::dependencies::DependencyScanningService Service(
       tooling::dependencies::ScanningMode::DependencyDirectivesScan,
-      tooling::dependencies::ScanningOutputFormat::Tree, CASOpts, FS,
+      ProduceIncludeTree
+          ? tooling::dependencies::ScanningOutputFormat::IncludeTree
+          : tooling::dependencies::ScanningOutputFormat::Tree,
+      CASOpts, FS,
       /*ReuseFileManager=*/false,
       /*SkipExcludedPPRanges=*/true);
 
@@ -884,7 +896,7 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
 #endif
 
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
-    Pool.async([&Service, &ShutDown, &ListenSocket, &NumRunning, &Start,
+    Pool.async([&CAS, &Service, &ShutDown, &ListenSocket, &NumRunning, &Start,
                 &SecondsSinceLastClose, I, Argv0, &SharedOS, ShutDownTest,
                 &ShutdownCleanUp]() {
       Optional<tooling::dependencies::DependencyScanningTool> Tool;
@@ -970,10 +982,20 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
           OS << "\n";
         };
 
+        bool ProduceIncludeTree =
+            Service.getFormat() ==
+            tooling::dependencies::ScanningOutputFormat::IncludeTree;
+
         // Is this safe to reuse? Or does DependendencyScanningWorkerFileSystem
         // make some bad assumptions about relative paths?
-        if (!Tool)
-          Tool.emplace(Service);
+        if (!Tool) {
+          llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> UnderlyingFS =
+              llvm::vfs::createPhysicalFileSystem();
+          if (ProduceIncludeTree)
+            UnderlyingFS = llvm::cas::createCASProvidingFileSystem(
+                CAS, std::move(UnderlyingFS));
+          Tool.emplace(Service, std::move(UnderlyingFS));
+        }
 
         IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
             CreateAndPopulateDiagOpts(Args);
@@ -986,7 +1008,7 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
         SmallVector<const char *> NewArgs;
         auto RootID = scanAndUpdateCC1InlineWithTool(
             *Tool, *DiagsConsumer, &DiagsOS, Argv0, Args, WorkingDirectory,
-            NewArgs, PrefixMapping,
+            NewArgs, PrefixMapping, *CAS,
             [&](const Twine &T) { return Saver.save(T).data(); });
         if (!RootID) {
           consumeError(Comms.putScanResultFailed(toString(RootID.takeError())));
@@ -1070,6 +1092,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     ArrayRef<const char *> InputArgs, StringRef WorkingDirectory,
     SmallVectorImpl<const char *> &OutputArgs,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping,
+    llvm::cas::CASDB &DB,
     llvm::function_ref<const char *(const Twine &)> SaveArg) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
   Diags.setClient(&DiagsConsumer, /*ShouldOwnClient=*/false);
@@ -1080,7 +1103,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
 
   Expected<llvm::cas::CASID> Root = scanAndUpdateCC1InlineWithTool(
       Tool, DiagsConsumer, VerboseOS, Exec, *Invocation, WorkingDirectory,
-      PrefixMapping);
+      PrefixMapping, DB);
   if (!Root)
     return Root;
 
@@ -1090,23 +1113,32 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
   return *Root;
 }
 
-static Expected<llvm::cas::CASID>
-scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
-                       StringRef WorkingDirectory,
-                       SmallVectorImpl<const char *> &OutputArgs,
-                       bool &DiagnosticErrorOccurred,
-                       const cc1depscand::DepscanPrefixMapping &PrefixMapping,
-                       llvm::function_ref<const char *(const Twine &)> SaveArg,
-                       const CASOptions &CASOpts, llvm::cas::CASDB &CAS) {
-  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS =
-      llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(CAS));
+static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
+    const char *Exec, ArrayRef<const char *> InputArgs,
+    StringRef WorkingDirectory, SmallVectorImpl<const char *> &OutputArgs,
+    bool ProduceIncludeTree, bool &DiagnosticErrorOccurred,
+    const cc1depscand::DepscanPrefixMapping &PrefixMapping,
+    llvm::function_ref<const char *(const Twine &)> SaveArg,
+    const CASOptions &CASOpts, std::shared_ptr<llvm::cas::CASDB> DB) {
+  IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
+  if (!ProduceIncludeTree)
+    FS = llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(*DB));
 
   tooling::dependencies::DependencyScanningService Service(
       tooling::dependencies::ScanningMode::DependencyDirectivesScan,
-      tooling::dependencies::ScanningOutputFormat::Tree, CASOpts, FS,
+      ProduceIncludeTree
+          ? tooling::dependencies::ScanningOutputFormat::IncludeTree
+          : tooling::dependencies::ScanningOutputFormat::Tree,
+      CASOpts, FS,
       /*ReuseFileManager=*/false,
       /*SkipExcludedPPRanges=*/true);
-  tooling::dependencies::DependencyScanningTool Tool(Service);
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> UnderlyingFS =
+      llvm::vfs::createPhysicalFileSystem();
+  if (ProduceIncludeTree)
+    UnderlyingFS =
+        llvm::cas::createCASProvidingFileSystem(DB, std::move(UnderlyingFS));
+  tooling::dependencies::DependencyScanningTool Tool(Service,
+                                                     std::move(UnderlyingFS));
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
       CreateAndPopulateDiagOpts(InputArgs);
@@ -1115,7 +1147,7 @@ scanAndUpdateCC1Inline(const char *Exec, ArrayRef<const char *> InputArgs,
 
   auto Result = scanAndUpdateCC1InlineWithTool(
       Tool, *DiagsConsumer, /*VerboseOS*/ nullptr, Exec, InputArgs,
-      WorkingDirectory, OutputArgs, PrefixMapping, SaveArg);
+      WorkingDirectory, OutputArgs, PrefixMapping, *DB, SaveArg);
   DiagnosticErrorOccurred = DiagsConsumer->getNumErrors() != 0;
   return Result;
 }

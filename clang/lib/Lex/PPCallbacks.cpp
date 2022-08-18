@@ -8,6 +8,7 @@
 
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Lex/PPCachedActions.h"
 
 using namespace clang;
 
@@ -28,3 +29,4 @@ void PPChainedCallbacks::HasInclude(SourceLocation Loc, StringRef FileName,
   Second->HasInclude(Loc, FileName, IsAngled, File, FileType);
 }
 
+void PPCachedActions::anchor() {}

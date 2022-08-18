@@ -235,6 +235,7 @@ llvm::cl::opt<bool> Verbose("v", llvm::cl::Optional,
 } // end anonymous namespace
 
 static bool emitCompilationDBWithCASTreeArguments(
+    std::shared_ptr<llvm::cas::CASDB> DB,
     std::vector<tooling::CompileCommand> Inputs,
     DiagnosticConsumer &DiagsConsumer, const char *Exec,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping,
@@ -249,12 +250,18 @@ static bool emitCompilationDBWithCASTreeArguments(
     DependencyScanningTool Worker;
     llvm::BumpPtrAllocator Alloc;
     llvm::StringSaver Saver;
-    explicit PerThreadState(DependencyScanningService &Service)
-        : Worker(Service), Saver(Alloc) {}
+    PerThreadState(DependencyScanningService &Service,
+                   std::unique_ptr<llvm::vfs::FileSystem> FS)
+        : Worker(Service, std::move(FS)), Saver(Alloc) {}
   };
   std::vector<std::unique_ptr<PerThreadState>> PerThreadStates;
-  for (unsigned I = 0, E = Pool.getThreadCount(); I != E; ++I)
-    PerThreadStates.push_back(std::make_unique<PerThreadState>(Service));
+  for (unsigned I = 0, E = Pool.getThreadCount(); I != E; ++I) {
+    std::unique_ptr<llvm::vfs::FileSystem> FS =
+        llvm::cas::createCASProvidingFileSystem(
+            DB, llvm::vfs::createPhysicalFileSystem());
+    PerThreadStates.push_back(
+        std::make_unique<PerThreadState>(Service, std::move(FS)));
+  }
 
   std::atomic<bool> HadErrors(false);
   std::mutex Lock;
@@ -290,6 +297,7 @@ static bool emitCompilationDBWithCASTreeArguments(
             PerThreadStates[I]->Worker;
 
         class ScanForCC1Action : public ToolAction {
+          llvm::cas::CASDB &DB;
           tooling::dependencies::DependencyScanningTool &WorkerTool;
           DiagnosticConsumer &DiagsConsumer;
           const char *Exec;
@@ -300,13 +308,14 @@ static bool emitCompilationDBWithCASTreeArguments(
 
         public:
           ScanForCC1Action(
+              llvm::cas::CASDB &DB,
               tooling::dependencies::DependencyScanningTool &WorkerTool,
               DiagnosticConsumer &DiagsConsumer, const char *Exec,
               StringRef CWD,
               const cc1depscand::DepscanPrefixMapping &PrefixMapping,
               SmallVectorImpl<const char *> &OutputArgs,
               llvm::StringSaver &Saver)
-              : WorkerTool(WorkerTool), DiagsConsumer(DiagsConsumer),
+              : DB(DB), WorkerTool(WorkerTool), DiagsConsumer(DiagsConsumer),
                 Exec(Exec), CWD(CWD), PrefixMapping(PrefixMapping),
                 OutputArgs(OutputArgs), Saver(Saver) {}
 
@@ -317,7 +326,7 @@ static bool emitCompilationDBWithCASTreeArguments(
                         DiagnosticConsumer *DiagConsumer) override {
             Expected<llvm::cas::CASID> Root = scanAndUpdateCC1InlineWithTool(
                 WorkerTool, DiagsConsumer, /*VerboseOS*/ nullptr, Exec,
-                *Invocation, CWD, PrefixMapping);
+                *Invocation, CWD, PrefixMapping, DB);
             if (!Root) {
               llvm::consumeError(Root.takeError());
               return false;
@@ -333,8 +342,8 @@ static bool emitCompilationDBWithCASTreeArguments(
         SmallVector<const char *> OutputArgs;
         llvm::StringSaver &Saver = PerThreadStates[I]->Saver;
         OutputArgs.push_back(Saver.save(Input->CommandLine.front()).data());
-        ScanForCC1Action Action(WorkerTool, *IgnoringDiagsConsumer, Exec, CWD,
-                                PrefixMapping, OutputArgs, Saver);
+        ScanForCC1Action Action(*DB, WorkerTool, *IgnoringDiagsConsumer, Exec,
+                                CWD, PrefixMapping, OutputArgs, Saver);
 
         llvm::IntrusiveRefCntPtr<FileManager> FileMgr =
             WorkerTool.getOrCreateFileManager();
@@ -783,8 +792,8 @@ int main(int argc, const char **argv) {
     // FIXME: Configure this.
     cc1depscand::DepscanPrefixMapping PrefixMapping;
     return emitCompilationDBWithCASTreeArguments(
-        AdjustingCompilations->getAllCompileCommands(), *DiagsConsumer, argv[0],
-        PrefixMapping, Service, Pool, llvm::outs());
+        CAS, AdjustingCompilations->getAllCompileCommands(), *DiagsConsumer,
+        argv[0], PrefixMapping, Service, Pool, llvm::outs());
   }
 
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;

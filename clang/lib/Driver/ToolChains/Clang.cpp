@@ -4550,6 +4550,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
   {
     const OptSpecifier DepScanOpts[] = {
         options::OPT_fdepscan_EQ,
+        options::OPT_fdepscan_include_tree,
         options::OPT_fdepscan_share_EQ,
         options::OPT_fdepscan_share_identifier,
         options::OPT_fdepscan_share_parent,

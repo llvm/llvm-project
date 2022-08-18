@@ -9,6 +9,7 @@
 #include "clang/Frontend/CompileJobCacheKey.h"
 #include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/Version.h"
+#include "clang/CAS/IncludeTree.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
@@ -18,18 +19,18 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
+using namespace clang::cas;
 using namespace llvm;
 using namespace llvm::cas;
 
 static llvm::cas::CASID
 createCompileJobCacheKeyForArgs(CASDB &CAS, ArrayRef<const char *> CC1Args,
-                                llvm::cas::CASID FileSystemRootID) {
-  Optional<llvm::cas::ObjectRef> RootRef = CAS.getReference(FileSystemRootID);
+                                llvm::cas::CASID RootID, bool IsIncludeTree) {
+  Optional<llvm::cas::ObjectRef> RootRef = CAS.getReference(RootID);
   if (!RootRef)
-    report_fatal_error(
-        createStringError(inconvertibleErrorCode(),
-                          "cannot handle unknown compile-job cache key: " +
-                              FileSystemRootID.toString()));
+    report_fatal_error(createStringError(
+        inconvertibleErrorCode(),
+        "cannot handle unknown compile-job cache key: " + RootID.toString()));
   assert(!CC1Args.empty() && StringRef(CC1Args[0]) == "-cc1");
   SmallString<256> CommandLine;
   for (StringRef Arg : CC1Args) {
@@ -38,7 +39,11 @@ createCompileJobCacheKeyForArgs(CASDB &CAS, ArrayRef<const char *> CC1Args,
   }
 
   llvm::cas::HierarchicalTreeBuilder Builder;
-  Builder.push(*RootRef, llvm::cas::TreeEntry::Tree, "filesystem");
+  if (IsIncludeTree) {
+    Builder.push(*RootRef, llvm::cas::TreeEntry::Regular, "include-tree");
+  } else {
+    Builder.push(*RootRef, llvm::cas::TreeEntry::Tree, "filesystem");
+  }
   Builder.push(
       CAS.getReference(llvm::cantFail(CAS.storeFromString(None, CommandLine))),
       llvm::cas::TreeEntry::Regular, "command-line");
@@ -83,10 +88,15 @@ clang::createCompileJobCacheKey(CASDB &CAS, DiagnosticsEngine &Diags,
   InvocationForCacheKey.generateCC1CommandLine(
       Argv, [&Saver](const llvm::Twine &T) { return Saver.save(T).data(); });
 
+  bool IsIncludeTree =
+      !InvocationForCacheKey.getFrontendOpts().CASIncludeTreeID.empty();
+
   // FIXME: currently correct since the main executable is always in the root
   // from scanning, but we should probably make it explicit here...
   StringRef RootIDString =
-      InvocationForCacheKey.getFileSystemOpts().CASFileSystemRootID;
+      IsIncludeTree
+          ? InvocationForCacheKey.getFrontendOpts().CASIncludeTreeID
+          : InvocationForCacheKey.getFileSystemOpts().CASFileSystemRootID;
   Expected<llvm::cas::CASID> RootID = CAS.parseID(RootIDString);
   if (!RootID) {
     llvm::consumeError(RootID.takeError());
@@ -94,7 +104,7 @@ clang::createCompileJobCacheKey(CASDB &CAS, DiagnosticsEngine &Diags,
     return None;
   }
 
-  return createCompileJobCacheKeyForArgs(CAS, Argv, *RootID);
+  return createCompileJobCacheKeyForArgs(CAS, Argv, *RootID, IsIncludeTree);
 }
 
 static Error printFileSystem(CASDB &CAS, ObjectRef Ref, raw_ostream &OS) {
@@ -136,6 +146,15 @@ static Error printCompileJobCacheKey(CASDB &CAS, ObjectHandle Node,
 
     if (E.getKind() != TreeEntry::Regular)
       return strError("expected blob for entry " + E.getName());
+
+    if (E.getName() == "include-tree") {
+      auto IncludeTree = IncludeTreeRoot::get(CAS, E.getRef());
+      if (!IncludeTree)
+        return IncludeTree.takeError();
+      OS << '\n';
+      return IncludeTree->print(OS, 2);
+    }
+
     auto Blob = CAS.getProxy(E.getRef());
     if (!Blob)
       return Blob.takeError();

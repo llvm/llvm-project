@@ -244,6 +244,7 @@ private:
   cas::CASDB &DB;
   Optional<cas::ObjectRef> PCHRef;
   llvm::BitVector SeenIncludeFiles;
+  SmallVector<cas::IncludeFileList::FileEntry> IncludedFiles;
   Optional<cas::ObjectRef> PredefinesBufferRef;
   SmallVector<FilePPState> IncludeStack;
   llvm::DenseMap<const FileEntry *, Optional<cas::ObjectRef>> ObjectForFile;
@@ -326,6 +327,7 @@ IncludeTreePPConsumer::getObjectForFileNonCached(FileManager &FM,
       cas::IncludeFile::create(DB, Filename, **CASContents);
   if (!FileNode)
     return FileNode.takeError();
+  IncludedFiles.push_back({FileNode->getRef(), FI.getContentCache().getSize()});
   return FileNode->getRef();
 }
 
@@ -359,8 +361,12 @@ Expected<cas::IncludeTreeRoot> IncludeTreePPConsumer::getIncludeTree() {
       getCASTreeForFileIncludes(IncludeStack.pop_back_val());
   if (!MainIncludeTree)
     return MainIncludeTree.takeError();
+  auto FileList = cas::IncludeFileList::create(DB, IncludedFiles);
+  if (!FileList)
+    return FileList.takeError();
 
-  return cas::IncludeTreeRoot::create(DB, MainIncludeTree->getRef());
+  return cas::IncludeTreeRoot::create(DB, MainIncludeTree->getRef(),
+                                      FileList->getRef());
 }
 
 Expected<cas::IncludeTreeRoot> DependencyScanningTool::getIncludeTree(
