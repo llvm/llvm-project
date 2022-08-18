@@ -798,10 +798,9 @@ define i8 @or_xor_notcommon_op(i8 %x, i8 %y, i8 %z, i8 %q) {
 
 define i4 @or_not_xor_common_op_commute0(i4 %x, i4 %y, i4 %z) {
 ; CHECK-LABEL: @or_not_xor_common_op_commute0(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[O1:%.*]] = or i4 [[NOTX]], [[Z:%.*]]
-; CHECK-NEXT:    [[O2:%.*]] = or i4 [[O1]], [[XOR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor i4 [[TMP1]], -1
+; CHECK-NEXT:    [[O2:%.*]] = or i4 [[NAND]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i4 [[O2]]
 ;
   %notx = xor i4 %x, -1
@@ -815,9 +814,9 @@ define i8 @or_not_xor_common_op_commute1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_not_xor_common_op_commute1(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use(i8 [[NOTX]])
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[O1:%.*]] = or i8 [[NOTX]], [[Z:%.*]]
-; CHECK-NEXT:    [[O2:%.*]] = or i8 [[XOR]], [[O1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[NAND]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[O2]]
 ;
   %notx = xor i8 %x, -1
@@ -831,10 +830,9 @@ define i8 @or_not_xor_common_op_commute1(i8 %x, i8 %y, i8 %z) {
 define i8 @or_not_xor_common_op_commute2(i8 %x, i8 %y, i8 %p) {
 ; CHECK-LABEL: @or_not_xor_common_op_commute2(
 ; CHECK-NEXT:    [[Z:%.*]] = sub i8 0, [[P:%.*]]
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[O1:%.*]] = or i8 [[Z]], [[NOTX]]
-; CHECK-NEXT:    [[O2:%.*]] = or i8 [[XOR]], [[O1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[NAND]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[O2]]
 ;
   %z = sub i8 0, %p ; thwart complexity-based canonicalizaion
@@ -848,10 +846,9 @@ define i8 @or_not_xor_common_op_commute2(i8 %x, i8 %y, i8 %p) {
 define i8 @or_not_xor_common_op_commute3(i8 %x, i8 %y, i8 %p) {
 ; CHECK-LABEL: @or_not_xor_common_op_commute3(
 ; CHECK-NEXT:    [[Z:%.*]] = sub i8 0, [[P:%.*]]
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[O1:%.*]] = or i8 [[Z]], [[NOTX]]
-; CHECK-NEXT:    [[O2:%.*]] = or i8 [[O1]], [[XOR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[NAND]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[O2]]
 ;
   %z = sub i8 0, %p ; thwart complexity-based canonicalizaion
@@ -864,10 +861,9 @@ define i8 @or_not_xor_common_op_commute3(i8 %x, i8 %y, i8 %p) {
 
 define <2 x i4> @or_not_xor_common_op_commute4(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
 ; CHECK-LABEL: @or_not_xor_common_op_commute4(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i4> [[X:%.*]], <i4 -1, i4 -1>
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[O1:%.*]] = or <2 x i4> [[NOTX]], [[Z:%.*]]
-; CHECK-NEXT:    [[O2:%.*]] = or <2 x i4> [[O1]], [[XOR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i4> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor <2 x i4> [[TMP1]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[O2:%.*]] = or <2 x i4> [[NAND]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i4> [[O2]]
 ;
   %notx = xor <2 x i4> %x, <i4 -1, i4 -1>
@@ -879,10 +875,9 @@ define <2 x i4> @or_not_xor_common_op_commute4(<2 x i4> %x, <2 x i4> %y, <2 x i4
 
 define i8 @or_not_xor_common_op_commute5(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_not_xor_common_op_commute5(
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[O1:%.*]] = or i8 [[NOTX]], [[Z:%.*]]
-; CHECK-NEXT:    [[O2:%.*]] = or i8 [[XOR]], [[O1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[NAND]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[O2]]
 ;
   %notx = xor i8 %x, -1
@@ -895,10 +890,9 @@ define i8 @or_not_xor_common_op_commute5(i8 %x, i8 %y, i8 %z) {
 define i8 @or_not_xor_common_op_commute6(i8 %x, i8 %y, i8 %p) {
 ; CHECK-LABEL: @or_not_xor_common_op_commute6(
 ; CHECK-NEXT:    [[Z:%.*]] = sub i8 0, [[P:%.*]]
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[O1:%.*]] = or i8 [[Z]], [[NOTX]]
-; CHECK-NEXT:    [[O2:%.*]] = or i8 [[XOR]], [[O1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[NAND]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[O2]]
 ;
   %z = sub i8 0, %p ; thwart complexity-based canonicalizaion
@@ -912,10 +906,9 @@ define i8 @or_not_xor_common_op_commute6(i8 %x, i8 %y, i8 %p) {
 define i8 @or_not_xor_common_op_commute7(i8 %x, i8 %y, i8 %p) {
 ; CHECK-LABEL: @or_not_xor_common_op_commute7(
 ; CHECK-NEXT:    [[Z:%.*]] = sub i8 0, [[P:%.*]]
-; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y:%.*]], [[X]]
-; CHECK-NEXT:    [[O1:%.*]] = or i8 [[Z]], [[NOTX]]
-; CHECK-NEXT:    [[O2:%.*]] = or i8 [[O1]], [[XOR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[NAND]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[O2]]
 ;
   %z = sub i8 0, %p ; thwart complexity-based canonicalizaion
@@ -925,6 +918,8 @@ define i8 @or_not_xor_common_op_commute7(i8 %x, i8 %y, i8 %p) {
   %o2 = or i8 %o1, %xor
   ret i8 %o2
 }
+
+; negative test - too many uses for basic check (but this could be enhanced)
 
 define i8 @or_not_xor_common_op_use1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_not_xor_common_op_use1(
@@ -942,6 +937,8 @@ define i8 @or_not_xor_common_op_use1(i8 %x, i8 %y, i8 %z) {
   %o2 = or i8 %xor, %o1
   ret i8 %o2
 }
+
+; negative test - too many uses
 
 define i8 @or_not_xor_common_op_use2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @or_not_xor_common_op_use2(
