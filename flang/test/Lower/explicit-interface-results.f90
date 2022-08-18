@@ -186,13 +186,17 @@ subroutine dyn_array(m, n)
   ! CHECK-DAG: %[[msub:.*]] = arith.subi %[[mcast]], %c1{{.*}} : i64
   ! CHECK-DAG: %[[madd:.*]] = arith.addi %[[msub]], %c1{{.*}} : i64
   ! CHECK-DAG: %[[mcast2:.*]] = fir.convert %[[madd]] : (i64) -> index
+  ! CHECK-DAG: %[[mcmpi:.*]] = arith.cmpi sgt, %[[mcast2]], %{{.*}} : index
+  ! CHECK-DAG: %[[mselect:.*]] = arith.select %[[mcmpi]], %[[mcast2]], %{{.*}} : index
   ! CHECK-DAG: %[[nload:.*]] = fir.load %[[n]] : !fir.ref<i32>
   ! CHECK-DAG: %[[ncast:.*]] = fir.convert %[[nload]] : (i32) -> i64
   ! CHECK-DAG: %[[nsub:.*]] = arith.subi %[[ncast]], %c1{{.*}} : i64
   ! CHECK-DAG: %[[nadd:.*]] = arith.addi %[[nsub]], %c1{{.*}} : i64
   ! CHECK-DAG: %[[ncast2:.*]] = fir.convert %[[nadd]] : (i64) -> index
-  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?xf32>, %[[mcast2]], %[[ncast2]]
-  ! CHECK: %[[shape:.*]] = fir.shape %[[mcast2]], %[[ncast2]] : (index, index) -> !fir.shape<2>
+  ! CHECK-DAG: %[[ncmpi:.*]] = arith.cmpi sgt, %[[ncast2]], %{{.*}} : index
+  ! CHECK-DAG: %[[nselect:.*]] = arith.select %[[ncmpi]], %[[ncast2]], %{{.*}} : index
+  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?xf32>, %[[mselect]], %[[nselect]]
+  ! CHECK: %[[shape:.*]] = fir.shape %[[mselect]], %[[nselect]] : (index, index) -> !fir.shape<2>
   ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_array(%[[m]], %[[n]]) : (!fir.ref<i32>, !fir.ref<i32>) -> !fir.array<?x?xf32>
   ! CHECK: fir.save_result %[[res]] to %[[tmp]](%[[shape]]) : !fir.array<?x?xf32>, !fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>
   print *, return_dyn_array(m, n)
@@ -205,10 +209,12 @@ subroutine dyn_char_cst_array(l)
   ! CHECK: %[[lload:.*]] = fir.load %[[l]] : !fir.ref<i32>
   ! CHECK: %[[lcast:.*]] = fir.convert %[[lload]] : (i32) -> i64
   ! CHECK: %[[lcast2:.*]] = fir.convert %[[lcast]] : (i64) -> index
-  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<20x30x!fir.char<1,?>>(%[[lcast2]] : index)
+  ! CHECK: %[[cmpi:.*]] = arith.cmpi sgt, %[[lcast2]], %{{.*}} : index
+  ! CHECK: %[[select:.*]] = arith.select %[[cmpi]], %[[lcast2]], %{{.*}} : index
+  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<20x30x!fir.char<1,?>>(%[[select]] : index)
   ! CHECK: %[[shape:.*]] = fir.shape %{{.*}}, %{{.*}} : (index, index) -> !fir.shape<2>
   ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_char_cst_array(%[[l]]) : (!fir.ref<i32>) -> !fir.array<20x30x!fir.char<1,?>>
-  ! CHECK: fir.save_result %[[res]] to %[[tmp]](%[[shape]]) typeparams %[[lcast2]] : !fir.array<20x30x!fir.char<1,?>>, !fir.ref<!fir.array<20x30x!fir.char<1,?>>>, !fir.shape<2>, index
+  ! CHECK: fir.save_result %[[res]] to %[[tmp]](%[[shape]]) typeparams %[[select]] : !fir.array<20x30x!fir.char<1,?>>, !fir.ref<!fir.array<20x30x!fir.char<1,?>>>, !fir.shape<2>, index
   print *, return_dyn_char_cst_array(l)
 end subroutine
 
@@ -221,13 +227,17 @@ subroutine cst_char_dyn_array(m, n)
   ! CHECK-DAG: %[[msub:.*]] = arith.subi %[[mcast]], %c1{{.*}} : i64
   ! CHECK-DAG: %[[madd:.*]] = arith.addi %[[msub]], %c1{{.*}} : i64
   ! CHECK-DAG: %[[mcast2:.*]] = fir.convert %[[madd]] : (i64) -> index
+  ! CHECK-DAG: %[[mcmpi:.*]] = arith.cmpi sgt, %[[mcast2]], %{{.*}} : index
+  ! CHECK-DAG: %[[mselect:.*]] = arith.select %[[mcmpi]], %[[mcast2]], %{{.*}} : index
   ! CHECK-DAG: %[[nload:.*]] = fir.load %[[n]] : !fir.ref<i32>
   ! CHECK-DAG: %[[ncast:.*]] = fir.convert %[[nload]] : (i32) -> i64
   ! CHECK-DAG: %[[nsub:.*]] = arith.subi %[[ncast]], %c1{{.*}} : i64
   ! CHECK-DAG: %[[nadd:.*]] = arith.addi %[[nsub]], %c1{{.*}} : i64
   ! CHECK-DAG: %[[ncast2:.*]] = fir.convert %[[nadd]] : (i64) -> index
-  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,10>>, %[[mcast2]], %[[ncast2]]
-  ! CHECK: %[[shape:.*]] = fir.shape %[[mcast2]], %[[ncast2]] : (index, index) -> !fir.shape<2>
+  ! CHECK-DAG: %[[ncmpi:.*]] = arith.cmpi sgt, %[[ncast2]], %{{.*}} : index
+  ! CHECK-DAG: %[[nselect:.*]] = arith.select %[[ncmpi]], %[[ncast2]], %{{.*}} : index
+  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,10>>, %[[mselect]], %[[nselect]]
+  ! CHECK: %[[shape:.*]] = fir.shape %[[mselect]], %[[nselect]] : (index, index) -> !fir.shape<2>
   ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_cst_char_dyn_array(%[[m]], %[[n]]) : (!fir.ref<i32>, !fir.ref<i32>) -> !fir.array<?x?x!fir.char<1,10>>
   ! CHECK: fir.save_result %[[res]] to %[[tmp]](%[[shape]]) typeparams {{.*}} : !fir.array<?x?x!fir.char<1,10>>, !fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index
   print *, return_cst_char_dyn_array(m, n)
@@ -241,18 +251,24 @@ subroutine dyn_char_dyn_array(l, m, n)
   ! CHECK-DAG: %[[msub:.*]] = arith.subi %[[mcast]], %c1{{.*}} : i64
   ! CHECK-DAG: %[[madd:.*]] = arith.addi %[[msub]], %c1{{.*}} : i64
   ! CHECK-DAG: %[[mcast2:.*]] = fir.convert %[[madd]] : (i64) -> index
+  ! CHECK-DAG: %[[mcmpi:.*]] = arith.cmpi sgt, %[[mcast2]], %{{.*}} : index
+  ! CHECK-DAG: %[[mselect:.*]] = arith.select %[[mcmpi]], %[[mcast2]], %{{.*}} : index
 
   ! CHECK-DAG: %[[nload:.*]] = fir.load %[[n]] : !fir.ref<i32>
   ! CHECK-DAG: %[[ncast:.*]] = fir.convert %[[nload]] : (i32) -> i64
   ! CHECK-DAG: %[[nsub:.*]] = arith.subi %[[ncast]], %c1{{.*}} : i64
   ! CHECK-DAG: %[[nadd:.*]] = arith.addi %[[nsub]], %c1{{.*}} : i64
   ! CHECK-DAG: %[[ncast2:.*]] = fir.convert %[[nadd]] : (i64) -> index
+  ! CHECK-DAG: %[[ncmpi:.*]] = arith.cmpi sgt, %[[ncast2]], %{{.*}} : index
+  ! CHECK-DAG: %[[nselect:.*]] = arith.select %[[ncmpi]], %[[ncast2]], %{{.*}} : index
 
   ! CHECK-DAG: %[[lload:.*]] = fir.load %[[l]] : !fir.ref<i32>
   ! CHECK-DAG: %[[lcast:.*]] = fir.convert %[[lload]] : (i32) -> i64
   ! CHECK-DAG: %[[lcast2:.*]] = fir.convert %[[lcast]] : (i64) -> index
-  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,?>>(%[[lcast2]] : index), %[[mcast2]], %[[ncast2]]
-  ! CHECK: %[[shape:.*]] = fir.shape %[[mcast2]], %[[ncast2]] : (index, index) -> !fir.shape<2>
+  ! CHECK-DAG: %[[lcmpi:.*]] = arith.cmpi sgt, %[[lcast2]], %{{.*}} : index
+  ! CHECK-DAG: %[[lselect:.*]] = arith.select %[[lcmpi]], %[[lcast2]], %{{.*}} : index
+  ! CHECK: %[[tmp:.*]] = fir.alloca !fir.array<?x?x!fir.char<1,?>>(%[[lselect]] : index), %[[mselect]], %[[nselect]]
+  ! CHECK: %[[shape:.*]] = fir.shape %[[mselect]], %[[nselect]] : (index, index) -> !fir.shape<2>
   ! CHECK: %[[res:.*]] = fir.call @_QMcalleePreturn_dyn_char_dyn_array(%[[l]], %[[m]], %[[n]]) : (!fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) -> !fir.array<?x?x!fir.char<1,?>>
   ! CHECK: fir.save_result %[[res]] to %[[tmp]](%[[shape]]) typeparams {{.*}} : !fir.array<?x?x!fir.char<1,?>>, !fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index
   integer :: l, m, n
@@ -308,7 +324,9 @@ subroutine test_result_depends_on_equiv_sym()
   ! CHECK: %[[l:.*]] = fir.convert %[[coor]] : (!fir.ref<i8>) -> !fir.ptr<i64>
   ! CHECK: %[[load:.*]] = fir.load %[[l]] : !fir.ptr<i64>
   ! CHECK: %[[lcast:.*]] = fir.convert %[[load]] : (i64) -> index
-  ! CHECK: fir.alloca !fir.char<1,?>(%[[lcast]] : index)
+  ! CHECK: %[[cmpi:.*]] = arith.cmpi sgt, %[[lcast]], %{{.*}} : index
+  ! CHECK: %[[select:.*]] = arith.select %[[cmpi]], %[[lcast]], %{{.*}} : index
+  ! CHECK: fir.alloca !fir.char<1,?>(%[[select]] : index)
   print *, result_depends_on_equiv_sym()
 end subroutine
 
@@ -325,7 +343,9 @@ subroutine test_depends_on_descriptor(x)
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %arg0, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
   ! CHECK: %[[extentCast:.*]] = fir.convert %[[dims]]#1 : (index) -> i64
   ! CHECK: %[[extent:.*]] = fir.convert %[[extentCast]] : (i64) -> index
-  ! CHECK: fir.alloca !fir.char<1,?>(%[[extent]] : index)
+  ! CHECK: %[[cmpi:.*]] = arith.cmpi sgt, %[[extent]], %{{.*}} : index
+  ! CHECK: %[[select:.*]] = arith.select %[[cmpi]], %[[extent]], %{{.*}} : index
+  ! CHECK: fir.alloca !fir.char<1,?>(%[[select]] : index)
   print *, depends_on_descriptor(x)
 end subroutine
 
@@ -346,7 +366,9 @@ subroutine test_symbol_indirection(n)
   ! CHECK: %[[n_is_positive:.*]] = arith.cmpi sgt, %[[nload]], %c0{{.*}} : i64
   ! CHECK: %[[len:.*]] = arith.select %[[n_is_positive]], %[[nload]], %c0{{.*}} : i64
   ! CHECK: %[[len_cast:.*]] = fir.convert %[[len]] : (i64) -> index
-  ! CHECK: fir.alloca !fir.char<1,?>(%[[len_cast]] : index)
+  ! CHECK: %[[cmpi:.*]] = arith.cmpi sgt, %[[len_cast]], %{{.*}} : index
+  ! CHECK: %[[select:.*]] = arith.select %[[cmpi]], %[[len_cast]], %{{.*}} : index
+  ! CHECK: fir.alloca !fir.char<1,?>(%[[select]] : index)
   print *, symbol_indirection(c, n)
 end subroutine
 
@@ -379,7 +401,9 @@ function test_recursion(n) result(res)
 
     ! CHECK: %[[nInCallLoad:.*]] = fir.load %[[nInCall]] : !fir.ref<i64>
     ! CHECK: %[[nInCallCast:.*]] = fir.convert %[[nInCallLoad]] : (i64) -> index
-    ! CHECK: %[[tmp:.*]] = fir.alloca !fir.char<1,?>(%[[nInCallCast]] : index)
+    ! CHECK: %[[cmpi:.*]] = arith.cmpi sgt, %[[nInCallCast]], %{{.*}} : index
+    ! CHECK: %[[select:.*]] = arith.select %[[cmpi]], %[[nInCallCast]], %{{.*}} : index
+    ! CHECK: %[[tmp:.*]] = fir.alloca !fir.char<1,?>(%[[select]] : index)
 
     ! CHECK-NOT: fir.alloca !fir.array<?xi32>
     ! CHECK: fir.call @_QPtest_recursion(%[[tmp]], {{.*}}
@@ -403,6 +427,8 @@ subroutine test_not_entirely_explicit_interface(n)
   print *, return_dyn_char_2(10)
   ! CHECK: %[[n:.*]] = fir.load %[[n_arg]] : !fir.ref<i64>
   ! CHECK: %[[len:.*]] = fir.convert %[[n]] : (i64) -> index
-  ! CHECK: %[[result:.*]] = fir.alloca !fir.char<1,?>(%[[len]] : index) {bindc_name = ".result"}
-  ! CHECK: fir.call @_QPreturn_dyn_char_2(%[[result]], %[[len]], %{{.*}}) : (!fir.ref<!fir.char<1,?>>, index, !fir.ref<i32>) -> !fir.boxchar<1>
+  ! CHECK: %[[cmpi:.*]] = arith.cmpi sgt, %[[len]], %{{.*}} : index
+  ! CHECK: %[[select:.*]] = arith.select %[[cmpi]], %[[len]], %{{.*}} : index
+  ! CHECK: %[[result:.*]] = fir.alloca !fir.char<1,?>(%[[select]] : index) {bindc_name = ".result"}
+  ! CHECK: fir.call @_QPreturn_dyn_char_2(%[[result]], %[[select]], %{{.*}}) : (!fir.ref<!fir.char<1,?>>, index, !fir.ref<i32>) -> !fir.boxchar<1>
 end subroutine
