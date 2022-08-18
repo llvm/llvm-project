@@ -2190,10 +2190,8 @@ void Clang::AddRISCVTargetArgs(const ArgList &Args,
   SetRISCVSmallDataLimit(getToolChain(), Args, CmdArgs);
 
   if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
-    StringRef Name =
-        llvm::RISCV::resolveTuneCPUAlias(A->getValue(), Triple.isArch64Bit());
     CmdArgs.push_back("-tune-cpu");
-    CmdArgs.push_back(Name.data());
+    CmdArgs.push_back(A->getValue());
   }
 }
 
