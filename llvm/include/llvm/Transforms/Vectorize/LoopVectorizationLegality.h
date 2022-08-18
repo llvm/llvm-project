@@ -291,10 +291,10 @@ public:
   /// Returns the induction variables found in the loop.
   const InductionList &getInductionVars() const { return Inductions; }
 
-  /// Return the first-order recurrences found in the loop.
-  RecurrenceSet &getFirstOrderRecurrences() { return FirstOrderRecurrences; }
+  /// Return the fixed-order recurrences found in the loop.
+  RecurrenceSet &getFixedOrderRecurrences() { return FixedOrderRecurrences; }
 
-  /// Return the set of instructions to sink to handle first-order recurrences.
+  /// Return the set of instructions to sink to handle fixed-order recurrences.
   MapVector<Instruction *, Instruction *> &getSinkAfter() { return SinkAfter; }
 
   /// Returns the widest induction type.
@@ -332,8 +332,8 @@ public:
   /// Returns True if PN is a reduction variable in this loop.
   bool isReductionVariable(PHINode *PN) const { return Reductions.count(PN); }
 
-  /// Returns True if Phi is a first-order recurrence in this loop.
-  bool isFirstOrderRecurrence(const PHINode *Phi) const;
+  /// Returns True if Phi is a fixed-order recurrence in this loop.
+  bool isFixedOrderRecurrence(const PHINode *Phi) const;
 
   /// Return true if the block BB needs to be predicated in order for the loop
   /// to be vectorized.
@@ -515,11 +515,11 @@ private:
   /// loop body.
   SmallPtrSet<Instruction *, 4> InductionCastsToIgnore;
 
-  /// Holds the phi nodes that are first-order recurrences.
-  RecurrenceSet FirstOrderRecurrences;
+  /// Holds the phi nodes that are fixed-order recurrences.
+  RecurrenceSet FixedOrderRecurrences;
 
   /// Holds instructions that need to sink past other instructions to handle
-  /// first-order recurrences.
+  /// fixed-order recurrences.
   MapVector<Instruction *, Instruction *> SinkAfter;
 
   /// Holds the widest induction type encountered.
