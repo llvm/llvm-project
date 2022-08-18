@@ -8,12 +8,16 @@
 
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "gtest/gtest.h"
 
 #include "PipSqueak.h"
+
+// FIXME: Missing globals/DSO https://github.com/llvm/llvm-project/issues/57206.
+#if !LLVM_HWADDRESS_SANITIZER_BUILD
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -180,5 +184,7 @@ TEST(DynamicLibrary, Unsupported) {
   EXPECT_FALSE(DL.isValid());
   EXPECT_EQ(Err, "dlopen() not supported on this platform");
 }
+
+#endif
 
 #endif
