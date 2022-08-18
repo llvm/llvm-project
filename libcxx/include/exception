@@ -85,8 +85,10 @@ template <class E> void rethrow_if_nested(const E& e);
 #include <type_traits>
 #include <version>
 
+// <vcruntime_exception.h> defines its own std::exception and std::bad_exception types,
+// which we use in order to be ABI-compatible with other STLs on Windows.
 #if defined(_LIBCPP_ABI_VCRUNTIME)
-#include <vcruntime_exception.h>
+#  include <vcruntime_exception.h>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -96,24 +98,66 @@ template <class E> void rethrow_if_nested(const E& e);
 namespace std  // purposefully not using versioning namespace
 {
 
-#if !defined(_LIBCPP_ABI_VCRUNTIME)
-class _LIBCPP_EXCEPTION_ABI exception
-{
-public:
-    _LIBCPP_INLINE_VISIBILITY exception() _NOEXCEPT {}
-    _LIBCPP_INLINE_VISIBILITY exception(const exception&) _NOEXCEPT = default;
+#if defined(_LIBCPP_ABI_VCRUNTIME) && (!defined(_HAS_EXCEPTIONS) || _HAS_EXCEPTIONS != 0)
+// The std::exception class was already included above, but we're explicit about this condition here for clarity.
 
-    virtual ~exception() _NOEXCEPT;
-    virtual const char* what() const _NOEXCEPT;
+#elif defined(_LIBCPP_ABI_VCRUNTIME) && _HAS_EXCEPTIONS == 0
+// However, <vcruntime_exception.h> does not define std::exception and std::bad_exception
+// when _HAS_EXCEPTIONS == 0.
+//
+// Since libc++ still wants to provide the std::exception hierarchy even when _HAS_EXCEPTIONS == 0
+// (after all those are simply types like any other), we define an ABI-compatible version
+// of the VCRuntime std::exception and std::bad_exception types in that mode.
+
+struct __std_exception_data {
+  char const* _What;
+  bool _DoFree;
 };
 
-class _LIBCPP_EXCEPTION_ABI bad_exception
-    : public exception
-{
+class exception { // base of all library exceptions
 public:
-    _LIBCPP_INLINE_VISIBILITY bad_exception() _NOEXCEPT {}
-    virtual ~bad_exception() _NOEXCEPT;
-    virtual const char* what() const _NOEXCEPT;
+  exception() _NOEXCEPT : _Data() {}
+
+  explicit exception(char const* __message) _NOEXCEPT : _Data() {
+    _Data._What = __message;
+    _Data._DoFree = true;
+  }
+
+  exception(exception const&) _NOEXCEPT {}
+
+  exception& operator=(exception const&) _NOEXCEPT { return *this; }
+
+  virtual ~exception() _NOEXCEPT {}
+
+  virtual char const* what() const _NOEXCEPT { return _Data._What ? _Data._What : "Unknown exception"; }
+
+private:
+  __std_exception_data _Data;
+};
+
+class bad_exception : public exception {
+public:
+  bad_exception() _NOEXCEPT : exception("bad exception") {}
+};
+
+#else // !defined(_LIBCPP_ABI_VCRUNTIME)
+// On all other platforms, we define our own std::exception and std::bad_exception types
+// regardless of whether exceptions are turned on as a language feature.
+
+class _LIBCPP_EXCEPTION_ABI exception {
+public:
+  _LIBCPP_INLINE_VISIBILITY exception() _NOEXCEPT {}
+  _LIBCPP_INLINE_VISIBILITY exception(const exception&) _NOEXCEPT = default;
+
+  virtual ~exception() _NOEXCEPT;
+  virtual const char* what() const _NOEXCEPT;
+};
+
+class _LIBCPP_EXCEPTION_ABI bad_exception : public exception {
+public:
+  _LIBCPP_INLINE_VISIBILITY bad_exception() _NOEXCEPT {}
+  virtual ~bad_exception() _NOEXCEPT;
+  virtual const char* what() const _NOEXCEPT;
 };
 #endif // !_LIBCPP_ABI_VCRUNTIME
 
