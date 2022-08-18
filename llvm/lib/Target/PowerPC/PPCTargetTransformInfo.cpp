@@ -321,21 +321,21 @@ static bool isMMAType(Type *Ty) {
          (Ty->getPrimitiveSizeInBits() > 128);
 }
 
-InstructionCost PPCTTIImpl::getUserCost(const User *U,
-                                        ArrayRef<const Value *> Operands,
-                                        TTI::TargetCostKind CostKind) {
+InstructionCost PPCTTIImpl::getInstructionCost(const User *U,
+                                               ArrayRef<const Value *> Operands,
+                                               TTI::TargetCostKind CostKind) {
   // We already implement getCastInstrCost and getMemoryOpCost where we perform
   // the vector adjustment there.
   if (isa<CastInst>(U) || isa<LoadInst>(U) || isa<StoreInst>(U))
-    return BaseT::getUserCost(U, Operands, CostKind);
+    return BaseT::getInstructionCost(U, Operands, CostKind);
 
   if (U->getType()->isVectorTy()) {
     // Instructions that need to be split should cost more.
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(U->getType());
-    return LT.first * BaseT::getUserCost(U, Operands, CostKind);
+    return LT.first * BaseT::getInstructionCost(U, Operands, CostKind);
   }
 
-  return BaseT::getUserCost(U, Operands, CostKind);
+  return BaseT::getInstructionCost(U, Operands, CostKind);
 }
 
 // Determining the address of a TLS variable results in a function call in
