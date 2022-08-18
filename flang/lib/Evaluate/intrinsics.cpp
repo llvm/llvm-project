@@ -2084,11 +2084,11 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
   if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1) &&
       arguments[0]) {
     if (Expr<SomeType> * mold{arguments[0]->UnwrapExpr()}) {
-      bool goodProcPointer{true};
-      if (IsAllocatableOrPointer(*mold)) {
+      bool isProcPtrTarget{IsProcedurePointerTarget(*mold)};
+      if (isProcPtrTarget || IsAllocatableOrPointerObject(*mold, context)) {
         characteristics::DummyArguments args;
         std::optional<characteristics::FunctionResult> fResult;
-        if (IsProcedurePointerTarget(*mold)) {
+        if (isProcPtrTarget) {
           // MOLD= procedure pointer
           const Symbol *last{GetLastSymbol(*mold)};
           CHECK(last);
@@ -2101,8 +2101,6 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
             args.emplace_back("mold"s,
                 characteristics::DummyProcedure{common::Clone(*procPointer)});
             fResult.emplace(std::move(*procPointer));
-          } else {
-            goodProcPointer = false;
           }
         } else if (auto type{mold->GetType()}) {
           // MOLD= object pointer
@@ -2115,7 +2113,7 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
           context.messages().Say(arguments[0]->sourceLocation(),
               "MOLD= argument to NULL() lacks type"_err_en_US);
         }
-        if (goodProcPointer) {
+        if (fResult) {
           fResult->attrs.set(characteristics::FunctionResult::Attr::Pointer);
           characteristics::Procedure::Attrs attrs;
           attrs.set(characteristics::Procedure::Attr::NullPointer);
