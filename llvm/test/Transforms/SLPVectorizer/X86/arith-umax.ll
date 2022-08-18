@@ -62,22 +62,38 @@ define void @umax_v8i64() {
 ; SSE-NEXT:    ret void
 ;
 ; SLM-LABEL: @umax_v8i64(
-; SLM-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @a64 to <2 x i64>*), align 8
-; SLM-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @b64 to <2 x i64>*), align 8
-; SLM-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.umax.v2i64(<2 x i64> [[TMP1]], <2 x i64> [[TMP2]])
-; SLM-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* bitcast ([8 x i64]* @c64 to <2 x i64>*), align 8
-; SLM-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 2) to <2 x i64>*), align 8
-; SLM-NEXT:    [[TMP5:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 2) to <2 x i64>*), align 8
-; SLM-NEXT:    [[TMP6:%.*]] = call <2 x i64> @llvm.umax.v2i64(<2 x i64> [[TMP4]], <2 x i64> [[TMP5]])
-; SLM-NEXT:    store <2 x i64> [[TMP6]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 2) to <2 x i64>*), align 8
-; SLM-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4) to <2 x i64>*), align 8
-; SLM-NEXT:    [[TMP8:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4) to <2 x i64>*), align 8
-; SLM-NEXT:    [[TMP9:%.*]] = call <2 x i64> @llvm.umax.v2i64(<2 x i64> [[TMP7]], <2 x i64> [[TMP8]])
-; SLM-NEXT:    store <2 x i64> [[TMP9]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4) to <2 x i64>*), align 8
-; SLM-NEXT:    [[TMP10:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 6) to <2 x i64>*), align 8
-; SLM-NEXT:    [[TMP11:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 6) to <2 x i64>*), align 8
-; SLM-NEXT:    [[TMP12:%.*]] = call <2 x i64> @llvm.umax.v2i64(<2 x i64> [[TMP10]], <2 x i64> [[TMP11]])
-; SLM-NEXT:    store <2 x i64> [[TMP12]], <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 6) to <2 x i64>*), align 8
+; SLM-NEXT:    [[A0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 0), align 8
+; SLM-NEXT:    [[A1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 1), align 8
+; SLM-NEXT:    [[A2:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 2), align 8
+; SLM-NEXT:    [[A3:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 3), align 8
+; SLM-NEXT:    [[A4:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 4), align 8
+; SLM-NEXT:    [[A5:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 5), align 8
+; SLM-NEXT:    [[A6:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 6), align 8
+; SLM-NEXT:    [[A7:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @a64, i32 0, i64 7), align 8
+; SLM-NEXT:    [[B0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 0), align 8
+; SLM-NEXT:    [[B1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 1), align 8
+; SLM-NEXT:    [[B2:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 2), align 8
+; SLM-NEXT:    [[B3:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 3), align 8
+; SLM-NEXT:    [[B4:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 4), align 8
+; SLM-NEXT:    [[B5:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 5), align 8
+; SLM-NEXT:    [[B6:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 6), align 8
+; SLM-NEXT:    [[B7:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @b64, i32 0, i64 7), align 8
+; SLM-NEXT:    [[R0:%.*]] = call i64 @llvm.umax.i64(i64 [[A0]], i64 [[B0]])
+; SLM-NEXT:    [[R1:%.*]] = call i64 @llvm.umax.i64(i64 [[A1]], i64 [[B1]])
+; SLM-NEXT:    [[R2:%.*]] = call i64 @llvm.umax.i64(i64 [[A2]], i64 [[B2]])
+; SLM-NEXT:    [[R3:%.*]] = call i64 @llvm.umax.i64(i64 [[A3]], i64 [[B3]])
+; SLM-NEXT:    [[R4:%.*]] = call i64 @llvm.umax.i64(i64 [[A4]], i64 [[B4]])
+; SLM-NEXT:    [[R5:%.*]] = call i64 @llvm.umax.i64(i64 [[A5]], i64 [[B5]])
+; SLM-NEXT:    [[R6:%.*]] = call i64 @llvm.umax.i64(i64 [[A6]], i64 [[B6]])
+; SLM-NEXT:    [[R7:%.*]] = call i64 @llvm.umax.i64(i64 [[A7]], i64 [[B7]])
+; SLM-NEXT:    store i64 [[R0]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 0), align 8
+; SLM-NEXT:    store i64 [[R1]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 1), align 8
+; SLM-NEXT:    store i64 [[R2]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 2), align 8
+; SLM-NEXT:    store i64 [[R3]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 3), align 8
+; SLM-NEXT:    store i64 [[R4]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 4), align 8
+; SLM-NEXT:    store i64 [[R5]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 5), align 8
+; SLM-NEXT:    store i64 [[R6]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 6), align 8
+; SLM-NEXT:    store i64 [[R7]], i64* getelementptr inbounds ([8 x i64], [8 x i64]* @c64, i32 0, i64 7), align 8
 ; SLM-NEXT:    ret void
 ;
 ; AVX-LABEL: @umax_v8i64(
