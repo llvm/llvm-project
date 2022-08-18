@@ -561,8 +561,8 @@ static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
       if (CI->cannotDuplicate() || CI->isConvergent())
         return ~0U;
 
-    if (TTI->getUserCost(&*I, TargetTransformInfo::TCK_SizeAndLatency)
-            == TargetTransformInfo::TCC_Free)
+    if (TTI->getInstructionCost(&*I, TargetTransformInfo::TCK_SizeAndLatency) ==
+        TargetTransformInfo::TCC_Free)
       continue;
 
     // All other instructions count for at least one unit.

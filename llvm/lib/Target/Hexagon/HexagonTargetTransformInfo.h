@@ -165,8 +165,9 @@ public:
 
   /// @}
 
-  InstructionCost getUserCost(const User *U, ArrayRef<const Value *> Operands,
-                              TTI::TargetCostKind CostKind);
+  InstructionCost getInstructionCost(const User *U,
+                                     ArrayRef<const Value *> Operands,
+                                     TTI::TargetCostKind CostKind);
 
   // Hexagon specific decision to generate a lookup table.
   bool shouldBuildLookupTables() const;
