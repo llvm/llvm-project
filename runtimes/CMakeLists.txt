@@ -244,15 +244,12 @@ if(LLVM_INCLUDE_TESTS)
                      ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
   endif()
 
-  if(LLVM_RUNTIMES_TARGET)
-    configure_file(
-      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
-      ${LLVM_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Tests.cmake)
-  else()
-    configure_file(
-      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
-      ${LLVM_BINARY_DIR}/runtimes/Tests.cmake)
-  endif()
+  get_property(LLVM_RUNTIMES_LIT_TESTSUITES GLOBAL PROPERTY LLVM_RUNTIMES_LIT_TESTSUITES)
+  string(REPLACE ";" "\n" LLVM_RUNTIMES_LIT_TESTSUITES "${LLVM_RUNTIMES_LIT_TESTSUITES}")
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/lit.tests ${LLVM_RUNTIMES_LIT_TESTSUITES})
+else()
+  # Create empty files so the parent build can use these unconditionally.
+  file(TOUCH ${CMAKE_CURRENT_BINARY_DIR}/lit.tests)
 endif()
 
 get_property(SUB_COMPONENTS GLOBAL PROPERTY SUB_COMPONENTS)
