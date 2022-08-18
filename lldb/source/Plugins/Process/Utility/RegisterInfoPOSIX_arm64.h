@@ -105,6 +105,7 @@ public:
   uint32_t ConfigureVectorLength(uint32_t sve_vq);
 
   bool VectorSizeIsValid(uint32_t vq) {
+    // coverity[unsigned_compare]
     if (vq >= eVectorQuadwordAArch64 && vq <= eVectorQuadwordAArch64SVEMax)
       return true;
     return false;
