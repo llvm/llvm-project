@@ -22,7 +22,7 @@ namespace interp {
 class Function;
 
 /// Pointer into the code segment.
-class CodePtr {
+class CodePtr final {
 public:
   CodePtr() : Ptr(nullptr) {}
 
@@ -42,6 +42,8 @@ public:
   }
 
   bool operator!=(const CodePtr &RHS) const { return Ptr != RHS.Ptr; }
+
+  operator bool() const { return Ptr; }
 
   /// Reads data and advances the pointer.
   template <typename T> std::enable_if_t<!std::is_pointer<T>::value, T> read() {
@@ -63,7 +65,7 @@ private:
 };
 
 /// Describes the statement/declaration an opcode was generated from.
-class SourceInfo {
+class SourceInfo final {
 public:
   SourceInfo() {}
   SourceInfo(const Stmt *E) : Source(E) {}

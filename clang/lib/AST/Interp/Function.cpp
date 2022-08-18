@@ -21,10 +21,6 @@ Function::Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
     : P(P), Loc(F->getBeginLoc()), F(F), ArgSize(ArgSize),
       ParamTypes(std::move(ParamTypes)), Params(std::move(Params)) {}
 
-CodePtr Function::getCodeBegin() const { return Code.data(); }
-
-CodePtr Function::getCodeEnd() const { return Code.data() + Code.size(); }
-
 Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
   auto It = Params.find(Offset);
   assert(It != Params.end() && "Invalid parameter offset");

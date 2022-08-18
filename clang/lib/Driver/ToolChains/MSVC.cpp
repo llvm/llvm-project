@@ -153,6 +153,11 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!C.getDriver().IsCLMode() && Args.hasArg(options::OPT_L))
     for (const auto &LibPath : Args.getAllArgValues(options::OPT_L))
       CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
+  // Add library directories for standard library shipped with the toolchain.
+  for (const auto &LibPath : TC.getFilePaths()) {
+    if (TC.getVFS().exists(LibPath))
+      CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
+  }
 
   CmdArgs.push_back("-nologo");
 
@@ -741,7 +746,36 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void MSVCToolChain::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
                                                  ArgStringList &CC1Args) const {
-  // FIXME: There should probably be logic here to find libc++ on Windows.
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx))
+    return;
+
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx: {
+    SmallString<128> P(getDriver().Dir);
+    llvm::sys::path::append(P, "..", "include");
+
+    std::string Version = detectLibcxxVersion(P);
+    if (Version.empty())
+      return;
+
+    // First add the per-target include path if it exists.
+    SmallString<128> TargetDir(P);
+    llvm::sys::path::append(TargetDir, getTripleString(), "c++", Version);
+    if (getVFS().exists(TargetDir))
+      addSystemInclude(DriverArgs, CC1Args, TargetDir);
+
+    // Second add the generic one.
+    SmallString<128> Dir(P);
+    llvm::sys::path::append(Dir, "c++", Version);
+    addSystemInclude(DriverArgs, CC1Args, Dir);
+    break;
+  }
+
+  default:
+    // TODO: Shall we report an error for other C++ standard libraries?
+    break;
+  }
 }
 
 VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
