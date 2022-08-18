@@ -18,6 +18,14 @@
 ; RUN: opt -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+avx512bw,+avx512vl -cost-kind=latency      < %s | FileCheck %s --check-prefixes=LATE
 ; RUN: opt -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+avx512bw,+avx512vl -cost-kind=code-size    < %s | FileCheck %s --check-prefixes=SIZE
 ; RUN: opt -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mattr=+avx512bw,+avx512vl -cost-kind=size-latency < %s | FileCheck %s --check-prefixes=SIZE_LATE
+;
+; RUN: opt -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mcpu=slm -cost-kind=latency      < %s | FileCheck %s --check-prefixes=LATE
+; RUN: opt -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mcpu=slm -cost-kind=code-size    < %s | FileCheck %s --check-prefixes=SIZE
+; RUN: opt -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mcpu=slm -cost-kind=size-latency < %s | FileCheck %s --check-prefixes=SIZE_LATE
+;
+; RUN: opt -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mcpu=goldmont -cost-kind=latency      < %s | FileCheck %s --check-prefixes=LATE
+; RUN: opt -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mcpu=goldmont -cost-kind=code-size    < %s | FileCheck %s --check-prefixes=SIZE
+; RUN: opt -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mcpu=goldmont -cost-kind=size-latency < %s | FileCheck %s --check-prefixes=SIZE_LATE
 
 define i32 @cmp_int_eq(i32 %arg) {
 ; LATE-LABEL: 'cmp_int_eq'
