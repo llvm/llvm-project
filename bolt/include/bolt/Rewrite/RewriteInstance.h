@@ -142,6 +142,10 @@ private:
   /// Read relocations from a given section.
   void readRelocations(const object::SectionRef &Section);
 
+  /// Handle one relocation.
+  void handleRelocation(const object::SectionRef &RelocatedSection,
+                        const RelocationRef &Rel);
+
   /// Mark functions that are not meant for processing as ignored.
   void selectFunctionsToProcess();
 
