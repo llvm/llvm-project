@@ -2595,8 +2595,8 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
 static bool isSupportedByOpenMPIRBuilder(const OMPSimdDirective &S) {
   // Check for unsupported clauses
   for (OMPClause *C : S.clauses()) {
-    // Currently only simdlen clause is supported
-    if (!isa<OMPSimdlenClause>(C))
+    // Currently only simdlen and safelen clauses are supported
+    if (!(isa<OMPSimdlenClause>(C) || isa<OMPSafelenClause>(C)))
       return false;
   }
 
@@ -2647,9 +2647,17 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
           auto *Val = cast<llvm::ConstantInt>(Len.getScalarVal());
           Simdlen = Val;
         }
+        llvm::ConstantInt *Safelen = nullptr;
+        if (const auto *C = S.getSingleClause<OMPSafelenClause>()) {
+          RValue Len =
+              this->EmitAnyExpr(C->getSafelen(), AggValueSlot::ignored(),
+                                /*ignoreResult=*/true);
+          auto *Val = cast<llvm::ConstantInt>(Len.getScalarVal());
+          Safelen = Val;
+        }
         // Add simd metadata to the collapsed loop. Do not generate
         // another loop for if clause. Support for if clause is done earlier.
-        OMPBuilder.applySimd(CLI, /*IfCond*/ nullptr, Simdlen);
+        OMPBuilder.applySimd(CLI, /*IfCond*/ nullptr, Simdlen, Safelen);
         return;
       }
     };
