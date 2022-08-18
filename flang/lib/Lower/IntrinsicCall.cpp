@@ -542,6 +542,7 @@ struct IntrinsicLibrary {
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genReduce(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genRepeat(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genRRSpacing(mlir::Type resultType,
@@ -906,6 +907,15 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"size", asBox, handleDynamicOptional},
        {"put", asBox, handleDynamicOptional},
        {"get", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"reduce",
+     &I::genReduce,
+     {{{"array", asBox},
+       {"operation", asAddr},
+       {"dim", asValue},
+       {"mask", asBox, handleDynamicOptional},
+       {"identity", asValue},
+       {"ordered", asValue}}},
      /*isElemental=*/false},
     {"repeat",
      &I::genRepeat,
@@ -3684,6 +3694,13 @@ void IntrinsicLibrary::genRandomSeed(llvm::ArrayRef<fir::ExtendedValue> args) {
   mlir::Value put = getDesc(1);
   mlir::Value get = getDesc(2);
   Fortran::lower::genRandomSeed(builder, loc, size, put, get);
+}
+
+// REDUCE
+fir::ExtendedValue
+IntrinsicLibrary::genReduce(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  TODO(loc, "intrinsic: reduce");
 }
 
 // REPEAT
