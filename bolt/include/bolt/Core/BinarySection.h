@@ -326,16 +326,7 @@ public:
 
   /// Add a new relocation at the given /p Offset.
   void addRelocation(uint64_t Offset, MCSymbol *Symbol, uint64_t Type,
-                     uint64_t Addend, uint64_t Value = 0,
-                     bool Pending = false) {
-    assert(Offset < getSize() && "offset not within section bounds");
-    if (!Pending) {
-      Relocations.emplace(Relocation{Offset, Symbol, Type, Addend, Value});
-    } else {
-      PendingRelocations.emplace_back(
-          Relocation{Offset, Symbol, Type, Addend, Value});
-    }
-  }
+                     uint64_t Addend, uint64_t Value = 0, bool Pending = false);
 
   /// Add a dynamic relocation at the given /p Offset.
   void addDynamicRelocation(uint64_t Offset, MCSymbol *Symbol, uint64_t Type,
