@@ -701,17 +701,26 @@ def LLVM_CallOp : LLVM_Op<"call",
 // ExtractElementOp
 //===----------------------------------------------------------------------===//
 
-def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [NoSideEffect]> {
+def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [NoSideEffect,
+    TypesMatchWith<"result type matches vector element type", "vector", "res",
+                   "LLVM::getVectorElementType($_self)">]> {
+  let summary = "Extract an element from an LLVM vector.";
+
   let arguments = (ins LLVM_AnyVector:$vector, AnyInteger:$position);
   let results = (outs LLVM_Type:$res);
+
+  let builders = [
+    OpBuilder<(ins "Value":$vector, "Value":$position,
+                   CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+  ];
+
+  let assemblyFormat = [{
+    $vector `[` $position `:` type($position) `]` attr-dict `:` type($vector)
+  }];
+
   string llvmBuilder = [{
     $res = builder.CreateExtractElement($vector, $position);
   }];
-  let builders = [
-    OpBuilder<(ins "Value":$vector, "Value":$position,
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>];
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -746,16 +755,26 @@ def LLVM_ExtractValueOp : LLVM_Op<"extractvalue", [NoSideEffect]> {
 // InsertElementOp
 //===----------------------------------------------------------------------===//
 
-def LLVM_InsertElementOp : LLVM_Op<"insertelement", [NoSideEffect]> {
+def LLVM_InsertElementOp : LLVM_Op<"insertelement", [NoSideEffect,
+    TypesMatchWith<"argument type matches vector element type", "vector",
+                   "value", "LLVM::getVectorElementType($_self)">,
+    AllTypesMatch<["res", "vector"]>]> {
+  let summary = "Insert an element into an LLVM vector.";
+
   let arguments = (ins LLVM_AnyVector:$vector, LLVM_PrimitiveType:$value,
                        AnyInteger:$position);
   let results = (outs LLVM_AnyVector:$res);
+
+  let builders = [LLVM_OneResultOpBuilder];
+
+  let assemblyFormat = [{
+    $value `,` $vector `[` $position `:` type($position) `]` attr-dict `:`
+    type($vector)
+  }];
+
   string llvmBuilder = [{
     $res = builder.CreateInsertElement($vector, $value, $position);
   }];
-  let builders = [LLVM_OneResultOpBuilder];
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

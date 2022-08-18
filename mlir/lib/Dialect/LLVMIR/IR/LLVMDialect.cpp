@@ -1365,10 +1365,10 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::ExtractElementOp.
+// ExtractElementOp
 //===----------------------------------------------------------------------===//
-// Expects vector to be of wrapped LLVM vector type and position to be of
-// wrapped LLVM i32 type.
+
+/// Expects vector to be an LLVM vector type and position to be an integer type.
 void LLVM::ExtractElementOp::build(OpBuilder &b, OperationState &result,
                                    Value vector, Value position,
                                    ArrayRef<NamedAttribute> attrs) {
@@ -1376,49 +1376,6 @@ void LLVM::ExtractElementOp::build(OpBuilder &b, OperationState &result,
   auto llvmType = LLVM::getVectorElementType(vectorType);
   build(b, result, llvmType, vector, position);
   result.addAttributes(attrs);
-}
-
-void ExtractElementOp::print(OpAsmPrinter &p) {
-  p << ' ' << getVector() << "[" << getPosition() << " : "
-    << getPosition().getType() << "]";
-  p.printOptionalAttrDict((*this)->getAttrs());
-  p << " : " << getVector().getType();
-}
-
-// <operation> ::= `llvm.extractelement` ssa-use `, ` ssa-use
-//                 attribute-dict? `:` type
-ParseResult ExtractElementOp::parse(OpAsmParser &parser,
-                                    OperationState &result) {
-  SMLoc loc;
-  OpAsmParser::UnresolvedOperand vector, position;
-  Type type, positionType;
-  if (parser.getCurrentLocation(&loc) || parser.parseOperand(vector) ||
-      parser.parseLSquare() || parser.parseOperand(position) ||
-      parser.parseColonType(positionType) || parser.parseRSquare() ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(type) ||
-      parser.resolveOperand(vector, type, result.operands) ||
-      parser.resolveOperand(position, positionType, result.operands))
-    return failure();
-  if (!LLVM::isCompatibleVectorType(type))
-    return parser.emitError(
-        loc, "expected LLVM dialect-compatible vector type for operand #1");
-  result.addTypes(LLVM::getVectorElementType(type));
-  return success();
-}
-
-LogicalResult ExtractElementOp::verify() {
-  Type vectorType = getVector().getType();
-  if (!LLVM::isCompatibleVectorType(vectorType))
-    return emitOpError("expected LLVM dialect-compatible vector type for "
-                       "operand #1, got")
-           << vectorType;
-  Type valueType = LLVM::getVectorElementType(vectorType);
-  if (valueType != getRes().getType())
-    return emitOpError() << "Type mismatch: extracting from " << vectorType
-                         << " should produce " << valueType
-                         << " but this op returns " << getRes().getType();
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1528,57 +1485,6 @@ void ExtractValueOp::build(OpBuilder &builder, OperationState &state,
   build(builder, state,
         getInsertExtractValueElementType(container.getType(), position),
         container, builder.getAttr<DenseI64ArrayAttr>(position));
-}
-
-//===----------------------------------------------------------------------===//
-// Printing/parsing for LLVM::InsertElementOp.
-//===----------------------------------------------------------------------===//
-
-void InsertElementOp::print(OpAsmPrinter &p) {
-  p << ' ' << getValue() << ", " << getVector() << "[" << getPosition() << " : "
-    << getPosition().getType() << "]";
-  p.printOptionalAttrDict((*this)->getAttrs());
-  p << " : " << getVector().getType();
-}
-
-// <operation> ::= `llvm.insertelement` ssa-use `,` ssa-use `,` ssa-use
-//                 attribute-dict? `:` type
-ParseResult InsertElementOp::parse(OpAsmParser &parser,
-                                   OperationState &result) {
-  SMLoc loc;
-  OpAsmParser::UnresolvedOperand vector, value, position;
-  Type vectorType, positionType;
-  if (parser.getCurrentLocation(&loc) || parser.parseOperand(value) ||
-      parser.parseComma() || parser.parseOperand(vector) ||
-      parser.parseLSquare() || parser.parseOperand(position) ||
-      parser.parseColonType(positionType) || parser.parseRSquare() ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(vectorType))
-    return failure();
-
-  if (!LLVM::isCompatibleVectorType(vectorType))
-    return parser.emitError(
-        loc, "expected LLVM dialect-compatible vector type for operand #1");
-  Type valueType = LLVM::getVectorElementType(vectorType);
-  if (!valueType)
-    return failure();
-
-  if (parser.resolveOperand(vector, vectorType, result.operands) ||
-      parser.resolveOperand(value, valueType, result.operands) ||
-      parser.resolveOperand(position, positionType, result.operands))
-    return failure();
-
-  result.addTypes(vectorType);
-  return success();
-}
-
-LogicalResult InsertElementOp::verify() {
-  Type valueType = LLVM::getVectorElementType(getVector().getType());
-  if (valueType != getValue().getType())
-    return emitOpError() << "Type mismatch: cannot insert "
-                         << getValue().getType() << " into "
-                         << getVector().getType();
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
