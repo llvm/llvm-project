@@ -473,13 +473,13 @@ bool SIMachineFunctionInfo::removeDeadFrameIndices(
   bool HaveSGPRToMemory = false;
 
   if (ResetSGPRSpillStackIDs) {
-    // All other SPGRs must be allocated on the default stack, so reset the
+    // All other SGPRs must be allocated on the default stack, so reset the
     // stack ID.
-    for (int i = MFI.getObjectIndexBegin(), e = MFI.getObjectIndexEnd(); i != e;
-         ++i) {
-      if (i != FramePointerSaveIndex && i != BasePointerSaveIndex) {
-        if (MFI.getStackID(i) == TargetStackID::SGPRSpill) {
-          MFI.setStackID(i, TargetStackID::Default);
+    for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd(); I != E;
+         ++I) {
+      if (!checkIndexInPrologEpilogSGPRSpills(I)) {
+        if (MFI.getStackID(I) == TargetStackID::SGPRSpill) {
+          MFI.setStackID(I, TargetStackID::Default);
           HaveSGPRToMemory = true;
         }
       }
