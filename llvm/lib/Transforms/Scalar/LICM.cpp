@@ -1316,10 +1316,11 @@ static bool isTriviallyReplaceablePHI(const PHINode &PN, const Instruction &I) {
 /// Return true if the instruction is free in the loop.
 static bool isFreeInLoop(const Instruction &I, const Loop *CurLoop,
                          const TargetTransformInfo *TTI) {
+  InstructionCost CostI =
+      TTI->getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
 
-  if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I)) {
-    if (TTI->getUserCost(GEP, TargetTransformInfo::TCK_SizeAndLatency) !=
-        TargetTransformInfo::TCC_Free)
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
+    if (CostI != TargetTransformInfo::TCC_Free)
       return false;
     // For a GEP, we cannot simply use getUserCost because currently it
     // optimistically assumes that a GEP will fold into addressing mode
@@ -1333,9 +1334,9 @@ static bool isFreeInLoop(const Instruction &I, const Loop *CurLoop,
         return false;
     }
     return true;
-  } else
-    return TTI->getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
-           TargetTransformInfo::TCC_Free;
+  }
+
+  return CostI == TargetTransformInfo::TCC_Free;
 }
 
 /// Return true if the only users of this instruction are outside of
