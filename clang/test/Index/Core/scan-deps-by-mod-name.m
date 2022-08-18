@@ -22,8 +22,9 @@
 // CHECK-NEXT:       [[PREFIX]]/Inputs/module/module.modulemap
 // CHECK-NEXT:     build-args: {{.*}} -emit-module {{.*}} -fmodule-name=ModA {{.*}} -fno-implicit-modules {{.*}}
 // CHECK-NEXT: dependencies:
-// CHECK-NEXT:   context-hash:
-// CHECK-NEXT:   module-deps:
-// CHECK-NEXT:     ModA:[[HASH_MOD_A]]
-// CHECK-NEXT:   file-deps:
-// CHECK-NEXT:   build-args: {{.*}} -fno-implicit-modules -fno-implicit-module-maps {{.*}} -fmodule-file={{(ModA=)?}}{{.*}}ModA_{{.*}}.pcm
+// CHECK-NEXT:   command 0:
+// CHECK-NEXT:     context-hash:
+// CHECK-NEXT:     module-deps:
+// CHECK-NEXT:       ModA:[[HASH_MOD_A]]
+// CHECK-NEXT:     file-deps:
+// CHECK-NEXT:     build-args: -cc1 {{.*}} -fmodule-file={{(ModA=)?}}{{.*}}ModA_{{.*}}.pcm

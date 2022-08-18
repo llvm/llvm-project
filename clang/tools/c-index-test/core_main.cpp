@@ -136,6 +136,9 @@ static cl::opt<bool>
 static cl::list<std::string> DependencyTargets(
     "dependency-target",
     cl::desc("module builds should use the given dependency target(s)"));
+static cl::opt<bool> DeprecatedDriverCommand(
+    "deprecated-driver-command",
+    cl::desc("use a single driver command to build the tu (deprecated)"));
 }
 } // anonymous namespace
 
@@ -683,7 +686,6 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
           CXDependencyMode_Full);
   CXDependencyScannerWorker Worker =
       clang_experimental_DependencyScannerWorker_create_v0(Service);
-  CXString Error;
 
   auto Callback = [&](CXModuleDependencySet *MDS) {
     llvm::outs() << "modules:\n";
@@ -746,38 +748,69 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
       const char *ModuleName, const char *ContextHash, CXOutputKind Kind,
       char *Output, size_t MaxLen)>(LookupOutput);
 
+  unsigned CommandIndex = 0;
+  auto HandleCommand = [&](CXString ContextHash, CXStringSet *ModuleDeps,
+                           CXStringSet *FileDeps, CXStringSet *Args) {
+    llvm::outs() << "  command " << CommandIndex++ << ":\n";
+    llvm::outs() << "    context-hash: " << clang_getCString(ContextHash)
+                 << "\n"
+                 << "    module-deps:\n";
+    for (const auto &ModuleName :
+         llvm::makeArrayRef(ModuleDeps->Strings, ModuleDeps->Count))
+      llvm::outs() << "      " << clang_getCString(ModuleName) << "\n";
+    llvm::outs() << "    file-deps:\n";
+    for (const auto &FileName :
+         llvm::makeArrayRef(FileDeps->Strings, FileDeps->Count))
+      llvm::outs() << "      " << clang_getCString(FileName) << "\n";
+    llvm::outs() << "    build-args:";
+    for (const auto &Arg : llvm::makeArrayRef(Args->Strings, Args->Count))
+      llvm::outs() << " " << clang_getCString(Arg);
+    llvm::outs() << "\n";
+  };
 
-  CXFileDependencies *Result = nullptr;
-  Result = clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
-      Worker, Args.size(), Args.data(),
-      ModuleName ? ModuleName->c_str() : nullptr, WorkingDirectory.c_str(),
-      CB.Context, CB.Callback, LookupOutputCB.Context, LookupOutputCB.Callback,
-      /*Options=*/0, &Error);
+  bool Failed = true;
+  CXString Error;
+  if (options::DeprecatedDriverCommand) {
+    CXFileDependencies *Result =
+        clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
+            Worker, Args.size(), Args.data(),
+            ModuleName ? ModuleName->c_str() : nullptr,
+            WorkingDirectory.c_str(), CB.Context, CB.Callback,
+            LookupOutputCB.Context, LookupOutputCB.Callback,
+            /*Options=*/0, &Error);
+    if (Result) {
+      Failed = false;
+      llvm::outs() << "dependencies:\n";
+      HandleCommand(Result->ContextHash, Result->ModuleDeps, Result->FileDeps,
+                    Result->BuildArguments);
+      clang_experimental_FileDependencies_dispose(Result);
+    }
+  } else {
+    CXFileDependenciesList *Result = nullptr;
+    clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
+        Worker, Args.size(), Args.data(),
+        ModuleName ? ModuleName->c_str() : nullptr, WorkingDirectory.c_str(),
+        CB.Context, CB.Callback, LookupOutputCB.Context,
+        LookupOutputCB.Callback,
+        /*Options=*/0, &Result, &Error);
+    if (Result) {
+      Failed = false;
+      llvm::outs() << "dependencies:\n";
+      for (size_t I = 0; I < Result->NumCommands; ++I)
+        HandleCommand(
+            Result->Commands[I].ContextHash, Result->Commands[I].ModuleDeps,
+            Result->Commands[I].FileDeps, Result->Commands[I].BuildArguments);
+      clang_experimental_FileDependenciesList_dispose(Result);
+    }
+  }
 
-  if (!Result) {
+  if (Failed) {
     llvm::errs() << "error: failed to get dependencies\n";
     llvm::errs() << clang_getCString(Error) << "\n";
     clang_disposeString(Error);
     return 1;
   }
-  llvm::outs() << "dependencies:\n";
-  llvm::outs() << "  context-hash: " << clang_getCString(Result->ContextHash)
-               << "\n"
-               << "  module-deps:\n";
-  for (const auto &ModuleName : llvm::makeArrayRef(Result->ModuleDeps->Strings,
-                                                   Result->ModuleDeps->Count))
-    llvm::outs() << "    " << clang_getCString(ModuleName) << "\n";
-  llvm::outs() << "  file-deps:\n";
-  for (const auto &FileName :
-       llvm::makeArrayRef(Result->FileDeps->Strings, Result->FileDeps->Count))
-    llvm::outs() << "    " << clang_getCString(FileName) << "\n";
-  llvm::outs() << "  build-args:";
-  for (const auto &Arg : llvm::makeArrayRef(Result->BuildArguments->Strings,
-                                            Result->BuildArguments->Count))
-    llvm::outs() << " " << clang_getCString(Arg);
-  llvm::outs() << "\n";
 
-  clang_experimental_FileDependencies_dispose(Result);
   clang_experimental_DependencyScannerWorker_dispose_v0(Worker);
   clang_experimental_DependencyScannerService_dispose_v0(Service);
   return 0;

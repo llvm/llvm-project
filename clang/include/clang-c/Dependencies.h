@@ -99,6 +99,27 @@ typedef struct {
 } CXFileDependencies;
 
 /**
+ * An individual command-line invocation that is part of an overall compilation
+ * \c CXFileDependenciesList.
+ *
+ * See \c CXModuleDependency for the meaning of these fields, with the addition
+ * that they represent only the direct dependencies for \c CXDependencyMode_Full
+ * mode.
+ */
+typedef struct {
+  CXString ContextHash;
+  CXStringSet *FileDeps;
+  CXStringSet *ModuleDeps;
+  CXString Executable;
+  CXStringSet *BuildArguments;
+} CXTranslationUnitCommand;
+
+typedef struct {
+  size_t NumCommands;
+  CXTranslationUnitCommand *Commands;
+} CXFileDependenciesList;
+
+/**
  * An output file kind needed by module dependencies.
  */
 typedef enum {
@@ -113,6 +134,9 @@ clang_experimental_ModuleDependencySet_dispose(CXModuleDependencySet *MD);
 
 CINDEX_LINKAGE void
 clang_experimental_FileDependencies_dispose(CXFileDependencies *ID);
+
+CINDEX_LINKAGE void
+clang_experimental_FileDependenciesList_dispose(CXFileDependenciesList *Deps);
 
 /**
  * Object encapsulating instance of a dependency scanner service.
@@ -225,7 +249,18 @@ typedef size_t CXModuleLookupOutputCallback(void *Context,
                                             char *Output, size_t MaxLen);
 
 /**
- * Returns the list of file dependencies for a particular compiler invocation.
+ * See \c clang_experimental_DependencyScannerWorker_getFileDependencies_v4.
+ */
+CINDEX_LINKAGE CXFileDependencies *
+clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
+    CXDependencyScannerWorker Worker, int argc, const char *const *argv,
+    const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
+    CXModuleDiscoveredCallback *MDC, void *MLOContext,
+    CXModuleLookupOutputCallback *MLO, unsigned Options, CXString *error);
+
+/**
+ * Calculates the list of file dependencies for a particular compiler
+ * invocation.
  *
  * \param argc the number of compiler invocation arguments (including argv[0]).
  * \param argv the compiler driver invocation arguments (including argv[0]).
@@ -250,18 +285,21 @@ typedef size_t CXModuleLookupOutputCallback(void *Context,
  *            called with \c CXDependencyMode_Flat. This callback will be called
  *            on the same thread that called this function.
  * \param Options reserved for future use, always pass 0.
+ * \param [out] Out A non-NULL pointer to store the resulting dependencies. The
+ *                  output must be freed by calling
+ *                  \c clang_experimental_FileDependenciesList_dispose.
  * \param [out] error the error string to pass back to client (if any).
  *
- * \returns A pointer to a CXFileDependencies on success, NULL otherwise. The
- *          CXFileDependencies must be freed by calling
- *          \c clang_experimental_FileDependencies_dispose.
+ * \returns \c CXError_Success on success; otherwise a non-zero \c CXErrorCode
+ * indicating the kind of error.
  */
-CINDEX_LINKAGE CXFileDependencies *
-clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
+CINDEX_LINKAGE CXErrorCode
+clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
     CXDependencyScannerWorker Worker, int argc, const char *const *argv,
     const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
     CXModuleDiscoveredCallback *MDC, void *MLOContext,
-    CXModuleLookupOutputCallback *MLO, unsigned Options, CXString *error);
+    CXModuleLookupOutputCallback *MLO, unsigned Options,
+    CXFileDependenciesList **Out, CXString *error);
 
 /**
  * @}
