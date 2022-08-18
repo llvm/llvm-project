@@ -229,12 +229,15 @@ end subroutine ac2
 ! CHECK:           %[[VAL_78:.*]] = arith.constant 1 : i64
 ! CHECK:           %[[VAL_79:.*]] = arith.addi %[[VAL_77]], %[[VAL_78]] : i64
 ! CHECK:           %[[VAL_80:.*]] = fir.convert %[[VAL_79]] : (i64) -> index
+! CHECK:           %[[C0:.*]] = arith.constant 0 : index
+! CHECK:           %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_80]], %[[C0]] : index
+! CHECK:           %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_80]], %[[C0]] : index
 ! CHECK:           %[[VAL_81:.*]] = fir.call @llvm.stacksave() : () -> !fir.ref<i8>
-! CHECK:           %[[VAL_82:.*]] = fir.shape %[[VAL_80]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_82:.*]] = fir.shape %[[SELECT]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_83:.*]] = fir.convert %[[VAL_74]] : (!fir.box<!fir.array<1xi32>>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK:           %[[VAL_84:.*]] = fir.call @_QFac2Pfunc(%[[VAL_83]]) : (!fir.box<!fir.array<?xi32>>) -> !fir.array<3xi32>
 ! CHECK:           fir.save_result %[[VAL_84]] to %[[VAL_2]](%[[VAL_82]]) : !fir.array<3xi32>, !fir.ref<!fir.array<3xi32>>, !fir.shape<1>
-! CHECK:           %[[VAL_85:.*]] = fir.shape %[[VAL_80]] : (index) -> !fir.shape<1>
+! CHECK:           %[[VAL_85:.*]] = fir.shape %[[SELECT]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_86:.*]] = fir.array_load %[[VAL_2]](%[[VAL_85]]) : (!fir.ref<!fir.array<3xi32>>, !fir.shape<1>) -> !fir.array<3xi32>
 ! CHECK:           %[[VAL_87:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_88:.*]] = arith.constant 0 : index
