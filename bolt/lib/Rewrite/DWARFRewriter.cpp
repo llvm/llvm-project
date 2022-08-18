@@ -485,10 +485,16 @@ void DWARFRewriter::updateUnitDebugInfo(
         Optional<uint64_t> Address = AttrVal.V.getAsAddress();
         const BinaryFunction *Function =
             BC.getBinaryFunctionContainingAddress(*Address);
-        const uint64_t UpdatedAddress =
-            Function->translateInputToOutputAddress(*Address);
-        const uint32_t Index =
-            AddrWriter->getIndexFromAddress(UpdatedAddress, Unit);
+        uint32_t Index = 0;
+        // Preserving original address instead of using whatever ends up at this
+        // index.
+        if (!Function) {
+          Index = AddrWriter->getIndexFromAddress(*Address, Unit);
+        } else {
+          const uint64_t UpdatedAddress =
+              Function->translateInputToOutputAddress(*Address);
+          Index = AddrWriter->getIndexFromAddress(UpdatedAddress, Unit);
+        }
         if (AttrVal.V.getForm() == dwarf::DW_FORM_addrx)
           DebugInfoPatcher.addUDataPatch(AttrVal.Offset, Index, AttrVal.Size);
         else
