@@ -529,12 +529,12 @@ define i32 @mul(i32 %arg) {
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = mul <16 x i16> undef, undef
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = mul <32 x i16> undef, undef
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = mul i8 undef, undef
-; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I8 = mul <2 x i8> undef, undef
-; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I8 = mul <4 x i8> undef, undef
-; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I8 = mul <8 x i8> undef, undef
-; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = mul <16 x i8> undef, undef
-; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = mul <32 x i8> undef, undef
-; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V64I8 = mul <64 x i8> undef, undef
+; LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I8 = mul <2 x i8> undef, undef
+; LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I8 = mul <4 x i8> undef, undef
+; LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I8 = mul <8 x i8> undef, undef
+; LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = mul <16 x i8> undef, undef
+; LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = mul <32 x i8> undef, undef
+; LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = mul <64 x i8> undef, undef
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; SIZE-LABEL: 'mul'
@@ -551,12 +551,12 @@ define i32 @mul(i32 %arg) {
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = mul <16 x i16> undef, undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = mul <32 x i16> undef, undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = mul i8 undef, undef
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I8 = mul <2 x i8> undef, undef
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I8 = mul <4 x i8> undef, undef
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I8 = mul <8 x i8> undef, undef
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = mul <16 x i8> undef, undef
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = mul <32 x i8> undef, undef
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V64I8 = mul <64 x i8> undef, undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I8 = mul <2 x i8> undef, undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I8 = mul <4 x i8> undef, undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I8 = mul <8 x i8> undef, undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = mul <16 x i8> undef, undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = mul <32 x i8> undef, undef
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = mul <64 x i8> undef, undef
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
 ; SIZE_LATE-LABEL: 'mul'
@@ -573,12 +573,12 @@ define i32 @mul(i32 %arg) {
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = mul <16 x i16> undef, undef
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I16 = mul <32 x i16> undef, undef
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = mul i8 undef, undef
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V2I8 = mul <2 x i8> undef, undef
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4I8 = mul <4 x i8> undef, undef
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I8 = mul <8 x i8> undef, undef
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = mul <16 x i8> undef, undef
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = mul <32 x i8> undef, undef
-; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V64I8 = mul <64 x i8> undef, undef
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V2I8 = mul <2 x i8> undef, undef
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4I8 = mul <4 x i8> undef, undef
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8I8 = mul <8 x i8> undef, undef
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16I8 = mul <16 x i8> undef, undef
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I8 = mul <32 x i8> undef, undef
+; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = mul <64 x i8> undef, undef
 ; SIZE_LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret i32 undef
 ;
   %I64 = mul i64 undef, undef
