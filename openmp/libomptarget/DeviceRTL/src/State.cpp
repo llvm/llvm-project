@@ -348,7 +348,12 @@ int omp_get_num_threads(void) {
   return omp_get_level() > 1 ? 1 : state::ParallelTeamSize;
 }
 
-int omp_get_thread_limit(void) { return mapping::getKernelSize(); }
+int omp_get_thread_limit(void) {
+  if (__kmpc_is_spmd_exec_mode())
+    return __kmpc_get_hardware_num_threads_in_block();
+
+  return omp_ext_get_master_thread_id();
+}
 
 int omp_get_num_procs(void) { return mapping::getNumberOfProcessorElements(); }
 
