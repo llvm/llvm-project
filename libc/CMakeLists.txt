@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.13.4)
 
+include(GNUInstallDirs)
+
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
 

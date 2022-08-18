@@ -552,7 +552,7 @@ checkOuterLoopInsts(FlattenInfo &FI,
                             m_Specific(FI.InnerTripCount))))
         continue;
       InstructionCost Cost =
-          TTI->getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
+          TTI->getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
       LLVM_DEBUG(dbgs() << "Cost " << Cost << ": "; I.dump());
       RepeatedInstrCost += Cost;
     }

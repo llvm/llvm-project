@@ -423,6 +423,14 @@ void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
 # define __asan_unpoison_memory_region(p, size)
 #endif
 
+/// \macro LLVM_HWADDRESS_SANITIZER_BUILD
+/// Whether LLVM itself is built with HWAddressSanitizer instrumentation.
+#if __has_feature(hwaddress_sanitizer)
+#define LLVM_HWADDRESS_SANITIZER_BUILD 1
+#else
+#define LLVM_HWADDRESS_SANITIZER_BUILD 0
+#endif
+
 /// \macro LLVM_THREAD_SANITIZER_BUILD
 /// Whether LLVM itself is built with ThreadSanitizer instrumentation.
 #if __has_feature(thread_sanitizer) || defined(__SANITIZE_THREAD__)

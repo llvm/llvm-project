@@ -124,3 +124,24 @@ if config.enable_assertions:
     config.available_features.add('asserts')
 else:
     config.available_features.add('noasserts')
+
+def have_host_jit_feature_support(feature_name):
+    mlir_cpu_runner_exe = lit.util.which('mlir-cpu-runner', config.mlir_tools_dir)
+
+    if not mlir_cpu_runner_exe:
+        return False
+
+    try:
+        mlir_cpu_runner_cmd = subprocess.Popen(
+            [mlir_cpu_runner_exe, '--host-supports-' + feature_name], stdout=subprocess.PIPE)
+    except OSError:
+        print('could not exec mlir-cpu-runner')
+        return False
+
+    mlir_cpu_runner_out = mlir_cpu_runner_cmd.stdout.read().decode('ascii')
+    mlir_cpu_runner_cmd.wait()
+
+    return 'true' in mlir_cpu_runner_out
+
+if have_host_jit_feature_support('jit'):
+    config.available_features.add('host-supports-jit')

@@ -180,7 +180,7 @@ foreach(PythonVersion ${CLANG_PYTHON_BINDINGS_VERSIONS})
           COMPONENT
             libclang-python-bindings
           DESTINATION
-            "lib${LLVM_LIBDIR_SUFFIX}/python${PythonVersion}/site-packages")
+            "${CMAKE_INSTALL_LIBDIR}/python${PythonVersion}/site-packages")
 endforeach()
 if(NOT LLVM_ENABLE_IDE)
   add_custom_target(libclang-python-bindings)

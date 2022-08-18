@@ -420,7 +420,7 @@ add_header_target("openmp-resource-headers" ${openmp_wrapper_files})
 add_header_target("windows-resource-headers" ${windows_only_files})
 add_header_target("utility-resource-headers" ${utility_files})
 
-set(header_install_dir lib${LLVM_LIBDIR_SUFFIX}/clang/${CLANG_VERSION}/include)
+set(header_install_dir ${CMAKE_INSTALL_LIBDIR}/clang/${CLANG_VERSION}/include)
 
 #############################################################
 # Install rules for the catch-all clang-resource-headers target

@@ -66,7 +66,7 @@ program omp_reduction
   !$omp end do
   !$omp end parallel
 
-  !$omp do reduction(-:k) reduction(*:j) reduction(-:l)
+  !$omp do reduction(+:k) reduction(*:j) reduction(+:l)
   !DEF: /omp_reduction/OtherConstruct7/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
     !DEF: /omp_reduction/OtherConstruct7/k (OmpReduction) HostAssoc INTEGER(4)

@@ -1,5 +1,5 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
-# REQUIRES: native
+# REQUIRES: host-supports-jit
 import gc, sys
 from mlir.ir import *
 from mlir.passmanager import *
