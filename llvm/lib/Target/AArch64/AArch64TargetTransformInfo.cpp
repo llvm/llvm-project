@@ -102,7 +102,7 @@ cl::opt<TailFoldingKind, true, cl::parser<std::string>> SVETailFolding(
         "\nsimple      Use tail-folding for simple loops (not reductions or "
         "recurrences)"
         "\nreductions  Use tail-folding for loops containing reductions"
-        "\nrecurrences Use tail-folding for loops containing first order "
+        "\nrecurrences Use tail-folding for loops containing fixed order "
         "recurrences"),
     cl::location(TailFoldingKindLoc));
 
@@ -3044,7 +3044,7 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(
   TailFoldingKind Required; // Defaults to 0.
   if (LVL->getReductionVars().size())
     Required.add(TailFoldingKind::TFReductions);
-  if (LVL->getFirstOrderRecurrences().size())
+  if (LVL->getFixedOrderRecurrences().size())
     Required.add(TailFoldingKind::TFRecurrences);
   if (!Required)
     Required.add(TailFoldingKind::TFSimple);

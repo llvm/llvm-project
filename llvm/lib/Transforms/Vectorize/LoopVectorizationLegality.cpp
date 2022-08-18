@@ -677,7 +677,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           // Non-header phi nodes that have outside uses can be vectorized. Add
           // them to the list of allowed exits.
           // Unsafe cyclic dependencies with header phis are identified during
-          // legalization for reduction, induction and first order
+          // legalization for reduction, induction and fixed order
           // recurrences.
           AllowedExit.insert(&I);
           continue;
@@ -710,7 +710,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // 3. Non-Phis with outside uses when SCEV predicates cannot be used
         // outside the loop - see call to hasOutsideLoopUser in the non-phi
         // handling below
-        // 4. FirstOrderRecurrence phis that can possibly be handled by
+        // 4. FixedOrderRecurrence phis that can possibly be handled by
         // extraction.
         // By recording these, we can then reason about ways to vectorize each
         // of these NotAllowedExit. 
@@ -721,10 +721,10 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           continue;
         }
 
-        if (RecurrenceDescriptor::isFirstOrderRecurrence(Phi, TheLoop,
+        if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop,
                                                          SinkAfter, DT)) {
           AllowedExit.insert(Phi);
-          FirstOrderRecurrences.insert(Phi);
+          FixedOrderRecurrences.insert(Phi);
           continue;
         }
 
@@ -894,12 +894,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
     }
   }
 
-  // For first order recurrences, we use the previous value (incoming value from
+  // For fixed order recurrences, we use the previous value (incoming value from
   // the latch) to check if it dominates all users of the recurrence. Bail out
   // if we have to sink such an instruction for another recurrence, as the
   // dominance requirement may not hold after sinking.
   BasicBlock *LoopLatch = TheLoop->getLoopLatch();
-  if (any_of(FirstOrderRecurrences, [LoopLatch, this](const PHINode *Phi) {
+  if (any_of(FixedOrderRecurrences, [LoopLatch, this](const PHINode *Phi) {
         Instruction *V =
             cast<Instruction>(Phi->getIncomingValueForBlock(LoopLatch));
         return SinkAfter.find(V) != SinkAfter.end();
@@ -1080,9 +1080,9 @@ bool LoopVectorizationLegality::isInductionVariable(const Value *V) const {
   return isInductionPhi(V) || isCastedInductionVariable(V);
 }
 
-bool LoopVectorizationLegality::isFirstOrderRecurrence(
+bool LoopVectorizationLegality::isFixedOrderRecurrence(
     const PHINode *Phi) const {
-  return FirstOrderRecurrences.count(Phi);
+  return FixedOrderRecurrences.count(Phi);
 }
 
 bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) const {
