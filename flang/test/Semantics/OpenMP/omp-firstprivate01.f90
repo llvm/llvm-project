@@ -42,11 +42,11 @@ program omp_firstprivate
   !$omp end do
   !$omp end parallel
 
-  !$omp parallel reduction(-:a)
+  !$omp parallel reduction(*:a)
   !ERROR: FIRSTPRIVATE variable 'a' is PRIVATE in outer context
   !$omp do firstprivate(a,b)
   do i = 1, 10
-    c(i) =  c(i) - a(i) * b(i) * i
+    c(i) =  c(i) * a(i) * b(i) * i
   end do
   !$omp end do
   !$omp end parallel
@@ -59,10 +59,10 @@ program omp_firstprivate
   !$omp end sections
   !$omp end parallel
 
-  !$omp parallel reduction(-:a)
+  !$omp parallel reduction(*:a)
   !ERROR: FIRSTPRIVATE variable 'a' is PRIVATE in outer context
   !$omp task firstprivate(a,b)
-  c =  c - a * b
+  c =  c * a * b
   !$omp end task
   !$omp end parallel
 
