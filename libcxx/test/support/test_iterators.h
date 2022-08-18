@@ -1230,7 +1230,6 @@ struct ProxySentinel {
   }
 };
 
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 template <std::ranges::input_range Base>
   requires std::ranges::view<Base>
 struct ProxyRange {
@@ -1254,7 +1253,6 @@ struct ProxyRange {
 template <std::ranges::input_range R>
   requires std::ranges::viewable_range<R&&>
 ProxyRange(R&&) -> ProxyRange<std::views::all_t<R&&>>;
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
 
 #endif // TEST_STD_VER > 17
 
