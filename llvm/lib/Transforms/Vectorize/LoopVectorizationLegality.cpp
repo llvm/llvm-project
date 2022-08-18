@@ -1096,30 +1096,24 @@ bool LoopVectorizationLegality::blockCanBePredicated(
     if (isa<NoAliasScopeDeclInst>(&I))
       continue;
 
-    // We might be able to hoist the load.
-    if (I.mayReadFromMemory()) {
-      auto *LI = dyn_cast<LoadInst>(&I);
-      if (!LI)
-        return false;
-      if (!SafePtrs.count(LI->getPointerOperand())) {
+    // Loads are handled via masking (or speculated if safe to do so.)
+    if (auto *LI = dyn_cast<LoadInst>(&I)) {
+      if (!SafePtrs.count(LI->getPointerOperand()))
         MaskedOp.insert(LI);
-        continue;
-      }
+      continue;
     }
 
-    if (I.mayWriteToMemory()) {
-      auto *SI = dyn_cast<StoreInst>(&I);
-      if (!SI)
-        return false;
-      // Predicated store requires some form of masking:
-      // 1) masked store HW instruction,
-      // 2) emulation via load-blend-store (only if safe and legal to do so,
-      //    be aware on the race conditions), or
-      // 3) element-by-element predicate check and scalar store.
+    // Predicated store requires some form of masking:
+    // 1) masked store HW instruction,
+    // 2) emulation via load-blend-store (only if safe and legal to do so,
+    //    be aware on the race conditions), or
+    // 3) element-by-element predicate check and scalar store.
+    if (auto *SI = dyn_cast<StoreInst>(&I)) {
       MaskedOp.insert(SI);
       continue;
     }
-    if (I.mayThrow())
+
+    if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow())
       return false;
   }
 
