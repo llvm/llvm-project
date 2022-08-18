@@ -34,7 +34,8 @@ def AOp : NS_Op<"a_op", []> {
   let arguments = (ins
       SomeAttr:$aAttr,
       DefaultValuedAttr<SomeAttr, "4.2">:$bAttr,
-      OptionalAttr<SomeAttr>:$cAttr
+      OptionalAttr<SomeAttr>:$cAttr,
+      DefaultValuedOptionalAttr<SomeAttr, "4.2">:$dAttr
   );
 }
 
@@ -45,7 +46,7 @@ def AOp : NS_Op<"a_op", []> {
 
 // DECL:      static ::llvm::ArrayRef<::llvm::StringRef> getAttributeNames()
 // DECL-NEXT:   static ::llvm::StringRef attrNames[] =
-// DECL-SAME:     {::llvm::StringRef("aAttr"), ::llvm::StringRef("bAttr"), ::llvm::StringRef("cAttr")};
+// DECL-SAME:     {::llvm::StringRef("aAttr"), ::llvm::StringRef("bAttr"), ::llvm::StringRef("cAttr"), ::llvm::StringRef("dAttr")};
 // DECL-NEXT:   return ::llvm::makeArrayRef(attrNames);
 
 // DECL:      ::mlir::StringAttr aAttrAttrName()
@@ -78,6 +79,7 @@ def AOp : NS_Op<"a_op", []> {
 // DEF-NEXT:     break;
 // DEF:      ::mlir::Attribute tblgen_bAttr;
 // DEF-NEXT: ::mlir::Attribute tblgen_cAttr;
+// DEF-NEXT: ::mlir::Attribute tblgen_dAttr;
 // DEF-NEXT: while (true) {
 // DEF-NEXT:   if (namedAttrIt == namedAttrRange.end())
 // DEF-NEXT:     break;
@@ -91,6 +93,8 @@ def AOp : NS_Op<"a_op", []> {
 // DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'bAttr' failed to satisfy constraint: some attribute kind");
 // DEF:      if (tblgen_cAttr && !((some-condition)))
 // DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'cAttr' failed to satisfy constraint: some attribute kind");
+// DEF:      if (tblgen_dAttr && !((some-condition)))
+// DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'dAttr' failed to satisfy constraint: some attribute kind");
 
 // Test getter methods
 // ---
@@ -114,6 +118,14 @@ def AOp : NS_Op<"a_op", []> {
 // DEF:      ::llvm::Optional<some-return-type> AOp::cAttr() {
 // DEF-NEXT:   auto attr = cAttrAttr()
 // DEF-NEXT:   return attr ? ::llvm::Optional<some-return-type>(attr.some-convert-from-storage()) : (::llvm::None);
+
+// DEF:      some-attr-kind AOp::dAttrAttr()
+// DEF-NEXT:   ::mlir::impl::getAttrFromSortedRange((*this)->getAttrs().begin() + 1, (*this)->getAttrs().end() - 0, dAttrAttrName()).dyn_cast_or_null<some-attr-kind>()
+// DEF:      some-return-type AOp::dAttr() {
+// DEF-NEXT:   auto attr = dAttrAttr();
+// DEF-NEXT:   if (!attr)
+// DEF-NEXT:       return some-const-builder-call(::mlir::Builder((*this)->getContext()), 4.2).some-convert-from-storage();
+// DEF-NEXT:   return attr.some-convert-from-storage();
 
 // Test setter methods
 // ---
@@ -139,6 +151,14 @@ def AOp : NS_Op<"a_op", []> {
 // DEF:        odsState.addAttribute(bAttrAttrName(odsState.name), bAttr);
 // DEF:        if (cAttr) {
 // DEF-NEXT:     odsState.addAttribute(cAttrAttrName(odsState.name), cAttr);
+
+// DEF:        odsState.addAttribute(aAttrAttrName(odsState.name), some-const-builder-call(odsBuilder, aAttr));
+// DEF-NEXT:   odsState.addAttribute(bAttrAttrName(odsState.name), some-const-builder-call(odsBuilder, bAttr));
+// DEF-NEXT:   if (cAttr) {
+// DEF-NEXT:   odsState.addAttribute(cAttrAttrName(odsState.name), cAttr);
+// DEF-NEXT:   }
+// DEF-NOT:    if (dAttr)
+// DEF:        odsState.addAttribute(dAttrAttrName(odsState.name), some-const-builder-call(odsBuilder, dAttr));
 
 // DEF:      void AOp::build(
 // DEF:        some-return-type aAttr, some-return-type bAttr, /*optional*/some-attr-kind cAttr

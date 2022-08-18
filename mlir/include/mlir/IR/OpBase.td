@@ -1014,6 +1014,8 @@ class OptionalAttr<Attr attr> : Attr<attr.predicate, attr.summary> {
 // quotes.
 class DefaultValuedStrAttr<Attr attr, string val>
     : DefaultValuedAttr<attr, "\"" # val # "\"">;
+class DefaultValuedOptionalStrAttr<Attr attr, string val>
+    : DefaultValuedOptionalAttr<attr, "\"" # val # "\"">;
 
 //===----------------------------------------------------------------------===//
 // Primitive attribute kinds
