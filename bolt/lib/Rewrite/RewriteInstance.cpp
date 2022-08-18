@@ -2354,10 +2354,10 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   }
 
   if (!IsAArch64 && BC->getDynamicRelocationAt(Rel.getOffset())) {
-    LLVM_DEBUG(
-        dbgs() << "BOLT-DEBUG: address 0x" << Twine::utohexstr(Rel.getOffset())
-               << " has a dynamic relocation against it. Ignoring static "
-                  "relocation.\n");
+    LLVM_DEBUG({
+      dbgs() << formatv("BOLT-DEBUG: address {0:x} has a ", Rel.getOffset())
+             << "dynamic relocation against it. Ignoring static relocation.\n";
+    });
     return;
   }
 
@@ -2369,17 +2369,19 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   bool Skip;
   if (!analyzeRelocation(Rel, RType, SymbolName, IsSectionRelocation,
                          SymbolAddress, Addend, ExtractedValue, Skip)) {
-    LLVM_DEBUG(dbgs() << "BOLT-WARNING: failed to analyze relocation @ "
-                      << "offset = 0x" << Twine::utohexstr(Rel.getOffset())
-                      << "; type name = " << TypeName << '\n');
+    LLVM_DEBUG({
+      dbgs() << "BOLT-WARNING: failed to analyze relocation @ offset = "
+             << formatv("{0:x}; type name = {1}\n", Rel.getOffset(), TypeName);
+    });
     ++NumFailedRelocations;
     return;
   }
 
   if (Skip) {
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: skipping relocation @ offset = 0x"
-                      << Twine::utohexstr(Rel.getOffset())
-                      << "; type name = " << TypeName << '\n');
+    LLVM_DEBUG({
+      dbgs() << "BOLT-DEBUG: skipping relocation @ offset = "
+             << formatv("{0:x}; type name = {1}\n", Rel.getOffset(), TypeName);
+    });
     return;
   }
 
@@ -2399,8 +2401,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     assert(ContainingBF && "cannot find function for address in code");
     if (!IsAArch64 && !ContainingBF->containsAddress(Rel.getOffset())) {
       if (opts::Verbosity >= 1)
-        outs() << "BOLT-INFO: " << *ContainingBF
-               << " has relocations in padding area\n";
+        outs() << formatv("BOLT-INFO: {0} has relocations in padding area\n",
+                          *ContainingBF);
       ContainingBF->setSize(ContainingBF->getMaxSize());
       ContainingBF->setSimple(false);
       return;
@@ -2441,10 +2443,10 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
                                   Addend, ExtractedValue);
     } else {
-      LLVM_DEBUG(
-          dbgs() << "BOLT-DEBUG: not creating PC-relative relocation at 0x"
-                 << Twine::utohexstr(Rel.getOffset()) << " for " << SymbolName
-                 << "\n");
+      LLVM_DEBUG({
+        dbgs() << "BOLT-DEBUG: not creating PC-relative relocation at"
+               << formatv("{0:x} for {1}\n", Rel.getOffset(), SymbolName);
+      });
     }
 
     return;
@@ -2470,14 +2472,12 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       if (BF != ReferencedBF) {
         // It's possible we are referencing a function without referencing any
         // code, e.g. when taking a bitmask action on a function address.
-        errs() << "BOLT-WARNING: non-standard function reference (e.g. "
-                  "bitmask) detected against function "
-               << *BF;
+        errs() << "BOLT-WARNING: non-standard function reference (e.g. bitmask)"
+               << formatv(" detected against function {0} from ", *BF);
         if (IsFromCode)
-          errs() << " from function " << *ContainingBF << '\n';
+          errs() << formatv("function {0}\n", *ContainingBF);
         else
-          errs() << " from data section at 0x"
-                 << Twine::utohexstr(Rel.getOffset()) << '\n';
+          errs() << formatv("data section at {0:x}\n", Rel.getOffset());
         LLVM_DEBUG(printRelocationInfo(Rel, SymbolName, SymbolAddress, Addend,
                                        ExtractedValue));
         ReferencedBF = BF;
@@ -2510,10 +2510,10 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
       }
 
       if (Found) {
-        errs() << "BOLT-WARNING: detected possible compiler "
-                  "de-virtualization bug: -1 addend used with "
-                  "non-pc-relative relocation against function "
-               << *RogueBF << " in function " << *ContainingBF << '\n';
+        errs() << "BOLT-WARNING: detected possible compiler de-virtualization "
+                  "bug: -1 addend used with non-pc-relative relocation against "
+               << formatv("function {0} in function {1}\n", *RogueBF,
+                          *ContainingBF);
         return;
       }
     }
@@ -2546,10 +2546,9 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
         }
         if (opts::Verbosity > 1 &&
             !BinarySection(*BC, RelocatedSection).isReadOnly())
-          errs() << "BOLT-WARNING: writable reference into the middle of "
-                 << "the function " << *ReferencedBF
-                 << " detected at address 0x"
-                 << Twine::utohexstr(Rel.getOffset()) << '\n';
+          errs() << "BOLT-WARNING: writable reference into the middle of the "
+                 << formatv("function {0} detected at address {1:x}\n",
+                            *ReferencedBF, Rel.getOffset());
       }
       SymbolAddress = Address;
       Addend = 0;
@@ -2557,7 +2556,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     LLVM_DEBUG({
       dbgs() << "  referenced function " << *ReferencedBF;
       if (Address != ReferencedBF->getAddress())
-        dbgs() << " at offset 0x" << Twine::utohexstr(RefFunctionOffset);
+        dbgs() << formatv(" at offset {0:x}", RefFunctionOffset);
       dbgs() << '\n';
     });
   } else {
@@ -2572,7 +2571,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     // section symbol. If we are here, this means we are probably accessing
     // data, so it is imperative to keep the original address.
     if (IsAArch64) {
-      SymbolName = ("SYMBOLat0x" + Twine::utohexstr(Address)).str();
+      SymbolName = formatv("SYMBOLat{0:x}", Address);
       SymbolAddress = Address;
       Addend = 0;
     }
@@ -2590,8 +2589,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
               (BD->nameStartsWith("ANONYMOUS") &&
                (BD->getSectionName().startswith(".plt") ||
                 BD->getSectionName().endswith(".plt")))) &&
-             "BOLT symbol names of all non-section relocations must match "
-             "up with symbol names referenced in the relocation");
+             "BOLT symbol names of all non-section relocations must match up "
+             "with symbol names referenced in the relocation");
 
       if (IsSectionRelocation)
         BC->markAmbiguousRelocations(*BD, Address);
@@ -2642,8 +2641,10 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     ++NumDataRelocations;
     if (opts::MaxDataRelocations &&
         NumDataRelocations + 1 == opts::MaxDataRelocations) {
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: processing ending on data relocation "
-                        << NumDataRelocations << ": ");
+      LLVM_DEBUG({
+        dbgs() << "BOLT-DEBUG: processing ending on data relocation "
+               << NumDataRelocations << ": ";
+      });
       printRelocationInfo(Rel, ReferencedSymbol->getName(), SymbolAddress,
                           Addend, ExtractedValue);
     }
