@@ -14,13 +14,8 @@ int CheckZeroArg() {
 
   #pragma omp target
   {
-
-
-
     printf("Hello, world");
   }
 
   return 0;
 }
-
-

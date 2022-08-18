@@ -231,7 +231,8 @@ static bool isVarString(const clang::Expr *argX, const clang::Type *argXTy,
   // Ensure the VarDecl has an inititalizer
   if (const auto *DRE = dyn_cast<DeclRefExpr>(argX))
     if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-      if (!VD->getInit())
+      if (!VD->getInit() ||
+          !llvm::isa<StringLiteral>(VD->getInit()->IgnoreImplicit()))
         return true;
   return false;
 }
