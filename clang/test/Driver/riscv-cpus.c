@@ -7,43 +7,24 @@
 // MCPU-ROCKET64: "-nostdsysteminc" "-target-cpu" "rocket-rv64"
 // MCPU-ROCKET64: "-target-feature" "+64bit"
 
-// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=sifive-7-rv32 | FileCheck -check-prefix=MCPU-SIFIVE7-32 %s
-// MCPU-SIFIVE7-32: "-nostdsysteminc" "-target-cpu" "sifive-7-rv32"
-
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-7-rv64 | FileCheck -check-prefix=MCPU-SIFIVE7-64 %s
-// MCPU-SIFIVE7-64: "-nostdsysteminc" "-target-cpu" "sifive-7-rv64"
-// MCPU-SIFIVE7-64: "-target-feature" "+64bit"
-
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=rocket-rv32 | FileCheck -check-prefix=MTUNE-ROCKET32 %s
 // MTUNE-ROCKET32: "-tune-cpu" "rocket-rv32"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=rocket-rv64 | FileCheck -check-prefix=MTUNE-ROCKET64 %s
 // MTUNE-ROCKET64: "-tune-cpu" "rocket-rv64"
 
-// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=sifive-7-rv32 | FileCheck -check-prefix=MTUNE-SIFIVE7-32 %s
-// MTUNE-SIFIVE7-32: "-tune-cpu" "sifive-7-rv32"
-
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=sifive-7-rv64 | FileCheck -check-prefix=MTUNE-SIFIVE7-64 %s
-// MTUNE-SIFIVE7-64: "-tune-cpu" "sifive-7-rv64"
-
 // Check mtune alias CPU has resolved to the right CPU according XLEN.
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=generic | FileCheck -check-prefix=MTUNE-GENERIC-32 %s
-// MTUNE-GENERIC-32: "-tune-cpu" "generic-rv32"
+// MTUNE-GENERIC-32: "-tune-cpu" "generic"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=generic | FileCheck -check-prefix=MTUNE-GENERIC-64 %s
-// MTUNE-GENERIC-64: "-tune-cpu" "generic-rv64"
+// MTUNE-GENERIC-64: "-tune-cpu" "generic"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=rocket | FileCheck -check-prefix=MTUNE-ROCKET-32 %s
-// MTUNE-ROCKET-32: "-tune-cpu" "rocket-rv32"
+// MTUNE-ROCKET-32: "-tune-cpu" "rocket"
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=rocket | FileCheck -check-prefix=MTUNE-ROCKET-64 %s
-// MTUNE-ROCKET-64: "-tune-cpu" "rocket-rv64"
-
-// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=sifive-7-series | FileCheck -check-prefix=MTUNE-SIFIVE7-SERIES-32 %s
-// MTUNE-SIFIVE7-SERIES-32: "-tune-cpu" "sifive-7-rv32"
-
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=sifive-7-series | FileCheck -check-prefix=MTUNE-SIFIVE7-SERIES-64 %s
-// MTUNE-SIFIVE7-SERIES-64: "-tune-cpu" "sifive-7-rv64"
+// MTUNE-ROCKET-64: "-tune-cpu" "rocket"
 
 // mcpu with default march
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=sifive-e20 | FileCheck -check-prefix=MCPU-SIFIVE-E20 %s
