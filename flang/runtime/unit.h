@@ -134,6 +134,7 @@ private:
   void CommitWrites();
   bool CheckDirectAccess(IoErrorHandler &);
   void HitEndOnRead(IoErrorHandler &);
+  std::int32_t ReadHeaderOrFooter(std::int64_t frameOffset);
 
   Lock lock_;
   // TODO: replace with a thread ID
