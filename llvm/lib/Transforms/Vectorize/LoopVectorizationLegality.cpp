@@ -462,8 +462,19 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   return 0;
 }
 
-bool LoopVectorizationLegality::isUniform(Value *V) {
+bool LoopVectorizationLegality::isUniform(Value *V) const {
   return LAI->isUniform(V);
+}
+
+bool LoopVectorizationLegality::isUniformMemOp(Instruction &I) const {
+  Value *Ptr = getLoadStorePointerOperand(&I);
+  if (!Ptr)
+    return false;
+  // Note: There's nothing inherent which prevents predicated loads and
+  // stores from being uniform.  The current lowering simply doesn't handle
+  // it; in particular, the cost model distinguishes scatter/gather from
+  // scalar w/predication, and we currently rely on the scalar path.
+  return isUniform(Ptr) && !blockNeedsPredication(I.getParent());
 }
 
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
