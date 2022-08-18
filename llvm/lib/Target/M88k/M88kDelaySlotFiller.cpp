@@ -144,7 +144,8 @@ bool M88kDelaySlotFiller::findDelayInstr(
     // Convert to forward iterator.
     MachineBasicBlock::instr_iterator FI = I.getReverse();
     if (/*I->hasUnmodeledSideEffects() ||*/ I->isInlineAsm() || I->isLabel() ||
-        FI == LastFiller || I->isBranch() || I->isCall() || I->isReturn())
+        FI == LastFiller || I->isBranch() || I->isCall() || I->isReturn() ||
+        I->mayRaiseFPException())
       break;
 
     if (delayHasHazard(FI, SawLoad, SawStore, RegDefs, RegUses)) {
@@ -224,6 +225,10 @@ void M88kDelaySlotFiller::insertDefsUses(MachineBasicBlock::instr_iterator MI,
   // Add implicit register used by return.
   if (MI->getDesc().isReturn())
     RegUses.insert(M88k::R1);
+
+  // Add implicit register defined by call.
+  if (MI->getDesc().isCall())
+    RegDefs.insert(M88k::R1);
 }
 
 // Returns true if the Reg or its alias is in the RegSet.

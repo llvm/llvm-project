@@ -831,7 +831,7 @@ let isBarrier = 1, isBranch = 1, isTerminator = 1, isIndirectBranch = 1 in {
     def JMPn : F_JMP<0b11000, (outs), (ins GPR:$rs2), "jmp">;
 }
 
-let isCall = 1 in {
+let isCall = 1, Defs = [R1] in {
   def JSR : F_JMP<0b11001, (outs), (ins GPR:$rs2), "jsr">;
   let hasDelaySlot = 1 in
     def JSRn : F_JMP<0b11001, (outs), (ins GPR:$rs2), "jsr">;
