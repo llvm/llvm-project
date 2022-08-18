@@ -15,8 +15,7 @@ module {
     %4 = llvm.mlir.undef : vector<4xi64>
     %5 = llvm.mlir.constant(0 : index) : i64
     %6 = llvm.insertelement %0, %4[%5 : i64] : vector<4xi64>
-    %7 = llvm.shufflevector %6, %4 [0, 0, 0, 0]
-        : vector<4xi64>, vector<4xi64>
+    %7 = llvm.shufflevector %6, %4 [0, 0, 0, 0] : vector<4xi64>
     %8 = llvm.mlir.constant(1 : i64) : i64
     %9 = llvm.insertelement %1, %7[%8 : i64] : vector<4xi64>
     %10 = llvm.mlir.constant(2 : i64) : i64
