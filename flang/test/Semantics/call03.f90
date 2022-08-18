@@ -165,7 +165,7 @@ module m01
     character :: ch1
     !ERROR: Actual argument variable length '1' is less than expected length '2'
     call ch2(ch1)
-    !WARN: Actual argument expression length '0' is less than expected length '2'
+    !WARNING: Actual argument expression length '0' is less than expected length '2'
     call ch2("")
     call pdtdefault(vardefault)
     call pdtdefault(var3)
