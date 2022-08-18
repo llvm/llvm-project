@@ -2696,15 +2696,18 @@ void TokenAnnotator::setCommentLineLevels(
         NextNonCommentLine->First->NewlinesBefore <= 1 &&
         NextNonCommentLine->First->OriginalColumn ==
             Line->First->OriginalColumn) {
+      const bool PPDirectiveOrImportStmt =
+          NextNonCommentLine->Type == LT_PreprocessorDirective ||
+          NextNonCommentLine->Type == LT_ImportStatement;
+      if (PPDirectiveOrImportStmt)
+        Line->Type = LT_CommentAbovePPDirective;
       // Align comments for preprocessor lines with the # in column 0 if
       // preprocessor lines are not indented. Otherwise, align with the next
       // line.
-      Line->Level =
-          (Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
-           (NextNonCommentLine->Type == LT_PreprocessorDirective ||
-            NextNonCommentLine->Type == LT_ImportStatement))
-              ? 0
-              : NextNonCommentLine->Level;
+      Line->Level = Style.IndentPPDirectives != FormatStyle::PPDIS_BeforeHash &&
+                            PPDirectiveOrImportStmt
+                        ? 0
+                        : NextNonCommentLine->Level;
     } else {
       NextNonCommentLine = Line->First->isNot(tok::r_brace) ? Line : nullptr;
     }
