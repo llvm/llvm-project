@@ -283,8 +283,7 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, ArrayRef<SourceLocation> Locs,
     // definition.
     if (FD->getTrailingRequiresClause()) {
       ConstraintSatisfaction Satisfaction;
-      if (CheckFunctionConstraints(FD, Satisfaction, Loc,
-                                   /*ForOverloadResolution*/ true))
+      if (CheckFunctionConstraints(FD, Satisfaction, Loc))
         // A diagnostic will have already been generated (non-constant
         // constraint expression, for example)
         return true;
