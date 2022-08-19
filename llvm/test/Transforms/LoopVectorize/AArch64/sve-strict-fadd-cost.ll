@@ -1,19 +1,16 @@
 ; REQUIRES: asserts
 ; RUN: opt < %s -loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -force-vector-width=4 -force-vector-interleave=1 \
-; RUN:   -S 2>&1 | FileCheck %s --check-prefix=CHECK-VF4
+; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -force-vector-interleave=1 -S 2>&1 | FileCheck %s
 ; RUN: opt < %s -loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -force-vector-width=8 -force-vector-interleave=1 \
-; RUN:   -S 2>&1 | FileCheck %s --check-prefix=CHECK-VF8
-; RUN: opt < %s -loop-vectorize -debug -disable-output -force-ordered-reductions=true -hints-allow-reordering=false \
-; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -force-vector-width=4 -force-vector-interleave=1 \
-; RUN:   -mcpu=neoverse-n2 -S 2>&1 | FileCheck %s --check-prefix=CHECK-VF4-CPU-NEOVERSE-N2
+; RUN:   -prefer-predicate-over-epilogue=scalar-epilogue -force-vector-interleave=1 \
+; RUN:   -mcpu=neoverse-n2 -S 2>&1 | FileCheck %s --check-prefix=CHECK-CPU-NEOVERSE-N2
 
 target triple="aarch64-unknown-linux-gnu"
 
-; CHECK-VF4: Found an estimated cost of 16 for VF vscale x 4 For instruction:   %add = fadd float %0, %sum.07
-; CHECK-VF8: Found an estimated cost of 32 for VF vscale x 8 For instruction:   %add = fadd float %0, %sum.07
-; CHECK-VF4-CPU-NEOVERSE-N2: Found an estimated cost of 8 for VF vscale x 4 For instruction:   %add = fadd float %0, %sum.07
+; CHECK: Found an estimated cost of 8 for VF vscale x 2 For instruction:   %add = fadd float %0, %sum.07
+; CHECK: Found an estimated cost of 16 for VF vscale x 4 For instruction:   %add = fadd float %0, %sum.07
+; CHECK-CPU-NEOVERSE-N2: Found an estimated cost of 4 for VF vscale x 2 For instruction:   %add = fadd float %0, %sum.07
+; CHECK-CPU-NEOVERSE-N2: Found an estimated cost of 8 for VF vscale x 4 For instruction:   %add = fadd float %0, %sum.07
 
 define float @fadd_strict32(float* noalias nocapture readonly %a, i64 %n) #0 {
 entry:
@@ -34,9 +31,8 @@ for.end:
 }
 
 
-; CHECK-VF4: Found an estimated cost of 16 for VF vscale x 4 For instruction:   %add = fadd double %0, %sum.07
-; CHECK-VF8: Found an estimated cost of 32 for VF vscale x 8 For instruction:   %add = fadd double %0, %sum.07
-; CHECK-VF4-CPU-NEOVERSE-N2: Found an estimated cost of 8 for VF vscale x 4 For instruction:   %add = fadd double %0, %sum.07
+; CHECK: Found an estimated cost of 8 for VF vscale x 2 For instruction:   %add = fadd double %0, %sum.07
+; CHECK-CPU-NEOVERSE-N2: Found an estimated cost of 4 for VF vscale x 2 For instruction:   %add = fadd double %0, %sum.07
 
 define double @fadd_strict64(double* noalias nocapture readonly %a, i64 %n) #0 {
 entry:
