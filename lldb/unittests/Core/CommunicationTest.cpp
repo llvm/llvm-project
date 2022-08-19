@@ -21,7 +21,6 @@
 
 using namespace lldb_private;
 
-#ifndef _WIN32
 static void CommunicationReadTest(bool use_read_thread) {
   Pipe pipe;
   ASSERT_THAT_ERROR(pipe.CreateNew(/*child_process_inherit=*/false).ToError(),
@@ -88,6 +87,7 @@ TEST(CommunicationTest, ReadThread) {
   CommunicationReadTest(/*use_thread=*/true);
 }
 
+#ifndef _WIN32
 TEST(CommunicationTest, SynchronizeWhileClosing) {
   // Set up a communication object reading from a pipe.
   Pipe pipe;

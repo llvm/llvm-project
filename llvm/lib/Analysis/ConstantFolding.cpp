@@ -3371,10 +3371,11 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
       case LibFunc_atan2:
       case LibFunc_atan2f:
       case LibFunc_atan2l:
-        // POSIX, GLIBC and MSVC dictate atan2(0,0) is 0 and no error is raised.
-        // C11 says that a domain error may optionally occur.
-        // This is consistent with both.
-        return true;
+        // Although IEEE-754 says atan2(+/-0.0, +/-0.0) are well-defined, and
+        // GLIBC and MSVC do not appear to raise an error on those, we
+        // cannot rely on that behavior. POSIX and C11 say that a domain error
+        // may occur, so allow for that possibility.
+        return !Op0.isZero() || !Op1.isZero();
 
       default:
         break;
