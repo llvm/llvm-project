@@ -206,16 +206,6 @@ CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 18
 CHECK-NEXT:        Inline: 0
 CHECK-NEXT:  -
-CHECK-NEXT:    FunctionGUID: 15822663052811949562
-CHECK-NEXT:    CallSites:
-CHECK-NEXT:    -
-CHECK-NEXT:      -
-CHECK-NEXT:        Function: 15822663052811949562
-CHECK-NEXT:        SymbolName: main
-CHECK-NEXT:        LineOffset: 1
-CHECK-NEXT:        Column: 3
-CHECK-NEXT:        Inline: 0
-CHECK-NEXT:  -
 CHECK-NEXT:    FunctionGUID: 16434608426314478903
 CHECK-NEXT:    CallSites:
 CHECK-NEXT:    -
@@ -224,4 +214,14 @@ CHECK-NEXT:        Function: 16434608426314478903
 CHECK-NEXT:        SymbolName: bar
 CHECK-NEXT:        LineOffset: 0
 CHECK-NEXT:        Column: 19
+CHECK-NEXT:        Inline: 0
+CHECK-NEXT:  -
+CHECK-NEXT:    FunctionGUID: 15822663052811949562
+CHECK-NEXT:    CallSites:
+CHECK-NEXT:    -
+CHECK-NEXT:      -
+CHECK-NEXT:        Function: 15822663052811949562
+CHECK-NEXT:        SymbolName: main
+CHECK-NEXT:        LineOffset: 1
+CHECK-NEXT:        Column: 3
 CHECK-NEXT:        Inline: 0

@@ -62,6 +62,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -181,7 +182,7 @@ namespace {
     void collectUsedGlobalVariables(Module &M, StringRef Name);
 
     /// Keep track of the GlobalVariable that must not be merged away
-    SmallPtrSet<const GlobalVariable *, 16> MustKeepGlobalVariables;
+    SmallSetVector<const GlobalVariable *, 16> MustKeepGlobalVariables;
 
   public:
     static char ID;             // Pass identification, replacement for typeid.
