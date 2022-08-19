@@ -375,14 +375,14 @@ public:
     {
         std::__debug_db_insert_c(this);
     }
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit vector(size_type __n);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI explicit vector(size_type __n);
 #if _LIBCPP_STD_VER > 11
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit vector(size_type __n, const allocator_type& __a);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI explicit vector(size_type __n, const allocator_type& __a);
 #endif
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(size_type __n, const value_type& __x);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI vector(size_type __n, const value_type& __x);
 
     template <class = __enable_if_t<__is_allocator<_Allocator>::value> >
-    _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     vector(size_type __n, const value_type& __x, const allocator_type& __a)
         : __end_cap_(nullptr, __a)
     {
@@ -395,7 +395,7 @@ public:
     }
 
     template <class _InputIterator>
-        _LIBCPP_CONSTEXPR_AFTER_CXX17
+        _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
         vector(_InputIterator __first,
                typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
                                  is_constructible<
@@ -403,14 +403,14 @@ public:
                                     typename iterator_traits<_InputIterator>::reference>::value,
                                  _InputIterator>::type __last);
     template <class _InputIterator>
-        _LIBCPP_CONSTEXPR_AFTER_CXX17
+        _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
         vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a,
                typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
                                  is_constructible<
                                     value_type,
                                     typename iterator_traits<_InputIterator>::reference>::value>::type* = 0);
     template <class _ForwardIterator>
-        _LIBCPP_CONSTEXPR_AFTER_CXX17
+        _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
         vector(_ForwardIterator __first,
                typename enable_if<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
                                  is_constructible<
@@ -418,7 +418,7 @@ public:
                                     typename iterator_traits<_ForwardIterator>::reference>::value,
                                  _ForwardIterator>::type __last);
     template <class _ForwardIterator>
-        _LIBCPP_CONSTEXPR_AFTER_CXX17
+        _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
         vector(_ForwardIterator __first, _ForwardIterator __last, const allocator_type& __a,
                typename enable_if<__is_cpp17_forward_iterator<_ForwardIterator>::value &&
                                  is_constructible<
@@ -438,8 +438,8 @@ public:
       }
     }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(const vector& __x);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(const vector& __x, const __type_identity_t<allocator_type>& __a);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI vector(const vector& __x);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI vector(const vector& __x, const __type_identity_t<allocator_type>& __a);
     _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     vector& operator=(const vector& __x);
 
@@ -470,7 +470,8 @@ public:
         _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
 
     template <class _InputIterator>
-        _LIBCPP_CONSTEXPR_AFTER_CXX17 typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
+    typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
             is_constructible<
                  value_type,
                  typename iterator_traits<_InputIterator>::reference>::value,
@@ -478,7 +479,7 @@ public:
         >::type
         assign(_InputIterator __first, _InputIterator __last);
     template <class _ForwardIterator>
-        _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
         typename enable_if
         <
             __is_cpp17_forward_iterator<_ForwardIterator>::value &&
@@ -489,7 +490,7 @@ public:
         >::type
         assign(_ForwardIterator __first, _ForwardIterator __last);
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void assign(size_type __n, const_reference __u);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void assign(size_type __n, const_reference __u);
 
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
@@ -541,14 +542,14 @@ public:
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     bool empty() const _NOEXCEPT
         {return this->__begin_ == this->__end_;}
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 size_type max_size() const _NOEXCEPT;
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void reserve(size_type __n);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void shrink_to_fit() _NOEXCEPT;
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT;
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void reserve(size_type __n);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void shrink_to_fit() _NOEXCEPT;
 
     _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI reference       operator[](size_type __n) _NOEXCEPT;
     _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __n) const _NOEXCEPT;
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 reference       at(size_type __n);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 const_reference at(size_type __n) const;
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI reference       at(size_type __n);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI const_reference at(size_type __n) const;
 
     _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI reference       front() _NOEXCEPT
     {
@@ -594,15 +595,18 @@ public:
     _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     void pop_back();
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 iterator insert(const_iterator __position, const_reference __x);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __position, const_reference __x);
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 iterator insert(const_iterator __position, value_type&& __x);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI iterator insert(const_iterator __position, value_type&& __x);
     template <class... _Args>
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 iterator emplace(const_iterator __position, _Args&&... __args);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI iterator emplace(const_iterator __position, _Args&&... __args);
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 iterator insert(const_iterator __position, size_type __n, const_reference __x);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
+    iterator insert(const_iterator __position, size_type __n, const_reference __x);
+
     template <class _InputIterator>
-        _LIBCPP_CONSTEXPR_AFTER_CXX17 typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
+    typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value &&
             is_constructible<
                  value_type,
                  typename iterator_traits<_InputIterator>::reference>::value,
@@ -610,7 +614,7 @@ public:
         >::type
         insert(const_iterator __position, _InputIterator __first, _InputIterator __last);
     template <class _ForwardIterator>
-        _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
         typename enable_if
         <
             __is_cpp17_forward_iterator<_ForwardIterator>::value &&
@@ -628,7 +632,7 @@ public:
 #endif
 
     _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __position);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 iterator erase(const_iterator __first, const_iterator __last);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last);
 
     _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     void clear() _NOEXCEPT
@@ -639,10 +643,10 @@ public:
         std::__debug_db_invalidate_all(this);
     }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void resize(size_type __sz);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void resize(size_type __sz, const_reference __x);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void resize(size_type __sz);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void resize(size_type __sz, const_reference __x);
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void swap(vector&)
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void swap(vector&)
 #if _LIBCPP_STD_VER >= 14
         _NOEXCEPT;
 #else
@@ -650,7 +654,7 @@ public:
                     __is_nothrow_swappable<allocator_type>::value);
 #endif
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 bool __invariants() const;
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI bool __invariants() const;
 
 #ifdef _LIBCPP_ENABLE_DEBUG_MODE
 
@@ -686,31 +690,31 @@ private:
         __annotate_new(0);
     }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void __vdeallocate() _NOEXCEPT;
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void __vdeallocate() _NOEXCEPT;
     _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI size_type __recommend(size_type __new_size) const;
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void __construct_at_end(size_type __n);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void __construct_at_end(size_type __n);
     _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     void __construct_at_end(size_type __n, const_reference __x);
     template <class _ForwardIterator>
-        _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
         typename enable_if
         <
             __is_cpp17_forward_iterator<_ForwardIterator>::value,
             void
         >::type
         __construct_at_end(_ForwardIterator __first, _ForwardIterator __last, size_type __n);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void __append(size_type __n);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void __append(size_type __n, const_reference __x);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void __append(size_type __n);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void __append(size_type __n, const_reference __x);
     _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     iterator       __make_iter(pointer __p) _NOEXCEPT;
     _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     const_iterator __make_iter(const_pointer __p) const _NOEXCEPT;
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void __swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 pointer __swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v, pointer __p);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void __move_range(pointer __from_s, pointer __from_e, pointer __to);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void __move_assign(vector& __c, true_type)
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void __swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI pointer __swap_out_circular_buffer(__split_buffer<value_type, allocator_type&>& __v, pointer __p);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void __move_range(pointer __from_s, pointer __from_e, pointer __to);
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void __move_assign(vector& __c, true_type)
         _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void __move_assign(vector& __c, false_type)
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI void __move_assign(vector& __c, false_type)
         _NOEXCEPT_(__alloc_traits::is_always_equal::value);
     _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     void __destruct_at_end(pointer __new_last) _NOEXCEPT
@@ -776,14 +780,14 @@ private:
     }
 
   struct _ConstructTransaction {
-    _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI
     explicit _ConstructTransaction(vector &__v, size_type __n)
       : __v_(__v), __pos_(__v.__end_), __new_end_(__v.__end_ + __n) {
 #ifndef _LIBCPP_HAS_NO_ASAN
       __v_.__annotate_increase(__n);
 #endif
     }
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 ~_ConstructTransaction() {
+    _LIBCPP_CONSTEXPR_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI ~_ConstructTransaction() {
       __v_.__end_ = __pos_;
 #ifndef _LIBCPP_HAS_NO_ASAN
       if (__pos_ != __new_end_) {
@@ -2111,33 +2115,33 @@ public:
 #else
         _NOEXCEPT;
 #endif
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 ~vector();
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit vector(size_type __n);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 ~vector();
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit vector(size_type __n);
 #if _LIBCPP_STD_VER > 11
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit vector(size_type __n, const allocator_type& __a);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit vector(size_type __n, const allocator_type& __a);
 #endif
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(size_type __n, const value_type& __v);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(size_type __n, const value_type& __v, const allocator_type& __a);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(size_type __n, const value_type& __v);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(size_type __n, const value_type& __v, const allocator_type& __a);
     template <class _InputIterator>
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(_InputIterator __first, _InputIterator __last,
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(_InputIterator __first, _InputIterator __last,
                typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value>::type* = 0);
     template <class _InputIterator>
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a,
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(_InputIterator __first, _InputIterator __last, const allocator_type& __a,
                typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value>::type* = 0);
     template <class _ForwardIterator>
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(_ForwardIterator __first, _ForwardIterator __last,
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(_ForwardIterator __first, _ForwardIterator __last,
                typename enable_if<__is_cpp17_forward_iterator<_ForwardIterator>::value>::type* = 0);
     template <class _ForwardIterator>
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(_ForwardIterator __first, _ForwardIterator __last, const allocator_type& __a,
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(_ForwardIterator __first, _ForwardIterator __last, const allocator_type& __a,
                typename enable_if<__is_cpp17_forward_iterator<_ForwardIterator>::value>::type* = 0);
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(const vector& __v);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(const vector& __v, const allocator_type& __a);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector& operator=(const vector& __v);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(const vector& __v);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(const vector& __v, const allocator_type& __a);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 vector& operator=(const vector& __v);
 
 #ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(initializer_list<value_type> __il);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(initializer_list<value_type> __il, const allocator_type& __a);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(initializer_list<value_type> __il);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(initializer_list<value_type> __il, const allocator_type& __a);
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     vector& operator=(initializer_list<value_type> __il)
@@ -2152,7 +2156,7 @@ public:
 #else
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
 #endif
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(vector&& __v, const __type_identity_t<allocator_type>& __a);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 vector(vector&& __v, const __type_identity_t<allocator_type>& __a);
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     vector& operator=(vector&& __v)
         _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
@@ -2161,16 +2165,16 @@ public:
         typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value,
            void
         >::type
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 assign(_InputIterator __first, _InputIterator __last);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 assign(_InputIterator __first, _InputIterator __last);
     template <class _ForwardIterator>
         typename enable_if
         <
             __is_cpp17_forward_iterator<_ForwardIterator>::value,
            void
         >::type
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 assign(_ForwardIterator __first, _ForwardIterator __last);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 assign(_ForwardIterator __first, _ForwardIterator __last);
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void assign(size_type __n, const value_type& __x);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void assign(size_type __n, const value_type& __x);
 
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
@@ -2181,7 +2185,7 @@ public:
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 allocator_type get_allocator() const _NOEXCEPT
         {return allocator_type(this->__alloc());}
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 size_type max_size() const _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 size_type max_size() const _NOEXCEPT;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     size_type capacity() const _NOEXCEPT
         {return __internal_cap_to_external(__cap());}
@@ -2191,8 +2195,8 @@ public:
     _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     bool empty() const _NOEXCEPT
         {return __size_ == 0;}
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void reserve(size_type __n);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void shrink_to_fit() _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void reserve(size_type __n);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void shrink_to_fit() _NOEXCEPT;
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     iterator begin() _NOEXCEPT
@@ -2235,15 +2239,15 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 reference       operator[](size_type __n)       {return __make_ref(__n);}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 const_reference operator[](size_type __n) const {return __make_ref(__n);}
-    reference       at(size_type __n);
-    const_reference at(size_type __n) const;
+    _LIBCPP_HIDE_FROM_ABI reference       at(size_type __n);
+    _LIBCPP_HIDE_FROM_ABI const_reference at(size_type __n) const;
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 reference       front()       {return __make_ref(0);}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 const_reference front() const {return __make_ref(0);}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 reference       back()        {return __make_ref(__size_ - 1);}
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 const_reference back()  const {return __make_ref(__size_ - 1);}
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void push_back(const value_type& __x);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void push_back(const value_type& __x);
 #if _LIBCPP_STD_VER > 11
     template <class... _Args>
 #if _LIBCPP_STD_VER > 14
@@ -2267,20 +2271,20 @@ public:
         { return insert ( __position, value_type ( std::forward<_Args>(__args)... )); }
 #endif
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 iterator insert(const_iterator __position, const value_type& __x);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 iterator insert(const_iterator __position, size_type __n, const value_type& __x);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 iterator insert(const_iterator __position, const value_type& __x);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 iterator insert(const_iterator __position, size_type __n, const value_type& __x);
     template <class _InputIterator>
         typename enable_if <__is_exactly_cpp17_input_iterator<_InputIterator>::value,
             iterator
         >::type
-        _LIBCPP_CONSTEXPR_AFTER_CXX17 insert(const_iterator __position, _InputIterator __first, _InputIterator __last);
+        _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 insert(const_iterator __position, _InputIterator __first, _InputIterator __last);
     template <class _ForwardIterator>
         typename enable_if
         <
             __is_cpp17_forward_iterator<_ForwardIterator>::value,
             iterator
         >::type
-        _LIBCPP_CONSTEXPR_AFTER_CXX17 insert(const_iterator __position, _ForwardIterator __first, _ForwardIterator __last);
+        _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 insert(const_iterator __position, _ForwardIterator __first, _ForwardIterator __last);
 
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
@@ -2289,7 +2293,7 @@ public:
 #endif
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 iterator erase(const_iterator __position);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 iterator erase(const_iterator __first, const_iterator __last);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 iterator erase(const_iterator __first, const_iterator __last);
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     void clear() _NOEXCEPT {__size_ = 0;}
@@ -2301,12 +2305,12 @@ public:
         _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value ||
                     __is_nothrow_swappable<allocator_type>::value);
 #endif
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 static void swap(reference __x, reference __y) _NOEXCEPT { std::swap(__x, __y); }
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 static void swap(reference __x, reference __y) _NOEXCEPT { std::swap(__x, __y); }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void resize(size_type __sz, value_type __x = false);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void flip() _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void resize(size_type __sz, value_type __x = false);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void flip() _NOEXCEPT;
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 bool __invariants() const;
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 bool __invariants() const;
 
 private:
     _LIBCPP_NORETURN _LIBCPP_HIDE_FROM_ABI
@@ -2339,7 +2343,7 @@ private:
         }
     }
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void __vdeallocate() _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void __vdeallocate() _NOEXCEPT;
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     static size_type __align_it(size_type __new_size) _NOEXCEPT
         {return (__new_size + (__bits_per_word-1)) & ~((size_type)__bits_per_word-1);}
@@ -2351,8 +2355,8 @@ private:
             __is_cpp17_forward_iterator<_ForwardIterator>::value,
             void
         >::type
-        _LIBCPP_CONSTEXPR_AFTER_CXX17 __construct_at_end(_ForwardIterator __first, _ForwardIterator __last);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void __append(size_type __n, const_reference __x);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 __construct_at_end(_ForwardIterator __first, _ForwardIterator __last);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void __append(size_type __n, const_reference __x);
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     reference __make_ref(size_type __pos) _NOEXCEPT
         {return reference(__begin_ + __pos / __bits_per_word, __storage_type(1) << __pos % __bits_per_word);}
@@ -2387,8 +2391,8 @@ private:
     void __copy_assign_alloc(const vector&, false_type)
         {}
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void __move_assign(vector& __c, false_type);
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void __move_assign(vector& __c, true_type)
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void __move_assign(vector& __c, false_type);
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void __move_assign(vector& __c, true_type)
         _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17
     void __move_assign_alloc(vector& __c)
@@ -2409,7 +2413,7 @@ private:
         _NOEXCEPT
         {}
 
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 size_t __hash_code() const _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 size_t __hash_code() const _NOEXCEPT;
 
     friend class __bit_reference<vector>;
     friend class __bit_const_reference<vector>;
