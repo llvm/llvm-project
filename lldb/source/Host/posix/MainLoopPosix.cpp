@@ -1,4 +1,4 @@
-//===-- MainLoop.cpp ------------------------------------------------------===//
+//===-- MainLoopPosix.cpp -------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Config/llvm-config.h"
+#include "lldb/Host/posix/MainLoopPosix.h"
 #include "lldb/Host/Config.h"
-
-#include "lldb/Host/MainLoop.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/Status.h"
+#include "llvm/Config/llvm-config.h"
 #include <algorithm>
 #include <cassert>
 #include <cerrno>
@@ -26,35 +25,10 @@
 
 #if HAVE_SYS_EVENT_H
 #include <sys/event.h>
-#elif defined(_WIN32)
-#include <winsock2.h>
 #elif defined(__ANDROID__)
 #include <sys/syscall.h>
 #else
 #include <poll.h>
-#endif
-
-#ifdef _WIN32
-#define POLL WSAPoll
-#else
-#define POLL poll
-#endif
-
-#if SIGNAL_POLLING_UNSUPPORTED
-#ifdef _WIN32
-typedef int sigset_t;
-typedef int siginfo_t;
-#endif
-
-int ppoll(struct pollfd *fds, size_t nfds, const struct timespec *timeout_ts,
-          const sigset_t *) {
-  int timeout =
-      (timeout_ts == nullptr)
-          ? -1
-          : (timeout_ts->tv_sec * 1000 + timeout_ts->tv_nsec / 1000000);
-  return POLL(fds, nfds, timeout);
-}
-
 #endif
 
 using namespace lldb;
@@ -62,23 +36,21 @@ using namespace lldb_private;
 
 static sig_atomic_t g_signal_flags[NSIG];
 
-#ifndef SIGNAL_POLLING_UNSUPPORTED
 static void SignalHandler(int signo, siginfo_t *info, void *) {
   assert(signo < NSIG);
   g_signal_flags[signo] = 1;
 }
-#endif
 
-class MainLoop::RunImpl {
+class MainLoopPosix::RunImpl {
 public:
-  RunImpl(MainLoop &loop);
+  RunImpl(MainLoopPosix &loop);
   ~RunImpl() = default;
 
   Status Poll();
   void ProcessEvents();
 
 private:
-  MainLoop &loop;
+  MainLoopPosix &loop;
 
 #if HAVE_SYS_EVENT_H
   std::vector<struct kevent> in_events;
@@ -97,11 +69,11 @@ private:
 };
 
 #if HAVE_SYS_EVENT_H
-MainLoop::RunImpl::RunImpl(MainLoop &loop) : loop(loop) {
+MainLoopPosix::RunImpl::RunImpl(MainLoopPosix &loop) : loop(loop) {
   in_events.reserve(loop.m_read_fds.size());
 }
 
-Status MainLoop::RunImpl::Poll() {
+Status MainLoopPosix::RunImpl::Poll() {
   in_events.resize(loop.m_read_fds.size());
   unsigned i = 0;
   for (auto &fd : loop.m_read_fds)
@@ -121,7 +93,7 @@ Status MainLoop::RunImpl::Poll() {
   return Status();
 }
 
-void MainLoop::RunImpl::ProcessEvents() {
+void MainLoopPosix::RunImpl::ProcessEvents() {
   assert(num_events >= 0);
   for (int i = 0; i < num_events; ++i) {
     if (loop.m_terminate_request)
@@ -139,31 +111,25 @@ void MainLoop::RunImpl::ProcessEvents() {
   }
 }
 #else
-MainLoop::RunImpl::RunImpl(MainLoop &loop) : loop(loop) {
+MainLoopPosix::RunImpl::RunImpl(MainLoopPosix &loop) : loop(loop) {
 #ifndef __ANDROID__
   read_fds.reserve(loop.m_read_fds.size());
 #endif
 }
 
-sigset_t MainLoop::RunImpl::get_sigmask() {
+sigset_t MainLoopPosix::RunImpl::get_sigmask() {
   sigset_t sigmask;
-#if defined(_WIN32)
-  sigmask = 0;
-#elif SIGNAL_POLLING_UNSUPPORTED
-  sigemptyset(&sigmask);
-#else
   int ret = pthread_sigmask(SIG_SETMASK, nullptr, &sigmask);
   assert(ret == 0);
-  (void) ret;
+  (void)ret;
 
   for (const auto &sig : loop.m_signals)
     sigdelset(&sigmask, sig.first);
-#endif
   return sigmask;
 }
 
 #ifdef __ANDROID__
-Status MainLoop::RunImpl::Poll() {
+Status MainLoopPosix::RunImpl::Poll() {
   // ppoll(2) is not supported on older all android versions. Also, older
   // versions android (API <= 19) implemented pselect in a non-atomic way, as a
   // combination of pthread_sigmask and select. This is not sufficient for us,
@@ -196,7 +162,7 @@ Status MainLoop::RunImpl::Poll() {
   return Status();
 }
 #else
-Status MainLoop::RunImpl::Poll() {
+Status MainLoopPosix::RunImpl::Poll() {
   read_fds.clear();
 
   sigset_t sigmask = get_sigmask();
@@ -217,7 +183,7 @@ Status MainLoop::RunImpl::Poll() {
 }
 #endif
 
-void MainLoop::RunImpl::ProcessEvents() {
+void MainLoopPosix::RunImpl::ProcessEvents() {
 #ifdef __ANDROID__
   // Collect first all readable file descriptors into a separate vector and
   // then iterate over it to invoke callbacks. Iterating directly over
@@ -255,29 +221,24 @@ void MainLoop::RunImpl::ProcessEvents() {
 }
 #endif
 
-MainLoop::MainLoop() : m_terminate_request(false) {
+MainLoopPosix::MainLoopPosix() {
 #if HAVE_SYS_EVENT_H
   m_kqueue = kqueue();
   assert(m_kqueue >= 0);
 #endif
 }
-MainLoop::~MainLoop() {
+
+MainLoopPosix::~MainLoopPosix() {
 #if HAVE_SYS_EVENT_H
   close(m_kqueue);
 #endif
-  assert(m_read_fds.size() == 0);
+  assert(m_read_fds.size() == 0); 
   assert(m_signals.size() == 0);
 }
 
-MainLoop::ReadHandleUP MainLoop::RegisterReadObject(const IOObjectSP &object_sp,
-                                                    const Callback &callback,
-                                                    Status &error) {
-#ifdef _WIN32
-  if (object_sp->GetFdType() != IOObject:: eFDTypeSocket) {
-    error.SetErrorString("MainLoop: non-socket types unsupported on Windows");
-    return nullptr;
-  }
-#endif
+MainLoopPosix::ReadHandleUP
+MainLoopPosix::RegisterReadObject(const IOObjectSP &object_sp,
+                                 const Callback &callback, Status &error) {
   if (!object_sp || !object_sp->IsValid()) {
     error.SetErrorString("IO object is not valid.");
     return nullptr;
@@ -296,12 +257,9 @@ MainLoop::ReadHandleUP MainLoop::RegisterReadObject(const IOObjectSP &object_sp,
 
 // We shall block the signal, then install the signal handler. The signal will
 // be unblocked in the Run() function to check for signal delivery.
-MainLoop::SignalHandleUP
-MainLoop::RegisterSignal(int signo, const Callback &callback, Status &error) {
-#ifdef SIGNAL_POLLING_UNSUPPORTED
-  error.SetErrorString("Signal polling is not supported on this platform.");
-  return nullptr;
-#else
+MainLoopPosix::SignalHandleUP
+MainLoopPosix::RegisterSignal(int signo, const Callback &callback,
+                              Status &error) {
   auto signal_it = m_signals.find(signo);
   if (signal_it != m_signals.end()) {
     auto callback_it = signal_it->second.callbacks.insert(
@@ -344,24 +302,16 @@ MainLoop::RegisterSignal(int signo, const Callback &callback, Status &error) {
 
   return SignalHandleUP(new SignalHandle(
       *this, signo, insert_ret.first->second.callbacks.begin()));
-#endif
 }
 
-void MainLoop::AddPendingCallback(const Callback &callback) {
-  m_pending_callbacks.push_back(callback);
-}
-
-void MainLoop::UnregisterReadObject(IOObject::WaitableHandle handle) {
+void MainLoopPosix::UnregisterReadObject(IOObject::WaitableHandle handle) {
   bool erased = m_read_fds.erase(handle);
   UNUSED_IF_ASSERT_DISABLED(erased);
   assert(erased);
 }
 
-void MainLoop::UnregisterSignal(int signo,
-                                std::list<Callback>::iterator callback_it) {
-#if SIGNAL_POLLING_UNSUPPORTED
-  Status("Signal polling is not supported on this platform.");
-#else
+void MainLoopPosix::UnregisterSignal(
+    int signo, std::list<Callback>::iterator callback_it) {
   auto it = m_signals.find(signo);
   assert(it != m_signals.end());
 
@@ -388,10 +338,9 @@ void MainLoop::UnregisterSignal(int signo,
 #endif
 
   m_signals.erase(it);
-#endif
 }
 
-Status MainLoop::Run() {
+Status MainLoopPosix::Run() {
   m_terminate_request = false;
 
   Status error;
@@ -406,14 +355,18 @@ Status MainLoop::Run() {
 
     impl.ProcessEvents();
 
-    for (const Callback &callback : m_pending_callbacks)
-      callback(*this);
-    m_pending_callbacks.clear();
+    ProcessPendingCallbacks();
   }
   return Status();
 }
 
-void MainLoop::ProcessSignal(int signo) {
+void MainLoopPosix::ProcessReadObject(IOObject::WaitableHandle handle) {
+  auto it = m_read_fds.find(handle);
+  if (it != m_read_fds.end())
+    it->second(*this); // Do the work
+}
+
+void MainLoopPosix::ProcessSignal(int signo) {
   auto it = m_signals.find(signo);
   if (it != m_signals.end()) {
     // The callback may actually register/unregister signal handlers,
@@ -423,10 +376,4 @@ void MainLoop::ProcessSignal(int signo) {
     for (auto &x : callbacks_to_run)
       x(*this); // Do the work
   }
-}
-
-void MainLoop::ProcessReadObject(IOObject::WaitableHandle handle) {
-  auto it = m_read_fds.find(handle);
-  if (it != m_read_fds.end())
-    it->second(*this); // Do the work
 }
