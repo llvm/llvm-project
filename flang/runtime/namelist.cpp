@@ -329,7 +329,7 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
     }
   } else {
     handler.SignalError("NAMELIST component reference of input group item %s "
-                        "has no name after '%'",
+                        "has no name after '%%'",
         name);
   }
   return false;
