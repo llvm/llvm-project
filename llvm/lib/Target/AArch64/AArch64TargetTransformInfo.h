@@ -371,6 +371,15 @@ public:
                                  ArrayRef<int> Mask, int Index,
                                  VectorType *SubTp,
                                  ArrayRef<const Value *> Args = None);
+
+  /// Return the cost of the scaling factor used in the addressing
+  /// mode represented by AM for this target, for a load/store
+  /// of the specified type.
+  /// If the AM is supported, the return value must be >= 0.
+  /// If the AM is not supported, it returns a negative value.
+  InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
+                                       int64_t BaseOffset, bool HasBaseReg,
+                                       int64_t Scale, unsigned AddrSpace) const;
   /// @}
 };
 

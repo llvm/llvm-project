@@ -646,24 +646,14 @@ void BinaryContext::populateJumpTables() {
         analyzeJumpTable(JT->getAddress(), JT->Type, *(JT->Parents[0]),
                          NextJTAddress, &JT->EntriesAsAddress);
     if (!Success) {
-      LLVM_DEBUG(ListSeparator LS;
-                 dbgs() << "failed to analyze jump table in function ";
-                 for (BinaryFunction *Frag
-                      : JT->Parents) dbgs()
-                 << LS << *Frag;
-                 dbgs() << '\n';);
-      JT->print(dbgs());
-      if (NextJTI != JTE) {
-        LLVM_DEBUG(ListSeparator LS;
-                   dbgs() << "next jump table at 0x"
-                          << Twine::utohexstr(NextJTI->second->getAddress())
-                          << " belongs to function ";
-                   for (BinaryFunction *Frag
-                        : NextJTI->second->Parents) dbgs()
-                   << LS << *Frag;
-                   dbgs() << "\n";);
-        NextJTI->second->print(dbgs());
-      }
+      LLVM_DEBUG({
+        dbgs() << "failed to analyze ";
+        JT->print(dbgs());
+        if (NextJTI != JTE) {
+          dbgs() << "next ";
+          NextJTI->second->print(dbgs());
+        }
+      });
       llvm_unreachable("jump table heuristic failure");
     }
     for (BinaryFunction *Frag : JT->Parents) {

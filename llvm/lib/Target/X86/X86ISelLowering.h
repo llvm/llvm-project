@@ -1240,15 +1240,6 @@ namespace llvm {
 
     bool isLegalStoreImmediate(int64_t Imm) const override;
 
-    /// Return the cost of the scaling factor used in the addressing
-    /// mode represented by AM for this target, for a load/store
-    /// of the specified type.
-    /// If the AM is supported, the return value must be >= 0.
-    /// If the AM is not supported, it returns a negative value.
-    InstructionCost getScalingFactorCost(const DataLayout &DL,
-                                         const AddrMode &AM, Type *Ty,
-                                         unsigned AS) const override;
-
     /// This is used to enable splatted operand transforms for vector shifts
     /// and vector funnel shifts.
     bool isVectorShiftByScalarCheap(Type *Ty) const override;

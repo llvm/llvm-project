@@ -281,7 +281,7 @@ class CS_ALU<bits<6> funct6, bits<2> funct2, string OpcodeStr,
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtC] in {
+let Predicates = [HasStdExtCOrZca] in {
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [X2] in
 def C_ADDI4SPN : RVInst16CIW<0b000, 0b00, (outs GPRC:$rd),
@@ -321,7 +321,7 @@ def C_FLW  : CLoad_ri<0b011, "c.flw", FPR32C, uimm7_lsb00>,
   let Inst{5} = imm{6};
 }
 
-let Predicates = [HasStdExtC, IsRV64] in
+let Predicates = [HasStdExtCOrZca, IsRV64] in
 def C_LD : CLoad_ri<0b011, "c.ld", GPRC, uimm8_lsb000>,
            Sched<[WriteLDD, ReadMemBase]> {
   bits<8> imm;
@@ -355,7 +355,7 @@ def C_FSW  : CStore_rri<0b111, "c.fsw", FPR32C, uimm7_lsb00>,
   let Inst{5} = imm{6};
 }
 
-let Predicates = [HasStdExtC, IsRV64] in
+let Predicates = [HasStdExtCOrZca, IsRV64] in
 def C_SD : CStore_rri<0b111, "c.sd", GPRC, uimm8_lsb000>,
            Sched<[WriteSTD, ReadStoreData, ReadMemBase]> {
   bits<8> imm;
@@ -391,12 +391,12 @@ def C_ADDI_NOP : RVInst16CI<0b000, 0b01, (outs GPRX0:$rd_wb),
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1,
     DecoderNamespace = "RISCV32Only_", Defs = [X1],
-    Predicates = [HasStdExtC, IsRV32]  in
+    Predicates = [HasStdExtCOrZca, IsRV32]  in
 def C_JAL : RVInst16CJ<0b001, 0b01, (outs), (ins simm12_lsb0:$offset),
                        "c.jal", "$offset">, Sched<[WriteJal]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
-    Predicates = [HasStdExtC, IsRV64] in
+    Predicates = [HasStdExtCOrZca, IsRV64] in
 def C_ADDIW : RVInst16CI<0b001, 0b01, (outs GPRNoX0:$rd_wb),
                          (ins GPRNoX0:$rd, simm6:$imm),
                          "c.addiw", "$rd, $imm">,
@@ -458,7 +458,7 @@ def C_OR   : CS_ALU<0b100011, 0b10, "c.or" , GPRC>,
 def C_AND  : CS_ALU<0b100011, 0b11, "c.and", GPRC>,
              Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
-let Predicates = [HasStdExtC, IsRV64] in {
+let Predicates = [HasStdExtCOrZca, IsRV64] in {
 def C_SUBW : CS_ALU<0b100111, 0b00, "c.subw", GPRC>,
              Sched<[WriteIALU32, ReadIALU32, ReadIALU32]>;
 def C_ADDW : CS_ALU<0b100111, 0b01, "c.addw", GPRC>,
@@ -506,7 +506,7 @@ def C_FLWSP  : CStackLoad<0b011, "c.flwsp", FPR32, uimm8_lsb00>,
   let Inst{3-2} = imm{7-6};
 }
 
-let Predicates = [HasStdExtC, IsRV64] in
+let Predicates = [HasStdExtCOrZca, IsRV64] in
 def C_LDSP : CStackLoad<0b011, "c.ldsp", GPRNoX0, uimm9_lsb000>,
              Sched<[WriteLDD, ReadMemBase]> {
   let Inst{6-5} = imm{4-3};
@@ -566,7 +566,7 @@ def C_FSWSP  : CStackStore<0b111, "c.fswsp", FPR32, uimm8_lsb00>,
   let Inst{8-7}  = imm{7-6};
 }
 
-let Predicates = [HasStdExtC, IsRV64] in
+let Predicates = [HasStdExtCOrZca, IsRV64] in
 def C_SDSP : CStackStore<0b111, "c.sdsp", GPR, uimm9_lsb000>,
              Sched<[WriteSTD, ReadStoreData, ReadMemBase]> {
   let Inst{12-10} = imm{5-3};
@@ -581,13 +581,13 @@ def C_UNIMP : RVInst16<(outs), (ins), "c.unimp", "", [], InstFormatOther>,
   let Inst{15-0} = 0;
 }
 
-} // Predicates = [HasStdExtC]
+} // Predicates = [HasStdExtCOrZca]
 
 //===----------------------------------------------------------------------===//
 // HINT Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtC, HasRVCHints], hasSideEffects = 0, mayLoad = 0,
+let Predicates = [HasStdExtCOrZca, HasRVCHints], hasSideEffects = 0, mayLoad = 0,
     mayStore = 0 in
 {
 
@@ -688,7 +688,7 @@ def C_SRAI64_HINT : RVInst16CI<0b100, 0b01, (outs GPRC:$rd_wb),
   let Inst{12} = 0;
 }
 
-} // Predicates = [HasStdExtC, HasRVCHints], hasSideEffects = 0, mayLoad = 0,
+} // Predicates = [HasStdExtCOrZca, HasRVCHints], hasSideEffects = 0, mayLoad = 0,
   // mayStore = 0
 
 //===----------------------------------------------------------------------===//
@@ -696,14 +696,14 @@ def C_SRAI64_HINT : RVInst16CI<0b100, 0b01, (outs GPRC:$rd_wb),
 //===----------------------------------------------------------------------===//
 
 let EmitPriority = 0 in {
-let Predicates = [HasStdExtC] in {
+let Predicates = [HasStdExtCOrZca] in {
 def : InstAlias<"c.lw $rd, (${rs1})", (C_LW GPRC:$rd, GPRC:$rs1, 0)>;
 def : InstAlias<"c.sw $rs2, (${rs1})", (C_SW GPRC:$rs2, GPRC:$rs1, 0)>;
 def : InstAlias<"c.lwsp $rd, (${rs1})", (C_LWSP GPRC:$rd, SP:$rs1, 0)>;
 def : InstAlias<"c.swsp $rs2, (${rs1})", (C_SWSP GPRC:$rs2, SP:$rs1, 0)>;
 }
 
-let Predicates = [HasStdExtC, IsRV64] in {
+let Predicates = [HasStdExtCOrZca, IsRV64] in {
 def : InstAlias<"c.ld $rd, (${rs1})", (C_LD GPRC:$rd, GPRC:$rs1, 0)>;
 def : InstAlias<"c.sd $rs2, (${rs1})", (C_SD GPRC:$rs2, GPRC:$rs1, 0)>;
 def : InstAlias<"c.ldsp $rd, (${rs1})", (C_LDSP GPRC:$rd, SP:$rs1, 0)>;

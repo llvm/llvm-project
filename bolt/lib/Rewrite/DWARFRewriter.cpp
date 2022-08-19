@@ -413,7 +413,7 @@ void DWARFRewriter::updateUnitDebugInfo(
         ARangesSectionWriter->addCURanges(Unit.getOffset(),
                                           std::move(OutputRanges));
       updateDWARFObjectAddressRanges(DIE, RangesSectionOffset, DebugInfoPatcher,
-                                     AbbrevWriter, RangesBase);
+                                     AbbrevWriter, 0, RangesBase);
       break;
     }
     case dwarf::DW_TAG_subprogram: {
@@ -448,7 +448,7 @@ void DWARFRewriter::updateUnitDebugInfo(
 
       updateDWARFObjectAddressRanges(
           DIE, RangesSectionWriter.addRanges(FunctionRanges), DebugInfoPatcher,
-          AbbrevWriter);
+          AbbrevWriter, 0);
 
       break;
     }
@@ -463,21 +463,34 @@ void DWARFRewriter::updateUnitDebugInfo(
               ? BC.getBinaryFunctionContainingAddress(
                     RangesOrError->front().LowPC)
               : nullptr;
+      DebugAddressRangesVector OutputRanges;
+      bool ErrorState = false;
       if (Function) {
-        DebugAddressRangesVector OutputRanges =
-            Function->translateInputToOutputRanges(*RangesOrError);
+        OutputRanges = Function->translateInputToOutputRanges(*RangesOrError);
         LLVM_DEBUG(if (OutputRanges.empty() != RangesOrError->empty()) {
           dbgs() << "BOLT-DEBUG: problem with DIE at 0x"
                  << Twine::utohexstr(DIE.getOffset()) << " in CU at 0x"
                  << Twine::utohexstr(Unit.getOffset()) << '\n';
         });
+
         RangesSectionOffset = RangesSectionWriter.addRanges(
             std::move(OutputRanges), CachedRanges);
       } else if (!RangesOrError) {
+        ErrorState = true;
         consumeError(RangesOrError.takeError());
       }
+      uint64_t LowPCToUse = 0;
+      if (!ErrorState && RangesOrError.get().size() == 1 &&
+          RangesOrError.get().begin()->LowPC ==
+              RangesOrError.get().begin()->HighPC) {
+        if (!OutputRanges.empty())
+          LowPCToUse = OutputRanges.front().LowPC;
+        else
+          LowPCToUse = RangesOrError.get().begin()->LowPC;
+      }
+
       updateDWARFObjectAddressRanges(DIE, RangesSectionOffset, DebugInfoPatcher,
-                                     AbbrevWriter);
+                                     AbbrevWriter, LowPCToUse);
       break;
     }
     case dwarf::DW_TAG_call_site: {
@@ -485,10 +498,16 @@ void DWARFRewriter::updateUnitDebugInfo(
         Optional<uint64_t> Address = AttrVal.V.getAsAddress();
         const BinaryFunction *Function =
             BC.getBinaryFunctionContainingAddress(*Address);
-        const uint64_t UpdatedAddress =
-            Function->translateInputToOutputAddress(*Address);
-        const uint32_t Index =
-            AddrWriter->getIndexFromAddress(UpdatedAddress, Unit);
+        uint32_t Index = 0;
+        // Preserving original address instead of using whatever ends up at this
+        // index.
+        if (!Function) {
+          Index = AddrWriter->getIndexFromAddress(*Address, Unit);
+        } else {
+          const uint64_t UpdatedAddress =
+              Function->translateInputToOutputAddress(*Address);
+          Index = AddrWriter->getIndexFromAddress(UpdatedAddress, Unit);
+        }
         if (AttrVal.V.getForm() == dwarf::DW_FORM_addrx)
           DebugInfoPatcher.addUDataPatch(AttrVal.Offset, Index, AttrVal.Size);
         else
@@ -773,7 +792,7 @@ void DWARFRewriter::updateUnitDebugInfo(
 void DWARFRewriter::updateDWARFObjectAddressRanges(
     const DWARFDie DIE, uint64_t DebugRangesOffset,
     SimpleBinaryPatcher &DebugInfoPatcher, DebugAbbrevWriter &AbbrevWriter,
-    Optional<uint64_t> RangesBase) {
+    uint64_t LowPCToUse, Optional<uint64_t> RangesBase) {
 
   // Some objects don't have an associated DIE and cannot be updated (such as
   // compiler-generated functions).
@@ -835,7 +854,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
       if (LowPCAttrInfo &&
           LowPCAttrInfo->V.getForm() != dwarf::DW_FORM_GNU_addr_index &&
           LowPCAttrInfo->V.getForm() != dwarf::DW_FORM_addrx)
-        DebugInfoPatcher.addLE64Patch(LowPCAttrInfo->Offset, 0);
+        DebugInfoPatcher.addLE64Patch(LowPCAttrInfo->Offset, LowPCToUse);
       return;
     }
 
@@ -865,7 +884,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
     convertToRangesPatchAbbrev(*DIE.getDwarfUnit(), AbbreviationDecl,
                                AbbrevWriter, RangesBase);
     convertToRangesPatchDebugInfo(DIE, DebugRangesOffset, DebugInfoPatcher,
-                                  RangesBase);
+                                  LowPCToUse, RangesBase);
   } else {
     if (opts::Verbosity >= 1)
       errs() << "BOLT-ERROR: cannot update ranges for DIE at offset 0x"
@@ -1867,7 +1886,8 @@ void DWARFRewriter::convertToRangesPatchAbbrev(
 
 void DWARFRewriter::convertToRangesPatchDebugInfo(
     DWARFDie DIE, uint64_t RangesSectionOffset,
-    SimpleBinaryPatcher &DebugInfoPatcher, Optional<uint64_t> RangesBase) {
+    SimpleBinaryPatcher &DebugInfoPatcher, uint64_t LowPCToUse,
+    Optional<uint64_t> RangesBase) {
   Optional<AttrInfo> LowPCVal = None;
   Optional<AttrInfo> HighPCVal = None;
   getRangeAttrData(DIE, LowPCVal, HighPCVal);
@@ -1894,10 +1914,10 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
     // when it's absent.
     if (LowForm == dwarf::DW_FORM_addrx) {
       const uint32_t Index =
-          AddrWriter->getIndexFromAddress(0, *DIE.getDwarfUnit());
+          AddrWriter->getIndexFromAddress(LowPCToUse, *DIE.getDwarfUnit());
       DebugInfoPatcher.addUDataPatch(LowPCOffset, Index, LowPCVal->Size);
     } else
-      DebugInfoPatcher.addLE64Patch(LowPCOffset, 0);
+      DebugInfoPatcher.addLE64Patch(LowPCOffset, LowPCToUse);
 
     // Original CU didn't have DW_AT_*_base. We converted it's children (or
     // dwo), so need to insert it into CU.

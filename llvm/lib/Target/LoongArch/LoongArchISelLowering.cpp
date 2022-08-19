@@ -57,6 +57,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::GlobalAddress, ISD::ConstantPool}, GRLenVT, Custom);
 
+  setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
+  if (Subtarget.is64Bit())
+    setOperationAction(ISD::EH_DWARF_CFA, MVT::i64, Custom);
+
   setOperationAction(ISD::DYNAMIC_STACKALLOC, GRLenVT, Expand);
   setOperationAction(ISD::VASTART, MVT::Other, Custom);
   setOperationAction({ISD::VAARG, ISD::VACOPY, ISD::VAEND}, MVT::Other, Expand);
@@ -147,6 +151,8 @@ bool LoongArchTargetLowering::isOffsetFoldingLegal(
 SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
                                                 SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
+  case ISD::EH_DWARF_CFA:
+    return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
   case ISD::SHL_PARTS:
@@ -167,6 +173,14 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerVASTART(Op, DAG);
   }
   return SDValue();
+}
+
+SDValue LoongArchTargetLowering::lowerEH_DWARF_CFA(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  auto Size = Subtarget.getGRLen() / 8;
+  auto FI = MF.getFrameInfo().CreateFixedObject(Size, 0, false);
+  return DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
 }
 
 SDValue LoongArchTargetLowering::lowerVASTART(SDValue Op,

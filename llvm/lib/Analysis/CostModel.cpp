@@ -100,8 +100,8 @@ void CostModelAnalysis::print(raw_ostream &OS, const Module*) const {
   for (BasicBlock &B : *F) {
     for (Instruction &Inst : B) {
       InstructionCost Cost;
-      if (TypeBasedIntrinsicCost && isa<IntrinsicInst>(&Inst)) {
-        auto *II = dyn_cast<IntrinsicInst>(&Inst);
+      auto *II = dyn_cast<IntrinsicInst>(&Inst);
+      if (II && TypeBasedIntrinsicCost) {
         IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II,
                                     InstructionCost::getInvalid(), true);
         Cost = TTI->getIntrinsicInstrCost(ICA, CostKind);
@@ -128,8 +128,8 @@ PreservedAnalyses CostModelPrinterPass::run(Function &F,
       // TODO: Use a pass parameter instead of cl::opt CostKind to determine
       // which cost kind to print.
       InstructionCost Cost;
-      if (TypeBasedIntrinsicCost && isa<IntrinsicInst>(&Inst)) {
-        auto *II = dyn_cast<IntrinsicInst>(&Inst);
+      auto *II = dyn_cast<IntrinsicInst>(&Inst);
+      if (II && TypeBasedIntrinsicCost) {
         IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II,
                                     InstructionCost::getInvalid(), true);
         Cost = TTI.getIntrinsicInstrCost(ICA, CostKind);

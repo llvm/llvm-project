@@ -15,6 +15,7 @@
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/DebugData.h"
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
@@ -396,12 +397,23 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, bool EmitColdPart,
   if (!EmitCodeOnly && EmitColdPart && BF.hasConstantIsland())
     BF.duplicateConstantIslands();
 
+  const FunctionFragment FF = BF.getLayout().getFragment(
+      EmitColdPart ? FragmentNum::cold() : FragmentNum::hot());
+
+  if (!FF.empty() && FF.front()->isLandingPad()) {
+    assert(!FF.front()->isEntryPoint() &&
+           "Landing pad cannot be entry point of function");
+    // If the first block of the fragment is a landing pad, it's offset from the
+    // start of the area that the corresponding LSDA describes is zero. In this
+    // case, the call site entries in that LSDA have 0 as offset to the landing
+    // pad, which the runtime interprets as "no handler". To prevent this,
+    // insert some padding.
+    Streamer.emitIntValue(BC.MIB->getTrapFillValue(), 1);
+  }
+
   // Track the first emitted instruction with debug info.
   bool FirstInstr = true;
-  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
-    if (EmitColdPart != BB->isCold())
-      continue;
-
+  for (BinaryBasicBlock *const BB : FF) {
     if ((opts::AlignBlocks || opts::PreserveBlocksAlignment) &&
         BB->getAlignment() > 1)
       Streamer.emitCodeAlignment(BB->getAlignment(), &*BC.STI,

@@ -340,6 +340,19 @@ def FeatureStdExtZk
                         FeatureStdExtZkr,
                         FeatureStdExtZkt]>;
 
+def FeatureExtZca
+    : SubtargetFeature<"experimental-zca", "HasStdExtZca", "true",
+                       "'Zca' (part of the C extension, excluding compressed floating point loads/stores)">;
+def HasStdExtZca : Predicate<"Subtarget->hasStdExtZca()">,
+                           AssemblerPredicate<(all_of FeatureExtZca),
+                           "'Zca' (part of the C extension, excluding compressed floating point loads/stores)">;
+
+def HasStdExtCOrZca
+    : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZca()">,
+                AssemblerPredicate<(any_of FeatureStdExtC, FeatureExtZca),
+                                   "'C' (Compressed Instructions) or "
+                                   "'Zca' (part of the C extension, excluding compressed floating point loads/stores)">;
+
 def FeatureNoRVCHints
     : SubtargetFeature<"no-rvc-hints", "EnableRVCHintInstrs", "false",
                        "Disable RVC Hint Instructions.">;

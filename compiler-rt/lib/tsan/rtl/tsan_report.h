@@ -76,6 +76,7 @@ struct ReportLocation {
   uptr external_tag = 0;
   Tid tid = kInvalidTid;
   int fd = 0;
+  bool fd_closed = false;
   bool suppressable = false;
   ReportStack *stack = nullptr;
 };

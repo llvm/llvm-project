@@ -95,7 +95,7 @@ TEST(LinkGraphTest, BlockAndSymbolIteration) {
   auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
   orc::ExecutorAddr B1Addr(0x1000);
   auto &B1 = G.createContentBlock(Sec1, BlockContent, B1Addr, 8, 0);
-  orc::ExecutorAddr B2Addr(0x1000);
+  orc::ExecutorAddr B2Addr(0x2000);
   auto &B2 = G.createContentBlock(Sec1, BlockContent, B2Addr, 8, 0);
   auto &S1 = G.addDefinedSymbol(B1, 0, "S1", 4, Linkage::Strong, Scope::Default,
                                 false, false);

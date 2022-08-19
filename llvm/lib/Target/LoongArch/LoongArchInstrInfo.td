@@ -821,6 +821,11 @@ def : BccSwapPat<setule, BGEU>;
 // condition was calculated elsewhere).
 def : Pat<(brcond GPR:$rj, bb:$imm21), (BNEZ GPR:$rj, bb:$imm21)>;
 
+def : Pat<(brcond (GRLenVT (seteq GPR:$rj, 0)), bb:$imm21),
+          (BEQZ GPR:$rj, bb:$imm21)>;
+def : Pat<(brcond (GRLenVT (setne GPR:$rj, 0)), bb:$imm21),
+          (BNEZ GPR:$rj, bb:$imm21)>;
+
 let isBarrier = 1, isBranch = 1, isTerminator = 1 in
 def PseudoBR : Pseudo<(outs), (ins simm26_lsl2:$imm26), [(br bb:$imm26)]>,
                PseudoInstExpansion<(B simm26_lsl2:$imm26)>;
