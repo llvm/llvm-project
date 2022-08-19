@@ -32,7 +32,7 @@ let Definition = "modulelist" in {
     Desc<"The module loading mode to use when loading modules for Swift.">;
   def EnableSwiftMetadataCache: Property<"enable-swift-metadata-cache", "Boolean">,
     Global,
-    DefaultFalse,
+    DefaultTrue,
     Desc<"Enable caching for Swift reflection metadata in LLDB.">;
   def SwiftMetadataCachePath: Property<"swift-metadata-cache-path", "FileSpec">,
     Global,
