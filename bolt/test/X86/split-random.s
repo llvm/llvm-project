@@ -2,8 +2,13 @@
 
 # RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.out --split-functions --split-strategy=random2 \
-# RUN:     --print-finalized --print-only=two_block --bolt-seed=7 2>&1 | \
+# RUN: llvm-bolt %t.exe -o %t.random2 --split-functions \
+# RUN:         --split-strategy=random2 --print-finalized \
+# RUN:         --print-only=two_block --bolt-seed=7 2>&1 | \
+# RUN:     FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t.randomN --split-functions \
+# RUN:         --split-strategy=randomN --print-finalized \
+# RUN:         --print-only=two_block --bolt-seed=7 2>&1 | \
 # RUN:     FileCheck %s
 
 # CHECK: Binary Function "two_block"
