@@ -473,7 +473,7 @@ define void @need_new_block_after_sinking_pr56146(i32 %x, i32* %src, i32* noalia
 ; CHECK-NEXT:   Successor(s): loop.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   loop.0:
-; CHECK-NEXT:     REPLICATE ir<[[L]]> = load ir<%src>
+; CHECK-NEXT:     CLONE ir<[[L]]> = load ir<%src>
 ; CHECK-NEXT:     EMIT vp<[[SPLICE:%.+]]> = first-order splice ir<%.pn> ir<[[L]]>
 ; CHECK-NEXT:   Successor(s): loop.0.split
 ; CHECK-EMPTY:

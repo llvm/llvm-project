@@ -1,5 +1,7 @@
 # RUN: not llvm-mc -triple=riscv32 -mattr=+c -mattr=+no-rvc-hints < %s 2>&1 \
 # RUN:     | FileCheck %s
+# RUN: not llvm-mc -triple=riscv32 -mattr=+experimental-zca -mattr=+no-rvc-hints < %s 2>&1 \
+# RUN:     | FileCheck %s
 
 ## GPRC
 .LBB:

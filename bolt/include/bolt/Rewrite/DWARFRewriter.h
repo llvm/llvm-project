@@ -113,6 +113,7 @@ private:
                                       uint64_t DebugRangesOffset,
                                       SimpleBinaryPatcher &DebugInfoPatcher,
                                       DebugAbbrevWriter &AbbrevWriter,
+                                      uint64_t LowPCToUse,
                                       Optional<uint64_t> RangesBase = None);
 
   std::unique_ptr<DebugBufferVector>
@@ -171,6 +172,7 @@ private:
   /// function above.
   void convertToRangesPatchDebugInfo(DWARFDie DIE, uint64_t RangesSectionOffset,
                                      SimpleBinaryPatcher &DebugInfoPatcher,
+                                     uint64_t LowPCToUse,
                                      Optional<uint64_t> RangesBase = None);
 
   /// Helper function for creating and returning per-DWO patchers/writers.

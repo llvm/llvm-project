@@ -945,6 +945,10 @@ Inline suitable functions
 
 Inline functions which are (explicitly or implicitly) marked inline
 
+.. option:: -finline-max-stacksize=<arg>
+
+Suppress inlining of functions with a stacksize larger than <arg> bytes.
+
 .. option:: -fno-legacy-pass-manager, -fexperimental-new-pass-manager
 
 .. option:: -fno-sanitize-ignorelist, -fno-sanitize-blacklist

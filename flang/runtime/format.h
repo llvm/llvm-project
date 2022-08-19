@@ -18,6 +18,10 @@
 #include <cinttypes>
 #include <optional>
 
+namespace Fortran::runtime {
+class Descriptor;
+} // namespace Fortran::runtime
+
 namespace Fortran::runtime::io {
 
 class IoStatementState;
@@ -86,7 +90,8 @@ public:
 
   FormatControl() {}
   FormatControl(const Terminator &, const CharType *format,
-      std::size_t formatLength, int maxHeight = maxMaxHeight);
+      std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
+      int maxHeight = maxMaxHeight);
 
   // For attempting to allocate in a user-supplied stack area
   static std::size_t GetNeededSize(int maxHeight) {
@@ -177,8 +182,9 @@ private:
   // user program for internal I/O.
   const std::uint8_t maxHeight_{maxMaxHeight};
   std::uint8_t height_{0};
+  bool freeFormat_{false};
   const CharType *format_{nullptr};
-  int formatLength_{0};
+  int formatLength_{0}; // in units of characters
   int offset_{0}; // next item is at format_[offset_]
 
   // must be last, may be incomplete

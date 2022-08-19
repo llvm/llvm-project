@@ -189,10 +189,10 @@ public:
     if (get_if<FormattedIoStatementState<D>>()) {
       return true;
     } else {
-      if (!get_if<ErroneousIoStatementState>()) {
-        GetIoErrorHandler().Crash(
-            "%s called for I/O statement that is not formatted %s", name,
-            D == Direction::Output ? "output" : "input");
+      auto &handler{GetIoErrorHandler()};
+      if (!handler.InError()) {
+        handler.Crash("%s called for I/O statement that is not formatted %s",
+            name, D == Direction::Output ? "output" : "input");
       }
       return false;
     }
@@ -293,6 +293,9 @@ template <>
 class ListDirectedStatementState<Direction::Input>
     : public FormattedIoStatementState<Direction::Input> {
 public:
+  bool inNamelistArray() const { return inNamelistArray_; }
+  void set_inNamelistArray(bool yes = true) { inNamelistArray_ = yes; }
+
   // Skips value separators, handles repetition and null values.
   // Vacant when '/' appears; present with descriptor == ListDirectedNullValue
   // when a null value appears.
@@ -303,10 +306,11 @@ public:
   // input statement.  This member function resets some state so that
   // repetition and null values work correctly for each successive
   // NAMELIST input item.
-  void ResetForNextNamelistItem() {
+  void ResetForNextNamelistItem(bool inNamelistArray) {
     remaining_ = 0;
     eatComma_ = false;
     realPart_ = imaginaryPart_ = false;
+    inNamelistArray_ = inNamelistArray;
   }
 
 private:
@@ -316,6 +320,7 @@ private:
   bool hitSlash_{false}; // once '/' is seen, nullify further items
   bool realPart_{false};
   bool imaginaryPart_{false};
+  bool inNamelistArray_{false};
 };
 
 template <Direction DIR>
@@ -353,10 +358,11 @@ public:
   using typename InternalIoStatementState<DIR>::Buffer;
   InternalFormattedIoStatementState(Buffer internal, std::size_t internalLength,
       const CharType *format, std::size_t formatLength,
-      const char *sourceFile = nullptr, int sourceLine = 0);
+      const char *sourceFile = nullptr, int sourceLine = 0,
+      const Descriptor *formatDescriptor = nullptr);
   InternalFormattedIoStatementState(const Descriptor &, const CharType *format,
       std::size_t formatLength, const char *sourceFile = nullptr,
-      int sourceLine = 0);
+      int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
   IoStatementState &ioStatementState() { return ioStatementState_; }
   void CompleteOperation();
   int EndIoStatement();
@@ -439,7 +445,7 @@ public:
   using CharType = CHAR;
   ExternalFormattedIoStatementState(ExternalFileUnit &, const CharType *format,
       std::size_t formatLength, const char *sourceFile = nullptr,
-      int sourceLine = 0);
+      int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
   void CompleteOperation();
   int EndIoStatement();
   std::optional<DataEdit> GetNextDataEdit(
@@ -495,7 +501,7 @@ public:
   using CharType = CHAR;
   ChildFormattedIoStatementState(ChildIo &, const CharType *format,
       std::size_t formatLength, const char *sourceFile = nullptr,
-      int sourceLine = 0);
+      int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
   MutableModes &mutableModes() { return mutableModes_; }
   void CompleteOperation();
   int EndIoStatement();

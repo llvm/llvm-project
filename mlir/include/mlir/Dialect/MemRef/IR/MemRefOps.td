@@ -1575,7 +1575,6 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     %3 = memref.subview %2[3, 4, 2][1, 6, 3][1, 1, 1] :
       memref<8x16x4xf32> to memref<6x3xf32, offset: 210, strides: [4, 1]>
     ```
-    }
   }];
 
   let arguments = (ins AnyMemRef:$source,

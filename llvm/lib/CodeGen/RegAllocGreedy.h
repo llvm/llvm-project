@@ -15,6 +15,7 @@
 #include "InterferenceCache.h"
 #include "RegAllocBase.h"
 #include "RegAllocEvictionAdvisor.h"
+#include "RegAllocPriorityAdvisor.h"
 #include "SpillPlacement.h"
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -147,6 +148,16 @@ public:
   size_t getQueueSize() const { return Queue.size(); }
   // end (interface to eviction advisers)
 
+  // Interface to priority advisers
+  bool getRegClassPriorityTrumpsGlobalness() const {
+    return RegClassPriorityTrumpsGlobalness;
+  }
+  bool getReverseLocalAssignment() const { return ReverseLocalAssignment; }
+  // FIXME: this is unnecessary once priority advisers are created by an
+  // analysis pass, which can fetch the SlotIndexes analysis itself.
+  SlotIndexes *getIndexes() const { return Indexes; }
+  // end (interface to priority advisers)
+
 private:
   // Convenient shortcuts.
   using PQueue = std::priority_queue<std::pair<unsigned, unsigned>>;
@@ -179,6 +190,8 @@ private:
   std::unique_ptr<VirtRegAuxInfo> VRAI;
   Optional<ExtraRegInfo> ExtraInfo;
   std::unique_ptr<RegAllocEvictionAdvisor> EvictAdvisor;
+
+  std::unique_ptr<RegAllocPriorityAdvisor> PriorityAdvisor;
 
   // Enum CutOffStage to keep a track whether the register allocation failed
   // because of the cutoffs encountered in last chance recoloring.

@@ -15,21 +15,21 @@ func.func @simple_store_load() {
     %v0 = affine.load %m[%i0] : memref<10xf32>
     %v1 = arith.addf %v0, %v0 : f32
   }
+  memref.dealloc %m : memref<10xf32>
   return
-// CHECK:       %{{.*}} = arith.constant 7.000000e+00 : f32
+// CHECK:       %[[C7:.*]] = arith.constant 7.000000e+00 : f32
 // CHECK-NEXT:  affine.for %{{.*}} = 0 to 10 {
-// CHECK-NEXT:    %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
+// CHECK-NEXT:    arith.addf %[[C7]], %[[C7]] : f32
 // CHECK-NEXT:  }
 // CHECK-NEXT:  return
 }
 
 // CHECK-LABEL: func @multi_store_load() {
 func.func @multi_store_load() {
-  %c0 = arith.constant 0 : index
   %cf7 = arith.constant 7.0 : f32
   %cf8 = arith.constant 8.0 : f32
   %cf9 = arith.constant 9.0 : f32
-  %m = memref.alloc() : memref<10xf32>
+  %m = gpu.alloc() : memref<10xf32>
   affine.for %i0 = 0 to 10 {
     affine.store %cf7, %m[%i0] : memref<10xf32>
     %v0 = affine.load %m[%i0] : memref<10xf32>
@@ -40,17 +40,16 @@ func.func @multi_store_load() {
     %v3 = affine.load %m[%i0] : memref<10xf32>
     %v4 = arith.mulf %v2, %v3 : f32
   }
+  gpu.dealloc %m : memref<10xf32>
   return
-// CHECK:       %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT:  %{{.*}} = arith.constant 7.000000e+00 : f32
-// CHECK-NEXT:  %{{.*}} = arith.constant 8.000000e+00 : f32
-// CHECK-NEXT:  %{{.*}} = arith.constant 9.000000e+00 : f32
+// CHECK-NEXT:  %[[C7:.*]] = arith.constant 7.000000e+00 : f32
+// CHECK-NEXT:  arith.constant 8.000000e+00 : f32
+// CHECK-NEXT:  %[[C9:.*]] = arith.constant 9.000000e+00 : f32
 // CHECK-NEXT:  affine.for %{{.*}} = 0 to 10 {
-// CHECK-NEXT:    %{{.*}} = arith.addf %{{.*}}, %{{.*}} : f32
-// CHECK-NEXT:    %{{.*}} = arith.mulf %{{.*}}, %{{.*}} : f32
+// CHECK-NEXT:    arith.addf %[[C7]], %[[C7]] : f32
+// CHECK-NEXT:    arith.mulf %[[C9]], %[[C9]] : f32
 // CHECK-NEXT:  }
 // CHECK-NEXT:  return
-
 }
 
 // The store-load forwarding can see through affine apply's since it relies on

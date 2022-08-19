@@ -921,7 +921,7 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   return false;
 }
 
-bool RecurrenceDescriptor::isFirstOrderRecurrence(
+bool RecurrenceDescriptor::isFixedOrderRecurrence(
     PHINode *Phi, Loop *TheLoop,
     MapVector<Instruction *, Instruction *> &SinkAfter, DominatorTree *DT) {
 
@@ -945,6 +945,20 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(
   // Get the previous value. The previous value comes from the latch edge while
   // the initial value comes form the preheader edge.
   auto *Previous = dyn_cast<Instruction>(Phi->getIncomingValueForBlock(Latch));
+
+  // If Previous is a phi in the header, go through incoming values from the
+  // latch until we find a non-phi value. Use this as the new Previous, all uses
+  // in the header will be dominated by the original phi, but need to be moved
+  // after the non-phi previous value.
+  SmallPtrSet<PHINode *, 4> SeenPhis;
+  while (auto *PrevPhi = dyn_cast_or_null<PHINode>(Previous)) {
+    if (PrevPhi->getParent() != Phi->getParent())
+      return false;
+    if (!SeenPhis.insert(PrevPhi).second)
+      return false;
+    Previous = dyn_cast<Instruction>(PrevPhi->getIncomingValueForBlock(Latch));
+  }
+
   if (!Previous || !TheLoop->contains(Previous) || isa<PHINode>(Previous) ||
       SinkAfter.count(Previous)) // Cannot rely on dominance due to motion.
     return false;
@@ -986,7 +1000,7 @@ bool RecurrenceDescriptor::isFirstOrderRecurrence(
       return false;
 
     // Avoid sinking an instruction multiple times (if multiple operands are
-    // first order recurrences) by sinking once - after the latest 'previous'
+    // fixed order recurrences) by sinking once - after the latest 'previous'
     // instruction.
     auto It = SinkAfter.find(SinkCandidate);
     if (It != SinkAfter.end()) {

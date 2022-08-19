@@ -659,15 +659,17 @@ LogicalResult mlir::normalizeAffineFor(AffineForOp op) {
 /// that would change the read within `memOp`.
 template <typename EffectType, typename T>
 static bool hasNoInterveningEffect(Operation *start, T memOp) {
-  Value memref = memOp.getMemRef();
-  bool isOriginalAllocation = memref.getDefiningOp<memref::AllocaOp>() ||
-                              memref.getDefiningOp<memref::AllocOp>();
+  auto isLocallyAllocated = [](Value memref) {
+    auto *defOp = memref.getDefiningOp();
+    return defOp && hasSingleEffect<MemoryEffects::Allocate>(defOp, memref);
+  };
 
   // A boolean representing whether an intervening operation could have impacted
   // memOp.
   bool hasSideEffect = false;
 
   // Check whether the effect on memOp can be caused by a given operation op.
+  Value memref = memOp.getMemRef();
   std::function<void(Operation *)> checkOperation = [&](Operation *op) {
     // If the effect has alreay been found, early exit,
     if (hasSideEffect)
@@ -682,12 +684,12 @@ static bool hasNoInterveningEffect(Operation *start, T memOp) {
         // If op causes EffectType on a potentially aliasing location for
         // memOp, mark as having the effect.
         if (isa<EffectType>(effect.getEffect())) {
-          if (isOriginalAllocation && effect.getValue() &&
-              (effect.getValue().getDefiningOp<memref::AllocaOp>() ||
-               effect.getValue().getDefiningOp<memref::AllocOp>())) {
-            if (effect.getValue() != memref)
-              continue;
-          }
+          // TODO: This should be replaced with a check for no aliasing.
+          // Aliasing information should be passed to this method.
+          if (effect.getValue() && effect.getValue() != memref &&
+              isLocallyAllocated(memref) &&
+              isLocallyAllocated(effect.getValue()))
+            continue;
           opMayHaveEffect = true;
           break;
         }
@@ -1058,18 +1060,20 @@ void mlir::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
   for (auto *op : opsToErase)
     op->erase();
 
-  // Check if the store fwd'ed memrefs are now left with only stores and can
-  // thus be completely deleted. Note: the canonicalize pass should be able
-  // to do this as well, but we'll do it here since we collected these anyway.
+  // Check if the store fwd'ed memrefs are now left with only stores and
+  // deallocs and can thus be completely deleted. Note: the canonicalize pass
+  // should be able to do this as well, but we'll do it here since we collected
+  // these anyway.
   for (auto memref : memrefsToErase) {
-    // If the memref hasn't been alloc'ed in this function, skip.
+    // If the memref hasn't been locally alloc'ed, skip.
     Operation *defOp = memref.getDefiningOp();
-    if (!defOp || !isa<memref::AllocOp>(defOp))
+    if (!defOp || !hasSingleEffect<MemoryEffects::Allocate>(defOp, memref))
       // TODO: if the memref was returned by a 'call' operation, we
       // could still erase it if the call had no side-effects.
       continue;
     if (llvm::any_of(memref.getUsers(), [&](Operation *ownerOp) {
-          return !isa<AffineWriteOpInterface, memref::DeallocOp>(ownerOp);
+          return !isa<AffineWriteOpInterface>(ownerOp) &&
+                 !hasSingleEffect<MemoryEffects::Free>(ownerOp, memref);
         }))
       continue;
 
@@ -1308,7 +1312,8 @@ LogicalResult mlir::replaceAllMemRefUsesWith(
 
     // Skip dealloc's - no replacement is necessary, and a memref replacement
     // at other uses doesn't hurt these dealloc's.
-    if (isa<memref::DeallocOp>(op) && !replaceInDeallocOp)
+    if (hasSingleEffect<MemoryEffects::Free>(op, oldMemRef) &&
+        !replaceInDeallocOp)
       continue;
 
     // Check if the memref was used in a non-dereferencing context. It is fine
@@ -1732,8 +1737,8 @@ LogicalResult mlir::normalizeMemRef(memref::AllocOp *allocOp) {
   }
   // Replace any uses of the original alloc op and erase it. All remaining uses
   // have to be dealloc's; RAMUW above would've failed otherwise.
-  assert(llvm::all_of(oldMemRef.getUsers(), [](Operation *op) {
-    return isa<memref::DeallocOp>(op);
+  assert(llvm::all_of(oldMemRef.getUsers(), [&](Operation *op) {
+    return hasSingleEffect<MemoryEffects::Free>(op, oldMemRef);
   }));
   oldMemRef.replaceAllUsesWith(newAlloc);
   allocOp->erase();

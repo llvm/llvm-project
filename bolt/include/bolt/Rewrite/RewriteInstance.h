@@ -134,8 +134,17 @@ private:
   /// Read relocations from a given section.
   void readDynamicRelocations(const object::SectionRef &Section, bool IsJmpRel);
 
+  /// Print relocation information.
+  void printRelocationInfo(const RelocationRef &Rel, StringRef SymbolName,
+                           uint64_t SymbolAddress, uint64_t Addend,
+                           uint64_t ExtractedValue) const;
+
   /// Read relocations from a given section.
   void readRelocations(const object::SectionRef &Section);
+
+  /// Handle one relocation.
+  void handleRelocation(const object::SectionRef &RelocatedSection,
+                        const RelocationRef &Rel);
 
   /// Mark functions that are not meant for processing as ignored.
   void selectFunctionsToProcess();

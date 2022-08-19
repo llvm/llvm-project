@@ -1712,9 +1712,13 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
   func_block->GetStartAddress(addr);
   VariableInfo var_info =
       GetVariableLocationInfo(*m_index, var_id, *func_block, module);
-  if (!var_info.location || !var_info.ranges)
+  if (!var_info.location || var_info.location->GetSize() == 0)
     return nullptr;
-
+  Function *func = func_block->CalculateSymbolContextFunction();
+  if (!func)
+    return VariableSP();
+  var_info.location->SetFuncFileAddress(
+      func->GetAddressRange().GetBaseAddress().GetFileAddress());
   CompilandIndexItem *cii = m_index->compilands().GetCompiland(var_id.modi);
   CompUnitSP comp_unit_sp = GetOrCreateCompileUnit(*cii);
   TypeSP type_sp = GetOrCreateType(var_info.type);
@@ -1732,11 +1736,10 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
   bool artificial = false;
   bool location_is_constant_data = false;
   bool static_member = false;
-  DWARFExpressionList locaiton_list = DWARFExpressionList(
-      module, *var_info.location, nullptr);
+  Variable::RangeList scope_ranges;
   VariableSP var_sp = std::make_shared<Variable>(
       toOpaqueUid(var_id), name.c_str(), name.c_str(), sftype, var_scope,
-      &block, *var_info.ranges, &decl, locaiton_list, external, artificial,
+      &block, scope_ranges, &decl, *var_info.location, external, artificial,
       location_is_constant_data, static_member);
   if (!is_param)
     m_ast->GetOrCreateVariableDecl(scope_id, var_id);

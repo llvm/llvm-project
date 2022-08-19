@@ -832,27 +832,37 @@ checkAliasInfoConsistency(Operation *op, const DominanceInfo &domInfo,
                           AnalysisState &state,
                           const BufferizationAliasInfo &aliasInfo) {
   const BufferizationOptions &options = state.getOptions();
-  Operation *inconsistentOp = nullptr;
-  WalkResult walkResult = op->walk([&](Operation *op) {
-    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
-      for (OpOperand &opOperand : op->getOpOperands())
-        if (opOperand.get().getType().isa<TensorType>()) {
-          if (wouldCreateReadAfterWriteInterference(
-                  opOperand, domInfo, state, aliasInfo,
-                  /*checkConsistencyOnly=*/true)) {
-            // This error can happen if certain "mustBufferizeInPlace" interface
-            // methods are implemented incorrectly, such that the IR already has
-            // a RaW conflict before making any bufferization decisions.
-            inconsistentOp = op;
-            return WalkResult::interrupt();
-          }
+
+  WalkResult walkResult = op->walk([&](BufferizableOpInterface op) {
+    // Skip ops that are not in the filter.
+    if (!options.isOpAllowed(op.getOperation()))
+      return WalkResult::advance();
+
+    // Input IR may not contain any ToMemrefOps. These are not supported because
+    // the analysis cannot follow the data flow through memrefs.
+    if (isa<ToMemrefOp>(op.getOperation())) {
+      op->emitError("to_memref ops not supported during One-Shot Analysis");
+      return WalkResult::interrupt();
+    }
+
+    for (OpOperand &opOperand : op->getOpOperands()) {
+      if (opOperand.get().getType().isa<TensorType>()) {
+        if (wouldCreateReadAfterWriteInterference(
+                opOperand, domInfo, state, aliasInfo,
+                /*checkConsistencyOnly=*/true)) {
+          // This error can happen if certain "mustBufferizeInPlace" interface
+          // methods are implemented incorrectly, such that the IR already has
+          // a RaW conflict before making any bufferization decisions.
+          op->emitError("input IR has RaW conflict");
+          return WalkResult::interrupt();
         }
+      }
+    }
+
     return WalkResult::advance();
   });
 
-  if (walkResult.wasInterrupted())
-    return inconsistentOp->emitError("input IR has RaW conflict");
-  return success();
+  return success(!walkResult.wasInterrupted());
 }
 
 /// Annotate the IR with the result of the analysis. For testing/debugging only.

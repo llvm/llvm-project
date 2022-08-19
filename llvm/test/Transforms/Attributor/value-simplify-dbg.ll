@@ -58,7 +58,7 @@ declare i32 @speculatable() speculatable readnone
 !7 = !{i32 7, !"Dwarf Version", i32 5}
 !8 = !{i32 2, !"Debug Info Version", i32 3}
 !9 = !{i32 1, !"wchar_size", i32 4}
-!10 = !{i32 7, !"PIC Level", i32 2}
+!10 = !{i32 8, !"PIC Level", i32 2}
 !11 = !{i32 7, !"PIE Level", i32 2}
 !12 = !{i32 7, !"uwtable", i32 2}
 !13 = !{i32 7, !"frame-pointer", i32 2}
@@ -88,7 +88,7 @@ declare i32 @speculatable() speculatable readnone
 ; CHECK: [[META7:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 5}
 ; CHECK: [[META8:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; CHECK: [[META9:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; CHECK: [[META10:![0-9]+]] = !{i32 7, !"PIC Level", i32 2}
+; CHECK: [[META10:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
 ; CHECK: [[META11:![0-9]+]] = !{i32 7, !"PIE Level", i32 2}
 ; CHECK: [[META12:![0-9]+]] = !{i32 7, !"uwtable", i32 2}
 ; CHECK: [[META13:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}

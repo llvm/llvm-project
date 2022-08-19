@@ -1924,13 +1924,17 @@ bool OmpStructureChecker::CheckIntrinsicOperator(
 
   switch (op) {
   case parser::DefinedOperator::IntrinsicOperator::Add:
-  case parser::DefinedOperator::IntrinsicOperator::Subtract:
   case parser::DefinedOperator::IntrinsicOperator::Multiply:
   case parser::DefinedOperator::IntrinsicOperator::AND:
   case parser::DefinedOperator::IntrinsicOperator::OR:
   case parser::DefinedOperator::IntrinsicOperator::EQV:
   case parser::DefinedOperator::IntrinsicOperator::NEQV:
     return true;
+  case parser::DefinedOperator::IntrinsicOperator::Subtract:
+    context_.Say(GetContext().clauseSource,
+        "The minus reduction operator is deprecated since OpenMP 5.2 and is not supported in the REDUCTION clause."_err_en_US,
+        ContextDirectiveAsFortran());
+    break;
   default:
     context_.Say(GetContext().clauseSource,
         "Invalid reduction operator in REDUCTION clause."_err_en_US,

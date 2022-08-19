@@ -33,7 +33,7 @@ define <vscale x 2 x double> @sqrt_v2f64(<vscale x 2 x double> %a) {
 ; THRU-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <vscale x 2 x double> %r
 ;
 ; LATE-LABEL: 'sqrt_v2f64'
-; LATE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %r = call <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> %a)
+; LATE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %r = call <vscale x 2 x double> @llvm.sqrt.nxv2f64(<vscale x 2 x double> %a)
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret <vscale x 2 x double> %r
 ;
 ; SIZE-LABEL: 'sqrt_v2f64'

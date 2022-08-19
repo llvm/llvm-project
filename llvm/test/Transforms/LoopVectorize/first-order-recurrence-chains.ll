@@ -2,7 +2,27 @@
 
 define void @test_chained_first_order_recurrences_1(ptr %ptr) {
 ; CHECK-LABEL: @test_chained_first_order_recurrences_1
-; CHECK-NOT: vector.body:
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 22>, %vector.ph ], [ [[WIDE_LOAD:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 33>, %vector.ph ], [ [[TMP4:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x i16>, ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[TMP4]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR1]], <4 x i16> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i16> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP8]], label %middle.block, label %vector.body
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
 ;
 entry:
   br label %loop
@@ -25,7 +45,27 @@ exit:
 
 define void @test_chained_first_order_recurrences_2(ptr %ptr) {
 ; CHECK-LABEL: @test_chained_first_order_recurrences_2
-; CHECK-NOT: vector.body:
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 33>, %vector.ph ], [ [[TMP4:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 22>, %vector.ph ], [ [[WIDE_LOAD:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x i16>, ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[TMP4]] = shufflevector <4 x i16> [[VECTOR_RECUR1]], <4 x i16> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i16> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP8]], label %middle.block, label %vector.body, !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:      middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI3:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
 ;
 entry:
   br label %loop
@@ -48,7 +88,32 @@ exit:
 
 define void @test_chained_first_order_recurrences_3(ptr %ptr) {
 ; CHECK-LABEL: @test_chained_first_order_recurrences_3
-; CHECK-NOT: vector.body:
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 22>, %vector.ph ], [ [[WIDE_LOAD:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 33>, %vector.ph ], [ [[TMP4:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR2:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 33>, %vector.ph ], [ [[TMP5:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x i16>, ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[TMP4]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP5]] = shufflevector <4 x i16> [[VECTOR_RECUR1]], <4 x i16> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR2]], <4 x i16> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i16> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i16> [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    store <4 x i16> [[TMP8]], ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:      middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI4:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI8:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
 ;
 entry:
   br label %loop
@@ -134,7 +199,32 @@ exit:
 
 define void @test_chained_first_order_recurrences_3_reordered_1(ptr %ptr) {
 ; CHECK-LABEL: @test_chained_first_order_recurrences_3_reordered_1
-; CHECK-NOT:   vector.body:
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR2:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 33>, %vector.ph ], [ [[TMP5:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 33>, %vector.ph ], [ [[TMP4:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 22>, %vector.ph ], [ [[WIDE_LOAD:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x i16>, ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[TMP4]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP5]] = shufflevector <4 x i16> [[VECTOR_RECUR1]], <4 x i16> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR2]], <4 x i16> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i16> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i16> [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    store <4 x i16> [[TMP8]], ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:      middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI8:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI4:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
 ;
 entry:
   br label %loop
@@ -159,7 +249,32 @@ exit:
 
 define void @test_chained_first_order_recurrences_3_reordered_2(ptr %ptr) {
 ; CHECK-LABEL: @test_chained_first_order_recurrences_3_reordered_2
-; CHECK-NOT:   vector.body:
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 33>, %vector.ph ], [ [[TMP4:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR2:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 33>, %vector.ph ], [ [[TMP5:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 22>, %vector.ph ], [ [[WIDE_LOAD:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x i16>, ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[TMP4]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP5]] = shufflevector <4 x i16> [[VECTOR_RECUR1]], <4 x i16> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR2]], <4 x i16> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i16> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i16> [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    store <4 x i16> [[TMP8]], ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:      middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI4:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI8:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
 ;
 entry:
   br label %loop
@@ -184,7 +299,32 @@ exit:
 
 define void @test_chained_first_order_recurrences_3_for2_no_other_uses(ptr %ptr) {
 ; CHECK-LABEL: @test_chained_first_order_recurrences_3_for2_no_other_uses
-; CHECK-NOT:   vector.body:
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 22>, %vector.ph ], [ [[WIDE_LOAD:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 33>, %vector.ph ], [ [[TMP4:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR2:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 33>, %vector.ph ], [ [[TMP5:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x i16>, ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[TMP4]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP5]] = shufflevector <4 x i16> [[VECTOR_RECUR1]], <4 x i16> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR2]], <4 x i16> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i16> [[TMP4]], <i16 10, i16 10, i16 10, i16 10>
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i16> [[TMP7]], [[TMP6]]
+; CHECK-NEXT:    store <4 x i16> [[TMP8]], ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:      middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI4:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI8:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
 ;
 entry:
   br label %loop
@@ -209,7 +349,31 @@ exit:
 
 define void @test_chained_first_order_recurrences_3_for1_for2_no_other_uses(ptr %ptr) {
 ; CHECK-LABEL: @test_chained_first_order_recurrences_3_for1_for2_no_other_uses
-; CHECK-NOT:   vector.body:
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 22>, %vector.ph ], [ [[WIDE_LOAD:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 33>, %vector.ph ], [ [[TMP4:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR2:%.*]] = phi <4 x i16> [ <i16 poison, i16 poison, i16 poison, i16 33>, %vector.ph ], [ [[TMP5:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x i16>, ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[TMP4]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP5]] = shufflevector <4 x i16> [[VECTOR_RECUR1]], <4 x i16> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR2]], <4 x i16> [[TMP5]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i16> [[TMP6]], <i16 10, i16 10, i16 10, i16 10>
+; CHECK-NEXT:    store <4 x i16> [[TMP8]], ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP10]], label %middle.block, label %vector.body, !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:      middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i16> [[WIDE_LOAD]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT3:%.*]] = extractelement <4 x i16> [[TMP4]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI4:%.*]] = extractelement <4 x i16> [[TMP4]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT7:%.*]] = extractelement <4 x i16> [[TMP5]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI8:%.*]] = extractelement <4 x i16> [[TMP5]], i32 2
 ;
 entry:
   br label %loop
@@ -233,7 +397,29 @@ exit:
 
 define void @test_chained_first_order_recurrence_sink_users_1(double* %ptr) {
 ; CHECK-LABEL: @test_chained_first_order_recurrence_sink_users_1
-; CHECK-NOT: vector.body:
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x double> [ <double poison, double poison, double poison, double 1.000000e+01>, %vector.ph ], [ [[WIDE_LOAD:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR1:%.*]] = phi <4 x double> [ <double poison, double poison, double poison, double 2.000000e+01>, %vector.ph ], [ [[TMP4:%.*]], %vector.body ]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD]] = load <4 x double>, ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP4]] = shufflevector <4 x double> [[VECTOR_RECUR]], <4 x double> [[WIDE_LOAD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[VECTOR_RECUR1]], <4 x double> [[TMP4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x double> <double 1.000000e+01, double 1.000000e+01, double 1.000000e+01, double 1.000000e+01>, [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x double> [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    store <4 x double> [[TMP7]], ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 996
+; CHECK-NEXT:    br i1 [[TMP9]], label %middle.block, label %vector.body, !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 999, 996
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x double> [[WIDE_LOAD]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x double> [[WIDE_LOAD]], i32 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT2:%.*]] = extractelement <4 x double> [[TMP4]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI3:%.*]] = extractelement <4 x double> [[TMP4]], i32 2
 ;
 entry:
   br label %loop
@@ -282,8 +468,27 @@ exit:
 
 define void @test_first_order_recurrences_and_induction(ptr %ptr) {
 ; CHECK-LABEL: @test_first_order_recurrences_and_induction(
-; CHECK-NOT:   vector.body:
-;
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 22>, %vector.ph ], [ [[VEC_IND:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VEC_IND]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP1]], <i64 10, i64 10, i64 10, i64 10>
+; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP5]], label %middle.block, label %vector.body
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[VEC_IND]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i64> [[VEC_IND]], i32 2
+; CHECK-NEXT:    br i1 [[CMP_N]]
+
 entry:
   br label %loop
 
@@ -306,7 +511,26 @@ exit:
 ; flipped.
 define void @test_first_order_recurrences_and_induction2(ptr %ptr) {
 ; CHECK-LABEL: @test_first_order_recurrences_and_induction2(
-; CHECK-NOT:   vector.body:
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ [[VEC_IND_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x i64> [ <i64 poison, i64 poison, i64 poison, i64 22>, %vector.ph ], [ [[VEC_IND]], %vector.body ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[PTR:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP1]], <i64 10, i64 10, i64 10, i64 10>
+; CHECK-NEXT:    store <4 x i64> [[TMP4]], ptr [[TMP3]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 4, i64 4, i64 4, i64 4>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP5]], label %middle.block, label %vector.body
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[VEC_IND]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x i64> [[VEC_IND]], i32 2
+; CHECK-NEXT:    br i1 [[CMP_N]]
 ;
 entry:
   br label %loop
@@ -328,7 +552,28 @@ exit:
 
 define void @test_first_order_recurrences_and_pointer_induction1(ptr %ptr) {
 ; CHECK-LABEL: @test_first_order_recurrences_and_pointer_induction1(
-; CHECK-NOT: vector.body
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 4000
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[PTR]], %vector.ph ], [ [[PTR_IND:%.*]], %vector.body ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x ptr> [ <ptr poison, ptr poison, ptr poison, ptr null>, %vector.ph ], [ [[TMP0:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 4, i64 8, i64 12>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x ptr> [[VECTOR_RECUR]], <4 x ptr> [[TMP0]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[PTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP3]], i32 0
+; CHECK-NEXT:    store <4 x ptr> [[TMP0]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 16
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP5]], label %middle.block, label %vector.body
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 2
+; CHECK-NEXT:    br i1 [[CMP_N]],
 ;
 entry:
   br label %loop
@@ -352,7 +597,28 @@ exit:
 ; of phis flipped.
 define void @test_first_order_recurrences_and_pointer_induction2(ptr %ptr) {
 ; CHECK-LABEL: @test_first_order_recurrences_and_pointer_induction2(
-; CHECK-NOT: vector.body
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 4000
+; CHECK-NEXT:    br label %vector.body
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[PTR]], %vector.ph ], [ [[PTR_IND:%.*]], %vector.body ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x ptr> [ <ptr poison, ptr poison, ptr poison, ptr null>, %vector.ph ], [ [[TMP0:%.*]], %vector.body ]
+; CHECK-NEXT:    [[TMP0]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 4, i64 8, i64 12>
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x ptr> [[VECTOR_RECUR]], <4 x ptr> [[TMP0]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[PTR]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[TMP3]], i32 0
+; CHECK-NEXT:    store <4 x ptr> [[TMP0]], ptr [[TMP4]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 16
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[TMP5]], label %middle.block, label %vector.body
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1000, 1000
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 3
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT_FOR_PHI:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 2
+; CHECK-NEXT:    br i1 [[CMP_N]],
 ;
 entry:
   br label %loop

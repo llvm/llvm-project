@@ -38,8 +38,10 @@ void SparseConstantPropagation::visitOperation(
   // guarantee that folding will be out-of-place. We don't allow in-place
   // folds as the desire here is for simulated execution, and not general
   // folding.
-  if (op->getNumRegions())
+  if (op->getNumRegions()) {
+    markAllPessimisticFixpoint(results);
     return;
+  }
 
   SmallVector<Attribute, 8> constantOperands;
   constantOperands.reserve(op->getNumOperands());

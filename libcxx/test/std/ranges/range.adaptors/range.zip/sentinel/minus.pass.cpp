@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template <bool OtherConst>
 // requires(sized_sentinel_for<sentinel_t<maybe-const<Const, Views>>,

@@ -27,6 +27,10 @@ struct MemberZero {
   constexpr int zero() const { return 0; }
 };
 
+constexpr int arr[]; // expected-error {{constexpr variable 'arr' must be initialized by a constant expression}}
+constexpr int arr2[2]; // expected-error {{constexpr variable 'arr2' must be initialized by a constant expression}}
+constexpr int arr3[2] = {};
+
 namespace DerivedToVBaseCast {
 
   struct U { int n; };
@@ -1298,7 +1302,7 @@ namespace ExternConstexpr {
   void f() {
     extern constexpr int i; // expected-error {{constexpr variable declaration must be a definition}}
     constexpr int j = 0;
-    constexpr int k; // expected-error {{default initialization of an object of const type}}
+    constexpr int k; // expected-error {{constexpr variable 'k' must be initialized by a constant expression}}
   }
 
   extern const int q;
@@ -2419,6 +2423,13 @@ enum class EScoped {escoped1=-4, escoped2=4};
 
 enum EMaxInt {emaxint1=-1, emaxint2=__INT_MAX__};
 
+enum NumberType {};
+
+E2 testDefaultArgForParam(E2 e2Param = (E2)-1) { // ok, not a constant expression context
+  E2 e2LocalInit = e2Param; // ok, not a constant expression context
+  return e2LocalInit;
+}
+
 void testValueInRangeOfEnumerationValues() {
   constexpr E1 x1 = static_cast<E1>(-8);
   constexpr E1 x2 = static_cast<E1>(8);
@@ -2454,6 +2465,8 @@ void testValueInRangeOfEnumerationValues() {
   constexpr EMaxInt x19 = static_cast<EMaxInt>(__INT_MAX__-1);
   constexpr EMaxInt x20 = static_cast<EMaxInt>((long)__INT_MAX__+1);
   // expected-error@-1 {{integer value 2147483648 is outside the valid range of values [-2147483648, 2147483647] for this enumeration type}}
+
+  const NumberType neg_one = (NumberType) ((NumberType) 0 - (NumberType) 1); // ok, not a constant expression context
 }
 
 enum SortOrder {
@@ -2470,3 +2483,8 @@ void A::f(SortOrder order) {
     return;
 }
 }
+
+GH50055::E2 GlobalInitNotCE1 = (GH50055::E2)-1; // ok, not a constant expression context
+GH50055::E2 GlobalInitNotCE2 = GH50055::testDefaultArgForParam(); // ok, not a constant expression context
+constexpr GH50055::E2 GlobalInitCE = (GH50055::E2)-1;
+// expected-error@-1 {{integer value -1 is outside the valid range of values [0, 7] for this enumeration type}}

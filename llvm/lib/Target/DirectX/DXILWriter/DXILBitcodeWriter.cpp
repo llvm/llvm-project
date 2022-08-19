@@ -2070,7 +2070,7 @@ void DXILBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
     } else if (const ConstantDataSequential *CDS =
                    dyn_cast<ConstantDataSequential>(C)) {
       Code = bitc::CST_CODE_DATA;
-      Type *EltTy = CDS->getType()->getArrayElementType();
+      Type *EltTy = CDS->getElementType();
       if (isa<IntegerType>(EltTy)) {
         for (unsigned i = 0, e = CDS->getNumElements(); i != e; ++i)
           Record.push_back(CDS->getElementAsInteger(i));
@@ -2318,7 +2318,8 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
     Code = bitc::FUNC_CODE_INST_SHUFFLEVEC;
     pushValueAndType(I.getOperand(0), InstID, Vals);
     pushValue(I.getOperand(1), InstID, Vals);
-    pushValue(I.getOperand(2), InstID, Vals);
+    pushValue(cast<ShuffleVectorInst>(&I)->getShuffleMaskForBitcode(), InstID,
+              Vals);
     break;
   case Instruction::ICmp:
   case Instruction::FCmp: {
@@ -2449,15 +2450,13 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
     Vals.push_back(getTypeID(AI.getAllocatedType()));
     Vals.push_back(getTypeID(I.getOperand(0)->getType()));
     Vals.push_back(VE.getValueID(I.getOperand(0))); // size.
-    using APV = AllocaPackedValues;
-    unsigned Record = 0;
-    unsigned EncodedAlign = getEncodedAlign(AI.getAlign());
-    Bitfield::set<APV::AlignLower>(
-        Record, EncodedAlign & ((1 << APV::AlignLower::Bits) - 1));
-    Bitfield::set<APV::AlignUpper>(Record,
-                                   EncodedAlign >> APV::AlignLower::Bits);
-    Bitfield::set<APV::UsedWithInAlloca>(Record, AI.isUsedWithInAlloca());
-    Vals.push_back(Record);
+    unsigned AlignRecord = Log2_32(AI.getAlign().value()) + 1;
+    assert(Log2_32(Value::MaximumAlignment) + 1 < 1 << 5 &&
+           "not enough bits for maximum alignment");
+    assert(AlignRecord < 1 << 5 && "alignment greater than 1 << 64");
+    AlignRecord |= AI.isUsedWithInAlloca() << 5;
+    AlignRecord |= 1 << 6;
+    Vals.push_back(AlignRecord);
     break;
   }
 

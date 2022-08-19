@@ -97,6 +97,11 @@ func.func @test_shape_of(%arg0: tensor<?xf32>) -> tensor<?xindex> {
   return %0 : tensor<?xindex>
 }
 
+func.func @test_value_of(%arg0: !shape.value_shape) -> tensor<?xf32> {
+  %0 = shape.value_of %arg0 : tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
 func.func @test_constraints() {
   %0 = shape.const_shape [] : !shape.shape
   %1 = shape.const_shape [1, 2, 3] : !shape.shape

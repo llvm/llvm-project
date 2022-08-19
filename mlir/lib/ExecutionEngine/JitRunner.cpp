@@ -26,6 +26,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassNameParser.h"
@@ -86,6 +87,10 @@ struct Options {
   llvm::cl::opt<std::string> objectFilename{
       "object-filename",
       llvm::cl::desc("Dump JITted-compiled object to file <input file>.o")};
+
+  llvm::cl::opt<bool> hostSupportsJit{"host-supports-jit",
+                                      llvm::cl::desc("Report host JIT support"),
+                                      llvm::cl::Hidden};
 };
 
 struct CompileAndExecuteConfig {
@@ -316,6 +321,17 @@ int mlir::JitRunnerMain(int argc, char **argv, const DialectRegistry &registry,
   // runner. This must come before the command line options are parsed.
   Options options;
   llvm::cl::ParseCommandLineOptions(argc, argv, "MLIR CPU execution driver\n");
+
+  if (options.hostSupportsJit) {
+    auto J = llvm::orc::LLJITBuilder().create();
+    if (J)
+      llvm::outs() << "true\n";
+    else {
+      llvm::consumeError(J.takeError());
+      llvm::outs() << "false\n";
+    }
+    return 0;
+  }
 
   Optional<unsigned> optLevel = getCommandLineOptLevel(options);
   SmallVector<std::reference_wrapper<llvm::cl::opt<bool>>, 4> optFlags{

@@ -762,6 +762,17 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                 return i.ISHFTC(countVal);
               }));
     }
+  } else if (name == "izext" || name == "jzext") {
+    if (args.size() == 1) {
+      if (auto *expr{UnwrapExpr<Expr<SomeInteger>>(args[0])}) {
+        // Rewrite to IAND(INT(n,k),255_k) for k=KIND(T)
+        intrinsic->name = "iand";
+        auto converted{ConvertToType<T>(std::move(*expr))};
+        *expr = Fold(context, Expr<SomeInteger>{std::move(converted)});
+        args.emplace_back(AsGenericExpr(Expr<T>{Scalar<T>{255}}));
+        return FoldIntrinsicFunction(context, std::move(funcRef));
+      }
+    }
   } else if (name == "lbound") {
     return LBOUND(context, std::move(funcRef));
   } else if (name == "leadz" || name == "trailz" || name == "poppar" ||

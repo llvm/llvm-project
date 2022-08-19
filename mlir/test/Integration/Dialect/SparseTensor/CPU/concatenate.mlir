@@ -166,8 +166,7 @@ module {
     %du = arith.constant -1.0 : f64
 
     %c = sparse_tensor.convert %A : tensor<9x4xf64, #MAT_C_C> to tensor<9x4xf64>
-    %m = bufferization.to_memref %c : memref<9x4xf64>
-    %v = vector.transfer_read %m[%c0, %c0], %du: memref<9x4xf64>, vector<9x4xf64>
+    %v = vector.transfer_read %c[%c0, %c0], %du: tensor<9x4xf64>, vector<9x4xf64>
     vector.print %v : vector<9x4xf64>
 
     %1 = sparse_tensor.values %A : tensor<9x4xf64, #MAT_C_C> to memref<?xf64>
@@ -182,8 +181,7 @@ module {
     %du = arith.constant -1.0 : f64
 
     %c = sparse_tensor.convert %A : tensor<9x4xf64, #MAT_C_C_P> to tensor<9x4xf64>
-    %m = bufferization.to_memref %c : memref<9x4xf64>
-    %v = vector.transfer_read %m[%c0, %c0], %du: memref<9x4xf64>, vector<9x4xf64>
+    %v = vector.transfer_read %c[%c0, %c0], %du: tensor<9x4xf64>, vector<9x4xf64>
     vector.print %v : vector<9x4xf64>
 
     %1 = sparse_tensor.values %A : tensor<9x4xf64, #MAT_C_C_P> to memref<?xf64>
@@ -197,8 +195,7 @@ module {
     %c0 = arith.constant 0 : index
     %du = arith.constant -1.0 : f64
 
-    %m = bufferization.to_memref %A : memref<9x4xf64>
-    %v = vector.transfer_read %m[%c0, %c0], %du: memref<9x4xf64>, vector<9x4xf64>
+    %v = vector.transfer_read %A[%c0, %c0], %du: tensor<9x4xf64>, vector<9x4xf64>
     vector.print %v : vector<9x4xf64>
 
     return
@@ -209,8 +206,7 @@ module {
     %du = arith.constant -1.0 : f64
 
     %c = sparse_tensor.convert %A : tensor<4x9xf64, #MAT_C_C> to tensor<4x9xf64>
-    %m = bufferization.to_memref %c : memref<4x9xf64>
-    %v = vector.transfer_read %m[%c0, %c0], %du: memref<4x9xf64>, vector<4x9xf64>
+    %v = vector.transfer_read %c[%c0, %c0], %du: tensor<4x9xf64>, vector<4x9xf64>
     vector.print %v : vector<4x9xf64>
 
     %1 = sparse_tensor.values %A : tensor<4x9xf64, #MAT_C_C> to memref<?xf64>
@@ -225,8 +221,7 @@ module {
     %du = arith.constant -1.0 : f64
 
     %c = sparse_tensor.convert %A : tensor<?x?xf64, #MAT_C_C> to tensor<?x?xf64>
-    %m = bufferization.to_memref %c : memref<?x?xf64>
-    %v = vector.transfer_read %m[%c0, %c0], %du: memref<?x?xf64>, vector<4x9xf64>
+    %v = vector.transfer_read %c[%c0, %c0], %du: tensor<?x?xf64>, vector<4x9xf64>
     vector.print %v : vector<4x9xf64>
 
     %1 = sparse_tensor.values %A : tensor<?x?xf64, #MAT_C_C> to memref<?xf64>
@@ -241,8 +236,7 @@ module {
     %du = arith.constant -1.0 : f64
 
     %c = sparse_tensor.convert %A : tensor<4x9xf64, #MAT_C_C_P> to tensor<4x9xf64>
-    %m = bufferization.to_memref %c : memref<4x9xf64>
-    %v = vector.transfer_read %m[%c0, %c0], %du: memref<4x9xf64>, vector<4x9xf64>
+    %v = vector.transfer_read %c[%c0, %c0], %du: tensor<4x9xf64>, vector<4x9xf64>
     vector.print %v : vector<4x9xf64>
 
     %1 = sparse_tensor.values %A : tensor<4x9xf64, #MAT_C_C_P> to memref<?xf64>
@@ -256,8 +250,7 @@ module {
     %c0 = arith.constant 0 : index
     %du = arith.constant -1.0 : f64
 
-    %m = bufferization.to_memref %A : memref<4x9xf64>
-    %v = vector.transfer_read %m[%c0, %c0], %du: memref<4x9xf64>, vector<4x9xf64>
+    %v = vector.transfer_read %A[%c0, %c0], %du: tensor<4x9xf64>, vector<4x9xf64>
     vector.print %v : vector<4x9xf64>
 
     return

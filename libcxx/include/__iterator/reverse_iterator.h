@@ -499,7 +499,7 @@ struct __unwrap_reverse_iter_impl {
   }
 };
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 template <ranges::bidirectional_range _Range>
 _LIBCPP_HIDE_FROM_ABI constexpr ranges::
     subrange<reverse_iterator<ranges::iterator_t<_Range>>, reverse_iterator<ranges::iterator_t<_Range>>>

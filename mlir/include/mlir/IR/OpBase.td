@@ -1014,6 +1014,8 @@ class OptionalAttr<Attr attr> : Attr<attr.predicate, attr.summary> {
 // quotes.
 class DefaultValuedStrAttr<Attr attr, string val>
     : DefaultValuedAttr<attr, "\"" # val # "\"">;
+class DefaultValuedOptionalStrAttr<Attr attr, string val>
+    : DefaultValuedOptionalAttr<attr, "\"" # val # "\"">;
 
 //===----------------------------------------------------------------------===//
 // Primitive attribute kinds
@@ -1291,6 +1293,7 @@ class DenseArrayAttrBase<string denseAttrName, string cppType, string summaryNam
                      summaryName # " dense array attribute"> {
   let storageType = "::mlir::" # denseAttrName;
   let returnType = "::llvm::ArrayRef<" # cppType # ">";
+  let constBuilderCall = "$_builder.get" # denseAttrName # "($0)";
 }
 def DenseBoolArrayAttr : DenseArrayAttrBase<"DenseBoolArrayAttr", "bool", "i1">;
 def DenseI8ArrayAttr : DenseArrayAttrBase<"DenseI8ArrayAttr", "int8_t", "i8">;

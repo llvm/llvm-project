@@ -6262,7 +6262,8 @@ SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op, SelectionDAG &DAG,
     Ops.push_back(Mask);
   Ops.push_back(VL);
 
-  SDValue ScalableRes = DAG.getNode(NewOpc, DL, ContainerVT, Ops);
+  SDValue ScalableRes =
+      DAG.getNode(NewOpc, DL, ContainerVT, Ops, Op->getFlags());
   return convertFromScalableVector(VT, ScalableRes, DAG, Subtarget);
 }
 
