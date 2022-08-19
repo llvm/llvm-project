@@ -23,7 +23,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _InputIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
 _OutputIterator
 __move_backward_constexpr(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
 {
@@ -33,7 +33,7 @@ __move_backward_constexpr(_InputIterator __first, _InputIterator __last, _Output
 }
 
 template <class _AlgPolicy, class _InputIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
 _OutputIterator
 __move_backward_impl(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
 {
@@ -41,7 +41,7 @@ __move_backward_impl(_InputIterator __first, _InputIterator __last, _OutputItera
 }
 
 template <class _AlgPolicy, class _Tp, class _Up>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
 typename enable_if
 <
     is_same<typename remove_const<_Tp>::type, _Up>::value &&
@@ -60,7 +60,7 @@ __move_backward_impl(_Tp* __first, _Tp* __last, _Up* __result)
 }
 
 template <class _AlgPolicy, class _BidirectionalIterator1, class _BidirectionalIterator2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 _BidirectionalIterator2
 __move_backward(_BidirectionalIterator1 __first, _BidirectionalIterator1 __last,
                 _BidirectionalIterator2 __result)
@@ -76,7 +76,7 @@ __move_backward(_BidirectionalIterator1 __first, _BidirectionalIterator1 __last,
 }
 
 template <class _BidirectionalIterator1, class _BidirectionalIterator2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 _BidirectionalIterator2
 move_backward(_BidirectionalIterator1 __first, _BidirectionalIterator1 __last,
               _BidirectionalIterator2 __result)
