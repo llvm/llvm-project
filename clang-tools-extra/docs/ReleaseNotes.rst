@@ -120,6 +120,12 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/signal-handler>` check. Partial
   support for C++14 signal handler rules was added. Bug report generation was
   improved.
+  
+- Improved `modernize-use-emplace <clang-tidy/checks/modernize/use-emplace.html>`_ check.
+
+  The check now supports detecting inefficient invocations of ``push`` and
+  ``push_front`` on STL-style containers and replacing them with ``emplace``
+  or ``emplace_front``.
 
 Removed checks
 ^^^^^^^^^^^^^^
