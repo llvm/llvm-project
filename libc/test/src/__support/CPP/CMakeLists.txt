@@ -91,3 +91,13 @@ add_libc_unittest(
   DEPENDS
   libc.src.__support.CPP.optional
 )
+
+add_libc_unittest(
+  span_test
+  SUITE
+    libc_cpp_utils_unittests
+  SRCS
+    span_test.cpp
+  DEPENDS
+  libc.src.__support.CPP.span
+)
