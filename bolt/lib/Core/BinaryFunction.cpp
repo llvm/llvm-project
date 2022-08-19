@@ -3260,8 +3260,8 @@ void BinaryFunction::fixBranches() {
         // could be "short", then prioritize short for "taken". This will
         // generate a sequence 1 byte shorter on x86.
         if (IsSupported && BC.isX86() &&
-            TSuccessor->isCold() != FSuccessor->isCold() &&
-            BB->isCold() != TSuccessor->isCold()) {
+            TSuccessor->getFragmentNum() != FSuccessor->getFragmentNum() &&
+            BB->getFragmentNum() != TSuccessor->getFragmentNum()) {
           std::swap(TSuccessor, FSuccessor);
           {
             auto L = BC.scopeLock();
@@ -4035,7 +4035,8 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
   }
 
   const uint64_t BaseAddress = getCodeSection()->getOutputAddress();
-  ErrorOr<BinarySection &> ColdSection = getColdCodeSection();
+  ErrorOr<BinarySection &> ColdSection =
+      getColdCodeSection(FragmentNum::cold());
   const uint64_t ColdBaseAddress =
       isSplit() ? ColdSection->getOutputAddress() : 0;
   if (BC.HasRelocations || isInjected()) {
@@ -4049,7 +4050,7 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
       setOutputDataAddress(BaseAddress + DataOffset);
     }
     if (isSplit()) {
-      const MCSymbol *ColdStartSymbol = getColdSymbol();
+      const MCSymbol *ColdStartSymbol = getSymbol(FragmentNum::cold());
       assert(ColdStartSymbol && ColdStartSymbol->isDefined() &&
              "split function should have defined cold symbol");
       const MCSymbol *ColdEndSymbol = getFunctionColdEndLabel();
