@@ -16,12 +16,25 @@
 namespace llvm {
 namespace bolt {
 
+/// Strategy used to partition blocks into fragments.
+enum SplitFunctionsStrategy : char {
+  /// Split each function into a hot and cold fragment using profiling
+  /// information.
+  Profile2 = 0,
+  /// Split each function into a hot and cold fragment at a randomly chosen
+  /// split point (ignoring any available profiling information).
+  Random2,
+  /// Split all basic blocks of each function into fragments such that each
+  /// fragment contains exactly a single basic block.
+  All
+};
+
 /// Split function code in multiple parts.
 class SplitFunctions : public BinaryFunctionPass {
 private:
   /// Split function body into fragments.
-  template <typename SplitStrategy>
-  void splitFunction(BinaryFunction &Function, SplitStrategy Strategy = {});
+  template <typename Strategy>
+  void splitFunction(BinaryFunction &Function, Strategy S = {});
 
   /// Map basic block labels to their trampoline block labels.
   using TrampolineSetType = DenseMap<const MCSymbol *, const MCSymbol *>;
