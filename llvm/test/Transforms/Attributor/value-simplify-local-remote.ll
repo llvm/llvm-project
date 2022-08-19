@@ -769,7 +769,7 @@ entry:
 !1 = !{i32 1, !"wchar_size", i32 4}
 !2 = !{i32 7, !"openmp", i32 50}
 !3 = !{i32 7, !"openmp-device", i32 50}
-!4 = !{i32 7, !"PIC Level", i32 2}
+!4 = !{i32 8, !"PIC Level", i32 2}
 !5 = !{i32 7, !"frame-pointer", i32 2}
 !6 = !{i32 7, !"Dwarf Version", i32 2}
 !7 = !{i32 2, !"Debug Info Version", i32 3}
@@ -795,7 +795,7 @@ entry:
 ; CHECK: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; CHECK: [[META2:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK: [[META3:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META4:![0-9]+]] = !{i32 7, !"PIC Level", i32 2}
+; CHECK: [[META4:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
 ; CHECK: [[META5:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
 ; CHECK: [[META6:![0-9]+]] = !{i32 7, !"Dwarf Version", i32 2}
 ; CHECK: [[META7:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
