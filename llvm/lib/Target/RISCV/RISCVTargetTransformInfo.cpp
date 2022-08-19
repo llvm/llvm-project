@@ -10,6 +10,7 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include <cmath>
 using namespace llvm;
@@ -250,6 +251,77 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
   return NumLoads * MemOpCost;
 }
 
+// Currently, these represent both throughput and codesize costs
+// for the respective intrinsics.  The costs in this table are simply
+// instruction counts with the following adjustments made:
+// * One vsetvli is considered free.
+static const CostTblEntry VectorIntrinsicCostTable[]{
+   {Intrinsic::floor, MVT::v2f32, 15},
+   {Intrinsic::floor, MVT::v4f32, 15},
+   {Intrinsic::floor, MVT::v8f32, 15},
+   {Intrinsic::floor, MVT::v16f32, 15},
+   {Intrinsic::floor, MVT::nxv2f32, 15},
+   {Intrinsic::floor, MVT::nxv4f32, 15},
+   {Intrinsic::floor, MVT::nxv8f32, 15},
+   {Intrinsic::floor, MVT::nxv16f32, 15},
+   {Intrinsic::floor, MVT::v2f64, 15},
+   {Intrinsic::floor, MVT::v4f64, 15},
+   {Intrinsic::floor, MVT::v8f64, 15},
+   {Intrinsic::floor, MVT::v16f64, 15},
+   {Intrinsic::floor, MVT::nxv1f64, 15},
+   {Intrinsic::floor, MVT::nxv2f64, 15},
+   {Intrinsic::floor, MVT::nxv4f64, 15},
+   {Intrinsic::floor, MVT::nxv8f64, 15},
+   {Intrinsic::ceil, MVT::v2f32, 15},
+   {Intrinsic::ceil, MVT::v4f32, 15},
+   {Intrinsic::ceil, MVT::v8f32, 15},
+   {Intrinsic::ceil, MVT::v16f32, 15},
+   {Intrinsic::ceil, MVT::nxv2f32, 15},
+   {Intrinsic::ceil, MVT::nxv4f32, 15},
+   {Intrinsic::ceil, MVT::nxv8f32, 15},
+   {Intrinsic::ceil, MVT::nxv16f32, 15},
+   {Intrinsic::ceil, MVT::v2f64, 15},
+   {Intrinsic::ceil, MVT::v4f64, 15},
+   {Intrinsic::ceil, MVT::v8f64, 15},
+   {Intrinsic::ceil, MVT::v16f64, 15},
+   {Intrinsic::ceil, MVT::nxv1f64, 15},
+   {Intrinsic::ceil, MVT::nxv2f64, 15},
+   {Intrinsic::ceil, MVT::nxv4f64, 15},
+   {Intrinsic::ceil, MVT::nxv8f64, 15},
+   {Intrinsic::trunc, MVT::v2f32, 7},
+   {Intrinsic::trunc, MVT::v4f32, 7},
+   {Intrinsic::trunc, MVT::v8f32, 7},
+   {Intrinsic::trunc, MVT::v16f32, 7},
+   {Intrinsic::trunc, MVT::nxv2f32, 7},
+   {Intrinsic::trunc, MVT::nxv4f32, 7},
+   {Intrinsic::trunc, MVT::nxv8f32, 7},
+   {Intrinsic::trunc, MVT::nxv16f32, 7},
+   {Intrinsic::trunc, MVT::v2f64, 7},
+   {Intrinsic::trunc, MVT::v4f64, 7},
+   {Intrinsic::trunc, MVT::v8f64, 7},
+   {Intrinsic::trunc, MVT::v16f64, 7},
+   {Intrinsic::trunc, MVT::nxv1f64, 7},
+   {Intrinsic::trunc, MVT::nxv2f64, 7},
+   {Intrinsic::trunc, MVT::nxv4f64, 7},
+   {Intrinsic::trunc, MVT::nxv8f64, 7},
+   {Intrinsic::round, MVT::v2f32, 10},
+   {Intrinsic::round, MVT::v4f32, 10},
+   {Intrinsic::round, MVT::v8f32, 10},
+   {Intrinsic::round, MVT::v16f32, 10},
+   {Intrinsic::round, MVT::nxv2f32, 10},
+   {Intrinsic::round, MVT::nxv4f32, 10},
+   {Intrinsic::round, MVT::nxv8f32, 10},
+   {Intrinsic::round, MVT::nxv16f32, 10},
+   {Intrinsic::round, MVT::v2f64, 10},
+   {Intrinsic::round, MVT::v4f64, 10},
+   {Intrinsic::round, MVT::v8f64, 10},
+   {Intrinsic::round, MVT::v16f64, 10},
+   {Intrinsic::round, MVT::nxv1f64, 10},
+   {Intrinsic::round, MVT::nxv2f64, 10},
+   {Intrinsic::round, MVT::nxv4f64, 10},
+   {Intrinsic::round, MVT::nxv8f64, 10},
+};
+
 InstructionCost
 RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                     TTI::TargetCostKind CostKind) {
@@ -262,6 +334,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return Cost + (LT.first - 1);
   }
   default:
+    if (ST->hasVInstructions() && RetTy->isVectorTy()) {
+      auto LT = getTypeLegalizationCost(RetTy);
+      if (const auto *Entry = CostTableLookup(VectorIntrinsicCostTable,
+                                              ICA.getID(), LT.second))
+        return LT.first * Entry->Cost;
+    }
     break;
   }
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
