@@ -4,6 +4,7 @@
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 loop-depth=1' | FileCheck %s --check-prefix UNROLL-INNER-BY-2
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 annotate=true' | FileCheck %s --check-prefix UNROLL-BY-2-ANNOTATE
 // RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=6 unroll-up-to-factor=true' | FileCheck %s --check-prefix UNROLL-UP-TO
+// RUN: mlir-opt %s --affine-loop-unroll='unroll-factor=5 cleanup-unroll=true' | FileCheck %s --check-prefix CLEANUP-UNROLL-BY-5
 
 func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
                           %arg3: memref<?xf32>) {
@@ -314,3 +315,28 @@ func.func @static_loop_unroll_by_3_rename_epilogue_arguments() -> (f32, f32) {
 //  UNROLL-BY-3-NEXT:     scf.yield %[[EADD]], %[[EMUL]] : f32, f32
 //  UNROLL-BY-3-NEXT:   }
 //  UNROLL-BY-3-NEXT:   return %[[EFOR]]#0, %[[EFOR]]#1 : f32, f32
+
+// Test that epilogue clean up loop is generated (trip count is less
+// than an unroll factor).
+func.func @static_loop_unroll_by_5_with_cleanup(%arg0 : memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 3 : index
+  affine.for %i0 = %lb to %ub {
+    memref.store %0, %arg0[%i0] : memref<?xf32>
+  }
+  return
+}
+
+// CLEANUP-UNROLL-BY-5-LABEL: func @static_loop_unroll_by_5_with_cleanup
+//  CLEANUP-UNROLL-BY-5-SAME:  %[[MEM:.*0]]: memref<?xf32>
+//
+//   CLEANUP-UNROLL-BY-5-DAG:  %[[C0:.*]] = arith.constant 0 : index
+//   CLEANUP-UNROLL-BY-5-DAG:  %[[C3:.*]] = arith.constant 3 : index
+//   CLEANUP-UNROLL-BY-5-NEXT: %[[V0:.*]] = affine.apply {{.*}}
+//   CLEANUP-UNROLL-BY-5-NEXT: memref.store %{{.*}}, %[[MEM]][%[[V0]]] : memref<?xf32>
+//   CLEANUP-UNROLL-BY-5-NEXT: %[[V1:.*]] = affine.apply {{.*}}
+//   CLEANUP-UNROLL-BY-5-NEXT: memref.store %{{.*}}, %[[MEM]][%[[V1]]] : memref<?xf32>
+//   CLEANUP-UNROLL-BY-5-NEXT: %[[V2:.*]] = affine.apply {{.*}}
+//   CLEANUP-UNROLL-BY-5-NEXT: memref.store %{{.*}}, %[[MEM]][%[[V2]]] : memref<?xf32>
+//   CLEANUP-UNROLL-BY-5-NEXT: return

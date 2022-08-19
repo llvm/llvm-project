@@ -11621,12 +11621,10 @@ public:
                                       SourceLocation EndLoc);
 
   /// Called on well-formed 'init' clause.
-  OMPClause *ActOnOpenMPInitClause(Expr *InteropVar, ArrayRef<Expr *> PrefExprs,
-                                   bool IsTarget, bool IsTargetSync,
-                                   SourceLocation StartLoc,
-                                   SourceLocation LParenLoc,
-                                   SourceLocation VarLoc,
-                                   SourceLocation EndLoc);
+  OMPClause *
+  ActOnOpenMPInitClause(Expr *InteropVar, OMPInteropInfo &InteropInfo,
+                        SourceLocation StartLoc, SourceLocation LParenLoc,
+                        SourceLocation VarLoc, SourceLocation EndLoc);
 
   /// Called on well-formed 'use' clause.
   OMPClause *ActOnOpenMPUseClause(Expr *InteropVar, SourceLocation StartLoc,
