@@ -1687,6 +1687,61 @@ NamedDecl *Sema::ActOnTemplateTemplateParameter(Scope* S,
   return Param;
 }
 
+namespace {
+class ConstraintRefersToContainingTemplateChecker
+    : public TreeTransform<ConstraintRefersToContainingTemplateChecker> {
+  bool Result = false;
+  unsigned TemplateDepth = 0;
+
+public:
+  using inherited = TreeTransform<ConstraintRefersToContainingTemplateChecker>;
+
+  ConstraintRefersToContainingTemplateChecker(Sema &SemaRef,
+                                              unsigned TemplateDepth)
+      : inherited(SemaRef), TemplateDepth(TemplateDepth) {}
+  bool getResult() const { return Result; }
+
+  // This should be the only template parm type that we have to deal with.
+  // SubstTempalteTypeParmPack, SubstNonTypeTemplateParmPack, and
+  // FunctionParmPackExpr are all partially substituted, which cannot happen
+  // with concepts at this point in translation.
+  QualType TransformTemplateTypeParmType(TypeLocBuilder &TLB,
+                                         TemplateTypeParmTypeLoc TL) {
+    assert(TL.getDecl()->getDepth() <= TemplateDepth &&
+           "Nothing should reference a value below the actual template depth, "
+           "depth is likely wrong");
+    if (TL.getDecl()->getDepth() != TemplateDepth)
+      Result = true;
+    return inherited::TransformTemplateTypeParmType(TLB, TL);
+  }
+
+  Decl *TransformDecl(SourceLocation Loc, Decl *D) {
+    // FIXME : This is possibly an incomplete list, but it is unclear what other
+    // Decl kinds could be used to refer to the template parameters.  This is a
+    // best guess so far based on examples currently available, but the
+    // unreachable should catch future instances/cases.
+    if (auto *TD = dyn_cast<TypedefNameDecl>(D))
+      TransformType(TD->getUnderlyingType());
+    else if (auto *VD = dyn_cast<ValueDecl>(D))
+      TransformType(VD->getType());
+    else if (auto *TD = dyn_cast<TemplateDecl>(D))
+      TransformTemplateParameterList(TD->getTemplateParameters());
+    else if (isa<NamedDecl>(D)) {
+      // No direct types to visit here I believe.
+    } else
+      llvm_unreachable("Don't know how to handle this declaration type yet");
+    return D;
+  }
+};
+} // namespace
+
+bool Sema::ConstraintExpressionDependsOnEnclosingTemplate(
+    unsigned TemplateDepth, const Expr *Constraint) {
+  ConstraintRefersToContainingTemplateChecker Checker(*this, TemplateDepth);
+  Checker.TransformExpr(const_cast<Expr *>(Constraint));
+  return Checker.getResult();
+}
+
 /// ActOnTemplateParameterList - Builds a TemplateParameterList, optionally
 /// constrained by RequiresClause, that contains the template parameters in
 /// Params.
@@ -2288,7 +2343,8 @@ private:
           TTP->isExpandedParameterPack() ?
           llvm::Optional<unsigned>(TTP->getNumExpansionParameters()) : None);
       if (const auto *TC = TTP->getTypeConstraint())
-        SemaRef.SubstTypeConstraint(NewTTP, TC, Args);
+        SemaRef.SubstTypeConstraint(NewTTP, TC, Args,
+                                    /*EvaluateConstraint*/ true);
       if (TTP->hasDefaultArgument()) {
         TypeSourceInfo *InstantiatedDefaultArg =
             SemaRef.SubstType(TTP->getDefaultArgumentInfo(), Args,
@@ -6014,10 +6070,30 @@ bool Sema::CheckTemplateArgumentList(
     TemplateArgs = std::move(NewArgs);
 
   if (!PartialTemplateArgs) {
-    // FIXME: This will be changed a bit once deferred concept instantiation is
-    // implemented.
-    MultiLevelTemplateArgumentList MLTAL;
-    MLTAL.addOuterTemplateArguments(Converted);
+    TemplateArgumentList StackTemplateArgs(TemplateArgumentList::OnStack,
+                                           Converted);
+    // Setup the context/ThisScope for the case where we are needing to
+    // re-instantiate constraints outside of normal instantiation.
+    DeclContext *NewContext = Template->getDeclContext();
+
+    // If this template is in a template, make sure we extract the templated
+    // decl.
+    if (auto *TD = dyn_cast<TemplateDecl>(NewContext))
+      NewContext = Decl::castToDeclContext(TD->getTemplatedDecl());
+    auto *RD = dyn_cast<CXXRecordDecl>(NewContext);
+
+    Qualifiers ThisQuals;
+    if (const auto *Method =
+            dyn_cast_or_null<CXXMethodDecl>(Template->getTemplatedDecl()))
+      ThisQuals = Method->getMethodQualifiers();
+
+    ContextRAII Context(*this, NewContext);
+    CXXThisScopeRAII(*this, RD, ThisQuals, RD != nullptr);
+
+    MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(
+        Template, &StackTemplateArgs, /*RelativeToPrimary*/ true,
+        /*Pattern*/ nullptr,
+        /*LookBeyondLambda*/ true, /*IncludeContainingStruct*/ true);
     if (EnsureTemplateArgumentListConstraints(
             Template, MLTAL,
             SourceRange(TemplateLoc, TemplateArgs.getRAngleLoc()))) {
@@ -7564,7 +7640,9 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
       //   are not considered.
       if (ParamsAC.empty())
         return false;
+
       Template->getAssociatedConstraints(TemplateAC);
+
       bool IsParamAtLeastAsConstrained;
       if (IsAtLeastAsConstrained(Param, ParamsAC, Template, TemplateAC,
                                  IsParamAtLeastAsConstrained))
@@ -7760,10 +7838,10 @@ Sema::BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
 }
 
 /// Match two template parameters within template parameter lists.
-static bool MatchTemplateParameterKind(Sema &S, NamedDecl *New, NamedDecl *Old,
-                                       bool Complain,
-                                     Sema::TemplateParameterListEqualKind Kind,
-                                       SourceLocation TemplateArgLoc) {
+static bool MatchTemplateParameterKind(
+    Sema &S, NamedDecl *New, const NamedDecl *NewInstFrom, NamedDecl *Old,
+    const NamedDecl *OldInstFrom, bool Complain,
+    Sema::TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc) {
   // Check the actual kind (type, non-type, template).
   if (Old->getKind() != New->getKind()) {
     if (Complain) {
@@ -7845,13 +7923,13 @@ static bool MatchTemplateParameterKind(Sema &S, NamedDecl *New, NamedDecl *Old,
   else if (TemplateTemplateParmDecl *OldTTP
                                     = dyn_cast<TemplateTemplateParmDecl>(Old)) {
     TemplateTemplateParmDecl *NewTTP = cast<TemplateTemplateParmDecl>(New);
-    if (!S.TemplateParameterListsAreEqual(NewTTP->getTemplateParameters(),
-                                          OldTTP->getTemplateParameters(),
-                                          Complain,
-                                        (Kind == Sema::TPL_TemplateMatch
-                                           ? Sema::TPL_TemplateTemplateParmMatch
-                                           : Kind),
-                                          TemplateArgLoc))
+    if (!S.TemplateParameterListsAreEqual(
+            NewInstFrom, NewTTP->getTemplateParameters(), OldInstFrom,
+            OldTTP->getTemplateParameters(), Complain,
+            (Kind == Sema::TPL_TemplateMatch
+                 ? Sema::TPL_TemplateTemplateParmMatch
+                 : Kind),
+            TemplateArgLoc))
       return false;
   } else if (Kind != Sema::TPL_TemplateTemplateArgumentMatch) {
     const Expr *NewC = nullptr, *OldC = nullptr;
@@ -7874,10 +7952,8 @@ static bool MatchTemplateParameterKind(Sema &S, NamedDecl *New, NamedDecl *Old,
     }
 
     if (NewC) {
-      llvm::FoldingSetNodeID OldCID, NewCID;
-      OldC->Profile(OldCID, S.Context, /*Canonical=*/true);
-      NewC->Profile(NewCID, S.Context, /*Canonical=*/true);
-      if (OldCID != NewCID) {
+      if (!S.AreConstraintExpressionsEqual(OldInstFrom, OldC, NewInstFrom,
+                                           NewC)) {
         if (Complain)
           Diagnose();
         return false;
@@ -7933,12 +8009,10 @@ void DiagnoseTemplateParameterListArityMismatch(Sema &S,
 ///
 /// \returns True if the template parameter lists are equal, false
 /// otherwise.
-bool
-Sema::TemplateParameterListsAreEqual(TemplateParameterList *New,
-                                     TemplateParameterList *Old,
-                                     bool Complain,
-                                     TemplateParameterListEqualKind Kind,
-                                     SourceLocation TemplateArgLoc) {
+bool Sema::TemplateParameterListsAreEqual(
+    const NamedDecl *NewInstFrom, TemplateParameterList *New,
+    const NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
+    TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc) {
   if (Old->size() != New->size() && Kind != TPL_TemplateTemplateArgumentMatch) {
     if (Complain)
       DiagnoseTemplateParameterListArityMismatch(*this, New, Old, Kind,
@@ -7968,8 +8042,9 @@ Sema::TemplateParameterListsAreEqual(TemplateParameterList *New,
         return false;
       }
 
-      if (!MatchTemplateParameterKind(*this, *NewParm, *OldParm, Complain,
-                                      Kind, TemplateArgLoc))
+      if (!MatchTemplateParameterKind(*this, *NewParm, NewInstFrom, *OldParm,
+                                      OldInstFrom, Complain, Kind,
+                                      TemplateArgLoc))
         return false;
 
       ++NewParm;
@@ -7984,8 +8059,9 @@ Sema::TemplateParameterListsAreEqual(TemplateParameterList *New,
     //   template parameter pack in P (ignoring whether those template
     //   parameters are template parameter packs).
     for (; NewParm != NewParmEnd; ++NewParm) {
-      if (!MatchTemplateParameterKind(*this, *NewParm, *OldParm, Complain,
-                                      Kind, TemplateArgLoc))
+      if (!MatchTemplateParameterKind(*this, *NewParm, NewInstFrom, *OldParm,
+                                      OldInstFrom, Complain, Kind,
+                                      TemplateArgLoc))
         return false;
     }
   }
@@ -8017,10 +8093,8 @@ Sema::TemplateParameterListsAreEqual(TemplateParameterList *New,
     }
 
     if (NewRC) {
-      llvm::FoldingSetNodeID OldRCID, NewRCID;
-      OldRC->Profile(OldRCID, Context, /*Canonical=*/true);
-      NewRC->Profile(NewRCID, Context, /*Canonical=*/true);
-      if (OldRCID != NewRCID) {
+      if (!AreConstraintExpressionsEqual(OldInstFrom, OldRC, NewInstFrom,
+                                         NewRC)) {
         if (Complain)
           Diagnose();
         return false;
