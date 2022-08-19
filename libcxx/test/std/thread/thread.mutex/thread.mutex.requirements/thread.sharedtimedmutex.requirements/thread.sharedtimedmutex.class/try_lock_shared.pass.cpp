@@ -54,7 +54,7 @@ void f()
     assert(!m.try_lock_shared());
     assert(!m.try_lock_shared());
     while(!m.try_lock_shared())
-        ;
+        std::this_thread::yield();
     time_point t1 = Clock::now();
     m.unlock_shared();
     ns d = t1 - t0 - ms(250);
