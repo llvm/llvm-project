@@ -104,6 +104,8 @@ set(LLVM_PLUGIN_EXT @LLVM_PLUGIN_EXT@)
 
 set(LLVM_ON_UNIX @LLVM_ON_UNIX@)
 
+set(LLVM_LIBDIR_SUFFIX @LLVM_LIBDIR_SUFFIX@)
+
 set(LLVM_INCLUDE_DIRS "@LLVM_CONFIG_INCLUDE_DIRS@")
 set(LLVM_LIBRARY_DIRS "@LLVM_CONFIG_LIBRARY_DIRS@")
 
@@ -117,14 +119,6 @@ set(LLVM_APPEND_VC_REV "@LLVM_APPEND_VC_REV@")
 # These are the "main" dirs
 set(LLVM_MAIN_INCLUDE_DIR "@LLVM_CONFIG_MAIN_INCLUDE_DIR@")
 set(LLVM_LIBRARY_DIR "@LLVM_CONFIG_LIBRARY_DIR@")
-
-# Backwards compatibility for anything using the deprecated `LLVM_LIBDIR_SUFFIX`
-# downstream.
-if("{LLVM_LIBRARY_DIR}" MATCHES "lib([^/]*)$")
-  set(LLVM_LIBDIR_SUFFIX "${CMAKE_MATCH_0}")
-else()
-  set(LLVM_LIBDIR_SUFFIX "")
-endif()
 
 # This is a secondary one for generated files
 set(LLVM_INCLUDE_DIR "@LLVM_CONFIG_INCLUDE_DIR@")

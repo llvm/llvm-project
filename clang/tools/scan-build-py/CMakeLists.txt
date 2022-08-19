@@ -88,7 +88,7 @@ foreach(lib ${LibScanbuild})
                      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/libscanbuild/${lib})
   list(APPEND Depends ${CMAKE_BINARY_DIR}/lib/libscanbuild/${lib})
   install(PROGRAMS lib/libscanbuild/${lib}
-          DESTINATION "${CMAKE_INSTALL_LIBDIR}/libscanbuild"
+          DESTINATION lib/libscanbuild
           COMPONENT scan-build-py)
 endforeach()
 
@@ -106,7 +106,7 @@ foreach(resource ${LibScanbuildResources})
                      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/libscanbuild/resources/${resource})
   list(APPEND Depends ${CMAKE_BINARY_DIR}/lib/libscanbuild/resources/${resource})
   install(PROGRAMS lib/libscanbuild/resources/${resource}
-          DESTINATION "${CMAKE_INSTALL_LIBDIR}/libscanbuild/resources"
+          DESTINATION lib/libscanbuild/resources
           COMPONENT scan-build-py)
 endforeach()
 
@@ -122,7 +122,7 @@ foreach(lib ${LibEar})
                      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/lib/libear/${lib})
   list(APPEND Depends ${CMAKE_BINARY_DIR}/lib/libear/${lib})
   install(PROGRAMS lib/libear/${lib}
-          DESTINATION "${CMAKE_INSTALL_LIBDIR}/libear"
+          DESTINATION lib/libear
           COMPONENT scan-build-py)
 endforeach()
 

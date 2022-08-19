@@ -247,6 +247,11 @@ description is in `LLVM-related variables`_ below.
   Control which runtimes are enabled. For example you may want to work on
   libc++ or libc++abi by specifying ``-DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"``.
 
+**LLVM_LIBDIR_SUFFIX**:STRING
+  Extra suffix to append to the directory where libraries are to be
+  installed. On a 64-bit architecture, one could use ``-DLLVM_LIBDIR_SUFFIX=64``
+  to install libraries to ``/usr/lib64``.
+
 **LLVM_PARALLEL_{COMPILE,LINK}_JOBS**:STRING
   Building the llvm toolchain can use a lot of resources, particularly
   linking. These options, when you use the Ninja generator, allow you
@@ -278,10 +283,6 @@ manual, or execute ``cmake --help-variable VARIABLE_NAME``.
 **CMAKE_INSTALL_BINDIR**:PATH
   The path to install executables, relative to the *CMAKE_INSTALL_PREFIX*.
   Defaults to "bin".
-
-**CMAKE_INSTALL_LIBDIR**:PATH
-  The path to install libraries, relative to the *CMAKE_INSTALL_PREFIX*.
-  Defaults to "lib".
 
 **CMAKE_INSTALL_INCLUDEDIR**:PATH
   The path to install header files, relative to the *CMAKE_INSTALL_PREFIX*.
@@ -829,21 +830,6 @@ things to go wrong.  They are also unstable across LLVM versions.
   The path for examples of using LLVM, relative to the *CMAKE_INSTALL_PREFIX*.
   Only matters if *LLVM_BUILD_EXAMPLES* is enabled.
   Defaults to "examples".
-
-Deprecated variables
-~~~~~~~~~~~~~~~~~~~~
-
-These will go away soon. Please try to avoid using them.
-
-**LLVM_LIBDIR_SUFFIX**:STRING
-
-  **Deprecated**: Use ``LLVM_LIBRARY_DIR`` or ``CMAKE_INSTALL_LIBDIR`` instead.
-  Only defined downstream for legacy consumers, not during the build of LLVM
-  itself.
-
-  Extra suffix to append to the directory where libraries are to be
-  installed. On a 64-bit architecture, one could use ``-DLLVM_LIBDIR_SUFFIX=64``
-  to install libraries to ``/usr/lib64``. See also ``CMAKE_INSTALL_LIBDIR``.
 
 CMake Caches
 ============
