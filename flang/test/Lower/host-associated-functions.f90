@@ -33,10 +33,13 @@ contains
   ! CHECK:  %[[VAL_14:.*]] = fir.load %[[VAL_6]] : !fir.ref<i32>
   ! CHECK:  %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (i32) -> i64
   ! CHECK:  %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (i64) -> index
+  ! CHECK:  %[[C0:.*]] = arith.constant 0 : index
+  ! CHECK:  %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_16]], %[[C0]] : index
+  ! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_16]], %[[C0]] : index
   ! CHECK:  %[[VAL_17:.*]] = fir.call @llvm.stacksave() : () -> !fir.ref<i8>
-  ! CHECK:  %[[VAL_18:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_16]] : index) {bindc_name = ".result"}
+  ! CHECK:  %[[VAL_18:.*]] = fir.alloca !fir.char<1,?>(%[[SELECT]] : index) {bindc_name = ".result"}
   ! CHECK:  %[[VAL_19:.*]] = fir.convert %[[VAL_13]] : (() -> ()) -> ((!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>)
-  ! CHECK:  %[[VAL_20:.*]] = fir.call %[[VAL_19]](%[[VAL_18]], %[[VAL_16]]) : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK:  %[[VAL_20:.*]] = fir.call %[[VAL_19]](%[[VAL_18]], %[[SELECT]]) : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
    print *, char_func_dummy()
   end subroutine
 end subroutine
@@ -118,8 +121,11 @@ contains
 ! CHECK:  %[[VAL_13:.*]] = arith.constant 1 : i64
 ! CHECK:  %[[VAL_14:.*]] = arith.addi %[[VAL_12]], %[[VAL_13]] : i64
 ! CHECK:  %[[VAL_15:.*]] = fir.convert %[[VAL_14]] : (i64) -> index
+! CHECK:  %[[C0:.*]] = arith.constant 0 : index
+! CHECK:  %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_15]], %[[C0]] : index
+! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_15]], %[[C0]] : index
 ! CHECK:  %[[VAL_16:.*]] = fir.call @llvm.stacksave() : () -> !fir.ref<i8>
-! CHECK:  %[[VAL_17:.*]] = fir.alloca !fir.array<?xi32>, %[[VAL_15]] {bindc_name = ".result"}
+! CHECK:  %[[VAL_17:.*]] = fir.alloca !fir.array<?xi32>, %[[SELECT]] {bindc_name = ".result"}
    print *, array_func()
   end subroutine
 end subroutine

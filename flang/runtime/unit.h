@@ -119,6 +119,7 @@ public:
   bool Wait(int);
 
 private:
+  static UnitMap &CreateUnitMap();
   static UnitMap &GetUnitMap();
   const char *FrameNextInput(IoErrorHandler &, std::size_t);
   void SetPosition(std::int64_t, IoErrorHandler &); // zero-based
@@ -133,6 +134,7 @@ private:
   void CommitWrites();
   bool CheckDirectAccess(IoErrorHandler &);
   void HitEndOnRead(IoErrorHandler &);
+  std::int32_t ReadHeaderOrFooter(std::int64_t frameOffset);
 
   Lock lock_;
   // TODO: replace with a thread ID

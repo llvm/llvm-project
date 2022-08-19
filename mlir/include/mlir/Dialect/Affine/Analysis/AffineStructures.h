@@ -299,7 +299,8 @@ public:
   /// Append variables of the specified kind after the last variable of that
   /// kind. The coefficient columns corresponding to the added variables are
   /// initialized to zero. `vals` are the Values corresponding to the
-  /// variables. Return the position of the first added column.
+  /// variables. Return the absolute column position (i.e., not relative to the
+  /// kind of variable) of the first appended variable.
   ///
   /// Note: Empty Values are allowed in `vals`.
   unsigned appendDimVar(ValueRange vals);

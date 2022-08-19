@@ -1361,8 +1361,8 @@ bool CallAnalyzer::isGEPFree(GetElementPtrInst &GEP) {
       Operands.push_back(SimpleOp);
     else
       Operands.push_back(Op);
-  return TTI.getUserCost(&GEP, Operands,
-                         TargetTransformInfo::TCK_SizeAndLatency) ==
+  return TTI.getInstructionCost(&GEP, Operands,
+                                TargetTransformInfo::TCK_SizeAndLatency) ==
          TargetTransformInfo::TCC_Free;
 }
 
@@ -1639,7 +1639,7 @@ bool CallAnalyzer::visitPtrToInt(PtrToIntInst &I) {
   if (auto *SROAArg = getSROAArgForValueOrNull(I.getOperand(0)))
     SROAArgValues[&I] = SROAArg;
 
-  return TTI.getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
+  return TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
          TargetTransformInfo::TCC_Free;
 }
 
@@ -1662,7 +1662,7 @@ bool CallAnalyzer::visitIntToPtr(IntToPtrInst &I) {
   if (auto *SROAArg = getSROAArgForValueOrNull(Op))
     SROAArgValues[&I] = SROAArg;
 
-  return TTI.getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
+  return TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
          TargetTransformInfo::TCC_Free;
 }
 
@@ -1692,7 +1692,7 @@ bool CallAnalyzer::visitCastInst(CastInst &I) {
     break;
   }
 
-  return TTI.getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
+  return TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
          TargetTransformInfo::TCC_Free;
 }
 
@@ -2390,7 +2390,7 @@ bool CallAnalyzer::visitUnreachableInst(UnreachableInst &I) {
 bool CallAnalyzer::visitInstruction(Instruction &I) {
   // Some instructions are free. All of the free intrinsics can also be
   // handled by SROA, etc.
-  if (TTI.getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
+  if (TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
       TargetTransformInfo::TCC_Free)
     return true;
 

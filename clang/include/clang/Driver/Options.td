@@ -1985,6 +1985,11 @@ def finline_functions : Flag<["-"], "finline-functions">, Group<f_clang_Group>, 
 def finline_hint_functions: Flag<["-"], "finline-hint-functions">, Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Inline functions which are (explicitly or implicitly) marked inline">;
 def finline : Flag<["-"], "finline">, Group<clang_ignored_f_Group>;
+def finline_max_stacksize_EQ
+    : Joined<["-"], "finline-max-stacksize=">,
+      Group<f_Group>, Flags<[CoreOption, CC1Option]>,
+      HelpText<"Suppress inlining of functions whose stack size exceeds the given value">,
+      MarshallingInfoInt<CodeGenOpts<"InlineMaxStackSize">, "UINT_MAX">;
 defm jmc : BoolFOption<"jmc",
   CodeGenOpts<"JMCInstrument">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enable just-my-code debugging">,
@@ -6914,7 +6919,7 @@ def enable_16bit_types : DXCFlag<"enable-16bit-types">, Alias<fnative_half_type>
 def hlsl_entrypoint : Option<["-"], "hlsl-entry", KIND_SEPARATE>,
                       Group<dxc_Group>,
                       Flags<[CC1Option]>,
-                      MarshallingInfoString<TargetOpts<"HLSLEntry">>,
+                      MarshallingInfoString<TargetOpts<"HLSLEntry">, "\"main\"">,
                       HelpText<"Entry point name for hlsl">;
 def dxc_entrypoint : Option<["--", "/", "-"], "E", KIND_JOINED_OR_SEPARATE>,
                      Group<dxc_Group>,

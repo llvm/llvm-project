@@ -271,14 +271,12 @@ void FlatAffineValueConstraints::reset(unsigned newNumDims,
 
 unsigned FlatAffineValueConstraints::appendDimVar(ValueRange vals) {
   unsigned pos = getNumDimVars();
-  insertVar(VarKind::SetDim, pos, vals);
-  return pos;
+  return insertVar(VarKind::SetDim, pos, vals);
 }
 
 unsigned FlatAffineValueConstraints::appendSymbolVar(ValueRange vals) {
   unsigned pos = getNumSymbolVars();
-  insertVar(VarKind::Symbol, pos, vals);
-  return pos;
+  return insertVar(VarKind::Symbol, pos, vals);
 }
 
 unsigned FlatAffineValueConstraints::insertDimVar(unsigned pos,

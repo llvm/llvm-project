@@ -1752,3 +1752,47 @@ TEST_F(MemorySSATest, TestVisitedBlocks) {
       Updater.moveToPlace(MUD, BB, MemorySSA::BeforeTerminator);
   }
 }
+
+TEST_F(MemorySSATest, TestNoDbgInsts) {
+  SMDiagnostic E;
+  auto M = parseAssemblyString(R"(
+      define void @test() presplitcoroutine {
+      entry:
+        %i = alloca i32
+        call void @llvm.dbg.declare(metadata ptr %i, metadata !6, metadata !DIExpression()), !dbg !10
+        call void @llvm.dbg.value(metadata ptr %i, metadata !6, metadata !DIExpression()), !dbg !10
+        ret void
+      }
+
+      declare void @llvm.dbg.declare(metadata, metadata, metadata) nocallback nofree nosync nounwind readnone speculatable willreturn
+      declare void @llvm.dbg.value(metadata, metadata, metadata) nocallback nofree nosync nounwind readnone speculatable willreturn
+
+      !llvm.dbg.cu = !{!0}
+
+      !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 15.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2, splitDebugInlining: false, nameTableKind: None)
+      !1 = !DIFile(filename: "repro.cpp", directory: ".")
+      !2 = !{}
+      !3 = !{i32 7, !"Dwarf Version", i32 4}
+      !4 = !{i32 2, !"Debug Info Version", i32 3}
+      !5 = !{!"clang version 15.0.0"}
+      !6 = !DILocalVariable(name: "i", scope: !7, file: !1, line: 24, type: !10)
+      !7 = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)
+      !8 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !1, file: !1, line: 23, type: !9, scopeLine: 23, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+      !9 = !DISubroutineType(types: !2)
+      !10 = !DILocation(line: 24, column: 7, scope: !7)
+    )",
+    E, C);
+  ASSERT_TRUE(M);
+  F = M->getFunction("test");
+  ASSERT_TRUE(F);
+  setupAnalyses();
+  MemorySSA &MSSA = *Analyses->MSSA;
+  MemorySSAUpdater Updater(&MSSA);
+
+  BasicBlock &Entry = F->front();
+  auto I = Entry.begin();
+  Instruction *DbgDeclare = cast<Instruction>(I++);
+  Instruction *DbgValue = cast<Instruction>(I++);
+  ASSERT_EQ(MSSA.getMemoryAccess(DbgDeclare), nullptr);
+  ASSERT_EQ(MSSA.getMemoryAccess(DbgValue), nullptr);
+}

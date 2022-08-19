@@ -266,20 +266,19 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   if (opts::ReorderFunctions != RT_NONE &&
       opts::ReorderFunctions != RT_EXEC_COUNT &&
       opts::ReorderFunctions != RT_USER) {
-    Cg = buildCallGraph(BC,
-                        [](const BinaryFunction &BF) {
-                          if (!BF.hasProfile())
-                            return true;
-                          if (BF.getState() != BinaryFunction::State::CFG)
-                            return true;
-                          return false;
-                        },
-                        opts::CgFromPerfData,
-                        false, // IncludeColdCalls
-                        opts::ReorderFunctionsUseHotSize,
-                        opts::CgUseSplitHotSize,
-                        opts::UseEdgeCounts,
-                        opts::CgIgnoreRecursiveCalls);
+    Cg = buildCallGraph(
+        BC,
+        [](const BinaryFunction &BF) {
+          if (!BF.hasProfile())
+            return true;
+          if (BF.getState() != BinaryFunction::State::CFG)
+            return true;
+          return false;
+        },
+        opts::CgFromPerfData,
+        /*IncludeSplitCalls=*/false, opts::ReorderFunctionsUseHotSize,
+        opts::CgUseSplitHotSize, opts::UseEdgeCounts,
+        opts::CgIgnoreRecursiveCalls);
     Cg.normalizeArcWeights();
   }
 

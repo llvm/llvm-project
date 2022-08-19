@@ -17,6 +17,7 @@ namespace npdb {
 
 uint32_t GetLLDBRegisterNumber(llvm::Triple::ArchType arch_type,
                                llvm::codeview::RegisterId register_id);
+uint32_t GetRegisterSize(llvm::codeview::RegisterId register_id);
 
 } // namespace npdb
 } // namespace lldb_private

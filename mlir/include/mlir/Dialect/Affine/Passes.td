@@ -212,6 +212,8 @@ def AffineLoopUnroll : Pass<"affine-loop-unroll", "func::FuncOp"> {
     Option<"unrollFullThreshold", "unroll-full-threshold", "unsigned",
            /*default=*/"1",
            "Unroll all loops with trip count less than or equal to this">,
+    Option<"cleanUpUnroll", "cleanup-unroll", "bool", /*default=*/"false",
+           "Fully unroll the cleanup loop when possible.">,
   ];
 }
 

@@ -18,7 +18,7 @@
 
 // This test doesn't support being run when some headers are not available, since we
 // would need to add significant complexity to make that work.
-// UNSUPPORTED: no-localization, no-threads, no-wide-characters, no-filesystem, libcpp-has-no-incomplete-format, libcpp-has-no-incomplete-ranges
+// UNSUPPORTED: no-localization, no-threads, no-wide-characters, no-filesystem, libcpp-has-no-incomplete-format
 
 // This test only supports being run with the latest Standard, otherwise we'd
 // have to support various versions of the test.

@@ -1074,28 +1074,6 @@ func.func @to_tensor_op_not_writable(%m: memref<?xf32>, %v:  vector<5xf32>,
 
 // -----
 
-// CHECK-LABEL: func @to_memref_op_is_reading
-func.func @to_memref_op_is_reading(%t1: tensor<?xf32> {bufferization.writable = true},
-                                   %idx1: index, %idx2: index, %idx3: index,
-                                   %v1: vector<5xf32>)
-    -> (vector<5xf32>, vector<5xf32>) {
-  // Write + read to/from tensor.
-  //      CHECK: vector.transfer_write
-  // CHECK-SAME: {__inplace_operands_attr__ = ["none", "false", "none"]
-  %1 = vector.transfer_write %v1, %t1[%idx2] : vector<5xf32>, tensor<?xf32>
-  %cst = arith.constant 0.0 : f32
-  %r1 = vector.transfer_read %1[%idx3], %cst : tensor<?xf32>, vector<5xf32>
-
-  // Write + read to/from same memref.
-  %0 = bufferization.to_memref %t1 : memref<?xf32>
-  vector.transfer_write %v1, %0[%idx1] : vector<5xf32>, memref<?xf32>
-  %r2 = vector.transfer_read %0[%idx3], %cst : memref<?xf32>, vector<5xf32>
-
-  return %r1, %r2 : vector<5xf32>, vector<5xf32>
-}
-
-// -----
-
 // CHECK-LABEL: func @inner_func
 func.func @inner_func(%t: tensor<?xf32>) -> tensor<?xf32> {
   //      CHECK: return

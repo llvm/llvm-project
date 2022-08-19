@@ -399,7 +399,12 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
   return false;
 }
 bool Interpret(InterpState &S, APValue &Result) {
+  assert(!S.Current->isRoot());
   CodePtr PC = S.Current->getPC();
+
+  // Empty program.
+  if (!PC)
+    return true;
 
   for (;;) {
     auto Op = PC.read<Opcode>();

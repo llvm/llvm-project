@@ -527,9 +527,6 @@ public:
                                       const SIRegisterInfo &TRI,
                                       SIMachineFunctionInfo &Info) const;
 
-  std::pair<InstructionCost, MVT> getTypeLegalizationCost(const DataLayout &DL,
-                                                          Type *Ty) const;
-
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;
 };

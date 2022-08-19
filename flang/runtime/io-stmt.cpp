@@ -140,16 +140,19 @@ void InternalIoStatementState<DIR>::HandleRelativePosition(std::int64_t n) {
 template <Direction DIR, typename CHAR>
 InternalFormattedIoStatementState<DIR, CHAR>::InternalFormattedIoStatementState(
     Buffer buffer, std::size_t length, const CharType *format,
-    std::size_t formatLength, const char *sourceFile, int sourceLine)
+    std::size_t formatLength, const char *sourceFile, int sourceLine,
+    const Descriptor *formatDescriptor)
     : InternalIoStatementState<DIR>{buffer, length, sourceFile, sourceLine},
-      ioStatementState_{*this}, format_{*this, format, formatLength} {}
+      ioStatementState_{*this}, format_{*this, format, formatLength,
+                                    formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 InternalFormattedIoStatementState<DIR, CHAR>::InternalFormattedIoStatementState(
     const Descriptor &d, const CharType *format, std::size_t formatLength,
-    const char *sourceFile, int sourceLine)
+    const char *sourceFile, int sourceLine, const Descriptor *formatDescriptor)
     : InternalIoStatementState<DIR>{d, sourceFile, sourceLine},
-      ioStatementState_{*this}, format_{*this, format, formatLength} {}
+      ioStatementState_{*this}, format_{*this, format, formatLength,
+                                    formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 void InternalFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
@@ -395,9 +398,9 @@ void ExternalIoStatementState<DIR>::FinishReadingRecord() {
 template <Direction DIR, typename CHAR>
 ExternalFormattedIoStatementState<DIR, CHAR>::ExternalFormattedIoStatementState(
     ExternalFileUnit &unit, const CHAR *format, std::size_t formatLength,
-    const char *sourceFile, int sourceLine)
+    const char *sourceFile, int sourceLine, const Descriptor *formatDescriptor)
     : ExternalIoStatementState<DIR>{unit, sourceFile, sourceLine},
-      format_{*this, format, formatLength} {}
+      format_{*this, format, formatLength, formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 void ExternalFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
@@ -850,10 +853,11 @@ void ChildIoStatementState<DIR>::HandleRelativePosition(std::int64_t n) {
 template <Direction DIR, typename CHAR>
 ChildFormattedIoStatementState<DIR, CHAR>::ChildFormattedIoStatementState(
     ChildIo &child, const CHAR *format, std::size_t formatLength,
-    const char *sourceFile, int sourceLine)
+    const char *sourceFile, int sourceLine, const Descriptor *formatDescriptor)
     : ChildIoStatementState<DIR>{child, sourceFile, sourceLine},
       mutableModes_{child.parent().mutableModes()}, format_{*this, format,
-                                                        formatLength} {}
+                                                        formatLength,
+                                                        formatDescriptor} {}
 
 template <Direction DIR, typename CHAR>
 void ChildFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {

@@ -162,6 +162,7 @@ namespace RISCV {
 
 enum CPUKind : unsigned {
 #define PROC(ENUM, NAME, FEATURES, DEFAULT_MARCH) CK_##ENUM,
+#define TUNE_PROC(ENUM, NAME) CK_##ENUM,
 #include "RISCVTargetParser.def"
 };
 
@@ -179,7 +180,6 @@ StringRef getMArchFromMcpu(StringRef CPU);
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64);
 bool getCPUFeaturesExceptStdExt(CPUKind Kind, std::vector<StringRef> &Features);
-StringRef resolveTuneCPUAlias(StringRef TuneCPU, bool IsRV64);
 
 } // namespace RISCV
 

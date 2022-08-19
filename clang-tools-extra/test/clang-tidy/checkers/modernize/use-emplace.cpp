@@ -62,6 +62,9 @@ public:
   class const_iterator {};
   const_iterator begin() { return const_iterator{}; }
 
+  void push_front(const T &) {}
+  void push_front(T &&) {}
+
   void push_back(const T &) {}
   void push_back(T &&) {}
 
@@ -86,6 +89,9 @@ public:
   void push_back(const T &) {}
   void push_back(T &&) {}
 
+  void push_front(const T &) {}
+  void push_front(T &&) {}
+
   template <typename... Args>
   iterator emplace(const_iterator pos, Args &&...args){};
   template <typename... Args>
@@ -103,6 +109,9 @@ public:
   class iterator {};
   class const_iterator {};
   const_iterator begin() { return const_iterator{}; }
+
+  void push_front(const T &) {}
+  void push_front(T &&) {}
 
   template <typename... Args>
   void emplace_front(Args &&...args){};
@@ -235,6 +244,9 @@ class stack {
 public:
   using value_type = T;
 
+  void push(const T &) {}
+  void push(T &&) {}
+
   template <typename... Args>
   void emplace(Args &&...args){};
 };
@@ -244,6 +256,9 @@ class queue {
 public:
   using value_type = T;
 
+  void push(const T &) {}
+  void push(T &&) {}
+
   template <typename... Args>
   void emplace(Args &&...args){};
 };
@@ -252,6 +267,9 @@ template <typename T>
 class priority_queue {
 public:
   using value_type = T;
+
+  void push(const T &) {}
+  void push(T &&) {}
 
   template <typename... Args>
   void emplace(Args &&...args){};
@@ -667,15 +685,43 @@ void testOtherContainers() {
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
   // CHECK-FIXES: l.emplace_back(42, 41);
 
+  l.push_front(Something(42, 41));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_front
+  // CHECK-FIXES: l.emplace_front(42, 41);
+
   std::deque<Something> d;
   d.push_back(Something(42));
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
   // CHECK-FIXES: d.emplace_back(42);
 
+  d.push_front(Something(42));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_front
+  // CHECK-FIXES: d.emplace_front(42);
+
   llvm::LikeASmallVector<Something> ls;
   ls.push_back(Something(42));
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
   // CHECK-FIXES: ls.emplace_back(42);
+
+  std::stack<Something> s;
+  s.push(Something(42, 41));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace
+  // CHECK-FIXES: s.emplace(42, 41);
+
+  std::queue<Something> q;
+  q.push(Something(42, 41));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace
+  // CHECK-FIXES: q.emplace(42, 41);
+
+  std::priority_queue<Something> pq;
+  pq.push(Something(42, 41));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace
+  // CHECK-FIXES: pq.emplace(42, 41);
+
+  std::forward_list<Something> fl;
+  fl.push_front(Something(42, 41));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_front
+  // CHECK-FIXES: fl.emplace_front(42, 41);
 }
 
 class IntWrapper {

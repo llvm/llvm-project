@@ -52,7 +52,7 @@ distance(_InputIter __first, _InputIter __last)
     return _VSTD::__distance(__first, __last, typename iterator_traits<_InputIter>::iterator_category());
 }
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 // [range.iter.op.distance]
 
@@ -100,7 +100,7 @@ inline namespace __cpo {
 } // namespace __cpo
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

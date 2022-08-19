@@ -732,6 +732,37 @@ public:
 
   path& replace_extension(const path& __replacement = path());
 
+  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.__compare(__rhs.__pn_) == 0;
+  }
+#  if _LIBCPP_STD_VER <= 17
+  friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.__compare(__rhs.__pn_) != 0;
+  }
+  friend _LIBCPP_HIDE_FROM_ABI bool operator<(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.__compare(__rhs.__pn_) < 0;
+  }
+  friend _LIBCPP_HIDE_FROM_ABI bool operator<=(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.__compare(__rhs.__pn_) <= 0;
+  }
+  friend _LIBCPP_HIDE_FROM_ABI bool operator>(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.__compare(__rhs.__pn_) > 0;
+  }
+  friend _LIBCPP_HIDE_FROM_ABI bool operator>=(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.__compare(__rhs.__pn_) >= 0;
+  }
+#  else // _LIBCPP_STD_VER <= 17
+  friend _LIBCPP_HIDE_FROM_ABI strong_ordering operator<=>(const path& __lhs, const path& __rhs) noexcept {
+    return __lhs.__compare(__rhs.__pn_) <=> 0;
+  }
+#  endif // _LIBCPP_STD_VER <= 17
+
+  friend _LIBCPP_HIDE_FROM_ABI path operator/(const path& __lhs, const path& __rhs) {
+    path __result(__lhs);
+    __result /= __rhs;
+    return __result;
+  }
+
   _LIBCPP_HIDE_FROM_ABI
   void swap(path& __rhs) noexcept { __pn_.swap(__rhs.__pn_); }
 
@@ -1035,30 +1066,6 @@ public:
   }
 #endif // !_LIBCPP_HAS_NO_LOCALIZATION
 
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.__compare(__rhs.__pn_) == 0;
-  }
-  friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.__compare(__rhs.__pn_) != 0;
-  }
-  friend _LIBCPP_HIDE_FROM_ABI bool operator<(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.__compare(__rhs.__pn_) < 0;
-  }
-  friend _LIBCPP_HIDE_FROM_ABI bool operator<=(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.__compare(__rhs.__pn_) <= 0;
-  }
-  friend _LIBCPP_HIDE_FROM_ABI bool operator>(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.__compare(__rhs.__pn_) > 0;
-  }
-  friend _LIBCPP_HIDE_FROM_ABI bool operator>=(const path& __lhs, const path& __rhs) noexcept {
-    return __lhs.__compare(__rhs.__pn_) >= 0;
-  }
-
-  friend _LIBCPP_HIDE_FROM_ABI path operator/(const path& __lhs, const path& __rhs) {
-    path __result(__lhs);
-    __result /= __rhs;
-    return __result;
-  }
 private:
   inline _LIBCPP_HIDE_FROM_ABI path&
   __assign_view(__string_view const& __s) noexcept {
