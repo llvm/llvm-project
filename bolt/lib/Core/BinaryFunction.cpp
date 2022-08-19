@@ -31,6 +31,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -1572,8 +1573,9 @@ bool BinaryFunction::scanExternalRefs() {
   if (BC.HasRelocations) {
     for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
       BC.UndefinedSymbols.insert(LI.second);
-    if (FunctionEndLabel)
-      BC.UndefinedSymbols.insert(FunctionEndLabel);
+    for (MCSymbol *const EndLabel : FunctionEndLabels)
+      if (EndLabel)
+        BC.UndefinedSymbols.insert(EndLabel);
   }
 
   clearList(Relocations);
@@ -2843,8 +2845,9 @@ void BinaryFunction::clearDisasmState() {
   if (BC.HasRelocations) {
     for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
       BC.UndefinedSymbols.insert(LI.second);
-    if (FunctionEndLabel)
-      BC.UndefinedSymbols.insert(FunctionEndLabel);
+    for (MCSymbol *const EndLabel : FunctionEndLabels)
+      if (EndLabel)
+        BC.UndefinedSymbols.insert(EndLabel);
   }
 }
 
@@ -4053,7 +4056,7 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
       const MCSymbol *ColdStartSymbol = getSymbol(FragmentNum::cold());
       assert(ColdStartSymbol && ColdStartSymbol->isDefined() &&
              "split function should have defined cold symbol");
-      const MCSymbol *ColdEndSymbol = getFunctionColdEndLabel();
+      const MCSymbol *ColdEndSymbol = getFunctionEndLabel(FragmentNum::cold());
       assert(ColdEndSymbol && ColdEndSymbol->isDefined() &&
              "split function should have defined cold end symbol");
       const uint64_t ColdStartOffset = Layout.getSymbolOffset(*ColdStartSymbol);

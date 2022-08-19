@@ -331,14 +331,13 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
 
   // Emit CFI start
   if (Function.hasCFI()) {
-    assert(Function.getLayout().isHotColdSplit() &&
-           "Exceptions supported only with hot/cold splitting.");
     Streamer.emitCFIStartProc(/*IsSimple=*/false);
     if (Function.getPersonalityFunction() != nullptr)
       Streamer.emitCFIPersonality(Function.getPersonalityFunction(),
                                   Function.getPersonalityEncoding());
-    MCSymbol *LSDASymbol = FF.isSplitFragment() ? Function.getColdLSDASymbol()
-                                                : Function.getLSDASymbol();
+    MCSymbol *LSDASymbol = FF.isSplitFragment()
+                               ? Function.getColdLSDASymbol(FF.getFragmentNum())
+                               : Function.getLSDASymbol();
     if (LSDASymbol)
       Streamer.emitCFILsda(LSDASymbol, BC.LSDAEncoding);
     else
@@ -383,9 +382,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   if (Function.hasCFI())
     Streamer.emitCFIEndProc();
 
-  MCSymbol *EndSymbol = FF.isSplitFragment()
-                            ? Function.getFunctionColdEndLabel()
-                            : Function.getFunctionEndLabel();
+  MCSymbol *EndSymbol = Function.getFunctionEndLabel(FF.getFragmentNum());
   Streamer.emitLabel(EndSymbol);
 
   if (MAI->hasDotTypeDotSizeDirective()) {
@@ -913,8 +910,9 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, bool EmitColdPart) {
   Streamer.emitValueToAlignment(TTypeAlignment);
 
   // Emit the LSDA label.
-  MCSymbol *LSDASymbol =
-      EmitColdPart ? BF.getColdLSDASymbol() : BF.getLSDASymbol();
+  MCSymbol *LSDASymbol = EmitColdPart
+                             ? BF.getColdLSDASymbol(FragmentNum::cold())
+                             : BF.getLSDASymbol();
   assert(LSDASymbol && "no LSDA symbol set");
   Streamer.emitLabel(LSDASymbol);
 
