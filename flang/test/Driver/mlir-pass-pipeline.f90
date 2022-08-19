@@ -26,6 +26,7 @@ end program
 
 ! ALL-NEXT: Canonicalizer
 ! ALL-NEXT: SimplifyRegionLite
+!  O2-NEXT: SimplifyIntrinsics
 !  O2-NEXT: AlgebraicSimplification
 ! ALL-NEXT: CSE
 ! ALL-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd

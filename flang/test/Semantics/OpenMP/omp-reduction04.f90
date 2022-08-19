@@ -14,7 +14,7 @@ program omp_Reduction
   !$omp end parallel do
 
   !ERROR: Variable 'c' on the REDUCTION clause is not definable
-  !$omp parallel do reduction(-:/c/)
+  !$omp parallel do reduction(*:/c/)
   do i = 1, 10
     l = k + 1
   end do

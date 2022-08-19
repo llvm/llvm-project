@@ -165,9 +165,11 @@ inline void createDefaultFIROptimizerPassPipeline(
   pm.addNestedPass<mlir::func::FuncOp>(fir::createCharacterConversionPass());
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLitePass());
-  // Algebraic simplifications may increase code size.
-  if (optLevel.isOptimizingForSpeed())
+  if (optLevel.isOptimizingForSpeed()) {
+    // These passes may increase code size.
+    pm.addPass(fir::createSimplifyIntrinsicsPass());
     pm.addPass(fir::createAlgebraicSimplificationPass(config));
+  }
   pm.addPass(mlir::createCSEPass());
   fir::addMemoryAllocationOpt(pm);
 

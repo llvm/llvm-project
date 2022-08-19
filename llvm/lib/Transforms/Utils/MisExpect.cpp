@@ -40,6 +40,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <numeric>
@@ -71,7 +72,7 @@ bool isMisExpectDiagEnabled(LLVMContext &Ctx) {
   return PGOWarnMisExpect || Ctx.getMisExpectWarningRequested();
 }
 
-uint64_t getMisExpectTolerance(LLVMContext &Ctx) {
+uint32_t getMisExpectTolerance(LLVMContext &Ctx) {
   return std::max(static_cast<uint32_t>(MisExpectTolerance),
                   Ctx.getDiagnosticsMisExpectTolerance());
 }
@@ -118,15 +119,6 @@ void emitMisexpectDiagnostic(Instruction *I, LLVMContext &Ctx,
 
 namespace llvm {
 namespace misexpect {
-
-// TODO: when clang allows c++17, use std::clamp instead
-uint32_t clamp(uint64_t value, uint32_t low, uint32_t hi) {
-  if (value > hi)
-    return hi;
-  if (value < low)
-    return low;
-  return value;
-}
 
 void verifyMisExpect(Instruction &I, ArrayRef<uint32_t> RealWeights,
                      ArrayRef<uint32_t> ExpectedWeights) {
@@ -176,7 +168,7 @@ void verifyMisExpect(Instruction &I, ArrayRef<uint32_t> RealWeights,
 
   // clamp tolerance range to [0, 100)
   auto Tolerance = getMisExpectTolerance(I.getContext());
-  Tolerance = clamp(Tolerance, 0, 99);
+  Tolerance = std::clamp(Tolerance, 0u, 99u);
 
   // Allow users to relax checking by N%  i.e., if they use a 5% tolerance,
   // then we check against 0.95*ScaledThreshold

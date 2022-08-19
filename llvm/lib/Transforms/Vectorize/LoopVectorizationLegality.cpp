@@ -462,8 +462,19 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   return 0;
 }
 
-bool LoopVectorizationLegality::isUniform(Value *V) {
+bool LoopVectorizationLegality::isUniform(Value *V) const {
   return LAI->isUniform(V);
+}
+
+bool LoopVectorizationLegality::isUniformMemOp(Instruction &I) const {
+  Value *Ptr = getLoadStorePointerOperand(&I);
+  if (!Ptr)
+    return false;
+  // Note: There's nothing inherent which prevents predicated loads and
+  // stores from being uniform.  The current lowering simply doesn't handle
+  // it; in particular, the cost model distinguishes scatter/gather from
+  // scalar w/predication, and we currently rely on the scalar path.
+  return isUniform(Ptr) && !blockNeedsPredication(I.getParent());
 }
 
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
@@ -666,7 +677,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           // Non-header phi nodes that have outside uses can be vectorized. Add
           // them to the list of allowed exits.
           // Unsafe cyclic dependencies with header phis are identified during
-          // legalization for reduction, induction and first order
+          // legalization for reduction, induction and fixed order
           // recurrences.
           AllowedExit.insert(&I);
           continue;
@@ -699,7 +710,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // 3. Non-Phis with outside uses when SCEV predicates cannot be used
         // outside the loop - see call to hasOutsideLoopUser in the non-phi
         // handling below
-        // 4. FirstOrderRecurrence phis that can possibly be handled by
+        // 4. FixedOrderRecurrence phis that can possibly be handled by
         // extraction.
         // By recording these, we can then reason about ways to vectorize each
         // of these NotAllowedExit. 
@@ -710,10 +721,10 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           continue;
         }
 
-        if (RecurrenceDescriptor::isFirstOrderRecurrence(Phi, TheLoop,
+        if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop,
                                                          SinkAfter, DT)) {
           AllowedExit.insert(Phi);
-          FirstOrderRecurrences.insert(Phi);
+          FixedOrderRecurrences.insert(Phi);
           continue;
         }
 
@@ -883,12 +894,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
     }
   }
 
-  // For first order recurrences, we use the previous value (incoming value from
+  // For fixed order recurrences, we use the previous value (incoming value from
   // the latch) to check if it dominates all users of the recurrence. Bail out
   // if we have to sink such an instruction for another recurrence, as the
   // dominance requirement may not hold after sinking.
   BasicBlock *LoopLatch = TheLoop->getLoopLatch();
-  if (any_of(FirstOrderRecurrences, [LoopLatch, this](const PHINode *Phi) {
+  if (any_of(FixedOrderRecurrences, [LoopLatch, this](const PHINode *Phi) {
         Instruction *V =
             cast<Instruction>(Phi->getIncomingValueForBlock(LoopLatch));
         return SinkAfter.find(V) != SinkAfter.end();
@@ -1069,9 +1080,9 @@ bool LoopVectorizationLegality::isInductionVariable(const Value *V) const {
   return isInductionPhi(V) || isCastedInductionVariable(V);
 }
 
-bool LoopVectorizationLegality::isFirstOrderRecurrence(
+bool LoopVectorizationLegality::isFixedOrderRecurrence(
     const PHINode *Phi) const {
-  return FirstOrderRecurrences.count(Phi);
+  return FixedOrderRecurrences.count(Phi);
 }
 
 bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) const {
@@ -1096,30 +1107,24 @@ bool LoopVectorizationLegality::blockCanBePredicated(
     if (isa<NoAliasScopeDeclInst>(&I))
       continue;
 
-    // We might be able to hoist the load.
-    if (I.mayReadFromMemory()) {
-      auto *LI = dyn_cast<LoadInst>(&I);
-      if (!LI)
-        return false;
-      if (!SafePtrs.count(LI->getPointerOperand())) {
+    // Loads are handled via masking (or speculated if safe to do so.)
+    if (auto *LI = dyn_cast<LoadInst>(&I)) {
+      if (!SafePtrs.count(LI->getPointerOperand()))
         MaskedOp.insert(LI);
-        continue;
-      }
+      continue;
     }
 
-    if (I.mayWriteToMemory()) {
-      auto *SI = dyn_cast<StoreInst>(&I);
-      if (!SI)
-        return false;
-      // Predicated store requires some form of masking:
-      // 1) masked store HW instruction,
-      // 2) emulation via load-blend-store (only if safe and legal to do so,
-      //    be aware on the race conditions), or
-      // 3) element-by-element predicate check and scalar store.
+    // Predicated store requires some form of masking:
+    // 1) masked store HW instruction,
+    // 2) emulation via load-blend-store (only if safe and legal to do so,
+    //    be aware on the race conditions), or
+    // 3) element-by-element predicate check and scalar store.
+    if (auto *SI = dyn_cast<StoreInst>(&I)) {
       MaskedOp.insert(SI);
       continue;
     }
-    if (I.mayThrow())
+
+    if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow())
       return false;
   }
 

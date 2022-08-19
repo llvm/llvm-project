@@ -2933,6 +2933,15 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
         (match(Op0, m_Not(m_Specific(A))) || match(Op0, m_Not(m_Specific(B)))))
       return BinaryOperator::CreateNot(Builder.CreateAnd(A, B));
 
+    // (~A | C) | (A ^ B) --> ~(A & B) | C
+    // (~B | C) | (A ^ B) --> ~(A & B) | C
+    if (Op0->hasOneUse() && Op1->hasOneUse() &&
+        (match(Op0, m_c_Or(m_Not(m_Specific(A)), m_Value(C))) ||
+         match(Op0, m_c_Or(m_Not(m_Specific(B)), m_Value(C))))) {
+      Value *Nand = Builder.CreateNot(Builder.CreateAnd(A, B), "nand");
+      return BinaryOperator::CreateOr(Nand, C);
+    }
+
     // A | (~A ^ B) --> ~B | A
     // B | (A ^ ~B) --> ~A | B
     if (Op1->hasOneUse() && match(A, m_Not(m_Specific(Op0)))) {

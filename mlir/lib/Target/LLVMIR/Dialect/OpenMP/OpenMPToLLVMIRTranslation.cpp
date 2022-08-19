@@ -973,7 +973,7 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   ompBuilder->applySimd(
       loopInfo,
       loop.if_expr() ? moduleTranslation.lookupValue(loop.if_expr()) : nullptr,
-      simdlen);
+      simdlen, nullptr);
 
   builder.restoreIP(afterIP);
   return success();

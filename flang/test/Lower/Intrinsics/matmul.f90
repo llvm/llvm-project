@@ -4,13 +4,13 @@
 ! Test matmul intrinsic
 
 ! CHECK-LABEL: matmul_test
-! CHECK-SAME: (%[[X:.*]]: !fir.ref<!fir.array<3x1xf32>>{{.*}}, %[[Y:.*]]: !fir.ref<!fir.array<1x3xf32>>{{.*}}, %[[Z:.*]]: !fir.ref<!fir.array<2x2xf32>>{{.*}})
+! CHECK-SAME: (%[[X:.*]]: !fir.ref<!fir.array<3x1xf32>>{{.*}}, %[[Y:.*]]: !fir.ref<!fir.array<1x3xf32>>{{.*}}, %[[Z:.*]]: !fir.ref<!fir.array<3x3xf32>>{{.*}})
 ! CHECK:  %[[RESULT_BOX_ADDR:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xf32>>>
 ! CHECK:  %[[C3:.*]] = arith.constant 3 : index
 ! CHECK:  %[[C1:.*]] = arith.constant 1 : index
 ! CHECK:  %[[C1_0:.*]] = arith.constant 1 : index
 ! CHECK:  %[[C3_1:.*]] = arith.constant 3 : index
-! CHECK:  %[[Z_BOX:.*]] = fir.array_load %[[Z]]({{.*}}) : (!fir.ref<!fir.array<2x2xf32>>, !fir.shape<2>) -> !fir.array<2x2xf32>
+! CHECK:  %[[Z_BOX:.*]] = fir.array_load %[[Z]]({{.*}}) : (!fir.ref<!fir.array<3x3xf32>>, !fir.shape<2>) -> !fir.array<3x3xf32>
 ! CHECK:  %[[X_SHAPE:.*]] = fir.shape %[[C3]], %[[C1]] : (index, index) -> !fir.shape<2>
 ! CHECK:  %[[X_BOX:.*]] = fir.embox %[[X]](%[[X_SHAPE]]) : (!fir.ref<!fir.array<3x1xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<3x1xf32>>
 ! CHECK:  %[[Y_SHAPE:.*]] = fir.shape %[[C1_0]], %[[C3_1]] : (index, index) -> !fir.shape<2>
@@ -31,10 +31,10 @@
 ! CHECK:    {{.*}}fir.array_update
 ! CHECK:    fir.result
 ! CHECK:  }
-! CHECK:  fir.array_merge_store %[[Z_BOX]], %[[Z_COPY_FROM_RESULT]] to %[[Z]] : !fir.array<2x2xf32>, !fir.array<2x2xf32>, !fir.ref<!fir.array<2x2xf32>>
+! CHECK:  fir.array_merge_store %[[Z_BOX]], %[[Z_COPY_FROM_RESULT]] to %[[Z]] : !fir.array<3x3xf32>, !fir.array<3x3xf32>, !fir.ref<!fir.array<3x3xf32>>
 ! CHECK:  fir.freemem %[[RESULT_TMP]] : !fir.heap<!fir.array<?x?xf32>>
 subroutine matmul_test(x,y,z)
-  real :: x(3,1), y(1,3), z(2,2)
+  real :: x(3,1), y(1,3), z(3,3)
   z = matmul(x,y)
 end subroutine
 

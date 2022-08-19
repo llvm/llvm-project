@@ -253,7 +253,6 @@ If there are users of this configuration we are happy to provide support.
 // easier to grep for target specific flags once the feature is complete.
 #  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #    define _LIBCPP_HAS_NO_INCOMPLETE_FORMAT
-#    define _LIBCPP_HAS_NO_INCOMPLETE_RANGES
 #  endif
 
 // Need to detect which libc we're using if we're on Linux.

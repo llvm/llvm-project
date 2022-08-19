@@ -1380,8 +1380,9 @@ public:
     int vector1Size = vector1.getType().cast<VectorType>().getNumElements();
     int vector2Size = vector2.getType().cast<VectorType>().getNumElements();
     if (vector1Size == vector2Size) {
-      rewriter.replaceOpWithNewOp<LLVM::ShuffleVectorOp>(op, vector1, vector2,
-                                                         components);
+      rewriter.replaceOpWithNewOp<LLVM::ShuffleVectorOp>(
+          op, vector1, vector2,
+          LLVM::convertArrayToIndices<int32_t>(components));
       return success();
     }
 

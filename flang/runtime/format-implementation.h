@@ -14,20 +14,47 @@
 #include "emit-encoded.h"
 #include "format.h"
 #include "io-stmt.h"
+#include "memory.h"
 #include "flang/Common/format.h"
 #include "flang/Decimal/decimal.h"
 #include "flang/Runtime/main.h"
 #include <algorithm>
+#include <cstring>
 #include <limits>
 
 namespace Fortran::runtime::io {
 
 template <typename CONTEXT>
 FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
-    const CharType *format, std::size_t formatLength, int maxHeight)
+    const CharType *format, std::size_t formatLength,
+    const Descriptor *formatDescriptor, int maxHeight)
     : maxHeight_{static_cast<std::uint8_t>(maxHeight)}, format_{format},
       formatLength_{static_cast<int>(formatLength)} {
   RUNTIME_CHECK(terminator, maxHeight == maxHeight_);
+  if (!format && formatDescriptor) {
+    // The format is a character array passed via a descriptor.
+    formatLength = formatDescriptor->SizeInBytes() / sizeof(CharType);
+    formatLength_ = static_cast<int>(formatLength);
+    if (formatDescriptor->IsContiguous()) {
+      // Treat the contiguous array as a single character value.
+      format = const_cast<const CharType *>(
+          reinterpret_cast<CharType *>(formatDescriptor->raw().base_addr));
+    } else {
+      // Concatenate its elements into a temporary array.
+      char *p{reinterpret_cast<char *>(
+          AllocateMemoryOrCrash(terminator, formatLength * sizeof(CharType)))};
+      format = p;
+      SubscriptValue at[maxRank];
+      formatDescriptor->GetLowerBounds(at);
+      auto elementBytes{formatDescriptor->ElementBytes()};
+      for (std::size_t j{0}; j < formatLength; ++j) {
+        std::memcpy(p, formatDescriptor->Element<char>(at), elementBytes);
+        p += elementBytes;
+        formatDescriptor->IncrementSubscripts(at);
+      }
+      freeFormat_ = true;
+    }
+  }
   RUNTIME_CHECK(
       terminator, formatLength == static_cast<std::size_t>(formatLength_));
   stack_[0].start = offset_;
@@ -474,6 +501,9 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
 template <typename CONTEXT>
 void FormatControl<CONTEXT>::Finish(Context &context) {
   CueUpNextDataEdit(context, true /* stop at colon or end of FORMAT */);
+  if (freeFormat_) {
+    FreeMemory(const_cast<CharType *>(format_));
+  }
 }
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_

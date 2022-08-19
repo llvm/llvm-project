@@ -221,7 +221,7 @@ add_gen_header(
     ../config/${LIBC_TARGET_OS}/syscall_numbers.h.inc
 )
 
-if(NOT LLVM_LIBC_FULLBUILD)
+if(NOT LLVM_LIBC_FULL_BUILD)
   # We don't install headers in non-fullbuild mode.
   return()
 endif()

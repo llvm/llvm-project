@@ -638,13 +638,6 @@ public:
         SimplifyAndSetOp);
   }
 
-  InstructionCost getInstructionLatency(const Instruction *I) {
-    if (isa<LoadInst>(I))
-      return getST()->getSchedModel().DefaultLoadLatency;
-
-    return BaseT::getInstructionLatency(I);
-  }
-
   virtual Optional<unsigned>
   getCacheSize(TargetTransformInfo::CacheLevel Level) const {
     return Optional<unsigned>(

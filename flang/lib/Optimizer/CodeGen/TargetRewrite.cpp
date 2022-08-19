@@ -475,7 +475,19 @@ public:
       return;
     llvm::SmallVector<mlir::Type> newResTys;
     llvm::SmallVector<mlir::Type> newInTys;
+    llvm::SmallVector<std::pair<unsigned, mlir::NamedAttribute>> savedAttrs;
+    llvm::SmallVector<std::pair<unsigned, mlir::NamedAttribute>> extraAttrs;
     llvm::SmallVector<FixupTy> fixups;
+
+    // Save argument attributes in case there is a shift so we can replace them
+    // correctly.
+    for (auto e : llvm::enumerate(funcTy.getInputs())) {
+      unsigned index = e.index();
+      llvm::ArrayRef<mlir::NamedAttribute> attrs = func.getArgAttrs(index);
+      for (mlir::NamedAttribute attr : attrs) {
+        savedAttrs.push_back({index, attr});
+      }
+    }
 
     // Convert return value(s)
     for (auto ty : funcTy.getResults())
@@ -493,6 +505,10 @@ public:
               doComplexReturn(func, cmplx, newResTys, newInTys, fixups);
           })
           .Default([&](mlir::Type ty) { newResTys.push_back(ty); });
+
+    // Saved potential shift in argument. Handling of result can add arguments
+    // at the beginning of the function signature.
+    unsigned argumentShift = newInTys.size();
 
     // Convert arguments
     llvm::SmallVector<mlir::Type> trailingTys;
@@ -552,9 +568,12 @@ public:
             }
           })
           .Default([&](mlir::Type ty) { newInTys.push_back(ty); });
+
       if (func.getArgAttrOfType<mlir::UnitAttr>(index,
                                                 fir::getHostAssocAttrName())) {
-        func.setArgAttr(index, "llvm.nest", rewriter->getUnitAttr());
+        extraAttrs.push_back(
+            {newInTys.size() - 1,
+             rewriter->getNamedAttr("llvm.nest", rewriter->getUnitAttr())});
       }
     }
 
@@ -715,6 +734,21 @@ public:
         mlir::FunctionType::get(func.getContext(), newInTys, newResTys);
     LLVM_DEBUG(llvm::dbgs() << "new func: " << newFuncTy << '\n');
     func.setType(newFuncTy);
+
+    for (std::pair<unsigned, mlir::NamedAttribute> extraAttr : extraAttrs)
+      func.setArgAttr(extraAttr.first, extraAttr.second.getName(),
+                      extraAttr.second.getValue());
+
+    // Replace attributes to the correct argument if there was an argument shift
+    // to the right.
+    if (argumentShift > 0) {
+      for (std::pair<unsigned, mlir::NamedAttribute> savedAttr : savedAttrs) {
+        func.removeArgAttr(savedAttr.first, savedAttr.second.getName());
+        func.setArgAttr(savedAttr.first + argumentShift,
+                        savedAttr.second.getName(),
+                        savedAttr.second.getValue());
+      }
+    }
 
     for (auto &fixup : fixups)
       if (fixup.finalizer)

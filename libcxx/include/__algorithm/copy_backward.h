@@ -40,7 +40,7 @@ __copy_backward(_InputIterator __first, _InputIterator __last, _OutputIterator _
   return pair<_InputIterator, _OutputIterator>(__ret.first.base(), __ret.second.base());
 }
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 template <class _AlgPolicy, class _Iter1, class _Sent1, class _Iter2,
           __enable_if_t<is_same<_AlgPolicy, _RangeAlgPolicy>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI constexpr pair<_Iter1, _Iter2> __copy_backward(_Iter1 __first, _Sent1 __last, _Iter2 __result) {
@@ -49,7 +49,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr pair<_Iter1, _Iter2> __copy_backward(_Iter1 __fi
   auto __ret           = ranges::copy(std::move(__reverse_range), std::make_reverse_iterator(__result));
   return std::make_pair(__last_iter, __ret.out.base());
 }
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 template <class _BidirectionalIterator1, class _BidirectionalIterator2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _BidirectionalIterator2

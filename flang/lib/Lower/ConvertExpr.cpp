@@ -2504,8 +2504,9 @@ public:
 
     mlir::IndexType idxTy = builder.getIndexType();
     auto lowerSpecExpr = [&](const auto &expr) -> mlir::Value {
-      return builder.createConvert(
+      mlir::Value convertExpr = builder.createConvert(
           loc, idxTy, fir::getBase(converter.genExprValue(expr, stmtCtx)));
+      return fir::factory::genMaxWithZero(builder, loc, convertExpr);
     };
     llvm::SmallVector<mlir::Value> resultLengths;
     auto allocatedResult = [&]() -> llvm::Optional<ExtValue> {

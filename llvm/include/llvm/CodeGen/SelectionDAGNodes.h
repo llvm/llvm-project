@@ -118,6 +118,10 @@ bool isBuildVectorOfConstantSDNodes(const SDNode *N);
 /// ConstantFPSDNode or undef.
 bool isBuildVectorOfConstantFPSDNodes(const SDNode *N);
 
+/// Returns true if the specified node is a vector where all elements can
+/// be truncated to the specified element size without a loss in meaning.
+bool isVectorShrinkable(const SDNode *N, unsigned NewEltSize, bool Signed);
+
 /// Return true if the node has at least one operand and all operands of the
 /// specified node are ISD::UNDEF.
 bool allOperandsUndef(const SDNode *N);

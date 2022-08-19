@@ -34,7 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy> struct _IterOps;
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 struct _RangeAlgPolicy {};
 
 template <>

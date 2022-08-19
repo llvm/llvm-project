@@ -146,7 +146,7 @@ end subroutine test5
 
 ! CHECK-LABEL: func @_QPtest6(
 subroutine test6(c, d, e)
-  character(5) :: c(3)
+  character(5) :: c(2)
   character(5) :: d, e
   ! CHECK: = fir.allocmem !fir.array<2x!fir.char<1,5>>
   ! CHECK: fir.call @realloc
