@@ -67,6 +67,9 @@ class TestContinue(GDBRemoteTestBase):
         process = self.connect(target)
         self.assertPacketLogContains(["vCont;C13:p400.401"])
 
+    # uses 'S13' instead of 's' arm (the pc dance?), testing it on one
+    # arch should be entirely sufficient
+    @skipIf(archs=no_match(["x86_64"]))
     def test_step_multiprocess(self):
         class MyResponder(self.BaseResponder):
             def other(self, packet):
