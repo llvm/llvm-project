@@ -592,41 +592,39 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
 
   for (auto &It : BC.getBinaryFunctions()) {
     BinaryFunction &BF = It.second;
-    int64_t CurrentGnuArgsSize = 0;
 
-    // Have we crossed hot/cold border for split functions?
-    bool SeenCold = false;
+    for (const FunctionFragment FF : BF.getLayout().fragments()) {
+      int64_t CurrentGnuArgsSize = 0;
 
-    for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
-      if (BB->isCold() && !SeenCold) {
-        SeenCold = true;
-        CurrentGnuArgsSize = 0;
-      }
-
-      // First convert GnuArgsSize annotations into CFIs. This may change instr
-      // pointers, so do it before recording ptrs for preserved annotations
-      if (BF.usesGnuArgsSize()) {
-        for (auto II = BB->begin(); II != BB->end(); ++II) {
-          if (!BC.MIB->isInvoke(*II))
-            continue;
-          const int64_t NewGnuArgsSize = BC.MIB->getGnuArgsSize(*II);
-          assert(NewGnuArgsSize >= 0 && "expected non-negative GNU_args_size");
-          if (NewGnuArgsSize != CurrentGnuArgsSize) {
-            auto InsertII = BF.addCFIInstruction(
-                BB, II,
-                MCCFIInstruction::createGnuArgsSize(nullptr, NewGnuArgsSize));
-            CurrentGnuArgsSize = NewGnuArgsSize;
-            II = std::next(InsertII);
+      for (BinaryBasicBlock *const BB : FF) {
+        // First convert GnuArgsSize annotations into CFIs. This may change
+        // instr pointers, so do it before recording ptrs for preserved
+        // annotations
+        if (BF.usesGnuArgsSize()) {
+          for (auto II = BB->begin(); II != BB->end(); ++II) {
+            if (!BC.MIB->isInvoke(*II))
+              continue;
+            const int64_t NewGnuArgsSize = BC.MIB->getGnuArgsSize(*II);
+            assert(NewGnuArgsSize >= 0 &&
+                   "expected non-negative GNU_args_size");
+            if (NewGnuArgsSize != CurrentGnuArgsSize) {
+              auto InsertII = BF.addCFIInstruction(
+                  BB, II,
+                  MCCFIInstruction::createGnuArgsSize(nullptr, NewGnuArgsSize));
+              CurrentGnuArgsSize = NewGnuArgsSize;
+              II = std::next(InsertII);
+            }
           }
         }
-      }
 
-      // Now record preserved annotations separately and then strip annotations.
-      for (auto II = BB->begin(); II != BB->end(); ++II) {
-        if (BF.requiresAddressTranslation() && BC.MIB->getOffset(*II))
-          PreservedOffsetAnnotations.emplace_back(&(*II),
-                                                  *BC.MIB->getOffset(*II));
-        BC.MIB->stripAnnotations(*II);
+        // Now record preserved annotations separately and then strip
+        // annotations.
+        for (auto II = BB->begin(); II != BB->end(); ++II) {
+          if (BF.requiresAddressTranslation() && BC.MIB->getOffset(*II))
+            PreservedOffsetAnnotations.emplace_back(&(*II),
+                                                    *BC.MIB->getOffset(*II));
+          BC.MIB->stripAnnotations(*II);
+        }
       }
     }
   }
