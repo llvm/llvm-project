@@ -13380,8 +13380,12 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
     // Provide a specific diagnostic for uninitialized variable
     // definitions with incomplete array type.
     if (Type->isIncompleteArrayType()) {
-      Diag(Var->getLocation(),
-           diag::err_typecheck_incomplete_array_needs_initializer);
+      if (Var->isConstexpr())
+        Diag(Var->getLocation(), diag::err_constexpr_var_requires_const_init)
+            << Var;
+      else
+        Diag(Var->getLocation(),
+             diag::err_typecheck_incomplete_array_needs_initializer);
       Var->setInvalidDecl();
       return;
     }
