@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SUPPORT_CPP_BIT_H
 #define LLVM_LIBC_SUPPORT_CPP_BIT_H
 
-namespace __llvm_libc::cpp {
+namespace __llvm_libc {
 
 #if defined __has_builtin
 #if __has_builtin(__builtin_bit_cast)
@@ -43,6 +43,6 @@ template <class To, class From> constexpr To bit_cast(const From &from) {
 #endif // defined(LLVM_LIBC_HAS_BUILTIN_BIT_CAST)
 }
 
-} // namespace __llvm_libc::cpp
+} // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SUPPORT_CPP_BIT_H
