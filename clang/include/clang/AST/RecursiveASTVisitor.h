@@ -73,7 +73,8 @@ struct has_same_member_pointer_type<R (T::*)(P...), R (U::*)(P...)>
 /// are pointers to the same non-static member function.
 template <typename FirstMethodPtrTy, typename SecondMethodPtrTy>
 LLVM_ATTRIBUTE_ALWAYS_INLINE LLVM_ATTRIBUTE_NODEBUG auto
-isSameMethod(FirstMethodPtrTy FirstMethodPtr, SecondMethodPtrTy SecondMethodPtr)
+isSameMethod([[maybe_unused]] FirstMethodPtrTy FirstMethodPtr,
+             [[maybe_unused]] SecondMethodPtrTy SecondMethodPtr)
     -> bool {
   if constexpr (has_same_member_pointer_type<FirstMethodPtrTy,
                                              SecondMethodPtrTy>::value)
