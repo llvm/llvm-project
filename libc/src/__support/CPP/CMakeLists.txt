@@ -103,12 +103,6 @@ add_header_library(
 )
 
 add_header_library(
-  blockstore
-  HDRS
-    blockstore.h
-)
-
-add_header_library(
   error
   HDRS
     error.h
