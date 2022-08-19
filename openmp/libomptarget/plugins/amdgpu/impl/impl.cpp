@@ -14,8 +14,8 @@
  * Data
  */
 
-bool already_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress) {
-  bool already_locked = false;
+bool is_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress) {
+  bool is_locked = false;
   hsa_status_t err = HSA_STATUS_SUCCESS;
   hsa_amd_pointer_info_t info;
   info.size = sizeof(hsa_amd_pointer_info_t);
@@ -24,9 +24,9 @@ bool already_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress) {
   if (err != HSA_STATUS_SUCCESS)
     DP("Error when getting pointer info\n");
   else
-    already_locked = (info.type == HSA_EXT_POINTER_TYPE_LOCKED);
+    is_locked = (info.type == HSA_EXT_POINTER_TYPE_LOCKED);
 
-  if (already_locked && agentBaseAddress != nullptr) {
+  if (is_locked && agentBaseAddress != nullptr) {
     // When user passes in a basePtr+offset we need to fix the
     // locked pointer to include the offset: ROCr always returns
     // the base locked address, not the shifted one.
@@ -37,7 +37,7 @@ bool already_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress) {
 
   if (err_p)
     *err_p = err;
-  return already_locked;
+  return is_locked;
 }
 
 hsa_status_t wait_for_signal(hsa_signal_t signal, hsa_signal_value_t init,
@@ -82,7 +82,7 @@ static hsa_status_t locking_async_memcpy(enum CopyDirection direction,
   hsa_status_t err;
 
   void *lockedPtr = nullptr;
-  if (!already_locked(lockingPtr, &err, &lockedPtr)) {
+  if (!is_locked(lockingPtr, &err, &lockedPtr)) {
     if (err != HSA_STATUS_SUCCESS)
       return err;
     *user_locked = false;

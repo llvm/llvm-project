@@ -1303,7 +1303,7 @@ public:
     SmallPoolTy::PtrVecTy AllPtrs = SmallPoolMgr.getAllPoolPtrs();
     for (const auto &e : AllPtrs) {
       hsa_status_t err = HSA_STATUS_SUCCESS;
-      assert(already_locked(e, &err, nullptr));
+      assert(is_locked(e, &err, nullptr));
 
       DP("Calling hsa_amd_memory_unlock in RTLDeviceInfoTy dtor for PoolPtr "
          "%p\n",
@@ -1776,6 +1776,10 @@ hsa_status_t AMDGPUAsyncInfoQueueTy::synchronize() {
 
 /// Get a pointer from a small pool, given a host pointer
 void *prepareHstPtrForDataRetrieve(size_t Size, void *HstPtr) {
+  // user-locked data does not need the pool
+  if (is_locked(HstPtr, /*err_p=*/nullptr, /*agentBaseAddress=*/nullptr))
+    return HstPtr;
+
   void *PoolPtr = SmallPoolMgr.allocateFromPool(Size, HstPtr);
   if (PoolPtr != nullptr) {
     DP("prepareHstPtrForDataRetrieve: HostPtr %p PoolPtr %p\n", HstPtr,
@@ -1825,6 +1829,10 @@ int32_t dataRetrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr, int64_t Size,
 /// Get a pointer from a small pool, given a HstPtr. Perform copy-in to the pool
 /// pointer since data transfer will use the pool pointer
 void *prepareHstPtrForDataSubmit(size_t Size, void *HstPtr) {
+  // user-locked data does not need the pool
+  if (is_locked(HstPtr, /*err_p=*/nullptr, /*agentBaseAddress=*/nullptr))
+    return HstPtr;
+
   void *PoolPtr = SmallPoolMgr.allocateFromPool(Size, HstPtr);
   if (PoolPtr != nullptr) {
     DP("dataSubmit: memcpy %lu bytes from HstPtr %p to PoolPtr %p\n", Size,
@@ -3782,7 +3790,7 @@ hsa_status_t lock_memory(void **mem, size_t size) {
   void *lockedPtr = nullptr;
   hsa_status_t err = HSA_STATUS_SUCCESS;
 
-  if (already_locked(*mem, &err, nullptr))
+  if (is_locked(*mem, &err, nullptr))
     return HSA_STATUS_SUCCESS;
 
   err = hsa_amd_memory_lock(*mem, size, nullptr, 0, (void **)&lockedPtr);
@@ -3795,7 +3803,7 @@ hsa_status_t lock_memory(void **mem, size_t size) {
 
 hsa_status_t unlock_memory(void *mem) {
   hsa_status_t err = HSA_STATUS_SUCCESS;
-  if (already_locked(mem, &err, nullptr))
+  if (is_locked(mem, &err, nullptr))
     err = hsa_amd_memory_unlock(mem);
   return err;
 }

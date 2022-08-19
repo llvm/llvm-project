@@ -23,7 +23,7 @@ extern "C" {
 // The new pointer, accessible by the HSA agents that were passed in to the
 // original lock function, is returned in the memory location pointed to by
 // agentBaseAddress. If this parameter is NULL, the pointer is not returned
-bool already_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress);
+bool is_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress);
 
 // wait for signal to turn to success
 hsa_status_t wait_for_signal(hsa_signal_t signal, hsa_signal_value_t init,
