@@ -12,6 +12,7 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/Exceptions.h"
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Core/Relocation.h"
@@ -3181,12 +3182,15 @@ void RewriteInstance::emitAndLink() {
     if (Section)
       BC->deregisterSection(*Section);
     assert(Function->getOriginSectionName() && "expected origin section");
-    Function->CodeSectionName = std::string(*Function->getOriginSectionName());
-    if (Function->isSplit()) {
-      if (ErrorOr<BinarySection &> ColdSection = Function->getColdCodeSection())
+    Function->CodeSectionName = Function->getOriginSectionName()->str();
+    for (const FunctionFragment FF :
+         Function->getLayout().getSplitFragments()) {
+      if (ErrorOr<BinarySection &> ColdSection =
+              Function->getColdCodeSection(FF.getFragmentNum()))
         BC->deregisterSection(*ColdSection);
-      Function->ColdCodeSectionName = std::string(getBOLTTextSectionName());
     }
+    if (Function->getLayout().isSplit())
+      Function->ColdCodeSectionName = getBOLTTextSectionName().str();
   }
 
   if (opts::PrintCacheMetrics) {
@@ -3722,34 +3726,37 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
     if (!Function.isSplit())
       continue;
 
-    ErrorOr<BinarySection &> ColdSection = Function.getColdCodeSection();
-    assert(ColdSection && "cannot find section for cold part");
-    // Cold fragments are aligned at 16 bytes.
-    NextAvailableAddress = alignTo(NextAvailableAddress, 16);
-    BinaryFunction::FragmentInfo &ColdPart = Function.cold();
-    if (TooLarge) {
-      // The corresponding FDE will refer to address 0.
-      ColdPart.setAddress(0);
-      ColdPart.setImageAddress(0);
-      ColdPart.setImageSize(0);
-      ColdPart.setFileOffset(0);
-    } else {
-      ColdPart.setAddress(NextAvailableAddress);
-      ColdPart.setImageAddress(ColdSection->getAllocAddress());
-      ColdPart.setImageSize(ColdSection->getOutputSize());
-      ColdPart.setFileOffset(getFileOffsetForAddress(NextAvailableAddress));
-      ColdSection->setOutputAddress(ColdPart.getAddress());
+    for (const FunctionFragment FF : Function.getLayout().getSplitFragments()) {
+      ErrorOr<BinarySection &> ColdSection =
+          Function.getColdCodeSection(FF.getFragmentNum());
+      assert(ColdSection && "cannot find section for cold part");
+      // Cold fragments are aligned at 16 bytes.
+      NextAvailableAddress = alignTo(NextAvailableAddress, 16);
+      BinaryFunction::FragmentInfo &ColdPart = Function.cold();
+      if (TooLarge) {
+        // The corresponding FDE will refer to address 0.
+        ColdPart.setAddress(0);
+        ColdPart.setImageAddress(0);
+        ColdPart.setImageSize(0);
+        ColdPart.setFileOffset(0);
+      } else {
+        ColdPart.setAddress(NextAvailableAddress);
+        ColdPart.setImageAddress(ColdSection->getAllocAddress());
+        ColdPart.setImageSize(ColdSection->getOutputSize());
+        ColdPart.setFileOffset(getFileOffsetForAddress(NextAvailableAddress));
+        ColdSection->setOutputAddress(ColdPart.getAddress());
+      }
+
+      LLVM_DEBUG(dbgs() << "BOLT: mapping cold fragment 0x"
+                        << Twine::utohexstr(ColdPart.getImageAddress())
+                        << " to 0x" << Twine::utohexstr(ColdPart.getAddress())
+                        << " with size "
+                        << Twine::utohexstr(ColdPart.getImageSize()) << '\n');
+      RTDyld.reassignSectionAddress(ColdSection->getSectionID(),
+                                    ColdPart.getAddress());
+
+      NextAvailableAddress += ColdPart.getImageSize();
     }
-
-    LLVM_DEBUG(dbgs() << "BOLT: mapping cold fragment 0x"
-                      << Twine::utohexstr(ColdPart.getImageAddress())
-                      << " to 0x" << Twine::utohexstr(ColdPart.getAddress())
-                      << " with size "
-                      << Twine::utohexstr(ColdPart.getImageSize()) << '\n');
-    RTDyld.reassignSectionAddress(ColdSection->getSectionID(),
-                                  ColdPart.getAddress());
-
-    NextAvailableAddress += ColdPart.getImageSize();
   }
 
   // Add the new text section aggregating all existing code sections.
@@ -4511,17 +4518,20 @@ void RewriteInstance::updateELFSymbolTable(
       Symbols.emplace_back(ICFSymbol);
     }
     if (Function.isSplit() && Function.cold().getAddress()) {
-      ELFSymTy NewColdSym = FunctionSymbol;
-      SmallVector<char, 256> Buf;
-      NewColdSym.st_name =
-          AddToStrTab(Twine(cantFail(FunctionSymbol.getName(StringSection)))
-                          .concat(".cold.0")
-                          .toStringRef(Buf));
-      NewColdSym.st_shndx = Function.getColdCodeSection()->getIndex();
-      NewColdSym.st_value = Function.cold().getAddress();
-      NewColdSym.st_size = Function.cold().getImageSize();
-      NewColdSym.setBindingAndType(ELF::STB_LOCAL, ELF::STT_FUNC);
-      Symbols.emplace_back(NewColdSym);
+      for (const FunctionFragment FF :
+           Function.getLayout().getSplitFragments()) {
+        ELFSymTy NewColdSym = FunctionSymbol;
+        const SmallString<256> Buf = formatv(
+            "{0}.cold.{1}", cantFail(FunctionSymbol.getName(StringSection)),
+            FF.getFragmentNum().get() - 1);
+        NewColdSym.st_name = AddToStrTab(Buf);
+        NewColdSym.st_shndx =
+            Function.getColdCodeSection(FF.getFragmentNum())->getIndex();
+        NewColdSym.st_value = Function.cold().getAddress();
+        NewColdSym.st_size = Function.cold().getImageSize();
+        NewColdSym.setBindingAndType(ELF::STB_LOCAL, ELF::STT_FUNC);
+        Symbols.emplace_back(NewColdSym);
+      }
     }
     if (Function.hasConstantIsland()) {
       uint64_t DataMark = Function.getOutputDataAddress();
@@ -4636,6 +4646,9 @@ void RewriteInstance::updateELFSymbolTable(
               : nullptr;
 
       if (Function && Function->isEmitted()) {
+        assert(Function->getLayout().isHotColdSplit() &&
+               "Adding symbols based on cold fragment when there are more than "
+               "2 fragments");
         const uint64_t OutputAddress =
             Function->translateInputToOutputAddress(Symbol.st_value);
 
@@ -4645,7 +4658,7 @@ void RewriteInstance::updateELFSymbolTable(
         NewSymbol.st_shndx =
             OutputAddress >= Function->cold().getAddress() &&
                     OutputAddress < Function->cold().getImageSize()
-                ? Function->getColdCodeSection()->getIndex()
+                ? Function->getColdCodeSection(FragmentNum::cold())->getIndex()
                 : Function->getCodeSection()->getIndex();
       } else {
         // Check if the symbol belongs to moved data object and update it.

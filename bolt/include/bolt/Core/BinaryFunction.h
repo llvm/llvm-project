@@ -568,7 +568,7 @@ private:
   };
   SmallVector<BasicBlockOffset, 0> BasicBlockOffsets;
 
-  MCSymbol *ColdSymbol{nullptr};
+  SmallVector<MCSymbol *, 0> ColdSymbols;
 
   /// Symbol at the end of the function.
   mutable MCSymbol *FunctionEndLabel{nullptr};
@@ -1081,7 +1081,23 @@ public:
 
   /// Return MC symbol associated with the function.
   /// All references to the function should use this symbol.
-  MCSymbol *getSymbol() { return Symbols[0]; }
+  MCSymbol *getSymbol(const FragmentNum Fragment = FragmentNum::hot()) {
+    if (Fragment == FragmentNum::hot())
+      return Symbols[0];
+
+    size_t ColdSymbolIndex = Fragment.get() - 1;
+    if (ColdSymbolIndex >= ColdSymbols.size())
+      ColdSymbols.resize(ColdSymbolIndex + 1);
+
+    MCSymbol *&ColdSymbol = ColdSymbols[ColdSymbolIndex];
+    if (ColdSymbol == nullptr) {
+      SmallString<10> Appendix = formatv(".cold.{0}", ColdSymbolIndex);
+      ColdSymbol = BC.Ctx->getOrCreateSymbol(
+          NameResolver::append(Symbols[0]->getName(), Appendix));
+    }
+
+    return ColdSymbol;
+  }
 
   /// Return MC symbol associated with the function (const version).
   /// All references to the function should use this symbol.
@@ -1134,16 +1150,6 @@ public:
   ///
   /// Return true of all callbacks returned true, false otherwise.
   bool forEachEntryPoint(EntryPointCallbackTy Callback) const;
-
-  MCSymbol *getColdSymbol() {
-    if (ColdSymbol)
-      return ColdSymbol;
-
-    ColdSymbol = BC.Ctx->getOrCreateSymbol(
-        NameResolver::append(getSymbol()->getName(), ".cold.0"));
-
-    return ColdSymbol;
-  }
 
   /// Return MC symbol associated with the end of the function.
   MCSymbol *getFunctionEndLabel() const {
@@ -1323,8 +1329,11 @@ public:
   }
 
   /// Return cold code section name for the function.
-  StringRef getColdCodeSectionName() const {
-    return StringRef(ColdCodeSectionName);
+  std::string getColdCodeSectionName(const FragmentNum Fragment) const {
+    std::string Result = ColdCodeSectionName;
+    if (Fragment != FragmentNum::cold())
+      Result.append(".").append(std::to_string(Fragment.get() - 1));
+    return Result;
   }
 
   /// Assign a section name for the cold part of the function.
@@ -1333,8 +1342,9 @@ public:
   }
 
   /// Get output code section for cold code of this function.
-  ErrorOr<BinarySection &> getColdCodeSection() const {
-    return BC.getUniqueSectionByName(getColdCodeSectionName());
+  ErrorOr<BinarySection &>
+  getColdCodeSection(const FragmentNum Fragment) const {
+    return BC.getUniqueSectionByName(getColdCodeSectionName(Fragment));
   }
 
   /// Return true iif the function will halt execution on entry.

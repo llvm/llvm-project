@@ -66,6 +66,10 @@ private:
       : Num(Num), Layout(Layout) {}
 
 public:
+  FragmentNum getFragmentNum() const { return Num; }
+  bool isMainFragment() const { return Num.get() == 0; }
+  bool isSplitFragment() const { return Num.get() > 0; }
+
   unsigned size() const;
   bool empty() const;
   const_iterator begin() const;
@@ -152,6 +156,18 @@ public:
 
   /// Return the fragment identified by Num.
   FunctionFragment getFragment(FragmentNum Num) const;
+
+  /// Get the fragment that contains all entry blocks and other blocks that
+  /// cannot be split.
+  FunctionFragment getMainFragment() const {
+    return getFragment(FragmentNum::hot());
+  }
+
+  /// Get the fragment that contains all entry blocks and other blocks that
+  /// cannot be split.
+  iterator_range<const_iterator> getSplitFragments() const {
+    return {++fragment_begin(), fragment_end()};
+  }
 
   /// Find the fragment that contains BB.
   FunctionFragment findFragment(const BinaryBasicBlock *BB) const;
