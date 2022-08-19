@@ -29,5 +29,5 @@ macro(_GNUInstallPackageDir_cache_path var default description)
   _GNUInstallPackageDir_cache_convert_to_path("${var}" "${description}")
 endmacro()
 
-_GNUInstallPackageDir_cache_path(CMAKE_INSTALL_PACKAGEDIR "lib${LLVM_LIBDIR_SUFFIX}/cmake"
+_GNUInstallPackageDir_cache_path(CMAKE_INSTALL_PACKAGEDIR "${CMAKE_INSTALL_LIBDIR}/cmake"
   "Directories containing installed CMake modules (lib/cmake)")

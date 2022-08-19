@@ -7,12 +7,12 @@ include(FindPrefixFromConfig)
 set(POLLY_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/polly" CACHE STRING
   "Path for CMake subdirectory for Polly (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/polly')")
 # CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
-set(polly_cmake_builddir "${POLLY_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/polly")
+set(polly_cmake_builddir "${POLLY_BINARY_DIR}/lib/cmake/polly")
 
 set(LLVM_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/llvm" CACHE STRING
   "Path for CMake subdirectory for LLVM (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/llvm')")
 # CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
-set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
+set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/lib/cmake/llvm")
 
 if (CMAKE_CONFIGURATION_TYPES)
   set(POLLY_EXPORTS_FILE_NAME "PollyExports-$<LOWER_CASE:$<CONFIG>>.cmake")
@@ -93,7 +93,7 @@ unset(POLLY_EXPORTS)
 find_prefix_from_config(POLLY_CONFIG_CODE POLLY_INSTALL_PREFIX "${POLLY_INSTALL_PACKAGE_DIR}")
 extend_path(POLLY_CONFIG_LLVM_CMAKE_DIR "\${POLLY_INSTALL_PREFIX}" "${LLVM_INSTALL_PACKAGE_DIR}")
 extend_path(POLLY_CONFIG_CMAKE_DIR "\${POLLY_INSTALL_PREFIX}" "${POLLY_INSTALL_PACKAGE_DIR}")
-extend_path(POLLY_CONFIG_LIBRARY_DIRS "\${POLLY_INSTALL_PREFIX}" "lib${LLVM_LIBDIR_SUFFIX}")
+extend_path(POLLY_CONFIG_LIBRARY_DIRS "\${POLLY_INSTALL_PREFIX}" "${CMAKE_INSTALL_LIBDIR}")
 extend_path(base_includedir "\${POLLY_INSTALL_PREFIX}" "${CMAKE_INSTALL_INCLUDEDIR}")
 if (POLLY_BUNDLED_ISL)
   set(POLLY_CONFIG_INCLUDE_DIRS

@@ -175,7 +175,7 @@ bool HostInfoLinux::ComputeSupportExeDirectory(FileSpec &file_spec) {
 }
 
 bool HostInfoLinux::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
-  FileSpec temp_file("/usr/lib" LLDB_LIBDIR_SUFFIX "/lldb/plugins");
+  FileSpec temp_file("/usr/" LLDB_INSTALL_LIBDIR_BASENAME "/lldb/plugins");
   FileSystem::Instance().Resolve(temp_file);
   file_spec.SetDirectory(temp_file.GetPath());
   return true;

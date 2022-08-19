@@ -3,7 +3,7 @@ include(LLVMDistributionSupport)
 include(FindPrefixFromConfig)
 
 # CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
-set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
+set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/lib/cmake/llvm")
 
 # First for users who use an installed LLVM, create the LLVMExports.cmake file.
 set(LLVM_EXPORTS_FILE ${llvm_cmake_builddir}/LLVMExports.cmake)
@@ -125,7 +125,7 @@ set(LLVM_CONFIG_INCLUDE_DIRS
   )
 list(REMOVE_DUPLICATES LLVM_CONFIG_INCLUDE_DIRS)
 
-extend_path(LLVM_CONFIG_LIBRARY_DIR "\${LLVM_INSTALL_PREFIX}" "lib\${LLVM_LIBDIR_SUFFIX}")
+extend_path(LLVM_CONFIG_LIBRARY_DIR "\${LLVM_INSTALL_PREFIX}" "${CMAKE_INSTALL_LIBDIR}")
 set(LLVM_CONFIG_LIBRARY_DIRS
   "${LLVM_CONFIG_LIBRARY_DIR}"
   # FIXME: Should there be other entries here?

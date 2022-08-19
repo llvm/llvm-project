@@ -408,8 +408,12 @@ function(mlir_python_setup_extension_rpath target)
     get_filename_component(_real_lib_dir "${LLVM_LIBRARY_OUTPUT_INTDIR}" REALPATH)
     set_property(TARGET ${target} APPEND PROPERTY
       BUILD_RPATH "${_real_lib_dir}")
-    set_property(TARGET ${target} APPEND PROPERTY
-      INSTALL_RPATH "${_origin_prefix}/${ARG_RELATIVE_INSTALL_ROOT}/lib${LLVM_LIBDIR_SUFFIX}")
+    if(NOT IS_ABSOLUTE "${CMAKE_INSTALL_LIBDIR}")
+      set(install_rpath "${_origin_prefix}/${ARG_RELATIVE_INSTALL_ROOT}/${CMAKE_INSTALL_LIBDIR}")
+	else()
+	  set(install_rpath "${CMAKE_INSTALL_LIBDIR}")
+	endif()
+    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${install_rpath}")
   endif()
 endfunction()
 
