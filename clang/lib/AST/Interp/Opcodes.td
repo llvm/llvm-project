@@ -73,6 +73,10 @@ def PtrTypeClass : TypeClass {
   let Types = [Ptr];
 }
 
+def BoolTypeClass : TypeClass {
+  let Types = [Bool];
+}
+
 def AllTypeClass : TypeClass {
   let Types = !listconcat(AluTypeClass.Types, PtrTypeClass.Types);
 }
@@ -382,6 +386,37 @@ def SubOffset : AluOpcode;
 def Sub : AluOpcode;
 def Add : AluOpcode;
 def Mul : AluOpcode;
+
+
+//===----------------------------------------------------------------------===//
+// Unary operators.
+//===----------------------------------------------------------------------===//
+
+// [Real] -> [Real]
+def Inv: Opcode {
+  let Types = [BoolTypeClass];
+  let HasGroup = 1;
+}
+
+// [Real] -> [Real]
+def Neg: Opcode {
+  let Types = [AluTypeClass];
+  let HasGroup = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Cast.
+//===----------------------------------------------------------------------===//
+// TODO: Expand this to handle casts between more types.
+
+def Sint32TypeClass : TypeClass {
+  let Types = [Sint32];
+}
+
+def Cast: Opcode {
+  let Types = [BoolTypeClass, Sint32TypeClass];
+  let HasGroup = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // Comparison opcodes.

@@ -243,8 +243,9 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
   // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
   auto &VTy = *cast<VectorType>(DataTy);
-  InstructionCost MemOpCost = getMemoryOpCost(Opcode, VTy.getElementType(),
-                                              Alignment, 0, CostKind, I);
+  InstructionCost MemOpCost =
+      getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
+                      TTI::OK_AnyValue, I);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
   return NumLoads * MemOpCost;
 }
@@ -431,6 +432,27 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
 
   return (LT.first - 1) +
          getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
+}
+
+InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+                                              MaybeAlign Alignment,
+                                              unsigned AddressSpace,
+                                              TTI::TargetCostKind CostKind,
+                                              TTI::OperandValueKind OpdInfo,
+                                              const Instruction *I) {
+  InstructionCost Cost = 0;
+  if (Opcode == Instruction::Store && isa<VectorType>(Src) &&
+      (OpdInfo == TTI::OK_UniformConstantValue ||
+       OpdInfo == TTI::OK_NonUniformConstantValue)) {
+    APInt PseudoAddr = APInt::getAllOnes(DL.getPointerSizeInBits());
+    // Add a cost of address load + the cost of the vector load.
+    Cost += RISCVMatInt::getIntMatCost(PseudoAddr, DL.getPointerSizeInBits(),
+                                       getST()->getFeatureBits()) +
+            getMemoryOpCost(Instruction::Load, Src, DL.getABITypeAlign(Src),
+                            /*AddressSpace=*/0, CostKind);
+  }
+  return Cost + BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                       CostKind, OpdInfo, I);
 }
 
 void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,

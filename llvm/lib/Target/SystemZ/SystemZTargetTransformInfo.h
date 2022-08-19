@@ -111,10 +111,11 @@ public:
   InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
                                      unsigned Index);
   bool isFoldableLoad(const LoadInst *Ld, const Instruction *&FoldedValue);
-  InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
-                                  MaybeAlign Alignment, unsigned AddressSpace,
-                                  TTI::TargetCostKind CostKind,
-                                  const Instruction *I = nullptr);
+  InstructionCost
+  getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
+                  unsigned AddressSpace, TTI::TargetCostKind CostKind,
+                  TTI::OperandValueKind OpdInfo = TTI::OK_AnyValue,
+                  const Instruction *I = nullptr);
 
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,

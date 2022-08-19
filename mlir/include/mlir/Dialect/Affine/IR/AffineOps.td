@@ -1061,4 +1061,47 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// AffineDelinearizeIndexOp
+//===----------------------------------------------------------------------===//
+
+def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
+    [NoSideEffect]> {
+  let summary = "delinearize an index";
+  let description = [{
+    The `affine.delinearize_index` operation takes a single index value and
+    calculates the multi-index according to the given basis.
+
+    Example:
+
+    ```
+    %indices:3 = affine.delinearize_index %linear_index into (%c16, %c224, %c224) : index, index, index
+    ```
+
+    In the above example, `%indices:3` conceptually holds the following:
+
+    ```
+    #map0 = affine_map<()[s0] -> (s0 floordiv 50176)>
+    #map1 = affine_map<()[s0] -> ((s0 mod 50176) floordiv 224)>
+    #map2 = affine_map<()[s0] -> (s0 mod 224)>
+    %indices_0 = affine.apply #map0()[%linear_index]
+    %indices_1 = affine.apply #map1()[%linear_index]
+    %indices_2 = affine.apply #map2()[%linear_index]
+    ```
+  }];
+
+  let arguments = (ins Index:$linear_index, Variadic<Index>:$basis);
+  let results = (outs Variadic<Index>:$multi_index);
+
+  let assemblyFormat = [{
+    $linear_index `into` ` ` `(` $basis `)` attr-dict `:` type($multi_index)
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$linear_index, "ArrayRef<OpFoldResult>":$basis)>
+  ];
+
+  let hasVerifier = 1;
+}
+
 #endif // AFFINE_OPS
