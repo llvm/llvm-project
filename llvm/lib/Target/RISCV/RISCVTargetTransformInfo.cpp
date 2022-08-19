@@ -512,6 +512,21 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
          getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
 }
 
+InstructionCost RISCVTTIImpl::getVectorImmCost(VectorType *VecTy,
+                                               TTI::OperandValueKind OpInfo,
+                                               TTI::OperandValueProperties PropInfo,
+                                               TTI::TargetCostKind CostKind) {
+  assert((OpInfo == TTI::OK_UniformConstantValue ||
+          OpInfo == TTI::OK_NonUniformConstantValue) && "non constant operand?");
+  APInt PseudoAddr = APInt::getAllOnes(DL.getPointerSizeInBits());
+  // Add a cost of address load + the cost of the vector load.
+  return RISCVMatInt::getIntMatCost(PseudoAddr, DL.getPointerSizeInBits(),
+                                    getST()->getFeatureBits()) +
+    getMemoryOpCost(Instruction::Load, VecTy, DL.getABITypeAlign(VecTy),
+                    /*AddressSpace=*/0, CostKind);
+}
+
+
 InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                               MaybeAlign Alignment,
                                               unsigned AddressSpace,
@@ -522,12 +537,7 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   if (Opcode == Instruction::Store && isa<VectorType>(Src) &&
       (OpdInfo == TTI::OK_UniformConstantValue ||
        OpdInfo == TTI::OK_NonUniformConstantValue)) {
-    APInt PseudoAddr = APInt::getAllOnes(DL.getPointerSizeInBits());
-    // Add a cost of address load + the cost of the vector load.
-    Cost += RISCVMatInt::getIntMatCost(PseudoAddr, DL.getPointerSizeInBits(),
-                                       getST()->getFeatureBits()) +
-            getMemoryOpCost(Instruction::Load, Src, DL.getABITypeAlign(Src),
-                            /*AddressSpace=*/0, CostKind);
+    Cost += getVectorImmCost(cast<VectorType>(Src), OpdInfo, TTI::OP_None, CostKind);
   }
   return Cost + BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                        CostKind, OpdInfo, I);
