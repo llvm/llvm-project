@@ -28,11 +28,10 @@ define void @test1(ptr %0, i64 %1, i64 %2) {
 define void @test2(ptr %0, i64 %1, i64 %2, <2 x i64> %3) {
 ; CHECK-LABEL: test2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x9, v0.d[1]
 ; CHECK-NEXT:    add x8, x0, x1, lsl #4
-; CHECK-NEXT:    ldr d0, [x8, #8]
-; CHECK-NEXT:    fmov d1, x9
-; CHECK-NEXT:    pmull v0.1q, v1.1d, v0.1d
+; CHECK-NEXT:    add x9, x8, #8
+; CHECK-NEXT:    ld1r { v1.2d }, [x9]
+; CHECK-NEXT:    pmull2 v0.1q, v0.2d, v1.2d
 ; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    ret
   %5 = getelementptr inbounds <2 x i64>, ptr %0, i64 %1
@@ -68,10 +67,8 @@ define void @test3(ptr %0, i64 %1, i64 %2, i64 %3) {
 define void @test4(ptr %0, <2 x i64> %1, i64 %2) {
 ; CHECK-LABEL: test4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, v0.d[1]
-; CHECK-NEXT:    fmov d0, x1
-; CHECK-NEXT:    fmov d1, x8
-; CHECK-NEXT:    pmull v0.1q, v1.1d, v0.1d
+; CHECK-NEXT:    dup v1.2d, x1
+; CHECK-NEXT:    pmull2 v0.1q, v0.2d, v1.2d
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %4 = extractelement <2 x i64> %1, i64 1
