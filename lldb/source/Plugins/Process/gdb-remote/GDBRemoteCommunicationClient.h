@@ -339,8 +339,6 @@ public:
 
   bool GetQXferSigInfoReadSupported();
 
-  bool GetMultiprocessSupported();
-
   LazyBool SupportsAllocDeallocMemory() // const
   {
     // Uncomment this to have lldb pretend the debug server doesn't respond to
