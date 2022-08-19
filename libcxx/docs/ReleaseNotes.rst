@@ -55,6 +55,10 @@ API Changes
   functions instead of as hidden friends, in conformance with the C++ standard.
   Also see `issue 56187 <https://github.com/llvm/llvm-project/issues/56187>`_.
 
+- ``_LIBCPP_ENABLE_NODISCARD`` and ``_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17`` are no longer respected.
+  Any standards-required ``[[nodiscard]]`` applications in C++20 are now always enabled. Any extended applications
+  can now be enabled by defining ``_LIBCPP_ENABLE_NODISCARD_EXT``.
+
 ABI Affecting Changes
 ---------------------
 
