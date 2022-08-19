@@ -1083,8 +1083,8 @@ foreach vtiTowti = AllWidenableIntVectors in {
   def : Pat<(vti.Vector (riscv_trunc_vector_vl (wti.Vector wti.RegClass:$rs1),
                                                (vti.Mask V0),
                                                VLOpFrag)),
-            (!cast<Instruction>("PseudoVNSRL_WX_"#vti.LMul.MX#"_MASK")
-                (vti.Vector (IMPLICIT_DEF)), wti.RegClass:$rs1, X0,
+            (!cast<Instruction>("PseudoVNSRL_WI_"#vti.LMul.MX#"_MASK")
+                (vti.Vector (IMPLICIT_DEF)), wti.RegClass:$rs1, 0,
                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
 }
 

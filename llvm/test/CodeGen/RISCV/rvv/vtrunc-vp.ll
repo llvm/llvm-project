@@ -8,7 +8,7 @@ define <vscale x 2 x i7> @vtrunc_nxv2i7_nxv2i16(<vscale x 2 x i16> %a, <vscale x
 ; CHECK-LABEL: vtrunc_nxv2i7_nxv2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i7> @llvm.vp.trunc.nxv2i7.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i7> %v
@@ -20,7 +20,7 @@ define <vscale x 2 x i8> @vtrunc_nxv2i8_nxv2i15(<vscale x 2 x i15> %a, <vscale x
 ; CHECK-LABEL: vtrunc_nxv2i8_nxv2i15:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i15(<vscale x 2 x i15> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i8> %v
@@ -32,7 +32,7 @@ define <vscale x 2 x i8> @vtrunc_nxv2i8_nxv2i16(<vscale x 2 x i16> %a, <vscale x
 ; CHECK-LABEL: vtrunc_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i8> %v
@@ -42,7 +42,7 @@ define <vscale x 2 x i8> @vtrunc_nxv2i8_nxv2i16_unmasked(<vscale x 2 x i16> %a, 
 ; CHECK-LABEL: vtrunc_nxv2i8_nxv2i16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
   ret <vscale x 2 x i8> %v
@@ -54,9 +54,9 @@ define <vscale x 2 x i8> @vtrunc_nxv2i8_nxv2i32(<vscale x 2 x i32> %a, <vscale x
 ; CHECK-LABEL: vtrunc_nxv2i8_nxv2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i8> %v
@@ -66,9 +66,9 @@ define <vscale x 2 x i8> @vtrunc_nxv2i8_nxv2i32_unmasked(<vscale x 2 x i32> %a, 
 ; CHECK-LABEL: vtrunc_nxv2i8_nxv2i32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
   ret <vscale x 2 x i8> %v
@@ -80,11 +80,11 @@ define <vscale x 2 x i8> @vtrunc_nxv2i8_nxv2i64(<vscale x 2 x i64> %a, <vscale x
 ; CHECK-LABEL: vtrunc_nxv2i8_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v10, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v10, v8, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v10, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i8> %v
@@ -94,11 +94,11 @@ define <vscale x 2 x i8> @vtrunc_nxv2i8_nxv2i64_unmasked(<vscale x 2 x i64> %a, 
 ; CHECK-LABEL: vtrunc_nxv2i8_nxv2i64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v10, v8
+; CHECK-NEXT:    vnsrl.wi v10, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v10
+; CHECK-NEXT:    vnsrl.wi v8, v10, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i8> @llvm.vp.trunc.nxv2i8.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
   ret <vscale x 2 x i8> %v
@@ -110,7 +110,7 @@ define <vscale x 2 x i16> @vtrunc_nxv2i16_nxv2i32(<vscale x 2 x i32> %a, <vscale
 ; CHECK-LABEL: vtrunc_nxv2i16_nxv2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.trunc.nxv2i16.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i16> %v
@@ -120,7 +120,7 @@ define <vscale x 2 x i16> @vtrunc_nxv2i16_nxv2i32_unmasked(<vscale x 2 x i32> %a
 ; CHECK-LABEL: vtrunc_nxv2i16_nxv2i32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.trunc.nxv2i16.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
   ret <vscale x 2 x i16> %v
@@ -132,9 +132,9 @@ define <vscale x 2 x i16> @vtrunc_nxv2i16_nxv2i64(<vscale x 2 x i64> %a, <vscale
 ; CHECK-LABEL: vtrunc_nxv2i16_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v10, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v10, v8, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v10, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.trunc.nxv2i16.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i16> %v
@@ -144,9 +144,9 @@ define <vscale x 2 x i16> @vtrunc_nxv2i16_nxv2i64_unmasked(<vscale x 2 x i64> %a
 ; CHECK-LABEL: vtrunc_nxv2i16_nxv2i64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v10, v8
+; CHECK-NEXT:    vnsrl.wi v10, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v10
+; CHECK-NEXT:    vnsrl.wi v8, v10, 0
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i16> @llvm.vp.trunc.nxv2i16.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
   ret <vscale x 2 x i16> %v
@@ -169,18 +169,18 @@ define <vscale x 15 x i16> @vtrunc_nxv15i16_nxv15i64(<vscale x 15 x i64> %a, <vs
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB12_2:
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v28, v16, v0.t
+; CHECK-NEXT:    vnsrl.wi v28, v16, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v18, v28, v0.t
+; CHECK-NEXT:    vnsrl.wi v18, v28, 0, v0.t
 ; CHECK-NEXT:    bltu a0, a1, .LBB12_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB12_4:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vncvt.x.x.w v20, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v20, v8, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v16, v20, v0.t
+; CHECK-NEXT:    vnsrl.wi v16, v20, 0, v0.t
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 15 x i16> @llvm.vp.trunc.nxv15i16.nxv15i64(<vscale x 15 x i64> %a, <vscale x 15 x i1> %m, i32 %vl)
@@ -193,7 +193,7 @@ define <vscale x 2 x i32> @vtrunc_nxv2i32_nxv2i64(<vscale x 2 x i64> %a, <vscale
 ; CHECK-LABEL: vtrunc_nxv2i32_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v10, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v10, v8, 0, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i64.nxv2i32(<vscale x 2 x i64> %a, <vscale x 2 x i1> %m, i32 %vl)
@@ -204,7 +204,7 @@ define <vscale x 2 x i32> @vtrunc_nxv2i32_nxv2i64_unmasked(<vscale x 2 x i64> %a
 ; CHECK-LABEL: vtrunc_nxv2i32_nxv2i64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v10, v8
+; CHECK-NEXT:    vnsrl.wi v10, v8, 0
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i64.nxv2i32(<vscale x 2 x i64> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
@@ -229,18 +229,18 @@ define <vscale x 32 x i7> @vtrunc_nxv32i7_nxv32i32(<vscale x 32 x i32> %a, <vsca
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB15_2:
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v28, v16, v0.t
+; CHECK-NEXT:    vnsrl.wi v28, v16, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v18, v28, v0.t
+; CHECK-NEXT:    vnsrl.wi v18, v28, 0, v0.t
 ; CHECK-NEXT:    bltu a0, a1, .LBB15_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB15_4:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vncvt.x.x.w v20, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v20, v8, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v16, v20, v0.t
+; CHECK-NEXT:    vnsrl.wi v16, v20, 0, v0.t
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i7> @llvm.vp.trunc.nxv32i7.nxv32i32(<vscale x 32 x i32> %a, <vscale x 32 x i1> %m, i32 %vl)
@@ -265,18 +265,18 @@ define <vscale x 32 x i8> @vtrunc_nxv32i8_nxv32i32(<vscale x 32 x i32> %a, <vsca
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB16_2:
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v28, v16, v0.t
+; CHECK-NEXT:    vnsrl.wi v28, v16, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v18, v28, v0.t
+; CHECK-NEXT:    vnsrl.wi v18, v28, 0, v0.t
 ; CHECK-NEXT:    bltu a0, a1, .LBB16_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB16_4:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vncvt.x.x.w v20, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v20, v8, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v16, v20, v0.t
+; CHECK-NEXT:    vnsrl.wi v16, v20, 0, v0.t
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i8> @llvm.vp.trunc.nxv32i8.nxv32i32(<vscale x 32 x i32> %a, <vscale x 32 x i1> %m, i32 %vl)
@@ -318,7 +318,7 @@ define <vscale x 32 x i32> @vtrunc_nxv32i64_nxv32i32(<vscale x 32 x i64> %a, <vs
 ; CHECK-NEXT:    srli a7, a1, 2
 ; CHECK-NEXT:    slli t0, a1, 3
 ; CHECK-NEXT:    vsetvli zero, a6, e32, m4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v12, v16, v0.t
+; CHECK-NEXT:    vnsrl.wi v12, v16, 0, v0.t
 ; CHECK-NEXT:    bltu a5, a1, .LBB17_6
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    mv a5, a1
@@ -335,7 +335,7 @@ define <vscale x 32 x i32> @vtrunc_nxv32i64_nxv32i32(<vscale x 32 x i64> %a, <vs
 ; CHECK-NEXT:    add a5, sp, a5
 ; CHECK-NEXT:    addi a5, a5, 16
 ; CHECK-NEXT:    vl8re8.v v16, (a5) # Unknown-size Folded Reload
-; CHECK-NEXT:    vncvt.x.x.w v8, v16, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v16, 0, v0.t
 ; CHECK-NEXT:    bltu a2, a4, .LBB17_8
 ; CHECK-NEXT:  # %bb.7:
 ; CHECK-NEXT:    mv a6, a4
@@ -363,7 +363,7 @@ define <vscale x 32 x i32> @vtrunc_nxv32i64_nxv32i32(<vscale x 32 x i64> %a, <vs
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vl8re8.v v24, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vncvt.x.x.w v20, v24, v0.t
+; CHECK-NEXT:    vnsrl.wi v20, v24, 0, v0.t
 ; CHECK-NEXT:    bltu a6, a1, .LBB17_12
 ; CHECK-NEXT:  # %bb.11:
 ; CHECK-NEXT:    mv a6, a1
@@ -372,7 +372,7 @@ define <vscale x 32 x i32> @vtrunc_nxv32i64_nxv32i32(<vscale x 32 x i64> %a, <vs
 ; CHECK-NEXT:    vmv1r.v v0, v1
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8re8.v v24, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vncvt.x.x.w v16, v24, v0.t
+; CHECK-NEXT:    vnsrl.wi v16, v24, 0, v0.t
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
