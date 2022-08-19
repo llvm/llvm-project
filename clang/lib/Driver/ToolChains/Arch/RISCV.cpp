@@ -52,7 +52,7 @@ static void getRISCFeaturesFromMcpu(const Driver &D, const llvm::Triple &Triple,
                                     const llvm::opt::ArgList &Args,
                                     const llvm::opt::Arg *A, StringRef Mcpu,
                                     std::vector<StringRef> &Features) {
-  bool Is64Bit = (Triple.getArch() == llvm::Triple::riscv64);
+  bool Is64Bit = Triple.isRISCV64();
   llvm::RISCV::CPUKind CPUKind = llvm::RISCV::parseCPUKind(Mcpu);
   if (!llvm::RISCV::checkCPUKind(CPUKind, Is64Bit) ||
       !llvm::RISCV::getCPUFeaturesExceptStdExt(CPUKind, Features)) {
@@ -163,9 +163,7 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 }
 
 StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
-  assert((Triple.getArch() == llvm::Triple::riscv32 ||
-          Triple.getArch() == llvm::Triple::riscv64) &&
-         "Unexpected triple");
+  assert(Triple.isRISCV() && "Unexpected triple");
 
   // GCC's logic around choosing a default `-mabi=` is complex. If GCC is not
   // configured using `--with-abi=`, then the logic for the default choice is
@@ -213,7 +211,7 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
   // We deviate from GCC's defaults here:
   // - On `riscv{XLEN}-unknown-elf` we use the integer calling convention only.
   // - On all other OSs we use the double floating point calling convention.
-  if (Triple.getArch() == llvm::Triple::riscv32) {
+  if (Triple.isRISCV32()) {
     if (Triple.getOS() == llvm::Triple::UnknownOS)
       return "ilp32";
     else
@@ -228,9 +226,7 @@ StringRef riscv::getRISCVABI(const ArgList &Args, const llvm::Triple &Triple) {
 
 StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
                               const llvm::Triple &Triple) {
-  assert((Triple.getArch() == llvm::Triple::riscv32 ||
-          Triple.getArch() == llvm::Triple::riscv64) &&
-         "Unexpected triple");
+  assert(Triple.isRISCV() && "Unexpected triple");
 
   // GCC's logic around choosing a default `-march=` is complex. If GCC is not
   // configured using `--with-arch=`, then the logic for the default choice is
@@ -291,7 +287,7 @@ StringRef riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   // We deviate from GCC's defaults here:
   // - On `riscv{XLEN}-unknown-elf` we default to `rv{XLEN}imac`
   // - On all other OSs we use `rv{XLEN}imafdc` (equivalent to `rv{XLEN}gc`)
-  if (Triple.getArch() == llvm::Triple::riscv32) {
+  if (Triple.isRISCV32()) {
     if (Triple.getOS() == llvm::Triple::UnknownOS)
       return "rv32imac";
     else
