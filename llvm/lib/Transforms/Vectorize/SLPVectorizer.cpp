@@ -6483,8 +6483,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       auto *SI =
           cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
       Align Alignment = SI->getAlign();
-      TTI::OperandValueProperties OpVP = TTI::OP_None;
-      TTI::OperandValueKind OpVK = TTI::getOperandInfo(SI->getOperand(0), OpVP);
+      TTI::OperandValueKind OpVK = TTI::getOperandInfo(SI->getOperand(0));
       InstructionCost ScalarEltCost = TTI->getMemoryOpCost(
           Instruction::Store, ScalarTy, Alignment, 0, CostKind, OpVK, VL0);
       InstructionCost ScalarStCost = VecTy->getNumElements() * ScalarEltCost;

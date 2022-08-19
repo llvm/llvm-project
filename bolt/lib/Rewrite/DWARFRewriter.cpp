@@ -858,18 +858,20 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
       return;
     }
 
-    // Convert DW_AT_low_pc into DW_AT_GNU_ranges_base.
-    if (!LowPCAttrInfo) {
-      errs() << "BOLT-ERROR: skeleton CU at 0x"
-             << Twine::utohexstr(DIE.getOffset())
-             << " does not have DW_AT_GNU_ranges_base or DW_AT_low_pc to"
-                " convert to update ranges base\n";
+    if (DIE.getOffset() != DIE.getDwarfUnit()->getUnitDIE().getOffset())
       return;
-    }
 
-    AbbrevWriter.addAttribute(*DIE.getDwarfUnit(), AbbreviationDecl,
-                              dwarf::DW_AT_GNU_ranges_base,
-                              dwarf::DW_FORM_sec_offset);
+    // If we are at this point we are in the CU/Skeleton CU, and
+    // DW_AT_GNU_ranges_base or DW_AT_rnglists_base doesn't exist.
+    if (DIE.getDwarfUnit()->getVersion() >= 5) {
+      AbbrevWriter.addAttribute(*DIE.getDwarfUnit(), AbbreviationDecl,
+                                dwarf::DW_AT_rnglists_base,
+                                dwarf::DW_FORM_sec_offset);
+    } else {
+      AbbrevWriter.addAttribute(*DIE.getDwarfUnit(), AbbreviationDecl,
+                                dwarf::DW_AT_GNU_ranges_base,
+                                dwarf::DW_FORM_sec_offset);
+    }
     reinterpret_cast<DebugInfoBinaryPatcher &>(DebugInfoPatcher)
         .insertNewEntry(DIE, *RangesBase);
 
