@@ -147,9 +147,9 @@ function(add_ocaml_library name)
   endforeach()
 
   if( APPLE )
-    set(ocaml_rpath "@executable_path/../../../${CMAKE_INSTALL_LIBDIR}")
+    set(ocaml_rpath "@executable_path/../../../lib${LLVM_LIBDIR_SUFFIX}")
   elseif( UNIX )
-    set(ocaml_rpath "\\$ORIGIN/../../../${CMAKE_INSTALL_LIBDIR}")
+    set(ocaml_rpath "\\$ORIGIN/../../../lib${LLVM_LIBDIR_SUFFIX}")
   endif()
   list(APPEND ocaml_flags "-ldopt" "-Wl,-rpath,${ocaml_rpath}")
 

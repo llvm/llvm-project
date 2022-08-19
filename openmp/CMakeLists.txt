@@ -17,9 +17,6 @@ endif()
 # Must go below project(..)
 include(GNUInstallDirs)
 
-set(OPENMP_INSTALL_LIBDIR "${CMAKE_INSTALL_LIBDIR}" CACHE STRING
-  "lib installation directory, e.g. lib or lib64")
-
 if (OPENMP_STANDALONE_BUILD)
   # CMAKE_BUILD_TYPE was not set, default to Release.
   if (NOT CMAKE_BUILD_TYPE)
@@ -29,6 +26,10 @@ if (OPENMP_STANDALONE_BUILD)
   # Group common settings.
   set(OPENMP_ENABLE_WERROR FALSE CACHE BOOL
     "Enable -Werror flags to turn warnings into errors for supporting compilers.")
+  set(OPENMP_LIBDIR_SUFFIX "" CACHE STRING
+    "Suffix of lib installation directory, e.g. 64 => lib64")
+  # Do not use OPENMP_LIBDIR_SUFFIX directly, use OPENMP_INSTALL_LIBDIR.
+  set(OPENMP_INSTALL_LIBDIR "lib${OPENMP_LIBDIR_SUFFIX}")
 
   # Group test settings.
   set(OPENMP_TEST_C_COMPILER ${CMAKE_C_COMPILER} CACHE STRING
@@ -38,6 +39,8 @@ if (OPENMP_STANDALONE_BUILD)
   set(OPENMP_LLVM_TOOLS_DIR "" CACHE PATH "Path to LLVM tools for testing.")
 else()
   set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
+  # If building in tree, we honor the same install suffix LLVM uses.
+  set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}")
 
   if (NOT MSVC)
     set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)

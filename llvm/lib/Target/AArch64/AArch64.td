@@ -908,7 +908,8 @@ def TuneNeoverseE1 : SubtargetFeature<"neoversee1", "ARMProcFamily", "NeoverseE1
 def TuneNeoverseN1 : SubtargetFeature<"neoversen1", "ARMProcFamily", "NeoverseN1",
                                       "Neoverse N1 ARM processors", [
                                       FeaturePostRAScheduler,
-                                      FeatureFuseAES
+                                      FeatureFuseAES,
+                                      FeatureFuseAdrpAdd
                                       ]>;
 
 def TuneNeoverseN2 : SubtargetFeature<"neoversen2", "ARMProcFamily", "NeoverseN2",
