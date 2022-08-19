@@ -26,4 +26,4 @@
 // CHECK-NEXT:   module-deps:
 // CHECK-NEXT:     ModA:[[HASH_MOD_A]]
 // CHECK-NEXT:   file-deps:
-// CHECK-NEXT:   build-args: {{.*}} -fno-implicit-modules -fno-implicit-module-maps -fmodule-file={{.*}}ModA_{{.*}}.pcm
+// CHECK-NEXT:   build-args: {{.*}} -fno-implicit-modules -fno-implicit-module-maps {{.*}} -fmodule-file={{(ModA=)?}}{{.*}}ModA_{{.*}}.pcm

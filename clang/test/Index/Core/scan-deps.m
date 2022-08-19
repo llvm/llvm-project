@@ -29,4 +29,4 @@
 // CHECK-NEXT:     ModA:[[HASH_MOD_A]]
 // CHECK-NEXT:   file-deps:
 // CHECK-NEXT:     [[PREFIX]]/scan-deps.m
-// CHECK-NEXT:   build-args: {{.*}} -fno-implicit-modules -fno-implicit-module-maps -fmodule-file={{.*}}ModA_{{.*}}.pcm
+// CHECK-NEXT:   build-args: {{.*}} -fno-implicit-modules -fno-implicit-module-maps {{.*}} -fmodule-file={{(ModA=)?}}{{.*}}ModA_{{.*}}.pcm
