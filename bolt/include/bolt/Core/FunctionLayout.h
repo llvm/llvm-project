@@ -39,14 +39,27 @@ public:
   constexpr FragmentNum() = default;
   constexpr explicit FragmentNum(unsigned Value) : Value(Value) {}
   constexpr unsigned get() const { return Value; }
+
   constexpr bool operator==(const FragmentNum Other) const {
     return Value == Other.Value;
   }
   constexpr bool operator!=(const FragmentNum Other) const {
-    return !(*this == Other);
+    return Value != Other.Value;
+  }
+  constexpr bool operator<(const FragmentNum Other) const {
+    return Value < Other.Value;
+  }
+  constexpr bool operator<=(const FragmentNum Other) const {
+    return Value <= Other.Value;
+  }
+  constexpr bool operator>=(const FragmentNum Other) const {
+    return Value >= Other.Value;
+  }
+  constexpr bool operator>(const FragmentNum Other) const {
+    return Value > Other.Value;
   }
 
-  static constexpr FragmentNum hot() { return FragmentNum(0); }
+  static constexpr FragmentNum main() { return FragmentNum(0); }
   static constexpr FragmentNum cold() { return FragmentNum(1); }
 };
 
@@ -66,6 +79,10 @@ private:
       : Num(Num), Layout(Layout) {}
 
 public:
+  FragmentNum getFragmentNum() const { return Num; }
+  bool isMainFragment() const { return Num.get() == 0; }
+  bool isSplitFragment() const { return Num.get() > 0; }
+
   unsigned size() const;
   bool empty() const;
   const_iterator begin() const;
@@ -153,6 +170,18 @@ public:
   /// Return the fragment identified by Num.
   FunctionFragment getFragment(FragmentNum Num) const;
 
+  /// Get the fragment that contains all entry blocks and other blocks that
+  /// cannot be split.
+  FunctionFragment getMainFragment() const {
+    return getFragment(FragmentNum::main());
+  }
+
+  /// Get the fragment that contains all entry blocks and other blocks that
+  /// cannot be split.
+  iterator_range<const_iterator> getSplitFragments() const {
+    return {++fragment_begin(), fragment_end()};
+  }
+
   /// Find the fragment that contains BB.
   FunctionFragment findFragment(const BinaryBasicBlock *BB) const;
 
@@ -164,7 +193,8 @@ public:
   void insertBasicBlocks(BinaryBasicBlock *InsertAfter,
                          ArrayRef<BinaryBasicBlock *> NewBlocks);
 
-  /// Erase all blocks from the layout that are in ToErase.
+  /// Erase all blocks from the layout that are in ToErase. If this method
+  /// erases all blocks of a fragment, it will be removed as well.
   void eraseBasicBlocks(const DenseSet<const BinaryBasicBlock *> ToErase);
 
   /// Make sure fragments' and basic blocks' indices match the current layout.

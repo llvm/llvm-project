@@ -69,30 +69,16 @@ template <typename T, typename U, typename R, typename... P>
 struct has_same_member_pointer_type<R (T::*)(P...), R (U::*)(P...)>
     : std::true_type {};
 
-template <bool has_same_type> struct is_same_method_impl {
-  template <typename FirstMethodPtrTy, typename SecondMethodPtrTy>
-  static bool isSameMethod(FirstMethodPtrTy FirstMethodPtr,
-                           SecondMethodPtrTy SecondMethodPtr) {
-    return false;
-  }
-};
-
-template <> struct is_same_method_impl<true> {
-  template <typename FirstMethodPtrTy, typename SecondMethodPtrTy>
-  static bool isSameMethod(FirstMethodPtrTy FirstMethodPtr,
-                           SecondMethodPtrTy SecondMethodPtr) {
-    return FirstMethodPtr == SecondMethodPtr;
-  }
-};
-
 /// Returns true if and only if \p FirstMethodPtr and \p SecondMethodPtr
 /// are pointers to the same non-static member function.
 template <typename FirstMethodPtrTy, typename SecondMethodPtrTy>
-bool isSameMethod(FirstMethodPtrTy FirstMethodPtr,
-                  SecondMethodPtrTy SecondMethodPtr) {
-  return is_same_method_impl<has_same_member_pointer_type<
-      FirstMethodPtrTy,
-      SecondMethodPtrTy>::value>::isSameMethod(FirstMethodPtr, SecondMethodPtr);
+LLVM_ATTRIBUTE_ALWAYS_INLINE LLVM_ATTRIBUTE_NODEBUG auto
+isSameMethod(FirstMethodPtrTy FirstMethodPtr, SecondMethodPtrTy SecondMethodPtr)
+    -> bool {
+  if constexpr (has_same_member_pointer_type<FirstMethodPtrTy,
+                                             SecondMethodPtrTy>::value)
+    return FirstMethodPtr == SecondMethodPtr;
+  return false;
 }
 
 } // end namespace detail

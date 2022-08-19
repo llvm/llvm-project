@@ -568,13 +568,10 @@ private:
   };
   SmallVector<BasicBlockOffset, 0> BasicBlockOffsets;
 
-  MCSymbol *ColdSymbol{nullptr};
+  SmallVector<MCSymbol *, 0> ColdSymbols;
 
-  /// Symbol at the end of the function.
-  mutable MCSymbol *FunctionEndLabel{nullptr};
-
-  /// Symbol at the end of the cold part of split function.
-  mutable MCSymbol *FunctionColdEndLabel{nullptr};
+  /// Symbol at the end of each fragment of a split function.
+  mutable SmallVector<MCSymbol *, 0> FunctionEndLabels;
 
   /// Unique number associated with the function.
   uint64_t FunctionNumber;
@@ -1081,7 +1078,23 @@ public:
 
   /// Return MC symbol associated with the function.
   /// All references to the function should use this symbol.
-  MCSymbol *getSymbol() { return Symbols[0]; }
+  MCSymbol *getSymbol(const FragmentNum Fragment = FragmentNum::main()) {
+    if (Fragment == FragmentNum::main())
+      return Symbols[0];
+
+    size_t ColdSymbolIndex = Fragment.get() - 1;
+    if (ColdSymbolIndex >= ColdSymbols.size())
+      ColdSymbols.resize(ColdSymbolIndex + 1);
+
+    MCSymbol *&ColdSymbol = ColdSymbols[ColdSymbolIndex];
+    if (ColdSymbol == nullptr) {
+      SmallString<10> Appendix = formatv(".cold.{0}", ColdSymbolIndex);
+      ColdSymbol = BC.Ctx->getOrCreateSymbol(
+          NameResolver::append(Symbols[0]->getName(), Appendix));
+    }
+
+    return ColdSymbol;
+  }
 
   /// Return MC symbol associated with the function (const version).
   /// All references to the function should use this symbol.
@@ -1135,33 +1148,26 @@ public:
   /// Return true of all callbacks returned true, false otherwise.
   bool forEachEntryPoint(EntryPointCallbackTy Callback) const;
 
-  MCSymbol *getColdSymbol() {
-    if (ColdSymbol)
-      return ColdSymbol;
-
-    ColdSymbol = BC.Ctx->getOrCreateSymbol(
-        NameResolver::append(getSymbol()->getName(), ".cold.0"));
-
-    return ColdSymbol;
-  }
-
   /// Return MC symbol associated with the end of the function.
-  MCSymbol *getFunctionEndLabel() const {
+  MCSymbol *
+  getFunctionEndLabel(const FragmentNum Fragment = FragmentNum::main()) const {
     assert(BC.Ctx && "cannot be called with empty context");
+
+    size_t LabelIndex = Fragment.get();
+    if (LabelIndex >= FunctionEndLabels.size()) {
+      FunctionEndLabels.resize(LabelIndex + 1);
+    }
+
+    MCSymbol *&FunctionEndLabel = FunctionEndLabels[LabelIndex];
     if (!FunctionEndLabel) {
       std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
-      FunctionEndLabel = BC.Ctx->createNamedTempSymbol("func_end");
+      if (Fragment == FragmentNum::main())
+        FunctionEndLabel = BC.Ctx->createNamedTempSymbol("func_end");
+      else
+        FunctionEndLabel = BC.Ctx->createNamedTempSymbol(
+            formatv("func_cold_end.{0}", Fragment.get() - 1));
     }
     return FunctionEndLabel;
-  }
-
-  /// Return MC symbol associated with the end of the cold part of the function.
-  MCSymbol *getFunctionColdEndLabel() const {
-    if (!FunctionColdEndLabel) {
-      std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
-      FunctionColdEndLabel = BC.Ctx->createNamedTempSymbol("func_cold_end");
-    }
-    return FunctionColdEndLabel;
   }
 
   /// Return a label used to identify where the constant island was emitted
@@ -1310,31 +1316,29 @@ public:
   }
 
   /// Return internal section name for this function.
-  StringRef getCodeSectionName() const { return StringRef(CodeSectionName); }
+  SmallString<32>
+  getCodeSectionName(const FragmentNum Fragment = FragmentNum::main()) const {
+    if (Fragment == FragmentNum::main())
+      return SmallString<32>(CodeSectionName);
+    if (Fragment == FragmentNum::cold())
+      return SmallString<32>(ColdCodeSectionName);
+    return formatv("{0}.{1}", ColdCodeSectionName, Fragment.get() - 1);
+  }
 
   /// Assign a code section name to the function.
-  void setCodeSectionName(StringRef Name) {
-    CodeSectionName = std::string(Name);
+  void setCodeSectionName(const StringRef Name) {
+    CodeSectionName = Name.str();
   }
 
   /// Get output code section.
-  ErrorOr<BinarySection &> getCodeSection() const {
-    return BC.getUniqueSectionByName(getCodeSectionName());
-  }
-
-  /// Return cold code section name for the function.
-  StringRef getColdCodeSectionName() const {
-    return StringRef(ColdCodeSectionName);
+  ErrorOr<BinarySection &>
+  getCodeSection(const FragmentNum Fragment = FragmentNum::main()) const {
+    return BC.getUniqueSectionByName(getCodeSectionName(Fragment));
   }
 
   /// Assign a section name for the cold part of the function.
-  void setColdCodeSectionName(StringRef Name) {
-    ColdCodeSectionName = std::string(Name);
-  }
-
-  /// Get output code section for cold code of this function.
-  ErrorOr<BinarySection &> getColdCodeSection() const {
-    return BC.getUniqueSectionByName(getColdCodeSectionName());
+  void setColdCodeSectionName(const StringRef Name) {
+    ColdCodeSectionName = Name.str();
   }
 
   /// Return true iif the function will halt execution on entry.
@@ -1862,14 +1866,15 @@ public:
   }
 
   /// Return symbol pointing to function's LSDA for the cold part.
-  MCSymbol *getColdLSDASymbol() {
+  MCSymbol *getColdLSDASymbol(const FragmentNum Fragment) {
     if (ColdLSDASymbol)
       return ColdLSDASymbol;
     if (ColdCallSites.empty())
       return nullptr;
 
-    ColdLSDASymbol = BC.Ctx->getOrCreateSymbol(
-        Twine("GCC_cold_except_table") + Twine::utohexstr(getFunctionNumber()));
+    ColdLSDASymbol =
+        BC.Ctx->getOrCreateSymbol(formatv("GCC_cold_except_table{0:x-}.{1}",
+                                          getFunctionNumber(), Fragment.get()));
 
     return ColdLSDASymbol;
   }
