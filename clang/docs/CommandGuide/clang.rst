@@ -75,7 +75,7 @@ Stage Selection Options
 
 .. option:: -fsyntax-only
 
- Run the preprocessor, parser and type checking stages.
+ Run the preprocessor, parser and semantic analysis stages.
 
 .. option:: -S
 
