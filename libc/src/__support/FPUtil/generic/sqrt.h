@@ -10,8 +10,8 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_SQRT_H
 
 #include "sqrt_80_bit_long_double.h"
+#include "src/__support/CPP/Bit.h"
 #include "src/__support/CPP/UInt128.h"
-#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -161,7 +161,7 @@ static inline cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
         break;
       }
 
-      return cpp::bit_cast<T>(y);
+      return __llvm_libc::bit_cast<T>(y);
     }
   }
 }
