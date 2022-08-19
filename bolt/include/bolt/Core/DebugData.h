@@ -1049,12 +1049,9 @@ public:
     assert(&Unit.getContext() == &Context &&
            "cannot update attribute from a different DWARF context");
     std::lock_guard<std::mutex> Lock(WriterMutex);
-    bool AlreadyAdded = false;
-    for (AbbrevEntry &E : NewAbbrevEntries[&Unit][Abbrev])
-      if (E.Attr == AttrTag) {
-        AlreadyAdded = true;
-        break;
-      }
+    bool AlreadyAdded =
+        llvm::any_of(NewAbbrevEntries[&Unit][Abbrev],
+                     [&](AbbrevEntry &E) { return E.Attr == AttrTag; });
 
     if (AlreadyAdded)
       return;

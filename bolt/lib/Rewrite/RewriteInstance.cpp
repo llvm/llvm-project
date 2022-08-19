@@ -31,6 +31,7 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
@@ -2500,15 +2501,12 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
             BC->getBinaryFunctionAtAddress(Address + 1)) {
       // Do an extra check that the function was referenced previously.
       // It's a linear search, but it should rarely happen.
-      bool Found = false;
-      for (const auto &RelKV : ContainingBF->Relocations) {
-        const Relocation &Rel = RelKV.second;
-        if (Rel.Symbol == RogueBF->getSymbol() &&
-            !Relocation::isPCRelative(Rel.Type)) {
-          Found = true;
-          break;
-        }
-      }
+      bool Found =
+          llvm::any_of(llvm::make_second_range(ContainingBF->Relocations),
+                       [&](const Relocation &Rel) {
+                         return Rel.Symbol == RogueBF->getSymbol() &&
+                                !Relocation::isPCRelative(Rel.Type);
+                       });
 
       if (Found) {
         errs() << "BOLT-WARNING: detected possible compiler de-virtualization "
