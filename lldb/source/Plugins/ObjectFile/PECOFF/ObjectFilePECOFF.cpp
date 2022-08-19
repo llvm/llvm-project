@@ -147,7 +147,7 @@ static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
       UUID::CvRecordPdb70 info;
       memcpy(&info.Uuid, pdb_info->PDB70.Signature, sizeof(info.Uuid));
       info.Age = pdb_info->PDB70.Age;
-      return UUID::fromCvRecord(info);
+      return UUID(info);
     }
   }
 
@@ -170,7 +170,7 @@ static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
   }
   // Use 4 bytes of crc from the .gnu_debuglink section.
   llvm::support::ulittle32_t data(gnu_debuglink_crc);
-  return UUID::fromData(&data, sizeof(data));
+  return UUID(&data, sizeof(data));
 }
 
 char ObjectFilePECOFF::ID;

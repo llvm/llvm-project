@@ -2188,8 +2188,8 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
   version_str[6] = '\0';
   if (strcmp(version_str, "dyld_v") == 0) {
     offset = offsetof(struct lldb_copy_dyld_cache_header_v1, uuid);
-    dsc_uuid = UUID::fromOptionalData(
-        dsc_header_data.GetData(&offset, sizeof(uuid_t)), sizeof(uuid_t));
+    dsc_uuid = UUID(dsc_header_data.GetData(&offset, sizeof(uuid_t)), 
+                    sizeof(uuid_t));
   }
   Log *log = GetLog(LLDBLog::Symbols);
   if (log && dsc_uuid.IsValid()) {
@@ -2329,7 +2329,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       const uint8_t *uuid_bytes = m_data.PeekData(offset, 16);
 
       if (uuid_bytes)
-        image_uuid = UUID::fromOptionalData(uuid_bytes, 16);
+        image_uuid = UUID(uuid_bytes, 16);
       break;
     }
 
@@ -2726,7 +2726,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
         return;
 
         if (process_shared_cache_uuid.IsValid() &&
-          process_shared_cache_uuid != UUID::fromOptionalData(&cache_uuid, 16))
+          process_shared_cache_uuid != UUID::fromData(&cache_uuid, 16))
         return;
 
       dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
@@ -2735,7 +2735,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           return;
 
         dyld_image_copy_uuid(image, &dsc_image_uuid);
-        if (image_uuid != UUID::fromOptionalData(dsc_image_uuid, 16))
+        if (image_uuid != UUID::fromData(dsc_image_uuid, 16))
           return;
 
         found_image = true;
@@ -4853,7 +4853,7 @@ UUID ObjectFileMachO::GetUUID(const llvm::MachO::mach_header &header,
         if (!memcmp(uuid_bytes, opencl_uuid, 16))
           return UUID();
 
-        return UUID::fromOptionalData(uuid_bytes, 16);
+        return UUID(uuid_bytes, 16);
       }
       return UUID();
     }
@@ -5616,8 +5616,7 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
             }
 
             if (m_data.CopyData(offset, sizeof(uuid_t), raw_uuid) != 0) {
-              if (!uuid_is_null(raw_uuid))
-                uuid = UUID::fromOptionalData(raw_uuid, sizeof(uuid_t));
+              uuid = UUID(raw_uuid, sizeof(uuid_t));
               // convert the "main bin spec" type into our
               // ObjectFile::BinaryType enum
               switch (binspec_type) {
@@ -5912,7 +5911,7 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
                          100); // sharedCacheBaseAddress <mach-o/dyld_images.h>
           }
         }
-        uuid = UUID::fromOptionalData(sharedCacheUUID_address, sizeof(uuid_t));
+        uuid = UUID(sharedCacheUUID_address, sizeof(uuid_t));
       }
     }
   } else {
@@ -5941,7 +5940,7 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
         dyld_process_info_get_cache(process_info, &sc_info);
         if (sc_info.cacheBaseAddress != 0) {
           base_addr = sc_info.cacheBaseAddress;
-          uuid = UUID::fromOptionalData(sc_info.cacheUUID, sizeof(uuid_t));
+          uuid = UUID(sc_info.cacheUUID, sizeof(uuid_t));
         }
         dyld_process_info_release(process_info);
       }
@@ -6928,8 +6927,7 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
 
           MachOCorefileImageEntry image_entry;
           image_entry.filename = (const char *)m_data.GetCStr(&filepath_offset);
-          if (!uuid_is_null(uuid))
-            image_entry.uuid = UUID::fromData(uuid, sizeof(uuid_t));
+          image_entry.uuid = UUID(uuid, sizeof(uuid_t));
           image_entry.load_address = load_address;
           image_entry.currently_executing = currently_executing;
 
@@ -6960,8 +6958,7 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
 
           MachOCorefileImageEntry image_entry;
           image_entry.filename = filename;
-          if (!uuid_is_null(uuid))
-            image_entry.uuid = UUID::fromData(uuid, sizeof(uuid_t));
+          image_entry.uuid = UUID(uuid, sizeof(uuid_t));
           image_entry.load_address = load_address;
           image_entry.slide = slide;
           image_entry.currently_executing = true;

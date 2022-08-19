@@ -194,7 +194,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo) {
   ASSERT_EQ(1u, result->size());
   EXPECT_EQ("/foo/bar.so", result.value()[0].GetFileSpec().GetPath());
   EXPECT_EQ(triple, result.value()[0].GetArchitecture().GetTriple());
-  EXPECT_EQ(UUID::fromData("@ABCDEFGHIJKLMNO", 16),
+  EXPECT_EQ(UUID("@ABCDEFGHIJKLMNO", 16),
             result.value()[0].GetUUID());
   EXPECT_EQ(0u, result.value()[0].GetObjectOffset());
   EXPECT_EQ(1234u, result.value()[0].GetObjectSize());
@@ -219,7 +219,7 @@ TEST_F(GDBRemoteCommunicationClientTest, GetModulesInfo_UUID20) {
   ASSERT_EQ(1u, result->size());
   EXPECT_EQ("/foo/bar.so", result.value()[0].GetFileSpec().GetPath());
   EXPECT_EQ(triple, result.value()[0].GetArchitecture().GetTriple());
-  EXPECT_EQ(UUID::fromData("@ABCDEFGHIJKLMNOPQRS", 20),
+  EXPECT_EQ(UUID("@ABCDEFGHIJKLMNOPQRS", 20),
             result.value()[0].GetUUID());
   EXPECT_EQ(0u, result.value()[0].GetObjectOffset());
   EXPECT_EQ(1234u, result.value()[0].GetObjectSize());
