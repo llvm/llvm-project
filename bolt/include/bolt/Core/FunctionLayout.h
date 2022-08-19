@@ -39,11 +39,24 @@ public:
   constexpr FragmentNum() = default;
   constexpr explicit FragmentNum(unsigned Value) : Value(Value) {}
   constexpr unsigned get() const { return Value; }
+
   constexpr bool operator==(const FragmentNum Other) const {
     return Value == Other.Value;
   }
   constexpr bool operator!=(const FragmentNum Other) const {
-    return !(*this == Other);
+    return Value != Other.Value;
+  }
+  constexpr bool operator<(const FragmentNum Other) const {
+    return Value < Other.Value;
+  }
+  constexpr bool operator<=(const FragmentNum Other) const {
+    return Value <= Other.Value;
+  }
+  constexpr bool operator>=(const FragmentNum Other) const {
+    return Value >= Other.Value;
+  }
+  constexpr bool operator>(const FragmentNum Other) const {
+    return Value > Other.Value;
   }
 
   static constexpr FragmentNum main() { return FragmentNum(0); }
