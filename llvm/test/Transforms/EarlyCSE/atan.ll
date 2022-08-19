@@ -52,9 +52,33 @@ define x86_fp80 @atanl_x86(x86_fp80 %x) {
 
 define float @callatan2_00() {
 ; CHECK-LABEL: @callatan2_00(
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %call = call float @atan2f(float 0.0, float 0.0)
+  ret float %call
+}
+
+define float @callatan2_n00() {
+; CHECK-LABEL: @callatan2_n00(
 ; CHECK-NEXT:    ret float -0.000000e+00
 ;
   %call = call float @atan2f(float -0.0, float 0.0)
+  ret float %call
+}
+
+define float @callatan2_0n0() {
+; CHECK-LABEL: @callatan2_0n0(
+; CHECK-NEXT:    ret float 0x400921FB60000000
+;
+  %call = call float @atan2f(float 0.0, float -0.0)
+  ret float %call
+}
+
+define float @callatan2_n0n0() {
+; CHECK-LABEL: @callatan2_n0n0(
+; CHECK-NEXT:    ret float 0xC00921FB60000000
+;
+  %call = call float @atan2f(float -0.0, float -0.0)
   ret float %call
 }
 
