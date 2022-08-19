@@ -1,5 +1,7 @@
 # RUN: llvm-mc -triple riscv64-unknown-linux-gnu -filetype obj -o - %s \
 # RUN:   | llvm-readobj -r - | FileCheck %s
+# RUN: not llvm-mc -triple riscv64-unknown-linux-gnu -filetype obj --defsym ERR=1 -o /dev/null %s 2>&1 \
+# RUN:   | FileCheck %s --check-prefix CHECK-ERROR
 
 # CHECK: Relocations [
 # CHECK:  .relasx {
@@ -9,10 +11,6 @@
 # CHECK:  .relasy {
 # CHECK-NEXT:    0x0 R_RISCV_ADD64 x 0x0
 # CHECK-NEXT:    0x0 R_RISCV_SUB64 y 0x0
-# CHECK:  }
-# CHECK:  .relasz {
-# CHECK-NEXT:    0x0 R_RISCV_ADD64 z 0x0
-# CHECK-NEXT:    0x0 R_RISCV_SUB64 a 0x0
 # CHECK:  }
 # CHECK:  .relasa {
 # CHECK-NEXT:    0x0 R_RISCV_ADD64 a 0x0
@@ -30,7 +28,15 @@ y:
 
 	.section	sz
 z:
+.ifdef ERR
 	.quad z-a
+
+# CHECK-ERROR: Cannot represent a difference across sections
+# CHECK-ERROR: 	.quad z-a
+# CHECK-ERROR:        ^
+.else
+	.quad 0
+.endif
 
 	.section	sa
 a:
