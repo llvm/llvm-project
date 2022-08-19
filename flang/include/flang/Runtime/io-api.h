@@ -59,6 +59,8 @@ extern "C" {
 //   Cookie cookie{BeginExternalListOutput(DefaultUnit,__FILE__,__LINE__)};
 //   OutputInteger32(cookie, 666);
 //   EndIoStatement(cookie);
+// Formatted I/O with explicit formats can supply the format as a
+// const char * pointer with a length, or with a descriptor.
 
 // Internal I/O initiation
 // Internal I/O can loan the runtime library an optional block of memory
@@ -86,11 +88,11 @@ Cookie IONAME(BeginInternalArrayListInput)(const Descriptor &,
 Cookie IONAME(BeginInternalArrayFormattedOutput)(const Descriptor &,
     const char *format, std::size_t formatLength, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
 Cookie IONAME(BeginInternalArrayFormattedInput)(const Descriptor &,
     const char *format, std::size_t formatLength, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
 
 // Internal I/O to/from a default-kind character scalar can avoid a
 // descriptor.
@@ -105,11 +107,13 @@ Cookie IONAME(BeginInternalListInput)(const char *internal,
 Cookie IONAME(BeginInternalFormattedOutput)(char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
     void **scratchArea = nullptr, std::size_t scratchBytes = 0,
-    const char *sourceFile = nullptr, int sourceLine = 0);
+    const char *sourceFile = nullptr, int sourceLine = 0,
+    const Descriptor *formatDescriptor = nullptr);
 Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
     void **scratchArea = nullptr, std::size_t scratchBytes = 0,
-    const char *sourceFile = nullptr, int sourceLine = 0);
+    const char *sourceFile = nullptr, int sourceLine = 0,
+    const Descriptor *formatDescriptor = nullptr);
 
 // External unit numbers must fit in default integers. When the integer
 // provided as UNIT is of a wider type than the default integer, it could
@@ -134,10 +138,10 @@ Cookie IONAME(BeginExternalListInput)(ExternalUnit = DefaultUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginExternalFormattedOutput)(const char *format, std::size_t,
     ExternalUnit = DefaultUnit, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
 Cookie IONAME(BeginExternalFormattedInput)(const char *format, std::size_t,
     ExternalUnit = DefaultUnit, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
 Cookie IONAME(BeginUnformattedOutput)(ExternalUnit = DefaultUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginUnformattedInput)(ExternalUnit = DefaultUnit,
