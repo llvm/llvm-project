@@ -6394,12 +6394,15 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
          "Stride should be 1 or -1 for consecutive memory access");
   const Align Alignment = getLoadStoreAlignment(I);
   InstructionCost Cost = 0;
-  if (Legal->isMaskRequired(I))
+  if (Legal->isMaskRequired(I)) {
     Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
                                       CostKind);
-  else
+  } else {
+    TTI::OperandValueProperties OpVP = TTI::OP_None;
+    TTI::OperandValueKind OpVK = TTI::getOperandInfo(I->getOperand(0), OpVP);
     Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
-                                CostKind, I);
+                                CostKind, OpVK, I);
+  }
 
   bool Reverse = ConsecutiveStride < 0;
   if (Reverse)
@@ -6676,9 +6679,11 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
     const Align Alignment = getLoadStoreAlignment(I);
     unsigned AS = getLoadStoreAddressSpace(I);
 
+    TTI::OperandValueProperties OpVP = TTI::OP_None;
+    TTI::OperandValueKind OpVK = TTI::getOperandInfo(I->getOperand(0), OpVP);
     return TTI.getAddressComputationCost(ValTy) +
            TTI.getMemoryOpCost(I->getOpcode(), ValTy, Alignment, AS,
-                               TTI::TCK_RecipThroughput, I);
+                               TTI::TCK_RecipThroughput, OpVK, I);
   }
   return getWideningCost(I, VF);
 }
