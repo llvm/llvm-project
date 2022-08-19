@@ -347,6 +347,37 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK-LABEL @sum_dim() {
 // CHECK: return
 
+
+// -----
+
+// Using an unknown size.
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
+  func.func @sum_1d_unknown(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}) -> i32 {
+    %0 = fir.alloca i32 {bindc_name = "test_sum_1", uniq_name = "_QFtest_sum_1Etest_sum_1"}
+    %1 = fir.absent !fir.box<i1>
+    %c0 = arith.constant 0 : index
+    %2 = fir.address_of(@_QQcl.2E2F696D61785F312E66393000) : !fir.ref<!fir.char<1,13>>
+    %c5_i32 = arith.constant 5 : i32
+    %3 = fir.convert %arg0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+    %4 = fir.convert %2 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
+    %5 = fir.convert %c0 : (index) -> i32
+    %6 = fir.convert %1 : (!fir.box<i1>) -> !fir.box<none>
+    %7 = fir.call @_FortranASumlInteger4(%3, %4, %c5_i32, %5, %6) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+    fir.store %7 to %0 : !fir.ref<i32>
+    %8 = fir.load %0 : !fir.ref<i32>
+    return %8 : i32
+  }
+  func.func private @_FortranASumInteger4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
+  fir.global linkonce @_QQcl.2E2F696D61785F312E66393000 constant : !fir.char<1,13> {
+    %0 = fir.string_lit "./imax_1.f90\00"(13) : !fir.char<1,13>
+    fir.has_value %0 : !fir.char<1,13>
+  }
+}
+
+// Just check that SOMETHING is being output.
+// CHECK-LABEL @sum_1d_unknown() {
+// CHECK: return
+
 // -----
 
 func.func @dot_f32(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a"}, %arg1: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "b"}) -> f32 {

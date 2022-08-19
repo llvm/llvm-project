@@ -71,6 +71,8 @@ struct GSS {
     LRTable::StateID State;
     // Used internally to track reachability during garbage collection.
     bool GCParity;
+    // Have we already used this node for error recovery? (prevents loops)
+    mutable bool Recovered = false;
     // Number of the parents of this node.
     // The parents hold previous parsed symbols, and may resume control after
     // this node is reduced.

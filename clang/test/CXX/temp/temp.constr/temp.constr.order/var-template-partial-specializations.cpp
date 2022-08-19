@@ -51,20 +51,5 @@ static_assert(f<unsigned> == 2);
 static_assert(f<char[10]> == 3);
 static_assert(f<char> == 1);
 
-template <int I>
-struct S {
-  template <typename T>
-  static constexpr int f = 1;
 
-  template <typename T>
-    requires C1<T> && C2<T>
-  static constexpr int f<T> = 2;
 
-  template <typename T>
-    requires C1<T> || C2<T>
-  static constexpr int f<T> = 3;
-};
-
-static_assert(S<1>::f<unsigned> == 2);
-static_assert(S<1>::f<char[10]> == 3);
-static_assert(S<1>::f<char> == 1);

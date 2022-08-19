@@ -1441,7 +1441,7 @@ entry:
 ; ASM32PWR4-DAG:   lwz [[REG10:[0-9]+]], 92(1)
 
 ; ASM64PWR4-DAG:   ld [[REG1:[0-9]+]], 112(1)
-; ASM64PWR4-DAG:   lwz [[REG2:[0-9]+]], 124(1)
+; ASM64PWR4-DAG:   lwa [[REG2:[0-9]+]], 124(1)
 ; ASM64PWR4-DAG:   lwz [[REG3:[0-9]+]], 132(1)
 ; ASM64PWR4-DAG:   lwz [[REG4:[0-9]+]], 140(1)
 ; ASM64PWR4-DAG:   lwa [[REG5:[0-9]+]], 148(1)

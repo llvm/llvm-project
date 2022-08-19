@@ -876,6 +876,34 @@ void MachineVerifier::verifyInlineAsm(const MachineInstr *MI) {
     if (!MO.isReg() || !MO.isImplicit())
       report("Expected implicit register after groups", &MO, OpNo);
   }
+
+  if (MI->getOpcode() == TargetOpcode::INLINEASM_BR) {
+    const MachineBasicBlock *MBB = MI->getParent();
+
+    for (unsigned i = InlineAsm::MIOp_FirstOperand, e = MI->getNumOperands();
+         i != e; ++i) {
+      const MachineOperand &MO = MI->getOperand(i);
+
+      if (!MO.isMBB())
+        continue;
+
+      // Check the successor & predecessor lists look ok, assume they are
+      // not. Find the indirect target without going through the successors.
+      const MachineBasicBlock *IndirectTargetMBB = MO.getMBB();
+      if (!IndirectTargetMBB) {
+        report("INLINEASM_BR indirect target does not exist", &MO, i);
+        break;
+      }
+
+      if (!MBB->isSuccessor(IndirectTargetMBB))
+        report("INLINEASM_BR indirect target missing from successor list", &MO,
+               i);
+
+      if (!IndirectTargetMBB->isPredecessor(MBB))
+        report("INLINEASM_BR indirect target predecessor list missing parent",
+               &MO, i);
+    }
+  }
 }
 
 bool MachineVerifier::verifyAllRegOpsScalar(const MachineInstr &MI,

@@ -73,12 +73,12 @@ ConvertRegReg("ppc-convert-rr-to-ri", cl::Hidden, cl::init(true),
 static cl::opt<bool>
     EnableSExtElimination("ppc-eliminate-signext",
                           cl::desc("enable elimination of sign-extensions"),
-                          cl::init(false), cl::Hidden);
+                          cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableZExtElimination("ppc-eliminate-zeroext",
                           cl::desc("enable elimination of zero-extensions"),
-                          cl::init(false), cl::Hidden);
+                          cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableTrapOptimization("ppc-opt-conditional-trap",
@@ -172,8 +172,10 @@ static MachineInstr *getVRegDefOrNull(MachineOperand *Op,
 
 // This function returns number of known zero bits in output of MI
 // starting from the most significant bit.
-static unsigned
-getKnownLeadingZeroCount(MachineInstr *MI, const PPCInstrInfo *TII) {
+static unsigned getKnownLeadingZeroCount(const unsigned Reg,
+                                         const PPCInstrInfo *TII,
+                                         const MachineRegisterInfo *MRI) {
+  MachineInstr *MI = MRI->getVRegDef(Reg);
   unsigned Opcode = MI->getOpcode();
   if (Opcode == PPC::RLDICL || Opcode == PPC::RLDICL_rec ||
       Opcode == PPC::RLDCL || Opcode == PPC::RLDCL_rec)
@@ -217,7 +219,7 @@ getKnownLeadingZeroCount(MachineInstr *MI, const PPCInstrInfo *TII) {
       Opcode == PPC::LBZU8 || Opcode == PPC::LBZUX8)
     return 56;
 
-  if (TII->isZeroExtended(*MI))
+  if (TII->isZeroExtended(Reg, MRI))
     return 32;
 
   return 0;
@@ -782,8 +784,8 @@ bool PPCMIPeephole::simplifyCode() {
             SrcMI->getOpcode() == PPC::LHZX) {
           if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
             break;
-          auto is64Bit = [] (unsigned Opcode) {
-            return Opcode == PPC::EXTSH8;
+          auto is64Bit = [](unsigned Opcode) {
+            return Opcode == PPC::EXTSH8 || Opcode == PPC::EXTSH8_32_64;
           };
           auto isXForm = [] (unsigned Opcode) {
             return Opcode == PPC::LHZX;
@@ -798,6 +800,7 @@ bool PPCMIPeephole::simplifyCode() {
           };
           unsigned Opc = getSextLoadOp(is64Bit(MI.getOpcode()),
                                        isXForm(SrcMI->getOpcode()));
+
           LLVM_DEBUG(dbgs() << "Zero-extending load\n");
           LLVM_DEBUG(SrcMI->dump());
           LLVM_DEBUG(dbgs() << "and sign-extension\n");
@@ -840,8 +843,29 @@ bool PPCMIPeephole::simplifyCode() {
               if (isXForm) return PPC::LWAX_32;
               else         return PPC::LWA_32;
           };
+
+          // The transformation from a zero-extending load to a sign-extending
+          // load is only legal when the displacement is a multiple of 4.
+          // If the displacement is not at least 4 byte aligned, don't perform
+          // the transformation.
+          bool IsWordAligned = false;
+          if (SrcMI->getOperand(1).isGlobal()) {
+            const GlobalObject *GO =
+                dyn_cast<GlobalObject>(SrcMI->getOperand(1).getGlobal());
+            if (GO && GO->getAlignment() >= 4)
+              IsWordAligned = true;
+          } else if (SrcMI->getOperand(1).isImm()) {
+            int64_t Value = SrcMI->getOperand(1).getImm();
+            if (Value % 4 == 0)
+              IsWordAligned = true;
+          }
+
           unsigned Opc = getSextLoadOp(is64Bit(MI.getOpcode()),
                                        isXForm(SrcMI->getOpcode()));
+
+          if (!IsWordAligned && (Opc == PPC::LWA || Opc == PPC::LWA_32))
+            break;
+
           LLVM_DEBUG(dbgs() << "Zero-extending load\n");
           LLVM_DEBUG(SrcMI->dump());
           LLVM_DEBUG(dbgs() << "and sign-extension\n");
@@ -853,7 +877,7 @@ bool PPCMIPeephole::simplifyCode() {
           Simplified = true;
           NumEliminatedSExt++;
         } else if (MI.getOpcode() == PPC::EXTSW_32_64 &&
-                   TII->isSignExtended(*SrcMI)) {
+                   TII->isSignExtended(NarrowReg, MRI)) {
           // We can eliminate EXTSW if the input is known to be already
           // sign-extended.
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
@@ -904,8 +928,11 @@ bool PPCMIPeephole::simplifyCode() {
           if (Register::isVirtualRegister(CopyReg))
             SrcMI = MRI->getVRegDef(CopyReg);
         }
+        if (!SrcMI->getOperand(0).isReg())
+          break;
 
-        unsigned KnownZeroCount = getKnownLeadingZeroCount(SrcMI, TII);
+        unsigned KnownZeroCount =
+            getKnownLeadingZeroCount(SrcMI->getOperand(0).getReg(), TII, MRI);
         if (MI.getOperand(3).getImm() <= KnownZeroCount) {
           LLVM_DEBUG(dbgs() << "Removing redundant zero-extension\n");
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),

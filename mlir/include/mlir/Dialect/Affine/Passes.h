@@ -110,6 +110,14 @@ createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize);
 /// Overload relying on pass options for initialization.
 std::unique_ptr<OperationPass<func::FuncOp>> createSuperVectorizePass();
 
+/// Populate patterns that expand affine index operations into more fundamental
+/// operations (not necessarily restricted to Affine dialect).
+void populateAffineExpandIndexOpsPatterns(RewritePatternSet &patterns);
+
+/// Creates a pass to expand affine index operations into more fundamental
+/// operations (not necessarily restricted to Affine dialect).
+std::unique_ptr<Pass> createAffineExpandIndexOpsPass();
+
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//

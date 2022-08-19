@@ -21,6 +21,72 @@
 
 using namespace lldb_private;
 
+static void CommunicationReadTest(bool use_read_thread) {
+  Pipe pipe;
+  ASSERT_THAT_ERROR(pipe.CreateNew(/*child_process_inherit=*/false).ToError(),
+                    llvm::Succeeded());
+
+  Status error;
+  size_t bytes_written;
+  ASSERT_THAT_ERROR(pipe.Write("test", 4, bytes_written).ToError(),
+                    llvm::Succeeded());
+  ASSERT_EQ(bytes_written, 4U);
+
+  Communication comm("test");
+  comm.SetConnection(std::make_unique<ConnectionFileDescriptor>(
+      pipe.ReleaseReadFileDescriptor(), /*owns_fd=*/true));
+  comm.SetCloseOnEOF(true);
+
+  if (use_read_thread)
+    ASSERT_TRUE(comm.StartReadThread());
+
+  // This read should wait for the data to become available and return it.
+  lldb::ConnectionStatus status = lldb::eConnectionStatusSuccess;
+  char buf[16];
+  error.Clear();
+  EXPECT_EQ(
+      comm.Read(buf, sizeof(buf), std::chrono::seconds(5), status, &error), 4U);
+  EXPECT_EQ(status, lldb::eConnectionStatusSuccess);
+  EXPECT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+  buf[4] = 0;
+  EXPECT_STREQ(buf, "test");
+
+  // These reads should time out as there is no more data.
+  error.Clear();
+  EXPECT_EQ(comm.Read(buf, sizeof(buf), std::chrono::microseconds(10), status,
+                      &error),
+            0U);
+  EXPECT_EQ(status, lldb::eConnectionStatusTimedOut);
+  EXPECT_THAT_ERROR(error.ToError(), llvm::Failed());
+
+  // 0 is special-cased, so we test it separately.
+  error.Clear();
+  EXPECT_EQ(
+      comm.Read(buf, sizeof(buf), std::chrono::seconds(0), status, &error), 0U);
+  EXPECT_EQ(status, lldb::eConnectionStatusTimedOut);
+  EXPECT_THAT_ERROR(error.ToError(), llvm::Failed());
+
+  // This read should return EOF.
+  pipe.CloseWriteFileDescriptor();
+  error.Clear();
+  EXPECT_EQ(
+      comm.Read(buf, sizeof(buf), std::chrono::seconds(5), status, &error), 0U);
+  EXPECT_EQ(status, lldb::eConnectionStatusEndOfFile);
+  EXPECT_THAT_ERROR(error.ToError(), llvm::Succeeded());
+
+  // JoinReadThread() should just return immediately since there was no read
+  // thread started.
+  EXPECT_TRUE(comm.JoinReadThread());
+}
+
+TEST(CommunicationTest, Read) {
+  CommunicationReadTest(/*use_thread=*/false);
+}
+
+TEST(CommunicationTest, ReadThread) {
+  CommunicationReadTest(/*use_thread=*/true);
+}
+
 #ifndef _WIN32
 TEST(CommunicationTest, SynchronizeWhileClosing) {
   // Set up a communication object reading from a pipe.

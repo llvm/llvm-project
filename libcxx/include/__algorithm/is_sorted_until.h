@@ -21,7 +21,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Compare, class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 __is_sorted_until(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
     if (__first != __last)
@@ -38,7 +38,7 @@ __is_sorted_until(_ForwardIterator __first, _ForwardIterator __last, _Compare __
 }
 
 template <class _ForwardIterator, class _Compare>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 is_sorted_until(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp)
 {
     typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
@@ -46,7 +46,7 @@ is_sorted_until(_ForwardIterator __first, _ForwardIterator __last, _Compare __co
 }
 
 template<class _ForwardIterator>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 is_sorted_until(_ForwardIterator __first, _ForwardIterator __last)
 {
     return _VSTD::is_sorted_until(__first, __last, __less<typename iterator_traits<_ForwardIterator>::value_type>());

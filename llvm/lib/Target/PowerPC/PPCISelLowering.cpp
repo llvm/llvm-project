@@ -11492,7 +11492,8 @@ static bool isSignExtended(MachineInstr &MI, const PPCInstrInfo *TII) {
   default:
     return false;
   case PPC::COPY:
-    return TII->isSignExtended(MI);
+    return TII->isSignExtended(MI.getOperand(1).getReg(),
+                               &MI.getMF()->getRegInfo());
   case PPC::LHA:
   case PPC::LHA8:
   case PPC::LHAU:

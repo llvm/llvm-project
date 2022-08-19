@@ -212,7 +212,7 @@ public:
     error_category() noexcept;
 #else
     _LIBCPP_INLINE_VISIBILITY
-    _LIBCPP_CONSTEXPR_AFTER_CXX11 error_category() _NOEXCEPT = default;
+    _LIBCPP_CONSTEXPR_SINCE_CXX14 error_category() _NOEXCEPT = default;
 #endif
     error_category(const error_category&) = delete;
     error_category& operator=(const error_category&) = delete;

@@ -1186,15 +1186,11 @@ Status ProcessGDBRemote::DoResume() {
     StreamString continue_packet;
     bool continue_packet_error = false;
     if (m_gdb_comm.HasAnyVContSupport()) {
-      std::string pid_prefix;
-      if (m_gdb_comm.GetMultiprocessSupported())
-        pid_prefix = llvm::formatv("p{0:x-}.", GetID());
-
       if (m_continue_c_tids.size() == num_threads ||
           (m_continue_c_tids.empty() && m_continue_C_tids.empty() &&
            m_continue_s_tids.empty() && m_continue_S_tids.empty())) {
-        // All threads are continuing
-        continue_packet.Format("vCont;c:{0}-1", pid_prefix);
+        // All threads are continuing, just send a "c" packet
+        continue_packet.PutCString("c");
       } else {
         continue_packet.PutCString("vCont");
 
@@ -1204,7 +1200,7 @@ Status ProcessGDBRemote::DoResume() {
                      t_pos = m_continue_c_tids.begin(),
                      t_end = m_continue_c_tids.end();
                  t_pos != t_end; ++t_pos)
-              continue_packet.Format(";c:{0}{1:x-}", pid_prefix, *t_pos);
+              continue_packet.Printf(";c:%4.4" PRIx64, *t_pos);
           } else
             continue_packet_error = true;
         }
@@ -1215,8 +1211,8 @@ Status ProcessGDBRemote::DoResume() {
                      s_pos = m_continue_C_tids.begin(),
                      s_end = m_continue_C_tids.end();
                  s_pos != s_end; ++s_pos)
-              continue_packet.Format(";C{0:x-2}:{1}{2:x-}", s_pos->second,
-                                     pid_prefix, s_pos->first);
+              continue_packet.Printf(";C%2.2x:%4.4" PRIx64, s_pos->second,
+                                     s_pos->first);
           } else
             continue_packet_error = true;
         }
@@ -1227,7 +1223,7 @@ Status ProcessGDBRemote::DoResume() {
                      t_pos = m_continue_s_tids.begin(),
                      t_end = m_continue_s_tids.end();
                  t_pos != t_end; ++t_pos)
-              continue_packet.Format(";s:{0}{1:x-}", pid_prefix, *t_pos);
+              continue_packet.Printf(";s:%4.4" PRIx64, *t_pos);
           } else
             continue_packet_error = true;
         }
@@ -1238,8 +1234,8 @@ Status ProcessGDBRemote::DoResume() {
                      s_pos = m_continue_S_tids.begin(),
                      s_end = m_continue_S_tids.end();
                  s_pos != s_end; ++s_pos)
-              continue_packet.Format(";S{0:x-2}:{1}{2:x-}", s_pos->second,
-                                     pid_prefix, s_pos->first);
+              continue_packet.Printf(";S%2.2x:%4.4" PRIx64, s_pos->second,
+                                     s_pos->first);
           } else
             continue_packet_error = true;
         }
