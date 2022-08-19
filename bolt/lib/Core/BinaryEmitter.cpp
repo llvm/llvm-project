@@ -287,10 +287,8 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   if (Function.getState() == BinaryFunction::State::Empty)
     return false;
 
-  MCSection *Section = BC.getCodeSection(
-      FF.isSplitFragment()
-          ? Function.getColdCodeSectionName(FF.getFragmentNum())
-          : Function.getCodeSectionName());
+  MCSection *Section =
+      BC.getCodeSection(Function.getCodeSectionName(FF.getFragmentNum()));
   Streamer.switchSection(Section);
   Section->setHasInstructions(true);
   BC.Ctx->addGenDwarfSection(Section);
@@ -408,7 +406,7 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF,
                                      const FunctionFragment &FF,
                                      bool EmitCodeOnly) {
   if (!EmitCodeOnly && FF.isSplitFragment() && BF.hasConstantIsland()) {
-    assert(FF.getFragmentNum() == FragmentNum::cold() &&
+    assert(BF.getLayout().isHotColdSplit() &&
            "Constant island support only with hot/cold split");
     BF.duplicateConstantIslands();
   }
@@ -918,7 +916,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, bool EmitColdPart) {
 
   // Corresponding FDE start.
   const MCSymbol *StartSymbol =
-      EmitColdPart ? BF.getSymbol(FragmentNum::cold()) : BF.getSymbol();
+      BF.getSymbol(EmitColdPart ? FragmentNum::cold() : FragmentNum::main());
 
   // Emit the LSDA header.
 

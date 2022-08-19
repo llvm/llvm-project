@@ -3,6 +3,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/edit_distance.h"
 #include <algorithm>
+#include <cstddef>
 #include <functional>
 
 using namespace llvm;
@@ -61,18 +62,35 @@ void FunctionLayout::eraseBasicBlocks(
   NewFragments.emplace_back(0);
   for (const FunctionFragment FF : fragments()) {
     unsigned ErasedBlocks = count_if(FF, IsErased);
+    // Only add the fragment if it is non-empty after removing blocks.
     unsigned NewFragment = NewFragments.back() + FF.size() - ErasedBlocks;
     NewFragments.emplace_back(NewFragment);
   }
   llvm::erase_if(Blocks, IsErased);
   Fragments = std::move(NewFragments);
+
+  // Remove empty fragments at the end
+  const_iterator EmptyTailBegin =
+      llvm::find_if_not(reverse(fragments()), [](const FunctionFragment &FF) {
+        return FF.empty();
+      }).base();
+  if (EmptyTailBegin != fragment_end()) {
+    // Add +1 for one-past-the-end entry
+    const FunctionFragment TailBegin = *EmptyTailBegin;
+    unsigned NewFragmentSize = TailBegin.getFragmentNum().get() + 1;
+    Fragments.resize(NewFragmentSize);
+  }
+
+  updateLayoutIndices();
 }
 
 void FunctionLayout::updateLayoutIndices() const {
   unsigned BlockIndex = 0;
   for (const FunctionFragment FF : fragments()) {
-    for (BinaryBasicBlock *const BB : FF)
+    for (BinaryBasicBlock *const BB : FF) {
       BB->setLayoutIndex(BlockIndex++);
+      BB->setFragmentNum(FF.getFragmentNum());
+    }
   }
 }
 

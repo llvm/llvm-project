@@ -309,7 +309,7 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy Strategy) {
         PreSplitLayout = mergeEHTrampolines(BF, PreSplitLayout, Trampolines);
 
       for (BinaryBasicBlock &BB : BF)
-        BB.setIsCold(false);
+        BB.setFragmentNum(FragmentNum::main());
       BF.getLayout().update(PreSplitLayout);
     } else {
       SplitBytesHot += HotSize;
