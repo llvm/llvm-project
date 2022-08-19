@@ -1145,6 +1145,7 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             MaybeAlign Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
+                                            TTI::OperandValueKind OpdInfo,
                                             const Instruction *I) {
 
   InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Src, nullptr);
