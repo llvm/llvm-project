@@ -12,10 +12,12 @@
 
 #include "bolt/Passes/SplitFunctions.h"
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
+#include <iterator>
 #include <random>
 #include <vector>
 
@@ -66,7 +68,7 @@ static cl::opt<unsigned> SplitAlignThreshold(
 
 static cl::opt<bool, false, DeprecatedSplitFunctionOptionParser>
     SplitFunctions("split-functions",
-                   cl::desc("split functions into hot and cold regions"),
+                   cl::desc("split functions into fragments"),
                    cl::cat(BoltOptCategory));
 
 static cl::opt<unsigned> SplitThreshold(
@@ -77,14 +79,25 @@ static cl::opt<unsigned> SplitThreshold(
              "increase after splitting."),
     cl::init(0), cl::Hidden, cl::cat(BoltOptCategory));
 
-static cl::opt<bool>
-    RandomSplit("split-random",
-                cl::desc("split functions randomly into hot/cold regions"),
-                cl::Hidden);
+static cl::opt<SplitFunctionsStrategy> SplitStrategy(
+    "split-strategy", cl::init(SplitFunctionsStrategy::Profile2),
+    cl::values(clEnumValN(SplitFunctionsStrategy::Profile2, "profile2",
+                          "split each function into a hot and cold fragment "
+                          "using profiling information")),
+    cl::values(clEnumValN(
+        SplitFunctionsStrategy::Random2, "random2",
+        "split each function into a hot and cold fragment at a randomly chosen "
+        "split point (ignoring any available profiling information)")),
+    cl::values(clEnumValN(
+        SplitFunctionsStrategy::All, "all",
+        "split all basic blocks of each function into fragments such that each "
+        "fragment contains exactly a single basic block")),
+    cl::desc("strategy used to partition blocks into fragments"),
+    cl::cat(BoltOptCategory));
 } // namespace opts
 
 namespace {
-struct SplitCold {
+struct SplitProfile2 {
   bool canSplit(const BinaryFunction &BF) {
     if (!BF.hasValidProfile())
       return false;
@@ -106,32 +119,25 @@ struct SplitCold {
   }
 
   template <typename It> void partition(const It Start, const It End) const {
-    for (auto I = Start; I != End; ++I) {
-      BinaryBasicBlock *BB = *I;
-      if (!BB->canOutline())
-        break;
-      BB->setIsCold(true);
-    }
+    std::for_each(Start, End, [](BinaryBasicBlock *const BB) {
+      assert(BB->canOutline() &&
+             "Moving a block that is not outlineable to cold fragment");
+      BB->setFragmentNum(FragmentNum::cold());
+    });
   }
 };
 
-struct SplitRandom {
+struct SplitRandom2 {
   std::minstd_rand0 *Gen;
 
-  explicit SplitRandom(std::minstd_rand0 &Gen) : Gen(&Gen) {}
+  explicit SplitRandom2(std::minstd_rand0 &Gen) : Gen(&Gen) {}
 
   bool canSplit(const BinaryFunction &BF) { return true; }
   bool canOutline(const BinaryBasicBlock &BB) { return true; }
 
   template <typename It> void partition(It Start, It End) const {
-    using DiffT = typename It::difference_type;
-
-    const It OutlineableBegin = Start;
-    const It OutlineableEnd =
-        std::find_if(OutlineableBegin, End, [](const BinaryBasicBlock *BB) {
-          return !BB->canOutline();
-        });
-    const DiffT NumOutlineableBlocks = OutlineableEnd - OutlineableBegin;
+    using DiffT = typename std::iterator_traits<It>::difference_type;
+    const DiffT NumOutlineableBlocks = End - Start;
 
     // We want to split at least one block unless there are not blocks that can
     // be outlined
@@ -139,15 +145,27 @@ struct SplitRandom {
     std::uniform_int_distribution<DiffT> Dist(MinimumSplit,
                                               NumOutlineableBlocks);
     const DiffT NumColdBlocks = Dist(*Gen);
-    const It ColdEnd = OutlineableBegin + NumColdBlocks;
+    std::for_each(End - NumColdBlocks, End, [](BinaryBasicBlock *BB) {
+      BB->setFragmentNum(FragmentNum::cold());
+    });
 
     LLVM_DEBUG(dbgs() << formatv("BOLT-DEBUG: randomly chose last {0} (out of "
                                  "{1} possible) blocks to split\n",
-                                 ColdEnd - OutlineableBegin,
-                                 OutlineableEnd - OutlineableBegin));
+                                 NumColdBlocks, End - Start));
+  }
+};
 
-    std::for_each(OutlineableBegin, ColdEnd,
-                  [](BinaryBasicBlock *BB) { BB->setIsCold(true); });
+struct SplitAll {
+  bool canSplit(const BinaryFunction &BF) { return true; }
+  bool canOutline(const BinaryBasicBlock &BB) { return true; }
+
+  template <typename It> void partition(It Start, It End) const {
+    unsigned Fragment = 1;
+    std::for_each(Start, End, [&](BinaryBasicBlock *const BB) {
+      assert(BB->canOutline() &&
+             "Moving a block that is not outlineable to cold fragment");
+      BB->setFragmentNum(FragmentNum(Fragment++));
+    });
   }
 };
 } // namespace
@@ -167,22 +185,32 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
   if (!opts::SplitFunctions)
     return;
 
-  ParallelUtilities::WorkFuncTy WorkFun;
   std::minstd_rand0 RandGen(opts::RandomSeed.getValue());
-  if (opts::RandomSplit)
+
+  ParallelUtilities::WorkFuncTy WorkFun;
+  bool ForceSequential = false;
+
+  switch (opts::SplitStrategy) {
+  case SplitFunctionsStrategy::Profile2:
+    WorkFun = [&](BinaryFunction &BF) { splitFunction<SplitProfile2>(BF); };
+    break;
+  case SplitFunctionsStrategy::Random2:
     WorkFun = [&](BinaryFunction &BF) {
-      splitFunction(BF, SplitRandom(RandGen));
+      splitFunction(BF, SplitRandom2(RandGen));
     };
-  else
-    WorkFun = [&](BinaryFunction &BF) { splitFunction<SplitCold>(BF); };
+    // If we split functions randomly, we need to ensure that across runs with
+    // the same input, we generate random numbers for each function in the same
+    // order.
+    ForceSequential = true;
+    break;
+  case SplitFunctionsStrategy::All:
+    WorkFun = [&](BinaryFunction &BF) { splitFunction<SplitAll>(BF); };
+    break;
+  }
 
   ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
     return !shouldOptimize(BF);
   };
-
-  // If we split functions randomly, we need to ensure that across runs with the
-  // same input, we generate random numbers for each function in the same order.
-  const bool ForceSequential = opts::RandomSplit;
 
   ParallelUtilities::runOnEachFunction(
       BC, ParallelUtilities::SchedulingPolicy::SP_BB_LINEAR, WorkFun, SkipFunc,
@@ -195,12 +223,12 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
                      100.0 * SplitBytesHot / (SplitBytesHot + SplitBytesCold));
 }
 
-template <typename SplitStrategy>
-void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy Strategy) {
+template <typename Strategy>
+void SplitFunctions::splitFunction(BinaryFunction &BF, Strategy S) {
   if (BF.empty())
     return;
 
-  if (!Strategy.canSplit(BF))
+  if (!S.canSplit(BF))
     return;
 
   FunctionLayout &Layout = BF.getLayout();
@@ -226,7 +254,7 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy Strategy) {
   for (BinaryBasicBlock *const BB : NewLayout) {
     if (!BB->canOutline())
       continue;
-    if (!Strategy.canOutline(*BB)) {
+    if (!S.canOutline(*BB)) {
       BB->setCanOutline(false);
       continue;
     }
@@ -278,8 +306,16 @@ void SplitFunctions::splitFunction(BinaryFunction &BF, SplitStrategy Strategy) {
                      });
   }
 
-  // Separate hot from cold starting from the bottom.
-  Strategy.partition(NewLayout.rbegin(), NewLayout.rend());
+  // Identify the last block that must not be split into a fragment. Every block
+  // after this block can be split. Note that when the iterator points to the
+  // block that cannot be outlined, then reverse_iterator::base() points to the
+  // block after it.
+  const BinaryFunction::BasicBlockOrderType::reverse_iterator FirstOutlineable =
+      llvm::find_if(reverse(NewLayout), [](const BinaryBasicBlock *const BB) {
+        return !BB->canOutline();
+      });
+
+  S.partition(FirstOutlineable.base(), NewLayout.end());
   BF.getLayout().update(NewLayout);
 
   // For shared objects, invoke instructions and corresponding landing pads
