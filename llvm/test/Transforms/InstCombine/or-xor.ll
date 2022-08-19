@@ -795,3 +795,167 @@ define i8 @or_xor_notcommon_op(i8 %x, i8 %y, i8 %z, i8 %q) {
   %r = or i8 %or, %xor
   ret i8 %r
 }
+
+define i4 @or_not_xor_common_op_commute0(i4 %x, i4 %y, i4 %z) {
+; CHECK-LABEL: @or_not_xor_common_op_commute0(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i4 [[X:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[O1:%.*]] = or i4 [[NOTX]], [[Z:%.*]]
+; CHECK-NEXT:    [[O2:%.*]] = or i4 [[O1]], [[XOR]]
+; CHECK-NEXT:    ret i4 [[O2]]
+;
+  %notx = xor i4 %x, -1
+  %xor = xor i4 %x, %y
+  %o1 = or i4 %notx, %z
+  %o2 = or i4 %o1, %xor
+  ret i4 %o2
+}
+
+define i8 @or_not_xor_common_op_commute1(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @or_not_xor_common_op_commute1(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOTX]])
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[O1:%.*]] = or i8 [[NOTX]], [[Z:%.*]]
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[XOR]], [[O1]]
+; CHECK-NEXT:    ret i8 [[O2]]
+;
+  %notx = xor i8 %x, -1
+  call void @use(i8 %notx)
+  %xor = xor i8 %x, %y
+  %o1 = or i8 %notx, %z
+  %o2 = or i8 %xor, %o1
+  ret i8 %o2
+}
+
+define i8 @or_not_xor_common_op_commute2(i8 %x, i8 %y, i8 %p) {
+; CHECK-LABEL: @or_not_xor_common_op_commute2(
+; CHECK-NEXT:    [[Z:%.*]] = sub i8 0, [[P:%.*]]
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[O1:%.*]] = or i8 [[Z]], [[NOTX]]
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[XOR]], [[O1]]
+; CHECK-NEXT:    ret i8 [[O2]]
+;
+  %z = sub i8 0, %p ; thwart complexity-based canonicalizaion
+  %notx = xor i8 %x, -1
+  %xor = xor i8 %x, %y
+  %o1 = or i8 %z, %notx
+  %o2 = or i8 %xor, %o1
+  ret i8 %o2
+}
+
+define i8 @or_not_xor_common_op_commute3(i8 %x, i8 %y, i8 %p) {
+; CHECK-LABEL: @or_not_xor_common_op_commute3(
+; CHECK-NEXT:    [[Z:%.*]] = sub i8 0, [[P:%.*]]
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[O1:%.*]] = or i8 [[Z]], [[NOTX]]
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[O1]], [[XOR]]
+; CHECK-NEXT:    ret i8 [[O2]]
+;
+  %z = sub i8 0, %p ; thwart complexity-based canonicalizaion
+  %notx = xor i8 %x, -1
+  %xor = xor i8 %x, %y
+  %o1 = or i8 %z, %notx
+  %o2 = or i8 %o1, %xor
+  ret i8 %o2
+}
+
+define <2 x i4> @or_not_xor_common_op_commute4(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
+; CHECK-LABEL: @or_not_xor_common_op_commute4(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor <2 x i4> [[X:%.*]], <i4 -1, i4 -1>
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i4> [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[O1:%.*]] = or <2 x i4> [[NOTX]], [[Z:%.*]]
+; CHECK-NEXT:    [[O2:%.*]] = or <2 x i4> [[O1]], [[XOR]]
+; CHECK-NEXT:    ret <2 x i4> [[O2]]
+;
+  %notx = xor <2 x i4> %x, <i4 -1, i4 -1>
+  %xor = xor <2 x i4> %y, %x
+  %o1 = or <2 x i4> %notx, %z
+  %o2 = or <2 x i4> %o1, %xor
+  ret <2 x i4> %o2
+}
+
+define i8 @or_not_xor_common_op_commute5(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @or_not_xor_common_op_commute5(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[O1:%.*]] = or i8 [[NOTX]], [[Z:%.*]]
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[XOR]], [[O1]]
+; CHECK-NEXT:    ret i8 [[O2]]
+;
+  %notx = xor i8 %x, -1
+  %xor = xor i8 %y, %x
+  %o1 = or i8 %notx, %z
+  %o2 = or i8 %xor, %o1
+  ret i8 %o2
+}
+
+define i8 @or_not_xor_common_op_commute6(i8 %x, i8 %y, i8 %p) {
+; CHECK-LABEL: @or_not_xor_common_op_commute6(
+; CHECK-NEXT:    [[Z:%.*]] = sub i8 0, [[P:%.*]]
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[O1:%.*]] = or i8 [[Z]], [[NOTX]]
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[XOR]], [[O1]]
+; CHECK-NEXT:    ret i8 [[O2]]
+;
+  %z = sub i8 0, %p ; thwart complexity-based canonicalizaion
+  %notx = xor i8 %x, -1
+  %xor = xor i8 %y, %x
+  %o1 = or i8 %z, %notx
+  %o2 = or i8 %xor, %o1
+  ret i8 %o2
+}
+
+define i8 @or_not_xor_common_op_commute7(i8 %x, i8 %y, i8 %p) {
+; CHECK-LABEL: @or_not_xor_common_op_commute7(
+; CHECK-NEXT:    [[Z:%.*]] = sub i8 0, [[P:%.*]]
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[Y:%.*]], [[X]]
+; CHECK-NEXT:    [[O1:%.*]] = or i8 [[Z]], [[NOTX]]
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[O1]], [[XOR]]
+; CHECK-NEXT:    ret i8 [[O2]]
+;
+  %z = sub i8 0, %p ; thwart complexity-based canonicalizaion
+  %notx = xor i8 %x, -1
+  %xor = xor i8 %y, %x
+  %o1 = or i8 %z, %notx
+  %o2 = or i8 %o1, %xor
+  ret i8 %o2
+}
+
+define i8 @or_not_xor_common_op_use1(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @or_not_xor_common_op_use1(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[XOR]])
+; CHECK-NEXT:    [[O1:%.*]] = or i8 [[NOTX]], [[Z:%.*]]
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[XOR]], [[O1]]
+; CHECK-NEXT:    ret i8 [[O2]]
+;
+  %notx = xor i8 %x, -1
+  %xor = xor i8 %x, %y
+  call void @use(i8 %xor)
+  %o1 = or i8 %notx, %z
+  %o2 = or i8 %xor, %o1
+  ret i8 %o2
+}
+
+define i8 @or_not_xor_common_op_use2(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @or_not_xor_common_op_use2(
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[O1:%.*]] = or i8 [[NOTX]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[O1]])
+; CHECK-NEXT:    [[O2:%.*]] = or i8 [[XOR]], [[O1]]
+; CHECK-NEXT:    ret i8 [[O2]]
+;
+  %notx = xor i8 %x, -1
+  %xor = xor i8 %x, %y
+  %o1 = or i8 %notx, %z
+  call void @use(i8 %o1)
+  %o2 = or i8 %xor, %o1
+  ret i8 %o2
+}
