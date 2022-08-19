@@ -512,14 +512,14 @@ multiclass StructLoad<string name, string proto, string i> {
 }
 
 // Load N-element structure into N vectors (scalar base)
-defm SVLD2 : StructLoad<"svld2[_{2}]", "2Pc", "aarch64_sve_ld2">;
-defm SVLD3 : StructLoad<"svld3[_{2}]", "3Pc", "aarch64_sve_ld3">;
-defm SVLD4 : StructLoad<"svld4[_{2}]", "4Pc", "aarch64_sve_ld4">;
+defm SVLD2 : StructLoad<"svld2[_{2}]", "2Pc", "aarch64_sve_ld2_sret">;
+defm SVLD3 : StructLoad<"svld3[_{2}]", "3Pc", "aarch64_sve_ld3_sret">;
+defm SVLD4 : StructLoad<"svld4[_{2}]", "4Pc", "aarch64_sve_ld4_sret">;
 
 // Load N-element structure into N vectors (scalar base, VL displacement)
-defm SVLD2_VNUM : StructLoad<"svld2_vnum[_{2}]", "2Pcl", "aarch64_sve_ld2">;
-defm SVLD3_VNUM : StructLoad<"svld3_vnum[_{2}]", "3Pcl", "aarch64_sve_ld3">;
-defm SVLD4_VNUM : StructLoad<"svld4_vnum[_{2}]", "4Pcl", "aarch64_sve_ld4">;
+defm SVLD2_VNUM : StructLoad<"svld2_vnum[_{2}]", "2Pcl", "aarch64_sve_ld2_sret">;
+defm SVLD3_VNUM : StructLoad<"svld3_vnum[_{2}]", "3Pcl", "aarch64_sve_ld3_sret">;
+defm SVLD4_VNUM : StructLoad<"svld4_vnum[_{2}]", "4Pcl", "aarch64_sve_ld4_sret">;
 
 // Load one octoword and replicate (scalar base)
 let ArchGuard = "defined(__ARM_FEATURE_SVE_MATMUL_FP64)" in {

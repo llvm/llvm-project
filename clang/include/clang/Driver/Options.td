@@ -2800,7 +2800,8 @@ def fstrict_overflow : Flag<["-"], "fstrict-overflow">, Group<f_Group>;
 def fdriver_only : Flag<["-"], "fdriver-only">, Flags<[NoXarchOption, CoreOption]>,
   Group<Action_Group>, HelpText<"Only run the driver.">;
 def fsyntax_only : Flag<["-"], "fsyntax-only">,
-  Flags<[NoXarchOption,CoreOption,CC1Option,FC1Option]>, Group<Action_Group>;
+  Flags<[NoXarchOption,CoreOption,CC1Option,FC1Option,FlangOption]>, Group<Action_Group>,
+  HelpText<"Run the preprocessor, parser and semantic analysis stages">;
 def ftabstop_EQ : Joined<["-"], "ftabstop=">, Group<f_Group>;
 def ftemplate_depth_EQ : Joined<["-"], "ftemplate-depth=">, Group<f_Group>;
 def ftemplate_depth_ : Joined<["-"], "ftemplate-depth-">, Group<f_Group>;
@@ -6618,7 +6619,7 @@ def _SLASH_Zp : CLJoined<"Zp">,
 def _SLASH_Zp_flag : CLFlag<"Zp">,
   HelpText<"Set default maximum struct packing alignment to 1">,
   Alias<fpack_struct_EQ>, AliasArgs<["1"]>;
-def _SLASH_Zs : CLFlag<"Zs">, HelpText<"Syntax-check only">,
+def _SLASH_Zs : CLFlag<"Zs">, HelpText<"Run the preprocessor, parser and semantic analysis stages">,
   Alias<fsyntax_only>;
 def _SLASH_openmp_ : CLFlag<"openmp-">,
   HelpText<"Disable OpenMP support">, Alias<fno_openmp>;

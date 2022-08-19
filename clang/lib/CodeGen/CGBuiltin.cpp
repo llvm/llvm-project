@@ -8849,13 +8849,13 @@ Value *CodeGenFunction::EmitSVEStructLoad(const SVETypeFlags &TypeFlags,
 
   unsigned N;
   switch (IntID) {
-  case Intrinsic::aarch64_sve_ld2:
+  case Intrinsic::aarch64_sve_ld2_sret:
     N = 2;
     break;
-  case Intrinsic::aarch64_sve_ld3:
+  case Intrinsic::aarch64_sve_ld3_sret:
     N = 3;
     break;
-  case Intrinsic::aarch64_sve_ld4:
+  case Intrinsic::aarch64_sve_ld4_sret:
     N = 4;
     break;
   default:
@@ -8869,9 +8869,16 @@ Value *CodeGenFunction::EmitSVEStructLoad(const SVETypeFlags &TypeFlags,
   Value *Offset = Ops.size() > 2 ? Ops[2] : Builder.getInt32(0);
   BasePtr = Builder.CreateGEP(VTy, BasePtr, Offset);
   BasePtr = Builder.CreateBitCast(BasePtr, EltPtrTy);
-
-  Function *F = CGM.getIntrinsic(IntID, {RetTy, Predicate->getType()});
-  return Builder.CreateCall(F, { Predicate, BasePtr });
+  Function *F = CGM.getIntrinsic(IntID, {VTy});
+  Value *Call = Builder.CreateCall(F, {Predicate, BasePtr});
+  unsigned MinElts = VTy->getMinNumElements();
+  Value *Ret = llvm::PoisonValue::get(RetTy);
+  for (unsigned I = 0; I < N; I++) {
+    Value *Idx = ConstantInt::get(CGM.Int64Ty, I * MinElts);
+    Value *SRet = Builder.CreateExtractValue(Call, I);
+    Ret = Builder.CreateInsertVector(RetTy, Ret, SRet, Idx);
+  }
+  return Ret;
 }
 
 Value *CodeGenFunction::EmitSVEStructStore(const SVETypeFlags &TypeFlags,

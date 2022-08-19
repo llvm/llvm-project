@@ -2409,7 +2409,31 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Vec = II->getArgOperand(0);
     Value *Idx = II->getArgOperand(1);
 
-    auto *DstTy = dyn_cast<FixedVectorType>(II->getType());
+    Type *ReturnType = II->getType();
+    // (extract_vector (insert_vector InsertTuple, InsertValue, InsertIdx),
+    // ExtractIdx)
+    unsigned ExtractIdx = cast<ConstantInt>(Idx)->getZExtValue();
+    Value *InsertTuple, *InsertIdx, *InsertValue;
+    if (match(Vec, m_Intrinsic<Intrinsic::vector_insert>(m_Value(InsertTuple),
+                                                         m_Value(InsertValue),
+                                                         m_Value(InsertIdx))) &&
+        InsertValue->getType() == ReturnType) {
+      unsigned Index = cast<ConstantInt>(InsertIdx)->getZExtValue();
+      // Case where we get the same index right after setting it.
+      // extract.vector(insert.vector(InsertTuple, InsertValue, Idx), Idx) -->
+      // InsertValue
+      if (ExtractIdx == Index)
+        return replaceInstUsesWith(CI, InsertValue);
+      // If we are getting a different index than what was set in the
+      // insert.vector intrinsic. We can just set the input tuple to the one up
+      // in the chain. extract.vector(insert.vector(InsertTuple, InsertValue,
+      // InsertIndex), ExtractIndex)
+      // --> extract.vector(InsertTuple, ExtractIndex)
+      else
+        return replaceOperand(CI, 0, InsertTuple);
+    }
+
+    auto *DstTy = dyn_cast<FixedVectorType>(ReturnType);
     auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
 
     // Only canonicalize if the the destination vector and Vec are fixed
