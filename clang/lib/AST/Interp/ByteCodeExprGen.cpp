@@ -147,6 +147,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   default:
     assert(false && "Cast not implemented");
   }
+  llvm_unreachable("Unhandled clang::CastKind enum");
 }
 
 template <class Emitter>
