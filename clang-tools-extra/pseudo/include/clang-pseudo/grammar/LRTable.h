@@ -106,8 +106,6 @@ public:
     assert(isToken(Terminal));
     assert(isNonterminal(Nonterminal));
     // tok::unknown is a sentinel value used in recovery: can follow anything.
-    if (tok::unknown)
-      return true;
     return Terminal == tokenSymbol(tok::unknown) ||
            FollowSets.test(tok::NUM_TOKENS * Nonterminal +
                            symbolToToken(Terminal));

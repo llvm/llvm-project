@@ -403,6 +403,10 @@ public:
   GLRReduce(const ParseParams &Params, const Language &Lang)
       : Params(Params), Lang(Lang) {}
 
+  // Reduce Heads, resulting in new nodes that are appended to Heads.
+  // The "consumed" nodes are not removed!
+  // Only reduce rules compatible with the Lookahead are applied, though
+  // tokenSymbol(tok::unknown) will match any rule.
   void operator()(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead) {
     assert(isToken(Lookahead));
 
