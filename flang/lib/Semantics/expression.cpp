@@ -150,6 +150,7 @@ public:
   bool IsIntrinsicConcat() const;
 
   bool CheckConformance();
+  bool CheckAssignmentConformance();
   bool CheckForNullPointer(const char *where = "as an operand here");
 
   // Find and return a user-defined operator or report an error.
@@ -2558,10 +2559,12 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
 const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
   if (!x.typedAssignment) {
     ArgumentAnalyzer analyzer{*this};
-    analyzer.Analyze(std::get<parser::Variable>(x.t));
+    const auto &variable{std::get<parser::Variable>(x.t)};
+    analyzer.Analyze(variable);
     analyzer.Analyze(std::get<parser::Expr>(x.t));
     std::optional<Assignment> assignment;
     if (!analyzer.fatalErrors()) {
+      auto restorer{GetContextualMessages().SetLocation(variable.GetSource())};
       std::optional<ProcedureRef> procRef{analyzer.TryDefinedAssignment()};
       if (!procRef) {
         analyzer.CheckForNullPointer(
@@ -3478,6 +3481,28 @@ bool ArgumentAnalyzer::CheckConformance() {
   return true; // no proven problem
 }
 
+bool ArgumentAnalyzer::CheckAssignmentConformance() {
+  if (actuals_.size() == 2) {
+    const auto *lhs{actuals_.at(0).value().UnwrapExpr()};
+    const auto *rhs{actuals_.at(1).value().UnwrapExpr()};
+    if (lhs && rhs) {
+      auto &foldingContext{context_.GetFoldingContext()};
+      auto lhShape{GetShape(foldingContext, *lhs)};
+      auto rhShape{GetShape(foldingContext, *rhs)};
+      if (lhShape && rhShape) {
+        if (!evaluate::CheckConformance(foldingContext.messages(), *lhShape,
+                *rhShape, CheckConformanceFlags::RightScalarExpandable,
+                "left-hand side", "right-hand side")
+                 .value_or(true /*ok when conformance is not known now*/)) {
+          fatalErrors_ = true;
+          return false;
+        }
+      }
+    }
+  }
+  return true; // no proven problem
+}
+
 bool ArgumentAnalyzer::CheckForNullPointer(const char *where) {
   for (const std::optional<ActualArgument> &arg : actuals_) {
     if (arg) {
@@ -3578,6 +3603,9 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
   if (isDefined == Tristate::No) {
     if (lhsType && rhsType) {
       AddAssignmentConversion(*lhsType, *rhsType);
+    }
+    if (!fatalErrors_) {
+      CheckAssignmentConformance();
     }
     return std::nullopt; // user-defined assignment not allowed for these args
   }
