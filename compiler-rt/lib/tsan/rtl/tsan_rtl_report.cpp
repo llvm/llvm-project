@@ -281,11 +281,9 @@ void ScopedReportBase::AddLocation(uptr addr, uptr size) {
   int fd = -1;
   Tid creat_tid = kInvalidTid;
   StackID creat_stack = 0;
-  bool closed = false;
-  if (FdLocation(addr, &fd, &creat_tid, &creat_stack, &closed)) {
+  if (FdLocation(addr, &fd, &creat_tid, &creat_stack)) {
     auto *loc = New<ReportLocation>();
     loc->type = ReportLocationFD;
-    loc->fd_closed = closed;
     loc->fd = fd;
     loc->tid = creat_tid;
     loc->stack = SymbolizeStackId(creat_stack);
