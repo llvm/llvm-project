@@ -108,8 +108,8 @@ Options for all Libraries
 **OPENMP_ENABLE_WERROR** = ``OFF|ON``
   Treat warnings as errors and fail, if a compiler warning is triggered.
 
-**OPENMP_INSTALL_LIBDIR** = ``lib``
-  Name or path of the directory where libraries are to be installed.
+**OPENMP_LIBDIR_SUFFIX** = ``""``
+  Extra suffix to append to the directory where libraries are to be installed.
 
 **OPENMP_TEST_C_COMPILER** = ``${CMAKE_C_COMPILER}``
   Compiler to use for testing. Defaults to the compiler that was also used for
