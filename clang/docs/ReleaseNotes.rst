@@ -75,6 +75,9 @@ Bug Fixes
   This fixes `Issue 56094 <https://github.com/llvm/llvm-project/issues/56094>`_.
 - Fix `#57151 <https://github.com/llvm/llvm-project/issues/57151>`_.
   ``-Wcomma`` is emitted for void returning functions.
+- ``-Wtautological-compare`` missed warnings for tautological comparisons
+  involving a negative integer literal. This fixes
+  `Issue 42918 <https://github.com/llvm/llvm-project/issues/42918>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
