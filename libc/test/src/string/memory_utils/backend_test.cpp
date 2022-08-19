@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/ArrayRef.h"
+#include "src/__support/CPP/Bit.h"
 #include "src/__support/CPP/array.h"
-#include "src/__support/CPP/bit.h"
 #include "src/__support/architectures.h"
 #include "src/string/memory_utils/backends.h"
 #include "utils/UnitTest/Test.h"
@@ -49,17 +49,15 @@ template <typename Backend, size_t Size> struct Conf {
   static constexpr size_t SIZE = Size;
 
   static BufferT splat(ubyte value) {
-    return cpp::bit_cast<BufferT>(Backend::template splat<T>(value));
+    return bit_cast<BufferT>(Backend::template splat<T>(value));
   }
 
   static uint64_t notEquals(const BufferT &v1, const BufferT &v2) {
-    return Backend::template notEquals<T>(cpp::bit_cast<T>(v1),
-                                          cpp::bit_cast<T>(v2));
+    return Backend::template notEquals<T>(bit_cast<T>(v1), bit_cast<T>(v2));
   }
 
   static int32_t threeWayCmp(const BufferT &v1, const BufferT &v2) {
-    return Backend::template threeWayCmp<T>(cpp::bit_cast<T>(v1),
-                                            cpp::bit_cast<T>(v2));
+    return Backend::template threeWayCmp<T>(bit_cast<T>(v1), bit_cast<T>(v2));
   }
 };
 
@@ -87,10 +85,9 @@ using FunctionTypes = testing::TypeList< //
 
 TYPED_TEST(LlvmLibcMemoryBackend, splat, FunctionTypes) {
   for (auto value : cpp::array<uint8_t, 3>{0u, 1u, 255u}) {
-    alignas(64) const auto stored =
-        ParamType::splat(cpp::bit_cast<ubyte>(value));
+    alignas(64) const auto stored = ParamType::splat(bit_cast<ubyte>(value));
     for (size_t i = 0; i < ParamType::SIZE; ++i)
-      EXPECT_EQ(cpp::bit_cast<uint8_t>(stored[i]), value);
+      EXPECT_EQ(bit_cast<uint8_t>(stored[i]), value);
   }
 }
 
@@ -132,14 +129,14 @@ struct LoadStoreConf {
   static constexpr size_t SIZE = Size;
 
   static BufferT load(const BufferT &ref) {
-    const auto *ptr = cpp::bit_cast<const T *>(ref.data());
+    const auto *ptr = bit_cast<const T *>(ref.data());
     const T value = Backend::template load<T, TS, AS>(ptr);
-    return cpp::bit_cast<BufferT>(value);
+    return bit_cast<BufferT>(value);
   }
 
   static void store(BufferT &ref, const BufferT value) {
-    auto *ptr = cpp::bit_cast<T *>(ref.data());
-    Backend::template store<T, TS, AS>(ptr, cpp::bit_cast<T>(value));
+    auto *ptr = bit_cast<T *>(ref.data());
+    Backend::template store<T, TS, AS>(ptr, bit_cast<T>(value));
   }
 };
 

@@ -29,7 +29,7 @@ add_header_library(
 add_header_library(
   bit
   HDRS
-    bit.h
+    Bit.h
 )
 
 add_header_library(
