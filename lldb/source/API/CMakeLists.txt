@@ -8,8 +8,6 @@ if (LLDB_ENABLE_SWIFT_SUPPORT)
 endif()
 ## END SWIFT
 
-include(ExtendPath)
-
 get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
 if(LLDB_BUILD_FRAMEWORK)
@@ -133,8 +131,7 @@ add_properties_for_swift_modules(liblldb)
 # (LLVM_LINK_LLVM_DYLIB). Add an additional rpath $ORIGIN/../../../../lib so
 # that _lldb.so can be loaded from Python.
 if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX AND NOT APPLE)
-  extend_path(install_rpath "\$ORIGIN/../../../../" "${CMAKE_INSTALL_LIBDIR}")
-  set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "${install_rpath}")
+  set_property(TARGET liblldb APPEND PROPERTY INSTALL_RPATH "\$ORIGIN/../../../../lib${LLVM_LIBDIR_SUFFIX}")
 endif()
 
 if(Python3_RPATH)
