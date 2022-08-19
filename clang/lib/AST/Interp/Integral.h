@@ -58,12 +58,12 @@ private:
   template <unsigned OtherBits, bool OtherSigned> friend class Integral;
 
   // The primitive representing the integral.
-  using T = typename Repr<Bits, Signed>::Type;
-  T V;
+  using ReprT = typename Repr<Bits, Signed>::Type;
+  ReprT V;
 
   /// Primitive representing limits.
-  static const auto Min = std::numeric_limits<T>::min();
-  static const auto Max = std::numeric_limits<T>::max();
+  static const auto Min = std::numeric_limits<ReprT>::min();
+  static const auto Max = std::numeric_limits<ReprT>::max();
 
   /// Construct an integral from anything that is convertible to storage.
   template <typename T> explicit Integral(T V) : V(V) {}
@@ -124,25 +124,27 @@ public:
 
   bool isMin() const { return *this == min(bitWidth()); }
 
-  bool isMinusOne() const { return Signed && V == T(-1); }
+  bool isMinusOne() const { return Signed && V == ReprT(-1); }
 
   constexpr static bool isSigned() { return Signed; }
 
-  bool isNegative() const { return V < T(0); }
+  bool isNegative() const { return V < ReprT(0); }
   bool isPositive() const { return !isNegative(); }
 
   ComparisonCategoryResult compare(const Integral &RHS) const {
     return Compare(V, RHS.V);
   }
 
-  unsigned countLeadingZeros() const { return llvm::countLeadingZeros<T>(V); }
+  unsigned countLeadingZeros() const {
+    return llvm::countLeadingZeros<ReprT>(V);
+  }
 
   Integral truncate(unsigned TruncBits) const {
     if (TruncBits >= Bits)
       return *this;
-    const T BitMask = (T(1) << T(TruncBits)) - 1;
-    const T SignBit = T(1) << (TruncBits - 1);
-    const T ExtMask = ~BitMask;
+    const ReprT BitMask = (ReprT(1) << ReprT(TruncBits)) - 1;
+    const ReprT SignBit = ReprT(1) << (TruncBits - 1);
+    const ReprT ExtMask = ~BitMask;
     return Integral((V & BitMask) | (Signed && (V & SignBit) ? ExtMask : 0));
   }
 
@@ -159,7 +161,7 @@ public:
     if constexpr (std::is_integral<ValT>::value)
       return Integral(Value);
     else
-      return Integral::from(static_cast<Integral::T>(Value));
+      return Integral::from(static_cast<Integral::ReprT>(Value));
   }
 
   template <unsigned SrcBits, bool SrcSign>
@@ -182,15 +184,15 @@ public:
   }
 
   static bool inRange(int64_t Value, unsigned NumBits) {
-    return CheckRange<T, Min, Max>(Value);
+    return CheckRange<ReprT, Min, Max>(Value);
   }
 
   static bool increment(Integral A, Integral *R) {
-    return add(A, Integral(T(1)), A.bitWidth(), R);
+    return add(A, Integral(ReprT(1)), A.bitWidth(), R);
   }
 
   static bool decrement(Integral A, Integral *R) {
-    return sub(A, Integral(T(1)), A.bitWidth(), R);
+    return sub(A, Integral(ReprT(1)), A.bitWidth(), R);
   }
 
   static bool add(Integral A, Integral B, unsigned OpBits, Integral *R) {
