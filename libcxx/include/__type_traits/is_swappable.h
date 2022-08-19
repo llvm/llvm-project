@@ -44,12 +44,12 @@ using __swap_result_t = void;
 
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR_AFTER_CXX17 __swap_result_t<_Tp>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __swap_result_t<_Tp>
 swap(_Tp& __x, _Tp& __y) _NOEXCEPT_(is_nothrow_move_constructible<_Tp>::value &&
                                     is_nothrow_move_assignable<_Tp>::value);
 
 template<class _Tp, size_t _Np>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 typename enable_if<
     __is_swappable<_Tp>::value
 >::type
