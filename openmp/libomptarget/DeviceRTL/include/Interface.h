@@ -288,13 +288,26 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 ///{
 void __kmpc_xteam_sum_d(double, double *);
 void __kmpc_xteam_sum_f(float, float *);
+void __kmpc_xteam_sum_cd(double _Complex, double _Complex *);
+void __kmpc_xteam_sum_cf(float _Complex, float _Complex *);
 void __kmpc_xteam_sum_i(int, int *);
+void __kmpc_xteam_sum_ui(unsigned int, unsigned int *);
+void __kmpc_xteam_sum_l(long int, long int *);
+void __kmpc_xteam_sum_ul(unsigned long, unsigned long *);
+
 void __kmpc_xteam_max_d(double, double *);
 void __kmpc_xteam_max_f(float, float *);
 void __kmpc_xteam_max_i(int, int *);
+void __kmpc_xteam_max_ui(unsigned int, unsigned int *);
+void __kmpc_xteam_max_l(long int, long int *);
+void __kmpc_xteam_max_ul(unsigned long, unsigned long *);
+
 void __kmpc_xteam_min_d(double, double *);
 void __kmpc_xteam_min_f(float, float *);
 void __kmpc_xteam_min_i(int, int *);
+void __kmpc_xteam_min_ui(unsigned int, unsigned int *);
+void __kmpc_xteam_min_l(long int, long int *);
+void __kmpc_xteam_min_ul(unsigned long, unsigned long *);
 ///}
 
 /// Synchronization
