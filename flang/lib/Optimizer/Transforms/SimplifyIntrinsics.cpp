@@ -331,8 +331,8 @@ static bool isZero(mlir::Value val) {
 static mlir::Value findShape(mlir::Value val) {
   if (auto op = expectConvertOp(val)) {
     assert(op->getOperands().size() != 0);
-    if (auto box =
-            mlir::dyn_cast<fir::EmboxOp>(op->getOperand(0).getDefiningOp()))
+    if (auto box = mlir::dyn_cast_or_null<fir::EmboxOp>(
+            op->getOperand(0).getDefiningOp()))
       return box.getShape();
   }
   return {};
