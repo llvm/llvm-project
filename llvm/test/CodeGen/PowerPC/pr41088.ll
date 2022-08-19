@@ -46,13 +46,12 @@ define void @test(%6* %arg, %7* %arg1, %12* %arg2) unnamed_addr personality i32 
 ; CHECK-NEXT:    stdu r1, -32(r1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
-; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:  # %bb.1: # %bb9
 ; CHECK-NEXT:    bl test5
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    rlwinm r3, r3, 8, 16, 23
+; CHECK-NEXT:    rlwinm r4, r3, 8, 16, 23
 ; CHECK-NEXT:  # %bb.2: # %bb12
-; CHECK-NEXT:    clrldi r4, r3, 32
 ; CHECK-NEXT:    bl test3
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 32
