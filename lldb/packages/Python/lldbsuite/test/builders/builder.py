@@ -121,8 +121,9 @@ class Builder:
         return []
 
     def getLibCxxArgs(self):
-        if configuration.hermetic_libcxx:
-            return ["USE_HERMETIC_LIBCPP=1"]
+        if configuration.libcxx_include_dir and configuration.libcxx_library_dir:
+            return ["LIBCPP_INCLUDE_DIR={}".format(configuration.libcxx_include_dir),
+                    "LIBCPP_LIBRARY_DIR={}".format(configuration.libcxx_library_dir)]
         return []
 
     def _getDebugInfoArgs(self, debug_info):
