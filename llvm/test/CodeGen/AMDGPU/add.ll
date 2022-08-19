@@ -3,6 +3,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx1200 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10,FUNC %s
 
 ; FUNC-LABEL: {{^}}s_add_i32:
 ; GCN: s_add_i32 s[[REG:[0-9]+]], {{s[0-9]+, s[0-9]+}}
