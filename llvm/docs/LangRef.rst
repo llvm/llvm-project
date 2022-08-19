@@ -20532,7 +20532,7 @@ Semantics:
 
 The '``llvm.vp.sext``' intrinsic performs a sign extension by copying the sign
 bit (highest order bit) of the value until it reaches the size of the return
-type. When zero extending from i1, the result will always be either -1 or 0.
+type. When sign extending from i1, the result will always be either -1 or 0.
 The conversion is performed on lane positions below the explicit vector length
 and where the vector mask is true. Masked-off lanes are undefined.
 
