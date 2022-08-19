@@ -681,11 +681,11 @@ public:
   bool isCold() const {
     assert(Fragment.get() < 2 &&
            "Function is split into more than two (hot/cold)-fragments");
-    return Fragment == FragmentNum::cold();
+    return isSplit();
   }
 
   void setIsCold(const bool Flag) {
-    Fragment = Flag ? FragmentNum::cold() : FragmentNum::hot();
+    Fragment = Flag ? FragmentNum::cold() : FragmentNum::main();
   }
 
   /// Return true if the block can be outlined. At the moment we disallow

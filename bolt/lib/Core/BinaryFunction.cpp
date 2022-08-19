@@ -4038,10 +4038,6 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
   }
 
   const uint64_t BaseAddress = getCodeSection()->getOutputAddress();
-  ErrorOr<BinarySection &> ColdSection =
-      getColdCodeSection(FragmentNum::cold());
-  const uint64_t ColdBaseAddress =
-      isSplit() ? ColdSection->getOutputAddress() : 0;
   if (BC.HasRelocations || isInjected()) {
     const uint64_t StartOffset = Layout.getSymbolOffset(*getSymbol());
     const uint64_t EndOffset = Layout.getSymbolOffset(*getFunctionEndLabel());
@@ -4053,20 +4049,35 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
       setOutputDataAddress(BaseAddress + DataOffset);
     }
     if (isSplit()) {
-      const MCSymbol *ColdStartSymbol = getSymbol(FragmentNum::cold());
-      assert(ColdStartSymbol && ColdStartSymbol->isDefined() &&
-             "split function should have defined cold symbol");
-      const MCSymbol *ColdEndSymbol = getFunctionEndLabel(FragmentNum::cold());
-      assert(ColdEndSymbol && ColdEndSymbol->isDefined() &&
-             "split function should have defined cold end symbol");
-      const uint64_t ColdStartOffset = Layout.getSymbolOffset(*ColdStartSymbol);
-      const uint64_t ColdEndOffset = Layout.getSymbolOffset(*ColdEndSymbol);
-      cold().setAddress(ColdBaseAddress + ColdStartOffset);
-      cold().setImageSize(ColdEndOffset - ColdStartOffset);
-      if (hasConstantIsland()) {
-        const uint64_t DataOffset =
-            Layout.getSymbolOffset(*getFunctionColdConstantIslandLabel());
-        setOutputColdDataAddress(ColdBaseAddress + DataOffset);
+      for (const FunctionFragment &FF : getLayout().getSplitFragments()) {
+        ErrorOr<BinarySection &> ColdSection =
+            getCodeSection(FF.getFragmentNum());
+        // If fragment is empty, cold section might not exist
+        if (FF.empty() && ColdSection.getError())
+          continue;
+        const uint64_t ColdBaseAddress = ColdSection->getOutputAddress();
+
+        const MCSymbol *ColdStartSymbol = getSymbol(FF.getFragmentNum());
+        // If fragment is empty, symbol might have not been emitted
+        if (FF.empty() && (!ColdStartSymbol || !ColdStartSymbol->isDefined()) &&
+            !hasConstantIsland())
+          continue;
+        assert(ColdStartSymbol && ColdStartSymbol->isDefined() &&
+               "split function should have defined cold symbol");
+        const MCSymbol *ColdEndSymbol =
+            getFunctionEndLabel(FF.getFragmentNum());
+        assert(ColdEndSymbol && ColdEndSymbol->isDefined() &&
+               "split function should have defined cold end symbol");
+        const uint64_t ColdStartOffset =
+            Layout.getSymbolOffset(*ColdStartSymbol);
+        const uint64_t ColdEndOffset = Layout.getSymbolOffset(*ColdEndSymbol);
+        cold().setAddress(ColdBaseAddress + ColdStartOffset);
+        cold().setImageSize(ColdEndOffset - ColdStartOffset);
+        if (hasConstantIsland()) {
+          const uint64_t DataOffset =
+              Layout.getSymbolOffset(*getFunctionColdConstantIslandLabel());
+          setOutputColdDataAddress(ColdBaseAddress + DataOffset);
+        }
       }
     }
   } else {
@@ -4088,32 +4099,42 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
   if (getLayout().block_empty())
     return;
 
+  assert((getLayout().isHotColdSplit() ||
+          (cold().getAddress() == 0 && cold().getImageSize() == 0 &&
+           BC.HasRelocations)) &&
+         "Function must be split two ways or cold fragment must have no "
+         "address (only in relocation mode)");
+
   BinaryBasicBlock *PrevBB = nullptr;
-  for (BinaryBasicBlock *BB : this->Layout.blocks()) {
-    assert(BB->getLabel()->isDefined() && "symbol should be defined");
-    const uint64_t BBBaseAddress = BB->isCold() ? ColdBaseAddress : BaseAddress;
-    if (!BC.HasRelocations) {
-      if (BB->isCold()) {
-        assert(BBBaseAddress == cold().getAddress());
-      } else {
-        assert(BBBaseAddress == getOutputAddress());
+  for (const FunctionFragment &FF : getLayout().fragments()) {
+    const uint64_t FragmentBaseAddress =
+        getCodeSection(isSimple() ? FF.getFragmentNum() : FragmentNum::main())
+            ->getOutputAddress();
+    for (BinaryBasicBlock *const BB : FF) {
+      assert(BB->getLabel()->isDefined() && "symbol should be defined");
+      if (!BC.HasRelocations) {
+        if (BB->isSplit()) {
+          assert(FragmentBaseAddress == cold().getAddress());
+        } else {
+          assert(FragmentBaseAddress == getOutputAddress());
+        }
       }
-    }
-    const uint64_t BBOffset = Layout.getSymbolOffset(*BB->getLabel());
-    const uint64_t BBAddress = BBBaseAddress + BBOffset;
-    BB->setOutputStartAddress(BBAddress);
+      const uint64_t BBOffset = Layout.getSymbolOffset(*BB->getLabel());
+      const uint64_t BBAddress = FragmentBaseAddress + BBOffset;
+      BB->setOutputStartAddress(BBAddress);
 
-    if (PrevBB) {
-      uint64_t PrevBBEndAddress = BBAddress;
-      if (BB->isCold() != PrevBB->isCold())
-        PrevBBEndAddress = getOutputAddress() + getOutputSize();
-      PrevBB->setOutputEndAddress(PrevBBEndAddress);
-    }
-    PrevBB = BB;
+      if (PrevBB) {
+        uint64_t PrevBBEndAddress = BBAddress;
+        if (BB->isSplit() != PrevBB->isSplit())
+          PrevBBEndAddress = getOutputAddress() + getOutputSize();
+        PrevBB->setOutputEndAddress(PrevBBEndAddress);
+      }
+      PrevBB = BB;
 
-    BB->updateOutputValues(Layout);
+      BB->updateOutputValues(Layout);
+    }
   }
-  PrevBB->setOutputEndAddress(PrevBB->isCold()
+  PrevBB->setOutputEndAddress(PrevBB->isSplit()
                                   ? cold().getAddress() + cold().getImageSize()
                                   : getOutputAddress() + getOutputSize());
 }

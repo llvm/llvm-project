@@ -3186,11 +3186,11 @@ void RewriteInstance::emitAndLink() {
     for (const FunctionFragment FF :
          Function->getLayout().getSplitFragments()) {
       if (ErrorOr<BinarySection &> ColdSection =
-              Function->getColdCodeSection(FF.getFragmentNum()))
+              Function->getCodeSection(FF.getFragmentNum()))
         BC->deregisterSection(*ColdSection);
     }
     if (Function->getLayout().isSplit())
-      Function->ColdCodeSectionName = getBOLTTextSectionName().str();
+      Function->setColdCodeSectionName(getBOLTTextSectionName());
   }
 
   if (opts::PrintCacheMetrics) {
@@ -3728,7 +3728,7 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
 
     for (const FunctionFragment FF : Function.getLayout().getSplitFragments()) {
       ErrorOr<BinarySection &> ColdSection =
-          Function.getColdCodeSection(FF.getFragmentNum());
+          Function.getCodeSection(FF.getFragmentNum());
       assert(ColdSection && "cannot find section for cold part");
       // Cold fragments are aligned at 16 bytes.
       NextAvailableAddress = alignTo(NextAvailableAddress, 16);
@@ -4521,12 +4521,12 @@ void RewriteInstance::updateELFSymbolTable(
       for (const FunctionFragment FF :
            Function.getLayout().getSplitFragments()) {
         ELFSymTy NewColdSym = FunctionSymbol;
-        const SmallString<256> Buf = formatv(
+        const SmallString<256> SymbolName = formatv(
             "{0}.cold.{1}", cantFail(FunctionSymbol.getName(StringSection)),
             FF.getFragmentNum().get() - 1);
-        NewColdSym.st_name = AddToStrTab(Buf);
+        NewColdSym.st_name = AddToStrTab(SymbolName);
         NewColdSym.st_shndx =
-            Function.getColdCodeSection(FF.getFragmentNum())->getIndex();
+            Function.getCodeSection(FF.getFragmentNum())->getIndex();
         NewColdSym.st_value = Function.cold().getAddress();
         NewColdSym.st_size = Function.cold().getImageSize();
         NewColdSym.setBindingAndType(ELF::STB_LOCAL, ELF::STT_FUNC);
@@ -4658,7 +4658,7 @@ void RewriteInstance::updateELFSymbolTable(
         NewSymbol.st_shndx =
             OutputAddress >= Function->cold().getAddress() &&
                     OutputAddress < Function->cold().getImageSize()
-                ? Function->getColdCodeSection(FragmentNum::cold())->getIndex()
+                ? Function->getCodeSection(FragmentNum::cold())->getIndex()
                 : Function->getCodeSection()->getIndex();
       } else {
         // Check if the symbol belongs to moved data object and update it.
@@ -4756,6 +4756,9 @@ void RewriteInstance::updateELFSymbolTable(
     Symbols.emplace_back(NewSymbol);
 
     if (Function->isSplit()) {
+      assert(Function->getLayout().isHotColdSplit() &&
+             "Adding symbols based on cold fragment when there are more than "
+             "2 fragments");
       ELFSymTy NewColdSym = NewSymbol;
       NewColdSym.setType(ELF::STT_NOTYPE);
       SmallVector<char, 256> Buf;

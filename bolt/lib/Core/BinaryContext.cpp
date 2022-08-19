@@ -2205,7 +2205,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
     SplitLabels.emplace_back(SplitStartLabel, SplitEndLabel);
 
     MCSectionELF *const SplitSection = LocalCtx->getELFSection(
-        BF.getColdCodeSectionName(FF.getFragmentNum()), ELF::SHT_PROGBITS,
+        BF.getCodeSectionName(FF.getFragmentNum()), ELF::SHT_PROGBITS,
         ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
     SplitSection->setHasInstructions(true);
     Streamer->switchSection(SplitSection);
