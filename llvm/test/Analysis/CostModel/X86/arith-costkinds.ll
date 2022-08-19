@@ -27,9 +27,6 @@
 ; RUN: opt -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mcpu=goldmont -cost-kind=code-size    < %s | FileCheck %s --check-prefixes=SIZE
 ; RUN: opt -mtriple=x86_64-- -passes="print<cost-model>" 2>&1 -disable-output -mcpu=goldmont -cost-kind=size-latency < %s | FileCheck %s --check-prefixes=SIZE_LATE
 
-target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
-target triple = "x86_64-apple-macosx10.8.0"
-
 define i32 @add(i32 %arg) {
 ; LATE-LABEL: 'add'
 ; LATE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = add i64 undef, undef
