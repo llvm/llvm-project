@@ -59,7 +59,7 @@ cc_library(
 
 cc_library(
     name = "__support_cpp_bitset",
-    hdrs = ["src/__support/CPP/Bitset.h"],
+    hdrs = ["src/__support/CPP/bitset.h"],
     deps = [":libc_root"],
 )
 

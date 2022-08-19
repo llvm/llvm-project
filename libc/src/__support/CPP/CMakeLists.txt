@@ -35,7 +35,7 @@ add_header_library(
 add_header_library(
   bitset
   HDRS
-    Bitset.h
+    bitset.h
 )
 
 add_header_library(
