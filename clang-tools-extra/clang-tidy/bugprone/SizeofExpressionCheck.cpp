@@ -147,8 +147,8 @@ void SizeofExpressionCheck::registerMatchers(MatchFinder *Finder) {
   const auto StructAddrOfExpr = unaryOperator(
       hasOperatorName("&"), hasUnaryOperand(ignoringParenImpCasts(
                                 hasType(hasCanonicalType(recordType())))));
-  const auto PointerToStructType = hasUnqualifiedDesugaredType(
-      pointerType(pointee(hasCanonicalType(recordType()))));
+  const auto PointerToStructType =
+      hasUnqualifiedDesugaredType(pointerType(pointee(recordType())));
   const auto PointerToStructExpr = ignoringParenImpCasts(expr(
       hasType(hasCanonicalType(PointerToStructType)), unless(cxxThisExpr())));
 
