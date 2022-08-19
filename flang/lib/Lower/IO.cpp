@@ -1894,11 +1894,15 @@ void genBeginDataTransferCallArgs(
         loc, builder.getIntegerAttr(ioFuncTy.getInput(ioArgs.size()),
                                     Fortran::runtime::io::DefaultUnit)));
   }
-  // File name and line number are always the last two arguments.
+  // File name and line number.
   ioArgs.push_back(
       locToFilename(converter, loc, ioFuncTy.getInput(ioArgs.size())));
   ioArgs.push_back(
       locToLineNo(converter, loc, ioFuncTy.getInput(ioArgs.size())));
+  // Placeholder for format passed as a descriptor.
+  if (isFormatted && !isListOrNml)
+    ioArgs.push_back(
+        builder.createNullConstant(loc, ioFuncTy.getInput(ioArgs.size())));
 }
 
 template <bool isInput, bool hasIOCtrl = true, typename A>
