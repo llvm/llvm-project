@@ -1,8 +1,8 @@
 # Test random function splitting option
 
 # RUN: llvm-mc --filetype=obj --triple x86_64-unknown-unknown %s -o %t.o
-# RUN: %clang %cflags %t.o -o %t.exe
-# RUN: llvm-bolt %t.exe -o %t.out --split-functions --split-random \
+# RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.out --split-functions --split-strategy=random2 \
 # RUN:     --print-finalized --print-only=two_block --bolt-seed=7 2>&1 | \
 # RUN:     FileCheck %s
 
