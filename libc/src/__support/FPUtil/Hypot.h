@@ -13,8 +13,8 @@
 #include "FEnvImpl.h"
 #include "FPBits.h"
 #include "builtin_wrappers.h"
-#include "src/__support/CPP/Bit.h"
 #include "src/__support/CPP/UInt128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 
 namespace __llvm_libc {
@@ -248,7 +248,7 @@ static inline T hypot(T x, T y) {
   }
 
   y_new |= static_cast<UIntType>(out_exp) << MantissaWidth<T>::VALUE;
-  return __llvm_libc::bit_cast<T>(y_new);
+  return cpp::bit_cast<T>(y_new);
 }
 
 } // namespace fputil
