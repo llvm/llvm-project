@@ -11,7 +11,6 @@ define zeroext i8 @_Z6testcff(float %arg) {
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfs f1, -4(r1)
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %arg.addr = alloca float, align 4
@@ -44,7 +43,6 @@ define zeroext i8 @_Z6testcdd(double %arg) {
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfd f1, -8(r1)
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %arg.addr = alloca double, align 8
@@ -77,7 +75,6 @@ define zeroext i8 @_Z7testucff(float %arg) {
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfs f1, -4(r1)
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %arg.addr = alloca float, align 4
@@ -110,7 +107,6 @@ define zeroext i8 @_Z7testucdd(double %arg) {
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfd f1, -8(r1)
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %arg.addr = alloca double, align 8
@@ -209,7 +205,6 @@ define zeroext i16 @_Z7testusff(float %arg) {
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfs f1, -4(r1)
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %arg.addr = alloca float, align 4
@@ -242,7 +237,6 @@ define zeroext i16 @_Z7testusdd(double %arg) {
 ; CHECK-NEXT:    xscvdpsxws f0, f1
 ; CHECK-NEXT:    stfd f1, -8(r1)
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %arg.addr = alloca double, align 8
@@ -341,7 +335,6 @@ define zeroext i32 @_Z7testuiff(float %arg) {
 ; CHECK-NEXT:    xscvdpuxws f0, f1
 ; CHECK-NEXT:    stfs f1, -4(r1)
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %arg.addr = alloca float, align 4
@@ -374,7 +367,6 @@ define zeroext i32 @_Z7testuidd(double %arg) {
 ; CHECK-NEXT:    xscvdpuxws f0, f1
 ; CHECK-NEXT:    stfd f1, -8(r1)
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %arg.addr = alloca double, align 8

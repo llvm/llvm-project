@@ -32,6 +32,7 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
@@ -640,6 +641,29 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
   return HI;
 }
 
+/// The standard defines __func__ as a "predefined variable".
+llvm::Optional<HoverInfo>
+getPredefinedExprHoverContents(const PredefinedExpr &PE, ASTContext &Ctx,
+                               const PrintingPolicy &PP) {
+  HoverInfo HI;
+  HI.Name = PE.getIdentKindName();
+  HI.Kind = index::SymbolKind::Variable;
+  HI.Documentation = "Name of the current function (predefined variable)";
+  if (const StringLiteral *Name = PE.getFunctionName()) {
+    HI.Value.emplace();
+    llvm::raw_string_ostream OS(*HI.Value);
+    Name->outputString(OS);
+    HI.Type = printType(Name->getType(), Ctx, PP);
+  } else {
+    // Inside templates, the approximate type `const char[]` is still useful.
+    QualType StringType = Ctx.getIncompleteArrayType(
+        Ctx.CharTy.withConst(), ArrayType::ArraySizeModifier::Normal,
+        /*IndexTypeQuals=*/0);
+    HI.Type = printType(StringType, Ctx, PP);
+  }
+  return HI;
+}
+
 /// Generate a \p Hover object given the macro \p MacroDecl.
 HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
   HoverInfo HI;
@@ -764,6 +788,8 @@ llvm::Optional<HoverInfo> getHoverContents(const Expr *E, ParsedAST &AST,
   // For `this` expr we currently generate hover with pointee type.
   if (const CXXThisExpr *CTE = dyn_cast<CXXThisExpr>(E))
     return getThisExprHoverContents(CTE, AST.getASTContext(), PP);
+  if (const PredefinedExpr *PE = dyn_cast<PredefinedExpr>(E))
+    return getPredefinedExprHoverContents(*PE, AST.getASTContext(), PP);
   // For expressions we currently print the type and the value, iff it is
   // evaluatable.
   if (auto Val = printExprValue(E, AST.getASTContext())) {

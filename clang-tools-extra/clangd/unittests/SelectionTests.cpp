@@ -527,6 +527,10 @@ TEST(SelectionTest, CommonAncestor) {
         /*error-ok*/
         void func() [[{^]])cpp",
        "CompoundStmt"},
+      {R"cpp(
+        void func() { [[__^func__]]; }
+        )cpp",
+       "PredefinedExpr"},
   };
 
   for (const Case &C : Cases) {

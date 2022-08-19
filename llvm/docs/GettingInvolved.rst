@@ -147,6 +147,8 @@ The :doc:`CodeOfConduct` applies to all online sync-ups.
 If you'd like to organize a new sync-up, please add the info in the table
 below. Please also create a calendar event for it and invite calendar@llvm.org
 to the event, so that it'll show up on the :ref:`llvm-community-calendar`. 
+Please see :ref:`llvm-community-calendar-host-guidance` for more guidance on
+what to add to your calendar invite.
 
 .. list-table:: LLVM regular sync-up calls
    :widths: 25 25 25 25
@@ -313,6 +315,8 @@ Guidance for office hours hosts
   information to the list above. Please create a calendar event for it and
   invite calendar@llvm.org to the event so that it'll show up on the 
   :ref:`llvm-community-calendar`.
+  Please see :ref:`llvm-community-calendar-host-guidance` for more guidance on
+  what to add to your calendar invite.
 * When starting an office hours session, consider typing something like "*Hi,
   I'm available for chats in the next half hour at* video chat URL. *I'm
   looking forward to having conversations on the video chat or here.*" on the
@@ -424,3 +428,39 @@ also be seen inline below:
 .. raw:: html
 
     <iframe src="https://calendar.google.com/calendar/embed?height=600&wkst=1&bgcolor=%23ffffff&ctz=UTC&showCalendars=0&showDate=1&showNav=1&src=Y2FsZW5kYXJAbGx2bS5vcmc&color=%23039BE5" style="border:solid 1px #777" width="800" height="600" frameborder="0" scrolling="no"></iframe>
+
+.. _llvm-community-calendar-host-guidance:
+
+Guidance on what to put into LLVM community calendar invites
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Please put the following pieces of information in your calendar invite:
+
+* Write a single paragraph describing what the event is about. Include things
+  such as who the event is for and what sort of topics are discussed.
+* State explicitly that the :doc:`CodeOfConduct` applies to this event.
+* Make it clear who:
+
+  * the organizer is.
+
+  * the person to contact is in case of any code-of-conduct issues.  Typically,
+    this would be the organizer.
+
+* If you have meeting minutes for your event, add a pointer to where those live.
+  A good place for meeting minutes could be as a post on LLVM Discourse.
+
+An example invite looks as follows
+
+.. code-block:: none
+
+  This event is a meetup for all developers of LLDB. Meeting agendas are posted
+  on discourse before the event.
+
+  Attendees are required to adhere to the LLVM Code of Conduct
+  (https://llvm.org/docs/CodeOfConduct.html). For any Code of Conduct reports,
+  please contact the organizers, and also email conduct@llvm.org.
+
+  Agenda/Meeting Minutes: Link to minutes
+
+  Organizer(s): First Surname (name@email.com)
+

@@ -625,6 +625,32 @@ TEST_F(GLRTest, RecoverTerminal) {
             "[  1, end) └─; := <opaque>\n");
 }
 
+TEST_F(GLRTest, RecoverUnrestrictedReduce) {
+  // Here, ! is not in any rule and therefore not in the follow set of `word`.
+  // We would not normally reduce `word := IDENTIFIER`, but do so for recovery.
+
+  build(R"bnf(
+    _ := sentence
+
+    word := IDENTIFIER
+    sentence := word word [recover=AcceptAnyTokenInstead]
+  )bnf");
+
+  clang::LangOptions LOptions;
+  const TokenStream &Tokens = cook(lex("id !", LOptions), LOptions);
+  TestLang.Table = LRTable::buildSLR(TestLang.G);
+  TestLang.RecoveryStrategies.try_emplace(
+      extensionID("AcceptAnyTokenInstead"),
+      [](Token::Index Start, const TokenStream &Stream) { return Start + 1; });
+
+  const ForestNode &Parsed =
+      glrParse({Tokens, Arena, GSStack}, id("sentence"), TestLang);
+  EXPECT_EQ(Parsed.dumpRecursive(TestLang.G),
+            "[  0, end) sentence := word word [recover=AcceptAnyTokenInstead]\n"
+            "[  0,   1) ├─word := IDENTIFIER\n"
+            "[  0,   1) │ └─IDENTIFIER := tok[0]\n"
+            "[  1, end) └─word := <opaque>\n");
+}
 
 TEST_F(GLRTest, NoExplicitAccept) {
   build(R"bnf(
