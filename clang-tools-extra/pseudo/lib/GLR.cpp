@@ -601,6 +601,10 @@ const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
   std::vector<const GSS::Node *> Heads = {GSS.addNode(/*State=*/StartState,
                                                       /*ForestNode=*/nullptr,
                                                       {})};
+  // Invariant: Heads is partitioned by source: {shifted | reduced}.
+  // HeadsPartition is the index of the first head formed by reduction.
+  // We use this to discard and recreate the reduced heads during recovery.
+  unsigned HeadsPartition = 0;
   std::vector<const GSS::Node *> NextHeads;
   auto MaybeGC = [&, Roots(std::vector<const GSS::Node *>{}), I(0u)]() mutable {
     assert(NextHeads.empty() && "Running GC at the wrong time!");
@@ -623,8 +627,17 @@ const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
     // If we weren't able to consume the token, try to skip over some tokens
     // so we can keep parsing.
     if (NextHeads.empty()) {
-      // FIXME: Heads may not be fully reduced, because our reductions were
-      // constrained by lookahead (but lookahead is meaningless to recovery).
+      // The reduction in the previous round was constrained by lookahead.
+      // On valid code this only rejects dead ends, but on broken code we should
+      // consider all possibilities.
+      //
+      // We discard all heads formed by reduction, and recreate them without
+      // this constraint. This may duplicate some nodes, but it's rare.
+      LLVM_DEBUG(llvm::dbgs() << "Shift failed, will attempt recovery. "
+                                 "Re-reducing without lookahead.");
+      Heads.resize(HeadsPartition);
+      Reduce(Heads, /*allow all reductions*/ tokenSymbol(tok::unknown));
+
       glrRecover(Heads, I, Params, Lang, NextHeads);
       if (NextHeads.empty())
         // FIXME: Ensure the `_ := start-symbol` rules have a fallback
@@ -636,6 +649,7 @@ const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
     // Form nonterminals containing the token we just consumed.
     SymbolID Lookahead =
         I == Terminals.size() ? tokenSymbol(tok::eof) : Terminals[I].symbol();
+    HeadsPartition = NextHeads.size();
     Reduce(NextHeads, Lookahead);
     // Prepare for the next token.
     std::swap(Heads, NextHeads);
