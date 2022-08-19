@@ -249,7 +249,7 @@ define <vscale x 4 x i16> @test_signed_v4f64_v4i16(<vscale x 4 x double> %f) {
 ; CHECK32-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; CHECK32-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; CHECK32-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
-; CHECK32-NEXT:    vncvt.x.x.w v8, v12
+; CHECK32-NEXT:    vnsrl.wi v8, v12, 0
 ; CHECK32-NEXT:    ret
 ;
 ; CHECK64-LABEL: test_signed_v4f64_v4i16:
@@ -263,7 +263,7 @@ define <vscale x 4 x i16> @test_signed_v4f64_v4i16(<vscale x 4 x double> %f) {
 ; CHECK64-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
 ; CHECK64-NEXT:    vfncvt.rtz.xu.f.w v12, v8
 ; CHECK64-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
-; CHECK64-NEXT:    vncvt.x.x.w v8, v12
+; CHECK64-NEXT:    vnsrl.wi v8, v12, 0
 ; CHECK64-NEXT:    ret
     %x = call <vscale x 4 x i16> @llvm.fptoui.sat.nxv4f64.nxv4i16(<vscale x 4 x double> %f)
     ret <vscale x 4 x i16> %x
@@ -281,7 +281,7 @@ define <vscale x 8 x i16> @test_signed_v8f64_v8i16(<vscale x 8 x double> %f) {
 ; CHECK32-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
 ; CHECK32-NEXT:    vfncvt.rtz.xu.f.w v16, v8
 ; CHECK32-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; CHECK32-NEXT:    vncvt.x.x.w v8, v16
+; CHECK32-NEXT:    vnsrl.wi v8, v16, 0
 ; CHECK32-NEXT:    ret
 ;
 ; CHECK64-LABEL: test_signed_v8f64_v8i16:
@@ -295,7 +295,7 @@ define <vscale x 8 x i16> @test_signed_v8f64_v8i16(<vscale x 8 x double> %f) {
 ; CHECK64-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
 ; CHECK64-NEXT:    vfncvt.rtz.xu.f.w v16, v8
 ; CHECK64-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
-; CHECK64-NEXT:    vncvt.x.x.w v8, v16
+; CHECK64-NEXT:    vnsrl.wi v8, v16, 0
 ; CHECK64-NEXT:    ret
     %x = call <vscale x 8 x i16> @llvm.fptoui.sat.nxv8f64.nxv8i16(<vscale x 8 x double> %f)
     ret <vscale x 8 x i16> %x
