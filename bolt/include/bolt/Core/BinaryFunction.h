@@ -570,11 +570,8 @@ private:
 
   SmallVector<MCSymbol *, 0> ColdSymbols;
 
-  /// Symbol at the end of the function.
-  mutable MCSymbol *FunctionEndLabel{nullptr};
-
-  /// Symbol at the end of the cold part of split function.
-  mutable MCSymbol *FunctionColdEndLabel{nullptr};
+  /// Symbol at the end of each fragment of a split function.
+  mutable SmallVector<MCSymbol *, 0> FunctionEndLabels;
 
   /// Unique number associated with the function.
   uint64_t FunctionNumber;
@@ -1152,22 +1149,25 @@ public:
   bool forEachEntryPoint(EntryPointCallbackTy Callback) const;
 
   /// Return MC symbol associated with the end of the function.
-  MCSymbol *getFunctionEndLabel() const {
+  MCSymbol *
+  getFunctionEndLabel(const FragmentNum Fragment = FragmentNum::main()) const {
     assert(BC.Ctx && "cannot be called with empty context");
+
+    size_t LabelIndex = Fragment.get();
+    if (LabelIndex >= FunctionEndLabels.size()) {
+      FunctionEndLabels.resize(LabelIndex + 1);
+    }
+
+    MCSymbol *&FunctionEndLabel = FunctionEndLabels[LabelIndex];
     if (!FunctionEndLabel) {
       std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
-      FunctionEndLabel = BC.Ctx->createNamedTempSymbol("func_end");
+      if (Fragment == FragmentNum::main())
+        FunctionEndLabel = BC.Ctx->createNamedTempSymbol("func_end");
+      else
+        FunctionEndLabel = BC.Ctx->createNamedTempSymbol(
+            formatv("func_cold_end.{0}", Fragment.get() - 1));
     }
     return FunctionEndLabel;
-  }
-
-  /// Return MC symbol associated with the end of the cold part of the function.
-  MCSymbol *getFunctionColdEndLabel() const {
-    if (!FunctionColdEndLabel) {
-      std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
-      FunctionColdEndLabel = BC.Ctx->createNamedTempSymbol("func_cold_end");
-    }
-    return FunctionColdEndLabel;
   }
 
   /// Return a label used to identify where the constant island was emitted
@@ -1872,14 +1872,17 @@ public:
   }
 
   /// Return symbol pointing to function's LSDA for the cold part.
-  MCSymbol *getColdLSDASymbol() {
+  MCSymbol *getColdLSDASymbol(const FragmentNum Fragment) {
     if (ColdLSDASymbol)
       return ColdLSDASymbol;
     if (ColdCallSites.empty())
       return nullptr;
 
-    ColdLSDASymbol = BC.Ctx->getOrCreateSymbol(
-        Twine("GCC_cold_except_table") + Twine::utohexstr(getFunctionNumber()));
+    SmallString<8> SymbolSuffix;
+    if (Fragment != FragmentNum::cold())
+      SymbolSuffix = formatv(".{0}", Fragment.get());
+    ColdLSDASymbol = BC.Ctx->getOrCreateSymbol(formatv(
+        "GCC_cold_except_table{0:x-}{1}", getFunctionNumber(), SymbolSuffix));
 
     return ColdLSDASymbol;
   }

@@ -46,6 +46,7 @@ public:
     return !(*this == Other);
   }
 
+  static constexpr FragmentNum main() { return FragmentNum(0); }
   static constexpr FragmentNum hot() { return FragmentNum(0); }
   static constexpr FragmentNum cold() { return FragmentNum(1); }
 };
