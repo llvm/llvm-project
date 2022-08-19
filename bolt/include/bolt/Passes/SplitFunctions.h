@@ -9,7 +9,9 @@
 #ifndef BOLT_PASSES_SPLIT_FUNCTIONS_H
 #define BOLT_PASSES_SPLIT_FUNCTIONS_H
 
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Passes/BinaryPasses.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
 
@@ -39,8 +41,29 @@ private:
   template <typename Strategy>
   void splitFunction(BinaryFunction &Function, Strategy S = {});
 
+  struct TrampolineKey {
+    FragmentNum SourceFN = FragmentNum::main();
+    const MCSymbol *Target = nullptr;
+
+    TrampolineKey() = default;
+    TrampolineKey(const FragmentNum SourceFN, const MCSymbol *const Target)
+        : SourceFN(SourceFN), Target(Target) {}
+
+    static inline TrampolineKey getEmptyKey() { return TrampolineKey(); };
+    static inline TrampolineKey getTombstoneKey() {
+      return TrampolineKey(FragmentNum(UINT_MAX), nullptr);
+    };
+    static unsigned getHashValue(const TrampolineKey &Val) {
+      return llvm::hash_combine(Val.SourceFN.get(), Val.Target);
+    }
+    static bool isEqual(const TrampolineKey &LHS, const TrampolineKey &RHS) {
+      return LHS.SourceFN == RHS.SourceFN && LHS.Target == RHS.Target;
+    }
+  };
+
   /// Map basic block labels to their trampoline block labels.
-  using TrampolineSetType = DenseMap<const MCSymbol *, const MCSymbol *>;
+  using TrampolineSetType =
+      DenseMap<TrampolineKey, const MCSymbol *, TrampolineKey>;
 
   using BasicBlockOrderType = BinaryFunction::BasicBlockOrderType;
 
