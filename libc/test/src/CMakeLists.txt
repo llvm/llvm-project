@@ -81,7 +81,7 @@ add_custom_command(
 
   DEPENDS ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td ${spec_files}
           libc-prototype-testgen ${TARGET_PUBLIC_HEADERS}
-          c
+          ${LIBC_TARGET}
 )
 
 add_executable(
@@ -96,7 +96,7 @@ set_target_properties(
   PROPERTIES
   INCLUDE_DIRECTORIES ""
 )
-target_link_libraries(libc-api-test c)
+target_link_libraries(libc-api-test ${LIBC_TARGET})
 
 # Only include we need is the include for cpp::IsSame and our generated
 # public headers.
