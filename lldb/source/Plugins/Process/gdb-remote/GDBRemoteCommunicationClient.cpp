@@ -181,6 +181,12 @@ bool GDBRemoteCommunicationClient::GetQXferSigInfoReadSupported() {
   return m_supports_qXfer_siginfo_read == eLazyBoolYes;
 }
 
+bool GDBRemoteCommunicationClient::GetMultiprocessSupported() {
+  if (m_supports_memory_tagging == eLazyBoolCalculate)
+    GetRemoteQSupported();
+  return m_supports_multiprocess == eLazyBoolYes;
+}
+
 uint64_t GDBRemoteCommunicationClient::GetRemoteMaxPacketSize() {
   if (m_max_packet_size == 0) {
     GetRemoteQSupported();
@@ -1514,7 +1520,7 @@ Status GDBRemoteCommunicationClient::Detach(bool keep_stopped,
     }
   }
 
-  if (m_supports_multiprocess) {
+  if (GetMultiprocessSupported()) {
     // Some servers (e.g. qemu) require specifying the PID even if only a single
     // process is running.
     if (pid == LLDB_INVALID_PROCESS_ID)
