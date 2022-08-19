@@ -3042,7 +3042,7 @@ def : Pat<(i64 (zextloadi32 (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))),
 
 // Pre-fetch.
 def PRFMui : PrefetchUI<0b11, 0, 0b10, "prfm",
-                        [(AArch64Prefetch imm:$Rt,
+                        [(AArch64Prefetch timm:$Rt,
                                         (am_indexed64 GPR64sp:$Rn,
                                                       uimm12s8:$offset))]>;
 
@@ -3287,7 +3287,7 @@ def : InstAlias<"ldrsw $Rt, [$Rn, $offset]",
 
 // Pre-fetch.
 defm PRFUM : PrefetchUnscaled<0b11, 0, 0b10, "prfum",
-                  [(AArch64Prefetch imm:$Rt,
+                  [(AArch64Prefetch timm:$Rt,
                                   (am_unscaled64 GPR64sp:$Rn, simm9:$offset))]>;
 
 //---
