@@ -240,8 +240,9 @@ LRGraph LRGraph::buildLR0(const Grammar &G) {
     PendingStates.push_back(Result.first);
 
     const Rule &StartRule = G.lookupRule(RID);
-    assert(StartRule.Size == 1 &&
-           "Start rule must have exactly one symbol in its body!");
+    assert(StartRule.Size == 2 &&
+           StartRule.seq().back() == tokenSymbol(tok::eof) &&
+           "Start rule must be of the form `_ := start-symbol EOF`!");
     Builder.addStartState(StartRule.seq().front(), Result.first);
   }
 
