@@ -193,10 +193,7 @@ cleanup:
 ; CHECK-LABEL: @testComplexISEL
 ; CHECK: cmplwi r3, 0
 ; CHECK: li r3, 1
-; CHECK: beq cr0, [[TGT:.LBB[0-9_]+]]
-; CHECK: clrldi r3, r3, 32
-; CHECK: blr
-; CHECK: [[TGT]]
+; CHECK: bnelr cr0
 ; CHECK: xor [[XOR:r[0-9]+]]
 ; CHECK: cntlzd [[CZ:r[0-9]+]], [[XOR]]
 ; CHECK: rldicl [[SH:r[0-9]+]], [[CZ]], 58, 63

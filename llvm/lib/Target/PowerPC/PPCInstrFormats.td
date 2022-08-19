@@ -44,6 +44,16 @@ class I<bits<6> opcode, dag OOL, dag IOL, string asmstr, InstrItinClass itin>
   // Indicate that this instruction is prefixed.
   bits<1> Prefixed = 0;
   let TSFlags{7}  = Prefixed;
+  
+  // Indicate that this instruction produces a result that is sign extended from
+  // 32 bits to 64 bits.
+  bits<1> SExt32To64 = 0;
+  let TSFlags{8} = SExt32To64;
+
+  // Indicate that this instruction produces a result that is zero extended from
+  // 32 bits to 64 bits.
+  bits<1> ZExt32To64 = 0;
+  let TSFlags{9} = ZExt32To64;
 
   // Fields used for relation models.
   string BaseName = "";
@@ -70,6 +80,8 @@ class PPC970_Unit_VPERM    { bits<3> PPC970_Unit = 6;   }
 class PPC970_Unit_BRU      { bits<3> PPC970_Unit = 7;   }
 
 class XFormMemOp { bits<1> XFormMemOp = 1; }
+class SExt32To64 { bits<1> SExt32To64 = 1; }
+class ZExt32To64 { bits<1> ZExt32To64 = 1; }
 
 // Two joined instructions; used to emit two adjacent instructions as one.
 // The itinerary from the first instruction is used for scheduling and

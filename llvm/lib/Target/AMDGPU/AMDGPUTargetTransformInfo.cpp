@@ -958,6 +958,9 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::amdgcn_ds_fmax:
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private:
+  case Intrinsic::amdgcn_flat_atomic_fadd:
+  case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmin:
     OpIndexes.push_back(0);
     return true;
   default:
@@ -1031,6 +1034,18 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 
     return B.CreateIntrinsic(Intrinsic::ptrmask, {NewV->getType(), MaskTy},
                              {NewV, MaskOp});
+  }
+  case Intrinsic::amdgcn_flat_atomic_fadd:
+  case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmin: {
+    Module *M = II->getParent()->getParent()->getParent();
+    Type *DestTy = II->getType();
+    Type *SrcTy = NewV->getType();
+    Function *NewDecl = Intrinsic::getDeclaration(M, II->getIntrinsicID(),
+                                                  {DestTy, SrcTy, DestTy});
+    II->setArgOperand(0, NewV);
+    II->setCalledFunction(NewDecl);
+    return II;
   }
   default:
     return nullptr;

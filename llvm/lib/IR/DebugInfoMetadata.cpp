@@ -1387,7 +1387,10 @@ void DIExpression::appendOffset(SmallVectorImpl<uint64_t> &Ops,
     Ops.push_back(Offset);
   } else if (Offset < 0) {
     Ops.push_back(dwarf::DW_OP_constu);
-    Ops.push_back(-Offset);
+    // Avoid UB when encountering LLONG_MIN, because in 2's complement
+    // abs(LLONG_MIN) is LLONG_MAX+1.
+    uint64_t AbsMinusOne = -(Offset+1);
+    Ops.push_back(AbsMinusOne + 1);
     Ops.push_back(dwarf::DW_OP_minus);
   }
 }

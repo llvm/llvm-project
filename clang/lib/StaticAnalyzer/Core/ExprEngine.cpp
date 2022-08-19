@@ -2117,8 +2117,9 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
 
   // Build an Epsilon node from which we will restart the analyzes.
   // Note that CE is permitted to be NULL!
-  ProgramPoint NewNodeLoc =
-               EpsilonPoint(BeforeProcessingCall->getLocationContext(), CE);
+  static SimpleProgramPointTag PT("ExprEngine", "Replay without inlining");
+  ProgramPoint NewNodeLoc = EpsilonPoint(
+      BeforeProcessingCall->getLocationContext(), CE, nullptr, &PT);
   // Add the special flag to GDM to signal retrying with no inlining.
   // Note, changing the state ensures that we are not going to cache out.
   ProgramStateRef NewNodeState = BeforeProcessingCall->getState();

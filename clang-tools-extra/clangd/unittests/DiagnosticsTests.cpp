@@ -54,6 +54,9 @@ using ::testing::UnorderedElementsAre;
   return Field(&Diag::Fixes, UnorderedElementsAre(FixMatcher1, FixMatcher2));
 }
 
+::testing::Matcher<const Diag &> withID(unsigned ID) {
+  return Field(&Diag::ID, ID);
+}
 ::testing::Matcher<const Diag &>
 withNote(::testing::Matcher<Note> NoteMatcher) {
   return Field(&Diag::Notes, ElementsAre(NoteMatcher));
@@ -1869,6 +1872,20 @@ TEST(DiagnosticsTest, FixItFromHeader) {
                       "'int' to 'int *' for 1st argument; take the address of "
                       "the argument with &")))));
 }
+
+TEST(DiagnosticsTest, UnusedInHeader) {
+  // Clang diagnoses unused static inline functions outside headers.
+  auto TU = TestTU::withCode("static inline void foo(void) {}");
+  TU.ExtraArgs.push_back("-Wunused-function");
+  TU.Filename = "test.c";
+  EXPECT_THAT(*TU.build().getDiagnostics(),
+              ElementsAre(withID(diag::warn_unused_function)));
+  // Sema should recognize a *.h file open in clangd as a header.
+  // https://github.com/clangd/vscode-clangd/issues/360
+  TU.Filename = "test.h";
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

@@ -5121,9 +5121,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           Call);
     break;
   case Intrinsic::prefetch:
-    Check(cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue() < 2 &&
-              cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 4,
-          "invalid arguments to llvm.prefetch", Call);
+    Check(cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue() < 2,
+          "rw argument to llvm.prefetch must be 0-1", Call);
+    Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 4,
+          "locality argument to llvm.prefetch must be 0-4", Call);
+    Check(cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue() < 2,
+          "cache type argument to llvm.prefetch must be 0-1", Call);
     break;
   case Intrinsic::stackprotector:
     Check(isa<AllocaInst>(Call.getArgOperand(1)->stripPointerCasts()),

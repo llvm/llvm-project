@@ -139,6 +139,33 @@ TEST(Hover, Structured) {
          HI.Definition = "int bar";
          HI.Type = "int";
        }},
+      // Predefined variable
+      {R"cpp(
+          void foo() {
+            [[__f^unc__]];
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "__func__";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.Documentation =
+             "Name of the current function (predefined variable)";
+         HI.Value = "\"foo\"";
+         HI.Type = "const char[4]";
+       }},
+      // Predefined variable (dependent)
+      {R"cpp(
+          template<int> void foo() {
+            [[__f^unc__]];
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "__func__";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.Documentation =
+             "Name of the current function (predefined variable)";
+         HI.Type = "const char[]";
+       }},
       // Anon namespace and local scope.
       {R"cpp(
           namespace ns1 { namespace {

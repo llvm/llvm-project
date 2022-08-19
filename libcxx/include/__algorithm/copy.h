@@ -28,7 +28,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // copy
 
 template <class _InIter, class _Sent, class _OutIter>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<_InIter, _OutIter> __copy_impl(_InIter __first, _Sent __last, _OutIter __result) {
   while (__first != __last) {
     *__result = *__first;
@@ -42,7 +42,7 @@ template <class _InValueT,
           class _OutValueT,
           class = __enable_if_t<is_same<typename remove_const<_InValueT>::type, _OutValueT>::value
                              && is_trivially_copy_assignable<_OutValueT>::value> >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<_InValueT*, _OutValueT*> __copy_impl(_InValueT* __first, _InValueT* __last, _OutValueT* __result) {
   if (__libcpp_is_constant_evaluated()
 // TODO: Remove this once GCC supports __builtin_memmove during constant evaluation
@@ -64,7 +64,7 @@ template <class _InIter, class _OutIter,
                       && is_trivially_copy_assignable<__iter_value_type<_OutIter> >::value
                       && __is_reverse_iterator<_InIter>::value
                       && __is_reverse_iterator<_OutIter>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<_InIter, _OutIter>
 __copy_impl(_InIter __first, _InIter __last, _OutIter __result) {
   auto __first_base = std::__unwrap_iter(__first.base());
@@ -79,7 +79,7 @@ template <class _InIter, class _Sent, class _OutIter,
           __enable_if_t<!(is_copy_constructible<_InIter>::value
                        && is_copy_constructible<_Sent>::value
                        && is_copy_constructible<_OutIter>::value), int> = 0 >
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<_InIter, _OutIter> __copy(_InIter __first, _Sent __last, _OutIter __result) {
   return std::__copy_impl(std::move(__first), std::move(__last), std::move(__result));
 }
@@ -88,7 +88,7 @@ template <class _InIter, class _Sent, class _OutIter,
           __enable_if_t<is_copy_constructible<_InIter>::value
                      && is_copy_constructible<_Sent>::value
                      && is_copy_constructible<_OutIter>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<_InIter, _OutIter> __copy(_InIter __first, _Sent __last, _OutIter __result) {
   auto __range = std::__unwrap_range(__first, __last);
   auto __ret   = std::__copy_impl(std::move(__range.first), std::move(__range.second), std::__unwrap_iter(__result));
@@ -97,7 +97,7 @@ pair<_InIter, _OutIter> __copy(_InIter __first, _Sent __last, _OutIter __result)
 }
 
 template <class _InputIterator, class _OutputIterator>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 _OutputIterator
 copy(_InputIterator __first, _InputIterator __last, _OutputIterator __result) {
   return std::__copy(__first, __last, __result).second;

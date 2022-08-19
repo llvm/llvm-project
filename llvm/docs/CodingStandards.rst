@@ -1026,6 +1026,24 @@ Or better yet (in this case) as:
 The idea is to reduce indentation and the amount of code you have to keep track
 of when reading the code.
 
+Note: this advice does not apply to a ``constexpr if`` statement. The
+substatement of the ``else`` clause may be a discarded statement, so removing
+the ``else`` can cause unexpected template instantiations. Thus, the following
+example is correct:
+
+.. code-block:: c++
+
+  template<typename T>
+  static constexpr bool VarTempl = true;
+
+  template<typename T>
+  int func() {
+    if constexpr (VarTempl<T>)
+      return 1;
+    else
+      static_assert(!VarTempl<T>);
+  }
+
 Turn Predicate Loops into Predicate Functions
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

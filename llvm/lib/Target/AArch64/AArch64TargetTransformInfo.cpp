@@ -2249,7 +2249,8 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
 
   ElementCount LegalVF = LT.second.getVectorElementCount();
   InstructionCost MemOpCost =
-      getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind, I);
+      getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind,
+                      TTI::OK_AnyValue, I);
   // Add on an overhead cost for using gathers/scatters.
   // TODO: At the moment this is applied unilaterally for all CPUs, but at some
   // point we may want a per-CPU overhead.
@@ -2265,6 +2266,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 MaybeAlign Alignment,
                                                 unsigned AddressSpace,
                                                 TTI::TargetCostKind CostKind,
+                                                TTI::OperandValueKind OpdInfo,
                                                 const Instruction *I) {
   EVT VT = TLI->getValueType(DL, Ty, true);
   // Type legalization can't handle structs

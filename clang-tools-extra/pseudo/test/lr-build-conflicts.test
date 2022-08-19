@@ -1,31 +1,34 @@
-_ := expr
+_ := expr EOF
 expr := expr - expr  # S/R conflict at state 4 on '-' token
 expr := IDENTIFIER
 
 # RUN: clang-pseudo -grammar %s -print-graph | FileCheck %s --check-prefix=GRAPH
 #      GRAPH: States
 # GRAPH-NEXT: State 0
+# GRAPH-NEXT:     _ :=  • expr EOF
 # GRAPH-NEXT:     expr :=  • expr - expr
-# GRAPH-NEXT:     _ :=  • expr
 # GRAPH-NEXT:     expr :=  • IDENTIFIER
 # GRAPH-NEXT: State 1
-# GRAPH-NEXT:     _ := expr • 
+# GRAPH-NEXT:     _ := expr • EOF
 # GRAPH-NEXT:     expr := expr • - expr
 # GRAPH-NEXT: State 2
 # GRAPH-NEXT:     expr := IDENTIFIER • 
 # GRAPH-NEXT: State 3
+# GRAPH-NEXT:     _ := expr EOF •
+# GRAPH-NEXT: State 4
 # GRAPH-NEXT:     expr :=  • expr - expr
 # GRAPH-NEXT:     expr := expr - • expr
 # GRAPH-NEXT:     expr :=  • IDENTIFIER
-# GRAPH-NEXT: State 4
+# GRAPH-NEXT: State 5
 # GRAPH-NEXT:     expr := expr - expr • 
 # GRAPH-NEXT:     expr := expr • - expr
 # GRAPH-NEXT: 0 ->[expr] 1
 # GRAPH-NEXT: 0 ->[IDENTIFIER] 2
-# GRAPH-NEXT: 1 ->[-] 3
-# GRAPH-NEXT: 3 ->[expr] 4
-# GRAPH-NEXT: 3 ->[IDENTIFIER] 2
-# GRAPH-NEXT: 4 ->[-] 3
+# GRAPH-NEXT: 1 ->[EOF] 3
+# GRAPH-NEXT: 1 ->[-] 4
+# GRAPH-NEXT: 4 ->[expr] 5
+# GRAPH-NEXT: 4 ->[IDENTIFIER] 2
+# GRAPH-NEXT: 5 ->[-] 4
 
 # RUN: clang-pseudo -grammar %s -print-table | FileCheck %s --check-prefix=TABLE
 #      TABLE: LRTable:
@@ -33,12 +36,14 @@ expr := IDENTIFIER
 # TABLE-NEXT:     IDENTIFIER: shift state 2
 # TABLE-NEXT:     expr: go to state 1
 # TABLE-NEXT: State 1
-# TABLE-NEXT:     -: shift state 3
+# TABLE-NEXT:     EOF: shift state 3
+# TABLE-NEXT:     -: shift state 4
 # TABLE-NEXT: State 2
-# TABLE-NEXT:     EOF -: reduce by rule 1 'expr := IDENTIFIER'
+# TABLE-NEXT:     EOF -: reduce by rule 2 'expr := IDENTIFIER'
 # TABLE-NEXT: State 3
-# TABLE-NEXT:     IDENTIFIER: shift state 2
-# TABLE-NEXT:     expr: go to state 4
 # TABLE-NEXT: State 4
-# TABLE-NEXT:     -: shift state 3
-# TABLE-NEXT:     EOF -: reduce by rule 0 'expr := expr - expr'
+# TABLE-NEXT:     IDENTIFIER: shift state 2
+# TABLE-NEXT:     expr: go to state 5
+# TABLE-NEXT: State 5
+# TABLE-NEXT:     -: shift state 4
+# TABLE-NEXT:     EOF -: reduce by rule 1 'expr := expr - expr'

@@ -4200,6 +4200,12 @@ public:
   llvm::Type *getEltType(const SVETypeFlags &TypeFlags);
   llvm::ScalableVectorType *getSVEType(const SVETypeFlags &TypeFlags);
   llvm::ScalableVectorType *getSVEPredType(const SVETypeFlags &TypeFlags);
+  llvm::Value *EmitSVETupleSetOrGet(const SVETypeFlags &TypeFlags,
+                                    llvm::Type *ReturnType,
+                                    ArrayRef<llvm::Value *> Ops);
+  llvm::Value *EmitSVETupleCreate(const SVETypeFlags &TypeFlags,
+                                  llvm::Type *ReturnType,
+                                  ArrayRef<llvm::Value *> Ops);
   llvm::Value *EmitSVEAllTruePred(const SVETypeFlags &TypeFlags);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar, llvm::Type *Ty);

@@ -3890,7 +3890,7 @@ class BasePrefetchRO<bits<2> sz, bit V, bits<2> opc, dag outs, dag ins,
 multiclass PrefetchRO<bits<2> sz, bit V, bits<2> opc, string asm> {
   def roW : BasePrefetchRO<sz, V, opc, (outs),
                 (ins prfop:$Rt, GPR64sp:$Rn, GPR32:$Rm, ro_Wextend64:$extend),
-                asm, [(AArch64Prefetch imm:$Rt,
+                asm, [(AArch64Prefetch timm:$Rt,
                                      (ro_Windexed64 GPR64sp:$Rn, GPR32:$Rm,
                                                     ro_Wextend64:$extend))]> {
     let Inst{13} = 0b0;
@@ -3898,7 +3898,7 @@ multiclass PrefetchRO<bits<2> sz, bit V, bits<2> opc, string asm> {
 
   def roX : BasePrefetchRO<sz, V, opc, (outs),
                 (ins prfop:$Rt, GPR64sp:$Rn, GPR64:$Rm, ro_Xextend64:$extend),
-                asm,  [(AArch64Prefetch imm:$Rt,
+                asm,  [(AArch64Prefetch timm:$Rt,
                                       (ro_Xindexed64 GPR64sp:$Rn, GPR64:$Rm,
                                                      ro_Xextend64:$extend))]> {
     let Inst{13} = 0b1;

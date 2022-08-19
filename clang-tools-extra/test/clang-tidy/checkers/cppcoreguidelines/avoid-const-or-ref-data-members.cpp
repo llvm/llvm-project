@@ -167,3 +167,41 @@ TemplatedConst<const int> t2{123};
 TemplatedConstRef<const int &> t3{123};
 TemplatedRefRef<int &&> t4{123};
 TemplatedRef<int &> t5{t1.t};
+
+// Lambdas capturing const or ref members should not trigger warnings
+void lambdas()
+{
+  int x1{123};
+  const int x2{123};
+  const int& x3{123};
+  int&& x4{123};
+  int& x5{x1};
+
+  auto v1 = [x1]{};
+  auto v2 = [x2]{};
+  auto v3 = [x3]{};
+  auto v4 = [x4]{};
+  auto v5 = [x5]{};
+
+  auto r1 = [&x1]{};
+  auto r2 = [&x2]{};
+  auto r3 = [&x3]{};
+  auto r4 = [&x4]{};
+  auto r5 = [&x5]{};
+
+  auto iv = [=]{
+    auto c1 = x1;
+    auto c2 = x2;
+    auto c3 = x3;
+    auto c4 = x4;
+    auto c5 = x5;
+  };
+
+  auto ir = [&]{
+    auto c1 = x1;
+    auto c2 = x2;
+    auto c3 = x3;
+    auto c4 = x4;
+    auto c5 = x5;
+  };
+}
