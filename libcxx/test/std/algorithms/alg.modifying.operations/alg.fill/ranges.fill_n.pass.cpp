@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class T, output_iterator<const T&> O>
 //   constexpr O ranges::fill_n(O first, iter_difference_t<O> n, const T& value);

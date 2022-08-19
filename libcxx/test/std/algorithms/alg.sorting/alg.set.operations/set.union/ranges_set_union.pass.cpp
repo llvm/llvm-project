@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // <algorithm>
 
@@ -488,7 +487,7 @@ constexpr bool test() {
       assert(compProjs.numberOfProj2 < maxOperation);
     }
   }
-  
+
   return true;
 }
 
