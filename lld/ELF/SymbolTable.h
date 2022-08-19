@@ -32,7 +32,7 @@ class SharedFile;
 // is one add* function per symbol type.
 class SymbolTable {
 public:
-  ArrayRef<Symbol *> symbols() const { return symVector; }
+  ArrayRef<Symbol *> getSymbols() const { return symVector; }
 
   void wrap(Symbol *sym, Symbol *real, Symbol *wrap);
 

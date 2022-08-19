@@ -2155,7 +2155,8 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    slli a3, a0, 63
 ; CHECK-NOV-NEXT:    beq a1, a0, .LBB18_11
 ; CHECK-NOV-NEXT:  .LBB18_8: # %entry
-; CHECK-NOV-NEXT:    slt a1, a0, a1
+; CHECK-NOV-NEXT:    slti a1, a1, 0
+; CHECK-NOV-NEXT:    xori a1, a1, 1
 ; CHECK-NOV-NEXT:    bne s1, a0, .LBB18_12
 ; CHECK-NOV-NEXT:  .LBB18_9:
 ; CHECK-NOV-NEXT:    sltu a0, a3, s0
@@ -2170,7 +2171,8 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    sltu a1, a3, a2
 ; CHECK-NOV-NEXT:    beq s1, a0, .LBB18_9
 ; CHECK-NOV-NEXT:  .LBB18_12: # %entry
-; CHECK-NOV-NEXT:    slt a0, a0, s1
+; CHECK-NOV-NEXT:    slti a0, s1, 0
+; CHECK-NOV-NEXT:    xori a0, a0, 1
 ; CHECK-NOV-NEXT:    bnez a0, .LBB18_14
 ; CHECK-NOV-NEXT:  .LBB18_13: # %entry
 ; CHECK-NOV-NEXT:    mv s0, a3
@@ -2239,7 +2241,8 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-V-NEXT:    slli a3, a2, 63
 ; CHECK-V-NEXT:    beq s1, a2, .LBB18_11
 ; CHECK-V-NEXT:  .LBB18_8: # %entry
-; CHECK-V-NEXT:    slt a4, a2, s1
+; CHECK-V-NEXT:    slti a4, s1, 0
+; CHECK-V-NEXT:    xori a4, a4, 1
 ; CHECK-V-NEXT:    bne a1, a2, .LBB18_12
 ; CHECK-V-NEXT:  .LBB18_9:
 ; CHECK-V-NEXT:    sltu a1, a3, a0
@@ -2254,7 +2257,8 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) {
 ; CHECK-V-NEXT:    sltu a4, a3, s0
 ; CHECK-V-NEXT:    beq a1, a2, .LBB18_9
 ; CHECK-V-NEXT:  .LBB18_12: # %entry
-; CHECK-V-NEXT:    slt a1, a2, a1
+; CHECK-V-NEXT:    slti a1, a1, 0
+; CHECK-V-NEXT:    xori a1, a1, 1
 ; CHECK-V-NEXT:    bnez a4, .LBB18_14
 ; CHECK-V-NEXT:  .LBB18_13: # %entry
 ; CHECK-V-NEXT:    mv s0, a3
@@ -2593,7 +2597,8 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-NOV-NEXT:    slli a3, a0, 63
 ; CHECK-NOV-NEXT:    beq a1, a0, .LBB21_11
 ; CHECK-NOV-NEXT:  .LBB21_8: # %entry
-; CHECK-NOV-NEXT:    slt a1, a0, a1
+; CHECK-NOV-NEXT:    slti a1, a1, 0
+; CHECK-NOV-NEXT:    xori a1, a1, 1
 ; CHECK-NOV-NEXT:    bne s1, a0, .LBB21_12
 ; CHECK-NOV-NEXT:  .LBB21_9:
 ; CHECK-NOV-NEXT:    sltu a0, a3, s0
@@ -2608,7 +2613,8 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-NOV-NEXT:    sltu a1, a3, a2
 ; CHECK-NOV-NEXT:    beq s1, a0, .LBB21_9
 ; CHECK-NOV-NEXT:  .LBB21_12: # %entry
-; CHECK-NOV-NEXT:    slt a0, a0, s1
+; CHECK-NOV-NEXT:    slti a0, s1, 0
+; CHECK-NOV-NEXT:    xori a0, a0, 1
 ; CHECK-NOV-NEXT:    bnez a0, .LBB21_14
 ; CHECK-NOV-NEXT:  .LBB21_13: # %entry
 ; CHECK-NOV-NEXT:    mv s0, a3
@@ -2677,7 +2683,8 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-V-NEXT:    slli a3, a2, 63
 ; CHECK-V-NEXT:    beq s1, a2, .LBB21_11
 ; CHECK-V-NEXT:  .LBB21_8: # %entry
-; CHECK-V-NEXT:    slt a4, a2, s1
+; CHECK-V-NEXT:    slti a4, s1, 0
+; CHECK-V-NEXT:    xori a4, a4, 1
 ; CHECK-V-NEXT:    bne a1, a2, .LBB21_12
 ; CHECK-V-NEXT:  .LBB21_9:
 ; CHECK-V-NEXT:    sltu a1, a3, a0
@@ -2692,7 +2699,8 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) {
 ; CHECK-V-NEXT:    sltu a4, a3, s0
 ; CHECK-V-NEXT:    beq a1, a2, .LBB21_9
 ; CHECK-V-NEXT:  .LBB21_12: # %entry
-; CHECK-V-NEXT:    slt a1, a2, a1
+; CHECK-V-NEXT:    slti a1, a1, 0
+; CHECK-V-NEXT:    xori a1, a1, 1
 ; CHECK-V-NEXT:    bnez a4, .LBB21_14
 ; CHECK-V-NEXT:  .LBB21_13: # %entry
 ; CHECK-V-NEXT:    mv s0, a3
@@ -3033,7 +3041,8 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    slli a3, a0, 63
 ; CHECK-NOV-NEXT:    beq a1, a0, .LBB24_11
 ; CHECK-NOV-NEXT:  .LBB24_8: # %entry
-; CHECK-NOV-NEXT:    slt a1, a0, a1
+; CHECK-NOV-NEXT:    slti a1, a1, 0
+; CHECK-NOV-NEXT:    xori a1, a1, 1
 ; CHECK-NOV-NEXT:    bne s1, a0, .LBB24_12
 ; CHECK-NOV-NEXT:  .LBB24_9:
 ; CHECK-NOV-NEXT:    sltu a0, a3, s0
@@ -3048,7 +3057,8 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    sltu a1, a3, a2
 ; CHECK-NOV-NEXT:    beq s1, a0, .LBB24_9
 ; CHECK-NOV-NEXT:  .LBB24_12: # %entry
-; CHECK-NOV-NEXT:    slt a0, a0, s1
+; CHECK-NOV-NEXT:    slti a0, s1, 0
+; CHECK-NOV-NEXT:    xori a0, a0, 1
 ; CHECK-NOV-NEXT:    bnez a0, .LBB24_14
 ; CHECK-NOV-NEXT:  .LBB24_13: # %entry
 ; CHECK-NOV-NEXT:    mv s0, a3
@@ -3111,7 +3121,8 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) {
 ; CHECK-V-NEXT:    slli a3, a2, 63
 ; CHECK-V-NEXT:    beq a1, a2, .LBB24_11
 ; CHECK-V-NEXT:  .LBB24_8: # %entry
-; CHECK-V-NEXT:    slt a1, a2, a1
+; CHECK-V-NEXT:    slti a1, a1, 0
+; CHECK-V-NEXT:    xori a1, a1, 1
 ; CHECK-V-NEXT:    bne s1, a2, .LBB24_12
 ; CHECK-V-NEXT:  .LBB24_9:
 ; CHECK-V-NEXT:    sltu a2, a3, s0
@@ -3126,7 +3137,8 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) {
 ; CHECK-V-NEXT:    sltu a1, a3, a0
 ; CHECK-V-NEXT:    beq s1, a2, .LBB24_9
 ; CHECK-V-NEXT:  .LBB24_12: # %entry
-; CHECK-V-NEXT:    slt a2, a2, s1
+; CHECK-V-NEXT:    slti a2, s1, 0
+; CHECK-V-NEXT:    xori a2, a2, 1
 ; CHECK-V-NEXT:    bnez a2, .LBB24_14
 ; CHECK-V-NEXT:  .LBB24_13: # %entry
 ; CHECK-V-NEXT:    mv s0, a3

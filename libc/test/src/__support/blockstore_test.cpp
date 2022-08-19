@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/blockstore.h"
+#include "src/__support/blockstore.h"
 #include "utils/UnitTest/Test.h"
 
 struct Element {

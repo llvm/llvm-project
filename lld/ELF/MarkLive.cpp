@@ -220,7 +220,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
 
   // Preserve externally-visible symbols if the symbols defined by this
   // file can interrupt other ELF file's symbols at runtime.
-  for (Symbol *sym : symtab->symbols())
+  for (Symbol *sym : symtab->getSymbols())
     if (sym->includeInDynsym() && sym->partition == partition)
       markSymbol(sym);
 
@@ -361,7 +361,7 @@ template <class ELFT> void elf::markLive() {
   // If --gc-sections is not given, retain all input sections.
   if (!config->gcSections) {
     // If a DSO defines a symbol referenced in a regular object, it is needed.
-    for (Symbol *sym : symtab->symbols())
+    for (Symbol *sym : symtab->getSymbols())
       if (auto *s = dyn_cast<SharedSymbol>(sym))
         if (s->isUsedInRegularObj && !s->isWeak())
           cast<SharedFile>(s->file)->isNeeded = true;

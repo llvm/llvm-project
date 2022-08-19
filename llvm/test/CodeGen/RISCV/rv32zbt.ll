@@ -648,14 +648,12 @@ define i64 @cmov_sle_i64(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ;
 ; RV32ZBT-LABEL: cmov_sle_i64:
 ; RV32ZBT:       # %bb.0:
-; RV32ZBT-NEXT:    xor t0, a3, a5
 ; RV32ZBT-NEXT:    sltu a2, a4, a2
-; RV32ZBT-NEXT:    xori a2, a2, 1
+; RV32ZBT-NEXT:    xor a4, a3, a5
 ; RV32ZBT-NEXT:    slt a3, a5, a3
-; RV32ZBT-NEXT:    xori a3, a3, 1
-; RV32ZBT-NEXT:    cmov a2, t0, a3, a2
-; RV32ZBT-NEXT:    cmov a0, a2, a0, a6
-; RV32ZBT-NEXT:    cmov a1, a2, a1, a7
+; RV32ZBT-NEXT:    cmov a2, a4, a3, a2
+; RV32ZBT-NEXT:    cmov a0, a2, a6, a0
+; RV32ZBT-NEXT:    cmov a1, a2, a7, a1
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp sle i64 %b, %c
   %cond = select i1 %tobool, i64 %a, i64 %d
@@ -683,14 +681,12 @@ define i64 @cmov_sge_i64(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ;
 ; RV32ZBT-LABEL: cmov_sge_i64:
 ; RV32ZBT:       # %bb.0:
-; RV32ZBT-NEXT:    xor t0, a3, a5
 ; RV32ZBT-NEXT:    sltu a2, a2, a4
-; RV32ZBT-NEXT:    xori a2, a2, 1
+; RV32ZBT-NEXT:    xor a4, a3, a5
 ; RV32ZBT-NEXT:    slt a3, a3, a5
-; RV32ZBT-NEXT:    xori a3, a3, 1
-; RV32ZBT-NEXT:    cmov a2, t0, a3, a2
-; RV32ZBT-NEXT:    cmov a0, a2, a0, a6
-; RV32ZBT-NEXT:    cmov a1, a2, a1, a7
+; RV32ZBT-NEXT:    cmov a2, a4, a3, a2
+; RV32ZBT-NEXT:    cmov a0, a2, a6, a0
+; RV32ZBT-NEXT:    cmov a1, a2, a7, a1
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp sge i64 %b, %c
   %cond = select i1 %tobool, i64 %a, i64 %d
@@ -718,14 +714,12 @@ define i64 @cmov_ule_i64(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ;
 ; RV32ZBT-LABEL: cmov_ule_i64:
 ; RV32ZBT:       # %bb.0:
-; RV32ZBT-NEXT:    xor t0, a3, a5
 ; RV32ZBT-NEXT:    sltu a2, a4, a2
-; RV32ZBT-NEXT:    xori a2, a2, 1
+; RV32ZBT-NEXT:    xor a4, a3, a5
 ; RV32ZBT-NEXT:    sltu a3, a5, a3
-; RV32ZBT-NEXT:    xori a3, a3, 1
-; RV32ZBT-NEXT:    cmov a2, t0, a3, a2
-; RV32ZBT-NEXT:    cmov a0, a2, a0, a6
-; RV32ZBT-NEXT:    cmov a1, a2, a1, a7
+; RV32ZBT-NEXT:    cmov a2, a4, a3, a2
+; RV32ZBT-NEXT:    cmov a0, a2, a6, a0
+; RV32ZBT-NEXT:    cmov a1, a2, a7, a1
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp ule i64 %b, %c
   %cond = select i1 %tobool, i64 %a, i64 %d
@@ -753,14 +747,12 @@ define i64 @cmov_uge_i64(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ;
 ; RV32ZBT-LABEL: cmov_uge_i64:
 ; RV32ZBT:       # %bb.0:
-; RV32ZBT-NEXT:    xor t0, a3, a5
 ; RV32ZBT-NEXT:    sltu a2, a2, a4
-; RV32ZBT-NEXT:    xori a2, a2, 1
+; RV32ZBT-NEXT:    xor a4, a3, a5
 ; RV32ZBT-NEXT:    sltu a3, a3, a5
-; RV32ZBT-NEXT:    xori a3, a3, 1
-; RV32ZBT-NEXT:    cmov a2, t0, a3, a2
-; RV32ZBT-NEXT:    cmov a0, a2, a0, a6
-; RV32ZBT-NEXT:    cmov a1, a2, a1, a7
+; RV32ZBT-NEXT:    cmov a2, a4, a3, a2
+; RV32ZBT-NEXT:    cmov a0, a2, a6, a0
+; RV32ZBT-NEXT:    cmov a1, a2, a7, a1
 ; RV32ZBT-NEXT:    ret
   %tobool = icmp uge i64 %b, %c
   %cond = select i1 %tobool, i64 %a, i64 %d
