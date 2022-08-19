@@ -39,7 +39,7 @@ static bool findRISCVMultilibs(const Driver &D,
   StringRef Arch = riscv::getRISCVArch(Args, TargetTriple);
   StringRef Abi = tools::riscv::getRISCVABI(Args, TargetTriple);
 
-  if (TargetTriple.getArch() == llvm::Triple::riscv64) {
+  if (TargetTriple.isRISCV64()) {
     Multilib Imac = makeMultilib("").flag("+march=rv64imac").flag("+mabi=lp64");
     Multilib Imafdc = makeMultilib("/rv64imafdc/lp64d")
                           .flag("+march=rv64imafdc")
@@ -57,7 +57,7 @@ static bool findRISCVMultilibs(const Driver &D,
     Result.Multilibs = MultilibSet().Either(Imac, Imafdc);
     return Result.Multilibs.select(Flags, Result.SelectedMultilib);
   }
-  if (TargetTriple.getArch() == llvm::Triple::riscv32) {
+  if (TargetTriple.isRISCV32()) {
     Multilib Imac =
         makeMultilib("").flag("+march=rv32imac").flag("+mabi=ilp32");
     Multilib I =
@@ -140,8 +140,7 @@ static bool isAArch64BareMetal(const llvm::Triple &Triple) {
 }
 
 static bool isRISCVBareMetal(const llvm::Triple &Triple) {
-  if (Triple.getArch() != llvm::Triple::riscv32 &&
-      Triple.getArch() != llvm::Triple::riscv64)
+  if (!Triple.isRISCV())
     return false;
 
   if (Triple.getVendor() != llvm::Triple::UnknownVendor)
