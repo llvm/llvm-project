@@ -108,7 +108,7 @@ define <vscale x 2 x float> @vpmerge_vpfadd(<vscale x 2 x float> %passthru, <vsc
   ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vr = COPY $v9
   ; MIR-NEXT:   [[COPY4:%[0-9]+]]:vrnov0 = COPY $v8
   ; MIR-NEXT:   $v0 = COPY [[COPY1]]
-  ; MIR-NEXT:   [[PseudoVFADD_VV_M1_MASK:%[0-9]+]]:vrnov0 = PseudoVFADD_VV_M1_MASK [[COPY4]], [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0, implicit $frm
+  ; MIR-NEXT:   [[PseudoVFADD_VV_M1_MASK:%[0-9]+]]:vrnov0 = nofpexcept PseudoVFADD_VV_M1_MASK [[COPY4]], [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0, implicit $frm
   ; MIR-NEXT:   $v8 = COPY [[PseudoVFADD_VV_M1_MASK]]
   ; MIR-NEXT:   PseudoRET implicit $v8
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
@@ -568,7 +568,7 @@ define <vscale x 2 x float> @vpmerge_vfsqrt(<vscale x 2 x float> %passthru, <vsc
   ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY $v9
   ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
   ; MIR-NEXT:   $v0 = COPY [[COPY1]]
-  ; MIR-NEXT:   [[PseudoVFSQRT_V_M1_MASK:%[0-9]+]]:vrnov0 = PseudoVFSQRT_V_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0, implicit $frm
+  ; MIR-NEXT:   [[PseudoVFSQRT_V_M1_MASK:%[0-9]+]]:vrnov0 = nofpexcept PseudoVFSQRT_V_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0, implicit $frm
   ; MIR-NEXT:   $v8 = COPY [[PseudoVFSQRT_V_M1_MASK]]
   ; MIR-NEXT:   PseudoRET implicit $v8
   %1 = zext i32 %vl to i64
@@ -594,7 +594,7 @@ define <vscale x 2 x float> @vpmerge_vfrec7(<vscale x 2 x float> %passthru, <vsc
   ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY $v9
   ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
   ; MIR-NEXT:   $v0 = COPY [[COPY1]]
-  ; MIR-NEXT:   [[PseudoVFREC7_V_M1_MASK:%[0-9]+]]:vrnov0 = PseudoVFREC7_V_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0, implicit $frm
+  ; MIR-NEXT:   [[PseudoVFREC7_V_M1_MASK:%[0-9]+]]:vrnov0 = nofpexcept PseudoVFREC7_V_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0, implicit $frm
   ; MIR-NEXT:   $v8 = COPY [[PseudoVFREC7_V_M1_MASK]]
   ; MIR-NEXT:   PseudoRET implicit $v8
   %1 = zext i32 %vl to i64
