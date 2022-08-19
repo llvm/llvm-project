@@ -339,16 +339,18 @@ int main(int argc, char **argv) {
     switch (DevelopmentTreeLayout) {
     case CMakeStyle:
       ActiveBinDir = ActiveObjRoot + "/bin";
-      ActiveLibDir = ActiveObjRoot + "/lib";
+      ActiveLibDir = ActiveObjRoot + "/lib" + LLVM_LIBDIR_SUFFIX;
       ActiveCMakeDir = ActiveLibDir + "/cmake/llvm";
       break;
     case CMakeBuildModeStyle:
       // FIXME: Should we consider the build-mode-specific path as the prefix?
       ActivePrefix = ActiveObjRoot;
       ActiveBinDir = ActiveObjRoot + "/" + build_mode + "/bin";
-      ActiveLibDir = ActiveObjRoot + "/" + build_mode + "/lib";
+      ActiveLibDir =
+          ActiveObjRoot + "/" + build_mode + "/lib" + LLVM_LIBDIR_SUFFIX;
       // The CMake directory isn't separated by build mode.
-      ActiveCMakeDir = ActivePrefix + "/lib/cmake/llvm";
+      ActiveCMakeDir =
+          ActivePrefix + "/lib" + LLVM_LIBDIR_SUFFIX + "/cmake/llvm";
       break;
     }
 
@@ -367,11 +369,7 @@ int main(int argc, char **argv) {
       sys::fs::make_absolute(ActivePrefix, Path);
       ActiveBinDir = std::string(Path.str());
     }
-    {
-      SmallString<256> Path(LLVM_INSTALL_LIBDIR);
-      sys::fs::make_absolute(ActivePrefix, Path);
-      ActiveLibDir = std::string(Path.str());
-    }
+    ActiveLibDir = ActivePrefix + "/lib" + LLVM_LIBDIR_SUFFIX;
     {
       SmallString<256> Path(LLVM_INSTALL_PACKAGE_DIR);
       sys::fs::make_absolute(ActivePrefix, Path);

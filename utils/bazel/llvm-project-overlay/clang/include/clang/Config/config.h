@@ -67,8 +67,8 @@
 /* Default architecture for SystemZ. */
 #define CLANG_SYSTEMZ_DEFAULT_ARCH "z10"
 
-/* Multilib basename for libdir. */
-#define CLANG_INSTALL_LIBDIR_BASENAME "lib"
+/* Multilib suffix for libdir. */
+#define CLANG_LIBDIR_SUFFIX ""
 
 /* Relative directory for resource files */
 #define CLANG_RESOURCE_DIR ""

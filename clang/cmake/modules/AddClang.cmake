@@ -119,8 +119,8 @@ macro(add_clang_library name)
         install(TARGETS ${lib}
           COMPONENT ${lib}
           ${export_to_clangtargets}
-          LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-          ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+          LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+          ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
           RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
         if (NOT LLVM_ENABLE_IDE)

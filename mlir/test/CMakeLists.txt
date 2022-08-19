@@ -8,7 +8,7 @@ endif()
 # Passed to lit.site.cfg.py.so that the out of tree Standalone dialect test
 # can find MLIR's CMake configuration
 set(MLIR_CMAKE_DIR
-  "${CMAKE_BINARY_DIR}/lib/cmake/mlir")
+  "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/mlir")
 
 # Passed to lit.site.cfg.py.in to set up the path where to find the libraries
 # for linalg integration tests.

@@ -88,10 +88,10 @@ install(TARGETS ParallelSTL
 install(EXPORT ParallelSTLTargets
         FILE ParallelSTLTargets.cmake
         NAMESPACE pstl::
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/ParallelSTL")
+        DESTINATION lib/cmake/ParallelSTL)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/ParallelSTLConfigVersion.cmake"
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/ParallelSTL")
+        DESTINATION lib/cmake/ParallelSTL)
 install(DIRECTORY include/
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
         PATTERN "*.in" EXCLUDE)

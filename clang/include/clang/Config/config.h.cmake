@@ -53,8 +53,8 @@
 /* Default architecture for SystemZ. */
 #define CLANG_SYSTEMZ_DEFAULT_ARCH "${CLANG_SYSTEMZ_DEFAULT_ARCH}"
 
-/* Multilib basename for libdir. */
-#define CLANG_INSTALL_LIBDIR_BASENAME "${CLANG_INSTALL_LIBDIR_BASENAME}"
+/* Multilib suffix for libdir. */
+#define CLANG_LIBDIR_SUFFIX "${CLANG_LIBDIR_SUFFIX}"
 
 /* Relative directory for resource files */
 #define CLANG_RESOURCE_DIR "${CLANG_RESOURCE_DIR}"
