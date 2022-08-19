@@ -27,6 +27,10 @@ struct MemberZero {
   constexpr int zero() const { return 0; }
 };
 
+constexpr int arr[]; // expected-error {{constexpr variable 'arr' must be initialized by a constant expression}}
+constexpr int arr2[2]; // expected-error {{constexpr variable 'arr2' must be initialized by a constant expression}}
+constexpr int arr3[2] = {};
+
 namespace DerivedToVBaseCast {
 
   struct U { int n; };
@@ -1298,7 +1302,7 @@ namespace ExternConstexpr {
   void f() {
     extern constexpr int i; // expected-error {{constexpr variable declaration must be a definition}}
     constexpr int j = 0;
-    constexpr int k; // expected-error {{default initialization of an object of const type}}
+    constexpr int k; // expected-error {{constexpr variable 'k' must be initialized by a constant expression}}
   }
 
   extern const int q;
