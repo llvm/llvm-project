@@ -1,5 +1,5 @@
 add_entrypoint_library(
-  llvmlibc
+  ${LIBC_TARGET}
   DEPENDS
   ${TARGET_LLVMLIBC_ENTRYPOINTS}
 )
@@ -11,13 +11,7 @@ else()
 endif()
 
 install(
-  TARGETS llvmlibc
+  TARGETS ${LIBC_TARGET}
   ARCHIVE DESTINATION "${LIBC_INSTALL_LIBRARY_DIR}"
-  COMPONENT llvmlibc
-)
-
-add_llvm_install_targets(
-  install-llvmlibc
-  DEPENDS llvmlibc
-  COMPONENT llvmlibc
+  COMPONENT ${LIBC_COMPONENT}
 )

@@ -159,6 +159,8 @@ C++20 Feature Support
   template instantiation to be constexpr/consteval even though a call to such
   a function cannot appear in a constant expression.
   (C++14 [dcl.constexpr]p6 (CWG DR647/CWG DR1358))
+- Correctly defer dependent immediate function invocations until template instantiation.
+  This fixes `GH55601 <https://github.com/llvm/llvm-project/issues/55601>`_.
 
 
 

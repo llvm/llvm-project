@@ -413,65 +413,61 @@ private:
     setCallable(IsCallable);
   }
 
-  static Symbol &constructCommon(void *SymStorage, Block &Base, StringRef Name,
-                                 orc::ExecutorAddrDiff Size, Scope S,
-                                 bool IsLive) {
-    assert(SymStorage && "Storage cannot be null");
+  static Symbol &constructCommon(BumpPtrAllocator &Allocator, Block &Base,
+                                 StringRef Name, orc::ExecutorAddrDiff Size,
+                                 Scope S, bool IsLive) {
     assert(!Name.empty() && "Common symbol name cannot be empty");
     assert(Base.isDefined() &&
            "Cannot create common symbol from undefined block");
     assert(static_cast<Block &>(Base).getSize() == Size &&
            "Common symbol size should match underlying block size");
-    auto *Sym = reinterpret_cast<Symbol *>(SymStorage);
+    auto *Sym = Allocator.Allocate<Symbol>();
     new (Sym) Symbol(Base, 0, Name, Size, Linkage::Weak, S, IsLive, false);
     return *Sym;
   }
 
-  static Symbol &constructExternal(void *SymStorage, Addressable &Base,
-                                   StringRef Name, orc::ExecutorAddrDiff Size,
-                                   Linkage L) {
-    assert(SymStorage && "Storage cannot be null");
+  static Symbol &constructExternal(BumpPtrAllocator &Allocator,
+                                   Addressable &Base, StringRef Name,
+                                   orc::ExecutorAddrDiff Size, Linkage L) {
     assert(!Base.isDefined() &&
            "Cannot create external symbol from defined block");
     assert(!Name.empty() && "External symbol name cannot be empty");
-    auto *Sym = reinterpret_cast<Symbol *>(SymStorage);
+    auto *Sym = Allocator.Allocate<Symbol>();
     new (Sym) Symbol(Base, 0, Name, Size, L, Scope::Default, false, false);
     return *Sym;
   }
 
-  static Symbol &constructAbsolute(void *SymStorage, Addressable &Base,
-                                   StringRef Name, orc::ExecutorAddrDiff Size,
-                                   Linkage L, Scope S, bool IsLive) {
-    assert(SymStorage && "Storage cannot be null");
+  static Symbol &constructAbsolute(BumpPtrAllocator &Allocator,
+                                   Addressable &Base, StringRef Name,
+                                   orc::ExecutorAddrDiff Size, Linkage L,
+                                   Scope S, bool IsLive) {
     assert(!Base.isDefined() &&
            "Cannot create absolute symbol from a defined block");
-    auto *Sym = reinterpret_cast<Symbol *>(SymStorage);
+    auto *Sym = Allocator.Allocate<Symbol>();
     new (Sym) Symbol(Base, 0, Name, Size, L, S, IsLive, false);
     return *Sym;
   }
 
-  static Symbol &constructAnonDef(void *SymStorage, Block &Base,
+  static Symbol &constructAnonDef(BumpPtrAllocator &Allocator, Block &Base,
                                   orc::ExecutorAddrDiff Offset,
                                   orc::ExecutorAddrDiff Size, bool IsCallable,
                                   bool IsLive) {
-    assert(SymStorage && "Storage cannot be null");
     assert((Offset + Size) <= Base.getSize() &&
            "Symbol extends past end of block");
-    auto *Sym = reinterpret_cast<Symbol *>(SymStorage);
+    auto *Sym = Allocator.Allocate<Symbol>();
     new (Sym) Symbol(Base, Offset, StringRef(), Size, Linkage::Strong,
                      Scope::Local, IsLive, IsCallable);
     return *Sym;
   }
 
-  static Symbol &constructNamedDef(void *SymStorage, Block &Base,
+  static Symbol &constructNamedDef(BumpPtrAllocator &Allocator, Block &Base,
                                    orc::ExecutorAddrDiff Offset, StringRef Name,
                                    orc::ExecutorAddrDiff Size, Linkage L,
                                    Scope S, bool IsLive, bool IsCallable) {
-    assert(SymStorage && "Storage cannot be null");
     assert((Offset + Size) <= Base.getSize() &&
            "Symbol extends past end of block");
     assert(!Name.empty() && "Name cannot be empty");
-    auto *Sym = reinterpret_cast<Symbol *>(SymStorage);
+    auto *Sym = Allocator.Allocate<Symbol>();
     new (Sym) Symbol(Base, Offset, Name, Size, L, S, IsLive, IsCallable);
     return *Sym;
   }
@@ -654,7 +650,7 @@ private:
   uint64_t S : 2;
   uint64_t IsLive : 1;
   uint64_t IsCallable : 1;
-  orc::ExecutorAddrDiff Size = 0;
+  size_t Size = 0;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const Symbol &A);
@@ -1092,8 +1088,8 @@ public:
                           }) == 0 &&
            "Duplicate external symbol");
     auto &Sym = Symbol::constructExternal(
-        Allocator.Allocate<Symbol>(),
-        createAddressable(orc::ExecutorAddr(), false), Name, Size, L);
+        Allocator, createAddressable(orc::ExecutorAddr(), false), Name, Size,
+        L);
     ExternalSymbols.insert(&Sym);
     return Sym;
   }
@@ -1107,9 +1103,8 @@ public:
                                                  return Sym->getName() == Name;
                                                }) == 0) &&
                                     "Duplicate absolute symbol");
-    auto &Sym = Symbol::constructAbsolute(Allocator.Allocate<Symbol>(),
-                                          createAddressable(Address), Name,
-                                          Size, L, S, IsLive);
+    auto &Sym = Symbol::constructAbsolute(Allocator, createAddressable(Address),
+                                          Name, Size, L, S, IsLive);
     AbsoluteSymbols.insert(&Sym);
     return Sym;
   }
@@ -1124,9 +1119,8 @@ public:
                           }) == 0 &&
            "Duplicate defined symbol");
     auto &Sym = Symbol::constructCommon(
-        Allocator.Allocate<Symbol>(),
-        createBlock(Section, Size, Address, Alignment, 0), Name, Size, S,
-        IsLive);
+        Allocator, createBlock(Section, Size, Address, Alignment, 0), Name,
+        Size, S, IsLive);
     Section.addSymbol(Sym);
     return Sym;
   }
@@ -1135,8 +1129,8 @@ public:
   Symbol &addAnonymousSymbol(Block &Content, orc::ExecutorAddrDiff Offset,
                              orc::ExecutorAddrDiff Size, bool IsCallable,
                              bool IsLive) {
-    auto &Sym = Symbol::constructAnonDef(Allocator.Allocate<Symbol>(), Content,
-                                         Offset, Size, IsCallable, IsLive);
+    auto &Sym = Symbol::constructAnonDef(Allocator, Content, Offset, Size,
+                                         IsCallable, IsLive);
     Content.getSection().addSymbol(Sym);
     return Sym;
   }
@@ -1150,9 +1144,8 @@ public:
                                                   return Sym->getName() == Name;
                                                 }) == 0) &&
            "Duplicate defined symbol");
-    auto &Sym =
-        Symbol::constructNamedDef(Allocator.Allocate<Symbol>(), Content, Offset,
-                                  Name, Size, L, S, IsLive, IsCallable);
+    auto &Sym = Symbol::constructNamedDef(Allocator, Content, Offset, Name,
+                                          Size, L, S, IsLive, IsCallable);
     Content.getSection().addSymbol(Sym);
     return Sym;
   }

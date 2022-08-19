@@ -53,16 +53,22 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
       (viz. the maximum value of each tensor index over all dimensions). The
       choices are `8`, `16`, `32`, `64`, or `0` for a native width.
 
-    Example:
+    Examples:
 
     ```mlir
+    // Sparse vector.
+    #SparseVector = #sparse_tensor.encoding<{
+      dimLevelType = [ "compressed" ]
+    }>
+    ... tensor<?xf32, #SparseVector> ...
+
+    // Doubly compressed sparse column storage with specific bitwidths.
     #DCSC = #sparse_tensor.encoding<{
       dimLevelType = [ "compressed", "compressed" ],
       dimOrdering = affine_map<(i,j) -> (j,i)>,
       pointerBitWidth = 32,
       indexBitWidth = 8
     }>
-
     ... tensor<8x8xf64, #DCSC> ...
     ```
   }];

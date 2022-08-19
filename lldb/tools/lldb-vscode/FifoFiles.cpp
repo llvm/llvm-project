@@ -62,6 +62,13 @@ Expected<json::Value> FifoFileIO::ReadJSON(std::chrono::milliseconds timeout) {
           line = buffer;
       }));
   if (future->wait_for(timeout) == std::future_status::timeout || !line)
+    // Indeed this is a leak, but it's intentional. "future" obj destructor
+    //  will block on waiting for the worker thread to join. And the worker
+    //  thread might be stuck in blocking I/O. Intentionally leaking the  obj
+    //  as a hack to avoid blocking main thread, and adding annotation to
+    //  supress static code inspection warnings
+
+    // coverity[leaked_storage]
     return createStringError(inconvertibleErrorCode(),
                              "Timed out trying to get messages from the " +
                                  m_other_endpoint_name);
@@ -79,6 +86,13 @@ Error FifoFileIO::SendJSON(const json::Value &json,
         done = true;
       }));
   if (future->wait_for(timeout) == std::future_status::timeout || !done) {
+    // Indeed this is a leak, but it's intentional. "future" obj destructor will
+    // block on waiting for the worker thread to join. And the worker thread
+    // might be stuck in blocking I/O. Intentionally leaking the  obj as a hack
+    // to avoid blocking main thread, and adding annotation to supress static
+    // code inspection warnings"
+
+    // coverity[leaked_storage]
     return createStringError(inconvertibleErrorCode(),
                              "Timed out trying to send messages to the " +
                                  m_other_endpoint_name);

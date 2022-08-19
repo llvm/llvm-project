@@ -6345,6 +6345,7 @@ static offset_t CreateAllImageInfosPayload(
         // The segment name in a Mach-O LC_SEGMENT/LC_SEGMENT_64 is char[16] and
         // is not guaranteed to be nul-terminated if all 16 characters are
         // used.
+        // coverity[buffer_size_warning]
         strncpy(seg_vmaddr.segname, name.AsCString(),
                 sizeof(seg_vmaddr.segname));
         seg_vmaddr.vmaddr = vmaddr;
@@ -6740,6 +6741,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           // the right one, doesn't need to be nul terminated.
           // LC_NOTE name field is char[16] and is not guaranteed to be
           // nul-terminated.
+          // coverity[buffer_size_warning]
           strncpy(namebuf, lcnote->name.c_str(), sizeof(namebuf));
           buffer.PutRawBytes(namebuf, sizeof(namebuf));
           buffer.PutHex64(lcnote->payload_file_offset);

@@ -2095,8 +2095,10 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
     if (attr.isDerivedAttr() || inferredAttributes.contains(namedAttr.name))
       continue;
 
-    bool emitNotNullCheck =
-        attr.isOptional() || (attr.hasDefaultValue() && !isRawValueAttr);
+    // TODO(jpienaar): The wrapping of optional is different for default or not,
+    // so don't unwrap for default ones that would fail below.
+    bool emitNotNullCheck = (attr.isOptional() && !attr.hasDefaultValue()) ||
+                            (attr.hasDefaultValue() && !isRawValueAttr);
     if (emitNotNullCheck)
       body << formatv("  if ({0}) ", namedAttr.name) << "{\n";
 

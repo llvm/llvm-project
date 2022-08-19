@@ -105,6 +105,11 @@ func.func @create_mask_0d(%zero : index, %one : index) {
   return
 }
 
+func.func @reduce_add(%arg0: vector<f32>) -> f32 {
+  %0 = vector.reduction <add>, %arg0 : vector<f32> into f32    
+  return %0 : f32
+}
+
 func.func @entry() {
   %0 = arith.constant 42.0 : f32
   %1 = arith.constant dense<0.0> : vector<f32>
@@ -130,6 +135,11 @@ func.func @entry() {
   %zero_idx = arith.constant 0 : index
   %one_idx = arith.constant 1 : index
   call  @create_mask_0d(%zero_idx, %one_idx) : (index, index) -> ()
+
+  %red_array = arith.constant dense<5.0> : vector<f32>
+  %red_res = call  @reduce_add(%red_array) : (vector<f32>) -> (f32)  
+  vector.print %red_res : f32
+  // CHECK: 5
 
   return
 }
