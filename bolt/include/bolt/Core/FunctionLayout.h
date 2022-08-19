@@ -47,7 +47,6 @@ public:
   }
 
   static constexpr FragmentNum main() { return FragmentNum(0); }
-  static constexpr FragmentNum hot() { return FragmentNum(0); }
   static constexpr FragmentNum cold() { return FragmentNum(1); }
 };
 
@@ -161,7 +160,7 @@ public:
   /// Get the fragment that contains all entry blocks and other blocks that
   /// cannot be split.
   FunctionFragment getMainFragment() const {
-    return getFragment(FragmentNum::hot());
+    return getFragment(FragmentNum::main());
   }
 
   /// Get the fragment that contains all entry blocks and other blocks that
@@ -181,7 +180,8 @@ public:
   void insertBasicBlocks(BinaryBasicBlock *InsertAfter,
                          ArrayRef<BinaryBasicBlock *> NewBlocks);
 
-  /// Erase all blocks from the layout that are in ToErase.
+  /// Erase all blocks from the layout that are in ToErase. If this method
+  /// erases all blocks of a fragment, it will be removed as well.
   void eraseBasicBlocks(const DenseSet<const BinaryBasicBlock *> ToErase);
 
   /// Make sure fragments' and basic blocks' indices match the current layout.

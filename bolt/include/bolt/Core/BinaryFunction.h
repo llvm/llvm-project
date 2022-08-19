@@ -1078,8 +1078,8 @@ public:
 
   /// Return MC symbol associated with the function.
   /// All references to the function should use this symbol.
-  MCSymbol *getSymbol(const FragmentNum Fragment = FragmentNum::hot()) {
-    if (Fragment == FragmentNum::hot())
+  MCSymbol *getSymbol(const FragmentNum Fragment = FragmentNum::main()) {
+    if (Fragment == FragmentNum::main())
       return Symbols[0];
 
     size_t ColdSymbolIndex = Fragment.get() - 1;
@@ -1316,35 +1316,29 @@ public:
   }
 
   /// Return internal section name for this function.
-  StringRef getCodeSectionName() const { return StringRef(CodeSectionName); }
+  SmallString<32>
+  getCodeSectionName(const FragmentNum Fragment = FragmentNum::main()) const {
+    if (Fragment == FragmentNum::main())
+      return SmallString<32>(CodeSectionName);
+    if (Fragment == FragmentNum::cold())
+      return SmallString<32>(ColdCodeSectionName);
+    return formatv("{0}.{1}", ColdCodeSectionName, Fragment.get() - 1);
+  }
 
   /// Assign a code section name to the function.
-  void setCodeSectionName(StringRef Name) {
-    CodeSectionName = std::string(Name);
+  void setCodeSectionName(const StringRef Name) {
+    CodeSectionName = Name.str();
   }
 
   /// Get output code section.
-  ErrorOr<BinarySection &> getCodeSection() const {
-    return BC.getUniqueSectionByName(getCodeSectionName());
-  }
-
-  /// Return cold code section name for the function.
-  std::string getColdCodeSectionName(const FragmentNum Fragment) const {
-    std::string Result = ColdCodeSectionName;
-    if (Fragment != FragmentNum::cold())
-      Result.append(".").append(std::to_string(Fragment.get() - 1));
-    return Result;
+  ErrorOr<BinarySection &>
+  getCodeSection(const FragmentNum Fragment = FragmentNum::main()) const {
+    return BC.getUniqueSectionByName(getCodeSectionName(Fragment));
   }
 
   /// Assign a section name for the cold part of the function.
-  void setColdCodeSectionName(StringRef Name) {
-    ColdCodeSectionName = std::string(Name);
-  }
-
-  /// Get output code section for cold code of this function.
-  ErrorOr<BinarySection &>
-  getColdCodeSection(const FragmentNum Fragment) const {
-    return BC.getUniqueSectionByName(getColdCodeSectionName(Fragment));
+  void setColdCodeSectionName(const StringRef Name) {
+    ColdCodeSectionName = Name.str();
   }
 
   /// Return true iif the function will halt execution on entry.
@@ -1878,11 +1872,9 @@ public:
     if (ColdCallSites.empty())
       return nullptr;
 
-    SmallString<8> SymbolSuffix;
-    if (Fragment != FragmentNum::cold())
-      SymbolSuffix = formatv(".{0}", Fragment.get());
-    ColdLSDASymbol = BC.Ctx->getOrCreateSymbol(formatv(
-        "GCC_cold_except_table{0:x-}{1}", getFunctionNumber(), SymbolSuffix));
+    ColdLSDASymbol =
+        BC.Ctx->getOrCreateSymbol(formatv("GCC_cold_except_table{0:x-}.{1}",
+                                          getFunctionNumber(), Fragment.get()));
 
     return ColdLSDASymbol;
   }
