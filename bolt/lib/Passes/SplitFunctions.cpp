@@ -11,13 +11,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/SplitFunctions.h"
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/ParallelUtilities.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
 #include <iterator>
+#include <numeric>
 #include <random>
 #include <vector>
 
@@ -89,6 +95,10 @@ static cl::opt<SplitFunctionsStrategy> SplitStrategy(
         "split each function into a hot and cold fragment at a randomly chosen "
         "split point (ignoring any available profiling information)")),
     cl::values(clEnumValN(
+        SplitFunctionsStrategy::RandomN, "randomN",
+        "split each function into N fragments at a randomly chosen split "
+        "points (ignoring any available profiling information)")),
+    cl::values(clEnumValN(
         SplitFunctionsStrategy::All, "all",
         "split all basic blocks of each function into fragments such that each "
         "fragment contains exactly a single basic block")),
@@ -139,7 +149,7 @@ struct SplitRandom2 {
     using DiffT = typename std::iterator_traits<It>::difference_type;
     const DiffT NumOutlineableBlocks = End - Start;
 
-    // We want to split at least one block unless there are not blocks that can
+    // We want to split at least one block unless there are no blocks that can
     // be outlined
     const auto MinimumSplit = std::min<DiffT>(NumOutlineableBlocks, 1);
     std::uniform_int_distribution<DiffT> Dist(MinimumSplit,
@@ -152,6 +162,51 @@ struct SplitRandom2 {
     LLVM_DEBUG(dbgs() << formatv("BOLT-DEBUG: randomly chose last {0} (out of "
                                  "{1} possible) blocks to split\n",
                                  NumColdBlocks, End - Start));
+  }
+};
+
+struct SplitRandomN {
+  std::minstd_rand0 *Gen;
+
+  explicit SplitRandomN(std::minstd_rand0 &Gen) : Gen(&Gen) {}
+
+  bool canSplit(const BinaryFunction &BF) { return true; }
+  bool canOutline(const BinaryBasicBlock &BB) { return true; }
+
+  template <typename It> void partition(It Start, It End) const {
+    using DiffT = typename std::iterator_traits<It>::difference_type;
+    const DiffT NumOutlineableBlocks = End - Start;
+
+    // We want to split at least one fragment if possible
+    const auto MinimumSplits = std::min<DiffT>(NumOutlineableBlocks, 1);
+    std::uniform_int_distribution<DiffT> Dist(MinimumSplits,
+                                              NumOutlineableBlocks);
+    // Choose how many splits to perform
+    const DiffT NumSplits = Dist(*Gen);
+
+    // Draw split points from a lottery
+    SmallVector<unsigned, 0> Lottery(NumOutlineableBlocks);
+    std::iota(Lottery.begin(), Lottery.end(), 0u);
+    std::shuffle(Lottery.begin(), Lottery.end(), *Gen);
+    Lottery.resize(NumSplits);
+    llvm::sort(Lottery);
+
+    // Add one past the end entry to lottery
+    Lottery.push_back(NumOutlineableBlocks);
+
+    unsigned LotteryIndex = 0;
+    unsigned BBPos = 0;
+    for (BinaryBasicBlock *const BB : make_range(Start, End)) {
+      // Check whether to start new fragment
+      if (BBPos >= Lottery[LotteryIndex])
+        ++LotteryIndex;
+
+      // Because LotteryIndex is 0 based and cold fragments are 1 based, we can
+      // use the index to assign fragments.
+      BB->setFragmentNum(FragmentNum(LotteryIndex));
+
+      ++BBPos;
+    }
   }
 };
 
@@ -201,6 +256,12 @@ void SplitFunctions::runOnFunctions(BinaryContext &BC) {
     // If we split functions randomly, we need to ensure that across runs with
     // the same input, we generate random numbers for each function in the same
     // order.
+    ForceSequential = true;
+    break;
+  case SplitFunctionsStrategy::RandomN:
+    WorkFun = [&](BinaryFunction &BF) {
+      splitFunction(BF, SplitRandomN(RandGen));
+    };
     ForceSequential = true;
     break;
   case SplitFunctionsStrategy::All:
