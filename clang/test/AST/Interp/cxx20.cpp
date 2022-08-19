@@ -10,7 +10,7 @@ constexpr int getMinus5() {
   int *p = &a;
   return *p;
 }
-//static_assert(getMinus5() == -5, "") TODO
+static_assert(getMinus5() == -5, "");
 
 constexpr int assign() {
   int m = 10;
@@ -20,7 +20,7 @@ constexpr int assign() {
 
   return m;
 }
-//static_assert(assign() == 20, "");  TODO
+static_assert(assign() == 20, "");
 
 
 constexpr int pointerAssign() {
@@ -31,7 +31,7 @@ constexpr int pointerAssign() {
 
   return m;
 }
-//static_assert(pointerAssign() == 12, "");  TODO
+static_assert(pointerAssign() == 12, "");
 
 constexpr int pointerDeref() {
   int m = 12;
@@ -39,7 +39,7 @@ constexpr int pointerDeref() {
 
   return *p;
 }
-//static_assert(pointerDeref() == 12, ""); TODO
+static_assert(pointerDeref() == 12, "");
 
 constexpr int pointerAssign2() {
   int m = 10;
@@ -52,4 +52,4 @@ constexpr int pointerAssign2() {
 
   return v;
 }
-//static_assert(pointerAssign2() == 12, ""); TODO
+static_assert(pointerAssign2() == 12, "");

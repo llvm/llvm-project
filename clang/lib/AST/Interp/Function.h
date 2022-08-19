@@ -62,7 +62,7 @@ public:
 
   /// Returns the size of the function's local stack.
   unsigned getFrameSize() const { return FrameSize; }
-  /// Returns the size of the argument stackx
+  /// Returns the size of the argument stack.
   unsigned getArgSize() const { return ArgSize; }
 
   /// Returns a pointer to the start of the code.

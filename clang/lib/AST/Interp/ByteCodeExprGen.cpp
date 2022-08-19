@@ -9,6 +9,7 @@
 #include "ByteCodeExprGen.h"
 #include "ByteCodeEmitter.h"
 #include "ByteCodeGenError.h"
+#include "ByteCodeStmtGen.h"
 #include "Context.h"
 #include "Function.h"
 #include "PrimType.h"
@@ -591,6 +592,52 @@ bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   }
 
   return this->bail(VD);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
+  assert(!E->getBuiltinCallee() && "Builtin functions aren't supported yet");
+
+  const Decl *Callee = E->getCalleeDecl();
+  if (const auto *FuncDecl = dyn_cast_or_null<FunctionDecl>(Callee)) {
+    const Function *Func = P.getFunction(FuncDecl);
+
+    // Templated functions might not have been compiled yet, so do it now.
+    if (!Func) {
+      if (auto R =
+              ByteCodeStmtGen<ByteCodeEmitter>(Ctx, P).compileFunc(FuncDecl))
+        Func = *R;
+    }
+    assert(Func);
+
+    QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
+    Optional<PrimType> T = classify(ReturnType);
+
+    if (T || ReturnType->isVoidType()) {
+      // Put arguments on the stack.
+      for (const auto *Arg : E->arguments()) {
+        if (!this->visit(Arg))
+          return false;
+      }
+
+      if (T)
+        return this->emitCall(*T, Func, E);
+      return this->emitCallVoid(Func, E);
+    } else {
+      assert(false && "Can't classify function return type");
+    }
+
+  } else {
+    assert(false && "We don't support non-FunctionDecl callees right now.");
+  }
+
+  return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXDefaultArgExpr(
+    const CXXDefaultArgExpr *E) {
+  return this->visit(E->getExpr());
 }
 
 template <class Emitter>
