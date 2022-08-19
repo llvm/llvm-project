@@ -956,13 +956,13 @@ inline bool ExpandPtr(InterpState &S, CodePtr OpPC) {
 
 template <typename T>
 inline std::enable_if_t<!std::is_pointer<T>::value, T> ReadArg(InterpState &S,
-                                                               CodePtr OpPC) {
+                                                               CodePtr &OpPC) {
   return OpPC.read<T>();
 }
 
 template <typename T>
 inline std::enable_if_t<std::is_pointer<T>::value, T> ReadArg(InterpState &S,
-                                                              CodePtr OpPC) {
+                                                              CodePtr &OpPC) {
   uint32_t ID = OpPC.read<uint32_t>();
   return reinterpret_cast<T>(S.P.getNativePointer(ID));
 }

@@ -24,7 +24,7 @@ entry:
   call void @longjmp(%struct.__jmp_buf_tag* %arraydecay1, i32 1) #1
   unreachable
 ; CHECK: entry:
-; CHECK-NEXT: %[[MALLOCCALL:.*]] = tail call i8* @malloc(i32 40)
+; CHECK-NEXT: %[[MALLOCCALL:.*]] = tail call i8* @malloc([[PTR]] 40)
 ; CHECK-NEXT: %[[SETJMP_TABLE:.*]] = bitcast i8* %[[MALLOCCALL]] to i32*
 ; CHECK-NEXT: store i32 0, i32* %[[SETJMP_TABLE]]
 ; CHECK-NEXT: %[[SETJMP_TABLE_SIZE:.*]] = add i32 4, 0
@@ -311,7 +311,6 @@ declare void @_longjmp(%struct.__jmp_buf_tag*, i32) #1
 declare i32 @__gxx_personality_v0(...)
 declare i8* @__cxa_begin_catch(i8*)
 declare void @__cxa_end_catch()
-declare i8* @malloc(i32)
 declare void @free(i8*)
 
 ; JS glue functions and invoke wrappers declaration

@@ -35,10 +35,25 @@ function(add_header target_name)
 
   if(ADD_HEADER_DEPENDS)
     get_fq_deps_list(fq_deps_list ${ADD_HEADER_DEPENDS})
+    # Dependencies of a add_header target can only be another add_header target
+    # or an add_gen_header target.
+    foreach(dep IN LISTS fq_deps_list)
+      get_target_property(header_file ${dep} HEADER_FILE_PATH)
+      if(NOT header_file)
+        message(FATAL_ERROR "Invalid dependency '${dep}' for '${fq_target_name}'.")
+      endif()
+    endforeach()
     add_dependencies(
       ${fq_target_name} ${fq_deps_list}
     )
   endif()
+
+  set_target_properties(
+    ${fq_target_name}
+    PROPERTIES
+      HEADER_FILE_PATH ${dest_file}
+      DEPS "${fq_deps_list}"
+  )
 endfunction(add_header)
 
 # A rule for generated header file targets.
@@ -53,7 +68,7 @@ endfunction(add_header)
 function(add_gen_header target_name)
   cmake_parse_arguments(
     "ADD_GEN_HDR"
-    "" # No optional arguments
+    "PUBLIC" # No optional arguments
     "DEF_FILE;GEN_HDR" # Single value arguments
     "PARAMS;DATA_FILES;DEPENDS"     # Multi value arguments
     ${ARGN}
@@ -108,9 +123,24 @@ function(add_gen_header target_name)
 
   if(ADD_GEN_HDR_DEPENDS)
     get_fq_deps_list(fq_deps_list ${ADD_GEN_HDR_DEPENDS})
+    # Dependencies of a add_header target can only be another add_gen_header target
+    # or an add_header target.
+    foreach(dep IN LISTS fq_deps_list)
+      get_target_property(header_file ${dep} HEADER_FILE_PATH)
+      if(NOT header_file)
+        message(FATAL_ERROR "Invalid dependency '${dep}' for '${fq_target_name}'.")
+      endif()
+    endforeach()
   endif()
   add_custom_target(
     ${fq_target_name}
     DEPENDS ${out_file} ${fq_deps_list}
+  )
+
+  set_target_properties(
+    ${fq_target_name}
+    PROPERTIES
+      HEADER_FILE_PATH ${out_file}
+      DEPS "${fq_deps_list}"
   )
 endfunction(add_gen_header)

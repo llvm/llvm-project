@@ -132,12 +132,7 @@ function(generate_protos LibraryName ProtoFile)
         ARGS ${Flags} "${ProtoSourceAbsolutePath}"
         DEPENDS "${ProtoSourceAbsolutePath}")
 
-  set(LIBTYPE STATIC)
-  if(NOT XCODE)
-    # The Xcode generator doesn't handle object libraries correctly.
-    list(APPEND LIBTYPE OBJECT)
-  endif()
-  llvm_add_library(${LibraryName} ${LIBTYPE} ${GeneratedProtoSource}
+  add_llvm_library(${LibraryName} ${GeneratedProtoSource}
     PARTIAL_SOURCES_INTENDED
     LINK_LIBS PUBLIC grpc++ protobuf)
 

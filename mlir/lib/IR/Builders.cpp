@@ -124,6 +124,10 @@ DenseIntElementsAttr Builder::getIndexVectorAttr(ArrayRef<int64_t> values) {
       values);
 }
 
+DenseBoolArrayAttr Builder::getDenseBoolArrayAttr(ArrayRef<bool> values) {
+  return DenseBoolArrayAttr::get(context, values);
+}
+
 DenseI8ArrayAttr Builder::getDenseI8ArrayAttr(ArrayRef<int8_t> values) {
   return DenseI8ArrayAttr::get(context, values);
 }

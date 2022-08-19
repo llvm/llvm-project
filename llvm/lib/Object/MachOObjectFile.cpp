@@ -4756,7 +4756,7 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
     return None;
 
   auto DyldInfoOrErr =
-    getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
+      getStructOrErr<MachO::dyld_info_command>(*this, DyldInfoLoadCmd);
   if (!DyldInfoOrErr)
     return None;
   MachO::dyld_info_command DyldInfo = DyldInfoOrErr.get();
@@ -4765,8 +4765,8 @@ ArrayRef<uint8_t> MachOObjectFile::getDyldInfoLazyBindOpcodes() const {
   return makeArrayRef(Ptr, DyldInfo.lazy_bind_size);
 }
 
-Expected<Optional<MachO::dyld_chained_fixups_header>>
-MachOObjectFile::getChainedFixupsHeader() const {
+Expected<Optional<MachO::linkedit_data_command>>
+MachOObjectFile::getChainedFixupsLoadCommand() const {
   // Load the dyld chained fixups load command.
   if (!DyldChainedFixupsLoadCmd)
     return llvm::None;
@@ -4774,13 +4774,28 @@ MachOObjectFile::getChainedFixupsHeader() const {
       *this, DyldChainedFixupsLoadCmd);
   if (!DyldChainedFixupsOrErr)
     return DyldChainedFixupsOrErr.takeError();
-  MachO::linkedit_data_command DyldChainedFixups = DyldChainedFixupsOrErr.get();
+  const MachO::linkedit_data_command &DyldChainedFixups =
+      *DyldChainedFixupsOrErr;
 
   // If the load command is present but the data offset has been zeroed out,
   // as is the case for dylib stubs, return None (no error).
+  if (!DyldChainedFixups.dataoff)
+    return llvm::None;
+  return DyldChainedFixups;
+}
+
+Expected<Optional<MachO::dyld_chained_fixups_header>>
+MachOObjectFile::getChainedFixupsHeader() const {
+  auto CFOrErr = getChainedFixupsLoadCommand();
+  if (!CFOrErr)
+    return CFOrErr.takeError();
+  if (!CFOrErr->has_value())
+    return llvm::None;
+
+  const MachO::linkedit_data_command &DyldChainedFixups = **CFOrErr;
+
   uint64_t CFHeaderOffset = DyldChainedFixups.dataoff;
-  if (CFHeaderOffset == 0)
-    return DyldChainedFixupsOrErr.takeError();
+  uint64_t CFSize = DyldChainedFixups.datasize;
 
   // Load the dyld chained fixups header.
   const char *CFHeaderPtr = getPtr(*this, CFHeaderOffset);
@@ -4808,7 +4823,7 @@ MachOObjectFile::getChainedFixupsHeader() const {
                           Twine(CFHeader.starts_offset) +
                           " overlaps with chained fixups header");
   }
-  uint32_t EndOffset = DyldChainedFixups.dataoff + DyldChainedFixups.datasize;
+  uint32_t EndOffset = CFHeaderOffset + CFSize;
   if (CFImageStartsOffset + sizeof(MachO::dyld_chained_starts_in_image) >
       EndOffset) {
     return malformedError(Twine("bad chained fixups: image starts end ") +
@@ -4818,6 +4833,95 @@ MachOObjectFile::getChainedFixupsHeader() const {
   }
 
   return CFHeader;
+}
+
+Expected<std::pair<size_t, std::vector<MachOObjectFile::ChainedFixupsSegment>>>
+MachOObjectFile::getChainedFixupsSegments() const {
+  auto CFOrErr = getChainedFixupsLoadCommand();
+  if (!CFOrErr)
+    return CFOrErr.takeError();
+
+  std::vector<MachOObjectFile::ChainedFixupsSegment> Segments;
+  if (!CFOrErr->has_value())
+    return std::make_pair(0, Segments);
+
+  const MachO::linkedit_data_command &DyldChainedFixups = **CFOrErr;
+
+  auto HeaderOrErr = getChainedFixupsHeader();
+  if (!HeaderOrErr)
+    return HeaderOrErr.takeError();
+  if (!HeaderOrErr->has_value())
+    return std::make_pair(0, Segments);
+  const MachO::dyld_chained_fixups_header &Header = **HeaderOrErr;
+
+  const char *Contents = getPtr(*this, DyldChainedFixups.dataoff);
+
+  auto ImageStartsOrErr = getStructOrErr<MachO::dyld_chained_starts_in_image>(
+      *this, Contents + Header.starts_offset);
+  if (!ImageStartsOrErr)
+    return ImageStartsOrErr.takeError();
+  const MachO::dyld_chained_starts_in_image &ImageStarts = *ImageStartsOrErr;
+
+  const char *SegOffsPtr =
+      Contents + Header.starts_offset +
+      offsetof(MachO::dyld_chained_starts_in_image, seg_info_offset);
+  const char *SegOffsEnd =
+      SegOffsPtr + ImageStarts.seg_count * sizeof(uint32_t);
+  if (SegOffsEnd > Contents + DyldChainedFixups.datasize)
+    return malformedError(
+        "bad chained fixups: seg_info_offset extends past end");
+
+  const char *LastSegEnd = nullptr;
+  for (size_t I = 0, N = ImageStarts.seg_count; I < N; ++I) {
+    auto OffOrErr =
+        getStructOrErr<uint32_t>(*this, SegOffsPtr + I * sizeof(uint32_t));
+    if (!OffOrErr)
+      return OffOrErr.takeError();
+    // seg_info_offset == 0 means there is no associated starts_in_segment
+    // entry.
+    if (!*OffOrErr)
+      continue;
+
+    auto Fail = [&](Twine Message) {
+      return malformedError("bad chained fixups: segment info" + Twine(I) +
+                            " at offset " + Twine(*OffOrErr) + Message);
+    };
+
+    const char *SegPtr = Contents + Header.starts_offset + *OffOrErr;
+    if (LastSegEnd && SegPtr < LastSegEnd)
+      return Fail(" overlaps with previous segment info");
+
+    auto SegOrErr =
+        getStructOrErr<MachO::dyld_chained_starts_in_segment>(*this, SegPtr);
+    if (!SegOrErr)
+      return SegOrErr.takeError();
+    const MachO::dyld_chained_starts_in_segment &Seg = *SegOrErr;
+
+    LastSegEnd = SegPtr + Seg.size;
+    if (Seg.pointer_format < 1 || Seg.pointer_format > 12)
+      return Fail(" has unknown pointer format: " + Twine(Seg.pointer_format));
+
+    const char *PageStart =
+        SegPtr + offsetof(MachO::dyld_chained_starts_in_segment, page_start);
+    const char *PageEnd = PageStart + Seg.page_count * sizeof(uint16_t);
+    if (PageEnd > SegPtr + Seg.size)
+      return Fail(" : page_starts extend past seg_info size");
+
+    // FIXME: This does not account for multiple offsets on a single page
+    //        (DYLD_CHAINED_PTR_START_MULTI; 32-bit only).
+    std::vector<uint16_t> PageStarts;
+    for (size_t PageIdx = 0; PageIdx < Seg.page_count; ++PageIdx) {
+      uint16_t Start;
+      memcpy(&Start, PageStart + PageIdx * sizeof(uint16_t), sizeof(uint16_t));
+      if (isLittleEndian() != sys::IsLittleEndianHost)
+        sys::swapByteOrder(Start);
+      PageStarts.push_back(Start);
+    }
+
+    Segments.emplace_back(I, *OffOrErr, Seg, std::move(PageStarts));
+  }
+
+  return std::make_pair(ImageStarts.seg_count, Segments);
 }
 
 Expected<std::vector<ChainedFixupTarget>>

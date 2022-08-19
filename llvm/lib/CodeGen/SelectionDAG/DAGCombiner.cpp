@@ -2672,9 +2672,9 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   }
 
   // fold a+vscale(c1)+vscale(c2) -> a+vscale(c1+c2)
-  if ((N0.getOpcode() == ISD::ADD) &&
-      (N0.getOperand(1).getOpcode() == ISD::VSCALE) &&
-      (N1.getOpcode() == ISD::VSCALE)) {
+  if (N0.getOpcode() == ISD::ADD &&
+      N0.getOperand(1).getOpcode() == ISD::VSCALE &&
+      N1.getOpcode() == ISD::VSCALE) {
     const APInt &VS0 = N0.getOperand(1)->getConstantOperandAPInt(0);
     const APInt &VS1 = N1->getConstantOperandAPInt(0);
     SDValue VS = DAG.getVScale(DL, VT, VS0 + VS1);
@@ -2691,9 +2691,9 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
   }
 
   // Fold a + step_vector(c1) + step_vector(c2) to a + step_vector(c1+c2)
-  if ((N0.getOpcode() == ISD::ADD) &&
-      (N0.getOperand(1).getOpcode() == ISD::STEP_VECTOR) &&
-      (N1.getOpcode() == ISD::STEP_VECTOR)) {
+  if (N0.getOpcode() == ISD::ADD &&
+      N0.getOperand(1).getOpcode() == ISD::STEP_VECTOR &&
+      N1.getOpcode() == ISD::STEP_VECTOR) {
     const APInt &SV0 = N0.getOperand(1)->getConstantOperandAPInt(0);
     const APInt &SV1 = N1->getConstantOperandAPInt(0);
     APInt NewStep = SV0 + SV1;
@@ -3720,7 +3720,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   }
 
   // canonicalize (sub X, (vscale * C)) to (add X, (vscale * -C))
-  if (N1.getOpcode() == ISD::VSCALE) {
+  if (N1.getOpcode() == ISD::VSCALE && N1.hasOneUse()) {
     const APInt &IntVal = N1.getConstantOperandAPInt(0);
     return DAG.getNode(ISD::ADD, DL, VT, N0, DAG.getVScale(DL, VT, -IntVal));
   }
@@ -4112,21 +4112,21 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
         DAG.getNode(ISD::MUL, SDLoc(N1), VT, N0.getOperand(1), N1));
 
   // Fold (mul (vscale * C0), C1) to (vscale * (C0 * C1)).
-  if (N0.getOpcode() == ISD::VSCALE)
-    if (ConstantSDNode *NC1 = isConstOrConstSplat(N1)) {
-      const APInt &C0 = N0.getConstantOperandAPInt(0);
-      const APInt &C1 = NC1->getAPIntValue();
-      return DAG.getVScale(DL, VT, C0 * C1);
-    }
+  ConstantSDNode *NC1 = isConstOrConstSplat(N1);
+  if (N0.getOpcode() == ISD::VSCALE && NC1) {
+    const APInt &C0 = N0.getConstantOperandAPInt(0);
+    const APInt &C1 = NC1->getAPIntValue();
+    return DAG.getVScale(DL, VT, C0 * C1);
+  }
 
   // Fold (mul step_vector(C0), C1) to (step_vector(C0 * C1)).
   APInt MulVal;
-  if (N0.getOpcode() == ISD::STEP_VECTOR)
-    if (ISD::isConstantSplatVector(N1.getNode(), MulVal)) {
-      const APInt &C0 = N0.getConstantOperandAPInt(0);
-      APInt NewStep = C0 * MulVal;
-      return DAG.getStepVector(DL, VT, NewStep);
-    }
+  if (N0.getOpcode() == ISD::STEP_VECTOR &&
+      ISD::isConstantSplatVector(N1.getNode(), MulVal)) {
+    const APInt &C0 = N0.getConstantOperandAPInt(0);
+    APInt NewStep = C0 * MulVal;
+    return DAG.getStepVector(DL, VT, NewStep);
+  }
 
   // Fold ((mul x, 0/undef) -> 0,
   //       (mul x, 1) -> x) -> x)
@@ -9179,23 +9179,22 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
       return NewSHL;
 
   // Fold (shl (vscale * C0), C1) to (vscale * (C0 << C1)).
-  if (N0.getOpcode() == ISD::VSCALE)
-    if (ConstantSDNode *NC1 = isConstOrConstSplat(N->getOperand(1))) {
-      const APInt &C0 = N0.getConstantOperandAPInt(0);
-      const APInt &C1 = NC1->getAPIntValue();
-      return DAG.getVScale(SDLoc(N), VT, C0 << C1);
-    }
+  if (N0.getOpcode() == ISD::VSCALE && N1C) {
+    const APInt &C0 = N0.getConstantOperandAPInt(0);
+    const APInt &C1 = N1C->getAPIntValue();
+    return DAG.getVScale(SDLoc(N), VT, C0 << C1);
+  }
 
   // Fold (shl step_vector(C0), C1) to (step_vector(C0 << C1)).
   APInt ShlVal;
-  if (N0.getOpcode() == ISD::STEP_VECTOR)
-    if (ISD::isConstantSplatVector(N1.getNode(), ShlVal)) {
-      const APInt &C0 = N0.getConstantOperandAPInt(0);
-      if (ShlVal.ult(C0.getBitWidth())) {
-        APInt NewStep = C0 << ShlVal;
-        return DAG.getStepVector(SDLoc(N), VT, NewStep);
-      }
+  if (N0.getOpcode() == ISD::STEP_VECTOR &&
+      ISD::isConstantSplatVector(N1.getNode(), ShlVal)) {
+    const APInt &C0 = N0.getConstantOperandAPInt(0);
+    if (ShlVal.ult(C0.getBitWidth())) {
+      APInt NewStep = C0 << ShlVal;
+      return DAG.getStepVector(SDLoc(N), VT, NewStep);
     }
+  }
 
   return SDValue();
 }

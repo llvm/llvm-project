@@ -51,7 +51,10 @@ MachOLinkGraphBuilder::MachOLinkGraphBuilder(
     : Obj(Obj),
       G(std::make_unique<LinkGraph>(
           std::string(Obj.getFileName()), std::move(TT), getPointerSize(Obj),
-          getEndianness(Obj), std::move(GetEdgeKindName))) {}
+          getEndianness(Obj), std::move(GetEdgeKindName))) {
+  auto &MachHeader = Obj.getHeader64();
+  SubsectionsViaSymbols = MachHeader.flags & MachO::MH_SUBSECTIONS_VIA_SYMBOLS;
+}
 
 void MachOLinkGraphBuilder::addCustomSectionParser(
     StringRef SectionName, SectionParserFunction Parser) {
@@ -485,15 +488,24 @@ Error MachOLinkGraphBuilder::graphifyRegularSymbols() {
     }
 
     // Visit section symbols in order by popping off the reverse-sorted stack,
-    // building blocks for each alt-entry chain and creating symbols as we go.
+    // building graph symbols as we go.
+    //
+    // If MH_SUBSECTIONS_VIA_SYMBOLS is set we'll build a block for each
+    // alt-entry chain.
+    //
+    // If MH_SUBSECTIONS_VIA_SYMBOLS is not set then we'll just build one block
+    // for the whole section.
     while (!SecNSymStack.empty()) {
       SmallVector<NormalizedSymbol *, 8> BlockSyms;
 
+      // Get the symbols in this alt-entry chain, or the whole section (if
+      // !SubsectionsViaSymbols).
       BlockSyms.push_back(SecNSymStack.back());
       SecNSymStack.pop_back();
       while (!SecNSymStack.empty() &&
              (isAltEntry(*SecNSymStack.back()) ||
-              SecNSymStack.back()->Value == BlockSyms.back()->Value)) {
+              SecNSymStack.back()->Value == BlockSyms.back()->Value ||
+             !SubsectionsViaSymbols)) {
         BlockSyms.push_back(SecNSymStack.back());
         SecNSymStack.pop_back();
       }

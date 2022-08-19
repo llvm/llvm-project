@@ -13680,22 +13680,6 @@ bool AArch64TargetLowering::shouldConsiderGEPOffsetSplit() const {
   return true;
 }
 
-InstructionCost AArch64TargetLowering::getScalingFactorCost(
-    const DataLayout &DL, const AddrMode &AM, Type *Ty, unsigned AS) const {
-  // Scaling factors are not free at all.
-  // Operands                     | Rt Latency
-  // -------------------------------------------
-  // Rt, [Xn, Xm]                 | 4
-  // -------------------------------------------
-  // Rt, [Xn, Xm, lsl #imm]       | Rn: 4 Rm: 5
-  // Rt, [Xn, Wm, <extend> #imm]  |
-  if (isLegalAddressingMode(DL, AM, Ty, AS))
-    // Scale represents reg2 * scale, thus account for 1 if
-    // it is not equal to 0 or 1.
-    return AM.Scale != 0 && AM.Scale != 1;
-  return -1;
-}
-
 bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
     const MachineFunction &MF, EVT VT) const {
   VT = VT.getScalarType();
@@ -17843,12 +17827,19 @@ static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
   if (IndexVT.getVectorElementType() != MVT::i64 || IndexVT == MVT::nxv2i64)
     return Changed;
 
+  // Can indices be trivially shrunk?
+  if (ISD::isVectorShrinkable(Index.getNode(), 32, N->isIndexSigned())) {
+    EVT NewIndexVT = IndexVT.changeVectorElementType(MVT::i32);
+    Index = DAG.getNode(ISD::TRUNCATE, SDLoc(N), NewIndexVT, Index);
+    return true;
+  }
+
   // Match:
   //   Index = step(const)
   int64_t Stride = 0;
-  if (Index.getOpcode() == ISD::STEP_VECTOR)
+  if (Index.getOpcode() == ISD::STEP_VECTOR) {
     Stride = cast<ConstantSDNode>(Index.getOperand(0))->getSExtValue();
-
+  }
   // Match:
   //   Index = step(const) << shift(const)
   else if (Index.getOpcode() == ISD::SHL &&
@@ -17882,8 +17873,7 @@ static bool findMoreOptimalIndexType(const MaskedGatherScatterSDNode *N,
   EVT NewIndexVT = IndexVT.changeVectorElementType(MVT::i32);
   // Stride does not scale explicitly by 'Scale', because it happens in
   // the gather/scatter addressing mode.
-  Index = DAG.getNode(ISD::STEP_VECTOR, SDLoc(N), NewIndexVT,
-                      DAG.getTargetConstant(Stride, SDLoc(N), MVT::i32));
+  Index = DAG.getStepVector(SDLoc(N), NewIndexVT, APInt(32, Stride));
   return true;
 }
 
@@ -18420,6 +18410,58 @@ static SDValue foldCSELofCTTZ(SDNode *N, SelectionDAG &DAG) {
                      BitWidthMinusOne);
 }
 
+// (CSEL l r EQ (CMP (CSEL x y cc2 cond) x)) => (CSEL l r cc2 cond)
+// (CSEL l r EQ (CMP (CSEL x y cc2 cond) y)) => (CSEL l r !cc2 cond)
+// Where x and y are constants
+
+// (CSEL l r NE (CMP (CSEL x y cc2 cond) x)) => (CSEL l r !cc2 cond)
+// (CSEL l r NE (CMP (CSEL x y cc2 cond) y)) => (CSEL l r cc2 cond)
+// Where x and y are constants
+static SDValue foldCSELOfCSEL(SDNode *Op, SelectionDAG &DAG) {
+  SDValue L = Op->getOperand(0);
+  SDValue R = Op->getOperand(1);
+  AArch64CC::CondCode OpCC =
+      static_cast<AArch64CC::CondCode>(Op->getConstantOperandVal(2));
+
+  SDValue OpCmp = Op->getOperand(3);
+  if (!isCMP(OpCmp))
+    return SDValue();
+
+  SDValue CmpLHS = OpCmp.getOperand(0);
+  SDValue CmpRHS = OpCmp.getOperand(1);
+
+  if (CmpRHS.getOpcode() == AArch64ISD::CSEL)
+    std::swap(CmpLHS, CmpRHS);
+  else if (CmpLHS.getOpcode() != AArch64ISD::CSEL)
+    return SDValue();
+
+  SDValue X = CmpLHS->getOperand(0);
+  SDValue Y = CmpLHS->getOperand(1);
+  if (!isa<ConstantSDNode>(X) || !isa<ConstantSDNode>(Y)) {
+    return SDValue();
+  }
+
+  AArch64CC::CondCode CC =
+      static_cast<AArch64CC::CondCode>(CmpLHS->getConstantOperandVal(2));
+  SDValue Cond = CmpLHS->getOperand(3);
+
+  if (CmpRHS == Y)
+    CC = AArch64CC::getInvertedCondCode(CC);
+  else if (CmpRHS != X)
+    return SDValue();
+
+  if (OpCC == AArch64CC::NE)
+    CC = AArch64CC::getInvertedCondCode(CC);
+  else if (OpCC != AArch64CC::EQ)
+    return SDValue();
+
+  SDLoc DL(Op);
+  EVT VT = Op->getValueType(0);
+
+  SDValue CCValue = DAG.getConstant(CC, DL, MVT::i32);
+  return DAG.getNode(AArch64ISD::CSEL, DL, VT, L, R, CCValue, Cond);
+}
+
 // Optimize CSEL instructions
 static SDValue performCSELCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
@@ -18427,6 +18469,9 @@ static SDValue performCSELCombine(SDNode *N,
   // CSEL x, x, cc -> x
   if (N->getOperand(0) == N->getOperand(1))
     return N->getOperand(0);
+
+  if (SDValue R = foldCSELOfCSEL(N, DAG))
+    return R;
 
   // CSEL 0, cttz(X), eq(X, 0) -> AND cttz bitwidth-1
   // CSEL cttz(X), 0, ne(X, 0) -> AND cttz bitwidth-1

@@ -15,6 +15,7 @@
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/DebugData.h"
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
@@ -128,7 +129,7 @@ public:
 
   /// Emit function code. The caller is responsible for emitting function
   /// symbol(s) and setting the section to emit the code to.
-  void emitFunctionBody(BinaryFunction &BF, bool EmitColdPart,
+  void emitFunctionBody(BinaryFunction &BF, const FunctionFragment &FF,
                         bool EmitCodeOnly = false);
 
 private:
@@ -136,7 +137,7 @@ private:
   void emitFunctions();
 
   /// Emit a single function.
-  bool emitFunction(BinaryFunction &BF, bool EmitColdPart);
+  bool emitFunction(BinaryFunction &BF, const FunctionFragment &FF);
 
   /// Helper for emitFunctionBody to write data inside a function
   /// (used for AArch64)
@@ -233,13 +234,24 @@ void BinaryEmitter::emitFunctions() {
           !Function->hasValidProfile())
         Streamer.setAllowAutoPadding(false);
 
-      Emitted |= emitFunction(*Function, /*EmitColdPart=*/false);
+      const FunctionLayout &Layout = Function->getLayout();
+      Emitted |= emitFunction(*Function, Layout.getMainFragment());
 
       if (Function->isSplit()) {
         if (opts::X86AlignBranchBoundaryHotOnly)
           Streamer.setAllowAutoPadding(false);
-        Emitted |= emitFunction(*Function, /*EmitColdPart=*/true);
+
+        assert((Layout.fragment_size() == 1 || Function->isSimple()) &&
+               "Only simple functions can have fragments");
+        for (const FunctionFragment FF : Layout.getSplitFragments()) {
+          // Skip empty fragments so no symbols and sections for empty fragments
+          // are generated
+          if (FF.empty() && !Function->hasConstantIsland())
+            continue;
+          Emitted |= emitFunction(*Function, FF);
+        }
       }
+
       Streamer.setAllowAutoPadding(OriginalAllowAutoPadding);
 
       if (Emitted)
@@ -267,7 +279,8 @@ void BinaryEmitter::emitFunctions() {
   }
 }
 
-bool BinaryEmitter::emitFunction(BinaryFunction &Function, bool EmitColdPart) {
+bool BinaryEmitter::emitFunction(BinaryFunction &Function,
+                                 const FunctionFragment &FF) {
   if (Function.size() == 0 && !Function.hasIslandsInfo())
     return false;
 
@@ -275,8 +288,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function, bool EmitColdPart) {
     return false;
 
   MCSection *Section =
-      BC.getCodeSection(EmitColdPart ? Function.getColdCodeSectionName()
-                                     : Function.getCodeSectionName());
+      BC.getCodeSection(Function.getCodeSectionName(FF.getFragmentNum()));
   Streamer.switchSection(Section);
   Section->setHasInstructions(true);
   BC.Ctx->addGenDwarfSection(Section);
@@ -289,8 +301,9 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function, bool EmitColdPart) {
       Section->setAlignment(Align(opts::AlignFunctions));
 
     Streamer.emitCodeAlignment(BinaryFunction::MinAlign, &*BC.STI);
-    uint16_t MaxAlignBytes = EmitColdPart ? Function.getMaxColdAlignmentBytes()
-                                          : Function.getMaxAlignmentBytes();
+    uint16_t MaxAlignBytes = FF.isSplitFragment()
+                                 ? Function.getMaxColdAlignmentBytes()
+                                 : Function.getMaxAlignmentBytes();
     if (MaxAlignBytes > 0)
       Streamer.emitCodeAlignment(Function.getAlignment(), &*BC.STI,
                                  MaxAlignBytes);
@@ -301,17 +314,15 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function, bool EmitColdPart) {
   MCContext &Context = Streamer.getContext();
   const MCAsmInfo *MAI = Context.getAsmInfo();
 
-  MCSymbol *StartSymbol = nullptr;
+  MCSymbol *const StartSymbol = Function.getSymbol(FF.getFragmentNum());
 
   // Emit all symbols associated with the main function entry.
-  if (!EmitColdPart) {
-    StartSymbol = Function.getSymbol();
+  if (FF.isMainFragment()) {
     for (MCSymbol *Symbol : Function.getSymbols()) {
       Streamer.emitSymbolAttribute(Symbol, MCSA_ELF_TypeFunction);
       Streamer.emitLabel(Symbol);
     }
   } else {
-    StartSymbol = Function.getColdSymbol();
     Streamer.emitSymbolAttribute(StartSymbol, MCSA_ELF_TypeFunction);
     Streamer.emitLabel(StartSymbol);
   }
@@ -322,8 +333,9 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function, bool EmitColdPart) {
     if (Function.getPersonalityFunction() != nullptr)
       Streamer.emitCFIPersonality(Function.getPersonalityFunction(),
                                   Function.getPersonalityEncoding());
-    MCSymbol *LSDASymbol =
-        EmitColdPart ? Function.getColdLSDASymbol() : Function.getLSDASymbol();
+    MCSymbol *LSDASymbol = FF.isSplitFragment()
+                               ? Function.getColdLSDASymbol(FF.getFragmentNum())
+                               : Function.getLSDASymbol();
     if (LSDASymbol)
       Streamer.emitCFILsda(LSDASymbol, BC.LSDAEncoding);
     else
@@ -352,7 +364,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function, bool EmitColdPart) {
   }
 
   // Emit code.
-  emitFunctionBody(Function, EmitColdPart, /*EmitCodeOnly=*/false);
+  emitFunctionBody(Function, FF, /*EmitCodeOnly=*/false);
 
   // Emit padding if requested.
   if (size_t Padding = opts::padFunction(Function)) {
@@ -368,8 +380,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function, bool EmitColdPart) {
   if (Function.hasCFI())
     Streamer.emitCFIEndProc();
 
-  MCSymbol *EndSymbol = EmitColdPart ? Function.getFunctionColdEndLabel()
-                                     : Function.getFunctionEndLabel();
+  MCSymbol *EndSymbol = Function.getFunctionEndLabel(FF.getFragmentNum());
   Streamer.emitLabel(EndSymbol);
 
   if (MAI->hasDotTypeDotSizeDirective()) {
@@ -383,25 +394,37 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function, bool EmitColdPart) {
     emitLineInfoEnd(Function, EndSymbol);
 
   // Exception handling info for the function.
-  emitLSDA(Function, EmitColdPart);
+  emitLSDA(Function, FF.isSplitFragment());
 
-  if (!EmitColdPart && opts::JumpTables > JTS_NONE)
+  if (FF.isMainFragment() && opts::JumpTables > JTS_NONE)
     emitJumpTables(Function);
 
   return true;
 }
 
-void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, bool EmitColdPart,
+void BinaryEmitter::emitFunctionBody(BinaryFunction &BF,
+                                     const FunctionFragment &FF,
                                      bool EmitCodeOnly) {
-  if (!EmitCodeOnly && EmitColdPart && BF.hasConstantIsland())
+  if (!EmitCodeOnly && FF.isSplitFragment() && BF.hasConstantIsland()) {
+    assert(BF.getLayout().isHotColdSplit() &&
+           "Constant island support only with hot/cold split");
     BF.duplicateConstantIslands();
+  }
+
+  if (!FF.empty() && FF.front()->isLandingPad()) {
+    assert(!FF.front()->isEntryPoint() &&
+           "Landing pad cannot be entry point of function");
+    // If the first block of the fragment is a landing pad, it's offset from the
+    // start of the area that the corresponding LSDA describes is zero. In this
+    // case, the call site entries in that LSDA have 0 as offset to the landing
+    // pad, which the runtime interprets as "no handler". To prevent this,
+    // insert some padding.
+    Streamer.emitIntValue(BC.MIB->getTrapFillValue(), 1);
+  }
 
   // Track the first emitted instruction with debug info.
   bool FirstInstr = true;
-  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
-    if (EmitColdPart != BB->isCold())
-      continue;
-
+  for (BinaryBasicBlock *const BB : FF) {
     if ((opts::AlignBlocks || opts::PreserveBlocksAlignment) &&
         BB->getAlignment() > 1)
       Streamer.emitCodeAlignment(BB->getAlignment(), &*BC.STI,
@@ -476,7 +499,7 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, bool EmitColdPart,
   }
 
   if (!EmitCodeOnly)
-    emitConstantIslands(BF, EmitColdPart);
+    emitConstantIslands(BF, FF.isSplitFragment());
 }
 
 void BinaryEmitter::emitConstantIslands(BinaryFunction &BF, bool EmitColdPart,
@@ -885,14 +908,15 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, bool EmitColdPart) {
   Streamer.emitValueToAlignment(TTypeAlignment);
 
   // Emit the LSDA label.
-  MCSymbol *LSDASymbol =
-      EmitColdPart ? BF.getColdLSDASymbol() : BF.getLSDASymbol();
+  MCSymbol *LSDASymbol = EmitColdPart
+                             ? BF.getColdLSDASymbol(FragmentNum::cold())
+                             : BF.getLSDASymbol();
   assert(LSDASymbol && "no LSDA symbol set");
   Streamer.emitLabel(LSDASymbol);
 
   // Corresponding FDE start.
   const MCSymbol *StartSymbol =
-      EmitColdPart ? BF.getColdSymbol() : BF.getSymbol();
+      BF.getSymbol(EmitColdPart ? FragmentNum::cold() : FragmentNum::main());
 
   // Emit the LSDA header.
 
@@ -1136,9 +1160,9 @@ void emitBinaryContext(MCStreamer &Streamer, BinaryContext &BC,
 }
 
 void emitFunctionBody(MCStreamer &Streamer, BinaryFunction &BF,
-                      bool EmitColdPart, bool EmitCodeOnly) {
+                      const FunctionFragment &FF, bool EmitCodeOnly) {
   BinaryEmitter(Streamer, BF.getBinaryContext())
-      .emitFunctionBody(BF, EmitColdPart, EmitCodeOnly);
+      .emitFunctionBody(BF, FF, EmitCodeOnly);
 }
 
 } // namespace bolt

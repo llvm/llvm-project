@@ -23,6 +23,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 
 namespace llvm {
 namespace bolt {
@@ -38,14 +39,27 @@ public:
   constexpr FragmentNum() = default;
   constexpr explicit FragmentNum(unsigned Value) : Value(Value) {}
   constexpr unsigned get() const { return Value; }
+
   constexpr bool operator==(const FragmentNum Other) const {
     return Value == Other.Value;
   }
   constexpr bool operator!=(const FragmentNum Other) const {
-    return !(*this == Other);
+    return Value != Other.Value;
+  }
+  constexpr bool operator<(const FragmentNum Other) const {
+    return Value < Other.Value;
+  }
+  constexpr bool operator<=(const FragmentNum Other) const {
+    return Value <= Other.Value;
+  }
+  constexpr bool operator>=(const FragmentNum Other) const {
+    return Value >= Other.Value;
+  }
+  constexpr bool operator>(const FragmentNum Other) const {
+    return Value > Other.Value;
   }
 
-  static constexpr FragmentNum hot() { return FragmentNum(0); }
+  static constexpr FragmentNum main() { return FragmentNum(0); }
   static constexpr FragmentNum cold() { return FragmentNum(1); }
 };
 
@@ -65,6 +79,10 @@ private:
       : Num(Num), Layout(Layout) {}
 
 public:
+  FragmentNum getFragmentNum() const { return Num; }
+  bool isMainFragment() const { return Num.get() == 0; }
+  bool isSplitFragment() const { return Num.get() > 0; }
+
   unsigned size() const;
   bool empty() const;
   const_iterator begin() const;
@@ -100,7 +118,10 @@ public:
     const FunctionLayout *Layout;
 
     FragmentIterator(FragmentNum Num, const FunctionLayout *Layout)
-        : Num(Num), Layout(Layout) {}
+        : Num(Num), Layout(Layout) {
+      assert(Num.get() <= Layout->fragment_size() &&
+             "Initializing iterator out of bounds");
+    }
 
   public:
     bool operator==(const FragmentIterator &Other) const {
@@ -108,15 +129,20 @@ public:
     }
 
     FunctionFragment operator*() const {
+      assert(Num.get() < Layout->fragment_size() &&
+             "Dereferencing end() iterator (or past it)");
       return FunctionFragment(Num, *Layout);
     }
 
     FragmentIterator &operator++() {
+      assert(Num.get() < Layout->fragment_size() &&
+             "Incrementing iterator past end()");
       Num = FragmentNum(Num.get() + 1);
       return *this;
     }
 
     FragmentIterator &operator--() {
+      assert(Num.get() > 0 && "Decrementing iterator past begin()");
       Num = FragmentNum(Num.get() - 1);
       return *this;
     }
@@ -133,10 +159,9 @@ private:
   BasicBlockListType Blocks;
   /// List of indices dividing block list into fragments. To simplify iteration,
   /// we have `Fragments.back()` equals `Blocks.size()`. Hence,
-  /// `Fragments.size()` equals `this->size() + 1`.
-  FragmentListType Fragments = {0};
-  BasicBlockListType PreviousBlocks;
-  FragmentListType PreviousFragments;
+  /// `Fragments.size()` equals `this->size() + 1`. Always contains at least one
+  /// fragment.
+  FragmentListType Fragments = {0, 0};
 
 public:
   /// Add an empty fragment.
@@ -144,6 +169,18 @@ public:
 
   /// Return the fragment identified by Num.
   FunctionFragment getFragment(FragmentNum Num) const;
+
+  /// Get the fragment that contains all entry blocks and other blocks that
+  /// cannot be split.
+  FunctionFragment getMainFragment() const {
+    return getFragment(FragmentNum::main());
+  }
+
+  /// Get the fragment that contains all entry blocks and other blocks that
+  /// cannot be split.
+  iterator_range<const_iterator> getSplitFragments() const {
+    return {++fragment_begin(), fragment_end()};
+  }
 
   /// Find the fragment that contains BB.
   FunctionFragment findFragment(const BinaryBasicBlock *BB) const;
@@ -156,7 +193,8 @@ public:
   void insertBasicBlocks(BinaryBasicBlock *InsertAfter,
                          ArrayRef<BinaryBasicBlock *> NewBlocks);
 
-  /// Erase all blocks from the layout that are in ToErase.
+  /// Erase all blocks from the layout that are in ToErase. If this method
+  /// erases all blocks of a fragment, it will be removed as well.
   void eraseBasicBlocks(const DenseSet<const BinaryBasicBlock *> ToErase);
 
   /// Make sure fragments' and basic blocks' indices match the current layout.
@@ -164,12 +202,9 @@ public:
 
   /// Replace the current layout with NewLayout. Uses the block's
   /// self-identifying fragment number to assign blocks to infer function
-  /// fragments.
-  void update(const ArrayRef<BinaryBasicBlock *> NewLayout);
-
-  /// Return true if the layout has been changed by basic block reordering,
-  /// false otherwise.
-  bool hasLayoutChanged() const { return !PreviousBlocks.empty(); }
+  /// fragments. Returns `true` if the new layout is different from the current
+  /// layout.
+  bool update(ArrayRef<BinaryBasicBlock *> NewLayout);
 
   /// Clear layout releasing memory.
   void clear();
@@ -186,16 +221,26 @@ public:
 
   /// Get the edit distance of the new layout with respect to the previous
   /// layout after basic block reordering.
-  uint64_t getEditDistance() const;
+  uint64_t
+  getEditDistance(ArrayRef<const BinaryBasicBlock *> OldBlockOrder) const;
 
-  size_t size() const { return Fragments.size() - 1; }
-  bool empty() const { return Fragments.size() == 1; }
-  const_iterator begin() const { return {FragmentNum(0), this}; }
-  const_iterator end() const { return {FragmentNum(size()), this}; }
-  FunctionFragment front() const { return *begin(); }
-  FunctionFragment back() const { return *std::prev(end()); }
-  FunctionFragment operator[](const FragmentNum Num) const {
-    return getFragment(Num);
+  /// True if the function is split into at most 2 fragments. Mostly used for
+  /// checking whether a function can be processed in places that do not support
+  /// multiple fragments yet.
+  bool isHotColdSplit() const { return fragment_size() <= 2; }
+
+  size_t fragment_size() const {
+    assert(Fragments.size() >= 2 &&
+           "Layout should have at least one fragment.");
+    return Fragments.size() - 1;
+  }
+  bool fragment_empty() const { return Fragments.size() == 1; }
+  const_iterator fragment_begin() const { return {FragmentNum(0), this}; }
+  const_iterator fragment_end() const {
+    return {FragmentNum(fragment_size()), this};
+  }
+  iterator_range<const_iterator> fragments() const {
+    return {fragment_begin(), fragment_end()};
   }
 
   size_t block_size() const { return Blocks.size(); }

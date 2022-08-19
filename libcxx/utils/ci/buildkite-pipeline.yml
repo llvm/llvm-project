@@ -592,6 +592,18 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
+    - label: "Clang-cl (no vcruntime exceptions)"
+      command: "bash libcxx/utils/ci/run-buildbot clang-cl-no-vcruntime"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      agents:
+        queue: "windows"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+
     - label: "MinGW (DLL, x86_64)"
       command: "bash libcxx/utils/ci/run-buildbot mingw-dll"
       artifact_paths:

@@ -56478,35 +56478,6 @@ X86TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
   return Res;
 }
 
-InstructionCost X86TargetLowering::getScalingFactorCost(const DataLayout &DL,
-                                                        const AddrMode &AM,
-                                                        Type *Ty,
-                                                        unsigned AS) const {
-  // Scaling factors are not free at all.
-  // An indexed folded instruction, i.e., inst (reg1, reg2, scale),
-  // will take 2 allocations in the out of order engine instead of 1
-  // for plain addressing mode, i.e. inst (reg1).
-  // E.g.,
-  // vaddps (%rsi,%rdx), %ymm0, %ymm1
-  // Requires two allocations (one for the load, one for the computation)
-  // whereas:
-  // vaddps (%rsi), %ymm0, %ymm1
-  // Requires just 1 allocation, i.e., freeing allocations for other operations
-  // and having less micro operations to execute.
-  //
-  // For some X86 architectures, this is even worse because for instance for
-  // stores, the complex addressing mode forces the instruction to use the
-  // "load" ports instead of the dedicated "store" port.
-  // E.g., on Haswell:
-  // vmovaps %ymm1, (%r8, %rdi) can use port 2 or 3.
-  // vmovaps %ymm1, (%r8) can use port 2, 3, or 7.
-  if (isLegalAddressingMode(DL, AM, Ty, AS))
-    // Scale represents reg2 * scale, thus account for 1
-    // as soon as we use a second register.
-    return AM.Scale != 0;
-  return -1;
-}
-
 bool X86TargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
   // Integer division on x86 is expensive. However, when aggressively optimizing
   // for code size, we prefer to use a div instruction, as it is usually smaller

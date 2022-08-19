@@ -1128,8 +1128,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     if (!vec2)
       return failure();
 
-    ArrayAttr mask = b.getI32ArrayAttr(svInst->getShuffleMask());
-
+    SmallVector<int32_t> mask(svInst->getShuffleMask());
     instMap[inst] = b.create<ShuffleVectorOp>(loc, vec1, vec2, mask);
     return success();
   }

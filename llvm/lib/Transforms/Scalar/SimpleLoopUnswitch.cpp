@@ -2878,7 +2878,7 @@ static bool unswitchBestCondition(
         if (CB->isConvergent() || CB->cannotDuplicate())
           return false;
 
-      Cost += TTI.getUserCost(&I, CostKind);
+      Cost += TTI.getInstructionCost(&I, CostKind);
     }
     assert(Cost >= 0 && "Must not have negative costs!");
     LoopCost += Cost;

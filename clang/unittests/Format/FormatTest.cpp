@@ -24887,7 +24887,7 @@ TEST_F(FormatTest, FormatDecayCopy) {
                                 // the user's own fault
   verifyFormat("integral auto(x) = y;"); // actually a declaration, but this is
                                          // clearly the user's own fault
-  verifyFormat("auto(*p)() = f;");       // actually a declaration; TODO FIXME
+  verifyFormat("auto (*p)() = f;");
 }
 
 TEST_F(FormatTest, Cpp20ModulesSupport) {

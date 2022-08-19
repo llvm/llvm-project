@@ -322,7 +322,7 @@ public:
     }
 #endif // _LIBCPP_STD_VER > 17
 
-#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 20
     template <class _Range>
       requires (
         !is_same_v<remove_cvref_t<_Range>, basic_string_view> &&
@@ -339,7 +339,7 @@ public:
       )
     constexpr explicit _LIBCPP_HIDE_FROM_ABI
     basic_string_view(_Range&& __r) : __data(ranges::data(__r)), __size(ranges::size(__r)) {}
-#endif // _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 20
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     basic_string_view(const _CharT* __s)
@@ -749,10 +749,10 @@ template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
 #endif // _LIBCPP_STD_VER > 17
 
 
-#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 20
 template <ranges::contiguous_range _Range>
   basic_string_view(_Range) -> basic_string_view<ranges::range_value_t<_Range>>;
-#endif // _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif
 
 // [string.view.comparison]
 // operator ==

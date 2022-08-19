@@ -573,7 +573,8 @@ private:
     if (!I)
       return std::numeric_limits<unsigned>::min();
 
-    auto Cost = TTI.getUserCost(U, TargetTransformInfo::TCK_SizeAndLatency);
+    InstructionCost Cost =
+        TTI.getInstructionCost(U, TargetTransformInfo::TCK_SizeAndLatency);
 
     // Traverse recursively if there are more uses.
     // TODO: Any other instructions to be added here?
