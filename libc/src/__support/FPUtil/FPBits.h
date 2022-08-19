@@ -11,7 +11,7 @@
 
 #include "PlatformDefs.h"
 
-#include "src/__support/CPP/Bit.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/builtin_wrappers.h"
 #include "src/__support/common.h"
@@ -104,8 +104,7 @@ template <typename T> struct FPBits {
   // We don't want accidental type promotions/conversions, so we require exact
   // type match.
   template <typename XType, cpp::enable_if_t<cpp::is_same_v<T, XType>, int> = 0>
-  constexpr explicit FPBits(XType x)
-      : bits(__llvm_libc::bit_cast<UIntType>(x)) {}
+  constexpr explicit FPBits(XType x) : bits(cpp::bit_cast<UIntType>(x)) {}
 
   template <typename XType,
             cpp::enable_if_t<cpp::is_same_v<XType, UIntType>, int> = 0>
@@ -113,9 +112,9 @@ template <typename T> struct FPBits {
 
   FPBits() : bits(0) {}
 
-  T get_val() const { return __llvm_libc::bit_cast<T>(bits); }
+  T get_val() const { return cpp::bit_cast<T>(bits); }
 
-  void set_val(T value) { bits = __llvm_libc::bit_cast<UIntType>(value); }
+  void set_val(T value) { bits = cpp::bit_cast<UIntType>(value); }
 
   explicit operator T() const { return get_val(); }
 
