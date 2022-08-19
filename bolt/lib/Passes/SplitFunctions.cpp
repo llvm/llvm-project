@@ -433,11 +433,12 @@ SplitFunctions::createEHTrampolines(BinaryFunction &BF) const {
 
       const MCSymbol *LPLabel = EHInfo->first;
       BinaryBasicBlock *LPBlock = BF.getBasicBlockForLabel(LPLabel);
-      if (BB->isCold() == LPBlock->isCold())
+      if (BB->getFragmentNum() == LPBlock->getFragmentNum())
         continue;
 
       const MCSymbol *TrampolineLabel = nullptr;
-      auto Iter = LPTrampolines.find(LPLabel);
+      const TrampolineKey Key(BB->getFragmentNum(), LPLabel);
+      auto Iter = LPTrampolines.find(Key);
       if (Iter != LPTrampolines.end()) {
         TrampolineLabel = Iter->second;
       } else {
@@ -445,12 +446,12 @@ SplitFunctions::createEHTrampolines(BinaryFunction &BF) const {
         // Note: there's no need to insert the jump instruction, it will be
         // added by fixBranches().
         BinaryBasicBlock *TrampolineBB = BF.addBasicBlock();
-        TrampolineBB->setIsCold(BB->isCold());
+        TrampolineBB->setFragmentNum(BB->getFragmentNum());
         TrampolineBB->setExecutionCount(LPBlock->getExecutionCount());
         TrampolineBB->addSuccessor(LPBlock, TrampolineBB->getExecutionCount());
         TrampolineBB->setCFIState(LPBlock->getCFIState());
         TrampolineLabel = TrampolineBB->getLabel();
-        LPTrampolines.insert(std::make_pair(LPLabel, TrampolineLabel));
+        LPTrampolines.insert(std::make_pair(Key, TrampolineLabel));
       }
 
       // Substitute the landing pad with the trampoline.
@@ -467,7 +468,7 @@ SplitFunctions::createEHTrampolines(BinaryFunction &BF) const {
   BinaryFunction::BasicBlockOrderType NewLayout(BF.getLayout().block_begin(),
                                                 BF.getLayout().block_end());
   stable_sort(NewLayout, [&](BinaryBasicBlock *A, BinaryBasicBlock *B) {
-    return A->isCold() < B->isCold();
+    return A->getFragmentNum() < B->getFragmentNum();
   });
   BF.getLayout().update(NewLayout);
 
@@ -483,13 +484,22 @@ SplitFunctions::createEHTrampolines(BinaryFunction &BF) const {
 SplitFunctions::BasicBlockOrderType SplitFunctions::mergeEHTrampolines(
     BinaryFunction &BF, SplitFunctions::BasicBlockOrderType &Layout,
     const SplitFunctions::TrampolineSetType &Trampolines) const {
+  DenseMap<const MCSymbol *, SmallVector<const MCSymbol *, 0>>
+      IncomingTrampolines;
+  for (const auto &Entry : Trampolines) {
+    IncomingTrampolines[Entry.getFirst().Target].emplace_back(
+        Entry.getSecond());
+  }
+
   BasicBlockOrderType MergedLayout;
   for (BinaryBasicBlock *BB : Layout) {
-    auto Iter = Trampolines.find(BB->getLabel());
-    if (Iter != Trampolines.end()) {
-      BinaryBasicBlock *LPBlock = BF.getBasicBlockForLabel(Iter->second);
-      assert(LPBlock && "Could not find matching landing pad block.");
-      MergedLayout.push_back(LPBlock);
+    auto Iter = IncomingTrampolines.find(BB->getLabel());
+    if (Iter != IncomingTrampolines.end()) {
+      for (const MCSymbol *const Trampoline : Iter->getSecond()) {
+        BinaryBasicBlock *LPBlock = BF.getBasicBlockForLabel(Trampoline);
+        assert(LPBlock && "Could not find matching landing pad block.");
+        MergedLayout.push_back(LPBlock);
+      }
     }
     MergedLayout.push_back(BB);
   }
