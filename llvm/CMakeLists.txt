@@ -55,7 +55,15 @@ project(LLVM
   VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}
   LANGUAGES C CXX ASM)
 
-# Must go after project(..)
+if (NOT DEFINED CMAKE_INSTALL_LIBDIR AND DEFINED LLVM_LIBDIR_SUFFIX)
+  # Must go before `include(GNUInstallDirs)`.
+  set(CMAKE_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}")
+endif()
+
+# Must go after `DEFINED LLVM_LIBDIR_SUFFIX` check.
+set(LLVM_LIBDIR_SUFFIX "" CACHE STRING "Define suffix of library directory name (32/64)" )
+
+# Must go after `project(..)`.
 include(GNUInstallDirs)
 
 # This C++ standard is required to build LLVM.
@@ -336,8 +344,6 @@ if (CMAKE_BUILD_TYPE AND
     NOT uppercase_CMAKE_BUILD_TYPE MATCHES "^(DEBUG|RELEASE|RELWITHDEBINFO|MINSIZEREL)$")
   message(FATAL_ERROR "Invalid value for CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 endif()
-
-set(LLVM_LIBDIR_SUFFIX "" CACHE STRING "Define suffix of library directory name (32/64)" )
 
 # LLVM_INSTALL_PACKAGE_DIR needs to be declared prior to adding the tools
 # subdirectory in order to have the value available for llvm-config.
