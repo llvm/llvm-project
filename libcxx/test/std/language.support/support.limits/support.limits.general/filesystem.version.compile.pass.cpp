@@ -60,7 +60,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_filesystem
-#     error "__cpp_lib_filesystem should not be defined when !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_filesystem) is not defined!"
+#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_filesystem)' is not met!"
 #   endif
 # endif
 
@@ -75,7 +75,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_char8_t
-#     error "__cpp_lib_char8_t should not be defined when defined(__cpp_char8_t) is not defined!"
+#     error "__cpp_lib_char8_t should not be defined when the requirement 'defined(__cpp_char8_t)' is not met!"
 #   endif
 # endif
 
@@ -88,7 +88,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_filesystem
-#     error "__cpp_lib_filesystem should not be defined when !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_filesystem) is not defined!"
+#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_filesystem)' is not met!"
 #   endif
 # endif
 
@@ -103,7 +103,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_char8_t
-#     error "__cpp_lib_char8_t should not be defined when defined(__cpp_char8_t) is not defined!"
+#     error "__cpp_lib_char8_t should not be defined when the requirement 'defined(__cpp_char8_t)' is not met!"
 #   endif
 # endif
 
@@ -116,7 +116,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_filesystem
-#     error "__cpp_lib_filesystem should not be defined when !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_filesystem) is not defined!"
+#     error "__cpp_lib_filesystem should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_filesystem)' is not met!"
 #   endif
 # endif
 

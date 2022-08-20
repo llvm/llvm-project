@@ -982,7 +982,7 @@ test_types = {
 #   endif
 # else
 #   ifdef {name}
-#     error "{name} should not be defined when {test_suite_guard} is not defined!"
+#     error "{name} should not be defined when the requirement '{test_suite_guard}' is not met!"
 #   endif
 # endif
 """,
