@@ -695,7 +695,7 @@ void Writer::scanSymbols() {
         continue;
       dysym->getFile()->refState =
           std::max(dysym->getFile()->refState, dysym->getRefState());
-    } else if (const auto *undefined = dyn_cast<Undefined>(sym)) {
+    } else if (isa<Undefined>(sym)) {
       if (sym->getName().startswith(ObjCStubsSection::symbolPrefix))
         in.objcStubs->addEntry(sym);
     }

@@ -1097,6 +1097,7 @@ void assertArgs(PatternRewriter &rewriter, ArrayRef<PDLValue> values,
   auto errorFn = [&](const Twine &msg) -> LogicalResult {
     llvm::report_fatal_error(msg);
   };
+  (void)errorFn;
   (assert(succeeded(
        ProcessPDLValue<typename FnTraitsT::template arg_t<I + 1>>::verifyAsArg(
            errorFn, values[I], I))),
