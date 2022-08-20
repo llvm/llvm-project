@@ -26,6 +26,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
+#include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
@@ -454,6 +455,78 @@ static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
   }
 }
 
+// A memory mapper with a fake offset applied only used for -noexec testing
+class InProcessDeltaMapper final : public InProcessMemoryMapper {
+public:
+  InProcessDeltaMapper(size_t PageSize, uint64_t TargetAddr)
+      : InProcessMemoryMapper(PageSize), TargetMapAddr(TargetAddr),
+        DeltaAddr(0) {}
+
+  static Expected<std::unique_ptr<InProcessDeltaMapper>> Create() {
+    auto PageSize = sys::Process::getPageSize();
+    if (!PageSize)
+      return PageSize.takeError();
+    return std::make_unique<InProcessDeltaMapper>(*PageSize, SlabAddress);
+  }
+
+  void reserve(size_t NumBytes, OnReservedFunction OnReserved) override {
+    InProcessMemoryMapper::reserve(
+        NumBytes, [this, OnReserved = std::move(OnReserved)](
+                      Expected<ExecutorAddrRange> Result) mutable {
+          if (!Result)
+            return OnReserved(Result.takeError());
+
+          assert(DeltaAddr == 0 && "Overwriting previous offset");
+          if (TargetMapAddr != ~0ULL)
+            DeltaAddr = TargetMapAddr - Result->Start.getValue();
+          auto OffsetRange = ExecutorAddrRange(Result->Start + DeltaAddr,
+                                               Result->End + DeltaAddr);
+
+          OnReserved(OffsetRange);
+        });
+  }
+
+  char *prepare(ExecutorAddr Addr, size_t ContentSize) override {
+    return InProcessMemoryMapper::prepare(Addr - DeltaAddr, ContentSize);
+  }
+
+  void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override {
+    auto FixedAI = AI;
+    FixedAI.MappingBase -= DeltaAddr;
+    InProcessMemoryMapper::initialize(
+        FixedAI, [this, OnInitialized = std::move(OnInitialized)](
+                     Expected<ExecutorAddr> Result) mutable {
+          if (!Result)
+            return OnInitialized(Result.takeError());
+
+          OnInitialized(ExecutorAddr(Result->getValue() + DeltaAddr));
+        });
+  }
+
+  void deinitialize(ArrayRef<ExecutorAddr> Allocations,
+                    OnDeinitializedFunction OnDeInitialized) override {
+    std::vector<ExecutorAddr> Addrs(Allocations.size());
+    for (const auto Base : Allocations) {
+      Addrs.push_back(Base - DeltaAddr);
+    }
+
+    InProcessMemoryMapper::deinitialize(Addrs, std::move(OnDeInitialized));
+  }
+
+  void release(ArrayRef<ExecutorAddr> Reservations,
+               OnReleasedFunction OnRelease) override {
+    std::vector<ExecutorAddr> Addrs(Reservations.size());
+    for (const auto Base : Reservations) {
+      Addrs.push_back(Base - DeltaAddr);
+    }
+    InProcessMemoryMapper::release(Addrs, std::move(OnRelease));
+  }
+
+private:
+  uint64_t TargetMapAddr;
+  uint64_t DeltaAddr;
+};
+
 class JITLinkSlabAllocator final : public JITLinkMemoryManager {
 private:
   struct FinalizedAllocInfo {
@@ -721,12 +794,24 @@ Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
   return SlabSize * Units;
 }
 
-static std::unique_ptr<JITLinkMemoryManager> createMemoryManager() {
+static std::unique_ptr<JITLinkMemoryManager> createInProcessMemoryManager() {
   if (!SlabAllocateSizeString.empty()) {
     auto SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
-    return ExitOnErr(JITLinkSlabAllocator::Create(SlabSize));
+
+    return ExitOnErr(
+        MapperJITLinkMemoryManager::CreateWithMapper<InProcessDeltaMapper>(
+            SlabSize));
   }
-  return ExitOnErr(InProcessMemoryManager::Create());
+
+#ifdef _WIN32
+  return ExitOnErr(
+      MapperJITLinkMemoryManager::CreateWithMapper<InProcessMemoryMapper>(
+          1024 * 1024));
+#else
+  return ExitOnErr(
+      MapperJITLinkMemoryManager::CreateWithMapper<InProcessMemoryMapper>(
+          1024 * 1024 * 1024));
+#endif
 }
 
 static Expected<MaterializationUnit::Interface>
@@ -1012,7 +1097,7 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
     EPC = std::make_unique<SelfExecutorProcessControl>(
         std::make_shared<SymbolStringPool>(),
         std::make_unique<InPlaceTaskDispatcher>(), std::move(TT), *PageSize,
-        createMemoryManager());
+        createInProcessMemoryManager());
   }
 
   Error Err = Error::success();
