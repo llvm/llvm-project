@@ -399,6 +399,10 @@ is what to do:
 #. Update the ``releases/index.html`` with the new release and link to release
    documentation.
 
+#. After you push the changes to the www-releases repo, someone with admin
+   access must login to prereleases-origin.llvm.org and manually pull the new
+   changes into /data/www-releases/.  This is where the website is served from.
+
 #. Finally checkout the llvm-www repo and update the main page
    (``index.html`` and sidebar) to point to the new release and release
    announcement.
@@ -406,5 +410,14 @@ is what to do:
 Announce the Release
 ^^^^^^^^^^^^^^^^^^^^
 
-Send an email to the list announcing the release, pointing people to all the
-relevant documentation, download pages and bugs fixed.
+Create a new post in the `Announce Category<https://discourse.llvm.org/c/announce>`_
+once all the release tasks are complete.  For X.0.0 releases, make sure to include a
+link to the release notes in the post.  For X.0.1+ releases, generate a changelog
+using this command and add it to the post.
+
+::
+
+  $ git log --format="[%h %s](https://github.com/llvm/llvm-project/commit/%H)" llvmorg-X.0.N-1..llvmorg-X.0.N
+
+Once the release has been announced add a link to the announcement on the llvm
+homepage (from the llvm-www repo) in the "Release Emails" section.
