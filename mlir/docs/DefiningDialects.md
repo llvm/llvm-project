@@ -528,7 +528,7 @@ Type MyDialect::parseType(DialectAsmParser &parser) const {
     // Try to parse a dynamic type with 'typeTag' name.
     Type dynType;
     auto parseResult = parseOptionalDynamicType(typeTag, parser, dynType);
-    if (parseResult.hasValue()) {
+    if (parseResult.has_value()) {
         if (succeeded(parseResult.getValue()))
             return dynType;
          return Type();
@@ -628,8 +628,8 @@ Attribute MyDialect::parseAttribute(DialectAsmParser &parser,
     // Try to parse a dynamic attribute with 'attrTag' name.
     Attribute dynAttr;
     auto parseResult = parseOptionalDynamicAttr(attrTag, parser, dynAttr);
-    if (parseResult.hasValue()) {
-        if (succeeded(parseResult.getValue()))
+    if (parseResult.has_value()) {
+        if (succeeded(*parseResult))
             return dynAttr;
          return Attribute();
     }
