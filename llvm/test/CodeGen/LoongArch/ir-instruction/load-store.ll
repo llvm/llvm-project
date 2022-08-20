@@ -11,18 +11,18 @@ define i32 @load_store_global() nounwind {
 ; ALL-LABEL:      load_store_global:
 ; ALL:            # %bb.0:
 
-; LA32NOPIC-NEXT:   pcalau12i $a0, G
-; LA32NOPIC-NEXT:   addi.w $a1, $a0, G
-; LA32PIC-NEXT:     pcalau12i $a0, .LG$local
-; LA32PIC-NEXT:     addi.w $a1, $a0, .LG$local
+; LA32NOPIC-NEXT:   pcalau12i $a0, %pc_hi20(G)
+; LA32NOPIC-NEXT:   addi.w $a1, $a0, %pc_lo12(G)
+; LA32PIC-NEXT:     pcalau12i $a0, %pc_hi20(.LG$local)
+; LA32PIC-NEXT:     addi.w $a1, $a0, %pc_lo12(.LG$local)
 ; LA32-NEXT:        ld.w $a0, $a1, 0
 ; LA32-NEXT:        addi.w $a0, $a0, 1
 ; LA32-NEXT:        st.w $a0, $a1, 0
 
-; LA64NOPIC-NEXT:   pcalau12i $a0, G
-; LA64NOPIC-NEXT:   addi.d $a1, $a0, G
-; LA64PIC-NEXT:     pcalau12i $a0, .LG$local
-; LA64PIC-NEXT:     addi.d $a1, $a0, .LG$local
+; LA64NOPIC-NEXT:   pcalau12i $a0, %pc_hi20(G)
+; LA64NOPIC-NEXT:   addi.d $a1, $a0, %pc_lo12(G)
+; LA64PIC-NEXT:     pcalau12i $a0, %pc_hi20(.LG$local)
+; LA64PIC-NEXT:     addi.d $a1, $a0, %pc_lo12(.LG$local)
 ; LA64-NEXT:        ld.w $a0, $a1, 0
 ; LA64-NEXT:        addi.d $a0, $a0, 1
 ; LA64-NEXT:        st.w $a0, $a1, 0
@@ -39,10 +39,10 @@ define i32 @load_store_global_array(i32 %a) nounwind {
 ; ALL-LABEL: load_store_global_array:
 ; ALL:       # %bb.0:
 
-; LA32NOPIC-NEXT:   pcalau12i $a1, arr
-; LA32NOPIC-NEXT:   addi.w $a2, $a1, arr
-; LA32PIC-NEXT:     pcalau12i $a1, .Larr$local
-; LA32PIC-NEXT:     addi.w $a2, $a1, .Larr$local
+; LA32NOPIC-NEXT:   pcalau12i $a1, %pc_hi20(arr)
+; LA32NOPIC-NEXT:   addi.w $a2, $a1, %pc_lo12(arr)
+; LA32PIC-NEXT:     pcalau12i $a1, %pc_hi20(.Larr$local)
+; LA32PIC-NEXT:     addi.w $a2, $a1, %pc_lo12(.Larr$local)
 ; LA32-NEXT:        ld.w $a1, $a2, 0
 ; LA32-NEXT:        st.w $a0, $a2, 0
 ; LA32NOPIC-NEXT:   ld.w $a3, $a2, 36
@@ -50,10 +50,10 @@ define i32 @load_store_global_array(i32 %a) nounwind {
 ; LA32PIC-NEXT:     ld.w $a3, $a2, 36
 ; LA32PIC-NEXT:     st.w $a0, $a2, 36
 
-; LA64NOPIC-NEXT:   pcalau12i $a1, arr
-; LA64NOPIC-NEXT:   addi.d $a2, $a1, arr
-; LA64PIC-NEXT:     pcalau12i $a1, .Larr$local
-; LA64PIC-NEXT:     addi.d $a2, $a1, .Larr$local
+; LA64NOPIC-NEXT:   pcalau12i $a1, %pc_hi20(arr)
+; LA64NOPIC-NEXT:   addi.d $a2, $a1, %pc_lo12(arr)
+; LA64PIC-NEXT:     pcalau12i $a1, %pc_hi20(.Larr$local)
+; LA64PIC-NEXT:     addi.d $a2, $a1, %pc_lo12(.Larr$local)
 ; LA64-NEXT:        ld.w $a1, $a2, 0
 ; LA64-NEXT:        st.w $a0, $a2, 0
 ; LA64NOPIC-NEXT:   ld.w $a3, $a2, 36
