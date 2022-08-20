@@ -762,6 +762,12 @@ TargetTransformInfo::getOperandInfo(const Value *V,
   return OpInfo;
 }
 
+TargetTransformInfo::OperandValueKind
+TargetTransformInfo::getOperandInfo(const Value *V) {
+  OperandValueProperties Discard = OP_None;
+  return getOperandInfo(V, Discard);
+}
+
 InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     OperandValueKind Opd1Info, OperandValueKind Opd2Info,

@@ -1,6 +1,12 @@
 add_subdirectory(CPP)
 
 add_header_library(
+  blockstore
+  HDRS
+    blockstore.h
+)
+
+add_header_library(
   common
   HDRS
     architectures.h

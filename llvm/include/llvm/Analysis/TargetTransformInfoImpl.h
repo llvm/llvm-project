@@ -1100,8 +1100,7 @@ public:
     case Instruction::Store: {
       auto *SI = cast<StoreInst>(U);
       Type *ValTy = U->getOperand(0)->getType();
-      TTI::OperandValueProperties OpVP = TTI::OP_None;
-      TTI::OperandValueKind OpVK = TTI::getOperandInfo(U->getOperand(0), OpVP);
+      TTI::OperandValueKind OpVK = TTI::getOperandInfo(U->getOperand(0));
       return TargetTTI->getMemoryOpCost(Opcode, ValTy, SI->getAlign(),
                                         SI->getPointerAddressSpace(), CostKind,
                                         OpVK, I);

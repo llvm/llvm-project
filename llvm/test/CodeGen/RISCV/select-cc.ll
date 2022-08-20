@@ -465,7 +465,8 @@ define i64 @select_sge_int32min(i64 %x, i64 %y, i64 %z) {
 ; RV32I-NEXT:    slti a0, a0, 0
 ; RV32I-NEXT:    j .LBB3_3
 ; RV32I-NEXT:  .LBB3_2:
-; RV32I-NEXT:    slt a0, a6, a1
+; RV32I-NEXT:    slti a0, a1, 0
+; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:  .LBB3_3:
 ; RV32I-NEXT:    bnez a0, .LBB3_5
 ; RV32I-NEXT:  # %bb.4:

@@ -15,8 +15,11 @@
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
+
+extern cl::opt<bool> Verbose;
 
 Value *getDefaultValue(Type *T);
 bool hasAliasUse(Function &F);
