@@ -22,6 +22,30 @@
 
 using namespace llvm;
 
+const MCFixupKindInfo &
+LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  const static MCFixupKindInfo Infos[] = {
+      // This table *must* be in the order that the fixup_* kinds are defined in
+      // LoongArchFixupKinds.h.
+      //
+      // {name, offset, bits, flags}
+      {"fixup_loongarch_b26", 0, 26, 0},
+      {"fixup_loongarch_pcala_hi20", 5, 20, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_loongarch_pcala_lo12", 10, 12, MCFixupKindInfo::FKF_IsPCRel},
+      // TODO: Add more fixup kinds.
+  };
+
+  static_assert((array_lengthof(Infos)) == LoongArch::NumTargetFixupKinds,
+                "Not all fixup kinds added to Infos array");
+
+  if (Kind < FirstTargetFixupKind)
+    return MCAsmBackend::getFixupKindInfo(Kind);
+
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+         "Invalid kind!");
+  return Infos[Kind - FirstTargetFixupKind];
+}
+
 void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
                                      const MCFixup &Fixup,
                                      const MCValue &Target,

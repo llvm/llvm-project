@@ -10,13 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LoongArchFixupKinds.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
+#include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
@@ -39,6 +42,10 @@ public:
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
+
+  void expandFunctionCall(const MCInst &MI, raw_ostream &OS,
+                          SmallVectorImpl<MCFixup> &Fixups,
+                          const MCSubtargetInfo &STI) const;
 
   /// TableGen'erated function for getting the binary encoding for an
   /// instruction.
@@ -68,6 +75,10 @@ public:
   unsigned getImmOpValueAsr2(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
+
+  unsigned getExprOpValue(const MCInst &MI, const MCOperand &MO,
+                          SmallVectorImpl<MCFixup> &Fixups,
+                          const MCSubtargetInfo &STI) const;
 };
 } // end namespace
 
@@ -82,7 +93,9 @@ LoongArchMCCodeEmitter::getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   if (MO.isImm())
     return static_cast<unsigned>(MO.getImm());
 
-  llvm_unreachable("Unhandled expression!");
+  // MO must be an Expr.
+  assert(MO.isExpr());
+  return getExprOpValue(MI, MO, Fixups, STI);
 }
 
 unsigned
@@ -96,9 +109,62 @@ unsigned
 LoongArchMCCodeEmitter::getImmOpValueAsr2(const MCInst &MI, unsigned OpNo,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
-  unsigned Res = MI.getOperand(OpNo).getImm();
-  assert((Res & 3) == 0 && "lowest 2 bits are non-zero");
-  return Res >> 2;
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  if (MO.isImm()) {
+    unsigned Res = MI.getOperand(OpNo).getImm();
+    assert((Res & 3) == 0 && "lowest 2 bits are non-zero");
+    return Res >> 2;
+  }
+
+  return getExprOpValue(MI, MO, Fixups, STI);
+}
+
+unsigned
+LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const {
+  assert(MO.isExpr() && "getExprOpValue expects only expressions");
+  const MCExpr *Expr = MO.getExpr();
+  MCExpr::ExprKind Kind = Expr->getKind();
+  LoongArch::Fixups FixupKind = LoongArch::fixup_loongarch_invalid;
+  if (Kind == MCExpr::Target) {
+    const LoongArchMCExpr *LAExpr = cast<LoongArchMCExpr>(Expr);
+
+    switch (LAExpr->getKind()) {
+    case LoongArchMCExpr::VK_LoongArch_None:
+    case LoongArchMCExpr::VK_LoongArch_Invalid:
+      llvm_unreachable("Unhandled fixup kind!");
+    case LoongArchMCExpr::VK_LoongArch_PCREL_HI:
+      FixupKind = LoongArch::fixup_loongarch_pcala_hi20;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_PCREL_LO:
+      FixupKind = LoongArch::fixup_loongarch_pcala_lo12;
+      break;
+    case LoongArchMCExpr::VK_LoongArch_CALL:
+    case LoongArchMCExpr::VK_LoongArch_CALL_PLT:
+      FixupKind = LoongArch::fixup_loongarch_b26;
+      break;
+    }
+  }
+
+  assert(FixupKind != LoongArch::fixup_loongarch_invalid &&
+         "Unhandled expression!");
+
+  Fixups.push_back(
+      MCFixup::create(0, Expr, MCFixupKind(FixupKind), MI.getLoc()));
+  return 0;
+}
+
+void LoongArchMCCodeEmitter::expandFunctionCall(
+    const MCInst &MI, raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
+  MCOperand Func = MI.getOperand(0);
+  MCInst TmpInst = Func.isExpr()
+                       ? MCInstBuilder(LoongArch::BL).addExpr(Func.getExpr())
+                       : MCInstBuilder(LoongArch::BL).addImm(Func.getImm());
+  uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  support::endian::write(OS, Binary, support::little);
 }
 
 void LoongArchMCCodeEmitter::encodeInstruction(
@@ -107,6 +173,9 @@ void LoongArchMCCodeEmitter::encodeInstruction(
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   // Get byte count of instruction.
   unsigned Size = Desc.getSize();
+
+  if (MI.getOpcode() == LoongArch::PseudoCALL)
+    return expandFunctionCall(MI, OS, Fixups, STI);
 
   switch (Size) {
   default:
