@@ -1,3 +1,9 @@
+set(SWIFT_SOURCES HostInfoSwiftTest.cpp)
+set(LLVM_OPTIONAL_SOURCES ${SWIFT_SOURCES})
+if (NOT LLDB_ENABLE_SWIFT_SUPPORT)
+  unset(SWIFT_SOURCES)
+endif()
+
 set (FILES
   ConnectionFileDescriptorTest.cpp
   FileActionTest.cpp
@@ -14,6 +20,7 @@ set (FILES
   SocketTestUtilities.cpp
   ThreadLauncherTest.cpp
   XMLTest.cpp
+  ${SWIFT_SOURCES}
 )
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")

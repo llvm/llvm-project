@@ -106,6 +106,13 @@ public:
 
   static FileSpec GetXcodeContentsDirectory() { return {}; }
   static FileSpec GetXcodeDeveloperDirectory() { return {}; }
+#ifdef LLDB_ENABLE_SWIFT
+  static FileSpec GetSwiftResourceDir() { return {}; }
+  static bool ComputeSwiftResourceDirectory(
+      FileSpec &lldb_shlib_spec, FileSpec &file_spec, bool verify) {
+    return false;
+  }
+#endif
   
   /// Return the directory containing a specific Xcode SDK.
   static llvm::StringRef GetXcodeSDKPath(XcodeSDK sdk) { return {}; }

@@ -1,4 +1,4 @@
-//===-- SwiftParserTest.cpp --------------------------------------*- C++-*-===//
+//===-- HostInfoSwiftTest.cpp ---------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/ExpressionParser/Swift/SwiftHost.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -34,7 +33,7 @@ ComputeSwiftResourceDirectoryHelper(std::string lldb_shlib_path,
                                     bool verify = false) {
   FileSpec swift_dir;
   FileSpec lldb_shlib_spec(lldb_shlib_path);
-  ComputeSwiftResourceDirectory(lldb_shlib_spec, swift_dir, verify);
+  HostInfo::ComputeSwiftResourceDirectory(lldb_shlib_spec, swift_dir, verify);
   return swift_dir.GetPath();
 }
 

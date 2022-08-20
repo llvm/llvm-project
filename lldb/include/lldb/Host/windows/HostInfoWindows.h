@@ -32,6 +32,11 @@ public:
   static bool GetHostname(std::string &s);
   static FileSpec GetProgramFileSpec();
   static FileSpec GetDefaultShell();
+#ifdef LLDB_ENABLE_SWIFT
+  static FileSpec GetSwiftResourceDir();
+  static bool ComputeSwiftResourceDirectory(FileSpec &lldb_shlib_spec,
+                                            FileSpec &file_spec, bool verify);
+#endif
 
   static bool GetEnvironmentVar(const std::string &var_name, std::string &var);
 
