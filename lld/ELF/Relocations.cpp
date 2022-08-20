@@ -673,7 +673,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
   for (auto &it : map)
     if (name.equals_insensitive(it.first))
       return it.second;
-  for (Symbol *sym : symtab->symbols())
+  for (Symbol *sym : symtab->getSymbols())
     if (!sym->isUndefined() && name.equals_insensitive(sym->getName()))
       return sym;
 
@@ -699,7 +699,7 @@ static const Symbol *getAlternativeSpelling(const Undefined &sym,
         break;
       }
     if (!s)
-      for (Symbol *sym : symtab->symbols())
+      for (Symbol *sym : symtab->getSymbols())
         if (canSuggestExternCForCXX(name, sym->getName())) {
           s = sym;
           break;
@@ -1697,7 +1697,7 @@ void elf::postScanRelocations() {
   }
 
   assert(symAux.empty());
-  for (Symbol *sym : symtab->symbols())
+  for (Symbol *sym : symtab->getSymbols())
     fn(*sym);
 
   // Local symbols may need the aforementioned non-preemptible ifunc and GOT

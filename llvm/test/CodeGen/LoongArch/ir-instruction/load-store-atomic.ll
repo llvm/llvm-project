@@ -58,7 +58,7 @@ define i64 @load_acquire_i64(ptr %ptr) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    ori $a1, $zero, 2
-; LA32-NEXT:    bl __atomic_load_8
+; LA32-NEXT:    bl %plt(__atomic_load_8)
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -128,7 +128,7 @@ define void @store_release_i64(ptr %ptr, i64 %v) {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    ori $a3, $zero, 3
-; LA32-NEXT:    bl __atomic_store_8
+; LA32-NEXT:    bl %plt(__atomic_store_8)
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret

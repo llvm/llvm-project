@@ -46,6 +46,14 @@ jobs:
         uses: llvm/actions/setup-windows@main
         with:
           arch: amd64
+      # On Windows, starting with win19/20220814.1, cmake choose the 32-bit
+      # python3.10.6 libraries instead of the 64-bit libraries when building
+      # lldb.  Using this setup-python action to make 3.10 the default
+      # python fixes this.
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
       - name: Install Ninja
         uses: llvm/actions/install-ninja@main
       # actions/checkout deletes any existing files in the new git directory,

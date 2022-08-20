@@ -53,13 +53,13 @@ cc_library(
 
 cc_library(
     name = "__support_cpp_bit",
-    hdrs = ["src/__support/CPP/Bit.h"],
+    hdrs = ["src/__support/CPP/bit.h"],
     deps = [":libc_root"],
 )
 
 cc_library(
     name = "__support_cpp_bitset",
-    hdrs = ["src/__support/CPP/Bitset.h"],
+    hdrs = ["src/__support/CPP/bitset.h"],
     deps = [":libc_root"],
 )
 

@@ -14,7 +14,7 @@
 #include "NormalFloat.h"
 #include "PlatformDefs.h"
 
-#include "src/__support/CPP/Bit.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
 
 #include <limits.h>
@@ -165,7 +165,7 @@ static inline T nextafter(T from, T to) {
     int_val = (to_bits.uintval() & sign_mask) + UIntType(1);
   }
 
-  return __llvm_libc::bit_cast<T>(int_val);
+  return cpp::bit_cast<T>(int_val);
   // TODO: Raise floating point exceptions as required by the standard.
 }
 
