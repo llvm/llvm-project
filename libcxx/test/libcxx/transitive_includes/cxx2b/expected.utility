@@ -4,7 +4,6 @@ cstddef
 cstdint
 cstdlib
 initializer_list
-iosfwd
 limits
 type_traits
 utility

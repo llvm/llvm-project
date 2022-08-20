@@ -69,7 +69,15 @@ def build_file_entry(fname, options):
                 local_includes.append(m.group(1))
             m = re.match(r'\s*#\s*include\s+<([^>]*)>', line)
             if m is not None:
-                system_includes.append(m.group(1))
+                # Since libc++ keeps transitive includes guarded by the
+                # language version some cycles can be ignored. For example
+                # before C++20 several headers included <chrono> without using
+                # it. In C++20 <chrono> conditionally includes <format> in
+                # C++20. This causes multiple cycles in this script that can't
+                # happen in practice. Since the script uses a regex instead of
+                # a parser use a magic word.
+                if re.search(r'IGNORE-CYCLE', line) is None:
+                    system_includes.append(m.group(1))
 
     fully_qualified_includes = [
         locate_header_file(h, options.search_dirs)

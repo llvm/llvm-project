@@ -7,7 +7,6 @@ cstdint
 cstdlib
 cstring
 initializer_list
-iosfwd
 limits
 type_traits
 version

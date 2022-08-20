@@ -5,7 +5,6 @@ bit
 bitset
 cctype
 cerrno
-chrono
 climits
 cmath
 compare

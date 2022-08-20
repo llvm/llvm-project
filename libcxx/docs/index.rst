@@ -175,6 +175,7 @@ Design Documents
    DesignDocs/ExtendedCXX03Support
    DesignDocs/FeatureTestMacros
    DesignDocs/FileTimeType
+   DesignDocs/HeaderRemovalPolicy
    DesignDocs/NoexceptPolicy
    DesignDocs/ThreadingSupportAPI
    DesignDocs/UniquePtrTrivialAbi
