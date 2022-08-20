@@ -23,7 +23,7 @@ module __Fortran_builtins
     integer(kind=int64) :: __address
   end type
 
-  type :: __builtin_c_funptr
+  type, bind(c) :: __builtin_c_funptr
     integer(kind=int64) :: __address
   end type
 

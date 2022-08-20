@@ -1920,8 +1920,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
           "An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement"_err_en_US);
       context_.SetError(symbol);
     }
-  }
-  if (const auto *derived{symbol.detailsIf<DerivedTypeDetails>()}) {
+  } else if (const auto *derived{symbol.detailsIf<DerivedTypeDetails>()}) {
     if (derived->sequence()) { // C1801
       messages_.Say(symbol.name(),
           "A derived type with the BIND attribute cannot have the SEQUENCE attribute"_err_en_US);
@@ -1940,6 +1939,18 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
         if (IsProcedure(*component)) { // C1804
           messages_.Say(symbol.name(),
               "A derived type with the BIND attribute cannot have a type bound procedure"_err_en_US);
+          context_.SetError(symbol);
+          break;
+        } else if (IsAllocatableOrPointer(*component)) { // C1806
+          messages_.Say(symbol.name(),
+              "A derived type with the BIND attribute cannot have a pointer or allocatable component"_err_en_US);
+          context_.SetError(symbol);
+          break;
+        } else if (component->GetType() && component->GetType()->AsDerived() &&
+            !component->GetType()->AsDerived()->typeSymbol().attrs().test(
+                Attr::BIND_C)) {
+          messages_.Say(component->GetType()->AsDerived()->typeSymbol().name(),
+              "The component of the interoperable derived type must have the BIND attribute"_err_en_US);
           context_.SetError(symbol);
           break;
         }
