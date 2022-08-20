@@ -376,21 +376,12 @@ struct has_rbegin : has_rbegin_impl<typename std::remove_reference<Ty>::type> {
 };
 
 // Returns an iterator_range over the given container which iterates in reverse.
-// Note that the container must have rbegin()/rend() methods for this to work.
-template <typename ContainerTy>
-auto reverse(ContainerTy &&C,
-             std::enable_if_t<has_rbegin<ContainerTy>::value> * = nullptr) {
-  return make_range(C.rbegin(), C.rend());
-}
-
-// Returns an iterator_range over the given container which iterates in reverse.
-// Note that the container must have begin()/end() methods which return
-// bidirectional iterators for this to work.
-template <typename ContainerTy>
-auto reverse(ContainerTy &&C,
-             std::enable_if_t<!has_rbegin<ContainerTy>::value> * = nullptr) {
-  return make_range(std::make_reverse_iterator(std::end(C)),
-                    std::make_reverse_iterator(std::begin(C)));
+template <typename ContainerTy> auto reverse(ContainerTy &&C) {
+  if constexpr (has_rbegin<ContainerTy>::value)
+    return make_range(C.rbegin(), C.rend());
+  else
+    return make_range(std::make_reverse_iterator(std::end(C)),
+                      std::make_reverse_iterator(std::begin(C)));
 }
 
 /// An iterator adaptor that filters the elements of given inner iterators.
