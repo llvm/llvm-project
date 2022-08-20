@@ -150,6 +150,9 @@ def : PatFprFpr<fmul, FMUL_D, FPR64>;
 def : PatFprFpr<fdiv, FDIV_D, FPR64>;
 def : PatFpr<fneg, FNEG_D, FPR64>;
 def : PatFpr<fabs, FABS_D, FPR64>;
+def : PatFpr<fsqrt, FSQRT_D, FPR64>;
+
+def : Pat<(fdiv fpimm1, (fsqrt FPR64:$fj)), (FRSQRT_D FPR64:$fj)>;
 
 /// Setcc
 

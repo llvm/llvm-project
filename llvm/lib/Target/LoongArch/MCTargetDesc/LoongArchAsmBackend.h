@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_LOONGARCH_MCTARGETDESC_LOONGARCHASMBACKEND_H
 
 #include "MCTargetDesc/LoongArchBaseInfo.h"
+#include "MCTargetDesc/LoongArchFixupKinds.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCFixupKindInfo.h"
@@ -45,9 +46,10 @@ public:
   }
 
   unsigned getNumFixupKinds() const override {
-    // FIXME: Implement this when we define fixup kind
-    return 0;
+    return LoongArch::NumTargetFixupKinds;
   }
+
+  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override {}
