@@ -35,10 +35,10 @@ Here is the annual release schedule for LLVM.  This is meant to be a
 guide, and release managers are not required to follow this exactly.
 Releases should be tagged on Tuesdays.
 
-=============================== ========================
+=============================== =========================
 Release                         Approx. Date
-=============================== ========================
-------------------------------- ------------------------
+=============================== =========================
+------------------------------- -------------------------
 *release branch: even releases* *4th Tue in January*
 *release branch: odd releases*  *4th Tue in July*
 X.0.0-rc1                       3 days after branch.
