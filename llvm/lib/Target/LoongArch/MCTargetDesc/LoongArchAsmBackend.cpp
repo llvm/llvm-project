@@ -22,6 +22,22 @@
 
 using namespace llvm;
 
+Optional<MCFixupKind> LoongArchAsmBackend::getFixupKind(StringRef Name) const {
+  if (STI.getTargetTriple().isOSBinFormatELF()) {
+    auto Type = llvm::StringSwitch<unsigned>(Name)
+#define ELF_RELOC(X, Y) .Case(#X, Y)
+#include "llvm/BinaryFormat/ELFRelocs/LoongArch.def"
+#undef ELF_RELOC
+                    .Case("BFD_RELOC_NONE", ELF::R_LARCH_NONE)
+                    .Case("BFD_RELOC_32", ELF::R_LARCH_32)
+                    .Case("BFD_RELOC_64", ELF::R_LARCH_64)
+                    .Default(-1u);
+    if (Type != -1u)
+      return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
+  }
+  return None;
+}
+
 const MCFixupKindInfo &
 LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[] = {
@@ -37,6 +53,11 @@ LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   static_assert((array_lengthof(Infos)) == LoongArch::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
+
+  // Fixup kinds from .reloc directive are like R_LARCH_NONE. They
+  // do not require any extra processing.
+  if (Kind >= FirstLiteralRelocationKind)
+    return MCAsmBackend::getFixupKindInfo(FK_NONE);
 
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
@@ -59,6 +80,8 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
 bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                                 const MCFixup &Fixup,
                                                 const MCValue &Target) {
+  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+    return true;
   // TODO: Determine which relocation require special processing at linking
   // time.
   return false;
