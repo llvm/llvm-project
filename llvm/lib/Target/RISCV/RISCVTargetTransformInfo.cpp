@@ -736,7 +736,26 @@ InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     if (CmpInst::isIntPredicate(VecPred))
       return LT.first * 1;
 
-    // TODO: Add cost for fp vector compare instruction.
+    // If we do not support the input floating point vector type, use the base
+    // one which will calculate as:
+    // ScalarizeCost + Num * Cost for fixed vector,
+    // InvalidCost for scalable vector.
+    if ((ValTy->getScalarSizeInBits() == 16 && !ST->hasVInstructionsF16()) ||
+        (ValTy->getScalarSizeInBits() == 32 && !ST->hasVInstructionsF32()) ||
+        (ValTy->getScalarSizeInBits() == 64 && !ST->hasVInstructionsF64()))
+      return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                       I);
+    switch (VecPred) {
+      // Support natively.
+    case CmpInst::FCMP_OEQ:
+    case CmpInst::FCMP_OGT:
+    case CmpInst::FCMP_OGE:
+    case CmpInst::FCMP_OLT:
+    case CmpInst::FCMP_OLE:
+    case CmpInst::FCMP_UNE:
+      return LT.first * 1;
+    }
+    // TODO: Other comparisons?
   }
 
   // TODO: Add cost for scalar type.
