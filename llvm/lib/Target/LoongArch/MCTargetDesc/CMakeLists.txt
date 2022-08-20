@@ -5,8 +5,9 @@ add_llvm_component_library(LLVMLoongArchDesc
   LoongArchELFStreamer.cpp
   LoongArchInstPrinter.cpp
   LoongArchMCAsmInfo.cpp
-  LoongArchMCTargetDesc.cpp
   LoongArchMCCodeEmitter.cpp
+  LoongArchMCExpr.cpp
+  LoongArchMCTargetDesc.cpp
   LoongArchMatInt.cpp
   LoongArchTargetStreamer.cpp
 

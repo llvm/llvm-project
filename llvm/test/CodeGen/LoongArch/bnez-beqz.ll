@@ -11,7 +11,7 @@ define void @bnez_i32(i32 signext %0) nounwind {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    bnez $a0, .LBB0_2
 ; LA32-NEXT:  # %bb.1: # %t
-; LA32-NEXT:    bl bar
+; LA32-NEXT:    bl %plt(bar)
 ; LA32-NEXT:  .LBB0_2: # %f
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
@@ -23,7 +23,7 @@ define void @bnez_i32(i32 signext %0) nounwind {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    bnez $a0, .LBB0_2
 ; LA64-NEXT:  # %bb.1: # %t
-; LA64-NEXT:    bl bar
+; LA64-NEXT:    bl %plt(bar)
 ; LA64-NEXT:  .LBB0_2: # %f
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
@@ -47,7 +47,7 @@ define void @beqz_i32(i32 signext %0) nounwind {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    beqz $a0, .LBB1_2
 ; LA32-NEXT:  # %bb.1: # %t
-; LA32-NEXT:    bl bar
+; LA32-NEXT:    bl %plt(bar)
 ; LA32-NEXT:  .LBB1_2: # %f
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
@@ -59,7 +59,7 @@ define void @beqz_i32(i32 signext %0) nounwind {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    beqz $a0, .LBB1_2
 ; LA64-NEXT:  # %bb.1: # %t
-; LA64-NEXT:    bl bar
+; LA64-NEXT:    bl %plt(bar)
 ; LA64-NEXT:  .LBB1_2: # %f
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
@@ -84,7 +84,7 @@ define void @bnez_i64(i64 %0) nounwind {
 ; LA32-NEXT:    or $a0, $a0, $a1
 ; LA32-NEXT:    bnez $a0, .LBB2_2
 ; LA32-NEXT:  # %bb.1: # %t
-; LA32-NEXT:    bl bar
+; LA32-NEXT:    bl %plt(bar)
 ; LA32-NEXT:  .LBB2_2: # %f
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
@@ -96,7 +96,7 @@ define void @bnez_i64(i64 %0) nounwind {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    bnez $a0, .LBB2_2
 ; LA64-NEXT:  # %bb.1: # %t
-; LA64-NEXT:    bl bar
+; LA64-NEXT:    bl %plt(bar)
 ; LA64-NEXT:  .LBB2_2: # %f
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
@@ -121,7 +121,7 @@ define void @beqz_i64(i64 %0) nounwind {
 ; LA32-NEXT:    or $a0, $a0, $a1
 ; LA32-NEXT:    beqz $a0, .LBB3_2
 ; LA32-NEXT:  # %bb.1: # %t
-; LA32-NEXT:    bl bar
+; LA32-NEXT:    bl %plt(bar)
 ; LA32-NEXT:  .LBB3_2: # %f
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
@@ -133,7 +133,7 @@ define void @beqz_i64(i64 %0) nounwind {
 ; LA64-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    beqz $a0, .LBB3_2
 ; LA64-NEXT:  # %bb.1: # %t
-; LA64-NEXT:    bl bar
+; LA64-NEXT:    bl %plt(bar)
 ; LA64-NEXT:  .LBB3_2: # %f
 ; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16

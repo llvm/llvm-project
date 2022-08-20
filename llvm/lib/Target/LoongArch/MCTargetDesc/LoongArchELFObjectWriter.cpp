@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/LoongArchFixupKinds.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
@@ -52,9 +54,26 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
     return Kind - FirstLiteralRelocationKind;
 
   switch (Kind) {
-  // TODO: Implement this when we defined fixup kind.
   default:
+    Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
     return ELF::R_LARCH_NONE;
+  case FK_Data_1:
+    Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
+    return ELF::R_LARCH_NONE;
+  case FK_Data_2:
+    Ctx.reportError(Fixup.getLoc(), "2-byte data relocations not supported");
+    return ELF::R_LARCH_NONE;
+  case FK_Data_4:
+    return ELF::R_LARCH_32;
+  case FK_Data_8:
+    return ELF::R_LARCH_64;
+  case LoongArch::fixup_loongarch_pcala_hi20:
+    return ELF::R_LARCH_PCALA_HI20;
+  case LoongArch::fixup_loongarch_pcala_lo12:
+    return ELF::R_LARCH_PCALA_LO12;
+  case LoongArch::fixup_loongarch_b26:
+    return ELF::R_LARCH_B26;
+    // TODO: Handle more fixup-kinds.
   }
 }
 
