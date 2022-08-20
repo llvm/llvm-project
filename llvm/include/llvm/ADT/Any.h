@@ -101,6 +101,7 @@ public:
   }
 
   bool hasValue() const { return !!Storage; }
+  bool has_value() const { return !!Storage; }
 
   void reset() { Storage.reset(); }
 
