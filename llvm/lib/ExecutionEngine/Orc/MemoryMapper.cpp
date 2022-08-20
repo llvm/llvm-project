@@ -11,6 +11,8 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/WindowsError.h"
 
+#include <algorithm>
+
 #if defined(LLVM_ON_UNIX) && !defined(__ANDROID__)
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -300,8 +302,10 @@ char *SharedMemoryMapper::prepare(ExecutorAddr Addr, size_t ContentSize) {
 
 void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
                                     OnInitializedFunction OnInitialized) {
-  auto Reservation = Reservations.find(AI.MappingBase);
-  assert(Reservation != Reservations.end() &&
+  auto Reservation = std::lower_bound(
+      Reservations.rbegin(), Reservations.rend(), AI.MappingBase,
+      [](const auto &A, const auto &B) { return A.first > B; });
+  assert(Reservation != Reservations.rend() &&
          "Attempt to initialize unreserved range");
 
   tpctypes::SharedMemoryFinalizeRequest FR;
@@ -336,7 +340,7 @@ void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
 
         OnInitialized(std::move(Result));
       },
-      SAs.Instance, AI.MappingBase, std::move(FR));
+      SAs.Instance, Reservation->first, std::move(FR));
 }
 
 void SharedMemoryMapper::deinitialize(
@@ -418,7 +422,6 @@ SharedMemoryMapper::~SharedMemoryMapper() {
     UnmapViewOfFile(R.second.LocalAddr);
 
 #endif
-
   }
 }
 
