@@ -975,6 +975,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_LOAD:
     SplitVecRes_VP_LOAD(cast<VPLoadSDNode>(N), Lo, Hi);
     break;
+  case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
+    SplitVecRes_VP_STRIDED_LOAD(cast<VPStridedLoadSDNode>(N), Lo, Hi);
+    break;
   case ISD::MLOAD:
     SplitVecRes_MLOAD(cast<MaskedLoadSDNode>(N), Lo, Hi);
     break;
@@ -1921,6 +1924,87 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo,
   ReplaceValueWith(SDValue(LD, 1), Ch);
 }
 
+void DAGTypeLegalizer::SplitVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *SLD,
+                                                   SDValue &Lo, SDValue &Hi) {
+  assert(SLD->isUnindexed() &&
+         "Indexed VP strided load during type legalization!");
+  assert(SLD->getOffset().isUndef() &&
+         "Unexpected indexed variable-length load offset");
+
+  SDLoc DL(SLD);
+
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(SLD->getValueType(0));
+
+  EVT LoMemVT, HiMemVT;
+  bool HiIsEmpty = false;
+  std::tie(LoMemVT, HiMemVT) =
+      DAG.GetDependentSplitDestVTs(SLD->getMemoryVT(), LoVT, &HiIsEmpty);
+
+  SDValue Mask = SLD->getMask();
+  SDValue LoMask, HiMask;
+  if (Mask.getOpcode() == ISD::SETCC) {
+    SplitVecRes_SETCC(Mask.getNode(), LoMask, HiMask);
+  } else {
+    if (getTypeAction(Mask.getValueType()) == TargetLowering::TypeSplitVector)
+      GetSplitVector(Mask, LoMask, HiMask);
+    else
+      std::tie(LoMask, HiMask) = DAG.SplitVector(Mask, DL);
+  }
+
+  SDValue LoEVL, HiEVL;
+  std::tie(LoEVL, HiEVL) =
+      DAG.SplitEVL(SLD->getVectorLength(), SLD->getValueType(0), DL);
+
+  // Generate the low vp_strided_load
+  Lo = DAG.getStridedLoadVP(
+      SLD->getAddressingMode(), SLD->getExtensionType(), LoVT, DL,
+      SLD->getChain(), SLD->getBasePtr(), SLD->getOffset(), SLD->getStride(),
+      LoMask, LoEVL, LoMemVT, SLD->getMemOperand(), SLD->isExpandingLoad());
+
+  if (HiIsEmpty) {
+    // The high vp_strided_load has zero storage size. We therefore simply set
+    // it to the low vp_strided_load and rely on subsequent removal from the
+    // chain.
+    Hi = Lo;
+  } else {
+    // Generate the high vp_strided_load.
+    // To calculate the high base address, we need to sum to the low base
+    // address stride number of bytes for each element already loaded by low,
+    // that is: Ptr = Ptr + (LoEVL * Stride)
+    EVT PtrVT = SLD->getBasePtr().getValueType();
+    SDValue Increment =
+        DAG.getNode(ISD::MUL, DL, PtrVT, LoEVL,
+                    DAG.getSExtOrTrunc(SLD->getStride(), DL, PtrVT));
+    SDValue Ptr =
+        DAG.getNode(ISD::ADD, DL, PtrVT, SLD->getBasePtr(), Increment);
+
+    Align Alignment = SLD->getOriginalAlign();
+    if (LoMemVT.isScalableVector())
+      Alignment = commonAlignment(
+          Alignment, LoMemVT.getSizeInBits().getKnownMinSize() / 8);
+
+    MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+        MachinePointerInfo(SLD->getPointerInfo().getAddrSpace()),
+        MachineMemOperand::MOLoad, MemoryLocation::UnknownSize, Alignment,
+        SLD->getAAInfo(), SLD->getRanges());
+
+    Hi = DAG.getStridedLoadVP(SLD->getAddressingMode(), SLD->getExtensionType(),
+                              HiVT, DL, SLD->getChain(), Ptr, SLD->getOffset(),
+                              SLD->getStride(), HiMask, HiEVL, HiMemVT, MMO,
+                              SLD->isExpandingLoad());
+  }
+
+  // Build a factor node to remember that this load is independent of the
+  // other one.
+  SDValue Ch = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo.getValue(1),
+                           Hi.getValue(1));
+
+  // Legalize the chain result - switch anything that used the old chain to
+  // use the new one.
+  ReplaceValueWith(SDValue(SLD, 1), Ch);
+}
+
 void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
                                          SDValue &Lo, SDValue &Hi) {
   assert(MLD->isUnindexed() && "Indexed masked load during type legalization!");
@@ -2707,6 +2791,9 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VP_STORE:
     Res = SplitVecOp_VP_STORE(cast<VPStoreSDNode>(N), OpNo);
     break;
+  case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
+    Res = SplitVecOp_VP_STRIDED_STORE(cast<VPStridedStoreSDNode>(N), OpNo);
+    break;
   case ISD::MSTORE:
     Res = SplitVecOp_MSTORE(cast<MaskedStoreSDNode>(N), OpNo);
     break;
@@ -3184,6 +3271,80 @@ SDValue DAGTypeLegalizer::SplitVecOp_VP_STORE(VPStoreSDNode *N, unsigned OpNo) {
   Hi = DAG.getStoreVP(Ch, DL, DataHi, Ptr, Offset, MaskHi, EVLHi, HiMemVT, MMO,
                       N->getAddressingMode(), N->isTruncatingStore(),
                       N->isCompressingStore());
+
+  // Build a factor node to remember that this store is independent of the
+  // other one.
+  return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Lo, Hi);
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_VP_STRIDED_STORE(VPStridedStoreSDNode *N,
+                                                      unsigned OpNo) {
+  assert(N->isUnindexed() && "Indexed vp_strided_store of a vector?");
+  assert(N->getOffset().isUndef() && "Unexpected VP strided store offset");
+
+  SDLoc DL(N);
+
+  SDValue Data = N->getValue();
+  SDValue LoData, HiData;
+  if (getTypeAction(Data.getValueType()) == TargetLowering::TypeSplitVector)
+    GetSplitVector(Data, LoData, HiData);
+  else
+    std::tie(LoData, HiData) = DAG.SplitVector(Data, DL);
+
+  EVT LoMemVT, HiMemVT;
+  bool HiIsEmpty = false;
+  std::tie(LoMemVT, HiMemVT) = DAG.GetDependentSplitDestVTs(
+      N->getMemoryVT(), LoData.getValueType(), &HiIsEmpty);
+
+  SDValue Mask = N->getMask();
+  SDValue LoMask, HiMask;
+  if (OpNo == 1 && Mask.getOpcode() == ISD::SETCC)
+    SplitVecRes_SETCC(Mask.getNode(), LoMask, HiMask);
+  else if (getTypeAction(Mask.getValueType()) ==
+           TargetLowering::TypeSplitVector)
+    GetSplitVector(Mask, LoMask, HiMask);
+  else
+    std::tie(LoMask, HiMask) = DAG.SplitVector(Mask, DL);
+
+  SDValue LoEVL, HiEVL;
+  std::tie(LoEVL, HiEVL) =
+      DAG.SplitEVL(N->getVectorLength(), Data.getValueType(), DL);
+
+  // Generate the low vp_strided_store
+  SDValue Lo = DAG.getStridedStoreVP(
+      N->getChain(), DL, LoData, N->getBasePtr(), N->getOffset(),
+      N->getStride(), LoMask, LoEVL, LoMemVT, N->getMemOperand(),
+      N->getAddressingMode(), N->isTruncatingStore(), N->isCompressingStore());
+
+  // If the high vp_strided_store has zero storage size, only the low
+  // vp_strided_store is needed.
+  if (HiIsEmpty)
+    return Lo;
+
+  // Generate the high vp_strided_store.
+  // To calculate the high base address, we need to sum to the low base
+  // address stride number of bytes for each element already stored by low,
+  // that is: Ptr = Ptr + (LoEVL * Stride)
+  EVT PtrVT = N->getBasePtr().getValueType();
+  SDValue Increment =
+      DAG.getNode(ISD::MUL, DL, PtrVT, LoEVL,
+                  DAG.getSExtOrTrunc(N->getStride(), DL, PtrVT));
+  SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, N->getBasePtr(), Increment);
+
+  Align Alignment = N->getOriginalAlign();
+  if (LoMemVT.isScalableVector())
+    Alignment = commonAlignment(Alignment,
+                                LoMemVT.getSizeInBits().getKnownMinSize() / 8);
+
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(N->getPointerInfo().getAddrSpace()),
+      MachineMemOperand::MOStore, MemoryLocation::UnknownSize, Alignment,
+      N->getAAInfo(), N->getRanges());
+
+  SDValue Hi = DAG.getStridedStoreVP(
+      N->getChain(), DL, HiData, Ptr, N->getOffset(), N->getStride(), HiMask,
+      HiEVL, HiMemVT, MMO, N->getAddressingMode(), N->isTruncatingStore(),
+      N->isCompressingStore());
 
   // Build a factor node to remember that this store is independent of the
   // other one.
