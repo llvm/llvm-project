@@ -38,20 +38,19 @@ Releases should be tagged on Tuesdays.
 =============================== =========================
 Release                         Approx. Date
 =============================== =========================
-------------------------------- -------------------------
 *release branch: even releases* *4th Tue in January*
 *release branch: odd releases*  *4th Tue in July*
 X.0.0-rc1                       3 days after branch.
 X.0.0-rc2                       2 weeks after branch.
 X.0.0-rc3                       4 weeks after branch
 **X.0.0-final**                 **6 weeks after branch**
-**X.0.1                         **8 weeks after branch**
-**X.0.2                         **10 weeks after branch**
-**X.0.3                         **12 weeks after branch**
-**X.0.4                         **14 weeks after branch**
-**X.0.5                         **16 weeks after branch**
-**X.0.6 (if necessary)          **18 weeks after branch**
-------------------------------- -------------------------
+**X.0.1**                       **8 weeks after branch**
+**X.0.2**                       **10 weeks after branch**
+**X.0.3**                       **12 weeks after branch**
+**X.0.4**                       **14 weeks after branch**
+**X.0.5**                       **16 weeks after branch**
+**X.0.6 (if necessary)**        **18 weeks after branch**
+=============================== =========================
 
 Release Process Summary
 -----------------------
@@ -429,7 +428,7 @@ is what to do:
 Announce the Release
 ^^^^^^^^^^^^^^^^^^^^
 
-Create a new post in the `Announce Category<https://discourse.llvm.org/c/announce>`_
+Create a new post in the `Announce Category <https://discourse.llvm.org/c/announce>`_
 once all the release tasks are complete.  For X.0.0 releases, make sure to include a
 link to the release notes in the post.  For X.0.1+ releases, generate a changelog
 using this command and add it to the post.
