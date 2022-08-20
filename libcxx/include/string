@@ -375,60 +375,60 @@ bool operator==(const basic_string<charT, traits, Allocator>& lhs,
                 const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20
 
 template<class charT, class traits, class Allocator>
-bool operator==(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20, removed in C++20
+bool operator==(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // removed in C++20
 
 template<class charT, class traits, class Allocator>
 bool operator==(const basic_string<charT,traits,Allocator>& lhs, const charT* rhs) noexcept;    // constexpr since C++20
 
 template<class charT, class traits, class Allocator>
 bool operator!=(const basic_string<charT,traits,Allocator>& lhs,
-                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20, removed in C++20
+                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator!=(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20, removed in C++20
+bool operator!=(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator!=(const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20, removed in C++20
+bool operator!=(const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // removed in C++20
 
 template<class charT, class traits, class Allocator>
 bool operator< (const basic_string<charT, traits, Allocator>& lhs,
-                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20, removed in C++20
+                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator< (const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20, removed in C++20
+bool operator< (const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator< (const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20, removed in C++20
+bool operator< (const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // removed in C++20
 
 template<class charT, class traits, class Allocator>
 bool operator> (const basic_string<charT, traits, Allocator>& lhs,
-                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20, removed in C++20
+                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator> (const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20, removed in C++20
+bool operator> (const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator> (const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20, removed in C++20
+bool operator> (const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // removed in C++20
 
 template<class charT, class traits, class Allocator>
 bool operator<=(const basic_string<charT, traits, Allocator>& lhs,
-                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20, removed in C++20
+                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator<=(const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20, removed in C++20
+bool operator<=(const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator<=(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20, removed in C++20
+bool operator<=(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // removed in C++20
 
 template<class charT, class traits, class Allocator>
 bool operator>=(const basic_string<charT, traits, Allocator>& lhs,
-                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // constexpr since C++20, removed in C++20
+                const basic_string<charT, traits, Allocator>& rhs) noexcept;                    // removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator>=(const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // constexpr since C++20, removed in C++20
+bool operator>=(const basic_string<charT, traits, Allocator>& lhs, const charT* rhs) noexcept;  // removed in C++20
 
 template<class charT, class traits, class Allocator>
-bool operator>=(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // constexpr since C++20, removed in C++20
+bool operator>=(const charT* lhs, const basic_string<charT, traits, Allocator>& rhs) noexcept;  // removed in C++20
 
 template<class charT, class traits, class Allocator>                                            // since C++20
 constexpr see below operator<=>(const basic_string<charT, traits, Allocator>& lhs,
@@ -4193,7 +4193,7 @@ operator==(const basic_string<char, char_traits<char>, _Allocator>& __lhs,
 
 #if _LIBCPP_STD_VER <= 17
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator==(const _CharT* __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
@@ -4241,7 +4241,7 @@ operator<=>(const basic_string<_CharT, _Traits, _Allocator>& __lhs, const _CharT
 #else // _LIBCPP_STD_VER > 17
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(const basic_string<_CharT,_Traits,_Allocator>& __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
@@ -4250,7 +4250,7 @@ operator!=(const basic_string<_CharT,_Traits,_Allocator>& __lhs,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(const _CharT* __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
@@ -4259,7 +4259,7 @@ operator!=(const _CharT* __lhs,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator!=(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
            const _CharT* __rhs) _NOEXCEPT
@@ -4270,7 +4270,7 @@ operator!=(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
 // operator<
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator< (const basic_string<_CharT, _Traits, _Allocator>& __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
@@ -4279,7 +4279,7 @@ operator< (const basic_string<_CharT, _Traits, _Allocator>& __lhs,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator< (const basic_string<_CharT, _Traits, _Allocator>& __lhs,
            const _CharT* __rhs) _NOEXCEPT
@@ -4288,7 +4288,7 @@ operator< (const basic_string<_CharT, _Traits, _Allocator>& __lhs,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator< (const _CharT* __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
@@ -4299,7 +4299,7 @@ operator< (const _CharT* __lhs,
 // operator>
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator> (const basic_string<_CharT, _Traits, _Allocator>& __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
@@ -4308,7 +4308,7 @@ operator> (const basic_string<_CharT, _Traits, _Allocator>& __lhs,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator> (const basic_string<_CharT, _Traits, _Allocator>& __lhs,
            const _CharT* __rhs) _NOEXCEPT
@@ -4317,7 +4317,7 @@ operator> (const basic_string<_CharT, _Traits, _Allocator>& __lhs,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator> (const _CharT* __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
@@ -4328,7 +4328,7 @@ operator> (const _CharT* __lhs,
 // operator<=
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator<=(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
@@ -4337,7 +4337,7 @@ operator<=(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator<=(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
            const _CharT* __rhs) _NOEXCEPT
@@ -4346,7 +4346,7 @@ operator<=(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator<=(const _CharT* __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
@@ -4357,7 +4357,7 @@ operator<=(const _CharT* __lhs,
 // operator>=
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator>=(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
@@ -4366,7 +4366,7 @@ operator>=(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator>=(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
            const _CharT* __rhs) _NOEXCEPT
@@ -4375,7 +4375,7 @@ operator>=(const basic_string<_CharT, _Traits, _Allocator>& __lhs,
 }
 
 template<class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+inline _LIBCPP_HIDE_FROM_ABI
 bool
 operator>=(const _CharT* __lhs,
            const basic_string<_CharT, _Traits, _Allocator>& __rhs) _NOEXCEPT
