@@ -407,23 +407,19 @@ void SharedMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
 }
 
 SharedMemoryMapper::~SharedMemoryMapper() {
-  std::vector<ExecutorAddr> ReservationAddrs;
-  if (!Reservations.empty()) {
-    std::lock_guard<std::mutex> Lock(Mutex);
-    {
-      ReservationAddrs.reserve(Reservations.size());
-      for (const auto &R : Reservations) {
-        ReservationAddrs.push_back(R.first);
-      }
-    }
-  }
+  for (const auto R : Reservations) {
 
-  std::promise<MSVCPError> P;
-  auto F = P.get_future();
-  release(ReservationAddrs, [&](Error Err) { P.set_value(std::move(Err)); });
-  // FIXME: Release can actually fail. The error should be propagated.
-  // Meanwhile, a better option is to explicitly call release().
-  cantFail(F.get());
+#if defined(LLVM_ON_UNIX) && !defined(__ANDROID__)
+
+    munmap(R.second.LocalAddr, R.second.Size);
+
+#elif defined(_WIN32)
+
+    UnmapViewOfFile(R.second.LocalAddr);
+
+#endif
+
+  }
 }
 
 } // namespace orc
