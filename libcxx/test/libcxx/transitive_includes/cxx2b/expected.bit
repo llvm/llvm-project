@@ -2,7 +2,6 @@ bit
 cstddef
 cstdint
 cstdlib
-iosfwd
 limits
 type_traits
 version

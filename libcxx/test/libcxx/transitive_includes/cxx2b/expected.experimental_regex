@@ -1,10 +1,6 @@
-algorithm
-array
 atomic
-bit
 cctype
 cerrno
-chrono
 climits
 cmath
 compare
@@ -23,15 +19,12 @@ experimental/memory_resource
 experimental/regex
 experimental/string
 experimental/utility
-functional
 initializer_list
 iosfwd
-iterator
 limits
 memory
 mutex
 new
-optional
 ratio
 regex
 stdexcept
@@ -41,8 +34,6 @@ system_error
 tuple
 type_traits
 typeinfo
-unordered_map
 utility
-variant
 vector
 version

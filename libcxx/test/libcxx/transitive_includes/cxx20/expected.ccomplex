@@ -6,7 +6,6 @@ bitset
 ccomplex
 cctype
 cerrno
-chrono
 climits
 cmath
 compare

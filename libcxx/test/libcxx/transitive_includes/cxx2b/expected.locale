@@ -1,10 +1,6 @@
-algorithm
-array
 atomic
-bit
 cctype
 cerrno
-chrono
 climits
 cmath
 compare
@@ -19,17 +15,14 @@ ctime
 cwchar
 cwctype
 exception
-functional
 initializer_list
 ios
 iosfwd
-iterator
 limits
 locale
 memory
 mutex
 new
-optional
 ratio
 stdexcept
 streambuf
@@ -39,8 +32,4 @@ system_error
 tuple
 type_traits
 typeinfo
-unordered_map
-utility
-variant
-vector
 version

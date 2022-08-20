@@ -1,9 +1,5 @@
-algorithm
-array
 atomic
-bit
 cctype
-chrono
 climits
 cmath
 compare
@@ -20,14 +16,11 @@ exception
 experimental/memory_resource
 experimental/string
 experimental/utility
-functional
 initializer_list
 iosfwd
-iterator
 limits
 memory
 new
-optional
 ratio
 stdexcept
 string
@@ -35,8 +28,5 @@ string_view
 tuple
 type_traits
 typeinfo
-unordered_map
 utility
-variant
-vector
 version
