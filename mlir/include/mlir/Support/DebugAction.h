@@ -25,6 +25,7 @@
 #include "llvm/Support/TypeName.h"
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
+#include <type_traits>
 
 namespace mlir {
 
@@ -218,8 +219,8 @@ private:
   /// parameter types.
   template <typename... CallerParameterTs>
   static constexpr bool canHandleWith() {
-    return llvm::is_invocable<function_ref<void(ParameterTs...)>,
-                              CallerParameterTs...>::value;
+    return std::is_invocable_v<function_ref<void(ParameterTs...)>,
+                               CallerParameterTs...>;
   }
 
   /// Allow access to `canHandleWith`.
