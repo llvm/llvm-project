@@ -240,7 +240,7 @@ void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
 
     unsigned firstIndex = 0;
     if (inputs.size() != lattices.size()) {
-      if (auto *op = point.dyn_cast<Operation *>()) {
+      if (point.dyn_cast<Operation *>()) {
         if (!inputs.empty())
           firstIndex = inputs.front().cast<OpResult>().getResultNumber();
         visitNonControlFlowArgumentsImpl(
