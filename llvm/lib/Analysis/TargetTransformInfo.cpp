@@ -771,8 +771,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     ArrayRef<const Value *> Args, const Instruction *CxtI) const {
   InstructionCost Cost =
       TTIImpl->getArithmeticInstrCost(Opcode, Ty, CostKind,
-                                      Op1Info.Kind, Op2Info.Kind,
-                                      Op1Info.Properties, Op2Info.Properties,
+                                      Op1Info, Op2Info,
                                       Args, CxtI);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;

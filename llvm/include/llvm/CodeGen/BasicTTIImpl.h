@@ -818,10 +818,8 @@ public:
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-      TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
-      TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
-      TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
-      TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
+      TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr) {
     // Check if any of the operands are vector operands.
@@ -833,7 +831,6 @@ public:
     if (CostKind != TTI::TCK_RecipThroughput)
       return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
                                            Opd1Info, Opd2Info,
-                                           Opd1PropInfo, Opd2PropInfo,
                                            Args, CxtI);
 
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
@@ -866,8 +863,7 @@ public:
                                         LT.second)) {
         unsigned DivOpc = IsSigned ? Instruction::SDiv : Instruction::UDiv;
         InstructionCost DivCost = thisT()->getArithmeticInstrCost(
-            DivOpc, Ty, CostKind, Opd1Info, Opd2Info, Opd1PropInfo,
-            Opd2PropInfo);
+            DivOpc, Ty, CostKind, Opd1Info, Opd2Info);
         InstructionCost MulCost =
             thisT()->getArithmeticInstrCost(Instruction::Mul, Ty, CostKind);
         InstructionCost SubCost =
@@ -886,7 +882,7 @@ public:
     if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
       InstructionCost Cost = thisT()->getArithmeticInstrCost(
           Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
-          Opd1PropInfo, Opd2PropInfo, Args, CxtI);
+          Args, CxtI);
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
       SmallVector<Type *> Tys(Args.size(), Ty);
@@ -1565,13 +1561,14 @@ public:
       const Value *X = Args[0];
       const Value *Y = Args[1];
       const Value *Z = Args[2];
-      const auto [OpKindX, OpPropsX] = TTI::getOperandInfo(X);
-      const auto [OpKindY, OpPropsY] = TTI::getOperandInfo(Y);
-      const auto [OpKindZ, OpPropsZ] = TTI::getOperandInfo(Z);
-      TTI::OperandValueKind OpKindBW = TTI::OK_UniformConstantValue;
-      TTI::OperandValueProperties OpPropsBW =
-        isPowerOf2_32(RetTy->getScalarSizeInBits()) ? TTI::OP_PowerOf2
-        : TTI::OP_None;
+      const TTI::OperandValueInfo OpInfoX = TTI::getOperandInfo(X);
+      const TTI::OperandValueInfo OpInfoY = TTI::getOperandInfo(Y);
+      const TTI::OperandValueInfo OpInfoZ = TTI::getOperandInfo(Z);
+      const TTI::OperandValueInfo OpInfoBW =
+        {TTI::OK_UniformConstantValue,
+         isPowerOf2_32(RetTy->getScalarSizeInBits()) ? TTI::OP_PowerOf2
+         : TTI::OP_None};
+
       // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
       // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
       InstructionCost Cost = 0;
@@ -1580,15 +1577,15 @@ public:
       Cost +=
           thisT()->getArithmeticInstrCost(BinaryOperator::Sub, RetTy, CostKind);
       Cost += thisT()->getArithmeticInstrCost(
-          BinaryOperator::Shl, RetTy, CostKind, OpKindX, OpKindZ, OpPropsX);
+          BinaryOperator::Shl, RetTy, CostKind, OpInfoX,
+          {OpInfoZ.Kind, TTI::OP_None});
       Cost += thisT()->getArithmeticInstrCost(
-          BinaryOperator::LShr, RetTy, CostKind, OpKindY, OpKindZ, OpPropsY);
+          BinaryOperator::LShr, RetTy, CostKind, OpInfoY,
+          {OpInfoZ.Kind, TTI::OP_None});
       // Non-constant shift amounts requires a modulo.
-      if (OpKindZ != TTI::OK_UniformConstantValue &&
-          OpKindZ != TTI::OK_NonUniformConstantValue)
+      if (!OpInfoZ.isConstant())
         Cost += thisT()->getArithmeticInstrCost(BinaryOperator::URem, RetTy,
-                                                CostKind, OpKindZ, OpKindBW,
-                                                OpPropsZ, OpPropsBW);
+                                                CostKind, OpInfoZ, OpInfoBW);
       // For non-rotates (X != Y) we must add shift-by-zero handling costs.
       if (X != Y) {
         Type *CondTy = RetTy->getWithNewBitWidth(1);
@@ -1855,7 +1852,7 @@ public:
                                           Pred, CostKind);
       // TODO: Should we add an OperandValueProperties::OP_Zero property?
       Cost += thisT()->getArithmeticInstrCost(
-          BinaryOperator::Sub, RetTy, CostKind, TTI::OK_UniformConstantValue);
+         BinaryOperator::Sub, RetTy, CostKind, {TTI::OK_UniformConstantValue, TTI::OP_None});
       return Cost;
     }
     case Intrinsic::smax:
@@ -1930,11 +1927,12 @@ public:
       Cost += 2 * thisT()->getCastInstrCost(Instruction::Trunc, RetTy, ExtTy,
                                             CCH, CostKind);
       Cost += thisT()->getArithmeticInstrCost(Instruction::LShr, RetTy,
-                                              CostKind, TTI::OK_AnyValue,
-                                              TTI::OK_UniformConstantValue);
+                                              CostKind,
+                                              {TTI::OK_AnyValue, TTI::OP_None},
+                                              {TTI::OK_UniformConstantValue, TTI::OP_None});
       Cost += thisT()->getArithmeticInstrCost(Instruction::Shl, RetTy, CostKind,
-                                              TTI::OK_AnyValue,
-                                              TTI::OK_UniformConstantValue);
+                                              {TTI::OK_AnyValue, TTI::OP_None},
+                                              {TTI::OK_UniformConstantValue, TTI::OP_None});
       Cost += thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
       return Cost;
     }
@@ -1995,13 +1993,15 @@ public:
       Cost += 2 * thisT()->getCastInstrCost(Instruction::Trunc, MulTy, ExtTy,
                                             CCH, CostKind);
       Cost += thisT()->getArithmeticInstrCost(Instruction::LShr, ExtTy,
-                                              CostKind, TTI::OK_AnyValue,
-                                              TTI::OK_UniformConstantValue);
+                                              CostKind,
+                                              {TTI::OK_AnyValue, TTI::OP_None},
+                                              {TTI::OK_UniformConstantValue, TTI::OP_None});
 
       if (IsSigned)
         Cost += thisT()->getArithmeticInstrCost(Instruction::AShr, MulTy,
-                                                CostKind, TTI::OK_AnyValue,
-                                                TTI::OK_UniformConstantValue);
+                                                CostKind,
+                                                {TTI::OK_AnyValue, TTI::OP_None},
+                                                {TTI::OK_UniformConstantValue, TTI::OP_None});
 
       Cost += thisT()->getCmpSelInstrCost(
           BinaryOperator::ICmp, MulTy, OverflowTy, CmpInst::ICMP_NE, CostKind);
