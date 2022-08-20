@@ -209,7 +209,7 @@ TEST(LinkGraphTest, ContentAccessAndUpdate) {
 }
 
 TEST(LinkGraphTest, MakeExternal) {
-  // Check that we can make a defined symbol external.
+  // Check that we can make defined and absolute symbols external.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
   auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
@@ -237,14 +237,31 @@ TEST(LinkGraphTest, MakeExternal) {
       0U)
       << "Unexpected number of external symbols";
 
-  // Make S1 external, confirm that the its flags are updated and that it is
-  // moved from the defined symbols to the externals list.
+  // Add an absolute symbol.
+  auto &S2 = G.addAbsoluteSymbol("S2", orc::ExecutorAddr(0x2000), 0,
+                                 Linkage::Strong, Scope::Default, true);
+
+  EXPECT_TRUE(S2.isAbsolute()) << "Symbol should be absolute";
+  EXPECT_EQ(
+      std::distance(G.absolute_symbols().begin(), G.absolute_symbols().end()),
+      1U)
+      << "Unexpected number of symbols";
+
+  // Make S1 and S2 external, confirm that the its flags are updated and that it
+  // is moved from the defined/absolute symbols lists to the externals list.
   G.makeExternal(S1);
+  G.makeExternal(S2);
 
   EXPECT_FALSE(S1.isDefined()) << "Symbol should not be defined";
   EXPECT_TRUE(S1.isExternal()) << "Symbol should be external";
   EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
+  EXPECT_FALSE(S2.isDefined()) << "Symbol should not be defined";
+  EXPECT_TRUE(S2.isExternal()) << "Symbol should be external";
+  EXPECT_FALSE(S2.isAbsolute()) << "Symbol should not be absolute";
+
   EXPECT_EQ(S1.getAddress(), orc::ExecutorAddr())
+      << "Unexpected symbol address";
+  EXPECT_EQ(S2.getAddress(), orc::ExecutorAddr())
       << "Unexpected symbol address";
 
   EXPECT_EQ(
@@ -252,7 +269,79 @@ TEST(LinkGraphTest, MakeExternal) {
       << "Unexpected number of defined symbols";
   EXPECT_EQ(
       std::distance(G.external_symbols().begin(), G.external_symbols().end()),
+      2U)
+      << "Unexpected number of external symbols";
+  EXPECT_EQ(
+      std::distance(G.absolute_symbols().begin(), G.absolute_symbols().end()),
+      0U)
+      << "Unexpected number of external symbols";
+}
+
+TEST(LinkGraphTest, MakeAbsolute) {
+  // Check that we can make defined and external symbols absolute.
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+              getGenericEdgeKindName);
+  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
+
+  // Create an initial block.
+  auto &B1 =
+      G.createContentBlock(Sec, BlockContent, orc::ExecutorAddr(0x1000), 8, 0);
+
+  // Add a symbol to the block.
+  auto &S1 = G.addDefinedSymbol(B1, 0, "S1", 4, Linkage::Strong, Scope::Default,
+                                false, false);
+
+  EXPECT_TRUE(S1.isDefined()) << "Symbol should be defined";
+  EXPECT_FALSE(S1.isExternal()) << "Symbol should not be external";
+  EXPECT_FALSE(S1.isAbsolute()) << "Symbol should not be absolute";
+  EXPECT_TRUE(&S1.getBlock()) << "Symbol should have a non-null block";
+  EXPECT_EQ(S1.getAddress(), orc::ExecutorAddr(0x1000))
+      << "Unexpected symbol address";
+
+  EXPECT_EQ(
+      std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 1U)
+      << "Unexpected number of defined symbols";
+  EXPECT_EQ(
+      std::distance(G.external_symbols().begin(), G.external_symbols().end()),
+      0U)
+      << "Unexpected number of external symbols";
+
+  // Add an external symbol.
+  auto &S2 = G.addExternalSymbol("S2", 0, Linkage::Strong);
+
+  EXPECT_TRUE(S2.isExternal()) << "Symbol should be external";
+  EXPECT_EQ(
+      std::distance(G.external_symbols().begin(), G.external_symbols().end()),
       1U)
+      << "Unexpected number of symbols";
+
+  // Make S1 and S2 absolute, confirm that the its flags are updated and that it
+  // is moved from the defined/external symbols lists to the absolutes list.
+  orc::ExecutorAddr S1AbsAddr(0xA000);
+  orc::ExecutorAddr S2AbsAddr(0xB000);
+  G.makeAbsolute(S1, S1AbsAddr);
+  G.makeAbsolute(S2, S2AbsAddr);
+
+  EXPECT_FALSE(S1.isDefined()) << "Symbol should not be defined";
+  EXPECT_FALSE(S1.isExternal()) << "Symbol should not be external";
+  EXPECT_TRUE(S1.isAbsolute()) << "Symbol should be absolute";
+  EXPECT_FALSE(S2.isDefined()) << "Symbol should not be defined";
+  EXPECT_FALSE(S2.isExternal()) << "Symbol should not be absolute";
+  EXPECT_TRUE(S2.isAbsolute()) << "Symbol should be absolute";
+
+  EXPECT_EQ(S1.getAddress(), S1AbsAddr) << "Unexpected symbol address";
+  EXPECT_EQ(S2.getAddress(), S2AbsAddr) << "Unexpected symbol address";
+
+  EXPECT_EQ(
+      std::distance(G.defined_symbols().begin(), G.defined_symbols().end()), 0U)
+      << "Unexpected number of defined symbols";
+  EXPECT_EQ(
+      std::distance(G.external_symbols().begin(), G.external_symbols().end()),
+      0U)
+      << "Unexpected number of external symbols";
+  EXPECT_EQ(
+      std::distance(G.absolute_symbols().begin(), G.absolute_symbols().end()),
+      2U)
       << "Unexpected number of external symbols";
 }
 
