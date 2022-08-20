@@ -1151,7 +1151,7 @@ static void addSynthenticMethnames() {
   llvm::raw_string_ostream os(data);
   const int prefixLength = ObjCStubsSection::symbolPrefix.size();
   for (Symbol *sym : symtab->getSymbols())
-    if (const auto *undefined = dyn_cast<Undefined>(sym))
+    if (isa<Undefined>(sym))
       if (sym->getName().startswith(ObjCStubsSection::symbolPrefix))
         os << sym->getName().drop_front(prefixLength) << '\0';
 
