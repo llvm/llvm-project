@@ -53,7 +53,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined when !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT) is not defined!"
+#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)' is not met!"
 #   endif
 # endif
 
@@ -68,7 +68,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_format
-#     error "__cpp_lib_format should not be defined when !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT) is not defined!"
+#     error "__cpp_lib_format should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_format) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)' is not met!"
 #   endif
 # endif
 
