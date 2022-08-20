@@ -28,6 +28,7 @@
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -236,6 +237,11 @@ static cl::opt<bool>
     ShowErrFailedToMaterialize("show-err-failed-to-materialize",
                                cl::desc("Show FailedToMaterialize errors"),
                                cl::init(false), cl::cat(JITLinkCategory));
+
+static cl::opt<bool> UseSharedMemory(
+    "use-shared-memory",
+    cl::desc("Use shared memory to transfer generated code and data"),
+    cl::init(false), cl::cat(JITLinkCategory));
 
 static ExitOnError ExitOnErr;
 
@@ -814,6 +820,35 @@ static std::unique_ptr<JITLinkMemoryManager> createInProcessMemoryManager() {
 #endif
 }
 
+Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+createSharedMemoryManager(SimpleRemoteEPC &SREPC) {
+  SharedMemoryMapper::SymbolAddrs SAs;
+  if (auto Err = SREPC.getBootstrapSymbols(
+          {{SAs.Instance, rt::ExecutorSharedMemoryMapperServiceInstanceName},
+           {SAs.Reserve,
+            rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
+           {SAs.Initialize,
+            rt::ExecutorSharedMemoryMapperServiceInitializeWrapperName},
+           {SAs.Deinitialize,
+            rt::ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
+           {SAs.Release,
+            rt::ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
+    return std::move(Err);
+
+#ifdef _WIN32
+  size_t SlabSize = 1024 * 1024;
+#else
+  size_t SlabSize = 1024 * 1024 * 1024;
+#endif
+
+  if (!SlabAllocateSizeString.empty())
+    SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
+
+  return MapperJITLinkMemoryManager::CreateWithMapper<SharedMemoryMapper>(
+      SlabSize, SREPC, SAs);
+}  size_t SlabSize = 1024 * 1024 * 1024;
+
+
 static Expected<MaterializationUnit::Interface>
 getTestObjectFileInterface(Session &S, MemoryBufferRef O) {
 
@@ -970,9 +1005,13 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> launchExecutor() {
   close(ToExecutor[ReadEnd]);
   close(FromExecutor[WriteEnd]);
 
+  auto S = SimpleRemoteEPC::Setup();
+  if (UseSharedMemory)
+    S.CreateMemoryManager = createSharedMemoryManager;
+
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
-      std::make_unique<DynamicThreadPoolTaskDispatcher>(),
-      SimpleRemoteEPC::Setup(), FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
+      std::make_unique<DynamicThreadPoolTaskDispatcher>(), std::move(S),
+      FromExecutor[ReadEnd], ToExecutor[WriteEnd]);
 #endif
 }
 
@@ -1056,9 +1095,13 @@ static Expected<std::unique_ptr<ExecutorProcessControl>> connectToExecutor() {
   if (!SockFD)
     return SockFD.takeError();
 
+  auto S = SimpleRemoteEPC::Setup();
+  if (UseSharedMemory)
+    S.CreateMemoryManager = createSharedMemoryManager;
+
   return SimpleRemoteEPC::Create<FDSimpleRemoteEPCTransport>(
       std::make_unique<DynamicThreadPoolTaskDispatcher>(),
-      SimpleRemoteEPC::Setup(), *SockFD, *SockFD);
+      std::move(S), *SockFD, *SockFD);
 #endif
 }
 
