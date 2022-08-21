@@ -77,12 +77,11 @@ template <typename T> struct make_const_ref {
 };
 
 namespace detail {
-template <typename...> using void_t = void;
 template <class, template <class...> class Op, class... Args> struct detector {
   using value_t = std::false_type;
 };
 template <template <class...> class Op, class... Args>
-struct detector<void_t<Op<Args...>>, Op, Args...> {
+struct detector<std::void_t<Op<Args...>>, Op, Args...> {
   using value_t = std::true_type;
 };
 } // end namespace detail
