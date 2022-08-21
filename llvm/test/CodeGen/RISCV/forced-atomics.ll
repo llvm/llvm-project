@@ -1183,7 +1183,7 @@ define i32 @rmw32_umax_seq_cst(ptr %p) nounwind {
 ; RV32-NO-ATOMIC-NEXT:  .LBB25_2: # %atomicrmw.start
 ; RV32-NO-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NO-ATOMIC-NEXT:    mv a2, a1
-; RV32-NO-ATOMIC-NEXT:    bltu zero, a1, .LBB25_1
+; RV32-NO-ATOMIC-NEXT:    bnez a1, .LBB25_1
 ; RV32-NO-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32-NO-ATOMIC-NEXT:    # in Loop: Header=BB25_2 Depth=1
 ; RV32-NO-ATOMIC-NEXT:    li a2, 1
@@ -2754,7 +2754,7 @@ define i64 @rmw64_umax_seq_cst(ptr %p) nounwind {
 ; RV64-NO-ATOMIC-NEXT:  .LBB51_2: # %atomicrmw.start
 ; RV64-NO-ATOMIC-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NO-ATOMIC-NEXT:    mv a2, a1
-; RV64-NO-ATOMIC-NEXT:    bltu zero, a1, .LBB51_1
+; RV64-NO-ATOMIC-NEXT:    bnez a1, .LBB51_1
 ; RV64-NO-ATOMIC-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV64-NO-ATOMIC-NEXT:    # in Loop: Header=BB51_2 Depth=1
 ; RV64-NO-ATOMIC-NEXT:    li a2, 1
