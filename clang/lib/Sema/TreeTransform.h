@@ -14536,11 +14536,10 @@ TreeTransform<Derived>::RebuildArrayType(QualType ElementType,
     SemaRef.Context.UnsignedIntTy, SemaRef.Context.UnsignedLongTy,
     SemaRef.Context.UnsignedLongLongTy, SemaRef.Context.UnsignedInt128Ty
   };
-  const unsigned NumTypes = llvm::array_lengthof(Types);
   QualType SizeType;
-  for (unsigned I = 0; I != NumTypes; ++I)
-    if (Size->getBitWidth() == SemaRef.Context.getIntWidth(Types[I])) {
-      SizeType = Types[I];
+  for (const auto &T : Types)
+    if (Size->getBitWidth() == SemaRef.Context.getIntWidth(T)) {
+      SizeType = T;
       break;
     }
 
