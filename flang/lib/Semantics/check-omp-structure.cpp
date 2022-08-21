@@ -2275,9 +2275,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
 void OmpStructureChecker::CheckAllowedMapTypes(
     const parser::OmpMapType::Type &type,
     const std::list<parser::OmpMapType::Type> &allowedMapTypeList) {
-  const auto found{std::find(
-      std::begin(allowedMapTypeList), std::end(allowedMapTypeList), type)};
-  if (found == std::end(allowedMapTypeList)) {
+  if (!llvm::is_contained(allowedMapTypeList, type)) {
     std::string commaSeperatedMapTypes;
     llvm::interleave(
         allowedMapTypeList.begin(), allowedMapTypeList.end(),

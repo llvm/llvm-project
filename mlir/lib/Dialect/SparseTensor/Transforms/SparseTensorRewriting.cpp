@@ -34,11 +34,9 @@ using namespace mlir::sparse_tensor;
 // Helper to detect a sparse tensor type operand.
 static bool isSparseTensor(OpOperand *op) {
   if (auto enc = getSparseTensorEncoding(op->get().getType())) {
-    ArrayRef<SparseTensorEncodingAttr::DimLevelType> dimTypes =
-        enc.getDimLevelType();
-    for (auto dimType : dimTypes)
-      if (dimType == SparseTensorEncodingAttr::DimLevelType::Compressed)
-        return true; // at least one compressed
+    if (llvm::is_contained(enc.getDimLevelType(),
+                           SparseTensorEncodingAttr::DimLevelType::Compressed))
+      return true;
   }
   return false;
 }

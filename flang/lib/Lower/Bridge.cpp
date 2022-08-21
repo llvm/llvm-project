@@ -1038,8 +1038,7 @@ private:
     for (Fortran::parser::Label label :
          std::get<std::list<Fortran::parser::Label>>(stmt.t)) {
       if (labelSet.count(label) &&
-          std::find(indexList.begin(), indexList.end(), label) ==
-              indexList.end()) { // ignore duplicates
+          !llvm::is_contained(indexList, label)) { // ignore duplicates
         addLabel(label);
       }
     }
