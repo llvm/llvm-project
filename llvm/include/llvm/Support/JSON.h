@@ -329,7 +329,8 @@ public:
   Value(std::nullptr_t) : Type(T_Null) {}
   // Boolean (disallow implicit conversions).
   // (The last template parameter is a dummy to keep templates distinct.)
-  template <typename T, typename = std::enable_if_t<std::is_same_v<T, bool>>,
+  template <typename T,
+            typename = std::enable_if_t<std::is_same<T, bool>::value>,
             bool = false>
   Value(T B) : Type(T_Boolean) {
     create<bool>(B);
@@ -337,7 +338,7 @@ public:
 
   // Unsigned 64-bit long integers.
   template <typename T,
-            typename = std::enable_if_t<std::is_same_v<T, uint64_t>>,
+            typename = std::enable_if_t<std::is_same<T, uint64_t>::value>,
             bool = false, bool = false>
   Value(T V) : Type(T_UINT64) {
     create<uint64_t>(uint64_t{V});
@@ -346,8 +347,8 @@ public:
   // Integers (except boolean and uint64_t).
   // Must be non-narrowing convertible to int64_t.
   template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>,
-            typename = std::enable_if_t<!std::is_same_v<T, bool>>,
-            typename = std::enable_if_t<!std::is_same_v<T, uint64_t>>>
+            typename = std::enable_if_t<!std::is_same<T, bool>::value>,
+            typename = std::enable_if_t<!std::is_same<T, uint64_t>::value>>
   Value(T I) : Type(T_Integer) {
     create<int64_t>(int64_t{I});
   }
@@ -360,8 +361,8 @@ public:
   }
   // Serializable types: with a toJSON(const T&)->Value function, found by ADL.
   template <typename T,
-            typename = std::enable_if_t<
-                std::is_same_v<Value, decltype(toJSON(*(const T *)nullptr))>>,
+            typename = std::enable_if_t<std::is_same<
+                Value, decltype(toJSON(*(const T *)nullptr))>::value>,
             Value * = nullptr>
   Value(const T &V) : Value(toJSON(V)) {}
 

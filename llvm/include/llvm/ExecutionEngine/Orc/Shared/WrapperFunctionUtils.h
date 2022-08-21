@@ -669,7 +669,7 @@ public:
 
   /// Run call and deserialize result using SPS.
   template <typename SPSRetT, typename RetT>
-  std::enable_if_t<!std::is_same_v<SPSRetT, void>, Error>
+  std::enable_if_t<!std::is_same<SPSRetT, void>::value, Error>
   runWithSPSRet(RetT &RetVal) const {
     auto WFR = run();
     if (const char *ErrMsg = WFR.getOutOfBandError())
@@ -684,7 +684,8 @@ public:
 
   /// Overload for SPS functions returning void.
   template <typename SPSRetT>
-  std::enable_if_t<std::is_same_v<SPSRetT, void>, Error> runWithSPSRet() const {
+  std::enable_if_t<std::is_same<SPSRetT, void>::value, Error>
+  runWithSPSRet() const {
     shared::SPSEmpty E;
     return runWithSPSRet<shared::SPSEmpty>(E);
   }

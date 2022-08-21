@@ -154,13 +154,16 @@ public:
 template <typename SPSTagT>
 class SPSSerializationTraits<
     SPSTagT, SPSTagT,
-    std::enable_if_t<
-        std::is_same_v<SPSTagT, bool> || std::is_same_v<SPSTagT, char> ||
-        std::is_same_v<SPSTagT, int8_t> || std::is_same_v<SPSTagT, int16_t> ||
-        std::is_same_v<SPSTagT, int32_t> || std::is_same_v<SPSTagT, int64_t> ||
-        std::is_same_v<SPSTagT, uint8_t> || std::is_same_v<SPSTagT, uint16_t> ||
-        std::is_same_v<SPSTagT, uint32_t> ||
-        std::is_same_v<SPSTagT, uint64_t>>> {
+    std::enable_if_t<std::is_same<SPSTagT, bool>::value ||
+                     std::is_same<SPSTagT, char>::value ||
+                     std::is_same<SPSTagT, int8_t>::value ||
+                     std::is_same<SPSTagT, int16_t>::value ||
+                     std::is_same<SPSTagT, int32_t>::value ||
+                     std::is_same<SPSTagT, int64_t>::value ||
+                     std::is_same<SPSTagT, uint8_t>::value ||
+                     std::is_same<SPSTagT, uint16_t>::value ||
+                     std::is_same<SPSTagT, uint32_t>::value ||
+                     std::is_same<SPSTagT, uint64_t>::value>> {
 public:
   static size_t size(const SPSTagT &Value) { return sizeof(SPSTagT); }
 
