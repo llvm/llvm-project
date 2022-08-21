@@ -4084,10 +4084,21 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
     translateSetCCForBranch(DL, LHS, RHS, CCVal, DAG);
     // 1 < x ? x : 1 -> 0 < x ? x : 1
-    if (isOneConstant(LHS) && !isa<ConstantSDNode>(RHS) &&
+    if (isOneConstant(LHS) &&
         (CCVal == ISD::SETLT || CCVal == ISD::SETULT) && RHS == TrueV &&
-        isOneConstant(FalseV)) {
+        LHS == FalseV) {
       LHS = DAG.getConstant(0, DL, VT);
+      // 0 <u x is the same as x != 0.
+      if (CCVal == ISD::SETULT) {
+        std::swap(LHS, RHS);
+        CCVal = ISD::SETNE;
+      }
+    }
+
+    // x <s -1 ? x : -1 -> x <s 0 ? x : -1
+    if (isAllOnesConstant(RHS) && CCVal == ISD::SETLT && LHS == TrueV &&
+        RHS == FalseV) {
+      RHS = DAG.getConstant(0, DL, VT);
     }
 
     SDValue TargetCC = DAG.getCondCode(CCVal);
