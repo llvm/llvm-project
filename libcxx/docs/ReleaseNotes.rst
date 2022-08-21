@@ -39,6 +39,7 @@ Implemented Papers
 ------------------
 - P2499R0 - ``string_view`` range constructor should be ``explicit``
 - P2417R2 - A more constexpr bitset
+- P2445R1 - ``std::forward_like``
 
 Improvements and New Features
 -----------------------------

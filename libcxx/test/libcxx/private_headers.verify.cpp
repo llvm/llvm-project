@@ -660,6 +660,7 @@ END-SCRIPT
 #include <__utility/declval.h> // expected-error@*:* {{use of private header from outside its module: '__utility/declval.h'}}
 #include <__utility/exchange.h> // expected-error@*:* {{use of private header from outside its module: '__utility/exchange.h'}}
 #include <__utility/forward.h> // expected-error@*:* {{use of private header from outside its module: '__utility/forward.h'}}
+#include <__utility/forward_like.h> // expected-error@*:* {{use of private header from outside its module: '__utility/forward_like.h'}}
 #include <__utility/in_place.h> // expected-error@*:* {{use of private header from outside its module: '__utility/in_place.h'}}
 #include <__utility/integer_sequence.h> // expected-error@*:* {{use of private header from outside its module: '__utility/integer_sequence.h'}}
 #include <__utility/move.h> // expected-error@*:* {{use of private header from outside its module: '__utility/move.h'}}
