@@ -1265,6 +1265,7 @@ module std [system] {
       module declval             { private header "__utility/declval.h" }
       module exchange            { private header "__utility/exchange.h" }
       module forward             { private header "__utility/forward.h" }
+      module forward_like        { private header "__utility/forward_like.h" }
       module in_place            { private header "__utility/in_place.h" }
       module integer_sequence    { private header "__utility/integer_sequence.h" }
       module move                { private header "__utility/move.h" }
