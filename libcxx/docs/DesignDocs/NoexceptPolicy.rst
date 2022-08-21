@@ -1,9 +1,9 @@
-====================
+===================
 ``noexcept`` Policy
-====================
+===================
 
 Extended applications of ``noexcept``
-------------------------------------------
+-------------------------------------
 
 As of version 13 libc++ may mark functions that do not throw (i.e.,
 "Throws: Nothing") as ``noexcept``. This has two primary consequences:
