@@ -389,7 +389,7 @@ void GCNIterativeScheduler::scheduleRegion(Region &R, Range &&Schedule,
 
   // Schedule consisting of MachineInstr* is considered 'detached'
   // and already interleaved with debug values
-  if (!std::is_same<decltype(*Schedule.begin()), MachineInstr*>::value) {
+  if (!std::is_same_v<decltype(*Schedule.begin()), MachineInstr *>) {
     placeDebugValues();
     // Unfortunately placeDebugValues incorrectly modifies RegionEnd, restore
     // assert(R.End == RegionEnd);

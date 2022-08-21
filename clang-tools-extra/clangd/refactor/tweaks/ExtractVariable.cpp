@@ -409,7 +409,7 @@ bool eligibleForExtraction(const SelectionTree::Node *N) {
     return false;
 
   // A plain reference to a name (e.g. variable) isn't  worth extracting.
-  // FIXME: really? What if it's e.g. `std::is_same<void, void>::value`?
+  // FIXME: really? What if it's e.g. `std::is_same_v<void, void>`?
   if (llvm::isa<DeclRefExpr>(E))
     return false;
 

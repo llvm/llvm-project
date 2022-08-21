@@ -492,7 +492,7 @@ struct callback_traits<R (C::*)(Args...) const> {
   using result_type = R;
   using arg_type = std::tuple_element_t<0, std::tuple<Args...>>;
   static_assert(sizeof...(Args) == 1, "callback function must have one and only one parameter");
-  static_assert(std::is_same<result_type, void>::value,
+  static_assert(std::is_same_v<result_type, void>,
                 "callback return type must be void");
   static_assert(std::is_lvalue_reference<arg_type>::value &&
                     std::is_const<std::remove_reference_t<arg_type>>::value,

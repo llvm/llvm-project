@@ -157,7 +157,7 @@ private:
   };
 
   template <class T> class TypedAnyStorage : public Context::AnyStorage {
-    static_assert(std::is_same<typename std::decay<T>::type, T>::value,
+    static_assert(std::is_same_v<typename std::decay<T>::type, T>,
                   "Argument to TypedAnyStorage must be decayed");
 
   public:

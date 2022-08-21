@@ -441,7 +441,7 @@ applyFirst(std::initializer_list<RewriteRuleWith<MetadataT>> Rules) {
 /// Converts a \c RewriteRuleWith<T> to a \c RewriteRule by stripping off the
 /// metadata generators.
 template <int &..., typename MetadataT>
-std::enable_if_t<!std::is_same<MetadataT, void>::value, RewriteRule>
+std::enable_if_t<!std::is_same_v<MetadataT, void>, RewriteRule>
 stripMetadata(RewriteRuleWith<MetadataT> Rule) {
   RewriteRule R;
   R.Cases = std::move(Rule.Cases);
