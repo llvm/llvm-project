@@ -576,13 +576,13 @@ NaryReassociatePass::findClosestMatchingDominator(const SCEV *CandidateExpr,
 }
 
 template <typename MaxMinT> static SCEVTypes convertToSCEVype(MaxMinT &MM) {
-  if (std::is_same_v<smax_pred_ty, typename MaxMinT::PredType>)
+  if (std::is_same<smax_pred_ty, typename MaxMinT::PredType>::value)
     return scSMaxExpr;
-  else if (std::is_same_v<umax_pred_ty, typename MaxMinT::PredType>)
+  else if (std::is_same<umax_pred_ty, typename MaxMinT::PredType>::value)
     return scUMaxExpr;
-  else if (std::is_same_v<smin_pred_ty, typename MaxMinT::PredType>)
+  else if (std::is_same<smin_pred_ty, typename MaxMinT::PredType>::value)
     return scSMinExpr;
-  else if (std::is_same_v<umin_pred_ty, typename MaxMinT::PredType>)
+  else if (std::is_same<umin_pred_ty, typename MaxMinT::PredType>::value)
     return scUMinExpr;
 
   llvm_unreachable("Can't convert MinMax pattern to SCEV type");

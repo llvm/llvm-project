@@ -50,10 +50,10 @@ using TreePatternNodePtr = std::shared_ptr<TreePatternNode>;
 /// To reduce the allocations even further, make MachineValueTypeSet own
 /// the storage and use std::array as the bit container.
 struct MachineValueTypeSet {
-  static_assert(
-      std::is_same_v<std::underlying_type<MVT::SimpleValueType>::type, uint8_t>,
-      "Change uint8_t here to the SimpleValueType's type");
-  static unsigned constexpr Capacity = std::numeric_limits<uint8_t>::max() + 1;
+  static_assert(std::is_same<std::underlying_type<MVT::SimpleValueType>::type,
+                             uint8_t>::value,
+                "Change uint8_t here to the SimpleValueType's type");
+  static unsigned constexpr Capacity = std::numeric_limits<uint8_t>::max()+1;
   using WordType = uint64_t;
   static unsigned constexpr WordWidth = CHAR_BIT*sizeof(WordType);
   static unsigned constexpr NumWords = Capacity/WordWidth;

@@ -225,12 +225,12 @@ template <
     typename DifferenceTypeT =
         typename std::iterator_traits<WrappedIteratorT>::difference_type,
     typename PointerT = std::conditional_t<
-        std::is_same_v<
-            T, typename std::iterator_traits<WrappedIteratorT>::value_type>,
+        std::is_same<T, typename std::iterator_traits<
+                            WrappedIteratorT>::value_type>::value,
         typename std::iterator_traits<WrappedIteratorT>::pointer, T *>,
     typename ReferenceT = std::conditional_t<
-        std::is_same_v<
-            T, typename std::iterator_traits<WrappedIteratorT>::value_type>,
+        std::is_same<T, typename std::iterator_traits<
+                            WrappedIteratorT>::value_type>::value,
         typename std::iterator_traits<WrappedIteratorT>::reference, T &>>
 class iterator_adaptor_base
     : public iterator_facade_base<DerivedT, IteratorCategoryT, T,

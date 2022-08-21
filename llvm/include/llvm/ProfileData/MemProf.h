@@ -190,7 +190,7 @@ struct Frame {
 
     // If the type of the GlobalValue::GUID changes, then we need to update
     // the reader and the writer.
-    static_assert(std::is_same_v<GlobalValue::GUID, uint64_t>,
+    static_assert(std::is_same<GlobalValue::GUID, uint64_t>::value,
                   "Expect GUID to be uint64_t.");
     LE.write<uint64_t>(Function);
 

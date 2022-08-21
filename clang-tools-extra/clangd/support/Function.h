@@ -93,7 +93,7 @@ public:
   }
 
 private:
-  static_assert(std::is_same_v<typename std::decay<T>::type, T>,
+  static_assert(std::is_same<typename std::decay<T>::type, T>::value,
                 "use a plain type: event values are always passed by const&");
 
   std::recursive_mutex ListenersMu;
