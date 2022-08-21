@@ -4374,7 +4374,7 @@ void TargetProperties::CheckJITObjectsDir() {
   else if (!writable)
     os << "is not writable";
 
-  llvm::Optional<lldb::user_id_t> debugger_id = llvm::None;
+  llvm::Optional<lldb::user_id_t> debugger_id;
   if (m_target)
     debugger_id = m_target->GetDebugger().GetID();
   Debugger::ReportError(os.str(), debugger_id);

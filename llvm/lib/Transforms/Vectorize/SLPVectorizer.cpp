@@ -2027,7 +2027,7 @@ public:
     LookAheadHeuristics LookAhead(*DL, *SE, *this, /*NumLanes=*/2,
                                   RootLookAheadMaxDepth);
     int BestScore = Limit;
-    Optional<int> Index = None;
+    Optional<int> Index;
     for (int I : seq<int>(0, Candidates.size())) {
       int Score = LookAhead.getScoreAtLevelRec(Candidates[I].first,
                                                Candidates[I].second,

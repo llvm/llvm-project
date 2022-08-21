@@ -553,7 +553,7 @@ public:
 
     // Examine the remaining variable locations: if we can find the same value
     // again, we can recover the location.
-    Optional<LocIdx> NewLoc = None;
+    Optional<LocIdx> NewLoc;
     for (auto Loc : MTracker->locations())
       if (Loc.Value == OldValue)
         NewLoc = Loc.Idx;
@@ -1145,7 +1145,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
 
   // Default machine value number is <None> -- if no instruction defines
   // the corresponding value, it must have been optimized out.
-  Optional<ValueIDNum> NewID = None;
+  Optional<ValueIDNum> NewID;
 
   // Try to lookup the instruction number, and find the machine value number
   // that it defines. It could be an instruction, or a PHI.
@@ -1278,7 +1278,7 @@ bool InstrRefBasedLDV::transferDebugInstrRef(MachineInstr &MI,
 
   // Pick a location for the machine value number, if such a location exists.
   // (This information could be stored in TransferTracker to make it faster).
-  Optional<LocIdx> FoundLoc = None;
+  Optional<LocIdx> FoundLoc;
   for (auto Location : MTracker->locations()) {
     LocIdx CurL = Location.Idx;
     ValueIDNum ID = MTracker->readMLoc(CurL);

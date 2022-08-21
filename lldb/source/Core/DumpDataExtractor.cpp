@@ -357,7 +357,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
   offset_t offset = start_offset;
 
-  llvm::Optional<MemoryTagMap> memory_tag_map = llvm::None;
+  llvm::Optional<MemoryTagMap> memory_tag_map;
   if (show_memory_tags && base_addr != LLDB_INVALID_ADDRESS)
     memory_tag_map =
         GetMemoryTags(base_addr, DE.GetByteSize() - offset, exe_scope);
