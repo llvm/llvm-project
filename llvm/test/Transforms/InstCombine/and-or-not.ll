@@ -645,11 +645,7 @@ define i32 @xor_to_xnor4(float %fa, float %fb) {
 
 define i4 @simplify_or_common_op_commute0(i4 %x, i4 %y, i4 %z)  {
 ; CHECK-LABEL: @simplify_or_common_op_commute0(
-; CHECK-NEXT:    [[XY:%.*]] = and i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XYZ:%.*]] = and i4 [[XY]], [[Z:%.*]]
-; CHECK-NEXT:    [[NOT_XYZ:%.*]] = xor i4 [[XYZ]], -1
-; CHECK-NEXT:    [[R:%.*]] = or i4 [[NOT_XYZ]], [[X]]
-; CHECK-NEXT:    ret i4 [[R]]
+; CHECK-NEXT:    ret i4 -1
 ;
   %xy = and i4 %x, %y
   %xyz = and i4 %xy, %z
@@ -660,11 +656,7 @@ define i4 @simplify_or_common_op_commute0(i4 %x, i4 %y, i4 %z)  {
 
 define i4 @simplify_or_common_op_commute1(i4 %x, i4 %y, i4 %z)  {
 ; CHECK-LABEL: @simplify_or_common_op_commute1(
-; CHECK-NEXT:    [[XY:%.*]] = and i4 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[XYZ:%.*]] = and i4 [[XY]], [[Z:%.*]]
-; CHECK-NEXT:    [[NOT_XYZ:%.*]] = xor i4 [[XYZ]], -1
-; CHECK-NEXT:    [[R:%.*]] = or i4 [[NOT_XYZ]], [[X]]
-; CHECK-NEXT:    ret i4 [[R]]
+; CHECK-NEXT:    ret i4 -1
 ;
   %xy = and i4 %y, %x
   %xyz = and i4 %xy, %z
@@ -673,15 +665,11 @@ define i4 @simplify_or_common_op_commute1(i4 %x, i4 %y, i4 %z)  {
   ret i4 %r
 }
 
+; The common operand may bubble through multiple instructions.
+
 define i4 @simplify_or_common_op_commute2(i4 %x, i4 %y, i4 %p, i4 %q)  {
 ; CHECK-LABEL: @simplify_or_common_op_commute2(
-; CHECK-NEXT:    [[Z:%.*]] = mul i4 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[XY:%.*]] = and i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XYZ:%.*]] = and i4 [[Z]], [[XY]]
-; CHECK-NEXT:    [[XYZQ:%.*]] = and i4 [[XYZ]], [[Q:%.*]]
-; CHECK-NEXT:    [[NOT_XYZQ:%.*]] = xor i4 [[XYZQ]], -1
-; CHECK-NEXT:    [[R:%.*]] = or i4 [[NOT_XYZQ]], [[X]]
-; CHECK-NEXT:    ret i4 [[R]]
+; CHECK-NEXT:    ret i4 -1
 ;
   %z = mul i4 %p, %p ; thwart complexity-based canonicalization
   %xy = and i4 %x, %y
@@ -694,12 +682,7 @@ define i4 @simplify_or_common_op_commute2(i4 %x, i4 %y, i4 %p, i4 %q)  {
 
 define <2 x i4> @simplify_or_common_op_commute3(<2 x i4> %x, <2 x i4> %y, <2 x i4> %p)  {
 ; CHECK-LABEL: @simplify_or_common_op_commute3(
-; CHECK-NEXT:    [[Z:%.*]] = mul <2 x i4> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[XY:%.*]] = and <2 x i4> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[XYZ:%.*]] = and <2 x i4> [[Z]], [[XY]]
-; CHECK-NEXT:    [[NOT_XYZ:%.*]] = xor <2 x i4> [[XYZ]], <i4 -1, i4 -1>
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[NOT_XYZ]], [[X]]
-; CHECK-NEXT:    ret <2 x i4> [[R]]
+; CHECK-NEXT:    ret <2 x i4> <i4 -1, i4 -1>
 ;
   %z = mul <2 x i4> %p, %p ; thwart complexity-based canonicalization
   %xy = and <2 x i4> %y, %x
@@ -711,12 +694,8 @@ define <2 x i4> @simplify_or_common_op_commute3(<2 x i4> %x, <2 x i4> %y, <2 x i
 
 define i4 @simplify_and_common_op_commute0(i4 %x, i4 %y, i4 %z)  {
 ; CHECK-LABEL: @simplify_and_common_op_commute0(
-; CHECK-NEXT:    [[XY:%.*]] = or i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    call void @use(i4 [[X]])
-; CHECK-NEXT:    [[XYZ:%.*]] = or i4 [[XY]], [[Z:%.*]]
-; CHECK-NEXT:    [[NOT_XYZ:%.*]] = xor i4 [[XYZ]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i4 [[NOT_XYZ]], [[X]]
-; CHECK-NEXT:    ret i4 [[R]]
+; CHECK-NEXT:    call void @use(i4 [[X:%.*]])
+; CHECK-NEXT:    ret i4 0
 ;
   %xy = or i4 %x, %y
   call void @use(i4 %x)
@@ -728,11 +707,7 @@ define i4 @simplify_and_common_op_commute0(i4 %x, i4 %y, i4 %z)  {
 
 define i4 @simplify_and_common_op_commute1(i4 %x, i4 %y, i4 %z)  {
 ; CHECK-LABEL: @simplify_and_common_op_commute1(
-; CHECK-NEXT:    [[XY:%.*]] = or i4 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[XYZ:%.*]] = or i4 [[XY]], [[Z:%.*]]
-; CHECK-NEXT:    [[NOT_XYZ:%.*]] = xor i4 [[XYZ]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i4 [[NOT_XYZ]], [[X]]
-; CHECK-NEXT:    ret i4 [[R]]
+; CHECK-NEXT:    ret i4 0
 ;
   %xy = or i4 %y, %x
   %xyz = or i4 %xy, %z
@@ -741,15 +716,11 @@ define i4 @simplify_and_common_op_commute1(i4 %x, i4 %y, i4 %z)  {
   ret i4 %r
 }
 
+; The common operand may bubble through multiple instructions.
+
 define i4 @simplify_and_common_op_commute2(i4 %x, i4 %y, i4 %p, i4 %q)  {
 ; CHECK-LABEL: @simplify_and_common_op_commute2(
-; CHECK-NEXT:    [[Z:%.*]] = mul i4 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[XY:%.*]] = or i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XYZ:%.*]] = or i4 [[Z]], [[XY]]
-; CHECK-NEXT:    [[XYZQ:%.*]] = or i4 [[XYZ]], [[Q:%.*]]
-; CHECK-NEXT:    [[NOT_XYZQ:%.*]] = xor i4 [[XYZQ]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i4 [[NOT_XYZQ]], [[X]]
-; CHECK-NEXT:    ret i4 [[R]]
+; CHECK-NEXT:    ret i4 0
 ;
   %z = mul i4 %p, %p ; thwart complexity-based canonicalization
   %xy = or i4 %x, %y
@@ -762,12 +733,7 @@ define i4 @simplify_and_common_op_commute2(i4 %x, i4 %y, i4 %p, i4 %q)  {
 
 define <2 x i4> @simplify_and_common_op_commute3(<2 x i4> %x, <2 x i4> %y, <2 x i4> %p)  {
 ; CHECK-LABEL: @simplify_and_common_op_commute3(
-; CHECK-NEXT:    [[Z:%.*]] = mul <2 x i4> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[XY:%.*]] = or <2 x i4> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[XYZ:%.*]] = or <2 x i4> [[Z]], [[XY]]
-; CHECK-NEXT:    [[NOT_XYZ:%.*]] = xor <2 x i4> [[XYZ]], <i4 -1, i4 -1>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i4> [[NOT_XYZ]], [[X]]
-; CHECK-NEXT:    ret <2 x i4> [[R]]
+; CHECK-NEXT:    ret <2 x i4> zeroinitializer
 ;
   %z = mul <2 x i4> %p, %p ; thwart complexity-based canonicalization
   %xy = or <2 x i4> %y, %x
@@ -776,6 +742,8 @@ define <2 x i4> @simplify_and_common_op_commute3(<2 x i4> %x, <2 x i4> %y, <2 x 
   %r = and <2 x i4> %x, %not_xyz
   ret <2 x i4> %r
 }
+
+; TODO: This should simplify.
 
 define i4 @simplify_and_common_op_use1(i4 %x, i4 %y, i4 %z)  {
 ; CHECK-LABEL: @simplify_and_common_op_use1(
@@ -793,6 +761,8 @@ define i4 @simplify_and_common_op_use1(i4 %x, i4 %y, i4 %z)  {
   %r = and i4 %not_xyz, %x
   ret i4 %r
 }
+
+; TODO: This should simplify.
 
 define i4 @simplify_and_common_op_use2(i4 %x, i4 %y, i4 %z)  {
 ; CHECK-LABEL: @simplify_and_common_op_use2(
@@ -813,9 +783,8 @@ define i4 @simplify_and_common_op_use2(i4 %x, i4 %y, i4 %z)  {
 
 define i4 @reduce_xor_common_op_commute0(i4 %x, i4 %y, i4 %z)  {
 ; CHECK-LABEL: @reduce_xor_common_op_commute0(
-; CHECK-NEXT:    [[XY:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XYZ:%.*]] = xor i4 [[XY]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i4 [[XYZ]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i4 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i4 [[R]]
 ;
   %xy = xor i4 %x, %y
@@ -826,9 +795,8 @@ define i4 @reduce_xor_common_op_commute0(i4 %x, i4 %y, i4 %z)  {
 
 define i4 @reduce_xor_common_op_commute1(i4 %x, i4 %y, i4 %z)  {
 ; CHECK-LABEL: @reduce_xor_common_op_commute1(
-; CHECK-NEXT:    [[XY:%.*]] = xor i4 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[XYZ:%.*]] = xor i4 [[XY]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i4 [[XYZ]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i4 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i4 [[R]]
 ;
   %xy = xor i4 %y, %x
@@ -840,11 +808,9 @@ define i4 @reduce_xor_common_op_commute1(i4 %x, i4 %y, i4 %z)  {
 define i4 @annihilate_xor_common_op_commute2(i4 %x, i4 %y, i4 %p, i4 %q)  {
 ; CHECK-LABEL: @annihilate_xor_common_op_commute2(
 ; CHECK-NEXT:    [[Z:%.*]] = mul i4 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[XY:%.*]] = xor i4 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[XYZ:%.*]] = xor i4 [[Z]], [[XY]]
-; CHECK-NEXT:    [[XYZQ:%.*]] = xor i4 [[XYZ]], [[Q:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor i4 [[XYZQ]], [[X]]
-; CHECK-NEXT:    ret i4 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i4 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i4 [[TMP1]], [[Q:%.*]]
+; CHECK-NEXT:    ret i4 [[TMP2]]
 ;
   %z = mul i4 %p, %p ; thwart complexity-based canonicalization
   %xy = xor i4 %x, %y
@@ -857,9 +823,8 @@ define i4 @annihilate_xor_common_op_commute2(i4 %x, i4 %y, i4 %p, i4 %q)  {
 define <2 x i4> @reduce_xor_common_op_commute3(<2 x i4> %x, <2 x i4> %y, <2 x i4> %p)  {
 ; CHECK-LABEL: @reduce_xor_common_op_commute3(
 ; CHECK-NEXT:    [[Z:%.*]] = mul <2 x i4> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[XY:%.*]] = xor <2 x i4> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[XYZ:%.*]] = xor <2 x i4> [[Z]], [[XY]]
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[XYZ]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i4> [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i4> [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
   %z = mul <2 x i4> %p, %p ; thwart complexity-based canonicalization
