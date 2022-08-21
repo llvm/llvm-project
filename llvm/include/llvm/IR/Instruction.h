@@ -821,7 +821,7 @@ protected:
   template <typename BitfieldElement>
   typename BitfieldElement::Type getSubclassData() const {
     static_assert(
-        std::is_same_v<BitfieldElement, HasMetadataField> ||
+        std::is_same<BitfieldElement, HasMetadataField>::value ||
             !Bitfield::isOverlapping<BitfieldElement, HasMetadataField>(),
         "Must not overlap with the metadata bit");
     return Bitfield::get<BitfieldElement>(getSubclassDataFromValue());
@@ -830,7 +830,7 @@ protected:
   template <typename BitfieldElement>
   void setSubclassData(typename BitfieldElement::Type Value) {
     static_assert(
-        std::is_same_v<BitfieldElement, HasMetadataField> ||
+        std::is_same<BitfieldElement, HasMetadataField>::value ||
             !Bitfield::isOverlapping<BitfieldElement, HasMetadataField>(),
         "Must not overlap with the metadata bit");
     auto Storage = getSubclassDataFromValue();

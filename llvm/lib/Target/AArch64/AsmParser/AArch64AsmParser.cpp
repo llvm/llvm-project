@@ -959,8 +959,8 @@ public:
     if (!isShiftedImm() && (!isImm() || !isa<MCConstantExpr>(getImm())))
       return DiagnosticPredicateTy::NoMatch;
 
-    bool IsByte = std::is_same_v<int8_t, std::make_signed_t<T>> ||
-                  std::is_same_v<int8_t, T>;
+    bool IsByte = std::is_same<int8_t, std::make_signed_t<T>>::value ||
+                  std::is_same<int8_t, T>::value;
     if (auto ShiftedImm = getShiftedVal<8>())
       if (!(IsByte && ShiftedImm->second) &&
           AArch64_AM::isSVECpyImm<T>(uint64_t(ShiftedImm->first)
@@ -977,8 +977,8 @@ public:
     if (!isShiftedImm() && (!isImm() || !isa<MCConstantExpr>(getImm())))
       return DiagnosticPredicateTy::NoMatch;
 
-    bool IsByte = std::is_same_v<int8_t, std::make_signed_t<T>> ||
-                  std::is_same_v<int8_t, T>;
+    bool IsByte = std::is_same<int8_t, std::make_signed_t<T>>::value ||
+                  std::is_same<int8_t, T>::value;
     if (auto ShiftedImm = getShiftedVal<8>())
       if (!(IsByte && ShiftedImm->second) &&
           AArch64_AM::isSVEAddSubImm<T>(ShiftedImm->first
