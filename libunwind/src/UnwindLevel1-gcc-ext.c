@@ -52,7 +52,7 @@ _Unwind_Resume_or_Rethrow(_Unwind_Exception *exception_object) {
     // std::terminate().
   }
 
-  // Call through to _Unwind_Resume() which distiguishes between forced and
+  // Call through to _Unwind_Resume() which distinguishes between forced and
   // regular exceptions.
   _Unwind_Resume(exception_object);
   _LIBUNWIND_ABORT("_Unwind_Resume_or_Rethrow() called _Unwind_RaiseException()"
