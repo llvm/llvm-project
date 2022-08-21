@@ -1522,7 +1522,7 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
   int OffsetStride = IsUnscaled ? TII->getMemScale(FirstMI) : 1;
   bool IsPromotableZeroStore = isPromotableZeroStoreInst(FirstMI);
 
-  Optional<bool> MaybeCanRename = None;
+  Optional<bool> MaybeCanRename;
   if (!EnableRenaming)
     MaybeCanRename = {false};
 

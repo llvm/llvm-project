@@ -134,7 +134,7 @@ static Optional<unsigned> calculateIterationsToInvariance(
   // Place infinity to map to avoid infinite recursion for cycled Phis. Such
   // cycles can never stop on an invariant.
   IterationsToInvariance[Phi] = None;
-  Optional<unsigned> ToInvariance = None;
+  Optional<unsigned> ToInvariance;
 
   if (L->isLoopInvariant(Input))
     ToInvariance = 1u;

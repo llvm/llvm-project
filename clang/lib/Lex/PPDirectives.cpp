@@ -291,7 +291,7 @@ static Optional<StringRef> findSimilarStr(
   size_t Length = LHS.size();
   size_t MaxDist = Length < 3 ? Length - 1 : Length / 3;
 
-  Optional<std::pair<StringRef, size_t>> SimilarStr = None;
+  Optional<std::pair<StringRef, size_t>> SimilarStr;
   for (StringRef C : Candidates) {
     size_t CurDist = LHS.edit_distance(C, true);
     if (CurDist <= MaxDist) {

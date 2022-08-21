@@ -743,7 +743,7 @@ private:
       return {false, None};
     }
 
-    Optional<unsigned> Difference = None;
+    Optional<unsigned> Difference;
     int Diff = TC0 - TC1;
 
     if (Diff > 0)
