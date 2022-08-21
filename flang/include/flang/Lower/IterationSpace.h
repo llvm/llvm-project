@@ -565,7 +565,7 @@ template <typename A>
 bool symbolSetsIntersect(llvm::ArrayRef<FrontEndSymbol> ctrlSet,
                          const A &exprSyms) {
   for (const auto &sym : exprSyms)
-    if (std::find(ctrlSet.begin(), ctrlSet.end(), &sym.get()) != ctrlSet.end())
+    if (llvm::is_contained(ctrlSet, &sym.get()))
       return true;
   return false;
 }

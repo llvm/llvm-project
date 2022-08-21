@@ -894,8 +894,7 @@ getCommonMembersWithInitAliases(const Fortran::semantics::Symbol &common) {
           if (!details->init() || com != &common)
             continue;
           // This is an alias with an init that belongs to the list
-          if (std::find(members.begin(), members.end(), obj.symbol) ==
-              members.end())
+          if (!llvm::is_contained(members, obj.symbol))
             members.emplace_back(obj.symbol);
         }
       }
