@@ -123,8 +123,9 @@ foreach(proj ${LLVM_ENABLE_PROJECTS})
 endforeach()
 foreach(proj "libcxx" "libcxxabi" "libunwind")
   if (${proj} IN_LIST LLVM_ENABLE_PROJECTS)
-    message(WARNING "Using LLVM_ENABLE_PROJECTS=${proj} is deprecated now, please use -DLLVM_ENABLE_RUNTIMES=${proj} or "
-                    "see the instructions at https://libcxx.llvm.org/BuildingLibcxx.html for building the runtimes.")
+    message(FATAL_ERROR
+      "Using LLVM_ENABLE_PROJECTS=${proj} is incorrect. Please use -DLLVM_ENABLE_RUNTIMES=${proj} or "
+      "see the instructions at https://libcxx.llvm.org/BuildingLibcxx.html for building the runtimes.")
   endif()
 endforeach()
 

@@ -13,7 +13,7 @@ INSTALL=cxx_install_dir
 
 mkdir ${BUILD}
 cmake -S ${PWD} -B ${BUILD} \
-      -DLLVM_ENABLE_PROJECTS="libcxx;libcxxabi" \
+      -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo \
       -DCMAKE_INSTALL_PREFIX="${INSTALL}"
 cmake --build ${BUILD} --target install-cxx-headers
