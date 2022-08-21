@@ -5895,7 +5895,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         if (Idx + NumElts <= EENumElts) {
           Cost +=
               TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
-                                    EEVTy, None, Idx, VecTy);
+                                    EEVTy, None, CostKind, Idx, VecTy);
         } else {
           // Need to round up the subvector type vectorization factor to avoid a
           // crash in cost model functions. Make SubVT so that Idx + VF of SubVT
@@ -5904,11 +5904,11 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
               FixedVectorType::get(VecTy->getElementType(), EENumElts - Idx);
           Cost +=
               TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
-                                    EEVTy, None, Idx, SubVT);
+                                    EEVTy, None, CostKind, Idx, SubVT);
         }
       } else {
         Cost += TTIRef.getShuffleCost(TargetTransformInfo::SK_InsertSubvector,
-                                      VecTy, None, 0, EEVTy);
+                                      VecTy, None, CostKind, 0, EEVTy);
       }
     }
   };
@@ -5976,7 +5976,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       assert(VecTy == FinalVecTy &&
              "No reused scalars expected for broadcast.");
       return TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
-                                 /*Mask=*/None, /*Index=*/0,
+                                 /*Mask=*/None, CostKind, /*Index=*/0,
                                  /*SubTp=*/nullptr, /*Args=*/VL[0]);
     }
     InstructionCost ReuseShuffleCost = 0;
@@ -6065,7 +6065,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
           // Add the cost for the subvectors insert.
           for (int I = VF, E = VL.size(); I < E; I += VF)
             GatherCost += TTI->getShuffleCost(TTI::SK_InsertSubvector, VecTy,
-                                              None, I, LoadTy);
+                                              None, CostKind, I, LoadTy);
         }
         return ReuseShuffleCost + GatherCost - ScalarsCost;
       }
@@ -6249,8 +6249,9 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         if (InsertVecSz != VecSz) {
           auto *ActualVecTy =
               FixedVectorType::get(SrcVecTy->getElementType(), VecSz);
-          Cost += TTI->getShuffleCost(TTI::SK_InsertSubvector, ActualVecTy,
-                                      None, OffsetBeg - Offset, InsertVecTy);
+          Cost +=
+              TTI->getShuffleCost(TTI::SK_InsertSubvector, ActualVecTy, None,
+                                  CostKind, OffsetBeg - Offset, InsertVecTy);
         } else {
           for (unsigned I = 0, End = OffsetBeg - Offset; I < End; ++I)
             Mask[I] = I;
