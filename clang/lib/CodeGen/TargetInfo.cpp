@@ -11915,8 +11915,8 @@ llvm::Function *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   auto *Cast = Builder.CreatePointerCast(BlockPtr, InvokeFT->getParamType(0));
   llvm::SmallVector<llvm::Value *, 2> Args;
   Args.push_back(Cast);
-  for (auto I = F->arg_begin() + 1, E = F->arg_end(); I != E; ++I)
-    Args.push_back(I);
+  for (llvm::Argument &A : llvm::drop_begin(F->args()))
+    Args.push_back(&A);
   llvm::CallInst *call = Builder.CreateCall(Invoke, Args);
   call->setCallingConv(Invoke->getCallingConv());
   Builder.CreateRetVoid();
