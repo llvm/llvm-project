@@ -5691,7 +5691,7 @@ void Sema::diagnoseMissingImport(SourceLocation UseLoc, NamedDecl *Decl,
   llvm::SmallVector<Module*, 8> UniqueModules;
   llvm::SmallDenseSet<Module*, 8> UniqueModuleSet;
   for (auto *M : Modules) {
-    if (M->Kind == Module::GlobalModuleFragment)
+    if (M->isGlobalModule() || M->isPrivateModule())
       continue;
     if (UniqueModuleSet.insert(M).second)
       UniqueModules.push_back(M);
