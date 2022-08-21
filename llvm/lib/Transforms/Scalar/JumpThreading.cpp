@@ -2456,7 +2456,7 @@ BasicBlock *JumpThreadingPass::splitBlockPreds(BasicBlock *BB,
   for (auto *NewBB : NewBBs) {
     BlockFrequency NewBBFreq(0);
     Updates.push_back({DominatorTree::Insert, NewBB, BB});
-    for (auto Pred : predecessors(NewBB)) {
+    for (auto *Pred : predecessors(NewBB)) {
       Updates.push_back({DominatorTree::Delete, Pred, BB});
       Updates.push_back({DominatorTree::Insert, Pred, NewBB});
       if (HasProfileData) // Update frequencies between Pred -> NewBB.

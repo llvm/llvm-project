@@ -1898,7 +1898,7 @@ bool InductiveRangeCheckElimination::run(
   LLVMContext &Context = Preheader->getContext();
   SmallVector<InductiveRangeCheck, 16> RangeChecks;
 
-  for (auto BBI : L->getBlocks())
+  for (auto *BBI : L->getBlocks())
     if (BranchInst *TBI = dyn_cast<BranchInst>(BBI->getTerminator()))
       InductiveRangeCheck::extractRangeChecksFromBranch(TBI, L, SE, BPI,
                                                         RangeChecks);
