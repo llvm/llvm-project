@@ -366,9 +366,9 @@ define i32 @reduction_and(i32* nocapture %A, i32* nocapture %B) {
 ; CHECK:       pred.load.continue6:
 ; CHECK-NEXT:    [[TMP38:%.*]] = phi <4 x i32> [ [[TMP28]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP34]], [[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP39:%.*]] = phi <4 x i32> [ [[TMP29]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP37]], [[PRED_LOAD_IF5]] ]
-; CHECK-NEXT:    [[TMP40:%.*]] = and <4 x i32> [[VEC_PHI]], [[TMP38]]
-; CHECK-NEXT:    [[TMP41:%.*]] = and <4 x i32> [[TMP40]], [[TMP39]]
-; CHECK-NEXT:    [[TMP42]] = select <4 x i1> [[TMP0]], <4 x i32> [[TMP41]], <4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP40:%.*]] = and <4 x i32> [[TMP38]], [[TMP39]]
+; CHECK-NEXT:    [[TMP41:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[TMP40]], <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP42]] = and <4 x i32> [[VEC_PHI]], [[TMP41]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
 ; CHECK-NEXT:    [[TMP43:%.*]] = icmp eq i32 [[INDEX_NEXT]], 260
