@@ -131,10 +131,17 @@ if (NOT LIBCXXABI_ENABLE_SHARED AND NOT LIBCXXABI_ENABLE_STATIC)
   message(FATAL_ERROR "libc++abi must be built as either a shared or static library.")
 endif()
 
-# TODO: Remove this, which shouldn't be necessary since we know we're being built
-#       side-by-side with libc++.
 set(LIBCXXABI_LIBCXX_INCLUDES "" CACHE PATH
     "Specify path to libc++ includes.")
+if (NOT libcxx IN_LIST LLVM_ENABLE_RUNTIMES)
+  if (NOT IS_DIRECTORY ${LIBCXXABI_LIBCXX_INCLUDES})
+    message(FATAL_ERROR
+      "LIBCXXABI_LIBCXX_INCLUDES=${LIBCXXABI_LIBCXX_INCLUDES} is not a valid directory. "
+      "Please provide the path to where the libc++ headers have been installed.")
+  endif()
+  add_library(cxx-headers INTERFACE)
+  target_include_directories(cxx-headers INTERFACE "${LIBCXXABI_LIBCXX_INCLUDES}")
+endif()
 
 set(LIBCXXABI_HERMETIC_STATIC_LIBRARY_DEFAULT OFF)
 if (WIN32)
