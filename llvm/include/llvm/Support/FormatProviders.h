@@ -35,7 +35,7 @@ struct use_integral_formatter
 
 template <typename T>
 struct use_char_formatter
-    : public std::integral_constant<bool, std::is_same_v<T, char>> {};
+    : public std::integral_constant<bool, std::is_same<T, char>::value> {};
 
 template <typename T>
 struct is_cstring

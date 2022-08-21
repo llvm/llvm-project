@@ -1032,7 +1032,7 @@ public:
 class ConstantExpr final
     : public FullExpr,
       private llvm::TrailingObjects<ConstantExpr, APValue, uint64_t> {
-  static_assert(std::is_same_v<uint64_t, llvm::APInt::WordType>,
+  static_assert(std::is_same<uint64_t, llvm::APInt::WordType>::value,
                 "ConstantExpr assumes that llvm::APInt::WordType is uint64_t "
                 "for tail-allocated storage");
   friend TrailingObjects;

@@ -147,7 +147,7 @@ build_format_adapter(T &&Item) {
   // would be responsible for consuming it.
   // Make the caller opt into this by calling fmt_consume().
   static_assert(
-      !std::is_same_v<llvm::Error, std::remove_cv_t<T>>,
+      !std::is_same<llvm::Error, std::remove_cv_t<T>>::value,
       "llvm::Error-by-value must be wrapped in fmt_consume() for formatv");
   return stream_operator_format_adapter<T>(std::forward<T>(Item));
 }

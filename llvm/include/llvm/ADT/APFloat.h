@@ -794,9 +794,9 @@ class APFloat : public APFloatBase {
   } U;
 
   template <typename T> static bool usesLayout(const fltSemantics &Semantics) {
-    static_assert(
-        std::is_same_v<T, IEEEFloat> || std::is_same_v<T, DoubleAPFloat>, "");
-    if (std::is_same_v<T, DoubleAPFloat>) {
+    static_assert(std::is_same<T, IEEEFloat>::value ||
+                  std::is_same<T, DoubleAPFloat>::value, "");
+    if (std::is_same<T, DoubleAPFloat>::value) {
       return &Semantics == &PPCDoubleDouble();
     }
     return &Semantics != &PPCDoubleDouble();

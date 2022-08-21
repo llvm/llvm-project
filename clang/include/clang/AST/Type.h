@@ -7315,7 +7315,7 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &PD,
 // not try to look through a qualified type to get to an array type.
 template <typename T>
 using TypeIsArrayType =
-    std::integral_constant<bool, std::is_same_v<T, ArrayType> ||
+    std::integral_constant<bool, std::is_same<T, ArrayType>::value ||
                                      std::is_base_of<ArrayType, T>::value>;
 
 // Member-template getAs<specific type>'.

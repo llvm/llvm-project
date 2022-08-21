@@ -231,7 +231,7 @@ struct cast_convert_val<To, FromTy *, FromTy *> {
 
 template <class X> struct is_simple_type {
   static const bool value =
-      std::is_same_v<X, typename simplify_type<X>::SimpleType>;
+      std::is_same<X, typename simplify_type<X>::SimpleType>::value;
 };
 
 // } // namespace detail
@@ -319,7 +319,7 @@ namespace detail {
 /// A helper to derive the type to use with `Self` for cast traits, when the
 /// provided CRTP derived type is allowed to be void.
 template <typename OptionalDerived, typename Default>
-using SelfType = std::conditional_t<std::is_same_v<OptionalDerived, void>,
+using SelfType = std::conditional_t<std::is_same<OptionalDerived, void>::value,
                                     Default, OptionalDerived>;
 } // namespace detail
 
