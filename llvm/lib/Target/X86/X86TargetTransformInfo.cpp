@@ -286,10 +286,22 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   }
 
   // TODO: Handle more cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput)
+  if (CostKind != TTI::TCK_RecipThroughput) {
+    // Handle some basic single instruction code size cases.
+    if (CostKind == TTI::TCK_CodeSize || CostKind == TTI::TCK_SizeAndLatency) {
+      switch (ISD) {
+      case ISD::FADD:
+      case ISD::FSUB:
+      case ISD::FMUL:
+        return LT.first;
+        break;
+      }
+    }
+
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Opd1PropInfo, Opd2PropInfo, Args,
                                          CxtI);
+  }
 
   static const CostTblEntry GLMCostTable[] = {
     { ISD::FDIV,  MVT::f32,   18 }, // divss
@@ -3426,6 +3438,10 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
       return LT.first * Cost;
     }
+
+    // FSQRT is a single instruction.
+    if (ISD == ISD::FSQRT && CostKind == TTI::TCK_CodeSize)
+      return LT.first;
 
     auto adjustTableCost = [](const CostTblEntry &Entry,
                               InstructionCost LegalizationCost,
