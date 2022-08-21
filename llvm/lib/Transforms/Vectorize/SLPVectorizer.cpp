@@ -2027,7 +2027,7 @@ public:
     LookAheadHeuristics LookAhead(*DL, *SE, *this, /*NumLanes=*/2,
                                   RootLookAheadMaxDepth);
     int BestScore = Limit;
-    Optional<int> Index = None;
+    Optional<int> Index;
     for (int I : seq<int>(0, Candidates.size())) {
       int Score = LookAhead.getScoreAtLevelRec(Candidates[I].first,
                                                Candidates[I].second,
@@ -6935,12 +6935,12 @@ namespace {
 /// value, otherwise.
 struct ValueSelect {
   template <typename U>
-  static typename std::enable_if<std::is_same<Value *, U>::value, Value *>::type
+  static typename std::enable_if<std::is_same_v<Value *, U>, Value *>::type
   get(Value *V) {
     return V;
   }
   template <typename U>
-  static typename std::enable_if<!std::is_same<Value *, U>::value, U>::type
+  static typename std::enable_if<!std::is_same_v<Value *, U>, U>::type
   get(Value *) {
     return U();
   }

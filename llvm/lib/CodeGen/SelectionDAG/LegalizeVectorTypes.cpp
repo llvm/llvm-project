@@ -2579,11 +2579,11 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
                              NewElts](SmallVectorImpl<int> &Mask) {
     SetVector<SDValue> UniqueInputs;
     SetVector<SDValue> UniqueConstantInputs;
-    for (unsigned I = 0; I < array_lengthof(Inputs); ++I) {
-      if (IsConstant(Inputs[I]))
-        UniqueConstantInputs.insert(Inputs[I]);
-      else if (!Inputs[I].isUndef())
-        UniqueInputs.insert(Inputs[I]);
+    for (const auto &I : Inputs) {
+      if (IsConstant(I))
+        UniqueConstantInputs.insert(I);
+      else if (!I.isUndef())
+        UniqueInputs.insert(I);
     }
     // Adjust mask in case of reused inputs. Also, need to insert constant
     // inputs at first, otherwise it affects the final outcome.

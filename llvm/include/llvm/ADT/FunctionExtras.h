@@ -63,7 +63,7 @@ using EnableIfTrivial =
                      std::is_trivially_destructible<T>::value>;
 template <typename CallableT, typename ThisT>
 using EnableUnlessSameType =
-    std::enable_if_t<!std::is_same<remove_cvref_t<CallableT>, ThisT>::value>;
+    std::enable_if_t<!std::is_same_v<remove_cvref_t<CallableT>, ThisT>>;
 template <typename CallableT, typename Ret, typename... Params>
 using EnableIfCallable = std::enable_if_t<std::disjunction<
     std::is_void<Ret>,

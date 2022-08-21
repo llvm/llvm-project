@@ -1419,8 +1419,7 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 // We use enable_if here to prevent that this overload is selected for
 // pointers or other arguments that are implicitly convertible to bool.
 template <typename T>
-inline std::enable_if_t<std::is_same<T, bool>::value,
-                        const StreamingDiagnostic &>
+inline std::enable_if_t<std::is_same_v<T, bool>, const StreamingDiagnostic &>
 operator<<(const StreamingDiagnostic &DB, T I) {
   DB.AddTaggedVal(I, DiagnosticsEngine::ak_sint);
   return DB;
@@ -1462,9 +1461,8 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 // other arguments that derive from DeclContext (e.g., RecordDecls) will not
 // match.
 template <typename T>
-inline std::enable_if_t<
-    std::is_same<std::remove_const_t<T>, DeclContext>::value,
-    const StreamingDiagnostic &>
+inline std::enable_if_t<std::is_same_v<std::remove_const_t<T>, DeclContext>,
+                        const StreamingDiagnostic &>
 operator<<(const StreamingDiagnostic &DB, T *DC) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(DC),
                   DiagnosticsEngine::ak_declcontext);

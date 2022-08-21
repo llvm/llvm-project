@@ -289,7 +289,7 @@ template <typename T> struct iota_range {
 private:
   static_assert(std::is_integral<T>::value || std::is_enum<T>::value,
                 "T must be an integral or enum type");
-  static_assert(std::is_same<T, std::remove_cv_t<T>>::value,
+  static_assert(std::is_same_v<T, std::remove_cv_t<T>>,
                 "T must not be const nor volatile");
 
   iterator BeginValue;

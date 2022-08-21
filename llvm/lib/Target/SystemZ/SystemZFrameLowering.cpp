@@ -301,8 +301,8 @@ SystemZELFFrameLowering::SystemZELFFrameLowering()
   // Create a mapping from register number to save slot offset.
   // These offsets are relative to the start of the register save area.
   RegSpillOffsets.grow(SystemZ::NUM_TARGET_REGS);
-  for (unsigned I = 0, E = array_lengthof(ELFSpillOffsetTable); I != E; ++I)
-    RegSpillOffsets[ELFSpillOffsetTable[I].Reg] = ELFSpillOffsetTable[I].Offset;
+  for (const auto &Entry : ELFSpillOffsetTable)
+    RegSpillOffsets[Entry.Reg] = Entry.Offset;
 }
 
 // Add GPR64 to the save instruction being built by MIB, which is in basic
@@ -906,9 +906,8 @@ SystemZXPLINKFrameLowering::SystemZXPLINKFrameLowering()
   // Create a mapping from register number to save slot offset.
   // These offsets are relative to the start of the local are area.
   RegSpillOffsets.grow(SystemZ::NUM_TARGET_REGS);
-  for (unsigned I = 0, E = array_lengthof(XPLINKSpillOffsetTable); I != E; ++I)
-    RegSpillOffsets[XPLINKSpillOffsetTable[I].Reg] =
-        XPLINKSpillOffsetTable[I].Offset;
+  for (const auto &Entry : XPLINKSpillOffsetTable)
+    RegSpillOffsets[Entry.Reg] = Entry.Offset;
 }
 
 // Checks if the function is a potential candidate for being a XPLeaf routine.

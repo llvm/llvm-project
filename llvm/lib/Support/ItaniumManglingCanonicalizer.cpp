@@ -93,7 +93,7 @@ public:
     // FIXME: Don't canonicalize forward template references for now, because
     // they contain state (the resolved template node) that's not known at their
     // point of creation.
-    if (std::is_same<T, ForwardTemplateReference>::value) {
+    if (std::is_same_v<T, ForwardTemplateReference>) {
       // Note that we don't use if-constexpr here and so we must still write
       // this code in a generic form.
       return {new (RawAlloc.Allocate(sizeof(T), alignof(T)))
