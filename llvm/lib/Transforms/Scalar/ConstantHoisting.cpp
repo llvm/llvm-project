@@ -534,7 +534,7 @@ void ConstantHoistingPass::collectConstantCandidates(Function &Fn) {
 // represented in uint64 we return an "empty" APInt. This is then interpreted
 // as the value is not in range.
 static Optional<APInt> calculateOffsetDiff(const APInt &V1, const APInt &V2) {
-  Optional<APInt> Res = None;
+  Optional<APInt> Res;
   unsigned BW = V1.getBitWidth() > V2.getBitWidth() ?
                 V1.getBitWidth() : V2.getBitWidth();
   uint64_t LimVal1 = V1.getLimitedValue();

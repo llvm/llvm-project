@@ -505,7 +505,7 @@ CPlusPlusNameParser::ParseFullNameImpl() {
   Bookmark start_position = SetBookmark();
   State state = State::Beginning;
   bool continue_parsing = true;
-  Optional<size_t> last_coloncolon_position = None;
+  Optional<size_t> last_coloncolon_position;
 
   while (continue_parsing && HasMoreTokens()) {
     const auto &token = Peek();
