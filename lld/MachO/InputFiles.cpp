@@ -416,8 +416,7 @@ void ObjFile::splitEhFrames(ArrayRef<uint8_t> data, Section &ehFrameSection) {
 template <class T>
 static Section *findContainingSection(const std::vector<Section *> &sections,
                                       T *offset) {
-  static_assert(std::is_same<uint64_t, T>::value ||
-                    std::is_same<uint32_t, T>::value,
+  static_assert(std::is_same_v<uint64_t, T> || std::is_same_v<uint32_t, T>,
                 "unexpected type for offset");
   auto it = std::prev(llvm::upper_bound(
       sections, *offset,
@@ -436,8 +435,7 @@ static Section *findContainingSection(const std::vector<Section *> &sections,
 template <class T>
 static InputSection *findContainingSubsection(const Section &section,
                                               T *offset) {
-  static_assert(std::is_same<uint64_t, T>::value ||
-                    std::is_same<uint32_t, T>::value,
+  static_assert(std::is_same_v<uint64_t, T> || std::is_same_v<uint32_t, T>,
                 "unexpected type for offset");
   auto it = std::prev(llvm::upper_bound(
       section.subsections, *offset,

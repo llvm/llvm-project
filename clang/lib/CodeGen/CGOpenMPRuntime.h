@@ -81,8 +81,8 @@ public:
   template <typename Callable>
   RegionCodeGenTy(
       Callable &&CodeGen,
-      std::enable_if_t<!std::is_same<std::remove_reference_t<Callable>,
-                                     RegionCodeGenTy>::value> * = nullptr)
+      std::enable_if_t<!std::is_same_v<std::remove_reference_t<Callable>,
+                                       RegionCodeGenTy>> * = nullptr)
       : CodeGen(reinterpret_cast<intptr_t>(&CodeGen)),
         Callback(CallbackFn<std::remove_reference_t<Callable>>),
         PrePostAction(nullptr) {}

@@ -579,7 +579,7 @@ public:
   template <typename From>
   Matcher(const Matcher<From> &Other,
           std::enable_if_t<std::is_base_of<From, T>::value &&
-                           !std::is_same<From, T>::value> * = nullptr)
+                           !std::is_same_v<From, T>> * = nullptr)
       : Implementation(restrictMatcher(Other.Implementation)) {
     assert(Implementation.getSupportedKind().isSame(
         ASTNodeKind::getFromNodeKind<T>()));
@@ -590,8 +590,8 @@ public:
   /// The resulting matcher is not strict, i.e. ignores qualifiers.
   template <typename TypeT>
   Matcher(const Matcher<TypeT> &Other,
-          std::enable_if_t<std::is_same<T, QualType>::value &&
-                           std::is_same<TypeT, Type>::value> * = nullptr)
+          std::enable_if_t<std::is_same_v<T, QualType> &&
+                           std::is_same_v<TypeT, Type>> * = nullptr)
       : Implementation(new TypeToQualType<TypeT>(Other)) {}
 
   /// Convert \c this into a \c Matcher<T> by applying dyn_cast<> to the
@@ -904,10 +904,10 @@ public:
 /// PolymorphicMatcher and should be StringRef.
 template <typename T, typename ArgT>
 class HasOverloadedOperatorNameMatcher : public SingleNodeMatcherInterface<T> {
-  static_assert(std::is_same<T, CXXOperatorCallExpr>::value ||
-                std::is_base_of<FunctionDecl, T>::value,
+  static_assert(std::is_same_v<T, CXXOperatorCallExpr> ||
+                    std::is_base_of<FunctionDecl, T>::value,
                 "unsupported class for matcher");
-  static_assert(std::is_same<ArgT, std::vector<std::string>>::value,
+  static_assert(std::is_same_v<ArgT, std::vector<std::string>>,
                 "argument type must be std::vector<std::string>");
 
 public:
@@ -988,7 +988,7 @@ Matcher<ObjCMessageExpr> hasAnySelectorFunc(
 /// not actually used.
 template <typename T, typename DeclMatcherT>
 class HasDeclarationMatcher : public MatcherInterface<T> {
-  static_assert(std::is_same<DeclMatcherT, Matcher<Decl>>::value,
+  static_assert(std::is_same_v<DeclMatcherT, Matcher<Decl>>,
                 "instantiated with wrong types");
 
   DynTypedMatcher InnerMatcher;
@@ -1166,14 +1166,12 @@ private:
 template <typename T>
 struct IsBaseType {
   static const bool value =
-      std::is_same<T, Decl>::value || std::is_same<T, Stmt>::value ||
-      std::is_same<T, QualType>::value || std::is_same<T, Type>::value ||
-      std::is_same<T, TypeLoc>::value ||
-      std::is_same<T, NestedNameSpecifier>::value ||
-      std::is_same<T, NestedNameSpecifierLoc>::value ||
-      std::is_same<T, CXXCtorInitializer>::value ||
-      std::is_same<T, TemplateArgumentLoc>::value ||
-      std::is_same<T, Attr>::value;
+      std::is_same_v<T, Decl> || std::is_same_v<T, Stmt> ||
+      std::is_same_v<T, QualType> || std::is_same_v<T, Type> ||
+      std::is_same_v<T, TypeLoc> || std::is_same_v<T, NestedNameSpecifier> ||
+      std::is_same_v<T, NestedNameSpecifierLoc> ||
+      std::is_same_v<T, CXXCtorInitializer> ||
+      std::is_same_v<T, TemplateArgumentLoc> || std::is_same_v<T, Attr>;
 };
 template <typename T>
 const bool IsBaseType<T>::value;
@@ -2203,13 +2201,13 @@ inline Optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
 /// PolymorphicMatcher and should be std::vector<std::string>>.
 template <typename T, typename ArgT = std::vector<std::string>>
 class HasAnyOperatorNameMatcher : public SingleNodeMatcherInterface<T> {
-  static_assert(std::is_same<T, BinaryOperator>::value ||
-                    std::is_same<T, CXXOperatorCallExpr>::value ||
-                    std::is_same<T, CXXRewrittenBinaryOperator>::value ||
-                    std::is_same<T, UnaryOperator>::value,
+  static_assert(std::is_same_v<T, BinaryOperator> ||
+                    std::is_same_v<T, CXXOperatorCallExpr> ||
+                    std::is_same_v<T, CXXRewrittenBinaryOperator> ||
+                    std::is_same_v<T, UnaryOperator>,
                 "Matcher only supports `BinaryOperator`, `UnaryOperator`, "
                 "`CXXOperatorCallExpr` and `CXXRewrittenBinaryOperator`");
-  static_assert(std::is_same<ArgT, std::vector<std::string>>::value,
+  static_assert(std::is_same_v<ArgT, std::vector<std::string>>,
                 "Matcher ArgT must be std::vector<std::string>");
 
 public:

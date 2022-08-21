@@ -193,10 +193,9 @@ protected:
     this->assertSafeToReferenceAfterResize(From, 0);
     this->assertSafeToReferenceAfterResize(To - 1, 0);
   }
-  template <
-      class ItTy,
-      std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T *>::value,
-                       bool> = false>
+  template <class ItTy,
+            std::enable_if_t<!std::is_same_v<std::remove_const_t<ItTy>, T *>,
+                             bool> = false>
   void assertSafeToReferenceAfterClear(ItTy, ItTy) {}
 
   /// Check whether any part of the range will be invalidated by growing.
@@ -206,10 +205,9 @@ protected:
     this->assertSafeToAdd(From, To - From);
     this->assertSafeToAdd(To - 1, To - From);
   }
-  template <
-      class ItTy,
-      std::enable_if_t<!std::is_same<std::remove_const_t<ItTy>, T *>::value,
-                       bool> = false>
+  template <class ItTy,
+            std::enable_if_t<!std::is_same_v<std::remove_const_t<ItTy>, T *>,
+                             bool> = false>
   void assertSafeToAddRange(ItTy, ItTy) {}
 
   /// Reserve enough space to add one element, and return the updated element
@@ -498,8 +496,8 @@ protected:
   template <typename T1, typename T2>
   static void uninitialized_copy(
       T1 *I, T1 *E, T2 *Dest,
-      std::enable_if_t<std::is_same<typename std::remove_const<T1>::type,
-                                    T2>::value> * = nullptr) {
+      std::enable_if_t<std::is_same_v<typename std::remove_const<T1>::type, T2>>
+          * = nullptr) {
     // Use memcpy for PODs iterated by pointers (which includes SmallVector
     // iterators): std::uninitialized_copy optimizes to memmove, but we can
     // use memcpy here. Note that I and E are iterators and thus might be
@@ -756,8 +754,8 @@ private:
   template <class ArgType> iterator insert_one_impl(iterator I, ArgType &&Elt) {
     // Callers ensure that ArgType is derived from T.
     static_assert(
-        std::is_same<std::remove_const_t<std::remove_reference_t<ArgType>>,
-                     T>::value,
+        std::is_same_v<std::remove_const_t<std::remove_reference_t<ArgType>>,
+                       T>,
         "ArgType must be derived from T!");
 
     if (I == this->end()) {  // Important special case for empty vector.
@@ -780,7 +778,7 @@ private:
 
     // If we just moved the element we're inserting, be sure to update
     // the reference (never happens if TakesParamByValue).
-    static_assert(!TakesParamByValue || std::is_same<ArgType, T>::value,
+    static_assert(!TakesParamByValue || std::is_same_v<ArgType, T>,
                   "ArgType must be 'T' when taking by value!");
     if (!TakesParamByValue && this->isReferenceToRange(EltPtr, I, this->end()))
       ++EltPtr;

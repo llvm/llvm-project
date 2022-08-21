@@ -5411,12 +5411,12 @@ namespace {
 // specialized than primary" check.
 struct GetP2 {
   template <typename T1, typename T2,
-            std::enable_if_t<std::is_same<T1, T2>::value, bool> = true>
+            std::enable_if_t<std::is_same_v<T1, T2>, bool> = true>
   T2 *operator()(T1 *, T2 *P2) {
     return P2;
   }
   template <typename T1, typename T2,
-            std::enable_if_t<!std::is_same<T1, T2>::value, bool> = true>
+            std::enable_if_t<!std::is_same_v<T1, T2>, bool> = true>
   T1 *operator()(T1 *, T2 *) {
     return nullptr;
   }
@@ -5450,7 +5450,7 @@ static TemplateLikeDecl *
 getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
                    PrimaryDel *P2, TemplateDeductionInfo &Info) {
   constexpr bool IsMoreSpecialThanPrimaryCheck =
-      !std::is_same<TemplateLikeDecl, PrimaryDel>::value;
+      !std::is_same_v<TemplateLikeDecl, PrimaryDel>;
 
   bool Better1 = isAtLeastAsSpecializedAs(S, T1, T2, P2, Info);
   if (IsMoreSpecialThanPrimaryCheck && !Better1)

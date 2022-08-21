@@ -415,7 +415,7 @@ QualType QualType::getSingleStepDesugaredTypeImpl(QualType type,
 // APInt member. It should be replaced in favor of ASTContext allocation.
 #define TYPE(CLASS, BASE)                                                      \
   static_assert(std::is_trivially_destructible<CLASS##Type>::value ||          \
-                    std::is_same<CLASS##Type, ConstantArrayType>::value,       \
+                    std::is_same_v<CLASS##Type, ConstantArrayType>,            \
                 #CLASS "Type should be trivially destructible!");
 #include "clang/AST/TypeNodes.inc"
 
