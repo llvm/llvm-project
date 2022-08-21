@@ -307,13 +307,6 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
   Generic_GCC::AddMultiarchPaths(D, SysRoot, OSLibDir, Paths);
 
-  // The deprecated -DLLVM_ENABLE_PROJECTS=libcxx configuration installs
-  // libc++.so in D.Dir+"/../lib/". Detect this path.
-  // TODO Remove once LLVM_ENABLE_PROJECTS=libcxx is unsupported.
-  if (StringRef(D.Dir).startswith(SysRoot) &&
-      D.getVFS().exists(D.Dir + "/../lib/libc++.so"))
-    addPathIfExists(D, D.Dir + "/../lib", Paths);
-
   addPathIfExists(D, concat(SysRoot, "/lib"), Paths);
   addPathIfExists(D, concat(SysRoot, "/usr/lib"), Paths);
 }
