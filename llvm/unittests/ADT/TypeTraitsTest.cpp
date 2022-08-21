@@ -64,16 +64,3 @@ static_assert(is_detected<has_foo_method_t, HasFooMethod>::value,
 static_assert(!is_detected<has_foo_method_t, NoFooMethod>::value,
               "expected no foo method to be detected");
 } // end anonymous namespace
-
-//===----------------------------------------------------------------------===//
-// is_invocable
-//===----------------------------------------------------------------------===//
-
-void invocable_fn(int);
-
-static_assert(is_invocable<decltype(invocable_fn), int>::value,
-              "expected function to be invocable");
-static_assert(!is_invocable<decltype(invocable_fn), void *>::value,
-              "expected function not to be invocable");
-static_assert(!is_invocable<decltype(invocable_fn), int, int>::value,
-              "expected function not to be invocable");
