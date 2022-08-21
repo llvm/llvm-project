@@ -1069,10 +1069,11 @@ public:
   /// passed through \p Args, which helps improve the cost estimation in some
   /// cases, like in broadcast loads.
   /// NOTE: For subvector extractions Tp represents the source type.
-  InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
-                                 ArrayRef<int> Mask = None, int Index = 0,
-                                 VectorType *SubTp = nullptr,
-                                 ArrayRef<const Value *> Args = None) const;
+  InstructionCost
+  getShuffleCost(ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask = None,
+                 TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+                 int Index = 0, VectorType *SubTp = nullptr,
+                 ArrayRef<const Value *> Args = None) const;
 
   /// Represents a hint about the context in which a cast is used.
   ///
@@ -1715,8 +1716,9 @@ public:
       OperandValueProperties Opd1PropInfo, OperandValueProperties Opd2PropInfo,
       ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) = 0;
   virtual InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
-                                         ArrayRef<int> Mask, int Index,
-                                         VectorType *SubTp,
+                                         ArrayRef<int> Mask,
+                                         TTI::TargetCostKind CostKind,
+                                         int Index, VectorType *SubTp,
                                          ArrayRef<const Value *> Args) = 0;
   virtual InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst,
                                            Type *Src, CastContextHint CCH,
@@ -2265,10 +2267,11 @@ public:
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
   }
   InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
-                                 ArrayRef<int> Mask, int Index,
+                                 ArrayRef<int> Mask,
+                                 TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
                                  ArrayRef<const Value *> Args) override {
-    return Impl.getShuffleCost(Kind, Tp, Mask, Index, SubTp, Args);
+    return Impl.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
   }
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    CastContextHint CCH,
