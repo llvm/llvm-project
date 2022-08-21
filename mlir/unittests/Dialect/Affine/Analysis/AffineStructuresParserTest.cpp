@@ -22,7 +22,7 @@ using namespace mlir;
 using namespace presburger;
 
 /// Construct a IntegerPolyhedron from a set of inequality, equality, and
-/// division onstraints.
+/// division constraints.
 static IntegerPolyhedron makeFACFromConstraints(
     unsigned dims, unsigned syms, ArrayRef<SmallVector<int64_t, 4>> ineqs,
     ArrayRef<SmallVector<int64_t, 4>> eqs = {},
@@ -56,7 +56,7 @@ TEST(ParseFACTest, InvalidInputTest) {
 
   fac = parseIntegerSetToFAC("(x)[] : (y == 0)", &context, false);
   EXPECT_TRUE(failed(fac))
-      << "should not accept strings that contain unkown identifiers";
+      << "should not accept strings that contain unknown identifiers";
 
   fac = parseIntegerSetToFAC("(x, x) : (2 * x >= 0)", &context, false);
   EXPECT_TRUE(failed(fac))
