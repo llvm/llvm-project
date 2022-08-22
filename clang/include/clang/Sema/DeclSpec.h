@@ -32,6 +32,7 @@
 #include "clang/Lex/Token.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/ParsedAttr.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -290,7 +291,9 @@ public:
   static const TST TST_typeofExpr = clang::TST_typeofExpr;
   static const TST TST_decltype = clang::TST_decltype;
   static const TST TST_decltype_auto = clang::TST_decltype_auto;
-  static const TST TST_underlyingType = clang::TST_underlyingType;
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
+  static const TST TST_##Trait = clang::TST_##Trait;
+#include "clang/Basic/TransformTypeTraits.def"
   static const TST TST_auto = clang::TST_auto;
   static const TST TST_auto_type = clang::TST_auto_type;
   static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
@@ -333,7 +336,7 @@ private:
   /*TypeSpecifierWidth*/ unsigned TypeSpecWidth : 2;
   /*TSC*/unsigned TypeSpecComplex : 2;
   /*TSS*/unsigned TypeSpecSign : 2;
-  /*TST*/unsigned TypeSpecType : 6;
+  /*TST*/unsigned TypeSpecType : 7;
   unsigned TypeAltiVecVector : 1;
   unsigned TypeAltiVecPixel : 1;
   unsigned TypeAltiVecBool : 1;
@@ -400,8 +403,8 @@ private:
   ObjCDeclSpec *ObjCQualifiers;
 
   static bool isTypeRep(TST T) {
-    return (T == TST_typename || T == TST_typeofType ||
-            T == TST_underlyingType || T == TST_atomic);
+    return T == TST_atomic || T == TST_typename || T == TST_typeofType ||
+           isTransformTypeTrait(T);
   }
   static bool isExprRep(TST T) {
     return (T == TST_typeofExpr || T == TST_decltype || T == TST_bitint);
@@ -417,6 +420,14 @@ public:
     return (T == TST_enum || T == TST_struct ||
             T == TST_interface || T == TST_union ||
             T == TST_class);
+  }
+  static bool isTransformTypeTrait(TST T) {
+    constexpr std::array<TST, 16> Traits = {
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
+#include "clang/Basic/TransformTypeTraits.def"
+    };
+
+    return T >= Traits.front() && T <= Traits.back();
   }
 
   DeclSpec(AttributeFactory &attrFactory)
@@ -522,7 +533,7 @@ public:
   }
 
   SourceRange getTypeofParensRange() const { return TypeofParensRange; }
-  void setTypeofParensRange(SourceRange range) { TypeofParensRange = range; }
+  void setTypeArgumentRange(SourceRange range) { TypeofParensRange = range; }
 
   bool hasAutoTypeSpec() const {
     return (TypeSpecType == TST_auto || TypeSpecType == TST_auto_type ||

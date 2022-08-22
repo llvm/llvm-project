@@ -18,6 +18,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -1021,7 +1022,7 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
     EndLoc = Tok.getAnnotationEndLoc();
     // Unfortunately, we don't know the LParen source location as the annotated
     // token doesn't have it.
-    DS.setTypeofParensRange(SourceRange(SourceLocation(), EndLoc));
+    DS.setTypeArgumentRange(SourceRange(SourceLocation(), EndLoc));
     ConsumeAnnotationToken();
     if (Result.isInvalid()) {
       DS.SetTypeSpecError();
@@ -1085,7 +1086,7 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
 
     // Match the ')'
     T.consumeClose();
-    DS.setTypeofParensRange(T.getRange());
+    DS.setTypeArgumentRange(T.getRange());
     if (T.getCloseLocation().isInvalid()) {
       DS.SetTypeSpecError();
       // FIXME: this should return the location of the last token
@@ -1142,35 +1143,48 @@ void Parser::AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
   PP.AnnotateCachedTokens(Tok);
 }
 
-void Parser::ParseUnderlyingTypeSpecifier(DeclSpec &DS) {
-  assert(Tok.is(tok::kw___underlying_type) &&
-         "Not an underlying type specifier");
-
-  SourceLocation StartLoc = ConsumeToken();
-  BalancedDelimiterTracker T(*this, tok::l_paren);
-  if (T.expectAndConsume(diag::err_expected_lparen_after, "__underlying_type",
-                         tok::r_paren)) {
-    return;
+DeclSpec::TST Parser::TypeTransformTokToDeclSpec() {
+  switch (Tok.getKind()) {
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
+  case tok::kw___##Trait:                                                      \
+    return DeclSpec::TST_##Trait;
+#include "clang/Basic/TransformTypeTraits.def"
+  default:
+    llvm_unreachable("passed in an unhandled type transformation built-in");
   }
+}
+
+bool Parser::MaybeParseTypeTransformTypeSpecifier(DeclSpec &DS) {
+  if (!NextToken().is(tok::l_paren)) {
+    Tok.setKind(tok::identifier);
+    return false;
+  }
+  DeclSpec::TST TypeTransformTST = TypeTransformTokToDeclSpec();
+  SourceLocation StartLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume(diag::err_expected_lparen_after, Tok.getName(),
+                         tok::r_paren))
+    return true;
 
   TypeResult Result = ParseTypeName();
   if (Result.isInvalid()) {
     SkipUntil(tok::r_paren, StopAtSemi);
-    return;
+    return true;
   }
 
-  // Match the ')'
   T.consumeClose();
   if (T.getCloseLocation().isInvalid())
-    return;
+    return true;
 
   const char *PrevSpec = nullptr;
   unsigned DiagID;
-  if (DS.SetTypeSpecType(DeclSpec::TST_underlyingType, StartLoc, PrevSpec,
-                         DiagID, Result.get(),
+  if (DS.SetTypeSpecType(TypeTransformTST, StartLoc, PrevSpec, DiagID,
+                         Result.get(),
                          Actions.getASTContext().getPrintingPolicy()))
     Diag(StartLoc, DiagID) << PrevSpec;
-  DS.setTypeofParensRange(T.getRange());
+  DS.setTypeArgumentRange(T.getRange());
+  return true;
 }
 
 /// ParseBaseTypeSpecifier - Parse a C++ base-type-specifier which is either a
@@ -1525,28 +1539,58 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   if (TagType == DeclSpec::TST_struct && Tok.isNot(tok::identifier) &&
       !Tok.isAnnotation() && Tok.getIdentifierInfo() &&
       Tok.isOneOf(
-          tok::kw___is_abstract, tok::kw___is_aggregate,
-          tok::kw___is_arithmetic, tok::kw___is_array, tok::kw___is_assignable,
-          tok::kw___is_base_of, tok::kw___is_class, tok::kw___is_complete_type,
-          tok::kw___is_compound, tok::kw___is_const, tok::kw___is_constructible,
-          tok::kw___is_convertible, tok::kw___is_convertible_to,
-          tok::kw___is_destructible, tok::kw___is_empty, tok::kw___is_enum,
-          tok::kw___is_floating_point, tok::kw___is_final,
-          tok::kw___is_function, tok::kw___is_fundamental,
-          tok::kw___is_integral, tok::kw___is_interface_class,
-          tok::kw___is_literal, tok::kw___is_lvalue_expr,
-          tok::kw___is_lvalue_reference, tok::kw___is_member_function_pointer,
-          tok::kw___is_member_object_pointer, tok::kw___is_member_pointer,
-          tok::kw___is_nothrow_assignable, tok::kw___is_nothrow_constructible,
-          tok::kw___is_nothrow_destructible, tok::kw___is_object,
-          tok::kw___is_pod, tok::kw___is_pointer, tok::kw___is_polymorphic,
-          tok::kw___is_reference, tok::kw___is_rvalue_expr,
-          tok::kw___is_rvalue_reference, tok::kw___is_same, tok::kw___is_scalar,
-          tok::kw___is_sealed, tok::kw___is_signed,
-          tok::kw___is_standard_layout, tok::kw___is_trivial,
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
+#include "clang/Basic/TransformTypeTraits.def"
+          tok::kw___is_abstract,
+          tok::kw___is_aggregate,
+          tok::kw___is_arithmetic,
+          tok::kw___is_array,
+          tok::kw___is_assignable,
+          tok::kw___is_base_of,
+          tok::kw___is_class,
+          tok::kw___is_complete_type,
+          tok::kw___is_compound,
+          tok::kw___is_const,
+          tok::kw___is_constructible,
+          tok::kw___is_convertible,
+          tok::kw___is_convertible_to,
+          tok::kw___is_destructible,
+          tok::kw___is_empty,
+          tok::kw___is_enum,
+          tok::kw___is_floating_point,
+          tok::kw___is_final,
+          tok::kw___is_function,
+          tok::kw___is_fundamental,
+          tok::kw___is_integral,
+          tok::kw___is_interface_class,
+          tok::kw___is_literal,
+          tok::kw___is_lvalue_expr,
+          tok::kw___is_lvalue_reference,
+          tok::kw___is_member_function_pointer,
+          tok::kw___is_member_object_pointer,
+          tok::kw___is_member_pointer,
+          tok::kw___is_nothrow_assignable,
+          tok::kw___is_nothrow_constructible,
+          tok::kw___is_nothrow_destructible,
+          tok::kw___is_object,
+          tok::kw___is_pod,
+          tok::kw___is_pointer,
+          tok::kw___is_polymorphic,
+          tok::kw___is_reference,
+          tok::kw___is_rvalue_expr,
+          tok::kw___is_rvalue_reference,
+          tok::kw___is_same,
+          tok::kw___is_scalar,
+          tok::kw___is_sealed,
+          tok::kw___is_signed,
+          tok::kw___is_standard_layout,
+          tok::kw___is_trivial,
           tok::kw___is_trivially_assignable,
-          tok::kw___is_trivially_constructible, tok::kw___is_trivially_copyable,
-          tok::kw___is_union, tok::kw___is_unsigned, tok::kw___is_void,
+          tok::kw___is_trivially_constructible,
+          tok::kw___is_trivially_copyable,
+          tok::kw___is_union,
+          tok::kw___is_unsigned,
+          tok::kw___is_void,
           tok::kw___is_volatile))
     // GNU libstdc++ 4.2 and libc++ use certain intrinsic names as the
     // name of struct templates, but some are keywords in GCC >= 4.3
