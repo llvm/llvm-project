@@ -1041,10 +1041,7 @@ public:
   unsigned getMaxInterleaveFactor(unsigned VF) const;
 
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
-  static OperandValueKind getOperandInfo(const Value *V,
-                                         OperandValueProperties &OpProps);
-  static OperandValueKind getOperandInfo(const Value *V);
-
+  static OperandValueInfo getOperandInfo(const Value *V);
 
   /// This is an approximation of reciprocal throughput of a math/logic op.
   /// A higher cost indicates less expected throughput.
