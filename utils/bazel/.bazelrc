@@ -147,6 +147,9 @@ build:clang-cl --cxxopt=/clang:-Wno-c++11-narrowing --host_cxxopt=/clang:-Wno-c+
 # -O1 tries to provide a reasonable tradeoff between compile times and runtime
 # performance. However, if we start running more tests (e.g. all of
 # check-clang) we may want more optimizations.
+# Note for anybody considering using --compilation_mode=opt in CI, it builds
+# most files twice, one PIC version for shared libraries in tests, and one
+# non-PIC version for binaries.
 build:ci --copt=-O1
 
 ###############################################################################
