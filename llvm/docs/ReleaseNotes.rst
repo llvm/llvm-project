@@ -197,9 +197,9 @@ The change may affect the current use of ``half`` includes (but is not limited
 to):
 
 * Frontends generating ``half`` type in function passing and/or returning
-arguments.
+  arguments.
 * Downstream runtimes providing any ``half`` conversion builtins assuming the
-old ABI.
+  old ABI.
 * Projects built with LLVM 15.0 but using early versions of compiler-rt.
 
 When you find failures with ``half`` type, check the calling conversion of the
