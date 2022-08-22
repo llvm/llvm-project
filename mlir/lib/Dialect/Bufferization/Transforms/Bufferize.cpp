@@ -351,17 +351,6 @@ protected:
     if (!options.isOpAllowed(op) || (opFilter && !opFilter->isOpAllowed(op)))
       return;
 
-#ifndef NDEBUG
-    // Read-only tensor ops may be created during bufferization. Ops that are
-    // writing should not be created because such ops were never analyzed.
-    // Bufferizing such ops could introduce a RaW conflict.
-    for (OpOperand &operand : op->getOpOperands())
-      if (operand.get().getType().isa<TensorType>())
-        assert(!analysisState.bufferizesToMemoryWrite(operand) &&
-               "creating tensor ops that bufferize to a memory write is not "
-               "allowed during bufferization");
-#endif // NDEBUG
-
     // Add op to worklist.
     worklist.push_back(op);
   }

@@ -765,6 +765,9 @@ public:
   /// If the target supports tail calls.
   bool supportsTailCalls() const;
 
+  /// If target supports tail call on \p CB
+  bool supportsTailCallFor(const CallBase *CB) const;
+
   /// Don't restrict interleaved unrolling to small loops.
   bool enableAggressiveInterleaving(bool LoopHasReductions) const;
 
@@ -1032,6 +1035,8 @@ public:
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   static OperandValueKind getOperandInfo(const Value *V,
                                          OperandValueProperties &OpProps);
+  static OperandValueKind getOperandInfo(const Value *V);
+
 
   /// This is an approximation of reciprocal throughput of a math/logic op.
   /// A higher cost indicates less expected throughput.
@@ -1067,10 +1072,11 @@ public:
   /// passed through \p Args, which helps improve the cost estimation in some
   /// cases, like in broadcast loads.
   /// NOTE: For subvector extractions Tp represents the source type.
-  InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
-                                 ArrayRef<int> Mask = None, int Index = 0,
-                                 VectorType *SubTp = nullptr,
-                                 ArrayRef<const Value *> Args = None) const;
+  InstructionCost
+  getShuffleCost(ShuffleKind Kind, VectorType *Tp, ArrayRef<int> Mask = None,
+                 TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+                 int Index = 0, VectorType *SubTp = nullptr,
+                 ArrayRef<const Value *> Args = None) const;
 
   /// Represents a hint about the context in which a cast is used.
   ///
@@ -1173,6 +1179,7 @@ public:
   getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                   unsigned AddressSpace,
                   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+                  OperandValueKind OpdInfo = OK_AnyValue,
                   const Instruction *I = nullptr) const;
 
   /// \return The cost of VP Load and Store instructions.
@@ -1631,6 +1638,7 @@ public:
                                    ArrayRef<Type *> Tys) = 0;
   virtual bool supportsEfficientVectorElementLoadStore() = 0;
   virtual bool supportsTailCalls() = 0;
+  virtual bool supportsTailCallFor(const CallBase *CB) = 0;
   virtual bool enableAggressiveInterleaving(bool LoopHasReductions) = 0;
   virtual MemCmpExpansionOptions
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const = 0;
@@ -1712,8 +1720,9 @@ public:
       OperandValueProperties Opd1PropInfo, OperandValueProperties Opd2PropInfo,
       ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) = 0;
   virtual InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
-                                         ArrayRef<int> Mask, int Index,
-                                         VectorType *SubTp,
+                                         ArrayRef<int> Mask,
+                                         TTI::TargetCostKind CostKind,
+                                         int Index, VectorType *SubTp,
                                          ArrayRef<const Value *> Args) = 0;
   virtual InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst,
                                            Type *Src, CastContextHint CCH,
@@ -1740,11 +1749,10 @@ public:
                             const APInt &DemandedDstElts,
                             TTI::TargetCostKind CostKind) = 0;
 
-  virtual InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src,
-                                          Align Alignment,
-                                          unsigned AddressSpace,
-                                          TTI::TargetCostKind CostKind,
-                                          const Instruction *I) = 0;
+  virtual InstructionCost
+  getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                  unsigned AddressSpace, TTI::TargetCostKind CostKind,
+                  OperandValueKind OpdInfo, const Instruction *I) = 0;
   virtual InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src,
                                             Align Alignment,
                                             unsigned AddressSpace,
@@ -2105,6 +2113,9 @@ public:
   }
 
   bool supportsTailCalls() override { return Impl.supportsTailCalls(); }
+  bool supportsTailCallFor(const CallBase *CB) override {
+    return Impl.supportsTailCallFor(CB);
+  }
 
   bool enableAggressiveInterleaving(bool LoopHasReductions) override {
     return Impl.enableAggressiveInterleaving(LoopHasReductions);
@@ -2263,10 +2274,11 @@ public:
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
   }
   InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
-                                 ArrayRef<int> Mask, int Index,
+                                 ArrayRef<int> Mask,
+                                 TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
                                  ArrayRef<const Value *> Args) override {
-    return Impl.getShuffleCost(Kind, Tp, Mask, Index, SubTp, Args);
+    return Impl.getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp, Args);
   }
   InstructionCost getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                    CastContextHint CCH,
@@ -2307,9 +2319,10 @@ public:
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,
+                                  OperandValueKind OpdInfo,
                                   const Instruction *I) override {
-    return Impl.getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                CostKind, I);
+    return Impl.getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
+                                OpdInfo, I);
   }
   InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                     unsigned AddressSpace,

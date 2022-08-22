@@ -2249,7 +2249,8 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
 
   ElementCount LegalVF = LT.second.getVectorElementCount();
   InstructionCost MemOpCost =
-      getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind, I);
+      getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind,
+                      TTI::OK_AnyValue, I);
   // Add on an overhead cost for using gathers/scatters.
   // TODO: At the moment this is applied unilaterally for all CPUs, but at some
   // point we may want a per-CPU overhead.
@@ -2265,6 +2266,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 MaybeAlign Alignment,
                                                 unsigned AddressSpace,
                                                 TTI::TargetCostKind CostKind,
+                                                TTI::OperandValueKind OpdInfo,
                                                 const Instruction *I) {
   EVT VT = TLI->getValueType(DL, Ty, true);
   // Type legalization can't handle structs
@@ -2816,8 +2818,9 @@ InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index) {
 
 InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                VectorType *Tp,
-                                               ArrayRef<int> Mask, int Index,
-                                               VectorType *SubTp,
+                                               ArrayRef<int> Mask,
+                                               TTI::TargetCostKind CostKind,
+                                               int Index, VectorType *SubTp,
                                                ArrayRef<const Value *> Args) {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
   // If we have a Mask, and the LT is being legalized somehow, split the Mask
@@ -2875,7 +2878,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       if (NumSources <= 2)
         Cost += getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
-                               NTp, NMask, 0, nullptr, Args);
+                               NTp, NMask, CostKind, 0, nullptr, Args);
       else if (any_of(enumerate(NMask), [&](const auto &ME) {
                  return ME.value() % LTNumElts == ME.index();
                }))
@@ -2906,8 +2909,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
-      Kind == TTI::SK_Reverse) {
-
+      Kind == TTI::SK_Reverse || Kind == TTI::SK_Splice) {
     static const CostTblEntry ShuffleTbl[] = {
       // Broadcast shuffle kinds can be performed with 'dup'.
       { TTI::SK_Broadcast, MVT::v8i8,  1 },
@@ -2968,6 +2970,21 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       { TTI::SK_Reverse, MVT::v4f16, 1 }, // REV64
       { TTI::SK_Reverse, MVT::v4i16, 1 }, // REV64
       { TTI::SK_Reverse, MVT::v8i8, 1 }, // REV64
+      // Splice can all be lowered as `ext`.
+      { TTI::SK_Splice, MVT::v2i32, 1 },
+      { TTI::SK_Splice, MVT::v4i32, 1 },
+      { TTI::SK_Splice, MVT::v2i64, 1 },
+      { TTI::SK_Splice, MVT::v2f32, 1 },
+      { TTI::SK_Splice, MVT::v4f32, 1 },
+      { TTI::SK_Splice, MVT::v2f64, 1 },
+      { TTI::SK_Splice, MVT::v8f16, 1 },
+      { TTI::SK_Splice, MVT::v8bf16, 1 },
+      { TTI::SK_Splice, MVT::v8i16, 1 },
+      { TTI::SK_Splice, MVT::v16i8, 1 },
+      { TTI::SK_Splice, MVT::v4bf16, 1 },
+      { TTI::SK_Splice, MVT::v4f16, 1 },
+      { TTI::SK_Splice, MVT::v4i16, 1 },
+      { TTI::SK_Splice, MVT::v8i8, 1 },
       // Broadcast shuffle kinds for scalable vectors
       { TTI::SK_Broadcast, MVT::nxv16i8,  1 },
       { TTI::SK_Broadcast, MVT::nxv8i16,  1 },
@@ -3025,7 +3042,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
 
 bool AArch64TTIImpl::preferPredicateOverEpilogue(

@@ -529,7 +529,7 @@ private:
 #ifndef NDEBUG
 static void printLoopVector(const LoopVector &LV) {
   dbgs() << "****************************\n";
-  for (auto L : LV)
+  for (auto *L : LV)
     printLoop(*L, dbgs());
   dbgs() << "****************************\n";
 }
@@ -743,7 +743,7 @@ private:
       return {false, None};
     }
 
-    Optional<unsigned> Difference = None;
+    Optional<unsigned> Difference;
     int Diff = TC0 - TC1;
 
     if (Diff > 0)

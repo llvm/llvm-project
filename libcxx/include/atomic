@@ -1673,7 +1673,7 @@ struct __atomic_base<_Tp, true>
 {
     typedef __atomic_base<_Tp, false> __base;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     __atomic_base() _NOEXCEPT = default;
 
     _LIBCPP_INLINE_VISIBILITY

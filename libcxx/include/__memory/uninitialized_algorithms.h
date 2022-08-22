@@ -501,7 +501,7 @@ constexpr void __uninitialized_allocator_value_construct_n(_Alloc& __alloc, _Bid
 
 // Destroy all elements in [__first, __last) from left to right using allocator destruction.
 template <class _Alloc, class _Iter, class _Sent>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 void
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 __allocator_destroy(_Alloc& __alloc, _Iter __first, _Sent __last) {
   for (; __first != __last; ++__first)
      allocator_traits<_Alloc>::destroy(__alloc, std::__to_address(__first));
@@ -510,11 +510,11 @@ __allocator_destroy(_Alloc& __alloc, _Iter __first, _Sent __last) {
 template <class _Alloc, class _Iter>
 class _AllocatorDestroyRangeReverse {
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
   _AllocatorDestroyRangeReverse(_Alloc& __alloc, _Iter& __first, _Iter& __last)
       : __alloc_(__alloc), __first_(__first), __last_(__last) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 void operator()() const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void operator()() const {
     std::__allocator_destroy(__alloc_, std::reverse_iterator<_Iter>(__last_), std::reverse_iterator<_Iter>(__first_));
   }
 
@@ -529,7 +529,7 @@ private:
 // The caller has to ensure that __first2 can hold at least N uninitialized elements. If an exception is thrown the
 // already copied elements are destroyed in reverse order of their construction.
 template <class _Alloc, class _Iter1, class _Sent1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _Iter2
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2
 __uninitialized_allocator_copy(_Alloc& __alloc, _Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
 #ifndef _LIBCPP_NO_EXCEPTIONS
   auto __destruct_first = __first2;
@@ -562,7 +562,7 @@ template <class _Alloc,
               // using _RawType because of the allocator<T const> extension
               is_trivially_copy_constructible<_RawType>::value && is_trivially_copy_assignable<_RawType>::value &&
               __allocator_has_trivial_copy_construct<_Alloc, _RawType>::value>* = nullptr>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _Type*
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Type*
 __uninitialized_allocator_copy(_Alloc&, const _Type* __first1, const _Type* __last1, _Type* __first2) {
   // TODO: Remove the const_cast once we drop support for std::allocator<T const>
   if (__libcpp_is_constant_evaluated()) {
@@ -583,7 +583,7 @@ __uninitialized_allocator_copy(_Alloc&, const _Type* __first1, const _Type* __la
 // Otherwise try to copy all elements. If an exception is thrown the already copied
 // elements are destroyed in reverse order of their construction.
 template <class _Alloc, class _Iter1, class _Sent1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _Iter2 __uninitialized_allocator_move_if_noexcept(
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2 __uninitialized_allocator_move_if_noexcept(
     _Alloc& __alloc, _Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
   static_assert(__is_cpp17_move_insertable<_Alloc>::value,
                 "The specified type does not meet the requirements of Cpp17MoveInsertable");
@@ -623,7 +623,7 @@ template <
     class _Type = typename iterator_traits<_Iter1>::value_type,
     class = __enable_if_t<is_trivially_move_constructible<_Type>::value && is_trivially_move_assignable<_Type>::value &&
                           __allocator_has_trivial_move_construct<_Alloc, _Type>::value> >
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _Iter2
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2
 __uninitialized_allocator_move_if_noexcept(_Alloc&, _Iter1 __first1, _Iter1 __last1, _Iter2 __first2) {
   if (__libcpp_is_constant_evaluated()) {
     while (__first1 != __last1) {

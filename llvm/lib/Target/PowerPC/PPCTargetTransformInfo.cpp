@@ -1003,8 +1003,9 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
 }
 
 InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
-                                           ArrayRef<int> Mask, int Index,
-                                           Type *SubTp,
+                                           ArrayRef<int> Mask,
+                                           TTI::TargetCostKind CostKind,
+                                           int Index, Type *SubTp,
                                            ArrayRef<const Value *> Args) {
 
   InstructionCost CostFactor =
@@ -1145,6 +1146,7 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             MaybeAlign Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
+                                            TTI::OperandValueKind OpdInfo,
                                             const Instruction *I) {
 
   InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Src, nullptr);
@@ -1458,4 +1460,20 @@ InstructionCost PPCTTIImpl::getVPMemoryOpCost(unsigned Opcode, Type *Src,
   // model the cost of legalization. Currently we can only lower intrinsics with
   // evl but no mask, on Power 9/10. Otherwise, we must scalarize.
   return getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
+}
+
+bool PPCTTIImpl::supportsTailCallFor(const CallBase *CB) const {
+  // Subtargets using PC-Relative addressing supported.
+  if (ST->isUsingPCRelativeCalls())
+    return true;
+
+  const Function *Callee = CB->getCalledFunction();
+  // Indirect calls and variadic argument functions not supported.
+  if (!Callee || Callee->isVarArg())
+    return false;
+
+  const Function *Caller = CB->getCaller();
+  // Support if we can share TOC base.
+  return ST->getTargetMachine().shouldAssumeDSOLocal(*Caller->getParent(),
+                                                     Callee);
 }

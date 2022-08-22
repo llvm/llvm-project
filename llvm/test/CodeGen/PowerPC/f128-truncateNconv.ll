@@ -627,7 +627,6 @@ define zeroext i32 @qpConv2uw(fp128* nocapture readonly %a)  {
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    xscvqpuwz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: qpConv2uw:
@@ -707,7 +706,6 @@ define zeroext i32 @qpConv2uw_03(fp128* nocapture readonly %a)  {
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    xscvqpuwz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: qpConv2uw_03:
@@ -964,7 +962,6 @@ define zeroext i16 @qpConv2uhw(fp128* nocapture readonly %a) {
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    xscvqpswz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: qpConv2uhw:
@@ -1042,7 +1039,6 @@ define zeroext i16 @qpConv2uhw_03(fp128* nocapture readonly %a) {
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    xscvqpswz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: qpConv2uhw_03:
@@ -1296,7 +1292,6 @@ define zeroext i8 @qpConv2ub(fp128* nocapture readonly %a) {
 ; CHECK-NEXT:    lxv v2, 0(r3)
 ; CHECK-NEXT:    xscvqpswz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: qpConv2ub:
@@ -1374,7 +1369,6 @@ define zeroext i8 @qpConv2ub_03(fp128* nocapture readonly %a) {
 ; CHECK-NEXT:    xsaddqp v2, v2, v3
 ; CHECK-NEXT:    xscvqpswz v2, v2
 ; CHECK-NEXT:    mfvsrwz r3, v2
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: qpConv2ub_03:

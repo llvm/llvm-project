@@ -155,6 +155,36 @@ bool Mul(InterpState &S, CodePtr OpPC) {
 }
 
 //===----------------------------------------------------------------------===//
+// Inv
+//===----------------------------------------------------------------------===//
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool Inv(InterpState &S, CodePtr OpPC) {
+  using BoolT = PrimConv<PT_Bool>::T;
+  const T &Val = S.Stk.pop<T>();
+  const unsigned Bits = Val.bitWidth();
+  Boolean R;
+  Boolean::inv(BoolT::from(Val, Bits), &R);
+
+  S.Stk.push<BoolT>(R);
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+// Neg
+//===----------------------------------------------------------------------===//
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool Neg(InterpState &S, CodePtr OpPC) {
+  const T &Val = S.Stk.pop<T>();
+  T Result;
+  T::neg(Val, &Result);
+
+  S.Stk.push<T>(Result);
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
 // EQ, NE, GT, GE, LT, LE
 //===----------------------------------------------------------------------===//
 

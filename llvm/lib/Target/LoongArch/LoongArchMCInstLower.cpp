@@ -13,6 +13,8 @@
 
 #include "LoongArch.h"
 #include "LoongArchSubtarget.h"
+#include "MCTargetDesc/LoongArchBaseInfo.h"
+#include "MCTargetDesc/LoongArchMCExpr.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -25,8 +27,28 @@ using namespace llvm;
 static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
                                     const AsmPrinter &AP) {
   MCContext &Ctx = AP.OutContext;
+  LoongArchMCExpr::VariantKind Kind;
 
-  // TODO: Processing target flags.
+  switch (MO.getTargetFlags()) {
+  default:
+    llvm_unreachable("Unknown target flag on GV operand");
+  case LoongArchII::MO_None:
+    Kind = LoongArchMCExpr::VK_LoongArch_None;
+    break;
+  case LoongArchII::MO_CALL:
+    Kind = LoongArchMCExpr::VK_LoongArch_CALL;
+    break;
+  case LoongArchII::MO_CALL_PLT:
+    Kind = LoongArchMCExpr::VK_LoongArch_CALL_PLT;
+    break;
+  case LoongArchII::MO_PCREL_HI:
+    Kind = LoongArchMCExpr::VK_LoongArch_PCREL_HI;
+    break;
+  case LoongArchII::MO_PCREL_LO:
+    Kind = LoongArchMCExpr::VK_LoongArch_PCREL_LO;
+    break;
+    // TODO: Handle more target-flags.
+  }
 
   const MCExpr *ME =
       MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, Ctx);
@@ -35,6 +57,8 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     ME = MCBinaryExpr::createAdd(
         ME, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
 
+  if (Kind != LoongArchMCExpr::VK_LoongArch_None)
+    ME = LoongArchMCExpr::create(ME, Kind, Ctx);
   return MCOperand::createExpr(ME);
 }
 

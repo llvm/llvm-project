@@ -2145,7 +2145,7 @@ bool llvm::promoteLoopAccessesToScalars(
 
   // Look at all the loop uses, and try to merge their locations.
   std::vector<const DILocation *> LoopUsesLocs;
-  for (auto U : LoopUses)
+  for (auto *U : LoopUses)
     LoopUsesLocs.push_back(U->getDebugLoc().get());
   auto DL = DebugLoc(DILocation::getMergedLocations(LoopUsesLocs));
 

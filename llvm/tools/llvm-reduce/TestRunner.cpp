@@ -8,7 +8,7 @@
 
 #include "TestRunner.h"
 #include "ReducerWorkItem.h"
-#include "llvm/CodeGen/MachineFunction.h"
+#include "deltas/Utils.h"
 
 using namespace llvm;
 
@@ -33,9 +33,15 @@ int TestRunner::run(StringRef Filename) {
   ProgramArgs.push_back(Filename);
 
   std::string ErrMsg;
-  int Result = sys::ExecuteAndWait(
-      TestName, ProgramArgs, /*Env=*/None, /*Redirects=*/None,
-      /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
+  SmallVector<Optional<StringRef>, 3> Redirects;
+  Optional<StringRef> Empty = StringRef();
+  if (!Verbose) {
+    for (int i = 0; i < 3; ++i)
+      Redirects.push_back(Empty);
+  }
+  int Result =
+      sys::ExecuteAndWait(TestName, ProgramArgs, /*Env=*/None, Redirects,
+                          /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
 
   if (Result < 0) {
     Error E = make_error<StringError>("Error running interesting-ness test: " +

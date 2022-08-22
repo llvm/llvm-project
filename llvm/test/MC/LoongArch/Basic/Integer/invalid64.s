@@ -31,15 +31,15 @@ bstrpick.d $a0, $a0, 64, 0
 
 ## simm12
 addi.d $a0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:18: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:18: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 lu52i.d $a0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:19: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:19: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.wu $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:17: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.d $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 st.d $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 ## simm14_lsl2
 ldptr.w $a0, $a0, -32772

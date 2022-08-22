@@ -974,7 +974,7 @@ static bool hasOnlyUniformBranches(Region *R, unsigned UniformMDKindID,
   // Count of how many direct children are conditional.
   unsigned ConditionalDirectChildren = 0;
 
-  for (auto E : R->elements()) {
+  for (auto *E : R->elements()) {
     if (!E->isSubRegion()) {
       auto Br = dyn_cast<BranchInst>(E->getEntry()->getTerminator());
       if (!Br || !Br->isConditional())
@@ -998,7 +998,7 @@ static bool hasOnlyUniformBranches(Region *R, unsigned UniformMDKindID,
       // their direct child basic blocks' terminators, regardless of whether
       // subregions are uniform or not. However, this requires a very careful
       // look at SIAnnotateControlFlow to make sure nothing breaks there.
-      for (auto BB : E->getNodeAs<Region>()->blocks()) {
+      for (auto *BB : E->getNodeAs<Region>()->blocks()) {
         auto Br = dyn_cast<BranchInst>(BB->getTerminator());
         if (!Br || !Br->isConditional())
           continue;

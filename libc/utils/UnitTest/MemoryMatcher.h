@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_UTILS_UNITTEST_MEMORY_MATCHER_H
 #define LLVM_LIBC_UTILS_UNITTEST_MEMORY_MATCHER_H
 
-#include "src/__support/CPP/ArrayRef.h"
+#include "src/__support/CPP/span.h"
 
 #include "utils/UnitTest/Test.h"
 
@@ -17,7 +17,7 @@ namespace __llvm_libc {
 namespace memory {
 namespace testing {
 
-using MemoryView = __llvm_libc::cpp::ArrayRef<char>;
+using MemoryView = __llvm_libc::cpp::span<const char>;
 
 class MemoryMatcher : public __llvm_libc::testing::Matcher<MemoryView> {
   MemoryView expected;

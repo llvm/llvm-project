@@ -16,7 +16,6 @@ define dso_local i24 @_Z1f1c(i24 %g.coerce) local_unnamed_addr #0 {
 ; CHECK-LE-NEXT:    xsmuldp f0, f0, f1
 ; CHECK-LE-NEXT:    xscvdpsxws f0, f0
 ; CHECK-LE-NEXT:    mffprwz r3, f0
-; CHECK-LE-NEXT:    clrldi r3, r3, 32
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: _Z1f1c:
@@ -31,7 +30,6 @@ define dso_local i24 @_Z1f1c(i24 %g.coerce) local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    fctiwz f0, f0
 ; CHECK-BE-NEXT:    stfd f0, -8(r1)
 ; CHECK-BE-NEXT:    lwz r3, -4(r1)
-; CHECK-BE-NEXT:    clrldi r3, r3, 32
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = and i24 %g.coerce, 255

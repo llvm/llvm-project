@@ -4267,8 +4267,7 @@ void LSRInstance::GenerateCrossUseConstantOffsets() {
       ImmMapTy::const_iterator OtherImms[] = {
           Imms.begin(), std::prev(Imms.end()),
          Imms.lower_bound(Avg)};
-      for (size_t i = 0, e = array_lengthof(OtherImms); i != e; ++i) {
-        ImmMapTy::const_iterator M = OtherImms[i];
+      for (const auto &M : OtherImms) {
         if (M == J || M == JE) continue;
 
         // Compute the difference between the two.

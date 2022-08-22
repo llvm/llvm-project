@@ -343,6 +343,10 @@ public:
 
   bool supportsTailCalls() const { return true; }
 
+  bool supportsTailCallFor(const CallBase *CB) const {
+    return supportsTailCalls();
+  }
+
   bool enableAggressiveInterleaving(bool LoopHasReductions) const {
     return false;
   }
@@ -510,7 +514,8 @@ public:
   }
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Ty,
-                                 ArrayRef<int> Mask, int Index,
+                                 ArrayRef<int> Mask,
+                                 TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
                                  ArrayRef<const Value *> Args = None) const {
     return 1;
@@ -595,6 +600,7 @@ public:
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,
+                                  TTI::OperandValueKind OpdInfo,
                                   const Instruction *I) const {
     return 1;
   }
@@ -1099,9 +1105,10 @@ public:
     case Instruction::Store: {
       auto *SI = cast<StoreInst>(U);
       Type *ValTy = U->getOperand(0)->getType();
+      TTI::OperandValueKind OpVK = TTI::getOperandInfo(U->getOperand(0));
       return TargetTTI->getMemoryOpCost(Opcode, ValTy, SI->getAlign(),
-                                        SI->getPointerAddressSpace(),
-                                        CostKind, I);
+                                        SI->getPointerAddressSpace(), CostKind,
+                                        OpVK, I);
     }
     case Instruction::Load: {
       // FIXME: Arbitary cost which could come from the backend.
@@ -1122,8 +1129,8 @@ public:
           LoadType = TI->getDestTy();
       }
       return TargetTTI->getMemoryOpCost(Opcode, LoadType, LI->getAlign(),
-                                        LI->getPointerAddressSpace(),
-                                        CostKind, I);
+                                        LI->getPointerAddressSpace(), CostKind,
+                                        TTI::OK_AnyValue, I);
     }
     case Instruction::Select: {
       const Value *Op0, *Op1;
@@ -1183,13 +1190,13 @@ public:
 
         if (Shuffle->isExtractSubvectorMask(SubIndex))
           return TargetTTI->getShuffleCost(TTI::SK_ExtractSubvector, VecSrcTy,
-                                           Shuffle->getShuffleMask(), SubIndex,
-                                           VecTy, Operands);
+                                           Shuffle->getShuffleMask(), CostKind,
+                                           SubIndex, VecTy, Operands);
 
         if (Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex))
           return TargetTTI->getShuffleCost(
               TTI::SK_InsertSubvector, VecTy, Shuffle->getShuffleMask(),
-              SubIndex,
+              CostKind, SubIndex,
               FixedVectorType::get(VecTy->getScalarType(), NumSubElts),
               Operands);
 
@@ -1214,37 +1221,38 @@ public:
 
       if (Shuffle->isReverse())
         return TargetTTI->getShuffleCost(TTI::SK_Reverse, VecTy,
-                                         Shuffle->getShuffleMask(), 0, nullptr,
-                                         Operands);
+                                         Shuffle->getShuffleMask(), CostKind, 0,
+                                         nullptr, Operands);
 
       if (Shuffle->isSelect())
         return TargetTTI->getShuffleCost(TTI::SK_Select, VecTy,
-                                         Shuffle->getShuffleMask(), 0, nullptr,
-                                         Operands);
+                                         Shuffle->getShuffleMask(), CostKind, 0,
+                                         nullptr, Operands);
 
       if (Shuffle->isTranspose())
         return TargetTTI->getShuffleCost(TTI::SK_Transpose, VecTy,
-                                         Shuffle->getShuffleMask(), 0, nullptr,
-                                         Operands);
+                                         Shuffle->getShuffleMask(), CostKind, 0,
+                                         nullptr, Operands);
 
       if (Shuffle->isZeroEltSplat())
         return TargetTTI->getShuffleCost(TTI::SK_Broadcast, VecTy,
-                                         Shuffle->getShuffleMask(), 0, nullptr,
-                                         Operands);
+                                         Shuffle->getShuffleMask(), CostKind, 0,
+                                         nullptr, Operands);
 
       if (Shuffle->isSingleSource())
         return TargetTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy,
-                                         Shuffle->getShuffleMask(), 0, nullptr,
-                                         Operands);
+                                         Shuffle->getShuffleMask(), CostKind, 0,
+                                         nullptr, Operands);
 
       if (Shuffle->isInsertSubvectorMask(NumSubElts, SubIndex))
         return TargetTTI->getShuffleCost(
-            TTI::SK_InsertSubvector, VecTy, Shuffle->getShuffleMask(), SubIndex,
-            FixedVectorType::get(VecTy->getScalarType(), NumSubElts), Operands);
+            TTI::SK_InsertSubvector, VecTy, Shuffle->getShuffleMask(), CostKind,
+            SubIndex, FixedVectorType::get(VecTy->getScalarType(), NumSubElts),
+            Operands);
 
       return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy,
-                                       Shuffle->getShuffleMask(), 0, nullptr,
-                                       Operands);
+                                       Shuffle->getShuffleMask(), CostKind, 0,
+                                       nullptr, Operands);
     }
     case Instruction::ExtractElement: {
       auto *EEI = dyn_cast<ExtractElementInst>(U);

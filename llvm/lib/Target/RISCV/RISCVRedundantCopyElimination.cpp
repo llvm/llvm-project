@@ -101,7 +101,6 @@ bool RISCVRedundantCopyElimination::optimizeBlock(MachineBasicBlock &MBB) {
     if (!CondBr->isTerminator())
       return false;
     // If we found a branch with X0, stop searching and try to remove copies.
-    // TODO: Handle multiple branches with different registers.
     if (guaranteesZeroRegInBlock(*CondBr, MBB))
       break;
     // If we reached the beginning of the basic block, give up.

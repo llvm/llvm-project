@@ -162,6 +162,9 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Regions that has the same occupancy as the latest MinOccupancy
   BitVector RegionsWithMinOcc;
 
+  // Regions that have IGLP instructions (SCHED_GROUP_BARRIER or IGLP_OPT).
+  BitVector RegionsWithIGLPInstrs;
+
   // Region live-in cache.
   SmallVector<GCNRPTracker::LiveRegSet, 32> LiveIns;
 
@@ -231,6 +234,8 @@ protected:
   // RP after scheduling the current region.
   GCNRegPressure PressureAfter;
 
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
+
   GCNSchedStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG);
 
 public:
@@ -278,8 +283,6 @@ public:
 
 class UnclusteredHighRPStage : public GCNSchedStage {
 private:
-  std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
-
   // Save the initial occupancy before starting this stage.
   unsigned InitialOccupancy;
 
@@ -353,6 +356,22 @@ public:
 
   ILPInitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
+};
+
+class GCNPostScheduleDAGMILive final : public ScheduleDAGMI {
+private:
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> SavedMutations;
+
+  bool HasIGLPInstrs = false;
+
+public:
+  void schedule() override;
+
+  void finalizeSchedule() override;
+
+  GCNPostScheduleDAGMILive(MachineSchedContext *C,
+                           std::unique_ptr<MachineSchedStrategy> S,
+                           bool RemoveKillFlags);
 };
 
 } // End namespace llvm

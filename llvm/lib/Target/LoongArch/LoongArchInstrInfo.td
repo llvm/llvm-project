@@ -126,7 +126,8 @@ def simm12 : Operand<GRLenVT>, ImmLeaf<GRLenVT, [{return isInt<12>(Imm);}]> {
   let DecoderMethod = "decodeSImmOperand<12>";
 }
 
-def simm14_lsl2 : Operand<GRLenVT> {
+def simm14_lsl2 : Operand<GRLenVT>,
+    ImmLeaf<GRLenVT, [{return isShiftedInt<14,2>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<14, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<14, 2>";
@@ -150,9 +151,16 @@ def simm16_lsl2_br : Operand<OtherVT> {
   let DecoderMethod = "decodeSImmOperand<16, 2>";
 }
 
-def simm20 : Operand<GRLenVT> {
-  let ParserMatchClass = SImmAsmOperand<20>;
+class SImm20Operand : Operand<GRLenVT> {
   let DecoderMethod = "decodeSImmOperand<20>";
+}
+
+def simm20 : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20>;
+}
+
+def simm20_pcalau12i : SImm20Operand {
+  let ParserMatchClass = SImmAsmOperand<20, "pcalau12i">;
 }
 
 def simm21_lsl2 : Operand<OtherVT> {
@@ -161,8 +169,24 @@ def simm21_lsl2 : Operand<OtherVT> {
   let DecoderMethod = "decodeSImmOperand<21, 2>";
 }
 
-def simm26_lsl2 : Operand<OtherVT> {
-  let ParserMatchClass = SImmAsmOperand<26, "lsl2">;
+// TODO: Need split the ParserMethod/PredicateMethod for call/jump/tailcall.
+def SImm26Operand: AsmOperandClass {
+  let Name = "SImm26Operand";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidSImm26Operand";
+  let ParserMethod = "parseSImm26Operand";
+}
+
+// A symbol or an imm used in B/PseudoBR.
+def simm26_b : Operand<OtherVT> {
+  let ParserMatchClass = SImm26Operand;
+  let EncoderMethod = "getImmOpValueAsr2";
+  let DecoderMethod = "decodeSImmOperand<26, 2>";
+}
+
+// A symbol or an imm used in BL/PseudoCALL.
+def simm26_bl : Operand<GRLenVT> {
+  let ParserMatchClass = SImm26Operand;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<26, 2>";
 }
@@ -189,17 +213,6 @@ def ImmSubFrom32 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(32 - N->getZExtValue(), SDLoc(N),
                                    N->getValueType(0));
 }]>;
-
-def CallSymbol: AsmOperandClass {
-  let Name = "CallSymbol";
-  let RenderMethod = "addImmOperands";
-  let PredicateMethod = "isImm";
-}
-
-// A bare symbol used in call only.
-def call_symbol : Operand<iPTR> {
-  let ParserMatchClass = CallSymbol;
-}
 
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
 
@@ -259,7 +272,7 @@ class BrCCZ_1RI21<bits<6> op, string opstr>
   let isTerminator = 1;
 }
 class Br_I26<bits<6> op, string opstr>
-    : FmtI26<op, (outs), (ins simm26_lsl2:$imm26), opstr, "$imm26"> {
+    : FmtI26<op, (outs), (ins simm26_b:$imm26), opstr, "$imm26"> {
   let isBranch = 1;
   let isTerminator = 1;
 }
@@ -323,7 +336,7 @@ def SLTI  : ALU_2RI12<0b0000001000, "slti", simm12>;
 def SLTUI : ALU_2RI12<0b0000001001, "sltui", simm12>;
 def PCADDI    : ALU_1RI20<0b0001100, "pcaddi", simm20>;
 def PCADDU12I : ALU_1RI20<0b0001110, "pcaddu12i", simm20>;
-def PCALAU12I : ALU_1RI20<0b0001101, "pcalau12i", simm20>;
+def PCALAU12I : ALU_1RI20<0b0001101, "pcalau12i", simm20_pcalau12i>;
 def AND  : ALU_3R<0b00000000000101001, "and">;
 def OR   : ALU_3R<0b00000000000101010, "or">;
 def NOR  : ALU_3R<0b00000000000101000, "nor">;
@@ -387,8 +400,8 @@ def BEQZ : BrCCZ_1RI21<0b010000, "beqz">;
 def BNEZ : BrCCZ_1RI21<0b010001, "bnez">;
 def B : Br_I26<0b010100, "b">;
 
-let isCall = 1 in
-def BL : FmtI26<0b010101, (outs), (ins simm26_lsl2:$imm26), "bl", "$imm26">;
+let isCall = 1, Defs=[R1] in
+def BL : FmtI26<0b010101, (outs), (ins simm26_bl:$imm26), "bl", "$imm26">;
 def JIRL : Fmt2RI16<0b010011, (outs GPR:$rd),
                     (ins GPR:$rj, simm16_lsl2:$imm16), "jirl",
                     "$rd, $rj, $imm16">;
@@ -827,8 +840,8 @@ def : Pat<(brcond (GRLenVT (setne GPR:$rj, 0)), bb:$imm21),
           (BNEZ GPR:$rj, bb:$imm21)>;
 
 let isBarrier = 1, isBranch = 1, isTerminator = 1 in
-def PseudoBR : Pseudo<(outs), (ins simm26_lsl2:$imm26), [(br bb:$imm26)]>,
-               PseudoInstExpansion<(B simm26_lsl2:$imm26)>;
+def PseudoBR : Pseudo<(outs), (ins simm26_b:$imm26), [(br bb:$imm26)]>,
+               PseudoInstExpansion<(B simm26_b:$imm26)>;
 
 let isBarrier = 1, isBranch = 1, isIndirectBranch = 1, isTerminator = 1 in
 def PseudoBRIND : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16), []>,
@@ -839,7 +852,7 @@ def : Pat<(brind (add GPR:$rj, simm16_lsl2:$imm16)),
           (PseudoBRIND GPR:$rj, simm16_lsl2:$imm16)>;
 
 let isCall = 1, Defs = [R1] in
-def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), []> {
+def PseudoCALL : Pseudo<(outs), (ins simm26_bl:$func), []> {
   let AsmString = "bl\t$func";
 }
 
@@ -948,6 +961,18 @@ defm : StPat<store, ST_W, GPR, i32>, Requires<[IsLA32]>;
 let Predicates = [IsLA64] in {
 defm : StPat<truncstorei32, ST_W, GPR, i64>;
 defm : StPat<store, ST_D, GPR, i64>;
+} // Predicates = [IsLA64]
+
+let Predicates = [IsLA64] in {
+def : Pat<(i64 (sextloadi32 (AddLike BaseAddr:$rj, simm14_lsl2:$imm14))),
+          (LDPTR_W BaseAddr:$rj, simm14_lsl2:$imm14)>;
+def : Pat<(i64 (load (AddLike BaseAddr:$rj, simm14_lsl2:$imm14))),
+          (LDPTR_D BaseAddr:$rj, simm14_lsl2:$imm14)>;
+def : Pat<(truncstorei32 (i64 GPR:$rd),
+                         (AddLike BaseAddr:$rj, simm14_lsl2:$imm14)),
+          (STPTR_W GPR:$rd, BaseAddr:$rj, simm14_lsl2:$imm14)>;
+def : Pat<(store (i64 GPR:$rd), (AddLike BaseAddr:$rj, simm14_lsl2:$imm14)),
+          (STPTR_D GPR:$rd, BaseAddr:$rj, simm14_lsl2:$imm14)>;
 } // Predicates = [IsLA64]
 
 // LA64 register-register-addressed stores

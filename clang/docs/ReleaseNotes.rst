@@ -75,6 +75,9 @@ Bug Fixes
   This fixes `Issue 56094 <https://github.com/llvm/llvm-project/issues/56094>`_.
 - Fix `#57151 <https://github.com/llvm/llvm-project/issues/57151>`_.
   ``-Wcomma`` is emitted for void returning functions.
+- ``-Wtautological-compare`` missed warnings for tautological comparisons
+  involving a negative integer literal. This fixes
+  `Issue 42918 <https://github.com/llvm/llvm-project/issues/42918>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -146,10 +149,6 @@ C++ Language Changes in Clang
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
-- Clang now correctly delays the instantiation of function constraints until
-  the time of checking, which should now allow the libstdc++ ranges implementation
-  to work for at least trivial examples.  This fixes
-  `Issue 44178 <https://github.com/llvm/llvm-project/issues/44178>`_.
 
 - Support capturing structured bindings in lambdas
   (`P1091R3 <https://wg21.link/p1091r3>`_ and `P1381R1 <https://wg21.link/P1381R1>`).

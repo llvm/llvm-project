@@ -12,9 +12,19 @@ namespace __llvm_libc {
 namespace memory {
 namespace testing {
 
+template <typename T>
+bool equals(const cpp::span<T> &Span1, const cpp::span<T> &Span2) {
+  if (Span1.size() != Span2.size())
+    return false;
+  for (size_t Index = 0; Index < Span1.size(); ++Index)
+    if (Span1[Index] != Span2[Index])
+      return false;
+  return true;
+}
+
 bool MemoryMatcher::match(MemoryView actualValue) {
   actual = actualValue;
-  return expected.equals(actual);
+  return equals(expected, actual);
 }
 
 void display(testutils::StreamWrapper &Stream, char C) {

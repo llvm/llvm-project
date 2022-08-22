@@ -1841,7 +1841,7 @@ LegalizerHelper::widenScalarAddSubOverflow(MachineInstr &MI, unsigned TypeIdx,
                                            LLT WideTy) {
   unsigned Opcode;
   unsigned ExtOpcode;
-  Optional<Register> CarryIn = None;
+  Optional<Register> CarryIn;
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected opcode!");

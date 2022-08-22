@@ -8086,7 +8086,7 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
   SmallVector<BasicBlock *, 8> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
-  Optional<unsigned> Res = None;
+  Optional<unsigned> Res;
   for (auto *ExitingBB : ExitingBlocks) {
     unsigned Multiple = getSmallConstantTripMultiple(L, ExitingBB);
     if (!Res)
@@ -10049,7 +10049,7 @@ SolveQuadraticAddRecRange(const SCEVAddRecExpr *AddRec,
                       << Bound << " (before multiplying by " << M << ")\n");
     Bound *= M; // The quadratic equation multiplier.
 
-    Optional<APInt> SO = None;
+    Optional<APInt> SO;
     if (BitWidth > 1) {
       LLVM_DEBUG(dbgs() << "SolveQuadraticAddRecRange: solving for "
                            "signed overflow\n");
@@ -10809,7 +10809,11 @@ ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
   case ICmpInst::ICMP_ULT: {
     assert(ArLHS->hasNoUnsignedWrap() && "Is a requirement of monotonicity!");
     // Given preconditions
-    // (1) ArLHS does not cross 0 (due to NoUnsignedWrap)
+    // (1) ArLHS does not cross the border of positive and negative parts of
+    //     range because of:
+    //     - Positive step; (TODO: lift this limitation)
+    //     - nuw - does not cross zero boundary;
+    //     - nsw - does not cross SINT_MAX boundary;
     // (2) ArLHS <s RHS
     // (3) RHS >=s 0
     // we can replace the loop variant ArLHS <u RHS condition with loop
@@ -10823,7 +10827,9 @@ ScalarEvolution::getLoopInvariantPredicate(ICmpInst::Predicate Pred,
     // All together it means that ArLHS <u RHS <=> Start(ArLHS) >=s 0.
     // We can strengthen this to Start(ArLHS) <u RHS.
     auto SignFlippedPred = ICmpInst::getFlippedSignednessPredicate(Pred);
-    if (isKnownNonNegative(RHS) &&
+    if (ArLHS->hasNoSignedWrap() && ArLHS->isAffine() &&
+        isKnownPositive(ArLHS->getStepRecurrence(*this)) &&
+        isKnownNonNegative(RHS) &&
         isKnownPredicateAt(SignFlippedPred, ArLHS, RHS, CtxI))
       return ScalarEvolution::LoopInvariantPredicate(Pred, ArLHS->getStart(),
                                                      RHS);

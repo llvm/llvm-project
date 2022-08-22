@@ -26,6 +26,12 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if __has_builtin(__decay)
+template <class _Tp>
+struct decay {
+  using type _LIBCPP_NODEBUG = __decay(_Tp);
+};
+#else
 template <class _Up, bool>
 struct __decay {
     typedef _LIBCPP_NODEBUG typename remove_cv<_Up>::type type;
@@ -53,8 +59,9 @@ struct _LIBCPP_TEMPLATE_VIS decay
 private:
     typedef _LIBCPP_NODEBUG typename remove_reference<_Tp>::type _Up;
 public:
-    typedef _LIBCPP_NODEBUG typename __decay<_Up, __is_referenceable<_Up>::value>::type type;
+  typedef _LIBCPP_NODEBUG typename __decay<_Up, __libcpp_is_referenceable<_Up>::value>::type type;
 };
+#endif // __has_builtin(__decay)
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using decay_t = typename decay<_Tp>::type;

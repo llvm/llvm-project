@@ -50,6 +50,7 @@ private:
   bool HasStdExtD = false;
   bool HasStdExtC = false;
   bool HasStdExtZihintpause = false;
+  bool HasStdExtZihintntl = false;
   bool HasStdExtZba = false;
   bool HasStdExtZbb = false;
   bool HasStdExtZbc = false;
@@ -158,6 +159,7 @@ public:
   bool hasStdExtC() const { return HasStdExtC; }
   bool hasStdExtV() const { return HasStdExtV; }
   bool hasStdExtZihintpause() const { return HasStdExtZihintpause; }
+  bool hasStdExtZihintntl() const { return HasStdExtZihintntl; }
   bool hasStdExtZba() const { return HasStdExtZba; }
   bool hasStdExtZbb() const { return HasStdExtZbb; }
   bool hasStdExtZbc() const { return HasStdExtZbc; }

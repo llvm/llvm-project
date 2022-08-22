@@ -20,6 +20,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 
@@ -58,6 +59,7 @@ struct SLPVectorizerPass : public PassInfoMixin<SLPVectorizerPass> {
   using StoreListMap = MapVector<Value *, StoreList>;
   using GEPList = SmallVector<GetElementPtrInst *, 8>;
   using GEPListMap = MapVector<Value *, GEPList>;
+  using InstSetVector = SmallSetVector<Instruction *, 8>;
 
   ScalarEvolution *SE = nullptr;
   TargetTransformInfo *TTI = nullptr;
@@ -124,8 +126,8 @@ private:
 
   /// Tries to vectorize constructs started from CmpInst, InsertValueInst or
   /// InsertElementInst instructions.
-  bool vectorizeSimpleInstructions(SmallVectorImpl<Instruction *> &Instructions,
-                                   BasicBlock *BB, slpvectorizer::BoUpSLP &R,
+  bool vectorizeSimpleInstructions(InstSetVector &Instructions, BasicBlock *BB,
+                                   slpvectorizer::BoUpSLP &R,
                                    bool AtTerminator);
 
   /// Scan the basic block and look for patterns that are likely to start

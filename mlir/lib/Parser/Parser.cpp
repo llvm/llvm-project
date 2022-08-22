@@ -12,6 +12,7 @@
 
 #include "mlir/Parser/Parser.h"
 #include "mlir/AsmParser/AsmParser.h"
+#include "mlir/Bytecode/BytecodeReader.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
@@ -25,6 +26,8 @@ LogicalResult mlir::parseSourceFile(const llvm::SourceMgr &sourceMgr,
                                          sourceBuf->getBufferIdentifier(),
                                          /*line=*/0, /*column=*/0);
   }
+  if (isBytecode(*sourceBuf))
+    return readBytecodeFile(*sourceBuf, block, config);
   return parseAsmSourceFile(sourceMgr, block, config);
 }
 

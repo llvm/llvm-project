@@ -831,6 +831,8 @@ Only run the driver.
 
 .. option:: -fsyntax-only
 
+Run the preprocessor, parser and semantic analysis stages
+
 .. option:: -module-file-info
 
 Provide information about a particular module file

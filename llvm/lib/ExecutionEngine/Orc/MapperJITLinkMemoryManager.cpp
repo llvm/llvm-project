@@ -12,8 +12,6 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Support/Process.h"
 
-#include <limits>
-
 using namespace llvm::jitlink;
 
 namespace llvm {
@@ -34,7 +32,8 @@ public:
     std::swap(AI.Segments, Segs);
     std::swap(AI.Actions, G.allocActions());
 
-    Parent.Mapper->initialize(AI, [&](Expected<ExecutorAddr> Result) {
+    Parent.Mapper->initialize(AI, [OnFinalize = std::move(OnFinalize)](
+                                      Expected<ExecutorAddr> Result) mutable {
       if (!Result) {
         OnFinalize(Result.takeError());
         return;
