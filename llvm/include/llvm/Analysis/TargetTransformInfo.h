@@ -906,6 +906,16 @@ public:
   struct OperandValueInfo {
     OperandValueKind Kind = OK_AnyValue;
     OperandValueProperties Properties = OP_None;
+
+    bool isConstant() const {
+      return Kind == OK_UniformConstantValue || Kind == OK_NonUniformConstantValue;
+    }
+    bool isUniform() const {
+      return Kind == OK_UniformConstantValue || Kind == OK_UniformValue;
+    }
+    bool isPowerOf2() const {
+      return Properties == OP_PowerOf2;
+    }
   };
 
   /// \return the number of registers in the target-provided register class.
