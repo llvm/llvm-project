@@ -326,11 +326,13 @@ struct ResolvedDbgOp {
 /// DbgOp is a constant, meaning that for simple equality or const-ness checks
 /// it is not necessary to lookup this ID.
 struct DbgOpID {
+  struct IsConstIndexPair {
+    uint32_t IsConst : 1;
+    uint32_t Index : 31;
+  };
+
   union {
-    struct {
-      uint32_t IsConst : 1;
-      uint32_t Index : 31;
-    } ID;
+    struct IsConstIndexPair ID;
     uint32_t RawID;
   };
 
