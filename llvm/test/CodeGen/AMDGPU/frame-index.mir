@@ -181,7 +181,7 @@ body:             |
   bb.0:
     liveins: $sgpr30_sgpr31, $sgpr10
     ; GCN-LABEL: name: func_add_constant_to_fi_uniform_live_SCC_i32
-    ; GCN: liveins: $sgpr30_sgpr31, $sgpr10
+    ; GCN: liveins: $sgpr10, $sgpr30_sgpr31
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32_lo16, 0, 6
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x10, 0x10, 0x08, 0x90, 0x3e, 0x93, 0x04, 0x90, 0x3f, 0x93, 0x04
