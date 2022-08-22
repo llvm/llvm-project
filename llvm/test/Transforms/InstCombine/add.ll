@@ -1755,3 +1755,137 @@ define i32 @add_add_add_commute3(i32 %A, i32 %B, i32 %C, i32 %D) {
   %G = add i32 %D, %F
   ret i32 %G
 }
+
+define i8 @mul_add_common_factor_commute1(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @mul_add_common_factor_commute1(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[M]], [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul i8 %x, %y
+  %a = add i8 %x, %z
+  %r = add i8 %m, %a
+  ret i8 %r
+}
+
+define i8 @mul_add_common_factor_commute2(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @mul_add_common_factor_commute2(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[M]], [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul i8 %y, %x
+  %a = add i8 %x, %z
+  %r = add i8 %m, %a
+  ret i8 %r
+}
+
+define i8 @mul_add_common_factor_commute3(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @mul_add_common_factor_commute3(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[M]], [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul i8 %x, 42
+  %a = add i8 %z, %x
+  %r = add i8 %m, %a
+  ret i8 %r
+}
+
+define <2 x i8> @mul_add_common_factor_commute4(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
+; CHECK-LABEL: @mul_add_common_factor_commute4(
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[M]], [[A]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %m = mul <2 x i8> %y, %x
+  %a = add <2 x i8> %z, %x
+  %r = add <2 x i8> %m, %a
+  ret <2 x i8> %r
+}
+
+define i8 @mul_add_common_factor_commute5(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @mul_add_common_factor_commute5(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], 43
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[A]], [[M]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul i8 %x, %y
+  %a = add i8 %x, 43
+  %r = add i8 %a, %m
+  ret i8 %r
+}
+
+define i8 @mul_add_common_factor_commute6(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @mul_add_common_factor_commute6(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[A]], [[M]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul i8 %y, %x
+  %a = add i8 %x, %z
+  %r = add i8 %a, %m
+  ret i8 %r
+}
+
+define i8 @mul_add_common_factor_commute7(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @mul_add_common_factor_commute7(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[A]], [[M]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul i8 %x, %y
+  %a = add i8 %z, %x
+  %r = add i8 %a, %m
+  ret i8 %r
+}
+
+define i8 @mul_add_common_factor_commute8(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @mul_add_common_factor_commute8(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[A]], [[M]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul i8 %y, %x
+  %a = add i8 %z, %x
+  %r = add i8 %a, %m
+  ret i8 %r
+}
+
+define i8 @mul_add_common_factor_use1(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @mul_add_common_factor_use1(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[M]], [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul i8 %x, %y
+  call void @use(i8 %m)
+  %a = add i8 %x, %z
+  %r = add i8 %m, %a
+  ret i8 %r
+}
+
+define i8 @mul_add_common_factor_use2(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @mul_add_common_factor_use2(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[M]], [[A]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul i8 %x, %y
+  %a = add i8 %x, %z
+  call void @use(i8 %a)
+  %r = add i8 %m, %a
+  ret i8 %r
+}
