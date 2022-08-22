@@ -5428,22 +5428,30 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
     break;
   }
 
-  if (Opcode != ISD::INTRINSIC_VOID)
+  if (Opcode != ISD::INTRINSIC_VOID && Opcode != ISD::INTRINSIC_W_CHAIN)
     return EVT();
 
-  const unsigned IntNo =
-      cast<ConstantSDNode>(Root->getOperand(1))->getZExtValue();
-  if (IntNo == Intrinsic::aarch64_sme_ldr ||
-      IntNo == Intrinsic::aarch64_sme_str)
+  switch (cast<ConstantSDNode>(Root->getOperand(1))->getZExtValue()) {
+  default:
+    return EVT();
+  case Intrinsic::aarch64_sme_ldr:
+  case Intrinsic::aarch64_sme_str:
     return MVT::nxv16i8;
-
-  if (IntNo != Intrinsic::aarch64_sve_prf)
-    return EVT();
-
-  // We are using an SVE prefetch intrinsic. Type must be inferred
-  // from the width of the predicate.
-  return getPackedVectorTypeFromPredicateType(
-      Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/1);
+  case Intrinsic::aarch64_sve_prf:
+    // We are using an SVE prefetch intrinsic. Type must be inferred from the
+    // width of the predicate.
+    return getPackedVectorTypeFromPredicateType(
+        Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/1);
+  case Intrinsic::aarch64_sve_ld2_sret:
+    return getPackedVectorTypeFromPredicateType(
+        Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/2);
+  case Intrinsic::aarch64_sve_ld3_sret:
+    return getPackedVectorTypeFromPredicateType(
+        Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/3);
+  case Intrinsic::aarch64_sve_ld4_sret:
+    return getPackedVectorTypeFromPredicateType(
+        Ctx, Root->getOperand(2)->getValueType(0), /*NumVec=*/4);
+  }
 }
 
 /// SelectAddrModeIndexedSVE - Attempt selection of the addressing mode:
