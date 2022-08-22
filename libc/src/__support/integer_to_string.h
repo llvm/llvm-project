@@ -9,9 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_INTEGER_TO_STRING_H
 #define LLVM_LIBC_SRC_SUPPORT_INTEGER_TO_STRING_H
 
-#include "src/__support/CPP/ArrayRef.h"
 #include "src/__support/CPP/StringView.h"
 #include "src/__support/CPP/optional.h"
+#include "src/__support/CPP/span.h"
 #include "src/__support/CPP/type_traits.h"
 
 namespace __llvm_libc {
@@ -43,7 +43,7 @@ namespace __llvm_libc {
 //   auto str = IntegerToString::convert<30>(a, b30buf);
 class IntegerToString {
   static cpp::StringView convert_uintmax(uintmax_t uval,
-                                         cpp::MutableArrayRef<char> &buffer,
+                                         cpp::span<char> &buffer,
                                          bool lowercase,
                                          const uint8_t conv_base) {
     const char a = lowercase ? 'a' : 'A';
@@ -65,8 +65,7 @@ class IntegerToString {
     return cpp::StringView(buffer.data() + buffer.size() - len, len);
   }
 
-  static cpp::StringView convert_intmax(intmax_t val,
-                                        cpp::MutableArrayRef<char> &buffer,
+  static cpp::StringView convert_intmax(intmax_t val, cpp::span<char> &buffer,
                                         bool lowercase,
                                         const uint8_t conv_base) {
     if (val >= 0)
@@ -137,8 +136,8 @@ public:
   template <uint8_t BASE, typename T,
             cpp::enable_if_t<2 <= BASE && BASE <= 36 && cpp::is_integral_v<T>,
                              int> = 0>
-  static cpp::optional<cpp::StringView>
-  convert(T val, cpp::MutableArrayRef<char> buffer, bool lowercase = true) {
+  static cpp::optional<cpp::StringView> convert(T val, cpp::span<char> buffer,
+                                                bool lowercase = true) {
     if (buffer.size() < bufsize<BASE, T>())
       return cpp::optional<cpp::StringView>();
     if (cpp::is_signed_v<T>)
@@ -148,26 +147,23 @@ public:
   }
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
-  static cpp::optional<cpp::StringView> dec(T val,
-                                            cpp::MutableArrayRef<char> buffer) {
+  static cpp::optional<cpp::StringView> dec(T val, cpp::span<char> buffer) {
     return convert<10>(val, buffer);
   }
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
-  static cpp::optional<cpp::StringView>
-  hex(T val, cpp::MutableArrayRef<char> buffer, bool lowercase = true) {
+  static cpp::optional<cpp::StringView> hex(T val, cpp::span<char> buffer,
+                                            bool lowercase = true) {
     return convert<16>(val, buffer, lowercase);
   }
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
-  static cpp::optional<cpp::StringView> oct(T val,
-                                            cpp::MutableArrayRef<char> buffer) {
+  static cpp::optional<cpp::StringView> oct(T val, cpp::span<char> buffer) {
     return convert<8>(val, buffer);
   }
 
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
-  static cpp::optional<cpp::StringView> bin(T val,
-                                            cpp::MutableArrayRef<char> buffer) {
+  static cpp::optional<cpp::StringView> bin(T val, cpp::span<char> buffer) {
     return convert<2>(val, buffer);
   }
 };
