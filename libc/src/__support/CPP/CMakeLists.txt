@@ -53,6 +53,14 @@ add_header_library(
 )
 
 add_header_library(
+  span
+  HDRS
+    span.h
+  DEPENDS
+    .type_traits
+)
+
+add_header_library(
   string_view
   HDRS
     StringView.h
