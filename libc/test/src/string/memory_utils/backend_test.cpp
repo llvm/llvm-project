@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/ArrayRef.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/span.h"
 #include "src/__support/architectures.h"
 #include "src/string/memory_utils/backends.h"
 #include "utils/UnitTest/Test.h"
@@ -30,7 +30,7 @@ static char GetRandomChar() {
   return seed;
 }
 
-static void Randomize(cpp::MutableArrayRef<char> buffer) {
+static void Randomize(cpp::span<char> buffer) {
   for (auto &current : buffer)
     current = GetRandomChar();
 }

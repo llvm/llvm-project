@@ -448,14 +448,18 @@ Error ARMAttributeParser::also_compatible_with(AttrType tag) {
     }
   }
 
-  DictScope scope(*sw, "Attribute");
-  sw->printNumber("Tag", tag);
-  sw->printString("TagName",
-                  ELFAttrs::attrTypeAsString(tag, tagToStringMap, false));
-  sw->printStringEscaped("Value", RawStringValue);
-  if (!Description.empty()) {
-    sw->printString("Description", Description);
+  setAttributeString(tag, RawStringValue);
+  if (sw) {
+    DictScope scope(*sw, "Attribute");
+    sw->printNumber("Tag", tag);
+    sw->printString("TagName",
+                    ELFAttrs::attrTypeAsString(tag, tagToStringMap, false));
+    sw->printStringEscaped("Value", RawStringValue);
+    if (!Description.empty()) {
+      sw->printString("Description", Description);
+    }
   }
+
   cursor.seek(FinalOffset);
 
   return returnValue ? std::move(*returnValue) : Error::success();

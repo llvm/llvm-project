@@ -544,3 +544,36 @@ func.func @tensor.reshape(%t1: tensor<?x10xf32>) -> tensor<2x2x5xf32> {
   // CHECK: return %[[r]]
   return %reshaped : tensor<2x2x5xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @tensor.pad(
+//  CHECK-SAME:   %[[t1:.*]]: tensor<?x10xindex>, %[[l2:.*]]: index, %[[h1:.*]]: index, %[[h2:.*]]: index
+func.func @tensor.pad(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
+                      %h2: index) -> tensor<?x?xindex> {
+  // CHECK-DAG: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<?x10xindex>
+  // CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
+  // CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
+  // CHECK-DAG: %[[c5:.*]] = arith.constant 5 : index
+  // CHECK-DAG: %[[dim0:.*]] = memref.dim %[[m1]], %[[c0]]
+  // CHECK-DAG: %[[dim1:.*]] = memref.dim %[[m1]], %[[c1]]
+  // CHECK-DAG: %[[pad0:.*]] = arith.addi %[[c5]], %[[h1]]
+  // CHECK-DAG: %[[size0:.*]] = arith.addi %[[pad0]], %[[dim0]]
+  // CHECK-DAG: %[[pad1:.*]] = arith.addi %[[l2]], %[[h2]]
+  // CHECK-DAG: %[[size1:.*]] = arith.addi %[[pad1]], %[[dim1]]
+  // CHECK:     %[[alloc:.*]] = memref.alloc(%[[size0]], %[[size1]]) {{.*}} : memref<?x?xindex>
+  // CHECK:     scf.parallel ({{.*}}) = (%[[c0]], %[[c0]]) to (%[[size0]], %[[size1]]) step (%[[c1]], %[[c1]]) {
+  // CHECK:       memref.store
+  // CHECK:     }
+  // CHECK:     %[[subview:.*]] = memref.subview %[[alloc]][5, %[[l2]]] [%[[dim0]], 10] [1, 1]
+  // CHECK:     memref.copy %[[m1]], %[[subview]]
+  %0 = tensor.pad %t1 low[5, %l2] high[%h1, %h2] {
+  ^bb0(%arg0: index, %arg1: index):
+    %m = arith.muli %arg0, %arg1 : index
+    tensor.yield %m : index
+  } : tensor<?x10xindex> to tensor<?x?xindex>
+
+  // CHECK:     %[[r:.*]] = bufferization.to_tensor %[[alloc]]
+  // CHECK:     return %[[r]] : tensor<?x?xindex>
+  return %0 : tensor<?x?xindex>
+}

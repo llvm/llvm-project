@@ -980,9 +980,8 @@ InstructionCost PPCTTIImpl::vectorCostAdjustmentFactor(unsigned Opcode,
 
 InstructionCost PPCTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-    TTI::OperandValueKind Op1Info, TTI::OperandValueKind Op2Info,
-    TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
+    TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
+    ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
   assert(TLI->InstructionOpcodeToISD(Opcode) && "Invalid opcode");
 
@@ -993,12 +992,11 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
   // TODO: Handle more cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
-                                         Op2Info, Opd1PropInfo,
-                                         Opd2PropInfo, Args, CxtI);
+                                         Op2Info, Args, CxtI);
 
   // Fallback to the default implementation.
   InstructionCost Cost = BaseT::getArithmeticInstrCost(
-      Opcode, Ty, CostKind, Op1Info, Op2Info, Opd1PropInfo, Opd2PropInfo);
+      Opcode, Ty, CostKind, Op1Info, Op2Info);
   return Cost * CostFactor;
 }
 
@@ -1460,4 +1458,20 @@ InstructionCost PPCTTIImpl::getVPMemoryOpCost(unsigned Opcode, Type *Src,
   // model the cost of legalization. Currently we can only lower intrinsics with
   // evl but no mask, on Power 9/10. Otherwise, we must scalarize.
   return getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
+}
+
+bool PPCTTIImpl::supportsTailCallFor(const CallBase *CB) const {
+  // Subtargets using PC-Relative addressing supported.
+  if (ST->isUsingPCRelativeCalls())
+    return true;
+
+  const Function *Callee = CB->getCalledFunction();
+  // Indirect calls and variadic argument functions not supported.
+  if (!Callee || Callee->isVarArg())
+    return false;
+
+  const Function *Caller = CB->getCaller();
+  // Support if we can share TOC base.
+  return ST->getTargetMachine().shouldAssumeDSOLocal(*Caller->getParent(),
+                                                     Callee);
 }

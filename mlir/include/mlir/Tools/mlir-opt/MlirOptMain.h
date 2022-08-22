@@ -50,13 +50,15 @@ using PassPipelineFn = llvm::function_ref<LogicalResult(PassManager &pm)>;
 /// - preloadDialectsInContext will trigger the upfront loading of all
 ///   dialects from the global registry in the MLIRContext. This option is
 ///   deprecated and will be removed soon.
+/// - emitBytecode will generate bytecode output instead of text.
 LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
                           std::unique_ptr<llvm::MemoryBuffer> buffer,
                           const PassPipelineCLParser &passPipeline,
                           DialectRegistry &registry, bool splitInputFile,
                           bool verifyDiagnostics, bool verifyPasses,
                           bool allowUnregisteredDialects,
-                          bool preloadDialectsInContext = false);
+                          bool preloadDialectsInContext = false,
+                          bool emitBytecode = false);
 
 /// Support a callback to setup the pass manager.
 /// - passManagerSetupFn is the callback invoked to setup the pass manager to
@@ -67,7 +69,8 @@ LogicalResult MlirOptMain(llvm::raw_ostream &outputStream,
                           DialectRegistry &registry, bool splitInputFile,
                           bool verifyDiagnostics, bool verifyPasses,
                           bool allowUnregisteredDialects,
-                          bool preloadDialectsInContext = false);
+                          bool preloadDialectsInContext = false,
+                          bool emitBytecode = false);
 
 /// Implementation for tools like `mlir-opt`.
 /// - toolName is used for the header displayed by `--help`.

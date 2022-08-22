@@ -221,6 +221,7 @@ class DeclArgument<DeclNode kind, string name, bit opt = 0, bit fake = 0>
 //   OMPTraitProperty := {Kind}
 //
 class OMPTraitInfoArgument<string name> : Argument<name, 0>;
+class VariadicOMPInteropInfoArgument<string name> : Argument<name, 0>;
 
 class TypeArgument<string name, bit opt = 0> : Argument<name, opt>;
 class UnsignedArgument<string name, bit opt = 0> : Argument<name, opt>;
@@ -3827,14 +3828,19 @@ def OMPDeclareVariant : InheritableAttr {
     OMPTraitInfoArgument<"TraitInfos">,
     VariadicExprArgument<"AdjustArgsNothing">,
     VariadicExprArgument<"AdjustArgsNeedDevicePtr">,
-    VariadicEnumArgument<"AppendArgs", "InteropType",
-                     ["target", "targetsync", "target,targetsync"],
-                     ["Target", "TargetSync", "Target_TargetSync"]>
+    VariadicOMPInteropInfoArgument<"AppendArgs">,
   ];
   let AdditionalMembers = [{
     OMPTraitInfo &getTraitInfo() { return *traitInfos; }
     void printPrettyPragma(raw_ostream & OS, const PrintingPolicy &Policy)
         const;
+    static StringRef getInteropTypeString(const OMPInteropInfo *I) {
+      if (I->IsTarget && I->IsTargetSync)
+        return "target,targetsync";
+      if (I->IsTarget)
+        return "target";
+      return "targetsync";
+    }
   }];
 }
 

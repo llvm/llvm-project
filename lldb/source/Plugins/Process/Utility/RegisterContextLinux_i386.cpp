@@ -107,7 +107,7 @@ RegisterContextLinux_i386::RegisterContextLinux_i386(
 size_t RegisterContextLinux_i386::GetGPRSizeStatic() { return sizeof(GPR); }
 
 const RegisterInfo *RegisterContextLinux_i386::GetRegisterInfo() const {
-  switch (m_target_arch.GetMachine()) {
+  switch (GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
     return g_register_infos_i386;

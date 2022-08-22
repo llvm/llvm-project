@@ -213,7 +213,8 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   auto *PN = dyn_cast<PHINode>(IVOperand);
   if (!PN)
     return false;
-  auto LIP = SE->getLoopInvariantPredicate(Pred, S, X, L);
+
+  auto LIP = SE->getLoopInvariantPredicate(Pred, S, X, L, ICmp);
   if (!LIP)
     return false;
   ICmpInst::Predicate InvariantPredicate = LIP->Pred;
