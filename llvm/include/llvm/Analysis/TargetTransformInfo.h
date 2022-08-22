@@ -765,6 +765,9 @@ public:
   /// If the target supports tail calls.
   bool supportsTailCalls() const;
 
+  /// If target supports tail call on \p CB
+  bool supportsTailCallFor(const CallBase *CB) const;
+
   /// Don't restrict interleaved unrolling to small loops.
   bool enableAggressiveInterleaving(bool LoopHasReductions) const;
 
@@ -1635,6 +1638,7 @@ public:
                                    ArrayRef<Type *> Tys) = 0;
   virtual bool supportsEfficientVectorElementLoadStore() = 0;
   virtual bool supportsTailCalls() = 0;
+  virtual bool supportsTailCallFor(const CallBase *CB) = 0;
   virtual bool enableAggressiveInterleaving(bool LoopHasReductions) = 0;
   virtual MemCmpExpansionOptions
   enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const = 0;
@@ -2109,6 +2113,9 @@ public:
   }
 
   bool supportsTailCalls() override { return Impl.supportsTailCalls(); }
+  bool supportsTailCallFor(const CallBase *CB) override {
+    return Impl.supportsTailCallFor(CB);
+  }
 
   bool enableAggressiveInterleaving(bool LoopHasReductions) override {
     return Impl.enableAggressiveInterleaving(LoopHasReductions);
