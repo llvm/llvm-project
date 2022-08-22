@@ -15,6 +15,5 @@ _ = "An unterminated string
 :quit
 
 
-//--- fr.yaml
-- id: "lex_unterminated_string"
-  msg: "chaîne non terminée littérale"
+//--- fr.strings
+"lex_unterminated_string" = "chaîne non terminée littérale";
