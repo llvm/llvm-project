@@ -4029,10 +4029,8 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             MaybeAlign Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
-                                            TTI::OperandValueKind OpdKind,
+                                            TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) {
-  const TTI::OperandValueInfo OpInfo = {OpdKind, TTI::OP_None};
-
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput) {
     if (auto *SI = dyn_cast_or_null<StoreInst>(I)) {
