@@ -214,7 +214,7 @@ function(runtime_default_target)
   endforeach()
   foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
     if(NOT ${component} IN_LIST SUB_COMPONENTS)
-      list(APPEND extra_targets ${component} install-${component} install-${component}-stripped)
+      list(APPEND extra_targets install-${component} install-${component}-stripped)
     endif()
   endforeach()
 
