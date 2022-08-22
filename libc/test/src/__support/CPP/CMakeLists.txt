@@ -78,7 +78,7 @@ add_libc_unittest(
   SRCS
     stringstream_test.cpp
   DEPENDS
-    libc.src.__support.CPP.array_ref
+    libc.src.__support.CPP.span
     libc.src.__support.CPP.stringstream
 )
 
