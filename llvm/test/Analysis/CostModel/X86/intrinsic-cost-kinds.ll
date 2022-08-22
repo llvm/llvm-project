@@ -139,7 +139,7 @@ define void @fmuladd(float %a, float %b, float %c, <16 x float> %va, <16 x float
 ;
 ; SIZE-LABEL: 'fmuladd'
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = call float @llvm.fmuladd.f32(float %a, float %b, float %c)
-; SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v = call <16 x float> @llvm.fmuladd.v16f32(<16 x float> %va, <16 x float> %vb, <16 x float> %vc)
+; SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v = call <16 x float> @llvm.fmuladd.v16f32(<16 x float> %va, <16 x float> %vb, <16 x float> %vc)
 ; SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
 ; SIZE_LATE-LABEL: 'fmuladd'

@@ -117,7 +117,7 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   if (co->validReg(regNum)) {
     co->setReg(regNum, (pint_t)value);
-    // specical case altering IP to re-find info (being called by personality
+    // special case altering IP to re-find info (being called by personality
     // function)
     if (regNum == UNW_REG_IP) {
       unw_proc_info_t info;

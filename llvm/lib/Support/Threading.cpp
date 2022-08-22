@@ -81,7 +81,7 @@ unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
   // main thread (8MB) before creation.
 const llvm::Optional<unsigned> llvm::thread::DefaultStackSize = 8 * 1024 * 1024;
 #else
-const llvm::Optional<unsigned> llvm::thread::DefaultStackSize = None;
+const llvm::Optional<unsigned> llvm::thread::DefaultStackSize;
 #endif
 
 

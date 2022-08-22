@@ -1890,8 +1890,8 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
     DWARFDie DIE, uint64_t RangesSectionOffset,
     SimpleBinaryPatcher &DebugInfoPatcher, uint64_t LowPCToUse,
     Optional<uint64_t> RangesBase) {
-  Optional<AttrInfo> LowPCVal = None;
-  Optional<AttrInfo> HighPCVal = None;
+  Optional<AttrInfo> LowPCVal;
+  Optional<AttrInfo> HighPCVal;
   getRangeAttrData(DIE, LowPCVal, HighPCVal);
   uint64_t LowPCOffset = LowPCVal->Offset;
   uint64_t HighPCOffset = HighPCVal->Offset;

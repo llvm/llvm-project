@@ -2109,7 +2109,7 @@ void NewGVN::markMemoryLeaderChangeTouched(CongruenceClass *CC) {
 // Touch the instructions that need to be updated after a congruence class has a
 // leader change, and mark changed values.
 void NewGVN::markValueLeaderChangeTouched(CongruenceClass *CC) {
-  for (auto M : *CC) {
+  for (auto *M : *CC) {
     if (auto *I = dyn_cast<Instruction>(M))
       TouchedInstructions.set(InstrToDFSNum(I));
     LeaderChanges.insert(M);
@@ -2798,7 +2798,7 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
         // We failed to find a leader for the current ValueOp, but this might
         // change in case of the translated operands change.
         if (SafeForPHIOfOps)
-          for (auto Dep : CurrentDeps)
+          for (auto *Dep : CurrentDeps)
             addAdditionalUsers(Dep, I);
 
         return nullptr;
@@ -2816,7 +2816,7 @@ NewGVN::makePossiblePHIOfOps(Instruction *I,
     LLVM_DEBUG(dbgs() << "Found phi of ops operand " << *FoundVal << " in "
                       << getBlockName(PredBB) << "\n");
   }
-  for (auto Dep : Deps)
+  for (auto *Dep : Deps)
     addAdditionalUsers(Dep, I);
   sortPHIOps(PHIOps);
   auto *E = performSymbolicPHIEvaluation(PHIOps, I, PHIBlock);
@@ -2883,7 +2883,7 @@ void NewGVN::initializeCongruenceClasses(Function &F) {
   MemoryAccessToClass[MSSA->getLiveOnEntryDef()] =
       createMemoryClass(MSSA->getLiveOnEntryDef());
 
-  for (auto DTN : nodes(DT)) {
+  for (auto *DTN : nodes(DT)) {
     BasicBlock *BB = DTN->getBlock();
     // All MemoryAccesses are equivalent to live on entry to start. They must
     // be initialized to something so that initial changes are noticed. For
@@ -3456,7 +3456,7 @@ bool NewGVN::runGVN() {
   }
 
   // Now a standard depth first ordering of the domtree is equivalent to RPO.
-  for (auto DTN : depth_first(DT->getRootNode())) {
+  for (auto *DTN : depth_first(DT->getRootNode())) {
     BasicBlock *B = DTN->getBlock();
     const auto &BlockRange = assignDFSNumbers(B, ICount);
     BlockInstRange.insert({B, BlockRange});
@@ -3576,7 +3576,7 @@ void NewGVN::convertClassToDFSOrdered(
     const CongruenceClass &Dense, SmallVectorImpl<ValueDFS> &DFSOrderedSet,
     DenseMap<const Value *, unsigned int> &UseCounts,
     SmallPtrSetImpl<Instruction *> &ProbablyDead) const {
-  for (auto D : Dense) {
+  for (auto *D : Dense) {
     // First add the value.
     BasicBlock *BB = getBlockForValue(D);
     // Constants are handled prior to ever calling this function, so
@@ -3666,7 +3666,7 @@ void NewGVN::convertClassToDFSOrdered(
 void NewGVN::convertClassToLoadsAndStores(
     const CongruenceClass &Dense,
     SmallVectorImpl<ValueDFS> &LoadsAndStores) const {
-  for (auto D : Dense) {
+  for (auto *D : Dense) {
     if (!isa<LoadInst>(D) && !isa<StoreInst>(D))
       continue;
 
@@ -3804,7 +3804,7 @@ Value *NewGVN::findPHIOfOpsLeader(const Expression *E,
   if (alwaysAvailable(CC->getLeader()))
     return CC->getLeader();
 
-  for (auto Member : *CC) {
+  for (auto *Member : *CC) {
     auto *MemberInst = dyn_cast<Instruction>(Member);
     if (MemberInst == OrigInst)
       continue;
@@ -3897,7 +3897,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
       continue;
     // Everything still in the TOP class is unreachable or dead.
     if (CC == TOPClass) {
-      for (auto M : *CC) {
+      for (auto *M : *CC) {
         auto *VTE = ValueToExpression.lookup(M);
         if (VTE && isa<DeadExpression>(VTE))
           markInstructionForDeletion(cast<Instruction>(M));
@@ -3918,7 +3918,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
         CC->getStoredValue() ? CC->getStoredValue() : CC->getLeader();
     if (alwaysAvailable(Leader)) {
       CongruenceClass::MemberSet MembersLeft;
-      for (auto M : *CC) {
+      for (auto *M : *CC) {
         Value *Member = M;
         // Void things have no uses we can replace.
         if (Member == Leader || !isa<Instruction>(Member) ||

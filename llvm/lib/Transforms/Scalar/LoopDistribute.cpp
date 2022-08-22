@@ -397,7 +397,7 @@ public:
         continue;
 
       auto PartI = I->getData();
-      for (auto PartJ : make_range(std::next(ToBeMerged.member_begin(I)),
+      for (auto *PartJ : make_range(std::next(ToBeMerged.member_begin(I)),
                                    ToBeMerged.member_end())) {
         PartJ->moveTo(*PartI);
       }
