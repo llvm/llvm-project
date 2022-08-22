@@ -1020,31 +1020,135 @@ void transform::TileOp::getEffects(
 // TileToForeachThreadOp
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure transform::TileToForeachThreadOp::applyToOne(
-    TilingInterface target, SmallVectorImpl<Operation *> &results,
+DiagnosedSilenceableFailure transform::TileToForeachThreadOp::apply(
+    transform::TransformResults &transformResults,
     transform::TransformState &state) {
   IRRewriter rewriter(getContext());
-  rewriter.setInsertionPoint(target);
-  auto maybeThreadDimMappingAttr = getThreadDimMapping();
-  auto dimMapping =
-      llvm::to_vector(maybeThreadDimMappingAttr
-                          ? extractFromI64ArrayAttr(*maybeThreadDimMappingAttr)
-                          : ArrayRef<int64_t>{});
+  ArrayRef<Operation *> targets = state.getPayloadOps(getTarget());
 
-  FailureOr<ForeachThreadTilingResult> tilingResult = failure();
-  if (Optional<ArrayAttr> numThreads = getNumThreads())
-    tilingResult = linalg::tileToForeachThreadOp(
-        rewriter, target, getAsOpFoldResult(*numThreads), dimMapping);
+  // If there the target payload ops are empty, there is nothing to do.
+  if (targets.empty()) {
+    transformResults.set(getForeachThreadOp().cast<OpResult>(), {});
+    transformResults.set(getTiledOp().cast<OpResult>(), {});
+    return DiagnosedSilenceableFailure(success());
+  }
 
-  if (Optional<ArrayAttr> tileSizes = getTileSizes())
-    tilingResult = linalg::tileToForeachThreadOpUsingTileSizes(
-        rewriter, target, getAsOpFoldResult(*tileSizes), dimMapping);
+  // Result payload ops.
+  SmallVector<Operation *> tileOps;
+  SmallVector<Operation *> tiledOps;
 
-  if (failed(tilingResult))
-    return emitDefaultSilenceableFailure(target);
-  rewriter.replaceOp(target, tilingResult->tileOp->getResults());
-  results.assign({tilingResult->tileOp, tilingResult->tiledOp});
+  // Given a list of OpFoldResults that are either index attrs or op handles,
+  // return a list of OpFoldResults where all op handles are replaced with the
+  // first (and only) OpResult of that payload op. (There must be exactly one
+  // mapped payload op and it must have exactly one index result.)
+  auto getOpResultsOrIndexAttrs =
+      [&](SmallVector<OpFoldResult> &result,
+          ArrayRef<OpFoldResult> opHandlesOrIndexAttrs) {
+        for (OpFoldResult ofr : opHandlesOrIndexAttrs) {
+          if (ofr.is<Attribute>()) {
+            result.push_back(ofr);
+            continue;
+          }
+          ArrayRef<Operation *> dynamicNumThreads =
+              state.getPayloadOps(ofr.get<Value>());
+          if (dynamicNumThreads.size() != 1) {
+            DiagnosedSilenceableFailure diag =
+                emitSilenceableError()
+                << "handle must be mapped to exactly 1 payload op";
+            diag.attachNote(ofr.get<Value>().getLoc())
+                << "mapped to " << dynamicNumThreads.size() << " ops";
+            return diag;
+          }
+          Operation *op = dynamicNumThreads[0];
+          if (op->getNumResults() != 1 ||
+              !op->getResult(0).getType().isIndex()) {
+            DiagnosedSilenceableFailure diag =
+                emitSilenceableError()
+                << "payload op must have exactly 1 index result";
+            diag.attachNote(op->getLoc())
+                << "has " << op->getNumResults() << " results";
+            return diag;
+          }
+          result.push_back(op->getResult(0));
+        }
+
+        return DiagnosedSilenceableFailure(success());
+      };
+
+  // getMixedNumThreads are OpFoldResults[index attributes or PDL operation].
+  // Convert to OpFoldResults[index attributes or payload op].
+  SmallVector<OpFoldResult> numThreads;
+  DiagnosedSilenceableFailure status =
+      getOpResultsOrIndexAttrs(numThreads, getMixedNumThreads());
+  if (!status.succeeded())
+    return status;
+
+  // getMixedTileSizes are OpFoldResults[index attributes or PDL operation].
+  // Convert to OpFoldResults[index attributes or payload op].
+  SmallVector<OpFoldResult> tileSizes;
+  status = getOpResultsOrIndexAttrs(tileSizes, getMixedTileSizes());
+  if (!status.succeeded())
+    return status;
+
+  // Transform all targets one by one.
+  for (Operation *target : targets) {
+    auto tilableOp = dyn_cast<TilingInterface>(target);
+    if (!tilableOp) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError() << "only TilingInterface ops are supported";
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+    rewriter.setInsertionPoint(tilableOp);
+    auto maybeThreadDimMappingAttr = getThreadDimMapping();
+    auto dimMapping = llvm::to_vector(
+        maybeThreadDimMappingAttr
+            ? extractFromI64ArrayAttr(*maybeThreadDimMappingAttr)
+            : ArrayRef<int64_t>{});
+
+    FailureOr<ForeachThreadTilingResult> tilingResult = failure();
+    if (!getMixedNumThreads().empty()) {
+      tilingResult = linalg::tileToForeachThreadOp(rewriter, tilableOp,
+                                                   numThreads, dimMapping);
+    } else {
+      tilingResult = linalg::tileToForeachThreadOpUsingTileSizes(
+          rewriter, tilableOp, tileSizes, dimMapping);
+    }
+
+    if (failed(tilingResult))
+      return emitDefaultSilenceableFailure(tilableOp);
+    rewriter.replaceOp(tilableOp, tilingResult->tileOp->getResults());
+
+    tileOps.push_back(tilingResult->tileOp);
+    tiledOps.push_back(tilingResult->tiledOp);
+  }
+
+  transformResults.set(getForeachThreadOp().cast<OpResult>(), tileOps);
+  transformResults.set(getTiledOp().cast<OpResult>(), tiledOps);
+
   return DiagnosedSilenceableFailure(success());
+}
+
+void transform::TileToForeachThreadOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTarget(), effects);
+  onlyReadsHandle(getTileSizes(), effects);
+  onlyReadsHandle(getNumThreads(), effects);
+  producesHandle(getResults(), effects);
+}
+
+SmallVector<OpFoldResult> TileToForeachThreadOp::getMixedNumThreads() {
+  return getMixedSizes(getStaticNumThreads(), getNumThreads());
+}
+
+SmallVector<OpFoldResult> TileToForeachThreadOp::getMixedTileSizes() {
+  return getMixedSizes(getStaticTileSizes(), getTileSizes());
+}
+
+LogicalResult TileToForeachThreadOp::verify() {
+  if (getMixedNumThreads().empty() == getMixedTileSizes().empty())
+    return emitOpError("either num_threads or tile_sizes must be specified");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
