@@ -1,5 +1,3 @@
-// REQUIRES: x86-registered-target
-
 // Test that the driver always emits -fno-use-init-array on the PS4/PS5 targets
 // since their ABI does not support the .init_array section.
 
