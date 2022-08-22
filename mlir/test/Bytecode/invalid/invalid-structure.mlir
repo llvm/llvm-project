@@ -1,6 +1,9 @@
 // This file contains various failure test cases related to the structure of
 // a bytecode file.
 
+// Bytecode currently does not support big-endian platforms
+// XFAIL: s390x-
+
 //===--------------------------------------------------------------------===//
 // Version
 //===--------------------------------------------------------------------===//
