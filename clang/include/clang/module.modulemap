@@ -71,6 +71,7 @@ module Clang_Basic {
   textual header "Basic/RISCVVTypes.def"
   textual header "Basic/Sanitizers.def"
   textual header "Basic/TargetCXXABI.def"
+  textual header "Basic/TransformTypeTraits.def"
 
   module * { export * }
 }
