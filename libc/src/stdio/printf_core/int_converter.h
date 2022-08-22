@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_INT_CONVERTER_H
 
 #include "src/__support/CPP/span.h"
-#include "src/__support/CPP/StringView.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
@@ -27,7 +27,7 @@ namespace printf_core {
 constexpr char inline to_lower(char a) { return a | 32; }
 constexpr bool inline is_lower(char a) { return (a & 32) > 0; }
 
-cpp::optional<cpp::StringView> inline num_to_strview(
+cpp::optional<cpp::string_view> inline num_to_strview(
     uintmax_t num, cpp::span<char> bufref, char conv_name) {
   if (to_lower(conv_name) == 'x') {
     return IntegerToString::hex(num, bufref, is_lower(conv_name));

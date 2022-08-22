@@ -9,7 +9,7 @@
 #include "LibcTest.h"
 
 #include "src/__support/CPP/UInt128.h"
-#include "src/__support/CPP/StringView.h"
+#include "src/__support/CPP/string_view.h"
 #include "utils/testutils/ExecuteFunction.h"
 #include <cassert>
 #include <iostream>
@@ -43,7 +43,7 @@ describeValue(ValType Value) {
 }
 
 std::string describeValue(std::string Value) { return std::string(Value); }
-std::string describeValue(cpp::StringView Value) {
+std::string describeValue(cpp::string_view Value) {
   return std::string(Value.data(), Value.size());
 }
 
@@ -282,9 +282,9 @@ template bool test<__llvm_libc::cpp::UInt<128>>(
     __llvm_libc::cpp::UInt<128> RHS, const char *LHSStr, const char *RHSStr,
     const char *File, unsigned long Line);
 
-template bool test<__llvm_libc::cpp::StringView>(RunContext *Ctx, TestCondition Cond,
-                                       __llvm_libc::cpp::StringView LHS,
-                                       __llvm_libc::cpp::StringView RHS,
+template bool test<__llvm_libc::cpp::string_view>(RunContext *Ctx, TestCondition Cond,
+                                       __llvm_libc::cpp::string_view LHS,
+                                       __llvm_libc::cpp::string_view RHS,
                                        const char *LHSStr, const char *RHSStr,
                                        const char *File, unsigned long Line);
 
