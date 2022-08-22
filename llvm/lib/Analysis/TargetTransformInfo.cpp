@@ -784,6 +784,19 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
   return Cost;
 }
 
+InstructionCost TargetTransformInfo::getArithmeticInstrCost(
+    unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+    OperandValueInfo Op1Info, OperandValueInfo Op2Info,
+    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+  InstructionCost Cost =
+      TTIImpl->getArithmeticInstrCost(Opcode, Ty, CostKind,
+                                      Op1Info.Kind, Op2Info.Kind,
+                                      Op1Info.Properties, Op2Info.Properties,
+                                      Args, CxtI);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 InstructionCost TargetTransformInfo::getShuffleCost(
     ShuffleKind Kind, VectorType *Ty, ArrayRef<int> Mask,
     TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,

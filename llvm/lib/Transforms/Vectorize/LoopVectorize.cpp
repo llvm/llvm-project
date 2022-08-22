@@ -7119,14 +7119,16 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
 
     SmallVector<const Value *, 4> Operands(I->operand_values());
     return TTI.getArithmeticInstrCost(
-        I->getOpcode(), VectorTy, CostKind, TargetTransformInfo::OK_AnyValue,
-        Op2VK, TargetTransformInfo::OP_None, Op2VP, Operands, I);
+        I->getOpcode(), VectorTy, CostKind,
+        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+        {Op2VK, Op2VP}, Operands, I);
   }
   case Instruction::FNeg: {
     return TTI.getArithmeticInstrCost(
-        I->getOpcode(), VectorTy, CostKind, TargetTransformInfo::OK_AnyValue,
-        TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None,
-        TargetTransformInfo::OP_None, I->getOperand(0), I);
+        I->getOpcode(), VectorTy, CostKind,
+        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+        I->getOperand(0), I);
   }
   case Instruction::Select: {
     SelectInst *SI = cast<SelectInst>(I);
@@ -7149,7 +7151,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
       SmallVector<const Value *, 2> Operands{Op0, Op1};
       return TTI.getArithmeticInstrCost(
           match(I, m_LogicalOr()) ? Instruction::Or : Instruction::And, VectorTy,
-          CostKind, Op1VK, Op2VK, Op1VP, Op2VP, Operands, I);
+          CostKind, {Op1VK, Op1VP}, {Op2VK, Op2VP}, Operands, I);
     }
 
     Type *CondTy = SI->getCondition()->getType();
