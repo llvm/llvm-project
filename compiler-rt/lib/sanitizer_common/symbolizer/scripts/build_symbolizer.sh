@@ -119,7 +119,7 @@ if [[ ! -d ${LIBCXX_BUILD} ]]; then
     -DLIBCXX_ENABLE_RTTI=OFF \
     -DLIBCXX_ENABLE_SHARED=OFF \
     -DLLVM_DEFAULT_TARGET_TRIPLE="${TARGET_TRIPLE}" \
-  $LLVM_SRC
+  $LLVM_SRC/../runtimes
 fi
 cd ${LIBCXX_BUILD}
 ninja cxx cxxabi
