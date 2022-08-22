@@ -37,7 +37,6 @@ add_header_library(
   HDRS
     integer_to_string.h
   DEPENDS
-    libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
 )
