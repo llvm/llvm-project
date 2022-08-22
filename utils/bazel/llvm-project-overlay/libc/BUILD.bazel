@@ -83,7 +83,7 @@ cc_library(
 
 cc_library(
     name = "__support_cpp_string_view",
-    hdrs = ["src/__support/CPP/StringView.h"],
+    hdrs = ["src/__support/CPP/string_view.h"],
     deps = [":libc_root"],
 )
 

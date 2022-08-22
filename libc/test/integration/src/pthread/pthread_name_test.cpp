@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/StringView.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_getname_np.h"
 #include "src/pthread/pthread_join.h"
@@ -22,7 +22,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-using StringView = __llvm_libc::cpp::StringView;
+using string_view = __llvm_libc::cpp::string_view;
 
 char child_thread_name_buffer[16];
 pthread_mutex_t mutex;
@@ -47,8 +47,8 @@ TEST_MAIN() {
   ASSERT_EQ(__llvm_libc::pthread_setname_np(main_thread, MAIN_THREAD_NAME), 0);
   ASSERT_EQ(
       __llvm_libc::pthread_getname_np(main_thread, thread_name_buffer, 16), 0);
-  ASSERT_TRUE(StringView(MAIN_THREAD_NAME)
-                  .equals(StringView(
+  ASSERT_TRUE(string_view(MAIN_THREAD_NAME)
+                  .equals(string_view(
                       reinterpret_cast<const char *>(thread_name_buffer))));
 
   pthread_t th;
@@ -57,8 +57,8 @@ TEST_MAIN() {
   const char CHILD_THREAD_NAME[] = "child_thread";
   ASSERT_EQ(__llvm_libc::pthread_setname_np(th, CHILD_THREAD_NAME), 0);
   ASSERT_EQ(__llvm_libc::pthread_getname_np(th, thread_name_buffer, 16), 0);
-  ASSERT_TRUE(StringView(CHILD_THREAD_NAME)
-                  .equals(StringView(
+  ASSERT_TRUE(string_view(CHILD_THREAD_NAME)
+                  .equals(string_view(
                       reinterpret_cast<const char *>(thread_name_buffer))));
 
   ASSERT_EQ(__llvm_libc::pthread_mutex_unlock(&mutex), 0);
@@ -67,8 +67,8 @@ TEST_MAIN() {
   ASSERT_EQ(__llvm_libc::pthread_join(th, &retval), 0);
   ASSERT_EQ(uintptr_t(retval), uintptr_t(nullptr));
   // Make sure that the child thread saw it name correctly.
-  ASSERT_TRUE(StringView(CHILD_THREAD_NAME)
-                  .equals(StringView(reinterpret_cast<const char *>(
+  ASSERT_TRUE(string_view(CHILD_THREAD_NAME)
+                  .equals(string_view(reinterpret_cast<const char *>(
                       child_thread_name_buffer))));
 
   __llvm_libc::pthread_mutex_destroy(&mutex);
