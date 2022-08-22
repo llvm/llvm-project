@@ -199,26 +199,35 @@ public:
 /// the value, and Boolean of whether or not it's indirect.
 class DbgValueProperties {
 public:
-  DbgValueProperties(const DIExpression *DIExpr, bool Indirect)
-      : DIExpr(DIExpr), Indirect(Indirect) {}
+  DbgValueProperties(const DIExpression *DIExpr, bool Indirect, bool IsVariadic)
+      : DIExpr(DIExpr), Indirect(Indirect), IsVariadic(IsVariadic) {}
 
   /// Extract properties from an existing DBG_VALUE instruction.
   DbgValueProperties(const MachineInstr &MI) {
     assert(MI.isDebugValue());
+    assert(MI.getDebugExpression()->getNumLocationOperands() == 0 ||
+           MI.isDebugValueList() || MI.isUndefDebugValue());
+    IsVariadic = MI.isDebugValueList();
     DIExpr = MI.getDebugExpression();
-    Indirect = MI.getOperand(1).isImm();
+    Indirect = MI.isDebugOffsetImm();
   }
 
   bool operator==(const DbgValueProperties &Other) const {
-    return std::tie(DIExpr, Indirect) == std::tie(Other.DIExpr, Other.Indirect);
+    return std::tie(DIExpr, Indirect, IsVariadic) ==
+           std::tie(Other.DIExpr, Other.Indirect, Other.IsVariadic);
   }
 
   bool operator!=(const DbgValueProperties &Other) const {
     return !(*this == Other);
   }
 
+  unsigned getLocationOpCount() const {
+    return IsVariadic ? DIExpr->getNumLocationOperands() : 1;
+  }
+
   const DIExpression *DIExpr;
   bool Indirect;
+  bool IsVariadic;
 };
 
 /// Class recording the (high level) _value_ of a variable. Identifies either
@@ -704,7 +713,7 @@ public:
 
 public:
   VLocTracker(const OverlapMap &O, const DIExpression *EmptyExpr)
-      : OverlappingFragments(O), EmptyProperties(EmptyExpr, false) {}
+      : OverlappingFragments(O), EmptyProperties(EmptyExpr, false, false) {}
 
   void defVar(const MachineInstr &MI, const DbgValueProperties &Properties,
               Optional<ValueIDNum> ID) {
