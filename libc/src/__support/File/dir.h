@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FILE_DIR_H
 #define LLVM_LIBC_SRC_SUPPORT_FILE_DIR_H
 
-#include "src/__support/CPP/ArrayRef.h"
+#include "src/__support/CPP/span.h"
 #include "src/__support/threads/mutex.h"
 
 #include <dirent.h>
@@ -28,7 +28,7 @@ bool platform_closedir(int fd);
 
 // Platform specific function which will fetch dirents in to buffer.
 // Returns the number of bytes written into buffer
-size_t platform_fetch_dirents(int fd, cpp::MutableArrayRef<uint8_t> buffer);
+size_t platform_fetch_dirents(int fd, cpp::span<uint8_t> buffer);
 
 // This class is designed to allow implementation of the POSIX dirent.h API.
 // By itself, it is platform independent but calls platform specific
