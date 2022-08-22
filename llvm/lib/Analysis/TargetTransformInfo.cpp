@@ -904,12 +904,12 @@ InstructionCost TargetTransformInfo::getReplicationShuffleCost(
 
 InstructionCost TargetTransformInfo::getMemoryOpCost(
     unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
-    TTI::TargetCostKind CostKind, TTI::OperandValueKind OpdInfo,
+    TTI::TargetCostKind CostKind, TTI::OperandValueInfo OpdInfo,
     const Instruction *I) const {
   assert((I == nullptr || I->getOpcode() == Opcode) &&
          "Opcode should reflect passed instruction.");
   InstructionCost Cost = TTIImpl->getMemoryOpCost(
-      Opcode, Src, Alignment, AddressSpace, CostKind, OpdInfo, I);
+      Opcode, Src, Alignment, AddressSpace, CostKind, OpdInfo.Kind, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

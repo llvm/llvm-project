@@ -1182,7 +1182,7 @@ public:
   getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                   unsigned AddressSpace,
                   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-                  OperandValueKind OpdInfo = OK_AnyValue,
+                  OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
                   const Instruction *I = nullptr) const;
 
   /// \return The cost of VP Load and Store instructions.
