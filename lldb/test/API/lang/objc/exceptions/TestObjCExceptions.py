@@ -64,7 +64,7 @@ class ObjCExceptionsTestCase(TestBase):
             ])
 
         self.expect(
-            'frame variable --dynamic-type no-run-target *e1',
+            'frame variable *e1',
             substrs=[
                 '(NSException) *e1 = ',
                 'name = ', '"ExceptionName"',
@@ -93,7 +93,7 @@ class ObjCExceptionsTestCase(TestBase):
             ])
 
         self.expect(
-            'frame variable --dynamic-type no-run-target *e2',
+            'frame variable *e2',
             substrs=[
                 '(NSException) *e2 = ',
                 'name = ', '"ThrownException"',
