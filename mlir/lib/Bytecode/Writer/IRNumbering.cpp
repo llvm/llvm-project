@@ -42,7 +42,7 @@ static void groupByDialectPerByte(T range) {
     // Update the number of elements in the current byte grouping. Reminder
     // that varint encodes 7-bits per byte, so that's how we compute the
     // number of elements in each byte grouping.
-    elementsInByteGroup = (1 << (7 * i)) - elementsInByteGroup;
+    elementsInByteGroup = (1ULL << (7ULL * i)) - elementsInByteGroup;
 
     // Slice out the sub-set of elements that are in the current byte grouping
     // to be sorted.
