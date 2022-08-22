@@ -18,6 +18,7 @@
 // CHECK-NOT: __riscv_compressed
 // CHECK-NOT: __riscv_b
 // CHECK-NOT: __riscv_bitmanip
+// CHECK-NOT: __riscv_zihintntl
 // CHECK-NOT: __riscv_zba
 // CHECK-NOT: __riscv_zbb
 // CHECK-NOT: __riscv_zbc
@@ -109,6 +110,14 @@
 // RUN: -o - | FileCheck --check-prefix=CHECK-C-EXT %s
 // CHECK-C-EXT: __riscv_c 2000000{{$}}
 // CHECK-C-EXT: __riscv_compressed 1
+
+// RUN: %clang -target riscv32-unknown-linux-gnu -menable-experimental-extensions \
+// RUN: -march=rv32izihintntl0p2 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZIHINTNTL-EXT %s
+// RUN: %clang -target riscv64-unknown-linux-gnu -menable-experimental-extensions \
+// RUN: -march=rv64izihintntl0p2 -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-ZIHINTNTL-EXT %s
+// CHECK-ZIHINTNTL-EXT: __riscv_zihintntl 2000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu \
 // RUN: -march=rv32izba1p0 -x c -E -dM %s \
