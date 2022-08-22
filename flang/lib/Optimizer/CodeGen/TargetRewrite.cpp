@@ -756,7 +756,7 @@ public:
   }
 
   inline bool functionArgIsSRet(unsigned index, mlir::func::FuncOp func) {
-    if (auto attr = func.getArgAttrOfType<mlir::UnitAttr>(index, "llvm.sret"))
+    if (auto attr = func.getArgAttrOfType<mlir::TypeAttr>(index, "llvm.sret"))
       return true;
     return false;
   }
@@ -782,16 +782,22 @@ public:
       if (auto align = attr.getAlignment())
         fixups.emplace_back(
             FixupTy::Codes::ReturnAsStore, argNo, [=](mlir::func::FuncOp func) {
-              func.setArgAttr(argNo, "llvm.sret", rewriter->getUnitAttr());
+              auto elemType = fir::dyn_cast_ptrOrBoxEleTy(
+                  func.getFunctionType().getInput(argNo));
+              func.setArgAttr(argNo, "llvm.sret",
+                              mlir::TypeAttr::get(elemType));
               func.setArgAttr(argNo, "llvm.align",
                               rewriter->getIntegerAttr(
                                   rewriter->getIntegerType(32), align));
             });
       else
-        fixups.emplace_back(
-            FixupTy::Codes::ReturnAsStore, argNo, [=](mlir::func::FuncOp func) {
-              func.setArgAttr(argNo, "llvm.sret", rewriter->getUnitAttr());
-            });
+        fixups.emplace_back(FixupTy::Codes::ReturnAsStore, argNo,
+                            [=](mlir::func::FuncOp func) {
+                              auto elemType = fir::dyn_cast_ptrOrBoxEleTy(
+                                  func.getFunctionType().getInput(argNo));
+                              func.setArgAttr(argNo, "llvm.sret",
+                                              mlir::TypeAttr::get(elemType));
+                            });
       newInTys.push_back(argTy);
       return;
     } else {
@@ -833,7 +839,10 @@ public:
           fixups.emplace_back(
               FixupTy::Codes::ArgumentAsLoad, argNo,
               [=](mlir::func::FuncOp func) {
-                func.setArgAttr(argNo, "llvm.byval", rewriter->getUnitAttr());
+                auto elemType = fir::dyn_cast_ptrOrBoxEleTy(
+                    func.getFunctionType().getInput(argNo));
+                func.setArgAttr(argNo, "llvm.byval",
+                                mlir::TypeAttr::get(elemType));
                 func.setArgAttr(argNo, "llvm.align",
                                 rewriter->getIntegerAttr(
                                     rewriter->getIntegerType(32), align));
@@ -841,8 +850,10 @@ public:
         else
           fixups.emplace_back(FixupTy::Codes::ArgumentAsLoad, newInTys.size(),
                               [=](mlir::func::FuncOp func) {
+                                auto elemType = fir::dyn_cast_ptrOrBoxEleTy(
+                                    func.getFunctionType().getInput(argNo));
                                 func.setArgAttr(argNo, "llvm.byval",
-                                                rewriter->getUnitAttr());
+                                                mlir::TypeAttr::get(elemType));
                               });
       } else {
         if (auto align = attr.getAlignment())
