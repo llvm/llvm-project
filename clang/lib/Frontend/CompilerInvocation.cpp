@@ -4672,6 +4672,37 @@ void CompilerInvocation::generateCC1CommandLine(
   GenerateDependencyOutputArgs(DependencyOutputOpts, Args, SA);
 }
 
+std::vector<std::string> CompilerInvocation::getCC1CommandLine() const {
+  // Set up string allocator.
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Strings(Alloc);
+  auto SA = [&Strings](const Twine &Arg) { return Strings.save(Arg).data(); };
+
+  // Synthesize full command line from the CompilerInvocation, including "-cc1".
+  SmallVector<const char *, 32> Args{"-cc1"};
+  generateCC1CommandLine(Args, SA);
+
+  // Convert arguments to the return type.
+  return std::vector<std::string>{Args.begin(), Args.end()};
+}
+
+void CompilerInvocation::resetNonModularOptions() {
+  getLangOpts()->resetNonModularOptions();
+  getPreprocessorOpts().resetNonModularOptions();
+}
+
+void CompilerInvocation::clearImplicitModuleBuildOptions() {
+  getLangOpts()->ImplicitModules = false;
+  getHeaderSearchOpts().ImplicitModuleMaps = false;
+  getHeaderSearchOpts().ModuleCachePath.clear();
+  getHeaderSearchOpts().ModulesValidateOncePerBuildSession = false;
+  getHeaderSearchOpts().BuildSessionTimestamp = 0;
+  // The specific values we canonicalize to for pruning don't affect behaviour,
+  /// so use the default values so they may be dropped from the command-line.
+  getHeaderSearchOpts().ModuleCachePruneInterval = 7 * 24 * 60 * 60;
+  getHeaderSearchOpts().ModuleCachePruneAfter = 31 * 24 * 60 * 60;
+}
+
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 clang::createVFSFromCompilerInvocation(const CompilerInvocation &CI,
                                        DiagnosticsEngine &Diags) {
