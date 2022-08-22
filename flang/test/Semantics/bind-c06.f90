@@ -42,4 +42,24 @@ program main
   type, bind(c) :: t5
   end type
 
+  ! ERROR: A derived type with the BIND attribute cannot have a pointer or allocatable component
+  type, bind(c) :: t6
+    integer, pointer :: x
+  end type
+
+  ! ERROR: A derived type with the BIND attribute cannot have a pointer or allocatable component
+  type, bind(c) :: t7
+    integer, allocatable :: y
+  end type
+
+  ! ERROR: The component of the interoperable derived type must have the BIND attribute
+  type :: t8
+    integer :: x
+  end type
+
+  type, bind(c) :: t9
+    type(t8) :: y
+    integer :: z
+  end type
+
 end

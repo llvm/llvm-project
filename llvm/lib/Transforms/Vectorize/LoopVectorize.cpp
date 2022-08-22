@@ -552,7 +552,7 @@ protected:
 
   /// Create the exit value of first order recurrences in the middle block and
   /// update their users.
-  void fixFirstOrderRecurrence(VPFirstOrderRecurrencePHIRecipe *PhiR,
+  void fixFixedOrderRecurrence(VPFirstOrderRecurrencePHIRecipe *PhiR,
                                VPTransformState &State);
 
   /// Create code for the loop exit value of the reduction.
@@ -1435,16 +1435,16 @@ public:
     }));
   }
 
-  /// Returns true if \p I is an instruction that will be scalarized with
-  /// predication when vectorizing \p I with vectorization factor \p VF. Such
-  /// instructions include conditional stores and instructions that may divide
-  /// by zero.
+  /// Returns true if \p I is an instruction which requires predication and
+  /// for which our chosen predication strategy is scalarization (i.e. we
+  /// don't have an alternate strategy such as masking available).
+  /// \p VF is the vectorization factor that will be used to vectorize \p I.
   bool isScalarWithPredication(Instruction *I, ElementCount VF) const;
 
-  // Returns true if \p I is an instruction that will be predicated either
-  // through scalar predication or masked load/store or masked gather/scatter.
-  // \p VF is the vectorization factor that will be used to vectorize \p I.
-  // Superset of instructions that return true for isScalarWithPredication.
+  /// Returns true if \p I is an instruction that needs to be predicated
+  /// at runtime.  The result is independent of the predication mechanism.
+  /// \p VF is the vectorization factor that will be used to vectorize \p I.
+  /// Superset of instructions that return true for isScalarWithPredication.
   bool isPredicatedInst(Instruction *I, ElementCount VF) const;
 
   /// Returns true if \p I is a memory instruction with consecutive memory
@@ -3705,11 +3705,11 @@ void InnerLoopVectorizer::fixCrossIterationPHIs(VPTransformState &State) {
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R))
       fixReduction(ReductionPhi, State);
     else if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
-      fixFirstOrderRecurrence(FOR, State);
+      fixFixedOrderRecurrence(FOR, State);
   }
 }
 
-void InnerLoopVectorizer::fixFirstOrderRecurrence(
+void InnerLoopVectorizer::fixFixedOrderRecurrence(
     VPFirstOrderRecurrencePHIRecipe *PhiR, VPTransformState &State) {
   // This is the second phase of vectorizing first-order recurrences. An
   // overview of the transformation is described below. Suppose we have the
@@ -4002,7 +4002,7 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
 
   // We know that the loop is in LCSSA form. We need to update the PHI nodes
   // in the exit blocks.  See comment on analogous loop in
-  // fixFirstOrderRecurrence for a more complete explaination of the logic.
+  // fixFixedOrderRecurrence for a more complete explaination of the logic.
   if (!Cost->requiresScalarEpilogue(VF))
     for (PHINode &LCSSAPhi : LoopExitBlock->phis())
       if (llvm::is_contained(LCSSAPhi.incoming_values(), LoopExitInst)) {
@@ -4412,15 +4412,16 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
 bool LoopVectorizationCostModel::isScalarWithPredication(
     Instruction *I, ElementCount VF) const {
-  if (!blockNeedsPredicationForAnyReason(I->getParent()))
+  if (!isPredicatedInst(I, VF))
     return false;
+
+  // Do we have a non-scalar lowering for this predicated
+  // instruction? No - it is scalar with predication.
   switch(I->getOpcode()) {
   default:
-    break;
+    return true;
   case Instruction::Load:
   case Instruction::Store: {
-    if (!Legal->isMaskRequired(I))
-      return false;
     auto *Ptr = getLoadStorePointerOperand(I);
     auto *Ty = getLoadStoreType(I);
     Type *VTy = Ty;
@@ -4432,6 +4433,40 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
                             : !(isLegalMaskedStore(Ty, Ptr, Alignment) ||
                                 TTI.isLegalMaskedScatter(VTy, Alignment));
   }
+  }
+}
+
+bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I,
+                                                  ElementCount VF) const {
+  if (!blockNeedsPredicationForAnyReason(I->getParent()))
+    return false;
+
+  // Can we prove this instruction is safe to unconditionally execute?
+  // If not, we must use some form of predication.
+  switch(I->getOpcode()) {
+  default:
+    return false;
+  case Instruction::Load:
+  case Instruction::Store: {
+    if (!Legal->isMaskRequired(I))
+      return false;
+    // When we know the load's address is loop invariant and the instruction
+    // in the original scalar loop was unconditionally executed then we
+    // don't need to mark it as a predicated instruction. Tail folding may
+    // introduce additional predication, but we're guaranteed to always have
+    // at least one active lane.  We call Legal->blockNeedsPredication here
+    // because it doesn't query tail-folding.  For stores, we need to prove
+    // both speculation safety (which follows from the same argument as loads),
+    // but also must prove the value being stored is correct.  The easiest
+    // form of the later is to require that all values stored are the same.
+    if (Legal->isUniformMemOp(*I) &&
+      (isa<LoadInst>(I) ||
+       (isa<StoreInst>(I) &&
+        TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()))) &&
+        !Legal->blockNeedsPredication(I->getParent()))
+      return false;
+    return true;
+  }
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::SRem:
@@ -4440,33 +4475,6 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
     // context sensitive reasoning
     return !isSafeToSpeculativelyExecute(I);
   }
-  return false;
-}
-
-bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I,
-                                                  ElementCount VF) const {
-  // When we know the load's address is loop invariant and the instruction
-  // in the original scalar loop was unconditionally executed then we
-  // don't need to mark it as a predicated instruction. Tail folding may
-  // introduce additional predication, but we're guaranteed to always have
-  // at least one active lane.  We call Legal->blockNeedsPredication here
-  // because it doesn't query tail-folding.  For stores, we need to prove
-  // both speculation safety (which follows from the same argument as loads),
-  // but also must prove the value being stored is correct.  The easiest
-  // form of the later is to require that all values stored are the same.
-  if (Legal->isUniformMemOp(*I) &&
-      (isa<LoadInst>(I) ||
-       (isa<StoreInst>(I) &&
-        TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()))) &&
-      !Legal->blockNeedsPredication(I->getParent()))
-    return false;
-  if (!blockNeedsPredicationForAnyReason(I->getParent()))
-    return false;
-  // Loads and stores that need some form of masked operation are predicated
-  // instructions.
-  if (isa<LoadInst>(I) || isa<StoreInst>(I))
-    return Legal->isMaskRequired(I);
-  return isScalarWithPredication(I, VF);
 }
 
 bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
@@ -4730,7 +4738,7 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
       // First order recurrence Phi's should typically be considered
       // non-uniform.
       auto *OP = dyn_cast<PHINode>(OV);
-      if (OP && Legal->isFirstOrderRecurrence(OP))
+      if (OP && Legal->isFixedOrderRecurrence(OP))
         continue;
       // If all the users of the operand are uniform, then add the
       // operand into the uniform worklist.
@@ -5419,7 +5427,7 @@ bool LoopVectorizationCostModel::isCandidateForEpilogueVectorization(
   // Cross iteration phis such as reductions need special handling and are
   // currently unsupported.
   if (any_of(L.getHeader()->phis(),
-             [&](PHINode &Phi) { return Legal->isFirstOrderRecurrence(&Phi); }))
+             [&](PHINode &Phi) { return Legal->isFixedOrderRecurrence(&Phi); }))
     return false;
 
   // Phis with uses outside of the loop require special handling and are
@@ -6070,7 +6078,7 @@ bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
   // from moving "masked load/store" check from legality to cost model.
   // Masked Load/Gather emulation was previously never allowed.
   // Limited number of Masked Store/Scatter emulation was allowed.
-  assert((isPredicatedInst(I, VF) || Legal->isUniformMemOp(*I)) &&
+  assert((isPredicatedInst(I, VF)) &&
          "Expecting a scalar emulated instruction");
   return isa<LoadInst>(I) ||
          (isa<StoreInst>(I) &&
@@ -6386,17 +6394,19 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
          "Stride should be 1 or -1 for consecutive memory access");
   const Align Alignment = getLoadStoreAlignment(I);
   InstructionCost Cost = 0;
-  if (Legal->isMaskRequired(I))
+  if (Legal->isMaskRequired(I)) {
     Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
                                       CostKind);
-  else
+  } else {
+    TTI::OperandValueKind OpVK = TTI::getOperandInfo(I->getOperand(0));
     Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
-                                CostKind, I);
+                                CostKind, OpVK, I);
+  }
 
   bool Reverse = ConsecutiveStride < 0;
   if (Reverse)
-    Cost +=
-        TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, None, 0);
+    Cost += TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, None,
+                               CostKind, 0);
   return Cost;
 }
 
@@ -6453,6 +6463,7 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(ToVectorTy(ValTy, VF));
   unsigned AS = getLoadStoreAddressSpace(I);
+  enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
   auto Group = getInterleavedAccessGroup(I);
   assert(Group && "Fail to get an interleaved access group.");
@@ -6472,15 +6483,15 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
       (isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor()));
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
       I->getOpcode(), WideVecTy, Group->getFactor(), Indices, Group->getAlign(),
-      AS, TTI::TCK_RecipThroughput, Legal->isMaskRequired(I), UseMaskForGaps);
+      AS, CostKind, Legal->isMaskRequired(I), UseMaskForGaps);
 
   if (Group->isReverse()) {
     // TODO: Add support for reversed masked interleaved access.
     assert(!Legal->isMaskRequired(I) &&
            "Reverse masked interleaved access not supported.");
-    Cost +=
-        Group->getNumMembers() *
-        TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, None, 0);
+    Cost += Group->getNumMembers() *
+            TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy, None,
+                               CostKind, 0);
   }
   return Cost;
 }
@@ -6668,9 +6679,10 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
     const Align Alignment = getLoadStoreAlignment(I);
     unsigned AS = getLoadStoreAddressSpace(I);
 
+    TTI::OperandValueKind OpVK = TTI::getOperandInfo(I->getOperand(0));
     return TTI.getAddressComputationCost(ValTy) +
            TTI.getMemoryOpCost(I->getOpcode(), ValTy, Alignment, AS,
-                               TTI::TCK_RecipThroughput, I);
+                               TTI::TCK_RecipThroughput, OpVK, I);
   }
   return getWideningCost(I, VF);
 }
@@ -7024,10 +7036,11 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
 
     // First-order recurrences are replaced by vector shuffles inside the loop.
     // NOTE: Don't use ToVectorTy as SK_ExtractSubvector expects a vector type.
-    if (VF.isVector() && Legal->isFirstOrderRecurrence(Phi))
-      return TTI.getShuffleCost(
-          TargetTransformInfo::SK_ExtractSubvector, cast<VectorType>(VectorTy),
-          None, VF.getKnownMinValue() - 1, FixedVectorType::get(RetTy, 1));
+    if (VF.isVector() && Legal->isFixedOrderRecurrence(Phi))
+      return TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                cast<VectorType>(VectorTy), None, CostKind,
+                                VF.getKnownMinValue() - 1,
+                                FixedVectorType::get(RetTy, 1));
 
     // Phi nodes in non-header blocks (not inductions, reductions, etc.) are
     // converted into select instructions. We require N - 1 selects per phi
@@ -8501,13 +8514,18 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
   if (auto Phi = dyn_cast<PHINode>(Instr)) {
     if (Phi->getParent() != OrigLoop->getHeader())
       return tryToBlend(Phi, Operands, Plan);
+
+    // Always record recipes for header phis. Later first-order recurrence phis
+    // can have earlier phis as incoming values.
+    recordRecipeOf(Phi);
+
     if ((Recipe = tryToOptimizeInductionPHI(Phi, Operands, *Plan, Range)))
       return toVPRecipeResult(Recipe);
 
     VPHeaderPHIRecipe *PhiRecipe = nullptr;
     assert((Legal->isReductionVariable(Phi) ||
-            Legal->isFirstOrderRecurrence(Phi)) &&
-           "can only widen reductions and first-order recurrences here");
+            Legal->isFixedOrderRecurrence(Phi)) &&
+           "can only widen reductions and fixed-order recurrences here");
     VPValue *StartV = Operands[0];
     if (Legal->isReductionVariable(Phi)) {
       const RecurrenceDescriptor &RdxDesc =
@@ -8518,13 +8536,21 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
                                            CM.isInLoopReduction(Phi),
                                            CM.useOrderedReductions(RdxDesc));
     } else {
+      // TODO: Currently fixed-order recurrences are modeled as chains of
+      // first-order recurrences. If there are no users of the intermediate
+      // recurrences in the chain, the fixed order recurrence should be modeled
+      // directly, enabling more efficient codegen.
       PhiRecipe = new VPFirstOrderRecurrencePHIRecipe(Phi, *StartV);
     }
 
     // Record the incoming value from the backedge, so we can add the incoming
     // value from the backedge after all recipes have been created.
-    recordRecipeOf(cast<Instruction>(
-        Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch())));
+    auto *Inc = cast<Instruction>(
+        Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch()));
+    auto RecipeIter = Ingredient2Recipe.find(Inc);
+    if (RecipeIter == Ingredient2Recipe.end())
+      recordRecipeOf(Inc);
+
     PhisToFix.push_back(PhiRecipe);
     return toVPRecipeResult(PhiRecipe);
   }
@@ -8589,7 +8615,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       assert(
           SinkTarget != FirstInst &&
           "Must find a live instruction (at least the one feeding the "
-          "first-order recurrence PHI) before reaching beginning of the block");
+          "fixed-order recurrence PHI) before reaching beginning of the block");
       SinkTarget = SinkTarget->getPrevNode();
       assert(SinkTarget != P.first &&
              "sink source equals target, no sinking required");
@@ -8974,7 +9000,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
                              RecipeBuilder, Range.Start);
 
   // Introduce a recipe to combine the incoming and previous values of a
-  // first-order recurrence.
+  // fixed-order recurrence.
   for (VPRecipeBase &R :
        Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     auto *RecurPhi = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R);
@@ -8982,6 +9008,11 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
       continue;
 
     VPRecipeBase *PrevRecipe = RecurPhi->getBackedgeRecipe();
+    // Fixed-order recurrences do not contain cycles, so this loop is guaranteed
+    // to terminate.
+    while (auto *PrevPhi =
+               dyn_cast<VPFirstOrderRecurrencePHIRecipe>(PrevRecipe))
+      PrevRecipe = PrevPhi->getBackedgeRecipe();
     VPBasicBlock *InsertBlock = PrevRecipe->getParent();
     auto *Region = GetReplicateRegion(PrevRecipe);
     if (Region)

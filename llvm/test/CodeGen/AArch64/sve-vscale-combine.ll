@@ -76,10 +76,8 @@ define i32 @combine_sub_vscale_i32(i32 %in) nounwind {
 define i64 @multiple_uses_sub_vscale_i64(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: multiple_uses_sub_vscale_i64:
 ; CHECK-NEXT:  rdvl	x8, #1
-; CHECK-NEXT:  rdvl	x9, #-1
 ; CHECK-NEXT:  lsr	x8, x8, #4
-; CHECK-NEXT:  asr	x9, x9, #4
-; CHECK-NEXT:  add	x9, x0, x9
+; CHECK-NEXT:  sub	x9, x0, x8
 ; CHECK-NEXT:  add	x8, x1, x8
 ; CHECK-NEXT:  mul	x0, x9, x8
 ; CHECK-NEXT:  ret

@@ -116,3 +116,32 @@ func.func @threadprivate(%a: !llvm.ptr<i32>) -> () {
   %1 = omp.threadprivate %a : !llvm.ptr<i32> -> !llvm.ptr<i32>
   return
 }
+
+// -----
+
+// CHECK:      llvm.func @simdloop_block_arg(%[[LOWER:.*]]: i32, %[[UPPER:.*]]: i32, %[[ITER:.*]]: i64) {
+// CHECK:      omp.simdloop   for  (%[[ARG_0:.*]]) : i32 =
+// CHECK-SAME:     (%[[LOWER]]) to (%[[UPPER]]) inclusive step (%[[LOWER]]) {
+// CHECK:      llvm.br ^[[BB1:.*]](%[[ITER]] : i64)
+// CHECK:        ^[[BB1]](%[[VAL_0:.*]]: i64):
+// CHECK:          %[[VAL_1:.*]] = llvm.icmp "slt" %[[VAL_0]], %[[ITER]] : i64
+// CHECK:          llvm.cond_br %[[VAL_1]], ^[[BB2:.*]], ^[[BB3:.*]]
+// CHECK:        ^[[BB2]]:
+// CHECK:          %[[VAL_2:.*]] = llvm.add %[[VAL_0]], %[[ITER]]  : i64
+// CHECK:          llvm.br ^[[BB1]](%[[VAL_2]] : i64)
+// CHECK:        ^[[BB3]]:
+// CHECK:          omp.yield
+func.func @simdloop_block_arg(%val : i32, %ub : i32, %i : index) {
+  omp.simdloop   for  (%arg0) : i32 = (%val) to (%ub) inclusive step (%val) {
+    cf.br ^bb1(%i : index)
+  ^bb1(%0: index):
+    %1 = arith.cmpi slt, %0, %i : index
+    cf.cond_br %1, ^bb2, ^bb3
+  ^bb2:
+    %2 = arith.addi %0, %i : index
+    cf.br ^bb1(%2 : index)
+  ^bb3:
+    omp.yield
+  }
+  return
+}

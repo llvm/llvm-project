@@ -676,11 +676,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         // to be the same size as the dest.
         if (DstTy != SrcTy)
           return false;
-        for (auto &Ty : {v2s32, v4s32, v2s64, v2p0, v16s8, v8s16}) {
-          if (DstTy == Ty)
-            return true;
-        }
-        return false;
+        return llvm::is_contained({v2s32, v4s32, v2s64, v2p0, v16s8, v8s16},
+                                  DstTy);
       })
       // G_SHUFFLE_VECTOR can have scalar sources (from 1 x s vectors), we
       // just want those lowered into G_BUILD_VECTOR
@@ -1023,6 +1020,30 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     auto &Value = MI.getOperand(3);
     Register ZExtValueReg = MIB.buildAnyExt(LLT::scalar(64), Value).getReg(0);
     Value.setReg(ZExtValueReg);
+    return true;
+  }
+  case Intrinsic::prefetch: {
+    MachineIRBuilder MIB(MI);
+    auto &AddrVal = MI.getOperand(1);
+
+    int64_t IsWrite = MI.getOperand(2).getImm();
+    int64_t Locality = MI.getOperand(3).getImm();
+    int64_t IsData = MI.getOperand(4).getImm();
+
+    bool IsStream = Locality == 0;
+    if (Locality != 0) {
+      assert(Locality <= 3 && "Prefetch locality out-of-range");
+      // The locality degree is the opposite of the cache speed.
+      // Put the number the other way around.
+      // The encoding starts at 0 for level 1
+      Locality = 3 - Locality;
+    }
+
+    unsigned PrfOp =
+        (IsWrite << 4) | (!IsData << 3) | (Locality << 1) | IsStream;
+
+    MIB.buildInstr(AArch64::G_PREFETCH).addImm(PrfOp).add(AddrVal);
+    MI.eraseFromParent();
     return true;
   }
   }

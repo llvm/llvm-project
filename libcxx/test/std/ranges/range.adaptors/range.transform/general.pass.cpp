@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // Some basic examples of how transform_view might be used in the wild. This is a general
 // collection of sample algorithms and functions that try to mock general usage of

@@ -1744,6 +1744,29 @@ static Instruction *foldComplexAndOrPatterns(BinaryOperator &I,
   return nullptr;
 }
 
+/// Try to reassociate a pair of binops so that values with one use only are
+/// part of the same instruction. This may enable folds that are limited with
+/// multi-use restrictions and makes it more likely to match other patterns that
+/// are looking for a common operand.
+static Instruction *reassociateForUses(BinaryOperator &BO,
+                                       InstCombinerImpl::BuilderTy &Builder) {
+  Instruction::BinaryOps Opcode = BO.getOpcode();
+  Value *X, *Y, *Z;
+  if (match(&BO, m_c_BinOp(Opcode,
+                           m_OneUse(m_c_BinOp(Opcode, m_Value(X),
+                                              m_OneUse(m_Value(Y)))),
+                           m_OneUse(m_Value(Z))))) {
+    // (X op Y) op Z --> (Y op Z) op X
+    if (!isa<Constant>(X) && !isa<Constant>(Y) && !isa<Constant>(Z) &&
+        !X->hasOneUse()) {
+      Value *YZ = Builder.CreateBinOp(Opcode, Y, Z);
+      return BinaryOperator::Create(Opcode, YZ, X);
+    }
+  }
+
+  return nullptr;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -2203,6 +2226,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   Value *Start = nullptr, *Step = nullptr;
   if (matchSimpleRecurrence(&I, PN, Start, Step) && DT.dominates(Step, PN))
     return replaceInstUsesWith(I, Builder.CreateAnd(Start, Step));
+
+  if (Instruction *R = reassociateForUses(I, Builder))
+    return R;
 
   return nullptr;
 }
@@ -2933,6 +2959,15 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
         (match(Op0, m_Not(m_Specific(A))) || match(Op0, m_Not(m_Specific(B)))))
       return BinaryOperator::CreateNot(Builder.CreateAnd(A, B));
 
+    // (~A | C) | (A ^ B) --> ~(A & B) | C
+    // (~B | C) | (A ^ B) --> ~(A & B) | C
+    if (Op0->hasOneUse() && Op1->hasOneUse() &&
+        (match(Op0, m_c_Or(m_Not(m_Specific(A)), m_Value(C))) ||
+         match(Op0, m_c_Or(m_Not(m_Specific(B)), m_Value(C))))) {
+      Value *Nand = Builder.CreateNot(Builder.CreateAnd(A, B), "nand");
+      return BinaryOperator::CreateOr(Nand, C);
+    }
+
     // A | (~A ^ B) --> ~B | A
     // B | (A ^ ~B) --> ~A | B
     if (Op1->hasOneUse() && match(A, m_Not(m_Specific(Op0)))) {
@@ -3152,6 +3187,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       return BinaryOperator::CreateOr(
           Builder.CreateOr(C, Builder.CreateAnd(A, B)), D);
   }
+
+  if (Instruction *R = reassociateForUses(I, Builder))
+    return R;
 
   return nullptr;
 }
@@ -3889,6 +3927,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
                                        m_ImmConstant(C1))),
                         m_Value(Y))))
     return BinaryOperator::CreateXor(Builder.CreateXor(X, Y), C1);
+
+  if (Instruction *R = reassociateForUses(I, Builder))
+    return R;
 
   return nullptr;
 }

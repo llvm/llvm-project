@@ -150,7 +150,6 @@ define signext i32 @tc43(%struct.ST* noundef byval(%struct.ST) align 8 %s) {
 ; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    lwz 3, 48(1)
 ; CHECK-NEXT:    srawi 3, 3, 8
-; CHECK-NEXT:    extsw 3, 3
 ; CHECK-NEXT:    blr
 entry:
   %a = getelementptr inbounds %struct.ST, %struct.ST* %s, i32 0, i32 0

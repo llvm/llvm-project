@@ -9,25 +9,21 @@ define signext i32 @foo(i32 signext %a, i32 signext %b, i32* nocapture %c) #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpw 3, 4
-; CHECK-NEXT:    iselgt 6, 3, 4
-; CHECK-NEXT:    sub 4, 3, 4
-; CHECK-NEXT:    extsw 3, 6
-; CHECK-NEXT:    stw 4, 0(5)
+; CHECK-NEXT:    sub 6, 3, 4
+; CHECK-NEXT:    iselgt 3, 3, 4
+; CHECK-NEXT:    stw 6, 0(5)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NO-ISEL-LABEL: foo:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    cmpw 3, 4
+; CHECK-NO-ISEL-NEXT:    sub 6, 3, 4
 ; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB0_2
 ; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 6, 4, 0
-; CHECK-NO-ISEL-NEXT:    b .LBB0_3
+; CHECK-NO-ISEL-NEXT:    ori 3, 4, 0
+; CHECK-NO-ISEL-NEXT:    b .LBB0_2
 ; CHECK-NO-ISEL-NEXT:  .LBB0_2: # %entry
-; CHECK-NO-ISEL-NEXT:    addi 6, 3, 0
-; CHECK-NO-ISEL-NEXT:  .LBB0_3: # %entry
-; CHECK-NO-ISEL-NEXT:    sub 4, 3, 4
-; CHECK-NO-ISEL-NEXT:    extsw 3, 6
-; CHECK-NO-ISEL-NEXT:    stw 4, 0(5)
+; CHECK-NO-ISEL-NEXT:    stw 6, 0(5)
 ; CHECK-NO-ISEL-NEXT:    blr
 entry:
   %sub = sub nsw i32 %a, %b

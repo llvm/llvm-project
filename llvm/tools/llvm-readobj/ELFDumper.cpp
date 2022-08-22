@@ -7078,7 +7078,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
         Sec.sh_type != SHT_LLVM_BB_ADDR_MAP_V0) {
       continue;
     }
-    Optional<const Elf_Shdr *> FunctionSec = None;
+    Optional<const Elf_Shdr *> FunctionSec;
     if (IsRelocatable)
       FunctionSec =
           unwrapOrError(this->FileName, this->Obj.getSection(Sec.sh_link));

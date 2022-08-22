@@ -38,6 +38,7 @@
 #include <algorithm>
 #include <functional>
 #include <iterator>
+#include <numeric>
 #include <unordered_set>
 
 using namespace llvm;
@@ -1647,7 +1648,7 @@ void BinaryContext::preprocessDebugInfo() {
 
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
     if (DwarfVersion >= 5) {
-      Optional<MD5::MD5Result> Checksum = None;
+      Optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[0].Checksum;
       Optional<const char *> Name =
@@ -1685,7 +1686,7 @@ void BinaryContext::preprocessDebugInfo() {
       if (Optional<const char *> FName = dwarf::toString(FileNames[I].Name))
         FileName = *FName;
       assert(FileName != "");
-      Optional<MD5::MD5Result> Checksum = None;
+      Optional<MD5::MD5Result> Checksum;
       if (DwarfVersion >= 5 && LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[I].Checksum;
       cantFail(
@@ -2189,27 +2190,31 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   // Create symbols in the LocalCtx so that they get destroyed with it.
   MCSymbol *StartLabel = LocalCtx->createTempSymbol();
   MCSymbol *EndLabel = LocalCtx->createTempSymbol();
-  MCSymbol *ColdStartLabel = LocalCtx->createTempSymbol();
-  MCSymbol *ColdEndLabel = LocalCtx->createTempSymbol();
 
   Streamer->switchSection(Section);
   Streamer->emitLabel(StartLabel);
-  emitFunctionBody(*Streamer, BF, /*EmitColdPart=*/false,
+  emitFunctionBody(*Streamer, BF, BF.getLayout().getMainFragment(),
                    /*EmitCodeOnly=*/true);
   Streamer->emitLabel(EndLabel);
 
-  if (BF.isSplit()) {
-    MCSectionELF *ColdSection =
-        LocalCtx->getELFSection(BF.getColdCodeSectionName(), ELF::SHT_PROGBITS,
-                                ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
-    ColdSection->setHasInstructions(true);
+  using LabelRange = std::pair<const MCSymbol *, const MCSymbol *>;
+  SmallVector<LabelRange> SplitLabels;
+  for (const FunctionFragment FF : BF.getLayout().getSplitFragments()) {
+    MCSymbol *const SplitStartLabel = LocalCtx->createTempSymbol();
+    MCSymbol *const SplitEndLabel = LocalCtx->createTempSymbol();
+    SplitLabels.emplace_back(SplitStartLabel, SplitEndLabel);
 
-    Streamer->switchSection(ColdSection);
-    Streamer->emitLabel(ColdStartLabel);
-    emitFunctionBody(*Streamer, BF, /*EmitColdPart=*/true,
-                     /*EmitCodeOnly=*/true);
-    Streamer->emitLabel(ColdEndLabel);
-    // To avoid calling MCObjectStreamer::flushPendingLabels() which is private
+    MCSectionELF *const SplitSection = LocalCtx->getELFSection(
+        BF.getCodeSectionName(FF.getFragmentNum()), ELF::SHT_PROGBITS,
+        ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
+    SplitSection->setHasInstructions(true);
+    Streamer->switchSection(SplitSection);
+
+    Streamer->emitLabel(SplitStartLabel);
+    emitFunctionBody(*Streamer, BF, FF, /*EmitCodeOnly=*/true);
+    Streamer->emitLabel(SplitEndLabel);
+    // To avoid calling MCObjectStreamer::flushPendingLabels() which is
+    // private
     Streamer->emitBytes(StringRef(""));
     Streamer->switchSection(Section);
   }
@@ -2225,10 +2230,12 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
 
   const uint64_t HotSize =
       Layout.getSymbolOffset(*EndLabel) - Layout.getSymbolOffset(*StartLabel);
-  const uint64_t ColdSize = BF.isSplit()
-                                ? Layout.getSymbolOffset(*ColdEndLabel) -
-                                      Layout.getSymbolOffset(*ColdStartLabel)
-                                : 0ULL;
+  const uint64_t ColdSize =
+      std::accumulate(SplitLabels.begin(), SplitLabels.end(), 0ULL,
+                      [&](const uint64_t Accu, const LabelRange &Labels) {
+                        return Accu + Layout.getSymbolOffset(*Labels.second) -
+                               Layout.getSymbolOffset(*Labels.first);
+                      });
 
   // Clean-up the effect of the code emission.
   for (const MCSymbol &Symbol : Assembler.symbols()) {

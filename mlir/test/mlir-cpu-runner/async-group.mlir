@@ -13,6 +13,9 @@
 // to keep the bot green for now.
 // UNSUPPORTED: asan
 
+// FIXME: https://github.com/llvm/llvm-project/issues/57231
+// UNSUPPORTED: hwasan
+
 func.func @main() {
   %c1 = arith.constant 1 : index
   %c5 = arith.constant 5 : index

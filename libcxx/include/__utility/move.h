@@ -32,7 +32,7 @@ using __move_if_noexcept_result_t =
                          _Tp&&>::type;
 
 template <class _Tp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 __move_if_noexcept_result_t<_Tp>
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14 __move_if_noexcept_result_t<_Tp>
 move_if_noexcept(_Tp& __x) _NOEXCEPT {
   return _VSTD::move(__x);
 }

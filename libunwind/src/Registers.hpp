@@ -4003,7 +4003,7 @@ typedef float fp_t;
 #    error "Unsupported __riscv_flen"
 #   endif
 #  else
-// This is just for supressing undeclared error of fp_t.
+// This is just for suppressing undeclared error of fp_t.
 typedef double fp_t;
 #  endif
 # else

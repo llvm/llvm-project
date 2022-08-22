@@ -162,6 +162,9 @@ bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
   if (A.isMultiEntry() || B.isMultiEntry())
     return false;
 
+  if (A.hasIslandsInfo() || B.hasIslandsInfo())
+    return false;
+
   // Process both functions in either DFS or existing order.
   const BinaryFunction::BasicBlockOrderType OrderA =
       opts::UseDFS

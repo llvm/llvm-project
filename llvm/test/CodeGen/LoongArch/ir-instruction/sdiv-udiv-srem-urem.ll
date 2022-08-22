@@ -155,7 +155,7 @@ define i64 @sdiv_i64(i64 %a, i64 %b) {
 ; LA32-NEXT:    .cfi_def_cfa_offset 16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
-; LA32-NEXT:    bl __divdi3
+; LA32-NEXT:    bl %plt(__divdi3)
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -171,7 +171,7 @@ define i64 @sdiv_i64(i64 %a, i64 %b) {
 ; LA32-TRAP-NEXT:    .cfi_def_cfa_offset 16
 ; LA32-TRAP-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-TRAP-NEXT:    .cfi_offset 1, -4
-; LA32-TRAP-NEXT:    bl __divdi3
+; LA32-TRAP-NEXT:    bl %plt(__divdi3)
 ; LA32-TRAP-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-TRAP-NEXT:    addi.w $sp, $sp, 16
 ; LA32-TRAP-NEXT:    ret
@@ -336,7 +336,7 @@ define i64 @udiv_i64(i64 %a, i64 %b) {
 ; LA32-NEXT:    .cfi_def_cfa_offset 16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
-; LA32-NEXT:    bl __udivdi3
+; LA32-NEXT:    bl %plt(__udivdi3)
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -352,7 +352,7 @@ define i64 @udiv_i64(i64 %a, i64 %b) {
 ; LA32-TRAP-NEXT:    .cfi_def_cfa_offset 16
 ; LA32-TRAP-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-TRAP-NEXT:    .cfi_offset 1, -4
-; LA32-TRAP-NEXT:    bl __udivdi3
+; LA32-TRAP-NEXT:    bl %plt(__udivdi3)
 ; LA32-TRAP-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-TRAP-NEXT:    addi.w $sp, $sp, 16
 ; LA32-TRAP-NEXT:    ret
@@ -521,7 +521,7 @@ define i64 @srem_i64(i64 %a, i64 %b) {
 ; LA32-NEXT:    .cfi_def_cfa_offset 16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
-; LA32-NEXT:    bl __moddi3
+; LA32-NEXT:    bl %plt(__moddi3)
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -537,7 +537,7 @@ define i64 @srem_i64(i64 %a, i64 %b) {
 ; LA32-TRAP-NEXT:    .cfi_def_cfa_offset 16
 ; LA32-TRAP-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-TRAP-NEXT:    .cfi_offset 1, -4
-; LA32-TRAP-NEXT:    bl __moddi3
+; LA32-TRAP-NEXT:    bl %plt(__moddi3)
 ; LA32-TRAP-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-TRAP-NEXT:    addi.w $sp, $sp, 16
 ; LA32-TRAP-NEXT:    ret
@@ -706,7 +706,7 @@ define i64 @urem_i64(i64 %a, i64 %b) {
 ; LA32-NEXT:    .cfi_def_cfa_offset 16
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    .cfi_offset 1, -4
-; LA32-NEXT:    bl __umoddi3
+; LA32-NEXT:    bl %plt(__umoddi3)
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
@@ -722,7 +722,7 @@ define i64 @urem_i64(i64 %a, i64 %b) {
 ; LA32-TRAP-NEXT:    .cfi_def_cfa_offset 16
 ; LA32-TRAP-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-TRAP-NEXT:    .cfi_offset 1, -4
-; LA32-TRAP-NEXT:    bl __umoddi3
+; LA32-TRAP-NEXT:    bl %plt(__umoddi3)
 ; LA32-TRAP-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-TRAP-NEXT:    addi.w $sp, $sp, 16
 ; LA32-TRAP-NEXT:    ret

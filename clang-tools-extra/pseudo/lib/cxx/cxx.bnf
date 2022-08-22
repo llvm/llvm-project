@@ -29,9 +29,9 @@
 # We list important nonterminals as start symbols, rather than doing it for all
 # nonterminals by default, this reduces the number of states by 30% and LRTable
 # actions by 16%.
-_ := translation-unit
-_ := statement-seq
-_ := declaration-seq
+_ := translation-unit EOF
+_ := statement-seq EOF
+_ := declaration-seq EOF
 
 # gram.key
 #! we don't distinguish between namespaces and namespace aliases, as it's hard

@@ -75,6 +75,9 @@ Bug Fixes
   This fixes `Issue 56094 <https://github.com/llvm/llvm-project/issues/56094>`_.
 - Fix `#57151 <https://github.com/llvm/llvm-project/issues/57151>`_.
   ``-Wcomma`` is emitted for void returning functions.
+- ``-Wtautological-compare`` missed warnings for tautological comparisons
+  involving a negative integer literal. This fixes
+  `Issue 42918 <https://github.com/llvm/llvm-project/issues/42918>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -101,6 +104,8 @@ Improvements to Clang's diagnostics
 - Clang will now print more information about failed static assertions. In
   particular, simple static assertion expressions are evaluated to their
   compile-time value and printed out if the assertion fails.
+- Diagnostics about uninitialized ``constexpr`` varaibles have been improved
+  to mention the missing constant initializer.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -144,10 +149,6 @@ C++ Language Changes in Clang
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
-- Clang now correctly delays the instantiation of function constraints until
-  the time of checking, which should now allow the libstdc++ ranges implementation
-  to work for at least trivial examples.  This fixes
-  `Issue 44178 <https://github.com/llvm/llvm-project/issues/44178>`_.
 
 - Support capturing structured bindings in lambdas
   (`P1091R3 <https://wg21.link/p1091r3>`_ and `P1381R1 <https://wg21.link/P1381R1>`).
@@ -190,6 +191,12 @@ CUDA Support in Clang
 ---------------------
 
 - ...
+
+RISC-V Support in Clang
+-----------------------
+
+- ``sifive-7-rv32`` and ``sifive-7-rv64`` are no longer supported for `-mcpu`.
+  Use `sifive-e76`, `sifive-s76`, or `sifive-u74` instead.
 
 X86 Support in Clang
 --------------------

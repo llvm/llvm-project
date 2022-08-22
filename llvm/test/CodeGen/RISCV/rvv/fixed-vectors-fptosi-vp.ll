@@ -121,7 +121,7 @@ define <4 x i8> @vfptosi_v4i8_v4f32(<4 x float> %va, <4 x i1> %m, i32 zeroext %e
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v9, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v9, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x i8> @llvm.vp.fptosi.v4i8.v4f32(<4 x float> %va, <4 x i1> %m, i32 %evl)
   ret <4 x i8> %v
@@ -133,7 +133,7 @@ define <4 x i8> @vfptosi_v4i8_v4f32_unmasked(<4 x float> %va, i32 zeroext %evl) 
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v9
+; CHECK-NEXT:    vnsrl.wi v8, v9, 0
 ; CHECK-NEXT:    ret
   %v = call <4 x i8> @llvm.vp.fptosi.v4i8.v4f32(<4 x float> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
   ret <4 x i8> %v
@@ -217,9 +217,9 @@ define <4 x i8> @vfptosi_v4i8_v4f64(<4 x double> %va, <4 x i1> %m, i32 zeroext %
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v10, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v10, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x i8> @llvm.vp.fptosi.v4i8.v4f64(<4 x double> %va, <4 x i1> %m, i32 %evl)
   ret <4 x i8> %v
@@ -231,9 +231,9 @@ define <4 x i8> @vfptosi_v4i8_v4f64_unmasked(<4 x double> %va, i32 zeroext %evl)
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v10, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v10
+; CHECK-NEXT:    vnsrl.wi v8, v10, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    ret
   %v = call <4 x i8> @llvm.vp.fptosi.v4i8.v4f64(<4 x double> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
   ret <4 x i8> %v
@@ -247,7 +247,7 @@ define <4 x i16> @vfptosi_v4i16_v4f64(<4 x double> %va, <4 x i1> %m, i32 zeroext
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v10, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v10, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x i16> @llvm.vp.fptosi.v4i16.v4f64(<4 x double> %va, <4 x i1> %m, i32 %evl)
   ret <4 x i16> %v
@@ -259,7 +259,7 @@ define <4 x i16> @vfptosi_v4i16_v4f64_unmasked(<4 x double> %va, i32 zeroext %ev
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v10, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v10
+; CHECK-NEXT:    vnsrl.wi v8, v10, 0
 ; CHECK-NEXT:    ret
   %v = call <4 x i16> @llvm.vp.fptosi.v4i16.v4f64(<4 x double> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
   ret <4 x i16> %v

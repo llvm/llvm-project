@@ -44,29 +44,29 @@ xori $a0, $a0, 4096
 
 ## simm12
 addi.w $a0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:18: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:18: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 slti $a0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 sltui $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:17: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 preld 0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:15: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:15: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.b $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.h $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.w $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.bu $a0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:17: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 ld.hu $a0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:17: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:17: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 st.b $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 st.h $a0, $a0, 2048
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 st.w $a0, $a0, -2049
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-2048, 2047]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_lo12) or an integer in the range [-2048, 2047]
 
 ## simm14_lsl2
 ll.w $a0, $a0, -32772
@@ -101,8 +101,10 @@ pcaddi $a0, -0x80001
 # CHECK: :[[#@LINE-1]]:13: error: immediate must be an integer in the range [-524288, 524287]
 pcaddu12i $a0, 0x80000
 # CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-524288, 524287]
+
+## simm20_pcalau12i
 pcalau12i $a0, 0x80000
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-524288, 524287]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %pc_hi20) or an integer in the range [-524288, 524287]
 
 ## simm21_lsl2
 beqz $a0, -0x400001
@@ -116,13 +118,13 @@ bnez $a0, 0x400000
 
 ## simm26_lsl2
 b -0x8000001
-# CHECK: :[[#@LINE-1]]:3: error: immediate must be a multiple of 4 in the range [-134217728, 134217724]
+# CHECK: :[[#@LINE-1]]:3: error: operand must be a bare symbol name or an immediate must be a multiple of 4 in the range [-134217728, 134217724]
 b 0x1
-# CHECK: :[[#@LINE-1]]:3: error: immediate must be a multiple of 4 in the range [-134217728, 134217724]
+# CHECK: :[[#@LINE-1]]:3: error: operand must be a bare symbol name or an immediate must be a multiple of 4 in the range [-134217728, 134217724]
 bl 0x7FFFFFF
-# CHECK: :[[#@LINE-1]]:4: error: immediate must be a multiple of 4 in the range [-134217728, 134217724]
+# CHECK: :[[#@LINE-1]]:4: error: operand must be a bare symbol name or an immediate must be a multiple of 4 in the range [-134217728, 134217724]
 bl 0x8000000
-# CHECK: :[[#@LINE-1]]:4: error: immediate must be a multiple of 4 in the range [-134217728, 134217724]
+# CHECK: :[[#@LINE-1]]:4: error: operand must be a bare symbol name or an immediate must be a multiple of 4 in the range [-134217728, 134217724]
 
 ## Invalid mnemonics
 nori $a0, $a0, 0

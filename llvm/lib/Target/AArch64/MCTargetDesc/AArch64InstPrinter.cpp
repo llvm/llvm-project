@@ -705,10 +705,9 @@ static const LdStNInstrDesc LdStNInstInfo[] = {
 };
 
 static const LdStNInstrDesc *getLdStNInstrDesc(unsigned Opcode) {
-  unsigned Idx;
-  for (Idx = 0; Idx != array_lengthof(LdStNInstInfo); ++Idx)
-    if (LdStNInstInfo[Idx].Opcode == Opcode)
-      return &LdStNInstInfo[Idx];
+  for (const auto &Info : LdStNInstInfo)
+    if (Info.Opcode == Opcode)
+      return &Info;
 
   return nullptr;
 }

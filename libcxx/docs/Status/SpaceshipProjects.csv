@@ -11,7 +11,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `strong_order_fallback <https://reviews.llvm.org/D111514>`_
 | `weak_order_fallback <https://reviews.llvm.org/D111514>`_
 | `partial_order_fallback <https://reviews.llvm.org/D111514>`_",None,Arthur O'Dwyer,|Complete| [#note-strongorder]_
-| `[alg.three.way] <https://wg21.link/alg.three.way>`_,| `lexicographical_compare_three_way <https://reviews.llvm.org/D80902>`_,[comparisons.three.way],Christopher Di Bella,|In Progress|
+| `[alg.three.way] <https://wg21.link/alg.three.way>`_,| `lexicographical_compare_three_way <https://reviews.llvm.org/D131395>`_,[comparisons.three.way],Adrian Vogelsgesang,|In Progress|
 | `[type.info] <https://wg21.link/type.info>`_,| `typeinfo <https://reviews.llvm.org/D130853>`_,None,Adrian Vogelsgesang,|Complete|
 | `[coroutine.handle.compare] <https://wg21.link/coroutine.handle.compare>`_,| `coroutine_handle <https://reviews.llvm.org/D109433>`_,[comparisons.three.way],Chuanqi Xu,|Complete|
 | `[pairs.spec] <https://wg21.link/pairs.spec>`_,| `pair <https://reviews.llvm.org/D107721>`_,[expos.only.func],Kent Ross,|Complete|
@@ -35,11 +35,11 @@ Section,Description,Dependencies,Assignee,Complete
 | `[stacktrace.basic.cmp] <https://wg21.link/stacktrace.basic.cmp>`_,| basic_stacktrace,[alg.three.way],Unassigned,|Not Started|
 | `[string.cmp] <https://wg21.link/string.cmp>`_,| `basic_string <https://reviews.llvm.org/D131421>`_,None,Mark de Wever,|Complete|
 | `[string.view.comparison] <https://wg21.link/string.view.comparison>`_,| `basic_string_view <https://reviews.llvm.org/D130295>`_,None,Mark de Wever,|Complete|
-| `[array.syn] <https://wg21.link/array.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| array,[expos.only.func],Unassigned,|Not Started|
+| `[array.syn] <https://wg21.link/array.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `array <https://reviews.llvm.org/D132265>`_,[expos.only.func],Adrian Vogelsgesang,|In Progress|
 | `[deque.syn] <https://wg21.link/deque.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| deque,[expos.only.func],Unassigned,|Not Started|
 | `[forward.list.syn] <https://wg21.link/forward.list.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| forward_list,[expos.only.func],Unassigned,|Not Started|
 | `[list.syn] <https://wg21.link/list.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| list,[expos.only.func],Unassigned,|Not Started|
-| `[vector.syn] <https://wg21.link/vector.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| vector,[expos.only.func],Unassigned,|Not Started|
+| `[vector.syn] <https://wg21.link/vector.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),| `vector <https://reviews.llvm.org/D132268>`_,[expos.only.func],Adrian Vogelsgesang,|In Progress|
 | `[associative.map.syn] <https://wg21.link/associative.map.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),"| map
 | multimap",[expos.only.func],Unassigned,|Not Started|
 | `[associative.set.syn] <https://wg21.link/associative.set.syn>`_ (`general <https://wg21.link/container.opt.reqmts>`_),"| multiset
@@ -75,7 +75,7 @@ Section,Description,Dependencies,Assignee,Complete
 | chrono::leap_second
 | chrono::time_zone_link",A ``<chrono>`` implementation,Unassigned,|Not Started|
 | `[fs.filesystem.syn] <https://wg21.link/fs.filesystem.syn>`_,| `filesystem::space_info <https://reviews.llvm.org/D130861>`_,None,Adrian Vogelsgesang,|Complete|
-| `[fs.path.nonmember] <https://wg21.link/fs.path.nonmember>`_,| `filesystem::path <https://reviews.llvm.org/D130859>`_,None,Adrian Vogelsgesang,|In Progress|
-| `[fs.dir.entry.obs] <https://wg21.link/fs.dir.entry.obs>`_,| `filesystem::directory_entry <https://reviews.llvm.org/D130860>`_,None,Adrian Vogelsgesang,|In Progress|
+| `[fs.path.nonmember] <https://wg21.link/fs.path.nonmember>`_,| `filesystem::path <https://reviews.llvm.org/D130859>`_,None,Adrian Vogelsgesang,|Complete|
+| `[fs.dir.entry.obs] <https://wg21.link/fs.dir.entry.obs>`_,| `filesystem::directory_entry <https://reviews.llvm.org/D130860>`_,None,Adrian Vogelsgesang,|Complete|
 | `[re.submatch.op] <https://wg21.link/re.submatch.op>`_,| sub_match,None,Mark de Wever,|In Progress|
 | `[thread.thread.id] <https://wg21.link/thread.thread.id>`_,| `thread::id <https://reviews.llvm.org/D131362>`_,None,Adrian Vogelsgesang,|Complete|

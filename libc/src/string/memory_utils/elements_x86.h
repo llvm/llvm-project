@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ELEMENTS_X86_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_ELEMENTS_X86_H
 
-#include "src/__support/CPP/Bit.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/architectures.h"
 
 #if defined(LLVM_LIBC_ARCH_X86)
@@ -68,18 +68,18 @@ struct M128 {
   static uint16_t mask(T value) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
     return static_cast<uint16_t>(
-        _mm_movemask_epi8(__llvm_libc::bit_cast<__m128i>(value)));
+        _mm_movemask_epi8(cpp::bit_cast<__m128i>(value)));
   }
   static uint16_t not_equal_mask(T a, T b) { return mask(a != b); }
   static T load(const char *ptr) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return __llvm_libc::bit_cast<T>(
+    return cpp::bit_cast<T>(
         _mm_loadu_si128(reinterpret_cast<__m128i_u const *>(ptr)));
   }
   static void store(char *ptr, T value) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
     return _mm_storeu_si128(reinterpret_cast<__m128i_u *>(ptr),
-                            __llvm_libc::bit_cast<__m128i>(value));
+                            cpp::bit_cast<__m128i>(value));
   }
   static T get_splatted_value(const char v) {
     const T splatted = {v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v};
@@ -95,18 +95,18 @@ struct M256 {
   using T = char __attribute__((__vector_size__(SIZE)));
   static uint32_t mask(T value) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return _mm256_movemask_epi8(__llvm_libc::bit_cast<__m256i>(value));
+    return _mm256_movemask_epi8(cpp::bit_cast<__m256i>(value));
   }
   static uint32_t not_equal_mask(T a, T b) { return mask(a != b); }
   static T load(const char *ptr) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return __llvm_libc::bit_cast<T>(
+    return cpp::bit_cast<T>(
         _mm256_loadu_si256(reinterpret_cast<__m256i const *>(ptr)));
   }
   static void store(char *ptr, T value) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
     return _mm256_storeu_si256(reinterpret_cast<__m256i *>(ptr),
-                               __llvm_libc::bit_cast<__m256i>(value));
+                               cpp::bit_cast<__m256i>(value));
   }
   static T get_splatted_value(const char v) {
     const T splatted = {v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v,
@@ -123,16 +123,16 @@ struct M512 {
   using T = char __attribute__((__vector_size__(SIZE)));
   static uint64_t not_equal_mask(T a, T b) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return _mm512_cmpneq_epi8_mask(__llvm_libc::bit_cast<__m512i>(a),
-                                   __llvm_libc::bit_cast<__m512i>(b));
+    return _mm512_cmpneq_epi8_mask(cpp::bit_cast<__m512i>(a),
+                                   cpp::bit_cast<__m512i>(b));
   }
   static T load(const char *ptr) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return __llvm_libc::bit_cast<T>(_mm512_loadu_epi8(ptr));
+    return cpp::bit_cast<T>(_mm512_loadu_epi8(ptr));
   }
   static void store(char *ptr, T value) {
     // NOLINTNEXTLINE(llvmlibc-callee-namespace)
-    return _mm512_storeu_epi8(ptr, __llvm_libc::bit_cast<__m512i>(value));
+    return _mm512_storeu_epi8(ptr, cpp::bit_cast<__m512i>(value));
   }
   static T get_splatted_value(const char v) {
     const T splatted = {v, v, v, v, v, v, v, v, v, v, v, v, v, v, v, v,

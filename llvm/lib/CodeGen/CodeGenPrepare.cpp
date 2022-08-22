@@ -6603,8 +6603,8 @@ static bool sinkSelectOperand(const TargetTransformInfo *TTI, Value *V) {
   // If it's safe to speculatively execute, then it should not have side
   // effects; therefore, it's safe to sink and possibly *not* execute.
   return I && I->hasOneUse() && isSafeToSpeculativelyExecute(I) &&
-         TTI->getUserCost(I, TargetTransformInfo::TCK_SizeAndLatency) >=
-         TargetTransformInfo::TCC_Expensive;
+         TTI->getInstructionCost(I, TargetTransformInfo::TCK_SizeAndLatency) >=
+             TargetTransformInfo::TCC_Expensive;
 }
 
 /// Returns true if a SelectInst should be turned into an explicit branch.

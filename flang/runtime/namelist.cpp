@@ -329,7 +329,7 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
     }
   } else {
     handler.SignalError("NAMELIST component reference of input group item %s "
-                        "has no name after '%'",
+                        "has no name after '%%'",
         name);
   }
   return false;
@@ -475,7 +475,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     }
     io.HandleRelativePosition(byteCount);
     // Read the values into the descriptor.  An array can be short.
-    listInput->ResetForNextNamelistItem();
+    listInput->ResetForNextNamelistItem(useDescriptor->rank() > 0);
     if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor)) {
       return false;
     }
@@ -493,9 +493,10 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   return true;
 }
 
-bool IsNamelistName(IoStatementState &io) {
-  if (io.get_if<ListDirectedStatementState<Direction::Input>>()) {
-    if (io.mutableModes().inNamelist) {
+bool IsNamelistNameOrSlash(IoStatementState &io) {
+  if (auto *listInput{
+          io.get_if<ListDirectedStatementState<Direction::Input>>()}) {
+    if (listInput->inNamelistArray()) {
       SavedPosition savedPosition{io};
       std::size_t byteCount{0};
       if (auto ch{io.GetNextNonBlank(byteCount)}) {
@@ -507,6 +508,8 @@ bool IsNamelistName(IoStatementState &io) {
           ch = io.GetNextNonBlank(byteCount);
           // TODO: how to deal with NaN(...) ambiguity?
           return ch && (*ch == '=' || *ch == '(' || *ch == '%');
+        } else {
+          return *ch == '/';
         }
       }
     }

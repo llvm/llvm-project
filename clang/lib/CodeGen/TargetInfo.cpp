@@ -10981,9 +10981,22 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
     // Unions aren't eligible unless they're empty (which is caught above).
     if (RD->isUnion())
       return false;
+    const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
+    // If this is a C++ record, check the bases first.
+    if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      for (const CXXBaseSpecifier &B : CXXRD->bases()) {
+        const auto *BDecl =
+            cast<CXXRecordDecl>(B.getType()->castAs<RecordType>()->getDecl());
+        CharUnits BaseOff = Layout.getBaseClassOffset(BDecl);
+        bool Ret = detectFPCCEligibleStructHelper(B.getType(), CurOff + BaseOff,
+                                                  Field1Ty, Field1Off, Field2Ty,
+                                                  Field2Off);
+        if (!Ret)
+          return false;
+      }
+    }
     int ZeroWidthBitFieldCount = 0;
     for (const FieldDecl *FD : RD->fields()) {
-      const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
       uint64_t FieldOffInBits = Layout.getFieldOffset(FD->getFieldIndex());
       QualType QTy = FD->getType();
       if (FD->isBitField()) {
@@ -11511,6 +11524,42 @@ class BPFABIInfo : public DefaultABIInfo {
 public:
   BPFABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
 
+  ABIArgInfo classifyArgumentType(QualType Ty) const {
+    Ty = useFirstFieldIfTransparentUnion(Ty);
+
+    if (isAggregateTypeForABI(Ty)) {
+      uint64_t Bits = getContext().getTypeSize(Ty);
+      if (Bits == 0)
+        return ABIArgInfo::getIgnore();
+
+      // If the aggregate needs 1 or 2 registers, do not use reference.
+      if (Bits <= 128) {
+        llvm::Type *CoerceTy;
+        if (Bits <= 64) {
+          CoerceTy =
+              llvm::IntegerType::get(getVMContext(), llvm::alignTo(Bits, 8));
+        } else {
+          llvm::Type *RegTy = llvm::IntegerType::get(getVMContext(), 64);
+          CoerceTy = llvm::ArrayType::get(RegTy, 2);
+        }
+        return ABIArgInfo::getDirect(CoerceTy);
+      } else {
+        return getNaturalAlignIndirect(Ty);
+      }
+    }
+
+    if (const EnumType *EnumTy = Ty->getAs<EnumType>())
+      Ty = EnumTy->getDecl()->getIntegerType();
+
+    ASTContext &Context = getContext();
+    if (const auto *EIT = Ty->getAs<BitIntType>())
+      if (EIT->getNumBits() > Context.getTypeSize(Context.Int128Ty))
+        return getNaturalAlignIndirect(Ty);
+
+    return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
+                                              : ABIArgInfo::getDirect());
+  }
+
   ABIArgInfo classifyReturnType(QualType RetTy) const {
     if (RetTy->isVoidType())
       return ABIArgInfo::getIgnore();
@@ -11868,8 +11917,8 @@ llvm::Function *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   auto *Cast = Builder.CreatePointerCast(BlockPtr, InvokeFT->getParamType(0));
   llvm::SmallVector<llvm::Value *, 2> Args;
   Args.push_back(Cast);
-  for (auto I = F->arg_begin() + 1, E = F->arg_end(); I != E; ++I)
-    Args.push_back(I);
+  for (llvm::Argument &A : llvm::drop_begin(F->args()))
+    Args.push_back(&A);
   llvm::CallInst *call = Builder.CreateCall(Invoke, Args);
   call->setCallingConv(Invoke->getCallingConv());
   Builder.CreateRetVoid();

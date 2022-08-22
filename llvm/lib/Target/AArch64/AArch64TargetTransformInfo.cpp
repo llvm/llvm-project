@@ -102,7 +102,7 @@ cl::opt<TailFoldingKind, true, cl::parser<std::string>> SVETailFolding(
         "\nsimple      Use tail-folding for simple loops (not reductions or "
         "recurrences)"
         "\nreductions  Use tail-folding for loops containing reductions"
-        "\nrecurrences Use tail-folding for loops containing first order "
+        "\nrecurrences Use tail-folding for loops containing fixed order "
         "recurrences"),
     cl::location(TailFoldingKindLoc));
 
@@ -2249,7 +2249,8 @@ InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
 
   ElementCount LegalVF = LT.second.getVectorElementCount();
   InstructionCost MemOpCost =
-      getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind, I);
+      getMemoryOpCost(Opcode, VT->getElementType(), Alignment, 0, CostKind,
+                      TTI::OK_AnyValue, I);
   // Add on an overhead cost for using gathers/scatters.
   // TODO: At the moment this is applied unilaterally for all CPUs, but at some
   // point we may want a per-CPU overhead.
@@ -2265,6 +2266,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 MaybeAlign Alignment,
                                                 unsigned AddressSpace,
                                                 TTI::TargetCostKind CostKind,
+                                                TTI::OperandValueKind OpdInfo,
                                                 const Instruction *I) {
   EVT VT = TLI->getValueType(DL, Ty, true);
   // Type legalization can't handle structs
@@ -2816,8 +2818,9 @@ InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index) {
 
 InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                VectorType *Tp,
-                                               ArrayRef<int> Mask, int Index,
-                                               VectorType *SubTp,
+                                               ArrayRef<int> Mask,
+                                               TTI::TargetCostKind CostKind,
+                                               int Index, VectorType *SubTp,
                                                ArrayRef<const Value *> Args) {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
   // If we have a Mask, and the LT is being legalized somehow, split the Mask
@@ -2875,7 +2878,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       if (NumSources <= 2)
         Cost += getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
-                               NTp, NMask, 0, nullptr, Args);
+                               NTp, NMask, CostKind, 0, nullptr, Args);
       else if (any_of(enumerate(NMask), [&](const auto &ME) {
                  return ME.value() % LTNumElts == ME.index();
                }))
@@ -3025,7 +3028,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
 
 bool AArch64TTIImpl::preferPredicateOverEpilogue(
@@ -3044,7 +3047,7 @@ bool AArch64TTIImpl::preferPredicateOverEpilogue(
   TailFoldingKind Required; // Defaults to 0.
   if (LVL->getReductionVars().size())
     Required.add(TailFoldingKind::TFReductions);
-  if (LVL->getFirstOrderRecurrences().size())
+  if (LVL->getFixedOrderRecurrences().size())
     Required.add(TailFoldingKind::TFRecurrences);
   if (!Required)
     Required.add(TailFoldingKind::TFSimple);

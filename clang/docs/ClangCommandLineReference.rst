@@ -845,6 +845,8 @@ Only run the driver.
 
 .. option:: -fsyntax-only
 
+Run the preprocessor, parser and semantic analysis stages
+
 .. option:: -module-file-info
 
 Provide information about a particular module file
@@ -958,6 +960,10 @@ Inline suitable functions
 .. option:: -finline-hint-functions
 
 Inline functions which are (explicitly or implicitly) marked inline
+
+.. option:: -finline-max-stacksize=<arg>
+
+Suppress inlining of functions with a stacksize larger than <arg> bytes.
 
 .. option:: -fno-legacy-pass-manager, -fexperimental-new-pass-manager
 

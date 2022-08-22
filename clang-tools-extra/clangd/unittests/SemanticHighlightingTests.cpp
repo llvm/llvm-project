@@ -841,6 +841,12 @@ sizeof...($TemplateParameter[[Elements]]);
             $Function_deprecated[[Foo]]($Parameter[[x]]); 
         }
       )cpp",
+      // Predefined identifiers
+      R"cpp(
+        void $Function_decl[[Foo]]() {
+            const char *$LocalVariable_decl_readonly[[s]] = $LocalVariable_readonly_static[[__func__]];
+        }
+      )cpp",
       // Explicit template specialization
       R"cpp(
         struct $Class_decl[[Base]]{};
