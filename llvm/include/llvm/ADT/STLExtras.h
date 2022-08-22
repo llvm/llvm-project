@@ -96,16 +96,6 @@ struct detector<std::void_t<Op<Args...>>, Op, Args...> {
 template <template <class...> class Op, class... Args>
 using is_detected = typename detail::detector<void, Op, Args...>::value_t;
 
-namespace detail {
-template <typename Callable, typename... Args>
-using is_invocable =
-    decltype(std::declval<Callable &>()(std::declval<Args>()...));
-} // namespace detail
-
-/// Check if a Callable type can be invoked with the given set of arg types.
-template <typename Callable, typename... Args>
-using is_invocable = is_detected<detail::is_invocable, Callable, Args...>;
-
 /// This class provides various trait information about a callable object.
 ///   * To access the number of arguments: Traits::num_args
 ///   * To access the type of an argument: Traits::arg_t<Index>
