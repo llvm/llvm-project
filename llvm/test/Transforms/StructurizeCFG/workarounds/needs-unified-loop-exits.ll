@@ -28,16 +28,18 @@ define void @exiting-block(i1 %PredH1, i1 %PredB2, i1 %PredB1, i1 %PredH2) {
 ; CHECK:       H1:
 ; CHECK-NEXT:    br i1 [[PREDH1_INV]], label [[B1:%.*]], label [[FLOW3:%.*]]
 ; CHECK:       Flow3:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[PREDB1:%.*]], [[B1]] ], [ [[PREDH1]], [[H1]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[H2:%.*]], label [[FLOW4:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[B1]] ], [ undef, [[H1]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[PREDB1:%.*]], [[B1]] ], [ [[PREDH1]], [[H1]] ]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[H2:%.*]], label [[FLOW4:%.*]]
 ; CHECK:       H2:
 ; CHECK-NEXT:    br i1 [[PREDH2:%.*]], label [[B2:%.*]], label [[FLOW:%.*]]
 ; CHECK:       B2:
 ; CHECK-NEXT:    br i1 [[PREDB2_INV]], label [[L2:%.*]], label [[FLOW2:%.*]]
 ; CHECK:       Flow:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, [[FLOW2]] ], [ true, [[H2]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ [[TMP4:%.*]], [[FLOW2]] ], [ true, [[H2]] ]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_EXIT_GUARD1:%.*]], label [[H2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, [[FLOW2]] ], [ undef, [[H2]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, [[FLOW2]] ], [ true, [[H2]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP6:%.*]], [[FLOW2]] ], [ true, [[H2]] ]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP_EXIT_GUARD1:%.*]], label [[H2]]
 ; CHECK:       L2:
 ; CHECK-NEXT:    br label [[FLOW2]]
 ; CHECK:       L1:
@@ -49,19 +51,19 @@ define void @exiting-block(i1 %PredH1, i1 %PredB2, i1 %PredB1, i1 %PredH2) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       Flow5:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, [[L1:%.*]] ], [ true, [[LOOP_EXIT_GUARD1]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ false, [[L1:%.*]] ], [ true, [[LOOP_EXIT_GUARD1]] ]
 ; CHECK-NEXT:    br label [[FLOW4]]
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    br i1 [[TMP5:%.*]], label [[C:%.*]], label [[EXIT]]
+; CHECK-NEXT:    br i1 [[TMP7:%.*]], label [[C:%.*]], label [[EXIT]]
 ; CHECK:       Flow2:
-; CHECK-NEXT:    [[TMP4]] = phi i1 [ false, [[L2]] ], [ true, [[B2]] ]
+; CHECK-NEXT:    [[TMP6]] = phi i1 [ false, [[L2]] ], [ true, [[B2]] ]
 ; CHECK-NEXT:    br label [[FLOW]]
 ; CHECK:       Flow4:
-; CHECK-NEXT:    [[TMP5]] = phi i1 [ false, [[FLOW5]] ], [ true, [[FLOW3]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = phi i1 [ [[TMP3]], [[FLOW5]] ], [ true, [[FLOW3]] ]
-; CHECK-NEXT:    br i1 [[TMP6]], label [[LOOP_EXIT_GUARD:%.*]], label [[H1]]
+; CHECK-NEXT:    [[TMP7]] = phi i1 [ [[TMP2]], [[FLOW5]] ], [ [[TMP0]], [[FLOW3]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i1 [ [[TMP5]], [[FLOW5]] ], [ true, [[FLOW3]] ]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[LOOP_EXIT_GUARD:%.*]], label [[H1]]
 ; CHECK:       loop.exit.guard1:
-; CHECK-NEXT:    br i1 [[TMP1]], label [[L1]], label [[FLOW5]]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[L1]], label [[FLOW5]]
 ;
 entry:
   br label %H1
@@ -112,37 +114,39 @@ define void @incorrect-backedge(i1 %PredH2, i1 %PredH3, i1 %PredL2, i1 %PredL13,
 ; CHECK:       L2:
 ; CHECK-NEXT:    br i1 [[PREDL2_INV]], label [[L13:%.*]], label [[FLOW3:%.*]]
 ; CHECK:       Flow:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ false, [[FLOW3]] ], [ true, [[H3]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP6:%.*]], [[FLOW3]] ], [ true, [[H3]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ [[TMP7:%.*]], [[FLOW3]] ], [ true, [[H3]] ]
-; CHECK-NEXT:    br i1 [[TMP2]], label [[LOOP_EXIT_GUARD2:%.*]], label [[H3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[TMP7:%.*]], [[FLOW3]] ], [ true, [[H3]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[TMP7]], [[FLOW3]] ], [ false, [[H3]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ [[TMP8:%.*]], [[FLOW3]] ], [ true, [[H3]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ [[TMP9:%.*]], [[FLOW3]] ], [ true, [[H3]] ]
+; CHECK-NEXT:    br i1 [[TMP3]], label [[LOOP_EXIT_GUARD2:%.*]], label [[H3]]
 ; CHECK:       L13:
 ; CHECK-NEXT:    br label [[FLOW3]]
 ; CHECK:       Flow5:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ [[TMP8:%.*]], [[LOOP_EXIT_GUARD1:%.*]] ], [ true, [[LOOP_EXIT_GUARD:%.*]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ false, [[LOOP_EXIT_GUARD1]] ], [ true, [[LOOP_EXIT_GUARD]] ]
-; CHECK-NEXT:    br i1 [[TMP4]], label [[L1:%.*]], label [[FLOW6:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP10:%.*]], [[LOOP_EXIT_GUARD1:%.*]] ], [ true, [[LOOP_EXIT_GUARD:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ false, [[LOOP_EXIT_GUARD1]] ], [ true, [[LOOP_EXIT_GUARD]] ]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[L1:%.*]], label [[FLOW6:%.*]]
 ; CHECK:       L1:
 ; CHECK-NEXT:    br label [[FLOW6]]
 ; CHECK:       Flow6:
-; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ [[PREDL1:%.*]], [[L1]] ], [ [[TMP3]], [[FLOW5:%.*]] ]
-; CHECK-NEXT:    br i1 [[TMP5]], label [[EXIT:%.*]], label [[H1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i1 [ [[PREDL1:%.*]], [[L1]] ], [ [[TMP4]], [[FLOW5:%.*]] ]
+; CHECK-NEXT:    br i1 [[TMP6]], label [[EXIT:%.*]], label [[H1]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       loop.exit.guard:
-; CHECK-NEXT:    br i1 [[TMP11:%.*]], label [[LOOP_EXIT_GUARD1]], label [[FLOW5]]
+; CHECK-NEXT:    br i1 [[DOTINV:%.*]], label [[LOOP_EXIT_GUARD1]], label [[FLOW5]]
 ; CHECK:       loop.exit.guard1:
 ; CHECK-NEXT:    br label [[FLOW5]]
 ; CHECK:       Flow3:
-; CHECK-NEXT:    [[TMP6]] = phi i1 [ true, [[L13]] ], [ false, [[L2]] ]
-; CHECK-NEXT:    [[TMP7]] = phi i1 [ [[PREDL13_INV]], [[L13]] ], [ true, [[L2]] ]
+; CHECK-NEXT:    [[TMP7]] = phi i1 [ false, [[L13]] ], [ undef, [[L2]] ]
+; CHECK-NEXT:    [[TMP8]] = phi i1 [ true, [[L13]] ], [ false, [[L2]] ]
+; CHECK-NEXT:    [[TMP9]] = phi i1 [ [[PREDL13_INV]], [[L13]] ], [ true, [[L2]] ]
 ; CHECK-NEXT:    br label [[FLOW]]
 ; CHECK:       Flow4:
-; CHECK-NEXT:    [[TMP8]] = phi i1 [ [[TMP0]], [[LOOP_EXIT_GUARD2]] ], [ false, [[H2]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = phi i1 [ false, [[LOOP_EXIT_GUARD2]] ], [ true, [[H2]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = phi i1 [ [[TMP1]], [[LOOP_EXIT_GUARD2]] ], [ true, [[H2]] ]
-; CHECK-NEXT:    [[TMP11]] = xor i1 [[TMP9]], true
-; CHECK-NEXT:    br i1 [[TMP10]], label [[LOOP_EXIT_GUARD]], label [[H2]]
+; CHECK-NEXT:    [[TMP10]] = phi i1 [ [[TMP0]], [[LOOP_EXIT_GUARD2]] ], [ false, [[H2]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = phi i1 [ [[TMP1]], [[LOOP_EXIT_GUARD2]] ], [ true, [[H2]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ [[TMP2]], [[LOOP_EXIT_GUARD2]] ], [ true, [[H2]] ]
+; CHECK-NEXT:    [[DOTINV]] = xor i1 [[TMP11]], true
+; CHECK-NEXT:    br i1 [[TMP12]], label [[LOOP_EXIT_GUARD]], label [[H2]]
 ; CHECK:       loop.exit.guard2:
 ; CHECK-NEXT:    br label [[FLOW4]]
 ;
