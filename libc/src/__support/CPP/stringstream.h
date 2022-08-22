@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_STRINGSTREAM_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_STRINGSTREAM_H
 
+#include "ArrayRef.h"
 #include "StringView.h"
-#include "span.h"
 #include "type_traits.h"
 
 #include "src/__support/integer_to_string.h"
@@ -22,7 +22,7 @@ namespace cpp {
 // without any dynamic memory allocation. There is no requirement to mimic the
 // C++ standard library class std::stringstream.
 class StringStream {
-  span<char> data;
+  MutableArrayRef<char> data;
   size_t write_ptr = 0; // The current write pointer
   bool err = false;     // If an error occurs while writing
 
@@ -41,7 +41,7 @@ public:
   static constexpr char ENDS = '\0';
 
   // Create a string stream which will write into |buf|.
-  constexpr StringStream(const span<char> &buf) : data(buf) {}
+  constexpr StringStream(const MutableArrayRef<char> &buf) : data(buf) {}
 
   // Return a StringView to the current characters in the stream. If a
   // null terminator was not explicitly written, then the return value

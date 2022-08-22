@@ -59,11 +59,10 @@ add_object_library(
   DEPENDS
     .writer
     .core_structs
+    libc.src.__support.integer_to_string
     libc.src.__support.CPP.limits
-    libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
     libc.src.__support.FPUtil.fputil
-    libc.src.__support.integer_to_string
 )
 
 
