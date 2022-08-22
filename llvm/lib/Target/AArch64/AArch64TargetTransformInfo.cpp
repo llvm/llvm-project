@@ -2909,8 +2909,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
   if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
       Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc ||
-      Kind == TTI::SK_Reverse) {
-
+      Kind == TTI::SK_Reverse || Kind == TTI::SK_Splice) {
     static const CostTblEntry ShuffleTbl[] = {
       // Broadcast shuffle kinds can be performed with 'dup'.
       { TTI::SK_Broadcast, MVT::v8i8,  1 },
@@ -2971,6 +2970,21 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       { TTI::SK_Reverse, MVT::v4f16, 1 }, // REV64
       { TTI::SK_Reverse, MVT::v4i16, 1 }, // REV64
       { TTI::SK_Reverse, MVT::v8i8, 1 }, // REV64
+      // Splice can all be lowered as `ext`.
+      { TTI::SK_Splice, MVT::v2i32, 1 },
+      { TTI::SK_Splice, MVT::v4i32, 1 },
+      { TTI::SK_Splice, MVT::v2i64, 1 },
+      { TTI::SK_Splice, MVT::v2f32, 1 },
+      { TTI::SK_Splice, MVT::v4f32, 1 },
+      { TTI::SK_Splice, MVT::v2f64, 1 },
+      { TTI::SK_Splice, MVT::v8f16, 1 },
+      { TTI::SK_Splice, MVT::v8bf16, 1 },
+      { TTI::SK_Splice, MVT::v8i16, 1 },
+      { TTI::SK_Splice, MVT::v16i8, 1 },
+      { TTI::SK_Splice, MVT::v4bf16, 1 },
+      { TTI::SK_Splice, MVT::v4f16, 1 },
+      { TTI::SK_Splice, MVT::v4i16, 1 },
+      { TTI::SK_Splice, MVT::v8i8, 1 },
       // Broadcast shuffle kinds for scalable vectors
       { TTI::SK_Broadcast, MVT::nxv16i8,  1 },
       { TTI::SK_Broadcast, MVT::nxv8i16,  1 },
