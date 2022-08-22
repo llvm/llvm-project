@@ -24,6 +24,15 @@ namespace __llvm_libc::cpp {
 //   inherits from B),
 // - No reverse iterators
 template <typename T> class span {
+  template <typename U>
+  inline static constexpr bool is_const_view_v =
+      !cpp::is_const_v<U> && cpp::is_const_v<T> &&
+      cpp::is_same_v<U, remove_cv_t<T>>;
+
+  template <typename U>
+  inline static constexpr bool is_compatible_v =
+      cpp::is_same_v<U, T> || is_const_view_v<U>;
+
 public:
   using element_type = T;
   using value_type = remove_cv_t<T>;
@@ -45,21 +54,25 @@ public:
   constexpr span(pointer first, pointer end)
       : span_data(first), span_size(end - first) {}
 
-  template <size_t N>
-  constexpr span(element_type (&arr)[N]) : span_data(arr), span_size(N) {}
+  template <typename U, size_t N,
+            cpp::enable_if_t<is_compatible_v<U>, bool> = true>
+  constexpr span(U (&arr)[N]) : span_data(arr), span_size(N) {}
 
-  template <size_t N>
-  constexpr span(array<T, N> &arr)
+  template <typename U, size_t N,
+            cpp::enable_if_t<is_compatible_v<U>, bool> = true>
+  constexpr span(array<U, N> &arr)
       : span_data(arr.data()), span_size(arr.size()) {}
 
-  template <typename U,
-            cpp::enable_if_t<!cpp::is_const_v<U> && cpp::is_const_v<T> &&
-                                 cpp::is_same_v<U, value_type>,
-                             bool> = true>
-  constexpr span(span<U> &s) : span(s.data(), s.size()) {}
+  template <typename U, cpp::enable_if_t<is_compatible_v<U>, bool> = true>
+  constexpr span(span<U> &s) : span_data(s.data()), span_size(s.size()) {}
 
-  constexpr span(const span &s) = default;
-  constexpr span &operator=(const span &s) = default;
+  template <typename U, cpp::enable_if_t<is_compatible_v<U>, bool> = true>
+  constexpr span &operator=(span<U> &s) {
+    span_data = s.data();
+    span_size = s.size();
+    return *this;
+  }
+
   ~span() = default;
   constexpr reference operator[](size_type index) const {
     return data()[index];
