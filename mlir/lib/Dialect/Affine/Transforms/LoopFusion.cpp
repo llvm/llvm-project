@@ -1124,10 +1124,10 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
   // loop nest at 'dstLoopDepth'.
   uint64_t minFusedLoopNestComputeCost = std::numeric_limits<uint64_t>::max();
   double maxStorageReduction = 0.0;
-  Optional<uint64_t> sliceMemEstimate = None;
+  Optional<uint64_t> sliceMemEstimate;
 
   // The best loop depth at which to materialize the slice.
-  Optional<unsigned> bestDstLoopDepth = None;
+  Optional<unsigned> bestDstLoopDepth;
 
   // Compute op instance count for the src loop nest without iteration slicing.
   uint64_t srcLoopNestCost = getComputeCost(srcLoopIVs[0], srcLoopNestStats);
@@ -1260,7 +1260,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
   auto dstMemSize = getMemoryFootprintBytes(dstForOp);
   auto srcMemSize = getMemoryFootprintBytes(srcLoopIVs[0]);
 
-  Optional<double> storageReduction = None;
+  Optional<double> storageReduction;
 
   if (!dstMemSize || !srcMemSize) {
     LLVM_DEBUG(llvm::dbgs()

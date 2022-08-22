@@ -10489,7 +10489,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
                     ValueVTs);
     MVT VT = ValueVTs[0].getSimpleVT();
     MVT RegVT = TLI->getRegisterType(*CurDAG->getContext(), VT);
-    Optional<ISD::NodeType> AssertOp = None;
+    Optional<ISD::NodeType> AssertOp;
     SDValue ArgValue = getCopyFromParts(DAG, dl, &InVals[0], 1, RegVT, VT,
                                         nullptr, F.getCallingConv(), AssertOp);
 

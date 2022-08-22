@@ -2316,6 +2316,7 @@ cc_library(
         ":AffineOpsIncGen",
         ":ArithmeticDialect",
         ":ControlFlowInterfaces",
+        ":DialectUtils",
         ":IR",
         ":LoopLikeInterface",
         ":MemRefDialect",
@@ -2430,6 +2431,7 @@ cc_library(
     deps = [
         ":AffineAnalysis",
         ":AffineDialect",
+        ":ArithmeticUtils",
         ":Analysis",
         ":FuncDialect",
         ":IR",

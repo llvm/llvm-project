@@ -2818,8 +2818,9 @@ InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index) {
 
 InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                                VectorType *Tp,
-                                               ArrayRef<int> Mask, int Index,
-                                               VectorType *SubTp,
+                                               ArrayRef<int> Mask,
+                                               TTI::TargetCostKind CostKind,
+                                               int Index, VectorType *SubTp,
                                                ArrayRef<const Value *> Args) {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
   // If we have a Mask, and the LT is being legalized somehow, split the Mask
@@ -2877,7 +2878,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       if (NumSources <= 2)
         Cost += getShuffleCost(NumSources <= 1 ? TTI::SK_PermuteSingleSrc
                                                : TTI::SK_PermuteTwoSrc,
-                               NTp, NMask, 0, nullptr, Args);
+                               NTp, NMask, CostKind, 0, nullptr, Args);
       else if (any_of(enumerate(NMask), [&](const auto &ME) {
                  return ME.value() % LTNumElts == ME.index();
                }))
@@ -3027,7 +3028,7 @@ InstructionCost AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
 
 bool AArch64TTIImpl::preferPredicateOverEpilogue(

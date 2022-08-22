@@ -1895,9 +1895,9 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
     add(config->wordsize);
     add(target->relativeRel);
     if (config->isRela) {
-      for (auto i = g.begin() + 1, e = g.end(); i != e; ++i) {
-        add(i->r_addend - addend);
-        addend = i->r_addend;
+      for (const auto &i : llvm::drop_begin(g)) {
+        add(i.r_addend - addend);
+        addend = i.r_addend;
       }
     }
 

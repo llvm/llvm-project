@@ -1648,7 +1648,7 @@ void BinaryContext::preprocessDebugInfo() {
 
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
     if (DwarfVersion >= 5) {
-      Optional<MD5::MD5Result> Checksum = None;
+      Optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[0].Checksum;
       Optional<const char *> Name =
@@ -1686,7 +1686,7 @@ void BinaryContext::preprocessDebugInfo() {
       if (Optional<const char *> FName = dwarf::toString(FileNames[I].Name))
         FileName = *FName;
       assert(FileName != "");
-      Optional<MD5::MD5Result> Checksum = None;
+      Optional<MD5::MD5Result> Checksum;
       if (DwarfVersion >= 5 && LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[I].Checksum;
       cantFail(

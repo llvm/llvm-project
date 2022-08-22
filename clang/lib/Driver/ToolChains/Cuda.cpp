@@ -592,7 +592,7 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
   // Add paths for the default clang library path.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(TC.getDriver().Dir);
-  llvm::sys::path::append(DefaultLibPath, "lib" CLANG_LIBDIR_SUFFIX);
+  llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
   CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
 
   for (const auto &II : Inputs) {
