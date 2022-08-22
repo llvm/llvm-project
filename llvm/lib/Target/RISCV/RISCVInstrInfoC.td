@@ -695,6 +695,13 @@ def C_SRAI64_HINT : RVInst16CI<0b100, 0b01, (outs GPRC:$rd_wb),
 // Assembler Pseudo Instructions
 //===----------------------------------------------------------------------===//
 
+let Predicates = [HasStdExtC, HasRVCHints, HasStdExtZihintntl] in {
+def : InstAlias<"c.ntl.p1", (C_ADD_HINT X0, X2)>;
+def : InstAlias<"c.ntl.pall", (C_ADD_HINT X0, X3)>;
+def : InstAlias<"c.ntl.s1", (C_ADD_HINT X0, X4)>;
+def : InstAlias<"c.ntl.all", (C_ADD_HINT X0, X5)>;
+} // Predicates = [HasStdExtC, HasRVCHints, HasStdExtZihintntl]
+
 let EmitPriority = 0 in {
 let Predicates = [HasStdExtCOrZca] in {
 def : InstAlias<"c.lw $rd, (${rs1})", (C_LW GPRC:$rd, GPRC:$rs1, 0)>;
