@@ -6189,6 +6189,7 @@ cc_library(
     hdrs = ["include/mlir/Tools/mlir-opt/MlirOptMain.h"],
     includes = ["include"],
     deps = [
+        ":BytecodeReader",
         ":BytecodeWriter",
         ":IR",
         ":Parser",

@@ -165,14 +165,14 @@ public:
   /// contents of the section in `sectionData`.
   LogicalResult parseSection(bytecode::Section::ID &sectionID,
                              ArrayRef<uint8_t> &sectionData) {
-    size_t length;
+    uint64_t length;
     if (failed(parseByte(sectionID)) || failed(parseVarInt(length)))
       return failure();
     if (sectionID >= bytecode::Section::kNumSections)
       return emitError("invalid section ID: ", unsigned(sectionID));
 
     // Parse the actua section data now that we have its length.
-    return parseBytes(length, sectionData);
+    return parseBytes(static_cast<size_t>(length), sectionData);
   }
 
 private:
