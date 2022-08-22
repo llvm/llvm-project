@@ -15,7 +15,7 @@ add_libc_unittest(
   DEPENDS
     libc.src.string.memory_utils.memory_utils
     libc.src.__support.CPP.array
-    libc.src.__support.CPP.array_ref
+    libc.src.__support.CPP.span
 )
 
 if(NOT LLVM_LIBC_FULL_BUILD)
@@ -30,6 +30,6 @@ add_libc_unittest(
   DEPENDS
     libc.src.string.memory_utils.memory_utils
     libc.src.__support.CPP.array
-    libc.src.__support.CPP.array_ref
+    libc.src.__support.CPP.span
 )
 endif()

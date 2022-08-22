@@ -13,6 +13,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
 
@@ -739,6 +740,92 @@ struct InsertSliceOpInterface
   }
 };
 
+/// Bufferization of tensor.pad. Replace with tensor.generate + insert_slice.
+/// For best performance, vectorize before bufferization (better performance in
+/// case of padding with a constant).
+struct PadOpInterface
+    : public BufferizableOpInterface::ExternalModel<PadOpInterface,
+                                                    tensor::PadOp> {
+  bool bufferizesToAllocation(Operation *op, OpResult opResult) const {
+    return true;
+  }
+
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    return true;
+  }
+
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const AnalysisState &state) const {
+    return false;
+  }
+
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
+    return {};
+  }
+
+  LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
+                          const BufferizationOptions &options) const {
+    auto padOp = cast<tensor::PadOp>(op);
+    Location loc = padOp.getLoc();
+    RankedTensorType resultType = padOp.getResultType();
+    RankedTensorType srcType = padOp.getSourceType();
+
+    auto toValue = [&](OpFoldResult ofr) {
+      if (ofr.is<Value>())
+        return ofr.get<Value>();
+      return rewriter
+          .create<arith::ConstantIndexOp>(loc, *getConstantIntValue(ofr))
+          .getResult();
+    };
+
+    // Compute dynamic result dimensions.
+    SmallVector<OpFoldResult> mixedLowPad = padOp.getMixedLowPad();
+    SmallVector<OpFoldResult> mixedHighPad = padOp.getMixedHighPad();
+    SmallVector<Value> dynamicSizes;
+    for (int64_t i = 0; i < resultType.getRank(); ++i) {
+      if (!resultType.isDynamicDim(i))
+        continue;
+      Value srcDim = rewriter.create<tensor::DimOp>(loc, padOp.getSource(), i);
+      Value lowPad = toValue(mixedLowPad[i]);
+      Value highPad = toValue(mixedHighPad[i]);
+      Value s1 = rewriter.create<arith::AddIOp>(loc, lowPad, highPad);
+      Value s2 = rewriter.create<arith::AddIOp>(loc, s1, srcDim);
+      dynamicSizes.push_back(s2);
+    }
+
+    // Create tensor::GenerateOp.
+    auto generateOp =
+        rewriter.create<tensor::GenerateOp>(loc, resultType, dynamicSizes);
+    // Move over "escape" attribute if present.
+    if (padOp->hasAttr(BufferizationDialect::kEscapeAttrName))
+      generateOp->setAttr(
+          BufferizationDialect::kEscapeAttrName,
+          padOp->getAttr(BufferizationDialect::kEscapeAttrName));
+    // TODO: Memory space
+    rewriter.inlineRegionBefore(padOp.getRegion(), generateOp.getBody(),
+                                generateOp.getBody().begin());
+
+    // Create tensor::InsertSliceOp.
+    SmallVector<OpFoldResult> sliceSizes, sliceStrides;
+    for (int64_t i = 0; i < resultType.getRank(); ++i) {
+      sliceStrides.push_back(rewriter.getIndexAttr(1));
+      if (srcType.isDynamicDim(i)) {
+        Value size = rewriter.create<tensor::DimOp>(loc, padOp.getSource(), i);
+        sliceSizes.push_back(size);
+      } else {
+        sliceSizes.push_back(rewriter.getIndexAttr(srcType.getDimSize(i)));
+      }
+    }
+    rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
+        padOp, padOp.getSource(), generateOp.getResult(),
+        /*offsets=*/padOp.getMixedLowPad(), sliceSizes, sliceStrides);
+
+    return success();
+  }
+};
+
 /// Bufferization of tensor.rank. Replace with memref.rank.
 struct RankOpInterface
     : public BufferizableOpInterface::ExternalModel<RankOpInterface,
@@ -982,6 +1069,7 @@ void mlir::tensor::registerBufferizableOpInterfaceExternalModels(
     GenerateOp::attachInterface<GenerateOpInterface>(*ctx);
     InsertOp::attachInterface<InsertOpInterface>(*ctx);
     InsertSliceOp::attachInterface<InsertSliceOpInterface>(*ctx);
+    PadOp::attachInterface<PadOpInterface>(*ctx);
     ParallelInsertSliceOp::attachInterface<ParallelInsertSliceOpInterface>(
         *ctx);
     RankOp::attachInterface<RankOpInterface>(*ctx);

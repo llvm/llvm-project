@@ -343,6 +343,10 @@ public:
 
   bool supportsTailCalls() const { return true; }
 
+  bool supportsTailCallFor(const CallBase *CB) const {
+    return supportsTailCalls();
+  }
+
   bool enableAggressiveInterleaving(bool LoopHasReductions) const {
     return false;
   }

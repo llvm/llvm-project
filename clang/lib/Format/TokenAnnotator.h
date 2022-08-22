@@ -31,6 +31,7 @@ enum LineType {
   LT_PreprocessorDirective,
   LT_VirtualFunctionDecl,
   LT_ArrayOfStructInitializer,
+  LT_CommentAbovePPDirective,
 };
 
 class AnnotatedLine {

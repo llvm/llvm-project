@@ -1106,8 +1106,10 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(BaseTp);
 
   Kind = improveShuffleKindFromMask(Kind, Mask);
+
   // Treat Transpose as 2-op shuffles - there's no difference in lowering.
-  if (Kind == TTI::SK_Transpose)
+  // TODO: Treat Splice as 2-op shuffles - improve this in the future.
+  if (Kind == TTI::SK_Transpose || Kind == TTI::SK_Splice)
     Kind = TTI::SK_PermuteTwoSrc;
 
   // For Broadcasts we are splatting the first element from the first input
