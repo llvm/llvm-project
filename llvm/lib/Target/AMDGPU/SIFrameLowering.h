@@ -129,6 +129,10 @@ public:
                                            MachineBasicBlock::iterator MBBI,
                                            const DebugLoc &DL, unsigned VGPR,
                                            int64_t Offset) const;
+  MachineInstr *buildCFIForRegToSGPRPairSpill(MachineBasicBlock &MBB,
+                                              MachineBasicBlock::iterator MBBI,
+                                              const DebugLoc &DL, Register Reg,
+                                              Register SGPRPair) const;
 };
 
 } // end namespace llvm
