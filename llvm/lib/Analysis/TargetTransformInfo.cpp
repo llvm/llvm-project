@@ -528,6 +528,10 @@ bool TargetTransformInfo::supportsTailCalls() const {
   return TTIImpl->supportsTailCalls();
 }
 
+bool TargetTransformInfo::supportsTailCallFor(const CallBase *CB) const {
+  return TTIImpl->supportsTailCallFor(CB);
+}
+
 bool TargetTransformInfo::enableAggressiveInterleaving(
     bool LoopHasReductions) const {
   return TTIImpl->enableAggressiveInterleaving(LoopHasReductions);

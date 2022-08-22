@@ -8,8 +8,8 @@
 
 #include "pthread_getname_np.h"
 
-#include "src/__support/CPP/ArrayRef.h"
-#include "src/__support/CPP/StringView.h"
+#include "src/__support/CPP/span.h"
+#include "src/__support/CPP/stringstream.h"
 #include "src/__support/common.h"
 #include "src/__support/threads/thread.h"
 
@@ -24,7 +24,7 @@ static_assert(sizeof(pthread_t) == sizeof(__llvm_libc::Thread),
 LLVM_LIBC_FUNCTION(int, pthread_getname_np,
                    (pthread_t th, char *buf, size_t len)) {
   auto *thread = reinterpret_cast<__llvm_libc::Thread *>(&th);
-  cpp::MutableArrayRef<char> name_buf(buf, len);
+  cpp::span<char> name_buf(buf, len);
   cpp::StringStream name_stream(name_buf);
   return thread->get_name(name_stream);
 }

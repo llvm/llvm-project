@@ -1362,7 +1362,7 @@ static bool shouldBeMustTail(const CallInst &CI, const Function &F) {
 // for symmetrical coroutine control transfer (C++ Coroutines TS extension).
 // This transformation is done only in the resume part of the coroutine that has
 // identical signature and calling convention as the coro.resume call.
-static void addMustTailToCoroResumes(Function &F) {
+static void addMustTailToCoroResumes(Function &F, TargetTransformInfo &TTI) {
   bool changed = false;
 
   // Collect potential resume instructions.
@@ -1374,7 +1374,9 @@ static void addMustTailToCoroResumes(Function &F) {
 
   // Set musttail on those that are followed by a ret instruction.
   for (CallInst *Call : Resumes)
-    if (simplifyTerminatorLeadingToRet(Call->getNextNode())) {
+    // Skip targets which don't support tail call on the specific case.
+    if (TTI.supportsTailCallFor(Call) &&
+        simplifyTerminatorLeadingToRet(Call->getNextNode())) {
       Call->setTailCallKind(CallInst::TCK_MustTail);
       changed = true;
     }
@@ -1610,7 +1612,7 @@ static void splitSwitchCoroutine(Function &F, coro::Shape &Shape,
   // FIXME: Could we support symmetric transfer effectively without musttail
   // call?
   if (TTI.supportsTailCalls())
-    addMustTailToCoroResumes(*ResumeClone);
+    addMustTailToCoroResumes(*ResumeClone, TTI);
 
   // Store addresses resume/destroy/cleanup functions in the coroutine frame.
   updateCoroFrame(Shape, ResumeClone, DestroyClone, CleanupClone);

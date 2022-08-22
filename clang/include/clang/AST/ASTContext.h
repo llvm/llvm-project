@@ -2731,6 +2731,10 @@ public:
   /// Return number of constant array elements.
   uint64_t getConstantArrayElementCount(const ConstantArrayType *CA) const;
 
+  /// Return number of elements initialized in an ArrayInitLoopExpr.
+  uint64_t
+  getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE) const;
+
   /// Perform adjustment on the parameter type of a function.
   ///
   /// This routine adjusts the given parameter type @p T to the actual

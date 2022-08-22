@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_STRINGSTREAM_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_STRINGSTREAM_H
 
-#include "ArrayRef.h"
-#include "StringView.h"
+#include "string_view.h"
+#include "span.h"
 #include "type_traits.h"
 
 #include "src/__support/integer_to_string.h"
@@ -22,7 +22,7 @@ namespace cpp {
 // without any dynamic memory allocation. There is no requirement to mimic the
 // C++ standard library class std::stringstream.
 class StringStream {
-  MutableArrayRef<char> data;
+  span<char> data;
   size_t write_ptr = 0; // The current write pointer
   bool err = false;     // If an error occurs while writing
 
@@ -41,16 +41,16 @@ public:
   static constexpr char ENDS = '\0';
 
   // Create a string stream which will write into |buf|.
-  constexpr StringStream(const MutableArrayRef<char> &buf) : data(buf) {}
+  constexpr StringStream(const span<char> &buf) : data(buf) {}
 
-  // Return a StringView to the current characters in the stream. If a
+  // Return a string_view to the current characters in the stream. If a
   // null terminator was not explicitly written, then the return value
-  // will not include one. In order to produce a StringView to a null
+  // will not include one. In order to produce a string_view to a null
   // terminated string, write ENDS explicitly.
-  StringView str() const { return StringView(data.data(), write_ptr); }
+  string_view str() const { return string_view(data.data(), write_ptr); }
 
   // Write the characters from |str| to the stream.
-  StringStream &operator<<(StringView str) {
+  StringStream &operator<<(string_view str) {
     write(str.data(), str.size());
     return *this;
   }
@@ -77,7 +77,7 @@ public:
   // Write a null-terminated string. The terminating null character is not
   // written to allow stremaing to continue.
   StringStream &operator<<(const char *str) {
-    return operator<<(StringView(str));
+    return operator<<(string_view(str));
   }
 
   // Write a single character.

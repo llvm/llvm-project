@@ -147,8 +147,10 @@ printing the details of the coroutine frame from an address is also possible:
   (gdb) # Get the linkage name for the coroutine
   (gdb) x 0x4019e0
   0x4019e0 <_ZL9coro_taski>:  0xe5894855
+  (gdb) # Turn off the demangler temporarily to avoid the debugger misunderstanding the name.
+  (gdb) set demangle-style none
   (gdb) # The coroutine frame type is 'linkage_name.coro_frame_ty'
-  (gdb) print  (_ZL9coro_taski.coro_frame_ty)*(0x418eb0)
+  (gdb) print  ('_ZL9coro_taski.coro_frame_ty')*(0x418eb0)
   $2 = {__resume_fn = 0x4019e0 <coro_task(int)>, __destroy_fn = 0x402000 <coro_task(int)>, __promise = {...}, ...}
 
 The above is possible because:

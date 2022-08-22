@@ -6,5 +6,6 @@ add_mlir_library(MLIRParser
 
   LINK_LIBS PUBLIC
   MLIRAsmParser
+  MLIRBytecodeReader
   MLIRIR
   )

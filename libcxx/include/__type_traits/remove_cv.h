@@ -19,8 +19,16 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if __has_builtin(__remove_cv)
+template <class _Tp>
+struct remove_cv {
+  using type _LIBCPP_NODEBUG = __remove_cv(_Tp);
+};
+#else
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_cv
 {typedef typename remove_volatile<typename remove_const<_Tp>::type>::type type;};
+#endif // __has_builtin(__remove_cv)
+
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using remove_cv_t = typename remove_cv<_Tp>::type;
 #endif

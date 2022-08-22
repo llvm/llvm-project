@@ -961,6 +961,13 @@ def : InstAlias<"hfence.gvma $rs", (HFENCE_GVMA GPR:$rs, X0)>;
 def : InstAlias<"hfence.vvma",     (HFENCE_VVMA      X0, X0)>;
 def : InstAlias<"hfence.vvma $rs", (HFENCE_VVMA GPR:$rs, X0)>;
 
+let Predicates = [HasStdExtZihintntl] in {
+  def : InstAlias<"ntl.p1",     (ADD   X0, X0, X2)>;
+  def : InstAlias<"ntl.pall",   (ADD   X0, X0, X3)>;
+  def : InstAlias<"ntl.s1",     (ADD   X0, X0, X4)>;
+  def : InstAlias<"ntl.all",    (ADD   X0, X0, X5)>;
+} // Predicates = [HasStdExtZihintntl]
+
 let EmitPriority = 0 in {
 def : InstAlias<"lb $rd, (${rs1})",
                 (LB  GPR:$rd, GPR:$rs1, 0)>;
