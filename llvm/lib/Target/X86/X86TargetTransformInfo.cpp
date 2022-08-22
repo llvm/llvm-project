@@ -176,7 +176,7 @@ unsigned X86TTIImpl::getMaxInterleaveFactor(unsigned VF) {
 
 InstructionCost X86TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-    TTI::OperandValueKind Op1Info, TTI::OperandValueKind Op2Info,
+    TTI::OperandValueKind Op1Kind, TTI::OperandValueKind Op2Kind,
     TTI::OperandValueProperties Opd1PropInfo,
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
@@ -191,7 +191,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
            getCastInstrCost(Instruction::Trunc, Ty, WideVecTy,
                             TargetTransformInfo::CastContextHint::None,
                             CostKind) +
-           getArithmeticInstrCost(Opcode, WideVecTy, CostKind, Op1Info, Op2Info,
+           getArithmeticInstrCost(Opcode, WideVecTy, CostKind, Op1Kind, Op2Kind,
                                   Opd1PropInfo, Opd2PropInfo);
   }
 
@@ -233,11 +233,11 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
   // Vector multiply by pow2 will be simplified to shifts.
   if (ISD == ISD::MUL &&
-      (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
+      (Op2Kind == TargetTransformInfo::OK_UniformConstantValue ||
+       Op2Kind == TargetTransformInfo::OK_NonUniformConstantValue) &&
       Opd2PropInfo == TargetTransformInfo::OP_PowerOf2)
-    return getArithmeticInstrCost(Instruction::Shl, Ty, CostKind, Op1Info,
-                                  Op2Info, TargetTransformInfo::OP_None,
+    return getArithmeticInstrCost(Instruction::Shl, Ty, CostKind, Op1Kind,
+                                  Op2Kind, TargetTransformInfo::OP_None,
                                   TargetTransformInfo::OP_None);
 
   // On X86, vector signed division by constants power-of-two are
@@ -245,26 +245,26 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   // The OperandValue properties may not be the same as that of the previous
   // operation; conservatively assume OP_None.
   if ((ISD == ISD::SDIV || ISD == ISD::SREM) &&
-      (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
+      (Op2Kind == TargetTransformInfo::OK_UniformConstantValue ||
+       Op2Kind == TargetTransformInfo::OK_NonUniformConstantValue) &&
       Opd2PropInfo == TargetTransformInfo::OP_PowerOf2) {
     InstructionCost Cost =
-        2 * getArithmeticInstrCost(Instruction::AShr, Ty, CostKind, Op1Info,
-                                   Op2Info, TargetTransformInfo::OP_None,
+        2 * getArithmeticInstrCost(Instruction::AShr, Ty, CostKind, Op1Kind,
+                                   Op2Kind, TargetTransformInfo::OP_None,
                                    TargetTransformInfo::OP_None);
-    Cost += getArithmeticInstrCost(Instruction::LShr, Ty, CostKind, Op1Info,
-                                   Op2Info, TargetTransformInfo::OP_None,
+    Cost += getArithmeticInstrCost(Instruction::LShr, Ty, CostKind, Op1Kind,
+                                   Op2Kind, TargetTransformInfo::OP_None,
                                    TargetTransformInfo::OP_None);
-    Cost += getArithmeticInstrCost(Instruction::Add, Ty, CostKind, Op1Info,
-                                   Op2Info, TargetTransformInfo::OP_None,
+    Cost += getArithmeticInstrCost(Instruction::Add, Ty, CostKind, Op1Kind,
+                                   Op2Kind, TargetTransformInfo::OP_None,
                                    TargetTransformInfo::OP_None);
 
     if (ISD == ISD::SREM) {
       // For SREM: (X % C) is the equivalent of (X - (X/C)*C)
-      Cost += getArithmeticInstrCost(Instruction::Mul, Ty, CostKind, Op1Info,
-                                     Op2Info);
-      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind, Op1Info,
-                                     Op2Info);
+      Cost += getArithmeticInstrCost(Instruction::Mul, Ty, CostKind, Op1Kind,
+                                     Op2Kind);
+      Cost += getArithmeticInstrCost(Instruction::Sub, Ty, CostKind, Op1Kind,
+                                     Op2Kind);
     }
 
     return Cost;
@@ -272,16 +272,16 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
   // Vector unsigned division/remainder will be simplified to shifts/masks.
   if ((ISD == ISD::UDIV || ISD == ISD::UREM) &&
-      (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
+      (Op2Kind == TargetTransformInfo::OK_UniformConstantValue ||
+       Op2Kind == TargetTransformInfo::OK_NonUniformConstantValue) &&
       Opd2PropInfo == TargetTransformInfo::OP_PowerOf2) {
     if (ISD == ISD::UDIV)
-      return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind, Op1Info,
-                                    Op2Info, TargetTransformInfo::OP_None,
+      return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind, Op1Kind,
+                                    Op2Kind, TargetTransformInfo::OP_None,
                                     TargetTransformInfo::OP_None);
     // UREM
-    return getArithmeticInstrCost(Instruction::And, Ty, CostKind, Op1Info,
-                                  Op2Info, TargetTransformInfo::OP_None,
+    return getArithmeticInstrCost(Instruction::And, Ty, CostKind, Op1Kind,
+                                  Op2Kind, TargetTransformInfo::OP_None,
                                   TargetTransformInfo::OP_None);
   }
 
@@ -298,7 +298,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       }
     }
 
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Kind, Op2Kind,
                                          Opd1PropInfo, Opd2PropInfo, Args,
                                          CxtI);
   }
@@ -372,7 +372,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v64i8,   4 }, // psrlw, pand, pxor, psubb.
   };
 
-  if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
+  if (Op2Kind == TargetTransformInfo::OK_UniformConstantValue &&
       ST->hasBWI()) {
     if (const auto *Entry = CostTableLookup(AVX512BWUniformConstCostTable, ISD,
                                             LT.second))
@@ -394,7 +394,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UREM, MVT::v16i32,  7 }, // pmuludq+mul+sub sequence
   };
 
-  if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
+  if (Op2Kind == TargetTransformInfo::OK_UniformConstantValue &&
       ST->hasAVX512()) {
     if (const auto *Entry = CostTableLookup(AVX512UniformConstCostTable, ISD,
                                             LT.second))
@@ -414,7 +414,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UREM, MVT::v8i32,   7 }, // pmuludq+mul+sub sequence
   };
 
-  if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
+  if (Op2Kind == TargetTransformInfo::OK_UniformConstantValue &&
       ST->hasAVX2()) {
     if (const auto *Entry = CostTableLookup(AVX2UniformConstCostTable, ISD,
                                             LT.second))
@@ -441,7 +441,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   };
 
   // XOP has faster vXi8 shifts.
-  if (Op2Info == TargetTransformInfo::OK_UniformConstantValue &&
+  if (Op2Kind == TargetTransformInfo::OK_UniformConstantValue &&
       ST->hasSSE2() && !ST->hasXOP()) {
     if (const auto *Entry =
             CostTableLookup(SSE2UniformConstCostTable, ISD, LT.second))
@@ -459,8 +459,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UREM, MVT::v32i16,  8 }, // vpmulhuw+mul+sub sequence
   };
 
-  if ((Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
+  if ((Op2Kind == TargetTransformInfo::OK_UniformConstantValue ||
+       Op2Kind == TargetTransformInfo::OK_NonUniformConstantValue) &&
       ST->hasBWI()) {
     if (const auto *Entry =
             CostTableLookup(AVX512BWConstCostTable, ISD, LT.second))
@@ -482,8 +482,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UREM, MVT::v32i16, 16 }, // 2*vpmulhuw+mul+sub sequence
   };
 
-  if ((Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
+  if ((Op2Kind == TargetTransformInfo::OK_UniformConstantValue ||
+       Op2Kind == TargetTransformInfo::OK_NonUniformConstantValue) &&
       ST->hasAVX512()) {
     if (const auto *Entry =
             CostTableLookup(AVX512ConstCostTable, ISD, LT.second))
@@ -505,8 +505,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UREM, MVT::v8i32,  19 }, // vpmuludq+mul+sub sequence
   };
 
-  if ((Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
+  if ((Op2Kind == TargetTransformInfo::OK_UniformConstantValue ||
+       Op2Kind == TargetTransformInfo::OK_NonUniformConstantValue) &&
       ST->hasAVX2()) {
     if (const auto *Entry = CostTableLookup(AVX2ConstCostTable, ISD, LT.second))
       return LT.first * Entry->Cost;
@@ -539,8 +539,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UREM, MVT::v4i32,    20 }, // pmuludq+mul+sub sequence
   };
 
-  if ((Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-       Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) &&
+  if ((Op2Kind == TargetTransformInfo::OK_UniformConstantValue ||
+       Op2Kind == TargetTransformInfo::OK_NonUniformConstantValue) &&
       ST->hasSSE2()) {
     // pmuldq sequence.
     if (ISD == ISD::SDIV && LT.second == MVT::v8i32 && ST->hasAVX())
@@ -599,8 +599,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   };
 
   if (ST->hasAVX2() &&
-      ((Op2Info == TargetTransformInfo::OK_UniformConstantValue) ||
-       (Op2Info == TargetTransformInfo::OK_UniformValue))) {
+      ((Op2Kind == TargetTransformInfo::OK_UniformConstantValue) ||
+       (Op2Kind == TargetTransformInfo::OK_UniformValue))) {
     if (const auto *Entry =
             CostTableLookup(AVX2UniformCostTable, ISD, LT.second))
       return LT.first * Entry->Cost;
@@ -621,8 +621,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   };
 
   if (ST->hasSSE2() &&
-      ((Op2Info == TargetTransformInfo::OK_UniformConstantValue) ||
-       (Op2Info == TargetTransformInfo::OK_UniformValue))) {
+      ((Op2Kind == TargetTransformInfo::OK_UniformConstantValue) ||
+       (Op2Kind == TargetTransformInfo::OK_UniformValue))) {
     if (const auto *Entry =
             CostTableLookup(SSE2UniformCostTable, ISD, LT.second))
       return LT.first * Entry->Cost;
@@ -718,12 +718,12 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
   if (ST->hasAVX512()) {
     if (ISD == ISD::SHL && LT.second == MVT::v32i16 &&
-        (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-         Op2Info == TargetTransformInfo::OK_NonUniformConstantValue))
+        (Op2Kind == TargetTransformInfo::OK_UniformConstantValue ||
+         Op2Kind == TargetTransformInfo::OK_NonUniformConstantValue))
       // On AVX512, a packed v32i16 shift left by a constant build_vector
       // is lowered into a vector multiply (vpmullw).
       return getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
-                                    Op1Info, Op2Info,
+                                    Op1Kind, Op2Kind,
                                     TargetTransformInfo::OP_None,
                                     TargetTransformInfo::OP_None);
   }
@@ -731,12 +731,12 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   // Look for AVX2 lowering tricks (XOP is always better at v4i32 shifts).
   if (ST->hasAVX2() && !(ST->hasXOP() && LT.second == MVT::v4i32)) {
     if (ISD == ISD::SHL && LT.second == MVT::v16i16 &&
-        (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-         Op2Info == TargetTransformInfo::OK_NonUniformConstantValue))
+        (Op2Kind == TargetTransformInfo::OK_UniformConstantValue ||
+         Op2Kind == TargetTransformInfo::OK_NonUniformConstantValue))
       // On AVX2, a packed v16i16 shift left by a constant build_vector
       // is lowered into a vector multiply (vpmullw).
       return getArithmeticInstrCost(Instruction::Mul, Ty, CostKind,
-                                    Op1Info, Op2Info,
+                                    Op1Kind, Op2Kind,
                                     TargetTransformInfo::OP_None,
                                     TargetTransformInfo::OP_None);
 
@@ -779,8 +779,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     // it's as cheap as a left shift.
     int ShiftISD = ISD;
     if ((ShiftISD == ISD::SRL || ShiftISD == ISD::SRA) &&
-        (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
-         Op2Info == TargetTransformInfo::OK_NonUniformConstantValue))
+        (Op2Kind == TargetTransformInfo::OK_UniformConstantValue ||
+         Op2Kind == TargetTransformInfo::OK_NonUniformConstantValue))
       ShiftISD = ISD::SHL;
     if (const auto *Entry =
             CostTableLookup(XOPShiftCostTable, ShiftISD, LT.second))
@@ -804,8 +804,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   };
 
   if (ST->hasSSE2() &&
-      ((Op2Info == TargetTransformInfo::OK_UniformConstantValue) ||
-       (Op2Info == TargetTransformInfo::OK_UniformValue))) {
+      ((Op2Kind == TargetTransformInfo::OK_UniformConstantValue) ||
+       (Op2Kind == TargetTransformInfo::OK_UniformValue))) {
 
     // Handle AVX2 uniform v4i64 ISD::SRA, it's not worth a table.
     if (ISD == ISD::SRA && LT.second == MVT::v4i64 && ST->hasAVX2())
@@ -817,7 +817,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   }
 
   if (ISD == ISD::SHL &&
-      Op2Info == TargetTransformInfo::OK_NonUniformConstantValue) {
+      Op2Kind == TargetTransformInfo::OK_NonUniformConstantValue) {
     MVT VT = LT.second;
     // Vector shift left by non uniform constant can be lowered
     // into vector multiply.
@@ -1085,13 +1085,13 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   if (LT.second.isVector() && (ISD == ISD::SDIV || ISD == ISD::SREM ||
                                ISD == ISD::UDIV || ISD == ISD::UREM)) {
     InstructionCost ScalarCost = getArithmeticInstrCost(
-        Opcode, Ty->getScalarType(), CostKind, Op1Info, Op2Info,
+        Opcode, Ty->getScalarType(), CostKind, Op1Kind, Op2Kind,
         TargetTransformInfo::OP_None, TargetTransformInfo::OP_None);
     return 20 * LT.first * LT.second.getVectorNumElements() * ScalarCost;
   }
 
   // Fallback to the default implementation.
-  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Kind, Op2Kind,
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
 }
 
