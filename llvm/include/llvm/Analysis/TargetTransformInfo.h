@@ -1769,7 +1769,7 @@ public:
   virtual InstructionCost
   getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                   unsigned AddressSpace, TTI::TargetCostKind CostKind,
-                  OperandValueKind OpdInfo, const Instruction *I) = 0;
+                  OperandValueInfo OpInfo, const Instruction *I) = 0;
   virtual InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src,
                                             Align Alignment,
                                             unsigned AddressSpace,
@@ -2336,10 +2336,10 @@ public:
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,
-                                  OperandValueKind OpdInfo,
+                                  OperandValueInfo OpInfo,
                                   const Instruction *I) override {
     return Impl.getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
-                                OpdInfo, I);
+                                OpInfo, I);
   }
   InstructionCost getVPMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                     unsigned AddressSpace,

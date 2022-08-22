@@ -247,7 +247,7 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
   auto &VTy = *cast<VectorType>(DataTy);
   InstructionCost MemOpCost =
       getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
-                      TTI::OK_AnyValue, I);
+                      {TTI::OK_AnyValue, TTI::OP_None}, I);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
   return NumLoads * MemOpCost;
 }
@@ -530,14 +530,13 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                               MaybeAlign Alignment,
                                               unsigned AddressSpace,
                                               TTI::TargetCostKind CostKind,
-                                              TTI::OperandValueKind OpdKind,
+                                              TTI::OperandValueInfo OpInfo,
                                               const Instruction *I) {
-  const TTI::OperandValueInfo OpInfo = {OpdKind, TTI::OP_None};
   InstructionCost Cost = 0;
   if (Opcode == Instruction::Store && isa<VectorType>(Src) && OpInfo.isConstant())
     Cost += getVectorImmCost(cast<VectorType>(Src), OpInfo, CostKind);
   return Cost + BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                       CostKind, OpInfo.Kind, I);
+                                       CostKind, OpInfo, I);
 }
 
 void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
