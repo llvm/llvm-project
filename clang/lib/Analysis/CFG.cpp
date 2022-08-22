@@ -1332,6 +1332,18 @@ private:
 
 } // namespace
 
+Expr *
+clang::extractElementInitializerFromNestedAILE(const ArrayInitLoopExpr *AILE) {
+  if (!AILE)
+    return nullptr;
+
+  Expr *AILEInit = AILE->getSubExpr();
+  while (const auto *E = dyn_cast<ArrayInitLoopExpr>(AILEInit))
+    AILEInit = E->getSubExpr();
+
+  return AILEInit;
+}
+
 inline bool AddStmtChoice::alwaysAdd(CFGBuilder &builder,
                                      const Stmt *stmt) const {
   return builder.alwaysAdd(stmt) || kind == AlwaysAdd;
@@ -1706,11 +1718,12 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   if (Init) {
     // If the initializer is an ArrayInitLoopExpr, we want to extract the
     // initializer, that's used for each element.
-    const auto *AILE = dyn_cast_or_null<ArrayInitLoopExpr>(Init);
+    auto *AILEInit = extractElementInitializerFromNestedAILE(
+        dyn_cast<ArrayInitLoopExpr>(Init));
 
     findConstructionContexts(
         ConstructionContextLayer::create(cfg->getBumpVectorContext(), I),
-        AILE ? AILE->getSubExpr() : Init);
+        AILEInit ? AILEInit : Init);
 
     if (HasTemporaries) {
       // For expression with temporaries go directly to subexpression to omit
@@ -3415,11 +3428,12 @@ CFGBlock *CFGBuilder::VisitLambdaExpr(LambdaExpr *E, AddStmtChoice asc) {
     if (Expr *Init = *it) {
       // If the initializer is an ArrayInitLoopExpr, we want to extract the
       // initializer, that's used for each element.
-      const auto *AILE = dyn_cast_or_null<ArrayInitLoopExpr>(Init);
+      auto *AILEInit = extractElementInitializerFromNestedAILE(
+          dyn_cast<ArrayInitLoopExpr>(Init));
 
       findConstructionContexts(ConstructionContextLayer::create(
                                    cfg->getBumpVectorContext(), {E, Idx}),
-                               AILE ? AILE->getSubExpr() : Init);
+                               AILEInit ? AILEInit : Init);
 
       CFGBlock *Tmp = Visit(Init);
       if (Tmp)

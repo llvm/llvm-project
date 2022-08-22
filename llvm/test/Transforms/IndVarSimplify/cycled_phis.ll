@@ -320,6 +320,8 @@ done:
 
 ; Slightly more complex version of previous one (cycled phis).
 ; TODO: remove unsigned comparison by proving non-negativity of iv.start.
+; TODO: When we check against IV_START, for some reason we then cannot infer nuw for IV.next.
+;       It was possible while checking against IV. Missing inference logic somewhere.
 define i32 @start.from.sibling.iv.wide.cycled.phis(i32* %len.ptr, i32* %sibling.len.ptr) {
 ; CHECK-LABEL: @start.from.sibling.iv.wide.cycled.phis(
 ; CHECK-NEXT:  entry:
@@ -349,10 +351,10 @@ define i32 @start.from.sibling.iv.wide.cycled.phis(i32* %len.ptr, i32* %sibling.
 ; CHECK-NEXT:    [[SIGNED_CMP:%.*]] = icmp slt i32 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[SIGNED_CMP]], label [[SIGNED_PASSED:%.*]], label [[FAILED_SIGNED:%.*]]
 ; CHECK:       signed.passed:
-; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV]], [[LEN]]
+; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV_START]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_CMP]], label [[BACKEDGE]], label [[FAILED_UNSIGNED:%.*]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[OUTER_LOOP_BACKEDGE]]
 ; CHECK:       outer.loop.backedge:
@@ -467,10 +469,10 @@ define i32 @start.from.sibling.iv.wide.cycled.phis.complex.phis(i32* %len.ptr, i
 ; CHECK-NEXT:    [[SIGNED_CMP:%.*]] = icmp slt i32 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[SIGNED_CMP]], label [[SIGNED_PASSED:%.*]], label [[FAILED_SIGNED:%.*]]
 ; CHECK:       signed.passed:
-; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV]], [[LEN]]
+; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV_START]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_CMP]], label [[BACKEDGE]], label [[FAILED_UNSIGNED:%.*]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP]], label [[OUTER_LOOP_SELECTION:%.*]]
 ; CHECK:       outer.loop.selection:

@@ -42,16 +42,6 @@ cc_library(
 )
 
 cc_library(
-    name = "__support_cpp_array_ref",
-    hdrs = ["src/__support/CPP/ArrayRef.h"],
-    deps = [
-        ":__support_cpp_array",
-        ":__support_cpp_type_traits",
-        ":libc_root",
-    ],
-)
-
-cc_library(
     name = "__support_cpp_bit",
     hdrs = ["src/__support/CPP/bit.h"],
     deps = [":libc_root"],
@@ -79,6 +69,16 @@ cc_library(
     name = "__support_cpp_optional",
     hdrs = ["src/__support/CPP/optional.h"],
     deps = [":libc_root"],
+)
+
+cc_library(
+    name = "__support_cpp_span",
+    hdrs = ["src/__support/CPP/span.h"],
+    deps = [
+        "__support_cpp_array",
+        "__support_cpp_type_traits",
+        ":libc_root",
+    ],
 )
 
 cc_library(

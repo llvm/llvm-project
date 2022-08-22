@@ -1461,3 +1461,19 @@ InstructionCost PPCTTIImpl::getVPMemoryOpCost(unsigned Opcode, Type *Src,
   // evl but no mask, on Power 9/10. Otherwise, we must scalarize.
   return getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind);
 }
+
+bool PPCTTIImpl::supportsTailCallFor(const CallBase *CB) const {
+  // Subtargets using PC-Relative addressing supported.
+  if (ST->isUsingPCRelativeCalls())
+    return true;
+
+  const Function *Callee = CB->getCalledFunction();
+  // Indirect calls and variadic argument functions not supported.
+  if (!Callee || Callee->isVarArg())
+    return false;
+
+  const Function *Caller = CB->getCaller();
+  // Support if we can share TOC base.
+  return ST->getTargetMachine().shouldAssumeDSOLocal(*Caller->getParent(),
+                                                     Callee);
+}

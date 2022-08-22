@@ -19,7 +19,7 @@ module __Fortran_builtins
   private :: selected_int_kind
   integer, parameter, private :: int64 = selected_int_kind(18)
 
-  type :: __builtin_c_ptr
+  type, bind(c) :: __builtin_c_ptr
     integer(kind=int64) :: __address
   end type
 

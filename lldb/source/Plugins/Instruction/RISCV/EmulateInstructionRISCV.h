@@ -33,6 +33,7 @@ public:
     case eInstructionTypeAll:
       return false;
     }
+    llvm_unreachable("Fully covered switch above!");
   }
 
   static bool SupportsThisArch(const ArchSpec &arch);
