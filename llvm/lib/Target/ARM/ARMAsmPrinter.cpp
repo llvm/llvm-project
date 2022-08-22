@@ -891,7 +891,7 @@ MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
 
     return MCSym;
   } else if (Subtarget->isTargetELF()) {
-    return getSymbolPreferLocal(*GV);
+    return getSymbol(GV);
   }
   llvm_unreachable("unexpected target");
 }
