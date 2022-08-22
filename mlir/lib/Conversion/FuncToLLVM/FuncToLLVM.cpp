@@ -23,10 +23,13 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -34,6 +37,7 @@
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -311,10 +315,42 @@ protected:
       SmallVector<Attribute, 4> newArgAttrs(
           llvmType.cast<LLVM::LLVMFunctionType>().getNumParams());
       for (unsigned i = 0, e = funcOp.getNumArguments(); i < e; ++i) {
+        // Some LLVM IR attribute have a type attached to them. During FuncOp ->
+        // LLVMFuncOp conversion these types may have changed. Account for that
+        // change by converting attributes' types as well.
+        SmallVector<NamedAttribute, 4> convertedAttrs;
+        auto attrsDict = argAttrDicts[i].cast<DictionaryAttr>();
+        convertedAttrs.reserve(attrsDict.size());
+        for (const NamedAttribute &attr : attrsDict) {
+          const auto convert = [&](const NamedAttribute &attr) {
+            return TypeAttr::get(getTypeConverter()->convertType(
+                attr.getValue().cast<TypeAttr>().getValue()));
+          };
+          if (attr.getName().getValue() ==
+              LLVM::LLVMDialect::getByValAttrName()) {
+            convertedAttrs.push_back(rewriter.getNamedAttr(
+                LLVM::LLVMDialect::getByValAttrName(), convert(attr)));
+          } else if (attr.getName().getValue() ==
+                     LLVM::LLVMDialect::getByRefAttrName()) {
+            convertedAttrs.push_back(rewriter.getNamedAttr(
+                LLVM::LLVMDialect::getByRefAttrName(), convert(attr)));
+          } else if (attr.getName().getValue() ==
+                     LLVM::LLVMDialect::getStructRetAttrName()) {
+            convertedAttrs.push_back(rewriter.getNamedAttr(
+                LLVM::LLVMDialect::getStructRetAttrName(), convert(attr)));
+          } else if (attr.getName().getValue() ==
+                     LLVM::LLVMDialect::getInAllocaAttrName()) {
+            convertedAttrs.push_back(rewriter.getNamedAttr(
+                LLVM::LLVMDialect::getInAllocaAttrName(), convert(attr)));
+          } else {
+            convertedAttrs.push_back(attr);
+          }
+        }
         auto mapping = result.getInputMapping(i);
         assert(mapping && "unexpected deletion of function argument");
         for (size_t j = 0; j < mapping->size; ++j)
-          newArgAttrs[mapping->inputNo + j] = argAttrDicts[i];
+          newArgAttrs[mapping->inputNo + j] =
+              DictionaryAttr::get(rewriter.getContext(), convertedAttrs);
       }
       attributes.push_back(
           rewriter.getNamedAttr(FunctionOpInterface::getArgDictAttrName(),
