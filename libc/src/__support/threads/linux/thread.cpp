@@ -8,7 +8,7 @@
 
 #include "src/__support/threads/thread.h"
 #include "config/linux/app.h"
-#include "src/__support/CPP/StringView.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/error.h"
 #include "src/__support/CPP/stringstream.h"
@@ -273,7 +273,7 @@ bool Thread::operator==(const Thread &thread) const {
   return attrib->tid == thread.attrib->tid;
 }
 
-static constexpr cpp::StringView THREAD_NAME_PATH_PREFIX("/proc/self/task/");
+static constexpr cpp::string_view THREAD_NAME_PATH_PREFIX("/proc/self/task/");
 static constexpr size_t THREAD_NAME_PATH_SIZE =
     THREAD_NAME_PATH_PREFIX.size() +
     IntegerToString::dec_bufsize<int>() + // Size of tid
@@ -282,11 +282,11 @@ static constexpr size_t THREAD_NAME_PATH_SIZE =
 
 static void construct_thread_name_file_path(cpp::StringStream &stream,
                                             int tid) {
-  stream << THREAD_NAME_PATH_PREFIX << tid << '/' << cpp::StringView("comm")
+  stream << THREAD_NAME_PATH_PREFIX << tid << '/' << cpp::string_view("comm")
          << cpp::StringStream::ENDS;
 }
 
-int Thread::set_name(const cpp::StringView &name) {
+int Thread::set_name(const cpp::string_view &name) {
   if (name.size() >= NAME_SIZE_MAX)
     return ERANGE;
 

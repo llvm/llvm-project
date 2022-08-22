@@ -58,7 +58,7 @@ add_header_library(
 add_header_library(
   string_view
   HDRS
-    StringView.h
+    string_view.h
 )
 
 add_header_library(
