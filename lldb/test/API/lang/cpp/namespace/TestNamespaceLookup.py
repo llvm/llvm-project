@@ -37,6 +37,55 @@ class NamespaceLookupTestCase(TestBase):
                              'stop reason = breakpoint'])
 
     @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
+    @expectedFailure("CU-local objects incorrectly scoped")
+    def test_scope_lookup_with_run_command_globals(self):
+        """Test scope lookup of functions in lldb."""
+        self.build()
+
+        lldbutil.run_to_source_breakpoint(
+                self,
+                self.line_break_global_scope,
+                lldb.SBFileSpec("ns.cpp"))
+
+        lldbutil.run_break_set_by_file_and_line(
+            self,
+            "ns3.cpp",
+            self.line_break_before_using_directive,
+            num_expected_locations=1,
+            loc_exact=False)
+
+        # Run to BP_global_scope at file scope
+        self.runToBkpt("run")
+
+        # FIXME: LLDB does not correctly scope CU-local objects.
+        # LLDB currently lumps functions from all files into
+        # a single AST and depending on the order with which
+        # functions are considered, LLDB can incorrectly call
+        # the static local ns.cpp::func() instead of the expected
+        # ::func()
+
+        # Evaluate func() - should call ::func()
+        self.expect_expr("func()", expect_type="int", expect_value="1")
+
+        # Evaluate ::func() - should call A::func()
+        self.expect_expr("::func()", result_type="int", result_value="1")
+
+        # Continue to BP_before_using_directive at file scope
+        self.runToBkpt("continue")
+
+        # Evaluate func() - should call ::func()
+        self.expect_expr("func()", result_type="int", result_value="1")
+
+        # Evaluate ::func() - should call ::func()
+        self.expect_expr("::func()", result_type="int", result_value="1")
+
+        # Continue to BP_after_using_directive at file scope
+        self.runToBkpt("continue")
+
+        # Evaluate ::func() - should call ::func()
+        self.expect_expr("::func()", result_type="int", result_value="1")
+
+    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
     def test_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
         self.build()
@@ -68,6 +117,12 @@ class NamespaceLookupTestCase(TestBase):
             loc_exact=False)
         lldbutil.run_break_set_by_file_and_line(
             self,
+            "ns2.cpp",
+            self.line_break_file_scope,
+            num_expected_locations=1,
+            loc_exact=False)
+        lldbutil.run_break_set_by_file_and_line(
+            self,
             "ns3.cpp",
             self.line_break_before_using_directive,
             num_expected_locations=1,
@@ -81,16 +136,17 @@ class NamespaceLookupTestCase(TestBase):
 
         # Run to BP_global_scope at global scope
         self.runToBkpt("run")
-        # Evaluate func() - should call ::func()
-        self.expect_expr("func()", result_type="int", result_value="1")
+
         # Evaluate A::B::func() - should call A::B::func()
         self.expect_expr("A::B::func()", result_type="int", result_value="4")
         # Evaluate func(10) - should call ::func(int)
         self.expect_expr("func(10)", result_type="int", result_value="11")
-        # Evaluate ::func() - should call A::func()
-        self.expect_expr("::func()", result_type="int", result_value="1")
         # Evaluate A::foo() - should call A::foo()
         self.expect_expr("A::foo()", result_type="int", result_value="42")
+
+        # Continue to BP_file_scope at file scope
+        self.runToBkpt("continue")
+        self.expect_expr("func()", result_type="int", result_value="2")
 
         # Continue to BP_ns_scope at ns scope
         self.runToBkpt("continue")
@@ -124,16 +180,12 @@ class NamespaceLookupTestCase(TestBase):
         # Continue to BP_before_using_directive at global scope before using
         # declaration
         self.runToBkpt("continue")
-        # Evaluate ::func() - should call ::func()
-        self.expect_expr("::func()", result_type="int", result_value="1")
         # Evaluate B::func() - should call B::func()
         self.expect_expr("B::func()", result_type="int", result_value="4")
 
         # Continue to BP_after_using_directive at global scope after using
         # declaration
         self.runToBkpt("continue")
-        # Evaluate ::func() - should call ::func()
-        self.expect_expr("::func()", result_type="int", result_value="1")
         # Evaluate B::func() - should call B::func()
         self.expect_expr("B::func()", result_type="int", result_value="4")
 
@@ -173,46 +225,6 @@ class NamespaceLookupTestCase(TestBase):
         # FIXME: lldb finds Y::foo because lookup for variables is done
         # before functions.
         self.expect_expr("foo()", result_type="int", result_value="42")
-
-    @expectedFailure("lldb file scope lookup bugs")
-    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
-    def test_file_scope_lookup_with_run_command(self):
-        """Test file scope lookup in lldb."""
-        self.build()
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
-
-        lldbutil.run_break_set_by_file_and_line(
-            self,
-            "ns2.cpp",
-            self.line_break_file_scope,
-            num_expected_locations=1,
-            loc_exact=False)
-
-        # Run to BP_file_scope at file scope
-        self.runToBkpt("run")
-        # Evaluate func() - should call static ns2.cpp:func()
-        # FIXME: This test fails because lldb doesn't know about file scopes so
-        # finds the global ::func().
-        self.expect_expr("func()", result_type="int", result_value="2")
-
-    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
-    def test_scope_lookup_before_using_with_run_command(self):
-        """Test scope lookup before using in lldb."""
-        self.build()
-        self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
-
-        lldbutil.run_break_set_by_file_and_line(
-            self,
-            "ns3.cpp",
-            self.line_break_before_using_directive,
-            num_expected_locations=1,
-            loc_exact=False)
-
-        # Run to BP_before_using_directive at global scope before using
-        # declaration
-        self.runToBkpt("run")
-        # Evaluate func() - should call ::func()
-        self.expect_expr("func()", result_type="int", result_value="1")
 
     # NOTE: this test may fail on older systems that don't emit import
     # entries in DWARF - may need to add checks for compiler versions here.
