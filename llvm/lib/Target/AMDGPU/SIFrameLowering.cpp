@@ -142,10 +142,12 @@ static void buildPrologSpill(const GCNSubtarget &ST, const SIRegisterInfo &TRI,
       PtrInfo, MachineMemOperand::MOStore, FrameInfo.getObjectSize(FI),
       FrameInfo.getObjectAlign(FI));
   LiveRegs.addReg(SpillReg);
-  TRI.buildSpillLoadStore(MBB, I, DL, Opc, FI, SpillReg, true,
+  bool IsKill = !MBB.isLiveIn(SpillReg);
+  TRI.buildSpillLoadStore(MBB, I, DL, Opc, FI, SpillReg, IsKill,
                           FuncInfo.getStackPtrOffsetReg(), DwordOff, MMO,
                           nullptr, &LiveRegs);
-  LiveRegs.removeReg(SpillReg);
+  if (IsKill)
+    LiveRegs.removeReg(SpillReg);
 }
 
 static void buildEpilogRestore(const GCNSubtarget &ST,
