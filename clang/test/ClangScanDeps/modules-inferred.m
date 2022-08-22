@@ -19,11 +19,6 @@ inferred a = 0;
 // CHECK-NEXT:       "clang-module-deps": [],
 // CHECK-NEXT:       "clang-modulemap-file": "[[SOURCEDIR]]/Inputs/frameworks/module.modulemap",
 // CHECK-NEXT:       "command-line": [
-// CHECK-NEXT:         "-cc1",
-// CHECK:              "-emit-module",
-// CHECK-NOT:          "-fimplicit-module-maps",
-// CHECK:              "-fmodule-name=Inferred",
-// CHECK:              "-fno-implicit-modules",
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_INFERRED:[A-Z0-9]+]]",
 // CHECK-NEXT:       "file-deps": [
@@ -44,10 +39,7 @@ inferred a = 0;
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
-// CHECK:              "-fno-implicit-modules",
-// CHECK-NEXT:         "-fno-implicit-module-maps",
-// CHECK-NEXT:         "-fmodule-file=[[PREFIX]]/module-cache/[[HASH_INFERRED]]/Inferred-{{[A-Z0-9]+}}.pcm"
-// CHECK-NEXT:       ],
+// CHECK:            ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/modules_cdb_input.cpp"
 // CHECK-NEXT:       ],

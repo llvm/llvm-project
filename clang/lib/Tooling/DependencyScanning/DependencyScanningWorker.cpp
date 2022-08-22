@@ -140,11 +140,12 @@ public:
   DependencyScanningAction(
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
-      ScanningOutputFormat Format, bool OptimizeArgs, bool DisableFree,
-      llvm::Optional<StringRef> ModuleName = None)
+      ScanningOutputFormat Format, bool OptimizeArgs, bool EagerLoadModules,
+      bool DisableFree, llvm::Optional<StringRef> ModuleName = None)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
         DepFS(std::move(DepFS)), Format(Format), OptimizeArgs(OptimizeArgs),
-        DisableFree(DisableFree), ModuleName(ModuleName) {}
+        EagerLoadModules(EagerLoadModules), DisableFree(DisableFree),
+        ModuleName(ModuleName) {}
 
   bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
                      FileManager *FileMgr,
@@ -231,7 +232,7 @@ public:
     case ScanningOutputFormat::Full:
       ScanInstance.addDependencyCollector(std::make_shared<ModuleDepCollector>(
           std::move(Opts), ScanInstance, Consumer,
-          std::move(OriginalInvocation), OptimizeArgs));
+          std::move(OriginalInvocation), OptimizeArgs, EagerLoadModules));
       break;
     }
 
@@ -261,6 +262,7 @@ private:
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   ScanningOutputFormat Format;
   bool OptimizeArgs;
+  bool EagerLoadModules;
   bool DisableFree;
   llvm::Optional<StringRef> ModuleName;
 };
@@ -270,7 +272,8 @@ private:
 DependencyScanningWorker::DependencyScanningWorker(
     DependencyScanningService &Service,
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-    : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()) {
+    : Format(Service.getFormat()), OptimizeArgs(Service.canOptimizeArgs()),
+      EagerLoadModules(Service.shouldEagerLoadModules()) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   PCHContainerOps->registerReader(
       std::make_unique<ObjectFilePCHContainerReader>());
@@ -343,7 +346,8 @@ llvm::Error DependencyScanningWorker::computeDependencies(
                         bool DisableFree = true;
                         DependencyScanningAction Action(
                             WorkingDirectory, Consumer, DepFS, Format,
-                            OptimizeArgs, DisableFree, ModuleName);
+                            OptimizeArgs, EagerLoadModules, DisableFree,
+                            ModuleName);
                         // Create an invocation that uses the underlying file
                         // system to ensure that any file system requests that
                         // are made by the driver do not go through the
