@@ -1,6 +1,9 @@
 // This file contains various failure test cases related to the structure of
 // the string section.
 
+// Bytecode currently does not support big-endian platforms
+// XFAIL: s390x-
+
 //===--------------------------------------------------------------------===//
 // Count
 //===--------------------------------------------------------------------===//

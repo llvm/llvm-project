@@ -40,7 +40,7 @@ static std::string toString(bytecode::Section::ID sectionID) {
   case bytecode::Section::kIR:
     return "IR (4)";
   default:
-    return ("Unknown (" + Twine(sectionID) + ")").str();
+    return ("Unknown (" + Twine(static_cast<unsigned>(sectionID)) + ")").str();
   }
 }
 
