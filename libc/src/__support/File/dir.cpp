@@ -29,7 +29,8 @@ Dir *Dir::open(const char *path) {
 struct ::dirent *Dir::read() {
   MutexLock lock(&mutex);
   if (readptr >= fillsize) {
-    fillsize = platform_fetch_dirents(fd, buffer);
+    fillsize = platform_fetch_dirents(
+        fd, cpp::MutableArrayRef<uint8_t>(buffer, BUFSIZE));
     if (fillsize == 0)
       return nullptr;
     readptr = 0;

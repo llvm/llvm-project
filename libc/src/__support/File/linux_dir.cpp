@@ -34,7 +34,7 @@ int platform_opendir(const char *name) {
   return fd;
 }
 
-size_t platform_fetch_dirents(int fd, cpp::span<uint8_t> buffer) {
+size_t platform_fetch_dirents(int fd, cpp::MutableArrayRef<uint8_t> buffer) {
   long size =
       __llvm_libc::syscall(SYS_getdents, fd, buffer.data(), buffer.size());
   if (size < 0) {
