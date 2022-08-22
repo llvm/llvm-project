@@ -2027,7 +2027,7 @@ public:
     LookAheadHeuristics LookAhead(*DL, *SE, *this, /*NumLanes=*/2,
                                   RootLookAheadMaxDepth);
     int BestScore = Limit;
-    Optional<int> Index = None;
+    Optional<int> Index;
     for (int I : seq<int>(0, Candidates.size())) {
       int Score = LookAhead.getScoreAtLevelRec(Candidates[I].first,
                                                Candidates[I].second,
@@ -5895,7 +5895,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         if (Idx + NumElts <= EENumElts) {
           Cost +=
               TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
-                                    EEVTy, None, Idx, VecTy);
+                                    EEVTy, None, CostKind, Idx, VecTy);
         } else {
           // Need to round up the subvector type vectorization factor to avoid a
           // crash in cost model functions. Make SubVT so that Idx + VF of SubVT
@@ -5904,11 +5904,11 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
               FixedVectorType::get(VecTy->getElementType(), EENumElts - Idx);
           Cost +=
               TTIRef.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
-                                    EEVTy, None, Idx, SubVT);
+                                    EEVTy, None, CostKind, Idx, SubVT);
         }
       } else {
         Cost += TTIRef.getShuffleCost(TargetTransformInfo::SK_InsertSubvector,
-                                      VecTy, None, 0, EEVTy);
+                                      VecTy, None, CostKind, 0, EEVTy);
       }
     }
   };
@@ -5976,7 +5976,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       assert(VecTy == FinalVecTy &&
              "No reused scalars expected for broadcast.");
       return TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
-                                 /*Mask=*/None, /*Index=*/0,
+                                 /*Mask=*/None, CostKind, /*Index=*/0,
                                  /*SubTp=*/nullptr, /*Args=*/VL[0]);
     }
     InstructionCost ReuseShuffleCost = 0;
@@ -6048,15 +6048,15 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
           auto *LI = cast<LoadInst>(V);
           ScalarsCost += TTI->getMemoryOpCost(
               Instruction::Load, LI->getType(), LI->getAlign(),
-              LI->getPointerAddressSpace(), CostKind, LI);
+              LI->getPointerAddressSpace(), CostKind, TTI::OK_AnyValue, LI);
         }
         auto *LI = cast<LoadInst>(E->getMainOp());
         auto *LoadTy = FixedVectorType::get(LI->getType(), VF);
         Align Alignment = LI->getAlign();
-        GatherCost +=
-            VectorizedCnt *
-            TTI->getMemoryOpCost(Instruction::Load, LoadTy, Alignment,
-                                 LI->getPointerAddressSpace(), CostKind, LI);
+        GatherCost += VectorizedCnt *
+                      TTI->getMemoryOpCost(Instruction::Load, LoadTy, Alignment,
+                                           LI->getPointerAddressSpace(),
+                                           CostKind, TTI::OK_AnyValue, LI);
         GatherCost += ScatterVectorizeCnt *
                       TTI->getGatherScatterOpCost(
                           Instruction::Load, LoadTy, LI->getPointerOperand(),
@@ -6065,7 +6065,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
           // Add the cost for the subvectors insert.
           for (int I = VF, E = VL.size(); I < E; I += VF)
             GatherCost += TTI->getShuffleCost(TTI::SK_InsertSubvector, VecTy,
-                                              None, I, LoadTy);
+                                              None, CostKind, I, LoadTy);
         }
         return ReuseShuffleCost + GatherCost - ScalarsCost;
       }
@@ -6249,8 +6249,9 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         if (InsertVecSz != VecSz) {
           auto *ActualVecTy =
               FixedVectorType::get(SrcVecTy->getElementType(), VecSz);
-          Cost += TTI->getShuffleCost(TTI::SK_InsertSubvector, ActualVecTy,
-                                      None, OffsetBeg - Offset, InsertVecTy);
+          Cost +=
+              TTI->getShuffleCost(TTI::SK_InsertSubvector, ActualVecTy, None,
+                                  CostKind, OffsetBeg - Offset, InsertVecTy);
         } else {
           for (unsigned I = 0, End = OffsetBeg - Offset; I < End; ++I)
             Mask[I] = I;
@@ -6414,6 +6415,12 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         CommonCost -= (EntryVF - VL.size()) * ScalarEltCost;
       }
       InstructionCost ScalarCost = VecTy->getNumElements() * ScalarEltCost;
+      for (unsigned I = 0, Num = VL0->getNumOperands(); I < Num; ++I) {
+        if (all_of(VL, [I](Value *V) {
+              return isConstant(cast<Instruction>(V)->getOperand(I));
+            }))
+          Operands[I] = ConstantVector::getNullValue(VecTy);
+      }
       InstructionCost VecCost =
           TTI->getArithmeticInstrCost(E->getOpcode(), VecTy, CostKind, Op1VK,
                                       Op2VK, Op1VP, Op2VP, Operands, VL0);
@@ -6447,8 +6454,9 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
     case Instruction::Load: {
       // Cost of wide load - cost of scalar loads.
       Align Alignment = cast<LoadInst>(VL0)->getAlign();
-      InstructionCost ScalarEltCost = TTI->getMemoryOpCost(
-          Instruction::Load, ScalarTy, Alignment, 0, CostKind, VL0);
+      InstructionCost ScalarEltCost =
+          TTI->getMemoryOpCost(Instruction::Load, ScalarTy, Alignment, 0,
+                               CostKind, TTI::OK_AnyValue, VL0);
       if (NeedToShuffleReuses) {
         CommonCost -= (EntryVF - VL.size()) * ScalarEltCost;
       }
@@ -6456,7 +6464,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       InstructionCost VecLdCost;
       if (E->State == TreeEntry::Vectorize) {
         VecLdCost = TTI->getMemoryOpCost(Instruction::Load, VecTy, Alignment, 0,
-                                         CostKind, VL0);
+                                         CostKind, TTI::OK_AnyValue, VL0);
       } else {
         assert(E->State == TreeEntry::ScatterVectorize && "Unknown EntryState");
         Align CommonAlignment = Alignment;
@@ -6476,11 +6484,22 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       auto *SI =
           cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
       Align Alignment = SI->getAlign();
+      TTI::OperandValueKind OpVK = TTI::getOperandInfo(SI->getOperand(0));
       InstructionCost ScalarEltCost = TTI->getMemoryOpCost(
-          Instruction::Store, ScalarTy, Alignment, 0, CostKind, VL0);
+          Instruction::Store, ScalarTy, Alignment, 0, CostKind, OpVK, VL0);
       InstructionCost ScalarStCost = VecTy->getNumElements() * ScalarEltCost;
+      OpVK = TTI::OK_AnyValue;
+      if (all_of(E->Scalars,
+                 [](Value *V) {
+                   return isConstant(cast<Instruction>(V)->getOperand(0));
+                 }) &&
+          any_of(E->Scalars, [](Value *V) {
+            Value *Op = cast<Instruction>(V)->getOperand(0);
+            return !isa<UndefValue>(Op) && !cast<Constant>(Op)->isZeroValue();
+          }))
+        OpVK = TTI::OK_NonUniformConstantValue;
       InstructionCost VecStCost = TTI->getMemoryOpCost(
-          Instruction::Store, VecTy, Alignment, 0, CostKind, VL0);
+          Instruction::Store, VecTy, Alignment, 0, CostKind, OpVK, VL0);
       LLVM_DEBUG(dumpTreeCosts(E, CommonCost, VecStCost, ScalarStCost));
       return CommonCost + VecStCost - ScalarStCost;
     }
@@ -11947,9 +11966,9 @@ static bool compareCmp(Value *V, Value *V2,
   return IsCompatibility;
 }
 
-bool SLPVectorizerPass::vectorizeSimpleInstructions(
-    SmallVectorImpl<Instruction *> &Instructions, BasicBlock *BB, BoUpSLP &R,
-    bool AtTerminator) {
+bool SLPVectorizerPass::vectorizeSimpleInstructions(InstSetVector &Instructions,
+                                                    BasicBlock *BB, BoUpSLP &R,
+                                                    bool AtTerminator) {
   bool OpsChanged = false;
   SmallVector<Instruction *, 4> PostponedCmps;
   for (auto *I : reverse(Instructions)) {
@@ -12018,9 +12037,10 @@ bool SLPVectorizerPass::vectorizeSimpleInstructions(
         /*LimitForRegisterSize=*/true);
     Instructions.clear();
   } else {
+    Instructions.clear();
     // Insert in reverse order since the PostponedCmps vector was filled in
     // reverse order.
-    Instructions.assign(PostponedCmps.rbegin(), PostponedCmps.rend());
+    Instructions.insert(PostponedCmps.rbegin(), PostponedCmps.rend());
   }
   return OpsChanged;
 }
@@ -12173,7 +12193,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
   VisitedInstrs.clear();
 
-  SmallVector<Instruction *, 8> PostProcessInstructions;
+  InstSetVector PostProcessInstructions;
   SmallDenseSet<Instruction *, 4> KeyNodes;
   for (BasicBlock::iterator it = BB->begin(), e = BB->end(); it != e; ++it) {
     // Skip instructions with scalable type. The num of elements is unknown at
@@ -12225,8 +12245,12 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
             !DT->isReachableFromEntry(P->getIncomingBlock(I)))
           continue;
 
-        Changed |= vectorizeRootInstruction(nullptr, P->getIncomingValue(I),
-                                            P->getIncomingBlock(I), R, TTI);
+        // Postponed instructions should not be vectorized here, delay their
+        // vectorization.
+        if (auto *PI = dyn_cast<Instruction>(P->getIncomingValue(I));
+            PI && !PostProcessInstructions.contains(PI))
+          Changed |= vectorizeRootInstruction(nullptr, P->getIncomingValue(I),
+                                              P->getIncomingBlock(I), R, TTI);
       }
       continue;
     }
@@ -12253,8 +12277,12 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
       }
       if (TryToVectorizeRoot) {
         for (auto *V : it->operand_values()) {
-          // Try to match and vectorize a horizontal reduction.
-          OpsChanged |= vectorizeRootInstruction(nullptr, V, BB, R, TTI);
+          // Postponed instructions should not be vectorized here, delay their
+          // vectorization.
+          if (auto *VI = dyn_cast<Instruction>(V);
+              VI && !PostProcessInstructions.contains(VI))
+            // Try to match and vectorize a horizontal reduction.
+            OpsChanged |= vectorizeRootInstruction(nullptr, V, BB, R, TTI);
         }
       }
       // Start vectorization of post-process list of instructions from the
@@ -12273,7 +12301,7 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
     }
 
     if (isa<CmpInst, InsertElementInst, InsertValueInst>(it))
-      PostProcessInstructions.push_back(&*it);
+      PostProcessInstructions.insert(&*it);
   }
 
   return Changed;

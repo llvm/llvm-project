@@ -367,114 +367,96 @@ void BinaryFunction::updateEHRanges() {
     uint64_t Action;
   };
 
-  // If previous call can throw, this is its exception handler.
-  EHInfo PreviousEH = {nullptr, 0};
+  for (const FunctionFragment FF : getLayout().fragments()) {
+    // Sites to update - either regular or cold.
+    CallSitesType &Sites = FF.isMainFragment() ? CallSites : ColdCallSites;
 
-  // Marker for the beginning of exceptions range.
-  const MCSymbol *StartRange = nullptr;
+    // If previous call can throw, this is its exception handler.
+    EHInfo PreviousEH = {nullptr, 0};
 
-  // Indicates whether the start range is located in a cold part.
-  bool IsStartInCold = false;
+    // Marker for the beginning of exceptions range.
+    const MCSymbol *StartRange = nullptr;
 
-  // Have we crossed hot/cold border for split functions?
-  bool SeenCold = false;
+    for (BinaryBasicBlock *const BB : FF) {
+      for (auto II = BB->begin(); II != BB->end(); ++II) {
+        if (!BC.MIB->isCall(*II))
+          continue;
 
-  // Sites to update - either regular or cold.
-  CallSitesType *Sites = &CallSites;
+        // Instruction can throw an exception that should be handled.
+        const bool Throws = BC.MIB->isInvoke(*II);
 
-  for (BinaryBasicBlock *BB : getLayout().blocks()) {
+        // Ignore the call if it's a continuation of a no-throw gap.
+        if (!Throws && !StartRange)
+          continue;
 
-    if (BB->isCold() && !SeenCold) {
-      SeenCold = true;
+        assert(getLayout().isHotColdSplit() &&
+               "Exceptions only supported for hot/cold splitting");
 
-      // Close the range (if any) and change the target call sites.
-      if (StartRange) {
-        Sites->emplace_back(CallSite{StartRange, getFunctionEndLabel(),
-                                     PreviousEH.LP, PreviousEH.Action});
-      }
-      Sites = &ColdCallSites;
+        // Extract exception handling information from the instruction.
+        const MCSymbol *LP = nullptr;
+        uint64_t Action = 0;
+        if (const Optional<MCPlus::MCLandingPad> EHInfo =
+                BC.MIB->getEHInfo(*II))
+          std::tie(LP, Action) = *EHInfo;
 
-      // Reset the range.
-      StartRange = nullptr;
-      PreviousEH = {nullptr, 0};
-    }
+        // No action if the exception handler has not changed.
+        if (Throws && StartRange && PreviousEH.LP == LP &&
+            PreviousEH.Action == Action)
+          continue;
 
-    for (auto II = BB->begin(); II != BB->end(); ++II) {
-      if (!BC.MIB->isCall(*II))
-        continue;
+        // Same symbol is used for the beginning and the end of the range.
+        const MCSymbol *EHSymbol;
+        MCInst EHLabel;
+        {
+          std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
+          EHSymbol = BC.Ctx->createNamedTempSymbol("EH");
+          BC.MIB->createEHLabel(EHLabel, EHSymbol, BC.Ctx.get());
+        }
 
-      // Instruction can throw an exception that should be handled.
-      const bool Throws = BC.MIB->isInvoke(*II);
+        II = std::next(BB->insertPseudoInstr(II, EHLabel));
 
-      // Ignore the call if it's a continuation of a no-throw gap.
-      if (!Throws && !StartRange)
-        continue;
+        // At this point we could be in one of the following states:
+        //
+        // I. Exception handler has changed and we need to close previous range
+        //    and start a new one.
+        //
+        // II. Start a new exception range after the gap.
+        //
+        // III. Close current exception range and start a new gap.
+        const MCSymbol *EndRange;
+        if (StartRange) {
+          // I, III:
+          EndRange = EHSymbol;
+        } else {
+          // II:
+          StartRange = EHSymbol;
+          EndRange = nullptr;
+        }
 
-      // Extract exception handling information from the instruction.
-      const MCSymbol *LP = nullptr;
-      uint64_t Action = 0;
-      if (const Optional<MCPlus::MCLandingPad> EHInfo = BC.MIB->getEHInfo(*II))
-        std::tie(LP, Action) = *EHInfo;
+        // Close the previous range.
+        if (EndRange) {
+          Sites.emplace_back(
+              CallSite{StartRange, EndRange, PreviousEH.LP, PreviousEH.Action});
+        }
 
-      // No action if the exception handler has not changed.
-      if (Throws && StartRange && PreviousEH.LP == LP &&
-          PreviousEH.Action == Action)
-        continue;
-
-      // Same symbol is used for the beginning and the end of the range.
-      const MCSymbol *EHSymbol;
-      MCInst EHLabel;
-      {
-        std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
-        EHSymbol = BC.Ctx->createNamedTempSymbol("EH");
-        BC.MIB->createEHLabel(EHLabel, EHSymbol, BC.Ctx.get());
-      }
-
-      II = std::next(BB->insertPseudoInstr(II, EHLabel));
-
-      // At this point we could be in one of the following states:
-      //
-      // I. Exception handler has changed and we need to close previous range
-      //    and start a new one.
-      //
-      // II. Start a new exception range after the gap.
-      //
-      // III. Close current exception range and start a new gap.
-      const MCSymbol *EndRange;
-      if (StartRange) {
-        // I, III:
-        EndRange = EHSymbol;
-      } else {
-        // II:
-        StartRange = EHSymbol;
-        IsStartInCold = SeenCold;
-        EndRange = nullptr;
-      }
-
-      // Close the previous range.
-      if (EndRange) {
-        Sites->emplace_back(
-            CallSite{StartRange, EndRange, PreviousEH.LP, PreviousEH.Action});
-      }
-
-      if (Throws) {
-        // I, II:
-        StartRange = EHSymbol;
-        IsStartInCold = SeenCold;
-        PreviousEH = EHInfo{LP, Action};
-      } else {
-        StartRange = nullptr;
+        if (Throws) {
+          // I, II:
+          StartRange = EHSymbol;
+          PreviousEH = EHInfo{LP, Action};
+        } else {
+          StartRange = nullptr;
+        }
       }
     }
-  }
 
-  // Check if we need to close the range.
-  if (StartRange) {
-    assert((!isSplit() || Sites == &ColdCallSites) && "sites mismatch");
-    const MCSymbol *EndRange =
-        IsStartInCold ? getFunctionColdEndLabel() : getFunctionEndLabel();
-    Sites->emplace_back(
-        CallSite{StartRange, EndRange, PreviousEH.LP, PreviousEH.Action});
+    // Check if we need to close the range.
+    if (StartRange) {
+      assert((FF.isMainFragment() || &Sites == &ColdCallSites) &&
+             "sites mismatch");
+      const MCSymbol *EndRange = getFunctionEndLabel(FF.getFragmentNum());
+      Sites.emplace_back(
+          CallSite{StartRange, EndRange, PreviousEH.LP, PreviousEH.Action});
+    }
   }
 }
 

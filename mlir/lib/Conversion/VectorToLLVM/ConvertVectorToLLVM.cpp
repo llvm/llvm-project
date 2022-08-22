@@ -573,7 +573,8 @@ public:
     // there is direct shuffle support in LLVM. Use it!
     if (rank == 1 && v1Type == v2Type) {
       Value llvmShuffleOp = rewriter.create<LLVM::ShuffleVectorOp>(
-          loc, adaptor.getV1(), adaptor.getV2(), maskArrayAttr);
+          loc, adaptor.getV1(), adaptor.getV2(),
+          LLVM::convertArrayToIndices<int32_t>(maskArrayAttr));
       rewriter.replaceOp(shuffleOp, llvmShuffleOp);
       return success();
     }
@@ -1210,12 +1211,11 @@ struct VectorSplatOpLowering : public ConvertOpToLLVMPattern<vector::SplatOp> {
         splatOp.getLoc(), vectorType, undef, adaptor.getInput(), zero);
 
     int64_t width = splatOp.getType().cast<VectorType>().getDimSize(0);
-    SmallVector<int32_t, 4> zeroValues(width, 0);
+    SmallVector<int32_t> zeroValues(width, 0);
 
     // Shuffle the value across the desired number of elements.
-    ArrayAttr zeroAttrs = rewriter.getI32ArrayAttr(zeroValues);
     rewriter.replaceOpWithNewOp<LLVM::ShuffleVectorOp>(splatOp, v, undef,
-                                                       zeroAttrs);
+                                                       zeroValues);
     return success();
   }
 };
@@ -1256,9 +1256,8 @@ struct VectorSplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
 
     // Shuffle the value across the desired number of elements.
     int64_t width = resultType.getDimSize(resultType.getRank() - 1);
-    SmallVector<int32_t, 4> zeroValues(width, 0);
-    ArrayAttr zeroAttrs = rewriter.getI32ArrayAttr(zeroValues);
-    v = rewriter.create<LLVM::ShuffleVectorOp>(loc, v, v, zeroAttrs);
+    SmallVector<int32_t> zeroValues(width, 0);
+    v = rewriter.create<LLVM::ShuffleVectorOp>(loc, v, v, zeroValues);
 
     // Iterate of linear index, convert to coords space and insert splatted 1-D
     // vector in each position.

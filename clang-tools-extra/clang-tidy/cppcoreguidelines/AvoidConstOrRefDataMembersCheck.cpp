@@ -15,12 +15,23 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
+namespace {
+
+AST_MATCHER(FieldDecl, isMemberOfLambda) {
+  return Node.getParent()->isLambda();
+}
+
+} // namespace
 
 void AvoidConstOrRefDataMembersCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      fieldDecl(hasType(hasCanonicalType(referenceType()))).bind("ref"), this);
-  Finder->addMatcher(
-      fieldDecl(hasType(qualType(isConstQualified()))).bind("const"), this);
+  Finder->addMatcher(fieldDecl(unless(isMemberOfLambda()),
+                               hasType(hasCanonicalType(referenceType())))
+                         .bind("ref"),
+                     this);
+  Finder->addMatcher(fieldDecl(unless(isMemberOfLambda()),
+                               hasType(qualType(isConstQualified())))
+                         .bind("const"),
+                     this);
 }
 
 void AvoidConstOrRefDataMembersCheck::check(

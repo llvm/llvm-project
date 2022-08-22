@@ -124,9 +124,10 @@ bool GCNDPPCombine::isShrinkable(MachineInstr &MI) const {
     return false;
   }
   if (const auto *SDst = TII->getNamedOperand(MI, AMDGPU::OpName::sdst)) {
-    // Give up if there are any uses of the carry-out from instructions like
-    // V_ADD_CO_U32. The shrunken form of the instruction would write it to vcc
-    // instead of to a virtual register.
+    // Give up if there are any uses of the sdst in carry-out or VOPC.
+    // The shrunken form of the instruction would write it to vcc instead of to
+    // a virtual register. If we rewrote the uses the shrinking would be
+    // possible.
     if (!MRI->use_nodbg_empty(SDst->getReg()))
       return false;
   }

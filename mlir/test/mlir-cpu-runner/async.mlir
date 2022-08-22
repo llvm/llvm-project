@@ -6,6 +6,9 @@
 // RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_async_runtime%shlibext   \
 // RUN: | FileCheck %s
 
+// FIXME: https://github.com/llvm/llvm-project/issues/57231
+// UNSUPPORTED: hwasan
+
 func.func @main() {
   %i0 = arith.constant 0 : index
   %i1 = arith.constant 1 : index

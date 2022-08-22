@@ -17,7 +17,9 @@ subroutine host1()
   call takes_array(return_array())
 ! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i32) -> index
-! CHECK:  %[[VAL_6:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_5]] {bindc_name = ".result"}
+! CHECK:  %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_5]], %{{.*}} : index
+! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_5]], %{{.*}} : index
+! CHECK:  %[[VAL_6:.*]] = fir.alloca !fir.array<?xf32>, %[[SELECT]] {bindc_name = ".result"}
 contains
   function return_array()
     real :: return_array(n)
@@ -33,7 +35,9 @@ subroutine host2()
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QMsome_moduleEn_module) : !fir.ref<i32>
 ! CHECK:  %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (i32) -> index
-! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_2]] {bindc_name = ".result"}
+! CHECK:  %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_2]], %{{.*}} : index
+! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_2]], %{{.*}} : index
+! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.array<?xf32>, %[[SELECT]] {bindc_name = ".result"}
 contains
   function return_array()
     real :: return_array(n_module)
@@ -48,7 +52,9 @@ subroutine host3()
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QMsome_moduleEn_module) : !fir.ref<i32>
 ! CHECK:  %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (i32) -> index
-! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_2]] {bindc_name = ".result"}
+! CHECK:  %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_2]], %{{.*}} : index
+! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_2]], %{{.*}} : index
+! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.array<?xf32>, %[[SELECT]] {bindc_name = ".result"}
 contains
   function return_array()
     use :: some_module
@@ -72,7 +78,9 @@ contains
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.llvm_ptr<!fir.ref<i32>>
 ! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i32) -> index
-! CHECK:  %[[VAL_6:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_5]] {bindc_name = ".result"}
+! CHECK:  %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_5]], %{{.*}} : index
+! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_5]], %{{.*}} : index
+! CHECK:  %[[VAL_6:.*]] = fir.alloca !fir.array<?xf32>, %[[SELECT]] {bindc_name = ".result"}
   end subroutine
   function return_array()
     real :: return_array(n)
@@ -92,7 +100,9 @@ contains
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QMsome_moduleEn_module) : !fir.ref<i32>
 ! CHECK:  %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (i32) -> index
-! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_2]] {bindc_name = ".result"}
+! CHECK:  %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_2]], %{{.*}} : index
+! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_2]], %{{.*}} : index
+! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.array<?xf32>, %[[SELECT]] {bindc_name = ".result"}
   end subroutine
   function return_array()
     real :: return_array(n_module)
@@ -111,7 +121,9 @@ contains
 ! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QMsome_moduleEn_module) : !fir.ref<i32>
 ! CHECK:  %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (i32) -> index
-! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_2]] {bindc_name = ".result"}
+! CHECK:  %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_2]], %{{.*}} : index
+! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_2]], %{{.*}} : index
+! CHECK:  %[[VAL_3:.*]] = fir.alloca !fir.array<?xf32>, %[[SELECT]] {bindc_name = ".result"}
   end subroutine
   function return_array()
     use :: some_module
@@ -134,7 +146,9 @@ subroutine host7()
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! CHECK:  %[[VAL_8:.*]] = fir.load %[[VAL_5]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i32) -> index
-! CHECK:  %[[VAL_10:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_9]] {bindc_name = ".result"}
+! CHECK:  %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_9]], %{{.*}} : index
+! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_9]], %{{.*}} : index
+! CHECK:  %[[VAL_10:.*]] = fir.alloca !fir.array<?xf32>, %[[SELECT]] {bindc_name = ".result"}
 contains
   function return_array()
     real :: return_array(n_common)
@@ -154,7 +168,9 @@ subroutine host8()
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i32) -> index
-! CHECK:  %[[VAL_7:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_6]] {bindc_name = ".result"}
+! CHECK:  %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_6]], %{{.*}} : index
+! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_6]], %{{.*}} : index
+! CHECK:  %[[VAL_7:.*]] = fir.alloca !fir.array<?xf32>, %[[SELECT]] {bindc_name = ".result"}
 contains
   function return_array()
     integer :: n_common
@@ -181,7 +197,9 @@ contains
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.llvm_ptr<!fir.ref<i32>>
 ! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i32) -> index
-! CHECK:  %[[VAL_6:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_5]] {bindc_name = ".result"}
+! CHECK:  %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_5]], %{{.*}} : index
+! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_5]], %{{.*}} : index
+! CHECK:  %[[VAL_6:.*]] = fir.alloca !fir.array<?xf32>, %[[SELECT]] {bindc_name = ".result"}
     call takes_array(return_array())
   end subroutine
   function return_array()
@@ -206,7 +224,9 @@ contains
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<i8>) -> !fir.ref<i32>
 ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i32) -> index
-! CHECK:  %[[VAL_7:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_6]] {bindc_name = ".result"}
+! CHECK:  %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_6]], %{{.*}} : index
+! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_6]], %{{.*}} : index
+! CHECK:  %[[VAL_7:.*]] = fir.alloca !fir.array<?xf32>, %[[SELECT]] {bindc_name = ".result"}
   end subroutine
   function return_array()
     integer :: n_common

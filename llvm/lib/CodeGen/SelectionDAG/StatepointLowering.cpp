@@ -197,7 +197,7 @@ static Optional<int> findPreviousSpillSlot(const Value *Val,
   // All incoming values should have same known stack slot, otherwise result
   // is unknown.
   if (const PHINode *Phi = dyn_cast<PHINode>(Val)) {
-    Optional<int> MergedResult = None;
+    Optional<int> MergedResult;
 
     for (const auto &IncomingValue : Phi->incoming_values()) {
       Optional<int> SpillSlot =

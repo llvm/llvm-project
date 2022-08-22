@@ -37,11 +37,26 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   const RISCVSubtarget *getST() const { return ST; }
   const RISCVTargetLowering *getTLI() const { return TLI; }
 
-  unsigned getMaxVLFor(VectorType *Ty);
+  /// This function returns an estimate for VL to be used in VL based terms
+  /// of the cost model.  For fixed length vectors, this is simply the
+  /// vector length.  For scalable vectors, we return results consistent
+  /// with getVScaleForTuning under the assumption that clients are also
+  /// using that when comparing costs between scalar and vector representation.
+  /// This does unfortunately mean that we can both undershoot and overshot
+  /// the true cost significantly if getVScaleForTuning is wildly off for the
+  /// actual target hardware.
+  unsigned getEstimatedVLFor(VectorType *Ty);
 public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
+
+  /// Return the cost of materializing a vector immediate, assuming it does
+  /// not get folded into the using instruction(s).
+  InstructionCost getVectorImmCost(VectorType *VecTy,
+                                   TTI::OperandValueKind OpInfo,
+                                   TTI::OperandValueProperties PropInfo,
+                                   TTI::TargetCostKind CostKind);
 
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
                                 TTI::TargetCostKind CostKind);
@@ -86,7 +101,8 @@ public:
 
   InstructionCost getSpliceCost(VectorType *Tp, int Index);
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
-                                 ArrayRef<int> Mask, int Index,
+                                 ArrayRef<int> Mask,
+                                 TTI::TargetCostKind CostKind, int Index,
                                  VectorType *SubTp,
                                  ArrayRef<const Value *> Args = None);
 
@@ -116,6 +132,12 @@ public:
                                            Type *ResTy, VectorType *ValTy,
                                            Optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind);
+
+  InstructionCost
+  getMemoryOpCost(unsigned Opcode, Type *Src, MaybeAlign Alignment,
+                  unsigned AddressSpace, TTI::TargetCostKind CostKind,
+                  TTI::OperandValueKind OpdInfo = TTI::OK_AnyValue,
+                  const Instruction *I = nullptr);
 
   bool isElementTypeLegalForScalableVector(Type *Ty) const {
     return TLI->isLegalElementTypeForRVV(Ty);

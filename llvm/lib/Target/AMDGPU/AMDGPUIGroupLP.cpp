@@ -31,12 +31,6 @@ using namespace llvm;
 
 namespace {
 
-static cl::opt<bool>
-    EnableIGroupLP("amdgpu-igrouplp",
-                   cl::desc("Enable construction of Instruction Groups and "
-                            "their ordering for scheduling"),
-                   cl::init(false));
-
 static cl::opt<bool> EnableExactSolver(
     "amdgpu-igrouplp-exact-solver", cl::Hidden,
     cl::desc("Whether to use the exponential time solver to fit "
@@ -106,7 +100,10 @@ private:
   int SyncID = 0;
 
   // SGID is used to map instructions to candidate SchedGroups
-  int SGID;
+  unsigned SGID;
+
+  // Count of the number of created SchedGroups, used to initialize SGID.
+  static unsigned NumSchedGroups;
 
   ScheduleDAGInstrs *DAG;
 
@@ -180,18 +177,22 @@ public:
 
   SchedGroup(SchedGroupMask SGMask, Optional<unsigned> MaxSize,
              ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
-      : SGMask(SGMask), MaxSize(MaxSize), DAG(DAG), TII(TII) {}
+      : SGMask(SGMask), MaxSize(MaxSize), DAG(DAG), TII(TII) {
+    SGID = NumSchedGroups++;
+  }
 
   SchedGroup(SchedGroupMask SGMask, Optional<unsigned> MaxSize, int SyncID,
-             int SGID, ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
-      : SGMask(SGMask), MaxSize(MaxSize), SyncID(SyncID), SGID(SGID), DAG(DAG),
-        TII(TII) {}
+             ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
+      : SGMask(SGMask), MaxSize(MaxSize), SyncID(SyncID), DAG(DAG), TII(TII) {
+    SGID = NumSchedGroups++;
+  }
 };
 
 // Remove all existing edges from a SCHED_BARRIER or SCHED_GROUP_BARRIER.
 static void resetEdges(SUnit &SU, ScheduleDAGInstrs *DAG) {
   assert(SU.getInstr()->getOpcode() == AMDGPU::SCHED_BARRIER ||
-         SU.getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER);
+         SU.getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER ||
+         SU.getInstr()->getOpcode() == AMDGPU::IGLP_OPT);
 
   while (!SU.Preds.empty())
     for (auto &P : SU.Preds)
@@ -725,31 +726,107 @@ void PipelineSolver::solve() {
   makePipeline();
 }
 
-class IGroupLPDAGMutation : public ScheduleDAGMutation {
-private:
-  // Organize lists of SchedGroups by their SyncID. SchedGroups /
-  // SCHED_GROUP_BARRIERs with different SyncIDs will have no edges added
-  // between then.
-  DenseMap<int, SmallVector<SchedGroup, 4>> SyncedSchedGroups;
+enum IGLPStrategyID : int { MFMASmallGemmOptID = 0 };
 
-  // The number of created sched groups -- also used as SGID
-  int NumCreatedSchedGroups = 0;
+// Implement a IGLP scheduling strategy.
+class IGLPStrategy {
+protected:
+  ScheduleDAGInstrs *DAG;
 
-  // Used to track instructions that can be mapped to multiple sched groups
-  DenseMap<int, SUnitsToCandidateSGsMap> SyncedInstrs;
+  const SIInstrInfo *TII;
 
 public:
-  const SIInstrInfo *TII;
-  ScheduleDAGMI *DAG;
+  // Add SchedGroups to \p Pipeline to implement this Strategy.
+  virtual void applyIGLPStrategy(
+      DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) = 0;
 
-  IGroupLPDAGMutation() = default;
-  void apply(ScheduleDAGInstrs *DAGInstrs) override;
+  // Returns true if this strategy should be applied to a ScheduleDAG.
+  virtual bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) = 0;
+
+  IGLPStrategy(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
+      : DAG(DAG), TII(TII) {}
+
+  virtual ~IGLPStrategy() = default;
 };
 
-// DAG mutation that coordinates with the SCHED_BARRIER instruction and
-// corresponding builtin. The mutation adds edges from specific instruction
-// classes determined by the SCHED_BARRIER mask so that they cannot be
-class SchedBarrierDAGMutation : public ScheduleDAGMutation {
+class MFMASmallGemmOpt final : public IGLPStrategy {
+public:
+  void applyIGLPStrategy(
+      DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) override;
+
+  bool shouldApplyStrategy(ScheduleDAGInstrs *DAG) override { return true; }
+
+  MFMASmallGemmOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
+      : IGLPStrategy(DAG, TII) {}
+};
+
+void MFMASmallGemmOpt::applyIGLPStrategy(
+    DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups) {
+  // Count the number of MFMA instructions.
+  unsigned MFMACount = 0;
+  for (auto I = DAG->begin(), E = DAG->end(); I != E; ++I) {
+    if (TII->isMFMA(*I))
+      ++MFMACount;
+  }
+
+  const unsigned PipelineSyncID = 0;
+  SchedGroup *SG = nullptr;
+  for (unsigned I = 0; I < MFMACount; ++I) {
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::DS_READ, 1, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::VMEM_READ, 1, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::VMEM_WRITE, 1, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::DS_WRITE, 1, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+  }
+
+  for (unsigned I = 0; I < MFMACount; ++I) {
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::DS_READ, 1, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::VMEM_READ, 1, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::VMEM_WRITE, 1, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::DS_WRITE, 1, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+  }
+}
+
+static std::unique_ptr<IGLPStrategy>
+createIGLPStrategy(IGLPStrategyID ID, ScheduleDAGInstrs *DAG,
+                   const SIInstrInfo *TII) {
+  switch (ID) {
+  case MFMASmallGemmOptID:
+    return std::make_unique<MFMASmallGemmOpt>(DAG, TII);
+  }
+
+  llvm_unreachable("Unknown IGLPStrategyID");
+}
+
+class IGroupLPDAGMutation : public ScheduleDAGMutation {
 private:
   const SIInstrInfo *TII;
 
@@ -759,9 +836,6 @@ private:
   // SCHED_GROUP_BARRIERs with different SyncIDs will have no edges added
   // between then.
   DenseMap<int, SmallVector<SchedGroup, 4>> SyncedSchedGroups;
-
-  // The number of create sched groups -- also used as SGID
-  int NumCreatedSchedGroups = 0;
 
   // Used to track instructions that can be mapped to multiple sched groups
   DenseMap<int, SUnitsToCandidateSGsMap> SyncedInstrs;
@@ -784,11 +858,15 @@ private:
   void initSchedGroupBarrierPipelineStage(
       std::vector<SUnit>::reverse_iterator RIter);
 
+  void initIGLPOpt(SUnit &SU);
+
 public:
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
-  SchedBarrierDAGMutation() = default;
+  IGroupLPDAGMutation() = default;
 };
+
+unsigned SchedGroup::NumSchedGroups = 0;
 
 bool SchedGroup::tryAddEdge(SUnit *A, SUnit *B) {
   if (A != B && DAG->canAddEdge(B, A)) {
@@ -960,88 +1038,44 @@ void SchedGroup::initSchedGroup(SUnitsToCandidateSGsMap &SyncedInstrs) {
 }
 
 void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
-  const GCNSubtarget &ST = DAGInstrs->MF.getSubtarget<GCNSubtarget>();
-  TII = ST.getInstrInfo();
-  DAG = static_cast<ScheduleDAGMI *>(DAGInstrs);
-
-  // IGroupLP and sched_group_barrier are mutually exclusive mutations.
-  // Check for sched_group_barriers as that mutation gets priority.
-  for (auto R = DAG->SUnits.rbegin(), E = DAG->SUnits.rend(); R != E; ++R) {
-    if (R->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER) {
-      return;
-    }
-  }
-
-  SyncedSchedGroups.clear();
-  SyncedInstrs.clear();
-  const TargetSchedModel *TSchedModel = DAGInstrs->getSchedModel();
-  if (!TSchedModel || DAG->SUnits.empty())
-    return;
-
-  LLVM_DEBUG(dbgs() << "Applying IGroupLPDAGMutation...\n");
-
-  // The order of InstructionGroups in this vector defines the
-  // order in which edges will be added. In other words, given the
-  // present ordering, we will try to make each VMEMRead instruction
-  // a predecessor of each DSRead instruction, and so on.
-
-  struct SGParams {
-    SchedGroupMask Mask;
-    Optional<unsigned> Size;
-    int SyncID;
-
-    SGParams(SchedGroupMask Mask, Optional<unsigned> Size, int SyncID)
-        : Mask(Mask), Size(Size), SyncID(SyncID) {}
-  };
-
-  SmallVector<SGParams, 16> PipelineOrderGroups;
-
-  for (size_t i = 0; i < DAG->SUnits.size() / 4; i++) {
-    PipelineOrderGroups.push_back({SchedGroupMask::DS_READ, 8, 0});
-    PipelineOrderGroups.push_back({SchedGroupMask::MFMA, 1, 0});
-    PipelineOrderGroups.push_back({SchedGroupMask::DS_WRITE, 8, 0});
-  }
-
-  auto I = PipelineOrderGroups.rbegin();
-  auto E = PipelineOrderGroups.rend();
-  for (; I < E; I++) {
-    auto &SG = SyncedSchedGroups[I->SyncID].emplace_back(
-        I->Mask, I->Size, I->SyncID, NumCreatedSchedGroups++, DAG, TII);
-    SG.initSchedGroup(SyncedInstrs[SG.getSyncID()]);
-  }
-
-  PipelineSolver PS(SyncedSchedGroups, SyncedInstrs, DAG);
-  // PipelineSolver performs the mutation by adding the edges it
-  // determined as the best
-  PS.solve();
-}
-
-void SchedBarrierDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   const TargetSchedModel *TSchedModel = DAGInstrs->getSchedModel();
   if (!TSchedModel || DAGInstrs->SUnits.empty())
     return;
 
-  LLVM_DEBUG(dbgs() << "Applying SchedBarrierDAGMutation...\n");
+  LLVM_DEBUG(dbgs() << "Applying IGroupLPDAGMutation...\n");
   const GCNSubtarget &ST = DAGInstrs->MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   DAG = static_cast<ScheduleDAGMI *>(DAGInstrs);
   SyncedSchedGroups.clear();
   SyncedInstrs.clear();
+  bool foundSB = false;
+  bool foundIGLP = false;
   for (auto R = DAG->SUnits.rbegin(), E = DAG->SUnits.rend(); R != E; ++R) {
-    if (R->getInstr()->getOpcode() == AMDGPU::SCHED_BARRIER)
+    unsigned Opc = R->getInstr()->getOpcode();
+    // SCHED_[GROUP_]BARRIER and IGLP are mutually exclusive.
+    if (Opc == AMDGPU::SCHED_BARRIER) {
       addSchedBarrierEdges(*R);
-
-    else if (R->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
+      foundSB = true;
+    } else if (Opc == AMDGPU::SCHED_GROUP_BARRIER) {
       initSchedGroupBarrierPipelineStage(R);
+      foundSB = true;
+    } else if (Opc == AMDGPU::IGLP_OPT) {
+      resetEdges(*R, DAG);
+      if (!foundSB && !foundIGLP)
+        initIGLPOpt(*R);
+      foundIGLP = true;
+    }
   }
 
-  PipelineSolver PS(SyncedSchedGroups, SyncedInstrs, DAG);
-  // PipelineSolver performs the mutation by adding the edges it
-  // determined as the best
-  PS.solve();
+  if (foundSB || foundIGLP) {
+    PipelineSolver PS(SyncedSchedGroups, SyncedInstrs, DAG);
+    // PipelineSolver performs the mutation by adding the edges it
+    // determined as the best
+    PS.solve();
+  }
 }
 
-void SchedBarrierDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
+void IGroupLPDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
   MachineInstr &MI = *SchedBarrier.getInstr();
   assert(MI.getOpcode() == AMDGPU::SCHED_BARRIER);
   // Remove all existing edges from the SCHED_BARRIER that were added due to the
@@ -1059,7 +1093,7 @@ void SchedBarrierDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
 }
 
 SchedGroupMask
-SchedBarrierDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
+IGroupLPDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
   // Invert mask and erase bits for types of instructions that are implied to be
   // allowed past the SCHED_BARRIER.
   SchedGroupMask InvertedMask = ~Mask;
@@ -1093,7 +1127,7 @@ SchedBarrierDAGMutation::invertSchedBarrierMask(SchedGroupMask Mask) const {
   return InvertedMask;
 }
 
-void SchedBarrierDAGMutation::initSchedGroupBarrierPipelineStage(
+void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
     std::vector<SUnit>::reverse_iterator RIter) {
   // Remove all existing edges from the SCHED_GROUP_BARRIER that were added due
   // to the instruction having side effects.
@@ -1104,10 +1138,18 @@ void SchedBarrierDAGMutation::initSchedGroupBarrierPipelineStage(
   int32_t Size = SGB.getOperand(1).getImm();
   int32_t SyncID = SGB.getOperand(2).getImm();
 
-  auto &SG = SyncedSchedGroups[SyncID].emplace_back(
-      (SchedGroupMask)SGMask, Size, SyncID, NumCreatedSchedGroups++, DAG, TII);
+  auto &SG = SyncedSchedGroups[SyncID].emplace_back((SchedGroupMask)SGMask,
+                                                    Size, SyncID, DAG, TII);
 
   SG.initSchedGroup(RIter, SyncedInstrs[SG.getSyncID()]);
+}
+
+void IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
+  IGLPStrategyID StrategyID =
+      (IGLPStrategyID)SU.getInstr()->getOperand(0).getImm();
+  auto S = createIGLPStrategy(StrategyID, DAG, TII);
+  if (S->shouldApplyStrategy(DAG))
+    S->applyIGLPStrategy(SyncedInstrs, SyncedSchedGroups);
 }
 
 } // namespace
@@ -1115,11 +1157,7 @@ void SchedBarrierDAGMutation::initSchedGroupBarrierPipelineStage(
 namespace llvm {
 
 std::unique_ptr<ScheduleDAGMutation> createIGroupLPDAGMutation() {
-  return EnableIGroupLP ? std::make_unique<IGroupLPDAGMutation>() : nullptr;
-}
-
-std::unique_ptr<ScheduleDAGMutation> createSchedBarrierDAGMutation() {
-  return std::make_unique<SchedBarrierDAGMutation>();
+  return std::make_unique<IGroupLPDAGMutation>();
 }
 
 } // end namespace llvm

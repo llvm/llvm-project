@@ -291,6 +291,8 @@ enum NodeType : unsigned {
   SMULL,
   UMULL,
 
+  PMULL,
+
   // Reciprocal estimates and steps.
   FRECPE,
   FRECPS,

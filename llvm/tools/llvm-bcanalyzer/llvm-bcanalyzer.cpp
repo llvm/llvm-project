@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
   O.DumpBlockinfo = DumpBlockinfo;
 
   ExitOnErr(BA.analyze(
-      Dump ? Optional<BCDumpOptions>(O) : Optional<BCDumpOptions>(None),
+      Dump ? Optional<BCDumpOptions>(O) : Optional<BCDumpOptions>(),
       CheckHash.empty() ? None : Optional<StringRef>(CheckHash)));
 
   if (Dump)

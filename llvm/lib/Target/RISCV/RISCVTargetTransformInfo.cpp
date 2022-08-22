@@ -10,6 +10,7 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include <cmath>
 using namespace llvm;
@@ -179,6 +180,7 @@ InstructionCost RISCVTTIImpl::getSpliceCost(VectorType *Tp, int Index) {
 
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
+                                             TTI::TargetCostKind CostKind,
                                              int Index, VectorType *SubTp,
                                              ArrayRef<const Value *> Args) {
   if (isa<ScalableVectorType>(Tp)) {
@@ -211,7 +213,7 @@ InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, Tp, Mask, CostKind, Index, SubTp);
 }
 
 InstructionCost
@@ -240,14 +242,86 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
                                          Alignment, CostKind, I);
 
   // Cost is proportional to the number of memory operations implied.  For
-  // scalable vectors, we use an upper bound on that number since we don't
+  // scalable vectors, we use an estimate on that number since we don't
   // know exactly what VL will be.
   auto &VTy = *cast<VectorType>(DataTy);
-  InstructionCost MemOpCost = getMemoryOpCost(Opcode, VTy.getElementType(),
-                                              Alignment, 0, CostKind, I);
-  unsigned NumLoads = getMaxVLFor(&VTy);
+  InstructionCost MemOpCost =
+      getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
+                      TTI::OK_AnyValue, I);
+  unsigned NumLoads = getEstimatedVLFor(&VTy);
   return NumLoads * MemOpCost;
 }
+
+// Currently, these represent both throughput and codesize costs
+// for the respective intrinsics.  The costs in this table are simply
+// instruction counts with the following adjustments made:
+// * One vsetvli is considered free.
+static const CostTblEntry VectorIntrinsicCostTable[]{
+   {Intrinsic::floor, MVT::v2f32, 15},
+   {Intrinsic::floor, MVT::v4f32, 15},
+   {Intrinsic::floor, MVT::v8f32, 15},
+   {Intrinsic::floor, MVT::v16f32, 15},
+   {Intrinsic::floor, MVT::nxv2f32, 15},
+   {Intrinsic::floor, MVT::nxv4f32, 15},
+   {Intrinsic::floor, MVT::nxv8f32, 15},
+   {Intrinsic::floor, MVT::nxv16f32, 15},
+   {Intrinsic::floor, MVT::v2f64, 15},
+   {Intrinsic::floor, MVT::v4f64, 15},
+   {Intrinsic::floor, MVT::v8f64, 15},
+   {Intrinsic::floor, MVT::v16f64, 15},
+   {Intrinsic::floor, MVT::nxv1f64, 15},
+   {Intrinsic::floor, MVT::nxv2f64, 15},
+   {Intrinsic::floor, MVT::nxv4f64, 15},
+   {Intrinsic::floor, MVT::nxv8f64, 15},
+   {Intrinsic::ceil, MVT::v2f32, 15},
+   {Intrinsic::ceil, MVT::v4f32, 15},
+   {Intrinsic::ceil, MVT::v8f32, 15},
+   {Intrinsic::ceil, MVT::v16f32, 15},
+   {Intrinsic::ceil, MVT::nxv2f32, 15},
+   {Intrinsic::ceil, MVT::nxv4f32, 15},
+   {Intrinsic::ceil, MVT::nxv8f32, 15},
+   {Intrinsic::ceil, MVT::nxv16f32, 15},
+   {Intrinsic::ceil, MVT::v2f64, 15},
+   {Intrinsic::ceil, MVT::v4f64, 15},
+   {Intrinsic::ceil, MVT::v8f64, 15},
+   {Intrinsic::ceil, MVT::v16f64, 15},
+   {Intrinsic::ceil, MVT::nxv1f64, 15},
+   {Intrinsic::ceil, MVT::nxv2f64, 15},
+   {Intrinsic::ceil, MVT::nxv4f64, 15},
+   {Intrinsic::ceil, MVT::nxv8f64, 15},
+   {Intrinsic::trunc, MVT::v2f32, 7},
+   {Intrinsic::trunc, MVT::v4f32, 7},
+   {Intrinsic::trunc, MVT::v8f32, 7},
+   {Intrinsic::trunc, MVT::v16f32, 7},
+   {Intrinsic::trunc, MVT::nxv2f32, 7},
+   {Intrinsic::trunc, MVT::nxv4f32, 7},
+   {Intrinsic::trunc, MVT::nxv8f32, 7},
+   {Intrinsic::trunc, MVT::nxv16f32, 7},
+   {Intrinsic::trunc, MVT::v2f64, 7},
+   {Intrinsic::trunc, MVT::v4f64, 7},
+   {Intrinsic::trunc, MVT::v8f64, 7},
+   {Intrinsic::trunc, MVT::v16f64, 7},
+   {Intrinsic::trunc, MVT::nxv1f64, 7},
+   {Intrinsic::trunc, MVT::nxv2f64, 7},
+   {Intrinsic::trunc, MVT::nxv4f64, 7},
+   {Intrinsic::trunc, MVT::nxv8f64, 7},
+   {Intrinsic::round, MVT::v2f32, 10},
+   {Intrinsic::round, MVT::v4f32, 10},
+   {Intrinsic::round, MVT::v8f32, 10},
+   {Intrinsic::round, MVT::v16f32, 10},
+   {Intrinsic::round, MVT::nxv2f32, 10},
+   {Intrinsic::round, MVT::nxv4f32, 10},
+   {Intrinsic::round, MVT::nxv8f32, 10},
+   {Intrinsic::round, MVT::nxv16f32, 10},
+   {Intrinsic::round, MVT::v2f64, 10},
+   {Intrinsic::round, MVT::v4f64, 10},
+   {Intrinsic::round, MVT::v8f64, 10},
+   {Intrinsic::round, MVT::v16f64, 10},
+   {Intrinsic::round, MVT::nxv1f64, 10},
+   {Intrinsic::round, MVT::nxv2f64, 10},
+   {Intrinsic::round, MVT::nxv4f64, 10},
+   {Intrinsic::round, MVT::nxv8f64, 10},
+};
 
 InstructionCost
 RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
@@ -261,6 +335,12 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return Cost + (LT.first - 1);
   }
   default:
+    if (ST->hasVInstructions() && RetTy->isVectorTy()) {
+      auto LT = getTypeLegalizationCost(RetTy);
+      if (const auto *Entry = CostTableLookup(VectorIntrinsicCostTable,
+                                              ICA.getID(), LT.second))
+        return LT.first * Entry->Cost;
+    }
     break;
   }
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
@@ -343,12 +423,12 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 }
 
-unsigned RISCVTTIImpl::getMaxVLFor(VectorType *Ty) {
+unsigned RISCVTTIImpl::getEstimatedVLFor(VectorType *Ty) {
   if (isa<ScalableVectorType>(Ty)) {
     const unsigned EltSize = DL.getTypeSizeInBits(Ty->getElementType());
     const unsigned MinSize = DL.getTypeSizeInBits(Ty).getKnownMinValue();
-    const unsigned VectorBitsMax = ST->getRealMaxVLen();
-    return RISCVTargetLowering::computeVLMAX(VectorBitsMax, EltSize, MinSize);
+    const unsigned VectorBits = *getVScaleForTuning() * RISCV::RVVBitsPerBlock;
+    return RISCVTargetLowering::computeVLMAX(VectorBits, EltSize, MinSize);
   }
   return cast<FixedVectorType>(Ty)->getNumElements();
 }
@@ -372,7 +452,7 @@ RISCVTTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
   InstructionCost BaseCost = 2;
-  unsigned VL = getMaxVLFor(Ty);
+  unsigned VL = getEstimatedVLFor(Ty);
   return (LT.first - 1) + BaseCost + Log2_32_Ceil(VL);
 }
 
@@ -401,7 +481,7 @@ RISCVTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
 
   // IR Reduction is composed by two vmv and one rvv reduction instruction.
   InstructionCost BaseCost = 2;
-  unsigned VL = getMaxVLFor(Ty);
+  unsigned VL = getEstimatedVLFor(Ty);
   if (TTI::requiresOrderedReduction(FMF))
     return (LT.first - 1) + BaseCost + VL;
   return (LT.first - 1) + BaseCost + Log2_32_Ceil(VL);
@@ -431,6 +511,37 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
 
   return (LT.first - 1) +
          getArithmeticReductionCost(Opcode, ValTy, FMF, CostKind);
+}
+
+InstructionCost RISCVTTIImpl::getVectorImmCost(VectorType *VecTy,
+                                               TTI::OperandValueKind OpInfo,
+                                               TTI::OperandValueProperties PropInfo,
+                                               TTI::TargetCostKind CostKind) {
+  assert((OpInfo == TTI::OK_UniformConstantValue ||
+          OpInfo == TTI::OK_NonUniformConstantValue) && "non constant operand?");
+  APInt PseudoAddr = APInt::getAllOnes(DL.getPointerSizeInBits());
+  // Add a cost of address load + the cost of the vector load.
+  return RISCVMatInt::getIntMatCost(PseudoAddr, DL.getPointerSizeInBits(),
+                                    getST()->getFeatureBits()) +
+    getMemoryOpCost(Instruction::Load, VecTy, DL.getABITypeAlign(VecTy),
+                    /*AddressSpace=*/0, CostKind);
+}
+
+
+InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+                                              MaybeAlign Alignment,
+                                              unsigned AddressSpace,
+                                              TTI::TargetCostKind CostKind,
+                                              TTI::OperandValueKind OpdInfo,
+                                              const Instruction *I) {
+  InstructionCost Cost = 0;
+  if (Opcode == Instruction::Store && isa<VectorType>(Src) &&
+      (OpdInfo == TTI::OK_UniformConstantValue ||
+       OpdInfo == TTI::OK_NonUniformConstantValue)) {
+    Cost += getVectorImmCost(cast<VectorType>(Src), OpdInfo, TTI::OP_None, CostKind);
+  }
+  return Cost + BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
+                                       CostKind, OpdInfo, I);
 }
 
 void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
@@ -492,8 +603,8 @@ void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       }
 
       SmallVector<const Value *> Operands(I.operand_values());
-      Cost +=
-          getUserCost(&I, Operands, TargetTransformInfo::TCK_SizeAndLatency);
+      Cost += getInstructionCost(&I, Operands,
+                                 TargetTransformInfo::TCK_SizeAndLatency);
     }
   }
 

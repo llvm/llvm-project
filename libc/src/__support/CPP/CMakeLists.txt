@@ -29,13 +29,13 @@ add_header_library(
 add_header_library(
   bit
   HDRS
-    Bit.h
+    bit.h
 )
 
 add_header_library(
   bitset
   HDRS
-    Bitset.h
+    bitset.h
 )
 
 add_header_library(
@@ -100,12 +100,6 @@ add_header_library(
   atomic
   HDRS
     atomic.h
-)
-
-add_header_library(
-  blockstore
-  HDRS
-    blockstore.h
 )
 
 add_header_library(

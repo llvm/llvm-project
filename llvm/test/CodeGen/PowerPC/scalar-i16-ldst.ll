@@ -4320,7 +4320,6 @@ define dso_local zeroext i16 @ld_align16_uint16_t_float(i8* nocapture readonly %
 ; CHECK-NEXT:    lfs f0, 8(r3)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
@@ -4337,7 +4336,6 @@ define dso_local zeroext i16 @ld_align32_uint16_t_float(i8* nocapture readonly %
 ; CHECK-P10-NEXT:    plfs f0, 99999000(r3), 0
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
-; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_align32_uint16_t_float:
@@ -4347,7 +4345,6 @@ define dso_local zeroext i16 @ld_align32_uint16_t_float(i8* nocapture readonly %
 ; CHECK-PREP10-NEXT:    lfsx f0, r3, r4
 ; CHECK-PREP10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-PREP10-NEXT:    mffprwz r3, f0
-; CHECK-PREP10-NEXT:    clrldi r3, r3, 32
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
@@ -4366,7 +4363,6 @@ define dso_local zeroext i16 @ld_align64_uint16_t_float(i8* nocapture readonly %
 ; CHECK-P10-NEXT:    lfsx f0, r3, r4
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
-; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_align64_uint16_t_float:
@@ -4377,7 +4373,6 @@ define dso_local zeroext i16 @ld_align64_uint16_t_float(i8* nocapture readonly %
 ; CHECK-PREP10-NEXT:    lfsx f0, r3, r4
 ; CHECK-PREP10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-PREP10-NEXT:    mffprwz r3, f0
-; CHECK-PREP10-NEXT:    clrldi r3, r3, 32
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
@@ -4394,7 +4389,6 @@ define dso_local zeroext i16 @ld_reg_uint16_t_float(i8* nocapture readonly %ptr,
 ; CHECK-NEXT:    lfsx f0, r3, r4
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
@@ -4412,7 +4406,6 @@ define dso_local zeroext i16 @ld_or_uint16_t_float(i64 %ptr, i8 zeroext %off) {
 ; CHECK-NEXT:    lfs f0, 0(r3)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %conv = zext i8 %off to i64
@@ -4431,7 +4424,6 @@ define dso_local zeroext i16 @ld_not_disjoint16_uint16_t_float(i64 %ptr) {
 ; CHECK-NEXT:    lfs f0, 0(r3)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 6
@@ -4449,7 +4441,6 @@ define dso_local zeroext i16 @ld_disjoint_align16_uint16_t_float(i64 %ptr) {
 ; CHECK-NEXT:    lfs f0, 24(r3)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %and = and i64 %ptr, -4096
@@ -4469,7 +4460,6 @@ define dso_local zeroext i16 @ld_not_disjoint32_uint16_t_float(i64 %ptr) {
 ; CHECK-NEXT:    lfs f0, 0(r3)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 99999
@@ -4488,7 +4478,6 @@ define dso_local zeroext i16 @ld_disjoint_align32_uint16_t_float(i64 %ptr) {
 ; CHECK-P10-NEXT:    plfs f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
-; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: ld_disjoint_align32_uint16_t_float:
@@ -4500,7 +4489,6 @@ define dso_local zeroext i16 @ld_disjoint_align32_uint16_t_float(i64 %ptr) {
 ; CHECK-P9-NEXT:    lfsx f0, r3, r4
 ; CHECK-P9-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P9-NEXT:    mffprwz r3, f0
-; CHECK-P9-NEXT:    clrldi r3, r3, 32
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: ld_disjoint_align32_uint16_t_float:
@@ -4512,7 +4500,6 @@ define dso_local zeroext i16 @ld_disjoint_align32_uint16_t_float(i64 %ptr) {
 ; CHECK-P8-NEXT:    lfsx f0, r3, r4
 ; CHECK-P8-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P8-NEXT:    mffprwz r3, f0
-; CHECK-P8-NEXT:    clrldi r3, r3, 32
 ; CHECK-P8-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
@@ -4534,7 +4521,6 @@ define dso_local zeroext i16 @ld_not_disjoint64_uint16_t_float(i64 %ptr) {
 ; CHECK-P10-NEXT:    lfs f0, 0(r3)
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
-; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_not_disjoint64_uint16_t_float:
@@ -4547,7 +4533,6 @@ define dso_local zeroext i16 @ld_not_disjoint64_uint16_t_float(i64 %ptr) {
 ; CHECK-PREP10-NEXT:    lfs f0, 0(r3)
 ; CHECK-PREP10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-PREP10-NEXT:    mffprwz r3, f0
-; CHECK-PREP10-NEXT:    clrldi r3, r3, 32
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %or = or i64 %ptr, 1000000000001
@@ -4567,7 +4552,6 @@ define dso_local zeroext i16 @ld_disjoint_align64_uint16_t_float(i64 %ptr) {
 ; CHECK-P10-NEXT:    lfsx f0, r3, r4
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
-; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_disjoint_align64_uint16_t_float:
@@ -4579,7 +4563,6 @@ define dso_local zeroext i16 @ld_disjoint_align64_uint16_t_float(i64 %ptr) {
 ; CHECK-PREP10-NEXT:    lfsx f0, r3, r4
 ; CHECK-PREP10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-PREP10-NEXT:    mffprwz r3, f0
-; CHECK-PREP10-NEXT:    clrldi r3, r3, 32
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1099511627776
@@ -4597,7 +4580,6 @@ define dso_local zeroext i16 @ld_cst_align16_uint16_t_float() {
 ; CHECK-NEXT:    lfs f0, 4080(0)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %0 = load float, float* inttoptr (i64 4080 to float*), align 16
@@ -4613,7 +4595,6 @@ define dso_local zeroext i16 @ld_cst_align32_uint16_t_float() {
 ; CHECK-NEXT:    lfs f0, -27108(r3)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %0 = load float, float* inttoptr (i64 9999900 to float*), align 4
@@ -4630,7 +4611,6 @@ define dso_local zeroext i16 @ld_cst_align64_uint16_t_float() {
 ; CHECK-P10-NEXT:    lfs f0, 0(r3)
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
-; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_cst_align64_uint16_t_float:
@@ -4641,7 +4621,6 @@ define dso_local zeroext i16 @ld_cst_align64_uint16_t_float() {
 ; CHECK-PREP10-NEXT:    lfs f0, 0(r3)
 ; CHECK-PREP10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-PREP10-NEXT:    mffprwz r3, f0
-; CHECK-PREP10-NEXT:    clrldi r3, r3, 32
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %0 = load float, float* inttoptr (i64 1000000000000 to float*), align 4096
@@ -4656,7 +4635,6 @@ define dso_local zeroext i16 @ld_0_uint16_t_double(i64 %ptr) {
 ; CHECK-NEXT:    lfd f0, 0(r3)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %0 = inttoptr i64 %ptr to double*
@@ -4672,7 +4650,6 @@ define dso_local zeroext i16 @ld_align16_uint16_t_double(i8* nocapture readonly 
 ; CHECK-NEXT:    lfd f0, 8(r3)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 8
@@ -4689,7 +4666,6 @@ define dso_local zeroext i16 @ld_align32_uint16_t_double(i8* nocapture readonly 
 ; CHECK-P10-NEXT:    plfd f0, 99999000(r3), 0
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
-; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_align32_uint16_t_double:
@@ -4699,7 +4675,6 @@ define dso_local zeroext i16 @ld_align32_uint16_t_double(i8* nocapture readonly 
 ; CHECK-PREP10-NEXT:    lfdx f0, r3, r4
 ; CHECK-PREP10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-PREP10-NEXT:    mffprwz r3, f0
-; CHECK-PREP10-NEXT:    clrldi r3, r3, 32
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 99999000
@@ -4718,7 +4693,6 @@ define dso_local zeroext i16 @ld_align64_uint16_t_double(i8* nocapture readonly 
 ; CHECK-P10-NEXT:    lfdx f0, r3, r4
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
-; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_align64_uint16_t_double:
@@ -4729,7 +4703,6 @@ define dso_local zeroext i16 @ld_align64_uint16_t_double(i8* nocapture readonly 
 ; CHECK-PREP10-NEXT:    lfdx f0, r3, r4
 ; CHECK-PREP10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-PREP10-NEXT:    mffprwz r3, f0
-; CHECK-PREP10-NEXT:    clrldi r3, r3, 32
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 1000000000000
@@ -4746,7 +4719,6 @@ define dso_local zeroext i16 @ld_reg_uint16_t_double(i8* nocapture readonly %ptr
 ; CHECK-NEXT:    lfdx f0, r3, r4
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %add.ptr = getelementptr inbounds i8, i8* %ptr, i64 %off
@@ -4764,7 +4736,6 @@ define dso_local zeroext i16 @ld_or_uint16_t_double(i64 %ptr, i8 zeroext %off) {
 ; CHECK-NEXT:    lfd f0, 0(r3)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %conv = zext i8 %off to i64
@@ -4783,7 +4754,6 @@ define dso_local zeroext i16 @ld_not_disjoint16_uint16_t_double(i64 %ptr) {
 ; CHECK-NEXT:    lfd f0, 0(r3)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 6
@@ -4801,7 +4771,6 @@ define dso_local zeroext i16 @ld_disjoint_align16_uint16_t_double(i64 %ptr) {
 ; CHECK-NEXT:    lfd f0, 24(r3)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %and = and i64 %ptr, -4096
@@ -4821,7 +4790,6 @@ define dso_local zeroext i16 @ld_not_disjoint32_uint16_t_double(i64 %ptr) {
 ; CHECK-NEXT:    lfd f0, 0(r3)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %or = or i64 %ptr, 99999
@@ -4840,7 +4808,6 @@ define dso_local zeroext i16 @ld_disjoint_align32_uint16_t_double(i64 %ptr) {
 ; CHECK-P10-NEXT:    plfd f0, 999990000(r3), 0
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
-; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: ld_disjoint_align32_uint16_t_double:
@@ -4852,7 +4819,6 @@ define dso_local zeroext i16 @ld_disjoint_align32_uint16_t_double(i64 %ptr) {
 ; CHECK-P9-NEXT:    lfdx f0, r3, r4
 ; CHECK-P9-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P9-NEXT:    mffprwz r3, f0
-; CHECK-P9-NEXT:    clrldi r3, r3, 32
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: ld_disjoint_align32_uint16_t_double:
@@ -4864,7 +4830,6 @@ define dso_local zeroext i16 @ld_disjoint_align32_uint16_t_double(i64 %ptr) {
 ; CHECK-P8-NEXT:    lfdx f0, r3, r4
 ; CHECK-P8-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P8-NEXT:    mffprwz r3, f0
-; CHECK-P8-NEXT:    clrldi r3, r3, 32
 ; CHECK-P8-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1000341504
@@ -4886,7 +4851,6 @@ define dso_local zeroext i16 @ld_not_disjoint64_uint16_t_double(i64 %ptr) {
 ; CHECK-P10-NEXT:    lfd f0, 0(r3)
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
-; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_not_disjoint64_uint16_t_double:
@@ -4899,7 +4863,6 @@ define dso_local zeroext i16 @ld_not_disjoint64_uint16_t_double(i64 %ptr) {
 ; CHECK-PREP10-NEXT:    lfd f0, 0(r3)
 ; CHECK-PREP10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-PREP10-NEXT:    mffprwz r3, f0
-; CHECK-PREP10-NEXT:    clrldi r3, r3, 32
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %or = or i64 %ptr, 1000000000001
@@ -4919,7 +4882,6 @@ define dso_local zeroext i16 @ld_disjoint_align64_uint16_t_double(i64 %ptr) {
 ; CHECK-P10-NEXT:    lfdx f0, r3, r4
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
-; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_disjoint_align64_uint16_t_double:
@@ -4931,7 +4893,6 @@ define dso_local zeroext i16 @ld_disjoint_align64_uint16_t_double(i64 %ptr) {
 ; CHECK-PREP10-NEXT:    lfdx f0, r3, r4
 ; CHECK-PREP10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-PREP10-NEXT:    mffprwz r3, f0
-; CHECK-PREP10-NEXT:    clrldi r3, r3, 32
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %and = and i64 %ptr, -1099511627776
@@ -4949,7 +4910,6 @@ define dso_local zeroext i16 @ld_cst_align16_uint16_t_double() {
 ; CHECK-NEXT:    lfd f0, 4080(0)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %0 = load double, double* inttoptr (i64 4080 to double*), align 16
@@ -4965,7 +4925,6 @@ define dso_local zeroext i16 @ld_cst_align32_uint16_t_double() {
 ; CHECK-NEXT:    lfd f0, -27108(r3)
 ; CHECK-NEXT:    xscvdpsxws f0, f0
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 entry:
   %0 = load double, double* inttoptr (i64 9999900 to double*), align 8
@@ -4982,7 +4941,6 @@ define dso_local zeroext i16 @ld_cst_align64_uint16_t_double() {
 ; CHECK-P10-NEXT:    lfd f0, 0(r3)
 ; CHECK-P10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-P10-NEXT:    mffprwz r3, f0
-; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 ;
 ; CHECK-PREP10-LABEL: ld_cst_align64_uint16_t_double:
@@ -4993,7 +4951,6 @@ define dso_local zeroext i16 @ld_cst_align64_uint16_t_double() {
 ; CHECK-PREP10-NEXT:    lfd f0, 0(r3)
 ; CHECK-PREP10-NEXT:    xscvdpsxws f0, f0
 ; CHECK-PREP10-NEXT:    mffprwz r3, f0
-; CHECK-PREP10-NEXT:    clrldi r3, r3, 32
 ; CHECK-PREP10-NEXT:    blr
 entry:
   %0 = load double, double* inttoptr (i64 1000000000000 to double*), align 4096

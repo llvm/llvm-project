@@ -2280,7 +2280,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __nbc)
                     else
                     {
                         __next_pointer __np = __cp;
-                        if _LIBCPP_CONSTEXPR_AFTER_CXX14 (!_UniqueKeys)
+                        if _LIBCPP_CONSTEXPR_SINCE_CXX17 (!_UniqueKeys)
                         {
                             for (; __np->__next_ != nullptr &&
                                    key_eq()(__cp->__upcast()->__value_,

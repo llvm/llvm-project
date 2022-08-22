@@ -7709,6 +7709,13 @@ public:
   }
 };
 
+/// Contains 'interop' data for 'append_args' and 'init' clauses.
+struct OMPInteropInfo final {
+  bool IsTarget = false;
+  bool IsTargetSync = false;
+  llvm::SmallVector<Expr *, 4> PreferTypes;
+};
+
 /// This represents the 'init' clause in '#pragma omp ...' directives.
 ///
 /// \code
@@ -7763,16 +7770,14 @@ public:
   ///
   /// \param C AST context.
   /// \param InteropVar The interop variable.
-  /// \param PrefExprs The list of preference expressions.
-  /// \param IsTarget Uses the 'target' interop-type.
-  /// \param IsTargetSync Uses the 'targetsync' interop-type.
+  /// \param InteropInfo The interop-type and prefer_type list.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.
   /// \param VarLoc Location of the interop variable.
   /// \param EndLoc Ending location of the clause.
   static OMPInitClause *Create(const ASTContext &C, Expr *InteropVar,
-                               ArrayRef<Expr *> PrefExprs, bool IsTarget,
-                               bool IsTargetSync, SourceLocation StartLoc,
+                               OMPInteropInfo &InteropInfo,
+                               SourceLocation StartLoc,
                                SourceLocation LParenLoc, SourceLocation VarLoc,
                                SourceLocation EndLoc);
 

@@ -18,20 +18,20 @@
 // CHECK-LABEL: @test_svst4_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA:%.*]], i32 0)
-// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i32 1)
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i32 2)
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i32 3)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i64 8)
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i64 16)
+// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i64 24)
 // CHECK-NEXT:    tail call void @llvm.aarch64.sve.st4.nxv8bf16(<vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], <vscale x 8 x bfloat> [[TMP4]], <vscale x 8 x i1> [[TMP0]], bfloat* [[BASE:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z15test_svst4_bf16u10__SVBool_tPu6__bf1614svbfloat16x4_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA:%.*]], i32 0)
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i32 1)
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i32 2)
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i32 3)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i64 8)
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i64 16)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i64 24)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st4.nxv8bf16(<vscale x 8 x bfloat> [[TMP1]], <vscale x 8 x bfloat> [[TMP2]], <vscale x 8 x bfloat> [[TMP3]], <vscale x 8 x bfloat> [[TMP4]], <vscale x 8 x i1> [[TMP0]], bfloat* [[BASE:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
@@ -45,10 +45,10 @@ void test_svst4_bf16(svbool_t pg, bfloat16_t *base, svbfloat16x4_t data)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast bfloat* [[BASE:%.*]] to <vscale x 8 x bfloat>*
 // CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
-// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA:%.*]], i32 0)
-// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i32 1)
-// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i32 2)
-// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i32 3)
+// CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i64 8)
+// CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i64 16)
+// CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i64 24)
 // CHECK-NEXT:    tail call void @llvm.aarch64.sve.st4.nxv8bf16(<vscale x 8 x bfloat> [[TMP3]], <vscale x 8 x bfloat> [[TMP4]], <vscale x 8 x bfloat> [[TMP5]], <vscale x 8 x bfloat> [[TMP6]], <vscale x 8 x i1> [[TMP0]], bfloat* [[TMP2]])
 // CHECK-NEXT:    ret void
 //
@@ -57,10 +57,10 @@ void test_svst4_bf16(svbool_t pg, bfloat16_t *base, svbfloat16x4_t data)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = bitcast bfloat* [[BASE:%.*]] to <vscale x 8 x bfloat>*
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* [[TMP1]], i64 [[VNUM:%.*]], i64 0
-// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA:%.*]], i32 0)
-// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i32 1)
-// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i32 2)
-// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.tuple.get.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i32 3)
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP4:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i64 8)
+// CPP-CHECK-NEXT:    [[TMP5:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i64 16)
+// CPP-CHECK-NEXT:    [[TMP6:%.*]] = tail call <vscale x 8 x bfloat> @llvm.vector.extract.nxv8bf16.nxv32bf16(<vscale x 32 x bfloat> [[DATA]], i64 24)
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st4.nxv8bf16(<vscale x 8 x bfloat> [[TMP3]], <vscale x 8 x bfloat> [[TMP4]], <vscale x 8 x bfloat> [[TMP5]], <vscale x 8 x bfloat> [[TMP6]], <vscale x 8 x i1> [[TMP0]], bfloat* [[TMP2]])
 // CPP-CHECK-NEXT:    ret void
 //

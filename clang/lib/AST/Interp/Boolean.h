@@ -49,6 +49,7 @@ class Boolean {
   explicit operator unsigned() const { return V; }
   explicit operator int64_t() const { return V; }
   explicit operator uint64_t() const { return V; }
+  explicit operator int() const { return V; }
 
   APSInt toAPSInt() const {
     return APSInt(APInt(1, static_cast<uint64_t>(V), false), true);
@@ -132,6 +133,16 @@ class Boolean {
 
   static bool mul(Boolean A, Boolean B, unsigned OpBits, Boolean *R) {
     *R = Boolean(A.V && B.V);
+    return false;
+  }
+
+  static bool inv(Boolean A, Boolean *R) {
+    *R = Boolean(!A.V);
+    return false;
+  }
+
+  static bool neg(Boolean A, Boolean *R) {
+    *R = Boolean(A.V);
     return false;
   }
 };

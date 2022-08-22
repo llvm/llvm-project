@@ -35,7 +35,8 @@ define i32 @stest_f64i32(double %x) {
 ; RV32IF-NEXT:    li a3, -1
 ; RV32IF-NEXT:    beq a1, a3, .LBB0_6
 ; RV32IF-NEXT:  # %bb.5: # %entry
-; RV32IF-NEXT:    slt a1, a3, a1
+; RV32IF-NEXT:    slti a1, a1, 0
+; RV32IF-NEXT:    xori a1, a1, 1
 ; RV32IF-NEXT:    beqz a1, .LBB0_7
 ; RV32IF-NEXT:    j .LBB0_8
 ; RV32IF-NEXT:  .LBB0_6:
@@ -389,7 +390,8 @@ define i32 @stest_f16i32(half %x) {
 ; RV32-NEXT:    li a3, -1
 ; RV32-NEXT:    beq a1, a3, .LBB6_6
 ; RV32-NEXT:  # %bb.5: # %entry
-; RV32-NEXT:    slt a1, a3, a1
+; RV32-NEXT:    slti a1, a1, 0
+; RV32-NEXT:    xori a1, a1, 1
 ; RV32-NEXT:    beqz a1, .LBB6_7
 ; RV32-NEXT:    j .LBB6_8
 ; RV32-NEXT:  .LBB6_6:
@@ -1132,7 +1134,8 @@ define i64 @stest_f64i64(double %x) {
 ; RV32IF-NEXT:    and a3, a3, a2
 ; RV32IF-NEXT:    beq a3, a6, .LBB18_10
 ; RV32IF-NEXT:  .LBB18_9: # %entry
-; RV32IF-NEXT:    slt a4, a6, a2
+; RV32IF-NEXT:    slti a2, a2, 0
+; RV32IF-NEXT:    xori a4, a2, 1
 ; RV32IF-NEXT:  .LBB18_10: # %entry
 ; RV32IF-NEXT:    bnez a4, .LBB18_12
 ; RV32IF-NEXT:  # %bb.11: # %entry
@@ -1167,7 +1170,8 @@ define i64 @stest_f64i64(double %x) {
 ; RV64IF-NEXT:    slli a3, a2, 63
 ; RV64IF-NEXT:    beq a1, a2, .LBB18_6
 ; RV64IF-NEXT:  # %bb.5: # %entry
-; RV64IF-NEXT:    slt a1, a2, a1
+; RV64IF-NEXT:    slti a1, a1, 0
+; RV64IF-NEXT:    xori a1, a1, 1
 ; RV64IF-NEXT:    beqz a1, .LBB18_7
 ; RV64IF-NEXT:    j .LBB18_8
 ; RV64IF-NEXT:  .LBB18_6:
@@ -1227,7 +1231,8 @@ define i64 @stest_f64i64(double %x) {
 ; RV32IFD-NEXT:    and a3, a3, a2
 ; RV32IFD-NEXT:    beq a3, a6, .LBB18_10
 ; RV32IFD-NEXT:  .LBB18_9: # %entry
-; RV32IFD-NEXT:    slt a4, a6, a2
+; RV32IFD-NEXT:    slti a2, a2, 0
+; RV32IFD-NEXT:    xori a4, a2, 1
 ; RV32IFD-NEXT:  .LBB18_10: # %entry
 ; RV32IFD-NEXT:    bnez a4, .LBB18_12
 ; RV32IFD-NEXT:  # %bb.11: # %entry
@@ -1562,7 +1567,8 @@ define i64 @stest_f32i64(float %x) {
 ; RV32-NEXT:    and a3, a3, a2
 ; RV32-NEXT:    beq a3, a6, .LBB21_10
 ; RV32-NEXT:  .LBB21_9: # %entry
-; RV32-NEXT:    slt a4, a6, a2
+; RV32-NEXT:    slti a2, a2, 0
+; RV32-NEXT:    xori a4, a2, 1
 ; RV32-NEXT:  .LBB21_10: # %entry
 ; RV32-NEXT:    bnez a4, .LBB21_12
 ; RV32-NEXT:  # %bb.11: # %entry
@@ -1798,7 +1804,8 @@ define i64 @stest_f16i64(half %x) {
 ; RV32-NEXT:    and a3, a3, a2
 ; RV32-NEXT:    beq a3, a6, .LBB24_10
 ; RV32-NEXT:  .LBB24_9: # %entry
-; RV32-NEXT:    slt a4, a6, a2
+; RV32-NEXT:    slti a2, a2, 0
+; RV32-NEXT:    xori a4, a2, 1
 ; RV32-NEXT:  .LBB24_10: # %entry
 ; RV32-NEXT:    bnez a4, .LBB24_12
 ; RV32-NEXT:  # %bb.11: # %entry
@@ -1835,7 +1842,8 @@ define i64 @stest_f16i64(half %x) {
 ; RV64-NEXT:    slli a3, a2, 63
 ; RV64-NEXT:    beq a1, a2, .LBB24_6
 ; RV64-NEXT:  # %bb.5: # %entry
-; RV64-NEXT:    slt a1, a2, a1
+; RV64-NEXT:    slti a1, a1, 0
+; RV64-NEXT:    xori a1, a1, 1
 ; RV64-NEXT:    beqz a1, .LBB24_7
 ; RV64-NEXT:    j .LBB24_8
 ; RV64-NEXT:  .LBB24_6:

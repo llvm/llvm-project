@@ -85,9 +85,9 @@ _LIBCPP_BEGIN_NAMESPACE_LFTS
 #  define _LIBCPP_DEPRECATED_BOYER_MOORE_SEARCHER
 #  define _LIBCPP_DEPRECATED_BOYER_MOORE_HORSPOOL_SEARCHER
 #else
-#  define _LIBCPP_DEPRECATED_DEFAULT_SEARCHER _LIBCPP_DEPRECATED_("std::exprerimental::default_searcher will be removed in LLVM 17. Use std::default_searcher instead")
-#  define _LIBCPP_DEPRECATED_BOYER_MOORE_SEARCHER _LIBCPP_DEPRECATED_("std::exprerimental::boyer_moore_searcher will be removed in LLVM 17. Use std::boyer_moore_searcher instead")
-#  define _LIBCPP_DEPRECATED_BOYER_MOORE_HORSPOOL_SEARCHER _LIBCPP_DEPRECATED_("std::exprerimental::boyer_moore_horspool_searcher will be removed in LLVM 17. Use std::boyer_moore_horspool_searcher instead")
+#  define _LIBCPP_DEPRECATED_DEFAULT_SEARCHER _LIBCPP_DEPRECATED_("std::experimental::default_searcher will be removed in LLVM 17. Use std::default_searcher instead")
+#  define _LIBCPP_DEPRECATED_BOYER_MOORE_SEARCHER _LIBCPP_DEPRECATED_("std::experimental::boyer_moore_searcher will be removed in LLVM 17. Use std::boyer_moore_searcher instead")
+#  define _LIBCPP_DEPRECATED_BOYER_MOORE_HORSPOOL_SEARCHER _LIBCPP_DEPRECATED_("std::experimental::boyer_moore_horspool_searcher will be removed in LLVM 17. Use std::boyer_moore_horspool_searcher instead")
 #endif
 
 #if _LIBCPP_STD_VER > 11

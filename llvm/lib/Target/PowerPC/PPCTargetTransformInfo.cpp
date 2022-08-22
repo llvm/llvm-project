@@ -321,21 +321,21 @@ static bool isMMAType(Type *Ty) {
          (Ty->getPrimitiveSizeInBits() > 128);
 }
 
-InstructionCost PPCTTIImpl::getUserCost(const User *U,
-                                        ArrayRef<const Value *> Operands,
-                                        TTI::TargetCostKind CostKind) {
+InstructionCost PPCTTIImpl::getInstructionCost(const User *U,
+                                               ArrayRef<const Value *> Operands,
+                                               TTI::TargetCostKind CostKind) {
   // We already implement getCastInstrCost and getMemoryOpCost where we perform
   // the vector adjustment there.
   if (isa<CastInst>(U) || isa<LoadInst>(U) || isa<StoreInst>(U))
-    return BaseT::getUserCost(U, Operands, CostKind);
+    return BaseT::getInstructionCost(U, Operands, CostKind);
 
   if (U->getType()->isVectorTy()) {
     // Instructions that need to be split should cost more.
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(U->getType());
-    return LT.first * BaseT::getUserCost(U, Operands, CostKind);
+    return LT.first * BaseT::getInstructionCost(U, Operands, CostKind);
   }
 
-  return BaseT::getUserCost(U, Operands, CostKind);
+  return BaseT::getInstructionCost(U, Operands, CostKind);
 }
 
 // Determining the address of a TLS variable results in a function call in
@@ -1003,8 +1003,9 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
 }
 
 InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
-                                           ArrayRef<int> Mask, int Index,
-                                           Type *SubTp,
+                                           ArrayRef<int> Mask,
+                                           TTI::TargetCostKind CostKind,
+                                           int Index, Type *SubTp,
                                            ArrayRef<const Value *> Args) {
 
   InstructionCost CostFactor =
@@ -1145,6 +1146,7 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             MaybeAlign Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
+                                            TTI::OperandValueKind OpdInfo,
                                             const Instruction *I) {
 
   InstructionCost CostFactor = vectorCostAdjustmentFactor(Opcode, Src, nullptr);

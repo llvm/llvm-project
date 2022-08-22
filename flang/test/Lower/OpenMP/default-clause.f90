@@ -16,7 +16,6 @@
 !CHECK: fir.store %[[const]] to %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: %[[PRIVATE_Y:.*]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFEy"}
 !CHECK: %[[PRIVATE_W:.*]] = fir.alloca i32 {bindc_name = "w", pinned, uniq_name = "_QFEw"}
-!CHECK: omp.barrier
 !CHECK: %[[const:.*]] = arith.constant 2 : i32
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_Y]] : !fir.ref<i32>
 !CHECK: %[[result:.*]] = arith.muli %[[const]], %[[temp]] : i32
@@ -65,7 +64,6 @@ program default_clause_lowering
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFEx"}
 !CHECK: %[[temp:.*]] = fir.load %[[X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[PRIVATE_X]] : !fir.ref<i32>
-!CHECK: omp.barrier
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_Y]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: omp.terminator
@@ -83,7 +81,6 @@ program default_clause_lowering
 !CHECK: %[[PRIVATE_W:.*]] = fir.alloca i32 {bindc_name = "w", pinned, uniq_name = "_QFEw"}
 !CHECK: %[[temp:.*]] = fir.load %[[W]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[PRIVATE_W]] : !fir.ref<i32>
-!CHECK: omp.barrier
 !CHECK: %[[const:.*]] = arith.constant 2 : i32
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_Y]] : !fir.ref<i32>
 !CHECK: %[[result:.*]] = arith.muli %[[const]], %[[temp]] : i32
@@ -115,7 +112,6 @@ program default_clause_lowering
 !CHECK: %[[PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFEx"}
 !CHECK: %[[temp:.*]] = fir.load %[[X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[PRIVATE_X]] : !fir.ref<i32>
-!CHECK: omp.barrier
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_X]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[PRIVATE_W]] : !fir.ref<i32>
 !CHECK: omp.terminator
@@ -149,7 +145,6 @@ subroutine nested_default_clause_tests
 !CHECK: %[[PRIVATE_Y:.*]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFnested_default_clause_testsEy"}
 !CHECK: %[[PRIVATE_Z:.*]] = fir.alloca i32 {bindc_name = "z", pinned, uniq_name = "_QFnested_default_clause_testsEz"}
 !CHECK: %[[PRIVATE_K:.*]] = fir.alloca i32 {bindc_name = "k", pinned, uniq_name = "_QFnested_default_clause_testsEk"}
-!CHECK: omp.barrier
 !CHECK: omp.parallel {
 !CHECK: %[[INNER_PRIVATE_Y:.*]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFnested_default_clause_testsEy"}
 !CHECK: %[[INNER_PRIVATE_X:.*]] = fir.alloca i32 {bindc_name = "x", pinned, uniq_name = "_QFnested_default_clause_testsEx"}
@@ -167,7 +162,6 @@ subroutine nested_default_clause_tests
 !CHECK: %[[INNER_PRIVATE_K:.*]] = fir.alloca i32 {bindc_name = "k", pinned, uniq_name = "_QFnested_default_clause_testsEk"}
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_K]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[INNER_PRIVATE_K]] : !fir.ref<i32>
-!CHECK: omp.barrier
 !CHECK: %[[const:.*]] = arith.constant 30 : i32
 !CHECK: fir.store %[[const]] to %[[PRIVATE_Y]] : !fir.ref<i32>
 !CHECK: %[[const:.*]] = arith.constant 40 : i32
@@ -207,7 +201,6 @@ subroutine nested_default_clause_tests
 !CHECK: %[[INNER_PRIVATE_Y:.*]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFnested_default_clause_testsEy"}
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_Y]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[INNER_PRIVATE_Y]] : !fir.ref<i32>
-!CHECK: omp.barrier
 !CHECK: %[[temp:.*]] = fir.load %[[INNER_PRIVATE_Y]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[PRIVATE_INNER_X]] : !fir.ref<i32>
 !CHECK: omp.terminator
@@ -243,7 +236,6 @@ subroutine nested_default_clause_tests
 !CHECK: %[[INNER_PRIVATE_Y:.*]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFnested_default_clause_testsEy"}
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_Y]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[INNER_PRIVATE_Y]] : !fir.ref<i32>
-!CHECK: omp.barrier
 !CHECK: %[[temp:.*]] = fir.load %[[INNER_PRIVATE_Y]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[INNER_PRIVATE_X]] : !fir.ref<i32>
 !CHECK: omp.terminator
@@ -273,7 +265,6 @@ subroutine nested_default_clause_tests
 !CHECK: %[[PRIVATE_Y:.*]] = fir.alloca i32 {bindc_name = "y", pinned, uniq_name = "_QFnested_default_clause_testsEy"}
 !CHECK: %[[temp:.*]] = fir.load %[[Y]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[PRIVATE_Y]] : !fir.ref<i32>
-!CHECK: omp.barrier
 !CHECK: omp.single {
 !CHECK: %[[temp:.*]] = fir.load %[[PRIVATE_Y]] : !fir.ref<i32>
 !CHECK: fir.store %[[temp]] to %[[PRIVATE_X]] : !fir.ref<i32>

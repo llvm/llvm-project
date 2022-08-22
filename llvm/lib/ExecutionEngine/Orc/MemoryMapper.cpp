@@ -11,6 +11,8 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/WindowsError.h"
 
+#include <algorithm>
+
 #if defined(LLVM_ON_UNIX) && !defined(__ANDROID__)
 #include <fcntl.h>
 #include <sys/mman.h>
@@ -300,8 +302,10 @@ char *SharedMemoryMapper::prepare(ExecutorAddr Addr, size_t ContentSize) {
 
 void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
                                     OnInitializedFunction OnInitialized) {
-  auto Reservation = Reservations.find(AI.MappingBase);
-  assert(Reservation != Reservations.end() &&
+  auto Reservation = std::lower_bound(
+      Reservations.rbegin(), Reservations.rend(), AI.MappingBase,
+      [](const auto &A, const auto &B) { return A.first > B; });
+  assert(Reservation != Reservations.rend() &&
          "Attempt to initialize unreserved range");
 
   tpctypes::SharedMemoryFinalizeRequest FR;
@@ -336,7 +340,7 @@ void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
 
         OnInitialized(std::move(Result));
       },
-      SAs.Instance, AI.MappingBase, std::move(FR));
+      SAs.Instance, Reservation->first, std::move(FR));
 }
 
 void SharedMemoryMapper::deinitialize(
@@ -407,23 +411,18 @@ void SharedMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
 }
 
 SharedMemoryMapper::~SharedMemoryMapper() {
-  std::vector<ExecutorAddr> ReservationAddrs;
-  if (!Reservations.empty()) {
-    std::lock_guard<std::mutex> Lock(Mutex);
-    {
-      ReservationAddrs.reserve(Reservations.size());
-      for (const auto &R : Reservations) {
-        ReservationAddrs.push_back(R.first);
-      }
-    }
-  }
+  for (const auto R : Reservations) {
 
-  std::promise<MSVCPError> P;
-  auto F = P.get_future();
-  release(ReservationAddrs, [&](Error Err) { P.set_value(std::move(Err)); });
-  // FIXME: Release can actually fail. The error should be propagated.
-  // Meanwhile, a better option is to explicitly call release().
-  cantFail(F.get());
+#if defined(LLVM_ON_UNIX) && !defined(__ANDROID__)
+
+    munmap(R.second.LocalAddr, R.second.Size);
+
+#elif defined(_WIN32)
+
+    UnmapViewOfFile(R.second.LocalAddr);
+
+#endif
+  }
 }
 
 } // namespace orc

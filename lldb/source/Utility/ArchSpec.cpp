@@ -255,13 +255,13 @@ struct ArchDefinition {
 };
 
 void ArchSpec::ListSupportedArchNames(StringList &list) {
-  for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i)
-    list.AppendString(g_core_definitions[i].name);
+  for (const auto &def : g_core_definitions)
+    list.AppendString(def.name);
 }
 
 void ArchSpec::AutoComplete(CompletionRequest &request) {
-  for (uint32_t i = 0; i < llvm::array_lengthof(g_core_definitions); ++i)
-    request.TryCompleteCurrentArg(g_core_definitions[i].name);
+  for (const auto &def : g_core_definitions)
+    request.TryCompleteCurrentArg(def.name);
 }
 
 #define CPU_ANY (UINT32_MAX)
@@ -446,16 +446,12 @@ static const ArchDefinition g_coff_arch_def = {
 static const ArchDefinition *g_arch_definitions[] = {
     &g_macho_arch_def, &g_elf_arch_def, &g_coff_arch_def};
 
-static const size_t k_num_arch_definitions =
-    llvm::array_lengthof(g_arch_definitions);
-
 //===----------------------------------------------------------------------===//
 // Static helper functions.
 
 // Get the architecture definition for a given object type.
 static const ArchDefinition *FindArchDefinition(ArchitectureType arch_type) {
-  for (unsigned int i = 0; i < k_num_arch_definitions; ++i) {
-    const ArchDefinition *def = g_arch_definitions[i];
+  for (const ArchDefinition *def : g_arch_definitions) {
     if (def->type == arch_type)
       return def;
   }
@@ -464,9 +460,9 @@ static const ArchDefinition *FindArchDefinition(ArchitectureType arch_type) {
 
 // Get an architecture definition by name.
 static const CoreDefinition *FindCoreDefinition(llvm::StringRef name) {
-  for (unsigned int i = 0; i < llvm::array_lengthof(g_core_definitions); ++i) {
-    if (name.equals_insensitive(g_core_definitions[i].name))
-      return &g_core_definitions[i];
+  for (const auto &def : g_core_definitions) {
+    if (name.equals_insensitive(def.name))
+      return &def;
   }
   return nullptr;
 }

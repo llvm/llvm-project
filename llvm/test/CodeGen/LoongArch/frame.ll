@@ -12,7 +12,7 @@ define i32 @test() nounwind {
 ; CHECK-NEXT:    st.d $zero, $sp, 8
 ; CHECK-NEXT:    st.d $zero, $sp, 0
 ; CHECK-NEXT:    addi.d $a0, $sp, 4
-; CHECK-NEXT:    bl test1
+; CHECK-NEXT:    bl %plt(test1)
 ; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 32

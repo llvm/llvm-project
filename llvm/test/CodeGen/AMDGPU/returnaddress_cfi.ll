@@ -14,6 +14,7 @@ define hidden void @_ZL3barv_spill_RA_to_vgpr() #0 {
 ; CHECK-NEXT:    s_or_saveexec_b64 s[16:17], -1
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset 2600, 1228
+
 ; CHECK-NEXT:    s_mov_b64 exec, s[16:17]
 
 ; CHECK:    v_writelane_b32 v40, s30, 32

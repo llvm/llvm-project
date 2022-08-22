@@ -1049,16 +1049,15 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(
   SmallPtrSet<Value *, 16> NewPtrs;
   NewPtrs.insert(Base.first);
 
-  for (auto I = std::next(BucketChain.Elements.begin()),
-       IE = BucketChain.Elements.end(); I != IE; ++I) {
-    Value *Ptr = getPointerOperandAndType(I->Instr);
+  for (const BucketElement &BE : llvm::drop_begin(BucketChain.Elements)) {
+    Value *Ptr = getPointerOperandAndType(BE.Instr);
     assert(Ptr && "No pointer operand");
     if (NewPtrs.count(Ptr))
       continue;
 
     Instruction *NewPtr = rewriteForBucketElement(
-        Base, *I,
-        I->Offset ? cast<SCEVConstant>(I->Offset)->getValue() : nullptr,
+        Base, BE,
+        BE.Offset ? cast<SCEVConstant>(BE.Offset)->getValue() : nullptr,
         DeletedPtrs);
     assert(NewPtr && "wrong rewrite!\n");
     NewPtrs.insert(NewPtr);

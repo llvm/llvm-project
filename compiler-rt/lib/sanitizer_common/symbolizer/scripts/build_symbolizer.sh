@@ -100,12 +100,12 @@ if [[ ! -d ${LIBCXX_BUILD} ]]; then
   mkdir -p ${LIBCXX_BUILD}
   cd ${LIBCXX_BUILD}
   LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined"
-  PROJECTS=
+  RUNTIMES=
   if [[ ! -d $LLVM_SRC/projects/libcxxabi ]] ; then
-    PROJECTS="-DLLVM_ENABLE_PROJECTS='libcxx;libcxxabi'"
+    RUNTIMES="-DLLVM_ENABLE_RUNTIMES='libcxx;libcxxabi'"
   fi
   cmake -GNinja \
-    ${PROJECTS} \
+    ${RUNTIMES} \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=$CC \
     -DCMAKE_CXX_COMPILER=$CXX \
@@ -119,7 +119,7 @@ if [[ ! -d ${LIBCXX_BUILD} ]]; then
     -DLIBCXX_ENABLE_RTTI=OFF \
     -DLIBCXX_ENABLE_SHARED=OFF \
     -DLLVM_DEFAULT_TARGET_TRIPLE="${TARGET_TRIPLE}" \
-  $LLVM_SRC
+  $LLVM_SRC/../runtimes
 fi
 cd ${LIBCXX_BUILD}
 ninja cxx cxxabi

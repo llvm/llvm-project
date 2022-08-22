@@ -291,7 +291,7 @@ static Optional<StringRef> findSimilarStr(
   size_t Length = LHS.size();
   size_t MaxDist = Length < 3 ? Length - 1 : Length / 3;
 
-  Optional<std::pair<StringRef, size_t>> SimilarStr = None;
+  Optional<std::pair<StringRef, size_t>> SimilarStr;
   for (StringRef C : Candidates) {
     size_t CurDist = LHS.edit_distance(C, true);
     if (CurDist <= MaxDist) {
@@ -2286,6 +2286,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       // actual module containing it exists (because the umbrella header is
       // incomplete).  Treat this as a textual inclusion.
       SuggestedModule = ModuleMap::KnownHeader();
+      SM = nullptr;
     } else if (Imported.isConfigMismatch()) {
       // On a configuration mismatch, enter the header textually. We still know
       // that it's part of the corresponding module.

@@ -4954,6 +4954,25 @@ TEST_F(FormatTest, IndentsPPDirectiveWithPPIndentWidth) {
                "    int y = 0;\n"
                "}\n",
                style);
+  verifyFormat("#if 1\n"
+               " // some comments\n"
+               " // another\n"
+               " #define foo 1\n"
+               "// not a define comment\n"
+               "void bar() {\n"
+               "    // comment\n"
+               "    int y = 0;\n"
+               "}",
+               "#if 1\n"
+               "// some comments\n"
+               "// another\n"
+               "#define foo 1\n"
+               "// not a define comment\n"
+               "void bar() {\n"
+               "  // comment\n"
+               "  int y = 0;\n"
+               "}",
+               style);
 }
 
 TEST_F(FormatTest, IndentsPPDirectiveInReducedSpace) {

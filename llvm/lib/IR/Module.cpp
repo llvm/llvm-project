@@ -596,7 +596,9 @@ PICLevel::Level Module::getPICLevel() const {
 }
 
 void Module::setPICLevel(PICLevel::Level PL) {
-  addModuleFlag(ModFlagBehavior::Max, "PIC Level", PL);
+  // The merge result of a non-PIC object and a PIC object can only be reliably
+  // used as a non-PIC object, so use the Min merge behavior.
+  addModuleFlag(ModFlagBehavior::Min, "PIC Level", PL);
 }
 
 PIELevel::Level Module::getPIELevel() const {

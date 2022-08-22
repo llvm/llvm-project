@@ -17,11 +17,16 @@ import sys
 
 headers = []
 for line in sys.stdin.readlines():
-  match = re.search('c\+\+/v[0-9]+/(.+)', line)
+  # On Windows, the path separators can either be forward slash or backslash.
+  # If it is a backslash, Clang prints it escaped as two consecutive
+  # backslashes, and they need to be escaped in the RE. (Use a raw string for
+  # the pattern to avoid needing another level of escaping on the Python string
+  # literal level.)
+  match = re.search(r'c\+\+(/|\\\\)v[0-9]+(/|\\\\)(.+)', line)
   if not match:
     continue
 
-  header = match.group(1)
+  header = match.group(3)
   if os.path.basename(header).endswith('.h'): # Skip C headers
     continue
 

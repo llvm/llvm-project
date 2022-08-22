@@ -671,7 +671,7 @@ bool llvm::runIPSCCP(
       findReturnsToZap(*F, ReturnsToZap, Solver);
   }
 
-  for (auto F : Solver.getMRVFunctionsTracked()) {
+  for (auto *F : Solver.getMRVFunctionsTracked()) {
     assert(F->getReturnType()->isStructTy() &&
            "The return type should be a struct");
     StructType *STy = cast<StructType>(F->getReturnType());

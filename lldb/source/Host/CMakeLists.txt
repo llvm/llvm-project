@@ -24,7 +24,7 @@ add_host_subdirectory(common
   common/HostThread.cpp
   common/LockFileBase.cpp
   common/LZMA.cpp
-  common/MainLoop.cpp
+  common/MainLoopBase.cpp
   common/MonitoringProcessLauncher.cpp
   common/NativeProcessProtocol.cpp
   common/NativeRegisterContext.cpp
@@ -63,6 +63,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
     windows/HostProcessWindows.cpp
     windows/HostThreadWindows.cpp
     windows/LockFileWindows.cpp
+    windows/MainLoopWindows.cpp
     windows/PipeWindows.cpp
     windows/ProcessLauncherWindows.cpp
     windows/ProcessRunLock.cpp
@@ -75,6 +76,7 @@ else()
     posix/HostProcessPosix.cpp
     posix/HostThreadPosix.cpp
     posix/LockFilePosix.cpp
+    posix/MainLoopPosix.cpp
     posix/PipePosix.cpp
     posix/ProcessLauncherPosixFork.cpp
     )

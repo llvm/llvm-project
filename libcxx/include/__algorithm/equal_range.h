@@ -34,7 +34,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _AlgPolicy, class _Compare, class _Iter, class _Sent, class _Tp, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 pair<_Iter, _Iter>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Iter, _Iter>
 __equal_range(_Iter __first, _Sent __last, const _Tp& __value, _Compare&& __comp, _Proj&& __proj) {
   auto __len  = _IterOps<_AlgPolicy>::distance(__first, __last);
   _Iter __end = _IterOps<_AlgPolicy>::next(__first, __last);
@@ -58,7 +58,7 @@ __equal_range(_Iter __first, _Sent __last, const _Tp& __value, _Compare&& __comp
 }
 
 template <class _ForwardIterator, class _Tp, class _Compare>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 pair<_ForwardIterator, _ForwardIterator>
+_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_ForwardIterator, _ForwardIterator>
 equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value, _Compare __comp) {
   static_assert(__is_callable<_Compare, decltype(*__first), const _Tp&>::value,
                 "The comparator has to be callable");
@@ -70,7 +70,7 @@ equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __valu
 }
 
 template <class _ForwardIterator, class _Tp>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 pair<_ForwardIterator, _ForwardIterator>
+_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_ForwardIterator, _ForwardIterator>
 equal_range(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) {
   return std::equal_range(
       std::move(__first),
