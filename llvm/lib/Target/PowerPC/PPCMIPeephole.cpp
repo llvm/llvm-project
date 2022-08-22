@@ -778,28 +778,27 @@ bool PPCMIPeephole::simplifyCode() {
           break;
 
         MachineInstr *SrcMI = MRI->getVRegDef(NarrowReg);
+        unsigned SrcOpcode = SrcMI->getOpcode();
         // If we've used a zero-extending load that we will sign-extend,
         // just do a sign-extending load.
-        if (SrcMI->getOpcode() == PPC::LHZ ||
-            SrcMI->getOpcode() == PPC::LHZX) {
+        if (SrcOpcode == PPC::LHZ || SrcOpcode == PPC::LHZX) {
           if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
             break;
-          auto is64Bit = [](unsigned Opcode) {
-            return Opcode == PPC::EXTSH8 || Opcode == PPC::EXTSH8_32_64;
-          };
-          auto isXForm = [] (unsigned Opcode) {
-            return Opcode == PPC::LHZX;
-          };
-          auto getSextLoadOp = [] (bool is64Bit, bool isXForm) {
-            if (is64Bit)
-              if (isXForm) return PPC::LHAX8;
-              else         return PPC::LHA8;
-            else
-              if (isXForm) return PPC::LHAX;
-              else         return PPC::LHA;
-          };
-          unsigned Opc = getSextLoadOp(is64Bit(MI.getOpcode()),
-                                       isXForm(SrcMI->getOpcode()));
+          // Determine the new opcode. We need to make sure that if the original
+          // instruction has a 64 bit opcode we keep using a 64 bit opcode.
+          // Likewise if the source is X-Form the new opcode should also be
+          // X-Form.
+          unsigned Opc = PPC::LHA;
+          bool SourceIsXForm = SrcOpcode == PPC::LHZX;
+          bool MIIs64Bit = MI.getOpcode() == PPC::EXTSH8 ||
+            MI.getOpcode() == PPC::EXTSH8_32_64;
+
+          if (SourceIsXForm && MIIs64Bit)
+            Opc = PPC::LHAX8;
+          else if (SourceIsXForm && !MIIs64Bit)
+            Opc = PPC::LHAX;
+          else if (MIIs64Bit)
+            Opc = PPC::LHA8;
 
           LLVM_DEBUG(dbgs() << "Zero-extending load\n");
           LLVM_DEBUG(SrcMI->dump());
@@ -823,26 +822,12 @@ bool PPCMIPeephole::simplifyCode() {
           break;
 
         MachineInstr *SrcMI = MRI->getVRegDef(NarrowReg);
+        unsigned SrcOpcode = SrcMI->getOpcode();
         // If we've used a zero-extending load that we will sign-extend,
         // just do a sign-extending load.
-        if (SrcMI->getOpcode() == PPC::LWZ ||
-            SrcMI->getOpcode() == PPC::LWZX) {
+        if (SrcOpcode == PPC::LWZ || SrcOpcode == PPC::LWZX) {
           if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
             break;
-          auto is64Bit = [] (unsigned Opcode) {
-            return Opcode == PPC::EXTSW || Opcode == PPC::EXTSW_32_64;
-          };
-          auto isXForm = [] (unsigned Opcode) {
-            return Opcode == PPC::LWZX;
-          };
-          auto getSextLoadOp = [] (bool is64Bit, bool isXForm) {
-            if (is64Bit)
-              if (isXForm) return PPC::LWAX;
-              else         return PPC::LWA;
-            else
-              if (isXForm) return PPC::LWAX_32;
-              else         return PPC::LWA_32;
-          };
 
           // The transformation from a zero-extending load to a sign-extending
           // load is only legal when the displacement is a multiple of 4.
@@ -860,8 +845,21 @@ bool PPCMIPeephole::simplifyCode() {
               IsWordAligned = true;
           }
 
-          unsigned Opc = getSextLoadOp(is64Bit(MI.getOpcode()),
-                                       isXForm(SrcMI->getOpcode()));
+          // Determine the new opcode. We need to make sure that if the original
+          // instruction has a 64 bit opcode we keep using a 64 bit opcode.
+          // Likewise if the source is X-Form the new opcode should also be
+          // X-Form.
+          unsigned Opc = PPC::LWA_32;
+          bool SourceIsXForm = SrcOpcode == PPC::LWZX;
+          bool MIIs64Bit = MI.getOpcode() == PPC::EXTSW ||
+            MI.getOpcode() == PPC::EXTSW_32_64;
+
+          if (SourceIsXForm && MIIs64Bit)
+            Opc = PPC::LWAX;
+          else if (SourceIsXForm && !MIIs64Bit)
+            Opc = PPC::LWAX_32;
+          else if (MIIs64Bit)
+            Opc = PPC::LWA;
 
           if (!IsWordAligned && (Opc == PPC::LWA || Opc == PPC::LWA_32))
             break;
