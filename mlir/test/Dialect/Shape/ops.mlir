@@ -268,6 +268,12 @@ func.func @shape_with_shape(%a : !shape.value_shape, %b : !shape.value_shape) ->
   return %2 : !shape.shape
 }
 
+func.func @shape_with_shape_extent_tensor_type(%a : tensor<?x?x?xf32>, %b : !shape.value_shape) -> !shape.value_shape {
+  %0 = shape.shape_of %a : tensor<?x?x?xf32> -> tensor<3xindex>
+  %1 = shape.with_shape %b, %0 : !shape.value_shape, tensor<3xindex>
+  return %1 : !shape.value_shape
+}
+
 func.func @any_on_shape(%a : !shape.shape, %b : !shape.shape, %c : !shape.shape)
     -> !shape.shape {
   %result = shape.any %a, %b, %c
