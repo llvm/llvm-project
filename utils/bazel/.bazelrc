@@ -152,6 +152,22 @@ build:clang-cl --cxxopt=/clang:-Wno-c++11-narrowing --host_cxxopt=/clang:-Wno-c+
 # non-PIC version for binaries.
 build:ci --copt=-O1
 
+# Use clang.
+build:ci --config=generic_clang
+
+# Speedup bazel using a ramdisk.
+build:ci --sandbox_base=/dev/shm
+
+# Don't build/test targets tagged with "nobuildkite".
+build:ci --build_tag_filters=-nobuildkite
+build:ci --test_tag_filters=-nobuildkite
+
+# Show as many errors as possible.
+build:ci --keep_going
+
+# Show test errors.
+build:ci --test_output=errors
+
 ###############################################################################
 
 # The user.bazelrc file is not checked in but available for local mods.
