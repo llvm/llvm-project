@@ -294,6 +294,27 @@ void IncludeTreePPConsumer::handleHasIncludeCheck(Preprocessor &PP,
 }
 
 void IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
+  FileManager &FM = CI.getFileManager();
+
+  auto addFile = [&](StringRef FilePath) -> bool {
+    llvm::ErrorOr<const FileEntry *> FE = FM.getFile(FilePath);
+    if (!FE) {
+      ErrorToReport = llvm::errorCodeToError(FE.getError());
+      return false;
+    }
+    Expected<cas::ObjectRef> Ref = addToFileList(FM, *FE);
+    if (!Ref) {
+      ErrorToReport = Ref.takeError();
+      return false;
+    }
+    return true;
+  };
+
+  for (StringRef FilePath : CI.getLangOpts().NoSanitizeFiles) {
+    if (!addFile(FilePath))
+      return;
+  }
+
   PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
   if (PPOpts.ImplicitPCHInclude.empty())
     return; // no need for additional work.
@@ -312,7 +333,6 @@ void IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
     return LHS->getUID() < RHS->getUID();
   });
 
-  FileManager &FM = CI.getFileManager();
   for (const FileEntry *FE : NotSeenIncludes) {
     auto FileNode = addToFileList(FM, FE);
     if (!FileNode) {
