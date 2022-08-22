@@ -3308,6 +3308,43 @@ cc_library(
 )
 
 cc_library(
+    name = "BytecodeReader",
+    srcs = glob([
+        "lib/Bytecode/Reader/*.cpp",
+        "lib/Bytecode/Reader/*.h",
+        "lib/Bytecode/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Bytecode/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":AsmParser",
+        ":IR",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "BytecodeWriter",
+    srcs = glob([
+        "lib/Bytecode/Writer/*.cpp",
+        "lib/Bytecode/Writer/*.h",
+        "lib/Bytecode/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Bytecode/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "Parser",
     srcs = glob([
         "lib/Parser/*.cpp",
@@ -3321,6 +3358,7 @@ cc_library(
         ":AsmParser",
         ":IR",
         ":Support",
+        ":BytecodeReader",
         "//llvm:Support",
     ],
 )
@@ -6151,6 +6189,7 @@ cc_library(
     hdrs = ["include/mlir/Tools/mlir-opt/MlirOptMain.h"],
     includes = ["include"],
     deps = [
+        ":BytecodeWriter",
         ":IR",
         ":Parser",
         ":Pass",
