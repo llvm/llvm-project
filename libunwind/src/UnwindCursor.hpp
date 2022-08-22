@@ -510,7 +510,7 @@ public:
   void setDispatcherContext(DISPATCHER_CONTEXT *disp) { _dispContext = *disp; }
 
   // libunwind does not and should not depend on C++ library which means that we
-  // need our own defition of inline placement new.
+  // need our own definition of inline placement new.
   static void *operator new(size_t, UnwindCursor<A, R> *p) { return p; }
 
 private:
@@ -946,7 +946,7 @@ public:
 #endif
 
   // libunwind does not and should not depend on C++ library which means that we
-  // need our own defition of inline placement new.
+  // need our own definition of inline placement new.
   static void *operator new(size_t, UnwindCursor<A, R> *p) { return p; }
 
 private:
@@ -2461,7 +2461,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
                              reinterpret_cast<void *>(pc));
 
   // The return address is the address after call site instruction, so
-  // setting IP to that simualates a return.
+  // setting IP to that simulates a return.
   newRegisters.setIP(reinterpret_cast<uintptr_t>(returnAddress));
 
   // Simulate the step by replacing the register set with the new ones.

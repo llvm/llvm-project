@@ -269,9 +269,9 @@ public:
   _LIBCPP_CONSTEXPR explicit operator bool() const _NOEXCEPT { return true; }
   _LIBCPP_CONSTEXPR bool done() const _NOEXCEPT { return false; }
 
-  _LIBCPP_CONSTEXPR_AFTER_CXX17 void operator()() const _NOEXCEPT {}
-  _LIBCPP_CONSTEXPR_AFTER_CXX17 void resume() const _NOEXCEPT {}
-  _LIBCPP_CONSTEXPR_AFTER_CXX17 void destroy() const _NOEXCEPT {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void operator()() const _NOEXCEPT {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void resume() const _NOEXCEPT {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void destroy() const _NOEXCEPT {}
 
 private:
   _LIBCPP_INLINE_VISIBILITY

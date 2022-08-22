@@ -1258,7 +1258,7 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
           // example is generating calls to ABI-tagged template functions.
           // This is done separately for member functions in
           // AddMethodToCXXRecordType.
-          if (attrs.mangled_name && attrs.storage == clang::SC_Extern)
+          if (attrs.mangled_name)
             function_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
                 m_ast.getASTContext(), attrs.mangled_name, /*literal=*/false));
 

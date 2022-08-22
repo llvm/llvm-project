@@ -205,7 +205,7 @@ define <8 x i32> @vpmerge_vptrunc(<8 x i32> %passthru, <8 x i64> %x, <8 x i1> %m
 ; CHECK-LABEL: vpmerge_vptrunc:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v10, v0.t
+; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
 ; CHECK-NEXT:    ret
   ; MIR-LABEL: name: vpmerge_vptrunc
   ; MIR: bb.0 (%ir-block.0):
@@ -216,7 +216,7 @@ define <8 x i32> @vpmerge_vptrunc(<8 x i32> %passthru, <8 x i64> %x, <8 x i1> %m
   ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vrm2 = COPY $v10m2
   ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
   ; MIR-NEXT:   $v0 = COPY [[COPY1]]
-  ; MIR-NEXT:   early-clobber %4:vrnov0 = PseudoVNSRL_WX_M1_MASK [[COPY3]], [[COPY2]], $x0, $v0, [[COPY]], 5 /* e32 */, 0
+  ; MIR-NEXT:   early-clobber %4:vrnov0 = PseudoVNSRL_WI_M1_MASK [[COPY3]], [[COPY2]], 0, $v0, [[COPY]], 5 /* e32 */, 0
   ; MIR-NEXT:   $v8 = COPY %4
   ; MIR-NEXT:   PseudoRET implicit $v8
   %splat = insertelement <8 x i1> poison, i1 -1, i32 0

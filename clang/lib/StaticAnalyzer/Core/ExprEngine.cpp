@@ -537,9 +537,10 @@ ExprEngine::addObjectUnderConstruction(ProgramStateRef State,
     Init = Item.getCXXCtorInitializer()->getInit();
 
   // In an ArrayInitLoopExpr the real initializer is returned by
-  // getSubExpr().
+  // getSubExpr(). Note that AILEs can be nested in case of
+  // multidimesnional arrays.
   if (const auto *AILE = dyn_cast_or_null<ArrayInitLoopExpr>(Init))
-    Init = AILE->getSubExpr();
+    Init = extractElementInitializerFromNestedAILE(AILE);
 
   // FIXME: Currently the state might already contain the marker due to
   // incorrect handling of temporaries bound to default parameters.
@@ -2117,8 +2118,9 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
 
   // Build an Epsilon node from which we will restart the analyzes.
   // Note that CE is permitted to be NULL!
-  ProgramPoint NewNodeLoc =
-               EpsilonPoint(BeforeProcessingCall->getLocationContext(), CE);
+  static SimpleProgramPointTag PT("ExprEngine", "Replay without inlining");
+  ProgramPoint NewNodeLoc = EpsilonPoint(
+      BeforeProcessingCall->getLocationContext(), CE, nullptr, &PT);
   // Add the special flag to GDM to signal retrying with no inlining.
   // Note, changing the state ensures that we are not going to cache out.
   ProgramStateRef NewNodeState = BeforeProcessingCall->getState();

@@ -22,7 +22,6 @@ define i64 @foo(i8* %p, i32 signext %n, i32 signext %count) {
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    addi r6, r3, 5
 ; CHECK-NEXT:    addi r3, r4, -1
-; CHECK-NEXT:    extsw r5, r5
 ; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    addi r3, r3, 1
 ; CHECK-NEXT:    mtctr r3
@@ -88,7 +87,6 @@ define zeroext i8 @foo1(i8* %p, i32 signext %n, i32 signext %count) {
 ; CHECK-NEXT:    cmpwi r4, 1
 ; CHECK-NEXT:    blt cr0, .LBB1_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    extsw r5, r5
 ; CHECK-NEXT:    sub r3, r3, r5
 ; CHECK-NEXT:    addi r6, r3, 1000
 ; CHECK-NEXT:    addi r3, r4, -1

@@ -72,6 +72,10 @@ static SourceLocation GetEndLoc(Decl *D) {
 
 /// Returns true on constant values based around a single IntegerLiteral.
 /// Allow for use of parentheses, integer casts, and negative signs.
+/// FIXME: it would be good to unify this function with
+/// getIntegerLiteralSubexpressionValue at some point given the similarity
+/// between the functions.
+
 static bool IsIntegerLiteralConstantExpr(const Expr *E) {
   // Allow parentheses
   E = E->IgnoreParens();
@@ -964,15 +968,16 @@ private:
     const Expr *LHSExpr = B->getLHS()->IgnoreParens();
     const Expr *RHSExpr = B->getRHS()->IgnoreParens();
 
-    const IntegerLiteral *IntLiteral = dyn_cast<IntegerLiteral>(LHSExpr);
+    Optional<llvm::APInt> IntLiteral1 =
+        getIntegerLiteralSubexpressionValue(LHSExpr);
     const Expr *BoolExpr = RHSExpr;
 
-    if (!IntLiteral) {
-      IntLiteral = dyn_cast<IntegerLiteral>(RHSExpr);
+    if (!IntLiteral1) {
+      IntLiteral1 = getIntegerLiteralSubexpressionValue(RHSExpr);
       BoolExpr = LHSExpr;
     }
 
-    if (!IntLiteral)
+    if (!IntLiteral1)
       return TryResult();
 
     const BinaryOperator *BitOp = dyn_cast<BinaryOperator>(BoolExpr);
@@ -981,32 +986,72 @@ private:
       const Expr *LHSExpr2 = BitOp->getLHS()->IgnoreParens();
       const Expr *RHSExpr2 = BitOp->getRHS()->IgnoreParens();
 
-      const IntegerLiteral *IntLiteral2 = dyn_cast<IntegerLiteral>(LHSExpr2);
+      Optional<llvm::APInt> IntLiteral2 =
+          getIntegerLiteralSubexpressionValue(LHSExpr2);
 
       if (!IntLiteral2)
-        IntLiteral2 = dyn_cast<IntegerLiteral>(RHSExpr2);
+        IntLiteral2 = getIntegerLiteralSubexpressionValue(RHSExpr2);
 
       if (!IntLiteral2)
         return TryResult();
 
-      llvm::APInt L1 = IntLiteral->getValue();
-      llvm::APInt L2 = IntLiteral2->getValue();
-      if ((BitOp->getOpcode() == BO_And && (L2 & L1) != L1) ||
-          (BitOp->getOpcode() == BO_Or  && (L2 | L1) != L1)) {
+      if ((BitOp->getOpcode() == BO_And &&
+           (*IntLiteral2 & *IntLiteral1) != *IntLiteral1) ||
+          (BitOp->getOpcode() == BO_Or &&
+           (*IntLiteral2 | *IntLiteral1) != *IntLiteral1)) {
         if (BuildOpts.Observer)
           BuildOpts.Observer->compareBitwiseEquality(B,
                                                      B->getOpcode() != BO_EQ);
         TryResult(B->getOpcode() != BO_EQ);
       }
     } else if (BoolExpr->isKnownToHaveBooleanValue()) {
-      llvm::APInt IntValue = IntLiteral->getValue();
-      if ((IntValue == 1) || (IntValue == 0)) {
+      if ((*IntLiteral1 == 1) || (*IntLiteral1 == 0)) {
         return TryResult();
       }
       return TryResult(B->getOpcode() != BO_EQ);
     }
 
     return TryResult();
+  }
+
+  // Helper function to get an APInt from an expression. Supports expressions
+  // which are an IntegerLiteral or a UnaryOperator and returns the value with
+  // all operations performed on it.
+  // FIXME: it would be good to unify this function with
+  // IsIntegerLiteralConstantExpr at some point given the similarity between the
+  // functions.
+  Optional<llvm::APInt> getIntegerLiteralSubexpressionValue(const Expr *E) {
+
+    // If unary.
+    if (const auto *UnOp = dyn_cast<UnaryOperator>(E->IgnoreParens())) {
+      // Get the sub expression of the unary expression and get the Integer
+      // Literal.
+      const Expr *SubExpr = UnOp->getSubExpr()->IgnoreParens();
+
+      if (const auto *IntLiteral = dyn_cast<IntegerLiteral>(SubExpr)) {
+
+        llvm::APInt Value = IntLiteral->getValue();
+
+        // Perform the operation manually.
+        switch (UnOp->getOpcode()) {
+        case UO_Plus:
+          return Value;
+        case UO_Minus:
+          return -Value;
+        case UO_Not:
+          return ~Value;
+        case UO_LNot:
+          return llvm::APInt(Value.getBitWidth(), !Value);
+        default:
+          assert(false && "Unexpected unary operator!");
+          return llvm::None;
+        }
+      }
+    } else if (const auto *IntLiteral =
+                   dyn_cast<IntegerLiteral>(E->IgnoreParens()))
+      return IntLiteral->getValue();
+
+    return llvm::None;
   }
 
   TryResult analyzeLogicOperatorCondition(BinaryOperatorKind Relation,
@@ -1286,6 +1331,18 @@ private:
 };
 
 } // namespace
+
+Expr *
+clang::extractElementInitializerFromNestedAILE(const ArrayInitLoopExpr *AILE) {
+  if (!AILE)
+    return nullptr;
+
+  Expr *AILEInit = AILE->getSubExpr();
+  while (const auto *E = dyn_cast<ArrayInitLoopExpr>(AILEInit))
+    AILEInit = E->getSubExpr();
+
+  return AILEInit;
+}
 
 inline bool AddStmtChoice::alwaysAdd(CFGBuilder &builder,
                                      const Stmt *stmt) const {
@@ -1661,11 +1718,12 @@ CFGBlock *CFGBuilder::addInitializer(CXXCtorInitializer *I) {
   if (Init) {
     // If the initializer is an ArrayInitLoopExpr, we want to extract the
     // initializer, that's used for each element.
-    const auto *AILE = dyn_cast_or_null<ArrayInitLoopExpr>(Init);
+    auto *AILEInit = extractElementInitializerFromNestedAILE(
+        dyn_cast<ArrayInitLoopExpr>(Init));
 
     findConstructionContexts(
         ConstructionContextLayer::create(cfg->getBumpVectorContext(), I),
-        AILE ? AILE->getSubExpr() : Init);
+        AILEInit ? AILEInit : Init);
 
     if (HasTemporaries) {
       // For expression with temporaries go directly to subexpression to omit
@@ -3370,11 +3428,12 @@ CFGBlock *CFGBuilder::VisitLambdaExpr(LambdaExpr *E, AddStmtChoice asc) {
     if (Expr *Init = *it) {
       // If the initializer is an ArrayInitLoopExpr, we want to extract the
       // initializer, that's used for each element.
-      const auto *AILE = dyn_cast_or_null<ArrayInitLoopExpr>(Init);
+      auto *AILEInit = extractElementInitializerFromNestedAILE(
+          dyn_cast<ArrayInitLoopExpr>(Init));
 
       findConstructionContexts(ConstructionContextLayer::create(
                                    cfg->getBumpVectorContext(), {E, Idx}),
-                               AILE ? AILE->getSubExpr() : Init);
+                               AILEInit ? AILEInit : Init);
 
       CFGBlock *Tmp = Visit(Init);
       if (Tmp)

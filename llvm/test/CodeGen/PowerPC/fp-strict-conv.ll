@@ -89,7 +89,6 @@ define zeroext i32 @d_to_u32(double %m) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpuxws f0, f1
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 ;
 ; NOVSX-LABEL: d_to_u32:
@@ -165,7 +164,6 @@ define zeroext i32 @f_to_u32(float %m) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpuxws f0, f1
 ; CHECK-NEXT:    mffprwz r3, f0
-; CHECK-NEXT:    clrldi r3, r3, 32
 ; CHECK-NEXT:    blr
 ;
 ; NOVSX-LABEL: f_to_u32:

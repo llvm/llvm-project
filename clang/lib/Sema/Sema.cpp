@@ -1251,6 +1251,33 @@ void Sema::ActOnEndOfTranslationUnit() {
     emitAndClearUnusedLocalTypedefWarnings();
   }
 
+  // C++ standard modules. Diagnose cases where a function is declared inline
+  // in the module purview but has no definition before the end of the TU or
+  // the start of a Private Module Fragment (if one is present).
+  if (!PendingInlineFuncDecls.empty()) {
+    for (auto *D : PendingInlineFuncDecls) {
+      if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+        bool DefInPMF = false;
+        if (auto *FDD = FD->getDefinition()) {
+          assert(FDD->getOwningModule() &&
+                 FDD->getOwningModule()->isModulePurview());
+          DefInPMF = FDD->getOwningModule()->isPrivateModule();
+          if (!DefInPMF)
+            continue;
+        }
+        Diag(FD->getLocation(), diag::err_export_inline_not_defined)
+            << DefInPMF;
+        // If we have a PMF it should be at the end of the ModuleScopes.
+        if (DefInPMF &&
+            ModuleScopes.back().Module->Kind == Module::PrivateModuleFragment) {
+          Diag(ModuleScopes.back().BeginLoc,
+               diag::note_private_module_fragment);
+        }
+      }
+    }
+    PendingInlineFuncDecls.clear();
+  }
+
   // C99 6.9.2p2:
   //   A declaration of an identifier for an object that has file
   //   scope without an initializer, and without a storage-class

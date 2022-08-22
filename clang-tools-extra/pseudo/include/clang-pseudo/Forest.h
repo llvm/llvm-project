@@ -79,7 +79,7 @@ public:
   llvm::ArrayRef<const ForestNode *> elements() const {
     assert(kind() == Sequence);
     return children(Data >> RuleBits);
-  };
+  }
 
   // Returns all possible interpretations of the code.
   // REQUIRES: this is an Ambiguous node.
@@ -213,7 +213,7 @@ class ForestNode::RecursiveIterator
 public:
   RecursiveIterator(const ForestNode *N = nullptr) : Cur(N) {}
 
-  const ForestNode &operator*() const { return *Cur; };
+  const ForestNode &operator*() const { return *Cur; }
   void operator++();
   bool operator==(const RecursiveIterator &I) const { return Cur == I.Cur; }
   bool operator!=(const RecursiveIterator &I) const { return !(*this == I); }

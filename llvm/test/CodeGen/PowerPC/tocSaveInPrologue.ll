@@ -16,29 +16,29 @@ define dso_local void @test(void (i32)* nocapture %fp, i32 signext %Arg, i32 sig
 ; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -64(r1)
 ; CHECK-NEXT:    mr r29, r5
-; CHECK-NEXT:    mr r30, r3
-; CHECK-NEXT:    extsw r28, r4
+; CHECK-NEXT:    mr r30, r4
+; CHECK-NEXT:    mr r28, r3
 ; CHECK-NEXT:    std r2, 24(r1)
 ; CHECK-NEXT:    cmpwi r29, 1
 ; CHECK-NEXT:    bc 12, lt, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    cmpwi r4, 11
+; CHECK-NEXT:    cmpwi r30, 11
 ; CHECK-NEXT:    bc 12, lt, .LBB0_3
 ; CHECK-NEXT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_2: # %for.body.us
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    mtctr r30
-; CHECK-NEXT:    mr r3, r28
-; CHECK-NEXT:    mr r12, r30
+; CHECK-NEXT:    mtctr r28
+; CHECK-NEXT:    mr r3, r30
+; CHECK-NEXT:    mr r12, r28
 ; CHECK-NEXT:    bctrl
 ; CHECK-NEXT:    ld 2, 24(r1)
 ; CHECK-NEXT:    addi r29, r29, -1
 ; CHECK-NEXT:    cmplwi r29, 0
 ; CHECK-NEXT:    bne cr0, .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: # %for.cond.cleanup
-; CHECK-NEXT:    mtctr r30
-; CHECK-NEXT:    mr r3, r28
-; CHECK-NEXT:    mr r12, r30
+; CHECK-NEXT:    mtctr r28
+; CHECK-NEXT:    mr r3, r30
+; CHECK-NEXT:    mr r12, r28
 ; CHECK-NEXT:    bctrl
 ; CHECK-NEXT:    ld 2, 24(r1)
 ; CHECK-NEXT:    addi r1, r1, 64

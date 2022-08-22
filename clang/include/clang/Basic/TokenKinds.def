@@ -501,7 +501,9 @@ TYPE_TRAIT_1(__is_trivially_copyable, IsTriviallyCopyable, KEYCXX)
 TYPE_TRAIT_1(__is_union, IsUnion, KEYCXX)
 TYPE_TRAIT_1(__has_unique_object_representations,
              HasUniqueObjectRepresentations, KEYCXX)
-KEYWORD(__underlying_type           , KEYCXX)
+
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) KEYWORD(__##Trait, KEYCXX)
+#include "clang/Basic/TransformTypeTraits.def"
 
 // Clang-only C++ Type Traits
 TYPE_TRAIT_1(__is_trivially_relocatable, IsTriviallyRelocatable, KEYCXX)

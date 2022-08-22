@@ -80,7 +80,7 @@ Error RemarkLinker::link(StringRef Buffer, Optional<Format> RemarkFormat) {
       createRemarkParserFromMeta(
           *RemarkFormat, Buffer, /*StrTab=*/None,
           PrependPath ? Optional<StringRef>(StringRef(*PrependPath))
-                      : Optional<StringRef>(None));
+                      : Optional<StringRef>());
   if (!MaybeParser)
     return MaybeParser.takeError();
 

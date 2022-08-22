@@ -1194,7 +1194,10 @@ Status ProcessGDBRemote::DoResume() {
           (m_continue_c_tids.empty() && m_continue_C_tids.empty() &&
            m_continue_s_tids.empty() && m_continue_S_tids.empty())) {
         // All threads are continuing
-        continue_packet.Format("vCont;c:{0}-1", pid_prefix);
+        if (m_gdb_comm.GetMultiprocessSupported())
+          continue_packet.Format("vCont;c:{0}-1", pid_prefix);
+        else
+          continue_packet.PutCString("c");
       } else {
         continue_packet.PutCString("vCont");
 

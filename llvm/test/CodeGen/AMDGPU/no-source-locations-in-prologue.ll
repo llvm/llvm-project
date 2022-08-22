@@ -19,10 +19,10 @@ define hidden void @_ZL3barv() #0 !dbg !1644 {
 ; CHECK-NEXT:    v_writelane_b32 v40, s33, 2
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_add_i32 s32, s32, 0x400
-; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    .loc 0 31 3 prologue_end ; lane-info.cpp:31:3
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
+; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:    .loc 0 31 3 prologue_end ; lane-info.cpp:31:3
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, _ZL13sleep_foreverv@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, _ZL13sleep_foreverv@gotpcrel32@hi+12

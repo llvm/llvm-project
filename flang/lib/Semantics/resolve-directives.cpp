@@ -1881,8 +1881,7 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
 bool OmpAttributeVisitor::HasSymbolInEnclosingScope(
     const Symbol &symbol, Scope &scope) {
   const auto symbols{scope.parent().GetSymbols()};
-  auto it{std::find(symbols.begin(), symbols.end(), symbol)};
-  return it != symbols.end();
+  return llvm::is_contained(symbols, symbol);
 }
 
 } // namespace Fortran::semantics

@@ -1294,7 +1294,7 @@ TEST_F(AtomicChangeTest, Metadata) {
 
 TEST_F(AtomicChangeTest, NoMetadata) {
   AtomicChange Change(Context.Sources, DefaultLoc);
-  EXPECT_FALSE(Change.getMetadata().hasValue());
+  EXPECT_FALSE(Change.getMetadata().has_value());
 }
 
 class ApplyAtomicChangesTest : public ::testing::Test {

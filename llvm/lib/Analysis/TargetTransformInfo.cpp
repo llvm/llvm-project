@@ -528,6 +528,10 @@ bool TargetTransformInfo::supportsTailCalls() const {
   return TTIImpl->supportsTailCalls();
 }
 
+bool TargetTransformInfo::supportsTailCallFor(const CallBase *CB) const {
+  return TTIImpl->supportsTailCallFor(CB);
+}
+
 bool TargetTransformInfo::enableAggressiveInterleaving(
     bool LoopHasReductions) const {
   return TTIImpl->enableAggressiveInterleaving(LoopHasReductions);
@@ -762,6 +766,12 @@ TargetTransformInfo::getOperandInfo(const Value *V,
   return OpInfo;
 }
 
+TargetTransformInfo::OperandValueKind
+TargetTransformInfo::getOperandInfo(const Value *V) {
+  OperandValueProperties Discard = OP_None;
+  return getOperandInfo(V, Discard);
+}
+
 InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     OperandValueKind Opd1Info, OperandValueKind Opd2Info,
@@ -775,10 +785,11 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
 }
 
 InstructionCost TargetTransformInfo::getShuffleCost(
-    ShuffleKind Kind, VectorType *Ty, ArrayRef<int> Mask, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args) const {
+    ShuffleKind Kind, VectorType *Ty, ArrayRef<int> Mask,
+    TTI::TargetCostKind CostKind, int Index, VectorType *SubTp,
+    ArrayRef<const Value *> Args) const {
   InstructionCost Cost =
-      TTIImpl->getShuffleCost(Kind, Ty, Mask, Index, SubTp, Args);
+      TTIImpl->getShuffleCost(Kind, Ty, Mask, CostKind, Index, SubTp, Args);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -899,11 +910,12 @@ InstructionCost TargetTransformInfo::getReplicationShuffleCost(
 
 InstructionCost TargetTransformInfo::getMemoryOpCost(
     unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
-    TTI::TargetCostKind CostKind, const Instruction *I) const {
+    TTI::TargetCostKind CostKind, TTI::OperandValueKind OpdInfo,
+    const Instruction *I) const {
   assert((I == nullptr || I->getOpcode() == Opcode) &&
          "Opcode should reflect passed instruction.");
-  InstructionCost Cost = TTIImpl->getMemoryOpCost(Opcode, Src, Alignment,
-                                                  AddressSpace, CostKind, I);
+  InstructionCost Cost = TTIImpl->getMemoryOpCost(
+      Opcode, Src, Alignment, AddressSpace, CostKind, OpdInfo, I);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

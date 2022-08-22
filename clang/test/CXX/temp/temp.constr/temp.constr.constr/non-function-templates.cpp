@@ -90,24 +90,3 @@ struct D { };
 
 static_assert(C<int>{}); // expected-note{{while checking constraint satisfaction for template 'C<int>' required here}}
 static_assert(D<int>{}); // expected-note{{while checking constraint satisfaction for template 'D<int>' required here}}
-
-// Test the delayed instantiation, the 'foo' implementation shouldn't cause the
-// constraint failure(or crash!) until the use to create 'y'.
-namespace DelayedInst {
-template <unsigned I>
-struct AAA {
-  template <typename T>
-    requires(sizeof(T) == I) // expected-note {{because 'sizeof(int) == 5U' (4 == 5) evaluated to false}}
-  struct B {
-    static constexpr int a = 0;
-  };
-
-  static constexpr auto foo() {
-    return B<int>::a; // expected-error{{constraints not satisfied for class template 'B' [with T = int]}}
-  }
-};
-
-constexpr auto x = AAA<4>::foo();
-constexpr auto y = AAA<5>::foo(); // expected-note {{in instantiation of member function 'DelayedInst::AAA<5>::foo' requested here}}
-
-} // namespace DelayedInst

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/Bit.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf_core/parser.h"
 
@@ -248,7 +248,7 @@ TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
   expected1.has_conv = true;
   expected1.raw_len = 2;
   expected1.raw_string = str + 2;
-  expected1.conv_val_raw = __llvm_libc::bit_cast<uint64_t>(arg2);
+  expected1.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
   expected1.conv_name = 'f';
 
   ASSERT_FORMAT_EQ(expected1, format_arr[1]);
@@ -300,7 +300,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential) {
   expected1.has_conv = true;
   expected1.raw_len = 4;
   expected1.raw_string = str + 4;
-  expected1.conv_val_raw = __llvm_libc::bit_cast<uint64_t>(arg2);
+  expected1.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
   expected1.conv_name = 'f';
 
   ASSERT_FORMAT_EQ(expected1, format_arr[1]);
@@ -334,7 +334,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse) {
   expected1.has_conv = true;
   expected1.raw_len = 4;
   expected1.raw_string = str + 4;
-  expected1.conv_val_raw = __llvm_libc::bit_cast<uint64_t>(arg2);
+  expected1.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
   expected1.conv_name = 'f';
 
   ASSERT_FORMAT_EQ(expected1, format_arr[1]);
@@ -418,7 +418,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected5.raw_string = str + 22;
   expected5.flags = __llvm_libc::printf_core::FormatFlags::SPACE_PREFIX;
   expected5.min_width = arg4;
-  expected5.conv_val_raw = __llvm_libc::bit_cast<uint64_t>(arg2);
+  expected5.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
   expected5.conv_name = 'f';
 
   EXPECT_FORMAT_EQ(expected5, format_arr[5]);
@@ -434,7 +434,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected7.raw_string = str + 31;
   expected7.flags = __llvm_libc::printf_core::FormatFlags::SPACE_PREFIX;
   expected7.precision = arg4;
-  expected7.conv_val_raw = __llvm_libc::bit_cast<uint64_t>(arg2);
+  expected7.conv_val_raw = __llvm_libc::cpp::bit_cast<uint64_t>(arg2);
   expected7.conv_name = 'f';
 
   EXPECT_FORMAT_EQ(expected7, format_arr[7]);

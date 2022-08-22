@@ -219,8 +219,8 @@ template <typename AttrT, typename T>
 static void checkNativeAccess(MLIRContext *ctx, ArrayRef<T> data,
                               Type elementType) {
   auto type = RankedTensorType::get(data.size(), elementType);
-  auto attr =
-      AttrT::get(type, "resource", UnmanagedAsmResourceBlob::allocate(data));
+  auto attr = AttrT::get(type, "resource",
+                         UnmanagedAsmResourceBlob::allocateInferAlign(data));
 
   // Check that we can access and iterate the data properly.
   Optional<ArrayRef<T>> attrData = attr.tryGetAsArrayRef();
@@ -279,7 +279,7 @@ TEST(DenseResourceElementsAttrTest, CheckNoCast) {
   ArrayRef<uint32_t> data;
   auto type = RankedTensorType::get(data.size(), builder.getI32Type());
   Attribute i32ResourceAttr = DenseI32ResourceElementsAttr::get(
-      type, "resource", UnmanagedAsmResourceBlob::allocate(data));
+      type, "resource", UnmanagedAsmResourceBlob::allocateInferAlign(data));
 
   EXPECT_TRUE(i32ResourceAttr.isa<DenseI32ResourceElementsAttr>());
   EXPECT_FALSE(i32ResourceAttr.isa<DenseF32ResourceElementsAttr>());
@@ -296,7 +296,8 @@ TEST(DenseResourceElementsAttrTest, CheckInvalidData) {
   EXPECT_DEBUG_DEATH(
       {
         DenseBoolResourceElementsAttr::get(
-            type, "resource", UnmanagedAsmResourceBlob::allocate(data));
+            type, "resource",
+            UnmanagedAsmResourceBlob::allocateInferAlign(data));
       },
       "alignment mismatch between expected alignment and blob alignment");
 }
@@ -311,7 +312,8 @@ TEST(DenseResourceElementsAttrTest, CheckInvalidType) {
   EXPECT_DEBUG_DEATH(
       {
         DenseBoolResourceElementsAttr::get(
-            type, "resource", UnmanagedAsmResourceBlob::allocate(data));
+            type, "resource",
+            UnmanagedAsmResourceBlob::allocateInferAlign(data));
       },
       "invalid shape element type for provided type `T`");
 }

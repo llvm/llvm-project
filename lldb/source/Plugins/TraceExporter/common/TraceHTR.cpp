@@ -25,7 +25,7 @@ size_t HTRBlockMetadata::GetNumInstructions() const {
 llvm::Optional<llvm::StringRef>
 HTRBlockMetadata::GetMostFrequentlyCalledFunction() const {
   size_t max_ncalls = 0;
-  llvm::Optional<llvm::StringRef> max_name = llvm::None;
+  llvm::Optional<llvm::StringRef> max_name;
   for (const auto &it : m_func_calls) {
     ConstString name = it.first;
     size_t ncalls = it.second;
@@ -316,7 +316,7 @@ HTRBlockLayerUP lldb_private::BasicSuperBlockMerge(IHTRLayer &layer) {
     // Each super block always has the same first unit (we call this the
     // super block head) This gurantee allows us to use the super block head as
     // the unique key mapping to the super block it begins
-    llvm::Optional<size_t> superblock_head = llvm::None;
+    llvm::Optional<size_t> superblock_head;
     auto construct_next_layer = [&](size_t merge_start, size_t n) -> void {
       if (!superblock_head)
         return;

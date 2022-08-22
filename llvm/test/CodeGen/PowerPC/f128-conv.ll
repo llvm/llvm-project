@@ -1999,7 +1999,6 @@ define void @cvdp2uw2qp(double %val, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    xscvdpuxws f0, f1
 ; CHECK-P8-NEXT:    mr r30, r4
 ; CHECK-P8-NEXT:    mffprwz r3, f0
-; CHECK-P8-NEXT:    clrldi r3, r3, 32
 ; CHECK-P8-NEXT:    bl __floatunsikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
@@ -2075,7 +2074,6 @@ define void @cvsp2uw2qp(float %val, fp128* nocapture %res) {
 ; CHECK-P8-NEXT:    xscvdpuxws f0, f1
 ; CHECK-P8-NEXT:    mr r30, r4
 ; CHECK-P8-NEXT:    mffprwz r3, f0
-; CHECK-P8-NEXT:    clrldi r3, r3, 32
 ; CHECK-P8-NEXT:    bl __floatunsikf
 ; CHECK-P8-NEXT:    nop
 ; CHECK-P8-NEXT:    xxswapd vs0, v2

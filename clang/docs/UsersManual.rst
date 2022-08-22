@@ -3999,7 +3999,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Zl                     Don't mention any default libraries in the object file
       /Zp                     Set the default maximum struct packing alignment to 1
       /Zp<value>              Specify the default maximum struct packing alignment
-      /Zs                     Syntax-check only
+      /Zs                     Run the preprocessor, parser and semantic analysis stages
 
     OPTIONS:
       -###                    Print (but do not run) the commands to run for this compilation
@@ -4130,6 +4130,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               behavior. See user manual for available checks
       -fsplit-lto-unit        Enables splitting of the LTO unit.
       -fstandalone-debug      Emit full debug info for all types used by the program
+      -fsyntax-only           Run the preprocessor, parser and semantic analysis stages
       -fwhole-program-vtables Enables whole-program vtable optimization. Requires -flto
       -gcodeview-ghash        Emit type record hashes in a .debug$H section
       -gcodeview              Generate CodeView debug information

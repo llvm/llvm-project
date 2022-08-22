@@ -24,6 +24,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GCNSchedStrategy.h"
+#include "AMDGPUIGroupLP.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 
@@ -31,7 +32,7 @@
 
 using namespace llvm;
 
-cl::opt<bool>
+static cl::opt<bool>
     DisableUnclusterHighRP("amdgpu-disable-unclustred-high-rp-reschedule",
                            cl::Hidden,
                            cl::desc("Disable unclustred high register pressure "
@@ -570,10 +571,12 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
   RegionsWithHighRP.resize(Regions.size());
   RegionsWithExcessRP.resize(Regions.size());
   RegionsWithMinOcc.resize(Regions.size());
+  RegionsWithIGLPInstrs.resize(Regions.size());
   RescheduleRegions.set();
   RegionsWithHighRP.reset();
   RegionsWithExcessRP.reset();
   RegionsWithMinOcc.reset();
+  RegionsWithIGLPInstrs.reset();
 
   runSchedStages();
 }
@@ -655,6 +658,8 @@ bool UnclusteredHighRPStage::initGCNSchedStage() {
     return false;
 
   SavedMutations.swap(DAG.Mutations);
+  DAG.addMutation(createIGroupLPDAGMutation());
+
   InitialOccupancy = DAG.MinOccupancy;
   // Aggressivly try to reduce register pressure in the unclustered high RP
   // stage. Temporarily increase occupancy target in the region.
@@ -760,8 +765,18 @@ bool GCNSchedStage::initGCNRegion() {
   // Save original instruction order before scheduling for possible revert.
   Unsched.clear();
   Unsched.reserve(DAG.NumRegionInstrs);
-  for (auto &I : DAG)
-    Unsched.push_back(&I);
+  if (StageID == GCNSchedStageID::OccInitialSchedule ||
+      StageID == GCNSchedStageID::ILPInitialSchedule) {
+    for (auto &I : DAG) {
+      Unsched.push_back(&I);
+      if (I.getOpcode() == AMDGPU::SCHED_GROUP_BARRIER ||
+          I.getOpcode() == AMDGPU::IGLP_OPT)
+        DAG.RegionsWithIGLPInstrs[RegionIdx] = true;
+    }
+  } else {
+    for (auto &I : DAG)
+      Unsched.push_back(&I);
+  }
 
   PressureBefore = DAG.Pressure[RegionIdx];
 
@@ -773,6 +788,13 @@ bool GCNSchedStage::initGCNRegion() {
       dbgs() << "Region register pressure: "; PressureBefore.print(dbgs()));
 
   S.HasHighPressure = false;
+
+  if (DAG.RegionsWithIGLPInstrs[RegionIdx] &&
+      StageID != GCNSchedStageID::UnclusteredHighRPReschedule) {
+    SavedMutations.clear();
+    SavedMutations.swap(DAG.Mutations);
+    DAG.addMutation(createIGroupLPDAGMutation());
+  }
 
   return true;
 }
@@ -828,6 +850,10 @@ void GCNSchedStage::finalizeGCNRegion() {
   // Revert scheduling if we have dropped occupancy or there is some other
   // reason that the original schedule is better.
   checkScheduling();
+
+  if (DAG.RegionsWithIGLPInstrs[RegionIdx] &&
+      StageID != GCNSchedStageID::UnclusteredHighRPReschedule)
+    SavedMutations.swap(DAG.Mutations);
 
   DAG.exitRegion();
   RegionIdx++;
@@ -1315,4 +1341,35 @@ void GCNScheduleDAGMILive::updateRegionBoundaries(
       return;
     }
   }
+}
+
+static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
+  return std::any_of(
+      DAG->begin(), DAG->end(), [](MachineBasicBlock::iterator MI) {
+        unsigned Opc = MI->getOpcode();
+        return Opc == AMDGPU::SCHED_GROUP_BARRIER || Opc == AMDGPU::IGLP_OPT;
+      });
+}
+
+GCNPostScheduleDAGMILive::GCNPostScheduleDAGMILive(
+    MachineSchedContext *C, std::unique_ptr<MachineSchedStrategy> S,
+    bool RemoveKillFlags)
+    : ScheduleDAGMI(C, std::move(S), RemoveKillFlags) {}
+
+void GCNPostScheduleDAGMILive::schedule() {
+  HasIGLPInstrs = hasIGLPInstrs(this);
+  if (HasIGLPInstrs) {
+    SavedMutations.clear();
+    SavedMutations.swap(Mutations);
+    addMutation(createIGroupLPDAGMutation());
+  }
+
+  ScheduleDAGMI::schedule();
+}
+
+void GCNPostScheduleDAGMILive::finalizeSchedule() {
+  if (HasIGLPInstrs)
+    SavedMutations.swap(Mutations);
+
+  ScheduleDAGMI::finalizeSchedule();
 }

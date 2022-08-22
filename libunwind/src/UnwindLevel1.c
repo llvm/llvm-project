@@ -41,7 +41,7 @@
 // In exception handing, some stack frames will be skipped before jumping to
 // landing pad and we must adjust CET shadow stack accordingly.
 // _LIBUNWIND_POP_CET_SSP is used to adjust CET shadow stack pointer and we
-// directly jump to __libunwind_Registerts_x86/x86_64_jumpto instead of using
+// directly jump to __libunwind_Registers_x86/x86_64_jumpto instead of using
 // a regular function call to avoid pushing to CET shadow stack again.
 #if !defined(_LIBUNWIND_USE_CET)
 #define __unw_phase2_resume(cursor, fn)                                        \
@@ -425,7 +425,7 @@ _Unwind_RaiseException(_Unwind_Exception *exception_object) {
 /// may force a jump to a landing pad in that function, the landing
 /// pad code may then call _Unwind_Resume() to continue with the
 /// unwinding.  Note: the call to _Unwind_Resume() is from compiler
-/// geneated user code.  All other _Unwind_* routines are called
+/// generated user code.  All other _Unwind_* routines are called
 /// by the C++ runtime __cxa_* routines.
 ///
 /// Note: re-throwing an exception (as opposed to continuing the unwind)

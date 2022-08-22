@@ -586,7 +586,7 @@ bufferization::getBufferType(Value value, const BufferizationOptions &options) {
 
   // Check value is a new buffer allocation with a memory space attribute. In
   // that case we can at least infer the memory space.
-  Optional<unsigned> memorySpace = None;
+  Optional<unsigned> memorySpace;
   if (auto opResult = value.dyn_cast<OpResult>()) {
     if (auto bufferizableOp =
             options.dynCastBufferizableOp(opResult.getDefiningOp())) {

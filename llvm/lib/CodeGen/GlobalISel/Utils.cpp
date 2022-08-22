@@ -1029,7 +1029,7 @@ Optional<ValueAndVReg> getAnyConstantSplat(Register VReg,
   if (!isBuildVectorOp(MI->getOpcode()))
     return None;
 
-  Optional<ValueAndVReg> SplatValAndReg = None;
+  Optional<ValueAndVReg> SplatValAndReg;
   for (MachineOperand &Op : MI->uses()) {
     Register Element = Op.getReg();
     auto ElementValAndReg =

@@ -273,12 +273,6 @@ TEST_F(TokenAnnotatorTest, UnderstandsVariableTemplates) {
   EXPECT_TOKEN(Tokens[13], tok::ampamp, TT_BinaryOperator);
 }
 
-TEST_F(TokenAnnotatorTest, UnderstandsLBracesInMacroDefinition) {
-  auto Tokens = annotate("#define BEGIN NS {");
-  EXPECT_EQ(Tokens.size(), 6u) << Tokens;
-  EXPECT_TOKEN(Tokens[4], tok::l_brace, TT_Unknown);
-}
-
 TEST_F(TokenAnnotatorTest, UnderstandsDelete) {
   auto Tokens = annotate("delete (void *)p;");
   EXPECT_EQ(Tokens.size(), 8u) << Tokens;
