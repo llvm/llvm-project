@@ -124,6 +124,39 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasFlag(clang::driver::options::OPT_fdebug_pass_manager,
                    clang::driver::options::OPT_fno_debug_pass_manager, false))
     opts.DebugPassManager = 1;
+
+  // -mrelocation-model option.
+  if (const llvm::opt::Arg *A =
+          args.getLastArg(clang::driver::options::OPT_mrelocation_model)) {
+    llvm::StringRef ModelName = A->getValue();
+    auto RM = llvm::StringSwitch<llvm::Optional<llvm::Reloc::Model>>(ModelName)
+                  .Case("static", llvm::Reloc::Static)
+                  .Case("pic", llvm::Reloc::PIC_)
+                  .Case("dynamic-no-pic", llvm::Reloc::DynamicNoPIC)
+                  .Case("ropi", llvm::Reloc::ROPI)
+                  .Case("rwpi", llvm::Reloc::RWPI)
+                  .Case("ropi-rwpi", llvm::Reloc::ROPI_RWPI)
+                  .Default(llvm::None);
+    if (RM.has_value())
+      opts.setRelocationModel(*RM);
+    else
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << A->getAsString(args) << ModelName;
+  }
+
+  // -pic-level and -pic-is-pie option.
+  if (int PICLevel = getLastArgIntValue(
+          args, clang::driver::options::OPT_pic_level, 0, diags)) {
+    if (PICLevel > 2)
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << args.getLastArg(clang::driver::options::OPT_pic_level)
+                 ->getAsString(args)
+          << PICLevel;
+
+    opts.PICLevel = PICLevel;
+    if (args.hasArg(clang::driver::options::OPT_pic_is_pie))
+      opts.IsPIE = 1;
+  }
 }
 
 /// Parses all target input arguments and populates the target
