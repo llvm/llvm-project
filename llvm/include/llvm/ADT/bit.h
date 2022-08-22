@@ -19,7 +19,7 @@
 
 namespace llvm {
 
-// This implementation of bit_cast is different from the C++17 one in two ways:
+// This implementation of bit_cast is different from the C++20 one in two ways:
 //  - It isn't constexpr because that requires compiler support.
 //  - It requires trivially-constructible To, to avoid UB in the implementation.
 template <
