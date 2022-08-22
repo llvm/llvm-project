@@ -8,7 +8,7 @@
 
 #include "pthread_setname_np.h"
 
-#include "src/__support/CPP/StringView.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/error.h"
 #include "src/__support/common.h"
 #include "src/__support/threads/thread.h"
@@ -22,7 +22,7 @@ static_assert(sizeof(pthread_t) == sizeof(__llvm_libc::Thread),
 
 LLVM_LIBC_FUNCTION(int, pthread_setname_np, (pthread_t th, const char *name)) {
   auto *thread = reinterpret_cast<__llvm_libc::Thread *>(&th);
-  return thread->set_name(cpp::StringView(name));
+  return thread->set_name(cpp::string_view(name));
 }
 
 } // namespace __llvm_libc
