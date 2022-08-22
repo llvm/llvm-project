@@ -537,9 +537,10 @@ ExprEngine::addObjectUnderConstruction(ProgramStateRef State,
     Init = Item.getCXXCtorInitializer()->getInit();
 
   // In an ArrayInitLoopExpr the real initializer is returned by
-  // getSubExpr().
+  // getSubExpr(). Note that AILEs can be nested in case of
+  // multidimesnional arrays.
   if (const auto *AILE = dyn_cast_or_null<ArrayInitLoopExpr>(Init))
-    Init = AILE->getSubExpr();
+    Init = extractElementInitializerFromNestedAILE(AILE);
 
   // FIXME: Currently the state might already contain the marker due to
   // incorrect handling of temporaries bound to default parameters.
