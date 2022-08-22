@@ -6409,8 +6409,9 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
 
       SmallVector<const Value *, 4> Operands(VL0->operand_values());
       InstructionCost ScalarEltCost =
-          TTI->getArithmeticInstrCost(E->getOpcode(), ScalarTy, CostKind, Op1VK,
-                                      Op2VK, Op1VP, Op2VP, Operands, VL0);
+          TTI->getArithmeticInstrCost(E->getOpcode(), ScalarTy, CostKind,
+                                      {Op1VK, Op1VP}, {Op2VK, Op2VP},
+                                      Operands, VL0);
       if (NeedToShuffleReuses) {
         CommonCost -= (EntryVF - VL.size()) * ScalarEltCost;
       }
@@ -6422,8 +6423,9 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
           Operands[I] = ConstantVector::getNullValue(VecTy);
       }
       InstructionCost VecCost =
-          TTI->getArithmeticInstrCost(E->getOpcode(), VecTy, CostKind, Op1VK,
-                                      Op2VK, Op1VP, Op2VP, Operands, VL0);
+          TTI->getArithmeticInstrCost(E->getOpcode(), VecTy, CostKind,
+                                      {Op1VK, Op1VP}, {Op2VK, Op2VP},
+                                      Operands, VL0);
       LLVM_DEBUG(dumpTreeCosts(E, CommonCost, VecCost, ScalarCost));
       return CommonCost + VecCost - ScalarCost;
     }
