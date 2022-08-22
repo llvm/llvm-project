@@ -129,10 +129,10 @@ INSTR_PROF_RAW_HEADER(uint64_t, Magic, __llvm_profile_get_magic())
 INSTR_PROF_RAW_HEADER(uint64_t, Version, __llvm_profile_get_version())
 INSTR_PROF_RAW_HEADER(uint64_t, BinaryIdsSize, __llvm_write_binary_ids(NULL))
 /* FIXME: A more accurate name is NumData */
-INSTR_PROF_RAW_HEADER(uint64_t, DataSize, DataSize)
+INSTR_PROF_RAW_HEADER(uint64_t, DataSize, DataSizeInitVal)
 INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesBeforeCounters, PaddingBytesBeforeCounters)
 /* FIXME: A more accurate name is NumCounters */
-INSTR_PROF_RAW_HEADER(uint64_t, CountersSize, CountersSize)
+INSTR_PROF_RAW_HEADER(uint64_t, CountersSize, CountersSizeInitVal)
 INSTR_PROF_RAW_HEADER(uint64_t, PaddingBytesAfterCounters, PaddingBytesAfterCounters)
 INSTR_PROF_RAW_HEADER(uint64_t, NamesSize,  NamesSize)
 INSTR_PROF_RAW_HEADER(uint64_t, CountersDelta,
