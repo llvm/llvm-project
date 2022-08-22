@@ -334,7 +334,7 @@ add_entrypoint_object(
     pthread_getname_np.h
   DEPENDS
     libc.include.pthread
-    libc.src.__support.CPP.array_ref
+    libc.src.__support.CPP.span
     libc.src.__support.CPP.stringstream
     libc.src.__support.threads.thread
 )

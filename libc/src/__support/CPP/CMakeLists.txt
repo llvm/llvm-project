@@ -21,12 +21,6 @@ add_header_library(
 )
 
 add_header_library(
-  array_ref
-  HDRS
-    ArrayRef.h
-)
-
-add_header_library(
   bit
   HDRS
     bit.h
