@@ -54,9 +54,19 @@ static std::vector<std::string> splitString(std::string S, char Separator) {
 
 void ModuleDepCollector::addOutputPaths(ModuleDeps &Deps) {
   CompilerInvocation &CI = Deps.BuildInvocation;
-  for (ModuleID MID : Deps.ClangModuleDeps)
-    CI.getFrontendOpts().ModuleFiles.push_back(
-        Consumer.lookupModuleOutput(MID, ModuleOutputKind::ModuleFile));
+
+  // These are technically *inputs* to the compilation, but we populate them
+  // here in order to make \c getModuleContextHash() independent of
+  // \c lookupModuleOutput().
+  for (ModuleID MID : Deps.ClangModuleDeps) {
+    auto PCMPath =
+        Consumer.lookupModuleOutput(MID, ModuleOutputKind::ModuleFile);
+    if (EagerLoadModules)
+      CI.getFrontendOpts().ModuleFiles.push_back(PCMPath);
+    else
+      CI.getHeaderSearchOpts().PrebuiltModuleFiles.insert(
+          {MID.ModuleName, PCMPath});
+  }
 
   CI.getFrontendOpts().OutputFile =
       Consumer.lookupModuleOutput(Deps.ID, ModuleOutputKind::ModuleFile);
@@ -133,6 +143,19 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   for (const auto &PrebuiltModule : Deps.PrebuiltModuleDeps)
     CI.getFrontendOpts().ModuleFiles.push_back(PrebuiltModule.PCMFile);
 
+  if (!EagerLoadModules) {
+    ModuleMap &ModMap =
+        ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
+    for (ModuleID MID : Deps.ClangModuleDeps) {
+      const Module *M = ModMap.findModule(MID.ModuleName);
+      assert(M && "Modular dependency not found");
+      auto MDeps = ModularDeps.find(M);
+      assert(MDeps != ModularDeps.end() && "Inconsistent dependency info");
+      CI.getFrontendOpts().ModuleMapFiles.push_back(
+          MDeps->second->ClangModuleMapFile);
+    }
+  }
+
   // Remove any macro definitions that are explicitly ignored.
   if (!CI.getHeaderSearchOpts().ModulesIgnoreMacros.empty()) {
     llvm::erase_if(
@@ -178,7 +201,8 @@ std::vector<std::string> ModuleDeps::getCanonicalCommandLine() const {
   return serializeCompilerInvocation(BuildInvocation);
 }
 
-static std::string getModuleContextHash(const ModuleDeps &MD) {
+static std::string getModuleContextHash(const ModuleDeps &MD,
+                                        bool EagerLoadModules) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>,
                     llvm::support::endianness::native>
       HashBuilder;
@@ -207,6 +231,8 @@ static std::string getModuleContextHash(const ModuleDeps &MD) {
     HashBuilder.add(ID.ModuleName);
     HashBuilder.add(ID.ContextHash);
   }
+
+  HashBuilder.add(EagerLoadModules);
 
   llvm::BLAKE3Result<16> Hash = HashBuilder.final();
   std::array<uint64_t, 2> Words;
@@ -385,8 +411,11 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   // Add direct prebuilt module dependencies now, so that we can use them when
   // creating a CompilerInvocation and computing context hash for this
   // ModuleDeps instance.
+  // TODO: Squash these.
   llvm::DenseSet<const Module *> SeenModules;
   addAllSubmodulePrebuiltDeps(M, MD, SeenModules);
+  llvm::DenseSet<const Module *> AddedModules;
+  addAllSubmoduleDeps(M, MD, AddedModules);
 
   MD.BuildInvocation = MDC.makeInvocationForModuleBuildWithoutOutputs(
       MD, [&](CompilerInvocation &BuildInvocation) {
@@ -395,11 +424,8 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
                                    *MDC.ScanInstance.getASTReader(), *MF);
       });
 
-  llvm::DenseSet<const Module *> AddedModules;
-  addAllSubmoduleDeps(M, MD, AddedModules);
-
   // Compute the context hash from the inputs. Requires dependencies.
-  MD.ID.ContextHash = getModuleContextHash(MD);
+  MD.ID.ContextHash = getModuleContextHash(MD, MDC.EagerLoadModules);
   // Finish the compiler invocation. Requires dependencies and the context hash.
   MDC.addOutputPaths(MD);
   return MD.ID;
@@ -465,9 +491,10 @@ void ModuleDepCollectorPP::addModuleDep(
 ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
-    CompilerInvocation &&OriginalCI, bool OptimizeArgs)
+    CompilerInvocation &&OriginalCI, bool OptimizeArgs, bool EagerLoadModules)
     : ScanInstance(ScanInstance), Consumer(C), Opts(std::move(Opts)),
-      OriginalInvocation(std::move(OriginalCI)), OptimizeArgs(OptimizeArgs) {}
+      OriginalInvocation(std::move(OriginalCI)), OptimizeArgs(OptimizeArgs),
+      EagerLoadModules(EagerLoadModules) {}
 
 void ModuleDepCollector::attachToPreprocessor(Preprocessor &PP) {
   PP.addPPCallbacks(std::make_unique<ModuleDepCollectorPP>(*this));

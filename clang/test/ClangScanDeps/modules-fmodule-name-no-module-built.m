@@ -41,10 +41,7 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
-// CHECK:              "-fno-implicit-modules"
-// CHECK-NEXT:         "-fno-implicit-module-maps"
-// CHECK-NEXT:         "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H2]]/header2-{{[A-Z0-9]+}}.pcm"
-// CHECK-NEXT:       ],
+// CHECK:            ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/modules-fmodule-name-no-module-built.m"
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header3.h"
