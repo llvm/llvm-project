@@ -1,4 +1,4 @@
-//===-- POSIX header stat.h -----------------------------------------------===//
+//===-- Macros defined in sys/stat.h header file --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SYS_STAT_H
-#define LLVM_LIBC_SYS_STAT_H
+#ifndef __LLVM_LIBC_MACROS_SYS_STAT_MACROS_H
+#define __LLVM_LIBC_MACROS_SYS_STAT_MACROS_H
 
-#include <__llvm-libc-common.h>
+#ifdef __unix__
+#include "linux/sys-stat-macros.h"
+#endif
 
-#include <llvm-libc-macros/sys-stat-macros.h>
-
-%%public_api()
-
-#endif // LLVM_LIBC_SYS_STAT_H
+#endif // __LLVM_LIBC_MACROS_SYS_STAT_MACROS_H
