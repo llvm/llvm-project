@@ -11,7 +11,7 @@
 #include <stddef.h> // For size_t
 
 #include "array.h"       // For array
-#include "type_traits.h" // For remove_cv_t
+#include "type_traits.h" // For remove_cv_t, enable_if_t, is_same_v, is_const_v
 
 namespace __llvm_libc::cpp {
 
@@ -51,6 +51,12 @@ public:
   template <size_t N>
   constexpr span(array<T, N> &arr)
       : span_data(arr.data()), span_size(arr.size()) {}
+
+  template <typename U,
+            cpp::enable_if_t<!cpp::is_const_v<U> && cpp::is_const_v<T> &&
+                                 cpp::is_same_v<U, value_type>,
+                             bool> = true>
+  constexpr span(span<U> &s) : span(s.data(), s.size()) {}
 
   constexpr span(const span &s) = default;
   constexpr span &operator=(const span &s) = default;

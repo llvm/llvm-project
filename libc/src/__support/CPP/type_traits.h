@@ -15,9 +15,7 @@ namespace __llvm_libc {
 namespace cpp {
 
 template <bool B, typename T> struct enable_if;
-template <typename T> struct enable_if<true, T> {
-  using type = T;
-};
+template <typename T> struct enable_if<true, T> { using type = T; };
 template <bool B, typename T = void>
 using enable_if_t = typename enable_if<B, T>::type;
 
@@ -28,14 +26,16 @@ template <typename T, T v> struct integral_constant {
 using true_type = cpp::integral_constant<bool, true>;
 using false_type = cpp::integral_constant<bool, false>;
 
-template <typename T> struct type_identity {
-  using type = T;
-};
+template <typename T> struct type_identity { using type = T; };
 
 template <typename T, typename U> struct is_same : cpp::false_type {};
 template <typename T> struct is_same<T, T> : cpp::true_type {};
 template <typename T, typename U>
 inline constexpr bool is_same_v = is_same<T, U>::value;
+
+template <class T> struct is_const : cpp::false_type {};
+template <class T> struct is_const<const T> : cpp::true_type {};
+template <class T> inline constexpr bool is_const_v = is_const<T>::value;
 
 template <typename T> struct remove_cv : public type_identity<T> {};
 template <typename T> struct remove_cv<const T> : public type_identity<T> {};
@@ -114,46 +114,26 @@ template <typename T> struct is_signed {
 template <typename T> inline constexpr bool is_signed_v = is_signed<T>::value;
 
 template <typename T> struct make_unsigned;
-template <> struct make_unsigned<char> {
-  using type = unsigned char;
-};
-template <> struct make_unsigned<signed char> {
-  using type = unsigned char;
-};
-template <> struct make_unsigned<short> {
-  using type = unsigned short;
-};
-template <> struct make_unsigned<int> {
-  using type = unsigned int;
-};
-template <> struct make_unsigned<long> {
-  using type = unsigned long;
-};
+template <> struct make_unsigned<char> { using type = unsigned char; };
+template <> struct make_unsigned<signed char> { using type = unsigned char; };
+template <> struct make_unsigned<short> { using type = unsigned short; };
+template <> struct make_unsigned<int> { using type = unsigned int; };
+template <> struct make_unsigned<long> { using type = unsigned long; };
 template <> struct make_unsigned<long long> {
   using type = unsigned long long;
 };
-template <> struct make_unsigned<unsigned char> {
-  using type = unsigned char;
-};
+template <> struct make_unsigned<unsigned char> { using type = unsigned char; };
 template <> struct make_unsigned<unsigned short> {
   using type = unsigned short;
 };
-template <> struct make_unsigned<unsigned int> {
-  using type = unsigned int;
-};
-template <> struct make_unsigned<unsigned long> {
-  using type = unsigned long;
-};
+template <> struct make_unsigned<unsigned int> { using type = unsigned int; };
+template <> struct make_unsigned<unsigned long> { using type = unsigned long; };
 template <> struct make_unsigned<unsigned long long> {
   using type = unsigned long long;
 };
 #ifdef __SIZEOF_INT128__
-template <> struct make_unsigned<__int128_t> {
-  using type = __uint128_t;
-};
-template <> struct make_unsigned<__uint128_t> {
-  using type = __uint128_t;
-};
+template <> struct make_unsigned<__int128_t> { using type = __uint128_t; };
+template <> struct make_unsigned<__uint128_t> { using type = __uint128_t; };
 #endif
 template <typename T> using make_unsigned_t = typename make_unsigned<T>::type;
 
