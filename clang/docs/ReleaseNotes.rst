@@ -655,6 +655,10 @@ Arm and AArch64 Support in Clang
 - clang now supports the Cortex-M85 CPU, which can be chosen with
   `-mcpu=cortex-m85`. By default, this has PACBTI turned on, but it can be
   disabled with `-mcpu=cortex-m85+nopacbti`.
+- clang now supports using C/C++ operators on sizeless SVE vectors such as
+  `svint32_t`. The set of supported operators is shown in the table Vector
+  Operations found in the :ref:`Clang Language Extensions <Vector Operations>`
+  document.
 
 Floating Point Support in Clang
 -------------------------------
