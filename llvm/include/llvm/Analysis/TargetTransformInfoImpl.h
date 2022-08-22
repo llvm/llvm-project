@@ -1074,12 +1074,14 @@ public:
     case Instruction::Or:
     case Instruction::Xor:
     case Instruction::FNeg: {
-      TTI::OperandValueProperties Op1VP = TTI::OP_None;
+      const auto [Op1VK, Op1VP] = TTI::getOperandInfo(U->getOperand(0));
       TTI::OperandValueProperties Op2VP = TTI::OP_None;
-      TTI::OperandValueKind Op1VK =
-        TTI::getOperandInfo(U->getOperand(0), Op1VP);
-      TTI::OperandValueKind Op2VK = Opcode != Instruction::FNeg ?
-        TTI::getOperandInfo(U->getOperand(1), Op2VP) : TTI::OK_AnyValue;
+      TTI::OperandValueKind Op2VK = TTI::OK_AnyValue;
+      if (Opcode != Instruction::FNeg) {
+        auto Info = TTI::getOperandInfo(U->getOperand(1));
+        Op2VK = Info.Kind;
+        Op2VP = Info.Properties;
+      }
       SmallVector<const Value *, 2> Operands(U->operand_values());
       return TargetTTI->getArithmeticInstrCost(Opcode, Ty, CostKind,
                                                Op1VK, Op2VK,
@@ -1105,7 +1107,7 @@ public:
     case Instruction::Store: {
       auto *SI = cast<StoreInst>(U);
       Type *ValTy = U->getOperand(0)->getType();
-      TTI::OperandValueKind OpVK = TTI::getOperandInfo(U->getOperand(0));
+      TTI::OperandValueKind OpVK = TTI::getOperandInfo(U->getOperand(0)).Kind;
       return TargetTTI->getMemoryOpCost(Opcode, ValTy, SI->getAlign(),
                                         SI->getPointerAddressSpace(), CostKind,
                                         OpVK, I);
@@ -1138,10 +1140,8 @@ public:
           match(U, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
         // select x, y, false --> x & y
         // select x, true, y --> x | y
-        TTI::OperandValueProperties Op1VP = TTI::OP_None;
-        TTI::OperandValueProperties Op2VP = TTI::OP_None;
-        TTI::OperandValueKind Op1VK = TTI::getOperandInfo(Op0, Op1VP);
-        TTI::OperandValueKind Op2VK = TTI::getOperandInfo(Op1, Op2VP);
+        const auto [Op1VK, Op1VP] = TTI::getOperandInfo(Op0);
+        const auto [Op2VK, Op2VP] = TTI::getOperandInfo(Op1);
         assert(Op0->getType()->getScalarSizeInBits() == 1 &&
                Op1->getType()->getScalarSizeInBits() == 1);
 
