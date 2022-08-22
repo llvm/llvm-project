@@ -79,7 +79,7 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    st.w $a0, $fp, -24
 ; CHECK-NEXT:    ld.w $a0, $fp, -16
-; CHECK-NEXT:    beq $a0, $zero, .LBB0_4
+; CHECK-NEXT:    beqz $a0, .LBB0_4
 ; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    st.w $a0, $fp, -24
@@ -94,7 +94,7 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    ori $a0, $zero, 4
 ; CHECK-NEXT:    st.w $a0, $fp, -28
 ; CHECK-NEXT:    ld.w $a0, $fp, -16
-; CHECK-NEXT:    bne $a0, $zero, .LBB0_5
+; CHECK-NEXT:    bnez $a0, .LBB0_5
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    ori $a0, $zero, 2
 ; CHECK-NEXT:    st.w $a0, $fp, -20
