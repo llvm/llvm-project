@@ -904,8 +904,8 @@ public:
   // of migrating uses of OperandValueKind and OperandValueProperties
   // to use this class, and then will change the internal representation.
   struct OperandValueInfo {
-    OperandValueKind Kind;
-    OperandValueProperties Properties;
+    OperandValueKind Kind = OK_AnyValue;
+    OperandValueProperties Properties = OP_None;
   };
 
   /// \return the number of registers in the target-provided register class.
@@ -1059,16 +1059,6 @@ public:
   /// cases or optimizations based on those values.
   /// \p CxtI is the optional original context instruction, if one exists, to
   /// provide even more information.
-  InstructionCost getArithmeticInstrCost(
-      unsigned Opcode, Type *Ty,
-      TTI::TargetCostKind CostKind,
-      OperandValueKind Opd1Info,
-      OperandValueKind Opd2Info = OK_AnyValue,
-      OperandValueProperties Opd1PropInfo = OP_None,
-      OperandValueProperties Opd2PropInfo = OP_None,
-      ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
-      const Instruction *CxtI = nullptr) const;
-
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,

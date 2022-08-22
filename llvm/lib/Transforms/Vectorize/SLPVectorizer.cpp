@@ -6443,13 +6443,17 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
               : TargetTransformInfo::OK_UniformConstantValue;
 
       InstructionCost ScalarEltCost = TTI->getArithmeticInstrCost(
-          Instruction::Add, ScalarTy, CostKind, Op1VK, Op2VK);
+          Instruction::Add, ScalarTy, CostKind,
+          {Op1VK, TargetTransformInfo::OP_None},
+          {Op2VK, TargetTransformInfo::OP_None});
       if (NeedToShuffleReuses) {
         CommonCost -= (EntryVF - VL.size()) * ScalarEltCost;
       }
       InstructionCost ScalarCost = VecTy->getNumElements() * ScalarEltCost;
       InstructionCost VecCost = TTI->getArithmeticInstrCost(
-          Instruction::Add, VecTy, CostKind, Op1VK, Op2VK);
+          Instruction::Add, VecTy, CostKind,
+          {Op1VK, TargetTransformInfo::OP_None},
+          {Op2VK, TargetTransformInfo::OP_None});
       LLVM_DEBUG(dumpTreeCosts(E, CommonCost, VecCost, ScalarCost));
       return CommonCost + VecCost - ScalarCost;
     }
