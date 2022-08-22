@@ -98,8 +98,8 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   // Make a deep copy of the original Clang invocation.
   CompilerInvocation CI(OriginalInvocation);
 
-  CI.getLangOpts()->resetNonModularOptions();
-  CI.getPreprocessorOpts().resetNonModularOptions();
+  CI.resetNonModularOptions();
+  CI.clearImplicitModuleBuildOptions();
 
   // Remove options incompatible with explicit module build or are likely to
   // differ between identical modules discovered from different translation
@@ -119,18 +119,6 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   CI.getFrontendOpts().ProgramAction = frontend::GenerateModule;
   CI.getLangOpts()->ModuleName = Deps.ID.ModuleName;
   CI.getFrontendOpts().IsSystemModule = Deps.IsSystem;
-
-  // Disable implicit modules and canonicalize options that are only used by
-  // implicit modules.
-  CI.getLangOpts()->ImplicitModules = false;
-  CI.getHeaderSearchOpts().ImplicitModuleMaps = false;
-  CI.getHeaderSearchOpts().ModuleCachePath.clear();
-  CI.getHeaderSearchOpts().ModulesValidateOncePerBuildSession = false;
-  CI.getHeaderSearchOpts().BuildSessionTimestamp = 0;
-  // The specific values we canonicalize to for pruning don't affect behaviour,
-  /// so use the default values so they will be dropped from the command-line.
-  CI.getHeaderSearchOpts().ModuleCachePruneInterval = 7 * 24 * 60 * 60;
-  CI.getHeaderSearchOpts().ModuleCachePruneAfter = 31 * 24 * 60 * 60;
 
   // Inputs
   InputKind ModuleMapInputKind(CI.getFrontendOpts().DashX.getLanguage(),
@@ -182,23 +170,8 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   return CI;
 }
 
-static std::vector<std::string>
-serializeCompilerInvocation(const CompilerInvocation &CI) {
-  // Set up string allocator.
-  llvm::BumpPtrAllocator Alloc;
-  llvm::StringSaver Strings(Alloc);
-  auto SA = [&Strings](const Twine &Arg) { return Strings.save(Arg).data(); };
-
-  // Synthesize full command line from the CompilerInvocation, including "-cc1".
-  SmallVector<const char *, 32> Args{"-cc1"};
-  CI.generateCC1CommandLine(Args, SA);
-
-  // Convert arguments to the return type.
-  return std::vector<std::string>{Args.begin(), Args.end()};
-}
-
 std::vector<std::string> ModuleDeps::getCanonicalCommandLine() const {
-  return serializeCompilerInvocation(BuildInvocation);
+  return BuildInvocation.getCC1CommandLine();
 }
 
 static std::string getModuleContextHash(const ModuleDeps &MD,
