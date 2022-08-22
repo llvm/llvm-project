@@ -3157,7 +3157,7 @@ void add_rvalue_reference() {
   static_assert(__is_same(add_rvalue_reference_t<int (S::*)()>, int(S::* &&)()), "");
 }
 
-template <class T> using remove_reference_t = __remove_reference(T);
+template <class T> using remove_reference_t = __remove_reference_t(T);
 
 void check_remove_reference() {
   static_assert(__is_same(remove_reference_t<void>, void), "");
