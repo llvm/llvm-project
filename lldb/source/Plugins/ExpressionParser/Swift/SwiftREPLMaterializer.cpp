@@ -207,8 +207,8 @@ public:
 
     for (const IRExecutionUnit::JittedGlobalVariable &variable :
          execution_unit->GetJittedGlobalVariables()) {
-      swift::Demangle::NodePointer node_pointer =
-          demangle_ctx.demangleSymbolAsNode(variable.m_name.GetStringRef());
+      auto *node_pointer = SwiftLanguageRuntime::DemangleSymbolAsNode(
+          variable.m_name.GetStringRef(), demangle_ctx);
 
       llvm::StringRef variable_name = GetNameOfDemangledVariable(node_pointer);
       if (variable_name == result_name) {
@@ -365,8 +365,8 @@ public:
       //     kind=Module, text="lldb_expr_0"
       //     kind=Identifier, text="a"
 
-      swift::Demangle::NodePointer node_pointer =
-          demangle_ctx.demangleSymbolAsNode(variable.m_name.GetStringRef());
+      auto *node_pointer = SwiftLanguageRuntime::DemangleSymbolAsNode(
+          variable.m_name.GetStringRef(), demangle_ctx);
 
       llvm::StringRef last_component = GetNameOfDemangledVariable(node_pointer);
 

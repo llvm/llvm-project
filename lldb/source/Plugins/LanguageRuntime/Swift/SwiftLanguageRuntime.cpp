@@ -2071,15 +2071,16 @@ protected:
     for (size_t i = 0; i < command.GetArgumentCount(); i++) {
       StringRef name = command.GetArgumentAtIndex(i);
       if (!name.empty()) {
-        swift::Demangle::Context demangle_ctx;
+        Context ctx;
         NodePointer node_ptr = nullptr;
         // Match the behavior of swift-demangle and accept Swift symbols without
         // the leading `$`. This makes symbol copy & paste more convenient.
         if (name.startswith("S") || name.startswith("s")) {
           std::string correctedName = std::string("$") + name.str();
-          node_ptr = demangle_ctx.demangleSymbolAsNode(correctedName);
+          node_ptr =
+              SwiftLanguageRuntime::DemangleSymbolAsNode(correctedName, ctx);
         } else {
-          node_ptr = demangle_ctx.demangleSymbolAsNode(name);
+          node_ptr = SwiftLanguageRuntime::DemangleSymbolAsNode(name, ctx);
         }
         if (node_ptr) {
           if (m_options.m_expand)

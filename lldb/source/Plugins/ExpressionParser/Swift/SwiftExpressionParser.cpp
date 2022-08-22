@@ -1877,8 +1877,8 @@ static bool FindFunctionInModule(ConstString &mangled_name,
       // see if we can find it in the demangled nodes.
       demangle_ctx.clear();
 
-      swift::Demangle::NodePointer node_ptr =
-          demangle_ctx.demangleSymbolAsNode(fi->getName());
+      auto *node_ptr = SwiftLanguageRuntime::DemangleSymbolAsNode(fi->getName(),
+                                                                  demangle_ctx);
       if (node_ptr) {
         if (node_ptr->getKind() != swift::Demangle::Node::Kind::Global)
           continue;

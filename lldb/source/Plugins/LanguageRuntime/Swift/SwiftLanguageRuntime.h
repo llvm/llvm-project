@@ -19,6 +19,7 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
+#include "swift/Demangling/Demangle.h"
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSet.h"
@@ -147,6 +148,12 @@ public:
   static std::string DemangleSymbolAsString(llvm::StringRef symbol,
                                             DemangleMode mode,
                                             const SymbolContext *sc = nullptr);
+
+  /// Demangle a symbol to a swift::Demangle node tree.
+  ///
+  /// This is a central point of access, for purposes such as logging.
+  static swift::Demangle::NodePointer
+  DemangleSymbolAsNode(llvm::StringRef symbol, swift::Demangle::Context &ctx);
 
   void DumpTyperef(CompilerType type, TypeSystemSwiftTypeRef *module_holder,
                    Stream *s);
