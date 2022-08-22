@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "Config.h"
 #include "IncludeCleaner.h"
 #include "SourceCode.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "support/Context.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
@@ -599,6 +601,27 @@ TEST(IncludeCleaner, IWYUPragmaExport) {
   EXPECT_THAT(computeUnusedIncludes(AST), IsEmpty());
 }
 
+TEST(IncludeCleaner, NoDiagsForObjC) {
+  TestTU TU;
+  TU.Code = R"cpp(
+    #include "foo.h"
+
+    void bar() {}
+    )cpp";
+  TU.AdditionalFiles["foo.h"] = R"cpp(
+    #ifndef FOO_H
+    #define FOO_H
+
+    #endif
+  )cpp";
+  TU.ExtraArgs.emplace_back("-xobjective-c");
+
+  Config Cfg;
+  Cfg.Diagnostics.UnusedIncludes = Config::Strict;
+  WithContextValue Ctx(Config::Key, std::move(Cfg));
+  ParsedAST AST = TU.build();
+  EXPECT_THAT(AST.getDiagnostics(), llvm::ValueIs(IsEmpty()));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
