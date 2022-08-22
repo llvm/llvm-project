@@ -3,6 +3,8 @@
 // RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,debug.DumpCFG -analyzer-config inline-lambdas=true %s > %t 2>&1
 // RUN: FileCheck --input-file=%t %s
 
+#include "Inputs/system-header-simulator-cxx.h"
+
 void clang_analyzer_warnIfReached();
 void clang_analyzer_eval(int);
 
@@ -215,6 +217,13 @@ void testCopyElidedObjectCaptured(int x) {
   [e = Elided(x)] {
     clang_analyzer_eval(e.x == 0); // expected-warning{{TRUE}}
   }();
+}
+
+static auto MakeUniquePtr() { return std::make_unique<std::vector<int>>(); }
+
+void testCopyElidedUniquePtr() {
+  [uniquePtr = MakeUniquePtr()] {}();
+  clang_analyzer_warnIfReached(); // expected-warning{{TRUE}}
 }
 
 #endif
