@@ -2451,8 +2451,6 @@ void DXILBitcodeWriter::writeInstruction(const Instruction &I, unsigned InstID,
     Vals.push_back(getTypeID(I.getOperand(0)->getType()));
     Vals.push_back(VE.getValueID(I.getOperand(0))); // size.
     unsigned AlignRecord = Log2_32(AI.getAlign().value()) + 1;
-    assert(Log2_64(Value::MaximumAlignment) + 1 < 1 << 5 &&
-           "not enough bits for maximum alignment");
     assert(AlignRecord < 1 << 5 && "alignment greater than 1 << 64");
     AlignRecord |= AI.isUsedWithInAlloca() << 5;
     AlignRecord |= 1 << 6;
