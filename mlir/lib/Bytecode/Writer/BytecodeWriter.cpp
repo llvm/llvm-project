@@ -197,6 +197,41 @@ void EncodingEmitter::emitMultiByteVarInt(uint64_t value) {
 }
 
 //===----------------------------------------------------------------------===//
+// StringSectionBuilder
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// This class is used to simplify the process of emitting the string section.
+class StringSectionBuilder {
+public:
+  /// Add the given string to the string section, and return the index of the
+  /// string within the section.
+  size_t insert(StringRef str) {
+    auto it = strings.insert({llvm::CachedHashStringRef(str), strings.size()});
+    return it.first->second;
+  }
+
+  /// Write the current set of strings to the given emitter.
+  void write(EncodingEmitter &emitter) {
+    emitter.emitVarInt(strings.size());
+
+    // Emit the sizes in reverse order, so that we don't need to backpatch an
+    // offset to the string data or have a separate section.
+    for (const auto &it : llvm::reverse(strings))
+      emitter.emitVarInt(it.first.size() + 1);
+    // Emit the string data itself.
+    for (const auto &it : strings)
+      emitter.emitNulTerminatedString(it.first.val());
+  }
+
+private:
+  /// A set of strings referenced within the bytecode. The value of the map is
+  /// unused.
+  llvm::MapVector<llvm::CachedHashStringRef, size_t> strings;
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // Bytecode Writer
 //===----------------------------------------------------------------------===//
 
@@ -232,19 +267,14 @@ private:
 
   void writeStringSection(EncodingEmitter &emitter);
 
-  /// Get the number for the given shared string, that is contained within the
-  /// string section.
-  size_t getSharedStringNumber(StringRef str);
-
   //===--------------------------------------------------------------------===//
   // Fields
 
+  /// The builder used for the string section.
+  StringSectionBuilder stringSection;
+
   /// The IR numbering state generated for the root operation.
   IRNumberingState numberingState;
-
-  /// A set of strings referenced within the bytecode. The value of the map is
-  /// unused.
-  llvm::MapVector<llvm::CachedHashStringRef, size_t> strings;
 };
 } // namespace
 
@@ -314,11 +344,11 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
   auto dialects = numberingState.getDialects();
   dialectEmitter.emitVarInt(llvm::size(dialects));
   for (DialectNumbering &dialect : dialects)
-    dialectEmitter.emitVarInt(getSharedStringNumber(dialect.name));
+    dialectEmitter.emitVarInt(stringSection.insert(dialect.name));
 
   // Emit the referenced operation names grouped by dialect.
   auto emitOpName = [&](OpNameNumbering &name) {
-    dialectEmitter.emitVarInt(getSharedStringNumber(name.name.stripDialect()));
+    dialectEmitter.emitVarInt(stringSection.insert(name.name.stripDialect()));
   };
   writeDialectGrouping(dialectEmitter, numberingState.getOpNames(), emitOpName);
 
@@ -491,22 +521,8 @@ void BytecodeWriter::writeIRSection(EncodingEmitter &emitter, Operation *op) {
 
 void BytecodeWriter::writeStringSection(EncodingEmitter &emitter) {
   EncodingEmitter stringEmitter;
-  stringEmitter.emitVarInt(strings.size());
-
-  // Emit the sizes in reverse order, so that we don't need to backpatch an
-  // offset to the string data or have a separate section.
-  for (const auto &it : llvm::reverse(strings))
-    stringEmitter.emitVarInt(it.first.size() + 1);
-  // Emit the string data itself.
-  for (const auto &it : strings)
-    stringEmitter.emitNulTerminatedString(it.first.val());
-
+  stringSection.write(stringEmitter);
   emitter.emitSection(bytecode::Section::kString, std::move(stringEmitter));
-}
-
-size_t BytecodeWriter::getSharedStringNumber(StringRef str) {
-  auto it = strings.insert({llvm::CachedHashStringRef(str), strings.size()});
-  return it.first->second;
 }
 
 //===----------------------------------------------------------------------===//
