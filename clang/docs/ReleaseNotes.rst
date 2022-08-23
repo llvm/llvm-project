@@ -144,7 +144,7 @@ C2x Feature Support
 C++ Language Changes in Clang
 -----------------------------
 
-- Implemented DR692, DR1395 and DR1432. Use the ``-fclang-abi-compat=14`` option
+- Implemented DR692, DR1395 and DR1432. Use the ``-fclang-abi-compat=15`` option
   to get the old partial ordering behavior regarding packs.
 
 C++20 Feature Support
