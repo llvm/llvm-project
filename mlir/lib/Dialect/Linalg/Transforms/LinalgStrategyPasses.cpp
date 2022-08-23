@@ -199,37 +199,6 @@ struct LinalgStrategyDecomposePass
   LinalgTransformationFilter filter;
 };
 
-/// Configurable pass to apply pattern-based linalg generalization.
-struct LinalgStrategyInterchangePass
-    : public LinalgStrategyInterchangePassBase<LinalgStrategyInterchangePass> {
-
-  LinalgStrategyInterchangePass() = default;
-
-  LinalgStrategyInterchangePass(ArrayRef<int64_t> iteratorInterchange,
-                                LinalgTransformationFilter filter)
-      : iteratorInterchange(iteratorInterchange.begin(),
-                            iteratorInterchange.end()),
-        filter(std::move(filter)) {}
-
-  void runOnOperation() override {
-    auto funcOp = getOperation();
-    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
-      return;
-
-    SmallVector<unsigned> interchangeVector(iteratorInterchange.begin(),
-                                            iteratorInterchange.end());
-    RewritePatternSet interchangePattern(funcOp.getContext());
-    interchangePattern.add<GenericOpInterchangePattern>(
-        funcOp.getContext(), interchangeVector, filter);
-    if (failed(applyPatternsAndFoldGreedily(funcOp,
-                                            std::move(interchangePattern))))
-      signalPassFailure();
-  }
-
-  SmallVector<int64_t> iteratorInterchange;
-  LinalgTransformationFilter filter;
-};
-
 /// Configurable pass to apply pattern-based linalg peeling.
 struct LinalgStrategyPeelPass
     : public LinalgStrategyPeelPassBase<LinalgStrategyPeelPass> {
@@ -489,15 +458,6 @@ std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::createLinalgStrategyDecomposePass(
     const LinalgTransformationFilter &filter) {
   return std::make_unique<LinalgStrategyDecomposePass>(filter);
-}
-
-/// Create a LinalgStrategyInterchangePass.
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgStrategyInterchangePass(
-    ArrayRef<int64_t> iteratorInterchange,
-    const LinalgTransformationFilter &filter) {
-  return std::make_unique<LinalgStrategyInterchangePass>(iteratorInterchange,
-                                                         filter);
 }
 
 /// Create a LinalgStrategyPeelPass.
