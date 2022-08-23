@@ -137,11 +137,11 @@ void Merge(const MemInfoBlock &newMIB) {
 
   TotalAccessCount += newMIB.TotalAccessCount;
   MinAccessCount = newMIB.MinAccessCount < MinAccessCount ? newMIB.MinAccessCount : MinAccessCount;
-  MaxAccessCount = newMIB.MaxAccessCount < MaxAccessCount ? newMIB.MaxAccessCount : MaxAccessCount;
+  MaxAccessCount = newMIB.MaxAccessCount > MaxAccessCount ? newMIB.MaxAccessCount : MaxAccessCount;
 
   TotalSize += newMIB.TotalSize;
   MinSize = newMIB.MinSize < MinSize ? newMIB.MinSize : MinSize;
-  MaxSize = newMIB.MaxSize < MaxSize ? newMIB.MaxSize : MaxSize;
+  MaxSize = newMIB.MaxSize > MaxSize ? newMIB.MaxSize : MaxSize;
 
   TotalLifetime += newMIB.TotalLifetime;
   MinLifetime = newMIB.MinLifetime < MinLifetime ? newMIB.MinLifetime : MinLifetime;
