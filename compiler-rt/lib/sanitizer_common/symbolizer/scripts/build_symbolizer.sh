@@ -101,7 +101,7 @@ if [[ ! -d ${LIBCXX_BUILD} ]]; then
   cd ${LIBCXX_BUILD}
   LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined"
   cmake -GNinja \
-    -DLLVM_ENABLE_PROJECTS='libcxx;libcxxabi' \
+    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=$CC \
     -DCMAKE_CXX_COMPILER=$CXX \
