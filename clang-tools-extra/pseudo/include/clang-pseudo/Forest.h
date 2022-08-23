@@ -80,10 +80,18 @@ public:
     assert(kind() == Sequence);
     return children(Data >> RuleBits);
   }
+  llvm::MutableArrayRef<ForestNode *> elements() {
+    assert(kind() == Sequence);
+    return children(Data >> RuleBits);
+  }
 
   // Returns all possible interpretations of the code.
   // REQUIRES: this is an Ambiguous node.
   llvm::ArrayRef<const ForestNode *> alternatives() const {
+    assert(kind() == Ambiguous);
+    return children(Data);
+  }
+  llvm::MutableArrayRef<ForestNode *> alternatives() {
     assert(kind() == Ambiguous);
     return children(Data);
   }
@@ -133,6 +141,10 @@ private:
   llvm::ArrayRef<const ForestNode *> children(uint16_t Num) const {
     return llvm::makeArrayRef(reinterpret_cast<ForestNode *const *>(this + 1),
                               Num);
+  }
+  llvm::MutableArrayRef<ForestNode *> children(uint16_t Num) {
+    return llvm::makeMutableArrayRef(reinterpret_cast<ForestNode **>(this + 1),
+                                     Num);
   }
 
   Token::Index StartIndex;
