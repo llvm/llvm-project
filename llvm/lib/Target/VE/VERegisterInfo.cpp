@@ -121,6 +121,7 @@ static unsigned offsetToDisp(MachineInstr &MI) {
   {
     using namespace llvm::VE;
     switch (MI.getOpcode()) {
+    case INLINEASM:
     case RRCAS_multi_cases(TS1AML):
     case RRCAS_multi_cases(TS1AMW):
     case RRCAS_multi_cases(CASL):

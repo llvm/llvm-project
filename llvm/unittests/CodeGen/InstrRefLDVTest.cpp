@@ -1970,8 +1970,8 @@ TEST_F(InstrRefLDVTest, pickVPHILocDiamond) {
   // cannot be joined.
   DbgOpID ConstOneID = addConstDbgOp(MachineOperand::CreateImm(1));
   DbgOpID Locs4[] = {LiveInRaxID, ConstOneID};
-  VLiveOuts[1] = DbgValue(Locs0, TwoOpProps);
-  VLiveOuts[2] = DbgValue(Locs2, TwoOpProps);
+  VLiveOuts[1] = DbgValue(Locs3, TwoOpProps);
+  VLiveOuts[2] = DbgValue(Locs4, TwoOpProps);
   OutValues.clear();
   Result = pickVPHILoc(OutValues, *MBB3, VLiveOutIdx, MOutLocs, Preds);
   EXPECT_FALSE(Result);

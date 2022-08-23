@@ -459,3 +459,52 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             "pt": {"missing": ["indexedVariables"]},
         }
         self.verify_variables(verify_locals, locals)
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_registers(self):
+        '''
+            Test that registers whose byte size is the size of a pointer on
+            the current system get formatted as lldb::eFormatAddressInfo. This
+            will show the pointer value followed by a description of the address
+            itself. To test this we attempt to find the PC value in the general
+            purpose registers, and since we will be stopped in main.cpp, verify
+            that the value for the PC starts with a pointer and is followed by
+            a description that contains main.cpp.
+        '''
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        breakpoint1_line = line_number(source, "// breakpoint 1")
+        lines = [breakpoint1_line]
+        # Set breakpoint in the thread function so we can step the threads
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        )
+        self.continue_to_breakpoints(breakpoint_ids)
+
+
+        pc_name = None
+        arch = self.getArchitecture()
+        if arch == 'x86_64':
+            pc_name = 'rip'
+        elif arch == 'x86':
+            pc_name = 'rip'
+        elif arch.startswith('arm'):
+            pc_name = 'pc'
+
+        if pc_name is None:
+            return
+        # Verify locals
+        reg_sets = self.vscode.get_registers()
+        for reg_set in reg_sets:
+            if reg_set['name'] == 'General Purpose Registers':
+                varRef = reg_set['variablesReference']
+                regs = self.vscode.request_variables(varRef)['body']['variables']
+                for reg in regs:
+                    if reg['name'] == pc_name:
+                        value = reg['value']
+                        self.assertTrue(value.startswith('0x'))
+                        self.assertTrue('a.out`main + ' in value)
+                        self.assertTrue('at main.cpp:' in value)

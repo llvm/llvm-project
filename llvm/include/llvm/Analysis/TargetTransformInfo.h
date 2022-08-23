@@ -906,6 +906,20 @@ public:
   struct OperandValueInfo {
     OperandValueKind Kind = OK_AnyValue;
     OperandValueProperties Properties = OP_None;
+
+    bool isConstant() const {
+      return Kind == OK_UniformConstantValue || Kind == OK_NonUniformConstantValue;
+    }
+    bool isUniform() const {
+      return Kind == OK_UniformConstantValue || Kind == OK_UniformValue;
+    }
+    bool isPowerOf2() const {
+      return Properties == OP_PowerOf2;
+    }
+
+    OperandValueInfo getNoProps() const {
+      return {Kind, OP_None};
+    }
   };
 
   /// \return the number of registers in the target-provided register class.
@@ -1277,7 +1291,7 @@ public:
   /// Calculate the cost of an extended reduction pattern, similar to
   /// getArithmeticReductionCost of a reduction with an extension.
   /// This is the cost of as:
-  /// ResTy vecreduce(ext(Ty A)).
+  /// ResTy vecreduce.opcode(ext(Ty A)).
   InstructionCost getExtendedReductionCost(
       unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
       Optional<FastMathFlags> FMF,
@@ -1719,12 +1733,7 @@ public:
   virtual unsigned getMaxInterleaveFactor(unsigned VF) = 0;
   virtual InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-      OperandValueKind Opd1Info, OperandValueKind Opd2Info,
-      OperandValueProperties Opd1PropInfo, OperandValueProperties Opd2PropInfo,
-      ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) = 0;
-  virtual InstructionCost getArithmeticInstrCost(
-      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-      OperandValueInfo Op1Info, OperandValueInfo Op2Info,
+      OperandValueInfo Opd1Info, OperandValueInfo Opd2Info,
       ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) = 0;
 
   virtual InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
@@ -2274,22 +2283,10 @@ public:
   }
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-      OperandValueKind Opd1Info, OperandValueKind Opd2Info,
-      OperandValueProperties Opd1PropInfo, OperandValueProperties Opd2PropInfo,
-      ArrayRef<const Value *> Args,
-      const Instruction *CxtI = nullptr) override {
-    return Impl.getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
-                                       Opd1PropInfo, Opd2PropInfo, Args, CxtI);
-  }
-
-  InstructionCost getArithmeticInstrCost(
-      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       OperandValueInfo Opd1Info, OperandValueInfo Opd2Info,
       ArrayRef<const Value *> Args,
       const Instruction *CxtI = nullptr) override {
-    return Impl.getArithmeticInstrCost(Opcode, Ty, CostKind,
-                                       Opd1Info.Kind, Opd2Info.Kind,
-                                       Opd1Info.Properties, Opd2Info.Properties,
+    return Impl.getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
                                        Args, CxtI);
   }
 

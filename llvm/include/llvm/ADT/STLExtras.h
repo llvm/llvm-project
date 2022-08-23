@@ -1763,16 +1763,25 @@ template <typename L, typename R> bool equal(L &&LRange, R &&RRange) {
                     adl_end(RRange));
 }
 
-/// Wrapper function around std::equal to detect if all elements
-/// in a container are same.
-template <typename R>
-bool is_splat(R &&Range) {
-  size_t range_size = size(Range);
-  return range_size != 0 && (range_size == 1 ||
-         std::equal(adl_begin(Range) + 1, adl_end(Range), adl_begin(Range)));
+/// Returns true if all elements in Range are equal or when the Range is empty.
+template <typename R> bool all_equal(R &&Range) {
+  auto Begin = adl_begin(Range);
+  auto End = adl_end(Range);
+  return Begin == End || std::equal(Begin + 1, End, Begin);
 }
 
-/// Returns true iff all Values in the initializer lists are same.
+/// Returns true if all Values in the initializer lists are equal or the list
+// is empty.
+template <typename T> bool all_equal(std::initializer_list<T> Values) {
+  return all_equal<std::initializer_list<T>>(std::move(Values));
+}
+
+/// Returns true if Range consists of the same value repeated multiple times.
+template <typename R> bool is_splat(R &&Range) {
+  return !llvm::empty(Range) && all_equal(Range);
+}
+
+/// Returns true if Values consists of the same value repeated multiple times.
 template <typename T> bool is_splat(std::initializer_list<T> Values) {
   return is_splat<std::initializer_list<T>>(std::move(Values));
 }

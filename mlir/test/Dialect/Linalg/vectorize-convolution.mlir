@@ -38,14 +38,14 @@ func.func @conv1d_nwc_4x2x8_memref(%input: memref<4x6x3xf32>, %filter: memref<1x
 /// w == 0, kw == 0
 //      CHECK:   %[[CONTRACT_0:.+]] = vector.contract {
 // CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
-// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
 // CHECK-SAME:     %[[V_INPUT_0]], %[[V_FILTER]], %[[V_OUTPUT_0]]
 // CHECK-SAME:     : vector<4x1x3xf32>, vector<3x8xf32> into vector<4x1x8xf32>
 
 /// w == 1, kw == 0
 //      CHECK:   %[[CONTRACT_1:.+]] = vector.contract {
 // CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
-// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
 // CHECK-SAME:     %[[V_INPUT_1]], %[[V_FILTER]], %[[V_OUTPUT_1]]
 // CHECK-SAME:     : vector<4x1x3xf32>, vector<3x8xf32> into vector<4x1x8xf32>
 
@@ -104,25 +104,25 @@ func.func @conv1d_nwc_4x2x8_memref(%input: memref<4x6x3xf32>, %filter: memref<2x
 /// w == 0, kw == 0
 //      CHECK:   %[[CONTRACT_0:.+]] = vector.contract {
 // CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
-// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
 // CHECK-SAME:     %[[V_INPUT_0]], %[[V_FILTER_0]], %[[V_OUTPUT_0]]
 // CHECK-SAME:     : vector<4x1x3xf32>, vector<3x8xf32> into vector<4x1x8xf32>
 /// w == 1, kw == 0
 //      CHECK:   %[[CONTRACT_1:.+]] = vector.contract {
 // CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
-// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
 // CHECK-SAME:     %[[V_INPUT_1]], %[[V_FILTER_0]], %[[V_OUTPUT_1]]
 // CHECK-SAME:     : vector<4x1x3xf32>, vector<3x8xf32> into vector<4x1x8xf32>
 /// w == 1, kw == 1
 //      CHECK:   %[[CONTRACT_2:.+]] = vector.contract {
 // CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
-// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
 // CHECK-SAME:     %[[V_INPUT_2]], %[[V_FILTER_1]], %[[CONTRACT_0]]
 // CHECK-SAME:     : vector<4x1x3xf32>, vector<3x8xf32> into vector<4x1x8xf32>
 /// w == 1, kw == 1
 //      CHECK:   %[[CONTRACT_3:.+]] = vector.contract {
 // CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
-// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
 // CHECK-SAME:     %[[V_INPUT_3]], %[[V_FILTER_1]], %[[CONTRACT_1]]
 // CHECK-SAME:     : vector<4x1x3xf32>, vector<3x8xf32> into vector<4x1x8xf32>
 
@@ -172,13 +172,13 @@ func.func @conv1d_nwc_4x2x8_memref(%input: memref<4x6x3xf32>, %filter: memref<2x
 /// w == 0, kw == 0
 //      CHECK:   %[[CONTRACT_0:.+]] = vector.contract {
 // CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
-// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
 // CHECK-SAME:     %[[V_INPUT_0]], %[[V_FILTER_0]], %[[V_OUTPUT_R]]
 // CHECK-SAME:     : vector<4x2x3xf32>, vector<3x8xf32> into vector<4x2x8xf32>
 /// w == 0, kw == 1
 //      CHECK:   %[[CONTRACT_1:.+]] = vector.contract {
 // CHECK-SAME:       indexing_maps = [#[[INPUT_MAP]], #[[FILTER_MAP]], #[[OUTPUT_MAP]]],
-// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+// CHECK-SAME:       iterator_types = ["parallel", "parallel", "parallel", "reduction"]
 // CHECK-SAME:     %[[V_INPUT_1]], %[[V_FILTER_1]], %[[CONTRACT_0]]
 // CHECK-SAME:     : vector<4x2x3xf32>, vector<3x8xf32> into vector<4x2x8xf32>
 

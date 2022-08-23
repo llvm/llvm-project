@@ -514,11 +514,9 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
 }
 
 InstructionCost RISCVTTIImpl::getVectorImmCost(VectorType *VecTy,
-                                               TTI::OperandValueKind OpInfo,
-                                               TTI::OperandValueProperties PropInfo,
+                                               TTI::OperandValueInfo OpInfo,
                                                TTI::TargetCostKind CostKind) {
-  assert((OpInfo == TTI::OK_UniformConstantValue ||
-          OpInfo == TTI::OK_NonUniformConstantValue) && "non constant operand?");
+  assert(OpInfo.isConstant() && "non constant operand?");
   APInt PseudoAddr = APInt::getAllOnes(DL.getPointerSizeInBits());
   // Add a cost of address load + the cost of the vector load.
   return RISCVMatInt::getIntMatCost(PseudoAddr, DL.getPointerSizeInBits(),
@@ -532,16 +530,14 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                               MaybeAlign Alignment,
                                               unsigned AddressSpace,
                                               TTI::TargetCostKind CostKind,
-                                              TTI::OperandValueKind OpdInfo,
+                                              TTI::OperandValueKind OpdKind,
                                               const Instruction *I) {
+  const TTI::OperandValueInfo OpInfo = {OpdKind, TTI::OP_None};
   InstructionCost Cost = 0;
-  if (Opcode == Instruction::Store && isa<VectorType>(Src) &&
-      (OpdInfo == TTI::OK_UniformConstantValue ||
-       OpdInfo == TTI::OK_NonUniformConstantValue)) {
-    Cost += getVectorImmCost(cast<VectorType>(Src), OpdInfo, TTI::OP_None, CostKind);
-  }
+  if (Opcode == Instruction::Store && isa<VectorType>(Src) && OpInfo.isConstant())
+    Cost += getVectorImmCost(cast<VectorType>(Src), OpInfo, CostKind);
   return Cost + BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                       CostKind, OpdInfo, I);
+                                       CostKind, OpInfo.Kind, I);
 }
 
 void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,

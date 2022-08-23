@@ -74,7 +74,7 @@ class NSArraySyntheticTestCase(TestBase):
             substrs=[
                 '@"0 elements"'])
         self.expect(
-            'frame variable arr --ptr-depth 1 -d no-run-target',
+            'frame variable arr --ptr-depth 1',
             substrs=[
                 '@"6 elements"',
                 '@"hello"',
@@ -84,14 +84,14 @@ class NSArraySyntheticTestCase(TestBase):
                 '@"me"',
                 '@"http://www.apple.com'])
         self.expect(
-            'frame variable other_arr --ptr-depth 1 -d no-run-target',
+            'frame variable other_arr --ptr-depth 1',
             substrs=[
                 '@"4 elements"',
                 '(int)5',
                 '@"a string"',
                 '@"6 elements"'])
         self.expect(
-            'frame variable other_arr --ptr-depth 2 -d no-run-target',
+            'frame variable other_arr --ptr-depth 2',
             substrs=[
                 '@"4 elements"',
                 '@"6 elements" {',

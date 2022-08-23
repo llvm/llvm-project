@@ -2,7 +2,7 @@
 
 module attributes {gpu.container_module, spv.target_env = #spv.target_env<#spv.vce<v1.0, [Shader], [SPV_KHR_variable_pointers]>, #spv.resource_limits<max_compute_workgroup_invocations = 128, max_compute_workgroup_size = [128, 128, 64]>>} {
 
-  //       CHECK: llvm.mlir.global linkonce @__spv__foo_bar_arg_0_descriptor_set0_binding0() : !llvm.struct<(array<6 x i32>)>
+  //       CHECK: llvm.mlir.global linkonce @__spv__foo_bar_arg_0_descriptor_set0_binding0() {addr_space = 0 : i32} : !llvm.struct<(array<6 x i32>)>
   //       CHECK: llvm.func @__spv__foo_bar()
 
   //       CHECK: spv.module @__spv__foo

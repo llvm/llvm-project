@@ -230,15 +230,6 @@ static void applyPatterns(func::FuncOp funcOp) {
                .addOpFilter<MatmulOp, FillOp, GenericOp>());
   patterns.add<CopyVectorizationPattern>(ctx);
 
-  //===--------------------------------------------------------------------===//
-  // Linalg generic interchange pattern.
-  //===--------------------------------------------------------------------===//
-  patterns.add<GenericOpInterchangePattern>(
-      ctx,
-      /*interchangeVector=*/ArrayRef<unsigned>{1, 2, 0},
-      LinalgTransformationFilter(ArrayRef<StringAttr>{},
-                                 StringAttr::get(ctx, "PERMUTED")));
-
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 
   // Drop the marker.

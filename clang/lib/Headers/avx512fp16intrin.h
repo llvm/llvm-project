@@ -10,6 +10,8 @@
 #error "Never use <avx512fp16intrin.h> directly; include <immintrin.h> instead."
 #endif
 
+#ifdef __SSE2__
+
 #ifndef __AVX512FP16INTRIN_H
 #define __AVX512FP16INTRIN_H
 
@@ -3346,4 +3348,5 @@ _mm512_permutexvar_ph(__m512i __A, __m512h __B) {
 #undef __DEFAULT_FN_ATTRS256
 #undef __DEFAULT_FN_ATTRS512
 
+#endif
 #endif
