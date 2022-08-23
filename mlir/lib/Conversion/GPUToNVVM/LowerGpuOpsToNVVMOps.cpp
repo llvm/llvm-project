@@ -183,7 +183,8 @@ struct LowerGpuOpsToNVVMOpsPass
       if (type.getMemorySpaceAsInt() !=
           gpu::GPUDialect::getPrivateAddressSpace())
         return llvm::None;
-      return converter.convertType(MemRefType::Builder(type).setMemorySpace(0));
+      return converter.convertType(MemRefType::Builder(type).setMemorySpace(
+          IntegerAttr::get(IntegerType::get(m.getContext(), 64), 0)));
     });
     // Lowering for MMAMatrixType.
     converter.addConversion([&](gpu::MMAMatrixType type) -> Type {

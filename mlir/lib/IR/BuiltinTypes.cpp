@@ -532,13 +532,6 @@ unsigned mlir::detail::getMemorySpaceAsInt(Attribute memorySpace) {
   return static_cast<unsigned>(memorySpace.cast<IntegerAttr>().getInt());
 }
 
-MemRefType::Builder &
-MemRefType::Builder::setMemorySpace(unsigned newMemorySpace) {
-  memorySpace =
-      wrapIntegerMemorySpace(newMemorySpace, elementType.getContext());
-  return *this;
-}
-
 unsigned MemRefType::getMemorySpaceAsInt() const {
   return detail::getMemorySpaceAsInt(getMemorySpace());
 }
