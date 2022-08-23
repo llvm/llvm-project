@@ -5879,6 +5879,7 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":ArithmeticDialect",
         ":CallOpInterfaces",
         ":ControlFlowInterfaces",
         ":DataLayoutInterfaces",
