@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -790,9 +791,12 @@ struct PadOpInterface
       Value srcDim = rewriter.create<tensor::DimOp>(loc, padOp.getSource(), i);
       Value lowPad = toValue(mixedLowPad[i]);
       Value highPad = toValue(mixedHighPad[i]);
-      Value s1 = rewriter.create<arith::AddIOp>(loc, lowPad, highPad);
-      Value s2 = rewriter.create<arith::AddIOp>(loc, s1, srcDim);
-      dynamicSizes.push_back(s2);
+      AffineExpr s0, s1, s2;
+      bindSymbols(op->getContext(), s0, s1, s2);
+      AffineExpr sumExpr = s0 + s1 + s2;
+      Value sum = rewriter.create<AffineApplyOp>(
+          loc, sumExpr, ValueRange{srcDim, lowPad, highPad});
+      dynamicSizes.push_back(sum);
     }
 
     // Create tensor::GenerateOp.
