@@ -11,6 +11,7 @@ add_llvm_unittest(ADTTests
   ArrayRefTest.cpp
   BitFieldsTest.cpp
   BitmaskEnumTest.cpp
+  BitTest.cpp
   BitVectorTest.cpp
   BreadthFirstIteratorTest.cpp
   BumpPtrListTest.cpp
