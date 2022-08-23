@@ -380,7 +380,12 @@ public:
     char buffer[printBufSize];
     mpfr_snprintf(buffer, printBufSize, "%100.50Rf", value);
     cpp::string_view view(buffer);
-    view = view.trim(' ');
+    // Trim whitespaces
+    const char whitespace = ' ';
+    while (!view.empty() && view.front() == whitespace)
+      view.remove_prefix(1);
+    while (!view.empty() && view.back() == whitespace)
+      view.remove_suffix(1);
     return std::string(view.data());
   }
 
