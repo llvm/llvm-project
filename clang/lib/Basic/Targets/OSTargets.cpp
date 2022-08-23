@@ -263,6 +263,9 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
     }
   }
 
+  if (!Opts.MSVolatile)
+    Builder.defineMacro("_ISO_VOLATILE");
+
   if (Opts.Kernel)
     Builder.defineMacro("_KERNEL_MODE");
 

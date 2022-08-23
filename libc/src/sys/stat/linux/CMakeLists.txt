@@ -1,4 +1,31 @@
 add_entrypoint_object(
+  chmod
+  SRCS
+    chmod.cpp
+  HDRS
+    ../chmod.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.sys_stat
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fchmod
+  SRCS
+    fchmod.cpp
+  HDRS
+    ../fchmod.h
+  DEPENDS
+    libc.include.sys_stat
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   mkdir
   SRCS
     mkdir.cpp

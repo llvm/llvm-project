@@ -1108,7 +1108,7 @@ InstructionCost SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                                 MaybeAlign Alignment,
                                                 unsigned AddressSpace,
                                                 TTI::TargetCostKind CostKind,
-                                                TTI::OperandValueKind OpdInfo,
+                                                TTI::OperandValueInfo OpInfo,
                                                 const Instruction *I) {
   assert(!Src->isVoidTy() && "Invalid type");
 

@@ -2061,7 +2061,7 @@ bool ShuffleVectorInst::isValidOperands(const Value *V1, const Value *V2,
       return false;
 
   if (isa<ScalableVectorType>(V1->getType()))
-    if ((Mask[0] != 0 && Mask[0] != UndefMaskElem) || !is_splat(Mask))
+    if ((Mask[0] != 0 && Mask[0] != UndefMaskElem) || !all_equal(Mask))
       return false;
 
   return true;
@@ -2152,7 +2152,7 @@ Constant *ShuffleVectorInst::convertShuffleMaskForBitcode(ArrayRef<int> Mask,
                                                           Type *ResultTy) {
   Type *Int32Ty = Type::getInt32Ty(ResultTy->getContext());
   if (isa<ScalableVectorType>(ResultTy)) {
-    assert(is_splat(Mask) && "Unexpected shuffle");
+    assert(all_equal(Mask) && "Unexpected shuffle");
     Type *VecTy = VectorType::get(Int32Ty, Mask.size(), true);
     if (Mask[0] == 0)
       return Constant::getNullValue(VecTy);

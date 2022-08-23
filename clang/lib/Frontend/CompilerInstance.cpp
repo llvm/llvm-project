@@ -1150,8 +1150,7 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
 
   // For any options that aren't intended to affect how a module is built,
   // reset them to their default values.
-  Invocation->getLangOpts()->resetNonModularOptions();
-  PPOpts.resetNonModularOptions();
+  Invocation->resetNonModularOptions();
 
   // Remove any macro definitions that are explicitly ignored by the module.
   // They aren't supposed to affect how the module is built anyway.

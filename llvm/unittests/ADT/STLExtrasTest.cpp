@@ -611,28 +611,6 @@ TEST(STLExtrasTest, AllEqualInitializerList) {
   EXPECT_TRUE(all_equal({1, 1, 1}));
 }
 
-TEST(STLExtrasTest, IsSplat) {
-  std::vector<int> V;
-  EXPECT_FALSE(is_splat(V));
-
-  V.push_back(1);
-  EXPECT_TRUE(is_splat(V));
-
-  V.push_back(1);
-  V.push_back(1);
-  EXPECT_TRUE(is_splat(V));
-
-  V.push_back(2);
-  EXPECT_FALSE(is_splat(V));
-}
-
-TEST(STLExtrasTest, IsSplatInitializerList) {
-  EXPECT_TRUE(is_splat({1}));
-  EXPECT_TRUE(is_splat({1, 1}));
-  EXPECT_FALSE(is_splat({1, 2}));
-  EXPECT_TRUE(is_splat({1, 1, 1}));
-}
-
 TEST(STLExtrasTest, to_address) {
   int *V1 = new int;
   EXPECT_EQ(V1, to_address(V1));

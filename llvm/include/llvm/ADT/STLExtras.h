@@ -1645,6 +1645,24 @@ OutputIt copy(R &&Range, OutputIt Out) {
   return std::copy(adl_begin(Range), adl_end(Range), Out);
 }
 
+/// Provide wrappers to std::replace_copy_if which take ranges instead of having
+/// to pass begin/end explicitly.
+template <typename R, typename OutputIt, typename UnaryPredicate, typename T>
+OutputIt replace_copy_if(R &&Range, OutputIt Out, UnaryPredicate P,
+                         const T &NewValue) {
+  return std::replace_copy_if(adl_begin(Range), adl_end(Range), Out, P,
+                              NewValue);
+}
+
+/// Provide wrappers to std::replace_copy which take ranges instead of having to
+/// pass begin/end explicitly.
+template <typename R, typename OutputIt, typename T>
+OutputIt replace_copy(R &&Range, OutputIt Out, const T &OldValue,
+                      const T &NewValue) {
+  return std::replace_copy(adl_begin(Range), adl_end(Range), Out, OldValue,
+                           NewValue);
+}
+
 /// Provide wrappers to std::move which take ranges instead of having to
 /// pass begin/end explicitly.
 template <typename R, typename OutputIt>
@@ -1777,12 +1795,20 @@ template <typename T> bool all_equal(std::initializer_list<T> Values) {
 }
 
 /// Returns true if Range consists of the same value repeated multiple times.
-template <typename R> bool is_splat(R &&Range) {
+template <typename R>
+LLVM_DEPRECATED(
+    "Use 'all_equal(Range)' or '!empty(Range) && all_equal(Range)' instead.",
+    "all_equal")
+bool is_splat(R &&Range) {
   return !llvm::empty(Range) && all_equal(Range);
 }
 
 /// Returns true if Values consists of the same value repeated multiple times.
-template <typename T> bool is_splat(std::initializer_list<T> Values) {
+template <typename T>
+LLVM_DEPRECATED(
+    "Use 'all_equal(Values)' or '!empty(Values) && all_equal(Values)' instead.",
+    "all_equal")
+bool is_splat(std::initializer_list<T> Values) {
   return is_splat<std::initializer_list<T>>(std::move(Values));
 }
 

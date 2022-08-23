@@ -3287,7 +3287,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
     Flags.copyFMF(*FPOp);
 
   // Min/max matching is only viable if all output VTs are the same.
-  if (is_splat(ValueVTs)) {
+  if (all_equal(ValueVTs)) {
     EVT VT = ValueVTs[0];
     LLVMContext &Ctx = *DAG.getContext();
     auto &TLI = DAG.getTargetLoweringInfo();

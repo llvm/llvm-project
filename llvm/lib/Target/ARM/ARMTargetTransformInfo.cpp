@@ -1386,8 +1386,7 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     // sequences look particularly beneficial to vectorize.
     // To work around this we increase the cost of v2i64 operations to make them
     // seem less beneficial.
-    if (LT.second == MVT::v2i64 &&
-        Op2Info.Kind == TargetTransformInfo::OK_UniformConstantValue)
+    if (LT.second == MVT::v2i64 && Op2Info.isUniform() && Op2Info.isConstant())
       Cost += 4;
 
     return Cost;
@@ -1401,7 +1400,7 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
 
     if (!CxtI || !CxtI->hasOneUse() || !CxtI->isShift())
       return false;
-    if (Op2Info.Kind != TargetTransformInfo::OK_UniformConstantValue)
+    if (!Op2Info.isUniform() || !Op2Info.isConstant())
       return false;
 
     // Folded into a ADC/ADD/AND/BIC/CMP/EOR/MVN/ORR/ORN/RSB/SBC/SUB
@@ -1451,7 +1450,7 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             MaybeAlign Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
-                                            TTI::OperandValueKind OpdInfo,
+                                            TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) {
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -1491,7 +1490,7 @@ InstructionCost ARMTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                      ? ST->getMVEVectorCostFactor(CostKind)
                      : 1;
   return BaseCost * BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                           CostKind, OpdInfo, I);
+                                           CostKind, OpInfo, I);
 }
 
 InstructionCost

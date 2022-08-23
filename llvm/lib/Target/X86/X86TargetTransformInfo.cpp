@@ -776,8 +776,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       return LT.first * Entry->Cost;
   }
 
-  if (ISD == ISD::SHL &&
-      Op2Info.Kind == TargetTransformInfo::OK_NonUniformConstantValue) {
+  if (ISD == ISD::SHL && !Op2Info.isUniform() && Op2Info.isConstant()) {
     MVT VT = LT.second;
     // Vector shift left by non uniform constant can be lowered
     // into vector multiply.
@@ -4029,10 +4028,8 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             MaybeAlign Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
-                                            TTI::OperandValueKind OpdKind,
+                                            TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) {
-  const TTI::OperandValueInfo OpInfo = {OpdKind, TTI::OP_None};
-
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput) {
     if (auto *SI = dyn_cast_or_null<StoreInst>(I)) {

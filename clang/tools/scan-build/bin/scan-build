@@ -61,7 +61,6 @@ my %Options = (
   UseCC => undef,            # C compiler to use for compilation.
   UseCXX => undef,           # C++ compiler to use for compilation.
   AnalyzerTarget => undef,
-  StoreModel => undef,
   ConstraintsModel => undef,
   InternalStats => undef,
   OutputFormat => "html",
@@ -977,8 +976,7 @@ sub SetEnv {
     die "$var is undefined\n" if (!defined $var);
     $ENV{$var} = $EnvVars->{$var};
   }
-  foreach my $var ('CCC_ANALYZER_STORE_MODEL',
-                   'CCC_ANALYZER_CONSTRAINTS_MODEL',
+  foreach my $var ('CCC_ANALYZER_CONSTRAINTS_MODEL',
                    'CCC_ANALYZER_INTERNAL_STATS',
                    'CCC_ANALYZER_OUTPUT_FORMAT',
                    'CCC_CC',
@@ -1704,12 +1702,6 @@ sub ProcessArgs {
       next;
     }
 
-    if ($arg eq "-store") {
-      shift @$Args;
-      $Options{StoreModel} = shift @$Args;
-      next;
-    }
-
     if ($arg eq "-constraints") {
       shift @$Args;
       $Options{ConstraintsModel} = shift @$Args;
@@ -1958,7 +1950,6 @@ my %EnvVars = (
   'CCC_CC' => $Options{UseCC},
   'CCC_CXX' => $Options{UseCXX},
   'CCC_REPORT_FAILURES' => $Options{ReportFailures},
-  'CCC_ANALYZER_STORE_MODEL' => $Options{StoreModel},
   'CCC_ANALYZER_CONSTRAINTS_MODEL' => $Options{ConstraintsModel},
   'CCC_ANALYZER_INTERNAL_STATS' => $Options{InternalStats},
   'CCC_ANALYZER_OUTPUT_FORMAT' => $Options{OutputFormat},

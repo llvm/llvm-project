@@ -161,7 +161,7 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                                 MaybeAlign Alignment,
                                                 unsigned AddressSpace,
                                                 TTI::TargetCostKind CostKind,
-                                                TTI::OperandValueKind OpdInfo,
+                                                TTI::OperandValueInfo OpInfo,
                                                 const Instruction *I) {
   assert(Opcode == Instruction::Load || Opcode == Instruction::Store);
   // TODO: Handle other cost kinds.
@@ -170,7 +170,7 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
   if (Opcode == Instruction::Store)
     return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                  CostKind, OpdInfo, I);
+                                  CostKind, OpInfo, I);
 
   if (Src->isVectorTy()) {
     VectorType *VecTy = cast<VectorType>(Src);
@@ -211,7 +211,7 @@ InstructionCost HexagonTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   }
 
   return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
-                                OpdInfo, I);
+                                OpInfo, I);
 }
 
 InstructionCost

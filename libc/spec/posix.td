@@ -264,6 +264,16 @@ def POSIX : StandardSpec<"POSIX"> {
     [], // Enumerations
     [
         FunctionSpec<
+          "chdir",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>]
+        >,
+        FunctionSpec<
+          "fchdir",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>]
+        >,
+        FunctionSpec<
           "close",
           RetValSpec<IntType>,
           [ArgSpec<IntType>]
@@ -393,6 +403,16 @@ def POSIX : StandardSpec<"POSIX"> {
     [ModeTType], // Types
     [], // Enumerations
     [
+        FunctionSpec<
+          "chmod",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>]
+        >,
+        FunctionSpec<
+          "fchmod",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>]
+        >,
         FunctionSpec<
             "mkdir",
             RetValSpec<IntType>,
