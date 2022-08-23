@@ -142,38 +142,6 @@ struct LinalgStrategyPadPass
   LinalgTransformationFilter filter;
 };
 
-/// Configurable pass to apply pattern-based linalg generalization.
-struct LinalgStrategyGeneralizePass
-    : public LinalgStrategyGeneralizePassBase<LinalgStrategyGeneralizePass> {
-
-  LinalgStrategyGeneralizePass() = default;
-
-  LinalgStrategyGeneralizePass(StringRef opName,
-                               LinalgTransformationFilter filter)
-      : filter(std::move(filter)) {
-    this->anchorOpName.setValue(opName.str());
-  }
-
-  void runOnOperation() override {
-    auto funcOp = getOperation();
-    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
-      return;
-
-    RewritePatternSet generalizationPattern(funcOp.getContext());
-    if (!anchorOpName.empty()) {
-      generalizationPattern.add<LinalgGeneralizationPattern>(
-          anchorOpName, funcOp.getContext(), filter);
-    } else {
-      generalizationPattern.add<LinalgGeneralizationPattern>(
-          funcOp.getContext(), filter);
-    }
-    if (failed(applyPatternsAndFoldGreedily(funcOp,
-                                            std::move(generalizationPattern))))
-      signalPassFailure();
-  }
-
-  LinalgTransformationFilter filter;
-};
 
 /// Configurable pass to apply lowering of coarser-grained named linalg ops into
 /// finer-grained named versions.
@@ -443,13 +411,6 @@ mlir::createLinalgStrategyPadPass(StringRef opName,
                                   const LinalgPaddingOptions &opt,
                                   const LinalgTransformationFilter &filter) {
   return std::make_unique<LinalgStrategyPadPass>(opName, opt, filter);
-}
-
-/// Create a LinalgStrategyGeneralizePass.
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgStrategyGeneralizePass(
-    StringRef opName, const LinalgTransformationFilter &filter) {
-  return std::make_unique<LinalgStrategyGeneralizePass>(opName, filter);
 }
 
 /// Create a LinalgStrategyDecomposePass.
