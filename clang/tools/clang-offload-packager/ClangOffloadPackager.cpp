@@ -143,7 +143,7 @@ extractOffloadFiles(MemoryBufferRef Contents) {
     Binaries.emplace_back(std::move(*BinaryOrErr));
   }
 
-  return Binaries;
+  return std::move(Binaries);
 }
 
 static Error unbundleImages() {
