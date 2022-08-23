@@ -16,8 +16,8 @@ endif()
 # Note: This isn't a component, since that could potentially add a libcurl
 # dependency to libLLVM.
 add_llvm_library(LLVMDebuginfod
+  BuildIDFetcher.cpp
   Debuginfod.cpp
-  DIFetcher.cpp
   HTTPClient.cpp
   HTTPServer.cpp
 

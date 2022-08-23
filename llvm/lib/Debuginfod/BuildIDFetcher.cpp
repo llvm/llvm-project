@@ -1,4 +1,4 @@
-//===- llvm/DebugInfod/DIFetcher.cpp - Debug info fetcher -----------------===//
+//===- llvm/DebugInfod/BuildIDFetcher.cpp - Build ID fetcher --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,14 +12,17 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Debuginfod/DIFetcher.h"
+#include "llvm/Debuginfod/BuildIDFetcher.h"
 
 #include "llvm/Debuginfod/Debuginfod.h"
 
 using namespace llvm;
 
 Optional<std::string>
-DebuginfodDIFetcher::fetchBuildID(ArrayRef<uint8_t> BuildID) const {
+DebuginfodFetcher::fetch(ArrayRef<uint8_t> BuildID) const {
+  if (Optional<std::string> Path = BuildIDFetcher::fetch(BuildID))
+    return std::move(*Path);
+
   Expected<std::string> PathOrErr = getCachedOrDownloadDebuginfo(BuildID);
   if (PathOrErr)
     return *PathOrErr;
