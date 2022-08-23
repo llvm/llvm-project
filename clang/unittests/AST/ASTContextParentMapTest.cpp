@@ -119,5 +119,34 @@ TEST(GetParents, ImplicitLambdaNodes) {
       Lang_CXX11));
 }
 
+TEST(GetParents, FriendTypeLoc) {
+  auto AST = tooling::buildASTFromCode("struct A { friend struct Fr; };"
+                                       "struct B { friend struct Fr; };"
+                                       "struct Fr;");
+  auto &Ctx = AST->getASTContext();
+  auto &TU = *Ctx.getTranslationUnitDecl();
+  auto &A = *TU.lookup(&Ctx.Idents.get("A")).front();
+  auto &B = *TU.lookup(&Ctx.Idents.get("B")).front();
+  auto &FrA = *cast<FriendDecl>(*++(cast<CXXRecordDecl>(A).decls_begin()));
+  auto &FrB = *cast<FriendDecl>(*++(cast<CXXRecordDecl>(B).decls_begin()));
+  TypeLoc FrALoc = FrA.getFriendType()->getTypeLoc();
+  TypeLoc FrBLoc = FrB.getFriendType()->getTypeLoc();
+  TagDecl *FrATagDecl =
+      FrALoc.getTypePtr()->getAs<ElaboratedType>()->getOwnedTagDecl();
+  TagDecl *FrBTagDecl =
+      FrBLoc.getTypePtr()->getAs<ElaboratedType>()->getOwnedTagDecl();
+
+  EXPECT_THAT(Ctx.getParents(A), ElementsAre(DynTypedNode::create(TU)));
+  EXPECT_THAT(Ctx.getParents(B), ElementsAre(DynTypedNode::create(TU)));
+  EXPECT_THAT(Ctx.getParents(FrA), ElementsAre(DynTypedNode::create(A)));
+  EXPECT_THAT(Ctx.getParents(FrB), ElementsAre(DynTypedNode::create(B)));
+  EXPECT_THAT(Ctx.getParents(FrALoc), ElementsAre(DynTypedNode::create(FrA)));
+  EXPECT_THAT(Ctx.getParents(FrBLoc), ElementsAre(DynTypedNode::create(FrB)));
+  EXPECT_TRUE(FrATagDecl);
+  EXPECT_FALSE(FrBTagDecl);
+  EXPECT_THAT(Ctx.getParents(*FrATagDecl),
+              ElementsAre(DynTypedNode::create(FrA)));
+}
+
 } // end namespace ast_matchers
 } // end namespace clang
