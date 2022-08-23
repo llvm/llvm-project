@@ -212,14 +212,14 @@ defm imm32zx5 : Immediate<i32, [{
   return (Imm.getZExtValue() & ~0x000000000000001fULL) == 0;
 }], NOOP_SDNodeXForm, "U5Imm">;
 
-defm imm32zx16 : Immediate<i32, [{
-  return (Imm.getZExtValue() & ~0x00000000000000ffULL) == 0;
+defm uimm16 : Immediate<i32, [{
+  return isUInt<16>(Imm.getZExtValue());
 }], NOOP_SDNodeXForm, "U16Imm">;
 
 // Predicate: Arbitrary 32 bit value.
 def uimm32 : IntImmLeaf<i32, [{
   uint64_t Val = Imm.getZExtValue();
-  return isUInt<32>(Val) && (Val & 0xffff);
+  return isUInt<32>(Val);
 }]>;
 
 // ---------------------------------------------------------------------------//
@@ -239,8 +239,8 @@ def ADJCALLSTACKUP : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 multiclass BinaryOpPat<string Inst, SDPatternOperator OpNode> {
   def : Pat<(OpNode GPR:$rs1, GPR:$rs2),
             (!cast<InstM88k>(Inst#"rr") GPR:$rs1, GPR:$rs2)>;
-  def : Pat<(OpNode GPR:$rs1, imm32zx16:$imm16),
-            (!cast<InstM88k>(Inst#"ri") GPR:$rs1, imm32zx16:$imm16)>;
+  def : Pat<(OpNode GPR:$rs1, uimm16:$imm16),
+            (!cast<InstM88k>(Inst#"ri") GPR:$rs1, uimm16:$imm16)>;
 }
 
 class UnaryOpPat<InstM88k Inst, SDPatternOperator OpNode>
@@ -367,7 +367,7 @@ def : Pat<(ctlz_zero_undef GPR:$rs), (XORri (FF1r GPR:$rs), 31)>;
 // Multiclass for arithmetic instructions with triadic registers or immediates.
 multiclass ArithTri<bits<6> Func, string OpcStr> {
   def rr : F_IRC<Func, 0b0, 0b0, OpcStr>;
-  def ri : F_II<Func, (ins GPR:$rs1, imm32zx16:$imm16),OpcStr> {
+  def ri : F_II<Func, (ins GPR:$rs1, uimm16:$imm16),OpcStr> {
     let isReMaterializable = !if(!or(!eq(OpcStr,"addu"),
                                      !eq(OpcStr,"add"),
                                      !eq(OpcStr,"subu"),
@@ -415,8 +415,8 @@ def : Pat<(ineg GPR:$rs2), (SUBUrr (i32 R0), GPR:$rs2)>;
 multiclass SetCCPat<CondCode CC, bits<5> w5, bits<5> o5> {
   def : Pat<(setcc (i32 GPR:$lhs), (i32 GPR:$rhs), CC),
             (EXTUrwo (CMPrr GPR:$lhs, GPR:$rhs), w5, o5)>;
-  def : Pat<(setcc (i32 GPR:$lhs), imm32zx16:$rhs, CC),
-            (EXTUrwo (CMPrr GPR:$lhs, imm32zx16:$rhs), w5, o5)>;
+  def : Pat<(setcc (i32 GPR:$lhs), uimm16:$rhs, CC),
+            (EXTUrwo (CMPrr GPR:$lhs, uimm16:$rhs), w5, o5)>;
 }
 
 defm : SetCCPat<SETEQ, 1, 2>;
@@ -443,64 +443,64 @@ def ADDRrs : ComplexPattern<i32, 1, "selectAddrRs", [], []>;
 // Multiclass for load and store instructions.
 multiclass LoadIndexImm<bits<4> Func, string OpcStr> {
   def riw  : F_LS<Func, /*ty=*/ 0b01,
-                  (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                  (outs GPR:$rd), (ins GPR:$rs1, uimm16:$si16),
                   OpcStr,
-                  [(set (i32 GPR:$rd), (load (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))]>;
+                  [(set (i32 GPR:$rd), (load (ADDRri (i32 GPR:$rs1), uimm16:$si16)))]>;
   def rib  : F_LS<Func, /*ty=*/ 0b11,
-                  (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                  (outs GPR:$rd), (ins GPR:$rs1, uimm16:$si16),
                   !strconcat(OpcStr, ".b"),
-                  [(set (i32 GPR:$rd), (sextloadi8 (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))]>;
+                  [(set (i32 GPR:$rd), (sextloadi8 (ADDRri (i32 GPR:$rs1), uimm16:$si16)))]>;
   def rih  : F_LS<Func, /*ty=*/ 0b10,
-                  (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                  (outs GPR:$rd), (ins GPR:$rs1, uimm16:$si16),
                   !strconcat(OpcStr, ".h"),
-                  [(set (i32 GPR:$rd), (sextloadi16 (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))]>;
+                  [(set (i32 GPR:$rd), (sextloadi16 (ADDRri (i32 GPR:$rs1), uimm16:$si16)))]>;
   def rid  : F_LS<Func, /*ty=*/ 0b00,
-                  (outs GPR64:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                  (outs GPR64:$rd), (ins GPR:$rs1, uimm16:$si16),
                   !strconcat(OpcStr, ".d"),
-                  [(set (i64 GPR64:$rd), (load (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))]>;
+                  [(set (i64 GPR64:$rd), (load (ADDRri (i32 GPR:$rs1), uimm16:$si16)))]>;
 }
 
 multiclass StoreIndexImm<string OpcStr> {
   defvar Func = 0b0010;
   def riw  : F_LS<Func, /*ty=*/ 0b01,
-                  (outs), (ins GPR:$rd, GPR:$rs1, imm32zx16:$si16),
+                  (outs), (ins GPR:$rd, GPR:$rs1, uimm16:$si16),
                   OpcStr,
-                  [(store (i32 GPR:$rd), (ADDRri (i32 GPR:$rs1), imm32zx16:$si16))]>;
+                  [(store (i32 GPR:$rd), (ADDRri (i32 GPR:$rs1), uimm16:$si16))]>;
   def rib  : F_LS<Func, /*ty=*/ 0b11,
-                  (outs), (ins GPR:$rd, GPR:$rs1, imm32zx16:$si16),
+                  (outs), (ins GPR:$rd, GPR:$rs1, uimm16:$si16),
                   !strconcat(OpcStr, ".b"),
-                  [(truncstorei8 (i32 GPR:$rd), (ADDRri (i32 GPR:$rs1), imm32zx16:$si16))]>;
+                  [(truncstorei8 (i32 GPR:$rd), (ADDRri (i32 GPR:$rs1), uimm16:$si16))]>;
   def rih  : F_LS<Func, /*ty=*/ 0b10,
-                  (outs), (ins GPR:$rd, GPR:$rs1, imm32zx16:$si16),
+                  (outs), (ins GPR:$rd, GPR:$rs1, uimm16:$si16),
                   !strconcat(OpcStr, ".h"),
-                  [(truncstorei16 (i32 GPR:$rd), (ADDRri (i32 GPR:$rs1), imm32zx16:$si16))]>;
+                  [(truncstorei16 (i32 GPR:$rd), (ADDRri (i32 GPR:$rs1), uimm16:$si16))]>;
   def rid  : F_LS<Func, /*ty=*/ 0b00,
-                  (outs), (ins GPR64:$rd, GPR:$rs1, imm32zx16:$si16),
+                  (outs), (ins GPR64:$rd, GPR:$rs1, uimm16:$si16),
                   !strconcat(OpcStr, ".d"),
-                  [(store (i64 GPR64:$rd), (ADDRri (i32 GPR:$rs1), imm32zx16:$si16))]>;
+                  [(store (i64 GPR64:$rd), (ADDRri (i32 GPR:$rs1), uimm16:$si16))]>;
   let Predicates = [MC88110], DecoderNamespace = "MC88110" in {
     def xis  : F_LS<0b0011, /*ty=*/ 0b01,
-                    (outs), (ins XR:$rd, GPR:$rs1, imm32zx16:$si16),
+                    (outs), (ins XR:$rd, GPR:$rs1, uimm16:$si16),
                     OpcStr,
-                    [(store (f32 XR:$rd), (ADDRri (i32 GPR:$rs1), imm32zx16:$si16))]>;
+                    [(store (f32 XR:$rd), (ADDRri (i32 GPR:$rs1), uimm16:$si16))]>;
     def xid  : F_LS<0b0011, /*ty=*/ 0b00,
-                    (outs), (ins XR:$rd, GPR:$rs1, imm32zx16:$si16),
+                    (outs), (ins XR:$rd, GPR:$rs1, uimm16:$si16),
                     !strconcat(OpcStr, ".d"),
-                    [(store (f64 XR:$rd), (ADDRri (i32 GPR:$rs1), imm32zx16:$si16))]>;
+                    [(store (f64 XR:$rd), (ADDRri (i32 GPR:$rs1), uimm16:$si16))]>;
     def xix  : F_LS<0b0011, /*ty=*/ 0b10,
-                    (outs), (ins XR:$rd, GPR:$rs1, imm32zx16:$si16),
+                    (outs), (ins XR:$rd, GPR:$rs1, uimm16:$si16),
                     !strconcat(OpcStr, ".x"),
-                    [(store (f80 XR:$rd), (ADDRri (i32 GPR:$rs1), imm32zx16:$si16))]>;
+                    [(store (f80 XR:$rd), (ADDRri (i32 GPR:$rs1), uimm16:$si16))]>;
   }
 }
 
 multiclass LoadUnsigned {
-  def urih : F_LU<0b0, (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+  def urih : F_LU<0b0, (outs GPR:$rd), (ins GPR:$rs1, uimm16:$si16),
                   "ld.hu",
-                  [(set (i32 GPR:$rd), (zextloadi16 (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))]>;
-  def urib : F_LU<0b1, (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                  [(set (i32 GPR:$rd), (zextloadi16 (ADDRri (i32 GPR:$rs1), uimm16:$si16)))]>;
+  def urib : F_LU<0b1, (outs GPR:$rd), (ins GPR:$rs1, uimm16:$si16),
                   "ld.bu",
-                  [(set (i32 GPR:$rd), (zextloadi8 (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))]>;
+                  [(set (i32 GPR:$rd), (zextloadi8 (ADDRri (i32 GPR:$rs1), uimm16:$si16)))]>;
   foreach U = 0-1 in {
     defvar Suffix = !if(U, ".usr", "");
     defvar S = !if(U, "u", "");
@@ -520,9 +520,9 @@ multiclass LoadUnsigned {
 }
 
 class LoadXR<bits<6> Func, string OpcStr, ValueType VT>
-  :  F_LX<Func, (outs XR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+  :  F_LX<Func, (outs XR:$rd), (ins GPR:$rs1, uimm16:$si16),
           OpcStr,
-          [(set (VT XR:$rd), (zextloadi8 (ADDRri (i32 GPR:$rs1), imm32zx16:$si16)))]>;
+          [(set (VT XR:$rd), (zextloadi8 (ADDRri (i32 GPR:$rs1), uimm16:$si16)))]>;
 
 multiclass LoadUnscaled<bits<4> Func, string OpcStr> {
   let regfile = 1 in {
@@ -746,16 +746,16 @@ multiclass LoadAddr<string OpcStr> {
                      !strconcat(OpcStr, ".b")>;
 
     def rid  : F_LS</*func=*/ 0b0011, /*ty=*/ 0b00,
-                    (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                    (outs GPR:$rd), (ins GPR:$rs1, uimm16:$si16),
                     !strconcat(OpcStr, ".d")>;
     def riw  : F_LS</*func=*/ 0b0011, /*ty=*/ 0b01,
-                    (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                    (outs GPR:$rd), (ins GPR:$rs1, uimm16:$si16),
                     OpcStr>;
     def rih  : F_LS</*func=*/ 0b0011, /*ty=*/ 0b10,
-                    (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                    (outs GPR:$rd), (ins GPR:$rs1, uimm16:$si16),
                     !strconcat(OpcStr, ".h")>;
     def rib  : F_LS</*func=*/ 0b0011, /*ty=*/ 0b11,
-                    (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$si16),
+                    (outs GPR:$rd), (ins GPR:$rs1, uimm16:$si16),
                     !strconcat(OpcStr, ".b")>;
   }
 }
@@ -763,10 +763,10 @@ multiclass LoadAddr<string OpcStr> {
 multiclass Xmem {
   let Predicates = [NotMC88110] in {
     def bi : F_XMEMIMM</*ty=*/ 0b00,
-                        (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$imm16),
+                        (outs GPR:$rd), (ins GPR:$rs1, uimm16:$imm16),
                         "xmem.bu">;
     def wi : F_XMEMIMM</*ty=*/ 0b01,
-                        (outs GPR:$rd), (ins GPR:$rs1, imm32zx16:$imm16),
+                        (outs GPR:$rd), (ins GPR:$rs1, uimm16:$imm16),
                         "xmem">;
   }
 
@@ -884,7 +884,7 @@ let isTrap = 1, isBarrier = 1 in {
   def TB1 : F_TB<0b1101100, (outs), (ins imm32zx5:$b5, GPR:$rs1, Vec9:$vec9),
                  "tb1">;
   def TCND : F_TCND<(outs), (ins ccode:$m5, GPR:$rs1, Vec9:$vec9), "tcnd">;
-  def TBNDi : F_TBNDIMM<(outs), (ins GPR:$rs1, imm32zx16:$imm16), "tbnd">;
+  def TBNDi : F_TBNDIMM<(outs), (ins GPR:$rs1, uimm16:$imm16), "tbnd">;
   def TBND : F_TBND<(outs), (ins GPR:$rs1, GPR:$rs2), "tbnd">;
 
   let isTerminator = 1, isCodeGenOnly = 1 in {
@@ -923,12 +923,12 @@ def : Pat<(brcc SETLE, GPR:$rs1, 0, bb:$dst),
 multiclass BranchPat<CondCode CC, PatFrag ccop, bits<5> m5> {
   def : Pat<(brcc CC, (i32 GPR:$rs1), (i32 GPR:$rs2), bb:$dst),
              (BB1 m5, (CMPrr GPR:$rs1, GPR:$rs2), bb:$dst)>;
-  def : Pat<(brcc CC, (i32 GPR:$rs1), imm32zx16:$imm16, bb:$dst),
-             (BB1 m5, (CMPri GPR:$rs1, imm32zx16:$imm16), bb:$dst)>;
+  def : Pat<(brcc CC, (i32 GPR:$rs1), uimm16:$imm16, bb:$dst),
+             (BB1 m5, (CMPri GPR:$rs1, uimm16:$imm16), bb:$dst)>;
   def : Pat<(brcond (i32 (ccop (i32 GPR:$lhs), (i32 GPR:$rhs))), bb:$dst),
              (BB1 m5, (CMPrr GPR:$lhs, GPR:$rhs), bb:$dst)>;
-  def : Pat<(brcond (i32 (ccop (i32 GPR:$lhs), imm32zx16:$rhs)), bb:$dst),
-             (BB1 m5, (CMPri GPR:$lhs, imm32zx16:$rhs), bb:$dst)>;
+  def : Pat<(brcond (i32 (ccop (i32 GPR:$lhs), uimm16:$rhs)), bb:$dst),
+             (BB1 m5, (CMPri GPR:$lhs, uimm16:$rhs), bb:$dst)>;
 }
 
 // Compare integer registers / integer register and immediate.
