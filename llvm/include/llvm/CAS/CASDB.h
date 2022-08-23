@@ -133,8 +133,8 @@ public:
   virtual Expected<CASID> parseID(StringRef ID) = 0;
 
   /// Store object into CASDB.
-  virtual Expected<ObjectHandle> store(ArrayRef<ObjectRef> Refs,
-                                       ArrayRef<char> Data) = 0;
+  virtual Expected<ObjectRef> store(ArrayRef<ObjectRef> Refs,
+                                    ArrayRef<char> Data) = 0;
   /// Get an ID for \p Ref.
   virtual CASID getID(ObjectRef Ref) const = 0;
   /// Get an ID for \p Handle.
@@ -171,7 +171,7 @@ public:
                                  bool RequiresNullTerminator = false) const = 0;
 
 protected:
-  virtual Expected<ObjectHandle>
+  virtual Expected<ObjectRef>
   storeFromOpenFileImpl(sys::fs::file_t FD,
                         Optional<sys::fs::file_status> Status);
 
@@ -189,8 +189,8 @@ public:
   Expected<ObjectProxy> createProxy(ArrayRef<ObjectRef> Refs, StringRef Data);
 
   /// Store object from StringRef.
-  Expected<ObjectHandle> storeFromString(ArrayRef<ObjectRef> Refs,
-                                         StringRef String) {
+  Expected<ObjectRef> storeFromString(ArrayRef<ObjectRef> Refs,
+                                      StringRef String) {
     return store(Refs, arrayRefFromStringRef<char>(String));
   }
 
@@ -203,7 +203,7 @@ public:
   /// where \p Status implies).
   ///
   /// Returns the \a CASID and the size of the file.
-  Expected<ObjectHandle>
+  Expected<ObjectRef>
   storeFromOpenFile(sys::fs::file_t FD,
                     Optional<sys::fs::file_status> Status = None) {
     return storeFromOpenFileImpl(FD, Status);

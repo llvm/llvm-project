@@ -336,24 +336,26 @@ Expected<FileSystemCache::DirectoryEntry *>
 CachingOnDiskFileSystemImpl::makeSymlinkTo(DirectoryEntry &Parent,
                                            StringRef TreePath,
                                            StringRef Target) {
-  Expected<ObjectHandle> Node = DB.storeFromString(None, Target);
+  Expected<ObjectRef> Node = DB.storeFromString(None, Target);
   if (!Node)
     return Node.takeError();
-  return &Cache->makeSymlink(Parent, TreePath, DB.getReference(*Node),
-                             DB.getDataString(*Node));
+  return &Cache->makeSymlink(Parent, TreePath, *Node, Target);
 }
 
 Expected<FileSystemCache::DirectoryEntry *>
 CachingOnDiskFileSystemImpl::makeFile(DirectoryEntry &Parent,
                                       StringRef TreePath, sys::fs::file_t F,
                                       sys::fs::file_status Status) {
-  Expected<ObjectHandle> Node = DB.storeFromOpenFile(F, Status);
+  Expected<ObjectRef> Node = DB.storeFromOpenFile(F, Status);
   if (!Node)
     return Node.takeError();
 
+  // Load back the data from CAS since we stored from openFile buffer.
+  Expected<ObjectHandle> Handle = DB.load(*Node);
+  if (!Handle)
+    return Handle.takeError();
   // Do not trust Status.size() in case the file is volatile.
-  return &Cache->makeFile(Parent, TreePath, DB.getReference(*Node),
-                          DB.getDataSize(*Node),
+  return &Cache->makeFile(Parent, TreePath, *Node, DB.getDataSize(*Handle),
                           Status.permissions() & sys::fs::perms::owner_exe);
 }
 

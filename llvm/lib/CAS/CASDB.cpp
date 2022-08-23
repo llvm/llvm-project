@@ -66,7 +66,7 @@ CASDB::getMemoryBuffer(ObjectHandle Node, StringRef Name,
 }
 
 /// Default implementation opens the file and calls \a createBlob().
-Expected<ObjectHandle>
+Expected<ObjectRef>
 CASDB::storeFromOpenFileImpl(sys::fs::file_t FD,
                              Optional<sys::fs::file_status> Status) {
   // Check whether we can trust the size from stat.
@@ -126,7 +126,10 @@ Error CASDB::createUnknownObjectError(CASID ID) {
 
 Expected<ObjectProxy> CASDB::createProxy(ArrayRef<ObjectRef> Refs,
                                          StringRef Data) {
-  return getProxy(store(Refs, arrayRefFromStringRef<char>(Data)));
+  Expected<ObjectRef> Ref = store(Refs, arrayRefFromStringRef<char>(Data));
+  if (!Ref)
+    return Ref.takeError();
+  return getProxy(*Ref);
 }
 
 Expected<std::unique_ptr<MemoryBuffer>>

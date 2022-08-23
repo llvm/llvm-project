@@ -27,15 +27,18 @@ Expected<NodeT> IncludeTreeBase<NodeT>::create(CASDB &DB,
   auto Node = DB.store(Refs, Buf);
   if (!Node)
     return Node.takeError();
-  return NodeT(ObjectProxy::load(DB, *Node));
+  auto Handle = DB.load(*Node);
+  if (!Handle)
+    return Handle.takeError();
+  return NodeT(ObjectProxy::load(DB, *Handle));
 }
 
 Expected<IncludeFile> IncludeFile::create(CASDB &DB, StringRef Filename,
                                           ObjectRef Contents) {
-  auto PathHandle = DB.storeFromString({}, Filename);
-  if (!PathHandle)
-    return PathHandle.takeError();
-  std::array<ObjectRef, 2> Refs{DB.getReference(*PathHandle), Contents};
+  auto PathRef = DB.storeFromString({}, Filename);
+  if (!PathRef)
+    return PathRef.takeError();
+  std::array<ObjectRef, 2> Refs{*PathRef, Contents};
   return IncludeTreeBase::create(DB, Refs, {});
 }
 

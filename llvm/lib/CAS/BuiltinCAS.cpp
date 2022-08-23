@@ -51,7 +51,7 @@ static size_t getPageSize() {
   return PageSize;
 }
 
-Expected<ObjectHandle>
+Expected<ObjectRef>
 BuiltinCAS::storeFromOpenFileImpl(sys::fs::file_t FD,
                                   Optional<sys::fs::file_status> Status) {
   int PageSize = getPageSize();
@@ -63,7 +63,7 @@ BuiltinCAS::storeFromOpenFileImpl(sys::fs::file_t FD,
   }
 
   constexpr size_t MinMappedSize = 4 * 4096;
-  auto readWithStream = [&]() -> Expected<ObjectHandle> {
+  auto readWithStream = [&]() -> Expected<ObjectRef> {
     // FIXME: MSVC: SmallString<MinMappedSize * 2>
     SmallString<4 * 4096 * 2> Data;
     if (Error E = sys::fs::readNativeFileToEOF(FD, Data, MinMappedSize))
@@ -97,8 +97,8 @@ BuiltinCAS::storeFromOpenFileImpl(sys::fs::file_t FD,
   return storeImpl(ComputedHash, None, Data);
 }
 
-Expected<ObjectHandle> BuiltinCAS::store(ArrayRef<ObjectRef> Refs,
-                                         ArrayRef<char> Data) {
+Expected<ObjectRef> BuiltinCAS::store(ArrayRef<ObjectRef> Refs,
+                                      ArrayRef<char> Data) {
   return storeImpl(BuiltinObjectHasher<HasherT>::hashObject(*this, Refs, Data),
                    Refs, Data);
 }

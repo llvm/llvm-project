@@ -163,16 +163,16 @@ public:
 
   virtual Expected<CASID> parseIDImpl(ArrayRef<uint8_t> Hash) = 0;
 
-  Expected<ObjectHandle> store(ArrayRef<ObjectRef> Refs,
-                               ArrayRef<char> Data) final;
-  virtual Expected<ObjectHandle> storeImpl(ArrayRef<uint8_t> ComputedHash,
-                                           ArrayRef<ObjectRef> Refs,
-                                           ArrayRef<char> Data) = 0;
+  Expected<ObjectRef> store(ArrayRef<ObjectRef> Refs,
+                            ArrayRef<char> Data) final;
+  virtual Expected<ObjectRef> storeImpl(ArrayRef<uint8_t> ComputedHash,
+                                        ArrayRef<ObjectRef> Refs,
+                                        ArrayRef<char> Data) = 0;
 
-  Expected<ObjectHandle>
+  Expected<ObjectRef>
   storeFromOpenFileImpl(sys::fs::file_t FD,
                         Optional<sys::fs::file_status> Status) override;
-  virtual Expected<ObjectHandle>
+  virtual Expected<ObjectRef>
   storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
                                 sys::fs::mapped_file_region Map) {
     return storeImpl(ComputedHash, None, makeArrayRef(Map.data(), Map.size()));

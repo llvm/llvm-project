@@ -194,11 +194,11 @@ public:
     return getID(indexHash(Hash));
   }
 
-  Expected<ObjectHandle> storeImpl(ArrayRef<uint8_t> ComputedHash,
-                                   ArrayRef<ObjectRef> Refs,
-                                   ArrayRef<char> Data) final;
+  Expected<ObjectRef> storeImpl(ArrayRef<uint8_t> ComputedHash,
+                                ArrayRef<ObjectRef> Refs,
+                                ArrayRef<char> Data) final;
 
-  Expected<ObjectHandle>
+  Expected<ObjectRef>
   storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
                                 sys::fs::mapped_file_region Map) override;
 
@@ -341,7 +341,7 @@ void InMemoryCAS::print(raw_ostream &OS) const {
   ActionCache.print(OS);
 }
 
-Expected<ObjectHandle>
+Expected<ObjectRef>
 InMemoryCAS::storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
                                            sys::fs::mapped_file_region Map) {
   // Look up the hash in the index, initializing to nullptr if it's new.
@@ -363,12 +363,12 @@ InMemoryCAS::storeFromNullTerminatedRegion(ArrayRef<uint8_t> ComputedHash,
     if (RefNode->getData().data() == Map.data())
       new (MemoryMaps.Allocate()) sys::fs::mapped_file_region(std::move(Map));
 
-  return getObjectHandle(Node);
+  return toReference(Node);
 }
 
-Expected<ObjectHandle> InMemoryCAS::storeImpl(ArrayRef<uint8_t> ComputedHash,
-                                              ArrayRef<ObjectRef> Refs,
-                                              ArrayRef<char> Data) {
+Expected<ObjectRef> InMemoryCAS::storeImpl(ArrayRef<uint8_t> ComputedHash,
+                                           ArrayRef<ObjectRef> Refs,
+                                           ArrayRef<char> Data) {
   // Look up the hash in the index, initializing to nullptr if it's new.
   auto &I = indexHash(ComputedHash);
 
@@ -382,8 +382,7 @@ Expected<ObjectHandle> InMemoryCAS::storeImpl(ArrayRef<uint8_t> ComputedHash,
   auto Generator = [&]() -> const InMemoryObject * {
     return &InMemoryInlineObject::create(Allocator, I, InternalRefs, Data);
   };
-  return getObjectHandle(
-      cast<InMemoryObject>(I.Data.loadOrGenerate(Generator)));
+  return toReference(cast<InMemoryObject>(I.Data.loadOrGenerate(Generator)));
 }
 
 const InMemoryString &InMemoryCAS::getOrCreateString(StringRef String) {

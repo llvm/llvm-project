@@ -58,12 +58,12 @@ void CASDependencyCollector::finishedMainFile(DiagnosticsEngine &Diags) {
       Diags.Report({}, diag::err_cas_store) << toString(Handle.takeError());
       return;
     }
-    Refs.push_back(CAS.getReference(*Handle));
+    Refs.push_back(*Handle);
   }
 
   auto Handle = CAS.store(Refs, {});
   if (Handle)
-    Callback(CAS.getReference(*Handle));
+    Callback(*Handle);
   else
     Diags.Report({}, diag::err_cas_store) << toString(Handle.takeError());
 }

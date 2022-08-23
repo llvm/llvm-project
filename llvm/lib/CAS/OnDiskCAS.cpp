@@ -769,13 +769,13 @@ public:
     return getID(indexHash(Hash));
   }
 
-  Expected<ObjectHandle> storeImpl(ArrayRef<uint8_t> ComputedHash,
-                                   ArrayRef<ObjectRef> Refs,
-                                   ArrayRef<char> Data) final;
+  Expected<ObjectRef> storeImpl(ArrayRef<uint8_t> ComputedHash,
+                                ArrayRef<ObjectRef> Refs,
+                                ArrayRef<char> Data) final;
 
-  Expected<ObjectHandle> createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data);
+  Expected<ObjectRef> createStandaloneLeaf(IndexProxy &I, ArrayRef<char> Data);
 
-  Expected<ObjectHandle>
+  Expected<ObjectRef>
   loadOrCreateDataRecord(IndexProxy &I, TrieRecord::ObjectKind OK,
                          DataRecordHandle::Input Input);
 
@@ -1761,8 +1761,8 @@ static size_t getPageSize() {
   return PageSize;
 }
 
-Expected<ObjectHandle> OnDiskCAS::createStandaloneLeaf(IndexProxy &I,
-                                                     ArrayRef<char> Data) {
+Expected<ObjectRef> OnDiskCAS::createStandaloneLeaf(IndexProxy &I,
+                                                    ArrayRef<char> Data) {
   assert(Data.size() > TrieRecord::MaxEmbeddedSize &&
          "Expected a bigger file for external content...");
 
@@ -1792,7 +1792,7 @@ Expected<ObjectHandle> OnDiskCAS::createStandaloneLeaf(IndexProxy &I,
   {
     TrieRecord::Data Leaf{SK, TrieRecord::ObjectKind::Object, FileOffset()};
     if (I.Ref.compare_exchange_strong(Existing, Leaf))
-      return load(I, Leaf, *makeInternalRef(I.Offset, Leaf));
+      return getExternalReference(*makeInternalRef(I.Offset, Leaf));
   }
 
   // If there was a race, confirm that the new value has valid storage.
@@ -1801,19 +1801,19 @@ Expected<ObjectHandle> OnDiskCAS::createStandaloneLeaf(IndexProxy &I,
     return createCorruptObjectError(getID(I));
 
   // Get and return the inserted leaf node.
-  return load(I, Existing, *makeInternalRef(I.Offset, Existing));
+  return getExternalReference(*makeInternalRef(I.Offset, Existing));
 }
 
-Expected<ObjectHandle> OnDiskCAS::storeImpl(ArrayRef<uint8_t> ComputedHash,
-                                            ArrayRef<ObjectRef> Refs,
-                                            ArrayRef<char> Data) {
+Expected<ObjectRef> OnDiskCAS::storeImpl(ArrayRef<uint8_t> ComputedHash,
+                                         ArrayRef<ObjectRef> Refs,
+                                         ArrayRef<char> Data) {
   IndexProxy I = indexHash(ComputedHash);
 
   // Early return in case the node exists.
   {
     TrieRecord::Data Existing = I.Ref.load();
     if (Existing.OK == TrieRecord::ObjectKind::Object)
-      return load(I, Existing, *makeInternalRef(I.Offset, Existing));
+      return getExternalReference(*makeInternalRef(I.Offset, Existing));
     if (Existing.SK != TrieRecord::StorageKind::Unknown)
       return createCorruptObjectError(getID(I));
   }
@@ -1835,7 +1835,7 @@ Expected<ObjectHandle> OnDiskCAS::storeImpl(ArrayRef<uint8_t> ComputedHash,
       DataRecordHandle::Input{I.Offset, InternalRefs, Data});
 }
 
-Expected<ObjectHandle>
+Expected<ObjectRef>
 OnDiskCAS::loadOrCreateDataRecord(IndexProxy &I, TrieRecord::ObjectKind OK,
                                   DataRecordHandle::Input Input) {
   // Compute the storage kind, allocate it, and create the record.
@@ -1896,7 +1896,7 @@ OnDiskCAS::loadOrCreateDataRecord(IndexProxy &I, TrieRecord::ObjectKind OK,
     // handle.
     if (Existing.SK == TrieRecord::StorageKind::Unknown) {
       if (I.Ref.compare_exchange_strong(Existing, NewObject))
-        return load(I, NewObject, *makeInternalRef(I.Offset, NewObject));
+        return getExternalReference(*makeInternalRef(I.Offset, NewObject));
     }
   }
 
@@ -1904,7 +1904,7 @@ OnDiskCAS::loadOrCreateDataRecord(IndexProxy &I, TrieRecord::ObjectKind OK,
     return createCorruptObjectError(getID(I));
 
   // Load existing object.
-  return load(I, Existing, *makeInternalRef(I.Offset, Existing));
+  return getExternalReference(*makeInternalRef(I.Offset, Existing));
 }
 
 OnDiskCAS::PooledDataRecord

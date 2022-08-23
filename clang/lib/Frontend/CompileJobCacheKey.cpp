@@ -45,15 +45,14 @@ createCompileJobCacheKeyForArgs(CASDB &CAS, ArrayRef<const char *> CC1Args,
     Builder.push(*RootRef, llvm::cas::TreeEntry::Tree, "filesystem");
   }
   Builder.push(
-      CAS.getReference(llvm::cantFail(CAS.storeFromString(None, CommandLine))),
+      llvm::cantFail(CAS.storeFromString(None, CommandLine)),
       llvm::cas::TreeEntry::Regular, "command-line");
   Builder.push(
-      CAS.getReference(llvm::cantFail(CAS.storeFromString(None, "-cc1"))),
+      llvm::cantFail(CAS.storeFromString(None, "-cc1")),
       llvm::cas::TreeEntry::Regular, "computation");
 
   // FIXME: The version is maybe insufficient...
-  Builder.push(CAS.getReference(llvm::cantFail(
-                   CAS.storeFromString(None, getClangFullVersion()))),
+  Builder.push(llvm::cantFail(CAS.storeFromString(None, getClangFullVersion())),
                llvm::cas::TreeEntry::Regular, "version");
 
   return CAS.getID(llvm::cantFail(Builder.create(CAS)));

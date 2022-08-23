@@ -165,13 +165,13 @@ multiline text multiline text multiline text multiline text multiline text
 multiline text multiline text multiline text multiline text multiline text)",
   };
 
-  SmallVector<ObjectHandle> Nodes;
+  SmallVector<ObjectRef> Nodes;
   SmallVector<CASID> IDs;
   for (StringRef Content : ContentStrings) {
     // Use StringRef::str() to create a temporary std::string. This could cause
     // problems if the CAS is storing references to the input string instead of
     // copying it.
-    Optional<ObjectHandle> Node;
+    Optional<ObjectRef> Node;
     ASSERT_THAT_ERROR(
         CAS1->store(None, arrayRefFromStringRef<char>(Content)).moveInto(Node),
         Succeeded());
@@ -192,7 +192,7 @@ multiline text multiline text multiline text multiline text multiline text)",
 
   // Check that the blobs give the same IDs later.
   for (int I = 0, E = IDs.size(); I != E; ++I) {
-    Optional<ObjectHandle> Node;
+    Optional<ObjectRef> Node;
     ASSERT_THAT_ERROR(
         CAS1->store(None, arrayRefFromStringRef<char>(ContentStrings[I]))
             .moveInto(Node),
@@ -223,7 +223,7 @@ multiline text multiline text multiline text multiline text multiline text)",
   for (int I = IDs.size(), E = 0; I != E; --I) {
     auto &ID = IDs[I - 1];
     auto &Content = ContentStrings[I - 1];
-    Optional<ObjectHandle> Node;
+    Optional<ObjectRef> Node;
     ASSERT_THAT_ERROR(
         CAS2->store(None, arrayRefFromStringRef<char>(Content)).moveInto(Node),
         Succeeded());

@@ -402,13 +402,12 @@ IncludeTreePPConsumer::getObjectForFileNonCached(FileManager &FM,
 Expected<cas::ObjectRef>
 IncludeTreePPConsumer::getObjectForBuffer(const SrcMgr::FileInfo &FI) {
   // This is a non-file buffer, like the predefines.
-  auto Handle = DB.storeFromString(
+  auto Ref = DB.storeFromString(
       {}, FI.getContentCache().getBufferIfLoaded()->getBuffer());
-  if (!Handle)
-    return Handle.takeError();
-  cas::ObjectRef CASContents = DB.getReference(*Handle);
+  if (!Ref)
+    return Ref.takeError();
   Expected<cas::IncludeFile> FileNode =
-      cas::IncludeFile::create(DB, FI.getName(), CASContents);
+      cas::IncludeFile::create(DB, FI.getName(), *Ref);
   if (!FileNode)
     return FileNode.takeError();
   return FileNode->getRef();

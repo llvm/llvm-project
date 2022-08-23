@@ -43,7 +43,7 @@ bufferHasContent(ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer,
 }
 
 static ObjectRef createBlobUnchecked(CASDB &CAS, StringRef Content) {
-  return CAS.getReference(llvm::cantFail(CAS.storeFromString(None, Content)));
+  return llvm::cantFail(CAS.storeFromString(None, Content));
 }
 
 static Expected<ObjectHandle> createEmptyTree(CASDB &CAS) {
