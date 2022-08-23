@@ -276,7 +276,7 @@ std::unique_ptr<CSEConfigBase> MipsPassConfig::getCSEConfig() const {
 }
 
 void MipsPassConfig::addPreSched2() {
-  if (getMipsSubtarget().hasNanoMips())
+  if (getMipsSubtarget().hasNanoMips() && getOptLevel() != CodeGenOpt::None)
     addPass(createNanoMipsLoadStoreOptimizerPass());
 }
 
@@ -302,7 +302,7 @@ void MipsPassConfig::addPreRegAlloc() {
 }
 
 void MipsPassConfig::addPostRegAlloc() {
-  if (getMipsSubtarget().hasNanoMips())
+  if (getMipsSubtarget().hasNanoMips() && getOptLevel() != CodeGenOpt::None)
     addPass(createRedundantCopyEliminationPass());
 }
 
@@ -333,7 +333,7 @@ void MipsPassConfig::addPreEmitPass() {
   // instructions which can be remapped to a 16 bit instruction.
   addPass(createMicroMipsSizeReducePass());
 
-  if (getMipsSubtarget().hasNanoMips())
+  if (getMipsSubtarget().hasNanoMips() && getOptLevel() != CodeGenOpt::None)
     addPass(createNanoMipsMoveOptimizerPass());
 
   // The delay slot filler pass can potientially create forbidden slot hazards
