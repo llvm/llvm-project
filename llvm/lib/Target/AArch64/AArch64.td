@@ -1033,9 +1033,10 @@ def ProcessorFeatures {
                                  FeatureSPE, FeatureFullFP16, FeatureDotProd,
                                  FeatureSSBS];
   list<SubtargetFeature> X1C  = [HasV8_2aOps, FeatureCrypto, FeatureFPARMv8,
-                                 FeatureNEON, FeatureRCPC, FeaturePerfMon,
+                                 FeatureNEON, FeatureRCPC_IMMO, FeaturePerfMon,
                                  FeatureSPE, FeatureFullFP16, FeatureDotProd,
-                                 FeaturePAuth, FeatureSSBS];
+                                 FeaturePAuth, FeatureSSBS, FeatureFlagM,
+                                 FeatureLSE2];
   list<SubtargetFeature> X2   = [HasV9_0aOps, FeatureNEON, FeaturePerfMon,
                                  FeatureMatMulInt8, FeatureBF16, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVE2BitPerm,

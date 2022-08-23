@@ -787,6 +787,14 @@ if (CLANG_ENABLE_BOOTSTRAP)
     endif()
   endforeach()
 
+  # Build arguments for native tool used in CMake.
+  set(build_configuration "$<CONFIG>")
+  set(build_tool_args "${LLVM_EXTERNAL_PROJECT_BUILD_TOOL_ARGS}")
+  if(NOT build_tool_args STREQUAL "")
+    string(PREPEND build_tool_args "-- ")
+    separate_arguments(build_tool_args UNIX_COMMAND "${build_tool_args}")
+  endif()
+
   ExternalProject_Add(${NEXT_CLANG_STAGE}
     DEPENDS clang-bootstrap-deps
     PREFIX ${NEXT_CLANG_STAGE}
@@ -809,6 +817,9 @@ if (CLANG_ENABLE_BOOTSTRAP)
                 ${${CLANG_STAGE}_RANLIB}
                 ${${CLANG_STAGE}_OBJCOPY}
                 ${${CLANG_STAGE}_STRIP}
+    BUILD_COMMAND ${CMAKE_COMMAND} --build ${BINARY_DIR}
+                                   --config ${build_configuration}
+                                   ${build_tool_args}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
     USES_TERMINAL_CONFIGURE 1

@@ -588,6 +588,29 @@ TEST(STLExtrasTest, EarlyIncrementTestCustomPointerIterator) {
   EXPECT_EQ(EIR.end(), I);
 }
 
+TEST(STLExtrasTest, AllEqual) {
+  std::vector<int> V;
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(1);
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(1);
+  V.push_back(1);
+  EXPECT_TRUE(all_equal(V));
+
+  V.push_back(2);
+  EXPECT_FALSE(all_equal(V));
+}
+
+TEST(STLExtrasTest, AllEqualInitializerList) {
+  EXPECT_TRUE(all_equal({1}));
+  EXPECT_TRUE(all_equal({1, 1}));
+  EXPECT_FALSE(all_equal({1, 2}));
+  EXPECT_FALSE(all_equal({2, 1}));
+  EXPECT_TRUE(all_equal({1, 1, 1}));
+}
+
 TEST(STLExtrasTest, IsSplat) {
   std::vector<int> V;
   EXPECT_FALSE(is_splat(V));

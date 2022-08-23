@@ -1549,10 +1549,15 @@ DEF_TRAVERSE_DECL(ImportDecl, {})
 
 DEF_TRAVERSE_DECL(FriendDecl, {
   // Friend is either decl or a type.
-  if (D->getFriendType())
+  if (D->getFriendType()) {
     TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
-  else
+    // Traverse any CXXRecordDecl owned by this type, since
+    // it will not be in the parent context:
+    if (auto *ET = D->getFriendType()->getType()->getAs<ElaboratedType>())
+      TRY_TO(TraverseDecl(ET->getOwnedTagDecl()));
+  } else {
     TRY_TO(TraverseDecl(D->getFriendDecl()));
+  }
 })
 
 DEF_TRAVERSE_DECL(FriendTemplateDecl, {

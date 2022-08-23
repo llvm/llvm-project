@@ -8,6 +8,7 @@
 
 #include "Linux.h"
 #include "Arch/ARM.h"
+#include "Arch/LoongArch.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
@@ -464,6 +465,20 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
 
     LibDir = "lib";
     Loader = HF ? "ld-linux-armhf.so.3" : "ld-linux.so.3";
+    break;
+  }
+  case llvm::Triple::loongarch32: {
+    LibDir = "lib32";
+    Loader = ("ld-linux-loongarch-" +
+              tools::loongarch::getLoongArchABI(Args, Triple) + ".so.1")
+                 .str();
+    break;
+  }
+  case llvm::Triple::loongarch64: {
+    LibDir = "lib64";
+    Loader = ("ld-linux-loongarch-" +
+              tools::loongarch::getLoongArchABI(Args, Triple) + ".so.1")
+                 .str();
     break;
   }
   case llvm::Triple::m68k:

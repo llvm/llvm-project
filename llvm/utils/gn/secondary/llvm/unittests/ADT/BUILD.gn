@@ -17,6 +17,7 @@ unittest("ADTTests") {
     "AnyTest.cpp",
     "ArrayRefTest.cpp",
     "BitFieldsTest.cpp",
+    "BitTest.cpp",
     "BitVectorTest.cpp",
     "BitmaskEnumTest.cpp",
     "BreadthFirstIteratorTest.cpp",

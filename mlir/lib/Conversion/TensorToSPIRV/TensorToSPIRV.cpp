@@ -68,9 +68,13 @@ public:
 
     spirv::VariableOp varOp;
     if (adaptor.getTensor().getDefiningOp<spirv::ConstantOp>()) {
-      varOp = rewriter.create<spirv::VariableOp>(
-          loc, varType, spirv::StorageClass::Function,
-          /*initializer=*/adaptor.getTensor());
+      // We could use the initializer directly; but certain driver compilers
+      // have bugs dealing with that. So for now, use spv.Store for
+      // initialization.
+      varOp = rewriter.create<spirv::VariableOp>(loc, varType,
+                                                 spirv::StorageClass::Function,
+                                                 /*initializer=*/nullptr);
+      rewriter.create<spirv::StoreOp>(loc, varOp, adaptor.getTensor());
     } else {
       // Need to store the value to the local variable. It's questionable
       // whether we want to support such case though.
