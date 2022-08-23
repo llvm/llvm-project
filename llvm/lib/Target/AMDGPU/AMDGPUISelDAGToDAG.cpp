@@ -13,6 +13,7 @@
 
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPU.h"
+#include "AMDGPUInstrInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -2965,13 +2966,15 @@ bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
 bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode * N) const {
   auto Ld = cast<LoadSDNode>(N);
 
+  if (N->isDivergent() && !AMDGPUInstrInfo::isUniformMMO(Ld->getMemOperand()))
+    return false;
+
   return Ld->getAlign() >= Align(4) &&
-         (((Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
-            Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) &&
-           !N->isDivergent()) ||
+         ((Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS ||
+           Ld->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS_32BIT) ||
           (Subtarget->getScalarizeGlobalBehavior() &&
            Ld->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS &&
-           Ld->isSimple() && !N->isDivergent() &&
+           Ld->isSimple() &&
            static_cast<const SITargetLowering *>(getTargetLowering())
                ->isMemOpHasNoClobberedMemOperand(N)));
 }
