@@ -128,6 +128,11 @@ New Pragmas in Clang
 
 Attribute Changes in Clang
 --------------------------
+- Added support for ``__attribute__((guard(nocf)))`` and C++-style
+  ``[[clang::guard(nocf)]]``, which is equivalent to ``__declspec(guard(nocf))``
+  when using the MSVC environment. This is to support enabling Windows Control
+  Flow Guard checks with the ability to disable them for specific functions when
+  using the MinGW environment.
 
 Windows Support
 ---------------
