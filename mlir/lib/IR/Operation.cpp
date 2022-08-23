@@ -77,6 +77,10 @@ Operation *Operation::create(Location location, OperationName name,
   char *mallocMem = reinterpret_cast<char *>(malloc(byteSize + prefixByteSize));
   void *rawMem = mallocMem + prefixByteSize;
 
+  // Populate default attributes.
+  if (Optional<RegisteredOperationName> info = name.getRegisteredInfo())
+    info->populateDefaultAttrs(attributes);
+
   // Create the new Operation.
   Operation *op = ::new (rawMem) Operation(
       location, name, numResults, numSuccessors, numRegions,

@@ -18,10 +18,10 @@ using namespace dependencies;
 DependencyScanningService::DependencyScanningService(
     ScanningMode Mode, ScanningOutputFormat Format, CASOptions CASOpts,
     IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS,
-    bool ReuseFileManager, bool OptimizeArgs)
+    bool ReuseFileManager, bool OptimizeArgs, bool EagerLoadModules)
     : Mode(Mode), Format(Format), CASOpts(std::move(CASOpts)),
       ReuseFileManager(ReuseFileManager), OptimizeArgs(OptimizeArgs),
-      SharedFS(std::move(SharedFS)) {
+      SharedFS(std::move(SharedFS)), EagerLoadModules(EagerLoadModules) {
   if (!this->SharedFS)
     SharedCache.emplace();
 
