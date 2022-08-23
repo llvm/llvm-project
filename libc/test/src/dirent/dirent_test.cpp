@@ -33,13 +33,13 @@ TEST(LlvmLibcDirentTest, SimpleOpenAndRead) {
     struct ::dirent *d = __llvm_libc::readdir(dir);
     if (d == nullptr)
       break;
-    if (string_view(&d->d_name[0]).equals("file1.txt"))
+    if (string_view(&d->d_name[0]) == "file1.txt")
       file1 = d;
-    if (string_view(&d->d_name[0]).equals("file2.txt"))
+    if (string_view(&d->d_name[0]) == "file2.txt")
       file2 = d;
-    if (string_view(&d->d_name[0]).equals("dir1"))
+    if (string_view(&d->d_name[0]) == "dir1")
       dir1 = d;
-    if (string_view(&d->d_name[0]).equals("dir2"))
+    if (string_view(&d->d_name[0]) == "dir2")
       dir2 = d;
   }
 
