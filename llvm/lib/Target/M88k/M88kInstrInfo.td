@@ -365,19 +365,15 @@ def : Pat<(ctlz_zero_undef GPR:$rs), (XORri (FF1r GPR:$rs), 31)>;
 // ---------------------------------------------------------------------------//
 
 // Multiclass for arithmetic instructions with triadic registers or immediates.
-multiclass ArithTri<bits<6> Func, string OpcStr> {
+multiclass ArithTri<bits<6> Func, string OpcStr, bit IsReMat = 0> {
   def rr : F_IRC<Func, 0b0, 0b0, OpcStr>;
-  def ri : F_II<Func, (ins GPR:$rs1, uimm16:$imm16),OpcStr> {
-    let isReMaterializable = !if(!or(!eq(OpcStr,"addu"),
-                                     !eq(OpcStr,"add"),
-                                     !eq(OpcStr,"subu"),
-                                     !eq(OpcStr,"sub")), 1, 0);
-  }
+  let isReMaterializable = IsReMat in
+    def ri : F_II<Func, (ins GPR:$rs1, uimm16:$imm16),OpcStr>;
 }
 
 // Multiclass for arithmetic instructions with triadic registers or immediates.
-multiclass ArithTriCarry<bits<6> Func, string OpcStr>
-  : ArithTri<Func, OpcStr> {
+multiclass ArithTriCarry<bits<6> Func, string OpcStr, bit IsReMat = 0>
+  : ArithTri<Func, OpcStr, IsReMat> {
   def rrci  : F_IRC<Func, 0b1, 0b0, !strconcat(OpcStr, ".ci")>;
   def rrco  : F_IRC<Func, 0b0, 0b1, !strconcat(OpcStr, ".co")>;
   def rrcio : F_IRC<Func, 0b1, 0b1, !strconcat(OpcStr, ".cio")>;
@@ -385,13 +381,13 @@ multiclass ArithTriCarry<bits<6> Func, string OpcStr>
 
 let isCommutable = 1 in {
   let isAdd = 1 in {
-    defm ADDU : ArithTriCarry<0b011000, "addu">;
-    defm ADD : ArithTriCarry<0b011100, "add">;
+    defm ADDU : ArithTriCarry<0b011000, "addu", 1>;
+    defm ADD : ArithTriCarry<0b011100, "add", 1>;
   }
   defm MULU : ArithTri<0b011011, "mulu">;
 }
-defm SUBU : ArithTriCarry<0b011001, "subu">;
-defm SUB : ArithTriCarry<0b011101, "sub">;
+defm SUBU : ArithTriCarry<0b011001, "subu", 1>;
+defm SUB : ArithTriCarry<0b011101, "sub", 1>;
 defm DIVU : ArithTri<0b011010, "divu">;
 defm DIVS : ArithTri<0b011110, "divs">;
 let isCompare = 1 in
