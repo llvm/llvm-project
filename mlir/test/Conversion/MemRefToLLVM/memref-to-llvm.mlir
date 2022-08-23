@@ -615,16 +615,16 @@ func.func @transpose(%arg0: memref<?x?x?xf32, offset: ?, strides: [?, ?, 1]>) {
 
 // -----
 
-// CHECK:   llvm.mlir.global external @gv0() : !llvm.array<2 x f32> {
+// CHECK:   llvm.mlir.global external @gv0() {addr_space = 0 : i32} : !llvm.array<2 x f32> {
 // CHECK-NEXT:     %0 = llvm.mlir.undef : !llvm.array<2 x f32>
 // CHECK-NEXT:     llvm.return %0 : !llvm.array<2 x f32>
 // CHECK-NEXT:   }
 memref.global @gv0 : memref<2xf32> = uninitialized
 
-// CHECK: llvm.mlir.global private @gv1() : !llvm.array<2 x f32>
+// CHECK: llvm.mlir.global private @gv1() {addr_space = 0 : i32} : !llvm.array<2 x f32>
 memref.global "private" @gv1 : memref<2xf32>
 
-// CHECK: llvm.mlir.global external @gv2(dense<{{\[\[}}0.000000e+00, 1.000000e+00, 2.000000e+00], [3.000000e+00, 4.000000e+00, 5.000000e+00]]> : tensor<2x3xf32>) : !llvm.array<2 x array<3 x f32>>
+// CHECK: llvm.mlir.global external @gv2(dense<{{\[\[}}0.000000e+00, 1.000000e+00, 2.000000e+00], [3.000000e+00, 4.000000e+00, 5.000000e+00]]> : tensor<2x3xf32>) {addr_space = 0 : i32} : !llvm.array<2 x array<3 x f32>>
 memref.global @gv2 : memref<2x3xf32> = dense<[[0.0, 1.0, 2.0], [3.0, 4.0, 5.0]]>
 
 // Test 1D memref.
@@ -672,7 +672,7 @@ func.func @get_gv2_memref() {
 }
 
 // Test scalar memref.
-// CHECK: llvm.mlir.global external @gv3(1.000000e+00 : f32) : f32
+// CHECK: llvm.mlir.global external @gv3(1.000000e+00 : f32) {addr_space = 0 : i32} : f32
 memref.global @gv3 : memref<f32> = dense<1.0>
 
 // CHECK-LABEL: func @get_gv3_memref
@@ -691,7 +691,7 @@ func.func @get_gv3_memref() {
 }
 
 // Test scalar memref with an alignment.
-// CHECK: llvm.mlir.global private @gv4(1.000000e+00 : f32) {alignment = 64 : i64} : f32
+// CHECK: llvm.mlir.global private @gv4(1.000000e+00 : f32) {addr_space = 0 : i32, alignment = 64 : i64} : f32
 memref.global "private" @gv4 : memref<f32> = dense<1.0> {alignment = 64}
 
 // -----
