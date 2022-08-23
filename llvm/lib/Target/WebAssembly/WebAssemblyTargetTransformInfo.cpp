@@ -57,6 +57,8 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
     TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
 
+  const TTI::OperandValueInfo Op2Info = {Opd2Info, Opd2PropInfo};
+
   InstructionCost Cost =
       BasicTTIImplBase<WebAssemblyTTIImpl>::getArithmeticInstrCost(
           Opcode, Ty, CostKind, Opd1Info, Opd2Info, Opd1PropInfo, Opd2PropInfo);
@@ -69,8 +71,7 @@ InstructionCost WebAssemblyTTIImpl::getArithmeticInstrCost(
       // SIMD128's shifts currently only accept a scalar shift count. For each
       // element, we'll need to extract, op, insert. The following is a rough
       // approximation.
-      if (Opd2Info != TTI::OK_UniformValue &&
-          Opd2Info != TTI::OK_UniformConstantValue)
+      if (!Op2Info.isUniform())
         Cost =
             cast<FixedVectorType>(VTy)->getNumElements() *
             (TargetTransformInfo::TCC_Basic +
