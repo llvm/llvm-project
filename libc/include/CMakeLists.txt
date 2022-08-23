@@ -208,6 +208,7 @@ add_gen_header(
   GEN_HDR sys/stat.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.sys_stat_macros
     .llvm-libc-types.mode_t
 )
 
