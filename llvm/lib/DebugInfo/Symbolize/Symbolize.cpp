@@ -16,9 +16,9 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBContext.h"
-#include "llvm/DebugInfo/Symbolize/DIFetcher.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
@@ -45,7 +45,9 @@ namespace symbolize {
 
 LLVMSymbolizer::LLVMSymbolizer() = default;
 
-LLVMSymbolizer::LLVMSymbolizer(const Options &Opts) : Opts(Opts) {}
+LLVMSymbolizer::LLVMSymbolizer(const Options &Opts)
+    : Opts(Opts),
+      BIDFetcher(std::make_unique<BuildIDFetcher>(Opts.DebugFileDirectory)) {}
 
 LLVMSymbolizer::~LLVMSymbolizer() = default;
 
@@ -307,42 +309,7 @@ bool darwinDsymMatchesBinary(const MachOObjectFile *DbgObj,
   return !memcmp(dbg_uuid.data(), bin_uuid.data(), dbg_uuid.size());
 }
 
-template <typename ELFT>
-Optional<ArrayRef<uint8_t>> getBuildID(const ELFFile<ELFT> &Obj) {
-  auto PhdrsOrErr = Obj.program_headers();
-  if (!PhdrsOrErr) {
-    consumeError(PhdrsOrErr.takeError());
-    return {};
-  }
-  for (const auto &P : *PhdrsOrErr) {
-    if (P.p_type != ELF::PT_NOTE)
-      continue;
-    Error Err = Error::success();
-    for (auto N : Obj.notes(P, Err))
-      if (N.getType() == ELF::NT_GNU_BUILD_ID &&
-          N.getName() == ELF::ELF_NOTE_GNU)
-        return N.getDesc();
-    consumeError(std::move(Err));
-  }
-  return {};
-}
-
 } // end anonymous namespace
-
-Optional<ArrayRef<uint8_t>> getBuildID(const ELFObjectFileBase *Obj) {
-  Optional<ArrayRef<uint8_t>> BuildID;
-  if (auto *O = dyn_cast<ELFObjectFile<ELF32LE>>(Obj))
-    BuildID = getBuildID(O->getELFFile());
-  else if (auto *O = dyn_cast<ELFObjectFile<ELF32BE>>(Obj))
-    BuildID = getBuildID(O->getELFFile());
-  else if (auto *O = dyn_cast<ELFObjectFile<ELF64LE>>(Obj))
-    BuildID = getBuildID(O->getELFFile());
-  else if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(Obj))
-    BuildID = getBuildID(O->getELFFile());
-  else
-    llvm_unreachable("unsupported file format");
-  return BuildID;
-}
 
 ObjectFile *LLVMSymbolizer::lookUpDsymFile(const std::string &ExePath,
                                            const MachOObjectFile *MachExeObj,
@@ -471,27 +438,14 @@ bool LLVMSymbolizer::getOrFindDebugBinary(const ArrayRef<uint8_t> BuildID,
     Result = I->second;
     return true;
   }
-  auto recordPath = [&](StringRef Path) {
-    Result = Path.str();
+  if (!BIDFetcher)
+    return false;
+  if (Optional<std::string> Path = BIDFetcher->fetch(BuildID)) {
+    Result = *Path;
     auto InsertResult = BuildIDPaths.insert({BuildIDStr, Result});
     assert(InsertResult.second);
     (void)InsertResult;
-  };
-
-  Optional<std::string> Path;
-  Path = LocalDIFetcher(Opts.DebugFileDirectory).fetchBuildID(BuildID);
-  if (Path) {
-    recordPath(*Path);
     return true;
-  }
-
-  // Try caller-provided debug info fetchers.
-  for (const std::unique_ptr<DIFetcher> &Fetcher : DIFetchers) {
-    Path = Fetcher->fetchBuildID(BuildID);
-    if (Path) {
-      recordPath(*Path);
-      return true;
-    }
   }
 
   return false;
