@@ -235,17 +235,6 @@ def LinalgStrategyDecomposePass
   ];
 }
 
-def LinalgStrategyInterchangePass
-    : Pass<"linalg-strategy-interchange-pass", "func::FuncOp"> {
-  let summary = "Configurable pass to apply pattern-based iterator interchange.";
-  let constructor = "mlir::createLinalgStrategyInterchangePass()";
-  let dependentDialects = ["linalg::LinalgDialect"];
-  let options = [
-    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
-      "Which func op is the anchor to latch on.">,
-  ];
-}
-
 def LinalgStrategyPeelPass
     : Pass<"linalg-strategy-peel-pass", "func::FuncOp"> {
   let summary = "Configurable pass to apply pattern-based linalg peeling.";
