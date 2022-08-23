@@ -1092,6 +1092,47 @@ MCSymbol *BinaryFunction::handleExternalReference(MCInst &Instruction,
   return BC.getOrCreateGlobalSymbol(TargetAddress, "FUNCat");
 }
 
+void BinaryFunction::handleIndirectBranch(MCInst &Instruction, uint64_t Size,
+                                          uint64_t Offset) {
+  auto &MIB = BC.MIB;
+  uint64_t IndirectTarget = 0;
+  IndirectBranchType Result =
+      processIndirectBranch(Instruction, Size, Offset, IndirectTarget);
+  switch (Result) {
+  default:
+    llvm_unreachable("unexpected result");
+  case IndirectBranchType::POSSIBLE_TAIL_CALL: {
+    bool Result = MIB->convertJmpToTailCall(Instruction);
+    (void)Result;
+    assert(Result);
+    break;
+  }
+  case IndirectBranchType::POSSIBLE_JUMP_TABLE:
+  case IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE:
+    if (opts::JumpTables == JTS_NONE)
+      IsSimple = false;
+    break;
+  case IndirectBranchType::POSSIBLE_FIXED_BRANCH: {
+    if (containsAddress(IndirectTarget)) {
+      const MCSymbol *TargetSymbol = getOrCreateLocalLabel(IndirectTarget);
+      Instruction.clear();
+      MIB->createUncondBranch(Instruction, TargetSymbol, BC.Ctx.get());
+      TakenBranches.emplace_back(Offset, IndirectTarget - getAddress());
+      HasFixedIndirectBranch = true;
+    } else {
+      MIB->convertJmpToTailCall(Instruction);
+      BC.addInterproceduralReference(this, IndirectTarget);
+    }
+    break;
+  }
+  case IndirectBranchType::UNKNOWN:
+    // Keep processing. We'll do more checks and fixes in
+    // postProcessIndirectBranches().
+    UnknownIndirectBranchOffsets.emplace(Offset);
+    break;
+  }
+}
+
 bool BinaryFunction::disassemble() {
   NamedRegionTimer T("disassemble", "Disassemble function", "buildfuncs",
                      "Build Binary Functions", opts::TimeBuild);
@@ -1109,46 +1150,6 @@ bool BinaryFunction::disassemble() {
   // Insert a label at the beginning of the function. This will be our first
   // basic block.
   Labels[0] = Ctx->createNamedTempSymbol("BB0");
-
-  auto handleIndirectBranch = [&](MCInst &Instruction, uint64_t Size,
-                                  uint64_t Offset) {
-    uint64_t IndirectTarget = 0;
-    IndirectBranchType Result =
-        processIndirectBranch(Instruction, Size, Offset, IndirectTarget);
-    switch (Result) {
-    default:
-      llvm_unreachable("unexpected result");
-    case IndirectBranchType::POSSIBLE_TAIL_CALL: {
-      bool Result = MIB->convertJmpToTailCall(Instruction);
-      (void)Result;
-      assert(Result);
-      break;
-    }
-    case IndirectBranchType::POSSIBLE_JUMP_TABLE:
-    case IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE:
-      if (opts::JumpTables == JTS_NONE)
-        IsSimple = false;
-      break;
-    case IndirectBranchType::POSSIBLE_FIXED_BRANCH: {
-      if (containsAddress(IndirectTarget)) {
-        const MCSymbol *TargetSymbol = getOrCreateLocalLabel(IndirectTarget);
-        Instruction.clear();
-        MIB->createUncondBranch(Instruction, TargetSymbol, BC.Ctx.get());
-        TakenBranches.emplace_back(Offset, IndirectTarget - getAddress());
-        HasFixedIndirectBranch = true;
-      } else {
-        MIB->convertJmpToTailCall(Instruction);
-        BC.addInterproceduralReference(this, IndirectTarget);
-      }
-      break;
-    }
-    case IndirectBranchType::UNKNOWN:
-      // Keep processing. We'll do more checks and fixes in
-      // postProcessIndirectBranches().
-      UnknownIndirectBranchOffsets.emplace(Offset);
-      break;
-    }
-  };
 
   // Check for linker veneers, which lack relocations and need manual
   // adjustments.
