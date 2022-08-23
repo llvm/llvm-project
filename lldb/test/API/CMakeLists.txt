@@ -37,7 +37,7 @@ set(LLDB_TEST_USER_ARGS
   ""
   CACHE STRING "Specify additional arguments to pass to test runner. For example: '-C gcc -C clang -A i386 -A x86_64'")
 
-set(LLDB_TEST_COMMON_ARGS
+set(LLDB_TEST_COMMON_ARGS_VAR
   -u CXXFLAGS
   -u CFLAGS
   )
@@ -71,16 +71,16 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
     CACHE BOOL "(Windows only) Hides the console window for an inferior when it is launched through the test suite")
 
   if (LLDB_TEST_DEBUG_TEST_CRASHES)
-    set(LLDB_TEST_COMMON_ARGS ${LLDB_TEST_COMMON_ARGS} --enable-crash-dialog)
+    set(LLDB_TEST_COMMON_ARGS_VAR ${LLDB_TEST_COMMON_ARGS_VAR} --enable-crash-dialog)
   endif()
 
   if (NOT LLDB_TEST_HIDE_CONSOLE_WINDOWS)
-    set(LLDB_TEST_COMMON_ARGS ${LLDB_TEST_COMMON_ARGS} --show-inferior-console)
+    set(LLDB_TEST_COMMON_ARGS_VAR ${LLDB_TEST_COMMON_ARGS_VAR} --show-inferior-console)
   endif()
 endif()
 
 if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows|Darwin")
-  list(APPEND LLDB_TEST_COMMON_ARGS
+  list(APPEND LLDB_TEST_COMMON_ARGS_VAR
     --env ARCHIVER=${CMAKE_AR} --env OBJCOPY=${CMAKE_OBJCOPY})
 endif()
 
@@ -98,7 +98,7 @@ if(CMAKE_HOST_APPLE)
   # Use the same identity for testing
   get_property(code_sign_identity_used GLOBAL PROPERTY LLDB_DEBUGSERVER_CODESIGN_IDENTITY)
   if(code_sign_identity_used)
-    list(APPEND LLDB_TEST_COMMON_ARGS --codesign-identity "${code_sign_identity_used}")
+    list(APPEND LLDB_TEST_COMMON_ARGS_VAR --codesign-identity "${code_sign_identity_used}")
   endif()
 
   if(LLDB_USE_SYSTEM_DEBUGSERVER)
@@ -115,20 +115,20 @@ if(CMAKE_HOST_APPLE)
         COMMENT "Copying the system debugserver to LLDB's binaries directory for testing.")
     endif()
     message(STATUS "LLDB tests use out-of-tree debugserver: ${system_debugserver_path}")
-    list(APPEND LLDB_TEST_COMMON_ARGS --out-of-tree-debugserver)
+    list(APPEND LLDB_TEST_COMMON_ARGS_VAR --out-of-tree-debugserver)
     add_lldb_test_dependency(debugserver)
   else()
     message(STATUS "LLDB tests use just-built debug server")
   endif()
 endif()
 
-set(LLDB_DOTEST_ARGS ${LLDB_TEST_COMMON_ARGS};${LLDB_TEST_USER_ARGS} CACHE INTERNAL STRING)
 set(dotest_args_replacement ${LLVM_BUILD_MODE})
 
 if(LLDB_BUILT_STANDALONE)
   # In paths to our build-tree, replace CMAKE_CFG_INTDIR with our configuration name placeholder.
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} config_runtime_output_dir ${LLVM_RUNTIME_OUTPUT_INTDIR})
-  string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
+  string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_COMMON_ARGS_VAR "${LLDB_TEST_COMMON_ARGS_VAR}")
+  string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_USER_ARGS "${LLDB_TEST_USER_ARGS}")
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_SOURCE_DIR "${LLDB_SOURCE_DIR}")
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_FRAMEWORK_DIR "${LLDB_FRAMEWORK_DIR}")
   string(REPLACE ${LLVM_RUNTIME_OUTPUT_INTDIR} ${config_runtime_output_dir} LLDB_TEST_BUILD_DIRECTORY "${LLDB_TEST_BUILD_DIRECTORY}")
@@ -155,12 +155,15 @@ if(LLDB_BUILT_STANDALONE)
   endif()
 endif()
 
-string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_DOTEST_ARGS "${LLDB_DOTEST_ARGS}")
+string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_COMMON_ARGS_VAR "${LLDB_TEST_COMMON_ARGS_VAR}")
+string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_USER_ARGS "${LLDB_TEST_USER_ARGS}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_SOURCE_DIR "${LLDB_SOURCE_DIR}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_BUILD_DIRECTORY "${LLDB_TEST_BUILD_DIRECTORY}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_EXECUTABLE "${LLDB_TEST_EXECUTABLE}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_COMPILER "${LLDB_TEST_COMPILER}")
 string(REPLACE ${CMAKE_CFG_INTDIR} ${dotest_args_replacement} LLDB_TEST_DSYMUTIL "${LLDB_TEST_DSYMUTIL}")
+
+set(LLDB_TEST_COMMON_ARGS ${LLDB_TEST_COMMON_ARGS_VAR} CACHE INTERNAL STRING)
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
