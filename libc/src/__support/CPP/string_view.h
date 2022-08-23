@@ -33,30 +33,41 @@ private:
     return 0;
   }
 
+  static constexpr size_t length(const char *Str) {
+    for (const char *End = Str;; ++End)
+      if (*End == '\0')
+        return End - Str;
+  }
+
+  bool equals(string_view Other) const {
+    return (Len == Other.Len &&
+            compareMemory(Data, Other.Data, Other.Len) == 0);
+  }
+
 public:
+  using value_type = char;
+  using size_type = size_t;
+  using difference_type = ptrdiff_t;
+  using pointer = char *;
+  using const_pointer = const char *;
+  using reference = char &;
+  using const_reference = const char &;
+  using const_iterator = char *;
+  using iterator = const_iterator;
+
   // special value equal to the maximum value representable by the type
   // size_type.
-  static constexpr size_t npos = -1;
+  inline static constexpr size_t npos = -1;
 
   constexpr string_view() : Data(nullptr), Len(0) {}
 
   // Assumes Str is a null-terminated string. The length of the string does
   // not include the terminating null character.
-  explicit constexpr string_view(const char *Str) : Data(Str), Len(0) {
-    if (Str == nullptr)
-      return;
-    for (const char *D = Data; *D != '\0'; ++D, ++Len)
-      ;
-    if (Len == 0)
-      Data = nullptr;
-  }
+  // Preconditions: [Str, Str + ​length(Str)) is a valid range.
+  constexpr string_view(const char *Str) : Data(Str), Len(length(Str)) {}
 
-  explicit constexpr string_view(const char *Str, size_t N)
-      : Data(N ? Str : nullptr), Len(Str == nullptr ? 0 : N) {}
-
-  // Ctor for raw literal.
-  template <size_t N>
-  constexpr string_view(const char (&Str)[N]) : string_view(Str, N - 1) {}
+  // Preconditions: [Str, Str + N) is a valid range.
+  constexpr string_view(const char *Str, size_t N) : Data(Str), Len(N) {}
 
   constexpr const char *data() const { return Data; }
 
@@ -90,16 +101,14 @@ public:
     return Len < Other.Len ? -1 : 1;
   }
 
-  // An equivalent method is not available in std::string_view.
-  bool equals(string_view Other) const {
-    return (Len == Other.Len &&
-            compareMemory(Data, Other.Data, Other.Len) == 0);
-  }
-
   inline bool operator==(string_view Other) const { return equals(Other); }
   inline bool operator!=(string_view Other) const { return !(*this == Other); }
-  inline bool operator<(string_view Other) const { return compare(Other) == -1; }
-  inline bool operator<=(string_view Other) const { return compare(Other) != 1; }
+  inline bool operator<(string_view Other) const {
+    return compare(Other) == -1;
+  }
+  inline bool operator<=(string_view Other) const {
+    return compare(Other) != 1;
+  }
   inline bool operator>(string_view Other) const { return compare(Other) == 1; }
   inline bool operator>=(string_view Other) const {
     return compare(Other) != -1;
@@ -115,16 +124,6 @@ public:
   // Moves the end of the view back by n characters.
   // The behavior is undefined if n > size().
   void remove_suffix(size_t N) { Len -= N; }
-
-  // An equivalent method is not available in std::string_view.
-  string_view trim(const char C) const {
-    string_view Copy = *this;
-    while (Copy.starts_with(C))
-      Copy = Copy.drop_front();
-    while (Copy.ends_with(C))
-      Copy = Copy.drop_back();
-    return Copy;
-  }
 
   // Check if this string starts with the given Prefix.
   bool starts_with(string_view Prefix) const {
@@ -162,129 +161,27 @@ public:
     return string_view(Data + Start, min(N, Len - Start));
   }
 
-  // Search for the first character matching the character
-  //
-  // Returns The index of the first character satisfying the character starting
-  // from From, or npos if not found.
-  size_t find_first_of(const char c, size_t From = 0) const noexcept {
-    string_view S = drop_front(From);
-    while (!S.empty()) {
-      if (S.front() == c)
-        return size() - S.size();
-      S = S.drop_front();
-    }
-    return npos;
-  }
-
-  // Search for the last character matching the character
-  //
-  // Return the index of the last character equal to the |c| before End.
-  size_t find_last_of(const char c, size_t End = npos) const {
-    End = End > size() ? size() : End + 1;
-    string_view S = drop_back(size() - End);
-    while (!S.empty()) {
-      if (S.back() == c)
-        return S.size() - 1;
-      S = S.drop_back();
-    }
-    return npos;
-  }
-
-  // Search for the first character satisfying the predicate Function
-  //
-  // Returns The index of the first character satisfying Function starting from
-  // From, or npos if not found.
-  template <typename F> size_t find_if(F Function, size_t From = 0) const {
-    string_view S = drop_front(From);
-    while (!S.empty()) {
-      if (Function(S.front()))
-        return size() - S.size();
-      S = S.drop_front();
-    }
-    return npos;
-  }
-
-  // Search for the first character not satisfying the predicate Function
-  // Returns The index of the first character not satisfying Function starting
-  // from From, or npos if not found.
-  template <typename F> size_t find_if_not(F Function, size_t From = 0) const {
-    return find_if([Function](char c) { return !Function(c); }, From);
-  }
-
   // front - Get the first character in the string.
   char front() const { return Data[0]; }
 
   // back - Get the last character in the string.
   char back() const { return Data[Len - 1]; }
 
-  // Return a string_view equal to 'this' but with the first N elements
-  // dropped.
-  string_view drop_front(size_t N = 1) const { return substr(N); }
-
-  // Return a string_view equal to 'this' but with the last N elements
-  // dropped.
-  string_view drop_back(size_t N = 1) const { return substr(0, size() - N); }
-
-  // Return a string_view equal to 'this' but with only the first N
-  // elements remaining.  If N is greater than the length of the
-  // string, the entire string is returned.
-  string_view take_front(size_t N = 1) const {
-    if (N >= size())
-      return *this;
-    return drop_back(size() - N);
+  // Finds the first occurence of c in this view, starting at position From.
+  size_t find_first_of(const char c, size_t From = 0) const {
+    for (size_t Pos = From; Pos < size(); ++Pos)
+      if ((*this)[Pos] == c)
+        return Pos;
+    return npos;
   }
 
-  // Return a string_view equal to 'this' but with only the last N
-  // elements remaining.  If N is greater than the length of the
-  // string, the entire string is returned.
-  string_view take_back(size_t N = 1) const {
-    if (N >= size())
-      return *this;
-    return drop_front(size() - N);
-  }
-
-  // Return the longest prefix of 'this' such that every character
-  // in the prefix satisfies the given predicate.
-  template <typename F> string_view take_while(F Function) const {
-    return substr(0, find_if_not(Function));
-  }
-
-  // Return the longest prefix of 'this' such that no character in
-  // the prefix satisfies the given predicate.
-  template <typename F> string_view take_until(F Function) const {
-    return substr(0, find_if(Function));
-  }
-
-  // Return a string_view equal to 'this', but with all characters satisfying
-  // the given predicate dropped from the beginning of the string.
-  template <typename F> string_view drop_while(F Function) const {
-    return substr(find_if_not(Function));
-  }
-
-  // Return a string_view equal to 'this', but with all characters not
-  // satisfying the given predicate dropped from the beginning of the string.
-  template <typename F> string_view drop_until(F Function) const {
-    return substr(find_if(Function));
-  }
-
-  // Returns true if this string_view has the given prefix and removes that
-  // prefix.
-  bool consume_front(string_view Prefix) {
-    if (!starts_with(Prefix))
-      return false;
-
-    *this = drop_front(Prefix.size());
-    return true;
-  }
-
-  // Returns true if this string_view has the given suffix and removes that
-  // suffix.
-  bool consume_back(string_view Suffix) {
-    if (!ends_with(Suffix))
-      return false;
-
-    *this = drop_back(Suffix.size());
-    return true;
+  // Finds the last occurence of c in this view, ending at position End.
+  size_t find_last_of(const char c, size_t End = npos) const {
+    End = End > size() ? size() : End + 1;
+    for (; End > 0; --End)
+      if ((*this)[End - 1] == c)
+        return End - 1;
+    return npos;
   }
 };
 
