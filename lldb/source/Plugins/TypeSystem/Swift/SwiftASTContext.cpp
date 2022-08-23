@@ -4537,7 +4537,7 @@ SwiftASTContext::CreateTupleType(const std::vector<TupleElement> &elements) {
     }
     llvm::ArrayRef<swift::TupleTypeElt> fields(tuple_elems);
     return ToCompilerType(
-        {swift::TupleType::get(fields, *GetASTContext()).getPointer()});
+        {swift::TupleType::get(fields, *GetASTContext())});
   }
 }
 
