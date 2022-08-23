@@ -47,9 +47,8 @@ TEST_MAIN() {
   ASSERT_EQ(__llvm_libc::pthread_setname_np(main_thread, MAIN_THREAD_NAME), 0);
   ASSERT_EQ(
       __llvm_libc::pthread_getname_np(main_thread, thread_name_buffer, 16), 0);
-  ASSERT_TRUE(string_view(MAIN_THREAD_NAME)
-                  .equals(string_view(
-                      reinterpret_cast<const char *>(thread_name_buffer))));
+  ASSERT_EQ(string_view(MAIN_THREAD_NAME),
+            string_view(reinterpret_cast<const char *>(thread_name_buffer)));
 
   pthread_t th;
   ASSERT_EQ(__llvm_libc::pthread_create(&th, nullptr, child_func, nullptr), 0);
@@ -57,9 +56,8 @@ TEST_MAIN() {
   const char CHILD_THREAD_NAME[] = "child_thread";
   ASSERT_EQ(__llvm_libc::pthread_setname_np(th, CHILD_THREAD_NAME), 0);
   ASSERT_EQ(__llvm_libc::pthread_getname_np(th, thread_name_buffer, 16), 0);
-  ASSERT_TRUE(string_view(CHILD_THREAD_NAME)
-                  .equals(string_view(
-                      reinterpret_cast<const char *>(thread_name_buffer))));
+  ASSERT_EQ(string_view(CHILD_THREAD_NAME),
+            string_view(reinterpret_cast<const char *>(thread_name_buffer)));
 
   ASSERT_EQ(__llvm_libc::pthread_mutex_unlock(&mutex), 0);
 
@@ -67,9 +65,9 @@ TEST_MAIN() {
   ASSERT_EQ(__llvm_libc::pthread_join(th, &retval), 0);
   ASSERT_EQ(uintptr_t(retval), uintptr_t(nullptr));
   // Make sure that the child thread saw it name correctly.
-  ASSERT_TRUE(string_view(CHILD_THREAD_NAME)
-                  .equals(string_view(reinterpret_cast<const char *>(
-                      child_thread_name_buffer))));
+  ASSERT_EQ(
+      string_view(CHILD_THREAD_NAME),
+      string_view(reinterpret_cast<const char *>(child_thread_name_buffer)));
 
   __llvm_libc::pthread_mutex_destroy(&mutex);
 
