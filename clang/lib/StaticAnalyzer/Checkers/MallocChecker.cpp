@@ -1733,6 +1733,10 @@ ProgramStateRef MallocChecker::MallocMemAux(CheckerContext &C,
   // Fill the region with the initialization value.
   State = State->bindDefaultInitial(RetVal, Init, LCtx);
 
+  // If Size is somehow undefined at this point, this line prevents a crash.
+  if (Size.isUndef())
+    Size = UnknownVal();
+
   // Set the region's extent.
   State = setDynamicExtent(State, RetVal.getAsRegion(),
                            Size.castAs<DefinedOrUnknownSVal>(), svalBuilder);
