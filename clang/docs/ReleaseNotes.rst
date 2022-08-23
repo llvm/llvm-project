@@ -233,6 +233,11 @@ libclang
 Static Analyzer
 ---------------
 
+- Removed the deprecated ``-analyzer-store`` and
+  ``-analyzer-opt-analyze-nested-blocks`` analyzer flags.
+  ``scanbuild`` was also updated accordingly.
+  Passing these flags will result in a hard error.
+
 .. _release-notes-ubsan:
 
 Undefined Behavior Sanitizer (UBSan)
