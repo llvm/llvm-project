@@ -1665,8 +1665,7 @@ Value *llvm::addRuntimeChecks(
 }
 
 Value *llvm::addDiffRuntimeChecks(
-    Instruction *Loc, Loop *TheLoop, ArrayRef<PointerDiffInfo> Checks,
-    SCEVExpander &Expander,
+    Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
     function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC) {
 
   LLVMContext &Ctx = Loc->getContext();
