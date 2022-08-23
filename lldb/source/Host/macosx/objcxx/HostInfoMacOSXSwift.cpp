@@ -9,6 +9,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/posix/HostInfoPosix.h"
+#include "lldb/Host/common/HostInfoSwift.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -16,17 +17,6 @@
 #include <string>
 
 using namespace lldb_private;
-
-static bool VerifySwiftPath(const llvm::Twine &swift_path) {
-  if (FileSystem::Instance().IsDirectory(swift_path))
-    return true;
-  Log *log = GetLog(LLDBLog::Host);
-  if (log)
-    log->Printf("VerifySwiftPath(): "
-                "failed to stat swift resource directory at \"%s\"",
-                swift_path.str().c_str());
-  return false;
-}
 
 bool HostInfoMacOSX::ComputeSwiftResourceDirectory(FileSpec &lldb_shlib_spec,
                                                    FileSpec &file_spec,
