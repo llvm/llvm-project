@@ -183,9 +183,7 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
     C.InputFiles.push_back({None, Arg->getValue()});
   for (auto Arg : InputArgs.filtered(LIPO_arch)) {
     validateArchitectureName(Arg->getValue(0));
-    if (!Arg->getValue(1))
-      reportError(
-          "arch is missing an argument: expects -arch arch_type file_name");
+    assert(Arg->getValue(1) && "file_name is missing");
     C.InputFiles.push_back({StringRef(Arg->getValue(0)), Arg->getValue(1)});
   }
 
@@ -294,10 +292,7 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
 
   case LIPO_replace:
     for (auto Action : ActionArgs) {
-      if (!Action->getValue(1))
-        reportError(
-            "replace is missing an argument: expects -replace arch_type "
-            "file_name");
+      assert(Action->getValue(1) && "file_name is missing");
       validateArchitectureName(Action->getValue(0));
       C.ReplacementFiles.push_back(
           {StringRef(Action->getValue(0)), Action->getValue(1)});
@@ -725,7 +720,7 @@ replaceSlices(LLVMContext &LLVMCtx,
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
-  Config C = parseLipoOptions(makeArrayRef(argv + 1, argc));
+  Config C = parseLipoOptions(makeArrayRef(argv + 1, argc - 1));
   LLVMContext LLVMCtx;
   SmallVector<OwningBinary<Binary>, 1> InputBinaries =
       readInputBinaries(LLVMCtx, C.InputFiles);
