@@ -1897,7 +1897,7 @@ public:
       if (DiffChecks) {
         Value *RuntimeVF = nullptr;
         MemRuntimeCheckCond = addDiffRuntimeChecks(
-            MemCheckBlock->getTerminator(), L, *DiffChecks, MemCheckExp,
+            MemCheckBlock->getTerminator(), *DiffChecks, MemCheckExp,
             [VF, &RuntimeVF](IRBuilderBase &B, unsigned Bits) {
               if (!RuntimeVF)
                 RuntimeVF = getRuntimeVF(B, B.getIntNTy(Bits), VF);
