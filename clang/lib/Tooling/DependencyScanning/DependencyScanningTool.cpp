@@ -470,7 +470,8 @@ DependencyScanningTool::getFullDependencies(
     const llvm::StringSet<> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput,
     llvm::Optional<StringRef> ModuleName) {
-  FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput);
+  FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput,
+                                  Worker.shouldEagerLoadModules());
   llvm::cas::CachingOnDiskFileSystem *FS =
       Worker.useCAS() ? &Worker.getCASFS() : nullptr;
   if (FS) {
@@ -513,9 +514,14 @@ FullDependenciesResult FullDependencyConsumer::getFullDependencies(
     auto &MD = M.second;
     if (MD.ImportedByMainFile) {
       FD.ClangModuleDeps.push_back(MD.ID);
-      FD.CommandLine.push_back(
-          "-fmodule-file=" +
-          LookupModuleOutput(MD.ID, ModuleOutputKind::ModuleFile));
+      auto PCMPath = LookupModuleOutput(MD.ID, ModuleOutputKind::ModuleFile);
+      if (EagerLoadModules) {
+        FD.CommandLine.push_back("-fmodule-file=" + PCMPath);
+      } else {
+        FD.CommandLine.push_back("-fmodule-map-file=" + MD.ClangModuleMapFile);
+        FD.CommandLine.push_back("-fmodule-file=" + MD.ID.ModuleName + "=" +
+                                 PCMPath);
+      }
     }
   }
 

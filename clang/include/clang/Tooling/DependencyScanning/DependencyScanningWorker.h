@@ -135,6 +135,8 @@ public:
   /// each invocation.
   llvm::IntrusiveRefCntPtr<FileManager> getOrCreateFileManager() const;
 
+  bool shouldEagerLoadModules() const { return EagerLoadModules; }
+
 private:
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
 
@@ -159,6 +161,9 @@ private:
   llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
   CASOptions CASOpts;
   bool UseCAS;
+
+  /// Whether to set up command-lines to load PCM files eagerly.
+  bool EagerLoadModules;
 };
 
 } // end namespace dependencies

@@ -114,7 +114,7 @@ static CXFileDependencies *getFullDependencies(
     void *Context, CXString *error, LookupModuleOutputCallback LookupOutput,
     llvm::Optional<StringRef> ModuleName = None) {
   llvm::StringSet<> AlreadySeen;
-  FullDependencyConsumer Consumer(AlreadySeen, LookupOutput);
+  FullDependencyConsumer Consumer(AlreadySeen, LookupOutput, false);
   llvm::Error Result = Worker->computeDependencies(
       WorkingDirectory, Compilation, Consumer, ModuleName);
 
