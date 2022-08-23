@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/CIR/IR/CIRDialect.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -57,7 +58,7 @@ struct ConvertCIRToMemRefPass
                                mlir::OperationPass<mlir::ModuleOp>> {
   void getDependentDialects(mlir::DialectRegistry &registry) const override {
     registry.insert<mlir::memref::MemRefDialect, mlir::func::FuncDialect,
-                    mlir::scf::SCFDialect>();
+                    mlir::scf::SCFDialect, mlir::cf::ControlFlowDialect>();
   }
   void runOnOperation() final;
 
@@ -466,10 +467,22 @@ public:
   }
 };
 
+class CIRBrOpLowering : public mlir::OpRewritePattern<mlir::cir::BrOp> {
+public:
+  using OpRewritePattern<mlir::cir::BrOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::BrOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::cf::BranchOp>(op, op.getDest());
+    return mlir::LogicalResult::success();
+  }
+};
+
 void populateCIRToMemRefConversionPatterns(mlir::RewritePatternSet &patterns) {
   patterns.add<CIRAllocaLowering, CIRLoadLowering, CIRStoreLowering,
-               CIRConstantLowering, CIRBinOpLowering, CIRCmpOpLowering>(
-      patterns.getContext());
+               CIRConstantLowering, CIRBinOpLowering, CIRCmpOpLowering,
+               CIRBrOpLowering>(patterns.getContext());
 }
 
 void ConvertCIRToLLVMPass::runOnOperation() {
@@ -497,13 +510,13 @@ void ConvertCIRToMemRefPass::runOnOperation() {
   // whether we should have micro-conversions that do the minimal amount of work
   // or macro conversions that entiirely remove a dialect.
   target.addLegalOp<mlir::ModuleOp>();
-  target
-      .addLegalDialect<mlir::affine::AffineDialect, mlir::arith::ArithDialect,
-                       mlir::memref::MemRefDialect, mlir::func::FuncDialect>();
+  target.addLegalDialect<mlir::affine::AffineDialect, mlir::arith::ArithDialect,
+                         mlir::memref::MemRefDialect, mlir::func::FuncDialect,
+                         mlir::scf::SCFDialect, mlir::cf::ControlFlowDialect>();
   target
       .addIllegalOp<mlir::cir::BinOp, mlir::cir::ReturnOp, mlir::cir::AllocaOp,
                     mlir::cir::LoadOp, mlir::cir::StoreOp,
-                    mlir::cir::ConstantOp, mlir::cir::CmpOp>();
+                    mlir::cir::ConstantOp, mlir::cir::CmpOp, mlir::cir::BrOp>();
 
   mlir::RewritePatternSet patterns(&getContext());
   populateCIRToMemRefConversionPatterns(patterns);
