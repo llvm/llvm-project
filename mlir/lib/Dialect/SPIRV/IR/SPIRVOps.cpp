@@ -2871,9 +2871,9 @@ LogicalResult spirv::IAddCarryOp::verify() {
   if (resultType.getNumElements() != 2)
     return emitOpError("expected result struct type containing two members");
 
-  if (!llvm::is_splat({operand1().getType(), operand2().getType(),
-                       resultType.getElementType(0),
-                       resultType.getElementType(1)}))
+  if (!llvm::all_equal({operand1().getType(), operand2().getType(),
+                        resultType.getElementType(0),
+                        resultType.getElementType(1)}))
     return emitOpError(
         "expected all operand types and struct member types are the same");
 
@@ -2920,9 +2920,9 @@ LogicalResult spirv::ISubBorrowOp::verify() {
   if (resultType.getNumElements() != 2)
     return emitOpError("expected result struct type containing two members");
 
-  if (!llvm::is_splat({operand1().getType(), operand2().getType(),
-                       resultType.getElementType(0),
-                       resultType.getElementType(1)}))
+  if (!llvm::all_equal({operand1().getType(), operand2().getType(),
+                        resultType.getElementType(0),
+                        resultType.getElementType(1)}))
     return emitOpError(
         "expected all operand types and struct member types are the same");
 

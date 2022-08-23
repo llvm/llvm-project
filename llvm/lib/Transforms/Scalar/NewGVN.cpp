@@ -3166,7 +3166,7 @@ bool NewGVN::singleReachablePHIPath(
       make_filter_range(MP->operands(), ReachableOperandPred);
   SmallVector<const Value *, 32> OperandList;
   llvm::copy(FilteredPhiArgs, std::back_inserter(OperandList));
-  bool Okay = is_splat(OperandList);
+  bool Okay = all_equal(OperandList);
   if (Okay)
     return singleReachablePHIPath(Visited, cast<MemoryAccess>(OperandList[0]),
                                   Second);
@@ -3261,7 +3261,7 @@ void NewGVN::verifyMemoryCongruency() const {
                        const MemoryDef *MD = cast<MemoryDef>(U);
                        return ValueToClass.lookup(MD->getMemoryInst());
                      });
-      assert(is_splat(PhiOpClasses) &&
+      assert(all_equal(PhiOpClasses) &&
              "All MemoryPhi arguments should be in the same class");
     }
   }

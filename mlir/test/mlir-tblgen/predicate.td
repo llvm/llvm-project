@@ -102,7 +102,7 @@ def OpJ: NS_Op<"op_for_TCopVTEtAreSameAt", [
 }
 
 // CHECK-LABEL: OpJAdaptor::verify
-// CHECK:      ::llvm::is_splat(::llvm::map_range(
+// CHECK:      ::llvm::all_equal(::llvm::map_range(
 // CHECK-SAME:   ::mlir::ArrayRef<unsigned>({0, 2, 3}),
 // CHECK-SAME:   [this](unsigned i) { return getElementTypeOrSelf(this->getOperand(i)); }))
 // CHECK: "failed to verify that operands indexed at 0, 2, 3 should all have the same type"
