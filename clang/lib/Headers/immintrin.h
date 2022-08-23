@@ -287,6 +287,23 @@ _rdrand64_step(unsigned long long *__p)
 {
   return (int)__builtin_ia32_rdrand64_step(__p);
 }
+#else
+// We need to emulate the functionality of 64-bit rdrand with 2 32-bit
+// rdrand instructions.
+static __inline__ int __attribute__((__always_inline__, __nodebug__, __target__("rdrnd")))
+_rdrand64_step(unsigned long long *__p)
+{
+  unsigned int __lo, __hi;
+  int __res_lo = __builtin_ia32_rdrand32_step(&__lo);
+  int __res_hi = __builtin_ia32_rdrand32_step(&__hi);
+  if (__res_lo && __res_hi) {
+    *__p = ((unsigned long long)__hi << 32) | (unsigned long long)__lo;
+    return 1;
+  } else {
+    *__p = 0;
+    return 0;
+  }
+}
 #endif
 #endif /* __RDRND__ */
 
