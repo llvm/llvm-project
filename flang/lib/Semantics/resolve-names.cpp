@@ -3124,8 +3124,15 @@ void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
       Say(*name, "Procedure '%s' not found"_err_en_US);
       continue;
     }
-    const Symbol &specific{BypassGeneric(*symbol)};
-    const Symbol &ultimate{specific.GetUltimate()};
+    // Subtlety: when *symbol is a use- or host-association, the specific
+    // procedure that is recorded in the GenericDetails below must be *symbol,
+    // not the specific procedure shadowed by a generic, because that specific
+    // procedure may be a symbol from another module and its name unavailable to
+    // emit to a module file.
+    const Symbol &bypassed{BypassGeneric(*symbol)};
+    const Symbol &specific{
+        symbol == &symbol->GetUltimate() ? bypassed : *symbol};
+    const Symbol &ultimate{bypassed.GetUltimate()};
     if (!ultimate.has<SubprogramDetails>() &&
         !ultimate.has<SubprogramNameDetails>()) {
       Say(*name, "'%s' is not a subprogram"_err_en_US);
