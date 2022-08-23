@@ -421,6 +421,15 @@ module {
 
 // -----
 
+module {
+  gpu.module @gpu_funcs {
+    // expected-error @+1 {{expected body with at least one block}}
+    "gpu.func"() ({}) {function_type = () -> (), gpu.kernel, sym_name = "kernel"} : () -> ()
+  }
+}
+
+// -----
+
 func.func @sync_wait_with_result() {
   // expected-error @+1 {{cannot name an operation with no results}}
   %t = gpu.wait
