@@ -13,7 +13,7 @@ entry:
 define dso_local i32 @test_fn(ptr %ptr) {
 ; CHECK-LABEL: @test_fn(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @_ZdlPv(ptr poison) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @_ZdlPv(ptr [[PTR:%.*]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret i32 1
 ;
 entry:
