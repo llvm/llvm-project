@@ -462,8 +462,6 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
 bool SIMachineFunctionInfo::removeDeadFrameIndices(
     MachineFunction &MF, bool ResetSGPRSpillStackIDs) {
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo *TRI = ST.getRegisterInfo();
   // Remove dead frame indices from function frame, however keep FP & BP since
   // spills for them haven't been inserted yet. And also make sure to remove the
   // frame indices from `SGPRSpillToVGPRLanes` data structure, otherwise, it
@@ -478,16 +476,16 @@ bool SIMachineFunctionInfo::removeDeadFrameIndices(
   bool HaveSGPRToMemory = false;
 
   if (ResetSGPRSpillStackIDs) {
-    // All other SPGRs must be allocated on the default stack, so reset the
+    // All other SGPRs must be allocated on the default stack, so reset the
     // stack ID.
-    for (int i = MFI.getObjectIndexBegin(), e = MFI.getObjectIndexEnd(); i != e;
-         ++i) {
-      if (i != FramePointerSaveIndex && i != BasePointerSaveIndex &&
-          (!TRI->isCFISavedRegsSpillEnabled() || i != EXECSaveIndex))
-        if (MFI.getStackID(i) == TargetStackID::SGPRSpill) {
-          MFI.setStackID(i, TargetStackID::Default);
+    for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd(); I != E;
+         ++I) {
+      if (!checkIndexInPrologEpilogSGPRSpills(I)) {
+        if (MFI.getStackID(I) == TargetStackID::SGPRSpill) {
+          MFI.setStackID(I, TargetStackID::Default);
           HaveSGPRToMemory = true;
         }
+      }
     }
   }
 
