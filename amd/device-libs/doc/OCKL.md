@@ -99,8 +99,8 @@ The following table lists the available functions along with a brief description
 | `int __ockl_mul24_i32(int,int);` | Multiply assuming operands fit in 24 bits |
 | `uint __ockl_mul24_u32(uint,uint);` | |
 | - | |
-| `ulong __ockl_memtime_u64(void);` | Current value of free running 64-bit clock counter |
-| `ulong __ockl_memrealtime_u64(void);` | Current value of constant speed 64-bit clock counter |
+| `ulong __ockl_cyclectr_u64(void);` | Current value of free running 64-bit clock counter |
+| `ulong __ockl_steadyctr_u64(void);` | Current value of constant speed 64-bit clock counter |
 | - | |
 | `uint __ockl_activelane_u32(void);` | Index of currently lane counting only active lanes in wavefront |
 | - | |
