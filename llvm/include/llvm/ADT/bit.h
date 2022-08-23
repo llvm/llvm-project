@@ -34,6 +34,45 @@ inline To bit_cast(const From &from) noexcept {
   return to;
 }
 
+namespace detail {
+template <typename T, std::size_t SizeOfT> struct PopulationCounter {
+  static int count(T Value) {
+    // Generic version, forward to 32 bits.
+    static_assert(SizeOfT <= 4, "Not implemented!");
+#if defined(__GNUC__)
+    return (int)__builtin_popcount(Value);
+#else
+    uint32_t v = Value;
+    v = v - ((v >> 1) & 0x55555555);
+    v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
+    return int(((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24);
+#endif
+  }
+};
+
+template <typename T> struct PopulationCounter<T, 8> {
+  static int count(T Value) {
+#if defined(__GNUC__)
+    return (int)__builtin_popcountll(Value);
+#else
+    uint64_t v = Value;
+    v = v - ((v >> 1) & 0x5555555555555555ULL);
+    v = (v & 0x3333333333333333ULL) + ((v >> 2) & 0x3333333333333333ULL);
+    v = (v + (v >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
+    return int((uint64_t)(v * 0x0101010101010101ULL) >> 56);
+#endif
+  }
+};
+} // namespace detail
+
+/// Count the number of set bits in a value.
+/// Ex. popcount(0xF000F000) = 8
+/// Returns 0 if the word is zero.
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+inline int popcount(T Value) noexcept {
+  return detail::PopulationCounter<T, sizeof(T)>::count(Value);
+}
+
 } // namespace llvm
 
 #endif
