@@ -1888,6 +1888,14 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         Value *NewAnd = Builder.CreateAnd(X, Op1);
         return BinaryOperator::CreateXor(NewAnd, Op1);
       }
+
+      // If all bits affected by the add are included in a high-bit-mask, do the
+      // mask op before the add. Example:
+      // (X + 16) & -4 --> (X & -4) + 16
+      if (Op0->hasOneUse() && C->isNegatedPowerOf2() && *AddC == (*AddC & *C)) {
+        Value *NewAnd = Builder.CreateAnd(X, Op1);
+        return BinaryOperator::CreateAdd(NewAnd, ConstantInt::get(Ty, *AddC));
+      }
     }
 
     // ((C1 OP zext(X)) & C2) -> zext((C1 OP X) & C2) if C2 fits in the

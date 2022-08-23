@@ -1541,10 +1541,20 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
     strm.IndentMore();
     for (uint32_t i = 0; i < num_matches; ++i) {
       Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
-      if (symbol && symbol->ValueIsAddress()) {
-        DumpAddress(
-            interpreter.GetExecutionContext().GetBestExecutionContextScope(),
-            symbol->GetAddressRef(), verbose, all_ranges, strm);
+      if (symbol) {
+        if (symbol->ValueIsAddress()) {
+          DumpAddress(
+              interpreter.GetExecutionContext().GetBestExecutionContextScope(),
+              symbol->GetAddressRef(), verbose, all_ranges, strm);
+        } else {
+          strm.IndentMore();
+          strm.Indent("    Value: ");
+          strm.Printf("0x%16.16" PRIx64 "\n", symbol->GetRawValue());
+          if (symbol->GetByteSizeIsValid()) {
+            strm.Indent("    Size: ");
+            strm.Printf("0x%16.16" PRIx64 "\n", symbol->GetByteSize());
+          }
+        }
       }
     }
     strm.IndentLess();

@@ -476,6 +476,9 @@ std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
       Cfg.Diagnostics.SuppressAll ||
       Cfg.Diagnostics.Suppress.contains("unused-includes"))
     return {};
+  // Interaction is only polished for C/CPP.
+  if (AST.getLangOpts().ObjC)
+    return {};
   trace::Span Tracer("IncludeCleaner::issueUnusedIncludesDiagnostics");
   std::vector<Diag> Result;
   std::string FileName =

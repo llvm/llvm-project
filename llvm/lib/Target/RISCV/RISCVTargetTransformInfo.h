@@ -54,8 +54,7 @@ public:
   /// Return the cost of materializing a vector immediate, assuming it does
   /// not get folded into the using instruction(s).
   InstructionCost getVectorImmCost(VectorType *VecTy,
-                                   TTI::OperandValueKind OpInfo,
-                                   TTI::OperandValueProperties PropInfo,
+                                   TTI::OperandValueInfo OpInfo,
                                    TTI::TargetCostKind CostKind);
 
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,

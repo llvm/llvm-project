@@ -21,16 +21,23 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#if __has_builtin(__add_pointer)
+template <class _Tp>
+struct add_pointer {
+  using type _LIBCPP_NODEBUG = __add_pointer(_Tp);
+};
+#else
 template <class _Tp,
-        bool = __is_referenceable<_Tp>::value ||
-                _IsSame<typename remove_cv<_Tp>::type, void>::value>
-struct __add_pointer_impl
-    {typedef _LIBCPP_NODEBUG typename remove_reference<_Tp>::type* type;};
+          bool = __libcpp_is_referenceable<_Tp>::value || _IsSame<typename remove_cv<_Tp>::type, void>::value>
+struct __add_pointer_impl {
+  typedef _LIBCPP_NODEBUG typename remove_reference<_Tp>::type* type;
+};
 template <class _Tp> struct __add_pointer_impl<_Tp, false>
     {typedef _LIBCPP_NODEBUG _Tp type;};
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_pointer
     {typedef _LIBCPP_NODEBUG typename __add_pointer_impl<_Tp>::type type;};
+#endif // __has_builtin(__add_pointer)
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using add_pointer_t = typename add_pointer<_Tp>::type;

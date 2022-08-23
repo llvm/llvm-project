@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/ArrayRef.h"
 #include "src/__support/CPP/array.h"
+#include "src/__support/CPP/span.h"
 #include "src/string/memory_utils/elements.h"
 #include "utils/UnitTest/Test.h"
 
@@ -51,7 +51,7 @@ char GetRandomChar() {
   return seed;
 }
 
-void Randomize(cpp::MutableArrayRef<char> buffer) {
+void Randomize(cpp::span<char> buffer) {
   for (auto &current : buffer)
     current = GetRandomChar();
 }

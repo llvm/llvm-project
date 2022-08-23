@@ -85,6 +85,16 @@ public:
       return Address();
   }
 
+  /// Get the raw value of the symbol from the symbol table.
+  ///
+  /// If the symbol's value is an address, return the file address, else return
+  /// the raw value that is stored in the m_addr_range. If the base address has
+  /// no section, then getting the file address will return the correct value
+  /// as it will return the offset in the base address which is the value.
+  uint64_t GetRawValue() const {
+    return m_addr_range.GetBaseAddress().GetFileAddress();
+  }
+
   // When a symbol's value isn't an address, we need to access the raw value.
   // This function will ensure this symbol's value isn't an address and return
   // the integer value if this checks out, otherwise it will return
