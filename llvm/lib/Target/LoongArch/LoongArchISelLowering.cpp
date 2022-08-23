@@ -1746,3 +1746,21 @@ bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 bool LoongArchTargetLowering::isCheapToSpeculateCttz() const { return true; }
 
 bool LoongArchTargetLowering::isCheapToSpeculateCtlz() const { return true; }
+
+bool LoongArchTargetLowering::shouldInsertFencesForAtomic(
+    const Instruction *I) const {
+  if (!Subtarget.is64Bit())
+    return isa<LoadInst>(I) || isa<StoreInst>(I);
+
+  if (isa<LoadInst>(I))
+    return true;
+
+  // On LA64, atomic store operations with IntegerBitWidth of 32 and 64 do not
+  // require fences beacuse we can use amswap_db.[w/d].
+  if (isa<StoreInst>(I)) {
+    unsigned Size = I->getOperand(0)->getType()->getIntegerBitWidth();
+    return (Size == 8 || Size == 16);
+  }
+
+  return false;
+}
