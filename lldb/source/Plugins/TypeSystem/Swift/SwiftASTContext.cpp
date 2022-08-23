@@ -8179,7 +8179,7 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
     Status &error) {
   LLDB_SCOPED_TIMER();
   CompileUnit *compile_unit = sc.comp_unit;
-  if (compile_unit)
+  if (compile_unit && compile_unit->GetModule())
     // Check the cache if this compile unit's imports were previously
     // requested.  If the caller didn't request the list of imported
     // modules then there is nothing left to do for subsequent
