@@ -1047,6 +1047,51 @@ void BinaryFunction::handlePCRelOperand(MCInst &Instruction, uint64_t Address,
                                  Instruction, Expr, *BC.Ctx, 0)));
 }
 
+MCSymbol *BinaryFunction::handleExternalReference(MCInst &Instruction,
+                                                  uint64_t Size,
+                                                  uint64_t Offset,
+                                                  uint64_t TargetAddress,
+                                                  bool &IsCall) {
+  auto &MIB = BC.MIB;
+
+  const uint64_t AbsoluteInstrAddr = getAddress() + Offset;
+  BC.addInterproceduralReference(this, TargetAddress);
+  if (opts::Verbosity >= 2 && !IsCall && Size == 2 && !BC.HasRelocations) {
+    errs() << "BOLT-WARNING: relaxed tail call detected at 0x"
+           << Twine::utohexstr(AbsoluteInstrAddr) << " in function " << *this
+           << ". Code size will be increased.\n";
+  }
+
+  assert(!MIB->isTailCall(Instruction) &&
+         "synthetic tail call instruction found");
+
+  // This is a call regardless of the opcode.
+  // Assign proper opcode for tail calls, so that they could be
+  // treated as calls.
+  if (!IsCall) {
+    if (!MIB->convertJmpToTailCall(Instruction)) {
+      assert(MIB->isConditionalBranch(Instruction) &&
+             "unknown tail call instruction");
+      if (opts::Verbosity >= 2) {
+        errs() << "BOLT-WARNING: conditional tail call detected in "
+               << "function " << *this << " at 0x"
+               << Twine::utohexstr(AbsoluteInstrAddr) << ".\n";
+      }
+    }
+    IsCall = true;
+  }
+
+  if (opts::Verbosity >= 2 && TargetAddress == 0) {
+    // We actually see calls to address 0 in presence of weak
+    // symbols originating from libraries. This code is never meant
+    // to be executed.
+    outs() << "BOLT-INFO: Function " << *this
+           << " has a call to address zero.\n";
+  }
+
+  return BC.getOrCreateGlobalSymbol(TargetAddress, "FUNCat");
+}
+
 bool BinaryFunction::disassemble() {
   NamedRegionTimer T("disassemble", "Disassemble function", "buildfuncs",
                      "Build Binary Functions", opts::TimeBuild);
@@ -1064,49 +1109,6 @@ bool BinaryFunction::disassemble() {
   // Insert a label at the beginning of the function. This will be our first
   // basic block.
   Labels[0] = Ctx->createNamedTempSymbol("BB0");
-
-  auto handleExternalReference = [&](MCInst &Instruction, uint64_t Size,
-                                     uint64_t Offset, uint64_t TargetAddress,
-                                     bool &IsCall) -> MCSymbol * {
-    const uint64_t AbsoluteInstrAddr = getAddress() + Offset;
-    MCSymbol *TargetSymbol = nullptr;
-    BC.addInterproceduralReference(this, TargetAddress);
-    if (opts::Verbosity >= 2 && !IsCall && Size == 2 && !BC.HasRelocations) {
-      errs() << "BOLT-WARNING: relaxed tail call detected at 0x"
-             << Twine::utohexstr(AbsoluteInstrAddr) << " in function " << *this
-             << ". Code size will be increased.\n";
-    }
-
-    assert(!MIB->isTailCall(Instruction) &&
-           "synthetic tail call instruction found");
-
-    // This is a call regardless of the opcode.
-    // Assign proper opcode for tail calls, so that they could be
-    // treated as calls.
-    if (!IsCall) {
-      if (!MIB->convertJmpToTailCall(Instruction)) {
-        assert(MIB->isConditionalBranch(Instruction) &&
-               "unknown tail call instruction");
-        if (opts::Verbosity >= 2) {
-          errs() << "BOLT-WARNING: conditional tail call detected in "
-                 << "function " << *this << " at 0x"
-                 << Twine::utohexstr(AbsoluteInstrAddr) << ".\n";
-        }
-      }
-      IsCall = true;
-    }
-
-    TargetSymbol = BC.getOrCreateGlobalSymbol(TargetAddress, "FUNCat");
-    if (opts::Verbosity >= 2 && TargetAddress == 0) {
-      // We actually see calls to address 0 in presence of weak
-      // symbols originating from libraries. This code is never meant
-      // to be executed.
-      outs() << "BOLT-INFO: Function " << *this
-             << " has a call to address zero.\n";
-    }
-
-    return TargetSymbol;
-  };
 
   auto handleIndirectBranch = [&](MCInst &Instruction, uint64_t Size,
                                   uint64_t Offset) {
