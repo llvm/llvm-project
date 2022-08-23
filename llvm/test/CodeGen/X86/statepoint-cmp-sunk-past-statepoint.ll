@@ -1,12 +1,5 @@
-; RUN: not --crash llc -max-registers-for-gc-values=256 -verify-machineinstrs -stop-after twoaddressinstruction < %s 2>&1 | FileCheck --check-prefixes CHECK-ERROR-LV %s
-; RUN: not --crash llc -max-registers-for-gc-values=256 -verify-machineinstrs -stop-after twoaddressinstruction -early-live-intervals < %s 2>&1  | FileCheck --check-prefixes CHECK-ERROR-LIS %s
-; REQUIRES: asserts
-
-; CHECK-ERROR-LV:  Bad machine code: Virtual register killed in block, but needed live out.
-; CHECK-ERROR-LV:  function:    test
-; CHECK-ERROR-LV:  basic block: %bb.0
-
-; CHECK-ERROR-LIS: Found multiple kills of a register in a basic block
+; RUN: llc -max-registers-for-gc-values=256 -verify-machineinstrs -stop-after twoaddressinstruction < %s | FileCheck --check-prefixes CHECK,CHECK-LV %s
+; RUN: llc -max-registers-for-gc-values=256 -verify-machineinstrs -stop-after twoaddressinstruction -early-live-intervals < %s | FileCheck --check-prefixes CHECK,CHECK-LIS %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128-ni:1-p2:32:8:8:32-ni:2"
 target triple = "x86_64-unknown-linux-gnu"
@@ -22,15 +15,16 @@ declare i32* @fake_personality_function()
 ; CHECK:  bb.0
 ; CHECK-LV:     %0:gr64 = COPY killed $rdi
 ; CHECK-LIS:    %0:gr64 = COPY $rdi
-; CHECK:        %0:gr64 = STATEPOINT 2, 5, 0, undef %2:gr64, 2, 0, 2, 0, 2, 0, 2, 1, %0(tied-def 0), 2, 0, 2, 1, 0, 0
+; CHECK:        %1:gr64 = COPY %0
+; CHECK:        %1:gr64 = STATEPOINT 2, 5, 0, undef %2:gr64, 2, 0, 2, 0, 2, 0, 2, 1, %1(tied-def 0), 2, 0, 2, 1, 0, 0
 ; CHECK-LV:     TEST64rr killed %0, %0, implicit-def $eflags
 ; CHECK-LIS:    TEST64rr %0, %0, implicit-def $eflags
 ; CHECK:        JCC_1 %bb.2, 4, implicit killed $eflags
 ; CHECK:        JMP_1 %bb.1
 ; CHECK:      bb.1
-; CHECK-LV:     $rdi = COPY killed %0
-; CHECK-LV:     STATEPOINT 2, 5, 1, undef %3:gr64, $rdi, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0
-; CHECK-LIS:    $rdi = COPY killed %0
+; CHECK-LV:     $rdi = COPY killed %1
+; CHECK-LV:     STATEPOINT 2, 5, 1, undef %3:gr64, killed $rdi, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0
+; CHECK-LIS:    $rdi = COPY %1
 ; CHECK-LIS:    STATEPOINT 2, 5, 1, undef %3:gr64, $rdi, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0
 ; CHECK:        RET 0
 ; CHECK:      bb.2
@@ -55,7 +49,8 @@ zero:
 ; CHECK-LABEL: name: test2
 ; CHECK:  bb.2
 ; CHECK:        %1:gr64 = STATEPOINT 2882400000, 0, 0, undef %11:gr64, 2, 0, 2, 0, 2, 0, 2, 1, %1(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64
-; CHECK:        %1:gr64 = STATEPOINT 2882400000, 0, 0, undef %13:gr64, 2, 0, 2, 0, 2, 0, 2, 1, %1(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64
+; CHECK:        %10:gr64 = COPY %1
+; CHECK:        %10:gr64 = STATEPOINT 2882400000, 0, 0, undef %13:gr64, 2, 0, 2, 0, 2, 0, 2, 1, %10(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64
 ; CHECK:        JMP_1 %bb.3
 ; CHECK:      bb.3
 ; CHECK:        %18:gr8 = COPY %17.sub_8bit
@@ -65,9 +60,9 @@ zero:
 ; CHECK:        JMP_1 %bb.4
 ; CHECK:      bb.4
 ; CHECK:      bb.5
-; CHECK:        %4:gr64 = LEA64r %1, 1, $noreg, 8, $noreg
-; CHECK-LV:     %3:gr64 = COPY killed %1
-; CHECK-LIS:    %3:gr64 = COPY killed %1
+; CHECK:        %4:gr64 = LEA64r %10, 1, $noreg, 8, $noreg
+; CHECK-LV:     %3:gr64 = COPY killed %10
+; CHECK-LIS:    %3:gr64 = COPY %10
 ; CHECK-LV:     TEST64rr killed %1, %1, implicit-def $eflags
 ; CHECK:        JCC_1 %bb.1, 5, implicit killed $eflags
 ; CHECK:        JMP_1 %bb.6
