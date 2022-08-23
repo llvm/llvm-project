@@ -108,6 +108,7 @@ public:
   static FileSpec GetXcodeDeveloperDirectory() { return {}; }
 #ifdef LLDB_ENABLE_SWIFT
   static FileSpec GetSwiftResourceDir() { return {}; }
+  static FileSpec GetSwiftResourceDir(llvm::Triple triple) { return {}; }
   static bool ComputeSwiftResourceDirectory(
       FileSpec &lldb_shlib_spec, FileSpec &file_spec, bool verify) {
     return false;

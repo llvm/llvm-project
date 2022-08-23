@@ -37,3 +37,9 @@ FileSpec HostInfoPosix::GetSwiftResourceDir() {
   });
   return g_swift_resource_dir;
 }
+
+std::string
+HostInfoPosix::GetSwiftResourceDir(llvm::Triple triple,
+                                   llvm::StringRef platform_sdk_path) {
+  return GetSwiftResourceDir().GetPath();
+}

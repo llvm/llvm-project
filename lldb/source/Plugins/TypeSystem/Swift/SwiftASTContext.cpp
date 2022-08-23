@@ -119,13 +119,11 @@
 
 #include "Plugins/Language/Swift/LogChannelSwift.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
-#include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include <mutex>
 #include <queue>
-#include <regex>
 #include <set>
 #include <sstream>
 
@@ -293,12 +291,6 @@ static EnumInfoCache *GetEnumInfoCache(const swift::ASTContext *a) {
   }
   return pos->second.get();
 }
-
-namespace {
-bool IsDirectory(const FileSpec &spec) {
-  return llvm::sys::fs::is_directory(spec.GetPath());
-}
-} // namespace
 
 llvm::LLVMContext &SwiftASTContext::GetGlobalLLVMContext() {
   static llvm::LLVMContext s_global_context;
@@ -950,239 +942,6 @@ SwiftASTContextForModule::~SwiftASTContextForModule() {
     GetASTMap().Erase(ctx);
 }
 
-/// Return the Xcode sdk type for the target triple, if that makes sense.
-/// Otherwise, return the unknown sdk type.
-static XcodeSDK::Type GetSDKType(const llvm::Triple &target,
-                                 const llvm::Triple &host) {
-  // Only Darwin platforms know the concept of an SDK.
-  auto host_os = host.getOS();
-  if (host_os != llvm::Triple::OSType::MacOSX)
-    return XcodeSDK::Type::unknown;
-
-  auto is_simulator = [&]() -> bool {
-    return target.getEnvironment() == llvm::Triple::Simulator ||
-           !target.getArchName().startswith("arm");
-  };
-
-  switch (target.getOS()) {
-  case llvm::Triple::OSType::MacOSX:
-  case llvm::Triple::OSType::Darwin:
-    return XcodeSDK::Type::MacOSX;
-  case llvm::Triple::OSType::IOS:
-    if (is_simulator())
-      return XcodeSDK::Type::iPhoneSimulator;
-    return XcodeSDK::Type::iPhoneOS;
-  case llvm::Triple::OSType::TvOS:
-    if (is_simulator())
-      return XcodeSDK::Type::AppleTVSimulator;
-    return XcodeSDK::Type::AppleTVOS;
-  case llvm::Triple::OSType::WatchOS:
-    if (is_simulator())
-      return XcodeSDK::Type::WatchSimulator;
-    return XcodeSDK::Type::watchOS;
-  default:
-    return XcodeSDK::Type::unknown;
-  }
-}
-
-/// Return the name of the OS-specific subdirectory containing the
-/// Swift stdlib needed for \p target.
-std::string SwiftASTContext::GetSwiftStdlibOSDir(const llvm::Triple &target,
-                                                 const llvm::Triple &host) {
-  XcodeSDK::Info sdk_info;
-  sdk_info.type = GetSDKType(target, host);
-  std::string sdk_name = XcodeSDK::GetCanonicalName(sdk_info);
-  if (!sdk_name.empty())
-    return sdk_name;
-  return target.getOSName().str();
-}
-
-std::string SwiftASTContext::GetResourceDir(const llvm::Triple &triple) {
-  static std::mutex g_mutex;
-  std::lock_guard<std::mutex> locker(g_mutex);
-  StringRef platform_sdk_path = GetPlatformSDKPath();
-  std::string swift_stdlib_os_dir =
-      GetSwiftStdlibOSDir(triple, HostInfo::GetArchitecture().GetTriple());
-
-  // The resource dir depends on the SDK path and the expected os name.
-  llvm::SmallString<128> key(platform_sdk_path);
-  key.append(swift_stdlib_os_dir);
-  static llvm::StringMap<std::string> g_resource_dir_cache;
-  auto it = g_resource_dir_cache.find(key);
-  if (it != g_resource_dir_cache.end())
-    return it->getValue();
-
-  auto value = GetResourceDir(
-      platform_sdk_path, swift_stdlib_os_dir,
-      HostInfo::GetSwiftResourceDir().GetPath(),
-      HostInfo::GetXcodeContentsDirectory().GetPath(),
-      PlatformDarwin::GetCurrentToolchainDirectory().GetPath(),
-      PlatformDarwin::GetCurrentCommandLineToolsDirectory().GetPath());
-  g_resource_dir_cache.insert({key, value});
-  return g_resource_dir_cache[key];
-}
-
-std::string SwiftASTContext::GetResourceDir(StringRef platform_sdk_path,
-                                            StringRef swift_stdlib_os_dir,
-                                            std::string swift_dir,
-                                            std::string xcode_contents_path,
-                                            std::string toolchain_path,
-                                            std::string cl_tools_path) {
-  llvm::SmallString<16> m_description("SwiftASTContext");
-  // First, check if there's something in our bundle.
-  {
-    FileSpec swift_dir_spec(swift_dir);
-    if (swift_dir_spec) {
-      LOG_PRINTF(GetLog(LLDBLog::Types), "trying ePathTypeSwiftDir: %s",
-                 swift_dir_spec.GetCString());
-      // We can't just check for the Swift directory, because that
-      // always exists.  We have to look for "clang" inside that.
-      FileSpec swift_clang_dir_spec = swift_dir_spec;
-      swift_clang_dir_spec.AppendPathComponent("clang");
-
-      if (IsDirectory(swift_clang_dir_spec)) {
-        LOG_PRINTF(GetLog(LLDBLog::Types),
-                   "found Swift resource dir via ePathTypeSwiftDir': %s",
-                   swift_dir_spec.GetCString());
-        return swift_dir_spec.GetPath();
-      }
-    }
-  }
-
-  // Nothing in our bundle. Are we in a toolchain that has its own Swift
-  // compiler resource dir?
-
-  {
-    llvm::SmallString<256> path(toolchain_path);
-    LOG_PRINTF(GetLog(LLDBLog::Types), "trying toolchain path: %s",
-               path.c_str());
-
-    if (!path.empty()) {
-      llvm::sys::path::append(path, "usr/lib/swift");
-      LOG_PRINTF(GetLog(LLDBLog::Types), "trying toolchain-based lib path: %s",
-                 path.c_str());
-
-      if (IsDirectory(FileSpec(path))) {
-        LOG_PRINTF(GetLog(LLDBLog::Types),
-                   "found Swift resource dir via "
-                   "toolchain path + 'usr/lib/swift': %s",
-                   path.c_str());
-        return std::string(path);
-      }
-    }
-  }
-
-  // We're not in a toolchain that has one. Use the Xcode default toolchain.
-
-  {
-    llvm::SmallString<256> path(xcode_contents_path);
-    LOG_PRINTF(GetLog(LLDBLog::Types), "trying Xcode path: %s", path.c_str());
-
-    if (!path.empty()) {
-      llvm::sys::path::append(path, "Developer",
-                              "Toolchains/XcodeDefault.xctoolchain",
-                              "usr/lib/swift");
-      LOG_PRINTF(GetLog(LLDBLog::Types), "trying Xcode-based lib path: %s",
-                 path.c_str());
-
-      if (IsDirectory(FileSpec(path))) {
-        StringRef resource_dir = path;
-        llvm::sys::path::append(path, swift_stdlib_os_dir);
-        std::string s(path);
-        if (IsDirectory(FileSpec(path))) {
-          LOG_PRINTF(GetLog(LLDBLog::Types),
-                     "found Swift resource dir via "
-                     "Xcode contents path + default toolchain "
-                     "relative dir: %s",
-                     resource_dir.str().c_str());
-          return resource_dir.str();
-        } else {
-          // Search the SDK for a matching cross-SDK.
-          path = platform_sdk_path;
-          llvm::sys::path::append(path, "usr/lib/swift");
-          StringRef resource_dir = path;
-          llvm::sys::path::append(path, swift_stdlib_os_dir);
-          if (IsDirectory(FileSpec(path))) {
-            LOG_PRINTF(GetLog(LLDBLog::Types),
-                       "found Swift resource dir via "
-                       "Xcode contents path + cross-compilation SDK "
-                       "relative dir: %s",
-                       resource_dir.str().c_str());
-            return resource_dir.str();
-          }
-        }
-      }
-    }
-  }
-
-  // We're not in Xcode. We might be in the command-line tools.
-
-  {
-    llvm::SmallString<256> path(cl_tools_path);
-    LOG_PRINTF(GetLog(LLDBLog::Types), "trying command-line tools path: %s",
-               path.c_str());
-
-    if (!path.empty()) {
-      llvm::sys::path::append(path, "usr/lib/swift");
-      LOG_PRINTF(GetLog(LLDBLog::Types),
-                 "trying command-line tools-based lib path: %s", path.c_str());
-
-      if (IsDirectory(FileSpec(path))) {
-        LOG_PRINTF(GetLog(LLDBLog::Types),
-                   "found Swift resource dir via command-line tools "
-                   "path + usr/lib/swift: %s",
-                   path.c_str());
-        return std::string(path);
-      }
-    }
-  }
-
-  // We might be in the build-dir configuration for a
-  // build-script-driven LLDB build, which has the Swift build dir as
-  // a sibling directory to the lldb build dir.  This looks much
-  // different than the install- dir layout that the previous checks
-  // would try.
-  {
-    FileSpec faux_swift_dir_spec(swift_dir);
-    if (faux_swift_dir_spec) {
-      // Let's try to regex this.
-      // We're looking for /some/path/lldb-{os}-{arch}, and want to
-      // build the following:
-      //    /some/path/swift-{os}-{arch}/lib/swift/{os}/{arch}
-      // In a match, these are the following assignments for
-      // backrefs:
-      //   $1 - first part of path before swift build dir
-      //   $2 - the host OS path separator character
-      //   $3 - all the stuff that should come after changing
-      //        lldb to swift for the lib dir.
-      auto match_regex =
-          std::regex("^(.+([/\\\\]))lldb-(.+)$");
-      const std::string replace_format = "$1swift-$3";
-      const std::string faux_swift_dir =
-          faux_swift_dir_spec.GetCString();
-      const std::string build_tree_resource_dir =
-          std::regex_replace(faux_swift_dir, match_regex,
-                             replace_format);
-      LOG_PRINTF(GetLog(LLDBLog::Types),
-                 "trying ePathTypeSwiftDir regex-based build dir: %s",
-                 build_tree_resource_dir.c_str());
-      FileSpec swift_resource_dir_spec(build_tree_resource_dir.c_str());
-      if (IsDirectory(swift_resource_dir_spec)) {
-        LOG_PRINTF(GetLog(LLDBLog::Types),
-                   "found Swift resource dir via "
-                   "ePathTypeSwiftDir + inferred build-tree dir: %s",
-                   swift_resource_dir_spec.GetCString());
-        return swift_resource_dir_spec.GetCString();
-      }
-    }
-  }
-
-  // We failed to find a reasonable Swift resource dir.
-  LOG_PRINTF(GetLog(LLDBLog::Types), "failed to find a Swift resource dir");
-
-  return {};
-}
-
 /// This code comes from CompilerInvocation.cpp (setRuntimeResourcePath).
 static void ConfigureResourceDirs(swift::CompilerInvocation &invocation,
                                   FileSpec resource_dir, llvm::Triple triple) {
@@ -1785,7 +1544,8 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   // CompilerInvocation with the triple recovered from the binary.
   swift_ast_sp->SetTriple(triple, &module);
 
-  std::string resource_dir = swift_ast_sp->GetResourceDir(triple);
+  std::string resource_dir =
+      HostInfo::GetSwiftResourceDir(triple, swift_ast_sp->GetPlatformSDKPath());
   ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(),
                         FileSpec(resource_dir), triple);
 
@@ -2279,7 +2039,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   }
 
   llvm::Triple triple = swift_ast_sp->GetTriple();
-  std::string resource_dir = swift_ast_sp->GetResourceDir(triple);
+  std::string resource_dir = HostInfo::GetSwiftResourceDir(
+      triple, swift_ast_sp->GetPlatformSDKPath());
   ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(),
                         FileSpec(resource_dir), triple);
   const bool discover_implicit_search_paths =
@@ -2660,7 +2421,8 @@ void SwiftASTContext::InitializeSearchPathOptions(
   }
 
   llvm::Triple triple(GetTriple());
-  std::string resource_dir = GetResourceDir(triple);
+  std::string resource_dir =
+      HostInfo::GetSwiftResourceDir(triple, GetPlatformSDKPath());
   ConfigureResourceDirs(GetCompilerInvocation(), FileSpec(resource_dir),
                         triple);
 
@@ -3189,7 +2951,8 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   }
   std::string prebuiltModuleCachePath =
       swift::CompilerInvocation::computePrebuiltCachePath(
-          GetResourceDir(triple), triple, sdk_version);
+          HostInfo::GetSwiftResourceDir(triple, GetPlatformSDKPath()), triple,
+          sdk_version);
   if (sdk_version)
     LOG_PRINTF(GetLog(LLDBLog::Types), "SDK version: %s",
                sdk_version->getAsString().c_str());

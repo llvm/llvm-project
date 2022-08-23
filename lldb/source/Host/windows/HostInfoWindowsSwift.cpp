@@ -17,14 +17,14 @@
 
 using namespace lldb_private;
 
-bool HostInfoPosix::ComputeSwiftResourceDirectory(FileSpec &lldb_shlib_spec,
-                                                  FileSpec &file_spec,
-                                                  bool verify) {
+bool HostInfoWindows::ComputeSwiftResourceDirectory(FileSpec &lldb_shlib_spec,
+                                                    FileSpec &file_spec,
+                                                    bool verify) {
   return DefaultComputeSwiftResourceDirectory(lldb_shlib_spec, file_spec,
                                               verify);
 }
 
-FileSpec HostInfoPosix::GetSwiftResourceDir() {
+FileSpec HostInfoWindows::GetSwiftResourceDir() {
   static std::once_flag g_once_flag;
   static FileSpec g_swift_resource_dir;
   std::call_once(g_once_flag, []() {
@@ -35,4 +35,10 @@ FileSpec HostInfoPosix::GetSwiftResourceDir() {
     LLDB_LOG(log, "swift dir -> '{0}'", g_swift_resource_dir);
   });
   return g_swift_resource_dir;
+}
+
+std::string
+HostInfoWindows::GetSwiftResourceDir(llvm::Triple triple,
+                                     llvm::StringRef platform_sdk_path) {
+  return GetSwiftResourceDir().GetPath();
 }

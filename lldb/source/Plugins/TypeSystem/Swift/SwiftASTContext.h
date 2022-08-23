@@ -926,22 +926,6 @@ protected:
   /// Apply a PathMappingList dictionary on all search paths in the
   /// ClangImporterOptions.
   void RemapClangImporterOptions(const PathMappingList &path_map);
-
-  /// Infer the appropriate Swift resource directory for a target triple.
-  std::string GetResourceDir(const llvm::Triple &target);
-
-  /// Implementation of \c GetResourceDir.
-  static std::string GetResourceDir(llvm::StringRef platform_sdk_path,
-                                    llvm::StringRef swift_stdlib_os_dir,
-                                    std::string swift_dir,
-                                    std::string xcode_contents_path,
-                                    std::string toolchain_path,
-                                    std::string cl_tools_path);
-
-  /// Return the name of the OS-specific subdirectory containing the
-  /// Swift stdlib needed for \p target.
-  static std::string GetSwiftStdlibOSDir(const llvm::Triple &target,
-                                         const llvm::Triple &host);
 };
 
 /// Deprecated.

@@ -37,6 +37,8 @@ public:
 
 #ifdef LLDB_ENABLE_SWIFT
   static FileSpec GetSwiftResourceDir();
+  static std::string GetSwiftResourceDir(llvm::Triple triple,
+                                         llvm::StringRef platform_sdk_path);
   static bool ComputeSwiftResourceDirectory(FileSpec &lldb_shlib_spec,
                                             FileSpec &file_spec, bool verify);
 #endif
