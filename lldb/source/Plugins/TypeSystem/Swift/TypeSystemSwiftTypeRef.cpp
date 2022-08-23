@@ -1035,7 +1035,7 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetDemangleTreeForPrinting(
   return GetNodeForPrintingImpl(dem, node, resolve_objc_module);
 }
 
-/// Determine wether this demangle tree contains an unresolved type alias.
+/// Determine wether this demangle tree contains a generic type parameter.
 static bool ContainsGenericTypeParameter(swift::Demangle::NodePointer node) {
   if (!node)
     return false;
@@ -1050,14 +1050,32 @@ static bool ContainsGenericTypeParameter(swift::Demangle::NodePointer node) {
   return false;
 }
 
+/// Determine wether this demangle tree contains generic types.
+static bool IsGeneric(swift::Demangle::NodePointer node) {
+  if (!node)
+    return false;
+
+  // Bug-for-bug-compatibility.
+  // FIXME: There should be more cases here.
+  if (node->getKind() == Node::Kind::DynamicSelf)
+    return true;
+
+  for (swift::Demangle::NodePointer child : *node)
+    if (IsGeneric(child))
+      return true;
+
+  return false;
+}
+
 /// Collect TypeInfo flags from a demangle tree. For most attributes
 /// this can stop scanning at the outmost type, however in order to
 /// determine whether a node is generic or not, it needs to visit all
 /// nodes. The \p generic_walk argument specifies that the primary
 /// attributes have been collected and that we only look for generics.
-uint32_t TypeSystemSwiftTypeRef::CollectTypeInfo(
-    swift::Demangle::Demangler &dem, swift::Demangle::NodePointer node,
-    bool &unresolved_typealias, bool generic_walk) {
+uint32_t
+TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
+                                        swift::Demangle::NodePointer node,
+                                        bool &unresolved_typealias) {
   if (!node)
     return 0;
   uint32_t swift_flags = eTypeIsSwift;
@@ -1093,98 +1111,86 @@ uint32_t TypeSystemSwiftTypeRef::CollectTypeInfo(
   };
 
   using namespace swift::Demangle;
-  if (generic_walk)
-    switch (node->getKind()) {
-    // Bug-for-bug-compatibility.
-    // FIXME: There should be more cases here.
-    case Node::Kind::DynamicSelf:
-      swift_flags |= eTypeIsGeneric;
-      break;
-    default:
-      break;
+  switch (node->getKind()) {
+  case Node::Kind::SugaredOptional:
+    swift_flags |= eTypeIsGeneric | eTypeIsBound | eTypeHasChildren |
+                   eTypeHasValue | eTypeIsEnumeration;
+    break;
+  case Node::Kind::SugaredArray:
+  case Node::Kind::SugaredDictionary:
+    swift_flags |=
+        eTypeIsGeneric | eTypeIsBound | eTypeHasChildren | eTypeIsStructUnion;
+    break;
+
+  case Node::Kind::DependentGenericParamType:
+    swift_flags |= eTypeHasValue | eTypeIsPointer | eTypeIsScalar |
+                   eTypeIsGenericTypeParam;
+    break;
+  case Node::Kind::DependentGenericType:
+  case Node::Kind::DependentMemberType:
+    swift_flags |= eTypeHasValue | eTypeIsPointer | eTypeIsScalar |
+                   eTypeIsGenericTypeParam;
+    break;
+
+  case Node::Kind::DynamicSelf:
+    swift_flags |= eTypeHasValue | eTypeIsGeneric | eTypeIsBound;
+    break;
+
+  case Node::Kind::ImplFunctionType:
+    // Bug-for-bug-compatibility. Not sure if this is correct.
+    swift_flags |= eTypeIsPointer | eTypeHasValue;
+    return swift_flags;
+  case Node::Kind::BoundGenericFunction:
+    swift_flags |= eTypeIsGeneric | eTypeIsBound;
+    LLVM_FALLTHROUGH;
+  case Node::Kind::NoEscapeFunctionType:
+  case Node::Kind::FunctionType:
+    swift_flags |= eTypeIsPointer | eTypeHasValue;
+    break;
+  case Node::Kind::BuiltinTypeName:
+    swift_flags |= eTypeIsBuiltIn | eTypeHasValue;
+    if (node->hasText()) {
+      // TODO (performance): It may be safe to switch over the pointers here.
+      if (node->getText() == swift::BUILTIN_TYPE_NAME_RAWPOINTER)
+        swift_flags |= eTypeHasChildren | eTypeIsPointer | eTypeIsScalar;
+      else if (node->getText() == swift::BUILTIN_TYPE_NAME_UNSAFEVALUEBUFFER)
+        swift_flags |= eTypeIsPointer | eTypeIsScalar;
+      else if (node->getText() == swift::BUILTIN_TYPE_NAME_NATIVEOBJECT)
+        swift_flags |= eTypeHasChildren | eTypeIsPointer | eTypeIsScalar;
+      else if (node->getText() == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT ||
+               node->getText() == swift::BUILTIN_TYPE_NAME_UNKNOWNOBJECT)
+        swift_flags |=
+            eTypeHasChildren | eTypeIsPointer | eTypeIsScalar | eTypeIsObjC;
+      else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT) ||
+               node->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT_PPC))
+        swift_flags |= eTypeIsFloat | eTypeIsScalar;
+      else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_VEC))
+        swift_flags |= eTypeHasChildren | eTypeIsVector;
+      else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_INT) ||
+               node->getText().startswith(swift::BUILTIN_TYPE_NAME_WORD))
+        swift_flags |= eTypeIsInteger | eTypeIsScalar;
     }
-  else
-    switch (node->getKind()) {
-    case Node::Kind::SugaredOptional:
-      swift_flags |= eTypeIsGeneric | eTypeIsBound | eTypeHasChildren |
-                     eTypeHasValue | eTypeIsEnumeration;
+    break;
+  case Node::Kind::Tuple:
+    swift_flags |= eTypeHasChildren | eTypeIsTuple;
+    break;
+  case Node::Kind::BoundGenericEnum:
+    swift_flags |= eTypeIsGeneric | eTypeIsBound;
+    LLVM_FALLTHROUGH;
+  case Node::Kind::Enum: {
+    // FIXME: do C-style enums have children?
+    // The AST implementation is getting eTypeHasChildren out of the Decl.
+    swift_flags |= eTypeIsEnumeration;
+    if (node->getNumChildren() != 2)
       break;
-    case Node::Kind::SugaredArray:
-    case Node::Kind::SugaredDictionary:
-      swift_flags |=
-          eTypeIsGeneric | eTypeIsBound | eTypeHasChildren | eTypeIsStructUnion;
-      break;
-
-    case Node::Kind::DependentGenericParamType:
-      swift_flags |= eTypeHasValue | eTypeIsPointer | eTypeIsScalar |
-                     eTypeIsGenericTypeParam;
-      break;
-    case Node::Kind::DependentGenericType:
-    case Node::Kind::DependentMemberType:
-      swift_flags |= eTypeHasValue | eTypeIsPointer | eTypeIsScalar |
-                     eTypeIsGenericTypeParam;
-      break;
-
-    case Node::Kind::DynamicSelf:
-      swift_flags |= eTypeHasValue | eTypeIsGeneric | eTypeIsBound;
-      break;
-
-    case Node::Kind::ImplFunctionType:
-      // Bug-for-bug-compatibility. Not sure if this is correct.
-      swift_flags |= eTypeIsPointer | eTypeHasValue;
-      return swift_flags;
-    case Node::Kind::BoundGenericFunction:
-      swift_flags |= eTypeIsGeneric | eTypeIsBound;
-      LLVM_FALLTHROUGH;
-    case Node::Kind::NoEscapeFunctionType:
-    case Node::Kind::FunctionType:
-      swift_flags |= eTypeIsPointer | eTypeHasValue;
-      break;
-    case Node::Kind::BuiltinTypeName:
-      swift_flags |= eTypeIsBuiltIn | eTypeHasValue;
-      if (node->hasText()) {
-        // TODO (performance): It may be safe to switch over the pointers here.
-        if (node->getText() == swift::BUILTIN_TYPE_NAME_RAWPOINTER)
-          swift_flags |= eTypeHasChildren | eTypeIsPointer | eTypeIsScalar;
-        else if (node->getText() == swift::BUILTIN_TYPE_NAME_UNSAFEVALUEBUFFER)
-          swift_flags |= eTypeIsPointer | eTypeIsScalar;
-        else if (node->getText() == swift::BUILTIN_TYPE_NAME_NATIVEOBJECT)
-          swift_flags |= eTypeHasChildren | eTypeIsPointer | eTypeIsScalar;
-        else if (node->getText() == swift::BUILTIN_TYPE_NAME_BRIDGEOBJECT ||
-                 node->getText() == swift::BUILTIN_TYPE_NAME_UNKNOWNOBJECT)
-          swift_flags |=
-              eTypeHasChildren | eTypeIsPointer | eTypeIsScalar | eTypeIsObjC;
-        else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT) ||
-                 node->getText().startswith(swift::BUILTIN_TYPE_NAME_FLOAT_PPC))
-          swift_flags |= eTypeIsFloat | eTypeIsScalar;
-        else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_VEC))
-          swift_flags |= eTypeHasChildren | eTypeIsVector;
-        else if (node->getText().startswith(swift::BUILTIN_TYPE_NAME_INT) ||
-                 node->getText().startswith(swift::BUILTIN_TYPE_NAME_WORD))
-          swift_flags |= eTypeIsInteger | eTypeIsScalar;
-      }
-      break;
-    case Node::Kind::Tuple:
-      swift_flags |= eTypeHasChildren | eTypeIsTuple;
-      break;
-    case Node::Kind::BoundGenericEnum:
-      swift_flags |= eTypeIsGeneric | eTypeIsBound;
-      LLVM_FALLTHROUGH;
-    case Node::Kind::Enum: {
-      // FIXME: do C-style enums have children?
-      // The AST implementation is getting eTypeHasChildren out of the Decl.
-      swift_flags |= eTypeIsEnumeration;
-      if (node->getNumChildren() != 2)
-        break;
-      // Bug-for-bug compatibility.
-      if (!ContainsGenericTypeParameter(node->getChild(1)))
-        swift_flags |= eTypeHasValue | eTypeHasChildren;
-      auto module = node->getChild(0);
-      if (module->hasText() &&
-          module->getText() == swift::MANGLING_MODULE_OBJC) {
-        swift_flags |= eTypeHasValue /*| eTypeIsObjC*/;
-      }
-      break;
+    // Bug-for-bug compatibility.
+    if (!ContainsGenericTypeParameter(node->getChild(1)))
+      swift_flags |= eTypeHasValue | eTypeHasChildren;
+    auto module = node->getChild(0);
+    if (module->hasText() && module->getText() == swift::MANGLING_MODULE_OBJC) {
+      swift_flags |= eTypeHasValue /*| eTypeIsObjC*/;
+    }
+    break;
     }
     case Node::Kind::BoundGenericStructure:
       swift_flags |= eTypeIsGeneric | eTypeIsBound;
@@ -1271,7 +1277,8 @@ uint32_t TypeSystemSwiftTypeRef::CollectTypeInfo(
         // then we don't have debug info to resolve it from.
         unresolved_typealias = true;
       }
-      swift_flags |= CollectTypeInfo(dem, node_clangtype.first, generic_walk);
+      swift_flags |=
+          CollectTypeInfo(dem, node_clangtype.first, unresolved_typealias);
       return swift_flags;
     }
     default:
@@ -1280,12 +1287,16 @@ uint32_t TypeSystemSwiftTypeRef::CollectTypeInfo(
 
   // If swift_flags were collected we're done here except for
   // determining whether the type is generic.
-  generic_walk |= (swift_flags != eTypeIsSwift);
+  if (swift_flags != eTypeIsSwift) {
+    if ((swift_flags & eTypeIsGeneric) == 0)
+      if (IsGeneric(node))
+        swift_flags |= eTypeIsGeneric;
+    return swift_flags;
+  }
 
   // Visit the child nodes.
-  for (unsigned i = 0; i < node->getNumChildren(); ++i)
-    swift_flags |= CollectTypeInfo(dem, node->getChild(i), unresolved_typealias,
-                                   generic_walk);
+  for (auto *child : *node)
+    swift_flags |= CollectTypeInfo(dem, child, unresolved_typealias);
 
   return swift_flags;
 }

@@ -368,8 +368,7 @@ protected:
 
   uint32_t CollectTypeInfo(swift::Demangle::Demangler &dem,
                            swift::Demangle::NodePointer node,
-                           bool &unresolved_typealias,
-                           bool generic_walk = false);
+                           bool &unresolved_typealias);
 
   swift::Demangle::NodePointer
   GetClangTypeNode(CompilerType clang_type, swift::Demangle::Demangler &dem);
