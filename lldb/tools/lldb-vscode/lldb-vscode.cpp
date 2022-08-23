@@ -2933,6 +2933,25 @@ void request_variables(const llvm::json::Object &request) {
     int64_t start_idx = 0;
     int64_t num_children = 0;
 
+    if (variablesReference == VARREF_REGS) {
+      // Change the default format of any pointer sized registers in the first
+      // register set to be the lldb::eFormatAddressInfo so we show the pointer
+      // and resolve what the pointer resolves to. Only change the format if the
+      // format was set to the default format or if it was hex as some registers
+      // have formats set for them.
+      const uint32_t addr_size = g_vsc.target.GetProcess().GetAddressByteSize();
+      lldb::SBValue reg_set = g_vsc.variables.registers.GetValueAtIndex(0);
+      const uint32_t num_regs = reg_set.GetNumChildren();
+      for (uint32_t reg_idx=0; reg_idx<num_regs; ++reg_idx) {
+        lldb::SBValue reg = reg_set.GetChildAtIndex(reg_idx);
+        const lldb::Format format = reg.GetFormat();
+        if (format == lldb::eFormatDefault || format == lldb::eFormatHex) {
+          if (reg.GetByteSize() == addr_size)
+            reg.SetFormat(lldb::eFormatAddressInfo);
+        }
+      }
+    }
+
     num_children = top_scope->GetSize();
     const int64_t end_idx = start_idx + ((count == 0) ? num_children : count);
 
