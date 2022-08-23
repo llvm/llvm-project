@@ -6398,7 +6398,7 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
     Cost += TTI.getMaskedMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
                                       CostKind);
   } else {
-    TTI::OperandValueKind OpVK = TTI::getOperandInfo(I->getOperand(0));
+    TTI::OperandValueKind OpVK = TTI::getOperandInfo(I->getOperand(0)).Kind;
     Cost += TTI.getMemoryOpCost(I->getOpcode(), VectorTy, Alignment, AS,
                                 CostKind, OpVK, I);
   }
@@ -6679,7 +6679,7 @@ LoopVectorizationCostModel::getMemoryInstructionCost(Instruction *I,
     const Align Alignment = getLoadStoreAlignment(I);
     unsigned AS = getLoadStoreAddressSpace(I);
 
-    TTI::OperandValueKind OpVK = TTI::getOperandInfo(I->getOperand(0));
+    TTI::OperandValueKind OpVK = TTI::getOperandInfo(I->getOperand(0)).Kind;
     return TTI.getAddressComputationCost(ValTy) +
            TTI.getMemoryOpCost(I->getOpcode(), ValTy, Alignment, AS,
                                TTI::TCK_RecipThroughput, OpVK, I);
@@ -7111,17 +7111,15 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     // Certain instructions can be cheaper to vectorize if they have a constant
     // second vector operand. One example of this are shifts on x86.
     Value *Op2 = I->getOperand(1);
-    TargetTransformInfo::OperandValueProperties Op2VP;
-    TargetTransformInfo::OperandValueKind Op2VK =
-        TTI.getOperandInfo(Op2, Op2VP);
-    if (Op2VK == TargetTransformInfo::OK_AnyValue && Legal->isUniform(Op2))
-      Op2VK = TargetTransformInfo::OK_UniformValue;
+    auto Op2Info = TTI.getOperandInfo(Op2);
+    if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue && Legal->isUniform(Op2))
+      Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
 
     SmallVector<const Value *, 4> Operands(I->operand_values());
     return TTI.getArithmeticInstrCost(
         I->getOpcode(), VectorTy, CostKind,
         {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-        {Op2VK, Op2VP}, Operands, I);
+        Op2Info, Operands, I);
   }
   case Instruction::FNeg: {
     return TTI.getArithmeticInstrCost(
@@ -7141,10 +7139,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
                         match(I, m_LogicalOr(m_Value(Op0), m_Value(Op1))))) {
       // select x, y, false --> x & y
       // select x, true, y --> x | y
-      TTI::OperandValueProperties Op1VP = TTI::OP_None;
-      TTI::OperandValueProperties Op2VP = TTI::OP_None;
-      TTI::OperandValueKind Op1VK = TTI::getOperandInfo(Op0, Op1VP);
-      TTI::OperandValueKind Op2VK = TTI::getOperandInfo(Op1, Op2VP);
+      const auto [Op1VK, Op1VP] = TTI::getOperandInfo(Op0);
+      const auto [Op2VK, Op2VP] = TTI::getOperandInfo(Op1);
       assert(Op0->getType()->getScalarSizeInBits() == 1 &&
               Op1->getType()->getScalarSizeInBits() == 1);
 

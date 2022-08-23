@@ -1565,13 +1565,13 @@ public:
       const Value *X = Args[0];
       const Value *Y = Args[1];
       const Value *Z = Args[2];
-      TTI::OperandValueProperties OpPropsX, OpPropsY, OpPropsZ, OpPropsBW;
-      TTI::OperandValueKind OpKindX = TTI::getOperandInfo(X, OpPropsX);
-      TTI::OperandValueKind OpKindY = TTI::getOperandInfo(Y, OpPropsY);
-      TTI::OperandValueKind OpKindZ = TTI::getOperandInfo(Z, OpPropsZ);
+      const auto [OpKindX, OpPropsX] = TTI::getOperandInfo(X);
+      const auto [OpKindY, OpPropsY] = TTI::getOperandInfo(Y);
+      const auto [OpKindZ, OpPropsZ] = TTI::getOperandInfo(Z);
       TTI::OperandValueKind OpKindBW = TTI::OK_UniformConstantValue;
-      OpPropsBW = isPowerOf2_32(RetTy->getScalarSizeInBits()) ? TTI::OP_PowerOf2
-                                                              : TTI::OP_None;
+      TTI::OperandValueProperties OpPropsBW =
+        isPowerOf2_32(RetTy->getScalarSizeInBits()) ? TTI::OP_PowerOf2
+        : TTI::OP_None;
       // fshl: (X << (Z % BW)) | (Y >> (BW - (Z % BW)))
       // fshr: (X << (BW - (Z % BW))) | (Y >> (Z % BW))
       InstructionCost Cost = 0;
