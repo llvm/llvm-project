@@ -176,8 +176,8 @@ define void @test_runtime_trip_count(i32 %N) {
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[FOR_BODY_PREHEADER7:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 4294967292
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N_VEC]], -4
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr exact i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[WIDE_TRIP_COUNT]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP2]], 7
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP0]], 28
