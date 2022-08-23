@@ -1152,23 +1152,6 @@ static void RenderDebugInfoCompressionArgs(const ArgList &Args,
   }
 }
 
-static const char *RelocationModelName(llvm::Reloc::Model Model) {
-  switch (Model) {
-  case llvm::Reloc::Static:
-    return "static";
-  case llvm::Reloc::PIC_:
-    return "pic";
-  case llvm::Reloc::DynamicNoPIC:
-    return "dynamic-no-pic";
-  case llvm::Reloc::ROPI:
-    return "ropi";
-  case llvm::Reloc::RWPI:
-    return "rwpi";
-  case llvm::Reloc::ROPI_RWPI:
-    return "ropi-rwpi";
-  }
-  llvm_unreachable("Unknown Reloc::Model kind");
-}
 static void handleAMDGPUCodeObjectVersionOptions(const Driver &D,
                                                  const ArgList &Args,
                                                  ArgStringList &CmdArgs,
