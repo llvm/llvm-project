@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple x86_64-pc-win32 -fms-extensions -fms-compatibility \
 // RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | grep GCC | count 5
 // CHECK-MS64: #define _INTEGRAL_MAX_BITS 64
+// CHECK-MS64: #define _ISO_VOLATILE 1
 // CHECK-MS64: #define _MSC_EXTENSIONS 1
 // CHECK-MS64: #define _MSC_VER 1900
 // CHECK-MS64: #define _MSVC_LANG 201402L
@@ -27,6 +28,7 @@
 // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
 // RUN:     -fms-compatibility-version=19.00 -std=c++17 -o - | grep GCC | count 5
 // CHECK-MS: #define _INTEGRAL_MAX_BITS 64
+// CHECK-MS: #define _ISO_VOLATILE 1
 // CHECK-MS: #define _MSC_EXTENSIONS 1
 // CHECK-MS: #define _MSC_VER 1900
 // CHECK-MS: #define _MSVC_LANG 201703L
