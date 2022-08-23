@@ -776,8 +776,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       return LT.first * Entry->Cost;
   }
 
-  if (ISD == ISD::SHL &&
-      Op2Info.Kind == TargetTransformInfo::OK_NonUniformConstantValue) {
+  if (ISD == ISD::SHL && !Op2Info.isUniform() && Op2Info.isConstant()) {
     MVT VT = LT.second;
     // Vector shift left by non uniform constant can be lowered
     // into vector multiply.
