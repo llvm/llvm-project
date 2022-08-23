@@ -1007,6 +1007,46 @@ bool BinaryFunction::isZeroPaddingAt(uint64_t Offset) const {
   return true;
 }
 
+void BinaryFunction::handlePCRelOperand(MCInst &Instruction, uint64_t Address,
+                                        uint64_t Size) {
+  auto &MIB = BC.MIB;
+  uint64_t TargetAddress = 0;
+  if (!MIB->evaluateMemOperandTarget(Instruction, TargetAddress, Address,
+                                     Size)) {
+    errs() << "BOLT-ERROR: PC-relative operand can't be evaluated:\n";
+    BC.InstPrinter->printInst(&Instruction, 0, "", *BC.STI, errs());
+    errs() << '\n';
+    Instruction.dump_pretty(errs(), BC.InstPrinter.get());
+    errs() << '\n';
+    errs() << "BOLT-ERROR: cannot handle PC-relative operand at 0x"
+           << Twine::utohexstr(Address) << ". Skipping function " << *this
+           << ".\n";
+    if (BC.HasRelocations)
+      exit(1);
+    IsSimple = false;
+    return;
+  }
+  if (TargetAddress == 0 && opts::Verbosity >= 1) {
+    outs() << "BOLT-INFO: PC-relative operand is zero in function " << *this
+           << '\n';
+  }
+
+  const MCSymbol *TargetSymbol;
+  uint64_t TargetOffset;
+  std::tie(TargetSymbol, TargetOffset) =
+      BC.handleAddressRef(TargetAddress, *this, /*IsPCRel*/ true);
+  const MCExpr *Expr =
+      MCSymbolRefExpr::create(TargetSymbol, MCSymbolRefExpr::VK_None, *BC.Ctx);
+  if (TargetOffset) {
+    const MCConstantExpr *Offset =
+        MCConstantExpr::create(TargetOffset, *BC.Ctx);
+    Expr = MCBinaryExpr::createAdd(Expr, Offset, *BC.Ctx);
+  }
+  MIB->replaceMemOperandDisp(Instruction,
+                             MCOperand::createExpr(BC.MIB->getTargetExprFor(
+                                 Instruction, Expr, *BC.Ctx, 0)));
+}
+
 bool BinaryFunction::disassemble() {
   NamedRegionTimer T("disassemble", "Disassemble function", "buildfuncs",
                      "Build Binary Functions", opts::TimeBuild);
@@ -1024,45 +1064,6 @@ bool BinaryFunction::disassemble() {
   // Insert a label at the beginning of the function. This will be our first
   // basic block.
   Labels[0] = Ctx->createNamedTempSymbol("BB0");
-
-  auto handlePCRelOperand = [&](MCInst &Instruction, uint64_t Address,
-                                uint64_t Size) {
-    uint64_t TargetAddress = 0;
-    if (!MIB->evaluateMemOperandTarget(Instruction, TargetAddress, Address,
-                                       Size)) {
-      errs() << "BOLT-ERROR: PC-relative operand can't be evaluated:\n";
-      BC.InstPrinter->printInst(&Instruction, 0, "", *BC.STI, errs());
-      errs() << '\n';
-      Instruction.dump_pretty(errs(), BC.InstPrinter.get());
-      errs() << '\n';
-      errs() << "BOLT-ERROR: cannot handle PC-relative operand at 0x"
-             << Twine::utohexstr(Address) << ". Skipping function " << *this
-             << ".\n";
-      if (BC.HasRelocations)
-        exit(1);
-      IsSimple = false;
-      return;
-    }
-    if (TargetAddress == 0 && opts::Verbosity >= 1) {
-      outs() << "BOLT-INFO: PC-relative operand is zero in function " << *this
-             << '\n';
-    }
-
-    const MCSymbol *TargetSymbol;
-    uint64_t TargetOffset;
-    std::tie(TargetSymbol, TargetOffset) =
-        BC.handleAddressRef(TargetAddress, *this, /*IsPCRel*/ true);
-    const MCExpr *Expr = MCSymbolRefExpr::create(
-        TargetSymbol, MCSymbolRefExpr::VK_None, *BC.Ctx);
-    if (TargetOffset) {
-      const MCConstantExpr *Offset =
-          MCConstantExpr::create(TargetOffset, *BC.Ctx);
-      Expr = MCBinaryExpr::createAdd(Expr, Offset, *BC.Ctx);
-    }
-    MIB->replaceMemOperandDisp(Instruction,
-                               MCOperand::createExpr(BC.MIB->getTargetExprFor(
-                                   Instruction, Expr, *BC.Ctx, 0)));
-  };
 
   auto handleExternalReference = [&](MCInst &Instruction, uint64_t Size,
                                      uint64_t Offset, uint64_t TargetAddress,
