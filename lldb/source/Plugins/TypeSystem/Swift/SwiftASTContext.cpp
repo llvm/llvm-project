@@ -5437,6 +5437,7 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILFunction:
+  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILToken:
   case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::TypeVariable:
@@ -5578,6 +5579,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILToken:
   case swift::TypeKind::SequenceArchetype:
   case swift::TypeKind::Unresolved:
@@ -6067,6 +6069,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
   case swift::TypeKind::SequenceArchetype:
@@ -6165,6 +6168,7 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
   case swift::TypeKind::SequenceArchetype:
@@ -6299,6 +6303,7 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
   case swift::TypeKind::SequenceArchetype:
@@ -6525,6 +6530,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
   case swift::TypeKind::SequenceArchetype:
@@ -6709,6 +6715,7 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
   case swift::TypeKind::SequenceArchetype:
@@ -6893,6 +6900,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
   case swift::TypeKind::SequenceArchetype:
@@ -7198,6 +7206,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::Placeholder:
     case swift::TypeKind::SILBlockStorage:
     case swift::TypeKind::SILBox:
+    case swift::TypeKind::SILMoveOnlyWrapped:
     case swift::TypeKind::SILFunction:
     case swift::TypeKind::SILToken:
     case swift::TypeKind::SequenceArchetype:
@@ -7577,6 +7586,7 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::Placeholder:
   case swift::TypeKind::SILBlockStorage:
   case swift::TypeKind::SILBox:
+  case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
   case swift::TypeKind::SequenceArchetype:
