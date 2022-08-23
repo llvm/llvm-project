@@ -900,6 +900,14 @@ public:
   /// Additional properties of an operand's values.
   enum OperandValueProperties { OP_None = 0, OP_PowerOf2 = 1 };
 
+  // Describe the values an operand can take.  We're in the process
+  // of migrating uses of OperandValueKind and OperandValueProperties
+  // to use this class, and then will change the internal representation.
+  struct OperandValueInfo {
+    OperandValueKind Kind = OK_AnyValue;
+    OperandValueProperties Properties = OP_None;
+  };
+
   /// \return the number of registers in the target-provided register class.
   unsigned getNumberOfRegisters(unsigned ClassID) const;
 
@@ -1033,10 +1041,7 @@ public:
   unsigned getMaxInterleaveFactor(unsigned VF) const;
 
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
-  static OperandValueKind getOperandInfo(const Value *V,
-                                         OperandValueProperties &OpProps);
-  static OperandValueKind getOperandInfo(const Value *V);
-
+  static OperandValueInfo getOperandInfo(const Value *V);
 
   /// This is an approximation of reciprocal throughput of a math/logic op.
   /// A higher cost indicates less expected throughput.
@@ -1057,10 +1062,8 @@ public:
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      OperandValueKind Opd1Info = OK_AnyValue,
-      OperandValueKind Opd2Info = OK_AnyValue,
-      OperandValueProperties Opd1PropInfo = OP_None,
-      OperandValueProperties Opd2PropInfo = OP_None,
+      TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr) const;
 
@@ -1179,7 +1182,7 @@ public:
   getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                   unsigned AddressSpace,
                   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-                  OperandValueKind OpdInfo = OK_AnyValue,
+                  OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
                   const Instruction *I = nullptr) const;
 
   /// \return The cost of VP Load and Store instructions.
@@ -1719,6 +1722,11 @@ public:
       OperandValueKind Opd1Info, OperandValueKind Opd2Info,
       OperandValueProperties Opd1PropInfo, OperandValueProperties Opd2PropInfo,
       ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) = 0;
+  virtual InstructionCost getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+      OperandValueInfo Op1Info, OperandValueInfo Op2Info,
+      ArrayRef<const Value *> Args, const Instruction *CxtI = nullptr) = 0;
+
   virtual InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
                                          ArrayRef<int> Mask,
                                          TTI::TargetCostKind CostKind,
@@ -2273,6 +2281,18 @@ public:
     return Impl.getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
                                        Opd1PropInfo, Opd2PropInfo, Args, CxtI);
   }
+
+  InstructionCost getArithmeticInstrCost(
+      unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
+      OperandValueInfo Opd1Info, OperandValueInfo Opd2Info,
+      ArrayRef<const Value *> Args,
+      const Instruction *CxtI = nullptr) override {
+    return Impl.getArithmeticInstrCost(Opcode, Ty, CostKind,
+                                       Opd1Info.Kind, Opd2Info.Kind,
+                                       Opd1Info.Properties, Opd2Info.Properties,
+                                       Args, CxtI);
+  }
+
   InstructionCost getShuffleCost(ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
