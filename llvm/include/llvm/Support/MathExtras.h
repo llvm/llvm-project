@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_MATHEXTRAS_H
 #define LLVM_SUPPORT_MATHEXTRAS_H
 
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <climits>
@@ -525,37 +526,6 @@ unsigned countTrailingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
   return countTrailingZeros<T>(~Value, ZB);
 }
 
-namespace detail {
-template <typename T, std::size_t SizeOfT> struct PopulationCounter {
-  static unsigned count(T Value) {
-    // Generic version, forward to 32 bits.
-    static_assert(SizeOfT <= 4, "Not implemented!");
-#if defined(__GNUC__)
-    return __builtin_popcount(Value);
-#else
-    uint32_t v = Value;
-    v = v - ((v >> 1) & 0x55555555);
-    v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-    return ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24;
-#endif
-  }
-};
-
-template <typename T> struct PopulationCounter<T, 8> {
-  static unsigned count(T Value) {
-#if defined(__GNUC__)
-    return __builtin_popcountll(Value);
-#else
-    uint64_t v = Value;
-    v = v - ((v >> 1) & 0x5555555555555555ULL);
-    v = (v & 0x3333333333333333ULL) + ((v >> 2) & 0x3333333333333333ULL);
-    v = (v + (v >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
-    return unsigned((uint64_t)(v * 0x0101010101010101ULL) >> 56);
-#endif
-  }
-};
-} // namespace detail
-
 /// Count the number of set bits in a value.
 /// Ex. countPopulation(0xF000F000) = 8
 /// Returns 0 if the word is zero.
@@ -564,7 +534,7 @@ inline unsigned countPopulation(T Value) {
   static_assert(std::numeric_limits<T>::is_integer &&
                     !std::numeric_limits<T>::is_signed,
                 "Only unsigned integral types are allowed.");
-  return detail::PopulationCounter<T, sizeof(T)>::count(Value);
+  return (unsigned)llvm::popcount(Value);
 }
 
 /// Return true if the argument contains a non-empty sequence of ones with the
