@@ -394,6 +394,23 @@ bool M88kPostLegalizerLoweringInfo::combine(GISelChangeObserver &Observer,
                                             MachineIRBuilder &B) const {
   M88kGenPostLegalizerLoweringHelper Generated(GeneratedRuleCfg);
 
+  // If the instruction is commutable and the first operand is a constant, then
+  // swap the operands. The matcher generated from the SDAG patterns expects the
+  // constant always as the second operand, otherwise operand is not matched as
+  // immediate.
+  if (MI.isCommutable()) {
+    assert(MI.getNumExplicitOperands() == 3 && "Not a binary operation");
+    unsigned SrcOpc =
+        getDefIgnoringCopies(MI.getOperand(1).getReg(), *B.getMRI())
+            ->getOpcode();
+    if (SrcOpc == TargetOpcode::G_CONSTANT ||
+        SrcOpc == TargetOpcode::G_FCONSTANT) {
+      Observer.changingInstr(MI);
+      B.getTII().commuteInstruction(MI, false, 1, 2);
+      Observer.changedInstr(MI);
+    }
+  }
+
   if (Generated.tryCombineAll(Observer, MI, B, KB, ReplaceSignedDiv,
                               AddZeroDivCheck))
     return true;
