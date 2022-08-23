@@ -81,21 +81,6 @@ private:
   linalg::LinalgPaddingOptions options;
 };
 
-/// Represent one application of createLinalgStrategyGeneralizePass.
-struct Generalize : public Transformation {
-  explicit Generalize(StringRef name,
-                      LinalgTransformationFilter::FilterFunction f = nullptr)
-      : Transformation(std::move(f)), opName(name) {}
-
-  void addToPassPipeline(OpPassManager &pm,
-                         LinalgTransformationFilter m) const override {
-    pm.addPass(createLinalgStrategyGeneralizePass(opName, m));
-  }
-
-private:
-  std::string opName;
-};
-
 /// Represent one application of createLinalgStrategyDecomposePass.
 struct Decompose : public Transformation {
   explicit Decompose(LinalgTransformationFilter::FilterFunction f = nullptr)
@@ -218,21 +203,7 @@ struct CodegenStrategy {
   padIf(bool b, StringRef opName, linalg::LinalgPaddingOptions options,
         LinalgTransformationFilter::FilterFunction f = nullptr) {
     return b ? pad(opName, std::move(options), std::move(f)) : *this;
-  }
-  /// Append a pattern to generalize named operations.
-  CodegenStrategy &
-  generalize(StringRef opName,
-             const LinalgTransformationFilter::FilterFunction &f = nullptr) {
-    transformationSequence.emplace_back(
-        std::make_unique<Generalize>(opName, f));
-    return *this;
-  }
-  /// Conditionally append a pattern to generalize named operations.
-  CodegenStrategy &
-  generalizeIf(bool b, StringRef opName,
-               LinalgTransformationFilter::FilterFunction f = nullptr) {
-    return b ? generalize(opName, std::move(f)) : *this;
-  }
+  }  
   /// Append patterns to decompose convolutions.
   CodegenStrategy &
   decompose(const LinalgTransformationFilter::FilterFunction &f = nullptr) {
