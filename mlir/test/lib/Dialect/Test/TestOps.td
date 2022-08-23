@@ -2741,7 +2741,8 @@ def TestLinalgConvOpNotLinalgOp : TEST_Op<"conv_op_not_linalg_op", [
 
 def TestLinalgConvOp :
   TEST_Op<"linalg_conv_op", [AttrSizedOperandSegments, SingleBlock,
-      LinalgStructuredInterface, LinalgConvolutionOpInterface]> {
+      DestinationStyleOpInterface, LinalgStructuredInterface,
+      LinalgConvolutionOpInterface]> {
 
   let arguments = (ins Variadic<AnyType>:$inputs,
     Variadic<AnyType>:$outputs);
@@ -2799,7 +2800,8 @@ def TestLinalgFillOpNotLinalgOp : TEST_Op<"fill_op_not_linalg_op", [
 
 def TestLinalgFillOp :
   TEST_Op<"linalg_fill_op", [AttrSizedOperandSegments, SingleBlock,
-      LinalgStructuredInterface, LinalgFillOpInterface]> {
+      DestinationStyleOpInterface, LinalgStructuredInterface,
+      LinalgFillOpInterface]> {
 
   let arguments = (ins Variadic<AnyType>:$inputs,
     Variadic<AnyType>:$outputs);
