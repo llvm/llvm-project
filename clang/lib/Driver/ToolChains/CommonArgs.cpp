@@ -1529,7 +1529,7 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
   // Targets that don't use unwind libraries.
   if ((TC.getTriple().isAndroid() && UNW == ToolChain::UNW_Libgcc) ||
       TC.getTriple().isOSIAMCU() || TC.getTriple().isOSBinFormatWasm() ||
-      UNW == ToolChain::UNW_None)
+      TC.getTriple().isWindowsMSVCEnvironment() || UNW == ToolChain::UNW_None)
     return;
 
   LibGccType LGT = getLibGccType(TC, D, Args);
