@@ -43,8 +43,7 @@ class TestSwiftRegex(TestBase):
                     substrs=['Regex<Substring>'])
 
     @swiftTest
-    # Expected to fail because of availability checking while Regex support isn't stabilized
-    @expectedFailureDarwin
+    @skipIf(macos_version=["<", "13"])
     def test_swift_regex_in_exp(self):
         """Test Swift's regex support"""
         self.build()
