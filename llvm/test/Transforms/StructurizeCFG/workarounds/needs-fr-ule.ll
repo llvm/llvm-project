@@ -68,7 +68,7 @@ define void @irreducible_mountain_bug(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3
 ; CHECK:       cond.end61:
 ; CHECK-NEXT:    br label [[FLOW7]]
 ; CHECK:       Flow14:
-; CHECK-NEXT:    [[TMP15:%.*]] = phi i1 [ [[TMP20:%.*]], [[FLOW15:%.*]] ], [ [[TMP17:%.*]], [[LOOP_EXIT_GUARD1]] ]
+; CHECK-NEXT:    [[TMP15:%.*]] = phi i1 [ [[TMP20:%.*]], [[FLOW15:%.*]] ], [ undef, [[LOOP_EXIT_GUARD1]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi i1 [ [[TMP21:%.*]], [[FLOW15]] ], [ [[DOTINV]], [[LOOP_EXIT_GUARD1]] ]
 ; CHECK-NEXT:    br label [[FLOW13:%.*]]
 ; CHECK:       if.then69:
@@ -102,7 +102,7 @@ define void @irreducible_mountain_bug(i1 %Pred0, i1 %Pred1, i1 %Pred2, i1 %Pred3
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       Flow12:
-; CHECK-NEXT:    [[TMP17]] = phi i1 [ true, [[LOR_RHS]] ], [ undef, [[WHILE_COND]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = phi i1 [ true, [[LOR_RHS]] ], [ undef, [[WHILE_COND]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = phi i1 [ false, [[LOR_RHS]] ], [ true, [[WHILE_COND]] ]
 ; CHECK-NEXT:    [[TMP19:%.*]] = phi i1 [ [[PRED9:%.*]], [[LOR_RHS]] ], [ [[PRED3]], [[WHILE_COND]] ]
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[IRR_GUARD]], label [[FLOW13]]
