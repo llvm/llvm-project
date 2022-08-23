@@ -4526,8 +4526,8 @@ void Verifier::visitMemProfMetadata(Instruction &I, MDNode *MD) {
     visitCallStackMetadata(StackMD);
 
     // Check that remaining operands are MDString.
-    Check(std::all_of(MIB->op_begin() + 1, MIB->op_end(),
-                      [](const MDOperand &Op) { return isa<MDString>(Op); }),
+    Check(llvm::all_of(llvm::drop_begin(MIB->operands()),
+                       [](const MDOperand &Op) { return isa<MDString>(Op); }),
           "Not all !memprof MemInfoBlock operands 1 to N are MDString", MIB);
   }
 }
