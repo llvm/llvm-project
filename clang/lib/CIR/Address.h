@@ -54,6 +54,12 @@ public:
   static Address invalid() { return Address(nullptr); }
   bool isValid() const { return Pointer != nullptr; }
 
+  /// Return address with different pointer, but same element type and
+  /// alignment.
+  Address withPointer(mlir::Value NewPointer) const {
+    return Address(NewPointer, getElementType(), getAlignment());
+  }
+
   mlir::Value getPointer() const {
     // assert(isValid());
     return Pointer;

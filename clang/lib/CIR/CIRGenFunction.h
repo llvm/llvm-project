@@ -462,6 +462,9 @@ public:
       ReturnValueSlot ReturnValue, bool HasQualifier,
       clang::NestedNameSpecifier *Qualifier, bool IsArrow,
       const clang::Expr *Base);
+  RValue buildCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
+                                        const CXXMethodDecl *MD,
+                                        ReturnValueSlot ReturnValue);
 
   mlir::Value buildCXXNewExpr(const CXXNewExpr *E);
 
@@ -556,6 +559,8 @@ public:
 
   void buildCallArg(CallArgList &args, const clang::Expr *E,
                     clang::QualType ArgType);
+
+  LValue buildCallExprLValue(const CallExpr *E);
 
   /// buildAnyExprToTemp - Similarly to buildAnyExpr(), however, the result will
   /// always be accessible even if no aggregate location is provided.
@@ -701,6 +706,8 @@ public:
     /// address space for address space agnostic languages.
     Address getAllocatedAddress() const { return Addr; }
   };
+
+  LValue buildMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
 
   /// Emit the alloca and debug information for a
   /// local variable.  Does not emit initialization or destruction.

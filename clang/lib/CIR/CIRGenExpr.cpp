@@ -566,7 +566,10 @@ RValue CIRGenFunction::buildCallExpr(const clang::CallExpr *E,
     return buildCXXMemberCallExpr(CE, ReturnValue);
 
   assert(!dyn_cast<CUDAKernelCallExpr>(E) && "CUDA NYI");
-  assert(!dyn_cast<CXXOperatorCallExpr>(E) && "NYI");
+  if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(E))
+    if (const CXXMethodDecl *MD =
+            dyn_cast_or_null<CXXMethodDecl>(CE->getCalleeDecl()))
+      return buildCXXOperatorMemberCallExpr(CE, MD, ReturnValue);
 
   CIRGenCallee callee = buildCallee(E->getCallee());
 
@@ -1211,6 +1214,173 @@ LValue CIRGenFunction::buildMemberExpr(const MemberExpr *E) {
   llvm_unreachable("Unhandled member declaration!");
 }
 
+LValue CIRGenFunction::buildCallExprLValue(const CallExpr *E) {
+  RValue RV = buildCallExpr(E);
+
+  if (!RV.isScalar())
+    return makeAddrLValue(RV.getAggregateAddress(), E->getType(),
+                          AlignmentSource::Decl);
+
+  assert(E->getCallReturnType(getContext())->isReferenceType() &&
+         "Can't have a scalar return unless the return type is a "
+         "reference type!");
+
+  assert(0 && "remove me once there's a testcase to cover this");
+  return MakeNaturalAlignPointeeAddrLValue(RV.getScalarVal().getDefiningOp(),
+                                           E->getType());
+}
+
+/// Evaluate an expression into a given memory location.
+void CIRGenFunction::buildAnyExprToMem(const Expr *E, Address Location,
+                                       Qualifiers Quals, bool IsInit) {
+  // FIXME: This function should take an LValue as an argument.
+  switch (getEvaluationKind(E->getType())) {
+  case TEK_Complex:
+    assert(0 && "NYI");
+    return;
+
+  case TEK_Aggregate: {
+    buildAggExpr(E, AggValueSlot::forAddr(Location, Quals,
+                                          AggValueSlot::IsDestructed_t(IsInit),
+                                          AggValueSlot::DoesNotNeedGCBarriers,
+                                          AggValueSlot::IsAliased_t(!IsInit),
+                                          AggValueSlot::MayOverlap));
+    return;
+  }
+
+  case TEK_Scalar: {
+    assert(0 && "NYI");
+    return;
+  }
+  }
+  llvm_unreachable("bad evaluation kind");
+}
+
+static Address createReferenceTemporary(CIRGenFunction &CGF,
+                                        const MaterializeTemporaryExpr *M,
+                                        const Expr *Inner,
+                                        Address *Alloca = nullptr) {
+  // TODO(cir): CGF.getTargetHooks();
+  switch (M->getStorageDuration()) {
+  case SD_FullExpression:
+  case SD_Automatic: {
+    // TODO(cir): probably not needed / too LLVM specific?
+    // If we have a constant temporary array or record try to promote it into a
+    // constant global under the same rules a normal constant would've been
+    // promoted. This is easier on the optimizer and generally emits fewer
+    // instructions.
+    QualType Ty = Inner->getType();
+    if (CGF.CGM.getCodeGenOpts().MergeAllConstants &&
+        (Ty->isArrayType() || Ty->isRecordType()) &&
+        CGF.CGM.isTypeConstant(Ty, true))
+      assert(0 && "NYI");
+    return CGF.CreateMemTemp(Ty, CGF.getLoc(M->getSourceRange()), "ref.tmp",
+                             Alloca);
+  }
+  case SD_Thread:
+  case SD_Static:
+    assert(0 && "NYI");
+
+  case SD_Dynamic:
+    llvm_unreachable("temporary can't have dynamic storage duration");
+  }
+  llvm_unreachable("unknown storage duration");
+}
+
+static void pushTemporaryCleanup(CIRGenFunction &CGF,
+                                 const MaterializeTemporaryExpr *M,
+                                 const Expr *E, Address ReferenceTemporary) {
+  // Objective-C++ ARC:
+  //   If we are binding a reference to a temporary that has ownership, we
+  //   need to perform retain/release operations on the temporary.
+  //
+  // FIXME: This should be looking at E, not M.
+  if (auto Lifetime = M->getType().getObjCLifetime()) {
+    assert(0 && "NYI");
+  }
+
+  CXXDestructorDecl *ReferenceTemporaryDtor = nullptr;
+  if (const RecordType *RT =
+          E->getType()->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
+    // Get the destructor for the reference temporary.
+    auto *ClassDecl = cast<CXXRecordDecl>(RT->getDecl());
+    if (!ClassDecl->hasTrivialDestructor())
+      ReferenceTemporaryDtor = ClassDecl->getDestructor();
+  }
+
+  if (!ReferenceTemporaryDtor)
+    return;
+
+  // TODO(cir): Call the destructor for the temporary.
+  assert(0 && "NYI");
+}
+
+LValue CIRGenFunction::buildMaterializeTemporaryExpr(
+    const MaterializeTemporaryExpr *M) {
+  const Expr *E = M->getSubExpr();
+
+  assert((!M->getExtendingDecl() || !isa<VarDecl>(M->getExtendingDecl()) ||
+          !cast<VarDecl>(M->getExtendingDecl())->isARCPseudoStrong()) &&
+         "Reference should never be pseudo-strong!");
+
+  // FIXME: ideally this would use buildAnyExprToMem, however, we cannot do so
+  // as that will cause the lifetime adjustment to be lost for ARC
+  auto ownership = M->getType().getObjCLifetime();
+  if (ownership != Qualifiers::OCL_None &&
+      ownership != Qualifiers::OCL_ExplicitNone) {
+    assert(0 && "NYI");
+  }
+
+  SmallVector<const Expr *, 2> CommaLHSs;
+  SmallVector<SubobjectAdjustment, 2> Adjustments;
+  E = E->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
+
+  for (const auto &Ignored : CommaLHSs)
+    buildIgnoredExpr(Ignored);
+
+  if (const auto *opaque = dyn_cast<OpaqueValueExpr>(E))
+    assert(0 && "NYI");
+
+  // Create and initialize the reference temporary.
+  Address Alloca = Address::invalid();
+  Address Object = createReferenceTemporary(*this, M, E, &Alloca);
+
+  if (auto Var =
+          dyn_cast<mlir::cir::GlobalOp>(Object.getPointer().getDefiningOp())) {
+    // TODO(cir): add something akin to stripPointerCasts() to ptr above
+    assert(0 && "NYI");
+  } else {
+    switch (M->getStorageDuration()) {
+    case SD_Automatic:
+      assert(0 && "NYI");
+      break;
+
+    case SD_FullExpression: {
+      if (!ShouldEmitLifetimeMarkers)
+        break;
+      assert(0 && "NYI");
+      break;
+    }
+
+    default:
+      break;
+    }
+
+    buildAnyExprToMem(E, Object, Qualifiers(), /*IsInit*/ true);
+  }
+  pushTemporaryCleanup(*this, M, E, Object);
+
+  // Perform derived-to-base casts and/or field accesses, to get from the
+  // temporary object we created (and, potentially, for which we extended
+  // the lifetime) to the subobject we're binding the reference to.
+  for (SubobjectAdjustment &Adjustment : llvm::reverse(Adjustments)) {
+    (void)Adjustment;
+    assert(0 && "NYI");
+  }
+
+  return makeAddrLValue(Object, M->getType(), AlignmentSource::Decl);
+}
+
 /// Emit code to compute a designator that specifies the location
 /// of the expression.
 /// FIXME: document this function better.
@@ -1232,6 +1402,27 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
       assert(0 && "not yet implemented");
     assert(!Ty->isAnyComplexType() && "complex types not implemented");
     return buildCompoundAssignmentLValue(cast<CompoundAssignOperator>(E));
+  }
+  case Expr::UserDefinedLiteralClass:
+    assert(0 && "should fallback below, remove assert when testcase available");
+  case Expr::CXXOperatorCallExprClass:
+    return buildCallExprLValue(cast<CallExpr>(E));
+  case Expr::ExprWithCleanupsClass: {
+    const auto *cleanups = cast<ExprWithCleanups>(E);
+    // RunCleanupsScope Scope(*this);
+    LValue LV = buildLValue(cleanups->getSubExpr());
+    if (LV.isSimple()) {
+      // Defend against branches out of gnu statement expressions surrounded by
+      // cleanups.
+      Address Addr = LV.getAddress();
+      auto V = Addr.getPointer();
+      // Scope.ForceCleanup({&V});
+      return LValue::makeAddr(Addr.withPointer(V), LV.getType(), getContext(),
+                              LV.getBaseInfo() /*TODO(cir):TBAA*/);
+    }
+    // FIXME: Is it possible to create an ExprWithCleanups that produces a
+    // bitfield lvalue or some other non-simple lvalue?
+    return LV;
   }
   case Expr::DeclRefExprClass:
     return buildDeclRefLValue(cast<DeclRefExpr>(E));
@@ -1255,6 +1446,9 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
   case Expr::CXXStaticCastExprClass:
   case Expr::ImplicitCastExprClass:
     return buildCastLValue(cast<CastExpr>(E));
+
+  case Expr::MaterializeTemporaryExprClass:
+    return buildMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(E));
 
   case Expr::ObjCPropertyRefExprClass:
     llvm_unreachable("cannot emit a property reference directly");
@@ -1516,4 +1710,70 @@ LValue CIRGenFunction::buildLoadOfReferenceLValue(LValue RefLVal,
   Address PointeeAddr = buildLoadOfReference(RefLVal, Loc, &PointeeBaseInfo);
   return makeAddrLValue(PointeeAddr, RefLVal.getType()->getPointeeType(),
                         PointeeBaseInfo);
+}
+
+//===----------------------------------------------------------------------===//
+// CIR builder helpers
+//===----------------------------------------------------------------------===//
+
+Address CIRGenFunction::CreateMemTemp(QualType Ty, mlir::Location Loc,
+                                      const Twine &Name, Address *Alloca) {
+  // FIXME: Should we prefer the preferred type alignment here?
+  return CreateMemTemp(Ty, getContext().getTypeAlignInChars(Ty), Loc, Name,
+                       Alloca);
+}
+
+Address CIRGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
+                                      mlir::Location Loc, const Twine &Name,
+                                      Address *Alloca) {
+  Address Result =
+      CreateTempAlloca(getTypes().convertTypeForMem(Ty), Align, Loc, Name,
+                       /*ArraySize=*/nullptr, Alloca);
+  if (Ty->isConstantMatrixType()) {
+    assert(0 && "NYI");
+  }
+  return Result;
+}
+
+/// This creates a alloca and inserts it into the entry block.
+Address CIRGenFunction::CreateTempAllocaWithoutCast(mlir::Type Ty,
+                                                    CharUnits Align,
+                                                    mlir::Location Loc,
+                                                    const Twine &Name,
+                                                    mlir::Value ArraySize) {
+  auto Alloca = CreateTempAlloca(Ty, Loc, Name, ArraySize);
+  Alloca.setAlignmentAttr(CGM.getSize(Align));
+  return Address(Alloca, Ty, Align);
+}
+
+/// CreateTempAlloca - This creates a alloca and inserts it into the entry
+/// block. The alloca is casted to default address space if necessary.
+Address CIRGenFunction::CreateTempAlloca(mlir::Type Ty, CharUnits Align,
+                                         mlir::Location Loc, const Twine &Name,
+                                         mlir::Value ArraySize,
+                                         Address *AllocaAddr) {
+  auto Alloca = CreateTempAllocaWithoutCast(Ty, Align, Loc, Name, ArraySize);
+  if (AllocaAddr)
+    *AllocaAddr = Alloca;
+  mlir::Value V = Alloca.getPointer();
+  // Alloca always returns a pointer in alloca address space, which may
+  // be different from the type defined by the language. For example,
+  // in C++ the auto variables are in the default address space. Therefore
+  // cast alloca to the default address space when necessary.
+  assert(!UnimplementedFeature::getASTAllocaAddressSpace());
+  return Address(V, Ty, Align);
+}
+
+/// CreateTempAlloca - This creates an alloca and inserts it into the entry
+/// block if \p ArraySize is nullptr, otherwise inserts it at the current
+/// insertion point of the builder.
+mlir::cir::AllocaOp CIRGenFunction::CreateTempAlloca(mlir::Type Ty,
+                                                     mlir::Location Loc,
+                                                     const Twine &Name,
+                                                     mlir::Value ArraySize) {
+  if (ArraySize)
+    assert(0 && "NYI");
+  return cast<mlir::cir::AllocaOp>(
+      buildAlloca(Name.str(), InitStyle::uninitialized, Ty, Loc, CharUnits())
+          .getDefiningOp());
 }

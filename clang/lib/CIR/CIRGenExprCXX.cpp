@@ -116,7 +116,17 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
   CallArgList *RtlArgs = nullptr;
   LValue TrivialAssignmentRHS;
   if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
-    llvm_unreachable("NYI");
+    if (OCE->isAssignmentOp()) {
+      if (TrivialAssignment) {
+        TrivialAssignmentRHS = buildLValue(CE->getArg(1));
+      } else {
+        assert(0 && "remove me once there's a testcase to cover this");
+        RtlArgs = &RtlArgStorage;
+        buildCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
+                      drop_begin(CE->arguments(), 1), CE->getDirectCallee(),
+                      /*ParamsToSkip*/ 0, EvaluationOrder::ForceRightToLeft);
+      }
+    }
   }
 
   LValue This;
@@ -207,6 +217,17 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
   return buildCXXMemberOrOperatorCall(
       CalleeDecl, Callee, ReturnValue, This.getPointer(),
       /*ImplicitParam=*/nullptr, QualType(), CE, RtlArgs);
+}
+
+RValue
+CIRGenFunction::buildCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *E,
+                                               const CXXMethodDecl *MD,
+                                               ReturnValueSlot ReturnValue) {
+  assert(MD->isInstance() &&
+         "Trying to emit a member call expr on a static method!");
+  return buildCXXMemberOrOperatorMemberCallExpr(
+      E, MD, ReturnValue, /*HasQualifier=*/false, /*Qualifier=*/nullptr,
+      /*IsArrow=*/false, E->getArg(0));
 }
 
 void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,

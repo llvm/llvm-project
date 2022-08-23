@@ -671,6 +671,8 @@ void CIRGenFunction::buildConstructorBody(FunctionArgList &Args) {
 /// an l-vlaue withi the natural pointee alignment of T.
 LValue CIRGenFunction::MakeNaturalAlignPointeeAddrLValue(mlir::Operation *Op,
                                                          QualType T) {
+  // FIXME(cir): is it safe to assume Op->getResult(0) is valid? Perhaps
+  // assert on the result type first.
   LValueBaseInfo BaseInfo;
   CharUnits Align = CGM.getNaturalTypeAlignment(T, &BaseInfo,
                                                 /* for PointeeType= */ true);
