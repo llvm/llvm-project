@@ -58,8 +58,8 @@ struct FormatSection {
     if (has_conv != other.has_conv)
       return false;
 
-    if (cpp::string_view(raw_string, raw_len) !=
-        cpp::string_view(other.raw_string, other.raw_len))
+    if (!cpp::string_view(raw_string, raw_len)
+             .equals(cpp::string_view(other.raw_string, other.raw_len)))
       return false;
 
     if (has_conv) {
