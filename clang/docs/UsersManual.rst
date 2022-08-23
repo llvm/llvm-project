@@ -1631,12 +1631,15 @@ Note that floating-point operations performed as part of constant initialization
 
 A note about ``__FLT_EVAL_METHOD__``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-The macro ``__FLT_EVAL_METHOD__`` will expand to either the value set from the
-command line option ``ffp-eval-method`` or to the value from the target info
-setting. The ``__FLT_EVAL_METHOD__`` macro cannot expand to the correct
-evaluation method in the presence of a ``#pragma`` which alters the evaluation
-method. An error is issued if ``__FLT_EVAL_METHOD__`` is expanded inside a scope
-modified by ``#pragma clang fp eval_method``.
+The ``__FLT_EVAL_METHOD__`` is not defined as a traditional macro, and so it
+will not appear when dumping preprocessor macros. Instead, the value
+``__FLT_EVAL_METHOD__`` expands to is determined at the point of expansion
+either from the value set by the ``-ffp-eval-method`` command line option or
+from the target. This is because the ``__FLT_EVAL_METHOD__`` macro
+cannot expand to the correct evaluation method in the presence of a ``#pragma``
+which alters the evaluation method. An error is issued if
+``__FLT_EVAL_METHOD__`` is expanded inside a scope modified by
+``#pragma clang fp eval_method``.
 
 .. _fp-constant-eval:
 
