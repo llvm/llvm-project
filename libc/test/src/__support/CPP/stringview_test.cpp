@@ -1,4 +1,5 @@
-//===-- Unittests for string_view ------------------------------------------===//
+//===-- Unittests for string_view
+//------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,19 +19,11 @@ TEST(LlvmLibcStringViewTest, InitializeCheck) {
 
   v = string_view("");
   ASSERT_EQ(v.size(), size_t(0));
-  ASSERT_TRUE(v.data() == nullptr);
-
-  v = string_view(nullptr);
-  ASSERT_EQ(v.size(), size_t(0));
-  ASSERT_TRUE(v.data() == nullptr);
-
-  v = string_view(nullptr, 10);
-  ASSERT_EQ(v.size(), size_t(0));
-  ASSERT_TRUE(v.data() == nullptr);
+  ASSERT_TRUE(v.data() != nullptr);
 
   v = string_view("abc", 0);
   ASSERT_EQ(v.size(), size_t(0));
-  ASSERT_TRUE(v.data() == nullptr);
+  ASSERT_TRUE(v.data() != nullptr);
 
   v = string_view("123456789");
   ASSERT_EQ(v.size(), size_t(9));
@@ -38,13 +31,13 @@ TEST(LlvmLibcStringViewTest, InitializeCheck) {
 
 TEST(LlvmLibcStringViewTest, Equals) {
   string_view v("abc");
-  ASSERT_TRUE(v.equals(string_view("abc")));
-  ASSERT_FALSE(v.equals(string_view()));
-  ASSERT_FALSE(v.equals(string_view("")));
-  ASSERT_FALSE(v.equals(string_view("123")));
-  ASSERT_FALSE(v.equals(string_view("abd")));
-  ASSERT_FALSE(v.equals(string_view("aaa")));
-  ASSERT_FALSE(v.equals(string_view("abcde")));
+  ASSERT_EQ(v, string_view("abc"));
+  ASSERT_NE(v, string_view());
+  ASSERT_NE(v, string_view(""));
+  ASSERT_NE(v, string_view("123"));
+  ASSERT_NE(v, string_view("abd"));
+  ASSERT_NE(v, string_view("aaa"));
+  ASSERT_NE(v, string_view("abcde"));
 }
 
 TEST(LlvmLibcStringViewTest, startsWith) {
@@ -81,12 +74,12 @@ TEST(LlvmLibcStringViewTest, RemovePrefix) {
   string_view a("123456789");
   a.remove_prefix(0);
   ASSERT_EQ(a.size(), size_t(9));
-  ASSERT_TRUE(a.equals(string_view("123456789")));
+  ASSERT_TRUE(a == "123456789");
 
   string_view b("123456789");
   b.remove_prefix(4);
   ASSERT_EQ(b.size(), size_t(5));
-  ASSERT_TRUE(b.equals(string_view("56789")));
+  ASSERT_TRUE(b == "56789");
 
   string_view c("123456789");
   c.remove_prefix(9);
@@ -97,57 +90,16 @@ TEST(LlvmLibcStringViewTest, RemoveSuffix) {
   string_view a("123456789");
   a.remove_suffix(0);
   ASSERT_EQ(a.size(), size_t(9));
-  ASSERT_TRUE(a.equals(string_view("123456789")));
+  ASSERT_TRUE(a == "123456789");
 
   string_view b("123456789");
   b.remove_suffix(4);
   ASSERT_EQ(b.size(), size_t(5));
-  ASSERT_TRUE(b.equals(string_view("12345")));
+  ASSERT_TRUE(b == "12345");
 
   string_view c("123456789");
   c.remove_suffix(9);
   ASSERT_EQ(c.size(), size_t(0));
-}
-
-TEST(LlvmLibcStringViewTest, TrimSingleChar) {
-  string_view v("     123456789   ");
-  auto t = v.trim(' ');
-  ASSERT_EQ(t.size(), size_t(9));
-  ASSERT_TRUE(t.equals(string_view("123456789")));
-
-  v = string_view("====12345==");
-  t = v.trim(' ');
-  ASSERT_EQ(v.size(), size_t(11));
-  ASSERT_TRUE(t.equals(string_view("====12345==")));
-
-  t = v.trim('=');
-  ASSERT_EQ(t.size(), size_t(5));
-  ASSERT_TRUE(t.equals(string_view("12345")));
-
-  v = string_view("12345===");
-  t = v.trim('=');
-  ASSERT_EQ(t.size(), size_t(5));
-  ASSERT_TRUE(t.equals(string_view("12345")));
-
-  v = string_view("===========12345");
-  t = v.trim('=');
-  ASSERT_EQ(t.size(), size_t(5));
-  ASSERT_TRUE(t.equals(string_view("12345")));
-
-  v = string_view("============");
-  t = v.trim('=');
-  ASSERT_EQ(t.size(), size_t(0));
-  ASSERT_TRUE(t.data() == nullptr);
-
-  v = string_view();
-  t = v.trim(' ');
-  ASSERT_EQ(t.size(), size_t(0));
-  ASSERT_TRUE(t.data() == nullptr);
-
-  v = string_view("");
-  t = v.trim(' ');
-  ASSERT_EQ(t.size(), size_t(0));
-  ASSERT_TRUE(t.data() == nullptr);
 }
 
 TEST(LlvmLibcStringViewTest, Observer) {
@@ -159,32 +111,6 @@ TEST(LlvmLibcStringViewTest, Observer) {
 }
 
 bool isDigit(char c) { return c >= '0' && c <= '9'; }
-
-TEST(LlvmLibcStringViewTest, Transform) {
-  ASSERT_TRUE(string_view("123abc").drop_back(3).equals("123"));
-  ASSERT_TRUE(string_view("123abc").drop_front(3).equals("abc"));
-  ASSERT_TRUE(string_view("123abc").take_back(3).equals("abc"));
-  ASSERT_TRUE(string_view("123abc").take_front(3).equals("123"));
-
-  ASSERT_TRUE(string_view("123abc").take_while(&isDigit).equals("123"));
-  ASSERT_TRUE(string_view("abc123").take_until(&isDigit).equals("abc"));
-  ASSERT_TRUE(string_view("123abc").drop_while(&isDigit).equals("abc"));
-  ASSERT_TRUE(string_view("abc123").drop_until(&isDigit).equals("123"));
-}
-
-TEST(LlvmLibcStringViewTest, ConsumeFront) {
-  string_view Tmp("abc");
-  ASSERT_FALSE(Tmp.consume_front("###"));
-  ASSERT_TRUE(Tmp.consume_front("ab"));
-  ASSERT_TRUE(Tmp.equals("c"));
-}
-
-TEST(LlvmLibcStringViewTest, ConsumeBack) {
-  string_view Tmp("abc");
-  ASSERT_FALSE(Tmp.consume_back("###"));
-  ASSERT_TRUE(Tmp.consume_back("bc"));
-  ASSERT_TRUE(Tmp.equals("a"));
-}
 
 TEST(LlvmLibcStringViewTest, FindFirstOf) {
   string_view Tmp("abca");
