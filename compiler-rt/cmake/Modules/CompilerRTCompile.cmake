@@ -24,26 +24,6 @@ function(translate_msvc_cflags out_flags msvc_flags)
   set(${out_flags} "${clang_flags}" PARENT_SCOPE)
 endfunction()
 
-# Add warnings to catch potential errors that can lead to security
-# vulnerabilities.
-function(add_security_warnings out_flags macosx_sdk_version)
-  set(flags "${${out_flags}}" -Werror=builtin-memcpy-chk-size -Werror=format-security
-      -Werror=array-bounds -Werror=uninitialized -Werror=array-bounds-pointer-arithmetic
-      -Werror=shadow -Werror=empty-body -Werror=sizeof-pointer-memaccess
-      -Werror=return-stack-address -Werror=sizeof-array-decay -Werror=sizeof-array-argument
-      -Werror=memset-transposed-args -Werror=format-insufficient-args)
-
-  # Add -Wformat-nonliteral only if we can avoid adding the defintion of
-  # eprintf. On Apple platforms, eprintf is needed only on macosx and only if
-  # its version is older than 10.7.
-  if ("${macosx_sdk_version}" VERSION_GREATER_EQUAL 10.7 OR
-      "${macosx_sdk_version}" EQUAL 0)
-    set(flags "${flags}" -Werror=format-nonliteral -DDONT_DEFINE_EPRINTF)
-  endif()
-
-  set(${out_flags} "${flags}" PARENT_SCOPE)
-endfunction()
-
 # Compile a sanitizer test with a freshly built clang
 # for a given architecture, adding the result to the object list.
 #  - obj_list: output list of objects, populated by path
