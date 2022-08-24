@@ -2,7 +2,7 @@
 // the attribute/type offset section.
 
 // Bytecode currently does not support big-endian platforms
-// XFAIL: s390x-
+// UNSUPPORTED: s390x-
 
 //===--------------------------------------------------------------------===//
 // Index
