@@ -552,88 +552,6 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       Exec, CmdArgs, Inputs, Output));
 }
 
-void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
-                                       const InputInfo &Output,
-                                       const InputInfoList &Inputs,
-                                       const ArgList &Args,
-                                       const char *LinkingOutput) const {
-  const auto &TC =
-      static_cast<const toolchains::CudaToolChain &>(getToolChain());
-  assert(TC.getTriple().isNVPTX() && "Wrong platform");
-
-  ArgStringList CmdArgs;
-
-  // OpenMP uses nvlink to link cubin files. The result will be embedded in the
-  // host binary by the host linker.
-  assert(!JA.isHostOffloading(Action::OFK_OpenMP) &&
-         "CUDA toolchain not expected for an OpenMP host device.");
-
-  if (Output.isFilename()) {
-    CmdArgs.push_back("-o");
-    CmdArgs.push_back(Output.getFilename());
-  } else
-    assert(Output.isNothing() && "Invalid output.");
-  if (mustEmitDebugInfo(Args) == EmitSameDebugInfoAsHost)
-    CmdArgs.push_back("-g");
-
-  if (Args.hasArg(options::OPT_v))
-    CmdArgs.push_back("-v");
-
-  StringRef GPUArch =
-      Args.getLastArgValue(options::OPT_march_EQ);
-  assert(!GPUArch.empty() && "At least one GPU Arch required for ptxas.");
-
-  CmdArgs.push_back("-arch");
-  CmdArgs.push_back(Args.MakeArgString(GPUArch));
-
-  // Add paths specified in LIBRARY_PATH environment variable as -L options.
-  addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
-
-  // Add paths for the default clang library path.
-  SmallString<256> DefaultLibPath =
-      llvm::sys::path::parent_path(TC.getDriver().Dir);
-  llvm::sys::path::append(DefaultLibPath, CLANG_INSTALL_LIBDIR_BASENAME);
-  CmdArgs.push_back(Args.MakeArgString(Twine("-L") + DefaultLibPath));
-
-  for (const auto &II : Inputs) {
-    if (II.getType() == types::TY_LLVM_IR ||
-        II.getType() == types::TY_LTO_IR ||
-        II.getType() == types::TY_LTO_BC ||
-        II.getType() == types::TY_LLVM_BC) {
-      C.getDriver().Diag(diag::err_drv_no_linker_llvm_support)
-          << getToolChain().getTripleString();
-      continue;
-    }
-
-    // Currently, we only pass the input files to the linker, we do not pass
-    // any libraries that may be valid only for the host.
-    if (!II.isFilename())
-      continue;
-
-    const char *CubinF =
-        C.getArgs().MakeArgString(getToolChain().getInputFilename(II));
-
-    CmdArgs.push_back(CubinF);
-  }
-
-  AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, CmdArgs, "nvptx",
-                             GPUArch, /*isBitCodeSDL=*/false,
-                             /*postClangLink=*/false);
-
-  // Find nvlink and pass it as "--nvlink-path=" argument of
-  // clang-nvlink-wrapper.
-  CmdArgs.push_back(Args.MakeArgString(
-      Twine("--nvlink-path=" + getToolChain().GetProgramPath("nvlink"))));
-
-  const char *Exec =
-      Args.MakeArgString(getToolChain().GetProgramPath("clang-nvlink-wrapper"));
-  C.addCommand(std::make_unique<Command>(
-      JA, *this,
-      ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
-                          "--options-file"},
-      Exec, CmdArgs, Inputs, Output));
-}
-
 void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    const llvm::opt::ArgList &Args,
                                    std::vector<StringRef> &Features) {
@@ -766,9 +684,6 @@ void CudaToolChain::addClangTargetOptions(
 
     addOpenMPDeviceRTL(getDriver(), DriverArgs, CC1Args, GpuArch.str(),
                        getTriple());
-    AddStaticDeviceLibsPostLinking(getDriver(), DriverArgs, CC1Args, "nvptx",
-                                   GpuArch, /*isBitCodeSDL=*/true,
-                                   /*postClangLink=*/true);
   }
 }
 
@@ -868,8 +783,6 @@ Tool *CudaToolChain::buildAssembler() const {
 }
 
 Tool *CudaToolChain::buildLinker() const {
-  if (OK == Action::OFK_OpenMP)
-    return new tools::NVPTX::OpenMPLinker(*this);
   return new tools::NVPTX::Linker(*this);
 }
 
