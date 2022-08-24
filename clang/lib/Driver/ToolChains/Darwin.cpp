@@ -2392,7 +2392,6 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
 
   DarwinEnvironmentKind Environment = OSTarget->getEnvironment();
   // Recognize iOS targets with an x86 architecture as the iOS simulator.
-  // FIXME: Remove this.
   if (Environment == NativeEnvironment && Platform != MacOS &&
       Platform != DriverKit && OSTarget->canInferSimulatorFromArch() &&
       getTriple().isX86())
