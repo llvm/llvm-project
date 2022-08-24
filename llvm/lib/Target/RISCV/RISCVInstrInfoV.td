@@ -28,6 +28,14 @@ class VTypeIOp<int VTypeINum> : Operand<XLenVT> {
   let ParserMatchClass = VTypeIAsmOperand<VTypeINum>;
   let PrintMethod = "printVTypeI";
   let DecoderMethod = "decodeUImmOperand<"#VTypeINum#">";
+  let OperandType = "OPERAND_VTYPEI" # VTypeINum;
+  let OperandNamespace = "RISCVOp";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<VTypeINum>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
 }
 
 def VTypeIOp10 : VTypeIOp<10>;
@@ -54,6 +62,8 @@ def simm5 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<5>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<5>";
+  let OperandType = "OPERAND_SIMM5";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -71,6 +81,8 @@ def SImm5Plus1AsmOperand : AsmOperandClass {
 def simm5_plus1 : Operand<XLenVT>, ImmLeaf<XLenVT,
   [{return (isInt<5>(Imm) && Imm != -16) || Imm == 16;}]> {
   let ParserMatchClass = SImm5Plus1AsmOperand;
+  let OperandType = "OPERAND_SIMM5_PLUS1";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))

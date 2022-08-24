@@ -71,6 +71,8 @@ def shfl_uimm : Operand<XLenVT>, ImmLeaf<XLenVT, [{
 }]> {
   let ParserMatchClass = UImmLog2XLenHalfAsmOperand;
   let DecoderMethod = "decodeUImmOperand<5>";
+  let OperandType = "OPERAND_UIMM_SHFL";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))

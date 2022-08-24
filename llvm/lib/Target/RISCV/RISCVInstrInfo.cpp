@@ -1153,9 +1153,39 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM(4)
         CASE_OPERAND_UIMM(5)
         CASE_OPERAND_UIMM(7)
+        case RISCVOp::OPERAND_UIMM7_LSB00:
+          Ok = isShiftedUInt<5, 2>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM8_LSB00:
+          Ok = isShiftedUInt<6, 2>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMM8_LSB000:
+          Ok = isShiftedUInt<5, 3>(Imm);
+          break;
         CASE_OPERAND_UIMM(12)
         CASE_OPERAND_UIMM(20)
           // clang-format on
+        case RISCVOp::OPERAND_ZERO:
+          Ok = Imm == 0;
+          break;
+        case RISCVOp::OPERAND_SIMM5:
+          Ok = isInt<5>(Imm);
+          break;
+        case RISCVOp::OPERAND_SIMM5_PLUS1:
+          Ok = (isInt<5>(Imm) && Imm != -16) || Imm == 16;
+          break;
+        case RISCVOp::OPERAND_SIMM6:
+          Ok = isInt<6>(Imm);
+          break;
+        case RISCVOp::OPERAND_SIMM6_NONZERO:
+          Ok = Imm != 0 && isInt<6>(Imm);
+          break;
+        case RISCVOp::OPERAND_VTYPEI10:
+          Ok = isUInt<10>(Imm);
+          break;
+        case RISCVOp::OPERAND_VTYPEI11:
+          Ok = isUInt<11>(Imm);
+          break;
         case RISCVOp::OPERAND_SIMM12:
           Ok = isInt<12>(Imm);
           break;
@@ -1163,10 +1193,17 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           Ok = isShiftedInt<7, 5>(Imm);
           break;
         case RISCVOp::OPERAND_UIMMLOG2XLEN:
-          if (STI.getTargetTriple().isArch64Bit())
-            Ok = isUInt<6>(Imm);
-          else
-            Ok = isUInt<5>(Imm);
+          Ok = STI.getTargetTriple().isArch64Bit() ? isUInt<6>(Imm)
+                                                   : isUInt<5>(Imm);
+          break;
+        case RISCVOp::OPERAND_UIMMLOG2XLEN_NONZERO:
+          Ok = STI.getTargetTriple().isArch64Bit() ? isUInt<6>(Imm)
+                                                   : isUInt<5>(Imm);
+          Ok = Ok && Imm != 0;
+          break;
+        case RISCVOp::OPERAND_UIMM_SHFL:
+          Ok = STI.getTargetTriple().isArch64Bit() ? isUInt<5>(Imm)
+                                                   : isUInt<4>(Imm);
           break;
         case RISCVOp::OPERAND_RVKRNUM:
           Ok = Imm >= 0 && Imm <= 10;
