@@ -613,6 +613,13 @@ void MappingTraits<MachO::build_version_command>::mapping(
   IO.mapRequired("ntools", LoadCommand.ntools);
 }
 
+void MappingTraits<MachO::fileset_entry_command>::mapping(
+    IO &IO, MachO::fileset_entry_command &LoadCommand) {
+  IO.mapRequired("vmaddr", LoadCommand.vmaddr);
+  IO.mapRequired("fileoff", LoadCommand.fileoff);
+  IO.mapRequired("id", LoadCommand.entry_id);
+}
+
 } // end namespace yaml
 
 } // end namespace llvm
