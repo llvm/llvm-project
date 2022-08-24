@@ -117,9 +117,9 @@ extractFunctionCalls(const std::vector<BinaryFunction *> &BinaryFunctions) {
 
   for (BinaryFunction *SrcFunction : BinaryFunctions) {
     const BinaryContext &BC = SrcFunction->getBinaryContext();
-    for (BinaryBasicBlock *BB : SrcFunction->getLayout().blocks()) {
+    for (const BinaryBasicBlock *BB : SrcFunction->getLayout().blocks()) {
       // Find call instructions and extract target symbols from each one
-      for (MCInst &Inst : *BB) {
+      for (const MCInst &Inst : *BB) {
         if (!BC.MIB->isCall(Inst))
           continue;
 

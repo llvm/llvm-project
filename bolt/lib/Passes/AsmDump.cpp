@@ -195,7 +195,7 @@ void dumpFunction(const BinaryFunction &BF) {
   std::unordered_set<const MCSymbol *> CallReferences;
 
   MAP->OutStreamer->emitCFIStartProc(/*IsSimple=*/false);
-  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
+  for (const BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     OS << BB->getName() << ": \n";
 
     const std::string BranchLabel = Twine(BB->getName(), "_br").str();
