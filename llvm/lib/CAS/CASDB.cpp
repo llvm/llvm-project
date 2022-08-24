@@ -86,12 +86,6 @@ CASDB::storeFromOpenFileImpl(sys::fs::file_t FD,
                arrayRefFromStringRef<char>((*ExpectedContent)->getBuffer()));
 }
 
-Expected<Optional<ObjectHandle>> CASDB::load(const CASID &ID) {
-  if (Optional<ObjectRef> Ref = getReference(ID))
-    return load(*Ref);
-  return None;
-}
-
 void CASDB::readRefs(ObjectHandle Node,
                      SmallVectorImpl<ObjectRef> &Refs) const {
   consumeError(forEachRef(Node, [&Refs](ObjectRef Ref) -> Error {
@@ -101,11 +95,26 @@ void CASDB::readRefs(ObjectHandle Node,
 }
 
 Expected<ObjectProxy> CASDB::getProxy(CASID ID) {
-  Optional<ObjectHandle> H;
-  if (Error E = load(ID).moveInto(H))
-    return std::move(E);
-  if (!H)
+  Optional<ObjectRef> Ref = getReference(ID);
+  if (!Ref)
     return createUnknownObjectError(ID);
+
+  Optional<ObjectHandle> H;
+  if (Error E = load(*Ref).moveInto(H))
+    return std::move(E);
+
+  return ObjectProxy::load(*this, *H);
+}
+
+Expected<Optional<ObjectProxy>> CASDB::getProxyOrNone(CASID ID) {
+  Optional<ObjectRef> Ref = getReference(ID);
+  if (!Ref)
+    return None;
+
+  Optional<ObjectHandle> H;
+  if (Error E = load(*Ref).moveInto(H))
+    return std::move(E);
+
   return ObjectProxy::load(*this, *H);
 }
 
@@ -140,4 +149,10 @@ CASDB::loadIndependentDataBuffer(ObjectHandle Node, const Twine &Name,
   readData(Node, OS);
   return std::make_unique<SmallVectorMemoryBuffer>(std::move(Bytes), Name.str(),
                                                    NullTerminate);
+}
+
+std::unique_ptr<MemoryBuffer>
+ObjectProxy::getMemoryBuffer(StringRef Name,
+                             bool RequiresNullTerminator) const {
+  return CAS->getMemoryBuffer(H, Name, RequiresNullTerminator);
 }

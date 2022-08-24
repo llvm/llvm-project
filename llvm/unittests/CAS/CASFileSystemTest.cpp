@@ -46,12 +46,12 @@ static ObjectRef createBlobUnchecked(CASDB &CAS, StringRef Content) {
   return llvm::cantFail(CAS.storeFromString(None, Content));
 }
 
-static Expected<ObjectHandle> createEmptyTree(CASDB &CAS) {
+static Expected<ObjectProxy> createEmptyTree(CASDB &CAS) {
   HierarchicalTreeBuilder Builder;
   return Builder.create(CAS);
 }
 
-static Expected<ObjectHandle> createFlatTree(CASDB &CAS) {
+static Expected<ObjectProxy> createFlatTree(CASDB &CAS) {
   HierarchicalTreeBuilder Builder;
   Builder.push(createBlobUnchecked(CAS, "1"), TreeEntry::Regular, "file1");
   Builder.push(createBlobUnchecked(CAS, "1"), TreeEntry::Regular, "1");
@@ -59,7 +59,7 @@ static Expected<ObjectHandle> createFlatTree(CASDB &CAS) {
   return Builder.create(CAS);
 }
 
-static Expected<ObjectHandle> createNestedTree(CASDB &CAS) {
+static Expected<ObjectProxy> createNestedTree(CASDB &CAS) {
   ObjectRef Data1 = createBlobUnchecked(CAS, "blob1");
   ObjectRef Data2 = createBlobUnchecked(CAS, "blob2");
   ObjectRef Data3 = createBlobUnchecked(CAS, "blob3");
@@ -74,7 +74,7 @@ static Expected<ObjectHandle> createNestedTree(CASDB &CAS) {
   return Builder.create(CAS);
 }
 
-static Expected<ObjectHandle> createSymlinksTree(CASDB &CAS) {
+static Expected<ObjectProxy> createSymlinksTree(CASDB &CAS) {
   auto make = [&](StringRef Bytes) { return createBlobUnchecked(CAS, Bytes); };
 
   HierarchicalTreeBuilder Builder;
@@ -94,7 +94,7 @@ static Expected<ObjectHandle> createSymlinksTree(CASDB &CAS) {
   return Builder.create(CAS);
 }
 
-static Expected<ObjectHandle> createSymlinkLoopsTree(CASDB &CAS) {
+static Expected<ObjectProxy> createSymlinkLoopsTree(CASDB &CAS) {
   auto make = [&](StringRef Bytes) { return createBlobUnchecked(CAS, Bytes); };
 
   HierarchicalTreeBuilder Builder;
@@ -108,10 +108,10 @@ static Expected<ObjectHandle> createSymlinkLoopsTree(CASDB &CAS) {
 }
 
 static Expected<std::unique_ptr<vfs::FileSystem>>
-createFS(CASDB &CAS, Expected<ObjectHandle> Tree) {
+createFS(CASDB &CAS, Expected<ObjectProxy> Tree) {
   if (!Tree)
     return Tree.takeError();
-  return createCASFileSystem(CAS, CAS.getID(*Tree));
+  return createCASFileSystem(CAS, Tree->getID());
 }
 
 template <class IteratorType>

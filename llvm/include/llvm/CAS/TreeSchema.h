@@ -23,10 +23,10 @@ class TreeSchema : public RTTIExtends<TreeSchema, NodeSchema> {
 
 public:
   static char ID;
-  bool isRootNode(const ObjectHandle &Node) const final {
+  bool isRootNode(const ObjectProxy &Node) const final {
     return false; // TreeSchema doesn't have a root node.
   }
-  bool isNode(const ObjectHandle &Node) const final;
+  bool isNode(const ObjectProxy &Node) const final;
 
   TreeSchema(CASDB &CAS);
 
@@ -45,7 +45,7 @@ public:
   /// Passes the \p TreeNodeProxy if the entry is a \p TreeEntry::Tree,
   /// otherwise passes \p None.
   Error walkFileTreeRecursively(
-      CASDB &CAS, const ObjectHandle &Root,
+      CASDB &CAS, const ObjectProxy &Root,
       function_ref<Error(const NamedTreeEntry &, Optional<TreeProxy>)>
           Callback);
 
@@ -53,7 +53,7 @@ public:
   NamedTreeEntry loadTreeEntry(TreeProxy Tree, size_t I) const;
 
   Expected<TreeProxy> load(ObjectRef Object) const;
-  Expected<TreeProxy> load(ObjectHandle Object) const;
+  Expected<TreeProxy> load(ObjectProxy Object) const;
 
   Expected<TreeProxy> create(ArrayRef<NamedTreeEntry> Entries = None);
 

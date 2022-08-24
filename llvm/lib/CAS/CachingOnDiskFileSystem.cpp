@@ -198,12 +198,12 @@ public:
   /// Get the contents of the file as a \p MemoryBuffer.
   ErrorOr<std::unique_ptr<MemoryBuffer>> getBuffer(const Twine &RequestedName,
                                                    int64_t, bool, bool) final {
-    Expected<ObjectHandle> Object = DB.load(*Entry->getRef());
+    Expected<ObjectProxy> Object = DB.getProxy(*Entry->getRef());
     if (!Object)
       return errorToErrorCode(Object.takeError());
-    assert(DB.getNumRefs(*Object) == 0 && "Expected a leaf node");
+    assert(Object->getNumReferences() == 0 && "Expected a leaf node");
     SmallString<256> Storage;
-    return DB.getMemoryBuffer(*Object, RequestedName.toStringRef(Storage));
+    return Object->getMemoryBuffer(RequestedName.toStringRef(Storage));
   }
 
   llvm::ErrorOr<Optional<cas::ObjectRef>> getObjectRefForContent() final {
@@ -351,11 +351,11 @@ CachingOnDiskFileSystemImpl::makeFile(DirectoryEntry &Parent,
     return Node.takeError();
 
   // Load back the data from CAS since we stored from openFile buffer.
-  Expected<ObjectHandle> Handle = DB.load(*Node);
+  Expected<ObjectProxy> Handle = DB.getProxy(*Node);
   if (!Handle)
     return Handle.takeError();
   // Do not trust Status.size() in case the file is volatile.
-  return &Cache->makeFile(Parent, TreePath, *Node, DB.getDataSize(*Handle),
+  return &Cache->makeFile(Parent, TreePath, *Node, Handle->getData().size(),
                           Status.permissions() & sys::fs::perms::owner_exe);
 }
 
@@ -634,12 +634,6 @@ void CachingOnDiskFileSystemImpl::trackNewAccesses() {
   TrackedAccesses->reserve(128); // Seed with a bit of runway.
 }
 
-static Expected<ObjectProxy> toProxy(CASDB &CAS, Expected<ObjectHandle> Node) {
-  if (Node)
-    return ObjectProxy::load(CAS, *Node);
-  return Node.takeError();
-}
-
 Expected<ObjectProxy> CachingOnDiskFileSystemImpl::createTreeFromNewAccesses(
     llvm::function_ref<StringRef(const vfs::CachedDirectoryEntry &)>
         RemapPath) {
@@ -666,7 +660,7 @@ Expected<ObjectProxy> CachingOnDiskFileSystemImpl::createTreeFromNewAccesses(
       Builder.push(*Entry->getRef(), getTreeEntryKind(*Entry), Path);
   }
 
-  return toProxy(DB, Builder.create(DB));
+  return Builder.create(DB);
 }
 
 Expected<ObjectProxy> CachingOnDiskFileSystemImpl::createTreeFromAllAccesses() {
@@ -783,7 +777,7 @@ public:
   Error push(const Twine &Path) final;
 
   Expected<ObjectProxy> create() final {
-    return toProxy(FS.getCAS(), Builder.create(FS.getCAS()));
+    return Builder.create(FS.getCAS());
   }
 
   // Push \p Entry directly to \a Builder, asserting that it's a symlink.

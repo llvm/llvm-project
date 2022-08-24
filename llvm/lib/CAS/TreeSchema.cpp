@@ -21,13 +21,13 @@ constexpr StringLiteral TreeSchema::SchemaName;
 
 void TreeSchema::anchor() {}
 
-bool TreeSchema::isNode(const ObjectHandle &Node) const {
+bool TreeSchema::isNode(const ObjectProxy &Node) const {
   // Load the first ref to check its content.
-  if (CAS.getNumRefs(Node) < 1)
+  if (Node.getNumReferences() < 1)
     return false;
 
   // If can't load the first ref, consume error and return false.
-  auto FirstRef = CAS.readRef(Node, 0);
+  auto FirstRef = Node.getReference(0);
   return FirstRef == getKindRef();
 }
 
@@ -39,7 +39,7 @@ TreeSchema::TreeSchema(cas::CASDB &CAS) : TreeSchema::RTTIExtends(CAS) {
 ObjectRef TreeSchema::getKindRef() const { return *TreeKindRef; }
 
 size_t TreeSchema::getNumTreeEntries(TreeProxy Tree) const {
-  return CAS.getNumRefs(Tree) - 1;
+  return Tree.getNumReferences() - 1;
 }
 
 Error TreeSchema::forEachTreeEntry(
@@ -53,14 +53,14 @@ Error TreeSchema::forEachTreeEntry(
 }
 
 Error TreeSchema::walkFileTreeRecursively(
-    CASDB &CAS, const ObjectHandle &Root,
+    CASDB &CAS, const ObjectProxy &Root,
     function_ref<Error(const NamedTreeEntry &, Optional<TreeProxy>)>
         Callback) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
   SmallString<128> PathStorage;
   SmallVector<NamedTreeEntry> Stack;
-  Stack.emplace_back(CAS.getReference(Root), TreeEntry::Tree, "/");
+  Stack.emplace_back(Root.getRef(), TreeEntry::Tree, "/");
 
   while (!Stack.empty()) {
     if (Stack.back().getKind() != TreeEntry::Tree) {
@@ -139,18 +139,18 @@ Optional<size_t> TreeSchema::lookupTreeEntry(TreeProxy Tree,
 }
 
 Expected<TreeProxy> TreeSchema::load(ObjectRef Object) const {
-  auto TreeNode = CAS.load(Object);
+  auto TreeNode = CAS.getProxy(Object);
   if (!TreeNode)
     return TreeNode.takeError();
 
   return load(*TreeNode);
 }
 
-Expected<TreeProxy> TreeSchema::load(ObjectHandle Object) const {
+Expected<TreeProxy> TreeSchema::load(ObjectProxy Object) const {
   if (!isNode(Object))
     return createStringError(inconvertibleErrorCode(), "not a tree object");
 
-  return TreeProxy::get(*this, ObjectProxy::load(CAS, Object));
+  return TreeProxy::get(*this, Object);
 }
 
 Expected<TreeProxy>

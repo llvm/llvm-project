@@ -599,14 +599,14 @@ void CompileJobCache::finishComputedResult(CompilerInstance &Clang,
   llvm::cas::HierarchicalTreeBuilder Builder;
   Builder.push(Outputs->getRef(), llvm::cas::TreeEntry::Regular, "outputs");
   Builder.push(Errs->getRef(), llvm::cas::TreeEntry::Regular, "stderr");
-  Expected<llvm::cas::ObjectHandle> Result = Builder.create(*CAS);
+  Expected<llvm::cas::ObjectProxy> Result = Builder.create(*CAS);
   if (!Result)
     llvm::report_fatal_error(Result.takeError());
-  if (llvm::Error E = Cache->put(*ResultCacheKey, CAS->getReference(*Result)))
+  if (llvm::Error E = Cache->put(*ResultCacheKey, Result->getRef()))
     llvm::report_fatal_error(std::move(E));
 
   // Replay / decanonicalize as necessary.
-  Optional<int> Status = replayCachedResult(Clang, CAS->getReference(*Result),
+  Optional<int> Status = replayCachedResult(Clang, Result->getRef(),
                                             /*JustComputedResult=*/true);
   (void)Status;
   assert(Status == None);

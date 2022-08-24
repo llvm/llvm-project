@@ -250,7 +250,7 @@ int catNodeData(CASDB &CAS, CASID ID) {
   return 0;
 }
 
-static StringRef getKindString(CASDB &CAS, ObjectHandle Object) {
+static StringRef getKindString(CASDB &CAS, ObjectProxy Object) {
   TreeSchema Schema(CAS);
   if (Schema.isNode(Object))
     return "tree";
@@ -259,11 +259,9 @@ static StringRef getKindString(CASDB &CAS, ObjectHandle Object) {
 
 int printKind(CASDB &CAS, CASID ID) {
   ExitOnError ExitOnErr("llvm-cas: print-kind: ");
-  Optional<ObjectHandle> Object = ExitOnErr(CAS.load(ID));
-  if (!Object)
-    ExitOnErr(createStringError(inconvertibleErrorCode(), "unknown object"));
+  ObjectProxy Object = ExitOnErr(CAS.getProxy(ID));
 
-  llvm::outs() << getKindString(CAS, *Object) << "\n";
+  llvm::outs() << getKindString(CAS, Object) << "\n";
   return 0;
 }
 
@@ -323,13 +321,11 @@ static GraphInfo traverseObjectGraph(CASDB &CAS, CASID TopLevel) {
     }
     Worklist.back().second = true;
     CASID ID = Worklist.back().first;
-    Optional<ObjectHandle> Object = ExitOnErr(CAS.load(ID));
-    if (!Object)
-      continue;
+    ObjectProxy Object = ExitOnErr(CAS.getProxy(ID));
 
     TreeSchema Schema(CAS);
-    if (Schema.isNode(*Object)) {
-      TreeProxy Tree = ExitOnErr(Schema.load(*Object));
+    if (Schema.isNode(Object)) {
+      TreeProxy Tree = ExitOnErr(Schema.load(Object));
       ExitOnErr(Tree.forEachEntry([&](const NamedTreeEntry &Entry) {
         push(CAS.getID(Entry.getRef()));
         return Error::success();
@@ -337,7 +333,7 @@ static GraphInfo traverseObjectGraph(CASDB &CAS, CASID TopLevel) {
       continue;
     }
 
-    ExitOnErr(CAS.forEachRef(*Object, [&](ObjectRef Ref) {
+    ExitOnErr(Object.forEachReference([&](ObjectRef Ref) {
       push(CAS.getID(Ref));
       return Error::success();
     }));
@@ -355,8 +351,8 @@ static void printDiffs(CASDB &CAS, const GraphInfo &Baseline,
       continue;
 
     StringRef KindString;
-    if (Optional<ObjectHandle> Object = ExitOnErr(CAS.load(ID)))
-      KindString = getKindString(CAS, *Object);
+    ObjectProxy Object = ExitOnErr(CAS.getProxy(ID));
+    KindString = getKindString(CAS, Object);
 
     outs() << llvm::formatv("{0}{1,-4} {2}\n", NewName, KindString, ID);
   }
@@ -457,7 +453,7 @@ static int mergeTrees(CASDB &CAS, ArrayRef<std::string> Objects) {
   }
 
   auto Ref = ExitOnErr(Builder.create(CAS));
-  outs() << CAS.getID(Ref) << "\n";
+  outs() << Ref.getID() << "\n";
   return 0;
 }
 

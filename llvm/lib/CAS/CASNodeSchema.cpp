@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/CASNodeSchema.h"
+#include "llvm/CAS/CASDB.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -14,7 +15,7 @@ using namespace llvm::cas;
 char NodeSchema::ID = 0;
 void NodeSchema::anchor() {}
 
-NodeSchema *SchemaPool::getSchemaForRoot(cas::ObjectHandle Node) const {
+NodeSchema *SchemaPool::getSchemaForRoot(cas::ObjectProxy Node) const {
   for (auto &Schema : Schemas)
     if (Schema->isRootNode(Node))
       return Schema.get();

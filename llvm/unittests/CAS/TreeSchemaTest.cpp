@@ -61,8 +61,8 @@ TEST(TreeSchemaTest, Trees) {
   for (ArrayRef<NamedTreeEntry> Entries : FlatTreeEntries) {
     Optional<TreeProxy> H;
     ASSERT_THAT_ERROR(Schema1.create(Entries).moveInto(H), Succeeded());
-    FlatIDs.push_back(CAS1->getID(*H));
-    FlatRefs.push_back(CAS1->getReference(*H));
+    FlatIDs.push_back(H->getID());
+    FlatRefs.push_back(H->getRef());
   }
 
   // Confirm we get the same IDs the second time and that the trees can be
@@ -236,7 +236,7 @@ TEST(TreeSchemaTest, walkFileTreeRecursively) {
   Builder.push(make("blob1"), TreeEntry::Regular, "/t1/d1");
   Builder.push(make("blob3"), TreeEntry::Regular, "/t3/d3");
   Builder.push(make("blob1"), TreeEntry::Regular, "/t3/t1nested/d1");
-  Optional<ObjectHandle> Root;
+  Optional<ObjectProxy> Root;
   ASSERT_THAT_ERROR(Builder.create(*CAS).moveInto(Root), Succeeded());
 
   std::pair<std::string, bool> ExpectedEntries[] = {

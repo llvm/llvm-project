@@ -104,14 +104,15 @@ Expected<ObjectRef> BuiltinCAS::store(ArrayRef<ObjectRef> Refs,
 }
 
 Error BuiltinCAS::validate(const CASID &ID) {
-  auto Handle = load(ID);
+  auto Ref = getReference(ID);
+  if (!Ref)
+    return createUnknownObjectError(ID);
+
+  auto Handle = load(*Ref);
   if (!Handle)
     return Handle.takeError();
 
-  if (!*Handle)
-    return createUnknownObjectError(ID);
-
-  auto Proxy = ObjectProxy::load(*this, **Handle);
+  auto Proxy = ObjectProxy::load(*this, *Handle);
   SmallVector<ObjectRef> Refs;
   if (auto E = Proxy.forEachReference([&](ObjectRef Ref) -> Error {
         Refs.push_back(Ref);

@@ -89,9 +89,9 @@ TEST(CASProvidingFileSystemTest, WithCASSupportingFS) {
   EXPECT_EQ(BlobContents->getData(), Contents);
 
   CASID ID = UnderlyingDB->getID(**Ref);
-  Optional<ObjectHandle> Handle;
-  ASSERT_THAT_ERROR(DB->load(ID).moveInto(Handle), Succeeded());
+  Optional<ObjectProxy> Proxy;
+  ASSERT_THAT_ERROR(DB->getProxyOrNone(ID).moveInto(Proxy), Succeeded());
   // It didn't have to ingest in DB because the underlying FS provided a CAS
   // reference.
-  EXPECT_FALSE(Handle);
+  EXPECT_FALSE(Proxy);
 }

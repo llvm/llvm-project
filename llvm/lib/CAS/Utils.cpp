@@ -40,9 +40,9 @@ void cas::NamedTreeEntry::print(raw_ostream &OS, CASDB &CAS) const {
   if (getKind() == TreeEntry::Tree)
     OS << "/";
   if (getKind() == TreeEntry::Symlink) {
-    ObjectHandle Target = cantFail(CAS.load(getRef()));
+    ObjectProxy Target = cantFail(CAS.getProxy(getRef()));
     OS << " -> ";
-    CAS.readData(Target, OS);
+    OS << Target.getData();
   }
   OS << "\n";
 }

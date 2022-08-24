@@ -162,8 +162,7 @@ void DependencyScanningCASFilesystem::scanForDirectives(
     Builder.push(*ClangFullVersionID, TreeEntry::Regular, "version");
     Builder.push(*DepDirectivesID, TreeEntry::Regular, "command");
     Builder.push(InputDataID, TreeEntry::Regular, "data");
-    InputID =
-        CAS.getID(CAS.getReference(reportAsFatalIfError(Builder.create(CAS))));
+    InputID = reportAsFatalIfError(Builder.create(CAS)).getID();
   }
 
   // Check the result cache.

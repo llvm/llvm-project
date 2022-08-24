@@ -88,9 +88,10 @@ multiline text multiline text multiline text multiline text multiline text)",
   // Confirm these blobs don't exist in a fresh CAS instance.
   std::unique_ptr<CASDB> CAS2 = createCAS();
   for (int I = 0, E = IDs.size(); I != E; ++I) {
-    Optional<ObjectHandle> Handle;
-    EXPECT_THAT_ERROR(CAS2->load(IDs[I]).moveInto(Handle), Succeeded());
-    ASSERT_FALSE(Handle);
+    Optional<ObjectProxy> Proxy;
+    EXPECT_THAT_ERROR(CAS2->getProxyOrNone(IDs[I]).moveInto(Proxy),
+                      Succeeded());
+    ASSERT_FALSE(Proxy);
   }
 
   // Insert into the second CAS and confirm the IDs are stable. Getting them
@@ -203,18 +204,19 @@ multiline text multiline text multiline text multiline text multiline text)",
   // Check that the blobs can be retrieved multiple times.
   for (int I = 0, E = IDs.size(); I != E; ++I) {
     for (int J = 0, JE = 3; J != JE; ++J) {
-      Optional<ObjectHandle> Object;
-      ASSERT_THAT_ERROR(CAS1->load(IDs[I]).moveInto(Object), Succeeded());
+      Optional<ObjectProxy> Object;
+      ASSERT_THAT_ERROR(CAS1->getProxy(IDs[I]).moveInto(Object), Succeeded());
       ASSERT_TRUE(Object);
-      EXPECT_EQ(ContentStrings[I], CAS1->getDataString(*Object));
+      EXPECT_EQ(ContentStrings[I], Object->getData());
     }
   }
 
   // Confirm these blobs don't exist in a fresh CAS instance.
   std::unique_ptr<CASDB> CAS2 = createCAS();
   for (int I = 0, E = IDs.size(); I != E; ++I) {
-    Optional<ObjectHandle> Object;
-    EXPECT_THAT_EXPECTED(CAS2->load(IDs[I]), Succeeded());
+    Optional<ObjectProxy> Object;
+    EXPECT_THAT_ERROR(CAS2->getProxyOrNone(IDs[I]).moveInto(Object),
+                      Succeeded());
     EXPECT_FALSE(Object);
   }
 
@@ -229,10 +231,10 @@ multiline text multiline text multiline text multiline text multiline text)",
         Succeeded());
     EXPECT_EQ(ID, CAS2->getID(*Node));
 
-    Optional<ObjectHandle> Object;
-    ASSERT_THAT_ERROR(CAS2->load(ID).moveInto(Object), Succeeded());
+    Optional<ObjectProxy> Object;
+    ASSERT_THAT_ERROR(CAS2->getProxy(ID).moveInto(Object), Succeeded());
     ASSERT_TRUE(Object);
-    EXPECT_EQ(Content, CAS2->getDataString(*Object));
+    EXPECT_EQ(Content, Object->getData());
   }
 }
 

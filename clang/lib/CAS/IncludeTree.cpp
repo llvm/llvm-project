@@ -27,10 +27,10 @@ Expected<NodeT> IncludeTreeBase<NodeT>::create(CASDB &DB,
   auto Node = DB.store(Refs, Buf);
   if (!Node)
     return Node.takeError();
-  auto Handle = DB.load(*Node);
-  if (!Handle)
-    return Handle.takeError();
-  return NodeT(ObjectProxy::load(DB, *Handle));
+  auto Proxy = DB.getProxy(*Node);
+  if (!Proxy)
+    return Proxy.takeError();
+  return NodeT(*Proxy);
 }
 
 Expected<IncludeFile> IncludeFile::create(CASDB &DB, StringRef Filename,
@@ -240,7 +240,7 @@ llvm::Error IncludeFile::print(llvm::raw_ostream &OS, unsigned Indent) {
   if (!Filename)
     return Filename.takeError();
   OS.indent(Indent) << Filename->getData() << ' ';
-  CAS->getID(getContentsRef()).print(OS);
+  getCAS().getID(getContentsRef()).print(OS);
   OS << '\n';
   return llvm::Error::success();
 }
@@ -278,7 +278,7 @@ llvm::Error IncludeFileList::print(llvm::raw_ostream &OS, unsigned Indent) {
 llvm::Error IncludeTreeRoot::print(llvm::raw_ostream &OS, unsigned Indent) {
   if (Optional<ObjectRef> PCHRef = getPCHRef()) {
     OS.indent(Indent) << "(PCH) ";
-    CAS->getID(*PCHRef).print(OS);
+    getCAS().getID(*PCHRef).print(OS);
     OS << '\n';
   }
   Optional<cas::IncludeTree> MainTree;

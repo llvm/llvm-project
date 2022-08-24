@@ -80,7 +80,7 @@ public:
 
   /// Recursively create the trees implied by calls to \a push(), return the
   /// top-level \a CASID.
-  Expected<ObjectHandle> create(CASDB &CAS);
+  Expected<ObjectProxy> create(CASDB &CAS);
 };
 
 } // namespace cas
