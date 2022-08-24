@@ -187,13 +187,11 @@ def Builtin_DenseArrayBase : Builtin_Attr<
     [1, 2, 3]
     ```
   }];
-  let parameters = (ins AttributeSelfTypeParameter<"", "ShapedType">:$type,
-                        "DenseArrayBaseAttr::EltType":$elementType,
-                        Builtin_DenseArrayRawDataParameter:$rawData);
+  let parameters = (ins
+    AttributeSelfTypeParameter<"", "RankedTensorType">:$type,
+    Builtin_DenseArrayRawDataParameter:$rawData
+  );
   let extraClassDeclaration = [{
-    // All possible supported element type.
-    enum class EltType { I1, I8, I16, I32, I64, F32, F64 };
-
     /// Allow implicit conversion to ElementsAttr.
     operator ElementsAttr() const {
       return *this ? cast<ElementsAttr>() : nullptr;
