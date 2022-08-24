@@ -3328,7 +3328,7 @@ def G_AMDGPU_INTRIN_BVH_INTERSECT_RAY : AMDGPUGenericInstruction {
 }
 
 def G_AMDGPU_INTRIN_BVH_DUAL_INTERSECT_RAY : AMDGPUGenericInstruction {
-  let OutOperandList = (outs unknown:$dst);
+  let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$intrin, variable_ops);
   let hasSideEffects = 0;
   let mayLoad = 1;

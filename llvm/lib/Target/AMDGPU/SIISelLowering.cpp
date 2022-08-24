@@ -7736,7 +7736,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     Ops.push_back(NodePtr);
     Ops.push_back(DAG.getBuildVector(MVT::v2i32, DL,
                   {DAG.getBitcast(MVT::i32, RayExtent),
-                   DAG.getAnyExtOrTrunc(InstanceMask, DL, MVT::i32)}));
+                   DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, InstanceMask)}));
     Ops.push_back(RayOrigin);
     Ops.push_back(RayDir);
     Ops.push_back(Offsets);
