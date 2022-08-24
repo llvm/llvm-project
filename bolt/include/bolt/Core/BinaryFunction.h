@@ -232,6 +232,9 @@ private:
   /// Size of the function in the output file.
   uint64_t OutputSize{0};
 
+  /// Offset in the file.
+  uint64_t FileOffset{0};
+
   /// Maximum size this function is allowed to have.
   uint64_t MaxSize{std::numeric_limits<uint64_t>::max()};
 
@@ -341,6 +344,14 @@ private:
   /// functions with non-canonical CFG.
   /// This attribute is only valid when hasCFG() == true.
   bool HasCanonicalCFG{true};
+
+  /// The address for the code for this function in codegen memory.
+  /// Used for functions that are emitted in a dedicated section with a fixed
+  /// address. E.g. for functions that are overwritten in-place.
+  uint64_t ImageAddress{0};
+
+  /// The size of the code in memory.
+  uint64_t ImageSize{0};
 
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
@@ -1049,9 +1060,7 @@ public:
   }
 
   /// Return offset of the function body in the binary file.
-  uint64_t getFileOffset() const {
-    return getLayout().getMainFragment().getFileOffset();
-  }
+  uint64_t getFileOffset() const { return FileOffset; }
 
   /// Return (original) byte size of the function.
   uint64_t getSize() const { return Size; }
@@ -1689,7 +1698,7 @@ public:
                                              int64_t NewOffset);
 
   BinaryFunction &setFileOffset(uint64_t Offset) {
-    getLayout().getMainFragment().setFileOffset(Offset);
+    FileOffset = Offset;
     return *this;
   }
 
@@ -1776,24 +1785,20 @@ public:
   uint16_t getMaxColdAlignmentBytes() const { return MaxColdAlignmentBytes; }
 
   BinaryFunction &setImageAddress(uint64_t Address) {
-    getLayout().getMainFragment().setImageAddress(Address);
+    ImageAddress = Address;
     return *this;
   }
 
   /// Return the address of this function' image in memory.
-  uint64_t getImageAddress() const {
-    return getLayout().getMainFragment().getImageAddress();
-  }
+  uint64_t getImageAddress() const { return ImageAddress; }
 
   BinaryFunction &setImageSize(uint64_t Size) {
-    getLayout().getMainFragment().setImageSize(Size);
+    ImageSize = Size;
     return *this;
   }
 
   /// Return the size of this function' image in memory.
-  uint64_t getImageSize() const {
-    return getLayout().getMainFragment().getImageSize();
-  }
+  uint64_t getImageSize() const { return ImageSize; }
 
   /// Return true if the function is a secondary fragment of another function.
   bool isFragment() const { return IsFragment; }
@@ -2297,6 +2302,33 @@ public:
   bool isAArch64Veneer() const;
 
   virtual ~BinaryFunction();
+
+  /// Info for fragmented functions.
+  class FragmentInfo {
+  private:
+    uint64_t Address{0};
+    uint64_t ImageAddress{0};
+    uint64_t ImageSize{0};
+    uint64_t FileOffset{0};
+
+  public:
+    uint64_t getAddress() const { return Address; }
+    uint64_t getImageAddress() const { return ImageAddress; }
+    uint64_t getImageSize() const { return ImageSize; }
+    uint64_t getFileOffset() const { return FileOffset; }
+
+    void setAddress(uint64_t VAddress) { Address = VAddress; }
+    void setImageAddress(uint64_t Address) { ImageAddress = Address; }
+    void setImageSize(uint64_t Size) { ImageSize = Size; }
+    void setFileOffset(uint64_t Offset) { FileOffset = Offset; }
+  };
+
+  /// Cold fragment of the function.
+  FragmentInfo ColdFragment;
+
+  FragmentInfo &cold() { return ColdFragment; }
+
+  const FragmentInfo &cold() const { return ColdFragment; }
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS,
