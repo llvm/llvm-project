@@ -38,10 +38,6 @@ public:
   /// Emit an error to the reader.
   virtual InFlightDiagnostic emitError(const Twine &msg = {}) = 0;
 
-  //===--------------------------------------------------------------------===//
-  // IR
-  //===--------------------------------------------------------------------===//
-
   /// Read out a list of elements, invoking the provided callback for each
   /// element. The callback function may be in any of the following forms:
   ///   * LogicalResult(T &)
@@ -70,6 +66,10 @@ public:
     }
     return success();
   }
+
+  //===--------------------------------------------------------------------===//
+  // IR
+  //===--------------------------------------------------------------------===//
 
   /// Read a reference to the given attribute.
   virtual LogicalResult readAttribute(Attribute &result) = 0;
@@ -114,6 +114,10 @@ public:
 
   /// Read a signed variable width integer.
   virtual LogicalResult readSignedVarInt(int64_t &result) = 0;
+  LogicalResult readSignedVarInts(SmallVectorImpl<int64_t> &result) {
+    return readList(result,
+                    [this](int64_t &value) { return readSignedVarInt(value); });
+  }
 
   /// Read an APInt that is known to have been encoded with the given width.
   virtual FailureOr<APInt> readAPIntWithKnownWidth(unsigned bitWidth) = 0;
@@ -178,6 +182,9 @@ public:
   /// Write a signed variable width integer to the output stream. This should be
   /// the preferred method for emitting signed integers whenever possible.
   virtual void writeSignedVarInt(int64_t value) = 0;
+  void writeSignedVarInts(ArrayRef<int64_t> value) {
+    writeList(value, [this](int64_t value) { writeSignedVarInt(value); });
+  }
 
   /// Write an APInt to the bytecode stream whose bitwidth will be known
   /// externally at read time. This method is useful for encoding APInt values
