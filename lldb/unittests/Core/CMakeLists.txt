@@ -21,6 +21,7 @@ add_lldb_unittest(LLDBCoreTests
     lldbPluginSymbolFileSymtab
     lldbSymbol
     lldbUtilityHelpers
+    lldbHostHelpers
     LLVMTestingSupport
   LINK_COMPONENTS
     Support
