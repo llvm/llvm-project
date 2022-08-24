@@ -306,19 +306,6 @@ the identity of function pointers is maintained, and calls across shared
 library boundaries are no different from calls within a single program or
 shared library.
 
-.. _kcfi:
-
-``-fsanitize=kcfi``
--------------------
-
-This is an alternative indirect call control-flow integrity scheme designed
-for low-level system software, such as operating system kernels. Unlike
-``-fsanitize=cfi-icall``, it doesn't require ``-flto``, won't result in
-function pointers being replaced with jump table references, and never breaks
-cross-DSO function address equality. These properties make KCFI easier to
-adopt in low-level software. KCFI is limited to checking only function
-pointers, and isn't compatible with executable-only memory.
-
 Member Function Pointer Call Checking
 =====================================
 

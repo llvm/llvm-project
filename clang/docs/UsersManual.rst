@@ -1720,8 +1720,6 @@ are listed below.
       flow analysis.
    -  ``-fsanitize=cfi``: :doc:`control flow integrity <ControlFlowIntegrity>`
       checks. Requires ``-flto``.
-   -  ``-fsanitize=kcfi``: kernel indirect call forward-edge control flow
-      integrity.
    -  ``-fsanitize=safe-stack``: :doc:`safe stack <SafeStack>`
       protection against stack-based memory corruption errors.
 

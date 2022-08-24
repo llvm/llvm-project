@@ -505,8 +505,7 @@ bool CallBase::hasReadingOperandBundles() const {
   // Implementation note: this is a conservative implementation of operand
   // bundle semantics, where *any* non-assume operand bundle (other than
   // ptrauth) forces a callsite to be at least readonly.
-  return hasOperandBundlesOtherThan(
-             {LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi}) &&
+  return hasOperandBundlesOtherThan(LLVMContext::OB_ptrauth) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
