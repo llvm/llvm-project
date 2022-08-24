@@ -85,6 +85,14 @@ public:
     emitMultiByteVarInt(value);
   }
 
+  /// Emit a signed variable length integer. Signed varints are encoded using
+  /// a varint with zigzag encoding, meaning that we use the low bit of the
+  /// value to indicate the sign of the value. This allows for more efficient
+  /// encoding of negative values by limiting the number of active bits
+  void emitSignedVarInt(uint64_t value) {
+    emitVarInt((value << 1) ^ (uint64_t)((int64_t)value >> 63));
+  }
+
   /// Emit a variable length integer whose low bit is used to encode the
   /// provided flag, i.e. encoded as: (value << 1) | (flag ? 1 : 0).
   void emitVarIntWithFlag(uint64_t value, bool flag) {
@@ -383,6 +391,37 @@ public:
   //===--------------------------------------------------------------------===//
 
   void writeVarInt(uint64_t value) override { emitter.emitVarInt(value); }
+
+  void writeSignedVarInt(int64_t value) override {
+    emitter.emitSignedVarInt(value);
+  }
+
+  void writeAPIntWithKnownWidth(const APInt &value) override {
+    size_t bitWidth = value.getBitWidth();
+
+    // If the value is a single byte, just emit it directly without going
+    // through a varint.
+    if (bitWidth <= 8)
+      return emitter.emitByte(value.getLimitedValue());
+
+    // If the value fits within a single varint, emit it directly.
+    if (bitWidth <= 64)
+      return emitter.emitSignedVarInt(value.getLimitedValue());
+
+    // Otherwise, we need to encode a variable number of active words. We use
+    // active words instead of the number of total words under the observation
+    // that smaller values will be more common.
+    unsigned numActiveWords = value.getActiveWords();
+    emitter.emitVarInt(numActiveWords);
+
+    const uint64_t *rawValueData = value.getRawData();
+    for (unsigned i = 0; i < numActiveWords; ++i)
+      emitter.emitSignedVarInt(rawValueData[i]);
+  }
+
+  void writeAPFloatWithKnownSemantics(const APFloat &value) override {
+    writeAPIntWithKnownWidth(value.bitcastToAPInt());
+  }
 
   void writeOwnedString(StringRef str) override {
     emitter.emitVarInt(stringSection.insert(str));
