@@ -96,10 +96,6 @@ LoongArchRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-bool LoongArchRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
-  return PhysReg == LoongArch::R0;
-}
-
 Register
 LoongArchRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = getFrameLowering(MF);
