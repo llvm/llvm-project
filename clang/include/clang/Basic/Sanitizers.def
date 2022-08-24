@@ -127,9 +127,6 @@ SANITIZER_GROUP("cfi", CFI,
                 CFIDerivedCast | CFIICall | CFIMFCall | CFIUnrelatedCast |
                     CFINVCall | CFIVCall)
 
-// Kernel Control Flow Integrity
-SANITIZER("kcfi", KCFI)
-
 // Safe Stack
 SANITIZER("safe-stack", SafeStack)
 

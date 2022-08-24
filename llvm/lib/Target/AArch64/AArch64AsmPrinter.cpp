@@ -111,7 +111,6 @@ public:
 
   typedef std::tuple<unsigned, bool, uint32_t> HwasanMemaccessTuple;
   std::map<HwasanMemaccessTuple, MCSymbol *> HwasanMemaccessSymbols;
-  void LowerKCFI_CHECK(const MachineInstr &MI);
   void LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI);
   void emitHwasanMemaccessSymbols(Module &M);
 
@@ -316,107 +315,6 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
 
   OutStreamer->emitLabel(Target);
   recordSled(CurSled, MI, Kind, 2);
-}
-
-void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
-  Register AddrReg = MI.getOperand(0).getReg();
-  assert(std::next(MI.getIterator())->isCall() &&
-         "KCFI_CHECK not followed by a call instruction");
-  assert(std::next(MI.getIterator())->getOperand(0).getReg() == AddrReg &&
-         "KCFI_CHECK call target doesn't match call operand");
-
-  // Default to using the intra-procedure-call temporary registers for
-  // comparing the hashes.
-  unsigned ScratchRegs[] = {AArch64::W16, AArch64::W17};
-  if (AddrReg == AArch64::XZR) {
-    // Checking XZR makes no sense. Instead of emitting a load, zero
-    // ScratchRegs[0] and use it for the ESR AddrIndex below.
-    AddrReg = getXRegFromWReg(ScratchRegs[0]);
-    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ORRXrs)
-                                     .addReg(AddrReg)
-                                     .addReg(AArch64::XZR)
-                                     .addReg(AArch64::XZR)
-                                     .addImm(0));
-  } else {
-    // If one of the scratch registers is used for the call target (e.g.
-    // with AArch64::TCRETURNriBTI), we can clobber another caller-saved
-    // temporary register instead (in this case, AArch64::W9) as the check
-    // is immediately followed by the call instruction.
-    for (auto &Reg : ScratchRegs) {
-      if (Reg == getWRegFromXReg(AddrReg)) {
-        Reg = AArch64::W9;
-        break;
-      }
-    }
-    assert(ScratchRegs[0] != AddrReg && ScratchRegs[1] != AddrReg &&
-           "Invalid scratch registers for KCFI_CHECK");
-
-    // Adjust the offset for patchable-function-prefix. This assumes that
-    // patchable-function-prefix is the same for all functions.
-    int64_t PrefixNops = 0;
-    (void)MI.getMF()
-        ->getFunction()
-        .getFnAttribute("patchable-function-prefix")
-        .getValueAsString()
-        .getAsInteger(10, PrefixNops);
-
-    // Load the target function type hash.
-    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDURWi)
-                                     .addReg(ScratchRegs[0])
-                                     .addReg(AddrReg)
-                                     .addImm(-(PrefixNops * 4 + 4)));
-  }
-
-  // Load the expected type hash.
-  const int64_t Type = MI.getOperand(1).getImm();
-  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVKWi)
-                                   .addReg(ScratchRegs[1])
-                                   .addReg(ScratchRegs[1])
-                                   .addImm(Type & 0xFFFF)
-                                   .addImm(0));
-  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVKWi)
-                                   .addReg(ScratchRegs[1])
-                                   .addReg(ScratchRegs[1])
-                                   .addImm((Type >> 16) & 0xFFFF)
-                                   .addImm(16));
-
-  // Compare the hashes and trap if there's a mismatch.
-  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::SUBSWrs)
-                                   .addReg(AArch64::WZR)
-                                   .addReg(ScratchRegs[0])
-                                   .addReg(ScratchRegs[1])
-                                   .addImm(0));
-
-  MCSymbol *Pass = OutContext.createTempSymbol();
-  EmitToStreamer(*OutStreamer,
-                 MCInstBuilder(AArch64::Bcc)
-                     .addImm(AArch64CC::EQ)
-                     .addExpr(MCSymbolRefExpr::create(Pass, OutContext)));
-
-  // The base ESR is 0x8000 and the register information is encoded in bits
-  // 0-9 as follows:
-  // - 0-4: n, where the register Xn contains the target address
-  // - 5-9: m, where the register Wm contains the expected type hash
-  // Where n, m are in [0, 30].
-  unsigned TypeIndex = ScratchRegs[1] - AArch64::W0;
-  unsigned AddrIndex;
-  switch (AddrReg) {
-  default:
-    AddrIndex = AddrReg - AArch64::X0;
-    break;
-  case AArch64::FP:
-    AddrIndex = 29;
-    break;
-  case AArch64::LR:
-    AddrIndex = 30;
-    break;
-  }
-
-  assert(AddrIndex < 31 && TypeIndex < 31);
-
-  unsigned ESR = 0x8000 | ((TypeIndex & 31) << 5) | (AddrIndex & 31);
-  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK).addImm(ESR));
-  OutStreamer->emitLabel(Pass);
 }
 
 void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
@@ -1545,10 +1443,6 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   case TargetOpcode::PATCHABLE_TAIL_CALL:
     LowerPATCHABLE_TAIL_CALL(*MI);
-    return;
-
-  case AArch64::KCFI_CHECK:
-    LowerKCFI_CHECK(*MI);
     return;
 
   case AArch64::HWASAN_CHECK_MEMACCESS:

@@ -814,8 +814,6 @@ public:
     return true;
   }
 
-  bool supportKCFIBundles() const override { return true; }
-
   /// Enable aggressive FMA fusion on targets that want it.
   bool enableAggressiveFMAFusion(EVT VT) const override;
 

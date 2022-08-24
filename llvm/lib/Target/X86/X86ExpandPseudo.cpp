@@ -356,7 +356,6 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
     MachineInstr &NewMI = *std::prev(MBBI);
     NewMI.copyImplicitOps(*MBBI->getParent()->getParent(), *MBBI);
-    NewMI.setCFIType(*MBB.getParent(), MI.getCFIType());
 
     // Update the call site info.
     if (MBBI->isCandidateForCallSiteEntry())

@@ -1814,8 +1814,6 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
         continue;
       if (Tag == LLVMContext::OB_clang_arc_attachedcall)
         continue;
-      if (Tag == LLVMContext::OB_kcfi)
-        continue;
 
       return InlineResult::failure("unsupported operand bundle");
     }

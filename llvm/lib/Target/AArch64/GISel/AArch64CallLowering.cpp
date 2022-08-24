@@ -979,9 +979,6 @@ bool AArch64CallLowering::lowerTailCall(
     TRI->UpdateCustomCallPreservedMask(MF, &Mask);
   MIB.addRegMask(Mask);
 
-  if (Info.CFIType)
-    MIB->setCFIType(MF, Info.CFIType->getZExtValue());
-
   if (TRI->isAnyArgRegReserved(MF))
     TRI->emitReservedArgRegCallError(MF);
 
@@ -1179,8 +1176,6 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     Function *ARCFn = *objcarc::getAttachedARCFunction(Info.CB);
     MIB.addGlobalAddress(ARCFn);
     ++CalleeOpNo;
-  } else if (Info.CFIType) {
-    MIB->setCFIType(MF, Info.CFIType->getZExtValue());
   }
 
   MIB.add(Info.Callee);
