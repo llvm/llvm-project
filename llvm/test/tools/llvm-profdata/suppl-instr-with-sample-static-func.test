@@ -12,4 +12,5 @@ RUN: llvm-profdata show -function=foo -counts %t3 | FileCheck %s
 RUN: llvm-profdata merge -supplement-instr-with-sample=%p/Inputs/FUnique.afdotext -suppl-min-size-threshold=2 %p/Inputs/NoFUnique.proftext -o %t4
 RUN: llvm-profdata show -function=foo -counts %t4 | FileCheck %s
 
-CHECK: Block counts: [18446744073709551615, 18446744073709551615, 18446744073709551615]
+CHECK: Counters: 3    <PseudoHot>
+CHECK-NEXT: Instrumentation level:

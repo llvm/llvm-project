@@ -485,31 +485,46 @@ InstrProfileEntry::InstrProfileEntry(InstrProfRecord *Record) {
   NumEdgeCounters = CntNum;
 }
 
-// Either set all the counters in the instr profile entry \p IFE to -1
-/// in order to drop the profile or scale up the counters in \p IFP to
-/// be above hot threshold. We use the ratio of zero counters in the
-/// profile of a function to decide the profile is helpful or harmful
-/// for performance, and to choose whether to scale up or drop it.
-static void updateInstrProfileEntry(InstrProfileEntry &IFE,
+/// Either set all the counters in the instr profile entry \p IFE to
+/// -1 / -2 /in order to drop the profile or scale up the
+/// counters in \p IFP to be above hot / cold threshold. We use
+/// the ratio of zero counters in the profile of a function to
+/// decide the profile is helpful or harmful for performance,
+/// and to choose whether to scale up or drop it.
+static void updateInstrProfileEntry(InstrProfileEntry &IFE, bool SetToHot,
                                     uint64_t HotInstrThreshold,
+                                    uint64_t ColdInstrThreshold,
                                     float ZeroCounterThreshold) {
   InstrProfRecord *ProfRecord = IFE.ProfRecord;
   if (!IFE.MaxCount || IFE.ZeroCounterRatio > ZeroCounterThreshold) {
     // If all or most of the counters of the function are zero, the
-    // profile is unaccountable and shuld be dropped. Reset all the
-    // counters to be -1 and PGO profile-use will drop the profile.
+    // profile is unaccountable and should be dropped. Reset all the
+    // counters to be -1 / -2 and PGO profile-use will drop the profile.
     // All counters being -1 also implies that the function is hot so
     // PGO profile-use will also set the entry count metadata to be
     // above hot threshold.
-    for (size_t I = 0; I < ProfRecord->Counts.size(); ++I)
-      ProfRecord->Counts[I] = -1;
+    // All counters being -2 implies that the function is warm so
+    // PGO profile-use will also set the entry count metadata to be
+    // above cold threshold.
+    auto Kind =
+        (SetToHot ? InstrProfRecord::PseudoHot : InstrProfRecord::PseudoWarm);
+    ProfRecord->setPseudoCount(Kind);
     return;
   }
 
-  // Scale up the MaxCount to be multiple times above hot threshold.
+  // Scale up the MaxCount to be multiple times above hot / cold threshold.
   const unsigned MultiplyFactor = 3;
-  uint64_t Numerator = HotInstrThreshold * MultiplyFactor;
+  uint64_t Threshold = (SetToHot ? HotInstrThreshold : ColdInstrThreshold);
+  uint64_t Numerator = Threshold * MultiplyFactor;
+
+  // Make sure Threshold for warm counters is below the HotInstrThreshold.
+  if (!SetToHot && Threshold >= HotInstrThreshold) {
+    Threshold = (HotInstrThreshold + ColdInstrThreshold) / 2;
+  }
+
   uint64_t Denominator = IFE.MaxCount;
+  if (Numerator <= Denominator)
+    return;
   ProfRecord->scale(Numerator, Denominator, [&](instrprof_error E) {
     warn(toString(make_error<InstrProfError>(E)));
   });
@@ -635,6 +650,11 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
   ProfileSummary SamplePS = Reader->getSummary();
 
   // Compute cold thresholds for instr profile and sample profile.
+  uint64_t HotSampleThreshold =
+      ProfileSummaryBuilder::getEntryForPercentile(
+          SamplePS.getDetailedSummary(),
+          ProfileSummaryBuilder::DefaultCutoffs[HotPercentileIdx])
+          .MinCount;
   uint64_t ColdSampleThreshold =
       ProfileSummaryBuilder::getEntryForPercentile(
           SamplePS.getDetailedSummary(),
@@ -657,7 +677,8 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
   // and adjust the profiles of those functions in the instr profile.
   for (const auto &PD : Reader->getProfiles()) {
     const sampleprof::FunctionSamples &FS = PD.second;
-    if (FS.getMaxCountInside() <= ColdSampleThreshold)
+    uint64_t SampleMaxCount = FS.getMaxCountInside();
+    if (SampleMaxCount < ColdSampleThreshold)
       continue;
     auto &FContext = PD.first;
     auto It = InstrProfileMap.find(FContext.toString());
@@ -676,8 +697,9 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
         It->second.MaxCount > ColdInstrThreshold ||
         It->second.NumEdgeCounters < SupplMinSizeThreshold)
       continue;
-    updateInstrProfileEntry(It->second, HotInstrThreshold,
-                            ZeroCounterThreshold);
+    bool SetToHot = SampleMaxCount >= HotSampleThreshold;
+    updateInstrProfileEntry(It->second, SetToHot, HotInstrThreshold,
+                            ColdInstrThreshold, ZeroCounterThreshold);
   }
 }
 
@@ -2294,9 +2316,27 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
 
     uint64_t FuncMax = 0;
     uint64_t FuncSum = 0;
+
+    auto PseudoKind = Func.getCountPseudoKind();
+    if (PseudoKind != InstrProfRecord::NotPseudo) {
+      if (Show) {
+        if (!ShownFunctions)
+          OS << "Counters:\n";
+        ++ShownFunctions;
+        OS << "  " << Func.Name << ":\n"
+           << "    Hash: " << format("0x%016" PRIx64, Func.Hash) << "\n"
+           << "    Counters: " << Func.Counts.size();
+        if (PseudoKind == InstrProfRecord::PseudoHot)
+          OS << "    <PseudoHot>\n";
+        else if (PseudoKind == InstrProfRecord::PseudoWarm)
+          OS << "    <PseudoWarm>\n";
+        else
+          llvm_unreachable("Unknown PseudoKind");
+      }
+      continue;
+    }
+
     for (size_t I = 0, E = Func.Counts.size(); I < E; ++I) {
-      if (Func.Counts[I] == (uint64_t)-1)
-        continue;
       FuncMax = std::max(FuncMax, Func.Counts[I]);
       FuncSum += Func.Counts[I];
     }
