@@ -1,4 +1,5 @@
 # RUN: llvm-mc -arch=amdgcn -mcpu=tonga -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
+# RUN: llvm-mc -arch=amdgcn -mcpu=fiji -disassemble -show-encoding < %s | FileCheck -strict-whitespace %s
 
 # CHECK: v_interp_p1_f32_e32 v5, v1, attr0.x     ; encoding: [0x01,0x00,0x14,0xd4]
 0x01,0x00,0x14,0xd4
@@ -83,3 +84,9 @@
 
 # CHECK: v_interp_mov_f32_e32 v5, p10, attr0.w   ; encoding: [0x00,0x03,0x16,0xd4]
 0x00,0x03,0x16,0xd4
+
+# CHECK: v_interp_mov_f32_e32 v7, invalid_param_212, attr16.y ; encoding: [0xd4,0x41,0x1e,0xd4]
+0xd4 0x41 0x1e 0xd4
+
+# CHECK: v_interp_mov_f32_e32 v7, p10, attr16.y  ; encoding: [0x00,0x41,0x1e,0xd4]
+0x00 0x41 0x1e 0xd4

@@ -2683,6 +2683,17 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
              << "' to be a `loopopts` attribute";
   }
 
+  if (attr.getName() == LLVMDialect::getReadnoneAttrName()) {
+    const auto attrName = LLVMDialect::getReadnoneAttrName();
+    if (!isa<FunctionOpInterface>(op))
+      return op->emitOpError()
+             << "'" << attrName
+             << "' is permitted only on FunctionOpInterface operations";
+    if (!attr.getValue().isa<UnitAttr>())
+      return op->emitOpError()
+             << "expected '" << attrName << "' to be a unit attribute";
+  }
+
   if (attr.getName() == LLVMDialect::getStructAttrsAttrName()) {
     return op->emitOpError()
            << "'" << LLVM::LLVMDialect::getStructAttrsAttrName()
