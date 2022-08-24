@@ -1538,6 +1538,8 @@ eTypeIsMetatype = _lldb.eTypeIsMetatype
 
 eTypeHasUnboundGeneric = _lldb.eTypeHasUnboundGeneric
 
+eTypeHasDynamicSelf = _lldb.eTypeHasDynamicSelf
+
 eCommandRequiresTarget = _lldb.eCommandRequiresTarget
 
 eCommandRequiresProcess = _lldb.eCommandRequiresProcess

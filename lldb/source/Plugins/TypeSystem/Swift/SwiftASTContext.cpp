@@ -5185,6 +5185,8 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   if (swift_can_type->hasUnboundGenericType() ||
       swift_can_type->hasTypeParameter())
     swift_flags |= eTypeHasUnboundGeneric;
+  if (swift_can_type->hasDynamicSelfType())
+    swift_flags |= eTypeHasDynamicSelf;
   switch (type_kind) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:

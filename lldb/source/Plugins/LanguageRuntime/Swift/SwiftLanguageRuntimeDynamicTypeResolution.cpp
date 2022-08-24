@@ -2259,8 +2259,9 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Value(
     Address &address) {
   class_type_or_name.SetCompilerType(bound_type);
 
-  llvm::Optional<uint64_t> size = bound_type.GetByteSize(
-      in_value.GetExecutionContextRef().GetFrameSP().get());
+  ExecutionContext exe_ctx = in_value.GetExecutionContextRef().Lock(true);
+  llvm::Optional<uint64_t> size =
+      bound_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!size)
     return false;
   lldb::addr_t val_address = in_value.GetAddressOf(true, nullptr);
@@ -2626,14 +2627,19 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress(
     success = GetDynamicTypeAndAddress_Protocol(in_value, val_type, use_dynamic,
                                                 class_type_or_name, address);
   else {
-    // Perform generic type resolution.
-    StackFrameSP frame = in_value.GetExecutionContextRef().GetFrameSP();
-    if (!frame)
-      return false;
+    CompilerType bound_type;
+    if (type_info.AnySet(eTypeHasUnboundGeneric | eTypeHasDynamicSelf)) {
+      // Perform generic type resolution.
+      StackFrameSP frame = in_value.GetExecutionContextRef().GetFrameSP();
+      if (!frame)
+        return false;
 
-    CompilerType bound_type = BindGenericTypeParameters(*frame.get(), val_type);
-    if (!bound_type)
-      return false;
+      bound_type = BindGenericTypeParameters(*frame.get(), val_type);
+      if (!bound_type)
+        return false;
+    } else {
+      bound_type = val_type;
+    }
 
     Flags subst_type_info(bound_type.GetTypeInfo());
     if (subst_type_info.AnySet(eTypeIsClass)) {

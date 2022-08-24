@@ -1035,41 +1035,25 @@ swift::Demangle::NodePointer TypeSystemSwiftTypeRef::GetDemangleTreeForPrinting(
   return GetNodeForPrintingImpl(dem, node, resolve_objc_module);
 }
 
-/// Determine wether this demangle tree contains a generic type parameter.
-static bool ContainsGenericTypeParameter(swift::Demangle::NodePointer node) {
+/// Determine wether this demangle tree contains a node of kind \c kind.
+static bool Contains(swift::Demangle::NodePointer node,
+                     swift::Demangle::Node::Kind kind) {
   if (!node)
     return false;
 
-  if (node->getKind() == swift::Demangle::Node::Kind::DependentGenericParamType)
+  if (node->getKind() == kind)
     return true;
 
   for (swift::Demangle::NodePointer child : *node)
-    if (ContainsGenericTypeParameter(child))
+    if (Contains(child, kind))
       return true;
 
   return false;
 }
 
-/// Determine wether this demangle tree contains generic types.
-static bool HasUnboundGeneric(swift::Demangle::NodePointer node) {
-  if (!node)
-    return false;
-
-  // Bug-for-bug-compatibility.
-  // FIXME: There should be more cases here.
-  switch (node->getKind()) {
-  case Node::Kind::DynamicSelf:
-  case Node::Kind::DependentGenericParamType:
-    return true;
-  default:
-    break;
-  }
-
-  for (swift::Demangle::NodePointer child : *node)
-    if (HasUnboundGeneric(child))
-      return true;
-
-  return false;
+/// Determine wether this demangle tree contains a generic type parameter.
+static bool ContainsGenericTypeParameter(swift::Demangle::NodePointer node) {
+  return Contains(node, swift::Demangle::Node::Kind::DependentGenericParamType);
 }
 
 /// Collect TypeInfo flags from a demangle tree. For most attributes
@@ -1277,8 +1261,10 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
   // If swift_flags were collected we're done here except for
   // determining whether the type is generic.
   if (swift_flags != eTypeIsSwift) {
-    if (HasUnboundGeneric(node))
+    if (ContainsGenericTypeParameter(node))
       swift_flags |= eTypeHasUnboundGeneric;
+    if (Contains(node, Node::Kind::DynamicSelf))
+      swift_flags |= eTypeHasDynamicSelf;
     return swift_flags;
   }
 

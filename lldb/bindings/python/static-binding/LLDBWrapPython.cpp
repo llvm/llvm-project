@@ -88521,6 +88521,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eTypeIsTuple",SWIG_From_int(static_cast< int >(lldb::eTypeIsTuple)));
   SWIG_Python_SetConstant(d, "eTypeIsMetatype",SWIG_From_int(static_cast< int >(lldb::eTypeIsMetatype)));
   SWIG_Python_SetConstant(d, "eTypeHasUnboundGeneric",SWIG_From_int(static_cast< int >(lldb::eTypeHasUnboundGeneric)));
+  SWIG_Python_SetConstant(d, "eTypeHasDynamicSelf",SWIG_From_int(static_cast< int >(lldb::eTypeHasDynamicSelf)));
   SWIG_Python_SetConstant(d, "eCommandRequiresTarget",SWIG_From_int(static_cast< int >(lldb::eCommandRequiresTarget)));
   SWIG_Python_SetConstant(d, "eCommandRequiresProcess",SWIG_From_int(static_cast< int >(lldb::eCommandRequiresProcess)));
   SWIG_Python_SetConstant(d, "eCommandRequiresThread",SWIG_From_int(static_cast< int >(lldb::eCommandRequiresThread)));
