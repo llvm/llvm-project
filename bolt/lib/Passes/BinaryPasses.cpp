@@ -1450,11 +1450,11 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   if (!opts::PrintSortedBy.empty() &&
       !llvm::is_contained(opts::PrintSortedBy, DynoStats::FIRST_DYNO_STAT)) {
 
-    std::vector<const BinaryFunction *> Functions;
+    std::vector<BinaryFunction *> Functions;
     std::map<const BinaryFunction *, DynoStats> Stats;
 
-    for (const auto &BFI : BC.getBinaryFunctions()) {
-      const BinaryFunction &BF = BFI.second;
+    for (auto &BFI : BC.getBinaryFunctions()) {
+      BinaryFunction &BF = BFI.second;
       if (shouldOptimize(BF) && BF.hasValidProfile()) {
         Functions.push_back(&BF);
         Stats.emplace(&BF, getDynoStats(BF));
@@ -1554,9 +1554,9 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
 
   // Collect and print information about suboptimal code layout on input.
   if (opts::ReportBadLayout) {
-    std::vector<const BinaryFunction *> SuboptimalFuncs;
+    std::vector<BinaryFunction *> SuboptimalFuncs;
     for (auto &BFI : BC.getBinaryFunctions()) {
-      const BinaryFunction &BF = BFI.second;
+      BinaryFunction &BF = BFI.second;
       if (!BF.hasValidProfile())
         continue;
 
