@@ -73,10 +73,16 @@ private:
                 raw_ostream &O);
   void printCPol(const MCInst *MI, unsigned OpNo,
                  const MCSubtargetInfo &STI, raw_ostream &O);
+  void printTH(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+               raw_ostream &O);
+  void printScope(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                  raw_ostream &O);
   void printSWZ(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
   void printTFE(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                 raw_ostream &O);
+  void printNV(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+               raw_ostream &O);
   void printDMask(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                   raw_ostream &O);
   void printDim(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,

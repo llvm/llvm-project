@@ -25,6 +25,7 @@ def MIMGEncGfx10Default : MIMGEncoding;
 def MIMGEncGfx10NSA : MIMGEncoding;
 def MIMGEncGfx11Default : MIMGEncoding;
 def MIMGEncGfx11NSA : MIMGEncoding;
+def MIMGEncGfx12 : MIMGEncoding;
 
 def MIMGEncoding : GenericEnum {
   let FilterClass = "MIMGEncoding";
@@ -94,11 +95,13 @@ def MIMG {
   int NOP = -1;
 }
 
-class mimgopc <int gfx11, int gfx10m, int vi = gfx10m, int si = gfx10m> {
+class mimgopc <int gfx12, int gfx11, int gfx10m, int vi = gfx10m, int si = gfx10m> {
+  field bits<8> GFX12 = gfx12;
   field bits<8> GFX11 = gfx11;
   field bits<8> GFX10M = gfx10m; // GFX10minus for all but atomics
   field bits<8> VI = vi; // VI is only used for atomic instructions
   field bits<8> SI = si; // SI is only used for atomic instructions
+  bit HAS_GFX12 = !ne(gfx12, MIMG.NOP);
   bit HAS_GFX11 = !ne(gfx11, MIMG.NOP);
   bit HAS_GFX10M = !ne(gfx10m, MIMG.NOP);
   bit HAS_VI = !ne(vi, MIMG.NOP);
@@ -218,6 +221,16 @@ class MIMG <dag outs, string dns = "">
   bits<8> VAddrOperands;
 }
 
+class VIMAGE <dag outs, string dns = ""> : MIMG<outs, dns> {
+  let MIMG = 0;
+  let VIMAGE = 1;
+}
+
+class VSAMPLE <dag outs, string dns = ""> : MIMG<outs, dns> {
+  let MIMG = 0;
+  let VSAMPLE = 1;
+}
+
 def MIMGInfoTable : GenericTable {
   let FilterClass = "MIMG";
   let CppTypeName = "MIMGInfo";
@@ -249,6 +262,17 @@ class MIMGNSAHelper<int num_addrs,
             !if(!le(num_addrs, 5), 1,
             !if(!le(num_addrs, 9), 2,
             !if(!le(num_addrs, 13), 3, ?))));
+}
+
+class VSAMPLEHelper<int num_addrs, RegisterClass Addr3RC> {
+  list<RegisterClass> addr_types =
+    !if(!ge(num_addrs, 4), !listconcat(!listsplat(VGPR_32, 3), [Addr3RC]),
+                           !listsplat(VGPR_32, num_addrs));
+
+  list<string> AddrAsmNames =
+    !foreach(i, !filter(i, [0, 1, 2, 3], !lt(i, num_addrs)), "vaddr" # i);
+  dag AddrIns = !dag(ins, addr_types, AddrAsmNames);
+  string AddrAsm = "[$" # !interleave(AddrAsmNames, ", $") # "]";
 }
 
 // Base class of all pre-gfx10 MIMG instructions.
@@ -308,8 +332,8 @@ class MIMG_nsa_gfx10<int op, dag outs, int num_addrs, string dns="">
 // Base class of all non-NSA gfx11 MIMG instructions.
 class MIMG_gfx11<int op, dag outs, string dns = "">
   : MIMG<outs, dns>, MIMGe_gfx11<op> {
-  let SubtargetPredicate = isGFX11Plus;
-  let AssemblerPredicate = isGFX11Plus;
+  let SubtargetPredicate = isGFX11Only;
+  let AssemblerPredicate = isGFX11Only;
 
   let MIMGEncoding = MIMGEncGfx11Default;
   let VAddrOperands = 1;
@@ -323,8 +347,8 @@ class MIMG_gfx11<int op, dag outs, string dns = "">
 class MIMG_nsa_gfx11<int op, dag outs, int num_addrs, string dns="",
                      list<RegisterClass> addr_types=[]>
   : MIMG<outs, dns>, MIMGe_gfx11<op> {
-  let SubtargetPredicate = isGFX11Plus;
-  let AssemblerPredicate = isGFX11Plus;
+  let SubtargetPredicate = isGFX11Only;
+  let AssemblerPredicate = isGFX11Only;
 
   let MIMGEncoding = MIMGEncGfx11NSA;
   let VAddrOperands = num_addrs;
@@ -337,6 +361,48 @@ class MIMG_nsa_gfx11<int op, dag outs, int num_addrs, string dns="",
 
   let d16 = !if(BaseOpcode.HasD16, ?, 0);
   let nsa = nsah.NSA;
+}
+
+class VIMAGE_gfx12<int op, dag outs, int num_addrs, string dns="",
+                   list<RegisterClass> addr_types=[]>
+  : VIMAGE<outs, dns>, VIMAGEe<op> {
+  let SubtargetPredicate = isGFX12Plus;
+  let AssemblerPredicate = isGFX12Plus;
+
+  let MIMGEncoding = MIMGEncGfx12;
+  let VAddrOperands = num_addrs;
+
+  MIMGNSAHelper nsah = !if(!empty(addr_types),
+                           MIMGNSAHelper<num_addrs>,
+                           MIMGNSAHelper<num_addrs, addr_types>);
+  dag AddrIns = nsah.AddrIns;
+  string AddrAsm = !if(!eq(num_addrs, 1), "$vaddr0", nsah.AddrAsm);
+
+  let d16 = !if(BaseOpcode.HasD16, ?, 0);
+  let vaddr1 = !if(!lt(num_addrs, 2), 0, ?);
+  let vaddr2 = !if(!lt(num_addrs, 3), 0, ?);
+  let vaddr3 = !if(!lt(num_addrs, 4), 0, ?);
+  let vaddr4 = !if(!lt(num_addrs, 5), 0, ?);
+}
+
+class VSAMPLE_gfx12<int op, dag outs, int num_addrs, string dns="",
+                    RegisterClass Addr3RC>
+  : VSAMPLE<outs, dns>, VSAMPLEe<op> {
+  let SubtargetPredicate = isGFX12Plus;
+  let AssemblerPredicate = isGFX12Plus;
+
+  let MIMGEncoding = MIMGEncGfx12;
+  let VAddrOperands = num_addrs;
+
+  VSAMPLEHelper vsamph = VSAMPLEHelper<num_addrs, Addr3RC>;
+
+  dag AddrIns = vsamph.AddrIns;
+  string AddrAsm = !if(!eq(num_addrs, 1), "$vaddr0", vsamph.AddrAsm);
+
+  let d16 = !if(BaseOpcode.HasD16, ?, 0);
+  let vaddr1 = !if(!lt(num_addrs, 2), 0, ?);
+  let vaddr2 = !if(!lt(num_addrs, 3), 0, ?);
+  let vaddr3 = !if(!lt(num_addrs, 4), 0, ?);
 }
 
 class MIMG_NoSampler_Helper <mimgopc op, string asm,
@@ -415,12 +481,25 @@ class MIMG_NoSampler_nsa_gfx11<mimgopc op, string opcode,
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
+class VIMAGE_NoSampler_gfx12<mimgopc op, string opcode,
+                             RegisterClass DataRC, int num_addrs,
+                             string dns="">
+  : VIMAGE_gfx12<op.GFX11, (outs DataRC:$vdata), num_addrs, dns> {
+  let InOperandList = !con(AddrIns,
+                           (ins SReg_256:$rsrc, DMask:$dmask, Dim:$dim,
+                                R128A16:$r128, GFX10A16:$a16, TH:$th,
+                                Scope:$scope, NV:$nv, TFE:$tfe),
+                           !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
+  let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc$dmask$dim$r128$a16$th$scope$nv$tfe"
+                    #!if(BaseOpcode.HasD16, "$d16", "");
+}
+
 multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
                                              RegisterClass dst_rc,
                                              bit enableDisasm,
                                              bit ExtendedImageInst = 1> {
-  let ssamp = 0 in {
-    let VAddrDwords = 1 in {
+  let VAddrDwords = 1 in {
+    let ssamp = 0 in {
       if op.HAS_GFX10M then {
         def _V1 : MIMG_NoSampler_Helper <op, asm, dst_rc, VGPR_32,
                                          !if(enableDisasm, "AMDGPU", "")>;
@@ -435,8 +514,13 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
                                              !if(enableDisasm, "AMDGPU", "")>;
       }
     }
-
-    let VAddrDwords = 2 in {
+    if op.HAS_GFX12 then {
+      def _V1_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 1,
+                                             !if(enableDisasm, "GFX12", "")>;
+    }
+  }
+  let VAddrDwords = 2 in {
+    let ssamp = 0 in {
       if op.HAS_GFX10M then {
         def _V2 : MIMG_NoSampler_Helper <op, asm, dst_rc, VReg_64>;
         if !not(ExtendedImageInst) then
@@ -449,8 +533,12 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
         def _V2_nsa_gfx11 : MIMG_NoSampler_nsa_gfx11<op, asm, dst_rc, 2>;
       }
     }
-
-    let VAddrDwords = 3 in {
+    if op.HAS_GFX12 then {
+      def _V2_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 2>;
+    }
+  }
+  let VAddrDwords = 3 in {
+    let ssamp = 0 in {
       if op.HAS_GFX10M then {
         def _V3 : MIMG_NoSampler_Helper <op, asm, dst_rc, VReg_96>;
         if !not(ExtendedImageInst) then
@@ -463,8 +551,12 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
         def _V3_nsa_gfx11 : MIMG_NoSampler_nsa_gfx11<op, asm, dst_rc, 3>;
       }
     }
-
-    let VAddrDwords = 4 in {
+    if op.HAS_GFX12 then {
+      def _V3_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 3>;
+    }
+  }
+  let VAddrDwords = 4 in {
+    let ssamp = 0 in {
       if op.HAS_GFX10M then {
         def _V4 : MIMG_NoSampler_Helper <op, asm, dst_rc, VReg_128>;
         if !not(ExtendedImageInst) then
@@ -478,6 +570,10 @@ multiclass MIMG_NoSampler_Src_Helper <mimgopc op, string asm,
         def _V4_nsa_gfx11 : MIMG_NoSampler_nsa_gfx11<op, asm, dst_rc, 4,
                                                      !if(enableDisasm, "AMDGPU", "")>;
       }
+    }
+    if op.HAS_GFX12 then {
+      def _V4_gfx12 : VIMAGE_NoSampler_gfx12<op, asm, dst_rc, 4,
+                                             !if(enableDisasm, "GFX12", "")>;
     }
   }
 }
@@ -586,62 +682,98 @@ class MIMG_Store_nsa_gfx11<mimgopc op, string opcode,
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
+class VIMAGE_Store_gfx12<mimgopc op, string opcode,
+                         RegisterClass DataRC, int num_addrs,
+                         string dns="">
+  : VIMAGE_gfx12<op.GFX12, (outs), num_addrs, dns> {
+  let InOperandList = !con((ins DataRC:$vdata),
+                           AddrIns,
+                           (ins SReg_256:$rsrc, DMask:$dmask, Dim:$dim,
+                                R128A16:$r128, GFX10A16:$a16, TH:$th,
+                                Scope:$scope, NV:$nv, TFE:$tfe),
+                           !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
+  let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc$dmask$dim$r128$a16$th$scope$nv$tfe"
+                    #!if(BaseOpcode.HasD16, "$d16", "");
+}
+
 multiclass MIMG_Store_Addr_Helper <mimgopc op, string asm,
                                   RegisterClass data_rc,
                                   bit enableDisasm> {
   let mayLoad = 0, mayStore = 1, hasSideEffects = 0, hasPostISelHook = 0,
-      DisableWQM = 1, ssamp = 0 in {
+      DisableWQM = 1 in {
     let VAddrDwords = 1 in {
-      if op.HAS_GFX10M then {
-        def _V1 : MIMG_Store_Helper <op, asm, data_rc, VGPR_32,
-                                     !if(enableDisasm, "AMDGPU", "")>;
-        let hasPostISelHook = 1 in
-        def _V1_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VGPR_32,
-                                     !if(enableDisasm, "GFX90A", "")>;
-        def _V1_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VGPR_32,
-                                          !if(enableDisasm, "AMDGPU", "")>;
+      let ssamp = 0 in {
+        if op.HAS_GFX10M then {
+          def _V1 : MIMG_Store_Helper <op, asm, data_rc, VGPR_32,
+                                      !if(enableDisasm, "AMDGPU", "")>;
+          let hasPostISelHook = 1 in
+          def _V1_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VGPR_32,
+                                      !if(enableDisasm, "GFX90A", "")>;
+          def _V1_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VGPR_32,
+                                            !if(enableDisasm, "AMDGPU", "")>;
+        }
+        if op.HAS_GFX11 then {
+          def _V1_gfx11 : MIMG_Store_gfx11 <op, asm, data_rc, VGPR_32,
+                                            !if(enableDisasm, "AMDGPU", "")>;
+        }
       }
-      if op.HAS_GFX11 then {
-        def _V1_gfx11 : MIMG_Store_gfx11 <op, asm, data_rc, VGPR_32,
-                                          !if(enableDisasm, "AMDGPU", "")>;
+      if op.HAS_GFX12 then {
+        def _V1_gfx12 : VIMAGE_Store_gfx12 <op, asm, data_rc, 1,
+                                            !if(enableDisasm, "GFX12", "")>;
       }
     }
     let VAddrDwords = 2 in {
-      if op.HAS_GFX10M then {
-        def _V2 : MIMG_Store_Helper <op, asm, data_rc, VReg_64>;
-        def _V2_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VReg_64>;
-        def _V2_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VReg_64>;
-        def _V2_nsa_gfx10 : MIMG_Store_nsa_gfx10 <op, asm, data_rc, 2>;
+      let ssamp = 0 in {
+        if op.HAS_GFX10M then {
+          def _V2 : MIMG_Store_Helper <op, asm, data_rc, VReg_64>;
+          def _V2_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VReg_64>;
+          def _V2_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VReg_64>;
+          def _V2_nsa_gfx10 : MIMG_Store_nsa_gfx10 <op, asm, data_rc, 2>;
+        }
+        if op.HAS_GFX11 then {
+          def _V2_gfx11 : MIMG_Store_gfx11 <op, asm, data_rc, VReg_64>;
+          def _V2_nsa_gfx11 : MIMG_Store_nsa_gfx11 <op, asm, data_rc, 2>;
+        }
       }
-      if op.HAS_GFX11 then {
-        def _V2_gfx11 : MIMG_Store_gfx11 <op, asm, data_rc, VReg_64>;
-        def _V2_nsa_gfx11 : MIMG_Store_nsa_gfx11 <op, asm, data_rc, 2>;
+      if op.HAS_GFX12 then {
+        def _V2_gfx12 : VIMAGE_Store_gfx12 <op, asm, data_rc, 2>;
       }
     }
     let VAddrDwords = 3 in {
-      if op.HAS_GFX10M then {
-        def _V3 : MIMG_Store_Helper <op, asm, data_rc, VReg_96>;
-        def _V3_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VReg_96>;
-        def _V3_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VReg_96>;
-        def _V3_nsa_gfx10 : MIMG_Store_nsa_gfx10 <op, asm, data_rc, 3>;
+      let ssamp = 0 in {
+        if op.HAS_GFX10M then {
+          def _V3 : MIMG_Store_Helper <op, asm, data_rc, VReg_96>;
+          def _V3_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VReg_96>;
+          def _V3_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VReg_96>;
+          def _V3_nsa_gfx10 : MIMG_Store_nsa_gfx10 <op, asm, data_rc, 3>;
+        }
+        if op.HAS_GFX11 then {
+          def _V3_gfx11 : MIMG_Store_gfx11 <op, asm, data_rc, VReg_96>;
+          def _V3_nsa_gfx11 : MIMG_Store_nsa_gfx11 <op, asm, data_rc, 3>;
+        }
       }
-      if op.HAS_GFX11 then {
-        def _V3_gfx11 : MIMG_Store_gfx11 <op, asm, data_rc, VReg_96>;
-        def _V3_nsa_gfx11 : MIMG_Store_nsa_gfx11 <op, asm, data_rc, 3>;
+      if op.HAS_GFX12 then {
+        def _V3_gfx12 : VIMAGE_Store_gfx12 <op, asm, data_rc, 3>;
       }
     }
     let VAddrDwords = 4 in {
-      if op.HAS_GFX10M then {
-        def _V4 : MIMG_Store_Helper <op, asm, data_rc, VReg_128>;
-        def _V4_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VReg_128>;
-        def _V4_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VReg_128>;
-        def _V4_nsa_gfx10 : MIMG_Store_nsa_gfx10 <op, asm, data_rc, 4,
-                                                         !if(enableDisasm, "AMDGPU", "")>;
+      let ssamp = 0 in {
+        if op.HAS_GFX10M then {
+          def _V4 : MIMG_Store_Helper <op, asm, data_rc, VReg_128>;
+          def _V4_gfx90a : MIMG_Store_Helper_gfx90a <op, asm, data_rc, VReg_128>;
+          def _V4_gfx10 : MIMG_Store_gfx10 <op, asm, data_rc, VReg_128>;
+          def _V4_nsa_gfx10 : MIMG_Store_nsa_gfx10 <op, asm, data_rc, 4,
+                                                          !if(enableDisasm, "AMDGPU", "")>;
+        }
+        if op.HAS_GFX11 then {
+          def _V4_gfx11 : MIMG_Store_gfx11 <op, asm, data_rc, VReg_128>;
+          def _V4_nsa_gfx11 : MIMG_Store_nsa_gfx11 <op, asm, data_rc, 4,
+                                                          !if(enableDisasm, "AMDGPU", "")>;
+        }
       }
-      if op.HAS_GFX11 then {
-        def _V4_gfx11 : MIMG_Store_gfx11 <op, asm, data_rc, VReg_128>;
-        def _V4_nsa_gfx11 : MIMG_Store_nsa_gfx11 <op, asm, data_rc, 4,
-                                                         !if(enableDisasm, "AMDGPU", "")>;
+      if op.HAS_GFX12 then {
+        def _V4_gfx12 : VIMAGE_Store_gfx12 <op, asm, data_rc, 4,
+                                            !if(enableDisasm, "GFX12", "")>;
       }
     }
   }
@@ -774,84 +906,139 @@ class MIMG_Atomic_nsa_gfx11<mimgopc op, string opcode,
   let AsmString = opcode#" $vdata, "#AddrAsm#", $srsrc$dmask$dim$unorm$cpol$r128$a16$tfe$lwe";
 }
 
+class VIMAGE_Atomic_gfx12<mimgopc op, string opcode, RegisterClass DataRC,
+                          int num_addrs, bit enableDisasm = 0>
+  : VIMAGE_gfx12<!cast<int>(op.GFX12), (outs DataRC:$vdst), num_addrs,
+                  !if(enableDisasm, "GFX12", "")> {
+  let Constraints = "$vdst = $vdata";
+  let AsmMatchConverter = "cvtMIMGAtomic";
+
+  let InOperandList = !con((ins DataRC:$vdata),
+                           AddrIns,
+                           (ins SReg_256:$rsrc, DMask:$dmask, Dim:$dim,
+                                R128A16:$r128, GFX10A16:$a16, TH:$th,
+                                Scope:$scope, NV:$nv, TFE:$tfe));
+  let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc$dmask$dim$r128$a16$th$scope$nv$tfe";
+}
+
+class VIMAGE_Atomic_gfx12_Renamed<mimgopc op, string opcode, string renamed,
+                                  RegisterClass DataRC, int num_addrs,
+                                  bit enableDisasm = 0>
+   : VIMAGE_Atomic_gfx12<op, renamed, DataRC, num_addrs, enableDisasm>,
+     MnemonicAlias<opcode, renamed>, Requires<[isGFX12Plus]>;
+
 multiclass MIMG_Atomic_Addr_Helper_m <mimgopc op, string asm,
                                       RegisterClass data_rc,
                                       bit enableDasm = 0,
-                                      bit isFP = 0> {
+                                      bit isFP = 0,
+                                      string renamed = ""> {
   let hasSideEffects = 1, // FIXME: remove this
       mayLoad = 1, mayStore = 1, hasPostISelHook = 0, DisableWQM = 1,
-      ssamp = 0, FPAtomic = isFP in {
+      FPAtomic = isFP in {
     let VAddrDwords = 1 in {
-      if op.HAS_SI then {
-        def _V1_si : MIMG_Atomic_si <op, asm, data_rc, VGPR_32, enableDasm>;
+      let ssamp = 0 in {
+        if op.HAS_SI then {
+          def _V1_si : MIMG_Atomic_si <op, asm, data_rc, VGPR_32, enableDasm>;
+        }
+        if op.HAS_VI then {
+          def _V1_vi : MIMG_Atomic_vi <op, asm, data_rc, VGPR_32, enableDasm>;
+          let hasPostISelHook = 1 in
+          def _V1_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VGPR_32, enableDasm>;
+        }
+        if op.HAS_GFX10M then {
+          def _V1_gfx10 : MIMG_Atomic_gfx10 <op, asm, data_rc, VGPR_32, enableDasm>;
+        }
+        if op.HAS_GFX11 then {
+          def _V1_gfx11 : MIMG_Atomic_gfx11 <op, asm, data_rc, VGPR_32, enableDasm>;
+        }
       }
-      if op.HAS_VI then {
-        def _V1_vi : MIMG_Atomic_vi <op, asm, data_rc, VGPR_32, enableDasm>;
-        let hasPostISelHook = 1 in
-        def _V1_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VGPR_32, enableDasm>;
-      }
-      if op.HAS_GFX10M then {
-        def _V1_gfx10 : MIMG_Atomic_gfx10 <op, asm, data_rc, VGPR_32, enableDasm>;
-      }
-      if op.HAS_GFX11 then {
-        def _V1_gfx11 : MIMG_Atomic_gfx11 <op, asm, data_rc, VGPR_32, enableDasm>;
+      if op.HAS_GFX12 then {
+        if !empty(renamed) then
+          def _V1_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 1, enableDasm>;
+        else
+          def _V1_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, asm, renamed, data_rc, 1, enableDasm>;
       }
     }
     let VAddrDwords = 2 in {
-      if op.HAS_SI then {
-        def _V2_si : MIMG_Atomic_si <op, asm, data_rc, VReg_64, 0>;
+      let ssamp = 0 in {
+        if op.HAS_SI then {
+          def _V2_si : MIMG_Atomic_si <op, asm, data_rc, VReg_64, 0>;
+        }
+        if op.HAS_VI then {
+          def _V2_vi : MIMG_Atomic_vi <op, asm, data_rc, VReg_64, 0>;
+          def _V2_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VReg_64, 0>;
+        }
+        if op.HAS_GFX10M then {
+          def _V2_gfx10 : MIMG_Atomic_gfx10 <op, asm, data_rc, VReg_64, 0>;
+          def _V2_nsa_gfx10 : MIMG_Atomic_nsa_gfx10 <op, asm, data_rc, 2, 0>;
+        }
+        if op.HAS_GFX11 then {
+          def _V2_gfx11 : MIMG_Atomic_gfx11 <op, asm, data_rc, VReg_64, 0>;
+          def _V2_nsa_gfx11 : MIMG_Atomic_nsa_gfx11 <op, asm, data_rc, 2, 0>;
+        }
       }
-      if op.HAS_VI then {
-        def _V2_vi : MIMG_Atomic_vi <op, asm, data_rc, VReg_64, 0>;
-        def _V2_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VReg_64, 0>;
-      }
-      if op.HAS_GFX10M then {
-        def _V2_gfx10 : MIMG_Atomic_gfx10 <op, asm, data_rc, VReg_64, 0>;
-        def _V2_nsa_gfx10 : MIMG_Atomic_nsa_gfx10 <op, asm, data_rc, 2, 0>;
-      }
-      if op.HAS_GFX11 then {
-        def _V2_gfx11 : MIMG_Atomic_gfx11 <op, asm, data_rc, VReg_64, 0>;
-        def _V2_nsa_gfx11 : MIMG_Atomic_nsa_gfx11 <op, asm, data_rc, 2, 0>;
+      if op.HAS_GFX12 then {
+        if !empty(renamed) then
+          def _V2_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 2, 0>;
+        else
+          def _V2_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, asm, renamed, data_rc, 2, 0>;
       }
     }
     let VAddrDwords = 3 in {
-      if op.HAS_SI then {
-        def _V3_si : MIMG_Atomic_si <op, asm, data_rc, VReg_96, 0>;
+      let ssamp = 0 in {
+        if op.HAS_SI then {
+          def _V3_si : MIMG_Atomic_si <op, asm, data_rc, VReg_96, 0>;
+        }
+        if op.HAS_VI then {
+          def _V3_vi : MIMG_Atomic_vi <op, asm, data_rc, VReg_96, 0>;
+          def _V3_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VReg_96, 0>;
+        }
+        if op.HAS_GFX10M then {
+          def _V3_gfx10 : MIMG_Atomic_gfx10 <op, asm, data_rc, VReg_96, 0>;
+          def _V3_nsa_gfx10 : MIMG_Atomic_nsa_gfx10 <op, asm, data_rc, 3, 0>;
+        }
+        if op.HAS_GFX11 then {
+          def _V3_gfx11 : MIMG_Atomic_gfx11 <op, asm, data_rc, VReg_96, 0>;
+          def _V3_nsa_gfx11 : MIMG_Atomic_nsa_gfx11 <op, asm, data_rc, 3, 0>;
+        }
       }
-      if op.HAS_VI then {
-        def _V3_vi : MIMG_Atomic_vi <op, asm, data_rc, VReg_96, 0>;
-        def _V3_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VReg_96, 0>;
-      }
-      if op.HAS_GFX10M then {
-        def _V3_gfx10 : MIMG_Atomic_gfx10 <op, asm, data_rc, VReg_96, 0>;
-        def _V3_nsa_gfx10 : MIMG_Atomic_nsa_gfx10 <op, asm, data_rc, 3, 0>;
-      }
-      if op.HAS_GFX11 then {
-        def _V3_gfx11 : MIMG_Atomic_gfx11 <op, asm, data_rc, VReg_96, 0>;
-        def _V3_nsa_gfx11 : MIMG_Atomic_nsa_gfx11 <op, asm, data_rc, 3, 0>;
+      if op.HAS_GFX12 then {
+        if !empty(renamed) then
+          def _V3_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 3, 0>;
+        else
+          def _V3_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, asm, renamed, data_rc, 3, 0>;
       }
     }
     let VAddrDwords = 4 in {
-      if op.HAS_SI then {
-        def _V4_si : MIMG_Atomic_si <op, asm, data_rc, VReg_128, 0>;
+      let ssamp = 0 in {
+        if op.HAS_SI then {
+          def _V4_si : MIMG_Atomic_si <op, asm, data_rc, VReg_128, 0>;
+        }
+        if op.HAS_VI then {
+          def _V4_vi : MIMG_Atomic_vi <op, asm, data_rc, VReg_128, 0>;
+          def _V4_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VReg_128, 0>;
+        }
+        if op.HAS_GFX10M then {
+          def _V4_gfx10 : MIMG_Atomic_gfx10 <op, asm, data_rc, VReg_128, 0>;
+          def _V4_nsa_gfx10 : MIMG_Atomic_nsa_gfx10 <op, asm, data_rc, 4, enableDasm>;
+        }
+        if op.HAS_GFX11 then {
+          def _V4_gfx11 : MIMG_Atomic_gfx11 <op, asm, data_rc, VReg_128, 0>;
+          def _V4_nsa_gfx11 : MIMG_Atomic_nsa_gfx11 <op, asm, data_rc, 4, enableDasm>;
+        }
       }
-      if op.HAS_VI then {
-        def _V4_vi : MIMG_Atomic_vi <op, asm, data_rc, VReg_128, 0>;
-        def _V4_gfx90a : MIMG_Atomic_gfx90a <op, asm, data_rc, VReg_128, 0>;
-      }
-      if op.HAS_GFX10M then {
-        def _V4_gfx10 : MIMG_Atomic_gfx10 <op, asm, data_rc, VReg_128, 0>;
-        def _V4_nsa_gfx10 : MIMG_Atomic_nsa_gfx10 <op, asm, data_rc, 4, enableDasm>;
-      }
-      if op.HAS_GFX11 then {
-        def _V4_gfx11 : MIMG_Atomic_gfx11 <op, asm, data_rc, VReg_128, 0>;
-        def _V4_nsa_gfx11 : MIMG_Atomic_nsa_gfx11 <op, asm, data_rc, 4, enableDasm>;
+      if op.HAS_GFX12 then {
+        if !empty(renamed) then
+          def _V4_gfx12 : VIMAGE_Atomic_gfx12 <op, asm, data_rc, 4, enableDasm>;
+        else
+          def _V4_gfx12 : VIMAGE_Atomic_gfx12_Renamed <op, asm, renamed, data_rc, 4, enableDasm>;
       }
     }
   }
 }
 
-multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0> { // 64-bit atomics
+multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0,
+                        string renamed = ""> { // 64-bit atomics
   let IsAtomicRet = 1 in {
     def "" : MIMGBaseOpcode {
       let Atomic = 1;
@@ -863,12 +1050,16 @@ multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0>
       // using dmask and tfe. Only 32-bit variant is registered with disassembler.
       // Other variants are reconstructed by disassembler using dmask and tfe.
       let VDataDwords = !if(isCmpSwap, 2, 1) in
-      defm _V1 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_64, VGPR_32), 1, isFP>;
+      defm _V1 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_64, VGPR_32), 1, isFP, renamed>;
       let VDataDwords = !if(isCmpSwap, 4, 2) in
-      defm _V2 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_128, VReg_64), 0, isFP>;
+      defm _V2 : MIMG_Atomic_Addr_Helper_m <op, asm, !if(isCmpSwap, VReg_128, VReg_64), 0, isFP, renamed>;
     }
   } // End IsAtomicRet = 1
 }
+
+multiclass MIMG_Atomic_Renamed <mimgopc op, string asm, string renamed,
+                                bit isCmpSwap = 0, bit isFP = 0>
+  : MIMG_Atomic <op, asm, isCmpSwap, isFP, renamed>;
 
 class MIMG_Sampler_Helper <mimgopc op, string asm, RegisterClass dst_rc,
                            RegisterClass src_rc, string dns="">
@@ -946,24 +1137,44 @@ class MIMG_Sampler_nsa_gfx11<mimgopc op, string opcode,
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
-class MIMGAddrSize<int dw, bit enable_disasm> {
+class VSAMPLE_Sampler_gfx12<mimgopc op, string opcode,
+                            RegisterClass DataRC,
+                            int num_addrs, RegisterClass Addr3RC,
+                            string dns="">
+  : VSAMPLE_gfx12<op.GFX11, (outs DataRC:$vdata), num_addrs, dns, Addr3RC> {
+  let InOperandList = !con(AddrIns,
+                           (ins SReg_256:$rsrc, SReg_128:$samp, DMask:$dmask,
+                                Dim:$dim, UNorm:$unorm, R128A16:$r128,
+                                GFX10A16:$a16, TH:$th, Scope:$scope, NV:$nv,
+                                TFE:$tfe, LWE:$lwe),
+                           !if(BaseOpcode.HasD16, (ins D16:$d16), (ins)));
+  let AsmString = opcode#" $vdata, "#AddrAsm#", $rsrc, $samp$dmask$dim$unorm"
+                    #"$r128$a16$th$scope$nv$tfe$lwe"
+                    #!if(BaseOpcode.HasD16, "$d16", "");
+}
+
+class MIMGAddrSize<int dw, bit enable_disasm, int AddrDW = dw> {
   int NumWords = dw;
 
-  RegisterClass RegClass = !if(!le(NumWords, 0), ?,
-                           !if(!eq(NumWords, 1), VGPR_32,
-                           !if(!eq(NumWords, 2), VReg_64,
-                           !if(!eq(NumWords, 3), VReg_96,
-                           !if(!eq(NumWords, 4), VReg_128,
-                           !if(!eq(NumWords, 5), VReg_160,
-                           !if(!eq(NumWords, 6), VReg_192,
-                           !if(!eq(NumWords, 7), VReg_224,
-                           !if(!le(NumWords, 8), VReg_256,
-                           !if(!le(NumWords, 16), VReg_512, ?))))))))));
+  RegisterClass RegClass = !if(!le(AddrDW, 0), ?,
+                           !if(!eq(AddrDW, 1), VGPR_32,
+                           !if(!eq(AddrDW, 2), VReg_64,
+                           !if(!eq(AddrDW, 3), VReg_96,
+                           !if(!eq(AddrDW, 4), VReg_128,
+                           !if(!eq(AddrDW, 5), VReg_160,
+                           !if(!eq(AddrDW, 6), VReg_192,
+                           !if(!eq(AddrDW, 7), VReg_224,
+                           !if(!le(AddrDW, 8), VReg_256,
+                           !if(!le(AddrDW, 16), VReg_512, ?))))))))));
 
   // Whether the instruction variant with this vaddr size should be enabled for
   // the auto-generated disassembler.
   bit Disassemble = enable_disasm;
 }
+
+class VSAMPLEAddr3Size <int dw, bit enable_disasm>
+  : MIMGAddrSize<dw, enable_disasm,
+                 !if(!gt(dw, 3), !sub(dw, 3), 0)>;
 
 // Return whether x is in lst.
 class isIntInList<int x, list<int> lst> {
@@ -1027,6 +1238,20 @@ class MIMG_Sampler_AddrSizes<AMDGPUSampleVariant sample, bit isG16> {
                               !if(isIntInList<dw, AllNumAddrWords>.ret,
                                   !listconcat(lhs, [MIMGAddrSize<dw, !empty(lhs)>]),
                                   lhs))));
+
+  // For VSAMPLE, generate machine instruction for all possible number of words.
+  // The disassembler defaults to the largest number of arguments but no larger
+  // than 4. List is generated with the register class needed for vaddr3 since
+  // it is the only one that could have a register other than VGPR32.
+  int EnableDisasmNum = !if(isIntInList<4, AllNumAddrWords>.ret, 4, 3);
+  list<VSAMPLEAddr3Size> VSAMPLEInstrs =
+        !foldl([]<VSAMPLEAddr3Size>,
+               [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
+               lhs,
+               dw,
+               !if(isIntInList<dw, AllNumAddrWords>.ret,
+                  !listconcat(lhs, [VSAMPLEAddr3Size<dw, !eq(dw, EnableDisasmNum)>]),
+                  lhs));
 }
 
 multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
@@ -1066,6 +1291,16 @@ multiclass MIMG_Sampler_Src_Helper <mimgopc op, string asm,
         def _V # addr.NumWords # _nsa_gfx11
           : MIMG_Sampler_nsa_gfx11<op, asm, dst_rc, addr.NumWords,
                                    !if(!and(enableDisasm, addr.Disassemble), "AMDGPU", "")>;
+      }
+    }
+  }
+
+  foreach addr = MIMG_Sampler_AddrSizes<sample, isG16>.VSAMPLEInstrs in {
+    let VAddrDwords = addr.NumWords in {
+      if op.HAS_GFX12 then {
+        def _V # addr.NumWords # _gfx12
+          : VSAMPLE_Sampler_gfx12<op, asm, dst_rc, addr.NumWords, addr.RegClass,
+                                  !if(!and(enableDisasm, addr.Disassemble), "GFX12", "")>;
       }
     }
   }
@@ -1180,6 +1415,15 @@ class MIMG_IntersectRay_nsa_gfx11<mimgopc op, string opcode, int num_addrs,
   let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $srsrc"#!if(A16, "$a16", "");
 }
 
+class VIMAGE_IntersectRay_gfx12<mimgopc op, string opcode, int num_addrs,
+                                bit A16, list<RegisterClass> addr_types>
+    : VIMAGE_gfx12<op.GFX12, (outs VReg_128:$vdata), num_addrs, "GFX12",
+                   addr_types> {
+  let InOperandList = !con(nsah.AddrIns, (ins SReg_128:$rsrc), (ins NV:$nv),
+                           !if(A16, (ins GFX10A16:$a16), (ins)));
+  let AsmString = opcode#" $vdata, "#nsah.AddrAsm#", $rsrc$nv"#!if(A16, "$a16", "");
+}
+
 multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit A16> {
   defvar info = MIMG_IntersectRay_Helper<Is64, A16>;
   def "" : MIMGBaseOpcode {
@@ -1187,31 +1431,39 @@ multiclass MIMG_IntersectRay<mimgopc op, string opcode, bit Is64, bit A16> {
   }
   let AsmMatchConverter = !if(A16, "cvtIntersectRay", ""),
       dmask = 0xf,
-      unorm = 1,
       d16 = 0,
-      cpol = 0,
       tfe = 0,
-      lwe = 0,
       r128 = 1,
-      ssamp = 0,
       dim = {0, 0, 0},
       a16 = A16,
       d16 = 0,
       BaseOpcode = !cast<MIMGBaseOpcode>(NAME),
       VDataDwords = 4 in {
-    def _sa_gfx10 : MIMG_IntersectRay_gfx10<op, opcode, info.RegClass, A16> {
-      let VAddrDwords = info.VAddrDwords;
+    let unorm = 1,
+        cpol = 0,
+        lwe = 0,
+        ssamp = 0 in {
+      def _sa_gfx10 : MIMG_IntersectRay_gfx10<op, opcode, info.RegClass, A16> {
+        let VAddrDwords = info.VAddrDwords;
+      }
+      def _sa_gfx11 : MIMG_IntersectRay_gfx11<op, opcode, info.RegClass, A16> {
+        let VAddrDwords = info.VAddrDwords;
+      }
+      def _nsa_gfx10 : MIMG_IntersectRay_nsa_gfx10<op, opcode, info.num_addrs, A16> {
+        let VAddrDwords = info.num_addrs;
+      }
+      def _nsa_gfx11 : MIMG_IntersectRay_nsa_gfx11<op, opcode,
+                                                  info.gfx11_nsa_addrs, A16,
+                                                  info.gfx11_addr_types> {
+        let VAddrDwords = info.num_addrs;
+      }
     }
-    def _sa_gfx11 : MIMG_IntersectRay_gfx11<op, opcode, info.RegClass, A16> {
-      let VAddrDwords = info.VAddrDwords;
-    }
-    def _nsa_gfx10 : MIMG_IntersectRay_nsa_gfx10<op, opcode, info.num_addrs, A16> {
-      let VAddrDwords = info.num_addrs;
-    }
-    def _nsa_gfx11 : MIMG_IntersectRay_nsa_gfx11<op, opcode,
-                                                 info.gfx11_nsa_addrs, A16,
-                                                 info.gfx11_addr_types> {
-      let VAddrDwords = info.num_addrs;
+    let scope = 0,
+        th = 0 in {
+      def _gfx12 : VIMAGE_IntersectRay_gfx12<op, opcode, info.gfx11_nsa_addrs,
+                                             A16, info.gfx11_addr_types> {
+        let VAddrDwords = info.num_addrs;
+      }
     }
   }
 }
@@ -1241,141 +1493,141 @@ multiclass MIMG_MSAA_Load <mimgopc op, string asm> {
 //===----------------------------------------------------------------------===//
 let OtherPredicates = [HasImageInsts] in {
 
-defm IMAGE_LOAD                 : MIMG_NoSampler <mimgopc<0x00, 0x00>, "image_load", 1>;
-defm IMAGE_LOAD_MIP             : MIMG_NoSampler <mimgopc<0x01, 0x01>, "image_load_mip", 1, 1>;
-defm IMAGE_LOAD_PCK             : MIMG_NoSampler <mimgopc<0x02, 0x02>, "image_load_pck", 0>;
-defm IMAGE_LOAD_PCK_SGN         : MIMG_NoSampler <mimgopc<0x03, 0x03>, "image_load_pck_sgn", 0>;
-defm IMAGE_LOAD_MIP_PCK         : MIMG_NoSampler <mimgopc<0x04, 0x04>, "image_load_mip_pck", 0, 1>;
-defm IMAGE_LOAD_MIP_PCK_SGN     : MIMG_NoSampler <mimgopc<0x05, 0x05>, "image_load_mip_pck_sgn", 0, 1>;
-defm IMAGE_STORE                : MIMG_Store <mimgopc<0x06, 0x08>, "image_store", 1>;
-defm IMAGE_STORE_MIP            : MIMG_Store <mimgopc<0x07, 0x09>, "image_store_mip", 1, 1>;
-defm IMAGE_STORE_PCK            : MIMG_Store <mimgopc<0x08, 0x0a>, "image_store_pck", 0>;
-defm IMAGE_STORE_MIP_PCK        : MIMG_Store <mimgopc<0x09, 0x0b>, "image_store_mip_pck", 0, 1>;
+defm IMAGE_LOAD                 : MIMG_NoSampler <mimgopc<0x00, 0x00, 0x00>, "image_load", 1>;
+defm IMAGE_LOAD_MIP             : MIMG_NoSampler <mimgopc<0x01, 0x01, 0x01>, "image_load_mip", 1, 1>;
+defm IMAGE_LOAD_PCK             : MIMG_NoSampler <mimgopc<0x02, 0x02, 0x02>, "image_load_pck", 0>;
+defm IMAGE_LOAD_PCK_SGN         : MIMG_NoSampler <mimgopc<0x03, 0x03, 0x03>, "image_load_pck_sgn", 0>;
+defm IMAGE_LOAD_MIP_PCK         : MIMG_NoSampler <mimgopc<0x04, 0x04, 0x04>, "image_load_mip_pck", 0, 1>;
+defm IMAGE_LOAD_MIP_PCK_SGN     : MIMG_NoSampler <mimgopc<0x05, 0x05, 0x05>, "image_load_mip_pck_sgn", 0, 1>;
+defm IMAGE_STORE                : MIMG_Store <mimgopc<0x06, 0x06, 0x08>, "image_store", 1>;
+defm IMAGE_STORE_MIP            : MIMG_Store <mimgopc<0x07, 0x07, 0x09>, "image_store_mip", 1, 1>;
+defm IMAGE_STORE_PCK            : MIMG_Store <mimgopc<0x08, 0x08, 0x0a>, "image_store_pck", 0>;
+defm IMAGE_STORE_MIP_PCK        : MIMG_Store <mimgopc<0x09, 0x09, 0x0b>, "image_store_mip_pck", 0, 1>;
 
-defm IMAGE_GET_RESINFO          : MIMG_NoSampler <mimgopc<0x17, 0x0e>, "image_get_resinfo", 0, 1, 1>;
+defm IMAGE_GET_RESINFO          : MIMG_NoSampler <mimgopc<0x17, 0x17, 0x0e, 0x0e, 0x0e>, "image_get_resinfo", 0, 1, 1>;
 
-defm IMAGE_ATOMIC_SWAP          : MIMG_Atomic <mimgopc<0x0a, 0x0f, 0x10, 0x0f>, "image_atomic_swap">;
-defm IMAGE_ATOMIC_CMPSWAP       : MIMG_Atomic <mimgopc<0x0b, 0x10, 0x11, 0x10>, "image_atomic_cmpswap", 1>;
-defm IMAGE_ATOMIC_ADD           : MIMG_Atomic <mimgopc<0x0c, 0x11, 0x12, 0x11>, "image_atomic_add">;
-defm IMAGE_ATOMIC_SUB           : MIMG_Atomic <mimgopc<0x0d, 0x12, 0x13, 0x12>, "image_atomic_sub">;
-defm IMAGE_ATOMIC_RSUB          : MIMG_Atomic <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x13>, "image_atomic_rsub">;
-defm IMAGE_ATOMIC_SMIN          : MIMG_Atomic <mimgopc<0x0e, 0x14>, "image_atomic_smin">;
-defm IMAGE_ATOMIC_UMIN          : MIMG_Atomic <mimgopc<0x0f, 0x15>, "image_atomic_umin">;
-defm IMAGE_ATOMIC_SMAX          : MIMG_Atomic <mimgopc<0x10, 0x16>, "image_atomic_smax">;
-defm IMAGE_ATOMIC_UMAX          : MIMG_Atomic <mimgopc<0x11, 0x17>, "image_atomic_umax">;
-defm IMAGE_ATOMIC_AND           : MIMG_Atomic <mimgopc<0x12, 0x18>, "image_atomic_and">;
-defm IMAGE_ATOMIC_OR            : MIMG_Atomic <mimgopc<0x13, 0x19>, "image_atomic_or">;
-defm IMAGE_ATOMIC_XOR           : MIMG_Atomic <mimgopc<0x14, 0x1a>, "image_atomic_xor">;
-defm IMAGE_ATOMIC_INC           : MIMG_Atomic <mimgopc<0x15, 0x1b>, "image_atomic_inc">;
-defm IMAGE_ATOMIC_DEC           : MIMG_Atomic <mimgopc<0x16, 0x1c>, "image_atomic_dec">;
-defm IMAGE_ATOMIC_FCMPSWAP      : MIMG_Atomic <mimgopc<MIMG.NOP, 0x1d, MIMG.NOP>, "image_atomic_fcmpswap", 1, 1>;
-defm IMAGE_ATOMIC_FMIN          : MIMG_Atomic <mimgopc<MIMG.NOP, 0x1e, MIMG.NOP>, "image_atomic_fmin", 0, 1>;
-defm IMAGE_ATOMIC_FMAX          : MIMG_Atomic <mimgopc<MIMG.NOP, 0x1f, MIMG.NOP>, "image_atomic_fmax", 0, 1>;
+defm IMAGE_ATOMIC_SWAP          : MIMG_Atomic <mimgopc<0x0a, 0x0a, 0x0f, 0x10, 0x0f>, "image_atomic_swap">;
+defm IMAGE_ATOMIC_CMPSWAP       : MIMG_Atomic <mimgopc<0x0b, 0x0b, 0x10, 0x11, 0x10>, "image_atomic_cmpswap", 1>;
+defm IMAGE_ATOMIC_ADD           : MIMG_Atomic_Renamed <mimgopc<0x0c, 0x0c, 0x11, 0x12, 0x11>, "image_atomic_add", "image_atomic_add_uint">;
+defm IMAGE_ATOMIC_SUB           : MIMG_Atomic_Renamed <mimgopc<0x0d, 0x0d, 0x12, 0x13, 0x12>, "image_atomic_sub", "image_atomic_sub_uint">;
+defm IMAGE_ATOMIC_RSUB          : MIMG_Atomic <mimgopc<MIMG.NOP, MIMG.NOP, MIMG.NOP, MIMG.NOP, 0x13>, "image_atomic_rsub">;
+defm IMAGE_ATOMIC_SMIN          : MIMG_Atomic_Renamed <mimgopc<0x0e, 0x0e, 0x14>, "image_atomic_smin", "image_atomic_min_int">;
+defm IMAGE_ATOMIC_UMIN          : MIMG_Atomic_Renamed <mimgopc<0x0f, 0x0f, 0x15>, "image_atomic_umin", "image_atomic_min_uint">;
+defm IMAGE_ATOMIC_SMAX          : MIMG_Atomic_Renamed <mimgopc<0x10, 0x10, 0x16>, "image_atomic_smax", "image_atomic_max_int">;
+defm IMAGE_ATOMIC_UMAX          : MIMG_Atomic_Renamed <mimgopc<0x11, 0x11, 0x17>, "image_atomic_umax", "image_atomic_max_uint">;
+defm IMAGE_ATOMIC_AND           : MIMG_Atomic <mimgopc<0x12, 0x12, 0x18>, "image_atomic_and">;
+defm IMAGE_ATOMIC_OR            : MIMG_Atomic <mimgopc<0x13, 0x13, 0x19>, "image_atomic_or">;
+defm IMAGE_ATOMIC_XOR           : MIMG_Atomic <mimgopc<0x14, 0x14, 0x1a>, "image_atomic_xor">;
+defm IMAGE_ATOMIC_INC           : MIMG_Atomic_Renamed <mimgopc<0x15, 0x15, 0x1b>, "image_atomic_inc", "image_atomic_inc_uint">;
+defm IMAGE_ATOMIC_DEC           : MIMG_Atomic_Renamed <mimgopc<0x16, 0x16, 0x1c>, "image_atomic_dec", "image_atomic_dec_uint">;
+defm IMAGE_ATOMIC_FCMPSWAP      : MIMG_Atomic <mimgopc<MIMG.NOP, MIMG.NOP, 0x1d, MIMG.NOP>, "image_atomic_fcmpswap", 1, 1>;
+defm IMAGE_ATOMIC_FMIN          : MIMG_Atomic <mimgopc<MIMG.NOP, MIMG.NOP, 0x1e, MIMG.NOP>, "image_atomic_fmin", 0, 1>;
+defm IMAGE_ATOMIC_FMAX          : MIMG_Atomic <mimgopc<MIMG.NOP, MIMG.NOP, 0x1f, MIMG.NOP>, "image_atomic_fmax", 0, 1>;
 
-defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x1b, 0x20>, AMDGPUSample>;
+defm IMAGE_SAMPLE               : MIMG_Sampler_WQM <mimgopc<0x1b, 0x1b, 0x20>, AMDGPUSample>;
 let OtherPredicates = [HasExtendedImageInsts] in {
-defm IMAGE_SAMPLE_CL            : MIMG_Sampler_WQM <mimgopc<0x40, 0x21>, AMDGPUSample_cl>;
-defm IMAGE_SAMPLE_D             : MIMG_Sampler <mimgopc<0x1c, 0x22>, AMDGPUSample_d>;
-defm IMAGE_SAMPLE_D_CL          : MIMG_Sampler <mimgopc<0x41, 0x23>, AMDGPUSample_d_cl>;
-defm IMAGE_SAMPLE_L             : MIMG_Sampler <mimgopc<0x1d, 0x24>, AMDGPUSample_l>;
-defm IMAGE_SAMPLE_B             : MIMG_Sampler_WQM <mimgopc<0x1e, 0x25>, AMDGPUSample_b>;
-defm IMAGE_SAMPLE_B_CL          : MIMG_Sampler_WQM <mimgopc<0x42, 0x26>, AMDGPUSample_b_cl>;
-defm IMAGE_SAMPLE_LZ            : MIMG_Sampler <mimgopc<0x1f, 0x27>, AMDGPUSample_lz>;
-defm IMAGE_SAMPLE_C             : MIMG_Sampler_WQM <mimgopc<0x20, 0x28>, AMDGPUSample_c>;
-defm IMAGE_SAMPLE_C_CL          : MIMG_Sampler_WQM <mimgopc<0x43, 0x29>, AMDGPUSample_c_cl>;
-defm IMAGE_SAMPLE_C_D           : MIMG_Sampler <mimgopc<0x21, 0x2a>, AMDGPUSample_c_d>;
-defm IMAGE_SAMPLE_C_D_CL        : MIMG_Sampler <mimgopc<0x44, 0x2b>, AMDGPUSample_c_d_cl>;
-defm IMAGE_SAMPLE_C_L           : MIMG_Sampler <mimgopc<0x22, 0x2c>, AMDGPUSample_c_l>;
-defm IMAGE_SAMPLE_C_B           : MIMG_Sampler_WQM <mimgopc<0x23, 0x2d>, AMDGPUSample_c_b>;
-defm IMAGE_SAMPLE_C_B_CL        : MIMG_Sampler_WQM <mimgopc<0x45, 0x2e>, AMDGPUSample_c_b_cl>;
-defm IMAGE_SAMPLE_C_LZ          : MIMG_Sampler <mimgopc<0x24, 0x2f>, AMDGPUSample_c_lz>;
-defm IMAGE_SAMPLE_O             : MIMG_Sampler_WQM <mimgopc<0x25, 0x30>, AMDGPUSample_o>;
-defm IMAGE_SAMPLE_CL_O          : MIMG_Sampler_WQM <mimgopc<0x46, 0x31>, AMDGPUSample_cl_o>;
-defm IMAGE_SAMPLE_D_O           : MIMG_Sampler <mimgopc<0x26, 0x32>, AMDGPUSample_d_o>;
-defm IMAGE_SAMPLE_D_CL_O        : MIMG_Sampler <mimgopc<0x47, 0x33>, AMDGPUSample_d_cl_o>;
-defm IMAGE_SAMPLE_L_O           : MIMG_Sampler <mimgopc<0x27, 0x34>, AMDGPUSample_l_o>;
-defm IMAGE_SAMPLE_B_O           : MIMG_Sampler_WQM <mimgopc<0x28, 0x35>, AMDGPUSample_b_o>;
-defm IMAGE_SAMPLE_B_CL_O        : MIMG_Sampler_WQM <mimgopc<0x48, 0x36>, AMDGPUSample_b_cl_o>;
-defm IMAGE_SAMPLE_LZ_O          : MIMG_Sampler <mimgopc<0x29, 0x37>, AMDGPUSample_lz_o>;
-defm IMAGE_SAMPLE_C_O           : MIMG_Sampler_WQM <mimgopc<0x2a, 0x38>, AMDGPUSample_c_o>;
-defm IMAGE_SAMPLE_C_CL_O        : MIMG_Sampler_WQM <mimgopc<0x49, 0x39>, AMDGPUSample_c_cl_o>;
-defm IMAGE_SAMPLE_C_D_O         : MIMG_Sampler <mimgopc<0x2b, 0x3a>, AMDGPUSample_c_d_o>;
-defm IMAGE_SAMPLE_C_D_CL_O      : MIMG_Sampler <mimgopc<0x4a, 0x3b>, AMDGPUSample_c_d_cl_o>;
-defm IMAGE_SAMPLE_C_L_O         : MIMG_Sampler <mimgopc<0x2c, 0x3c>, AMDGPUSample_c_l_o>;
-defm IMAGE_SAMPLE_C_B_CL_O      : MIMG_Sampler_WQM <mimgopc<0x4b, 0x3e>, AMDGPUSample_c_b_cl_o>;
-defm IMAGE_SAMPLE_C_B_O         : MIMG_Sampler_WQM <mimgopc<0x2d, 0x3d>, AMDGPUSample_c_b_o>;
-defm IMAGE_SAMPLE_C_LZ_O        : MIMG_Sampler <mimgopc<0x2e, 0x3f>, AMDGPUSample_c_lz_o>;
-defm IMAGE_GATHER4              : MIMG_Gather_WQM <mimgopc<0x2f, 0x40>, AMDGPUSample>;
-defm IMAGE_GATHER4_CL           : MIMG_Gather_WQM <mimgopc<0x60, 0x41>, AMDGPUSample_cl>;
-defm IMAGE_GATHER4_L            : MIMG_Gather <mimgopc<0x30, 0x44>, AMDGPUSample_l>;
-defm IMAGE_GATHER4_B            : MIMG_Gather_WQM <mimgopc<0x31, 0x45>, AMDGPUSample_b>;
-defm IMAGE_GATHER4_B_CL         : MIMG_Gather_WQM <mimgopc<0x61, 0x46>, AMDGPUSample_b_cl>;
-defm IMAGE_GATHER4_LZ           : MIMG_Gather <mimgopc<0x32, 0x47>, AMDGPUSample_lz>;
-defm IMAGE_GATHER4_C            : MIMG_Gather_WQM <mimgopc<0x33, 0x48>, AMDGPUSample_c>;
-defm IMAGE_GATHER4_C_CL         : MIMG_Gather_WQM <mimgopc<0x62, 0x49>, AMDGPUSample_c_cl>;
-defm IMAGE_GATHER4_C_L          : MIMG_Gather <mimgopc<0x63, 0x4c>, AMDGPUSample_c_l>;
-defm IMAGE_GATHER4_C_B          : MIMG_Gather_WQM <mimgopc<0x64, 0x4d>, AMDGPUSample_c_b>;
-defm IMAGE_GATHER4_C_B_CL       : MIMG_Gather_WQM <mimgopc<0x65, 0x4e>, AMDGPUSample_c_b_cl>;
-defm IMAGE_GATHER4_C_LZ         : MIMG_Gather <mimgopc<0x34, 0x4f>, AMDGPUSample_c_lz>;
-defm IMAGE_GATHER4_O            : MIMG_Gather_WQM <mimgopc<0x35, 0x50>, AMDGPUSample_o>;
-defm IMAGE_GATHER4_CL_O         : MIMG_Gather_WQM <mimgopc<MIMG.NOP, 0x51>, AMDGPUSample_cl_o>;
-defm IMAGE_GATHER4_L_O          : MIMG_Gather <mimgopc<MIMG.NOP, 0x54>, AMDGPUSample_l_o>;
-defm IMAGE_GATHER4_B_O          : MIMG_Gather_WQM <mimgopc<MIMG.NOP, 0x55>, AMDGPUSample_b_o>;
-defm IMAGE_GATHER4_B_CL_O       : MIMG_Gather <mimgopc<MIMG.NOP, 0x56>, AMDGPUSample_b_cl_o>;
-defm IMAGE_GATHER4_LZ_O         : MIMG_Gather <mimgopc<0x36, 0x57>, AMDGPUSample_lz_o>;
-defm IMAGE_GATHER4_C_O          : MIMG_Gather_WQM <mimgopc<MIMG.NOP, 0x58>, AMDGPUSample_c_o>;
-defm IMAGE_GATHER4_C_CL_O       : MIMG_Gather_WQM <mimgopc<MIMG.NOP, 0x59>, AMDGPUSample_c_cl_o>;
-defm IMAGE_GATHER4_C_L_O        : MIMG_Gather <mimgopc<MIMG.NOP, 0x5c>, AMDGPUSample_c_l_o>;
-defm IMAGE_GATHER4_C_B_O        : MIMG_Gather_WQM <mimgopc<MIMG.NOP, 0x5d>, AMDGPUSample_c_b_o>;
-defm IMAGE_GATHER4_C_B_CL_O     : MIMG_Gather_WQM <mimgopc<MIMG.NOP, 0x5e>, AMDGPUSample_c_b_cl_o>;
-defm IMAGE_GATHER4_C_LZ_O       : MIMG_Gather <mimgopc<0x37, 0x5f>, AMDGPUSample_c_lz_o>;
-defm IMAGE_GATHER4H             : MIMG_Gather <mimgopc<0x90, 0x61>, AMDGPUSample, 1, "image_gather4h">;
+defm IMAGE_SAMPLE_CL            : MIMG_Sampler_WQM <mimgopc<0x40, 0x40, 0x21>, AMDGPUSample_cl>;
+defm IMAGE_SAMPLE_D             : MIMG_Sampler <mimgopc<0x1c, 0x1c, 0x22>, AMDGPUSample_d>;
+defm IMAGE_SAMPLE_D_CL          : MIMG_Sampler <mimgopc<0x41, 0x41, 0x23>, AMDGPUSample_d_cl>;
+defm IMAGE_SAMPLE_L             : MIMG_Sampler <mimgopc<0x1d, 0x1d, 0x24>, AMDGPUSample_l>;
+defm IMAGE_SAMPLE_B             : MIMG_Sampler_WQM <mimgopc<0x1e, 0x1e, 0x25>, AMDGPUSample_b>;
+defm IMAGE_SAMPLE_B_CL          : MIMG_Sampler_WQM <mimgopc<0x42, 0x42, 0x26>, AMDGPUSample_b_cl>;
+defm IMAGE_SAMPLE_LZ            : MIMG_Sampler <mimgopc<0x1f, 0x1f, 0x27>, AMDGPUSample_lz>;
+defm IMAGE_SAMPLE_C             : MIMG_Sampler_WQM <mimgopc<0x20, 0x20, 0x28>, AMDGPUSample_c>;
+defm IMAGE_SAMPLE_C_CL          : MIMG_Sampler_WQM <mimgopc<0x43, 0x43, 0x29>, AMDGPUSample_c_cl>;
+defm IMAGE_SAMPLE_C_D           : MIMG_Sampler <mimgopc<0x21, 0x21, 0x2a>, AMDGPUSample_c_d>;
+defm IMAGE_SAMPLE_C_D_CL        : MIMG_Sampler <mimgopc<0x44, 0x44, 0x2b>, AMDGPUSample_c_d_cl>;
+defm IMAGE_SAMPLE_C_L           : MIMG_Sampler <mimgopc<0x22, 0x22, 0x2c>, AMDGPUSample_c_l>;
+defm IMAGE_SAMPLE_C_B           : MIMG_Sampler_WQM <mimgopc<0x23, 0x23, 0x2d>, AMDGPUSample_c_b>;
+defm IMAGE_SAMPLE_C_B_CL        : MIMG_Sampler_WQM <mimgopc<0x45, 0x45, 0x2e>, AMDGPUSample_c_b_cl>;
+defm IMAGE_SAMPLE_C_LZ          : MIMG_Sampler <mimgopc<0x24, 0x24, 0x2f>, AMDGPUSample_c_lz>;
+defm IMAGE_SAMPLE_O             : MIMG_Sampler_WQM <mimgopc<0x25, 0x25, 0x30>, AMDGPUSample_o>;
+defm IMAGE_SAMPLE_CL_O          : MIMG_Sampler_WQM <mimgopc<0x46, 0x46, 0x31>, AMDGPUSample_cl_o>;
+defm IMAGE_SAMPLE_D_O           : MIMG_Sampler <mimgopc<0x26, 0x26, 0x32>, AMDGPUSample_d_o>;
+defm IMAGE_SAMPLE_D_CL_O        : MIMG_Sampler <mimgopc<0x47, 0x47, 0x33>, AMDGPUSample_d_cl_o>;
+defm IMAGE_SAMPLE_L_O           : MIMG_Sampler <mimgopc<0x27, 0x27, 0x34>, AMDGPUSample_l_o>;
+defm IMAGE_SAMPLE_B_O           : MIMG_Sampler_WQM <mimgopc<0x28, 0x28, 0x35>, AMDGPUSample_b_o>;
+defm IMAGE_SAMPLE_B_CL_O        : MIMG_Sampler_WQM <mimgopc<0x48, 0x48, 0x36>, AMDGPUSample_b_cl_o>;
+defm IMAGE_SAMPLE_LZ_O          : MIMG_Sampler <mimgopc<0x29, 0x29, 0x37>, AMDGPUSample_lz_o>;
+defm IMAGE_SAMPLE_C_O           : MIMG_Sampler_WQM <mimgopc<0x2a, 0x2a, 0x38>, AMDGPUSample_c_o>;
+defm IMAGE_SAMPLE_C_CL_O        : MIMG_Sampler_WQM <mimgopc<0x49, 0x49, 0x39>, AMDGPUSample_c_cl_o>;
+defm IMAGE_SAMPLE_C_D_O         : MIMG_Sampler <mimgopc<0x2b, 0x2b, 0x3a>, AMDGPUSample_c_d_o>;
+defm IMAGE_SAMPLE_C_D_CL_O      : MIMG_Sampler <mimgopc<0x4a, 0x4a, 0x3b>, AMDGPUSample_c_d_cl_o>;
+defm IMAGE_SAMPLE_C_L_O         : MIMG_Sampler <mimgopc<0x2c, 0x2c, 0x3c>, AMDGPUSample_c_l_o>;
+defm IMAGE_SAMPLE_C_B_CL_O      : MIMG_Sampler_WQM <mimgopc<0x4b, 0x4b, 0x3e>, AMDGPUSample_c_b_cl_o>;
+defm IMAGE_SAMPLE_C_B_O         : MIMG_Sampler_WQM <mimgopc<0x2d, 0x2d, 0x3d>, AMDGPUSample_c_b_o>;
+defm IMAGE_SAMPLE_C_LZ_O        : MIMG_Sampler <mimgopc<0x2e, 0x2e, 0x3f>, AMDGPUSample_c_lz_o>;
+defm IMAGE_GATHER4              : MIMG_Gather_WQM <mimgopc<0x2f, 0x2f, 0x40>, AMDGPUSample>;
+defm IMAGE_GATHER4_CL           : MIMG_Gather_WQM <mimgopc<0x60, 0x60, 0x41>, AMDGPUSample_cl>;
+defm IMAGE_GATHER4_L            : MIMG_Gather <mimgopc<0x30, 0x30, 0x44>, AMDGPUSample_l>;
+defm IMAGE_GATHER4_B            : MIMG_Gather_WQM <mimgopc<0x31, 0x31, 0x45>, AMDGPUSample_b>;
+defm IMAGE_GATHER4_B_CL         : MIMG_Gather_WQM <mimgopc<0x61, 0x61, 0x46>, AMDGPUSample_b_cl>;
+defm IMAGE_GATHER4_LZ           : MIMG_Gather <mimgopc<0x32, 0x32, 0x47>, AMDGPUSample_lz>;
+defm IMAGE_GATHER4_C            : MIMG_Gather_WQM <mimgopc<0x33, 0x33, 0x48>, AMDGPUSample_c>;
+defm IMAGE_GATHER4_C_CL         : MIMG_Gather_WQM <mimgopc<0x62, 0x62, 0x49>, AMDGPUSample_c_cl>;
+defm IMAGE_GATHER4_C_L          : MIMG_Gather <mimgopc<0x63, 0x63, 0x4c>, AMDGPUSample_c_l>;
+defm IMAGE_GATHER4_C_B          : MIMG_Gather_WQM <mimgopc<0x64, 0x64, 0x4d>, AMDGPUSample_c_b>;
+defm IMAGE_GATHER4_C_B_CL       : MIMG_Gather_WQM <mimgopc<0x65, 0x65, 0x4e>, AMDGPUSample_c_b_cl>;
+defm IMAGE_GATHER4_C_LZ         : MIMG_Gather <mimgopc<0x34, 0x34, 0x4f>, AMDGPUSample_c_lz>;
+defm IMAGE_GATHER4_O            : MIMG_Gather_WQM <mimgopc<0x35, 0x35, 0x50>, AMDGPUSample_o>;
+defm IMAGE_GATHER4_CL_O         : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, 0x51>, AMDGPUSample_cl_o>;
+defm IMAGE_GATHER4_L_O          : MIMG_Gather <mimgopc<MIMG.NOP, MIMG.NOP, 0x54>, AMDGPUSample_l_o>;
+defm IMAGE_GATHER4_B_O          : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, 0x55>, AMDGPUSample_b_o>;
+defm IMAGE_GATHER4_B_CL_O       : MIMG_Gather <mimgopc<MIMG.NOP, MIMG.NOP, 0x56>, AMDGPUSample_b_cl_o>;
+defm IMAGE_GATHER4_LZ_O         : MIMG_Gather <mimgopc<0x36, 0x36, 0x57>, AMDGPUSample_lz_o>;
+defm IMAGE_GATHER4_C_O          : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, 0x58>, AMDGPUSample_c_o>;
+defm IMAGE_GATHER4_C_CL_O       : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, 0x59>, AMDGPUSample_c_cl_o>;
+defm IMAGE_GATHER4_C_L_O        : MIMG_Gather <mimgopc<MIMG.NOP, MIMG.NOP, 0x5c>, AMDGPUSample_c_l_o>;
+defm IMAGE_GATHER4_C_B_O        : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, 0x5d>, AMDGPUSample_c_b_o>;
+defm IMAGE_GATHER4_C_B_CL_O     : MIMG_Gather_WQM <mimgopc<MIMG.NOP, MIMG.NOP, 0x5e>, AMDGPUSample_c_b_cl_o>;
+defm IMAGE_GATHER4_C_LZ_O       : MIMG_Gather <mimgopc<0x37, 0x37, 0x5f>, AMDGPUSample_c_lz_o>;
+defm IMAGE_GATHER4H             : MIMG_Gather <mimgopc<0x90, 0x90, 0x61>, AMDGPUSample, 1, "image_gather4h">;
 
-defm IMAGE_GET_LOD              : MIMG_Sampler <mimgopc<0x38, 0x60>, AMDGPUSample, 1, 0, 1, "image_get_lod">;
+defm IMAGE_GET_LOD              : MIMG_Sampler <mimgopc<0x38, 0x38, 0x60>, AMDGPUSample, 1, 0, 1, "image_get_lod">;
 
-defm IMAGE_SAMPLE_CD            : MIMG_Sampler <mimgopc<MIMG.NOP, 0x68>, AMDGPUSample_cd>;
-defm IMAGE_SAMPLE_CD_CL         : MIMG_Sampler <mimgopc<MIMG.NOP, 0x69>, AMDGPUSample_cd_cl>;
-defm IMAGE_SAMPLE_C_CD          : MIMG_Sampler <mimgopc<MIMG.NOP, 0x6a>, AMDGPUSample_c_cd>;
-defm IMAGE_SAMPLE_C_CD_CL       : MIMG_Sampler <mimgopc<MIMG.NOP, 0x6b>, AMDGPUSample_c_cd_cl>;
-defm IMAGE_SAMPLE_CD_O          : MIMG_Sampler <mimgopc<MIMG.NOP, 0x6c>, AMDGPUSample_cd_o>;
-defm IMAGE_SAMPLE_CD_CL_O       : MIMG_Sampler <mimgopc<MIMG.NOP, 0x6d>, AMDGPUSample_cd_cl_o>;
-defm IMAGE_SAMPLE_C_CD_O        : MIMG_Sampler <mimgopc<MIMG.NOP, 0x6e>, AMDGPUSample_c_cd_o>;
-defm IMAGE_SAMPLE_C_CD_CL_O     : MIMG_Sampler <mimgopc<MIMG.NOP, 0x6f>, AMDGPUSample_c_cd_cl_o>;
+defm IMAGE_SAMPLE_CD            : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x68>, AMDGPUSample_cd>;
+defm IMAGE_SAMPLE_CD_CL         : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x69>, AMDGPUSample_cd_cl>;
+defm IMAGE_SAMPLE_C_CD          : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x6a>, AMDGPUSample_c_cd>;
+defm IMAGE_SAMPLE_C_CD_CL       : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x6b>, AMDGPUSample_c_cd_cl>;
+defm IMAGE_SAMPLE_CD_O          : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x6c>, AMDGPUSample_cd_o>;
+defm IMAGE_SAMPLE_CD_CL_O       : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x6d>, AMDGPUSample_cd_cl_o>;
+defm IMAGE_SAMPLE_C_CD_O        : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x6e>, AMDGPUSample_c_cd_o>;
+defm IMAGE_SAMPLE_C_CD_CL_O     : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x6f>, AMDGPUSample_c_cd_cl_o>;
 } // End OtherPredicates = [HasExtendedImageInsts]
 
 let OtherPredicates = [HasExtendedImageInsts,HasG16] in {
-defm IMAGE_SAMPLE_D_G16         : MIMG_Sampler <mimgopc<0x39, 0xa2>, AMDGPUSample_d, 0, 1>;
-defm IMAGE_SAMPLE_D_CL_G16      : MIMG_Sampler <mimgopc<0x5f, 0xa3>, AMDGPUSample_d_cl, 0, 1>;
-defm IMAGE_SAMPLE_C_D_G16       : MIMG_Sampler <mimgopc<0x3a, 0xaa>, AMDGPUSample_c_d, 0, 1>;
-defm IMAGE_SAMPLE_C_D_CL_G16    : MIMG_Sampler <mimgopc<0x54, 0xab>, AMDGPUSample_c_d_cl, 0, 1>;
-defm IMAGE_SAMPLE_D_O_G16       : MIMG_Sampler <mimgopc<0x3b, 0xb2>, AMDGPUSample_d_o, 0, 1>;
-defm IMAGE_SAMPLE_D_CL_O_G16    : MIMG_Sampler <mimgopc<0x55, 0xb3>, AMDGPUSample_d_cl_o, 0, 1>;
-defm IMAGE_SAMPLE_C_D_O_G16     : MIMG_Sampler <mimgopc<0x3c, 0xba>, AMDGPUSample_c_d_o, 0, 1>;
-defm IMAGE_SAMPLE_C_D_CL_O_G16  : MIMG_Sampler <mimgopc<0x56, 0xbb>, AMDGPUSample_c_d_cl_o, 0, 1>;
-defm IMAGE_SAMPLE_CD_G16        : MIMG_Sampler <mimgopc<MIMG.NOP, 0xe8>, AMDGPUSample_cd, 0, 1>;
-defm IMAGE_SAMPLE_CD_CL_G16     : MIMG_Sampler <mimgopc<MIMG.NOP, 0xe9>, AMDGPUSample_cd_cl, 0, 1>;
-defm IMAGE_SAMPLE_C_CD_G16      : MIMG_Sampler <mimgopc<MIMG.NOP, 0xea>, AMDGPUSample_c_cd, 0, 1>;
-defm IMAGE_SAMPLE_C_CD_CL_G16   : MIMG_Sampler <mimgopc<MIMG.NOP, 0xeb>, AMDGPUSample_c_cd_cl, 0, 1>;
-defm IMAGE_SAMPLE_CD_O_G16      : MIMG_Sampler <mimgopc<MIMG.NOP, 0xec>, AMDGPUSample_cd_o, 0, 1>;
-defm IMAGE_SAMPLE_CD_CL_O_G16   : MIMG_Sampler <mimgopc<MIMG.NOP, 0xed>, AMDGPUSample_cd_cl_o, 0, 1>;
-defm IMAGE_SAMPLE_C_CD_O_G16    : MIMG_Sampler <mimgopc<MIMG.NOP, 0xee>, AMDGPUSample_c_cd_o, 0, 1>;
-defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<MIMG.NOP, 0xef>, AMDGPUSample_c_cd_cl_o, 0, 1>;
+defm IMAGE_SAMPLE_D_G16         : MIMG_Sampler <mimgopc<0x39, 0x39, 0xa2>, AMDGPUSample_d, 0, 1>;
+defm IMAGE_SAMPLE_D_CL_G16      : MIMG_Sampler <mimgopc<0x5f, 0x5f, 0xa3>, AMDGPUSample_d_cl, 0, 1>;
+defm IMAGE_SAMPLE_C_D_G16       : MIMG_Sampler <mimgopc<0x3a, 0x3a, 0xaa>, AMDGPUSample_c_d, 0, 1>;
+defm IMAGE_SAMPLE_C_D_CL_G16    : MIMG_Sampler <mimgopc<0x54, 0x54, 0xab>, AMDGPUSample_c_d_cl, 0, 1>;
+defm IMAGE_SAMPLE_D_O_G16       : MIMG_Sampler <mimgopc<0x3b, 0x3b, 0xb2>, AMDGPUSample_d_o, 0, 1>;
+defm IMAGE_SAMPLE_D_CL_O_G16    : MIMG_Sampler <mimgopc<0x55, 0x55, 0xb3>, AMDGPUSample_d_cl_o, 0, 1>;
+defm IMAGE_SAMPLE_C_D_O_G16     : MIMG_Sampler <mimgopc<0x3c, 0x3c, 0xba>, AMDGPUSample_c_d_o, 0, 1>;
+defm IMAGE_SAMPLE_C_D_CL_O_G16  : MIMG_Sampler <mimgopc<0x56, 0x56, 0xbb>, AMDGPUSample_c_d_cl_o, 0, 1>;
+defm IMAGE_SAMPLE_CD_G16        : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xe8>, AMDGPUSample_cd, 0, 1>;
+defm IMAGE_SAMPLE_CD_CL_G16     : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xe9>, AMDGPUSample_cd_cl, 0, 1>;
+defm IMAGE_SAMPLE_C_CD_G16      : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xea>, AMDGPUSample_c_cd, 0, 1>;
+defm IMAGE_SAMPLE_C_CD_CL_G16   : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xeb>, AMDGPUSample_c_cd_cl, 0, 1>;
+defm IMAGE_SAMPLE_CD_O_G16      : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xec>, AMDGPUSample_cd_o, 0, 1>;
+defm IMAGE_SAMPLE_CD_CL_O_G16   : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xed>, AMDGPUSample_cd_cl_o, 0, 1>;
+defm IMAGE_SAMPLE_C_CD_O_G16    : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xee>, AMDGPUSample_c_cd_o, 0, 1>;
+defm IMAGE_SAMPLE_C_CD_CL_O_G16 : MIMG_Sampler <mimgopc<MIMG.NOP, MIMG.NOP, 0xef>, AMDGPUSample_c_cd_cl_o, 0, 1>;
 } // End OtherPredicates = [HasExtendedImageInsts,HasG16]
 
 //def IMAGE_RSRC256 : MIMG_NoPattern_RSRC256 <"image_rsrc256", mimgopc<0x7e>>;
 //def IMAGE_SAMPLER : MIMG_NoPattern_ <"image_sampler", mimgopc<0x7f>>;
 
 let SubtargetPredicate = isGFX10Only, OtherPredicates = [HasGFX10_AEncoding] in
-defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, 0x80>, "image_msaa_load", 1, 0, 0, 1>;
+defm IMAGE_MSAA_LOAD_X : MIMG_NoSampler <mimgopc<MIMG.NOP, MIMG.NOP, 0x80>, "image_msaa_load", 1, 0, 0, 1>;
 
 let OtherPredicates = [HasGFX10_AEncoding] in
-defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x18, MIMG.NOP>, "image_msaa_load">;
+defm IMAGE_MSAA_LOAD : MIMG_MSAA_Load <mimgopc<0x18, 0x18, MIMG.NOP>, "image_msaa_load">;
 
 let OtherPredicates = [HasGFX10_AEncoding] in {
-defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<0x19, 0xe6>, "image_bvh_intersect_ray", 0, 0>;
-defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0x19, 0xe6>, "image_bvh_intersect_ray", 0, 1>;
-defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 0>;
-defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1>;
+defm IMAGE_BVH_INTERSECT_RAY       : MIMG_IntersectRay<mimgopc<0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 0>;
+defm IMAGE_BVH_INTERSECT_RAY_a16   : MIMG_IntersectRay<mimgopc<0x19, 0x19, 0xe6>, "image_bvh_intersect_ray", 0, 1>;
+defm IMAGE_BVH64_INTERSECT_RAY     : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 0>;
+defm IMAGE_BVH64_INTERSECT_RAY_a16 : MIMG_IntersectRay<mimgopc<0x1a, 0x1a, 0xe7>, "image_bvh64_intersect_ray", 1, 1>;
 } // End OtherPredicates = [HasGFX10_AEncoding]
 
 } // End let OtherPredicates = [HasImageInsts]

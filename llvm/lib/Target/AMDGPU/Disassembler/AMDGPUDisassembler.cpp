@@ -486,6 +486,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       Res = tryDecodeInst(DecoderTableGFX1196, MI, DecW, Address);
       if (Res)
         break;
+
+      Res = tryDecodeInst(DecoderTableGFX1296, MI, DecW, Address);
+      if (Res)
+        break;
     }
     // Reinitialize Bytes
     Bytes = Bytes_.slice(0, MaxInstBytesNum);
@@ -707,6 +711,10 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       Res = convertMIMGInst(MI);
   }
 
+  if (Res && (MCII->get(MI.getOpcode()).TSFlags &
+              (SIInstrFlags::VIMAGE | SIInstrFlags::VSAMPLE)))
+    Res = convertMIMGInst(MI);
+
   if (Res && (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::EXP))
     Res = convertEXPInst(MI);
 
@@ -899,7 +907,9 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
   }
 
   bool IsAtomic = (VDstIdx != -1);
-  bool IsGather4 = MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::Gather4;
+  auto TSFlags = MCII->get(MI.getOpcode()).TSFlags;
+  bool IsGather4 = TSFlags & SIInstrFlags::Gather4;
+  bool IsVSample = TSFlags & SIInstrFlags::VSAMPLE;
   bool IsNSA = false;
   unsigned AddrSize = Info->VAddrDwords;
 
@@ -915,10 +925,14 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     AddrSize =
         AMDGPU::getAddrSizeMIMGOp(BaseOpcode, Dim, IsA16, AMDGPU::hasG16(STI));
 
+    // VSAMPLE insts that do not use vaddr3 behave the same as NSA forms.
+    // VIMAGE insts other then BVH never use vaddr4.
     IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA ||
-            Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA;
+            Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA ||
+            (Info->MIMGEncoding == AMDGPU::MIMGEncGfx12 &&
+             ((IsVSample && AddrSize < 4) || TSFlags & SIInstrFlags::VIMAGE));
     if (!IsNSA) {
-      if (AddrSize > 8)
+      if (!IsVSample && AddrSize > 8)
         AddrSize = 16;
     } else {
       if (AddrSize > Info->VAddrDwords) {
@@ -967,17 +981,24 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     }
   }
 
-  // If not using NSA on GFX10+, widen address register to correct size.
-  unsigned NewVAddr0 = AMDGPU::NoRegister;
-  if (isGFX10Plus() && !IsNSA && AddrSize != Info->VAddrDwords) {
-    unsigned VAddr0 = MI.getOperand(VAddr0Idx).getReg();
-    unsigned VAddrSub0 = MRI.getSubReg(VAddr0, AMDGPU::sub0);
-    VAddr0 = (VAddrSub0 != 0) ? VAddrSub0 : VAddr0;
+  // For VSAMPLE vaddr3 provides all aditional components in sequential VGPRs if
+  // more then 4 vaddrs are needed.
+  int16_t VAddrSAOp =
+      IsVSample ? AMDGPU::OpName::vaddr3 : AMDGPU::OpName::vaddr0;
+  int VAddrSAIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), VAddrSAOp);
 
-    auto AddrRCID = MCII->get(NewOpcode).OpInfo[VAddr0Idx].RegClass;
-    NewVAddr0 = MRI.getMatchingSuperReg(VAddr0, AMDGPU::sub0,
-                                        &MRI.getRegClass(AddrRCID));
-    if (NewVAddr0 == AMDGPU::NoRegister)
+  // If not using NSA on GFX10 or GFX11, widen vaddr0 address register to
+  // correct size. On GFX12 widen last address register.
+  unsigned NewVAddrSA = AMDGPU::NoRegister;
+  if (isGFX10Plus() && !IsNSA && AddrSize != Info->VAddrDwords) {
+    unsigned VAddrSA = MI.getOperand(VAddrSAIdx).getReg();
+    unsigned VAddrSubSA = MRI.getSubReg(VAddrSA, AMDGPU::sub0);
+    VAddrSA = (VAddrSubSA != 0) ? VAddrSubSA : VAddrSA;
+
+    auto AddrRCID = MCII->get(NewOpcode).OpInfo[VAddrSAIdx].RegClass;
+    NewVAddrSA = MRI.getMatchingSuperReg(VAddrSA, AMDGPU::sub0,
+                                         &MRI.getRegClass(AddrRCID));
+    if (NewVAddrSA == AMDGPU::NoRegister)
       return MCDisassembler::Success;
   }
 
@@ -992,8 +1013,8 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     }
   }
 
-  if (NewVAddr0 != AMDGPU::NoRegister) {
-    MI.getOperand(VAddr0Idx) = MCOperand::createReg(NewVAddr0);
+  if (NewVAddrSA != AMDGPU::NoRegister) {
+    MI.getOperand(VAddrSAIdx) = MCOperand::createReg(NewVAddrSA);
   } else if (IsNSA) {
     assert(AddrSize <= Info->VAddrDwords);
     MI.erase(MI.begin() + VAddr0Idx + AddrSize,

@@ -1242,6 +1242,8 @@ def highmod : NamedOperandBit<"High", NamedMatchClass<"High">>;
 def CPol : NamedOperandU32<"CPol", NamedMatchClass<"CPol">>;
 def CPol_0 : NamedOperandU32Default0<"CPol", NamedMatchClass<"CPol">>;
 def CPol_GLC1 : NamedOperandU32Default1<"CPol", NamedMatchClass<"CPol">>;
+def Scope : NamedOperandU32<"Scope", NamedMatchClass<"Scope">>;
+def TH : NamedOperandU32<"TH", NamedMatchClass<"TH">>;
 
 def TFE : NamedOperandBit<"TFE", NamedMatchClass<"TFE">>;
 def TFE_0 : NamedOperandBit_0<"TFE", NamedMatchClass<"TFE">>;
@@ -1253,6 +1255,7 @@ def R128A16 : NamedOperandBit<"R128A16", NamedMatchClass<"R128A16">>;
 def GFX10A16 : NamedOperandBit<"GFX10A16", NamedMatchClass<"GFX10A16">>;
 def D16 : NamedOperandBit<"D16", NamedMatchClass<"D16">>;
 def LWE : NamedOperandBit<"LWE", NamedMatchClass<"LWE">>;
+def NV : NamedOperandBit<"NV", NamedMatchClass<"NV">>;
 def exp_compr : NamedOperandBit<"ExpCompr", NamedMatchClass<"ExpCompr">>;
 def exp_vm : NamedOperandBit<"ExpVM", NamedMatchClass<"ExpVM">>;
 

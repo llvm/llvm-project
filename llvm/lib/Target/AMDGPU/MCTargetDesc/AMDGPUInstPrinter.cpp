@@ -218,6 +218,88 @@ void AMDGPUInstPrinter::printCPol(const MCInst *MI, unsigned OpNo,
     O << " /* unexpected cache policy bit */";
 }
 
+void AMDGPUInstPrinter::printTH(const MCInst *MI, unsigned OpNo,
+                                const MCSubtargetInfo &STI, raw_ostream &O) {
+  auto Imm = MI->getOperand(OpNo).getImm();
+
+  // For th = 0 do not print this field
+  if (Imm == 0)
+    return;
+
+  const unsigned Opcode = MI->getOpcode();
+  const MCInstrDesc &TID = MII.get(Opcode);
+
+  bool IsStore = TID.mayStore();
+  bool IsAtomic = TID.mayLoad() && IsStore;
+
+  int ScopeIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::scope);
+  assert(ScopeIdx != -1);
+  int64_t Scope = MI->getOperand(ScopeIdx).getImm();
+
+  O << " th:";
+
+  if (IsAtomic) {
+    O << "TH_ATOMIC_";
+    if (Imm & AMDGPU::TH::ATOMIC_CASCADE) {
+      if (Scope >= AMDGPU::Scope::SCOPE_DEV)
+        O << "CASCADE" << (Imm & AMDGPU::TH::ATOMIC_NT ? "_NT" : "_RT");
+      else
+        O << formatHex(Imm);
+    } else if (Imm & AMDGPU::TH::ATOMIC_NT)
+      O << "NT" << (Imm & AMDGPU::TH::ATOMIC_RETURN ? "_RETURN" : "");
+    else if (Imm & AMDGPU::TH::ATOMIC_RETURN)
+      O << "RETURN";
+    else
+      O << formatHex(Imm);
+  } else {
+    // This will default to printing load variants when neither MayStore nor
+    // MayLoad flag is present which is the case with instructons like
+    // image_get_resinfo.
+    O << (IsStore ? "TH_STORE_" : "TH_LOAD_");
+    switch (Imm) {
+    case AMDGPU::TH::NT:
+      O << "NT";
+      break;
+    case AMDGPU::TH::HT:
+      O << "HT";
+      break;
+    case AMDGPU::TH::BYPASS: // or LU
+      O << (IsStore || Scope == AMDGPU::Scope::SCOPE_SYS ? "BYPASS" : "LU");
+      break;
+    case AMDGPU::TH::NT_RT:
+      O << "NT_RT";
+      break;
+    case AMDGPU::TH::RT_NT:
+      O << "RT_NT";
+      break;
+    case AMDGPU::TH::NT_HT:
+      O << "NT_HT";
+      break;
+    default:
+      O << formatHex(Imm);
+      break;
+    }
+  }
+}
+
+void AMDGPUInstPrinter::printScope(const MCInst *MI, unsigned OpNo,
+                                   const MCSubtargetInfo &STI, raw_ostream &O) {
+  auto Imm = MI->getOperand(OpNo).getImm();
+
+  if (Imm == Scope::SCOPE_CU)
+    return;
+
+  O << " scope:";
+  if (Imm == Scope::SCOPE_SE)
+    O << "SCOPE_SE";
+  else if (Imm == Scope::SCOPE_DEV)
+    O << "SCOPE_DEV";
+  else if (Imm == Scope::SCOPE_SYS)
+    O << "SCOPE_SYS";
+  else
+    llvm_unreachable("unexpected scope policy value");
+}
+
 void AMDGPUInstPrinter::printSWZ(const MCInst *MI, unsigned OpNo,
                                  const MCSubtargetInfo &STI, raw_ostream &O) {
 }
@@ -225,6 +307,11 @@ void AMDGPUInstPrinter::printSWZ(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printTFE(const MCInst *MI, unsigned OpNo,
                                  const MCSubtargetInfo &STI, raw_ostream &O) {
   printNamedBit(MI, OpNo, O, "tfe");
+}
+
+void AMDGPUInstPrinter::printNV(const MCInst *MI, unsigned OpNo,
+                                const MCSubtargetInfo &STI, raw_ostream &O) {
+  printNamedBit(MI, OpNo, O, "nv");
 }
 
 void AMDGPUInstPrinter::printDMask(const MCInst *MI, unsigned OpNo,

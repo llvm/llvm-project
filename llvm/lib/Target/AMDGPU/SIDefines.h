@@ -55,19 +55,21 @@ enum : uint64_t {
   MTBUF = 1 << 18,
   SMRD = 1 << 19,
   MIMG = 1 << 20,
-  EXP = 1 << 21,
-  FLAT = 1 << 22,
-  DS = 1 << 23,
+  VIMAGE = 1 << 21,
+  VSAMPLE = 1 << 22,
+  EXP = 1 << 23,
+  FLAT = 1 << 24,
+  DS = 1 << 25,
 
   // Pseudo instruction formats.
-  VGPRSpill = 1 << 24,
-  SGPRSpill = 1 << 25,
+  VGPRSpill = 1 << 26,
+  SGPRSpill = 1 << 27,
 
   // LDSDIR instruction format.
-  LDSDIR = 1 << 26,
+  LDSDIR = 1 << 28,
 
   // VINTERP instruction format.
-  VINTERP = 1 << 27,
+  VINTERP = 1 << 29,
 
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
@@ -312,6 +314,37 @@ enum CPol {
 };
 
 } // namespace CPol
+
+namespace Scope {
+
+enum Scope {
+  SCOPE_CU = 0,
+  SCOPE_SE = 1,
+  SCOPE_DEV = 2,
+  SCOPE_SYS = 3
+};
+
+} // namespace Scope
+
+namespace TH {
+
+enum TH {
+  RT = 0,     // regular
+  NT = 1,     // non-temporal
+  HT = 2,     // high-temporal
+  LU = 3,     // last use
+  NT_RT = 4,  // non-temporal (CU, SE), regular (MALL)
+  RT_NT = 5,  // regular (CU, SE), non-temporal (MALL)
+  NT_HT = 6,  // non-temporal (CU, SE), high-temporal (MALL)
+  BYPASS = 3, // only to be used with scope = 3
+
+  // Bits of TH for atomics
+  ATOMIC_RETURN = 1,  // Returning vs non-returning
+  ATOMIC_NT = 2,      // Non-temporal vs regular
+  ATOMIC_CASCADE = 4, // Cascading vs regular
+};
+
+} // namespace TH
 
 namespace SendMsg { // Encoding of SIMM16 used in s_sendmsg* insns.
 

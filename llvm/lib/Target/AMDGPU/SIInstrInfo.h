@@ -504,6 +504,22 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::MIMG;
   }
 
+  static bool isVIMAGE(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::VIMAGE;
+  }
+
+  bool isVIMAGE(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::VIMAGE;
+  }
+
+  static bool isVSAMPLE(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::VSAMPLE;
+  }
+
+  bool isVSAMPLE(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::VSAMPLE;
+  }
+
   static bool isGather4(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::Gather4;
   }
