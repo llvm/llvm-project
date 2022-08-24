@@ -2099,6 +2099,12 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
                     << ")\n");
 
   if (scheduleFound) {
+    scheduleFound = LoopPipelinerInfo->shouldUseSchedule(*this, Schedule);
+    if (!scheduleFound)
+      dbgs() << "Target rejected schedule\n";
+  }
+
+  if (scheduleFound) {
     Schedule.finalizeSchedule(this);
     Pass.ORE->emit([&]() {
       return MachineOptimizationRemarkAnalysis(

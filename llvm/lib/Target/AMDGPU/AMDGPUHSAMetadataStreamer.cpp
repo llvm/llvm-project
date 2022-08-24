@@ -768,7 +768,10 @@ void MetadataStreamerV3::emitKernelArg(
 
   if (auto PtrTy = dyn_cast<PointerType>(Ty))
     if (auto Qualifier = getAddressSpaceQualifier(PtrTy->getAddressSpace()))
-      Arg[".address_space"] = Arg.getDocument()->getNode(*Qualifier, /*Copy=*/true);
+      // Limiting address space to emit only for a certain ValueKind.
+      if (ValueKind == "global_buffer" || ValueKind == "dynamic_shared_pointer")
+        Arg[".address_space"] = Arg.getDocument()->getNode(*Qualifier,
+                                                           /*Copy=*/true);
 
   if (auto AQ = getAccessQualifier(AccQual))
     Arg[".access"] = Arg.getDocument()->getNode(*AQ, /*Copy=*/true);

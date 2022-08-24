@@ -31,7 +31,6 @@ Token::Index findRecoveryEndpoint(ExtensionID Strategy, Token::Index Begin,
                                   const TokenStream &Tokens,
                                   const Language &Lang) {
   assert(Strategy != 0);
-  assert(Begin > 0);
   if (auto S = Lang.RecoveryStrategies.lookup(Strategy))
     return S(Begin, Tokens);
   return Token::Invalid;
@@ -614,7 +613,7 @@ const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
   // Invariant: Heads is partitioned by source: {shifted | reduced}.
   // HeadsPartition is the index of the first head formed by reduction.
   // We use this to discard and recreate the reduced heads during recovery.
-  unsigned HeadsPartition = 0;
+  unsigned HeadsPartition = Heads.size();
   std::vector<const GSS::Node *> NextHeads;
   auto MaybeGC = [&, Roots(std::vector<const GSS::Node *>{}), I(0u)]() mutable {
     assert(NextHeads.empty() && "Running GC at the wrong time!");

@@ -145,11 +145,19 @@ private:
     case AppendingLinkage:
     case InternalLinkage:
     case PrivateLinkage:
-      return isInterposable();
+      // Optimizations may assume builtin semantics for functions defined as
+      // nobuiltin due to attributes at call-sites. To avoid applying IPO based
+      // on nobuiltin semantics, treat such function definitions as maybe
+      // derefined.
+      return isInterposable() || isNobuiltinFnDef();
     }
 
     llvm_unreachable("Fully covered switch above!");
   }
+
+  /// Returns true if the global is a function definition with the nobuiltin
+  /// attribute.
+  bool isNobuiltinFnDef() const;
 
 protected:
   /// The intrinsic ID for this subclass (which must be a Function).

@@ -2,9 +2,8 @@
 // section in XCOFF yet.
 // UNSUPPORTED: aix
 
-// Check that we discover dependency on a precompiled module (and generate the
-// appropriate `-fmodule-file=` argument) when it's imported by a **submodule**
-// instead of a top-level module.
+// Check that we discover dependency on a precompiled module when it's imported
+// by a **submodule** instead of a top-level module.
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: cp %S/Inputs/modules-pch-common-via-submodule/* %t
@@ -22,11 +21,6 @@
 // CHECK-PCH-NEXT:       "clang-module-deps": [],
 // CHECK-PCH-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-PCH-NEXT:       "command-line": [
-// CHECK-PCH-NEXT:         "-cc1"
-// CHECK-PCH:              "-emit-module"
-// CHECK-PCH:              "-fmodules"
-// CHECK-PCH:              "-fmodule-name=ModCommon"
-// CHECK-PCH:              "-fno-implicit-modules"
 // CHECK-PCH:            ],
 // CHECK-PCH-NEXT:       "context-hash": "[[HASH_MOD_COMMON:.*]]",
 // CHECK-PCH-NEXT:       "file-deps": [
@@ -46,10 +40,7 @@
 // CHECK-PCH-NEXT:         }
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "command-line": [
-// CHECK-PCH:              "-fno-implicit-modules"
-// CHECK-PCH-NEXT:         "-fno-implicit-module-maps"
-// CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON]]/ModCommon-{{.*}}.pcm"
-// CHECK-PCH-NEXT:       ],
+// CHECK-PCH:            ],
 // CHECK-PCH-NEXT:       "file-deps": [
 // CHECK-PCH-NEXT:         "[[PREFIX]]/pch.h"
 // CHECK-PCH-NEXT:       ],
@@ -79,12 +70,6 @@
 // CHECK-TU-NEXT:       "clang-module-deps": [],
 // CHECK-TU-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-TU-NEXT:       "command-line": [
-// CHECK-TU-NEXT:         "-cc1"
-// CHECK-TU:              "-emit-module"
-// CHECK-TU:              "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON:.*]]/ModCommon-{{.*}}.pcm"
-// CHECK-TU:              "-fmodules"
-// CHECK-TU:              "-fmodule-name=ModTU"
-// CHECK-TU:              "-fno-implicit-modules"
 // CHECK-TU:            ],
 // CHECK-TU-NEXT:       "context-hash": "[[HASH_MOD_TU:.*]]",
 // CHECK-TU-NEXT:       "file-deps": [
@@ -105,10 +90,7 @@
 // CHECK-TU-NEXT:         }
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "command-line": [
-// CHECK-TU:              "-fno-implicit-modules",
-// CHECK-TU-NEXT:         "-fno-implicit-module-maps",
-// CHECK-TU-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_TU:.*]]/ModTU-{{.*}}.pcm"
-// CHECK-TU-NEXT:       ],
+// CHECK-TU:            ],
 // CHECK-TU-NEXT:       "file-deps": [
 // CHECK-TU-NEXT:         "[[PREFIX]]/tu.c",
 // CHECK-TU-NEXT:         "[[PREFIX]]/pch.h.gch"

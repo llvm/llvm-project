@@ -1510,9 +1510,9 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
       // embedded in the section data (AKA an "abs-ified" reloc.). Parse that
       // and generate a Reloc struct.
       uint32_t cieMinuend = reader.readU32(&dataOff);
-      if (cieMinuend == 0)
+      if (cieMinuend == 0) {
         cieIsec = isec;
-      else {
+      } else {
         uint32_t cieOff = isecOff + dataOff - cieMinuend;
         cieIsec = findContainingSubsection(ehFrameSection, &cieOff);
         if (cieIsec == nullptr)

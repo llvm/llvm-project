@@ -273,6 +273,19 @@ TEST_F(TokenAnnotatorTest, UnderstandsVariableTemplates) {
   EXPECT_TOKEN(Tokens[13], tok::ampamp, TT_BinaryOperator);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsWhitespaceSensitiveMacros) {
+  FormatStyle Style = getLLVMStyle();
+  Style.WhitespaceSensitiveMacros.push_back("FOO");
+
+  auto Tokens = annotate("FOO(1+2 )\n", Style);
+  EXPECT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_UntouchableMacroFunc);
+
+  Tokens = annotate("FOO(a:b:c)\n", Style);
+  EXPECT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::identifier, TT_UntouchableMacroFunc);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsDelete) {
   auto Tokens = annotate("delete (void *)p;");
   EXPECT_EQ(Tokens.size(), 8u) << Tokens;

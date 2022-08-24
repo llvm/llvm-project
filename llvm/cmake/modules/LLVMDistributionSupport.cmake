@@ -260,10 +260,10 @@ function(llvm_distribution_add_targets)
     add_custom_target(install-${distribution_target}-stripped)
 
     foreach(target ${distribution_components})
+      # Note that some distribution components may not have an actual target, but only an install-FOO target.
+      # This happens for example if a target is an INTERFACE target.
       if(TARGET ${target})
         add_dependencies(${distribution_target} ${target})
-      else()
-        message(SEND_ERROR "Specified distribution component '${target}' doesn't have a target")
       endif()
 
       if(TARGET install-${target})

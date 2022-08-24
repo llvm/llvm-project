@@ -21,12 +21,6 @@
 // CHECK-PCH-NEXT:       "clang-module-deps": [],
 // CHECK-PCH-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-PCH-NEXT:       "command-line": [
-// CHECK-PCH-NEXT:         "-cc1"
-// CHECK-PCH:              "-emit-module"
-// CHECK-PCH:              "-fmodules"
-// CHECK-PCH-NOT:          "-fimplicit-module-maps"
-// CHECK-PCH:              "-fmodule-name=ModCommon1"
-// CHECK-PCH:              "-fno-implicit-modules"
 // CHECK-PCH:            ],
 // CHECK-PCH-NEXT:       "context-hash": "[[HASH_MOD_COMMON_1:.*]]",
 // CHECK-PCH-NEXT:       "file-deps": [
@@ -39,12 +33,6 @@
 // CHECK-PCH-NEXT:       "clang-module-deps": [],
 // CHECK-PCH-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-PCH-NEXT:       "command-line": [
-// CHECK-PCH-NEXT:         "-cc1"
-// CHECK-PCH:              "-emit-module"
-// CHECK-PCH:              "-fmodules"
-// CHECK-PCH-NOT:          "-fimplicit-module-maps"
-// CHECK-PCH:              "-fmodule-name=ModCommon2"
-// CHECK-PCH:              "-fno-implicit-modules"
 // CHECK-PCH:            ],
 // CHECK-PCH-NEXT:       "context-hash": "[[HASH_MOD_COMMON_2:.*]]",
 // CHECK-PCH-NEXT:       "file-deps": [
@@ -62,13 +50,6 @@
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-PCH-NEXT:       "command-line": [
-// CHECK-PCH-NEXT:         "-cc1"
-// CHECK-PCH:              "-emit-module"
-// CHECK-PCH:              "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON_2]]/ModCommon2-{{.*}}.pcm"
-// CHECK-PCH:              "-fmodules"
-// CHECK-PCH-NOT:          "-fimplicit-module-maps"
-// CHECK-PCH:              "-fmodule-name=ModPCH"
-// CHECK-PCH:              "-fno-implicit-modules"
 // CHECK-PCH:            ],
 // CHECK-PCH-NEXT:       "context-hash": "[[HASH_MOD_PCH:.*]]",
 // CHECK-PCH-NEXT:       "file-deps": [
@@ -92,11 +73,7 @@
 // CHECK-PCH-NEXT:         }
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "command-line": [
-// CHECK-PCH:              "-fno-implicit-modules",
-// CHECK-PCH-NEXT:         "-fno-implicit-module-maps",
-// CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_COMMON_1]]/ModCommon1-{{.*}}.pcm",
-// CHECK-PCH-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_PCH]]/ModPCH-{{.*}}.pcm"
-// CHECK-PCH-NEXT:       ],
+// CHECK-PCH:            ],
 // CHECK-PCH-NEXT:       "file-deps": [
 // CHECK-PCH-NEXT:         "[[PREFIX]]/pch.h"
 // CHECK-PCH-NEXT:       ],
@@ -130,11 +107,6 @@
 // CHECK-TU-NEXT:       "clang-module-deps": [],
 // CHECK-TU-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-TU-NEXT:       "command-line": [
-// CHECK-TU-NEXT:         "-cc1",
-// CHECK-TU:              "-emit-module",
-// CHECK-TU-NOT:          "-fimplicit-module-maps",
-// CHECK-TU:              "-fmodule-name=ModTU",
-// CHECK-TU:              "-fno-implicit-modules",
 // CHECK-TU:            ],
 // CHECK-TU-NEXT:       "context-hash": "[[HASH_MOD_TU:.*]]",
 // CHECK-TU-NEXT:       "file-deps": [
@@ -154,10 +126,7 @@
 // CHECK-TU-NEXT:         }
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "command-line": [
-// CHECK-TU:              "-fno-implicit-modules",
-// CHECK-TU-NEXT:         "-fno-implicit-module-maps",
-// CHECK-TU-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_TU]]/ModTU-{{.*}}.pcm"
-// CHECK-TU-NEXT:       ],
+// CHECK-TU:            ],
 // CHECK-TU-NEXT:       "file-deps": [
 // CHECK-TU-NEXT:         "[[PREFIX]]/tu.c",
 // CHECK-TU-NEXT:         "[[PREFIX]]/pch.h.gch"
@@ -188,12 +157,6 @@
 // CHECK-TU-WITH-COMMON-NEXT:       "clang-module-deps": [],
 // CHECK-TU-WITH-COMMON-NEXT:       "clang-modulemap-file": "[[PREFIX]]/module.modulemap",
 // CHECK-TU-WITH-COMMON-NEXT:       "command-line": [
-// CHECK-TU-WITH-COMMON-NEXT:         "-cc1",
-// CHECK-TU-WITH-COMMON:              "-emit-module",
-// CHECK-TU-WITH-COMMON:              "-fmodule-file=[[PREFIX]]/build/{{.*}}/ModCommon1-{{.*}}.pcm",
-// CHECK-TU-WITH-COMMON-NOT:          "-fimplicit-module-maps",
-// CHECK-TU-WITH-COMMON:              "-fmodule-name=ModTUWithCommon",
-// CHECK-TU-WITH-COMMON:              "-fno-implicit-modules",
 // CHECK-TU-WITH-COMMON:            ],
 // CHECK-TU-WITH-COMMON-NEXT:       "context-hash": "[[HASH_MOD_TU_WITH_COMMON:.*]]",
 // CHECK-TU-WITH-COMMON-NEXT:       "file-deps": [
@@ -213,11 +176,8 @@
 // CHECK-TU-WITH-COMMON-NEXT:         }
 // CHECK-TU-WITH-COMMON-NEXT:       ],
 // CHECK-TU-WITH-COMMON-NEXT:       "command-line": [
-// CHECK-TU-WITH-COMMON:              "-fno-implicit-modules",
-// CHECK-TU-WITH-COMMON-NEXT:         "-fno-implicit-module-maps",
-// CHECK-TU-WITH-COMMON-NEXT:         "-fmodule-file=[[PREFIX]]/build/{{.*}}/ModCommon2-{{.*}}.pcm",
-// CHECK-TU-WITH-COMMON-NEXT:         "-fmodule-file=[[PREFIX]]/build/[[HASH_MOD_TU_WITH_COMMON]]/ModTUWithCommon-{{.*}}.pcm"
-// CHECK-TU-WITH-COMMON-NEXT:       ],
+// CHECK-TU-WITH-COMMON:              "-fmodule-file=[[PREFIX]]/build/{{.*}}/ModCommon2-{{.*}}.pcm"
+// CHECK-TU-WITH-COMMON:            ],
 // CHECK-TU-WITH-COMMON-NEXT:       "file-deps": [
 // CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/tu_with_common.c",
 // CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/pch.h.gch"

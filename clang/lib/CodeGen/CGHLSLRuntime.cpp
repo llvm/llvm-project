@@ -90,7 +90,7 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
 void clang::CodeGen::CGHLSLRuntime::setHLSLFunctionAttributes(
     llvm::Function *F, const FunctionDecl *FD) {
   if (HLSLShaderAttr *ShaderAttr = FD->getAttr<HLSLShaderAttr>()) {
-    const StringRef ShaderAttrKindStr = "dx.shader";
+    const StringRef ShaderAttrKindStr = "hlsl.shader";
     F->addFnAttr(ShaderAttrKindStr,
                  ShaderAttr->ConvertShaderTypeToStr(ShaderAttr->getType()));
   }

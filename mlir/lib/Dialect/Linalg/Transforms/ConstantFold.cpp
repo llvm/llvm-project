@@ -77,8 +77,8 @@ public:
     auto getOperandElementType = [](OpOperand *operand) {
       return operand->get().getType().cast<ShapedType>().getElementType();
     };
-    if (!llvm::is_splat(llvm::map_range(genericOp.getInputAndOutputOperands(),
-                                        getOperandElementType)))
+    if (!llvm::all_equal(llvm::map_range(genericOp.getInputAndOutputOperands(),
+                                         getOperandElementType)))
       return failure();
 
     // We can only handle the case where we have int/float elements.

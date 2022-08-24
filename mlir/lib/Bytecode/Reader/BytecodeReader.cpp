@@ -921,9 +921,9 @@ BytecodeReader::parseRegions(EncodingReader &reader,
 
   // When the regions have been fully parsed, pop them off of the read stack. If
   // the regions were isolated from above, we also pop the last value scope.
-  regionStack.pop_back();
   if (readState.isIsolatedFromAbove)
     valueScopes.pop_back();
+  regionStack.pop_back();
   return success();
 }
 

@@ -222,18 +222,18 @@ void OMPDeclareVariantAttr::printPrettyPragma(
     OS << ")";
   }
 
-  auto PrintInteropTypes = [&OS](InteropType *Begin, InteropType *End) {
-    for (InteropType *I = Begin; I != End; ++I) {
+  auto PrintInteropInfo = [&OS](OMPInteropInfo *Begin, OMPInteropInfo *End) {
+    for (OMPInteropInfo *I = Begin; I != End; ++I) {
       if (I != Begin)
         OS << ", ";
       OS << "interop(";
-      OS << ConvertInteropTypeToStr(*I);
+      OS << getInteropTypeString(I);
       OS << ")";
     }
   };
   if (appendArgs_size()) {
     OS << " append_args(";
-    PrintInteropTypes(appendArgs_begin(), appendArgs_end());
+    PrintInteropInfo(appendArgs_begin(), appendArgs_end());
     OS << ")";
   }
 }

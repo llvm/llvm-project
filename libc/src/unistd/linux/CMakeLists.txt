@@ -1,9 +1,35 @@
 add_entrypoint_object(
+  chdir
+  SRCS
+    chdir.cpp
+  HDRS
+    ../chdir.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   close
   SRCS
     close.cpp
   HDRS
     ../close.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fchdir
+  SRCS
+    fchdir.cpp
+  HDRS
+    ../fchdir.h
   DEPENDS
     libc.include.unistd
     libc.include.sys_syscall

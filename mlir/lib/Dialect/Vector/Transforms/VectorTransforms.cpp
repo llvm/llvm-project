@@ -1269,7 +1269,7 @@ struct ReorderElementwiseOpsOnTranspose final
     // This is an elementwise op, so all transposed operands should have the
     // same type. We need to additionally check that all transposes uses the
     // same map.
-    if (!llvm::is_splat(transposeMaps))
+    if (!llvm::all_equal(transposeMaps))
       return rewriter.notifyMatchFailure(op, "different transpose map");
 
     SmallVector<Value, 4> srcValues;

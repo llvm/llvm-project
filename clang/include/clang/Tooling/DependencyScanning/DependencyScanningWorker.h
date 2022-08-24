@@ -70,6 +70,8 @@ public:
                                   DependencyConsumer &Consumer,
                                   llvm::Optional<StringRef> ModuleName = None);
 
+  bool shouldEagerLoadModules() const { return EagerLoadModules; }
+
 private:
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
 
@@ -87,6 +89,8 @@ private:
   ScanningOutputFormat Format;
   /// Whether to optimize the modules' command-line arguments.
   bool OptimizeArgs;
+  /// Whether to set up command-lines to load PCM files eagerly.
+  bool EagerLoadModules;
 };
 
 } // end namespace dependencies

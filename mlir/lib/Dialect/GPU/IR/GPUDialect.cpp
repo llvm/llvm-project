@@ -997,6 +997,8 @@ static LogicalResult verifyAttributions(Operation *op,
 
 /// Verifies the body of the function.
 LogicalResult GPUFuncOp::verifyBody() {
+  if (empty())
+    return emitOpError() << "expected body with at least one block";
   unsigned numFuncArguments = getNumArguments();
   unsigned numWorkgroupAttributions = getNumWorkgroupAttributions();
   unsigned numBlockArguments = front().getNumArguments();
