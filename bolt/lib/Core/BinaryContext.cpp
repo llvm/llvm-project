@@ -2199,7 +2199,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
 
   using LabelRange = std::pair<const MCSymbol *, const MCSymbol *>;
   SmallVector<LabelRange> SplitLabels;
-  for (FunctionFragment &FF : BF.getLayout().getSplitFragments()) {
+  for (const FunctionFragment FF : BF.getLayout().getSplitFragments()) {
     MCSymbol *const SplitStartLabel = LocalCtx->createTempSymbol();
     MCSymbol *const SplitEndLabel = LocalCtx->createTempSymbol();
     SplitLabels.emplace_back(SplitStartLabel, SplitEndLabel);
