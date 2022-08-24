@@ -1,11 +1,9 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 // XFAIL: nvptx64-nvidia-cuda
-// XFAIL: nvptx64-nvidia-cuda-oldDriver
 // XFAIL: nvptx64-nvidia-cuda-LTO
 
 // Fails on amdgpu with error: GPU Memory Error
 // XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-oldDriver
 // XFAIL: amdgcn-amd-amdhsa-LTO
 
 #include <stdio.h>
