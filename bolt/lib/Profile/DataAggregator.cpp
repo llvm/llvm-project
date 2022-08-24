@@ -865,8 +865,8 @@ bool DataAggregator::recordTrace(
   if (From > To)
     return false;
 
-  const BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
-  const BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
+  BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
+  BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
 
   if (!FromBB || !ToBB)
     return false;
@@ -875,8 +875,7 @@ bool DataAggregator::recordTrace(
   // the previous block (that instruction should be a call).
   if (From == FromBB->getOffset() && !BF.containsAddress(FirstLBR.From) &&
       !FromBB->isEntryPoint() && !FromBB->isLandingPad()) {
-    const BinaryBasicBlock *PrevBB =
-        BF.getLayout().getBlock(FromBB->getIndex() - 1);
+    BinaryBasicBlock *PrevBB = BF.getLayout().getBlock(FromBB->getIndex() - 1);
     if (PrevBB->getSuccessor(FromBB->getLabel())) {
       const MCInst *Instr = PrevBB->getLastNonPseudoInstr();
       if (Instr && BC.MIB->isCall(*Instr))
