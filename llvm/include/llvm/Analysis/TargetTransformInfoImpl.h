@@ -1244,6 +1244,11 @@ public:
             SubIndex, FixedVectorType::get(VecTy->getScalarType(), NumSubElts),
             Operands);
 
+      if (Shuffle->isSplice(SubIndex))
+        return TargetTTI->getShuffleCost(TTI::SK_Splice, VecTy,
+                                         Shuffle->getShuffleMask(), CostKind,
+                                         SubIndex, nullptr, Operands);
+
       return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy,
                                        Shuffle->getShuffleMask(), CostKind, 0,
                                        nullptr, Operands);

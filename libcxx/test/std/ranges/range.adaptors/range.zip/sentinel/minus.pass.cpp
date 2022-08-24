@@ -12,7 +12,7 @@
 // requires(sized_sentinel_for<sentinel_t<maybe-const<Const, Views>>,
 //                             iterator_t<maybe-const<OtherConst, Views>>>&&...)
 // friend constexpr common_type_t<range_difference_t<maybe-const<OtherConst, Views>>...>
-// 	operator-(const iterator<OtherConst>&, const sentinel&)
+//   operator-(const iterator<OtherConst>&, const sentinel&)
 //
 // template <bool OtherConst>
 // requires(sized_sentinel_for<sentinel_t<maybe-const<Const, Views>>,

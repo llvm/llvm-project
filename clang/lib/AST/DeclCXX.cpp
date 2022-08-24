@@ -894,9 +894,11 @@ void CXXRecordDecl::addedMember(Decl *D) {
         // This is an extension in C++03.
         data().PlainOldData = false;
       }
-      // We delay updating destructor relevant properties until
-      // addedSelectedDestructor.
-      // FIXME: Defer this for the other special member functions as well.
+      // When instantiating a class, we delay updating the destructor and
+      // triviality properties of the class until selecting a destructor and
+      // computing the eligibility of its special member functions. This is
+      // because there might be function constraints that we need to evaluate
+      // and compare later in the instantiation.
       if (!Method->isIneligibleOrNotSelected()) {
         addedEligibleSpecialMemberFunction(Method, SMKind);
       }
@@ -1437,10 +1439,12 @@ void CXXRecordDecl::finishedDefaultedOrDeletedMember(CXXMethodDecl *D) {
 
   // Update which trivial / non-trivial special members we have.
   // addedMember will have skipped this step for this member.
-  if (D->isTrivial())
-    data().HasTrivialSpecialMembers |= SMKind;
-  else
-    data().DeclaredNonTrivialSpecialMembers |= SMKind;
+  if (!D->isIneligibleOrNotSelected()) {
+    if (D->isTrivial())
+      data().HasTrivialSpecialMembers |= SMKind;
+    else
+      data().DeclaredNonTrivialSpecialMembers |= SMKind;
+  }
 }
 
 void CXXRecordDecl::setCaptures(ASTContext &Context,

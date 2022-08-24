@@ -10,8 +10,8 @@
 
 // constexpr iterator(iterator<!Const> i)
 //             requires Const &&
-//                      convertible_­to<iterator_t<V>, OuterIter> &&
-//                      convertible_­to<iterator_t<InnerRng>, InnerIter>;
+//                      convertible_to<iterator_t<V>, OuterIter> &&
+//                      convertible_to<iterator_t<InnerRng>, InnerIter>;
 
 #include <cassert>
 #include <ranges>

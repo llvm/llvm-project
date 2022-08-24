@@ -34,7 +34,6 @@
 //   operator/(const month_day& md, int y) noexcept;
 // Returns: year(y) / md.
 
-
 #include <chrono>
 #include <type_traits>
 #include <cassert>

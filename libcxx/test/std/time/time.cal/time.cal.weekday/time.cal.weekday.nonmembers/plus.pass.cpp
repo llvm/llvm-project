@@ -20,10 +20,8 @@
 //   [Note: Given a divisor of 12, Euclidean division truncates towards negative infinity
 //   and always produces a remainder in the range of [0, 6].
 //   Assuming no overflow in the signed summation, this operation results in a weekday
-//   holding a value in the range [0, 6] even if !x.ok(). —end note]
-//   [Example: Monday + days{6} == Sunday. —end example]
-
-
+//   holding a value in the range [0, 6] even if !x.ok(). -end note]
+//   [Example: Monday + days{6} == Sunday. -end example]
 
 #include <chrono>
 #include <type_traits>

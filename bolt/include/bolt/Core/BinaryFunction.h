@@ -2044,6 +2044,19 @@ public:
   /// Returns false if disassembly failed.
   bool disassemble();
 
+  void handlePCRelOperand(MCInst &Instruction, uint64_t Address, uint64_t Size);
+
+  MCSymbol *handleExternalReference(MCInst &Instruction, uint64_t Size,
+                                    uint64_t Offset, uint64_t TargetAddress,
+                                    bool &IsCall);
+
+  void handleIndirectBranch(MCInst &Instruction, uint64_t Size,
+                            uint64_t Offset);
+
+  // Check for linker veneers, which lack relocations and need manual
+  // adjustments.
+  void handleAArch64IndirectCall(MCInst &Instruction, const uint64_t Offset);
+
   /// Scan function for references to other functions. In relocation mode,
   /// add relocations for external references.
   ///
