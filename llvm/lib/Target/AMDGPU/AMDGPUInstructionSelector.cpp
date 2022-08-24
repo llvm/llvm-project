@@ -3694,6 +3694,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     assert(Intr && "not an image intrinsic with image pseudo");
     return selectImageIntrinsic(I, Intr);
   }
+  case AMDGPU::G_AMDGPU_INTRIN_BVH_DUAL_INTERSECT_RAY:
   case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY:
     return selectBVHIntrinsic(I);
   case AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FADD:

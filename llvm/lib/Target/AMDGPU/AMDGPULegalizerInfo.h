@@ -191,6 +191,8 @@ public:
 
   bool legalizeBVHIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
 
+  bool legalizeBVHDualIntrinsic(MachineInstr &MI, MachineIRBuilder &B) const;
+
   bool legalizeFPTruncRound(MachineInstr &MI, MachineIRBuilder &B) const;
 
   bool legalizeImageIntrinsic(

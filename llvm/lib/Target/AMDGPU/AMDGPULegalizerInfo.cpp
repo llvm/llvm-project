@@ -5530,6 +5530,76 @@ bool AMDGPULegalizerInfo::legalizeBVHIntrinsic(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeBVHDualIntrinsic(MachineInstr &MI,
+                                                   MachineIRBuilder &B) const {
+  const LLT S32 = LLT::scalar(32);
+  const LLT V2S32 = LLT::fixed_vector(2, 32);
+  const LLT V3S32 = LLT::fixed_vector(3, 32);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register NodePtr = MI.getOperand(2).getReg();
+  Register RayExtent = MI.getOperand(3).getReg();
+  Register InstanceMask = MI.getOperand(4).getReg();
+  Register RayOrigin = MI.getOperand(5).getReg();
+  Register RayDir = MI.getOperand(6).getReg();
+  Register Offsets = MI.getOperand(7).getReg();
+  Register TDescr = MI.getOperand(8).getReg();
+
+  if (!AMDGPU::isGFX12Plus(ST)) {
+    DiagnosticInfoUnsupported BadIntrin(B.getMF().getFunction(),
+                                        "intrinsic not supported on subtarget",
+                                        MI.getDebugLoc());
+    B.getMF().getFunction().getContext().diagnose(BadIntrin);
+    return false;
+  }
+
+  const unsigned NumVDataDwords = 10;
+  const unsigned NumVAddrDwords = 12;
+  int Opcode = AMDGPU::getMIMGOpcode(AMDGPU::IMAGE_BVH_DUAL_INTERSECT_RAY,
+                                     AMDGPU::MIMGEncGfx12,
+                                     NumVDataDwords, NumVAddrDwords);
+  assert(Opcode != -1);
+
+  SmallVector<Register, 12> Ops;
+  auto packLanes = [&Ops, S32, V2S32, V3S32, &B] (Register Src, LLT Ty) {
+    Register Res;
+    if (Ty == V2S32) {
+      auto Unmerge = B.buildUnmerge({S32, S32}, Src);
+      auto Merged = B.buildMerge(Ty,
+        {Unmerge.getReg(0), Unmerge.getReg(1)});
+      Res = Merged.getReg(0);
+    } else if (Ty == V3S32) {
+      auto Unmerge = B.buildUnmerge({S32, S32, S32}, Src);
+      auto Merged = B.buildMerge(Ty,
+        {Unmerge.getReg(0), Unmerge.getReg(1), Unmerge.getReg(2)});
+      Res = Merged.getReg(0);
+    }
+    Ops.push_back(Res);
+  };
+
+  Ops.push_back(NodePtr);
+  Ops.push_back(B.buildMerge(V2S32,
+    {RayExtent, B.buildAnyExt(S32, InstanceMask).getReg(0)}).getReg(0));
+  packLanes(RayOrigin, V3S32);
+  packLanes(RayDir, V3S32);
+  packLanes(Offsets, V2S32);
+
+  auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_INTRIN_BVH_DUAL_INTERSECT_RAY)
+    .addDef(DstReg)
+    .addImm(Opcode);
+
+  for (Register R : Ops) {
+    MIB.addUse(R);
+  }
+
+  MIB.addUse(TDescr)
+     .addImm(0)
+     .cloneMemRefs(MI);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeFPTruncRound(MachineInstr &MI,
                                                MachineIRBuilder &B) const {
   unsigned Opc;
@@ -5806,6 +5876,8 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return legalizeDSAtomicFPIntrinsic(Helper, MI, IntrID);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:
     return legalizeBVHIntrinsic(MI, B);
+  case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
+    return legalizeBVHDualIntrinsic(MI, B);
   default: {
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrID))

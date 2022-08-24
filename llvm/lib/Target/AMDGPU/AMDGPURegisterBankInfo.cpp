@@ -3063,7 +3063,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     applyMappingImage(MI, OpdMapper, MRI, RSrcIntrin->RsrcArg);
     return;
   }
-  case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY: {
+  case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY:
+  case AMDGPU::G_AMDGPU_INTRIN_BVH_DUAL_INTERSECT_RAY: {
     unsigned N = MI.getNumExplicitOperands() - 2;
     applyDefaultMapping(OpdMapper);
     executeInWaterfallLoop(MI, MRI, { N });
@@ -4566,9 +4567,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     assert(RSrcIntrin->IsImage);
     return getImageMapping(MRI, MI, RSrcIntrin->RsrcArg);
   }
-  case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY: {
+  case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY:
+  case AMDGPU::G_AMDGPU_INTRIN_BVH_DUAL_INTERSECT_RAY: {
     unsigned N = MI.getNumExplicitOperands() - 2;
-    OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, 128);
+    unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
     OpdsMapping[N] = getSGPROpMapping(MI.getOperand(N).getReg(), MRI, *TRI);
     if (N == 3) {
       // Sequential form: all operands combined into VGPR256/VGPR512

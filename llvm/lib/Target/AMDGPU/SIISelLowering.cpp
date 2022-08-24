@@ -1104,6 +1104,7 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                   MachineMemOperand::MOVolatile;
     return true;
   }
+  case Intrinsic::amdgcn_image_bvh_dual_intersect_ray:
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -7712,6 +7713,48 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
 
     return DAG.getMemIntrinsicNode(AMDGPUISD::BUFFER_ATOMIC_CMPSWAP, DL,
                                    Op->getVTList(), Ops, VT, M->getMemOperand());
+  }
+  case Intrinsic::amdgcn_image_bvh_dual_intersect_ray: {
+    MemSDNode *M = cast<MemSDNode>(Op);
+    SDValue NodePtr = M->getOperand(2);
+    SDValue RayExtent = M->getOperand(3);
+    SDValue InstanceMask = M->getOperand(4);
+    SDValue RayOrigin = M->getOperand(5);
+    SDValue RayDir = M->getOperand(6);
+    SDValue Offsets = M->getOperand(7);
+    SDValue TDescr = M->getOperand(8);
+
+    assert(NodePtr.getValueType() == MVT::i64);
+    assert(RayDir.getValueType() == MVT::v3f32);
+
+    if (!AMDGPU::isGFX12Plus(*Subtarget)) {
+      emitRemovedIntrinsicError(DAG, DL, Op.getValueType());
+      return SDValue();
+    }
+
+    const unsigned NumVDataDwords = 10;
+    const unsigned NumVAddrDwords = 12;
+    int Opcode = AMDGPU::getMIMGOpcode(AMDGPU::IMAGE_BVH_DUAL_INTERSECT_RAY,
+                                       AMDGPU::MIMGEncGfx12,
+                                       NumVDataDwords, NumVAddrDwords);
+    assert(Opcode != -1);
+
+    SmallVector<SDValue, 16> Ops;
+    Ops.push_back(NodePtr);
+    Ops.push_back(DAG.getBuildVector(MVT::v2i32, DL,
+                  {DAG.getBitcast(MVT::i32, RayExtent),
+                   DAG.getAnyExtOrTrunc(InstanceMask, DL, MVT::i32)}));
+    Ops.push_back(RayOrigin);
+    Ops.push_back(RayDir);
+    Ops.push_back(Offsets);
+    Ops.push_back(TDescr);
+    Ops.push_back(DAG.getTargetConstant(0, DL, MVT::i1));
+    Ops.push_back(M->getChain());
+
+    auto *NewNode = DAG.getMachineNode(Opcode, DL, M->getVTList(), Ops);
+    MachineMemOperand *MemRef = M->getMemOperand();
+    DAG.setNodeMemRefs(NewNode, {MemRef});
+    return SDValue(NewNode, 0);
   }
   case Intrinsic::amdgcn_image_bvh_intersect_ray: {
     MemSDNode *M = cast<MemSDNode>(Op);

@@ -2022,6 +2022,15 @@ def int_amdgcn_ds_bvh_stack_rtn :
     [ImmArg<ArgIndex<3>>, IntrWillReturn]
   >;
 
+// uint4 llvm.amdgcn.image.bvh.dual.intersect.ray <node_ptr>, <ray_extent>,
+//                                                <ray_origin>, <ray_dir>,
+//                                                <texture_descr>
+def int_amdgcn_image_bvh_dual_intersect_ray :
+  Intrinsic<[llvm_v16i32_ty],
+            [llvm_i64_ty, llvm_float_ty, llvm_i8_ty, llvm_v3f32_ty,
+             llvm_v3f32_ty, llvm_v2i32_ty, llvm_v4i32_ty],
+            [IntrReadMem, IntrWillReturn]>;
+
 // WMMA (Wave Matrix Multiply-Accumulate) intrinsics
 //
 // These operations perform a matrix multiplication and accumulation of
