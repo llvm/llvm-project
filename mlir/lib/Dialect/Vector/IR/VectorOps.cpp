@@ -49,11 +49,11 @@ enum class MaskFormat {
   Unknown = 2,
 };
 
-/// Helper method to classify a 1-D mask value. Currently, the method
+/// Helper method to classify a mask value. Currently, the method
 /// looks "under the hood" of a constant value with dense attributes
 /// and a constant mask operation (since the client may be called at
 /// various stages during progressive lowering).
-static MaskFormat get1DMaskFormat(Value mask) {
+static MaskFormat getMaskFormat(Value mask) {
   if (auto c = mask.getDefiningOp<arith::ConstantOp>()) {
     // Inspect constant dense values. We count up for bits that
     // are set, count down for bits that are cleared, and bail
@@ -77,12 +77,20 @@ static MaskFormat get1DMaskFormat(Value mask) {
     // dimension size, all bits are set. If the index is zero
     // or less, no bits are set.
     ArrayAttr masks = m.getMaskDimSizes();
-    assert(masks.size() == 1);
-    int64_t i = masks[0].cast<IntegerAttr>().getInt();
-    int64_t u = m.getType().getDimSize(0);
-    if (i >= u)
+    auto shape = m.getType().getShape();
+    bool allTrue = true;
+    bool allFalse = true;
+    for (auto pair : llvm::zip(masks, shape)) {
+      int64_t i = std::get<0>(pair).cast<IntegerAttr>().getInt();
+      int64_t u = std::get<1>(pair);
+      if (i < u)
+        allTrue = false;
+      if (i > 0)
+        allFalse = false;
+    }
+    if (allTrue)
       return MaskFormat::AllTrue;
-    if (i <= 0)
+    if (allFalse)
       return MaskFormat::AllFalse;
   }
   return MaskFormat::Unknown;
@@ -3980,7 +3988,7 @@ public:
   using OpRewritePattern<MaskedLoadOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(MaskedLoadOp load,
                                 PatternRewriter &rewriter) const override {
-    switch (get1DMaskFormat(load.getMask())) {
+    switch (getMaskFormat(load.getMask())) {
     case MaskFormat::AllTrue:
       rewriter.replaceOpWithNewOp<vector::LoadOp>(
           load, load.getType(), load.getBase(), load.getIndices());
@@ -4031,7 +4039,7 @@ public:
   using OpRewritePattern<MaskedStoreOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(MaskedStoreOp store,
                                 PatternRewriter &rewriter) const override {
-    switch (get1DMaskFormat(store.getMask())) {
+    switch (getMaskFormat(store.getMask())) {
     case MaskFormat::AllTrue:
       rewriter.replaceOpWithNewOp<vector::StoreOp>(
           store, store.getValueToStore(), store.getBase(), store.getIndices());
@@ -4074,9 +4082,9 @@ LogicalResult GatherOp::verify() {
     return emitOpError("base and result element type should match");
   if (llvm::size(getIndices()) != baseType.getRank())
     return emitOpError("requires ") << baseType.getRank() << " indices";
-  if (resVType.getDimSize(0) != indVType.getDimSize(0))
+  if (resVType.getShape() != indVType.getShape())
     return emitOpError("expected result dim to match indices dim");
-  if (resVType.getDimSize(0) != maskVType.getDimSize(0))
+  if (resVType.getShape() != maskVType.getShape())
     return emitOpError("expected result dim to match mask dim");
   if (resVType != getPassThruVectorType())
     return emitOpError("expected pass_thru of same type as result type");
@@ -4089,7 +4097,7 @@ public:
   using OpRewritePattern<GatherOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(GatherOp gather,
                                 PatternRewriter &rewriter) const override {
-    switch (get1DMaskFormat(gather.getMask())) {
+    switch (getMaskFormat(gather.getMask())) {
     case MaskFormat::AllTrue:
       return failure(); // no unmasked equivalent
     case MaskFormat::AllFalse:
@@ -4135,7 +4143,7 @@ public:
   using OpRewritePattern<ScatterOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(ScatterOp scatter,
                                 PatternRewriter &rewriter) const override {
-    switch (get1DMaskFormat(scatter.getMask())) {
+    switch (getMaskFormat(scatter.getMask())) {
     case MaskFormat::AllTrue:
       return failure(); // no unmasked equivalent
     case MaskFormat::AllFalse:
@@ -4181,7 +4189,7 @@ public:
   using OpRewritePattern<ExpandLoadOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(ExpandLoadOp expand,
                                 PatternRewriter &rewriter) const override {
-    switch (get1DMaskFormat(expand.getMask())) {
+    switch (getMaskFormat(expand.getMask())) {
     case MaskFormat::AllTrue:
       rewriter.replaceOpWithNewOp<vector::LoadOp>(
           expand, expand.getType(), expand.getBase(), expand.getIndices());
@@ -4226,7 +4234,7 @@ public:
   using OpRewritePattern<CompressStoreOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(CompressStoreOp compress,
                                 PatternRewriter &rewriter) const override {
-    switch (get1DMaskFormat(compress.getMask())) {
+    switch (getMaskFormat(compress.getMask())) {
     case MaskFormat::AllTrue:
       rewriter.replaceOpWithNewOp<vector::StoreOp>(
           compress, compress.getValueToStore(), compress.getBase(),
