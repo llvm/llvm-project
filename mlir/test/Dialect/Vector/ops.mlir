@@ -478,11 +478,13 @@ func.func @bitcast(%arg0 : vector<5x1x3x2xf32>,
 }
 
 // CHECK-LABEL: @vector_fma
-func.func @vector_fma(%a: vector<8xf32>, %b: vector<8x4xf32>) {
+func.func @vector_fma(%a: vector<8xf32>, %b: vector<8x4xf32>, %c: vector<f32>) {
   // CHECK: vector.fma %{{.*}} : vector<8xf32>
   vector.fma %a, %a, %a : vector<8xf32>
   // CHECK: vector.fma %{{.*}} : vector<8x4xf32>
   vector.fma %b, %b, %b : vector<8x4xf32>
+  // CHECK: vector.fma %{{.*}} : vector<f32>
+  vector.fma %c, %c, %c : vector<f32>
   return
 }
 
