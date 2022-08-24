@@ -35,6 +35,7 @@
 // Reference:
 //   * A. Newell and S. Pupyrev, Improved Basic Block Reordering,
 //     IEEE Transactions on Computers, 2020
+//     https://arxiv.org/abs/1809.04676
 //
 //===----------------------------------------------------------------------===//
 
@@ -54,40 +55,56 @@ cl::opt<bool> ApplyExtTspWithoutProfile(
     cl::desc("Whether to apply ext-tsp placement for instances w/o profile"),
     cl::init(true), cl::Hidden);
 
-// Algorithm-specific constants. The values are tuned for the best performance
+// Algorithm-specific params. The values are tuned for the best performance
 // of large-scale front-end bound binaries.
-static cl::opt<double>
-    ForwardWeight("ext-tsp-forward-weight", cl::Hidden, cl::init(0.1),
-                  cl::desc("The weight of forward jumps for ExtTSP value"));
+static cl::opt<double> ForwardWeightCond(
+    "ext-tsp-forward-weight-cond", cl::ReallyHidden, cl::init(0.1),
+    cl::desc("The weight of conditional forward jumps for ExtTSP value"));
 
-static cl::opt<double>
-    BackwardWeight("ext-tsp-backward-weight", cl::Hidden, cl::init(0.1),
-                   cl::desc("The weight of backward jumps for ExtTSP value"));
+static cl::opt<double> ForwardWeightUncond(
+    "ext-tsp-forward-weight-uncond", cl::ReallyHidden, cl::init(0.1),
+    cl::desc("The weight of unconditional forward jumps for ExtTSP value"));
+
+static cl::opt<double> BackwardWeightCond(
+    "ext-tsp-backward-weight-cond", cl::ReallyHidden, cl::init(0.1),
+    cl::desc("The weight of conditonal backward jumps for ExtTSP value"));
+
+static cl::opt<double> BackwardWeightUncond(
+    "ext-tsp-backward-weight-uncond", cl::ReallyHidden, cl::init(0.1),
+    cl::desc("The weight of unconditonal backward jumps for ExtTSP value"));
+
+static cl::opt<double> FallthroughWeightCond(
+    "ext-tsp-fallthrough-weight-cond", cl::ReallyHidden, cl::init(1.0),
+    cl::desc("The weight of conditional fallthrough jumps for ExtTSP value"));
+
+static cl::opt<double> FallthroughWeightUncond(
+    "ext-tsp-fallthrough-weight-uncond", cl::ReallyHidden, cl::init(1.05),
+    cl::desc("The weight of unconditional fallthrough jumps for ExtTSP value"));
 
 static cl::opt<unsigned> ForwardDistance(
-    "ext-tsp-forward-distance", cl::Hidden, cl::init(1024),
+    "ext-tsp-forward-distance", cl::ReallyHidden, cl::init(1024),
     cl::desc("The maximum distance (in bytes) of a forward jump for ExtTSP"));
 
 static cl::opt<unsigned> BackwardDistance(
-    "ext-tsp-backward-distance", cl::Hidden, cl::init(640),
+    "ext-tsp-backward-distance", cl::ReallyHidden, cl::init(640),
     cl::desc("The maximum distance (in bytes) of a backward jump for ExtTSP"));
 
 // The maximum size of a chain created by the algorithm. The size is bounded
 // so that the algorithm can efficiently process extremely large instance.
 static cl::opt<unsigned>
-    MaxChainSize("ext-tsp-max-chain-size", cl::Hidden, cl::init(4096),
+    MaxChainSize("ext-tsp-max-chain-size", cl::ReallyHidden, cl::init(4096),
                  cl::desc("The maximum size of a chain to create."));
 
 // The maximum size of a chain for splitting. Larger values of the threshold
 // may yield better quality at the cost of worsen run-time.
 static cl::opt<unsigned> ChainSplitThreshold(
-    "ext-tsp-chain-split-threshold", cl::Hidden, cl::init(128),
+    "ext-tsp-chain-split-threshold", cl::ReallyHidden, cl::init(128),
     cl::desc("The maximum size of a chain to apply splitting"));
 
 // The option enables splitting (large) chains along in-coming and out-going
 // jumps. This typically results in a better quality.
 static cl::opt<bool> EnableChainSplitAlongJumps(
-    "ext-tsp-enable-chain-split-along-jumps", cl::Hidden, cl::init(true),
+    "ext-tsp-enable-chain-split-along-jumps", cl::ReallyHidden, cl::init(true),
     cl::desc("The maximum size of a chain to apply splitting"));
 
 namespace {
@@ -95,31 +112,37 @@ namespace {
 // Epsilon for comparison of doubles.
 constexpr double EPS = 1e-8;
 
+// Compute the Ext-TSP score for a given jump.
+double jumpExtTSPScore(uint64_t JumpDist, uint64_t JumpMaxDist, uint64_t Count,
+                       double Weight) {
+  if (JumpDist > JumpMaxDist)
+    return 0;
+  double Prob = 1.0 - static_cast<double>(JumpDist) / JumpMaxDist;
+  return Weight * Prob * Count;
+}
+
 // Compute the Ext-TSP score for a jump between a given pair of blocks,
 // using their sizes, (estimated) addresses and the jump execution count.
 double extTSPScore(uint64_t SrcAddr, uint64_t SrcSize, uint64_t DstAddr,
-                   uint64_t Count) {
+                   uint64_t Count, bool IsConditional) {
   // Fallthrough
   if (SrcAddr + SrcSize == DstAddr) {
-    // Assume that FallthroughWeight = 1.0 after normalization
-    return static_cast<double>(Count);
+    return jumpExtTSPScore(0, 1, Count,
+                           IsConditional ? FallthroughWeightCond
+                                         : FallthroughWeightUncond);
   }
   // Forward
   if (SrcAddr + SrcSize < DstAddr) {
-    const auto Dist = DstAddr - (SrcAddr + SrcSize);
-    if (Dist <= ForwardDistance) {
-      double Prob = 1.0 - static_cast<double>(Dist) / ForwardDistance;
-      return ForwardWeight * Prob * Count;
-    }
-    return 0;
+    const uint64_t Dist = DstAddr - (SrcAddr + SrcSize);
+    return jumpExtTSPScore(Dist, ForwardDistance, Count,
+                           IsConditional ? ForwardWeightCond
+                                         : ForwardWeightUncond);
   }
   // Backward
-  const auto Dist = SrcAddr + SrcSize - DstAddr;
-  if (Dist <= BackwardDistance) {
-    double Prob = 1.0 - static_cast<double>(Dist) / BackwardDistance;
-    return BackwardWeight * Prob * Count;
-  }
-  return 0;
+  const uint64_t Dist = SrcAddr + SrcSize - DstAddr;
+  return jumpExtTSPScore(Dist, BackwardDistance, Count,
+                         IsConditional ? BackwardWeightCond
+                                       : BackwardWeightUncond);
 }
 
 /// A type of merging two chains, X and Y. The former chain is split into
@@ -191,8 +214,8 @@ public:
   std::vector<Jump *> InJumps;
 
 public:
-  explicit Block(size_t Index, uint64_t Size_, uint64_t EC)
-      : Index(Index), Size(Size_), ExecutionCount(EC) {}
+  explicit Block(size_t Index, uint64_t Size, uint64_t EC)
+      : Index(Index), Size(Size), ExecutionCount(EC) {}
   bool isEntry() const { return Index == 0; }
 };
 
@@ -210,6 +233,8 @@ public:
   Block *Target;
   // Execution count of the arc in the profile data.
   uint64_t ExecutionCount{0};
+  // Whether the jump corresponds to a conditional branch.
+  bool IsConditional{false};
 
 public:
   explicit Jump(Block *Source, Block *Target, uint64_t ExecutionCount)
@@ -230,6 +255,14 @@ public:
   uint64_t id() const { return Id; }
 
   bool isEntry() const { return Blocks[0]->Index == 0; }
+
+  bool isCold() const {
+    for (auto Block : Blocks) {
+      if (Block->ExecutionCount > 0)
+        return false;
+    }
+    return true;
+  }
 
   double score() const { return Score; }
 
@@ -371,10 +404,10 @@ void Chain::mergeEdges(Chain *Other) {
 
   // Update edges adjacent to chain Other
   for (auto EdgeIt : Other->Edges) {
-    const auto DstChain = EdgeIt.first;
-    const auto DstEdge = EdgeIt.second;
-    const auto TargetChain = DstChain == Other ? this : DstChain;
-    auto CurEdge = getEdge(TargetChain);
+    Chain *DstChain = EdgeIt.first;
+    ChainEdge *DstEdge = EdgeIt.second;
+    Chain *TargetChain = DstChain == Other ? this : DstChain;
+    ChainEdge *CurEdge = getEdge(TargetChain);
     if (CurEdge == nullptr) {
       DstEdge->changeEndpoint(Other, this);
       this->addEdge(TargetChain, DstEdge);
@@ -436,7 +469,7 @@ private:
 /// The implementation of the ExtTSP algorithm.
 class ExtTSPImpl {
   using EdgeT = std::pair<uint64_t, uint64_t>;
-  using EdgeCountMap = DenseMap<EdgeT, uint64_t>;
+  using EdgeCountMap = std::vector<std::pair<EdgeT, uint64_t>>;
 
 public:
   ExtTSPImpl(size_t NumNodes, const std::vector<uint64_t> &NodeSizes,
@@ -478,12 +511,14 @@ private:
     }
 
     // Initialize jumps between blocks
-    SuccNodes = std::vector<std::vector<uint64_t>>(NumNodes);
-    PredNodes = std::vector<std::vector<uint64_t>>(NumNodes);
+    SuccNodes.resize(NumNodes);
+    PredNodes.resize(NumNodes);
+    std::vector<uint64_t> OutDegree(NumNodes, 0);
     AllJumps.reserve(EdgeCounts.size());
     for (auto It : EdgeCounts) {
       auto Pred = It.first.first;
       auto Succ = It.first.second;
+      OutDegree[Pred]++;
       // Ignore self-edges
       if (Pred == Succ)
         continue;
@@ -499,11 +534,15 @@ private:
         Block.OutJumps.push_back(&AllJumps.back());
       }
     }
+    for (auto &Jump : AllJumps) {
+      assert(OutDegree[Jump.Source->Index] > 0);
+      Jump.IsConditional = OutDegree[Jump.Source->Index] > 1;
+    }
 
     // Initialize chains
     AllChains.reserve(NumNodes);
     HotChains.reserve(NumNodes);
-    for (auto &Block : AllBlocks) {
+    for (Block &Block : AllBlocks) {
       AllChains.emplace_back(Block.Index, &Block);
       Block.CurChain = &AllChains.back();
       if (Block.ExecutionCount > 0) {
@@ -513,10 +552,10 @@ private:
 
     // Initialize chain edges
     AllEdges.reserve(AllJumps.size());
-    for (auto &Block : AllBlocks) {
+    for (Block &Block : AllBlocks) {
       for (auto &Jump : Block.OutJumps) {
         auto SuccBlock = Jump->Target;
-        auto CurEdge = Block.CurChain->getEdge(SuccBlock->CurChain);
+        ChainEdge *CurEdge = Block.CurChain->getEdge(SuccBlock->CurChain);
         // this edge is already present in the graph
         if (CurEdge != nullptr) {
           assert(SuccBlock->CurChain->getEdge(Block.CurChain) != nullptr);
@@ -596,11 +635,11 @@ private:
       Chain *BestChainSucc = nullptr;
       auto BestGain = MergeGainTy();
       // Iterate over all pairs of chains
-      for (auto ChainPred : HotChains) {
+      for (Chain *ChainPred : HotChains) {
         // Get candidates for merging with the current chain
         for (auto EdgeIter : ChainPred->edges()) {
-          auto ChainSucc = EdgeIter.first;
-          auto ChainEdge = EdgeIter.second;
+          Chain *ChainSucc = EdgeIter.first;
+          class ChainEdge *ChainEdge = EdgeIter.second;
           // Ignore loop edges
           if (ChainPred == ChainSucc)
             continue;
@@ -610,7 +649,8 @@ private:
             continue;
 
           // Compute the gain of merging the two chains
-          auto CurGain = getBestMergeGain(ChainPred, ChainSucc, ChainEdge);
+          MergeGainTy CurGain =
+              getBestMergeGain(ChainPred, ChainSucc, ChainEdge);
           if (CurGain.score() <= EPS)
             continue;
 
@@ -635,11 +675,13 @@ private:
     }
   }
 
-  /// Merge cold blocks to reduce code size.
+  /// Merge remaining blocks into chains w/o taking jump counts into
+  /// consideration. This allows to maintain the original block order in the
+  /// absense of profile data
   void mergeColdChains() {
     for (size_t SrcBB = 0; SrcBB < NumNodes; SrcBB++) {
-      // Iterating over neighbors in the reverse order to make sure original
-      // fallthrough jumps are merged first
+      // Iterating in reverse order to make sure original fallthrough jumps are
+      // merged first; this might be beneficial for code size.
       size_t NumSuccs = SuccNodes[SrcBB].size();
       for (size_t Idx = 0; Idx < NumSuccs; Idx++) {
         auto DstBB = SuccNodes[SrcBB][NumSuccs - Idx - 1];
@@ -647,7 +689,8 @@ private:
         auto DstChain = AllBlocks[DstBB].CurChain;
         if (SrcChain != DstChain && !DstChain->isEntry() &&
             SrcChain->blocks().back()->Index == SrcBB &&
-            DstChain->blocks().front()->Index == DstBB) {
+            DstChain->blocks().front()->Index == DstBB &&
+            SrcChain->isCold() == DstChain->isCold()) {
           mergeChains(SrcChain, DstChain, 0, MergeTypeTy::X_Y);
         }
       }
@@ -666,11 +709,12 @@ private:
     });
 
     double Score = 0;
-    for (const auto &Jump : Jumps) {
-      const auto SrcBlock = Jump->Source;
-      const auto DstBlock = Jump->Target;
+    for (auto &Jump : Jumps) {
+      const Block *SrcBlock = Jump->Source;
+      const Block *DstBlock = Jump->Target;
       Score += ::extTSPScore(SrcBlock->EstimatedAddr, SrcBlock->Size,
-                             DstBlock->EstimatedAddr, Jump->ExecutionCount);
+                             DstBlock->EstimatedAddr, Jump->ExecutionCount,
+                             Jump->IsConditional);
     }
     return Score;
   }
@@ -689,7 +733,7 @@ private:
 
     // Precompute jumps between ChainPred and ChainSucc
     auto Jumps = Edge->jumps();
-    auto EdgePP = ChainPred->getEdge(ChainPred);
+    ChainEdge *EdgePP = ChainPred->getEdge(ChainPred);
     if (EdgePP != nullptr) {
       Jumps.insert(Jumps.end(), EdgePP->jumps().begin(), EdgePP->jumps().end());
     }
@@ -813,14 +857,14 @@ private:
     assert(Into != From && "a chain cannot be merged with itself");
 
     // Merge the blocks
-    auto MergedBlocks =
+    MergedChain MergedBlocks =
         mergeBlocks(Into->blocks(), From->blocks(), MergeOffset, MergeType);
     Into->merge(From, MergedBlocks.getBlocks());
     Into->mergeEdges(From);
     From->clear();
 
     // Update cached ext-tsp score for the new chain
-    auto SelfEdge = Into->getEdge(Into);
+    ChainEdge *SelfEdge = Into->getEdge(Into);
     if (SelfEdge != nullptr) {
       MergedBlocks = MergedChain(Into->blocks().begin(), Into->blocks().end());
       Into->setScore(extTSPScore(MergedBlocks, SelfEdge->jumps()));
@@ -858,7 +902,7 @@ private:
     // Sorting chains by density in the decreasing order
     std::stable_sort(SortedChains.begin(), SortedChains.end(),
                      [&](const Chain *C1, const Chain *C2) {
-                       // Makre sure the original entry block is at the
+                       // Make sure the original entry block is at the
                        // beginning of the order
                        if (C1->isEntry() != C2->isEntry()) {
                          return C1->isEntry();
@@ -872,8 +916,8 @@ private:
 
     // Collect the blocks in the order specified by their chains
     Order.reserve(NumNodes);
-    for (auto Chain : SortedChains) {
-      for (auto Block : Chain->blocks()) {
+    for (Chain *Chain : SortedChains) {
+      for (Block *Block : Chain->blocks()) {
         Order.push_back(Block->Index);
       }
     }
@@ -910,7 +954,7 @@ private:
 std::vector<uint64_t> llvm::applyExtTspLayout(
     const std::vector<uint64_t> &NodeSizes,
     const std::vector<uint64_t> &NodeCounts,
-    const DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> &EdgeCounts) {
+    const std::vector<std::pair<EdgeT, uint64_t>> &EdgeCounts) {
   size_t NumNodes = NodeSizes.size();
 
   // Verify correctness of the input data.
@@ -931,11 +975,16 @@ std::vector<uint64_t> llvm::applyExtTspLayout(
 double llvm::calcExtTspScore(
     const std::vector<uint64_t> &Order, const std::vector<uint64_t> &NodeSizes,
     const std::vector<uint64_t> &NodeCounts,
-    const DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> &EdgeCounts) {
+    const std::vector<std::pair<EdgeT, uint64_t>> &EdgeCounts) {
   // Estimate addresses of the blocks in memory
-  auto Addr = std::vector<uint64_t>(NodeSizes.size(), 0);
+  std::vector<uint64_t> Addr(NodeSizes.size(), 0);
   for (size_t Idx = 1; Idx < Order.size(); Idx++) {
     Addr[Order[Idx]] = Addr[Order[Idx - 1]] + NodeSizes[Order[Idx - 1]];
+  }
+  std::vector<uint64_t> OutDegree(NodeSizes.size(), 0);
+  for (auto It : EdgeCounts) {
+    auto Pred = It.first.first;
+    OutDegree[Pred]++;
   }
 
   // Increase the score for each jump
@@ -944,7 +993,9 @@ double llvm::calcExtTspScore(
     auto Pred = It.first.first;
     auto Succ = It.first.second;
     uint64_t Count = It.second;
-    Score += extTSPScore(Addr[Pred], NodeSizes[Pred], Addr[Succ], Count);
+    bool IsConditional = OutDegree[Pred] > 1;
+    Score += ::extTSPScore(Addr[Pred], NodeSizes[Pred], Addr[Succ], Count,
+                           IsConditional);
   }
   return Score;
 }
@@ -952,8 +1003,8 @@ double llvm::calcExtTspScore(
 double llvm::calcExtTspScore(
     const std::vector<uint64_t> &NodeSizes,
     const std::vector<uint64_t> &NodeCounts,
-    const DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> &EdgeCounts) {
-  auto Order = std::vector<uint64_t>(NodeSizes.size());
+    const std::vector<std::pair<EdgeT, uint64_t>> &EdgeCounts) {
+  std::vector<uint64_t> Order(NodeSizes.size());
   for (size_t Idx = 0; Idx < NodeSizes.size(); Idx++) {
     Order[Idx] = Idx;
   }

@@ -318,7 +318,3 @@ bool MipsRegisterInfo::canRealignStack(const MachineFunction &MF) const {
   // sized objects.
   return MF.getRegInfo().canReserveReg(BP);
 }
-
-bool MipsRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
-  return PhysReg == Mips::ZERO_64 || PhysReg == Mips::ZERO;
-}

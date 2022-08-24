@@ -94,11 +94,9 @@ public:
 
   bool operator!() const { return impl == nullptr; }
 
-  template <typename U>
+  template <typename... Tys>
   bool isa() const;
-  template <typename First, typename Second, typename... Rest>
-  bool isa() const;
-  template <typename First, typename... Rest>
+  template <typename... Tys>
   bool isa_and_nonnull() const;
   template <typename U>
   U dyn_cast() const;
@@ -185,6 +183,9 @@ public:
   /// Return the abstract type descriptor for this type.
   const AbstractTy &getAbstractType() { return impl->getAbstractType(); }
 
+  /// Return the Type implementation.
+  ImplType *getImpl() const { return impl; }
+
 protected:
   ImplType *impl{nullptr};
 };
@@ -250,34 +251,29 @@ inline ::llvm::hash_code hash_value(Type arg) {
   return DenseMapInfo<const Type::ImplType *>::getHashValue(arg.impl);
 }
 
-template <typename U>
+template <typename... Tys>
 bool Type::isa() const {
-  assert(impl && "isa<> used on a null type.");
-  return U::classof(*this);
+  return llvm::isa<Tys...>(*this);
 }
 
-template <typename First, typename Second, typename... Rest>
-bool Type::isa() const {
-  return isa<First>() || isa<Second, Rest...>();
-}
-
-template <typename First, typename... Rest>
+template <typename... Tys>
 bool Type::isa_and_nonnull() const {
-  return impl && isa<First, Rest...>();
+  return llvm::isa_and_present<Tys...>(*this);
 }
 
 template <typename U>
 U Type::dyn_cast() const {
-  return isa<U>() ? U(impl) : U(nullptr);
+  return llvm::dyn_cast<U>(*this);
 }
+
 template <typename U>
 U Type::dyn_cast_or_null() const {
-  return (impl && isa<U>()) ? U(impl) : U(nullptr);
+  return llvm::dyn_cast_or_null<U>(*this);
 }
+
 template <typename U>
 U Type::cast() const {
-  assert(isa<U>());
-  return U(impl);
+  return llvm::cast<U>(*this);
 }
 
 } // namespace mlir
@@ -323,6 +319,32 @@ public:
     return mlir::Type::getFromOpaquePointer(P);
   }
   static constexpr int NumLowBitsAvailable = 3;
+};
+
+/// Add support for llvm style casts.
+/// We provide a cast between To and From if From is mlir::Type or derives from
+/// it
+template <typename To, typename From>
+struct CastInfo<To, From,
+                typename std::enable_if<
+                    std::is_same_v<mlir::Type, std::remove_const_t<From>> ||
+                    std::is_base_of_v<mlir::Type, From>>::type>
+    : NullableValueCastFailed<To>,
+      DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+  /// Arguments are taken as mlir::Type here and not as From.
+  /// Because when casting from an intermediate type of the hierarchy to one of
+  /// its children, the val.getTypeID() inside T::classof will use the static
+  /// getTypeID of the parent instead of the non-static Type::getTypeID return
+  /// the dynamic ID. so T::classof would end up comparing the static TypeID of
+  /// The children to the static TypeID of its parent making it impossible to
+  /// downcast from the parent to the child
+  static inline bool isPossible(mlir::Type ty) {
+    /// Return a constant true instead of a dynamic true when casting to self or
+    /// up the hierarchy
+    return std::is_same_v<To, std::remove_const_t<From>> ||
+           std::is_base_of_v<To, From> || To::classof(ty);
+  }
+  static inline To doCast(mlir::Type ty) { return To(ty.getImpl()); }
 };
 
 } // namespace llvm

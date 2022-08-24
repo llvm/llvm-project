@@ -203,24 +203,26 @@ def Arith_AddIOp : Arith_IntBinaryOp<"addi", [Commutative]> {
 }
 
 
-def Arith_AddICarryOp : Arith_Op<"addi_carry", [Commutative,
+def Arith_AddUICarryOp : Arith_Op<"addui_carry", [Commutative,
     AllTypesMatch<["lhs", "rhs", "sum"]>]> {
-  let summary = "integer addition operation returning both the sum and carry";
+  let summary = "unsigned integer addition operation returning sum and carry";
   let description = [{
-    The `addi_carry` operation takes two operands and returns two results: the
-    sum (same type as both operands), and the carry (boolean-like).
+    The `addui_carry` operation takes two operands and returns two results: the
+    sum (same type as both operands), and the carry (boolean-like). The carry
+    value `1` indicates unsigned addition overflow, while indicates `0` no
+    overflow.
 
     Example:
 
     ```mlir
     // Scalar addition.
-    %sum, %carry = arith.addi_carry %b, %c : i64, i1
+    %sum, %carry = arith.addui_carry %b, %c : i64, i1
 
     // Vector element-wise addition.
-    %b:2 = arith.addi_carry %g, %h : vector<4xi32>, vector<4xi1>
+    %b:2 = arith.addui_carry %g, %h : vector<4xi32>, vector<4xi1>
 
     // Tensor element-wise addition.
-    %c:2 = arith.addi_carry %y, %z : tensor<4x?xi8>, tensor<4x?xi1>
+    %c:2 = arith.addui_carry %y, %z : tensor<4x?xi8>, tensor<4x?xi1>
     ```
   }];
 

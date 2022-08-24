@@ -1474,13 +1474,13 @@ public:
       break;
     case Intrinsic::cttz:
       // FIXME: If necessary, this should go in target-specific overrides.
-      if (RetVF.isScalar() && getTLI()->isCheapToSpeculateCttz())
+      if (RetVF.isScalar() && getTLI()->isCheapToSpeculateCttz(RetTy))
         return TargetTransformInfo::TCC_Basic;
       break;
 
     case Intrinsic::ctlz:
       // FIXME: If necessary, this should go in target-specific overrides.
-      if (RetVF.isScalar() && getTLI()->isCheapToSpeculateCtlz())
+      if (RetVF.isScalar() && getTLI()->isCheapToSpeculateCtlz(RetTy))
         return TargetTransformInfo::TCC_Basic;
       break;
 

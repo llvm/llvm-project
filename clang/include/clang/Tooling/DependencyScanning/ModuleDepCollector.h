@@ -176,6 +176,13 @@ private:
                            llvm::DenseSet<const Module *> &AddedModules);
   void addModuleDep(const Module *M, ModuleDeps &MD,
                     llvm::DenseSet<const Module *> &AddedModules);
+
+  /// Traverses the affecting modules and updates \c MD with references to the
+  /// parent \c ModuleDepCollector info.
+  void addAllAffectingModules(const Module *M, ModuleDeps &MD,
+                              llvm::DenseSet<const Module *> &AddedModules);
+  void addAffectingModule(const Module *M, ModuleDeps &MD,
+                          llvm::DenseSet<const Module *> &AddedModules);
 };
 
 /// Collects modular and non-modular dependencies of the main file by attaching

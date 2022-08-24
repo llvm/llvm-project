@@ -4376,6 +4376,11 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
         Unresolved.Mod->Imports.insert(ResolvedMod);
       continue;
 
+    case UnresolvedModuleRef::Affecting:
+      if (ResolvedMod)
+        Unresolved.Mod->AffectingModules.insert(ResolvedMod);
+      continue;
+
     case UnresolvedModuleRef::Export:
       if (ResolvedMod || Unresolved.IsWildcard)
         Unresolved.Mod->Exports.push_back(
@@ -5669,6 +5674,18 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
         Unresolved.Mod = CurrentModule;
         Unresolved.ID = Record[Idx];
         Unresolved.Kind = UnresolvedModuleRef::Import;
+        Unresolved.IsWildcard = false;
+        UnresolvedModuleRefs.push_back(Unresolved);
+      }
+      break;
+
+    case SUBMODULE_AFFECTING_MODULES:
+      for (unsigned Idx = 0; Idx != Record.size(); ++Idx) {
+        UnresolvedModuleRef Unresolved;
+        Unresolved.File = &F;
+        Unresolved.Mod = CurrentModule;
+        Unresolved.ID = Record[Idx];
+        Unresolved.Kind = UnresolvedModuleRef::Affecting;
         Unresolved.IsWildcard = false;
         UnresolvedModuleRefs.push_back(Unresolved);
       }
