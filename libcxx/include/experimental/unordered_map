@@ -59,6 +59,8 @@ namespace pmr {
 
 _LIBCPP_BEGIN_NAMESPACE_LFTS_PMR
 
+#ifndef _LIBCPP_CXX03_LANG
+
 template <class _Key, class _Value,
           class _Hash = hash<_Key>, class _Pred = equal_to<_Key>>
 using unordered_map = _VSTD::unordered_map<_Key, _Value, _Hash, _Pred,
@@ -68,6 +70,8 @@ template <class _Key, class _Value,
           class _Hash = hash<_Key>, class _Pred = equal_to<_Key>>
 using unordered_multimap = _VSTD::unordered_multimap<_Key, _Value, _Hash, _Pred,
                         polymorphic_allocator<pair<const _Key, _Value>>>;
+
+#endif // _LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_LFTS_PMR
 
