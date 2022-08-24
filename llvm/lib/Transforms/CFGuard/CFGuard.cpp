@@ -247,7 +247,7 @@ bool CFGuard::doInitialization(Module &M) {
   } else if (GuardMechanism == CF_Dispatch) {
     GuardFnName = "__guard_dispatch_icall_fptr";
   } else {
-    assert("Invalid CFGuard mechanism");
+    assert(false && "Invalid CFGuard mechanism");
   }
   GuardFnGlobal = M.getOrInsertGlobal(GuardFnName, GuardFnPtrType, [&] {
     auto *Var = new GlobalVariable(M, GuardFnPtrType, false,
