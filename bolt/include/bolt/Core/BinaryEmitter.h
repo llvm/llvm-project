@@ -35,7 +35,7 @@ void emitBinaryContext(MCStreamer &Streamer, BinaryContext &BC,
 /// Emit \p BF function code. The caller is responsible for emitting function
 /// symbol(s) and setting the section to emit the code to.
 void emitFunctionBody(MCStreamer &Streamer, BinaryFunction &BF,
-                      FunctionFragment &FF, bool EmitCodeOnly);
+                      const FunctionFragment &FF, bool EmitCodeOnly);
 
 } // namespace bolt
 } // namespace llvm
