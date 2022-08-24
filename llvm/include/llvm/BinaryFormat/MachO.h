@@ -50,7 +50,8 @@ enum HeaderFileType {
   MH_BUNDLE = 0x8u,
   MH_DYLIB_STUB = 0x9u,
   MH_DSYM = 0xAu,
-  MH_KEXT_BUNDLE = 0xBu
+  MH_KEXT_BUNDLE = 0xBu,
+  MH_FILESET = 0xCu,
 };
 
 enum {
@@ -885,6 +886,14 @@ struct linker_option_command {
   uint32_t count;
 };
 
+struct fileset_entry_command {
+  uint32_t cmd;
+  uint32_t cmdsize;
+  uint64_t vmaddr;
+  uint64_t fileoff;
+  uint32_t entry_id;
+};
+
 // The symseg_command is obsolete and no longer supported.
 struct symseg_command {
   uint32_t cmd;
@@ -1361,6 +1370,14 @@ inline void swapStruct(linker_option_command &C) {
   sys::swapByteOrder(C.cmd);
   sys::swapByteOrder(C.cmdsize);
   sys::swapByteOrder(C.count);
+}
+
+inline void swapStruct(fileset_entry_command &C) {
+  sys::swapByteOrder(C.cmd);
+  sys::swapByteOrder(C.cmdsize);
+  sys::swapByteOrder(C.vmaddr);
+  sys::swapByteOrder(C.fileoff);
+  sys::swapByteOrder(C.entry_id);
 }
 
 inline void swapStruct(version_min_command &C) {
