@@ -204,10 +204,14 @@ bool FunctionLayout::update(const ArrayRef<BinaryBasicBlock *> NewLayout) {
 
 void FunctionLayout::clear() {
   Blocks = BasicBlockListType();
-  for (FunctionFragment *const FF : Fragments)
-    delete FF;
-  Fragments = FragmentListType();
-  addFragment();
+  // If the binary does not have relocations and is not split, the function will
+  // be written to the output stream at its original file offset (see
+  // `RewriteInstance::rewriteFile`). Hence, when the layout is cleared, retain
+  // the main fragment, so that this information is not lost.
+  std::for_each(Fragments.begin() + 1, Fragments.end(),
+                [](FunctionFragment *const FF) { delete FF; });
+  Fragments = FragmentListType{Fragments.front()};
+  getMainFragment().Size = 0;
 }
 
 const BinaryBasicBlock *

@@ -83,6 +83,20 @@ private:
   unsigned StartIndex;
   unsigned Size = 0;
 
+  /// Output address for the fragment.
+  uint64_t Address = 0;
+
+  /// The address for the code for this fragment in codegen memory. Used for
+  /// functions that are emitted in a dedicated section with a fixed address,
+  /// e.g. for functions that are overwritten in-place.
+  uint64_t ImageAddress = 0;
+
+  /// The size of the code in memory.
+  uint64_t ImageSize = 0;
+
+  /// Offset in the file.
+  uint64_t FileOffset = 0;
+
   FunctionFragment(FunctionLayout &Layout, FragmentNum Num);
   FunctionFragment(const FunctionFragment &) = default;
   FunctionFragment(FunctionFragment &&) = default;
@@ -96,6 +110,15 @@ public:
     return getFragmentNum() == FragmentNum::main();
   }
   bool isSplitFragment() const { return !isMainFragment(); }
+
+  uint64_t getAddress() const { return Address; }
+  void setAddress(uint64_t Value) { Address = Value; }
+  uint64_t getImageAddress() const { return ImageAddress; }
+  void setImageAddress(uint64_t Address) { ImageAddress = Address; }
+  uint64_t getImageSize() const { return ImageSize; }
+  void setImageSize(uint64_t Size) { ImageSize = Size; }
+  uint64_t getFileOffset() const { return FileOffset; }
+  void setFileOffset(uint64_t Offset) { FileOffset = Offset; }
 
   unsigned size() const { return Size; };
   bool empty() const { return size() == 0; };
