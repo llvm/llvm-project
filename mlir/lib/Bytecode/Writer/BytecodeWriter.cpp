@@ -401,9 +401,6 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
   offsetEmitter.emitVarInt(llvm::size(numberingState.getAttributes()));
   offsetEmitter.emitVarInt(llvm::size(numberingState.getTypes()));
 
-  // The writer used when emitting using a custom bytecode encoding.
-  DialectWriter dialectWriter(attrTypeEmitter, numberingState, stringSection);
-
   // A functor used to emit an attribute or type entry.
   uint64_t prevOffset = 0;
   auto emitAttrOrType = [&](auto &entry) {
@@ -412,6 +409,10 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
     // First, try to emit this entry using the dialect bytecode interface.
     bool hasCustomEncoding = false;
     if (const BytecodeDialectInterface *interface = entry.dialect->interface) {
+      // The writer used when emitting using a custom bytecode encoding.
+      DialectWriter dialectWriter(attrTypeEmitter, numberingState,
+                                  stringSection);
+
       if constexpr (std::is_same_v<std::decay_t<decltype(entryValue)>, Type>) {
         // TODO: We don't currently support custom encoded mutable types.
         hasCustomEncoding =
