@@ -16,13 +16,13 @@ define i64 @getLargeConstantI64() {
   ret i64 34359738368
 }
 
-; Capabilities:
+;; Capabilities:
 ; CHECK-DAG: OpCapability Int16
 ; CHECK-DAG: OpCapability Int64
 
 ; CHECK-NOT: DAG-FENCE
 
-; Names:
+;; Names:
 ; CHECK-DAG: OpName %[[#GET_I16:]] "getConstantI16"
 ; CHECK-DAG: OpName %[[#GET_I32:]] "getConstantI32"
 ; CHECK-DAG: OpName %[[#GET_I64:]] "getConstantI64"
@@ -30,7 +30,7 @@ define i64 @getLargeConstantI64() {
 
 ; CHECK-NOT: DAG-FENCE
 
-; Types and Constants:
+;; Types and Constants:
 ; CHECK-DAG: %[[#I16:]] = OpTypeInt 16 0
 ; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#I64:]] = OpTypeInt 64 0
