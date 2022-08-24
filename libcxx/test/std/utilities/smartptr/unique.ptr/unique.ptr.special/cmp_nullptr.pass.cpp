@@ -35,7 +35,7 @@
 // template <class T, class D>
 //     bool operator>=(nullptr_t, const unique_ptr<T, D>& y);
 // template<class T, class D>
-//   requires three_­way_­comparable<typename unique_ptr<T, D>::pointer>
+//   requires three_way_comparable<typename unique_ptr<T, D>::pointer>
 //   constexpr compare_three_way_result_t<typename unique_ptr<T, D>::pointer>
 //     operator<=>(const unique_ptr<T, D>& x, nullptr_t);                            // C++20
 

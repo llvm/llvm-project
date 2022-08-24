@@ -304,8 +304,8 @@ public:
           loc, llvm1DVectorTy, ptrs, /*mask=*/vectorOperands[1],
           /*passThru=*/vectorOperands[2], rewriter.getI32IntegerAttr(align));
     };
-    ValueRange vectorOperands = {adaptor.getIndexVec(), adaptor.getMask(),
-                                 adaptor.getPassThru()};
+    SmallVector<Value> vectorOperands = {
+        adaptor.getIndexVec(), adaptor.getMask(), adaptor.getPassThru()};
     return LLVM::detail::handleMultidimensionalVectors(
         gather, vectorOperands, *getTypeConverter(), callback, rewriter);
   }

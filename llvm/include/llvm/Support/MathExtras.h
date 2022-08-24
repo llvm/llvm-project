@@ -486,12 +486,12 @@ constexpr inline bool isShiftedMask_64(uint64_t Value) {
 /// Return true if the argument is a power of two > 0.
 /// Ex. isPowerOf2_32(0x00100000U) == true (32 bit edition.)
 constexpr inline bool isPowerOf2_32(uint32_t Value) {
-  return Value && !(Value & (Value - 1));
+  return llvm::has_single_bit(Value);
 }
 
 /// Return true if the argument is a power of two > 0 (64 bit edition.)
 constexpr inline bool isPowerOf2_64(uint64_t Value) {
-  return Value && !(Value & (Value - 1));
+  return llvm::has_single_bit(Value);
 }
 
 /// Count the number of ones from the most significant bit to the first

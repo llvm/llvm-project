@@ -207,7 +207,26 @@ reference to the parent dialect instead.
 
 ##### Dialect Defined Encoding
 
-TODO: This is not yet supported.
+In addition to the assembly format fallback, dialects may also provide a custom
+encoding for their attributes and types. Custom encodings are very beneficial in
+that they are significantly smaller and faster to read and write.
+
+Dialects can opt-in to providing custom encodings by implementing the
+`BytecodeDialectInterface`. This interface provides hooks, namely
+`readAttribute`/`readType` and `writeAttribute`/`writeType`, that will be used
+by the bytecode reader and writer. These hooks are provided a reader and writer
+implementation that can be used to encode various constructs in the underlying
+bytecode format. A unique feature of this interface is that dialects may choose
+to only encode a subset of their attributes and types in a custom bytecode
+format, which can simplify adding new or experimental components that aren't
+fully baked.
+
+When implementing the bytecode interface, dialects are responsible for all
+aspects of the encoding. This includes the indicator for which kind of attribute
+or type is being encoded; the bytecode reader will only know that it has
+encountered an attribute or type of a given dialect, it doesn't encode any
+further information. As such, a common encoding idiom is to use a leading
+`varint` code to indicate how the attribute or type was encoded.
 
 ### IR Section
 

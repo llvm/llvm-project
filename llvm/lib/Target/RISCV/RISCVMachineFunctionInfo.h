@@ -53,6 +53,8 @@ private:
   /// FrameIndex used for transferring values between 64-bit FPRs and a pair
   /// of 32-bit GPRs via the stack.
   int MoveF64FrameIndex = -1;
+  /// FrameIndex of the spill slot for the scratch register in BranchRelaxation.
+  int BranchRelaxationScratchFrameIndex = -1;
   /// Size of any opaque stack adjustment due to save/restore libcalls.
   unsigned LibCallStackSize = 0;
   /// Size of RVV stack.
@@ -83,6 +85,13 @@ public:
       MoveF64FrameIndex =
           MF.getFrameInfo().CreateStackObject(8, Align(8), false);
     return MoveF64FrameIndex;
+  }
+
+  int getBranchRelaxationScratchFrameIndex() const {
+    return BranchRelaxationScratchFrameIndex;
+  }
+  void setBranchRelaxationScratchFrameIndex(int Index) {
+    BranchRelaxationScratchFrameIndex = Index;
   }
 
   unsigned getLibCallStackSize() const { return LibCallStackSize; }
