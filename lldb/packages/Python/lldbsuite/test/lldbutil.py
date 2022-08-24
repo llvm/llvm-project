@@ -988,6 +988,21 @@ def continue_to_breakpoint(process, bkpt):
         return get_threads_stopped_at_breakpoint(process, bkpt)
 
 
+def continue_to_source_breakpoint(test, process, bkpt_pattern, source_spec):
+    """
+    Sets a breakpoint set by source regex bkpt_pattern, continues the process, and deletes the breakpoint again.
+    Otherwise the same as `continue_to_breakpoint`
+    """
+    breakpoint = process.target.BreakpointCreateBySourceRegex(
+            bkpt_pattern, source_spec, None)
+    test.assertTrue(breakpoint.GetNumLocations() > 0,
+                    'No locations found for source breakpoint: "%s", file: "%s", dir: "%s"'
+                    %(bkpt_pattern, source_spec.GetFilename(), source_spec.GetDirectory()))
+    stopped_threads = continue_to_breakpoint(process, breakpoint)
+    process.target.BreakpointDelete(breakpoint.GetID())
+    return stopped_threads
+
+
 def get_caller_symbol(thread):
     """
     Returns the symbol name for the call site of the leaf function.
