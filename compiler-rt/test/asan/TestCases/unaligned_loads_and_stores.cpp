@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
     case 'A': res = __sanitizer_unaligned_load16(x + 15); break;
 //  CHECK-A ERROR: AddressSanitizer: heap-buffer-overflow on address
 //  CHECK-A: main{{.*}}unaligned_loads_and_stores.cpp:[[@LINE-2]]
-//  CHECK-A: is located 0 bytes to the right of 16-byte region
+//  CHECK-A: is located 0 bytes after 16-byte region
     case 'B': res = __sanitizer_unaligned_load32(x + 14); break;
 //  CHECK-B: main{{.*}}unaligned_loads_and_stores.cpp:[[@LINE-1]]
     case 'C': res = __sanitizer_unaligned_load32(x + 13); break;
@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
     case 'K': __sanitizer_unaligned_store16(x + 15, 0); break;
 //  CHECK-K ERROR: AddressSanitizer: heap-buffer-overflow on address
 //  CHECK-K: main{{.*}}unaligned_loads_and_stores.cpp:[[@LINE-2]]
-//  CHECK-K: is located 0 bytes to the right of 16-byte region
+//  CHECK-K: is located 0 bytes after 16-byte region
     case 'L': __sanitizer_unaligned_store32(x + 15, 0); break;
 //  CHECK-L: main{{.*}}unaligned_loads_and_stores.cpp:[[@LINE-1]]
     case 'M': __sanitizer_unaligned_store32(x + 13, 0); break;
