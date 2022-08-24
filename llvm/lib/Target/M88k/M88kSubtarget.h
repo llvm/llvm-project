@@ -37,6 +37,7 @@ class StringRef;
 class M88kSubtarget : public M88kGenSubtargetInfo {
   enum M88kProcEnum {
     None,
+    MC88000,
     MC88100,
     MC88110,
   };

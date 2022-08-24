@@ -1935,13 +1935,10 @@ void Clang::AddLoongArchTargetArgs(const ArgList &Args,
 }
 
 void Clang::AddM88kTargetArgs(const ArgList &Args,
-                                 ArgStringList &CmdArgs) const {
-  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
+                              ArgStringList &CmdArgs) const {
+  if (StringRef TuneCPU = m88k::getM88kTuneCPU(Args); !TuneCPU.empty()) {
     CmdArgs.push_back("-tune-cpu");
-    if (strcmp(A->getValue(), "native") == 0)
-      CmdArgs.push_back(Args.MakeArgString(llvm::sys::getHostCPUName()));
-    else
-      CmdArgs.push_back(A->getValue());
+    CmdArgs.push_back(TuneCPU.data());
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_mcheck_zero_division,

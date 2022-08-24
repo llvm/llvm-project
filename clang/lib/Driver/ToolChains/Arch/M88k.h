@@ -28,7 +28,8 @@ enum class FloatABI {
 
 FloatABI getM88kFloatABI(const Driver &D, const llvm::opt::ArgList &Args);
 
-std::string getM88kTargetCPU(const llvm::opt::ArgList &Args);
+StringRef getM88kTargetCPU(const llvm::opt::ArgList &Args);
+StringRef getM88kTuneCPU(const llvm::opt::ArgList &Args);
 
 void getM88kTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                            const llvm::opt::ArgList &Args,

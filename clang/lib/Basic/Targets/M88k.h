@@ -45,6 +45,8 @@ public:
   }
 
   bool setCPU(const std::string &Name) override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+  bool isValidCPUName(StringRef Name) const override;
 };
 
 } // namespace targets

@@ -23,37 +23,45 @@ using namespace clang::driver::tools;
 using namespace clang;
 using namespace llvm::opt;
 
-/// getM88KTargetCPU - Get the (LLVM) name of the 88000 cpu we are targeting.
-std::string m88k::getM88kTargetCPU(const ArgList &Args) {
-  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ)) {
-    // The canonical CPU name is captalize. However, we allow
-    // starting with lower case or numbers only
-    StringRef CPUName = A->getValue();
-
-    if (CPUName == "native") {
-      std::string CPU = std::string(llvm::sys::getHostCPUName());
-      if (!CPU.empty() && CPU != "generic")
-        return CPU;
-    }
-
-    if (CPUName == "common")
-      return "generic";
-
-    return llvm::StringSwitch<std::string>(CPUName)
-        .Cases("m88000", "88000", "M88000")
-        .Cases("m88100", "88100", "M88100")
-        .Cases("m88110", "88110", "M88110")
-        .Default(CPUName.str());
+static StringRef normalizeCPU(StringRef CPUName) {
+  if (CPUName == "native") {
+    StringRef CPU = std::string(llvm::sys::getHostCPUName());
+    if (!CPU.empty() && CPU != "generic")
+      return CPU;
   }
-  // FIXME: Throw error when multiple sub-architecture flag exist
-  if (Args.hasArg(clang::driver::options::OPT_m88000))
-    return "M88000";
-  if (Args.hasArg(clang::driver::options::OPT_m88100))
-    return "M88100";
-  if (Args.hasArg(clang::driver::options::OPT_m88110))
-    return "M88110";
 
-  return "";
+  return llvm::StringSwitch<StringRef>(CPUName)
+      .Cases("mc88000", "m88000", "88000", "generic", "mc88000")
+      .Cases("mc88100", "m88100", "88100", "mc88100")
+      .Cases("mc88110", "m88110", "88110", "mc88110")
+      .Default(CPUName);
+}
+
+/// getM88KTargetCPU - Get the (LLVM) name of the 88000 cpu we are targeting.
+StringRef m88k::getM88kTargetCPU(const ArgList &Args) {
+  Arg *A = Args.getLastArg(options::OPT_m88000, options::OPT_m88100,
+                           options::OPT_m88110, options::OPT_mcpu_EQ);
+  if (!A)
+    return StringRef();
+
+  switch (A->getOption().getID()) {
+  case options::OPT_m88000:
+    return "mc88000";
+  case options::OPT_m88100:
+    return "mc88100";
+  case options::OPT_m88110:
+    return "mc88110";
+  case options::OPT_mcpu_EQ:
+    return normalizeCPU(A->getValue());
+  default:
+    llvm_unreachable("Impossible option ID");
+  }
+}
+
+StringRef m88k::getM88kTuneCPU(const ArgList &Args) {
+  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ))
+    return normalizeCPU(A->getValue());
+  return StringRef();
 }
 
 void m88k::getM88kTargetFeatures(const Driver &D, const llvm::Triple &Triple,

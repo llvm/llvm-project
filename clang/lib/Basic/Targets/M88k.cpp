@@ -63,11 +63,23 @@ bool M88kTargetInfo::setCPU(const std::string &Name) {
   StringRef N = Name;
   CPU = llvm::StringSwitch<CPUKind>(N)
             .Case("generic", CK_88000)
-            .Case("M88000", CK_88000)
-            .Case("M88100", CK_88100)
-            .Case("M88110", CK_88110)
+            .Case("mc88000", CK_88000)
+            .Case("mc88100", CK_88100)
+            .Case("mc88110", CK_88110)
             .Default(CK_Unknown);
   return CPU != CK_Unknown;
+}
+
+static constexpr llvm::StringLiteral ValidCPUNames[] = {
+    {"generic"}, {"mc88000"}, {"mc88100"}, {"mc88110"}};
+
+void M88kTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
+}
+
+bool M88kTargetInfo::isValidCPUName(StringRef Name) const {
+  return llvm::is_contained(ValidCPUNames, Name);
 }
 
 void M88kTargetInfo::getTargetDefines(const LangOptions &Opts,
