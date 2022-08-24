@@ -2003,10 +2003,13 @@ define i16 @urem_zext_noundef(i8 noundef %x, i8 %y) {
   ret i16 %z
 }
 
+; x * y - x --> (y - 1) * x
+; TODO: The mul could retain nsw.
+
 define i8 @mul_sub_common_factor_commute1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_sub_common_factor_commute1(
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = sub nsw i8 [[M]], [[X]]
+; CHECK-NEXT:    [[X1:%.*]] = add i8 [[Y:%.*]], -1
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[A]]
 ;
   %m = mul nsw i8 %x, %y
@@ -2014,10 +2017,12 @@ define i8 @mul_sub_common_factor_commute1(i8 %x, i8 %y) {
   ret i8 %a
 }
 
+; TODO: The mul could retain nuw.
+
 define <2 x i8> @mul_sub_common_factor_commute2(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @mul_sub_common_factor_commute2(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i8> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = sub nuw <2 x i8> [[M]], [[X]]
+; CHECK-NEXT:    [[M1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[A:%.*]] = mul <2 x i8> [[M1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[A]]
 ;
   %m = mul nuw <2 x i8> %y, %x
@@ -2025,10 +2030,12 @@ define <2 x i8> @mul_sub_common_factor_commute2(<2 x i8> %x, <2 x i8> %y) {
   ret <2 x i8> %a
 }
 
+; x - (x * y) --> (1 - y) * x
+
 define i8 @mul_sub_common_factor_commute3(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_sub_common_factor_commute3(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = sub nsw i8 [[X]], [[M]]
+; CHECK-NEXT:    [[M1:%.*]] = sub i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[M1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[A]]
 ;
   %m = mul nuw i8 %x, %y
@@ -2038,14 +2045,16 @@ define i8 @mul_sub_common_factor_commute3(i8 %x, i8 %y) {
 
 define i8 @mul_sub_common_factor_commute4(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_sub_common_factor_commute4(
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = sub nuw i8 [[X]], [[M]]
+; CHECK-NEXT:    [[M1:%.*]] = sub i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[M1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[A]]
 ;
   %m = mul nsw i8 %y, %x
   %a = sub nuw i8 %x, %m
   ret i8 %a
 }
+
+; negative test - uses
 
 define i8 @mul_sub_common_factor_use(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_sub_common_factor_use(
