@@ -140,6 +140,118 @@ enum TypeCode {
   ///   }
   ///
   kFunctionType = 2,
+
+  ///   BFloat16Type {
+  ///   }
+  ///
+  kBFloat16Type = 3,
+
+  ///   Float16Type {
+  ///   }
+  ///
+  kFloat16Type = 4,
+
+  ///   Float32Type {
+  ///   }
+  ///
+  kFloat32Type = 5,
+
+  ///   Float64Type {
+  ///   }
+  ///
+  kFloat64Type = 6,
+
+  ///   Float80Type {
+  ///   }
+  ///
+  kFloat80Type = 7,
+
+  ///   Float128Type {
+  ///   }
+  ///
+  kFloat128Type = 8,
+
+  ///   ComplexType {
+  ///     elementType: Type
+  ///   }
+  ///
+  kComplexType = 9,
+
+  ///   MemRefType {
+  ///     shape: svarint[],
+  ///     elementType: Type,
+  ///     layout: Attribute
+  ///   }
+  ///
+  kMemRefType = 10,
+
+  ///   MemRefTypeWithMemSpace {
+  ///     memorySpace: Attribute,
+  ///     shape: svarint[],
+  ///     elementType: Type,
+  ///     layout: Attribute
+  ///   }
+  /// Variant of MemRefType with non-default memory space.
+  kMemRefTypeWithMemSpace = 11,
+
+  ///   NoneType {
+  ///   }
+  ///
+  kNoneType = 12,
+
+  ///   RankedTensorType {
+  ///     shape: svarint[],
+  ///     elementType: Type,
+  ///   }
+  ///
+  kRankedTensorType = 13,
+
+  ///   RankedTensorTypeWithEncoding {
+  ///     encoding: Attribute,
+  ///     shape: svarint[],
+  ///     elementType: Type
+  ///   }
+  /// Variant of RankedTensorType with an encoding.
+  kRankedTensorTypeWithEncoding = 14,
+
+  ///   TupleType {
+  ///     elementTypes: Type[]
+  ///   }
+  kTupleType = 15,
+
+  ///   UnrankedMemRefType {
+  ///     shape: svarint[]
+  ///   }
+  ///
+  kUnrankedMemRefType = 16,
+
+  ///   UnrankedMemRefTypeWithMemSpace {
+  ///     memorySpace: Attribute,
+  ///     shape: svarint[]
+  ///   }
+  /// Variant of UnrankedMemRefType with non-default memory space.
+  kUnrankedMemRefTypeWithMemSpace = 17,
+
+  ///   UnrankedTensorType {
+  ///     elementType: Type
+  ///   }
+  ///
+  kUnrankedTensorType = 18,
+
+  ///   VectorType {
+  ///     shape: svarint[],
+  ///     elementType: Type
+  ///   }
+  ///
+  kVectorType = 19,
+
+  ///   VectorTypeWithScalableDims {
+  ///     numScalableDims: varint,
+  ///     shape: svarint[],
+  ///     elementType: Type
+  ///   }
+  /// Variant of VectorType with scalable dimensions.
+  kVectorTypeWithScalableDims = 20,
 };
 
 } // namespace builtin_encoding
@@ -194,13 +306,32 @@ struct BuiltinDialectBytecodeInterface : public BytecodeDialectInterface {
   // Types
 
   Type readType(DialectBytecodeReader &reader) const override;
+  ComplexType readComplexType(DialectBytecodeReader &reader) const;
   IntegerType readIntegerType(DialectBytecodeReader &reader) const;
   FunctionType readFunctionType(DialectBytecodeReader &reader) const;
+  MemRefType readMemRefType(DialectBytecodeReader &reader,
+                            bool hasMemSpace) const;
+  RankedTensorType readRankedTensorType(DialectBytecodeReader &reader,
+                                        bool hasEncoding) const;
+  TupleType readTupleType(DialectBytecodeReader &reader) const;
+  UnrankedMemRefType readUnrankedMemRefType(DialectBytecodeReader &reader,
+                                            bool hasMemSpace) const;
+  UnrankedTensorType
+  readUnrankedTensorType(DialectBytecodeReader &reader) const;
+  VectorType readVectorType(DialectBytecodeReader &reader,
+                            bool hasScalableDims) const;
 
   LogicalResult writeType(Type type,
                           DialectBytecodeWriter &writer) const override;
+  void write(ComplexType type, DialectBytecodeWriter &writer) const;
   void write(IntegerType type, DialectBytecodeWriter &writer) const;
   void write(FunctionType type, DialectBytecodeWriter &writer) const;
+  void write(MemRefType type, DialectBytecodeWriter &writer) const;
+  void write(RankedTensorType type, DialectBytecodeWriter &writer) const;
+  void write(TupleType type, DialectBytecodeWriter &writer) const;
+  void write(UnrankedMemRefType type, DialectBytecodeWriter &writer) const;
+  void write(UnrankedTensorType type, DialectBytecodeWriter &writer) const;
+  void write(VectorType type, DialectBytecodeWriter &writer) const;
 };
 } // namespace
 
@@ -576,9 +707,45 @@ Type BuiltinDialectBytecodeInterface::readType(
     return readIntegerType(reader);
   case builtin_encoding::kIndexType:
     return IndexType::get(getContext());
-
   case builtin_encoding::kFunctionType:
     return readFunctionType(reader);
+  case builtin_encoding::kBFloat16Type:
+    return BFloat16Type::get(getContext());
+  case builtin_encoding::kFloat16Type:
+    return Float16Type::get(getContext());
+  case builtin_encoding::kFloat32Type:
+    return Float32Type::get(getContext());
+  case builtin_encoding::kFloat64Type:
+    return Float64Type::get(getContext());
+  case builtin_encoding::kFloat80Type:
+    return Float80Type::get(getContext());
+  case builtin_encoding::kFloat128Type:
+    return Float128Type::get(getContext());
+  case builtin_encoding::kComplexType:
+    return readComplexType(reader);
+  case builtin_encoding::kMemRefType:
+    return readMemRefType(reader, /*hasMemSpace=*/false);
+  case builtin_encoding::kMemRefTypeWithMemSpace:
+    return readMemRefType(reader, /*hasMemSpace=*/true);
+  case builtin_encoding::kNoneType:
+    return NoneType::get(getContext());
+  case builtin_encoding::kRankedTensorType:
+    return readRankedTensorType(reader, /*hasEncoding=*/false);
+  case builtin_encoding::kRankedTensorTypeWithEncoding:
+    return readRankedTensorType(reader, /*hasEncoding=*/true);
+  case builtin_encoding::kTupleType:
+    return readTupleType(reader);
+  case builtin_encoding::kUnrankedMemRefType:
+    return readUnrankedMemRefType(reader, /*hasMemSpace=*/false);
+  case builtin_encoding::kUnrankedMemRefTypeWithMemSpace:
+    return readUnrankedMemRefType(reader, /*hasMemSpace=*/true);
+  case builtin_encoding::kUnrankedTensorType:
+    return readUnrankedTensorType(reader);
+  case builtin_encoding::kVectorType:
+    return readVectorType(reader, /*hasScalableDims=*/false);
+  case builtin_encoding::kVectorTypeWithScalableDims:
+    return readVectorType(reader, /*hasScalableDims=*/true);
+
   default:
     reader.emitError() << "unknown builtin type code: " << code;
     return Type();
@@ -588,14 +755,54 @@ Type BuiltinDialectBytecodeInterface::readType(
 LogicalResult BuiltinDialectBytecodeInterface::writeType(
     Type type, DialectBytecodeWriter &writer) const {
   return TypeSwitch<Type, LogicalResult>(type)
-      .Case<IntegerType, FunctionType>([&](auto type) {
+      .Case<ComplexType, IntegerType, FunctionType, MemRefType,
+            RankedTensorType, TupleType, UnrankedMemRefType, UnrankedTensorType,
+            VectorType>([&](auto type) {
         write(type, writer);
         return success();
       })
       .Case([&](IndexType) {
         return writer.writeVarInt(builtin_encoding::kIndexType), success();
       })
+      .Case([&](BFloat16Type) {
+        return writer.writeVarInt(builtin_encoding::kBFloat16Type), success();
+      })
+      .Case([&](Float16Type) {
+        return writer.writeVarInt(builtin_encoding::kFloat16Type), success();
+      })
+      .Case([&](Float32Type) {
+        return writer.writeVarInt(builtin_encoding::kFloat32Type), success();
+      })
+      .Case([&](Float64Type) {
+        return writer.writeVarInt(builtin_encoding::kFloat64Type), success();
+      })
+      .Case([&](Float80Type) {
+        return writer.writeVarInt(builtin_encoding::kFloat80Type), success();
+      })
+      .Case([&](Float128Type) {
+        return writer.writeVarInt(builtin_encoding::kFloat128Type), success();
+      })
+      .Case([&](NoneType) {
+        return writer.writeVarInt(builtin_encoding::kNoneType), success();
+      })
       .Default([&](Type) { return failure(); });
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexType
+
+ComplexType BuiltinDialectBytecodeInterface::readComplexType(
+    DialectBytecodeReader &reader) const {
+  Type elementType;
+  if (failed(reader.readType(elementType)))
+    return ComplexType();
+  return ComplexType::get(elementType);
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    ComplexType type, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kComplexType);
+  writer.writeType(type.getElementType());
 }
 
 //===----------------------------------------------------------------------===//
@@ -633,4 +840,152 @@ void BuiltinDialectBytecodeInterface::write(
   writer.writeVarInt(builtin_encoding::kFunctionType);
   writer.writeTypes(type.getInputs());
   writer.writeTypes(type.getResults());
+}
+
+//===----------------------------------------------------------------------===//
+// MemRefType
+
+MemRefType
+BuiltinDialectBytecodeInterface::readMemRefType(DialectBytecodeReader &reader,
+                                                bool hasMemSpace) const {
+  Attribute memorySpace;
+  if (hasMemSpace && failed(reader.readAttribute(memorySpace)))
+    return MemRefType();
+  SmallVector<int64_t> shape;
+  Type elementType;
+  MemRefLayoutAttrInterface layout;
+  if (failed(reader.readSignedVarInts(shape)) ||
+      failed(reader.readType(elementType)) ||
+      failed(reader.readAttribute(layout)))
+    return MemRefType();
+  return MemRefType::get(shape, elementType, layout, memorySpace);
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    MemRefType type, DialectBytecodeWriter &writer) const {
+  if (Attribute memSpace = type.getMemorySpace()) {
+    writer.writeVarInt(builtin_encoding::kMemRefTypeWithMemSpace);
+    writer.writeAttribute(memSpace);
+  } else {
+    writer.writeVarInt(builtin_encoding::kMemRefType);
+  }
+  writer.writeSignedVarInts(type.getShape());
+  writer.writeType(type.getElementType());
+  writer.writeAttribute(type.getLayout());
+}
+
+//===----------------------------------------------------------------------===//
+// RankedTensorType
+
+RankedTensorType BuiltinDialectBytecodeInterface::readRankedTensorType(
+    DialectBytecodeReader &reader, bool hasEncoding) const {
+  Attribute encoding;
+  if (hasEncoding && failed(reader.readAttribute(encoding)))
+    return RankedTensorType();
+  SmallVector<int64_t> shape;
+  Type elementType;
+  if (failed(reader.readSignedVarInts(shape)) ||
+      failed(reader.readType(elementType)))
+    return RankedTensorType();
+  return RankedTensorType::get(shape, elementType, encoding);
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    RankedTensorType type, DialectBytecodeWriter &writer) const {
+  if (Attribute encoding = type.getEncoding()) {
+    writer.writeVarInt(builtin_encoding::kRankedTensorTypeWithEncoding);
+    writer.writeAttribute(encoding);
+  } else {
+    writer.writeVarInt(builtin_encoding::kRankedTensorType);
+  }
+  writer.writeSignedVarInts(type.getShape());
+  writer.writeType(type.getElementType());
+}
+
+//===----------------------------------------------------------------------===//
+// TupleType
+
+TupleType BuiltinDialectBytecodeInterface::readTupleType(
+    DialectBytecodeReader &reader) const {
+  SmallVector<Type> elements;
+  if (failed(reader.readTypes(elements)))
+    return TupleType();
+  return TupleType::get(getContext(), elements);
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    TupleType type, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kTupleType);
+  writer.writeTypes(type.getTypes());
+}
+
+//===----------------------------------------------------------------------===//
+// UnrankedMemRefType
+
+UnrankedMemRefType BuiltinDialectBytecodeInterface::readUnrankedMemRefType(
+    DialectBytecodeReader &reader, bool hasMemSpace) const {
+  Attribute memorySpace;
+  if (hasMemSpace && failed(reader.readAttribute(memorySpace)))
+    return UnrankedMemRefType();
+  Type elementType;
+  if (failed(reader.readType(elementType)))
+    return UnrankedMemRefType();
+  return UnrankedMemRefType::get(elementType, memorySpace);
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    UnrankedMemRefType type, DialectBytecodeWriter &writer) const {
+  if (Attribute memSpace = type.getMemorySpace()) {
+    writer.writeVarInt(builtin_encoding::kUnrankedMemRefTypeWithMemSpace);
+    writer.writeAttribute(memSpace);
+  } else {
+    writer.writeVarInt(builtin_encoding::kUnrankedMemRefType);
+  }
+  writer.writeType(type.getElementType());
+}
+
+//===----------------------------------------------------------------------===//
+// UnrankedTensorType
+
+UnrankedTensorType BuiltinDialectBytecodeInterface::readUnrankedTensorType(
+    DialectBytecodeReader &reader) const {
+  Type elementType;
+  if (failed(reader.readType(elementType)))
+    return UnrankedTensorType();
+  return UnrankedTensorType::get(elementType);
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    UnrankedTensorType type, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kUnrankedTensorType);
+  writer.writeType(type.getElementType());
+}
+
+//===----------------------------------------------------------------------===//
+// VectorType
+
+VectorType
+BuiltinDialectBytecodeInterface::readVectorType(DialectBytecodeReader &reader,
+                                                bool hasScalableDims) const {
+  uint64_t numScalableDims = 0;
+  if (hasScalableDims && failed(reader.readVarInt(numScalableDims)))
+    return VectorType();
+  SmallVector<int64_t> shape;
+  Type elementType;
+  if (failed(reader.readSignedVarInts(shape)) ||
+      failed(reader.readType(elementType)))
+    return VectorType();
+  return VectorType::get(shape, elementType, numScalableDims);
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    VectorType type, DialectBytecodeWriter &writer) const {
+  if (unsigned numScalableDims = type.getNumScalableDims()) {
+    writer.writeVarInt(builtin_encoding::kVectorTypeWithScalableDims);
+    writer.writeVarInt(numScalableDims);
+  } else {
+    writer.writeVarInt(builtin_encoding::kVectorType);
+  }
+  writer.writeSignedVarInts(type.getShape());
+  writer.writeType(type.getElementType());
 }
