@@ -3726,38 +3726,38 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
     if (!Function.isSplit())
       continue;
 
-    assert(Function.getLayout().isHotColdSplit() &&
-           "Cannot allocate more than two fragments per function in "
-           "non-relocation mode.");
+    for (const FunctionFragment &FF :
+         Function.getLayout().getSplitFragments()) {
+      ErrorOr<BinarySection &> ColdSection =
+          Function.getCodeSection(FF.getFragmentNum());
+      assert(ColdSection && "cannot find section for cold part");
+      // Cold fragments are aligned at 16 bytes.
+      NextAvailableAddress = alignTo(NextAvailableAddress, 16);
+      BinaryFunction::FragmentInfo &ColdPart = Function.cold();
+      if (TooLarge) {
+        // The corresponding FDE will refer to address 0.
+        ColdPart.setAddress(0);
+        ColdPart.setImageAddress(0);
+        ColdPart.setImageSize(0);
+        ColdPart.setFileOffset(0);
+      } else {
+        ColdPart.setAddress(NextAvailableAddress);
+        ColdPart.setImageAddress(ColdSection->getAllocAddress());
+        ColdPart.setImageSize(ColdSection->getOutputSize());
+        ColdPart.setFileOffset(getFileOffsetForAddress(NextAvailableAddress));
+        ColdSection->setOutputAddress(ColdPart.getAddress());
+      }
 
-    FunctionFragment &FF =
-        Function.getLayout().getFragment(FragmentNum::cold());
-    ErrorOr<BinarySection &> ColdSection =
-        Function.getCodeSection(FF.getFragmentNum());
-    assert(ColdSection && "cannot find section for cold part");
-    // Cold fragments are aligned at 16 bytes.
-    NextAvailableAddress = alignTo(NextAvailableAddress, 16);
-    if (TooLarge) {
-      // The corresponding FDE will refer to address 0.
-      FF.setAddress(0);
-      FF.setImageAddress(0);
-      FF.setImageSize(0);
-      FF.setFileOffset(0);
-    } else {
-      FF.setAddress(NextAvailableAddress);
-      FF.setImageAddress(ColdSection->getAllocAddress());
-      FF.setImageSize(ColdSection->getOutputSize());
-      FF.setFileOffset(getFileOffsetForAddress(NextAvailableAddress));
-      ColdSection->setOutputAddress(FF.getAddress());
+      LLVM_DEBUG(dbgs() << "BOLT: mapping cold fragment 0x"
+                        << Twine::utohexstr(ColdPart.getImageAddress())
+                        << " to 0x" << Twine::utohexstr(ColdPart.getAddress())
+                        << " with size "
+                        << Twine::utohexstr(ColdPart.getImageSize()) << '\n');
+      RTDyld.reassignSectionAddress(ColdSection->getSectionID(),
+                                    ColdPart.getAddress());
+
+      NextAvailableAddress += ColdPart.getImageSize();
     }
-
-    LLVM_DEBUG(
-        dbgs() << formatv(
-            "BOLT: mapping cold fragment {0:x+} to {1:x+} with size {2:x+}\n",
-            FF.getImageAddress(), FF.getAddress(), FF.getImageSize()));
-    RTDyld.reassignSectionAddress(ColdSection->getSectionID(), FF.getAddress());
-
-    NextAvailableAddress += FF.getImageSize();
   }
 
   // Add the new text section aggregating all existing code sections.
@@ -4518,22 +4518,20 @@ void RewriteInstance::updateELFSymbolTable(
       ICFSymbol.st_shndx = ICFParent->getCodeSection()->getIndex();
       Symbols.emplace_back(ICFSymbol);
     }
-    if (Function.isSplit()) {
+    if (Function.isSplit() && Function.cold().getAddress()) {
       for (const FunctionFragment &FF :
            Function.getLayout().getSplitFragments()) {
-        if (FF.getAddress()) {
-          ELFSymTy NewColdSym = FunctionSymbol;
-          const SmallString<256> SymbolName = formatv(
-              "{0}.cold.{1}", cantFail(FunctionSymbol.getName(StringSection)),
-              FF.getFragmentNum().get() - 1);
-          NewColdSym.st_name = AddToStrTab(SymbolName);
-          NewColdSym.st_shndx =
-              Function.getCodeSection(FF.getFragmentNum())->getIndex();
-          NewColdSym.st_value = FF.getAddress();
-          NewColdSym.st_size = FF.getImageSize();
-          NewColdSym.setBindingAndType(ELF::STB_LOCAL, ELF::STT_FUNC);
-          Symbols.emplace_back(NewColdSym);
-        }
+        ELFSymTy NewColdSym = FunctionSymbol;
+        const SmallString<256> SymbolName = formatv(
+            "{0}.cold.{1}", cantFail(FunctionSymbol.getName(StringSection)),
+            FF.getFragmentNum().get() - 1);
+        NewColdSym.st_name = AddToStrTab(SymbolName);
+        NewColdSym.st_shndx =
+            Function.getCodeSection(FF.getFragmentNum())->getIndex();
+        NewColdSym.st_value = Function.cold().getAddress();
+        NewColdSym.st_size = Function.cold().getImageSize();
+        NewColdSym.setBindingAndType(ELF::STB_LOCAL, ELF::STT_FUNC);
+        Symbols.emplace_back(NewColdSym);
       }
     }
     if (Function.hasConstantIsland()) {
@@ -4658,26 +4656,11 @@ void RewriteInstance::updateELFSymbolTable(
         NewSymbol.st_value = OutputAddress;
         // Force secondary entry points to have zero size.
         NewSymbol.st_size = 0;
-
-        // Find fragment containing entrypoint
-        FunctionLayout::fragment_const_iterator FF = llvm::find_if(
-            Function->getLayout().fragments(), [&](const FunctionFragment &FF) {
-              uint64_t Lo = FF.getAddress();
-              uint64_t Hi = Lo + FF.getImageSize();
-              return Lo <= OutputAddress && OutputAddress < Hi;
-            });
-
-        if (FF == Function->getLayout().fragment_end()) {
-          assert(
-              OutputAddress >= Function->getCodeSection()->getOutputAddress() &&
-              OutputAddress < (Function->getCodeSection()->getOutputAddress() +
-                               Function->getCodeSection()->getOutputSize()) &&
-              "Cannot locate fragment containg secondary entrypoint");
-          FF = Function->getLayout().fragment_begin();
-        }
-
         NewSymbol.st_shndx =
-            Function->getCodeSection(FF->getFragmentNum())->getIndex();
+            OutputAddress >= Function->cold().getAddress() &&
+                    OutputAddress < Function->cold().getImageSize()
+                ? Function->getCodeSection(FragmentNum::cold())->getIndex()
+                : Function->getCodeSection()->getIndex();
       } else {
         // Check if the symbol belongs to moved data object and update it.
         BinaryData *BD = opts::ReorderData.empty()
@@ -4782,10 +4765,8 @@ void RewriteInstance::updateELFSymbolTable(
       SmallVector<char, 256> Buf;
       NewColdSym.st_name = AddToStrTab(
           Twine(Function->getPrintName()).concat(".cold.0").toStringRef(Buf));
-      const FunctionFragment &ColdFF =
-          Function->getLayout().getFragment(FragmentNum::cold());
-      NewColdSym.st_value = ColdFF.getAddress();
-      NewColdSym.st_size = ColdFF.getImageSize();
+      NewColdSym.st_value = Function->cold().getAddress();
+      NewColdSym.st_size = Function->cold().getImageSize();
       Symbols.emplace_back(NewColdSym);
     }
   }
@@ -5311,21 +5292,9 @@ void RewriteInstance::rewriteFile() {
       continue;
     }
 
-    const auto HasAddress = [](const FunctionFragment &FF) {
-      return FF.empty() ||
-             (FF.getImageAddress() != 0 && FF.getImageSize() != 0);
-    };
-    const bool SplitFragmentsHaveAddress =
-        llvm::all_of(Function->getLayout().getSplitFragments(), HasAddress);
-    if (Function->isSplit() && !SplitFragmentsHaveAddress) {
-      const auto HasNoAddress = [](const FunctionFragment &FF) {
-        return FF.getImageAddress() == 0 && FF.getImageSize() == 0;
-      };
-      assert(llvm::all_of(Function->getLayout().getSplitFragments(),
-                          HasNoAddress) &&
-             "Some split fragments have an address while others do not");
+    if (Function->isSplit() && (Function->cold().getImageAddress() == 0 ||
+                                Function->cold().getImageSize() == 0))
       continue;
-    }
 
     OverwrittenScore += Function->getFunctionScore();
     // Overwrite function in the output file.
@@ -5357,14 +5326,12 @@ void RewriteInstance::rewriteFile() {
 
     // Write cold part
     if (opts::Verbosity >= 2)
-      outs() << formatv("BOLT: rewriting function \"{0}\" (split parts)\n",
-                        *Function);
+      outs() << "BOLT: rewriting function \"" << *Function
+             << "\" (cold part)\n";
 
-    for (const FunctionFragment &FF :
-         Function->getLayout().getSplitFragments()) {
-      OS.pwrite(reinterpret_cast<char *>(FF.getImageAddress()),
-                FF.getImageSize(), FF.getFileOffset());
-    }
+    OS.pwrite(reinterpret_cast<char *>(Function->cold().getImageAddress()),
+              Function->cold().getImageSize(),
+              Function->cold().getFileOffset());
 
     ++CountOverwrittenFunctions;
     if (opts::MaxFunctions && CountOverwrittenFunctions == opts::MaxFunctions) {

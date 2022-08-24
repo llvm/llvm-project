@@ -73,27 +73,29 @@ void BoltAddressTranslation::write(const BinaryContext &BC, raw_ostream &OS) {
     LLVM_DEBUG(dbgs() << "Function name: " << Function.getPrintName() << "\n");
     LLVM_DEBUG(dbgs() << " Address reference: 0x"
                       << Twine::utohexstr(Function.getOutputAddress()) << "\n");
-
     MapTy Map;
-    for (const BinaryBasicBlock *const BB :
-         Function.getLayout().getMainFragment())
+    const bool IsSplit = Function.isSplit();
+    for (const BinaryBasicBlock *const BB : Function.getLayout().blocks()) {
+      if (IsSplit && BB->isCold())
+        break;
       writeEntriesForBB(Map, *BB, Function.getOutputAddress());
-    Maps.emplace(Function.getOutputAddress(), std::move(Map));
+    }
+    Maps.insert(std::pair<uint64_t, MapTy>(Function.getOutputAddress(), Map));
 
-    if (!Function.isSplit())
+    if (!IsSplit)
       continue;
 
-    // Split maps
+    // Cold map
+    Map.clear();
     LLVM_DEBUG(dbgs() << " Cold part\n");
-    for (const FunctionFragment &FF :
-         Function.getLayout().getSplitFragments()) {
-      Map.clear();
-      for (const BinaryBasicBlock *const BB : FF)
-        writeEntriesForBB(Map, *BB, FF.getAddress());
-
-      Maps.emplace(FF.getAddress(), std::move(Map));
-      ColdPartSource.emplace(FF.getAddress(), Function.getOutputAddress());
+    for (const BinaryBasicBlock *const BB : Function.getLayout().blocks()) {
+      if (!BB->isCold())
+        continue;
+      writeEntriesForBB(Map, *BB, Function.cold().getAddress());
     }
+    Maps.insert(std::pair<uint64_t, MapTy>(Function.cold().getAddress(), Map));
+    ColdPartSource.insert(std::pair<uint64_t, uint64_t>(
+        Function.cold().getAddress(), Function.getOutputAddress()));
   }
 
   const uint32_t NumFuncs = Maps.size();
