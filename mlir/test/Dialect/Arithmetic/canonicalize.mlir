@@ -1532,3 +1532,30 @@ func.func @test_remf_vec() -> (vector<4xf32>) {
   %0 = arith.remf %v1, %v2 : vector<4xf32>
   return %0 : vector<4xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @test_andi_not_fold_rhs(
+// CHECK-SAME: %[[ARG0:[[:alnum:]]+]]
+// CHECK: %[[C:.*]] = arith.constant 0 : index
+// CHECK: return %[[C]]
+
+func.func @test_andi_not_fold_rhs(%arg0 : index) -> index {
+    %0 = arith.constant -1 : index
+    %1 = arith.xori %arg0, %0 : index
+    %2 = arith.andi %arg0, %1 : index
+    return %2 : index
+}
+
+
+// CHECK-LABEL: @test_andi_not_fold_lhs(
+// CHECK-SAME: %[[ARG0:[[:alnum:]]+]]
+// CHECK: %[[C:.*]] = arith.constant 0 : index
+// CHECK: return %[[C]]
+
+func.func @test_andi_not_fold_lhs(%arg0 : index) -> index {
+    %0 = arith.constant -1 : index
+    %1 = arith.xori %arg0, %0 : index
+    %2 = arith.andi %1, %arg0 : index
+    return %2 : index
+}
