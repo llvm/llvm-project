@@ -3556,7 +3556,7 @@ def MSAllocator : InheritableAttr {
 def CFGuard : InheritableAttr {
   // Currently only the __declspec(guard(nocf)) modifier is supported. In future
   // we might also want to support __declspec(guard(suppress)).
-  let Spellings = [Declspec<"guard">];
+  let Spellings = [Declspec<"guard">, Clang<"guard">];
   let Subjects = SubjectList<[Function]>;
   let Args = [EnumArgument<"Guard", "GuardArg", ["nocf"], ["nocf"]>];
   let Documentation = [CFGuardDocs];

@@ -1,8 +1,18 @@
 // RUN: %clang_cc1 -triple %ms_abi_triple -fms-extensions -verify -fsyntax-only %s
 // RUN: %clang_cc1 -triple %ms_abi_triple -fms-extensions -verify -std=c++11 -fsyntax-only -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-w64-windows-gnu -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple x86_64-w64-windows-gnu -verify -std=c++11 -fsyntax-only -x c++ %s
+
+// The x86_64-w64-windows-gnu version tests mingw target, which relies on
+// __declspec(...) being defined as __attribute__((...)) by compiler built-in.
 
 // Function definition.
 __declspec(guard(nocf)) void testGuardNoCF(void) { // no warning
+}
+
+// Function definition using GNU-style attribute without relying on the
+// __declspec define for mingw.
+__attribute__((guard(nocf))) void testGNUStyleGuardNoCF(void) { // no warning
 }
 
 // Can not be used on variable, parameter, or function pointer declarations.
