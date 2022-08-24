@@ -39,6 +39,13 @@ void genAnyDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
                       mlir::Value resultBox, mlir::Value maskBox,
                       mlir::Value dim);
 
+/// Generate call to `ParityDim` runtime routine.
+/// This calls the descriptor based runtime call implementation of the `parity`
+/// intrinsic.
+void genParityDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
+                         mlir::Value resultBox, mlir::Value maskBox,
+                         mlir::Value dim);
+
 /// Generate call to `All` runtime routine. This version of `all` is specialized
 /// for rank 1 mask arguments.
 /// This calls the version that returns a scalar logical value.
@@ -127,6 +134,12 @@ void genMinvalChar(fir::FirOpBuilder &builder, mlir::Location loc,
 void genMinvalDim(fir::FirOpBuilder &builder, mlir::Location loc,
                   mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
                   mlir::Value maskBox);
+
+/// Generate call to `Parity` runtime routine. This version of `parity` is
+/// specialized for rank 1 mask arguments.
+/// This calls the version that returns a scalar logical value.
+mlir::Value genParity(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Value maskBox, mlir::Value dim);
 
 /// Generate call to `Product` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
