@@ -15,22 +15,22 @@
 ; CHECK-SPIRV-DAG: OpDecorate %[[#r6]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|Fast
 ; CHECK-SPIRV-DAG: OpDecorate %[[#r7]] FPFastMathMode NotNaN|NotInf
 ; CHECK-SPIRV:     %[[#float:]] = OpTypeFloat 32
-; CHECK-SPIRV:     %[[#r1]] = OpFAdd %[[#float]]
-; CHECK-SPIRV:     %[[#r2]] = OpFAdd %[[#float]]
-; CHECK-SPIRV:     %[[#r3]] = OpFAdd %[[#float]]
-; CHECK-SPIRV:     %[[#r4]] = OpFAdd %[[#float]]
-; CHECK-SPIRV:     %[[#r5]] = OpFAdd %[[#float]]
-; CHECK-SPIRV:     %[[#r6]] = OpFAdd %[[#float]]
-; CHECK-SPIRV:     %[[#r7]] = OpFAdd %[[#float]]
+; CHECK-SPIRV:     %[[#r1]] = OpFDiv %[[#float]]
+; CHECK-SPIRV:     %[[#r2]] = OpFDiv %[[#float]]
+; CHECK-SPIRV:     %[[#r3]] = OpFDiv %[[#float]]
+; CHECK-SPIRV:     %[[#r4]] = OpFDiv %[[#float]]
+; CHECK-SPIRV:     %[[#r5]] = OpFDiv %[[#float]]
+; CHECK-SPIRV:     %[[#r6]] = OpFDiv %[[#float]]
+; CHECK-SPIRV:     %[[#r7]] = OpFDiv %[[#float]]
 
-define spir_kernel void @testFAdd(float %a, float %b) {
+define spir_kernel void @testFDiv(float %a, float %b) local_unnamed_addr {
 entry:
-  %r1 = fadd float %a, %b
-  %r2 = fadd nnan float %a, %b
-  %r3 = fadd ninf float %a, %b
-  %r4 = fadd nsz float %a, %b
-  %r5 = fadd arcp float %a, %b
-  %r6 = fadd fast float %a, %b
-  %r7 = fadd nnan ninf float %a, %b
+  %r1 = fdiv float %a, %b
+  %r2 = fdiv nnan float %a, %b
+  %r3 = fdiv ninf float %a, %b
+  %r4 = fdiv nsz float %a, %b
+  %r5 = fdiv arcp float %a, %b
+  %r6 = fdiv fast float %a, %b
+  %r7 = fdiv nnan ninf float %a, %b
   ret void
 }
