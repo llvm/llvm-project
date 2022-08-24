@@ -639,7 +639,7 @@ Value *InstCombinerImpl::tryFactorization(BinaryOperator &I,
   assert(A && B && C && D && "All values must be provided");
 
   Value *V = nullptr;
-  Value *SimplifiedInst = nullptr;
+  Value *RetVal = nullptr;
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   Instruction::BinaryOps TopLevelOpcode = I.getOpcode();
 
@@ -647,7 +647,7 @@ Value *InstCombinerImpl::tryFactorization(BinaryOperator &I,
   bool InnerCommutative = Instruction::isCommutative(InnerOpcode);
 
   // Does "X op' (Y op Z)" always equal "(X op' Y) op (X op' Z)"?
-  if (leftDistributesOverRight(InnerOpcode, TopLevelOpcode))
+  if (leftDistributesOverRight(InnerOpcode, TopLevelOpcode)) {
     // Does the instruction have the form "(A op' B) op (A op' D)" or, in the
     // commutative case, "(A op' B) op (C op' A)"?
     if (A == C || (InnerCommutative && A == D)) {
@@ -656,17 +656,18 @@ Value *InstCombinerImpl::tryFactorization(BinaryOperator &I,
       // Consider forming "A op' (B op D)".
       // If "B op D" simplifies then it can be formed with no cost.
       V = simplifyBinOp(TopLevelOpcode, B, D, SQ.getWithInstruction(&I));
+
       // If "B op D" doesn't simplify then only go on if both of the existing
       // operations "A op' B" and "C op' D" will be zapped as no longer used.
       if (!V && LHS->hasOneUse() && RHS->hasOneUse())
         V = Builder.CreateBinOp(TopLevelOpcode, B, D, RHS->getName());
-      if (V) {
-        SimplifiedInst = Builder.CreateBinOp(InnerOpcode, A, V);
-      }
+      if (V)
+        RetVal = Builder.CreateBinOp(InnerOpcode, A, V);
     }
+  }
 
   // Does "(X op Y) op' Z" always equal "(X op' Z) op (Y op' Z)"?
-  if (!SimplifiedInst && rightDistributesOverLeft(TopLevelOpcode, InnerOpcode))
+  if (!RetVal && rightDistributesOverLeft(TopLevelOpcode, InnerOpcode)) {
     // Does the instruction have the form "(A op' B) op (C op' B)" or, in the
     // commutative case, "(A op' B) op (B op' D)"?
     if (B == D || (InnerCommutative && B == C)) {
@@ -680,57 +681,52 @@ Value *InstCombinerImpl::tryFactorization(BinaryOperator &I,
       // operations "A op' B" and "C op' D" will be zapped as no longer used.
       if (!V && LHS->hasOneUse() && RHS->hasOneUse())
         V = Builder.CreateBinOp(TopLevelOpcode, A, C, LHS->getName());
-      if (V) {
-        SimplifiedInst = Builder.CreateBinOp(InnerOpcode, V, B);
-      }
-    }
-
-  if (SimplifiedInst) {
-    ++NumFactor;
-    SimplifiedInst->takeName(&I);
-
-    // Check if we can add NSW/NUW flags to SimplifiedInst. If so, set them.
-    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(SimplifiedInst)) {
-      if (isa<OverflowingBinaryOperator>(SimplifiedInst)) {
-        bool HasNSW = false;
-        bool HasNUW = false;
-        if (isa<OverflowingBinaryOperator>(&I)) {
-          HasNSW = I.hasNoSignedWrap();
-          HasNUW = I.hasNoUnsignedWrap();
-        }
-
-        if (auto *LOBO = dyn_cast<OverflowingBinaryOperator>(LHS)) {
-          HasNSW &= LOBO->hasNoSignedWrap();
-          HasNUW &= LOBO->hasNoUnsignedWrap();
-        }
-
-        if (auto *ROBO = dyn_cast<OverflowingBinaryOperator>(RHS)) {
-          HasNSW &= ROBO->hasNoSignedWrap();
-          HasNUW &= ROBO->hasNoUnsignedWrap();
-        }
-
-        if (TopLevelOpcode == Instruction::Add &&
-            InnerOpcode == Instruction::Mul) {
-          // We can propagate 'nsw' if we know that
-          //  %Y = mul nsw i16 %X, C
-          //  %Z = add nsw i16 %Y, %X
-          // =>
-          //  %Z = mul nsw i16 %X, C+1
-          //
-          // iff C+1 isn't INT_MIN
-          const APInt *CInt;
-          if (match(V, m_APInt(CInt))) {
-            if (!CInt->isMinSignedValue())
-              BO->setHasNoSignedWrap(HasNSW);
-          }
-
-          // nuw can be propagated with any constant or nuw value.
-          BO->setHasNoUnsignedWrap(HasNUW);
-        }
-      }
+      if (V)
+        RetVal = Builder.CreateBinOp(InnerOpcode, V, B);
     }
   }
-  return SimplifiedInst;
+
+  if (!RetVal)
+    return nullptr;
+
+  ++NumFactor;
+  RetVal->takeName(&I);
+
+  // Try to add no-overflow flags to the final value.
+  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(RetVal)) {
+    bool HasNSW = false;
+    bool HasNUW = false;
+    if (isa<OverflowingBinaryOperator>(&I)) {
+      HasNSW = I.hasNoSignedWrap();
+      HasNUW = I.hasNoUnsignedWrap();
+    }
+    if (auto *LOBO = dyn_cast<OverflowingBinaryOperator>(LHS)) {
+      HasNSW &= LOBO->hasNoSignedWrap();
+      HasNUW &= LOBO->hasNoUnsignedWrap();
+    }
+
+    if (auto *ROBO = dyn_cast<OverflowingBinaryOperator>(RHS)) {
+      HasNSW &= ROBO->hasNoSignedWrap();
+      HasNUW &= ROBO->hasNoUnsignedWrap();
+    }
+
+    if (TopLevelOpcode == Instruction::Add && InnerOpcode == Instruction::Mul) {
+      // We can propagate 'nsw' if we know that
+      //  %Y = mul nsw i16 %X, C
+      //  %Z = add nsw i16 %Y, %X
+      // =>
+      //  %Z = mul nsw i16 %X, C+1
+      //
+      // iff C+1 isn't INT_MIN
+      const APInt *CInt;
+      if (match(V, m_APInt(CInt)) && !CInt->isMinSignedValue())
+        cast<Instruction>(RetVal)->setHasNoSignedWrap(HasNSW);
+
+      // nuw can be propagated with any constant or nuw value.
+      cast<Instruction>(RetVal)->setHasNoUnsignedWrap(HasNUW);
+    }
+  }
+  return RetVal;
 }
 
 /// This tries to simplify binary operations which some other binary operation
