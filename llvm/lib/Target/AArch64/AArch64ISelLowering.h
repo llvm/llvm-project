@@ -742,11 +742,11 @@ public:
     return true;
   }
 
-  bool isCheapToSpeculateCttz() const override {
+  bool isCheapToSpeculateCttz(Type *) const override {
     return true;
   }
 
-  bool isCheapToSpeculateCtlz() const override {
+  bool isCheapToSpeculateCtlz(Type *) const override {
     return true;
   }
 

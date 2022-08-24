@@ -236,7 +236,7 @@ public:
   // VE doesn't have rem.
   bool hasStandaloneRem(EVT) const override { return false; }
   // VE LDZ instruction returns 64 if the input is zero.
-  bool isCheapToSpeculateCtlz() const override { return true; }
+  bool isCheapToSpeculateCtlz(Type *) const override { return true; }
   // VE LDZ instruction is fast.
   bool isCtlzFast() const override { return true; }
   // VE has NND instruction.
