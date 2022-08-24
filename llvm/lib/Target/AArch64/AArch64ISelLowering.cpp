@@ -16145,6 +16145,7 @@ static SDValue performBuildVectorCombine(SDNode *N,
                                          TargetLowering::DAGCombinerInfo &DCI,
                                          SelectionDAG &DAG) {
   SDLoc DL(N);
+  EVT VT = N->getValueType(0);
 
   // A build vector of two extracted elements is equivalent to an
   // extract subvector where the inner vector is any-extended to the
@@ -16155,7 +16156,7 @@ static SDValue performBuildVectorCombine(SDNode *N,
 
   // For now, only consider the v2i32 case, which arises as a result of
   // legalization.
-  if (N->getValueType(0) != MVT::v2i32)
+  if (VT != MVT::v2i32)
     return SDValue();
 
   SDValue Elt0 = N->getOperand(0), Elt1 = N->getOperand(1);
@@ -16168,7 +16169,10 @@ static SDValue performBuildVectorCombine(SDNode *N,
       // Both EXTRACT_VECTOR_ELT from same vector...
       Elt0->getOperand(0) == Elt1->getOperand(0) &&
       // ... and contiguous. First element's index +1 == second element's index.
-      Elt0->getConstantOperandVal(1) + 1 == Elt1->getConstantOperandVal(1)) {
+      Elt0->getConstantOperandVal(1) + 1 == Elt1->getConstantOperandVal(1) &&
+      // EXTRACT_SUBVECTOR requires that Idx be a constant multiple of
+      // ResultType's known minimum vector length.
+      Elt0->getConstantOperandVal(1) % VT.getVectorMinNumElements() == 0) {
     SDValue VecToExtend = Elt0->getOperand(0);
     EVT ExtVT = VecToExtend.getValueType().changeVectorElementType(MVT::i32);
     if (!DAG.getTargetLoweringInfo().isTypeLegal(ExtVT))
