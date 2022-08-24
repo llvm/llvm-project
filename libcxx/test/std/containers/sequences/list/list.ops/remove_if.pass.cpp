@@ -49,10 +49,10 @@ int main(int, char**)
     L c(a1, a1+4);
     Predicate cp(g);
 #if TEST_STD_VER > 17
-	ASSERT_SAME_TYPE(L::size_type, decltype(c.remove_if(std::ref(cp))));
+    ASSERT_SAME_TYPE(L::size_type, decltype(c.remove_if(std::ref(cp))));
     assert(c.remove_if(std::ref(cp)) == 2);
 #else
-	ASSERT_SAME_TYPE(void, decltype(c.remove_if(std::ref(cp))));
+    ASSERT_SAME_TYPE(void, decltype(c.remove_if(std::ref(cp))));
     c.remove_if(std::ref(cp));
 #endif
     assert(c == std::list<int>(a2, a2+2));

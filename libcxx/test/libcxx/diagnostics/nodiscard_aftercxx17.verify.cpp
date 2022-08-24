@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Test that _LIBCPP_NODISCARD_AFTER_CXX17 works
-//	#define _LIBCPP_NODISCARD_AFTER_CXX17 [[nodiscard]]
+// #define _LIBCPP_NODISCARD_AFTER_CXX17 [[nodiscard]]
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 

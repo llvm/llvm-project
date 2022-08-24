@@ -34,6 +34,11 @@ inline To bit_cast(const From &from) noexcept {
   return to;
 }
 
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+constexpr inline bool has_single_bit(T Value) noexcept {
+  return (Value != 0) && ((Value & (Value - 1)) == 0);
+}
+
 namespace detail {
 template <typename T, std::size_t SizeOfT> struct PopulationCounter {
   static int count(T Value) {

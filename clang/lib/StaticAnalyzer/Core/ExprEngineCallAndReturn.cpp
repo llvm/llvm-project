@@ -195,6 +195,33 @@ static bool wasDifferentDeclUsedForInlining(CallEventRef<> Call,
   return RuntimeCallee->getCanonicalDecl() != StaticDecl->getCanonicalDecl();
 }
 
+// Returns the number of elements in the array currently being destructed.
+// If the element count is not found 0 will be returned.
+static unsigned getElementCountOfArrayBeingDestructed(
+    const CallEvent &Call, const ProgramStateRef State, SValBuilder &SVB) {
+  assert(isa<CXXDestructorCall>(Call) &&
+         "The call event is not a destructor call!");
+
+  const auto &DtorCall = cast<CXXDestructorCall>(Call);
+
+  auto ThisVal = DtorCall.getCXXThisVal();
+
+  if (auto ThisElementRegion = dyn_cast<ElementRegion>(ThisVal.getAsRegion())) {
+    auto ArrayRegion = ThisElementRegion->getAsArrayOffset().getRegion();
+    auto ElementType = ThisElementRegion->getElementType();
+
+    auto ElementCount =
+        getDynamicElementCount(State, ArrayRegion, SVB, ElementType);
+
+    if (!ElementCount.isConstant())
+      return 0;
+
+    return ElementCount.getAsInteger()->getLimitedValue();
+  }
+
+  return 0;
+}
+
 /// The call exit is simulated with a sequence of nodes, which occur between
 /// CallExitBegin and CallExitEnd. The following operations occur between the
 /// two program points:
@@ -233,6 +260,19 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // construction where the CXXConstructExpr is referenced only once in the CFG,
   // but we want to evaluate it as many times as many elements the array has.
   bool ShouldRepeatCall = false;
+
+  if (const auto *DtorDecl =
+          dyn_cast_or_null<CXXDestructorDecl>(Call->getDecl())) {
+    if (auto Idx = getPendingArrayDestruction(state, callerCtx)) {
+      ShouldRepeatCall = *Idx > 0;
+
+      auto ThisVal = svalBuilder.getCXXThis(DtorDecl->getParent(), calleeCtx);
+      state = state->killBinding(ThisVal);
+
+      if (!ShouldRepeatCall)
+        state = removePendingArrayDestruction(state, callerCtx);
+    }
+  }
 
   // If the callee returns an expression, bind its value to CallExpr.
   if (CE) {
@@ -818,11 +858,6 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
         !Opts.MayInlineCXXAllocator)
       return CIP_DisallowedOnce;
 
-    // FIXME: We don't handle constructors or destructors for arrays properly.
-    // Even once we do, we still need to be careful about implicitly-generated
-    // initializers for array fields in default move/copy constructors.
-    // We still allow construction into ElementRegion targets when they don't
-    // represent array elements.
     if (CallOpts.IsArrayCtorOrDtor) {
       if (!shouldInlineArrayConstruction(Pred->getState(), CtorExpr, CurLC))
         return CIP_DisallowedOnce;
@@ -877,9 +912,12 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     assert(ADC->getCFGBuildOptions().AddImplicitDtors && "No CFG destructors");
     (void)ADC;
 
-    // FIXME: We don't handle destructors for arrays properly.
-    if (CallOpts.IsArrayCtorOrDtor)
-      return CIP_DisallowedOnce;
+    if (CallOpts.IsArrayCtorOrDtor) {
+      if (!shouldInlineArrayDestruction(getElementCountOfArrayBeingDestructed(
+              Call, Pred->getState(), svalBuilder))) {
+        return CIP_DisallowedOnce;
+      }
+    }
 
     // Allow disabling temporary destructor inlining with a separate option.
     if (CallOpts.IsTemporaryCtorOrDtor &&
@@ -1096,13 +1134,19 @@ bool ExprEngine::shouldInlineArrayConstruction(const ProgramStateRef State,
   if (!CE)
     return false;
 
-  auto Type = CE->getType();
-
   // FIXME: Handle other arrays types.
-  if (const auto *CAT = dyn_cast<ConstantArrayType>(Type)) {
-    unsigned Size = getContext().getConstantArrayElementCount(CAT);
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(CE->getType())) {
+    unsigned ArrSize = getContext().getConstantArrayElementCount(CAT);
 
-    return Size <= AMgr.options.maxBlockVisitOnPath;
+    // This might seem conter-intuitive at first glance, but the functions are
+    // closely related. Reasoning about destructors depends only on the type
+    // of the expression that initialized the memory region, which is the
+    // CXXConstructExpr. So to avoid code repetition, the work is delegated
+    // to the function that reasons about destructor inlining. Also note that
+    // if the constructors of the array elements are inlined, the destructors
+    // can also be inlined and if the destructors can be inline, it's safe to
+    // inline the constructors.
+    return shouldInlineArrayDestruction(ArrSize);
   }
 
   // Check if we're inside an ArrayInitLoopExpr, and it's sufficiently small.
@@ -1110,6 +1154,14 @@ bool ExprEngine::shouldInlineArrayConstruction(const ProgramStateRef State,
     return *Size <= AMgr.options.maxBlockVisitOnPath;
 
   return false;
+}
+
+bool ExprEngine::shouldInlineArrayDestruction(uint64_t Size) {
+
+  uint64_t maxAllowedSize = AMgr.options.maxBlockVisitOnPath;
+
+  // Declaring a 0 element array is also possible.
+  return Size <= maxAllowedSize && Size > 0;
 }
 
 bool ExprEngine::shouldRepeatCtorCall(ProgramStateRef State,

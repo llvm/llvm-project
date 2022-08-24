@@ -809,7 +809,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
     OrderedFuncOffsets->reserve(*Size);
   }
 
-  for (uint32_t I = 0; I < *Size; ++I) {
+  for (uint64_t I = 0; I < *Size; ++I) {
     auto FContext(readSampleContextFromTable());
     if (std::error_code EC = FContext.getError())
       return EC;
@@ -1096,7 +1096,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readMD5NameTable() {
     return sampleprof_error::success;
   }
   NameTable.reserve(*Size);
-  for (uint32_t I = 0; I < *Size; ++I) {
+  for (uint64_t I = 0; I < *Size; ++I) {
     auto FID = readNumber<uint64_t>();
     if (std::error_code EC = FID.getError())
       return EC;
@@ -1237,7 +1237,7 @@ std::error_code SampleProfileReaderCompactBinary::readNameTable() {
   if (std::error_code EC = Size.getError())
     return EC;
   NameTable.reserve(*Size);
-  for (uint32_t I = 0; I < *Size; ++I) {
+  for (uint64_t I = 0; I < *Size; ++I) {
     auto FID = readNumber<uint64_t>();
     if (std::error_code EC = FID.getError())
       return EC;
@@ -1279,7 +1279,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readSecHdrTable() {
   if (std::error_code EC = EntryNum.getError())
     return EC;
 
-  for (uint32_t i = 0; i < (*EntryNum); i++)
+  for (uint64_t i = 0; i < (*EntryNum); i++)
     if (std::error_code EC = readSecHdrTableEntry(i))
       return EC;
 
@@ -1448,7 +1448,7 @@ std::error_code SampleProfileReaderCompactBinary::readFuncOffsetTable() {
     return EC;
 
   FuncOffsetTable.reserve(*Size);
-  for (uint32_t I = 0; I < *Size; ++I) {
+  for (uint64_t I = 0; I < *Size; ++I) {
     auto FName(readStringFromTable());
     if (std::error_code EC = FName.getError())
       return EC;

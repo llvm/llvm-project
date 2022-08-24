@@ -1761,10 +1761,10 @@ def Vector_GatherOp :
   Vector_Op<"gather">,
     Arguments<(ins Arg<AnyShaped, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
-               VectorOf<[AnyInteger, Index]>:$index_vec,
-               VectorOf<[I1]>:$mask,
-               AnyVector:$pass_thru)>,
-    Results<(outs AnyVector:$result)> {
+               VectorOfRankAndType<[1], [AnyInteger, Index]>:$index_vec,
+               VectorOfRankAndType<[1], [I1]>:$mask,
+               VectorOfRank<[1]>:$pass_thru)>,
+    Results<(outs VectorOfRank<[1]>:$result)> {
 
   let summary = [{
     gathers elements from memory or ranked tensor into a vector as defined by an
@@ -1773,10 +1773,10 @@ def Vector_GatherOp :
 
   let description = [{
     The gather operation gathers elements from memory or ranked tensor into a
-    n-D vector as defined by a base with indices and an additional n-D index
-    vector (each index is a 1-D offset on the base), but only if the
-    corresponding bit is set in a n-D mask vector. Otherwise, the element is
-    taken from a n-D pass-through vector. Informally the semantics are:
+    1-D vector as defined by a base with indices and an additional 1-D index
+    vector, but only if the corresponding bit is set in a 1-D mask vector.
+    Otherwise, the element is taken from a 1-D pass-through vector. Informally
+    the semantics are:
     ```
     result[0] := mask[0] ? base[index[0]] : pass_thru[0]
     result[1] := mask[1] ? base[index[1]] : pass_thru[1]
@@ -1786,13 +1786,15 @@ def Vector_GatherOp :
 
     The gather operation can be used directly where applicable, or can be used
     during progressively lowering to bring other memory operations closer to
-    hardware ISA support for a gather.
+    hardware ISA support for a gather. The semantics of the operation closely
+    correspond to those of the `llvm.masked.gather`
+    [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-gather-intrinsics).
 
     Examples:
 
     ```mlir
     %0 = vector.gather %base[%c0][%v], %mask, %pass_thru
-       : memref<?xf32>, vector<2x16xi32>, vector<2x16xi1>, vector<2x16xf32> into vector<2x16xf32>
+       : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
 
     %1 = vector.gather %base[%i, %j][%v], %mask, %pass_thru
        : memref<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
