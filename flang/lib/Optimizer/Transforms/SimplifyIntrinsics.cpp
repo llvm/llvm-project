@@ -444,9 +444,7 @@ void SimplifyIntrinsicsPass::runOnOperation() {
         // RTNAME(Sum<T>)(const Descriptor &x, const char *source, int line,
         //                int dim, const Descriptor *mask)
         //
-        // Disable SUM inlining by default, because it fatally fails on some
-        // FIR yet.
-        if (enableExperimental && funcName.startswith("_FortranASum")) {
+        if (funcName.startswith("_FortranASum")) {
           mlir::Operation::operand_range args = call.getArgs();
           // args[1] and args[2] are source filename and line number, ignored.
           const mlir::Value &dim = args[3];
