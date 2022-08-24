@@ -171,6 +171,10 @@ void mlir::populateMathToLibmConversionPatterns(
                                                 "sin", benefit);
   patterns.add<ScalarOpToLibmCall<math::Log1pOp>>(
       patterns.getContext(), "log1pf", "log1p", log1pBenefit.value_or(benefit));
+  patterns.add<ScalarOpToLibmCall<math::FloorOp>>(patterns.getContext(),
+                                                  "floorf", "floor", benefit);
+  patterns.add<ScalarOpToLibmCall<math::CeilOp>>(patterns.getContext(), "ceilf",
+                                                 "ceil", benefit);
 }
 
 namespace {
