@@ -8599,6 +8599,9 @@ static void PrintMachHeader(uint32_t magic, uint32_t cputype,
     case MachO::MH_KEXT_BUNDLE:
       outs() << "  KEXTBUNDLE";
       break;
+    case MachO::MH_FILESET:
+      outs() << "     FILESET";
+      break;
     default:
       outs() << format("  %10u", filetype);
       break;
