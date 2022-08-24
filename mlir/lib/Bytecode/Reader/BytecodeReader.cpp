@@ -241,6 +241,69 @@ static LogicalResult parseEntry(EncodingReader &reader, RangeT &entries,
 }
 
 //===----------------------------------------------------------------------===//
+// StringSectionReader
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// This class is used to read references to the string section from the
+/// bytecode.
+class StringSectionReader {
+public:
+  /// Initialize the string section reader with the given section data.
+  LogicalResult initialize(Location fileLoc, ArrayRef<uint8_t> sectionData);
+
+  /// Parse a shared string from the string section. The shared string is
+  /// encoded using an index to a corresponding string in the string section.
+  LogicalResult parseString(EncodingReader &reader, StringRef &result) {
+    return parseEntry(reader, strings, result, "string");
+  }
+
+private:
+  /// The table of strings referenced within the bytecode file.
+  SmallVector<StringRef> strings;
+};
+} // namespace
+
+LogicalResult StringSectionReader::initialize(Location fileLoc,
+                                              ArrayRef<uint8_t> sectionData) {
+  EncodingReader stringReader(sectionData, fileLoc);
+
+  // Parse the number of strings in the section.
+  uint64_t numStrings;
+  if (failed(stringReader.parseVarInt(numStrings)))
+    return failure();
+  strings.resize(numStrings);
+
+  // Parse each of the strings. The sizes of the strings are encoded in reverse
+  // order, so that's the order we populate the table.
+  size_t stringDataEndOffset = sectionData.size();
+  for (StringRef &string : llvm::reverse(strings)) {
+    uint64_t stringSize;
+    if (failed(stringReader.parseVarInt(stringSize)))
+      return failure();
+    if (stringDataEndOffset < stringSize) {
+      return stringReader.emitError(
+          "string size exceeds the available data size");
+    }
+
+    // Extract the string from the data, dropping the null character.
+    size_t stringOffset = stringDataEndOffset - stringSize;
+    string = StringRef(
+        reinterpret_cast<const char *>(sectionData.data() + stringOffset),
+        stringSize - 1);
+    stringDataEndOffset = stringOffset;
+  }
+
+  // Check that the only remaining data was for the strings, i.e. the reader
+  // should be at the same offset as the first string.
+  if ((sectionData.size() - stringReader.size()) != stringDataEndOffset) {
+    return stringReader.emitError("unexpected trailing data between the "
+                                  "offsets for strings and their data");
+  }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // BytecodeDialect
 //===----------------------------------------------------------------------===//
 
@@ -596,17 +659,6 @@ private:
   LogicalResult parseBlockArguments(EncodingReader &reader, Block *block);
 
   //===--------------------------------------------------------------------===//
-  // String Section
-
-  LogicalResult parseStringSection(ArrayRef<uint8_t> sectionData);
-
-  /// Parse a shared string from the string section. The shared string is
-  /// encoded using an index to a corresponding string in the string section.
-  LogicalResult parseSharedString(EncodingReader &reader, StringRef &result) {
-    return parseEntry(reader, strings, result, "string");
-  }
-
-  //===--------------------------------------------------------------------===//
   // Value Processing
 
   /// Parse an operand reference using the given reader. Returns nullptr in the
@@ -667,7 +719,7 @@ private:
   SmallVector<BytecodeOperationName> opNames;
 
   /// The table of strings referenced within the bytecode file.
-  SmallVector<StringRef> strings;
+  StringSectionReader stringReader;
 
   /// The current set of available IR value scopes.
   std::vector<ValueScope> valueScopes;
@@ -726,7 +778,8 @@ LogicalResult BytecodeReader::read(llvm::MemoryBufferRef buffer, Block *block) {
   }
 
   // Process the string section first.
-  if (failed(parseStringSection(*sectionDatas[bytecode::Section::kString])))
+  if (failed(stringReader.initialize(
+          fileLoc, *sectionDatas[bytecode::Section::kString])))
     return failure();
 
   // Process the dialect section.
@@ -777,13 +830,13 @@ BytecodeReader::parseDialectSection(ArrayRef<uint8_t> sectionData) {
 
   // Parse each of the dialects.
   for (uint64_t i = 0; i < numDialects; ++i)
-    if (failed(parseSharedString(sectionReader, dialects[i].name)))
+    if (failed(stringReader.parseString(sectionReader, dialects[i].name)))
       return failure();
 
   // Parse the operation names, which are grouped by dialect.
   auto parseOpName = [&](BytecodeDialect *dialect) {
     StringRef opName;
-    if (failed(parseSharedString(sectionReader, opName)))
+    if (failed(stringReader.parseString(sectionReader, opName)))
       return failure();
     opNames.emplace_back(dialect, opName);
     return success();
@@ -1089,51 +1142,6 @@ LogicalResult BytecodeReader::parseBlockArguments(EncodingReader &reader,
   }
   block->addArguments(argTypes, argLocs);
   return defineValues(reader, block->getArguments());
-}
-
-//===----------------------------------------------------------------------===//
-// String Section
-
-LogicalResult
-BytecodeReader::parseStringSection(ArrayRef<uint8_t> sectionData) {
-  EncodingReader stringReader(sectionData, fileLoc);
-
-  // Parse the number of strings in the section.
-  uint64_t numStrings;
-  if (failed(stringReader.parseVarInt(numStrings)))
-    return failure();
-  strings.resize(numStrings);
-
-  // Parse each of the strings. The sizes of the strings are encoded in reverse
-  // order, so that's the order we populate the table.
-  size_t stringDataEndOffset = sectionData.size();
-  size_t totalStringDataSize = 0;
-  for (StringRef &string : llvm::reverse(strings)) {
-    uint64_t stringSize;
-    if (failed(stringReader.parseVarInt(stringSize)))
-      return failure();
-    if (stringDataEndOffset < stringSize) {
-      return stringReader.emitError(
-          "string size exceeds the available data size");
-    }
-
-    // Extract the string from the data, dropping the null character.
-    size_t stringOffset = stringDataEndOffset - stringSize;
-    string = StringRef(
-        reinterpret_cast<const char *>(sectionData.data() + stringOffset),
-        stringSize - 1);
-    stringDataEndOffset = stringOffset;
-
-    // Update the total string data size.
-    totalStringDataSize += stringSize;
-  }
-
-  // Check that the only remaining data was for the strings
-  if (stringReader.size() != totalStringDataSize) {
-    return stringReader.emitError("unexpected trailing data between the "
-                                  "offsets for strings and their data");
-  }
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
