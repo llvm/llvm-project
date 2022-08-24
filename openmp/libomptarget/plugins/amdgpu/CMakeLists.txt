@@ -84,7 +84,6 @@ add_llvm_library(omptarget.rtl.amdgpu SHARED
   PRIVATE
   elf_common
   ${LIBOMPTARGET_DEP_LIBRARIES}
-  ${CMAKE_DL_LIBS}
   ${LIBOMPTARGET_DEP_LIBELF_LIBRARIES}
   ${OPENMP_PTHREAD_LIB}
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"

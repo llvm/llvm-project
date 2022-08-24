@@ -289,8 +289,6 @@ public:
     return isVGPR(MRI, Reg) || isAGPR(MRI, Reg);
   }
 
-  bool isConstantPhysReg(MCRegister PhysReg) const override;
-
   bool isDivergentRegClass(const TargetRegisterClass *RC) const override {
     return !isSGPRClass(RC);
   }
