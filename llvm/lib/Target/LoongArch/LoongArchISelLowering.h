@@ -98,6 +98,7 @@ public:
                     SmallVectorImpl<SDValue> &InVals) const override;
   bool isCheapToSpeculateCttz() const override;
   bool isCheapToSpeculateCtlz() const override;
+  bool hasAndNot(SDValue Y) const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
