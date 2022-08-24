@@ -2046,7 +2046,7 @@ def int_amdgcn_ds_sub_gs_reg_rtn :
   Intrinsic<[llvm_anyint_ty], [llvm_i32_ty, llvm_i32_ty],
             [ImmArg<ArgIndex<1>>, IntrHasSideEffects, IntrWillReturn]>;
 
-def int_amdgcn_ds_bvh_stack_rtn :
+class IntDSBVHStackRtn :
   Intrinsic<
     [llvm_i32_ty, llvm_i32_ty], // %vdst, %addr
     [
@@ -2057,6 +2057,8 @@ def int_amdgcn_ds_bvh_stack_rtn :
     ],
     [ImmArg<ArgIndex<3>>, IntrWillReturn]
   >;
+
+def int_amdgcn_ds_bvh_stack_rtn : IntDSBVHStackRtn;
 
 // WMMA (Wave Matrix Multiply-Accumulate) intrinsics
 //
@@ -2110,6 +2112,32 @@ def int_amdgcn_wmma_i32_16x16x16_iu4   : AMDGPUWmmaIntrinsicIU<llvm_v2i32_ty, ll
 //===----------------------------------------------------------------------===//
 // GFX12 Intrinsics
 //===----------------------------------------------------------------------===//
+
+def int_amdgcn_ds_bvh_stack_push4_pop1_rtn : IntDSBVHStackRtn;
+
+def int_amdgcn_ds_bvh_stack_push8_pop1_rtn :
+  Intrinsic<
+    [llvm_i32_ty, llvm_i32_ty], // %vdst, %addr
+    [
+      llvm_i32_ty,   // %addr
+      llvm_i32_ty,   // %data0
+      llvm_v8i32_ty, // %data1
+      llvm_i32_ty,   // %offset
+    ],
+    [ImmArg<ArgIndex<3>>, IntrWillReturn]
+  >;
+
+def int_amdgcn_ds_bvh_stack_push8_pop2_rtn :
+  Intrinsic<
+    [llvm_i64_ty, llvm_i32_ty], // %vdst, %addr
+    [
+      llvm_i32_ty,   // %addr
+      llvm_i32_ty,   // %data0
+      llvm_v8i32_ty, // %data1
+      llvm_i32_ty,   // %offset
+    ],
+    [ImmArg<ArgIndex<3>>, IntrWillReturn]
+  >;
 
 // v16i32 llvm.amdgcn.image.bvh.dual.intersect.ray <node_ptr>, <ray_extent>,
 //                                                 <instance_mask>, <ray_origin>,
