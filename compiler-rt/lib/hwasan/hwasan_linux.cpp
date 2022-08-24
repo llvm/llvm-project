@@ -110,12 +110,13 @@ static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
       FindDynamicShadowStart(shadow_size_bytes);
 }
 
-void InitializeOsSupport() {
 #  define PR_SET_TAGGED_ADDR_CTRL 55
 #  define PR_GET_TAGGED_ADDR_CTRL 56
 #  define PR_TAGGED_ADDR_ENABLE (1UL << 0)
 #  define ARCH_GET_UNTAG_MASK 0x4001
 #  define ARCH_ENABLE_TAGGED_ADDR 0x4002
+
+void InitializeOsSupport() {
   // Check we're running on a kernel that can use the tagged address ABI.
   int local_errno = 0;
   bool has_abi;
@@ -169,9 +170,6 @@ void InitializeOsSupport() {
       Die();
     }
   }
-#  undef PR_SET_TAGGED_ADDR_CTRL
-#  undef PR_GET_TAGGED_ADDR_CTRL
-#  undef PR_TAGGED_ADDR_ENABLE
 }
 
 bool InitShadow() {
