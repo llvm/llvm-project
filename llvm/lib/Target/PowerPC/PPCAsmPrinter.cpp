@@ -2564,7 +2564,7 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
       SmallString<128> Name;
       StringRef Prefix = ".";
       Name += Prefix;
-      Name += I.first.first->getName();
+      Name += cast<MCSymbolXCOFF>(I.first.first)->getSymbolTableName();
       MCSymbol *S = OutContext.getOrCreateSymbol(Name);
       TCEntry = cast<MCSectionXCOFF>(
           getObjFileLowering().getSectionForTOCEntry(S, TM));

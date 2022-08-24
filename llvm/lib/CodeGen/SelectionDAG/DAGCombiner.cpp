@@ -7183,7 +7183,8 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
   return SDValue();
 }
 
-static SDValue stripConstantMask(SelectionDAG &DAG, SDValue Op, SDValue &Mask) {
+static SDValue stripConstantMask(const SelectionDAG &DAG, SDValue Op,
+                                 SDValue &Mask) {
   if (Op.getOpcode() == ISD::AND &&
       DAG.isConstantIntBuildVectorOrConstantInt(Op.getOperand(1))) {
     Mask = Op.getOperand(1);
@@ -7193,7 +7194,7 @@ static SDValue stripConstantMask(SelectionDAG &DAG, SDValue Op, SDValue &Mask) {
 }
 
 /// Match "(X shl/srl V1) & V2" where V2 may not be present.
-static bool matchRotateHalf(SelectionDAG &DAG, SDValue Op, SDValue &Shift,
+static bool matchRotateHalf(const SelectionDAG &DAG, SDValue Op, SDValue &Shift,
                             SDValue &Mask) {
   Op = stripConstantMask(DAG, Op, Mask);
   if (Op.getOpcode() == ISD::SRL || Op.getOpcode() == ISD::SHL) {
@@ -7641,6 +7642,10 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL) {
     std::swap(LHSShift, RHSShift);
     std::swap(LHSMask, RHSMask);
   }
+
+  // Something has gone wrong - we've lost the shl/srl pair - bail.
+  if (LHSShift.getOpcode() != ISD::SHL || RHSShift.getOpcode() != ISD::SRL)
+    return SDValue();
 
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
   SDValue LHSShiftArg = LHSShift.getOperand(0);

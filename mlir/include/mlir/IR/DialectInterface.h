@@ -50,6 +50,9 @@ public:
   /// Return the dialect that this interface represents.
   Dialect *getDialect() const { return dialect; }
 
+  /// Return the context that holds the parent dialect of this interface.
+  MLIRContext *getContext() const;
+
   /// Return the derived interface id.
   TypeID getID() const { return interfaceID; }
 
