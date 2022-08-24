@@ -94,8 +94,11 @@ define i32 @ctpop2_multiuse(i32 %0) {
 ; __builtin_popcount((i & -i) - 1) -> __builtin_cttz(i, false)
 define i32 @ctpop3(i32 %0) {
 ; CHECK-LABEL: @ctpop3(
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP0:%.*]], i1 false), !range [[RNG0]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], -1
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[TMP4]]), !range [[RNG0]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   %2 = sub i32 0, %0
   %3 = and i32 %2, %0
@@ -106,8 +109,11 @@ define i32 @ctpop3(i32 %0) {
 
 define <2 x i32> @ctpop3v(<2 x i32> %0) {
 ; CHECK-LABEL: @ctpop3v(
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP0:%.*]], i1 false)
-; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i32> zeroinitializer, [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP3]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP4]])
+; CHECK-NEXT:    ret <2 x i32> [[TMP5]]
 ;
   %2 = sub <2 x i32> zeroinitializer, %0
   %3 = and <2 x i32> %2, %0
@@ -118,8 +124,11 @@ define <2 x i32> @ctpop3v(<2 x i32> %0) {
 
 define <2 x i32> @ctpop3v_undef(<2 x i32> %0) {
 ; CHECK-LABEL: @ctpop3v_undef(
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[TMP0:%.*]], i1 false)
-; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i32> zeroinitializer, [[TMP0:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i32> [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP3]], <i32 -1, i32 undef>
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP4]])
+; CHECK-NEXT:    ret <2 x i32> [[TMP5]]
 ;
   %2 = sub <2 x i32> zeroinitializer, %0
   %3 = and <2 x i32> %2, %0
