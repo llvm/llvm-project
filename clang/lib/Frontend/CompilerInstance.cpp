@@ -2099,7 +2099,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
         << Module->getFullModuleName()
         << SourceRange(Path.front().second, Path.back().second);
 
-      return ModuleLoadResult::MissingExpected;
+      return ModuleLoadResult(Module, ModuleLoadResult::MissingExpected);
     }
 
     // Check whether this module is available.

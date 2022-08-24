@@ -746,7 +746,7 @@ public:
   matchAndRewrite(vector::FMAOp fmaOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     VectorType vType = fmaOp.getVectorType();
-    if (vType.getRank() != 1)
+    if (vType.getRank() > 1)
       return failure();
     rewriter.replaceOpWithNewOp<LLVM::FMulAddOp>(
         fmaOp, adaptor.getLhs(), adaptor.getRhs(), adaptor.getAcc());

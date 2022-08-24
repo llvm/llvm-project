@@ -274,12 +274,13 @@ using bind_iterator = content_iterator<MachOBindEntry>;
 ///     symbol. E.g., C++'s "operator new". This is called a "weak bind."
 struct ChainedFixupTarget {
 public:
-  ChainedFixupTarget(int LibOrdinal, StringRef Symbol, uint64_t Addend,
-                     bool WeakImport)
-      : LibOrdinal(LibOrdinal), SymbolName(Symbol), Addend(Addend),
-        WeakImport(WeakImport) {}
+  ChainedFixupTarget(int LibOrdinal, uint32_t NameOffset, StringRef Symbol,
+                     uint64_t Addend, bool WeakImport)
+      : LibOrdinal(LibOrdinal), NameOffset(NameOffset), SymbolName(Symbol),
+        Addend(Addend), WeakImport(WeakImport) {}
 
   int libOrdinal() { return LibOrdinal; }
+  uint32_t nameOffset() { return NameOffset; }
   StringRef symbolName() { return SymbolName; }
   uint64_t addend() { return Addend; }
   bool weakImport() { return WeakImport; }
@@ -289,6 +290,7 @@ public:
 
 private:
   int LibOrdinal;
+  uint32_t NameOffset;
   StringRef SymbolName;
   uint64_t Addend;
   bool WeakImport;

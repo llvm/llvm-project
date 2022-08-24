@@ -64,7 +64,7 @@ target_link_libraries(LibcPrintfHelpers LibcUnitTest)
 add_dependencies(
   LibcPrintfHelpers
   LibcUnitTest
-  libc.src.__support.CPP.uint128
+  libc.src.__support.FPUtil.fputil #FPBits
   libc.src.stdio.printf_core.core_structs
   libc.utils.UnitTest.string_utils
 )

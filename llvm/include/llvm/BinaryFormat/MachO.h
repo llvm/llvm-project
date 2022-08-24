@@ -50,7 +50,8 @@ enum HeaderFileType {
   MH_BUNDLE = 0x8u,
   MH_DYLIB_STUB = 0x9u,
   MH_DSYM = 0xAu,
-  MH_KEXT_BUNDLE = 0xBu
+  MH_KEXT_BUNDLE = 0xBu,
+  MH_FILESET = 0xCu,
 };
 
 enum {
@@ -885,6 +886,14 @@ struct linker_option_command {
   uint32_t count;
 };
 
+struct fileset_entry_command {
+  uint32_t cmd;
+  uint32_t cmdsize;
+  uint64_t vmaddr;
+  uint64_t fileoff;
+  uint32_t entry_id;
+};
+
 // The symseg_command is obsolete and no longer supported.
 struct symseg_command {
   uint32_t cmd;
@@ -1068,6 +1077,30 @@ struct dyld_chained_starts_in_segment {
   uint16_t page_count;        ///< Length of the page_start array
   uint16_t page_start[1];     ///< Page offset of first fixup on each page, or
                               ///< DYLD_CHAINED_PTR_START_NONE if no fixups
+};
+
+// DYLD_CHAINED_IMPORT
+struct dyld_chained_import {
+  uint32_t lib_ordinal : 8;
+  uint32_t weak_import : 1;
+  uint32_t name_offset : 23;
+};
+
+// DYLD_CHAINED_IMPORT_ADDEND
+struct dyld_chained_import_addend {
+  uint32_t lib_ordinal : 8;
+  uint32_t weak_import : 1;
+  uint32_t name_offset : 23;
+  int32_t addend;
+};
+
+// DYLD_CHAINED_IMPORT_ADDEND64
+struct dyld_chained_import_addend64 {
+  uint64_t lib_ordinal : 16;
+  uint64_t weak_import : 1;
+  uint64_t reserved : 15;
+  uint64_t name_offset : 32;
+  uint64_t addend;
 };
 
 // Byte order swapping functions for MachO structs
@@ -1361,6 +1394,14 @@ inline void swapStruct(linker_option_command &C) {
   sys::swapByteOrder(C.cmd);
   sys::swapByteOrder(C.cmdsize);
   sys::swapByteOrder(C.count);
+}
+
+inline void swapStruct(fileset_entry_command &C) {
+  sys::swapByteOrder(C.cmd);
+  sys::swapByteOrder(C.cmdsize);
+  sys::swapByteOrder(C.vmaddr);
+  sys::swapByteOrder(C.fileoff);
+  sys::swapByteOrder(C.entry_id);
 }
 
 inline void swapStruct(version_min_command &C) {

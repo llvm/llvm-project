@@ -26,6 +26,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fchmodat
+  SRCS
+    fchmodat.cpp
+  HDRS
+    ../fchmod.h
+  DEPENDS
+    libc.include.sys_stat
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   mkdir
   SRCS
     mkdir.cpp

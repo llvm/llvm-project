@@ -1756,10 +1756,12 @@ define i32 @add_add_add_commute3(i32 %A, i32 %B, i32 %C, i32 %D) {
   ret i32 %G
 }
 
+; x * y + x --> (y + 1) * x
+
 define i8 @mul_add_common_factor_commute1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_add_common_factor_commute1(
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[M]], [[X]]
+; CHECK-NEXT:    [[X1:%.*]] = add i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i8 [[A]]
 ;
   %m = mul nsw i8 %x, %y
@@ -1769,8 +1771,8 @@ define i8 @mul_add_common_factor_commute1(i8 %x, i8 %y) {
 
 define <2 x i8> @mul_add_common_factor_commute2(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @mul_add_common_factor_commute2(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i8> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = add nuw <2 x i8> [[M]], [[X]]
+; CHECK-NEXT:    [[M1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[A:%.*]] = mul nuw <2 x i8> [[M1]], [[X:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[A]]
 ;
   %m = mul nuw <2 x i8> %y, %x
@@ -1781,8 +1783,8 @@ define <2 x i8> @mul_add_common_factor_commute2(<2 x i8> %x, <2 x i8> %y) {
 define i8 @mul_add_common_factor_commute3(i8 %p, i8 %y) {
 ; CHECK-LABEL: @mul_add_common_factor_commute3(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X]], [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[X]], [[M]]
+; CHECK-NEXT:    [[M1:%.*]] = add i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X]], [[M1]]
 ; CHECK-NEXT:    ret i8 [[A]]
 ;
   %x = mul i8 %p, %p ; thwart complexity-based canonicalization
@@ -1795,8 +1797,8 @@ define i8 @mul_add_common_factor_commute4(i8 %p, i8 %q) {
 ; CHECK-LABEL: @mul_add_common_factor_commute4(
 ; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
 ; CHECK-NEXT:    [[Y:%.*]] = mul i8 [[Q:%.*]], [[Q]]
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[Y]], [[X]]
-; CHECK-NEXT:    [[A:%.*]] = add nuw i8 [[X]], [[M]]
+; CHECK-NEXT:    [[M1:%.*]] = add i8 [[Y]], 1
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X]], [[M1]]
 ; CHECK-NEXT:    ret i8 [[A]]
 ;
   %x = mul i8 %p, %p ; thwart complexity-based canonicalization
@@ -1805,6 +1807,8 @@ define i8 @mul_add_common_factor_commute4(i8 %p, i8 %q) {
   %a = add nuw i8 %x, %m
   ret i8 %a
 }
+
+; negative test - uses
 
 define i8 @mul_add_common_factor_use(i8 %x, i8 %y) {
 ; CHECK-LABEL: @mul_add_common_factor_use(

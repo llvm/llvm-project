@@ -42,23 +42,19 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 
 // CHECK-LABEL:   func.func private @_FortranASumInteger4_simplified(
 // CHECK-SAME:                                                       %[[ARR:.*]]: !fir.box<none>) -> i32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
-// CHECK:           %[[CI32_0:.*]] = arith.constant 0 : i32
-// CHECK:           %[[SUM:.*]] = fir.alloca i32
-// CHECK:           fir.store %[[CI32_0]] to %[[SUM]] : !fir.ref<i32>
 // CHECK:           %[[CINDEX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[ARR_BOX_I32:.*]] = fir.convert %[[ARR]] : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %[[CINDEX_0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
-// CHECK:           fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] {
+// CHECK:           %[[CI32_0:.*]] = arith.constant 0 : i32
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[SUM:.*]] = %[[CI32_0]]) -> (i32) {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_I32]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<i32>
-// CHECK:             %[[SUM_VAL:.*]] = fir.load %[[SUM]] : !fir.ref<i32>
-// CHECK:             %[[NEW_SUM:.*]] = arith.addi %[[ITEM_VAL]], %[[SUM_VAL]] : i32
-// CHECK:             fir.store %[[NEW_SUM]] to %[[SUM]] : !fir.ref<i32>
+// CHECK:             %[[NEW_SUM:.*]] = arith.addi %[[ITEM_VAL]], %[[SUM]] : i32
+// CHECK:             fir.result %[[NEW_SUM]] : i32
 // CHECK:           }
-// CHECK:           %[[RET:.*]] = fir.load %[[SUM]] : !fir.ref<i32>
-// CHECK:           return %[[RET]] : i32
+// CHECK:           return %[[RES]] : i32
 // CHECK:         }
 
 // -----
@@ -140,22 +136,18 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 
 // CHECK-LABEL:   func.func private @_FortranASumReal8_simplified(
 // CHECK-SAME:                                                    %[[ARR:.*]]: !fir.box<none>) -> f64 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
-// CHECK:           %[[ZERO:.*]] = arith.constant 0.000000e+00 : f64
-// CHECK:           %[[SUM:.*]] = fir.alloca f64
-// CHECK:           fir.store %[[ZERO]] to %[[SUM]] : !fir.ref<f64>
 // CHECK:           %[[CINDEX_0:.*]] = arith.constant 0 : index
 // CHECK:           %[[ARR_BOX_F64:.*]] = fir.convert %[[ARR]] : (!fir.box<none>) -> !fir.box<!fir.array<?xf64>>
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_F64]], %[[CINDEX_0]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
 // CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
-// CHECK:           fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] {
+// CHECK:           %[[ZERO:.*]] = arith.constant 0.000000e+00 : f64
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[SUM]] = %[[ZERO]]) -> (f64) {
 // CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_F64]], %[[ITER]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
 // CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<f64>
-// CHECK:             %[[SUM_VAL:.*]] = fir.load %[[SUM]] : !fir.ref<f64>
-// CHECK:             %[[NEW_SUM:.*]] = arith.addf %[[ITEM_VAL]], %[[SUM_VAL]] : f64
-// CHECK:             fir.store %[[NEW_SUM]] to %[[SUM]] : !fir.ref<f64>
+// CHECK:             %[[NEW_SUM:.*]] = arith.addf %[[ITEM_VAL]], %[[SUM]] : f64
+// CHECK:             fir.result %[[NEW_SUM]] : f64
 // CHECK:           }
-// CHECK:           %[[RES:.*]] = fir.load %[[SUM]] : !fir.ref<f64>
 // CHECK:           return %[[RES]] : f64
 // CHECK:         }
 
@@ -312,10 +304,10 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %{{.*}} : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
 // CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
-// CHECK:           fir.do_loop %[[ITER:.*]] = %{{.*}} to %[[EXTENT]] step %[[CINDEX_1]] {
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %{{.*}} to %[[EXTENT]] step %[[CINDEX_1]] iter_args({{.*}}) -> (i32) {
 // CHECK:             %{{.*}} = fir.coordinate_of %[[ARR_BOX_I32]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
 // CHECK:           }
-// CHECK:           return %{{.*}} : i32
+// CHECK:           return %[[RES]] : i32
 // CHECK:         }
 
 // -----
@@ -702,6 +694,119 @@ fir.global linkonce @_QQcl.2E2F646F742E66393000 constant : !fir.char<1,10> {
 // CHECK:             %[[MUL:.*]] = arith.mulf %[[AVALCAST]], %[[BVALCAST]] : f64
 // CHECK:             %[[NEWSUM:.*]] = arith.addf %[[MUL]], %[[SUM]] : f64
 // CHECK:             fir.result %[[NEWSUM]] : f64
+// CHECK:           }
+// CHECK:           return %[[RES]] : f64
+// CHECK:         }
+
+
+// -----
+
+// Call to MAXVAL with 1D I32 array is replaced.
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
+  func.func @maxval_1d_array_int(%arg0: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"}) -> i32 {
+    %c10 = arith.constant 10 : index
+    %0 = fir.alloca i32 {bindc_name = "test_max_2", uniq_name = "_QFtest_max_2Etest_max_2"}
+    %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+    %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
+    %3 = fir.absent !fir.box<i1>
+    %c0 = arith.constant 0 : index
+    %4 = fir.address_of(@_QQcl.2E2F696D61785F322E66393000) : !fir.ref<!fir.char<1,13>>
+    %c5_i32 = arith.constant 5 : i32
+    %5 = fir.convert %2 : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
+    %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
+    %7 = fir.convert %c0 : (index) -> i32
+    %8 = fir.convert %3 : (!fir.box<i1>) -> !fir.box<none>
+    %9 = fir.call @_FortranAMaxvalInteger4(%5, %6, %c5_i32, %7, %8) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32
+    fir.store %9 to %0 : !fir.ref<i32>
+    %10 = fir.load %0 : !fir.ref<i32>
+    return %10 : i32
+  }
+  func.func private @_FortranAMaxvalInteger4(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> i32 attributes {fir.runtime}
+  fir.global linkonce @_QQcl.2E2F696D61785F322E66393000 constant : !fir.char<1,13> {
+    %0 = fir.string_lit "./imax_2.f90\00"(13) : !fir.char<1,13>
+    fir.has_value %0 : !fir.char<1,13>
+  }
+}
+
+// CHECK-LABEL:   func.func @maxval_1d_array_int(
+// CHECK-SAME:                             %[[A:.*]]: !fir.ref<!fir.array<10xi32>> {fir.bindc_name = "a"}) -> i32 {
+// CHECK:           %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
+// CHECK:           %[[A_BOX_I32:.*]] = fir.embox %[[A]](%[[SHAPE]]) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
+// CHECK:           %[[A_BOX_NONE:.*]] = fir.convert %[[A_BOX_I32]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
+// CHECK:           %[[RES:.*]] = fir.call @_FortranAMaxvalInteger4_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> i32
+// CHECK:           return %{{.*}} : i32
+// CHECK:         }
+
+// CHECK-LABEL:   func.func private @_FortranAMaxvalInteger4_simplified(
+// CHECK-SAME:                                                       %[[ARR:.*]]: !fir.box<none>) -> i32 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK:           %[[CINDEX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[ARR_BOX_I32:.*]] = fir.convert %[[ARR]] : (!fir.box<none>) -> !fir.box<!fir.array<?xi32>>
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_I32]], %[[CINDEX_0]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
+// CHECK:           %[[CI32_MININT:.*]] = arith.constant -2147483648 : i32
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MAX:.*]] = %[[CI32_MININT]]) -> (i32) {
+// CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_I32]], %[[ITER]] : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
+// CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<i32>
+// CHECK:             %[[NEW_MAX:.*]] = arith.maxsi %[[ITEM_VAL]], %[[MAX]] : i32
+// CHECK:             fir.result %[[NEW_MAX]] : i32
+// CHECK:           }
+// CHECK:           return %[[RES]] : i32
+// CHECK:         }
+
+// -----
+
+// Call to MAXVAL with 1D F64 is replaced.
+module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {
+  func.func @maxval_1d_real(%arg0: !fir.ref<!fir.array<10xf64>> {fir.bindc_name = "a"}) -> f64 {
+    %c10 = arith.constant 10 : index
+    %0 = fir.alloca f64 {bindc_name = "maxval_1d_real", uniq_name = "_QFmaxval_1d_realEmaxval_1d_real"}
+    %1 = fir.shape %c10 : (index) -> !fir.shape<1>
+    %2 = fir.embox %arg0(%1) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
+    %3 = fir.absent !fir.box<i1>
+    %c0 = arith.constant 0 : index
+    %4 = fir.address_of(@_QQcl.2E2F6973756D5F352E66393000) : !fir.ref<!fir.char<1,13>>
+    %c5_i32 = arith.constant 5 : i32
+    %5 = fir.convert %2 : (!fir.box<!fir.array<10xf64>>) -> !fir.box<none>
+    %6 = fir.convert %4 : (!fir.ref<!fir.char<1,13>>) -> !fir.ref<i8>
+    %7 = fir.convert %c0 : (index) -> i32
+    %8 = fir.convert %3 : (!fir.box<i1>) -> !fir.box<none>
+    %9 = fir.call @_FortranAMaxvalReal8(%5, %6, %c5_i32, %7, %8) : (!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> f64
+    fir.store %9 to %0 : !fir.ref<f64>
+    %10 = fir.load %0 : !fir.ref<f64>
+    return %10 : f64
+  }
+  func.func private @_FortranAMaxvalReal8(!fir.box<none>, !fir.ref<i8>, i32, i32, !fir.box<none>) -> f64 attributes {fir.runtime}
+  fir.global linkonce @_QQcl.2E2F6973756D5F352E66393000 constant : !fir.char<1,13> {
+    %0 = fir.string_lit "./imaxval_5.f90\00"(13) : !fir.char<1,13>
+    fir.has_value %0 : !fir.char<1,13>
+  }
+}
+
+
+// CHECK-LABEL:   func.func @maxval_1d_real(
+// CHECK-SAME:                           %[[A:.*]]: !fir.ref<!fir.array<10xf64>> {fir.bindc_name = "a"}) -> f64 {
+// CHECK:           %[[CINDEX_10:.*]] = arith.constant 10 : index
+// CHECK:           %[[SHAPE:.*]] = fir.shape %[[CINDEX_10]] : (index) -> !fir.shape<1>
+// CHECK:           %[[A_BOX_F64:.*]] = fir.embox %[[A]](%[[SHAPE]]) : (!fir.ref<!fir.array<10xf64>>, !fir.shape<1>) -> !fir.box<!fir.array<10xf64>>
+// CHECK:           %[[A_BOX_NONE:.*]] = fir.convert %[[A_BOX_F64]] : (!fir.box<!fir.array<10xf64>>) -> !fir.box<none>
+// CHECK:           %[[RES:.*]] = fir.call @_FortranAMaxvalReal8_simplified(%[[A_BOX_NONE]]) : (!fir.box<none>) -> f64
+// CHECK:           return %{{.*}} : f64
+// CHECK:         }
+
+// CHECK-LABEL:   func.func private @_FortranAMaxvalReal8_simplified(
+// CHECK-SAME:                                                    %[[ARR:.*]]: !fir.box<none>) -> f64 attributes {llvm.linkage = #llvm.linkage<linkonce_odr>} {
+// CHECK:           %[[CINDEX_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[ARR_BOX_F64:.*]] = fir.convert %[[ARR]] : (!fir.box<none>) -> !fir.box<!fir.array<?xf64>>
+// CHECK:           %[[DIMS:.*]]:3 = fir.box_dims %[[ARR_BOX_F64]], %[[CINDEX_0]] : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
+// CHECK:           %[[CINDEX_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[EXTENT:.*]] = arith.subi %[[DIMS]]#1, %[[CINDEX_1]] : index
+// CHECK:           %[[NEG_DBL_MAX:.*]] = arith.constant -1.7976931348623157E+308 : f64
+// CHECK:           %[[RES:.*]] = fir.do_loop %[[ITER:.*]] = %[[CINDEX_0]] to %[[EXTENT]] step %[[CINDEX_1]] iter_args(%[[MAX]] = %[[NEG_DBL_MAX]]) -> (f64) {
+// CHECK:             %[[ITEM:.*]] = fir.coordinate_of %[[ARR_BOX_F64]], %[[ITER]] : (!fir.box<!fir.array<?xf64>>, index) -> !fir.ref<f64>
+// CHECK:             %[[ITEM_VAL:.*]] = fir.load %[[ITEM]] : !fir.ref<f64>
+// CHECK:             %[[NEW_MAX:.*]] = arith.maxf %[[ITEM_VAL]], %[[MAX]] : f64
+// CHECK:             fir.result %[[NEW_MAX]] : f64
 // CHECK:           }
 // CHECK:           return %[[RES]] : f64
 // CHECK:         }
