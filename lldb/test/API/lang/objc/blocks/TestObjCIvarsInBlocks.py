@@ -44,6 +44,8 @@ class TestObjCIvarsInBlocks(TestBase):
             process.GetState(), lldb.eStateStopped,
             "Stopped it too.")
 
+        self.runCmd('settings set target.prefer-dynamic-value no-dynamic-values')
+
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(
             process, breakpoint)
         self.assertEqual(len(thread_list), 1)

@@ -5048,6 +5048,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":AffineDialect",
         ":ArithmeticDialect",
         ":BufferizationDialect",
         ":BufferizationTransforms",
@@ -5878,6 +5879,7 @@ cc_library(
     ),
     includes = ["include"],
     deps = [
+        ":ArithmeticDialect",
         ":CallOpInterfaces",
         ":ControlFlowInterfaces",
         ":DataLayoutInterfaces",

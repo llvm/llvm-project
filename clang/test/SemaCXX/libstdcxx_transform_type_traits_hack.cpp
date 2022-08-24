@@ -49,9 +49,9 @@ template <class T>
 using H = Same<__add_rvalue_reference<T>, __add_rvalue_reference<T>>;
 
 template <class T>
-using __remove_reference = int; // expected-warning{{keyword '__remove_reference' will be made available as an identifier here}}
+using __remove_reference_t = int; // expected-warning{{keyword '__remove_reference_t' will be made available as an identifier here}}
 template <class T>
-using I = Same<__remove_reference<T>, __remove_reference<T>>;
+using I = Same<__remove_reference_t<T>, __remove_reference_t<T>>;
 
 template <class T>
 using __remove_cvref = int; // expected-warning{{keyword '__remove_cvref' will be made available as an identifier here}}

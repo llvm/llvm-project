@@ -74,9 +74,6 @@ SmallVector<AffineExpr, 4> concat(ArrayRef<AffineExpr> a,
 void getDimsOfType(Operation *op, StringRef iteratorTypeName,
                    SmallVectorImpl<unsigned> &res);
 
-namespace detail {
-LogicalResult verifyStructuredOpInterface(Operation *op);
-} // namespace detail
 } // namespace linalg
 } // namespace mlir
 

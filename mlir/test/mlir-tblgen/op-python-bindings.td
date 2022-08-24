@@ -188,8 +188,8 @@ def DefaultValuedAttrsOp : TestOp<"default_valued_attrs"> {
   // CHECK:   results = []
   // CHECK:   attributes = {}
   // CHECK:   regions = None
-  // CHECK:   attributes["arr"] = arr if arr is not None else _ods_ir.ArrayAttr.get([])
-  // CHECK:   unsupported is not None, "attribute unsupported must be specified"
+  // CHECK:   if arr is not None: attributes["arr"] = arr
+  // CHECK:   if unsupported is not None: attributes["unsupported"] = unsupported
   // CHECK:   _ods_successors = None
   // CHECK:   super().__init__(self.build_generic(
   // CHECK:     attributes=attributes, results=results, operands=operands,

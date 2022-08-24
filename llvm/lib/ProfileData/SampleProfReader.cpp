@@ -138,8 +138,8 @@ void SampleProfileReader::dumpJson(raw_ostream &OS) {
   sortFuncProfiles(Profiles, V);
   json::OStream JOS(OS, 2);
   JOS.arrayBegin();
-  for (const auto &[FC, FS] : V)
-    dumpFunctionProfileJson(*FS, JOS, true);
+  for (const auto &F : V)
+    dumpFunctionProfileJson(*F.second, JOS, true);
   JOS.arrayEnd();
 
   // Emit a newline character at the end as json::OStream doesn't emit one.

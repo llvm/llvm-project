@@ -447,6 +447,10 @@ class DebugCommunication(object):
         return self.get_scope_variables('Locals', frameIndex=frameIndex,
                                         threadId=threadId)
 
+    def get_registers(self, frameIndex=0, threadId=None):
+        return self.get_scope_variables('Registers', frameIndex=frameIndex,
+                                        threadId=threadId)
+
     def get_local_variable(self, name, frameIndex=0, threadId=None):
         locals = self.get_local_variables(frameIndex=frameIndex,
                                           threadId=threadId)

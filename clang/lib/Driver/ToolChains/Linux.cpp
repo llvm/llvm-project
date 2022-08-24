@@ -8,6 +8,7 @@
 
 #include "Linux.h"
 #include "Arch/ARM.h"
+#include "Arch/LoongArch.h"
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
@@ -307,6 +308,13 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
   Generic_GCC::AddMultiarchPaths(D, SysRoot, OSLibDir, Paths);
 
+  // The deprecated -DLLVM_ENABLE_PROJECTS=libcxx configuration installs
+  // libc++.so in D.Dir+"/../lib/". Detect this path.
+  // TODO Remove once LLVM_ENABLE_PROJECTS=libcxx is unsupported.
+  if (StringRef(D.Dir).startswith(SysRoot) &&
+      D.getVFS().exists(D.Dir + "/../lib/libc++.so"))
+    addPathIfExists(D, D.Dir + "/../lib", Paths);
+
   addPathIfExists(D, concat(SysRoot, "/lib"), Paths);
   addPathIfExists(D, concat(SysRoot, "/usr/lib"), Paths);
 }
@@ -464,6 +472,20 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
 
     LibDir = "lib";
     Loader = HF ? "ld-linux-armhf.so.3" : "ld-linux.so.3";
+    break;
+  }
+  case llvm::Triple::loongarch32: {
+    LibDir = "lib32";
+    Loader = ("ld-linux-loongarch-" +
+              tools::loongarch::getLoongArchABI(Args, Triple) + ".so.1")
+                 .str();
+    break;
+  }
+  case llvm::Triple::loongarch64: {
+    LibDir = "lib64";
+    Loader = ("ld-linux-loongarch-" +
+              tools::loongarch::getLoongArchABI(Args, Triple) + ".so.1")
+                 .str();
     break;
   }
   case llvm::Triple::m68k:
@@ -692,11 +714,8 @@ void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
 }
 
 bool Linux::isPIEDefault(const llvm::opt::ArgList &Args) const {
-  // TODO: Remove the special treatment for Flang once its frontend driver can
-  // generate position independent code.
-  return !getDriver().IsFlangMode() &&
-         (CLANG_DEFAULT_PIE_ON_LINUX || getTriple().isAndroid() ||
-          getTriple().isMusl() || getSanitizerArgs(Args).requiresPIE());
+  return CLANG_DEFAULT_PIE_ON_LINUX || getTriple().isAndroid() ||
+         getTriple().isMusl() || getSanitizerArgs(Args).requiresPIE();
 }
 
 bool Linux::IsAArch64OutlineAtomicsDefault(const ArgList &Args) const {

@@ -147,7 +147,26 @@ build:clang-cl --cxxopt=/clang:-Wno-c++11-narrowing --host_cxxopt=/clang:-Wno-c+
 # -O1 tries to provide a reasonable tradeoff between compile times and runtime
 # performance. However, if we start running more tests (e.g. all of
 # check-clang) we may want more optimizations.
+# Note for anybody considering using --compilation_mode=opt in CI, it builds
+# most files twice, one PIC version for shared libraries in tests, and one
+# non-PIC version for binaries.
 build:ci --copt=-O1
+
+# Use clang.
+build:ci --config=generic_clang
+
+# Speedup bazel using a ramdisk.
+build:ci --sandbox_base=/dev/shm
+
+# Don't build/test targets tagged with "nobuildkite".
+build:ci --build_tag_filters=-nobuildkite
+build:ci --test_tag_filters=-nobuildkite
+
+# Show as many errors as possible.
+build:ci --keep_going
+
+# Show test errors.
+build:ci --test_output=errors
 
 ###############################################################################
 

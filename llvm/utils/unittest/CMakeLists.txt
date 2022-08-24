@@ -34,8 +34,7 @@ endif()
 set(LLVM_REQUIRES_RTTI 1)
 add_definitions( -DGTEST_HAS_RTTI=0 )
 
-find_library(LLVM_PTHREAD_LIBRARY_PATH pthread)
-if (LLVM_PTHREAD_LIBRARY_PATH)
+if (HAVE_LIBPTHREAD)
   list(APPEND LIBS pthread)
 endif()
 

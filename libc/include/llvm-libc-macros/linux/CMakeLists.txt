@@ -3,3 +3,9 @@ add_header(
   HDR
     fcntl-macros.h
 )
+
+add_header(
+  sys_stat_macros
+  HDR
+    sys-stat-macros.h
+)
