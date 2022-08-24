@@ -396,20 +396,11 @@ bool BinaryFunction::isForwardCall(const MCSymbol *CalleeSymbol) const {
 }
 
 void BinaryFunction::dump(bool PrintInstructions) const {
-  // getDynoStats calls FunctionLayout::updateLayoutIndices and
-  // BasicBlock::analyzeBranch. The former cannot be const, but should be
-  // removed, the latter should be made const, but seems to require refactoring.
-  // Forcing all callers to have a non-const reference to BinaryFunction to call
-  // dump non-const however is not ideal either. Adding this const_cast is right
-  // now the best solution. It is safe, because BinaryFunction itself is not
-  // modified. Only BinaryBasicBlocks are actually modified (if it all) and we
-  // have mutable pointers to those regardless whether this function is
-  // const-qualified or not.
-  const_cast<BinaryFunction &>(*this).print(dbgs(), "", PrintInstructions);
+  print(dbgs(), "", PrintInstructions);
 }
 
 void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
-                           bool PrintInstructions) {
+                           bool PrintInstructions) const {
   if (!opts::shouldPrint(*this))
     return;
 
@@ -3567,9 +3558,9 @@ size_t BinaryFunction::computeHash(bool UseDFS,
 
   assert(hasCFG() && "function is expected to have CFG");
 
-  SmallVector<const BinaryBasicBlock *, 0> Order;
+  BasicBlockListType Order;
   if (UseDFS)
-    llvm::copy(dfs(), std::back_inserter(Order));
+    Order = dfs();
   else
     llvm::copy(Layout.blocks(), std::back_inserter(Order));
 

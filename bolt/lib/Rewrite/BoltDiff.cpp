@@ -183,7 +183,7 @@ class RewriteInstanceDiff {
            RI1.getTotalScore();
   }
 
-  double getNormalizedScore(BinaryBasicBlock::const_branch_info_iterator BIIter,
+  double getNormalizedScore(BinaryBasicBlock::branch_info_iterator BIIter,
                             const RewriteInstance &Ctx) {
     double Score =
         BIIter->Count == BinaryBasicBlock::COUNT_NO_PROFILE ? 0 : BIIter->Count;
