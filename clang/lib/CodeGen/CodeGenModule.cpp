@@ -60,12 +60,12 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProfReader.h"
+#include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MD5.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/X86TargetParser.h"
 #include "llvm/Support/xxhash.h"
@@ -208,22 +208,7 @@ CodeGenModule::CodeGenModule(ASTContext &C,
         Path = Entry.second + Path.substr(Entry.first.size());
         break;
       }
-    llvm::MD5 Md5;
-    Md5.update(Path);
-    llvm::MD5::MD5Result R;
-    Md5.final(R);
-    SmallString<32> Str;
-    llvm::MD5::stringifyResult(R, Str);
-    // Convert MD5hash to Decimal. Demangler suffixes can either contain
-    // numbers or characters but not both.
-    llvm::APInt IntHash(128, Str.str(), 16);
-    // Prepend "__uniq" before the hash for tools like profilers to understand
-    // that this symbol is of internal linkage type.  The "__uniq" is the
-    // pre-determined prefix that is used to tell tools that this symbol was
-    // created with -funique-internal-linakge-symbols and the tools can strip or
-    // keep the prefix as needed.
-    ModuleNameHash = (Twine(".__uniq.") +
-        Twine(toString(IntHash, /* Radix = */ 10, /* Signed = */false))).str();
+    ModuleNameHash = llvm::getUniqueInternalLinkagePostfix(Path);
   }
 }
 
