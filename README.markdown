@@ -42,10 +42,10 @@ files on top of `main`, which means that I often rebase. Sorry!
 
 ## Status
 
-The benchnark [MiBench/security-sha](https://github.com/llvm/llvm-test-suite/tree/main/MultiSource/Benchmarks/MiBench/security-sha)
+The benchmark [MiBench/security-sha](https://github.com/llvm/llvm-test-suite/tree/main/MultiSource/Benchmarks/MiBench/security-sha)
 from the [LLVM test suite](https://github.com/llvm/llvm-test-suite/) can be
 cross-compiled with optimization levels -O0, -O1, and -O2, and gives the same
-results as the gcc-compiled version.
+result as the native gcc-compiled version. Here is the recipe:
 
 1. Create a directory for the header files. From here I name it `$SYSROOT`.
 2. Copy directory `/usr/include` (with all subdirectories) from your OpenBSD system
