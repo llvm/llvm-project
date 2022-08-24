@@ -44,6 +44,10 @@ bool isDebugMode(DebugKind Level);
 /// explicitly disabled by the user.
 bool mayUseThreadStates();
 
+/// Indicates if this kernel may require data environments for nested
+/// parallelism, or if it was explicitly disabled by the user.
+bool mayUseNestedParallelism();
+
 } // namespace config
 } // namespace _OMP
 

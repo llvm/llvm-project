@@ -6228,6 +6228,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
         CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
       if (Args.hasArg(options::OPT_fopenmp_assume_no_thread_state))
         CmdArgs.push_back("-fopenmp-assume-no-thread-state");
+      if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
+        CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
       if (Args.hasArg(options::OPT_fopenmp_offload_mandatory))
         CmdArgs.push_back("-fopenmp-offload-mandatory");
       break;
@@ -8572,8 +8574,9 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
     for (StringRef LibName : BCLibs)
       CmdArgs.push_back(Args.MakeArgString(
-          "--bitcode-library=" + Action::GetOffloadKindName(Action::OFK_OpenMP) +
-          "-" + TC->getTripleString() + "-" + Arch + "=" + LibName));
+          "--bitcode-library=" +
+          Action::GetOffloadKindName(Action::OFK_OpenMP) + "-" +
+          TC->getTripleString() + "-" + Arch + "=" + LibName));
   }
 
   if (D.isUsingLTO(/* IsOffload */ true)) {
