@@ -1825,9 +1825,8 @@ define i8 @mul_add_common_factor_use(i8 %x, i8 %y) {
 
 define i8 @not_mul(i8 %x) {
 ; CHECK-LABEL: @not_mul(
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i8 [[X:%.*]], 42
-; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[MUL]], -1
-; CHECK-NEXT:    [[PLUSX:%.*]] = add nsw i8 [[NOT]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[X:%.*]], -41
+; CHECK-NEXT:    [[PLUSX:%.*]] = add i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[PLUSX]]
 ;
   %mul = mul nsw i8 %x, 42
@@ -1839,9 +1838,8 @@ define i8 @not_mul(i8 %x) {
 define <2 x i8> @not_mul_commute(<2 x i8> %p) {
 ; CHECK-LABEL: @not_mul_commute(
 ; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <2 x i8> [[X]], <i8 -42, i8 -42>
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i8> [[MUL]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[PLUSX:%.*]] = add nuw <2 x i8> [[X]], [[NOT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i8> [[X]], <i8 43, i8 43>
+; CHECK-NEXT:    [[PLUSX:%.*]] = add <2 x i8> [[TMP1]], <i8 -1, i8 -1>
 ; CHECK-NEXT:    ret <2 x i8> [[PLUSX]]
 ;
   %x = mul <2 x i8> %p, %p ; thwart complexity-based canonicalization
@@ -1850,6 +1848,23 @@ define <2 x i8> @not_mul_commute(<2 x i8> %p) {
   %plusx = add nuw <2 x i8> %x, %not
   ret <2 x i8> %plusx
 }
+
+; negative test - need common operand
+
+define i8 @not_mul_wrong_op(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_mul_wrong_op(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[MUL]], -1
+; CHECK-NEXT:    [[PLUSX:%.*]] = add i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[PLUSX]]
+;
+  %mul = mul i8 %x, 42
+  %not = xor i8 %mul, -1
+  %plusx = add i8 %not, %y
+  ret i8 %plusx
+}
+
+; negative test - avoid creating an extra mul
 
 define i8 @not_mul_use1(i8 %x) {
 ; CHECK-LABEL: @not_mul_use1(
@@ -1865,6 +1880,8 @@ define i8 @not_mul_use1(i8 %x) {
   %plusx = add nsw i8 %not, %x
   ret i8 %plusx
 }
+
+; negative test - too many instructions
 
 define i8 @not_mul_use2(i8 %x) {
 ; CHECK-LABEL: @not_mul_use2(
