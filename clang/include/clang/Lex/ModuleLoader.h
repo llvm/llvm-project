@@ -51,6 +51,11 @@ public:
   ModuleLoadResult() = default;
   ModuleLoadResult(Module *M) : Storage(M, Normal) {}
   ModuleLoadResult(LoadResultKind Kind) : Storage(nullptr, Kind) {}
+  ModuleLoadResult(Module *M, LoadResultKind Kind) : Storage(M, Kind) {}
+
+  operator bool() const {
+    return Storage.getInt() == Normal && Storage.getPointer();
+  }
 
   operator Module *() const { return Storage.getPointer(); }
 
