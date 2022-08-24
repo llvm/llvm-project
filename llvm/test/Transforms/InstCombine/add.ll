@@ -1822,3 +1822,61 @@ define i8 @mul_add_common_factor_use(i8 %x, i8 %y) {
   %a = add i8 %m, %x
   ret i8 %a
 }
+
+define i8 @not_mul(i8 %x) {
+; CHECK-LABEL: @not_mul(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[MUL]], -1
+; CHECK-NEXT:    [[PLUSX:%.*]] = add nsw i8 [[NOT]], [[X]]
+; CHECK-NEXT:    ret i8 [[PLUSX]]
+;
+  %mul = mul nsw i8 %x, 42
+  %not = xor i8 %mul, -1
+  %plusx = add nsw i8 %not, %x
+  ret i8 %plusx
+}
+
+define <2 x i8> @not_mul_commute(<2 x i8> %p) {
+; CHECK-LABEL: @not_mul_commute(
+; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <2 x i8> [[X]], <i8 -42, i8 -42>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i8> [[MUL]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[PLUSX:%.*]] = add nuw <2 x i8> [[X]], [[NOT]]
+; CHECK-NEXT:    ret <2 x i8> [[PLUSX]]
+;
+  %x = mul <2 x i8> %p, %p ; thwart complexity-based canonicalization
+  %mul = mul nuw <2 x i8> %x, <i8 -42, i8 -42>
+  %not = xor <2 x i8> %mul, <i8 -1, i8 -1>
+  %plusx = add nuw <2 x i8> %x, %not
+  ret <2 x i8> %plusx
+}
+
+define i8 @not_mul_use1(i8 %x) {
+; CHECK-LABEL: @not_mul_use1(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i8 [[X:%.*]], 42
+; CHECK-NEXT:    call void @use(i8 [[MUL]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[MUL]], -1
+; CHECK-NEXT:    [[PLUSX:%.*]] = add nsw i8 [[NOT]], [[X]]
+; CHECK-NEXT:    ret i8 [[PLUSX]]
+;
+  %mul = mul nsw i8 %x, 42
+  call void @use(i8 %mul)
+  %not = xor i8 %mul, -1
+  %plusx = add nsw i8 %not, %x
+  ret i8 %plusx
+}
+
+define i8 @not_mul_use2(i8 %x) {
+; CHECK-LABEL: @not_mul_use2(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[MUL]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOT]])
+; CHECK-NEXT:    [[PLUSX:%.*]] = add i8 [[NOT]], [[X]]
+; CHECK-NEXT:    ret i8 [[PLUSX]]
+;
+  %mul = mul i8 %x, 42
+  %not = xor i8 %mul, -1
+  call void @use(i8 %not)
+  %plusx = add i8 %not, %x
+  ret i8 %plusx
+}
