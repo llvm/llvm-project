@@ -52,9 +52,8 @@ static std::vector<std::string> splitString(std::string S, char Separator) {
   return Result;
 }
 
-void ModuleDepCollector::addOutputPaths(ModuleDeps &Deps) {
-  CompilerInvocation &CI = Deps.BuildInvocation;
-
+void ModuleDepCollector::addOutputPaths(CompilerInvocation &CI,
+                                        ModuleDeps &Deps) {
   // These are technically *inputs* to the compilation, but we populate them
   // here in order to make \c getModuleContextHash() independent of
   // \c lookupModuleOutput().
@@ -170,11 +169,8 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   return CI;
 }
 
-std::vector<std::string> ModuleDeps::getCanonicalCommandLine() const {
-  return BuildInvocation.getCC1CommandLine();
-}
-
 static std::string getModuleContextHash(const ModuleDeps &MD,
+                                        const CompilerInvocation &CI,
                                         bool EagerLoadModules) {
   llvm::HashBuilder<llvm::TruncatedBLAKE3<16>,
                     llvm::support::endianness::native>
@@ -188,7 +184,7 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
 
   // Hash the BuildInvocation without any input files.
   SmallVector<const char *, 32> DummyArgs;
-  MD.BuildInvocation.generateCC1CommandLine(DummyArgs, [&](const Twine &Arg) {
+  CI.generateCC1CommandLine(DummyArgs, [&](const Twine &Arg) {
     Scratch.clear();
     StringRef Str = Arg.toStringRef(Scratch);
     HashBuilder.add(Str);
@@ -397,7 +393,7 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   llvm::DenseSet<const Module *> ProcessedModules;
   addAllAffectingModules(M, MD, ProcessedModules);
 
-  MD.BuildInvocation = MDC.makeInvocationForModuleBuildWithoutOutputs(
+  CompilerInvocation CI = MDC.makeInvocationForModuleBuildWithoutOutputs(
       MD, [&](CompilerInvocation &BuildInvocation) {
         if (MDC.OptimizeArgs)
           optimizeHeaderSearchOpts(BuildInvocation.getHeaderSearchOpts(),
@@ -405,9 +401,12 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
       });
 
   // Compute the context hash from the inputs. Requires dependencies.
-  MD.ID.ContextHash = getModuleContextHash(MD, MDC.EagerLoadModules);
+  MD.ID.ContextHash = getModuleContextHash(MD, CI, MDC.EagerLoadModules);
   // Finish the compiler invocation. Requires dependencies and the context hash.
-  MDC.addOutputPaths(MD);
+  MDC.addOutputPaths(CI, MD);
+
+  MD.BuildArguments = CI.getCC1CommandLine();
+
   return MD.ID;
 }
 

@@ -119,11 +119,9 @@ struct ModuleDeps {
   // the primary TU.
   bool ImportedByMainFile = false;
 
-  /// Compiler invocation that can be used to build this module (without paths).
-  CompilerInvocation BuildInvocation;
-
-  /// Gets the canonical command line suitable for passing to clang.
-  std::vector<std::string> getCanonicalCommandLine() const;
+  /// Compiler invocation that can be used to build this module. Does not
+  /// include argv[0].
+  std::vector<std::string> BuildArguments;
 };
 
 class ModuleDepCollector;
@@ -238,7 +236,7 @@ private:
       llvm::function_ref<void(CompilerInvocation &)> Optimize) const;
 
   /// Add paths that require looking up outputs to the given dependencies.
-  void addOutputPaths(ModuleDeps &Deps);
+  void addOutputPaths(CompilerInvocation &CI, ModuleDeps &Deps);
 };
 
 } // end namespace dependencies
