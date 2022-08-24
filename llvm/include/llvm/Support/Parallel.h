@@ -30,9 +30,6 @@ namespace parallel {
 extern ThreadPoolStrategy strategy;
 
 namespace detail {
-
-#if LLVM_ENABLE_THREADS
-
 class Latch {
   uint32_t Count;
   mutable std::mutex Mutex;
@@ -61,20 +58,42 @@ public:
     Cond.wait(lock, [&] { return Count == 0; });
   }
 };
+} // namespace detail
 
 class TaskGroup {
-  Latch L;
+  detail::Latch L;
   bool Parallel;
 
 public:
   TaskGroup();
   ~TaskGroup();
 
+  // Spawn a task, but does not wait for it to finish.
   void spawn(std::function<void()> f);
+
+  // Similar to spawn, but execute the task immediately when ThreadsRequested ==
+  // 1. The difference is to give the following pattern a more intuitive order
+  // when single threading is requested.
+  //
+  // for (size_t begin = 0, i = 0, taskSize = 0;;) {
+  //   taskSize += ...
+  //   bool done = ++i == end;
+  //   if (done || taskSize >= taskSizeLimit) {
+  //     tg.execute([=] { fn(begin, i); });
+  //     if (done)
+  //       break;
+  //     begin = i;
+  //     taskSize = 0;
+  //   }
+  // }
+  void execute(std::function<void()> f);
 
   void sync() const { L.sync(); }
 };
 
+namespace detail {
+
+#if LLVM_ENABLE_THREADS
 const ptrdiff_t MinParallelSize = 1024;
 
 /// Inclusive median.

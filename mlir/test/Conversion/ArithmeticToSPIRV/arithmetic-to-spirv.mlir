@@ -73,29 +73,29 @@ func.func @index_scalar_srem(%lhs: index, %rhs: index) {
 }
 
 // Check integer add-with-carry conversions.
-// CHECK-LABEL: @int32_scalar_addi_carry
+// CHECK-LABEL: @int32_scalar_addui_carry
 // CHECK-SAME: (%[[LHS:.+]]: i32, %[[RHS:.+]]: i32)
-func.func @int32_scalar_addi_carry(%lhs: i32, %rhs: i32) -> (i32, i1) {
+func.func @int32_scalar_addui_carry(%lhs: i32, %rhs: i32) -> (i32, i1) {
   // CHECK-NEXT: %[[IAC:.+]] = spv.IAddCarry %[[LHS]], %[[RHS]] : !spv.struct<(i32, i32)>
   // CHECK-DAG:  %[[SUM:.+]] = spv.CompositeExtract %[[IAC]][0 : i32] : !spv.struct<(i32, i32)>
   // CHECK-DAG:  %[[C0:.+]]  = spv.CompositeExtract %[[IAC]][1 : i32] : !spv.struct<(i32, i32)>
   // CHECK-DAG:  %[[ONE:.+]] = spv.Constant 1 : i32
   // CHECK-NEXT: %[[C1:.+]]  = spv.IEqual %[[C0]], %[[ONE]] : i32
   // CHECK-NEXT: return %[[SUM]], %[[C1]] : i32, i1
-  %sum, %carry = arith.addi_carry %lhs, %rhs: i32, i1
+  %sum, %carry = arith.addui_carry %lhs, %rhs: i32, i1
   return %sum, %carry : i32, i1
 }
 
-// CHECK-LABEL: @int32_vector_addi_carry
+// CHECK-LABEL: @int32_vector_addui_carry
 // CHECK-SAME: (%[[LHS:.+]]: vector<4xi32>, %[[RHS:.+]]: vector<4xi32>)
-func.func @int32_vector_addi_carry(%lhs: vector<4xi32>, %rhs: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
+func.func @int32_vector_addui_carry(%lhs: vector<4xi32>, %rhs: vector<4xi32>) -> (vector<4xi32>, vector<4xi1>) {
   // CHECK-NEXT: %[[IAC:.+]] = spv.IAddCarry %[[LHS]], %[[RHS]] : !spv.struct<(vector<4xi32>, vector<4xi32>)>
   // CHECK-DAG:  %[[SUM:.+]] = spv.CompositeExtract %[[IAC]][0 : i32] : !spv.struct<(vector<4xi32>, vector<4xi32>)>
   // CHECK-DAG:  %[[C0:.+]]  = spv.CompositeExtract %[[IAC]][1 : i32] : !spv.struct<(vector<4xi32>, vector<4xi32>)>
   // CHECK-DAG:  %[[ONE:.+]] = spv.Constant dense<1> : vector<4xi32>
   // CHECK-NEXT: %[[C1:.+]]  = spv.IEqual %[[C0]], %[[ONE]] : vector<4xi32>
   // CHECK-NEXT: return %[[SUM]], %[[C1]] : vector<4xi32>, vector<4xi1>
-  %sum, %carry = arith.addi_carry %lhs, %rhs: vector<4xi32>, vector<4xi1>
+  %sum, %carry = arith.addui_carry %lhs, %rhs: vector<4xi32>, vector<4xi1>
   return %sum, %carry : vector<4xi32>, vector<4xi1>
 }
 

@@ -19,6 +19,22 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  fchmodat_test
+  SUITE
+    libc_sys_stat_unittests
+  SRCS
+    fchmodat_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.fcntl
+    libc.include.sys_stat
+    libc.src.fcntl.open
+    libc.src.sys.stat.fchmodat
+    libc.src.unistd.close
+    libc.src.unistd.write
+)
+
+add_libc_unittest(
   fchmod_test
   SUITE
     libc_sys_stat_unittests
