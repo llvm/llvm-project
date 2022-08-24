@@ -52,16 +52,6 @@ public:
   /// from by the plug-in instance.
   ~ObjectContainer() override = default;
 
-  /// Dump a description of this object to a Stream.
-  ///
-  /// Dump a description of the current contents of this object to the
-  /// supplied stream \a s. The dumping should include the section list if it
-  /// has been parsed, and the symbol table if it has been parsed.
-  ///
-  /// \param[in] s
-  ///     The stream to which to dump the object description.
-  virtual void Dump(Stream *s) const = 0;
-
   /// Gets the architecture given an index.
   ///
   /// Copies the architecture specification for index \a idx.
@@ -141,20 +131,6 @@ public:
   ///     arch and optional \a name. Returns nullptr of no such object
   ///     file exists in the container.
   virtual lldb::ObjectFileSP GetObjectFile(const FileSpec *file) = 0;
-
-  virtual bool ObjectAtIndexIsContainer(uint32_t object_idx) { return false; }
-
-  virtual ObjectFile *GetObjectFileAtIndex(uint32_t object_idx) {
-    return nullptr;
-  }
-
-  virtual ObjectContainer *GetObjectContainerAtIndex(uint32_t object_idx) {
-    return nullptr;
-  }
-
-  virtual const char *GetObjectNameAtIndex(uint32_t object_idx) const {
-    return nullptr;
-  }
 
 protected:
   // Member variables.
