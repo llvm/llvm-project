@@ -1764,3 +1764,8 @@ bool LoongArchTargetLowering::shouldInsertFencesForAtomic(
 
   return false;
 }
+
+bool LoongArchTargetLowering::hasAndNot(SDValue Y) const {
+  // TODO: Support vectors.
+  return Y.getValueType().isScalarInteger() && !isa<ConstantSDNode>(Y);
+}
