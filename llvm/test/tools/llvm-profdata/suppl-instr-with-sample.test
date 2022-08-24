@@ -64,21 +64,21 @@ than suppl-min-size-threshold.
 RUN: llvm-profdata merge \
 RUN:     -supplement-instr-with-sample=%p/Inputs/mix_sample.proftext \
 RUN:     -suppl-min-size-threshold=2 -zero-counter-threshold=0.7 \
-RUN:     -instr-prof-cold-threshold=30 %p/Inputs/mix_instr.proftext -o %t
+RUN:     -instr-prof-cold-threshold=30 %p/Inputs/mix_instr_small.proftext -o %t
 RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=MIX4
 
 MIX4: foo:
 MIX4-NEXT: Hash: 0x0000000000000007
-MIX4-NEXT: Counters: 5
-MIX4-NEXT: Block counts: [12, 13, 0, 0, 0]
+MIX4-NEXT: Counters: 1
+MIX4-NEXT: Block counts: [0]
 MIX4: goo:
 MIX4-NEXT: Hash: 0x0000000000000005
 MIX4-NEXT: Counters: 3
 MIX4-NEXT: Block counts: [18446744073709551615, 18446744073709551615, 18446744073709551615]
 MIX4: moo:
 MIX4-NEXT: Hash: 0x0000000000000009
-MIX4-NEXT: Counters: 4
-MIX4-NEXT: Block counts: [3000, 1000, 2000, 500]
+MIX4-NEXT: Counters: 1
+MIX4-NEXT: Block counts: [0]
 
 Test profile summary won't be affected by -1 counter.
 RUN: llvm-profdata merge \
