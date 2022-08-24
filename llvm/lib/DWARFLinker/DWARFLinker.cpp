@@ -1109,7 +1109,9 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
   if (Form == dwarf::DW_FORM_addrx) {
     if (Optional<uint64_t> AddrOffsetSectionBase =
             Unit.getOrigUnit().getAddrOffsetSectionBase()) {
-      uint64_t StartOffset = *AddrOffsetSectionBase + Val.getRawUValue();
+      uint64_t StartOffset =
+          *AddrOffsetSectionBase +
+          Val.getRawUValue() * Unit.getOrigUnit().getAddressByteSize();
       uint64_t EndOffset =
           StartOffset + Unit.getOrigUnit().getAddressByteSize();
       if (llvm::Expected<uint64_t> RelocAddr =
@@ -1120,7 +1122,8 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     } else
       Linker.reportWarning("no base offset for address table", ObjFile);
 
-    // If this is an indexed address emit the debug_info address.
+    // Generation of DWARFv5 .debug_addr table is not supported yet.
+    // Convert attribute into the dwarf::DW_FORM_addr.
     Form = dwarf::DW_FORM_addr;
   } else
     Addr = *Val.getAsAddress();
