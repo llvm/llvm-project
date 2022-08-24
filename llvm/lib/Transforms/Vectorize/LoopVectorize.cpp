@@ -7035,12 +7035,13 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
     auto *Phi = cast<PHINode>(I);
 
     // First-order recurrences are replaced by vector shuffles inside the loop.
-    // NOTE: Don't use ToVectorTy as SK_ExtractSubvector expects a vector type.
-    if (VF.isVector() && Legal->isFixedOrderRecurrence(Phi))
-      return TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
-                                cast<VectorType>(VectorTy), None, CostKind,
-                                VF.getKnownMinValue() - 1,
-                                FixedVectorType::get(RetTy, 1));
+    if (VF.isVector() && Legal->isFixedOrderRecurrence(Phi)) {
+      SmallVector<int> Mask(VF.getKnownMinValue());
+      std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
+      return TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
+                                cast<VectorType>(VectorTy), Mask, CostKind,
+                                VF.getKnownMinValue() - 1);
+    }
 
     // Phi nodes in non-header blocks (not inductions, reductions, etc.) are
     // converted into select instructions. We require N - 1 selects per phi

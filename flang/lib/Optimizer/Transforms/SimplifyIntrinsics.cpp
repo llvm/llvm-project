@@ -67,41 +67,36 @@ public:
 
 } // namespace
 
-/// Generate function type for the simplified version of FortranASum
-/// operating on the given \p elementType.
-static mlir::FunctionType genFortranASumType(fir::FirOpBuilder &builder,
-                                             const mlir::Type &elementType) {
+/// Generate function type for the simplified version of FortranASum and
+/// similar functions with a fir.box<none> type returning \p elementType.
+static mlir::FunctionType genNoneBoxType(fir::FirOpBuilder &builder,
+                                         const mlir::Type &elementType) {
   mlir::Type boxType = fir::BoxType::get(builder.getNoneType());
   return mlir::FunctionType::get(builder.getContext(), {boxType},
                                  {elementType});
 }
 
-/// Generate function body of the simplified version of FortranASum
-/// with signature provided by \p funcOp. The caller is responsible
-/// for saving/restoring the original insertion point of \p builder.
-/// \p funcOp is expected to be empty on entry to this function.
-static void genFortranASumBody(fir::FirOpBuilder &builder,
-                               mlir::func::FuncOp &funcOp) {
-  // function FortranASum<T>_simplified(arr)
-  //   T, dimension(:) :: arr
-  //   T sum = 0
-  //   integer iter
-  //   do iter = 0, extent(arr)
-  //     sum = sum + arr[iter]
-  //   end do
-  //   FortranASum<T>_simplified = sum
-  // end function FortranASum<T>_simplified
+using BodyOpGeneratorTy =
+    std::function<mlir::Value(fir::FirOpBuilder &, mlir::Location,
+                              const mlir::Type &, mlir::Value, mlir::Value)>;
+using InitValGeneratorTy = std::function<mlir::Value(
+    fir::FirOpBuilder &, mlir::Location, const mlir::Type &)>;
+
+/// Generate the reduction loop into \p funcOp.
+///
+/// \p initVal is a function, called to get the initial value for
+///    the reduction value
+/// \p genBody is called to fill in the actual reduciton operation
+///    for example add for SUM, MAX for MAXVAL, etc.
+static void genReductionLoop(fir::FirOpBuilder &builder,
+                             mlir::func::FuncOp &funcOp,
+                             InitValGeneratorTy initVal,
+                             BodyOpGeneratorTy genBody) {
   auto loc = mlir::UnknownLoc::get(builder.getContext());
   mlir::Type elementType = funcOp.getResultTypes()[0];
   builder.setInsertionPointToEnd(funcOp.addEntryBlock());
 
   mlir::IndexType idxTy = builder.getIndexType();
-
-  mlir::Value zero = elementType.isa<mlir::FloatType>()
-                         ? builder.createRealConstant(loc, elementType, 0.0)
-                         : builder.createIntegerConstant(loc, elementType, 0);
-  mlir::Value sum = builder.create<fir::AllocaOp>(loc, elementType);
-  builder.create<fir::StoreOp>(loc, zero, sum);
 
   mlir::Block::BlockArgListType args = funcOp.front().getArguments();
   mlir::Value arg = args[0];
@@ -120,7 +115,11 @@ static void genFortranASumBody(fir::FirOpBuilder &builder,
 
   // We use C indexing here, so len-1 as loopcount
   mlir::Value loopCount = builder.create<mlir::arith::SubIOp>(loc, len, one);
-  auto loop = builder.create<fir::DoLoopOp>(loc, zeroIdx, loopCount, step);
+  mlir::Value init = initVal(builder, loc, elementType);
+  auto loop = builder.create<fir::DoLoopOp>(loc, zeroIdx, loopCount, step,
+                                            /*unordered=*/false,
+                                            /*finalCountValue=*/false, init);
+  mlir::Value reductionVal = loop.getRegionIterArgs()[0];
 
   // Begin loop code
   mlir::OpBuilder::InsertPoint loopEndPt = builder.saveInsertionPoint();
@@ -131,22 +130,81 @@ static void genFortranASumBody(fir::FirOpBuilder &builder,
   mlir::Value addr =
       builder.create<fir::CoordinateOp>(loc, eleRefTy, array, index);
   mlir::Value elem = builder.create<fir::LoadOp>(loc, addr);
-  mlir::Value sumVal = builder.create<fir::LoadOp>(loc, sum);
 
-  mlir::Value res;
-  if (elementType.isa<mlir::FloatType>())
-    res = builder.create<mlir::arith::AddFOp>(loc, elem, sumVal);
-  else if (elementType.isa<mlir::IntegerType>())
-    res = builder.create<mlir::arith::AddIOp>(loc, elem, sumVal);
-  else
-    TODO(loc, "Unsupported type");
+  reductionVal = genBody(builder, loc, elementType, elem, reductionVal);
 
-  builder.create<fir::StoreOp>(loc, res, sum);
+  builder.create<fir::ResultOp>(loc, reductionVal);
   // End of loop.
   builder.restoreInsertionPoint(loopEndPt);
 
-  mlir::Value resultVal = builder.create<fir::LoadOp>(loc, sum);
+  mlir::Value resultVal = loop.getResult(0);
   builder.create<mlir::func::ReturnOp>(loc, resultVal);
+}
+
+/// Generate function body of the simplified version of FortranASum
+/// with signature provided by \p funcOp. The caller is responsible
+/// for saving/restoring the original insertion point of \p builder.
+/// \p funcOp is expected to be empty on entry to this function.
+static void genFortranASumBody(fir::FirOpBuilder &builder,
+                               mlir::func::FuncOp &funcOp) {
+  // function FortranASum<T>_simplified(arr)
+  //   T, dimension(:) :: arr
+  //   T sum = 0
+  //   integer iter
+  //   do iter = 0, extent(arr)
+  //     sum = sum + arr[iter]
+  //   end do
+  //   FortranASum<T>_simplified = sum
+  // end function FortranASum<T>_simplified
+  auto zero = [](fir::FirOpBuilder builder, mlir::Location loc,
+                 mlir::Type elementType) {
+    return elementType.isa<mlir::FloatType>()
+               ? builder.createRealConstant(loc, elementType,
+                                            llvm::APFloat(0.0))
+               : builder.createIntegerConstant(loc, elementType, 0);
+  };
+
+  auto genBodyOp = [](fir::FirOpBuilder builder, mlir::Location loc,
+                      mlir::Type elementType, mlir::Value elem1,
+                      mlir::Value elem2) -> mlir::Value {
+    if (elementType.isa<mlir::FloatType>())
+      return builder.create<mlir::arith::AddFOp>(loc, elem1, elem2);
+    if (elementType.isa<mlir::IntegerType>())
+      return builder.create<mlir::arith::AddIOp>(loc, elem1, elem2);
+
+    llvm_unreachable("unsupported type");
+    return {};
+  };
+
+  genReductionLoop(builder, funcOp, zero, genBodyOp);
+}
+
+static void genFortranAMaxvalBody(fir::FirOpBuilder &builder,
+                                  mlir::func::FuncOp &funcOp) {
+  auto init = [](fir::FirOpBuilder builder, mlir::Location loc,
+                 mlir::Type elementType) {
+    if (auto ty = elementType.dyn_cast<mlir::FloatType>()) {
+      const llvm::fltSemantics &sem = ty.getFloatSemantics();
+      return builder.createRealConstant(
+          loc, elementType, llvm::APFloat::getLargest(sem, /*Negative=*/true));
+    }
+    unsigned bits = elementType.getIntOrFloatBitWidth();
+    int64_t minInt = llvm::APInt::getSignedMinValue(bits).getSExtValue();
+    return builder.createIntegerConstant(loc, elementType, minInt);
+  };
+
+  auto genBodyOp = [](fir::FirOpBuilder builder, mlir::Location loc,
+                      mlir::Type elementType, mlir::Value elem1,
+                      mlir::Value elem2) -> mlir::Value {
+    if (elementType.isa<mlir::FloatType>())
+      return builder.create<mlir::arith::MaxFOp>(loc, elem1, elem2);
+    if (elementType.isa<mlir::IntegerType>())
+      return builder.create<mlir::arith::MaxSIOp>(loc, elem1, elem2);
+
+    llvm_unreachable("unsupported type");
+    return {};
+  };
+  genReductionLoop(builder, funcOp, init, genBodyOp);
 }
 
 /// Generate function type for the simplified version of FortranADotProduct
@@ -409,7 +467,7 @@ void SimplifyIntrinsicsPass::runOnOperation() {
               return;
             }
             auto typeGenerator = [&type](fir::FirOpBuilder &builder) {
-              return genFortranASumType(builder, type);
+              return genNoneBoxType(builder, type);
             };
             mlir::func::FuncOp newFunc = getOrCreateFunction(
                 builder, funcName, typeGenerator, genFortranASumBody);
@@ -431,6 +489,7 @@ void SimplifyIntrinsicsPass::runOnOperation() {
           const mlir::Value &v2 = args[1];
           mlir::Location loc = call.getLoc();
           fir::FirOpBuilder builder(op, kindMap);
+
           mlir::Type type = call.getResult(0).getType();
           if (!type.isa<mlir::FloatType>() && !type.isa<mlir::IntegerType>())
             return;
@@ -480,6 +539,38 @@ void SimplifyIntrinsicsPass::runOnOperation() {
           LLVM_DEBUG(llvm::dbgs() << "Replaced with:\n"; newCall.dump();
                      llvm::dbgs() << "\n");
           return;
+        }
+        if (funcName.startswith("_FortranAMaxval")) {
+          mlir::Operation::operand_range args = call.getArgs();
+          const mlir::Value &dim = args[3];
+          const mlir::Value &mask = args[4];
+          // dim is zero when it is absent, which is an implementation
+          // detail in the runtime library.
+          bool dimAndMaskAbsent = isZero(dim) && isOperandAbsent(mask);
+          unsigned rank = getDimCount(args[0]);
+          if (dimAndMaskAbsent && rank == 1) {
+            mlir::Location loc = call.getLoc();
+            mlir::Type type;
+            fir::FirOpBuilder builder(op, kindMap);
+            if (funcName.endswith("Integer4")) {
+              type = mlir::IntegerType::get(builder.getContext(), 32);
+            } else if (funcName.endswith("Real8")) {
+              type = mlir::FloatType::getF64(builder.getContext());
+            } else {
+              return;
+            }
+            auto typeGenerator = [&type](fir::FirOpBuilder &builder) {
+              return genNoneBoxType(builder, type);
+            };
+            mlir::func::FuncOp newFunc = getOrCreateFunction(
+                builder, funcName, typeGenerator, genFortranAMaxvalBody);
+            auto newCall = builder.create<fir::CallOp>(
+                loc, newFunc, mlir::ValueRange{args[0]});
+            call->replaceAllUsesWith(newCall.getResults());
+            call->dropAllReferences();
+            call->erase();
+            return;
+          }
         }
       }
     }
