@@ -2002,3 +2002,60 @@ define i16 @urem_zext_noundef(i8 noundef %x, i8 %y) {
   %z = sub i16 %ex, %ed
   ret i16 %z
 }
+
+define i8 @mul_sub_common_factor_commute1(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_sub_common_factor_commute1(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = sub nsw i8 [[M]], [[X]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul nsw i8 %x, %y
+  %a = sub nsw i8 %m, %x
+  ret i8 %a
+}
+
+define <2 x i8> @mul_sub_common_factor_commute2(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @mul_sub_common_factor_commute2(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = sub nuw <2 x i8> [[M]], [[X]]
+; CHECK-NEXT:    ret <2 x i8> [[A]]
+;
+  %m = mul nuw <2 x i8> %y, %x
+  %a = sub nuw <2 x i8> %m, %x
+  ret <2 x i8> %a
+}
+
+define i8 @mul_sub_common_factor_commute3(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_sub_common_factor_commute3(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = sub nsw i8 [[X]], [[M]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul nuw i8 %x, %y
+  %a = sub nsw i8 %x, %m
+  ret i8 %a
+}
+
+define i8 @mul_sub_common_factor_commute4(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_sub_common_factor_commute4(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = sub nuw i8 [[X]], [[M]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul nsw i8 %y, %x
+  %a = sub nuw i8 %x, %m
+  ret i8 %a
+}
+
+define i8 @mul_sub_common_factor_use(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_sub_common_factor_use(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use8(i8 [[M]])
+; CHECK-NEXT:    [[A:%.*]] = sub i8 [[M]], [[X]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul i8 %x, %y
+  call void @use8(i8 %m)
+  %a = sub i8 %m, %x
+  ret i8 %a
+}
