@@ -119,7 +119,7 @@ static Error bundleImages() {
   std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
   std::copy(BinaryData.begin(), BinaryData.end(), Output->getBufferStart());
   if (Error E = Output->commit())
-    return std::move(E);
+    return E;
   return Error::success();
 }
 
@@ -200,7 +200,7 @@ static Error unbundleImages() {
       std::unique_ptr<FileOutputBuffer> Output = std::move(*OutputOrErr);
       llvm::copy(Binary->getImage(), Output->getBufferStart());
       if (Error E = Output->commit())
-        return std::move(E);
+        return E;
     }
   }
 
