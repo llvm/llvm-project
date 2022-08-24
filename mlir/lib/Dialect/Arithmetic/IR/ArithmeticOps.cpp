@@ -574,6 +574,16 @@ OpFoldResult arith::AndIOp::fold(ArrayRef<Attribute> operands) {
   APInt intValue;
   if (matchPattern(getRhs(), m_ConstantInt(&intValue)) && intValue.isAllOnes())
     return getLhs();
+  /// and(x, not(x)) -> 0
+  if (matchPattern(getRhs(), m_Op<XOrIOp>(matchers::m_Val(getLhs()),
+                                          m_ConstantInt(&intValue))) &&
+      intValue.isAllOnes())
+    return IntegerAttr::get(getType(), 0);
+  /// and(not(x), x) -> 0
+  if (matchPattern(getLhs(), m_Op<XOrIOp>(matchers::m_Val(getRhs()),
+                                          m_ConstantInt(&intValue))) &&
+      intValue.isAllOnes())
+    return IntegerAttr::get(getType(), 0);
 
   return constFoldBinaryOp<IntegerAttr>(
       operands, [](APInt a, const APInt &b) { return std::move(a) & b; });
