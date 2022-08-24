@@ -1004,7 +1004,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   mlir::Value scheduleChunkClauseOperand, ifClauseOperand;
   mlir::Attribute scheduleClauseOperand, noWaitClauseOperand,
       orderedClauseOperand, orderClauseOperand;
-  mlir::IntegerAttr simdlenClauseOperand;
+  mlir::IntegerAttr simdlenClauseOperand, safelenClauseOperand;
   SmallVector<Attribute> reductionDeclSymbols;
   Fortran::lower::StatementContext stmtCtx;
   const auto &loopOpClauseList = std::get<Fortran::parser::OmpClauseList>(
@@ -1129,6 +1129,13 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
       const std::optional<std::int64_t> simdlenVal =
           Fortran::evaluate::ToInt64(*expr);
       simdlenClauseOperand = firOpBuilder.getI64IntegerAttr(*simdlenVal);
+    } else if (const auto &safelenClause =
+                   std::get_if<Fortran::parser::OmpClause::Safelen>(
+                       &clause.u)) {
+      const auto *expr = Fortran::semantics::GetExpr(safelenClause->v);
+      const std::optional<std::int64_t> safelenVal =
+          Fortran::evaluate::ToInt64(*expr);
+      safelenClauseOperand = firOpBuilder.getI64IntegerAttr(*safelenVal);
     }
   }
 
@@ -1150,7 +1157,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
     TypeRange resultType;
     auto SimdLoopOp = firOpBuilder.create<mlir::omp::SimdLoopOp>(
         currentLocation, resultType, lowerBound, upperBound, step,
-        ifClauseOperand, simdlenClauseOperand, nullptr,
+        ifClauseOperand, simdlenClauseOperand, safelenClauseOperand,
         /*inclusive=*/firOpBuilder.getUnitAttr());
     createBodyOfOp<omp::SimdLoopOp>(SimdLoopOp, converter, currentLocation,
                                     eval, &loopOpClauseList, iv);
