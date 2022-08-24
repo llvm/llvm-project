@@ -662,12 +662,12 @@ func.func @generic_index_op2(%arg0: tensor<1x8xf64>, %arg1: tensor<1x8xi32>) -> 
     linalg.yield %r : f64
   } -> tensor<1x8xf64>
 
-  // CHECK-NEXT:   %[[R:.*]] = linalg.generic
+  // CHECK-NEXT:   %[[R:.*]]:2 = linalg.generic
   //      CHECK:     bb0(%[[BBA:[0-9a-z]*]]: f64, %[[BBB:[0-9a-z]*]]: i32):
   // CHECK-NEXT:       %[[A:.*]] = func.call @compute1(%[[BBA]]) : (f64) -> f64
   // CHECK-NEXT:       %[[B:.*]] = func.call @compute2(%[[A]], %[[BBB]]) : (f64, i32) -> i32
-  // CHECK-NEXT:       linalg.yield %[[B]] : i32
-  // CHECK-NEXT:   } -> tensor<1x8xi32>
+  // CHECK-NEXT:       linalg.yield %[[A]], %[[B]] : f64, i32
+  // CHECK-NEXT:   } -> (tensor<1x8xf64>, tensor<1x8xi32>)
   %1 = linalg.generic {
     indexing_maps = [affine_map<(i, j) -> (i, j)>, affine_map<(i, j) -> (i, j)>],
     iterator_types = ["parallel", "parallel"]}
@@ -678,7 +678,7 @@ func.func @generic_index_op2(%arg0: tensor<1x8xf64>, %arg1: tensor<1x8xi32>) -> 
     linalg.yield %r : i32
   } -> tensor<1x8xi32>
 
-  // CHECK-NEXT:   return %[[R]] : tensor<1x8xi32>
+  // CHECK-NEXT:   return %[[R]]#1 : tensor<1x8xi32>
   return %1 : tensor<1x8xi32>
 }
 
@@ -948,7 +948,7 @@ func.func @no_fusion_missing_reduction_shape(%arg0: tensor<f32>, %arg1: index) -
 
 // -----
 
-func.func @illegal_fusion(%arg0 : tensor<5000xi64>, %arg1 : tensor<5000xi32>) -> tensor<5000xi32> {
+func.func @fusion_different_axes(%arg0 : tensor<5000xi64>, %arg1 : tensor<5000xi32>) -> tensor<5000xi32> {
   %c1_i32 = arith.constant 1 : i32
   %0 = linalg.generic {
         indexing_maps = [affine_map<(d0) -> (d0)>],
@@ -971,10 +971,25 @@ func.func @illegal_fusion(%arg0 : tensor<5000xi64>, %arg1 : tensor<5000xi32>) ->
         } -> tensor<5000xi32>
   return %2 : tensor<5000xi32>
 }
-// CHECK-LABEL: func @illegal_fusion(
-//       CHECK:   %[[PRODUCER:.+]] = linalg.generic
-//       CHECK:    linalg.generic
-//   CHECK-SAME:       ins(%[[PRODUCER]]
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1) -> (d0)>
+//  CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1) -> (d1)>
+//      CHECK: func @fusion_different_axes(
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<5000xi64>
+// CHECK-SAME:     %[[ARG1:.+]]: tensor<5000xi32>
+//  CHECK-DAG:   %[[INIT0:.+]] = linalg.init_tensor [5000] : tensor<5000xi64>
+//  CHECK-DAG:   %[[INIT1:.+]] = linalg.init_tensor [5000] : tensor<5000xi32>
+//      CHECK:   %[[RESULT:.+]]:2 = linalg.generic
+// CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]]]
+// CHECK-SAME:       outs(%[[INIT0]], %[[INIT1]] :
+// CHECK-NEXT:   ^bb0(
+// CHECK-SAME:       %[[B0:.+]]: i64
+// CHECK-SAME:       %[[B1:.+]]: i32
+//  CHECK-DAG:     %[[T0:.+]] = linalg.index 0
+//  CHECK-DAG:     %[[CAST1:.+]] = arith.index_cast %[[T0]] : index to i64
+//  CHECK-DAG:     %[[CAST2:.+]] = arith.index_cast %[[CAST1]] : i64 to index
+//      CHECK:     %[[EXTRACT:.+]] = tensor.extract %[[ARG1]][%[[CAST2]]]
+//      CHECK:     linalg.yield %[[CAST1]], %[[EXTRACT]]
+//      CHECK:   return %[[RESULT]]#1
 
 // -----
 
@@ -995,7 +1010,7 @@ func.func @fold_fill_generic_basic(%arg0: tensor<?xf32>) -> (tensor<?xf32>) {
   %4 = linalg.generic {indexing_maps = [#map0, #map0, #map0], iterator_types=["parallel"]} ins(%arg0, %2 : tensor<?xf32>, tensor<?xf32>) outs (%3:tensor<?xf32>) {
   ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):
     %5 = arith.addf  %arg1, %arg2 : f32
-	linalg.yield %5 : f32
+        linalg.yield %5 : f32
   } -> tensor<?xf32>
   return %4 : tensor<?xf32>
 }
@@ -1024,7 +1039,50 @@ func.func @fold_fill_generic_mixedaccess(%arg0: tensor<?x?xf32>) -> (tensor<?x?x
   %7 = linalg.generic {indexing_maps = [#map0, #map1, #map0], iterator_types=["parallel","parallel"]} ins(%3, %5 : tensor<?x?xf32>, tensor<?x?xf32>) outs (%6:tensor<?x?xf32>) {
   ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):
     %8 = arith.divf  %arg1, %arg2 : f32
-	linalg.yield %8 : f32
+        linalg.yield %8 : f32
   } -> tensor<?x?xf32>
   return %7 : tensor<?x?xf32>
 }
+
+// -----
+
+#map = affine_map<() -> ()>
+module {
+  func.func @fuse_multi_result_producer(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<f32>, %arg3: tensor<f32>, %arg4: tensor<f32>) -> tensor<f32> {
+    %0 = linalg.init_tensor [] : tensor<f32>
+    %1 = linalg.init_tensor [] : tensor<f32>
+    %2:2 = linalg.generic {
+      indexing_maps = [#map, #map, #map, #map, #map], iterator_types = []}
+      ins(%arg0, %arg1, %arg1 : tensor<f32>, tensor<f32>, tensor<f32>) outs(%0, %1 : tensor<f32>, tensor<f32>) {
+    ^bb0(%arg5: f32, %arg6: f32, %arg7: f32, %arg8: f32, %arg9: f32):
+      %4 = arith.addf %arg5, %arg6 : f32
+      %5 = arith.addf %4, %arg7 : f32
+      linalg.yield %4, %5 : f32, f32
+    } -> (tensor<f32>, tensor<f32>)
+    %3 = linalg.generic {
+      indexing_maps = [#map, #map, #map], iterator_types = []}
+      ins(%2#1, %arg1 : tensor<f32>, tensor<f32>) outs(%arg4 : tensor<f32>) {
+    ^bb0(%arg5: f32, %arg6: f32, %arg7: f32):
+      %4 = arith.addf %arg5, %arg6 : f32
+      %5 = arith.addf %4, %arg6 : f32
+      linalg.yield %5 : f32
+    } -> tensor<f32>
+    return %3 : tensor<f32>
+  }
+}
+// CHECK-LABEL: func.func @fuse_multi_result_producer
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<f32>
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<f32>
+//       CHECK:   %[[INIT:.+]] = linalg.init_tensor
+//       CHECK:   %[[GENERIC:.+]] = linalg.generic
+//  CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] :
+//  CHECK-SAME:       outs(%[[INIT]] :
+//  CHECK-NEXT:     ^bb0
+//  CHECK-SAME:         %[[B0:[a-zA-Z0-9]+]]: f32
+//  CHECK-SAME:         %[[B1:[a-zA-Z0-9]+]]: f32
+//   CHECK-DAG:     %[[T0:.+]] = arith.addf %[[B0]], %[[B1]]
+//   CHECK-DAG:     %[[T1:.+]] = arith.addf %[[T0]], %[[B1]]
+//   CHECK-DAG:     %[[T2:.+]] = arith.addf %[[T1]], %[[B1]]
+//   CHECK-DAG:     %[[T3:.+]] = arith.addf %[[T2]], %[[B1]]
+//       CHECK:     linalg.yield %[[T3]] : f32
+//       CHECK:   return %[[GENERIC]]

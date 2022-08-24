@@ -43,6 +43,9 @@ parsing options from the command line.  ``LIT_OPTS`` is primarily useful for
 supplementing or overriding the command-line options supplied to :program:`lit`
 by ``check`` targets defined by a project's build system.
 
+:program:`lit` can also read options from response files which are specified as
+inputs using the ``@path/to/file.rsp`` syntax.
+
 Users interested in the :program:`lit` architecture or designing a
 :program:`lit` testing implementation should see :ref:`lit-infrastructure`.
 

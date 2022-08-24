@@ -1861,7 +1861,7 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
   } else if (auto denseArrayAttr = attr.dyn_cast<DenseArrayBaseAttr>()) {
     typeElision = AttrTypeElision::Must;
     os << "array<" << denseArrayAttr.getType().getElementType();
-    if (denseArrayAttr.size())
+    if (!denseArrayAttr.empty())
       os << ": ";
     denseArrayAttr.printWithoutBraces(os);
     os << ">";
