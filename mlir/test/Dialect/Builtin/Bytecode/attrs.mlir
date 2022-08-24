@@ -1,4 +1,4 @@
-// RUN: mlir-opt -emit-bytecode %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt -emit-bytecode %s | mlir-opt -mlir-print-local-scope | FileCheck %s
 
 // Bytecode currently does not support big-endian platforms
 // UNSUPPORTED: s390x-
@@ -77,4 +77,58 @@ module @TestSymbolRef attributes {
 module @TestType attributes {
   // CHECK: bytecode.type = i178
   bytecode.type = i178
+} {}
+
+//===----------------------------------------------------------------------===//
+// CallSiteLoc
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestLocCallSite
+module @TestLocCallSite attributes {
+  // CHECK: bytecode.loc = loc(callsite("foo" at "mysource.cc":10:8))
+  bytecode.loc = loc(callsite("foo" at "mysource.cc":10:8))
+} {}
+
+//===----------------------------------------------------------------------===//
+// FileLineColLoc
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestLocFileLineCol
+module @TestLocFileLineCol attributes {
+  // CHECK: bytecode.loc = loc("mysource.cc":10:8)
+  bytecode.loc = loc("mysource.cc":10:8)
+} {}
+
+//===----------------------------------------------------------------------===//
+// FusedLoc
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestLocFused
+module @TestLocFused attributes {
+  // CHECK: bytecode.loc = loc(fused["foo", "mysource.cc":10:8])
+  // CHECK: bytecode.loc2 = loc(fused<"myPass">["foo", "foo2"])
+  bytecode.loc = loc(fused["foo", "mysource.cc":10:8]),
+  bytecode.loc2 = loc(fused<"myPass">["foo", "foo2"])
+} {}
+
+//===----------------------------------------------------------------------===//
+// NameLoc
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestLocName
+module @TestLocName attributes {
+  // CHECK: bytecode.loc = loc("foo")
+  // CHECK: bytecode.loc2 = loc("foo"("mysource.cc":10:8))
+  bytecode.loc = loc("foo"),
+  bytecode.loc2 = loc("foo"("mysource.cc":10:8))
+} {}
+
+//===----------------------------------------------------------------------===//
+// UnknownLoc
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @TestLocUnknown
+module @TestLocUnknown attributes {
+  // CHECK: bytecode.loc = loc(unknown)
+  bytecode.loc = loc(unknown)
 } {}
