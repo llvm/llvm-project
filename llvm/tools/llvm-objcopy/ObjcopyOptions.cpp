@@ -1198,7 +1198,15 @@ objcopy::parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr,
   // We only support -r for now, which removes all bitcode sections and
   // the __LLVM segment if it's now empty.
   cantFail(Config.ToRemove.addMatcher(NameOrPattern::create(
+      "__LLVM,__asm", MatchStyle::Literal, ErrorCallback)));
+  cantFail(Config.ToRemove.addMatcher(NameOrPattern::create(
+      "__LLVM,__bitcode", MatchStyle::Literal, ErrorCallback)));
+  cantFail(Config.ToRemove.addMatcher(NameOrPattern::create(
       "__LLVM,__bundle", MatchStyle::Literal, ErrorCallback)));
+  cantFail(Config.ToRemove.addMatcher(NameOrPattern::create(
+      "__LLVM,__cmdline", MatchStyle::Literal, ErrorCallback)));
+  cantFail(Config.ToRemove.addMatcher(NameOrPattern::create(
+      "__LLVM,__swift_cmdline", MatchStyle::Literal, ErrorCallback)));
   MachOConfig.EmptySegmentsToRemove.insert("__LLVM");
 
   DC.CopyConfigs.push_back(std::move(ConfigMgr));

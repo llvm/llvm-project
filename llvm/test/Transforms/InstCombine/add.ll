@@ -724,12 +724,12 @@ define i8 @test34(i8 %A) {
 }
 
 ; If all bits affected by the add are included
-; in the mask, do the add before the mask op.
+; in the mask, do the mask op before the add.
 
 define i8 @masked_add(i8 %x) {
 ; CHECK-LABEL: @masked_add(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -16
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], 96
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -16
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[AND]], 96
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %and = and i8 %x, 240 ; 0xf0
@@ -763,12 +763,12 @@ define i8 @masked_add_multi_use(i8 %x) {
 ; CHECK-LABEL: @masked_add_multi_use(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -16
 ; CHECK-NEXT:    [[R:%.*]] = add i8 [[AND]], 96
-; CHECK-NEXT:    call void @use(i8 [[X]])
+; CHECK-NEXT:    call void @use(i8 [[AND]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %and = and i8 %x, -16 ; 0xf0
   %r = add i8 %and, 96  ; 0x60
-  call void @use(i8 %x) ; extra use
+  call void @use(i8 %and) ; extra use
   ret i8 %r
 }
 
@@ -1754,4 +1754,67 @@ define i32 @add_add_add_commute3(i32 %A, i32 %B, i32 %C, i32 %D) {
   %F = add i32 %C, %E
   %G = add i32 %D, %F
   ret i32 %G
+}
+
+define i8 @mul_add_common_factor_commute1(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_add_common_factor_commute1(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[M]], [[X]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul nsw i8 %x, %y
+  %a = add nsw i8 %m, %x
+  ret i8 %a
+}
+
+define <2 x i8> @mul_add_common_factor_commute2(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @mul_add_common_factor_commute2(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add nuw <2 x i8> [[M]], [[X]]
+; CHECK-NEXT:    ret <2 x i8> [[A]]
+;
+  %m = mul nuw <2 x i8> %y, %x
+  %a = add nuw <2 x i8> %m, %x
+  ret <2 x i8> %a
+}
+
+define i8 @mul_add_common_factor_commute3(i8 %p, i8 %y) {
+; CHECK-LABEL: @mul_add_common_factor_commute3(
+; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[X]], [[M]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %x = mul i8 %p, %p ; thwart complexity-based canonicalization
+  %m = mul nuw i8 %x, %y
+  %a = add nsw i8 %x, %m
+  ret i8 %a
+}
+
+define i8 @mul_add_common_factor_commute4(i8 %p, i8 %q) {
+; CHECK-LABEL: @mul_add_common_factor_commute4(
+; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[Y:%.*]] = mul i8 [[Q:%.*]], [[Q]]
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[Y]], [[X]]
+; CHECK-NEXT:    [[A:%.*]] = add nuw i8 [[X]], [[M]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %x = mul i8 %p, %p ; thwart complexity-based canonicalization
+  %y = mul i8 %q, %q ; thwart complexity-based canonicalization
+  %m = mul nsw i8 %y, %x
+  %a = add nuw i8 %x, %m
+  ret i8 %a
+}
+
+define i8 @mul_add_common_factor_use(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_add_common_factor_use(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], [[X]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul i8 %x, %y
+  call void @use(i8 %m)
+  %a = add i8 %m, %x
+  ret i8 %a
 }

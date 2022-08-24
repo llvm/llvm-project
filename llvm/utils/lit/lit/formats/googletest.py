@@ -239,7 +239,11 @@ class GoogleTest(TestFormat):
 
             # Load json file to retrieve results.
             with open(test.gtest_json_file, encoding='utf-8') as f:
-                testsuites = json.load(f)['testsuites']
+                try:
+                    testsuites = json.load(f)['testsuites']
+                except json.JSONDecodeError as e:
+                    raise RuntimeError("Failed to parse json file: " +
+                                       test.gtest_json_file + "\n" + e.doc)
                 for testcase in testsuites:
                     for testinfo in testcase['testsuite']:
                         # Ignore disabled tests.

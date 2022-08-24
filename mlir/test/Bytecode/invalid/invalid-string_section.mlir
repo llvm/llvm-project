@@ -2,7 +2,7 @@
 // the string section.
 
 // Bytecode currently does not support big-endian platforms
-// XFAIL: s390x-
+// UNSUPPORTED: s390x-
 
 //===--------------------------------------------------------------------===//
 // Count

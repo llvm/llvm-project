@@ -529,6 +529,14 @@ void CodeGenAction::generateLLVMIR() {
   llvmModule = mlir::translateModuleToLLVMIR(
       *mlirModule, *llvmCtx, moduleName ? *moduleName : "FIRModule");
 
+  // Set PIC/PIE level LLVM module flags.
+  if (opts.PICLevel > 0) {
+    llvmModule->setPICLevel(static_cast<llvm::PICLevel::Level>(opts.PICLevel));
+    if (opts.IsPIE)
+      llvmModule->setPIELevel(
+          static_cast<llvm::PIELevel::Level>(opts.PICLevel));
+  }
+
   if (!llvmModule) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "failed to create the LLVM module");
@@ -571,11 +579,12 @@ void CodeGenAction::setUpTargetMachine() {
   assert(theTarget && "Failed to create Target");
 
   // Create `TargetMachine`
-  llvm::CodeGenOpt::Level OptLevel =
-      getCGOptLevel(ci.getInvocation().getCodeGenOpts());
+  const auto &CGOpts = ci.getInvocation().getCodeGenOpts();
+  llvm::CodeGenOpt::Level OptLevel = getCGOptLevel(CGOpts);
   tm.reset(theTarget->createTargetMachine(
       theTriple, /*CPU=*/"",
-      /*Features=*/"", llvm::TargetOptions(), /*Reloc::Model=*/llvm::None,
+      /*Features=*/"", llvm::TargetOptions(),
+      /*Reloc::Model=*/CGOpts.getRelocationModel(),
       /*CodeModel::Model=*/llvm::None, OptLevel));
   assert(tm && "Failed to create TargetMachine");
 }

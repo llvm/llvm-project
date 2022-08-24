@@ -1490,8 +1490,8 @@ define i8 @sub_add_sub_reassoc_use2(i8 %w, i8 %x, i8 %y, i8 %z) {
 
 define i8 @sub_mask_lowbits(i8 %x) {
 ; CHECK-LABEL: @sub_mask_lowbits(
-; CHECK-NEXT:    [[A1:%.*]] = add i8 [[X:%.*]], -108
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[A1]], -4
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X:%.*]], -4
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], -108
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a1 = add i8 %x, 148 ; 0x94

@@ -562,7 +562,7 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
       Priority = 400;
 
     if (Priority != -1)
-      AddGlobalCtor(Fn, Priority, COMDATKey);
+      AddGlobalCtor(Fn, Priority, ~0U, COMDATKey);
     else
       EmitPointerToInitFunc(D, Addr, Fn, ISA);
   } else if (auto *IPA = D->getAttr<InitPriorityAttr>()) {
@@ -588,8 +588,16 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
     // SelectAny globals will be comdat-folded. Put the initializer into a
     // COMDAT group associated with the global, so the initializers get folded
     // too.
-
-    AddGlobalCtor(Fn, 65535, COMDATKey);
+    I = DelayedCXXInitPosition.find(D);
+    // CXXGlobalInits.size() is the lex order number for the next deferred
+    // VarDecl. Use it when the current VarDecl is non-deferred. Although this
+    // lex order number is shared between current VarDecl and some following
+    // VarDecls, their order of insertion into `llvm.global_ctors` is the same
+    // as the lexing order and the following stable sort would preserve such
+    // order.
+    unsigned LexOrder =
+        I == DelayedCXXInitPosition.end() ? CXXGlobalInits.size() : I->second;
+    AddGlobalCtor(Fn, 65535, LexOrder, COMDATKey);
     if (COMDATKey && (getTriple().isOSBinFormatELF() ||
                       getTarget().getCXXABI().isMicrosoft())) {
       // When COMDAT is used on ELF or in the MS C++ ABI, the key must be in

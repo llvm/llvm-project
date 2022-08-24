@@ -2859,6 +2859,8 @@ public:
     return Reader.readInt();
   }
 
+  bool readBool() { return Reader.readBool(); }
+
   SourceRange readSourceRange() {
     return Reader.readSourceRange();
   }

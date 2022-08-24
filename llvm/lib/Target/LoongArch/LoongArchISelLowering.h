@@ -98,6 +98,7 @@ public:
                     SmallVectorImpl<SDValue> &InVals) const override;
   bool isCheapToSpeculateCttz() const override;
   bool isCheapToSpeculateCtlz() const override;
+  bool hasAndNot(SDValue Y) const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
@@ -132,9 +133,7 @@ private:
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
 
-  bool shouldInsertFencesForAtomic(const Instruction *I) const override {
-    return isa<LoadInst>(I) || isa<StoreInst>(I);
-  }
+  bool shouldInsertFencesForAtomic(const Instruction *I) const override;
 };
 
 } // end namespace llvm

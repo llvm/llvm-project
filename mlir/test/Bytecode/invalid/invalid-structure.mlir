@@ -2,7 +2,7 @@
 // a bytecode file.
 
 // Bytecode currently does not support big-endian platforms
-// XFAIL: s390x-
+// UNSUPPORTED: s390x-
 
 //===--------------------------------------------------------------------===//
 // Version

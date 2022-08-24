@@ -1213,6 +1213,8 @@ CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
                               "__omp_rtl_assume_threads_oversubscription");
   OMPBuilder.createGlobalFlag(CGM.getLangOpts().OpenMPNoThreadState,
                               "__omp_rtl_assume_no_thread_state");
+  OMPBuilder.createGlobalFlag(CGM.getLangOpts().OpenMPNoNestedParallelism,
+                              "__omp_rtl_assume_no_nested_parallelism");
 }
 
 void CGOpenMPRuntimeGPU::emitProcBindClause(CodeGenFunction &CGF,

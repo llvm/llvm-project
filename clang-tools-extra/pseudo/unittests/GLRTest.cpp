@@ -652,6 +652,31 @@ TEST_F(GLRTest, RecoverUnrestrictedReduce) {
             "[  1, end) └─word := <opaque>\n");
 }
 
+TEST_F(GLRTest, RecoveryFromStartOfInput) {
+  build(R"bnf(
+    _ := start [recover=Fallback] EOF
+
+    start := IDENTIFIER
+  )bnf");
+  TestLang.Table = LRTable::buildSLR(TestLang.G);
+  bool fallback_recovered = false;
+  auto fallback = [&](Token::Index Start, const TokenStream & Code) {
+    fallback_recovered = true;
+    return Code.tokens().size();
+  };
+  TestLang.RecoveryStrategies.try_emplace(
+      extensionID("Fallback"),
+      fallback);
+  clang::LangOptions LOptions;
+  TokenStream Tokens = cook(lex("?", LOptions), LOptions);
+
+  const ForestNode &Parsed =
+      glrParse({Tokens, Arena, GSStack}, id("start"), TestLang);
+  EXPECT_TRUE(fallback_recovered);
+  EXPECT_EQ(Parsed.dumpRecursive(TestLang.G),
+            "[  0, end) start := <opaque>\n");
+}
+
 TEST_F(GLRTest, RepeatedRecovery) {
   // We require multiple steps of recovery at eof and then a reduction in order
   // to successfully parse.

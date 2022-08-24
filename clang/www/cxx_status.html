@@ -927,8 +927,16 @@ code. This issue is expected to be rectified soon.
       </tr>
       <tr> <!-- from Cologne -->
         <td><a href="https://wg21.link/p0848r3">P0848R3</a></td>
-        <td rowspan="1" class="none" align="center">No</td>
-      </tr>
+        <td rowspan="1" class="unreleased" align="center">
+          <details>
+            <summary>Clang 16 (Partial)</summary>
+            Because of other concepts implementation deficits, the __cpp_concepts macro is not yet set to 202002L.
+            Also, the related defect reports <a href="https://wg21.link/cwg1496">DR1496</a> and
+            <a href="https://wg21.link/cwg1734">DR1734</a> are not yet implemented. Accordingly, deleted
+            special member functions are treated as eligible even though they shouldn't be.
+          </details>
+        </td>
+        </tr>
       <tr>
         <td><a href="https://wg21.link/p1616r1">P1616R1</a></td>
         <td rowspan="2" class="full" align="center">Clang 10</td>

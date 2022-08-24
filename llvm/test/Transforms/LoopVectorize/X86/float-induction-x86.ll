@@ -28,8 +28,8 @@ define void @fp_iv_loop1(float* noalias nocapture %A, i32 %N) #0 {
 ; AUTO_VEC-NEXT:    [[CAST_CRD:%.*]] = sitofp i64 [[N_VEC]] to float
 ; AUTO_VEC-NEXT:    [[TMP0:%.*]] = fmul fast float [[CAST_CRD]], 5.000000e-01
 ; AUTO_VEC-NEXT:    [[IND_END:%.*]] = fadd fast float [[TMP0]], 1.000000e+00
-; AUTO_VEC-NEXT:    [[TMP1:%.*]] = add nsw i64 [[N_VEC]], -32
-; AUTO_VEC-NEXT:    [[TMP2:%.*]] = lshr exact i64 [[TMP1]], 5
+; AUTO_VEC-NEXT:    [[TMP1:%.*]] = add nsw i64 [[ZEXT]], -32
+; AUTO_VEC-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 5
 ; AUTO_VEC-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP3]], 3
 ; AUTO_VEC-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP1]], 96
@@ -298,8 +298,8 @@ define double @external_use_with_fast_math(double* %a, i64 %n) {
 ; AUTO_VEC-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775792
 ; AUTO_VEC-NEXT:    [[CAST_CRD:%.*]] = sitofp i64 [[N_VEC]] to double
 ; AUTO_VEC-NEXT:    [[TMP0:%.*]] = fmul fast double [[CAST_CRD]], 3.000000e+00
-; AUTO_VEC-NEXT:    [[TMP1:%.*]] = add nsw i64 [[N_VEC]], -16
-; AUTO_VEC-NEXT:    [[TMP2:%.*]] = lshr exact i64 [[TMP1]], 4
+; AUTO_VEC-NEXT:    [[TMP1:%.*]] = add nsw i64 [[SMAX]], -16
+; AUTO_VEC-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; AUTO_VEC-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP3]], 3
 ; AUTO_VEC-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP1]], 48
@@ -559,11 +559,11 @@ define void @fadd_reassoc_FMF(float* nocapture %p, i32 %N) {
 ; AUTO_VEC-NEXT:    [[CAST_CRD:%.*]] = sitofp i64 [[N_VEC]] to float
 ; AUTO_VEC-NEXT:    [[TMP1:%.*]] = fmul reassoc float [[CAST_CRD]], 4.200000e+01
 ; AUTO_VEC-NEXT:    [[IND_END:%.*]] = fadd reassoc float [[TMP1]], 1.000000e+00
-; AUTO_VEC-NEXT:    [[TMP2:%.*]] = add nsw i64 [[N_VEC]], -32
-; AUTO_VEC-NEXT:    [[TMP3:%.*]] = lshr exact i64 [[TMP2]], 5
+; AUTO_VEC-NEXT:    [[TMP2:%.*]] = add nsw i64 [[TMP0]], -32
+; AUTO_VEC-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP2]], 5
 ; AUTO_VEC-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; AUTO_VEC-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP4]], 1
-; AUTO_VEC-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP2]], 0
+; AUTO_VEC-NEXT:    [[TMP5:%.*]] = icmp ult i64 [[TMP2]], 32
 ; AUTO_VEC-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK_UNR_LCSSA:%.*]], label [[VECTOR_PH_NEW:%.*]]
 ; AUTO_VEC:       vector.ph.new:
 ; AUTO_VEC-NEXT:    [[UNROLL_ITER:%.*]] = and i64 [[TMP4]], 1152921504606846974

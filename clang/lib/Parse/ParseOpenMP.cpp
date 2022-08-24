@@ -1419,7 +1419,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
   OMPTraitInfo &TI = ASTCtx.getNewOMPTraitInfo();
   SmallVector<Expr *, 6> AdjustNothing;
   SmallVector<Expr *, 6> AdjustNeedDevicePtr;
-  SmallVector<OMPDeclareVariantAttr::InteropType, 3> AppendArgs;
+  SmallVector<OMPInteropInfo, 3> AppendArgs;
   SourceLocation AdjustArgsLoc, AppendArgsLoc;
 
   // At least one clause is required.
@@ -1503,7 +1503,7 @@ void Parser::ParseOMPDeclareVariantClauses(Parser::DeclGroupPtrTy Ptr,
 }
 
 bool Parser::parseOpenMPAppendArgs(
-    SmallVectorImpl<OMPDeclareVariantAttr::InteropType> &InterOpTypes) {
+    SmallVectorImpl<OMPInteropInfo> &InteropInfos) {
   bool HasError = false;
   // Parse '('.
   BalancedDelimiterTracker T(*this, tok::l_paren, tok::annot_pragma_openmp_end);
@@ -1521,26 +1521,16 @@ bool Parser::parseOpenMPAppendArgs(
       return true;
 
     OMPInteropInfo InteropInfo;
-    if (ParseOMPInteropInfo(InteropInfo, OMPC_append_args)) {
+    if (ParseOMPInteropInfo(InteropInfo, OMPC_append_args))
       HasError = true;
-    } else {
-      OMPDeclareVariantAttr::InteropType IT;
-      // As of OpenMP 5.1, there are two interop-types, "target" and
-      // "targetsync". Either or both are allowed for a single interop.
-      if (InteropInfo.IsTarget && InteropInfo.IsTargetSync)
-        IT = OMPDeclareVariantAttr::Target_TargetSync;
-      else if (InteropInfo.IsTarget)
-        IT = OMPDeclareVariantAttr::Target;
-      else
-        IT = OMPDeclareVariantAttr::TargetSync;
-      InterOpTypes.push_back(IT);
-    }
+    else
+      InteropInfos.push_back(InteropInfo);
 
     IT.consumeClose();
     if (Tok.is(tok::comma))
       ConsumeToken();
   }
-  if (!HasError && InterOpTypes.empty()) {
+  if (!HasError && InteropInfos.empty()) {
     HasError = true;
     Diag(Tok.getLocation(), diag::err_omp_unexpected_append_op);
     SkipUntil(tok::comma, tok::r_paren, tok::annot_pragma_openmp_end,

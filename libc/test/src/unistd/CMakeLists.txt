@@ -3,6 +3,36 @@ add_libc_testsuite(libc_unistd_unittests)
 add_subdirectory(testdata)
 
 add_libc_unittest(
+  chdir_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    chdir_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.unistd
+    libc.src.fcntl.open
+    libc.src.unistd.chdir
+    libc.src.unistd.close
+    libc.test.errno_setter_matcher
+)
+
+add_libc_unittest(
+  fchdir_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    fchdir_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.unistd
+    libc.src.fcntl.open
+    libc.src.unistd.fchdir
+    libc.src.unistd.close
+    libc.test.errno_setter_matcher
+)
+
+add_libc_unittest(
   read_write_test
   SUITE
     libc_unistd_unittests

@@ -8,6 +8,7 @@
 
 #include "mlir/Analysis/BufferViewFlowAnalysis.h"
 
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SetOperations.h"
@@ -51,9 +52,9 @@ void BufferViewFlowAnalysis::remove(const SmallPtrSetImpl<Value> &aliasValues) {
 /// successor regions and branch-like return operations from nested regions.
 void BufferViewFlowAnalysis::build(Operation *op) {
   // Registers all dependencies of the given values.
-  auto registerDependencies = [&](auto values, auto dependencies) {
-    for (auto entry : llvm::zip(values, dependencies))
-      this->dependencies[std::get<0>(entry)].insert(std::get<1>(entry));
+  auto registerDependencies = [&](ValueRange values, ValueRange dependencies) {
+    for (auto [value, dep] : llvm::zip(values, dependencies))
+      this->dependencies[value].insert(dep);
   };
 
   // Add additional dependencies created by view changes to the alias list.
@@ -118,5 +119,11 @@ void BufferViewFlowAnalysis::build(Operation *op) {
         }
       }
     }
+  });
+
+  // TODO: This should be an interface.
+  op->walk([&](arith::SelectOp selectOp) {
+    registerDependencies({selectOp.getOperand(1)}, {selectOp.getResult()});
+    registerDependencies({selectOp.getOperand(2)}, {selectOp.getResult()});
   });
 }

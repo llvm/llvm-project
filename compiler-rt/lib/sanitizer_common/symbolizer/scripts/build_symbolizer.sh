@@ -100,12 +100,8 @@ if [[ ! -d ${LIBCXX_BUILD} ]]; then
   mkdir -p ${LIBCXX_BUILD}
   cd ${LIBCXX_BUILD}
   LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined"
-  RUNTIMES=
-  if [[ ! -d $LLVM_SRC/projects/libcxxabi ]] ; then
-    RUNTIMES="-DLLVM_ENABLE_RUNTIMES='libcxx;libcxxabi'"
-  fi
   cmake -GNinja \
-    ${RUNTIMES} \
+    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=$CC \
     -DCMAKE_CXX_COMPILER=$CXX \

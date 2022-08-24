@@ -18,6 +18,7 @@
 #include "llvm/ADT/MapVector.h"
 
 namespace mlir {
+class BytecodeDialectInterface;
 class BytecodeWriterConfig;
 
 namespace bytecode {
@@ -90,8 +91,8 @@ struct DialectNumbering {
   /// The number assigned to the dialect.
   unsigned number;
 
-  /// The loaded dialect, or nullptr if the dialect isn't loaded.
-  Dialect *dialect = nullptr;
+  /// The bytecode dialect interface of the dialect if defined.
+  const BytecodeDialectInterface *interface = nullptr;
 };
 
 //===----------------------------------------------------------------------===//
@@ -147,6 +148,10 @@ public:
   }
 
 private:
+  /// This class is used to provide a fake dialect writer for numbering nested
+  /// attributes and types.
+  struct NumberingDialectWriter;
+
   /// Number the given IR unit for bytecode emission.
   void number(Attribute attr);
   void number(Block &block);

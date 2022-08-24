@@ -486,9 +486,8 @@ public:
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-      TTI::OperandValueKind Opd1Info, TTI::OperandValueKind Opd2Info,
-      TTI::OperandValueProperties Opd1PropInfo,
-      TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
+      TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
+      ArrayRef<const Value *> Args,
       const Instruction *CxtI = nullptr) const {
     // FIXME: A number of transformation tests seem to require these values
     // which seems a little odd for how arbitary there are.
@@ -600,7 +599,7 @@ public:
   InstructionCost getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind,
-                                  TTI::OperandValueKind OpdInfo,
+                                  TTI::OperandValueInfo OpInfo,
                                   const Instruction *I) const {
     return 1;
   }
@@ -1074,16 +1073,13 @@ public:
     case Instruction::Or:
     case Instruction::Xor:
     case Instruction::FNeg: {
-      TTI::OperandValueProperties Op1VP = TTI::OP_None;
-      TTI::OperandValueProperties Op2VP = TTI::OP_None;
-      TTI::OperandValueKind Op1VK =
-        TTI::getOperandInfo(U->getOperand(0), Op1VP);
-      TTI::OperandValueKind Op2VK = Opcode != Instruction::FNeg ?
-        TTI::getOperandInfo(U->getOperand(1), Op2VP) : TTI::OK_AnyValue;
+      const TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(U->getOperand(0));
+      TTI::OperandValueInfo Op2Info;
+      if (Opcode != Instruction::FNeg)
+        Op2Info = TTI::getOperandInfo(U->getOperand(1));
       SmallVector<const Value *, 2> Operands(U->operand_values());
-      return TargetTTI->getArithmeticInstrCost(Opcode, Ty, CostKind,
-                                               Op1VK, Op2VK,
-                                               Op1VP, Op2VP, Operands, I);
+      return TargetTTI->getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                               Op2Info, Operands, I);
     }
     case Instruction::IntToPtr:
     case Instruction::PtrToInt:
@@ -1105,10 +1101,10 @@ public:
     case Instruction::Store: {
       auto *SI = cast<StoreInst>(U);
       Type *ValTy = U->getOperand(0)->getType();
-      TTI::OperandValueKind OpVK = TTI::getOperandInfo(U->getOperand(0));
+      TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(U->getOperand(0));
       return TargetTTI->getMemoryOpCost(Opcode, ValTy, SI->getAlign(),
                                         SI->getPointerAddressSpace(), CostKind,
-                                        OpVK, I);
+                                        OpInfo, I);
     }
     case Instruction::Load: {
       // FIXME: Arbitary cost which could come from the backend.
@@ -1130,7 +1126,7 @@ public:
       }
       return TargetTTI->getMemoryOpCost(Opcode, LoadType, LI->getAlign(),
                                         LI->getPointerAddressSpace(), CostKind,
-                                        TTI::OK_AnyValue, I);
+                                        {TTI::OK_AnyValue, TTI::OP_None}, I);
     }
     case Instruction::Select: {
       const Value *Op0, *Op1;
@@ -1138,17 +1134,15 @@ public:
           match(U, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
         // select x, y, false --> x & y
         // select x, true, y --> x | y
-        TTI::OperandValueProperties Op1VP = TTI::OP_None;
-        TTI::OperandValueProperties Op2VP = TTI::OP_None;
-        TTI::OperandValueKind Op1VK = TTI::getOperandInfo(Op0, Op1VP);
-        TTI::OperandValueKind Op2VK = TTI::getOperandInfo(Op1, Op2VP);
+        const auto Op1Info = TTI::getOperandInfo(Op0);
+        const auto Op2Info = TTI::getOperandInfo(Op1);
         assert(Op0->getType()->getScalarSizeInBits() == 1 &&
                Op1->getType()->getScalarSizeInBits() == 1);
 
         SmallVector<const Value *, 2> Operands{Op0, Op1};
         return TargetTTI->getArithmeticInstrCost(
             match(U, m_LogicalOr()) ? Instruction::Or : Instruction::And, Ty,
-            CostKind, Op1VK, Op2VK, Op1VP, Op2VP, Operands, I);
+            CostKind, Op1Info, Op2Info, Operands, I);
       }
       Type *CondTy = U->getOperand(0)->getType();
       return TargetTTI->getCmpSelInstrCost(Opcode, U->getType(), CondTy,
@@ -1249,6 +1243,11 @@ public:
             TTI::SK_InsertSubvector, VecTy, Shuffle->getShuffleMask(), CostKind,
             SubIndex, FixedVectorType::get(VecTy->getScalarType(), NumSubElts),
             Operands);
+
+      if (Shuffle->isSplice(SubIndex))
+        return TargetTTI->getShuffleCost(TTI::SK_Splice, VecTy,
+                                         Shuffle->getShuffleMask(), CostKind,
+                                         SubIndex, nullptr, Operands);
 
       return TargetTTI->getShuffleCost(TTI::SK_PermuteTwoSrc, VecTy,
                                        Shuffle->getShuffleMask(), CostKind, 0,
