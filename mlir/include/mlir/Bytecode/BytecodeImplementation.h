@@ -78,14 +78,14 @@ public:
     return readList(attrs, [this](T &attr) { return readAttribute(attr); });
   }
   template <typename T>
-  LogicalResult parseAttribute(T &result) {
+  LogicalResult readAttribute(T &result) {
     Attribute baseResult;
-    if (failed(parseAttribute(baseResult)))
+    if (failed(readAttribute(baseResult)))
       return failure();
     if ((result = baseResult.dyn_cast<T>()))
       return success();
-    return emitError() << "expected attribute of type: "
-                       << llvm::getTypeName<T>() << ", but got: " << baseResult;
+    return emitError() << "expected " << llvm::getTypeName<T>()
+                       << ", but got: " << baseResult;
   }
 
   /// Read a reference to the given type.
@@ -94,14 +94,34 @@ public:
   LogicalResult readTypes(SmallVectorImpl<T> &types) {
     return readList(types, [this](T &type) { return readType(type); });
   }
+  template <typename T>
+  LogicalResult readType(T &result) {
+    Type baseResult;
+    if (failed(readType(baseResult)))
+      return failure();
+    if ((result = baseResult.dyn_cast<T>()))
+      return success();
+    return emitError() << "expected " << llvm::getTypeName<T>()
+                       << ", but got: " << baseResult;
+  }
 
   //===--------------------------------------------------------------------===//
   // Primitives
   //===--------------------------------------------------------------------===//
 
   /// Read a variable width integer.
-  // TODO: Add a signed variant when necessary.
   virtual LogicalResult readVarInt(uint64_t &result) = 0;
+
+  /// Read a signed variable width integer.
+  virtual LogicalResult readSignedVarInt(int64_t &result) = 0;
+
+  /// Read an APInt that is known to have been encoded with the given width.
+  virtual FailureOr<APInt> readAPIntWithKnownWidth(unsigned bitWidth) = 0;
+
+  /// Read an APFloat that is known to have been encoded with the given
+  /// semantics.
+  virtual FailureOr<APFloat>
+  readAPFloatWithKnownSemantics(const llvm::fltSemantics &semantics) = 0;
 
   /// Read a string from the bytecode.
   virtual LogicalResult readString(StringRef &result) = 0;
@@ -153,8 +173,24 @@ public:
 
   /// Write a variable width integer to the output stream. This should be the
   /// preferred method for emitting integers whenever possible.
-  // TODO: Add a signed variant when necessary.
   virtual void writeVarInt(uint64_t value) = 0;
+
+  /// Write a signed variable width integer to the output stream. This should be
+  /// the preferred method for emitting signed integers whenever possible.
+  virtual void writeSignedVarInt(int64_t value) = 0;
+
+  /// Write an APInt to the bytecode stream whose bitwidth will be known
+  /// externally at read time. This method is useful for encoding APInt values
+  /// when the width is known via external means, such as via a type. This
+  /// method should generally only be invoked if you need an APInt, otherwise
+  /// use the varint methods above. APInt values are generally encoded using
+  /// zigzag encoding, to enable more efficient encodings for negative values.
+  virtual void writeAPIntWithKnownWidth(const APInt &value) = 0;
+
+  /// Write an APFloat to the bytecode stream whose semantics will be known
+  /// externally at read time. This method is useful for encoding APFloat values
+  /// when the semantics are known via external means, such as via a type.
+  virtual void writeAPFloatWithKnownSemantics(const APFloat &value) = 0;
 
   /// Write a string to the bytecode, which is owned by the caller and is
   /// guaranteed to not die before the end of the bytecode process. This should
