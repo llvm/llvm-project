@@ -1412,8 +1412,6 @@ RISCVInstrInfo::getOutliningType(MachineBasicBlock::iterator &MBBI,
       MI.getDesc().hasImplicitDefOfPhysReg(RISCV::X5))
     return outliner::InstrType::Illegal;
 
-  const auto &TM =
-      static_cast<const RISCVTargetMachine &>(MI.getMF()->getTarget());
   // Make sure the operands don't reference something unsafe.
   for (const auto &MO : MI.operands()) {
     if (MO.isMBB() || MO.isBlockAddress() || MO.isCPI() || MO.isJTI())
@@ -1422,7 +1420,8 @@ RISCVInstrInfo::getOutliningType(MachineBasicBlock::iterator &MBBI,
     // pcrel-hi and pcrel-lo can't put in separate sections, filter that out
     // if any possible.
     if (MO.getTargetFlags() == RISCVII::MO_PCREL_LO &&
-        (TM.getFunctionSections() || F.hasComdat() || F.hasSection()))
+        (MI.getMF()->getTarget().getFunctionSections() || F.hasComdat() ||
+         F.hasSection()))
       return outliner::InstrType::Illegal;
   }
 
