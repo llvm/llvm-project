@@ -1028,9 +1028,11 @@ public:
   ///
   /// This is allocated on the function's allocator and so lives the life of
   /// the function.
-  MachineInstr::ExtraInfo *createMIExtraInfo(
-      ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol = nullptr,
-      MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr);
+  MachineInstr::ExtraInfo *
+  createMIExtraInfo(ArrayRef<MachineMemOperand *> MMOs,
+                    MCSymbol *PreInstrSymbol = nullptr,
+                    MCSymbol *PostInstrSymbol = nullptr,
+                    MDNode *HeapAllocMarker = nullptr, uint32_t CFIType = 0);
 
   /// Allocate a string and populate it with the given external symbol name.
   const char *createExternalSymbolName(StringRef Name);

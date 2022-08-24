@@ -291,8 +291,8 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
     // TODO: Unfortunately the header's fields are named DataSize and
     // CountersSize when they should be named NumData and NumCounters,
     // respectively.
-    const uint64_t CountersSize = NumCounters;
-    const uint64_t DataSize = NumData;
+    const uint64_t CountersSizeInitVal = NumCounters;
+    const uint64_t DataSizeInitVal = NumData;
 /* Initialize header structure.  */
 #define INSTR_PROF_RAW_HEADER(Type, Name, Init) Header.Name = Init;
 #include "profile/InstrProfData.inc"

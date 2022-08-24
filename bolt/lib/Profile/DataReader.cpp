@@ -674,7 +674,7 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
   BinaryContext &BC = BF.getBinaryContext();
 
   BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
-  BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
+  const BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
 
   if (!FromBB || !ToBB) {
     LLVM_DEBUG(dbgs() << "failed to get block for recorded branch\n");
@@ -703,7 +703,7 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
   if (!OffsetMatches) {
     // Skip the nops to support old .fdata
     uint64_t Offset = ToBB->getOffset();
-    for (MCInst &Instr : *ToBB) {
+    for (const MCInst &Instr : *ToBB) {
       if (!BC.MIB->isNoop(Instr))
         break;
 
@@ -739,7 +739,8 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
     // The real destination is the layout successor of the detected ToBB.
     if (ToBB == BF.getLayout().block_back())
       return false;
-    BinaryBasicBlock *NextBB = BF.getLayout().getBlock(ToBB->getIndex() + 1);
+    const BinaryBasicBlock *NextBB =
+        BF.getLayout().getBlock(ToBB->getIndex() + 1);
     assert((NextBB && NextBB->getOffset() > ToBB->getOffset()) && "bad layout");
     ToBB = NextBB;
   }

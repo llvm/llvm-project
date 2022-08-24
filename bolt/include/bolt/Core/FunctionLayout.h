@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
+#include <iterator>
 
 namespace llvm {
 namespace bolt {
@@ -108,8 +109,6 @@ private:
   using FragmentListType = SmallVector<unsigned, 0>;
 
 public:
-  class FragmentIterator;
-
   class FragmentIterator
       : public iterator_facade_base<
             FragmentIterator, std::bidirectional_iterator_tag, FunctionFragment,
@@ -153,7 +152,7 @@ public:
   using const_iterator = FragmentIterator;
   using block_const_iterator = BasicBlockListType::const_iterator;
   using block_const_reverse_iterator =
-      BasicBlockListType::const_reverse_iterator;
+      std::reverse_iterator<block_const_iterator>;
 
 private:
   BasicBlockListType Blocks;
@@ -252,8 +251,12 @@ public:
   iterator_range<block_const_iterator> blocks() const {
     return {block_begin(), block_end()};
   }
-  block_const_reverse_iterator block_rbegin() const { return Blocks.rbegin(); }
-  block_const_reverse_iterator block_rend() const { return Blocks.rend(); }
+  block_const_reverse_iterator block_rbegin() const {
+    return block_const_reverse_iterator(block_end());
+  }
+  block_const_reverse_iterator block_rend() const {
+    return block_const_reverse_iterator(block_begin());
+  }
   iterator_range<block_const_reverse_iterator> rblocks() const {
     return {block_rbegin(), block_rend()};
   }
