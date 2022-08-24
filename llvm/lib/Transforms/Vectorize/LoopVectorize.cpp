@@ -1443,9 +1443,8 @@ public:
 
   /// Returns true if \p I is an instruction that needs to be predicated
   /// at runtime.  The result is independent of the predication mechanism.
-  /// \p VF is the vectorization factor that will be used to vectorize \p I.
   /// Superset of instructions that return true for isScalarWithPredication.
-  bool isPredicatedInst(Instruction *I, ElementCount VF) const;
+  bool isPredicatedInst(Instruction *I) const;
 
   /// Returns true if \p I is a memory instruction with consecutive memory
   /// access that can be widened.
@@ -4412,7 +4411,7 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
 bool LoopVectorizationCostModel::isScalarWithPredication(
     Instruction *I, ElementCount VF) const {
-  if (!isPredicatedInst(I, VF))
+  if (!isPredicatedInst(I))
     return false;
 
   // Do we have a non-scalar lowering for this predicated
@@ -4445,8 +4444,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
   }
 }
 
-bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I,
-                                                  ElementCount VF) const {
+bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   if (!blockNeedsPredicationForAnyReason(I->getParent()))
     return false;
 
@@ -6087,7 +6085,7 @@ bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
   // from moving "masked load/store" check from legality to cost model.
   // Masked Load/Gather emulation was previously never allowed.
   // Limited number of Masked Store/Scatter emulation was allowed.
-  assert((isPredicatedInst(I, VF)) &&
+  assert((isPredicatedInst(I)) &&
          "Expecting a scalar emulated instruction");
   return isa<LoadInst>(I) ||
          (isa<StoreInst>(I) &&
@@ -6369,7 +6367,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // If we have a predicated load/store, it will need extra i1 extracts and
   // conditional branches, but may not be executed for each vector lane. Scale
   // the cost by the probability of executing the predicated block.
-  if (isPredicatedInst(I, VF)) {
+  if (isPredicatedInst(I)) {
     Cost /= getReciprocalPredBlockProb();
 
     // Add the cost of an i1 extract and a branch
@@ -7068,8 +7066,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
   case Instruction::SDiv:
   case Instruction::URem:
   case Instruction::SRem:
-    if (VF.isVector() && blockNeedsPredicationForAnyReason(I->getParent()) &&
-        !isSafeToSpeculativelyExecute(I)) {
+    if (VF.isVector() && isPredicatedInst(I)) {
       // If we're speculating lanes, we have two options - scalarization and
       // guarded widening.
       if (isScalarWithPredication(I, VF)) {
@@ -8371,8 +8368,7 @@ VPRecipeBase *VPRecipeBuilder::tryToWiden(Instruction *I,
   case Instruction::URem: {
     // If not provably safe, use a select to form a safe divisor before widening the
     // div/rem operation itself.  Otherwise fall through to general handling below.
-    if (CM.blockNeedsPredicationForAnyReason(I->getParent()) &&
-        !isSafeToSpeculativelyExecute(I)) {
+    if (CM.isPredicatedInst(I)) {
       SmallVector<VPValue *> Ops(Operands.begin(), Operands.end());
       VPValue *Mask = createBlockInMask(I->getParent(), Plan);
       VPValue *One =
@@ -8438,9 +8434,7 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
       [&](ElementCount VF) { return CM.isUniformAfterVectorization(I, VF); },
       Range);
 
-  bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
-      [&](ElementCount VF) { return CM.isPredicatedInst(I, VF); },
-      Range);
+  bool IsPredicated = CM.isPredicatedInst(I);
 
   // Even if the instruction is not marked as uniform, there are certain
   // intrinsic calls that can be effectively treated as such, so we check for
