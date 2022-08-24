@@ -367,7 +367,7 @@ void BinaryFunction::updateEHRanges() {
     uint64_t Action;
   };
 
-  for (FunctionFragment &FF : getLayout().fragments()) {
+  for (const FunctionFragment FF : getLayout().fragments()) {
     // Sites to update - either regular or cold.
     CallSitesType &Sites = FF.isMainFragment() ? CallSites : ColdCallSites;
 

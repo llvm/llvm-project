@@ -3183,7 +3183,7 @@ void RewriteInstance::emitAndLink() {
       BC->deregisterSection(*Section);
     assert(Function->getOriginSectionName() && "expected origin section");
     Function->CodeSectionName = Function->getOriginSectionName()->str();
-    for (const FunctionFragment &FF :
+    for (const FunctionFragment FF :
          Function->getLayout().getSplitFragments()) {
       if (ErrorOr<BinarySection &> ColdSection =
               Function->getCodeSection(FF.getFragmentNum()))
@@ -3726,8 +3726,7 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
     if (!Function.isSplit())
       continue;
 
-    for (const FunctionFragment &FF :
-         Function.getLayout().getSplitFragments()) {
+    for (const FunctionFragment FF : Function.getLayout().getSplitFragments()) {
       ErrorOr<BinarySection &> ColdSection =
           Function.getCodeSection(FF.getFragmentNum());
       assert(ColdSection && "cannot find section for cold part");
@@ -4519,7 +4518,7 @@ void RewriteInstance::updateELFSymbolTable(
       Symbols.emplace_back(ICFSymbol);
     }
     if (Function.isSplit() && Function.cold().getAddress()) {
-      for (const FunctionFragment &FF :
+      for (const FunctionFragment FF :
            Function.getLayout().getSplitFragments()) {
         ELFSymTy NewColdSym = FunctionSymbol;
         const SmallString<256> SymbolName = formatv(
