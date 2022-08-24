@@ -374,8 +374,8 @@ public:
 
       FailureOr<Operation *> fusedOp = fuseElementwiseOps(rewriter, opOperand);
       if (succeeded(fusedOp)) {
-        auto replacements = fusedOp.getValue()->getResults().take_back(
-            genericOp.getNumResults());
+        auto replacements =
+            fusedOp.value()->getResults().take_back(genericOp.getNumResults());
         rewriter.replaceOp(genericOp, replacements);
         return success();
       }
