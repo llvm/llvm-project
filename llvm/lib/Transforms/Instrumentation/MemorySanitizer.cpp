@@ -1949,7 +1949,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     IRBuilder<> IRB(&I);
     Value *Addr = I.getOperand(0);
     Value *Val = I.getOperand(1);
-    Value *ShadowPtr = getShadowOriginPtr(Addr, IRB, Val->getType(), Align(1),
+    Value *ShadowPtr = getShadowOriginPtr(Addr, IRB, getShadowTy(Val), Align(1),
                                           /*isStore*/ true)
                            .first;
 
