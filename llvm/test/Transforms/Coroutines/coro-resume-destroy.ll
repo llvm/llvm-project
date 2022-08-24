@@ -1,9 +1,5 @@
 ; Tests that CoroEarly pass correctly lowers coro.resume, coro.destroy
-; and other intrinsics managed by this pass.
 ; RUN: opt < %s -S -passes=coro-early | FileCheck %s
-
-; CHECK: %NoopCoro.Frame = type { void (%NoopCoro.Frame*)*, void (%NoopCoro.Frame*)* }
-; CHECK: @NoopCoro.Frame.Const = private constant %NoopCoro.Frame { void (%NoopCoro.Frame*)* @NoopCoro.ResumeDestroy, void (%NoopCoro.Frame*)* @NoopCoro.ResumeDestroy }
 
 ; CHECK-LABEL: @callResume(
 define void @callResume(i8* %hdl) {
@@ -41,20 +37,5 @@ ehcleanup:
 }
 
 
-; CHECK-LABEL: @noop(
-define i8* @noop() {
-; CHECK-NEXT: entry
-entry:
-; CHECK-NEXT: ret i8* bitcast (%NoopCoro.Frame* @NoopCoro.Frame.Const to i8*)
-  %n = call i8* @llvm.coro.noop()
-  ret i8* %n
-}
-
-; CHECK-LABEL: define private fastcc void @NoopCoro.ResumeDestroy(%NoopCoro.Frame* %0) {
-; CHECK-NEXT: entry
-; CHECK-NEXT:    ret void
-
-
 declare void @llvm.coro.resume(i8*)
 declare void @llvm.coro.destroy(i8*)
-declare i8* @llvm.coro.noop()
