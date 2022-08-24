@@ -31,6 +31,23 @@ TEST(BitTest, BitCast) {
                    llvm::bit_cast<double>(llvm::bit_cast<uint64_t>(kValueF64)));
 }
 
+TEST(BitTest, HasSingleBit) {
+  EXPECT_FALSE(llvm::has_single_bit(0U));
+  EXPECT_FALSE(llvm::has_single_bit(0ULL));
+
+  EXPECT_FALSE(llvm::has_single_bit(~0U));
+  EXPECT_FALSE(llvm::has_single_bit(~0ULL));
+
+  EXPECT_TRUE(llvm::has_single_bit(1U));
+  EXPECT_TRUE(llvm::has_single_bit(1ULL));
+
+  static const int8_t kValueS8 = -128;
+  EXPECT_TRUE(llvm::has_single_bit(static_cast<uint8_t>(kValueS8)));
+
+  static const int16_t kValueS16 = -32768;
+  EXPECT_TRUE(llvm::has_single_bit(static_cast<uint16_t>(kValueS16)));
+}
+
 TEST(BitTest, PopCount) {
   EXPECT_EQ(0, llvm::popcount(0U));
   EXPECT_EQ(0, llvm::popcount(0ULL));
