@@ -158,7 +158,7 @@ void DynoStats::operator+=(const DynoStats &Other) {
   }
 }
 
-DynoStats getDynoStats(BinaryFunction &BF) {
+DynoStats getDynoStats(const BinaryFunction &BF) {
   auto &BC = BF.getBinaryContext();
 
   DynoStats Stats(/*PrintAArch64Stats*/ BC.isAArch64());
