@@ -26,6 +26,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+#include <functional>
+
 using namespace mlir;
 using namespace mlir::tosa;
 
@@ -436,6 +438,68 @@ void ClampOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 // Operator Folders.
 //===----------------------------------------------------------------------===//
+
+template <typename IntFolder, typename FloatFolder>
+DenseElementsAttr BinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
+                               RankedTensorType ty) {
+  if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
+    if (ty.getElementType().isa<IntegerType>()) {
+      APInt l = lhs.getSplatValue<APInt>();
+      APInt r = rhs.getSplatValue<APInt>();
+      APInt result = IntFolder()(l, r);
+      return DenseElementsAttr::get(ty, result);
+    }
+
+    if (ty.getElementType().isa<FloatType>()) {
+      APFloat l = lhs.getSplatValue<APFloat>();
+      APFloat r = rhs.getSplatValue<APFloat>();
+      APFloat result = FloatFolder()(l, r);
+      return DenseElementsAttr::get(ty, result);
+    }
+  }
+
+  return {};
+}
+
+OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
+  auto lhsTy = getInput1().getType().dyn_cast<RankedTensorType>();
+  auto rhsTy = getInput2().getType().dyn_cast<RankedTensorType>();
+  auto resultTy = getType().dyn_cast<RankedTensorType>();
+  if (!lhsTy || !rhsTy || !resultTy)
+    return {};
+  if (lhsTy != rhsTy)
+    return {};
+
+  auto resultETy = resultTy.getElementType();
+  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+
+  if (lhsAttr && lhsAttr.isSplat() && resultETy.isa<FloatType>()) {
+    if (lhsAttr.getSplatValue<APFloat>().isZero())
+      return getInput2();
+  }
+
+  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<FloatType>()) {
+    if (rhsAttr.getSplatValue<APFloat>().isZero())
+      return getInput1();
+  }
+
+  if (lhsAttr && lhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
+    if (lhsAttr.getSplatValue<APInt>().isZero())
+      return getInput2();
+  }
+
+  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
+    if (rhsAttr.getSplatValue<APInt>().isZero())
+      return getInput1();
+  }
+
+  if (!lhsAttr || !rhsAttr)
+    return {};
+
+  return BinaryFolder<std::plus<APInt>, std::plus<APFloat>>(lhsAttr, rhsAttr,
+                                                            lhsTy);
+}
 
 OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
   if (getInput().getType() == getType())
