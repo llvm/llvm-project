@@ -8,6 +8,7 @@ add_mlir_library(MLIRIR
   BuiltinAttributeInterfaces.cpp
   BuiltinAttributes.cpp
   BuiltinDialect.cpp
+  BuiltinDialectBytecode.cpp
   BuiltinTypes.cpp
   BuiltinTypeInterfaces.cpp
   Diagnostics.cpp

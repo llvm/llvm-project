@@ -217,12 +217,17 @@ void UseEqualsDefaultCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
+  // Skip unions since constructors with empty bodies behave differently
+  // in comparison with structs/classes.
+
   // Destructor.
-  Finder->addMatcher(cxxDestructorDecl(isDefinition()).bind(SpecialFunction),
+  Finder->addMatcher(cxxDestructorDecl(unless(hasParent(recordDecl(isUnion()))),
+                                       isDefinition())
+                         .bind(SpecialFunction),
                      this);
   Finder->addMatcher(
       cxxConstructorDecl(
-          isDefinition(),
+          unless(hasParent(recordDecl(isUnion()))), isDefinition(),
           anyOf(
               // Default constructor.
               allOf(unless(hasAnyConstructorInitializer(isWritten())),
@@ -237,7 +242,8 @@ void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
       this);
   // Copy-assignment operator.
   Finder->addMatcher(
-      cxxMethodDecl(isDefinition(), isCopyAssignmentOperator(),
+      cxxMethodDecl(unless(hasParent(recordDecl(isUnion()))), isDefinition(),
+                    isCopyAssignmentOperator(),
                     // isCopyAssignmentOperator() allows the parameter to be
                     // passed by value, and in this case it cannot be
                     // defaulted.

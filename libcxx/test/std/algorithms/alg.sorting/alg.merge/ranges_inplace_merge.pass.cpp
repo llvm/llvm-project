@@ -50,7 +50,7 @@ concept HasInplaceMergeIter =
 
 static_assert(HasInplaceMergeIter<int*, int*, int*>);
 
-// !bidirectional_­iterator<I>
+// !bidirectional_iterator<I>
 static_assert(!HasInplaceMergeIter<BidirectionalIteratorNotDerivedFrom>);
 static_assert(!HasInplaceMergeIter<cpp20_input_iterator<int*>>);
 
@@ -287,7 +287,7 @@ bool test() {
 
   // Complexity: Let N = last - first :
   //   - For the overloads with no ExecutionPolicy, and if enough
-  //     additional memory is available, exactly N − 1 comparisons.
+  //     additional memory is available, exactly N - 1 comparisons.
   //   - Otherwise, O(NlogN) comparisons.
   // In either case, twice as many projections as comparisons.
   {

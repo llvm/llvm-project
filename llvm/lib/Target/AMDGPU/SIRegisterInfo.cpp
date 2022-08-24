@@ -3083,20 +3083,6 @@ SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
   return RC;
 }
 
-bool SIRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
-  switch (PhysReg) {
-  case AMDGPU::SGPR_NULL:
-  case AMDGPU::SGPR_NULL64:
-  case AMDGPU::SRC_SHARED_BASE:
-  case AMDGPU::SRC_PRIVATE_BASE:
-  case AMDGPU::SRC_SHARED_LIMIT:
-  case AMDGPU::SRC_PRIVATE_LIMIT:
-    return true;
-  default:
-    return false;
-  }
-}
-
 ArrayRef<MCPhysReg>
 SIRegisterInfo::getAllSGPR128(const MachineFunction &MF) const {
   return makeArrayRef(AMDGPU::SGPR_128RegClass.begin(),

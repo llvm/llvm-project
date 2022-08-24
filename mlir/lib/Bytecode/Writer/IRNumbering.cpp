@@ -7,12 +7,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "IRNumbering.h"
+#include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 
 using namespace mlir;
 using namespace mlir::bytecode::detail;
+
+//===----------------------------------------------------------------------===//
+// NumberingDialectWriter
+//===----------------------------------------------------------------------===//
+
+struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
+  NumberingDialectWriter(IRNumberingState &state) : state(state) {}
+
+  void writeAttribute(Attribute attr) override { state.number(attr); }
+  void writeType(Type type) override { state.number(type); }
+
+  /// Stubbed out methods that are not used for numbering.
+  void writeVarInt(uint64_t) override {}
+  void writeOwnedString(StringRef) override {
+    // TODO: It might be nice to prenumber strings and sort by the number of
+    // references. This could potentially be useful for optimizing things like
+    // file locations.
+  }
+
+  /// The parent numbering state that is populated by this writer.
+  IRNumberingState &state;
+};
 
 //===----------------------------------------------------------------------===//
 // IR Numbering
@@ -138,10 +161,22 @@ void IRNumberingState::number(Attribute attr) {
   // have a registered dialect when it got created. We don't want to encode this
   // as the builtin OpaqueAttr, we want to encode it as if the dialect was
   // actually loaded.
-  if (OpaqueAttr opaqueAttr = attr.dyn_cast<OpaqueAttr>())
+  if (OpaqueAttr opaqueAttr = attr.dyn_cast<OpaqueAttr>()) {
     numbering->dialect = &numberDialect(opaqueAttr.getDialectNamespace());
-  else
-    numbering->dialect = &numberDialect(&attr.getDialect());
+    return;
+  }
+  numbering->dialect = &numberDialect(&attr.getDialect());
+
+  // If this attribute will be emitted using the bytecode format, perform a
+  // dummy writing to number any nested components.
+  if (const auto *interface = numbering->dialect->interface) {
+    // TODO: We don't allow custom encodings for mutable attributes right now.
+    if (attr.hasTrait<AttributeTrait::IsMutable>())
+      return;
+
+    NumberingDialectWriter writer(*this);
+    (void)interface->writeAttribute(attr, writer);
+  }
 }
 
 void IRNumberingState::number(Block &block) {
@@ -164,7 +199,7 @@ auto IRNumberingState::numberDialect(Dialect *dialect) -> DialectNumbering & {
   DialectNumbering *&numbering = registeredDialects[dialect];
   if (!numbering) {
     numbering = &numberDialect(dialect->getNamespace());
-    numbering->dialect = dialect;
+    numbering->interface = dyn_cast<BytecodeDialectInterface>(dialect);
   }
   return *numbering;
 }
@@ -244,8 +279,20 @@ void IRNumberingState::number(Type type) {
   // registered dialect when it got created. We don't want to encode this as the
   // builtin OpaqueType, we want to encode it as if the dialect was actually
   // loaded.
-  if (OpaqueType opaqueType = type.dyn_cast<OpaqueType>())
+  if (OpaqueType opaqueType = type.dyn_cast<OpaqueType>()) {
     numbering->dialect = &numberDialect(opaqueType.getDialectNamespace());
-  else
-    numbering->dialect = &numberDialect(&type.getDialect());
+    return;
+  }
+  numbering->dialect = &numberDialect(&type.getDialect());
+
+  // If this type will be emitted using the bytecode format, perform a dummy
+  // writing to number any nested components.
+  if (const auto *interface = numbering->dialect->interface) {
+    // TODO: We don't allow custom encodings for mutable types right now.
+    if (type.hasTrait<TypeTrait::IsMutable>())
+      return;
+
+    NumberingDialectWriter writer(*this);
+    (void)interface->writeType(type, writer);
+  }
 }

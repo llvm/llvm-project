@@ -48,6 +48,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopUnrolling.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopWidening.h"
@@ -204,6 +205,12 @@ typedef llvm::ImmutableMap<
     std::pair<const CXXConstructExpr *, const LocationContext *>, unsigned>
     PendingInitLoopMap;
 REGISTER_TRAIT_WITH_PROGRAMSTATE(PendingInitLoop, PendingInitLoopMap)
+
+typedef llvm::ImmutableMap<const LocationContext *, unsigned>
+    PendingArrayDestructionMap;
+REGISTER_TRAIT_WITH_PROGRAMSTATE(PendingArrayDestruction,
+                                 PendingArrayDestructionMap)
+
 //===----------------------------------------------------------------------===//
 // Engine construction and deletion.
 //===----------------------------------------------------------------------===//
@@ -515,6 +522,35 @@ ExprEngine::removeIndexOfElementToConstruct(ProgramStateRef State,
 
   assert(E && State->contains<IndexOfElementToConstruct>(Key));
   return State->remove<IndexOfElementToConstruct>(Key);
+}
+
+Optional<unsigned>
+ExprEngine::getPendingArrayDestruction(ProgramStateRef State,
+                                       const LocationContext *LCtx) {
+  assert(LCtx && "LocationContext shouldn't be null!");
+
+  return Optional<unsigned>::create(
+      State->get<PendingArrayDestruction>(LCtx->getStackFrame()));
+}
+
+ProgramStateRef ExprEngine::setPendingArrayDestruction(
+    ProgramStateRef State, const LocationContext *LCtx, unsigned Idx) {
+  assert(LCtx && "LocationContext shouldn't be null!");
+
+  auto Key = LCtx->getStackFrame();
+
+  return State->set<PendingArrayDestruction>(Key, Idx);
+}
+
+ProgramStateRef
+ExprEngine::removePendingArrayDestruction(ProgramStateRef State,
+                                          const LocationContext *LCtx) {
+  assert(LCtx && "LocationContext shouldn't be null!");
+
+  auto Key = LCtx->getStackFrame();
+
+  assert(LCtx && State->contains<PendingArrayDestruction>(Key));
+  return State->remove<PendingArrayDestruction>(Key);
 }
 
 ProgramStateRef
@@ -1072,6 +1108,42 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
   Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
 
+std::pair<ProgramStateRef, uint64_t>
+ExprEngine::prepareStateForArrayDestruction(const ProgramStateRef State,
+                                            const MemRegion *Region,
+                                            const QualType &ElementTy,
+                                            const LocationContext *LCtx,
+                                            SVal *ElementCountVal) {
+
+  QualType Ty = ElementTy.getDesugaredType(getContext());
+  while (const auto *NTy = dyn_cast<ArrayType>(Ty))
+    Ty = NTy->getElementType().getDesugaredType(getContext());
+
+  auto ElementCount = getDynamicElementCount(State, Region, svalBuilder, Ty);
+
+  if (ElementCountVal)
+    *ElementCountVal = ElementCount;
+
+  // Note: the destructors are called in reverse order.
+  unsigned Idx = 0;
+  if (auto OptionalIdx = getPendingArrayDestruction(State, LCtx)) {
+    Idx = *OptionalIdx;
+  } else {
+    // The element count is either unknown, or an SVal that's not an integer.
+    if (!ElementCount.isConstant())
+      return {State, 0};
+
+    Idx = ElementCount.getAsInteger()->getLimitedValue();
+  }
+
+  if (Idx == 0)
+    return {State, 0};
+
+  --Idx;
+
+  return {setPendingArrayDestruction(State, LCtx, Idx), Idx};
+}
+
 void ExprEngine::ProcessImplicitDtor(const CFGImplicitDtor D,
                                      ExplodedNode *Pred) {
   ExplodedNodeSet Dst;
@@ -1121,11 +1193,14 @@ void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
 void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
                                          ExplodedNode *Pred,
                                          ExplodedNodeSet &Dst) {
+  const auto *DtorDecl = Dtor.getDestructorDecl(getContext());
   const VarDecl *varDecl = Dtor.getVarDecl();
   QualType varType = varDecl->getType();
 
   ProgramStateRef state = Pred->getState();
-  SVal dest = state->getLValue(varDecl, Pred->getLocationContext());
+  const LocationContext *LCtx = Pred->getLocationContext();
+
+  SVal dest = state->getLValue(varDecl, LCtx);
   const MemRegion *Region = dest.castAs<loc::MemRegionVal>().getRegion();
 
   if (varType->isReferenceType()) {
@@ -1141,13 +1216,45 @@ void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
     varType = cast<TypedValueRegion>(Region)->getValueType();
   }
 
-  // FIXME: We need to run the same destructor on every element of the array.
-  // This workaround will just run the first destructor (which will still
-  // invalidate the entire array).
+  unsigned Idx = 0;
+  if (const auto *AT = dyn_cast<ArrayType>(varType)) {
+    SVal ElementCount;
+    std::tie(state, Idx) = prepareStateForArrayDestruction(
+        state, Region, varType, LCtx, &ElementCount);
+
+    if (ElementCount.isConstant()) {
+      uint64_t ArrayLength = ElementCount.getAsInteger()->getLimitedValue();
+      assert(ArrayLength &&
+             "An automatic dtor for a 0 length array shouldn't be triggered!");
+
+      // Still handle this case if we don't have assertions enabled.
+      if (!ArrayLength) {
+        static SimpleProgramPointTag PT(
+            "ExprEngine", "Skipping automatic 0 length array destruction, "
+                          "which shouldn't be in the CFG.");
+        PostImplicitCall PP(DtorDecl, varDecl->getLocation(), LCtx, &PT);
+        NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+        Bldr.generateSink(PP, Pred->getState(), Pred);
+        return;
+      }
+    }
+  }
+
   EvalCallOptions CallOpts;
   Region = makeElementRegion(state, loc::MemRegionVal(Region), varType,
-                             CallOpts.IsArrayCtorOrDtor)
+                             CallOpts.IsArrayCtorOrDtor, Idx)
                .getAsRegion();
+
+  NodeBuilder Bldr(Pred, Dst, getBuilderContext());
+
+  static SimpleProgramPointTag PT("ExprEngine",
+                                  "Prepare for object destruction");
+  PreImplicitCall PP(DtorDecl, varDecl->getLocation(), LCtx, &PT);
+  Pred = Bldr.generateNode(PP, state, Pred);
+  Bldr.takeNodes(Pred);
+
+  if (!Pred)
+    return;
 
   VisitCXXDestructor(varType, Region, Dtor.getTriggerStmt(),
                      /*IsBase=*/false, Pred, Dst, CallOpts);
@@ -1176,19 +1283,52 @@ void ExprEngine::ProcessDeleteDtor(const CFGDeleteDtor Dtor,
     return;
   }
 
+  auto getDtorDecl = [](const QualType &DTy) {
+    const CXXRecordDecl *RD = DTy->getAsCXXRecordDecl();
+    return RD->getDestructor();
+  };
+
+  unsigned Idx = 0;
   EvalCallOptions CallOpts;
   const MemRegion *ArgR = ArgVal.getAsRegion();
+
   if (DE->isArrayForm()) {
-    // FIXME: We need to run the same destructor on every element of the array.
-    // This workaround will just run the first destructor (which will still
-    // invalidate the entire array).
+    SVal ElementCount;
+    std::tie(State, Idx) =
+        prepareStateForArrayDestruction(State, ArgR, DTy, LCtx, &ElementCount);
+
     CallOpts.IsArrayCtorOrDtor = true;
     // Yes, it may even be a multi-dimensional array.
     while (const auto *AT = getContext().getAsArrayType(DTy))
       DTy = AT->getElementType();
+
+    // If we're about to destruct a 0 length array, don't run any of the
+    // destructors.
+    if (ElementCount.isConstant() &&
+        ElementCount.getAsInteger()->getLimitedValue() == 0) {
+
+      static SimpleProgramPointTag PT(
+          "ExprEngine", "Skipping 0 length array delete destruction");
+      PostImplicitCall PP(getDtorDecl(DTy), DE->getBeginLoc(), LCtx, &PT);
+      NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+      Bldr.generateNode(PP, Pred->getState(), Pred);
+      return;
+    }
+
     if (ArgR)
-      ArgR = getStoreManager().GetElementZeroRegion(cast<SubRegion>(ArgR), DTy);
+      ArgR = State->getLValue(DTy, svalBuilder.makeArrayIndex(Idx), ArgVal)
+                 .getAsRegion();
   }
+
+  NodeBuilder Bldr(Pred, Dst, getBuilderContext());
+  static SimpleProgramPointTag PT("ExprEngine",
+                                  "Prepare for object destruction");
+  PreImplicitCall PP(getDtorDecl(DTy), DE->getBeginLoc(), LCtx, &PT);
+  Pred = Bldr.generateNode(PP, State, Pred);
+  Bldr.takeNodes(Pred);
+
+  if (!Pred)
+    return;
 
   VisitCXXDestructor(DTy, ArgR, DE, /*IsBase=*/false, Pred, Dst, CallOpts);
 }
@@ -1215,6 +1355,7 @@ void ExprEngine::ProcessBaseDtor(const CFGBaseDtor D,
 
 void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
                                    ExplodedNode *Pred, ExplodedNodeSet &Dst) {
+  const auto *DtorDecl = D.getDestructorDecl(getContext());
   const FieldDecl *Member = D.getFieldDecl();
   QualType T = Member->getType();
   ProgramStateRef State = Pred->getState();
@@ -1226,11 +1367,44 @@ void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
   Loc ThisLoc = State->getSVal(ThisStorageLoc).castAs<Loc>();
   SVal FieldVal = State->getLValue(Member, ThisLoc);
 
-  // FIXME: We need to run the same destructor on every element of the array.
-  // This workaround will just run the first destructor (which will still
-  // invalidate the entire array).
+  unsigned Idx = 0;
+  if (const auto *AT = dyn_cast<ArrayType>(T)) {
+    SVal ElementCount;
+    std::tie(State, Idx) = prepareStateForArrayDestruction(
+        State, FieldVal.getAsRegion(), T, LCtx, &ElementCount);
+
+    if (ElementCount.isConstant()) {
+      uint64_t ArrayLength = ElementCount.getAsInteger()->getLimitedValue();
+      assert(ArrayLength &&
+             "A member dtor for a 0 length array shouldn't be triggered!");
+
+      // Still handle this case if we don't have assertions enabled.
+      if (!ArrayLength) {
+        static SimpleProgramPointTag PT(
+            "ExprEngine", "Skipping member 0 length array destruction, which "
+                          "shouldn't be in the CFG.");
+        PostImplicitCall PP(DtorDecl, Member->getLocation(), LCtx, &PT);
+        NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+        Bldr.generateSink(PP, Pred->getState(), Pred);
+        return;
+      }
+    }
+  }
+
   EvalCallOptions CallOpts;
-  FieldVal = makeElementRegion(State, FieldVal, T, CallOpts.IsArrayCtorOrDtor);
+  FieldVal =
+      makeElementRegion(State, FieldVal, T, CallOpts.IsArrayCtorOrDtor, Idx);
+
+  NodeBuilder Bldr(Pred, Dst, getBuilderContext());
+
+  static SimpleProgramPointTag PT("ExprEngine",
+                                  "Prepare for object destruction");
+  PreImplicitCall PP(DtorDecl, Member->getLocation(), LCtx, &PT);
+  Pred = Bldr.generateNode(PP, State, Pred);
+  Bldr.takeNodes(Pred);
+
+  if (!Pred)
+    return;
 
   VisitCXXDestructor(T, FieldVal.getAsRegion(), CurDtor->getBody(),
                      /*IsBase=*/false, Pred, Dst, CallOpts);
@@ -1281,15 +1455,31 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
   EvalCallOptions CallOpts;
   CallOpts.IsTemporaryCtorOrDtor = true;
   if (!MR) {
-    // If we have no MR, we still need to unwrap the array to avoid destroying
-    // the whole array at once. Regardless, we'd eventually need to model array
-    // destructors properly, element-by-element.
+    // FIXME: If we have no MR, we still need to unwrap the array to avoid
+    // destroying the whole array at once.
+    //
+    // For this case there is no universal solution as there is no way to
+    // directly create an array of temporary objects. There are some expressions
+    // however which can create temporary objects and have an array type.
+    //
+    // E.g.: std::initializer_list<S>{S(), S()};
+    //
+    // The expression above has a type of 'const struct S[2]' but it's a single
+    // 'std::initializer_list<>'. The destructors of the 2 temporary 'S()'
+    // objects will be called anyway, because they are 2 separate objects in 2
+    // separate clusters, i.e.: not an array.
+    //
+    // Now the 'std::initializer_list<>' is not an array either even though it
+    // has the type of an array. The point is, we only want to invoke the
+    // destructor for the initializer list once not twice or so.
     while (const ArrayType *AT = getContext().getAsArrayType(T)) {
       T = AT->getElementType();
-      CallOpts.IsArrayCtorOrDtor = true;
+
+      // FIXME: Enable this flag once we handle this case properly.
+      // CallOpts.IsArrayCtorOrDtor = true;
     }
   } else {
-    // We'd eventually need to makeElementRegion() trick here,
+    // FIXME: We'd eventually need to makeElementRegion() trick here,
     // but for now we don't have the respective construction contexts,
     // so MR would always be null in this case. Do nothing for now.
   }

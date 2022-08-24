@@ -113,6 +113,10 @@ void Dialect::addInterface(std::unique_ptr<DialectInterface> interface) {
 
 DialectInterface::~DialectInterface() = default;
 
+MLIRContext *DialectInterface::getContext() const {
+  return dialect->getContext();
+}
+
 DialectInterfaceCollectionBase::DialectInterfaceCollectionBase(
     MLIRContext *ctx, TypeID interfaceKind) {
   for (auto *dialect : ctx->getLoadedDialects()) {

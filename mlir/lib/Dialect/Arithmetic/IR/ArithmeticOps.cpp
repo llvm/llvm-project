@@ -218,10 +218,10 @@ void arith::AddIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 }
 
 //===----------------------------------------------------------------------===//
-// AddICarryOp
+// AddUICarryOp
 //===----------------------------------------------------------------------===//
 
-Optional<SmallVector<int64_t, 4>> arith::AddICarryOp::getShapeForUnroll() {
+Optional<SmallVector<int64_t, 4>> arith::AddUICarryOp::getShapeForUnroll() {
   if (auto vt = getType(0).dyn_cast<VectorType>())
     return llvm::to_vector<4>(vt.getShape());
   return None;
@@ -233,10 +233,11 @@ static APInt calculateCarry(const APInt &sum, const APInt &operand) {
   return sum.ult(operand) ? APInt::getAllOnes(1) : APInt::getZero(1);
 }
 
-LogicalResult arith::AddICarryOp::fold(ArrayRef<Attribute> operands,
-                                       SmallVectorImpl<OpFoldResult> &results) {
+LogicalResult
+arith::AddUICarryOp::fold(ArrayRef<Attribute> operands,
+                          SmallVectorImpl<OpFoldResult> &results) {
   auto carryTy = getCarry().getType();
-  // addi_carry(x, 0) -> x, false
+  // addui_carry(x, 0) -> x, false
   if (matchPattern(getRhs(), m_Zero())) {
     auto carryZero = APInt::getZero(1);
     Builder builder(getContext());
@@ -247,7 +248,7 @@ LogicalResult arith::AddICarryOp::fold(ArrayRef<Attribute> operands,
     return success();
   }
 
-  // addi_carry(constant_a, constant_b) -> constant_sum, constant_carry
+  // addui_carry(constant_a, constant_b) -> constant_sum, constant_carry
   // Let the `constFoldBinaryOp` utility attempt to fold the sum of both
   // operands. If that succeeds, calculate the carry boolean based on the sum
   // and the first (constant) operand, `lhs`. Note that we cannot simply call
@@ -574,6 +575,16 @@ OpFoldResult arith::AndIOp::fold(ArrayRef<Attribute> operands) {
   APInt intValue;
   if (matchPattern(getRhs(), m_ConstantInt(&intValue)) && intValue.isAllOnes())
     return getLhs();
+  /// and(x, not(x)) -> 0
+  if (matchPattern(getRhs(), m_Op<XOrIOp>(matchers::m_Val(getLhs()),
+                                          m_ConstantInt(&intValue))) &&
+      intValue.isAllOnes())
+    return IntegerAttr::get(getType(), 0);
+  /// and(not(x), x) -> 0
+  if (matchPattern(getLhs(), m_Op<XOrIOp>(matchers::m_Val(getRhs()),
+                                          m_ConstantInt(&intValue))) &&
+      intValue.isAllOnes())
+    return IntegerAttr::get(getType(), 0);
 
   return constFoldBinaryOp<IntegerAttr>(
       operands, [](APInt a, const APInt &b) { return std::move(a) & b; });

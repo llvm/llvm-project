@@ -303,7 +303,7 @@ cc_library(
     srcs = glob([
         "lib/IR/*.cpp",
         "lib/IR/*.h",
-    ]),
+    ]) + ["include/mlir/Bytecode/BytecodeImplementation.h"],
     hdrs = glob([
         "include/mlir/IR/*.h",
     ]) + [
@@ -2431,8 +2431,8 @@ cc_library(
     deps = [
         ":AffineAnalysis",
         ":AffineDialect",
-        ":ArithmeticUtils",
         ":Analysis",
+        ":ArithmeticUtils",
         ":FuncDialect",
         ":IR",
         ":MemRefDialect",
@@ -3356,9 +3356,9 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AsmParser",
+        ":BytecodeReader",
         ":IR",
         ":Support",
-        ":BytecodeReader",
         "//llvm:Support",
     ],
 )

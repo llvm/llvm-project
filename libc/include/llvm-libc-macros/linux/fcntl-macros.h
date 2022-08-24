@@ -12,6 +12,7 @@
 // File creation flags
 #define O_CLOEXEC 02000000
 #define O_CREAT 00000100
+#define O_PATH 010000000
 
 #ifdef __aarch64__
 #define O_DIRECTORY 040000

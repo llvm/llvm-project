@@ -95,10 +95,10 @@ struct tiny {
 
 void P2418()
 {
-	auto t = tiny{};
-	std::format("{}", t.bit); // expected-error{{non-const reference cannot bind to bit-field 'bit'}}
+  auto t = tiny{};
+  std::format("{}", t.bit); // expected-error{{non-const reference cannot bind to bit-field 'bit'}}
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
-	std::format(L"{}", t.bit); // expected-error{{non-const reference cannot bind to bit-field 'bit'}}
+  std::format(L"{}", t.bit); // expected-error{{non-const reference cannot bind to bit-field 'bit'}}
 #endif
 }

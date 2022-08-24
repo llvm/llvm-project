@@ -97,8 +97,15 @@ static bool emitCAPIImpl(const llvm::RecordKeeper &records, raw_ostream &os) {
   for (const auto *def : records.getAllDerivedDefinitions("PassBase")) {
     Pass pass(def);
     StringRef defName = pass.getDef()->getName();
-    os << llvm::formatv(passCreateDef, groupName, defName,
-                        pass.getConstructor());
+
+    std::string constructorCall;
+    if (StringRef constructor = pass.getConstructor(); !constructor.empty())
+      constructorCall = constructor.str();
+    else
+      constructorCall =
+          llvm::formatv("create{0}Pass()", pass.getDef()->getName()).str();
+
+    os << llvm::formatv(passCreateDef, groupName, defName, constructorCall);
   }
   return false;
 }
