@@ -1795,12 +1795,20 @@ template <typename T> bool all_equal(std::initializer_list<T> Values) {
 }
 
 /// Returns true if Range consists of the same value repeated multiple times.
-template <typename R> bool is_splat(R &&Range) {
+template <typename R>
+LLVM_DEPRECATED(
+    "Use 'all_equal(Range)' or '!empty(Range) && all_equal(Range)' instead.",
+    "all_equal")
+bool is_splat(R &&Range) {
   return !llvm::empty(Range) && all_equal(Range);
 }
 
 /// Returns true if Values consists of the same value repeated multiple times.
-template <typename T> bool is_splat(std::initializer_list<T> Values) {
+template <typename T>
+LLVM_DEPRECATED(
+    "Use 'all_equal(Values)' or '!empty(Values) && all_equal(Values)' instead.",
+    "all_equal")
+bool is_splat(std::initializer_list<T> Values) {
   return is_splat<std::initializer_list<T>>(std::move(Values));
 }
 
