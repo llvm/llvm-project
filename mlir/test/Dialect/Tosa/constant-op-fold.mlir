@@ -161,3 +161,25 @@ func.func @fold_add_splat_f32() -> tensor<10xf32> {
   // CHECK: return %[[THREE]]
   return %add : tensor<10xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @slice_splat
+func.func @slice_splat() -> tensor<1x1x1xi32> {
+  // CHECK: %[[SLICE:.+]] = "tosa.const"() {value = dense<42> : tensor<1x1x1xi32>}
+  %splat = "tosa.const"() {value = dense<42> : tensor<4x5x6xi32>} : () -> tensor<4x5x6xi32>
+  %slice = "tosa.slice"(%splat) { size = [1, 1, 1], start = [1, 2, 3] } : (tensor<4x5x6xi32>) -> tensor<1x1x1xi32>
+  // CHECK: return %[[SLICE]]
+  return %slice : tensor<1x1x1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @slice_singleton
+func.func @slice_singleton() -> tensor<1x1xi32> {
+  %splat = "tosa.const"() {value = dense<[[0, 1, 2], [3, 4, 5], [6, 7 ,8]]> : tensor<3x3xi32>} : () -> tensor<3x3xi32>
+  // CHECK: %[[SLICE:.+]] = "tosa.const"() {value = dense<4> : tensor<1x1xi32>}
+  %slice = "tosa.slice"(%splat) { size = [1, 1], start = [1, 1] } : (tensor<3x3xi32>) -> tensor<1x1xi32>
+  // CHECK: return %[[SLICE]]
+  return %slice : tensor<1x1xi32>
+}
