@@ -345,6 +345,10 @@ public:
   /// module depends.
   llvm::SmallSetVector<Module *, 2> Imports;
 
+  /// The set of top-level modules that affected the compilation of this module,
+  /// but were not imported.
+  llvm::SmallSetVector<Module *, 2> AffectingModules;
+
   /// Describes an exported module.
   ///
   /// The pointer is the module being re-exported, while the bit will be true
