@@ -52,11 +52,11 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
 #elif defined(__APPLE__) && defined(_LIBCPP_USE_ULOCK)
 
 extern "C" int __ulock_wait(uint32_t operation, void *addr, uint64_t value,
-		uint32_t timeout); /* timeout is specified in microseconds */
+                            uint32_t timeout); /* timeout is specified in microseconds */
 extern "C" int __ulock_wake(uint32_t operation, void *addr, uint64_t wake_value);
 
-#define UL_COMPARE_AND_WAIT				1
-#define ULF_WAKE_ALL					0x00000100
+#define UL_COMPARE_AND_WAIT 1
+#define ULF_WAKE_ALL        0x00000100
 
 static void __libcpp_platform_wait_on_address(__cxx_atomic_contention_t const volatile* __ptr,
                                               __cxx_contention_t __val)
