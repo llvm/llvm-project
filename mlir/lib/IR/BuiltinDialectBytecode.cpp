@@ -209,7 +209,8 @@ void builtin_dialect_detail::addBytecodeInterface(BuiltinDialect *dialect) {
 }
 
 //===----------------------------------------------------------------------===//
-// Attributes: Reader
+// Attributes
+//===----------------------------------------------------------------------===//
 
 Attribute BuiltinDialectBytecodeInterface::readAttribute(
     DialectBytecodeReader &reader) const {
@@ -255,6 +256,30 @@ Attribute BuiltinDialectBytecodeInterface::readAttribute(
   }
 }
 
+LogicalResult BuiltinDialectBytecodeInterface::writeAttribute(
+    Attribute attr, DialectBytecodeWriter &writer) const {
+  return TypeSwitch<Attribute, LogicalResult>(attr)
+      .Case<ArrayAttr, DictionaryAttr, FloatAttr, IntegerAttr, StringAttr,
+            SymbolRefAttr, TypeAttr, CallSiteLoc, FileLineColLoc, FusedLoc,
+            NameLoc>([&](auto attr) {
+        write(attr, writer);
+        return success();
+      })
+      .Case([&](OpaqueLoc attr) { return write(attr, writer); })
+      .Case([&](UnitAttr) {
+        writer.writeVarInt(builtin_encoding::kUnitAttr);
+        return success();
+      })
+      .Case([&](UnknownLoc) {
+        writer.writeVarInt(builtin_encoding::kUnknownLoc);
+        return success();
+      })
+      .Default([&](Attribute) { return failure(); });
+}
+
+//===----------------------------------------------------------------------===//
+// ArrayAttr
+
 ArrayAttr BuiltinDialectBytecodeInterface::readArrayAttr(
     DialectBytecodeReader &reader) const {
   SmallVector<Attribute> elements;
@@ -262,6 +287,15 @@ ArrayAttr BuiltinDialectBytecodeInterface::readArrayAttr(
     return ArrayAttr();
   return ArrayAttr::get(getContext(), elements);
 }
+
+void BuiltinDialectBytecodeInterface::write(
+    ArrayAttr attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kArrayAttr);
+  writer.writeAttributes(attr.getValue());
+}
+
+//===----------------------------------------------------------------------===//
+// DictionaryAttr
 
 DictionaryAttr BuiltinDialectBytecodeInterface::readDictionaryAttr(
     DialectBytecodeReader &reader) const {
@@ -279,6 +313,18 @@ DictionaryAttr BuiltinDialectBytecodeInterface::readDictionaryAttr(
   return DictionaryAttr::get(getContext(), attrs);
 }
 
+void BuiltinDialectBytecodeInterface::write(
+    DictionaryAttr attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kDictionaryAttr);
+  writer.writeList(attr.getValue(), [&](NamedAttribute attr) {
+    writer.writeAttribute(attr.getName());
+    writer.writeAttribute(attr.getValue());
+  });
+}
+
+//===----------------------------------------------------------------------===//
+// FloatAttr
+
 FloatAttr BuiltinDialectBytecodeInterface::readFloatAttr(
     DialectBytecodeReader &reader) const {
   FloatType type;
@@ -290,6 +336,16 @@ FloatAttr BuiltinDialectBytecodeInterface::readFloatAttr(
     return FloatAttr();
   return FloatAttr::get(type, *value);
 }
+
+void BuiltinDialectBytecodeInterface::write(
+    FloatAttr attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kFloatAttr);
+  writer.writeType(attr.getType());
+  writer.writeAPFloatWithKnownSemantics(attr.getValue());
+}
+
+//===----------------------------------------------------------------------===//
+// IntegerAttr
 
 IntegerAttr BuiltinDialectBytecodeInterface::readIntegerAttr(
     DialectBytecodeReader &reader) const {
@@ -315,6 +371,16 @@ IntegerAttr BuiltinDialectBytecodeInterface::readIntegerAttr(
   return IntegerAttr::get(type, *value);
 }
 
+void BuiltinDialectBytecodeInterface::write(
+    IntegerAttr attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kIntegerAttr);
+  writer.writeType(attr.getType());
+  writer.writeAPIntWithKnownWidth(attr.getValue());
+}
+
+//===----------------------------------------------------------------------===//
+// StringAttr
+
 StringAttr
 BuiltinDialectBytecodeInterface::readStringAttr(DialectBytecodeReader &reader,
                                                 bool hasType) const {
@@ -331,6 +397,24 @@ BuiltinDialectBytecodeInterface::readStringAttr(DialectBytecodeReader &reader,
   return StringAttr::get(string, type);
 }
 
+void BuiltinDialectBytecodeInterface::write(
+    StringAttr attr, DialectBytecodeWriter &writer) const {
+  // We only encode the type if it isn't NoneType, which is significantly less
+  // common.
+  Type type = attr.getType();
+  if (!type.isa<NoneType>()) {
+    writer.writeVarInt(builtin_encoding::kStringAttrWithType);
+    writer.writeOwnedString(attr.getValue());
+    writer.writeType(type);
+    return;
+  }
+  writer.writeVarInt(builtin_encoding::kStringAttr);
+  writer.writeOwnedString(attr.getValue());
+}
+
+//===----------------------------------------------------------------------===//
+// SymbolRefAttr
+
 SymbolRefAttr BuiltinDialectBytecodeInterface::readSymbolRefAttr(
     DialectBytecodeReader &reader, bool hasNestedRefs) const {
   StringAttr rootReference;
@@ -342,6 +426,20 @@ SymbolRefAttr BuiltinDialectBytecodeInterface::readSymbolRefAttr(
   return SymbolRefAttr::get(rootReference, nestedReferences);
 }
 
+void BuiltinDialectBytecodeInterface::write(
+    SymbolRefAttr attr, DialectBytecodeWriter &writer) const {
+  ArrayRef<FlatSymbolRefAttr> nestedRefs = attr.getNestedReferences();
+  writer.writeVarInt(nestedRefs.empty() ? builtin_encoding::kFlatSymbolRefAttr
+                                        : builtin_encoding::kSymbolRefAttr);
+
+  writer.writeAttribute(attr.getRootReference());
+  if (!nestedRefs.empty())
+    writer.writeAttributes(nestedRefs);
+}
+
+//===----------------------------------------------------------------------===//
+// TypeAttr
+
 TypeAttr BuiltinDialectBytecodeInterface::readTypeAttr(
     DialectBytecodeReader &reader) const {
   Type type;
@@ -349,6 +447,15 @@ TypeAttr BuiltinDialectBytecodeInterface::readTypeAttr(
     return TypeAttr();
   return TypeAttr::get(type);
 }
+
+void BuiltinDialectBytecodeInterface::write(
+    TypeAttr attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kTypeAttr);
+  writer.writeType(attr.getValue());
+}
+
+//===----------------------------------------------------------------------===//
+// CallSiteLoc
 
 LocationAttr BuiltinDialectBytecodeInterface::readCallSiteLoc(
     DialectBytecodeReader &reader) const {
@@ -359,6 +466,16 @@ LocationAttr BuiltinDialectBytecodeInterface::readCallSiteLoc(
   return CallSiteLoc::get(callee, caller);
 }
 
+void BuiltinDialectBytecodeInterface::write(
+    CallSiteLoc attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kCallSiteLoc);
+  writer.writeAttribute(attr.getCallee());
+  writer.writeAttribute(attr.getCaller());
+}
+
+//===----------------------------------------------------------------------===//
+// FileLineColLoc
+
 LocationAttr BuiltinDialectBytecodeInterface::readFileLineColLoc(
     DialectBytecodeReader &reader) const {
   StringAttr filename;
@@ -368,6 +485,17 @@ LocationAttr BuiltinDialectBytecodeInterface::readFileLineColLoc(
     return LocationAttr();
   return FileLineColLoc::get(filename, line, column);
 }
+
+void BuiltinDialectBytecodeInterface::write(
+    FileLineColLoc attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kFileLineColLoc);
+  writer.writeAttribute(attr.getFilename());
+  writer.writeVarInt(attr.getLine());
+  writer.writeVarInt(attr.getColumn());
+}
+
+//===----------------------------------------------------------------------===//
+// FusedLoc
 
 LocationAttr
 BuiltinDialectBytecodeInterface::readFusedLoc(DialectBytecodeReader &reader,
@@ -391,116 +519,6 @@ BuiltinDialectBytecodeInterface::readFusedLoc(DialectBytecodeReader &reader,
   return FusedLoc::get(locations, metadata, getContext());
 }
 
-LocationAttr BuiltinDialectBytecodeInterface::readNameLoc(
-    DialectBytecodeReader &reader) const {
-  StringAttr name;
-  LocationAttr childLoc;
-  if (failed(reader.readAttribute(name)) ||
-      failed(reader.readAttribute(childLoc)))
-    return LocationAttr();
-  return NameLoc::get(name, childLoc);
-}
-
-//===----------------------------------------------------------------------===//
-// Attributes: Writer
-
-LogicalResult BuiltinDialectBytecodeInterface::writeAttribute(
-    Attribute attr, DialectBytecodeWriter &writer) const {
-  return TypeSwitch<Attribute, LogicalResult>(attr)
-      .Case<ArrayAttr, DictionaryAttr, FloatAttr, IntegerAttr, StringAttr,
-            SymbolRefAttr, TypeAttr, CallSiteLoc, FileLineColLoc, FusedLoc,
-            NameLoc>([&](auto attr) {
-        write(attr, writer);
-        return success();
-      })
-      .Case([&](OpaqueLoc attr) { return write(attr, writer); })
-      .Case([&](UnitAttr) {
-        writer.writeVarInt(builtin_encoding::kUnitAttr);
-        return success();
-      })
-      .Case([&](UnknownLoc) {
-        writer.writeVarInt(builtin_encoding::kUnknownLoc);
-        return success();
-      })
-      .Default([&](Attribute) { return failure(); });
-}
-
-void BuiltinDialectBytecodeInterface::write(
-    ArrayAttr attr, DialectBytecodeWriter &writer) const {
-  writer.writeVarInt(builtin_encoding::kArrayAttr);
-  writer.writeAttributes(attr.getValue());
-}
-
-void BuiltinDialectBytecodeInterface::write(
-    DictionaryAttr attr, DialectBytecodeWriter &writer) const {
-  writer.writeVarInt(builtin_encoding::kDictionaryAttr);
-  writer.writeList(attr.getValue(), [&](NamedAttribute attr) {
-    writer.writeAttribute(attr.getName());
-    writer.writeAttribute(attr.getValue());
-  });
-}
-
-void BuiltinDialectBytecodeInterface::write(
-    FloatAttr attr, DialectBytecodeWriter &writer) const {
-  writer.writeVarInt(builtin_encoding::kFloatAttr);
-  writer.writeType(attr.getType());
-  writer.writeAPFloatWithKnownSemantics(attr.getValue());
-}
-
-void BuiltinDialectBytecodeInterface::write(
-    IntegerAttr attr, DialectBytecodeWriter &writer) const {
-  writer.writeVarInt(builtin_encoding::kIntegerAttr);
-  writer.writeType(attr.getType());
-  writer.writeAPIntWithKnownWidth(attr.getValue());
-}
-
-void BuiltinDialectBytecodeInterface::write(
-    StringAttr attr, DialectBytecodeWriter &writer) const {
-  // We only encode the type if it isn't NoneType, which is significantly less
-  // common.
-  Type type = attr.getType();
-  if (!type.isa<NoneType>()) {
-    writer.writeVarInt(builtin_encoding::kStringAttrWithType);
-    writer.writeOwnedString(attr.getValue());
-    writer.writeType(type);
-    return;
-  }
-  writer.writeVarInt(builtin_encoding::kStringAttr);
-  writer.writeOwnedString(attr.getValue());
-}
-
-void BuiltinDialectBytecodeInterface::write(
-    SymbolRefAttr attr, DialectBytecodeWriter &writer) const {
-  ArrayRef<FlatSymbolRefAttr> nestedRefs = attr.getNestedReferences();
-  writer.writeVarInt(nestedRefs.empty() ? builtin_encoding::kFlatSymbolRefAttr
-                                        : builtin_encoding::kSymbolRefAttr);
-
-  writer.writeAttribute(attr.getRootReference());
-  if (!nestedRefs.empty())
-    writer.writeAttributes(nestedRefs);
-}
-
-void BuiltinDialectBytecodeInterface::write(
-    TypeAttr attr, DialectBytecodeWriter &writer) const {
-  writer.writeVarInt(builtin_encoding::kTypeAttr);
-  writer.writeType(attr.getValue());
-}
-
-void BuiltinDialectBytecodeInterface::write(
-    CallSiteLoc attr, DialectBytecodeWriter &writer) const {
-  writer.writeVarInt(builtin_encoding::kCallSiteLoc);
-  writer.writeAttribute(attr.getCallee());
-  writer.writeAttribute(attr.getCaller());
-}
-
-void BuiltinDialectBytecodeInterface::write(
-    FileLineColLoc attr, DialectBytecodeWriter &writer) const {
-  writer.writeVarInt(builtin_encoding::kFileLineColLoc);
-  writer.writeAttribute(attr.getFilename());
-  writer.writeVarInt(attr.getLine());
-  writer.writeVarInt(attr.getColumn());
-}
-
 void BuiltinDialectBytecodeInterface::write(
     FusedLoc attr, DialectBytecodeWriter &writer) const {
   if (Attribute metadata = attr.getMetadata()) {
@@ -513,12 +531,28 @@ void BuiltinDialectBytecodeInterface::write(
   }
 }
 
+//===----------------------------------------------------------------------===//
+// NameLoc
+
+LocationAttr BuiltinDialectBytecodeInterface::readNameLoc(
+    DialectBytecodeReader &reader) const {
+  StringAttr name;
+  LocationAttr childLoc;
+  if (failed(reader.readAttribute(name)) ||
+      failed(reader.readAttribute(childLoc)))
+    return LocationAttr();
+  return NameLoc::get(name, childLoc);
+}
+
 void BuiltinDialectBytecodeInterface::write(
     NameLoc attr, DialectBytecodeWriter &writer) const {
   writer.writeVarInt(builtin_encoding::kNameLoc);
   writer.writeAttribute(attr.getName());
   writer.writeAttribute(attr.getChildLoc());
 }
+
+//===----------------------------------------------------------------------===//
+// OpaqueLoc
 
 LogicalResult
 BuiltinDialectBytecodeInterface::write(OpaqueLoc attr,
@@ -529,7 +563,8 @@ BuiltinDialectBytecodeInterface::write(OpaqueLoc attr,
 }
 
 //===----------------------------------------------------------------------===//
-// Types: Reader
+// Types
+//===----------------------------------------------------------------------===//
 
 Type BuiltinDialectBytecodeInterface::readType(
     DialectBytecodeReader &reader) const {
@@ -550,27 +585,6 @@ Type BuiltinDialectBytecodeInterface::readType(
   }
 }
 
-IntegerType BuiltinDialectBytecodeInterface::readIntegerType(
-    DialectBytecodeReader &reader) const {
-  uint64_t encoding;
-  if (failed(reader.readVarInt(encoding)))
-    return IntegerType();
-  return IntegerType::get(
-      getContext(), encoding >> 2,
-      static_cast<IntegerType::SignednessSemantics>(encoding & 0x3));
-}
-
-FunctionType BuiltinDialectBytecodeInterface::readFunctionType(
-    DialectBytecodeReader &reader) const {
-  SmallVector<Type> inputs, results;
-  if (failed(reader.readTypes(inputs)) || failed(reader.readTypes(results)))
-    return FunctionType();
-  return FunctionType::get(getContext(), inputs, results);
-}
-
-//===----------------------------------------------------------------------===//
-// Types: Writer
-
 LogicalResult BuiltinDialectBytecodeInterface::writeType(
     Type type, DialectBytecodeWriter &writer) const {
   return TypeSwitch<Type, LogicalResult>(type)
@@ -584,10 +598,34 @@ LogicalResult BuiltinDialectBytecodeInterface::writeType(
       .Default([&](Type) { return failure(); });
 }
 
+//===----------------------------------------------------------------------===//
+// IntegerType
+
+IntegerType BuiltinDialectBytecodeInterface::readIntegerType(
+    DialectBytecodeReader &reader) const {
+  uint64_t encoding;
+  if (failed(reader.readVarInt(encoding)))
+    return IntegerType();
+  return IntegerType::get(
+      getContext(), encoding >> 2,
+      static_cast<IntegerType::SignednessSemantics>(encoding & 0x3));
+}
+
 void BuiltinDialectBytecodeInterface::write(
     IntegerType type, DialectBytecodeWriter &writer) const {
   writer.writeVarInt(builtin_encoding::kIntegerType);
   writer.writeVarInt((type.getWidth() << 2) | type.getSignedness());
+}
+
+//===----------------------------------------------------------------------===//
+// FunctionType
+
+FunctionType BuiltinDialectBytecodeInterface::readFunctionType(
+    DialectBytecodeReader &reader) const {
+  SmallVector<Type> inputs, results;
+  if (failed(reader.readTypes(inputs)) || failed(reader.readTypes(results)))
+    return FunctionType();
+  return FunctionType::get(getContext(), inputs, results);
 }
 
 void BuiltinDialectBytecodeInterface::write(
