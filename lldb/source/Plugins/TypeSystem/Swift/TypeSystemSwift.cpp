@@ -134,7 +134,7 @@ lldb::Format TypeSystemSwift::GetFormat(opaque_compiler_type_t type) {
   if (swift_flags & eTypeIsClass)
     return eFormatHex;
 
-  if (swift_flags & eTypeIsGeneric)
+  if (swift_flags & eTypeIsGenericTypeParam)
     return eFormatUnsigned;
 
   if (swift_flags & eTypeIsFuncPrototype || swift_flags & eTypeIsBlock)

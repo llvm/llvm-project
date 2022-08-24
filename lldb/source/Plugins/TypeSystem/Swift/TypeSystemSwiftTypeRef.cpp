@@ -1051,17 +1051,22 @@ static bool ContainsGenericTypeParameter(swift::Demangle::NodePointer node) {
 }
 
 /// Determine wether this demangle tree contains generic types.
-static bool IsGeneric(swift::Demangle::NodePointer node) {
+static bool HasUnboundGeneric(swift::Demangle::NodePointer node) {
   if (!node)
     return false;
 
   // Bug-for-bug-compatibility.
   // FIXME: There should be more cases here.
-  if (node->getKind() == Node::Kind::DynamicSelf)
+  switch (node->getKind()) {
+  case Node::Kind::DynamicSelf:
+  case Node::Kind::DependentGenericParamType:
     return true;
+  default:
+    break;
+  }
 
   for (swift::Demangle::NodePointer child : *node)
-    if (IsGeneric(child))
+    if (HasUnboundGeneric(child))
       return true;
 
   return false;
@@ -1113,13 +1118,11 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
   using namespace swift::Demangle;
   switch (node->getKind()) {
   case Node::Kind::SugaredOptional:
-    swift_flags |= eTypeIsGeneric | eTypeIsBound | eTypeHasChildren |
-                   eTypeHasValue | eTypeIsEnumeration;
+    swift_flags |= eTypeHasChildren | eTypeHasValue | eTypeIsEnumeration;
     break;
   case Node::Kind::SugaredArray:
   case Node::Kind::SugaredDictionary:
-    swift_flags |=
-        eTypeIsGeneric | eTypeIsBound | eTypeHasChildren | eTypeIsStructUnion;
+    swift_flags |= eTypeHasChildren | eTypeIsStructUnion;
     break;
 
   case Node::Kind::DependentGenericParamType:
@@ -1133,7 +1136,7 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
     break;
 
   case Node::Kind::DynamicSelf:
-    swift_flags |= eTypeHasValue | eTypeIsGeneric | eTypeIsBound;
+    swift_flags |= eTypeHasValue;
     break;
 
   case Node::Kind::ImplFunctionType:
@@ -1141,8 +1144,6 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
     swift_flags |= eTypeIsPointer | eTypeHasValue;
     return swift_flags;
   case Node::Kind::BoundGenericFunction:
-    swift_flags |= eTypeIsGeneric | eTypeIsBound;
-    LLVM_FALLTHROUGH;
   case Node::Kind::NoEscapeFunctionType:
   case Node::Kind::FunctionType:
     swift_flags |= eTypeIsPointer | eTypeHasValue;
@@ -1175,8 +1176,6 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
     swift_flags |= eTypeHasChildren | eTypeIsTuple;
     break;
   case Node::Kind::BoundGenericEnum:
-    swift_flags |= eTypeIsGeneric | eTypeIsBound;
-    LLVM_FALLTHROUGH;
   case Node::Kind::Enum: {
     // FIXME: do C-style enums have children?
     // The AST implementation is getting eTypeHasChildren out of the Decl.
@@ -1193,8 +1192,6 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
     break;
     }
     case Node::Kind::BoundGenericStructure:
-      swift_flags |= eTypeIsGeneric | eTypeIsBound;
-      LLVM_FALLTHROUGH;
     case Node::Kind::Structure: {
       swift_flags |= eTypeHasChildren | eTypeIsStructUnion;
       if (node->getNumChildren() != 2)
@@ -1225,21 +1222,16 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
       break;
     }
     case Node::Kind::BoundGenericClass:
-      swift_flags |= eTypeIsGeneric | eTypeIsBound;
-      LLVM_FALLTHROUGH;
     case Node::Kind::Class:
       swift_flags |= eTypeHasChildren | eTypeIsClass | eTypeHasValue |
                      eTypeInstanceIsPointer;
       break;
 
     case Node::Kind::BoundGenericOtherNominalType:
-      swift_flags |= eTypeIsGeneric | eTypeIsBound;
       swift_flags |= eTypeHasValue;
       break;
 
     case Node::Kind::BoundGenericProtocol:
-      swift_flags |= eTypeIsGeneric | eTypeIsBound;
-      LLVM_FALLTHROUGH;
     case Node::Kind::Protocol:
       swift_flags |= eTypeHasChildren | eTypeIsStructUnion | eTypeIsProtocol;
       break;
@@ -1261,9 +1253,6 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
       break;
 
     case Node::Kind::BoundGenericTypeAlias:
-      // Bug-for-bug compatibility.
-      // swift_flags |= eTypeIsGeneric | eTypeIsBound;
-      LLVM_FALLTHROUGH;
     case Node::Kind::TypeAlias: {
       // Bug-for-bug compatibility.
       // swift_flags |= eTypeIsTypedef;
@@ -1288,9 +1277,8 @@ TypeSystemSwiftTypeRef::CollectTypeInfo(swift::Demangle::Demangler &dem,
   // If swift_flags were collected we're done here except for
   // determining whether the type is generic.
   if (swift_flags != eTypeIsSwift) {
-    if ((swift_flags & eTypeIsGeneric) == 0)
-      if (IsGeneric(node))
-        swift_flags |= eTypeIsGeneric;
+    if (HasUnboundGeneric(node))
+      swift_flags |= eTypeHasUnboundGeneric;
     return swift_flags;
   }
 
@@ -1635,8 +1623,7 @@ template <> bool Equivalent<uint32_t>(uint32_t l, uint32_t r) {
     HANDLE_ENUM_CASE(l, eTypeIsProtocol);
     HANDLE_ENUM_CASE(l, eTypeIsTuple);
     HANDLE_ENUM_CASE(l, eTypeIsMetatype);
-    HANDLE_ENUM_CASE(l, eTypeIsGeneric);
-    HANDLE_ENUM_CASE(l, eTypeIsBound);
+    HANDLE_ENUM_CASE(l, eTypeHasUnboundGeneric);
     llvm::dbgs() << "\nr = " << r;
 
     HANDLE_ENUM_CASE(r, eTypeHasChildren);
@@ -1667,8 +1654,7 @@ template <> bool Equivalent<uint32_t>(uint32_t l, uint32_t r) {
     HANDLE_ENUM_CASE(r, eTypeIsProtocol);
     HANDLE_ENUM_CASE(r, eTypeIsTuple);
     HANDLE_ENUM_CASE(r, eTypeIsMetatype);
-    HANDLE_ENUM_CASE(r, eTypeIsGeneric);
-    HANDLE_ENUM_CASE(r, eTypeIsBound);
+    HANDLE_ENUM_CASE(r, eTypeHasUnboundGeneric);
     llvm::dbgs() << "\n";
   }
   return l == r;

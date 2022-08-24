@@ -5182,6 +5182,9 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   swift::CanType swift_can_type(GetCanonicalSwiftType(type));
   const swift::TypeKind type_kind = swift_can_type->getKind();
   uint32_t swift_flags = eTypeIsSwift;
+  if (swift_can_type->hasUnboundGenericType() ||
+      swift_can_type->hasTypeParameter())
+    swift_flags |= eTypeHasUnboundGeneric;
   switch (type_kind) {
   case swift::TypeKind::BuiltinDefaultActorStorage:
   case swift::TypeKind::BuiltinExecutor:
@@ -5211,12 +5214,9 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     assert(false && "Internal compiler type");
     break;
   case swift::TypeKind::UnboundGeneric:
-    swift_flags |= eTypeIsGeneric;
     break;
 
   case swift::TypeKind::GenericFunction:
-    swift_flags |= eTypeIsGeneric;
-    LLVM_FALLTHROUGH;
   case swift::TypeKind::Function:
     swift_flags |= eTypeIsPointer | eTypeHasValue;
     break;
@@ -5260,7 +5260,6 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
                        .GetTypeInfo(pointee_or_element_clang_type);
     break;
   case swift::TypeKind::BoundGenericEnum:
-    swift_flags |= eTypeIsGeneric | eTypeIsBound;
     LLVM_FALLTHROUGH;
   case swift::TypeKind::Enum: {
     SwiftEnumDescriptor *cached_enum_info = GetCachedEnumInfo(type);
@@ -5271,7 +5270,6 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   } break;
 
   case swift::TypeKind::BoundGenericStruct:
-    swift_flags |= eTypeIsGeneric | eTypeIsBound;
     LLVM_FALLTHROUGH;
   case swift::TypeKind::Struct:
     if (auto *ndecl = swift_can_type.getAnyNominal())
@@ -5284,7 +5282,6 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     break;
 
   case swift::TypeKind::BoundGenericClass:
-    swift_flags |= eTypeIsGeneric | eTypeIsBound;
     LLVM_FALLTHROUGH;
   case swift::TypeKind::Class:
     swift_flags |= eTypeHasChildren | eTypeIsClass | eTypeHasValue |
@@ -5313,7 +5310,7 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     swift_flags |= eTypeHasChildren | eTypeIsReference | eTypeHasValue;
     break;
   case swift::TypeKind::DynamicSelf:
-    swift_flags |= eTypeIsGeneric | eTypeIsBound | eTypeHasValue;
+    swift_flags |= eTypeHasValue;
     break;
 
   case swift::TypeKind::Optional:

@@ -88222,6 +88222,12 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eArgTypeColumnNum",SWIG_From_int(static_cast< int >(lldb::eArgTypeColumnNum)));
   SWIG_Python_SetConstant(d, "eArgTypeModuleUUID",SWIG_From_int(static_cast< int >(lldb::eArgTypeModuleUUID)));
   SWIG_Python_SetConstant(d, "eArgTypeSaveCoreStyle",SWIG_From_int(static_cast< int >(lldb::eArgTypeSaveCoreStyle)));
+  SWIG_Python_SetConstant(d, "eArgTypeLogHandler",SWIG_From_int(static_cast< int >(lldb::eArgTypeLogHandler)));
+  SWIG_Python_SetConstant(d, "eArgTypeSEDStylePair",SWIG_From_int(static_cast< int >(lldb::eArgTypeSEDStylePair)));
+  SWIG_Python_SetConstant(d, "eArgTypeRecognizerID",SWIG_From_int(static_cast< int >(lldb::eArgTypeRecognizerID)));
+  SWIG_Python_SetConstant(d, "eArgTypeConnectURL",SWIG_From_int(static_cast< int >(lldb::eArgTypeConnectURL)));
+  SWIG_Python_SetConstant(d, "eArgTypeTargetID",SWIG_From_int(static_cast< int >(lldb::eArgTypeTargetID)));
+  SWIG_Python_SetConstant(d, "eArgTypeStopHookID",SWIG_From_int(static_cast< int >(lldb::eArgTypeStopHookID)));
   SWIG_Python_SetConstant(d, "eArgTypeLastArg",SWIG_From_int(static_cast< int >(lldb::eArgTypeLastArg)));
   SWIG_Python_SetConstant(d, "eSymbolTypeAny",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeAny)));
   SWIG_Python_SetConstant(d, "eSymbolTypeInvalid",SWIG_From_int(static_cast< int >(lldb::eSymbolTypeInvalid)));
@@ -88514,8 +88520,7 @@ SWIG_init(void) {
   SWIG_Python_SetConstant(d, "eTypeIsProtocol",SWIG_From_int(static_cast< int >(lldb::eTypeIsProtocol)));
   SWIG_Python_SetConstant(d, "eTypeIsTuple",SWIG_From_int(static_cast< int >(lldb::eTypeIsTuple)));
   SWIG_Python_SetConstant(d, "eTypeIsMetatype",SWIG_From_int(static_cast< int >(lldb::eTypeIsMetatype)));
-  SWIG_Python_SetConstant(d, "eTypeIsGeneric",SWIG_From_int(static_cast< int >(lldb::eTypeIsGeneric)));
-  SWIG_Python_SetConstant(d, "eTypeIsBound",SWIG_From_int(static_cast< int >(lldb::eTypeIsBound)));
+  SWIG_Python_SetConstant(d, "eTypeHasUnboundGeneric",SWIG_From_int(static_cast< int >(lldb::eTypeHasUnboundGeneric)));
   SWIG_Python_SetConstant(d, "eCommandRequiresTarget",SWIG_From_int(static_cast< int >(lldb::eCommandRequiresTarget)));
   SWIG_Python_SetConstant(d, "eCommandRequiresProcess",SWIG_From_int(static_cast< int >(lldb::eCommandRequiresProcess)));
   SWIG_Python_SetConstant(d, "eCommandRequiresThread",SWIG_From_int(static_cast< int >(lldb::eCommandRequiresThread)));

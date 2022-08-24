@@ -940,6 +940,18 @@ eArgTypeModuleUUID = _lldb.eArgTypeModuleUUID
 
 eArgTypeSaveCoreStyle = _lldb.eArgTypeSaveCoreStyle
 
+eArgTypeLogHandler = _lldb.eArgTypeLogHandler
+
+eArgTypeSEDStylePair = _lldb.eArgTypeSEDStylePair
+
+eArgTypeRecognizerID = _lldb.eArgTypeRecognizerID
+
+eArgTypeConnectURL = _lldb.eArgTypeConnectURL
+
+eArgTypeTargetID = _lldb.eArgTypeTargetID
+
+eArgTypeStopHookID = _lldb.eArgTypeStopHookID
+
 eArgTypeLastArg = _lldb.eArgTypeLastArg
 
 eSymbolTypeAny = _lldb.eSymbolTypeAny
@@ -1524,9 +1536,7 @@ eTypeIsTuple = _lldb.eTypeIsTuple
 
 eTypeIsMetatype = _lldb.eTypeIsMetatype
 
-eTypeIsGeneric = _lldb.eTypeIsGeneric
-
-eTypeIsBound = _lldb.eTypeIsBound
+eTypeHasUnboundGeneric = _lldb.eTypeHasUnboundGeneric
 
 eCommandRequiresTarget = _lldb.eCommandRequiresTarget
 

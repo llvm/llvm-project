@@ -247,8 +247,17 @@ TEST_F(TestTypeSystemSwiftTypeRef, GetTypeInfo) {
                                          b.NodeWithIndex(Node::Kind::Index,
                                                          0)))))))));
     CompilerType p = GetCompilerType(b.Mangle(n));
-    ASSERT_EQ(p.GetTypeInfo(), (eTypeIsEnumeration | eTypeIsSwift |
-                                eTypeIsGeneric | eTypeIsBound));
+    ASSERT_EQ(p.GetTypeInfo(),
+              (eTypeIsEnumeration | eTypeIsSwift | eTypeHasUnboundGeneric));
+  }
+  {
+    NodePointer n = b.GlobalType(b.Node(Node::Kind::DependentGenericParamType,
+                                        b.NodeWithIndex(Node::Kind::Index, 0),
+                                        b.NodeWithIndex(Node::Kind::Index, 0)));
+    CompilerType p = GetCompilerType(b.Mangle(n));
+    ASSERT_EQ(p.GetTypeInfo(),
+              (eTypeHasValue | eTypeIsPointer | eTypeIsScalar | eTypeIsSwift |
+               eTypeIsGenericTypeParam | eTypeHasUnboundGeneric));
   }
 }
 
