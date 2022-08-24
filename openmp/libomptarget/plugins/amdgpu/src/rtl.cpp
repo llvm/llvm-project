@@ -81,8 +81,6 @@ typedef void (*libomptarget_ompt_set_timestamp_t)(uint64_t start, uint64_t end);
 libomptarget_ompt_set_timestamp_t ompt_set_timestamp_fn = nullptr;
 std::mutex ompt_set_timestamp_mtx;
 
-SmallPoolMgrTy SmallPoolMgr;
-
 // hostrpc interface, FIXME: consider moving to its own include these are
 // statically linked into amdgpu/plugin if present from hostrpc_services.a,
 // linked as --whole-archive to override the weak symbols that are used to
@@ -538,7 +536,11 @@ class RTLDeviceInfoTy : HSALifetime {
     }
   };
 
+  SmallPoolMgrTy SmallPoolMgr;
+
 public:
+  SmallPoolMgrTy &getSmallPoolMgr() { return SmallPoolMgr; }
+
   bool ConstructionSucceeded = false;
 
   // load binary populates symbol tables and mutates various global state
@@ -1368,10 +1370,8 @@ void ompt_enable_queue_profiling(int enable) {
 
 int32_t __tgt_rtl_deinit_plugin() {
   printHostRPCCallCount();
-#if fixme
   if (DeviceInfoState)
     delete DeviceInfoState;
-#endif
   return OFFLOAD_SUCCESS;
 }
 
@@ -1511,7 +1511,7 @@ public:
            "Both HstPtr and HstOrPoolPtr must be non-null");
     if (HstOrPoolPtr != HstPtr) {
       DP("Releasing %p into pool without unlocking\n", HstOrPoolPtr);
-      SmallPoolMgr.releaseIntoPool(Size, HstPtr);
+      DeviceInfo().getSmallPoolMgr().releaseIntoPool(Size, HstPtr);
       return HSA_STATUS_SUCCESS;
     }
     DP("Calling hsa_amd_memory_unlock %p\n", HstPtr);
@@ -1783,7 +1783,7 @@ void *prepareHstPtrForDataRetrieve(size_t Size, void *HstPtr) {
   if (is_locked(HstPtr, /*err_p=*/nullptr, /*agentBaseAddress=*/nullptr))
     return HstPtr;
 
-  void *PoolPtr = SmallPoolMgr.allocateFromPool(Size, HstPtr);
+  void *PoolPtr = DeviceInfo().getSmallPoolMgr().allocateFromPool(Size, HstPtr);
   if (PoolPtr != nullptr) {
     DP("prepareHstPtrForDataRetrieve: HostPtr %p PoolPtr %p\n", HstPtr,
        PoolPtr);
@@ -1836,7 +1836,7 @@ void *prepareHstPtrForDataSubmit(size_t Size, void *HstPtr) {
   if (is_locked(HstPtr, /*err_p=*/nullptr, /*agentBaseAddress=*/nullptr))
     return HstPtr;
 
-  void *PoolPtr = SmallPoolMgr.allocateFromPool(Size, HstPtr);
+  void *PoolPtr = DeviceInfo().getSmallPoolMgr().allocateFromPool(Size, HstPtr);
   if (PoolPtr != nullptr) {
     DP("dataSubmit: memcpy %lu bytes from HstPtr %p to PoolPtr %p\n", Size,
        HstPtr, PoolPtr);

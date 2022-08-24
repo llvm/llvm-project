@@ -52,6 +52,7 @@ public:
   /// Deallocate the provided location, returning it to the free list
   void dealloc(void *Ptr) {
     void *EndBuffer = Buffer + MaxSize;
+    (void)EndBuffer;
     assert(Ptr >= Buffer && Ptr < EndBuffer && Ptr < FreePtr &&
            "Invalid ptr to deallocate");
     FreeList.insert(Ptr);
