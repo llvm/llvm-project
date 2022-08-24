@@ -26,6 +26,8 @@ def uimmlog2xlennonzero : Operand<XLenVT>, ImmLeaf<XLenVT, [{
   let ParserMatchClass = UImmLog2XLenNonZeroAsmOperand;
   // TODO: should ensure invalid shamt is rejected when decoding.
   let DecoderMethod = "decodeUImmOperand<6>";
+  let OperandType = "OPERAND_UIMMLOG2XLEN_NONZERO";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -40,6 +42,8 @@ def simm6 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<6>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<6>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<6>";
+  let OperandType = "OPERAND_SIMM6";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -53,6 +57,8 @@ def simm6nonzero : Operand<XLenVT>,
   let ParserMatchClass = SImmAsmOperand<6, "NonZero">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<6>";
+  let OperandType = "OPERAND_SIMM6_NONZERO";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -64,6 +70,8 @@ def simm6nonzero : Operand<XLenVT>,
 def immzero : Operand<XLenVT>,
               ImmLeaf<XLenVT, [{return (Imm == 0);}]> {
   let ParserMatchClass = ImmZeroAsmOperand;
+  let OperandType = "OPERAND_ZERO";
+  let OperandNamespace = "RISCVOp";
 }
 
 def CLUIImmAsmOperand : AsmOperandClass {
@@ -100,6 +108,8 @@ def uimm7_lsb00 : Operand<XLenVT>,
   let ParserMatchClass = UImmAsmOperand<7, "Lsb00">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<7>";
+  let OperandType = "OPERAND_UIMM7_LSB00";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -114,6 +124,8 @@ def uimm8_lsb00 : Operand<XLenVT>,
   let ParserMatchClass = UImmAsmOperand<8, "Lsb00">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<8>";
+  let OperandType = "OPERAND_UIMM8_LSB00";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
@@ -128,6 +140,8 @@ def uimm8_lsb000 : Operand<XLenVT>,
   let ParserMatchClass = UImmAsmOperand<8, "Lsb000">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeUImmOperand<8>";
+  let OperandType = "OPERAND_UIMM8_LSB000";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
