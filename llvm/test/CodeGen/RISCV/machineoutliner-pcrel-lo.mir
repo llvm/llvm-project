@@ -48,19 +48,22 @@ body:             |
   ; CHECK-FS: bb.0:
   ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-FS-NEXT: {{  $}}
-  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
+  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-FS-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-FS-NEXT:   PseudoBR %bb.3
   ; CHECK-FS-NEXT: {{  $}}
   ; CHECK-FS-NEXT: bb.1:
   ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-FS-NEXT: {{  $}}
-  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
+  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-FS-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-FS-NEXT:   PseudoBR %bb.3
   ; CHECK-FS-NEXT: {{  $}}
   ; CHECK-FS-NEXT: bb.2:
   ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-FS-NEXT: {{  $}}
-  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
+  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-FS-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-FS-NEXT:   PseudoBR %bb.3
   ; CHECK-FS-NEXT: {{  $}}
   ; CHECK-FS-NEXT: bb.3:
@@ -106,19 +109,22 @@ body:             |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_1, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_1, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
+  ; CHECK-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_1, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-NEXT:   PseudoBR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
@@ -127,19 +133,22 @@ body:             |
   ; CHECK-FS: bb.0:
   ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-FS-NEXT: {{  $}}
-  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
+  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-FS-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-FS-NEXT:   PseudoBR %bb.3
   ; CHECK-FS-NEXT: {{  $}}
   ; CHECK-FS-NEXT: bb.1:
   ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-FS-NEXT: {{  $}}
-  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
+  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-FS-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-FS-NEXT:   PseudoBR %bb.3
   ; CHECK-FS-NEXT: {{  $}}
   ; CHECK-FS-NEXT: bb.2:
   ; CHECK-FS-NEXT:   liveins: $x10, $x11, $x13
   ; CHECK-FS-NEXT: {{  $}}
-  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11, implicit $x13
+  ; CHECK-FS-NEXT:   $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x10, implicit $x11
+  ; CHECK-FS-NEXT:   $x11 = LW killed renamable $x13, target-flags(riscv-pcrel-lo) <mcsymbol .Lpcrel_hi1> :: (dereferenceable load (s32) from @bar)
   ; CHECK-FS-NEXT:   PseudoBR %bb.3
   ; CHECK-FS-NEXT: {{  $}}
   ; CHECK-FS-NEXT: bb.3:
