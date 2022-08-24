@@ -1163,9 +1163,9 @@ template <typename T> void f14(T, __remove_pointer(T)) {}
 template void f14<int>(int, __remove_pointer(int));
 // CHECK-LABEL: @_ZN6test553f14IiEEvT_u16__remove_pointerIS1_E
 
-template <typename T> void f15(T, __remove_reference(T)) {}
-template void f15<int>(int, __remove_reference(int));
-// CHECK-LABEL: @_ZN6test553f15IiEEvT_u18__remove_referenceIS1_E
+template <typename T> void f15(T, __remove_reference_t(T)) {}
+template void f15<int>(int, __remove_reference_t(int));
+// CHECK-LABEL: @_ZN6test553f15IiEEvT_u20__remove_reference_tIS1_E
 
 template <typename T> void f16(T, __remove_volatile(T)) {}
 template void f16<int>(int, __remove_volatile(int));

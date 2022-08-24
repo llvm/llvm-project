@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-linalg-transform-patterns=test-patterns -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-linalg-transform-patterns=test-patterns -split-input-file -test-transform-dialect-interpreter | FileCheck %s
 
 // CHECK-DAG: #[[$STRIDED_1D:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 // Map corresponding to a 2D memory access where the stride along the last dim is known to be 1.
@@ -113,6 +113,14 @@ func.func @permute_generic(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
       linalg.yield %e: f32
   }
   return
+}
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  transform.sequence %arg0 failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+    transform.structured.interchange %0 { iterator_interchange = [1, 2, 0]}
+  }
 }
 // CHECK-LABEL:  func @permute_generic
 // CHECK:        linalg.generic {

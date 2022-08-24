@@ -286,8 +286,6 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
     return;
   }
 
-  const DataLayout &DL =
-      SinkAR->getLoop()->getHeader()->getModule()->getDataLayout();
   SmallVector<Instruction *, 4> SrcInsts =
       DC.getInstructionsForAccess(Src->PointerValue, Src->IsWritePtr);
   SmallVector<Instruction *, 4> SinkInsts =
@@ -298,11 +296,10 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
     CanUseDiffCheck = false;
     return;
   }
+  const DataLayout &DL =
+      SinkAR->getLoop()->getHeader()->getModule()->getDataLayout();
   unsigned AllocSize =
       std::max(DL.getTypeAllocSize(SrcTy), DL.getTypeAllocSize(DstTy));
-  IntegerType *IntTy =
-      IntegerType::get(Src->PointerValue->getContext(),
-                       DL.getPointerSizeInBits(CGI.AddressSpace));
 
   // Only matching constant steps matching the AllocSize are supported at the
   // moment. This simplifies the difference computation. Can be extended in the
@@ -313,6 +310,10 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
     CanUseDiffCheck = false;
     return;
   }
+
+  IntegerType *IntTy =
+      IntegerType::get(Src->PointerValue->getContext(),
+                       DL.getPointerSizeInBits(CGI.AddressSpace));
 
   // When counting down, the dependence distance needs to be swapped.
   if (Step->getValue()->isNegative())

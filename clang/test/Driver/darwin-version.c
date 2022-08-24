@@ -48,6 +48,10 @@
 // RUN: FileCheck --check-prefix=CHECK-VERSION-IOS10 %s
 // CHECK-VERSION-IOS10: x86_64-apple-ios11.0.0-simulator
 
+// RUN: %clang -target arm64-apple-darwin -mios-simulator-version-min=11.0 -c -### %s 2>&1 | \
+// RUN: FileCheck --check-prefix=CHECK-VERSION-IOS10-ARM64 %s
+// CHECK-VERSION-IOS10-ARM64: arm64-apple-ios11.0.0-simulator
+
 // RUN: %clang -target arm64-apple-ios11.1 -c -### %s 2>&1 | \
 // RUN: FileCheck --check-prefix=CHECK-VERSION-IOS11 %s
 // CHECK-VERSION-IOS11: arm64-apple-ios11.1.0

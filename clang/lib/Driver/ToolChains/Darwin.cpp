@@ -1655,9 +1655,12 @@ struct DarwinPlatform {
     Result.setEnvironment(Environment, OSVersion, SDKInfo);
     return Result;
   }
-  static DarwinPlatform createOSVersionArg(DarwinPlatformKind Platform,
-                                           Arg *A) {
-    return DarwinPlatform(OSVersionArg, Platform, A);
+  static DarwinPlatform createOSVersionArg(DarwinPlatformKind Platform, Arg *A,
+                                           bool IsSimulator) {
+    DarwinPlatform Result{OSVersionArg, Platform, A};
+    if (IsSimulator)
+      Result.Environment = DarwinEnvironmentKind::Simulator;
+    return Result;
   }
   static DarwinPlatform createDeploymentTargetEnv(DarwinPlatformKind Platform,
                                                   StringRef EnvVarName,
@@ -1752,23 +1755,33 @@ getDeploymentTargetFromOSVersionArg(DerivedArgList &Args,
                          : TvOSVersion ? TvOSVersion : WatchOSVersion)
                  ->getAsString(Args);
     }
-    return DarwinPlatform::createOSVersionArg(Darwin::MacOS, macOSVersion);
+    return DarwinPlatform::createOSVersionArg(Darwin::MacOS, macOSVersion,
+                                              /*IsImulator=*/false);
   } else if (iOSVersion) {
     if (TvOSVersion || WatchOSVersion) {
       TheDriver.Diag(diag::err_drv_argument_not_allowed_with)
           << iOSVersion->getAsString(Args)
           << (TvOSVersion ? TvOSVersion : WatchOSVersion)->getAsString(Args);
     }
-    return DarwinPlatform::createOSVersionArg(Darwin::IPhoneOS, iOSVersion);
+    return DarwinPlatform::createOSVersionArg(
+        Darwin::IPhoneOS, iOSVersion,
+        iOSVersion->getOption().getID() ==
+            options::OPT_mios_simulator_version_min_EQ);
   } else if (TvOSVersion) {
     if (WatchOSVersion) {
       TheDriver.Diag(diag::err_drv_argument_not_allowed_with)
           << TvOSVersion->getAsString(Args)
           << WatchOSVersion->getAsString(Args);
     }
-    return DarwinPlatform::createOSVersionArg(Darwin::TvOS, TvOSVersion);
+    return DarwinPlatform::createOSVersionArg(
+        Darwin::TvOS, TvOSVersion,
+        TvOSVersion->getOption().getID() ==
+            options::OPT_mtvos_simulator_version_min_EQ);
   } else if (WatchOSVersion)
-    return DarwinPlatform::createOSVersionArg(Darwin::WatchOS, WatchOSVersion);
+    return DarwinPlatform::createOSVersionArg(
+        Darwin::WatchOS, WatchOSVersion,
+        WatchOSVersion->getOption().getID() ==
+            options::OPT_mwatchos_simulator_version_min_EQ);
   return None;
 }
 

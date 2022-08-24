@@ -168,8 +168,7 @@ entry:
 ; CHECK-NEXT:       - .offset:         40
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         48
+; CHECK-NEXT:       - .offset:         48
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
 ; CHECK:          .name:           test32
@@ -211,16 +210,13 @@ entry:
 ; CHECK-NEXT:       - .offset:         40
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         48
+; CHECK-NEXT:       - .offset:         48
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         56
+; CHECK-NEXT:       - .offset:         56
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         64
+; CHECK-NEXT:       - .offset:         64
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
 ; CHECK:          .name:           test48
@@ -262,20 +258,16 @@ entry:
 ; CHECK-NEXT:       - .offset:         40
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         48
+; CHECK-NEXT:       - .offset:         48
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         56
+; CHECK-NEXT:       - .offset:         56
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         64
+; CHECK-NEXT:       - .offset:         64
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_none
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         72
+; CHECK-NEXT:       - .offset:         72
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_multigrid_sync_arg
 ; CHECK:          .name:           test56

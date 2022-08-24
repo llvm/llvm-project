@@ -58,6 +58,27 @@ void Flang::AddOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
                    options::OPT_std_EQ, options::OPT_W_Joined});
 }
 
+void Flang::AddPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
+  // ParsePICArgs parses -fPIC/-fPIE and their variants and returns a tuple of
+  // (RelocationModel, PICLevel, IsPIE).
+  llvm::Reloc::Model RelocationModel;
+  unsigned PICLevel;
+  bool IsPIE;
+  std::tie(RelocationModel, PICLevel, IsPIE) =
+      ParsePICArgs(getToolChain(), Args);
+
+  if (auto *RMName = RelocationModelName(RelocationModel)) {
+    CmdArgs.push_back("-mrelocation-model");
+    CmdArgs.push_back(RMName);
+  }
+  if (PICLevel > 0) {
+    CmdArgs.push_back("-pic-level");
+    CmdArgs.push_back(PICLevel == 1 ? "1" : "2");
+    if (IsPIE)
+      CmdArgs.push_back("-pic-is-pie");
+  }
+}
+
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
@@ -116,6 +137,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
                   options::OPT_fno_color_diagnostics);
   if (D.getDiags().getDiagnosticOptions().ShowColors)
     CmdArgs.push_back("-fcolor-diagnostics");
+
+  // -fPIC and related options.
+  AddPicOptions(Args, CmdArgs);
 
   // Add other compile options
   AddOtherOptions(Args, CmdArgs);

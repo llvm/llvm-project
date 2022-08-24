@@ -9671,9 +9671,7 @@ OMPClause *TreeTransform<Derived>::TransformOMPInitClause(OMPInitClause *C) {
   if (IVR.isInvalid())
     return nullptr;
 
-  OMPInteropInfo InteropInfo;
-  InteropInfo.IsTarget = C->getIsTarget();
-  InteropInfo.IsTargetSync = C->getIsTargetSync();
+  OMPInteropInfo InteropInfo(C->getIsTarget(), C->getIsTargetSync());
   InteropInfo.PreferTypes.reserve(C->varlist_size() - 1);
   for (Expr *E : llvm::drop_begin(C->varlists())) {
     ExprResult ER = getDerived().TransformExpr(cast<Expr>(E));

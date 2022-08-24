@@ -44,9 +44,11 @@
 
 // RUN: %clang_cl /fp:fast /fp:except -### -- %s 2>&1 | FileCheck -check-prefix=fpexcept %s
 // fpexcept-NOT: -menable-unsafe-fp-math
+// fpexcept: -ffp-exception-behavior=strict
 
 // RUN: %clang_cl /fp:fast /fp:except /fp:except- -### -- %s 2>&1 | FileCheck -check-prefix=fpexcept_ %s
 // fpexcept_: -menable-unsafe-fp-math
+// fpexcept_: -ffp-exception-behavior=ignore
 
 // RUN: %clang_cl /fp:precise /fp:fast -### -- %s 2>&1 | FileCheck -check-prefix=fpfast %s
 // fpfast: -menable-unsafe-fp-math
@@ -59,6 +61,10 @@
 // RUN: %clang_cl /fp:fast /fp:strict -### -- %s 2>&1 | FileCheck -check-prefix=fpstrict %s
 // fpstrict-NOT: -menable-unsafe-fp-math
 // fpstrict-NOT: -ffast-math
+// fpstrict: -ffp-contract=off
+
+// RUN: %clang_cl /fp:strict /fp:contract -### -- %s 2>&1 | FileCheck -check-prefix=fpcontract %s
+// fpcontract: -ffp-contract=on
 
 // RUN: %clang_cl /fsanitize=address -### -- %s 2>&1 | FileCheck -check-prefix=fsanitize_address %s
 // fsanitize_address: -fsanitize=address

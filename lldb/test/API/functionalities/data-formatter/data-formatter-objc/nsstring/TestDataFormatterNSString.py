@@ -22,6 +22,8 @@ class NSStringDataFormatterTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
+        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
+
         # The stop reason of the thread should be breakpoint.
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
                     substrs=['stopped',

@@ -1046,7 +1046,7 @@ def AtomicReadOp : OpenMP_Op<"atomic.read", [AllTypesMatch<["x", "v"]>]> {
 
   let arguments = (ins OpenMP_PointerLikeType:$x,
                        OpenMP_PointerLikeType:$v,
-                       DefaultValuedAttr<I64Attr, "0">:$hint_val,
+                       DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let assemblyFormat = [{
     $v `=` $x
@@ -1093,7 +1093,7 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
 
   let arguments = (ins OpenMP_PointerLikeType:$address,
                        AnyType:$value,
-                       DefaultValuedAttr<I64Attr, "0">:$hint_val,
+                       DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let assemblyFormat = [{
     $address `=` $value
@@ -1157,7 +1157,7 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
   let arguments = (ins Arg<OpenMP_PointerLikeType,
                            "Address of variable to be updated",
                            [MemRead, MemWrite]>:$x,
-                       DefaultValuedAttr<I64Attr, "0">:$hint_val,
+                       DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let regions = (region SizedRegion<1>:$region);
   let assemblyFormat = [{
@@ -1219,7 +1219,7 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
 
   }];
 
-  let arguments = (ins DefaultValuedAttr<I64Attr, "0">:$hint_val,
+  let arguments = (ins DefaultValuedOptionalAttr<I64Attr, "0">:$hint_val,
                        OptionalAttr<MemoryOrderKindAttr>:$memory_order_val);
   let regions = (region SizedRegion<1>:$region);
   let assemblyFormat = [{

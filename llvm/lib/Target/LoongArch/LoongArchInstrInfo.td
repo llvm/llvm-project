@@ -995,13 +995,48 @@ defm : LdPat<atomic_load_8, LD_B>;
 defm : LdPat<atomic_load_16, LD_H>;
 defm : LdPat<atomic_load_32, LD_W>;
 
+class release_seqcst_store<PatFrag base>
+    : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
+  AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getSuccessOrdering();
+  return isReleaseOrStronger(Ordering);
+}]>;
+
+class unordered_monotonic_store<PatFrag base>
+    : PatFrag<(ops node:$ptr, node:$val), (base node:$ptr, node:$val), [{
+  AtomicOrdering Ordering = cast<AtomicSDNode>(N)->getSuccessOrdering();
+  return !isReleaseOrStronger(Ordering);
+}]>;
+
+def atomic_store_release_seqcst_32 : release_seqcst_store<atomic_store_32>;
+def atomic_store_release_seqcst_64 : release_seqcst_store<atomic_store_64>;
+def atomic_store_unordered_monotonic_32
+    : unordered_monotonic_store<atomic_store_32>;
+def atomic_store_unordered_monotonic_64
+    : unordered_monotonic_store<atomic_store_64>;
+
 defm : StPat<atomic_store_8, ST_B, GPR, GRLenVT>;
 defm : StPat<atomic_store_16, ST_H, GPR, GRLenVT>;
-defm : StPat<atomic_store_32, ST_W, GPR, i32>, Requires<[IsLA32]>;
+defm : StPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i32>,
+             Requires<[IsLA32]>;
+
+def PseudoAtomicStoreW : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk), []>,
+                                 PseudoInstExpansion<(AMSWAP_DB_W R0,
+                                                      GPR:$rk, GPR:$rj)>;
+
+def : Pat<(atomic_store_release_seqcst_32 GPR:$rj, GPR:$rk),
+          (PseudoAtomicStoreW GPR:$rj, GPR:$rk)>;
+
 let Predicates = [IsLA64] in {
+def PseudoAtomicStoreD : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk), []>,
+                                 PseudoInstExpansion<(AMSWAP_DB_D R0,
+                                                      GPR:$rk, GPR:$rj)>;
+
+def : Pat<(atomic_store_release_seqcst_64 GPR:$rj, GPR:$rk),
+          (PseudoAtomicStoreD GPR:$rj, GPR:$rk)>;
+
 defm : LdPat<atomic_load_64, LD_D>;
-defm : StPat<atomic_store_32, ST_W, GPR, i64>;
-defm : StPat<atomic_store_64, ST_D, GPR, i64>;
+defm : StPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i64>;
+defm : StPat<atomic_store_unordered_monotonic_64, ST_D, GPR, i64>;
 } // Predicates = [IsLA64]
 
 /// Other pseudo-instructions

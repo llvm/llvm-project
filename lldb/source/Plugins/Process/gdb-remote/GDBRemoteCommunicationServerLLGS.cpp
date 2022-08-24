@@ -2441,7 +2441,7 @@ GDBRemoteCommunicationServerLLGS::Handle_I(StringExtractorGDBRemote &packet) {
     // remote host
     ConnectionStatus status;
     Status error;
-    m_stdio_communication.Write(tmp, read, status, &error);
+    m_stdio_communication.WriteAll(tmp, read, status, &error);
     if (error.Fail()) {
       return SendErrorResponse(0x15);
     }

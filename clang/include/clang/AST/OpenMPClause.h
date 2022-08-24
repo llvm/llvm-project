@@ -7709,13 +7709,6 @@ public:
   }
 };
 
-/// Contains 'interop' data for 'append_args' and 'init' clauses.
-struct OMPInteropInfo final {
-  bool IsTarget = false;
-  bool IsTargetSync = false;
-  llvm::SmallVector<Expr *, 4> PreferTypes;
-};
-
 /// This represents the 'init' clause in '#pragma omp ...' directives.
 ///
 /// \code

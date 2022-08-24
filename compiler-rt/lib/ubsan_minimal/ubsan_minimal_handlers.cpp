@@ -20,9 +20,9 @@ static __sanitizer::atomic_uintptr_t caller_pcs[kMaxCallerPcs];
 // that "too many errors" has already been reported.
 static __sanitizer::atomic_uint32_t caller_pcs_sz;
 
-__attribute__((noinline)) static bool report_this_error(void *caller_p) {
-  uintptr_t caller = reinterpret_cast<uintptr_t>(caller_p);
-  if (caller == 0) return false;
+__attribute__((noinline)) static bool report_this_error(uintptr_t caller) {
+  if (caller == 0)
+    return false;
   while (true) {
     unsigned sz = __sanitizer::atomic_load_relaxed(&caller_pcs_sz);
     if (sz > kMaxCallerPcs) return false;  // early exit
@@ -80,7 +80,7 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 // @1234ABCD").
 #define HANDLER_RECOVER(name, msg)                               \
   INTERFACE void __ubsan_handle_##name##_minimal() {             \
-    if (!report_this_error(__builtin_return_address(0))) return; \
+    if (!report_this_error(GET_CALLER_PC())) return; \
     message("ubsan: " msg "\n");                                 \
   }
 

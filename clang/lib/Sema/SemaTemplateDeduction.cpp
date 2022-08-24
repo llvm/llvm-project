@@ -1107,9 +1107,9 @@ DeduceTemplateArguments(Sema &S,
   // During partial ordering, if Ai was originally a function parameter pack:
   // - if P does not contain a function parameter type corresponding to Ai then
   //   Ai is ignored;
-  bool ClangABICompat14 = S.Context.getLangOpts().getClangABICompat() <=
-                          LangOptions::ClangABI::Ver14;
-  if (!ClangABICompat14 && PartialOrdering && ArgIdx + 1 == NumArgs &&
+  bool ClangABICompat15 = S.Context.getLangOpts().getClangABICompat() <=
+                          LangOptions::ClangABI::Ver15;
+  if (!ClangABICompat15 && PartialOrdering && ArgIdx + 1 == NumArgs &&
       isa<PackExpansionType>(Args[ArgIdx]))
     return Sema::TDK_Success;
 
@@ -2445,8 +2445,8 @@ static bool isSameTemplateArg(ASTContext &Context,
   if (X.getKind() != Y.getKind())
     return false;
 
-  bool ClangABICompat14 =
-      Context.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver14;
+  bool ClangABICompat15 =
+      Context.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver15;
 
   switch (X.getKind()) {
     case TemplateArgument::Null:
@@ -2480,7 +2480,7 @@ static bool isSameTemplateArg(ASTContext &Context,
     }
 
     case TemplateArgument::Pack:
-      if (ClangABICompat14) {
+      if (ClangABICompat15) {
         if (X.pack_size() != Y.pack_size())
           return false;
 
@@ -5464,9 +5464,9 @@ getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
     return nullptr;
 
   if (Better1 && Better2) {
-    bool ClangABICompat14 = S.Context.getLangOpts().getClangABICompat() <=
-                            LangOptions::ClangABI::Ver14;
-    if (!ClangABICompat14) {
+    bool ClangABICompat15 = S.Context.getLangOpts().getClangABICompat() <=
+                            LangOptions::ClangABI::Ver15;
+    if (!ClangABICompat15) {
       // Consider this a fix for CWG1432. Similar to the fix for CWG1395.
       auto *TST1 = T1->castAs<TemplateSpecializationType>();
       auto *TST2 = T2->castAs<TemplateSpecializationType>();

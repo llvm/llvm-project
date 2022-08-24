@@ -330,7 +330,7 @@ block-declaration := opaque-enum-declaration
 nodeclspec-function-declaration := function-declarator ;
 alias-declaration := USING IDENTIFIER = defining-type-id ;
 simple-declaration := decl-specifier-seq init-declarator-list_opt ;
-simple-declaration := decl-specifier-seq ref-qualifier_opt [ identifier-list ] initializer ;
+simple-declaration := decl-specifier-seq ref-qualifier_opt [ identifier-list ] initializer ; [guard]
 static_assert-declaration := STATIC_ASSERT ( constant-expression ) ;
 static_assert-declaration := STATIC_ASSERT ( constant-expression , string-literal ) ;
 empty-declaration := ;

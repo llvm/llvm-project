@@ -1298,3 +1298,19 @@ func.func @while_three_arg(%arg0: index) {
 // CHECK-NEXT: return
   return
 }
+
+// -----
+
+func.func @select_aliases(%arg0: index, %arg1: memref<?xi8>, %arg2: i1) {
+  // CHECK: memref.alloc
+  // CHECK: memref.alloc
+  // CHECK: arith.select
+  // CHECK: test.copy
+  // CHECK: memref.dealloc
+  // CHECK: memref.dealloc
+  %0 = memref.alloc(%arg0) : memref<?xi8>
+  %1 = memref.alloc(%arg0) : memref<?xi8>
+  %2 = arith.select %arg2, %0, %1 : memref<?xi8>
+  test.copy(%2, %arg1) : (memref<?xi8>, memref<?xi8>)
+  return
+}

@@ -8,18 +8,18 @@
 ; ModuleID = 'test/Transforms/SimplifyCFG/pr-new.ll'
 source_filename = "test/Transforms/SimplifyCFG/pr-new.ll"
 
-define i32 @test(float %arg) gc "statepoint-example" personality i32* ()* @blam {
+define i32 @test(float %arg, i1 %c) gc "statepoint-example" personality i32* ()* @blam {
 ; CHECK-LABEL: @test
 bb:
   %tmp = call i1 @llvm.experimental.widenable.condition()
   br i1 %tmp, label %bb2, label %bb1
 
 bb1:                                              ; preds = %bb
-  br i1 undef, label %bb7, label %bb5
+  br i1 %c, label %bb7, label %bb5
 
 bb2:                                              ; preds = %bb
   %tmp3 = getelementptr inbounds i8, i8 addrspace(1)* undef, i64 16
-  br i1 undef, label %bb6, label %bb4
+  br i1 %c, label %bb6, label %bb4
 
 bb4:                                              ; preds = %bb2
   call void @snork() [ "deopt"() ]

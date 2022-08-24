@@ -18,6 +18,7 @@ set_default("compiler_rt_src_root", "@COMPILER_RT_SOURCE_DIR@")
 set_default("compiler_rt_obj_root", "@COMPILER_RT_BINARY_DIR@")
 set_default("enable_per_target_runtime_dir", @LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_PYBOOL@)
 set_default("llvm_tools_dir", "@LLVM_TOOLS_DIR@")
+set_default("lit_tools_dir", "@LLVM_LIT_TOOLS_DIR@")
 set_default("llvm_shlib_dir", "@LLVM_LIBRARY_OUTPUT_INTDIR@")
 set_default("gnu_ld_executable", "@GNU_LD_EXECUTABLE@")
 set_default("gold_executable", "@GOLD_EXECUTABLE@")
@@ -75,6 +76,9 @@ config.compiler_rt_libdir = lit_config.substitute(config.compiler_rt_libdir)
 
 if not os.path.exists(config.clang):
   lit_config.fatal("Can't find compiler on path %r" % config.clang)
+
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
 
 # Setup attributes common for all compiler-rt projects.
 lit_config.load_config(config, "@COMPILER_RT_SOURCE_DIR@/test/lit.common.cfg.py")

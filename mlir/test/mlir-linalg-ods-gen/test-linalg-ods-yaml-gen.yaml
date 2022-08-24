@@ -70,7 +70,7 @@ structured_op: !LinalgStructuredOpConfig
 #       ODS:  let arguments =
 #  ODS-NEXT:    Variadic<AnyType>:$inputs,
 #  ODS-NEXT:    Variadic<AnyShaped>:$outputs,
-#  ODS-NEXT:    DefaultValuedAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
+#  ODS-NEXT:    DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
 
 #       ODS:  let builders =
 #       ODS:  (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
@@ -157,7 +157,7 @@ structured_op: !LinalgStructuredOpConfig
 #       ODS:  let arguments =
 #  ODS-NEXT:    Variadic<AnyType>:$inputs,
 #  ODS-NEXT:    Variadic<AnyShaped>:$outputs,
-#  ODS-NEXT:    DefaultValuedAttr<RankedI64ElementsAttr<[2]>
+#  ODS-NEXT:    DefaultValuedOptionalAttr<RankedI64ElementsAttr<[2]>
 #  ODS-SAME:    "{ static_cast<int64_t>(1), static_cast<int64_t>(2) }">:$strides
 
 #       ODS:  "Attribute":$strides
@@ -305,8 +305,8 @@ structured_op: !LinalgStructuredOpConfig
 #       ODS:  let arguments =
 #  ODS-NEXT:    Variadic<AnyType>:$inputs,
 #  ODS-NEXT:    Variadic<AnyShaped>:$outputs,
-#  ODS-NEXT:    DefaultValuedAttr<UnaryFnAttr, "UnaryFn::exp">:$unary_fun,
-#  ODS-NEXT:    DefaultValuedAttr<BinaryFnAttr, "BinaryFn::add">:$binary_fun
+#  ODS-NEXT:    DefaultValuedOptionalAttr<UnaryFnAttr, "UnaryFn::exp">:$unary_fun,
+#  ODS-NEXT:    DefaultValuedOptionalAttr<BinaryFnAttr, "BinaryFn::add">:$binary_fun
 
 #       ODS:    "Attribute":$unary_fun, "Attribute":$binary_fun,
 

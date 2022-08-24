@@ -178,6 +178,54 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
   if (!Opts.CharIsSigned)
     Builder.defineMacro("_CHAR_UNSIGNED");
 
+  // "The /fp:contract option allows the compiler to generate floating-point
+  // contractions [...]"
+  if (Opts.getDefaultFPContractMode() != LangOptions::FPModeKind::FPM_Off)
+    Builder.defineMacro("_M_FP_CONTRACT");
+
+  // "The /fp:except option generates code to ensures that any unmasked
+  // floating-point exceptions are raised at the exact point at which they
+  // occur, and that no other floating-point exceptions are raised."
+  if (Opts.getDefaultExceptionMode() ==
+      LangOptions::FPExceptionModeKind::FPE_Strict)
+    Builder.defineMacro("_M_FP_EXCEPT");
+
+  // "The /fp:fast option allows the compiler to reorder, combine, or simplify
+  // floating-point operations to optimize floating-point code for speed and
+  // space. The compiler may omit rounding at assignment statements,
+  // typecasts, or function calls. It may reorder operations or make algebraic
+  // transforms, for example, by use of associative and distributive laws. It
+  // may reorder code even if such transformations result in observably
+  // different rounding behavior."
+  //
+  // "Under /fp:precise and /fp:strict, the compiler doesn't do any mathematical
+  // transformation unless the transformation is guaranteed to produce a bitwise
+  // identical result."
+  const bool any_imprecise_flags =
+      Opts.FastMath || Opts.FiniteMathOnly || Opts.UnsafeFPMath ||
+      Opts.AllowFPReassoc || Opts.NoHonorNaNs || Opts.NoHonorInfs ||
+      Opts.NoSignedZero || Opts.AllowRecip || Opts.ApproxFunc;
+
+  // "Under both /fp:precise and /fp:fast, the compiler generates code intended
+  // to run in the default floating-point environment."
+  //
+  // "[The] default floating point environment [...] sets the rounding mode
+  // to round to nearest."
+  if (Opts.getDefaultRoundingMode() ==
+      LangOptions::RoundingMode::NearestTiesToEven) {
+    if (any_imprecise_flags) {
+      Builder.defineMacro("_M_FP_FAST");
+    } else {
+      Builder.defineMacro("_M_FP_PRECISE");
+    }
+  } else if (!any_imprecise_flags && Opts.getDefaultRoundingMode() ==
+                                         LangOptions::RoundingMode::Dynamic) {
+    // "Under /fp:strict, the compiler generates code that allows the
+    // program to safely unmask floating-point exceptions, read or write
+    // floating-point status registers, or change rounding modes."
+    Builder.defineMacro("_M_FP_STRICT");
+  }
+
   // FIXME: POSIXThreads isn't exactly the option this should be defined for,
   //        but it works for now.
   if (Opts.POSIXThreads)
@@ -214,6 +262,9 @@ static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
       Builder.defineMacro("_NATIVE_NULLPTR_SUPPORTED");
     }
   }
+
+  if (!Opts.MSVolatile)
+    Builder.defineMacro("_ISO_VOLATILE");
 
   if (Opts.Kernel)
     Builder.defineMacro("_KERNEL_MODE");

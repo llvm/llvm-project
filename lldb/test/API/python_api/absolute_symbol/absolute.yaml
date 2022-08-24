@@ -1,0 +1,36 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_FREEBSD
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0xFFFFFFFF8037C000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1000
+    AddressAlign:    0x4
+    Content:         "c3c3c3c3"
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_X, PF_R ]
+    VAddr: 0x1000
+    PAddr: 0x1000
+    Align: 0x4
+    FirstSec: .text
+    LastSec:  .text
+Symbols:
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x1000
+    Size:            0x4
+  - Name:            absolute
+    Index:           SHN_ABS
+    Binding:         STB_GLOBAL
+    Value:           0xFFFFFFFF80000000
+    Size:            0x9
+

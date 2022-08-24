@@ -247,7 +247,7 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
   auto &VTy = *cast<VectorType>(DataTy);
   InstructionCost MemOpCost =
       getMemoryOpCost(Opcode, VTy.getElementType(), Alignment, 0, CostKind,
-                      TTI::OK_AnyValue, I);
+                      {TTI::OK_AnyValue, TTI::OP_None}, I);
   unsigned NumLoads = getEstimatedVLFor(&VTy);
   return NumLoads * MemOpCost;
 }
@@ -514,11 +514,9 @@ InstructionCost RISCVTTIImpl::getExtendedReductionCost(
 }
 
 InstructionCost RISCVTTIImpl::getVectorImmCost(VectorType *VecTy,
-                                               TTI::OperandValueKind OpInfo,
-                                               TTI::OperandValueProperties PropInfo,
+                                               TTI::OperandValueInfo OpInfo,
                                                TTI::TargetCostKind CostKind) {
-  assert((OpInfo == TTI::OK_UniformConstantValue ||
-          OpInfo == TTI::OK_NonUniformConstantValue) && "non constant operand?");
+  assert(OpInfo.isConstant() && "non constant operand?");
   APInt PseudoAddr = APInt::getAllOnes(DL.getPointerSizeInBits());
   // Add a cost of address load + the cost of the vector load.
   return RISCVMatInt::getIntMatCost(PseudoAddr, DL.getPointerSizeInBits(),
@@ -532,16 +530,13 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                               MaybeAlign Alignment,
                                               unsigned AddressSpace,
                                               TTI::TargetCostKind CostKind,
-                                              TTI::OperandValueKind OpdInfo,
+                                              TTI::OperandValueInfo OpInfo,
                                               const Instruction *I) {
   InstructionCost Cost = 0;
-  if (Opcode == Instruction::Store && isa<VectorType>(Src) &&
-      (OpdInfo == TTI::OK_UniformConstantValue ||
-       OpdInfo == TTI::OK_NonUniformConstantValue)) {
-    Cost += getVectorImmCost(cast<VectorType>(Src), OpdInfo, TTI::OP_None, CostKind);
-  }
+  if (Opcode == Instruction::Store && isa<VectorType>(Src) && OpInfo.isConstant())
+    Cost += getVectorImmCost(cast<VectorType>(Src), OpInfo, CostKind);
   return Cost + BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
-                                       CostKind, OpdInfo, I);
+                                       CostKind, OpInfo, I);
 }
 
 void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,

@@ -6048,7 +6048,8 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
           auto *LI = cast<LoadInst>(V);
           ScalarsCost += TTI->getMemoryOpCost(
               Instruction::Load, LI->getType(), LI->getAlign(),
-              LI->getPointerAddressSpace(), CostKind, TTI::OK_AnyValue, LI);
+              LI->getPointerAddressSpace(), CostKind,
+              {TTI::OK_AnyValue, TTI::OP_None}, LI);
         }
         auto *LI = cast<LoadInst>(E->getMainOp());
         auto *LoadTy = FixedVectorType::get(LI->getType(), VF);
@@ -6056,7 +6057,8 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         GatherCost += VectorizedCnt *
                       TTI->getMemoryOpCost(Instruction::Load, LoadTy, Alignment,
                                            LI->getPointerAddressSpace(),
-                                           CostKind, TTI::OK_AnyValue, LI);
+                                           CostKind, {TTI::OK_AnyValue,
+                                                      TTI::OP_None}, LI);
         GatherCost += ScatterVectorizeCnt *
                       TTI->getGatherScatterOpCost(
                           Instruction::Load, LoadTy, LI->getPointerOperand(),
@@ -6409,8 +6411,9 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
 
       SmallVector<const Value *, 4> Operands(VL0->operand_values());
       InstructionCost ScalarEltCost =
-          TTI->getArithmeticInstrCost(E->getOpcode(), ScalarTy, CostKind, Op1VK,
-                                      Op2VK, Op1VP, Op2VP, Operands, VL0);
+          TTI->getArithmeticInstrCost(E->getOpcode(), ScalarTy, CostKind,
+                                      {Op1VK, Op1VP}, {Op2VK, Op2VP},
+                                      Operands, VL0);
       if (NeedToShuffleReuses) {
         CommonCost -= (EntryVF - VL.size()) * ScalarEltCost;
       }
@@ -6422,8 +6425,9 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
           Operands[I] = ConstantVector::getNullValue(VecTy);
       }
       InstructionCost VecCost =
-          TTI->getArithmeticInstrCost(E->getOpcode(), VecTy, CostKind, Op1VK,
-                                      Op2VK, Op1VP, Op2VP, Operands, VL0);
+          TTI->getArithmeticInstrCost(E->getOpcode(), VecTy, CostKind,
+                                      {Op1VK, Op1VP}, {Op2VK, Op2VP},
+                                      Operands, VL0);
       LLVM_DEBUG(dumpTreeCosts(E, CommonCost, VecCost, ScalarCost));
       return CommonCost + VecCost - ScalarCost;
     }
@@ -6441,13 +6445,17 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
               : TargetTransformInfo::OK_UniformConstantValue;
 
       InstructionCost ScalarEltCost = TTI->getArithmeticInstrCost(
-          Instruction::Add, ScalarTy, CostKind, Op1VK, Op2VK);
+          Instruction::Add, ScalarTy, CostKind,
+          {Op1VK, TargetTransformInfo::OP_None},
+          {Op2VK, TargetTransformInfo::OP_None});
       if (NeedToShuffleReuses) {
         CommonCost -= (EntryVF - VL.size()) * ScalarEltCost;
       }
       InstructionCost ScalarCost = VecTy->getNumElements() * ScalarEltCost;
       InstructionCost VecCost = TTI->getArithmeticInstrCost(
-          Instruction::Add, VecTy, CostKind, Op1VK, Op2VK);
+          Instruction::Add, VecTy, CostKind,
+          {Op1VK, TargetTransformInfo::OP_None},
+          {Op2VK, TargetTransformInfo::OP_None});
       LLVM_DEBUG(dumpTreeCosts(E, CommonCost, VecCost, ScalarCost));
       return CommonCost + VecCost - ScalarCost;
     }
@@ -6456,7 +6464,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       Align Alignment = cast<LoadInst>(VL0)->getAlign();
       InstructionCost ScalarEltCost =
           TTI->getMemoryOpCost(Instruction::Load, ScalarTy, Alignment, 0,
-                               CostKind, TTI::OK_AnyValue, VL0);
+                               CostKind, {TTI::OK_AnyValue, TTI::OP_None}, VL0);
       if (NeedToShuffleReuses) {
         CommonCost -= (EntryVF - VL.size()) * ScalarEltCost;
       }
@@ -6464,7 +6472,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       InstructionCost VecLdCost;
       if (E->State == TreeEntry::Vectorize) {
         VecLdCost = TTI->getMemoryOpCost(Instruction::Load, VecTy, Alignment, 0,
-                                         CostKind, TTI::OK_AnyValue, VL0);
+                                         CostKind, {TTI::OK_AnyValue, TTI::OP_None}, VL0);
       } else {
         assert(E->State == TreeEntry::ScatterVectorize && "Unknown EntryState");
         Align CommonAlignment = Alignment;
@@ -6484,11 +6492,11 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       auto *SI =
           cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
       Align Alignment = SI->getAlign();
-      TTI::OperandValueKind OpVK = TTI::getOperandInfo(SI->getOperand(0));
+      TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(SI->getOperand(0));
       InstructionCost ScalarEltCost = TTI->getMemoryOpCost(
-          Instruction::Store, ScalarTy, Alignment, 0, CostKind, OpVK, VL0);
+          Instruction::Store, ScalarTy, Alignment, 0, CostKind, OpInfo, VL0);
       InstructionCost ScalarStCost = VecTy->getNumElements() * ScalarEltCost;
-      OpVK = TTI::OK_AnyValue;
+      TTI::OperandValueKind OpVK = TTI::OK_AnyValue;
       if (all_of(E->Scalars,
                  [](Value *V) {
                    return isConstant(cast<Instruction>(V)->getOperand(0));
@@ -6499,7 +6507,8 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
           }))
         OpVK = TTI::OK_NonUniformConstantValue;
       InstructionCost VecStCost = TTI->getMemoryOpCost(
-          Instruction::Store, VecTy, Alignment, 0, CostKind, OpVK, VL0);
+          Instruction::Store, VecTy, Alignment, 0, CostKind,
+          {OpVK, TTI::OP_None}, VL0);
       LLVM_DEBUG(dumpTreeCosts(E, CommonCost, VecStCost, ScalarStCost));
       return CommonCost + VecStCost - ScalarStCost;
     }

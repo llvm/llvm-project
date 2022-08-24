@@ -106,8 +106,10 @@ private:
 class FullDependencyConsumer : public DependencyConsumer {
 public:
   FullDependencyConsumer(const llvm::StringSet<> &AlreadySeen,
-                         LookupModuleOutputCallback LookupModuleOutput)
-      : AlreadySeen(AlreadySeen), LookupModuleOutput(LookupModuleOutput) {}
+                         LookupModuleOutputCallback LookupModuleOutput,
+                         bool EagerLoadModules)
+      : AlreadySeen(AlreadySeen), LookupModuleOutput(LookupModuleOutput),
+        EagerLoadModules(EagerLoadModules) {}
 
   void handleDependencyOutputOpts(const DependencyOutputOptions &) override {}
 
@@ -144,6 +146,7 @@ private:
   std::vector<std::string> OutputPaths;
   const llvm::StringSet<> &AlreadySeen;
   LookupModuleOutputCallback LookupModuleOutput;
+  bool EagerLoadModules;
 };
 
 } // end namespace dependencies
