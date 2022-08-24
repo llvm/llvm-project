@@ -2044,6 +2044,8 @@ public:
   /// Returns false if disassembly failed.
   bool disassemble();
 
+  void handlePCRelOperand(MCInst &Instruction, uint64_t Address, uint64_t Size);
+
   /// Scan function for references to other functions. In relocation mode,
   /// add relocations for external references.
   ///
