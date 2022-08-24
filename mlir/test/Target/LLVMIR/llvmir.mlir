@@ -1937,3 +1937,11 @@ llvm.func @vararg_function(%arg0: i32, ...) {
   // CHECK: ret void
   llvm.return
 }
+
+// -----
+
+// Function attributes: readnone
+
+// CHECK: declare void @readnone_function() #[[ATTR:[0-9]+]]
+// CHECK: attributes #[[ATTR]] = { readnone }
+llvm.func @readnone_function() attributes {llvm.readnone}
