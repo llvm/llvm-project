@@ -578,13 +578,6 @@ LogicalResult SimdLoopOp::verify() {
   if (this->lowerBound().empty()) {
     return emitOpError() << "empty lowerbound for simd loop operation";
   }
-  if (this->simdlen().has_value() && this->safelen().has_value() &&
-      this->simdlen().value() > this->safelen().value()) {
-    return emitOpError()
-           << "simdlen clause and safelen clause are both present, but the "
-              "simdlen value is not less than or equal to safelen value";
-  }
-
   return success();
 }
 
