@@ -4433,6 +4433,15 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
                             : !(isLegalMaskedStore(Ty, Ptr, Alignment) ||
                                 TTI.isLegalMaskedScatter(VTy, Alignment));
   }
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::SRem:
+  case Instruction::URem:
+    // We have the option to use the safe-divisor idiom to avoid predication.
+    // At the moment this is only used for scalable (which legally can't
+    // scalarize), but long term we want to make a cost based decision
+    // for fixed length vectors as well.
+    return !VF.isScalable();
   }
 }
 
@@ -4473,11 +4482,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I,
   case Instruction::URem:
     // TODO: We can use the loop-preheader as context point here and get
     // context sensitive reasoning
-    // We have the option to use the safe-divisor idiom to avoid predication.
-    // At the moment this is only used for scalable (which legally can't
-    // scalarize), but long term we want to make a cost based decision
-    // for fixed length vectors as well.
-    return !VF.isScalable() && !isSafeToSpeculativelyExecute(I);
+    return !isSafeToSpeculativelyExecute(I);
   }
 }
 
