@@ -106,23 +106,18 @@ install(TARGETS omptarget.rtl.amdgpu LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDI
 set_target_properties(omptarget.rtl.amdgpu PROPERTIES 
   INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
 
-# in case of amdgcn, skip running tests if amdgpu-arch was not built or fails
-if (NOT TARGET amdgpu-arch)
-  libomptarget_say("Not generating amdgcn test targets as amdgpu-arch is not found")
-  return()
-endif()
-
-get_property(AMDGPU_ARCH_COMMAND TARGET amdgpu-arch PROPERTY LOCATION)
-
-execute_process(COMMAND ${AMDGPU_ARCH_COMMAND} RESULT_VARIABLE amdgpu_arch_result
-                                               OUTPUT_VARIABLE amdgpu_arch_output)
-if (${amdgpu_arch_result})
-  libomptarget_say("Not generating amdgcn test targets as amdgpu-arch exited with ${amdgpu_arch_result}")
-else()
+# Report to the parent scope that we are building a plugin for hsa.
+# This controls whether tests are run for the nvptx offloading target
+# Run them if libhsa is available, or if the user explicitly asked for dlopen
+# Otherwise this plugin is being built speculatively and there may be no hsa available
+if (${hsa-runtime64_FOUND} OR LIBOMPTARGET_FORCE_DLOPEN_LIBHSA)
   # Report to the parent scope that we are building a plugin for amdgpu
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa amdgcn-amd-amdhsa-oldDriver" PARENT_SCOPE)
   set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} amdgcn-amd-amdhsa amdgcn-amd-amdhsa-LTO" PARENT_SCOPE)
   list(APPEND LIBOMPTARGET_TESTED_PLUGINS "omptarget.rtl.amdgpu")
   set(LIBOMPTARGET_TESTED_PLUGINS "${LIBOMPTARGET_TESTED_PLUGINS}" PARENT_SCOPE)
+else()
+  libomptarget_say("Not generating amdgcn test targets as libhsa is not linkable")
+  return()
 endif()
 

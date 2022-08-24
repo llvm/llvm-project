@@ -59,19 +59,19 @@ int inline convert_inf_nan(Writer *writer, const FormatSection &to_conv) {
 
   if (padding > 0 && ((to_conv.flags & FormatFlags::LEFT_JUSTIFIED) !=
                       FormatFlags::LEFT_JUSTIFIED))
-    RET_IF_RESULT_NEGATIVE(writer->write_chars(' ', padding));
+    RET_IF_RESULT_NEGATIVE(writer->write(' ', padding));
 
   if (sign_char)
-    RET_IF_RESULT_NEGATIVE(writer->write(&sign_char, 1));
+    RET_IF_RESULT_NEGATIVE(writer->write(sign_char));
   if (mantissa == 0) { // inf
-    RET_IF_RESULT_NEGATIVE(writer->write((a == 'a' ? "inf" : "INF"), 3));
+    RET_IF_RESULT_NEGATIVE(writer->write(a == 'a' ? "inf" : "INF"));
   } else { // nan
-    RET_IF_RESULT_NEGATIVE(writer->write((a == 'a' ? "nan" : "NAN"), 3));
+    RET_IF_RESULT_NEGATIVE(writer->write(a == 'a' ? "nan" : "NAN"));
   }
 
   if (padding > 0 && ((to_conv.flags & FormatFlags::LEFT_JUSTIFIED) ==
                       FormatFlags::LEFT_JUSTIFIED))
-    RET_IF_RESULT_NEGATIVE(writer->write_chars(' ', padding));
+    RET_IF_RESULT_NEGATIVE(writer->write(' ', padding));
 
   return WRITE_OK;
 }

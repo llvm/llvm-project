@@ -1443,9 +1443,8 @@ public:
 
   /// Returns true if \p I is an instruction that needs to be predicated
   /// at runtime.  The result is independent of the predication mechanism.
-  /// \p VF is the vectorization factor that will be used to vectorize \p I.
   /// Superset of instructions that return true for isScalarWithPredication.
-  bool isPredicatedInst(Instruction *I, ElementCount VF) const;
+  bool isPredicatedInst(Instruction *I) const;
 
   /// Returns true if \p I is a memory instruction with consecutive memory
   /// access that can be widened.
@@ -4412,7 +4411,7 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
 
 bool LoopVectorizationCostModel::isScalarWithPredication(
     Instruction *I, ElementCount VF) const {
-  if (!isPredicatedInst(I, VF))
+  if (!isPredicatedInst(I))
     return false;
 
   // Do we have a non-scalar lowering for this predicated
@@ -4433,11 +4432,19 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
                             : !(isLegalMaskedStore(Ty, Ptr, Alignment) ||
                                 TTI.isLegalMaskedScatter(VTy, Alignment));
   }
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::SRem:
+  case Instruction::URem:
+    // We have the option to use the safe-divisor idiom to avoid predication.
+    // At the moment this is only used for scalable (which legally can't
+    // scalarize), but long term we want to make a cost based decision
+    // for fixed length vectors as well.
+    return !VF.isScalable();
   }
 }
 
-bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I,
-                                                  ElementCount VF) const {
+bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   if (!blockNeedsPredicationForAnyReason(I->getParent()))
     return false;
 
@@ -6078,7 +6085,7 @@ bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
   // from moving "masked load/store" check from legality to cost model.
   // Masked Load/Gather emulation was previously never allowed.
   // Limited number of Masked Store/Scatter emulation was allowed.
-  assert((isPredicatedInst(I, VF)) &&
+  assert((isPredicatedInst(I)) &&
          "Expecting a scalar emulated instruction");
   return isa<LoadInst>(I) ||
          (isa<StoreInst>(I) &&
@@ -6360,7 +6367,7 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // If we have a predicated load/store, it will need extra i1 extracts and
   // conditional branches, but may not be executed for each vector lane. Scale
   // the cost by the probability of executing the predicated block.
-  if (isPredicatedInst(I, VF)) {
+  if (isPredicatedInst(I)) {
     Cost /= getReciprocalPredBlockProb();
 
     // Add the cost of an i1 extract and a branch
@@ -7059,33 +7066,59 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I, ElementCount VF,
   case Instruction::SDiv:
   case Instruction::URem:
   case Instruction::SRem:
-    // If we have a predicated instruction, it may not be executed for each
-    // vector lane. Get the scalarization cost and scale this amount by the
-    // probability of executing the predicated block. If the instruction is not
-    // predicated, we fall through to the next case.
-    if (VF.isVector() && isScalarWithPredication(I, VF)) {
+    if (VF.isVector() && isPredicatedInst(I)) {
+      // If we're speculating lanes, we have two options - scalarization and
+      // guarded widening.
+      if (isScalarWithPredication(I, VF)) {
+        // Get the scalarization cost and scale this amount by the probability of
+        // executing the predicated block. If the instruction is not predicated,
+        // we fall through to the next case.
+        InstructionCost Cost = 0;
+
+        // These instructions have a non-void type, so account for the phi nodes
+        // that we will create. This cost is likely to be zero. The phi node
+        // cost, if any, should be scaled by the block probability because it
+        // models a copy at the end of each predicated block.
+        Cost += VF.getKnownMinValue() *
+          TTI.getCFInstrCost(Instruction::PHI, CostKind);
+
+        // The cost of the non-predicated instruction.
+        Cost += VF.getKnownMinValue() *
+          TTI.getArithmeticInstrCost(I->getOpcode(), RetTy, CostKind);
+
+        // The cost of insertelement and extractelement instructions needed for
+        // scalarization.
+        Cost += getScalarizationOverhead(I, VF);
+
+        // Scale the cost by the probability of executing the predicated blocks.
+        // This assumes the predicated block for each vector lane is equally
+        // likely.
+        return Cost / getReciprocalPredBlockProb();
+      }
       InstructionCost Cost = 0;
 
-      // These instructions have a non-void type, so account for the phi nodes
-      // that we will create. This cost is likely to be zero. The phi node
-      // cost, if any, should be scaled by the block probability because it
-      // models a copy at the end of each predicated block.
-      Cost += VF.getKnownMinValue() *
-              TTI.getCFInstrCost(Instruction::PHI, CostKind);
+      // The cost of the select guard to ensure all lanes are well defined
+      // after we speculate above any internal control flow.
+      Cost += TTI.getCmpSelInstrCost(
+                 Instruction::Select, ToVectorTy(I->getType(), VF),
+                 ToVectorTy(Type::getInt1Ty(I->getContext()), VF),
+                 CmpInst::BAD_ICMP_PREDICATE, CostKind);
 
-      // The cost of the non-predicated instruction.
-      Cost += VF.getKnownMinValue() *
-              TTI.getArithmeticInstrCost(I->getOpcode(), RetTy, CostKind);
+      // Certain instructions can be cheaper to vectorize if they have a constant
+      // second vector operand. One example of this are shifts on x86.
+      Value *Op2 = I->getOperand(1);
+      auto Op2Info = TTI.getOperandInfo(Op2);
+      if (Op2Info.Kind == TargetTransformInfo::OK_AnyValue && Legal->isUniform(Op2))
+        Op2Info.Kind = TargetTransformInfo::OK_UniformValue;
 
-      // The cost of insertelement and extractelement instructions needed for
-      // scalarization.
-      Cost += getScalarizationOverhead(I, VF);
-
-      // Scale the cost by the probability of executing the predicated blocks.
-      // This assumes the predicated block for each vector lane is equally
-      // likely.
-      return Cost / getReciprocalPredBlockProb();
+      SmallVector<const Value *, 4> Operands(I->operand_values());
+      Cost += TTI.getArithmeticInstrCost(
+                I->getOpcode(), VectorTy, CostKind,
+                {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+                Op2Info, Operands, I);
+      return Cost;
     }
+    // We've proven all lanes safe to speculate, fall through.
     [[fallthrough]];
   case Instruction::Add:
   case Instruction::FAdd:
@@ -8323,55 +8356,65 @@ bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
                                                              Range);
 }
 
-VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
-                                           ArrayRef<VPValue *> Operands) const {
-  auto IsVectorizableOpcode = [](unsigned Opcode) {
-    switch (Opcode) {
-    case Instruction::Add:
-    case Instruction::And:
-    case Instruction::AShr:
-    case Instruction::BitCast:
-    case Instruction::FAdd:
-    case Instruction::FCmp:
-    case Instruction::FDiv:
-    case Instruction::FMul:
-    case Instruction::FNeg:
-    case Instruction::FPExt:
-    case Instruction::FPToSI:
-    case Instruction::FPToUI:
-    case Instruction::FPTrunc:
-    case Instruction::FRem:
-    case Instruction::FSub:
-    case Instruction::ICmp:
-    case Instruction::IntToPtr:
-    case Instruction::LShr:
-    case Instruction::Mul:
-    case Instruction::Or:
-    case Instruction::PtrToInt:
-    case Instruction::SDiv:
-    case Instruction::Select:
-    case Instruction::SExt:
-    case Instruction::Shl:
-    case Instruction::SIToFP:
-    case Instruction::SRem:
-    case Instruction::Sub:
-    case Instruction::Trunc:
-    case Instruction::UDiv:
-    case Instruction::UIToFP:
-    case Instruction::URem:
-    case Instruction::Xor:
-    case Instruction::ZExt:
-    case Instruction::Freeze:
-      return true;
-    }
-    return false;
-  };
-
-  if (!IsVectorizableOpcode(I->getOpcode()))
+VPRecipeBase *VPRecipeBuilder::tryToWiden(Instruction *I,
+                                          ArrayRef<VPValue *> Operands,
+                                          VPBasicBlock *VPBB, VPlanPtr &Plan) {
+  switch (I->getOpcode()) {
+  default:
     return nullptr;
-
-  // Success: widen this instruction.
-  return new VPWidenRecipe(*I, make_range(Operands.begin(), Operands.end()));
+  case Instruction::SDiv:
+  case Instruction::UDiv:
+  case Instruction::SRem:
+  case Instruction::URem: {
+    // If not provably safe, use a select to form a safe divisor before widening the
+    // div/rem operation itself.  Otherwise fall through to general handling below.
+    if (CM.isPredicatedInst(I)) {
+      SmallVector<VPValue *> Ops(Operands.begin(), Operands.end());
+      VPValue *Mask = createBlockInMask(I->getParent(), Plan);
+      VPValue *One =
+        Plan->getOrAddExternalDef(ConstantInt::get(I->getType(), 1u, false));
+      auto *SafeRHS =
+         new VPInstruction(Instruction::Select, {Mask, Ops[1], One},
+                           I->getDebugLoc());
+      VPBB->appendRecipe(SafeRHS);
+      Ops[1] = SafeRHS;
+      return new VPWidenRecipe(*I, make_range(Ops.begin(), Ops.end()));
+    }
+    LLVM_FALLTHROUGH;
+  }
+  case Instruction::Add:
+  case Instruction::And:
+  case Instruction::AShr:
+  case Instruction::BitCast:
+  case Instruction::FAdd:
+  case Instruction::FCmp:
+  case Instruction::FDiv:
+  case Instruction::FMul:
+  case Instruction::FNeg:
+  case Instruction::FPExt:
+  case Instruction::FPToSI:
+  case Instruction::FPToUI:
+  case Instruction::FPTrunc:
+  case Instruction::FRem:
+  case Instruction::FSub:
+  case Instruction::ICmp:
+  case Instruction::IntToPtr:
+  case Instruction::LShr:
+  case Instruction::Mul:
+  case Instruction::Or:
+  case Instruction::PtrToInt:
+  case Instruction::Select:
+  case Instruction::SExt:
+  case Instruction::Shl:
+  case Instruction::SIToFP:
+  case Instruction::Sub:
+  case Instruction::Trunc:
+  case Instruction::UIToFP:
+  case Instruction::Xor:
+  case Instruction::ZExt:
+  case Instruction::Freeze:
+    return new VPWidenRecipe(*I, make_range(Operands.begin(), Operands.end()));
+  };
 }
 
 void VPRecipeBuilder::fixHeaderPhis() {
@@ -8391,9 +8434,7 @@ VPBasicBlock *VPRecipeBuilder::handleReplication(
       [&](ElementCount VF) { return CM.isUniformAfterVectorization(I, VF); },
       Range);
 
-  bool IsPredicated = LoopVectorizationPlanner::getDecisionAndClampRange(
-      [&](ElementCount VF) { return CM.isPredicatedInst(I, VF); },
-      Range);
+  bool IsPredicated = CM.isPredicatedInst(I);
 
   // Even if the instruction is not marked as uniform, there are certain
   // intrinsic calls that can be effectively treated as such, so we check for
@@ -8506,7 +8547,8 @@ VPRecipeBuilder::createReplicateRegion(VPReplicateRecipe *PredRecipe,
 VPRecipeOrVPValueTy
 VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
                                         ArrayRef<VPValue *> Operands,
-                                        VFRange &Range, VPlanPtr &Plan) {
+                                        VFRange &Range, VPBasicBlock *VPBB,
+                                        VPlanPtr &Plan) {
   // First, check for specific widening recipes that deal with inductions, Phi
   // nodes, calls and memory operations.
   VPRecipeBase *Recipe;
@@ -8584,7 +8626,7 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
         *SI, make_range(Operands.begin(), Operands.end()), InvariantCond));
   }
 
-  return toVPRecipeResult(tryToWiden(Instr, Operands));
+  return toVPRecipeResult(tryToWiden(Instr, Operands, VPBB, Plan));
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
@@ -8855,7 +8897,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
         continue;
 
       if (auto RecipeOrValue = RecipeBuilder.tryToCreateWidenRecipe(
-              Instr, Operands, Range, Plan)) {
+              Instr, Operands, Range, VPBB, Plan)) {
         // If Instr can be simplified to an existing VPValue, use it.
         if (RecipeOrValue.is<VPValue *>()) {
           auto *VPV = RecipeOrValue.get<VPValue *>();

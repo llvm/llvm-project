@@ -692,11 +692,11 @@ bool AMDGPUTargetLowering::isLoadBitCastBeneficial(EVT LoadTy, EVT CastTy,
 // SI+ has instructions for cttz / ctlz for 32-bit values. This is probably also
 // profitable with the expansion for 64-bit since it's generally good to
 // speculate things.
-bool AMDGPUTargetLowering::isCheapToSpeculateCttz() const {
+bool AMDGPUTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
   return true;
 }
 
-bool AMDGPUTargetLowering::isCheapToSpeculateCtlz() const {
+bool AMDGPUTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
   return true;
 }
 

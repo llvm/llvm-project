@@ -5820,12 +5820,13 @@ bool X86TargetLowering::shouldFormOverflowOp(unsigned Opcode, EVT VT,
   return VT.isSimple() || !isOperationExpand(Opcode, VT);
 }
 
-bool X86TargetLowering::isCheapToSpeculateCttz() const {
-  // Speculate cttz only if we can directly use TZCNT.
-  return Subtarget.hasBMI();
+bool X86TargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
+  // Speculate cttz only if we can directly use TZCNT or can promote to i32.
+  return Subtarget.hasBMI() ||
+         (!Ty->isVectorTy() && Ty->getScalarSizeInBits() < 32);
 }
 
-bool X86TargetLowering::isCheapToSpeculateCtlz() const {
+bool X86TargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
   // Speculate ctlz only if we can directly use LZCNT.
   return Subtarget.hasLZCNT();
 }
@@ -28876,6 +28877,10 @@ static SDValue LowerCTTZ(SDValue Op, const X86Subtarget &Subtarget,
   // Issue a bsf (scan bits forward) which also sets EFLAGS.
   SDVTList VTs = DAG.getVTList(VT, MVT::i32);
   Op = DAG.getNode(X86ISD::BSF, dl, VTs, N0);
+
+  // If src is known never zero we can skip the CMOV.
+  if (DAG.isKnownNeverZero(N0))
+    return Op;
 
   // If src is zero (i.e. bsf sets ZF), returns NumBits.
   SDValue Ops[] = {Op, DAG.getConstant(NumBits, dl, VT),

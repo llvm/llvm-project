@@ -621,12 +621,12 @@ public:
   }
 
   /// Return true if it is cheap to speculate a call to intrinsic cttz.
-  virtual bool isCheapToSpeculateCttz() const {
+  virtual bool isCheapToSpeculateCttz(Type *Ty) const {
     return false;
   }
 
   /// Return true if it is cheap to speculate a call to intrinsic ctlz.
-  virtual bool isCheapToSpeculateCtlz() const {
+  virtual bool isCheapToSpeculateCtlz(Type *Ty) const {
     return false;
   }
 
