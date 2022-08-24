@@ -366,10 +366,6 @@ bool AArch64RegisterInfo::isAsmClobberable(const MachineFunction &MF,
   return !isReservedReg(MF, PhysReg);
 }
 
-bool AArch64RegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
-  return PhysReg == AArch64::WZR || PhysReg == AArch64::XZR;
-}
-
 const TargetRegisterClass *
 AArch64RegisterInfo::getPointerRegClass(const MachineFunction &MF,
                                       unsigned Kind) const {
