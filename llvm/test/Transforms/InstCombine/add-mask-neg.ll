@@ -18,13 +18,15 @@ define i32 @dec_mask_neg_i32(i32 %X) {
   ret i32 %dec
 }
 
-define i32 @dec_mask_commute_neg_i32(i32 %X) {
+define i32 @dec_mask_commute_neg_i32(i32 %A) {
 ; CHECK-LABEL: @dec_mask_commute_neg_i32(
-; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[NEG]], [[X]]
+; CHECK-NEXT:    [[X:%.*]] = sdiv i32 42, [[A:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = sub nsw i32 0, [[X]]
+; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[X]], [[NEG]]
 ; CHECK-NEXT:    [[DEC:%.*]] = add i32 [[MASK]], -1
 ; CHECK-NEXT:    ret i32 [[DEC]]
 ;
+  %X = sdiv i32 42, %A ; thwart complexity-based canonicalization
   %neg = sub i32 0, %X
   %mask = and i32 %X, %neg
   %dec = add i32 %mask, -1
