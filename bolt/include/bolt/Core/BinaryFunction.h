@@ -2053,6 +2053,10 @@ public:
   void handleIndirectBranch(MCInst &Instruction, uint64_t Size,
                             uint64_t Offset);
 
+  // Check for linker veneers, which lack relocations and need manual
+  // adjustments.
+  void handleAArch64IndirectCall(MCInst &Instruction, const uint64_t Offset);
+
   /// Scan function for references to other functions. In relocation mode,
   /// add relocations for external references.
   ///

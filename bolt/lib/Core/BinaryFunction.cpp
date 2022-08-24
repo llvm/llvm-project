@@ -1133,6 +1133,28 @@ void BinaryFunction::handleIndirectBranch(MCInst &Instruction, uint64_t Size,
   }
 }
 
+void BinaryFunction::handleAArch64IndirectCall(MCInst &Instruction,
+                                               const uint64_t Offset) {
+  auto &MIB = BC.MIB;
+  const uint64_t AbsoluteInstrAddr = getAddress() + Offset;
+  MCInst *TargetHiBits, *TargetLowBits;
+  uint64_t TargetAddress, Count;
+  Count = MIB->matchLinkerVeneer(Instructions.begin(), Instructions.end(),
+                                 AbsoluteInstrAddr, Instruction, TargetHiBits,
+                                 TargetLowBits, TargetAddress);
+  if (Count) {
+    MIB->addAnnotation(Instruction, "AArch64Veneer", true);
+    --Count;
+    for (auto It = std::prev(Instructions.end()); Count != 0;
+         It = std::prev(It), --Count) {
+      MIB->addAnnotation(It->second, "AArch64Veneer", true);
+    }
+
+    BC.addAdrpAddRelocAArch64(*this, *TargetLowBits, *TargetHiBits,
+                              TargetAddress);
+  }
+}
+
 bool BinaryFunction::disassemble() {
   NamedRegionTimer T("disassemble", "Disassemble function", "buildfuncs",
                      "Build Binary Functions", opts::TimeBuild);
@@ -1150,28 +1172,6 @@ bool BinaryFunction::disassemble() {
   // Insert a label at the beginning of the function. This will be our first
   // basic block.
   Labels[0] = Ctx->createNamedTempSymbol("BB0");
-
-  // Check for linker veneers, which lack relocations and need manual
-  // adjustments.
-  auto handleAArch64IndirectCall = [&](MCInst &Instruction, uint64_t Offset) {
-    const uint64_t AbsoluteInstrAddr = getAddress() + Offset;
-    MCInst *TargetHiBits, *TargetLowBits;
-    uint64_t TargetAddress, Count;
-    Count = MIB->matchLinkerVeneer(Instructions.begin(), Instructions.end(),
-                                   AbsoluteInstrAddr, Instruction, TargetHiBits,
-                                   TargetLowBits, TargetAddress);
-    if (Count) {
-      MIB->addAnnotation(Instruction, "AArch64Veneer", true);
-      --Count;
-      for (auto It = std::prev(Instructions.end()); Count != 0;
-           It = std::prev(It), --Count) {
-        MIB->addAnnotation(It->second, "AArch64Veneer", true);
-      }
-
-      BC.addAdrpAddRelocAArch64(*this, *TargetLowBits, *TargetHiBits,
-                                TargetAddress);
-    }
-  };
 
   uint64_t Size = 0; // instruction size
   for (uint64_t Offset = 0; Offset < getSize(); Offset += Size) {
