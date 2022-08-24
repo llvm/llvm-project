@@ -156,8 +156,8 @@ public:
 class _LIBCPP_EXCEPTION_ABI bad_exception : public exception {
 public:
   _LIBCPP_INLINE_VISIBILITY bad_exception() _NOEXCEPT {}
-  virtual ~bad_exception() _NOEXCEPT;
-  virtual const char* what() const _NOEXCEPT;
+  ~bad_exception() _NOEXCEPT override;
+  const char* what() const _NOEXCEPT override;
 };
 #endif // !_LIBCPP_ABI_VCRUNTIME
 

@@ -226,7 +226,7 @@ public:
     // 27.9.1.2 Constructors/destructor:
     basic_filebuf();
     basic_filebuf(basic_filebuf&& __rhs);
-    virtual ~basic_filebuf();
+    ~basic_filebuf() override;
 
     // 27.9.1.3 Assign/swap:
     _LIBCPP_INLINE_VISIBILITY
@@ -259,16 +259,16 @@ public:
 
   protected:
     // 27.9.1.5 Overridden virtual functions:
-    virtual int_type underflow();
-    virtual int_type pbackfail(int_type __c = traits_type::eof());
-    virtual int_type overflow (int_type __c = traits_type::eof());
-    virtual basic_streambuf<char_type, traits_type>* setbuf(char_type* __s, streamsize __n);
-    virtual pos_type seekoff(off_type __off, ios_base::seekdir __way,
-                             ios_base::openmode __wch = ios_base::in | ios_base::out);
-    virtual pos_type seekpos(pos_type __sp,
-                             ios_base::openmode __wch = ios_base::in | ios_base::out);
-    virtual int sync();
-    virtual void imbue(const locale& __loc);
+    int_type underflow() override;
+    int_type pbackfail(int_type __c = traits_type::eof()) override;
+    int_type overflow (int_type __c = traits_type::eof()) override;
+    basic_streambuf<char_type, traits_type>* setbuf(char_type* __s, streamsize __n) override;
+    pos_type seekoff(off_type __off, ios_base::seekdir __way,
+                     ios_base::openmode __wch = ios_base::in | ios_base::out) override;
+    pos_type seekpos(pos_type __sp,
+                     ios_base::openmode __wch = ios_base::in | ios_base::out) override;
+    int sync() override;
+    void imbue(const locale& __loc) override;
 
 private:
   char* __extbuf_;

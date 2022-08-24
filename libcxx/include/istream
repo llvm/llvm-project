@@ -192,7 +192,7 @@ public:
     inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     explicit basic_istream(basic_streambuf<char_type, traits_type>* __sb) : __gc_(0)
     { this->init(__sb); }
-    virtual ~basic_istream();
+    ~basic_istream() override;
 protected:
     inline _LIBCPP_INLINE_VISIBILITY
     basic_istream(basic_istream&& __rhs);
@@ -1408,7 +1408,7 @@ public:
       : basic_istream<_CharT, _Traits>(__sb)
     {}
 
-    virtual ~basic_iostream();
+    ~basic_iostream() override;
 protected:
     inline _LIBCPP_INLINE_VISIBILITY
     basic_iostream(basic_iostream&& __rhs);

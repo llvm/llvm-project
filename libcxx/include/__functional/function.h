@@ -45,13 +45,13 @@ public:
 // bad_function_call will end up containing a weak definition of the vtable and
 // typeinfo.
 #ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
-    virtual ~bad_function_call() _NOEXCEPT;
+    ~bad_function_call() _NOEXCEPT override;
 #else
-    virtual ~bad_function_call() _NOEXCEPT {}
+    ~bad_function_call() _NOEXCEPT override {}
 #endif
 
 #ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
-    virtual const char* what() const _NOEXCEPT;
+    const char* what() const _NOEXCEPT override;
 #endif
 };
 _LIBCPP_DIAGNOSTIC_POP
