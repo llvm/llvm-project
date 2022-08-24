@@ -21157,11 +21157,11 @@ bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
   return false;
 }
 
-bool ARMTargetLowering::isCheapToSpeculateCttz() const {
+bool ARMTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
   return Subtarget->hasV6T2Ops();
 }
 
-bool ARMTargetLowering::isCheapToSpeculateCtlz() const {
+bool ARMTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
   return Subtarget->hasV6T2Ops();
 }
 
