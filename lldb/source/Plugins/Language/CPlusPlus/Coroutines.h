@@ -15,6 +15,9 @@
 #include "lldb/Utility/Stream.h"
 
 namespace lldb_private {
+
+class ClangASTImporter;
+
 namespace formatters {
 
 /// Summary provider for `std::coroutine_handle<T>` from  libc++, libstdc++ and
@@ -45,6 +48,7 @@ public:
 
 private:
   lldb::ValueObjectSP m_frame_ptr_sp;
+  std::unique_ptr<lldb_private::ClangASTImporter> m_ast_importer;
 };
 
 SyntheticChildrenFrontEnd *
