@@ -1415,16 +1415,6 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     return &I;
   }
 
-  // Canonicalize ((A & -A) - 1) --> (~A & (A - 1))
-  // Forms all commutable operations, and simplifies ctpop -> cttz folds.
-  if (match(&I,
-            m_Add(m_OneUse(m_c_And(m_Value(A), m_OneUse(m_Neg(m_Deferred(A))))),
-                  m_AllOnes()))) {
-    Constant *AllOnes = ConstantInt::getAllOnesValue(RHS->getType());
-    return BinaryOperator::CreateAnd(Builder.CreateXor(A, AllOnes),
-                                     Builder.CreateAdd(A, AllOnes));
-  }
-
   // TODO(jingyue): Consider willNotOverflowSignedAdd and
   // willNotOverflowUnsignedAdd to reduce the number of invocations of
   // computeKnownBits.
