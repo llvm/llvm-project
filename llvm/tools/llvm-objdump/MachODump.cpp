@@ -94,6 +94,8 @@ static std::vector<std::string> ArchFlags;
 static bool ArchAll = false;
 static std::string ThumbTripleName;
 
+static StringRef ordinalName(const object::MachOObjectFile *, int);
+
 void objdump::parseMachOOptions(const llvm::opt::InputArgList &InputArgs) {
   FirstPrivateHeader = InputArgs.hasArg(OBJDUMP_private_header);
   ExportsTrie = InputArgs.hasArg(OBJDUMP_exports_trie);
@@ -1282,6 +1284,26 @@ PrintChainedFixupsSegment(const MachOObjectFile::ChainedFixupsSegment &Segment,
   }
 }
 
+static void PrintChainedFixupTarget(ChainedFixupTarget &Target, size_t Idx,
+                                    int Format, MachOObjectFile *O) {
+  if (Format == MachO::DYLD_CHAINED_IMPORT)
+    outs() << "dyld chained import";
+  else if (Format == MachO::DYLD_CHAINED_IMPORT_ADDEND)
+    outs() << "dyld chained import addend";
+  else if (Format == MachO::DYLD_CHAINED_IMPORT_ADDEND64)
+    outs() << "dyld chained import addend64";
+  // FIXME: otool prints the encoded value as well.
+  outs() << '[' << Idx << "]\n";
+
+  outs() << "  lib_ordinal = " << Target.libOrdinal() << " ("
+         << ordinalName(O, Target.libOrdinal()) << ")\n";
+  outs() << "  weak_import = " << Target.weakImport() << '\n';
+  outs() << "  name_offset = " << Target.nameOffset() << " ("
+         << Target.symbolName() << ")\n";
+  if (Format != MachO::DYLD_CHAINED_IMPORT)
+    outs() << "  addend      = " << (int64_t)Target.addend() << '\n';
+}
+
 static void PrintChainedFixups(MachOObjectFile *O) {
   // MachOObjectFile::getChainedFixupsHeader() reads LC_DYLD_CHAINED_FIXUPS.
   // FIXME: Support chained fixups in __TEXT,__chain_starts section too.
@@ -1314,7 +1336,12 @@ static void PrintChainedFixups(MachOObjectFile *O) {
   for (const MachOObjectFile::ChainedFixupsSegment &S : Segments)
     PrintChainedFixupsSegment(S, SegNames[S.SegIdx]);
 
-  // FIXME: Print more things.
+  auto FixupTargets =
+      unwrapOrError(O->getDyldChainedFixupTargets(), O->getFileName());
+
+  uint32_t ImportsFormat = ChainedFixupHeader->imports_format;
+  for (auto [Idx, Target] : enumerate(FixupTargets))
+    PrintChainedFixupTarget(Target, Idx, ImportsFormat, O);
 }
 
 static void PrintDyldInfo(MachOObjectFile *O) {
@@ -10508,6 +10535,8 @@ static StringRef ordinalName(const object::MachOObjectFile *Obj, int Ordinal) {
     return "main-executable";
   case MachO::BIND_SPECIAL_DYLIB_FLAT_LOOKUP:
     return "flat-namespace";
+  case MachO::BIND_SPECIAL_DYLIB_WEAK_LOOKUP:
+    return "weak";
   default:
     if (Ordinal > 0) {
       std::error_code EC =
