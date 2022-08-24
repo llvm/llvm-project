@@ -8415,8 +8415,46 @@ static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG) {
   return combineSelectAndUse(N, N1, N0, DAG, /*AllOnes*/ false);
 }
 
-static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
+// Apply DeMorgan's law to (and/or (xor X, 1), (xor Y, 1)) if X and Y are 0/1.
+// Legalizing setcc can introduce xors like this. Doing this transform reduces
+// the number of xors and may allow the xor to fold into a branch condition.
+static SDValue combineDeMorganOfBoolean(SDNode *N, SelectionDAG &DAG) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  bool IsAnd = N->getOpcode() == ISD::AND;
+
+  if (N0.getOpcode() != ISD::XOR || N1.getOpcode() != ISD::XOR)
+    return SDValue();
+
+  if (!N0.hasOneUse() || !N1.hasOneUse())
+    return SDValue();
+
+  // RHS of both xors needs to be 1.
+  if (!isOneConstant(N0.getOperand(1)) || !isOneConstant(N1.getOperand(1)))
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+
+  SDValue N00 = N0.getOperand(0);
+  SDValue N10 = N1.getOperand(0);
+
+  // The LHS of the xors needs to be 0/1.
+  APInt Mask = APInt::getBitsSetFrom(VT.getSizeInBits(), 1);
+  if (!DAG.MaskedValueIsZero(N00, Mask) || !DAG.MaskedValueIsZero(N10, Mask))
+    return SDValue();
+
+  // Invert the opcode and insert a new xor.
+  SDLoc DL(N);
+  unsigned Opc = IsAnd ? ISD::OR : ISD::AND;
+  SDValue Logic = DAG.getNode(Opc, DL, VT, N00, N10);
+  return DAG.getNode(ISD::XOR, DL, VT, Logic, DAG.getConstant(1, DL, VT));
+}
+
+static SDValue performANDCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
+  SelectionDAG &DAG = DCI.DAG;
+
   SDValue N0 = N->getOperand(0);
   // Pre-promote (i32 (and (srl X, Y), 1)) on RV64 with Zbs without zero
   // extending X. This is safe since we only need the LSB after the shift and
@@ -8439,13 +8477,19 @@ static SDValue performANDCombine(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineBinOpToReduce(N, DAG))
     return V;
 
+  if (DCI.isAfterLegalizeDAG())
+    if (SDValue V = combineDeMorganOfBoolean(N, DAG))
+      return V;
+
   // fold (and (select lhs, rhs, cc, -1, y), x) ->
   //      (select lhs, rhs, cc, x, (and x, y))
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ true);
 }
 
-static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
+static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const RISCVSubtarget &Subtarget) {
+  SelectionDAG &DAG = DCI.DAG;
+
   if (Subtarget.hasStdExtZbp()) {
     if (auto GREV = combineORToGREV(SDValue(N, 0), DAG, Subtarget))
       return GREV;
@@ -8457,6 +8501,11 @@ static SDValue performORCombine(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue V = combineBinOpToReduce(N, DAG))
     return V;
+
+  if (DCI.isAfterLegalizeDAG())
+    if (SDValue V = combineDeMorganOfBoolean(N, DAG))
+      return V;
+
   // fold (or (select cond, 0, y), x) ->
   //      (select cond, x, (or x, y))
   return combineSelectAndUseCommutative(N, DAG, /*AllOnes*/ false);
@@ -9349,9 +9398,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SUB:
     return performSUBCombine(N, DAG);
   case ISD::AND:
-    return performANDCombine(N, DAG, Subtarget);
+    return performANDCombine(N, DCI, Subtarget);
   case ISD::OR:
-    return performORCombine(N, DAG, Subtarget);
+    return performORCombine(N, DCI, Subtarget);
   case ISD::XOR:
     return performXORCombine(N, DAG);
   case ISD::FADD:

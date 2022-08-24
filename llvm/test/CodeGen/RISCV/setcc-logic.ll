@@ -219,19 +219,17 @@ define i1 @or_icmp_sge(i32 signext %a, i32 signext %b, i32 signext %c, i32 signe
 ; RV32I-LABEL: or_icmp_sge:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a0, a1
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    slt a1, a2, a3
-; RV32I-NEXT:    xori a1, a1, 1
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: or_icmp_sge:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slt a0, a0, a1
-; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    slt a1, a2, a3
-; RV64I-NEXT:    xori a1, a1, 1
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    ret
   %cmp1 = icmp sge i32 %a, %b
   %cmp2 = icmp sge i32 %c, %d
@@ -243,19 +241,17 @@ define i1 @or_icmp_sle(i32 signext %a, i32 signext %b, i32 signext %c, i32 signe
 ; RV32I-LABEL: or_icmp_sle:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a1, a0
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    slt a1, a3, a2
-; RV32I-NEXT:    xori a1, a1, 1
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: or_icmp_sle:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slt a0, a1, a0
-; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    slt a1, a3, a2
-; RV64I-NEXT:    xori a1, a1, 1
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    ret
   %cmp1 = icmp sle i32 %a, %b
   %cmp2 = icmp sle i32 %c, %d
@@ -267,19 +263,17 @@ define i1 @or_icmp_uge(i32 signext %a, i32 signext %b, i32 signext %c, i32 signe
 ; RV32I-LABEL: or_icmp_uge:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a0, a1
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    sltu a1, a2, a3
-; RV32I-NEXT:    xori a1, a1, 1
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: or_icmp_uge:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a0, a0, a1
-; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    sltu a1, a2, a3
-; RV64I-NEXT:    xori a1, a1, 1
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    ret
   %cmp1 = icmp uge i32 %a, %b
   %cmp2 = icmp uge i32 %c, %d
@@ -291,19 +285,17 @@ define i1 @or_icmp_ule(i32 signext %a, i32 signext %b, i32 signext %c, i32 signe
 ; RV32I-LABEL: or_icmp_ule:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a1, a0
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    sltu a1, a3, a2
-; RV32I-NEXT:    xori a1, a1, 1
-; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: or_icmp_ule:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a0, a1, a0
-; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    sltu a1, a3, a2
-; RV64I-NEXT:    xori a1, a1, 1
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    xori a0, a0, 1
 ; RV64I-NEXT:    ret
   %cmp1 = icmp ule i32 %a, %b
   %cmp2 = icmp ule i32 %c, %d
