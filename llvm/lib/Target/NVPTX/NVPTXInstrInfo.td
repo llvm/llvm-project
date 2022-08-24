@@ -731,16 +731,16 @@ def UInt16Const : PatLeaf<(imm), [{
   return v.isIntN(16);
 }]>;
 
-def Int5Const : PatLeaf<(imm), [{
-  // Check if 0 <= v < 32; only then will the result of (x << v) be an int32.
+def IntConst_0_30 : PatLeaf<(imm), [{
+  // Check if 0 <= v < 31; only then will the result of (x << v) be an int32.
   const APInt &v = N->getAPIntValue();
-  return v.sge(0) && v.slt(32);
+  return v.sge(0) && v.slt(31);
 }]>;
 
-def Int4Const : PatLeaf<(imm), [{
-  // Check if 0 <= v < 16; only then will the result of (x << v) be an int16.
+def IntConst_0_14 : PatLeaf<(imm), [{
+  // Check if 0 <= v < 15; only then will the result of (x << v) be an int16.
   const APInt &v = N->getAPIntValue();
-  return v.sge(0) && v.slt(16);
+  return v.sge(0) && v.slt(15);
 }]>;
 
 def SHL2MUL32 : SDNodeXForm<imm, [{
@@ -756,17 +756,17 @@ def SHL2MUL16 : SDNodeXForm<imm, [{
 }]>;
 
 // Convert "sign/zero-extend, then shift left by an immediate" to mul.wide.
-def : Pat<(shl (sext Int32Regs:$a), (i32 Int5Const:$b)),
+def : Pat<(shl (sext Int32Regs:$a), (i32 IntConst_0_30:$b)),
           (MULWIDES64Imm Int32Regs:$a, (SHL2MUL32 node:$b))>,
       Requires<[doMulWide]>;
-def : Pat<(shl (zext Int32Regs:$a), (i32 Int5Const:$b)),
+def : Pat<(shl (zext Int32Regs:$a), (i32 IntConst_0_30:$b)),
           (MULWIDEU64Imm Int32Regs:$a, (SHL2MUL32 node:$b))>,
       Requires<[doMulWide]>;
 
-def : Pat<(shl (sext Int16Regs:$a), (i16 Int4Const:$b)),
+def : Pat<(shl (sext Int16Regs:$a), (i16 IntConst_0_14:$b)),
           (MULWIDES32Imm Int16Regs:$a, (SHL2MUL16 node:$b))>,
       Requires<[doMulWide]>;
-def : Pat<(shl (zext Int16Regs:$a), (i16 Int4Const:$b)),
+def : Pat<(shl (zext Int16Regs:$a), (i16 IntConst_0_14:$b)),
           (MULWIDEU32Imm Int16Regs:$a, (SHL2MUL16 node:$b))>,
       Requires<[doMulWide]>;
 
