@@ -970,14 +970,10 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   if (llvm::Optional<uint64_t> simdlenVar = loop.simdlen())
     simdlen = builder.getInt64(simdlenVar.value());
 
-  llvm::ConstantInt *safelen = nullptr;
-  if (llvm::Optional<uint64_t> safelenVar = loop.safelen())
-    safelen = builder.getInt64(safelenVar.value());
-
   ompBuilder->applySimd(
       loopInfo,
       loop.if_expr() ? moduleTranslation.lookupValue(loop.if_expr()) : nullptr,
-      simdlen, safelen);
+      simdlen, nullptr);
 
   builder.restoreIP(afterIP);
   return success();
