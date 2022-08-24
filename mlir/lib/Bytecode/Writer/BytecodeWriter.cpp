@@ -9,6 +9,7 @@
 #include "mlir/Bytecode/BytecodeWriter.h"
 #include "../Encoding.h"
 #include "IRNumbering.h"
+#include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/CachedHashString.h"
@@ -358,22 +359,78 @@ void BytecodeWriter::writeDialectSection(EncodingEmitter &emitter) {
 //===----------------------------------------------------------------------===//
 // Attributes and Types
 
+namespace {
+class DialectWriter : public DialectBytecodeWriter {
+public:
+  DialectWriter(EncodingEmitter &emitter, IRNumberingState &numberingState,
+                StringSectionBuilder &stringSection)
+      : emitter(emitter), numberingState(numberingState),
+        stringSection(stringSection) {}
+
+  //===--------------------------------------------------------------------===//
+  // IR
+  //===--------------------------------------------------------------------===//
+
+  void writeAttribute(Attribute attr) override {
+    emitter.emitVarInt(numberingState.getNumber(attr));
+  }
+  void writeType(Type type) override {
+    emitter.emitVarInt(numberingState.getNumber(type));
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Primitives
+  //===--------------------------------------------------------------------===//
+
+  void writeVarInt(uint64_t value) override { emitter.emitVarInt(value); }
+
+  void writeOwnedString(StringRef str) override {
+    emitter.emitVarInt(stringSection.insert(str));
+  }
+
+private:
+  EncodingEmitter &emitter;
+  IRNumberingState &numberingState;
+  StringSectionBuilder &stringSection;
+};
+} // namespace
+
 void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
   EncodingEmitter attrTypeEmitter;
   EncodingEmitter offsetEmitter;
   offsetEmitter.emitVarInt(llvm::size(numberingState.getAttributes()));
   offsetEmitter.emitVarInt(llvm::size(numberingState.getTypes()));
 
+  // The writer used when emitting using a custom bytecode encoding.
+  DialectWriter dialectWriter(attrTypeEmitter, numberingState, stringSection);
+
   // A functor used to emit an attribute or type entry.
   uint64_t prevOffset = 0;
   auto emitAttrOrType = [&](auto &entry) {
-    // TODO: Allow dialects to provide more optimal implementations of attribute
-    // and type encodings.
-    bool hasCustomEncoding = false;
+    auto entryValue = entry.getValue();
 
-    // Emit the entry using the textual format.
-    raw_emitter_ostream(attrTypeEmitter) << entry.getValue();
-    attrTypeEmitter.emitByte(0);
+    // First, try to emit this entry using the dialect bytecode interface.
+    bool hasCustomEncoding = false;
+    if (const BytecodeDialectInterface *interface = entry.dialect->interface) {
+      if constexpr (std::is_same_v<std::decay_t<decltype(entryValue)>, Type>) {
+        // TODO: We don't currently support custom encoded mutable types.
+        hasCustomEncoding =
+            !entryValue.template hasTrait<TypeTrait::IsMutable>() &&
+            succeeded(interface->writeType(entryValue, dialectWriter));
+      } else {
+        // TODO: We don't currently support custom encoded mutable attributes.
+        hasCustomEncoding =
+            !entryValue.template hasTrait<AttributeTrait::IsMutable>() &&
+            succeeded(interface->writeAttribute(entryValue, dialectWriter));
+      }
+    }
+
+    // If the entry was not emitted using the dialect interface, emit it using
+    // the textual format.
+    if (!hasCustomEncoding) {
+      raw_emitter_ostream(attrTypeEmitter) << entryValue;
+      attrTypeEmitter.emitByte(0);
+    }
 
     // Record the offset of this entry.
     uint64_t curOffset = attrTypeEmitter.size();
