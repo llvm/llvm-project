@@ -97,21 +97,9 @@ std::unique_ptr<OperationPass<func::FuncOp>> createLinalgStrategyPadPass(
     const linalg::LinalgTransformationFilter &filter =
         linalg::LinalgTransformationFilter());
 
-/// Create a LinalgStrategyGeneralizePass.
-std::unique_ptr<OperationPass<func::FuncOp>> createLinalgStrategyGeneralizePass(
-    StringRef opName = "", const linalg::LinalgTransformationFilter &filter =
-                               linalg::LinalgTransformationFilter());
-
 /// Create a LinalgStrategyDecomposePass.
 // TODO: if/when we need finer control add an `opName` parameter.
 std::unique_ptr<OperationPass<func::FuncOp>> createLinalgStrategyDecomposePass(
-    const linalg::LinalgTransformationFilter &filter =
-        linalg::LinalgTransformationFilter());
-
-/// Create a LinalgStrategyInterchangePass.
-std::unique_ptr<OperationPass<func::FuncOp>>
-createLinalgStrategyInterchangePass(
-    ArrayRef<int64_t> iteratorInterchange = {},
     const linalg::LinalgTransformationFilter &filter =
         linalg::LinalgTransformationFilter());
 

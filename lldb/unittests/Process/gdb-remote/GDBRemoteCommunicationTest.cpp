@@ -39,7 +39,7 @@ protected:
 
   bool Write(llvm::StringRef packet) {
     ConnectionStatus status;
-    return server.Write(packet.data(), packet.size(), status, nullptr) ==
+    return server.WriteAll(packet.data(), packet.size(), status, nullptr) ==
            packet.size();
   }
 };

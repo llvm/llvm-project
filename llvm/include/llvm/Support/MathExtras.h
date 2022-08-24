@@ -13,6 +13,7 @@
 #ifndef LLVM_SUPPORT_MATHEXTRAS_H
 #define LLVM_SUPPORT_MATHEXTRAS_H
 
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <climits>
@@ -485,12 +486,12 @@ constexpr inline bool isShiftedMask_64(uint64_t Value) {
 /// Return true if the argument is a power of two > 0.
 /// Ex. isPowerOf2_32(0x00100000U) == true (32 bit edition.)
 constexpr inline bool isPowerOf2_32(uint32_t Value) {
-  return Value && !(Value & (Value - 1));
+  return llvm::has_single_bit(Value);
 }
 
 /// Return true if the argument is a power of two > 0 (64 bit edition.)
 constexpr inline bool isPowerOf2_64(uint64_t Value) {
-  return Value && !(Value & (Value - 1));
+  return llvm::has_single_bit(Value);
 }
 
 /// Count the number of ones from the most significant bit to the first
@@ -525,37 +526,6 @@ unsigned countTrailingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
   return countTrailingZeros<T>(~Value, ZB);
 }
 
-namespace detail {
-template <typename T, std::size_t SizeOfT> struct PopulationCounter {
-  static unsigned count(T Value) {
-    // Generic version, forward to 32 bits.
-    static_assert(SizeOfT <= 4, "Not implemented!");
-#if defined(__GNUC__)
-    return __builtin_popcount(Value);
-#else
-    uint32_t v = Value;
-    v = v - ((v >> 1) & 0x55555555);
-    v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-    return ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24;
-#endif
-  }
-};
-
-template <typename T> struct PopulationCounter<T, 8> {
-  static unsigned count(T Value) {
-#if defined(__GNUC__)
-    return __builtin_popcountll(Value);
-#else
-    uint64_t v = Value;
-    v = v - ((v >> 1) & 0x5555555555555555ULL);
-    v = (v & 0x3333333333333333ULL) + ((v >> 2) & 0x3333333333333333ULL);
-    v = (v + (v >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
-    return unsigned((uint64_t)(v * 0x0101010101010101ULL) >> 56);
-#endif
-  }
-};
-} // namespace detail
-
 /// Count the number of set bits in a value.
 /// Ex. countPopulation(0xF000F000) = 8
 /// Returns 0 if the word is zero.
@@ -564,7 +534,7 @@ inline unsigned countPopulation(T Value) {
   static_assert(std::numeric_limits<T>::is_integer &&
                     !std::numeric_limits<T>::is_signed,
                 "Only unsigned integral types are allowed.");
-  return detail::PopulationCounter<T, sizeof(T)>::count(Value);
+  return (unsigned)llvm::popcount(Value);
 }
 
 /// Return true if the argument contains a non-empty sequence of ones with the
@@ -647,38 +617,30 @@ inline uint64_t GreatestCommonDivisor64(uint64_t A, uint64_t B) {
 
 /// This function takes a 64-bit integer and returns the bit equivalent double.
 inline double BitsToDouble(uint64_t Bits) {
-  double D;
   static_assert(sizeof(uint64_t) == sizeof(double), "Unexpected type sizes");
-  memcpy(&D, &Bits, sizeof(Bits));
-  return D;
+  return llvm::bit_cast<double>(Bits);
 }
 
 /// This function takes a 32-bit integer and returns the bit equivalent float.
 inline float BitsToFloat(uint32_t Bits) {
-  float F;
   static_assert(sizeof(uint32_t) == sizeof(float), "Unexpected type sizes");
-  memcpy(&F, &Bits, sizeof(Bits));
-  return F;
+  return llvm::bit_cast<float>(Bits);
 }
 
 /// This function takes a double and returns the bit equivalent 64-bit integer.
 /// Note that copying doubles around changes the bits of NaNs on some hosts,
 /// notably x86, so this routine cannot be used if these bits are needed.
 inline uint64_t DoubleToBits(double Double) {
-  uint64_t Bits;
   static_assert(sizeof(uint64_t) == sizeof(double), "Unexpected type sizes");
-  memcpy(&Bits, &Double, sizeof(Double));
-  return Bits;
+  return llvm::bit_cast<uint64_t>(Double);
 }
 
 /// This function takes a float and returns the bit equivalent 32-bit integer.
 /// Note that copying floats around changes the bits of NaNs on some hosts,
 /// notably x86, so this routine cannot be used if these bits are needed.
 inline uint32_t FloatToBits(float Float) {
-  uint32_t Bits;
   static_assert(sizeof(uint32_t) == sizeof(float), "Unexpected type sizes");
-  memcpy(&Bits, &Float, sizeof(Float));
-  return Bits;
+  return llvm::bit_cast<uint32_t>(Float);
 }
 
 /// A and B are either alignments or offsets. Return the minimum alignment that

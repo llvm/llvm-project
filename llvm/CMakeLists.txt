@@ -119,24 +119,21 @@ set(LLVM_EXTRA_PROJECTS "flang")
 set(LLVM_KNOWN_PROJECTS "${LLVM_ALL_PROJECTS};${LLVM_EXTRA_PROJECTS}")
 set(LLVM_ENABLE_PROJECTS "" CACHE STRING
     "Semicolon-separated list of projects to build (${LLVM_KNOWN_PROJECTS}), or \"all\".")
+# Make sure expansion happens first to not handle "all" in rest of the checks.
+if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
+  set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
+endif()
 foreach(proj ${LLVM_ENABLE_PROJECTS})
-  if (NOT proj STREQUAL "all" AND NOT proj STREQUAL "llvm" AND NOT "${proj}" IN_LIST LLVM_KNOWN_PROJECTS)
+  if (NOT proj STREQUAL "llvm" AND NOT "${proj}" IN_LIST LLVM_KNOWN_PROJECTS)
      MESSAGE(FATAL_ERROR "${proj} isn't a known project: ${LLVM_KNOWN_PROJECTS}")
   endif()
 endforeach()
 foreach(proj "libcxx" "libcxxabi" "libunwind")
   if (${proj} IN_LIST LLVM_ENABLE_PROJECTS)
-    # TODO(Ericson2314): Making non-fatal for now because of out-of-tree docs
-    # CI jobs use this.
-    message(SEND_ERROR
-      "Using LLVM_ENABLE_PROJECTS=${proj} is incorrect. Please use -DLLVM_ENABLE_RUNTIMES=${proj} or "
-      "see the instructions at https://libcxx.llvm.org/BuildingLibcxx.html for building the runtimes.")
+    message(WARNING "Using LLVM_ENABLE_PROJECTS=${proj} is deprecated now, please use -DLLVM_ENABLE_RUNTIMES=${proj} or "
+                    "see the instructions at https://libcxx.llvm.org/BuildingLibcxx.html for building the runtimes.")
   endif()
 endforeach()
-
-if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
-  set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
-endif()
 
 if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)

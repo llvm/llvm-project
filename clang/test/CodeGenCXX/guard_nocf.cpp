@@ -1,4 +1,8 @@
 // RUN: %clang_cc1 -triple %ms_abi_triple -fms-extensions -std=c++11 -emit-llvm -O2 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-w64-windows-gnu -std=c++11 -emit-llvm -O2 -o - %s | FileCheck %s
+
+// The x86_64-w64-windows-gnu version tests mingw target, which relies on
+// __declspec(...) being defined as __attribute__((...)) by compiler built-in.
 
 void target_func();
 void (*func_ptr)() = &target_func;
@@ -8,6 +12,23 @@ __declspec(guard(nocf)) void nocf0() {
   (*func_ptr)();
 }
 // CHECK-LABEL: nocf0
+// CHECK: call{{.*}}[[NOCF:#[0-9]+]]
+
+// Explicitly test using the GNU-style attribute without relying on the
+// __declspec define for mingw.
+// The "guard_nocf" attribute must be added.
+__attribute__((guard(nocf))) void nocf0_gnu_style() {
+  (*func_ptr)();
+}
+// CHECK-LABEL: nocf0_gnu_style
+// CHECK: call{{.*}}[[NOCF:#[0-9]+]]
+
+// Test using the c++-style attribute.
+// The "guard_nocf" attribute must be added.
+[[clang::guard(nocf)]] void nocf0_cxx_style() {
+  (*func_ptr)();
+}
+// CHECK-LABEL: nocf0_cxx_style
 // CHECK: call{{.*}}[[NOCF:#[0-9]+]]
 
 // The "guard_nocf" attribute must *not* be added.

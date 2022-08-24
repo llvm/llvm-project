@@ -537,29 +537,6 @@ mlir::linalg::LinalgTileAndFuseTensorOpsPattern::returningMatchAndRewrite(
   return tileLoopNest;
 }
 
-/// Linalg generic interchange pattern.
-mlir::linalg::GenericOpInterchangePattern::GenericOpInterchangePattern(
-    MLIRContext *context, ArrayRef<unsigned> interchangeVector,
-    LinalgTransformationFilter f, PatternBenefit benefit)
-    : OpRewritePattern(context, benefit), filter(std::move(f)),
-      interchangeVector(interchangeVector.begin(), interchangeVector.end()) {}
-
-FailureOr<GenericOp>
-mlir::linalg::GenericOpInterchangePattern::returningMatchAndRewrite(
-    GenericOp genericOp, PatternRewriter &rewriter) const {
-  if (failed(filter.checkAndNotify(rewriter, genericOp)))
-    return failure();
-
-  FailureOr<GenericOp> transformedOp =
-      interchangeGenericOp(rewriter, genericOp, interchangeVector);
-  if (failed(transformedOp))
-    return failure();
-
-  // New filter if specified.
-  filter.replaceLinalgTransformationFilter(rewriter, genericOp);
-  return transformedOp;
-}
-
 /// Linalg generalization pattern.
 mlir::linalg::LinalgGeneralizationPattern::LinalgGeneralizationPattern(
     MLIRContext *context, LinalgTransformationFilter f, PatternBenefit benefit)

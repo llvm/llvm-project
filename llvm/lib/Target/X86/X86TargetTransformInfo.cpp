@@ -776,8 +776,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       return LT.first * Entry->Cost;
   }
 
-  if (ISD == ISD::SHL &&
-      Op2Info.Kind == TargetTransformInfo::OK_NonUniformConstantValue) {
+  if (ISD == ISD::SHL && !Op2Info.isUniform() && Op2Info.isConstant()) {
     MVT VT = LT.second;
     // Vector shift left by non uniform constant can be lowered
     // into vector multiply.
@@ -1068,8 +1067,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   Kind = improveShuffleKindFromMask(Kind, Mask);
 
   // Treat Transpose as 2-op shuffles - there's no difference in lowering.
-  // TODO: Treat Splice as 2-op shuffles - improve this in the future.
-  if (Kind == TTI::SK_Transpose || Kind == TTI::SK_Splice)
+  if (Kind == TTI::SK_Transpose)
     Kind = TTI::SK_PermuteTwoSrc;
 
   // For Broadcasts we are splatting the first element from the first input
@@ -1158,6 +1156,11 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Reverse,          MVT::v2i16, 1}, // pshuflw
       {TTI::SK_Reverse,          MVT::v4i8,  3}, // punpck/pshuflw/packus
       {TTI::SK_Reverse,          MVT::v2i8,  1}, // punpck
+
+      {TTI::SK_Splice,           MVT::v4i16, 2}, // punpck+psrldq
+      {TTI::SK_Splice,           MVT::v2i16, 2}, // punpck+psrldq
+      {TTI::SK_Splice,           MVT::v4i8,  2}, // punpck+psrldq
+      {TTI::SK_Splice,           MVT::v2i8,  2}, // punpck+psrldq
 
       {TTI::SK_PermuteTwoSrc,    MVT::v4i16, 2}, // punpck/pshuflw
       {TTI::SK_PermuteTwoSrc,    MVT::v2i16, 2}, // punpck/pshuflw
@@ -1331,6 +1334,10 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
 
       {TTI::SK_Select, MVT::v32i16, 1}, // vblendmw
       {TTI::SK_Select, MVT::v64i8,  1}, // vblendmb
+
+      {TTI::SK_Splice, MVT::v32i16, 2}, // vshufi64x2 + palignr
+      {TTI::SK_Splice, MVT::v32f16, 2}, // vshufi64x2 + palignr
+      {TTI::SK_Splice, MVT::v64i8,  2}, // vshufi64x2 + palignr
   };
 
   if (ST->hasBWI())
@@ -1352,6 +1359,18 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Reverse, MVT::v16i32, 1}, // vpermd
       {TTI::SK_Reverse, MVT::v32i16, 7}, // per mca
       {TTI::SK_Reverse, MVT::v64i8,  7}, // per mca
+
+      {TTI::SK_Splice, MVT::v8f64,  1}, // vpalignd
+      {TTI::SK_Splice, MVT::v4f64,  1}, // vpalignd
+      {TTI::SK_Splice, MVT::v16f32, 1}, // vpalignd
+      {TTI::SK_Splice, MVT::v8f32,  1}, // vpalignd
+      {TTI::SK_Splice, MVT::v8i64,  1}, // vpalignd
+      {TTI::SK_Splice, MVT::v4i64,  1}, // vpalignd
+      {TTI::SK_Splice, MVT::v16i32, 1}, // vpalignd
+      {TTI::SK_Splice, MVT::v8i32,  1}, // vpalignd
+      {TTI::SK_Splice, MVT::v32i16, 4}, // split + palignr
+      {TTI::SK_Splice, MVT::v32f16, 4}, // split + palignr
+      {TTI::SK_Splice, MVT::v64i8,  4}, // split + palignr
 
       {TTI::SK_PermuteSingleSrc, MVT::v8f64, 1},  // vpermpd
       {TTI::SK_PermuteSingleSrc, MVT::v4f64, 1},  // vpermpd
@@ -1415,7 +1434,14 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Reverse, MVT::v32i8, 2},  // vperm2i128 + pshufb
 
       {TTI::SK_Select, MVT::v16i16, 1}, // vpblendvb
-      {TTI::SK_Select, MVT::v32i8, 1},  // vpblendvb
+      {TTI::SK_Select, MVT::v16f16, 1}, // vpblendvb
+      {TTI::SK_Select, MVT::v32i8,  1}, // vpblendvb
+
+      {TTI::SK_Splice, MVT::v8i32,  2}, // vperm2i128 + vpalignr
+      {TTI::SK_Splice, MVT::v8f32,  2}, // vperm2i128 + vpalignr
+      {TTI::SK_Splice, MVT::v16i16, 2}, // vperm2i128 + vpalignr
+      {TTI::SK_Splice, MVT::v16f16, 2}, // vperm2i128 + vpalignr
+      {TTI::SK_Splice, MVT::v32i8,  2}, // vperm2i128 + vpalignr
 
       {TTI::SK_PermuteSingleSrc, MVT::v4f64, 1},  // vpermpd
       {TTI::SK_PermuteSingleSrc, MVT::v8f32, 1},  // vpermps
@@ -1486,6 +1512,14 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Select, MVT::v16i16, 3}, // vpand + vpandn + vpor
       {TTI::SK_Select, MVT::v32i8, 3},  // vpand + vpandn + vpor
 
+      {TTI::SK_Splice, MVT::v4i64,  2}, // vperm2f128 + shufpd
+      {TTI::SK_Splice, MVT::v4f64,  2}, // vperm2f128 + shufpd
+      {TTI::SK_Splice, MVT::v8i32,  4}, // 2*vperm2f128 + 2*vshufps
+      {TTI::SK_Splice, MVT::v8f32,  4}, // 2*vperm2f128 + 2*vshufps
+      {TTI::SK_Splice, MVT::v16i16, 5}, // 2*vperm2f128 + 2*vpalignr + vinsertf128
+      {TTI::SK_Splice, MVT::v16f16, 5}, // 2*vperm2f128 + 2*vpalignr + vinsertf128
+      {TTI::SK_Splice, MVT::v32i8,  5}, // 2*vperm2f128 + 2*vpalignr + vinsertf128
+
       {TTI::SK_PermuteSingleSrc, MVT::v4f64, 2},  // vperm2f128 + vshufpd
       {TTI::SK_PermuteSingleSrc, MVT::v4i64, 2},  // vperm2f128 + vshufpd
       {TTI::SK_PermuteSingleSrc, MVT::v8f32, 4},  // 2*vperm2f128 + 2*vshufps
@@ -1532,6 +1566,12 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Select, MVT::v8i16, 3}, // 2*pshufb + por
       {TTI::SK_Select, MVT::v16i8, 3}, // 2*pshufb + por
 
+      {TTI::SK_Splice, MVT::v4i32, 1}, // palignr
+      {TTI::SK_Splice, MVT::v4f32, 1}, // palignr
+      {TTI::SK_Splice, MVT::v8i16, 1}, // palignr
+      {TTI::SK_Splice, MVT::v8f16, 1}, // palignr
+      {TTI::SK_Splice, MVT::v16i8, 1}, // palignr
+
       {TTI::SK_PermuteSingleSrc, MVT::v8i16, 1}, // pshufb
       {TTI::SK_PermuteSingleSrc, MVT::v16i8, 1}, // pshufb
 
@@ -1562,6 +1602,13 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
       {TTI::SK_Select, MVT::v4i32, 2}, // 2*shufps
       {TTI::SK_Select, MVT::v8i16, 3}, // pand + pandn + por
       {TTI::SK_Select, MVT::v16i8, 3}, // pand + pandn + por
+
+      {TTI::SK_Splice, MVT::v2i64, 1}, // shufpd
+      {TTI::SK_Splice, MVT::v2f64, 1}, // shufpd
+      {TTI::SK_Splice, MVT::v4i32, 2}, // 2*{unpck,movsd,pshufd}
+      {TTI::SK_Splice, MVT::v8i16, 3}, // psrldq + psrlldq + por
+      {TTI::SK_Splice, MVT::v8f16, 3}, // psrldq + psrlldq + por
+      {TTI::SK_Splice, MVT::v16i8, 3}, // psrldq + psrlldq + por
 
       {TTI::SK_PermuteSingleSrc, MVT::v2f64, 1}, // shufpd
       {TTI::SK_PermuteSingleSrc, MVT::v2i64, 1}, // pshufd
@@ -1602,6 +1649,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     { TTI::SK_Broadcast,        MVT::v4f32, 1 }, // shufps
     { TTI::SK_Reverse,          MVT::v4f32, 1 }, // shufps
     { TTI::SK_Select,           MVT::v4f32, 2 }, // 2*shufps
+    { TTI::SK_Splice,           MVT::v4f32, 2 }, // 2*shufps
     { TTI::SK_PermuteSingleSrc, MVT::v4f32, 1 }, // shufps
     { TTI::SK_PermuteTwoSrc,    MVT::v4f32, 2 }, // 2*shufps
   };
@@ -4015,10 +4063,8 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                             MaybeAlign Alignment,
                                             unsigned AddressSpace,
                                             TTI::TargetCostKind CostKind,
-                                            TTI::OperandValueKind OpdKind,
+                                            TTI::OperandValueInfo OpInfo,
                                             const Instruction *I) {
-  const TTI::OperandValueInfo OpInfo = {OpdKind, TTI::OP_None};
-
   // TODO: Handle other cost kinds.
   if (CostKind != TTI::TCK_RecipThroughput) {
     if (auto *SI = dyn_cast_or_null<StoreInst>(I)) {

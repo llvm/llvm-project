@@ -936,10 +936,11 @@ public:
   LLVM_DUMP_METHOD void dump_mloc_map();
 #endif
 
-  /// Create a DBG_VALUE based on  machine location \p MLoc. Qualify it with the
+  /// Create a DBG_VALUE based on debug operands \p DbgOps. Qualify it with the
   /// information in \pProperties, for variable Var. Don't insert it anywhere,
   /// just return the builder for it.
-  MachineInstrBuilder emitLoc(Optional<LocIdx> MLoc, const DebugVariable &Var,
+  MachineInstrBuilder emitLoc(const SmallVectorImpl<ResolvedDbgOp> &DbgOps,
+                              const DebugVariable &Var,
                               const DbgValueProperties &Properties);
 };
 
@@ -978,7 +979,6 @@ public:
   void defVar(const MachineInstr &MI, const DbgValueProperties &Properties,
               const SmallVectorImpl<DbgOpID> &DebugOps) {
     assert(MI.isDebugValue() || MI.isDebugRef());
-    assert(DebugOps.size() <= 1);
     DebugVariable Var(MI.getDebugVariable(), MI.getDebugExpression(),
                       MI.getDebugLoc()->getInlinedAt());
     DbgValue Rec = (DebugOps.size() > 0)
@@ -1401,6 +1401,7 @@ public:
   void dump_mloc_transfer(const MLocTransferMap &mloc_transfer) const;
 
   bool isCalleeSaved(LocIdx L) const;
+  bool isCalleeSavedReg(Register R) const;
 
   bool hasFoldedStackStore(const MachineInstr &MI) {
     // Instruction must have a memory operand that's a stack slot, and isn't

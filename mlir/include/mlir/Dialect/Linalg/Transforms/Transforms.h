@@ -829,38 +829,6 @@ private:
 };
 
 ///
-/// Linalg generic interchange pattern.
-///
-/// Apply the `interchange` transformation on a RewriterBase.
-/// `filter` controls LinalgTransformMarker matching and update when specified.
-/// See `interchange` for more details.
-struct GenericOpInterchangePattern : public OpRewritePattern<GenericOp> {
-  using OpRewritePattern<GenericOp>::OpRewritePattern;
-
-  /// GenericOp-specific constructor with an optional `filter`.
-  GenericOpInterchangePattern(
-      MLIRContext *context, ArrayRef<unsigned> interchangeVector,
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1);
-
-  /// `matchAndRewrite` implementation that returns the significant transformed
-  /// pieces of IR.
-  FailureOr<GenericOp>
-  returningMatchAndRewrite(GenericOp op, PatternRewriter &rewriter) const;
-
-  LogicalResult matchAndRewrite(GenericOp op,
-                                PatternRewriter &rewriter) const override {
-    return returningMatchAndRewrite(op, rewriter);
-  }
-
-private:
-  /// LinalgTransformMarker handles special attribute manipulations.
-  LinalgTransformationFilter filter;
-  /// The interchange vector to reorder the iterators and indexing_maps dims.
-  SmallVector<unsigned, 8> interchangeVector;
-};
-
-///
 /// Linalg generalization pattern.
 ///
 /// Apply the `generalization` transformation as a pattern.

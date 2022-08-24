@@ -41,6 +41,8 @@ class PoVerbosityTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
+        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
+
         self.expect("expr -O -v -- foo",
                     substrs=['(id) $', ' = 0x', '1 = 2', '2 = 3;'])
         self.expect("expr -O -vfull -- foo",

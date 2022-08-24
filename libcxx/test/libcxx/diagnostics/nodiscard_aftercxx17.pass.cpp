@@ -19,7 +19,7 @@ _LIBCPP_NODISCARD_AFTER_CXX17 int foo() { return 6; }
 
 int main(int, char**)
 {
-	foo();	// no error here!
+  foo(); // no error here!
 
   return 0;
 }
