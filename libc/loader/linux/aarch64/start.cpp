@@ -186,6 +186,8 @@ __attribute__((noinline)) static void do_start() {
     __llvm_libc::set_thread_ptr(tls.tp);
 
   __llvm_libc::self.attrib = &__llvm_libc::main_thread_attrib;
+  __llvm_libc::main_thread_attrib.atexit_callback_mgr =
+      __llvm_libc::internal::get_thread_atexit_callback_mgr();
 
   // We want the fini array callbacks to be run after other atexit
   // callbacks are run. So, we register them before running the init

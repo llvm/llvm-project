@@ -22,6 +22,20 @@ entry:
 ; CHECK: store i32 0, {{.*}} @__msan_retval_tls
 ; CHECK: ret i32
 
+; atomicrmw xchg ptr: exactly the same as above
+
+define i32* @AtomicRmwXchgPtr(i32** %p, i32* %x) sanitize_memory {
+entry:
+  %0 = atomicrmw xchg i32** %p, i32* %x seq_cst
+  ret i32* %0
+}
+
+; CHECK-LABEL: @AtomicRmwXchgPtr
+; CHECK: store i64 0,
+; CHECK: atomicrmw xchg {{.*}} seq_cst
+; CHECK: store i64 0, {{.*}} @__msan_retval_tls
+; CHECK: ret i32*
+
 
 ; atomicrmw max: exactly the same as above
 

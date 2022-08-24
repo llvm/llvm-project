@@ -18,6 +18,10 @@
 // CHECK-DAG: @cosf(f32) -> f32
 // CHECK-DAG: @sin(f64) -> f64
 // CHECK-DAG: @sinf(f32) -> f32
+// CHECK-DAG: @floor(f64) -> f64
+// CHECK-DAG: @floorf(f32) -> f32
+// CHECK-DAG: @ceil(f64) -> f64
+// CHECK-DAG: @ceilf(f32) -> f32
 
 // CHECK-LABEL: func @atan_caller
 // CHECK-SAME: %[[FLOAT:.*]]: f32
@@ -312,6 +316,30 @@ func.func @log1p_caller(%float: f32, %double: f64) -> (f32, f64)  {
   %float_result = math.log1p %float : f32
   // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @log1p(%[[DOUBLE]]) : (f64) -> f64
   %double_result = math.log1p %double : f64
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL: func @floor_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+func.func @floor_caller(%float: f32, %double: f64) -> (f32, f64)  {
+  // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @floorf(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.floor %float : f32
+  // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @floor(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.floor %double : f64
+  // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
+  return %float_result, %double_result : f32, f64
+}
+
+// CHECK-LABEL: func @ceil_caller
+// CHECK-SAME: %[[FLOAT:.*]]: f32
+// CHECK-SAME: %[[DOUBLE:.*]]: f64
+func.func @ceil_caller(%float: f32, %double: f64) -> (f32, f64)  {
+  // CHECK-DAG: %[[FLOAT_RESULT:.*]] = call @ceilf(%[[FLOAT]]) : (f32) -> f32
+  %float_result = math.ceil %float : f32
+  // CHECK-DAG: %[[DOUBLE_RESULT:.*]] = call @ceil(%[[DOUBLE]]) : (f64) -> f64
+  %double_result = math.ceil %double : f64
   // CHECK: return %[[FLOAT_RESULT]], %[[DOUBLE_RESULT]]
   return %float_result, %double_result : f32, f64
 }

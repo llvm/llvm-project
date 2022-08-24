@@ -3328,7 +3328,7 @@ IntrinsicLibrary::genLenTrim(mlir::Type resultType,
   assert(args.size() == 1 || args.size() == 2);
   const fir::CharBoxValue *charBox = args[0].getCharBox();
   if (!charBox)
-    TODO(loc, "character array len_trim");
+    TODO(loc, "intrinsic: len_trim for character array");
   auto len =
       fir::factory::CharacterExprHelper(builder, loc).createLenTrim(*charBox);
   return builder.createConvert(loc, resultType, len);
@@ -3488,7 +3488,7 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
   // Real case
   if (resultType == mlir::FloatType::getF128(builder.getContext()))
 
-    TODO(loc, "intrinsic: MODULO for floating point of KIND=16");
+    TODO(loc, "intrinsic: modulo for floating point of KIND=16");
   auto remainder = builder.create<mlir::arith::RemFOp>(loc, args[0], args[1]);
   mlir::Value zero = builder.createRealZeroConstant(loc, remainder.getType());
   auto remainderIsNotZero = builder.create<mlir::arith::CmpFOp>(
@@ -3742,7 +3742,7 @@ IntrinsicLibrary::genReshape(mlir::Type resultType,
   auto resultRank = shapeArrTy.cast<fir::SequenceType>().getShape()[0];
 
   if (resultRank == fir::SequenceType::getUnknownExtent())
-    TODO(loc, "RESHAPE intrinsic requires computing rank of result");
+    TODO(loc, "intrinsic: reshape requires computing rank of result");
 
   // Handle optional pad argument
   mlir::Value pad = isStaticallyAbsent(args[2])
@@ -3974,7 +3974,7 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
   assert(args.size() == 3);
   if (const auto *boxValue = args[0].getBoxOf<fir::BoxValue>())
     if (boxValue->hasAssumedRank())
-      TODO(loc, "SIZE intrinsic with assumed rank argument");
+      TODO(loc, "intrinsic: size with assumed rank argument");
 
   // Get the ARRAY argument
   mlir::Value array = builder.createBox(loc, args[0]);
@@ -4109,7 +4109,7 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
   const fir::ExtendedValue &array = args[0];
   if (const auto *boxValue = array.getBoxOf<fir::BoxValue>())
     if (boxValue->hasAssumedRank())
-      TODO(loc, "LBOUND intrinsic with assumed rank argument");
+      TODO(loc, "intrinsic: lbound with assumed rank argument");
 
   //===----------------------------------------------------------------------===//
   mlir::Type indexType = builder.getIndexType();
@@ -4394,7 +4394,7 @@ static mlir::Value createExtremumCompare(mlir::Location loc,
     // TODO: ! character min and max is tricky because the result
     // length is the length of the longest argument!
     // So we may need a temp.
-    TODO(loc, "CHARACTER min and max");
+    TODO(loc, "intrinsic: min and max for CHARACTER");
   }
   assert(result && "result must be defined");
   return result;

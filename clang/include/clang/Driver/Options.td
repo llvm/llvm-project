@@ -2585,6 +2585,10 @@ def fopenmp_assume_no_thread_state : Flag<["-"], "fopenmp-assume-no-thread-state
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>,
   HelpText<"Assert no thread in a parallel region modifies an ICV">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoThreadState">>;
+def fopenmp_assume_no_nested_parallelism : Flag<["-"], "fopenmp-assume-no-nested-parallelism">, Group<f_Group>,
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>,
+  HelpText<"Assert no nested parallel regions in the GPU">,
+  MarshallingInfoFlag<LangOpts<"OpenMPNoNestedParallelism">>;
 def fopenmp_offload_mandatory : Flag<["-"], "fopenmp-offload-mandatory">, Group<f_Group>,
   Flags<[CC1Option, NoArgumentUnused]>,
   HelpText<"Do not create a host fallback if offloading to the device fails.">,

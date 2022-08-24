@@ -321,7 +321,7 @@ constexpr bool test() {
   // Stable ([algorithm.stable]). If [first1, last1) contains m elements that are
   // equivalent to each other and [first2, last2) contains n elements that are
   // equivalent to them, then all m elements from the first range are copied to the
-  // output range, in order, and then the final max(n−m,0) elements from the second
+  // output range, in order, and then the final max(n-m,0) elements from the second
   // range are copied to the output range, in order.
   {
     std::array<IntAndOrder, 3> r1{{{0, 0}, {0, 1}, {0, 2}}};

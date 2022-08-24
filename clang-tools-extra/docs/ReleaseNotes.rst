@@ -127,6 +127,11 @@ Changes in existing checks
   ``push_front`` on STL-style containers and replacing them with ``emplace``
   or ``emplace_front``.
 
+- Improved `modernize-use-equals-default <clang-tidy/checks/modernize/use-equals-default.html>`_ check.
+
+  The check now skips unions since in this case a default constructor with empty body
+  is not equivalent to the explicitly defaulted one.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

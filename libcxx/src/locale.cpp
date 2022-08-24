@@ -4805,7 +4805,7 @@ __check_grouping(const string& __grouping, unsigned* __g, unsigned* __g_end,
 {
 //  if the grouping pattern is empty _or_ there are no grouping bits, then do nothing
 //  we always have at least a single entry in [__g, __g_end); the end of the input sequence
-	if (__grouping.size() != 0 && __g_end - __g > 1)
+    if (__grouping.size() != 0 && __g_end - __g > 1)
     {
         reverse(__g, __g_end);
         const char* __ig = __grouping.data();
@@ -4838,7 +4838,7 @@ __num_put_base::__format_int(char* __fmtp, const char* __len, bool __signd,
     if ((__flags & ios_base::showpos) &&
         (__flags & ios_base::basefield) != ios_base::oct &&
         (__flags & ios_base::basefield) != ios_base::hex &&
-	__signd)
+        __signd)
         *__fmtp++ = '+';
     if (__flags & ios_base::showbase)
         *__fmtp++ = '#';

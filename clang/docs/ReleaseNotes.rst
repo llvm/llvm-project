@@ -128,6 +128,11 @@ New Pragmas in Clang
 
 Attribute Changes in Clang
 --------------------------
+- Added support for ``__attribute__((guard(nocf)))`` and C++-style
+  ``[[clang::guard(nocf)]]``, which is equivalent to ``__declspec(guard(nocf))``
+  when using the MSVC environment. This is to support enabling Windows Control
+  Flow Guard checks with the ability to disable them for specific functions when
+  using the MinGW environment.
 
 Windows Support
 ---------------
@@ -162,6 +167,10 @@ C++20 Feature Support
   (C++14 [dcl.constexpr]p6 (CWG DR647/CWG DR1358))
 - Correctly defer dependent immediate function invocations until template instantiation.
   This fixes `GH55601 <https://github.com/llvm/llvm-project/issues/55601>`_.
+- Implemented "Conditionally Trivial Special Member Functions" (`P0848 <https://wg21.link/p0848r3>`_).
+  Note: The handling of deleted functions is not yet compliant, as Clang
+  does not implement `DR1496 <https://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#1496>`_
+  and `DR1734 <https://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#1734>`_.
 
 
 

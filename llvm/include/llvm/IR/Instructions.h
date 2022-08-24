@@ -2293,6 +2293,26 @@ public:
     return !changesLength() && isTransposeMask(ShuffleMask);
   }
 
+  /// Return true if this shuffle mask is a splice mask, concatenating the two
+  /// inputs together and then extracts an original width vector starting from
+  /// the splice index.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
+  static bool isSpliceMask(ArrayRef<int> Mask, int &Index);
+  static bool isSpliceMask(const Constant *Mask, int &Index) {
+    assert(Mask->getType()->isVectorTy() && "Shuffle needs vector constant.");
+    SmallVector<int, 16> MaskAsInts;
+    getShuffleMask(Mask, MaskAsInts);
+    return isSpliceMask(MaskAsInts, Index);
+  }
+
+  /// Return true if this shuffle splices two inputs without changing the length
+  /// of the vectors. This operation concatenates the two inputs together and
+  /// then extracts an original width vector starting from the splice index.
+  /// Example: shufflevector <4 x n> A, <4 x n> B, <1,2,3,4>
+  bool isSplice(int &Index) const {
+    return !changesLength() && isSpliceMask(ShuffleMask, Index);
+  }
+
   /// Return true if this shuffle mask is an extract subvector mask.
   /// A valid extract subvector mask returns a smaller vector from a single
   /// source operand. The base extraction index is returned as well.

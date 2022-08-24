@@ -33,6 +33,15 @@ public:
   ~NE() { f(); }
 };
 
+// Skip unions.
+union NU {
+  NU() {}
+  // CHECK-FIXES: NU() {}
+  ~NU() {}
+  // CHECK-FIXES: ~NU() {}
+  NE Field;
+};
+
 // Initializer or arguments.
 class IA {
 public:

@@ -1602,9 +1602,10 @@ void tools::AddRunTimeLibs(const ToolChain &TC, const Driver &D,
     if (TC.getTriple().isKnownWindowsMSVCEnvironment()) {
       // Issue error diagnostic if libgcc is explicitly specified
       // through command line as --rtlib option argument.
-      if (Args.hasArg(options::OPT_rtlib_EQ)) {
+      Arg *A = Args.getLastArg(options::OPT_rtlib_EQ);
+      if (A && A->getValue() != StringRef("platform")) {
         TC.getDriver().Diag(diag::err_drv_unsupported_rtlib_for_platform)
-            << Args.getLastArg(options::OPT_rtlib_EQ)->getValue() << "MSVC";
+            << A->getValue() << "MSVC";
       }
     } else
       AddLibgcc(TC, D, CmdArgs, Args);
