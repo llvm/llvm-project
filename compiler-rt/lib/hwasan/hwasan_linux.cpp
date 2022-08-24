@@ -122,14 +122,25 @@ static void MaybeDieIfNoTaggingAbi(const char *message) {
 #  define PR_TAGGED_ADDR_ENABLE (1UL << 0)
 #  define ARCH_GET_UNTAG_MASK 0x4001
 #  define ARCH_ENABLE_TAGGED_ADDR 0x4002
+#  define ARCH_GET_MAX_TAG_BITS 0x4003
 
 static bool CanUseTaggingAbi() {
 #  if defined(__x86_64__)
+  unsigned long num_bits = 0;
   // Check for x86 LAM support. This API is based on a currently unsubmitted
-  // patch to the Linux kernel (as of July 2022) and is thus subject to
-  // change. Patch is here:
-  // https://lore.kernel.org/linux-mm/20220712231328.5294-1-kirill.shutemov@linux.intel.com/
-  return !internal_iserror(internal_arch_prctl(ARCH_GET_UNTAG_MASK, 0));
+  // patch to the Linux kernel (as of August 2022) and is thus subject to
+  // change. The patch is here:
+  // https://lore.kernel.org/all/20220815041803.17954-1-kirill.shutemov@linux.intel.com/
+  //
+  // arch_prctl(ARCH_GET_MAX_TAG_BITS, &bits) returns the maximum number of tag
+  // bits the user can request, or zero if LAM is not supported by the hardware.
+  if (internal_iserror(internal_arch_prctl(ARCH_GET_MAX_TAG_BITS,
+                                           reinterpret_cast<uptr>(&num_bits))))
+    return false;
+  // The platform must provide enough bits for HWASan tags.
+  if (num_bits < kTagBits)
+    return false;
+  return true;
 #  else
   // Check for ARM TBI support.
   return !internal_iserror(internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0));
@@ -139,7 +150,24 @@ static bool CanUseTaggingAbi() {
 static bool EnableTaggingAbi() {
 #  if defined(__x86_64__)
   // Enable x86 LAM tagging for the process.
-  return !internal_iserror(internal_arch_prctl(ARCH_ENABLE_TAGGED_ADDR, kTagBits));
+  //
+  // arch_prctl(ARCH_ENABLE_TAGGED_ADDR, bits) enables tagging if the number of
+  // tag bits requested by the user does not exceed that provided by the system.
+  // arch_prctl(ARCH_GET_UNTAG_MASK, &mask) returns the mask of significant
+  // address bits. It is ~0ULL if either LAM is disabled for the process or LAM
+  // is not supported by the hardware.
+  if (internal_iserror(internal_arch_prctl(ARCH_ENABLE_TAGGED_ADDR, kTagBits)))
+    return false;
+  unsigned long mask = 0;
+  // Make sure the tag bits are where we expect them to be.
+  if (internal_iserror(internal_arch_prctl(ARCH_GET_UNTAG_MASK,
+                                           reinterpret_cast<uptr>(&mask))))
+    return false;
+  // @mask has ones for non-tag bits, whereas @kAddressTagMask has ones for tag
+  // bits. Therefore these masks must not overlap.
+  if (mask & kAddressTagMask)
+    return false;
+  return true;
 #  else
   // Enable ARM TBI tagging for the process. If for some reason tagging is not
   // supported, prctl(PR_SET_TAGGED_ADDR_CTRL, PR_TAGGED_ADDR_ENABLE) returns
