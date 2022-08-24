@@ -617,10 +617,15 @@ public:
     return svalBuilder.evalBinOp(ST, Op, LHS, RHS, T);
   }
 
-  /// Retreives which element is being constructed in a non POD type array.
+  /// Retreives which element is being constructed in a non-POD type array.
   static Optional<unsigned>
   getIndexOfElementToConstruct(ProgramStateRef State, const CXXConstructExpr *E,
                                const LocationContext *LCtx);
+
+  /// Retreives which element is being destructed in a non-POD type array.
+  static Optional<unsigned>
+  getPendingArrayDestruction(ProgramStateRef State,
+                             const LocationContext *LCtx);
 
   /// Retreives the size of the array in the pending ArrayInitLoopExpr.
   static Optional<unsigned> getPendingInitLoop(ProgramStateRef State,
@@ -825,6 +830,27 @@ private:
                                      const CXXConstructExpr *CE,
                                      const LocationContext *LCtx);
 
+  /// Checks whether our policies allow us to inline a non-POD type array
+  /// destruction.
+  /// \param Size The size of the array.
+  bool shouldInlineArrayDestruction(uint64_t Size);
+
+  /// Prepares the program state for array destruction. If no error happens
+  /// the function binds a 'PendingArrayDestruction' entry to the state, which
+  /// it returns along with the index. If any error happens (we fail to read
+  /// the size, the index would be -1, etc.) the function will return the
+  /// original state along with an index of 0. The actual element count of the
+  /// array can be accessed by the optional 'ElementCountVal' parameter. \param
+  /// State The program state. \param Region The memory region where the array
+  /// is stored. \param ElementTy The type an element in the array. \param LCty
+  /// The location context. \param ElementCountVal A pointer to an optional
+  /// SVal. If specified, the size of the array will be returned in it. It can
+  /// be Unknown.
+  std::pair<ProgramStateRef, uint64_t> prepareStateForArrayDestruction(
+      const ProgramStateRef State, const MemRegion *Region,
+      const QualType &ElementTy, const LocationContext *LCtx,
+      SVal *ElementCountVal = nullptr);
+
   /// Checks whether we construct an array of non-POD type, and decides if the
   /// constructor should be inkoved once again.
   bool shouldRepeatCtorCall(ProgramStateRef State, const CXXConstructExpr *E,
@@ -923,6 +949,16 @@ private:
   removeIndexOfElementToConstruct(ProgramStateRef State,
                                   const CXXConstructExpr *E,
                                   const LocationContext *LCtx);
+
+  /// Assuming we destruct an array of non-POD types, this method allows us
+  /// to store which element is to be destructed next.
+  static ProgramStateRef setPendingArrayDestruction(ProgramStateRef State,
+                                                    const LocationContext *LCtx,
+                                                    unsigned Idx);
+
+  static ProgramStateRef
+  removePendingArrayDestruction(ProgramStateRef State,
+                                const LocationContext *LCtx);
 
   /// Sets the size of the array in a pending ArrayInitLoopExpr.
   static ProgramStateRef setPendingInitLoop(ProgramStateRef State,
