@@ -17,9 +17,9 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/CAS/CachingOnDiskFileSystem.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
+#include "llvm/CAS/CachingOnDiskFileSystem.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
@@ -246,7 +246,7 @@ TEST(DependencyScanner, ScanDepsWithFS) {
 }
 
 TEST(DependencyScanner, DepScanFSWithCASProvider) {
-  std::shared_ptr<CASDB> DB = llvm::cas::createInMemoryCAS();
+  std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
   auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   StringRef Path = "a.h";
   StringRef Contents = "a";

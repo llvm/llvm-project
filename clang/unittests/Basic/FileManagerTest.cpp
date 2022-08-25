@@ -10,8 +10,8 @@
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/FileSystemStatCache.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -563,7 +563,7 @@ TEST_F(FileManagerTest, getBypassFile) {
 }
 
 TEST_F(FileManagerTest, CASProvider) {
-  std::shared_ptr<CASDB> DB = llvm::cas::createInMemoryCAS();
+  std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
   auto FS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
   auto Sept = llvm::sys::path::get_separator();
   std::string Path = std::string(llvm::formatv("{0}root{0}a.txt", Sept));

@@ -108,15 +108,15 @@ public:
           RemapPath = nullptr);
 
   Expected<cas::IncludeTreeRoot>
-  getIncludeTree(cas::CASDB &DB, const std::vector<std::string> &CommandLine,
-                 StringRef CWD);
+  getIncludeTree(cas::ObjectStore &DB,
+                 const std::vector<std::string> &CommandLine, StringRef CWD);
 
   /// If \p DiagGenerationAsCompilation is true it will generate error
   /// diagnostics same way as the normal compilation, with "N errors generated"
   /// message and the serialized diagnostics file emitted if the
   /// \p DiagOpts.DiagnosticSerializationFile setting is set for the invocation.
   Expected<cas::IncludeTreeRoot> getIncludeTreeFromCompilerInvocation(
-      cas::CASDB &DB, std::shared_ptr<CompilerInvocation> Invocation,
+      cas::ObjectStore &DB, std::shared_ptr<CompilerInvocation> Invocation,
       StringRef CWD, DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
       bool DiagGenerationAsCompilation);
 

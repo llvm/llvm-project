@@ -11,7 +11,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Error.h"
 #include <cstddef>
@@ -140,7 +140,7 @@ inline ArrayRef<char> toArrayRef(StringRef Data) {
 using HasherT = BLAKE3;
 using HashType = decltype(HasherT::hash(std::declval<ArrayRef<uint8_t> &>()));
 
-class BuiltinCAS : public CASDB {
+class BuiltinCAS : public ObjectStore {
   void printIDImpl(raw_ostream &OS, const CASID &ID) const final;
 
 public:

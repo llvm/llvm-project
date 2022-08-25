@@ -1,4 +1,5 @@
-//===- llvm/CAS/CASDB.h -----------------------------------------*- C++ -*-===//
+//===- llvm/CAS/ObjectStore.h -----------------------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CAS_CASDB_H
-#define LLVM_CAS_CASDB_H
+#ifndef LLVM_CAS_ObjectStore_H
+#define LLVM_CAS_ObjectStore_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,7 +25,7 @@ class MemoryBuffer;
 
 namespace cas {
 
-class CASDB;
+class ObjectStore;
 
 class ObjectProxy;
 
@@ -41,14 +42,15 @@ class ObjectProxy;
 ///     - It's comparable between any two CAS instances that have the same \a
 ///       CASIDContext::getHashSchemaIdentifier().
 ///     - The UID can be printed (e.g., \a CASID::toString()) and it can parsed
-///       by the same or a different CAS instance with \a CASDB::parseID().
+///       by the same or a different CAS instance with \a
+///       ObjectStore::parseID().
 /// - An object can be looked up by content or by UID.
 ///     - \a store() is "get-or-create"  methods, writing an object if it
 ///       doesn't exist yet, and return a ref to it in any case.
 ///     - \a loadObject(const CASID&) looks up an object by its UID.
 /// - Objects can reference other objects, forming an arbitrary DAG.
 ///
-/// The \a CASDB interface has a few ways of referencing objects:
+/// The \a ObjectStore interface has a few ways of referencing objects:
 ///
 /// - \a ObjectRef encapsulates a reference to something in the CAS. It is an
 ///   opaque type that references an object inside a specific CAS. It is
@@ -63,12 +65,12 @@ class ObjectProxy;
 ///   data and references. This is internal to CAS implementation and not
 ///   availble from CAS public APIs.
 /// - \a CASID: the UID for an object in the CAS, obtained through \a
-///   CASDB::getID() or \a CASDB::parseID(). This is a valid CAS
+///   ObjectStore::getID() or \a ObjectStore::parseID(). This is a valid CAS
 ///   identifier, but may reference an object that is unknown to this CAS
 ///   instance.
-/// - \a ObjectProxy pairs an ObjectHandle (subclass) with a CASDB, and wraps
-///   access APIs to avoid having to pass extra parameters. It is the object
-///   used for accessing underlying data and refs by CAS users.
+/// - \a ObjectProxy pairs an ObjectHandle (subclass) with a ObjectStore, and
+///   wraps access APIs to avoid having to pass extra parameters. It is the
+///   object used for accessing underlying data and refs by CAS users.
 ///
 /// There are a few options for accessing content of objects, with different
 /// lifetime tradeoffs:
@@ -77,12 +79,12 @@ class ObjectProxy;
 /// - \a loadIndependentDataBuffer() returns a \a MemoryBuffer whose lifetime
 ///   is independent of the CAS (it can live longer).
 /// - \a getDataString() return StringRef with lifetime is guaranteed to last as
-///   long as \a CASDB.
+///   long as \a ObjectStore.
 /// - \a readRef() and \a forEachRef() iterate through the references in an
 ///   object. There is no lifetime assumption.
 ///
 /// Both ObjectRef and ObjectHandle are lightweight, wrapping a `uint64_t`.
-/// Doing anything with them requires a CASDB. As a convenience:
+/// Doing anything with them requires a ObjectStore. As a convenience:
 ///
 ///
 /// TODO: Remove CASID.
@@ -101,10 +103,10 @@ class ObjectProxy;
 /// TODO: Consider optimizing small and/or string-like leaf objects:
 ///
 /// - \a NodeBuilder and \a NodeReader interfaces can bring some of the same
-///   gains without adding complexity to \a CASDB. E.g., \a NodeBuilder could
-///   have an API to add a named field to a node under construction; if the
-///   name is small enough, it's stored locally in the node's own data, but if
-///   it's bigger then it's outlined to a separate CAS object. \a NodeReader
+///   gains without adding complexity to \a ObjectStore. E.g., \a NodeBuilder
+///   could have an API to add a named field to a node under construction; if
+///   the name is small enough, it's stored locally in the node's own data, but
+///   if it's bigger then it's outlined to a separate CAS object. \a NodeReader
 ///   could handle the complications of reading.
 /// - Implementations can do fast lookups of small objects by adding a
 ///   content-based index for them (prefix tree / suffix tree of content),
@@ -124,7 +126,7 @@ class ObjectProxy;
 ///
 /// FIXME: Split out ActionCache as a separate concept, and rename this
 /// ObjectStore.
-class CASDB : public CASIDContext {
+class ObjectStore : public CASIDContext {
   friend class ObjectProxy;
   void anchor() override;
 
@@ -137,7 +139,7 @@ public:
   /// extractHashFromID().
   virtual Expected<CASID> parseID(StringRef ID) = 0;
 
-  /// Store object into CASDB.
+  /// Store object into ObjectStore.
   virtual Expected<ObjectRef> store(ArrayRef<ObjectRef> Refs,
                                     ArrayRef<char> Data) = 0;
   /// Get an ID for \p Ref.
@@ -203,7 +205,7 @@ protected:
   storeFromOpenFileImpl(sys::fs::file_t FD,
                         Optional<sys::fs::file_status> Status);
 
-  /// Allow CASDB implementations to create internal handles.
+  /// Allow ObjectStore implementations to create internal handles.
 #define MAKE_CAS_HANDLE_CONSTRUCTOR(HandleKind)                                \
   HandleKind make##HandleKind(uint64_t InternalRef) const {                    \
     return HandleKind(*this, InternalRef);                                     \
@@ -243,7 +245,8 @@ public:
   Expected<ObjectProxy> getProxy(CASID ID);
   /// Create ObjectProxy from CASID. If the object doesn't exit, get None..
   Expected<Optional<ObjectProxy>> getProxyOrNone(CASID ID);
-  /// Create ObjectProxy from ObjectRef. If the object can't be loaded, get an error.
+  /// Create ObjectProxy from ObjectRef. If the object can't be loaded, get an
+  /// error.
   Expected<ObjectProxy> getProxy(ObjectRef Ref);
 
   /// Read the data from \p Data into \p OS.
@@ -262,26 +265,24 @@ public:
   loadIndependentDataBuffer(ObjectHandle Node, const Twine &Name = "",
                             bool NullTerminate = true) const;
 
-  /// Print the CASDB internals for debugging purpose.
+  /// Print the ObjectStore internals for debugging purpose.
   virtual void print(raw_ostream &) const {}
   void dump() const;
 
-  virtual ~CASDB() = default;
+  virtual ~ObjectStore() = default;
 };
 
 /// Reference to an abstract hierarchical node, with data and references.
 /// Reference is passed by value and is expected to be valid as long as the \a
-/// CASDB is.
+/// ObjectStore is.
 ///
-/// TODO: Expose \a CASDB::readData() and only call \a CASDB::getDataString()
-/// when asked.
+/// TODO: Expose \a ObjectStore::readData() and only call \a
+/// ObjectStore::getDataString() when asked.
 class ObjectProxy {
 public:
-  const CASDB &getCAS() const { return *CAS; }
-  CASDB &getCAS() { return *CAS; }
-  CASID getID() const {
-    return CAS->getID(H);
-  }
+  const ObjectStore &getCAS() const { return *CAS; }
+  ObjectStore &getCAS() { return *CAS; }
+  CASID getID() const { return CAS->getID(H); }
   ObjectRef getRef() const { return CAS->getReference(H); }
   size_t getNumReferences() const { return CAS->getNumRefs(H); }
   ObjectRef getReference(size_t I) const { return CAS->readRef(H, I); }
@@ -326,23 +327,24 @@ public:
   friend bool operator!=(ObjectRef Ref, const ObjectProxy &Proxy) {
     return !(Proxy.getRef() == Ref);
   }
+
 public:
   ObjectProxy() = delete;
 
-  static ObjectProxy load(CASDB &CAS, ObjectHandle Node) {
+  static ObjectProxy load(ObjectStore &CAS, ObjectHandle Node) {
     return ObjectProxy(CAS, Node);
   }
 
 private:
-  ObjectProxy(CASDB &CAS, ObjectHandle H)
-      : CAS(&CAS), H(H) {}
+  ObjectProxy(ObjectStore &CAS, ObjectHandle H) : CAS(&CAS), H(H) {}
 
-  CASDB *CAS;
+  ObjectStore *CAS;
   ObjectHandle H;
 };
 
 
-std::unique_ptr<CASDB> createInMemoryCAS();
+
+std::unique_ptr<ObjectStore> createInMemoryCAS();
 
 /// Gets or creates a persistent on-disk path at \p Path.
 ///
@@ -351,7 +353,7 @@ std::unique_ptr<CASDB> createInMemoryCAS();
 ///
 /// FIXME: Remove the special behaviour for getDefaultOnDiskCASStableID(). The
 /// client should handle this logic, if/when desired.
-Expected<std::unique_ptr<CASDB>> createOnDiskCAS(const Twine &Path);
+Expected<std::unique_ptr<ObjectStore>> createOnDiskCAS(const Twine &Path);
 
 /// Set \p Path to a reasonable default on-disk path for a persistent CAS for
 /// the current user.
@@ -370,4 +372,4 @@ std::string getDefaultOnDiskCASStableID();
 } // namespace cas
 } // namespace llvm
 
-#endif // LLVM_CAS_CASDB_H
+#endif // LLVM_CAS_ObjectStore_H

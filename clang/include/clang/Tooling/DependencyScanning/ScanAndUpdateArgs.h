@@ -15,7 +15,7 @@
 
 namespace llvm {
 namespace cas {
-class CASDB;
+class ObjectStore;
 class CASID;
 }
 } // namespace llvm
@@ -45,7 +45,7 @@ Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS, const char *Exec,
     CompilerInvocation &Invocation, StringRef WorkingDirectory,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping,
-    llvm::cas::CASDB &DB);
+    llvm::cas::ObjectStore &DB);
 
 } // end namespace clang
 

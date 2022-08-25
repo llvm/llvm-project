@@ -14,7 +14,7 @@ using namespace clang;
 using namespace clang::cas;
 
 template <typename NodeT>
-Expected<NodeT> IncludeTreeBase<NodeT>::create(CASDB &DB,
+Expected<NodeT> IncludeTreeBase<NodeT>::create(ObjectStore &DB,
                                                ArrayRef<ObjectRef> Refs,
                                                ArrayRef<char> Data) {
   // Using 4 chars for less chance that it will randomly match a wrong node and
@@ -33,7 +33,7 @@ Expected<NodeT> IncludeTreeBase<NodeT>::create(CASDB &DB,
   return NodeT(*Proxy);
 }
 
-Expected<IncludeFile> IncludeFile::create(CASDB &DB, StringRef Filename,
+Expected<IncludeFile> IncludeFile::create(ObjectStore &DB, StringRef Filename,
                                           ObjectRef Contents) {
   auto PathRef = DB.storeFromString({}, Filename);
   if (!PathRef)
@@ -60,11 +60,10 @@ llvm::Error IncludeTree::forEachInclude(
   });
 }
 
-Expected<IncludeTree>
-IncludeTree::create(CASDB &DB, SrcMgr::CharacteristicKind FileCharacteristic,
-                    ObjectRef BaseFile,
-                    ArrayRef<std::pair<ObjectRef, uint32_t>> Includes,
-                    llvm::SmallBitVector Checks) {
+Expected<IncludeTree> IncludeTree::create(
+    ObjectStore &DB, SrcMgr::CharacteristicKind FileCharacteristic,
+    ObjectRef BaseFile, ArrayRef<std::pair<ObjectRef, uint32_t>> Includes,
+    llvm::SmallBitVector Checks) {
   // The data buffer is composed of
   // 1. `uint32_t` offsets of includes
   // 2. 1 byte for `CharacteristicKind`
@@ -117,7 +116,7 @@ IncludeTree::create(CASDB &DB, SrcMgr::CharacteristicKind FileCharacteristic,
   return IncludeTreeBase::create(DB, Refs, Buffer);
 }
 
-Expected<IncludeTree> IncludeTree::get(CASDB &DB, ObjectRef Ref) {
+Expected<IncludeTree> IncludeTree::get(ObjectStore &DB, ObjectRef Ref) {
   auto Node = DB.getProxy(Ref);
   if (!Node)
     return Node.takeError();
@@ -175,7 +174,7 @@ llvm::Error IncludeFileList::forEachFile(
   });
 }
 
-Expected<IncludeFileList> IncludeFileList::create(CASDB &DB,
+Expected<IncludeFileList> IncludeFileList::create(ObjectStore &DB,
                                                   ArrayRef<FileEntry> Files) {
   SmallVector<ObjectRef, 16> Refs;
   Refs.reserve(Files.size());
@@ -193,7 +192,7 @@ Expected<IncludeFileList> IncludeFileList::create(CASDB &DB,
   return IncludeTreeBase::create(DB, Refs, Buffer);
 }
 
-Expected<IncludeFileList> IncludeFileList::get(CASDB &DB, ObjectRef Ref) {
+Expected<IncludeFileList> IncludeFileList::get(ObjectStore &DB, ObjectRef Ref) {
   auto Node = DB.getProxy(Ref);
   if (!Node)
     return Node.takeError();
@@ -212,7 +211,7 @@ bool IncludeFileList::isValid(const ObjectProxy &Node) {
          Base.getData().size() == NumFiles * sizeof(FileSizeTy);
 }
 
-Expected<IncludeTreeRoot> IncludeTreeRoot::create(CASDB &DB,
+Expected<IncludeTreeRoot> IncludeTreeRoot::create(ObjectStore &DB,
                                                   ObjectRef MainFileTree,
                                                   ObjectRef FileList,
                                                   Optional<ObjectRef> PCHRef) {
@@ -225,7 +224,7 @@ Expected<IncludeTreeRoot> IncludeTreeRoot::create(CASDB &DB,
   }
 }
 
-Expected<IncludeTreeRoot> IncludeTreeRoot::get(CASDB &DB, ObjectRef Ref) {
+Expected<IncludeTreeRoot> IncludeTreeRoot::get(ObjectStore &DB, ObjectRef Ref) {
   auto Node = DB.getProxy(Ref);
   if (!Node)
     return Node.takeError();
@@ -299,7 +298,7 @@ namespace {
 /// "replaying" an \p IncludeTreeRoot. It is not intended to be a complete
 /// implementation of a file system.
 class IncludeTreeFileSystem : public llvm::vfs::FileSystem {
-  llvm::cas::CASDB &CAS;
+  llvm::cas::ObjectStore &CAS;
 
 public:
   class IncludeTreeFile : public llvm::vfs::File {
@@ -328,7 +327,7 @@ public:
     std::error_code close() override { return std::error_code(); }
   };
 
-  explicit IncludeTreeFileSystem(llvm::cas::CASDB &CAS) : CAS(CAS) {}
+  explicit IncludeTreeFileSystem(llvm::cas::ObjectStore &CAS) : CAS(CAS) {}
 
   struct FileEntry {
     cas::ObjectRef ContentsRef;

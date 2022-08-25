@@ -31,7 +31,7 @@ bool TreeSchema::isNode(const ObjectProxy &Node) const {
   return FirstRef == getKindRef();
 }
 
-TreeSchema::TreeSchema(cas::CASDB &CAS) : TreeSchema::RTTIExtends(CAS) {
+TreeSchema::TreeSchema(cas::ObjectStore &CAS) : TreeSchema::RTTIExtends(CAS) {
   auto Kind = cantFail(CAS.createProxy(None, SchemaName));
   TreeKindRef.emplace(Kind.getRef());
 }
@@ -53,9 +53,8 @@ Error TreeSchema::forEachTreeEntry(
 }
 
 Error TreeSchema::walkFileTreeRecursively(
-    CASDB &CAS, const ObjectProxy &Root,
-    function_ref<Error(const NamedTreeEntry &, Optional<TreeProxy>)>
-        Callback) {
+    ObjectStore &CAS, const ObjectProxy &Root,
+    function_ref<Error(const NamedTreeEntry &, Optional<TreeProxy>)> Callback) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
   SmallString<128> PathStorage;

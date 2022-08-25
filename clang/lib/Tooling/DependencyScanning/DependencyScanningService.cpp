@@ -8,8 +8,8 @@
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace clang;

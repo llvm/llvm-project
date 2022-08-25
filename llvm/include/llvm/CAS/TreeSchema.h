@@ -9,8 +9,8 @@
 #ifndef LLVM_CAS_TREESCHEMA_H
 #define LLVM_CAS_TREESCHEMA_H
 
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CASNodeSchema.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeEntry.h"
 
 namespace llvm {
@@ -28,7 +28,7 @@ public:
   }
   bool isNode(const ObjectProxy &Node) const final;
 
-  TreeSchema(CASDB &CAS);
+  TreeSchema(ObjectStore &CAS);
 
   size_t getNumTreeEntries(TreeProxy Tree) const;
 
@@ -45,7 +45,7 @@ public:
   /// Passes the \p TreeNodeProxy if the entry is a \p TreeEntry::Tree,
   /// otherwise passes \p None.
   Error walkFileTreeRecursively(
-      CASDB &CAS, const ObjectProxy &Root,
+      ObjectStore &CAS, const ObjectProxy &Root,
       function_ref<Error(const NamedTreeEntry &, Optional<TreeProxy>)>
           Callback);
 

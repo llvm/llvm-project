@@ -8,8 +8,8 @@
 
 #include "BuiltinCAS.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/HashMappedTrie.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/OnDiskHashMappedTrie.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
@@ -39,7 +39,7 @@ private:
 
 class InMemoryActionCache final : public ActionCache {
 public:
-  InMemoryActionCache(CASDB &CAS);
+  InMemoryActionCache(ObjectStore &CAS);
 
   Error putImpl(ArrayRef<uint8_t> ActionKey, const ObjectRef &Result) final;
   Expected<Optional<ObjectRef>>
@@ -59,7 +59,7 @@ public:
   Expected<Optional<ObjectRef>>
   getImpl(ArrayRef<uint8_t> ActionKey) const final;
 
-  static Expected<std::unique_ptr<OnDiskActionCache>> create(CASDB &CAS,
+  static Expected<std::unique_ptr<OnDiskActionCache>> create(ObjectStore &CAS,
                                                              StringRef Path);
 
 private:
@@ -73,7 +73,7 @@ private:
   static constexpr StringLiteral ActionCacheFile = "actions";
   static constexpr StringLiteral FilePrefix = "v1.";
 
-  OnDiskActionCache(CASDB &CAS, StringRef RootPath,
+  OnDiskActionCache(ObjectStore &CAS, StringRef RootPath,
                     OnDiskHashMappedTrie ActionCache);
 
   std::string Path;
@@ -89,7 +89,7 @@ static std::string hashToString(ArrayRef<uint8_t> Hash) {
   return Str.str().str();
 }
 
-static Error createResultCachePoisonedError(StringRef Key, CASDB &CAS,
+static Error createResultCachePoisonedError(StringRef Key, ObjectStore &CAS,
                                             ObjectRef Output,
                                             ArrayRef<uint8_t> ExistingOutput) {
   std::string OutID = CAS.getID(Output).toString();
@@ -111,7 +111,7 @@ static Error createResultCacheUnknownObjectError(StringRef Key,
 
 // TODO: Check the hash schema is the same between action cache and CAS. If we
 // can derive that from static type information, that would be even better.
-InMemoryActionCache::InMemoryActionCache(CASDB &CAS) : ActionCache(CAS) {}
+InMemoryActionCache::InMemoryActionCache(ObjectStore &CAS) : ActionCache(CAS) {}
 
 Expected<Optional<ObjectRef>>
 InMemoryActionCache::getImpl(ArrayRef<uint8_t> Key) const {
@@ -140,17 +140,17 @@ Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key,
                                         Observed.getValue());
 }
 
-std::unique_ptr<ActionCache> cas::createInMemoryActionCache(CASDB &CAS) {
+std::unique_ptr<ActionCache> cas::createInMemoryActionCache(ObjectStore &CAS) {
   return std::make_unique<InMemoryActionCache>(CAS);
 }
 
 #if LLVM_ENABLE_ONDISK_CAS
-OnDiskActionCache::OnDiskActionCache(CASDB &CAS, StringRef Path,
+OnDiskActionCache::OnDiskActionCache(ObjectStore &CAS, StringRef Path,
                                      OnDiskHashMappedTrie Cache)
     : ActionCache(CAS), Path(Path.str()), Cache(std::move(Cache)) {}
 
 Expected<std::unique_ptr<OnDiskActionCache>>
-OnDiskActionCache::create(CASDB &CAS, StringRef AbsPath) {
+OnDiskActionCache::create(ObjectStore &CAS, StringRef AbsPath) {
   if (std::error_code EC = sys::fs::create_directories(AbsPath))
     return createFileError(AbsPath, EC);
 
@@ -217,12 +217,12 @@ std::string cas::getDefaultOnDiskActionCachePath() {
 }
 
 Expected<std::unique_ptr<ActionCache>>
-cas::createOnDiskActionCache(CASDB &CAS, StringRef Path) {
+cas::createOnDiskActionCache(ObjectStore &CAS, StringRef Path) {
   return OnDiskActionCache::create(CAS, Path);
 }
 # else
 Expected<std::unique_ptr<ActionCache>>
-cas::createOnDiskActionCache(CASDB &CAS, StringRef Path) {
+cas::createOnDiskActionCache(ObjectStore &CAS, StringRef Path) {
   return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
 }
 #endif /* LLVM_ENABLE_ONDISK_CAS */

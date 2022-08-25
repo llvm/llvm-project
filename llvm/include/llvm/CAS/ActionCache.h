@@ -16,7 +16,7 @@
 
 namespace llvm::cas {
 
-class CASDB;
+class ObjectStore;
 class CASID;
 class ObjectProxy;
 
@@ -33,7 +33,7 @@ public:
   // has function.
   CacheKey(const CASID &ID);
   CacheKey(const ObjectProxy &Proxy);
-  CacheKey(const CASDB &CAS, const ObjectRef &Ref);
+  CacheKey(const ObjectStore &CAS, const ObjectRef &Ref);
 
 private:
   std::string Key;
@@ -75,23 +75,23 @@ protected:
   virtual Error putImpl(ArrayRef<uint8_t> ResolvedKey,
                         const ObjectRef &Result) = 0;
 
-  ActionCache(CASDB &CAS) : CAS(CAS) {}
+  ActionCache(ObjectStore &CAS) : CAS(CAS) {}
 
-  CASDB &getCAS() const { return CAS; }
+  ObjectStore &getCAS() const { return CAS; }
 
 private:
-  CASDB &CAS;
+  ObjectStore &CAS;
 };
 
 /// Create an action cache in memory.
-std::unique_ptr<ActionCache> createInMemoryActionCache(CASDB &CAS);
+std::unique_ptr<ActionCache> createInMemoryActionCache(ObjectStore &CAS);
 
 /// Get a reasonable default on-disk path for a persistent ActionCache for the
 /// current user.
 std::string getDefaultOnDiskActionCachePath();
 
 /// Create an action cache on disk.
-Expected<std::unique_ptr<ActionCache>> createOnDiskActionCache(CASDB &CAS,
+Expected<std::unique_ptr<ActionCache>> createOnDiskActionCache(ObjectStore &CAS,
                                                                StringRef Path);
 } // end namespace llvm::cas
 

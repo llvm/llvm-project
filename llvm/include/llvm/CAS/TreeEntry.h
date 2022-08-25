@@ -15,7 +15,7 @@
 namespace llvm {
 namespace cas {
 
-class CASDB;
+class ObjectStore;
 
 class TreeEntry {
 public:
@@ -60,7 +60,7 @@ public:
   NamedTreeEntry(ObjectRef Ref, EntryKind Kind, StringRef Name)
       : TreeEntry(Ref, Kind), Name(Name) {}
 
-  void print(raw_ostream &OS, CASDB &CAS) const;
+  void print(raw_ostream &OS, ObjectStore &CAS) const;
 
 private:
   StringRef Name;

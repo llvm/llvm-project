@@ -19,12 +19,12 @@ class raw_ostream;
 
 namespace cas {
 
-class CASDB;
+class ObjectStore;
 
 class ObjectHandle;
 class ObjectRef;
 
-/// Base class for references to things in \a CASDB.
+/// Base class for references to things in \a ObjectStore.
 class ReferenceBase {
 protected:
   struct DenseMapEmptyTag {};
@@ -34,7 +34,7 @@ protected:
 
 public:
   /// Get an internal reference.
-  uint64_t getInternalRef(const CASDB &ExpectedCAS) const {
+  uint64_t getInternalRef(const ObjectStore &ExpectedCAS) const {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(CAS == &ExpectedCAS && "Extracting reference for the wrong CAS");
 #endif
@@ -66,8 +66,8 @@ protected:
   }
 
 protected:
-  friend class CASDB;
-  ReferenceBase(const CASDB *CAS, uint64_t InternalRef, bool IsHandle)
+  friend class ObjectStore;
+  ReferenceBase(const ObjectStore *CAS, uint64_t InternalRef, bool IsHandle)
       : InternalRef(InternalRef) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
     this->CAS = CAS;
@@ -85,32 +85,32 @@ private:
   uint64_t InternalRef;
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  const CASDB *CAS = nullptr;
+  const ObjectStore *CAS = nullptr;
 #endif
 };
 
-/// Reference to an object in a \a CASDB instance.
+/// Reference to an object in a \a ObjectStore instance.
 ///
 /// If you have an ObjectRef, you know the object exists, and you can point at
-/// it from new nodes with \a CASDB::store(), but you don't know anything
+/// it from new nodes with \a ObjectStore::store(), but you don't know anything
 /// about it. "Loading" the object is a separate step that may not have
 /// happened yet, and which can fail (due to filesystem corruption) or
 /// introduce latency (if downloading from a remote store).
 ///
-/// \a CASDB::store() takes a list of these, and these are returned by \a
-/// CASDB::forEachRef() and \a CASDB::readRef(), which are accessors for nodes,
-/// and \a CASDB::getReference().
+/// \a ObjectStore::store() takes a list of these, and these are returned by \a
+/// ObjectStore::forEachRef() and \a ObjectStore::readRef(), which are accessors
+/// for nodes, and \a ObjectStore::getReference().
 ///
-/// \a CASDB::load() will load the referenced object, and returns \a
+/// \a ObjectStore::load() will load the referenced object, and returns \a
 /// ObjectHandle, a variant that knows what kind of entity it is. \a
-/// CASDB::getReferenceKind() can expect the type of reference without asking
-/// for unloaded objects to be loaded.
+/// ObjectStore::getReferenceKind() can expect the type of reference without
+/// asking for unloaded objects to be loaded.
 ///
-/// This is a wrapper around a \c uint64_t (and a \a CASDB instance when
+/// This is a wrapper around a \c uint64_t (and a \a ObjectStore instance when
 /// assertions are on). If necessary, it can be deconstructed and reconstructed
 /// using \a Reference::getInternalRef() and \a
 /// Reference::getFromInternalRef(), but clients aren't expected to need to do
-/// this. These both require the right \a CASDB instance.
+/// this. These both require the right \a ObjectStore instance.
 class ObjectRef : public ReferenceBase {
   struct DenseMapTag {};
 
@@ -123,7 +123,8 @@ public:
   }
 
   /// Allow a reference to be recreated after it's deconstructed.
-  static ObjectRef getFromInternalRef(const CASDB &CAS, uint64_t InternalRef) {
+  static ObjectRef getFromInternalRef(const ObjectStore &CAS,
+                                      uint64_t InternalRef) {
     return ObjectRef(CAS, InternalRef);
   }
 
@@ -140,10 +141,10 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 
 private:
-  friend class CASDB;
+  friend class ObjectStore;
   friend class ReferenceBase;
   using ReferenceBase::ReferenceBase;
-  ObjectRef(const CASDB &CAS, uint64_t InternalRef)
+  ObjectRef(const ObjectStore &CAS, uint64_t InternalRef)
       : ReferenceBase(&CAS, InternalRef, /*IsHandle=*/false) {
     assert(InternalRef != -1ULL && "Reserved for DenseMapInfo");
     assert(InternalRef != -2ULL && "Reserved for DenseMapInfo");
@@ -153,7 +154,7 @@ private:
   explicit ObjectRef(ReferenceBase) = delete;
 };
 
-/// Handle to a loaded object in a \a CASDB instance.
+/// Handle to a loaded object in a \a ObjectStore instance.
 ///
 /// ObjectHandle encapulates a *loaded* object in the CAS. You need one
 /// of these to inspect the content of an object: to look at its stored
@@ -173,11 +174,11 @@ public:
   LLVM_DUMP_METHOD void dump() const;
 
 private:
-  friend class CASDB;
+  friend class ObjectStore;
   friend class ReferenceBase;
   using ReferenceBase::ReferenceBase;
   explicit ObjectHandle(ReferenceBase) = delete;
-  ObjectHandle(const CASDB &CAS, uint64_t InternalRef)
+  ObjectHandle(const ObjectStore &CAS, uint64_t InternalRef)
       : ReferenceBase(&CAS, InternalRef, /*IsHandle=*/true) {}
 };
 

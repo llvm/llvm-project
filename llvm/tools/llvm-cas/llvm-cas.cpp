@@ -8,10 +8,10 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CASFileSystem.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
 #include "llvm/CAS/Utils.h"
 #include "llvm/Support/CommandLine.h"
@@ -35,21 +35,22 @@ static cl::list<std::string> PrefixMapPaths(
     "prefix-map",
     cl::desc("prefix map for file system ingestion, -prefix-map BEFORE=AFTER"));
 
-static int dump(CASDB &CAS);
-static int listTree(CASDB &CAS, CASID ID);
-static int listTreeRecursively(CASDB &CAS, CASID ID);
-static int listObjectReferences(CASDB &CAS, CASID ID);
-static int catBlob(CASDB &CAS, CASID ID);
-static int catNodeData(CASDB &CAS, CASID ID);
-static int printKind(CASDB &CAS, CASID ID);
-static int makeBlob(CASDB &CAS, StringRef DataPath);
-static int makeNode(CASDB &CAS, ArrayRef<std::string> References, StringRef DataPath);
-static int diffGraphs(CASDB &CAS, CASID LHS, CASID RHS);
-static int traverseGraph(CASDB &CAS, CASID ID);
-static int ingestFileSystem(CASDB &CAS, StringRef Path);
-static int mergeTrees(CASDB &CAS, ArrayRef<std::string> Objects);
-static int getCASIDForFile(CASDB &CAS, CASID ID, StringRef Path);
-static int validateObject(CASDB &CAS, CASID ID);
+static int dump(ObjectStore &CAS);
+static int listTree(ObjectStore &CAS, CASID ID);
+static int listTreeRecursively(ObjectStore &CAS, CASID ID);
+static int listObjectReferences(ObjectStore &CAS, CASID ID);
+static int catBlob(ObjectStore &CAS, CASID ID);
+static int catNodeData(ObjectStore &CAS, CASID ID);
+static int printKind(ObjectStore &CAS, CASID ID);
+static int makeBlob(ObjectStore &CAS, StringRef DataPath);
+static int makeNode(ObjectStore &CAS, ArrayRef<std::string> References,
+                    StringRef DataPath);
+static int diffGraphs(ObjectStore &CAS, CASID LHS, CASID RHS);
+static int traverseGraph(ObjectStore &CAS, CASID ID);
+static int ingestFileSystem(ObjectStore &CAS, StringRef Path);
+static int mergeTrees(ObjectStore &CAS, ArrayRef<std::string> Objects);
+static int getCASIDForFile(ObjectStore &CAS, CASID ID, StringRef Path);
+static int validateObject(ObjectStore &CAS, CASID ID);
 
 int main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
@@ -111,7 +112,7 @@ int main(int Argc, char **Argv) {
   if (CASPath.empty())
     ExitOnErr(
         createStringError(inconvertibleErrorCode(), "missing --cas=<path>"));
-  std::unique_ptr<CASDB> CAS;
+  std::unique_ptr<ObjectStore> CAS;
   if (CASPath == "auto")
     CAS = ExitOnErr(
         llvm::cas::createOnDiskCAS(llvm::cas::getDefaultOnDiskCASPath()));
@@ -183,7 +184,7 @@ int main(int Argc, char **Argv) {
   return catBlob(*CAS, ID);
 }
 
-int listTree(CASDB &CAS, CASID ID) {
+int listTree(ObjectStore &CAS, CASID ID) {
   ExitOnError ExitOnErr("llvm-cas: ls-tree: ");
 
   TreeSchema Schema(CAS);
@@ -197,7 +198,7 @@ int listTree(CASDB &CAS, CASID ID) {
   return 0;
 }
 
-int listTreeRecursively(CASDB &CAS, CASID ID) {
+int listTreeRecursively(ObjectStore &CAS, CASID ID) {
   ExitOnError ExitOnErr("llvm-cas: ls-tree-recursively: ");
   TreeSchema Schema(CAS);
   ExitOnErr(Schema.walkFileTreeRecursively(
@@ -215,9 +216,7 @@ int listTreeRecursively(CASDB &CAS, CASID ID) {
   return 0;
 }
 
-int catBlob(CASDB &CAS, CASID ID) {
-  return catNodeData(CAS, ID);
-}
+int catBlob(ObjectStore &CAS, CASID ID) { return catNodeData(CAS, ID); }
 
 static Expected<std::unique_ptr<MemoryBuffer>>
 openBuffer(StringRef DataPath) {
@@ -228,13 +227,13 @@ openBuffer(StringRef DataPath) {
                       : llvm::MemoryBuffer::getFile(DataPath));
 }
 
-int dump(CASDB &CAS) {
+int dump(ObjectStore &CAS) {
   ExitOnError ExitOnErr("llvm-cas: dump: ");
   CAS.print(llvm::outs());
   return 0;
 }
 
-int makeBlob(CASDB &CAS, StringRef DataPath) {
+int makeBlob(ObjectStore &CAS, StringRef DataPath) {
   ExitOnError ExitOnErr("llvm-cas: make-blob: ");
   std::unique_ptr<MemoryBuffer> Buffer =
       ExitOnErr(openBuffer(DataPath));
@@ -244,20 +243,20 @@ int makeBlob(CASDB &CAS, StringRef DataPath) {
   return 0;
 }
 
-int catNodeData(CASDB &CAS, CASID ID) {
+int catNodeData(ObjectStore &CAS, CASID ID) {
   ExitOnError ExitOnErr("llvm-cas: cat-node-data: ");
   llvm::outs() << ExitOnErr(CAS.getProxy(ID)).getData();
   return 0;
 }
 
-static StringRef getKindString(CASDB &CAS, ObjectProxy Object) {
+static StringRef getKindString(ObjectStore &CAS, ObjectProxy Object) {
   TreeSchema Schema(CAS);
   if (Schema.isNode(Object))
     return "tree";
   return "object";
 }
 
-int printKind(CASDB &CAS, CASID ID) {
+int printKind(ObjectStore &CAS, CASID ID) {
   ExitOnError ExitOnErr("llvm-cas: print-kind: ");
   ObjectProxy Object = ExitOnErr(CAS.getProxy(ID));
 
@@ -265,7 +264,7 @@ int printKind(CASDB &CAS, CASID ID) {
   return 0;
 }
 
-int listObjectReferences(CASDB &CAS, CASID ID) {
+int listObjectReferences(ObjectStore &CAS, CASID ID) {
   ExitOnError ExitOnErr("llvm-cas: ls-node-refs: ");
 
   ObjectProxy Object = ExitOnErr(CAS.getProxy(ID));
@@ -277,7 +276,8 @@ int listObjectReferences(CASDB &CAS, CASID ID) {
   return 0;
 }
 
-static int makeNode(CASDB &CAS, ArrayRef<std::string> Objects, StringRef DataPath) {
+static int makeNode(ObjectStore &CAS, ArrayRef<std::string> Objects,
+                    StringRef DataPath) {
   std::unique_ptr<MemoryBuffer> Data =
       ExitOnError("llvm-cas: make-node: data: ")(openBuffer(DataPath));
 
@@ -304,7 +304,7 @@ struct GraphInfo {
 };
 } // namespace
 
-static GraphInfo traverseObjectGraph(CASDB &CAS, CASID TopLevel) {
+static GraphInfo traverseObjectGraph(ObjectStore &CAS, CASID TopLevel) {
   ExitOnError ExitOnErr("llvm-cas: traverse-node-graph: ");
   GraphInfo Info;
 
@@ -342,7 +342,7 @@ static GraphInfo traverseObjectGraph(CASDB &CAS, CASID TopLevel) {
   return Info;
 }
 
-static void printDiffs(CASDB &CAS, const GraphInfo &Baseline,
+static void printDiffs(ObjectStore &CAS, const GraphInfo &Baseline,
                        const GraphInfo &New, StringRef NewName) {
   ExitOnError ExitOnErr("llvm-cas: diff-graphs: ");
 
@@ -358,7 +358,7 @@ static void printDiffs(CASDB &CAS, const GraphInfo &Baseline,
   }
 }
 
-int diffGraphs(CASDB &CAS, CASID LHS, CASID RHS) {
+int diffGraphs(ObjectStore &CAS, CASID LHS, CASID RHS) {
   if (LHS == RHS)
     return 0;
 
@@ -371,7 +371,7 @@ int diffGraphs(CASDB &CAS, CASID LHS, CASID RHS) {
   return 0;
 }
 
-int traverseGraph(CASDB &CAS, CASID ID) {
+int traverseGraph(ObjectStore &CAS, CASID ID) {
   ExitOnError ExitOnErr("llvm-cas: traverse-graph: ");
   GraphInfo Info = traverseObjectGraph(CAS, ID);
   printDiffs(CAS, GraphInfo{}, Info, "");
@@ -396,8 +396,8 @@ static Error recursiveAccess(CachingOnDiskFileSystem &FS, StringRef Path) {
   return Error::success();
 }
 
-static Expected<ObjectProxy>
-ingestFileSystemImpl(CASDB &CAS, StringRef Path) {
+static Expected<ObjectProxy> ingestFileSystemImpl(ObjectStore &CAS,
+                                                  StringRef Path) {
   auto FS = createCachingOnDiskFileSystem(CAS);
   if (!FS)
     return FS.takeError();
@@ -423,7 +423,7 @@ ingestFileSystemImpl(CASDB &CAS, StringRef Path) {
       });
 }
 
-int ingestFileSystem(CASDB &CAS, StringRef Path) {
+int ingestFileSystem(ObjectStore &CAS, StringRef Path) {
   ExitOnError ExitOnErr("llvm-cas: ingest: ");
   if (Path.empty())
     ExitOnErr(
@@ -433,7 +433,7 @@ int ingestFileSystem(CASDB &CAS, StringRef Path) {
   return 0;
 }
 
-static int mergeTrees(CASDB &CAS, ArrayRef<std::string> Objects) {
+static int mergeTrees(ObjectStore &CAS, ArrayRef<std::string> Objects) {
   ExitOnError ExitOnErr("llvm-cas: merge: ");
 
   HierarchicalTreeBuilder Builder;
@@ -457,7 +457,7 @@ static int mergeTrees(CASDB &CAS, ArrayRef<std::string> Objects) {
   return 0;
 }
 
-int getCASIDForFile(CASDB &CAS, CASID ID, StringRef Path) {
+int getCASIDForFile(ObjectStore &CAS, CASID ID, StringRef Path) {
   ExitOnError ExitOnErr("llvm-cas: get-cas-id: ");
   auto FS = createCASFileSystem(CAS, ID);
   if (!FS)
@@ -473,7 +473,7 @@ int getCASIDForFile(CASDB &CAS, CASID ID, StringRef Path) {
   return 0;
 }
 
-int validateObject(CASDB &CAS, CASID ID) {
+int validateObject(ObjectStore &CAS, CASID ID) {
   ExitOnError ExitOnErr("llvm-cas: validate: ");
   ExitOnErr(CAS.validate(ID));
   outs() << ID << ": validated successfully\n";

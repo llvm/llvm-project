@@ -408,6 +408,6 @@ Error InMemoryCAS::forEachRef(ObjectHandle Handle,
   return Error::success();
 }
 
-std::unique_ptr<CASDB> cas::createInMemoryCAS() {
+std::unique_ptr<ObjectStore> cas::createInMemoryCAS() {
   return std::make_unique<InMemoryCAS>();
 }

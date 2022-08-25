@@ -15,7 +15,7 @@
 
 namespace llvm {
 namespace cas {
-class CASDB;
+class ObjectStore;
 class CASID;
 class ObjectProxy;
 
@@ -36,7 +36,7 @@ public:
   /// the \p Kind string instead of its path.
   void addKindMap(StringRef Kind, StringRef Path);
 
-  CASDB &getCAS() const { return CAS; }
+  ObjectStore &getCAS() const { return CAS; }
 
 private:
   Expected<std::unique_ptr<vfs::OutputFileImpl>>
@@ -49,16 +49,16 @@ private:
   }
 
 public:
-  CASOutputBackend(std::shared_ptr<CASDB> CAS);
-  CASOutputBackend(CASDB &CAS);
+  CASOutputBackend(std::shared_ptr<ObjectStore> CAS);
+  CASOutputBackend(ObjectStore &CAS);
   ~CASOutputBackend();
 
 private:
   struct PrivateImpl;
   std::unique_ptr<PrivateImpl> Impl;
 
-  CASDB &CAS;
-  std::shared_ptr<CASDB> OwnedCAS;
+  ObjectStore &CAS;
+  std::shared_ptr<ObjectStore> OwnedCAS;
 };
 
 } // namespace cas

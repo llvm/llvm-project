@@ -99,7 +99,7 @@ public:
   /// cached filesystem contents.
   virtual std::unique_ptr<TreeBuilder> createTreeBuilder() = 0;
 
-  CASDB &getCAS() const { return DB; }
+  ObjectStore &getCAS() const { return DB; }
 
   /// Get a proxy FS that has an independent working directory but uses the
   /// same thread-safe cache.
@@ -110,19 +110,19 @@ public:
   }
 
 protected:
-  CachingOnDiskFileSystem(std::shared_ptr<CASDB> DB);
-  CachingOnDiskFileSystem(CASDB &DB);
+  CachingOnDiskFileSystem(std::shared_ptr<ObjectStore> DB);
+  CachingOnDiskFileSystem(ObjectStore &DB);
   CachingOnDiskFileSystem(const CachingOnDiskFileSystem &) = default;
 
-  CASDB &DB;
-  std::shared_ptr<CASDB> OwnedDB;
+  ObjectStore &DB;
+  std::shared_ptr<ObjectStore> OwnedDB;
 };
 
 Expected<IntrusiveRefCntPtr<CachingOnDiskFileSystem>>
-createCachingOnDiskFileSystem(std::shared_ptr<CASDB> DB);
+createCachingOnDiskFileSystem(std::shared_ptr<ObjectStore> DB);
 
 Expected<IntrusiveRefCntPtr<CachingOnDiskFileSystem>>
-createCachingOnDiskFileSystem(CASDB &DB);
+createCachingOnDiskFileSystem(ObjectStore &DB);
 
 } // namespace cas
 } // namespace llvm

@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BuiltinCAS.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/CASDB.h"
+#include "BuiltinCAS.h"
 #include "llvm/CAS/CASID.h"
+#include "llvm/CAS/ObjectStore.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -19,7 +19,7 @@ void ActionCache::anchor() {}
 CacheKey::CacheKey(const CASID &ID) : Key(toStringRef(ID.getHash()).str()) {}
 CacheKey::CacheKey(const ObjectProxy &Proxy)
     : CacheKey(Proxy.getCAS(), Proxy.getRef()) {}
-CacheKey::CacheKey(const CASDB &CAS, const ObjectRef &Ref)
+CacheKey::CacheKey(const ObjectStore &CAS, const ObjectRef &Ref)
     : Key(toStringRef(CAS.getID(Ref).getHash())) {}
 
 Expected<ObjectRef>

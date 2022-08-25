@@ -723,11 +723,11 @@ struct OnDiskContent {
 ///
 /// Eventually: update UniqueID/CASID to store:
 /// - uint64_t: for BuiltinCAS, this is a pointer to Trie record
-/// - CASDB*: for knowing how to compare, and for getHash()
+/// - ObjectStore*: for knowing how to compare, and for getHash()
 ///
 /// Eventually: add ObjectHandle (update ObjectRef):
 /// - uint64_t: for BuiltinCAS, this is a pointer to Data record
-/// - CASDB*: for implementing APIs
+/// - ObjectStore*: for implementing APIs
 ///
 /// Eventually: consider creating a StringPool for strings instead of using
 /// RecordDataStore table.
@@ -1980,7 +1980,7 @@ OnDiskCAS::OnDiskCAS(StringRef RootPath, OnDiskHashMappedTrie Index,
   TempPrefix = Temp.str().str();
 }
 
-Expected<std::unique_ptr<CASDB>> cas::createOnDiskCAS(const Twine &Path) {
+Expected<std::unique_ptr<ObjectStore>> cas::createOnDiskCAS(const Twine &Path) {
   // FIXME: An absolute path isn't really good enough. Should open a directory
   // and use openat() for files underneath.
   SmallString<256> AbsPath;
@@ -1996,7 +1996,7 @@ Expected<std::unique_ptr<CASDB>> cas::createOnDiskCAS(const Twine &Path) {
 
 #else /* LLVM_ENABLE_ONDISK_CAS */
 
-Expected<std::unique_ptr<CASDB>> cas::createOnDiskCAS(const Twine &Path) {
+Expected<std::unique_ptr<ObjectStore>> cas::createOnDiskCAS(const Twine &Path) {
   return createStringError(inconvertibleErrorCode(), "OnDiskCAS is disabled");
 }
 

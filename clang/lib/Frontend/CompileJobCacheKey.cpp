@@ -11,8 +11,8 @@
 #include "clang/Basic/Version.h"
 #include "clang/CAS/IncludeTree.h"
 #include "clang/Frontend/CompilerInvocation.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
 #include "llvm/CAS/Utils.h"
 #include "llvm/Support/StringSaver.h"
@@ -24,7 +24,8 @@ using namespace llvm;
 using namespace llvm::cas;
 
 static llvm::cas::CASID
-createCompileJobCacheKeyForArgs(CASDB &CAS, ArrayRef<const char *> CC1Args,
+createCompileJobCacheKeyForArgs(ObjectStore &CAS,
+                                ArrayRef<const char *> CC1Args,
                                 llvm::cas::CASID RootID, bool IsIncludeTree) {
   Optional<llvm::cas::ObjectRef> RootRef = CAS.getReference(RootID);
   if (!RootRef)
@@ -59,7 +60,7 @@ createCompileJobCacheKeyForArgs(CASDB &CAS, ArrayRef<const char *> CC1Args,
 }
 
 Optional<llvm::cas::CASID>
-clang::createCompileJobCacheKey(CASDB &CAS, DiagnosticsEngine &Diags,
+clang::createCompileJobCacheKey(ObjectStore &CAS, DiagnosticsEngine &Diags,
                                 const CompilerInvocation &OriginalInvocation) {
   CompilerInvocation InvocationForCacheKey(OriginalInvocation);
   FrontendOptions &FrontendOpts = InvocationForCacheKey.getFrontendOpts();
@@ -106,7 +107,7 @@ clang::createCompileJobCacheKey(CASDB &CAS, DiagnosticsEngine &Diags,
   return createCompileJobCacheKeyForArgs(CAS, Argv, *RootID, IsIncludeTree);
 }
 
-static Error printFileSystem(CASDB &CAS, ObjectRef Ref, raw_ostream &OS) {
+static Error printFileSystem(ObjectStore &CAS, ObjectRef Ref, raw_ostream &OS) {
   Expected<ObjectProxy> Root = CAS.getProxy(Ref);
   if (!Root)
     return Root.takeError();
@@ -123,7 +124,7 @@ static Error printFileSystem(CASDB &CAS, ObjectRef Ref, raw_ostream &OS) {
       });
 }
 
-static Error printCompileJobCacheKey(CASDB &CAS, ObjectProxy Node,
+static Error printCompileJobCacheKey(ObjectStore &CAS, ObjectProxy Node,
                                      raw_ostream &OS) {
   auto strError = [](const Twine &Err) {
     return createStringError(inconvertibleErrorCode(), Err);
@@ -179,7 +180,8 @@ static Error printCompileJobCacheKey(CASDB &CAS, ObjectProxy Node,
   });
 }
 
-Error clang::printCompileJobCacheKey(CASDB &CAS, CASID Key, raw_ostream &OS) {
+Error clang::printCompileJobCacheKey(ObjectStore &CAS, CASID Key,
+                                     raw_ostream &OS) {
   auto H = CAS.getProxy(Key);
   if (!H)
     return H.takeError();

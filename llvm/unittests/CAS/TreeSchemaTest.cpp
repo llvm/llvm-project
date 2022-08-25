@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CAS/CASDB.h"
-#include "llvm/CAS/HierarchicalTreeBuilder.h"
 #include "llvm/CAS/TreeSchema.h"
+#include "llvm/CAS/HierarchicalTreeBuilder.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
@@ -19,8 +19,8 @@ using namespace llvm;
 using namespace llvm::cas;
 
 TEST(TreeSchemaTest, Trees) {
-  std::unique_ptr<CASDB> CAS1 = createInMemoryCAS();
-  std::unique_ptr<CASDB> CAS2 = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS1 = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS2 = createInMemoryCAS();
 
   auto createBlobInBoth = [&](StringRef Content) {
     Optional<ObjectRef> H1, H2;
@@ -97,7 +97,7 @@ TEST(TreeSchemaTest, Trees) {
 
   // Insert into the other CAS and confirm the IDs are stable.
   for (int I = FlatIDs.size(), E = 0; I != E; --I) {
-    for (CASDB *CAS : {&*CAS1, &*CAS2}) {
+    for (ObjectStore *CAS : {&*CAS1, &*CAS2}) {
       TreeSchema Schema(*CAS);
       auto &ID = FlatIDs[I - 1];
       // Make a copy of the original entries and sort them.
@@ -163,7 +163,7 @@ TEST(TreeSchemaTest, Trees) {
     }
 
     llvm::sort(Entries);
-    for (CASDB *CAS : {&*CAS1, &*CAS2}) {
+    for (ObjectStore *CAS : {&*CAS1, &*CAS2}) {
       // Make a copy of the original entries and sort them.
       SmallVector<NamedTreeEntry> NewEntries;
       for (const NamedTreeEntry &Entry : Entries) {
@@ -191,7 +191,7 @@ TEST(TreeSchemaTest, Trees) {
 }
 
 TEST(TreeSchemaTest, Lookup) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   Optional<ObjectRef> Node;
   EXPECT_THAT_ERROR(CAS->storeFromString(None, "blob").moveInto(Node),
                     Succeeded());
@@ -225,7 +225,7 @@ TEST(TreeSchemaTest, Lookup) {
 }
 
 TEST(TreeSchemaTest, walkFileTreeRecursively) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
 
   auto make = [&](StringRef Content) {
     return cantFail(CAS->storeFromString(None, Content));

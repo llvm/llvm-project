@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/CASFileSystem.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -42,16 +42,16 @@ bufferHasContent(ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer,
          Buffer->getBufferIdentifier() == Content.getBufferIdentifier();
 }
 
-static ObjectRef createBlobUnchecked(CASDB &CAS, StringRef Content) {
+static ObjectRef createBlobUnchecked(ObjectStore &CAS, StringRef Content) {
   return llvm::cantFail(CAS.storeFromString(None, Content));
 }
 
-static Expected<ObjectProxy> createEmptyTree(CASDB &CAS) {
+static Expected<ObjectProxy> createEmptyTree(ObjectStore &CAS) {
   HierarchicalTreeBuilder Builder;
   return Builder.create(CAS);
 }
 
-static Expected<ObjectProxy> createFlatTree(CASDB &CAS) {
+static Expected<ObjectProxy> createFlatTree(ObjectStore &CAS) {
   HierarchicalTreeBuilder Builder;
   Builder.push(createBlobUnchecked(CAS, "1"), TreeEntry::Regular, "file1");
   Builder.push(createBlobUnchecked(CAS, "1"), TreeEntry::Regular, "1");
@@ -59,7 +59,7 @@ static Expected<ObjectProxy> createFlatTree(CASDB &CAS) {
   return Builder.create(CAS);
 }
 
-static Expected<ObjectProxy> createNestedTree(CASDB &CAS) {
+static Expected<ObjectProxy> createNestedTree(ObjectStore &CAS) {
   ObjectRef Data1 = createBlobUnchecked(CAS, "blob1");
   ObjectRef Data2 = createBlobUnchecked(CAS, "blob2");
   ObjectRef Data3 = createBlobUnchecked(CAS, "blob3");
@@ -74,7 +74,7 @@ static Expected<ObjectProxy> createNestedTree(CASDB &CAS) {
   return Builder.create(CAS);
 }
 
-static Expected<ObjectProxy> createSymlinksTree(CASDB &CAS) {
+static Expected<ObjectProxy> createSymlinksTree(ObjectStore &CAS) {
   auto make = [&](StringRef Bytes) { return createBlobUnchecked(CAS, Bytes); };
 
   HierarchicalTreeBuilder Builder;
@@ -94,7 +94,7 @@ static Expected<ObjectProxy> createSymlinksTree(CASDB &CAS) {
   return Builder.create(CAS);
 }
 
-static Expected<ObjectProxy> createSymlinkLoopsTree(CASDB &CAS) {
+static Expected<ObjectProxy> createSymlinkLoopsTree(ObjectStore &CAS) {
   auto make = [&](StringRef Bytes) { return createBlobUnchecked(CAS, Bytes); };
 
   HierarchicalTreeBuilder Builder;
@@ -108,7 +108,7 @@ static Expected<ObjectProxy> createSymlinkLoopsTree(CASDB &CAS) {
 }
 
 static Expected<std::unique_ptr<vfs::FileSystem>>
-createFS(CASDB &CAS, Expected<ObjectProxy> Tree) {
+createFS(ObjectStore &CAS, Expected<ObjectProxy> Tree) {
   if (!Tree)
     return Tree.takeError();
   return createCASFileSystem(CAS, Tree->getID());
@@ -133,7 +133,7 @@ static bool isEnd(IteratorType &I, std::error_code &EC) {
 }
 
 TEST(CASFileSystemTest, getBufferForFileEmpty) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   ASSERT_TRUE(CAS);
   std::unique_ptr<vfs::FileSystem> CASFS;
   ASSERT_THAT_ERROR(createFS(*CAS, createEmptyTree(*CAS)).moveInto(CASFS),
@@ -143,7 +143,7 @@ TEST(CASFileSystemTest, getBufferForFileEmpty) {
 }
 
 TEST(CASFileSystemTest, getBufferForFileFlat) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   ASSERT_TRUE(CAS);
 
   std::unique_ptr<vfs::FileSystem> CASFS;
@@ -168,7 +168,7 @@ TEST(CASFileSystemTest, getBufferForFileFlat) {
 }
 
 TEST(CASFileSystemTest, getBufferForFileNested) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   ASSERT_TRUE(CAS);
 
   std::unique_ptr<vfs::FileSystem> CASFS;
@@ -200,7 +200,7 @@ TEST(CASFileSystemTest, getBufferForFileNested) {
 }
 
 TEST(CASFileSystemTest, getBufferForFileSymlinks) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   ASSERT_TRUE(CAS);
   std::unique_ptr<vfs::FileSystem> CASFS;
   ASSERT_THAT_ERROR(createFS(*CAS, createSymlinksTree(*CAS)).moveInto(CASFS),
@@ -235,7 +235,7 @@ TEST(CASFileSystemTest, getBufferForFileSymlinks) {
 }
 
 TEST(CASFileSystemTest, getBufferForFileSymlinkLoops) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   ASSERT_TRUE(CAS);
   std::unique_ptr<vfs::FileSystem> CASFS;
   ASSERT_THAT_ERROR(
@@ -263,7 +263,7 @@ TEST(CASFileSystemTest, getBufferForFileSymlinkLoops) {
 }
 
 TEST(CASFileSystemTest, openFileForReadEmpty) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   ASSERT_TRUE(CAS);
   std::unique_ptr<vfs::FileSystem> CASFS;
   ASSERT_THAT_ERROR(createFS(*CAS, createEmptyTree(*CAS)).moveInto(CASFS),
@@ -273,7 +273,7 @@ TEST(CASFileSystemTest, openFileForReadEmpty) {
 }
 
 TEST(CASFileSystemTest, openFileForReadFlat) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   ASSERT_TRUE(CAS);
 
   std::unique_ptr<vfs::FileSystem> CASFS;
@@ -301,7 +301,7 @@ TEST(CASFileSystemTest, openFileForReadFlat) {
 }
 
 TEST(CASFileSystemTest, getDirectoryEntry) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   std::unique_ptr<vfs::FileSystem> CASFS;
   ASSERT_THAT_ERROR(createFS(*CAS, createSymlinksTree(*CAS)).moveInto(CASFS),
                     Succeeded());
@@ -341,7 +341,7 @@ TEST(CASFileSystemTest, getDirectoryEntry) {
 }
 
 TEST(CASFileSystemTest, getDirectoryEntrySymlinks) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   ASSERT_TRUE(CAS);
   std::unique_ptr<vfs::FileSystem> CASFS;
   ASSERT_THAT_ERROR(createFS(*CAS, createSymlinksTree(*CAS)).moveInto(CASFS),
@@ -376,7 +376,7 @@ TEST(CASFileSystemTest, getDirectoryEntrySymlinks) {
 }
 
 TEST(CASFileSystemTest, dirBeginEmpty) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   ASSERT_TRUE(CAS);
   std::unique_ptr<vfs::FileSystem> CASFS;
   ASSERT_THAT_ERROR(createFS(*CAS, createEmptyTree(*CAS)).moveInto(CASFS),
@@ -405,7 +405,7 @@ TEST(CASFileSystemTest, dirBeginEmpty) {
 }
 
 TEST(CASFileSystemTest, dirBeginFlat) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   ASSERT_TRUE(CAS);
 
   std::unique_ptr<vfs::FileSystem> CASFS;
@@ -438,7 +438,7 @@ TEST(CASFileSystemTest, dirBeginFlat) {
 }
 
 TEST(CASFileSystemTest, dirBeginNested) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   ASSERT_TRUE(CAS);
 
   std::unique_ptr<vfs::FileSystem> CASFS;
@@ -477,7 +477,7 @@ TEST(CASFileSystemTest, dirBeginNested) {
 }
 
 TEST(CASFileSystemTest, recursiveDirectoryIteratorNested) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   ASSERT_TRUE(CAS);
 
   std::unique_ptr<vfs::FileSystem> CASFS;

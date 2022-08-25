@@ -34,10 +34,10 @@ public:
 
   virtual bool isNode(const cas::ObjectProxy &Node) const = 0;
 
-  cas::CASDB &CAS;
+  cas::ObjectStore &CAS;
 
 protected:
-  NodeSchema(cas::CASDB &CAS) : CAS(CAS) {}
+  NodeSchema(cas::ObjectStore &CAS) : CAS(CAS) {}
 
 public:
   virtual ~NodeSchema() = default;
@@ -61,12 +61,12 @@ public:
     Schemas.push_back(std::move(S));
   }
 
-  cas::CASDB &getCAS() const { return CAS; }
+  cas::ObjectStore &getCAS() const { return CAS; }
 
-  explicit SchemaPool(cas::CASDB &CAS) : CAS(CAS) {}
+  explicit SchemaPool(cas::ObjectStore &CAS) : CAS(CAS) {}
 
 private:
-  cas::CASDB &CAS;
+  cas::ObjectStore &CAS;
   SmallVector<std::unique_ptr<NodeSchema>> Schemas;
 };
 

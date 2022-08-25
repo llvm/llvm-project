@@ -15,7 +15,7 @@
 namespace llvm {
 namespace cas {
 
-class CASDB;
+class ObjectStore;
 class CASID;
 
 /// For thread-safe filesystem implementations.

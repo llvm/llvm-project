@@ -8,7 +8,7 @@
 
 #include "llvm/CAS/Utils.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
@@ -34,7 +34,7 @@ static void printTreeEntryKind(raw_ostream &OS, TreeEntry::EntryKind Kind) {
   }
 }
 
-void cas::NamedTreeEntry::print(raw_ostream &OS, CASDB &CAS) const {
+void cas::NamedTreeEntry::print(raw_ostream &OS, ObjectStore &CAS) const {
   printTreeEntryKind(OS, getKind());
   OS << " " << CAS.getID(getRef()) << " " << Name;
   if (getKind() == TreeEntry::Tree)

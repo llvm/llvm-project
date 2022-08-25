@@ -10,13 +10,13 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticCAS.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Error.h"
 
 using namespace clang;
 using namespace llvm::cas;
 
-static std::shared_ptr<llvm::cas::CASDB>
+static std::shared_ptr<llvm::cas::ObjectStore>
 createCAS(const CASConfiguration &Config, DiagnosticsEngine &Diags) {
   if (Config.CASPath.empty())
     return llvm::cas::createInMemoryCAS();
@@ -37,7 +37,7 @@ createCAS(const CASConfiguration &Config, DiagnosticsEngine &Diags) {
   return nullptr;
 }
 
-std::shared_ptr<llvm::cas::CASDB>
+std::shared_ptr<llvm::cas::ObjectStore>
 CASOptions::getOrCreateCAS(DiagnosticsEngine &Diags,
                            bool CreateEmptyCASOnFailure) const {
   if (Cache.Config.IsFrozen)
@@ -77,7 +77,7 @@ void CASOptions::freezeConfig(DiagnosticsEngine &Diags) {
 }
 
 static std::shared_ptr<llvm::cas::ActionCache>
-createCache(CASDB &CAS, const CASConfiguration &Config,
+createCache(ObjectStore &CAS, const CASConfiguration &Config,
             DiagnosticsEngine &Diags) {
   if (Config.CachePath.empty())
     return llvm::cas::createInMemoryActionCache(CAS);

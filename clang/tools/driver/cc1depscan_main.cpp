@@ -30,10 +30,10 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/BuryPointer.h"
@@ -368,7 +368,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
     bool ProduceIncludeTree, bool &DiagnosticErrorOccurred,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping,
     llvm::function_ref<const char *(const Twine &)> SaveArg,
-    const CASOptions &CASOpts, std::shared_ptr<llvm::cas::CASDB> DB,
+    const CASOptions &CASOpts, std::shared_ptr<llvm::cas::ObjectStore> DB,
     std::shared_ptr<llvm::cas::ActionCache> Cache);
 
 static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
@@ -377,7 +377,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     ArrayRef<const char *> InputArgs, StringRef WorkingDirectory,
     SmallVectorImpl<const char *> &OutputArgs,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping,
-    llvm::cas::CASDB &DB,
+    llvm::cas::ObjectStore &DB,
     llvm::function_ref<const char *(const Twine &)> SaveArg);
 
 static void shutdownCC1ScanDepsDaemon(StringRef Path) {
@@ -416,7 +416,7 @@ static llvm::Expected<llvm::cas::CASID> scanAndUpdateCC1UsingDaemon(
     const cc1depscand::DepscanPrefixMapping &Mapping, StringRef Path,
     const DepscanSharing &Sharing,
     llvm::function_ref<const char *(const Twine &)> SaveArg,
-    llvm::cas::CASDB &CAS) {
+    llvm::cas::ObjectStore &CAS) {
   using namespace clang::cc1depscand;
 
   // FIXME: Skip some of this if -fcas-fs has been passed.
@@ -509,7 +509,7 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
                             DiagnosticsEngine &Diag,
                             const llvm::opt::ArgList &Args,
                             const CASOptions &CASOpts,
-                            std::shared_ptr<llvm::cas::CASDB> DB,
+                            std::shared_ptr<llvm::cas::ObjectStore> DB,
                             std::shared_ptr<llvm::cas::ActionCache> Cache,
                             llvm::Optional<llvm::cas::CASID> &RootID) {
   using namespace clang::driver;
@@ -631,7 +631,7 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
   CompilerInvocation::ParseCASArgs(CASOpts, ParsedCC1Args, Diags);
   CASOpts.ensurePersistentCAS();
 
-  std::shared_ptr<llvm::cas::CASDB> CAS = CASOpts.getOrCreateCAS(Diags);
+  std::shared_ptr<llvm::cas::ObjectStore> CAS = CASOpts.getOrCreateCAS(Diags);
   if (!CAS)
     return 1;
 
@@ -880,7 +880,7 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
   bool ProduceIncludeTree =
       ParsedCASArgs.hasArg(driver::options::OPT_fdepscan_include_tree);
 
-  std::shared_ptr<llvm::cas::CASDB> CAS = CASOpts.getOrCreateCAS(Diags);
+  std::shared_ptr<llvm::cas::ObjectStore> CAS = CASOpts.getOrCreateCAS(Diags);
   if (!CAS)
     llvm::report_fatal_error("clang -cc1depscand: cannot create CAS");
 
@@ -1127,7 +1127,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     ArrayRef<const char *> InputArgs, StringRef WorkingDirectory,
     SmallVectorImpl<const char *> &OutputArgs,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping,
-    llvm::cas::CASDB &DB,
+    llvm::cas::ObjectStore &DB,
     llvm::function_ref<const char *(const Twine &)> SaveArg) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
   Diags.setClient(&DiagsConsumer, /*ShouldOwnClient=*/false);
@@ -1154,7 +1154,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
     bool ProduceIncludeTree, bool &DiagnosticErrorOccurred,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping,
     llvm::function_ref<const char *(const Twine &)> SaveArg,
-    const CASOptions &CASOpts, std::shared_ptr<llvm::cas::CASDB> DB,
+    const CASOptions &CASOpts, std::shared_ptr<llvm::cas::ObjectStore> DB,
     std::shared_ptr<llvm::cas::ActionCache> Cache) {
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
   if (!ProduceIncludeTree)

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/CASProvidingFileSystem.h"
-#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 using namespace llvm;
@@ -16,11 +16,11 @@ using namespace llvm::cas;
 namespace {
 
 class CASProvidingFile final : public vfs::File {
-  std::shared_ptr<CASDB> DB;
+  std::shared_ptr<ObjectStore> DB;
   std::unique_ptr<File> UnderlyingFile;
 
 public:
-  CASProvidingFile(std::shared_ptr<CASDB> DB,
+  CASProvidingFile(std::shared_ptr<ObjectStore> DB,
                    std::unique_ptr<File> UnderlyingFile)
       : DB(std::move(DB)), UnderlyingFile(std::move(UnderlyingFile)) {}
 
@@ -53,10 +53,10 @@ public:
 };
 
 class CASProvidingFileSystem : public vfs::ProxyFileSystem {
-  std::shared_ptr<CASDB> DB;
+  std::shared_ptr<ObjectStore> DB;
 
 public:
-  CASProvidingFileSystem(std::shared_ptr<CASDB> DB,
+  CASProvidingFileSystem(std::shared_ptr<ObjectStore> DB,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
       : ProxyFileSystem(std::move(FS)), DB(std::move(DB)) {}
 
@@ -72,7 +72,7 @@ public:
 } // namespace
 
 std::unique_ptr<vfs::FileSystem> cas::createCASProvidingFileSystem(
-    std::shared_ptr<CASDB> DB,
+    std::shared_ptr<ObjectStore> DB,
     IntrusiveRefCntPtr<vfs::FileSystem> UnderlyingFS) {
   return std::make_unique<CASProvidingFileSystem>(std::move(DB),
                                                   std::move(UnderlyingFS));

@@ -10,9 +10,9 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/HashMappedTrie.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
@@ -124,11 +124,11 @@ public:
     return makeIntrusiveRefCnt<CachingOnDiskFileSystemImpl>(*this);
   }
 
-  CachingOnDiskFileSystemImpl(std::shared_ptr<CASDB> DB)
+  CachingOnDiskFileSystemImpl(std::shared_ptr<ObjectStore> DB)
       : CachingOnDiskFileSystem(std::move(DB)) {
     initializeWorkingDirectory();
   }
-  CachingOnDiskFileSystemImpl(CASDB &DB) : CachingOnDiskFileSystem(DB) {
+  CachingOnDiskFileSystemImpl(ObjectStore &DB) : CachingOnDiskFileSystem(DB) {
     initializeWorkingDirectory();
   }
 
@@ -184,10 +184,11 @@ private:
 };
 } // namespace
 
-CachingOnDiskFileSystem::CachingOnDiskFileSystem(std::shared_ptr<CASDB> DB)
+CachingOnDiskFileSystem::CachingOnDiskFileSystem(
+    std::shared_ptr<ObjectStore> DB)
     : DB(*DB), OwnedDB(std::move(DB)) {}
 
-CachingOnDiskFileSystem::CachingOnDiskFileSystem(CASDB &DB) : DB(DB) {}
+CachingOnDiskFileSystem::CachingOnDiskFileSystem(ObjectStore &DB) : DB(DB) {}
 
 class CachingOnDiskFileSystemImpl::VFSFile : public vfs::File {
 public:
@@ -214,11 +215,11 @@ public:
   std::error_code close() final { return std::error_code(); }
 
   VFSFile() = delete;
-  explicit VFSFile(CASDB &DB, DirectoryEntry &Entry, StringRef Name)
+  explicit VFSFile(ObjectStore &DB, DirectoryEntry &Entry, StringRef Name)
       : DB(DB), Entry(&Entry), Name(Name.str()) {}
 
 private:
-  CASDB &DB;
+  ObjectStore &DB;
   DirectoryEntry *Entry;
   std::string Name;
 };
@@ -613,7 +614,7 @@ getTreeEntryKind(const FileSystemCache::DirectoryEntry &Entry) {
 
 /// Push an entry to the builder, doing nothing (but returning false) for
 /// directories.
-static void pushEntryToBuilder(const CASDB &DB,
+static void pushEntryToBuilder(const ObjectStore &DB,
                                HierarchicalTreeBuilder &Builder,
                                const FileSystemCache::DirectoryEntry &Entry) {
   assert(!Entry.isDirectory());
@@ -878,11 +879,11 @@ Error CachingOnDiskFileSystemImpl::TreeBuilder::push(const Twine &Path) {
 }
 
 Expected<IntrusiveRefCntPtr<CachingOnDiskFileSystem>>
-cas::createCachingOnDiskFileSystem(std::shared_ptr<CASDB> DB) {
+cas::createCachingOnDiskFileSystem(std::shared_ptr<ObjectStore> DB) {
   return std::make_unique<CachingOnDiskFileSystemImpl>(std::move(DB));
 }
 
 Expected<IntrusiveRefCntPtr<CachingOnDiskFileSystem>>
-cas::createCachingOnDiskFileSystem(CASDB &DB) {
+cas::createCachingOnDiskFileSystem(ObjectStore &DB) {
   return std::make_unique<CachingOnDiskFileSystemImpl>(DB);
 }

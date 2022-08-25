@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CASTestConfig.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/CASDB.h"
+#include "CASTestConfig.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
@@ -19,7 +19,7 @@ using namespace llvm;
 using namespace llvm::cas;
 
 TEST_P(CASTest, ActionCacheHit) {
-  std::unique_ptr<CASDB> CAS = createCAS();
+  std::unique_ptr<ObjectStore> CAS = createCAS();
   std::unique_ptr<ActionCache> Cache = createActionCache(*CAS);
 
   Optional<ObjectProxy> ID;
@@ -32,7 +32,7 @@ TEST_P(CASTest, ActionCacheHit) {
 }
 
 TEST_P(CASTest, ActionCacheMiss) {
-  std::unique_ptr<CASDB> CAS = createCAS();
+  std::unique_ptr<ObjectStore> CAS = createCAS();
   std::unique_ptr<ActionCache> Cache = createActionCache(*CAS);
 
   Optional<ObjectProxy> ID1, ID2;
@@ -53,7 +53,7 @@ TEST_P(CASTest, ActionCacheMiss) {
 }
 
 TEST_P(CASTest, ActionCacheRewrite) {
-  std::unique_ptr<CASDB> CAS = createCAS();
+  std::unique_ptr<ObjectStore> CAS = createCAS();
   std::unique_ptr<ActionCache> Cache = createActionCache(*CAS);
 
   Optional<ObjectProxy> ID1, ID2;
@@ -68,8 +68,8 @@ TEST_P(CASTest, ActionCacheRewrite) {
 
 TEST(OnDiskActionCache, ActionCacheResultInvalid) {
   unittest::TempDir Temp("on-disk-cache", /*Unique=*/true);
-  std::unique_ptr<CASDB> CAS1 = createInMemoryCAS();
-  std::unique_ptr<CASDB> CAS2 = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS1 = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS2 = createInMemoryCAS();
 
   Optional<ObjectProxy> ID1, ID2, ID3;
   ASSERT_THAT_ERROR(CAS1->createProxy(None, "1").moveInto(ID1), Succeeded());

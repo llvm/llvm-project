@@ -34,10 +34,10 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CASFileSystem.h"
 #include "llvm/CAS/CASOutputBackend.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
 #include "llvm/CAS/Utils.h"
 #include "llvm/Config/llvm-config.h"
@@ -286,7 +286,7 @@ private:
 
   bool CacheCompileJob = false;
 
-  std::shared_ptr<llvm::cas::CASDB> CAS;
+  std::shared_ptr<llvm::cas::ObjectStore> CAS;
   std::shared_ptr<llvm::cas::ActionCache> Cache;
   SmallString<256> ResultDiags;
   Optional<llvm::cas::CASID> ResultCacheKey;

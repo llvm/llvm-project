@@ -22,7 +22,7 @@
 namespace llvm {
 namespace cas {
 
-class CASDB;
+class ObjectStore;
 
 /// Structure to facilitating building full tree hierarchies.
 class HierarchicalTreeBuilder {
@@ -80,7 +80,7 @@ public:
 
   /// Recursively create the trees implied by calls to \a push(), return the
   /// top-level \a CASID.
-  Expected<ObjectProxy> create(CASDB &CAS);
+  Expected<ObjectProxy> create(ObjectStore &CAS);
 };
 
 } // namespace cas

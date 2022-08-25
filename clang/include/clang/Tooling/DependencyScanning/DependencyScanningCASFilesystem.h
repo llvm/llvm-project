@@ -105,7 +105,7 @@ private:
 
   llvm::cas::CachingOnDiskFileSystem &getCachingFS();
 
-  llvm::cas::CASDB &CAS;
+  llvm::cas::ObjectStore &CAS;
   llvm::cas::ActionCache &Cache;
   Optional<llvm::cas::ObjectRef> ClangFullVersionID;
   Optional<llvm::cas::ObjectRef> DepDirectivesID;

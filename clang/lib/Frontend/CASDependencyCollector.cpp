@@ -8,21 +8,21 @@
 
 #include "clang/Frontend/CASDependencyCollector.h"
 #include "clang/Basic/DiagnosticCAS.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CASOutputBackend.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/VirtualOutputBackends.h"
 
 using namespace clang;
 using namespace clang::cas;
 
 CASDependencyCollector::CASDependencyCollector(
-    const DependencyOutputOptions &Opts, cas::CASDB &CAS,
+    const DependencyOutputOptions &Opts, cas::ObjectStore &CAS,
     std::function<void(Optional<cas::ObjectRef>)> Callback)
     : DependencyFileGenerator(Opts, llvm::vfs::makeNullOutputBackend()),
       CAS(CAS), Callback(std::move(Callback)) {}
 
 llvm::Error CASDependencyCollector::replay(const DependencyOutputOptions &Opts,
-                                           CASDB &CAS, ObjectRef DepsRef,
+                                           ObjectStore &CAS, ObjectRef DepsRef,
                                            llvm::raw_ostream &OS) {
   auto Refs = CAS.getProxy(DepsRef);
   if (!Refs)

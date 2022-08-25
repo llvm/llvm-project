@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/CASOutputBackend.h"
-#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/Utils.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
@@ -37,12 +37,12 @@ private:
 };
 } // namespace
 
-CASOutputBackend::CASOutputBackend(std::shared_ptr<CASDB> CAS)
+CASOutputBackend::CASOutputBackend(std::shared_ptr<ObjectStore> CAS)
     : CASOutputBackend(*CAS) {
   this->OwnedCAS = std::move(CAS);
 }
 
-CASOutputBackend::CASOutputBackend(CASDB &CAS) : CAS(CAS) {}
+CASOutputBackend::CASOutputBackend(ObjectStore &CAS) : CAS(CAS) {}
 
 CASOutputBackend::~CASOutputBackend() = default;
 

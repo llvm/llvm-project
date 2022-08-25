@@ -19,7 +19,7 @@
 
 namespace llvm {
 namespace cas {
-class CASDB;
+class ObjectStore;
 }
 class raw_ostream;
 } // namespace llvm
@@ -31,12 +31,13 @@ class DiagnosticsEngine;
 
 /// Create a cache key for the given \c CompilerInvocation as a \c CASID.
 llvm::Optional<llvm::cas::CASID>
-createCompileJobCacheKey(llvm::cas::CASDB &CAS, DiagnosticsEngine &Diags,
+createCompileJobCacheKey(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
                          const CompilerInvocation &Invocation);
 
 /// Print the structure of the cache key given by \p Key to \p OS. Returns an
 /// error if the key object does not exist in \p CAS, or is malformed.
-llvm::Error printCompileJobCacheKey(llvm::cas::CASDB &CAS, llvm::cas::CASID Key,
+llvm::Error printCompileJobCacheKey(llvm::cas::ObjectStore &CAS,
+                                    llvm::cas::CASID Key,
                                     llvm::raw_ostream &OS);
 
 } // namespace clang

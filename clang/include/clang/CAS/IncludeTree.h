@@ -10,7 +10,7 @@
 #define LLVM_CLANG_CAS_CASINCLUDETREE_H
 
 #include "clang/Basic/SourceManager.h"
-#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/ObjectStore.h"
 
 namespace llvm {
 class SmallBitVector;
@@ -32,7 +32,7 @@ protected:
     return ObjectProxy::getData().substr(NodeT::getNodeKind().size());
   }
 
-  static Expected<NodeT> create(CASDB &DB, ArrayRef<ObjectRef> Refs,
+  static Expected<NodeT> create(ObjectStore &DB, ArrayRef<ObjectRef> Refs,
                                 ArrayRef<char> Data);
 
   static bool isValid(const ObjectProxy &Node) {
@@ -77,7 +77,7 @@ public:
     return FileInfo{Filename->getData(), Contents->getData()};
   }
 
-  static Expected<IncludeFile> create(CASDB &DB, StringRef Filename,
+  static Expected<IncludeFile> create(ObjectStore &DB, StringRef Filename,
                                       ObjectRef Contents);
 
   llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
@@ -88,7 +88,7 @@ public:
     IncludeTreeBase Base(Node);
     return Base.getNumReferences() == 2 && Base.getData().empty();
   }
-  static bool isValid(CASDB &DB, ObjectRef Ref) {
+  static bool isValid(ObjectStore &DB, ObjectRef Ref) {
     auto Node = DB.getProxy(Ref);
     if (!Node) {
       llvm::consumeError(Node.takeError());
@@ -178,11 +178,11 @@ public:
           Callback);
 
   static Expected<IncludeTree>
-  create(CASDB &DB, SrcMgr::CharacteristicKind FileCharacteristic,
+  create(ObjectStore &DB, SrcMgr::CharacteristicKind FileCharacteristic,
          ObjectRef BaseFile, ArrayRef<std::pair<ObjectRef, uint32_t>> Includes,
          llvm::SmallBitVector Checks);
 
-  static Expected<IncludeTree> get(CASDB &DB, ObjectRef Ref);
+  static Expected<IncludeTree> get(ObjectStore &DB, ObjectRef Ref);
 
   llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
 
@@ -206,7 +206,7 @@ private:
   }
 
   static bool isValid(const ObjectProxy &Node);
-  static bool isValid(CASDB &DB, ObjectRef Ref) {
+  static bool isValid(ObjectStore &DB, ObjectRef Ref) {
     auto Node = DB.getProxy(Ref);
     if (!Node) {
       llvm::consumeError(Node.takeError());
@@ -246,9 +246,10 @@ public:
     ObjectRef FileRef;
     FileSizeTy Size;
   };
-  static Expected<IncludeFileList> create(CASDB &DB, ArrayRef<FileEntry> Files);
+  static Expected<IncludeFileList> create(ObjectStore &DB,
+                                          ArrayRef<FileEntry> Files);
 
-  static Expected<IncludeFileList> get(CASDB &CAS, ObjectRef Ref);
+  static Expected<IncludeFileList> get(ObjectStore &CAS, ObjectRef Ref);
 
   llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
 
@@ -269,7 +270,7 @@ private:
   }
 
   static bool isValid(const ObjectProxy &Node);
-  static bool isValid(CASDB &CAS, ObjectRef Ref) {
+  static bool isValid(ObjectStore &CAS, ObjectRef Ref) {
     auto Node = CAS.getProxy(Ref);
     if (!Node) {
       llvm::consumeError(Node.takeError());
@@ -318,11 +319,12 @@ public:
     return None;
   }
 
-  static Expected<IncludeTreeRoot> create(CASDB &DB, ObjectRef MainFileTree,
+  static Expected<IncludeTreeRoot> create(ObjectStore &DB,
+                                          ObjectRef MainFileTree,
                                           ObjectRef FileList,
                                           Optional<ObjectRef> PCHRef);
 
-  static Expected<IncludeTreeRoot> get(CASDB &DB, ObjectRef Ref);
+  static Expected<IncludeTreeRoot> get(ObjectStore &DB, ObjectRef Ref);
 
   llvm::Error print(llvm::raw_ostream &OS, unsigned Indent = 0);
 
@@ -333,7 +335,7 @@ public:
     return (Base.getNumReferences() == 2 || Base.getNumReferences() == 3) &&
            Base.getData().empty();
   }
-  static bool isValid(CASDB &DB, ObjectRef Ref) {
+  static bool isValid(ObjectStore &DB, ObjectRef Ref) {
     auto Node = DB.getProxy(Ref);
     if (!Node) {
       llvm::consumeError(Node.takeError());

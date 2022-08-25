@@ -22,7 +22,7 @@ namespace llvm {
 class Error;
 namespace cas {
 class ActionCache;
-class CASDB;
+class ObjectStore;
 } // end namespace cas
 } // end namespace llvm
 
@@ -91,7 +91,7 @@ public:
   ///
   /// If \p CreateEmptyCASOnFailure, returns an empty in-memory CAS on failure.
   /// Else, returns \c nullptr on failure.
-  std::shared_ptr<llvm::cas::CASDB>
+  std::shared_ptr<llvm::cas::ObjectStore>
   getOrCreateCAS(DiagnosticsEngine &Diags,
                  bool CreateEmptyCASOnFailure = false) const;
 
@@ -124,7 +124,7 @@ private:
 
   struct CachedCAS {
     /// A cached CAS instance.
-    std::shared_ptr<llvm::cas::CASDB> CAS;
+    std::shared_ptr<llvm::cas::ObjectStore> CAS;
     /// An ActionCache instnace.
     std::shared_ptr<llvm::cas::ActionCache> AC;
 

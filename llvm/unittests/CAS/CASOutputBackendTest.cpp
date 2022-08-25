@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/CASOutputBackend.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CASFileSystem.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -25,7 +25,7 @@ errorOrToPointer(ErrorOr<std::unique_ptr<T>> ErrorOrPointer) {
 }
 
 TEST(CASOutputBackendTest, createFiles) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
   ASSERT_TRUE(CAS);
 
   auto Outputs = makeIntrusiveRefCnt<CASOutputBackend>(*CAS);

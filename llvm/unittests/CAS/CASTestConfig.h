@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
@@ -18,8 +18,9 @@
 #define LLVM_UNITTESTS_CASTESTCONFIG_H
 
 struct TestingAndDir {
-  std::unique_ptr<llvm::cas::CASDB> CAS;
-  std::function<std::unique_ptr<llvm::cas::ActionCache>(llvm::cas::CASDB &)>
+  std::unique_ptr<llvm::cas::ObjectStore> CAS;
+  std::function<std::unique_ptr<llvm::cas::ActionCache>(
+      llvm::cas::ObjectStore &)>
       CreateCacheFn;
   llvm::Optional<llvm::unittest::TempDir> Temp;
 };
@@ -31,14 +32,14 @@ protected:
 
   llvm::SmallVector<llvm::unittest::TempDir> Dirs;
 
-  std::unique_ptr<llvm::cas::CASDB> createCAS() {
+  std::unique_ptr<llvm::cas::ObjectStore> createCAS() {
     auto TD = GetParam()(++(*NextCASIndex));
     if (TD.Temp)
       Dirs.push_back(std::move(*TD.Temp));
     return std::move(TD.CAS);
   }
   std::unique_ptr<llvm::cas::ActionCache>
-  createActionCache(llvm::cas::CASDB &CAS) {
+  createActionCache(llvm::cas::ObjectStore &CAS) {
     auto TD = GetParam()(*NextCASIndex);
     return TD.CreateCacheFn(CAS);
   }

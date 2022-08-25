@@ -8,8 +8,8 @@
 
 #include "llvm/CAS/CASFileSystem.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/FileSystemCache.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeSchema.h"
 #include "llvm/Support/AlignOf.h"
 #include "llvm/Support/Allocator.h"
@@ -70,19 +70,20 @@ public:
 
   Error initialize(ObjectRef Root);
 
-  CASFileSystem(std::shared_ptr<CASDB> DB) : DB(*DB), OwnedDB(std::move(DB)) {}
-  CASFileSystem(CASDB &DB) : DB(DB) {}
+  CASFileSystem(std::shared_ptr<ObjectStore> DB)
+      : DB(*DB), OwnedDB(std::move(DB)) {}
+  CASFileSystem(ObjectStore &DB) : DB(DB) {}
 
   IntrusiveRefCntPtr<ThreadSafeFileSystem> createThreadSafeProxyFS() final {
     return makeIntrusiveRefCnt<CASFileSystem>(*this);
   }
   CASFileSystem(const CASFileSystem &FS) = default;
 
-  CASDB &getCAS() const { return DB; }
+  ObjectStore &getCAS() const { return DB; }
 
 private:
-  CASDB &DB;
-  std::shared_ptr<CASDB> OwnedDB;
+  ObjectStore &DB;
+  std::shared_ptr<ObjectStore> OwnedDB;
 
   IntrusiveRefCntPtr<FileSystemCache> Cache;
   WorkingDirectoryType WorkingDirectory;
@@ -114,14 +115,14 @@ public:
   std::error_code close() final { return std::error_code(); }
 
   VFSFile() = delete;
-  explicit VFSFile(CASDB &DB, DirectoryEntry &Entry, StringRef Name)
+  explicit VFSFile(ObjectStore &DB, DirectoryEntry &Entry, StringRef Name)
       : DB(DB), Name(Name.str()), Entry(&Entry) {
     assert(Entry.isFile());
     assert(Entry.hasNode());
   }
 
 private:
-  CASDB &DB;
+  ObjectStore &DB;
   std::string Name;
   DirectoryEntry *Entry;
 };
@@ -353,12 +354,12 @@ initializeCASFileSystem(std::unique_ptr<CASFileSystem> FS, CASID RootID) {
 }
 
 Expected<std::unique_ptr<vfs::FileSystem>>
-cas::createCASFileSystem(std::shared_ptr<CASDB> DB, const CASID &RootID) {
+cas::createCASFileSystem(std::shared_ptr<ObjectStore> DB, const CASID &RootID) {
   return initializeCASFileSystem(std::make_unique<CASFileSystem>(std::move(DB)),
                                  RootID);
 }
 
 Expected<std::unique_ptr<vfs::FileSystem>>
-cas::createCASFileSystem(CASDB &DB, const CASID &RootID) {
+cas::createCASFileSystem(ObjectStore &DB, const CASID &RootID) {
   return initializeCASFileSystem(std::make_unique<CASFileSystem>(DB), RootID);
 }

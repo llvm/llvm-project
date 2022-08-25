@@ -45,8 +45,7 @@ class FileSystem;
 
 namespace cas {
 
-class CASDB;
-
+class ObjectStore;
 }
 
 } // namespace llvm
@@ -319,7 +318,7 @@ private:
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,
-    std::shared_ptr<llvm::cas::CASDB> OverrideCAS = nullptr);
+    std::shared_ptr<llvm::cas::ObjectStore> OverrideCAS = nullptr);
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,

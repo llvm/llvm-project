@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CAS/CASDB.h"
-#include "llvm/CAS/CASFileSystem.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
+#include "llvm/CAS/CASFileSystem.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -33,7 +33,7 @@ expectedToPointer(Expected<std::unique_ptr<T>> ExpectedPointer) {
 }
 
 TEST(HierarchicalTreeBuilderTest, Flat) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
 
   auto make = [&](StringRef Content) {
     return *expectedToOptional(CAS->storeFromString(None, Content));
@@ -68,7 +68,7 @@ TEST(HierarchicalTreeBuilderTest, Flat) {
 }
 
 TEST(HierarchicalTreeBuilderTest, Nested) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
 
   auto make = [&](StringRef Content) {
     return *expectedToOptional(CAS->storeFromString(None, Content));
@@ -112,7 +112,7 @@ TEST(HierarchicalTreeBuilderTest, Nested) {
 }
 
 TEST(HierarchicalTreeBuilderTest, MergeDirectories) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
 
   auto make = [&](StringRef Content) {
     return *expectedToOptional(CAS->storeFromString(None, Content));
@@ -172,7 +172,7 @@ TEST(HierarchicalTreeBuilderTest, MergeDirectories) {
 }
 
 TEST(HierarchicalTreeBuilderTest, MergeDirectoriesConflict) {
-  std::unique_ptr<CASDB> CAS = createInMemoryCAS();
+  std::unique_ptr<ObjectStore> CAS = createInMemoryCAS();
 
   auto make = [&](StringRef Content) {
     return *expectedToOptional(CAS->storeFromString(None, Content));

@@ -11,8 +11,8 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/PrefixMapper.h"
 
 using namespace clang;
@@ -216,7 +216,7 @@ Expected<llvm::cas::CASID> clang::scanAndUpdateCC1InlineWithTool(
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS, const char *Exec,
     CompilerInvocation &Invocation, StringRef WorkingDirectory,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping,
-    llvm::cas::CASDB &DB) {
+    llvm::cas::ObjectStore &DB) {
   llvm::cas::CachingOnDiskFileSystem &FS = Tool.getCachingFileSystem();
 
   // Override the CASOptions. They may match (the caller having sniffed them

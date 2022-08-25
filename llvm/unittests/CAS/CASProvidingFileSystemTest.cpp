@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/CASProvidingFileSystem.h"
-#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
@@ -16,7 +16,7 @@ using namespace llvm;
 using namespace llvm::cas;
 
 TEST(CASProvidingFileSystemTest, Basic) {
-  std::shared_ptr<CASDB> DB = createInMemoryCAS();
+  std::shared_ptr<ObjectStore> DB = createInMemoryCAS();
   auto FS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
   StringRef Path1 = "a.txt";
   StringRef Contents1 = "a";
@@ -63,7 +63,7 @@ TEST(CASProvidingFileSystemTest, Basic) {
 }
 
 TEST(CASProvidingFileSystemTest, WithCASSupportingFS) {
-  std::shared_ptr<CASDB> UnderlyingDB = createInMemoryCAS();
+  std::shared_ptr<ObjectStore> UnderlyingDB = createInMemoryCAS();
   auto FS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
   StringRef Path = "a.txt";
   StringRef Contents = "a";
@@ -72,7 +72,7 @@ TEST(CASProvidingFileSystemTest, WithCASSupportingFS) {
       createCASProvidingFileSystem(UnderlyingDB, FS);
   ASSERT_TRUE(UnderlyingFS);
 
-  std::shared_ptr<CASDB> DB = createInMemoryCAS();
+  std::shared_ptr<ObjectStore> DB = createInMemoryCAS();
   std::unique_ptr<vfs::FileSystem> CASFS =
       createCASProvidingFileSystem(DB, std::move(UnderlyingFS));
   ASSERT_TRUE(CASFS);

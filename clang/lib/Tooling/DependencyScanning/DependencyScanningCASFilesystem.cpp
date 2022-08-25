@@ -10,9 +10,9 @@
 #include "clang/Basic/Version.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
@@ -43,7 +43,7 @@ DependencyScanningCASFilesystem::DependencyScanningCASFilesystem(
 DependencyScanningCASFilesystem::~DependencyScanningCASFilesystem() = default;
 
 static Expected<cas::ObjectRef>
-storeDepDirectives(cas::CASDB &CAS,
+storeDepDirectives(cas::ObjectStore &CAS,
                    ArrayRef<dependency_directives_scan::Directive> Directives) {
   llvm::SmallString<1024> Buffer;
   llvm::raw_svector_ostream OS(Buffer);
@@ -87,7 +87,7 @@ template <typename T> static void readle(StringRef &Slice, T &Out) {
 }
 
 static Error loadDepDirectives(
-    cas::CASDB &CAS, cas::ObjectRef Ref,
+    cas::ObjectStore &CAS, cas::ObjectRef Ref,
     llvm::SmallVectorImpl<dependency_directives_scan::Token> &DepTokens,
     llvm::SmallVectorImpl<dependency_directives_scan::Directive>
         &DepDirectives) {

@@ -10,7 +10,7 @@
 #define LLVM_CAS_BUILTINOBJECTHASHER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CAS/CASDB.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/CAS/TreeEntry.h"
 #include "llvm/Support/Endian.h"
 
@@ -42,7 +42,7 @@ public:
     return H.finish();
   }
 
-  static HashT hashObject(const CASDB &CAS, ArrayRef<ObjectRef> Refs,
+  static HashT hashObject(const ObjectStore &CAS, ArrayRef<ObjectRef> Refs,
                           ArrayRef<char> Data) {
     BuiltinObjectHasher H;
     H.start(StableObjectKind::Node);
@@ -69,7 +69,9 @@ private:
     updateArray(makeArrayRef(String.data(), String.size()));
   }
 
-  void updateRef(const CASDB &CAS, ObjectRef Ref) { updateID(CAS.getID(Ref)); }
+  void updateRef(const ObjectStore &CAS, ObjectRef Ref) {
+    updateID(CAS.getID(Ref));
+  }
 
   void updateID(const CASID &ID) {
     // NOTE: Does not hash the size of the hash. That's a CAS implementation

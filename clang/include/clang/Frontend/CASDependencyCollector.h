@@ -27,7 +27,7 @@ public:
   /// \param Callback Callback that receives the resulting dependencies on
   ///                 completion, or \c None if an error occurred.
   CASDependencyCollector(
-      const DependencyOutputOptions &Opts, cas::CASDB &CAS,
+      const DependencyOutputOptions &Opts, cas::ObjectStore &CAS,
       std::function<void(Optional<cas::ObjectRef>)> Callback);
 
   /// Replay the given result, which should have been created by a
@@ -39,13 +39,13 @@ public:
   /// \param DepsRef The dependencies.
   /// \param OS The output stream to write the dependency file to.
   static llvm::Error replay(const DependencyOutputOptions &Opts,
-                            cas::CASDB &CAS, cas::ObjectRef DepsRef,
+                            cas::ObjectStore &CAS, cas::ObjectRef DepsRef,
                             llvm::raw_ostream &OS);
 
 private:
   void finishedMainFile(DiagnosticsEngine &Diags) override;
 
-  cas::CASDB &CAS;
+  cas::ObjectStore &CAS;
   std::function<void(Optional<cas::ObjectRef>)> Callback;
 };
 
