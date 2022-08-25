@@ -259,7 +259,6 @@ void CIRGenFunction::buildDecl(const Decl &D) {
   switch (D.getKind()) {
   case Decl::ImplicitConceptSpecialization:
   case Decl::HLSLBuffer:
-  case Decl::UnnamedGlobalConstant:
   case Decl::TopLevelStmt:
     llvm_unreachable("NYI");
   case Decl::BuiltinTemplate:
@@ -318,10 +317,10 @@ void CIRGenFunction::buildDecl(const Decl &D) {
     llvm_unreachable("Declaration should not be in declstmts!");
   case Decl::Record:    // struct/union/class X;
   case Decl::CXXRecord: // struct/union/class X; [C++]
-    assert(0 && "Not implemented");
+    llvm_unreachable("NYI");
     return;
   case Decl::Enum: // enum X;
-    assert(0 && "Not implemented");
+    llvm_unreachable("NYI");
     return;
   case Decl::Function:     // void X();
   case Decl::EnumConstant: // enum ? { X = ? }
@@ -338,6 +337,7 @@ void CIRGenFunction::buildDecl(const Decl &D) {
   case Decl::Concept:
   case Decl::LifetimeExtendedTemporary:
   case Decl::RequiresExprBody:
+  case Decl::UnnamedGlobalConstant:
     // None of these decls require codegen support.
     return;
 

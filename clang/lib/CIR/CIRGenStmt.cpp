@@ -193,21 +193,30 @@ mlir::LogicalResult CIRGenFunction::buildStmt(const Stmt *S,
   case Stmt::OMPTargetParallelForDirectiveClass:
   case Stmt::OMPTaskLoopDirectiveClass:
   case Stmt::OMPTaskLoopSimdDirectiveClass:
+  case Stmt::OMPMaskedTaskLoopDirectiveClass:
+  case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
   case Stmt::OMPMasterTaskLoopDirectiveClass:
   case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
+  case Stmt::OMPParallelGenericLoopDirectiveClass:
+  case Stmt::OMPParallelMaskedDirectiveClass:
+  case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
+  case Stmt::OMPParallelMaskedTaskLoopSimdDirectiveClass:
   case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
   case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
   case Stmt::OMPDistributeDirectiveClass:
-  case Stmt::OMPTargetUpdateDirectiveClass:
   case Stmt::OMPDistributeParallelForDirectiveClass:
   case Stmt::OMPDistributeParallelForSimdDirectiveClass:
   case Stmt::OMPDistributeSimdDirectiveClass:
+  case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
   case Stmt::OMPTargetParallelForSimdDirectiveClass:
   case Stmt::OMPTargetSimdDirectiveClass:
+  case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
+  case Stmt::OMPTargetUpdateDirectiveClass:
   case Stmt::OMPTeamsDistributeDirectiveClass:
   case Stmt::OMPTeamsDistributeSimdDirectiveClass:
   case Stmt::OMPTeamsDistributeParallelForSimdDirectiveClass:
   case Stmt::OMPTeamsDistributeParallelForDirectiveClass:
+  case Stmt::OMPTeamsGenericLoopDirectiveClass:
   case Stmt::OMPTargetTeamsDirectiveClass:
   case Stmt::OMPTargetTeamsDistributeDirectiveClass:
   case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
