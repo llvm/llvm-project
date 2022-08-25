@@ -57,6 +57,19 @@ define double @t5(float %a) {
   ret double %3
 }
 
+; FIXME: This is a miscompile. PR57357
+
+define float @not_maxnum(float %x) {
+; CHECK-LABEL: @not_maxnum(
+; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp ole float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[DOTINV]], float -0.000000e+00, float [[X]]
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %cmp = fcmp olt float %x, 0.0
+  %sel = select i1 %cmp, float -0.0, float %x
+  ret float %sel
+}
+
 ; From IEEE754: "Comparisons shall ignore the sign of zero (so +0 = -0)."
 ; So the compare constant may be treated as +0.0, and we sink the fpext.
 
