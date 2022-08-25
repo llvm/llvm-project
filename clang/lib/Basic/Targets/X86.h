@@ -290,7 +290,7 @@ public:
     return false;
   }
 
-  bool shouldEmitFloat16WithExcessPrecision() const {
+  bool shouldEmitFloat16WithExcessPrecision() const override {
     return HasFloat16 && !hasLegalHalfType();
   }
 

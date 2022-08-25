@@ -326,6 +326,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       case ISD::FADD:
       case ISD::FSUB:
       case ISD::FMUL:
+      case ISD::FDIV:
         return LT.first;
         break;
       }
@@ -2692,6 +2693,11 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                                                CmpInst::Predicate VecPred,
                                                TTI::TargetCostKind CostKind,
                                                const Instruction *I) {
+  // Early out if this type isn't scalar/vector integer/float.
+  if (!(ValTy->isIntOrIntVectorTy() || ValTy->isFPOrFPVectorTy()))
+    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                     I);
+
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 

@@ -434,7 +434,7 @@ public:
     return mlir::success();
   }
 
-  /// If the signature does not need any special target-specific converions,
+  /// If the signature does not need any special target-specific conversions,
   /// then it is considered portable for any target, and this function will
   /// return `true`. Otherwise, the signature is not portable and `false` is
   /// returned.

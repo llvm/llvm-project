@@ -1,4 +1,4 @@
-! Verify that`-O{n}` is indeed taken into account when definining the LLVM backend pass pipeline.
+! Verify that`-O{n}` is indeed taken into account when defining the LLVM backend pass pipeline.
 
 ! REQUIRES: aarch64-registered-target
 
