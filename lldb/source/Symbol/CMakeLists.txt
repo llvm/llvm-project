@@ -22,6 +22,7 @@ add_lldb_library(lldbSymbol
   LineEntry.cpp
   LineTable.cpp
   LocateSymbolFile.cpp
+  ObjectContainer.cpp
   ObjectFile.cpp
   PostfixExpression.cpp
   Symbol.cpp
