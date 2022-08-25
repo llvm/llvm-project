@@ -75,13 +75,34 @@ void customOperator() {
   s[i] = 3; // OK, custom operator
 }
 
+namespace ArrayInitIndexExpr {
 struct A {
   // The compiler-generated copy constructor uses an ArraySubscriptExpr. Don't warn.
   int x[3];
 };
 
-void use_A() {
+void implicitCopyMoveCtor() {
   // Force the compiler to generate a copy constructor.
   A a;
   A a2(a);
+
+  // Force the compiler to generate a move constructor.
+  A a3 = (A&&) a;
 }
+
+void lambdaCapture() {
+  int arr[3];
+
+  // Capturing an array by value uses an ArraySubscriptExpr. Don't warn. 
+  [arr](){};
+}
+
+#if __cplusplus >= 201703L
+void structuredBindings() {
+  int arr[3];
+
+  // Creating structured bindings by value uses an ArraySubscriptExpr. Don't warn.
+  auto [a,b,c] = arr;
+}
+#endif
+} // namespace ArrayInitIndexExpr
