@@ -100,6 +100,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
 
+    # sys/sendfile entrypoints
+    libc.src.sys.sendfile.sendfile
+
     # sys/stat.h entrypoints
     libc.src.sys.stat.chmod
     libc.src.sys.stat.fchmod
