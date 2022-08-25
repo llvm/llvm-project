@@ -282,6 +282,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<IntType>]
         >,
         FunctionSpec<
+          "ftruncate",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<OffTType>]
+        >,
+        FunctionSpec<
           "link",
           RetValSpec<IntType>,
           [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
@@ -325,6 +330,11 @@ def POSIX : StandardSpec<"POSIX"> {
           "symlinkat",
           RetValSpec<IntType>,
           [ArgSpec<IntType>, ArgSpec<ConstCharPtr>, ArgSpec<IntType>, ArgSpec<ConstCharPtr>]
+        >,
+        FunctionSpec<
+          "truncate",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<OffTType>]
         >,
         FunctionSpec<
           "unlink",
