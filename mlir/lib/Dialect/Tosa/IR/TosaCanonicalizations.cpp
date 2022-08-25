@@ -555,10 +555,29 @@ OpFoldResult SliceOp::fold(ArrayRef<Attribute> operands) {
   auto inputTy = getInput().getType().dyn_cast<RankedTensorType>();
   auto outputTy = getType().dyn_cast<RankedTensorType>();
 
-  if (!inputTy || !outputTy || inputTy != outputTy)
+  if (!inputTy || !outputTy)
     return {};
-  if (inputTy.hasStaticShape())
+
+  if (inputTy == outputTy && inputTy.hasStaticShape())
     return getInput();
+
+  if (!operands[0])
+    return {};
+
+  auto operand = operands[0].cast<ElementsAttr>();
+  if (operand.isSplat() && outputTy.hasStaticShape()) {
+    return SplatElementsAttr::get(outputTy, operand.getSplatValue<Attribute>());
+  }
+
+  if (inputTy.hasStaticShape() && outputTy.hasStaticShape() &&
+      outputTy.getNumElements() == 1) {
+    llvm::SmallVector<uint64_t> indices;
+    for (auto val : getStart()) {
+      indices.push_back(val.cast<IntegerAttr>().getInt());
+    }
+    auto value = operand.getValues<Attribute>()[indices];
+    return SplatElementsAttr::get(outputTy, value);
+  }
 
   return {};
 }
