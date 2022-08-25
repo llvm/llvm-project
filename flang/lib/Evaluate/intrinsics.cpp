@@ -2281,17 +2281,15 @@ static bool CheckAssociated(SpecificCall &call, FoldingContext &context) {
                             targetName, whyNot),
                         *pointerSymbol);
                   }
-                } else {
+                } else if (!IsNullProcedurePointer(*targetExpr)) {
                   // procedure pointer and object target
-                  if (!IsNullPointer(*targetExpr)) {
-                    AttachDeclaration(
-                        context.messages().Say(
-                            "POINTER= argument '%s' is a procedure "
-                            "pointer but the TARGET= argument '%s' is not a "
-                            "procedure or procedure pointer"_err_en_US,
-                            pointerSymbol->name(), targetName),
-                        *pointerSymbol);
-                  }
+                  AttachDeclaration(
+                      context.messages().Say(
+                          "POINTER= argument '%s' is a procedure "
+                          "pointer but the TARGET= argument '%s' is not a "
+                          "procedure or procedure pointer"_err_en_US,
+                          pointerSymbol->name(), targetName),
+                      *pointerSymbol);
                 }
               } else if (targetProc) {
                 // object pointer and procedure target
