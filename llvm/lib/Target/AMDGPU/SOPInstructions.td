@@ -1610,8 +1610,12 @@ let SubtargetPredicate = isGFX12Plus in {
     SOPP_Pseudo <"s_wait_alu" , (ins DepCtrImm:$simm16), "$simm16">;
   def S_WAIT_LOADCNT :
     SOPP_Pseudo<"s_wait_loadcnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_LOADCNT_DSCNT :
+    SOPP_Pseudo<"s_wait_loadcnt_dscnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_STORECNT :
     SOPP_Pseudo<"s_wait_storecnt", (ins s16imm:$simm16), "$simm16">;
+  def S_WAIT_STORECNT_DSCNT :
+    SOPP_Pseudo<"s_wait_storecnt_dscnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_SAMPLECNT :
     SOPP_Pseudo<"s_wait_samplecnt", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_BVHCNT :
@@ -2293,6 +2297,8 @@ defm S_WAIT_BVHCNT          : SOPP_Real_32_gfx12<0x043>;
 defm S_WAIT_EXPCNT          : SOPP_Real_32_gfx12<0x044>;
 defm S_WAIT_DSCNT           : SOPP_Real_32_gfx12<0x046>;
 defm S_WAIT_KMCNT           : SOPP_Real_32_gfx12<0x047>;
+defm S_WAIT_LOADCNT_DSCNT   : SOPP_Real_32_gfx12<0x048>;
+defm S_WAIT_STORECNT_DSCNT  : SOPP_Real_32_gfx12<0x049>;
 
 //===----------------------------------------------------------------------===//
 // SOPP - GFX11, GFX12.
