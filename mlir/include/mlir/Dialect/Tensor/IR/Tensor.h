@@ -110,6 +110,10 @@ bool canFoldIntoProducerOp(CastOp castOp);
 /// that can be folded.
 LogicalResult foldTensorCast(Operation *op);
 
+/// Return the dimensions of the given tensor value.
+SmallVector<OpFoldResult> getMixedSizes(OpBuilder &builder, Location loc,
+                                        Value value);
+
 /// Create a rank-reducing ExtractSliceOp @[0 .. 0] with strides [1 .. 1] and
 /// appropriate sizes (i.e. `tensor.getSizes()`) to reduce the rank of `tensor`
 /// to that of `targetType`.

@@ -36,6 +36,21 @@ Operation *TensorDialect::materializeConstant(OpBuilder &builder,
   return nullptr;
 }
 
+SmallVector<OpFoldResult> tensor::getMixedSizes(OpBuilder &builder,
+                                                Location loc, Value value) {
+  auto tensorType = value.getType().cast<RankedTensorType>();
+  SmallVector<OpFoldResult> result;
+  for (int64_t i = 0; i < tensorType.getRank(); ++i) {
+    if (tensorType.isDynamicDim(i)) {
+      Value size = builder.create<tensor::DimOp>(loc, value, i);
+      result.push_back(size);
+    } else {
+      result.push_back(builder.getIndexAttr(tensorType.getDimSize(i)));
+    }
+  }
+  return result;
+}
+
 //===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
@@ -1465,18 +1480,8 @@ Value mlir::tensor::createCanonicalRankReducingExtractSliceOp(
     OpBuilder &b, Location loc, Value tensor, RankedTensorType targetType) {
   auto rankedTensorType = tensor.getType().cast<RankedTensorType>();
   unsigned rank = rankedTensorType.getRank();
-  auto shape = rankedTensorType.getShape();
   SmallVector<OpFoldResult> offsets(rank, b.getIndexAttr(0));
-  SmallVector<OpFoldResult> sizes;
-  for (unsigned i = 0, e = rank; i < e; ++i) {
-    OpFoldResult dim;
-    if (rankedTensorType.isDynamicDim(i))
-      dim = b.createOrFold<tensor::DimOp>(
-          loc, tensor, b.create<arith::ConstantIndexOp>(loc, i));
-    else
-      dim = b.getIndexAttr(shape[i]);
-    sizes.push_back(dim);
-  }
+  SmallVector<OpFoldResult> sizes = getMixedSizes(b, loc, tensor);
   SmallVector<OpFoldResult> strides(rank, b.getIndexAttr(1));
   return b.createOrFold<tensor::ExtractSliceOp>(loc, targetType, tensor,
                                                 offsets, sizes, strides);
@@ -1818,18 +1823,8 @@ Value mlir::tensor::createCanonicalRankReducingInsertSliceOp(OpBuilder &b,
                                                              Value dest) {
   auto rankedTensorType = dest.getType().cast<RankedTensorType>();
   unsigned rank = rankedTensorType.getRank();
-  auto shape = rankedTensorType.getShape();
   SmallVector<OpFoldResult> offsets(rank, b.getIndexAttr(0));
-  SmallVector<OpFoldResult> sizes;
-  for (unsigned i = 0, e = rank; i < e; ++i) {
-    OpFoldResult dim;
-    if (rankedTensorType.isDynamicDim(i))
-      dim = b.createOrFold<tensor::DimOp>(
-          loc, dest, b.create<arith::ConstantIndexOp>(loc, i));
-    else
-      dim = b.getIndexAttr(shape[i]);
-    sizes.push_back(dim);
-  }
+  SmallVector<OpFoldResult> sizes = getMixedSizes(b, loc, dest);
   SmallVector<OpFoldResult> strides(rank, b.getIndexAttr(1));
   return b.createOrFold<tensor::InsertSliceOp>(loc, tensor, dest, offsets,
                                                sizes, strides);
