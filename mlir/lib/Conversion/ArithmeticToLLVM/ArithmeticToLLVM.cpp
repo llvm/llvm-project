@@ -106,6 +106,15 @@ struct IndexCastOpLowering : public ConvertOpToLLVMPattern<arith::IndexCastOp> {
                   ConversionPatternRewriter &rewriter) const override;
 };
 
+struct AddUICarryOpLowering
+    : public ConvertOpToLLVMPattern<arith::AddUICarryOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::AddUICarryOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
 struct CmpIOpLowering : public ConvertOpToLLVMPattern<arith::CmpIOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
@@ -184,6 +193,45 @@ LogicalResult IndexCastOpLowering::matchAndRewrite(
                                              adaptor.getIn());
       },
       rewriter);
+}
+
+//===----------------------------------------------------------------------===//
+// AddUICarryOpLowering
+//===----------------------------------------------------------------------===//
+
+LogicalResult AddUICarryOpLowering::matchAndRewrite(
+    arith::AddUICarryOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  Type operandType = adaptor.getLhs().getType();
+  Type sumResultType = op.getSum().getType();
+  Type carryResultType = op.getCarry().getType();
+
+  if (!LLVM::isCompatibleType(operandType))
+    return failure();
+
+  MLIRContext *ctx = rewriter.getContext();
+  Location loc = op.getLoc();
+
+  // Handle the scalar and 1D vector cases.
+  if (!operandType.isa<LLVM::LLVMArrayType>()) {
+    Type newCarryType = typeConverter->convertType(carryResultType);
+    Type structType =
+        LLVM::LLVMStructType::getLiteral(ctx, {sumResultType, newCarryType});
+    Value addOverflow = rewriter.create<LLVM::UAddWithOverflowOp>(
+        loc, structType, adaptor.getLhs(), adaptor.getRhs());
+    Value sumExtracted =
+        rewriter.create<LLVM::ExtractValueOp>(loc, addOverflow, 0);
+    Value carryExtracted =
+        rewriter.create<LLVM::ExtractValueOp>(loc, addOverflow, 1);
+    rewriter.replaceOp(op, {sumExtracted, carryExtracted});
+    return success();
+  }
+
+  if (!sumResultType.isa<VectorType>())
+    return rewriter.notifyMatchFailure(loc, "expected vector result types");
+
+  return rewriter.notifyMatchFailure(loc,
+                                     "ND vector types are not supported yet");
 }
 
 //===----------------------------------------------------------------------===//
@@ -300,6 +348,7 @@ void mlir::arith::populateArithmeticToLLVMConversionPatterns(
     AddFOpLowering,
     AddIOpLowering,
     AndIOpLowering,
+    AddUICarryOpLowering,
     BitcastOpLowering,
     ConstantOpLowering,
     CmpFOpLowering,
