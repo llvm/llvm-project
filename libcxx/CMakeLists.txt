@@ -832,6 +832,14 @@ function(cxx_add_windows_flags target)
                                  # Use the ISO conforming behaviour for conversion
                                  # in printf, scanf.
                                  _CRT_STDIO_ISO_WIDE_SPECIFIERS)
+    # Clang-cl shared builds don't support the experimental library.
+    # To avoid linker errors the format_error destructor is inlined for the
+    # dylib. Users can never use format in this mode.
+    # TODO FMT Remove when format becomes mainline.
+    if (LIBCXX_ENABLE_SHARED)
+      target_compile_definitions(${target} PRIVATE
+                                 _LIBCPP_INLINE_FORMAT_ERROR_DTOR)
+    endif()
   endif()
 endfunction()
 
