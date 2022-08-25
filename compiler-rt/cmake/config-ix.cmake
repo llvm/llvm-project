@@ -142,6 +142,7 @@ check_cxx_compiler_flag(-Warray-bounds-pointer-arithmetic COMPILER_RT_HAS_ARRAY_
 check_cxx_compiler_flag(-Wreturn-stack-address COMPILER_RT_HAS_RETURN_STACK_ADDRESS_FLAG)
 check_cxx_compiler_flag(-Wsizeof-array-decay COMPILER_RT_HAS_SIZEOF_ARRAY_DECAY_FLAG)
 check_cxx_compiler_flag(-Wformat-insufficient-args COMPILER_RT_HAS_FORMAT_INSUFFICIENT_ARGS_FLAG)
+check_cxx_compiler_flag(-Wformat-security COMPILER_RT_HAS_BUILTIN_FORMAL_SECURITY_FLAG)
 
 # Symbols.
 check_symbol_exists(__func__ "" COMPILER_RT_HAS_FUNC_SYMBOL)
