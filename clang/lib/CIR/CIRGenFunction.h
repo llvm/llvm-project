@@ -233,6 +233,9 @@ private:
   mlir::Value buildAlloca(llvm::StringRef name, mlir::cir::InitStyle initStyle,
                           clang::QualType ty, mlir::Location loc,
                           clang::CharUnits alignment);
+  mlir::Value buildAlloca(llvm::StringRef name, mlir::cir::InitStyle initStyle,
+                          mlir::Type ty, mlir::Location loc,
+                          clang::CharUnits alignment);
   void buildAndUpdateRetAlloca(clang::QualType ty, mlir::Location loc,
                                clang::CharUnits alignment);
 
