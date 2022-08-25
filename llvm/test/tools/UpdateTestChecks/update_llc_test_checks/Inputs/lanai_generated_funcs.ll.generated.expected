@@ -66,6 +66,7 @@ define dso_local i32 @main() #0 {
 attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-LABEL: check_boundaries:
 ; CHECK:       .Lcheck_boundaries$local:
+; CHECK-NEXT:    .type .Lcheck_boundaries$local,@function
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0:
 ; CHECK-NEXT:    st %fp, [--%sp]
@@ -113,6 +114,7 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ;
 ; CHECK-LABEL: main:
 ; CHECK:       .Lmain$local:
+; CHECK-NEXT:    .type .Lmain$local,@function
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0:
 ; CHECK-NEXT:    st %fp, [--%sp]
