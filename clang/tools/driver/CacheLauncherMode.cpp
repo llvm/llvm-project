@@ -145,7 +145,14 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
       }
     }
     if (const char *CASPath = ::getenv("LLVM_CACHE_CAS_PATH")) {
-      Args.append({"-Xclang", "-fcas-path", "-Xclang", CASPath});
+      llvm::SmallString<256> CASArg(CASPath);
+      llvm::sys::path::append(CASArg, "cas");
+      Args.append({"-Xclang", "-fcas-path", "-Xclang",
+                   Saver.save(CASArg.str()).data()});
+      llvm::SmallString<256> CacheArg(CASPath);
+      llvm::sys::path::append(CacheArg, "actioncache");
+      Args.append({"-Xclang", "-faction-cache-path", "-Xclang",
+                   Saver.save(CacheArg.str()).data()});
     }
     Args.append({"-greproducible"});
     return None;

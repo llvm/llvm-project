@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CASTestConfig.h"
 #include "llvm/CAS/CASDB.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
@@ -16,32 +17,7 @@
 using namespace llvm;
 using namespace llvm::cas;
 
-struct TestingAndDir {
-  std::unique_ptr<CASDB> DB;
-  Optional<unittest::TempDir> Temp;
-};
-
-class CASDBTest
-    : public testing::TestWithParam<std::function<TestingAndDir(int)>> {
-protected:
-  Optional<int> NextCASIndex;
-
-  SmallVector<unittest::TempDir> Dirs;
-
-  std::unique_ptr<CASDB> createCAS() {
-    auto TD = GetParam()((*NextCASIndex)++);
-    if (TD.Temp)
-      Dirs.push_back(std::move(*TD.Temp));
-    return std::move(TD.DB);
-  }
-  void SetUp() { NextCASIndex = 0; }
-  void TearDown() {
-    NextCASIndex = None;
-    Dirs.clear();
-  }
-};
-
-TEST_P(CASDBTest, PrintIDs) {
+TEST_P(CASTest, PrintIDs) {
   std::unique_ptr<CASDB> CAS = createCAS();
 
   Optional<CASID> ID1, ID2;
@@ -59,7 +35,7 @@ TEST_P(CASDBTest, PrintIDs) {
   EXPECT_EQ(ID2, ParsedID2);
 }
 
-TEST_P(CASDBTest, Blobs) {
+TEST_P(CASTest, Blobs) {
   std::unique_ptr<CASDB> CAS1 = createCAS();
   StringRef ContentStrings[] = {
       "word",
@@ -133,7 +109,7 @@ multiline text multiline text multiline text multiline text multiline text)",
   }
 }
 
-TEST_P(CASDBTest, BlobsBig) {
+TEST_P(CASTest, BlobsBig) {
   // A little bit of validation that bigger blobs are okay. Climb up to 1MB.
   std::unique_ptr<CASDB> CAS = createCAS();
   SmallString<256> String1 = StringRef("a few words");
@@ -176,7 +152,7 @@ TEST_P(CASDBTest, BlobsBig) {
   }
 }
 
-TEST_P(CASDBTest, LeafNodes) {
+TEST_P(CASTest, LeafNodes) {
   std::unique_ptr<CASDB> CAS1 = createCAS();
   StringRef ContentStrings[] = {
       "word",
@@ -260,7 +236,7 @@ multiline text multiline text multiline text multiline text multiline text)",
   }
 }
 
-TEST_P(CASDBTest, NodesBig) {
+TEST_P(CASTest, NodesBig) {
   std::unique_ptr<CASDB> CAS = createCAS();
 
   // Specifically check near 1MB for objects large enough they're likely to be
@@ -297,17 +273,3 @@ TEST_P(CASDBTest, NodesBig) {
   for (auto ID: CreatedNodes)
     ASSERT_THAT_ERROR(CAS->validate(CAS->getID(ID)), Succeeded());
 }
-
-INSTANTIATE_TEST_SUITE_P(InMemoryCAS, CASDBTest, ::testing::Values([](int) {
-                           return TestingAndDir{createInMemoryCAS(), None};
-                         }));
-
-#if LLVM_ENABLE_ONDISK_CAS
-static TestingAndDir createOnDisk(int I) {
-  unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
-  std::unique_ptr<CASDB> CAS;
-  EXPECT_THAT_ERROR(createOnDiskCAS(Temp.path()).moveInto(CAS), Succeeded());
-  return TestingAndDir{std::move(CAS), std::move(Temp)};
-}
-INSTANTIATE_TEST_SUITE_P(OnDiskCAS, CASDBTest, ::testing::Values(createOnDisk));
-#endif /* LLVM_ENABLE_ONDISK_CAS */

@@ -87,6 +87,9 @@ class CompilerInstance : public ModuleLoader {
   /// The CAS, if any.
   std::shared_ptr<llvm::cas::CASDB> CAS;
 
+  /// The ActionCache, if any.
+  std::shared_ptr<llvm::cas::ActionCache> ActionCache;
+
   /// The file manager.
   IntrusiveRefCntPtr<FileManager> FileMgr;
 
@@ -440,6 +443,7 @@ public:
 
   /// Get the CAS, or create it using the configuration in CompilerInvocation.
   llvm::cas::CASDB &getOrCreateCAS();
+  llvm::cas::ActionCache &getOrCreateActionCache();
 
   /// }
   /// @name Source Manager

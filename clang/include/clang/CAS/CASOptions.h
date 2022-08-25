@@ -19,7 +19,9 @@
 #include <vector>
 
 namespace llvm {
+class Error;
 namespace cas {
+class ActionCache;
 class CASDB;
 } // end namespace cas
 } // end namespace llvm
@@ -52,10 +54,11 @@ public:
   /// - "auto" is an alias for an automatically chosen location in the user's
   ///   system cache.
   std::string CASPath;
+  std::string CachePath;
 
   friend bool operator==(const CASConfiguration &LHS,
                          const CASConfiguration &RHS) {
-    return LHS.CASPath == RHS.CASPath;
+    return LHS.CASPath == RHS.CASPath && LHS.CachePath == RHS.CachePath;
   }
   friend bool operator!=(const CASConfiguration &LHS,
                          const CASConfiguration &RHS) {
@@ -73,7 +76,7 @@ private:
 /// defined in CASConfiguration to enable caching a CAS instance.
 ///
 /// CASOptions includes \a getOrCreateCAS() and \a
-/// getOrCreateCASAndHideConfig() for creating a CAS and caching it.
+/// getOrCreateActionCache() for creating CAS and ActionCache.
 ///
 /// FIXME: The the caching is done here, instead of as a field in \a
 /// CompilerInstance, in order to ensure that \a
@@ -92,24 +95,38 @@ public:
   getOrCreateCAS(DiagnosticsEngine &Diags,
                  bool CreateEmptyCASOnFailure = false) const;
 
-  /// Get a CAS defined by the options above. Future calls will return the same
+  /// Get a ActionCache defined by the options above. Future calls will return
+  /// the same ActionCache instance... unless the configuration has changed, in
+  /// which case a new one will be created.
+  ///
+  /// If \p CreateEmptyCacheOnFailure, returns an empty in-memory ActionCache on
+  /// failure. Else, returns \c nullptr on failure.
+  std::shared_ptr<llvm::cas::ActionCache>
+  getOrCreateActionCache(DiagnosticsEngine &Diags,
+                         bool CreateEmptyCacheOnFailures = false) const;
+
+  /// Freeze CAS Configuration. Future calls will return the same
   /// CAS instance, even if the configuration changes again later.
   ///
   /// The configuration will be wiped out to prevent it being observable or
   /// affecting the output of something that takes \a CASOptions as an input.
   /// This also "locks in" the return value of \a getOrCreateCAS(): future
   /// calls will not check if the configuration has changed.
-  std::shared_ptr<llvm::cas::CASDB>
-  getOrCreateCASAndHideConfig(DiagnosticsEngine &Diags);
+  void freezeConfig(DiagnosticsEngine &Diags);
 
   /// If the configuration is not for a persistent store, it modifies it to the
   /// default on-disk CAS, otherwise this is a noop.
   void ensurePersistentCAS();
 
 private:
+  /// Initialize Cached CAS and ActionCache.
+  void initCache(DiagnosticsEngine &Diags) const;
+
   struct CachedCAS {
     /// A cached CAS instance.
     std::shared_ptr<llvm::cas::CASDB> CAS;
+    /// An ActionCache instnace.
+    std::shared_ptr<llvm::cas::ActionCache> AC;
 
     /// Remember how the CAS was created.
     CASConfiguration Config;

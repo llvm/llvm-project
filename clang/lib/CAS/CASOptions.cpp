@@ -9,14 +9,15 @@
 #include "clang/CAS/CASOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticCAS.h"
+#include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/CASDB.h"
+#include "llvm/Support/Error.h"
 
 using namespace clang;
 using namespace llvm::cas;
 
 static std::shared_ptr<llvm::cas::CASDB>
-createCAS(const CASConfiguration &Config, DiagnosticsEngine &Diags,
-          bool CreateEmptyCASOnFailure) {
+createCAS(const CASConfiguration &Config, DiagnosticsEngine &Diags) {
   if (Config.CASPath.empty())
     return llvm::cas::createInMemoryCAS();
 
@@ -33,7 +34,7 @@ createCAS(const CASConfiguration &Config, DiagnosticsEngine &Diags,
           llvm::expectedToOptional(llvm::cas::createOnDiskCAS(Path)))
     return std::move(*MaybeCAS);
   Diags.Report(diag::err_builtin_cas_cannot_be_initialized) << Path;
-  return CreateEmptyCASOnFailure ? llvm::cas::createInMemoryCAS() : nullptr;
+  return nullptr;
 }
 
 std::shared_ptr<llvm::cas::CASDB>
@@ -42,22 +43,21 @@ CASOptions::getOrCreateCAS(DiagnosticsEngine &Diags,
   if (Cache.Config.IsFrozen)
     return Cache.CAS;
 
-  auto &CurrentConfig = static_cast<const CASConfiguration &>(*this);
-  if (!Cache.CAS || CurrentConfig != Cache.Config) {
-    Cache.Config = CurrentConfig;
-    Cache.CAS = createCAS(Cache.Config, Diags, CreateEmptyCASOnFailure);
-  }
-
+  initCache(Diags);
+  if (Cache.CAS)
+    return Cache.CAS;
+  if (!CreateEmptyCASOnFailure)
+    return nullptr;
+  Cache.CAS = llvm::cas::createInMemoryCAS();
   return Cache.CAS;
 }
 
-std::shared_ptr<llvm::cas::CASDB>
-CASOptions::getOrCreateCASAndHideConfig(DiagnosticsEngine &Diags) {
+void CASOptions::freezeConfig(DiagnosticsEngine &Diags) {
   if (Cache.Config.IsFrozen)
-    return Cache.CAS;
+    return;
 
-  std::shared_ptr<llvm::cas::CASDB> CAS = getOrCreateCAS(Diags);
-  assert(CAS == Cache.CAS && "Expected CAS to be cached");
+  // Make sure the cache is initialized.
+  initCache(Diags);
 
   // Freeze the CAS and wipe out the visible config to hide it from future
   // accesses. For example, future diagnostics cannot see this. Something that
@@ -67,13 +67,48 @@ CASOptions::getOrCreateCASAndHideConfig(DiagnosticsEngine &Diags) {
   CurrentConfig = CASConfiguration();
   CurrentConfig.IsFrozen = Cache.Config.IsFrozen = true;
 
-  if (CAS) {
+  if (Cache.CAS) {
     // Set the CASPath to the hash schema, since that leaks through CASContext's
     // API and is observable.
-    CurrentConfig.CASPath = CAS->getHashSchemaIdentifier().str();
+    CurrentConfig.CASPath = Cache.CAS->getHashSchemaIdentifier().str();
   }
+  if (Cache.AC)
+    CurrentConfig.CachePath = "";
+}
 
-  return CAS;
+static std::shared_ptr<llvm::cas::ActionCache>
+createCache(CASDB &CAS, const CASConfiguration &Config,
+            DiagnosticsEngine &Diags) {
+  if (Config.CachePath.empty())
+    return llvm::cas::createInMemoryActionCache(CAS);
+
+  // Compute the path.
+  std::string Path = Config.CASPath;
+  if (Path == "auto")
+    Path = getDefaultOnDiskActionCachePath();
+
+  // FIXME: Pass on the actual error from the CAS.
+  if (auto MaybeCache = llvm::expectedToOptional(
+          llvm::cas::createOnDiskActionCache(CAS, Path)))
+    return std::move(*MaybeCache);
+  Diags.Report(diag::err_builtin_actioncache_cannot_be_initialized) << Path;
+  return nullptr;
+}
+
+std::shared_ptr<llvm::cas::ActionCache>
+CASOptions::getOrCreateActionCache(DiagnosticsEngine &Diags,
+                                   bool CreateEmptyOnFailure) const {
+  if (Cache.Config.IsFrozen)
+    return Cache.AC;
+
+  initCache(Diags);
+  if (Cache.AC)
+    return Cache.AC;
+  if (!CreateEmptyOnFailure)
+    return nullptr;
+
+  Cache.CAS = Cache.CAS ? Cache.CAS : llvm::cas::createInMemoryCAS();
+  return llvm::cas::createInMemoryActionCache(*Cache.CAS);
 }
 
 void CASOptions::ensurePersistentCAS() {
@@ -83,8 +118,19 @@ void CASOptions::ensurePersistentCAS() {
       llvm_unreachable("Cannot ensure persistent CAS if it's unknown / frozen");
   case InMemoryCAS:
     CASPath = "auto";
+    CachePath = "auto";
     break;
   case OnDiskCAS:
     break;
   }
+}
+
+void CASOptions::initCache(DiagnosticsEngine &Diags) const {
+  auto &CurrentConfig = static_cast<const CASConfiguration &>(*this);
+  if (CurrentConfig == Cache.Config && Cache.CAS && Cache.AC)
+    return;
+
+  Cache.Config = CurrentConfig;
+  Cache.CAS = createCAS(Cache.Config, Diags);
+  Cache.AC = createCache(*Cache.CAS, Cache.Config, Diags);
 }

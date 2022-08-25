@@ -72,7 +72,8 @@ clang_experimental_DependencyScannerService_create_v0(CXDependencyMode Format) {
   CASOptions CASOpts;
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
   return wrap(new DependencyScanningService(
-      ScanningMode::DependencyDirectivesScan, unwrap(Format), CASOpts, FS,
+      ScanningMode::DependencyDirectivesScan, unwrap(Format), CASOpts,
+      /*ActionCache=*/nullptr, FS,
       /*ReuseFilemanager=*/false));
 }
 

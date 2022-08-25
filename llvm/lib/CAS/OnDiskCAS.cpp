@@ -835,6 +835,7 @@ public:
   }
 
   Optional<ObjectRef> getReference(const CASID &ID) const final;
+  Optional<ObjectRef> getReference(ArrayRef<uint8_t> Hash) const final;
   ObjectRef getReference(ObjectHandle Handle) const final {
     return getExternalReference(getInternalHandle(Handle).getRef());
   }
@@ -866,9 +867,6 @@ public:
   ArrayRef<char> getDataConst(ObjectHandle Node) const final;
 
   void print(raw_ostream &OS) const final;
-
-  Expected<CASID> getCachedResult(CASID InputID) final;
-  Error putCachedResult(CASID InputID, CASID OutputID) final;
 
   static Expected<std::unique_ptr<OnDiskCAS>> open(StringRef Path);
 
@@ -1455,6 +1453,16 @@ Optional<ObjectRef> OnDiskCAS::getReference(const CASID &ID) const {
   return None;
 }
 
+Optional<ObjectRef> OnDiskCAS::getReference(ArrayRef<uint8_t> Hash) const {
+  OnDiskHashMappedTrie::const_pointer P = Index.find(Hash);
+  if (!P)
+    return None;
+  IndexProxy I = getIndexProxyFromPointer(P);
+  if (Optional<InternalRef> Ref = makeInternalRef(I.Offset, I.Ref.load()))
+    return getExternalReference(*Ref);
+  return None;
+}
+
 OnDiskHashMappedTrie::const_pointer
 OnDiskCAS::getInternalIndexPointer(const CASID &ID) const {
   // Recover the pointer from the FileOffset if ID comes from this CAS.
@@ -1924,65 +1932,6 @@ Error OnDiskCAS::forEachRef(ObjectHandle Node,
   return Error::success();
 }
 
-Expected<CASID> OnDiskCAS::getCachedResult(CASID InputID) {
-  // Check that InputID is valid.
-  //
-  // FIXME: InputID check is silly; we should have a separate ActionKey.
-  if (!getReference(InputID))
-    return createUnknownObjectError(InputID);
-
-  // Check the result cache.
-  //
-  // FIXME: Failure here should not be an error.
-  OnDiskHashMappedTrie::pointer ActionP = ActionCache.find(InputID.getHash());
-  if (!ActionP)
-    return createResultCacheMissError(InputID);
-  const uint64_t Output =
-      reinterpret_cast<const ActionCacheResultT *>(ActionP->Data.data())
-          ->load();
-
-  // Return the result.
-  return getID(getExternalReference(InternalRef::getFromRawData(Output)));
-}
-
-Error OnDiskCAS::putCachedResult(CASID InputID, CASID OutputID) {
-  // Check that both IDs are valid.
-  //
-  // FIXME: InputID check is silly; we should have a separate ActionKey.
-  if (!getReference(InputID))
-    return createUnknownObjectError(InputID);
-
-  Optional<InternalRef> OutputRef;
-  if (Optional<ObjectRef> ExternalRef = getReference(OutputID))
-    OutputRef = getInternalRef(*ExternalRef);
-  else
-    return createUnknownObjectError(OutputID);
-
-  // Insert Input the result cache.
-  //
-  // FIXME: Consider templating OnDiskHashMappedTrie (really, renaming it to
-  // OnDiskHashMappedTrieBase and adding a type-safe layer on top).
-  const uint64_t Expected = OutputRef->getRawData();
-  OnDiskHashMappedTrie::pointer ActionP = ActionCache.insertLazy(
-      InputID.getHash(), [&](FileOffset TentativeOffset,
-                             OnDiskHashMappedTrie::ValueProxy TentativeValue) {
-        assert(TentativeValue.Data.size() == sizeof(ActionCacheResultT));
-        assert(isAddrAligned(Align::Of<ActionCacheResultT>(),
-                             TentativeValue.Data.data()));
-        new (TentativeValue.Data.data()) ActionCacheResultT(Expected);
-      });
-  const uint64_t Observed =
-      reinterpret_cast<const ActionCacheResultT *>(ActionP->Data.data())
-          ->load();
-
-  if (Expected == Observed)
-    return Error::success();
-
-  CASID ObservedID =
-      getID(getExternalReference(InternalRef::getFromRawData(Observed)));
-  return createResultCachePoisonedError(InputID, OutputID, ObservedID);
-}
-
 Expected<std::unique_ptr<OnDiskCAS>> OnDiskCAS::open(StringRef AbsPath) {
   if (std::error_code EC = sys::fs::create_directories(AbsPath))
     return createFileError(AbsPath, EC);
@@ -2053,13 +2002,11 @@ Expected<std::unique_ptr<CASDB>> cas::createOnDiskCAS(const Twine &Path) {
 
 #endif /* LLVM_ENABLE_ONDISK_CAS */
 
-// FIXME: Proxy not portable. Maybe also error-prone?
-constexpr StringLiteral DefaultDirProxy = "/^llvm::cas::builtin::default";
-constexpr StringLiteral DefaultName = "llvm.cas.builtin.default";
+static constexpr StringLiteral DefaultName = "cas";
 
 void cas::getDefaultOnDiskCASStableID(SmallVectorImpl<char> &Path) {
   Path.assign(DefaultDirProxy.begin(), DefaultDirProxy.end());
-  llvm::sys::path::append(Path, DefaultName);
+  llvm::sys::path::append(Path, DefaultDir, DefaultName);
 }
 
 std::string cas::getDefaultOnDiskCASStableID() {
@@ -2072,7 +2019,7 @@ void cas::getDefaultOnDiskCASPath(SmallVectorImpl<char> &Path) {
   // FIXME: Should this return 'Error' instead of hard-failing?
   if (!llvm::sys::path::cache_directory(Path))
     report_fatal_error("cannot get default cache directory");
-  llvm::sys::path::append(Path, DefaultName);
+  llvm::sys::path::append(Path, DefaultDir, DefaultName);
 }
 
 std::string cas::getDefaultOnDiskCASPath() {

@@ -4,7 +4,7 @@
 
 // RUN: rm -rf %t && mkdir -p %t/include
 // RUN: cp %S/Inputs/test.h %t/include
-// RUN: %clang -cc1depscand -start %{clang-daemon-dir}/daemon-cwd
+// RUN: %clang -cc1depscand -start %{clang-daemon-dir}/daemon-cwd -fcas-path %t/cas -faction-cache-path %t/cache
 // RUN: (cd %t && %clang -target x86_64-apple-macos11 -fdepscan=daemon    \
 // RUN:    -fdepscan-prefix-map=%S=/^source                               \
 // RUN:    -fdepscan-prefix-map=%t=/^build                                \

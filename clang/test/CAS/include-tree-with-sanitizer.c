@@ -10,7 +10,7 @@
 // RUN:   -e "s/^.*miss for '//" \
 // RUN:   -e "s/' .*$//" > %t/cache-key-tree
 
-// RUN: clang-cas-test -print-compile-job-cache-key -cas %t/cas @%t/cache-key-tree > %t/key.txt
+// RUN: clang-cas-test -print-compile-job-cache-key -cas %t/cas/cas @%t/cache-key-tree > %t/key.txt
 // RUN: FileCheck %s -DSRC_FILE=%s -DOUT_DIR=%t -input-file %t/key.txt
 //
 // CHECK: -fsanitize=address \

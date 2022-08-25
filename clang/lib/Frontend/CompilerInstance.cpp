@@ -880,6 +880,16 @@ llvm::cas::CASDB &CompilerInstance::getOrCreateCAS() {
   return *CAS;
 }
 
+llvm::cas::ActionCache &CompilerInstance::getOrCreateActionCache() {
+  if (ActionCache)
+    return *ActionCache;
+
+  ActionCache = getInvocation().getCASOpts().getOrCreateActionCache(
+      getDiagnostics(),
+      /*CreateEmptyActionCacheOnFailure=*/true);
+  return *ActionCache;
+}
+
 std::unique_ptr<raw_pwrite_stream>
 CompilerInstance::createOutputFile(StringRef OutputPath, bool Binary,
                                    bool RemoveFileOnSignal, bool UseTemporary,

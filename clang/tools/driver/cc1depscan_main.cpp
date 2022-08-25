@@ -29,6 +29,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
@@ -367,7 +368,8 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
     bool ProduceIncludeTree, bool &DiagnosticErrorOccurred,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping,
     llvm::function_ref<const char *(const Twine &)> SaveArg,
-    const CASOptions &CASOpts, std::shared_ptr<llvm::cas::CASDB> DB);
+    const CASOptions &CASOpts, std::shared_ptr<llvm::cas::CASDB> DB,
+    std::shared_ptr<llvm::cas::ActionCache> Cache);
 
 static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
     tooling::dependencies::DependencyScanningTool &Tool,
@@ -508,6 +510,7 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
                             const llvm::opt::ArgList &Args,
                             const CASOptions &CASOpts,
                             std::shared_ptr<llvm::cas::CASDB> DB,
+                            std::shared_ptr<llvm::cas::ActionCache> Cache,
                             llvm::Optional<llvm::cas::CASID> &RootID) {
   using namespace clang::driver;
 
@@ -579,7 +582,7 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
           PrefixMapping, *DaemonPath, Sharing, SaveArg, *DB);
     return scanAndUpdateCC1Inline(Exec, OldArgs, WorkingDirectory, NewArgs,
                                   ProduceIncludeTree, DiagnosticErrorOccurred,
-                                  PrefixMapping, SaveArg, CASOpts, DB);
+                                  PrefixMapping, SaveArg, CASOpts, DB, Cache);
   };
   if (llvm::Error E = ScanAndUpdate().moveInto(RootID)) {
     Diag.Report(diag::err_cas_depscan_failed) << toString(std::move(E));
@@ -632,8 +635,13 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
   if (!CAS)
     return 1;
 
+  std::shared_ptr<llvm::cas::ActionCache> Cache =
+      CASOpts.getOrCreateActionCache(Diags);
+  if (!Cache)
+    return 1;
+
   if (int Ret = scanAndUpdateCC1(Argv0, CC1Args->getValues(), NewArgs, Diags,
-                                 Args, CASOpts, CAS, RootID))
+                                 Args, CASOpts, CAS, Cache, RootID))
     return Ret;
 
   // FIXME: Use OutputBackend to OnDisk only now.
@@ -876,6 +884,11 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
   if (!CAS)
     llvm::report_fatal_error("clang -cc1depscand: cannot create CAS");
 
+  std::shared_ptr<llvm::cas::ActionCache> Cache =
+      CASOpts.getOrCreateActionCache(Diags);
+  if (!Cache)
+    llvm::report_fatal_error("clang -cc1depscand: cannot create ActionCache");
+
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
   if (!ProduceIncludeTree)
     FS = llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(*CAS));
@@ -884,7 +897,7 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
       ProduceIncludeTree
           ? tooling::dependencies::ScanningOutputFormat::IncludeTree
           : tooling::dependencies::ScanningOutputFormat::Tree,
-      CASOpts, FS,
+      CASOpts, Cache, FS,
       /*ReuseFileManager=*/false,
       /*SkipExcludedPPRanges=*/true);
 
@@ -1141,7 +1154,8 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
     bool ProduceIncludeTree, bool &DiagnosticErrorOccurred,
     const cc1depscand::DepscanPrefixMapping &PrefixMapping,
     llvm::function_ref<const char *(const Twine &)> SaveArg,
-    const CASOptions &CASOpts, std::shared_ptr<llvm::cas::CASDB> DB) {
+    const CASOptions &CASOpts, std::shared_ptr<llvm::cas::CASDB> DB,
+    std::shared_ptr<llvm::cas::ActionCache> Cache) {
   IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> FS;
   if (!ProduceIncludeTree)
     FS = llvm::cantFail(llvm::cas::createCachingOnDiskFileSystem(*DB));
@@ -1151,7 +1165,7 @@ static Expected<llvm::cas::CASID> scanAndUpdateCC1Inline(
       ProduceIncludeTree
           ? tooling::dependencies::ScanningOutputFormat::IncludeTree
           : tooling::dependencies::ScanningOutputFormat::Tree,
-      CASOpts, FS,
+      CASOpts, Cache, FS,
       /*ReuseFileManager=*/false,
       /*SkipExcludedPPRanges=*/true);
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> UnderlyingFS =

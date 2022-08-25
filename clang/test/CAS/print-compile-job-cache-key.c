@@ -43,7 +43,7 @@
 // RUN:   -e "s/^.*miss for '//" \
 // RUN:   -e "s/' .*$//" > %t/cache-key-tree
 
-// RUN: clang-cas-test -print-compile-job-cache-key -cas %t/cas @%t/cache-key-tree | FileCheck %s -check-prefix=INCLUDE_TREE -DSRC_FILE=%s
+// RUN: clang-cas-test -print-compile-job-cache-key -cas %t/cas/cas @%t/cache-key-tree | FileCheck %s -check-prefix=INCLUDE_TREE -DSRC_FILE=%s
 //
 // INCLUDE_TREE: command-line: llvmcas://
 // INCLUDE_TREE: computation: llvmcas://

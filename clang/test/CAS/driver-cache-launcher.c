@@ -13,12 +13,12 @@
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas PATH="%t:$PATH" %clang-cache clang-symlink-outside-bindir -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=CLANG -DPREFIX=%t
 
 // CLANG: "-cc1depscan" "-fdepscan=auto"
-// CLANG: "-fcas-path" "[[PREFIX]]/cas"
+// CLANG: "-fcas-path" "[[PREFIX]]/cas/cas" "-faction-cache-path" "[[PREFIX]]/cas/actioncache"
 // CLANG: "-greproducible"
 // CLANG: "-x" "c"
 
 // CLANGPP: "-cc1depscan" "-fdepscan=auto"
-// CLANGPP: "-fcas-path" "[[PREFIX]]/cas"
+// CLANGPP: "-fcas-path" "[[PREFIX]]/cas/cas" "-faction-cache-path" "[[PREFIX]]/cas/actioncache"
 // CLANGPP: "-greproducible"
 // CLANGPP: "-x" "c++"
 
@@ -28,7 +28,7 @@
 
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas cache-build-session %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=SESSION -DPREFIX=%t
 // SESSION: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-share-identifier"
-// SESSION: "-fcas-path" "[[PREFIX]]/cas"
+// SESSION: "-fcas-path" "[[PREFIX]]/cas/cas" "-faction-cache-path" "[[PREFIX]]/cas/actioncache"
 // SESSION: "-greproducible"
 
 // Using multi-arch invocation.

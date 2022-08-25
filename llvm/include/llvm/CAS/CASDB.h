@@ -145,6 +145,9 @@ public:
   /// Returns \c None if not stored in this CAS.
   virtual Optional<ObjectRef> getReference(const CASID &ID) const = 0;
 
+  /// Get a reference to the object has the hash value \p Hash.
+  virtual Optional<ObjectRef> getReference(ArrayRef<uint8_t> Hash) const = 0;
+
   /// Get a Ref from Handle.
   virtual ObjectRef getReference(ObjectHandle Handle) const = 0;
 
@@ -166,13 +169,6 @@ public:
   virtual size_t getNumRefs(ObjectHandle Node) const = 0;
   virtual ArrayRef<char> getData(ObjectHandle Node,
                                  bool RequiresNullTerminator = false) const = 0;
-
-public:
-  /// ActionCache APIs.
-  // FIXME: Split out in the future. This should also be generic key-value
-  // storage interface, rather than CASID -> CASID.
-  virtual Expected<CASID> getCachedResult(CASID InputID) = 0;
-  virtual Error putCachedResult(CASID InputID, CASID OutputID) = 0;
 
 protected:
   virtual Expected<ObjectHandle>

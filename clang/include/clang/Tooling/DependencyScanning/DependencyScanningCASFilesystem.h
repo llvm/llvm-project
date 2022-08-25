@@ -13,6 +13,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/CASReference.h"
 #include "llvm/CAS/ThreadSafeFileSystem.h"
@@ -34,7 +35,8 @@ namespace dependencies {
 class DependencyScanningCASFilesystem : public llvm::cas::ThreadSafeFileSystem {
 public:
   DependencyScanningCASFilesystem(
-      IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> WorkerFS);
+      IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> WorkerFS,
+      llvm::cas::ActionCache &Cache);
 
   ~DependencyScanningCASFilesystem();
 
@@ -104,6 +106,7 @@ private:
   llvm::cas::CachingOnDiskFileSystem &getCachingFS();
 
   llvm::cas::CASDB &CAS;
+  llvm::cas::ActionCache &Cache;
   Optional<llvm::cas::ObjectRef> ClangFullVersionID;
   Optional<llvm::cas::ObjectRef> DepDirectivesID;
   Optional<llvm::cas::ObjectRef> EmptyBlobID;

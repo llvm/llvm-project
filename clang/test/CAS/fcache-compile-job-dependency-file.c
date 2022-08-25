@@ -3,7 +3,7 @@
 // RUN: llvm-cas --cas %t/cas --ingest --data %t > %t/casid
 //
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
-// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
+// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid -fcache-compile-job \
 // RUN:   -Rcompile-job-cache %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
 // RUN:   -dependency-file %t/deps1.d -MT depends 2>&1 \
 // RUN:   | FileCheck %s --allow-empty --check-prefix=CACHE-MISS
@@ -17,7 +17,7 @@
 // RUN: ls %t/output.o && rm %t/output.o
 //
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
-// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
+// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid -fcache-compile-job \
 // RUN:   -Rcompile-job-cache %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
 // RUN:   -dependency-file %t/deps2.d -MT depends 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CACHE-HIT
@@ -29,7 +29,7 @@
 // CACHE-MISS-NOT: remark: compile job cache hit
 
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
-// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
+// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid -fcache-compile-job \
 // RUN:   -Rcompile-job-cache %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
 // RUN:   -dependency-file %t/deps3.d -MT other1 -MT other2 -MP 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CACHE-HIT
@@ -42,7 +42,7 @@
 // DEPS_OTHER: my_header.h:
 
 // RUN: %clang -cc1 -triple x86_64-apple-macos11 \
-// RUN:   -fcas-path %t/cas -fcas-fs @%t/casid -fcache-compile-job \
+// RUN:   -fcas-path %t/cas -faction-cache-path %t/cache -fcas-fs @%t/casid -fcache-compile-job \
 // RUN:   -Rcompile-job-cache %t/main.c -emit-obj -o %t/output.o -isystem %t/sys \
 // RUN:   -sys-header-deps -dependency-file %t/deps4.d -MT depends 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CACHE-MISS

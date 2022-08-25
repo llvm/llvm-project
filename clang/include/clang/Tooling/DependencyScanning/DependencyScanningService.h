@@ -12,6 +12,7 @@
 #include "clang/CAS/CASOptions.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningCASFilesystem.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
+#include "llvm/CAS/ActionCache.h"
 
 namespace clang {
 namespace tooling {
@@ -58,6 +59,7 @@ class DependencyScanningService {
 public:
   DependencyScanningService(
       ScanningMode Mode, ScanningOutputFormat Format, CASOptions CASOpts,
+      std::shared_ptr<llvm::cas::ActionCache> Cache,
       IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS,
       bool ReuseFileManager = true, bool OptimizeArgs = false,
       bool EagerLoadModules = false);
@@ -79,6 +81,10 @@ public:
   }
 
   const CASOptions &getCASOpts() const { return CASOpts; }
+  llvm::cas::ActionCache &getCache() const {
+    assert(Cache && "Cache is not initialized");
+    return *Cache;
+  }
 
   llvm::cas::CachingOnDiskFileSystem &getSharedFS() { return *SharedFS; }
 
@@ -88,6 +94,7 @@ private:
   const ScanningMode Mode;
   const ScanningOutputFormat Format;
   CASOptions CASOpts;
+  std::shared_ptr<llvm::cas::ActionCache> Cache;
   const bool ReuseFileManager;
   /// Whether to optimize the modules' command-line arguments.
   const bool OptimizeArgs;

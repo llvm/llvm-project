@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/CASDB.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
@@ -13,12 +14,17 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
 
+#ifndef LLVM_UNITTESTS_CASTESTCONFIG_H
+#define LLVM_UNITTESTS_CASTESTCONFIG_H
+
 struct TestingAndDir {
-  std::unique_ptr<llvm::cas::CASDB> DB;
+  std::unique_ptr<llvm::cas::CASDB> CAS;
+  std::function<std::unique_ptr<llvm::cas::ActionCache>(llvm::cas::CASDB &)>
+      CreateCacheFn;
   llvm::Optional<llvm::unittest::TempDir> Temp;
 };
 
-class CASDBTest
+class CASTest
     : public testing::TestWithParam<std::function<TestingAndDir(int)>> {
 protected:
   llvm::Optional<int> NextCASIndex;
@@ -26,10 +32,15 @@ protected:
   llvm::SmallVector<llvm::unittest::TempDir> Dirs;
 
   std::unique_ptr<llvm::cas::CASDB> createCAS() {
-    auto TD = GetParam()((*NextCASIndex)++);
+    auto TD = GetParam()(++(*NextCASIndex));
     if (TD.Temp)
       Dirs.push_back(std::move(*TD.Temp));
-    return std::move(TD.DB);
+    return std::move(TD.CAS);
+  }
+  std::unique_ptr<llvm::cas::ActionCache>
+  createActionCache(llvm::cas::CASDB &CAS) {
+    auto TD = GetParam()(*NextCASIndex);
+    return TD.CreateCacheFn(CAS);
   }
   void SetUp() { NextCASIndex = 0; }
   void TearDown() {
@@ -38,12 +49,4 @@ protected:
   }
 };
 
-#if LLVM_ENABLE_ONDISK_CAS
-static TestingAndDir createOnDisk(int I) {
-  llvm::unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
-  std::unique_ptr<llvm::cas::CASDB> CAS;
-  EXPECT_THAT_ERROR(llvm::cas::createOnDiskCAS(Temp.path()).moveInto(CAS),
-                    llvm::Succeeded());
-  return TestingAndDir{std::move(CAS), std::move(Temp)};
-}
-#endif /* LLVM_ENABLE_ONDISK_CAS */
+#endif

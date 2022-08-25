@@ -11,6 +11,9 @@ let Component = "CAS" in {
 def err_builtin_cas_cannot_be_initialized : Error<
   "CAS cannot be initialized from '%0' on disk (check -fcas-path)">,
   DefaultFatal;
+def err_builtin_actioncache_cannot_be_initialized : Error<
+  "ActionCache cannot be initialized from '%0' on disk (check -faction-cache-path)">,
+  DefaultFatal;
 def err_cas_cannot_parse_root_id : Error<
   "CAS cannot parse root-id '%0' specified by -fcas-fs">, DefaultFatal;
 def err_cas_filesystem_cannot_be_initialized : Error<

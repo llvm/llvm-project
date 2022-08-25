@@ -104,7 +104,7 @@ TEST(CASOptionsTest, getOrCreateCASInvalid) {
   ASSERT_EQ(Contents, MemBuffer->getBuffer());
 }
 
-TEST(CASOptionsTest, getOrCreateCASAndHideConfig) {
+TEST(CASOptionsTest, freezeConfig) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
                           new IgnoringDiagConsumer());
 
@@ -112,7 +112,8 @@ TEST(CASOptionsTest, getOrCreateCASAndHideConfig) {
   unittest::TempDir Dir("cas-options", /*Unique=*/true);
   CASOptions Opts;
   Opts.CASPath = Dir.path("cas").str().str();
-  std::shared_ptr<CASDB> CAS = Opts.getOrCreateCASAndHideConfig(Diags);
+  Opts.freezeConfig(Diags);
+  std::shared_ptr<CASDB> CAS = Opts.getOrCreateCAS(Diags);
   ASSERT_TRUE(CAS);
   EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
 
@@ -124,13 +125,9 @@ TEST(CASOptionsTest, getOrCreateCASAndHideConfig) {
   Opts.CASPath = "";
   EXPECT_EQ(CAS, Opts.getOrCreateCAS(Diags));
   EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
-  EXPECT_EQ(CAS, Opts.getOrCreateCASAndHideConfig(Diags));
-  EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
 
   Opts.CASPath = Dir.path("ignored-cas").str().str();
   EXPECT_EQ(CAS, Opts.getOrCreateCAS(Diags));
-  EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
-  EXPECT_EQ(CAS, Opts.getOrCreateCASAndHideConfig(Diags));
   EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
 }
 #endif

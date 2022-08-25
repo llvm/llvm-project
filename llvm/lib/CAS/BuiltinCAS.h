@@ -207,29 +207,12 @@ public:
                              "corrupt storage");
   }
 
-  /// FIXME: This should not use Error.
-  Error createResultCacheMissError(CASID Input) const {
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "no result for '" + Input.toString() + "'");
-  }
-
-  Error createResultCachePoisonedError(CASID Input, CASID Output,
-                                       CASID ExistingOutput) const {
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "cache poisoned for '" + Input.toString() +
-                                 "' (new='" + Output.toString() +
-                                 "' vs. existing '" +
-                                 ExistingOutput.toString() + "')");
-  }
-
-  Error createResultCacheCorruptError(CASID Input) const {
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "result cache corrupt for '" + Input.toString() +
-                                 "'");
-  }
-
   Error validate(const CASID &ID) final;
 };
+
+// FIXME: Proxy not portable. Maybe also error-prone?
+constexpr StringLiteral DefaultDirProxy = "/^llvm::cas::builtin::default";
+constexpr StringLiteral DefaultDir = "llvm.cas.builtin.default";
 
 } // end namespace builtin
 } // end namespace cas

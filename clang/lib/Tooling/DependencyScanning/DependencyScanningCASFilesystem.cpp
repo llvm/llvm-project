@@ -9,6 +9,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningCASFilesystem.h"
 #include "clang/Basic/Version.h"
 #include "clang/Lex/DependencyDirectivesScanner.h"
+#include "llvm/CAS/ActionCache.h"
 #include "llvm/CAS/CASDB.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/CAS/HierarchicalTreeBuilder.h"
@@ -34,8 +35,10 @@ static void reportAsFatalIfError(llvm::Error E) {
 using llvm::Error;
 
 DependencyScanningCASFilesystem::DependencyScanningCASFilesystem(
-    IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> WorkerFS)
-    : FS(WorkerFS), Entries(EntryAlloc), CAS(WorkerFS->getCAS()) {}
+    IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> WorkerFS,
+    llvm::cas::ActionCache &Cache)
+    : FS(WorkerFS), Entries(EntryAlloc), CAS(WorkerFS->getCAS()), Cache(Cache) {
+}
 
 DependencyScanningCASFilesystem::~DependencyScanningCASFilesystem() = default;
 
@@ -84,12 +87,12 @@ template <typename T> static void readle(StringRef &Slice, T &Out) {
 }
 
 static Error loadDepDirectives(
-    cas::CASDB &CAS, cas::CASID ID,
+    cas::CASDB &CAS, cas::ObjectRef Ref,
     llvm::SmallVectorImpl<dependency_directives_scan::Token> &DepTokens,
     llvm::SmallVectorImpl<dependency_directives_scan::Directive>
         &DepDirectives) {
   using namespace dependency_directives_scan;
-  auto Blob = CAS.getProxy(ID);
+  auto Blob = CAS.getProxy(Ref);
   if (!Blob)
     return Blob.takeError();
 
@@ -164,9 +167,10 @@ void DependencyScanningCASFilesystem::scanForDirectives(
   }
 
   // Check the result cache.
-  if (Optional<CASID> OutputID =
-          expectedToOptional(CAS.getCachedResult(*InputID))) {
-    reportAsFatalIfError(loadDepDirectives(CAS, *OutputID, Tokens, Directives));
+  if (Optional<ObjectRef> OutputRef =
+          reportAsFatalIfError(Cache.get(*InputID))) {
+    reportAsFatalIfError(
+        loadDepDirectives(CAS, *OutputRef, Tokens, Directives));
     return;
   }
 
@@ -178,16 +182,15 @@ void DependencyScanningCASFilesystem::scanForDirectives(
     // Failure. Cache empty directives.
     Tokens.clear();
     Directives.clear();
-    reportAsFatalIfError(
-        CAS.putCachedResult(*InputID, CAS.getID(*EmptyBlobID)));
+    reportAsFatalIfError(Cache.put(*InputID, *EmptyBlobID));
     return;
   }
 
   // Success. Add to the CAS and get back persistent output data.
-  cas::CASID DirectivesID =
-      CAS.getID(reportAsFatalIfError(storeDepDirectives(CAS, Directives)));
+  cas::ObjectRef DirectivesID =
+      reportAsFatalIfError(storeDepDirectives(CAS, Directives));
   // Cache the computation.
-  reportAsFatalIfError(CAS.putCachedResult(*InputID, DirectivesID));
+  reportAsFatalIfError(Cache.put(*InputID, DirectivesID));
 }
 
 Expected<StringRef>

@@ -272,6 +272,11 @@ public:
       return toReference(*Object);
     return None;
   }
+  Optional<ObjectRef> getReference(ArrayRef<uint8_t> Hash) const final {
+    if (InMemoryIndexT::const_pointer P = Index.find(Hash))
+      return toReference(*P->Data);
+    return None;
+  }
   ObjectRef getReference(ObjectHandle Handle) const final {
     return toReference(asInMemoryObject(Handle));
   }
@@ -281,9 +286,6 @@ public:
   }
 
   void print(raw_ostream &OS) const final;
-
-  Expected<CASID> getCachedResult(CASID InputID) final;
-  Error putCachedResult(CASID InputID, CASID OutputID) final;
 
   InMemoryCAS() = default;
 
@@ -396,34 +398,6 @@ const InMemoryString &InMemoryCAS::getOrCreateString(StringRef String) {
     return &InMemoryString::create(Allocator, String);
   };
   return S.Data.loadOrGenerate(Generator);
-}
-
-Expected<CASID> InMemoryCAS::getCachedResult(CASID InputID) {
-  InMemoryCacheT::pointer P = ActionCache.find(InputID.getHash());
-  if (!P)
-    return createResultCacheMissError(InputID);
-
-  /// TODO: Although, consider inserting null on cache misses and returning a
-  /// handle to avoid a second lookup!
-  assert(P->Data && "Unexpected null in result cache");
-  return getID(*P->Data);
-}
-
-Error InMemoryCAS::putCachedResult(CASID InputID, CASID OutputID) {
-  const InMemoryIndexT::value_type &Expected = indexHash(OutputID.getHash());
-  const InMemoryCacheT::value_type &Cached =
-      *ActionCache.insertLazy(InputID.getHash(), [&](auto ValueConstructor) {
-        ValueConstructor.emplace(&Expected);
-      });
-
-  /// TODO: Although, consider changing \a getCachedResult() to insert nullptr
-  /// and returning a handle on cache misses!
-  assert(Cached.Data && "Unexpected null in result cache");
-  const InMemoryIndexT::value_type &Observed = *Cached.Data;
-  if (&Expected == &Observed)
-    return Error::success();
-
-  return createResultCachePoisonedError(InputID, OutputID, getID(Observed));
 }
 
 Error InMemoryCAS::forEachRef(ObjectHandle Handle,
