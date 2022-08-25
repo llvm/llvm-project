@@ -387,17 +387,13 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     reason = "INTENT(OUT)";
   } else if (dummy.intent == common::Intent::InOut) {
     reason = "INTENT(IN OUT)";
-  } else if (dummyIsAsynchronous) {
-    reason = "ASYNCHRONOUS";
-  } else if (dummyIsVolatile) {
-    reason = "VOLATILE";
   }
   if (reason && scope) {
     bool vectorSubscriptIsOk{isElemental || dummyIsValue}; // 15.5.2.4(21)
     if (auto why{WhyNotModifiable(
             messages.at(), actual, *scope, vectorSubscriptIsOk)}) {
       if (auto *msg{messages.Say(
-              "Actual argument associated with %s %s must be definable"_err_en_US, // C1158
+              "Actual argument associated with %s %s must be definable"_err_en_US,
               reason, dummyName)}) {
         msg->Attach(*why);
       }
