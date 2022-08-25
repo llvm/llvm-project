@@ -1185,6 +1185,12 @@ void SubprogramSymbolCollector::DoSymbol(
                         DoSymbol(*object);
                       }
                     },
+                    [this](const ProcEntityDetails &details) {
+                      if (const Symbol * symbol{details.interface().symbol()}) {
+                        DoSymbol(*symbol);
+                      }
+                      DoType(details.interface().type());
+                    },
                     [](const auto &) {},
                 },
       symbol.details());
@@ -1240,6 +1246,8 @@ void SubprogramSymbolCollector::DoParamValue(const ParamValue &paramValue) {
 bool SubprogramSymbolCollector::NeedImport(
     const SourceName &name, const Symbol &symbol) {
   if (!isInterface_) {
+    return false;
+  } else if (&symbol == scope_.symbol()) {
     return false;
   } else if (symbol.owner().Contains(scope_)) {
     return true;
