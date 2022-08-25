@@ -266,7 +266,6 @@ public:
     return getID(asInMemoryObject(Ref));
   }
 
-  const InMemoryString &getOrCreateString(StringRef String);
   Optional<ObjectRef> getReference(const CASID &ID) const final {
     if (const InMemoryObject *Object = getInMemoryObject(ID))
       return toReference(*Object);
@@ -383,20 +382,6 @@ Expected<ObjectRef> InMemoryCAS::storeImpl(ArrayRef<uint8_t> ComputedHash,
     return &InMemoryInlineObject::create(Allocator, I, InternalRefs, Data);
   };
   return toReference(cast<InMemoryObject>(I.Data.loadOrGenerate(Generator)));
-}
-
-const InMemoryString &InMemoryCAS::getOrCreateString(StringRef String) {
-  InMemoryStringPoolT::value_type S = *StringPool.insertLazy(
-      BuiltinObjectHasher<HasherT>::hashString(String),
-      [&](auto ValueConstructor) { ValueConstructor.emplace(nullptr); });
-
-  auto Allocator = [&](size_t Size) -> void * {
-    return Strings.Allocate(Size, alignof(InMemoryString));
-  };
-  auto Generator = [&]() -> const InMemoryString * {
-    return &InMemoryString::create(Allocator, String);
-  };
-  return S.Data.loadOrGenerate(Generator);
 }
 
 Error InMemoryCAS::forEachRef(ObjectHandle Handle,

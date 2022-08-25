@@ -62,9 +62,6 @@ public:
 
     /// Object: refs and data.
     Object = 1,
-
-    /// String: data, no alignment guarantee, null-terminated.
-    String = 4,
   };
 
   enum Limits : int64_t {
@@ -756,7 +753,7 @@ public:
   static constexpr StringLiteral DataPoolFile = "data";
   static constexpr StringLiteral ActionCacheFile = "actions";
 
-  static constexpr StringLiteral FilePrefix = "v5.";
+  static constexpr StringLiteral FilePrefix = "v6.";
   static constexpr StringLiteral FileSuffixData = ".data";
   static constexpr StringLiteral FileSuffixLeaf = ".leaf";
   static constexpr StringLiteral FileSuffixLeaf0 = ".leaf+0";
@@ -861,8 +858,6 @@ public:
 
   IndexProxy
   getIndexProxyFromPointer(OnDiskHashMappedTrie::const_pointer P) const;
-
-  Expected<InternalRef> storeTreeEntryName(StringRef String);
 
   ArrayRef<char> getDataConst(ObjectHandle Node) const final;
 
@@ -1366,9 +1361,6 @@ void OnDiskCAS::print(raw_ostream &OS) const {
     case TrieRecord::ObjectKind::Object:
       OS << "object ";
       break;
-    case TrieRecord::ObjectKind::String:
-      OS << "string ";
-      break;
     }
     OS << " SK=";
     switch (D.SK) {
@@ -1532,8 +1524,6 @@ ObjectHandle OnDiskCAS::getLoadedObject(const IndexProxy &I,
                                         InternalHandle Handle) const {
   switch (Object.OK) {
   case TrieRecord::ObjectKind::Invalid:
-  case TrieRecord::ObjectKind::String:
-    report_fatal_error(createCorruptObjectError(getID(I)));
   case TrieRecord::ObjectKind::Object:
     return makeObjectHandle(Handle.getRawData());
   }
@@ -1569,54 +1559,6 @@ OnDiskCAS::makeInternalRef(FileOffset IndexOffset,
     return InternalRef::getFromOffset(InternalRef::OffsetKind::IndexRecord,
                                       IndexOffset);
   }
-}
-
-Expected<InternalRef> OnDiskCAS::storeTreeEntryName(StringRef String) {
-  if (String.size() > UINT16_MAX)
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "tree entry name too large for implementation");
-
-  // Make a string.
-  //
-  // FIXME: Should be using a content-based trie, rather than computing a hash
-  // and using a hash-based trie... otherwise this doesn't give any storage
-  // savings!
-  IndexProxy I = indexHash(BuiltinObjectHasher<HasherT>::hashString(String));
-
-  // Already exists!
-  TrieRecord::Data Object = I.Ref.load();
-  if (Object.OK == TrieRecord::ObjectKind::String)
-    return *makeInternalRef(I.Offset, Object);
-  if (Object.OK != TrieRecord::ObjectKind::Invalid)
-    return createCorruptStorageError();
-
-  FileOffset Offset;
-  auto Alloc = [&](size_t Size) -> char * {
-    OnDiskDataAllocator::pointer P = DataPool.allocate(Size);
-    Offset = P.getOffset();
-    LLVM_DEBUG({
-      dbgs() << "pool-alloc addr=" << (void *)Offset.get() << " size=" << Size
-             << " end=" << (void *)(Offset.get() + Size) << "\n";
-    });
-    return P->data();
-  };
-  (void)String2BHandle::create(Alloc, String);
-
-  TrieRecord::Data Existing;
-  {
-    TrieRecord::Data StringData{TrieRecord::StorageKind::DataPoolString2B,
-                                TrieRecord::ObjectKind::String, Offset};
-
-    if (I.Ref.compare_exchange_strong(Existing, StringData))
-      return *makeInternalRef(I.Offset, StringData);
-  }
-
-  // TODO: Find a way to reuse the storage from the new-but-abandoned
-  // String2BHandle.
-  if (Existing.SK != TrieRecord::StorageKind::DataPoolString2B)
-    return createCorruptStorageError();
-
-  return *makeInternalRef(I.Offset, Existing);
 }
 
 void OnDiskCAS::getStandalonePath(TrieRecord::StorageKind SK,

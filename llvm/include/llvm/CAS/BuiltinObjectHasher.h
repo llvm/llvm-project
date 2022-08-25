@@ -17,35 +17,13 @@
 namespace llvm {
 namespace cas {
 
-enum class StableObjectKind : uint8_t {
-  Node = 1,
-  Blob = 2,
-  Tree = 3,
-  String = 4,
-};
-
 template <class HasherT> class BuiltinObjectHasher {
 public:
   using HashT = decltype(HasherT::hash(std::declval<ArrayRef<uint8_t> &>()));
 
-  static HashT hashBlob(ArrayRef<char> Data) {
-    BuiltinObjectHasher H;
-    H.start(StableObjectKind::Blob);
-    H.updateArray(Data);
-    return H.finish();
-  }
-
-  static HashT hashString(StringRef String) {
-    BuiltinObjectHasher H;
-    H.start(StableObjectKind::String);
-    H.updateString(String);
-    return H.finish();
-  }
-
   static HashT hashObject(const ObjectStore &CAS, ArrayRef<ObjectRef> Refs,
                           ArrayRef<char> Data) {
     BuiltinObjectHasher H;
-    H.start(StableObjectKind::Node);
     H.updateSize(Refs.size());
     for (const ObjectRef &Ref : Refs)
       H.updateRef(CAS, Ref);
@@ -54,20 +32,7 @@ public:
   }
 
 private:
-  void start(StableObjectKind Kind) {
-    updateKind(Kind);
-  }
-
   HashT finish() { return Hasher.final(); }
-
-  void updateKind(StableObjectKind Kind) {
-    static_assert(sizeof(Kind) == 1, "Expected kind to be 1-byte");
-    Hasher.update((uint8_t)Kind);
-  }
-
-  void updateString(StringRef String) {
-    updateArray(makeArrayRef(String.data(), String.size()));
-  }
 
   void updateRef(const ObjectStore &CAS, ObjectRef Ref) {
     updateID(CAS.getID(Ref));
