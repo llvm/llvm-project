@@ -231,10 +231,10 @@ public:
   /// Prints all timers as JSON key/value pairs.
   static const char *printAllJSONValues(raw_ostream &OS, const char *delim);
 
-  /// Ensure global timer group lists are initialized. This function is mostly
-  /// used by the Statistic code to influence the construction and destruction
-  /// order of the global timer lists.
-  static void ConstructTimerLists();
+  /// Ensure global objects required for statistics printing are initialized.
+  /// This function is used by the Statistic code to ensure correct order of
+  /// global constructors and destructors.
+  static void constructForStatistics();
 
   /// This makes the default group unmanaged, and lets the user manage the
   /// group's lifetime.

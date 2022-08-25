@@ -2620,13 +2620,22 @@ void *__tgt_rtl_data_alloc(int DeviceId, int64_t Size, void *, int32_t Kind) {
   void *Ptr = NULL;
   assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
 
-  if (Kind != TARGET_ALLOC_DEFAULT) {
+  hsa_amd_memory_pool_t MemoryPool;
+  switch (Kind) {
+  case TARGET_ALLOC_DEFAULT:
+    // GPU memory
+    MemoryPool = DeviceInfo().getDeviceMemoryPool(DeviceId);
+    break;
+  case TARGET_ALLOC_HOST:
+    // non-migratable memory accessible by host and device(s)
+    MemoryPool = DeviceInfo().getHostMemoryPool();
+    break;
+  default:
     REPORT("Invalid target data allocation kind or requested allocator not "
            "implemented yet\n");
     return NULL;
   }
 
-  hsa_amd_memory_pool_t MemoryPool = DeviceInfo().getDeviceMemoryPool(DeviceId);
   hsa_status_t Err = hsa_amd_memory_pool_allocate(MemoryPool, Size, 0, &Ptr);
   DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", Size,
      (long long unsigned)(Elf64_Addr)Ptr);
@@ -2677,6 +2686,7 @@ int32_t __tgt_rtl_data_retrieve_async(int DeviceId, void *HstPtr, void *TgtPtr,
 
 int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr) {
   assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
+  // HSA can free pointers allocated from different types of memory pool.
   hsa_status_t Err;
   DP("Tgt free data (tgt:%016llx).\n", (long long unsigned)(Elf64_Addr)TgtPtr);
   Err = core::Runtime::Memfree(TgtPtr);

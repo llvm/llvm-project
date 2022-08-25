@@ -263,6 +263,7 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
   case MCSA_ELF_TypeIndFunction:
     Symbol->setType(CombineSymbolTypes(Symbol->getType(), ELF::STT_GNU_IFUNC));
+    getAssembler().getWriter().markGnuAbi();
     break;
 
   case MCSA_ELF_TypeObject:

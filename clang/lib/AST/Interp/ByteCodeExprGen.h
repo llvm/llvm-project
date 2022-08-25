@@ -72,6 +72,7 @@ public:
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E);
   bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E);
   bool VisitUnaryOperator(const UnaryOperator *E);
+  bool VisitDeclRefExpr(const DeclRefExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;

@@ -358,11 +358,11 @@ public:
   using typename InternalIoStatementState<DIR>::Buffer;
   InternalFormattedIoStatementState(Buffer internal, std::size_t internalLength,
       const CharType *format, std::size_t formatLength,
-      const char *sourceFile = nullptr, int sourceLine = 0,
-      const Descriptor *formatDescriptor = nullptr);
+      const Descriptor *formatDescriptor = nullptr,
+      const char *sourceFile = nullptr, int sourceLine = 0);
   InternalFormattedIoStatementState(const Descriptor &, const CharType *format,
-      std::size_t formatLength, const char *sourceFile = nullptr,
-      int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
+      std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
+      const char *sourceFile = nullptr, int sourceLine = 0);
   IoStatementState &ioStatementState() { return ioStatementState_; }
   void CompleteOperation();
   int EndIoStatement();
@@ -444,8 +444,8 @@ class ExternalFormattedIoStatementState
 public:
   using CharType = CHAR;
   ExternalFormattedIoStatementState(ExternalFileUnit &, const CharType *format,
-      std::size_t formatLength, const char *sourceFile = nullptr,
-      int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
+      std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
+      const char *sourceFile = nullptr, int sourceLine = 0);
   void CompleteOperation();
   int EndIoStatement();
   std::optional<DataEdit> GetNextDataEdit(
@@ -500,8 +500,8 @@ class ChildFormattedIoStatementState : public ChildIoStatementState<DIR>,
 public:
   using CharType = CHAR;
   ChildFormattedIoStatementState(ChildIo &, const CharType *format,
-      std::size_t formatLength, const char *sourceFile = nullptr,
-      int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
+      std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
+      const char *sourceFile = nullptr, int sourceLine = 0);
   MutableModes &mutableModes() { return mutableModes_; }
   void CompleteOperation();
   int EndIoStatement();

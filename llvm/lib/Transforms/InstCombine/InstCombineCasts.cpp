@@ -1684,7 +1684,6 @@ static Type *shrinkFPConstant(ConstantFP *CFP) {
 
 // Determine if this is a vector of ConstantFPs and if so, return the minimal
 // type we can safely truncate all elements to.
-// TODO: Make these support undef elements.
 static Type *shrinkFPConstantVector(Value *V) {
   auto *CV = dyn_cast<Constant>(V);
   auto *CVVTy = dyn_cast<FixedVectorType>(V->getType());
@@ -1698,6 +1697,9 @@ static Type *shrinkFPConstantVector(Value *V) {
   // For fixed-width vectors we find the minimal type by looking
   // through the constant values of the vector.
   for (unsigned i = 0; i != NumElts; ++i) {
+    if (isa<UndefValue>(CV->getAggregateElement(i)))
+      continue;
+
     auto *CFP = dyn_cast_or_null<ConstantFP>(CV->getAggregateElement(i));
     if (!CFP)
       return nullptr;
@@ -1713,7 +1715,7 @@ static Type *shrinkFPConstantVector(Value *V) {
   }
 
   // Make a vector type from the minimal type.
-  return FixedVectorType::get(MinType, NumElts);
+  return MinType ? FixedVectorType::get(MinType, NumElts) : nullptr;
 }
 
 /// Find the minimum FP type we can safely truncate to.
@@ -2887,21 +2889,27 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       }
     }
 
-    // A bitcasted-to-scalar and byte-reversing shuffle is better recognized as
-    // a byte-swap:
-    // bitcast <N x i8> (shuf X, undef, <N, N-1,...0>) --> bswap (bitcast X)
-    // TODO: We should match the related pattern for bitreverse.
-    if (DestTy->isIntegerTy() &&
-        DL.isLegalInteger(DestTy->getScalarSizeInBits()) &&
-        SrcTy->getScalarSizeInBits() == 8 &&
-        ShufElts.getKnownMinValue() % 2 == 0 && Shuf->hasOneUse() &&
-        Shuf->isReverse()) {
-      assert(ShufOp0->getType() == SrcTy && "Unexpected shuffle mask");
-      assert(match(ShufOp1, m_Undef()) && "Unexpected shuffle op");
-      Function *Bswap =
-          Intrinsic::getDeclaration(CI.getModule(), Intrinsic::bswap, DestTy);
-      Value *ScalarX = Builder.CreateBitCast(ShufOp0, DestTy);
-      return CallInst::Create(Bswap, { ScalarX });
+    // A bitcasted-to-scalar and byte/bit reversing shuffle is better recognized
+    // as a byte/bit swap:
+    // bitcast <N x i8> (shuf X, undef, <N, N-1,...0>) -> bswap (bitcast X)
+    // bitcast <N x i1> (shuf X, undef, <N, N-1,...0>) -> bitreverse (bitcast X)
+    if (DestTy->isIntegerTy() && ShufElts.getKnownMinValue() % 2 == 0 &&
+        Shuf->hasOneUse() && Shuf->isReverse()) {
+      unsigned IntrinsicNum = 0;
+      if (DL.isLegalInteger(DestTy->getScalarSizeInBits()) &&
+          SrcTy->getScalarSizeInBits() == 8) {
+        IntrinsicNum = Intrinsic::bswap;
+      } else if (SrcTy->getScalarSizeInBits() == 1) {
+        IntrinsicNum = Intrinsic::bitreverse;
+      }
+      if (IntrinsicNum != 0) {
+        assert(ShufOp0->getType() == SrcTy && "Unexpected shuffle mask");
+        assert(match(ShufOp1, m_Undef()) && "Unexpected shuffle op");
+        Function *BswapOrBitreverse =
+            Intrinsic::getDeclaration(CI.getModule(), IntrinsicNum, DestTy);
+        Value *ScalarX = Builder.CreateBitCast(ShufOp0, DestTy);
+        return CallInst::Create(BswapOrBitreverse, {ScalarX});
+      }
     }
   }
 

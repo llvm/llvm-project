@@ -241,10 +241,12 @@ LogicalResult mlir::getIndexSet(MutableArrayRef<Operation *> ops,
                                 FlatAffineValueConstraints *domain) {
   SmallVector<Value, 4> indices;
   SmallVector<AffineForOp, 8> forOps;
-
   for (Operation *op : ops) {
-    assert((isa<AffineForOp, AffineIfOp>(op)) &&
-           "ops should have either AffineForOp or AffineIfOp");
+    if (!isa<AffineForOp, AffineIfOp>(op)) {
+      // TODO: Support affine.parallel ops.
+      LLVM_DEBUG(llvm::dbgs() << "getIndexSet only handles affine.for/if ops");
+      return failure();
+    }
     if (AffineForOp forOp = dyn_cast<AffineForOp>(op))
       forOps.push_back(forOp);
   }
@@ -271,7 +273,7 @@ LogicalResult mlir::getIndexSet(MutableArrayRef<Operation *> ops,
 static LogicalResult getOpIndexSet(Operation *op,
                                    FlatAffineValueConstraints *indexSet) {
   SmallVector<Operation *, 4> ops;
-  getEnclosingAffineForAndIfOps(*op, &ops);
+  getEnclosingAffineOps(*op, &ops);
   return getIndexSet(ops, indexSet);
 }
 

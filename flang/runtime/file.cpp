@@ -426,10 +426,12 @@ void OpenFile::CloseFd(IoErrorHandler &handler) {
 
 bool IsATerminal(int fd) { return ::isatty(fd); }
 
-#ifdef WIN32
+#if defined(_WIN32) && !defined(F_OK)
 // Access flags are normally defined in unistd.h, which unavailable under
 // Windows. Instead, define the flags as documented at
 // https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/access-waccess
+// On Mingw, io.h does define these same constants - so check whether they
+// already are defined before defining these.
 #define F_OK 00
 #define W_OK 02
 #define R_OK 04

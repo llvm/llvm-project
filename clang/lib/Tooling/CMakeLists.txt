@@ -60,7 +60,7 @@ else()
       $<TARGET_FILE:clang-ast-dump>
         # Skip this in debug mode because parsing AST.h is too slow
         --skip-processing=${skip_expensive_processing}
-        -I ${LLVM_LIBRARY_DIR}/clang/${CLANG_VERSION}/include
+        -I ${LLVM_BINARY_DIR}/lib/clang/${CLANG_VERSION}/include
         -I ${CLANG_SOURCE_DIR}/include
         -I ${LLVM_BINARY_DIR}/tools/clang/include
         -I ${LLVM_BINARY_DIR}/include

@@ -673,7 +673,8 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
 
   // C++20 features.
   if (LangOpts.CPlusPlus20) {
-    //Builder.defineMacro("__cpp_aggregate_paren_init", "201902L");
+    // Builder.defineMacro("__cpp_aggregate_paren_init", "201902L");
+
     // P0848 is implemented, but we're still waiting for other concepts
     // issues to be addressed before bumping __cpp_concepts up to 202002L.
     // Refer to the discussion of this at https://reviews.llvm.org/D128619.

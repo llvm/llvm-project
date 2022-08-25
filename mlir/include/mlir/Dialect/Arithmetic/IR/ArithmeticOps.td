@@ -232,6 +232,13 @@ def Arith_AddUICarryOp : Arith_Op<"addui_carry", [Commutative,
     $lhs `,` $rhs attr-dict `:` type($sum) `,` type($carry)
   }];
 
+  let builders = [
+    OpBuilder<(ins "Value":$lhs, "Value":$rhs), [{
+      build($_builder, $_state, lhs.getType(), ::getI1SameShape(lhs.getType()),
+            lhs, rhs);
+    }]>
+  ];
+
   let hasFolder = 1;
 
   let extraClassDeclaration = [{
