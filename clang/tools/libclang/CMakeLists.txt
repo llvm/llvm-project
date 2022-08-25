@@ -3,11 +3,15 @@
 # LLVM_VERSION_MAJOR.
 # Please also see clang/tools/libclang/libclang.map
 
+# This option defaults to CLANG_FORCE_MATCHING_LIBCLANG_SOVERSION
+# to ON - which means that it by default matches CLANG_VERSION_MAJOR
+#
+# TODO: This should probably not be a option going forward but we
+# we should commit to a way to do it. But due to getting this out
+# in LLVM 15.x we opted for a option.
 if(NOT CLANG_FORCE_MATCHING_LIBCLANG_SOVERSION)
-  # default is to use the SOVERSION according to ABI...
   set(LIBCLANG_SOVERSION 13)
 else()
-  # ... unless explicily overridden
   set(LIBCLANG_SOVERSION ${CLANG_VERSION_MAJOR})
 endif()
 
