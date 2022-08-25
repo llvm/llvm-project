@@ -3084,7 +3084,7 @@ def : Pat<(f64 (fpextend Float32Regs:$a)),
 def retflag : SDNode<"NVPTXISD::RET_FLAG", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue]>;
 
-// fceil, ffloor, fround, ftrunc.
+// fceil, ffloor, froundeven, ftrunc.
 
 multiclass CVT_ROUND<SDNode OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
   def : Pat<(OpNode Float16Regs:$a),
@@ -3099,6 +3099,7 @@ multiclass CVT_ROUND<SDNode OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
 
 defm : CVT_ROUND<fceil, CvtRPI, CvtRPI_FTZ>;
 defm : CVT_ROUND<ffloor, CvtRMI, CvtRMI_FTZ>;
+defm : CVT_ROUND<froundeven, CvtRNI, CvtRNI_FTZ>;
 defm : CVT_ROUND<ftrunc, CvtRZI, CvtRZI_FTZ>;
 
 // nearbyint and rint are implemented as rounding to nearest even.  This isn't
