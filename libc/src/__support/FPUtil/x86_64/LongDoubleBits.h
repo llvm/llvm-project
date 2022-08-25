@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H
 
-#include "src/__support/CPP/UInt128.h"
 #include "src/__support/CPP/bit.h"
+#include "src/__support/UInt128.h"
 #include "src/__support/architectures.h"
 
 #if !defined(LLVM_LIBC_ARCH_X86)
