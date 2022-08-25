@@ -913,6 +913,70 @@ public:
   /// TODO(cir): add TBAAAccessInfo
   Address buildArrayToPointerDecay(const Expr *Array,
                                    LValueBaseInfo *BaseInfo = nullptr);
+
+  /// Emits the code necessary to evaluate an arbitrary expression into the
+  /// given memory location.
+  void buildAnyExprToMem(const Expr *E, Address Location, Qualifiers Quals,
+                         bool IsInitializer);
+
+  /// CIR build helpers
+  /// -----------------
+
+  /// This creates an alloca and inserts it into the entry block if \p ArraySize
+  /// is nullptr,
+  ///
+  /// TODO(cir): ... otherwise inserts it at the current insertion point of
+  ///            the builder.
+  /// The caller is responsible for setting an appropriate alignment on
+  /// the alloca.
+  ///
+  /// \p ArraySize is the number of array elements to be allocated if it
+  ///    is not nullptr.
+  ///
+  /// LangAS::Default is the address space of pointers to local variables and
+  /// temporaries, as exposed in the source language. In certain
+  /// configurations, this is not the same as the alloca address space, and a
+  /// cast is needed to lift the pointer from the alloca AS into
+  /// LangAS::Default. This can happen when the target uses a restricted
+  /// address space for the stack but the source language requires
+  /// LangAS::Default to be a generic address space. The latter condition is
+  /// common for most programming languages; OpenCL is an exception in that
+  /// LangAS::Default is the private address space, which naturally maps
+  /// to the stack.
+  ///
+  /// Because the address of a temporary is often exposed to the program in
+  /// various ways, this function will perform the cast. The original alloca
+  /// instruction is returned through \p Alloca if it is not nullptr.
+  ///
+  /// The cast is not performaed in CreateTempAllocaWithoutCast. This is
+  /// more efficient if the caller knows that the address will not be exposed.
+  mlir::cir::AllocaOp CreateTempAlloca(mlir::Type Ty, mlir::Location Loc,
+                                       const Twine &Name = "tmp",
+                                       mlir::Value ArraySize = nullptr);
+  Address CreateTempAlloca(mlir::Type Ty, CharUnits align, mlir::Location Loc,
+                           const Twine &Name = "tmp",
+                           mlir::Value ArraySize = nullptr,
+                           Address *Alloca = nullptr);
+  Address CreateTempAllocaWithoutCast(mlir::Type Ty, CharUnits align,
+                                      mlir::Location Loc,
+                                      const Twine &Name = "tmp",
+                                      mlir::Value ArraySize = nullptr);
+
+  /// Create a temporary memory object of the given type, with
+  /// appropriate alignmen and cast it to the default address space. Returns
+  /// the original alloca instruction by \p Alloca if it is not nullptr.
+  Address CreateMemTemp(QualType T, mlir::Location Loc,
+                        const Twine &Name = "tmp", Address *Alloca = nullptr);
+  Address CreateMemTemp(QualType T, CharUnits Align, mlir::Location Loc,
+                        const Twine &Name = "tmp", Address *Alloca = nullptr);
+
+  /// Create a temporary memory object of the given type, with
+  /// appropriate alignment without casting it to the default address space.
+  Address CreateMemTempWithoutCast(QualType T, mlir::Location Loc,
+                                   const Twine &Name = "tmp");
+  Address CreateMemTempWithoutCast(QualType T, CharUnits Align,
+                                   mlir::Location Loc,
+                                   const Twine &Name = "tmp");
 };
 
 } // namespace cir
