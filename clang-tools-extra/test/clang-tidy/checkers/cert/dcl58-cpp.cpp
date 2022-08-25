@@ -268,3 +268,16 @@ struct numeric_limits<::ranges::detail::LongT> {
 inline constexpr bool numeric_limits<::ranges::detail::LongT>::is_signed;
 inline constexpr bool numeric_limits<::ranges::detail::LongT>::is_integer;
 } // namespace std
+
+namespace no_crash {
+struct A
+{
+  friend struct B;
+};
+
+struct B;
+
+template<typename> struct T {};
+
+T<B> b;
+}
