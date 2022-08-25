@@ -661,7 +661,9 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
     if (interface.HasExplicitInterface() && dummyIsPointer &&
         dummy.intent != common::Intent::In) {
       const Symbol *last{GetLastSymbol(*expr)};
-      if (!(last && IsProcedurePointer(*last))) {
+      if (!(last && IsProcedurePointer(*last)) &&
+          !(dummy.intent == common::Intent::Default &&
+              IsNullProcedurePointer(*expr))) {
         // 15.5.2.9(5) -- dummy procedure POINTER
         // Interface compatibility has already been checked above
         messages.Say(
@@ -729,13 +731,13 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                     IsBOZLiteral(*expr)) {
                   // ok
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
-                    evaluate::IsNullPointer(*expr)) {
+                    evaluate::IsNullObjectPointer(*expr)) {
                   // ok, ASSOCIATED(NULL())
                 } else if ((object.attrs.test(characteristics::DummyDataObject::
                                     Attr::Pointer) ||
                                object.attrs.test(characteristics::
                                        DummyDataObject::Attr::Optional)) &&
-                    evaluate::IsNullPointer(*expr)) {
+                    evaluate::IsNullObjectPointer(*expr)) {
                   // ok, FOO(NULL())
                 } else if (object.attrs.test(characteristics::DummyDataObject::
                                    Attr::Allocatable) &&
