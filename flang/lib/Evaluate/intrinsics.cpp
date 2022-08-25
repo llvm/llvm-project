@@ -65,6 +65,7 @@ static constexpr CategorySet ComplexType{TypeCategory::Complex};
 static constexpr CategorySet CharType{TypeCategory::Character};
 static constexpr CategorySet LogicalType{TypeCategory::Logical};
 static constexpr CategorySet IntOrRealType{IntType | RealType};
+static constexpr CategorySet IntOrRealOrCharType{IntType | RealType | CharType};
 static constexpr CategorySet FloatingType{RealType | ComplexType};
 static constexpr CategorySet NumericType{IntType | RealType | ComplexType};
 static constexpr CategorySet RelatableType{IntType | RealType | CharType};
@@ -121,6 +122,8 @@ static constexpr TypePattern SubscriptInt{IntType, KindCode::subscript};
 static constexpr TypePattern AnyInt{IntType, KindCode::any};
 static constexpr TypePattern AnyReal{RealType, KindCode::any};
 static constexpr TypePattern AnyIntOrReal{IntOrRealType, KindCode::any};
+static constexpr TypePattern AnyIntOrRealOrChar{
+    IntOrRealOrCharType, KindCode::any};
 static constexpr TypePattern AnyComplex{ComplexType, KindCode::any};
 static constexpr TypePattern AnyFloating{FloatingType, KindCode::any};
 static constexpr TypePattern AnyNumeric{NumericType, KindCode::any};
@@ -1084,6 +1087,26 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
 
 static const IntrinsicInterface intrinsicSubroutine[]{
     {"abort", {}, {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"co_max",
+        {{"a", AnyIntOrRealOrChar, Rank::anyOrAssumedRank,
+             Optionality::required, common::Intent::InOut},
+            {"result_image", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::In},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
+        {}, Rank::elemental, IntrinsicClass::collectiveSubroutine},
+    {"co_min",
+        {{"a", AnyIntOrRealOrChar, Rank::anyOrAssumedRank,
+             Optionality::required, common::Intent::InOut},
+            {"result_image", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::In},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
+        {}, Rank::elemental, IntrinsicClass::collectiveSubroutine},
     {"co_sum",
         {{"a", AnyNumeric, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::InOut},
@@ -2449,7 +2472,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     }
   } else if (name == "associated") {
     return CheckAssociated(call, context);
-  } else if (name == "co_sum") {
+  } else if (name == "co_max" || name == "co_min" || name == "co_sum") {
     bool aOk{CheckForCoindexedObject(context, call.arguments[0], name, "a")};
     bool statOk{
         CheckForCoindexedObject(context, call.arguments[2], name, "stat")};
