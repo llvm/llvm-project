@@ -1710,7 +1710,7 @@ void MemoryDepChecker::mergeInStatus(VectorizationSafetyStatus S) {
     Status = S;
 }
 
-/// Given a non-constant (unknown) dependence-distance \p Dist between two
+/// Given a dependence-distance \p Dist between two
 /// memory accesses, that have the same stride whose absolute value is given
 /// in \p Stride, and that have the same type size \p TypeByteSize,
 /// in a loop whose takenCount is \p BackedgeTakenCount, check if it is
@@ -1738,7 +1738,7 @@ static bool isSafeDependenceDistance(const DataLayout &DL, ScalarEvolution &SE,
   // This is equivalent to the Strong SIV Test (Practical Dependence Testing,
   // Section 4.2.1); Note, that for vectorization it is sufficient to prove
   // that the dependence distance is >= VF; This is checked elsewhere.
-  // But in some cases we can prune unknown dependence distances early, and
+  // But in some cases we can prune dependence distances early, and
   // even before selecting the VF, and without a runtime test, by comparing
   // the distance against the loop iteration count. Since the vectorized code
   // will be executed only if LoopCount >= VF, proving distance >= LoopCount
@@ -1875,13 +1875,14 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   bool HasSameSize =
       DL.getTypeStoreSizeInBits(ATy) == DL.getTypeStoreSizeInBits(BTy);
   uint64_t Stride = std::abs(StrideAPtr);
+
+  if (!isa<SCEVCouldNotCompute>(Dist) && HasSameSize &&
+      isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
+                               Stride, TypeByteSize))
+    return Dependence::NoDep;
+
   const SCEVConstant *C = dyn_cast<SCEVConstant>(Dist);
   if (!C) {
-    if (!isa<SCEVCouldNotCompute>(Dist) && HasSameSize &&
-        isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
-                                 Stride, TypeByteSize))
-      return Dependence::NoDep;
-
     LLVM_DEBUG(dbgs() << "LAA: Dependence because of non-constant distance\n");
     FoundNonConstantDistanceDependence = true;
     return Dependence::Unknown;
