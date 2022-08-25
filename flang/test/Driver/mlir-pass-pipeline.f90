@@ -52,8 +52,11 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 ! ALL-NEXT: BoxedProcedurePass
 
-! ALL-NEXT: 'func.func' Pipeline
-! ALL-NEXT:   AbstractResultOnFuncOpt
+! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func']
+! ALL-NEXT:   'fir.global' Pipeline
+! ALL-NEXT:    AbstractResultOnGlobalOpt
+! ALL-NEXT:  'func.func' Pipeline
+! ALL-NEXT:    AbstractResultOnFuncOpt
 
 ! ALL-NEXT: CodeGenRewrite
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations eliminated
