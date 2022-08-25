@@ -99,7 +99,7 @@ static constexpr std::tuple<
     mkIOKey(SetFile), mkIOKey(GetNewUnit), mkIOKey(GetSize),
     mkIOKey(GetIoLength), mkIOKey(GetIoMsg), mkIOKey(InquireCharacter),
     mkIOKey(InquireLogical), mkIOKey(InquirePendingId),
-    mkIOKey(InquireInteger64), mkIOKey(EndIoStatement)>
+    mkIOKey(InquireInteger64), mkIOKey(EndIoStatement), mkIOKey(SetConvert)>
     newIOTable;
 } // namespace Fortran::lower
 
@@ -983,7 +983,8 @@ mlir::Value genIOOption<Fortran::parser::ConnectSpec::CharExpr>(
     ioFunc = getIORuntimeFunc<mkIOKey(SetCarriagecontrol)>(loc, builder);
     break;
   case Fortran::parser::ConnectSpec::CharExpr::Kind::Convert:
-    TODO(loc, "CONVERT not part of the runtime::io interface");
+    ioFunc = getIORuntimeFunc<mkIOKey(SetConvert)>(loc, builder);
+    break;
   case Fortran::parser::ConnectSpec::CharExpr::Kind::Dispose:
     TODO(loc, "DISPOSE not part of the runtime::io interface");
   }
