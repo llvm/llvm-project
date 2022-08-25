@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ActionCache.h"
-#include "BuiltinCAS.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/ObjectStore.h"
 
@@ -26,8 +25,11 @@ Expected<ObjectRef>
 ActionCache::getOrCompute(const CacheKey &ActionKey,
                           function_ref<Expected<ObjectRef>()> Computation) {
   ArrayRef<uint8_t> Key = arrayRefFromStringRef(ActionKey.getKey());
-  if (Optional<Expected<ObjectRef>> Result = builtin::transpose(getImpl(Key)))
-    return std::move(*Result);
+  if (Expected<Optional<ObjectRef>> Result = getImpl(Key)) {
+    if (*Result)
+      return **Result;
+  } else
+    return Result.takeError();
   Optional<ObjectRef> Result;
   if (Error E = Computation().moveInto(Result))
     return std::move(E);

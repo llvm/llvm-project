@@ -177,6 +177,11 @@ protected:
   virtual ArrayRef<char> getData(ObjectHandle Node,
                                  bool RequiresNullTerminator = false) const = 0;
 
+  /// Get ObjectRef from open file.
+  virtual Expected<ObjectRef>
+  storeFromOpenFileImpl(sys::fs::file_t FD,
+                        Optional<sys::fs::file_status> Status) = 0;
+
   /// Get a lifetime-extended StringRef pointing at \p Data.
   ///
   /// Depending on the CAS implementation, this may involve in-memory storage
@@ -198,11 +203,6 @@ protected:
                         SmallVectorImpl<ObjectRef> &Refs) const;
 
   Expected<ObjectProxy> getProxy(Expected<ObjectHandle> Ref);
-
-  /// Get ObjectRef from open file.
-  virtual Expected<ObjectRef>
-  storeFromOpenFileImpl(sys::fs::file_t FD,
-                        Optional<sys::fs::file_status> Status);
 
   /// Allow ObjectStore implementations to create internal handles.
 #define MAKE_CAS_HANDLE_CONSTRUCTOR(HandleKind)                                \

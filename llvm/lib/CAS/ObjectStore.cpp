@@ -65,27 +65,6 @@ ObjectStore::getMemoryBuffer(ObjectHandle Node, StringRef Name,
       RequiresNullTerminator);
 }
 
-/// Default implementation opens the file and calls \a createBlob().
-Expected<ObjectRef>
-ObjectStore::storeFromOpenFileImpl(sys::fs::file_t FD,
-                                   Optional<sys::fs::file_status> Status) {
-  // Check whether we can trust the size from stat.
-  int64_t FileSize = -1;
-  if (Status->type() == sys::fs::file_type::regular_file ||
-      Status->type() == sys::fs::file_type::block_file)
-    FileSize = Status->getSize();
-
-  // No need for a null terminator since the buffer will be dropped.
-  ErrorOr<std::unique_ptr<MemoryBuffer>> ExpectedContent =
-      MemoryBuffer::getOpenFile(FD, /*Filename=*/"", FileSize,
-                                /*RequiresNullTerminator=*/false);
-  if (!ExpectedContent)
-    return errorCodeToError(ExpectedContent.getError());
-
-  return store(None,
-               arrayRefFromStringRef<char>((*ExpectedContent)->getBuffer()));
-}
-
 void ObjectStore::readRefs(ObjectHandle Node,
                            SmallVectorImpl<ObjectRef> &Refs) const {
   consumeError(forEachRef(Node, [&Refs](ObjectRef Ref) -> Error {

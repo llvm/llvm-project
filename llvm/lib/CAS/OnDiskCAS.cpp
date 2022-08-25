@@ -1693,7 +1693,7 @@ OnDiskContent OnDiskCAS::getContentFromHandle(InternalHandle Handle) const {
     auto Handle =
         String2BHandle::get(DataPool.beginData(DirectRef.getFileOffset()));
     assert(Handle.getString().end()[0] == 0 && "Null termination");
-    return OnDiskContent{None, toArrayRef(Handle.getString())};
+    return OnDiskContent{None, arrayRefFromStringRef<char>(Handle.getString())};
   }
 
   case InternalRef::OffsetKind::DataRecord: {
@@ -1727,8 +1727,8 @@ OnDiskContent StandaloneDataInMemory::getContent() const {
   if (Leaf) {
     assert(Region->getBuffer().drop_back(Leaf0).end()[0] == 0 &&
            "Standalone node data missing null termination");
-    return OnDiskContent{None,
-                         toArrayRef(Region->getBuffer().drop_back(Leaf0))};
+    return OnDiskContent{None, arrayRefFromStringRef<char>(
+                                   Region->getBuffer().drop_back(Leaf0))};
   }
 
   DataRecordHandle Record = DataRecordHandle::get(Region->getBuffer().data());
