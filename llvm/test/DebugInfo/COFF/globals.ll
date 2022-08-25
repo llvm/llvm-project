@@ -48,7 +48,7 @@
 ; $ clang-cl a.cpp /c /GS- /Z7 /GR- /std:c++17 /clang:-S /clang:-emit-llvm
 
 ; ASM:        .section        .debug$S,"dr"
-; ASM-NEXT:   .p2align        2
+; ASM-NEXT:   .p2align        2, 0x0
 ; ASM-NEXT:   .long   4                       # Debug section magic
 
 ; ASM:        .short  4365                    # Record kind: S_GDATA32
@@ -56,70 +56,70 @@
 ; ASM-NEXT:   .secrel32       "?first@@3HA"   # DataOffset
 ; ASM-NEXT:   .secidx "?first@@3HA"           # Segment
 ; ASM-NEXT:   .asciz  "first"                 # Name
-; ASM-NEXT:   .p2align        2
+; ASM-NEXT:   .p2align        2, 0x0
 
 ; ASM:        .short  4371                    # Record kind: S_GTHREAD32
 ; ASM-NEXT:   .long   4117                    # Type
 ; ASM-NEXT:   .secrel32       "?middle@@3PEBHEB" # DataOffset
 ; ASM-NEXT:   .secidx "?middle@@3PEBHEB"      # Segment
 ; ASM-NEXT:   .asciz  "middle"                # Name
-; ASM-NEXT:   .p2align        2
+; ASM-NEXT:   .p2align        2, 0x0
 
 ; ASM:        .short  4371                    # Record kind: S_GTHREAD32
 ; ASM-NEXT:   .long   116                     # Type
 ; ASM-NEXT:   .secrel32       "?globalTLS@foo@@3HA" # DataOffset
 ; ASM-NEXT:   .secidx "?globalTLS@foo@@3HA"   # Segment
 ; ASM-NEXT:   .asciz  "foo::globalTLS"        # Name
-; ASM-NEXT:   .p2align        2
+; ASM-NEXT:   .p2align        2, 0x0
 
 ; ASM:        .short  4365                    # Record kind: S_GDATA32
 ; ASM-NEXT:   .long   116                     # Type
 ; ASM-NEXT:   .secrel32       "?justGlobal@foo@@3HA" # DataOffset
 ; ASM-NEXT:   .secidx "?justGlobal@foo@@3HA"  # Segment
 ; ASM-NEXT:   .asciz  "foo::justGlobal"       # Name
-; ASM-NEXT:   .p2align        2
+; ASM-NEXT:   .p2align        2, 0x0
 
 ; ASM:        .short  4365                    # Record kind: S_GDATA32
 ; ASM-NEXT:   .long   116                     # Type
 ; ASM-NEXT:   .secrel32       "?last@@3HA"    # DataOffset
 ; ASM-NEXT:   .secidx "?last@@3HA"            # Segment
 ; ASM-NEXT:   .asciz  "last"                  # Name
-; ASM-NEXT:   .p2align        2
+; ASM-NEXT:   .p2align        2, 0x0
 
 ; ASM:        .short	4359                    # Record kind: S_CONSTANT
 ; ASM-NEXT:	  .long	4100                    # Type
 ; ASM-NEXT:   .byte	0x08, 0x00              # Value
 ; ASM-NEXT:	  .asciz	"foo::constExpr"        # Name
-; ASM-NEXT:   .p2align	2
+; ASM-NEXT:   .p2align	2, 0x0
 
 ; ASM:        .short	4359                    # Record kind: S_CONSTANT
 ; ASM-NEXT:   .long	4100                    # Type
 ; ASM-NEXT:   .byte	0x09, 0x00              # Value
 ; ASM-NEXT:   .asciz	"foo::constVal"         # Name
-; ASM-NEXT:   .p2align	2
+; ASM-NEXT:   .p2align	2, 0x0
 
 ; ASM:        .short	4359                    # Record kind: S_CONSTANT
 ; ASM-NEXT:   .long	4100                    # Type
 ; ASM-NEXT:   .byte	0x0e, 0x00              # Value
 ; ASM-NEXT:   .asciz	"foo::Data::DataConstExpr" # Name
-; ASM-NEXT:   .p2align	2
+; ASM-NEXT:   .p2align	2, 0x0
 
 ; ASM:        .short  4364                    # Record kind: S_LDATA32
 ; ASM-NEXT:   .long   116                     # Type
 ; ASM-NEXT:   .secrel32       "?globalStatic@foo@@3HA" # DataOffset
 ; ASM-NEXT:   .secidx "?globalStatic@foo@@3HA" # Segment
 ; ASM-NEXT:   .asciz  "foo::globalStatic"     # Name
-; ASM-NEXT:   .p2align        2
+; ASM-NEXT:   .p2align        2, 0x0
 
 ; ASM:        .short  4370                    # Record kind: S_LTHREAD32
 ; ASM-NEXT:   .long   116                     # Type
 ; ASM-NEXT:   .secrel32       "?staticTLS@foo@@3HA" # DataOffset
 ; ASM-NEXT:   .secidx "?staticTLS@foo@@3HA"   # Segment
 ; ASM-NEXT:   .asciz  "foo::staticTLS"        # Name
-; ASM-NEXT:   .p2align        2
+; ASM-NEXT:   .p2align        2, 0x0
 
 ; ASM:        .section        .debug$S,"dr",associative,"?comdat@?$A@X@@2HB"
-; ASM-NEXT:   .p2align        2
+; ASM-NEXT:   .p2align        2, 0x0
 ; ASM-NEXT:   .long   4                       # Debug section magic
 
 ; ASM:        .short  4365                    # Record kind: S_GDATA32
@@ -129,24 +129,24 @@
 ; ASM-NEXT:   .asciz  "A<void>::comdat"       # Name
 
 ; ASM:	      .section	.debug$S,"dr",associative,"?DataStaticTLS@Data@foo@@2HA"
-; ASM-NEXT:	  .p2align	2               # Symbol subsection for ?DataStaticTLS@Data@foo@@2HA
+; ASM-NEXT:	  .p2align	2, 0x0          # Symbol subsection for ?DataStaticTLS@Data@foo@@2HA
 
 ; ASM:	      .short	4371                    # Record kind: S_GTHREAD32
 ; ASM-NEXT:	  .long	116                     # Type
 ; ASM-NEXT:	  .secrel32	"?DataStaticTLS@Data@foo@@2HA" # DataOffset
 ; ASM-NEXT:	  .secidx	"?DataStaticTLS@Data@foo@@2HA" # Segment
 ; ASM-NEXT:	  .asciz	"foo::Data::DataStaticTLS"         # Name
-; ASM-NEXT:   .p2align	2
+; ASM-NEXT:   .p2align	2, 0x0
 
 ; ASM:        .section        .debug$S,"dr",associative,"?DataStatic@Data@foo@@2HA"
-; ASM-NEXT:   .p2align        2               # Symbol subsection for ?DataStatic@Data@foo@@2HA
+; ASM-NEXT:   .p2align        2, 0x0          # Symbol subsection for ?DataStatic@Data@foo@@2HA
 
 ; ASM:        .short  4365                    # Record kind: S_GDATA32
 ; ASM-NEXT:   .long   116                     # Type
 ; ASM-NEXT:   .secrel32       "?DataStatic@Data@foo@@2HA" # DataOffset
 ; ASM-NEXT:   .secidx "?DataStatic@Data@foo@@2HA" # Segment
 ; ASM-NEXT:   .asciz  "foo::Data::DataStatic" # Name
-; ASM-NEXT:   .p2align        2
+; ASM-NEXT:   .p2align        2, 0x0
 
 ; OBJ: CodeViewDebugInfo [
 ; OBJ:   Section: .debug$S
