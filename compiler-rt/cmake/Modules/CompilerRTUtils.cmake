@@ -597,11 +597,15 @@ endfunction()
 # Add warnings to catch potential errors that can lead to security
 # vulnerabilities.
 function(add_security_warnings out_flags macosx_sdk_version)
-  set(flags "${${out_flags}}" -Werror=array-bounds
-      -Werror=uninitialized -Werror=shadow -Werror=empty-body
-      -Werror=sizeof-pointer-memaccess -Werror=sizeof-array-argument
-      -Werror=memset-transposed-args)
+  set(flags "${${out_flags}}")
 
+  append_list_if(COMPILER_RT_HAS_ARRAY_BOUNDS_FLAG -Werror=array-bounds flags)
+  append_list_if(COMPILER_RT_HAS_UNINITIALIZED_FLAG -Werror=uninitialized flags)
+  append_list_if(COMPILER_RT_HAS_SHADOW_FLAG -Werror=shadow flags)
+  append_list_if(COMPILER_RT_HAS_EMPTY_BODY_FLAG -Werror=empty-body flags)
+  append_list_if(COMPILER_RT_HAS_SIZEOF_POINTER_MEMACCESS_FLAG -Werror=sizeof-pointer-memaccess flags)
+  append_list_if(COMPILER_RT_HAS_SIZEOF_ARRAY_ARGUMENT_FLAG -Werror=sizeof-array-argument flags)
+  append_list_if(COMPILER_RT_HAS_MEMSET_TRANSPOSED_ARGS_FLAG -Werror=memset-transposed-args flags)
   append_list_if(COMPILER_RT_HAS_BUILTIN_MEMCPY_CHK_SIZE_FLAG -Werror=builtin-memcpy-chk-size flags)
   append_list_if(COMPILER_RT_HAS_ARRAY_BOUNDS_POINTER_ARITHMETIC_FLAG -Werror=array-bounds-pointer-arithmetic flags)
   append_list_if(COMPILER_RT_HAS_RETURN_STACK_ADDRESS_FLAG -Werror=return-stack-address flags)
