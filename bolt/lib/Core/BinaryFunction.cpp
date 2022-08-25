@@ -513,7 +513,7 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation,
   }
 
   StringRef SplitPointMsg = "";
-  for (const FunctionFragment FF : Layout.fragments()) {
+  for (const FunctionFragment &FF : Layout.fragments()) {
     OS << SplitPointMsg;
     SplitPointMsg = "-------   HOT-COLD SPLIT POINT   -------\n\n";
     for (const BinaryBasicBlock *BB : FF) {
@@ -2793,7 +2793,7 @@ bool BinaryFunction::finalizeCFIState() {
 
   const char *Sep = "";
   (void)Sep;
-  for (const FunctionFragment FF : Layout.fragments()) {
+  for (FunctionFragment &FF : Layout.fragments()) {
     // Hot-cold border: at start of each region (with a different FDE) we need
     // to reset the CFI state.
     int32_t State = 0;
@@ -4119,7 +4119,7 @@ void BinaryFunction::updateOutputValues(const MCAsmLayout &Layout) {
          "address (only in relocation mode)");
 
   BinaryBasicBlock *PrevBB = nullptr;
-  for (const FunctionFragment &FF : getLayout().fragments()) {
+  for (FunctionFragment &FF : getLayout().fragments()) {
     const uint64_t FragmentBaseAddress =
         getCodeSection(isSimple() ? FF.getFragmentNum() : FragmentNum::main())
             ->getOutputAddress();
