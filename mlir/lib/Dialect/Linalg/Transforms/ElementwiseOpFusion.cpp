@@ -768,6 +768,8 @@ fuseWithReshapeByExpansion(GenericOp genericOp, Operation *reshapeOp,
       outputs.push_back(rewriter.create<tensor::ExpandShapeOp>(
           genericOp.getLoc(), expandedOutputType, opOperand->get(),
           reassociation));
+    } else {
+      outputs.push_back(opOperand->get());
     }
   }
 

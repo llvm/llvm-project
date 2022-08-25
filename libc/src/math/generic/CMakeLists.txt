@@ -1135,7 +1135,7 @@ add_object_library(
   DEPENDS
     libc.src.__support.FPUtil.fputil #FPBits and ManipulationFunction
     libc.src.__support.FPUtil.xfloat
-    libc.src.__support.CPP.uint
+    libc.src.__support.uint
   COMPILE_OPTIONS
    -O3
 )

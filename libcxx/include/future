@@ -518,7 +518,7 @@ public:
     const error_code& code() const _NOEXCEPT {return __ec_;}
 
     future_error(const future_error&) _NOEXCEPT = default;
-    virtual ~future_error() _NOEXCEPT;
+    ~future_error() _NOEXCEPT override;
 };
 
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
@@ -544,7 +544,7 @@ protected:
     mutable condition_variable __cv_;
     unsigned __state_;
 
-    virtual void __on_zero_shared() _NOEXCEPT;
+    void __on_zero_shared() _NOEXCEPT override;
     void __sub_wait(unique_lock<mutex>& __lk);
 public:
     enum
@@ -631,7 +631,7 @@ class _LIBCPP_AVAILABILITY_FUTURE _LIBCPP_HIDDEN __assoc_state
 protected:
     _Up __value_;
 
-    virtual void __on_zero_shared() _NOEXCEPT;
+    void __on_zero_shared() _NOEXCEPT override;
 public:
 
     template <class _Arg>
@@ -711,7 +711,7 @@ class _LIBCPP_AVAILABILITY_FUTURE __assoc_state<_Rp&>
 protected:
     _Up __value_;
 
-    virtual void __on_zero_shared() _NOEXCEPT;
+    void __on_zero_shared() _NOEXCEPT override;
 public:
 
     void set_value(_Rp& __arg);
@@ -823,7 +823,7 @@ class _LIBCPP_AVAILABILITY_FUTURE __assoc_sub_state_alloc
     typedef __assoc_sub_state base;
     _Alloc __alloc_;
 
-    virtual void __on_zero_shared() _NOEXCEPT;
+    void __on_zero_shared() _NOEXCEPT override;
 public:
     _LIBCPP_INLINE_VISIBILITY
     explicit __assoc_sub_state_alloc(const _Alloc& __a)
@@ -895,7 +895,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     explicit __deferred_assoc_state(_Fp&& __f);
 
-    virtual void __execute();
+    void __execute() override;
 };
 
 template <class _Fp>
@@ -982,12 +982,12 @@ class _LIBCPP_AVAILABILITY_FUTURE __async_assoc_state<void, _Fp>
 
     _Fp __func_;
 
-    virtual void __on_zero_shared() _NOEXCEPT;
+    void __on_zero_shared() _NOEXCEPT override;
 public:
     _LIBCPP_INLINE_VISIBILITY
     explicit __async_assoc_state(_Fp&& __f);
 
-    virtual void __execute();
+    void __execute() override;
 };
 
 template <class _Fp>

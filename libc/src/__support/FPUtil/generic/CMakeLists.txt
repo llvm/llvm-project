@@ -4,7 +4,7 @@ add_header_library(
     sqrt.h
     sqrt_80_bit_long_double.h
   DEPENDS
-    libc.src.__support.CPP.uint128
+    libc.src.__support.uint128
 )
 
 add_header_library(
@@ -12,7 +12,7 @@ add_header_library(
   HDRS
     FMA.h
   DEPENDS
-    libc.src.__support.CPP.uint128
+    libc.src.__support.uint128
 )
 
 add_header_library(

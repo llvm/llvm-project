@@ -575,37 +575,6 @@ void Writer::treatSpecialUndefineds() {
   }
 }
 
-// Add stubs and bindings where necessary (e.g. if the symbol is a
-// DylibSymbol.)
-static void prepareBranchTarget(Symbol *sym) {
-  if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
-    if (in.stubs->addEntry(dysym)) {
-      if (sym->isWeakDef()) {
-        in.binding->addEntry(dysym, in.lazyPointers->isec,
-                             sym->stubsIndex * target->wordSize);
-        in.weakBinding->addEntry(sym, in.lazyPointers->isec,
-                                 sym->stubsIndex * target->wordSize);
-      } else {
-        in.lazyBinding->addEntry(dysym);
-      }
-    }
-  } else if (auto *defined = dyn_cast<Defined>(sym)) {
-    if (defined->isExternalWeakDef()) {
-      if (in.stubs->addEntry(sym)) {
-        in.rebase->addEntry(in.lazyPointers->isec,
-                            sym->stubsIndex * target->wordSize);
-        in.weakBinding->addEntry(sym, in.lazyPointers->isec,
-                                 sym->stubsIndex * target->wordSize);
-      }
-    } else if (defined->interposable) {
-      if (in.stubs->addEntry(sym))
-        in.lazyBinding->addEntry(sym);
-    }
-  } else {
-    llvm_unreachable("invalid branch target symbol type");
-  }
-}
-
 // Can a symbol's address can only be resolved at runtime?
 static bool needsBinding(const Symbol *sym) {
   if (isa<DylibSymbol>(sym))
@@ -621,7 +590,8 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
   const RelocAttrs &relocAttrs = target->getRelocAttrs(r.type);
 
   if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
-    prepareBranchTarget(sym);
+    if (needsBinding(sym))
+      in.stubs->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
     if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
       in.got->addEntry(sym);
@@ -1161,8 +1131,8 @@ void Writer::writeOutputFile() {
 
 template <class LP> void Writer::run() {
   treatSpecialUndefineds();
-  if (config->entry && !isa<Undefined>(config->entry))
-    prepareBranchTarget(config->entry);
+  if (config->entry && needsBinding(config->entry))
+    in.stubs->addEntry(config->entry);
 
   // Canonicalization of all pointers to InputSections should be handled by
   // these two scan* methods. I.e. from this point onward, for all live

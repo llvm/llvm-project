@@ -11689,27 +11689,18 @@ static bool matchRdxBop(Instruction *I, Value *&V0, Value *&V1) {
   return false;
 }
 
-/// Attempt to reduce a horizontal reduction.
-/// If it is legal to match a horizontal reduction feeding the phi node \a P
-/// with reduction operators \a Root (or one of its operands) in a basic block
-/// \a BB, then check if it can be done. If horizontal reduction is not found
-/// and root instruction is a binary operation, vectorization of the operands is
-/// attempted.
-/// \returns true if a horizontal reduction was matched and reduced or operands
-/// of one of the binary instruction were vectorized.
-/// \returns false if a horizontal reduction was not matched (or not possible)
-/// or no vectorization of any binary operation feeding \a Root instruction was
-/// performed.
-static bool tryToVectorizeHorReductionOrInstOperands(
-    PHINode *P, Instruction *Root, BasicBlock *BB, BoUpSLP &R,
-    TargetTransformInfo *TTI, ScalarEvolution &SE, const DataLayout &DL,
-    const TargetLibraryInfo &TLI,
-    const function_ref<bool(Instruction *, BoUpSLP &)> Vectorize) {
+bool SLPVectorizerPass::vectorizeHorReduction(
+    PHINode *P, Value *V, BasicBlock *BB, BoUpSLP &R, TargetTransformInfo *TTI,
+    SmallVectorImpl<WeakTrackingVH> &PostponedInsts) {
   if (!ShouldVectorizeHor)
     return false;
 
+  auto *Root = dyn_cast_or_null<Instruction>(V);
   if (!Root)
     return false;
+
+  if (!isa<BinaryOperator>(Root))
+    P = nullptr;
 
   if (Root->getParent() != BB || isa<PHINode>(Root))
     return false;
@@ -11722,24 +11713,21 @@ static bool tryToVectorizeHorReductionOrInstOperands(
   // horizontal reduction.
   // Interrupt the process if the Root instruction itself was vectorized or all
   // sub-trees not higher that RecursionMaxDepth were analyzed/vectorized.
-  // Skip the analysis of CmpInsts. Compiler implements postanalysis of the
-  // CmpInsts so we can skip extra attempts in
-  // tryToVectorizeHorReductionOrInstOperands and save compile time.
+  // If a horizintal reduction was not matched or vectorized we collect
+  // instructions for possible later attempts for vectorization.
   std::queue<std::pair<Instruction *, unsigned>> Stack;
   Stack.emplace(Root, 0);
   SmallPtrSet<Value *, 8> VisitedInstrs;
-  SmallVector<WeakTrackingVH> PostponedInsts;
   bool Res = false;
-  auto &&TryToReduce = [TTI, &SE, &DL, &P, &R, &TLI](Instruction *Inst,
-                                                     Value *&B0,
-                                                     Value *&B1) -> Value * {
+  auto &&TryToReduce = [this, TTI, &P, &R](Instruction *Inst, Value *&B0,
+                                           Value *&B1) -> Value * {
     if (R.isAnalyzedReductionRoot(Inst))
       return nullptr;
     bool IsBinop = matchRdxBop(Inst, B0, B1);
     bool IsSelect = match(Inst, m_Select(m_Value(), m_Value(), m_Value()));
     if (IsBinop || IsSelect) {
       HorizontalReduction HorRdx;
-      if (HorRdx.matchAssociativeReduction(P, Inst, SE, DL, TLI))
+      if (HorRdx.matchAssociativeReduction(P, Inst, *SE, *DL, *TLI))
         return HorRdx.tryToReduce(R, TTI);
     }
     return nullptr;
@@ -11781,9 +11769,8 @@ static bool tryToVectorizeHorReductionOrInstOperands(
       // Set P to nullptr to avoid re-analysis of phi node in
       // matchAssociativeReduction function unless this is the root node.
       P = nullptr;
-      // Do not try to vectorize CmpInst operands, this is done separately.
-      // Final attempt for binop args vectorization should happen after the loop
-      // to try to find reductions.
+      // Do not collect CmpInst or InsertElementInst/InsertValueInst as their
+      // analysis is done separately.
       if (!isa<CmpInst, InsertElementInst, InsertValueInst>(Inst))
         PostponedInsts.push_back(Inst);
     }
@@ -11801,29 +11788,25 @@ static bool tryToVectorizeHorReductionOrInstOperands(
                 !R.isDeleted(I) && I->getParent() == BB)
               Stack.emplace(I, Level);
   }
-  // Try to vectorized binops where reductions were not found.
-  for (Value *V : PostponedInsts)
-    if (auto *Inst = dyn_cast<Instruction>(V))
-      if (!R.isDeleted(Inst))
-        Res |= Vectorize(Inst, R);
   return Res;
 }
 
 bool SLPVectorizerPass::vectorizeRootInstruction(PHINode *P, Value *V,
                                                  BasicBlock *BB, BoUpSLP &R,
                                                  TargetTransformInfo *TTI) {
-  auto *I = dyn_cast_or_null<Instruction>(V);
-  if (!I)
-    return false;
+  SmallVector<WeakTrackingVH> PostponedInsts;
+  bool Res = vectorizeHorReduction(P, V, BB, R, TTI, PostponedInsts);
+  Res |= tryToVectorize(PostponedInsts, R);
+  return Res;
+}
 
-  if (!isa<BinaryOperator>(I))
-    P = nullptr;
-  // Try to match and vectorize a horizontal reduction.
-  auto &&ExtraVectorization = [this](Instruction *I, BoUpSLP &R) -> bool {
-    return tryToVectorize(I, R);
-  };
-  return tryToVectorizeHorReductionOrInstOperands(P, I, BB, R, TTI, *SE, *DL,
-                                                  *TLI, ExtraVectorization);
+bool SLPVectorizerPass::tryToVectorize(ArrayRef<WeakTrackingVH> Insts,
+                                       BoUpSLP &R) {
+  bool Res = false;
+  for (Value *V : Insts)
+    if (auto *Inst = dyn_cast<Instruction>(V); Inst && !R.isDeleted(Inst))
+      Res |= tryToVectorize(Inst, R);
+  return Res;
 }
 
 bool SLPVectorizerPass::vectorizeInsertValueInst(InsertValueInst *IVI,

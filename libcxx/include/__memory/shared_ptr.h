@@ -130,8 +130,8 @@ class _LIBCPP_EXCEPTION_ABI bad_weak_ptr
 public:
     bad_weak_ptr() _NOEXCEPT = default;
     bad_weak_ptr(const bad_weak_ptr&) _NOEXCEPT = default;
-    virtual ~bad_weak_ptr() _NOEXCEPT;
-    virtual const char* what() const  _NOEXCEPT;
+    ~bad_weak_ptr() _NOEXCEPT override;
+    const char* what() const  _NOEXCEPT override;
 };
 
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
@@ -196,7 +196,7 @@ public:
         : __shared_count(__refs),
           __shared_weak_owners_(__refs) {}
 protected:
-    virtual ~__shared_weak_count();
+    ~__shared_weak_count() override;
 
 public:
 #if defined(_LIBCPP_SHARED_PTR_DEFINE_LEGACY_INLINE_FUNCTIONS)
@@ -239,12 +239,12 @@ public:
         :  __data_(__compressed_pair<_Tp, _Dp>(__p, _VSTD::move(__d)), _VSTD::move(__a)) {}
 
 #ifndef _LIBCPP_NO_RTTI
-    virtual const void* __get_deleter(const type_info&) const _NOEXCEPT;
+    const void* __get_deleter(const type_info&) const _NOEXCEPT override;
 #endif
 
 private:
-    virtual void __on_zero_shared() _NOEXCEPT;
-    virtual void __on_zero_shared_weak() _NOEXCEPT;
+    void __on_zero_shared() _NOEXCEPT override;
+    void __on_zero_shared_weak() _NOEXCEPT override;
 };
 
 #ifndef _LIBCPP_NO_RTTI
@@ -304,7 +304,7 @@ struct __shared_ptr_emplace
     _Tp* __get_elem() _NOEXCEPT { return __storage_.__get_elem(); }
 
 private:
-    virtual void __on_zero_shared() _NOEXCEPT {
+    void __on_zero_shared() _NOEXCEPT override {
 #if _LIBCPP_STD_VER > 17
         using _TpAlloc = typename __allocator_traits_rebind<_Alloc, _Tp>::type;
         _TpAlloc __tmp(*__get_alloc());
@@ -314,7 +314,7 @@ private:
 #endif
     }
 
-    virtual void __on_zero_shared_weak() _NOEXCEPT {
+    void __on_zero_shared_weak() _NOEXCEPT override {
         using _ControlBlockAlloc = typename __allocator_traits_rebind<_Alloc, __shared_ptr_emplace>::type;
         using _ControlBlockPointer = typename allocator_traits<_ControlBlockAlloc>::pointer;
         _ControlBlockAlloc __tmp(*__get_alloc());

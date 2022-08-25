@@ -311,17 +311,18 @@ LogicalResult LLVM::detail::oneToOneRewrite(
     LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter) {
   unsigned numResults = op->getNumResults();
 
-  Type packedType;
+  SmallVector<Type> resultTypes;
   if (numResults != 0) {
-    packedType = typeConverter.packFunctionResults(op->getResultTypes());
-    if (!packedType)
+    resultTypes.push_back(
+        typeConverter.packFunctionResults(op->getResultTypes()));
+    if (!resultTypes.back())
       return failure();
   }
 
   // Create the operation through state since we don't know its C++ type.
   Operation *newOp =
       rewriter.create(op->getLoc(), rewriter.getStringAttr(targetOp), operands,
-                      packedType, op->getAttrs());
+                      resultTypes, op->getAttrs());
 
   // If the operation produced 0 or 1 result, return them immediately.
   if (numResults == 0)

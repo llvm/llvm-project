@@ -36,7 +36,7 @@ void *DynamicLibrary::HandleSet::DLOpen(const char *File, std::string *Err) {
   // Create the instance and return it to be the *Process* handle
   // simillar to dlopen(NULL, RTLD_LAZY|RTLD_GLOBAL)
   if (!File)
-    return &(*OpenedHandles);
+    return &getGlobals().OpenedHandles;
 
   SmallVector<wchar_t, MAX_PATH> FileUnicode;
   if (std::error_code ec = windows::UTF8ToUTF16(File, FileUnicode)) {
@@ -55,9 +55,7 @@ void *DynamicLibrary::HandleSet::DLOpen(const char *File, std::string *Err) {
 }
 
 static DynamicLibrary::HandleSet *IsOpenedHandlesInstance(void *Handle) {
-  if (!OpenedHandles.isConstructed())
-    return nullptr;
-  DynamicLibrary::HandleSet &Inst = *OpenedHandles;
+  DynamicLibrary::HandleSet &Inst = getGlobals().OpenedHandles;
   return Handle == &Inst ? &Inst : nullptr;
 }
 

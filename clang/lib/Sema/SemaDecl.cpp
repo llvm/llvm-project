@@ -18131,6 +18131,11 @@ static void ComputeSpecialMemberFunctionsEligiblity(Sema &S,
 
   for (auto *Decl : Record->decls()) {
     auto *MD = dyn_cast<CXXMethodDecl>(Decl);
+    if (!MD) {
+      auto *FTD = dyn_cast<FunctionTemplateDecl>(Decl);
+      if (FTD)
+        MD = dyn_cast<CXXMethodDecl>(FTD->getTemplatedDecl());
+    }
     if (!MD)
       continue;
     if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {

@@ -741,6 +741,7 @@ bool CommandObjectParsed::Execute(const char *args_string,
         if (cmd_args.GetArgumentCount() != 0 && m_arguments.empty()) {
           result.AppendErrorWithFormatv("'{0}' doesn't take any arguments.",
                                         GetCommandName());
+          Cleanup();
           return false;
         }
         handled = DoExecute(cmd_args, result);

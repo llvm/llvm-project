@@ -6085,6 +6085,7 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
                                               Value *TrueVal, Value *FalseVal,
                                               Value *&LHS, Value *&RHS,
                                               unsigned Depth) {
+  bool HasMismatchedZeros = false;
   if (CmpInst::isFPPredicate(Pred)) {
     // IEEE-754 ignores the sign of 0.0 in comparisons. So if the select has one
     // 0.0 operand, set the compare's 0.0 operands to that same value for the
@@ -6099,10 +6100,14 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
       OutputZeroVal = FalseVal;
 
     if (OutputZeroVal) {
-      if (match(CmpLHS, m_AnyZeroFP()))
+      if (match(CmpLHS, m_AnyZeroFP()) && CmpLHS != OutputZeroVal) {
+        HasMismatchedZeros = true;
         CmpLHS = OutputZeroVal;
-      if (match(CmpRHS, m_AnyZeroFP()))
+      }
+      if (match(CmpRHS, m_AnyZeroFP()) && CmpRHS != OutputZeroVal) {
+        HasMismatchedZeros = true;
         CmpRHS = OutputZeroVal;
+      }
     }
   }
 
@@ -6116,7 +6121,11 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
   // operands is known to not be zero or if we don't care about signed zero.
   switch (Pred) {
   default: break;
-  // FIXME: Include OGT/OLT/UGT/ULT.
+  case CmpInst::FCMP_OGT: case CmpInst::FCMP_OLT:
+  case CmpInst::FCMP_UGT: case CmpInst::FCMP_ULT:
+    if (!HasMismatchedZeros)
+      break;
+    [[fallthrough]];
   case CmpInst::FCMP_OGE: case CmpInst::FCMP_OLE:
   case CmpInst::FCMP_UGE: case CmpInst::FCMP_ULE:
     if (!FMF.noSignedZeros() && !isKnownNonZero(CmpLHS) &&

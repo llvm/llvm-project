@@ -26,6 +26,7 @@ TEST(LlvmLibcPrintfStringWriterTest, Constructor) {
   __llvm_libc::printf_core::StringWriter str_writer(str);
   __llvm_libc::printf_core::Writer writer =
       get_writer(reinterpret_cast<void *>(&str_writer));
+  (void)writer;
 }
 
 TEST(LlvmLibcPrintfStringWriterTest, Write) {

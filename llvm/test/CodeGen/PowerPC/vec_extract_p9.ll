@@ -182,9 +182,10 @@ define double @test10(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LE-NEXT:    addi 3, 3, .LCPI9_0@toc@l
 ; CHECK-LE-NEXT:    lxv 36, 0(3)
 ; CHECK-LE-NEXT:    addis 3, 2, .LCPI9_1@toc@ha
-; CHECK-LE-NEXT:    lfs 0, .LCPI9_1@toc@l(3)
-; CHECK-LE-NEXT:    vperm 2, 3, 2, 4
-; CHECK-LE-NEXT:    xsadddp 1, 34, 0
+; CHECK-LE-NEXT:    lfs 1, .LCPI9_1@toc@l(3)
+; CHECK-LE-NEXT:    vperm 2, 2, 3, 4
+; CHECK-LE-NEXT:    xxswapd 0, 34
+; CHECK-LE-NEXT:    xsadddp 1, 0, 1
 ; CHECK-LE-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test10:

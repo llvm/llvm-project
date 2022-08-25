@@ -12,8 +12,9 @@
 ; RUN: FileCheck --input-file %t1 %s --check-prefixes=CHECK,NOML
 ; RUN: diff %t1 %S/Inputs/reference-log-noml.txt
 
-; RUN: rm -rf %t && mkdir %t
-; RUN: %python %S/../../../lib/Analysis/models/gen-regalloc-eviction-test-model.py %t
+; RUN: rm -rf %t_savedmodel %t
+; RUN: %python %S/../../../lib/Analysis/models/gen-regalloc-eviction-test-model.py %t_savedmodel
+; RUN: %python %S/../../../lib/Analysis/models/saved-model-to-tflite.py %t_savedmodel %t
 ; RUN: llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=development \
 ; RUN:   -regalloc-training-log=%t2 -tfutils-text-log -regalloc-model=%t < %S/Inputs/input.ll
 ; RUN: sed -i 's/ \+/ /g' %t2

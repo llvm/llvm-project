@@ -120,6 +120,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/signal-handler>` check. Partial
   support for C++14 signal handler rules was added. Bug report generation was
   improved.
+
+- Fixed a false positive in :doc:`cppcoreguidelines-pro-type-member-init
+  <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` when warnings
+  would be emitted for uninitialized members of an anonymous union despite
+  there being an initializer for one of the other members.
   
 - Improved `modernize-use-emplace <clang-tidy/checks/modernize/use-emplace.html>`_ check.
 

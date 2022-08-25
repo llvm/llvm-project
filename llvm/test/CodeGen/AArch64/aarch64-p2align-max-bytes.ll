@@ -9,10 +9,10 @@
 ; should be the same, at different locations)
 define i32 @a(i32 %x, i32* nocapture readonly %y, i32* nocapture readonly %z) {
 ; CHECK-LABEL: a:
-; CHECK-EXPLICIT:    .p2align 5, 0x0, 8
+; CHECK-EXPLICIT:    .p2align 5, , 8
 ; CHECK-IMPLICIT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_5: // %vector.body
-; CHECK-EXPLICIT:    .p2align 5, 0x0, 8
+; CHECK-EXPLICIT:    .p2align 5, , 8
 ; CHECK-IMPLICIT:    .p2align 5
 ; CHECK-NEXT:  .LBB0_8: // %for.body
 ; CHECK-OBJ;Disassembly of section .text:

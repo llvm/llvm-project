@@ -48,7 +48,7 @@ class Parser {
   // TypeDesc objects, which store the size as well as minimal type information.
   // This is necessary because some systems separate the floating point and
   // integer values in va_args.
-  TypeDesc desc_arr[DESC_ARR_LEN] = {{0, Integer}};;
+  TypeDesc desc_arr[DESC_ARR_LEN] = {{0, Integer}};
 
   // TODO: Look into object stores for optimization.
 
