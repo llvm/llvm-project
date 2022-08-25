@@ -13,39 +13,29 @@
 ///
 //===----------------------------------------------------------------------===//
 /// About Cost Model numbers used below it's necessary to say the following:
-/// the numbers correspond to some "generic" X86 CPU instead of usage of a
-/// specific CPU model. Usually the numbers correspond to the CPU where the
-/// feature first appeared. For example, if we do Subtarget.hasSSE42() in
+/// the numbers correspond to some "generic" X86 CPU instead of usage of
+/// concrete CPU model. Usually the numbers correspond to CPU where the feature
+/// apeared at the first time. For example, if we do Subtarget.hasSSE42() in
 /// the lookups below the cost is based on Nehalem as that was the first CPU
-/// to support that feature level and thus has most likely the worst case cost,
-/// although we may discard an outlying worst cost from one CPU (e.g. Atom).
-///
+/// to support that feature level and thus has most likely the worst case cost.
 /// Some examples of other technologies/CPUs:
 ///   SSE 3   - Pentium4 / Athlon64
 ///   SSE 4.1 - Penryn
-///   SSE 4.2 - Nehalem / Silvermont
-///   AVX     - Sandy Bridge / Jaguar / Bulldozer
-///   AVX2    - Haswell / Ryzen
+///   SSE 4.2 - Nehalem
+///   AVX     - Sandy Bridge
+///   AVX2    - Haswell
 ///   AVX-512 - Xeon Phi / Skylake
-///
 /// And some examples of instruction target dependent costs (latency)
 ///                   divss     sqrtss          rsqrtss
-///   AMD K7          11-16     19              3
-///   Piledriver      9-24      13-15           5
-///   Jaguar          14        16              2
-///   Pentium II,III  18        30              2
-///   Nehalem         7-14      7-18            3
-///   Haswell         10-13     11              5
-///
-/// Interpreting the 4 TargetCostKind types:
-/// TCK_RecipThroughput and TCK_Latency should try to match the worst case
-/// values reported by the CPU scheduler models (and llvm-mca).
-/// TCK_CodeSize should match the instruction count (e.g. divss = 1), NOT the
-/// actual encoding size of the instruction.
-/// TCK_SizeAndLatency should match the worst case micro-op counts reported by
-/// by the CPU scheduler models (and llvm-mca), to ensure that they are
-/// compatible with the MicroOpBufferSize and LoopMicroOpBufferSize values which are
-/// often used as the cost thresholds where TCK_SizeAndLatency is requested.
+///   AMD K7            11-16     19              3
+///   Piledriver        9-24      13-15           5
+///   Jaguar            14        16              2
+///   Pentium II,III    18        30              2
+///   Nehalem           7-14      7-18            3
+///   Haswell           10-13     11              5
+/// TODO: Develop and implement  the target dependent cost model and
+/// specialize cost numbers for different Cost Model Targets such as throughput,
+/// code size, latency and uop count.
 //===----------------------------------------------------------------------===//
 
 #include "X86TargetTransformInfo.h"
@@ -66,43 +56,6 @@ using namespace llvm;
 // X86 cost model.
 //
 //===----------------------------------------------------------------------===//
-
-// Helper struct to store/access costs for each cost kind.
-// TODO: Move this to allow other targets to use it?
-struct CostKindCosts {
-  unsigned RecipThroughputCost;
-  unsigned LatencyCost;
-  unsigned CodeSizeCost;
-  unsigned SizeAndLatencyCost;
-
-  CostKindCosts(unsigned RecipThroughput = ~0U, unsigned Latency = ~0U,
-                unsigned CodeSize = ~0U, unsigned SizeAndLatency = ~0U)
-      : RecipThroughputCost(RecipThroughput), LatencyCost(Latency),
-        CodeSizeCost(CodeSize), SizeAndLatencyCost(SizeAndLatency) {}
-
-  llvm::Optional<unsigned>
-  operator[](TargetTransformInfo::TargetCostKind Kind) const {
-    unsigned Cost = ~0U;
-    switch (Kind) {
-    case TargetTransformInfo::TCK_RecipThroughput:
-      Cost = RecipThroughputCost;
-      break;
-    case TargetTransformInfo::TCK_Latency:
-      Cost = LatencyCost;
-      break;
-    case TargetTransformInfo::TCK_CodeSize:
-      Cost = CodeSizeCost;
-      break;
-    case TargetTransformInfo::TCK_SizeAndLatency:
-      Cost = SizeAndLatencyCost;
-      break;
-    }
-    if (Cost == ~0U)
-      return None;
-    return Cost;
-  }
-};
-using CostKindTblEntry = CostTblEntryT<CostKindCosts>;
 
 TargetTransformInfo::PopcntSupportKind
 X86TTIImpl::getPopcntSupport(unsigned TyWidth) {
@@ -2693,6 +2646,16 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                                                CmpInst::Predicate VecPred,
                                                TTI::TargetCostKind CostKind,
                                                const Instruction *I) {
+  // Assume a 3cy latency for fp select ops.
+  if (CostKind == TTI::TCK_Latency && Opcode == Instruction::Select)
+    if (ValTy->getScalarType()->isFloatingPointTy())
+      return 3;
+
+  // TODO: Handle other cost kinds.
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                     I);
+
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
@@ -2755,180 +2718,166 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     }
   }
 
-  static const CostKindTblEntry SLMCostTbl[] = {
+  static const CostTblEntry SLMCostTbl[] = {
     // slm pcmpeq/pcmpgt throughput is 2
-    { ISD::SETCC,   MVT::v2i64,   { 2 } },
+    { ISD::SETCC,   MVT::v2i64,   2 },
     // slm pblendvb/blendvpd/blendvps throughput is 4
-    { ISD::SELECT,  MVT::v2f64,   { 4, 4, 1, 3 } }, // vblendvpd
-    { ISD::SELECT,  MVT::v4f32,   { 4, 4, 1, 3 } }, // vblendvps
-    { ISD::SELECT,  MVT::v2i64,   { 4, 4, 1, 3 } }, // pblendvb
-    { ISD::SELECT,  MVT::v8i32,   { 4, 4, 1, 3 } }, // pblendvb
-    { ISD::SELECT,  MVT::v8i16,   { 4, 4, 1, 3 } }, // pblendvb
-    { ISD::SELECT,  MVT::v16i8,   { 4, 4, 1, 3 } }, // pblendvb
+    { ISD::SELECT,  MVT::v2f64,   4 }, // vblendvpd
+    { ISD::SELECT,  MVT::v4f32,   4 }, // vblendvps
+    { ISD::SELECT,  MVT::v2i64,   4 }, // pblendvb
+    { ISD::SELECT,  MVT::v8i32,   4 }, // pblendvb
+    { ISD::SELECT,  MVT::v8i16,   4 }, // pblendvb
+    { ISD::SELECT,  MVT::v16i8,   4 }, // pblendvb
   };
 
-  static const CostKindTblEntry AVX512BWCostTbl[] = {
-    { ISD::SETCC,   MVT::v32i16,  { 1 } },
-    { ISD::SETCC,   MVT::v64i8,   { 1 } },
+  static const CostTblEntry AVX512BWCostTbl[] = {
+    { ISD::SETCC,   MVT::v32i16,  1 },
+    { ISD::SETCC,   MVT::v64i8,   1 },
 
-    { ISD::SELECT,  MVT::v32i16,  { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v64i8,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v32i16,  1 },
+    { ISD::SELECT,  MVT::v64i8,   1 },
   };
 
-  static const CostKindTblEntry AVX512CostTbl[] = {
-    { ISD::SETCC,   MVT::v8i64,   { 1 } },
-    { ISD::SETCC,   MVT::v16i32,  { 1 } },
-    { ISD::SETCC,   MVT::v8f64,   { 1 } },
-    { ISD::SETCC,   MVT::v16f32,  { 1 } },
+  static const CostTblEntry AVX512CostTbl[] = {
+    { ISD::SETCC,   MVT::v8i64,   1 },
+    { ISD::SETCC,   MVT::v16i32,  1 },
+    { ISD::SETCC,   MVT::v8f64,   1 },
+    { ISD::SETCC,   MVT::v16f32,  1 },
 
-    { ISD::SELECT,  MVT::v8i64,   { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v4i64,   { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v2i64,   { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v16i32,  { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v8i32,   { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v4i32,   { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v8f64,   { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v4f64,   { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v2f64,   { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::f64,     { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v16f32,  { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v8f32 ,  { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v4f32,   { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::f32  ,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v8i64,   1 },
+    { ISD::SELECT,  MVT::v4i64,   1 },
+    { ISD::SELECT,  MVT::v2i64,   1 },
+    { ISD::SELECT,  MVT::v16i32,  1 },
+    { ISD::SELECT,  MVT::v8i32,   1 },
+    { ISD::SELECT,  MVT::v4i32,   1 },
+    { ISD::SELECT,  MVT::v8f64,   1 },
+    { ISD::SELECT,  MVT::v4f64,   1 },
+    { ISD::SELECT,  MVT::v2f64,   1 },
+    { ISD::SELECT,  MVT::f64,     1 },
+    { ISD::SELECT,  MVT::v16f32,  1 },
+    { ISD::SELECT,  MVT::v8f32 ,  1 },
+    { ISD::SELECT,  MVT::v4f32,   1 },
+    { ISD::SELECT,  MVT::f32  ,   1 },
 
-    { ISD::SETCC,   MVT::v32i16,  { 2 } }, // FIXME: should probably be 4
-    { ISD::SETCC,   MVT::v64i8,   { 2 } }, // FIXME: should probably be 4
+    { ISD::SETCC,   MVT::v32i16,  2 }, // FIXME: should probably be 4
+    { ISD::SETCC,   MVT::v64i8,   2 }, // FIXME: should probably be 4
 
-    { ISD::SELECT,  MVT::v32i16,  { 2, 2, 4, 4 } },
-    { ISD::SELECT,  MVT::v16i16,  { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v8i16,   { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v64i8,   { 2, 2, 4, 4 } },
-    { ISD::SELECT,  MVT::v32i8,   { 1, 1, 1, 1 } },
-    { ISD::SELECT,  MVT::v16i8,   { 1, 1, 1, 1 } },
+    { ISD::SELECT,  MVT::v32i16,  2 },
+    { ISD::SELECT,  MVT::v16i16,  1 },
+    { ISD::SELECT,  MVT::v8i16,   1 },
+    { ISD::SELECT,  MVT::v64i8,   2 },
+    { ISD::SELECT,  MVT::v32i8,   1 },
+    { ISD::SELECT,  MVT::v16i8,   1 },
   };
 
-  static const CostKindTblEntry AVX2CostTbl[] = {
-    { ISD::SETCC,   MVT::v4i64,   { 1 } },
-    { ISD::SETCC,   MVT::v8i32,   { 1 } },
-    { ISD::SETCC,   MVT::v16i16,  { 1 } },
-    { ISD::SETCC,   MVT::v32i8,   { 1 } },
+  static const CostTblEntry AVX2CostTbl[] = {
+    { ISD::SETCC,   MVT::v4i64,   1 },
+    { ISD::SETCC,   MVT::v8i32,   1 },
+    { ISD::SETCC,   MVT::v16i16,  1 },
+    { ISD::SETCC,   MVT::v32i8,   1 },
 
-    { ISD::SELECT,  MVT::v4f64,   { 2, 2, 1, 2 } }, // vblendvpd
-    { ISD::SELECT,  MVT::v8f32,   { 2, 2, 1, 2 } }, // vblendvps
-    { ISD::SELECT,  MVT::v4i64,   { 2, 2, 1, 2 } }, // pblendvb
-    { ISD::SELECT,  MVT::v8i32,   { 2, 2, 1, 2 } }, // pblendvb
-    { ISD::SELECT,  MVT::v16i16,  { 2, 2, 1, 2 } }, // pblendvb
-    { ISD::SELECT,  MVT::v32i8,   { 2, 2, 1, 2 } }, // pblendvb
+    { ISD::SELECT,  MVT::v4f64,   2 }, // vblendvpd
+    { ISD::SELECT,  MVT::v8f32,   2 }, // vblendvps
+    { ISD::SELECT,  MVT::v4i64,   2 }, // pblendvb
+    { ISD::SELECT,  MVT::v8i32,   2 }, // pblendvb
+    { ISD::SELECT,  MVT::v16i16,  2 }, // pblendvb
+    { ISD::SELECT,  MVT::v32i8,   2 }, // pblendvb
   };
 
-  static const CostKindTblEntry AVX1CostTbl[] = {
-    { ISD::SETCC,   MVT::v4f64,   { 1 } },
-    { ISD::SETCC,   MVT::v8f32,   { 1 } },
+  static const CostTblEntry AVX1CostTbl[] = {
+    { ISD::SETCC,   MVT::v4f64,   1 },
+    { ISD::SETCC,   MVT::v8f32,   1 },
     // AVX1 does not support 8-wide integer compare.
-    { ISD::SETCC,   MVT::v4i64,   { 4 } },
-    { ISD::SETCC,   MVT::v8i32,   { 4 } },
-    { ISD::SETCC,   MVT::v16i16,  { 4 } },
-    { ISD::SETCC,   MVT::v32i8,   { 4 } },
+    { ISD::SETCC,   MVT::v4i64,   4 },
+    { ISD::SETCC,   MVT::v8i32,   4 },
+    { ISD::SETCC,   MVT::v16i16,  4 },
+    { ISD::SETCC,   MVT::v32i8,   4 },
 
-    { ISD::SELECT,  MVT::v4f64,   { 3, 3, 1, 2 } }, // vblendvpd
-    { ISD::SELECT,  MVT::v8f32,   { 3, 3, 1, 2 } }, // vblendvps
-    { ISD::SELECT,  MVT::v4i64,   { 3, 3, 1, 2 } }, // vblendvpd
-    { ISD::SELECT,  MVT::v8i32,   { 3, 3, 1, 2 } }, // vblendvps
-    { ISD::SELECT,  MVT::v16i16,  { 3, 3, 3, 3 } }, // vandps + vandnps + vorps
-    { ISD::SELECT,  MVT::v32i8,   { 3, 3, 3, 3 } }, // vandps + vandnps + vorps
+    { ISD::SELECT,  MVT::v4f64,   3 }, // vblendvpd
+    { ISD::SELECT,  MVT::v8f32,   3 }, // vblendvps
+    { ISD::SELECT,  MVT::v4i64,   3 }, // vblendvpd
+    { ISD::SELECT,  MVT::v8i32,   3 }, // vblendvps
+    { ISD::SELECT,  MVT::v16i16,  3 }, // vandps + vandnps + vorps
+    { ISD::SELECT,  MVT::v32i8,   3 }, // vandps + vandnps + vorps
   };
 
-  static const CostKindTblEntry SSE42CostTbl[] = {
-    { ISD::SETCC,   MVT::v2i64,   { 1 } },
+  static const CostTblEntry SSE42CostTbl[] = {
+    { ISD::SETCC,   MVT::v2i64,   1 },
   };
 
-  static const CostKindTblEntry SSE41CostTbl[] = {
-    { ISD::SETCC,   MVT::v2f64,   { 1 } },
-    { ISD::SETCC,   MVT::v4f32,   { 1 } },
+  static const CostTblEntry SSE41CostTbl[] = {
+    { ISD::SETCC,   MVT::v2f64,   1 },
+    { ISD::SETCC,   MVT::v4f32,   1 },
 
-    { ISD::SELECT,  MVT::v2f64,   { 2, 2, 1, 2 } }, // blendvpd
-    { ISD::SELECT,  MVT::f64,     { 2, 2, 1, 2 } }, // blendvpd
-    { ISD::SELECT,  MVT::v4f32,   { 2, 2, 1, 2 } }, // blendvps
-    { ISD::SELECT,  MVT::f32  ,   { 2, 2, 1, 2 } }, // blendvps
-    { ISD::SELECT,  MVT::v2i64,   { 2, 2, 1, 2 } }, // pblendvb
-    { ISD::SELECT,  MVT::v4i32,   { 2, 2, 1, 2 } }, // pblendvb
-    { ISD::SELECT,  MVT::v8i16,   { 2, 2, 1, 2 } }, // pblendvb
-    { ISD::SELECT,  MVT::v16i8,   { 2, 2, 1, 2 } }, // pblendvb
+    { ISD::SELECT,  MVT::v2f64,   2 }, // blendvpd
+    { ISD::SELECT,  MVT::f64,     2 }, // blendvpd
+    { ISD::SELECT,  MVT::v4f32,   2 }, // blendvps
+    { ISD::SELECT,  MVT::f32  ,   2 }, // blendvps
+    { ISD::SELECT,  MVT::v2i64,   2 }, // pblendvb
+    { ISD::SELECT,  MVT::v4i32,   2 }, // pblendvb
+    { ISD::SELECT,  MVT::v8i16,   2 }, // pblendvb
+    { ISD::SELECT,  MVT::v16i8,   2 }, // pblendvb
   };
 
-  static const CostKindTblEntry SSE2CostTbl[] = {
-    { ISD::SETCC,   MVT::v2f64,   { 2 } },
-    { ISD::SETCC,   MVT::f64,     { 1 } },
-    { ISD::SETCC,   MVT::v2i64,   { 5 } }, // pcmpeqd/pcmpgtd expansion
-    { ISD::SETCC,   MVT::v4i32,   { 1 } },
-    { ISD::SETCC,   MVT::v8i16,   { 1 } },
-    { ISD::SETCC,   MVT::v16i8,   { 1 } },
+  static const CostTblEntry SSE2CostTbl[] = {
+    { ISD::SETCC,   MVT::v2f64,   2 },
+    { ISD::SETCC,   MVT::f64,     1 },
+    { ISD::SETCC,   MVT::v2i64,   5 }, // pcmpeqd/pcmpgtd expansion
+    { ISD::SETCC,   MVT::v4i32,   1 },
+    { ISD::SETCC,   MVT::v8i16,   1 },
+    { ISD::SETCC,   MVT::v16i8,   1 },
 
-    { ISD::SELECT,  MVT::v2f64,   { 2, 2, 3, 3 } }, // andpd + andnpd + orpd
-    { ISD::SELECT,  MVT::f64,     { 2, 2, 3, 3 } }, // andpd + andnpd + orpd
-    { ISD::SELECT,  MVT::v2i64,   { 2, 2, 3, 3 } }, // pand + pandn + por
-    { ISD::SELECT,  MVT::v4i32,   { 2, 2, 3, 3 } }, // pand + pandn + por
-    { ISD::SELECT,  MVT::v8i16,   { 2, 2, 3, 3 } }, // pand + pandn + por
-    { ISD::SELECT,  MVT::v16i8,   { 2, 2, 3, 3 } }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v2f64,   2 }, // andpd + andnpd + orpd
+    { ISD::SELECT,  MVT::f64,     2 }, // andpd + andnpd + orpd
+    { ISD::SELECT,  MVT::v2i64,   2 }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v4i32,   2 }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v8i16,   2 }, // pand + pandn + por
+    { ISD::SELECT,  MVT::v16i8,   2 }, // pand + pandn + por
   };
 
-  static const CostKindTblEntry SSE1CostTbl[] = {
-    { ISD::SETCC,   MVT::v4f32,   { 2 } },
-    { ISD::SETCC,   MVT::f32,     { 1 } },
+  static const CostTblEntry SSE1CostTbl[] = {
+    { ISD::SETCC,   MVT::v4f32,   2 },
+    { ISD::SETCC,   MVT::f32,     1 },
 
-    { ISD::SELECT,  MVT::v4f32,   { 2, 2, 3, 3 } }, // andps + andnps + orps
-    { ISD::SELECT,  MVT::f32,     { 2, 2, 3, 3 } }, // andps + andnps + orps
+    { ISD::SELECT,  MVT::v4f32,   2 }, // andps + andnps + orps
+    { ISD::SELECT,  MVT::f32,     2 }, // andps + andnps + orps
   };
 
   if (ST->useSLMArithCosts())
     if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasBWI())
     if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasAVX512())
     if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasAVX2())
     if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasSSE42())
     if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasSSE41())
     if (const auto *Entry = CostTableLookup(SSE41CostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
+      return LT.first * (ExtraCost + Entry->Cost);
 
   if (ST->hasSSE1())
     if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
-      if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + KindCost.value());
-
-  // Assume a 3cy latency for fp select ops.
-  if (CostKind == TTI::TCK_Latency && Opcode == Instruction::Select)
-    if (ValTy->getScalarType()->isFloatingPointTy())
-      return 3;
+      return LT.first * (ExtraCost + Entry->Cost);
 
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
 }
