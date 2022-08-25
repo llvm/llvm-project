@@ -593,7 +593,7 @@ void LowerAnnotations::runOnFunctions(BinaryContext &BC) {
   for (auto &It : BC.getBinaryFunctions()) {
     BinaryFunction &BF = It.second;
 
-    for (const FunctionFragment FF : BF.getLayout().fragments()) {
+    for (FunctionFragment &FF : BF.getLayout().fragments()) {
       int64_t CurrentGnuArgsSize = 0;
 
       for (BinaryBasicBlock *const BB : FF) {
