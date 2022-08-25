@@ -4415,6 +4415,11 @@ public:
   /// EmitLoadOfComplex - Load a complex number from the specified l-value.
   ComplexPairTy EmitLoadOfComplex(LValue src, SourceLocation loc);
 
+  ComplexPairTy EmitPromotedComplexExpr(const Expr *E, QualType PromotionType);
+  llvm::Value *EmitPromotedScalarExpr(const Expr *E, QualType PromotionType);
+  ComplexPairTy EmitPromotedValue(ComplexPairTy result, QualType PromotionType);
+  ComplexPairTy EmitUnPromotedValue(ComplexPairTy result, QualType PromotionType);
+
   Address emitAddrOfRealComponent(Address complex, QualType complexType);
   Address emitAddrOfImagComponent(Address complex, QualType complexType);
 
@@ -4611,6 +4616,9 @@ public:
   /// Emit a description of a source location in a format suitable for
   /// passing to a runtime sanitizer handler.
   llvm::Constant *EmitCheckSourceLocation(SourceLocation Loc);
+
+  void EmitKCFIOperandBundle(const CGCallee &Callee,
+                             SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
 
   /// Create a basic block that will either trap or call a handler function in
   /// the UBSan runtime with the provided arguments, and create a conditional

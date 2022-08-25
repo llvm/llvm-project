@@ -1006,8 +1006,8 @@ class _LIBCPP_EXCEPTION_ABI regex_error
 public:
     explicit regex_error(regex_constants::error_type __ecode);
     regex_error(const regex_error&) _NOEXCEPT = default;
-    virtual ~regex_error() _NOEXCEPT;
-     _LIBCPP_INLINE_VISIBILITY
+    ~regex_error() _NOEXCEPT override;
+    _LIBCPP_INLINE_VISIBILITY
     regex_constants::error_type code() const {return __code_;}
 };
 
@@ -1507,7 +1507,7 @@ public:
     explicit __owns_one_state(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual ~__owns_one_state();
+    ~__owns_one_state() override;
 };
 
 template <class _CharT>
@@ -2196,7 +2196,7 @@ public:
     __match_any_but_newline(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual void __exec(__state&) const;
+    void __exec(__state&) const override;
 };
 
 template <> _LIBCPP_FUNC_VIS void __match_any_but_newline<char>::__exec(__state&) const;

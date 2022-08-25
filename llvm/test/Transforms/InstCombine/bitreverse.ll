@@ -255,8 +255,8 @@ define i8 @rev8_mul_and_lshr(i8 %0) {
 
 define i4 @shuf_4bits(<4 x i1> %x) {
 ; CHECK-LABEL: @shuf_4bits(
-; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X:%.*]], <4 x i1> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i1> [[BITREVERSE]] to i4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1> [[X:%.*]] to i4
+; CHECK-NEXT:    [[CAST:%.*]] = call i4 @llvm.bitreverse.i4(i4 [[TMP1]])
 ; CHECK-NEXT:    ret i4 [[CAST]]
 ;
   %bitreverse = shufflevector <4 x i1> %x, <4 x i1> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
@@ -266,9 +266,9 @@ define i4 @shuf_4bits(<4 x i1> %x) {
 
 define i4 @shuf_load_4bits(<4 x i1> * %p) {
 ; CHECK-LABEL: @shuf_load_4bits(
-; CHECK-NEXT:    [[X:%.*]] = load <4 x i1>, <4 x i1>* [[P:%.*]], align 1
-; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[X]], <4 x i1> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i1> [[BITREVERSE]] to i4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1>* [[P:%.*]] to i4*
+; CHECK-NEXT:    [[X1:%.*]] = load i4, i4* [[TMP1]], align 1
+; CHECK-NEXT:    [[CAST:%.*]] = call i4 @llvm.bitreverse.i4(i4 [[X1]])
 ; CHECK-NEXT:    ret i4 [[CAST]]
 ;
   %x = load <4 x i1>, <4 x i1>* %p
@@ -279,9 +279,7 @@ define i4 @shuf_load_4bits(<4 x i1> * %p) {
 
 define i4 @shuf_bitcast_twice_4bits(i4 %x) {
 ; CHECK-LABEL: @shuf_bitcast_twice_4bits(
-; CHECK-NEXT:    [[CAST1:%.*]] = bitcast i4 [[X:%.*]] to <4 x i1>
-; CHECK-NEXT:    [[BITREVERSE:%.*]] = shufflevector <4 x i1> [[CAST1]], <4 x i1> undef, <4 x i32> <i32 undef, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[CAST2:%.*]] = bitcast <4 x i1> [[BITREVERSE]] to i4
+; CHECK-NEXT:    [[CAST2:%.*]] = call i4 @llvm.bitreverse.i4(i4 [[X:%.*]])
 ; CHECK-NEXT:    ret i4 [[CAST2]]
 ;
   %cast1 = bitcast i4 %x to <4 x i1>

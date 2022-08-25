@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_INTEGER_TO_STRING_H
 #define LLVM_LIBC_SRC_SUPPORT_INTEGER_TO_STRING_H
 
+#include <stdint.h>
+
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"

@@ -858,13 +858,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
 // _LIBCPP_NODISCARD_EXT may be used to apply [[nodiscard]] to entities not
 // specified as such as an extension.
-#  if defined(_LIBCPP_ENABLE_NODISCARD) && !defined(_LIBCPP_DISABLE_NODISCARD_EXT)
+#  if defined(_LIBCPP_ENABLE_NODISCARD_EXT)
 #    define _LIBCPP_NODISCARD_EXT _LIBCPP_NODISCARD
 #  else
 #    define _LIBCPP_NODISCARD_EXT
 #  endif
 
-#  if !defined(_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17) && (_LIBCPP_STD_VER > 17 || defined(_LIBCPP_ENABLE_NODISCARD))
+#  if _LIBCPP_STD_VER > 17 || defined(_LIBCPP_ENABLE_NODISCARD_EXT)
 #    define _LIBCPP_NODISCARD_AFTER_CXX17 _LIBCPP_NODISCARD
 #  else
 #    define _LIBCPP_NODISCARD_AFTER_CXX17

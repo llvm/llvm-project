@@ -13,9 +13,9 @@
 #include "FEnvImpl.h"
 #include "FPBits.h"
 #include "builtin_wrappers.h"
-#include "src/__support/CPP/UInt128.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/UInt128.h"
 
 namespace __llvm_libc {
 namespace fputil {

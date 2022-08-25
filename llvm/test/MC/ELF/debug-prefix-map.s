@@ -1,5 +1,5 @@
-# RUN: rm -rf %t.foo && mkdir %t.foo && cd %t.foo
-# RUN: cp %s %t.foo/src.s
+# RUN: rm -rf %t.foo && mkdir -p %t.foo/bar && cd %t.foo
+# RUN: cp %s %t.foo/src.s && cp %s %t.foo/bar/src.s
 
 # RUN: llvm-mc -triple=x86_64 -g -dwarf-version=4 src.s -filetype=obj -o nomap.4.o
 # RUN: llvm-dwarfdump -v -debug-info -debug-line nomap.4.o | FileCheck --check-prefix=NO_MAP_V4 %s
@@ -11,9 +11,10 @@
 # RUN: llvm-mc -triple=x86_64 -g -dwarf-version=5 src.s -filetype=obj -o map.5.o -fdebug-prefix-map=%t.foo=src_root
 # RUN: llvm-dwarfdump -v -debug-info -debug-line map.5.o | FileCheck --check-prefix=MAP_V5 %s
 
-# RUN: llvm-mc -triple=x86_64 -g -dwarf-version=4 %t.foo/src.s -filetype=obj -o mapabs.4.o -fdebug-prefix-map=%t.foo=/src_root
+# RUN: cd %t.foo/bar
+# RUN: llvm-mc -triple=x86_64 -g -dwarf-version=4 %t.foo%{fs-sep}bar%{fs-sep}src.s -filetype=obj -o mapabs.4.o -fdebug-prefix-map=%t.foo=/broken_root -fdebug-prefix-map=%t.foo%{fs-sep}bar=/src_root
 # RUN: llvm-dwarfdump -v -debug-info -debug-line mapabs.4.o | FileCheck --check-prefix=MAPABS_V4 %s
-# RUN: llvm-mc -triple=x86_64 -g -dwarf-version=5 %t.foo/src.s -filetype=obj -o mapabs.5.o -fdebug-prefix-map=%t.foo=/src_root
+# RUN: llvm-mc -triple=x86_64 -g -dwarf-version=5 %t.foo%{fs-sep}bar%{fs-sep}src.s -filetype=obj -o mapabs.5.o -fdebug-prefix-map=%t.foo%{fs-sep}bar=/src_root -fdebug-prefix-map=%t.foo=/broken_root
 # RUN: llvm-dwarfdump -v -debug-info -debug-line mapabs.5.o | FileCheck --check-prefix=MAPABS_V5 %s
 
 f:

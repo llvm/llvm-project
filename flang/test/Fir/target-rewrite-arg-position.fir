@@ -16,7 +16,7 @@ func.func @_QFPf(%arg0: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc}) -> !fir
 }
 
 // CHECK-LABEL: func.func @_QFPf
-// CHECK-SAME:    %{{.*}}: !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.sret}, %arg1: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc, llvm.nest}) {
+// CHECK-SAME:    %{{.*}}: !fir.ref<tuple<!fir.real<16>, !fir.real<16>>> {llvm.align = 16 : i32, llvm.sret = tuple<!fir.real<16>, !fir.real<16>>}, %arg1: !fir.ref<tuple<!fir.ref<i32>>> {fir.host_assoc, llvm.nest}) {
 
 // -----
 

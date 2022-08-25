@@ -169,6 +169,7 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::macho_dynamically_linked_shared_lib_stub:
   case file_magic::macho_dsym_companion:
   case file_magic::macho_kext_bundle:
+  case file_magic::macho_file_set:
     return createMachOObjectFile(Object);
   case file_magic::coff_object:
   case file_magic::coff_import_library:

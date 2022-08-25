@@ -207,8 +207,8 @@ class _LIBCPP_EXCEPTION_ABI _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS bad_optiona
 {
 public:
     // Get the key function ~bad_optional_access() into the dylib
-    virtual ~bad_optional_access() _NOEXCEPT;
-    virtual const char* what() const _NOEXCEPT;
+    ~bad_optional_access() _NOEXCEPT override;
+    const char* what() const _NOEXCEPT override;
 };
 
 } // namespace std

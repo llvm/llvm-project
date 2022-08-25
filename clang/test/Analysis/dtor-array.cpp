@@ -258,8 +258,7 @@ void zeroLength(){
   auto *arr4 = new InlineDtor[2][2][0];
   delete[] arr4;
 
-  // FIXME: Should be TRUE once the constructors are handled properly.
-  clang_analyzer_eval(InlineDtor::dtorCalled == 0); // expected-warning {{TRUE}} expected-warning {{FALSE}}
+  clang_analyzer_eval(InlineDtor::dtorCalled == 0); // expected-warning {{TRUE}}
 }
 
 
