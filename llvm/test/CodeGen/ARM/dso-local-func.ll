@@ -11,6 +11,7 @@ define dso_local ptr @dsolocal_func() nounwind {
 ; CHECK-NEXT: 	.code	32
 ; CHECK-NEXT: dsolocal_func:
 ; PIC-NEXT: .Ldsolocal_func$local:
+; PIC-NEXT: .type .Ldsolocal_func$local,%function
 ; CHECK-NEXT: 	.fnstart
 ; CHECK-NEXT: @ %bb.0:
 ; STATIC-NEXT: 	movw	r0, :lower16:dsolocal_func
@@ -26,6 +27,7 @@ define dso_local ptr @dsolocal_func() nounwind {
 ; PIC-NEXT:     .long	dsolocal_func-(.LPC0_0+8)
 ; CHECK-NEXT: .Lfunc_end0:
 ; CHECK-NEXT: 	.size	dsolocal_func, .Lfunc_end0-dsolocal_func
+; PIC-NEXT:     .size .Ldsolocal_func$local, .Lfunc_end0-dsolocal_func
 ; CHECK-NEXT: 	.cantunwind
 ; CHECK-NEXT: 	.fnend
   ret ptr @dsolocal_func
