@@ -187,7 +187,7 @@ public:
   std::string lookupModuleOutput(const ModuleID &ID, ModuleOutputKind MOK);
 
 private:
-  std::unordered_map<ModuleID, std::string, ModuleIDHasher> PCMPaths;
+  llvm::DenseMap<ModuleID, std::string> PCMPaths;
   void *MLOContext;
   CXModuleLookupOutputCallback *MLO;
 };
