@@ -856,13 +856,13 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   if (Input.isIncludeTree()) {
     auto reportError = [&](llvm::Error &&E) -> bool {
       std::string IncludeTreeID =
-          CI.getOrCreateCAS().getID(Input.getIncludeTree()).toString();
+          CI.getOrCreateObjectStore().getID(Input.getIncludeTree()).toString();
       CI.getDiagnostics().Report(diag::err_fe_unable_to_load_include_tree)
           << IncludeTreeID << llvm::toString(std::move(E));
       return false;
     };
-    auto Root =
-        cas::IncludeTreeRoot::get(CI.getOrCreateCAS(), Input.getIncludeTree());
+    auto Root = cas::IncludeTreeRoot::get(CI.getOrCreateObjectStore(),
+                                          Input.getIncludeTree());
     if (!Root)
       return reportError(Root.takeError());
     auto IncludeTreeFS = cas::createIncludeTreeFileSystem(*Root);

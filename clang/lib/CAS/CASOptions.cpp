@@ -17,7 +17,7 @@ using namespace clang;
 using namespace llvm::cas;
 
 static std::shared_ptr<llvm::cas::ObjectStore>
-createCAS(const CASConfiguration &Config, DiagnosticsEngine &Diags) {
+createObjectStore(const CASConfiguration &Config, DiagnosticsEngine &Diags) {
   if (Config.CASPath.empty())
     return llvm::cas::createInMemoryCAS();
 
@@ -38,8 +38,8 @@ createCAS(const CASConfiguration &Config, DiagnosticsEngine &Diags) {
 }
 
 std::shared_ptr<llvm::cas::ObjectStore>
-CASOptions::getOrCreateCAS(DiagnosticsEngine &Diags,
-                           bool CreateEmptyCASOnFailure) const {
+CASOptions::getOrCreateObjectStore(DiagnosticsEngine &Diags,
+                                   bool CreateEmptyCASOnFailure) const {
   if (Cache.Config.IsFrozen)
     return Cache.CAS;
 
@@ -131,6 +131,6 @@ void CASOptions::initCache(DiagnosticsEngine &Diags) const {
     return;
 
   Cache.Config = CurrentConfig;
-  Cache.CAS = createCAS(Cache.Config, Diags);
+  Cache.CAS = createObjectStore(Cache.Config, Diags);
   Cache.AC = createCache(*Cache.CAS, Cache.Config, Diags);
 }

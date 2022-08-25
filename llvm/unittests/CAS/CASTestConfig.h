@@ -32,7 +32,7 @@ protected:
 
   llvm::SmallVector<llvm::unittest::TempDir> Dirs;
 
-  std::unique_ptr<llvm::cas::ObjectStore> createCAS() {
+  std::unique_ptr<llvm::cas::ObjectStore> createObjectStore() {
     auto TD = GetParam()(++(*NextCASIndex));
     if (TD.Temp)
       Dirs.push_back(std::move(*TD.Temp));

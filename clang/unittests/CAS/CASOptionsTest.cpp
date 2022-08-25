@@ -38,47 +38,47 @@ TEST(CASOptionsTest, getKind) {
 #endif
 }
 
-TEST(CASOptionsTest, getOrCreateCAS) {
+TEST(CASOptionsTest, getOrCreateObjectStore) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
                           new IgnoringDiagConsumer());
 
   // Create an in-memory CAS.
   CASOptions Opts;
-  std::shared_ptr<ObjectStore> InMemory = Opts.getOrCreateCAS(Diags);
+  std::shared_ptr<ObjectStore> InMemory = Opts.getOrCreateObjectStore(Diags);
   ASSERT_TRUE(InMemory);
-  EXPECT_EQ(InMemory, Opts.getOrCreateCAS(Diags));
+  EXPECT_EQ(InMemory, Opts.getOrCreateObjectStore(Diags));
   EXPECT_EQ(CASOptions::InMemoryCAS, Opts.getKind());
 
 #if LLVM_ENABLE_ONDISK_CAS
   // Create an on-disk CAS.
   unittest::TempDir Dir("cas-options", /*Unique=*/true);
   Opts.CASPath = Dir.path("cas").str().str();
-  std::shared_ptr<ObjectStore> OnDisk = Opts.getOrCreateCAS(Diags);
+  std::shared_ptr<ObjectStore> OnDisk = Opts.getOrCreateObjectStore(Diags);
   EXPECT_NE(InMemory, OnDisk);
-  EXPECT_EQ(OnDisk, Opts.getOrCreateCAS(Diags));
+  EXPECT_EQ(OnDisk, Opts.getOrCreateObjectStore(Diags));
   EXPECT_EQ(CASOptions::OnDiskCAS, Opts.getKind());
 
   // Create an on-disk CAS at an automatic location.
   Opts.CASPath = "auto";
-  std::shared_ptr<ObjectStore> OnDiskAuto = Opts.getOrCreateCAS(Diags);
+  std::shared_ptr<ObjectStore> OnDiskAuto = Opts.getOrCreateObjectStore(Diags);
   EXPECT_NE(InMemory, OnDiskAuto);
   EXPECT_NE(OnDisk, OnDiskAuto);
-  EXPECT_EQ(OnDiskAuto, Opts.getOrCreateCAS(Diags));
+  EXPECT_EQ(OnDiskAuto, Opts.getOrCreateObjectStore(Diags));
   EXPECT_EQ(CASOptions::OnDiskCAS, Opts.getKind());
 
   // Create another in-memory CAS. It won't be the same one.
   Opts.CASPath = "";
-  std::shared_ptr<ObjectStore> InMemory2 = Opts.getOrCreateCAS(Diags);
+  std::shared_ptr<ObjectStore> InMemory2 = Opts.getOrCreateObjectStore(Diags);
   EXPECT_NE(InMemory, InMemory2);
   EXPECT_NE(OnDisk, InMemory2);
   EXPECT_NE(OnDiskAuto, InMemory2);
-  EXPECT_EQ(InMemory2, Opts.getOrCreateCAS(Diags));
+  EXPECT_EQ(InMemory2, Opts.getOrCreateObjectStore(Diags));
   EXPECT_EQ(CASOptions::InMemoryCAS, Opts.getKind());
 #endif
 }
 
 #if LLVM_ENABLE_ONDISK_CAS
-TEST(CASOptionsTest, getOrCreateCASInvalid) {
+TEST(CASOptionsTest, getOrCreateObjectStoreInvalid) {
   DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions,
                           new IgnoringDiagConsumer());
 
@@ -90,11 +90,11 @@ TEST(CASOptionsTest, getOrCreateCASInvalid) {
 
   CASOptions Opts;
   Opts.CASPath = File.path().str();
-  EXPECT_EQ(nullptr, Opts.getOrCreateCAS(Diags));
+  EXPECT_EQ(nullptr, Opts.getOrCreateObjectStore(Diags));
 
   std::shared_ptr<ObjectStore> Empty =
-      Opts.getOrCreateCAS(Diags, /*CreateEmptyCASOnFailure=*/true);
-  EXPECT_EQ(Empty, Opts.getOrCreateCAS(Diags));
+      Opts.getOrCreateObjectStore(Diags, /*CreateEmptyCASOnFailure=*/true);
+  EXPECT_EQ(Empty, Opts.getOrCreateObjectStore(Diags));
 
   // Ensure the file wasn't clobbered.
   std::unique_ptr<MemoryBuffer> MemBuffer;
@@ -113,21 +113,21 @@ TEST(CASOptionsTest, freezeConfig) {
   CASOptions Opts;
   Opts.CASPath = Dir.path("cas").str().str();
   Opts.freezeConfig(Diags);
-  std::shared_ptr<ObjectStore> CAS = Opts.getOrCreateCAS(Diags);
+  std::shared_ptr<ObjectStore> CAS = Opts.getOrCreateObjectStore(Diags);
   ASSERT_TRUE(CAS);
   EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
 
-  // Check that the configuration is hidden, but calls to getOrCreateCAS()
-  // still return the original CAS.
+  // Check that the configuration is hidden, but calls to
+  // getOrCreateObjectStore() still return the original CAS.
   EXPECT_EQ(CAS->getHashSchemaIdentifier(), Opts.CASPath);
 
   // Check that new paths are ignored.
   Opts.CASPath = "";
-  EXPECT_EQ(CAS, Opts.getOrCreateCAS(Diags));
+  EXPECT_EQ(CAS, Opts.getOrCreateObjectStore(Diags));
   EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
 
   Opts.CASPath = Dir.path("ignored-cas").str().str();
-  EXPECT_EQ(CAS, Opts.getOrCreateCAS(Diags));
+  EXPECT_EQ(CAS, Opts.getOrCreateObjectStore(Diags));
   EXPECT_EQ(CASOptions::UnknownCAS, Opts.getKind());
 }
 #endif

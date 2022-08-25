@@ -27,7 +27,8 @@ static void printCompileJobCacheKey(StringRef CASPath, StringRef Key) {
   // on-disk instead of in-memory if no --cas path is specified.
   Opts.CASPath = CASPath.empty() ? "auto" : CASPath.str();
 
-  auto CAS = Opts.getOrCreateCAS(*Diags, /*CreateEmptyCASOnFailure=*/false);
+  auto CAS =
+      Opts.getOrCreateObjectStore(*Diags, /*CreateEmptyCASOnFailure=*/false);
   if (!CAS)
     return;
 

@@ -358,7 +358,7 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   // TODO: Extract CASOptions.Path first if we need it later since it'll
   // disappear here.
   Invocation.getCASOpts().freezeConfig(Diags);
-  CAS = Invocation.getCASOpts().getOrCreateCAS(Diags);
+  CAS = Invocation.getCASOpts().getOrCreateObjectStore(Diags);
   if (!CAS)
     return 1; // Exit with error!
   Cache = Invocation.getCASOpts().getOrCreateActionCache(Diags);

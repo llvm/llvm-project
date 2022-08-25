@@ -2835,7 +2835,7 @@ static void determineInputFromIncludeTree(
     Diags.Report(diag::err_fe_unable_to_load_include_tree)
         << IncludeTreeID << llvm::toString(std::move(E));
   };
-  auto CAS = CASOpts.getOrCreateCAS(Diags);
+  auto CAS = CASOpts.getOrCreateObjectStore(Diags);
   if (!CAS)
     return;
   auto ID = CAS->parseID(IncludeTreeID);
@@ -5009,7 +5009,7 @@ createBaseFS(const CompilerInvocation &Invocation, DiagnosticsEngine &Diags,
   // If no CAS was provided, create one with CASOptions.
   std::shared_ptr<llvm::cas::ObjectStore> CAS = std::move(OverrideCAS);
   if (!CAS)
-    CAS = Invocation.getCASOpts().getOrCreateCAS(Diags);
+    CAS = Invocation.getCASOpts().getOrCreateObjectStore(Diags);
 
   // Helper for creating a valid (but empty) CASFS if an error is encountered.
   auto makeEmptyCASFS = [&CAS]() {

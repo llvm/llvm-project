@@ -782,7 +782,7 @@ int main(int argc, const char **argv) {
       else
         CASOpts.ensurePersistentCAS();
     }
-    CAS = CASOpts.getOrCreateCAS(Diags);
+    CAS = CASOpts.getOrCreateObjectStore(Diags);
     // FIXME: Cache is not used here so just create a dummy in-memory cache.
     Cache = CASOpts.getOrCreateActionCache(Diags);
     if (!CAS)

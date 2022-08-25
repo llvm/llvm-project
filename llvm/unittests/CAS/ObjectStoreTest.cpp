@@ -19,7 +19,7 @@ using namespace llvm;
 using namespace llvm::cas;
 
 TEST_P(CASTest, PrintIDs) {
-  std::unique_ptr<ObjectStore> CAS = createCAS();
+  std::unique_ptr<ObjectStore> CAS = createObjectStore();
 
   Optional<CASID> ID1, ID2;
   ASSERT_THAT_ERROR(CAS->createProxy(None, "1").moveInto(ID1), Succeeded());
@@ -37,7 +37,7 @@ TEST_P(CASTest, PrintIDs) {
 }
 
 TEST_P(CASTest, Blobs) {
-  std::unique_ptr<ObjectStore> CAS1 = createCAS();
+  std::unique_ptr<ObjectStore> CAS1 = createObjectStore();
   StringRef ContentStrings[] = {
       "word",
       "some longer text std::string's local memory",
@@ -87,7 +87,7 @@ multiline text multiline text multiline text multiline text multiline text)",
   }
 
   // Confirm these blobs don't exist in a fresh CAS instance.
-  std::unique_ptr<ObjectStore> CAS2 = createCAS();
+  std::unique_ptr<ObjectStore> CAS2 = createObjectStore();
   for (int I = 0, E = IDs.size(); I != E; ++I) {
     Optional<ObjectProxy> Proxy;
     EXPECT_THAT_ERROR(CAS2->getProxyOrNone(IDs[I]).moveInto(Proxy),
@@ -113,7 +113,7 @@ multiline text multiline text multiline text multiline text multiline text)",
 
 TEST_P(CASTest, BlobsBig) {
   // A little bit of validation that bigger blobs are okay. Climb up to 1MB.
-  std::unique_ptr<ObjectStore> CAS = createCAS();
+  std::unique_ptr<ObjectStore> CAS = createObjectStore();
   SmallString<256> String1 = StringRef("a few words");
   SmallString<256> String2 = StringRef("others");
   while (String1.size() < 1024U * 1024U) {
@@ -155,7 +155,7 @@ TEST_P(CASTest, BlobsBig) {
 }
 
 TEST_P(CASTest, LeafNodes) {
-  std::unique_ptr<ObjectStore> CAS1 = createCAS();
+  std::unique_ptr<ObjectStore> CAS1 = createObjectStore();
   StringRef ContentStrings[] = {
       "word",
       "some longer text std::string's local memory",
@@ -213,7 +213,7 @@ multiline text multiline text multiline text multiline text multiline text)",
   }
 
   // Confirm these blobs don't exist in a fresh CAS instance.
-  std::unique_ptr<ObjectStore> CAS2 = createCAS();
+  std::unique_ptr<ObjectStore> CAS2 = createObjectStore();
   for (int I = 0, E = IDs.size(); I != E; ++I) {
     Optional<ObjectProxy> Object;
     EXPECT_THAT_ERROR(CAS2->getProxyOrNone(IDs[I]).moveInto(Object),
@@ -240,7 +240,7 @@ multiline text multiline text multiline text multiline text multiline text)",
 }
 
 TEST_P(CASTest, NodesBig) {
-  std::unique_ptr<ObjectStore> CAS = createCAS();
+  std::unique_ptr<ObjectStore> CAS = createObjectStore();
 
   // Specifically check near 1MB for objects large enough they're likely to be
   // stored externally in an on-disk CAS, and such that one of them will be

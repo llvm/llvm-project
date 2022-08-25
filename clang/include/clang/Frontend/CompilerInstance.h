@@ -442,7 +442,7 @@ public:
   llvm::vfs::OutputBackend &getOrCreateOutputBackend();
 
   /// Get the CAS, or create it using the configuration in CompilerInvocation.
-  llvm::cas::ObjectStore &getOrCreateCAS();
+  llvm::cas::ObjectStore &getOrCreateObjectStore();
   llvm::cas::ActionCache &getOrCreateActionCache();
 
   /// }

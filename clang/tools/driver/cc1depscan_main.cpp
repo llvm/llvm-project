@@ -631,7 +631,8 @@ int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
   CompilerInvocation::ParseCASArgs(CASOpts, ParsedCC1Args, Diags);
   CASOpts.ensurePersistentCAS();
 
-  std::shared_ptr<llvm::cas::ObjectStore> CAS = CASOpts.getOrCreateCAS(Diags);
+  std::shared_ptr<llvm::cas::ObjectStore> CAS =
+      CASOpts.getOrCreateObjectStore(Diags);
   if (!CAS)
     return 1;
 
@@ -880,7 +881,8 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
   bool ProduceIncludeTree =
       ParsedCASArgs.hasArg(driver::options::OPT_fdepscan_include_tree);
 
-  std::shared_ptr<llvm::cas::ObjectStore> CAS = CASOpts.getOrCreateCAS(Diags);
+  std::shared_ptr<llvm::cas::ObjectStore> CAS =
+      CASOpts.getOrCreateObjectStore(Diags);
   if (!CAS)
     llvm::report_fatal_error("clang -cc1depscand: cannot create CAS");
 
