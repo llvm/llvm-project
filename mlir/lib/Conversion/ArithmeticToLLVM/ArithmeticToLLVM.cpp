@@ -87,7 +87,7 @@ using XOrIOpLowering = VectorConvertToLLVMPattern<arith::XOrIOp, LLVM::XOrOp>;
 
 /// Directly lower to LLVM op.
 struct ConstantOpLowering : public ConvertOpToLLVMPattern<arith::ConstantOp> {
-  using ConvertOpToLLVMPattern<arith::ConstantOp>::ConvertOpToLLVMPattern;
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arith::ConstantOp op, OpAdaptor adaptor,
@@ -99,7 +99,7 @@ struct ConstantOpLowering : public ConvertOpToLLVMPattern<arith::ConstantOp> {
 /// types is the same, just erase the cast.  If the target type is wider,
 /// sign-extend the value, otherwise truncate it.
 struct IndexCastOpLowering : public ConvertOpToLLVMPattern<arith::IndexCastOp> {
-  using ConvertOpToLLVMPattern<arith::IndexCastOp>::ConvertOpToLLVMPattern;
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arith::IndexCastOp op, OpAdaptor adaptor,
@@ -107,7 +107,7 @@ struct IndexCastOpLowering : public ConvertOpToLLVMPattern<arith::IndexCastOp> {
 };
 
 struct CmpIOpLowering : public ConvertOpToLLVMPattern<arith::CmpIOp> {
-  using ConvertOpToLLVMPattern<arith::CmpIOp>::ConvertOpToLLVMPattern;
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
@@ -115,7 +115,7 @@ struct CmpIOpLowering : public ConvertOpToLLVMPattern<arith::CmpIOp> {
 };
 
 struct CmpFOpLowering : public ConvertOpToLLVMPattern<arith::CmpFOp> {
-  using ConvertOpToLLVMPattern<arith::CmpFOp>::ConvertOpToLLVMPattern;
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
   LogicalResult
   matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
@@ -143,10 +143,10 @@ ConstantOpLowering::matchAndRewrite(arith::ConstantOp op, OpAdaptor adaptor,
 LogicalResult IndexCastOpLowering::matchAndRewrite(
     arith::IndexCastOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  auto resultType = op.getResult().getType();
-  auto targetElementType =
+  Type resultType = op.getResult().getType();
+  Type targetElementType =
       typeConverter->convertType(getElementTypeOrSelf(resultType));
-  auto sourceElementType =
+  Type sourceElementType =
       typeConverter->convertType(getElementTypeOrSelf(op.getIn()));
   unsigned targetBits = targetElementType.getIntOrFloatBitWidth();
   unsigned sourceBits = sourceElementType.getIntOrFloatBitWidth();
@@ -157,9 +157,9 @@ LogicalResult IndexCastOpLowering::matchAndRewrite(
   }
 
   // Handle the scalar and 1D vector cases.
-  auto operandType = adaptor.getIn().getType();
+  Type operandType = adaptor.getIn().getType();
   if (!operandType.isa<LLVM::LLVMArrayType>()) {
-    auto targetType = typeConverter->convertType(resultType);
+    Type targetType = typeConverter->convertType(resultType);
     if (targetBits < sourceBits)
       rewriter.replaceOpWithNewOp<LLVM::TruncOp>(op, targetType,
                                                  adaptor.getIn());
@@ -169,8 +169,7 @@ LogicalResult IndexCastOpLowering::matchAndRewrite(
     return success();
   }
 
-  auto vectorType = resultType.dyn_cast<VectorType>();
-  if (!vectorType)
+  if (!resultType.isa<VectorType>())
     return rewriter.notifyMatchFailure(op, "expected vector result type");
 
   return LLVM::detail::handleMultidimensionalVectors(
@@ -201,8 +200,8 @@ static LLVMPredType convertCmpPredicate(PredType pred) {
 LogicalResult
 CmpIOpLowering::matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &rewriter) const {
-  auto operandType = adaptor.getLhs().getType();
-  auto resultType = op.getResult().getType();
+  Type operandType = adaptor.getLhs().getType();
+  Type resultType = op.getResult().getType();
 
   // Handle the scalar and 1D vector cases.
   if (!operandType.isa<LLVM::LLVMArrayType>()) {
@@ -213,8 +212,7 @@ CmpIOpLowering::matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
     return success();
   }
 
-  auto vectorType = resultType.dyn_cast<VectorType>();
-  if (!vectorType)
+  if (!resultType.isa<VectorType>())
     return rewriter.notifyMatchFailure(op, "expected vector result type");
 
   return LLVM::detail::handleMultidimensionalVectors(
@@ -236,8 +234,8 @@ CmpIOpLowering::matchAndRewrite(arith::CmpIOp op, OpAdaptor adaptor,
 LogicalResult
 CmpFOpLowering::matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter &rewriter) const {
-  auto operandType = adaptor.getLhs().getType();
-  auto resultType = op.getResult().getType();
+  Type operandType = adaptor.getLhs().getType();
+  Type resultType = op.getResult().getType();
 
   // Handle the scalar and 1D vector cases.
   if (!operandType.isa<LLVM::LLVMArrayType>()) {
@@ -248,8 +246,7 @@ CmpFOpLowering::matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
     return success();
   }
 
-  auto vectorType = resultType.dyn_cast<VectorType>();
-  if (!vectorType)
+  if (!resultType.isa<VectorType>())
     return rewriter.notifyMatchFailure(op, "expected vector result type");
 
   return LLVM::detail::handleMultidimensionalVectors(
