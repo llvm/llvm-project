@@ -31,6 +31,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  link
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.link
+)
+
+add_entrypoint_object(
+  linkat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.linkat
+)
+
+add_entrypoint_object(
   lseek
   ALIAS
   DEPENDS
@@ -45,10 +59,38 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  readlink
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.readlink
+)
+
+add_entrypoint_object(
+  readlinkat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.readlinkat
+)
+
+add_entrypoint_object(
   rmdir
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.rmdir
+)
+
+add_entrypoint_object(
+  symlink
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.symlink
+)
+
+add_entrypoint_object(
+  symlinkat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.symlinkat
 )
 
 add_entrypoint_object(
