@@ -33,6 +33,24 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  ftruncate_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    ftruncate_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.unistd
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.read
+    libc.src.unistd.ftruncate
+    libc.src.unistd.unlink
+    libc.src.unistd.write
+    libc.src.__support.CPP.string_view
+)
+
+add_libc_unittest(
   read_write_test
   SUITE
     libc_unistd_unittests
@@ -167,6 +185,24 @@ add_libc_unittest(
     libc.src.unistd.close
     libc.src.unistd.symlinkat
     libc.src.unistd.unlink
+)
+
+add_libc_unittest(
+  truncate_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    truncate_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.unistd
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.read
+    libc.src.unistd.truncate
+    libc.src.unistd.unlink
+    libc.src.unistd.write
+    libc.src.__support.CPP.string_view
 )
 
 add_libc_unittest(
