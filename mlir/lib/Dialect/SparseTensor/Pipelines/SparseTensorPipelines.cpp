@@ -51,7 +51,6 @@ getBufferizationOptions(bool analysisOnly) {
 
 void mlir::sparse_tensor::buildSparseCompiler(
     OpPassManager &pm, const SparseCompilerOptions &options) {
-  // TODO(wrengr): ensure the original `pm` is for ModuleOp
   pm.addNestedPass<func::FuncOp>(createLinalgGeneralizationPass());
   pm.addPass(
       bufferization::createTensorCopyInsertionPass(getBufferizationOptions(
