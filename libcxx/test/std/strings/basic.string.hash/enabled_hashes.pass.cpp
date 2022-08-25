@@ -26,7 +26,7 @@ int main(int, char**) {
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test_hash_enabled_for_type<std::wstring>();
 #endif
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     test_hash_enabled_for_type<std::u8string>();
 #endif
     test_hash_enabled_for_type<std::u16string>();
