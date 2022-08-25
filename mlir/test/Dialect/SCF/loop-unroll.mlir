@@ -25,7 +25,7 @@ func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
 //   UNROLL-BY-2-DAG:  %[[V1:.*]] = arith.subi %[[STEP]], %[[C1]] : index
 //   UNROLL-BY-2-DAG:  %[[V2:.*]] = arith.addi %[[V0]], %[[V1]] : index
 //       Compute trip count in V3.
-//   UNROLL-BY-2-DAG:  %[[V3:.*]] = arith.divsi %[[V2]], %[[STEP]] : index
+//   UNROLL-BY-2-DAG:  %[[V3:.*]] = arith.divui %[[V2]], %[[STEP]] : index
 //       Store unroll factor in C2.
 //   UNROLL-BY-2-DAG:  %[[C2:.*]] = arith.constant 2 : index
 //   UNROLL-BY-2-DAG:  %[[V4:.*]] = arith.remsi %[[V3]], %[[C2]] : index
@@ -58,7 +58,7 @@ func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
 //   UNROLL-BY-3-DAG:  %[[V1:.*]] = arith.subi %[[STEP]], %[[C1]] : index
 //   UNROLL-BY-3-DAG:  %[[V2:.*]] = arith.addi %[[V0]], %[[V1]] : index
 //       Compute trip count in V3.
-//   UNROLL-BY-3-DAG:  %[[V3:.*]] = arith.divsi %[[V2]], %[[STEP]] : index
+//   UNROLL-BY-3-DAG:  %[[V3:.*]] = arith.divui %[[V2]], %[[STEP]] : index
 //       Store unroll factor in C3.
 //   UNROLL-BY-3-DAG:  %[[C3:.*]] = arith.constant 3 : index
 //   UNROLL-BY-3-DAG:  %[[V4:.*]] = arith.remsi %[[V3]], %[[C3]] : index
