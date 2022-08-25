@@ -941,6 +941,17 @@ bool ObjectFileMachO::MagicBytesMatch(DataBufferSP data_sp,
   data.SetData(data_sp, data_offset, data_length);
   lldb::offset_t offset = 0;
   uint32_t magic = data.GetU32(&offset);
+
+  offset += 4; // cputype
+  offset += 4; // cpusubtype
+  uint32_t filetype = data.GetU32(&offset);
+
+  // A fileset has a Mach-O header but is not an
+  // individual file and must be handled via an
+  // ObjectContainer plugin.
+  if (filetype == llvm::MachO::MH_FILESET)
+    return false;
+
   return MachHeaderSizeFromMagic(magic) != 0;
 }
 
