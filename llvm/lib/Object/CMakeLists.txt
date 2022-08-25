@@ -43,6 +43,7 @@ add_llvm_component_library(LLVMObject
   BitReader
   Core
   MC
+  IRReader
   BinaryFormat
   MCParser
   Support
