@@ -3086,55 +3086,27 @@ def retflag : SDNode<"NVPTXISD::RET_FLAG", SDTNone,
 
 // fceil, ffloor, fround, ftrunc.
 
-def : Pat<(fceil Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRPI)>;
-def : Pat<(fceil Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRPI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(fceil Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRPI)>, Requires<[doNoF32FTZ]>;
-def : Pat<(fceil Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRPI)>;
+multiclass CVT_ROUND<SDNode OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
+  def : Pat<(OpNode Float16Regs:$a),
+            (CVT_f16_f16 Float16Regs:$a, Mode)>;
+  def : Pat<(OpNode Float32Regs:$a),
+            (CVT_f32_f32 Float32Regs:$a, ModeFTZ)>, Requires<[doF32FTZ]>;
+  def : Pat<(OpNode Float32Regs:$a),
+            (CVT_f32_f32 Float32Regs:$a, Mode)>, Requires<[doNoF32FTZ]>;
+  def : Pat<(OpNode Float64Regs:$a),
+            (CVT_f64_f64 Float64Regs:$a, Mode)>;
+}
 
-def : Pat<(ffloor Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRMI)>;
-def : Pat<(ffloor Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRMI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(ffloor Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRMI)>, Requires<[doNoF32FTZ]>;
-def : Pat<(ffloor Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRMI)>;
-
-def : Pat<(ftrunc Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRZI)>;
-def : Pat<(ftrunc Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(ftrunc Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRZI)>, Requires<[doNoF32FTZ]>;
-def : Pat<(ftrunc Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRZI)>;
+defm : CVT_ROUND<fceil, CvtRPI, CvtRPI_FTZ>;
+defm : CVT_ROUND<ffloor, CvtRMI, CvtRMI_FTZ>;
+defm : CVT_ROUND<ftrunc, CvtRZI, CvtRZI_FTZ>;
 
 // nearbyint and rint are implemented as rounding to nearest even.  This isn't
 // strictly correct, because it causes us to ignore the rounding mode.  But it
 // matches what CUDA's "libm" does.
 
-def : Pat<(fnearbyint Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRNI)>;
-def : Pat<(fnearbyint Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRNI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(fnearbyint Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRNI)>, Requires<[doNoF32FTZ]>;
-def : Pat<(fnearbyint Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRNI)>;
-
-def : Pat<(frint Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRNI)>;
-def : Pat<(frint Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRNI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(frint Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRNI)>, Requires<[doNoF32FTZ]>;
-def : Pat<(frint Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRNI)>;
-
+defm : CVT_ROUND<fnearbyint, CvtRNI, CvtRNI_FTZ>;
+defm : CVT_ROUND<frint, CvtRNI, CvtRNI_FTZ>;
 
 //-----------------------------------
 // Control-flow
