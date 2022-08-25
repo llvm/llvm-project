@@ -222,6 +222,10 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return Discard(this->emitAdd(*T, BO));
     case BO_Mul:
       return Discard(this->emitMul(*T, BO));
+    case BO_Assign:
+      if (!this->emitStore(*T, BO))
+        return false;
+      return DiscardResult ? this->emitPopPtr(BO) : true;
     default:
       return this->bail(BO);
     }
@@ -609,8 +613,7 @@ bool ByteCodeExprGen<Emitter>::VisitCXXNullPtrLiteralExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
-  if (!this->Visit(E->getSubExpr()))
-    return false;
+  const Expr *SubExpr = E->getSubExpr();
 
   switch (E->getOpcode()) {
   case UO_PostInc: // x++
@@ -620,22 +623,55 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     return false;
 
   case UO_LNot: // !x
+    if (!this->Visit(SubExpr))
+      return false;
     return this->emitInvBool(E);
   case UO_Minus: // -x
+    if (!this->Visit(SubExpr))
+      return false;
     if (Optional<PrimType> T = classify(E->getType()))
       return this->emitNeg(*T, E);
     return false;
   case UO_Plus:  // +x
-    return true; // noop
+    return this->Visit(SubExpr); // noop
 
   case UO_AddrOf: // &x
+    // We should already have a pointer when we get here.
+    return this->Visit(SubExpr);
+
   case UO_Deref:  // *x
+    return dereference(
+        SubExpr, DerefKind::Read,
+        [](PrimType) {
+          llvm_unreachable("Dereferencing requires a pointer");
+          return false;
+        },
+        [this, E](PrimType T) {
+          return DiscardResult ? this->emitPop(T, E) : true;
+        });
   case UO_Not:    // ~x
   case UO_Real:   // __real x
   case UO_Imag:   // __imag x
   case UO_Extension:
   case UO_Coawait:
     assert(false && "Unhandled opcode");
+  }
+
+  return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
+  const auto *Decl = E->getDecl();
+
+  if (auto It = Locals.find(Decl); It != Locals.end()) {
+    const unsigned Offset = It->second.Offset;
+    return this->emitGetPtrLocal(Offset, E);
+  } else if (auto GlobalIndex = P.getGlobal(Decl)) {
+    return this->emitGetPtrGlobal(*GlobalIndex, E);
+  } else if (const auto *PVD = dyn_cast<ParmVarDecl>(Decl)) {
+    if (auto It = this->Params.find(PVD); It != this->Params.end())
+      return this->emitGetPtrParam(It->second, E);
   }
 
   return false;
