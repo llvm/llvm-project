@@ -530,9 +530,10 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 
 MachineInstr::ExtraInfo *MachineFunction::createMIExtraInfo(
     ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol,
-    MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker) {
+    MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker, uint32_t CFIType) {
   return MachineInstr::ExtraInfo::create(Allocator, MMOs, PreInstrSymbol,
-                                         PostInstrSymbol, HeapAllocMarker);
+                                         PostInstrSymbol, HeapAllocMarker,
+                                         CFIType);
 }
 
 const char *MachineFunction::createExternalSymbolName(StringRef Name) {

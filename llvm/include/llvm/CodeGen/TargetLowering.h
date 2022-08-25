@@ -3938,6 +3938,9 @@ public:
     return false;
   }
 
+  /// Return true if the target supports kcfi operand bundles.
+  virtual bool supportKCFIBundles() const { return false; }
+
   /// Perform necessary initialization to handle a subset of CSRs explicitly
   /// via copies. This function is called at the beginning of instruction
   /// selection.
@@ -4065,6 +4068,7 @@ public:
     SmallVector<SDValue, 32> OutVals;
     SmallVector<ISD::InputArg, 32> Ins;
     SmallVector<SDValue, 4> InVals;
+    const ConstantInt *CFIType = nullptr;
 
     Optional<PtrAuthInfo> PAI;
 
@@ -4191,6 +4195,11 @@ public:
 
     CallLoweringInfo &setIsPostTypeLegalization(bool Value=true) {
       IsPostTypeLegalization = Value;
+      return *this;
+    }
+
+    CallLoweringInfo &setCFIType(const ConstantInt *Type) {
+      CFIType = Type;
       return *this;
     }
 
