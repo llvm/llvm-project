@@ -109,7 +109,7 @@ def build_mock_model(path, signature):
 
   def action(*inputs):
     s = tf.reduce_sum([tf.cast(x, tf.float32) for x in tf.nest.flatten(inputs)])
-    return {signature['output']: float('inf') + s + module.var}
+    return {signature['output']: tf.cast(tf.divide((s + module.var), tf.abs(s + module.var)), tf.int64)}
 
   module.action = tf.function()(action)
   action = {'action': module.action.get_concrete_function(signature['inputs'])}
