@@ -33,7 +33,7 @@ bool test (T sv0)
 int main(int, char**) {
 
     assert( test<std::string_view>    (  "1234"));
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     assert( test<std::u8string_view>  (u8"1234"));
 #endif
 #if TEST_STD_VER >= 11
@@ -46,7 +46,7 @@ int main(int, char**) {
 
 #if TEST_STD_VER > 11
     static_assert( test<std::string_view>    ({  "abc", 3}), "");
-#   if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#  ifndef TEST_HAS_NO_CHAR8_T
     static_assert( test<std::u8string_view>  ({u8"abc", 3}), "");
 #   endif
     static_assert( test<std::u16string_view> ({ u"abc", 3}), "");
