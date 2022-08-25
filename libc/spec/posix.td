@@ -32,8 +32,6 @@ def POSIX : StandardSpec<"POSIX"> {
   ConstType ConstRestrictedCharPtr = ConstType<RestrictedCharPtr>;
 
   NamedType ModeTType = NamedType<"mode_t">;
-  NamedType OffTType = NamedType<"off_t">;
-  NamedType SSizeTType = NamedType<"ssize_t">;
 
   NamedType PThreadAttrTType = NamedType<"pthread_attr_t">;
   PtrType PThreadAttrTPtr = PtrType<PThreadAttrTType>;
