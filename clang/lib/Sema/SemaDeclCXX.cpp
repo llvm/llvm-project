@@ -6618,7 +6618,7 @@ static bool canPassInRegisters(Sema &S, CXXRecordDecl *D,
     bool CopyCtorIsTrivial = false, CopyCtorIsTrivialForCall = false;
     bool DtorIsTrivialForCall = false;
 
-    // If a class has at least one eligible, trivial copy constructor, it
+    // If a class has at least one non-deleted, trivial copy constructor, it
     // is passed according to the C ABI. Otherwise, it is passed indirectly.
     //
     // Note: This permits classes with non-trivial copy or move ctors to be
@@ -6633,8 +6633,7 @@ static bool canPassInRegisters(Sema &S, CXXRecordDecl *D,
       }
     } else {
       for (const CXXConstructorDecl *CD : D->ctors()) {
-        if (CD->isCopyConstructor() && !CD->isDeleted() &&
-            !CD->isIneligibleOrNotSelected()) {
+        if (CD->isCopyConstructor() && !CD->isDeleted()) {
           if (CD->isTrivial())
             CopyCtorIsTrivial = true;
           if (CD->isTrivialForCall())
