@@ -1514,6 +1514,34 @@ void OpEmitter::genSeparateArgParamBuilder() {
         body << "  " << builderOpState << ".addTypes(" << resultNames[i]
              << ");\n";
       }
+
+      // Automatically create the 'result_segment_sizes' attribute using
+      // the length of the type ranges.
+      if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
+        std::string getterName = op.getGetterName(resultSegmentAttrName);
+        body << " " << builderOpState << ".addAttribute(" << getterName
+             << "AttrName(" << builderOpState << ".name), "
+             << "odsBuilder.getDenseI32ArrayAttr({";
+
+        interleaveComma(
+            llvm::seq<int>(0, op.getNumResults()), body, [&](int i) {
+              const NamedTypeConstraint &result = op.getResult(i);
+              if (!result.isVariableLength()) {
+                body << "1";
+              } else if (result.isOptional()) {
+                body << "(" << resultNames[i] << " ? 1 : 0)";
+              } else {
+                // VariadicOfVariadic of results are currently unsupported in
+                // MLIR, hence it can only be a simple variadic.
+                // TODO: Add implementation for VariadicOfVariadic results here
+                //       once supported.
+                assert(result.isVariadic());
+                body << "static_cast<int32_t>(" << resultNames[i] << ".size())";
+              }
+            });
+        body << "}));\n";
+      }
+
       return;
     case TypeParamKind::Collective: {
       int numResults = op.getNumResults();
