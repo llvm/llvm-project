@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_UINT128_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_UINT128_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_UINT128_H
+#define LLVM_LIBC_SRC_SUPPORT_UINT128_H
 
 #include "UInt.h"
 
@@ -17,4 +17,4 @@ using UInt128 = __llvm_libc::cpp::UInt<128>;
 using UInt128 = __uint128_t;
 #endif
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CPP_UINT128_H
+#endif // LLVM_LIBC_SRC_SUPPORT_UINT128_H
