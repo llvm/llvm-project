@@ -390,6 +390,12 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
     // can pull this constant island and emit it as part of this function
     // too.
     auto IslandIter = AddressToConstantIslandMap.lower_bound(Address);
+
+    if (IslandIter != AddressToConstantIslandMap.begin() &&
+        (IslandIter == AddressToConstantIslandMap.end() ||
+         IslandIter->first > Address))
+      --IslandIter;
+
     if (IslandIter != AddressToConstantIslandMap.end()) {
       if (MCSymbol *IslandSym =
               IslandIter->second->getOrCreateProxyIslandAccess(Address, BF)) {
