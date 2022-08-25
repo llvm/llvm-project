@@ -9,6 +9,7 @@
 #include "TestAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
@@ -42,29 +43,28 @@ struct TestElementsAttrInterface
           continue;
         if (auto concreteAttr =
                 attr.getValue().dyn_cast<DenseArrayBaseAttr>()) {
-          switch (concreteAttr.getElementType()) {
-          case DenseArrayBaseAttr::EltType::I1:
-            testElementsAttrIteration<bool>(op, elementsAttr, "bool");
-            break;
-          case DenseArrayBaseAttr::EltType::I8:
-            testElementsAttrIteration<int8_t>(op, elementsAttr, "int8_t");
-            break;
-          case DenseArrayBaseAttr::EltType::I16:
-            testElementsAttrIteration<int16_t>(op, elementsAttr, "int16_t");
-            break;
-          case DenseArrayBaseAttr::EltType::I32:
-            testElementsAttrIteration<int32_t>(op, elementsAttr, "int32_t");
-            break;
-          case DenseArrayBaseAttr::EltType::I64:
-            testElementsAttrIteration<int64_t>(op, elementsAttr, "int64_t");
-            break;
-          case DenseArrayBaseAttr::EltType::F32:
-            testElementsAttrIteration<float>(op, elementsAttr, "float");
-            break;
-          case DenseArrayBaseAttr::EltType::F64:
-            testElementsAttrIteration<double>(op, elementsAttr, "double");
-            break;
-          }
+          llvm::TypeSwitch<DenseArrayBaseAttr>(concreteAttr)
+              .Case([&](DenseBoolArrayAttr attr) {
+                testElementsAttrIteration<bool>(op, attr, "bool");
+              })
+              .Case([&](DenseI8ArrayAttr attr) {
+                testElementsAttrIteration<int8_t>(op, attr, "int8_t");
+              })
+              .Case([&](DenseI16ArrayAttr attr) {
+                testElementsAttrIteration<int16_t>(op, attr, "int16_t");
+              })
+              .Case([&](DenseI32ArrayAttr attr) {
+                testElementsAttrIteration<int32_t>(op, attr, "int32_t");
+              })
+              .Case([&](DenseI64ArrayAttr attr) {
+                testElementsAttrIteration<int64_t>(op, attr, "int64_t");
+              })
+              .Case([&](DenseF32ArrayAttr attr) {
+                testElementsAttrIteration<float>(op, attr, "float");
+              })
+              .Case([&](DenseF64ArrayAttr attr) {
+                testElementsAttrIteration<double>(op, attr, "double");
+              });
           continue;
         }
         testElementsAttrIteration<int64_t>(op, elementsAttr, "int64_t");

@@ -129,7 +129,7 @@ public:
 
   /// Emit function code. The caller is responsible for emitting function
   /// symbol(s) and setting the section to emit the code to.
-  void emitFunctionBody(BinaryFunction &BF, const FunctionFragment &FF,
+  void emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
                         bool EmitCodeOnly = false);
 
 private:
@@ -137,7 +137,7 @@ private:
   void emitFunctions();
 
   /// Emit a single function.
-  bool emitFunction(BinaryFunction &BF, const FunctionFragment &FF);
+  bool emitFunction(BinaryFunction &BF, FunctionFragment &FF);
 
   /// Helper for emitFunctionBody to write data inside a function
   /// (used for AArch64)
@@ -234,7 +234,7 @@ void BinaryEmitter::emitFunctions() {
           !Function->hasValidProfile())
         Streamer.setAllowAutoPadding(false);
 
-      const FunctionLayout &Layout = Function->getLayout();
+      FunctionLayout &Layout = Function->getLayout();
       Emitted |= emitFunction(*Function, Layout.getMainFragment());
 
       if (Function->isSplit()) {
@@ -243,7 +243,7 @@ void BinaryEmitter::emitFunctions() {
 
         assert((Layout.fragment_size() == 1 || Function->isSimple()) &&
                "Only simple functions can have fragments");
-        for (const FunctionFragment FF : Layout.getSplitFragments()) {
+        for (FunctionFragment &FF : Layout.getSplitFragments()) {
           // Skip empty fragments so no symbols and sections for empty fragments
           // are generated
           if (FF.empty() && !Function->hasConstantIsland())
@@ -280,7 +280,7 @@ void BinaryEmitter::emitFunctions() {
 }
 
 bool BinaryEmitter::emitFunction(BinaryFunction &Function,
-                                 const FunctionFragment &FF) {
+                                 FunctionFragment &FF) {
   if (Function.size() == 0 && !Function.hasIslandsInfo())
     return false;
 
@@ -402,8 +402,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   return true;
 }
 
-void BinaryEmitter::emitFunctionBody(BinaryFunction &BF,
-                                     const FunctionFragment &FF,
+void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
                                      bool EmitCodeOnly) {
   if (!EmitCodeOnly && FF.isSplitFragment() && BF.hasConstantIsland()) {
     assert(BF.getLayout().isHotColdSplit() &&
@@ -1160,7 +1159,7 @@ void emitBinaryContext(MCStreamer &Streamer, BinaryContext &BC,
 }
 
 void emitFunctionBody(MCStreamer &Streamer, BinaryFunction &BF,
-                      const FunctionFragment &FF, bool EmitCodeOnly) {
+                      FunctionFragment &FF, bool EmitCodeOnly) {
   BinaryEmitter(Streamer, BF.getBinaryContext())
       .emitFunctionBody(BF, FF, EmitCodeOnly);
 }
