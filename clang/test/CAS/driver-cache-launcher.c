@@ -31,6 +31,13 @@
 // SESSION: "-fcas-path" "[[PREFIX]]/cas"
 // SESSION: "-greproducible"
 
+// Using multi-arch invocation.
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache %clang -target x86_64-apple-macos12 -arch x86_64 -arch arm64 -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=MULTIARCH
+// MULTIARCH: "-cc1depscan" "-fdepscan=auto"
+// MULTIARCH: "-triple" "x86_64-apple-macosx12.0.0"
+// MULTIARCH: "-cc1depscan" "-fdepscan=auto"
+// MULTIARCH: "-triple" "arm64-apple-macosx12.0.0"
+
 // RUN: cp -R %S/Inputs/cmake-build %t/cmake-build
 // RUN: pushd %t/cmake-build
 // RUN: cache-build-session -prefix-map-cmake -v echo 2>&1 | FileCheck %s -check-prefix=SESSION-CMAKE-PREFIX

@@ -42,6 +42,8 @@ static bool shouldCacheInvocation(ArrayRef<const char *> Args,
       CheckArgs.end());
   CreateInvocationOptions Opts;
   Opts.Diags = Diags;
+  // This enables picking the first invocation in a multi-arch build.
+  Opts.RecoverOnError = true;
   std::shared_ptr<CompilerInvocation> CInvok =
       createInvocation(CheckArgs, std::move(Opts));
   if (!CInvok)
