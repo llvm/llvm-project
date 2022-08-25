@@ -761,9 +761,9 @@ namespace detail {
 /// Base class for DenseArrayAttr that is instantiated and specialized for each
 /// supported element type below.
 template <typename T>
-class DenseArrayAttr : public DenseArrayBaseAttr {
+class DenseArrayAttrImpl : public DenseArrayAttr {
 public:
-  using DenseArrayBaseAttr::DenseArrayBaseAttr;
+  using DenseArrayAttr::DenseArrayAttr;
 
   /// Implicit conversion to ArrayRef<T>.
   operator ArrayRef<T>() const;
@@ -773,7 +773,7 @@ public:
   T operator[](std::size_t index) const { return asArrayRef()[index]; }
 
   /// Builder from ArrayRef<T>.
-  static DenseArrayAttr get(MLIRContext *context, ArrayRef<T> content);
+  static DenseArrayAttrImpl get(MLIRContext *context, ArrayRef<T> content);
 
   /// Print the short form `[42, 100, -1]` without any type prefix.
   void print(AsmPrinter &printer) const;
@@ -791,23 +791,23 @@ public:
   static bool classof(Attribute attr);
 };
 
-extern template class DenseArrayAttr<bool>;
-extern template class DenseArrayAttr<int8_t>;
-extern template class DenseArrayAttr<int16_t>;
-extern template class DenseArrayAttr<int32_t>;
-extern template class DenseArrayAttr<int64_t>;
-extern template class DenseArrayAttr<float>;
-extern template class DenseArrayAttr<double>;
+extern template class DenseArrayAttrImpl<bool>;
+extern template class DenseArrayAttrImpl<int8_t>;
+extern template class DenseArrayAttrImpl<int16_t>;
+extern template class DenseArrayAttrImpl<int32_t>;
+extern template class DenseArrayAttrImpl<int64_t>;
+extern template class DenseArrayAttrImpl<float>;
+extern template class DenseArrayAttrImpl<double>;
 } // namespace detail
 
 // Public name for all the supported DenseArrayAttr
-using DenseBoolArrayAttr = detail::DenseArrayAttr<bool>;
-using DenseI8ArrayAttr = detail::DenseArrayAttr<int8_t>;
-using DenseI16ArrayAttr = detail::DenseArrayAttr<int16_t>;
-using DenseI32ArrayAttr = detail::DenseArrayAttr<int32_t>;
-using DenseI64ArrayAttr = detail::DenseArrayAttr<int64_t>;
-using DenseF32ArrayAttr = detail::DenseArrayAttr<float>;
-using DenseF64ArrayAttr = detail::DenseArrayAttr<double>;
+using DenseBoolArrayAttr = detail::DenseArrayAttrImpl<bool>;
+using DenseI8ArrayAttr = detail::DenseArrayAttrImpl<int8_t>;
+using DenseI16ArrayAttr = detail::DenseArrayAttrImpl<int16_t>;
+using DenseI32ArrayAttr = detail::DenseArrayAttrImpl<int32_t>;
+using DenseI64ArrayAttr = detail::DenseArrayAttrImpl<int64_t>;
+using DenseF32ArrayAttr = detail::DenseArrayAttrImpl<float>;
+using DenseF64ArrayAttr = detail::DenseArrayAttrImpl<double>;
 
 //===----------------------------------------------------------------------===//
 // DenseResourceElementsAttr
