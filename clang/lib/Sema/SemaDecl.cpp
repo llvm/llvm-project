@@ -11896,6 +11896,16 @@ void Sema::CheckHLSLEntryPoint(FunctionDecl *FD) {
     }
     break;
   }
+
+  for (const auto *Param : FD->parameters()) {
+    if (!Param->hasAttr<HLSLAnnotationAttr>()) {
+      // FIXME: Handle struct parameters where annotations are on struct fields.
+      Diag(FD->getLocation(), diag::err_hlsl_missing_semantic_annotation);
+      Diag(Param->getLocation(), diag::note_previous_decl) << Param;
+      FD->setInvalidDecl();
+    }
+  }
+  // FIXME: Verify return type semantic annotation.
 }
 
 bool Sema::CheckForConstantInitializer(Expr *Init, QualType DclT) {
