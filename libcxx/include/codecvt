@@ -98,22 +98,18 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
           _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
-    virtual result
-        do_out(state_type& __st,
-               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
-               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual result
-        do_in(state_type& __st,
-              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
-              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
-    virtual result
-        do_unshift(state_type& __st,
-                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual int do_encoding() const _NOEXCEPT;
-    virtual bool do_always_noconv() const _NOEXCEPT;
-    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end,
-                          size_t __mx) const;
-    virtual int do_max_length() const _NOEXCEPT;
+    result do_out(state_type& __st,
+                  const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                  extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+    result do_in(state_type& __st,
+                 const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                 intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override;
+    result do_unshift(state_type& __st,
+                      extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+    int do_encoding() const _NOEXCEPT override;
+    bool do_always_noconv() const _NOEXCEPT override;
+    int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
+    int do_max_length() const _NOEXCEPT override;
 };
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
@@ -137,22 +133,18 @@ public:
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
-    virtual result
-        do_out(state_type& __st,
-               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
-               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual result
-        do_in(state_type& __st,
-              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
-              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
-    virtual result
-        do_unshift(state_type& __st,
-                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual int do_encoding() const _NOEXCEPT;
-    virtual bool do_always_noconv() const _NOEXCEPT;
-    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end,
-                          size_t __mx) const;
-    virtual int do_max_length() const _NOEXCEPT;
+     result do_out(state_type& __st,
+                   const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     result do_in(state_type& __st,
+                  const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                  intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override;
+     result do_unshift(state_type& __st,
+                       extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     int do_encoding() const _NOEXCEPT override;
+     bool do_always_noconv() const _NOEXCEPT override;
+     int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
+     int do_max_length() const _NOEXCEPT override;
 };
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
@@ -175,22 +167,18 @@ public:
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
-    virtual result
-        do_out(state_type& __st,
-               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
-               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual result
-        do_in(state_type& __st,
-              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
-              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
-    virtual result
-        do_unshift(state_type& __st,
-                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual int do_encoding() const _NOEXCEPT;
-    virtual bool do_always_noconv() const _NOEXCEPT;
-    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end,
-                          size_t __mx) const;
-    virtual int do_max_length() const _NOEXCEPT;
+     result do_out(state_type& __st,
+                   const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     result do_in(state_type& __st,
+                  const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                  intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override;
+     result do_unshift(state_type& __st,
+                       extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     int do_encoding() const _NOEXCEPT override;
+     bool do_always_noconv() const _NOEXCEPT override;
+     int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
+     int do_max_length() const _NOEXCEPT override;
 };
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
@@ -235,22 +223,19 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
           _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
-    virtual result
-        do_out(state_type& __st,
-               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
-               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual result
-        do_in(state_type& __st,
-              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
-              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
-    virtual result
-        do_unshift(state_type& __st,
-                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual int do_encoding() const _NOEXCEPT;
-    virtual bool do_always_noconv() const _NOEXCEPT;
-    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end,
-                          size_t __mx) const;
-    virtual int do_max_length() const _NOEXCEPT;
+     result do_out(state_type& __st,
+                   const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     result do_in(state_type& __st,
+                  const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                  intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override;
+     result do_unshift(state_type& __st,
+                       extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     int do_encoding() const _NOEXCEPT override;
+     bool do_always_noconv() const _NOEXCEPT override;
+     int do_length(state_type&, const extern_type* __frm, const extern_type* __end,
+                          size_t __mx) const override;
+     int do_max_length() const _NOEXCEPT override;
 };
 
 template <>
@@ -274,22 +259,18 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
           _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
-    virtual result
-        do_out(state_type& __st,
-               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
-               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual result
-        do_in(state_type& __st,
-              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
-              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
-    virtual result
-        do_unshift(state_type& __st,
-                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual int do_encoding() const _NOEXCEPT;
-    virtual bool do_always_noconv() const _NOEXCEPT;
-    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end,
-                          size_t __mx) const;
-    virtual int do_max_length() const _NOEXCEPT;
+     result do_out(state_type& __st,
+                   const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     result do_in(state_type& __st,
+                  const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                  intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override;
+     result do_unshift(state_type& __st,
+                       extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     int do_encoding() const _NOEXCEPT override;
+     bool do_always_noconv() const _NOEXCEPT override;
+     int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
+     int do_max_length() const _NOEXCEPT override;
 };
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
@@ -313,22 +294,18 @@ public:
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
-    virtual result
-        do_out(state_type& __st,
-               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
-               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual result
-        do_in(state_type& __st,
-              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
-              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
-    virtual result
-        do_unshift(state_type& __st,
-                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual int do_encoding() const _NOEXCEPT;
-    virtual bool do_always_noconv() const _NOEXCEPT;
-    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end,
-                          size_t __mx) const;
-    virtual int do_max_length() const _NOEXCEPT;
+     result do_out(state_type& __st,
+                   const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     result do_in(state_type& __st,
+                  const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                  intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override;
+     result do_unshift(state_type& __st,
+                       extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     int do_encoding() const _NOEXCEPT override;
+     bool do_always_noconv() const _NOEXCEPT override;
+     int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
+     int do_max_length() const _NOEXCEPT override;
 };
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
@@ -351,22 +328,18 @@ public:
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
-    virtual result
-        do_out(state_type& __st,
-               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
-               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual result
-        do_in(state_type& __st,
-              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
-              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
-    virtual result
-        do_unshift(state_type& __st,
-                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual int do_encoding() const _NOEXCEPT;
-    virtual bool do_always_noconv() const _NOEXCEPT;
-    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end,
-                          size_t __mx) const;
-    virtual int do_max_length() const _NOEXCEPT;
+     result do_out(state_type& __st,
+                   const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     result do_in(state_type& __st,
+                  const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                  intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override;
+     result do_unshift(state_type& __st,
+                       extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     int do_encoding() const _NOEXCEPT override;
+     bool do_always_noconv() const _NOEXCEPT override;
+     int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
+     int do_max_length() const _NOEXCEPT override;
 };
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
@@ -389,22 +362,18 @@ public:
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
-    virtual result
-        do_out(state_type& __st,
-               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
-               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual result
-        do_in(state_type& __st,
-              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
-              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
-    virtual result
-        do_unshift(state_type& __st,
-                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual int do_encoding() const _NOEXCEPT;
-    virtual bool do_always_noconv() const _NOEXCEPT;
-    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end,
-                          size_t __mx) const;
-    virtual int do_max_length() const _NOEXCEPT;
+     result do_out(state_type& __st,
+                   const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     result do_in(state_type& __st,
+                  const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                  intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override;
+     result do_unshift(state_type& __st,
+                       extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     int do_encoding() const _NOEXCEPT override;
+     bool do_always_noconv() const _NOEXCEPT override;
+     int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
+     int do_max_length() const _NOEXCEPT override;
 };
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
@@ -427,22 +396,18 @@ public:
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
-    virtual result
-        do_out(state_type& __st,
-               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
-               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual result
-        do_in(state_type& __st,
-              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
-              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
-    virtual result
-        do_unshift(state_type& __st,
-                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual int do_encoding() const _NOEXCEPT;
-    virtual bool do_always_noconv() const _NOEXCEPT;
-    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end,
-                          size_t __mx) const;
-    virtual int do_max_length() const _NOEXCEPT;
+     result do_out(state_type& __st,
+                   const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     result do_in(state_type& __st,
+                  const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                  intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override;
+     result do_unshift(state_type& __st,
+                       extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     int do_encoding() const _NOEXCEPT override;
+     bool do_always_noconv() const _NOEXCEPT override;
+     int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
+     int do_max_length() const _NOEXCEPT override;
 };
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
@@ -487,22 +452,18 @@ _LIBCPP_SUPPRESS_DEPRECATED_PUSH
           _Mode_(__mode) {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 protected:
-    virtual result
-        do_out(state_type& __st,
-               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
-               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual result
-        do_in(state_type& __st,
-              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
-              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
-    virtual result
-        do_unshift(state_type& __st,
-                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual int do_encoding() const _NOEXCEPT;
-    virtual bool do_always_noconv() const _NOEXCEPT;
-    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end,
-                          size_t __mx) const;
-    virtual int do_max_length() const _NOEXCEPT;
+     result do_out(state_type& __st,
+                   const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     result do_in(state_type& __st,
+                  const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                  intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override;
+     result do_unshift(state_type& __st,
+                       extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     int do_encoding() const _NOEXCEPT override;
+     bool do_always_noconv() const _NOEXCEPT override;
+     int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
+     int do_max_length() const _NOEXCEPT override;
 };
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
@@ -526,22 +487,18 @@ public:
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
-    virtual result
-        do_out(state_type& __st,
-               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
-               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual result
-        do_in(state_type& __st,
-              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
-              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
-    virtual result
-        do_unshift(state_type& __st,
-                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual int do_encoding() const _NOEXCEPT;
-    virtual bool do_always_noconv() const _NOEXCEPT;
-    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end,
-                          size_t __mx) const;
-    virtual int do_max_length() const _NOEXCEPT;
+     result do_out(state_type& __st,
+                   const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     result do_in(state_type& __st,
+                  const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                  intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override;
+     result do_unshift(state_type& __st,
+                       extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     int do_encoding() const _NOEXCEPT override;
+     bool do_always_noconv() const _NOEXCEPT override;
+     int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
+     int do_max_length() const _NOEXCEPT override;
 };
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
@@ -564,22 +521,18 @@ public:
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
 protected:
-    virtual result
-        do_out(state_type& __st,
-               const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
-               extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual result
-        do_in(state_type& __st,
-              const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
-              intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const;
-    virtual result
-        do_unshift(state_type& __st,
-                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const;
-    virtual int do_encoding() const _NOEXCEPT;
-    virtual bool do_always_noconv() const _NOEXCEPT;
-    virtual int do_length(state_type&, const extern_type* __frm, const extern_type* __end,
-                          size_t __mx) const;
-    virtual int do_max_length() const _NOEXCEPT;
+     result do_out(state_type& __st,
+                   const intern_type* __frm, const intern_type* __frm_end, const intern_type*& __frm_nxt,
+                   extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     result do_in(state_type& __st,
+                  const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+                  intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override;
+     result do_unshift(state_type& __st,
+                       extern_type* __to, extern_type* __to_end, extern_type*& __to_nxt) const override;
+     int do_encoding() const _NOEXCEPT override;
+     bool do_always_noconv() const _NOEXCEPT override;
+     int do_length(state_type&, const extern_type* __frm, const extern_type* __end, size_t __mx) const override;
+     int do_max_length() const _NOEXCEPT override;
 };
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH

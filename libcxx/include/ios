@@ -441,7 +441,7 @@ public:
     explicit failure(const string& __msg, const error_code& __ec = io_errc::stream);
     explicit failure(const char* __msg, const error_code& __ec = io_errc::stream);
     failure(const failure&) _NOEXCEPT = default;
-    virtual ~failure() _NOEXCEPT;
+    ~failure() _NOEXCEPT override;
 };
 
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
@@ -641,7 +641,7 @@ public:
     // 27.5.4.1 Constructor/destructor:
     _LIBCPP_INLINE_VISIBILITY
     explicit basic_ios(basic_streambuf<char_type,traits_type>* __sb);
-    virtual ~basic_ios();
+    ~basic_ios() override;
 
     // 27.5.4.2 Members:
     _LIBCPP_INLINE_VISIBILITY
