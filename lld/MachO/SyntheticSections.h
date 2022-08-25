@@ -279,9 +279,9 @@ public:
   void finalize() override;
   void writeTo(uint8_t *buf) const override;
   const llvm::SetVector<Symbol *> &getEntries() const { return entries; }
-  // Returns whether the symbol was added. Note that every stubs entry will
-  // have a corresponding entry in the LazyPointerSection.
-  bool addEntry(Symbol *);
+  // Creates a stub for the symbol and the corresponding entry in the
+  // LazyPointerSection.
+  void addEntry(Symbol *);
   uint64_t getVA(uint32_t stubsIndex) const {
     assert(isFinal || target->usesThunks());
     // ConcatOutputSection::finalize() can seek the address of a
