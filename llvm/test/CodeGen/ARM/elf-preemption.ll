@@ -43,7 +43,7 @@ define ptr @get_dsolocal_var() nounwind {
 ; PIC-NEXT:    .p2align 2
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI1_0:
-; PIC-NEXT:    .long dsolocal_var-(.LPC1_0+8)
+; PIC-NEXT:    .long .Ldsolocal_var$local-(.LPC1_0+8)
   ret ptr @dsolocal_var
 }
 
@@ -147,7 +147,7 @@ define dso_local ptr @dsolocal_func() nounwind {
 ; PIC-NEXT:    .p2align 2
 ; PIC-NEXT:  @ %bb.1:
 ; PIC-NEXT:  .LCPI6_0:
-; PIC-NEXT:    .long dsolocal_func-(.LPC6_0+8)
+; PIC-NEXT:    .long .Ldsolocal_func$local-(.LPC6_0+8)
   ret ptr @dsolocal_func
 }
 
@@ -185,7 +185,7 @@ define dso_local void @call_dsolocal_func() nounwind {
 ; PIC:       @ %bb.0:
 ; PIC-NEXT:    .save {r11, lr}
 ; PIC-NEXT:    push {r11, lr}
-; PIC-NEXT:    bl dsolocal_func
+; PIC-NEXT:    bl .Ldsolocal_func$local
 ; PIC-NEXT:    pop {r11, pc}
   call ptr @dsolocal_func()
   ret void
