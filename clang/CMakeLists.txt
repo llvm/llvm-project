@@ -463,6 +463,12 @@ if(CLANG_ENABLE_ARCMT)
   set(CLANG_ENABLE_OBJC_REWRITER ON)
 endif()
 
+# This option is a stop-gap, we should commit to removing this as
+# soon as possible. See discussion:
+# https://discourse.llvm.org/t/rationale-for-removing-versioned-libclang-middle-ground-to-keep-it-behind-option/
+option(CLANG_FORCE_MATCHING_LIBCLANG_SOVERSION
+  "Force the SOVERSION of libclang to be equal to CLANG_MAJOR" ON)
+
 # Clang version information
 set(CLANG_EXECUTABLE_VERSION
     "${CLANG_VERSION_MAJOR}" CACHE STRING
