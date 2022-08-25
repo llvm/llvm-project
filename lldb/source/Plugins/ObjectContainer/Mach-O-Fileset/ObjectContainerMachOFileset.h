@@ -73,7 +73,6 @@ public:
         : vmaddr(vmaddr), fileoff(fileoff), id(id) {}
     uint64_t vmaddr;
     uint64_t fileoff;
-    uint64_t slide;
     std::string id;
   };
 
