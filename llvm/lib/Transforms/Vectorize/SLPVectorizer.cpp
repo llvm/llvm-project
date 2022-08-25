@@ -11989,20 +11989,30 @@ bool SLPVectorizerPass::vectorizeSimpleInstructions(InstSetVector &Instructions,
                                                     bool AtTerminator) {
   bool OpsChanged = false;
   SmallVector<Instruction *, 4> PostponedCmps;
+  SmallVector<WeakTrackingVH> PostponedInsts;
+  // pass1 - try to vectorize reductions only
   for (auto *I : reverse(Instructions)) {
     if (R.isDeleted(I))
+      continue;
+    if (isa<CmpInst>(I)) {
+      PostponedCmps.push_back(I);
+      continue;
+    }
+    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
+  }
+  // pass2 - try to match and vectorize a buildvector sequence.
+  for (auto *I : reverse(Instructions)) {
+    if (R.isDeleted(I) || isa<CmpInst>(I))
       continue;
     if (auto *LastInsertValue = dyn_cast<InsertValueInst>(I)) {
       OpsChanged |= vectorizeInsertValueInst(LastInsertValue, BB, R);
     } else if (auto *LastInsertElem = dyn_cast<InsertElementInst>(I)) {
       OpsChanged |= vectorizeInsertElementInst(LastInsertElem, BB, R);
-    } else if (isa<CmpInst>(I)) {
-      PostponedCmps.push_back(I);
-      continue;
     }
-    // Try to find reductions in buildvector sequnces.
-    OpsChanged |= vectorizeRootInstruction(nullptr, I, BB, R, TTI);
   }
+  // Now try to vectorize postponed instructions.
+  OpsChanged |= tryToVectorize(PostponedInsts, R);
+
   if (AtTerminator) {
     // Try to find reductions first.
     for (Instruction *I : PostponedCmps) {
