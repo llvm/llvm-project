@@ -420,6 +420,7 @@ def Tosa_AddOp : Tosa_Op<"add", [
   );
 
   let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

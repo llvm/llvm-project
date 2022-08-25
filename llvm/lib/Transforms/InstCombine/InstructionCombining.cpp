@@ -693,7 +693,7 @@ Value *InstCombinerImpl::tryFactorization(BinaryOperator &I,
   RetVal->takeName(&I);
 
   // Try to add no-overflow flags to the final value.
-  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(RetVal)) {
+  if (isa<OverflowingBinaryOperator>(RetVal)) {
     bool HasNSW = false;
     bool HasNUW = false;
     if (isa<OverflowingBinaryOperator>(&I)) {

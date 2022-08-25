@@ -46,7 +46,10 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
       PointerSize(computePointerSize(TT)), SPIRVVersion(0), OpenCLVersion(0),
       InstrInfo(), FrameLowering(initSubtargetDependencies(CPU, FS)),
       TLInfo(TM, *this) {
+  // The order of initialization is important.
   initAvailableExtensions();
+  initAvailableExtInstSets();
+
   GR = std::make_unique<SPIRVGlobalRegistry>(PointerSize);
   CallLoweringInfo = std::make_unique<SPIRVCallLowering>(TLInfo, GR.get());
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
@@ -67,6 +70,11 @@ SPIRVSubtarget &SPIRVSubtarget::initSubtargetDependencies(StringRef CPU,
 
 bool SPIRVSubtarget::canUseExtension(SPIRV::Extension::Extension E) const {
   return AvailableExtensions.contains(E);
+}
+
+bool SPIRVSubtarget::canUseExtInstSet(
+    SPIRV::InstructionSet::InstructionSet E) const {
+  return AvailableExtInstSets.contains(E);
 }
 
 bool SPIRVSubtarget::isAtLeastSPIRVVer(uint32_t VerToCompareTo) const {
@@ -90,4 +98,21 @@ void SPIRVSubtarget::initAvailableExtensions() {
   // A default extension for testing.
   AvailableExtensions.insert(
       SPIRV::Extension::SPV_KHR_no_integer_wrap_decoration);
+}
+
+// TODO: use command line args for this rather than just defaults.
+// Must have called initAvailableExtensions first.
+void SPIRVSubtarget::initAvailableExtInstSets() {
+  AvailableExtInstSets.clear();
+  if (!isOpenCLEnv())
+    AvailableExtInstSets.insert(SPIRV::InstructionSet::GLSL_std_450);
+  else
+    AvailableExtInstSets.insert(SPIRV::InstructionSet::OpenCL_std);
+
+  // Handle extended instruction sets from extensions.
+  if (canUseExtension(
+          SPIRV::Extension::SPV_AMD_shader_trinary_minmax_extension)) {
+    AvailableExtInstSets.insert(
+        SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax);
+  }
 }

@@ -1345,6 +1345,16 @@ public:
 
   /// \}
 
+  /// Mark the given module as affecting the current module or translation unit.
+  void markModuleAsAffecting(Module *M) {
+    if (!BuildingSubmoduleStack.empty()) {
+      if (M != BuildingSubmoduleStack.back().M)
+        BuildingSubmoduleStack.back().M->AffectingModules.insert(M);
+    } else {
+      AffectingModules.insert(M);
+    }
+  }
+
   /// Get the set of top-level modules that affected preprocessing, but were not
   /// imported.
   const llvm::SmallSetVector<Module *, 2> &getAffectingModules() const {
