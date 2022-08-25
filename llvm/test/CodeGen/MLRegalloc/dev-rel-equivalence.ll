@@ -11,7 +11,8 @@
 ; RUN: llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=release \
 ; RUN:   %S/Inputs/input.ll -o %t.release
 
-; RUN: rm -rf %t && mkdir %t
+; RUN: rm -rf %t %t_savedmodel
+; RUN: %python %S/../../../../lib/Analysis/models/saved-model-to-tflite.py %t_savedmodel %t
 ; RUN: %python %S/../../../lib/Analysis/models/gen-regalloc-eviction-test-model.py %t
 ; RUN: llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=development \
 ; RUN:   -regalloc-model=%t %S/Inputs/input.ll -o %t.development
