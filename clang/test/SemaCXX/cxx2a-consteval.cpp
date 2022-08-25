@@ -908,3 +908,34 @@ int test() {
   return testDefaultArgForParam() + testDefaultArgForParam((E)1);
 }
 }
+
+namespace GH51182 {
+// Nested consteval function.
+consteval int f(int v) {
+  return v;
+}
+
+template <typename T>
+consteval int g(T a) {
+  // An immediate function context.
+  int n = f(a);
+  return n;
+}
+static_assert(g(100) == 100);
+// --------------------------------------
+template <typename T>
+consteval T max(const T& a, const T& b) {
+    return (a > b) ? a : b;
+}
+template <typename T>
+consteval T mid(const T& a, const T& b, const T& c) {
+    T m = max(max(a, b), c);
+    if (m == a)
+        return max(b, c);
+    if (m == b)
+        return max(a, c);
+    return max(a, b);
+}
+static_assert(max(1,2)==2);
+static_assert(mid(1,2,3)==2);
+} // namespace GH51182
