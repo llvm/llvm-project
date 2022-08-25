@@ -1087,6 +1087,16 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
 
 static const IntrinsicInterface intrinsicSubroutine[]{
     {"abort", {}, {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"co_broadcast",
+        {{"a", AnyData, Rank::anyOrAssumedRank, Optionality::required,
+             common::Intent::InOut},
+            {"source_image", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
+        {}, Rank::elemental, IntrinsicClass::collectiveSubroutine},
     {"co_max",
         {{"a", AnyIntOrRealOrChar, Rank::anyOrAssumedRank,
              Optionality::required, common::Intent::InOut},
@@ -1219,7 +1229,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
 
 // TODO: Intrinsic subroutine EVENT_QUERY
 // TODO: Atomic intrinsic subroutines: ATOMIC_ADD &al.
-// TODO: Collective intrinsic subroutines: CO_BROADCAST &al.
+// TODO: Collective intrinsic subroutines: co_reduce
 
 // Finds a built-in derived type and returns it as a DynamicType.
 static DynamicType GetBuiltinDerivedType(
@@ -2472,7 +2482,8 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     }
   } else if (name == "associated") {
     return CheckAssociated(call, context);
-  } else if (name == "co_max" || name == "co_min" || name == "co_sum") {
+  } else if (name == "co_broadcast" || name == "co_max" || name == "co_min" ||
+      name == "co_sum") {
     bool aOk{CheckForCoindexedObject(context, call.arguments[0], name, "a")};
     bool statOk{
         CheckForCoindexedObject(context, call.arguments[2], name, "stat")};
