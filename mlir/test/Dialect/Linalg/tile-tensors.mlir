@@ -77,8 +77,6 @@ func.func @generic_op_tensors(
 // -----
 
 //  CHECK-DAG:  #[[MAP0:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 2)>
-//  CHECK-DAG:  #[[MAP1:.*]] = affine_map<(d0) -> (d0 + 3)>
-//  CHECK-DAG:  #[[MAP2:.*]] = affine_map<(d0) -> (d0 + 4)>
 
 //      CHECK:  fold_extract_slice
 // CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<?x128xf32>
@@ -93,15 +91,15 @@ func.func @fold_extract_slice(
   %0 = tensor.dim %arg1, %c0 : tensor<?x42xf32>
   %1 = tensor.extract_slice %arg0[3, 4] [%0, 42] [1, 1] : tensor<?x128xf32> to tensor<?x42xf32>
 
+  //      CHECK:   %[[E:.*]] = tensor.extract_slice %[[ARG0]][3, 4] [%[[DIM]], 42] [1, 1] : tensor<?x128xf32> to tensor<?x42xf32>
+
   //      CHECK:    scf.for %[[IV0:[0-9a-zA-Z]*]] =
   //      CHECK:      scf.for %[[IV1:[0-9a-zA-Z]*]] =
 
   // Fold the existing extract slice op into the one created by the tiling.
   //      CHECK:        %[[SIZE0:.*]] = affine.min #[[MAP0]](%[[IV0]])[%[[DIM]]
-  //      CHECK:        %[[OFF0:.*]] = affine.apply #[[MAP1]](%[[IV0]]
-  //      CHECK:        %[[OFF1:.*]] = affine.apply #[[MAP2]](%[[IV1]]
-  //      CHECK:        %[[T0:.*]] = tensor.extract_slice %[[ARG0]]
-  // CHECK-SAME:                                          %[[OFF0]], %[[OFF1]]
+  //      CHECK:        %[[T0:.*]] = tensor.extract_slice %[[E]]
+  // CHECK-SAME:                                          %[[IV0]], %[[IV1]]
   // CHECK-SAME:                                          %[[SIZE0]], 3
   // CHECK-SAME:                                          1, 1
   //      CHECK:        {{.*}} = linalg.generic {{.*}} ins(%[[T0]]
