@@ -321,6 +321,22 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
    {Intrinsic::round, MVT::nxv2f64, 10},
    {Intrinsic::round, MVT::nxv4f64, 10},
    {Intrinsic::round, MVT::nxv8f64, 10},
+   {Intrinsic::fabs, MVT::v2f32, 1},
+   {Intrinsic::fabs, MVT::v4f32, 1},
+   {Intrinsic::fabs, MVT::v8f32, 1},
+   {Intrinsic::fabs, MVT::v16f32, 1},
+   {Intrinsic::fabs, MVT::nxv2f32, 1},
+   {Intrinsic::fabs, MVT::nxv4f32, 1},
+   {Intrinsic::fabs, MVT::nxv8f32, 1},
+   {Intrinsic::fabs, MVT::nxv16f32, 1},
+   {Intrinsic::fabs, MVT::v2f64, 1},
+   {Intrinsic::fabs, MVT::v4f64, 1},
+   {Intrinsic::fabs, MVT::v8f64, 1},
+   {Intrinsic::fabs, MVT::v16f64, 1},
+   {Intrinsic::fabs, MVT::nxv1f64, 1},
+   {Intrinsic::fabs, MVT::nxv2f64, 1},
+   {Intrinsic::fabs, MVT::nxv4f64, 1},
+   {Intrinsic::fabs, MVT::nxv8f64, 1},
 };
 
 InstructionCost
