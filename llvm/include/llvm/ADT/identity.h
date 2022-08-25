@@ -18,7 +18,9 @@
 
 namespace llvm {
 
+// Similar to `std::identity` from C++20.
 template <class Ty> struct identity {
+  using is_transparent = void;
   using argument_type = Ty;
 
   Ty &operator()(Ty &self) const {
