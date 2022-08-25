@@ -574,11 +574,6 @@ OpenCL C Language Changes in Clang
 ABI Changes in Clang
 --------------------
 
-- GCC doesn't pack non-POD members in packed structs unless the packed
-  attribute is also specified on the member. Clang historically did perform
-  such packing. Clang now matches the gcc behavior (except on Darwin and PS4).
-  You can switch back to the old ABI behavior with the flag:
-  ``-fclang-abi-compat=14.0``.
 - When compiling C for ARM or AArch64, a zero-length bitfield in a ``struct``
   (e.g. ``int : 0``) no longer prevents the structure from being considered a
   homogeneous floating-point or vector aggregate. The new behavior agrees with
