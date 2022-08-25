@@ -110,6 +110,13 @@ static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
       FindDynamicShadowStart(shadow_size_bytes);
 }
 
+static void MaybeDieIfNoTaggingAbi(const char *message) {
+  if (!flags()->fail_without_syscall_abi)
+    return;
+  Printf("FATAL: %s\n", message);
+  Die();
+}
+
 #  define PR_SET_TAGGED_ADDR_CTRL 55
 #  define PR_GET_TAGGED_ADDR_CTRL 56
 #  define PR_TAGGED_ADDR_ENABLE (1UL << 0)
@@ -139,12 +146,8 @@ void InitializeOsSupport() {
     // case.
     return;
 #  else
-    if (flags()->fail_without_syscall_abi) {
-      Printf(
-          "FATAL: "
-          "HWAddressSanitizer requires a kernel with tagged address ABI.\n");
-      Die();
-    }
+    MaybeDieIfNoTaggingAbi(
+        "HWAddressSanitizer requires a kernel with tagged address ABI.");
 #  endif
   }
 
@@ -162,13 +165,15 @@ void InitializeOsSupport() {
       return;
     }
 #  endif  // defined(__x86_64__) && !defined(HWASAN_ALIASING_MODE)
-    if (flags()->fail_without_syscall_abi) {
-      Printf(
-          "FATAL: HWAddressSanitizer failed to enable tagged address syscall "
-          "ABI.\nSuggest check `sysctl abi.tagged_addr_disabled` "
-          "configuration.\n");
-      Die();
-    }
+
+#  if SANITIZER_ANDROID
+  MaybeDieIfNoTaggingAbi(
+      "HWAddressSanitizer failed to enable tagged address syscall ABI.\n"
+      "Check the `sysctl abi.tagged_addr_disabled` configuration.");
+#  else
+  MaybeDieIfNoTaggingAbi(
+      "HWAddressSanitizer failed to enable tagged address syscall ABI.\n");
+#  endif
   }
 }
 
