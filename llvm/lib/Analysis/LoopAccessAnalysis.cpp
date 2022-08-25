@@ -1854,7 +1854,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     std::swap(StrideAPtr, StrideBPtr);
   }
 
-  const SCEV *Dist = PSE.getSE()->getMinusSCEV(Sink, Src);
+  ScalarEvolution &SE = *PSE.getSE();
+  const SCEV *Dist = SE.getMinusSCEV(Sink, Src);
 
   LLVM_DEBUG(dbgs() << "LAA: Src Scev: " << *Src << "Sink Scev: " << *Sink
                     << "(Induction step: " << StrideAPtr << ")\n");
@@ -1877,9 +1878,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   const SCEVConstant *C = dyn_cast<SCEVConstant>(Dist);
   if (!C) {
     if (!isa<SCEVCouldNotCompute>(Dist) && HasSameSize &&
-        isSafeDependenceDistance(DL, *(PSE.getSE()),
-                                 *(PSE.getBackedgeTakenCount()), *Dist, Stride,
-                                 TypeByteSize))
+        isSafeDependenceDistance(DL, SE, *(PSE.getBackedgeTakenCount()), *Dist,
+                                 Stride, TypeByteSize))
       return Dependence::NoDep;
 
     LLVM_DEBUG(dbgs() << "LAA: Dependence because of non-constant distance\n");
