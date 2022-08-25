@@ -33,21 +33,22 @@ FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
   RUNTIME_CHECK(terminator, maxHeight == maxHeight_);
   if (!format && formatDescriptor) {
     // The format is a character array passed via a descriptor.
-    formatLength = formatDescriptor->SizeInBytes() / sizeof(CharType);
+    std::size_t elements{formatDescriptor->Elements()};
+    std::size_t elementBytes{formatDescriptor->ElementBytes()};
+    formatLength = elements * elementBytes / sizeof(CharType);
     formatLength_ = static_cast<int>(formatLength);
     if (formatDescriptor->IsContiguous()) {
       // Treat the contiguous array as a single character value.
-      format = const_cast<const CharType *>(
+      format_ = const_cast<const CharType *>(
           reinterpret_cast<CharType *>(formatDescriptor->raw().base_addr));
     } else {
       // Concatenate its elements into a temporary array.
       char *p{reinterpret_cast<char *>(
           AllocateMemoryOrCrash(terminator, formatLength * sizeof(CharType)))};
-      format = p;
+      format_ = p;
       SubscriptValue at[maxRank];
       formatDescriptor->GetLowerBounds(at);
-      auto elementBytes{formatDescriptor->ElementBytes()};
-      for (std::size_t j{0}; j < formatLength; ++j) {
+      for (std::size_t j{0}; j < elements; ++j) {
         std::memcpy(p, formatDescriptor->Element<char>(at), elementBytes);
         p += elementBytes;
         formatDescriptor->IncrementSubscripts(at);

@@ -12,15 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "rtl.h"
+#include "llvm/Object/OffloadBinary.h"
+#include "llvm/OffloadArch/OffloadArch.h"
+
 #include "device.h"
 #include "private.h"
-#include "llvm/OffloadArch/OffloadArch.h"
+#include "rtl.h"
 
 #include <cassert>
 #include <cstdlib>
 #include <cstring>
-#include <dlfcn.h>
 
 #include <linux/limits.h>
 
@@ -28,6 +29,9 @@
 #include <string>
 // It's strange we do not have llvm tools for openmp runtime, so we use stat
 #include <sys/stat.h>
+
+using namespace llvm;
+using namespace llvm::sys;
 
 // List of all plugins that can support offloading.
 static const char *RTLNames[] = {
@@ -85,7 +89,7 @@ __attribute__((constructor(101))) void init() {
   ProfileTraceFile = getenv("LIBOMPTARGET_PROFILE");
   // TODO: add a configuration option for time granularity
   if (ProfileTraceFile)
-    llvm::timeTraceProfilerInitialize(500 /* us */, "libomptarget");
+    timeTraceProfilerInitialize(500 /* us */, "libomptarget");
 #endif
 }
 
@@ -113,10 +117,10 @@ __attribute__((destructor(101))) void deinit() {
 #ifdef OMPTARGET_PROFILE_ENABLED
   if (ProfileTraceFile) {
     // TODO: add env var for file output
-    if (auto E = llvm::timeTraceProfilerWrite(ProfileTraceFile, "-"))
+    if (auto E = timeTraceProfilerWrite(ProfileTraceFile, "-"))
       fprintf(stderr, "Error writing out the time trace\n");
 
-    llvm::timeTraceProfilerCleanup();
+    timeTraceProfilerCleanup();
   }
 #endif
 }
@@ -147,44 +151,23 @@ void RTLsTy::loadRTLs() {
     if (NoMapChecksStr)
       NoUSMMapChecks = std::stoi(NoMapChecksStr);
 
-  // Plugins should be loaded from same directory as libomptarget.so
-  void *handle = dlopen("libomptarget.so", RTLD_NOW);
-  if (!handle)
-    DP("dlopen() failed: %s\n", dlerror());
-  char *libomptarget_dir_name = new char[PATH_MAX];
-  if (dlinfo(handle, RTLD_DI_ORIGIN, libomptarget_dir_name) == -1)
-    DP("RTLD_DI_ORIGIN failed: %s\n", dlerror());
-  struct stat stat_buffer;
-  int platform_num = 0;
-
   DP("Loading RTLs...\n");
 
   // Attempt to open all the plugins and, if they exist, check if the interface
   // is correct and if they are supporting any devices.
   for (auto *Name : RTLNames) {
-    // Only one quick check file required to attempt to load platform plugin
-    std::string full_plugin_name;
-    bool found = false;
-    for (auto *QuickCheckName : RTLQuickCheckFiles[platform_num++]) {
-      if (QuickCheckName) {
-        if (!strcmp(QuickCheckName, "") ||
-            (stat(QuickCheckName, &stat_buffer) == 0))
-          found = true;
-      }
-    }
-    if (!found) // Not finding quick check files is a faster fail than dlopen
-      continue;
-    full_plugin_name.assign(libomptarget_dir_name).append("/").append(Name);
-    DP("Loading library '%s'...\n", full_plugin_name.c_str());
-    void *DynlibHandle = dlopen(full_plugin_name.c_str(), RTLD_NOW);
+    DP("Loading library '%s'...\n", Name);
+        std::string ErrMsg;
+        auto DynLibrary = std::make_unique<sys::DynamicLibrary>(
+            sys::DynamicLibrary::getPermanentLibrary(Name, &ErrMsg));
 
-    if (!DynlibHandle) {
+    if (!DynLibrary->isValid()) {
       // Library does not exist or cannot be found.
-      DP("Unable to load '%s': %s!\n", full_plugin_name.c_str(), dlerror());
+      DP("Unable to load '%s': %s!\n", Name, ErrMsg.c_str());
       continue;
     }
 
-    DP("Successfully loaded library '%s'!\n", full_plugin_name.c_str());
+    DP("Successfully loaded library '%s'!\n", Name);
 
     AllRTLs.emplace_back();
 
@@ -192,7 +175,8 @@ void RTLsTy::loadRTLs() {
     RTLInfoTy &R = AllRTLs.back();
 
     // Remove plugin on failure to call optional init_plugin
-    *((void **)&R.init_plugin) = dlsym(DynlibHandle, "__tgt_rtl_init_plugin");
+    *((void **)&R.init_plugin) =
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_init_plugin");
     if (R.init_plugin) {
       int32_t Rc = R.init_plugin();
       if (Rc != OFFLOAD_SUCCESS) {
@@ -205,37 +189,40 @@ void RTLsTy::loadRTLs() {
     bool ValidPlugin = true;
 
     if (!(*((void **)&R.is_valid_binary) =
-              dlsym(DynlibHandle, "__tgt_rtl_is_valid_binary")))
+              DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary")))
       ValidPlugin = false;
     if (!(*((void **)&R.number_of_team_procs) =
-              dlsym(DynlibHandle, "__tgt_rtl_number_of_team_procs")))
+              DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_team_procs")))
+      ValidPlugin = false;
+    if (!(*((void **)&R.number_of_team_procs) =
+              DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_team_procs")))
       ValidPlugin = false;
     if (!(*((void **)&R.number_of_devices) =
-              dlsym(DynlibHandle, "__tgt_rtl_number_of_devices")))
+              DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_devices")))
       ValidPlugin = false;
     if (!(*((void **)&R.init_device) =
-              dlsym(DynlibHandle, "__tgt_rtl_init_device")))
+              DynLibrary->getAddressOfSymbol("__tgt_rtl_init_device")))
       ValidPlugin = false;
     if (!(*((void **)&R.load_binary) =
-              dlsym(DynlibHandle, "__tgt_rtl_load_binary")))
+              DynLibrary->getAddressOfSymbol("__tgt_rtl_load_binary")))
       ValidPlugin = false;
     if (!(*((void **)&R.data_alloc) =
-              dlsym(DynlibHandle, "__tgt_rtl_data_alloc")))
+              DynLibrary->getAddressOfSymbol("__tgt_rtl_data_alloc")))
       ValidPlugin = false;
     if (!(*((void **)&R.data_submit) =
-              dlsym(DynlibHandle, "__tgt_rtl_data_submit")))
+              DynLibrary->getAddressOfSymbol("__tgt_rtl_data_submit")))
       ValidPlugin = false;
     if (!(*((void **)&R.data_retrieve) =
-              dlsym(DynlibHandle, "__tgt_rtl_data_retrieve")))
+              DynLibrary->getAddressOfSymbol("__tgt_rtl_data_retrieve")))
       ValidPlugin = false;
     if (!(*((void **)&R.data_delete) =
-              dlsym(DynlibHandle, "__tgt_rtl_data_delete")))
+              DynLibrary->getAddressOfSymbol("__tgt_rtl_data_delete")))
       ValidPlugin = false;
     if (!(*((void **)&R.run_region) =
-              dlsym(DynlibHandle, "__tgt_rtl_run_target_region")))
+              DynLibrary->getAddressOfSymbol("__tgt_rtl_run_target_region")))
       ValidPlugin = false;
-    if (!(*((void **)&R.run_team_region) =
-              dlsym(DynlibHandle, "__tgt_rtl_run_target_team_region")))
+    if (!(*((void **)&R.run_team_region) = DynLibrary->getAddressOfSymbol(
+              "__tgt_rtl_run_target_team_region")))
       ValidPlugin = false;
 
     // Invalid plugin
@@ -253,8 +240,6 @@ void RTLsTy::loadRTLs() {
       continue;
     }
 
-    R.LibraryHandler = DynlibHandle;
-
 #ifdef OMPTARGET_DEBUG
     R.RTLName = Name;
 #endif
@@ -264,61 +249,68 @@ void RTLsTy::loadRTLs() {
 
     // Optional functions
     *((void **)&R.deinit_plugin) =
-        dlsym(DynlibHandle, "__tgt_rtl_deinit_plugin");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_plugin");
 #ifdef fixme
     *((void **)&R.is_valid_binary_info) =
-        dlsym(DynlibHandle, "__tgt_rtl_is_valid_binary_info");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary_info");
 #endif
     *((void **)&R.deinit_device) =
-        dlsym(DynlibHandle, "__tgt_rtl_deinit_device");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_device");
     *((void **)&R.init_requires) =
-        dlsym(DynlibHandle, "__tgt_rtl_init_requires");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_init_requires");
     *((void **)&R.data_submit_async) =
-        dlsym(DynlibHandle, "__tgt_rtl_data_submit_async");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_data_submit_async");
     *((void **)&R.data_retrieve_async) =
-        dlsym(DynlibHandle, "__tgt_rtl_data_retrieve_async");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_data_retrieve_async");
     *((void **)&R.run_region_async) =
-        dlsym(DynlibHandle, "__tgt_rtl_run_target_region_async");
-    *((void **)&R.run_team_region_async) =
-        dlsym(DynlibHandle, "__tgt_rtl_run_target_team_region_async");
-    *((void **)&R.synchronize) = dlsym(DynlibHandle, "__tgt_rtl_synchronize");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_run_target_region_async");
+    *((void **)&R.run_team_region_async) = DynLibrary->getAddressOfSymbol(
+        "__tgt_rtl_run_target_team_region_async");
+    *((void **)&R.synchronize) =
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_synchronize");
     *((void **)&R.data_exchange) =
-        dlsym(DynlibHandle, "__tgt_rtl_data_exchange");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange");
     *((void **)&R.data_exchange_async) =
-        dlsym(DynlibHandle, "__tgt_rtl_data_exchange_async");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_data_exchange_async");
     *((void **)&R.is_data_exchangable) =
-        dlsym(DynlibHandle, "__tgt_rtl_is_data_exchangable");
-    *((void **)&R.register_lib) = dlsym(DynlibHandle, "__tgt_rtl_register_lib");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_is_data_exchangable");
+    *((void **)&R.register_lib) =
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_register_lib");
     *((void **)&R.unregister_lib) =
-        dlsym(DynlibHandle, "__tgt_rtl_unregister_lib");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_unregister_lib");
     *((void **)&R.supports_empty_images) =
-        dlsym(DynlibHandle, "__tgt_rtl_supports_empty_images");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_supports_empty_images");
     *((void **)&R.set_info_flag) =
-        dlsym(DynlibHandle, "__tgt_rtl_set_info_flag");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_set_info_flag");
     *((void **)&R.print_device_info) =
-        dlsym(DynlibHandle, "__tgt_rtl_print_device_info");
-    *((void **)&R.create_event) = dlsym(DynlibHandle, "__tgt_rtl_create_event");
-    *((void **)&R.record_event) = dlsym(DynlibHandle, "__tgt_rtl_record_event");
-    *((void **)&R.wait_event) = dlsym(DynlibHandle, "__tgt_rtl_wait_event");
-    *((void **)&R.sync_event) = dlsym(DynlibHandle, "__tgt_rtl_sync_event");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_print_device_info");
+    *((void **)&R.create_event) =
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_create_event");
+    *((void **)&R.record_event) =
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_record_event");
+    *((void **)&R.wait_event) =
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_wait_event");
+    *((void **)&R.sync_event) =
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_sync_event");
     *((void **)&R.destroy_event) =
-        dlsym(DynlibHandle, "__tgt_rtl_destroy_event");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_destroy_event");
     *((void **)&R.set_coarse_grain_mem_region) =
-      dlsym(DynlibHandle, "__tgt_rtl_set_coarse_grain_mem_region");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_set_coarse_grain_mem_region");
     *((void **)&R.query_coarse_grain_mem_region) =
-      dlsym(DynlibHandle, "__tgt_rtl_query_coarse_grain_mem_region");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_query_coarse_grain_mem_region");
     *((void **)&R.enable_access_to_all_agents) =
-        dlsym(DynlibHandle, "__tgt_rtl_enable_access_to_all_agents");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_enable_access_to_all_agents");
     *((void **)&R.release_async_info) =
-        dlsym(DynlibHandle, "__tgt_rtl_release_async_info");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_release_async_info");
     *((void **)&R.init_async_info) =
-        dlsym(DynlibHandle, "__tgt_rtl_init_async_info");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_init_async_info");
     *((void **)&R.init_device_info) =
-        dlsym(DynlibHandle, "__tgt_rtl_init_device_info");
-    *((void **)&R.data_lock) = dlsym(DynlibHandle, "__tgt_rtl_data_lock");
-    *((void **)&R.data_unlock) = dlsym(DynlibHandle, "__tgt_rtl_data_unlock");
+        DynLibrary->getAddressOfSymbol("__tgt_rtl_init_device_info");
+    *((void **)&R.data_lock) = DynLibrary->getAddressOfSymbol("__tgt_rtl_data_lock");
+    *((void **)&R.data_unlock) = DynLibrary->getAddressOfSymbol("__tgt_rtl_data_unlock");
+
+    R.LibraryHandler = std::move(DynLibrary);
   }
-  delete[] libomptarget_dir_name;
 
   DP("RTLs loaded!\n");
 
@@ -388,6 +380,40 @@ static void registerGlobalCtorsDtorsForImage(__tgt_bin_desc *Desc,
   }
 }
 
+static __tgt_device_image getExecutableImage(__tgt_device_image *Image) {
+  StringRef ImageStr(static_cast<char *>(Image->ImageStart),
+                     static_cast<char *>(Image->ImageEnd) -
+                         static_cast<char *>(Image->ImageStart));
+  auto BinaryOrErr =
+      object::OffloadBinary::create(MemoryBufferRef(ImageStr, ""));
+  if (!BinaryOrErr) {
+    consumeError(BinaryOrErr.takeError());
+    return *Image;
+  }
+
+  void *Begin = const_cast<void *>(
+      static_cast<const void *>((*BinaryOrErr)->getImage().bytes_begin()));
+  void *End = const_cast<void *>(
+      static_cast<const void *>((*BinaryOrErr)->getImage().bytes_end()));
+
+  return {Begin, End, Image->EntriesBegin, Image->EntriesEnd};
+}
+
+static __tgt_image_info getImageInfo(__tgt_device_image *Image) {
+  StringRef ImageStr(static_cast<char *>(Image->ImageStart),
+                     static_cast<char *>(Image->ImageEnd) -
+                         static_cast<char *>(Image->ImageStart));
+  auto BinaryOrErr =
+      object::OffloadBinary::create(MemoryBufferRef(ImageStr, ""));
+  if (!BinaryOrErr) {
+    consumeError(BinaryOrErr.takeError());
+    return __tgt_image_info{};
+  }
+#ifdef FIXME  
+  return __tgt_image_info{(*BinaryOrErr)->getArch().data()};
+#endif
+}
+
 void RTLsTy::registerRequires(int64_t Flags) {
   // TODO: add more elaborate check.
   // Minimal check: only set requires flags if previous value
@@ -452,7 +478,7 @@ void RTLsTy::initRTLonce(RTLInfoTy &R) {
     R.IsUsed = true;
     UsedRTLs.push_back(&R);
 
-    DP("RTL " DPxMOD " has index %d!\n", DPxPTR(R.LibraryHandler), R.Idx);
+    DP("RTL " DPxMOD " has index %d!\n", DPxPTR(R.LibraryHandler.get()), R.Idx);
   }
 }
 
@@ -663,12 +689,12 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
 
       if (!R->is_valid_binary(Img)) {
         DP("Image " DPxMOD " is NOT compatible with RTL " DPxMOD "!\n",
-           DPxPTR(Img->ImageStart), DPxPTR(R->LibraryHandler));
+           DPxPTR(Img->ImageStart), DPxPTR(R->LibraryHandler.get()));
         continue;
       }
 
       DP("Image " DPxMOD " is compatible with RTL " DPxMOD "!\n",
-         DPxPTR(Img->ImageStart), DPxPTR(R->LibraryHandler));
+         DPxPTR(Img->ImageStart), DPxPTR(R->LibraryHandler.get()));
 
       FoundRTL = R;
 
@@ -697,7 +723,7 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
       }
 
       DP("Unregistered image " DPxMOD " from RTL " DPxMOD "!\n",
-         DPxPTR(Img->ImageStart), DPxPTR(R->LibraryHandler));
+         DPxPTR(Img->ImageStart), DPxPTR(R->LibraryHandler.get()));
 
       break;
     }

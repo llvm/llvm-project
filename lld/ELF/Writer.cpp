@@ -2843,9 +2843,10 @@ template <class ELFT> void Writer<ELFT>::openFile() {
 }
 
 template <class ELFT> void Writer<ELFT>::writeSectionsBinary() {
+  parallel::TaskGroup tg;
   for (OutputSection *sec : outputSections)
     if (sec->flags & SHF_ALLOC)
-      sec->writeTo<ELFT>(Out::bufferStart + sec->offset);
+      sec->writeTo<ELFT>(Out::bufferStart + sec->offset, tg);
 }
 
 static void fillTrap(uint8_t *i, uint8_t *end) {
@@ -2888,16 +2889,21 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
 template <class ELFT> void Writer<ELFT>::writeSections() {
   llvm::TimeTraceScope timeScope("Write sections");
 
-  // In -r or --emit-relocs mode, write the relocation sections first as in
-  // ELf_Rel targets we might find out that we need to modify the relocated
-  // section while doing it.
-  for (OutputSection *sec : outputSections)
-    if (sec->type == SHT_REL || sec->type == SHT_RELA)
-      sec->writeTo<ELFT>(Out::bufferStart + sec->offset);
-
-  for (OutputSection *sec : outputSections)
-    if (sec->type != SHT_REL && sec->type != SHT_RELA)
-      sec->writeTo<ELFT>(Out::bufferStart + sec->offset);
+  {
+    // In -r or --emit-relocs mode, write the relocation sections first as in
+    // ELf_Rel targets we might find out that we need to modify the relocated
+    // section while doing it.
+    parallel::TaskGroup tg;
+    for (OutputSection *sec : outputSections)
+      if (sec->type == SHT_REL || sec->type == SHT_RELA)
+        sec->writeTo<ELFT>(Out::bufferStart + sec->offset, tg);
+  }
+  {
+    parallel::TaskGroup tg;
+    for (OutputSection *sec : outputSections)
+      if (sec->type != SHT_REL && sec->type != SHT_RELA)
+        sec->writeTo<ELFT>(Out::bufferStart + sec->offset, tg);
+  }
 
   // Finally, check that all dynamic relocation addends were written correctly.
   if (config->checkDynamicRelocs && config->writeAddends) {

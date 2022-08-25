@@ -1,6 +1,6 @@
 include_directories(
   ${LLVM_MAIN_SRC_DIR}/lib/Target/DirectX
-  ${LLVM_BINARY_DIR}/lib/Target/DirectX
+  ${LLVM_LIBRARY_DIR}/Target/DirectX
   )
 
 set(LLVM_LINK_COMPONENTS

@@ -510,34 +510,20 @@ define i64 @ctlz_i64_zero_test(i64 %n) {
   ret i64 %tmp1
 }
 
-; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
+; Promote i8 cttz to i32 and mask bit8 to prevent (slow) zero-src bsf case.
 define i8 @cttz_i8_zero_test(i8 %n) {
 ; X86-LABEL: cttz_i8_zero_test:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testb %al, %al
-; X86-NEXT:    je .LBB12_1
-; X86-NEXT:  # %bb.2: # %cond.false
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    movl $256, %eax # imm = 0x100
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rep bsfl %eax, %eax
-; X86-NEXT:    # kill: def $al killed $al killed $eax
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB12_1:
-; X86-NEXT:    movb $8, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cttz_i8_zero_test:
 ; X64:       # %bb.0:
-; X64-NEXT:    testb %dil, %dil
-; X64-NEXT:    je .LBB12_1
-; X64-NEXT:  # %bb.2: # %cond.false
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    rep bsfl %eax, %eax
-; X64-NEXT:    # kill: def $al killed $al killed $eax
-; X64-NEXT:    retq
-; X64-NEXT:  .LBB12_1:
-; X64-NEXT:    movb $8, %al
+; X64-NEXT:    orl $256, %edi # imm = 0x100
+; X64-NEXT:    rep bsfl %edi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
@@ -559,32 +545,20 @@ define i8 @cttz_i8_zero_test(i8 %n) {
   ret i8 %tmp1
 }
 
-; Generate a test and branch to handle zero inputs because bsr/bsf are very slow.
+; Promote i16 cttz to i32 and mask bit16 to prevent (slow) zero-src bsf case.
 define i16 @cttz_i16_zero_test(i16 %n) {
 ; X86-LABEL: cttz_i16_zero_test:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testw %ax, %ax
-; X86-NEXT:    je .LBB13_1
-; X86-NEXT:  # %bb.2: # %cond.false
+; X86-NEXT:    movl $65536, %eax # imm = 0x10000
+; X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    rep bsfl %eax, %eax
-; X86-NEXT:    # kill: def $ax killed $ax killed $eax
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB13_1:
-; X86-NEXT:    movw $16, %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: cttz_i16_zero_test:
 ; X64:       # %bb.0:
-; X64-NEXT:    testw %di, %di
-; X64-NEXT:    je .LBB13_1
-; X64-NEXT:  # %bb.2: # %cond.false
+; X64-NEXT:    orl $65536, %edi # imm = 0x10000
 ; X64-NEXT:    rep bsfl %edi, %eax
-; X64-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-NEXT:    retq
-; X64-NEXT:  .LBB13_1:
-; X64-NEXT:    movw $16, %ax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 ;

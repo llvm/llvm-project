@@ -25,10 +25,10 @@
 # CHECK-NEXT:           c.addi    a0, 1
 # CHECK-EMPTY:
 # CHECK-NEXT: <a>:
-# CHECK-NEXT:           addi    zero, zero, 0
-# CHECK-NEXT:           addi    zero, zero, 0
-# CHECK-NEXT:           addi    zero, zero, 0
 # CHECK-NEXT:           c.nop
+# CHECK-NEXT:           addi    zero, zero, 0
+# CHECK-NEXT:           addi    zero, zero, 0
+# CHECK-NEXT:           addi    zero, zero, 0
 # CHECK-EMPTY:
 # CHECK-NEXT: <b>:
 # CHECK-NEXT:   10010:  c.addi  a0, 2

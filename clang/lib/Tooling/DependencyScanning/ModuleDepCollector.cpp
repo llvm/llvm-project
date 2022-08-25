@@ -278,6 +278,11 @@ void ModuleDepCollectorPP::EndOfMainFile() {
   if (!MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude.empty())
     MDC.addFileDep(MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude);
 
+  for (const Module *M :
+       MDC.ScanInstance.getPreprocessor().getAffectingModules())
+    if (!MDC.isPrebuiltModule(M))
+      DirectModularDeps.insert(M);
+
   for (const Module *M : DirectModularDeps) {
     // A top-level module might not be actually imported as a module when
     // -fmodule-name is used to compile a translation unit that imports this
@@ -389,6 +394,8 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   addAllSubmodulePrebuiltDeps(M, MD, SeenModules);
   llvm::DenseSet<const Module *> AddedModules;
   addAllSubmoduleDeps(M, MD, AddedModules);
+  llvm::DenseSet<const Module *> ProcessedModules;
+  addAllAffectingModules(M, MD, ProcessedModules);
 
   MD.BuildInvocation = MDC.makeInvocationForModuleBuildWithoutOutputs(
       MD, [&](CompilerInvocation &BuildInvocation) {
@@ -456,6 +463,30 @@ void ModuleDepCollectorPP::addModuleDep(
         !MDC.isPrebuiltModule(Import)) {
       ModuleID ImportID = handleTopLevelModule(Import->getTopLevelModule());
       if (AddedModules.insert(Import->getTopLevelModule()).second)
+        MD.ClangModuleDeps.push_back(ImportID);
+    }
+  }
+}
+
+void ModuleDepCollectorPP::addAllAffectingModules(
+    const Module *M, ModuleDeps &MD,
+    llvm::DenseSet<const Module *> &AddedModules) {
+  addAffectingModule(M, MD, AddedModules);
+
+  for (const Module *SubM : M->submodules())
+    addAllAffectingModules(SubM, MD, AddedModules);
+}
+
+void ModuleDepCollectorPP::addAffectingModule(
+    const Module *M, ModuleDeps &MD,
+    llvm::DenseSet<const Module *> &AddedModules) {
+  for (const Module *Affecting : M->AffectingModules) {
+    assert(Affecting == Affecting->getTopLevelModule() &&
+           "Not quite import not top-level module");
+    if (Affecting != M->getTopLevelModule() &&
+        !MDC.isPrebuiltModule(Affecting)) {
+      ModuleID ImportID = handleTopLevelModule(Affecting);
+      if (AddedModules.insert(Affecting).second)
         MD.ClangModuleDeps.push_back(ImportID);
     }
   }

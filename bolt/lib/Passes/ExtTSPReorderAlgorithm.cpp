@@ -441,7 +441,7 @@ bool compareChainPairs(const Chain *A1, const Chain *B1, const Chain *A2,
 }
 class ExtTSP {
 public:
-  ExtTSP(const BinaryFunction &BF) : BF(BF) { initialize(); }
+  ExtTSP(BinaryFunction &BF) : BF(BF) { initialize(); }
 
   /// Run the algorithm and return an ordering of basic block
   void run(BinaryFunction::BasicBlockOrderType &Order) {
@@ -849,7 +849,7 @@ private:
 
 private:
   // The binary function
-  const BinaryFunction &BF;
+  BinaryFunction &BF;
 
   // All CFG nodes (basic blocks)
   std::vector<Block> AllBlocks;
@@ -864,7 +864,7 @@ private:
   std::vector<Edge> AllEdges;
 };
 
-void ExtTSPReorderAlgorithm::reorderBasicBlocks(const BinaryFunction &BF,
+void ExtTSPReorderAlgorithm::reorderBasicBlocks(BinaryFunction &BF,
                                                 BasicBlockOrder &Order) const {
   if (BF.getLayout().block_empty())
     return;

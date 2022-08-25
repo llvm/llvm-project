@@ -53,3 +53,16 @@
 
 // NORDC-NOT: offload bundler
 // NORDC: # "x86_64-unknown-linux-gnu" - "GNU::Linker", inputs: ["{{.*o}}"], output: "a.out"
+
+//
+// Check to make sure we can generate multiple outputs for device-only
+// compilation and fail with '-o'.
+//
+// RUN: %clang -### -target x86_64-linux-gnu --offload-new-driver -ccc-print-bindings \
+// RUN:        --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=MULTI-D-ONLY %s
+//      MULTI-D-ONLY: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[GFX908:.+]]"
+// MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX908]]"], output: "[[GFX908_OUT:.+]]"
+// MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[GFX90a:.+]]"
+// MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX90a]]"], output: "[[GFX90a_OUT:.+]]"
+//

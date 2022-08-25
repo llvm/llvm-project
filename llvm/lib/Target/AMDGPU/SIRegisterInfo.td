@@ -219,20 +219,25 @@ defm M0 : SIRegLoHi16 <"m0", 0>;
 
 defm SGPR_NULL_gfxpre11 : SIRegLoHi16 <"null", 125>;
 defm SGPR_NULL_gfx11plus : SIRegLoHi16 <"null", 124>;
+let isConstant = true in {
 defm SGPR_NULL : SIRegLoHi16 <"null", 0>;
 defm SGPR_NULL_HI : SIRegLoHi16 <"", 0>;
+} // isConstant = true
 
 def SGPR_NULL64 :
     RegisterWithSubRegs<"null", [SGPR_NULL, SGPR_NULL_HI]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
   let HWEncoding = SGPR_NULL.HWEncoding;
+  let isConstant = true;
 }
 
+let isConstant = true in {
 defm SRC_SHARED_BASE : SIRegLoHi16<"src_shared_base", 235>;
 defm SRC_SHARED_LIMIT : SIRegLoHi16<"src_shared_limit", 236>;
 defm SRC_PRIVATE_BASE : SIRegLoHi16<"src_private_base", 237>;
 defm SRC_PRIVATE_LIMIT : SIRegLoHi16<"src_private_limit", 238>;
+} // isConstant = true
 defm SRC_POPS_EXITING_WAVE_ID : SIRegLoHi16<"src_pops_exiting_wave_id", 239>;
 
 // Not addressable

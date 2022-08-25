@@ -2281,6 +2281,8 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     if (Imported) {
       Action = Import;
     } else if (Imported.isMissingExpected()) {
+      markModuleAsAffecting(
+          static_cast<Module *>(Imported)->getTopLevelModule());
       // We failed to find a submodule that we assumed would exist (because it
       // was in the directory of an umbrella header, for instance), but no
       // actual module containing it exists (because the umbrella header is
