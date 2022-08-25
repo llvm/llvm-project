@@ -17,10 +17,10 @@
 ; RELOCS-NEXT:     0x0 R_ARM_PREL31 .text._ZdlPv
 ; RELOCS-NEXT:   }
 ; RELOCS-NEXT:   Section (7) .rel.text.test {
-; RELOCS-NEXT:     0x4 R_ARM_CALL _ZdlPv
+; RELOCS-NEXT:     0x4 R_ARM_CALL .L_ZdlPv$local
 ; RELOCS-NEXT:     0xC R_ARM_ABS32 .L_ZdlPv$local
 ; RELOCS-NEXT:     0x10 R_ARM_ABS32 .L_ZdlPv$local
-; RELOCS-NEXT:     0x1C R_ARM_REL32 _ZdlPv
+; RELOCS-NEXT:     0x1C R_ARM_REL32 .L_ZdlPv$local
 ; RELOCS-NEXT:   }
 ; RELOCS-NEXT:   Section (9) .rel.ARM.exidx.text.test {
 ; RELOCS-NEXT:     0x0 R_ARM_PREL31 .text.test
@@ -67,7 +67,7 @@ define ptr @test(ptr %ptr) nounwind {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    bl _ZdlPv{{$}}
+; CHECK-NEXT:    bl .L_ZdlPv$local
 ; CHECK-NEXT:    ldr r0, .LCPI1_0
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    .long .L_ZdlPv$local
@@ -83,7 +83,7 @@ define ptr @test(ptr %ptr) nounwind {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI1_0:
-; CHECK-NEXT:    .long _ZdlPv-(.LPC1_0+8)
+; CHECK-NEXT:    .long .L_ZdlPv$local-(.LPC1_0+8)
 entry:
   call void @_ZdlPv(ptr %ptr)
   ; This inline assembly is needed to highlight the missing Thumb LSB since
