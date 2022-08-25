@@ -1487,9 +1487,15 @@ genFormat(Fortran::lower::AbstractConverter &converter, mlir::Location loc,
   assert(pExpr && "missing format expression");
   auto e = Fortran::semantics::GetExpr(*pExpr);
   if (Fortran::semantics::ExprHasTypeCategory(
-          *e, Fortran::common::TypeCategory::Character))
+          *e, Fortran::common::TypeCategory::Character)) {
     // character expression
+    if (e->Rank())
+      // Array: return address(descriptor) and no length (and no kind value).
+      return {fir::getBase(converter.genExprBox(loc, *e, stmtCtx)),
+              mlir::Value{}, mlir::Value{}};
+    // Scalar: return address(format) and format length (and no kind value).
     return lowerStringLit(converter, loc, stmtCtx, *pExpr, strTy, lenTy);
+  }
 
   if (Fortran::semantics::ExprHasTypeCategory(
           *e, Fortran::common::TypeCategory::Integer) &&
@@ -1855,11 +1861,26 @@ void genBeginDataTransferCallArgs(
   auto maybeGetFormatArgs = [&]() {
     if (!isFormatted || isListOrNml)
       return;
-    auto pair =
+    std::tuple triple =
         getFormat(converter, loc, stmt, ioFuncTy.getInput(ioArgs.size()),
                   ioFuncTy.getInput(ioArgs.size() + 1), stmtCtx);
-    ioArgs.push_back(std::get<0>(pair)); // format character string
-    ioArgs.push_back(std::get<1>(pair)); // format length
+    mlir::Value address = std::get<0>(triple);
+    mlir::Value length = std::get<1>(triple);
+    if (length) {
+      // Scalar format: string arg + length arg; no format descriptor arg
+      ioArgs.push_back(address); // format string
+      ioArgs.push_back(length);  // format length
+      ioArgs.push_back(
+          builder.createNullConstant(loc, ioFuncTy.getInput(ioArgs.size())));
+      return;
+    }
+    // Array format: no string arg, no length arg; format descriptor arg
+    ioArgs.push_back(
+        builder.createNullConstant(loc, ioFuncTy.getInput(ioArgs.size())));
+    ioArgs.push_back(
+        builder.createNullConstant(loc, ioFuncTy.getInput(ioArgs.size())));
+    ioArgs.push_back( // format descriptor
+        builder.createConvert(loc, ioFuncTy.getInput(ioArgs.size()), address));
   };
   if constexpr (hasIOCtrl) { // READ or WRITE
     if (isInternal) {
@@ -1894,15 +1915,11 @@ void genBeginDataTransferCallArgs(
         loc, builder.getIntegerAttr(ioFuncTy.getInput(ioArgs.size()),
                                     Fortran::runtime::io::DefaultUnit)));
   }
-  // File name and line number.
+  // File name and line number are always the last two arguments.
   ioArgs.push_back(
       locToFilename(converter, loc, ioFuncTy.getInput(ioArgs.size())));
   ioArgs.push_back(
       locToLineNo(converter, loc, ioFuncTy.getInput(ioArgs.size())));
-  // Placeholder for format passed as a descriptor.
-  if (isFormatted && !isListOrNml)
-    ioArgs.push_back(
-        builder.createNullConstant(loc, ioFuncTy.getInput(ioArgs.size())));
 }
 
 template <bool isInput, bool hasIOCtrl = true, typename A>
