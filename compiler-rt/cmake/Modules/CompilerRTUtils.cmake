@@ -597,7 +597,7 @@ endfunction()
 # Add warnings to catch potential errors that can lead to security
 # vulnerabilities.
 function(add_security_warnings out_flags macosx_sdk_version)
-  set(flags "${${out_flags}}" -Werror=format-security -Werror=array-bounds
+  set(flags "${${out_flags}}" -Werror=array-bounds
       -Werror=uninitialized -Werror=shadow -Werror=empty-body
       -Werror=sizeof-pointer-memaccess -Werror=sizeof-array-argument
       -Werror=memset-transposed-args)
@@ -607,6 +607,7 @@ function(add_security_warnings out_flags macosx_sdk_version)
   append_list_if(COMPILER_RT_HAS_RETURN_STACK_ADDRESS_FLAG -Werror=return-stack-address flags)
   append_list_if(COMPILER_RT_HAS_SIZEOF_ARRAY_DECAY_FLAG -Werror=sizeof-array-decay flags)
   append_list_if(COMPILER_RT_HAS_FORMAT_INSUFFICIENT_ARGS_FLAG -Werror=format-insufficient-args flags)
+  append_list_if(COMPILER_RT_HAS_BUILTIN_FORMAL_SECURITY_FLAG -Werror=format-security flags)
 
   # Add -Wformat-nonliteral only if we can avoid adding the defintion of
   # eprintf. On Apple platforms, eprintf is needed only on macosx and only if
