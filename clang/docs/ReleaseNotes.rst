@@ -711,8 +711,11 @@ clang-extdef-mapping
 libclang
 --------
 
-- The soversion for libclang will now change for each new LLVM major release.  This matches
-  the behavior of clang <= 13.
+- Introduce new option `CLANG_FORCE_MATCHING_LIBCLANG_SOVERSION` that defaults to ON.
+  This means that by default libclang's SOVERSION matches the major version of LLVM.
+  Setting this to OFF makes the SOVERSION be the ABI compatible version (currently 13).
+  See `discussion<https://discourse.llvm.org/t/rationale-for-removing-versioned-libclang-middle-ground-to-keep-it-behind-option/64410>`_
+  here.
 
 Static Analyzer
 ---------------
