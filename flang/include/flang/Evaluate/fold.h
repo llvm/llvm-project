@@ -57,10 +57,8 @@ auto UnwrapConstantValue(EXPR &expr) -> common::Constify<Constant<T>, EXPR> * {
   if (auto *c{UnwrapExpr<Constant<T>>(expr)}) {
     return c;
   } else {
-    if constexpr (!std::is_same_v<T, SomeDerived>) {
-      if (auto *parens{UnwrapExpr<Parentheses<T>>(expr)}) {
-        return UnwrapConstantValue<T>(parens->left());
-      }
+    if (auto *parens{UnwrapExpr<Parentheses<T>>(expr)}) {
+      return UnwrapConstantValue<T>(parens->left());
     }
     return nullptr;
   }
