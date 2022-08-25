@@ -140,7 +140,7 @@ def Builtin_ArrayAttr : Builtin_Attr<"Array", [
 }
 
 //===----------------------------------------------------------------------===//
-// DenseArrayBaseAttr
+// DenseArrayAttr
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
@@ -155,23 +155,28 @@ def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
   }];
 }
 
-def Builtin_DenseArrayBase : Builtin_Attr<
-    "DenseArrayBase", [ElementsAttrInterface, TypedAttrInterface]> {
-  let summary = "A dense array of i8, i16, i32, i64, f32, or f64.";
+def Builtin_DenseArray : Builtin_Attr<
+    "DenseArray", [ElementsAttrInterface, TypedAttrInterface]> {
+  let summary = "A dense array of integer or floating point elements.";
   let description = [{
     A dense array attribute is an attribute that represents a dense array of
     primitive element types. Contrary to DenseIntOrFPElementsAttr this is a
     flat unidimensional array which does not have a storage optimization for
     splat. This allows to expose the raw array through a C++ API as
-    `ArrayRef<T>`. This is the base class attribute, the actual access is
-    intended to be managed through the subclasses `DenseI8ArrayAttr`,
-    `DenseI16ArrayAttr`, `DenseI32ArrayAttr`, `DenseI64ArrayAttr`,
-    `DenseF32ArrayAttr`, and `DenseF64ArrayAttr`.
+    `ArrayRef<T>` for compatible types. The element type must be bool or an
+    integer or float whose bitwidth is a multiple of 8. Bool elements are stored
+    as bytes.
+
+    This is the base class attribute. Access to C++ types is intended to be
+    managed through the subclasses `DenseI8ArrayAttr`, `DenseI16ArrayAttr`,
+    `DenseI32ArrayAttr`, `DenseI64ArrayAttr`, `DenseF32ArrayAttr`,
+    and `DenseF64ArrayAttr`.
 
     Syntax:
 
     ```
-    dense-array-attribute ::= `[` `:` (integer-type | float-type) tensor-literal `]`
+    dense-array-attribute ::= `array` `<` (integer-type | float-type)
+                                          (`:` tensor-literal)? `>`
     ```
     Examples:
 
@@ -181,16 +186,26 @@ def Builtin_DenseArrayBase : Builtin_Attr<
     array<f64: 42., 12.>
     ```
 
-    when a specific subclass is used as argument of an operation, the declarative
-    assembly will omit the type and print directly:
-    ```
+    When a specific subclass is used as argument of an operation, the
+    declarative assembly will omit the type and print directly:
+
+    ```mlir
     [1, 2, 3]
     ```
   }];
+
   let parameters = (ins
     AttributeSelfTypeParameter<"", "RankedTensorType">:$type,
     Builtin_DenseArrayRawDataParameter:$rawData
   );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "RankedTensorType":$type,
+                                        "ArrayRef<char>":$rawData), [{
+      return $_get(type.getContext(), type, rawData);
+    }]>,
+  ];
+
   let extraClassDeclaration = [{
     /// Allow implicit conversion to ElementsAttr.
     operator ElementsAttr() const {
@@ -207,13 +222,9 @@ def Builtin_DenseArrayBase : Builtin_Attr<
     const int64_t *value_begin_impl(OverloadToken<int64_t>) const;
     const float *value_begin_impl(OverloadToken<float>) const;
     const double *value_begin_impl(OverloadToken<double>) const;
-
-    /// Printer for the short form: will dispatch to the appropriate subclass.
-    void print(AsmPrinter &printer) const;
-    void print(raw_ostream &os) const;
-    /// Print the short form `42, 100, -1` without any braces or prefix.
-    void printWithoutBraces(raw_ostream &os) const;
   }];
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//

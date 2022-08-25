@@ -569,6 +569,26 @@ func.func @dense_array_attr() attributes {
                f64attr = [-142.]
 // CHECK-SAME: emptyattr = []
                emptyattr = []
+
+  // CHECK: array.sizes
+  // CHECK-SAME: i0 = array<i0: 0, 0>
+  // CHECK-SAME: ui0 = array<ui0: 0, 0>
+  // CHECK-SAME: si0 = array<si0: 0, 0>
+  // CHECK-SAME: i24 = array<i24: -42, 42, 8388607>
+  // CHECK-SAME: ui24 = array<ui24: 16777215>
+  // CHECK-SAME: si24 = array<si24: -8388608>
+  // CHECK-SAME: bf16 = array<bf16: 1.2{{[0-9]+}}e+00, 3.4{{[0-9]+}}e+00>
+  // CHECK-SAME: f16 = array<f16: 1.{{[0-9]+}}e+00, 3.{{[0-9]+}}e+00>
+  "array.sizes"() {
+    x0_i0 = array<i0: 0, 0>,
+    x1_ui0 = array<ui0: 0, 0>,
+    x2_si0 = array<si0: 0, 0>,
+    x3_i24 = array<i24: -42, 42, 8388607>,
+    x4_ui24 = array<ui24: 16777215>,
+    x5_si24 = array<si24: -8388608>,
+    x6_bf16 = array<bf16: 1.2, 3.4>,
+    x7_f16 = array<f16: 1., 3.>
+  }: () -> ()
   return
 }
 
