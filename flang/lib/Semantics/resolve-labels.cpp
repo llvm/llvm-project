@@ -374,6 +374,12 @@ public:
         std::get<parser::Statement<parser::EndBlockDataStmt>>(blockData.t));
   }
 
+  bool Pre(const parser::InterfaceBody &) {
+    PushDisposableMap();
+    return true;
+  }
+  void Post(const parser::InterfaceBody &) { PopDisposableMap(); }
+
   // C1564
   void Post(const parser::InterfaceBody::Function &func) {
     CheckOptionalName<parser::FunctionStmt>("FUNCTION", func,
@@ -492,10 +498,15 @@ public:
   }
 
   // C739
+  bool Pre(const parser::DerivedTypeDef &) {
+    PushDisposableMap();
+    return true;
+  }
   void Post(const parser::DerivedTypeDef &derivedTypeDef) {
     CheckOptionalName<parser::DerivedTypeStmt>("derived type definition",
         derivedTypeDef,
         std::get<parser::Statement<parser::EndTypeStmt>>(derivedTypeDef.t));
+    PopDisposableMap();
   }
 
   void Post(const parser::LabelDoStmt &labelDoStmt) {
@@ -779,7 +790,10 @@ private:
       LabeledStmtClassificationSet labeledStmtClassificationSet,
       ProxyForScope scope, bool isExecutableConstructEndStmt = false) {
     CheckLabelInRange(label);
-    const auto pair{programUnits_.back().targetStmts.emplace(label,
+    TargetStmtMap &targetStmtMap{disposableMaps_.empty()
+            ? programUnits_.back().targetStmts
+            : disposableMaps_.back()};
+    const auto pair{targetStmtMap.emplace(label,
         LabeledStatementInfoTuplePOD{scope, currentPosition_,
             labeledStmtClassificationSet, isExecutableConstructEndStmt})};
     if (!pair.second) {
@@ -818,11 +832,19 @@ private:
     }
   }
 
+  void PushDisposableMap() { disposableMaps_.emplace_back(); }
+  void PopDisposableMap() { disposableMaps_.pop_back(); }
+
   std::vector<UnitAnalysis> programUnits_;
   SemanticsContext &context_;
   parser::CharBlock currentPosition_;
   ProxyForScope currentScope_;
   std::vector<std::string> constructNames_;
+  // For labels in derived type definitions and procedure
+  // interfaces, which are their own inclusive scopes.  None
+  // of these labels can be used as a branch target, but they
+  // should be pairwise distinct.
+  std::vector<TargetStmtMap> disposableMaps_;
 };
 
 bool InInclusiveScope(const std::vector<ScopeInfo> &scopes, ProxyForScope tail,
