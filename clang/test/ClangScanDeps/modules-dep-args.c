@@ -78,7 +78,7 @@ module Direct { header "direct.h" }
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
-// CHECK-NEXT:       "clang-context-hash": "{{.*}}",
+// CHECK:            "clang-context-hash": "{{.*}}",
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "{{.*}}",
@@ -93,10 +93,8 @@ module Direct { header "direct.h" }
 // CHECK_EAGER-NOT:    "-fmodule-map-file={{.*}}"
 // CHECK_EAGER:        "-fmodule-file=[[PREFIX]]/{{.*}}/Direct-{{.*}}.pcm"
 // CHECK:            ],
-// CHECK-NEXT:       "file-deps": [
+// CHECK:            "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/tu.c"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:     }
-// CHECK-NEXT:   ]
-// CHECK-NEXT: }
