@@ -133,21 +133,35 @@ static llvm::Optional<mach_header> ParseMachOHeader(DataExtractor &data) {
 
 static bool
 ParseFileset(DataExtractor &data, mach_header header,
-             std::vector<ObjectContainerMachOFileset::Entry> &entries) {
+             std::vector<ObjectContainerMachOFileset::Entry> &entries,
+             llvm::Optional<lldb::addr_t> load_addr = llvm::None) {
   lldb::offset_t offset = MachHeaderSizeFromMagic(header.magic);
+  lldb::offset_t slide = 0;
   for (uint32_t i = 0; i < header.ncmds; ++i) {
     const lldb::offset_t load_cmd_offset = offset;
     load_command lc = {};
     if (data.GetU32(&offset, &lc.cmd, 2) == nullptr)
       break;
 
+    // If we know the load address we can compute the slide.
+    if (load_addr) {
+      if (lc.cmd == llvm::MachO::LC_SEGMENT_64) {
+        segment_command_64 segment;
+        data.CopyData(load_cmd_offset, sizeof(segment_command_64), &segment);
+        if (llvm::StringRef(segment.segname) == "__TEXT")
+          slide = *load_addr - segment.vmaddr;
+      }
+    }
+
     if (lc.cmd == LC_FILESET_ENTRY) {
       fileset_entry_command entry;
       data.CopyData(load_cmd_offset, sizeof(fileset_entry_command), &entry);
       lldb::offset_t entry_id_offset = load_cmd_offset + entry.entry_id;
       const char *id = data.GetCStr(&entry_id_offset);
-      entries.emplace_back(entry.vmaddr, entry.fileoff, std::string(id));
+      entries.emplace_back(entry.vmaddr + slide, entry.fileoff,
+                           std::string(id));
     }
+
     offset = load_cmd_offset + lc.cmdsize;
   }
 
@@ -198,7 +212,7 @@ bool ObjectContainerMachOFileset::ParseHeader() {
     m_data.SetData(data_sp);
   }
 
-  return ParseFileset(m_data, *header, m_entries);
+  return ParseFileset(m_data, *header, m_entries, m_memory_addr);
 }
 
 size_t ObjectContainerMachOFileset::GetModuleSpecifications(
