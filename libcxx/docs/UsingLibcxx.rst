@@ -248,19 +248,9 @@ thread safety annotations.
   replacement scenarios from working, e.g. replacing `operator new` and
   expecting a non-replaced `operator new[]` to call the replaced `operator new`.
 
-**_LIBCPP_ENABLE_NODISCARD**:
-  Allow the library to add ``[[nodiscard]]`` attributes to entities not specified
-  as ``[[nodiscard]]`` by the current language dialect. This includes
-  backporting applications of ``[[nodiscard]]`` from newer dialects and
-  additional extended applications at the discretion of the library. All
-  additional applications of ``[[nodiscard]]`` are disabled by default.
-  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>` for
-  more information.
-
-**_LIBCPP_DISABLE_NODISCARD_EXT**:
-  This macro prevents the library from applying ``[[nodiscard]]`` to entities
-  purely as an extension. See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>`
-  for more information.
+**_LIBCPP_ENABLE_NODISCARD_EXT**:
+  This macro allows the library to apply ``[[nodiscard]]`` to entities as an extension.
+  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>` for more information.
 
 **_LIBCPP_DISABLE_DEPRECATION_WARNINGS**:
   This macro disables warnings when using deprecated components. For example,
@@ -350,7 +340,7 @@ Users who want help diagnosing misuses of STL functions may desire a more
 liberal application of ``[[nodiscard]]``.
 
 For this reason libc++ provides an extension that does just that! The
-extension must be enabled by defining ``_LIBCPP_ENABLE_NODISCARD``. The extended
+extension must be enabled by defining ``_LIBCPP_ENABLE_NODISCARD_EXT``. The extended
 applications of ``[[nodiscard]]`` takes two forms:
 
 1. Backporting ``[[nodiscard]]`` to entities declared as such by the
@@ -358,17 +348,6 @@ applications of ``[[nodiscard]]`` takes two forms:
 
 2. Extended applications of ``[[nodiscard]]``, at the library's discretion,
    applied to entities never declared as such by the standard.
-
-Users may also opt-out of additional applications ``[[nodiscard]]`` using
-additional macros.
-
-Applications of the first form, which backport ``[[nodiscard]]`` from a newer
-dialect, may be disabled using macros specific to the dialect in which it was
-added. For example, ``_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17``.
-
-Applications of the second form, which are pure extensions, may be disabled
-by defining ``_LIBCPP_DISABLE_NODISCARD_EXT``.
-
 
 Entities declared with ``_LIBCPP_NODISCARD_EXT``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

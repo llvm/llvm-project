@@ -69,32 +69,32 @@ Cookie IONAME(BeginInternalArrayListInput)(const Descriptor &descriptor,
 
 template <Direction DIR>
 Cookie BeginInternalArrayFormattedIO(const Descriptor &descriptor,
-    const char *format, std::size_t formatLength, void ** /*scratchArea*/,
-    std::size_t /*scratchBytes*/, const char *sourceFile, int sourceLine,
-    const Descriptor *formatDescriptor) {
+    const char *format, std::size_t formatLength,
+    const Descriptor *formatDescriptor, void ** /*scratchArea*/,
+    std::size_t /*scratchBytes*/, const char *sourceFile, int sourceLine) {
   Terminator oom{sourceFile, sourceLine};
   return &New<InternalFormattedIoStatementState<DIR>>{oom}(descriptor, format,
-      formatLength, sourceFile, sourceLine, formatDescriptor)
+      formatLength, formatDescriptor, sourceFile, sourceLine)
               .release()
               ->ioStatementState();
 }
 
 Cookie IONAME(BeginInternalArrayFormattedOutput)(const Descriptor &descriptor,
-    const char *format, std::size_t formatLength, void **scratchArea,
-    std::size_t scratchBytes, const char *sourceFile, int sourceLine,
-    const Descriptor *formatDescriptor) {
+    const char *format, std::size_t formatLength,
+    const Descriptor *formatDescriptor, void **scratchArea,
+    std::size_t scratchBytes, const char *sourceFile, int sourceLine) {
   return BeginInternalArrayFormattedIO<Direction::Output>(descriptor, format,
-      formatLength, scratchArea, scratchBytes, sourceFile, sourceLine,
-      formatDescriptor);
+      formatLength, formatDescriptor, scratchArea, scratchBytes, sourceFile,
+      sourceLine);
 }
 
 Cookie IONAME(BeginInternalArrayFormattedInput)(const Descriptor &descriptor,
-    const char *format, std::size_t formatLength, void **scratchArea,
-    std::size_t scratchBytes, const char *sourceFile, int sourceLine,
-    const Descriptor *formatDescriptor) {
+    const char *format, std::size_t formatLength,
+    const Descriptor *formatDescriptor, void **scratchArea,
+    std::size_t scratchBytes, const char *sourceFile, int sourceLine) {
   return BeginInternalArrayFormattedIO<Direction::Input>(descriptor, format,
-      formatLength, scratchArea, scratchBytes, sourceFile, sourceLine,
-      formatDescriptor);
+      formatLength, formatDescriptor, scratchArea, scratchBytes, sourceFile,
+      sourceLine);
 }
 
 template <Direction DIR>
@@ -127,33 +127,32 @@ template <Direction DIR>
 Cookie BeginInternalFormattedIO(
     std::conditional_t<DIR == Direction::Input, const char, char> *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
-    void ** /*scratchArea*/, std::size_t /*scratchBytes*/,
-    const char *sourceFile, int sourceLine,
-    const Descriptor *formatDescriptor) {
+    const Descriptor *formatDescriptor, void ** /*scratchArea*/,
+    std::size_t /*scratchBytes*/, const char *sourceFile, int sourceLine) {
   Terminator oom{sourceFile, sourceLine};
   return &New<InternalFormattedIoStatementState<DIR>>{oom}(internal,
-      internalLength, format, formatLength, sourceFile, sourceLine,
-      formatDescriptor)
+      internalLength, format, formatLength, formatDescriptor, sourceFile,
+      sourceLine)
               .release()
               ->ioStatementState();
 }
 
 Cookie IONAME(BeginInternalFormattedOutput)(char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
-    void **scratchArea, std::size_t scratchBytes, const char *sourceFile,
-    int sourceLine, const Descriptor *formatDescriptor) {
+    const Descriptor *formatDescriptor, void **scratchArea,
+    std::size_t scratchBytes, const char *sourceFile, int sourceLine) {
   return BeginInternalFormattedIO<Direction::Output>(internal, internalLength,
-      format, formatLength, scratchArea, scratchBytes, sourceFile, sourceLine,
-      formatDescriptor);
+      format, formatLength, formatDescriptor, scratchArea, scratchBytes,
+      sourceFile, sourceLine);
 }
 
 Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
-    void **scratchArea, std::size_t scratchBytes, const char *sourceFile,
-    int sourceLine, const Descriptor *formatDescriptor) {
+    const Descriptor *formatDescriptor, void **scratchArea,
+    std::size_t scratchBytes, const char *sourceFile, int sourceLine) {
   return BeginInternalFormattedIO<Direction::Input>(internal, internalLength,
-      format, formatLength, scratchArea, scratchBytes, sourceFile, sourceLine,
-      formatDescriptor);
+      format, formatLength, formatDescriptor, scratchArea, scratchBytes,
+      sourceFile, sourceLine);
 }
 
 static Cookie NoopUnit(const Terminator &terminator, int unitNumber,
@@ -244,8 +243,8 @@ Cookie IONAME(BeginExternalListInput)(
 
 template <Direction DIR>
 Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
-    ExternalUnit unitNumber, const char *sourceFile, int sourceLine,
-    const Descriptor *formatDescriptor) {
+    const Descriptor *formatDescriptor, ExternalUnit unitNumber,
+    const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   if (unitNumber == DefaultUnit) {
     unitNumber = DIR == Direction::Input ? 5 : 6;
@@ -269,8 +268,8 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
     }
     if (iostat == IostatOk) {
       return &child->BeginIoStatement<ChildFormattedIoStatementState<DIR>>(
-          *child, format, formatLength, sourceFile, sourceLine,
-          formatDescriptor);
+          *child, format, formatLength, formatDescriptor, sourceFile,
+          sourceLine);
     } else {
       return &child->BeginIoStatement<ErroneousIoStatementState>(
           iostat, nullptr /* no unit */, sourceFile, sourceLine);
@@ -281,8 +280,8 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
     }
     if (iostat == IostatOk) {
       return &unit->BeginIoStatement<ExternalFormattedIoStatementState<DIR>>(
-          terminator, *unit, format, formatLength, sourceFile, sourceLine,
-          formatDescriptor);
+          terminator, *unit, format, formatLength, formatDescriptor, sourceFile,
+          sourceLine);
     } else {
       return &unit->BeginIoStatement<ErroneousIoStatementState>(
           terminator, iostat, unit, sourceFile, sourceLine);
@@ -291,17 +290,17 @@ Cookie BeginExternalFormattedIO(const char *format, std::size_t formatLength,
 }
 
 Cookie IONAME(BeginExternalFormattedOutput)(const char *format,
-    std::size_t formatLength, ExternalUnit unitNumber, const char *sourceFile,
-    int sourceLine, const Descriptor *formatDescriptor) {
+    std::size_t formatLength, const Descriptor *formatDescriptor,
+    ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   return BeginExternalFormattedIO<Direction::Output>(format, formatLength,
-      unitNumber, sourceFile, sourceLine, formatDescriptor);
+      formatDescriptor, unitNumber, sourceFile, sourceLine);
 }
 
 Cookie IONAME(BeginExternalFormattedInput)(const char *format,
-    std::size_t formatLength, ExternalUnit unitNumber, const char *sourceFile,
-    int sourceLine, const Descriptor *formatDescriptor) {
+    std::size_t formatLength, const Descriptor *formatDescriptor,
+    ExternalUnit unitNumber, const char *sourceFile, int sourceLine) {
   return BeginExternalFormattedIO<Direction::Input>(format, formatLength,
-      unitNumber, sourceFile, sourceLine, formatDescriptor);
+      formatDescriptor, unitNumber, sourceFile, sourceLine);
 }
 
 template <Direction DIR>

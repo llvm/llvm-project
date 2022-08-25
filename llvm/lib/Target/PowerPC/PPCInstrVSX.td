@@ -3021,9 +3021,6 @@ defm : ScalToVecWPermute<v2f64, (f64 f64:$A),
                                    (SUBREG_TO_REG (i64 1), $A, sub_64), 0),
                          (SUBREG_TO_REG (i64 1), $A, sub_64)>;
 
-def : Pat<(f64 (extractelt (v2f64 (bitconvert (v16i8
-                 (PPCvperm v16i8:$A, v16i8:$B, v16i8:$C)))), 0)),
-          (f64 (EXTRACT_SUBREG (VPERM $B, $A, $C), sub_64))>;
 def : Pat<(f64 (extractelt v2f64:$S, 0)),
           (f64 (EXTRACT_SUBREG (XXPERMDI $S, $S, 2), sub_64))>;
 def : Pat<(f64 (extractelt v2f64:$S, 1)),

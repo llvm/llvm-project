@@ -1195,6 +1195,36 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
       UnknownLoc::get(context), f->getName(), functionType,
       convertLinkageFromLLVM(f->getLinkage()), dsoLocal, cconv);
 
+  for (const auto &arg : llvm::enumerate(functionType.getParams())) {
+    llvm::SmallVector<NamedAttribute, 1> argAttrs;
+    if (auto *type = f->getParamByValType(arg.index())) {
+      auto mlirType = processType(type);
+      argAttrs.push_back(
+          NamedAttribute(b.getStringAttr(LLVMDialect::getByValAttrName()),
+                         TypeAttr::get(mlirType)));
+    }
+    if (auto *type = f->getParamByRefType(arg.index())) {
+      auto mlirType = processType(type);
+      argAttrs.push_back(
+          NamedAttribute(b.getStringAttr(LLVMDialect::getByRefAttrName()),
+                         TypeAttr::get(mlirType)));
+    }
+    if (auto *type = f->getParamStructRetType(arg.index())) {
+      auto mlirType = processType(type);
+      argAttrs.push_back(
+          NamedAttribute(b.getStringAttr(LLVMDialect::getStructRetAttrName()),
+                         TypeAttr::get(mlirType)));
+    }
+    if (auto *type = f->getParamInAllocaType(arg.index())) {
+      auto mlirType = processType(type);
+      argAttrs.push_back(
+          NamedAttribute(b.getStringAttr(LLVMDialect::getInAllocaAttrName()),
+                         TypeAttr::get(mlirType)));
+    }
+
+    fop.setArgAttrs(arg.index(), argAttrs);
+  }
+
   if (FlatSymbolRefAttr personality = getPersonalityAsAttr(f))
     fop->setAttr(b.getStringAttr("personality"), personality);
   else if (f->hasPersonalityFn())

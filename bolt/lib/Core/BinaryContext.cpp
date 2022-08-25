@@ -390,6 +390,12 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
     // can pull this constant island and emit it as part of this function
     // too.
     auto IslandIter = AddressToConstantIslandMap.lower_bound(Address);
+
+    if (IslandIter != AddressToConstantIslandMap.begin() &&
+        (IslandIter == AddressToConstantIslandMap.end() ||
+         IslandIter->first > Address))
+      --IslandIter;
+
     if (IslandIter != AddressToConstantIslandMap.end()) {
       if (MCSymbol *IslandSym =
               IslandIter->second->getOrCreateProxyIslandAccess(Address, BF)) {
@@ -2199,7 +2205,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
 
   using LabelRange = std::pair<const MCSymbol *, const MCSymbol *>;
   SmallVector<LabelRange> SplitLabels;
-  for (const FunctionFragment FF : BF.getLayout().getSplitFragments()) {
+  for (FunctionFragment &FF : BF.getLayout().getSplitFragments()) {
     MCSymbol *const SplitStartLabel = LocalCtx->createTempSymbol();
     MCSymbol *const SplitEndLabel = LocalCtx->createTempSymbol();
     SplitLabels.emplace_back(SplitStartLabel, SplitEndLabel);

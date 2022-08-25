@@ -6,16 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_CPP_UINT_H
-#define LLVM_LIBC_UTILS_CPP_UINT_H
+#ifndef LLVM_LIBC_UTILS_UINT_H
+#define LLVM_LIBC_UTILS_UINT_H
 
-#include "array.h"
+#include "src/__support/CPP/array.h"
+#include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/type_traits.h"
 
 #include <stddef.h> // For size_t
 #include <stdint.h>
 
-namespace __llvm_libc {
-namespace cpp {
+namespace __llvm_libc::cpp {
 
 template <size_t Bits> class UInt {
 
@@ -446,7 +447,16 @@ constexpr UInt<128> UInt<128>::operator*(const UInt<128> &other) const {
   return result;
 }
 
-} // namespace cpp
-} // namespace __llvm_libc
+// Provides limits of UInt<128>.
+template <> class numeric_limits<UInt<128>> {
+public:
+  static constexpr UInt<128> max() { return ~UInt<128>(0); }
+  static constexpr UInt<128> min() { return 0; }
+};
 
-#endif // LLVM_LIBC_UTILS_CPP_UINT_H
+// Provides is_integral of UInt<128>.
+template <> struct is_integral<UInt<128>> : public cpp::true_type {};
+
+} // namespace __llvm_libc::cpp
+
+#endif // LLVM_LIBC_UTILS_UINT_H

@@ -115,7 +115,7 @@ chained updates, `%r`, and stores the result to the array at address, `%a`.
 This operation taken with `array_load`'s captures Fortran's
 copy-in/copy-out semantics. The first operands of `array_merge_store` is the
 result of the initial `array_load` operation. While this value could be
-retrieved by reference chasiing through the different array operations it is
+retrieved by reference chasing through the different array operations it is
 useful to have it on hand directly for analysis passes since this directly
 defines the "bounds" of the Fortran statement represented by these operations.
 The intention is to allow copy-in/copy-out regions to be easily delineated,

@@ -840,23 +840,57 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
                            .addAlignmentAttr(llvm::Align(attr.getInt())));
     }
 
-    if (auto attr = func.getArgAttrOfType<UnitAttr>(argIdx, "llvm.sret")) {
+    if (auto attr = func.getArgAttrOfType<TypeAttr>(
+            argIdx, LLVMDialect::getStructRetAttrName())) {
       auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMPointerType>();
       if (!argTy)
         return func.emitError(
             "llvm.sret attribute attached to LLVM non-pointer argument");
-      llvmArg.addAttrs(
-          llvm::AttrBuilder(llvmArg.getContext())
-              .addStructRetAttr(convertType(argTy.getElementType())));
+      if (!argTy.isOpaque() && argTy.getElementType() != attr.getValue())
+        return func.emitError("llvm.sret attribute attached to LLVM pointer "
+                              "argument of a different type");
+      llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext())
+                           .addStructRetAttr(convertType(attr.getValue())));
     }
 
-    if (auto attr = func.getArgAttrOfType<UnitAttr>(argIdx, "llvm.byval")) {
+    if (auto attr = func.getArgAttrOfType<TypeAttr>(
+            argIdx, LLVMDialect::getByValAttrName())) {
       auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMPointerType>();
       if (!argTy)
         return func.emitError(
             "llvm.byval attribute attached to LLVM non-pointer argument");
+      if (!argTy.isOpaque() && argTy.getElementType() != attr.getValue())
+        return func.emitError("llvm.byval attribute attached to LLVM pointer "
+                              "argument of a different type");
       llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext())
-                           .addByValAttr(convertType(argTy.getElementType())));
+                           .addByValAttr(convertType(attr.getValue())));
+    }
+
+    if (auto attr = func.getArgAttrOfType<TypeAttr>(
+            argIdx, LLVMDialect::getByRefAttrName())) {
+      auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMPointerType>();
+      if (!argTy)
+        return func.emitError(
+            "llvm.byref attribute attached to LLVM non-pointer argument");
+      if (!argTy.isOpaque() && argTy.getElementType() != attr.getValue())
+        return func.emitError("llvm.byref attribute attached to LLVM pointer "
+                              "argument of a different type");
+      llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext())
+                           .addByRefAttr(convertType(attr.getValue())));
+    }
+
+    if (auto attr = func.getArgAttrOfType<TypeAttr>(
+            argIdx, LLVMDialect::getInAllocaAttrName())) {
+      auto argTy = mlirArg.getType().dyn_cast<LLVM::LLVMPointerType>();
+      if (!argTy)
+        return func.emitError(
+            "llvm.inalloca attribute attached to LLVM non-pointer argument");
+      if (!argTy.isOpaque() && argTy.getElementType() != attr.getValue())
+        return func.emitError(
+            "llvm.inalloca attribute attached to LLVM pointer "
+            "argument of a different type");
+      llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext())
+                           .addInAllocaAttr(convertType(attr.getValue())));
     }
 
     if (auto attr = func.getArgAttrOfType<UnitAttr>(argIdx, "llvm.nest")) {

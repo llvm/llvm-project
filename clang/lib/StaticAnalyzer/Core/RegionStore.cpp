@@ -2594,6 +2594,12 @@ RegionStoreManager::tryBindSmallStruct(RegionBindingsConstRef B,
       return None;
 
     QualType Ty = FD->getType();
+
+    // Zero length arrays are basically no-ops, so we also ignore them here.
+    if (Ty->isConstantArrayType() &&
+        Ctx.getConstantArrayElementCount(Ctx.getAsConstantArrayType(Ty)) == 0)
+      continue;
+
     if (!(Ty->isScalarType() || Ty->isReferenceType()))
       return None;
 

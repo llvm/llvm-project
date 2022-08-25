@@ -306,3 +306,27 @@ void structured_binding_multi() {
   clang_analyzer_eval(b[0].i == 3); // expected-warning{{TRUE}}
   clang_analyzer_eval(b[1].i == 4); // expected-warning{{TRUE}}
 }
+
+// This snippet used to crash
+namespace crash {
+
+struct S
+{
+  int x;
+  S() { x = 1; }
+};
+
+void no_crash() {
+  S arr[0];
+  int n = 1;
+
+  auto l = [arr, n] { return n; };
+
+  int x = l();
+  clang_analyzer_eval(x == 1); // expected-warning{{TRUE}}
+
+  // FIXME: This should be 'Undefined'.
+  clang_analyzer_eval(arr[0].x); // expected-warning{{UNKNOWN}}
+}
+
+} // namespace crash
