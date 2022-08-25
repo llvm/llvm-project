@@ -34,25 +34,29 @@ def TSV110Model : SchedMachineModel {
 // which has 8 pipelines, each with its own queue where micro-ops wait for
 // their operands and issue out-of-order to one of eight execution pipelines.
 let SchedModel = TSV110Model in {
-  def TSV110UnitALU  : ProcResource<1>; // Int ALU
-  def TSV110UnitAB   : ProcResource<2>; // Int ALU/BRU
-  def TSV110UnitMDU  : ProcResource<1>; // Multi-Cycle
-  def TSV110UnitFSU1 : ProcResource<1>; // FP/ASIMD
-  def TSV110UnitFSU2 : ProcResource<1>; // FP/ASIMD
-  def TSV110UnitLdSt : ProcResource<2>; // Load/Store
+  def TSV110UnitALU   : ProcResource<1>; // Int ALU
+  def TSV110UnitAB    : ProcResource<2>; // Int ALU/BRU
+  def TSV110UnitMDU   : ProcResource<1>; // Multi-Cycle
+  def TSV110UnitFSU1  : ProcResource<1>; // FP/ASIMD
+  def TSV110UnitFSU2  : ProcResource<1>; // FP/ASIMD
+  def TSV110UnitLd0St : ProcResource<1>; // Load/Store
+  def TSV110UnitLd1   : ProcResource<1>; // Load
 
+  def TSV110UnitLd    : ProcResGroup<[TSV110UnitLd0St, TSV110UnitLd1]>;  // Any load
   def TSV110UnitF     : ProcResGroup<[TSV110UnitFSU1, TSV110UnitFSU2]>;
   def TSV110UnitALUAB : ProcResGroup<[TSV110UnitALU, TSV110UnitAB]>;
-  def TSV110UnitFLdSt : ProcResGroup<[TSV110UnitFSU1, TSV110UnitFSU2, TSV110UnitLdSt]>;
 }
 
 let SchedModel = TSV110Model in {
 
 //===----------------------------------------------------------------------===//
-// Map the target-defined scheduler read/write resources and latency for 
-// TSV110
+// Map the target-defined scheduler read/write resources and latency for TSV110
 
 // Integer ALU
+// TODO: Use SchedVariant to select BRU for ALU ops that sets NZCV flags
+// (including ops that shift and/or extend):
+// 1cyc_1BRU: ADDS, ADCS, ANDS, BICS, SUBS, SBCS, CCMN, CCMP
+// 2cyc_1BRU: ADDSshfr, SUBSshfr, ANDSshfr, ADDSextr, SUBSextr
 def : WriteRes<WriteImm,   [TSV110UnitALUAB]> { let Latency = 1; }
 def : WriteRes<WriteI,     [TSV110UnitALUAB]> { let Latency = 1; }
 def : WriteRes<WriteISReg, [TSV110UnitMDU]>   { let Latency = 2; } 
@@ -69,17 +73,17 @@ def : WriteRes<WriteIM32,  [TSV110UnitMDU]> { let Latency = 3; }
 def : WriteRes<WriteIM64,  [TSV110UnitMDU]> { let Latency = 4; }
 
 // Load
-def : WriteRes<WriteLD,    [TSV110UnitLdSt]> { let Latency = 4; }
-def : WriteRes<WriteLDIdx, [TSV110UnitLdSt]> { let Latency = 4; }
+def : WriteRes<WriteLD,    [TSV110UnitLd]>  { let Latency = 4; }
+def : WriteRes<WriteLDIdx, [TSV110UnitLd]>  { let Latency = 4; }
 def : WriteRes<WriteLDHi,  []> { let Latency = 4; }
 
 // Pre/Post Indexing
 def : WriteRes<WriteAdr,   [TSV110UnitALUAB]> { let Latency = 1; } 
 
 // Store
-def : WriteRes<WriteST,    [TSV110UnitLdSt]> { let Latency = 1; }
-def : WriteRes<WriteSTP,   [TSV110UnitLdSt]> { let Latency = 1; }
-def : WriteRes<WriteSTIdx, [TSV110UnitLdSt]> { let Latency = 1; }
+def : WriteRes<WriteST,    [TSV110UnitLd0St]> { let Latency = 1; }
+def : WriteRes<WriteSTP,   [TSV110UnitLd0St]> { let Latency = 1; }
+def : WriteRes<WriteSTIdx, [TSV110UnitLd0St]> { let Latency = 1; }
 
 // FP
 def : WriteRes<WriteF,     [TSV110UnitF]> { let Latency = 2; }
@@ -90,11 +94,10 @@ def : WriteRes<WriteFImm,  [TSV110UnitF]> { let Latency = 2; }
 def : WriteRes<WriteFMul,  [TSV110UnitF]> { let Latency = 5; }
 
 // FP Div, Sqrt
-def : WriteRes<WriteFDiv,  [TSV110UnitFSU1]> { let Latency = 18; } 
+def : WriteRes<WriteFDiv,  [TSV110UnitFSU1]> { let Latency = 18; let ResourceCycles = [18]; }
 
 def : WriteRes<WriteVd,    [TSV110UnitF]>     { let Latency = 4; }
 def : WriteRes<WriteVq,    [TSV110UnitF]>     { let Latency = 4; }
-def : WriteRes<WriteVLD,   [TSV110UnitFLdSt]> { let Latency = 5; }
 def : WriteRes<WriteVST,   [TSV110UnitF]>     { let Latency = 1; }
 
 // Branch
@@ -141,11 +144,10 @@ def : InstRW<[WriteI], (instrs COPY)>;
 def TSV110Wr_1cyc_1AB    : SchedWriteRes<[TSV110UnitAB]>    { let Latency = 1; }
 def TSV110Wr_1cyc_1ALU   : SchedWriteRes<[TSV110UnitALU]>   { let Latency = 1; }
 def TSV110Wr_1cyc_1ALUAB : SchedWriteRes<[TSV110UnitALUAB]> { let Latency = 1; }
-def TSV110Wr_1cyc_1LdSt  : SchedWriteRes<[TSV110UnitLdSt]>  { let Latency = 1; }
+def TSV110Wr_1cyc_1LdSt  : SchedWriteRes<[TSV110UnitLd0St]> { let Latency = 1; }
 
-def TSV110Wr_2cyc_1AB    : SchedWriteRes<[TSV110UnitAB]>    { let Latency = 2; }
+def TSV110Wr_2cyc_1AB    : SchedWriteRes<[TSV110UnitAB]>    { let Latency = 2; let ResourceCycles = [2]; }
 def TSV110Wr_2cyc_1ALU   : SchedWriteRes<[TSV110UnitALU]>   { let Latency = 2; }
-def TSV110Wr_2cyc_1LdSt  : SchedWriteRes<[TSV110UnitLdSt]>  { let Latency = 2; }
 def TSV110Wr_2cyc_1MDU   : SchedWriteRes<[TSV110UnitMDU]>   { let Latency = 2; }
 def TSV110Wr_2cyc_1FSU1  : SchedWriteRes<[TSV110UnitFSU1]>  { let Latency = 2; }
 def TSV110Wr_2cyc_1F     : SchedWriteRes<[TSV110UnitF]>     { let Latency = 2; }
@@ -156,13 +158,13 @@ def TSV110Wr_3cyc_1MDU   : SchedWriteRes<[TSV110UnitMDU]>   { let Latency = 3; }
 
 def TSV110Wr_4cyc_1FSU1  : SchedWriteRes<[TSV110UnitFSU1]>  { let Latency = 4; }
 def TSV110Wr_4cyc_1F     : SchedWriteRes<[TSV110UnitF]>     { let Latency = 4; }
-def TSV110Wr_4cyc_1LdSt  : SchedWriteRes<[TSV110UnitLdSt]>  { let Latency = 4; }
+def TSV110Wr_4cyc_1LdSt  : SchedWriteRes<[TSV110UnitLd]>    { let Latency = 4; }
 def TSV110Wr_4cyc_1MDU   : SchedWriteRes<[TSV110UnitMDU]>   { let Latency = 4; }
 
 def TSV110Wr_5cyc_1F     : SchedWriteRes<[TSV110UnitF]>     { let Latency = 5; }
 def TSV110Wr_5cyc_1FSU1  : SchedWriteRes<[TSV110UnitFSU1]>  { let Latency = 5; }
 def TSV110Wr_5cyc_1FSU2  : SchedWriteRes<[TSV110UnitFSU2]>  { let Latency = 5; }
-def TSV110Wr_5cyc_1LdSt  : SchedWriteRes<[TSV110UnitLdSt]>  { let Latency = 5; }
+def TSV110Wr_5cyc_1LdSt  : SchedWriteRes<[TSV110UnitLd]>    { let Latency = 5; }
 
 def TSV110Wr_6cyc_1F     : SchedWriteRes<[TSV110UnitF]>     { let Latency = 6; }
 
@@ -170,43 +172,43 @@ def TSV110Wr_7cyc_1F     : SchedWriteRes<[TSV110UnitF]>     { let Latency = 7; }
 
 def TSV110Wr_8cyc_1F     : SchedWriteRes<[TSV110UnitF]>     { let Latency = 8; }
 
-def TSV110Wr_11cyc_1FSU1 : SchedWriteRes<[TSV110UnitFSU1]>  { let Latency = 11; }
+def TSV110Wr_11cyc_1FSU1 : SchedWriteRes<[TSV110UnitFSU1]>  { let Latency = 11; let ResourceCycles = [11]; }
 
-def TSV110Wr_12cyc_1MDU  : SchedWriteRes<[TSV110UnitMDU]>   { let Latency = 12; }
+def TSV110Wr_12cyc_1MDU  : SchedWriteRes<[TSV110UnitMDU]>   { let Latency = 12; let ResourceCycles = [12]; }
 
-def TSV110Wr_17cyc_1FSU2 : SchedWriteRes<[TSV110UnitFSU2]>  { let Latency = 17; }
+def TSV110Wr_17cyc_1FSU2 : SchedWriteRes<[TSV110UnitFSU2]>  { let Latency = 17; let ResourceCycles = [17]; }
 
-def TSV110Wr_18cyc_1FSU1 : SchedWriteRes<[TSV110UnitFSU1]>  { let Latency = 18; }
+def TSV110Wr_18cyc_1FSU1 : SchedWriteRes<[TSV110UnitFSU1]>  { let Latency = 18; let ResourceCycles = [18]; }
 
-def TSV110Wr_20cyc_1MDU  : SchedWriteRes<[TSV110UnitMDU]>   { let Latency = 20; }
+def TSV110Wr_20cyc_1MDU  : SchedWriteRes<[TSV110UnitMDU]>   { let Latency = 20; let ResourceCycles = [20]; }
 
-def TSV110Wr_24cyc_1FSU1 : SchedWriteRes<[TSV110UnitFSU1]>  { let Latency = 24; }
+def TSV110Wr_24cyc_1FSU1 : SchedWriteRes<[TSV110UnitFSU1]>  { let Latency = 24; let ResourceCycles = [24]; }
 
-def TSV110Wr_31cyc_1FSU2 : SchedWriteRes<[TSV110UnitFSU2]>  { let Latency = 31; }
+def TSV110Wr_31cyc_1FSU2 : SchedWriteRes<[TSV110UnitFSU2]>  { let Latency = 31; let ResourceCycles = [31]; }
 
-def TSV110Wr_36cyc_1FSU2 : SchedWriteRes<[TSV110UnitFSU2]>  { let Latency = 36; }
+def TSV110Wr_36cyc_1FSU2 : SchedWriteRes<[TSV110UnitFSU2]>  { let Latency = 36; let ResourceCycles = [36]; }
 
-def TSV110Wr_38cyc_1FSU1 : SchedWriteRes<[TSV110UnitFSU1]>  { let Latency = 38; }
+def TSV110Wr_38cyc_1FSU1 : SchedWriteRes<[TSV110UnitFSU1]>  { let Latency = 38; let ResourceCycles = [38]; }
 
-def TSV110Wr_64cyc_1FSU2 : SchedWriteRes<[TSV110UnitFSU2]>  { let Latency = 64; }
+def TSV110Wr_64cyc_1FSU2 : SchedWriteRes<[TSV110UnitFSU2]>  { let Latency = 64; let ResourceCycles = [64]; }
 
 //===----------------------------------------------------------------------===//
 // Define Generic 2 micro-op types
 
-def TSV110Wr_1cyc_1LdSt_1ALUAB : SchedWriteRes<[TSV110UnitLdSt,
+def TSV110Wr_1cyc_1LdSt_1ALUAB : SchedWriteRes<[TSV110UnitLd0St,
                                                 TSV110UnitALUAB]> {
   let Latency = 1;
   let NumMicroOps = 2;
 }
 
-def TSV110Wr_2cyc_1LdSt_1ALUAB :  SchedWriteRes<[TSV110UnitLdSt,
-                                                 TSV110UnitALUAB]> {
+def TSV110Wr_2cyc_1LdSt_1ALUAB : SchedWriteRes<[TSV110UnitLd0St,
+                                                TSV110UnitALUAB]> {
   let Latency = 2;
   let NumMicroOps = 2;
 }
 
-def TSV110Wr_2cyc_2LdSt        : SchedWriteRes<[TSV110UnitLdSt,
-                                                TSV110UnitLdSt]> {
+def TSV110Wr_2cyc_2LdSt        : SchedWriteRes<[TSV110UnitLd0St,
+                                                TSV110UnitLd0St]> {
   let Latency = 2;
   let NumMicroOps = 2;
 }
@@ -235,7 +237,7 @@ def TSV110Wr_4cyc_1FSU1_1FSU2  : SchedWriteRes<[TSV110UnitFSU1,
   let NumMicroOps = 2;
 }
 
-def TSV110Wr_4cyc_1LdSt_1ALUAB : SchedWriteRes<[TSV110UnitLdSt,
+def TSV110Wr_4cyc_1LdSt_1ALUAB : SchedWriteRes<[TSV110UnitLd,
                                                 TSV110UnitALUAB]> {
   let Latency = 4;
   let NumMicroOps = 2;
@@ -247,20 +249,20 @@ def TSV110Wr_5cyc_1ALU_1F      : SchedWriteRes<[TSV110UnitALU,
   let NumMicroOps = 2;
 }
 
-def TSV110Wr_6cyc_2LdSt        : SchedWriteRes<[TSV110UnitLdSt,
-                                                TSV110UnitLdSt]> {
+def TSV110Wr_6cyc_2LdSt        : SchedWriteRes<[TSV110UnitLd,
+                                                TSV110UnitLd]> {
   let Latency = 6;
   let NumMicroOps = 2;
 }
 
-def TSV110Wr_6cyc_1LdSt_1ALUAB : SchedWriteRes<[TSV110UnitLdSt,
+def TSV110Wr_6cyc_1LdSt_1ALUAB : SchedWriteRes<[TSV110UnitLd,
                                                 TSV110UnitALUAB]> {
   let Latency = 6;
   let NumMicroOps = 2;
 }
 
 def TSV110Wr_7cyc_1F_1LdSt     : SchedWriteRes<[TSV110UnitF,
-                                                TSV110UnitLdSt]> {
+                                                TSV110UnitLd]> {
   let Latency = 7;
   let NumMicroOps = 2;
 }
@@ -287,14 +289,14 @@ def TSV110Wr_6cyc_3F       : SchedWriteRes<[TSV110UnitF, TSV110UnitF,
   let NumMicroOps = 3;
 }
 
-def TSV110Wr_6cyc_3LdSt    : SchedWriteRes<[TSV110UnitLdSt, TSV110UnitLdSt,
-                                            TSV110UnitLdSt]> {
+def TSV110Wr_6cyc_3LdSt    : SchedWriteRes<[TSV110UnitLd, TSV110UnitLd,
+                                            TSV110UnitLd]> {
   let Latency = 6;
   let NumMicroOps = 3;
 }
 
 def TSV110Wr_7cyc_2F_1LdSt : SchedWriteRes<[TSV110UnitF, TSV110UnitF,
-                                                         TSV110UnitLdSt]> {
+                                                         TSV110UnitLd]> {
   let Latency = 7;
   let NumMicroOps = 3;
 }
@@ -309,7 +311,7 @@ def TSV110Wr_8cyc_4F          : SchedWriteRes<[TSV110UnitF, TSV110UnitF,
 }
 
 def TSV110Wr_8cyc_3F_1LdSt    : SchedWriteRes<[TSV110UnitF, TSV110UnitF,
-                                               TSV110UnitF, TSV110UnitLdSt]> {
+                                               TSV110UnitF, TSV110UnitLd]> {
   let Latency = 8;
   let NumMicroOps = 4;
 }
@@ -318,7 +320,7 @@ def TSV110Wr_8cyc_3F_1LdSt    : SchedWriteRes<[TSV110UnitF, TSV110UnitF,
 // Define Generic 5 micro-op types
 
 def TSV110Wr_8cyc_3F_2LdSt : SchedWriteRes<[TSV110UnitF, TSV110UnitF, TSV110UnitF,
-                                            TSV110UnitLdSt, TSV110UnitLdSt]> {
+                                            TSV110UnitLd, TSV110UnitLd]> {
   let Latency = 8;
   let NumMicroOps = 5;
 }
@@ -328,8 +330,8 @@ def TSV110Wr_8cyc_3F_2LdSt : SchedWriteRes<[TSV110UnitF, TSV110UnitF, TSV110Unit
 
 def TSV110Wr_10cyc_4F_4LdSt : SchedWriteRes<[TSV110UnitF, TSV110UnitF,
                                              TSV110UnitF, TSV110UnitF,
-                                             TSV110UnitLdSt, TSV110UnitLdSt,
-                                             TSV110UnitLdSt, TSV110UnitLdSt]> {
+                                             TSV110UnitLd, TSV110UnitLd,
+                                             TSV110UnitLd, TSV110UnitLd]> {
   let Latency = 10;
   let NumMicroOps = 8;
 }
@@ -371,10 +373,32 @@ def : InstRW<[TSV110Wr_1cyc_1AB],    (instregex "(ADD|AND|EOR|ORR|SUB)S[WX]r(r|i
 def : InstRW<[TSV110Wr_1cyc_1ALUAB], (instregex "^(ADC|SBC|BIC)[WX]r$")>;
 def : InstRW<[TSV110Wr_1cyc_1AB],    (instregex "^(ADC|SBC)S[WX]r$")>;
 
-def : InstRW<[TSV110Wr_2cyc_1MDU],   (instregex "^(AND|BIC|EON|EOR|ORN|ORR)[WX]rs$")>;
-def : InstRW<[TSV110Wr_2cyc_1AB],    (instregex "^(AND|BIC|EON|EOR|ORN|ORR)S[WX]rs$")>;
-def : InstRW<[TSV110Wr_2cyc_1MDU],   (instregex "^(ADD|SUB)[WX]r(s|x|x64)$")>;
-def : InstRW<[TSV110Wr_2cyc_1AB],    (instregex "^(ADD|SUB)S[WX]r(s|x|x64)$")>;
+
+// Shifted Register with Shift == 0
+// ----------------------------------------------------------------------------
+
+def TSV110WrISReg : SchedWriteVariant<[
+       SchedVar<RegShiftedPred, [WriteISReg]>,
+       SchedVar<NoSchedPred, [WriteI]>]>;
+def : InstRW<[TSV110WrISReg], (instregex "^(ADD|AND|BIC|EON|EOR|ORN|ORR|SUB)[WX]rs$")>;
+
+def TSV110WrISRegBr : SchedWriteVariant<[
+       SchedVar<RegShiftedPred, [TSV110Wr_2cyc_1AB]>,
+       SchedVar<NoSchedPred, [WriteBr]>]>;
+def : InstRW<[TSV110WrISRegBr], (instregex "^(ADD|AND|BIC|EON|EOR|ORN|ORR|SUB)S[WX]rs$")>;
+
+// Extended Register with Extend == 0
+// ----------------------------------------------------------------------------
+
+def TSV110WrIEReg : SchedWriteVariant<[
+       SchedVar<RegExtendedPred, [WriteISReg]>,
+       SchedVar<NoSchedPred, [WriteI]>]>;
+def : InstRW<[TSV110WrIEReg], (instregex "^(ADD|SUB)[WX]r(x|x64)$")>;
+
+def TSV110WrIERegBr : SchedWriteVariant<[
+       SchedVar<RegExtendedPred, [TSV110Wr_2cyc_1AB]>,
+       SchedVar<NoSchedPred, [WriteBr]>]>;
+def : InstRW<[TSV110WrIERegBr], (instregex "^(ADD|SUB)S[WX]r(x|x64)$")>;
 
 def : InstRW<[TSV110Wr_1cyc_1AB],    (instregex "^(CCMN|CCMP)(W|X)(r|i)$")>;
 def : InstRW<[TSV110Wr_1cyc_1ALUAB], (instregex "^(CSEL|CSINC|CSINV|CSNEG)(W|X)r$")>;
