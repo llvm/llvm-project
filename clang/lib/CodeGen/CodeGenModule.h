@@ -1493,9 +1493,6 @@ public:
   /// Generate a cross-DSO type identifier for MD.
   llvm::ConstantInt *CreateCrossDsoCfiTypeId(llvm::Metadata *MD);
 
-  /// Generate a KCFI type identifier for T.
-  llvm::ConstantInt *CreateKCFITypeId(QualType T);
-
   /// Create a metadata identifier for the given type. This may either be an
   /// MDString (for external identifiers) or a distinct unnamed MDNode (for
   /// internal identifiers).
@@ -1513,12 +1510,6 @@ public:
   /// Create and attach type metadata to the given function.
   void CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
                                           llvm::Function *F);
-
-  /// Set type metadata to the given function.
-  void setKCFIType(const FunctionDecl *FD, llvm::Function *F);
-
-  /// Emit KCFI type identifier constants and remove unused identifiers.
-  void finalizeKCFITypes();
 
   /// Whether this function's return type has no side effects, and thus may
   /// be trivially discarded if it is unused.

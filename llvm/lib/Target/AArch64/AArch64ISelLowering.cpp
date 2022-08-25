@@ -6596,7 +6596,6 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
-  bool IsCFICall = CLI.CB && CLI.CB->isIndirectCall() && CLI.CFIType;
   bool IsSibCall = false;
   bool GuardWithBTI = false;
 
@@ -7063,18 +7062,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     MF.getFrameInfo().setHasTailCall();
     SDValue Ret = DAG.getNode(Opc, DL, NodeTys, Ops);
 
-    if (IsCFICall)
-      Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
-
     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
     return Ret;
   }
 
   // Returns a chain and a flag for retval copy to use.
   Chain = DAG.getNode(Opc, DL, NodeTys, Ops);
-
-  if (IsCFICall)
-    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
 
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   InFlag = Chain.getValue(1);

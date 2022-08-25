@@ -7903,17 +7903,6 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
   if (TLI.supportSwiftError() && SwiftErrorVal)
     isTailCall = false;
 
-  ConstantInt *CFIType = nullptr;
-  if (CB.isIndirectCall()) {
-    if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_kcfi)) {
-      if (!TLI.supportKCFIBundles())
-        report_fatal_error(
-            "Target doesn't support calls with kcfi operand bundles.");
-      CFIType = cast<ConstantInt>(Bundle->Inputs[0]);
-      assert(CFIType->getType()->isIntegerTy(32) && "Invalid CFI type");
-    }
-  }
-
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(getCurSDLoc())
       .setChain(getRoot())
@@ -7921,8 +7910,7 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
       .setTailCall(isTailCall)
       .setConvergent(CB.isConvergent())
       .setIsPreallocated(
-          CB.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
-      .setCFIType(CFIType);
+          CB.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0);
 
   // Set the pointer authentication info if we have it.
   if (PAI) {
@@ -8480,7 +8468,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
   assert(!I.hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
               LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
-              LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi}) &&
+              LLVMContext::OB_clang_arc_attachedcall}) &&
          "Cannot lower calls with arbitrary operand bundles!");
 
   SDValue Callee = getValue(I.getCalledOperand());

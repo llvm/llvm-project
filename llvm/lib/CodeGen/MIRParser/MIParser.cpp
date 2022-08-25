@@ -1016,7 +1016,6 @@ bool MIParser::parse(MachineInstr *&MI) {
   while (!Token.isNewlineOrEOF() && Token.isNot(MIToken::kw_pre_instr_symbol) &&
          Token.isNot(MIToken::kw_post_instr_symbol) &&
          Token.isNot(MIToken::kw_heap_alloc_marker) &&
-         Token.isNot(MIToken::kw_cfi_type) &&
          Token.isNot(MIToken::kw_debug_location) &&
          Token.isNot(MIToken::kw_debug_instr_number) &&
          Token.isNot(MIToken::coloncolon) && Token.isNot(MIToken::lbrace)) {
@@ -1046,20 +1045,6 @@ bool MIParser::parse(MachineInstr *&MI) {
   if (Token.is(MIToken::kw_heap_alloc_marker))
     if (parseHeapAllocMarker(HeapAllocMarker))
       return true;
-
-  unsigned CFIType = 0;
-  if (Token.is(MIToken::kw_cfi_type)) {
-    lex();
-    if (Token.isNot(MIToken::IntegerLiteral))
-      return error("expected an integer literal after 'cfi-type'");
-    // getUnsigned is sufficient for 32-bit integers.
-    if (getUnsigned(CFIType))
-      return true;
-    lex();
-    // Lex past trailing comma if present.
-    if (Token.is(MIToken::comma))
-      lex();
-  }
 
   unsigned InstrNum = 0;
   if (Token.is(MIToken::kw_debug_instr_number)) {
@@ -1140,8 +1125,6 @@ bool MIParser::parse(MachineInstr *&MI) {
     MI->setPostInstrSymbol(MF, PostInstrSymbol);
   if (HeapAllocMarker)
     MI->setHeapAllocMarker(MF, HeapAllocMarker);
-  if (CFIType)
-    MI->setCFIType(MF, CFIType);
   if (!MemOperands.empty())
     MI->setMemRefs(MF, MemOperands);
   if (InstrNum)
