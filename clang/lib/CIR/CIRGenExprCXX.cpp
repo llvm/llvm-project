@@ -254,3 +254,7 @@ void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,
 
   buildCXXConstructorCall(CD, Type, ForVirtualBase, Delegating, Dest, E);
 }
+
+mlir::Value CIRGenFunction::buildCXXNewExpr(const CXXNewExpr *E) {
+  assert(0 && "not implemented");
+}
