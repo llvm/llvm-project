@@ -10,17 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/CIR/IR/CIRTypes.h"
+#include "mlir/Dialect/CIR/IR/CIRAttrs.h"
 #include "mlir/Dialect/CIR/IR/CIRDialect.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
-#define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/CIR/IR/CIROpsTypes.cpp.inc"
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/CIR/IR/CIROpsAttributes.cpp.inc"
 
 using namespace mlir;
 using namespace mlir::cir;
@@ -29,42 +31,31 @@ using namespace mlir::cir;
 // General CIR parsing / printing
 //===----------------------------------------------------------------------===//
 
-Type CIRDialect::parseType(DialectAsmParser &parser) const {
+Attribute CIRDialect::parseAttribute(DialectAsmParser &parser,
+                                     Type type) const {
   llvm::SMLoc typeLoc = parser.getCurrentLocation();
   StringRef mnemonic;
-  Type genType;
+  Attribute genAttr;
   OptionalParseResult parseResult =
-      generatedTypeParser(parser, &mnemonic, genType);
+      generatedAttributeParser(parser, &mnemonic, type, genAttr);
   if (parseResult.has_value())
-    return genType;
-  parser.emitError(typeLoc, "unknown type in CIR dialect");
-  return Type();
+    return genAttr;
+  parser.emitError(typeLoc, "unknown attribute in CIR dialect");
+  return Attribute();
 }
 
-void CIRDialect::printType(Type type, DialectAsmPrinter &os) const {
-  if (failed(generatedTypePrinter(type, os)))
+void CIRDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
+  if (failed(generatedAttributePrinter(attr, os)))
     llvm_unreachable("unexpected CIR type kind");
-}
-
-Type PointerType::parse(mlir::AsmParser &parser) {
-  if (parser.parseLess())
-    return Type();
-  Type pointeeType;
-  if (parser.parseType(pointeeType))
-    return Type();
-  if (parser.parseGreater())
-    return Type();
-  return get(parser.getContext(), pointeeType);
-}
-
-void PointerType::print(mlir::AsmPrinter &printer) const {
-  printer << "<";
-  printer.printType(getPointee());
-  printer << '>';
 }
 
 //===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
 
-void CIRDialect::registerTypes() { addTypes<PointerType>(); }
+void CIRDialect::registerAttributes() {
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/CIR/IR/CIROpsAttributes.cpp.inc"
+      >();
+}
