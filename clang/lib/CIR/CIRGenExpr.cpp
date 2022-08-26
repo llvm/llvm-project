@@ -1136,11 +1136,16 @@ LValue CIRGenFunction::buildCheckedLValue(const Expr *E, TypeCheckKind TCK) {
   else
     LV = buildLValue(E);
   if (!isa<DeclRefExpr>(E) && !LV.isBitField() && LV.isSimple()) {
+    SanitizerSet SkippedChecks;
     if (const auto *ME = dyn_cast<MemberExpr>(E)) {
-      assert(0 && "not implemented");
+      bool IsBaseCXXThis = IsWrappedCXXThis(ME->getBase());
+      if (IsBaseCXXThis)
+        SkippedChecks.set(SanitizerKind::Alignment, true);
+      if (IsBaseCXXThis || isa<DeclRefExpr>(ME->getBase()))
+        SkippedChecks.set(SanitizerKind::Null, true);
     }
-    // TODO(cir): EmitTypeCheck equivalent.
-    assert(0 && "not implemented");
+    buildTypeCheck(TCK, E->getExprLoc(), LV.getPointer(), E->getType(),
+                   LV.getAlignment(), SkippedChecks);
   }
   return LV;
 }
@@ -1225,7 +1230,6 @@ LValue CIRGenFunction::buildCallExprLValue(const CallExpr *E) {
          "Can't have a scalar return unless the return type is a "
          "reference type!");
 
-  assert(0 && "remove me once there's a testcase to cover this");
   return MakeNaturalAlignPointeeAddrLValue(RV.getScalarVal().getDefiningOp(),
                                            E->getType());
 }

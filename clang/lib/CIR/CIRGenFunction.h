@@ -536,6 +536,7 @@ public:
     LValue RefLVal = makeAddrLValue(RefAddr, RefTy, LValueBaseInfo(Source));
     return buildLoadOfReferenceLValue(RefLVal, Loc);
   }
+  void buildImplicitAssignmentOperatorBody(FunctionArgList &Args);
 
   void buildCallArgs(
       CallArgList &Args, PrototypeWrapper Prototype,
@@ -855,8 +856,9 @@ public:
   LValue MakeNaturalAlignPointeeAddrLValue(mlir::Operation *Op,
                                            clang::QualType T);
 
-  /// LoadCXXThis - Load the value for 'this'. This function is only valid while
-  /// generating code for an C++ member function.
+  /// Load the value for 'this'. This function is only valid while generating
+  /// code for an C++ member function.
+  /// FIXME(cir): this should return a mlir::Value!
   mlir::Operation *LoadCXXThis() {
     assert(CXXThisValue && "no 'this' value for this function");
     return CXXThisValue;
@@ -942,11 +944,39 @@ public:
   void buildAnyExprToMem(const Expr *E, Address Location, Qualifiers Quals,
                          bool IsInitializer);
 
+
   /// Check if \p E is a C++ "this" pointer wrapped in value-preserving casts.
   static bool IsWrappedCXXThis(const Expr *E);
 
   LValue buildCheckedLValue(const Expr *E, TypeCheckKind TCK);
   LValue buildMemberExpr(const MemberExpr *E);
+
+  /// returns true if aggregate type has a volatile member.
+  /// TODO(cir): this could be a common AST helper between LLVM / CIR.
+  bool hasVolatileMember(QualType T) {
+    if (const RecordType *RT = T->getAs<RecordType>()) {
+      const RecordDecl *RD = cast<RecordDecl>(RT->getDecl());
+      return RD->hasVolatileMember();
+    }
+    return false;
+  }
+
+  /// Emit an aggregate assignment.
+  void buildAggregateAssign(LValue Dest, LValue Src, QualType EltTy) {
+    bool IsVolatile = hasVolatileMember(EltTy);
+    buildAggregateCopy(Dest, Src, EltTy, AggValueSlot::MayOverlap, IsVolatile);
+  }
+
+  /// Emit an aggregate copy.
+  ///
+  /// \param isVolatile \c true iff either the source or the destination is
+  ///        volatile.
+  /// \param MayOverlap Whether the tail padding of the destination might be
+  ///        occupied by some other object. More efficient code can often be
+  ///        generated if not.
+  void buildAggregateCopy(LValue Dest, LValue Src, QualType EltTy,
+                          AggValueSlot::Overlap_t MayOverlap,
+                          bool isVolatile = false);
 
   /// CIR build helpers
   /// -----------------

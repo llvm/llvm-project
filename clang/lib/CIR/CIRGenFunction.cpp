@@ -466,7 +466,9 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
     } else if (FD->isDefaulted() && isa<CXXMethodDecl>(FD) &&
                (cast<CXXMethodDecl>(FD)->isCopyAssignmentOperator() ||
                 cast<CXXMethodDecl>(FD)->isMoveAssignmentOperator())) {
-      llvm_unreachable("NYI");
+      // Implicit copy-assignment gets the same special treatment as implicit
+      // copy-constructors.
+      buildImplicitAssignmentOperatorBody(Args);
     } else if (Body) {
       if (mlir::failed(buildFunctionBody(Body))) {
         Fn.erase();
