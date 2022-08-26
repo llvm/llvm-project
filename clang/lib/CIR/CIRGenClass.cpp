@@ -15,6 +15,7 @@
 #include "UnimplementedFeatureGuarding.h"
 
 #include "clang/AST/RecordLayout.h"
+#include "clang/Basic/TargetBuiltins.h"
 
 using namespace clang;
 using namespace cir;
@@ -53,7 +54,47 @@ bool CIRGenFunction::IsConstructorDelegationValid(
   return true;
 }
 
+/// TODO(cir): strong candidate for AST helper to be shared between LLVM and CIR
+/// codegen.
+static bool isMemcpyEquivalentSpecialMember(const CXXMethodDecl *D) {
+  auto *CD = dyn_cast<CXXConstructorDecl>(D);
+  if (!(CD && CD->isCopyOrMoveConstructor()) &&
+      !D->isCopyAssignmentOperator() && !D->isMoveAssignmentOperator())
+    return false;
+
+  // We can emit a memcpy for a trivial copy or move constructor/assignment.
+  if (D->isTrivial() && !D->getParent()->mayInsertExtraPadding())
+    return true;
+
+  // We *must* emit a memcpy for a defaulted union copy or move op.
+  if (D->getParent()->isUnion() && D->isDefaulted())
+    return true;
+
+  return false;
+}
+
 namespace {
+/// TODO(cir): a lot of what we see under this namespace is a strong candidate
+/// to be shared between LLVM and CIR codegen.
+
+/// RAII object to indicate that codegen is copying the value representation
+/// instead of the object representation. Useful when copying a struct or
+/// class which has uninitialized members and we're only performing
+/// lvalue-to-rvalue conversion on the object but not its members.
+class CopyingValueRepresentation {
+public:
+  explicit CopyingValueRepresentation(CIRGenFunction &CGF)
+      : CGF(CGF), OldSanOpts(CGF.SanOpts) {
+    CGF.SanOpts.set(SanitizerKind::Bool, false);
+    CGF.SanOpts.set(SanitizerKind::Enum, false);
+  }
+  ~CopyingValueRepresentation() { CGF.SanOpts = OldSanOpts; }
+
+private:
+  CIRGenFunction &CGF;
+  SanitizerSet OldSanOpts;
+};
+
 class FieldMemcpyizer {
 public:
   FieldMemcpyizer(CIRGenFunction &CGF, const CXXRecordDecl *ClassDecl,
@@ -289,6 +330,118 @@ private:
   SmallVector<CXXCtorInitializer *, 16> AggregatedInits;
 };
 
+class AssignmentMemcpyizer : public FieldMemcpyizer {
+private:
+  // Returns the memcpyable field copied by the given statement, if one
+  // exists. Otherwise returns null.
+  FieldDecl *getMemcpyableField(Stmt *S) {
+    if (!AssignmentsMemcpyable)
+      return nullptr;
+    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(S)) {
+      // Recognise trivial assignments.
+      if (BO->getOpcode() != BO_Assign)
+        return nullptr;
+      MemberExpr *ME = dyn_cast<MemberExpr>(BO->getLHS());
+      if (!ME)
+        return nullptr;
+      FieldDecl *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
+      if (!Field || !isMemcpyableField(Field))
+        return nullptr;
+      Stmt *RHS = BO->getRHS();
+      if (ImplicitCastExpr *EC = dyn_cast<ImplicitCastExpr>(RHS))
+        RHS = EC->getSubExpr();
+      if (!RHS)
+        return nullptr;
+      if (MemberExpr *ME2 = dyn_cast<MemberExpr>(RHS)) {
+        if (ME2->getMemberDecl() == Field)
+          return Field;
+      }
+      return nullptr;
+    } else if (CXXMemberCallExpr *MCE = dyn_cast<CXXMemberCallExpr>(S)) {
+      CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(MCE->getCalleeDecl());
+      if (!(MD && isMemcpyEquivalentSpecialMember(MD)))
+        return nullptr;
+      MemberExpr *IOA = dyn_cast<MemberExpr>(MCE->getImplicitObjectArgument());
+      if (!IOA)
+        return nullptr;
+      FieldDecl *Field = dyn_cast<FieldDecl>(IOA->getMemberDecl());
+      if (!Field || !isMemcpyableField(Field))
+        return nullptr;
+      MemberExpr *Arg0 = dyn_cast<MemberExpr>(MCE->getArg(0));
+      if (!Arg0 || Field != dyn_cast<FieldDecl>(Arg0->getMemberDecl()))
+        return nullptr;
+      return Field;
+    } else if (CallExpr *CE = dyn_cast<CallExpr>(S)) {
+      FunctionDecl *FD = dyn_cast<FunctionDecl>(CE->getCalleeDecl());
+      if (!FD || FD->getBuiltinID() != Builtin::BI__builtin_memcpy)
+        return nullptr;
+      Expr *DstPtr = CE->getArg(0);
+      if (ImplicitCastExpr *DC = dyn_cast<ImplicitCastExpr>(DstPtr))
+        DstPtr = DC->getSubExpr();
+      UnaryOperator *DUO = dyn_cast<UnaryOperator>(DstPtr);
+      if (!DUO || DUO->getOpcode() != UO_AddrOf)
+        return nullptr;
+      MemberExpr *ME = dyn_cast<MemberExpr>(DUO->getSubExpr());
+      if (!ME)
+        return nullptr;
+      FieldDecl *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
+      if (!Field || !isMemcpyableField(Field))
+        return nullptr;
+      Expr *SrcPtr = CE->getArg(1);
+      if (ImplicitCastExpr *SC = dyn_cast<ImplicitCastExpr>(SrcPtr))
+        SrcPtr = SC->getSubExpr();
+      UnaryOperator *SUO = dyn_cast<UnaryOperator>(SrcPtr);
+      if (!SUO || SUO->getOpcode() != UO_AddrOf)
+        return nullptr;
+      MemberExpr *ME2 = dyn_cast<MemberExpr>(SUO->getSubExpr());
+      if (!ME2 || Field != dyn_cast<FieldDecl>(ME2->getMemberDecl()))
+        return nullptr;
+      return Field;
+    }
+
+    return nullptr;
+  }
+
+  bool AssignmentsMemcpyable;
+  SmallVector<Stmt *, 16> AggregatedStmts;
+
+public:
+  AssignmentMemcpyizer(CIRGenFunction &CGF, const CXXMethodDecl *AD,
+                       FunctionArgList &Args)
+      : FieldMemcpyizer(CGF, AD->getParent(), Args[Args.size() - 1]),
+        AssignmentsMemcpyable(CGF.getLangOpts().getGC() == LangOptions::NonGC) {
+    assert(Args.size() == 2);
+  }
+
+  void emitAssignment(Stmt *S) {
+    FieldDecl *F = getMemcpyableField(S);
+    if (F) {
+      addMemcpyableField(F);
+      AggregatedStmts.push_back(S);
+    } else {
+      emitAggregatedStmts();
+      if (CGF.buildStmt(S, /*useCurrentScope=*/true).failed())
+        llvm_unreachable("Should not get here!");
+    }
+  }
+
+  void emitAggregatedStmts() {
+    if (AggregatedStmts.size() <= 1) {
+      if (!AggregatedStmts.empty()) {
+        CopyingValueRepresentation CVR(CGF);
+        if (CGF.buildStmt(AggregatedStmts[0], /*useCurrentScope=*/true)
+                .failed())
+          llvm_unreachable("Should not get here!");
+      }
+      reset();
+    }
+
+    buildMemcpy();
+    AggregatedStmts.clear();
+  }
+
+  void finish() { emitAggregatedStmts(); }
+};
 } // namespace
 
 /// buildCtorPrologue - This routine generates necessary code to initialize base
@@ -427,8 +580,10 @@ Address CIRGenFunction::LoadCXXThisAddress() {
     CXXThisAlignment = CGM.getClassPointerAlignment(RD);
   }
 
-  // Consider how to do this if we ever have multiple returns
-  auto Result = LoadCXXThis()->getOpResult(0);
+  // TODO(cir): consider how to do this if we ever have multiple returns
+  auto *t = LoadCXXThis();
+  assert(t->getNumResults() == 1);
+  auto Result = t->getOpResult(0);
   return Address(Result, CXXThisAlignment);
 }
 
@@ -490,4 +645,22 @@ void CIRGenFunction::buildDelegateCXXConstructorCall(
                           /*Delegating=*/true, This, DelegateArgs,
                           AggValueSlot::MayOverlap, Loc,
                           /*NewPointerIsChecked=*/true);
+}
+
+void CIRGenFunction::buildImplicitAssignmentOperatorBody(
+    FunctionArgList &Args) {
+  const CXXMethodDecl *AssignOp = cast<CXXMethodDecl>(CurGD.getDecl());
+  const Stmt *RootS = AssignOp->getBody();
+  assert(isa<CompoundStmt>(RootS) &&
+         "Body of an implicit assignment operator should be compound stmt.");
+  const CompoundStmt *RootCS = cast<CompoundStmt>(RootS);
+
+  // LexicalScope Scope(*this, RootCS->getSourceRange());
+  // FIXME: add all of the below under a new scope.
+
+  assert(!UnimplementedFeature::incrementProfileCounter());
+  AssignmentMemcpyizer AM(*this, AssignOp, Args);
+  for (auto *I : RootCS->body())
+    AM.emitAssignment(I);
+  AM.finish();
 }

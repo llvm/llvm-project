@@ -268,7 +268,13 @@ public:
     CIRGenFunction::CXXDefaultInitExprScope Scope(CGF, DIE);
     return Visit(DIE->getExpr());
   }
-  mlir::Value VisitCXXThisExpr(CXXThisExpr *E) { llvm_unreachable("NYI"); }
+
+  mlir::Value VisitCXXThisExpr(CXXThisExpr *TE) {
+    auto *t = CGF.LoadCXXThis();
+    assert(t->getNumResults() == 1);
+    return t->getOpResult(0);
+  }
+
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *E) {
     llvm_unreachable("NYI");
   }

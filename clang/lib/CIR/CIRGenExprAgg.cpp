@@ -313,3 +313,100 @@ void CIRGenFunction::buildAggExpr(const Expr *E, AggValueSlot Slot) {
 
   AggExprEmitter(*this, Slot, Slot.isIgnored()).Visit(const_cast<Expr *>(E));
 }
+
+void CIRGenFunction::buildAggregateCopy(LValue Dest, LValue Src, QualType Ty,
+                                        AggValueSlot::Overlap_t MayOverlap,
+                                        bool isVolatile) {
+  // TODO(cir): this function needs improvements, commented code for now since
+  // this will be touched again soon.
+  assert(!Ty->isAnyComplexType() && "Shouldn't happen for complex");
+
+  // Address DestPtr = Dest.getAddress();
+  // Address SrcPtr = Src.getAddress();
+
+  if (getLangOpts().CPlusPlus) {
+    if (const RecordType *RT = Ty->getAs<RecordType>()) {
+      CXXRecordDecl *Record = cast<CXXRecordDecl>(RT->getDecl());
+      assert((Record->hasTrivialCopyConstructor() ||
+              Record->hasTrivialCopyAssignment() ||
+              Record->hasTrivialMoveConstructor() ||
+              Record->hasTrivialMoveAssignment() ||
+              Record->hasAttr<TrivialABIAttr>() || Record->isUnion()) &&
+             "Trying to aggregate-copy a type without a trivial copy/move "
+             "constructor or assignment operator");
+      // Ignore empty classes in C++.
+      if (Record->isEmpty())
+        return;
+    }
+  }
+
+  if (getLangOpts().CUDAIsDevice) {
+    assert(0 && "NYI");
+  }
+
+  // Aggregate assignment turns into llvm.memcpy.  This is almost valid per
+  // C99 6.5.16.1p3, which states "If the value being stored in an object is
+  // read from another object that overlaps in anyway the storage of the first
+  // object, then the overlap shall be exact and the two objects shall have
+  // qualified or unqualified versions of a compatible type."
+  //
+  // memcpy is not defined if the source and destination pointers are exactly
+  // equal, but other compilers do this optimization, and almost every memcpy
+  // implementation handles this case safely.  If there is a libc that does not
+  // safely handle this, we can add a target hook.
+
+  // Get data size info for this aggregate. Don't copy the tail padding if this
+  // might be a potentially-overlapping subobject, since the tail padding might
+  // be occupied by a different object. Otherwise, copying it is fine.
+  TypeInfoChars TypeInfo;
+  if (MayOverlap)
+    TypeInfo = getContext().getTypeInfoDataSizeInChars(Ty);
+  else
+    TypeInfo = getContext().getTypeInfoInChars(Ty);
+
+  llvm::Value *SizeVal = nullptr;
+  if (TypeInfo.Width.isZero()) {
+    assert(0 && "NYI");
+  }
+  if (!SizeVal) {
+    assert(0 && "NYI");
+    // SizeVal = llvm::ConstantInt::get(SizeTy, TypeInfo.Width.getQuantity());
+  }
+
+  // FIXME: If we have a volatile struct, the optimizer can remove what might
+  // appear to be `extra' memory ops:
+  //
+  // volatile struct { int i; } a, b;
+  //
+  // int main() {
+  //   a = b;
+  //   a = b;
+  // }
+  //
+  // we need to use a different call here.  We use isVolatile to indicate when
+  // either the source or the destination is volatile.
+
+  assert(0 && "NYI");
+  // DestPtr = Builder.CreateElementBitCast(DestPtr, Int8Ty);
+  // SrcPtr = Builder.CreateElementBitCast(SrcPtr, Int8Ty);
+
+  // Don't do any of the memmove_collectable tests if GC isn't set.
+  if (CGM.getLangOpts().getGC() == LangOptions::NonGC) {
+    // fall through
+  } else if (const RecordType *RecordTy = Ty->getAs<RecordType>()) {
+    assert(0 && "NYI");
+  } else if (Ty->isArrayType()) {
+    assert(0 && "NYI");
+  }
+
+  assert(0 && "NYI");
+  // auto Inst = Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, isVolatile);
+
+  // Determine the metadata to describe the position of any padding in this
+  // memcpy, as well as the TBAA tags for the members of the struct, in case
+  // the optimizer wishes to expand it in to scalar memory operations.
+  assert(!UnimplementedFeature::tbaa());
+  if (CGM.getCodeGenOpts().NewStructPathTBAA) {
+    assert(0 && "NYI");
+  }
+}

@@ -141,7 +141,27 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
   }
 
   if (TrivialForCodegen) {
-    llvm_unreachable("NYI");
+    if (isa<CXXDestructorDecl>(MD))
+      return RValue::get(nullptr);
+
+    if (TrivialAssignment) {
+      // We don't like to generate the trivial copy/move assignment operator
+      // when it isn't necessary; just produce the proper effect here.
+      // It's important that we use the result of EmitLValue here rather than
+      // emitting call arguments, in order to preserve TBAA information from
+      // the RHS.
+      //
+      // TODO(cir): once there are testcases evaluate if CIR needs to abstract
+      // this away or optimizing is fine.
+      // LValue RHS = isa<CXXOperatorCallExpr>(CE) ? TrivialAssignmentRHS
+      //                                           :
+      //                                           buildLValue(*CE->arg_begin());
+      // buildAggregateAssign(This, RHS, CE->getType());
+      // return RValue::get(This.getPointer());
+    } else {
+      assert(MD->getParent()->mayInsertExtraPadding() &&
+             "unknown trivial member function");
+    }
   }
 
   // Compute the function type we're calling
