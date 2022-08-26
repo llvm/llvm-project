@@ -106,6 +106,13 @@ Improvements to Clang's diagnostics
   compile-time value and printed out if the assertion fails.
 - Diagnostics about uninitialized ``constexpr`` varaibles have been improved
   to mention the missing constant initializer.
+- Correctly diagnose a future keyword if it exist as a keyword in the higher
+  language version and specifies in which version it will be a keyword. This
+  supports both c and c++ language.
+
+ Non-comprehensive list of changes in this release
+ -------------------------------------------------
+
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
