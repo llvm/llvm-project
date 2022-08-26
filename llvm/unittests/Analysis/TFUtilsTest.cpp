@@ -89,15 +89,6 @@ TEST(TFUtilsTest, EvalError) {
       TensorSpec::createSpec<float>("StatefulPartitionedCall", {1})};
 
   TFModelEvaluator Evaluator(getModelPath(), InputSpecs, OutputSpecs);
-  EXPECT_TRUE(Evaluator.isValid());
-
-  int32_t *V = Evaluator.getInput<int32_t>(0);
-  // Fill it up with 1's, we know the output.
-  for (auto I = 0; I < KnownSize; ++I) {
-    V[I] = 1;
-  }
-  auto ER = Evaluator.evaluate();
-  EXPECT_FALSE(ER.hasValue());
   EXPECT_FALSE(Evaluator.isValid());
 }
 

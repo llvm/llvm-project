@@ -182,6 +182,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::macho_dsym_companion;
     case 11:
       return file_magic::macho_kext_bundle;
+    case 12:
+      return file_magic::macho_file_set;
     }
     break;
   }

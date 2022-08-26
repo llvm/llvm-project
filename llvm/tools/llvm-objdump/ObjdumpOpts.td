@@ -153,6 +153,10 @@ def : Flag<["--"], "headers">, Alias<section_headers>,
 def : Flag<["-"], "h">, Alias<section_headers>,
   HelpText<"Alias for --section-headers">;
 
+def show_all_symbols : Flag<["--"], "show-all-symbols">,
+  HelpText<"Show all symbols during disassembly, even if multiple "
+           "symbols are defined at the same location">;
+
 def show_lma : Flag<["--"], "show-lma">,
   HelpText<"Display LMA column when dumping ELF section headers">;
 

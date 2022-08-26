@@ -3134,6 +3134,11 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement())
     return false;
 
+  // Allow SelectionDAG isel to handle indirect calls with KCFI checks.
+  if (CLI.CB && CLI.CB->isIndirectCall() &&
+      CLI.CB->getOperandBundle(LLVMContext::OB_kcfi))
+    return false;
+
   // Allow SelectionDAG isel to handle tail calls.
   if (IsTailCall)
     return false;

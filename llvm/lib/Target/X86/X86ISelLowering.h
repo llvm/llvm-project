@@ -1035,9 +1035,9 @@ namespace llvm {
     bool canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
                           const MachineFunction &MF) const override;
 
-    bool isCheapToSpeculateCttz() const override;
+    bool isCheapToSpeculateCttz(Type *Ty) const override;
 
-    bool isCheapToSpeculateCtlz() const override;
+    bool isCheapToSpeculateCtlz(Type *Ty) const override;
 
     bool isCtlzFast() const override;
 
@@ -1452,6 +1452,8 @@ namespace llvm {
     bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
     bool supportSwiftError() const override;
+
+    bool supportKCFIBundles() const override { return true; }
 
     bool hasStackProbeSymbol(MachineFunction &MF) const override;
     bool hasInlineStackProbe(MachineFunction &MF) const override;

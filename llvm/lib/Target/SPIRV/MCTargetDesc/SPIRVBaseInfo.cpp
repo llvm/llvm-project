@@ -41,6 +41,7 @@ struct CapabilityEntry {
 using namespace OperandCategory;
 using namespace Extension;
 using namespace Capability;
+using namespace InstructionSet;
 #define GET_SymbolicOperands_DECL
 #define GET_SymbolicOperands_IMPL
 #define GET_ExtensionEntries_DECL
@@ -50,19 +51,6 @@ using namespace Capability;
 #define GET_ExtendedBuiltins_DECL
 #define GET_ExtendedBuiltins_IMPL
 #include "SPIRVGenTables.inc"
-
-#define CASE(CLASS, ATTR)                                                      \
-  case CLASS::ATTR:                                                            \
-    return #ATTR;
-std::string getExtInstSetName(InstructionSet e) {
-  switch (e) {
-    CASE(InstructionSet, OpenCL_std)
-    CASE(InstructionSet, GLSL_std_450)
-    CASE(InstructionSet, SPV_AMD_shader_trinary_minmax)
-    break;
-  }
-  llvm_unreachable("Unexpected operand");
-}
 } // namespace SPIRV
 
 std::string
@@ -184,5 +172,39 @@ bool getSpirvBuiltInIdByName(llvm::StringRef Name,
 
   BI = static_cast<SPIRV::BuiltIn::BuiltIn>(Lookup->Value);
   return true;
+}
+
+std::string getExtInstSetName(SPIRV::InstructionSet::InstructionSet Set) {
+  switch (Set) {
+  case SPIRV::InstructionSet::OpenCL_std:
+    return "OpenCL.std";
+  case SPIRV::InstructionSet::GLSL_std_450:
+    return "GLSL.std.450";
+  case SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax:
+    return "SPV_AMD_shader_trinary_minmax";
+  }
+  return "UNKNOWN_EXT_INST_SET";
+}
+
+SPIRV::InstructionSet::InstructionSet
+getExtInstSetFromString(std::string SetName) {
+  for (auto Set : {SPIRV::InstructionSet::GLSL_std_450,
+                   SPIRV::InstructionSet::OpenCL_std}) {
+    if (SetName == getExtInstSetName(Set))
+      return Set;
+  }
+  llvm_unreachable("UNKNOWN_EXT_INST_SET");
+}
+
+std::string getExtInstName(SPIRV::InstructionSet::InstructionSet Set,
+                           uint32_t InstructionNumber) {
+  const SPIRV::ExtendedBuiltin *Lookup =
+      SPIRV::lookupExtendedBuiltinBySetAndNumber(
+          SPIRV::InstructionSet::OpenCL_std, InstructionNumber);
+
+  if (!Lookup)
+    return "UNKNOWN_EXT_INST";
+
+  return Lookup->Name.str();
 }
 } // namespace llvm

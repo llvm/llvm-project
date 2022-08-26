@@ -37,8 +37,7 @@ enum FormatFlags : uint8_t {
 struct FormatSection {
   bool has_conv;
 
-  const char *__restrict raw_string;
-  size_t raw_len;
+  cpp::string_view raw_string;
 
   // Format Specifier Values
   FormatFlags flags = FormatFlags(0);
@@ -58,8 +57,7 @@ struct FormatSection {
     if (has_conv != other.has_conv)
       return false;
 
-    if (cpp::string_view(raw_string, raw_len) !=
-        cpp::string_view(other.raw_string, other.raw_len))
+    if (raw_string != other.raw_string)
       return false;
 
     if (has_conv) {

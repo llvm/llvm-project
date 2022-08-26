@@ -465,8 +465,8 @@ void SPIRV::RequirementHandler::addRequirements(
   if (!Req.IsSatisfiable)
     report_fatal_error("Adding SPIR-V requirements this target can't satisfy.");
 
-  if (Req.Cap.hasValue())
-    addCapabilities({Req.Cap.getValue()});
+  if (Req.Cap.has_value())
+    addCapabilities({Req.Cap.value()});
 
   addExtensions(Req.Exts);
 

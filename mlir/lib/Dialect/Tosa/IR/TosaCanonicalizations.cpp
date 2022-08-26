@@ -26,6 +26,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+#include <functional>
+
 using namespace mlir;
 using namespace mlir::tosa;
 
@@ -437,6 +439,68 @@ void ClampOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // Operator Folders.
 //===----------------------------------------------------------------------===//
 
+template <typename IntFolder, typename FloatFolder>
+DenseElementsAttr BinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
+                               RankedTensorType ty) {
+  if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
+    if (ty.getElementType().isa<IntegerType>()) {
+      APInt l = lhs.getSplatValue<APInt>();
+      APInt r = rhs.getSplatValue<APInt>();
+      APInt result = IntFolder()(l, r);
+      return DenseElementsAttr::get(ty, result);
+    }
+
+    if (ty.getElementType().isa<FloatType>()) {
+      APFloat l = lhs.getSplatValue<APFloat>();
+      APFloat r = rhs.getSplatValue<APFloat>();
+      APFloat result = FloatFolder()(l, r);
+      return DenseElementsAttr::get(ty, result);
+    }
+  }
+
+  return {};
+}
+
+OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
+  auto lhsTy = getInput1().getType().dyn_cast<RankedTensorType>();
+  auto rhsTy = getInput2().getType().dyn_cast<RankedTensorType>();
+  auto resultTy = getType().dyn_cast<RankedTensorType>();
+  if (!lhsTy || !rhsTy || !resultTy)
+    return {};
+  if (lhsTy != rhsTy)
+    return {};
+
+  auto resultETy = resultTy.getElementType();
+  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+
+  if (lhsAttr && lhsAttr.isSplat() && resultETy.isa<FloatType>()) {
+    if (lhsAttr.getSplatValue<APFloat>().isZero())
+      return getInput2();
+  }
+
+  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<FloatType>()) {
+    if (rhsAttr.getSplatValue<APFloat>().isZero())
+      return getInput1();
+  }
+
+  if (lhsAttr && lhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
+    if (lhsAttr.getSplatValue<APInt>().isZero())
+      return getInput2();
+  }
+
+  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
+    if (rhsAttr.getSplatValue<APInt>().isZero())
+      return getInput1();
+  }
+
+  if (!lhsAttr || !rhsAttr)
+    return {};
+
+  return BinaryFolder<std::plus<APInt>, std::plus<APFloat>>(lhsAttr, rhsAttr,
+                                                            lhsTy);
+}
+
 OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
   if (getInput().getType() == getType())
     return getInput();
@@ -491,10 +555,29 @@ OpFoldResult SliceOp::fold(ArrayRef<Attribute> operands) {
   auto inputTy = getInput().getType().dyn_cast<RankedTensorType>();
   auto outputTy = getType().dyn_cast<RankedTensorType>();
 
-  if (!inputTy || !outputTy || inputTy != outputTy)
+  if (!inputTy || !outputTy)
     return {};
-  if (inputTy.hasStaticShape())
+
+  if (inputTy == outputTy && inputTy.hasStaticShape())
     return getInput();
+
+  if (!operands[0])
+    return {};
+
+  auto operand = operands[0].cast<ElementsAttr>();
+  if (operand.isSplat() && outputTy.hasStaticShape()) {
+    return SplatElementsAttr::get(outputTy, operand.getSplatValue<Attribute>());
+  }
+
+  if (inputTy.hasStaticShape() && outputTy.hasStaticShape() &&
+      outputTy.getNumElements() == 1) {
+    llvm::SmallVector<uint64_t> indices;
+    for (auto val : getStart()) {
+      indices.push_back(val.cast<IntegerAttr>().getInt());
+    }
+    auto value = operand.getValues<Attribute>()[indices];
+    return SplatElementsAttr::get(outputTy, value);
+  }
 
   return {};
 }

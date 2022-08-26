@@ -60,8 +60,12 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
     CSRChanged = false;
     size_t LastSize = LastCalleeSavedRegs.size();
     for (unsigned I = 0;; ++I) {
-      if (CSR[I] == 0 || I >= LastSize) {
+      if (CSR[I] == 0) {
         CSRChanged = I != LastSize;
+        break;
+      }
+      if (I >= LastSize) {
+        CSRChanged = true;
         break;
       }
       if (CSR[I] != LastCalleeSavedRegs[I]) {

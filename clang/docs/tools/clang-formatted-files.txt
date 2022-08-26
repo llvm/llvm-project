@@ -4180,6 +4180,8 @@ lldb/source/Plugins/Language/ClangCommon/ClangHighlighter.cpp
 lldb/source/Plugins/Language/ClangCommon/ClangHighlighter.h
 lldb/source/Plugins/Language/CPlusPlus/BlockPointer.cpp
 lldb/source/Plugins/Language/CPlusPlus/BlockPointer.h
+lldb/source/Plugins/Language/CPlusPlus/Coroutines.cpp
+lldb/source/Plugins/Language/CPlusPlus/Coroutines.h
 lldb/source/Plugins/Language/CPlusPlus/CPlusPlusLanguage.h
 lldb/source/Plugins/Language/CPlusPlus/CPlusPlusNameParser.h
 lldb/source/Plugins/Language/CPlusPlus/CxxStringTypes.h

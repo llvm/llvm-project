@@ -27,8 +27,9 @@ namespace printf_core {
 constexpr char inline to_lower(char a) { return a | 32; }
 constexpr bool inline is_lower(char a) { return (a & 32) > 0; }
 
-cpp::optional<cpp::string_view> inline num_to_strview(
-    uintmax_t num, cpp::span<char> bufref, char conv_name) {
+cpp::optional<cpp::string_view> inline num_to_strview(uintmax_t num,
+                                                      cpp::span<char> bufref,
+                                                      char conv_name) {
   if (to_lower(conv_name) == 'x') {
     return IntegerToString::hex(num, bufref, is_lower(conv_name));
   } else if (conv_name == 'o') {
@@ -88,7 +89,7 @@ int inline convert_int(Writer *writer, const FormatSection &to_conv) {
 
   // prefix is "0x" for hexadecimal, or the sign character for signed
   // conversions. Since hexadecimal is unsigned these will never conflict.
-  int prefix_len;
+  size_t prefix_len;
   char prefix[2];
   if ((to_lower(to_conv.conv_name) == 'x') &&
       ((flags & FormatFlags::ALTERNATE_FORM) != 0)) {
@@ -141,23 +142,23 @@ int inline convert_int(Writer *writer, const FormatSection &to_conv) {
   if ((flags & FormatFlags::LEFT_JUSTIFIED) == FormatFlags::LEFT_JUSTIFIED) {
     // If left justified it goes prefix zeroes digits spaces
     if (prefix_len != 0)
-      RET_IF_RESULT_NEGATIVE(writer->write(prefix, prefix_len));
+      RET_IF_RESULT_NEGATIVE(writer->write({prefix, prefix_len}));
     if (zeroes > 0)
-      RET_IF_RESULT_NEGATIVE(writer->write_chars('0', zeroes));
+      RET_IF_RESULT_NEGATIVE(writer->write('0', zeroes));
     if (digits_written > 0)
-      RET_IF_RESULT_NEGATIVE(writer->write(str->data(), digits_written));
+      RET_IF_RESULT_NEGATIVE(writer->write(*str));
     if (spaces > 0)
-      RET_IF_RESULT_NEGATIVE(writer->write_chars(' ', spaces));
+      RET_IF_RESULT_NEGATIVE(writer->write(' ', spaces));
   } else {
     // Else it goes spaces prefix zeroes digits
     if (spaces > 0)
-      RET_IF_RESULT_NEGATIVE(writer->write_chars(' ', spaces));
+      RET_IF_RESULT_NEGATIVE(writer->write(' ', spaces));
     if (prefix_len != 0)
-      RET_IF_RESULT_NEGATIVE(writer->write(prefix, prefix_len));
+      RET_IF_RESULT_NEGATIVE(writer->write({prefix, prefix_len}));
     if (zeroes > 0)
-      RET_IF_RESULT_NEGATIVE(writer->write_chars('0', zeroes));
+      RET_IF_RESULT_NEGATIVE(writer->write('0', zeroes));
     if (digits_written > 0)
-      RET_IF_RESULT_NEGATIVE(writer->write(str->data(), digits_written));
+      RET_IF_RESULT_NEGATIVE(writer->write(*str));
   }
   return WRITE_OK;
 }

@@ -39,6 +39,7 @@ private:
   uint32_t OpenCLVersion;
 
   SmallSet<SPIRV::Extension::Extension, 4> AvailableExtensions;
+  SmallSet<SPIRV::InstructionSet::InstructionSet, 4> AvailableExtInstSets;
   std::unique_ptr<SPIRVGlobalRegistry> GR;
 
   SPIRVInstrInfo InstrInfo;
@@ -51,9 +52,10 @@ private:
   std::unique_ptr<LegalizerInfo> Legalizer;
   std::unique_ptr<InstructionSelector> InstSelector;
 
-  // TODO: Initialise the available extensions based on
-  // the environment settings.
+  // TODO: Initialise the available extensions, extended instruction sets
+  // based on the environment settings.
   void initAvailableExtensions();
+  void initAvailableExtInstSets();
 
 public:
   // This constructor initializes the data members to match that
@@ -78,6 +80,7 @@ public:
   bool hasOpenCLFullProfile() const { return true; }
   bool hasOpenCLImageSupport() const { return true; }
   bool canUseExtension(SPIRV::Extension::Extension E) const;
+  bool canUseExtInstSet(SPIRV::InstructionSet::InstructionSet E) const;
 
   SPIRVGlobalRegistry *getSPIRVGlobalRegistry() const { return GR.get(); }
 

@@ -313,17 +313,22 @@ template <typename T> class ArrayRef;
     // This can be used on intructions that use typeN or ptypeN to identify
     // operands that should be considered as pointers even though SelectionDAG
     // didn't make a distinction between integer and pointers.
-    bool isOperandAPointer(unsigned i) const {
-      return isOperandImpl(i, "IsPointer");
+    bool isInOperandAPointer(unsigned i) const {
+      return isOperandImpl("InOperandList", i, "IsPointer");
+    }
+
+    bool isOutOperandAPointer(unsigned i) const {
+      return isOperandImpl("OutOperandList", i, "IsPointer");
     }
 
     /// Check if the operand is required to be an immediate.
-    bool isOperandImmArg(unsigned i) const {
-      return isOperandImpl(i, "IsImmediate");
+    bool isInOperandImmArg(unsigned i) const {
+      return isOperandImpl("InOperandList", i, "IsImmediate");
     }
 
   private:
-    bool isOperandImpl(unsigned i, StringRef PropertyName) const;
+    bool isOperandImpl(StringRef OpListName, unsigned i,
+                       StringRef PropertyName) const;
   };
 
 

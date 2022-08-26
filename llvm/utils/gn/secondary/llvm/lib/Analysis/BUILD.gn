@@ -119,6 +119,7 @@ static_library("Analysis") {
     "StackSafetyAnalysis.cpp",
     "SyncDependenceAnalysis.cpp",
     "SyntheticCountsUtils.cpp",
+    "TFLiteUtils.cpp",
     "TFUtils.cpp",
     "TargetLibraryInfo.cpp",
     "TargetTransformInfo.cpp",

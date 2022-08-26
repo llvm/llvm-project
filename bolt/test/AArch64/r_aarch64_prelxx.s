@@ -17,7 +17,7 @@
 
 // CHECKPREL32: [[#%x,DATATABLEADDR:]] <datatable>:
 // CHECKPREL32-NEXT: 00:
-// CHECKPREL32-NEXT: 04: [[#%x,VALUE:]]
+// CHECKPREL32-NEXT: 04: {{.*}} .word 0x[[#%x,VALUE:]]
 
 // 4 is offset in datatable
 // 8 is addend
@@ -27,8 +27,8 @@
 // CHECKPREL64: [[#%x,DATATABLEADDR:]] <datatable>:
 // CHECKPREL64-NEXT: 00:
 // CHECKPREL64-NEXT: 04:
-// CHECKPREL64-NEXT: 08: [[#%x,VALUE:]]
-// CHECKPREL64-NEXT: 0c: 00000000
+// CHECKPREL64-NEXT: 08: {{.*}} .word 0x[[#%x,VALUE:]]
+// CHECKPREL64-NEXT: 0c: {{.*}} .word 0x00000000
 
 // 8 is offset in datatable
 // 12 is addend

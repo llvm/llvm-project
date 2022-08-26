@@ -326,6 +326,7 @@ write_cmake_config("llvm-config") {
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
     "LLVM_HAVE_TF_API=",
+    "LLVM_HAVE_TFLITE=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_NATIVE_ARCH=$native_target",
     "LLVM_UNREACHABLE_OPTIMIZE=1",

@@ -25,27 +25,27 @@ func.func @test_addi_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : vector<[8]
   return %0 : vector<[8]xi64>
 }
 
-// CHECK-LABEL: test_addi_carry
-func.func @test_addi_carry(%arg0 : i64, %arg1 : i64) -> i64 {
-  %sum, %carry = arith.addi_carry %arg0, %arg1 : i64, i1
+// CHECK-LABEL: test_addui_carry
+func.func @test_addui_carry(%arg0 : i64, %arg1 : i64) -> i64 {
+  %sum, %carry = arith.addui_carry %arg0, %arg1 : i64, i1
   return %sum : i64
 }
 
-// CHECK-LABEL: test_addi_carry_tensor
-func.func @test_addi_carry_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) -> tensor<8x8xi64> {
-  %sum, %carry = arith.addi_carry %arg0, %arg1 : tensor<8x8xi64>, tensor<8x8xi1>
+// CHECK-LABEL: test_addui_carry_tensor
+func.func @test_addui_carry_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) -> tensor<8x8xi64> {
+  %sum, %carry = arith.addui_carry %arg0, %arg1 : tensor<8x8xi64>, tensor<8x8xi1>
   return %sum : tensor<8x8xi64>
 }
 
-// CHECK-LABEL: test_addi_carry_vector
-func.func @test_addi_carry_vector(%arg0 : vector<8xi64>, %arg1 : vector<8xi64>) -> vector<8xi64> {
-  %0:2 = arith.addi_carry %arg0, %arg1 : vector<8xi64>, vector<8xi1>
+// CHECK-LABEL: test_addui_carry_vector
+func.func @test_addui_carry_vector(%arg0 : vector<8xi64>, %arg1 : vector<8xi64>) -> vector<8xi64> {
+  %0:2 = arith.addui_carry %arg0, %arg1 : vector<8xi64>, vector<8xi1>
   return %0#0 : vector<8xi64>
 }
 
-// CHECK-LABEL: test_addi_carry_scalable_vector
-func.func @test_addi_carry_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : vector<[8]xi64>) -> vector<[8]xi64> {
-  %0:2 = arith.addi_carry %arg0, %arg1 : vector<[8]xi64>, vector<[8]xi1>
+// CHECK-LABEL: test_addui_carry_scalable_vector
+func.func @test_addui_carry_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : vector<[8]xi64>) -> vector<[8]xi64> {
+  %0:2 = arith.addui_carry %arg0, %arg1 : vector<[8]xi64>, vector<[8]xi1>
   return %0#0 : vector<[8]xi64>
 }
 

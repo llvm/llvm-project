@@ -19,6 +19,7 @@
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Endian.h"
 
 using namespace mlir;
@@ -718,30 +719,10 @@ void DenseArrayBaseAttr::print(AsmPrinter &printer) const {
 }
 
 void DenseArrayBaseAttr::printWithoutBraces(raw_ostream &os) const {
-  switch (getElementType()) {
-  case DenseArrayBaseAttr::EltType::I1:
-    this->cast<DenseBoolArrayAttr>().printWithoutBraces(os);
-    return;
-  case DenseArrayBaseAttr::EltType::I8:
-    this->cast<DenseI8ArrayAttr>().printWithoutBraces(os);
-    return;
-  case DenseArrayBaseAttr::EltType::I16:
-    this->cast<DenseI16ArrayAttr>().printWithoutBraces(os);
-    return;
-  case DenseArrayBaseAttr::EltType::I32:
-    this->cast<DenseI32ArrayAttr>().printWithoutBraces(os);
-    return;
-  case DenseArrayBaseAttr::EltType::I64:
-    this->cast<DenseI64ArrayAttr>().printWithoutBraces(os);
-    return;
-  case DenseArrayBaseAttr::EltType::F32:
-    this->cast<DenseF32ArrayAttr>().printWithoutBraces(os);
-    return;
-  case DenseArrayBaseAttr::EltType::F64:
-    this->cast<DenseF64ArrayAttr>().printWithoutBraces(os);
-    return;
-  }
-  llvm_unreachable("<unknown DenseArrayBaseAttr>");
+  llvm::TypeSwitch<DenseArrayBaseAttr>(*this)
+      .Case<DenseBoolArrayAttr, DenseI8ArrayAttr, DenseI16ArrayAttr,
+            DenseI32ArrayAttr, DenseI64ArrayAttr, DenseF32ArrayAttr,
+            DenseF64ArrayAttr>([&](auto attr) { attr.printWithoutBraces(os); });
 }
 
 void DenseArrayBaseAttr::print(raw_ostream &os) const {
@@ -750,6 +731,89 @@ void DenseArrayBaseAttr::print(raw_ostream &os) const {
   os << "]";
 }
 
+namespace {
+/// Instantiations of this class provide utilities for interacting with native
+/// data types in the context of DenseArrayAttr.
+template <size_t width,
+          IntegerType::SignednessSemantics signedness = IntegerType::Signless>
+struct DenseArrayAttrIntUtil {
+  static bool checkElementType(Type eltType) {
+    auto type = eltType.dyn_cast<IntegerType>();
+    if (!type || type.getWidth() != width)
+      return false;
+    return type.getSignedness() == signedness;
+  }
+
+  static Type getElementType(MLIRContext *ctx) {
+    return IntegerType::get(ctx, width, signedness);
+  }
+
+  template <typename T>
+  static void printElement(raw_ostream &os, T value) {
+    os << value;
+  }
+
+  template <typename T>
+  static ParseResult parseElement(AsmParser &parser, T &value) {
+    return parser.parseInteger(value);
+  }
+};
+template <typename T>
+struct DenseArrayAttrUtil;
+
+/// Specialization for boolean elements to print 'true' and 'false' literals for
+/// elements.
+template <>
+struct DenseArrayAttrUtil<bool> : public DenseArrayAttrIntUtil<1> {
+  static void printElement(raw_ostream &os, bool value) {
+    os << (value ? "true" : "false");
+  }
+};
+
+/// Specialization for 8-bit integers to ensure values are printed as integers
+/// and not characters.
+template <>
+struct DenseArrayAttrUtil<int8_t> : public DenseArrayAttrIntUtil<8> {
+  static void printElement(raw_ostream &os, int8_t value) {
+    os << static_cast<int>(value);
+  }
+};
+template <>
+struct DenseArrayAttrUtil<int16_t> : public DenseArrayAttrIntUtil<16> {};
+template <>
+struct DenseArrayAttrUtil<int32_t> : public DenseArrayAttrIntUtil<32> {};
+template <>
+struct DenseArrayAttrUtil<int64_t> : public DenseArrayAttrIntUtil<64> {};
+
+/// Specialization for 32-bit floats.
+template <>
+struct DenseArrayAttrUtil<float> {
+  static bool checkElementType(Type eltType) { return eltType.isF32(); }
+  static Type getElementType(MLIRContext *ctx) { return Float32Type::get(ctx); }
+  static void printElement(raw_ostream &os, float value) { os << value; }
+
+  /// Parse a double and cast it to a float.
+  static ParseResult parseElement(AsmParser &parser, float &value) {
+    double doubleVal;
+    if (parser.parseFloat(doubleVal))
+      return failure();
+    value = doubleVal;
+    return success();
+  }
+};
+
+/// Specialization for 64-bit floats.
+template <>
+struct DenseArrayAttrUtil<double> {
+  static bool checkElementType(Type eltType) { return eltType.isF64(); }
+  static Type getElementType(MLIRContext *ctx) { return Float64Type::get(ctx); }
+  static void printElement(raw_ostream &os, float value) { os << value; }
+  static ParseResult parseElement(AsmParser &parser, double &value) {
+    return parser.parseFloat(value);
+  }
+};
+} // namespace
+
 template <typename T>
 void DenseArrayAttr<T>::print(AsmPrinter &printer) const {
   print(printer.getStream());
@@ -757,20 +821,9 @@ void DenseArrayAttr<T>::print(AsmPrinter &printer) const {
 
 template <typename T>
 void DenseArrayAttr<T>::printWithoutBraces(raw_ostream &os) const {
-  llvm::interleaveComma(asArrayRef(), os);
-}
-
-/// Specialization for bool to print `true` or `false`.
-template <>
-void DenseArrayAttr<bool>::printWithoutBraces(raw_ostream &os) const {
-  llvm::interleaveComma(asArrayRef(), os,
-                        [&](bool v) { os << (v ? "true" : "false"); });
-}
-
-/// Specialization for int8_t for forcing printing as number instead of chars.
-template <>
-void DenseArrayAttr<int8_t>::printWithoutBraces(raw_ostream &os) const {
-  llvm::interleaveComma(asArrayRef(), os, [&](int64_t v) { os << v; });
+  llvm::interleaveComma(asArrayRef(), os, [&](T value) {
+    DenseArrayAttrUtil<T>::printElement(os, value);
+  });
 }
 
 template <typename T>
@@ -780,27 +833,6 @@ void DenseArrayAttr<T>::print(raw_ostream &os) const {
   os << "]";
 }
 
-/// Parse a single element: generic template for int types, specialized for
-/// floating point and boolean values below.
-template <typename T>
-static ParseResult parseDenseArrayAttrElt(AsmParser &parser, T &value) {
-  return parser.parseInteger(value);
-}
-
-template <>
-ParseResult parseDenseArrayAttrElt<float>(AsmParser &parser, float &value) {
-  double doubleVal;
-  if (parser.parseFloat(doubleVal))
-    return failure();
-  value = doubleVal;
-  return success();
-}
-
-template <>
-ParseResult parseDenseArrayAttrElt<double>(AsmParser &parser, double &value) {
-  return parser.parseFloat(value);
-}
-
 /// Parse a DenseArrayAttr without the braces: `1, 2, 3`
 template <typename T>
 Attribute DenseArrayAttr<T>::parseWithoutBraces(AsmParser &parser,
@@ -808,7 +840,7 @@ Attribute DenseArrayAttr<T>::parseWithoutBraces(AsmParser &parser,
   SmallVector<T> data;
   if (failed(parser.parseCommaSeparatedList([&]() {
         T value;
-        if (parseDenseArrayAttrElt(parser, value))
+        if (DenseArrayAttrUtil<T>::parseElement(parser, value))
           return failure();
         data.push_back(value);
         return success();
@@ -840,87 +872,23 @@ DenseArrayAttr<T>::operator ArrayRef<T>() const {
                      raw.size() / sizeof(T));
 }
 
-namespace {
-/// Mapping from C++ element type to MLIR DenseArrayAttr internals.
-template <typename T>
-struct denseArrayAttrEltTypeBuilder;
-template <>
-struct denseArrayAttrEltTypeBuilder<bool> {
-  constexpr static auto eltType = DenseArrayBaseAttr::EltType::I1;
-  static ShapedType getShapedType(MLIRContext *context,
-                                  ArrayRef<int64_t> shape) {
-    return RankedTensorType::get(shape, IntegerType::get(context, 1));
-  }
-};
-template <>
-struct denseArrayAttrEltTypeBuilder<int8_t> {
-  constexpr static auto eltType = DenseArrayBaseAttr::EltType::I8;
-  static ShapedType getShapedType(MLIRContext *context,
-                                  ArrayRef<int64_t> shape) {
-    return RankedTensorType::get(shape, IntegerType::get(context, 8));
-  }
-};
-template <>
-struct denseArrayAttrEltTypeBuilder<int16_t> {
-  constexpr static auto eltType = DenseArrayBaseAttr::EltType::I16;
-  static ShapedType getShapedType(MLIRContext *context,
-                                  ArrayRef<int64_t> shape) {
-    return RankedTensorType::get(shape, IntegerType::get(context, 16));
-  }
-};
-template <>
-struct denseArrayAttrEltTypeBuilder<int32_t> {
-  constexpr static auto eltType = DenseArrayBaseAttr::EltType::I32;
-  static ShapedType getShapedType(MLIRContext *context,
-                                  ArrayRef<int64_t> shape) {
-    return RankedTensorType::get(shape, IntegerType::get(context, 32));
-  }
-};
-template <>
-struct denseArrayAttrEltTypeBuilder<int64_t> {
-  constexpr static auto eltType = DenseArrayBaseAttr::EltType::I64;
-  static ShapedType getShapedType(MLIRContext *context,
-                                  ArrayRef<int64_t> shape) {
-    return RankedTensorType::get(shape, IntegerType::get(context, 64));
-  }
-};
-template <>
-struct denseArrayAttrEltTypeBuilder<float> {
-  constexpr static auto eltType = DenseArrayBaseAttr::EltType::F32;
-  static ShapedType getShapedType(MLIRContext *context,
-                                  ArrayRef<int64_t> shape) {
-    return RankedTensorType::get(shape, Float32Type::get(context));
-  }
-};
-template <>
-struct denseArrayAttrEltTypeBuilder<double> {
-  constexpr static auto eltType = DenseArrayBaseAttr::EltType::F64;
-  static ShapedType getShapedType(MLIRContext *context,
-                                  ArrayRef<int64_t> shape) {
-    return RankedTensorType::get(shape, Float64Type::get(context));
-  }
-};
-} // namespace
-
 /// Builds a DenseArrayAttr<T> from an ArrayRef<T>.
 template <typename T>
 DenseArrayAttr<T> DenseArrayAttr<T>::get(MLIRContext *context,
                                          ArrayRef<T> content) {
-  auto size = static_cast<int64_t>(content.size());
-  auto shapedType =
-      denseArrayAttrEltTypeBuilder<T>::getShapedType(context, size);
-  auto eltType = denseArrayAttrEltTypeBuilder<T>::eltType;
+  auto shapedType = RankedTensorType::get(
+      content.size(), DenseArrayAttrUtil<T>::getElementType(context));
   auto rawArray = ArrayRef<char>(reinterpret_cast<const char *>(content.data()),
                                  content.size() * sizeof(T));
-  return Base::get(context, shapedType, eltType, rawArray)
+  return Base::get(context, shapedType, rawArray)
       .template cast<DenseArrayAttr<T>>();
 }
 
 template <typename T>
 bool DenseArrayAttr<T>::classof(Attribute attr) {
-  return attr.isa<DenseArrayBaseAttr>() &&
-         attr.cast<DenseArrayBaseAttr>().getElementType() ==
-             denseArrayAttrEltTypeBuilder<T>::eltType;
+  if (auto denseArray = attr.dyn_cast<DenseArrayBaseAttr>())
+    return DenseArrayAttrUtil<T>::checkElementType(denseArray.getElementType());
+  return false;
 }
 
 namespace mlir {

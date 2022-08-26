@@ -1,0 +1,5 @@
+b main
+run
+dis a
+dis -a $pc
+exit

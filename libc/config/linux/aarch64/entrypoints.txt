@@ -103,6 +103,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/stat.h entrypoints
     libc.src.sys.stat.chmod
     libc.src.sys.stat.fchmod
+    libc.src.sys.stat.fchmodat
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
 

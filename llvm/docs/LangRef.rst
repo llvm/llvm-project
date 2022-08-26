@@ -2653,6 +2653,23 @@ Pointer Authentication operand bundles are characterized by the
 ``"ptrauth"`` operand bundle tag.  They are described in the
 `Pointer Authentication <PointerAuth.html#operand-bundle>`__ document.
 
+.. _ob_kcfi:
+
+KCFI Operand Bundles
+^^^^^^^^^^^^^^^^^^^^
+
+A ``"kcfi"`` operand bundle on an indirect call indicates that the call will
+be preceded by a runtime type check, which validates that the call target is
+prefixed with a :ref:`type identifier<md_kcfi_type>` that matches the operand
+bundle attribute. For example:
+
+.. code-block:: llvm
+
+      call void %0() ["kcfi"(i32 1234)]
+
+Clang emits KCFI operand bundles and the necessary metadata with
+``-fsanitize=kcfi``.
+
 .. _moduleasm:
 
 Module-Level Inline Assembly
@@ -7218,6 +7235,29 @@ Example:
       return void
     }
     !0 = !{i32 846595819, ptr @__llvm_rtti_proxy}
+
+.. _md_kcfi_type:
+
+'``kcfi_type``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``kcfi_type`` metadata can be used to attach a type identifier to
+functions that can be called indirectly. The type data is emitted before the
+function entry in the assembly. Indirect calls with the :ref:`kcfi operand
+bundle<ob_kcfi>` will emit a check that compares the type identifier to the
+metadata.
+
+Example:
+
+.. code-block:: text
+
+    define dso_local i32 @f() !kcfi_type !0 {
+      ret i32 0
+    }
+    !0 = !{i32 12345678}
+
+Clang emits ``kcfi_type`` metadata nodes for address-taken functions with
+``-fsanitize=kcfi``.
 
 Module Flags Metadata
 =====================

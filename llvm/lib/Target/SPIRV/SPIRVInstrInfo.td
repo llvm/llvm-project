@@ -699,6 +699,10 @@ def OpSetUserEventStatus: Op<301, (outs), (ins ID:$event, ID:$status),
 def OpCaptureEventProfilingInfo: Op<302, (outs),
                   (ins ID:$event, ID:$info, ID:$value),
                   "OpCaptureEventProfilingInfo $event $info $value">;
+def OpGetDefaultQueue: Op<303, (outs ID:$res), (ins TYPE:$type),
+                  "$res = OpGetDefaultQueue $type">;
+def OpBuildNDRange: Op<304, (outs ID:$res), (ins TYPE:$type, ID:$GWS, ID:$LWS, ID:$GWO),
+                  "$res = OpBuildNDRange $type $GWS $LWS $GWO">;
 
 // TODO: 3.42.23. Pipe Instructions
 

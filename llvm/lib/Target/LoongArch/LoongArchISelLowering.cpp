@@ -1743,9 +1743,13 @@ bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   return (Imm.isZero() || Imm.isExactlyValue(+1.0));
 }
 
-bool LoongArchTargetLowering::isCheapToSpeculateCttz() const { return true; }
+bool LoongArchTargetLowering::isCheapToSpeculateCttz(Type *) const {
+  return true;
+}
 
-bool LoongArchTargetLowering::isCheapToSpeculateCtlz() const { return true; }
+bool LoongArchTargetLowering::isCheapToSpeculateCtlz(Type *) const {
+  return true;
+}
 
 bool LoongArchTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {

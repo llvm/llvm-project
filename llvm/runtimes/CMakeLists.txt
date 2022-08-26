@@ -3,16 +3,6 @@
 # similar although simpler functionality. We should figure out how to merge
 # the two files.
 
-# TODO: Selecting runtimes should be always performed inside the runtimes
-# build, see runtimes/CMakeLists.txt, except that we currently check whether
-# compiler-rt is being built to determine whether to first build builtins
-# or not so we need that information in this file as well.
-set(LLVM_ALL_RUNTIMES "compiler-rt;libc;libcxx;libcxxabi;libunwind;openmp")
-set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
-  "Semicolon-separated list of runtimes to build (${LLVM_ALL_RUNTIMES}), or \"all\".")
-if(LLVM_ENABLE_RUNTIMES STREQUAL "all" )
-  set(LLVM_ENABLE_RUNTIMES ${LLVM_ALL_RUNTIMES})
-endif()
 set(COMMON_CMAKE_ARGS "-DHAVE_LLVM_LIT=ON")
 foreach(proj ${LLVM_ENABLE_RUNTIMES})
   set(proj_dir "${CMAKE_CURRENT_SOURCE_DIR}/../../${proj}")

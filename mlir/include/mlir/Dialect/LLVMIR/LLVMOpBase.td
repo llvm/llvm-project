@@ -66,6 +66,12 @@ def LLVM_Dialect : Dialect {
     /// Returns `true` if the given type is compatible with the LLVM dialect.
     static bool isCompatibleType(Type);
 
+    /// Name of the attribute mapped to LLVM's 'readnone' function attribute.
+    /// It is allowed on any FunctionOpInterface operations.
+    static StringRef getReadnoneAttrName() {
+      return "llvm.readnone";
+    }
+
   private:
     /// A cache storing compatible LLVM types that have been verified. This
     /// can save us lots of verification time if there are many occurrences

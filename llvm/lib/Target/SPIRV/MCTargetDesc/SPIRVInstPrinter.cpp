@@ -60,7 +60,10 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
 }
 
 void SPIRVInstPrinter::recordOpExtInstImport(const MCInst *MI) {
-  // TODO: insert {Reg, Set} into ExtInstSetIDs map.
+  Register Reg = MI->getOperand(0).getReg();
+  auto Name = getSPIRVStringOperand(*MI, 1);
+  auto Set = getExtInstSetFromString(Name);
+  ExtInstSetIDs.insert({Reg, Set});
 }
 
 void SPIRVInstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -306,7 +309,10 @@ void SPIRVInstPrinter::printStringImm(const MCInst *MI, unsigned OpNo,
 
 void SPIRVInstPrinter::printExtension(const MCInst *MI, unsigned OpNo,
                                       raw_ostream &O) {
-  llvm_unreachable("Unimplemented printExtension");
+  auto SetReg = MI->getOperand(2).getReg();
+  auto Set = ExtInstSetIDs[SetReg];
+  auto Op = MI->getOperand(OpNo).getImm();
+  O << getExtInstName(Set, Op);
 }
 
 template <OperandCategory::OperandCategory category>

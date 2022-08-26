@@ -29,6 +29,7 @@ class IntegerSet;
 class IntegerType;
 class Location;
 class Operation;
+class RankedTensorType;
 
 //===----------------------------------------------------------------------===//
 // Elements Attributes
@@ -781,18 +782,14 @@ public:
   void printWithoutBraces(raw_ostream &os) const;
 
   /// Parse the short form `[42, 100, -1]` without any type prefix.
-  static Attribute parse(AsmParser &parser, Type odsType);
+  static Attribute parse(AsmParser &parser, Type type);
 
   /// Parse the short form `42, 100, -1` without any type prefix or braces.
-  static Attribute parseWithoutBraces(AsmParser &parser, Type odsType);
+  static Attribute parseWithoutBraces(AsmParser &parser, Type type);
 
   /// Support for isa<>/cast<>.
   static bool classof(Attribute attr);
 };
-template <>
-void DenseArrayAttr<bool>::printWithoutBraces(raw_ostream &os) const;
-template <>
-void DenseArrayAttr<int8_t>::printWithoutBraces(raw_ostream &os) const;
 
 extern template class DenseArrayAttr<bool>;
 extern template class DenseArrayAttr<int8_t>;

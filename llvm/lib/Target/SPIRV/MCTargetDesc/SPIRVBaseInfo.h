@@ -181,6 +181,11 @@ namespace KernelProfilingInfo {
 #include "SPIRVGenTables.inc"
 } // namespace KernelProfilingInfo
 
+namespace InstructionSet {
+#define GET_InstructionSet_DECL
+#include "SPIRVGenTables.inc"
+} // namespace InstructionSet
+
 namespace OpenCLExtInst {
 #define GET_OpenCLExtInst_DECL
 #include "SPIRVGenTables.inc"
@@ -196,12 +201,11 @@ namespace Opcode {
 #include "SPIRVGenTables.inc"
 } // namespace Opcode
 
-enum class InstructionSet : uint32_t {
-  OpenCL_std = 0,
-  GLSL_std_450 = 1,
-  SPV_AMD_shader_trinary_minmax = 2,
+struct ExtendedBuiltin {
+  StringRef Name;
+  InstructionSet::InstructionSet Set;
+  uint32_t Number;
 };
-std::string getExtInstSetName(InstructionSet e);
 } // namespace SPIRV
 
 using CapabilityList = SmallVector<SPIRV::Capability::Capability, 8>;
@@ -225,6 +229,12 @@ getSymbolicOperandExtensions(SPIRV::OperandCategory::OperandCategory Category,
 std::string getLinkStringForBuiltIn(SPIRV::BuiltIn::BuiltIn BuiltInValue);
 
 bool getSpirvBuiltInIdByName(StringRef Name, SPIRV::BuiltIn::BuiltIn &BI);
+
+std::string getExtInstSetName(SPIRV::InstructionSet::InstructionSet Set);
+SPIRV::InstructionSet::InstructionSet
+getExtInstSetFromString(std::string SetName);
+std::string getExtInstName(SPIRV::InstructionSet::InstructionSet Set,
+                           uint32_t InstructionNumber);
 
 // Return a string representation of the operands from startIndex onwards.
 // Templated to allow both MachineInstr and MCInst to use the same logic.

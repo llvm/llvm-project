@@ -38,6 +38,11 @@ class SPIRVGlobalRegistry {
 
   DenseMap<SPIRVType *, const Type *> SPIRVToLLVMType;
 
+  // Look for an equivalent of the newType in the map. Return the equivalent
+  // if it's found, otherwise insert newType to the map and return the type.
+  const MachineInstr *checkSpecialInstr(const SPIRV::SpecialTypeDescriptor &TD,
+                                        MachineIRBuilder &MIRBuilder);
+
   SmallPtrSet<const Type *, 4> TypesInProcessing;
   DenseMap<const Type *, SPIRVType *> ForwardPointerTypes;
 
@@ -131,6 +136,11 @@ public:
     return Res->second;
   }
 
+  // Either generate a new OpTypeXXX instruction or return an existing one
+  // corresponding to the given string containing the name of the builtin type.
+  SPIRVType *getOrCreateSPIRVTypeByName(StringRef TypeStr,
+                                        MachineIRBuilder &MIRBuilder);
+
   // Return the SPIR-V type instruction corresponding to the given VReg, or
   // nullptr if no such type instruction exists.
   SPIRVType *getSPIRVTypeForVReg(Register VReg) const;
@@ -202,6 +212,16 @@ private:
       uint64_t Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
       MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
   SPIRVType *finishCreatingSPIRVType(const Type *LLVMTy, SPIRVType *SpirvType);
+  Register getOrCreateIntCompositeOrNull(uint64_t Val, MachineInstr &I,
+                                         SPIRVType *SpvType,
+                                         const SPIRVInstrInfo &TII,
+                                         Constant *CA, unsigned BitWidth,
+                                         unsigned ElemCnt);
+  Register getOrCreateIntCompositeOrNull(uint64_t Val,
+                                         MachineIRBuilder &MIRBuilder,
+                                         SPIRVType *SpvType, bool EmitIR,
+                                         Constant *CA, unsigned BitWidth,
+                                         unsigned ElemCnt);
 
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
@@ -213,6 +233,18 @@ public:
   Register getOrCreateConsIntVector(uint64_t Val, MachineInstr &I,
                                     SPIRVType *SpvType,
                                     const SPIRVInstrInfo &TII);
+  Register getOrCreateConsIntArray(uint64_t Val, MachineInstr &I,
+                                   SPIRVType *SpvType,
+                                   const SPIRVInstrInfo &TII);
+  Register getOrCreateConsIntVector(uint64_t Val, MachineIRBuilder &MIRBuilder,
+                                    SPIRVType *SpvType, bool EmitIR = true);
+  Register getOrCreateConsIntArray(uint64_t Val, MachineIRBuilder &MIRBuilder,
+                                   SPIRVType *SpvType, bool EmitIR = true);
+
+  Register buildConstantSampler(Register Res, unsigned AddrMode, unsigned Param,
+                                unsigned FilerMode,
+                                MachineIRBuilder &MIRBuilder,
+                                SPIRVType *SpvType);
   Register getOrCreateUndef(MachineInstr &I, SPIRVType *SpvType,
                             const SPIRVInstrInfo &TII);
   Register buildGlobalVariable(Register Reg, SPIRVType *BaseType,
@@ -244,6 +276,9 @@ public:
   SPIRVType *getOrCreateSPIRVPointerType(
       SPIRVType *BaseType, MachineInstr &I, const SPIRVInstrInfo &TII,
       SPIRV::StorageClass::StorageClass SClass = SPIRV::StorageClass::Function);
+  SPIRVType *getOrCreateOpTypeSampledImage(SPIRVType *ImageType,
+                                           MachineIRBuilder &MIRBuilder);
+
   SPIRVType *getOrCreateOpTypeFunctionWithArgs(
       const Type *Ty, SPIRVType *RetType,
       const SmallVectorImpl<SPIRVType *> &ArgTypes,

@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Swift.h"
 #include "llvm/Object/Error.h"
@@ -4924,15 +4925,122 @@ MachOObjectFile::getChainedFixupsSegments() const {
   return std::make_pair(ImageStarts.seg_count, Segments);
 }
 
+// The special library ordinals have a negative value, but they are encoded in
+// an unsigned bitfield, so we need to sign extend the value.
+template <typename T> static int getEncodedOrdinal(T Value) {
+  if (Value == static_cast<T>(MachO::BIND_SPECIAL_DYLIB_MAIN_EXECUTABLE) ||
+      Value == static_cast<T>(MachO::BIND_SPECIAL_DYLIB_FLAT_LOOKUP) ||
+      Value == static_cast<T>(MachO::BIND_SPECIAL_DYLIB_WEAK_LOOKUP))
+    return SignExtend32<sizeof(T) * CHAR_BIT>(Value);
+  return Value;
+}
+
+template <typename T, unsigned N>
+static std::array<T, N> getArray(const MachOObjectFile &O, const void *Ptr) {
+  std::array<T, N> RawValue;
+  memcpy(RawValue.data(), Ptr, N * sizeof(T));
+  if (O.isLittleEndian() != sys::IsLittleEndianHost)
+    for (auto &Element : RawValue)
+      sys::swapByteOrder(Element);
+  return RawValue;
+}
+
 Expected<std::vector<ChainedFixupTarget>>
 MachOObjectFile::getDyldChainedFixupTargets() const {
+  auto CFOrErr = getChainedFixupsLoadCommand();
+  if (!CFOrErr)
+    return CFOrErr.takeError();
+
+  std::vector<ChainedFixupTarget> Targets;
+  if (!CFOrErr->has_value())
+    return Targets;
+
+  const MachO::linkedit_data_command &DyldChainedFixups = **CFOrErr;
+
   auto CFHeaderOrErr = getChainedFixupsHeader();
   if (!CFHeaderOrErr)
     return CFHeaderOrErr.takeError();
-  std::vector<ChainedFixupTarget> Targets;
   if (!(*CFHeaderOrErr))
     return Targets;
-  return Targets;
+  const MachO::dyld_chained_fixups_header &Header = **CFHeaderOrErr;
+
+  size_t ImportSize = 0;
+  if (Header.imports_format == MachO::DYLD_CHAINED_IMPORT)
+    ImportSize = sizeof(MachO::dyld_chained_import);
+  else if (Header.imports_format == MachO::DYLD_CHAINED_IMPORT_ADDEND)
+    ImportSize = sizeof(MachO::dyld_chained_import_addend);
+  else if (Header.imports_format == MachO::DYLD_CHAINED_IMPORT_ADDEND64)
+    ImportSize = sizeof(MachO::dyld_chained_import_addend64);
+  else
+    return malformedError("bad chained fixups: unknown imports format: " +
+                          Twine(Header.imports_format));
+
+  const char *Contents = getPtr(*this, DyldChainedFixups.dataoff);
+  const char *Imports = Contents + Header.imports_offset;
+  size_t ImportsEndOffset =
+      Header.imports_offset + ImportSize * Header.imports_count;
+  const char *ImportsEnd = Contents + ImportsEndOffset;
+  const char *Symbols = Contents + Header.symbols_offset;
+  const char *SymbolsEnd = Contents + DyldChainedFixups.datasize;
+
+  if (ImportsEnd > Symbols)
+    return malformedError("bad chained fixups: imports end " +
+                          Twine(ImportsEndOffset) + " extends past end " +
+                          Twine(DyldChainedFixups.datasize));
+
+  if (ImportsEnd > Symbols)
+    return malformedError("bad chained fixups: imports end " +
+                          Twine(ImportsEndOffset) + " overlaps with symbols");
+
+  // We use bit manipulation to extract data from the bitfields. This is correct
+  // for both LE and BE hosts, but we assume that the object is little-endian.
+  if (!isLittleEndian())
+    return createError("parsing big-endian chained fixups is not implemented");
+  for (const char *ImportPtr = Imports; ImportPtr < ImportsEnd;
+       ImportPtr += ImportSize) {
+    int LibOrdinal;
+    bool WeakImport;
+    uint32_t NameOffset;
+    uint64_t Addend;
+    if (Header.imports_format == MachO::DYLD_CHAINED_IMPORT) {
+      static_assert(sizeof(uint32_t) == sizeof(MachO::dyld_chained_import));
+      auto RawValue = getArray<uint32_t, 1>(*this, ImportPtr);
+
+      LibOrdinal = getEncodedOrdinal<uint8_t>(RawValue[0] & 0xFF);
+      WeakImport = (RawValue[0] >> 8) & 1;
+      NameOffset = RawValue[0] >> 9;
+      Addend = 0;
+    } else if (Header.imports_format == MachO::DYLD_CHAINED_IMPORT_ADDEND) {
+      static_assert(sizeof(uint64_t) ==
+                    sizeof(MachO::dyld_chained_import_addend));
+      auto RawValue = getArray<uint32_t, 2>(*this, ImportPtr);
+
+      LibOrdinal = getEncodedOrdinal<uint8_t>(RawValue[0] & 0xFF);
+      WeakImport = (RawValue[0] >> 8) & 1;
+      NameOffset = RawValue[0] >> 9;
+      Addend = bit_cast<int32_t>(RawValue[1]);
+    } else if (Header.imports_format == MachO::DYLD_CHAINED_IMPORT_ADDEND64) {
+      static_assert(2 * sizeof(uint64_t) ==
+                    sizeof(MachO::dyld_chained_import_addend64));
+      auto RawValue = getArray<uint64_t, 2>(*this, ImportPtr);
+
+      LibOrdinal = getEncodedOrdinal<uint16_t>(RawValue[0] & 0xFFFF);
+      NameOffset = (RawValue[0] >> 16) & 1;
+      WeakImport = RawValue[0] >> 17;
+      Addend = RawValue[1];
+    } else {
+      llvm_unreachable("Import format should have been checked");
+    }
+
+    const char *Str = Symbols + NameOffset;
+    if (Str >= SymbolsEnd)
+      return malformedError("bad chained fixups: symbol offset " +
+                            Twine(NameOffset) + " extends past end " +
+                            Twine(DyldChainedFixups.datasize));
+    Targets.emplace_back(LibOrdinal, NameOffset, Str, Addend, WeakImport);
+  }
+
+  return std::move(Targets);
 }
 
 ArrayRef<uint8_t> MachOObjectFile::getDyldInfoExportsTrie() const {

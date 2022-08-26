@@ -168,6 +168,10 @@ public:
   /// Imports `f` into the current module.
   LogicalResult processFunction(llvm::Function *f);
 
+  /// Converts function attributes of LLVM Function \p f
+  /// into LLVM dialect attributes of LLVMFuncOp \p funcOp.
+  void processFunctionAttributes(llvm::Function *f, LLVMFuncOp funcOp);
+
   /// Imports GV as a GlobalOp, creating it if it doesn't exist.
   GlobalOp processGlobal(llvm::GlobalVariable *gv);
 
@@ -1157,6 +1161,15 @@ FlatSymbolRefAttr Importer::getPersonalityAsAttr(llvm::Function *f) {
   return FlatSymbolRefAttr();
 }
 
+void Importer::processFunctionAttributes(llvm::Function *func,
+                                         LLVMFuncOp funcOp) {
+  auto addNamedUnitAttr = [&](StringRef name) {
+    return funcOp->setAttr(name, UnitAttr::get(context));
+  };
+  if (func->hasFnAttribute(llvm::Attribute::ReadNone))
+    addNamedUnitAttr(LLVMDialect::getReadnoneAttrName());
+}
+
 LogicalResult Importer::processFunction(llvm::Function *f) {
   blocks.clear();
   instMap.clear();
@@ -1190,6 +1203,9 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
 
   if (f->hasGC())
     fop.setGarbageCollectorAttr(b.getStringAttr(f->getGC()));
+
+  // Handle Function attributes.
+  processFunctionAttributes(f, fop);
 
   if (f->isDeclaration())
     return success();

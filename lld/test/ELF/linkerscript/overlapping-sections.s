@@ -88,8 +88,8 @@
 # BROKEN-OUTPUT-FILE-NEXT: 8010 01010101 01010101 01010101 01010101
 # BROKEN-OUTPUT-FILE-NEXT: 8020 01010101 01010101 01010101 01010101
 # BROKEN-OUTPUT-FILE-NEXT: 8030 01010101 01010101 01010101 01010101
-# Starting here the contents of .sec2 overwrites .sec1:
-# BROKEN-OUTPUT-FILE-NEXT: 8040 02020202 02020202 02020202 02020202
+## Starting here the content may be from either .sec1 or .sec2, depending on the write order.
+# BROKEN-OUTPUT-FILE-NEXT: 8040
 
 # RUN: llvm-readelf --sections -l %t.so | FileCheck %s -check-prefix BAD-BOTH
 # BAD-BOTH-LABEL: Section Headers:

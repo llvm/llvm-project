@@ -798,7 +798,10 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                   "missing case to fold intrinsic function %s", name.c_str());
             }
             return FoldElementalIntrinsic<T, TI>(context, std::move(funcRef),
-                ScalarFunc<T, TI>([&fptr](const Scalar<TI> &i) -> Scalar<T> {
+                // `i` should be declared as `const Scalar<TI>&`.
+                // We declare it as `auto` to workaround an msvc bug:
+                // https://developercommunity.visualstudio.com/t/Regression:-nested-closure-assumes-wrong/10130223
+                ScalarFunc<T, TI>([&fptr](const auto &i) -> Scalar<T> {
                   return Scalar<T>{std::invoke(fptr, i)};
                 }));
           },

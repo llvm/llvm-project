@@ -63,7 +63,7 @@ struct TestPassWithOptions
     return TestPassWithOptionsBase<TestPassWithOptions>::clone();
   }
 
-  unsigned getTestOption() const { return testOption; }
+  int getTestOption() const { return testOption; }
 
   llvm::ArrayRef<int64_t> getTestListOption() const { return testListOption; }
 };

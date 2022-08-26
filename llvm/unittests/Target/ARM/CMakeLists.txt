@@ -1,6 +1,6 @@
 include_directories(
   ${LLVM_MAIN_SRC_DIR}/lib/Target/ARM
-  ${LLVM_BINARY_DIR}/lib/Target/ARM
+  ${LLVM_LIBRARY_DIR}/Target/ARM
   )
 
 set(LLVM_LINK_COMPONENTS

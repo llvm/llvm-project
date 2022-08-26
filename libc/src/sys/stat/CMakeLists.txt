@@ -10,6 +10,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fchmodat
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.fchmodat
+)
+
+add_entrypoint_object(
   fchmod
   ALIAS
   DEPENDS

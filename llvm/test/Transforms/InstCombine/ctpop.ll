@@ -448,9 +448,9 @@ define i32 @parity_xor_extra_use(i32 %arg, i32 %arg1) {
 ; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[ARG:%.*]]), !range [[RNG1]]
 ; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 1
 ; CHECK-NEXT:    tail call void @use(i32 [[I2]])
-; CHECK-NEXT:    [[I3:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[ARG1:%.*]]), !range [[RNG1]]
-; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], 1
-; CHECK-NEXT:    [[I5:%.*]] = xor i32 [[I4]], [[I2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[ARG1:%.*]], [[ARG]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP1]]), !range [[RNG1]]
+; CHECK-NEXT:    [[I5:%.*]] = and i32 [[TMP2]], 1
 ; CHECK-NEXT:    ret i32 [[I5]]
 ;
   %i = tail call i32 @llvm.ctpop.i32(i32 %arg)
@@ -467,9 +467,9 @@ define i32 @parity_xor_extra_use2(i32 %arg, i32 %arg1) {
 ; CHECK-NEXT:    [[I:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[ARG1:%.*]]), !range [[RNG1]]
 ; CHECK-NEXT:    [[I2:%.*]] = and i32 [[I]], 1
 ; CHECK-NEXT:    tail call void @use(i32 [[I2]])
-; CHECK-NEXT:    [[I3:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[ARG:%.*]]), !range [[RNG1]]
-; CHECK-NEXT:    [[I4:%.*]] = and i32 [[I3]], 1
-; CHECK-NEXT:    [[I5:%.*]] = xor i32 [[I2]], [[I4]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[ARG1]], [[ARG:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.ctpop.i32(i32 [[TMP1]]), !range [[RNG1]]
+; CHECK-NEXT:    [[I5:%.*]] = and i32 [[TMP2]], 1
 ; CHECK-NEXT:    ret i32 [[I5]]
 ;
   %i = tail call i32 @llvm.ctpop.i32(i32 %arg1)

@@ -14,11 +14,13 @@
 #define LLVM_LIB_TARGET_SPIRV_INSTPRINTER_SPIRVINSTPRINTER_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
 class SPIRVInstPrinter : public MCInstPrinter {
 private:
+  SmallDenseMap<unsigned, SPIRV::InstructionSet::InstructionSet> ExtInstSetIDs;
   void recordOpExtInstImport(const MCInst *MI);
 
 public:

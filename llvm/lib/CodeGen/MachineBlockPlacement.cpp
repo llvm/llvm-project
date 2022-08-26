@@ -3488,7 +3488,7 @@ void MachineBlockPlacement::applyExtTsp() {
 
   auto BlockSizes = std::vector<uint64_t>(F->size());
   auto BlockCounts = std::vector<uint64_t>(F->size());
-  DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> JumpCounts;
+  std::vector<EdgeCountT> JumpCounts;
   for (MachineBasicBlock &MBB : *F) {
     // Getting the block frequency.
     BlockFrequency BlockFreq = MBFI->getBlockFreq(&MBB);
@@ -3506,9 +3506,9 @@ void MachineBlockPlacement::applyExtTsp() {
     // Getting jump frequencies.
     for (MachineBasicBlock *Succ : MBB.successors()) {
       auto EP = MBPI->getEdgeProbability(&MBB, Succ);
-      BlockFrequency EdgeFreq = BlockFreq * EP;
-      auto Edge = std::make_pair(BlockIndex[&MBB], BlockIndex[Succ]);
-      JumpCounts[Edge] = EdgeFreq.getFrequency();
+      BlockFrequency JumpFreq = BlockFreq * EP;
+      auto Jump = std::make_pair(BlockIndex[&MBB], BlockIndex[Succ]);
+      JumpCounts.push_back(std::make_pair(Jump, JumpFreq.getFrequency()));
     }
   }
 

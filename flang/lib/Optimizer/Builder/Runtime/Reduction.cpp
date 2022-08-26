@@ -471,6 +471,18 @@ void fir::runtime::genAnyDescriptor(fir::FirOpBuilder &builder,
   genReduction2Args(anyFunc, builder, loc, resultBox, maskBox, dim);
 }
 
+/// Generate call to `ParityDim` runtime routine.
+/// This calls the descriptor based runtime call implementation of the `parity`
+/// intrinsic.
+void fir::runtime::genParityDescriptor(fir::FirOpBuilder &builder,
+                                       mlir::Location loc,
+                                       mlir::Value resultBox,
+                                       mlir::Value maskBox, mlir::Value dim) {
+  auto parityFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(ParityDim)>(loc, builder);
+  genReduction2Args(parityFunc, builder, loc, resultBox, maskBox, dim);
+}
+
 /// Generate call to `All` intrinsic runtime routine. This routine is
 /// specialized for mask arguments with rank == 1.
 mlir::Value fir::runtime::genAll(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -692,6 +704,15 @@ mlir::Value fir::runtime::genMinval(fir::FirOpBuilder &builder,
       builder, loc, fTy, arrayBox, sourceFile, sourceLine, dim, maskBox);
 
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
+/// Generate call to `Parity` intrinsic runtime routine. This routine is
+/// specialized for mask arguments with rank == 1.
+mlir::Value fir::runtime::genParity(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Value maskBox,
+                                    mlir::Value dim) {
+  auto parityFunc = fir::runtime::getRuntimeFunc<mkRTKey(Parity)>(loc, builder);
+  return genSpecial2Args(parityFunc, builder, loc, maskBox, dim);
 }
 
 /// Generate call to `ProductDim` intrinsic runtime routine. This is the version

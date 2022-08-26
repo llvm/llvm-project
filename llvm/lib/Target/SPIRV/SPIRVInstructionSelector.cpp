@@ -219,11 +219,12 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       }
       MRI->replaceRegWith(I.getOperand(1).getReg(), I.getOperand(0).getReg());
       I.removeFromParent();
+      return true;
     } else if (I.getNumDefs() == 1) {
       // Make all vregs 32 bits (for SPIR-V IDs).
       MRI->setType(I.getOperand(0).getReg(), LLT::scalar(32));
     }
-    return true;
+    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
   if (I.getNumOperands() != I.getNumExplicitOperands()) {

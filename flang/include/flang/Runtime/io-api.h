@@ -86,13 +86,15 @@ Cookie IONAME(BeginInternalArrayListInput)(const Descriptor &,
     void **scratchArea = nullptr, std::size_t scratchBytes = 0,
     const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginInternalArrayFormattedOutput)(const Descriptor &,
-    const char *format, std::size_t formatLength, void **scratchArea = nullptr,
+    const char *format, std::size_t formatLength,
+    const Descriptor *formatDescriptor = nullptr, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
-    int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
+    int sourceLine = 0);
 Cookie IONAME(BeginInternalArrayFormattedInput)(const Descriptor &,
-    const char *format, std::size_t formatLength, void **scratchArea = nullptr,
+    const char *format, std::size_t formatLength,
+    const Descriptor *formatDescriptor = nullptr, void **scratchArea = nullptr,
     std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
-    int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
+    int sourceLine = 0);
 
 // Internal I/O to/from a default-kind character scalar can avoid a
 // descriptor.
@@ -106,14 +108,14 @@ Cookie IONAME(BeginInternalListInput)(const char *internal,
     int sourceLine = 0);
 Cookie IONAME(BeginInternalFormattedOutput)(char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
-    void **scratchArea = nullptr, std::size_t scratchBytes = 0,
-    const char *sourceFile = nullptr, int sourceLine = 0,
-    const Descriptor *formatDescriptor = nullptr);
+    const Descriptor *formatDescriptor = nullptr, void **scratchArea = nullptr,
+    std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
+    int sourceLine = 0);
 Cookie IONAME(BeginInternalFormattedInput)(const char *internal,
     std::size_t internalLength, const char *format, std::size_t formatLength,
-    void **scratchArea = nullptr, std::size_t scratchBytes = 0,
-    const char *sourceFile = nullptr, int sourceLine = 0,
-    const Descriptor *formatDescriptor = nullptr);
+    const Descriptor *formatDescriptor = nullptr, void **scratchArea = nullptr,
+    std::size_t scratchBytes = 0, const char *sourceFile = nullptr,
+    int sourceLine = 0);
 
 // External unit numbers must fit in default integers. When the integer
 // provided as UNIT is of a wider type than the default integer, it could
@@ -137,11 +139,11 @@ Cookie IONAME(BeginExternalListOutput)(ExternalUnit = DefaultUnit,
 Cookie IONAME(BeginExternalListInput)(ExternalUnit = DefaultUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginExternalFormattedOutput)(const char *format, std::size_t,
-    ExternalUnit = DefaultUnit, const char *sourceFile = nullptr,
-    int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
+    const Descriptor *formatDescriptor = nullptr, ExternalUnit = DefaultUnit,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginExternalFormattedInput)(const char *format, std::size_t,
-    ExternalUnit = DefaultUnit, const char *sourceFile = nullptr,
-    int sourceLine = 0, const Descriptor *formatDescriptor = nullptr);
+    const Descriptor *formatDescriptor = nullptr, ExternalUnit = DefaultUnit,
+    const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginUnformattedOutput)(ExternalUnit = DefaultUnit,
     const char *sourceFile = nullptr, int sourceLine = 0);
 Cookie IONAME(BeginUnformattedInput)(ExternalUnit = DefaultUnit,

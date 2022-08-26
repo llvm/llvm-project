@@ -406,12 +406,17 @@ def POSIX : StandardSpec<"POSIX"> {
         FunctionSpec<
           "chmod",
           RetValSpec<IntType>,
-          [ArgSpec<ConstCharPtr>]
+          [ArgSpec<ConstCharPtr>, ArgSpec<ModeTType>]
         >,
         FunctionSpec<
           "fchmod",
           RetValSpec<IntType>,
-          [ArgSpec<IntType>]
+          [ArgSpec<IntType>, ArgSpec<ModeTType>]
+        >,
+        FunctionSpec<
+          "fchmodat",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<ConstCharPtr>, ArgSpec<ModeTType>, ArgSpec<IntType>]
         >,
         FunctionSpec<
             "mkdir",

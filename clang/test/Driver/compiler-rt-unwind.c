@@ -88,6 +88,13 @@
 // RTLIB-GCC-UNWINDLIB-COMPILER_RT: "{{[.|\\\n]*}}--rtlib=libgcc requires --unwindlib=libgcc"
 //
 // RUN: %clang -### %s 2>&1 \
+// RUN:     --target=x86_64-pc-windows-msvc -rtlib=compiler-rt --unwindlib=libunwind \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:   | FileCheck --check-prefix=MSVC-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT %s
+// MSVC-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT: "{{.*}}clang_rt.builtins-x86_64.lib"
+// MSVC-RTLIB-COMPILER-RT-UNWINDLIB-COMPILER-RT-NOT: "{{.*}}unwind.lib"
+//
+// RUN: %clang -### %s 2>&1 \
 // RUN:     --target=x86_64-w64-mingw32 -rtlib=compiler-rt --unwindlib=libunwind \
 // RUN:     -shared-libgcc \
 // RUN:     --gcc-toolchain="" \

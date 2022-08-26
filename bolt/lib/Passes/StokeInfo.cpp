@@ -46,11 +46,11 @@ void getRegNameFromBitVec(const BinaryContext &BC, const BitVector &RegV,
 void StokeInfo::checkInstr(const BinaryFunction &BF, StokeFuncInfo &FuncInfo) {
   MCPlusBuilder *MIB = BF.getBinaryContext().MIB.get();
   BitVector RegV(NumRegs, false);
-  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
+  for (const BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     if (BB->empty())
       continue;
 
-    for (MCInst &It : *BB) {
+    for (const MCInst &It : *BB) {
       if (MIB->isPseudo(It))
         continue;
       // skip function with exception handling yet

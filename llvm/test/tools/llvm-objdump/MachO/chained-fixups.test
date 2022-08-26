@@ -43,8 +43,30 @@ DETAILS-NEXT:     page_start[0] = 0
 DETAILS-NEXT:     page_start[1] = 32
 DETAILS-NEXT:     page_start[2] = 65535 (DYLD_CHAINED_PTR_START_NONE)
 DETAILS-NEXT:     page_start[3] = 32
+DETAILS-NEXT: dyld chained import[0]
+DETAILS-NEXT:   lib_ordinal = -2 (flat-namespace)
+DETAILS-NEXT:   weak_import = 0
+DETAILS-NEXT:   name_offset = 1 (_dynamicLookup)
+DETAILS-NEXT: dyld chained import[1]
+DETAILS-NEXT:   lib_ordinal = 1 (libdylib)
+DETAILS-NEXT:   weak_import = 1
+DETAILS-NEXT:   name_offset = 16 (_weakImport)
+DETAILS-NEXT: dyld chained import[2]
+DETAILS-NEXT:   lib_ordinal = 1 (libdylib)
+DETAILS-NEXT:   weak_import = 0
+DETAILS-NEXT:   name_offset = 28 (_dylib)
+DETAILS-NEXT: dyld chained import[3]
+DETAILS-NEXT:   lib_ordinal = -3 (weak)
+DETAILS-NEXT:   weak_import = 0
+DETAILS-NEXT:   name_offset = 35 (_weakLocal)
+DETAILS-NEXT: dyld chained import[4]
+DETAILS-NEXT:   lib_ordinal = -3 (weak)
+DETAILS-NEXT:   weak_import = 0
+DETAILS-NEXT:   name_offset = 46 (_weak)
 
 ## This test checks that the output is identical to that of cctools-1001.2 (XCode 14)
+## FIXME: Print encoded values of the dyld_chained_import* entries
+##
 ## The input was generated from the following files:
 ##
 ## --- dylib.s:

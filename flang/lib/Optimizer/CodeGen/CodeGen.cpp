@@ -3043,7 +3043,7 @@ struct IsPresentOpConversion : public FIROpConversion<fir::IsPresentOp> {
     auto ptr = adaptor.getOperands()[0];
 
     if (isPresent.getVal().getType().isa<fir::BoxCharType>()) {
-      auto structTy = ptr.getType().cast<mlir::LLVM::LLVMStructType>();
+      [[maybe_unused]] auto structTy = ptr.getType().cast<mlir::LLVM::LLVMStructType>();
       assert(!structTy.isOpaque() && !structTy.getBody().empty());
 
       ptr = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ptr, 0);

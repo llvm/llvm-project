@@ -596,6 +596,7 @@ class ThreeOp_i32_Pats <SDPatternOperator op1, SDPatternOperator op2, Instructio
 def : ThreeOp_i32_Pats<cshl_32, add, V_LSHL_ADD_U32_e64>;
 def : ThreeOp_i32_Pats<add, cshl_32, V_ADD_LSHL_U32_e64>;
 def : ThreeOp_i32_Pats<add, add, V_ADD3_U32_e64>;
+def : ThreeOp_i32_Pats<ptradd, ptradd, V_ADD3_U32_e64>;
 def : ThreeOp_i32_Pats<cshl_32, or, V_LSHL_OR_B32_e64>;
 def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32_e64>;
 def : ThreeOp_i32_Pats<or, or, V_OR3_B32_e64>;

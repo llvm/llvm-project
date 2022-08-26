@@ -96,16 +96,6 @@ BitVector VERegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-bool VERegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
-  switch (PhysReg) {
-  case VE::VM0:
-  case VE::VMP0:
-    return true;
-  default:
-    return false;
-  }
-}
-
 const TargetRegisterClass *
 VERegisterInfo::getPointerRegClass(const MachineFunction &MF,
                                    unsigned Kind) const {

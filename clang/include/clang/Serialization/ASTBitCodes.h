@@ -829,6 +829,9 @@ enum SubmoduleRecordTypes {
   /// Specifies the name of the module that will eventually
   /// re-export the entities in this module.
   SUBMODULE_EXPORT_AS = 17,
+
+  /// Specifies affecting modules that were not imported.
+  SUBMODULE_AFFECTING_MODULES = 18,
 };
 
 /// Record types used within a comments block.

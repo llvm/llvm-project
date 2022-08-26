@@ -35,6 +35,7 @@
 
 #include "BlockPointer.h"
 #include "CPlusPlusNameParser.h"
+#include "Coroutines.h"
 #include "CxxStringTypes.h"
 #include "Generic.h"
 #include "LibCxx.h"
@@ -796,6 +797,14 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 ConstString("^std::__[[:alnum:]]+::function<.+>$"),
                 stl_summary_flags, true);
 
+  ConstString libcxx_std_coroutine_handle_regex(
+      "^std::__[[:alnum:]]+::coroutine_handle<.+>(( )?&)?$");
+  AddCXXSynthetic(
+      cpp_category_sp,
+      lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEndCreator,
+      "coroutine_handle synthetic children", libcxx_std_coroutine_handle_regex,
+      stl_deref_flags, true);
+
   stl_summary_flags.SetDontShowChildren(false);
   stl_summary_flags.SetSkipPointers(false);
   AddCXXSummary(cpp_category_sp,
@@ -897,6 +906,11 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 lldb_private::formatters::LibcxxUniquePointerSummaryProvider,
                 "libc++ std::unique_ptr summary provider",
                 libcxx_std_unique_ptr_regex, stl_summary_flags, true);
+
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::StdlibCoroutineHandleSummaryProvider,
+                "libc++ std::coroutine_handle summary provider",
+                libcxx_std_coroutine_handle_regex, stl_summary_flags, true);
 
   AddCXXSynthetic(
       cpp_category_sp,
@@ -1122,6 +1136,14 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       "std::tuple synthetic children", ConstString("^std::tuple<.+>(( )?&)?$"),
       stl_synth_flags, true);
 
+  ConstString libstdcpp_std_coroutine_handle_regex(
+      "^std::coroutine_handle<.+>(( )?&)?$");
+  AddCXXSynthetic(
+      cpp_category_sp,
+      lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEndCreator,
+      "std::coroutine_handle synthetic children",
+      libstdcpp_std_coroutine_handle_regex, stl_deref_flags, true);
+
   AddCXXSynthetic(
       cpp_category_sp,
       lldb_private::formatters::LibStdcppBitsetSyntheticFrontEndCreator,
@@ -1149,6 +1171,10 @@ static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                 "libstdc++ std::weak_ptr summary provider",
                 ConstString("^std::weak_ptr<.+>(( )?&)?$"), stl_summary_flags,
                 true);
+  AddCXXSummary(cpp_category_sp,
+                lldb_private::formatters::StdlibCoroutineHandleSummaryProvider,
+                "libstdc++ std::coroutine_handle summary provider",
+                libstdcpp_std_coroutine_handle_regex, stl_summary_flags, true);
   AddCXXSummary(
       cpp_category_sp, lldb_private::formatters::GenericOptionalSummaryProvider,
       "libstd++ std::optional summary provider",

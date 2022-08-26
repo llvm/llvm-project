@@ -622,6 +622,8 @@ private:
 
   SDNodeFlags Flags;
 
+  uint32_t CFIType = 0;
+
 public:
   /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
   /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
@@ -970,6 +972,9 @@ public:
   /// Clear any flags in this node that aren't also set in Flags.
   /// If Flags is not in a defined state then this has no effect.
   void intersectFlagsWith(const SDNodeFlags Flags);
+
+  void setCFIType(uint32_t Type) { CFIType = Type; }
+  uint32_t getCFIType() const { return CFIType; }
 
   /// Return the number of values defined/returned by this operator.
   unsigned getNumValues() const { return NumValues; }
