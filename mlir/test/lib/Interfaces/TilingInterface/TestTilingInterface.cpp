@@ -13,12 +13,14 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/TilingInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/TileUsingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/IR/TensorTilingInterfaceImpl.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -117,9 +119,10 @@ struct TestTilingInterfacePass
   TestTilingInterfacePass(const TestTilingInterfacePass &pass)
       : PassWrapper(pass) {}
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
-                    tensor::TensorDialect>();
+    registry.insert<AffineDialect, linalg::LinalgDialect, memref::MemRefDialect,
+                    scf::SCFDialect, tensor::TensorDialect>();
     linalg::registerTilingInterfaceExternalModels(registry);
+    tensor::registerTilingInterfaceExternalModels(registry);
   }
   StringRef getArgument() const final { return "test-tiling-interface"; }
   StringRef getDescription() const final {
@@ -184,6 +187,16 @@ void TestTilingInterfacePass::addTestPatterns(MLIRContext *context,
     // 6. Tiling + interchange of an operation
     addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
         context, patterns, "gemm_interchange", {10, 20, 30}, {1, 2, 0});
+    // 7. Tiling for 2D pad tensor operations.
+    addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
+        context, patterns, "pad_2dtiling", {2, 3});
+    // 8. Tiling inner dimension of 2d pad tensor operations.
+    addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
+        context, patterns, "pad_inner_tiling", {0, 3});
+    // 9. Tiling inner dimension of 2d pad tensor operations.
+    addPatternForTiling<TestTileUsingSCFForOpWithFilter>(
+        context, patterns, "pad_outer_tiling", {2, 3});
+
     return;
   }
   if (testTileConsumerAndFuseProducer) {

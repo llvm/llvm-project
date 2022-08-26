@@ -125,7 +125,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
   sparse_tensor::registerBufferizableOpInterfaceExternalModels(registry);
   tensor::registerBufferizableOpInterfaceExternalModels(registry);
   tensor::registerInferTypeOpInterfaceExternalModels(registry);
-  tensor::registerTilingOpInterfaceExternalModels(registry);
+  tensor::registerTilingInterfaceExternalModels(registry);
   vector::registerBufferizableOpInterfaceExternalModels(registry);
 }
 
