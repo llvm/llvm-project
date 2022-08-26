@@ -53,7 +53,8 @@ write_lit_cfg("lit_api_site_cfg") {
   output = lldb_lit_api_site_cfg_file
   extra_values = [
     "LLDB_BUILD_INTEL_PT=0",
-    "LLDB_DOTEST_ARGS=",
+    "LLDB_TEST_COMMON_ARGS=",
+    "LLDB_TEST_USER_ARGS=",
     "LLDB_ENABLE_PYTHON=0",
     "LLDB_HAS_LIBCXX=",  # FIXME: support this (?)
     "LLDB_LIBS_DIR=",  # FIXME: for shared builds only (?)
