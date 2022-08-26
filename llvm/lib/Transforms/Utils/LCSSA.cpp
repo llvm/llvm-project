@@ -111,6 +111,10 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
       Instruction *User = cast<Instruction>(U.getUser());
       BasicBlock *UserBB = User->getParent();
 
+      // Skip uses in unreachable blocks.
+      if (!DT.isReachableFromEntry(UserBB))
+        continue;
+
       // For practical purposes, we consider that the use in a PHI
       // occurs in the respective predecessor block. For more info,
       // see the `phi` doc in LangRef and the LCSSA doc.
