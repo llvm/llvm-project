@@ -27,6 +27,7 @@ static_library("Symbol") {
     "LineEntry.cpp",
     "LineTable.cpp",
     "LocateSymbolFile.cpp",
+    "ObjectContainer.cpp",
     "ObjectFile.cpp",
     "PostfixExpression.cpp",
     "Symbol.cpp",
