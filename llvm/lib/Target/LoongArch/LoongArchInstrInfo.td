@@ -929,20 +929,20 @@ defm : LdPat<load, LD_D, i64>;
 
 // LA64 register-register-addressed loads
 let Predicates = [IsLA64] in {
-class RegRegLdPat<PatFrag LoadOp, LAInst Inst>
-  : Pat<(i64 (LoadOp (add BaseAddr:$rj, GPR:$rk))),
+class RegRegLdPat<PatFrag LoadOp, LAInst Inst, ValueType vt>
+  : Pat<(vt (LoadOp (add BaseAddr:$rj, GPR:$rk))),
         (Inst BaseAddr:$rj, GPR:$rk)>;
 
-def : RegRegLdPat<extloadi8, LDX_B>;
-def : RegRegLdPat<sextloadi8, LDX_B>;
-def : RegRegLdPat<zextloadi8, LDX_BU>;
-def : RegRegLdPat<extloadi16, LDX_H>;
-def : RegRegLdPat<sextloadi16, LDX_H>;
-def : RegRegLdPat<zextloadi16, LDX_HU>;
-def : RegRegLdPat<extloadi32, LDX_W>;
-def : RegRegLdPat<sextloadi32, LDX_W>;
-def : RegRegLdPat<zextloadi32, LDX_WU>;
-def : RegRegLdPat<load, LDX_D>;
+def : RegRegLdPat<extloadi8, LDX_B, i64>;
+def : RegRegLdPat<sextloadi8, LDX_B, i64>;
+def : RegRegLdPat<zextloadi8, LDX_BU, i64>;
+def : RegRegLdPat<extloadi16, LDX_H, i64>;
+def : RegRegLdPat<sextloadi16, LDX_H, i64>;
+def : RegRegLdPat<zextloadi16, LDX_HU, i64>;
+def : RegRegLdPat<extloadi32, LDX_W, i64>;
+def : RegRegLdPat<sextloadi32, LDX_W, i64>;
+def : RegRegLdPat<zextloadi32, LDX_WU, i64>;
+def : RegRegLdPat<load, LDX_D, i64>;
 } // Predicates = [IsLA64]
 
 /// Stores
@@ -977,14 +977,15 @@ def : Pat<(store (i64 GPR:$rd), (AddLike BaseAddr:$rj, simm14_lsl2:$imm14)),
 
 // LA64 register-register-addressed stores
 let Predicates = [IsLA64] in {
-class RegRegStPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy>
-  : Pat<(StoreOp (i64 StTy:$rd), (add BaseAddr:$rj, GPR:$rk)),
+class RegRegStPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
+                  ValueType vt>
+  : Pat<(StoreOp (vt StTy:$rd), (add BaseAddr:$rj, GPR:$rk)),
         (Inst StTy:$rd, BaseAddr:$rj, GPR:$rk)>;
 
-def : RegRegStPat<truncstorei8, STX_B, GPR>;
-def : RegRegStPat<truncstorei16, STX_H, GPR>;
-def : RegRegStPat<truncstorei32, STX_W, GPR>;
-def : RegRegStPat<store, STX_D, GPR>;
+def : RegRegStPat<truncstorei8, STX_B, GPR, i64>;
+def : RegRegStPat<truncstorei16, STX_H, GPR, i64>;
+def : RegRegStPat<truncstorei32, STX_W, GPR, i64>;
+def : RegRegStPat<store, STX_D, GPR, i64>;
 } // Predicates = [IsLA64]
 
 /// Atomic loads and stores
