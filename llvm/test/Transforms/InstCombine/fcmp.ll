@@ -1215,8 +1215,8 @@ define i1 @fneg_une_swap(float %p) {
 
 define i1 @bitcast_eq0(i32 %x) {
 ; CHECK-LABEL: @bitcast_eq0(
-; CHECK-NEXT:    [[F:%.*]] = bitcast i32 [[X:%.*]] to float
-; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[F]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 2147483647
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %f = bitcast i32 %x to float
@@ -1226,14 +1226,16 @@ define i1 @bitcast_eq0(i32 %x) {
 
 define <2 x i1> @bitcast_ne0(<2 x i32> %x) {
 ; CHECK-LABEL: @bitcast_ne0(
-; CHECK-NEXT:    [[F:%.*]] = bitcast <2 x i32> [[X:%.*]] to <2 x float>
-; CHECK-NEXT:    [[R:%.*]] = fcmp une <2 x float> [[F]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %f = bitcast <2 x i32> %x to <2 x float>
   %r = fcmp une <2 x float> %f, <float 0.0, float 0.0>
   ret <2 x i1> %r
 }
+
+; negative test - extra use
 
 define i1 @bitcast_eq0_use(i32 %x) {
 ; CHECK-LABEL: @bitcast_eq0_use(
@@ -1248,6 +1250,8 @@ define i1 @bitcast_eq0_use(i32 %x) {
   ret i1 %r
 }
 
+; negative test - this could be transformed, but requires a new bitcast
+
 define i1 @bitcast_nonint_eq0(<2 x i16> %x) {
 ; CHECK-LABEL: @bitcast_nonint_eq0(
 ; CHECK-NEXT:    [[F:%.*]] = bitcast <2 x i16> [[X:%.*]] to float
@@ -1258,6 +1262,8 @@ define i1 @bitcast_nonint_eq0(<2 x i16> %x) {
   %r = fcmp ogt float %f, 0.0
   ret i1 %r
 }
+
+; negative test - wrong predicate
 
 define i1 @bitcast_gt0(i32 %x) {
 ; CHECK-LABEL: @bitcast_gt0(
