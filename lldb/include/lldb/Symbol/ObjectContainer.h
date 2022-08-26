@@ -36,15 +36,7 @@ public:
   /// more than one architecture or object.
   ObjectContainer(const lldb::ModuleSP &module_sp, const FileSpec *file,
                   lldb::offset_t file_offset, lldb::offset_t length,
-                  lldb::DataBufferSP &data_sp, lldb::offset_t data_offset)
-      : ModuleChild(module_sp),
-        m_file(), // This file can be different than the module's file spec
-        m_offset(file_offset), m_length(length) {
-    if (file)
-      m_file = *file;
-    if (data_sp)
-      m_data.SetData(data_sp, data_offset, length);
-  }
+                  lldb::DataBufferSP data_sp, lldb::offset_t data_offset);
 
   /// Destructor.
   ///
@@ -132,15 +124,23 @@ public:
   ///     file exists in the container.
   virtual lldb::ObjectFileSP GetObjectFile(const FileSpec *file) = 0;
 
+  static lldb::ObjectContainerSP
+  FindPlugin(const lldb::ModuleSP &module_sp, const lldb::ProcessSP &process_sp,
+             lldb::addr_t header_addr, lldb::WritableDataBufferSP file_data_sp);
+
 protected:
-  // Member variables.
-  FileSpec m_file; ///< The file that represents this container objects (which
-                   ///can be different from the module's file).
-  lldb::addr_t
-      m_offset; ///< The offset in bytes into the file, or the address in memory
-  lldb::addr_t m_length; ///< The size in bytes if known (can be zero).
-  DataExtractor
-      m_data; ///< The data for this object file so things can be parsed lazily.
+  /// The file that represents this container objects (which can be different
+  /// from the module's file).
+  FileSpec m_file;
+
+  /// The offset in bytes into the file, or the address in memory
+  lldb::addr_t m_offset;
+
+  /// The size in bytes if known (can be zero).
+  lldb::addr_t m_length;
+
+  /// The data for this object file so things can be parsed lazily.
+  DataExtractor m_data;
 
 private:
   ObjectContainer(const ObjectContainer &) = delete;
