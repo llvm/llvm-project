@@ -1238,3 +1238,16 @@ bool CIRGenFunction::isWrappedCXXThis(const Expr *object) {
   }
   return true;
 }
+
+RValue CIRGenFunction::buildReferenceBindingToExpr(const Expr *E) {
+  // Emit the expression as an lvalue.
+  LValue LV = buildLValue(E);
+  assert(LV.isSimple());
+  auto Value = LV.getPointer();
+
+  if (sanitizePerformTypeCheck() && !E->getType()->isFunctionType()) {
+    assert(0 && "NYI");
+  }
+
+  return RValue::get(Value);
+}

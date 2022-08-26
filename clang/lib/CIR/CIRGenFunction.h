@@ -426,6 +426,9 @@ public:
 
   void buildAggExpr(const clang::Expr *E, AggValueSlot Slot);
 
+  /// Emits a reference binding to the passed in expression.
+  RValue buildReferenceBindingToExpr(const Expr *E);
+
   void buildCXXConstructExpr(const clang::CXXConstructExpr *E,
                              AggValueSlot Dest);
 
