@@ -15,7 +15,7 @@
 
 #include "test_macros.h"
 
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     typedef std::u8string_view u8string_view;
 #else
     typedef std::string_view   u8string_view;

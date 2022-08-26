@@ -43,7 +43,7 @@ int main(int, char**) {
     test ( std::wstring() );
 #endif
 
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     test ( std::u8string{u8"QBCDE"} );
     test ( std::u8string{u8""} );
     test ( std::u8string{} );

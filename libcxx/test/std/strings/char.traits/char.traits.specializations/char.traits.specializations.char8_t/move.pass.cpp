@@ -21,7 +21,7 @@
 
 TEST_CONSTEXPR_CXX20 bool test()
 {
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     char8_t s1[] = {1, 2, 3};
     assert(std::char_traits<char8_t>::move(s1, s1+1, 2) == s1);
     assert(s1[0] == char8_t(2));
