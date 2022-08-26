@@ -174,6 +174,9 @@ C++20 Feature Support
 - Class member variables are now in scope when parsing a ``requires`` clause. Fixes
   `GH55216 <https://github.com/llvm/llvm-project/issues/55216>`_.
 
+- Correctly set expression evaluation context as 'immediate function context' in
+  consteval functions.
+  This fixes `GH51182 https://github.com/llvm/llvm-project/issues/51182`
 
 
 C++2b Feature Support
