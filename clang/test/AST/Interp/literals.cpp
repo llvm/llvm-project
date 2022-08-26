@@ -14,6 +14,37 @@ static_assert(number != 10, ""); // expected-error{{failed}} \
                                  // expected-note{{evaluates to}} \
                                  // ref-note{{evaluates to}}
 
+constexpr bool b = number;
+static_assert(b, "");
+constexpr int one = true;
+static_assert(one == 1, "");
+
+namespace IntegralCasts {
+  constexpr int i = 12;
+  constexpr unsigned int ui = i;
+  static_assert(ui == 12, "");
+  constexpr unsigned int ub = !false;
+  static_assert(ub == 1, "");
+
+  constexpr int si = ui;
+  static_assert(si == 12, "");
+  constexpr int sb = true;
+  static_assert(sb == 1, "");
+
+  constexpr int zero = 0;
+  constexpr unsigned int uzero = 0;
+  constexpr bool bs = i;
+  static_assert(bs, "");
+  constexpr bool bu = ui;
+  static_assert(bu, "");
+  constexpr bool ns = zero;
+  static_assert(!ns, "");
+  constexpr bool nu = uzero;
+  static_assert(!nu, "");
+};
+
+
+
 constexpr bool getTrue() { return true; }
 constexpr bool getFalse() { return false; }
 constexpr void* getNull() { return nullptr; }
