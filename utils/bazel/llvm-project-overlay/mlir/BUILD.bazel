@@ -2549,6 +2549,7 @@ cc_library(
         ":LinalgToLLVM",
         ":LinalgToSPIRV",
         ":LinalgToStandard",
+        ":MathToFuncs",
         ":MathToLLVM",
         ":MathToLibm",
         ":MathToSPIRV",
@@ -5692,6 +5693,28 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "MathToFuncs",
+    srcs = glob(["lib/Conversion/MathToFuncs/*.cpp"]) + [":ConversionPassDetail"],
+    hdrs = glob(["include/mlir/Conversion/MathToFuncs/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithmeticDialect",
+        ":ControlFlowDialect",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":FuncDialect",
+        ":IR",
+        ":LLVMDialect",
+        ":MathDialect",
+        ":Pass",
+        ":Transforms",
+        ":VectorDialect",
+        ":VectorUtils",
+        "//third_party/llvm/llvm-project/llvm:Support",
+    ],
+)
+
 gentbl_cc_library(
     name = "CallOpInterfacesIncGen",
     strip_include_prefix = "include",
@@ -6291,6 +6314,7 @@ cc_library(
         ":LinalgTransforms",
         ":MLProgramDialect",
         ":MathDialect",
+        ":MathToFuncs",
         ":MathToLLVM",
         ":MathToLibm",
         ":MathToSPIRV",
