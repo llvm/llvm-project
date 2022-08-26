@@ -399,6 +399,7 @@ bool Sema::LookupTemplateName(LookupResult &Found,
     LookupCtx = computeDeclContext(ObjectType);
     IsDependent = !LookupCtx && ObjectType->isDependentType();
     assert((IsDependent || !ObjectType->isIncompleteType() ||
+            !ObjectType->getAs<TagType>() ||
             ObjectType->castAs<TagType>()->isBeingDefined()) &&
            "Caller should have completed object type");
 
