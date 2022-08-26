@@ -1459,17 +1459,7 @@ struct __cxx_atomic_impl : public _Base {
 
 using __cxx_atomic_contention_t = __cxx_atomic_impl<__cxx_contention_t>;
 
-#if defined(_LIBCPP_HAS_NO_THREADS)
-#   define _LIBCPP_HAS_NO_PLATFORM_WAIT
-#endif
-
-// TODO:
-// _LIBCPP_HAS_NO_PLATFORM_WAIT is currently a "dead" macro, in the sense that
-// it is not tied anywhere into the build system or even documented. We should
-// clean it up because it is technically never defined except when threads are
-// disabled. We should clean it up in its own changeset in case we break "bad"
-// users.
-#ifndef _LIBCPP_HAS_NO_PLATFORM_WAIT
+#ifndef _LIBCPP_HAS_NO_THREADS
 
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile*);
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile*);
@@ -1511,7 +1501,7 @@ _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Fn && __test_fn)
     return __libcpp_thread_poll_with_backoff(__test_fn, __backoff_fn);
 }
 
-#else // _LIBCPP_HAS_NO_PLATFORM_WAIT
+#else // _LIBCPP_HAS_NO_THREADS
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY void __cxx_atomic_notify_all(__cxx_atomic_impl<_Tp> const volatile*) { }
@@ -1520,15 +1510,10 @@ _LIBCPP_INLINE_VISIBILITY void __cxx_atomic_notify_one(__cxx_atomic_impl<_Tp> co
 template <class _Atp, class _Fn>
 _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp*, _Fn && __test_fn)
 {
-#if defined(_LIBCPP_HAS_NO_THREADS)
-    using _Policy = __spinning_backoff_policy;
-#else
-    using _Policy = __libcpp_timed_backoff_policy;
-#endif
-    return __libcpp_thread_poll_with_backoff(__test_fn, _Policy());
+    return __libcpp_thread_poll_with_backoff(__test_fn, __spinning_backoff_policy());
 }
 
-#endif // _LIBCPP_HAS_NO_PLATFORM_WAIT
+#endif // _LIBCPP_HAS_NO_THREADS
 
 template <class _Atp, class _Tp>
 struct __cxx_atomic_wait_test_fn_impl {
