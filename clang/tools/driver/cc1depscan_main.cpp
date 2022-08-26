@@ -1083,7 +1083,9 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
     ShutDown.store(true);
   }
 
-  return 0;
+  // Exit instead of return. Otherwise, it will wait on ~ThreadPool() which will
+  // never return since all threads might still be sleeping on ::accept().
+  ::exit(0);
 }
 
 static Expected<llvm::cas::CASID> scanAndUpdateCC1InlineWithTool(
