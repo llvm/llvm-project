@@ -454,7 +454,13 @@ mlir::Type CIRGenTypes::ConvertType(QualType T) {
   }
   case Type::LValueReference:
   case Type::RValueReference: {
-    assert(0 && "not implemented");
+    const ReferenceType *RTy = cast<ReferenceType>(Ty);
+    QualType ETy = RTy->getPointeeType();
+    auto PointeeType = convertTypeForMem(ETy);
+    // TODO(cir): use Context.getTargetAddressSpace(ETy) on pointer
+    ResultType =
+        ::mlir::cir::PointerType::get(Builder.getContext(), PointeeType);
+    assert(ResultType && "Cannot get pointer type?");
     break;
   }
   case Type::Pointer: {

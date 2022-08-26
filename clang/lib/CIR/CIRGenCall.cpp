@@ -496,7 +496,10 @@ void CIRGenFunction::buildCallArg(CallArgList &args, const Expr *E,
   assert(type->isReferenceType() == E->isGLValue() &&
          "reference binding to unmaterialized r-value!");
 
-  assert(!E->isGLValue() && "NYI");
+  if (E->isGLValue()) {
+    assert(E->getObjectKind() == OK_Ordinary);
+    return args.add(buildReferenceBindingToExpr(E), type);
+  }
 
   bool HasAggregateEvalKind = hasAggregateEvaluationKind(type);
 
