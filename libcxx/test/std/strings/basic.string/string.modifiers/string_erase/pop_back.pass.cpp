@@ -26,20 +26,17 @@ test(S s, S expected)
     assert(s == expected);
 }
 
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  test(S("abcde"), S("abcd"));
+  test(S("abcdefghij"), S("abcdefghi"));
+  test(S("abcdefghijklmnopqrst"), S("abcdefghijklmnopqrs"));
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    test(S("abcde"), S("abcd"));
-    test(S("abcdefghij"), S("abcdefghi"));
-    test(S("abcdefghijklmnopqrst"), S("abcdefghijklmnopqrs"));
-  }
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test(S("abcde"), S("abcd"));
-    test(S("abcdefghij"), S("abcdefghi"));
-    test(S("abcdefghijklmnopqrst"), S("abcdefghijklmnopqrs"));
-  }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
 #endif
 
   return true;
