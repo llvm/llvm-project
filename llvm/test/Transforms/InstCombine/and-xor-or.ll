@@ -4358,8 +4358,8 @@ define i1 @PR56294(i8 %x) {
 define i32 @canonicalize_logic_first_or0(i32 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_or0
 ; CHECK-SAME: (i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[X]], 15
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[TMP1]], 112
+; CHECK-NEXT:    [[A:%.*]] = add i32 [[X]], 112
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[A]], 15
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 %x, 112 ; 01110000
@@ -4370,8 +4370,8 @@ define i32 @canonicalize_logic_first_or0(i32 %x) {
 define <2 x i32> @canonicalize_logic_first_or_vector0(<2 x i32> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_or_vector0
 ; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[X]], <i32 15, i32 15>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[TMP1]], <i32 112, i32 112>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X]], <i32 112, i32 112>
+; CHECK-NEXT:    [[R:%.*]] = or <2 x i32> [[A]], <i32 15, i32 15>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = add <2 x i32> <i32 112, i32 112>, %x ; <0x00000070, 0x00000070>
@@ -4433,8 +4433,8 @@ define i32 @canonicalize_logic_first_or_bad_constraints2(i32 %x) {
 define i8 @canonicalize_logic_first_and0(i8 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_and0
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], -10
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], 48
+; CHECK-NEXT:    [[B:%.*]] = add i8 [[X]], 48
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[B]], -10
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %b = add i8 %x, 48    ;  00110000
@@ -4445,8 +4445,8 @@ define i8 @canonicalize_logic_first_and0(i8 %x) {
 define <2 x i8> @canonicalize_logic_first_and_vector0(<2 x i8> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_and_vector0
 ; CHECK-SAME: (<2 x i8> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], <i8 -10, i8 -10>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], <i8 48, i8 48>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X]], <i8 48, i8 48>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[A]], <i8 -10, i8 -10>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> <i8 48, i8 48>, %x
@@ -4522,8 +4522,8 @@ define i8 @canonicalize_logic_first_and_bad_constraints2(i8 %x) {
 define i8 @canonicalize_logic_first_xor_0(i8 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_xor_0
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], 31
-; CHECK-NEXT:    [[R:%.*]] = add i8 [[TMP1]], 96
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[X]], 96
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[A]], 31
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = add i8 %x, 96  ; 01100000
@@ -4534,8 +4534,8 @@ define i8 @canonicalize_logic_first_xor_0(i8 %x) {
 define <2 x i32> @canonicalize_logic_first_xor_vector0(<2 x i32> %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_xor_vector0
 ; CHECK-SAME: (<2 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i32> [[X]], <i32 32783, i32 32783>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i32> [[TMP1]], <i32 -8388608, i32 -8388608>
+; CHECK-NEXT:    [[A:%.*]] = add <2 x i32> [[X]], <i32 -8388608, i32 -8388608>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i32> [[A]], <i32 32783, i32 32783>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = add <2 x i32> <i32 -8388608, i32 -8388608>, %x ; <0xFF800000, 0xFF800000>
