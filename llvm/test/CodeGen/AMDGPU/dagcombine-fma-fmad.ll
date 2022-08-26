@@ -49,7 +49,7 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 ; GCN-NEXT:    v_mad_f32 v10, s2, v6, v2
 ; GCN-NEXT:    s_mov_b32 s0, 0x3c23d70a
 ; GCN-NEXT:    v_fmac_f32_e32 v1, v6, v8
-; GCN-NEXT:    v_mac_f32_e32 v10, v7, v6
+; GCN-NEXT:    v_fmac_f32_e32 v10, v7, v6
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mul_f32_e32 v9, s10, v0
 ; GCN-NEXT:    v_fma_f32 v0, -v0, s10, s14
@@ -196,10 +196,10 @@ define float @fmac_sequence_innermost_fmul(float %a, float %b, float %c, float %
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-NEXT:    v_mul_f32_e32 v2, v2, v3
+; GCN-NEXT:    v_mad_f32 v2, v2, v3, v6
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v0, v1
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v4, v5
-; GCN-NEXT:    v_add_f32_e32 v0, v2, v6
+; GCN-NEXT:    v_mov_b32_e32 v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %t0 = fmul fast float %a, %b
   %t1 = fmul fast float %c, %d
@@ -215,10 +215,10 @@ define float @fmac_sequence_innermost_fmul_swapped_operands(float %a, float %b, 
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-NEXT:    v_mul_f32_e32 v2, v2, v3
+; GCN-NEXT:    v_mad_f32 v2, v2, v3, v6
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v0, v1
 ; GCN-NEXT:    v_fmac_f32_e32 v2, v4, v5
-; GCN-NEXT:    v_add_f32_e32 v0, v6, v2
+; GCN-NEXT:    v_mov_b32_e32 v0, v2
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %t0 = fmul fast float %a, %b
   %t1 = fmul fast float %c, %d
