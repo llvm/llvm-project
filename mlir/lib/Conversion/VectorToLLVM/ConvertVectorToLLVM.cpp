@@ -595,13 +595,15 @@ public:
 
     // Get rank and dimension sizes.
     int64_t rank = vectorType.getRank();
-    assert(v1Type.getRank() == rank);
-    assert(v2Type.getRank() == rank);
-    int64_t v1Dim = v1Type.getDimSize(0);
+    bool wellFormed0DCase =
+        v1Type.getRank() == 0 && v2Type.getRank() == 0 && rank == 1;
+    bool wellFormedNDCase =
+        v1Type.getRank() == rank && v2Type.getRank() == rank;
+    assert((wellFormed0DCase || wellFormedNDCase) && "op is not well-formed");
 
-    // For rank 1, where both operands have *exactly* the same vector type,
-    // there is direct shuffle support in LLVM. Use it!
-    if (rank == 1 && v1Type == v2Type) {
+    // For rank 0 and 1, where both operands have *exactly* the same vector
+    // type, there is direct shuffle support in LLVM. Use it!
+    if (rank <= 1 && v1Type == v2Type) {
       Value llvmShuffleOp = rewriter.create<LLVM::ShuffleVectorOp>(
           loc, adaptor.getV1(), adaptor.getV2(),
           LLVM::convertArrayToIndices<int32_t>(maskArrayAttr));
@@ -610,6 +612,7 @@ public:
     }
 
     // For all other cases, insert the individual values individually.
+    int64_t v1Dim = v1Type.getDimSize(0);
     Type eltType;
     if (auto arrayType = llvmType.dyn_cast<LLVM::LLVMArrayType>())
       eltType = arrayType.getElementType();
