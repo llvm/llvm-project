@@ -78,6 +78,10 @@ Bug Fixes
 - ``-Wtautological-compare`` missed warnings for tautological comparisons
   involving a negative integer literal. This fixes
   `Issue 42918 <https://github.com/llvm/llvm-project/issues/42918>`_.
+- Fix a crash when generating code coverage information for an
+  ``if consteval`` statement. This fixes
+  `Issue 57377 <https://github.com/llvm/llvm-project/issues/57377>`_.
+
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
