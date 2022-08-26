@@ -71,8 +71,7 @@ SarifResult SARIFDiagnostic::addLocationToResult(
     FileID FID = Loc.getFileID();
     if (FID.isValid()) {
       if (const FileEntry *FE = Loc.getFileEntry()) {
-        [[gnu::unused]] llvm::StringRef Filename =
-            emitFilename(FE->getName(), Loc.getManager());
+        emitFilename(FE->getName(), Loc.getManager());
         // FIXME(llvm-project/issues/57366): File-only locations
       }
     }
