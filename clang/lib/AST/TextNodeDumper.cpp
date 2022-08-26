@@ -1570,12 +1570,6 @@ void TextNodeDumper::VisitTemplateTypeParmType(const TemplateTypeParmType *T) {
   dumpDeclRef(T->getDecl());
 }
 
-void TextNodeDumper::VisitSubstTemplateTypeParmType(
-    const SubstTemplateTypeParmType *T) {
-  if (auto PackIndex = T->getPackIndex())
-    OS << " pack_index " << *PackIndex;
-}
-
 void TextNodeDumper::VisitAutoType(const AutoType *T) {
   if (T->isDecltypeAuto())
     OS << " decltype(auto)";
