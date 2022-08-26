@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UNITTESTS_HOST_SOCKETTESTUTILITIES_H
-#define LLDB_UNITTESTS_HOST_SOCKETTESTUTILITIES_H
+#ifndef LLDB_UNITTESTS_TESTINGSUPPORT_HOST_SOCKETTESTUTILITIES_H
+#define LLDB_UNITTESTS_TESTINGSUPPORT_HOST_SOCKETTESTUTILITIES_H
 
 #include <cstdio>
 #include <functional>
