@@ -64,11 +64,11 @@ COMPILER_RT_VISIBILITY void __llvm_profile_reset_counters(void) {
       CurrentVSiteCount += DI->NumValueSites[VKI];
 
     for (i = 0; i < CurrentVSiteCount; ++i) {
-      ValueProfNode *CurrentVNode = ValueCounters[i];
+      ValueProfNode *CurrVNode = ValueCounters[i];
 
-      while (CurrentVNode) {
-        CurrentVNode->Count = 0;
-        CurrentVNode = CurrentVNode->Next;
+      while (CurrVNode) {
+        CurrVNode->Count = 0;
+        CurrVNode = CurrVNode->Next;
       }
     }
   }
