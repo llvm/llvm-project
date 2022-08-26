@@ -1,4 +1,4 @@
-; RUN: opt -passes='print-access-info' -disable-output  < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<access-info>' -disable-output  < %s 2>&1 | FileCheck %s
 
 ; Test that the loop accesses are proven safe in this case.
 ; The analyzer uses to be confused by the "diamond" because getUnderlyingObjects
