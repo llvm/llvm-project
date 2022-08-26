@@ -21450,7 +21450,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorLoadToSVE(
 
   auto Pg = getPredicateForFixedLengthVector(DAG, DL, VT);
 
-  if (VT.isFloatingPoint() && Load->getExtensionType() == ISD::EXTLOAD) {
+  if (VT.isFloatingPoint()) {
     LoadVT = ContainerVT.changeTypeToInteger();
     MemVT = MemVT.changeTypeToInteger();
   }
@@ -21468,6 +21468,8 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorLoadToSVE(
     Result = getSVESafeBitCast(ExtendVT, Result, DAG);
     Result = DAG.getNode(AArch64ISD::FP_EXTEND_MERGE_PASSTHRU, DL, ContainerVT,
                          Pg, Result, DAG.getUNDEF(ContainerVT));
+  } else if (VT.isFloatingPoint()) {
+    Result = DAG.getNode(ISD::BITCAST, DL, ContainerVT, Result);
   }
 
   Result = convertFromScalableVector(DAG, VT, Result);
@@ -21556,6 +21558,10 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorStoreToSVE(
     NewValue = DAG.getNode(AArch64ISD::FP_ROUND_MERGE_PASSTHRU, DL, TruncVT, Pg,
                            NewValue, DAG.getTargetConstant(0, DL, MVT::i64),
                            DAG.getUNDEF(TruncVT));
+    NewValue =
+        getSVESafeBitCast(ContainerVT.changeTypeToInteger(), NewValue, DAG);
+  } else if (VT.isFloatingPoint()) {
+    MemVT = MemVT.changeTypeToInteger();
     NewValue =
         getSVESafeBitCast(ContainerVT.changeTypeToInteger(), NewValue, DAG);
   }
