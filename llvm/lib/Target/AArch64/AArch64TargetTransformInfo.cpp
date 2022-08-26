@@ -2775,6 +2775,13 @@ InstructionCost AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index) {
       { TTI::SK_Splice, MVT::nxv2f64,  1 },
   };
 
+  // The code-generator is currently not able to handle scalable vectors
+  // of <vscale x 1 x eltty> yet, so return an invalid cost to avoid selecting
+  // it. This change will be removed when code-generation for these types is
+  // sufficiently reliable.
+  if (Tp->getElementCount() == ElementCount::getScalable(1))
+    return InstructionCost::getInvalid();
+
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
   Type *LegalVTy = EVT(LT.second).getTypeForEVT(Tp->getContext());
   TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
