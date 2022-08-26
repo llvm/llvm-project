@@ -175,13 +175,13 @@ exit:
 ; FIXME: Full no-overlap checks are required instead of difference checks, as
 ; one of the add-recs used is invariant in the inner loop.
 ; Test case for PR57315.
-define void @nested_loop_outer_iv_addrec_invariant_in_inner(ptr %a, ptr %b, i64 %n) {
-; CHECK-LABEL: @nested_loop_outer_iv_addrec_invariant_in_inner(
+define void @nested_loop_outer_iv_addrec_invariant_in_inner1(ptr %a, ptr %b, i64 %n) {
+; CHECK-LABEL: @nested_loop_outer_iv_addrec_invariant_in_inner1(
 ; CHECK:       entry:
-; CHECK-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B:%.*]] to i64
-; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A:%.*]] to i64
+; CHECK-NEXT:    [[B:%.*]] = ptrtoint ptr %b to i64
+; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr %a to i64
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A1]], [[B2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A]], [[B]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %scalar.ph, label %vector.ph
 ;
@@ -194,12 +194,50 @@ outer.header:
   br label %inner.body
 
 inner.body:
-  %red = phi i32 [ 0, %outer.header ], [ %red.next, %inner.body ]
   %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner.body ]
   %gep.b = getelementptr inbounds i32, ptr %b, i64 %inner.iv
   %l = load i32, ptr %gep.b, align 4
-  %red.next = sub i32 %red, %l
-  store i32 %red.next, ptr %gep.a, align 4
+  %sub = sub i32 %l, 10
+  store i32 %sub, ptr %gep.a, align 4
+  %inner.iv.next = add nuw nsw i64 %inner.iv, 1
+  %inner.cond = icmp eq i64 %inner.iv.next, %n
+  br i1 %inner.cond, label %outer.latch, label %inner.body
+
+outer.latch:
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.cond = icmp eq i64 %outer.iv.next, %n
+  br i1 %outer.cond, label %exit, label %outer.header
+
+exit:
+  ret void
+}
+
+; Same as @nested_loop_outer_iv_addrec_invariant_in_inner1 but with dependence
+; sink and source swapped.
+define void @nested_loop_outer_iv_addrec_invariant_in_inner2(ptr %a, ptr %b, i64 %n) {
+; CHECK-LABEL: @nested_loop_outer_iv_addrec_invariant_in_inner2(
+; CHECK:       entry:
+; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr %a to i64
+; CHECK-NEXT:    [[B:%.*]] = ptrtoint ptr %b to i64
+; CHECK:       vector.memcheck:
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[B]], [[A]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
+; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %scalar.ph, label %vector.ph
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ %outer.iv.next, %outer.latch ], [ 0, %entry ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %outer.iv
+  br label %inner.body
+
+inner.body:
+  %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner.body ]
+  %l = load i32, ptr %gep.a, align 4
+  %sub = sub i32 %l, 10
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %inner.iv
+  store i32 %sub, ptr %gep.b, align 4
   %inner.iv.next = add nuw nsw i64 %inner.iv, 1
   %inner.cond = icmp eq i64 %inner.iv.next, %n
   br i1 %inner.cond, label %outer.latch, label %inner.body
