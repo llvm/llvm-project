@@ -1,5 +1,5 @@
-; RUN: opt -passes='loop(loop-rotate),print-access-info' -S %s 2>&1 | FileCheck %s
-; RUN: opt -passes='loop(loop-rotate),invalidate<loops>,print-access-info' -S %s 2>&1 | FileCheck %s
+; RUN: opt -passes='loop(loop-rotate),print<access-info>' -S %s 2>&1 | FileCheck %s
+; RUN: opt -passes='loop(loop-rotate),invalidate<loops>,print<access-info>' -S %s 2>&1 | FileCheck %s
 
 ; Make sure that the result of analysis is consistent regardless of blocks
 ; order as they are stored in loop. This test demonstrates the situation when

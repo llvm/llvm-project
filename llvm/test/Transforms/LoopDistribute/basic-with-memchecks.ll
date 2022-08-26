@@ -5,7 +5,7 @@
 ; RUN:   -verify-loop-info -verify-dom-info -S < %s | \
 ; RUN:   FileCheck --check-prefix=VECTORIZE %s
 
-; RUN: opt -aa-pipeline=basic-aa -passes='loop-distribute,print-access-info' -enable-loop-distribute \
+; RUN: opt -aa-pipeline=basic-aa -passes='loop-distribute,print<access-info>' -enable-loop-distribute \
 ; RUN:   -verify-loop-info -verify-dom-info -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ANALYSIS
 
 ; The memcheck version of basic.ll.  We should distribute and vectorize the

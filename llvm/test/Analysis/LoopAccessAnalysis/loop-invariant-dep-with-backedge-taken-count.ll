@@ -1,4 +1,4 @@
-; RUN: opt -passes=print-access-info -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<access-info>' -disable-output %s 2>&1 | FileCheck %s
 
 ; Test cases for using the backedge-taken-count to rule out dependencies between
 ; an invariant and strided accesses.
