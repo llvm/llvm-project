@@ -155,8 +155,8 @@ public:
   void GenerateRelativeVTableAlias(llvm::GlobalVariable *VTable,
                                    llvm::StringRef AliasNameRef);
 
-  /// Specify a vtable should not be instrumented with hwasan.
-  void RemoveHwasanMetadata(llvm::GlobalValue *VTable);
+  /// Specify a global should not be instrumented with hwasan.
+  void RemoveHwasanMetadata(llvm::GlobalValue *GV) const;
 };
 
 } // end namespace CodeGen
