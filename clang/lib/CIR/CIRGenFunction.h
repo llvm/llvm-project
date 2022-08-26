@@ -455,6 +455,8 @@ public:
       clang::NestedNameSpecifier *Qualifier, bool IsArrow,
       const clang::Expr *Base);
 
+  mlir::Value buildCXXNewExpr(const CXXNewExpr *E);
+
   mlir::Operation *createLoad(const clang::VarDecl *VD, const char *Name);
 
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or

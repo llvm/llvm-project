@@ -272,7 +272,9 @@ public:
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *E) {
     llvm_unreachable("NYI");
   }
-  mlir::Value VisitCXXNewExpr(const CXXNewExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitCXXNewExpr(const CXXNewExpr *E) {
+    return CGF.buildCXXNewExpr(E);
+  }
   mlir::Value VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
     llvm_unreachable("NYI");
   }
