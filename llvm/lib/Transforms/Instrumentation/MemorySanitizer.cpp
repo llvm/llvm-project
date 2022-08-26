@@ -1175,10 +1175,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     unsigned StoreSize = DL.getTypeStoreSize(Shadow->getType());
     Value *ConvertedShadow = convertShadowToScalar(Shadow, IRB);
     if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
-      if (ClCheckConstantShadow && !ConstantShadow->isZeroValue())
+      if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
+        // Origin is not needed: value is initialized or const shadow is
+        // ignored.
+        return;
+      }
+      if (llvm::isKnownNonZero(ConvertedShadow, DL)) {
+        // Copy origin as the value is definitely uninitialized.
         paintOrigin(IRB, updateOrigin(Origin, IRB), OriginPtr, StoreSize,
                     OriginAlignment);
-      return;
+        return;
+      }
+      // Fallback to runtime check, which still can be optimized out later.
     }
 
     unsigned TypeSizeInBits = DL.getTypeSizeInBits(ConvertedShadow->getType());
@@ -1246,14 +1254,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *ConvertedShadow = convertShadowToScalar(Shadow, IRB);
     LLVM_DEBUG(dbgs() << "  SHAD1 : " << *ConvertedShadow << "\n");
 
-    if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
-      if (ClCheckConstantShadow && !ConstantShadow->isZeroValue()) {
-        insertWarningFn(IRB, Origin);
-      }
-      return;
-    }
-
     const DataLayout &DL = OrigIns->getModule()->getDataLayout();
+    if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
+      if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
+        // Value is initialized or const shadow is ignored.
+        return;
+      }
+      if (llvm::isKnownNonZero(ConvertedShadow, DL)) {
+        // Report as the value is definitely uninitialized.
+        insertWarningFn(IRB, Origin);
+        return;
+      }
+      // Fallback to runtime check, which still can be optimized out later.
+    }
 
     unsigned TypeSizeInBits = DL.getTypeSizeInBits(ConvertedShadow->getType());
     unsigned SizeIndex = TypeSizeToSizeIndex(TypeSizeInBits);
