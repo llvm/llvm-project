@@ -269,21 +269,6 @@ func.func @generic_result_tensor_type(%arg0: memref<?xf32, affine_map<(i)[off]->
 
 // -----
 
-func.func @generic_result_tensor_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>,
-                                 %arg1: tensor<?xf32>) {
-  // expected-error @+1 {{unexpected output tensor expression in indexing map #0 a.k.a 'd0' is function of reduction iterator 'd0'}}
-  %0 = linalg.generic {
-    indexing_maps = [ affine_map<(i) -> (i)> , affine_map<(i) -> (i)> ],
-    iterator_types = ["reduction"]}
-       ins(%arg0 : memref<?xf32, affine_map<(i)[off]->(off + i)>>)
-      outs(%arg1 : tensor<?xf32>) {
-    ^bb(%i: f32, %j: f32):
-      linalg.yield %i: f32
-  } -> tensor<?xf32>
-}
-
-// -----
-
 func.func @generic(%arg0: memref<?x?xf32>) {
   // expected-error @+6 {{block with no terminator, has %0 = "arith.addf"(%arg1, %arg1) : (f32, f32) -> f32}}
   linalg.generic  {
