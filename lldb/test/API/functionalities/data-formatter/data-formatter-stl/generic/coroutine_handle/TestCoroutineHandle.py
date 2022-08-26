@@ -63,7 +63,7 @@ class TestCoroutineHandle(TestBase):
         # Check that we still show the remaining data correctly.
         self.expect_expr("gen.hdl",
             result_children=[
-                ValueCheck(name="resume", value = "0x0000000000000000"),
+                ValueCheck(name="resume", value = re.compile("^0x0+$")),
                 ValueCheck(name="destroy", summary = test_generator_func_ptr_re),
                 ValueCheck(name="promise", children=[
                     ValueCheck(name="current_value", value = "42"),
