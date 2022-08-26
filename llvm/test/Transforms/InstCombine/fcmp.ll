@@ -7,6 +7,8 @@ declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 declare double @llvm.copysign.f64(double, double)
 declare <2 x double> @llvm.copysign.v2f64(<2 x double>, <2 x double>)
 
+declare void @use(float)
+
 define i1 @fpext_fpext(float %x, float %y) {
 ; CHECK-LABEL: @fpext_fpext(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ogt float [[X:%.*]], [[Y:%.*]]
@@ -1209,4 +1211,61 @@ define i1 @fneg_une_swap(float %p) {
   %fneg = fneg float %a
   %cmp = fcmp ninf une float %a, %fneg
   ret i1 %cmp
+}
+
+define i1 @bitcast_eq0(i32 %x) {
+; CHECK-LABEL: @bitcast_eq0(
+; CHECK-NEXT:    [[F:%.*]] = bitcast i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[F]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = bitcast i32 %x to float
+  %r = fcmp oeq float %f, 0.0
+  ret i1 %r
+}
+
+define <2 x i1> @bitcast_ne0(<2 x i32> %x) {
+; CHECK-LABEL: @bitcast_ne0(
+; CHECK-NEXT:    [[F:%.*]] = bitcast <2 x i32> [[X:%.*]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = fcmp une <2 x float> [[F]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %f = bitcast <2 x i32> %x to <2 x float>
+  %r = fcmp une <2 x float> %f, <float 0.0, float 0.0>
+  ret <2 x i1> %r
+}
+
+define i1 @bitcast_eq0_use(i32 %x) {
+; CHECK-LABEL: @bitcast_eq0_use(
+; CHECK-NEXT:    [[F:%.*]] = bitcast i32 [[X:%.*]] to float
+; CHECK-NEXT:    call void @use(float [[F]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[F]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = bitcast i32 %x to float
+  call void @use(float %f)
+  %r = fcmp oeq float %f, 0.0
+  ret i1 %r
+}
+
+define i1 @bitcast_nonint_eq0(<2 x i16> %x) {
+; CHECK-LABEL: @bitcast_nonint_eq0(
+; CHECK-NEXT:    [[F:%.*]] = bitcast <2 x i16> [[X:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fcmp ogt float [[F]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = bitcast <2 x i16> %x to float
+  %r = fcmp ogt float %f, 0.0
+  ret i1 %r
+}
+
+define i1 @bitcast_gt0(i32 %x) {
+; CHECK-LABEL: @bitcast_gt0(
+; CHECK-NEXT:    [[F:%.*]] = bitcast i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fcmp ogt float [[F]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = bitcast i32 %x to float
+  %r = fcmp ogt float %f, 0.0
+  ret i1 %r
 }
