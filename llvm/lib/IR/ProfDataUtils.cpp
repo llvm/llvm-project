@@ -149,8 +149,10 @@ bool extractProfTotalWeight(const MDNode *ProfileData, uint64_t &TotalVal) {
       TotalVal += V->getValue().getZExtValue();
     }
     return true;
-  } else if (ProfDataName->getString().equals("VP") &&
-             ProfileData->getNumOperands() > 3) {
+  }
+
+  if (ProfDataName->getString().equals("VP") &&
+      ProfileData->getNumOperands() > 3) {
     TotalVal = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(2))
                    ->getValue()
                    .getZExtValue();
