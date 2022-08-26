@@ -224,6 +224,12 @@ LogicalResult CastOp::verify() {
              << "requires same type for array element and pointee result";
     return success();
   }
+  case cir::CastKind::bitcast: {
+    if (!srcType.dyn_cast<mlir::cir::PointerType>() ||
+        !resType.dyn_cast<mlir::cir::PointerType>())
+      return emitOpError() << "requires !cir.ptr type for source and result";
+    return success();
+  }
   }
 
   llvm_unreachable("Unknown CastOp kind?");

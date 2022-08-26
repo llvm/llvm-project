@@ -44,11 +44,13 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
 def CK_IntegralToBoolean : I32EnumAttrCase<"int_to_bool", 1>;
 def CK_ArrayToPointerDecay : I32EnumAttrCase<"array_to_ptrdecay", 2>;
 def CK_IntegralCast : I32EnumAttrCase<"integral", 3>;
+def CK_BitCast : I32EnumAttrCase<"bitcast", 4>;
 
 def CastKind : I32EnumAttr<
     "CastKind",
     "cast kind",
-    [CK_IntegralToBoolean, CK_ArrayToPointerDecay, CK_IntegralCast]> {
+    [CK_IntegralToBoolean, CK_ArrayToPointerDecay, CK_IntegralCast,
+     CK_BitCast]> {
   let cppNamespace = "::mlir::cir";
 }
 
