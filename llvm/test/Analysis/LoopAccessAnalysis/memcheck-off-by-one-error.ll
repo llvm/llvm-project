@@ -1,4 +1,4 @@
-; RUN: opt -passes=print-access-info %s -disable-output 2>&1 | FileCheck %s
+; RUN: opt -passes='print<access-info>' %s -disable-output 2>&1 | FileCheck %s
 
 ; This test verifies run-time boundary check of memory accesses.
 ; The original loop:
