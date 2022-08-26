@@ -35,6 +35,8 @@ using Log10OpLowering =
 using Log2OpLowering = VectorConvertToLLVMPattern<math::Log2Op, LLVM::Log2Op>;
 using LogOpLowering = VectorConvertToLLVMPattern<math::LogOp, LLVM::LogOp>;
 using PowFOpLowering = VectorConvertToLLVMPattern<math::PowFOp, LLVM::PowOp>;
+using RoundEvenOpLowering =
+    VectorConvertToLLVMPattern<math::RoundEvenOp, LLVM::RoundEvenOp>;
 using RoundOpLowering =
     VectorConvertToLLVMPattern<math::RoundOp, LLVM::RoundOp>;
 using SinOpLowering = VectorConvertToLLVMPattern<math::SinOp, LLVM::SinOp>;
@@ -285,6 +287,7 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
     Log2OpLowering,
     LogOpLowering,
     PowFOpLowering,
+    RoundEvenOpLowering,
     RoundOpLowering,
     RsqrtOpLowering,
     SinOpLowering,

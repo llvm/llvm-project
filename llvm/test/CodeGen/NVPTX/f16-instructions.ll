@@ -847,6 +847,7 @@ declare half @llvm.trunc.f16(half %a) #0
 declare half @llvm.rint.f16(half %a) #0
 declare half @llvm.nearbyint.f16(half %a) #0
 declare half @llvm.round.f16(half %a) #0
+declare half @llvm.roundeven.f16(half %a) #0
 declare half @llvm.fmuladd.f16(half %a, half %b, half %c) #0
 
 ; CHECK-LABEL: test_sqrt(
@@ -1124,6 +1125,16 @@ define half @test_rint(half %a) #0 {
 ; CHECK:      ret;
 define half @test_nearbyint(half %a) #0 {
   %r = call half @llvm.nearbyint.f16(half %a)
+  ret half %r
+}
+
+; CHECK-LABEL: test_roundeven(
+; CHECK:      ld.param.b16    [[A:%h[0-9]+]], [test_roundeven_param_0];
+; CHECK:      cvt.rni.f16.f16 [[R:%h[0-9]+]], [[A]];
+; CHECK:      st.param.b16    [func_retval0+0], [[R]];
+; CHECK:      ret;
+define half @test_roundeven(half %a) #0 {
+  %r = call half @llvm.roundeven.f16(half %a)
   ret half %r
 }
 

@@ -77,12 +77,15 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
 
   m_has_parsed_non_skeleton_unit = true;
 
+  if (!m_dwo_id)
+    return; // No DWO file.
+
   std::shared_ptr<SymbolFileDWARFDwo> dwo_symbol_file =
       m_dwarf.GetDwoSymbolFileForCompileUnit(*this, m_first_die);
   if (!dwo_symbol_file)
     return;
 
-  DWARFUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(m_dwo_id);
+  DWARFUnit *dwo_cu = dwo_symbol_file->GetDWOCompileUnitForHash(*m_dwo_id);
 
   if (!dwo_cu)
     return; // Can't fetch the compile unit from the dwo file.
@@ -345,7 +348,7 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
   SetStrOffsetsBase(baseOffset);
 }
 
-uint64_t DWARFUnit::GetDWOId() {
+llvm::Optional<uint64_t> DWARFUnit::GetDWOId() {
   ExtractUnitDIENoDwoIfNeeded();
   return m_dwo_id;
 }
@@ -467,7 +470,7 @@ void DWARFUnit::SetLoclistsBase(dw_addr_t loclists_base) {
       GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
           "Failed to find location list contribution for CU with DWO Id "
           "0x%" PRIx64,
-          this->GetDWOId());
+          *GetDWOId());
       return;
     }
     offset += contribution->Offset;
@@ -889,8 +892,8 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
         header.m_index_entry = Index->getFromHash(header.m_type_hash);
     } else {
       Index = &context.GetAsLLVM().getCUIndex();
-      if (*Index && header.m_version >= 5)
-        header.m_index_entry = Index->getFromHash(header.m_dwo_id);
+      if (*Index && header.m_version >= 5 && header.m_dwo_id)
+        header.m_index_entry = Index->getFromHash(*header.m_dwo_id);
     }
     if (!header.m_index_entry)
       header.m_index_entry = Index->getFromOffset(header.m_offset);

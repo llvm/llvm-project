@@ -381,13 +381,12 @@ endif
 ifeq (1,$(USE_LIBSTDCPP))
 	# Clang requires an extra flag: -stdlib=libstdc++
 	ifneq (,$(findstring clang,$(CC)))
-		CXXFLAGS += -stdlib=libstdc++ -DLLDB_USING_LIBSTDCPP
+		CXXFLAGS += -stdlib=libstdc++
 		LDFLAGS += -stdlib=libstdc++
 	endif
 endif
 
 ifeq (1,$(USE_LIBCPP))
-	CXXFLAGS += -DLLDB_USING_LIBCPP
 	ifneq ($(and $(LIBCPP_INCLUDE_DIR), $(LIBCPP_LIBRARY_DIR)),)
 		CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(LIBCPP_INCLUDE_DIR)
 		LDFLAGS += -L$(LLVM_LIBS_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++

@@ -611,6 +611,19 @@ define <2 x i64> @test20(<2 x i64> %A) {
   ret <2 x i64> %C
 }
 
+@g = internal global i32 0, align 4
+
+define i32 @PR20079(i32 %a) {
+; CHECK-LABEL: @PR20079(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[ADD]], ptrtoint (i32* @g to i32)
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %add = add i32 %a, -1
+  %mul = mul nsw i32 %add, ptrtoint (i32* @g to i32)
+  ret i32 %mul
+}
+
 define <2 x i1> @test21(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test21(
 ; CHECK-NEXT:    [[C:%.*]] = and <2 x i1> [[A:%.*]], [[B:%.*]]

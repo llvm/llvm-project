@@ -9,7 +9,7 @@ define dso_local void @memset_unroll2(double* nocapture %array, i64 %size) {
 ; DEFAULT:       // %bb.0: // %entry
 ; DEFAULT-NEXT:    fmov v0.2d, #2.00000000
 ; DEFAULT-NEXT:    add x8, x0, #64
-; DEFAULT-NEXT:    .p2align 4, 0x0, 8
+; DEFAULT-NEXT:    .p2align 4, , 8
 ; DEFAULT-NEXT:  .LBB0_1: // %vector.body
 ; DEFAULT-NEXT:    // =>This Inner Loop Header: Depth=1
 ; DEFAULT-NEXT:    stur q0, [x8, #-64]
@@ -30,7 +30,7 @@ define dso_local void @memset_unroll2(double* nocapture %array, i64 %size) {
 ; ASCEND:       // %bb.0: // %entry
 ; ASCEND-NEXT:    fmov v0.2d, #2.00000000
 ; ASCEND-NEXT:    add x8, x0, #64
-; ASCEND-NEXT:    .p2align 4, 0x0, 8
+; ASCEND-NEXT:    .p2align 4, , 8
 ; ASCEND-NEXT:  .LBB0_1: // %vector.body
 ; ASCEND-NEXT:    // =>This Inner Loop Header: Depth=1
 ; ASCEND-NEXT:    stur q0, [x8, #-64]

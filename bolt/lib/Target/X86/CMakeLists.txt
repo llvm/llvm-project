@@ -17,5 +17,5 @@ add_llvm_library(LLVMBOLTTargetX86
 
 include_directories(
   ${LLVM_MAIN_SRC_DIR}/lib/Target/X86
-  ${LLVM_LIBRARY_DIR}/Target/X86
+  ${LLVM_BINARY_DIR}/lib/Target/X86
   )

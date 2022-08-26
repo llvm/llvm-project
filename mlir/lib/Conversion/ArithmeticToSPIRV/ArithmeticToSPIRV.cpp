@@ -854,11 +854,9 @@ LogicalResult
 AddICarryOpPattern::matchAndRewrite(arith::AddUICarryOp op, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
   Type dstElemTy = adaptor.getLhs().getType();
-  auto resultTy = spirv::StructType::get({dstElemTy, dstElemTy});
-
   Location loc = op->getLoc();
   Value result = rewriter.create<spirv::IAddCarryOp>(
-      loc, resultTy, adaptor.getLhs(), adaptor.getRhs());
+      loc, adaptor.getLhs(), adaptor.getRhs());
 
   Value sumResult = rewriter.create<spirv::CompositeExtractOp>(
       loc, result, llvm::makeArrayRef(0));

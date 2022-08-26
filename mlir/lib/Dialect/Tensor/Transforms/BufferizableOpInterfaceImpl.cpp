@@ -812,16 +812,10 @@ struct PadOpInterface
                                 generateOp.getBody().begin());
 
     // Create tensor::InsertSliceOp.
-    SmallVector<OpFoldResult> sliceSizes, sliceStrides;
-    for (int64_t i = 0; i < resultType.getRank(); ++i) {
-      sliceStrides.push_back(rewriter.getIndexAttr(1));
-      if (srcType.isDynamicDim(i)) {
-        Value size = rewriter.create<tensor::DimOp>(loc, padOp.getSource(), i);
-        sliceSizes.push_back(size);
-      } else {
-        sliceSizes.push_back(rewriter.getIndexAttr(srcType.getDimSize(i)));
-      }
-    }
+    SmallVector<OpFoldResult> sliceSizes =
+        getMixedSizes(rewriter, loc, padOp.getSource());
+    SmallVector<OpFoldResult> sliceStrides(srcType.getRank(),
+                                           rewriter.getIndexAttr(1));
     rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
         padOp, padOp.getSource(), generateOp.getResult(),
         /*offsets=*/padOp.getMixedLowPad(), sliceSizes, sliceStrides);

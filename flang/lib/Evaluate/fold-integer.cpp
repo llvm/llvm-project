@@ -552,6 +552,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "dim") {
     return FoldElementalIntrinsic<T, T, T>(
         context, std::move(funcRef), &Scalar<T>::DIM);
+  } else if (name == "dot_product") {
+    return FoldDotProduct<T>(context, std::move(funcRef));
   } else if (name == "dshiftl" || name == "dshiftr") {
     const auto fptr{
         name == "dshiftl" ? &Scalar<T>::DSHIFTL : &Scalar<T>::DSHIFTR};

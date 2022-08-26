@@ -308,6 +308,7 @@ cc_library(
         "//mlir:SCFDialect",
         "//mlir:SCFTransforms",
         "//mlir:TensorDialect",
+        "//mlir:TensorTilingInterfaceImpl",
         "//mlir:TilingInterface",
         "//mlir:Transforms",
     ],

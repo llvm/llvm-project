@@ -276,7 +276,7 @@ if (NOT TARGET clang-resource-headers)
   # could be and pick the first that exists.
   foreach(CANDIDATE "${Clang_DIR}/../.." "${LLVM_DIR}" "${LLVM_LIBRARY_DIRS}"
                     "${LLVM_BUILD_LIBRARY_DIR}"
-                    "${LLVM_LIBRARY_DIR}")
+                    "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}")
     # Build the resource directory path by appending 'clang/<version number>'.
     set(CANDIDATE_RESOURCE_DIR "${CANDIDATE}/clang/${LLDB_CLANG_RESOURCE_DIR_NAME}")
     if (IS_DIRECTORY "${CANDIDATE_RESOURCE_DIR}")

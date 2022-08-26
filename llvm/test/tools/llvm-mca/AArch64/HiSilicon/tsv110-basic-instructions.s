@@ -65,6 +65,14 @@ add      x27, x28, x29, lsr #63
 add      x2, x3, x4, asr #0
 add      x5, x6, x7, asr #21
 add      x8, x9, x10, asr #63
+add      x1, x4, w5, uxtb #4
+add      x2, x2, w2, uxth #3
+add      x9, x10, w11, uxtw #1
+add      x18, x19, x20, uxtx #4
+add      x12, x13, w14, sxtb #0
+add      x15, x16, w17, sxth #1
+add      x18, x19, w20, sxtw #2
+add      x10, x19, x20, sxtx #4
 adds     w3, w5, w7
 cmn      w3, w5
 adds     w20, wzr, w4
@@ -91,6 +99,8 @@ adds     x27, x28, x29, lsr #63
 adds     x2, x3, x4, asr #0
 adds     x5, x6, x7, asr #21
 adds     x8, x9, x10, asr #63
+adds     x21, x22, x23, sxtx #0
+adds     x1, x2, x3, uxtx #4
 sub      w3, w5, w7
 sub      wzr, w3, w5
 sub      w4, w6, wzr
@@ -1401,11 +1411,11 @@ br       x20
 # CHECK-NEXT:  1      1     0.33                        mov	wsp, w20
 # CHECK-NEXT:  1      1     0.33                        mov	x11, sp
 # CHECK-NEXT:  1      1     0.33                        mov	w24, wsp
-# CHECK-NEXT:  1      2     1.00                        add	w3, w5, w7
-# CHECK-NEXT:  1      2     1.00                        add	wzr, w3, w5
-# CHECK-NEXT:  1      2     1.00                        add	w20, wzr, w4
-# CHECK-NEXT:  1      2     1.00                        add	w4, w6, wzr
-# CHECK-NEXT:  1      2     1.00                        add	w11, w13, w15
+# CHECK-NEXT:  1      1     0.33                        add	w3, w5, w7
+# CHECK-NEXT:  1      1     0.33                        add	wzr, w3, w5
+# CHECK-NEXT:  1      1     0.33                        add	w20, wzr, w4
+# CHECK-NEXT:  1      1     0.33                        add	w4, w6, wzr
+# CHECK-NEXT:  1      1     0.33                        add	w11, w13, w15
 # CHECK-NEXT:  1      2     1.00                        add	w9, w3, wzr, lsl #10
 # CHECK-NEXT:  1      2     1.00                        add	w17, w29, w20, lsl #31
 # CHECK-NEXT:  1      2     1.00                        add	w21, w22, w23, lsr #0
@@ -1414,11 +1424,11 @@ br       x20
 # CHECK-NEXT:  1      2     1.00                        add	w2, w3, w4, asr #0
 # CHECK-NEXT:  1      2     1.00                        add	w5, w6, w7, asr #21
 # CHECK-NEXT:  1      2     1.00                        add	w8, w9, w10, asr #31
-# CHECK-NEXT:  1      2     1.00                        add	x3, x5, x7
-# CHECK-NEXT:  1      2     1.00                        add	xzr, x3, x5
-# CHECK-NEXT:  1      2     1.00                        add	x20, xzr, x4
-# CHECK-NEXT:  1      2     1.00                        add	x4, x6, xzr
-# CHECK-NEXT:  1      2     1.00                        add	x11, x13, x15
+# CHECK-NEXT:  1      1     0.33                        add	x3, x5, x7
+# CHECK-NEXT:  1      1     0.33                        add	xzr, x3, x5
+# CHECK-NEXT:  1      1     0.33                        add	x20, xzr, x4
+# CHECK-NEXT:  1      1     0.33                        add	x4, x6, xzr
+# CHECK-NEXT:  1      1     0.33                        add	x11, x13, x15
 # CHECK-NEXT:  1      2     1.00                        add	x9, x3, xzr, lsl #10
 # CHECK-NEXT:  1      2     1.00                        add	x17, x29, x20, lsl #63
 # CHECK-NEXT:  1      2     1.00                        add	x21, x22, x23, lsr #0
@@ -1427,36 +1437,46 @@ br       x20
 # CHECK-NEXT:  1      2     1.00                        add	x2, x3, x4, asr #0
 # CHECK-NEXT:  1      2     1.00                        add	x5, x6, x7, asr #21
 # CHECK-NEXT:  1      2     1.00                        add	x8, x9, x10, asr #63
-# CHECK-NEXT:  1      2     0.50                        adds	w3, w5, w7
-# CHECK-NEXT:  1      2     0.50                        cmn	w3, w5
-# CHECK-NEXT:  1      2     0.50                        adds	w20, wzr, w4
-# CHECK-NEXT:  1      2     0.50                        adds	w4, w6, wzr
-# CHECK-NEXT:  1      2     0.50                        adds	w11, w13, w15
-# CHECK-NEXT:  1      2     0.50                        adds	w9, w3, wzr, lsl #10
-# CHECK-NEXT:  1      2     0.50                        adds	w17, w29, w20, lsl #31
-# CHECK-NEXT:  1      2     0.50                        adds	w21, w22, w23, lsr #0
-# CHECK-NEXT:  1      2     0.50                        adds	w24, w25, w26, lsr #18
-# CHECK-NEXT:  1      2     0.50                        adds	w27, w28, w29, lsr #31
-# CHECK-NEXT:  1      2     0.50                        adds	w2, w3, w4, asr #0
-# CHECK-NEXT:  1      2     0.50                        adds	w5, w6, w7, asr #21
-# CHECK-NEXT:  1      2     0.50                        adds	w8, w9, w10, asr #31
-# CHECK-NEXT:  1      2     0.50                        adds	x3, x5, x7
-# CHECK-NEXT:  1      2     0.50                        cmn	x3, x5
-# CHECK-NEXT:  1      2     0.50                        adds	x20, xzr, x4
-# CHECK-NEXT:  1      2     0.50                        adds	x4, x6, xzr
-# CHECK-NEXT:  1      2     0.50                        adds	x11, x13, x15
-# CHECK-NEXT:  1      2     0.50                        adds	x9, x3, xzr, lsl #10
-# CHECK-NEXT:  1      2     0.50                        adds	x17, x29, x20, lsl #63
-# CHECK-NEXT:  1      2     0.50                        adds	x21, x22, x23, lsr #0
-# CHECK-NEXT:  1      2     0.50                        adds	x24, x25, x26, lsr #18
-# CHECK-NEXT:  1      2     0.50                        adds	x27, x28, x29, lsr #63
-# CHECK-NEXT:  1      2     0.50                        adds	x2, x3, x4, asr #0
-# CHECK-NEXT:  1      2     0.50                        adds	x5, x6, x7, asr #21
-# CHECK-NEXT:  1      2     0.50                        adds	x8, x9, x10, asr #63
-# CHECK-NEXT:  1      2     1.00                        sub	w3, w5, w7
-# CHECK-NEXT:  1      2     1.00                        sub	wzr, w3, w5
-# CHECK-NEXT:  1      2     1.00                        sub	w4, w6, wzr
-# CHECK-NEXT:  1      2     1.00                        sub	w11, w13, w15
+# CHECK-NEXT:  1      2     1.00                        add	x1, x4, w5, uxtb #4
+# CHECK-NEXT:  1      2     1.00                        add	x2, x2, w2, uxth #3
+# CHECK-NEXT:  1      2     1.00                        add	x9, x10, w11, uxtw #1
+# CHECK-NEXT:  1      2     1.00                        add	x18, x19, x20, uxtx #4
+# CHECK-NEXT:  1      2     1.00                        add	x12, x13, w14, sxtb
+# CHECK-NEXT:  1      2     1.00                        add	x15, x16, w17, sxth #1
+# CHECK-NEXT:  1      2     1.00                        add	x18, x19, w20, sxtw #2
+# CHECK-NEXT:  1      2     1.00                        add	x10, x19, x20, sxtx #4
+# CHECK-NEXT:  1      1     0.50                        adds	w3, w5, w7
+# CHECK-NEXT:  1      1     0.50                        cmn	w3, w5
+# CHECK-NEXT:  1      1     0.50                        adds	w20, wzr, w4
+# CHECK-NEXT:  1      1     0.50                        adds	w4, w6, wzr
+# CHECK-NEXT:  1      1     0.50                        adds	w11, w13, w15
+# CHECK-NEXT:  1      2     1.00                        adds	w9, w3, wzr, lsl #10
+# CHECK-NEXT:  1      2     1.00                        adds	w17, w29, w20, lsl #31
+# CHECK-NEXT:  1      2     1.00                        adds	w21, w22, w23, lsr #0
+# CHECK-NEXT:  1      2     1.00                        adds	w24, w25, w26, lsr #18
+# CHECK-NEXT:  1      2     1.00                        adds	w27, w28, w29, lsr #31
+# CHECK-NEXT:  1      2     1.00                        adds	w2, w3, w4, asr #0
+# CHECK-NEXT:  1      2     1.00                        adds	w5, w6, w7, asr #21
+# CHECK-NEXT:  1      2     1.00                        adds	w8, w9, w10, asr #31
+# CHECK-NEXT:  1      1     0.50                        adds	x3, x5, x7
+# CHECK-NEXT:  1      1     0.50                        cmn	x3, x5
+# CHECK-NEXT:  1      1     0.50                        adds	x20, xzr, x4
+# CHECK-NEXT:  1      1     0.50                        adds	x4, x6, xzr
+# CHECK-NEXT:  1      1     0.50                        adds	x11, x13, x15
+# CHECK-NEXT:  1      2     1.00                        adds	x9, x3, xzr, lsl #10
+# CHECK-NEXT:  1      2     1.00                        adds	x17, x29, x20, lsl #63
+# CHECK-NEXT:  1      2     1.00                        adds	x21, x22, x23, lsr #0
+# CHECK-NEXT:  1      2     1.00                        adds	x24, x25, x26, lsr #18
+# CHECK-NEXT:  1      2     1.00                        adds	x27, x28, x29, lsr #63
+# CHECK-NEXT:  1      2     1.00                        adds	x2, x3, x4, asr #0
+# CHECK-NEXT:  1      2     1.00                        adds	x5, x6, x7, asr #21
+# CHECK-NEXT:  1      2     1.00                        adds	x8, x9, x10, asr #63
+# CHECK-NEXT:  1      2     1.00                        adds	x21, x22, x23, sxtx
+# CHECK-NEXT:  1      2     1.00                        adds	x1, x2, x3, uxtx #4
+# CHECK-NEXT:  1      1     0.33                        sub	w3, w5, w7
+# CHECK-NEXT:  1      1     0.33                        sub	wzr, w3, w5
+# CHECK-NEXT:  1      1     0.33                        sub	w4, w6, wzr
+# CHECK-NEXT:  1      1     0.33                        sub	w11, w13, w15
 # CHECK-NEXT:  1      2     1.00                        sub	w9, w3, wzr, lsl #10
 # CHECK-NEXT:  1      2     1.00                        sub	w17, w29, w20, lsl #31
 # CHECK-NEXT:  1      2     1.00                        sub	w21, w22, w23, lsr #0
@@ -1465,10 +1485,10 @@ br       x20
 # CHECK-NEXT:  1      2     1.00                        sub	w2, w3, w4, asr #0
 # CHECK-NEXT:  1      2     1.00                        sub	w5, w6, w7, asr #21
 # CHECK-NEXT:  1      2     1.00                        sub	w8, w9, w10, asr #31
-# CHECK-NEXT:  1      2     1.00                        sub	x3, x5, x7
-# CHECK-NEXT:  1      2     1.00                        sub	xzr, x3, x5
-# CHECK-NEXT:  1      2     1.00                        sub	x4, x6, xzr
-# CHECK-NEXT:  1      2     1.00                        sub	x11, x13, x15
+# CHECK-NEXT:  1      1     0.33                        sub	x3, x5, x7
+# CHECK-NEXT:  1      1     0.33                        sub	xzr, x3, x5
+# CHECK-NEXT:  1      1     0.33                        sub	x4, x6, xzr
+# CHECK-NEXT:  1      1     0.33                        sub	x11, x13, x15
 # CHECK-NEXT:  1      2     1.00                        sub	x9, x3, xzr, lsl #10
 # CHECK-NEXT:  1      2     1.00                        sub	x17, x29, x20, lsl #63
 # CHECK-NEXT:  1      2     1.00                        sub	x21, x22, x23, lsr #0
@@ -1477,78 +1497,78 @@ br       x20
 # CHECK-NEXT:  1      2     1.00                        sub	x2, x3, x4, asr #0
 # CHECK-NEXT:  1      2     1.00                        sub	x5, x6, x7, asr #21
 # CHECK-NEXT:  1      2     1.00                        sub	x8, x9, x10, asr #63
-# CHECK-NEXT:  1      2     0.50                        subs	w3, w5, w7
-# CHECK-NEXT:  1      2     0.50                        cmp	w3, w5
-# CHECK-NEXT:  1      2     0.50                        subs	w4, w6, wzr
-# CHECK-NEXT:  1      2     0.50                        subs	w11, w13, w15
-# CHECK-NEXT:  1      2     0.50                        subs	w9, w3, wzr, lsl #10
-# CHECK-NEXT:  1      2     0.50                        subs	w17, w29, w20, lsl #31
-# CHECK-NEXT:  1      2     0.50                        subs	w21, w22, w23, lsr #0
-# CHECK-NEXT:  1      2     0.50                        subs	w24, w25, w26, lsr #18
-# CHECK-NEXT:  1      2     0.50                        subs	w27, w28, w29, lsr #31
-# CHECK-NEXT:  1      2     0.50                        subs	w2, w3, w4, asr #0
-# CHECK-NEXT:  1      2     0.50                        subs	w5, w6, w7, asr #21
-# CHECK-NEXT:  1      2     0.50                        subs	w8, w9, w10, asr #31
-# CHECK-NEXT:  1      2     0.50                        subs	x3, x5, x7
-# CHECK-NEXT:  1      2     0.50                        cmp	x3, x5
-# CHECK-NEXT:  1      2     0.50                        subs	x4, x6, xzr
-# CHECK-NEXT:  1      2     0.50                        subs	x11, x13, x15
-# CHECK-NEXT:  1      2     0.50                        subs	x9, x3, xzr, lsl #10
-# CHECK-NEXT:  1      2     0.50                        subs	x17, x29, x20, lsl #63
-# CHECK-NEXT:  1      2     0.50                        subs	x21, x22, x23, lsr #0
-# CHECK-NEXT:  1      2     0.50                        subs	x24, x25, x26, lsr #18
-# CHECK-NEXT:  1      2     0.50                        subs	x27, x28, x29, lsr #63
-# CHECK-NEXT:  1      2     0.50                        subs	x2, x3, x4, asr #0
-# CHECK-NEXT:  1      2     0.50                        subs	x5, x6, x7, asr #21
-# CHECK-NEXT:  1      2     0.50                        subs	x8, x9, x10, asr #63
-# CHECK-NEXT:  1      2     0.50                        cmn	wzr, w4
-# CHECK-NEXT:  1      2     0.50                        cmn	w5, wzr
-# CHECK-NEXT:  1      2     0.50                        cmn	w6, w7
-# CHECK-NEXT:  1      2     0.50                        cmn	w8, w9, lsl #15
-# CHECK-NEXT:  1      2     0.50                        cmn	w10, w11, lsl #31
-# CHECK-NEXT:  1      2     0.50                        cmn	w12, w13, lsr #0
-# CHECK-NEXT:  1      2     0.50                        cmn	w14, w15, lsr #21
-# CHECK-NEXT:  1      2     0.50                        cmn	w16, w17, lsr #31
-# CHECK-NEXT:  1      2     0.50                        cmn	w18, w19, asr #0
-# CHECK-NEXT:  1      2     0.50                        cmn	w20, w21, asr #22
-# CHECK-NEXT:  1      2     0.50                        cmn	w22, w23, asr #31
-# CHECK-NEXT:  1      2     0.50                        cmn	x0, x3
-# CHECK-NEXT:  1      2     0.50                        cmn	xzr, x4
-# CHECK-NEXT:  1      2     0.50                        cmn	x5, xzr
-# CHECK-NEXT:  1      2     0.50                        cmn	x6, x7
-# CHECK-NEXT:  1      2     0.50                        cmn	x8, x9, lsl #15
-# CHECK-NEXT:  1      2     0.50                        cmn	x10, x11, lsl #63
-# CHECK-NEXT:  1      2     0.50                        cmn	x12, x13, lsr #0
-# CHECK-NEXT:  1      2     0.50                        cmn	x14, x15, lsr #41
-# CHECK-NEXT:  1      2     0.50                        cmn	x16, x17, lsr #63
-# CHECK-NEXT:  1      2     0.50                        cmn	x18, x19, asr #0
-# CHECK-NEXT:  1      2     0.50                        cmn	x20, x21, asr #55
-# CHECK-NEXT:  1      2     0.50                        cmn	x22, x23, asr #63
-# CHECK-NEXT:  1      2     0.50                        cmp	w0, w3
-# CHECK-NEXT:  1      2     0.50                        cmp	wzr, w4
-# CHECK-NEXT:  1      2     0.50                        cmp	w5, wzr
-# CHECK-NEXT:  1      2     0.50                        cmp	w6, w7
-# CHECK-NEXT:  1      2     0.50                        cmp	w8, w9, lsl #15
-# CHECK-NEXT:  1      2     0.50                        cmp	w10, w11, lsl #31
-# CHECK-NEXT:  1      2     0.50                        cmp	w12, w13, lsr #0
-# CHECK-NEXT:  1      2     0.50                        cmp	w14, w15, lsr #21
-# CHECK-NEXT:  1      2     0.50                        cmp	w18, w19, asr #0
-# CHECK-NEXT:  1      2     0.50                        cmp	w20, w21, asr #22
-# CHECK-NEXT:  1      2     0.50                        cmp	w22, w23, asr #31
-# CHECK-NEXT:  1      2     0.50                        cmp	x0, x3
-# CHECK-NEXT:  1      2     0.50                        cmp	xzr, x4
-# CHECK-NEXT:  1      2     0.50                        cmp	x5, xzr
-# CHECK-NEXT:  1      2     0.50                        cmp	x6, x7
-# CHECK-NEXT:  1      2     0.50                        cmp	x8, x9, lsl #15
-# CHECK-NEXT:  1      2     0.50                        cmp	x10, x11, lsl #63
-# CHECK-NEXT:  1      2     0.50                        cmp	x12, x13, lsr #0
-# CHECK-NEXT:  1      2     0.50                        cmp	x14, x15, lsr #41
-# CHECK-NEXT:  1      2     0.50                        cmp	x16, x17, lsr #63
-# CHECK-NEXT:  1      2     0.50                        cmp	x18, x19, asr #0
-# CHECK-NEXT:  1      2     0.50                        cmp	x20, x21, asr #55
-# CHECK-NEXT:  1      2     0.50                        cmp	x22, x23, asr #63
-# CHECK-NEXT:  1      2     0.50                        cmp	wzr, w0
-# CHECK-NEXT:  1      2     0.50                        cmp	xzr, x0
+# CHECK-NEXT:  1      1     0.50                        subs	w3, w5, w7
+# CHECK-NEXT:  1      1     0.50                        cmp	w3, w5
+# CHECK-NEXT:  1      1     0.50                        subs	w4, w6, wzr
+# CHECK-NEXT:  1      1     0.50                        subs	w11, w13, w15
+# CHECK-NEXT:  1      2     1.00                        subs	w9, w3, wzr, lsl #10
+# CHECK-NEXT:  1      2     1.00                        subs	w17, w29, w20, lsl #31
+# CHECK-NEXT:  1      2     1.00                        subs	w21, w22, w23, lsr #0
+# CHECK-NEXT:  1      2     1.00                        subs	w24, w25, w26, lsr #18
+# CHECK-NEXT:  1      2     1.00                        subs	w27, w28, w29, lsr #31
+# CHECK-NEXT:  1      2     1.00                        subs	w2, w3, w4, asr #0
+# CHECK-NEXT:  1      2     1.00                        subs	w5, w6, w7, asr #21
+# CHECK-NEXT:  1      2     1.00                        subs	w8, w9, w10, asr #31
+# CHECK-NEXT:  1      1     0.50                        subs	x3, x5, x7
+# CHECK-NEXT:  1      1     0.50                        cmp	x3, x5
+# CHECK-NEXT:  1      1     0.50                        subs	x4, x6, xzr
+# CHECK-NEXT:  1      1     0.50                        subs	x11, x13, x15
+# CHECK-NEXT:  1      2     1.00                        subs	x9, x3, xzr, lsl #10
+# CHECK-NEXT:  1      2     1.00                        subs	x17, x29, x20, lsl #63
+# CHECK-NEXT:  1      2     1.00                        subs	x21, x22, x23, lsr #0
+# CHECK-NEXT:  1      2     1.00                        subs	x24, x25, x26, lsr #18
+# CHECK-NEXT:  1      2     1.00                        subs	x27, x28, x29, lsr #63
+# CHECK-NEXT:  1      2     1.00                        subs	x2, x3, x4, asr #0
+# CHECK-NEXT:  1      2     1.00                        subs	x5, x6, x7, asr #21
+# CHECK-NEXT:  1      2     1.00                        subs	x8, x9, x10, asr #63
+# CHECK-NEXT:  1      1     0.50                        cmn	wzr, w4
+# CHECK-NEXT:  1      1     0.50                        cmn	w5, wzr
+# CHECK-NEXT:  1      1     0.50                        cmn	w6, w7
+# CHECK-NEXT:  1      2     1.00                        cmn	w8, w9, lsl #15
+# CHECK-NEXT:  1      2     1.00                        cmn	w10, w11, lsl #31
+# CHECK-NEXT:  1      2     1.00                        cmn	w12, w13, lsr #0
+# CHECK-NEXT:  1      2     1.00                        cmn	w14, w15, lsr #21
+# CHECK-NEXT:  1      2     1.00                        cmn	w16, w17, lsr #31
+# CHECK-NEXT:  1      2     1.00                        cmn	w18, w19, asr #0
+# CHECK-NEXT:  1      2     1.00                        cmn	w20, w21, asr #22
+# CHECK-NEXT:  1      2     1.00                        cmn	w22, w23, asr #31
+# CHECK-NEXT:  1      1     0.50                        cmn	x0, x3
+# CHECK-NEXT:  1      1     0.50                        cmn	xzr, x4
+# CHECK-NEXT:  1      1     0.50                        cmn	x5, xzr
+# CHECK-NEXT:  1      1     0.50                        cmn	x6, x7
+# CHECK-NEXT:  1      2     1.00                        cmn	x8, x9, lsl #15
+# CHECK-NEXT:  1      2     1.00                        cmn	x10, x11, lsl #63
+# CHECK-NEXT:  1      2     1.00                        cmn	x12, x13, lsr #0
+# CHECK-NEXT:  1      2     1.00                        cmn	x14, x15, lsr #41
+# CHECK-NEXT:  1      2     1.00                        cmn	x16, x17, lsr #63
+# CHECK-NEXT:  1      2     1.00                        cmn	x18, x19, asr #0
+# CHECK-NEXT:  1      2     1.00                        cmn	x20, x21, asr #55
+# CHECK-NEXT:  1      2     1.00                        cmn	x22, x23, asr #63
+# CHECK-NEXT:  1      1     0.50                        cmp	w0, w3
+# CHECK-NEXT:  1      1     0.50                        cmp	wzr, w4
+# CHECK-NEXT:  1      1     0.50                        cmp	w5, wzr
+# CHECK-NEXT:  1      1     0.50                        cmp	w6, w7
+# CHECK-NEXT:  1      2     1.00                        cmp	w8, w9, lsl #15
+# CHECK-NEXT:  1      2     1.00                        cmp	w10, w11, lsl #31
+# CHECK-NEXT:  1      2     1.00                        cmp	w12, w13, lsr #0
+# CHECK-NEXT:  1      2     1.00                        cmp	w14, w15, lsr #21
+# CHECK-NEXT:  1      2     1.00                        cmp	w18, w19, asr #0
+# CHECK-NEXT:  1      2     1.00                        cmp	w20, w21, asr #22
+# CHECK-NEXT:  1      2     1.00                        cmp	w22, w23, asr #31
+# CHECK-NEXT:  1      1     0.50                        cmp	x0, x3
+# CHECK-NEXT:  1      1     0.50                        cmp	xzr, x4
+# CHECK-NEXT:  1      1     0.50                        cmp	x5, xzr
+# CHECK-NEXT:  1      1     0.50                        cmp	x6, x7
+# CHECK-NEXT:  1      2     1.00                        cmp	x8, x9, lsl #15
+# CHECK-NEXT:  1      2     1.00                        cmp	x10, x11, lsl #63
+# CHECK-NEXT:  1      2     1.00                        cmp	x12, x13, lsr #0
+# CHECK-NEXT:  1      2     1.00                        cmp	x14, x15, lsr #41
+# CHECK-NEXT:  1      2     1.00                        cmp	x16, x17, lsr #63
+# CHECK-NEXT:  1      2     1.00                        cmp	x18, x19, asr #0
+# CHECK-NEXT:  1      2     1.00                        cmp	x20, x21, asr #55
+# CHECK-NEXT:  1      2     1.00                        cmp	x22, x23, asr #63
+# CHECK-NEXT:  1      1     0.50                        cmp	wzr, w0
+# CHECK-NEXT:  1      1     0.50                        cmp	xzr, x0
 # CHECK-NEXT:  1      1     0.33                        adc	w29, w27, w25
 # CHECK-NEXT:  1      1     0.33                        adc	wzr, w3, w4
 # CHECK-NEXT:  1      1     0.33                        adc	w9, wzr, w10
@@ -1779,10 +1799,10 @@ br       x20
 # CHECK-NEXT:  1      1     0.33                        clz	x26, x4
 # CHECK-NEXT:  1      1     0.33                        cls	w3, w5
 # CHECK-NEXT:  1      1     0.33                        cls	x20, x5
-# CHECK-NEXT:  1      12    1.00                        udiv	w0, w7, w10
-# CHECK-NEXT:  1      20    1.00                        udiv	x9, x22, x4
-# CHECK-NEXT:  1      12    1.00                        sdiv	w12, w21, w0
-# CHECK-NEXT:  1      20    1.00                        sdiv	x13, x2, x1
+# CHECK-NEXT:  1      12    12.00                       udiv	w0, w7, w10
+# CHECK-NEXT:  1      20    20.00                       udiv	x9, x22, x4
+# CHECK-NEXT:  1      12    12.00                       sdiv	w12, w21, w0
+# CHECK-NEXT:  1      20    20.00                       sdiv	x13, x2, x1
 # CHECK-NEXT:  1      1     0.33                        lsl	w11, w12, w13
 # CHECK-NEXT:  1      1     0.33                        lsl	x14, x15, x16
 # CHECK-NEXT:  1      1     0.33                        lsr	w17, w18, w19
@@ -1886,7 +1906,7 @@ br       x20
 # CHECK-NEXT:  1      2     0.50                        fmov	s0, s1
 # CHECK-NEXT:  1      2     0.50                        fabs	s2, s3
 # CHECK-NEXT:  1      2     0.50                        fneg	s4, s5
-# CHECK-NEXT:  1      17    1.00                        fsqrt	s6, s7
+# CHECK-NEXT:  1      17    17.00                       fsqrt	s6, s7
 # CHECK-NEXT:  1      3     0.50                        fcvt	d8, s9
 # CHECK-NEXT:  1      3     0.50                        fcvt	h10, s11
 # CHECK-NEXT:  1      3     0.50                        frintn	s12, s13
@@ -1899,7 +1919,7 @@ br       x20
 # CHECK-NEXT:  1      2     0.50                        fmov	d0, d1
 # CHECK-NEXT:  1      2     0.50                        fabs	d2, d3
 # CHECK-NEXT:  1      2     0.50                        fneg	d4, d5
-# CHECK-NEXT:  1      31    1.00                        fsqrt	d6, d7
+# CHECK-NEXT:  1      31    31.00                       fsqrt	d6, d7
 # CHECK-NEXT:  1      3     0.50                        fcvt	s8, d9
 # CHECK-NEXT:  1      3     0.50                        fcvt	h10, d11
 # CHECK-NEXT:  1      3     0.50                        frintn	d12, d13
@@ -1912,7 +1932,7 @@ br       x20
 # CHECK-NEXT:  1      3     0.50                        fcvt	s26, h27
 # CHECK-NEXT:  1      3     0.50                        fcvt	d28, h29
 # CHECK-NEXT:  1      5     0.50                        fmul	s20, s19, s17
-# CHECK-NEXT:  1      11    1.00                        fdiv	s1, s2, s3
+# CHECK-NEXT:  1      11    11.00                       fdiv	s1, s2, s3
 # CHECK-NEXT:  1      5     0.50                        fadd	s4, s5, s6
 # CHECK-NEXT:  1      5     0.50                        fsub	s7, s8, s9
 # CHECK-NEXT:  1      2     0.50                        fmax	s10, s11, s12
@@ -1921,7 +1941,7 @@ br       x20
 # CHECK-NEXT:  1      2     0.50                        fminnm	s19, s20, s21
 # CHECK-NEXT:  1      5     0.50                        fnmul	s22, s23, s2
 # CHECK-NEXT:  1      5     0.50                        fmul	d20, d19, d17
-# CHECK-NEXT:  1      18    1.00                        fdiv	d1, d2, d3
+# CHECK-NEXT:  1      18    18.00                       fdiv	d1, d2, d3
 # CHECK-NEXT:  1      4     0.50                        fadd	d4, d5, d6
 # CHECK-NEXT:  1      4     0.50                        fsub	d7, d8, d9
 # CHECK-NEXT:  1      2     0.50                        fmax	d10, d11, d12
@@ -2132,22 +2152,22 @@ br       x20
 # CHECK-NEXT:  2      4     0.50    *      *      U     ldaxp	w5, w18, [sp]
 # CHECK-NEXT:  2      4     0.50    *      *      U     ldaxp	x6, x19, [x22]
 # CHECK-NEXT:  2      4     0.50    *      *      U     ldaxp	x6, x19, [x22]
-# CHECK-NEXT:  1      1     0.50           *      U     stlrb	w24, [sp]
-# CHECK-NEXT:  1      1     0.50           *      U     stlrh	w25, [x30]
-# CHECK-NEXT:  1      1     0.50           *      U     stlr	w26, [x29]
-# CHECK-NEXT:  1      1     0.50           *      U     stlr	x27, [x28]
-# CHECK-NEXT:  1      1     0.50           *      U     stlr	x27, [x28]
-# CHECK-NEXT:  1      1     0.50           *      U     stlr	x27, [x28]
+# CHECK-NEXT:  1      1     1.00           *      U     stlrb	w24, [sp]
+# CHECK-NEXT:  1      1     1.00           *      U     stlrh	w25, [x30]
+# CHECK-NEXT:  1      1     1.00           *      U     stlr	w26, [x29]
+# CHECK-NEXT:  1      1     1.00           *      U     stlr	x27, [x28]
+# CHECK-NEXT:  1      1     1.00           *      U     stlr	x27, [x28]
+# CHECK-NEXT:  1      1     1.00           *      U     stlr	x27, [x28]
 # CHECK-NEXT:  1      4     0.50    *             U     ldarb	w23, [sp]
 # CHECK-NEXT:  1      4     0.50    *             U     ldarh	w22, [x30]
 # CHECK-NEXT:  1      4     0.50    *             U     ldar	wzr, [x29]
 # CHECK-NEXT:  1      4     0.50    *             U     ldar	x21, [x28]
 # CHECK-NEXT:  1      4     0.50    *             U     ldar	x21, [x28]
 # CHECK-NEXT:  1      4     0.50    *             U     ldar	x21, [x28]
-# CHECK-NEXT:  1      1     0.50           *            sturb	w9, [sp]
-# CHECK-NEXT:  1      1     0.50           *            sturh	wzr, [x12, #255]
-# CHECK-NEXT:  1      1     0.50           *            stur	w16, [x0, #-256]
-# CHECK-NEXT:  1      1     0.50           *            stur	x28, [x14, #1]
+# CHECK-NEXT:  1      1     1.00           *            sturb	w9, [sp]
+# CHECK-NEXT:  1      1     1.00           *            sturh	wzr, [x12, #255]
+# CHECK-NEXT:  1      1     1.00           *            stur	w16, [x0, #-256]
+# CHECK-NEXT:  1      1     1.00           *            stur	x28, [x14, #1]
 # CHECK-NEXT:  1      4     0.50    *                   ldurb	w1, [x20, #255]
 # CHECK-NEXT:  1      4     0.50    *                   ldurh	w20, [x1, #255]
 # CHECK-NEXT:  1      4     0.50    *                   ldur	w12, [sp, #255]
@@ -2158,28 +2178,28 @@ br       x20
 # CHECK-NEXT:  1      4     0.50                  U     prfum	pldl2keep, [sp, #-256]
 # CHECK-NEXT:  1      4     0.50    *                   ldursb	w19, [x1, #-256]
 # CHECK-NEXT:  1      4     0.50    *                   ldursh	w15, [x21, #-256]
-# CHECK-NEXT:  1      1     0.50           *            stur	b0, [sp, #1]
-# CHECK-NEXT:  1      1     0.50           *            stur	h12, [x12, #-1]
-# CHECK-NEXT:  1      1     0.50           *            stur	s15, [x0, #255]
-# CHECK-NEXT:  1      1     0.50           *            stur	d31, [x5, #25]
-# CHECK-NEXT:  1      1     0.50           *            stur	q9, [x5]
+# CHECK-NEXT:  1      1     1.00           *            stur	b0, [sp, #1]
+# CHECK-NEXT:  1      1     1.00           *            stur	h12, [x12, #-1]
+# CHECK-NEXT:  1      1     1.00           *            stur	s15, [x0, #255]
+# CHECK-NEXT:  1      1     1.00           *            stur	d31, [x5, #25]
+# CHECK-NEXT:  1      1     1.00           *            stur	q9, [x5]
 # CHECK-NEXT:  1      5     0.50    *                   ldur	b3, [sp]
 # CHECK-NEXT:  1      5     0.50    *                   ldur	h5, [x4, #-256]
 # CHECK-NEXT:  1      5     0.50    *                   ldur	s7, [x12, #-1]
 # CHECK-NEXT:  1      5     0.50    *                   ldur	d11, [x19, #4]
 # CHECK-NEXT:  1      5     0.50    *                   ldur	q13, [x1, #2]
-# CHECK-NEXT:  2      1     0.50           *            strb	w9, [x2], #255
-# CHECK-NEXT:  2      1     0.50           *            strb	w10, [x3], #1
-# CHECK-NEXT:  2      1     0.50           *            strb	w10, [x3], #-256
-# CHECK-NEXT:  2      1     0.50           *            strh	w9, [x2], #255
-# CHECK-NEXT:  2      1     0.50           *            strh	w9, [x2], #1
-# CHECK-NEXT:  2      1     0.50           *            strh	w10, [x3], #-256
-# CHECK-NEXT:  2      1     0.50           *            str	w19, [sp], #255
-# CHECK-NEXT:  2      1     0.50           *            str	w20, [x30], #1
-# CHECK-NEXT:  2      1     0.50           *            str	w21, [x12], #-256
-# CHECK-NEXT:  2      1     0.50           *            str	xzr, [x9], #255
-# CHECK-NEXT:  2      1     0.50           *            str	x2, [x3], #1
-# CHECK-NEXT:  2      1     0.50           *            str	x19, [x12], #-256
+# CHECK-NEXT:  2      1     1.00           *            strb	w9, [x2], #255
+# CHECK-NEXT:  2      1     1.00           *            strb	w10, [x3], #1
+# CHECK-NEXT:  2      1     1.00           *            strb	w10, [x3], #-256
+# CHECK-NEXT:  2      1     1.00           *            strh	w9, [x2], #255
+# CHECK-NEXT:  2      1     1.00           *            strh	w9, [x2], #1
+# CHECK-NEXT:  2      1     1.00           *            strh	w10, [x3], #-256
+# CHECK-NEXT:  2      1     1.00           *            str	w19, [sp], #255
+# CHECK-NEXT:  2      1     1.00           *            str	w20, [x30], #1
+# CHECK-NEXT:  2      1     1.00           *            str	w21, [x12], #-256
+# CHECK-NEXT:  2      1     1.00           *            str	xzr, [x9], #255
+# CHECK-NEXT:  2      1     1.00           *            str	x2, [x3], #1
+# CHECK-NEXT:  2      1     1.00           *            str	x19, [x12], #-256
 # CHECK-NEXT:  2      4     0.50    *                   ldrb	w9, [x2], #255
 # CHECK-NEXT:  2      4     0.50    *                   ldrb	w10, [x3], #1
 # CHECK-NEXT:  2      4     0.50    *                   ldrb	w10, [x3], #-256
@@ -2207,18 +2227,18 @@ br       x20
 # CHECK-NEXT:  2      4     0.50    *                   ldrsh	wzr, [x9], #255
 # CHECK-NEXT:  2      4     0.50    *                   ldrsh	w2, [x3], #1
 # CHECK-NEXT:  2      4     0.50    *                   ldrsh	w19, [x12], #-256
-# CHECK-NEXT:  2      1     0.50           *            str	b0, [x0], #255
-# CHECK-NEXT:  2      1     0.50           *            str	b3, [x3], #1
-# CHECK-NEXT:  2      1     0.50           *            str	b5, [sp], #-256
-# CHECK-NEXT:  2      1     0.50           *            str	h10, [x10], #255
-# CHECK-NEXT:  2      1     0.50           *            str	h13, [x23], #1
-# CHECK-NEXT:  2      1     0.50           *            str	h15, [sp], #-256
-# CHECK-NEXT:  2      1     0.50           *            str	s20, [x20], #255
-# CHECK-NEXT:  2      1     0.50           *            str	s23, [x23], #1
-# CHECK-NEXT:  2      1     0.50           *            str	s25, [x0], #-256
-# CHECK-NEXT:  2      1     0.50           *            str	d20, [x20], #255
-# CHECK-NEXT:  2      1     0.50           *            str	d23, [x23], #1
-# CHECK-NEXT:  2      1     0.50           *            str	d25, [x0], #-256
+# CHECK-NEXT:  2      1     1.00           *            str	b0, [x0], #255
+# CHECK-NEXT:  2      1     1.00           *            str	b3, [x3], #1
+# CHECK-NEXT:  2      1     1.00           *            str	b5, [sp], #-256
+# CHECK-NEXT:  2      1     1.00           *            str	h10, [x10], #255
+# CHECK-NEXT:  2      1     1.00           *            str	h13, [x23], #1
+# CHECK-NEXT:  2      1     1.00           *            str	h15, [sp], #-256
+# CHECK-NEXT:  2      1     1.00           *            str	s20, [x20], #255
+# CHECK-NEXT:  2      1     1.00           *            str	s23, [x23], #1
+# CHECK-NEXT:  2      1     1.00           *            str	s25, [x0], #-256
+# CHECK-NEXT:  2      1     1.00           *            str	d20, [x20], #255
+# CHECK-NEXT:  2      1     1.00           *            str	d23, [x23], #1
+# CHECK-NEXT:  2      1     1.00           *            str	d25, [x0], #-256
 # CHECK-NEXT:  2      5     0.50    *                   ldr	b0, [x0], #255
 # CHECK-NEXT:  2      5     0.50    *                   ldr	b3, [x3], #1
 # CHECK-NEXT:  2      5     0.50    *                   ldr	b5, [sp], #-256
@@ -2234,22 +2254,22 @@ br       x20
 # CHECK-NEXT:  2      5     0.50    *                   ldr	q20, [x1], #255
 # CHECK-NEXT:  2      5     0.50    *                   ldr	q23, [x9], #1
 # CHECK-NEXT:  2      5     0.50    *                   ldr	q25, [x20], #-256
-# CHECK-NEXT:  2      1     0.50           *            str	q10, [x1], #255
-# CHECK-NEXT:  2      1     0.50           *            str	q22, [sp], #1
-# CHECK-NEXT:  2      1     0.50           *            str	q21, [x20], #-256
+# CHECK-NEXT:  2      1     1.00           *            str	q10, [x1], #255
+# CHECK-NEXT:  2      1     1.00           *            str	q22, [sp], #1
+# CHECK-NEXT:  2      1     1.00           *            str	q21, [x20], #-256
 # CHECK-NEXT:  2      4     0.50    *                   ldr	x3, [x4, #0]!
-# CHECK-NEXT:  2      1     0.50           *            strb	w9, [x2, #255]!
-# CHECK-NEXT:  2      1     0.50           *            strb	w10, [x3, #1]!
-# CHECK-NEXT:  2      1     0.50           *            strb	w10, [x3, #-256]!
-# CHECK-NEXT:  2      1     0.50           *            strh	w9, [x2, #255]!
-# CHECK-NEXT:  2      1     0.50           *            strh	w9, [x2, #1]!
-# CHECK-NEXT:  2      1     0.50           *            strh	w10, [x3, #-256]!
-# CHECK-NEXT:  2      1     0.50           *            str	w19, [sp, #255]!
-# CHECK-NEXT:  2      1     0.50           *            str	w20, [x30, #1]!
-# CHECK-NEXT:  2      1     0.50           *            str	w21, [x12, #-256]!
-# CHECK-NEXT:  2      1     0.50           *            str	xzr, [x9, #255]!
-# CHECK-NEXT:  2      1     0.50           *            str	x2, [x3, #1]!
-# CHECK-NEXT:  2      1     0.50           *            str	x19, [x12, #-256]!
+# CHECK-NEXT:  2      1     1.00           *            strb	w9, [x2, #255]!
+# CHECK-NEXT:  2      1     1.00           *            strb	w10, [x3, #1]!
+# CHECK-NEXT:  2      1     1.00           *            strb	w10, [x3, #-256]!
+# CHECK-NEXT:  2      1     1.00           *            strh	w9, [x2, #255]!
+# CHECK-NEXT:  2      1     1.00           *            strh	w9, [x2, #1]!
+# CHECK-NEXT:  2      1     1.00           *            strh	w10, [x3, #-256]!
+# CHECK-NEXT:  2      1     1.00           *            str	w19, [sp, #255]!
+# CHECK-NEXT:  2      1     1.00           *            str	w20, [x30, #1]!
+# CHECK-NEXT:  2      1     1.00           *            str	w21, [x12, #-256]!
+# CHECK-NEXT:  2      1     1.00           *            str	xzr, [x9, #255]!
+# CHECK-NEXT:  2      1     1.00           *            str	x2, [x3, #1]!
+# CHECK-NEXT:  2      1     1.00           *            str	x19, [x12, #-256]!
 # CHECK-NEXT:  2      4     0.50    *                   ldrb	w9, [x2, #255]!
 # CHECK-NEXT:  2      4     0.50    *                   ldrb	w10, [x3, #1]!
 # CHECK-NEXT:  2      4     0.50    *                   ldrb	w10, [x3, #-256]!
@@ -2277,18 +2297,18 @@ br       x20
 # CHECK-NEXT:  2      4     0.50    *                   ldrsh	wzr, [x9, #255]!
 # CHECK-NEXT:  2      4     0.50    *                   ldrsh	w2, [x3, #1]!
 # CHECK-NEXT:  2      4     0.50    *                   ldrsh	w19, [x12, #-256]!
-# CHECK-NEXT:  2      1     0.50           *            str	b0, [x0, #255]!
-# CHECK-NEXT:  2      1     0.50           *            str	b3, [x3, #1]!
-# CHECK-NEXT:  2      1     0.50           *            str	b5, [sp, #-256]!
-# CHECK-NEXT:  2      1     0.50           *            str	h10, [x10, #255]!
-# CHECK-NEXT:  2      1     0.50           *            str	h13, [x23, #1]!
-# CHECK-NEXT:  2      1     0.50           *            str	h15, [sp, #-256]!
-# CHECK-NEXT:  2      1     0.50           *            str	s20, [x20, #255]!
-# CHECK-NEXT:  2      1     0.50           *            str	s23, [x23, #1]!
-# CHECK-NEXT:  2      1     0.50           *            str	s25, [x0, #-256]!
-# CHECK-NEXT:  2      1     0.50           *            str	d20, [x20, #255]!
-# CHECK-NEXT:  2      1     0.50           *            str	d23, [x23, #1]!
-# CHECK-NEXT:  2      1     0.50           *            str	d25, [x0, #-256]!
+# CHECK-NEXT:  2      1     1.00           *            str	b0, [x0, #255]!
+# CHECK-NEXT:  2      1     1.00           *            str	b3, [x3, #1]!
+# CHECK-NEXT:  2      1     1.00           *            str	b5, [sp, #-256]!
+# CHECK-NEXT:  2      1     1.00           *            str	h10, [x10, #255]!
+# CHECK-NEXT:  2      1     1.00           *            str	h13, [x23, #1]!
+# CHECK-NEXT:  2      1     1.00           *            str	h15, [sp, #-256]!
+# CHECK-NEXT:  2      1     1.00           *            str	s20, [x20, #255]!
+# CHECK-NEXT:  2      1     1.00           *            str	s23, [x23, #1]!
+# CHECK-NEXT:  2      1     1.00           *            str	s25, [x0, #-256]!
+# CHECK-NEXT:  2      1     1.00           *            str	d20, [x20, #255]!
+# CHECK-NEXT:  2      1     1.00           *            str	d23, [x23, #1]!
+# CHECK-NEXT:  2      1     1.00           *            str	d25, [x0, #-256]!
 # CHECK-NEXT:  2      5     0.50    *                   ldr	b0, [x0, #255]!
 # CHECK-NEXT:  2      5     0.50    *                   ldr	b3, [x3, #1]!
 # CHECK-NEXT:  2      5     0.50    *                   ldr	b5, [sp, #-256]!
@@ -2304,13 +2324,13 @@ br       x20
 # CHECK-NEXT:  2      5     0.50    *                   ldr	q20, [x1, #255]!
 # CHECK-NEXT:  2      5     0.50    *                   ldr	q23, [x9, #1]!
 # CHECK-NEXT:  2      5     0.50    *                   ldr	q25, [x20, #-256]!
-# CHECK-NEXT:  2      1     0.50           *            str	q10, [x1, #255]!
-# CHECK-NEXT:  2      1     0.50           *            str	q22, [sp, #1]!
-# CHECK-NEXT:  2      1     0.50           *            str	q21, [x20, #-256]!
-# CHECK-NEXT:  1      1     0.50           *            sttrb	w9, [sp]
-# CHECK-NEXT:  1      1     0.50           *            sttrh	wzr, [x12, #255]
-# CHECK-NEXT:  1      1     0.50           *            sttr	w16, [x0, #-256]
-# CHECK-NEXT:  1      1     0.50           *            sttr	x28, [x14, #1]
+# CHECK-NEXT:  2      1     1.00           *            str	q10, [x1, #255]!
+# CHECK-NEXT:  2      1     1.00           *            str	q22, [sp, #1]!
+# CHECK-NEXT:  2      1     1.00           *            str	q21, [x20, #-256]!
+# CHECK-NEXT:  1      1     1.00           *            sttrb	w9, [sp]
+# CHECK-NEXT:  1      1     1.00           *            sttrh	wzr, [x12, #255]
+# CHECK-NEXT:  1      1     1.00           *            sttr	w16, [x0, #-256]
+# CHECK-NEXT:  1      1     1.00           *            sttr	x28, [x14, #1]
 # CHECK-NEXT:  1      4     0.50    *                   ldtrb	w1, [x20, #255]
 # CHECK-NEXT:  1      4     0.50    *                   ldtrh	w20, [x1, #255]
 # CHECK-NEXT:  1      4     0.50    *                   ldtr	w12, [sp, #255]
@@ -2337,21 +2357,21 @@ br       x20
 # CHECK-NEXT:  1      4     0.50    *                   ldrb	w12, [x2]
 # CHECK-NEXT:  1      4     0.50    *                   ldrsb	w27, [sp, #4095]
 # CHECK-NEXT:  1      4     0.50    *                   ldrsb	xzr, [x15]
-# CHECK-NEXT:  1      1     0.50           *            str	x30, [sp]
-# CHECK-NEXT:  1      1     0.50           *            str	w20, [x4, #16380]
-# CHECK-NEXT:  1      1     0.50           *            strh	w17, [sp, #8190]
-# CHECK-NEXT:  1      1     0.50           *            strb	w23, [x3, #4095]
-# CHECK-NEXT:  1      1     0.50           *            strb	wzr, [x2]
+# CHECK-NEXT:  1      1     1.00           *            str	x30, [sp]
+# CHECK-NEXT:  1      1     1.00           *            str	w20, [x4, #16380]
+# CHECK-NEXT:  1      1     1.00           *            strh	w17, [sp, #8190]
+# CHECK-NEXT:  1      1     1.00           *            strb	w23, [x3, #4095]
+# CHECK-NEXT:  1      1     1.00           *            strb	wzr, [x2]
 # CHECK-NEXT:  1      5     0.50    *                   ldr	b31, [sp, #4095]
 # CHECK-NEXT:  1      5     0.50    *                   ldr	h20, [x2, #8190]
 # CHECK-NEXT:  1      5     0.50    *                   ldr	s10, [x19, #16380]
 # CHECK-NEXT:  1      5     0.50    *                   ldr	d3, [x10, #32760]
-# CHECK-NEXT:  1      1     0.50           *            str	q12, [sp, #65520]
+# CHECK-NEXT:  1      1     1.00           *            str	q12, [sp, #65520]
 # CHECK-NEXT:  1      4     0.50    *                   ldrb	w3, [sp, x5]
 # CHECK-NEXT:  1      4     0.50    *                   ldrb	w9, [x27, x6]
 # CHECK-NEXT:  1      4     0.50    *                   ldrsb	w10, [x30, x7]
 # CHECK-NEXT:  1      4     0.50    *                   ldrb	w11, [x29, x3, sxtx]
-# CHECK-NEXT:  2      1     0.50           *            strb	w12, [x28, xzr, sxtx]
+# CHECK-NEXT:  2      1     1.00           *            strb	w12, [x28, xzr, sxtx]
 # CHECK-NEXT:  1      4     0.50    *                   ldrb	w14, [x26, w6, uxtw]
 # CHECK-NEXT:  1      4     0.50    *                   ldrsb	w15, [x25, w7, uxtw]
 # CHECK-NEXT:  1      4     0.50    *                   ldrb	w17, [x23, w9, sxtw]
@@ -2359,7 +2379,7 @@ br       x20
 # CHECK-NEXT:  1      4     0.50    *                   ldrsh	w3, [sp, x5]
 # CHECK-NEXT:  1      4     0.50    *                   ldrsh	w9, [x27, x6]
 # CHECK-NEXT:  1      4     0.50    *                   ldrh	w10, [x30, x7, lsl #1]
-# CHECK-NEXT:  2      1     0.50           *            strh	w11, [x29, x3, sxtx]
+# CHECK-NEXT:  2      1     1.00           *            strh	w11, [x29, x3, sxtx]
 # CHECK-NEXT:  1      4     0.50    *                   ldrh	w12, [x28, xzr, sxtx]
 # CHECK-NEXT:  1      4     0.50    *                   ldrsh	x13, [x27, x5, sxtx #1]
 # CHECK-NEXT:  1      4     0.50    *                   ldrh	w14, [x26, w6, uxtw]
@@ -2367,23 +2387,23 @@ br       x20
 # CHECK-NEXT:  1      4     0.50    *                   ldrsh	w16, [x24, w8, uxtw #1]
 # CHECK-NEXT:  1      4     0.50    *                   ldrh	w17, [x23, w9, sxtw]
 # CHECK-NEXT:  1      4     0.50    *                   ldrh	w18, [x22, w10, sxtw]
-# CHECK-NEXT:  2      1     0.50           *            strh	w19, [x21, wzr, sxtw #1]
+# CHECK-NEXT:  2      1     1.00           *            strh	w19, [x21, wzr, sxtw #1]
 # CHECK-NEXT:  1      4     0.50    *                   ldr	w3, [sp, x5]
 # CHECK-NEXT:  2      6     0.50    *                   ldr	s9, [x27, x6]
 # CHECK-NEXT:  1      4     0.50    *                   ldr	w10, [x30, x7, lsl #2]
 # CHECK-NEXT:  1      4     0.50    *                   ldr	w11, [x29, x3, sxtx]
-# CHECK-NEXT:  2      2     0.50           *            str	s12, [x28, xzr, sxtx]
-# CHECK-NEXT:  2      1     0.50           *            str	w13, [x27, x5, sxtx #2]
-# CHECK-NEXT:  2      1     0.50           *            str	w14, [x26, w6, uxtw]
+# CHECK-NEXT:  2      2     1.00           *            str	s12, [x28, xzr, sxtx]
+# CHECK-NEXT:  2      1     1.00           *            str	w13, [x27, x5, sxtx #2]
+# CHECK-NEXT:  2      1     1.00           *            str	w14, [x26, w6, uxtw]
 # CHECK-NEXT:  1      4     0.50    *                   ldr	w15, [x25, w7, uxtw]
 # CHECK-NEXT:  1      4     0.50    *                   ldr	w16, [x24, w8, uxtw #2]
 # CHECK-NEXT:  1      4     0.50    *                   ldrsw	x17, [x23, w9, sxtw]
 # CHECK-NEXT:  1      4     0.50    *                   ldr	w18, [x22, w10, sxtw]
 # CHECK-NEXT:  1      4     0.50    *                   ldrsw	x19, [x21, wzr, sxtw #2]
 # CHECK-NEXT:  1      4     0.50    *                   ldr	x3, [sp, x5]
-# CHECK-NEXT:  2      1     0.50           *            str	x9, [x27, x6]
+# CHECK-NEXT:  2      1     1.00           *            str	x9, [x27, x6]
 # CHECK-NEXT:  2      6     0.50    *                   ldr	d10, [x30, x7, lsl #3]
-# CHECK-NEXT:  2      1     0.50           *            str	x11, [x29, x3, sxtx]
+# CHECK-NEXT:  2      1     1.00           *            str	x11, [x29, x3, sxtx]
 # CHECK-NEXT:  1      4     0.50    *                   ldr	x12, [x28, xzr, sxtx]
 # CHECK-NEXT:  1      4     0.50    *                   ldr	x13, [x27, x5, sxtx #3]
 # CHECK-NEXT:  1      4     0.50                  U     prfm	pldl1keep, [x26, w6, uxtw]
@@ -2391,21 +2411,21 @@ br       x20
 # CHECK-NEXT:  1      4     0.50    *                   ldr	x16, [x24, w8, uxtw #3]
 # CHECK-NEXT:  1      4     0.50    *                   ldr	x17, [x23, w9, sxtw]
 # CHECK-NEXT:  1      4     0.50    *                   ldr	x18, [x22, w10, sxtw]
-# CHECK-NEXT:  2      2     0.50           *            str	d19, [x21, wzr, sxtw #3]
+# CHECK-NEXT:  2      2     1.00           *            str	d19, [x21, wzr, sxtw #3]
 # CHECK-NEXT:  2      6     0.50    *                   ldr	q3, [sp, x5]
 # CHECK-NEXT:  2      6     0.50    *                   ldr	q9, [x27, x6]
 # CHECK-NEXT:  2      6     0.50    *                   ldr	q10, [x30, x7, lsl #4]
-# CHECK-NEXT:  2      2     0.50           *            str	q11, [x29, x3, sxtx]
-# CHECK-NEXT:  2      2     0.50           *            str	q12, [x28, xzr, sxtx]
-# CHECK-NEXT:  2      2     0.50           *            str	q13, [x27, x5, sxtx #4]
+# CHECK-NEXT:  2      2     1.00           *            str	q11, [x29, x3, sxtx]
+# CHECK-NEXT:  2      2     1.00           *            str	q12, [x28, xzr, sxtx]
+# CHECK-NEXT:  2      2     1.00           *            str	q13, [x27, x5, sxtx #4]
 # CHECK-NEXT:  2      6     0.50    *                   ldr	q14, [x26, w6, uxtw]
 # CHECK-NEXT:  2      6     0.50    *                   ldr	q15, [x25, w7, uxtw]
 # CHECK-NEXT:  2      6     0.50    *                   ldr	q16, [x24, w8, uxtw #4]
 # CHECK-NEXT:  2      6     0.50    *                   ldr	q17, [x23, w9, sxtw]
-# CHECK-NEXT:  2      2     0.50           *            str	q18, [x22, w10, sxtw]
+# CHECK-NEXT:  2      2     1.00           *            str	q18, [x22, w10, sxtw]
 # CHECK-NEXT:  2      6     0.50    *                   ldr	q19, [x21, wzr, sxtw #4]
 # CHECK-NEXT:  2      4     0.50    *                   ldp	w3, w5, [sp]
-# CHECK-NEXT:  1      1     0.50           *            stp	wzr, w9, [sp, #252]
+# CHECK-NEXT:  1      1     1.00           *            stp	wzr, w9, [sp, #252]
 # CHECK-NEXT:  2      4     0.50    *                   ldp	w2, wzr, [sp, #-256]
 # CHECK-NEXT:  2      4     0.50    *                   ldp	w9, w10, [sp, #4]
 # CHECK-NEXT:  2      4     0.50    *                   ldpsw	x9, x10, [sp, #4]
@@ -2415,16 +2435,16 @@ br       x20
 # CHECK-NEXT:  2      4     0.50    *                   ldp	x22, x23, [x3, #-512]
 # CHECK-NEXT:  2      4     0.50    *                   ldp	x24, x25, [x4, #8]
 # CHECK-NEXT:  2      5     0.50    *                   ldp	s29, s28, [sp, #252]
-# CHECK-NEXT:  2      2     1.00           *            stp	s27, s26, [sp, #-256]
+# CHECK-NEXT:  2      2     2.00           *            stp	s27, s26, [sp, #-256]
 # CHECK-NEXT:  2      5     0.50    *                   ldp	s1, s2, [x3, #44]
-# CHECK-NEXT:  2      2     1.00           *            stp	d3, d5, [x9, #504]
-# CHECK-NEXT:  2      2     1.00           *            stp	d7, d11, [x10, #-512]
+# CHECK-NEXT:  2      2     2.00           *            stp	d3, d5, [x9, #504]
+# CHECK-NEXT:  2      2     2.00           *            stp	d7, d11, [x10, #-512]
 # CHECK-NEXT:  2      5     0.50    *                   ldp	d2, d3, [x30, #-8]
-# CHECK-NEXT:  2      2     1.00           *            stp	q3, q5, [sp]
-# CHECK-NEXT:  2      2     1.00           *            stp	q17, q19, [sp, #1008]
+# CHECK-NEXT:  2      2     2.00           *            stp	q3, q5, [sp]
+# CHECK-NEXT:  2      2     2.00           *            stp	q17, q19, [sp, #1008]
 # CHECK-NEXT:  2      5     0.50    *                   ldp	q23, q29, [x1, #-1024]
 # CHECK-NEXT:  4      4     0.67    *                   ldp	w3, w5, [sp], #0
-# CHECK-NEXT:  2      1     0.50           *            stp	wzr, w9, [sp], #252
+# CHECK-NEXT:  2      1     1.00           *            stp	wzr, w9, [sp], #252
 # CHECK-NEXT:  4      4     0.67    *                   ldp	w2, wzr, [sp], #-256
 # CHECK-NEXT:  4      4     0.67    *                   ldp	w9, w10, [sp], #4
 # CHECK-NEXT:  3      4     0.50    *                   ldpsw	x9, x10, [sp], #4
@@ -2434,16 +2454,16 @@ br       x20
 # CHECK-NEXT:  4      4     0.67    *                   ldp	x22, x23, [x3], #-512
 # CHECK-NEXT:  4      4     0.67    *                   ldp	x24, x25, [x4], #8
 # CHECK-NEXT:  3      5     0.50    *                   ldp	s29, s28, [sp], #252
-# CHECK-NEXT:  3      2     1.00           *            stp	s27, s26, [sp], #-256
+# CHECK-NEXT:  3      2     2.00           *            stp	s27, s26, [sp], #-256
 # CHECK-NEXT:  3      5     0.50    *                   ldp	s1, s2, [x3], #44
-# CHECK-NEXT:  3      2     1.00           *            stp	d3, d5, [x9], #504
-# CHECK-NEXT:  3      2     1.00           *            stp	d7, d11, [x10], #-512
+# CHECK-NEXT:  3      2     2.00           *            stp	d3, d5, [x9], #504
+# CHECK-NEXT:  3      2     2.00           *            stp	d7, d11, [x10], #-512
 # CHECK-NEXT:  3      5     0.50    *                   ldp	d2, d3, [x30], #-8
-# CHECK-NEXT:  3      2     1.00           *            stp	q3, q5, [sp], #0
-# CHECK-NEXT:  3      2     1.00           *            stp	q17, q19, [sp], #1008
+# CHECK-NEXT:  3      2     2.00           *            stp	q3, q5, [sp], #0
+# CHECK-NEXT:  3      2     2.00           *            stp	q17, q19, [sp], #1008
 # CHECK-NEXT:  3      5     0.50    *                   ldp	q23, q29, [x1], #-1024
 # CHECK-NEXT:  4      4     0.67    *                   ldp	w3, w5, [sp, #0]!
-# CHECK-NEXT:  2      1     0.50           *            stp	wzr, w9, [sp, #252]!
+# CHECK-NEXT:  2      1     1.00           *            stp	wzr, w9, [sp, #252]!
 # CHECK-NEXT:  4      4     0.67    *                   ldp	w2, wzr, [sp, #-256]!
 # CHECK-NEXT:  4      4     0.67    *                   ldp	w9, w10, [sp, #4]!
 # CHECK-NEXT:  3      4     0.50    *                   ldpsw	x9, x10, [sp, #4]!
@@ -2453,60 +2473,60 @@ br       x20
 # CHECK-NEXT:  4      4     0.67    *                   ldp	x22, x23, [x3, #-512]!
 # CHECK-NEXT:  4      4     0.67    *                   ldp	x24, x25, [x4, #8]!
 # CHECK-NEXT:  3      5     0.50    *                   ldp	s29, s28, [sp, #252]!
-# CHECK-NEXT:  3      2     1.00           *            stp	s27, s26, [sp, #-256]!
+# CHECK-NEXT:  3      2     2.00           *            stp	s27, s26, [sp, #-256]!
 # CHECK-NEXT:  3      5     0.50    *                   ldp	s1, s2, [x3, #44]!
-# CHECK-NEXT:  3      2     1.00           *            stp	d3, d5, [x9, #504]!
-# CHECK-NEXT:  3      2     1.00           *            stp	d7, d11, [x10, #-512]!
+# CHECK-NEXT:  3      2     2.00           *            stp	d3, d5, [x9, #504]!
+# CHECK-NEXT:  3      2     2.00           *            stp	d7, d11, [x10, #-512]!
 # CHECK-NEXT:  3      5     0.50    *                   ldp	d2, d3, [x30, #-8]!
-# CHECK-NEXT:  3      2     1.00           *            stp	q3, q5, [sp, #0]!
-# CHECK-NEXT:  3      2     1.00           *            stp	q17, q19, [sp, #1008]!
+# CHECK-NEXT:  3      2     2.00           *            stp	q3, q5, [sp, #0]!
+# CHECK-NEXT:  3      2     2.00           *            stp	q17, q19, [sp, #1008]!
 # CHECK-NEXT:  3      5     0.50    *                   ldp	q23, q29, [x1, #-1024]!
 # CHECK-NEXT:  2      4     0.50    *                   ldnp	w3, w5, [sp]
-# CHECK-NEXT:  1      1     0.50           *            stnp	wzr, w9, [sp, #252]
+# CHECK-NEXT:  1      1     1.00           *            stnp	wzr, w9, [sp, #252]
 # CHECK-NEXT:  2      4     0.50    *                   ldnp	w2, wzr, [sp, #-256]
 # CHECK-NEXT:  2      4     0.50    *                   ldnp	w9, w10, [sp, #4]
 # CHECK-NEXT:  2      4     0.50    *                   ldnp	x21, x29, [x2, #504]
 # CHECK-NEXT:  2      4     0.50    *                   ldnp	x22, x23, [x3, #-512]
 # CHECK-NEXT:  2      4     0.50    *                   ldnp	x24, x25, [x4, #8]
 # CHECK-NEXT:  2      5     0.50    *                   ldnp	s29, s28, [sp, #252]
-# CHECK-NEXT:  2      2     1.00           *            stnp	s27, s26, [sp, #-256]
+# CHECK-NEXT:  2      2     2.00           *            stnp	s27, s26, [sp, #-256]
 # CHECK-NEXT:  2      5     0.50    *                   ldnp	s1, s2, [x3, #44]
-# CHECK-NEXT:  2      2     1.00           *            stnp	d3, d5, [x9, #504]
-# CHECK-NEXT:  2      2     1.00           *            stnp	d7, d11, [x10, #-512]
+# CHECK-NEXT:  2      2     2.00           *            stnp	d3, d5, [x9, #504]
+# CHECK-NEXT:  2      2     2.00           *            stnp	d7, d11, [x10, #-512]
 # CHECK-NEXT:  2      5     0.50    *                   ldnp	d2, d3, [x30, #-8]
-# CHECK-NEXT:  2      2     1.00           *            stnp	q3, q5, [sp]
-# CHECK-NEXT:  2      2     1.00           *            stnp	q17, q19, [sp, #1008]
+# CHECK-NEXT:  2      2     2.00           *            stnp	q3, q5, [sp]
+# CHECK-NEXT:  2      2     2.00           *            stnp	q17, q19, [sp, #1008]
 # CHECK-NEXT:  2      5     0.50    *                   ldnp	q23, q29, [x1, #-1024]
 # CHECK-NEXT:  1      1     0.33                        mov	w3, #983055
 # CHECK-NEXT:  1      1     0.33                        mov	x10, #-6148914691236517206
-# CHECK-NEXT:  1      2     1.00                        and	w12, w23, w21
+# CHECK-NEXT:  1      1     0.33                        and	w12, w23, w21
 # CHECK-NEXT:  1      2     1.00                        and	w16, w15, w1, lsl #1
 # CHECK-NEXT:  1      2     1.00                        and	w9, w4, w10, lsl #31
-# CHECK-NEXT:  1      2     1.00                        and	w3, w30, w11
+# CHECK-NEXT:  1      1     0.33                        and	w3, w30, w11
 # CHECK-NEXT:  1      2     1.00                        and	x3, x5, x7, lsl #63
 # CHECK-NEXT:  1      2     1.00                        and	x5, x14, x19, asr #4
 # CHECK-NEXT:  1      2     1.00                        and	w3, w17, w19, ror #31
 # CHECK-NEXT:  1      2     1.00                        and	w0, w2, wzr, lsr #17
 # CHECK-NEXT:  1      2     1.00                        and	w3, w30, w11, asr #2
-# CHECK-NEXT:  1      2     1.00                        and	xzr, x4, x26
+# CHECK-NEXT:  1      1     0.33                        and	xzr, x4, x26
 # CHECK-NEXT:  1      2     1.00                        and	w3, wzr, w20, ror #2
 # CHECK-NEXT:  1      2     1.00                        and	x7, x20, xzr, asr #63
 # CHECK-NEXT:  1      2     1.00                        bic	x13, x20, x14, lsl #47
-# CHECK-NEXT:  1      2     1.00                        bic	w2, w7, w9
+# CHECK-NEXT:  1      1     0.33                        bic	w2, w7, w9
 # CHECK-NEXT:  1      2     1.00                        orr	w2, w7, w0, asr #31
 # CHECK-NEXT:  1      2     1.00                        orr	x8, x9, x10, lsl #12
 # CHECK-NEXT:  1      2     1.00                        orn	x3, x5, x7, asr #2
-# CHECK-NEXT:  1      2     1.00                        orn	w2, w5, w29
-# CHECK-NEXT:  1      2     0.50                        ands	w7, wzr, w9, lsl #1
-# CHECK-NEXT:  1      2     0.50                        ands	x3, x5, x20, ror #63
-# CHECK-NEXT:  1      2     0.50                        bics	w3, w5, w7
-# CHECK-NEXT:  1      2     0.50                        bics	x3, xzr, x3, lsl #1
-# CHECK-NEXT:  1      2     0.50                        tst	w3, w7, lsl #31
-# CHECK-NEXT:  1      2     0.50                        tst	x2, x20, asr #2
-# CHECK-NEXT:  1      2     1.00                        mov	x3, x6
-# CHECK-NEXT:  1      2     1.00                        mov	x3, xzr
-# CHECK-NEXT:  1      2     1.00                        mov	wzr, w2
-# CHECK-NEXT:  1      2     1.00                        mov	w3, w5
+# CHECK-NEXT:  1      1     0.33                        orn	w2, w5, w29
+# CHECK-NEXT:  1      2     1.00                        ands	w7, wzr, w9, lsl #1
+# CHECK-NEXT:  1      2     1.00                        ands	x3, x5, x20, ror #63
+# CHECK-NEXT:  1      1     0.50                        bics	w3, w5, w7
+# CHECK-NEXT:  1      2     1.00                        bics	x3, xzr, x3, lsl #1
+# CHECK-NEXT:  1      2     1.00                        tst	w3, w7, lsl #31
+# CHECK-NEXT:  1      2     1.00                        tst	x2, x20, asr #2
+# CHECK-NEXT:  1      1     0.33                        mov	x3, x6
+# CHECK-NEXT:  1      1     0.33                        mov	x3, xzr
+# CHECK-NEXT:  1      1     0.33                        mov	wzr, w2
+# CHECK-NEXT:  1      1     0.33                        mov	w3, w5
 # CHECK-NEXT:  1      1     0.33                        movz	w2, #0, lsl #16
 # CHECK-NEXT:  1      1     0.33                        mov	w2, #-1235
 # CHECK-NEXT:  1      1     0.33                        mov	x2, #5299989643264
@@ -2536,16 +2556,16 @@ br       x20
 # CHECK-NEXT: [1]   - TSV110UnitALU
 # CHECK-NEXT: [2]   - TSV110UnitFSU1
 # CHECK-NEXT: [3]   - TSV110UnitFSU2
-# CHECK-NEXT: [4.0] - TSV110UnitLdSt
-# CHECK-NEXT: [4.1] - TSV110UnitLdSt
-# CHECK-NEXT: [5]   - TSV110UnitMDU
+# CHECK-NEXT: [4]   - TSV110UnitLd0St
+# CHECK-NEXT: [5]   - TSV110UnitLd1
+# CHECK-NEXT: [6]   - TSV110UnitMDU
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4.0]  [4.1]  [5]
-# CHECK-NEXT: 236.83 236.83 180.33 141.50 95.50  207.50 207.50 127.00
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]
+# CHECK-NEXT: 281.83 281.83 189.33 168.50 141.50 281.50 133.50 168.00
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4.0]  [4.1]  [5]    Instructions:
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     add	w2, w3, #4095
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     add	w30, w29, #1, lsl #12
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     add	w13, w5, #4095, lsl #12
@@ -2575,11 +2595,11 @@ br       x20
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     mov	wsp, w20
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     mov	x11, sp
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     mov	w24, wsp
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	w3, w5, w7
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	wzr, w3, w5
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	w20, wzr, w4
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	w4, w6, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	w11, w13, w15
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     add	w3, w5, w7
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     add	wzr, w3, w5
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     add	w20, wzr, w4
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     add	w4, w6, wzr
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     add	w11, w13, w15
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	w9, w3, wzr, lsl #10
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	w17, w29, w20, lsl #31
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	w21, w22, w23, lsr #0
@@ -2588,11 +2608,11 @@ br       x20
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	w2, w3, w4, asr #0
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	w5, w6, w7, asr #21
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	w8, w9, w10, asr #31
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x3, x5, x7
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	xzr, x3, x5
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x20, xzr, x4
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x4, x6, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x11, x13, x15
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     add	x3, x5, x7
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     add	xzr, x3, x5
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     add	x20, xzr, x4
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     add	x4, x6, xzr
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     add	x11, x13, x15
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x9, x3, xzr, lsl #10
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x17, x29, x20, lsl #63
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x21, x22, x23, lsr #0
@@ -2601,36 +2621,46 @@ br       x20
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x2, x3, x4, asr #0
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x5, x6, x7, asr #21
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x8, x9, x10, asr #63
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x1, x4, w5, uxtb #4
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x2, x2, w2, uxth #3
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x9, x10, w11, uxtw #1
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x18, x19, x20, uxtx #4
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x12, x13, w14, sxtb
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x15, x16, w17, sxth #1
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x18, x19, w20, sxtw #2
+# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   add	x10, x19, x20, sxtx #4
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	w3, w5, w7
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	w3, w5
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	w20, wzr, w4
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	w4, w6, wzr
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	w11, w13, w15
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	w9, w3, wzr, lsl #10
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	w17, w29, w20, lsl #31
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	w21, w22, w23, lsr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	w24, w25, w26, lsr #18
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	w27, w28, w29, lsr #31
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	w2, w3, w4, asr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	w5, w6, w7, asr #21
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	w8, w9, w10, asr #31
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	w9, w3, wzr, lsl #10
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	w17, w29, w20, lsl #31
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	w21, w22, w23, lsr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	w24, w25, w26, lsr #18
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	w27, w28, w29, lsr #31
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	w2, w3, w4, asr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	w5, w6, w7, asr #21
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	w8, w9, w10, asr #31
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	x3, x5, x7
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	x3, x5
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	x20, xzr, x4
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	x4, x6, xzr
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	x11, x13, x15
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	x9, x3, xzr, lsl #10
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	x17, x29, x20, lsl #63
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	x21, x22, x23, lsr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	x24, x25, x26, lsr #18
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	x27, x28, x29, lsr #63
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	x2, x3, x4, asr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	x5, x6, x7, asr #21
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     adds	x8, x9, x10, asr #63
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	w3, w5, w7
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	wzr, w3, w5
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	w4, w6, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	w11, w13, w15
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	x9, x3, xzr, lsl #10
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	x17, x29, x20, lsl #63
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	x21, x22, x23, lsr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	x24, x25, x26, lsr #18
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	x27, x28, x29, lsr #63
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	x2, x3, x4, asr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	x5, x6, x7, asr #21
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	x8, x9, x10, asr #63
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	x21, x22, x23, sxtx
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     adds	x1, x2, x3, uxtx #4
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     sub	w3, w5, w7
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     sub	wzr, w3, w5
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     sub	w4, w6, wzr
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     sub	w11, w13, w15
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	w9, w3, wzr, lsl #10
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	w17, w29, w20, lsl #31
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	w21, w22, w23, lsr #0
@@ -2639,10 +2669,10 @@ br       x20
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	w2, w3, w4, asr #0
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	w5, w6, w7, asr #21
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	w8, w9, w10, asr #31
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	x3, x5, x7
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	xzr, x3, x5
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	x4, x6, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	x11, x13, x15
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     sub	x3, x5, x7
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     sub	xzr, x3, x5
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     sub	x4, x6, xzr
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     sub	x11, x13, x15
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	x9, x3, xzr, lsl #10
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	x17, x29, x20, lsl #63
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sub	x21, x22, x23, lsr #0
@@ -2655,72 +2685,72 @@ br       x20
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	w3, w5
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	w4, w6, wzr
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	w11, w13, w15
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	w9, w3, wzr, lsl #10
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	w17, w29, w20, lsl #31
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	w21, w22, w23, lsr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	w24, w25, w26, lsr #18
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	w27, w28, w29, lsr #31
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	w2, w3, w4, asr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	w5, w6, w7, asr #21
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	w8, w9, w10, asr #31
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	w9, w3, wzr, lsl #10
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	w17, w29, w20, lsl #31
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	w21, w22, w23, lsr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	w24, w25, w26, lsr #18
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	w27, w28, w29, lsr #31
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	w2, w3, w4, asr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	w5, w6, w7, asr #21
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	w8, w9, w10, asr #31
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	x3, x5, x7
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	x3, x5
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	x4, x6, xzr
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	x11, x13, x15
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	x9, x3, xzr, lsl #10
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	x17, x29, x20, lsl #63
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	x21, x22, x23, lsr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	x24, x25, x26, lsr #18
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	x27, x28, x29, lsr #63
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	x2, x3, x4, asr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	x5, x6, x7, asr #21
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     subs	x8, x9, x10, asr #63
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	x9, x3, xzr, lsl #10
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	x17, x29, x20, lsl #63
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	x21, x22, x23, lsr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	x24, x25, x26, lsr #18
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	x27, x28, x29, lsr #63
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	x2, x3, x4, asr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	x5, x6, x7, asr #21
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     subs	x8, x9, x10, asr #63
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	wzr, w4
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	w5, wzr
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	w6, w7
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	w8, w9, lsl #15
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	w10, w11, lsl #31
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	w12, w13, lsr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	w14, w15, lsr #21
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	w16, w17, lsr #31
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	w18, w19, asr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	w20, w21, asr #22
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	w22, w23, asr #31
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	w8, w9, lsl #15
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	w10, w11, lsl #31
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	w12, w13, lsr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	w14, w15, lsr #21
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	w16, w17, lsr #31
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	w18, w19, asr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	w20, w21, asr #22
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	w22, w23, asr #31
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	x0, x3
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	xzr, x4
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	x5, xzr
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	x6, x7
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	x8, x9, lsl #15
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	x10, x11, lsl #63
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	x12, x13, lsr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	x14, x15, lsr #41
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	x16, x17, lsr #63
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	x18, x19, asr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	x20, x21, asr #55
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmn	x22, x23, asr #63
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	x8, x9, lsl #15
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	x10, x11, lsl #63
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	x12, x13, lsr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	x14, x15, lsr #41
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	x16, x17, lsr #63
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	x18, x19, asr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	x20, x21, asr #55
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmn	x22, x23, asr #63
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	w0, w3
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	wzr, w4
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	w5, wzr
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	w6, w7
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	w8, w9, lsl #15
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	w10, w11, lsl #31
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	w12, w13, lsr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	w14, w15, lsr #21
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	w18, w19, asr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	w20, w21, asr #22
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	w22, w23, asr #31
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	w8, w9, lsl #15
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	w10, w11, lsl #31
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	w12, w13, lsr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	w14, w15, lsr #21
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	w18, w19, asr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	w20, w21, asr #22
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	w22, w23, asr #31
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	x0, x3
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	xzr, x4
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	x5, xzr
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	x6, x7
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	x8, x9, lsl #15
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	x10, x11, lsl #63
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	x12, x13, lsr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	x14, x15, lsr #41
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	x16, x17, lsr #63
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	x18, x19, asr #0
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	x20, x21, asr #55
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	x22, x23, asr #63
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	x8, x9, lsl #15
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	x10, x11, lsl #63
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	x12, x13, lsr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	x14, x15, lsr #41
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	x16, x17, lsr #63
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	x18, x19, asr #0
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	x20, x21, asr #55
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     cmp	x22, x23, asr #63
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	wzr, w0
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     cmp	xzr, x0
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     adc	w29, w27, w25
@@ -2953,10 +2983,10 @@ br       x20
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     clz	x26, x4
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     cls	w3, w5
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     cls	x20, x5
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   udiv	w0, w7, w10
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   udiv	x9, x22, x4
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sdiv	w12, w21, w0
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   sdiv	x13, x2, x1
+# CHECK-NEXT:  -      -      -      -      -      -      -     12.00  udiv	w0, w7, w10
+# CHECK-NEXT:  -      -      -      -      -      -      -     20.00  udiv	x9, x22, x4
+# CHECK-NEXT:  -      -      -      -      -      -      -     12.00  sdiv	w12, w21, w0
+# CHECK-NEXT:  -      -      -      -      -      -      -     20.00  sdiv	x13, x2, x1
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     lsl	w11, w12, w13
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     lsl	x14, x15, x16
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     lsr	w17, w18, w19
@@ -3060,7 +3090,7 @@ br       x20
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fmov	s0, s1
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fabs	s2, s3
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fneg	s4, s5
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     fsqrt	s6, s7
+# CHECK-NEXT:  -      -      -      -     17.00   -      -      -     fsqrt	s6, s7
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fcvt	d8, s9
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fcvt	h10, s11
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     frintn	s12, s13
@@ -3073,7 +3103,7 @@ br       x20
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fmov	d0, d1
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fabs	d2, d3
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fneg	d4, d5
-# CHECK-NEXT:  -      -      -      -     1.00    -      -      -     fsqrt	d6, d7
+# CHECK-NEXT:  -      -      -      -     31.00   -      -      -     fsqrt	d6, d7
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fcvt	s8, d9
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fcvt	h10, d11
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     frintn	d12, d13
@@ -3086,7 +3116,7 @@ br       x20
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fcvt	s26, h27
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fcvt	d28, h29
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fmul	s20, s19, s17
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     fdiv	s1, s2, s3
+# CHECK-NEXT:  -      -      -     11.00   -      -      -      -     fdiv	s1, s2, s3
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fadd	s4, s5, s6
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fsub	s7, s8, s9
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fmax	s10, s11, s12
@@ -3095,7 +3125,7 @@ br       x20
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fminnm	s19, s20, s21
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fnmul	s22, s23, s2
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fmul	d20, d19, d17
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     fdiv	d1, d2, d3
+# CHECK-NEXT:  -      -      -     18.00   -      -      -      -     fdiv	d1, d2, d3
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fadd	d4, d5, d6
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fsub	d7, d8, d9
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     fmax	d10, d11, d12
@@ -3276,52 +3306,52 @@ br       x20
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	q0, #-1048576
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     prfm	pldl1strm, #0
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     prfm	#22, #0
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stxrb	w18, w8, [sp]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stxrh	w24, w15, [x16]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stxr	w5, w6, [x17]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stxr	w1, x10, [x21]
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -     stxrb	w18, w8, [sp]
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -     stxrh	w24, w15, [x16]
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -     stxr	w5, w6, [x17]
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -     stxr	w1, x10, [x21]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldxrb	w30, [x0]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldxrh	w17, [x4]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldxr	w22, [sp]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldxr	x11, [x29]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldxr	x11, [x29]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldxr	x11, [x29]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stxp	w12, w11, w10, [sp]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stxp	wzr, x27, x9, [x12]
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -     stxp	w12, w11, w10, [sp]
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -     stxp	wzr, x27, x9, [x12]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldxp	w0, wzr, [sp]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldxp	x17, x0, [x18]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldxp	x17, x0, [x18]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stlxrb	w12, w22, [x0]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stlxrh	w10, w1, [x1]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stlxr	w9, w2, [x2]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stlxr	w9, x3, [sp]
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -     stlxrb	w12, w22, [x0]
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -     stlxrh	w10, w1, [x1]
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -     stlxr	w9, w2, [x2]
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -     stlxr	w9, x3, [sp]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldaxrb	w8, [x4]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldaxrh	w7, [x5]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldaxr	w6, [sp]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldaxr	x5, [x6]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldaxr	x5, [x6]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldaxr	x5, [x6]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stlxp	w4, w5, w6, [sp]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stlxp	wzr, x6, x7, [x1]
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -     stlxp	w4, w5, w6, [sp]
+# CHECK-NEXT:  -      -      -      -      -     1.50   0.50    -     stlxp	wzr, x6, x7, [x1]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldaxp	w5, w18, [sp]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldaxp	x6, x19, [x22]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldaxp	x6, x19, [x22]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stlrb	w24, [sp]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stlrh	w25, [x30]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stlr	w26, [x29]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stlr	x27, [x28]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stlr	x27, [x28]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stlr	x27, [x28]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stlrb	w24, [sp]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stlrh	w25, [x30]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stlr	w26, [x29]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stlr	x27, [x28]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stlr	x27, [x28]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stlr	x27, [x28]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldarb	w23, [sp]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldarh	w22, [x30]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldar	wzr, [x29]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldar	x21, [x28]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldar	x21, [x28]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldar	x21, [x28]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     sturb	w9, [sp]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     sturh	wzr, [x12, #255]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stur	w16, [x0, #-256]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stur	x28, [x14, #1]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     sturb	w9, [sp]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     sturh	wzr, [x12, #255]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stur	w16, [x0, #-256]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stur	x28, [x14, #1]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldurb	w1, [x20, #255]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldurh	w20, [x1, #255]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldur	w12, [sp, #255]
@@ -3332,28 +3362,28 @@ br       x20
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     prfum	pldl2keep, [sp, #-256]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldursb	w19, [x1, #-256]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldursh	w15, [x21, #-256]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stur	b0, [sp, #1]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stur	h12, [x12, #-1]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stur	s15, [x0, #255]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stur	d31, [x5, #25]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stur	q9, [x5]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stur	b0, [sp, #1]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stur	h12, [x12, #-1]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stur	s15, [x0, #255]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stur	d31, [x5, #25]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stur	q9, [x5]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldur	b3, [sp]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldur	h5, [x4, #-256]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldur	s7, [x12, #-1]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldur	d11, [x19, #4]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldur	q13, [x1, #2]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strb	w9, [x2], #255
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strb	w10, [x3], #1
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strb	w10, [x3], #-256
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strh	w9, [x2], #255
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strh	w9, [x2], #1
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strh	w10, [x3], #-256
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	w19, [sp], #255
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	w20, [x30], #1
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	w21, [x12], #-256
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	xzr, [x9], #255
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	x2, [x3], #1
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	x19, [x12], #-256
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strb	w9, [x2], #255
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strb	w10, [x3], #1
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strb	w10, [x3], #-256
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strh	w9, [x2], #255
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strh	w9, [x2], #1
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strh	w10, [x3], #-256
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	w19, [sp], #255
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	w20, [x30], #1
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	w21, [x12], #-256
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	xzr, [x9], #255
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	x2, [x3], #1
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	x19, [x12], #-256
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldrb	w9, [x2], #255
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldrb	w10, [x3], #1
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldrb	w10, [x3], #-256
@@ -3381,18 +3411,18 @@ br       x20
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldrsh	wzr, [x9], #255
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldrsh	w2, [x3], #1
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldrsh	w19, [x12], #-256
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	b0, [x0], #255
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	b3, [x3], #1
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	b5, [sp], #-256
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	h10, [x10], #255
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	h13, [x23], #1
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	h15, [sp], #-256
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	s20, [x20], #255
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	s23, [x23], #1
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	s25, [x0], #-256
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	d20, [x20], #255
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	d23, [x23], #1
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	d25, [x0], #-256
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	b0, [x0], #255
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	b3, [x3], #1
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	b5, [sp], #-256
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	h10, [x10], #255
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	h13, [x23], #1
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	h15, [sp], #-256
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	s20, [x20], #255
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	s23, [x23], #1
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	s25, [x0], #-256
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	d20, [x20], #255
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	d23, [x23], #1
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	d25, [x0], #-256
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	b0, [x0], #255
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	b3, [x3], #1
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	b5, [sp], #-256
@@ -3408,22 +3438,22 @@ br       x20
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q20, [x1], #255
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q23, [x9], #1
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q25, [x20], #-256
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	q10, [x1], #255
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	q22, [sp], #1
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	q21, [x20], #-256
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	q10, [x1], #255
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	q22, [sp], #1
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	q21, [x20], #-256
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	x3, [x4, #0]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strb	w9, [x2, #255]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strb	w10, [x3, #1]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strb	w10, [x3, #-256]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strh	w9, [x2, #255]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strh	w9, [x2, #1]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strh	w10, [x3, #-256]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	w19, [sp, #255]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	w20, [x30, #1]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	w21, [x12, #-256]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	xzr, [x9, #255]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	x2, [x3, #1]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	x19, [x12, #-256]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strb	w9, [x2, #255]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strb	w10, [x3, #1]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strb	w10, [x3, #-256]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strh	w9, [x2, #255]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strh	w9, [x2, #1]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strh	w10, [x3, #-256]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	w19, [sp, #255]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	w20, [x30, #1]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	w21, [x12, #-256]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	xzr, [x9, #255]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	x2, [x3, #1]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	x19, [x12, #-256]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldrb	w9, [x2, #255]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldrb	w10, [x3, #1]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldrb	w10, [x3, #-256]!
@@ -3451,18 +3481,18 @@ br       x20
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldrsh	wzr, [x9, #255]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldrsh	w2, [x3, #1]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldrsh	w19, [x12, #-256]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	b0, [x0, #255]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	b3, [x3, #1]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	b5, [sp, #-256]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	h10, [x10, #255]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	h13, [x23, #1]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	h15, [sp, #-256]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	s20, [x20, #255]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	s23, [x23, #1]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	s25, [x0, #-256]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	d20, [x20, #255]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	d23, [x23, #1]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	d25, [x0, #-256]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	b0, [x0, #255]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	b3, [x3, #1]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	b5, [sp, #-256]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	h10, [x10, #255]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	h13, [x23, #1]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	h15, [sp, #-256]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	s20, [x20, #255]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	s23, [x23, #1]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	s25, [x0, #-256]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	d20, [x20, #255]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	d23, [x23, #1]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	d25, [x0, #-256]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	b0, [x0, #255]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	b3, [x3, #1]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	b5, [sp, #-256]!
@@ -3478,13 +3508,13 @@ br       x20
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q20, [x1, #255]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q23, [x9, #1]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q25, [x20, #-256]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	q10, [x1, #255]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	q22, [sp, #1]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	q21, [x20, #-256]!
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     sttrb	w9, [sp]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     sttrh	wzr, [x12, #255]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     sttr	w16, [x0, #-256]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     sttr	x28, [x14, #1]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	q10, [x1, #255]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	q22, [sp, #1]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	q21, [x20, #-256]!
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     sttrb	w9, [sp]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     sttrh	wzr, [x12, #255]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     sttr	w16, [x0, #-256]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     sttr	x28, [x14, #1]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldtrb	w1, [x20, #255]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldtrh	w20, [x1, #255]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldtr	w12, [sp, #255]
@@ -3511,21 +3541,21 @@ br       x20
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrb	w12, [x2]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrsb	w27, [sp, #4095]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrsb	xzr, [x15]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     str	x30, [sp]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     str	w20, [x4, #16380]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     strh	w17, [sp, #8190]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     strb	w23, [x3, #4095]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     strb	wzr, [x2]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     str	x30, [sp]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     str	w20, [x4, #16380]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     strh	w17, [sp, #8190]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     strb	w23, [x3, #4095]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     strb	wzr, [x2]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	b31, [sp, #4095]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	h20, [x2, #8190]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	s10, [x19, #16380]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	d3, [x10, #32760]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     str	q12, [sp, #65520]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     str	q12, [sp, #65520]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrb	w3, [sp, x5]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrb	w9, [x27, x6]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrsb	w10, [x30, x7]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrb	w11, [x29, x3, sxtx]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strb	w12, [x28, xzr, sxtx]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strb	w12, [x28, xzr, sxtx]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrb	w14, [x26, w6, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrsb	w15, [x25, w7, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrb	w17, [x23, w9, sxtw]
@@ -3533,7 +3563,7 @@ br       x20
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrsh	w3, [sp, x5]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrsh	w9, [x27, x6]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrh	w10, [x30, x7, lsl #1]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strh	w11, [x29, x3, sxtx]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strh	w11, [x29, x3, sxtx]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrh	w12, [x28, xzr, sxtx]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrsh	x13, [x27, x5, sxtx #1]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrh	w14, [x26, w6, uxtw]
@@ -3541,23 +3571,23 @@ br       x20
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrsh	w16, [x24, w8, uxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrh	w17, [x23, w9, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrh	w18, [x22, w10, sxtw]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     strh	w19, [x21, wzr, sxtw #1]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     strh	w19, [x21, wzr, sxtw #1]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	w3, [sp, x5]
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	s9, [x27, x6]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	w10, [x30, x7, lsl #2]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	w11, [x29, x3, sxtx]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	s12, [x28, xzr, sxtx]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	w13, [x27, x5, sxtx #2]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	w14, [x26, w6, uxtw]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	s12, [x28, xzr, sxtx]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	w13, [x27, x5, sxtx #2]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	w14, [x26, w6, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	w15, [x25, w7, uxtw]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	w16, [x24, w8, uxtw #2]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrsw	x17, [x23, w9, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	w18, [x22, w10, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldrsw	x19, [x21, wzr, sxtw #2]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	x3, [sp, x5]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	x9, [x27, x6]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	x9, [x27, x6]
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	d10, [x30, x7, lsl #3]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	x11, [x29, x3, sxtx]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	x11, [x29, x3, sxtx]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	x12, [x28, xzr, sxtx]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	x13, [x27, x5, sxtx #3]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     prfm	pldl1keep, [x26, w6, uxtw]
@@ -3565,21 +3595,21 @@ br       x20
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	x16, [x24, w8, uxtw #3]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	x17, [x23, w9, sxtw]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldr	x18, [x22, w10, sxtw]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	d19, [x21, wzr, sxtw #3]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	d19, [x21, wzr, sxtw #3]
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q3, [sp, x5]
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q9, [x27, x6]
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q10, [x30, x7, lsl #4]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	q11, [x29, x3, sxtx]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	q12, [x28, xzr, sxtx]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	q13, [x27, x5, sxtx #4]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	q11, [x29, x3, sxtx]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	q12, [x28, xzr, sxtx]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	q13, [x27, x5, sxtx #4]
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q14, [x26, w6, uxtw]
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q15, [x25, w7, uxtw]
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q16, [x24, w8, uxtw #4]
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q17, [x23, w9, sxtw]
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     str	q18, [x22, w10, sxtw]
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     str	q18, [x22, w10, sxtw]
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldr	q19, [x21, wzr, sxtw #4]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldp	w3, w5, [sp]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stp	wzr, w9, [sp, #252]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stp	wzr, w9, [sp, #252]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldp	w2, wzr, [sp, #-256]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldp	w9, w10, [sp, #4]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldpsw	x9, x10, [sp, #4]
@@ -3589,16 +3619,16 @@ br       x20
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldp	x22, x23, [x3, #-512]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldp	x24, x25, [x4, #8]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldp	s29, s28, [sp, #252]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stp	s27, s26, [sp, #-256]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     stp	s27, s26, [sp, #-256]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldp	s1, s2, [x3, #44]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stp	d3, d5, [x9, #504]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stp	d7, d11, [x10, #-512]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     stp	d3, d5, [x9, #504]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     stp	d7, d11, [x10, #-512]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldp	d2, d3, [x30, #-8]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stp	q3, q5, [sp]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stp	q17, q19, [sp, #1008]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     stp	q3, q5, [sp]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     stp	q17, q19, [sp, #1008]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldp	q23, q29, [x1, #-1024]
 # CHECK-NEXT: 0.67   0.67   0.67    -      -     0.50   0.50    -     ldp	w3, w5, [sp], #0
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     stp	wzr, w9, [sp], #252
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     stp	wzr, w9, [sp], #252
 # CHECK-NEXT: 0.67   0.67   0.67    -      -     0.50   0.50    -     ldp	w2, wzr, [sp], #-256
 # CHECK-NEXT: 0.67   0.67   0.67    -      -     0.50   0.50    -     ldp	w9, w10, [sp], #4
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldpsw	x9, x10, [sp], #4
@@ -3608,16 +3638,16 @@ br       x20
 # CHECK-NEXT: 0.67   0.67   0.67    -      -     0.50   0.50    -     ldp	x22, x23, [x3], #-512
 # CHECK-NEXT: 0.67   0.67   0.67    -      -     0.50   0.50    -     ldp	x24, x25, [x4], #8
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldp	s29, s28, [sp], #252
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00   1.00    -     stp	s27, s26, [sp], #-256
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     2.00    -      -     stp	s27, s26, [sp], #-256
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldp	s1, s2, [x3], #44
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00   1.00    -     stp	d3, d5, [x9], #504
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00   1.00    -     stp	d7, d11, [x10], #-512
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     2.00    -      -     stp	d3, d5, [x9], #504
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     2.00    -      -     stp	d7, d11, [x10], #-512
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldp	d2, d3, [x30], #-8
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00   1.00    -     stp	q3, q5, [sp], #0
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00   1.00    -     stp	q17, q19, [sp], #1008
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     2.00    -      -     stp	q3, q5, [sp], #0
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     2.00    -      -     stp	q17, q19, [sp], #1008
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldp	q23, q29, [x1], #-1024
 # CHECK-NEXT: 0.67   0.67   0.67    -      -     0.50   0.50    -     ldp	w3, w5, [sp, #0]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     stp	wzr, w9, [sp, #252]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00    -      -     stp	wzr, w9, [sp, #252]!
 # CHECK-NEXT: 0.67   0.67   0.67    -      -     0.50   0.50    -     ldp	w2, wzr, [sp, #-256]!
 # CHECK-NEXT: 0.67   0.67   0.67    -      -     0.50   0.50    -     ldp	w9, w10, [sp, #4]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldpsw	x9, x10, [sp, #4]!
@@ -3627,60 +3657,60 @@ br       x20
 # CHECK-NEXT: 0.67   0.67   0.67    -      -     0.50   0.50    -     ldp	x22, x23, [x3, #-512]!
 # CHECK-NEXT: 0.67   0.67   0.67    -      -     0.50   0.50    -     ldp	x24, x25, [x4, #8]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldp	s29, s28, [sp, #252]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00   1.00    -     stp	s27, s26, [sp, #-256]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     2.00    -      -     stp	s27, s26, [sp, #-256]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldp	s1, s2, [x3, #44]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00   1.00    -     stp	d3, d5, [x9, #504]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00   1.00    -     stp	d7, d11, [x10, #-512]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     2.00    -      -     stp	d3, d5, [x9, #504]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     2.00    -      -     stp	d7, d11, [x10, #-512]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldp	d2, d3, [x30, #-8]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00   1.00    -     stp	q3, q5, [sp, #0]!
-# CHECK-NEXT: 0.33   0.33   0.33    -      -     1.00   1.00    -     stp	q17, q19, [sp, #1008]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     2.00    -      -     stp	q3, q5, [sp, #0]!
+# CHECK-NEXT: 0.33   0.33   0.33    -      -     2.00    -      -     stp	q17, q19, [sp, #1008]!
 # CHECK-NEXT: 0.33   0.33   0.33    -      -     0.50   0.50    -     ldp	q23, q29, [x1, #-1024]!
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldnp	w3, w5, [sp]
-# CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     stnp	wzr, w9, [sp, #252]
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     stnp	wzr, w9, [sp, #252]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldnp	w2, wzr, [sp, #-256]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldnp	w9, w10, [sp, #4]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldnp	x21, x29, [x2, #504]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldnp	x22, x23, [x3, #-512]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldnp	x24, x25, [x4, #8]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldnp	s29, s28, [sp, #252]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stnp	s27, s26, [sp, #-256]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     stnp	s27, s26, [sp, #-256]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldnp	s1, s2, [x3, #44]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stnp	d3, d5, [x9, #504]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stnp	d7, d11, [x10, #-512]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     stnp	d3, d5, [x9, #504]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     stnp	d7, d11, [x10, #-512]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldnp	d2, d3, [x30, #-8]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stnp	q3, q5, [sp]
-# CHECK-NEXT:  -      -      -      -      -     1.00   1.00    -     stnp	q17, q19, [sp, #1008]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     stnp	q3, q5, [sp]
+# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     stnp	q17, q19, [sp, #1008]
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -     ldnp	q23, q29, [x1, #-1024]
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     mov	w3, #983055
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     mov	x10, #-6148914691236517206
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   and	w12, w23, w21
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     and	w12, w23, w21
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   and	w16, w15, w1, lsl #1
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   and	w9, w4, w10, lsl #31
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   and	w3, w30, w11
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     and	w3, w30, w11
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   and	x3, x5, x7, lsl #63
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   and	x5, x14, x19, asr #4
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   and	w3, w17, w19, ror #31
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   and	w0, w2, wzr, lsr #17
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   and	w3, w30, w11, asr #2
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   and	xzr, x4, x26
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     and	xzr, x4, x26
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   and	w3, wzr, w20, ror #2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   and	x7, x20, xzr, asr #63
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   bic	x13, x20, x14, lsl #47
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   bic	w2, w7, w9
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     bic	w2, w7, w9
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   orr	w2, w7, w0, asr #31
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   orr	x8, x9, x10, lsl #12
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   orn	x3, x5, x7, asr #2
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   orn	w2, w5, w29
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     ands	w7, wzr, w9, lsl #1
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     ands	x3, x5, x20, ror #63
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     orn	w2, w5, w29
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     ands	w7, wzr, w9, lsl #1
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     ands	x3, x5, x20, ror #63
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     bics	w3, w5, w7
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     bics	x3, xzr, x3, lsl #1
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     tst	w3, w7, lsl #31
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     tst	x2, x20, asr #2
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   mov	x3, x6
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   mov	x3, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   mov	wzr, w2
-# CHECK-NEXT:  -      -      -      -      -      -      -     1.00   mov	w3, w5
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     bics	x3, xzr, x3, lsl #1
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     tst	w3, w7, lsl #31
+# CHECK-NEXT: 1.00   1.00    -      -      -      -      -      -     tst	x2, x20, asr #2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     mov	x3, x6
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     mov	x3, xzr
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     mov	wzr, w2
+# CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     mov	w3, w5
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     movz	w2, #0, lsl #16
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     mov	w2, #-1235
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -      -      -     mov	x2, #5299989643264

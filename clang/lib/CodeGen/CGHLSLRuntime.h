@@ -15,6 +15,8 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 #define LLVM_CLANG_LIB_CODEGEN_CGHLSLRUNTIME_H
 
+#include "llvm/IR/IRBuilder.h"
+
 #include "clang/Basic/HLSLRuntime.h"
 
 namespace llvm {
@@ -23,6 +25,7 @@ class Function;
 } // namespace llvm
 namespace clang {
 class VarDecl;
+class ParmVarDecl;
 
 class FunctionDecl;
 
@@ -36,6 +39,8 @@ protected:
   uint32_t ResourceCounters[static_cast<uint32_t>(
       hlsl::ResourceClass::NumClasses)] = {0};
 
+  llvm::Value *emitInputSemantic(llvm::IRBuilder<> &B, const ParmVarDecl &D);
+
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}
   virtual ~CGHLSLRuntime() {}
@@ -44,7 +49,9 @@ public:
 
   void finishCodeGen();
 
-  void setHLSLFunctionAttributes(llvm::Function *, const FunctionDecl *);
+  void setHLSLEntryAttributes(const FunctionDecl *FD, llvm::Function *Fn);
+
+  void emitEntryFunction(const FunctionDecl *FD, llvm::Function *Fn);
 };
 
 } // namespace CodeGen

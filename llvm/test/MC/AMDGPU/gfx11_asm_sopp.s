@@ -112,7 +112,7 @@ s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 // GFX11: s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3) ; encoding: [0x91,0x01,0x87,0xbf]
 
 //===----------------------------------------------------------------------===//
-//
+// s_waitcnt_depctr
 //===----------------------------------------------------------------------===//
 
 s_waitcnt_depctr 0xfffe
@@ -120,6 +120,79 @@ s_waitcnt_depctr 0xfffe
 
 s_waitcnt_depctr 0
 // GFX11: s_waitcnt_depctr depctr_hold_cnt(0) depctr_sa_sdst(0) depctr_va_vdst(0) depctr_va_sdst(0) depctr_va_ssrc(0) depctr_va_vcc(0) depctr_vm_vsrc(0) ; encoding: [0x00,0x00,0x88,0xbf]
+
+s_waitcnt_depctr depctr_hold_cnt(0)
+// GFX11: s_waitcnt_depctr depctr_hold_cnt(0) ; encoding: [0x1f,0xff,0x88,0xbf]
+
+s_waitcnt_depctr depctr_hold_cnt(1)
+// GFX11: s_waitcnt_depctr depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7) ; encoding: [0x9f,0xff,0x88,0xbf]
+
+s_waitcnt_depctr depctr_sa_sdst(0)
+// GFX11: s_waitcnt_depctr depctr_sa_sdst(0) ; encoding: [0x9e,0xff,0x88,0xbf]
+
+s_waitcnt_depctr depctr_sa_sdst(1)
+// GFX11: s_waitcnt_depctr depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7) ; encoding: [0x9f,0xff,0x88,0xbf]
+
+s_waitcnt_depctr depctr_va_vdst(0)
+// GFX11: s_waitcnt_depctr depctr_va_vdst(0) ; encoding: [0x9f,0x0f,0x88,0xbf]
+
+s_waitcnt_depctr depctr_va_vdst(1)
+// GFX11: s_waitcnt_depctr depctr_va_vdst(1) ; encoding: [0x9f,0x1f,0x88,0xbf]
+
+s_waitcnt_depctr depctr_va_vdst(14)
+// GFX11: s_waitcnt_depctr depctr_va_vdst(14) ; encoding: [0x9f,0xef,0x88,0xbf]
+
+s_waitcnt_depctr depctr_va_vdst(15)
+// GFX11: s_waitcnt_depctr depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7) ; encoding: [0x9f,0xff,0x88,0xbf]
+
+s_waitcnt_depctr depctr_va_sdst(0)
+// GFX11: s_waitcnt_depctr depctr_va_sdst(0) ; encoding: [0x9f,0xf1,0x88,0xbf]
+
+s_waitcnt_depctr depctr_va_sdst(1)
+// GFX11: s_waitcnt_depctr depctr_va_sdst(1) ; encoding: [0x9f,0xf3,0x88,0xbf]
+
+s_waitcnt_depctr depctr_va_sdst(6)
+// GFX11: s_waitcnt_depctr depctr_va_sdst(6) ; encoding: [0x9f,0xfd,0x88,0xbf]
+
+s_waitcnt_depctr depctr_va_sdst(7)
+// GFX11: s_waitcnt_depctr depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7) ; encoding: [0x9f,0xff,0x88,0xbf]
+
+s_waitcnt_depctr depctr_va_ssrc(0)
+// GFX11: s_waitcnt_depctr depctr_va_ssrc(0) ; encoding: [0x9f,0xfe,0x88,0xbf]
+
+s_waitcnt_depctr depctr_va_ssrc(1)
+// GFX11: s_waitcnt_depctr depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7) ; encoding: [0x9f,0xff,0x88,0xbf]
+
+s_waitcnt_depctr depctr_va_vcc(0)
+// GFX11: s_waitcnt_depctr depctr_va_vcc(0) ; encoding: [0x9d,0xff,0x88,0xbf]
+
+s_waitcnt_depctr depctr_va_vcc(1)
+// GFX11: s_waitcnt_depctr depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7) ; encoding: [0x9f,0xff,0x88,0xbf]
+
+s_waitcnt_depctr depctr_vm_vsrc(0)
+// GFX11: s_waitcnt_depctr depctr_vm_vsrc(0) ; encoding: [0x83,0xff,0x88,0xbf]
+
+s_waitcnt_depctr depctr_vm_vsrc(1)
+// GFX11: s_waitcnt_depctr depctr_vm_vsrc(1) ; encoding: [0x87,0xff,0x88,0xbf]
+
+s_waitcnt_depctr depctr_vm_vsrc(6)
+// GFX11: s_waitcnt_depctr depctr_vm_vsrc(6) ; encoding: [0x9b,0xff,0x88,0xbf]
+
+s_waitcnt_depctr depctr_vm_vsrc(7)
+// GFX11: s_waitcnt_depctr depctr_hold_cnt(1) depctr_sa_sdst(1) depctr_va_vdst(15) depctr_va_sdst(7) depctr_va_ssrc(1) depctr_va_vcc(1) depctr_vm_vsrc(7) ; encoding: [0x9f,0xff,0x88,0xbf]
+
+s_waitcnt_depctr depctr_hold_cnt(0) depctr_sa_sdst(0) depctr_va_vdst(0) depctr_va_sdst(0) depctr_va_ssrc(0) depctr_va_vcc(0) depctr_vm_vsrc(0)
+// GFX11: s_waitcnt_depctr depctr_hold_cnt(0) depctr_sa_sdst(0) depctr_va_vdst(0) depctr_va_sdst(0) depctr_va_ssrc(0) depctr_va_vcc(0) depctr_vm_vsrc(0) ; encoding: [0x00,0x00,0x88,0xbf]
+
+s_waitcnt_depctr depctr_hold_cnt(1) & depctr_sa_sdst(1) & depctr_va_vdst(1) & depctr_va_sdst(1) & depctr_va_ssrc(1) & depctr_va_vcc(1) & depctr_vm_vsrc(1)
+// GFX11: s_waitcnt_depctr depctr_va_vdst(1) depctr_va_sdst(1) depctr_vm_vsrc(1) ; encoding: [0x87,0x13,0x88,0xbf]
+
+s_waitcnt_depctr depctr_hold_cnt(1), depctr_sa_sdst(1), depctr_va_vdst(14), depctr_va_sdst(6), depctr_va_ssrc(1), depctr_va_vcc(1), depctr_vm_vsrc(6)
+// GFX11: s_waitcnt_depctr depctr_va_vdst(14) depctr_va_sdst(6) depctr_vm_vsrc(6) ; encoding: [0x9b,0xed,0x88,0xbf]
+
+//===----------------------------------------------------------------------===//
+//
+//===----------------------------------------------------------------------===//
 
 s_wait_idle
 // GFX11: s_wait_idle ; encoding: [0x00,0x00,0x8a,0xbf]
@@ -339,3 +412,9 @@ s_ttracedata_imm 0xc1d1
 
 s_set_inst_prefetch_distance 0xc1d1
 // GFX11: s_set_inst_prefetch_distance 0xc1d1 ; encoding: [0xd1,0xc1,0x84,0xbf]
+
+s_wait_event 0x3141
+// GFX11: s_wait_event 0x3141 ; encoding: [0x41,0x31,0x8b,0xbf]
+
+s_wait_event 0xc1d1
+// GFX11: s_wait_event 0xc1d1 ; encoding: [0xd1,0xc1,0x8b,0xbf]

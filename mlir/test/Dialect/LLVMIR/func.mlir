@@ -93,9 +93,9 @@ module {
     llvm.return
   }
 
-  // CHECK: llvm.func @sretattr(%{{.*}}: !llvm.ptr<i32> {llvm.sret})
-  // LOCINFO: llvm.func @sretattr(%{{.*}}: !llvm.ptr<i32> {llvm.sret} loc("some_source_loc"))
-  llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret} loc("some_source_loc")) {
+  // CHECK: llvm.func @sretattr(%{{.*}}: !llvm.ptr<i32> {llvm.sret = i32})
+  // LOCINFO: llvm.func @sretattr(%{{.*}}: !llvm.ptr<i32> {llvm.sret = i32} loc("some_source_loc"))
+  llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret = i32} loc("some_source_loc")) {
     llvm.return
   }
 

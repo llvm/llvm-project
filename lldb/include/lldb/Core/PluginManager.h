@@ -197,15 +197,19 @@ public:
                          llvm::StringRef plugin_name);
 
   // ObjectContainer
-  static bool
-  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
-                 ObjectContainerCreateInstance create_callback,
-                 ObjectFileGetModuleSpecifications get_module_specifications);
+  static bool RegisterPlugin(
+      llvm::StringRef name, llvm::StringRef description,
+      ObjectContainerCreateInstance create_callback,
+      ObjectFileGetModuleSpecifications get_module_specifications,
+      ObjectContainerCreateMemoryInstance create_memory_callback = nullptr);
 
   static bool UnregisterPlugin(ObjectContainerCreateInstance create_callback);
 
   static ObjectContainerCreateInstance
   GetObjectContainerCreateCallbackAtIndex(uint32_t idx);
+
+  static ObjectContainerCreateMemoryInstance
+  GetObjectContainerCreateMemoryCallbackAtIndex(uint32_t idx);
 
   static ObjectFileGetModuleSpecifications
   GetObjectContainerGetModuleSpecificationsCallbackAtIndex(uint32_t idx);

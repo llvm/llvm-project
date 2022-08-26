@@ -14,12 +14,12 @@
 
 define i32 @a(i32 %x, i32* nocapture readonly %y, i32* nocapture readonly %z) {
 ; CHECK-DEFAULT:    .p2align 5
-; CHECK-8:          .p2align 4, 0x0, 8
-; CHECK-16:         .p2align 5, 0x0, 16
+; CHECK-8:          .p2align 4, , 8
+; CHECK-16:         .p2align 5, , 16
 ; CHECK-NEXT:       .LBB0_5: // %vector.body
 ; CHECK-DEFAULT:    .p2align 5
-; CHECK-8:          .p2align 4, 0x0, 8
-; CHECK-16:         .p2align 5, 0x0, 16
+; CHECK-8:          .p2align 4, , 8
+; CHECK-16:         .p2align 5, , 16
 ; CHECK-NEXT:       .LBB0_8: // %for.body
 entry:
   %cmp10 = icmp sgt i32 %x, 0

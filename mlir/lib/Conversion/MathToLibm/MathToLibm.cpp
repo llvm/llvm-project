@@ -141,16 +141,19 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
 void mlir::populateMathToLibmConversionPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit,
     llvm::Optional<PatternBenefit> log1pBenefit) {
-  patterns.add<VecOpToScalarOp<math::Atan2Op>, VecOpToScalarOp<math::ExpM1Op>,
-               VecOpToScalarOp<math::TanhOp>, VecOpToScalarOp<math::CosOp>,
-               VecOpToScalarOp<math::SinOp>, VecOpToScalarOp<math::ErfOp>,
-               VecOpToScalarOp<math::RoundOp>, VecOpToScalarOp<math::AtanOp>,
-               VecOpToScalarOp<math::TanOp>>(patterns.getContext(), benefit);
+  patterns
+      .add<VecOpToScalarOp<math::Atan2Op>, VecOpToScalarOp<math::ExpM1Op>,
+           VecOpToScalarOp<math::TanhOp>, VecOpToScalarOp<math::CosOp>,
+           VecOpToScalarOp<math::SinOp>, VecOpToScalarOp<math::ErfOp>,
+           VecOpToScalarOp<math::RoundEvenOp>, VecOpToScalarOp<math::RoundOp>,
+           VecOpToScalarOp<math::AtanOp>, VecOpToScalarOp<math::TanOp>>(
+          patterns.getContext(), benefit);
   patterns.add<PromoteOpToF32<math::Atan2Op>, PromoteOpToF32<math::ExpM1Op>,
                PromoteOpToF32<math::TanhOp>, PromoteOpToF32<math::CosOp>,
                PromoteOpToF32<math::SinOp>, PromoteOpToF32<math::ErfOp>,
-               PromoteOpToF32<math::RoundOp>, PromoteOpToF32<math::AtanOp>,
-               PromoteOpToF32<math::TanOp>>(patterns.getContext(), benefit);
+               PromoteOpToF32<math::RoundEvenOp>, PromoteOpToF32<math::RoundOp>,
+               PromoteOpToF32<math::AtanOp>, PromoteOpToF32<math::TanOp>>(
+      patterns.getContext(), benefit);
   patterns.add<ScalarOpToLibmCall<math::AtanOp>>(patterns.getContext(), "atanf",
                                                  "atan", benefit);
   patterns.add<ScalarOpToLibmCall<math::Atan2Op>>(patterns.getContext(),
@@ -163,6 +166,8 @@ void mlir::populateMathToLibmConversionPatterns(
                                                 "tan", benefit);
   patterns.add<ScalarOpToLibmCall<math::TanhOp>>(patterns.getContext(), "tanhf",
                                                  "tanh", benefit);
+  patterns.add<ScalarOpToLibmCall<math::RoundEvenOp>>(
+      patterns.getContext(), "roundevenf", "roundeven", benefit);
   patterns.add<ScalarOpToLibmCall<math::RoundOp>>(patterns.getContext(),
                                                   "roundf", "round", benefit);
   patterns.add<ScalarOpToLibmCall<math::CosOp>>(patterns.getContext(), "cosf",

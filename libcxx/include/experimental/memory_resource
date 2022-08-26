@@ -379,7 +379,7 @@ public:
 
 // 8.7.3, memory.resource.adaptor.mem
 private:
-    virtual void * do_allocate(size_t __bytes, size_t)
+    void * do_allocate(size_t __bytes, size_t) override
     {
         if (__bytes > __max_size())
             __throw_bad_array_new_length();
@@ -387,7 +387,7 @@ private:
         return __alloc_.allocate(__s);
     }
 
-    virtual void do_deallocate(void * __p, size_t __bytes, size_t)
+    void do_deallocate(void * __p, size_t __bytes, size_t) override
     {
         _LIBCPP_ASSERT(__bytes <= __max_size(),
             "do_deallocate called for size which exceeds the maximum allocation size");
@@ -395,7 +395,7 @@ private:
         __alloc_.deallocate((_ValueType*)__p, __s);
     }
 
-    virtual bool do_is_equal(memory_resource const & __other) const _NOEXCEPT {
+    bool do_is_equal(memory_resource const & __other) const _NOEXCEPT override {
         __resource_adaptor_imp const * __p
           = dynamic_cast<__resource_adaptor_imp const *>(&__other);
         return __p  ? __alloc_ == __p->__alloc_ : false;

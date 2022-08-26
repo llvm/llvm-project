@@ -17,18 +17,18 @@ define i32 @fib(i32 %a, i32 %b) {
 ; FP-NEXT:    move.l %d1, (-32,%a6)
 ; FP-NEXT:    move.l (12,%a6), %d0
 ; FP-NEXT:    add.l %d0, %d1
-; FP-NEXT:    move.l %d0, (0,%a6)
+; FP-NEXT:    move.l %d0, (-28,%a6)
 ; FP-NEXT:    add.l %d1, %d0
-; FP-NEXT:    move.l %d1, (32,%a6)
+; FP-NEXT:    move.l %d1, (-24,%a6)
 ; FP-NEXT:    add.l %d0, %d1
-; FP-NEXT:    move.l %d0, (64,%a6)
-; FP-NEXT:    move.l %d1, (96,%a6)
+; FP-NEXT:    move.l %d0, (-20,%a6)
+; FP-NEXT:    move.l %d1, (-16,%a6)
 ; FP-NEXT:    add.l %d1, %d0
-; FP-NEXT:    move.l %d0, (128,%a6)
+; FP-NEXT:    move.l %d0, (-12,%a6)
 ; FP-NEXT:    add.l %d0, %d1
-; FP-NEXT:    move.l %d1, (160,%a6)
+; FP-NEXT:    move.l %d1, (-8,%a6)
 ; FP-NEXT:    add.l %d1, %d0
-; FP-NEXT:    move.l %d0, (192,%a6)
+; FP-NEXT:    move.l %d0, (-4,%a6)
 ; FP-NEXT:    unlk %a6
 ; FP-NEXT:    rts
 ;
@@ -41,35 +41,35 @@ define i32 @fib(i32 %a, i32 %b) {
 ; NO-FP-NEXT:    move.l %d1, (0,%sp)
 ; NO-FP-NEXT:    move.l (40,%sp), %d0
 ; NO-FP-NEXT:    add.l %d0, %d1
-; NO-FP-NEXT:    move.l %d0, (32,%sp)
+; NO-FP-NEXT:    move.l %d0, (4,%sp)
 ; NO-FP-NEXT:    add.l %d1, %d0
-; NO-FP-NEXT:    move.l %d1, (64,%sp)
+; NO-FP-NEXT:    move.l %d1, (8,%sp)
 ; NO-FP-NEXT:    add.l %d0, %d1
-; NO-FP-NEXT:    move.l %d0, (96,%sp)
-; NO-FP-NEXT:    move.l %d1, (128,%sp)
+; NO-FP-NEXT:    move.l %d0, (12,%sp)
+; NO-FP-NEXT:    move.l %d1, (16,%sp)
 ; NO-FP-NEXT:    add.l %d1, %d0
-; NO-FP-NEXT:    move.l %d0, (160,%sp)
+; NO-FP-NEXT:    move.l %d0, (20,%sp)
 ; NO-FP-NEXT:    add.l %d0, %d1
-; NO-FP-NEXT:    move.l %d1, (192,%sp)
+; NO-FP-NEXT:    move.l %d1, (24,%sp)
 ; NO-FP-NEXT:    add.l %d1, %d0
-; NO-FP-NEXT:    move.l %d0, (224,%sp)
+; NO-FP-NEXT:    move.l %d0, (28,%sp)
 ; NO-FP-NEXT:    adda.l #32, %sp
 ; NO-FP-NEXT:    rts
 entry:
   %arr = alloca [8 x i32], align 4
-  %s0 = getelementptr [8 x i32], ptr %arr, i32 0
-  %s1 = getelementptr [8 x i32], ptr %arr, i32 1
+  %s0 = getelementptr i32, ptr %arr, i32 0
+  %s1 = getelementptr i32, ptr %arr, i32 1
   store i32 %a, i32* %s0
   store i32 %b, i32* %s1
 
-  %ptr0 = getelementptr [8 x i32], ptr %arr, i32 0
-  %ptr1 = getelementptr [8 x i32], ptr %arr, i32 1
-  %ptr2 = getelementptr [8 x i32], ptr %arr, i32 2
-  %ptr3 = getelementptr [8 x i32], ptr %arr, i32 3
-  %ptr4 = getelementptr [8 x i32], ptr %arr, i32 4
-  %ptr5 = getelementptr [8 x i32], ptr %arr, i32 5
-  %ptr6 = getelementptr [8 x i32], ptr %arr, i32 6
-  %ptr7 = getelementptr [8 x i32], ptr %arr, i32 7
+  %ptr0 = getelementptr i32, ptr %arr, i32 0
+  %ptr1 = getelementptr i32, ptr %arr, i32 1
+  %ptr2 = getelementptr i32, ptr %arr, i32 2
+  %ptr3 = getelementptr i32, ptr %arr, i32 3
+  %ptr4 = getelementptr i32, ptr %arr, i32 4
+  %ptr5 = getelementptr i32, ptr %arr, i32 5
+  %ptr6 = getelementptr i32, ptr %arr, i32 6
+  %ptr7 = getelementptr i32, ptr %arr, i32 7
 
   %res0 = load i32, i32 * %ptr0
   %res1 = load i32, i32 * %ptr1
@@ -93,4 +93,37 @@ entry:
   store i32 %res7, i32 * %ptr7
 
   ret i32 %res7
+}
+
+define i32 @test_gep() {
+; FP-LABEL: test_gep:
+; FP:         .cfi_startproc
+; FP-NEXT:  ; %bb.0: ; %entry
+; FP-NEXT:    link.w %a6, #-256
+; FP-NEXT:    .cfi_def_cfa_offset -8
+; FP-NEXT:    .cfi_offset %a6, -8
+; FP-NEXT:    .cfi_def_cfa_register %a6
+; FP-NEXT:    move.l #21, (-4,%a6)
+; FP-NEXT:    move.l #12, (-256,%a6)
+; FP-NEXT:    move.l #0, %d0
+; FP-NEXT:    unlk %a6
+; FP-NEXT:    rts
+;
+; NO-FP-LABEL: test_gep:
+; NO-FP:         .cfi_startproc
+; NO-FP-NEXT:  ; %bb.0: ; %entry
+; NO-FP-NEXT:    suba.l #256, %sp
+; NO-FP-NEXT:    .cfi_def_cfa_offset -260
+; NO-FP-NEXT:    move.l #21, (252,%sp)
+; NO-FP-NEXT:    move.l #12, (0,%sp)
+; NO-FP-NEXT:    move.l #0, %d0
+; NO-FP-NEXT:    adda.l #256, %sp
+; NO-FP-NEXT:    rts
+entry:
+  %arr = alloca [8 x [8 x i32]]
+  %ptr1 = getelementptr [8 x i32], ptr %arr, i64 0, i64 0
+  store i32 12, i32 * %ptr1
+  %ptr2 = getelementptr [8 x i32], ptr %arr, i64 7, i64 7
+  store i32 21, i32 * %ptr2
+  ret i32 0
 }

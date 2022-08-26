@@ -932,9 +932,9 @@ configure_file(
   )
 
 # They are not referenced. See set_output_directory().
-set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_TOOLS_BINARY_DIR} )
-set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_LIBRARY_DIR} )
-set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_DIR} )
+set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/bin )
+set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
+set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
 
 if(LLVM_INCLUDE_TESTS)
   include(GetErrcMessages)
@@ -991,6 +991,7 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   # This needs to happen to avoid clashing protobuf codegen when building both AOT and development mode.
   # We plan to replace protobuf with a simpler alternative, so this will go away.
   file(COPY ${TENSORFLOW_AOT_PATH}/include DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/tensorflow
+    NO_SOURCE_PERMISSIONS
     PATTERN "google/*" EXCLUDE
     PATTERN "*.pb.h" EXCLUDE) 
   include_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/tensorflow/include)

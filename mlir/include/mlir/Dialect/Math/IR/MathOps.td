@@ -742,6 +742,35 @@ def Math_TanhOp : Math_FloatUnaryOp<"tanh"> {
 }
 
 //===----------------------------------------------------------------------===//
+// RoundEvenOp
+//===----------------------------------------------------------------------===//
+
+def Math_RoundEvenOp : Math_FloatUnaryOp<"roundeven"> {
+  let summary = "round of the specified value with halfway cases to even";
+  let description = [{
+    Syntax:
+
+    ```
+    operation ::= ssa-id `=` `math.roundeven` ssa-use `:` type
+    ```
+
+    The `roundeven` operation returns the operand rounded to the nearest integer
+    value in floating-point format. It takes one operand of floating point type
+    (i.e., scalar, tensor or vector) and produces one result of the same type.  The
+    operation rounds the argument to the nearest integer value in floating-point
+    format, rounding halfway cases to even, regardless of the current
+    rounding direction.
+
+    Example:
+
+    ```mlir
+    // Scalar round operation.
+    %a = math.roundeven %b : f64
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // RoundOp
 //===----------------------------------------------------------------------===//
 

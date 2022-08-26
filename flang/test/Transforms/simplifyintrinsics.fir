@@ -1,4 +1,4 @@
-// RUN: fir-opt --split-input-file --simplify-intrinsics='enable-experimental=true' %s | FileCheck %s
+// RUN: fir-opt --split-input-file --simplify-intrinsics %s | FileCheck %s
 
 // Call to SUM with 1D I32 array is replaced.
 module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.target_triple = "native"} {

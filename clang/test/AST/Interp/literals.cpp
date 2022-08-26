@@ -31,3 +31,19 @@ static_assert(!5 == false, "");
 static_assert(!0, "");
 static_assert(-true, "");
 static_assert(-false, ""); //expected-error{{failed}} ref-error{{failed}}
+
+constexpr int m = 10;
+constexpr const int *p = &m;
+static_assert(p != nullptr, "");
+static_assert(*p == 10, "");
+
+constexpr const int* getIntPointer() {
+  return &m;
+}
+//static_assert(getIntPointer() == &m, ""); TODO
+//static_assert(*getIntPointer() == 10, ""); TODO
+
+constexpr int gimme(int k) {
+  return k;
+}
+// static_assert(gimme(5) == 5, ""); TODO

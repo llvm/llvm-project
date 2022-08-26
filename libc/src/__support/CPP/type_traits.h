@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPETRAITS_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_TYPETRAITS_H
 
-#include "UInt.h"
-
 namespace __llvm_libc {
 namespace cpp {
 
@@ -50,6 +48,10 @@ private:
 
 public:
   static constexpr bool value =
+#ifdef __SIZEOF_INT128__
+      is_same_v<__int128_t, unqualified_type> ||
+      is_same_v<__uint128_t, unqualified_type> ||
+#endif
       is_same_v<char, unqualified_type> ||
       is_same_v<signed char, unqualified_type> ||
       is_same_v<unsigned char, unqualified_type> ||
@@ -61,17 +63,7 @@ public:
       is_same_v<unsigned long, unqualified_type> ||
       is_same_v<long long, unqualified_type> ||
       is_same_v<unsigned long long, unqualified_type> ||
-      is_same_v<bool, unqualified_type> ||
-      // We need to include UInt<128> and __uint128_t when available because
-      // we want to unittest UInt<128>. If we include only UInt128, then on
-      // platform where it resolves to __uint128_t, we cannot unittest
-      // UInt<128>.
-      is_same_v<__llvm_libc::cpp::UInt<128>, unqualified_type>
-#ifdef __SIZEOF_INT128__
-      || is_same_v<__int128_t, unqualified_type> ||
-      is_same_v<__uint128_t, unqualified_type>
-#endif
-      ;
+      is_same_v<bool, unqualified_type>;
 };
 template <typename T>
 inline constexpr bool is_integral_v = is_integral<T>::value;

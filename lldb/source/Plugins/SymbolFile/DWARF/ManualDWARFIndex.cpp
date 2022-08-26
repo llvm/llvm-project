@@ -148,19 +148,36 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
 
   const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
 
-  IndexUnitImpl(unit, cu_language, set);
-
-  if (SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile()) {
-    // Type units in a dwp file are indexed separately, so we just need to
-    // process the split unit here. However, if the split unit is in a dwo file,
-    // then we need to process type units here.
-    if (dwo_symbol_file == dwp) {
-      IndexUnitImpl(unit.GetNonSkeletonUnit(), cu_language, set);
-    } else {
-      DWARFDebugInfo &dwo_info = dwo_symbol_file->DebugInfo();
-      for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i)
-        IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), cu_language, set);
+  // First check if the unit has a DWO ID. If it does then we only want to index
+  // the .dwo file or nothing at all. If we have a compile unit where we can't
+  // locate the .dwo/.dwp file we don't want to index anything from the skeleton
+  // compile unit because it is usally has no children unless
+  // -fsplit-dwarf-inlining was used at compile time. This option will add a
+  // copy of all DW_TAG_subprogram and any contained DW_TAG_inline_subroutine
+  // DIEs so that symbolication will still work in the absence of the .dwo/.dwp
+  // file, but the functions have no return types and all arguments and locals
+  // have been removed. So we don't want to index any of these hacked up
+  // function types. Types can still exist in the skeleton compile unit DWARF
+  // though as some functions have template parameter types and other things
+  // that cause extra copies of types to be included, but we should find these
+  // types in the .dwo file only as methods could have return types removed and
+  // we don't have to index incomplete types from the skeletone compile unit.
+  if (unit.GetDWOId()) {
+    if (SymbolFileDWARFDwo *dwo_symbol_file = unit.GetDwoSymbolFile()) {
+      // Type units in a dwp file are indexed separately, so we just need to
+      // process the split unit here. However, if the split unit is in a dwo file,
+      // then we need to process type units here.
+      if (dwo_symbol_file == dwp) {
+        IndexUnitImpl(unit.GetNonSkeletonUnit(), cu_language, set);
+      } else {
+        DWARFDebugInfo &dwo_info = dwo_symbol_file->DebugInfo();
+        for (size_t i = 0; i < dwo_info.GetNumUnits(); ++i)
+          IndexUnitImpl(*dwo_info.GetUnitAtIndex(i), cu_language, set);
+      }
     }
+  } else {
+    // We either have a normal compile unit which we want to index.
+    IndexUnitImpl(unit, cu_language, set);
   }
 }
 

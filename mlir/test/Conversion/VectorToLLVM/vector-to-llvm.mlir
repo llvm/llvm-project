@@ -1760,6 +1760,8 @@ func.func @create_mask_1d(%a : index) -> vector<4xi1> {
 // CHECK:  %[[result:.*]] = arith.cmpi slt, %[[indices]], %[[bounds]] : vector<4xi32>
 // CHECK:  return %[[result]] : vector<4xi1>
 
+// -----
+
 func.func @create_mask_1d_scalable(%a : index) -> vector<[4]xi1> {
   %v = vector.create_mask %a : vector<[4]xi1>
   return %v: vector<[4]xi1>
@@ -1773,6 +1775,17 @@ func.func @create_mask_1d_scalable(%a : index) -> vector<[4]xi1> {
 // CHECK:  %[[bounds:.*]] = llvm.shufflevector %[[boundsInsert]], {{.*}} : vector<[4]xi32>
 // CHECK:  %[[result:.*]] = arith.cmpi slt, %[[indices]], %[[bounds]] : vector<[4]xi32>
 // CHECK: return %[[result]] : vector<[4]xi1>
+
+// -----
+
+func.func @transpose_0d(%arg0: vector<f32>) -> vector<f32> {
+  %0 = vector.transpose %arg0, [] : vector<f32> to vector<f32>
+  return %0 : vector<f32>
+}
+
+// CHECK-LABEL: func @transpose_0d
+// CHECK-SAME:  %[[A:.*]]: vector<f32>
+// CHECK:       return %[[A]] : vector<f32>
 
 // -----
 

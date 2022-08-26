@@ -130,8 +130,8 @@ struct ParseParams {
 // A rule `_ := StartSymbol` must exit for the chosen start symbol.
 //
 // If the parsing fails, we model it as an opaque node in the forest.
-const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
-                           const Language &Lang);
+ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
+                     const Language &Lang);
 
 // Shift a token onto all OldHeads, placing the results into NewHeads.
 //
