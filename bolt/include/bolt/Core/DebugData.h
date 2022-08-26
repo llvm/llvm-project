@@ -319,6 +319,11 @@ public:
   /// section.
   virtual uint64_t getOffset(DWARFUnit &Unit);
 
+  /// Returns True if CU exists in the DebugAddrWriter.
+  bool doesCUExist(DWARFUnit &Unit) {
+    return DWOIdToOffsetMap.count(getCUID(Unit)) > 0;
+  }
+
   /// Returns False if .debug_addr section was created..
   bool isInitialized() const { return !AddressMaps.empty(); }
 

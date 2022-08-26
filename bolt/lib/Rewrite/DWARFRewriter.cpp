@@ -1047,6 +1047,9 @@ DWARFRewriter::finalizeDebugSections(DebugInfoBinaryPatcher &DebugInfoPatcher) {
       if (!AttrValGnu && CU->getVersion() < 5)
         continue;
 
+      if (!AttrVal && CU->getVersion() >= 5 && !AddrWriter->doesCUExist(*CU))
+        continue;
+
       Offset = AddrWriter->getOffset(*CU);
 
       if (AttrValGnu) {
