@@ -337,39 +337,39 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
                                          CxtI);
   }
 
-  static const CostTblEntry GLMCostTable[] = {
-    { ISD::FDIV,  MVT::f32,   18 }, // divss
-    { ISD::FDIV,  MVT::v4f32, 35 }, // divps
-    { ISD::FDIV,  MVT::f64,   33 }, // divsd
-    { ISD::FDIV,  MVT::v2f64, 65 }, // divpd
+  static const CostKindTblEntry GLMCostTable[] = {
+    { ISD::FDIV,  MVT::f32,   { 18 } }, // divss
+    { ISD::FDIV,  MVT::v4f32, { 35 } }, // divps
+    { ISD::FDIV,  MVT::f64,   { 33 } }, // divsd
+    { ISD::FDIV,  MVT::v2f64, { 65 } }, // divpd
   };
 
   if (ST->useGLMDivSqrtCosts())
-    if (const auto *Entry = CostTableLookup(GLMCostTable, ISD,
-                                            LT.second))
-      return LT.first * Entry->Cost;
+    if (const auto *Entry = CostTableLookup(GLMCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry SLMCostTable[] = {
-    { ISD::MUL,   MVT::v4i32, 11 }, // pmulld
-    { ISD::MUL,   MVT::v8i16, 2  }, // pmullw
-    { ISD::FMUL,  MVT::f64,   2  }, // mulsd
-    { ISD::FMUL,  MVT::v2f64, 4  }, // mulpd
-    { ISD::FMUL,  MVT::v4f32, 2  }, // mulps
-    { ISD::FDIV,  MVT::f32,   17 }, // divss
-    { ISD::FDIV,  MVT::v4f32, 39 }, // divps
-    { ISD::FDIV,  MVT::f64,   32 }, // divsd
-    { ISD::FDIV,  MVT::v2f64, 69 }, // divpd
-    { ISD::FADD,  MVT::v2f64, 2  }, // addpd
-    { ISD::FSUB,  MVT::v2f64, 2  }, // subpd
+  static const CostKindTblEntry SLMCostTable[] = {
+    { ISD::MUL,   MVT::v4i32, { 11 } }, // pmulld
+    { ISD::MUL,   MVT::v8i16, { 2  } }, // pmullw
+    { ISD::FMUL,  MVT::f64,   { 2  } }, // mulsd
+    { ISD::FMUL,  MVT::v2f64, { 4  } }, // mulpd
+    { ISD::FMUL,  MVT::v4f32, { 2  } }, // mulps
+    { ISD::FDIV,  MVT::f32,   { 17 } }, // divss
+    { ISD::FDIV,  MVT::v4f32, { 39 } }, // divps
+    { ISD::FDIV,  MVT::f64,   { 32 } }, // divsd
+    { ISD::FDIV,  MVT::v2f64, { 69 } }, // divpd
+    { ISD::FADD,  MVT::v2f64, { 2  } }, // addpd
+    { ISD::FSUB,  MVT::v2f64, { 2  } }, // subpd
     // v2i64/v4i64 mul is custom lowered as a series of long:
     // multiplies(3), shifts(3) and adds(2)
     // slm muldq version throughput is 2 and addq throughput 4
     // thus: 3X2 (muldq throughput) + 3X1 (shift throughput) +
     //       3X4 (addq throughput) = 17
-    { ISD::MUL,   MVT::v2i64, 17 },
+    { ISD::MUL,   MVT::v2i64, { 17 } },
     // slm addq\subq throughput is 4
-    { ISD::ADD,   MVT::v2i64, 4  },
-    { ISD::SUB,   MVT::v2i64, 4  },
+    { ISD::ADD,   MVT::v2i64, {  4 } },
+    { ISD::SUB,   MVT::v2i64, {  4 } },
   };
 
   if (ST->useSLMArithCosts()) {
@@ -394,174 +394,173 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * 5; // pmullw/pmulhw/pshuf
     }
 
-    if (const auto *Entry = CostTableLookup(SLMCostTable, ISD,
-                                            LT.second)) {
-      return LT.first * Entry->Cost;
-    }
+    if (const auto *Entry = CostTableLookup(SLMCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
   }
 
-  static const CostTblEntry AVX512BWUniformConstCostTable[] = {
-    { ISD::SHL,  MVT::v64i8,   2 }, // psllw + pand.
-    { ISD::SRL,  MVT::v64i8,   2 }, // psrlw + pand.
-    { ISD::SRA,  MVT::v64i8,   4 }, // psrlw, pand, pxor, psubb.
+  static const CostKindTblEntry AVX512BWUniformConstCostTable[] = {
+    { ISD::SHL,  MVT::v64i8, { 2 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v64i8, { 2 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v64i8, { 4 } }, // psrlw, pand, pxor, psubb.
   };
 
-  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasBWI()) {
-    if (const auto *Entry = CostTableLookup(AVX512BWUniformConstCostTable, ISD,
-                                            LT.second))
-      return LT.first * Entry->Cost;
-  }
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasBWI())
+    if (const auto *Entry =
+            CostTableLookup(AVX512BWUniformConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry AVX512UniformConstCostTable[] = {
-    { ISD::SRA,  MVT::v2i64,   1 },
-    { ISD::SRA,  MVT::v4i64,   1 },
-    { ISD::SRA,  MVT::v8i64,   1 },
+  static const CostKindTblEntry AVX512UniformConstCostTable[] = {
+    { ISD::SRA,  MVT::v2i64,  { 1 } },
+    { ISD::SRA,  MVT::v4i64,  { 1 } },
+    { ISD::SRA,  MVT::v8i64,  { 1 } },
 
-    { ISD::SHL,  MVT::v64i8,   4 }, // psllw + pand.
-    { ISD::SRL,  MVT::v64i8,   4 }, // psrlw + pand.
-    { ISD::SRA,  MVT::v64i8,   8 }, // psrlw, pand, pxor, psubb.
+    { ISD::SHL,  MVT::v64i8,  { 4 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v64i8,  { 4 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v64i8,  { 8 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SDIV, MVT::v16i32,  6 }, // pmuludq sequence
-    { ISD::SREM, MVT::v16i32,  8 }, // pmuludq+mul+sub sequence
-    { ISD::UDIV, MVT::v16i32,  5 }, // pmuludq sequence
-    { ISD::UREM, MVT::v16i32,  7 }, // pmuludq+mul+sub sequence
+    { ISD::SDIV, MVT::v16i32, { 6 } }, // pmuludq sequence
+    { ISD::SREM, MVT::v16i32, { 8 } }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v16i32, { 5 } }, // pmuludq sequence
+    { ISD::UREM, MVT::v16i32, { 7 } }, // pmuludq+mul+sub sequence
   };
 
-  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX512()) {
-    if (const auto *Entry = CostTableLookup(AVX512UniformConstCostTable, ISD,
-                                            LT.second))
-      return LT.first * Entry->Cost;
-  }
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX512())
+    if (const auto *Entry =
+            CostTableLookup(AVX512UniformConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry AVX2UniformConstCostTable[] = {
-    { ISD::SHL,  MVT::v32i8,   2 }, // psllw + pand.
-    { ISD::SRL,  MVT::v32i8,   2 }, // psrlw + pand.
-    { ISD::SRA,  MVT::v32i8,   4 }, // psrlw, pand, pxor, psubb.
+  static const CostKindTblEntry AVX2UniformConstCostTable[] = {
+    { ISD::SHL,  MVT::v32i8, { 2 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v32i8, { 2 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v32i8, { 4 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SRA,  MVT::v4i64,   4 }, // 2 x psrad + shuffle.
+    { ISD::SRA,  MVT::v4i64, { 4 } }, // 2 x psrad + shuffle.
 
-    { ISD::SDIV, MVT::v8i32,   6 }, // pmuludq sequence
-    { ISD::SREM, MVT::v8i32,   8 }, // pmuludq+mul+sub sequence
-    { ISD::UDIV, MVT::v8i32,   5 }, // pmuludq sequence
-    { ISD::UREM, MVT::v8i32,   7 }, // pmuludq+mul+sub sequence
+    { ISD::SDIV, MVT::v8i32, { 6 } }, // pmuludq sequence
+    { ISD::SREM, MVT::v8i32, { 8 } }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v8i32, { 5 } }, // pmuludq sequence
+    { ISD::UREM, MVT::v8i32, { 7 } }, // pmuludq+mul+sub sequence
   };
 
-  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX2()) {
-    if (const auto *Entry = CostTableLookup(AVX2UniformConstCostTable, ISD,
-                                            LT.second))
-      return LT.first * Entry->Cost;
-  }
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasAVX2())
+    if (const auto *Entry =
+            CostTableLookup(AVX2UniformConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry SSE2UniformConstCostTable[] = {
-    { ISD::SHL,  MVT::v16i8,     2 }, // psllw + pand.
-    { ISD::SRL,  MVT::v16i8,     2 }, // psrlw + pand.
-    { ISD::SRA,  MVT::v16i8,     4 }, // psrlw, pand, pxor, psubb.
+  static const CostKindTblEntry SSE2UniformConstCostTable[] = {
+    { ISD::SHL,  MVT::v16i8, {    2 } }, // psllw + pand.
+    { ISD::SRL,  MVT::v16i8, {    2 } }, // psrlw + pand.
+    { ISD::SRA,  MVT::v16i8, {    4 } }, // psrlw, pand, pxor, psubb.
 
-    { ISD::SHL,  MVT::v32i8,   4+2 }, // 2*(psllw + pand) + split.
-    { ISD::SRL,  MVT::v32i8,   4+2 }, // 2*(psrlw + pand) + split.
-    { ISD::SRA,  MVT::v32i8,   8+2 }, // 2*(psrlw, pand, pxor, psubb) + split.
+    { ISD::SHL,  MVT::v32i8, {  4+2 } }, // 2*(psllw + pand) + split.
+    { ISD::SRL,  MVT::v32i8, {  4+2 } }, // 2*(psrlw + pand) + split.
+    { ISD::SRA,  MVT::v32i8, {  8+2 } }, // 2*(psrlw, pand, pxor, psubb) + split.
 
-    { ISD::SDIV, MVT::v8i32,  12+2 }, // 2*pmuludq sequence + split.
-    { ISD::SREM, MVT::v8i32,  16+2 }, // 2*pmuludq+mul+sub sequence + split.
-    { ISD::SDIV, MVT::v4i32,     6 }, // pmuludq sequence
-    { ISD::SREM, MVT::v4i32,     8 }, // pmuludq+mul+sub sequence
-    { ISD::UDIV, MVT::v8i32,  10+2 }, // 2*pmuludq sequence + split.
-    { ISD::UREM, MVT::v8i32,  14+2 }, // 2*pmuludq+mul+sub sequence + split.
-    { ISD::UDIV, MVT::v4i32,     5 }, // pmuludq sequence
-    { ISD::UREM, MVT::v4i32,     7 }, // pmuludq+mul+sub sequence
+    { ISD::SDIV, MVT::v8i32, { 12+2 } }, // 2*pmuludq sequence + split.
+    { ISD::SREM, MVT::v8i32, { 16+2 } }, // 2*pmuludq+mul+sub sequence + split.
+    { ISD::SDIV, MVT::v4i32, {    6 } }, // pmuludq sequence
+    { ISD::SREM, MVT::v4i32, {    8 } }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v8i32, { 10+2 } }, // 2*pmuludq sequence + split.
+    { ISD::UREM, MVT::v8i32, { 14+2 } }, // 2*pmuludq+mul+sub sequence + split.
+    { ISD::UDIV, MVT::v4i32, {    5 } }, // pmuludq sequence
+    { ISD::UREM, MVT::v4i32, {    7 } }, // pmuludq+mul+sub sequence
   };
 
   // XOP has faster vXi8 shifts.
-  if (Op2Info.isUniform() && Op2Info.isConstant() &&
-      ST->hasSSE2() && !ST->hasXOP()) {
+  if (Op2Info.isUniform() && Op2Info.isConstant() && ST->hasSSE2() &&
+      !ST->hasXOP())
     if (const auto *Entry =
             CostTableLookup(SSE2UniformConstCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry AVX512BWConstCostTable[] = {
-    { ISD::SDIV, MVT::v64i8,  14 }, // 2*ext+2*pmulhw sequence
-    { ISD::SREM, MVT::v64i8,  16 }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v64i8,  14 }, // 2*ext+2*pmulhw sequence
-    { ISD::UREM, MVT::v64i8,  16 }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::SDIV, MVT::v32i16,  6 }, // vpmulhw sequence
-    { ISD::SREM, MVT::v32i16,  8 }, // vpmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v32i16,  6 }, // vpmulhuw sequence
-    { ISD::UREM, MVT::v32i16,  8 }, // vpmulhuw+mul+sub sequence
+  static const CostKindTblEntry AVX512BWConstCostTable[] = {
+    { ISD::SDIV, MVT::v64i8,  { 14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::SREM, MVT::v64i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v64i8,  { 14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::UREM, MVT::v64i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+    { ISD::SDIV, MVT::v32i16, {  6 } }, // vpmulhw sequence
+    { ISD::SREM, MVT::v32i16, {  8 } }, // vpmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v32i16, {  6 } }, // vpmulhuw sequence
+    { ISD::UREM, MVT::v32i16, {  8 } }, // vpmulhuw+mul+sub sequence
   };
 
-  if (Op2Info.isConstant() && ST->hasBWI()) {
+  if (Op2Info.isConstant() && ST->hasBWI())
     if (const auto *Entry =
             CostTableLookup(AVX512BWConstCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry AVX512ConstCostTable[] = {
-    { ISD::SDIV, MVT::v16i32, 15 }, // vpmuldq sequence
-    { ISD::SREM, MVT::v16i32, 17 }, // vpmuldq+mul+sub sequence
-    { ISD::UDIV, MVT::v16i32, 15 }, // vpmuludq sequence
-    { ISD::UREM, MVT::v16i32, 17 }, // vpmuludq+mul+sub sequence
-    { ISD::SDIV, MVT::v64i8,  28 }, // 4*ext+4*pmulhw sequence
-    { ISD::SREM, MVT::v64i8,  32 }, // 4*ext+4*pmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v64i8,  28 }, // 4*ext+4*pmulhw sequence
-    { ISD::UREM, MVT::v64i8,  32 }, // 4*ext+4*pmulhw+mul+sub sequence
-    { ISD::SDIV, MVT::v32i16, 12 }, // 2*vpmulhw sequence
-    { ISD::SREM, MVT::v32i16, 16 }, // 2*vpmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v32i16, 12 }, // 2*vpmulhuw sequence
-    { ISD::UREM, MVT::v32i16, 16 }, // 2*vpmulhuw+mul+sub sequence
+  static const CostKindTblEntry AVX512ConstCostTable[] = {
+    { ISD::SDIV, MVT::v16i32, { 15 } }, // vpmuldq sequence
+    { ISD::SREM, MVT::v16i32, { 17 } }, // vpmuldq+mul+sub sequence
+    { ISD::UDIV, MVT::v16i32, { 15 } }, // vpmuludq sequence
+    { ISD::UREM, MVT::v16i32, { 17 } }, // vpmuludq+mul+sub sequence
+    { ISD::SDIV, MVT::v64i8,  { 28 } }, // 4*ext+4*pmulhw sequence
+    { ISD::SREM, MVT::v64i8,  { 32 } }, // 4*ext+4*pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v64i8,  { 28 } }, // 4*ext+4*pmulhw sequence
+    { ISD::UREM, MVT::v64i8,  { 32 } }, // 4*ext+4*pmulhw+mul+sub sequence
+    { ISD::SDIV, MVT::v32i16, { 12 } }, // 2*vpmulhw sequence
+    { ISD::SREM, MVT::v32i16, { 16 } }, // 2*vpmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v32i16, { 12 } }, // 2*vpmulhuw sequence
+    { ISD::UREM, MVT::v32i16, { 16 } }, // 2*vpmulhuw+mul+sub sequence
   };
 
-  if (Op2Info.isConstant() && ST->hasAVX512()) {
+  if (Op2Info.isConstant() && ST->hasAVX512())
     if (const auto *Entry =
             CostTableLookup(AVX512ConstCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry AVX2ConstCostTable[] = {
-    { ISD::SDIV, MVT::v32i8,  14 }, // 2*ext+2*pmulhw sequence
-    { ISD::SREM, MVT::v32i8,  16 }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v32i8,  14 }, // 2*ext+2*pmulhw sequence
-    { ISD::UREM, MVT::v32i8,  16 }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::SDIV, MVT::v16i16,  6 }, // vpmulhw sequence
-    { ISD::SREM, MVT::v16i16,  8 }, // vpmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v16i16,  6 }, // vpmulhuw sequence
-    { ISD::UREM, MVT::v16i16,  8 }, // vpmulhuw+mul+sub sequence
-    { ISD::SDIV, MVT::v8i32,  15 }, // vpmuldq sequence
-    { ISD::SREM, MVT::v8i32,  19 }, // vpmuldq+mul+sub sequence
-    { ISD::UDIV, MVT::v8i32,  15 }, // vpmuludq sequence
-    { ISD::UREM, MVT::v8i32,  19 }, // vpmuludq+mul+sub sequence
+  static const CostKindTblEntry AVX2ConstCostTable[] = {
+    { ISD::SDIV, MVT::v32i8,  { 14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::SREM, MVT::v32i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v32i8,  { 14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::UREM, MVT::v32i8,  { 16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+    { ISD::SDIV, MVT::v16i16, {  6 } }, // vpmulhw sequence
+    { ISD::SREM, MVT::v16i16, {  8 } }, // vpmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v16i16, {  6 } }, // vpmulhuw sequence
+    { ISD::UREM, MVT::v16i16, {  8 } }, // vpmulhuw+mul+sub sequence
+    { ISD::SDIV, MVT::v8i32,  { 15 } }, // vpmuldq sequence
+    { ISD::SREM, MVT::v8i32,  { 19 } }, // vpmuldq+mul+sub sequence
+    { ISD::UDIV, MVT::v8i32,  { 15 } }, // vpmuludq sequence
+    { ISD::UREM, MVT::v8i32,  { 19 } }, // vpmuludq+mul+sub sequence
   };
 
-  if (Op2Info.isConstant() && ST->hasAVX2()) {
+  if (Op2Info.isConstant() && ST->hasAVX2())
     if (const auto *Entry = CostTableLookup(AVX2ConstCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry SSE2ConstCostTable[] = {
-    { ISD::SDIV, MVT::v32i8,  28+2 }, // 4*ext+4*pmulhw sequence + split.
-    { ISD::SREM, MVT::v32i8,  32+2 }, // 4*ext+4*pmulhw+mul+sub sequence + split.
-    { ISD::SDIV, MVT::v16i8,    14 }, // 2*ext+2*pmulhw sequence
-    { ISD::SREM, MVT::v16i8,    16 }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v32i8,  28+2 }, // 4*ext+4*pmulhw sequence + split.
-    { ISD::UREM, MVT::v32i8,  32+2 }, // 4*ext+4*pmulhw+mul+sub sequence + split.
-    { ISD::UDIV, MVT::v16i8,    14 }, // 2*ext+2*pmulhw sequence
-    { ISD::UREM, MVT::v16i8,    16 }, // 2*ext+2*pmulhw+mul+sub sequence
-    { ISD::SDIV, MVT::v16i16, 12+2 }, // 2*pmulhw sequence + split.
-    { ISD::SREM, MVT::v16i16, 16+2 }, // 2*pmulhw+mul+sub sequence + split.
-    { ISD::SDIV, MVT::v8i16,     6 }, // pmulhw sequence
-    { ISD::SREM, MVT::v8i16,     8 }, // pmulhw+mul+sub sequence
-    { ISD::UDIV, MVT::v16i16, 12+2 }, // 2*pmulhuw sequence + split.
-    { ISD::UREM, MVT::v16i16, 16+2 }, // 2*pmulhuw+mul+sub sequence + split.
-    { ISD::UDIV, MVT::v8i16,     6 }, // pmulhuw sequence
-    { ISD::UREM, MVT::v8i16,     8 }, // pmulhuw+mul+sub sequence
-    { ISD::SDIV, MVT::v8i32,  38+2 }, // 2*pmuludq sequence + split.
-    { ISD::SREM, MVT::v8i32,  48+2 }, // 2*pmuludq+mul+sub sequence + split.
-    { ISD::SDIV, MVT::v4i32,    19 }, // pmuludq sequence
-    { ISD::SREM, MVT::v4i32,    24 }, // pmuludq+mul+sub sequence
-    { ISD::UDIV, MVT::v8i32,  30+2 }, // 2*pmuludq sequence + split.
-    { ISD::UREM, MVT::v8i32,  40+2 }, // 2*pmuludq+mul+sub sequence + split.
-    { ISD::UDIV, MVT::v4i32,    15 }, // pmuludq sequence
-    { ISD::UREM, MVT::v4i32,    20 }, // pmuludq+mul+sub sequence
+  static const CostKindTblEntry SSE2ConstCostTable[] = {
+    { ISD::SDIV, MVT::v32i8,  { 28+2 } }, // 4*ext+4*pmulhw sequence + split.
+    { ISD::SREM, MVT::v32i8,  { 32+2 } }, // 4*ext+4*pmulhw+mul+sub sequence + split.
+    { ISD::SDIV, MVT::v16i8,  {   14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::SREM, MVT::v16i8,  {   16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v32i8,  { 28+2 } }, // 4*ext+4*pmulhw sequence + split.
+    { ISD::UREM, MVT::v32i8,  { 32+2 } }, // 4*ext+4*pmulhw+mul+sub sequence + split.
+    { ISD::UDIV, MVT::v16i8,  {   14 } }, // 2*ext+2*pmulhw sequence
+    { ISD::UREM, MVT::v16i8,  {   16 } }, // 2*ext+2*pmulhw+mul+sub sequence
+    { ISD::SDIV, MVT::v16i16, { 12+2 } }, // 2*pmulhw sequence + split.
+    { ISD::SREM, MVT::v16i16, { 16+2 } }, // 2*pmulhw+mul+sub sequence + split.
+    { ISD::SDIV, MVT::v8i16,  {    6 } }, // pmulhw sequence
+    { ISD::SREM, MVT::v8i16,  {    8 } }, // pmulhw+mul+sub sequence
+    { ISD::UDIV, MVT::v16i16, { 12+2 } }, // 2*pmulhuw sequence + split.
+    { ISD::UREM, MVT::v16i16, { 16+2 } }, // 2*pmulhuw+mul+sub sequence + split.
+    { ISD::UDIV, MVT::v8i16,  {    6 } }, // pmulhuw sequence
+    { ISD::UREM, MVT::v8i16,  {    8 } }, // pmulhuw+mul+sub sequence
+    { ISD::SDIV, MVT::v8i32,  { 38+2 } }, // 2*pmuludq sequence + split.
+    { ISD::SREM, MVT::v8i32,  { 48+2 } }, // 2*pmuludq+mul+sub sequence + split.
+    { ISD::SDIV, MVT::v4i32,  {   19 } }, // pmuludq sequence
+    { ISD::SREM, MVT::v4i32,  {   24 } }, // pmuludq+mul+sub sequence
+    { ISD::UDIV, MVT::v8i32,  { 30+2 } }, // 2*pmuludq sequence + split.
+    { ISD::UREM, MVT::v8i32,  { 40+2 } }, // 2*pmuludq+mul+sub sequence + split.
+    { ISD::UDIV, MVT::v4i32,  {   15 } }, // pmuludq sequence
+    { ISD::UREM, MVT::v4i32,  {   20 } }, // pmuludq+mul+sub sequence
   };
 
   if (Op2Info.isConstant() && ST->hasSSE2()) {
@@ -576,163 +575,169 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       return LT.first * 20;
 
     if (const auto *Entry = CostTableLookup(SSE2ConstCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
   }
 
-  static const CostTblEntry AVX512BWShiftCostTable[] = {
-    { ISD::SHL,   MVT::v16i8,      4 }, // extend/vpsllvw/pack sequence.
-    { ISD::SRL,   MVT::v16i8,      4 }, // extend/vpsrlvw/pack sequence.
-    { ISD::SRA,   MVT::v16i8,      4 }, // extend/vpsravw/pack sequence.
-    { ISD::SHL,   MVT::v32i8,      4 }, // extend/vpsllvw/pack sequence.
-    { ISD::SRL,   MVT::v32i8,      4 }, // extend/vpsrlvw/pack sequence.
-    { ISD::SRA,   MVT::v32i8,      6 }, // extend/vpsravw/pack sequence.
-    { ISD::SHL,   MVT::v64i8,      6 }, // extend/vpsllvw/pack sequence.
-    { ISD::SRL,   MVT::v64i8,      7 }, // extend/vpsrlvw/pack sequence.
-    { ISD::SRA,   MVT::v64i8,     15 }, // extend/vpsravw/pack sequence.
+  static const CostKindTblEntry AVX512BWShiftCostTable[] = {
+    { ISD::SHL,   MVT::v16i8,  {  4 } }, // extend/vpsllvw/pack sequence.
+    { ISD::SRL,   MVT::v16i8,  {  4 } }, // extend/vpsrlvw/pack sequence.
+    { ISD::SRA,   MVT::v16i8,  {  4 } }, // extend/vpsravw/pack sequence.
+    { ISD::SHL,   MVT::v32i8,  {  4 } }, // extend/vpsllvw/pack sequence.
+    { ISD::SRL,   MVT::v32i8,  {  4 } }, // extend/vpsrlvw/pack sequence.
+    { ISD::SRA,   MVT::v32i8,  {  6 } }, // extend/vpsravw/pack sequence.
+    { ISD::SHL,   MVT::v64i8,  {  6 } }, // extend/vpsllvw/pack sequence.
+    { ISD::SRL,   MVT::v64i8,  {  7 } }, // extend/vpsrlvw/pack sequence.
+    { ISD::SRA,   MVT::v64i8,  { 15 } }, // extend/vpsravw/pack sequence.
 
-    { ISD::SHL,   MVT::v8i16,      1 }, // vpsllvw
-    { ISD::SRL,   MVT::v8i16,      1 }, // vpsrlvw
-    { ISD::SRA,   MVT::v8i16,      1 }, // vpsravw
-    { ISD::SHL,   MVT::v16i16,     1 }, // vpsllvw
-    { ISD::SRL,   MVT::v16i16,     1 }, // vpsrlvw
-    { ISD::SRA,   MVT::v16i16,     1 }, // vpsravw
-    { ISD::SHL,   MVT::v32i16,     1 }, // vpsllvw
-    { ISD::SRL,   MVT::v32i16,     1 }, // vpsrlvw
-    { ISD::SRA,   MVT::v32i16,     1 }, // vpsravw
+    { ISD::SHL,   MVT::v8i16,  {  1 } }, // vpsllvw
+    { ISD::SRL,   MVT::v8i16,  {  1 } }, // vpsrlvw
+    { ISD::SRA,   MVT::v8i16,  {  1 } }, // vpsravw
+    { ISD::SHL,   MVT::v16i16, {  1 } }, // vpsllvw
+    { ISD::SRL,   MVT::v16i16, {  1 } }, // vpsrlvw
+    { ISD::SRA,   MVT::v16i16, {  1 } }, // vpsravw
+    { ISD::SHL,   MVT::v32i16, {  1 } }, // vpsllvw
+    { ISD::SRL,   MVT::v32i16, {  1 } }, // vpsrlvw
+    { ISD::SRA,   MVT::v32i16, {  1 } }, // vpsravw
   };
 
   if (ST->hasBWI())
     if (const auto *Entry = CostTableLookup(AVX512BWShiftCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry AVX2UniformCostTable[] = {
+  static const CostKindTblEntry AVX2UniformCostTable[] = {
     // Uniform splats are cheaper for the following instructions.
-    { ISD::SHL,  MVT::v16i16, 1 }, // psllw.
-    { ISD::SRL,  MVT::v16i16, 1 }, // psrlw.
-    { ISD::SRA,  MVT::v16i16, 1 }, // psraw.
-    { ISD::SHL,  MVT::v32i16, 2 }, // 2*psllw.
-    { ISD::SRL,  MVT::v32i16, 2 }, // 2*psrlw.
-    { ISD::SRA,  MVT::v32i16, 2 }, // 2*psraw.
+    { ISD::SHL,  MVT::v16i16, { 1 } }, // psllw.
+    { ISD::SRL,  MVT::v16i16, { 1 } }, // psrlw.
+    { ISD::SRA,  MVT::v16i16, { 1 } }, // psraw.
+    { ISD::SHL,  MVT::v32i16, { 2 } }, // 2*psllw.
+    { ISD::SRL,  MVT::v32i16, { 2 } }, // 2*psrlw.
+    { ISD::SRA,  MVT::v32i16, { 2 } }, // 2*psraw.
 
-    { ISD::SHL,  MVT::v8i32,  1 }, // pslld
-    { ISD::SRL,  MVT::v8i32,  1 }, // psrld
-    { ISD::SRA,  MVT::v8i32,  1 }, // psrad
-    { ISD::SHL,  MVT::v4i64,  1 }, // psllq
-    { ISD::SRL,  MVT::v4i64,  1 }, // psrlq
+    { ISD::SHL,  MVT::v8i32,  { 1 } }, // pslld
+    { ISD::SRL,  MVT::v8i32,  { 1 } }, // psrld
+    { ISD::SRA,  MVT::v8i32,  { 1 } }, // psrad
+    { ISD::SHL,  MVT::v4i64,  { 1 } }, // psllq
+    { ISD::SRL,  MVT::v4i64,  { 1 } }, // psrlq
   };
 
-  if (ST->hasAVX2() && Op2Info.isUniform()) {
+  if (ST->hasAVX2() && Op2Info.isUniform())
     if (const auto *Entry =
             CostTableLookup(AVX2UniformCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry SSE2UniformCostTable[] = {
+  static const CostKindTblEntry SSE2UniformCostTable[] = {
     // Uniform splats are cheaper for the following instructions.
-    { ISD::SHL,  MVT::v8i16,  1 }, // psllw.
-    { ISD::SHL,  MVT::v4i32,  1 }, // pslld
-    { ISD::SHL,  MVT::v2i64,  1 }, // psllq.
+    { ISD::SHL,  MVT::v8i16,  { 1 } }, // psllw.
+    { ISD::SHL,  MVT::v4i32,  { 1 } }, // pslld
+    { ISD::SHL,  MVT::v2i64,  { 1 } }, // psllq.
 
-    { ISD::SRL,  MVT::v8i16,  1 }, // psrlw.
-    { ISD::SRL,  MVT::v4i32,  1 }, // psrld.
-    { ISD::SRL,  MVT::v2i64,  1 }, // psrlq.
+    { ISD::SRL,  MVT::v8i16,  { 1 } }, // psrlw.
+    { ISD::SRL,  MVT::v4i32,  { 1 } }, // psrld.
+    { ISD::SRL,  MVT::v2i64,  { 1 } }, // psrlq.
 
-    { ISD::SRA,  MVT::v8i16,  1 }, // psraw.
-    { ISD::SRA,  MVT::v4i32,  1 }, // psrad.
+    { ISD::SRA,  MVT::v8i16,  { 1 } }, // psraw.
+    { ISD::SRA,  MVT::v4i32,  { 1 } }, // psrad.
   };
 
-  if (ST->hasSSE2() && Op2Info.isUniform()) {
+  if (ST->hasSSE2() && Op2Info.isUniform())
     if (const auto *Entry =
             CostTableLookup(SSE2UniformCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
-  }
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry AVX512DQCostTable[] = {
-    { ISD::MUL,  MVT::v2i64, 2 }, // pmullq
-    { ISD::MUL,  MVT::v4i64, 2 }, // pmullq
-    { ISD::MUL,  MVT::v8i64, 2 }  // pmullq
+  static const CostKindTblEntry AVX512DQCostTable[] = {
+    { ISD::MUL,  MVT::v2i64, { 2 } }, // pmullq
+    { ISD::MUL,  MVT::v4i64, { 2 } }, // pmullq
+    { ISD::MUL,  MVT::v8i64, { 2 } }  // pmullq
   };
 
   // Look for AVX512DQ lowering tricks for custom cases.
   if (ST->hasDQI())
     if (const auto *Entry = CostTableLookup(AVX512DQCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry AVX512BWCostTable[] = {
-    { ISD::SHL,   MVT::v64i8,     11 }, // vpblendvb sequence.
-    { ISD::SRL,   MVT::v64i8,     11 }, // vpblendvb sequence.
-    { ISD::SRA,   MVT::v64i8,     24 }, // vpblendvb sequence.
+  static const CostKindTblEntry AVX512BWCostTable[] = {
+    { ISD::SHL,   MVT::v64i8, { 11 } }, // vpblendvb sequence.
+    { ISD::SRL,   MVT::v64i8, { 11 } }, // vpblendvb sequence.
+    { ISD::SRA,   MVT::v64i8, { 24 } }, // vpblendvb sequence.
   };
 
   // Look for AVX512BW lowering tricks for custom cases.
   if (ST->hasBWI())
     if (const auto *Entry = CostTableLookup(AVX512BWCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry AVX512CostTable[] = {
-    { ISD::SHL,     MVT::v4i32,      1 },
-    { ISD::SRL,     MVT::v4i32,      1 },
-    { ISD::SRA,     MVT::v4i32,      1 },
-    { ISD::SHL,     MVT::v8i32,      1 },
-    { ISD::SRL,     MVT::v8i32,      1 },
-    { ISD::SRA,     MVT::v8i32,      1 },
-    { ISD::SHL,     MVT::v16i32,     1 },
-    { ISD::SRL,     MVT::v16i32,     1 },
-    { ISD::SRA,     MVT::v16i32,     1 },
+  static const CostKindTblEntry AVX512CostTable[] = {
+    { ISD::SHL,     MVT::v4i32,   {  1 } },
+    { ISD::SRL,     MVT::v4i32,   {  1 } },
+    { ISD::SRA,     MVT::v4i32,   {  1 } },
+    { ISD::SHL,     MVT::v8i32,   {  1 } },
+    { ISD::SRL,     MVT::v8i32,   {  1 } },
+    { ISD::SRA,     MVT::v8i32,   {  1 } },
+    { ISD::SHL,     MVT::v16i32,  {  1 } },
+    { ISD::SRL,     MVT::v16i32,  {  1 } },
+    { ISD::SRA,     MVT::v16i32,  {  1 } },
 
-    { ISD::SHL,     MVT::v2i64,      1 },
-    { ISD::SRL,     MVT::v2i64,      1 },
-    { ISD::SHL,     MVT::v4i64,      1 },
-    { ISD::SRL,     MVT::v4i64,      1 },
-    { ISD::SHL,     MVT::v8i64,      1 },
-    { ISD::SRL,     MVT::v8i64,      1 },
+    { ISD::SHL,     MVT::v2i64,   {  1 } },
+    { ISD::SRL,     MVT::v2i64,   {  1 } },
+    { ISD::SHL,     MVT::v4i64,   {  1 } },
+    { ISD::SRL,     MVT::v4i64,   {  1 } },
+    { ISD::SHL,     MVT::v8i64,   {  1 } },
+    { ISD::SRL,     MVT::v8i64,   {  1 } },
 
-    { ISD::SRA,     MVT::v2i64,      1 },
-    { ISD::SRA,     MVT::v4i64,      1 },
-    { ISD::SRA,     MVT::v8i64,      1 },
+    { ISD::SRA,     MVT::v2i64,   {  1 } },
+    { ISD::SRA,     MVT::v4i64,   {  1 } },
+    { ISD::SRA,     MVT::v8i64,   {  1 } },
 
-    { ISD::MUL,     MVT::v16i32,     1 }, // pmulld (Skylake from agner.org)
-    { ISD::MUL,     MVT::v8i32,      1 }, // pmulld (Skylake from agner.org)
-    { ISD::MUL,     MVT::v4i32,      1 }, // pmulld (Skylake from agner.org)
-    { ISD::MUL,     MVT::v8i64,      6 }, // 3*pmuludq/3*shift/2*add
-    { ISD::MUL,     MVT::i64,        1 }, // Skylake from http://www.agner.org/
+    { ISD::MUL,     MVT::v16i32,  {  1 } }, // pmulld (Skylake from agner.org)
+    { ISD::MUL,     MVT::v8i32,   {  1 } }, // pmulld (Skylake from agner.org)
+    { ISD::MUL,     MVT::v4i32,   {  1 } }, // pmulld (Skylake from agner.org)
+    { ISD::MUL,     MVT::v8i64,   {  6 } }, // 3*pmuludq/3*shift/2*add
+    { ISD::MUL,     MVT::i64,     {  1 } }, // Skylake from http://www.agner.org/
 
-    { ISD::FNEG,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
-    { ISD::FADD,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
-    { ISD::FSUB,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
-    { ISD::FMUL,    MVT::v8f64,      1 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::f64,        4 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::v2f64,      4 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::v4f64,      8 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::v8f64,     16 }, // Skylake from http://www.agner.org/
+    { ISD::FNEG,    MVT::v8f64,   {  1 } }, // Skylake from http://www.agner.org/
+    { ISD::FADD,    MVT::v8f64,   {  1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSUB,    MVT::v8f64,   {  1 } }, // Skylake from http://www.agner.org/
+    { ISD::FMUL,    MVT::v8f64,   {  1 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::f64,     {  4 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v2f64,   {  4 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v4f64,   {  8 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v8f64,   { 16 } }, // Skylake from http://www.agner.org/
 
-    { ISD::FNEG,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
-    { ISD::FADD,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
-    { ISD::FSUB,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
-    { ISD::FMUL,    MVT::v16f32,     1 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::f32,        3 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::v4f32,      3 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::v8f32,      5 }, // Skylake from http://www.agner.org/
-    { ISD::FDIV,    MVT::v16f32,    10 }, // Skylake from http://www.agner.org/
+    { ISD::FNEG,    MVT::v16f32,  {  1 } }, // Skylake from http://www.agner.org/
+    { ISD::FADD,    MVT::v16f32,  {  1 } }, // Skylake from http://www.agner.org/
+    { ISD::FSUB,    MVT::v16f32,  {  1 } }, // Skylake from http://www.agner.org/
+    { ISD::FMUL,    MVT::v16f32,  {  1 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::f32,     {  3 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v4f32,   {  3 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v8f32,   {  5 } }, // Skylake from http://www.agner.org/
+    { ISD::FDIV,    MVT::v16f32,  { 10 } }, // Skylake from http://www.agner.org/
   };
 
   if (ST->hasAVX512())
     if (const auto *Entry = CostTableLookup(AVX512CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry AVX2ShiftCostTable[] = {
+
+  static const CostKindTblEntry AVX2ShiftCostTable[] = {
     // Shifts on vXi64/vXi32 on AVX2 is legal even though we declare to
     // customize them to detect the cases where shift amount is a scalar one.
-    { ISD::SHL,     MVT::v4i32,    2 }, // vpsllvd (Haswell from agner.org)
-    { ISD::SRL,     MVT::v4i32,    2 }, // vpsrlvd (Haswell from agner.org)
-    { ISD::SRA,     MVT::v4i32,    2 }, // vpsravd (Haswell from agner.org)
-    { ISD::SHL,     MVT::v8i32,    2 }, // vpsllvd (Haswell from agner.org)
-    { ISD::SRL,     MVT::v8i32,    2 }, // vpsrlvd (Haswell from agner.org)
-    { ISD::SRA,     MVT::v8i32,    2 }, // vpsravd (Haswell from agner.org)
-    { ISD::SHL,     MVT::v2i64,    1 }, // vpsllvq (Haswell from agner.org)
-    { ISD::SRL,     MVT::v2i64,    1 }, // vpsrlvq (Haswell from agner.org)
-    { ISD::SHL,     MVT::v4i64,    1 }, // vpsllvq (Haswell from agner.org)
-    { ISD::SRL,     MVT::v4i64,    1 }, // vpsrlvq (Haswell from agner.org)
+    { ISD::SHL,     MVT::v4i32,  { 2 } }, // vpsllvd (Haswell from agner.org)
+    { ISD::SRL,     MVT::v4i32,  { 2 } }, // vpsrlvd (Haswell from agner.org)
+    { ISD::SRA,     MVT::v4i32,  { 2 } }, // vpsravd (Haswell from agner.org)
+    { ISD::SHL,     MVT::v8i32,  { 2 } }, // vpsllvd (Haswell from agner.org)
+    { ISD::SRL,     MVT::v8i32,  { 2 } }, // vpsrlvd (Haswell from agner.org)
+    { ISD::SRA,     MVT::v8i32,  { 2 } }, // vpsravd (Haswell from agner.org)
+    { ISD::SHL,     MVT::v2i64,  { 1 } }, // vpsllvq (Haswell from agner.org)
+    { ISD::SRL,     MVT::v2i64,  { 1 } }, // vpsrlvq (Haswell from agner.org)
+    { ISD::SHL,     MVT::v4i64,  { 1 } }, // vpsllvq (Haswell from agner.org)
+    { ISD::SRL,     MVT::v4i64,  { 1 } }, // vpsrlvq (Haswell from agner.org)
   };
 
   if (ST->hasAVX512()) {
@@ -753,36 +758,37 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
                                     Op1Info.getNoProps(), Op2Info.getNoProps());
 
     if (const auto *Entry = CostTableLookup(AVX2ShiftCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
   }
 
-  static const CostTblEntry XOPShiftCostTable[] = {
+  static const CostKindTblEntry XOPShiftCostTable[] = {
     // 128bit shifts take 1cy, but right shifts require negation beforehand.
-    { ISD::SHL,     MVT::v16i8,    1 },
-    { ISD::SRL,     MVT::v16i8,    2 },
-    { ISD::SRA,     MVT::v16i8,    2 },
-    { ISD::SHL,     MVT::v8i16,    1 },
-    { ISD::SRL,     MVT::v8i16,    2 },
-    { ISD::SRA,     MVT::v8i16,    2 },
-    { ISD::SHL,     MVT::v4i32,    1 },
-    { ISD::SRL,     MVT::v4i32,    2 },
-    { ISD::SRA,     MVT::v4i32,    2 },
-    { ISD::SHL,     MVT::v2i64,    1 },
-    { ISD::SRL,     MVT::v2i64,    2 },
-    { ISD::SRA,     MVT::v2i64,    2 },
+    { ISD::SHL,     MVT::v16i8,  { 1 } },
+    { ISD::SRL,     MVT::v16i8,  { 2 } },
+    { ISD::SRA,     MVT::v16i8,  { 2 } },
+    { ISD::SHL,     MVT::v8i16,  { 1 } },
+    { ISD::SRL,     MVT::v8i16,  { 2 } },
+    { ISD::SRA,     MVT::v8i16,  { 2 } },
+    { ISD::SHL,     MVT::v4i32,  { 1 } },
+    { ISD::SRL,     MVT::v4i32,  { 2 } },
+    { ISD::SRA,     MVT::v4i32,  { 2 } },
+    { ISD::SHL,     MVT::v2i64,  { 1 } },
+    { ISD::SRL,     MVT::v2i64,  { 2 } },
+    { ISD::SRA,     MVT::v2i64,  { 2 } },
     // 256bit shifts require splitting if AVX2 didn't catch them above.
-    { ISD::SHL,     MVT::v32i8,  2+2 },
-    { ISD::SRL,     MVT::v32i8,  4+2 },
-    { ISD::SRA,     MVT::v32i8,  4+2 },
-    { ISD::SHL,     MVT::v16i16, 2+2 },
-    { ISD::SRL,     MVT::v16i16, 4+2 },
-    { ISD::SRA,     MVT::v16i16, 4+2 },
-    { ISD::SHL,     MVT::v8i32,  2+2 },
-    { ISD::SRL,     MVT::v8i32,  4+2 },
-    { ISD::SRA,     MVT::v8i32,  4+2 },
-    { ISD::SHL,     MVT::v4i64,  2+2 },
-    { ISD::SRL,     MVT::v4i64,  4+2 },
-    { ISD::SRA,     MVT::v4i64,  4+2 },
+    { ISD::SHL,     MVT::v32i8,  { 2+2 } },
+    { ISD::SRL,     MVT::v32i8,  { 4+2 } },
+    { ISD::SRA,     MVT::v32i8,  { 4+2 } },
+    { ISD::SHL,     MVT::v16i16, { 2+2 } },
+    { ISD::SRL,     MVT::v16i16, { 4+2 } },
+    { ISD::SRA,     MVT::v16i16, { 4+2 } },
+    { ISD::SHL,     MVT::v8i32,  { 2+2 } },
+    { ISD::SRL,     MVT::v8i32,  { 4+2 } },
+    { ISD::SRA,     MVT::v8i32,  { 4+2 } },
+    { ISD::SHL,     MVT::v4i64,  { 2+2 } },
+    { ISD::SRL,     MVT::v4i64,  { 4+2 } },
+    { ISD::SRA,     MVT::v4i64,  { 4+2 } },
   };
 
   // Look for XOP lowering tricks.
@@ -794,34 +800,35 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       ShiftISD = ISD::SHL;
     if (const auto *Entry =
             CostTableLookup(XOPShiftCostTable, ShiftISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
   }
 
-  static const CostTblEntry SSE2UniformShiftCostTable[] = {
+  static const CostKindTblEntry SSE2UniformShiftCostTable[] = {
     // Uniform splats are cheaper for the following instructions.
-    { ISD::SHL,  MVT::v16i16, 2+2 }, // 2*psllw + split.
-    { ISD::SHL,  MVT::v8i32,  2+2 }, // 2*pslld + split.
-    { ISD::SHL,  MVT::v4i64,  2+2 }, // 2*psllq + split.
+    { ISD::SHL,  MVT::v16i16, { 2+2 } }, // 2*psllw + split.
+    { ISD::SHL,  MVT::v8i32,  { 2+2 } }, // 2*pslld + split.
+    { ISD::SHL,  MVT::v4i64,  { 2+2 } }, // 2*psllq + split.
 
-    { ISD::SRL,  MVT::v16i16, 2+2 }, // 2*psrlw + split.
-    { ISD::SRL,  MVT::v8i32,  2+2 }, // 2*psrld + split.
-    { ISD::SRL,  MVT::v4i64,  2+2 }, // 2*psrlq + split.
+    { ISD::SRL,  MVT::v16i16, { 2+2 } }, // 2*psrlw + split.
+    { ISD::SRL,  MVT::v8i32,  { 2+2 } }, // 2*psrld + split.
+    { ISD::SRL,  MVT::v4i64,  { 2+2 } }, // 2*psrlq + split.
 
-    { ISD::SRA,  MVT::v16i16, 2+2 }, // 2*psraw + split.
-    { ISD::SRA,  MVT::v8i32,  2+2 }, // 2*psrad + split.
-    { ISD::SRA,  MVT::v2i64,    4 }, // 2*psrad + shuffle.
-    { ISD::SRA,  MVT::v4i64,  8+2 }, // 2*(2*psrad + shuffle) + split.
+    { ISD::SRA,  MVT::v16i16, { 2+2 } }, // 2*psraw + split.
+    { ISD::SRA,  MVT::v8i32,  { 2+2 } }, // 2*psrad + split.
+    { ISD::SRA,  MVT::v2i64,  {   4 } }, // 2*psrad + shuffle.
+    { ISD::SRA,  MVT::v4i64,  { 8+2 } }, // 2*(2*psrad + shuffle) + split.
   };
 
   if (ST->hasSSE2() && Op2Info.isUniform()) {
-
     // Handle AVX2 uniform v4i64 ISD::SRA, it's not worth a table.
     if (ISD == ISD::SRA && LT.second == MVT::v4i64 && ST->hasAVX2())
       return LT.first * 4; // 2*psrad + shuffle.
 
     if (const auto *Entry =
             CostTableLookup(SSE2UniformShiftCostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
   }
 
   if (ISD == ISD::SHL && !Op2Info.isUniform() && Op2Info.isConstant()) {
@@ -833,255 +840,264 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       ISD = ISD::MUL;
   }
 
-  static const CostTblEntry AVX2CostTable[] = {
-    { ISD::SHL,  MVT::v16i8,      6 }, // vpblendvb sequence.
-    { ISD::SHL,  MVT::v32i8,      6 }, // vpblendvb sequence.
-    { ISD::SHL,  MVT::v64i8,     12 }, // 2*vpblendvb sequence.
-    { ISD::SHL,  MVT::v8i16,      5 }, // extend/vpsrlvd/pack sequence.
-    { ISD::SHL,  MVT::v16i16,     7 }, // extend/vpsrlvd/pack sequence.
-    { ISD::SHL,  MVT::v32i16,    14 }, // 2*extend/vpsrlvd/pack sequence.
+  static const CostKindTblEntry AVX2CostTable[] = {
+    { ISD::SHL,  MVT::v16i8,   {  6 } }, // vpblendvb sequence.
+    { ISD::SHL,  MVT::v32i8,   {  6 } }, // vpblendvb sequence.
+    { ISD::SHL,  MVT::v64i8,   { 12 } }, // 2*vpblendvb sequence.
+    { ISD::SHL,  MVT::v8i16,   {  5 } }, // extend/vpsrlvd/pack sequence.
+    { ISD::SHL,  MVT::v16i16,  {  7 } }, // extend/vpsrlvd/pack sequence.
+    { ISD::SHL,  MVT::v32i16,  { 14 } }, // 2*extend/vpsrlvd/pack sequence.
 
-    { ISD::SRL,  MVT::v16i8,      6 }, // vpblendvb sequence.
-    { ISD::SRL,  MVT::v32i8,      6 }, // vpblendvb sequence.
-    { ISD::SRL,  MVT::v64i8,     12 }, // 2*vpblendvb sequence.
-    { ISD::SRL,  MVT::v8i16,      5 }, // extend/vpsrlvd/pack sequence.
-    { ISD::SRL,  MVT::v16i16,     7 }, // extend/vpsrlvd/pack sequence.
-    { ISD::SRL,  MVT::v32i16,    14 }, // 2*extend/vpsrlvd/pack sequence.
+    { ISD::SRL,  MVT::v16i8,   {  6 } }, // vpblendvb sequence.
+    { ISD::SRL,  MVT::v32i8,   {  6 } }, // vpblendvb sequence.
+    { ISD::SRL,  MVT::v64i8,   { 12 } }, // 2*vpblendvb sequence.
+    { ISD::SRL,  MVT::v8i16,   {  5 } }, // extend/vpsrlvd/pack sequence.
+    { ISD::SRL,  MVT::v16i16,  {  7 } }, // extend/vpsrlvd/pack sequence.
+    { ISD::SRL,  MVT::v32i16,  { 14 } }, // 2*extend/vpsrlvd/pack sequence.
 
-    { ISD::SRA,  MVT::v16i8,     17 }, // vpblendvb sequence.
-    { ISD::SRA,  MVT::v32i8,     17 }, // vpblendvb sequence.
-    { ISD::SRA,  MVT::v64i8,     34 }, // 2*vpblendvb sequence.
-    { ISD::SRA,  MVT::v8i16,      5 }, // extend/vpsravd/pack sequence.
-    { ISD::SRA,  MVT::v16i16,     7 }, // extend/vpsravd/pack sequence.
-    { ISD::SRA,  MVT::v32i16,    14 }, // 2*extend/vpsravd/pack sequence.
-    { ISD::SRA,  MVT::v2i64,      2 }, // srl/xor/sub sequence.
-    { ISD::SRA,  MVT::v4i64,      2 }, // srl/xor/sub sequence.
+    { ISD::SRA,  MVT::v16i8,   { 17 } }, // vpblendvb sequence.
+    { ISD::SRA,  MVT::v32i8,   { 17 } }, // vpblendvb sequence.
+    { ISD::SRA,  MVT::v64i8,   { 34 } }, // 2*vpblendvb sequence.
+    { ISD::SRA,  MVT::v8i16,   {  5 } }, // extend/vpsravd/pack sequence.
+    { ISD::SRA,  MVT::v16i16,  {  7 } }, // extend/vpsravd/pack sequence.
+    { ISD::SRA,  MVT::v32i16,  { 14 } }, // 2*extend/vpsravd/pack sequence.
+    { ISD::SRA,  MVT::v2i64,   {  2 } }, // srl/xor/sub sequence.
+    { ISD::SRA,  MVT::v4i64,   {  2 } }, // srl/xor/sub sequence.
 
-    { ISD::SUB,  MVT::v32i8,      1 }, // psubb
-    { ISD::ADD,  MVT::v32i8,      1 }, // paddb
-    { ISD::SUB,  MVT::v16i16,     1 }, // psubw
-    { ISD::ADD,  MVT::v16i16,     1 }, // paddw
-    { ISD::SUB,  MVT::v8i32,      1 }, // psubd
-    { ISD::ADD,  MVT::v8i32,      1 }, // paddd
-    { ISD::SUB,  MVT::v4i64,      1 }, // psubq
-    { ISD::ADD,  MVT::v4i64,      1 }, // paddq
+    { ISD::SUB,  MVT::v32i8,   {  1 } }, // psubb
+    { ISD::ADD,  MVT::v32i8,   {  1 } }, // paddb
+    { ISD::SUB,  MVT::v16i16,  {  1 } }, // psubw
+    { ISD::ADD,  MVT::v16i16,  {  1 } }, // paddw
+    { ISD::SUB,  MVT::v8i32,   {  1 } }, // psubd
+    { ISD::ADD,  MVT::v8i32,   {  1 } }, // paddd
+    { ISD::SUB,  MVT::v4i64,   {  1 } }, // psubq
+    { ISD::ADD,  MVT::v4i64,   {  1 } }, // paddq
 
-    { ISD::MUL,  MVT::v16i16,     1 }, // pmullw
-    { ISD::MUL,  MVT::v8i32,      2 }, // pmulld (Haswell from agner.org)
-    { ISD::MUL,  MVT::v4i64,      6 }, // 3*pmuludq/3*shift/2*add
+    { ISD::MUL,  MVT::v16i16,  {  1 } }, // pmullw
+    { ISD::MUL,  MVT::v8i32,   {  2 } }, // pmulld (Haswell from agner.org)
+    { ISD::MUL,  MVT::v4i64,   {  6 } }, // 3*pmuludq/3*shift/2*add
 
-    { ISD::FNEG, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FNEG, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FADD, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FADD, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FSUB, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FSUB, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FMUL, MVT::f64,        1 }, // Haswell from http://www.agner.org/
-    { ISD::FMUL, MVT::v2f64,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FMUL, MVT::v4f64,      1 }, // Haswell from http://www.agner.org/
-    { ISD::FMUL, MVT::v8f32,      1 }, // Haswell from http://www.agner.org/
+    { ISD::FNEG, MVT::v4f64,   {  1 } }, // Haswell from http://www.agner.org/
+    { ISD::FNEG, MVT::v8f32,   {  1 } }, // Haswell from http://www.agner.org/
+    { ISD::FADD, MVT::v4f64,   {  1 } }, // Haswell from http://www.agner.org/
+    { ISD::FADD, MVT::v8f32,   {  1 } }, // Haswell from http://www.agner.org/
+    { ISD::FSUB, MVT::v4f64,   {  1 } }, // Haswell from http://www.agner.org/
+    { ISD::FSUB, MVT::v8f32,   {  1 } }, // Haswell from http://www.agner.org/
+    { ISD::FMUL, MVT::f64,     {  1 } }, // Haswell from http://www.agner.org/
+    { ISD::FMUL, MVT::v2f64,   {  1 } }, // Haswell from http://www.agner.org/
+    { ISD::FMUL, MVT::v4f64,   {  1 } }, // Haswell from http://www.agner.org/
+    { ISD::FMUL, MVT::v8f32,   {  1 } }, // Haswell from http://www.agner.org/
 
-    { ISD::FDIV, MVT::f32,        7 }, // Haswell from http://www.agner.org/
-    { ISD::FDIV, MVT::v4f32,      7 }, // Haswell from http://www.agner.org/
-    { ISD::FDIV, MVT::v8f32,     14 }, // Haswell from http://www.agner.org/
-    { ISD::FDIV, MVT::f64,       14 }, // Haswell from http://www.agner.org/
-    { ISD::FDIV, MVT::v2f64,     14 }, // Haswell from http://www.agner.org/
-    { ISD::FDIV, MVT::v4f64,     28 }, // Haswell from http://www.agner.org/
+    { ISD::FDIV, MVT::f32,     {  7 } }, // Haswell from http://www.agner.org/
+    { ISD::FDIV, MVT::v4f32,   {  7 } }, // Haswell from http://www.agner.org/
+    { ISD::FDIV, MVT::v8f32,   { 14 } }, // Haswell from http://www.agner.org/
+    { ISD::FDIV, MVT::f64,     { 14 } }, // Haswell from http://www.agner.org/
+    { ISD::FDIV, MVT::v2f64,   { 14 } }, // Haswell from http://www.agner.org/
+    { ISD::FDIV, MVT::v4f64,   { 28 } }, // Haswell from http://www.agner.org/
   };
 
   // Look for AVX2 lowering tricks for custom cases.
   if (ST->hasAVX2())
     if (const auto *Entry = CostTableLookup(AVX2CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry AVX1CostTable[] = {
+  static const CostKindTblEntry AVX1CostTable[] = {
     // We don't have to scalarize unsupported ops. We can issue two half-sized
     // operations and we only need to extract the upper YMM half.
     // Two ops + 1 extract + 1 insert = 4.
-    { ISD::MUL,     MVT::v16i16,     4 },
-    { ISD::MUL,     MVT::v8i32,      5 }, // BTVER2 from http://www.agner.org/
-    { ISD::MUL,     MVT::v4i64,     12 },
+    { ISD::MUL,     MVT::v16i16,  {  4 } },
+    { ISD::MUL,     MVT::v8i32,   {  5 } }, // BTVER2 from http://www.agner.org/
+    { ISD::MUL,     MVT::v4i64,   { 12 } },
 
-    { ISD::SUB,     MVT::v32i8,      4 },
-    { ISD::ADD,     MVT::v32i8,      4 },
-    { ISD::SUB,     MVT::v16i16,     4 },
-    { ISD::ADD,     MVT::v16i16,     4 },
-    { ISD::SUB,     MVT::v8i32,      4 },
-    { ISD::ADD,     MVT::v8i32,      4 },
-    { ISD::SUB,     MVT::v4i64,      4 },
-    { ISD::ADD,     MVT::v4i64,      4 },
+    { ISD::SUB,     MVT::v32i8,   {  4 } },
+    { ISD::ADD,     MVT::v32i8,   {  4 } },
+    { ISD::SUB,     MVT::v16i16,  {  4 } },
+    { ISD::ADD,     MVT::v16i16,  {  4 } },
+    { ISD::SUB,     MVT::v8i32,   {  4 } },
+    { ISD::ADD,     MVT::v8i32,   {  4 } },
+    { ISD::SUB,     MVT::v4i64,   {  4 } },
+    { ISD::ADD,     MVT::v4i64,   {  4 } },
 
-    { ISD::SHL,     MVT::v32i8,     22 }, // pblendvb sequence + split.
-    { ISD::SHL,     MVT::v8i16,      6 }, // pblendvb sequence.
-    { ISD::SHL,     MVT::v16i16,    13 }, // pblendvb sequence + split.
-    { ISD::SHL,     MVT::v4i32,      3 }, // pslld/paddd/cvttps2dq/pmulld
-    { ISD::SHL,     MVT::v8i32,      9 }, // pslld/paddd/cvttps2dq/pmulld + split
-    { ISD::SHL,     MVT::v2i64,      2 }, // Shift each lane + blend.
-    { ISD::SHL,     MVT::v4i64,      6 }, // Shift each lane + blend + split.
+    { ISD::SHL,     MVT::v32i8,   { 22 } }, // pblendvb sequence + split.
+    { ISD::SHL,     MVT::v8i16,   {  6 } }, // pblendvb sequence.
+    { ISD::SHL,     MVT::v16i16,  { 13 } }, // pblendvb sequence + split.
+    { ISD::SHL,     MVT::v4i32,   {  3 } }, // pslld/paddd/cvttps2dq/pmulld
+    { ISD::SHL,     MVT::v8i32,   {  9 } }, // pslld/paddd/cvttps2dq/pmulld + split
+    { ISD::SHL,     MVT::v2i64,   {  2 } }, // Shift each lane + blend.
+    { ISD::SHL,     MVT::v4i64,   {  6 } }, // Shift each lane + blend + split.
 
-    { ISD::SRL,     MVT::v32i8,     23 }, // pblendvb sequence + split.
-    { ISD::SRL,     MVT::v16i16,    28 }, // pblendvb sequence + split.
-    { ISD::SRL,     MVT::v4i32,      6 }, // Shift each lane + blend.
-    { ISD::SRL,     MVT::v8i32,     14 }, // Shift each lane + blend + split.
-    { ISD::SRL,     MVT::v2i64,      2 }, // Shift each lane + blend.
-    { ISD::SRL,     MVT::v4i64,      6 }, // Shift each lane + blend + split.
+    { ISD::SRL,     MVT::v32i8,   { 23 } }, // pblendvb sequence + split.
+    { ISD::SRL,     MVT::v16i16,  { 28 } }, // pblendvb sequence + split.
+    { ISD::SRL,     MVT::v4i32,   {  6 } }, // Shift each lane + blend.
+    { ISD::SRL,     MVT::v8i32,   { 14 } }, // Shift each lane + blend + split.
+    { ISD::SRL,     MVT::v2i64,   {  2 } }, // Shift each lane + blend.
+    { ISD::SRL,     MVT::v4i64,   {  6 } }, // Shift each lane + blend + split.
 
-    { ISD::SRA,     MVT::v32i8,     44 }, // pblendvb sequence + split.
-    { ISD::SRA,     MVT::v16i16,    28 }, // pblendvb sequence + split.
-    { ISD::SRA,     MVT::v4i32,      6 }, // Shift each lane + blend.
-    { ISD::SRA,     MVT::v8i32,     14 }, // Shift each lane + blend + split.
-    { ISD::SRA,     MVT::v2i64,      5 }, // Shift each lane + blend.
-    { ISD::SRA,     MVT::v4i64,     12 }, // Shift each lane + blend + split.
+    { ISD::SRA,     MVT::v32i8,   { 44 } }, // pblendvb sequence + split.
+    { ISD::SRA,     MVT::v16i16,  { 28 } }, // pblendvb sequence + split.
+    { ISD::SRA,     MVT::v4i32,   {  6 } }, // Shift each lane + blend.
+    { ISD::SRA,     MVT::v8i32,   { 14 } }, // Shift each lane + blend + split.
+    { ISD::SRA,     MVT::v2i64,   {  5 } }, // Shift each lane + blend.
+    { ISD::SRA,     MVT::v4i64,   { 12 } }, // Shift each lane + blend + split.
 
-    { ISD::FNEG,    MVT::v4f64,      2 }, // BTVER2 from http://www.agner.org/
-    { ISD::FNEG,    MVT::v8f32,      2 }, // BTVER2 from http://www.agner.org/
+    { ISD::FNEG,    MVT::v4f64,   {  2 } }, // BTVER2 from http://www.agner.org/
+    { ISD::FNEG,    MVT::v8f32,   {  2 } }, // BTVER2 from http://www.agner.org/
 
-    { ISD::FMUL,    MVT::f64,        2 }, // BTVER2 from http://www.agner.org/
-    { ISD::FMUL,    MVT::v2f64,      2 }, // BTVER2 from http://www.agner.org/
-    { ISD::FMUL,    MVT::v4f64,      4 }, // BTVER2 from http://www.agner.org/
+    { ISD::FMUL,    MVT::f64,     {  2 } }, // BTVER2 from http://www.agner.org/
+    { ISD::FMUL,    MVT::v2f64,   {  2 } }, // BTVER2 from http://www.agner.org/
+    { ISD::FMUL,    MVT::v4f64,   {  4 } }, // BTVER2 from http://www.agner.org/
 
-    { ISD::FDIV,    MVT::f32,       14 }, // SNB from http://www.agner.org/
-    { ISD::FDIV,    MVT::v4f32,     14 }, // SNB from http://www.agner.org/
-    { ISD::FDIV,    MVT::v8f32,     28 }, // SNB from http://www.agner.org/
-    { ISD::FDIV,    MVT::f64,       22 }, // SNB from http://www.agner.org/
-    { ISD::FDIV,    MVT::v2f64,     22 }, // SNB from http://www.agner.org/
-    { ISD::FDIV,    MVT::v4f64,     44 }, // SNB from http://www.agner.org/
+    { ISD::FDIV,    MVT::f32,     { 14 } }, // SNB from http://www.agner.org/
+    { ISD::FDIV,    MVT::v4f32,   { 14 } }, // SNB from http://www.agner.org/
+    { ISD::FDIV,    MVT::v8f32,   { 28 } }, // SNB from http://www.agner.org/
+    { ISD::FDIV,    MVT::f64,     { 22 } }, // SNB from http://www.agner.org/
+    { ISD::FDIV,    MVT::v2f64,   { 22 } }, // SNB from http://www.agner.org/
+    { ISD::FDIV,    MVT::v4f64,   { 44 } }, // SNB from http://www.agner.org/
   };
 
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry SSE42CostTable[] = {
-    { ISD::FADD, MVT::f64,     1 }, // Nehalem from http://www.agner.org/
-    { ISD::FADD, MVT::f32,     1 }, // Nehalem from http://www.agner.org/
-    { ISD::FADD, MVT::v2f64,   1 }, // Nehalem from http://www.agner.org/
-    { ISD::FADD, MVT::v4f32,   1 }, // Nehalem from http://www.agner.org/
+  static const CostKindTblEntry SSE42CostTable[] = {
+    { ISD::FADD, MVT::f64,    {  1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FADD, MVT::f32,    {  1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FADD, MVT::v2f64,  {  1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FADD, MVT::v4f32,  {  1 } }, // Nehalem from http://www.agner.org/
 
-    { ISD::FSUB, MVT::f64,     1 }, // Nehalem from http://www.agner.org/
-    { ISD::FSUB, MVT::f32 ,    1 }, // Nehalem from http://www.agner.org/
-    { ISD::FSUB, MVT::v2f64,   1 }, // Nehalem from http://www.agner.org/
-    { ISD::FSUB, MVT::v4f32,   1 }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::f64,    {  1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::f32 ,   {  1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::v2f64,  {  1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::v4f32,  {  1 } }, // Nehalem from http://www.agner.org/
 
-    { ISD::FMUL, MVT::f64,     1 }, // Nehalem from http://www.agner.org/
-    { ISD::FMUL, MVT::f32,     1 }, // Nehalem from http://www.agner.org/
-    { ISD::FMUL, MVT::v2f64,   1 }, // Nehalem from http://www.agner.org/
-    { ISD::FMUL, MVT::v4f32,   1 }, // Nehalem from http://www.agner.org/
+    { ISD::FMUL, MVT::f64,    {  1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FMUL, MVT::f32,    {  1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FMUL, MVT::v2f64,  {  1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FMUL, MVT::v4f32,  {  1 } }, // Nehalem from http://www.agner.org/
 
-    { ISD::FDIV,  MVT::f32,   14 }, // Nehalem from http://www.agner.org/
-    { ISD::FDIV,  MVT::v4f32, 14 }, // Nehalem from http://www.agner.org/
-    { ISD::FDIV,  MVT::f64,   22 }, // Nehalem from http://www.agner.org/
-    { ISD::FDIV,  MVT::v2f64, 22 }, // Nehalem from http://www.agner.org/
+    { ISD::FDIV,  MVT::f32,   { 14 } }, // Nehalem from http://www.agner.org/
+    { ISD::FDIV,  MVT::v4f32, { 14 } }, // Nehalem from http://www.agner.org/
+    { ISD::FDIV,  MVT::f64,   { 22 } }, // Nehalem from http://www.agner.org/
+    { ISD::FDIV,  MVT::v2f64, { 22 } }, // Nehalem from http://www.agner.org/
 
-    { ISD::MUL,   MVT::v2i64,  6 }  // 3*pmuludq/3*shift/2*add
+    { ISD::MUL,   MVT::v2i64, {  6 } }  // 3*pmuludq/3*shift/2*add
   };
 
   if (ST->hasSSE42())
     if (const auto *Entry = CostTableLookup(SSE42CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry SSE41CostTable[] = {
-    { ISD::SHL,  MVT::v16i8,      10 }, // pblendvb sequence.
-    { ISD::SHL,  MVT::v8i16,      11 }, // pblendvb sequence.
-    { ISD::SHL,  MVT::v4i32,       4 }, // pslld/paddd/cvttps2dq/pmulld
 
-    { ISD::SRL,  MVT::v16i8,      11 }, // pblendvb sequence.
-    { ISD::SRL,  MVT::v8i16,      13 }, // pblendvb sequence.
-    { ISD::SRL,  MVT::v4i32,      16 }, // Shift each lane + blend.
+  static const CostKindTblEntry SSE41CostTable[] = {
+    { ISD::SHL,  MVT::v16i8,  { 10 } }, // pblendvb sequence.
+    { ISD::SHL,  MVT::v8i16,  { 11 } }, // pblendvb sequence.
+    { ISD::SHL,  MVT::v4i32,  {  4 } }, // pslld/paddd/cvttps2dq/pmulld
 
-    { ISD::SRA,  MVT::v16i8,      21 }, // pblendvb sequence.
-    { ISD::SRA,  MVT::v8i16,      13 }, // pblendvb sequence.
+    { ISD::SRL,  MVT::v16i8,  { 11 } }, // pblendvb sequence.
+    { ISD::SRL,  MVT::v8i16,  { 13 } }, // pblendvb sequence.
+    { ISD::SRL,  MVT::v4i32,  { 16 } }, // Shift each lane + blend.
 
-    { ISD::MUL,  MVT::v4i32,       2 }  // pmulld (Nehalem from agner.org)
+    { ISD::SRA,  MVT::v16i8,  { 21 } }, // pblendvb sequence.
+    { ISD::SRA,  MVT::v8i16,  { 13 } }, // pblendvb sequence.
+
+    { ISD::MUL,  MVT::v4i32,  {  2 } }  // pmulld (Nehalem from agner.org)
   };
 
   if (ST->hasSSE41())
     if (const auto *Entry = CostTableLookup(SSE41CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry SSE2CostTable[] = {
+  static const CostKindTblEntry SSE2CostTable[] = {
     // We don't correctly identify costs of casts because they are marked as
     // custom.
-    { ISD::SHL,  MVT::v16i8,      13 }, // cmpgtb sequence.
-    { ISD::SHL,  MVT::v8i16,      25 }, // cmpgtw sequence.
-    { ISD::SHL,  MVT::v4i32,      16 }, // pslld/paddd/cvttps2dq/pmuludq.
-    { ISD::SHL,  MVT::v2i64,       4 }, // splat+shuffle sequence.
+    { ISD::SHL,  MVT::v16i8,  { 13 } }, // cmpgtb sequence.
+    { ISD::SHL,  MVT::v8i16,  { 25 } }, // cmpgtw sequence.
+    { ISD::SHL,  MVT::v4i32,  { 16 } }, // pslld/paddd/cvttps2dq/pmuludq.
+    { ISD::SHL,  MVT::v2i64,  {  4 } }, // splat+shuffle sequence.
 
-    { ISD::SRL,  MVT::v16i8,      14 }, // cmpgtb sequence.
-    { ISD::SRL,  MVT::v8i16,      16 }, // cmpgtw sequence.
-    { ISD::SRL,  MVT::v4i32,      12 }, // Shift each lane + blend.
-    { ISD::SRL,  MVT::v2i64,       4 }, // splat+shuffle sequence.
+    { ISD::SRL,  MVT::v16i8,  { 14 } }, // cmpgtb sequence.
+    { ISD::SRL,  MVT::v8i16,  { 16 } }, // cmpgtw sequence.
+    { ISD::SRL,  MVT::v4i32,  { 12 } }, // Shift each lane + blend.
+    { ISD::SRL,  MVT::v2i64,  {  4 } }, // splat+shuffle sequence.
 
-    { ISD::SRA,  MVT::v16i8,      27 }, // unpacked cmpgtb sequence.
-    { ISD::SRA,  MVT::v8i16,      16 }, // cmpgtw sequence.
-    { ISD::SRA,  MVT::v4i32,      12 }, // Shift each lane + blend.
-    { ISD::SRA,  MVT::v2i64,       8 }, // srl/xor/sub splat+shuffle sequence.
+    { ISD::SRA,  MVT::v16i8,  { 27 } }, // unpacked cmpgtb sequence.
+    { ISD::SRA,  MVT::v8i16,  { 16 } }, // cmpgtw sequence.
+    { ISD::SRA,  MVT::v4i32,  { 12 } }, // Shift each lane + blend.
+    { ISD::SRA,  MVT::v2i64,  {  8 } }, // srl/xor/sub splat+shuffle sequence.
 
-    { ISD::MUL,  MVT::v8i16,       1 }, // pmullw
-    { ISD::MUL,  MVT::v4i32,       6 }, // 3*pmuludq/4*shuffle
-    { ISD::MUL,  MVT::v2i64,       8 }, // 3*pmuludq/3*shift/2*add
+    { ISD::MUL,  MVT::v8i16,  {  1 } }, // pmullw
+    { ISD::MUL,  MVT::v4i32,  {  6 } }, // 3*pmuludq/4*shuffle
+    { ISD::MUL,  MVT::v2i64,  {  8 } }, // 3*pmuludq/3*shift/2*add
 
-    { ISD::FDIV, MVT::f32,        23 }, // Pentium IV from http://www.agner.org/
-    { ISD::FDIV, MVT::v4f32,      39 }, // Pentium IV from http://www.agner.org/
-    { ISD::FDIV, MVT::f64,        38 }, // Pentium IV from http://www.agner.org/
-    { ISD::FDIV, MVT::v2f64,      69 }, // Pentium IV from http://www.agner.org/
+    { ISD::FDIV, MVT::f32,    { 23 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FDIV, MVT::v4f32,  { 39 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FDIV, MVT::f64,    { 38 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FDIV, MVT::v2f64,  { 69 } }, // Pentium IV from http://www.agner.org/
 
-    { ISD::FNEG, MVT::f32,         1 }, // Pentium IV from http://www.agner.org/
-    { ISD::FNEG, MVT::f64,         1 }, // Pentium IV from http://www.agner.org/
-    { ISD::FNEG, MVT::v4f32,       1 }, // Pentium IV from http://www.agner.org/
-    { ISD::FNEG, MVT::v2f64,       1 }, // Pentium IV from http://www.agner.org/
+    { ISD::FNEG, MVT::f32,    {  1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FNEG, MVT::f64,    {  1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FNEG, MVT::v4f32,  {  1 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FNEG, MVT::v2f64,  {  1 } }, // Pentium IV from http://www.agner.org/
 
-    { ISD::FADD, MVT::f32,         2 }, // Pentium IV from http://www.agner.org/
-    { ISD::FADD, MVT::f64,         2 }, // Pentium IV from http://www.agner.org/
+    { ISD::FADD, MVT::f32,    {  2 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FADD, MVT::f64,    {  2 } }, // Pentium IV from http://www.agner.org/
 
-    { ISD::FSUB, MVT::f32,         2 }, // Pentium IV from http://www.agner.org/
-    { ISD::FSUB, MVT::f64,         2 }, // Pentium IV from http://www.agner.org/
+    { ISD::FSUB, MVT::f32,    {  2 } }, // Pentium IV from http://www.agner.org/
+    { ISD::FSUB, MVT::f64,    {  2 } }, // Pentium IV from http://www.agner.org/
   };
 
   if (ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry SSE1CostTable[] = {
-    { ISD::FDIV, MVT::f32,   17 }, // Pentium III from http://www.agner.org/
-    { ISD::FDIV, MVT::v4f32, 34 }, // Pentium III from http://www.agner.org/
+  static const CostKindTblEntry SSE1CostTable[] = {
+    { ISD::FDIV, MVT::f32,   { 17 } }, // Pentium III from http://www.agner.org/
+    { ISD::FDIV, MVT::v4f32, { 34 } }, // Pentium III from http://www.agner.org/
 
-    { ISD::FNEG, MVT::f32,    2 }, // Pentium III from http://www.agner.org/
-    { ISD::FNEG, MVT::v4f32,  2 }, // Pentium III from http://www.agner.org/
+    { ISD::FNEG, MVT::f32,   {  2 } }, // Pentium III from http://www.agner.org/
+    { ISD::FNEG, MVT::v4f32, {  2 } }, // Pentium III from http://www.agner.org/
 
-    { ISD::FADD, MVT::f32,    1 }, // Pentium III from http://www.agner.org/
-    { ISD::FADD, MVT::v4f32,  2 }, // Pentium III from http://www.agner.org/
+    { ISD::FADD, MVT::f32,   {  1 } }, // Pentium III from http://www.agner.org/
+    { ISD::FADD, MVT::v4f32, {  2 } }, // Pentium III from http://www.agner.org/
 
-    { ISD::FSUB, MVT::f32,    1 }, // Pentium III from http://www.agner.org/
-    { ISD::FSUB, MVT::v4f32,  2 }, // Pentium III from http://www.agner.org/
+    { ISD::FSUB, MVT::f32,   {  1 } }, // Pentium III from http://www.agner.org/
+    { ISD::FSUB, MVT::v4f32, {  2 } }, // Pentium III from http://www.agner.org/
   };
 
   if (ST->hasSSE1())
     if (const auto *Entry = CostTableLookup(SSE1CostTable, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry X64CostTbl[] = { // 64-bit targets
-    { ISD::ADD,  MVT::i64,    1 }, // Core (Merom) from http://www.agner.org/
-    { ISD::SUB,  MVT::i64,    1 }, // Core (Merom) from http://www.agner.org/
-    { ISD::MUL,  MVT::i64,    2 }, // Nehalem from http://www.agner.org/
+  static const CostKindTblEntry X64CostTbl[] = { // 64-bit targets
+    { ISD::ADD,  MVT::i64,  {  1 } }, // Core (Merom) from http://www.agner.org/
+    { ISD::SUB,  MVT::i64,  {  1 } }, // Core (Merom) from http://www.agner.org/
+    { ISD::MUL,  MVT::i64,  {  2 } }, // Nehalem from http://www.agner.org/
   };
 
   if (ST->is64Bit())
     if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, LT.second))
-      return LT.first * Entry->Cost;
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
 
-  static const CostTblEntry X86CostTbl[] = { // 32 or 64-bit targets
-    { ISD::ADD,  MVT::i8,    1 }, // Pentium III from http://www.agner.org/
-    { ISD::ADD,  MVT::i16,   1 }, // Pentium III from http://www.agner.org/
-    { ISD::ADD,  MVT::i32,   1 }, // Pentium III from http://www.agner.org/
+  static const CostKindTblEntry X86CostTbl[] = { // 32 or 64-bit targets
+    { ISD::ADD,  MVT::i8,  {  1 } }, // Pentium III from http://www.agner.org/
+    { ISD::ADD,  MVT::i16, {  1 } }, // Pentium III from http://www.agner.org/
+    { ISD::ADD,  MVT::i32, {  1 } }, // Pentium III from http://www.agner.org/
 
-    { ISD::SUB,  MVT::i8,    1 }, // Pentium III from http://www.agner.org/
-    { ISD::SUB,  MVT::i16,   1 }, // Pentium III from http://www.agner.org/
-    { ISD::SUB,  MVT::i32,   1 }, // Pentium III from http://www.agner.org/
+    { ISD::SUB,  MVT::i8,  {  1 } }, // Pentium III from http://www.agner.org/
+    { ISD::SUB,  MVT::i16, {  1 } }, // Pentium III from http://www.agner.org/
+    { ISD::SUB,  MVT::i32, {  1 } }, // Pentium III from http://www.agner.org/
   };
 
   if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, LT.second))
-    return LT.first * Entry->Cost;
+    if (auto KindCost = Entry->Cost[CostKind])
+      return LT.first * KindCost.value();
 
   // It is not a good idea to vectorize division. We have to scalarize it and
   // in the process we will often end up having to spilling regular
