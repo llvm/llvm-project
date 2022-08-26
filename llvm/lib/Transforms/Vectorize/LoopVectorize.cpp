@@ -2721,6 +2721,14 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
   }
 }
 
+/// Return true if this VPValue represents a computation which is
+/// uniform-per-part.
+static bool isUniform(VPValue *VPV) {
+  if (VPReplicateRecipe *OperandR = dyn_cast<VPReplicateRecipe>(VPV))
+    return OperandR->isUniform();
+  return false;
+}
+
 void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
                                                VPReplicateRecipe *RepRecipe,
                                                const VPIteration &Instance,
@@ -2758,8 +2766,7 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
   for (const auto &I : enumerate(RepRecipe->operands())) {
     auto InputInstance = Instance;
     VPValue *Operand = I.value();
-    VPReplicateRecipe *OperandR = dyn_cast<VPReplicateRecipe>(Operand);
-    if (OperandR && OperandR->isUniform())
+    if (isUniform(Operand))
       InputInstance.Lane = VPLane::getFirstLane();
     Cloned->setOperand(I.index(), State.get(Operand, InputInstance));
   }
@@ -9868,8 +9875,7 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part) {
     return ScalarValue;
   }
 
-  auto *RepR = dyn_cast<VPReplicateRecipe>(Def);
-  bool IsUniform = RepR && RepR->isUniform();
+  bool IsUniform = isUniform(Def);
 
   unsigned LastLane = IsUniform ? 0 : VF.getKnownMinValue() - 1;
   // Check if there is a scalar value for the selected lane.
