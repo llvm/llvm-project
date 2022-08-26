@@ -7,6 +7,7 @@ add_unittest(ClangPseudoUnitTests ClangPseudoTests
   BracketTest.cpp
   CXXTest.cpp
   DirectiveTreeTest.cpp
+  DisambiguateTest.cpp
   ForestTest.cpp
   GLRTest.cpp
   GrammarTest.cpp
