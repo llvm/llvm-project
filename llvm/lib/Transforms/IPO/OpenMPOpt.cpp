@@ -4813,8 +4813,9 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
     for (auto &I : instructions(*F)) {
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         bool UsedAssumedInformation = false;
-        A.getAssumedSimplified(IRPosition::value(*LI), /* AA */ nullptr,
-                               UsedAssumedInformation, AA::Interprocedural);
+        // FIXME: This is causing some crashes in opt, comment out for now.
+        //A.getAssumedSimplified(IRPosition::value(*LI), /* AA */ nullptr,
+          //                     UsedAssumedInformation, AA::Interprocedural);
       } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
         A.getOrCreateAAFor<AAIsDead>(IRPosition::value(*SI));
       }

@@ -96,12 +96,15 @@ define void @neg_empty_2() {
 @GPtr4 = addrspace(4) global i32 addrspace(4)* null
 define void @pos_constant_loads() {
 ; CHECK-LABEL: define {{[^@]+}}@pos_constant_loads() {
-; CHECK-NEXT:    [[ARG:%.*]] = load i32 addrspace(4)*, i32 addrspace(4)** addrspacecast (i32 addrspace(4)* addrspace(4)* @GPtr4 to i32 addrspace(4)**), align 8
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* addrspacecast (i32 addrspace(4)* @GC2 to i32*), align 4
+; CHECK-NEXT:    [[GPTR4C:%.*]] = addrspacecast i32 addrspace(4)* addrspace(4)* @GPtr4 to i32 addrspace(4)**
+; CHECK-NEXT:    [[ARG:%.*]] = load i32 addrspace(4)*, i32 addrspace(4)** [[GPTR4C]], align 8
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* @GC1, align 4
+; CHECK-NEXT:    [[GC2C:%.*]] = addrspacecast i32 addrspace(4)* @GC2 to i32*
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[GC2C]], align 4
 ; CHECK-NEXT:    [[ARGC:%.*]] = addrspacecast i32 addrspace(4)* [[ARG]] to i32*
 ; CHECK-NEXT:    [[C:%.*]] = load i32, i32* [[ARGC]], align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
-; CHECK-NEXT:    [[D:%.*]] = add i32 42, [[B]]
+; CHECK-NEXT:    [[D:%.*]] = add i32 [[A]], [[B]]
 ; CHECK-NEXT:    [[E:%.*]] = add i32 [[D]], [[C]]
 ; CHECK-NEXT:    call void @useI32(i32 [[E]])
 ; CHECK-NEXT:    ret void
@@ -130,7 +133,8 @@ define void @neg_loads() {
 ; CHECK-NEXT:    [[ARG:%.*]] = load i32*, i32** @GPtr, align 8
 ; CHECK-NEXT:    [[A:%.*]] = load i32, i32* @G, align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @GS to i32*), align 4
+; CHECK-NEXT:    [[GSC:%.*]] = addrspacecast i32 addrspace(3)* @GS to i32*
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[GSC]], align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    [[C:%.*]] = load i32, i32* [[ARG]], align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
@@ -194,7 +198,8 @@ define void @neg_mem() {
 ; CHECK-NEXT:    call void @aligned_barrier()
 ; CHECK-NEXT:    store i32 [[A]], i32* [[ARG]], align 4
 ; CHECK-NEXT:    call void @aligned_barrier()
-; CHECK-NEXT:    [[B:%.*]] = load i32, i32* addrspacecast (i32 addrspace(1)* @G2 to i32*), align 4
+; CHECK-NEXT:    [[G2C:%.*]] = addrspacecast i32 addrspace(1)* @G2 to i32*
+; CHECK-NEXT:    [[B:%.*]] = load i32, i32* [[G2C]], align 4
 ; CHECK-NEXT:    store i32 [[B]], i32* @G1, align 4
 ; CHECK-NEXT:    ret void
 ;
