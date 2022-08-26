@@ -1110,6 +1110,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     case ISD::FSUB:
     case ISD::FMUL:
     case ISD::FDIV:
+    case ISD::FNEG:
       return LT.first;
       break;
     }
