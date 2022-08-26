@@ -87,12 +87,19 @@ static void updateCompilerInvocation(CompilerInvocation &Invocation,
     Invocation.getFrontendOpts().Inputs.clear();
     Invocation.getHeaderSearchOpts() = HeaderSearchOptions();
     auto &PPOpts = Invocation.getPreprocessorOpts();
-    // We don't need these because we save the contents of the predefines buffer
-    // and the PCH file in the include tree root.
-    PPOpts.Macros.clear();
-    PPOpts.MacroIncludes.clear();
+    // We don't need this because we save the contents of the PCH file in the
+    // include tree root.
     PPOpts.ImplicitPCHInclude.clear();
-    PPOpts.Includes.clear();
+    if (Invocation.getFrontendOpts().ProgramAction != frontend::GeneratePCH) {
+      // We don't need these because we save the contents of the predefines
+      // buffer in the include tree. But if we generate a PCH file we still need
+      // to keep them as preprocessor options so that they are preserved in a
+      // PCH file and compared with the preprocessor options of the dep-scan
+      // invocation that uses the PCH.
+      PPOpts.Macros.clear();
+      PPOpts.MacroIncludes.clear();
+      PPOpts.Includes.clear();
+    }
   } else {
     FileSystemOpts.CASFileSystemRootID = RootID;
     FileSystemOpts.CASFileSystemWorkingDirectory = CASWorkingDirectory.str();
@@ -151,6 +158,12 @@ static void updateCompilerInvocation(CompilerInvocation &Invocation,
   }
   remapInPlaceOrFilterOut(HeaderSearchOpts.PrebuiltModulePaths);
   remapInPlaceOrFilterOut(HeaderSearchOpts.VFSOverlayFiles);
+
+  // Preprocessor options.
+  auto &PPOpts = Invocation.getPreprocessorOpts();
+  remapInPlaceOrFilterOut(PPOpts.MacroIncludes);
+  remapInPlaceOrFilterOut(PPOpts.Includes);
+  Mapper.mapInPlaceOrClear(PPOpts.ImplicitPCHInclude);
 
   // Frontend options.
   remapInPlaceOrFilterOutWith(
