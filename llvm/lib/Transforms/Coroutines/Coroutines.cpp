@@ -171,6 +171,7 @@ static CoroSaveInst *createCoroSave(CoroBeginInst *CoroBegin,
 // Collect "interesting" coroutine intrinsics.
 void coro::Shape::buildFrom(Function &F) {
   bool HasFinalSuspend = false;
+  bool HasUnwindCoroEnd = false;
   size_t FinalSuspendIndex = 0;
   clear(*this);
   SmallVector<CoroFrameInst *, 8> CoroFrames;
@@ -242,6 +243,10 @@ void coro::Shape::buildFrom(Function &F) {
         if (auto *AsyncEnd = dyn_cast<CoroAsyncEndInst>(II)) {
           AsyncEnd->checkWellFormed();
         }
+
+        if (CoroEnds.back()->isUnwind())
+          HasUnwindCoroEnd = true;
+
         if (CoroEnds.back()->isFallthrough() && isa<CoroEndInst>(II)) {
           // Make sure that the fallthrough coro.end is the first element in the
           // CoroEnds vector.
@@ -290,6 +295,7 @@ void coro::Shape::buildFrom(Function &F) {
     auto SwitchId = cast<CoroIdInst>(Id);
     this->ABI = coro::ABI::Switch;
     this->SwitchLowering.HasFinalSuspend = HasFinalSuspend;
+    this->SwitchLowering.HasUnwindCoroEnd = HasUnwindCoroEnd;
     this->SwitchLowering.ResumeSwitch = nullptr;
     this->SwitchLowering.PromiseAlloca = SwitchId->getPromise();
     this->SwitchLowering.ResumeEntryBlock = nullptr;
