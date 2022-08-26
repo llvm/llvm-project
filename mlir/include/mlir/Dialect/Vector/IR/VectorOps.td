@@ -2229,12 +2229,13 @@ def Vector_TransposeOp :
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
-    Arguments<(ins AnyVector:$vector, I64ArrayAttr:$transp)>,
-    Results<(outs AnyVector:$result)> {
+    Arguments<(ins AnyVectorOfAnyRank:$vector, I64ArrayAttr:$transp)>,
+    Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "vector transpose operation";
   let description = [{
     Takes a n-D vector and returns the transposed n-D vector defined by
-    the permutation of ranks in the n-sized integer array attribute.
+    the permutation of ranks in the n-sized integer array attribute (in case
+    of 0-D vectors the array attribute must be empty).
     In the operation
 
     ```mlir
