@@ -130,6 +130,13 @@ cir.func @cast3(%p: !cir.ptr<i32>) {
 
 // -----
 
+cir.func @cast4(%p: !cir.ptr<i32>) {
+  %2 = cir.cast(bitcast, %p : !cir.ptr<i32>), i32 // expected-error {{requires !cir.ptr type for source and result}}
+  cir.return
+}
+
+// -----
+
 cir.func @b0() {
   cir.scope {
     cir.loop while(cond :  {  // expected-error {{cond region must be terminated with 'cir.yield' or 'cir.yield continue'}}

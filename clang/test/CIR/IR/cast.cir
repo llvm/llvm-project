@@ -9,8 +9,15 @@ module  {
     %4 = cir.cst(0 : i32) : i32
     cir.return
   }
+
+  cir.func @bitcast(%p: !cir.ptr<i32>) {
+    %2 = cir.cast(bitcast, %p : !cir.ptr<i32>), !cir.ptr<f32>
+    cir.return
+  }
 }
 
 // CHECK: cir.func @yolo(%arg0: i32)
 // CHECK: %1 = cir.cast(int_to_bool, %arg0 : i32), !cir.bool
 // CHECK: %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
+// CHECK: cir.func @bitcast
+// CHECK: %0 = cir.cast(bitcast, %arg0 : !cir.ptr<i32>), !cir.ptr<f32>
