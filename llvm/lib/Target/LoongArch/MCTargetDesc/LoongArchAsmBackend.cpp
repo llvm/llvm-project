@@ -73,8 +73,27 @@ void LoongArchAsmBackend::applyFixup(const MCAssembler &Asm,
                                      MutableArrayRef<char> Data, uint64_t Value,
                                      bool IsResolved,
                                      const MCSubtargetInfo *STI) const {
-  // TODO: Apply the Value for given Fixup into the provided data fragment.
-  return;
+  if (!Value)
+    return; // Doesn't change encoding.
+
+  MCFixupKind Kind = Fixup.getKind();
+  if (Kind >= FirstLiteralRelocationKind)
+    return;
+  MCFixupKindInfo Info = getFixupKindInfo(Kind);
+  // TODO: Apply any target-specific value adjustments.
+
+  // Shift the value into position.
+  Value <<= Info.TargetOffset;
+
+  unsigned Offset = Fixup.getOffset();
+  unsigned NumBytes = alignTo(Info.TargetSize + Info.TargetOffset, 8) / 8;
+
+  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  // For each byte of the fragment that the fixup touches, mask in the
+  // bits from the fixup value.
+  for (unsigned I = 0; I != NumBytes; ++I) {
+    Data[Offset + I] |= uint8_t((Value >> (I * 8)) & 0xff);
+  }
 }
 
 bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
