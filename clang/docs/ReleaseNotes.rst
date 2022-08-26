@@ -171,7 +171,7 @@ C++20 Feature Support
   Note: The handling of deleted functions is not yet compliant, as Clang
   does not implement `DR1496 <https://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#1496>`_
   and `DR1734 <https://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#1734>`_.
-- Class member variables are now in scope when parsing requires clauses. Fixes
+- Class member variables are now in scope when parsing a ``requires`` clause. Fixes
   `GH55216 <https://github.com/llvm/llvm-project/issues/55216>`_.
 
 
