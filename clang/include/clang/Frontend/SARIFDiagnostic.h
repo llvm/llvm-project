@@ -55,8 +55,6 @@ protected:
                                   StringRef ModuleName) override;
 
 private:
-  raw_ostream &OS;
-
   // Shared between SARIFDiagnosticPrinter and this renderer.
   SarifDocumentWriter *Writer;
 
