@@ -1043,8 +1043,13 @@ void AsmPrinter::emitFunctionEntryLabel() {
 
   if (TM.getTargetTriple().isOSBinFormatELF()) {
     MCSymbol *Sym = getSymbolPreferLocal(MF->getFunction());
-    if (Sym != CurrentFnSym)
+    if (Sym != CurrentFnSym) {
+      cast<MCSymbolELF>(Sym)->setType(ELF::STT_FUNC);
+      CurrentFnBeginLocal = Sym;
       OutStreamer->emitLabel(Sym);
+      if (MAI->hasDotTypeDotSizeDirective())
+        OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+    }
   }
 }
 
@@ -1710,6 +1715,8 @@ void AsmPrinter::emitFunctionBody() {
         MCSymbolRefExpr::create(CurrentFnEnd, OutContext),
         MCSymbolRefExpr::create(CurrentFnSymForSize, OutContext), OutContext);
     OutStreamer->emitELFSize(CurrentFnSym, SizeExp);
+    if (CurrentFnBeginLocal)
+      OutStreamer->emitELFSize(CurrentFnBeginLocal, SizeExp);
   }
 
   for (const HandlerInfo &HI : Handlers) {
@@ -2241,6 +2248,7 @@ void AsmPrinter::SetupMachineFunction(MachineFunction &MF) {
 
   CurrentFnSymForSize = CurrentFnSym;
   CurrentFnBegin = nullptr;
+  CurrentFnBeginLocal = nullptr;
   CurrentSectionBeginSym = nullptr;
   MBBSectionRanges.clear();
   MBBSectionExceptionSyms.clear();
