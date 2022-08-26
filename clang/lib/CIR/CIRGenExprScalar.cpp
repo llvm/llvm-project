@@ -192,7 +192,7 @@ public:
   mlir::Value VisitConvertVectorExpr(ConvertVectorExpr *E) {
     llvm_unreachable("NYI");
   }
-  mlir::Value VisitMemberExpr(MemberExpr *E) { llvm_unreachable("NYI"); }
+  mlir::Value VisitMemberExpr(MemberExpr *E);
   mlir::Value VisitExtVectorelementExpr(Expr *E) { llvm_unreachable("NYI"); }
   mlir::Value VisitCompoundLiteralEpxr(CompoundLiteralExpr *E) {
     llvm_unreachable("NYI");
@@ -909,6 +909,16 @@ mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *E) {
 
   // TODO: buildLValueAlignmentAssumption
   return V;
+}
+
+mlir::Value ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
+  // TODO(cir): Folding all this constants sound like work for MLIR optimizers,
+  // keep assertion for now.
+  assert(!UnimplementedFeature::tryEmitAsConstant());
+  Expr::EvalResult Result;
+  if (E->EvaluateAsInt(Result, CGF.getContext(), Expr::SE_AllowSideEffects))
+    assert(0 && "NYI");
+  return buildLoadOfLValue(E);
 }
 
 /// Emit a conversion from the specified type to the specified destination
