@@ -5,13 +5,13 @@
 
 // RUN: touch %T/libhipBundled.a
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   -target x86_64-unknown-linux-gnu \
+// RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   -nogpulib %s -fgpu-rdc -L%T -lhipBundled \
 // RUN:   2>&1 | FileCheck -check-prefix=GNU %s
 
 // RUN: touch %T/hipBundled2.lib
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
-// RUN:   -target x86_64-pc-windows-msvc \
+// RUN:   --target=x86_64-pc-windows-msvc \
 // RUN:   -nogpulib %s -fgpu-rdc -L%T -lhipBundled2 \
 // RUN:   2>&1 | FileCheck -check-prefix=MSVC %s
 
