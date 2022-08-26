@@ -28,11 +28,18 @@ def CIR_Dialect : Dialect {
   let useDefaultTypePrinterParser = 0;
 
   let extraClassDeclaration = [{
+    void registerAttributes();
     void registerTypes();
 
     ::mlir::Type parseType(::mlir::DialectAsmParser &parser) const override;
     void printType(::mlir::Type type,
                    ::mlir::DialectAsmPrinter &printer) const override;
+
+    ::mlir::Attribute parseAttribute(::mlir::DialectAsmParser &parser,
+                                     ::mlir::Type type) const override;
+
+    void printAttribute(::mlir::Attribute attr,
+                        ::mlir::DialectAsmPrinter &os) const override;
   }];
 }
 

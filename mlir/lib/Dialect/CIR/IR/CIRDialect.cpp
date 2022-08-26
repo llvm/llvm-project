@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/CIR/IR/CIRDialect.h"
+#include "mlir/Dialect/CIR/IR/CIRAttrs.h"
 #include "mlir/Dialect/CIR/IR/CIRTypes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -34,6 +35,7 @@ using namespace mlir::cir;
 /// the point of registration of types and operations for the dialect.
 void cir::CIRDialect::initialize() {
   registerTypes();
+  registerAttributes();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/CIR/IR/CIROps.cpp.inc"
