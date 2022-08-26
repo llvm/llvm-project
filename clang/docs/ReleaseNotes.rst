@@ -206,6 +206,9 @@ Bug Fixes
   missing when used, or vice versa. This makes sure that Clang picks the
   correct one, where it previously would consider multiple ones as potentially
   acceptable (and erroneously use whichever one is tried first).
+- Fix a crash when generating code coverage information for an
+  ``if consteval`` statement. This fixes
+  `Issue 57377 <https://github.com/llvm/llvm-project/issues/57377>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
