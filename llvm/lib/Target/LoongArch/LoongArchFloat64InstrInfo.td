@@ -198,10 +198,12 @@ def : PatFPSelectcc<SETUO,  FCMP_CUN_D,  FSEL_D, FPR64>;
 /// Loads
 
 defm : LdPat<load, FLD_D, f64>;
+def : RegRegLdPat<load, FLDX_D, f64>;
 
 /// Stores
 
 defm : StPat<store, FST_D, FPR64, f64>;
+def : RegRegStPat<store, FSTX_D, FPR64, f64>;
 
 /// FP conversion operations
 
