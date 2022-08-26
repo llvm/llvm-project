@@ -16,15 +16,35 @@ using namespace clang::ast_matchers;
 using clang::tidy::utils::hasPtrOrReferenceInFunc;
 
 namespace clang {
+namespace ast_matchers {
+/// matches a Decl if it has a  "no return" attribute of any kind
+AST_MATCHER(Decl, declHasNoReturnAttr) {
+  return Node.hasAttr<NoReturnAttr>() || Node.hasAttr<CXX11NoReturnAttr>() ||
+         Node.hasAttr<C11NoReturnAttr>();
+}
+
+/// matches a FunctionType if the type includes the GNU no return attribute
+AST_MATCHER(FunctionType, typeHasNoReturnAttr) {
+  return Node.getNoReturnAttr();
+}
+} // namespace ast_matchers
 namespace tidy {
 namespace bugprone {
 
 static internal::Matcher<Stmt>
 loopEndingStmt(internal::Matcher<Stmt> Internal) {
-  // FIXME: Cover noreturn ObjC methods (and blocks?).
+  internal::Matcher<QualType> isNoReturnFunType =
+      ignoringParens(functionType(typeHasNoReturnAttr()));
+  internal::Matcher<Decl> isNoReturnDecl =
+      anyOf(declHasNoReturnAttr(), functionDecl(hasType(isNoReturnFunType)),
+            varDecl(hasType(blockPointerType(pointee(isNoReturnFunType)))));
+
   return stmt(anyOf(
       mapAnyOf(breakStmt, returnStmt, gotoStmt, cxxThrowExpr).with(Internal),
-      callExpr(Internal, callee(functionDecl(isNoReturn())))));
+      callExpr(Internal,
+               callee(mapAnyOf(functionDecl, /* block callee */ varDecl)
+                          .with(isNoReturnDecl))),
+      objcMessageExpr(Internal, callee(isNoReturnDecl))));
 }
 
 /// Return whether `Var` was changed in `LoopStmt`.
