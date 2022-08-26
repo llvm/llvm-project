@@ -921,10 +921,31 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
 
   CGM.EmitVTableTypeMetadata(RD, VTable, *VTLayout.get());
 
-  if (UsingRelativeLayout && !VTable->isDSOLocal())
-    GenerateRelativeVTableAlias(VTable, OutName);
+  if (UsingRelativeLayout) {
+    RemoveHwasanMetadata(VTable);
+    if (!VTable->isDSOLocal())
+      GenerateRelativeVTableAlias(VTable, OutName);
+  }
 
   return VTable;
+}
+
+// Ensure this vtable is not instrumented by hwasan. That is, a global alias is
+// not generated for it. This is mainly used by the relative-vtables ABI where
+// vtables instead contain 32-bit offsets between the vtable and function
+// pointers. Hwasan is disabled for these vtables for now because the tag in a
+// vtable pointer may fail the overflow check when resolving 32-bit PLT
+// relocations. A future alternative for this would be finding which usages of
+// the vtable can continue to use the untagged hwasan value without any loss of
+// value in hwasan.
+void CodeGenVTables::RemoveHwasanMetadata(llvm::GlobalValue *VTable) {
+  if (CGM.getLangOpts().Sanitize.has(SanitizerKind::HWAddress)) {
+    llvm::GlobalValue::SanitizerMetadata Meta;
+    if (VTable->hasSanitizerMetadata())
+      Meta = VTable->getSanitizerMetadata();
+    Meta.NoHWAddress = true;
+    VTable->setSanitizerMetadata(Meta);
+  }
 }
 
 // If the VTable is not dso_local, then we will not be able to indicate that

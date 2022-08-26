@@ -154,6 +154,9 @@ public:
   /// when a vtable may not be dso_local.
   void GenerateRelativeVTableAlias(llvm::GlobalVariable *VTable,
                                    llvm::StringRef AliasNameRef);
+
+  /// Specify a vtable should not be instrumented with hwasan.
+  void RemoveHwasanMetadata(llvm::GlobalValue *VTable);
 };
 
 } // end namespace CodeGen
