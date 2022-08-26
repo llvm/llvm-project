@@ -536,6 +536,27 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * KindCost.value();
 
+  static const CostKindTblEntry AVXConstCostTable[] = {
+    { ISD::SDIV, MVT::v8i32,  { 32 } }, // vpmuludq sequence
+    { ISD::SREM, MVT::v8i32,  { 38 } }, // vpmuludq+mul+sub sequence
+  };
+
+  if (Op2Info.isConstant() && ST->hasAVX())
+    if (const auto *Entry = CostTableLookup(AVXConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
+
+  static const CostKindTblEntry SSE41ConstCostTable[] = {
+    { ISD::SDIV, MVT::v4i32,  { 15 } }, // vpmuludq sequence
+    { ISD::SREM, MVT::v4i32,  { 20 } }, // vpmuludq+mul+sub sequence
+  };
+
+  if (Op2Info.isConstant() && ST->hasSSE41())
+    if (const auto *Entry =
+            CostTableLookup(SSE41ConstCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
+
   static const CostKindTblEntry SSE2ConstCostTable[] = {
     { ISD::SDIV, MVT::v32i8,  { 28+2 } }, // 4*ext+4*pmulhw sequence + split.
     { ISD::SREM, MVT::v32i8,  { 32+2 } }, // 4*ext+4*pmulhw+mul+sub sequence + split.
@@ -563,21 +584,10 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::UREM, MVT::v4i32,  {   20 } }, // pmuludq+mul+sub sequence
   };
 
-  if (Op2Info.isConstant() && ST->hasSSE2()) {
-    // pmuldq sequence.
-    if (ISD == ISD::SDIV && LT.second == MVT::v8i32 && ST->hasAVX())
-      return LT.first * 32;
-    if (ISD == ISD::SREM && LT.second == MVT::v8i32 && ST->hasAVX())
-      return LT.first * 38;
-    if (ISD == ISD::SDIV && LT.second == MVT::v4i32 && ST->hasSSE41())
-      return LT.first * 15;
-    if (ISD == ISD::SREM && LT.second == MVT::v4i32 && ST->hasSSE41())
-      return LT.first * 20;
-
+  if (Op2Info.isConstant() && ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2ConstCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * KindCost.value();
-  }
 
   static const CostKindTblEntry AVX512BWShiftCostTable[] = {
     { ISD::SHL,   MVT::v16i8,  {  4 } }, // extend/vpsllvw/pack sequence.
