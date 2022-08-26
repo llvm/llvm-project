@@ -830,3 +830,57 @@ void test_block(void) {
   printf_arg2("foo", "%s string %i\n", "aaa", 123);
   printf_arg2("%s string\n", "foo", "bar"); // expected-warning{{data argument not used by format string}}
 }
+
+void test_promotion(void) {
+  // Default argument promotions for *printf in N2562
+  // https://github.com/llvm/llvm-project/issues/57102
+  // N2562: https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2562.pdf
+  int i;
+  signed char sc;
+  unsigned char uc;
+  char c;
+  short ss;
+  unsigned short us;
+
+  printf("%hhd %hd %d %hhd %hd %d", i, i, i, sc, sc, sc); // no-warning
+  printf("%hhd %hd %d %hhd %hd %d", uc, uc, uc, c, c, c); // no-warning
+
+  // %ld %lld %llx
+  printf("%ld", i); // expected-warning{{format specifies type 'long' but the argument has type 'int'}}
+  printf("%lld", i); // expected-warning{{format specifies type 'long long' but the argument has type 'int'}}
+  printf("%ld", sc); // expected-warning{{format specifies type 'long' but the argument has type 'signed char'}}
+  printf("%lld", sc); // expected-warning{{format specifies type 'long long' but the argument has type 'signed char'}}
+  printf("%ld", uc); // expected-warning{{format specifies type 'long' but the argument has type 'unsigned char'}}
+  printf("%lld", uc); // expected-warning{{format specifies type 'long long' but the argument has type 'unsigned char'}}
+  printf("%llx", i); // expected-warning{{format specifies type 'unsigned long long' but the argument has type 'int'}}
+
+  // ill formed spec for floats
+  printf("%hf", // expected-warning{{length modifier 'h' results in undefined behavior or no effect with 'f' conversion specifier}}
+  sc); // expected-warning{{format specifies type 'double' but the argument has type 'signed char'}}
+
+  // for %hhd and `short` they are compatible by promotions but more likely misuse
+  printf("%hd", ss); // no-warning
+  printf("%hhd", ss); // expected-warning{{format specifies type 'char' but the argument has type 'short'}}
+  printf("%hu", us); // no-warning
+  printf("%hhu", ss); // expected-warning{{format specifies type 'unsigned char' but the argument has type 'short'}}
+
+  // floats & integers are not compatible
+  printf("%f", i); // expected-warning{{format specifies type 'double' but the argument has type 'int'}}
+  printf("%f", sc); // expected-warning{{format specifies type 'double' but the argument has type 'signed char'}}
+  printf("%f", uc); // expected-warning{{format specifies type 'double' but the argument has type 'unsigned char'}}
+  printf("%f", c); // expected-warning{{format specifies type 'double' but the argument has type 'char'}}
+  printf("%f", ss); // expected-warning{{format specifies type 'double' but the argument has type 'short'}}
+  printf("%f", us); // expected-warning{{format specifies type 'double' but the argument has type 'unsigned short'}}
+
+  // character literals
+  // In C language engineering practice, printing a character literal with %hhd or %d is common, but %hd may be misuse.
+  printf("%hhu", 'a'); // no-warning
+  printf("%hhd", 'a'); // no-warning
+  printf("%hd", 'a'); // expected-warning{{format specifies type 'short' but the argument has type 'char'}}
+  printf("%hu", 'a'); // expected-warning{{format specifies type 'unsigned short' but the argument has type 'char'}}
+  printf("%d", 'a'); // no-warning
+  printf("%u", 'a'); // no-warning
+  
+  // pointers
+  printf("%s", i); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+}

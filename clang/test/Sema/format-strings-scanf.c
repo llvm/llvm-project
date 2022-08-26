@@ -246,3 +246,55 @@ void check_conditional_literal(char *s, int *i) {
   scanf(i ? "%d" : "%d", i, s); // expected-warning{{data argument not used}}
   scanf(i ? "%s" : "%d", s); // expected-warning{{format specifies type 'int *'}}
 }
+
+void test_promotion(void) {
+  // No promotions for *scanf pointers clarified in N2562
+  // https://github.com/llvm/llvm-project/issues/57102
+  // N2562: https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2562.pdf
+  int i;
+  signed char sc;
+  unsigned char uc;
+  short ss;
+  unsigned short us;
+
+  // pointers could not be "promoted"
+  scanf("%hhd", &i); // expected-warning{{format specifies type 'char *' but the argument has type 'int *'}}
+  scanf("%hd", &i); // expected-warning{{format specifies type 'short *' but the argument has type 'int *'}}
+  scanf("%d", &i); // no-warning
+  // char & uchar
+  scanf("%hhd", &sc); // no-warning
+  scanf("%hhd", &uc); // no-warning
+  scanf("%hd", &sc); // expected-warning{{format specifies type 'short *' but the argument has type 'signed char *'}}
+  scanf("%hd", &uc); // expected-warning{{format specifies type 'short *' but the argument has type 'unsigned char *'}}
+  scanf("%d", &sc); // expected-warning{{format specifies type 'int *' but the argument has type 'signed char *'}}
+  scanf("%d", &uc); // expected-warning{{format specifies type 'int *' but the argument has type 'unsigned char *'}}
+  // short & ushort
+  scanf("%hhd", &ss); // expected-warning{{format specifies type 'char *' but the argument has type 'short *'}}
+  scanf("%hhd", &us); // expected-warning{{format specifies type 'char *' but the argument has type 'unsigned short *'}}
+  scanf("%hd", &ss); // no-warning
+  scanf("%hd", &us); // no-warning
+  scanf("%d", &ss); // expected-warning{{format specifies type 'int *' but the argument has type 'short *'}}
+  scanf("%d", &us); // expected-warning{{format specifies type 'int *' but the argument has type 'unsigned short *'}}
+
+  // long types
+  scanf("%ld", &i); // expected-warning{{format specifies type 'long *' but the argument has type 'int *'}}
+  scanf("%lld", &i); // expected-warning{{format specifies type 'long long *' but the argument has type 'int *'}}
+  scanf("%ld", &sc); // expected-warning{{format specifies type 'long *' but the argument has type 'signed char *'}}
+  scanf("%lld", &sc); // expected-warning{{format specifies type 'long long *' but the argument has type 'signed char *'}}
+  scanf("%ld", &uc); // expected-warning{{format specifies type 'long *' but the argument has type 'unsigned char *'}}
+  scanf("%lld", &uc); // expected-warning{{format specifies type 'long long *' but the argument has type 'unsigned char *'}}
+  scanf("%llx", &i); // expected-warning{{format specifies type 'unsigned long long *' but the argument has type 'int *'}}
+
+  // ill-formed floats
+  scanf("%hf", // expected-warning{{length modifier 'h' results in undefined behavior or no effect with 'f' conversion specifier}}
+  &sc);
+
+  // pointers in scanf
+  scanf("%s", i); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+
+  // FIXME: does this match what the C committee allows or should it be pedantically warned on?
+  char c;
+  void *vp;
+  scanf("%hhd", &c); // Pedantic warning?
+  scanf("%hhd", vp); // expected-warning{{format specifies type 'char *' but the argument has type 'void *'}}
+}
