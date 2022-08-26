@@ -321,13 +321,10 @@ static cl::opt<bool>
                     cl::desc("Apply no_sanitize to the whole file"), cl::Hidden,
                     cl::init(false));
 
-// This is an experiment to enable handling of cases where shadow is a non-zero
-// compile-time constant. For some unexplainable reason they were silently
-// ignored in the instrumentation.
 static cl::opt<bool>
     ClCheckConstantShadow("msan-check-constant-shadow",
                           cl::desc("Insert checks for constant shadow values"),
-                          cl::Hidden, cl::init(false));
+                          cl::Hidden, cl::init(true));
 
 // This is off by default because of a bug in gold:
 // https://sourceware.org/bugzilla/show_bug.cgi?id=19002
@@ -1779,9 +1776,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   Value *getOrigin(Value *V) {
     if (!MS.TrackOrigins)
       return nullptr;
-    if (!PropagateShadow)
-      return getCleanOrigin();
-    if (isa<Constant>(V))
+    if (!PropagateShadow || isa<Constant>(V) || isa<InlineAsm>(V))
       return getCleanOrigin();
     assert((isa<Instruction>(V) || isa<Argument>(V)) &&
            "Unexpected value type in getOrigin()");
