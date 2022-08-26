@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Driver/Compilation.h"
@@ -204,15 +205,18 @@ public:
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS,
       llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS,
+      llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS,
       ScanningOutputFormat Format, bool OptimizeArgs, bool EagerLoadModules,
       bool DisableFree, bool EmitDependencyFile,
       bool DiagGenerationAsCompilation, const CASOptions &CASOpts,
+      RemapPathCallback RemapPath,
       llvm::Optional<StringRef> ModuleName = None,
       raw_ostream *VerboseOS = nullptr)
       : WorkingDirectory(WorkingDirectory), Consumer(Consumer),
-        DepFS(std::move(DepFS)), DepCASFS(std::move(DepCASFS)), Format(Format),
-        OptimizeArgs(OptimizeArgs), EagerLoadModules(EagerLoadModules),
-        DisableFree(DisableFree), CASOpts(CASOpts),
+        DepFS(std::move(DepFS)), DepCASFS(std::move(DepCASFS)),
+        CacheFS(std::move(CacheFS)), Format(Format), OptimizeArgs(OptimizeArgs),
+        EagerLoadModules(EagerLoadModules), DisableFree(DisableFree),
+        CASOpts(CASOpts), RemapPath(RemapPath),
         EmitDependencyFile(EmitDependencyFile),
         DiagGenerationAsCompilation(DiagGenerationAsCompilation),
         ModuleName(ModuleName), VerboseOS(VerboseOS) {}
@@ -233,6 +237,11 @@ public:
       // FIXME: to support multi-arch builds, each arch requires a separate scan
       setLastCC1Arguments(std::move(OriginalInvocation));
       return true;
+    }
+
+    if (CacheFS) {
+      CacheFS->trackNewAccesses();
+      CacheFS->setCurrentWorkingDirectory(WorkingDirectory);
     }
 
     Scanned = true;
@@ -367,6 +376,15 @@ public:
     if (!getDepScanFS())
       FileMgr->clearStatCache();
 
+    if (CacheFS) {
+      auto Tree = CacheFS->createTreeFromNewAccesses(RemapPath);
+      if (Tree)
+        Consumer.handleCASFileSystemRootID(Tree->getID());
+      else
+        ScanInstance.getDiagnostics().Report(diag::err_cas_depscan_failed)
+            << Tree.takeError();
+    }
+
     if (Result)
       setLastCC1Arguments(std::move(OriginalInvocation));
 
@@ -408,11 +426,13 @@ private:
   DependencyConsumer &Consumer;
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   llvm::IntrusiveRefCntPtr<DependencyScanningCASFilesystem> DepCASFS;
+  llvm::IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> CacheFS;
   ScanningOutputFormat Format;
   bool OptimizeArgs;
   bool EagerLoadModules;
   bool DisableFree;
   const CASOptions &CASOpts;
+  RemapPathCallback RemapPath;
   bool EmitDependencyFile = false;
   bool DiagGenerationAsCompilation;
   llvm::Optional<StringRef> ModuleName;
@@ -555,12 +575,13 @@ llvm::Error DependencyScanningWorker::computeDependencies(
         // in-process; preserve the original value, which is
         // always true for a driver invocation.
         bool DisableFree = true;
-        DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS, DepCASFS,
+        DependencyScanningAction Action(WorkingDirectory, Consumer, DepFS,
+                                        DepCASFS, CacheFS,
                                         Format, OptimizeArgs, EagerLoadModules,
                                         DisableFree,
                                         /*EmitDependencyFile=*/false,
                                         /*DiagGenerationAsCompilation=*/false,
-                                        getCASOpts(),
+                                        getCASOpts(), /*RemapPath=*/nullptr,
                                         ModuleName);
         bool Success = forEachDriverJob(
             FinalCommandLine, *Diags, *CurrentFiles,
@@ -606,8 +627,9 @@ llvm::Error DependencyScanningWorker::computeDependencies(
 
 void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
     std::shared_ptr<CompilerInvocation> Invocation, StringRef WorkingDirectory,
-    DependencyConsumer &DepsConsumer, DiagnosticConsumer &DiagsConsumer,
-    raw_ostream *VerboseOS, bool DiagGenerationAsCompilation) {
+    DependencyConsumer &DepsConsumer, RemapPathCallback RemapPath,
+    DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
+    bool DiagGenerationAsCompilation) {
   RealFS->setCurrentWorkingDirectory(WorkingDirectory);
 
   // Adjust the invocation.
@@ -634,10 +656,11 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
   // FIXME: EmitDependencyFile should only be set when it's for a real
   // compilation.
   DependencyScanningAction Action(
-      WorkingDirectory, DepsConsumer, DepFS, DepCASFS, Format,
-      /*OptimizeArgs=*/false, /*EagerLoadModules=*/false, /*DisableFree=*/false,
+      WorkingDirectory, DepsConsumer, DepFS, DepCASFS, CacheFS, Format,
+      /*OptimizeArgs=*/false, /*DisableFree=*/false, EagerLoadModules,
       /*EmitDependencyFile=*/!DepFile.empty(), DiagGenerationAsCompilation,
-      getCASOpts(), /*ModuleName=*/None, VerboseOS);
+      getCASOpts(), RemapPath,
+      /*ModuleName=*/None, VerboseOS);
 
   // Ignore result; we're just collecting dependencies.
   //

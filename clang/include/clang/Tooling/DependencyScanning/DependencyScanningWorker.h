@@ -42,6 +42,9 @@ struct Command {
   std::vector<std::string> Arguments;
 };
 
+using RemapPathCallback =
+    llvm::function_ref<StringRef(const llvm::vfs::CachedDirectoryEntry &)>;
+
 class DependencyConsumer {
 public:
   virtual ~DependencyConsumer() {}
@@ -60,6 +63,8 @@ public:
   virtual void handleModuleDependency(ModuleDeps MD) = 0;
 
   virtual void handleContextHash(std::string Hash) = 0;
+
+  virtual void handleCASFileSystemRootID(cas::CASID ID) = 0;
 
   virtual std::string lookupModuleOutput(const ModuleID &ID,
                                          ModuleOutputKind Kind) = 0;
@@ -91,6 +96,9 @@ protected:
     llvm::report_fatal_error("unexpected callback for include-tree");
   }
   void handleContextHash(std::string Hash) override {
+    llvm::report_fatal_error("unexpected callback for include-tree");
+  }
+  void handleCASFileSystemRootID(cas::CASID ID) override {
     llvm::report_fatal_error("unexpected callback for include-tree");
   }
   std::string lookupModuleOutput(const ModuleID &, ModuleOutputKind) override {
@@ -131,8 +139,8 @@ public:
   void computeDependenciesFromCompilerInvocation(
       std::shared_ptr<CompilerInvocation> Invocation,
       StringRef WorkingDirectory, DependencyConsumer &Consumer,
-      DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
-      bool DiagGenerationAsCompilation);
+      RemapPathCallback RemapPath, DiagnosticConsumer &DiagsConsumer,
+      raw_ostream *VerboseOS, bool DiagGenerationAsCompilation);
 
   ScanningOutputFormat getScanningFormat() const { return Format; }
 

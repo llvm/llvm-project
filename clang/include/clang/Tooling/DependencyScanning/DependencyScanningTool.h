@@ -206,17 +206,19 @@ public:
     ContextHash = std::move(Hash);
   }
 
+  void handleCASFileSystemRootID(cas::CASID ID) override {
+    CASFileSystemRootID = ID;
+  }
+
   std::string lookupModuleOutput(const ModuleID &ID,
                                  ModuleOutputKind Kind) override {
     return LookupModuleOutput(ID, Kind);
   }
 
   FullDependenciesResult getFullDependenciesLegacyDriverCommand(
-      const std::vector<std::string> &OriginalCommandLine,
-      Optional<cas::CASID> CASFileSystemRootID = None) const;
+      const std::vector<std::string> &OriginalCommandLine) const;
 
-  FullDependenciesResult takeFullDependencies(
-      Optional<cas::CASID> CASFileSystemRootID = None);
+  FullDependenciesResult takeFullDependencies();
 
 private:
   std::vector<std::string> Dependencies;
@@ -225,6 +227,7 @@ private:
       ClangModuleDeps;
   std::vector<Command> Commands;
   std::string ContextHash;
+  Optional<cas::CASID> CASFileSystemRootID;
   std::vector<std::string> OutputPaths;
   const llvm::StringSet<> &AlreadySeen;
   LookupModuleOutputCallback LookupModuleOutput;
