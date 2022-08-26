@@ -333,25 +333,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
                                   Op1Info.getNoProps(), Op2Info.getNoProps());
   }
 
-  // TODO: Handle more cost kinds.
-  if (CostKind != TTI::TCK_RecipThroughput) {
-    // Handle some basic single instruction code size cases.
-    if (CostKind == TTI::TCK_CodeSize) {
-      switch (ISD) {
-      case ISD::FADD:
-      case ISD::FSUB:
-      case ISD::FMUL:
-      case ISD::FDIV:
-        return LT.first;
-        break;
-      }
-    }
-
-    return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
-                                         Op1Info, Op2Info, Args,
-                                         CxtI);
-  }
-
   static const CostKindTblEntry GLMCostTable[] = {
     { ISD::FDIV,  MVT::f32,   { 18 } }, // divss
     { ISD::FDIV,  MVT::v4f32, { 35 } }, // divps
@@ -1113,12 +1094,25 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   // anyways so try hard to prevent vectorization of division - it is
   // generally a bad idea. Assume somewhat arbitrarily that we have to be able
   // to hide "20 cycles" for each lane.
-  if (LT.second.isVector() && (ISD == ISD::SDIV || ISD == ISD::SREM ||
-                               ISD == ISD::UDIV || ISD == ISD::UREM)) {
-    InstructionCost ScalarCost = getArithmeticInstrCost(
-        Opcode, Ty->getScalarType(), CostKind,
-        Op1Info.getNoProps(), Op2Info.getNoProps());
+  if (CostKind == TTI::TCK_RecipThroughput && LT.second.isVector() &&
+      (ISD == ISD::SDIV || ISD == ISD::SREM || ISD == ISD::UDIV ||
+       ISD == ISD::UREM)) {
+    InstructionCost ScalarCost =
+        getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind,
+                               Op1Info.getNoProps(), Op2Info.getNoProps());
     return 20 * LT.first * LT.second.getVectorNumElements() * ScalarCost;
+  }
+
+  // Handle some basic single instruction code size cases.
+  if (CostKind == TTI::TCK_CodeSize) {
+    switch (ISD) {
+    case ISD::FADD:
+    case ISD::FSUB:
+    case ISD::FMUL:
+    case ISD::FDIV:
+      return LT.first;
+      break;
+    }
   }
 
   // Fallback to the default implementation.
