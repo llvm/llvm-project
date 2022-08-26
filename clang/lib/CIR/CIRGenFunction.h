@@ -432,6 +432,8 @@ public:
   /// Emits a reference binding to the passed in expression.
   RValue buildReferenceBindingToExpr(const Expr *E);
 
+  LValue buildCastLValue(const CastExpr *E);
+
   void buildCXXConstructExpr(const clang::CXXConstructExpr *E,
                              AggValueSlot Dest);
 
@@ -507,19 +509,30 @@ public:
   RValue convertTempToRValue(Address addr, clang::QualType type,
                              clang::SourceLocation Loc);
 
-  /// buildLoadOfLValue - Given an expression that represents a value lvalue,
-  /// this method emits the address of the lvalue, then loads the result as an
-  /// rvalue, returning the rvalue.
+  /// Given an expression that represents a value lvalue, this method emits the
+  /// address of the lvalue, then loads the result as an rvalue, returning the
+  /// rvalue.
   RValue buildLoadOfLValue(LValue LV, SourceLocation Loc);
   mlir::Value buildLoadOfScalar(Address Addr, bool Volatile, clang::QualType Ty,
                                 clang::SourceLocation Loc,
                                 LValueBaseInfo BaseInfo,
                                 bool isNontemporal = false);
 
-  /// buildLoadOfScalar - Load a scalar value from an address, taking care to
-  /// appropriately convert form the memory representation to the CIR value
-  /// representation. The l-value must be a simple l-value.
+  /// Load a scalar value from an address, taking care to appropriately convert
+  /// form the memory representation to the CIR value representation. The
+  /// l-value must be a simple l-value.
   mlir::Value buildLoadOfScalar(LValue lvalue, clang::SourceLocation Loc);
+
+  Address buildLoadOfReference(LValue RefLVal, mlir::Location Loc,
+                               LValueBaseInfo *PointeeBaseInfo = nullptr);
+  LValue buildLoadOfReferenceLValue(LValue RefLVal, mlir::Location Loc);
+  LValue
+  buildLoadOfReferenceLValue(Address RefAddr, mlir::Location Loc,
+                             QualType RefTy,
+                             AlignmentSource Source = AlignmentSource::Type) {
+    LValue RefLVal = makeAddrLValue(RefAddr, RefTy, LValueBaseInfo(Source));
+    return buildLoadOfReferenceLValue(RefLVal, Loc);
+  }
 
   void buildCallArgs(
       CallArgList &Args, PrototypeWrapper Prototype,
@@ -921,6 +934,12 @@ public:
   /// given memory location.
   void buildAnyExprToMem(const Expr *E, Address Location, Qualifiers Quals,
                          bool IsInitializer);
+
+  /// Check if \p E is a C++ "this" pointer wrapped in value-preserving casts.
+  static bool IsWrappedCXXThis(const Expr *E);
+
+  LValue buildCheckedLValue(const Expr *E, TypeCheckKind TCK);
+  LValue buildMemberExpr(const MemberExpr *E);
 
   /// CIR build helpers
   /// -----------------

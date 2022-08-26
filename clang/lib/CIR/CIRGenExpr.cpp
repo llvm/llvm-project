@@ -379,8 +379,11 @@ LValue CIRGenFunction::buildDeclRefLValue(const DeclRefExpr *E) {
     }
 
     // Drill into reference types.
-    assert(!VD->getType()->isReferenceType() && "NYI");
-    LValue LV = makeAddrLValue(addr, T, AlignmentSource::Decl);
+    LValue LV =
+        VD->getType()->isReferenceType()
+            ? buildLoadOfReferenceLValue(addr, getLoc(E->getSourceRange()),
+                                         VD->getType(), AlignmentSource::Decl)
+            : makeAddrLValue(addr, T, AlignmentSource::Decl);
 
     assert(symbolTable.count(VD) && "should be already mapped");
 
@@ -990,6 +993,224 @@ LValue CIRGenFunction::buildStringLiteralLValue(const StringLiteral *E) {
       E->getType(), AlignmentSource::Decl);
 }
 
+/// Casts are never lvalues unless that cast is to a reference type. If the cast
+/// is to a reference, we can have the usual lvalue result, otherwise if a cast
+/// is needed by the code generator in an lvalue context, then it must mean that
+/// we need the address of an aggregate in order to access one of its members.
+/// This can happen for all the reasons that casts are permitted with aggregate
+/// result, including noop aggregate casts, and cast from scalar to union.
+LValue CIRGenFunction::buildCastLValue(const CastExpr *E) {
+  switch (E->getCastKind()) {
+  case CK_HLSLArrayRValue:
+  case CK_HLSLVectorTruncation:
+  case CK_ToVoid:
+  case CK_BitCast:
+  case CK_LValueToRValueBitCast:
+  case CK_ArrayToPointerDecay:
+  case CK_FunctionToPointerDecay:
+  case CK_NullToMemberPointer:
+  case CK_NullToPointer:
+  case CK_IntegralToPointer:
+  case CK_PointerToIntegral:
+  case CK_PointerToBoolean:
+  case CK_VectorSplat:
+  case CK_IntegralCast:
+  case CK_BooleanToSignedIntegral:
+  case CK_IntegralToBoolean:
+  case CK_IntegralToFloating:
+  case CK_FloatingToIntegral:
+  case CK_FloatingToBoolean:
+  case CK_FloatingCast:
+  case CK_FloatingRealToComplex:
+  case CK_FloatingComplexToReal:
+  case CK_FloatingComplexToBoolean:
+  case CK_FloatingComplexCast:
+  case CK_FloatingComplexToIntegralComplex:
+  case CK_IntegralRealToComplex:
+  case CK_IntegralComplexToReal:
+  case CK_IntegralComplexToBoolean:
+  case CK_IntegralComplexCast:
+  case CK_IntegralComplexToFloatingComplex:
+  case CK_DerivedToBaseMemberPointer:
+  case CK_BaseToDerivedMemberPointer:
+  case CK_MemberPointerToBoolean:
+  case CK_ReinterpretMemberPointer:
+  case CK_AnyPointerToBlockPointerCast:
+  case CK_ARCProduceObject:
+  case CK_ARCConsumeObject:
+  case CK_ARCReclaimReturnedObject:
+  case CK_ARCExtendBlockObject:
+  case CK_CopyAndAutoreleaseBlockObject:
+  case CK_IntToOCLSampler:
+  case CK_FloatingToFixedPoint:
+  case CK_FixedPointToFloating:
+  case CK_FixedPointCast:
+  case CK_FixedPointToBoolean:
+  case CK_FixedPointToIntegral:
+  case CK_IntegralToFixedPoint:
+  case CK_MatrixCast:
+    llvm_unreachable("NYI");
+
+  case CK_Dependent:
+    llvm_unreachable("dependent cast kind in IR gen!");
+
+  case CK_BuiltinFnToFnPtr:
+    llvm_unreachable("builtin functions are handled elsewhere");
+
+  // These are never l-values; just use the aggregate emission code.
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic:
+    assert(0 && "NYI");
+
+  case CK_Dynamic: {
+    assert(0 && "NYI");
+  }
+
+  case CK_ConstructorConversion:
+  case CK_UserDefinedConversion:
+  case CK_CPointerToObjCPointerCast:
+  case CK_BlockPointerToObjCPointerCast:
+  case CK_LValueToRValue:
+    assert(0 && "NYI");
+
+  case CK_NoOp: {
+    // CK_NoOp can model a qualification conversion, which can remove an array
+    // bound and change the IR type.
+    LValue LV = buildLValue(E->getSubExpr());
+    if (LV.isSimple()) {
+      Address V = LV.getAddress();
+      if (V.isValid()) {
+        auto T = getTypes().convertTypeForMem(E->getType());
+        if (V.getElementType() != T)
+          assert(0 && "NYI");
+      }
+    }
+    return LV;
+  }
+
+  case CK_UncheckedDerivedToBase:
+  case CK_DerivedToBase: {
+    assert(0 && "NYI");
+  }
+  case CK_ToUnion:
+    assert(0 && "NYI");
+  case CK_BaseToDerived: {
+    assert(0 && "NYI");
+  }
+  case CK_LValueBitCast: {
+    assert(0 && "NYI");
+  }
+  case CK_AddressSpaceConversion: {
+    assert(0 && "NYI");
+  }
+  case CK_ObjCObjectLValueCast: {
+    assert(0 && "NYI");
+  }
+  case CK_ZeroToOCLOpaqueType:
+    llvm_unreachable("NULL to OpenCL opaque type lvalue cast is not valid");
+  }
+
+  llvm_unreachable("Unhandled lvalue cast kind?");
+}
+
+// TODO(cir): candidate for common helper between LLVM and CIR codegen.
+static DeclRefExpr *tryToConvertMemberExprToDeclRefExpr(CIRGenFunction &CGF,
+                                                        const MemberExpr *ME) {
+  if (auto *VD = dyn_cast<VarDecl>(ME->getMemberDecl())) {
+    // Try to emit static variable member expressions as DREs.
+    return DeclRefExpr::Create(
+        CGF.getContext(), NestedNameSpecifierLoc(), SourceLocation(), VD,
+        /*RefersToEnclosingVariableOrCapture=*/false, ME->getExprLoc(),
+        ME->getType(), ME->getValueKind(), nullptr, nullptr, ME->isNonOdrUse());
+  }
+  return nullptr;
+}
+
+LValue CIRGenFunction::buildCheckedLValue(const Expr *E, TypeCheckKind TCK) {
+  LValue LV;
+  if (SanOpts.has(SanitizerKind::ArrayBounds) && isa<ArraySubscriptExpr>(E))
+    assert(0 && "not implemented");
+  else
+    LV = buildLValue(E);
+  if (!isa<DeclRefExpr>(E) && !LV.isBitField() && LV.isSimple()) {
+    if (const auto *ME = dyn_cast<MemberExpr>(E)) {
+      assert(0 && "not implemented");
+    }
+    // TODO(cir): EmitTypeCheck equivalent.
+    assert(0 && "not implemented");
+  }
+  return LV;
+}
+
+// TODO(cir): candidate for common AST helper for LLVM and CIR codegen
+bool CIRGenFunction::IsWrappedCXXThis(const Expr *Obj) {
+  const Expr *Base = Obj;
+  while (!isa<CXXThisExpr>(Base)) {
+    // The result of a dynamic_cast can be null.
+    if (isa<CXXDynamicCastExpr>(Base))
+      return false;
+
+    if (const auto *CE = dyn_cast<CastExpr>(Base)) {
+      Base = CE->getSubExpr();
+    } else if (const auto *PE = dyn_cast<ParenExpr>(Base)) {
+      Base = PE->getSubExpr();
+    } else if (const auto *UO = dyn_cast<UnaryOperator>(Base)) {
+      if (UO->getOpcode() == UO_Extension)
+        Base = UO->getSubExpr();
+      else
+        return false;
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
+LValue CIRGenFunction::buildMemberExpr(const MemberExpr *E) {
+  if (DeclRefExpr *DRE = tryToConvertMemberExprToDeclRefExpr(*this, E)) {
+    assert(0 && "enable upon testcase that validates this path");
+    // buildIgnoredExpr(E->getBase());
+    // return buildDeclRefLValue(DRE);
+  }
+
+  Expr *BaseExpr = E->getBase();
+  // If this is s.x, emit s as an lvalue.  If it is s->x, emit s as a scalar.
+  LValue BaseLV;
+  if (E->isArrow()) {
+    LValueBaseInfo BaseInfo;
+    Address Addr = buildPointerWithAlignment(BaseExpr, &BaseInfo);
+    QualType PtrTy = BaseExpr->getType()->getPointeeType();
+    SanitizerSet SkippedChecks;
+    bool IsBaseCXXThis = IsWrappedCXXThis(BaseExpr);
+    if (IsBaseCXXThis)
+      SkippedChecks.set(SanitizerKind::Alignment, true);
+    if (IsBaseCXXThis || isa<DeclRefExpr>(BaseExpr))
+      SkippedChecks.set(SanitizerKind::Null, true);
+    buildTypeCheck(TCK_MemberAccess, E->getExprLoc(), Addr.getPointer(), PtrTy,
+                   /*Alignment=*/CharUnits::Zero(), SkippedChecks);
+    BaseLV = makeAddrLValue(Addr, PtrTy, BaseInfo);
+  } else
+    BaseLV = buildCheckedLValue(BaseExpr, TCK_MemberAccess);
+
+  NamedDecl *ND = E->getMemberDecl();
+  if (auto *Field = dyn_cast<FieldDecl>(ND)) {
+    LValue LV = buildLValueForField(BaseLV, Field);
+    assert(!UnimplementedFeature::setObjCGCLValueClass() && "NYI");
+    if (getLangOpts().OpenMP) {
+      // If the member was explicitly marked as nontemporal, mark it as
+      // nontemporal. If the base lvalue is marked as nontemporal, mark access
+      // to children as nontemporal too.
+      assert(0 && "not implemented");
+    }
+    return LV;
+  }
+
+  if (const auto *FD = dyn_cast<FunctionDecl>(ND))
+    assert(0 && "not implemented");
+
+  llvm_unreachable("Unhandled member declaration!");
+}
+
 /// Emit code to compute a designator that specifies the location
 /// of the expression.
 /// FIXME: document this function better.
@@ -1018,6 +1239,21 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     return buildUnaryOpLValue(cast<UnaryOperator>(E));
   case Expr::StringLiteralClass:
     return buildStringLiteralLValue(cast<StringLiteral>(E));
+  case Expr::MemberExprClass:
+    return buildMemberExpr(cast<MemberExpr>(E));
+
+  case Expr::CStyleCastExprClass:
+  case Expr::CXXFunctionalCastExprClass:
+  case Expr::CXXStaticCastExprClass:
+  case Expr::CXXDynamicCastExprClass:
+  case Expr::CXXReinterpretCastExprClass:
+  case Expr::CXXConstCastExprClass:
+  case Expr::CXXAddrspaceCastExprClass:
+  case Expr::ObjCBridgedCastExprClass:
+    assert(0 && "Use buildCastLValue below, remove me when adding testcase");
+  case Expr::ImplicitCastExprClass:
+    return buildCastLValue(cast<CastExpr>(E));
+
   case Expr::ObjCPropertyRefExprClass:
     llvm_unreachable("cannot emit a property reference directly");
   }
@@ -1254,4 +1490,28 @@ RValue CIRGenFunction::buildReferenceBindingToExpr(const Expr *E) {
   }
 
   return RValue::get(Value);
+}
+
+Address CIRGenFunction::buildLoadOfReference(LValue RefLVal, mlir::Location Loc,
+                                             LValueBaseInfo *PointeeBaseInfo) {
+  assert(!RefLVal.isVolatile() && "NYI");
+  mlir::cir::LoadOp Load = builder.create<mlir::cir::LoadOp>(
+      Loc, RefLVal.getAddress().getElementType(),
+      RefLVal.getAddress().getPointer());
+
+  // TODO(cir): DecorateInstructionWithTBAA relevant for us?
+  assert(!UnimplementedFeature::tbaa());
+
+  QualType PointeeType = RefLVal.getType()->getPointeeType();
+  CharUnits Align = CGM.getNaturalTypeAlignment(PointeeType, PointeeBaseInfo,
+                                                /* forPointeeType= */ true);
+  return Address(Load, getTypes().convertTypeForMem(PointeeType), Align);
+}
+
+LValue CIRGenFunction::buildLoadOfReferenceLValue(LValue RefLVal,
+                                                  mlir::Location Loc) {
+  LValueBaseInfo PointeeBaseInfo;
+  Address PointeeAddr = buildLoadOfReference(RefLVal, Loc, &PointeeBaseInfo);
+  return makeAddrLValue(PointeeAddr, RefLVal.getType()->getPointeeType(),
+                        PointeeBaseInfo);
 }
