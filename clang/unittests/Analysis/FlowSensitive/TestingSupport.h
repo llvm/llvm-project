@@ -71,25 +71,14 @@ struct AnalysisData {
   std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> &BlockStates;
 };
 
-// FIXME: Rename to `checkDataflow` after usages of the overload that applies to
-// `CFGStmt` have been replaced.
-//
-/// Runs dataflow analysis (specified from `MakeAnalysis`) and the
-/// `PostVisitCFG` function (if provided) on the body of the function that
-/// matches `TargetFuncMatcher` in code snippet `Code`. `VerifyResults` checks
-/// that the results from the analysis are correct.
-///
-/// Requirements:
-///
-///  `AnalysisT` contains a type `Lattice`.
 template <typename AnalysisT>
-llvm::Error checkDataflowOnCFG(
+llvm::Error checkDataflow(
     llvm::StringRef Code,
     ast_matchers::internal::Matcher<FunctionDecl> TargetFuncMatcher,
     std::function<AnalysisT(ASTContext &, Environment &)> MakeAnalysis,
-    std::function<void(ASTContext &, const CFGElement &,
+    std::function<void(ASTContext &, const CFGStmt &,
                        const TypeErasedDataflowAnalysisState &)>
-        PostVisitCFG,
+        PostVisitStmt,
     std::function<void(AnalysisData)> VerifyResults, ArrayRef<std::string> Args,
     const tooling::FileContentMappings &VirtualMappedFiles = {}) {
   llvm::Annotations AnnotatedCode(Code);
@@ -123,14 +112,13 @@ llvm::Error checkDataflowOnCFG(
   Environment Env(DACtx, *F);
   auto Analysis = MakeAnalysis(Context, Env);
 
-  std::function<void(const CFGElement &,
-                     const TypeErasedDataflowAnalysisState &)>
-      PostVisitCFGClosure = nullptr;
-  if (PostVisitCFG) {
-    PostVisitCFGClosure = [&PostVisitCFG, &Context](
-                              const CFGElement &Element,
-                              const TypeErasedDataflowAnalysisState &State) {
-      PostVisitCFG(Context, Element, State);
+  std::function<void(const CFGStmt &, const TypeErasedDataflowAnalysisState &)>
+      PostVisitStmtClosure = nullptr;
+  if (PostVisitStmt != nullptr) {
+    PostVisitStmtClosure = [&PostVisitStmt, &Context](
+                               const CFGStmt &Stmt,
+                               const TypeErasedDataflowAnalysisState &State) {
+      PostVisitStmt(Context, Stmt, State);
     };
   }
 
@@ -142,7 +130,7 @@ llvm::Error checkDataflowOnCFG(
 
   llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
       MaybeBlockStates = runTypeErasedDataflowAnalysis(*CFCtx, Analysis, Env,
-                                                       PostVisitCFGClosure);
+                                                       PostVisitStmtClosure);
   if (!MaybeBlockStates)
     return MaybeBlockStates.takeError();
   auto &BlockStates = *MaybeBlockStates;
@@ -151,32 +139,6 @@ llvm::Error checkDataflowOnCFG(
                             Analysis, Annotations, BlockStates};
   VerifyResults(AnalysisData);
   return llvm::Error::success();
-}
-
-template <typename AnalysisT>
-llvm::Error checkDataflow(
-    llvm::StringRef Code,
-    ast_matchers::internal::Matcher<FunctionDecl> TargetFuncMatcher,
-    std::function<AnalysisT(ASTContext &, Environment &)> MakeAnalysis,
-    std::function<void(ASTContext &, const CFGStmt &,
-                       const TypeErasedDataflowAnalysisState &)>
-        PostVisitStmt,
-    std::function<void(AnalysisData)> VerifyResults, ArrayRef<std::string> Args,
-    const tooling::FileContentMappings &VirtualMappedFiles = {}) {
-  std::function<void(ASTContext & Context, const CFGElement &,
-                     const TypeErasedDataflowAnalysisState &)>
-      PostVisitCFG = nullptr;
-  if (PostVisitStmt) {
-    PostVisitCFG =
-        [&PostVisitStmt](ASTContext &Context, const CFGElement &Element,
-                         const TypeErasedDataflowAnalysisState &State) {
-          if (auto Stmt = Element.getAs<CFGStmt>()) {
-            PostVisitStmt(Context, *Stmt, State);
-          }
-        };
-  }
-  return checkDataflowOnCFG(Code, TargetFuncMatcher, MakeAnalysis, PostVisitCFG,
-                            VerifyResults, Args, VirtualMappedFiles);
 }
 
 // Runs dataflow on the body of the function that matches `TargetFuncMatcher` in
@@ -195,9 +157,9 @@ llvm::Error checkDataflow(
     const tooling::FileContentMappings &VirtualMappedFiles = {}) {
   using StateT = DataflowAnalysisState<typename AnalysisT::Lattice>;
 
-  return checkDataflowOnCFG(
+  return checkDataflow(
       Code, std::move(TargetFuncMatcher), std::move(MakeAnalysis),
-      /*PostVisitCFG=*/nullptr,
+      /*PostVisitStmt=*/nullptr,
       [&VerifyResults](AnalysisData AnalysisData) {
         if (AnalysisData.BlockStates.empty()) {
           VerifyResults({}, AnalysisData.ASTCtx);
@@ -218,13 +180,9 @@ llvm::Error checkDataflow(
               AnalysisData.CFCtx, AnalysisData.BlockStates, *Block,
               AnalysisData.Env, AnalysisData.Analysis,
               [&Results,
-               &Annotations](const clang::CFGElement &Element,
+               &Annotations](const clang::CFGStmt &Stmt,
                              const TypeErasedDataflowAnalysisState &State) {
-                // FIXME: Extend testing annotations to non statement constructs
-                auto Stmt = Element.getAs<CFGStmt>();
-                if (!Stmt)
-                  return;
-                auto It = Annotations.find(Stmt->getStmt());
+                auto It = Annotations.find(Stmt.getStmt());
                 if (It == Annotations.end())
                   return;
                 auto *Lattice = llvm::any_cast<typename AnalysisT::Lattice>(
