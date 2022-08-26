@@ -962,14 +962,32 @@ operator<<(basic_ostream<_CharT, _Traits>& __os,
 
 // [string.view.hash]
 template<class _CharT>
-struct _LIBCPP_TEMPLATE_VIS hash<basic_string_view<_CharT, char_traits<_CharT> > >
-    : public __unary_function<basic_string_view<_CharT, char_traits<_CharT> >, size_t>
+struct __string_view_hash : public __unary_function<basic_string_view<_CharT, char_traits<_CharT> >, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(const basic_string_view<_CharT, char_traits<_CharT> > __val) const _NOEXCEPT {
         return __do_string_hash(__val.data(), __val.data() + __val.size());
     }
 };
+
+template <>
+struct hash<basic_string_view<char, char_traits<char> > > : __string_view_hash<char> {};
+
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
+template <>
+struct hash<basic_string_view<char8_t, char_traits<char8_t> > > : __string_view_hash<char8_t> {};
+#endif
+
+template <>
+struct hash<basic_string_view<char16_t, char_traits<char16_t> > > : __string_view_hash<char16_t> {};
+
+template <>
+struct hash<basic_string_view<char32_t, char_traits<char32_t> > > : __string_view_hash<char32_t> {};
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+template <>
+struct hash<basic_string_view<wchar_t, char_traits<wchar_t> > > : __string_view_hash<wchar_t> {};
+#endif
 
 #if _LIBCPP_STD_VER > 11
 inline namespace literals
