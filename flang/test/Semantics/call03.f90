@@ -284,10 +284,8 @@ module m01
     call intentout_arr(a(j))
     !ERROR: Actual argument associated with INTENT(IN OUT) dummy argument 'x=' must be definable
     call intentinout_arr(a(j))
-    !ERROR: Actual argument associated with ASYNCHRONOUS dummy argument 'x=' must be definable
-    call asynchronous_arr(a(j))
-    !ERROR: Actual argument associated with VOLATILE dummy argument 'x=' must be definable
-    call volatile_arr(a(j))
+    call asynchronous_arr(a(j)) ! ok
+    call volatile_arr(a(j)) ! ok
   end subroutine
 
   subroutine coarr(x)

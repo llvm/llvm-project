@@ -136,6 +136,8 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             [](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
               return x.DIM(y).value;
             }));
+  } else if (name == "dot_product") {
+    return FoldDotProduct<T>(context, std::move(funcRef));
   } else if (name == "dprod") {
     if (auto scalars{GetScalarConstantArguments<T, T>(context, args)}) {
       return Fold(context,
