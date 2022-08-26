@@ -3509,104 +3509,125 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     if (ISD == ISD::FSQRT && CostKind == TTI::TCK_CodeSize)
       return LT.first;
 
-    auto adjustTableCost = [](const CostTblEntry &Entry,
+    auto adjustTableCost = [](int ISD, unsigned Cost,
                               InstructionCost LegalizationCost,
                               FastMathFlags FMF) {
       // If there are no NANs to deal with, then these are reduced to a
       // single MIN** or MAX** instruction instead of the MIN/CMP/SELECT that we
       // assume is used in the non-fast case.
-      if (Entry.ISD == ISD::FMAXNUM || Entry.ISD == ISD::FMINNUM) {
+      if (ISD == ISD::FMAXNUM || ISD == ISD::FMINNUM) {
         if (FMF.noNaNs())
           return LegalizationCost * 1;
       }
-      return LegalizationCost * (int)Entry.Cost;
+      return LegalizationCost * (int)Cost;
     };
 
     if (ST->useGLMDivSqrtCosts())
       if (const auto *Entry = CostTableLookup(GLMCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasBITALG())
       if (const auto *Entry = CostTableLookup(AVX512BITALGCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasVPOPCNTDQ())
       if (const auto *Entry = CostTableLookup(AVX512VPOPCNTDQCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasCDI())
       if (const auto *Entry = CostTableLookup(AVX512CDCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasBWI())
       if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasAVX512())
       if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasXOP())
       if (const auto *Entry = CostTableLookup(XOPCostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasAVX2())
       if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasAVX())
       if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasSSE42())
       if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasSSE41())
       if (const auto *Entry = CostTableLookup(SSE41CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasSSSE3())
       if (const auto *Entry = CostTableLookup(SSSE3CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasSSE2())
       if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasSSE1())
       if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (ST->hasBMI()) {
       if (ST->is64Bit())
         if (const auto *Entry = CostTableLookup(BMI64CostTbl, ISD, MTy))
-          return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+          return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                                 ICA.getFlags());
 
       if (const auto *Entry = CostTableLookup(BMI32CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
     }
 
     if (ST->hasLZCNT()) {
       if (ST->is64Bit())
         if (const auto *Entry = CostTableLookup(LZCNT64CostTbl, ISD, MTy))
-          return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+          return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                                 ICA.getFlags());
 
       if (const auto *Entry = CostTableLookup(LZCNT32CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
     }
 
     if (ST->hasPOPCNT()) {
       if (ST->is64Bit())
         if (const auto *Entry = CostTableLookup(POPCNT64CostTbl, ISD, MTy))
-          return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+          return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                                 ICA.getFlags());
 
       if (const auto *Entry = CostTableLookup(POPCNT32CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
     }
 
     if (ISD == ISD::BSWAP && ST->hasMOVBE() && ST->hasFastMOVBE()) {
@@ -3622,10 +3643,11 @@ X86TTIImpl::getTypeBasedIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     if (ST->is64Bit())
       if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
-        return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+        return adjustTableCost(Entry->ISD, Entry->Cost, LT.first,
+                               ICA.getFlags());
 
     if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, MTy))
-      return adjustTableCost(*Entry, LT.first, ICA.getFlags());
+      return adjustTableCost(Entry->ISD, Entry->Cost, LT.first, ICA.getFlags());
   }
 
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
