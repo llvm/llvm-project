@@ -188,9 +188,6 @@ public:
 protected:
   Tool *buildAssembler() const override;  // ptxas
   Tool *buildLinker() const override;     // fatbinary (ok, not really a linker)
-
-private:
-  const Action::OffloadKind OK;
 };
 
 } // end namespace toolchains

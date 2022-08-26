@@ -599,7 +599,7 @@ CudaToolChain::CudaToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ToolChain &HostTC, const ArgList &Args,
                              const Action::OffloadKind OK)
     : ToolChain(D, Triple, Args), HostTC(HostTC),
-      CudaInstallation(D, HostTC.getTriple(), Args), OK(OK) {
+      CudaInstallation(D, HostTC.getTriple(), Args) {
   if (CudaInstallation.isValid()) {
     CudaInstallation.WarnIfUnsupportedVersion();
     getProgramPaths().push_back(std::string(CudaInstallation.getBinPath()));
