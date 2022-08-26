@@ -205,6 +205,14 @@ void *omp_realloc(void *ptr, uint64_t size,
 
 void omp_free(void *ptr, omp_allocator_handle_t allocator = omp_null_allocator);
 /// }
+
+/// CUDA exposes a native malloc/free API, while ROCm does not.
+//// Any re-definitions of malloc/free delete the native CUDA
+//// but they are necessary
+#ifdef __AMDGCN__
+void *malloc(uint64_t Size);
+void free(void *Ptr);
+#endif
 }
 
 extern "C" {

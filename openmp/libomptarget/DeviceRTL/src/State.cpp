@@ -36,20 +36,12 @@ extern unsigned char DynamicSharedBuffer[] __attribute__((aligned(Alignment)));
 
 namespace {
 
-/// Fallback implementations are missing to trigger a link time error.
-/// Implementations for new devices, including the host, should go into a
-/// dedicated begin/end declare variant.
-///
-///{
+/// Malloc/Free API implementation
+/// AMDGCN does not expose a malloc/free API, while
+/// NVPTX does. FOr this reason, the order of the following malloc/free
+/// variant declarations and definitions is important and should not be changed
 
-extern "C" {
-__attribute__((leaf)) void *malloc(uint64_t Size);
-__attribute__((leaf)) void free(void *Ptr);
-}
-
-///}
-
-/// AMDGCN implementations of the shuffle sync idiom.
+/// AMDGCN implementations of the shuffle sync idiom
 ///
 ///{
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
@@ -59,15 +51,38 @@ extern "C" uint64_t __ockl_dm_alloc(uint64_t bufsz);
 extern "C" void __ockl_dm_dealloc(uint64_t ptr);
 
 extern "C" {
-void *malloc(uint64_t Size) {
+void *internal_malloc(uint64_t Size) {
   uint64_t ptr = __ockl_dm_alloc(Size);
   return (void *)ptr;
 }
 
-void free(void *Ptr) { __ockl_dm_dealloc((uint64_t)Ptr); }
+void internal_free(void *Ptr) { __ockl_dm_dealloc((uint64_t)Ptr); }
 }
 #pragma omp end declare variant
 ///}
+
+extern "C" {
+#ifdef __AMDGCN__
+void *malloc(uint64_t Size) { return internal_malloc(Size); }
+
+void free(void *Ptr) { internal_free(Ptr); }
+#else
+__attribute__((leaf)) void *malloc(uint64_t Size);
+__attribute__((leaf)) void free(void *Ptr);
+#endif
+} // extern "C"
+
+/// NVPTX implementations of internal mallocs
+///
+///{
+#pragma omp begin declare variant match(                                       \
+    device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
+extern "C" {
+void *internal_malloc(uint64_t Size) { return malloc(Size); }
+
+void internal_free(void *Ptr) { free(Ptr); }
+}
+#pragma omp end declare variant
 
 /// A "smart" stack in shared memory.
 ///
