@@ -5711,7 +5711,7 @@ cc_library(
         ":Transforms",
         ":VectorDialect",
         ":VectorUtils",
-        "//third_party/llvm/llvm-project/llvm:Support",
+        "//llvm:Support",
     ],
 )
 
