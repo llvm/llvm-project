@@ -110,8 +110,8 @@ Improvements to Clang's diagnostics
   language version and specifies in which version it will be a keyword. This
   supports both c and c++ language.
 
- Non-comprehensive list of changes in this release
- -------------------------------------------------
+Non-comprehensive list of changes in this release
+-------------------------------------------------
 
 
 Non-comprehensive list of changes in this release
