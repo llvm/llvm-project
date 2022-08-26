@@ -332,6 +332,9 @@ private:
   bool CXX20ModuleInits = false;
   std::unique_ptr<CodeGenTBAA> TBAA;
 
+  /// Used by emitParallelCall
+  bool isSPMDExecutionMode = false;
+
   mutable std::unique_ptr<TargetCodeGenInfo> TheTargetCodeGenInfo;
 
   // This should not be moved earlier, since its initialization depends on some
@@ -640,6 +643,9 @@ public:
   bool hasObjCRuntime() { return !!ObjCRuntime; }
 
   const std::string &getModuleNameHash() const { return ModuleNameHash; }
+
+  void setIsSPMDExecutionMode(bool isSPMD) { isSPMDExecutionMode = isSPMD; }
+  bool IsSPMDExecutionMode() { return isSPMDExecutionMode; }
 
   /// Return a reference to the configured OpenCL runtime.
   CGOpenCLRuntime &getOpenCLRuntime() {

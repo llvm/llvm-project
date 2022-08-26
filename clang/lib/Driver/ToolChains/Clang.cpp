@@ -780,8 +780,8 @@ static bool shouldIgnoreEnvVars(const ArgList &Args) {
   return false;
 }
 
-/// Assume no thread state at -Ofast
-static bool shouldAssumeNoThreadState(const ArgList &Args) {
+/// Is -Ofast used?
+static bool isOFastUsed(const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_O_Group))
     if (A->getOption().matches(options::OPT_Ofast))
       return true;
@@ -6222,13 +6222,18 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasFlag(options::OPT_fopenmp_assume_no_thread_state,
                        options::OPT_fno_openmp_assume_no_thread_state,
-                       shouldAssumeNoThreadState(Args)))
+                       isOFastUsed(Args)))
         CmdArgs.push_back("-fopenmp-assume-no-thread-state");
       else
         CmdArgs.push_back("-fno-openmp-assume-no-thread-state");
 
-      if (Args.hasArg(options::OPT_fopenmp_assume_no_nested_parallelism))
+      if (Args.hasFlag(options::OPT_fopenmp_assume_no_nested_parallelism,
+                       options::OPT_fno_openmp_assume_no_nested_parallelism,
+                       isOFastUsed(Args)))
         CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
+      else
+        CmdArgs.push_back("-fno-openmp-assume-no-nested-parallelism");
+
       if (Args.hasArg(options::OPT_fopenmp_offload_mandatory))
         CmdArgs.push_back("-fopenmp-offload-mandatory");
       break;

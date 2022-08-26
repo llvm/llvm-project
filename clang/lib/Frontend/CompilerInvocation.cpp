@@ -617,7 +617,7 @@ static unsigned getOptimizationLevelSize(ArgList &Args) {
 }
 
 /// Assume no thread state at -Ofast
-static bool shouldAssumeNoThreadState(const ArgList &Args) {
+static bool isOFastUsed(const ArgList &Args) {
   if (Arg *A = Args.getLastArg(options::OPT_O_Group))
     if (A->getOption().matches(options::OPT_Ofast))
       return true;
@@ -3478,6 +3478,11 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   else
     GenerateArg(Args, OPT_fno_openmp_assume_no_thread_state, SA);
 
+  if (Opts.OpenMPNoNestedParallelism)
+    GenerateArg(Args, OPT_fopenmp_assume_no_nested_parallelism, SA);
+  else
+    GenerateArg(Args, OPT_fno_openmp_assume_no_nested_parallelism, SA);
+
   if (Opts.OpenMPTargetDebug != 0)
     GenerateArg(Args, OPT_fopenmp_target_debug_EQ,
                 Twine(Opts.OpenMPTargetDebug), SA);
@@ -3937,10 +3942,14 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   }
 
   // Turn ON at -Ofast
-  Opts.OpenMPNoThreadState =
-      Args.hasFlag(options::OPT_fopenmp_assume_no_thread_state,
-                   options::OPT_fno_openmp_assume_no_thread_state,
-                   shouldAssumeNoThreadState(Args));
+  Opts.OpenMPNoThreadState = Args.hasFlag(
+      options::OPT_fopenmp_assume_no_thread_state,
+      options::OPT_fno_openmp_assume_no_thread_state, isOFastUsed(Args));
+
+  // Turn ON at -Ofast
+  Opts.OpenMPNoNestedParallelism = Args.hasFlag(
+      options::OPT_fopenmp_assume_no_nested_parallelism,
+      options::OPT_fno_openmp_assume_no_nested_parallelism, isOFastUsed(Args));
 
   // Get the OpenMP target triples if any.
   if (Arg *A = Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {

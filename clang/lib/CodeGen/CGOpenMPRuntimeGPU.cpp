@@ -1280,6 +1280,8 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
 
   const Stmt *DirectiveStmt = D.getAssociatedStmt();
   bool Mode = supportsSPMDExecutionMode(CGM.getContext(), D);
+  // Used by emitParallelCall
+  CGM.setIsSPMDExecutionMode(Mode);
   if (Mode) {
     // For AMDGPU, check if a no-loop or a Xteam reduction kernel should
     // be generated and if so, set metadata that can be used by codegen.
@@ -1309,6 +1311,8 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
   else if (Mode && DirectiveStmt &&
            CGM.isXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt)))
     CGM.resetXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt));
+  // Reset cached mode
+  CGM.setIsSPMDExecutionMode(false);
   assert(!CGM.isNoLoopKernel(DirectiveStmt) &&
          "No-loop attribute not reset after emit");
   assert(!CGM.isXteamRedKernel(CGM.getSingleForStmt(DirectiveStmt)) &&
@@ -1740,9 +1744,15 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
         Bld.CreateBitOrPointerCast(CapturedVarsAddrs.getPointer(),
                                    CGF.VoidPtrPtrTy),
         llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
-    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL___kmpc_parallel_51),
-                        Args);
+    if (CGM.getLangOpts().OpenMPNoNestedParallelism &&
+        CGM.IsSPMDExecutionMode())
+      CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                              CGM.getModule(), OMPRTL___kmpc_parallel_spmd),
+                          Args);
+    else
+      CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                              CGM.getModule(), OMPRTL___kmpc_parallel_51),
+                          Args);
   };
 
   RegionCodeGenTy RCG(ParallelGen);
