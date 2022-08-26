@@ -425,12 +425,16 @@ def Neg: Opcode {
 //===----------------------------------------------------------------------===//
 // TODO: Expand this to handle casts between more types.
 
-def Sint32TypeClass : TypeClass {
-  let Types = [Sint32];
+def FromCastTypeClass : TypeClass {
+  let Types = [Uint32, Sint32, Bool];
+}
+
+def ToCastTypeClass : TypeClass {
+  let Types = [Uint32, Sint32, Bool];
 }
 
 def Cast: Opcode {
-  let Types = [BoolTypeClass, Sint32TypeClass];
+  let Types = [FromCastTypeClass, ToCastTypeClass];
   let HasGroup = 1;
 }
 
