@@ -807,6 +807,16 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * KindCost.value();
   }
 
+  static const CostKindTblEntry AVX2UniformShiftCostTable[] = {
+    { ISD::SRA,  MVT::v4i64,  {   4 } }, // 2*psrad + shuffle.
+  };
+
+  if (ST->hasAVX2() && Op2Info.isUniform())
+    if (const auto *Entry =
+            CostTableLookup(AVX2UniformShiftCostTable, ISD, LT.second))
+      if (auto KindCost = Entry->Cost[CostKind])
+        return LT.first * KindCost.value();
+
   static const CostKindTblEntry SSE2UniformShiftCostTable[] = {
     // Uniform splats are cheaper for the following instructions.
     { ISD::SHL,  MVT::v16i16, { 2+2 } }, // 2*psllw + split.
@@ -823,16 +833,11 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v4i64,  { 8+2 } }, // 2*(2*psrad + shuffle) + split.
   };
 
-  if (ST->hasSSE2() && Op2Info.isUniform()) {
-    // Handle AVX2 uniform v4i64 ISD::SRA, it's not worth a table.
-    if (ISD == ISD::SRA && LT.second == MVT::v4i64 && ST->hasAVX2())
-      return LT.first * 4; // 2*psrad + shuffle.
-
+  if (ST->hasSSE2() && Op2Info.isUniform())
     if (const auto *Entry =
             CostTableLookup(SSE2UniformShiftCostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * KindCost.value();
-  }
 
   if (ISD == ISD::SHL && !Op2Info.isUniform() && Op2Info.isConstant()) {
     MVT VT = LT.second;
