@@ -134,7 +134,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
 void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
   auto Lane = VPLane::getLastLaneForVF(State.VF);
   VPValue *ExitValue = getOperand(0);
-  if (Plan.isUniformAfterVectorization(ExitValue))
+  if (vputils::isUniformAfterVectorization(ExitValue))
     Lane = VPLane::getFirstLane();
   Phi->addIncoming(State.get(ExitValue, VPIteration(State.UF - 1, Lane)),
                    State.Builder.GetInsertBlock());
