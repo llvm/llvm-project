@@ -1,5 +1,5 @@
-; RUN: opt < %s -msan-check-access-address=0 -msan-check-constant-shadow=1 -msan-eager-checks=1 -msan-track-origins=1 -S -passes=msan 2>&1 | FileCheck --check-prefixes=CHECK,CONST %s --implicit-check-not=icmp --implicit-check-not="store i" --implicit-check-not="call void @__msan"
-; RUN: opt < %s -msan-check-access-address=0                               -msan-eager-checks=1 -msan-track-origins=1 -S -passes=msan 2>&1 | FileCheck --check-prefixes=CHECK       %s --implicit-check-not=icmp --implicit-check-not="store i" --implicit-check-not="call void @__msan"
+; RUN: opt < %s -msan-check-access-address=0                               -msan-eager-checks=1 -msan-track-origins=1 -S -passes=msan 2>&1 | FileCheck --check-prefixes=CHECK,CONST %s --implicit-check-not=icmp --implicit-check-not="store i" --implicit-check-not="call void @__msan"
+; RUN: opt < %s -msan-check-access-address=0 -msan-check-constant-shadow=0 -msan-eager-checks=1 -msan-track-origins=1 -S -passes=msan 2>&1 | FileCheck --check-prefixes=CHECK       %s --implicit-check-not=icmp --implicit-check-not="store i" --implicit-check-not="call void @__msan"
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
