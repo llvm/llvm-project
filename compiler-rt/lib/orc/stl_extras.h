@@ -41,6 +41,16 @@ decltype(auto) apply_tuple(F &&f, Tuple &&t) {
                                   Indices{});
 }
 
+/// Substitute for std::identity.
+/// Switch to std::identity once we can use c++20.
+template <class Ty> struct identity {
+  using is_transparent = void;
+  using argument_type = Ty;
+
+  Ty &operator()(Ty &self) const { return self; }
+  const Ty &operator()(const Ty &self) const { return self; }
+};
+
 } // namespace __orc_rt
 
 #endif // ORC_RT_STL_EXTRAS
