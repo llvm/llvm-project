@@ -1600,6 +1600,65 @@ OpFoldResult ReinterpretCastOp::fold(ArrayRef<Attribute> /*operands*/) {
   return nullptr;
 }
 
+namespace {
+/// Replace reinterpret_cast(extract_strided_metadata memref) -> memref.
+struct ReinterpretCastOpExtractStridedMetadataFolder
+    : public OpRewritePattern<ReinterpretCastOp> {
+public:
+  using OpRewritePattern<ReinterpretCastOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ReinterpretCastOp op,
+                                PatternRewriter &rewriter) const override {
+    auto extractStridedMetadata =
+        op.getSource().getDefiningOp<ExtractStridedMetadataOp>();
+    if (!extractStridedMetadata)
+      return failure();
+    // Check if the reinterpret cast reconstructs a memref with the exact same
+    // properties as the extract strided metadata.
+
+    // First, check that the strides are the same.
+    if (extractStridedMetadata.getStrides().size() != op.getStrides().size())
+      return failure();
+    for (auto [extractStride, reinterpretStride] :
+         llvm::zip(extractStridedMetadata.getStrides(), op.getStrides()))
+      if (extractStride != reinterpretStride)
+        return failure();
+
+    // Second, check the sizes.
+    if (extractStridedMetadata.getSizes().size() != op.getSizes().size())
+      return failure();
+    for (auto [extractSize, reinterpretSize] :
+         llvm::zip(extractStridedMetadata.getSizes(), op.getSizes()))
+      if (extractSize != reinterpretSize)
+        return failure();
+
+    // Finally, check the offset.
+    if (op.getOffsets().size() != 1 &&
+        extractStridedMetadata.getOffset() != *op.getOffsets().begin())
+      return failure();
+
+    // At this point, we know that the back and forth between extract strided
+    // metadata and reinterpret cast is a noop. However, the final type of the
+    // reinterpret cast may not be exactly the same as the original memref.
+    // E.g., it could be changing a dimension from static to dynamic. Check that
+    // here and add a cast if necessary.
+    Type srcTy = extractStridedMetadata.getSource().getType();
+    if (srcTy == op.getResult().getType())
+      rewriter.replaceOp(op, extractStridedMetadata.getSource());
+    else
+      rewriter.replaceOpWithNewOp<CastOp>(op, op.getType(),
+                                          extractStridedMetadata.getSource());
+
+    return success();
+  }
+};
+} // namespace
+
+void ReinterpretCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                                    MLIRContext *context) {
+  results.add<ReinterpretCastOpExtractStridedMetadataFolder>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // Reassociative reshape ops
 //===----------------------------------------------------------------------===//
