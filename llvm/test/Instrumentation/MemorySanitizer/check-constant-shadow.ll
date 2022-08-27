@@ -1,4 +1,5 @@
-; RUN: opt < %s -msan-check-access-address=0 -msan-check-constant-shadow=1 -msan-eager-checks=1 -msan-track-origins=1 -S -passes=msan 2>&1 | FileCheck %s --implicit-check-not=icmp --implicit-check-not="store i" --implicit-check-not="call void @__msan"
+; RUN: opt < %s -msan-check-access-address=0 -msan-check-constant-shadow=1 -msan-eager-checks=1 -msan-track-origins=1 -S -passes=msan 2>&1 | FileCheck --check-prefixes=CHECK,CONST %s --implicit-check-not=icmp --implicit-check-not="store i" --implicit-check-not="call void @__msan"
+; RUN: opt < %s -msan-check-access-address=0                               -msan-eager-checks=1 -msan-track-origins=1 -S -passes=msan 2>&1 | FileCheck --check-prefixes=CHECK       %s --implicit-check-not=icmp --implicit-check-not="store i" --implicit-check-not="call void @__msan"
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -13,7 +14,7 @@ entry:
 
 ; CHECK-LABEL: @main
 ; CHECK: store i32 0, i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*)
-; CHECK: call void @__msan_warning_with_origin_noreturn
+; CONST: call void @__msan_warning_with_origin_noreturn
 ; CHECK: ret i32 undef
 
 
@@ -41,7 +42,7 @@ entry:
 }
 
 ; CHECK-LABEL: @StoreUndef
-; CHECK: store i32
-; CHECK: store i32
-; CHECK: store i32
+; CHECK: store i32 -1,
+; CONST: store i32 0,
+; CHECK: store i32 undef,
 ; CHECK: ret void
