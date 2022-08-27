@@ -2,7 +2,6 @@ algorithm
 array
 atomic
 bit
-bitset
 cctype
 climits
 cmath

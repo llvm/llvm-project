@@ -34,7 +34,6 @@ new
 optional
 ostream
 ratio
-sstream
 stdexcept
 streambuf
 string

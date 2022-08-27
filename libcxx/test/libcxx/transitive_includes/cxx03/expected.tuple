@@ -8,7 +8,6 @@ initializer_list
 iosfwd
 limits
 new
-tuple
 type_traits
 typeinfo
 utility

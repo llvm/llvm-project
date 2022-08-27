@@ -19,7 +19,6 @@ ctime
 cwchar
 cwctype
 exception
-format
 functional
 initializer_list
 ios

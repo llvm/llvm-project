@@ -20,5 +20,4 @@ stdexcept
 tuple
 type_traits
 typeinfo
-unordered_set
 version

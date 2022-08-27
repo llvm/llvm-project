@@ -3,6 +3,5 @@ compare
 cstddef
 cstdint
 limits
-tuple
 type_traits
 version

@@ -12,7 +12,6 @@ cstdint
 cstdlib
 cstring
 ctime
-deque
 exception
 functional
 initializer_list

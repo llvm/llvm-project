@@ -19,7 +19,6 @@ iterator
 limits
 memory
 new
-numeric
 optional
 ratio
 stdexcept

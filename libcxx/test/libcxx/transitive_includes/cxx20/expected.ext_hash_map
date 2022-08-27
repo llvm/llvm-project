@@ -16,7 +16,6 @@ ctime
 cwchar
 cwctype
 exception
-ext/hash_map
 functional
 initializer_list
 iosfwd

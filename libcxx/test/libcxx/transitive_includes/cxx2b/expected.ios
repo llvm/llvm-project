@@ -15,7 +15,6 @@ cwchar
 cwctype
 exception
 initializer_list
-ios
 iosfwd
 limits
 memory

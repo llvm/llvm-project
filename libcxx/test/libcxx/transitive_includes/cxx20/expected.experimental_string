@@ -17,7 +17,6 @@ cwchar
 cwctype
 exception
 experimental/memory_resource
-experimental/string
 experimental/utility
 functional
 initializer_list

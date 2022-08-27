@@ -11,5 +11,4 @@ limits
 new
 stdexcept
 type_traits
-valarray
 version
