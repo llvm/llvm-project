@@ -4277,9 +4277,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       if (usesConstantBus(MRI, MO, MI.getDesc().OpInfo[OpIdx])) {
         if (MO.isReg()) {
           SGPRUsed = MO.getReg();
-          if (llvm::all_of(SGPRsUsed, [SGPRUsed](unsigned SGPR) {
-                return SGPRUsed != SGPR;
-              })) {
+          if (!llvm::is_contained(SGPRsUsed, SGPRUsed)) {
             ++ConstantBusCount;
             SGPRsUsed.push_back(SGPRUsed);
           }
