@@ -847,10 +847,7 @@ void WinEHPrepare::cloneCommonBlocks(Function &F) {
           ColorVector &IncomingColors = BlockColors[IncomingBlock];
           assert(!IncomingColors.empty() && "Block not colored!");
           assert((IncomingColors.size() == 1 ||
-                  llvm::all_of(IncomingColors,
-                               [&](BasicBlock *Color) {
-                                 return Color != FuncletPadBB;
-                               })) &&
+                  !llvm::is_contained(IncomingColors, FuncletPadBB)) &&
                  "Cloning should leave this funclet's blocks monochromatic");
           EdgeTargetsFunclet = (IncomingColors.front() == FuncletPadBB);
         }
