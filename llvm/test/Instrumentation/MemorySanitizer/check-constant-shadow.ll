@@ -46,3 +46,32 @@ entry:
 ; CONST: store i32 0,
 ; CHECK: store i32 undef,
 ; CHECK: ret void
+
+
+; This function stores known initialized value, but msan can't prove this.
+define i32 @MaybeUninitialized(<2 x i64> noundef %acc) nounwind uwtable sanitize_memory {
+entry:
+  %shift = shufflevector <2 x i64> %acc, <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
+  %0 = add <2 x i64> %shift, %acc
+  %1 = bitcast <2 x i64> %0 to <4 x i32>
+  %conv = extractelement <4 x i32> %1, i64 0
+  ret i32 %conv
+}
+
+; CHECK-LABEL: @MaybeUninitialized
+; CHECK: store i32 extractelement (<4 x i32> bitcast (<2 x i64> <i64 0, i64 undef> to <4 x i32>), i64 0), i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
+; CHECK: store i32 0, i32* @__msan_retval_origin_tls
+
+; This function stores known initialized value, but msan can't prove this.
+define noundef i32 @MaybeUninitializedRetNoUndef(<2 x i64> noundef %acc) nounwind uwtable sanitize_memory {
+entry:
+  %shift = shufflevector <2 x i64> %acc, <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
+  %0 = add <2 x i64> %shift, %acc
+  %1 = bitcast <2 x i64> %0 to <4 x i32>
+  %conv = extractelement <4 x i32> %1, i64 0
+  ret i32 %conv
+}
+
+; CHECK-LABEL: @MaybeUninitializedRetNoUndef
+; CONST: br i1 icmp ne (i32 extractelement (<4 x i32> bitcast (<2 x i64> <i64 0, i64 undef> to <4 x i32>), i64 0), i32 0)
+; CONST: call void @__msan_warning_with_origin_noreturn
