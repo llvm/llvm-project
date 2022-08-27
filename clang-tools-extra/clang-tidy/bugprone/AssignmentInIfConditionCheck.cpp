@@ -17,23 +17,50 @@ namespace tidy {
 namespace bugprone {
 
 void AssignmentInIfConditionCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(ifStmt(hasCondition(forEachDescendant(
-                         binaryOperator(isAssignmentOperator())
-                             .bind("assignment_in_if_statement")))),
-                     this);
-  Finder->addMatcher(ifStmt(hasCondition(forEachDescendant(
-                         cxxOperatorCallExpr(isAssignmentOperator())
-                             .bind("assignment_in_if_statement")))),
-                     this);
+  Finder->addMatcher(translationUnitDecl(), this);
 }
 
 void AssignmentInIfConditionCheck::check(
-    const MatchFinder::MatchResult &Result) {
-  const auto *MatchedDecl =
-      Result.Nodes.getNodeAs<clang::Stmt>("assignment_in_if_statement");
-  if (!MatchedDecl) {
-    return;
-  }
+    const ast_matchers::MatchFinder::MatchResult &Result) {
+  class Visitor : public RecursiveASTVisitor<Visitor> {
+    AssignmentInIfConditionCheck &Check;
+
+  public:
+    explicit Visitor(AssignmentInIfConditionCheck &Check) : Check(Check) {}
+    bool VisitIfStmt(IfStmt *If) {
+      class ConditionVisitor : public RecursiveASTVisitor<ConditionVisitor> {
+        AssignmentInIfConditionCheck &Check;
+
+      public:
+        explicit ConditionVisitor(AssignmentInIfConditionCheck &Check)
+            : Check(Check) {}
+
+        // Dont traverse into any lambda expressions.
+        bool TraverseLambdaExpr(LambdaExpr *, DataRecursionQueue * = nullptr) {
+          return true;
+        }
+
+        bool VisitBinaryOperator(BinaryOperator *BO) {
+          if (BO->isAssignmentOp())
+            Check.report(BO);
+          return true;
+        }
+
+        bool VisitCXXOperatorCallExpr(CXXOperatorCallExpr *OCE) {
+          if (OCE->isAssignmentOp())
+            Check.report(OCE);
+          return true;
+        }
+      };
+
+      ConditionVisitor(Check).TraverseStmt(If->getCond());
+      return true;
+    }
+  };
+  Visitor(*this).TraverseAST(*Result.Context);
+}
+
+void AssignmentInIfConditionCheck::report(const Expr *MatchedDecl) {
   diag(MatchedDecl->getBeginLoc(),
        "an assignment within an 'if' condition is bug-prone");
   diag(MatchedDecl->getBeginLoc(),
