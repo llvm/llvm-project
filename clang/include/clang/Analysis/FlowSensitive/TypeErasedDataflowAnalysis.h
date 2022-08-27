@@ -79,9 +79,9 @@ public:
   virtual bool isEqualTypeErased(const TypeErasedLattice &,
                                  const TypeErasedLattice &) = 0;
 
-  /// Applies the analysis transfer function for a given statement and
-  /// type-erased lattice element.
-  virtual void transferTypeErased(const Stmt *, TypeErasedLattice &,
+  /// Applies the analysis transfer function for a given control flow graph
+  /// element and type-erased lattice element.
+  virtual void transferTypeErased(const CFGElement *, TypeErasedLattice &,
                                   Environment &) = 0;
 
   /// If the built-in transfer functions (which model the heap and stack in the
@@ -104,10 +104,10 @@ struct TypeErasedDataflowAnalysisState {
       : Lattice(std::move(Lattice)), Env(std::move(Env)) {}
 };
 
-/// Transfers the state of a basic block by evaluating each of its statements in
+/// Transfers the state of a basic block by evaluating each of its elements in
 /// the context of `Analysis` and the states of its predecessors that are
-/// available in `BlockStates`. `HandleTransferredStmt` (if provided) will be
-/// applied to each statement in the block, after it is evaluated.
+/// available in `BlockStates`. `PostVisitCFG` (if provided) will be applied to
+/// each element in the block, after it is evaluated.
 ///
 /// Requirements:
 ///
@@ -119,23 +119,23 @@ TypeErasedDataflowAnalysisState transferBlock(
     llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates,
     const CFGBlock &Block, const Environment &InitEnv,
     TypeErasedDataflowAnalysis &Analysis,
-    std::function<void(const CFGStmt &,
+    std::function<void(const CFGElement &,
                        const TypeErasedDataflowAnalysisState &)>
-        HandleTransferredStmt = nullptr);
+        PostVisitCFG = nullptr);
 
 /// Performs dataflow analysis and returns a mapping from basic block IDs to
 /// dataflow analysis states that model the respective basic blocks. Indices of
 /// the returned vector correspond to basic block IDs. Returns an error if the
 /// dataflow analysis cannot be performed successfully. Otherwise, calls
-/// `PostVisitStmt` on each statement with the final analysis results at that
+/// `PostVisitCFG` on each CFG element with the final analysis results at that
 /// program point.
 llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const ControlFlowContext &CFCtx, TypeErasedDataflowAnalysis &Analysis,
     const Environment &InitEnv,
-    std::function<void(const CFGStmt &,
+    std::function<void(const CFGElement &,
                        const TypeErasedDataflowAnalysisState &)>
-        PostVisitStmt = nullptr);
+        PostVisitCFG = nullptr);
 
 } // namespace dataflow
 } // namespace clang
