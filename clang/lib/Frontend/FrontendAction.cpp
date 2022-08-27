@@ -11,8 +11,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/CAS/IncludeTree.h"
+#include "clang/Basic/Sarif.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -20,6 +22,7 @@
 #include "clang/Frontend/IncludeTreePPActions.h"
 #include "clang/Frontend/LayoutOverrideSource.h"
 #include "clang/Frontend/MultiplexConsumer.h"
+#include "clang/Frontend/SARIFDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LiteralSupport.h"
@@ -37,6 +40,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
 #include <system_error>
 using namespace clang;
 
@@ -719,8 +723,14 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       return false;
     }
   }
-  if (!CI.hasSourceManager())
+  if (!CI.hasSourceManager()) {
     CI.createSourceManager(CI.getFileManager());
+    if (CI.getDiagnosticOpts().getFormat() == DiagnosticOptions::SARIF) {
+      static_cast<SARIFDiagnosticPrinter *>(&CI.getDiagnosticClient())
+          ->setSarifWriter(
+              std::make_unique<SarifDocumentWriter>(CI.getSourceManager()));
+    }
+  }
 
   // Set up embedding for any specified files. Do this before we load any
   // source files, including the primary module map for the compilation.

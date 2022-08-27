@@ -13,6 +13,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/SourceManager.h"
@@ -27,6 +28,7 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Frontend/LogDiagnosticPrinter.h"
+#include "clang/Frontend/SARIFDiagnosticPrinter.h"
 #include "clang/Frontend/SerializedDiagnosticPrinter.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
@@ -351,6 +353,8 @@ CompilerInstance::createDiagnostics(DiagnosticOptions *Opts,
   // implementing -verify.
   if (Client) {
     Diags->setClient(Client, ShouldOwnClient);
+  } else if (Opts->getFormat() == DiagnosticOptions::SARIF) {
+    Diags->setClient(new SARIFDiagnosticPrinter(llvm::errs(), Opts));
   } else
     Diags->setClient(new TextDiagnosticPrinter(llvm::errs(), Opts));
 
