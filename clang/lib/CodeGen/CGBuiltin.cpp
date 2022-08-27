@@ -60,11 +60,6 @@ using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
 
-static
-int64_t clamp(int64_t Value, int64_t Low, int64_t High) {
-  return std::min(High, std::max(Low, Value));
-}
-
 static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
                              Align AlignmentInBytes) {
   ConstantInt *Byte;
@@ -16024,7 +16019,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     assert(ArgCI &&
            "Third arg to xxinsertw intrinsic must be constant integer");
     const int64_t MaxIndex = 12;
-    int64_t Index = clamp(ArgCI->getSExtValue(), 0, MaxIndex);
+    int64_t Index = std::clamp(ArgCI->getSExtValue(), (int64_t)0, MaxIndex);
 
     // The builtin semantics don't exactly match the xxinsertw instructions
     // semantics (which ppc_vsx_xxinsertw follows). The builtin extracts the
@@ -16066,7 +16061,7 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
     assert(ArgCI &&
            "Second Arg to xxextractuw intrinsic must be a constant integer!");
     const int64_t MaxIndex = 12;
-    int64_t Index = clamp(ArgCI->getSExtValue(), 0, MaxIndex);
+    int64_t Index = std::clamp(ArgCI->getSExtValue(), (int64_t)0, MaxIndex);
 
     if (getTarget().isLittleEndian()) {
       // Reverse the index.
