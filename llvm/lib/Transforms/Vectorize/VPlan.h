@@ -1139,6 +1139,7 @@ public:
            B->getVPDefID() == VPRecipeBase::VPFirstOrderRecurrencePHISC ||
            B->getVPDefID() == VPRecipeBase::VPReductionPHISC ||
            B->getVPDefID() == VPRecipeBase::VPWidenIntOrFpInductionSC ||
+           B->getVPDefID() == VPRecipeBase::VPWidenPointerInductionSC ||
            B->getVPDefID() == VPRecipeBase::VPWidenPHISC;
   }
   static inline bool classof(const VPValue *V) {
@@ -1147,6 +1148,7 @@ public:
            V->getVPValueID() == VPValue::VPVFirstOrderRecurrencePHISC ||
            V->getVPValueID() == VPValue::VPVReductionPHISC ||
            V->getVPValueID() == VPValue::VPVWidenIntOrFpInductionSC ||
+           V->getVPValueID() == VPValue::VPVWidenPointerInductionSC ||
            V->getVPValueID() == VPValue::VPVWidenPHISC;
   }
 
