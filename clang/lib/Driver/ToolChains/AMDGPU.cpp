@@ -804,10 +804,7 @@ llvm::Error AMDGPUToolChain::getSystemGPUArch(const ArgList &Args,
   }
   GPUArch = GPUArchs[0];
   if (GPUArchs.size() > 1) {
-    bool AllSame = llvm::all_of(GPUArchs, [&](const StringRef &GPUArch) {
-      return GPUArch == GPUArchs.front();
-    });
-    if (!AllSame)
+    if (!llvm::all_equal(GPUArchs))
       return llvm::createStringError(
           std::error_code(), "Multiple AMD GPUs found with different archs");
   }
