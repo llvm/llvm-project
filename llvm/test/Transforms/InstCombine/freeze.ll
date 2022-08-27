@@ -132,8 +132,7 @@ define i32 @early_freeze_test3(i32 %v1) {
 ; CHECK-LABEL: @early_freeze_test3(
 ; CHECK-NEXT:    [[V1_FR:%.*]] = freeze i32 [[V1:%.*]]
 ; CHECK-NEXT:    [[V2:%.*]] = shl i32 [[V1_FR]], 1
-; CHECK-NEXT:    [[V3:%.*]] = add i32 [[V2]], 2
-; CHECK-NEXT:    [[V4:%.*]] = or i32 [[V3]], 1
+; CHECK-NEXT:    [[V4:%.*]] = add i32 [[V2]], 3
 ; CHECK-NEXT:    ret i32 [[V4]]
 ;
   %v2 = shl i32 %v1, 1
