@@ -1856,10 +1856,8 @@ define i8 @not_lshr_bitwidth_mask(i8 %x, i8 %y) {
 
 define i16 @invert_signbit_splat_mask(i8 %x, i16 %y) {
 ; CHECK-LABEL: @invert_signbit_splat_mask(
-; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[N:%.*]] = xor i8 [[A]], -1
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[N]] to i16
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[S]], [[Y:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], i16 0, i16 [[Y:%.*]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %a = ashr i8 %x, 7
@@ -1872,10 +1870,8 @@ define i16 @invert_signbit_splat_mask(i8 %x, i16 %y) {
 define <2 x i16> @invert_signbit_splat_mask_commute(<2 x i5> %x, <2 x i16> %p) {
 ; CHECK-LABEL: @invert_signbit_splat_mask_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i16> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i5> [[X:%.*]], <i5 4, i5 poison>
-; CHECK-NEXT:    [[N:%.*]] = xor <2 x i5> [[A]], <i5 -1, i5 -1>
-; CHECK-NEXT:    [[S:%.*]] = sext <2 x i5> [[N]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i16> [[Y]], [[S]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i5> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[ISNEG]], <2 x i16> zeroinitializer, <2 x i16> [[Y]]
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y = mul <2 x i16> %p, %p ; thwart complexity-based canonicalization
@@ -1890,9 +1886,8 @@ define i16 @invert_signbit_splat_mask_use1(i8 %x, i16 %y) {
 ; CHECK-LABEL: @invert_signbit_splat_mask_use1(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[N:%.*]] = xor i8 [[A]], -1
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[N]] to i16
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[S]], [[Y:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], i16 0, i16 [[Y:%.*]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %a = ashr i8 %x, 7
@@ -1908,8 +1903,8 @@ define i16 @invert_signbit_splat_mask_use2(i8 %x, i16 %y) {
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
 ; CHECK-NEXT:    [[N:%.*]] = xor i8 [[A]], -1
 ; CHECK-NEXT:    call void @use8(i8 [[N]])
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[N]] to i16
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[S]], [[Y:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], i16 0, i16 [[Y:%.*]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %a = ashr i8 %x, 7

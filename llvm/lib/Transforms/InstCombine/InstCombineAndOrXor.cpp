@@ -2245,6 +2245,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     return SelectInst::Create(A, Op0, Constant::getNullValue(Ty));
 
   // (iN X s>> (N-1)) & Y --> (X s< 0) ? Y : 0
+  // TODO: Peek through optional sext.
   unsigned FullShift = Ty->getScalarSizeInBits() - 1;
   if (match(&I, m_c_And(m_OneUse(m_AShr(m_Value(X),
                                         m_SpecificIntAllowUndef(FullShift))),
@@ -2253,10 +2254,11 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
     return SelectInst::Create(IsNeg, Y, ConstantInt::getNullValue(Ty));
   }
   // If there's a 'not' of the shifted value, swap the select operands:
-  // ~(iN X s>> (N-1)) & Y --> (X s< 0) ? 0 : Y
-  if (match(&I, m_c_And(m_OneUse(m_Not(m_AShr(
-                            m_Value(X), m_SpecificIntAllowUndef(FullShift)))),
-                        m_Value(Y)))) {
+  // ~(iN X s>> (N-1)) & Y --> (X s< 0) ? 0 : Y -- with optional sext
+  if (match(&I, m_c_And(m_OneUse(m_SExtOrSelf(
+                            m_Not(m_AShr(m_Value(X), m_APIntAllowUndef(C))))),
+                        m_Value(Y))) &&
+      *C == X->getType()->getScalarSizeInBits() - 1) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
     return SelectInst::Create(IsNeg, ConstantInt::getNullValue(Ty), Y);
   }
