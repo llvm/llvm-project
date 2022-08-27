@@ -1593,6 +1593,15 @@ void ObjFile::registerEhFrames(Section &ehFrameSection) {
     funcSym->unwindEntry = isec;
     ehRelocator.commit();
   }
+
+  // __eh_frame is marked as S_ATTR_LIVE_SUPPORT in input files, because FDEs
+  // are normally required to be kept alive if they reference a live symbol.
+  // However, we've explicitly created a dependency from a symbol to its FDE, so
+  // dead-stripping will just work as usual, and S_ATTR_LIVE_SUPPORT will only
+  // serve to incorrectly prevent us from dead-stripping duplicate FDEs for a
+  // live symbol (e.g. if there were multiple weak copies). Remove this flag to
+  // let dead-stripping proceed correctly.
+  ehFrameSection.flags &= ~S_ATTR_LIVE_SUPPORT;
 }
 
 std::string ObjFile::sourceFile() const {
