@@ -12,6 +12,7 @@ Building the fuzzers
 Building the LLDB fuzzers requires a build configuration that has the address sanitizer and sanitizer coverage enabled. In addition to your regular CMake arguments, you will need these argumets to build the fuzzers:
 
 ::
+
    -DLLVM_USE_SANITIZER='Address' \
    -DLLVM_USE_SANITIZE_COVERAGE=On \
    -DCLANG_ENABLE_PROTO_FUZZER=ON
@@ -23,6 +24,7 @@ If you want to debug LLDB itself when you find a bug using the fuzzers, use the 
 To build a fuzzer, run the desired ninja command for the fuzzer(s) you want to build:
 
 ::
+
    $ ninja lldb-target-fuzzer
    $ ninja lldb-commandinterpreter-fuzzer
    $ ninja lldb-expression-fuzzer
@@ -40,6 +42,7 @@ Running the fuzzers
 If you want to run the fuzzers locally, you can run the binaries that were generated with ninja from the build directory:
 
 ::
+
    $ ./bin/lldb-target-fuzzer
    $ ./bin/lldb-commandinterpreter-fuzzer
    $ ./bin/lldb-expression-fuzzer
@@ -51,6 +54,7 @@ Another way to run the fuzzers is to use a ninja target that will both build the
 To run the custom ninja targets, run the command for your desired fuzzer:
 
 ::
+
    $ ninja fuzz-lldb-target
    $ ninja fuzz-lldb-commandinterpreter
    $ ninja fuzz-lldb-expression
@@ -65,4 +69,5 @@ When running the fuzzers using the custom ninja targets shown above, the inputs 
 If you want to reproduce the issue found by a fuzzer once you have gotten the input, you can pass the individual input to the fuzzer binary as a command-line argument:
 
 ::
+
    $ ./<fuzzer binary> <input you are investigating>
