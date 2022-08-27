@@ -11,9 +11,9 @@
 
 // CHECK: "-fcas-path" "[[PREFIX]]/cas"
 // CHECK: "-fcas-include-tree"
+// CHECK: "-isysroot"
 // SHOULD-NOT: "-fcas-fs"
 // SHOULD-NOT: "-fcas-fs-working-directory"
-// SHOULD-NOT: "-isysroot"
 // SHOULD-NOT: "-I"
 // SHOULD-NOT: "[[PREFIX]]/t.c"
 // SHOULD-NOT: "-D"

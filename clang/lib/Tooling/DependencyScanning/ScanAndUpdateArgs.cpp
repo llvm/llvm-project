@@ -85,7 +85,11 @@ static void updateCompilerInvocation(CompilerInvocation &Invocation,
   if (ProduceIncludeTree) {
     Invocation.getFrontendOpts().CASIncludeTreeID = RootID;
     Invocation.getFrontendOpts().Inputs.clear();
+    // Preserve sysroot path to accommodate lookup for 'SDKSettings.json' during
+    // availability checking.
+    std::string OriginalSysroot = Invocation.getHeaderSearchOpts().Sysroot;
     Invocation.getHeaderSearchOpts() = HeaderSearchOptions();
+    Invocation.getHeaderSearchOpts().Sysroot = OriginalSysroot;
     auto &PPOpts = Invocation.getPreprocessorOpts();
     // We don't need this because we save the contents of the PCH file in the
     // include tree root.

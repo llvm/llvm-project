@@ -1,0 +1,23 @@
+{
+  "DefaultVariant": "macos", "DisplayName": "macOS 11",
+  "Version": "11.0",
+  "MaximumDeploymentTarget": "11.0.99",
+  "PropertyConditionFallbackNames": [], "VersionMap": {
+    "iOSMac_macOS": {
+      "13.2": "10.15.1",
+      "13.4": "10.15.4",
+      "13.3.1": "10.15.3",
+      "13.3": "10.15.2",
+      "13.1": "10.15",
+      "14.0": "11.0"
+    },
+    "macOS_iOSMac": {
+      "10.15.2": "13.3",
+      "11.0": "14.0",
+      "10.15": "13.1",
+      "10.15.3": "13.3.1",
+      "10.15.1": "13.2",
+      "10.15.4": "13.4"
+    }
+  }
+}

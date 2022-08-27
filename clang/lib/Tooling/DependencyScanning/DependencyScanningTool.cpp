@@ -296,9 +296,11 @@ void IncludeTreePPConsumer::handleHasIncludeCheck(Preprocessor &PP,
 void IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
   FileManager &FM = CI.getFileManager();
 
-  auto addFile = [&](StringRef FilePath) -> bool {
+  auto addFile = [&](StringRef FilePath, bool IgnoreFileError = false) -> bool {
     llvm::ErrorOr<const FileEntry *> FE = FM.getFile(FilePath);
     if (!FE) {
+      if (IgnoreFileError)
+        return true;
       ErrorToReport = llvm::errorCodeToError(FE.getError());
       return false;
     }
@@ -313,6 +315,15 @@ void IncludeTreePPConsumer::finalize(CompilerInstance &CI) {
   for (StringRef FilePath : CI.getLangOpts().NoSanitizeFiles) {
     if (!addFile(FilePath))
       return;
+  }
+
+  StringRef Sysroot = CI.getHeaderSearchOpts().Sysroot;
+  if (!Sysroot.empty()) {
+    // Include 'SDKSettings.json', if it exists, to accomodate availability
+    // checks during the compilation.
+    llvm::SmallString<256> FilePath = Sysroot;
+    llvm::sys::path::append(FilePath, "SDKSettings.json");
+    addFile(FilePath, /*IgnoreFileError*/ true);
   }
 
   PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
