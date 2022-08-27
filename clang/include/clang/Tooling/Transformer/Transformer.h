@@ -112,22 +112,7 @@ private:
 };
 
 namespace detail {
-/// Asserts that all \c Metadata for the \c Rule is set.
-/// FIXME: Use constexpr-if in C++17.
-/// @{
-template <typename T>
-void assertMetadataSet(const transformer::RewriteRuleWith<T> &Rule) {
-  assert(llvm::all_of(Rule.Metadata,
-                      [](const typename transformer::Generator<T> &Metadata)
-                          -> bool { return !!Metadata; }) &&
-         "metadata generator must be provided for each rule");
-}
-template <>
-inline void assertMetadataSet(const transformer::RewriteRuleWith<void> &) {}
-/// @}
-
 /// Runs the metadata generator on \c Rule and stuffs it into \c Result.
-/// FIXME: Use constexpr-if in C++17.
 /// @{
 template <typename T>
 llvm::Error
@@ -135,17 +120,12 @@ populateMetadata(const transformer::RewriteRuleWith<T> &Rule,
                  size_t SelectedCase,
                  const ast_matchers::MatchFinder::MatchResult &Match,
                  TransformerResult<T> &Result) {
-  auto Metadata = Rule.Metadata[SelectedCase]->eval(Match);
-  if (!Metadata)
-    return Metadata.takeError();
-  Result.Metadata = std::move(*Metadata);
-  return llvm::Error::success();
-}
-template <>
-inline llvm::Error
-populateMetadata(const transformer::RewriteRuleWith<void> &, size_t,
-                 const ast_matchers::MatchFinder::MatchResult &Match,
-                 TransformerResult<void> &) {
+  if constexpr (!std::is_void_v<T>) {
+    auto Metadata = Rule.Metadata[SelectedCase]->eval(Match);
+    if (!Metadata)
+      return Metadata.takeError();
+    Result.Metadata = std::move(*Metadata);
+  }
   return llvm::Error::success();
 }
 /// @}
@@ -165,7 +145,11 @@ public:
                         [](const transformer::RewriteRuleBase::Case &Case)
                             -> bool { return !!Case.Edits; }) &&
            "edit generator must be provided for each rule");
-    assertMetadataSet(Rule);
+    if constexpr (!std::is_void_v<T>)
+      assert(llvm::all_of(Rule.Metadata,
+                          [](const typename transformer::Generator<T> &Metadata)
+                              -> bool { return !!Metadata; }) &&
+             "metadata generator must be provided for each rule");
   }
 
 private:
