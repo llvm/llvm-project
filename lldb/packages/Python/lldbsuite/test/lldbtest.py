@@ -1255,21 +1255,23 @@ class Base(unittest2.TestCase):
         """Returns the architecture of the lldb binary."""
         if not hasattr(self, 'lldbArchitecture'):
 
-            # spawn local process
+            # These two target settings prevent lldb from doing setup that does
+            # nothing but slow down the end goal of printing the architecture.
             command = [
                 lldbtest_config.lldbExec,
-                "-o",
-                "file " + lldbtest_config.lldbExec,
-                "-o",
-                "quit"
+                "-x",
+                "-b",
+                "-o", "settings set target.preload-symbols false",
+                "-o", "settings set target.load-script-from-symbol-file false",
+                "-o", "file " + lldbtest_config.lldbExec,
             ]
 
             output = check_output(command)
-            str = output.decode("utf-8")
+            str = output.decode()
 
             for line in str.splitlines():
                 m = re.search(
-                    "Current executable set to '.*' \\((.*)\\)\\.", line)
+                    r"Current executable set to '.*' \((.*)\)\.", line)
                 if m:
                     self.lldbArchitecture = m.group(1)
                     break
