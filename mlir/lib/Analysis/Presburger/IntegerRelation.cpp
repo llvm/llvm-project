@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Debug.h"
+#include <numeric>
 
 #define DEBUG_TYPE "presburger"
 
@@ -537,7 +538,7 @@ static void eliminateFromConstraint(IntegerRelation *constraints,
     return;
   int64_t pivotCoeff = constraints->atEq(pivotRow, pivotCol);
   int64_t sign = (leadCoeff * pivotCoeff > 0) ? -1 : 1;
-  int64_t lcm = mlir::lcm(pivotCoeff, leadCoeff);
+  int64_t lcm = std::lcm(pivotCoeff, leadCoeff);
   int64_t pivotMultiplier = sign * (lcm / std::abs(pivotCoeff));
   int64_t rowMultiplier = lcm / std::abs(leadCoeff);
 
@@ -1827,7 +1828,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
         if (l == pos)
           continue;
         assert(lbCoeff >= 1 && ubCoeff >= 1 && "bounds wrongly identified");
-        int64_t lcm = mlir::lcm(lbCoeff, ubCoeff);
+        int64_t lcm = std::lcm(lbCoeff, ubCoeff);
         ineq.push_back(atIneq(ubPos, l) * (lcm / ubCoeff) +
                        atIneq(lbPos, l) * (lcm / lbCoeff));
         assert(lcm > 0 && "lcm should be positive!");
