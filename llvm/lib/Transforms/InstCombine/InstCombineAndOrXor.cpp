@@ -2246,15 +2246,16 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   // (iN X s>> (N-1)) & Y --> (X s< 0) ? Y : 0
   unsigned FullShift = Ty->getScalarSizeInBits() - 1;
-  if (match(&I, m_c_And(m_OneUse(m_AShr(m_Value(X), m_SpecificInt(FullShift))),
+  if (match(&I, m_c_And(m_OneUse(m_AShr(m_Value(X),
+                                        m_SpecificIntAllowUndef(FullShift))),
                         m_Value(Y)))) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
     return SelectInst::Create(IsNeg, Y, ConstantInt::getNullValue(Ty));
   }
   // If there's a 'not' of the shifted value, swap the select operands:
   // ~(iN X s>> (N-1)) & Y --> (X s< 0) ? 0 : Y
-  if (match(&I, m_c_And(m_OneUse(m_Not(
-                            m_AShr(m_Value(X), m_SpecificInt(FullShift)))),
+  if (match(&I, m_c_And(m_OneUse(m_Not(m_AShr(
+                            m_Value(X), m_SpecificIntAllowUndef(FullShift)))),
                         m_Value(Y)))) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
     return SelectInst::Create(IsNeg, ConstantInt::getNullValue(Ty), Y);
