@@ -232,6 +232,12 @@ bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueIni
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitSubstNonTypeTemplateParmExpr(
+    const SubstNonTypeTemplateParmExpr *E) {
+  return this->visit(E->getReplacement());
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true);
   return this->Visit(E);

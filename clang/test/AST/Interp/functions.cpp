@@ -65,3 +65,11 @@ constexpr int recursion(int i) {
   return recursion(i);
 }
 static_assert(recursion(10) == 0, "");
+
+template<int N = 5>
+constexpr decltype(N) getNum() {
+  return N;
+}
+static_assert(getNum<-2>() == -2, "");
+static_assert(getNum<10>() == 10, "");
+static_assert(getNum() == 5, "");
