@@ -58,26 +58,6 @@ TEST(ExecutorAddrTest, PtrConversionWithFunctionType) {
   EXPECT_EQ(FPtr, &F);
 }
 
-TEST(ExecutorAddrTest, WrappingAndUnwrapping) {
-  constexpr uintptr_t RawAddr = 0x123456;
-  int *RawPtr = (int *)RawAddr;
-
-  constexpr uintptr_t TagOffset = 8 * (sizeof(uintptr_t) - 1);
-  uintptr_t TagVal = 0xA5;
-  uintptr_t TagBits = TagVal << TagOffset;
-  void *TaggedPtr = (void *)((uintptr_t)RawPtr | TagBits);
-
-  ExecutorAddr EA =
-      ExecutorAddr::fromPtr(TaggedPtr, ExecutorAddr::Untag(8, TagOffset));
-
-  EXPECT_EQ(EA.getValue(), RawAddr);
-
-  void *ReconstitutedTaggedPtr =
-      EA.toPtr<void *>(ExecutorAddr::Tag(TagVal, TagOffset));
-
-  EXPECT_EQ(TaggedPtr, ReconstitutedTaggedPtr);
-}
-
 TEST(ExecutorAddrTest, AddrRanges) {
   ExecutorAddr A0(0), A1(1), A2(2), A3(3);
   ExecutorAddrRange R0(A0, A1), R1(A1, A2), R2(A2, A3), R3(A0, A2), R4(A1, A3);
