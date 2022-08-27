@@ -281,7 +281,8 @@ void RuntimePointerChecking::tryToCreateDiffCheck(
 
   auto *SrcAR = dyn_cast<SCEVAddRecExpr>(Src->Expr);
   auto *SinkAR = dyn_cast<SCEVAddRecExpr>(Sink->Expr);
-  if (!SrcAR || !SinkAR) {
+  if (!SrcAR || !SinkAR || SrcAR->getLoop() != DC.getInnermostLoop() ||
+      SinkAR->getLoop() != DC.getInnermostLoop()) {
     CanUseDiffCheck = false;
     return;
   }
