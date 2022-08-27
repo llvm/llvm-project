@@ -17,11 +17,10 @@
 ; RELOCS-NEXT:     0x0 R_ARM_PREL31 .text._ZdlPv
 ; RELOCS-NEXT:   }
 ; RELOCS-NEXT:   Section (7) .rel.text.test {
-; RELOCS-NEXT:     0x4 R_ARM_CALL _ZdlPv
-; FIXME: these two relocation should not be against the section!
-; RELOCS-NEXT:     0xC R_ARM_ABS32 .text._ZdlPv
-; RELOCS-NEXT:     0x10 R_ARM_ABS32 .text._ZdlPv
-; RELOCS-NEXT:     0x1C R_ARM_REL32 _ZdlPv
+; RELOCS-NEXT:     0x4 R_ARM_CALL .L_ZdlPv$local
+; RELOCS-NEXT:     0xC R_ARM_ABS32 .L_ZdlPv$local
+; RELOCS-NEXT:     0x10 R_ARM_ABS32 .L_ZdlPv$local
+; RELOCS-NEXT:     0x1C R_ARM_REL32 .L_ZdlPv$local
 ; RELOCS-NEXT:   }
 ; RELOCS-NEXT:   Section (9) .rel.ARM.exidx.text.test {
 ; RELOCS-NEXT:     0x0 R_ARM_PREL31 .text.test
@@ -32,17 +31,15 @@
 ; RELOCS-NEXT: ]
 
 ; RELOCS-LABEL: Symbols [
-; RELOCS: Symbol {
-; FIXME: we should include the symbol in the symbol table!
-; RELOCS-NOT:    Name: .L_ZdlPv$local
-; RELOCS-TODO:   Name: .L_ZdlPv$local
-; RELOCS-TODO:   Value: 0x1
-; RELOCS-TODO:   Size: 2
-; RELOCS-TODO:   Binding: Local (0x0)
-; RELOCS-TODO:   Type: Function (0x2)
-; RELOCS-TODO:   Other: 0
-; RELOCS-TODO:   Section: .text._ZdlPv (
-; RELOCS-TODO: }
+; RELOCS:      Symbol {
+; RELOCS:        Name: .L_ZdlPv$local
+; RELOCS-NEXT:   Value: 0x1
+; RELOCS-NEXT:   Size: 2
+; RELOCS-NEXT:   Binding: Local (0x0)
+; RELOCS-NEXT:   Type: Function (0x2)
+; RELOCS-NEXT:   Other: 0
+; RELOCS-NEXT:   Section: .text._ZdlPv (
+; RELOCS-NEXT: }
 
 define dso_local void @_ZdlPv(ptr %ptr) local_unnamed_addr nounwind "target-features"="+armv7-a,+thumb-mode" {
 ; CHECK-LABEL: 	.section	.text._ZdlPv,"ax",%progbits
@@ -53,11 +50,13 @@ define dso_local void @_ZdlPv(ptr %ptr) local_unnamed_addr nounwind "target-feat
 ; CHECK-NEXT: 	.thumb_func
 ; CHECK-NEXT: _ZdlPv:
 ; CHECK-NEXT: .L_ZdlPv$local:
+; CHECK-NEXT: .type .L_ZdlPv$local,%function
 ; CHECK-NEXT: 	.fnstart
 ; CHECK-NEXT: @ %bb.0:
 ; CHECK-NEXT: 	bx	lr
 ; CHECK-NEXT: .Lfunc_end0:
 ; CHECK-NEXT: 	.size	_ZdlPv, .Lfunc_end0-_ZdlPv
+; CHECK-NEXT: 	.size .L_ZdlPv$local, .Lfunc_end0-_ZdlPv
 ; CHECK-NEXT: 	.cantunwind
 ; CHECK-NEXT: 	.fnend
   ret void
@@ -68,7 +67,7 @@ define ptr @test(ptr %ptr) nounwind {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r11, lr}
 ; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    bl _ZdlPv{{$}}
+; CHECK-NEXT:    bl .L_ZdlPv$local
 ; CHECK-NEXT:    ldr r0, .LCPI1_0
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    .long .L_ZdlPv$local
@@ -84,7 +83,7 @@ define ptr @test(ptr %ptr) nounwind {
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI1_0:
-; CHECK-NEXT:    .long _ZdlPv-(.LPC1_0+8)
+; CHECK-NEXT:    .long .L_ZdlPv$local-(.LPC1_0+8)
 entry:
   call void @_ZdlPv(ptr %ptr)
   ; This inline assembly is needed to highlight the missing Thumb LSB since

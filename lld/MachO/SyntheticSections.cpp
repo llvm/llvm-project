@@ -659,11 +659,38 @@ void StubsSection::writeTo(uint8_t *buf) const {
 
 void StubsSection::finalize() { isFinal = true; }
 
-bool StubsSection::addEntry(Symbol *sym) {
+static void addBindingsForStub(Symbol *sym) {
+  if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
+    if (sym->isWeakDef()) {
+      in.binding->addEntry(dysym, in.lazyPointers->isec,
+                           sym->stubsIndex * target->wordSize);
+      in.weakBinding->addEntry(sym, in.lazyPointers->isec,
+                               sym->stubsIndex * target->wordSize);
+    } else {
+      in.lazyBinding->addEntry(dysym);
+    }
+  } else if (auto *defined = dyn_cast<Defined>(sym)) {
+    if (defined->isExternalWeakDef()) {
+      in.rebase->addEntry(in.lazyPointers->isec,
+                          sym->stubsIndex * target->wordSize);
+      in.weakBinding->addEntry(sym, in.lazyPointers->isec,
+                               sym->stubsIndex * target->wordSize);
+    } else if (defined->interposable) {
+      in.lazyBinding->addEntry(sym);
+    } else {
+      llvm_unreachable("invalid stub target");
+    }
+  } else {
+    llvm_unreachable("invalid stub target symbol type");
+  }
+}
+
+void StubsSection::addEntry(Symbol *sym) {
   bool inserted = entries.insert(sym);
-  if (inserted)
+  if (inserted) {
     sym->stubsIndex = entries.size() - 1;
-  return inserted;
+    addBindingsForStub(sym);
+  }
 }
 
 StubHelperSection::StubHelperSection()

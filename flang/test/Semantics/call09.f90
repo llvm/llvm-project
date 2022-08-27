@@ -29,6 +29,9 @@ module m
     !ERROR: A dummy procedure without the POINTER attribute may not have an INTENT attribute
     procedure(realfunc), intent(in) :: p
   end subroutine
+  subroutine s05(p)
+    procedure(realfunc), pointer, intent(in out) :: p
+  end subroutine
 
   subroutine selemental1(p)
     procedure(cos) :: p ! ok
@@ -82,10 +85,9 @@ module m
     call s02(ip)
     !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
     call s02(procptr())
+    call s02(null()) ! ok
     !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
-    call s02(null())
-    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
-    call s02(null(p))
+    call s05(null())
     !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
     call s02(sin)
   end subroutine

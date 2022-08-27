@@ -87,10 +87,10 @@ struct _C_node
     explicit _C_node(void* __c, __c_node* __n)
         : __c_node(__c, __n) {}
 
-    virtual bool __dereferenceable(const void*) const;
-    virtual bool __decrementable(const void*) const;
-    virtual bool __addable(const void*, ptrdiff_t) const;
-    virtual bool __subscriptable(const void*, ptrdiff_t) const;
+    bool __dereferenceable(const void*) const override;
+    bool __decrementable(const void*) const override;
+    bool __addable(const void*, ptrdiff_t) const override;
+    bool __subscriptable(const void*, ptrdiff_t) const override;
 };
 
 template <class _Cont>

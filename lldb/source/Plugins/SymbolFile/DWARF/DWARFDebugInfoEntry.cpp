@@ -547,6 +547,17 @@ uint64_t DWARFDebugInfoEntry::GetAttributeValueAsUnsigned(
   return fail_value;
 }
 
+llvm::Optional<uint64_t>
+DWARFDebugInfoEntry::GetAttributeValueAsOptionalUnsigned(
+    const DWARFUnit *cu, const dw_attr_t attr,
+    bool check_specification_or_abstract_origin) const {
+  DWARFFormValue form_value;
+  if (GetAttributeValue(cu, attr, form_value, nullptr,
+                        check_specification_or_abstract_origin))
+    return form_value.Unsigned();
+  return llvm::None;
+}
+
 // GetAttributeValueAsReference
 //
 // Get the value of an attribute as reference and fix up and compile unit

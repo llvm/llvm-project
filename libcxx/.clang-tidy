@@ -15,6 +15,7 @@ Checks: >
 
   modernize-loop-convert,
   modernize-redundant-void-arg,
+  modernize-use-override,
 
   readability-duplicate-include,
   readability-identifier-naming,
@@ -49,7 +50,6 @@ CheckOptions:
 # modernize-use-equals-default,
 # modernize-use-equals-delete,
 # modernize-use-nullptr,
-# modernize-use-override,
 # portability-restrict-system-includes,
 # readability-function-cognitive-complexity,
 # readability-implicit-bool-conversion,

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_CPP_BLOCKSTORE_H
-#define LLVM_LIBC_SUPPORT_CPP_BLOCKSTORE_H
+#ifndef LLVM_LIBC_SUPPORT_BLOCKSTORE_H
+#define LLVM_LIBC_SUPPORT_BLOCKSTORE_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -203,4 +203,4 @@ using ReverseOrderBlockStore = BlockStore<T, BLOCK_SIZE, true>;
 } // namespace cpp
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SUPPORT_CPP_BLOCKSTORE_H
+#endif // LLVM_LIBC_SUPPORT_BLOCKSTORE_H

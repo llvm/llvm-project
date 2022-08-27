@@ -60,7 +60,7 @@ void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
   //   A pointer-object shall not depend on the value,
   //   bounds, or association status of another pointer-
   //   object in the same NULLIFY statement.
-  // This restriction is the programmer's responsibilty.
+  // This restriction is the programmer's responsibility.
   // Some dependencies can be found compile time or at
   // runtime, but for now we choose to skip such checks.
 }

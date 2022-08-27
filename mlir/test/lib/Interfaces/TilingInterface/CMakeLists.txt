@@ -12,4 +12,5 @@ add_mlir_library(MLIRTilingInterfaceTestPasses
   MLIRSCFDialect
   MLIRSCFTransforms
   MLIRTensorDialect
+  MLIRTensorTilingInterfaceImpl
   )

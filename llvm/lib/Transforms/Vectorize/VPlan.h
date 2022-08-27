@@ -2680,12 +2680,6 @@ public:
     return map_range(Operands, Fn);
   }
 
-  /// Returns true if \p VPV is uniform after vectorization.
-  bool isUniformAfterVectorization(VPValue *VPV) const {
-    auto RepR = dyn_cast_or_null<VPReplicateRecipe>(VPV->getDef());
-    return !VPV->getDef() || (RepR && RepR->isUniform());
-  }
-
   /// Returns the VPRegionBlock of the vector loop.
   VPRegionBlock *getVectorLoopRegion() {
     return cast<VPRegionBlock>(getEntry()->getSingleSuccessor());
@@ -3061,6 +3055,12 @@ bool onlyFirstLaneUsed(VPValue *Def);
 /// create a new one.
 VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
                                        ScalarEvolution &SE);
+
+/// Returns true if \p VPV is uniform after vectorization.
+inline bool isUniformAfterVectorization(VPValue *VPV) {
+  auto RepR = dyn_cast_or_null<VPReplicateRecipe>(VPV->getDef());
+  return !VPV->getDef() || (RepR && RepR->isUniform());
+}
 } // end namespace vputils
 
 } // end namespace llvm

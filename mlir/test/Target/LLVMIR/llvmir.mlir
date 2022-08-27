@@ -1054,13 +1054,13 @@ llvm.func @llvm_noalias(%arg0: !llvm.ptr<f32> {llvm.noalias}) {
   llvm.return
 }
 
-// CHECK-LABEL: define void @byvalattr(i32* byval(i32) %
-llvm.func @byvalattr(%arg0: !llvm.ptr<i32> {llvm.byval}) {
+// CHECK-LABEL: define void @byvalattr(ptr byval(i32) %
+llvm.func @byvalattr(%arg0: !llvm.ptr<i32> {llvm.byval = i32}) {
   llvm.return
 }
 
-// CHECK-LABEL: define void @sretattr(i32* sret(i32) %
-llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret}) {
+// CHECK-LABEL: define void @sretattr(ptr sret(i32) %
+llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret = i32}) {
   llvm.return
 }
 

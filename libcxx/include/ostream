@@ -197,7 +197,7 @@ public:
     inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1
     explicit basic_ostream(basic_streambuf<char_type, traits_type>* __sb)
     { this->init(__sb); }
-    virtual ~basic_ostream();
+    ~basic_ostream() override;
 protected:
     inline _LIBCPP_INLINE_VISIBILITY
     basic_ostream(basic_ostream&& __rhs);

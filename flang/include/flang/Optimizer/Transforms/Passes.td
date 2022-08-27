@@ -39,6 +39,10 @@ def AbstractResultOnFuncOpt : AbstractResultOptBase<"func", "mlir::func::FuncOp"
   let constructor = "::fir::createAbstractResultOnFuncOptPass()";
 }
 
+def AbstractResultOnGlobalOpt : AbstractResultOptBase<"global", "fir::GlobalOp"> {
+  let constructor = "::fir::createAbstractResultOnGlobalOptPass()";
+}
+
 def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
   let summary = "Promotes `fir.{do_loop,if}` to `affine.{for,if}`.";
   let description = [{

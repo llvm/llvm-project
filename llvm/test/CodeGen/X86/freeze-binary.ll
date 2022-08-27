@@ -128,15 +128,13 @@ define i32 @freeze_add_nsw(i32 %a0) nounwind {
 ; X86-LABEL: freeze_add_nsw:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    incl %eax
-; X86-NEXT:    incl %eax
+; X86-NEXT:    addl $2, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_add_nsw:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal 1(%rdi), %eax
-; X64-NEXT:    incl %eax
+; X64-NEXT:    leal 2(%rdi), %eax
 ; X64-NEXT:    retq
   %x = add nsw i32 %a0, 1
   %y = freeze i32 %x
@@ -272,15 +270,15 @@ define i32 @freeze_mul_nsw(i32 %a0) nounwind {
 ; X86-LABEL: freeze_mul_nsw:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    leal (%eax,%eax,2), %eax
 ; X86-NEXT:    leal (%eax,%eax,4), %eax
+; X86-NEXT:    leal (%eax,%eax,2), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_mul_nsw:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rdi,2), %eax
-; X64-NEXT:    leal (%rax,%rax,4), %eax
+; X64-NEXT:    leal (%rdi,%rdi,4), %eax
+; X64-NEXT:    leal (%rax,%rax,2), %eax
 ; X64-NEXT:    retq
   %x = mul nsw i32 %a0, 3
   %y = freeze i32 %x
@@ -344,15 +342,13 @@ define i32 @freeze_shl_nsw(i32 %a0) nounwind {
 ; X86-LABEL: freeze_shl_nsw:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $3, %eax
-; X86-NEXT:    shll $5, %eax
+; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_shl_nsw:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (,%rdi,8), %eax
-; X64-NEXT:    shll $5, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shll $8, %eax
 ; X64-NEXT:    retq
   %x = shl nsw i32 %a0, 3
   %y = freeze i32 %x
@@ -398,8 +394,7 @@ define <2 x i64> @freeze_shl_vec(<2 x i64> %a0) nounwind {
 define <2 x i64> @freeze_shl_vec_outofrange(<2 x i64> %a0) nounwind {
 ; X86-LABEL: freeze_shl_vec_outofrange:
 ; X86:       # %bb.0:
-; X86-NEXT:    paddq %xmm0, %xmm0
-; X86-NEXT:    psllq $2, %xmm0
+; X86-NEXT:    psllq $3, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_shl_vec_outofrange:

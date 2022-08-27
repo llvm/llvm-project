@@ -453,6 +453,8 @@ lldb::SearchFilterSP ItaniumABILanguageRuntime::CreateExceptionSearchFilter() {
     // Apple binaries.
     filter_modules.EmplaceBack("libc++abi.dylib");
     filter_modules.EmplaceBack("libSystem.B.dylib");
+    filter_modules.EmplaceBack("libc++abi.1.0.dylib");
+    filter_modules.EmplaceBack("libc++abi.1.dylib");
   }
   return target.GetSearchFilterForModuleList(&filter_modules);
 }

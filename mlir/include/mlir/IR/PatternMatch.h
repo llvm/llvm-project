@@ -1098,10 +1098,9 @@ void assertArgs(PatternRewriter &rewriter, ArrayRef<PDLValue> values,
     llvm::report_fatal_error(msg);
   };
   (void)errorFn;
-  (assert(succeeded(
-       ProcessPDLValue<typename FnTraitsT::template arg_t<I + 1>>::verifyAsArg(
-           errorFn, values[I], I))),
-   ...);
+  assert((succeeded(ProcessPDLValue<typename FnTraitsT::template arg_t<I + 1>>::
+                        verifyAsArg(errorFn, values[I], I)) &&
+          ...));
 #endif
 }
 

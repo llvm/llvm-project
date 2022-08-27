@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/UInt.h"
 #include "src/__support/CPP/limits.h"
+#include "src/__support/UInt.h"
 #include "utils/UnitTest/Test.h"
 
 namespace __llvm_libc {

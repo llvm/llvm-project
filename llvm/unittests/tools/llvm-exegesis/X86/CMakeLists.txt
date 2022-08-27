@@ -1,6 +1,6 @@
 add_llvm_exegesis_unittest_includes(
   ${LLVM_MAIN_SRC_DIR}/lib/Target/X86
-  ${LLVM_LIBRARY_DIR}/Target/X86
+  ${LLVM_BINARY_DIR}/lib/Target/X86
   ${LLVM_MAIN_SRC_DIR}/tools/llvm-exegesis/lib
   )
 

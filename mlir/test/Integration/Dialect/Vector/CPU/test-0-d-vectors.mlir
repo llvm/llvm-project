@@ -120,6 +120,13 @@ func.func @fma_0d(%four: vector<f32>) {
   return
 }
 
+func.func @transpose_0d(%arg: vector<i32>) {
+  %1 = vector.transpose %arg, [] : vector<i32> to vector<i32>
+  // CHECK: ( 42 )
+  vector.print %1: vector<i32>
+  return
+}
+
 func.func @entry() {
   %0 = arith.constant 42.0 : f32
   %1 = arith.constant dense<0.0> : vector<f32>
@@ -151,6 +158,8 @@ func.func @entry() {
 
   %5 = arith.constant dense<4.0> : vector<f32>
   call  @fma_0d(%5) : (vector<f32>) -> ()
+  %6 = arith.constant dense<42> : vector<i32>
+  call @transpose_0d(%6) : (vector<i32>) -> ()
 
   return
 }

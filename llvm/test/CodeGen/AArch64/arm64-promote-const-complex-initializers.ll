@@ -8,7 +8,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios14.0.0"
 
 define [1 x <4 x float>] @test1() {
-; CHECK-LABEL:    .p2align    4               ; -- Begin function test1
+; CHECK-LABEL:    .p2align    4, 0x0              ; -- Begin function test1
 ; CHECK-NEXT: lCPI0_0:
 ; CHECK-NEXT:     .quad   0                       ; 0x0
 ; CHECK-NEXT:     .quad   4575657221408423936     ; 0x3f80000000000000
@@ -28,7 +28,7 @@ define [1 x <4 x float>] @test1() {
 }
 
 define [1 x <4 x float>] @test2() {
-; CHECK-LABEL:    .p2align    4               ; -- Begin function test2
+; CHECK-LABEL:    .p2align    4, 0x0              ; -- Begin function test2
 ; CHECK-NEXT: lCPI1_0:
 ; CHECK-NEXT:     .long   0x00000000              ; float 0
 ; CHECK-NEXT:     .long   0x00000000              ; float 0

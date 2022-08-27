@@ -233,6 +233,19 @@ func.func @round(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
   return
 }
 
+// CHECK-LABEL: func @roundeven(
+// CHECK-SAME:             %[[F:.*]]: f32, %[[V:.*]]: vector<4xf32>, %[[T:.*]]: tensor<4x4x?xf32>)
+func.func @roundeven(%f: f32, %v: vector<4xf32>, %t: tensor<4x4x?xf32>) {
+  // CHECK: %{{.*}} = math.roundeven %[[F]] : f32
+  %0 = math.roundeven %f : f32
+  // CHECK: %{{.*}} = math.roundeven %[[V]] : vector<4xf32>
+  %1 = math.roundeven %v : vector<4xf32>
+  // CHECK: %{{.*}} = math.roundeven %[[T]] : tensor<4x4x?xf32>
+  %2 = math.roundeven %t : tensor<4x4x?xf32>
+  return
+}
+
+
 // CHECK-LABEL: func @ipowi(
 // CHECK-SAME:             %[[I:.*]]: i32, %[[V:.*]]: vector<4xi32>, %[[T:.*]]: tensor<4x4x?xi32>)
 func.func @ipowi(%i: i32, %v: vector<4xi32>, %t: tensor<4x4x?xi32>) {

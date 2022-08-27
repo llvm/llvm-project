@@ -107,7 +107,7 @@ private:
   MVT XLenVT = MVT::i32;
   uint8_t MaxInterleaveFactor = 2;
   RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
-  BitVector UserReservedRegister;
+  std::bitset<RISCV::NUM_TARGET_REGS> UserReservedRegister;
   RISCVFrameLowering FrameLowering;
   RISCVInstrInfo InstrInfo;
   RISCVRegisterInfo RegInfo;

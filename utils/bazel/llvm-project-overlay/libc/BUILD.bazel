@@ -62,7 +62,7 @@ cc_library(
 cc_library(
     name = "__support_cpp_limits",
     hdrs = ["src/__support/CPP/limits.h"],
-    deps = [":libc_root", "__support_cpp_uint"],
+    deps = [":libc_root"],
 )
 
 cc_library(
@@ -88,27 +88,9 @@ cc_library(
 )
 
 cc_library(
-    name = "__support_cpp_uint",
-    hdrs = [
-        "src/__support/CPP/UInt.h",
-    ],
-    deps = [":libc_root","__support_cpp_array"],
-)
-
-cc_library(
-    name = "__support_cpp_uint128",
-    hdrs = [
-        "src/__support/CPP/UInt128.h",
-    ],
-    deps = [":libc_root",":__support_cpp_uint"],
-)
-
-cc_library(
     name = "__support_cpp_type_traits",
-    hdrs = [
-        "src/__support/CPP/type_traits.h",
-    ],
-    deps = [":libc_root","__support_cpp_uint"],
+    hdrs = ["src/__support/CPP/type_traits.h"],
+    deps = [":libc_root"],
 )
 
 cc_library(
@@ -131,6 +113,26 @@ cc_library(
     hdrs = ["src/__support/CPP/atomic.h"],
     deps = [
         ":__support_cpp_type_traits",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_uint",
+    hdrs = ["src/__support/UInt.h"],
+    deps = [
+        "__support_cpp_array",
+        "__support_cpp_limits",
+        "__support_cpp_type_traits",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_cpp_uint128",
+    hdrs = ["src/__support/UInt128.h"],
+    deps = [
+        ":__support_uint",
         ":libc_root",
     ],
 )
@@ -479,8 +481,8 @@ cc_library(
         ":__support_common",
         ":__support_fputil",
         ":__support_fputil_polyeval",
-        ":range_reduction",
         ":libc_root",
+        ":range_reduction",
     ],
 )
 

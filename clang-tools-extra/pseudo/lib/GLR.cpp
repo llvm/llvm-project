@@ -598,8 +598,8 @@ private:
 
 } // namespace
 
-const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
-                           const Language &Lang) {
+ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
+                     const Language &Lang) {
   GLRReduce Reduce(Params, Lang);
   assert(isNonterminal(StartSymbol) && "Start symbol must be a nonterminal");
   llvm::ArrayRef<ForestNode> Terminals = Params.Forest.createTerminals(Params.Code);
@@ -686,7 +686,7 @@ const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
     return Result;
   };
   if (auto *Result = SearchForAccept(Heads))
-    return *Result;
+    return *const_cast<ForestNode *>(Result); // Safe: we created all nodes.
   // We failed to parse the input, returning an opaque forest node for recovery.
   // FIXME: as above, we can add fallback error handling so this is impossible.
   return Params.Forest.createOpaque(StartSymbol, /*Token::Index=*/0);

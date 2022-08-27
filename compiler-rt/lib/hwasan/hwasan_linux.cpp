@@ -110,26 +110,84 @@ static void InitializeShadowBaseAddress(uptr shadow_size_bytes) {
       FindDynamicShadowStart(shadow_size_bytes);
 }
 
-void InitializeOsSupport() {
+static void MaybeDieIfNoTaggingAbi(const char *message) {
+  if (!flags()->fail_without_syscall_abi)
+    return;
+  Printf("FATAL: %s\n", message);
+  Die();
+}
+
 #  define PR_SET_TAGGED_ADDR_CTRL 55
 #  define PR_GET_TAGGED_ADDR_CTRL 56
 #  define PR_TAGGED_ADDR_ENABLE (1UL << 0)
 #  define ARCH_GET_UNTAG_MASK 0x4001
 #  define ARCH_ENABLE_TAGGED_ADDR 0x4002
-  // Check we're running on a kernel that can use the tagged address ABI.
-  int local_errno = 0;
-  bool has_abi;
+#  define ARCH_GET_MAX_TAG_BITS 0x4003
+
+static bool CanUseTaggingAbi() {
 #  if defined(__x86_64__)
-  has_abi = (internal_iserror(internal_arch_prctl(ARCH_GET_UNTAG_MASK, 0),
-                              &local_errno) &&
-             local_errno == EINVAL);
+  unsigned long num_bits = 0;
+  // Check for x86 LAM support. This API is based on a currently unsubmitted
+  // patch to the Linux kernel (as of August 2022) and is thus subject to
+  // change. The patch is here:
+  // https://lore.kernel.org/all/20220815041803.17954-1-kirill.shutemov@linux.intel.com/
+  //
+  // arch_prctl(ARCH_GET_MAX_TAG_BITS, &bits) returns the maximum number of tag
+  // bits the user can request, or zero if LAM is not supported by the hardware.
+  if (internal_iserror(internal_arch_prctl(ARCH_GET_MAX_TAG_BITS,
+                                           reinterpret_cast<uptr>(&num_bits))))
+    return false;
+  // The platform must provide enough bits for HWASan tags.
+  if (num_bits < kTagBits)
+    return false;
+  return true;
 #  else
-  has_abi =
-      (internal_iserror(internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0),
-                        &local_errno) &&
-       local_errno == EINVAL);
-#  endif
-  if (has_abi) {
+  // Check for ARM TBI support.
+  return !internal_iserror(internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0));
+#  endif // __x86_64__
+}
+
+static bool EnableTaggingAbi() {
+#  if defined(__x86_64__)
+  // Enable x86 LAM tagging for the process.
+  //
+  // arch_prctl(ARCH_ENABLE_TAGGED_ADDR, bits) enables tagging if the number of
+  // tag bits requested by the user does not exceed that provided by the system.
+  // arch_prctl(ARCH_GET_UNTAG_MASK, &mask) returns the mask of significant
+  // address bits. It is ~0ULL if either LAM is disabled for the process or LAM
+  // is not supported by the hardware.
+  if (internal_iserror(internal_arch_prctl(ARCH_ENABLE_TAGGED_ADDR, kTagBits)))
+    return false;
+  unsigned long mask = 0;
+  // Make sure the tag bits are where we expect them to be.
+  if (internal_iserror(internal_arch_prctl(ARCH_GET_UNTAG_MASK,
+                                           reinterpret_cast<uptr>(&mask))))
+    return false;
+  // @mask has ones for non-tag bits, whereas @kAddressTagMask has ones for tag
+  // bits. Therefore these masks must not overlap.
+  if (mask & kAddressTagMask)
+    return false;
+  return true;
+#  else
+  // Enable ARM TBI tagging for the process. If for some reason tagging is not
+  // supported, prctl(PR_SET_TAGGED_ADDR_CTRL, PR_TAGGED_ADDR_ENABLE) returns
+  // -EINVAL.
+  if (internal_iserror(internal_prctl(PR_SET_TAGGED_ADDR_CTRL,
+                                      PR_TAGGED_ADDR_ENABLE, 0, 0, 0)))
+    return false;
+  // Ensure that TBI is enabled.
+  if (internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0) !=
+      PR_TAGGED_ADDR_ENABLE)
+    return false;
+  return true;
+#  endif // __x86_64__
+}
+
+void InitializeOsSupport() {
+  // Check we're running on a kernel that can use the tagged address ABI.
+  bool has_abi = CanUseTaggingAbi();
+
+  if (!has_abi) {
 #  if SANITIZER_ANDROID || defined(HWASAN_ALIASING_MODE)
     // Some older Android kernels have the tagged pointer ABI on
     // unconditionally, and hence don't have the tagged-addr prctl while still
@@ -138,40 +196,22 @@ void InitializeOsSupport() {
     // case.
     return;
 #  else
-    if (flags()->fail_without_syscall_abi) {
-      Printf(
-          "FATAL: "
-          "HWAddressSanitizer requires a kernel with tagged address ABI.\n");
-      Die();
-    }
+    MaybeDieIfNoTaggingAbi(
+        "HWAddressSanitizer requires a kernel with tagged address ABI.");
 #  endif
   }
 
-  // Turn on the tagged address ABI.
-  if ((internal_iserror(internal_prctl(PR_SET_TAGGED_ADDR_CTRL,
-                                       PR_TAGGED_ADDR_ENABLE, 0, 0, 0)) ||
-       !internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0))) {
-#  if defined(__x86_64__) && !defined(HWASAN_ALIASING_MODE)
-    // Try the new prctl API for Intel LAM.  The API is based on a currently
-    // unsubmitted patch to the Linux kernel (as of July 2022) and is thus
-    // subject to change.  Patch is here:
-    // https://lore.kernel.org/linux-mm/20220712231328.5294-1-kirill.shutemov@linux.intel.com/
-    if (!internal_iserror(
-            internal_arch_prctl(ARCH_ENABLE_TAGGED_ADDR, kTagBits))) {
-      return;
-    }
-#  endif  // defined(__x86_64__) && !defined(HWASAN_ALIASING_MODE)
-    if (flags()->fail_without_syscall_abi) {
-      Printf(
-          "FATAL: HWAddressSanitizer failed to enable tagged address syscall "
-          "ABI.\nSuggest check `sysctl abi.tagged_addr_disabled` "
-          "configuration.\n");
-      Die();
-    }
-  }
-#  undef PR_SET_TAGGED_ADDR_CTRL
-#  undef PR_GET_TAGGED_ADDR_CTRL
-#  undef PR_TAGGED_ADDR_ENABLE
+  if (EnableTaggingAbi())
+    return;
+
+#  if SANITIZER_ANDROID
+  MaybeDieIfNoTaggingAbi(
+      "HWAddressSanitizer failed to enable tagged address syscall ABI.\n"
+      "Check the `sysctl abi.tagged_addr_disabled` configuration.");
+#  else
+  MaybeDieIfNoTaggingAbi(
+      "HWAddressSanitizer failed to enable tagged address syscall ABI.\n");
+#  endif
 }
 
 bool InitShadow() {

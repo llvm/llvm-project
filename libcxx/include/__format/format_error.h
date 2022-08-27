@@ -31,7 +31,7 @@ public:
       : runtime_error(__s) {}
   _LIBCPP_HIDE_FROM_ABI explicit format_error(const char* __s)
       : runtime_error(__s) {}
-  virtual ~format_error() noexcept;
+  ~format_error() noexcept override;
 };
 
 _LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void

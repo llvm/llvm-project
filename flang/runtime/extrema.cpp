@@ -423,12 +423,10 @@ public:
     if (extremum_) {
       std::memcpy(p, extremum_, byteSize);
     } else {
-      // empty array
-      if constexpr (KIND == 1) { // ASCII
-        *p = IS_MAXVAL ? 0 : 127; // 127 required by standard
-      } else {
-        std::memset(p, IS_MAXVAL ? 0 : 255, byteSize);
-      }
+      // Empty array; fill with character 0 for MAXVAL.
+      // For MINVAL, fill with 127 if ASCII as required
+      // by the standard, otherwise set all of the bits.
+      std::memset(p, IS_MAXVAL ? 0 : KIND == 1 ? 127 : 255, byteSize);
     }
   }
   bool Accumulate(const Type *x) {

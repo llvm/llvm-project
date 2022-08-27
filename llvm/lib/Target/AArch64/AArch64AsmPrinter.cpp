@@ -219,6 +219,10 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
       Feat00Flags |= 0x4000; // Object also has EHCont.
     }
 
+    if (M.getModuleFlag("ms-kernel")) {
+      Feat00Flags |= 0x40000000; // Object is compiled with /kernel.
+    }
+
     OutStreamer->emitSymbolAttribute(S, MCSA_Global);
     OutStreamer->emitAssignment(
         S, MCConstantExpr::create(Feat00Flags, MMI->getContext()));

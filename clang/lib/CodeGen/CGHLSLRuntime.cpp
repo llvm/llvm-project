@@ -14,7 +14,9 @@
 
 #include "CGHLSLRuntime.h"
 #include "CodeGenModule.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/TargetOptions.h"
+#include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 
@@ -40,16 +42,18 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   IRBuilder<> B(M.getContext());
   MDNode *Val = MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(Major)),
                                   ConstantAsMetadata::get(B.getInt32(Minor))});
-  StringRef DxilValKey = "dx.valver";
-  M.addModuleFlag(llvm::Module::ModFlagBehavior::AppendUnique, DxilValKey, Val);
+  StringRef DXILValKey = "dx.valver";
+  auto *DXILValMD = M.getOrInsertNamedMetadata(DXILValKey);
+  DXILValMD->addOperand(Val);
 }
 } // namespace
 
 void CGHLSLRuntime::finishCodeGen() {
   auto &TargetOpts = CGM.getTarget().getTargetOpts();
-
   llvm::Module &M = CGM.getModule();
-  addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
+  Triple T(M.getTargetTriple());
+  if (T.getArch() == Triple::ArchType::dxil)
+    addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
 }
 
 void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
@@ -87,11 +91,55 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
             ConstantAsMetadata::get(B.getInt32(Counter))}));
 }
 
-void clang::CodeGen::CGHLSLRuntime::setHLSLFunctionAttributes(
-    llvm::Function *F, const FunctionDecl *FD) {
-  if (HLSLShaderAttr *ShaderAttr = FD->getAttr<HLSLShaderAttr>()) {
-    const StringRef ShaderAttrKindStr = "hlsl.shader";
-    F->addFnAttr(ShaderAttrKindStr,
-                 ShaderAttr->ConvertShaderTypeToStr(ShaderAttr->getType()));
+void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
+    const FunctionDecl *FD, llvm::Function *Fn) {
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "All entry functions must have a HLSLShaderAttr");
+  const StringRef ShaderAttrKindStr = "hlsl.shader";
+  Fn->addFnAttr(ShaderAttrKindStr,
+                ShaderAttr->ConvertShaderTypeToStr(ShaderAttr->getType()));
+}
+
+llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
+                                              const ParmVarDecl &D) {
+  assert(D.hasAttrs() && "Entry parameter missing annotation attribute!");
+  if (D.hasAttr<HLSLSV_GroupIndexAttr>()) {
+    llvm::Function *DxGroupIndex =
+        CGM.getIntrinsic(Intrinsic::dx_flattened_thread_id_in_group);
+    return B.CreateCall(FunctionCallee(DxGroupIndex));
   }
+  assert(false && "Unhandled parameter attribute");
+  return nullptr;
+}
+
+void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
+                                      llvm::Function *Fn) {
+  llvm::Module &M = CGM.getModule();
+  llvm::LLVMContext &Ctx = M.getContext();
+  auto *EntryTy = llvm::FunctionType::get(llvm::Type::getVoidTy(Ctx), false);
+  Function *EntryFn =
+      Function::Create(EntryTy, Function::ExternalLinkage, FD->getName(), &M);
+
+  // Copy function attributes over, we have no argument or return attributes
+  // that can be valid on the real entry.
+  AttributeList NewAttrs = AttributeList::get(Ctx, AttributeList::FunctionIndex,
+                                              Fn->getAttributes().getFnAttrs());
+  EntryFn->setAttributes(NewAttrs);
+  setHLSLEntryAttributes(FD, EntryFn);
+
+  // Set the called function as internal linkage.
+  Fn->setLinkage(GlobalValue::InternalLinkage);
+
+  BasicBlock *BB = BasicBlock::Create(Ctx, "entry", EntryFn);
+  IRBuilder<> B(BB);
+  llvm::SmallVector<Value *> Args;
+  // FIXME: support struct parameters where semantics are on members.
+  for (const auto *Param : FD->parameters()) {
+    Args.push_back(emitInputSemantic(B, *Param));
+  }
+
+  CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args);
+  (void)CI;
+  // FIXME: Handle codegen for return type semantics.
+  B.CreateRetVoid();
 }

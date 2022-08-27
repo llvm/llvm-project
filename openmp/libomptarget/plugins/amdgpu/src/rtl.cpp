@@ -3534,25 +3534,37 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
   return DeviceInfo().getOffloadEntriesTable(DeviceId);
 }
 
-void *__tgt_rtl_data_alloc(int DeviceId, int64_t size, void *, int32_t kind) {
-  void *ptr = nullptr;
+void *__tgt_rtl_data_alloc(int DeviceId, int64_t Size, void *, int32_t Kind) {
+  void *Ptr = nullptr;
   assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
 
-  {
-    // We don't have HSA-profiling timestamps for device allocation, so just get
-    // the start and end system timestamps for OMPT
-    OmptTimestampRAII AllocTimestamp;
-    ptr = DeviceInfo().DeviceAllocators[DeviceId].allocate(size, nullptr,
-                                                          (TargetAllocTy)kind);
-  }
-  if (kind == TARGET_ALLOC_SHARED) {
-    __tgt_rtl_set_coarse_grain_mem_region(ptr, size);
+  hsa_amd_memory_pool_t MemoryPool;
+  switch (Kind) {
+  case TARGET_ALLOC_DEFAULT:
+    // GPU memory
+    MemoryPool = DeviceInfo().getDeviceMemoryPool(DeviceId);
+    break;
+  case TARGET_ALLOC_HOST:
+    // non-migratable memory accessible by host and device(s)
+    MemoryPool = DeviceInfo().getHostMemoryPool();
+    break;
+  default:
+    REPORT("Invalid target data allocation kind or requested allocator not "
+           "implemented yet\n");
+    return NULL;
   }
 
-  DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", size,
-     (long long unsigned)(Elf64_Addr)ptr);
+  OmptTimestampRAII AllocTimestamp;
+  hsa_status_t Err = hsa_amd_memory_pool_allocate(MemoryPool, Size, 0, &Ptr);
+ 
+  if (Kind == TARGET_ALLOC_SHARED) {
+    __tgt_rtl_set_coarse_grain_mem_region(Ptr, Size);
+  }
 
-  return ptr;
+  DP("Tgt alloc data %ld bytes, (tgt:%016llx).\n", Size,
+     (long long unsigned)(Elf64_Addr)Ptr);
+  Ptr = (Err == HSA_STATUS_SUCCESS) ? Ptr : NULL;
+  return Ptr;
 }
 
 void *__tgt_rtl_data_lock(int DeviceId, void *TgtPtr, int64_t size) {
@@ -3658,7 +3670,15 @@ int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr) {
   // We don't have HSA-profiling timestamps for device delete, so just get the
   // start and end system timestamps for OMPT
   OmptTimestampRAII DeleteTimestamp;
-  return DeviceInfo().DeviceAllocators[DeviceId].dev_free(TgtPtr);
+  // HSA can free pointers allocated from different types of memory pool.
+  hsa_status_t Err;
+  DP("Tgt free data (tgt:%016llx).\n", (long long unsigned)(Elf64_Addr)TgtPtr);
+  Err = core::Runtime::Memfree(TgtPtr);
+  if (Err != HSA_STATUS_SUCCESS) {
+    DP("Error when freeing CUDA memory\n");
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t __tgt_rtl_run_target_team_region(int32_t DeviceId, void *TgtEntryPtr,

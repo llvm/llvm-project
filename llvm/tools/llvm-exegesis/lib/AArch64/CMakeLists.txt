@@ -1,6 +1,6 @@
 include_directories(
   ${LLVM_MAIN_SRC_DIR}/lib/Target/AArch64
-  ${LLVM_LIBRARY_DIR}/Target/AArch64
+  ${LLVM_BINARY_DIR}/lib/Target/AArch64
   )
 
 set(LLVM_LINK_COMPONENTS

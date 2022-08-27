@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/UInt.h"
+#include "src/__support/UInt.h"
 
 #include "utils/UnitTest/Test.h"
 

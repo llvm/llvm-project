@@ -354,6 +354,14 @@ def SPV_IAddCarryOp : SPV_BinaryOp<"IAddCarry",
     SPV_AnyStruct:$result
   );
 
+  let builders = [
+    OpBuilder<(ins "Value":$operand1, "Value":$operand2), [{
+      build($_builder, $_state,
+            ::mlir::spirv::StructType::get({operand1.getType(), operand1.getType()}),
+            operand1, operand2);
+    }]>
+  ];
+
   let hasVerifier = 1;
 }
 
@@ -484,6 +492,14 @@ def SPV_ISubBorrowOp : SPV_BinaryOp<"ISubBorrow", SPV_AnyStruct, SPV_Integer,
   let results = (outs
     SPV_AnyStruct:$result
   );
+
+  let builders = [
+    OpBuilder<(ins "Value":$operand1, "Value":$operand2), [{
+      build($_builder, $_state,
+            ::mlir::spirv::StructType::get({operand1.getType(), operand1.getType()}),
+            operand1, operand2);
+    }]>
+  ];
 
   let hasVerifier = 1;
 }

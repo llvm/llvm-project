@@ -1,4 +1,4 @@
-; RUN: opt -passes='print-access-info' -disable-output  < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<access-info>' -disable-output  < %s 2>&1 | FileCheck %s
 
 ; Test to confirm LAA will not find store to invariant address.
 ; Inner loop has no store to invariant address.

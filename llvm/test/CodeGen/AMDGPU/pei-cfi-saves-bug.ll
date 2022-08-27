@@ -86,6 +86,7 @@ end:                                  ; preds = %entry
 define dso_local fastcc void @func_needs_fp() unnamed_addr #0 {
 ; CHECK-LABEL: func_needs_fp:
 ; CHECK:       func_needs_fp$local:
+; CHECK-NEXT:    .type func_needs_fp$local,@function
 ; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_or_saveexec_b64 s[16:17], -1

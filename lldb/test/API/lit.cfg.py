@@ -155,8 +155,8 @@ else:
 # Build dotest command.
 dotest_cmd = [os.path.join(config.lldb_src_root, 'test', 'API', 'dotest.py')]
 
-if is_configured('dotest_args_str'):
-  dotest_cmd.extend(config.dotest_args_str.split(';'))
+if is_configured('dotest_common_args_str'):
+  dotest_cmd.extend(config.dotest_common_args_str.split(';'))
 
 # Library path may be needed to locate just-built clang and libcxx.
 if is_configured('llvm_libs_dir'):
@@ -234,6 +234,20 @@ elif 'lldb-simulator-tvos' in config.available_features:
 if is_configured('enabled_plugins'):
   for plugin in config.enabled_plugins:
     dotest_cmd += ['--enable-plugin', plugin]
+
+# `dotest` args come from three different sources:
+# 1. Derived by CMake based on its configs (LLDB_TEST_COMMON_ARGS), which end
+# up in `dotest_common_args_str`.
+# 2. CMake user parameters (LLDB_TEST_USER_ARGS), which end up in
+# `dotest_user_args_str`.
+# 3. With `llvm-lit "--param=dotest-args=..."`, which end up in
+# `dotest_lit_args_str`.
+# Check them in this order, so that more specific overrides are visited last.
+# In particular, (1) is visited at the top of the file, since the script
+# derives other information from it.
+
+if is_configured('dotest_user_args_str'):
+  dotest_cmd.extend(config.dotest_user_args_str.split(';'))
 
 if is_configured('dotest_lit_args_str'):
   # We don't want to force users passing arguments to lit to use `;` as a

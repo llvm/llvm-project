@@ -353,8 +353,8 @@ class _LIBCPP_EXCEPTION_ABI bad_cast
  public:
   bad_cast() _NOEXCEPT;
   bad_cast(const bad_cast&) _NOEXCEPT = default;
-  virtual ~bad_cast() _NOEXCEPT;
-  virtual const char* what() const _NOEXCEPT;
+  ~bad_cast() _NOEXCEPT override;
+  const char* what() const _NOEXCEPT override;
 };
 
 class _LIBCPP_EXCEPTION_ABI bad_typeid
@@ -362,8 +362,8 @@ class _LIBCPP_EXCEPTION_ABI bad_typeid
 {
  public:
   bad_typeid() _NOEXCEPT;
-  virtual ~bad_typeid() _NOEXCEPT;
-  virtual const char* what() const _NOEXCEPT;
+  ~bad_typeid() _NOEXCEPT override;
+  const char* what() const _NOEXCEPT override;
 };
 
 } // namespace std

@@ -12,6 +12,8 @@
 #include "lldb/Host/Pipe.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include "TestingSupport/Host/SocketTestUtilities.h"
+#include "TestingSupport/SubsystemRAII.h"
 
 #include <thread>
 
@@ -21,30 +23,31 @@
 
 using namespace lldb_private;
 
-#ifndef _WIN32
-static void CommunicationReadTest(bool use_read_thread) {
-  Pipe pipe;
-  ASSERT_THAT_ERROR(pipe.CreateNew(/*child_process_inherit=*/false).ToError(),
-                    llvm::Succeeded());
+class CommunicationTest : public testing::Test {
+private:
+  SubsystemRAII<Socket> m_subsystems;
+};
 
-  Status error;
-  size_t bytes_written;
-  ASSERT_THAT_ERROR(pipe.Write("test", 4, bytes_written).ToError(),
-                    llvm::Succeeded());
-  ASSERT_EQ(bytes_written, 4U);
+static void CommunicationReadTest(bool use_read_thread) {
+  std::unique_ptr<TCPSocket> a, b;
+  ASSERT_TRUE(CreateTCPConnectedSockets("localhost", &a, &b));
+
+  size_t num_bytes = 4;
+  ASSERT_THAT_ERROR(a->Write("test", num_bytes).ToError(), llvm::Succeeded());
+  ASSERT_EQ(num_bytes, 4U);
 
   Communication comm("test");
-  comm.SetConnection(std::make_unique<ConnectionFileDescriptor>(
-      pipe.ReleaseReadFileDescriptor(), /*owns_fd=*/true));
+  comm.SetConnection(std::make_unique<ConnectionFileDescriptor>(b.release()));
   comm.SetCloseOnEOF(true);
 
-  if (use_read_thread)
+  if (use_read_thread) {
     ASSERT_TRUE(comm.StartReadThread());
+  }
 
   // This read should wait for the data to become available and return it.
   lldb::ConnectionStatus status = lldb::eConnectionStatusSuccess;
   char buf[16];
-  error.Clear();
+  Status error;
   EXPECT_EQ(
       comm.Read(buf, sizeof(buf), std::chrono::seconds(5), status, &error), 4U);
   EXPECT_EQ(status, lldb::eConnectionStatusSuccess);
@@ -68,7 +71,7 @@ static void CommunicationReadTest(bool use_read_thread) {
   EXPECT_THAT_ERROR(error.ToError(), llvm::Failed());
 
   // This read should return EOF.
-  pipe.CloseWriteFileDescriptor();
+  ASSERT_THAT_ERROR(a->Close().ToError(), llvm::Succeeded());
   error.Clear();
   EXPECT_EQ(
       comm.Read(buf, sizeof(buf), std::chrono::seconds(5), status, &error), 0U);
@@ -80,37 +83,33 @@ static void CommunicationReadTest(bool use_read_thread) {
   EXPECT_TRUE(comm.JoinReadThread());
 }
 
-TEST(CommunicationTest, Read) {
+TEST_F(CommunicationTest, Read) {
   CommunicationReadTest(/*use_thread=*/false);
 }
 
-TEST(CommunicationTest, ReadThread) {
+TEST_F(CommunicationTest, ReadThread) {
   CommunicationReadTest(/*use_thread=*/true);
 }
 
-TEST(CommunicationTest, SynchronizeWhileClosing) {
-  // Set up a communication object reading from a pipe.
-  Pipe pipe;
-  ASSERT_THAT_ERROR(pipe.CreateNew(/*child_process_inherit=*/false).ToError(),
-                    llvm::Succeeded());
+TEST_F(CommunicationTest, SynchronizeWhileClosing) {
+  std::unique_ptr<TCPSocket> a, b;
+  ASSERT_TRUE(CreateTCPConnectedSockets("localhost", &a, &b));
 
   Communication comm("test");
-  comm.SetConnection(std::make_unique<ConnectionFileDescriptor>(
-      pipe.ReleaseReadFileDescriptor(), /*owns_fd=*/true));
+  comm.SetConnection(std::make_unique<ConnectionFileDescriptor>(b.release()));
   comm.SetCloseOnEOF(true);
   ASSERT_TRUE(comm.StartReadThread());
 
   // Ensure that we can safely synchronize with the read thread while it is
   // closing the read end (in response to us closing the write end).
-  pipe.CloseWriteFileDescriptor();
+  ASSERT_THAT_ERROR(a->Close().ToError(), llvm::Succeeded());
   comm.SynchronizeWithReadThread();
 
   ASSERT_TRUE(comm.StopReadThread());
 }
-#endif
 
 #if LLDB_ENABLE_POSIX
-TEST(CommunicationTest, WriteAll) {
+TEST_F(CommunicationTest, WriteAll) {
   Pipe pipe;
   ASSERT_THAT_ERROR(pipe.CreateNew(/*child_process_inherit=*/false).ToError(),
                     llvm::Succeeded());

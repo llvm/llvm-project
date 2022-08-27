@@ -53,7 +53,7 @@ func.func @returncomplex4() -> !fir.complex<4> {
 // Test that we rewrite the signature and body of a function that returns a
 // complex<8>.
 // I32-LABEL:func @returncomplex8
-// I32-SAME: ([[ARG0:%[0-9A-Za-z]+]]: !fir.ref<tuple<!fir.real<8>, !fir.real<8>>>  {llvm.align = 4 : i32, llvm.sret})
+// I32-SAME: ([[ARG0:%[0-9A-Za-z]+]]: !fir.ref<tuple<!fir.real<8>, !fir.real<8>>>  {llvm.align = 4 : i32, llvm.sret = tuple<!fir.real<8>, !fir.real<8>>})
 // X64-LABEL: func @returncomplex8() -> tuple<!fir.real<8>, !fir.real<8>>
 // AARCH64-LABEL: func @returncomplex8() -> tuple<!fir.real<8>, !fir.real<8>>
 // PPC-LABEL: func @returncomplex8() -> tuple<!fir.real<8>, !fir.real<8>>
@@ -96,7 +96,7 @@ func.func @returncomplex8() -> !fir.complex<8> {
 }
 
 // Test that we rewrite the signature of a function that accepts a complex<4>.
-// I32-LABEL: func private @paramcomplex4(!fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval})
+// I32-LABEL: func private @paramcomplex4(!fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval = tuple<!fir.real<4>, !fir.real<4>>})
 // X64-LABEL: func private @paramcomplex4(!fir.vector<2:!fir.real<4>>)
 // AARCH64-LABEL: func private @paramcomplex4(!fir.array<2x!fir.real<4>>)
 // PPC-LABEL: func private @paramcomplex4(!fir.real<4>, !fir.real<4>)
@@ -156,7 +156,7 @@ func.func @callcomplex4() {
 }
 
 // Test that we rewrite the signature of a function that accepts a complex<8>.
-// I32-LABEL: func private @paramcomplex8(!fir.ref<tuple<!fir.real<8>, !fir.real<8>>> {llvm.align = 4 : i32, llvm.byval})
+// I32-LABEL: func private @paramcomplex8(!fir.ref<tuple<!fir.real<8>, !fir.real<8>>> {llvm.align = 4 : i32, llvm.byval = tuple<!fir.real<8>, !fir.real<8>>})
 // X64-LABEL: func private @paramcomplex8(!fir.real<8>, !fir.real<8>)
 // AARCH64-LABEL: func private @paramcomplex8(!fir.array<2x!fir.real<8>>)
 // PPC-LABEL: func private @paramcomplex8(!fir.real<8>, !fir.real<8>)
@@ -212,14 +212,14 @@ func.func @callcomplex8() {
 }
 
 // Test multiple complex<4> parameters and arguments
-// I32-LABEL: func private @calleemultipleparamscomplex4(!fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval}, !fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval}, !fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval})
+// I32-LABEL: func private @calleemultipleparamscomplex4(!fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval = tuple<!fir.real<4>, !fir.real<4>>}, !fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval = tuple<!fir.real<4>, !fir.real<4>>}, !fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval = tuple<!fir.real<4>, !fir.real<4>>})
 // X64-LABEL: func private @calleemultipleparamscomplex4(!fir.vector<2:!fir.real<4>>, !fir.vector<2:!fir.real<4>>, !fir.vector<2:!fir.real<4>>)
 // AARCH64-LABEL: func private @calleemultipleparamscomplex4(!fir.array<2x!fir.real<4>>, !fir.array<2x!fir.real<4>>, !fir.array<2x!fir.real<4>>)
 // PPC-LABEL: func private @calleemultipleparamscomplex4(!fir.real<4>, !fir.real<4>, !fir.real<4>, !fir.real<4>, !fir.real<4>, !fir.real<4>)
 func.func private @calleemultipleparamscomplex4(!fir.complex<4>, !fir.complex<4>, !fir.complex<4>) -> ()
 
 // I32-LABEL: func @multipleparamscomplex4
-// I32-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval}, [[Z2:%[0-9A-Za-z]+]]: !fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval}, [[Z3:%[0-9A-Za-z]+]]: !fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval})
+// I32-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval = tuple<!fir.real<4>, !fir.real<4>>}, [[Z2:%[0-9A-Za-z]+]]: !fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval = tuple<!fir.real<4>, !fir.real<4>>}, [[Z3:%[0-9A-Za-z]+]]: !fir.ref<tuple<!fir.real<4>, !fir.real<4>>> {llvm.align = 4 : i32, llvm.byval = tuple<!fir.real<4>, !fir.real<4>>})
 // X64-LABEL: func @multipleparamscomplex4
 // X64-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.vector<2:!fir.real<4>>, [[Z2:%[0-9A-Za-z]+]]: !fir.vector<2:!fir.real<4>>, [[Z3:%[0-9A-Za-z]+]]: !fir.vector<2:!fir.real<4>>)
 // AARCH64-LABEL: func @multipleparamscomplex4
@@ -329,7 +329,7 @@ func.func @multipleparamscomplex4(%z1 : !fir.complex<4>, %z2 : !fir.complex<4>, 
 // and returns MLIR complex<f32>.
 
 // I32-LABEL: func private @mlircomplexf32
-// I32-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval}, [[Z2:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval})
+// I32-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, [[Z2:%[0-9A-Za-z]+]]: !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>})
 // I32-SAME: -> i64
 // X64-LABEL: func private @mlircomplexf32
 // X64-SAME: ([[Z1:%[0-9A-Za-z]+]]: !fir.vector<2:f32>, [[Z2:%[0-9A-Za-z]+]]: !fir.vector<2:f32>)

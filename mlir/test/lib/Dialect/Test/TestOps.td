@@ -722,15 +722,17 @@ def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",
 
 def AttrSizedResultOp : TEST_Op<"attr_sized_results",
                                 [AttrSizedResultSegments]> {
-  let arguments = (ins
-    DenseI32ArrayAttr:$result_segment_sizes
-  );
   let results = (outs
     Variadic<I32>:$a,
     Variadic<I32>:$b,
     I32:$c,
     Variadic<I32>:$d
   );
+}
+
+def AttrSizedResultCompileTestOp : TEST_Op<"attr_sized_results_compile_test",
+                                           [AttrSizedResultSegments]> {
+  let results = (outs Variadic<I32>:$a, I32:$b, Optional<I32>:$c);
 }
 
 // This is used to test that the fallback for a custom op's parser and printer

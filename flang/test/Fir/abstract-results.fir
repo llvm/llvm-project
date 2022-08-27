@@ -3,6 +3,8 @@
 
 // RUN: fir-opt %s --abstract-result-on-func-opt | FileCheck %s --check-prefix=FUNC-REF
 // RUN: fir-opt %s --abstract-result-on-func-opt=abstract-result-as-box | FileCheck %s --check-prefix=FUNC-BOX
+// RUN: fir-opt %s --abstract-result-on-global-opt | FileCheck %s --check-prefix=GLOBAL-REF
+// RUN: fir-opt %s --abstract-result-on-global-opt=abstract-result-as-box | FileCheck %s --check-prefix=GLOBAL-BOX
 
 // ----------------------- Test declaration rewrite ----------------------------
 
@@ -252,4 +254,25 @@ func.func @test_indirect_calls(%arg0: () -> ()) {
   // FUNC-BOX: %[[conv:.*]] = fir.convert %[[original_conv]] : ((index) -> !fir.array<?xf32>) -> ((!fir.box<!fir.array<?xf32>>, index) -> ())
   // FUNC-BOX: fir.call %[[conv]](%[[box]], %c100) : (!fir.box<!fir.array<?xf32>>, index) -> ()
   // FUNC-BOX-NOT: fir.save_result
+}
+
+// ----------------------- Test GlobalOp rewrite ------------------------
+
+// This is needed to separate GlobalOp tests from FuncOp tests for FileCheck
+// FUNC-REF-LABEL: fir.global {{.*}} : {{.*}} {
+// FUNC-BOX-LABEL: fir.global {{.*}} : {{.*}} {
+
+// GLOBAL-REF-LABEL: fir.global @global_test_address_of : i32 {
+// GLOBAL-BOX-LABEL: fir.global @global_test_address_of : i32 {
+fir.global @global_test_address_of : i32 {
+  %0 = fir.address_of(@arrayfunc) : (i32) -> !fir.array<?xf32>
+
+  // GLOBAL-REF: %[[addrOf:.*]] = fir.address_of(@arrayfunc) : (!fir.ref<!fir.array<?xf32>>, i32) -> ()
+  // GLOBAL-REF: %[[conv:.*]] = fir.convert %[[addrOf]] : ((!fir.ref<!fir.array<?xf32>>, i32) -> ()) -> ((i32) -> !fir.array<?xf32>)
+
+  // GLOBAL-BOX: %[[addrOf:.*]] = fir.address_of(@arrayfunc) : (!fir.box<!fir.array<?xf32>>, i32) -> ()
+  // GLOBAL-BOX: %[[conv:.*]] = fir.convert %[[addrOf]] : ((!fir.box<!fir.array<?xf32>>, i32) -> ()) -> ((i32) -> !fir.array<?xf32>)
+
+  %c42 = arith.constant 42 : i32
+  fir.has_value %c42 : i32
 }
