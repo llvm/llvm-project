@@ -172,18 +172,29 @@ exit:
   ret void
 }
 
-; FIXME: Full no-overlap checks are required instead of difference checks, as
+; Full no-overlap checks are required instead of difference checks, as
 ; one of the add-recs used is invariant in the inner loop.
 ; Test case for PR57315.
 define void @nested_loop_outer_iv_addrec_invariant_in_inner1(ptr %a, ptr %b, i64 %n) {
 ; CHECK-LABEL: @nested_loop_outer_iv_addrec_invariant_in_inner1(
-; CHECK:       entry:
-; CHECK-NEXT:    [[B:%.*]] = ptrtoint ptr %b to i64
-; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr %a to i64
+; CHECK:        entry:
+; CHECK-NEXT:    [[N_SHL_2:%.]] = shl i64 %n, 2
+; CHECK-NEXT:    [[B_GEP_UPPER:%.*]] = getelementptr i8, ptr %b, i64 [[N_SHL_2]]
+; CHECK-NEXT:    br label %outer
+
+; CHECK:       outer.header:
+; CHECK:         [[OUTER_IV_SHL_2:%.]] = shl i64 %outer.iv, 2
+; CHECK-NEXT:    [[A_GEP_UPPER:%.*]] = getelementptr i8, ptr %a, i64 [[OUTER_IV_SHL_2]]
+; CHECK-NEXT:    [[OUTER_IV_4:%.]] = add i64 [[OUTER_IV_SHL_2]], 4
+; CHECK-NEXT:    [[A_GEP_UPPER_4:%.*]] = getelementptr i8, ptr %a, i64 [[OUTER_IV_4]]
+; CHECK:         [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %scalar.ph, label %vector.memcheck
+
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[A]], [[B]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
-; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %scalar.ph, label %vector.ph
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A_GEP_UPPER]], [[B_GEP_UPPER]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr %b, [[A_GEP_UPPER_4]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %scalar.ph, label %vector.ph
 ;
 entry:
   br label %outer.header
@@ -216,13 +227,24 @@ exit:
 ; sink and source swapped.
 define void @nested_loop_outer_iv_addrec_invariant_in_inner2(ptr %a, ptr %b, i64 %n) {
 ; CHECK-LABEL: @nested_loop_outer_iv_addrec_invariant_in_inner2(
-; CHECK:       entry:
-; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr %a to i64
-; CHECK-NEXT:    [[B:%.*]] = ptrtoint ptr %b to i64
+; CHECK:        entry:
+; CHECK-NEXT:    [[N_SHL_2:%.]] = shl i64 %n, 2
+; CHECK-NEXT:    [[B_GEP_UPPER:%.*]] = getelementptr i8, ptr %b, i64 [[N_SHL_2]]
+; CHECK-NEXT:    br label %outer
+
+; CHECK:       outer.header:
+; CHECK:         [[OUTER_IV_SHL_2:%.]] = shl i64 %outer.iv, 2
+; CHECK-NEXT:    [[A_GEP_UPPER:%.*]] = getelementptr i8, ptr %a, i64 [[OUTER_IV_SHL_2]]
+; CHECK-NEXT:    [[OUTER_IV_4:%.]] = add i64 [[OUTER_IV_SHL_2]], 4
+; CHECK-NEXT:    [[A_GEP_UPPER_4:%.*]] = getelementptr i8, ptr %a, i64 [[OUTER_IV_4]]
+; CHECK:         [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N:%.*]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %scalar.ph, label %vector.memcheck
+
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[B]], [[A]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
-; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %scalar.ph, label %vector.ph
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr %b, [[A_GEP_UPPER_4]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A_GEP_UPPER]], [[B_GEP_UPPER]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %scalar.ph, label %vector.ph
 ;
 entry:
   br label %outer.header
