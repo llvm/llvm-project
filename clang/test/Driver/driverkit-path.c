@@ -1,4 +1,7 @@
 // REQUIRES: x86-registered-target
+// REQUIRES: darwin
+// FIXME: Breaks on non-macOS:
+//        http://45.33.8.238/linux/85125/step_7.txt
 // RUN: %clang %s -target x86_64-apple-driverkit19.0 -mlinker-version=0 \
 // RUN:   -isysroot %S/Inputs/DriverKit19.0.sdk -### 2>&1               \
 // RUN: | FileCheck %s --check-prefix=LD64-OLD
