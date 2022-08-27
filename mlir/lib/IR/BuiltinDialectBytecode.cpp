@@ -81,6 +81,41 @@ enum AttributeCode {
   ///     value: APFloat
   ///   }
   kFloatAttr = 9,
+
+  ///   CallSiteLoc {
+  ///    callee: LocationAttr,
+  ///    caller: LocationAttr
+  ///   }
+  kCallSiteLoc = 10,
+
+  ///   FileLineColLoc {
+  ///     file: StringAttr,
+  ///     line: varint,
+  ///     column: varint
+  ///   }
+  kFileLineColLoc = 11,
+
+  ///   FusedLoc {
+  ///     locations: LocationAttr[]
+  ///   }
+  kFusedLoc = 12,
+
+  ///   FusedLocWithMetadata {
+  ///     locations: LocationAttr[],
+  ///     metadata: Attribute
+  ///   }
+  /// A variant of FusedLoc with metadata.
+  kFusedLocWithMetadata = 13,
+
+  ///   NameLoc {
+  ///     name: StringAttr,
+  ///     childLoc: LocationAttr
+  ///   }
+  kNameLoc = 14,
+
+  ///   UnknownLoc {
+  ///   }
+  kUnknownLoc = 15,
 };
 
 /// This enum contains marker codes used to indicate which type is currently
@@ -133,6 +168,12 @@ struct BuiltinDialectBytecodeInterface : public BytecodeDialectInterface {
                                   bool hasNestedRefs) const;
   TypeAttr readTypeAttr(DialectBytecodeReader &reader) const;
 
+  LocationAttr readCallSiteLoc(DialectBytecodeReader &reader) const;
+  LocationAttr readFileLineColLoc(DialectBytecodeReader &reader) const;
+  LocationAttr readFusedLoc(DialectBytecodeReader &reader,
+                            bool hasMetadata) const;
+  LocationAttr readNameLoc(DialectBytecodeReader &reader) const;
+
   LogicalResult writeAttribute(Attribute attr,
                                DialectBytecodeWriter &writer) const override;
   void write(ArrayAttr attr, DialectBytecodeWriter &writer) const;
@@ -142,6 +183,12 @@ struct BuiltinDialectBytecodeInterface : public BytecodeDialectInterface {
   void write(StringAttr attr, DialectBytecodeWriter &writer) const;
   void write(SymbolRefAttr attr, DialectBytecodeWriter &writer) const;
   void write(TypeAttr attr, DialectBytecodeWriter &writer) const;
+
+  void write(CallSiteLoc attr, DialectBytecodeWriter &writer) const;
+  void write(FileLineColLoc attr, DialectBytecodeWriter &writer) const;
+  void write(FusedLoc attr, DialectBytecodeWriter &writer) const;
+  void write(NameLoc attr, DialectBytecodeWriter &writer) const;
+  LogicalResult write(OpaqueLoc attr, DialectBytecodeWriter &writer) const;
 
   //===--------------------------------------------------------------------===//
   // Types
@@ -190,6 +237,18 @@ Attribute BuiltinDialectBytecodeInterface::readAttribute(
     return readIntegerAttr(reader);
   case builtin_encoding::kFloatAttr:
     return readFloatAttr(reader);
+  case builtin_encoding::kCallSiteLoc:
+    return readCallSiteLoc(reader);
+  case builtin_encoding::kFileLineColLoc:
+    return readFileLineColLoc(reader);
+  case builtin_encoding::kFusedLoc:
+    return readFusedLoc(reader, /*hasMetadata=*/false);
+  case builtin_encoding::kFusedLocWithMetadata:
+    return readFusedLoc(reader, /*hasMetadata=*/true);
+  case builtin_encoding::kNameLoc:
+    return readNameLoc(reader);
+  case builtin_encoding::kUnknownLoc:
+    return UnknownLoc::get(getContext());
   default:
     reader.emitError() << "unknown builtin attribute code: " << code;
     return Attribute();
@@ -291,6 +350,57 @@ TypeAttr BuiltinDialectBytecodeInterface::readTypeAttr(
   return TypeAttr::get(type);
 }
 
+LocationAttr BuiltinDialectBytecodeInterface::readCallSiteLoc(
+    DialectBytecodeReader &reader) const {
+  LocationAttr callee, caller;
+  if (failed(reader.readAttribute(callee)) ||
+      failed(reader.readAttribute(caller)))
+    return LocationAttr();
+  return CallSiteLoc::get(callee, caller);
+}
+
+LocationAttr BuiltinDialectBytecodeInterface::readFileLineColLoc(
+    DialectBytecodeReader &reader) const {
+  StringAttr filename;
+  uint64_t line, column;
+  if (failed(reader.readAttribute(filename)) ||
+      failed(reader.readVarInt(line)) || failed(reader.readVarInt(column)))
+    return LocationAttr();
+  return FileLineColLoc::get(filename, line, column);
+}
+
+LocationAttr
+BuiltinDialectBytecodeInterface::readFusedLoc(DialectBytecodeReader &reader,
+                                              bool hasMetadata) const {
+  // Parse the child locations.
+  auto readLoc = [&]() -> FailureOr<Location> {
+    LocationAttr locAttr;
+    if (failed(reader.readAttribute(locAttr)))
+      return failure();
+    return Location(locAttr);
+  };
+  SmallVector<Location> locations;
+  if (failed(reader.readList(locations, readLoc)))
+    return LocationAttr();
+
+  // Parse the metadata if present.
+  Attribute metadata;
+  if (hasMetadata && failed(reader.readAttribute(metadata)))
+    return LocationAttr();
+
+  return FusedLoc::get(locations, metadata, getContext());
+}
+
+LocationAttr BuiltinDialectBytecodeInterface::readNameLoc(
+    DialectBytecodeReader &reader) const {
+  StringAttr name;
+  LocationAttr childLoc;
+  if (failed(reader.readAttribute(name)) ||
+      failed(reader.readAttribute(childLoc)))
+    return LocationAttr();
+  return NameLoc::get(name, childLoc);
+}
+
 //===----------------------------------------------------------------------===//
 // Attributes: Writer
 
@@ -298,12 +408,18 @@ LogicalResult BuiltinDialectBytecodeInterface::writeAttribute(
     Attribute attr, DialectBytecodeWriter &writer) const {
   return TypeSwitch<Attribute, LogicalResult>(attr)
       .Case<ArrayAttr, DictionaryAttr, FloatAttr, IntegerAttr, StringAttr,
-            SymbolRefAttr, TypeAttr>([&](auto attr) {
+            SymbolRefAttr, TypeAttr, CallSiteLoc, FileLineColLoc, FusedLoc,
+            NameLoc>([&](auto attr) {
         write(attr, writer);
         return success();
       })
+      .Case([&](OpaqueLoc attr) { return write(attr, writer); })
       .Case([&](UnitAttr) {
         writer.writeVarInt(builtin_encoding::kUnitAttr);
+        return success();
+      })
+      .Case([&](UnknownLoc) {
+        writer.writeVarInt(builtin_encoding::kUnknownLoc);
         return success();
       })
       .Default([&](Attribute) { return failure(); });
@@ -368,6 +484,48 @@ void BuiltinDialectBytecodeInterface::write(
     TypeAttr attr, DialectBytecodeWriter &writer) const {
   writer.writeVarInt(builtin_encoding::kTypeAttr);
   writer.writeType(attr.getValue());
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    CallSiteLoc attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kCallSiteLoc);
+  writer.writeAttribute(attr.getCallee());
+  writer.writeAttribute(attr.getCaller());
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    FileLineColLoc attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kFileLineColLoc);
+  writer.writeAttribute(attr.getFilename());
+  writer.writeVarInt(attr.getLine());
+  writer.writeVarInt(attr.getColumn());
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    FusedLoc attr, DialectBytecodeWriter &writer) const {
+  if (Attribute metadata = attr.getMetadata()) {
+    writer.writeVarInt(builtin_encoding::kFusedLocWithMetadata);
+    writer.writeAttributes(attr.getLocations());
+    writer.writeAttribute(metadata);
+  } else {
+    writer.writeVarInt(builtin_encoding::kFusedLoc);
+    writer.writeAttributes(attr.getLocations());
+  }
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    NameLoc attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kNameLoc);
+  writer.writeAttribute(attr.getName());
+  writer.writeAttribute(attr.getChildLoc());
+}
+
+LogicalResult
+BuiltinDialectBytecodeInterface::write(OpaqueLoc attr,
+                                       DialectBytecodeWriter &writer) const {
+  // We can't encode an OpaqueLoc directly given that it is in-memory only, so
+  // encode the fallback instead.
+  return writeAttribute(attr.getFallbackLocation(), writer);
 }
 
 //===----------------------------------------------------------------------===//
