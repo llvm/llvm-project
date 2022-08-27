@@ -101,3 +101,20 @@ void awesome_f4(int arg) {
     f = 5;
   }
 }
+
+template <typename Func> bool exec(Func F) { return F(); }
+
+void lambda_if() {
+  int X;
+  if ([&X] {
+        X = 5;
+        return true;
+      }()) {
+  }
+
+  if (exec([&] {
+        X = 5;
+        return true;
+      })) {
+  }
+}
