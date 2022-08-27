@@ -186,15 +186,14 @@ define i32 @sub_ashr_and_i32_no_nuw_nsw(i32 %x, i32 %y) {
   ret i32 %and
 }
 
-define <4 x i32> @sub_ashr_and_i32_vec_undef(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: @sub_ashr_and_i32_vec_undef(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr <4 x i32> [[SUB]], <i32 31, i32 31, i32 31, i32 undef>
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[SHR]], [[X]]
+define <4 x i32> @sub_ashr_and_i32_vec_poison(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @sub_ashr_and_i32_vec_poison(
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <4 x i32> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = select <4 x i1> [[ISNEG]], <4 x i32> [[X]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <4 x i32> [[AND]]
 ;
   %sub = sub nsw <4 x i32> %y, %x
-  %shr = ashr <4 x i32> %sub, <i32 31, i32 31, i32 31, i32 undef>
+  %shr = ashr <4 x i32> %sub, <i32 31, i32 31, i32 31, i32 poison>
   %and = and <4 x i32> %shr, %x
   ret <4 x i32> %and
 }
