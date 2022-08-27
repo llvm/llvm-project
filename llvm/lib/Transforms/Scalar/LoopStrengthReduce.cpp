@@ -2413,9 +2413,7 @@ LSRInstance::OptimizeLoopTermCond() {
   BasicBlock *LatchBlock = L->getLoopLatch();
   SmallVector<BasicBlock*, 8> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
-  if (llvm::all_of(ExitingBlocks, [&LatchBlock](const BasicBlock *BB) {
-        return LatchBlock != BB;
-      })) {
+  if (!llvm::is_contained(ExitingBlocks, LatchBlock)) {
     // The backedge doesn't exit the loop; treat this as a head-tested loop.
     IVIncInsertPos = LatchBlock->getTerminator();
     return;

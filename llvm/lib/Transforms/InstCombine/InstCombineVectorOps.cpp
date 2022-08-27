@@ -859,8 +859,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
 
   // Do we know values for each element of the aggregate?
   auto KnowAllElts = [&AggElts]() {
-    return all_of(AggElts,
-                  [](Optional<Instruction *> Elt) { return Elt != NotFound; });
+    return !llvm::is_contained(AggElts, NotFound);
   };
 
   int Depth = 0;
