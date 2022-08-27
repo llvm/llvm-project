@@ -38,9 +38,49 @@ enum AttributeCode {
   kDictionaryAttr = 1,
 
   ///   StringAttr {
-  ///     string
+  ///     value: string
   ///   }
   kStringAttr = 2,
+
+  ///   StringAttrWithType {
+  ///     value: string,
+  ///     type: Type
+  ///   }
+  /// A variant of StringAttr with a type.
+  kStringAttrWithType = 3,
+
+  ///   FlatSymbolRefAttr {
+  ///     rootReference: StringAttr
+  ///   }
+  /// A variant of SymbolRefAttr with no leaf references.
+  kFlatSymbolRefAttr = 4,
+
+  ///   SymbolRefAttr {
+  ///     rootReference: StringAttr,
+  ///     leafReferences: FlatSymbolRefAttr[]
+  ///   }
+  kSymbolRefAttr = 5,
+
+  ///   TypeAttr {
+  ///     value: Type
+  ///   }
+  kTypeAttr = 6,
+
+  ///   UnitAttr {
+  ///   }
+  kUnitAttr = 7,
+
+  ///   IntegerAttr {
+  ///     type: Type
+  ///     value: APInt,
+  ///   }
+  kIntegerAttr = 8,
+
+  ///   FloatAttr {
+  ///     type: FloatType
+  ///     value: APFloat
+  ///   }
+  kFloatAttr = 9,
 };
 
 /// This enum contains marker codes used to indicate which type is currently
@@ -86,13 +126,22 @@ struct BuiltinDialectBytecodeInterface : public BytecodeDialectInterface {
   Attribute readAttribute(DialectBytecodeReader &reader) const override;
   ArrayAttr readArrayAttr(DialectBytecodeReader &reader) const;
   DictionaryAttr readDictionaryAttr(DialectBytecodeReader &reader) const;
-  StringAttr readStringAttr(DialectBytecodeReader &reader) const;
+  FloatAttr readFloatAttr(DialectBytecodeReader &reader) const;
+  IntegerAttr readIntegerAttr(DialectBytecodeReader &reader) const;
+  StringAttr readStringAttr(DialectBytecodeReader &reader, bool hasType) const;
+  SymbolRefAttr readSymbolRefAttr(DialectBytecodeReader &reader,
+                                  bool hasNestedRefs) const;
+  TypeAttr readTypeAttr(DialectBytecodeReader &reader) const;
 
   LogicalResult writeAttribute(Attribute attr,
                                DialectBytecodeWriter &writer) const override;
   void write(ArrayAttr attr, DialectBytecodeWriter &writer) const;
   void write(DictionaryAttr attr, DialectBytecodeWriter &writer) const;
+  void write(IntegerAttr attr, DialectBytecodeWriter &writer) const;
+  void write(FloatAttr attr, DialectBytecodeWriter &writer) const;
   void write(StringAttr attr, DialectBytecodeWriter &writer) const;
+  void write(SymbolRefAttr attr, DialectBytecodeWriter &writer) const;
+  void write(TypeAttr attr, DialectBytecodeWriter &writer) const;
 
   //===--------------------------------------------------------------------===//
   // Types
@@ -126,7 +175,21 @@ Attribute BuiltinDialectBytecodeInterface::readAttribute(
   case builtin_encoding::kDictionaryAttr:
     return readDictionaryAttr(reader);
   case builtin_encoding::kStringAttr:
-    return readStringAttr(reader);
+    return readStringAttr(reader, /*hasType=*/false);
+  case builtin_encoding::kStringAttrWithType:
+    return readStringAttr(reader, /*hasType=*/true);
+  case builtin_encoding::kFlatSymbolRefAttr:
+    return readSymbolRefAttr(reader, /*hasNestedRefs=*/false);
+  case builtin_encoding::kSymbolRefAttr:
+    return readSymbolRefAttr(reader, /*hasNestedRefs=*/true);
+  case builtin_encoding::kTypeAttr:
+    return readTypeAttr(reader);
+  case builtin_encoding::kUnitAttr:
+    return UnitAttr::get(getContext());
+  case builtin_encoding::kIntegerAttr:
+    return readIntegerAttr(reader);
+  case builtin_encoding::kFloatAttr:
+    return readFloatAttr(reader);
   default:
     reader.emitError() << "unknown builtin attribute code: " << code;
     return Attribute();
@@ -157,12 +220,75 @@ DictionaryAttr BuiltinDialectBytecodeInterface::readDictionaryAttr(
   return DictionaryAttr::get(getContext(), attrs);
 }
 
-StringAttr BuiltinDialectBytecodeInterface::readStringAttr(
+FloatAttr BuiltinDialectBytecodeInterface::readFloatAttr(
     DialectBytecodeReader &reader) const {
+  FloatType type;
+  if (failed(reader.readType(type)))
+    return FloatAttr();
+  FailureOr<APFloat> value =
+      reader.readAPFloatWithKnownSemantics(type.getFloatSemantics());
+  if (failed(value))
+    return FloatAttr();
+  return FloatAttr::get(type, *value);
+}
+
+IntegerAttr BuiltinDialectBytecodeInterface::readIntegerAttr(
+    DialectBytecodeReader &reader) const {
+  Type type;
+  if (failed(reader.readType(type)))
+    return IntegerAttr();
+
+  // Extract the value storage width from the type.
+  unsigned bitWidth;
+  if (auto intType = type.dyn_cast<IntegerType>()) {
+    bitWidth = intType.getWidth();
+  } else if (type.isa<IndexType>()) {
+    bitWidth = IndexType::kInternalStorageBitWidth;
+  } else {
+    reader.emitError()
+        << "expected integer or index type for IntegerAttr, but got: " << type;
+    return IntegerAttr();
+  }
+
+  FailureOr<APInt> value = reader.readAPIntWithKnownWidth(bitWidth);
+  if (failed(value))
+    return IntegerAttr();
+  return IntegerAttr::get(type, *value);
+}
+
+StringAttr
+BuiltinDialectBytecodeInterface::readStringAttr(DialectBytecodeReader &reader,
+                                                bool hasType) const {
   StringRef string;
   if (failed(reader.readString(string)))
     return StringAttr();
-  return StringAttr::get(getContext(), string);
+
+  // Read the type if present.
+  Type type;
+  if (!hasType)
+    type = NoneType::get(getContext());
+  else if (failed(reader.readType(type)))
+    return StringAttr();
+  return StringAttr::get(string, type);
+}
+
+SymbolRefAttr BuiltinDialectBytecodeInterface::readSymbolRefAttr(
+    DialectBytecodeReader &reader, bool hasNestedRefs) const {
+  StringAttr rootReference;
+  if (failed(reader.readAttribute(rootReference)))
+    return SymbolRefAttr();
+  SmallVector<FlatSymbolRefAttr> nestedReferences;
+  if (hasNestedRefs && failed(reader.readAttributes(nestedReferences)))
+    return SymbolRefAttr();
+  return SymbolRefAttr::get(rootReference, nestedReferences);
+}
+
+TypeAttr BuiltinDialectBytecodeInterface::readTypeAttr(
+    DialectBytecodeReader &reader) const {
+  Type type;
+  if (failed(reader.readType(type)))
+    return TypeAttr();
+  return TypeAttr::get(type);
 }
 
 //===----------------------------------------------------------------------===//
@@ -171,8 +297,13 @@ StringAttr BuiltinDialectBytecodeInterface::readStringAttr(
 LogicalResult BuiltinDialectBytecodeInterface::writeAttribute(
     Attribute attr, DialectBytecodeWriter &writer) const {
   return TypeSwitch<Attribute, LogicalResult>(attr)
-      .Case<ArrayAttr, DictionaryAttr, StringAttr>([&](auto attr) {
+      .Case<ArrayAttr, DictionaryAttr, FloatAttr, IntegerAttr, StringAttr,
+            SymbolRefAttr, TypeAttr>([&](auto attr) {
         write(attr, writer);
+        return success();
+      })
+      .Case([&](UnitAttr) {
+        writer.writeVarInt(builtin_encoding::kUnitAttr);
         return success();
       })
       .Default([&](Attribute) { return failure(); });
@@ -194,9 +325,49 @@ void BuiltinDialectBytecodeInterface::write(
 }
 
 void BuiltinDialectBytecodeInterface::write(
+    FloatAttr attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kFloatAttr);
+  writer.writeType(attr.getType());
+  writer.writeAPFloatWithKnownSemantics(attr.getValue());
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    IntegerAttr attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kIntegerAttr);
+  writer.writeType(attr.getType());
+  writer.writeAPIntWithKnownWidth(attr.getValue());
+}
+
+void BuiltinDialectBytecodeInterface::write(
     StringAttr attr, DialectBytecodeWriter &writer) const {
+  // We only encode the type if it isn't NoneType, which is significantly less
+  // common.
+  Type type = attr.getType();
+  if (!type.isa<NoneType>()) {
+    writer.writeVarInt(builtin_encoding::kStringAttrWithType);
+    writer.writeOwnedString(attr.getValue());
+    writer.writeType(type);
+    return;
+  }
   writer.writeVarInt(builtin_encoding::kStringAttr);
   writer.writeOwnedString(attr.getValue());
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    SymbolRefAttr attr, DialectBytecodeWriter &writer) const {
+  ArrayRef<FlatSymbolRefAttr> nestedRefs = attr.getNestedReferences();
+  writer.writeVarInt(nestedRefs.empty() ? builtin_encoding::kFlatSymbolRefAttr
+                                        : builtin_encoding::kSymbolRefAttr);
+
+  writer.writeAttribute(attr.getRootReference());
+  if (!nestedRefs.empty())
+    writer.writeAttributes(nestedRefs);
+}
+
+void BuiltinDialectBytecodeInterface::write(
+    TypeAttr attr, DialectBytecodeWriter &writer) const {
+  writer.writeVarInt(builtin_encoding::kTypeAttr);
+  writer.writeType(attr.getValue());
 }
 
 //===----------------------------------------------------------------------===//
