@@ -61,14 +61,18 @@ void AssignmentInIfConditionCheck::check(
   Visitor(*this).TraverseAST(*Result.Context);
 }
 
-void AssignmentInIfConditionCheck::report(const Expr *MatchedDecl) {
-  diag(MatchedDecl->getBeginLoc(),
-       "an assignment within an 'if' condition is bug-prone");
-  diag(MatchedDecl->getBeginLoc(),
+void AssignmentInIfConditionCheck::report(const Expr *AssignmentExpr) {
+  SourceLocation OpLoc =
+      isa<BinaryOperator>(AssignmentExpr)
+          ? cast<BinaryOperator>(AssignmentExpr)->getOperatorLoc()
+          : cast<CXXOperatorCallExpr>(AssignmentExpr)->getOperatorLoc();
+
+  diag(OpLoc, "an assignment within an 'if' condition is bug-prone")
+      << AssignmentExpr->getSourceRange();
+  diag(OpLoc,
        "if it should be an assignment, move it out of the 'if' condition",
        DiagnosticIDs::Note);
-  diag(MatchedDecl->getBeginLoc(),
-       "if it is meant to be an equality check, change '=' to '=='",
+  diag(OpLoc, "if it is meant to be an equality check, change '=' to '=='",
        DiagnosticIDs::Note);
 }
 
