@@ -19,5 +19,4 @@ stdexcept
 tuple
 type_traits
 typeinfo
-vector
 version

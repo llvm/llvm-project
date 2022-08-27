@@ -17,7 +17,6 @@ cwchar
 cwctype
 exception
 filesystem
-fstream
 initializer_list
 iomanip
 ios

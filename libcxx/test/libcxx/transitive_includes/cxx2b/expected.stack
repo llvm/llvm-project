@@ -16,7 +16,6 @@ limits
 memory
 new
 ratio
-stack
 stdexcept
 tuple
 type_traits

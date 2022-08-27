@@ -6,6 +6,5 @@ cstdlib
 exception
 limits
 type_traits
-typeindex
 typeinfo
 version

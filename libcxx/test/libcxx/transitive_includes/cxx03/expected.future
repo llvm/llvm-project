@@ -19,7 +19,6 @@ cwchar
 cwctype
 exception
 functional
-future
 initializer_list
 iosfwd
 iterator

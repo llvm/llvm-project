@@ -18,7 +18,6 @@ cstdint
 cstdio
 cstdlib
 cstring
-ctgmath
 ctime
 cwchar
 cwctype

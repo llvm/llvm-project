@@ -24,7 +24,6 @@ ios
 iosfwd
 iterator
 limits
-locale
 memory
 mutex
 new

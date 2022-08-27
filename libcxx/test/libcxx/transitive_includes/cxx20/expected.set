@@ -21,7 +21,6 @@ memory
 new
 optional
 ratio
-set
 stdexcept
 tuple
 type_traits

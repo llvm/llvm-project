@@ -9,7 +9,6 @@ initializer_list
 iosfwd
 limits
 new
-optional
 stdexcept
 type_traits
 version

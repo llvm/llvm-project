@@ -24,7 +24,6 @@ locale
 memory
 mutex
 new
-ostream
 ratio
 stdexcept
 streambuf

@@ -20,7 +20,6 @@ cwchar
 cwctype
 exception
 filesystem
-fstream
 functional
 initializer_list
 iomanip

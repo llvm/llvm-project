@@ -24,5 +24,4 @@ type_traits
 typeinfo
 utility
 variant
-vector
 version

@@ -14,7 +14,6 @@ ctime
 cwchar
 cwctype
 exception
-future
 initializer_list
 iosfwd
 limits

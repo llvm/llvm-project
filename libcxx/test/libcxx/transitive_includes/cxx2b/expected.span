@@ -9,7 +9,6 @@ exception
 initializer_list
 iosfwd
 limits
-span
 stdexcept
 type_traits
 version

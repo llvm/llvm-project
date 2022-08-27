@@ -23,7 +23,6 @@ mutex
 new
 ratio
 stdexcept
-streambuf
 string
 string_view
 system_error

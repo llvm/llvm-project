@@ -6,7 +6,6 @@ cstddef
 cstdint
 cstdlib
 exception
-experimental/simd
 initializer_list
 iosfwd
 limits

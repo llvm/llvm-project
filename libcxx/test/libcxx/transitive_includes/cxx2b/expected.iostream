@@ -19,7 +19,6 @@ exception
 initializer_list
 ios
 iosfwd
-iostream
 istream
 limits
 locale
