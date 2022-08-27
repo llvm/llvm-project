@@ -1083,10 +1083,8 @@ void PartialInlinerImpl::FunctionCloner::normalizeReturnBlock() const {
     return;
 
   auto IsTrivialPhi = [](PHINode *PN) -> Value * {
-    Value *CommonValue = PN->getIncomingValue(0);
-    if (all_of(PN->incoming_values(),
-               [&](Value *V) { return V == CommonValue; }))
-      return CommonValue;
+    if (llvm::all_equal(PN->incoming_values()))
+      return PN->getIncomingValue(0);
     return nullptr;
   };
 

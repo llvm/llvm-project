@@ -1484,6 +1484,12 @@ void LazyCallGraph::RefSCC::replaceNodeFunction(Node &N, Function &NewF) {
   // Update various call graph maps.
   G->NodeMap.erase(&OldF);
   G->NodeMap[&NewF] = &N;
+
+  // Update lib functions.
+  if (G->isLibFunction(OldF)) {
+    G->LibFunctions.remove(&OldF);
+    G->LibFunctions.insert(&NewF);
+  }
 }
 
 void LazyCallGraph::insertEdge(Node &SourceN, Node &TargetN, Edge::Kind EK) {

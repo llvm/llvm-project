@@ -32,8 +32,6 @@ def POSIX : StandardSpec<"POSIX"> {
   ConstType ConstRestrictedCharPtr = ConstType<RestrictedCharPtr>;
 
   NamedType ModeTType = NamedType<"mode_t">;
-  NamedType OffTType = NamedType<"off_t">;
-  NamedType SSizeTType = NamedType<"ssize_t">;
 
   NamedType PThreadAttrTType = NamedType<"pthread_attr_t">;
   PtrType PThreadAttrTPtr = PtrType<PThreadAttrTType>;
@@ -284,6 +282,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<IntType>]
         >,
         FunctionSpec<
+          "ftruncate",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<OffTType>]
+        >,
+        FunctionSpec<
           "link",
           RetValSpec<IntType>,
           [ArgSpec<ConstCharPtr>, ArgSpec<ConstCharPtr>]
@@ -327,6 +330,11 @@ def POSIX : StandardSpec<"POSIX"> {
           "symlinkat",
           RetValSpec<IntType>,
           [ArgSpec<IntType>, ArgSpec<ConstCharPtr>, ArgSpec<IntType>, ArgSpec<ConstCharPtr>]
+        >,
+        FunctionSpec<
+          "truncate",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>, ArgSpec<OffTType>]
         >,
         FunctionSpec<
           "unlink",

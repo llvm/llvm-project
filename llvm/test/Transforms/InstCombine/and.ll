@@ -1680,6 +1680,90 @@ define i8 @lshr_bitwidth_mask(i8 %x, i8 %y) {
   ret i8 %r
 }
 
+define i16 @signbit_splat_mask(i8 %x, i16 %y) {
+; CHECK-LABEL: @signbit_splat_mask(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[S:%.*]] = sext i8 [[A]] to i16
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[S]], [[Y:%.*]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %a = ashr i8 %x, 7
+  %s = sext i8 %a to i16
+  %r = and i16 %s, %y
+  ret i16 %r
+}
+
+define <2 x i16> @signbit_splat_mask_commute(<2 x i5> %x, <2 x i16> %p) {
+; CHECK-LABEL: @signbit_splat_mask_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i16> [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i5> [[X:%.*]], <i5 4, i5 poison>
+; CHECK-NEXT:    [[S:%.*]] = sext <2 x i5> [[A]] to <2 x i16>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i16> [[Y]], [[S]]
+; CHECK-NEXT:    ret <2 x i16> [[R]]
+;
+  %y = mul <2 x i16> %p, %p ; thwart complexity-based canonicalization
+  %a = ashr <2 x i5> %x, <i5 4, i5 poison>
+  %s = sext <2 x i5> %a to <2 x i16>
+  %r = and <2 x i16> %y, %s
+  ret <2 x i16> %r
+}
+
+define i16 @signbit_splat_mask_use1(i8 %x, i16 %y) {
+; CHECK-LABEL: @signbit_splat_mask_use1(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    call void @use8(i8 [[A]])
+; CHECK-NEXT:    [[S:%.*]] = sext i8 [[A]] to i16
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[S]], [[Y:%.*]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %a = ashr i8 %x, 7
+  call void @use8(i8 %a)
+  %s = sext i8 %a to i16
+  %r = and i16 %s, %y
+  ret i16 %r
+}
+
+define i16 @signbit_splat_mask_use2(i8 %x, i16 %y) {
+; CHECK-LABEL: @signbit_splat_mask_use2(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[S:%.*]] = sext i8 [[A]] to i16
+; CHECK-NEXT:    call void @use16(i16 [[S]])
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[S]], [[Y:%.*]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %a = ashr i8 %x, 7
+  %s = sext i8 %a to i16
+  call void @use16(i16 %s)
+  %r = and i16 %s, %y
+  ret i16 %r
+}
+
+define i16 @not_signbit_splat_mask1(i8 %x, i16 %y) {
+; CHECK-LABEL: @not_signbit_splat_mask1(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[Z:%.*]] = zext i8 [[A]] to i16
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[Z]], [[Y:%.*]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %a = ashr i8 %x, 7
+  %z = zext i8 %a to i16
+  %r = and i16 %z, %y
+  ret i16 %r
+}
+
+define i16 @not_signbit_splat_mask2(i8 %x, i16 %y) {
+; CHECK-LABEL: @not_signbit_splat_mask2(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[S:%.*]] = sext i8 [[A]] to i16
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[S]], [[Y:%.*]]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %a = ashr i8 %x, 6
+  %s = sext i8 %a to i16
+  %r = and i16 %s, %y
+  ret i16 %r
+}
+
 define i8 @not_ashr_bitwidth_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @not_ashr_bitwidth_mask(
 ; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i8 [[X:%.*]], 0

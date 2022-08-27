@@ -27,6 +27,9 @@ struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
 
   /// Stubbed out methods that are not used for numbering.
   void writeVarInt(uint64_t) override {}
+  void writeSignedVarInt(int64_t value) override {}
+  void writeAPIntWithKnownWidth(const APInt &value) override {}
+  void writeAPFloatWithKnownSemantics(const APFloat &value) override {}
   void writeOwnedString(StringRef) override {
     // TODO: It might be nice to prenumber strings and sort by the number of
     // references. This could potentially be useful for optimizing things like

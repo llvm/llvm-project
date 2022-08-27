@@ -65,6 +65,22 @@ x1000000: 49 value bits, the encoding uses 7 bytes
 00000000: 64 value bits, the encoding uses 9 bytes
 ```
 
+##### Signed Variable-Width Integers
+
+Signed variable width integer values are encoded in a similar fashion to
+[varints](#variable-width-integers), but employ
+[zigzag encoding](https://en.wikipedia.org/wiki/Variable-length_quantity#Zigzag_encoding).
+This encoding uses the low bit of the value to indicate the sign, which allows
+for more efficiently encoding negative numbers. If a negative value were encoded
+using a normal [varint](#variable-width-integers), it would be treated as an
+extremely large unsigned value. Using zigzag encoding allows for a smaller
+number of active bits in the value, leading to a smaller encoding. Below is the
+basic computation for generating a zigzag encoding:
+
+```
+(value << 1) ^ (value >> 63)
+```
+
 #### Strings
 
 Strings are blobs of characters with an associated length.
