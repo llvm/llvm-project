@@ -292,7 +292,7 @@ void SharedMemoryMapper::reserve(size_t NumBytes,
 
 char *SharedMemoryMapper::prepare(ExecutorAddr Addr, size_t ContentSize) {
   auto R = Reservations.upper_bound(Addr);
-  assert(R != Reservations.begin() && "Attempt to prepare unknown range");
+  assert(R != Reservations.begin() && "Attempt to prepare unreserved range");
   R--;
 
   ExecutorAddrDiff Offset = Addr - R->first;
@@ -302,11 +302,11 @@ char *SharedMemoryMapper::prepare(ExecutorAddr Addr, size_t ContentSize) {
 
 void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
                                     OnInitializedFunction OnInitialized) {
-  auto Reservation = std::lower_bound(
-      Reservations.rbegin(), Reservations.rend(), AI.MappingBase,
-      [](const auto &A, const auto &B) { return A.first > B; });
-  assert(Reservation != Reservations.rend() &&
-         "Attempt to initialize unreserved range");
+  auto Reservation = Reservations.upper_bound(AI.MappingBase);
+  assert(Reservation != Reservations.begin() && "Attempt to initialize unreserved range");
+  Reservation--;
+
+  auto AllocationOffset = AI.MappingBase - Reservation->first;
 
   tpctypes::SharedMemoryFinalizeRequest FR;
 
@@ -315,8 +315,8 @@ void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
   FR.Segments.reserve(AI.Segments.size());
 
   for (auto Segment : AI.Segments) {
-    char *Base =
-        static_cast<char *>(Reservation->second.LocalAddr) + Segment.Offset;
+    char *Base = static_cast<char *>(Reservation->second.LocalAddr) +
+                 AllocationOffset + Segment.Offset;
     std::memset(Base + Segment.ContentSize, 0, Segment.ZeroFillSize);
 
     tpctypes::SharedMemorySegFinalizeRequest SegReq;
