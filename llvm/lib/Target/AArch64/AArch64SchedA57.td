@@ -132,6 +132,7 @@ def : ReadAdvance<ReadVLD,     0>;
 // -----------------------------------------------------------------------------
 
 def : InstRW<[WriteI], (instrs COPY)>;
+def : InstRW<[WriteI], (instrs PRED_COPY)>;
 
 
 // Branch Instructions

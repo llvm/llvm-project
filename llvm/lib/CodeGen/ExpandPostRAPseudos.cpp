@@ -211,6 +211,7 @@ bool ExpandPostRA::runOnMachineFunction(MachineFunction &MF) {
         MadeChange |= LowerSubregToReg(&MI);
         break;
       case TargetOpcode::COPY:
+      case TargetOpcode::PRED_COPY:
         MadeChange |= LowerCopy(&MI);
         break;
       case TargetOpcode::DBG_VALUE:

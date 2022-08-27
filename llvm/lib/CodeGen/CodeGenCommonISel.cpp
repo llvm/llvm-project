@@ -234,6 +234,7 @@ static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
   case TargetOpcode::G_TRUNC:
     return getSalvageOpsForTrunc(MRI, MI, Ops);
   case TargetOpcode::COPY:
+  case TargetOpcode::PRED_COPY:
     return getSalvageOpsForCopy(MRI, MI);
   default:
     return nullptr;

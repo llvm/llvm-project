@@ -122,6 +122,7 @@ bool VLIWResourceModel::isResourceAvailable(SUnit *SU, bool IsTop) {
   case TargetOpcode::REG_SEQUENCE:
   case TargetOpcode::IMPLICIT_DEF:
   case TargetOpcode::COPY:
+  case TargetOpcode::PRED_COPY:
   case TargetOpcode::INLINEASM:
   case TargetOpcode::INLINEASM_BR:
     break;
@@ -172,6 +173,7 @@ bool VLIWResourceModel::reserveResources(SUnit *SU, bool IsTop) {
   case TargetOpcode::CFI_INSTRUCTION:
   case TargetOpcode::EH_LABEL:
   case TargetOpcode::COPY:
+  case TargetOpcode::PRED_COPY:
   case TargetOpcode::INLINEASM:
   case TargetOpcode::INLINEASM_BR:
     break;

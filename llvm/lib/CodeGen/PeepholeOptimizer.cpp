@@ -1022,7 +1022,7 @@ public:
       // Get rid of the sub-register index.
       CopyLike.removeOperand(2);
       // Morph the operation into a COPY.
-      CopyLike.setDesc(TII.get(TargetOpcode::COPY));
+      CopyLike.setDesc(TII.get(TII.getCopyOpcode()));
       return true;
     }
     CopyLike.getOperand(CurrentSrcIdx + 1).setImm(NewSubReg);
@@ -1110,6 +1110,7 @@ static Rewriter *getCopyRewriter(MachineInstr &MI, const TargetInstrInfo &TII) {
   default:
     return nullptr;
   case TargetOpcode::COPY:
+  case TargetOpcode::PRED_COPY:
     return new CopyRewriter(MI);
   case TargetOpcode::INSERT_SUBREG:
     return new InsertSubregRewriter(MI);

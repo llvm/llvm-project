@@ -329,6 +329,7 @@ std::optional<ValueAndVReg> getConstantVRegValWithLookThrough(
       VReg = MI->getOperand(1).getReg();
       break;
     case TargetOpcode::COPY:
+    case TargetOpcode::PRED_COPY:
       VReg = MI->getOperand(1).getReg();
       if (VReg.isPhysical())
         return std::nullopt;

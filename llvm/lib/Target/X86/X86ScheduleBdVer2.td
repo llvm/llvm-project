@@ -278,6 +278,7 @@ def : WriteRes<WriteSTMXCSR, [PdStore]> { let NumMicroOps = 2; let ResourceCycle
 
 // Treat misc copies as a move.
 def : InstRW<[WriteMove], (instrs COPY)>;
+def : InstRW<[WriteMove], (instrs PRED_COPY)>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Idioms that clear a register, like xorps %xmm0, %xmm0.

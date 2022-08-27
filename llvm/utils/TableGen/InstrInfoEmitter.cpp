@@ -1030,9 +1030,9 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   OS << "struct " << ClassName << " : public TargetInstrInfo {\n"
      << "  explicit " << ClassName
      << "(unsigned CFSetupOpcode = ~0u, unsigned CFDestroyOpcode = ~0u, "
-        "unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u);\n"
+        "unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u, "
+        "unsigned CopyOpcode = TargetOpcode::COPY);\n"
      << "  ~" << ClassName << "() override = default;\n";
-
 
   OS << "\n};\n} // end namespace llvm\n";
 
@@ -1064,9 +1064,9 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
        << "InstrComplexDeprecationInfos[];\n";
   OS << ClassName << "::" << ClassName
      << "(unsigned CFSetupOpcode, unsigned CFDestroyOpcode, unsigned "
-        "CatchRetOpcode, unsigned ReturnOpcode)\n"
+        "CatchRetOpcode, unsigned ReturnOpcode, unsigned CopyOpcode)\n"
      << "  : TargetInstrInfo(CFSetupOpcode, CFDestroyOpcode, CatchRetOpcode, "
-        "ReturnOpcode) {\n"
+        "ReturnOpcode, CopyOpcode) {\n"
      << "  InitMCInstrInfo(" << TargetName << "Insts, " << TargetName
      << "InstrNameIndices, " << TargetName << "InstrNameData, ";
   if (HasDeprecationFeatures)

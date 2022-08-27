@@ -266,6 +266,7 @@ def : InstRW<[THXT8XWriteRET], (instregex "^RET$")>;
 // Miscellaneous
 //---
 def : InstRW<[WriteI], (instrs COPY)>;
+def : InstRW<[WriteI], (instrs PRED_COPY)>;
 
 //---
 // Vector Loads

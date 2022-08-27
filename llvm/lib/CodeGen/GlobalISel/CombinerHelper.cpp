@@ -4294,7 +4294,7 @@ bool CombinerHelper::matchICmpToLHSKnownBits(
   LLT LHSTy = MRI.getType(LHS);
   unsigned LHSSize = LHSTy.getSizeInBits();
   unsigned DstSize = DstTy.getSizeInBits();
-  unsigned Op = TargetOpcode::COPY;
+  unsigned Op = Builder.getTII().getCopyOpcode();
   if (DstSize != LHSSize)
     Op = DstSize < LHSSize ? TargetOpcode::G_TRUNC : TargetOpcode::G_ZEXT;
   if (!isLegalOrBeforeLegalizer({Op, {DstTy, LHSTy}}))

@@ -613,6 +613,7 @@ def N2Write_11cyc_9L01_9S_9V : SchedWriteRes<[N2UnitL01, N2UnitL01, N2UnitL01,
 // -----------------------------------------------------------------------------
 
 def : InstRW<[WriteI], (instrs COPY)>;
+def : InstRW<[WriteI], (instrs PRED_COPY)>;
 
 // Branch Instructions
 // -----------------------------------------------------------------------------

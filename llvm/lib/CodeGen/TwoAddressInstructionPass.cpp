@@ -1839,7 +1839,7 @@ bool TwoAddressInstructionPass::runOnMachineFunction(MachineFunction &Func) {
         mi->getOperand(0).setSubReg(SubIdx);
         mi->getOperand(0).setIsUndef(mi->getOperand(1).isUndef());
         mi->removeOperand(1);
-        mi->setDesc(TII->get(TargetOpcode::COPY));
+        mi->setDesc(TII->get(TII->getCopyOpcode()));
         LLVM_DEBUG(dbgs() << "\t\tconvert to:\t" << *mi);
 
         // Update LiveIntervals.
@@ -1927,7 +1927,7 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
 
     // Insert the sub-register copy.
     MachineInstr *CopyMI = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                                   TII->get(TargetOpcode::COPY))
+                                   TII->get(TII->getCopyOpcode()))
                                .addReg(DstReg, RegState::Define, SubIdx)
                                .add(UseMO);
 

@@ -517,7 +517,7 @@ void SplitEditor::forceRecompute(unsigned RegIdx, const VNInfo &ParentVNI) {
 SlotIndex SplitEditor::buildSingleSubRegCopy(Register FromReg, Register ToReg,
     MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertBefore,
     unsigned SubIdx, LiveInterval &DestLI, bool Late, SlotIndex Def) {
-  const MCInstrDesc &Desc = TII.get(TargetOpcode::COPY);
+  const MCInstrDesc &Desc = TII.get(TII.getCopyOpcode());
   bool FirstCopy = !Def.isValid();
   MachineInstr *CopyMI = BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
       .addReg(ToReg, RegState::Define | getUndefRegState(FirstCopy)

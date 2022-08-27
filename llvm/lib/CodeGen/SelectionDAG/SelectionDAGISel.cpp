@@ -2232,7 +2232,7 @@ void SelectionDAGISel::Select_FREEZE(SDNode *N) {
   // TODO: We don't have FREEZE pseudo-instruction in MachineInstr-level now.
   // If FREEZE instruction is added later, the code below must be changed as
   // well.
-  CurDAG->SelectNodeTo(N, TargetOpcode::COPY, N->getValueType(0),
+  CurDAG->SelectNodeTo(N, TII->getCopyOpcode(), N->getValueType(0),
                        N->getOperand(0));
 }
 
