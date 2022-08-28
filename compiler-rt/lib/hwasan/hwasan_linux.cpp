@@ -403,6 +403,47 @@ static AccessInfo GetAccessInfo(siginfo_t *info, ucontext_t *uc) {
   const uptr size =
       size_log == 0xf ? uc->uc_mcontext.gregs[REG_RSI] : 1U << size_log;
 
+#  elif SANITIZER_RISCV64
+  // Access type is encoded in the instruction following EBREAK as
+  // ADDI x0, x0, [0x40 + 0xXY]. For Y == 0xF, access size is stored in
+  // X11 register. Access address is always in X10 register.
+  uptr pc = (uptr)uc->uc_mcontext.__gregs[REG_PC];
+  uint8_t byte1 = *((u8 *)(pc + 0));
+  uint8_t byte2 = *((u8 *)(pc + 1));
+  uint8_t byte3 = *((u8 *)(pc + 2));
+  uint8_t byte4 = *((u8 *)(pc + 3));
+  uint32_t ebreak = (byte1 | (byte2 << 8) | (byte3 << 16) | (byte4 << 24));
+  bool isFaultShort = false;
+  bool isEbreak = (ebreak == 0x100073);
+  bool isShortEbreak = false;
+#    if defined(__riscv_compressed)
+  isFaultShort = ((ebreak & 0x3) != 0x3);
+  isShortEbreak = ((ebreak & 0xffff) == 0x9002);
+#    endif
+  // faulted insn is not ebreak, not our case
+  if (!(isEbreak || isShortEbreak))
+    return AccessInfo{};
+  // advance pc to point after ebreak and reconstruct addi instruction
+  pc += isFaultShort ? 2 : 4;
+  byte1 = *((u8 *)(pc + 0));
+  byte2 = *((u8 *)(pc + 1));
+  byte3 = *((u8 *)(pc + 2));
+  byte4 = *((u8 *)(pc + 3));
+  // reconstruct instruction
+  uint32_t instr = (byte1 | (byte2 << 8) | (byte3 << 16) | (byte4 << 24));
+  // check if this is really 32 bit instruction
+  // code is encoded in top 12 bits, since instruction is supposed to be with
+  // imm
+  const unsigned code = (instr >> 20) & 0xffff;
+  const uptr addr = uc->uc_mcontext.__gregs[10];
+  const bool is_store = code & 0x10;
+  const bool recover = code & 0x20;
+  const unsigned size_log = code & 0xf;
+  if (size_log > 4 && size_log != 0xf)
+    return AccessInfo{};  // Not our case
+  const uptr size =
+      size_log == 0xf ? uc->uc_mcontext.__gregs[11] : 1U << size_log;
+
 #  else
 #    error Unsupported architecture
 #  endif
@@ -421,6 +462,19 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
 #  if defined(__aarch64__)
   uc->uc_mcontext.pc += 4;
 #  elif defined(__x86_64__)
+#  elif SANITIZER_RISCV64
+  // pc points to EBREAK which is 2 bytes long
+  uint8_t *exception_source = (uint8_t *)(uc->uc_mcontext.__gregs[REG_PC]);
+  uint8_t byte1 = (uint8_t)(*(exception_source + 0));
+  uint8_t byte2 = (uint8_t)(*(exception_source + 1));
+  uint8_t byte3 = (uint8_t)(*(exception_source + 2));
+  uint8_t byte4 = (uint8_t)(*(exception_source + 3));
+  uint32_t faulted = (byte1 | (byte2 << 8) | (byte3 << 16) | (byte4 << 24));
+  bool isFaultShort = false;
+#    if defined(__riscv_compressed)
+  isFaultShort = ((faulted & 0x3) != 0x3);
+#    endif
+  uc->uc_mcontext.__gregs[REG_PC] += isFaultShort ? 2 : 4;
 #  else
 #    error Unsupported architecture
 #  endif

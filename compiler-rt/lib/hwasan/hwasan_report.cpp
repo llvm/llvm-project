@@ -746,7 +746,7 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
 }
 
 // See the frame breakdown defined in __hwasan_tag_mismatch (from
-// hwasan_tag_mismatch_aarch64.S).
+// hwasan_tag_mismatch_{aarch64,riscv64}.S).
 void ReportRegisters(uptr *frame, uptr pc) {
   Printf("Registers where the failure occurred (pc %p):\n", pc);
 
@@ -754,8 +754,13 @@ void ReportRegisters(uptr *frame, uptr pc) {
   // reduce the amount of logcat error messages printed. Each Printf() will
   // result in a new logcat line, irrespective of whether a newline is present,
   // and so we wish to reduce the number of Printf() calls we have to make.
+#if defined(__aarch64__)
   Printf("    x0  %016llx  x1  %016llx  x2  %016llx  x3  %016llx\n",
        frame[0], frame[1], frame[2], frame[3]);
+#elif SANITIZER_RISCV64
+  Printf("    sp  %016llx  x1  %016llx  x2  %016llx  x3  %016llx\n",
+         reinterpret_cast<u8 *>(frame) + 256, frame[1], frame[2], frame[3]);
+#endif
   Printf("    x4  %016llx  x5  %016llx  x6  %016llx  x7  %016llx\n",
        frame[4], frame[5], frame[6], frame[7]);
   Printf("    x8  %016llx  x9  %016llx  x10 %016llx  x11 %016llx\n",
@@ -770,8 +775,14 @@ void ReportRegisters(uptr *frame, uptr pc) {
        frame[24], frame[25], frame[26], frame[27]);
   // hwasan_check* reduces the stack pointer by 256, then __hwasan_tag_mismatch
   // passes it to this function.
+#if defined(__aarch64__)
   Printf("    x28 %016llx  x29 %016llx  x30 %016llx   sp %016llx\n", frame[28],
          frame[29], frame[30], reinterpret_cast<u8 *>(frame) + 256);
+#elif SANITIZER_RISCV64
+  Printf("    x28 %016llx  x29 %016llx  x30 %016llx  x31 %016llx\n", frame[28],
+         frame[29], frame[30], frame[31]);
+#else
+#endif
 }
 
 }  // namespace __hwasan
