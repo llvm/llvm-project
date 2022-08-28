@@ -479,6 +479,8 @@ def StdC : StandardSpec<"stdc"> {
           FunctionSpec<"coshf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"sinhf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
           FunctionSpec<"tanhf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,
+          
+          FunctionSpec<"atanhf", RetValSpec<FloatType>, [ArgSpec<FloatType>]>,          
       ]
   >;
 

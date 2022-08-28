@@ -1376,6 +1376,18 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fputil
 )
 
+add_fp_unittest(
+  atanhf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    atanhf_test.cpp
+  DEPENDS
+    libc.src.math.atanhf
+    libc.src.__support.FPUtil.fputil
+)
+
 add_subdirectory(generic)
 add_subdirectory(exhaustive)
 add_subdirectory(differential_testing)
