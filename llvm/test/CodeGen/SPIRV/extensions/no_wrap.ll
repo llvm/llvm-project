@@ -32,12 +32,12 @@ define i32 @no_wrap_test(i32 %a, i32 %b) {
     ret i32 %e
 }
 
-; CHECK: %[[#NO_WRAP_TEST]] = OpFunction %[[#I32]] None %[[#FN]]
+; CHECK:      %[[#NO_WRAP_TEST]] = OpFunction %[[#I32]] None %[[#FN]]
 ; CHECK-NEXT: %[[#A]] = OpFunctionParameter %[[#I32]]
 ; CHECK-NEXT: %[[#B]] = OpFunctionParameter %[[#I32]]
-; CHECK: OpLabel
-; CHECK: %[[#C]] = OpIMul %[[#I32]] %[[#A]] %[[#B]]
-; CHECK: %[[#D]] = OpIMul %[[#I32]] %[[#A]] %[[#B]]
-; CHECK: %[[#E]] = OpIAdd %[[#I32]] %[[#C]] %[[#D]]
-; CHECK: OpReturnValue %[[#E]]
+; CHECK:      OpLabel
+; CHECK:      %[[#C]] = OpIMul %[[#I32]] %[[#A]] %[[#B]]
+; CHECK:      %[[#D]] = OpIMul %[[#I32]] %[[#A]] %[[#B]]
+; CHECK:      %[[#E]] = OpIAdd %[[#I32]] %[[#C]] %[[#D]]
+; CHECK:      OpReturnValue %[[#E]]
 ; CHECK-NEXT: OpFunctionEnd
