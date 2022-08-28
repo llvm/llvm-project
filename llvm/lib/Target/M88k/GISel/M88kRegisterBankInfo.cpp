@@ -303,6 +303,9 @@ M88kRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                                           getValueMapping(PMI_GR64)});
     break;
   }
+  case TargetOpcode::G_FREEZE:
+    OperandsMapping = getValueMapping(PMI_GR32);
+    break;
   case TargetOpcode::COPY: {
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();

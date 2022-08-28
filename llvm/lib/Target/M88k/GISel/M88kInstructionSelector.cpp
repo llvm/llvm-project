@@ -193,6 +193,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                       << " operand\n");
     return false;
   }
+  I.setDesc(TII.get(TargetOpcode::COPY));
   return true;
 }
 
@@ -1093,6 +1094,8 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return true;
 
   switch (I.getOpcode()) {
+  case TargetOpcode::G_FREEZE:
+    return selectCopy(I, TII, MRI, TRI, RBI);
   case TargetOpcode::G_INTRINSIC:
     return selectIntrinsic(I, MBB, MRI);
   case TargetOpcode::G_GLOBAL_VALUE:

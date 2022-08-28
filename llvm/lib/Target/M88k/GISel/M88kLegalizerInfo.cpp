@@ -47,7 +47,9 @@ M88kLegalizerInfo::M88kLegalizerInfo(const M88kSubtarget &ST) {
   getActionDefinitionsBuilder(G_PHI).legalFor({S32, P0});
   getActionDefinitionsBuilder(G_SELECT)
       .customForCartesianProduct({S32, S64, P0}, {S1});
-  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE}).legalFor({S32});
+  getActionDefinitionsBuilder({G_IMPLICIT_DEF, G_FREEZE})
+      .legalFor({S32, P0})
+      .clampScalar(0, S32, S32);
   getActionDefinitionsBuilder(G_MERGE_VALUES).legalFor({{S64, S32}});
   getActionDefinitionsBuilder(G_UNMERGE_VALUES).legalFor({{S32, S64}});
   getActionDefinitionsBuilder(G_CONSTANT)
