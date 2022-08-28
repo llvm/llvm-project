@@ -294,6 +294,8 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 
 /// Cross team helper functions for special case reductions
 ///{
+///   THESE INTERFACES kmpc_xteam_ WILL BE DEPRACATED AND REPLACED WITH BELOW
+///   kmpc_xteamr_
 void __kmpc_xteam_sum_d(double, double *);
 void __kmpc_xteam_sum_f(float, float *);
 void __kmpc_xteam_sum_cd(double _Complex, double _Complex *);
@@ -302,20 +304,52 @@ void __kmpc_xteam_sum_i(int, int *);
 void __kmpc_xteam_sum_ui(unsigned int, unsigned int *);
 void __kmpc_xteam_sum_l(long int, long int *);
 void __kmpc_xteam_sum_ul(unsigned long, unsigned long *);
-
 void __kmpc_xteam_max_d(double, double *);
 void __kmpc_xteam_max_f(float, float *);
 void __kmpc_xteam_max_i(int, int *);
 void __kmpc_xteam_max_ui(unsigned int, unsigned int *);
 void __kmpc_xteam_max_l(long int, long int *);
 void __kmpc_xteam_max_ul(unsigned long, unsigned long *);
-
 void __kmpc_xteam_min_d(double, double *);
 void __kmpc_xteam_min_f(float, float *);
 void __kmpc_xteam_min_i(int, int *);
 void __kmpc_xteam_min_ui(unsigned int, unsigned int *);
 void __kmpc_xteam_min_l(long int, long int *);
 void __kmpc_xteam_min_ul(unsigned long, unsigned long *);
+
+///  __kmpc_xteamr_<rtype>_<dtype>: Helper functions for Cross Team reductions
+///    arg1: the thread local reduction value.
+///    arg2: pointer to where result is written.
+///    arg3: global array of team values for this reduction instance.
+///    arg4: atomic counter of completed teams for this reduction instance.
+void __kmpc_xteamr_sum_d(double, double *, double *, uint32_t *);
+void __kmpc_xteamr_sum_f(float, float *, float *, uint32_t *);
+void __kmpc_xteamr_sum_cd(double _Complex, double _Complex *, double _Complex *,
+                          uint32_t *);
+void __kmpc_xteamr_sum_cf(float _Complex, float _Complex *, float _Complex *,
+                          uint32_t *);
+void __kmpc_xteamr_sum_i(int, int *, int *, uint32_t *);
+void __kmpc_xteamr_sum_ui(unsigned int, unsigned int *, unsigned int *,
+                          uint32_t *);
+void __kmpc_xteamr_sum_l(long int, long int *, long int *, uint32_t *);
+void __kmpc_xteamr_sum_ul(unsigned long, unsigned long *, unsigned long *,
+                          uint32_t *);
+void __kmpc_xteamr_max_d(double, double *, double *, uint32_t *);
+void __kmpc_xteamr_max_f(float, float *, float *, uint32_t *);
+void __kmpc_xteamr_max_i(int, int *, int *, uint32_t *);
+void __kmpc_xteamr_max_ui(unsigned int, unsigned int *, unsigned int *,
+                          uint32_t *);
+void __kmpc_xteamr_max_l(long int, long int *, long int *, uint32_t *);
+void __kmpc_xteamr_max_ul(unsigned long, unsigned long *, unsigned long *,
+                          uint32_t *);
+void __kmpc_xteamr_min_d(double, double *, double *, uint32_t *);
+void __kmpc_xteamr_min_f(float, float *, float *, uint32_t *);
+void __kmpc_xteamr_min_i(int, int *, int *, uint32_t *);
+void __kmpc_xteamr_min_ui(unsigned int, unsigned int *, unsigned int *,
+                          uint32_t *);
+void __kmpc_xteamr_min_l(long int, long int *, long int *, uint32_t *);
+void __kmpc_xteamr_min_ul(unsigned long, unsigned long *, unsigned long *,
+                          uint32_t *);
 ///}
 
 /// Synchronization
