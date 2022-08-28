@@ -255,8 +255,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
   if (HwasanMemaccessSymbols.empty())
     return;
 
-  const Triple &TT = TM.getTargetTriple();
-  assert(TT.isOSBinFormatELF());
+  assert(TM.getTargetTriple().isOSBinFormatELF());
 
   MCSymbol *HwasanTagMismatchV2Sym =
       OutContext.getOrCreateSymbol("__hwasan_tag_mismatch_v2");
