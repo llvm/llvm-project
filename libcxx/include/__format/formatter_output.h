@@ -10,10 +10,9 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_OUTPUT_H
 #define _LIBCPP___FORMAT_FORMATTER_OUTPUT_H
 
-#include <__algorithm/copy.h>
-#include <__algorithm/copy_n.h>
-#include <__algorithm/fill_n.h>
-#include <__algorithm/transform.h>
+#include <__algorithm/ranges_copy.h>
+#include <__algorithm/ranges_fill_n.h>
+#include <__algorithm/ranges_transform.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/buffer.h>
@@ -99,7 +98,7 @@ _LIBCPP_HIDE_FROM_ABI auto __copy(basic_string_view<_CharT> __str, output_iterat
     __out_it.__get_container()->__copy(__str);
     return __out_it;
   } else {
-    return std::copy_n(__str.data(), __str.size(), _VSTD::move(__out_it));
+    return std::ranges::copy(__str, _VSTD::move(__out_it)).out;
   }
 }
 
@@ -129,7 +128,7 @@ __transform(const _CharT* __first,
     __out_it.__get_container()->__transform(__first, __last, _VSTD::move(__operation));
     return __out_it;
   } else {
-    return std::transform(__first, __last, _VSTD::move(__out_it), __operation);
+    return std::ranges::transform(__first, __last, _VSTD::move(__out_it), __operation).out;
   }
 }
 
@@ -142,7 +141,7 @@ _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value)
     __out_it.__get_container()->__fill(__n, __value);
     return __out_it;
   } else {
-    return std::fill_n(_VSTD::move(__out_it), __n, __value);
+    return std::ranges::fill_n(_VSTD::move(__out_it), __n, __value);
   }
 }
 
