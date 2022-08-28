@@ -108,13 +108,9 @@ bool filterSymbol(const BinaryData *BD) {
   bool IsValid = true;
 
   if (!opts::ReorderSymbols.empty()) {
-    IsValid = false;
-    for (const std::string &Name : opts::ReorderSymbols) {
-      if (BD->hasName(Name)) {
-        IsValid = true;
-        break;
-      }
-    }
+    IsValid = llvm::any_of(opts::ReorderSymbols, [&](const std::string &Name) {
+      return BD->hasName(Name);
+    });
   }
 
   if (!IsValid)

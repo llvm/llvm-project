@@ -18,6 +18,7 @@
 #include "bolt/Profile/Heatmap.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -2022,19 +2023,16 @@ std::error_code DataAggregator::parseMMapEvents() {
     MMapInfo &MMapInfo = I->second;
     if (BC->HasFixedLoadAddress && MMapInfo.MMapAddress) {
       // Check that the binary mapping matches one of the segments.
-      bool MatchFound = false;
-      for (auto &KV : BC->SegmentMapInfo) {
-        SegmentInfo &SegInfo = KV.second;
-        // The mapping is page-aligned and hence the MMapAddress could be
-        // different from the segment start address. We cannot know the page
-        // size of the mapping, but we know it should not exceed the segment
-        // alignment value. Hence we are performing an approximate check.
-        if (SegInfo.Address >= MMapInfo.MMapAddress &&
-            SegInfo.Address - MMapInfo.MMapAddress < SegInfo.Alignment) {
-          MatchFound = true;
-          break;
-        }
-      }
+      bool MatchFound = llvm::any_of(
+          llvm::make_second_range(BC->SegmentMapInfo),
+          [&](SegmentInfo &SegInfo) {
+            // The mapping is page-aligned and hence the MMapAddress could be
+            // different from the segment start address. We cannot know the page
+            // size of the mapping, but we know it should not exceed the segment
+            // alignment value. Hence we are performing an approximate check.
+            return SegInfo.Address >= MMapInfo.MMapAddress &&
+                   SegInfo.Address - MMapInfo.MMapAddress < SegInfo.Alignment;
+          });
       if (!MatchFound) {
         errs() << "PERF2BOLT-WARNING: ignoring mapping of " << NameToUse
                << " at 0x" << Twine::utohexstr(MMapInfo.MMapAddress) << '\n';
