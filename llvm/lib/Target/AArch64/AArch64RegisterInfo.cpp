@@ -424,8 +424,7 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   bool IsVarArg = STI.isCallingConvWin64(MF.getFunction().getCallingConv());
 
   auto HasReg = [](ArrayRef<MCRegister> RegList, MCRegister Reg) {
-    return llvm::any_of(RegList,
-                        [Reg](const MCRegister R) { return R == Reg; });
+    return llvm::is_contained(RegList, Reg);
   };
 
   switch (CC) {
