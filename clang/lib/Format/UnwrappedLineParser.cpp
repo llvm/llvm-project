@@ -815,6 +815,10 @@ bool UnwrappedLineParser::mightFitOnOneLine(
   auto Length = LastToken->TotalLength;
   if (OpeningBrace) {
     assert(OpeningBrace != Tokens.front().Tok);
+    if (auto Prev = OpeningBrace->Previous;
+        Prev && Prev->TotalLength + ColumnLimit == OpeningBrace->TotalLength) {
+      Length -= ColumnLimit;
+    }
     Length -= OpeningBrace->TokenText.size() + 1;
   }
 
