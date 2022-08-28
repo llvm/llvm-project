@@ -923,7 +923,7 @@ const char *PythonException::toCString() const {
 
 PythonException::PythonException(const char *caller) {
   assert(PyErr_Occurred());
-  m_exception_type = m_exception = m_traceback = m_repr_bytes = NULL;
+  m_exception_type = m_exception = m_traceback = m_repr_bytes = nullptr;
   PyErr_Fetch(&m_exception_type, &m_exception, &m_traceback);
   PyErr_NormalizeException(&m_exception_type, &m_exception, &m_traceback);
   PyErr_Clear();
@@ -951,7 +951,7 @@ void PythonException::Restore() {
   } else {
     PyErr_SetString(PyExc_Exception, toCString());
   }
-  m_exception_type = m_exception = m_traceback = NULL;
+  m_exception_type = m_exception = m_traceback = nullptr;
 }
 
 PythonException::~PythonException() {
