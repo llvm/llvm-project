@@ -931,7 +931,7 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
 int SchedGroup::link(SUnit &SU, bool MakePred,
                      std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges) {
   int MissedEdges = 0;
-  for (auto A : Collection) {
+  for (auto *A : Collection) {
     SUnit *B = &SU;
     if (A == B || A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
       continue;
@@ -953,7 +953,7 @@ int SchedGroup::link(SUnit &SU, bool MakePred,
 }
 
 void SchedGroup::link(SUnit &SU, bool MakePred) {
-  for (auto A : Collection) {
+  for (auto *A : Collection) {
     SUnit *B = &SU;
     if (A->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER)
       continue;
@@ -966,7 +966,7 @@ void SchedGroup::link(SUnit &SU, bool MakePred) {
 
 void SchedGroup::link(SUnit &SU,
                       function_ref<bool(const SUnit *A, const SUnit *B)> P) {
-  for (auto A : Collection) {
+  for (auto *A : Collection) {
     SUnit *B = &SU;
     if (P(A, B))
       std::swap(A, B);
@@ -976,7 +976,7 @@ void SchedGroup::link(SUnit &SU,
 }
 
 void SchedGroup::link(SchedGroup &OtherGroup) {
-  for (auto B : OtherGroup.Collection)
+  for (auto *B : OtherGroup.Collection)
     link(*B);
 }
 

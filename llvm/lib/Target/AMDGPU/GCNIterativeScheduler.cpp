@@ -439,7 +439,7 @@ unsigned GCNIterativeScheduler::tryMaximizeOccupancy(unsigned TargetOcc) {
                     << ", current = " << Occ << '\n');
 
   auto NewOcc = TargetOcc;
-  for (auto R : Regions) {
+  for (auto *R : Regions) {
     if (R->MaxPressure.getOccupancy(ST) >= NewOcc)
       break;
 
@@ -495,7 +495,7 @@ void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
     // running first pass with TargetOccupancy = 0 mimics previous scheduling
     // approach and is a performance magic
     LStrgy.setTargetOccupancy(I == 0 ? 0 : TgtOcc);
-    for (auto R : Regions) {
+    for (auto *R : Regions) {
       OverrideLegacyStrategy Ovr(*R, LStrgy, *this);
 
       Ovr.schedule();
@@ -530,7 +530,7 @@ void GCNIterativeScheduler::scheduleMinReg(bool force) {
   sortRegionsByPressure(TgtOcc);
 
   auto MaxPressure = Regions.front()->MaxPressure;
-  for (auto R : Regions) {
+  for (auto *R : Regions) {
     if (!force && R->MaxPressure.less(ST, MaxPressure, TgtOcc))
       break;
 
@@ -574,7 +574,7 @@ void GCNIterativeScheduler::scheduleILP(
                     << TgtOcc << '\n');
 
   unsigned FinalOccupancy = std::min(Occ, MFI->getOccupancy());
-  for (auto R : Regions) {
+  for (auto *R : Regions) {
     BuildDAG DAG(*R, *this);
     const auto ILPSchedule = makeGCNILPScheduler(DAG.getBottomRoots(), *this);
 
