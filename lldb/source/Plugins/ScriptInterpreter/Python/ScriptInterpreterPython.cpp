@@ -1259,8 +1259,6 @@ void ScriptInterpreterPythonImpl::SetWatchpointCommandCallback(
     wp_options->SetCallback(
         ScriptInterpreterPythonImpl::WatchpointCallbackFunction, baton_sp);
   }
-
-  return;
 }
 
 Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
