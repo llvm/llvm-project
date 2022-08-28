@@ -1653,12 +1653,12 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
   // propagate the info through the new PHI. If we use more than one new PHI in
   // a single destination BB with the same old dbg.value, merge the updates so
   // that we get a single new dbg.value with all the new PHIs.
-  for (auto PHI : InsertedPHIs) {
+  for (auto *PHI : InsertedPHIs) {
     BasicBlock *Parent = PHI->getParent();
     // Avoid inserting an intrinsic into an EH block.
     if (Parent->getFirstNonPHI()->isEHPad())
       continue;
-    for (auto VI : PHI->operand_values()) {
+    for (auto *VI : PHI->operand_values()) {
       auto V = DbgValueMap.find(VI);
       if (V != DbgValueMap.end()) {
         auto *DbgII = cast<DbgVariableIntrinsic>(V->second);

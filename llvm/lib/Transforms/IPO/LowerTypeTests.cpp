@@ -1301,7 +1301,7 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
   // (all?) targets. Switch to a runtime initializer.
   SmallSetVector<GlobalVariable *, 8> GlobalVarUsers;
   findGlobalVariableUsersOf(F, GlobalVarUsers);
-  for (auto GV : GlobalVarUsers)
+  for (auto *GV : GlobalVarUsers)
     moveInitializerToModuleConstructor(GV);
 
   // Can not RAUW F with an expression that uses F. Replace with a temporary
@@ -1864,9 +1864,9 @@ bool LowerTypeTestsModule::lower() {
     std::vector<GlobalAlias *> AliasesToErase;
     {
       ScopedSaveAliaseesAndUsed S(M);
-      for (auto F : Defs)
+      for (auto *F : Defs)
         importFunction(F, /*isJumpTableCanonical*/ true, AliasesToErase);
-      for (auto F : Decls)
+      for (auto *F : Decls)
         importFunction(F, /*isJumpTableCanonical*/ false, AliasesToErase);
     }
     for (GlobalAlias *GA : AliasesToErase)
@@ -1918,7 +1918,7 @@ bool LowerTypeTestsModule::lower() {
 
     NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions");
     if (CfiFunctionsMD) {
-      for (auto FuncMD : CfiFunctionsMD->operands()) {
+      for (auto *FuncMD : CfiFunctionsMD->operands()) {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =
             cast<MDString>(FuncMD->getOperand(0))->getString();
@@ -2213,7 +2213,7 @@ bool LowerTypeTestsModule::lower() {
   // with an alias to the intended target.
   if (ExportSummary) {
     if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
-      for (auto AliasMD : AliasesMD->operands()) {
+      for (auto *AliasMD : AliasesMD->operands()) {
         assert(AliasMD->getNumOperands() >= 4);
         StringRef AliasName =
             cast<MDString>(AliasMD->getOperand(0))->getString();
@@ -2255,7 +2255,7 @@ bool LowerTypeTestsModule::lower() {
   // Emit .symver directives for exported functions, if they exist.
   if (ExportSummary) {
     if (NamedMDNode *SymversMD = M.getNamedMetadata("symvers")) {
-      for (auto Symver : SymversMD->operands()) {
+      for (auto *Symver : SymversMD->operands()) {
         assert(Symver->getNumOperands() >= 2);
         StringRef SymbolName =
             cast<MDString>(Symver->getOperand(0))->getString();

@@ -259,7 +259,7 @@ public:
     // of the loop, the result profile is incomplete.
     // FIXME: add other heuristics to detect long running loops.
     if (SkipRetExitBlock) {
-      for (auto BB : ExitBlocks)
+      for (auto *BB : ExitBlocks)
         if (isa<ReturnInst>(BB->getTerminator()))
           return false;
     }

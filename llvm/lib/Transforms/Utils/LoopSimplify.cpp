@@ -231,7 +231,7 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
   // a function call is present until a better alternative becomes
   // available. This is similar to the conservative treatment of
   // convergent function calls in GVNHoist and JumpThreading.
-  for (auto BB : L->blocks()) {
+  for (auto *BB : L->blocks()) {
     for (auto &II : *BB) {
       if (auto CI = dyn_cast<CallBase>(&II)) {
         if (CI->isConvergent()) {
