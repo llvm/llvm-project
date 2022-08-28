@@ -568,9 +568,6 @@ private:
   std::vector<std::vector<Edge *>> AugmentingEdges;
 };
 
-constexpr int64_t MinCostMaxFlow::AuxCostUnlikely;
-constexpr uint64_t MinCostMaxFlow::MinBaseDistance;
-
 /// A post-processing adjustment of control flow. It applies two steps by
 /// rerouting some flow and making it more realistic:
 ///
