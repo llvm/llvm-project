@@ -442,10 +442,10 @@ bool M88kInstructionSelector::selectBrCond(MachineInstr &I,
   MachineBasicBlock *BB = I.getOperand(1).getMBB();
   CmpInst::Predicate Pred;
   Register LHS, RHS, Reg;
-  int64_t SImm16;
-  if (mi_match(CC, MRI, m_GICmp(m_Pred(Pred), m_Reg(LHS), m_ICst(SImm16))) &&
-      isInt<16>(SImm16)) {
-    if (SImm16 == 0) {
+  int64_t UImm16;
+  if (mi_match(CC, MRI, m_GICmp(m_Pred(Pred), m_Reg(LHS), m_ICst(UImm16))) &&
+      isUInt<16>(UImm16)) {
+    if (UImm16 == 0) {
       CC0 CCCode = getCCforBCOND(Pred);
       MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BCND))
                .addImm(static_cast<int64_t>(CCCode))
@@ -457,7 +457,7 @@ bool M88kInstructionSelector::selectBrCond(MachineInstr &I,
       MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::CMPri))
                .addReg(Temp, RegState::Define)
                .addReg(LHS)
-               .addImm(SImm16);
+               .addImm(UImm16);
       if (!constrainSelectedInstRegOperands(*MI, TII, TRI, RBI))
         return false;
       MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(M88k::BB1))
