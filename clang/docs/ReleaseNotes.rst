@@ -320,6 +320,11 @@ Improvements to Clang's diagnostics
   conversions now defaults to an error in all C language modes. It may be
   downgraded to a warning with ``-Wno-error=int-conversion``, or disabled
   entirely with ``-Wno-int-conversion``.
+- Deprecated lax vector conversions for Altivec vectors.
+  The default behaviour with respect to these conversions
+  will switch to disable them in an upcoming release.
+- On AIX, only emit XL compatibility warning when 16 byte aligned structs are
+  pass-by-value function arguments.
 
 
 Non-comprehensive list of changes in this release

@@ -212,6 +212,8 @@ Fixes
   errors. (`D122624 <https://reviews.llvm.org/D122624>`_)
 * Fixed handling of relocatable object files within frameworks.
   (`D114841 <https://reviews.llvm.org/D114841>`_)
+* Fixed the PPC64R2SaveStub to only use non-pc-relative code.
+  (`D129580 <https://reviews.llvm.org/D129580>`_)
 
 WebAssembly Improvements
 ------------------------

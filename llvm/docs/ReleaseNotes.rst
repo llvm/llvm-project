@@ -115,6 +115,12 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+Changes to Loop Optimizations
+-----------------------------
+
+* Loop interchange legality and cost model improvements
+
+
 Changes to the AArch64 Backend
 ------------------------------
 
@@ -171,7 +177,25 @@ Changes to the MIPS Backend
 Changes to the PowerPC Backend
 ------------------------------
 
-* ...
+Common PowerPC improvements:
+* Add a new post instruction selection pass to generate CTR loops.
+* Add SSE4 and BMI compatible intrinsics implementation.
+* Supported 16-byte lock free atomics on PowerPC8 and up.
+* Supported atomic load/store for pointer types.
+* Supported stack size larger than 2G
+* Add __builtin_min/__builtin_max/__abs builtins.
+* Code generation improvements for splat load/vector shuffle/mulli, etc.
+* Emit VSX instructions for vector loads and stores regardless of alignment.
+* The mcpu=future has its own ISA now (FutureISA).
+* Added the ppc-set-dscr option to set the Data Stream Control Register (DSCR).
+* Bug fixes.
+
+AIX improvements:
+* Supported 64 bit XCOFF for integrated-as path.
+* Supported X86-compatible vector intrinsics.
+* Program code csect default alignment now is 32-byte.
+* Supported auxiliary header in integrated-as path.
+* Improved alias symbol handling.
 
 Changes to the RISC-V Backend
 -----------------------------
@@ -296,8 +320,25 @@ Changes to the LLVM tools
 * :doc:`llvm-objcopy <CommandGuide/llvm-objcopy>` has removed support for the legacy ``zlib-gnu`` format.
 * :doc:`llvm-objcopy <CommandGuide/llvm-objcopy>` now allows ``--set-section-flags src=... --rename-section src=tst``.
   ``--add-section=.foo1=... --rename-section=.foo1=.foo2`` now adds ``.foo1`` instead of ``.foo2``.
+* New features supported on AIX for ``llvm-ar``:
+
+  * AIX big-format archive write operation (`D123949 <https://reviews.llvm.org/D123949>`_)
+
+  * A new object mode option, ``-X`` , to specify the type of object file ``llvm-ar`` should operate upon (`D127864 <https://reviews.llvm.org/D127864>`_)
+
+  * Read global symbols of AIX big archive (`D124865 <https://reviews.llvm.org/D124865>`_)
+
+* New options supported for ``llvm-nm``:
+
+  * ``-X``, to specify the type of object file that ``llvm-nm`` should examine (`D118193 <https://reviews.llvm.org/D118193>`_)
+
+  * ``--export-symbols``, to create a list of symbols to export (`D112735 <https://reviews.llvm.org/D112735>`_)
+
 * The LLVM gold plugin now ignores bitcode from the ``.llvmbc`` section of ELF
   files when doing LTO.  https://github.com/llvm/llvm-project/issues/47216
+* llvm-objcopy now supports 32 bit XCOFF.
+* llvm-objdump: improved assembly printing for XCOFF.
+* llc now parses code-model attribute from input file.
 
 Changes to LLDB
 ---------------------------------
@@ -342,6 +383,14 @@ Other Changes
   <https://marketplace.visualstudio.com/items?itemName=LLVMExtensions.llvm-toolchain>`_
   has been removed. This had been obsolete and abandoned since Visual Studio
   started including an integration by default in 2019.
+
+* Added the unwinder, personality, and helper functions for exception handling
+  on AIX. (`D100132 <https://reviews.llvm.org/D100132>`_)
+  (`D100504 <https://reviews.llvm.org/D100504>`_)
+
+* PGO on AIX: A new implementation that requires linker support
+  (__start_SECTION/__stop_SECTION symbols) available on AIX 7.2 TL5 SP4 and
+  AIX 7.3 TL0 SP2.
 
 External Open Source Projects Using LLVM 15
 ===========================================
