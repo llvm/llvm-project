@@ -1369,9 +1369,9 @@ void LowerTypeTestsModule::createJumpTable(
 
   Triple::ArchType JumpTableArch = selectJumpTableArmEncoding(Functions, Arch);
 
-  for (unsigned I = 0; I != Functions.size(); ++I)
+  for (GlobalTypeMember *GTM : Functions)
     createJumpTableEntry(AsmOS, ConstraintOS, JumpTableArch, AsmArgs,
-                         cast<Function>(Functions[I]->getGlobal()));
+                         cast<Function>(GTM->getGlobal()));
 
   // Align the whole table by entry size.
   F->setAlignment(Align(getJumpTableEntrySize()));
