@@ -659,7 +659,7 @@ bool IntegerRelation::isEmptyByGCDTest() const {
   for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
     uint64_t gcd = std::abs(atEq(i, 0));
     for (unsigned j = 1; j < numCols - 1; ++j) {
-      gcd = llvm::GreatestCommonDivisor64(gcd, std::abs(atEq(i, j)));
+      gcd = std::gcd(gcd, (uint64_t)std::abs(atEq(i, j)));
     }
     int64_t v = std::abs(atEq(i, numCols - 1));
     if (gcd > 0 && (v % gcd != 0)) {
