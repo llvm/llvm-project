@@ -1,9 +1,22 @@
-RUN: llvm-objdump --macho --dyld-info %p/Inputs/bind.macho-x86_64 \
-RUN:   | FileCheck %s --match-full-lines --strict-whitespace \
-RUN:     --implicit-check-not={{.}}
-RUN: llvm-otool -dyld_info %p/Inputs/bind.macho-x86_64 \
-RUN:   | FileCheck %s --match-full-lines --strict-whitespace \
-RUN:     --implicit-check-not={{.}}
+RUN: llvm-objdump --macho --dyld-info %p/Inputs/chained-fixups.macho-x86_64 | \
+RUN:     FileCheck -DNAME=%p/Inputs/chained-fixups.macho-x86_64 %s
+RUN: llvm-otool -dyld_info %p/Inputs/chained-fixups.macho-x86_64 | \
+RUN:     FileCheck -DNAME=%p/Inputs/chained-fixups.macho-x86_64 %s
 
-CHECK:{{.*}}bind.macho-x86_64:
-CHECK:dyld information:
+
+## See chained-fixups.test for how the test input was generated.
+CHECK:      [[NAME]]:
+CHECK-NEXT: dyld information:
+CHECK-NEXT: segment      section address       pointer      type   addend dylib          symbol/vm address
+CHECK-NEXT: __DATA_CONST __const 0x3E0   0x8010000000000001 bind   0x0    libdylib       _weakImport (weak import)
+CHECK-NEXT: __DATA_CONST __const 0x3E8   0x8000000000000000 bind   0x0    flat-namespace _dynamicLookup
+CHECK-NEXT: __DATA       __data  0x3F0   0x00200000000003F0 rebase                       0x3F0
+CHECK-NEXT: __DATA       __data  0x400   0x8000000000000004 bind   0x0     weak          _weak
+CHECK-NEXT: __DATA       __data  0x1410  0x8000000000000003 bind   0x0     weak          _weakLocal
+CHECK-NEXT: __DATA       __data  0x3410  0x8010000000000002 bind   0x0     libdylib      _dylib
+CHECK-NEXT: __DATA       __data  0x3418  0x800000002A000002 bind   0x2A    libdylib      _dylib
+
+## TODO: Print opcode-based fixups/binds as well
+## For now, test that execution doesn't fail if the input uses those.
+RUN: llvm-objdump --macho --dyld-info %p/Inputs/bind.macho-x86_64
+RUN: llvm-objdump --macho --dyld-info %p/Inputs/bind.macho-x86_64
