@@ -323,10 +323,9 @@ void PipelineSolver::reset() {
     for (auto &SG : SyncPipeline) {
       SmallVector<SUnit *, 32> TempCollection = SG.Collection;
       SG.Collection.clear();
-      auto SchedBarr = std::find_if(
-          TempCollection.begin(), TempCollection.end(), [](SUnit *SU) {
-            return SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER;
-          });
+      auto SchedBarr = llvm::find_if(TempCollection, [](SUnit *SU) {
+        return SU->getInstr()->getOpcode() == AMDGPU::SCHED_GROUP_BARRIER;
+      });
       if (SchedBarr != TempCollection.end())
         SG.Collection.push_back(*SchedBarr);
     }
@@ -428,9 +427,8 @@ void PipelineSolver::removeEdges(
     SUnit *Pred = PredSuccPair.first;
     SUnit *Succ = PredSuccPair.second;
 
-    auto Match =
-        std::find_if(Succ->Preds.begin(), Succ->Preds.end(),
-                     [&Pred](SDep &P) { return P.getSUnit() == Pred; });
+    auto Match = llvm::find_if(
+        Succ->Preds, [&Pred](SDep &P) { return P.getSUnit() == Pred; });
     if (Match != Succ->Preds.end()) {
       assert(Match->isArtificial());
       Succ->removePred(*Match);

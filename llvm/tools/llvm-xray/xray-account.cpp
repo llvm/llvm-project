@@ -201,10 +201,10 @@ bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
 
     // Look for the parent up the stack.
     auto Parent =
-        std::find_if(ThreadStack.Stack.rbegin(), ThreadStack.Stack.rend(),
-                     [&](const std::pair<const int32_t, uint64_t> &E) {
-                       return E.first == Record.FuncId;
-                     });
+        llvm::find_if(llvm::reverse(ThreadStack.Stack),
+                      [&](const std::pair<const int32_t, uint64_t> &E) {
+                        return E.first == Record.FuncId;
+                      });
     if (Parent == ThreadStack.Stack.rend())
       return false;
 

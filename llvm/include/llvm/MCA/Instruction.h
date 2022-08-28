@@ -549,9 +549,9 @@ public:
   /// Return the MCAOperand which corresponds to index Idx within the original
   /// MCInst.
   const MCAOperand *getOperand(const unsigned Idx) const {
-    auto It = std::find_if(
-        Operands.begin(), Operands.end(),
-        [&Idx](const MCAOperand &Op) { return Op.getIndex() == Idx; });
+    auto It = llvm::find_if(Operands, [&Idx](const MCAOperand &Op) {
+      return Op.getIndex() == Idx;
+    });
     if (It == Operands.end())
       return nullptr;
     return &(*It);
