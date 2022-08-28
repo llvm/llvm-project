@@ -3702,10 +3702,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     unsigned ArgOffset = 0;
     LLVM_DEBUG(dbgs() << "  CallSite: " << CB << "\n");
-    for (auto ArgIt = CB.arg_begin(), End = CB.arg_end(); ArgIt != End;
-         ++ArgIt) {
-      Value *A = *ArgIt;
-      unsigned i = ArgIt - CB.arg_begin();
+    for (const auto &[i, A] : llvm::enumerate(CB.args())) {
       if (!A->getType()->isSized()) {
         LLVM_DEBUG(dbgs() << "Arg " << i << " is not sized: " << CB << "\n");
         continue;
@@ -4270,10 +4267,7 @@ struct VarArgAMD64Helper : public VarArgHelper {
     unsigned FpOffset = AMD64GpEndOffset;
     unsigned OverflowOffset = AMD64FpEndOffset;
     const DataLayout &DL = F.getParent()->getDataLayout();
-    for (auto ArgIt = CB.arg_begin(), End = CB.arg_end(); ArgIt != End;
-         ++ArgIt) {
-      Value *A = *ArgIt;
-      unsigned ArgNo = CB.getArgOperandNo(ArgIt);
+    for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
       if (IsByVal) {
@@ -4648,10 +4642,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
     unsigned OverflowOffset = AArch64VAEndOffset;
 
     const DataLayout &DL = F.getParent()->getDataLayout();
-    for (auto ArgIt = CB.arg_begin(), End = CB.arg_end(); ArgIt != End;
-         ++ArgIt) {
-      Value *A = *ArgIt;
-      unsigned ArgNo = CB.getArgOperandNo(ArgIt);
+    for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       ArgKind AK = classifyArgument(A);
       if (AK == AK_GeneralPurpose && GrOffset >= AArch64GrEndOffset)
@@ -4886,10 +4877,7 @@ struct VarArgPowerPC64Helper : public VarArgHelper {
       VAArgBase = 32;
     unsigned VAArgOffset = VAArgBase;
     const DataLayout &DL = F.getParent()->getDataLayout();
-    for (auto ArgIt = CB.arg_begin(), End = CB.arg_end(); ArgIt != End;
-         ++ArgIt) {
-      Value *A = *ArgIt;
-      unsigned ArgNo = CB.getArgOperandNo(ArgIt);
+    for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
       if (IsByVal) {
@@ -5114,10 +5102,7 @@ struct VarArgSystemZHelper : public VarArgHelper {
     unsigned VrIndex = 0;
     unsigned OverflowOffset = SystemZOverflowOffset;
     const DataLayout &DL = F.getParent()->getDataLayout();
-    for (auto ArgIt = CB.arg_begin(), End = CB.arg_end(); ArgIt != End;
-         ++ArgIt) {
-      Value *A = *ArgIt;
-      unsigned ArgNo = CB.getArgOperandNo(ArgIt);
+    for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       // SystemZABIInfo does not produce ByVal parameters.
       assert(!CB.paramHasAttr(ArgNo, Attribute::ByVal));
