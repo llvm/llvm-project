@@ -179,6 +179,13 @@ static const TargetRegisterClass *guessRegClass(unsigned Reg,
 static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                        const RegisterBankInfo &RBI) {
+  Register SrcReg = I.getOperand(1).getReg();
+  if (Register::isVirtualRegister(SrcReg) &&
+      MRI.getType(SrcReg) == LLT::pointer(0, 32))
+    if (Optional<APInt> Cst = getIConstantVRegVal(SrcReg, MRI);
+        Cst && Cst->isZero())
+      I.getOperand(1).setReg(M88k::R0);
+
   Register DstReg = I.getOperand(0).getReg();
   if (Register::isPhysicalRegister(DstReg))
     return true;
@@ -765,11 +772,17 @@ bool M88kInstructionSelector::selectLoadStore(MachineInstr &I,
 
   // ValReg is either the destination register of a load, or the source register
   // of a store. In case of a truncating store, match the G_TRUNC instruction
-  // and use the source operand of that instruction.
+  // and use the source operand of that instruction. If the source register of a
+  // store is the constant 0, then use register %r0 instead.
   Register ValReg = I.getOperand(0).getReg();
-  MachineInstr *TruncMI = nullptr;
-  if (!IsLoad && ((TruncMI = getOpcodeDef(TargetOpcode::G_TRUNC, ValReg, MRI))))
-    ValReg = TruncMI->getOperand(1).getReg();
+  if (!IsLoad) {
+    if (Optional<APInt> Cst = getIConstantVRegVal(ValReg, MRI);
+        Cst && Cst->isZero())
+      ValReg = M88k::R0;
+    else if (MachineInstr *TruncMI =
+                 getOpcodeDef(TargetOpcode::G_TRUNC, ValReg, MRI))
+      ValReg = TruncMI->getOperand(1).getReg();
+  }
 
   Register Base, Addend;
   if (MachineInstr *FrameIdxMI =
@@ -853,9 +866,6 @@ bool M88kInstructionSelector::selectLoadStore(MachineInstr &I,
              .addImm(0)
              .addMemOperand(MMO);
   }
-
-  if (TruncMI)
-    TruncMI->eraseFromParent();
 
   I.eraseFromParent();
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
