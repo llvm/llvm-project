@@ -681,9 +681,9 @@ bool llvm::runIPSCCP(
 
   // Zap all returns which we've identified as zap to change.
   SmallSetVector<Function *, 8> FuncZappedReturn;
-  for (unsigned i = 0, e = ReturnsToZap.size(); i != e; ++i) {
-    Function *F = ReturnsToZap[i]->getParent()->getParent();
-    ReturnsToZap[i]->setOperand(0, UndefValue::get(F->getReturnType()));
+  for (ReturnInst *RI : ReturnsToZap) {
+    Function *F = RI->getParent()->getParent();
+    RI->setOperand(0, UndefValue::get(F->getReturnType()));
     // Record all functions that are zapped.
     FuncZappedReturn.insert(F);
   }
