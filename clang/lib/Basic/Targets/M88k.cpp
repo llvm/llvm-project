@@ -54,7 +54,9 @@ M88kTargetInfo::M88kTargetInfo(const llvm::Triple &Triple,
 
   resetDataLayout(Layout);
 
-  SizeType = UnsignedInt;
+  IntMaxType = SignedLongLong;
+  Int64Type = SignedLongLong;
+  SizeType = UnsignedLong;
   PtrDiffType = SignedInt;
   IntPtrType = SignedInt;
 }
