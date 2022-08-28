@@ -239,7 +239,7 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     llvm::findDbgValues(DbgValues, I);
 
     // Update pre-existing debug value uses that reside outside the loop.
-    for (auto DVI : DbgValues) {
+    for (auto *DVI : DbgValues) {
       BasicBlock *UserBB = DVI->getParent();
       if (InstBB == UserBB || L->contains(UserBB))
         continue;

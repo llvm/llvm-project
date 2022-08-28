@@ -1297,7 +1297,7 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
   // cost calculations.
   if (!FromReduction) {
     for (ShuffleVectorInst *SV : Shuffles) {
-      for (auto U : SV->users()) {
+      for (auto *U : SV->users()) {
         ShuffleVectorInst *SSV = dyn_cast<ShuffleVectorInst>(U);
         if (SSV && isa<UndefValue>(SSV->getOperand(1)) && SSV->getType() == VT)
           Shuffles.push_back(SSV);

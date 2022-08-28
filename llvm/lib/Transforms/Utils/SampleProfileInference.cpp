@@ -640,7 +640,7 @@ private:
     while (!Queue.empty()) {
       Src = Queue.front();
       Queue.pop();
-      for (auto Jump : Func.Blocks[Src].SuccJumps) {
+      for (auto *Jump : Func.Blocks[Src].SuccJumps) {
         uint64_t Dst = Jump->Target;
         if (Jump->Flow > 0 && !Visited[Dst]) {
           Queue.push(Dst);
@@ -691,7 +691,7 @@ private:
           (Func.Blocks[Src].isExit() && Target == AnyExitBlock))
         break;
 
-      for (auto Jump : Func.Blocks[Src].SuccJumps) {
+      for (auto *Jump : Func.Blocks[Src].SuccJumps) {
         uint64_t Dst = Jump->Target;
         int64_t JumpDist = jumpDistance(Jump);
         if (Distance[Dst] > Distance[Src] + JumpDist) {
@@ -795,7 +795,7 @@ private:
 
     // Do not attempt to process subgraphs from a block w/o unknown sucessors
     bool HasUnknownSuccs = false;
-    for (auto Jump : SrcBlock->SuccJumps) {
+    for (auto *Jump : SrcBlock->SuccJumps) {
       if (Func.Blocks[Jump->Target].UnknownWeight) {
         HasUnknownSuccs = true;
         break;
@@ -823,7 +823,7 @@ private:
       auto &Block = Func.Blocks[Queue.front()];
       Queue.pop();
       // Process blocks reachable from Block
-      for (auto Jump : Block.SuccJumps) {
+      for (auto *Jump : Block.SuccJumps) {
         // If Jump can be ignored, skip it
         if (ignoreJump(SrcBlock, nullptr, Jump))
           continue;
@@ -860,7 +860,7 @@ private:
     DstBlock = KnownDstBlocks.empty() ? nullptr : KnownDstBlocks.front();
 
     // Verify sinks of the subgraph
-    for (auto Block : UnknownBlocks) {
+    for (auto *Block : UnknownBlocks) {
       if (Block->SuccJumps.empty()) {
         // If there are multiple (known and unknown) sinks, we can't rebalance
         if (DstBlock != nullptr)
@@ -868,7 +868,7 @@ private:
         continue;
       }
       size_t NumIgnoredJumps = 0;
-      for (auto Jump : Block->SuccJumps) {
+      for (auto *Jump : Block->SuccJumps) {
         if (ignoreJump(SrcBlock, DstBlock, Jump))
           NumIgnoredJumps++;
       }
@@ -914,14 +914,14 @@ private:
     // Extract local in-degrees in the considered subgraph
     auto LocalInDegree = std::vector<uint64_t>(NumBlocks(), 0);
     auto fillInDegree = [&](const FlowBlock *Block) {
-      for (auto Jump : Block->SuccJumps) {
+      for (auto *Jump : Block->SuccJumps) {
         if (ignoreJump(SrcBlock, DstBlock, Jump))
           continue;
         LocalInDegree[Jump->Target]++;
       }
     };
     fillInDegree(SrcBlock);
-    for (auto Block : UnknownBlocks) {
+    for (auto *Block : UnknownBlocks) {
       fillInDegree(Block);
     }
     // A loop containing SrcBlock
@@ -943,7 +943,7 @@ private:
         AcyclicOrder.push_back(Block);
 
       // Add to the queue all successors with zero local in-degree
-      for (auto Jump : Block->SuccJumps) {
+      for (auto *Jump : Block->SuccJumps) {
         if (ignoreJump(SrcBlock, DstBlock, Jump))
           continue;
         uint64_t Dst = Jump->Target;
@@ -972,7 +972,7 @@ private:
     // Ditribute flow from the source block
     uint64_t BlockFlow = 0;
     // SrcBlock's flow is the sum of outgoing flows along non-ignored jumps
-    for (auto Jump : SrcBlock->SuccJumps) {
+    for (auto *Jump : SrcBlock->SuccJumps) {
       if (ignoreJump(SrcBlock, DstBlock, Jump))
         continue;
       BlockFlow += Jump->Flow;
@@ -980,11 +980,11 @@ private:
     rebalanceBlock(SrcBlock, DstBlock, SrcBlock, BlockFlow);
 
     // Ditribute flow from the remaining blocks
-    for (auto Block : UnknownBlocks) {
+    for (auto *Block : UnknownBlocks) {
       assert(Block->UnknownWeight && "incorrect unknown subgraph");
       uint64_t BlockFlow = 0;
       // Block's flow is the sum of incoming flows
-      for (auto Jump : Block->PredJumps) {
+      for (auto *Jump : Block->PredJumps) {
         BlockFlow += Jump->Flow;
       }
       Block->Flow = BlockFlow;
@@ -998,7 +998,7 @@ private:
                       const FlowBlock *Block, uint64_t BlockFlow) {
     // Process all successor jumps and update corresponding flow values
     size_t BlockDegree = 0;
-    for (auto Jump : Block->SuccJumps) {
+    for (auto *Jump : Block->SuccJumps) {
       if (ignoreJump(SrcBlock, DstBlock, Jump))
         continue;
       BlockDegree++;
@@ -1011,7 +1011,7 @@ private:
     // Each of the Block's successors gets the following amount of flow.
     // Rounding the value up so that all flow is propagated
     uint64_t SuccFlow = (BlockFlow + BlockDegree - 1) / BlockDegree;
-    for (auto Jump : Block->SuccJumps) {
+    for (auto *Jump : Block->SuccJumps) {
       if (ignoreJump(SrcBlock, DstBlock, Jump))
         continue;
       uint64_t Flow = std::min(SuccFlow, BlockFlow);

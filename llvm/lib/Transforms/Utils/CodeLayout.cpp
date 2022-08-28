@@ -257,7 +257,7 @@ public:
   bool isEntry() const { return Blocks[0]->Index == 0; }
 
   bool isCold() const {
-    for (auto Block : Blocks) {
+    for (auto *Block : Blocks) {
       if (Block->ExecutionCount > 0)
         return false;
     }
@@ -890,7 +890,7 @@ private:
         // Using doubles to avoid overflow of ExecutionCount
         double Size = 0;
         double ExecutionCount = 0;
-        for (auto Block : Chain.blocks()) {
+        for (auto *Block : Chain.blocks()) {
           Size += static_cast<double>(Block->Size);
           ExecutionCount += static_cast<double>(Block->ExecutionCount);
         }

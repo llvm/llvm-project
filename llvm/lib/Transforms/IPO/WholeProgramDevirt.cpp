@@ -1875,7 +1875,7 @@ void DevirtModule::scanTypeTestUsers(
 
     auto RemoveTypeTestAssumes = [&]() {
       // We no longer need the assumes or the type test.
-      for (auto Assume : Assumes)
+      for (auto *Assume : Assumes)
         Assume->eraseFromParent();
       // We can't use RecursivelyDeleteTriviallyDeadInstructions here because we
       // may use the vtable argument later.
@@ -2265,10 +2265,10 @@ bool DevirtModule::run() {
     if (ExportSummary && isa<MDString>(S.first.TypeID)) {
       auto GUID =
           GlobalValue::getGUID(cast<MDString>(S.first.TypeID)->getString());
-      for (auto FS : S.second.CSInfo.SummaryTypeCheckedLoadUsers)
+      for (auto *FS : S.second.CSInfo.SummaryTypeCheckedLoadUsers)
         FS->addTypeTest(GUID);
       for (auto &CCS : S.second.ConstCSInfo)
-        for (auto FS : CCS.second.SummaryTypeCheckedLoadUsers)
+        for (auto *FS : CCS.second.SummaryTypeCheckedLoadUsers)
           FS->addTypeTest(GUID);
     }
   }
