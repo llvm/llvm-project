@@ -1682,9 +1682,8 @@ define i8 @lshr_bitwidth_mask(i8 %x, i8 %y) {
 
 define i16 @signbit_splat_mask(i8 %x, i16 %y) {
 ; CHECK-LABEL: @signbit_splat_mask(
-; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[A]] to i16
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[S]], [[Y:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], i16 [[Y:%.*]], i16 0
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %a = ashr i8 %x, 7
@@ -1696,9 +1695,8 @@ define i16 @signbit_splat_mask(i8 %x, i16 %y) {
 define <2 x i16> @signbit_splat_mask_commute(<2 x i5> %x, <2 x i16> %p) {
 ; CHECK-LABEL: @signbit_splat_mask_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i16> [[P:%.*]], [[P]]
-; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i5> [[X:%.*]], <i5 4, i5 poison>
-; CHECK-NEXT:    [[S:%.*]] = sext <2 x i5> [[A]] to <2 x i16>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i16> [[Y]], [[S]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <2 x i5> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[ISNEG]], <2 x i16> [[Y]], <2 x i16> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i16> [[R]]
 ;
   %y = mul <2 x i16> %p, %p ; thwart complexity-based canonicalization
@@ -1712,8 +1710,8 @@ define i16 @signbit_splat_mask_use1(i8 %x, i16 %y) {
 ; CHECK-LABEL: @signbit_splat_mask_use1(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
 ; CHECK-NEXT:    call void @use8(i8 [[A]])
-; CHECK-NEXT:    [[S:%.*]] = sext i8 [[A]] to i16
-; CHECK-NEXT:    [[R:%.*]] = and i16 [[S]], [[Y:%.*]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i8 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], i16 [[Y:%.*]], i16 0
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %a = ashr i8 %x, 7
@@ -1722,6 +1720,8 @@ define i16 @signbit_splat_mask_use1(i8 %x, i16 %y) {
   %r = and i16 %s, %y
   ret i16 %r
 }
+
+; negative test - extra use
 
 define i16 @signbit_splat_mask_use2(i8 %x, i16 %y) {
 ; CHECK-LABEL: @signbit_splat_mask_use2(
@@ -1738,6 +1738,8 @@ define i16 @signbit_splat_mask_use2(i8 %x, i16 %y) {
   ret i16 %r
 }
 
+; negative test - wrong extend
+
 define i16 @not_signbit_splat_mask1(i8 %x, i16 %y) {
 ; CHECK-LABEL: @not_signbit_splat_mask1(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
@@ -1750,6 +1752,8 @@ define i16 @not_signbit_splat_mask1(i8 %x, i16 %y) {
   %r = and i16 %z, %y
   ret i16 %r
 }
+
+; negative test - wrong shift amount
 
 define i16 @not_signbit_splat_mask2(i8 %x, i16 %y) {
 ; CHECK-LABEL: @not_signbit_splat_mask2(
@@ -1915,6 +1919,8 @@ define i16 @invert_signbit_splat_mask_use2(i8 %x, i16 %y) {
   ret i16 %r
 }
 
+; negative test - extra use
+
 define i16 @invert_signbit_splat_mask_use3(i8 %x, i16 %y) {
 ; CHECK-LABEL: @invert_signbit_splat_mask_use3(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
@@ -1932,6 +1938,8 @@ define i16 @invert_signbit_splat_mask_use3(i8 %x, i16 %y) {
   ret i16 %r
 }
 
+; negative test - wrong extend
+
 define i16 @not_invert_signbit_splat_mask1(i8 %x, i16 %y) {
 ; CHECK-LABEL: @not_invert_signbit_splat_mask1(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
@@ -1946,6 +1954,8 @@ define i16 @not_invert_signbit_splat_mask1(i8 %x, i16 %y) {
   %r = and i16 %z, %y
   ret i16 %r
 }
+
+; negative test - wrong shift amount
 
 define i16 @not_invert_signbit_splat_mask2(i8 %x, i16 %y) {
 ; CHECK-LABEL: @not_invert_signbit_splat_mask2(
