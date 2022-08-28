@@ -167,8 +167,8 @@ void HandleTagMismatch(AccessInfo ai, uptr pc, uptr frame, void *uc,
 
 // This dispatches to HandleTagMismatch but sets up the AccessInfo, program
 // counter, and frame pointer.
-void HwasanTagMismatch(uptr addr, uptr access_info, uptr *registers_frame,
-                       size_t outsize);
+void HwasanTagMismatch(uptr addr, uptr pc, uptr frame, uptr access_info,
+                       uptr *registers_frame, size_t outsize);
 
 }  // namespace __hwasan
 
