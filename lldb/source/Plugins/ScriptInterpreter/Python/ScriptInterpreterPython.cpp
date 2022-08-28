@@ -96,7 +96,7 @@ public:
     // Python's readline is incompatible with libedit being linked into lldb.
     // Provide a patched version local to the embedded interpreter.
     bool ReadlinePatched = false;
-    for (auto *p = PyImport_Inittab; p->name != NULL; p++) {
+    for (auto *p = PyImport_Inittab; p->name != nullptr; p++) {
       if (strcmp(p->name, "readline") == 0) {
         p->initfunc = initlldb_readline;
         break;
