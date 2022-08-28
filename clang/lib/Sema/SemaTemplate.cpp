@@ -3513,8 +3513,7 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
         0, IndexReplaced, false,
         cast<TemplateTypeParmDecl>(TPL->getParam(IndexReplaced)));
     return SemaRef.Context.getSubstTemplateTypeParmType(
-        cast<TemplateTypeParmType>(TTP), Replacement.getCanonicalType(),
-        PackIndexReplaced);
+        cast<TemplateTypeParmType>(TTP), Replacement, PackIndexReplaced);
   };
 
   switch (BTD->getBuiltinTemplateKind()) {
