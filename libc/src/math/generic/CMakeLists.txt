@@ -536,7 +536,7 @@ add_entrypoint_object(
   HDRS
     ../exp2f.h
   DEPENDS
-    .common_constants
+    .explogxf
     libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
@@ -1166,15 +1166,22 @@ add_entrypoint_object(
     -O3
 )
 
+add_object_library(
+  explogxf
+  HDRS
+    explogxf.h
+  SRCS
+    explogxf.cpp
+)
+
 add_entrypoint_object(
   coshf
   SRCS
     coshf.cpp
   HDRS
     ../coshf.h
-    expxf.h
   DEPENDS
-    .common_constants
+    .explogxf
     libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
@@ -1190,9 +1197,8 @@ add_entrypoint_object(
     sinhf.cpp
   HDRS
     ../sinhf.h
-    expxf.h
   DEPENDS
-    .common_constants
+    .explogxf
     libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
@@ -1208,9 +1214,8 @@ add_entrypoint_object(
     tanhf.cpp
   HDRS
     ../tanhf.h
-    expxf.h 
   DEPENDS
-    .common_constants
+    .explogxf
     libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
