@@ -14,6 +14,7 @@
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/MathExtras.h"
+#include <numeric>
 
 using namespace mlir;
 using namespace presburger;
@@ -27,8 +28,7 @@ static void normalizeDivisionByGCD(MutableArrayRef<int64_t> dividend,
     return;
   // We take the absolute value of dividend's coefficients to make sure that
   // `gcd` is positive.
-  int64_t gcd =
-      llvm::greatestCommonDivisor(std::abs(dividend.front()), int64_t(divisor));
+  int64_t gcd = std::gcd(std::abs(dividend.front()), int64_t(divisor));
 
   // The reason for ignoring the constant term is as follows.
   // For a division:
@@ -38,7 +38,7 @@ static void normalizeDivisionByGCD(MutableArrayRef<int64_t> dividend,
   // Since `{a/m}/d` in the dividend satisfies 0 <= {a/m}/d < 1/d, it will not
   // influence the result of the floor division and thus, can be ignored.
   for (size_t i = 1, m = dividend.size() - 1; i < m; i++) {
-    gcd = llvm::greatestCommonDivisor(std::abs(dividend[i]), gcd);
+    gcd = std::gcd(std::abs(dividend[i]), gcd);
     if (gcd == 1)
       return;
   }
@@ -334,7 +334,7 @@ int64_t presburger::normalizeRange(MutableArrayRef<int64_t> range) {
 
 void presburger::normalizeDiv(MutableArrayRef<int64_t> num, int64_t &denom) {
   assert(denom > 0 && "denom must be positive!");
-  int64_t gcd = llvm::greatestCommonDivisor(gcdRange(num), denom);
+  int64_t gcd = std::gcd(gcdRange(num), denom);
   for (int64_t &coeff : num)
     coeff /= gcd;
   denom /= gcd;
