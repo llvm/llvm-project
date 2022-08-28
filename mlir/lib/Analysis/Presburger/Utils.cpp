@@ -316,7 +316,7 @@ SmallVector<int64_t, 8> presburger::getDivLowerBound(ArrayRef<int64_t> dividend,
 int64_t presburger::gcdRange(ArrayRef<int64_t> range) {
   int64_t gcd = 0;
   for (int64_t elem : range) {
-    gcd = llvm::GreatestCommonDivisor64(gcd, std::abs(elem));
+    gcd = std::gcd((uint64_t)gcd, (uint64_t)std::abs(elem));
     if (gcd == 1)
       return gcd;
   }
