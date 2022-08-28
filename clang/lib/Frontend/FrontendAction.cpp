@@ -196,10 +196,8 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
         ActionType == PluginASTAction::CmdlineBeforeMainAction) {
       // This is O(|plugins| * |add_plugins|), but since both numbers are
       // way below 50 in practice, that's ok.
-      if (llvm::any_of(CI.getFrontendOpts().AddPluginActions,
-                       [&](const std::string &PluginAction) {
-                         return PluginAction == Plugin.getName();
-                       })) {
+      if (llvm::is_contained(CI.getFrontendOpts().AddPluginActions,
+                             Plugin.getName())) {
         if (ActionType == PluginASTAction::CmdlineBeforeMainAction)
           ActionType = PluginASTAction::AddBeforeMainAction;
         else

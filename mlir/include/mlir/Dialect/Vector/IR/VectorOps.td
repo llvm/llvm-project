@@ -1486,6 +1486,13 @@ def Vector_TransferWriteOp :
                    "ValueRange":$indices,
                    CArg<"Optional<ArrayRef<bool>>", "::llvm::None">:$inBounds)>,
   ];
+
+  let extraClassDeclaration = [{
+    /// This method is added to maintain uniformity with load/store
+    ///  ops of other dialects.
+    Value getValue() { return getVector(); }
+  }];
+
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;

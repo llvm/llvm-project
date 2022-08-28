@@ -343,7 +343,7 @@ SmallVector<VPlanSlp::MultiNodeOpTy, 4> VPlanSlp::reorderMultiNodeOps() {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPlanSlp::dumpBundle(ArrayRef<VPValue *> Values) {
   dbgs() << " Ops: ";
-  for (auto Op : Values) {
+  for (auto *Op : Values) {
     if (auto *VPInstr = cast_or_null<VPInstruction>(Op))
       if (auto *Instr = VPInstr->getUnderlyingInstr()) {
         dbgs() << *Instr << " | ";

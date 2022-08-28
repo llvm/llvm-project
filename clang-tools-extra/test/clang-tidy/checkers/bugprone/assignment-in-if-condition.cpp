@@ -3,7 +3,7 @@
 void f(int arg) {
   int f = 3;
   if ((f = arg) || (f == (arg + 1)))
-  // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
   {
     f = 5;
   }
@@ -12,7 +12,7 @@ void f(int arg) {
 void f1(int arg) {
   int f = 3;
   if ((f == arg) || (f = (arg + 1)))
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
   {
     f = 5;
   }
@@ -21,7 +21,7 @@ void f1(int arg) {
 void f2(int arg) {
   int f = 3;
   if (f = arg)
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
   {
     f = 5;
   }
@@ -32,7 +32,7 @@ volatile int v = 32;
 void f3(int arg) {
   int f = 3;
   if ((f == arg) || ((arg + 6 < f) && (f = v)))
-  // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
+  // CHECK-MESSAGES: :[[@LINE-1]]:42: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
   {
     f = 5;
   }
@@ -41,11 +41,11 @@ void f3(int arg) {
 void f4(int arg) {
   int f = 3;
   if ((f == arg) || ((arg + 6 < f) && ((f = v) || (f < 8))))
-  // CHECK-MESSAGES: :[[@LINE-1]]:41: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
+  // CHECK-MESSAGES: :[[@LINE-1]]:43: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
   {
     f = 5;
   } else if ((arg + 8 < f) && ((f = v) || (f < 8)))
-  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
+  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
   {
     f = 6;
   }
@@ -68,12 +68,12 @@ void f5(int arg) {
     f = 6;
   }
   if (bo = 3)
-  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
   {
     f = 7;
   }
   if ((arg == 3) || (bo = 6))
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: an assignment within an 'if' condition is bug-prone [bugprone-assignment-in-if-condition]
   {
     f = 8;
   }
@@ -99,5 +99,22 @@ void awesome_f4(int arg) {
   int f = 3;
   if ((f == arg) || ((arg + 6 < f) && ((f == v) || (f < 8)))) {
     f = 5;
+  }
+}
+
+template <typename Func> bool exec(Func F) { return F(); }
+
+void lambda_if() {
+  int X;
+  if ([&X] {
+        X = 5;
+        return true;
+      }()) {
+  }
+
+  if (exec([&] {
+        X = 5;
+        return true;
+      })) {
   }
 }

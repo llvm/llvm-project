@@ -122,7 +122,7 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
                                           SrcAS, DstAS, SrcAlign.value(),
                                           DstAlign.value(), AtomicElementSize);
 
-    for (auto OpTy : RemainingOps) {
+    for (auto *OpTy : RemainingOps) {
       Align PartSrcAlign(commonAlignment(SrcAlign, BytesCopied));
       Align PartDstAlign(commonAlignment(DstAlign, BytesCopied));
 

@@ -895,8 +895,8 @@ LLT llvm::getLCMType(LLT OrigTy, LLT TargetTy) {
       const LLT TargetElt = TargetTy.getElementType();
 
       if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
-        int GCDElts = greatestCommonDivisor(OrigTy.getNumElements(),
-                                            TargetTy.getNumElements());
+        int GCDElts =
+            std::gcd(OrigTy.getNumElements(), TargetTy.getNumElements());
         // Prefer the original element type.
         ElementCount Mul = OrigTy.getElementCount() * TargetTy.getNumElements();
         return LLT::vector(Mul.divideCoefficientBy(GCDElts),
@@ -954,8 +954,7 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
     if (TargetTy.isVector()) {
       LLT TargetElt = TargetTy.getElementType();
       if (OrigElt.getSizeInBits() == TargetElt.getSizeInBits()) {
-        int GCD = greatestCommonDivisor(OrigTy.getNumElements(),
-                                        TargetTy.getNumElements());
+        int GCD = std::gcd(OrigTy.getNumElements(), TargetTy.getNumElements());
         return LLT::scalarOrVector(ElementCount::getFixed(GCD), OrigElt);
       }
     } else {
@@ -964,7 +963,7 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
         return OrigElt;
     }
 
-    unsigned GCD = greatestCommonDivisor(OrigSize, TargetSize);
+    unsigned GCD = std::gcd(OrigSize, TargetSize);
     if (GCD == OrigElt.getSizeInBits())
       return OrigElt;
 
@@ -982,7 +981,7 @@ LLT llvm::getGCDType(LLT OrigTy, LLT TargetTy) {
       return OrigTy;
   }
 
-  unsigned GCD = greatestCommonDivisor(OrigSize, TargetSize);
+  unsigned GCD = std::gcd(OrigSize, TargetSize);
   return LLT::scalar(GCD);
 }
 

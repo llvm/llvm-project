@@ -1661,7 +1661,7 @@ static void coerceArguments(IRBuilder<> &Builder, FunctionType *FnTy,
                             ArrayRef<Value *> FnArgs,
                             SmallVectorImpl<Value *> &CallArgs) {
   size_t ArgIdx = 0;
-  for (auto paramTy : FnTy->params()) {
+  for (auto *paramTy : FnTy->params()) {
     assert(ArgIdx < FnArgs.size());
     if (paramTy != FnArgs[ArgIdx]->getType())
       CallArgs.push_back(
@@ -1870,7 +1870,7 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
                                              Shape.CoroSuspends.size()));
 
       // Next, all the directly-yielded values.
-      for (auto ResultTy : Shape.getRetconResultTypes())
+      for (auto *ResultTy : Shape.getRetconResultTypes())
         ReturnPHIs.push_back(Builder.CreatePHI(ResultTy,
                                                Shape.CoroSuspends.size()));
 
@@ -1995,7 +1995,7 @@ static coro::Shape splitCoroutine(Function &F,
 
 /// Remove calls to llvm.coro.end in the original function.
 static void removeCoroEnds(const coro::Shape &Shape) {
-  for (auto End : Shape.CoroEnds) {
+  for (auto *End : Shape.CoroEnds) {
     replaceCoroEnd(End, Shape, Shape.FramePtr, /*in resume*/ false, nullptr);
   }
 }
