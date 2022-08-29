@@ -1189,10 +1189,9 @@ define void @and_sge_gt0(i32 signext %0, i32 signext %1, i32 signext %2) {
 ; RV32I-LABEL: and_sge_gt0:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a0, a1
-; RV32I-NEXT:    not a0, a0
-; RV32I-NEXT:    sgtz a1, a2
-; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    beqz a0, .LBB37_2
+; RV32I-NEXT:    slti a1, a2, 1
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    bnez a0, .LBB37_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB37_2:
@@ -1201,10 +1200,9 @@ define void @and_sge_gt0(i32 signext %0, i32 signext %1, i32 signext %2) {
 ; RV64I-LABEL: and_sge_gt0:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slt a0, a0, a1
-; RV64I-NEXT:    not a0, a0
-; RV64I-NEXT:    sgtz a1, a2
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    beqz a0, .LBB37_2
+; RV64I-NEXT:    slti a1, a2, 1
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    bnez a0, .LBB37_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB37_2:
@@ -1226,10 +1224,9 @@ define void @and_sle_lt1(i32 signext %0, i32 signext %1, i32 signext %2) {
 ; RV32I-LABEL: and_sle_lt1:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slt a0, a1, a0
-; RV32I-NEXT:    not a0, a0
-; RV32I-NEXT:    slti a1, a2, 1
-; RV32I-NEXT:    and a0, a0, a1
-; RV32I-NEXT:    beqz a0, .LBB38_2
+; RV32I-NEXT:    sgtz a1, a2
+; RV32I-NEXT:    or a0, a1, a0
+; RV32I-NEXT:    bnez a0, .LBB38_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB38_2:
@@ -1238,10 +1235,9 @@ define void @and_sle_lt1(i32 signext %0, i32 signext %1, i32 signext %2) {
 ; RV64I-LABEL: and_sle_lt1:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slt a0, a1, a0
-; RV64I-NEXT:    not a0, a0
-; RV64I-NEXT:    slti a1, a2, 1
-; RV64I-NEXT:    and a0, a0, a1
-; RV64I-NEXT:    beqz a0, .LBB38_2
+; RV64I-NEXT:    sgtz a1, a2
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    bnez a0, .LBB38_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB38_2:
@@ -1263,10 +1259,9 @@ define void @or_uge_gt0(i32 signext %0, i32 signext %1, i32 signext %2) {
 ; RV32I-LABEL: or_uge_gt0:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a0, a1
-; RV32I-NEXT:    xori a0, a0, 1
-; RV32I-NEXT:    sgtz a1, a2
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    beqz a0, .LBB39_2
+; RV32I-NEXT:    slti a1, a2, 1
+; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    bnez a0, .LBB39_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB39_2:
@@ -1275,10 +1270,9 @@ define void @or_uge_gt0(i32 signext %0, i32 signext %1, i32 signext %2) {
 ; RV64I-LABEL: or_uge_gt0:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a0, a0, a1
-; RV64I-NEXT:    xori a0, a0, 1
-; RV64I-NEXT:    sgtz a1, a2
-; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    beqz a0, .LBB39_2
+; RV64I-NEXT:    slti a1, a2, 1
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    bnez a0, .LBB39_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB39_2:
@@ -1300,10 +1294,9 @@ define void @or_ule_lt1(i32 signext %0, i32 signext %1, i32 signext %2) {
 ; RV32I-LABEL: or_ule_lt1:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    sltu a0, a1, a0
-; RV32I-NEXT:    xori a0, a0, 1
-; RV32I-NEXT:    slti a1, a2, 1
-; RV32I-NEXT:    or a0, a0, a1
-; RV32I-NEXT:    beqz a0, .LBB40_2
+; RV32I-NEXT:    sgtz a1, a2
+; RV32I-NEXT:    and a0, a1, a0
+; RV32I-NEXT:    bnez a0, .LBB40_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB40_2:
@@ -1312,10 +1305,9 @@ define void @or_ule_lt1(i32 signext %0, i32 signext %1, i32 signext %2) {
 ; RV64I-LABEL: or_ule_lt1:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sltu a0, a1, a0
-; RV64I-NEXT:    xori a0, a0, 1
-; RV64I-NEXT:    slti a1, a2, 1
-; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    beqz a0, .LBB40_2
+; RV64I-NEXT:    sgtz a1, a2
+; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    bnez a0, .LBB40_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB40_2:
