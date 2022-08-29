@@ -1,5 +1,5 @@
 // Test -fsanitize-memory-use-after-dtor
-// RUN: %clang_cc1 -fsanitize=memory -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fsanitize=memory -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s --implicit-check-not="call void @__sanitizer_"
 
 // The no_sanitize_memory attribute, when applied to a destructor,
 // represses emission of sanitizing callback
@@ -26,13 +26,10 @@ int main() {
 // Repressing the sanitization attribute results in no msan
 // instrumentation of the destructor
 // CHECK: define {{.*}}No_SanD1Ev{{.*}} [[ATTRIBUTE:#[0-9]+]]
-// CHECK-NOT: call void {{.*}}sanitizer_dtor_callback
 // CHECK: ret void
 
 // CHECK: define {{.*}}No_SanD2Ev{{.*}} [[ATTRIBUTE:#[0-9]+]]
-// CHECK-NOT: call void {{.*}}sanitizer_dtor_callback
 // CHECK: call void {{.*}}VectorIiED2Ev
-// CHECK-NOT: call void {{.*}}sanitizer_dtor_callback
 // CHECK: ret void
 
 // CHECK: define {{.*}}VectorIiED2Ev
