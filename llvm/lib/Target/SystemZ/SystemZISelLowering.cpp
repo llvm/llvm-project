@@ -7557,7 +7557,7 @@ static void createPHIsForSelects(SmallVector<MachineInstr*, 8> &Selects,
   // destination registers, and the registers that went into the PHI.
   DenseMap<unsigned, std::pair<unsigned, unsigned>> RegRewriteTable;
 
-  for (auto MI : Selects) {
+  for (auto *MI : Selects) {
     Register DestReg = MI->getOperand(0).getReg();
     Register TrueReg = MI->getOperand(1).getReg();
     Register FalseReg = MI->getOperand(2).getReg();
@@ -7620,7 +7620,7 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
         NextMIIt->usesCustomInsertionHook())
       break;
     bool User = false;
-    for (auto SelMI : Selects)
+    for (auto *SelMI : Selects)
       if (NextMIIt->readsVirtualRegister(SelMI->getOperand(0).getReg())) {
         User = true;
         break;
@@ -7668,11 +7668,11 @@ SystemZTargetLowering::emitSelect(MachineInstr &MI,
   //  ...
   MBB = JoinMBB;
   createPHIsForSelects(Selects, StartMBB, FalseMBB, MBB);
-  for (auto SelMI : Selects)
+  for (auto *SelMI : Selects)
     SelMI->eraseFromParent();
 
   MachineBasicBlock::iterator InsertPos = MBB->getFirstNonPHI();
-  for (auto DbgMI : DbgValues)
+  for (auto *DbgMI : DbgValues)
     MBB->splice(InsertPos, StartMBB, DbgMI);
 
   return JoinMBB;
