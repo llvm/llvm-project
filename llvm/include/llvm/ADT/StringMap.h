@@ -326,7 +326,7 @@ public:
   /// if and only if the insertion takes place, and the iterator component of
   /// the pair points to the element with key equivalent to the key of the pair.
   template <typename... ArgsTy>
-  std::pair<iterator, bool> try_emplace(StringRef Key, ArgsTy &&...Args) {
+  std::pair<iterator, bool> try_emplace(StringRef Key, ArgsTy &&... Args) {
     unsigned BucketNo = LookupBucketFor(Key);
     StringMapEntryBase *&Bucket = TheTable[BucketNo];
     if (Bucket && Bucket != getTombstoneVal())
