@@ -366,15 +366,6 @@ def ixlenimm_li : Operand<XLenVT> {
 def simm12_plus1 : ImmLeaf<XLenVT,
   [{return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
 
-// A 12-bit signed immediate sub one and exclude zero
-def simm12_minus1_nonzero : PatLeaf<(imm), [{
-  if (!N->hasOneUse())
-    return false;
-  // The immediate operand must be in range [-2049, 0) or (0, 2046].
-  int64_t Imm = N->getSExtValue();
-  return (Imm >= -2049 && Imm < 0) || (Imm > 0 && Imm <= 2046);
-}]>;
-
 // A 6-bit constant greater than 32.
 def uimm6gt32 : ImmLeaf<XLenVT, [{
   return isUInt<6>(Imm) && Imm > 32;
@@ -395,12 +386,6 @@ def NegImm : SDNodeXForm<imm, [{
 // Return an immediate value minus 32.
 def ImmSub32 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue() - 32, SDLoc(N),
-                                   N->getValueType(0));
-}]>;
-
-// Return an immediate value plus 1.
-def ImmPlus1 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue() + 1, SDLoc(N),
                                    N->getValueType(0));
 }]>;
 
