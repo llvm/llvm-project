@@ -26,6 +26,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
@@ -1758,7 +1759,7 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
   llvm::DISubprogram::DISPFlags SPFlags = llvm::DISubprogram::SPFlagZero;
   int ThisAdjustment = 0;
 
-  if (Method->isVirtual()) {
+  if (VTableContextBase::hasVtableSlot(Method)) {
     if (Method->isPure())
       SPFlags |= llvm::DISubprogram::SPFlagPureVirtual;
     else
