@@ -116,8 +116,8 @@ define i64 @n9(i64 %x) {
 
 define i64 @n10(i64 %x) {
 ; CHECK-LABEL: @n10(
-; CHECK-NEXT:    [[X_NOT:%.*]] = xor i64 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = lshr i64 [[X_NOT]], 63
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i64 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[ISNOTNEG]] to i64
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %t0 = lshr i64 %x, 63

@@ -1900,8 +1900,8 @@ define i8 @not_mul_use2(i8 %x) {
 
 define i8 @full_ashr_inc(i8 %x) {
 ; CHECK-LABEL: @full_ashr_inc(
-; CHECK-NEXT:    [[X_NOT:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[X_NOT]], 7
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[ISNOTNEG]] to i8
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = ashr i8 %x, 7
@@ -1911,8 +1911,8 @@ define i8 @full_ashr_inc(i8 %x) {
 
 define <2 x i6> @full_ashr_inc_vec(<2 x i6> %x) {
 ; CHECK-LABEL: @full_ashr_inc_vec(
-; CHECK-NEXT:    [[X_NOT:%.*]] = xor <2 x i6> [[X:%.*]], <i6 -1, i6 -1>
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i6> [[X_NOT]], <i6 5, i6 5>
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <2 x i6> [[X:%.*]], <i6 -1, i6 -1>
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[ISNOTNEG]] to <2 x i6>
 ; CHECK-NEXT:    ret <2 x i6> [[R]]
 ;
   %a = ashr <2 x i6> %x, <i6 5, i6 poison>
