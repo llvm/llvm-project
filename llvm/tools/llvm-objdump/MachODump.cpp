@@ -2182,10 +2182,10 @@ static void ProcessMachO(StringRef Name, MachOObjectFile *MachOOF,
     DumpSectionContents(FileName, MachOOF, Verbose);
   if (InfoPlist)
     DumpInfoPlistSectionContents(FileName, MachOOF);
-  if (ChainedFixups)
-    PrintChainedFixups(MachOOF);
   if (DyldInfo)
     PrintDyldInfo(MachOOF);
+  if (ChainedFixups)
+    PrintChainedFixups(MachOOF);
   if (DylibsUsed)
     PrintDylibs(MachOOF, false);
   if (DylibId)
