@@ -810,7 +810,8 @@ def MyPass : Pass<"my-pass", "ModuleOp"> {
   }];
 
   // A constructor must be provided to specify how to create a default instance
-  // of MyPass.
+  // of MyPass. It can be skipped for this specific example, because both the
+  // constructor and the registration methods live in the same namespace.
   let constructor = "foo::createMyPass()";
 
   // Specify any options.
@@ -842,17 +843,23 @@ generates a `registerGroupPasses`, where `Group` is the tag provided via the
 `-name` input parameter, that registers all of the passes present.
 
 ```c++
-// gen-pass-decls -name="Example"
+// Tablegen options: -gen-pass-decls -name="Example"
 
+// Passes.h
+
+namespace foo {
 #define GEN_PASS_REGISTRATION
 #include "Passes.h.inc"
+} // namespace foo
 
 void registerMyPasses() {
   // Register all of the passes.
-  registerExamplePasses();
+  foo::registerExamplePasses();
+  
+  // Or
 
   // Register `MyPass` specifically.
-  registerMyPass();
+  foo::registerMyPass();
 }
 ```
 
@@ -900,20 +907,22 @@ implementation.
 
 It generates a base class for each of the passes, containing most of the boiler
 plate related to pass definitions. These classes are named in the form of
-`MyPassBase`, where `MyPass` is the name of the pass definition in tablegen. We
-can update the original C++ pass definition as so:
+`MyPassBase` and are declared inside the `impl` namespace, where `MyPass` is
+the name of the pass definition in tablegen. We can update the original C++
+pass definition as so:
 
 ```c++
+// MyPass.cpp
+
 /// Include the generated base pass class definitions.
+namespace foo {
 #define GEN_PASS_DEF_MYPASS
 #include "Passes.cpp.inc"
+}
 
 /// Define the main class as deriving from the generated base class.
-struct MyPass : MyPassBase<MyPass> {
-  /// The explicit constructor is no longer explicitly necessary when defining
-  /// pass options and statistics, the base class takes care of that
-  /// automatically.
-  ...
+struct MyPass : foo::impl::MyPassBase<MyPass> {
+  using MyPassBase::MyPassBase;
 
   /// The definitions of the options and statistics are now generated within
   /// the base class, but are accessible in the same way.
