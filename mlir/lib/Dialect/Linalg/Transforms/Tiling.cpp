@@ -452,7 +452,7 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
         linalg::ProcInfo{nullptr, nullptr, linalg::DistributionMethod::None});
     // Collect loop ranges of tiled loopss, loops that are parallel.
     SmallVector<Range> parallelLoopRanges;
-    for (auto iteratorType : llvm::enumerate(iteratorTypes)) {
+    for (const auto &iteratorType : llvm::enumerate(iteratorTypes)) {
       if (!isParallelIterator(iteratorType.value()))
         break;
       parallelLoopRanges.push_back(loopRanges[iteratorType.index()]);
@@ -461,7 +461,7 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
         options.distribution->procInfo(b, op.getLoc(), parallelLoopRanges);
     unsigned procIdIdx = 0;
     // Update the distribution information for the loops.
-    for (auto iteratorType : llvm::enumerate(iteratorTypes)) {
+    for (const auto &iteratorType : llvm::enumerate(iteratorTypes)) {
       if (!isParallelIterator(iteratorType.value()))
         break;
       procInfo[iteratorType.index()] = returnedProcInfo[procIdIdx++];
