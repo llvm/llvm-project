@@ -22,6 +22,7 @@
 ; user specified vector length.
 
 target triple = "aarch64-unknown-linux-gnu"
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 ; Ensure the cost of legalisation is removed as the vector length grows.
 ; NOTE: Assumes BaseCost_add=1, BaseCost_fadd=2.

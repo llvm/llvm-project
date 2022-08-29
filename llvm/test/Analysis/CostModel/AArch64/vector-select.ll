@@ -2,6 +2,8 @@
 ; RUN: opt < %s -mtriple=aarch64--linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -mattr=+fullfp16 | FileCheck %s --check-prefixes=COST,COST-FULLFP16
 ; RUN: llc < %s -mtriple=aarch64--linux-gnu -mattr=+fullfp16 | FileCheck %s --check-prefix=CODE
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 ; COST-LABEL: v8i8_select_eq
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %cmp.1 = icmp eq <8 x i8> %a, %b
 ; COST-NEXT:  Cost Model: Found an estimated cost of 1 for instruction:   %s.1 = select <8 x i1> %cmp.1, <8 x i8> %a, <8 x i8> %c
