@@ -45,6 +45,11 @@ struct UnimplementedFeature {
 
   // Debug info
   static bool generateDebugInfo() { return false; }
+
+  static bool getASTAllocaAddressSpace() { return false; }
+  static bool tryEmitAsConstant() { return false; }
+  static bool incrementProfileCounter() { return false; }
+  static bool requiresReturnValueCheck() { return false; }
 };
 } // namespace cir
 

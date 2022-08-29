@@ -407,17 +407,32 @@ mlir::LogicalResult CIRGenFunction::buildDeclStmt(const DeclStmt &S) {
 }
 
 mlir::LogicalResult CIRGenFunction::buildReturnStmt(const ReturnStmt &S) {
-  assert(!(getContext().getLangOpts().ElideConstructors &&
-           S.getNRVOCandidate() && S.getNRVOCandidate()->isNRVOVariable()) &&
-         "unimplemented");
-  assert(!FnRetQualTy->isReferenceType() && "unimplemented");
+  assert(!UnimplementedFeature::requiresReturnValueCheck());
   auto loc = getLoc(S.getSourceRange());
 
   // Emit the result value, even if unused, to evaluate the side effects.
   const Expr *RV = S.getRetValue();
-  if (RV) {
-    assert(!isa<ExprWithCleanups>(RV) && "unimplemented");
 
+  // TODO(cir): LLVM codegen uses a RunCleanupsScope cleanupScope here, we
+  // should model this in face of dtors.
+
+  if (const auto *EWC = dyn_cast_or_null<ExprWithCleanups>(RV))
+    assert(0 && "not implemented");
+
+  if (getContext().getLangOpts().ElideConstructors && S.getNRVOCandidate() &&
+      S.getNRVOCandidate()->isNRVOVariable()) {
+    assert(0 && "not implemented");
+  } else if (!ReturnValue.isValid() || (RV && RV->getType()->isVoidType())) {
+    // Make sure not to return anything, but evaluate the expression
+    // for side effects.
+    if (RV) {
+      assert(0 && "not implemented");
+    }
+  } else if (!RV) {
+    // Do nothing (return value is left uninitialized)
+  } else if (FnRetTy->isReferenceType()) {
+    assert(0 && "not implemented");
+  } else {
     mlir::Value V = nullptr;
     switch (CIRGenFunction::getEvaluationKind(RV->getType())) {
     case TEK_Scalar:
@@ -429,14 +444,6 @@ mlir::LogicalResult CIRGenFunction::buildReturnStmt(const ReturnStmt &S) {
       llvm::errs() << "ReturnStmt EvaluationKind not implemented\n";
       return mlir::failure();
     }
-
-    // Otherwise, this return operation has zero operands.
-    if (!V || (RV && RV->getType()->isVoidType())) {
-      // FIXME: evaluate for side effects.
-    }
-  } else {
-    // Do nothing (return value is left uninitialized), this is also
-    // the path when returning from void functions.
   }
 
   // Create a new return block (if not existent) and add a branch to
@@ -447,6 +454,8 @@ mlir::LogicalResult CIRGenFunction::buildReturnStmt(const ReturnStmt &S) {
 
   // Insert the new block to continue codegen after branch to ret block.
   builder.createBlock(builder.getBlock()->getParent());
+
+  // TODO(cir): LLVM codegen for a cleanup on cleanupScope here.
   return mlir::success();
 }
 
