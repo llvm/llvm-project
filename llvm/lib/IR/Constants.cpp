@@ -2480,7 +2480,7 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   if (VectorType *VecTy = dyn_cast<VectorType>(C->getType()))
     EltCount = VecTy->getElementCount();
   else
-    for (auto Idx : Idxs)
+    for (auto *Idx : Idxs)
       if (VectorType *VecTy = dyn_cast<VectorType>(Idx->getType()))
         EltCount = VecTy->getElementCount();
 

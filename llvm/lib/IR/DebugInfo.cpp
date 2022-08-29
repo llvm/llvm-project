@@ -161,7 +161,7 @@ void DebugInfoFinder::processModule(const Module &M) {
 void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
   if (!addCompileUnit(CU))
     return;
-  for (auto DIG : CU->getGlobalVariables()) {
+  for (auto *DIG : CU->getGlobalVariables()) {
     if (!addGlobalVariable(DIG))
       continue;
     auto *GV = DIG->getVariable();
