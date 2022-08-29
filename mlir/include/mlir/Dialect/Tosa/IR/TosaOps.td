@@ -1161,6 +1161,8 @@ def Tosa_GreaterOp : Tosa_Op<"greater", [
   let results = (outs
     I1Tensor:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
