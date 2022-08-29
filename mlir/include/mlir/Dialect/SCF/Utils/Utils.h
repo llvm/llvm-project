@@ -69,7 +69,7 @@ scf::ForOp replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
 SmallVector<scf::ForOp>
 replaceLoopNestWithNewYields(OpBuilder &builder, ArrayRef<scf::ForOp> loopNest,
                              ValueRange newIterOperands,
-                             NewYieldValueFn newYieldValueFn);
+                             const NewYieldValueFn &newYieldValueFn);
 
 /// Outline a region with a single block into a new FuncOp.
 /// Assumes the FuncOp result types is the type of the yielded operands of the
