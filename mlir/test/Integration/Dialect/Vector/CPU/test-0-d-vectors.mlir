@@ -127,6 +127,13 @@ func.func @transpose_0d(%arg: vector<i32>) {
   return
 }
 
+func.func @shuffle_0d(%v0: vector<i32>, %v1: vector<i32>) {
+  %1 = vector.shuffle %v0, %v1 [0, 1, 0] : vector<i32>, vector<i32>
+  // CHECK: ( 42, 43, 42 )
+  vector.print %1: vector<3xi32>
+  return
+}
+
 func.func @entry() {
   %0 = arith.constant 42.0 : f32
   %1 = arith.constant dense<0.0> : vector<f32>
@@ -159,7 +166,9 @@ func.func @entry() {
   %5 = arith.constant dense<4.0> : vector<f32>
   call  @fma_0d(%5) : (vector<f32>) -> ()
   %6 = arith.constant dense<42> : vector<i32>
+  %7 = arith.constant dense<43> : vector<i32>
   call @transpose_0d(%6) : (vector<i32>) -> ()
+  call @shuffle_0d(%6, %7) : (vector<i32>, vector<i32>) -> ()
 
   return
 }

@@ -437,22 +437,25 @@ def Vector_ShuffleOp :
      PredOpTrait<"second operand v2 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 1>>,
      DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
-     Arguments<(ins AnyVector:$v1, AnyVector:$v2, I64ArrayAttr:$mask)>,
+     Arguments<(ins AnyVectorOfAnyRank:$v1, AnyVectorOfAnyRank:$v2,
+                    I64ArrayAttr:$mask)>,
      Results<(outs AnyVector:$vector)> {
   let summary = "shuffle operation";
   let description = [{
     The shuffle operation constructs a permutation (or duplication) of elements
     from two input vectors, returning a vector with the same element type as
     the input and a length that is the same as the shuffle mask. The two input
-    vectors must have the same element type, rank, and trailing dimension sizes
-    and shuffles their values in the leading dimension (which may differ in size)
-    according to the given mask. The legality rules are:
+    vectors must have the same element type, same rank , and trailing dimension
+    sizes and shuffles their values in the
+    leading dimension (which may differ in size) according to the given mask.
+    The legality rules are:
     * the two operands must have the same element type as the result
-    * the two operands and the result must have the same rank and trailing
-      dimension sizes, viz. given two k-D operands
-              v1 : <s_1 x s_2 x .. x s_k x type> and
-              v2 : <t_1 x t_2 x .. x t_k x type>
-      we have s_i = t_i for all 1 < i <= k
+      - Either, the two operands and the result must have the same
+        rank and trailing dimension sizes, viz. given two k-D operands
+                v1 : <s_1 x s_2 x .. x s_k x type> and
+                v2 : <t_1 x t_2 x .. x t_k x type>
+        we have s_i = t_i for all 1 < i <= k
+      - Or, the two operands must be 0-D vectors and the result is a 1-D vector.
     * the mask length equals the leading dimension size of the result
     * numbering the input vector indices left to right across the operands, all
       mask values must be within range, viz. given two k-D operands v1 and v2
@@ -467,12 +470,15 @@ def Vector_ShuffleOp :
                : vector<2x16xf32>, vector<1x16xf32> ; yields vector<3x16xf32>
     %2 = vector.shuffle %a, %b[3, 2, 1, 0]
                : vector<2xf32>, vector<2xf32>       ; yields vector<4xf32>
+    %3 = vector.shuffle %a, %b[0, 1]
+               : vector<f32>, vector<f32>           ; yields vector<2xf32>
     ```
   }];
   let builders = [
     OpBuilder<(ins "Value":$v1, "Value":$v2, "ArrayRef<int64_t>")>
   ];
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
   let extraClassDeclaration = [{
     static StringRef getMaskAttrStrName() { return "mask"; }
     VectorType getV1VectorType() {
