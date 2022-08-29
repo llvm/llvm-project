@@ -1029,13 +1029,6 @@ Instruction *InstCombinerImpl::transformZExtICmp(ICmpInst *Cmp, ZExtInst &Zext) 
       APInt KnownZeroMask(~Known.Zero);
       if (KnownZeroMask.isPowerOf2()) { // Exactly 1 possible 1?
         bool isNE = Cmp->getPredicate() == ICmpInst::ICMP_NE;
-        if (!Op1CV->isZero() && (*Op1CV != KnownZeroMask)) {
-          // (X&4) == 2 --> false
-          // (X&4) != 2 --> true
-          Constant *Res = ConstantInt::get(Zext.getType(), isNE);
-          return replaceInstUsesWith(Zext, Res);
-        }
-
         uint32_t ShAmt = KnownZeroMask.logBase2();
         Value *In = Cmp->getOperand(0);
         if (ShAmt) {
