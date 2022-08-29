@@ -13,6 +13,8 @@
 #ifndef _OMPTARGET_RTL_H
 #define _OMPTARGET_RTL_H
 
+#include "omptarget.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DynamicLibrary.h"
 
@@ -126,6 +128,8 @@ struct RTLInfoTy {
 
   // Are there images associated with this RTL.
   bool IsUsed = false;
+
+  llvm::DenseSet<const __tgt_device_image *> UsedImages;
 
   // Mutex for thread-safety when calling RTL interface functions.
   // It is easier to enforce thread-safety at the libomptarget level,
