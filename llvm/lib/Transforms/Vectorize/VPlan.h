@@ -3048,8 +3048,13 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
 
 /// Returns true if \p VPV is uniform after vectorization.
 inline bool isUniformAfterVectorization(VPValue *VPV) {
-  auto RepR = dyn_cast_or_null<VPReplicateRecipe>(VPV->getDef());
-  return !VPV->getDef() || (RepR && RepR->isUniform());
+  if (auto *Def = VPV->getDef()) {
+    if (auto Rep = dyn_cast<VPReplicateRecipe>(Def))
+      return Rep->isUniform();
+    return false;
+  }
+  // A value without a def is external to vplan and thus uniform.
+  return true;
 }
 } // end namespace vputils
 
