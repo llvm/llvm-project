@@ -117,3 +117,28 @@ define signext i32 @andi_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
   store i32 %5, ptr %2, align 4
   ret i32 %5
 }
+
+; SimplifyDemandedBits breaks the ANDI by turning -8 into 0xfffffff8. This
+; gets CSEd with the AND needed for type legalizing the lshr. This increases
+; the use count of the AND with 0xfffffff8 making TargetShrinkDemandedConstant
+; unable to restore it to 0xffffffff for the lshr and -8 for the AND to use
+; ANDI.
+; FIXME: To fix this we need to allow srliw to be formed if the AND is not
+; 0xffffffff and has more than 1 use.
+define signext i32 @andi_srliw(i32 signext %0, ptr %1, i32 signext %2) {
+; CHECK-LABEL: andi_srliw:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a3, 1
+; CHECK-NEXT:    slli a3, a3, 32
+; CHECK-NEXT:    addi a3, a3, -8
+; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    srli a3, a0, 3
+; CHECK-NEXT:    addw a0, a0, a2
+; CHECK-NEXT:    sw a3, 0(a1)
+; CHECK-NEXT:    ret
+  %4 = and i32 %0, -8
+  %5 = lshr i32 %0, 3
+  store i32 %5, ptr %1, align 4
+  %6 = add i32 %4, %2
+  ret i32 %6
+}
