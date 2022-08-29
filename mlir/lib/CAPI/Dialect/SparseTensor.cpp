@@ -25,7 +25,28 @@ static_assert(
             static_cast<int>(SparseTensorEncodingAttr::DimLevelType::Dense) &&
         static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED) ==
             static_cast<int>(
-                SparseTensorEncodingAttr::DimLevelType::Compressed),
+                SparseTensorEncodingAttr::DimLevelType::Compressed) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU) ==
+            static_cast<int>(
+                SparseTensorEncodingAttr::DimLevelType::CompressedNu) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NO) ==
+            static_cast<int>(
+                SparseTensorEncodingAttr::DimLevelType::CompressedNo) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU_NO) ==
+            static_cast<int>(
+                SparseTensorEncodingAttr::DimLevelType::CompressedNuNo) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON) ==
+            static_cast<int>(
+                SparseTensorEncodingAttr::DimLevelType::Singleton) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU) ==
+            static_cast<int>(
+                SparseTensorEncodingAttr::DimLevelType::SingletonNu) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NO) ==
+            static_cast<int>(
+                SparseTensorEncodingAttr::DimLevelType::SingletonNo) &&
+        static_cast<int>(MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU_NO) ==
+            static_cast<int>(
+                SparseTensorEncodingAttr::DimLevelType::SingletonNuNo),
     "MlirSparseTensorDimLevelType (C-API) and DimLevelType (C++) mismatch");
 
 bool mlirAttributeIsASparseTensorEncodingAttr(MlirAttribute attr) {
