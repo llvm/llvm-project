@@ -14,7 +14,7 @@ program test_event_wait
   character(len=128) error_message, non_scalar_char(1), co_indexed_character[*], superfluous_errmsg
   logical invalid_type
 
-  !_______________________ standard-conforming statement ___________________________
+  !_______________________ standard-conforming statements ___________________________
 
   event wait(concert)
   event wait(occurrences(1))
@@ -28,24 +28,9 @@ program test_event_wait
   event wait(concert,                        stat=sync_status, errmsg=error_message)
   event wait(concert, until_count=threshold, stat=sync_status, errmsg=error_message)
 
-  !____________________ non-standard-conforming statement __________________________
+  !____________________ non-standard-conforming statements __________________________
 
   !_________________________ invalid event-variable ________________________________
-
-  ! event-variable must be event_type
-  event wait(non_event)
-
-  ! event-variable must be a coarray
-  event wait(non_coarray)
-
-  ! event-variable must not be coindexed
-  event wait(concert[1])
-
-  ! event-variable must not be coindexed
-  event wait(occurrences(1)[1])
-
-  ! event-variable must be a scalar variable
-  event wait(occurrences)
 
   ! event-variable has an unknown expression
   !ERROR: expected ')'
@@ -56,12 +41,6 @@ program test_event_wait
   ! Invalid until-spec keyword
   !ERROR: expected ')'
   event wait(concert, until_amount=threshold)
-
-  ! Until-spec must be an integer scalar
-  event wait(concert, until_count=invalid_type)
-
-  ! Until-spec must be an integer scalar
-  event wait(concert, until_count=non_scalar)
 
   ! Invalid until-spec: missing until-spec variable
   !ERROR: expected ')'
@@ -77,12 +56,6 @@ program test_event_wait
   !ERROR: expected ')'
   event wait(concert, status=sync_status)
 
-  ! Stat-variable must be an integer scalar
-  event wait(concert, stat=invalid_type)
-
-  ! Stat-variable must be an integer scalar
-  event wait(concert, stat=non_scalar)
-
   ! Invalid sync-stat-list: missing stat-variable
   !ERROR: expected ')'
   event wait(concert, stat)
@@ -96,12 +69,6 @@ program test_event_wait
   ! Invalid errmsg-variable keyword
   !ERROR: expected ')'
   event wait(concert, errormsg=error_message)
-
-  ! Errmsg-variable must be a character scalar
-  event wait(concert, errmsg=invalid_type)
-
-  ! Errmsg-variable must be a character scalar
-  event wait(concert, errmsg=non_scalar_char)
 
   ! Invalid sync-stat-list: missing 'errmsg='
   !ERROR: expected ')'
@@ -118,24 +85,5 @@ program test_event_wait
 
   !ERROR: expected ')'
   event wait(concert, occurrences(1), stat=sync_status, errmsg=error_message)
-
-  !______ invalid event-wait-spec-lists: redundant event-wait-spec-list ____________
-
-  ! No specifier shall appear more than once in a given event-wait-spec-list
-  event wait(concert, until_count=threshold, until_count=indexed(1))
-
-  ! No specifier shall appear more than once in a given event-wait-spec-list
-  event wait(concert, stat=sync_status, stat=superfluous_stat)
-
-  ! No specifier shall appear more than once in a given event-wait-spec-list
-  event wait(concert, errmsg=error_message, errmsg=superfluous_errmsg)
-
-  !_____________ invalid sync-stat-lists: coindexed stat-variable __________________
-
-  ! Check constraint C1173 from the Fortran 2018 standard
-  event wait(concert, stat=co_indexed_integer[1])
-
-  ! Check constraint C1173 from the Fortran 2018 standard
-  event wait(concert, errmsg=co_indexed_character[1])
 
 end program test_event_wait

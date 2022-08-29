@@ -12,23 +12,23 @@ define double @getConstantFP64() {
   ret double 0x4f2de42b8c68f3f1
 }
 
-; Capabilities
+;; Capabilities
 ; CHECK-DAG: OpCapability Float16
 ; CHECK-DAG: OpCapability Float64
 
 ; CHECK-NOT: DAG-FENCE
 
-; Names:
+;; Names:
 ; CHECK-DAG: OpName %[[#GET_FP16:]] "getConstantFP16"
 ; CHECK-DAG: OpName %[[#GET_FP32:]] "getConstantFP32"
 ; CHECK-DAG: OpName %[[#GET_FP64:]] "getConstantFP64"
 
 ; CHECK-NOT: DAG-FENCE
 
-; Types and Constants:
-; NOTE: These tests don't actually check the values of the constants because
-;       their representation isn't defined for textual output.
-; TODO: Test constant representation using binary output.
+;; Types and Constants:
+;; NOTE: These tests don't actually check the values of the constants because
+;;       their representation isn't defined for textual output.
+;; TODO: Test constant representation using binary output.
 ; CHECK-DAG: %[[#FP16:]] = OpTypeFloat 16
 ; CHECK-DAG: %[[#FP32:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#FP64:]] = OpTypeFloat 64

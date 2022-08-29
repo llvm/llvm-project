@@ -733,7 +733,7 @@ bool GCNDPPCombine::runOnMachineFunction(MachineFunction &MF) {
           ++NumDPPMovsCombined;
         } else {
           auto Split = TII->expandMovDPP64(MI);
-          for (auto M : { Split.first, Split.second }) {
+          for (auto *M : {Split.first, Split.second}) {
             if (M && combineDPPMov(*M))
               ++NumDPPMovsCombined;
           }

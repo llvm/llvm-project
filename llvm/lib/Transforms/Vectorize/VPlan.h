@@ -1134,22 +1134,12 @@ public:
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPRecipeBase *B) {
-    return B->getVPDefID() == VPRecipeBase::VPCanonicalIVPHISC ||
-           B->getVPDefID() == VPRecipeBase::VPActiveLaneMaskPHISC ||
-           B->getVPDefID() == VPRecipeBase::VPFirstOrderRecurrencePHISC ||
-           B->getVPDefID() == VPRecipeBase::VPReductionPHISC ||
-           B->getVPDefID() == VPRecipeBase::VPWidenIntOrFpInductionSC ||
-           B->getVPDefID() == VPRecipeBase::VPWidenPointerInductionSC ||
-           B->getVPDefID() == VPRecipeBase::VPWidenPHISC;
+    return B->getVPDefID() >= VPRecipeBase::VPFirstHeaderPHISC &&
+           B->getVPDefID() <= VPRecipeBase::VPLastPHISC;
   }
   static inline bool classof(const VPValue *V) {
-    return V->getVPValueID() == VPValue::VPVCanonicalIVPHISC ||
-           V->getVPValueID() == VPValue::VPVActiveLaneMaskPHISC ||
-           V->getVPValueID() == VPValue::VPVFirstOrderRecurrencePHISC ||
-           V->getVPValueID() == VPValue::VPVReductionPHISC ||
-           V->getVPValueID() == VPValue::VPVWidenIntOrFpInductionSC ||
-           V->getVPValueID() == VPValue::VPVWidenPointerInductionSC ||
-           V->getVPValueID() == VPValue::VPVWidenPHISC;
+    return V->getVPValueID() >= VPValue::VPVFirstHeaderPHISC &&
+           V->getVPValueID() <= VPValue::VPVLastPHISC;
   }
 
   /// Generate the phi nodes.

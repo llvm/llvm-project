@@ -714,7 +714,7 @@ PPCLoopInstrFormPrep::rewriteForBase(Loop *L, const SCEVAddRecExpr *BasePtrSCEV,
 
   // Note that LoopPredecessor might occur in the predecessor list multiple
   // times, and we need to add it the right number of times.
-  for (auto PI : predecessors(Header)) {
+  for (auto *PI : predecessors(Header)) {
     if (PI != LoopPredecessor)
       continue;
 
@@ -729,7 +729,7 @@ PPCLoopInstrFormPrep::rewriteForBase(Loop *L, const SCEVAddRecExpr *BasePtrSCEV,
         I8Ty, NewPHI, IncNode, getInstrName(BaseMemI, GEPNodeIncNameSuffix),
         InsPoint);
     cast<GetElementPtrInst>(PtrInc)->setIsInBounds(IsPtrInBounds(BasePtr));
-    for (auto PI : predecessors(Header)) {
+    for (auto *PI : predecessors(Header)) {
       if (PI == LoopPredecessor)
         continue;
 
@@ -744,7 +744,7 @@ PPCLoopInstrFormPrep::rewriteForBase(Loop *L, const SCEVAddRecExpr *BasePtrSCEV,
   } else {
     // Note that LoopPredecessor might occur in the predecessor list multiple
     // times, and we need to make sure no more incoming value for them in PHI.
-    for (auto PI : predecessors(Header)) {
+    for (auto *PI : predecessors(Header)) {
       if (PI == LoopPredecessor)
         continue;
 

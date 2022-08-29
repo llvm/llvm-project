@@ -1249,7 +1249,7 @@ bool SIFoldOperands::foldInstOperand(MachineInstr &MI,
   SmallVector<MachineOperand *, 4> UsesToProcess;
   for (auto &Use : MRI->use_nodbg_operands(Dst.getReg()))
     UsesToProcess.push_back(&Use);
-  for (auto U : UsesToProcess) {
+  for (auto *U : UsesToProcess) {
     MachineInstr *UseMI = U->getParent();
     foldOperand(OpToFold, UseMI, UseMI->getOperandNo(U), FoldList,
                 CopiesToReplace);

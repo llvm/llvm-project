@@ -240,7 +240,7 @@ void MetadataStreamerV2::emitPrintf(const Module &Mod) {
   if (!Node)
     return;
 
-  for (auto Op : Node->operands())
+  for (auto *Op : Node->operands())
     if (Op->getNumOperands())
       Printf.push_back(
           std::string(cast<MDString>(Op->getOperand(0))->getString()));
@@ -626,7 +626,7 @@ void MetadataStreamerV3::emitPrintf(const Module &Mod) {
     return;
 
   auto Printf = HSAMetadataDoc->getArrayNode();
-  for (auto Op : Node->operands())
+  for (auto *Op : Node->operands())
     if (Op->getNumOperands())
       Printf.push_back(Printf.getDocument()->getNode(
           cast<MDString>(Op->getOperand(0))->getString(), /*Copy=*/true));

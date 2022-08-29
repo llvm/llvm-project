@@ -278,9 +278,8 @@ define i32 @neg_mask(i32 %x, i16 %y) {
 ; CHECK-LABEL: @neg_mask(
 ; CHECK-NEXT:    [[S:%.*]] = sext i16 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 [[X:%.*]], [[S]]
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i16 [[Y]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[SUB1]], [[TMP2]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i16 [[Y]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], i32 [[SUB1]], i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = sext i16 %y to i32
@@ -296,9 +295,8 @@ define i32 @neg_mask_const(i16 %x) {
 ; CHECK-LABEL: @neg_mask_const(
 ; CHECK-NEXT:    [[S:%.*]] = sext i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[SUB1:%.*]] = sub nsw i32 1000, [[S]]
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i16 [[X]], 15
-; CHECK-NEXT:    [[TMP2:%.*]] = sext i16 [[TMP1]] to i32
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[SUB1]], [[TMP2]]
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i16 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISNEG]], i32 [[SUB1]], i32 0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = sext i16 %x to i32
