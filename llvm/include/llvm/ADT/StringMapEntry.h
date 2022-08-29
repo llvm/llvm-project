@@ -17,8 +17,8 @@
 #define LLVM_ADT_STRINGMAPENTRY_H
 
 #include "llvm/ADT/None.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 
@@ -74,7 +74,7 @@ public:
   explicit StringMapEntryStorage(size_t keyLength)
       : StringMapEntryBase(keyLength), second() {}
   template <typename... InitTy>
-  StringMapEntryStorage(size_t keyLength, InitTy &&... initVals)
+  StringMapEntryStorage(size_t keyLength, InitTy &&...initVals)
       : StringMapEntryBase(keyLength),
         second(std::forward<InitTy>(initVals)...) {}
   StringMapEntryStorage(StringMapEntryStorage &e) = delete;
@@ -121,7 +121,7 @@ public:
   /// \p InitiVals.
   template <typename AllocatorTy, typename... InitTy>
   static StringMapEntry *Create(StringRef key, AllocatorTy &allocator,
-                                InitTy &&... initVals) {
+                                InitTy &&...initVals) {
     return new (StringMapEntryBase::allocateWithKey(
         sizeof(StringMapEntry), alignof(StringMapEntry), key, allocator))
         StringMapEntry(key.size(), std::forward<InitTy>(initVals)...);
