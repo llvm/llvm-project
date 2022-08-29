@@ -26,7 +26,7 @@ using namespace mlir::scf;
 namespace {
 struct SCFBufferizePass : public impl::SCFBufferizeBase<SCFBufferizePass> {
   void runOnOperation() override {
-    auto func = getOperation();
+    auto *func = getOperation();
     auto *context = &getContext();
 
     bufferization::BufferizeTypeConverter typeConverter;
