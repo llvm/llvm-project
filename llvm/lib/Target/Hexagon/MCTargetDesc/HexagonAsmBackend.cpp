@@ -713,7 +713,7 @@ public:
 
   void finishLayout(MCAssembler const &Asm,
                     MCAsmLayout &Layout) const override {
-    for (auto I : Layout.getSectionOrder()) {
+    for (auto *I : Layout.getSectionOrder()) {
       auto &Fragments = I->getFragmentList();
       for (auto &J : Fragments) {
         switch (J.getKind()) {
