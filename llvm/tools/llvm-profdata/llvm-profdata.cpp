@@ -461,6 +461,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
 /// The profile entry for a function in instrumentation profile.
 struct InstrProfileEntry {
   uint64_t MaxCount = 0;
+  uint64_t NumEdgeCounters = 0;
   float ZeroCounterRatio = 0.0;
   InstrProfRecord *ProfRecord;
   InstrProfileEntry(InstrProfRecord *Record);
@@ -476,6 +477,7 @@ InstrProfileEntry::InstrProfileEntry(InstrProfRecord *Record) {
     ZeroCntNum += !Record->Counts[I];
   }
   ZeroCounterRatio = (float)ZeroCntNum / CntNum;
+  NumEdgeCounters = CntNum;
 }
 
 /// Either set all the counters in the instr profile entry \p IFE to -1
@@ -584,10 +586,10 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     auto &FContext = PD.first;
     const sampleprof::FunctionSamples &FS = PD.second;
     auto It = InstrProfileMap.find(FContext.toString());
-    if (FS.getHeadSamples() > ColdSampleThreshold &&
+    if (FS.getMaxCountInside() > ColdSampleThreshold &&
         It != InstrProfileMap.end() &&
         It->second.MaxCount <= ColdInstrThreshold &&
-        FS.getBodySamples().size() >= SupplMinSizeThreshold) {
+        It->second.NumEdgeCounters >= SupplMinSizeThreshold) {
       updateInstrProfileEntry(It->second, HotInstrThreshold,
                               ZeroCounterThreshold);
     }
