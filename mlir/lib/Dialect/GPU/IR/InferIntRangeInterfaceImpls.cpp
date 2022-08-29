@@ -71,7 +71,7 @@ void SubgroupSizeOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 
 void LaunchOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                  SetIntRangeFn setResultRange) {
-  auto setRange = [&](ConstantIntRanges argRange, Value dimResult,
+  auto setRange = [&](const ConstantIntRanges &argRange, Value dimResult,
                       Value idxResult) {
     if (argRange.umin().getBitWidth() != IndexType::kInternalStorageBitWidth)
       return;
