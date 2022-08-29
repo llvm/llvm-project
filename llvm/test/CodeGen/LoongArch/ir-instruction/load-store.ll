@@ -252,8 +252,7 @@ define i64 @ldx_b(ptr %a, i64 %idx) nounwind {
 define i64 @ldx_h(ptr %a, i64 %idx) nounwind {
 ; LA32-LABEL: ldx_h:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slli.w $a1, $a1, 1
-; LA32-NEXT:    add.w $a1, $a0, $a1
+; LA32-NEXT:    alsl.w $a1, $a1, $a0, 1
 ; LA32-NEXT:    ld.h $a2, $a1, 0
 ; LA32-NEXT:    ld.h $a0, $a0, 0
 ; LA32-NEXT:    srai.w $a1, $a2, 31
@@ -277,8 +276,7 @@ define i64 @ldx_h(ptr %a, i64 %idx) nounwind {
 define i64 @ldx_w(ptr %a, i64 %idx) nounwind {
 ; LA32-LABEL: ldx_w:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slli.w $a1, $a1, 2
-; LA32-NEXT:    add.w $a1, $a0, $a1
+; LA32-NEXT:    alsl.w $a1, $a1, $a0, 2
 ; LA32-NEXT:    ld.w $a2, $a1, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 0
 ; LA32-NEXT:    srai.w $a1, $a2, 31
@@ -302,8 +300,7 @@ define i64 @ldx_w(ptr %a, i64 %idx) nounwind {
 define i64 @ldx_d(ptr %a, i64 %idx) nounwind {
 ; LA32-LABEL: ldx_d:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slli.w $a1, $a1, 3
-; LA32-NEXT:    add.w $a1, $a0, $a1
+; LA32-NEXT:    alsl.w $a1, $a1, $a0, 3
 ; LA32-NEXT:    ld.w $a2, $a1, 0
 ; LA32-NEXT:    ld.w $a3, $a0, 0
 ; LA32-NEXT:    ld.w $a1, $a1, 4
@@ -352,8 +349,7 @@ define i64 @ldx_bu(ptr %a, i64 %idx) nounwind {
 define i64 @ldx_hu(ptr %a, i64 %idx) nounwind {
 ; LA32-LABEL: ldx_hu:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slli.w $a1, $a1, 1
-; LA32-NEXT:    add.w $a1, $a0, $a1
+; LA32-NEXT:    alsl.w $a1, $a1, $a0, 1
 ; LA32-NEXT:    ld.hu $a1, $a1, 0
 ; LA32-NEXT:    ld.hu $a0, $a0, 0
 ; LA32-NEXT:    add.w $a0, $a1, $a0
@@ -379,8 +375,7 @@ define i64 @ldx_hu(ptr %a, i64 %idx) nounwind {
 define i64 @ldx_wu(ptr %a, i64 %idx) nounwind {
 ; LA32-LABEL: ldx_wu:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slli.w $a1, $a1, 2
-; LA32-NEXT:    add.w $a1, $a0, $a1
+; LA32-NEXT:    alsl.w $a1, $a1, $a0, 2
 ; LA32-NEXT:    ld.w $a1, $a1, 0
 ; LA32-NEXT:    ld.w $a0, $a0, 0
 ; LA32-NEXT:    add.w $a0, $a1, $a0
@@ -480,8 +475,7 @@ define void @stx_b(ptr %dst, i64 %idx, i8 %val) nounwind {
 define void @stx_h(ptr %dst, i64 %idx, i16 %val) nounwind {
 ; LA32-LABEL: stx_h:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slli.w $a1, $a1, 1
-; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 1
 ; LA32-NEXT:    st.h $a3, $a0, 0
 ; LA32-NEXT:    ret
 ;
@@ -498,8 +492,7 @@ define void @stx_h(ptr %dst, i64 %idx, i16 %val) nounwind {
 define void @stx_w(ptr %dst, i64 %idx, i32 %val) nounwind {
 ; LA32-LABEL: stx_w:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slli.w $a1, $a1, 2
-; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 2
 ; LA32-NEXT:    st.w $a3, $a0, 0
 ; LA32-NEXT:    ret
 ;
@@ -516,8 +509,7 @@ define void @stx_w(ptr %dst, i64 %idx, i32 %val) nounwind {
 define void @stx_d(ptr %dst, i64 %idx, i64 %val) nounwind {
 ; LA32-LABEL: stx_d:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    slli.w $a1, $a1, 3
-; LA32-NEXT:    add.w $a0, $a0, $a1
+; LA32-NEXT:    alsl.w $a0, $a1, $a0, 3
 ; LA32-NEXT:    st.w $a4, $a0, 4
 ; LA32-NEXT:    st.w $a3, $a0, 0
 ; LA32-NEXT:    ret

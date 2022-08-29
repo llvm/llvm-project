@@ -36,8 +36,7 @@ define float @fldx_s(ptr %a, i64 %idx) nounwind {
 define double @fldx_d(ptr %a, i64 %idx) nounwind {
 ; LA32F-LABEL: fldx_d:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    slli.w $a1, $a1, 3
-; LA32F-NEXT:    add.w $a1, $a0, $a1
+; LA32F-NEXT:    alsl.w $a1, $a1, $a0, 3
 ; LA32F-NEXT:    ld.w $a0, $a1, 0
 ; LA32F-NEXT:    ld.w $a1, $a1, 4
 ; LA32F-NEXT:    ret
@@ -96,8 +95,7 @@ define void @fstx_s(ptr %dst, i64 %idx, float %val) nounwind {
 define void @fstx_d(ptr %dst, i64 %idx, double %val) nounwind {
 ; LA32F-LABEL: fstx_d:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    slli.w $a1, $a1, 3
-; LA32F-NEXT:    add.w $a0, $a0, $a1
+; LA32F-NEXT:    alsl.w $a0, $a1, $a0, 3
 ; LA32F-NEXT:    st.w $a4, $a0, 4
 ; LA32F-NEXT:    st.w $a3, $a0, 0
 ; LA32F-NEXT:    ret
