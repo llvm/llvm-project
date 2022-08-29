@@ -4842,35 +4842,51 @@ defm PseudoVFMV_V : VPseudoVMV_F;
 //===----------------------------------------------------------------------===//
 // 14.17. Single-Width Floating-Point/Integer Type-Convert Instructions
 //===----------------------------------------------------------------------===//
+let mayRaiseFPException = true in {
+let Uses = [FRM] in {
 defm PseudoVFCVT_XU_F : VPseudoVCVTI_V;
 defm PseudoVFCVT_X_F : VPseudoVCVTI_V;
+}
 defm PseudoVFCVT_RTZ_XU_F : VPseudoVCVTI_V;
 defm PseudoVFCVT_RTZ_X_F : VPseudoVCVTI_V;
+let Uses = [FRM] in {
 defm PseudoVFCVT_F_XU : VPseudoVCVTF_V;
 defm PseudoVFCVT_F_X : VPseudoVCVTF_V;
+}
+} // mayRaiseFPException = true
 
 //===----------------------------------------------------------------------===//
 // 14.18. Widening Floating-Point/Integer Type-Convert Instructions
 //===----------------------------------------------------------------------===//
+let mayRaiseFPException = true in {
+let Uses = [FRM] in {
 defm PseudoVFWCVT_XU_F     : VPseudoVWCVTI_V;
 defm PseudoVFWCVT_X_F      : VPseudoVWCVTI_V;
+}
 defm PseudoVFWCVT_RTZ_XU_F : VPseudoVWCVTI_V;
 defm PseudoVFWCVT_RTZ_X_F  : VPseudoVWCVTI_V;
 defm PseudoVFWCVT_F_XU     : VPseudoVWCVTF_V;
 defm PseudoVFWCVT_F_X      : VPseudoVWCVTF_V;
 defm PseudoVFWCVT_F_F      : VPseudoVWCVTD_V;
+} // mayRaiseFPException = true
 
 //===----------------------------------------------------------------------===//
 // 14.19. Narrowing Floating-Point/Integer Type-Convert Instructions
 //===----------------------------------------------------------------------===//
+let mayRaiseFPException = true in {
+let Uses = [FRM] in {
 defm PseudoVFNCVT_XU_F     : VPseudoVNCVTI_W;
 defm PseudoVFNCVT_X_F      : VPseudoVNCVTI_W;
+}
 defm PseudoVFNCVT_RTZ_XU_F : VPseudoVNCVTI_W;
 defm PseudoVFNCVT_RTZ_X_F  : VPseudoVNCVTI_W;
+let Uses = [FRM] in {
 defm PseudoVFNCVT_F_XU     : VPseudoVNCVTF_W;
 defm PseudoVFNCVT_F_X      : VPseudoVNCVTF_W;
 defm PseudoVFNCVT_F_F      : VPseudoVNCVTD_W;
+}
 defm PseudoVFNCVT_ROD_F_F  : VPseudoVNCVTD_W;
+} // mayRaiseFPException = true
 } // Predicates = [HasVInstructionsAnyF]
 
 let Predicates = [HasVInstructions] in {
