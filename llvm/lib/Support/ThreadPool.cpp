@@ -136,8 +136,7 @@ bool ThreadPool::workCompletedUnlocked(ThreadPoolTaskGroup *Group) const {
   if (Group == nullptr)
     return !ActiveThreads && Tasks.empty();
   return ActiveGroups.count(Group) == 0 &&
-         !llvm::any_of(Tasks,
-                       [Group](const auto &T) { return T.second == Group; });
+         !llvm::is_contained(llvm::make_second_range(Tasks), Group);
 }
 
 void ThreadPool::wait() {
