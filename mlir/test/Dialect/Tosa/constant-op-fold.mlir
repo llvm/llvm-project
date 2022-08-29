@@ -164,6 +164,50 @@ func.func @fold_add_splat_f32() -> tensor<10xf32> {
 
 // -----
 
+// CHECK-LABEL: @fold_sub_zero_rhs_f32
+func.func @fold_sub_zero_rhs_f32(%arg0: tensor<f32>) -> tensor<f32> {
+  %zero = "tosa.const"() {value = dense<0.0> : tensor<f32>} : () -> tensor<f32>
+  %sub = "tosa.sub"(%arg0, %zero) : (tensor<f32>, tensor<f32>) -> tensor<f32>
+  // CHECK: return %arg0
+  return %sub : tensor<f32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_sub_zero_rhs_i32
+func.func @fold_sub_zero_rhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
+  %zero = "tosa.const"() {value = dense<0> : tensor<i32>} : () -> tensor<i32>
+  %sub = "tosa.sub"(%arg0, %zero) : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  // CHECK: return %arg0
+  return %sub : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_sub_splat_i32
+func.func @fold_sub_splat_i32() -> tensor<10xi32> {
+  %one = "tosa.const"() {value = dense<1> : tensor<10xi32>} : () -> tensor<10xi32>
+  %two = "tosa.const"() {value = dense<2> : tensor<10xi32>} : () -> tensor<10xi32>
+  %sub = "tosa.sub"(%one, %two) : (tensor<10xi32>, tensor<10xi32>) -> tensor<10xi32>
+  // CHECK: %[[THREE:.+]] = "tosa.const"() {value = dense<-1> : tensor<10xi32>}
+  // CHECK: return %[[THREE]]
+  return %sub : tensor<10xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_sub_splat_f32
+func.func @fold_sub_splat_f32() -> tensor<10xf32> {
+  %one = "tosa.const"() {value = dense<1.0> : tensor<10xf32>} : () -> tensor<10xf32>
+  %two = "tosa.const"() {value = dense<2.0> : tensor<10xf32>} : () -> tensor<10xf32>
+  %sub = "tosa.sub"(%one, %two) : (tensor<10xf32>, tensor<10xf32>) -> tensor<10xf32>
+  // CHECK: %[[THREE:.+]] = "tosa.const"() {value = dense<-1.000000e+00> : tensor<10xf32>}
+  // CHECK: return %[[THREE]]
+  return %sub : tensor<10xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @fold_greater_splat_f32_true
 func.func @fold_greater_splat_f32_true() -> tensor<10xi1> {
   %one = "tosa.const"() {value = dense<4.0> : tensor<10xf32>} : () -> tensor<10xf32>
