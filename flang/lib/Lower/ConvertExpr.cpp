@@ -1497,7 +1497,7 @@ public:
   /// NaN strings as well. \p s is assumed to not contain any spaces.
   static llvm::APFloat consAPFloat(const llvm::fltSemantics &fsem,
                                    llvm::StringRef s) {
-    assert(s.find(' ') == llvm::StringRef::npos);
+    assert(!s.contains(' '));
     if (s.compare_insensitive("-inf") == 0)
       return llvm::APFloat::getInf(fsem, /*negative=*/true);
     if (s.compare_insensitive("inf") == 0 || s.compare_insensitive("+inf") == 0)
