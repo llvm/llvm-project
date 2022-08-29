@@ -12,11 +12,6 @@ set(ORC_UNITTEST_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/lib/orc
   )
 
-# We add the include directories one at a time in our CFLAGS.
-foreach (DIR ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})
-  list(APPEND ORC_UNITTEST_CFLAGS -I${DIR})
-endforeach()
-
 function(add_orc_lib library)
   add_library(${library} STATIC ${ARGN})
   set_target_properties(${library} PROPERTIES
