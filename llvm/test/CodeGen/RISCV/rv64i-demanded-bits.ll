@@ -104,15 +104,11 @@ define void @xor_signbit(ptr nocapture noundef %0) {
 ; removes the sext_inreg from the path to the store. This prevents
 ; TargetShrinkDemandedConstant from being able to restore the lost upper bits
 ; from the and mask to allow andi. ISel is able to recover the lost sext_inreg
-; using hasAllWUsers.
-; FIXME: Use hasAllWUers to recover the ANDI.
+; using hasAllWUsers. We also use hasAllWUsers to recover the ANDI.
 define signext i32 @andi_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
 ; CHECK-LABEL: andi_sub_cse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a3, 1
-; CHECK-NEXT:    slli a3, a3, 32
-; CHECK-NEXT:    addi a3, a3, -8
-; CHECK-NEXT:    and a0, a0, a3
+; CHECK-NEXT:    andi a0, a0, -8
 ; CHECK-NEXT:    subw a0, a0, a1
 ; CHECK-NEXT:    sw a0, 0(a2)
 ; CHECK-NEXT:    ret
