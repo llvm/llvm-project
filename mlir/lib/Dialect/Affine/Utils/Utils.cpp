@@ -398,8 +398,7 @@ mlir::affineParallelize(AffineForOp forOp,
   // "main" induction variable whenc coming from a non-parallel for.
   unsigned numIVs = 1;
   yieldOp->setOperands(reducedValues);
-  newPloop.getBody()->eraseArguments(
-      llvm::to_vector<4>(llvm::seq<unsigned>(numIVs, numReductions + numIVs)));
+  newPloop.getBody()->eraseArguments(numIVs, numReductions);
 
   forOp.erase();
   return success();
