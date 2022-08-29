@@ -158,4 +158,42 @@ exit:
   ret i32 %phi_indvar
 }
 
+define i16 @pr57336(i16 %end, i16 %m) mustprogress {
+; CHECK-LABEL: @pr57336(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INC8:%.*]] = phi i16 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i16 [[INC8]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i16 [[INC8]], [[M:%.*]]
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp sgt i16 [[MUL]], [[END:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[CRIT_EDGE:%.*]], label [[FOR_BODY]]
+; CHECK:       crit_edge:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.smax.i16(i16 [[END]], i16 -1)
+; CHECK-NEXT:    [[SMAX:%.*]] = add nsw i16 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i16 [[SMAX]], 0
+; CHECK-NEXT:    [[UMIN:%.*]] = zext i1 [[TMP1]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i16 [[SMAX]], [[UMIN]]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i16 @llvm.umax.i16(i16 [[M]], i16 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv i16 [[TMP2]], [[UMAX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[TMP3]], [[UMIN]]
+; CHECK-NEXT:    ret i16 [[TMP4]]
+;
+entry:
+  br label %for.body
+
+for.body:
+  %inc8 = phi i16 [ %inc, %for.body ], [ 0, %entry ]
+  %inc137 = phi i32 [ %inc1, %for.body ], [ 0, %entry ]
+  %inc1 = add nsw i32 %inc137, 1
+  %inc = add nsw i16 %inc8, 1
+  %mul = mul nsw i16 %m, %inc8
+  %cmp.not = icmp slt i16 %end, %mul
+  br i1 %cmp.not, label %crit_edge, label %for.body
+
+crit_edge:
+  %inc137.lcssa = phi i32 [ %inc137, %for.body ]
+  %conv = trunc i32 %inc137.lcssa to i16
+  ret i16 %conv
+}
 
