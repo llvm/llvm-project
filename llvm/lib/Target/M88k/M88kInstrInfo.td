@@ -371,12 +371,16 @@ multiclass ArithTri<bits<6> Func, string OpcStr, bit IsReMat = 0> {
     def ri : F_II<Func, (ins GPR:$rs1, uimm16:$imm16),OpcStr>;
 }
 
-// Multiclass for arithmetic instructions with triadic registers or immediates.
+// Multiclass for arithmetic instructions with triadic registers or immediates,
+// and carry setting or using variants.
 multiclass ArithTriCarry<bits<6> Func, string OpcStr, bit IsReMat = 0>
   : ArithTri<Func, OpcStr, IsReMat> {
-  def rrci  : F_IRC<Func, 0b1, 0b0, !strconcat(OpcStr, ".ci")>;
-  def rrco  : F_IRC<Func, 0b0, 0b1, !strconcat(OpcStr, ".co")>;
-  def rrcio : F_IRC<Func, 0b1, 0b1, !strconcat(OpcStr, ".cio")>;
+  let Uses = [CARRY] in
+    def rrci  : F_IRC<Func, 0b1, 0b0, !strconcat(OpcStr, ".ci")>;
+  let Defs = [CARRY] in
+    def rrco  : F_IRC<Func, 0b0, 0b1, !strconcat(OpcStr, ".co")>;
+  let Uses = [CARRY], Defs = [CARRY] in
+    def rrcio : F_IRC<Func, 0b1, 0b1, !strconcat(OpcStr, ".cio")>;
 }
 
 let isCommutable = 1 in {

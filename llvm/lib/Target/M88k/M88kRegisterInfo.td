@@ -89,6 +89,11 @@ foreach I = 0-63 in {
   def CR#I : M88kCRReg<I, "cr"#I>;
 }
 
+// Carry bit. This is really bit 28 of the processor status register aka cr1.
+def CARRY: M88kCRReg<1, "carry"> {
+  let Aliases = [CR1];
+}
+
 foreach I = 0-63 in {
   def FCR#I : M88kCRReg<I, "fcr"#I>;
 }
