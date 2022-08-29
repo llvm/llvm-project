@@ -14,6 +14,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertExpr.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
@@ -1666,6 +1667,39 @@ void Fortran::lower::genThreadprivateOp(
     // Generate the threadprivate value for the common block member.
     symThreadprivateValue =
         genCommonBlockMember(converter, sym, commonThreadprivateValue);
+  } else if (!var.isGlobal()) {
+    // Non-global variable which can be in threadprivate directive must be one
+    // variable in main program, and it has implicit SAVE attribute. Take it as
+    // with SAVE attribute, so to create GlobalOp for it to simplify the
+    // translation to LLVM IR.
+    mlir::Type ty = converter.genType(sym);
+    std::string globalName = converter.mangleName(sym);
+    mlir::StringAttr linkage = firOpBuilder.createInternalLinkage();
+    fir::GlobalOp global =
+        firOpBuilder.createGlobal(currentLocation, ty, globalName, linkage);
+
+    // Create default initialization for non-character scalar.
+    if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
+      mlir::Type baseAddrType = ty.dyn_cast<fir::BoxType>().getEleTy();
+      Fortran::lower::createGlobalInitialization(
+          firOpBuilder, global, [&](fir::FirOpBuilder &b) {
+            mlir::Value nullAddr =
+                b.createNullConstant(currentLocation, baseAddrType);
+            mlir::Value box =
+                b.create<fir::EmboxOp>(currentLocation, ty, nullAddr);
+            b.create<fir::HasValueOp>(currentLocation, box);
+          });
+    } else {
+      Fortran::lower::createGlobalInitialization(
+          firOpBuilder, global, [&](fir::FirOpBuilder &b) {
+            mlir::Value undef = b.create<fir::UndefOp>(currentLocation, ty);
+            b.create<fir::HasValueOp>(currentLocation, undef);
+          });
+    }
+    mlir::Value symValue = firOpBuilder.create<fir::AddrOfOp>(
+        currentLocation, global.resultType(), global.getSymbol());
+    symThreadprivateValue = firOpBuilder.create<mlir::omp::ThreadprivateOp>(
+        currentLocation, symValue.getType(), symValue);
   } else {
     mlir::Value symValue = converter.getSymbolAddress(sym);
     symThreadprivateValue = firOpBuilder.create<mlir::omp::ThreadprivateOp>(
