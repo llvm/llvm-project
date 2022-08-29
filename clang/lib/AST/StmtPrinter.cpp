@@ -1993,7 +1993,7 @@ void StmtPrinter::VisitUserDefinedLiteral(UserDefinedLiteral *Node) {
       cast<FunctionDecl>(DRE->getDecl())->getTemplateSpecializationArgs();
     assert(Args);
 
-    if (Args->size() != 1) {
+    if (Args->size() != 1 || Args->get(0).getKind() != TemplateArgument::Pack) {
       const TemplateParameterList *TPL = nullptr;
       if (!DRE->hadMultipleCandidates())
         if (const auto *TD = dyn_cast<TemplateDecl>(DRE->getDecl()))
