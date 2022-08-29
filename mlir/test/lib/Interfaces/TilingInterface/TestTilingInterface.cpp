@@ -11,6 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -40,7 +42,8 @@ struct TestTileUsingSCFForOpWithFilter : public scf::TileUsingSCFForOp {
                                   linalg::LinalgTransformationFilter filter =
                                       linalg::LinalgTransformationFilter(),
                                   PatternBenefit benefit = 1)
-      : scf::TileUsingSCFForOp(context, options, benefit), filter(filter) {}
+      : scf::TileUsingSCFForOp(context, std::move(options), benefit),
+        filter(std::move(filter)) {}
 
   /// Construct a generic pattern applied to `opName`.
   TestTileUsingSCFForOpWithFilter(StringRef opName, MLIRContext *context,
@@ -48,7 +51,8 @@ struct TestTileUsingSCFForOpWithFilter : public scf::TileUsingSCFForOp {
                                   linalg::LinalgTransformationFilter filter =
                                       linalg::LinalgTransformationFilter(),
                                   PatternBenefit benefit = 1)
-      : scf::TileUsingSCFForOp(context, options, benefit), filter(filter) {}
+      : scf::TileUsingSCFForOp(context, std::move(options), benefit),
+        filter(std::move(filter)) {}
 
   LogicalResult matchAndRewrite(TilingInterface op,
                                 PatternRewriter &rewriter) const override {
@@ -78,9 +82,9 @@ struct TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter
       linalg::LinalgTransformationFilter filter =
           linalg::LinalgTransformationFilter(),
       PatternBenefit benefit = 1)
-      : scf::TileConsumerAndFuseProducersUsingSCFForOp(context, options,
-                                                       benefit),
-        filter(filter) {}
+      : scf::TileConsumerAndFuseProducersUsingSCFForOp(
+            context, std::move(options), benefit),
+        filter(std::move(filter)) {}
 
   /// Construct a generic pattern applied to `opName`.
   TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter(
@@ -88,9 +92,9 @@ struct TestTileConsumerAndFuseProducersUsingSCFForOpWithFilter
       linalg::LinalgTransformationFilter filter =
           linalg::LinalgTransformationFilter(),
       PatternBenefit benefit = 1)
-      : scf::TileConsumerAndFuseProducersUsingSCFForOp(context, options,
-                                                       benefit),
-        filter(filter) {}
+      : scf::TileConsumerAndFuseProducersUsingSCFForOp(
+            context, std::move(options), benefit),
+        filter(std::move(filter)) {}
 
   LogicalResult matchAndRewrite(TilingInterface op,
                                 PatternRewriter &rewriter) const override {
