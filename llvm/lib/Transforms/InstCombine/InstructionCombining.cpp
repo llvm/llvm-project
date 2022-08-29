@@ -4116,7 +4116,7 @@ static bool TryToSinkInstruction(Instruction *I, BasicBlock *DestBlock,
 
   SmallVector<DbgVariableIntrinsic *, 2> DIIClones;
   SmallSet<DebugVariable, 4> SunkVariables;
-  for (auto User : DbgUsersToSink) {
+  for (auto *User : DbgUsersToSink) {
     // A dbg.declare instruction should not be cloned, since there can only be
     // one per variable fragment. It should be left in the original place
     // because the sunk instruction is not an alloca (otherwise we could not be

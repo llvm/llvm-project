@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -c -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
@@ -11,14 +11,14 @@
 // With `-emit-llvm`, the output should be the same as the aforementioned line
 // as `-fgpu-rdc` in HIP implies `-emit-llvm`.
 
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -c -emit-llvm -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip --gpu-bundle-output \
 // RUN: 2>&1 | FileCheck -check-prefixes=COMMON,EMITBC %s
 
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -S -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
@@ -28,7 +28,7 @@
 // With `-emit-llvm`, the output should be the same as the aforementioned line
 // as `-fgpu-rdc` in HIP implies `-emit-llvm`.
 
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -S -emit-llvm -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
@@ -39,7 +39,7 @@
 // output, there should 3 steps (preprocessor, compile, and backend) per source
 // and per target, totally 12 steps.
 
-// RUN: %clang -### -save-temps -target x86_64-linux-gnu \
+// RUN: %clang -### -save-temps --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -S -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
@@ -48,7 +48,7 @@
 
 // Check output one file without bundling cause error.
 
-// RUN: %clang -### -target x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -S -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu -o %t.s --no-gpu-bundle-output \

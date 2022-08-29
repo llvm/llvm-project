@@ -241,8 +241,9 @@ inline bool FormattedLogicalIO(
 template <Direction DIR>
 static bool DescriptorIO(IoStatementState &, const Descriptor &);
 
+// For default (not user-defined) derived type I/O, formatted & unformatted
 template <Direction DIR>
-static bool DefaultFormattedComponentIO(IoStatementState &io,
+static bool DefaultComponentIO(IoStatementState &io,
     const typeInfo::Component &component, const Descriptor &origDescriptor,
     const SubscriptValue origSubscripts[], Terminator &terminator) {
   if (component.genre() == typeInfo::Component::Genre::Data) {
@@ -261,6 +262,33 @@ static bool DefaultFormattedComponentIO(IoStatementState &io,
     const Descriptor &compDesc{*reinterpret_cast<const Descriptor *>(pointer)};
     return DescriptorIO<DIR>(io, compDesc);
   }
+}
+
+template <Direction DIR>
+static bool DefaultComponentwiseIO(IoStatementState &io,
+    const Descriptor &descriptor, const typeInfo::DerivedType &type) {
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
+  const Descriptor &compArray{type.component()};
+  RUNTIME_CHECK(handler, compArray.rank() == 1);
+  std::size_t numComponents{compArray.Elements()};
+  std::size_t numElements{descriptor.Elements()};
+  SubscriptValue subscripts[maxRank];
+  descriptor.GetLowerBounds(subscripts);
+  for (std::size_t j{0}; j < numElements;
+       ++j, descriptor.IncrementSubscripts(subscripts)) {
+    SubscriptValue at[maxRank];
+    compArray.GetLowerBounds(at);
+    for (std::size_t k{0}; k < numComponents;
+         ++k, compArray.IncrementSubscripts(at)) {
+      const typeInfo::Component &component{
+          *compArray.Element<typeInfo::Component>(at)};
+      if (!DefaultComponentIO<DIR>(
+              io, component, descriptor, subscripts, handler)) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 std::optional<bool> DefinedFormattedIo(
@@ -284,28 +312,7 @@ static bool FormattedDerivedTypeIO(
       return *wasDefined; // user-defined I/O was applied
     }
   }
-  // Default componentwise derived type formatting
-  const Descriptor &compArray{type->component()};
-  RUNTIME_CHECK(handler, compArray.rank() == 1);
-  std::size_t numComponents{compArray.Elements()};
-  std::size_t numElements{descriptor.Elements()};
-  SubscriptValue subscripts[maxRank];
-  descriptor.GetLowerBounds(subscripts);
-  for (std::size_t j{0}; j < numElements;
-       ++j, descriptor.IncrementSubscripts(subscripts)) {
-    SubscriptValue at[maxRank];
-    compArray.GetLowerBounds(at);
-    for (std::size_t k{0}; k < numComponents;
-         ++k, compArray.IncrementSubscripts(at)) {
-      const typeInfo::Component &component{
-          *compArray.Element<typeInfo::Component>(at)};
-      if (!DefaultFormattedComponentIO<DIR>(
-              io, component, descriptor, subscripts, handler)) {
-        return false;
-      }
-    }
-  }
-  return true;
+  return DefaultComponentwiseIO<DIR>(io, descriptor, *type);
 }
 
 bool DefinedUnformattedIo(
@@ -317,18 +324,24 @@ static bool UnformattedDescriptorIO(
     IoStatementState &io, const Descriptor &descriptor) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
   const DescriptorAddendum *addendum{descriptor.Addendum()};
-  const typeInfo::DerivedType *type{
-      addendum ? addendum->derivedType() : nullptr};
-  if (const typeInfo::SpecialBinding *
-      special{type
-              ? type->FindSpecialBinding(DIR == Direction::Input
-                        ? typeInfo::SpecialBinding::Which::ReadUnformatted
-                        : typeInfo::SpecialBinding::Which::WriteUnformatted)
-              : nullptr}) {
-    // User-defined derived type unformatted I/O
-    return DefinedUnformattedIo(io, descriptor, *special);
+  if (const typeInfo::DerivedType *
+      type{addendum ? addendum->derivedType() : nullptr}) {
+    // derived type unformatted I/O
+    if (const typeInfo::SpecialBinding *
+        special{type->FindSpecialBinding(DIR == Direction::Input
+                ? typeInfo::SpecialBinding::Which::ReadUnformatted
+                : typeInfo::SpecialBinding::Which::WriteUnformatted)}) {
+      // User-defined derived type unformatted I/O
+      return DefinedUnformattedIo(io, descriptor, *special);
+    } else {
+      // Default derived type unformatted I/O
+      // TODO: If no component at any level has user defined READ or WRITE
+      // (as appropriate), the elements are contiguous, and no byte swapping
+      // is active, do a block transfer via the code below.
+      return DefaultComponentwiseIO<DIR>(io, descriptor, *type);
+    }
   } else {
-    // Regular derived type unformatted I/O, not user-defined
+    // intrinsic type unformatted I/O
     auto *externalUnf{io.get_if<ExternalUnformattedIoStatementState<DIR>>()};
     auto *childUnf{io.get_if<ChildUnformattedIoStatementState<DIR>>()};
     auto *inq{
@@ -336,28 +349,41 @@ static bool UnformattedDescriptorIO(
     RUNTIME_CHECK(handler, externalUnf || childUnf || inq);
     std::size_t elementBytes{descriptor.ElementBytes()};
     std::size_t numElements{descriptor.Elements()};
+    std::size_t swappingBytes{elementBytes};
+    if (auto maybeCatAndKind{descriptor.type().GetCategoryAndKind()}) {
+      // Byte swapping units can be smaller than elements, namely
+      // for COMPLEX and CHARACTER.
+      if (maybeCatAndKind->first == TypeCategory::Character) {
+        // swap each character position independently
+        swappingBytes = maybeCatAndKind->second; // kind
+      } else if (maybeCatAndKind->first == TypeCategory::Complex) {
+        // swap real and imaginary components independently
+        swappingBytes /= 2;
+      }
+    }
     SubscriptValue subscripts[maxRank];
     descriptor.GetLowerBounds(subscripts);
     using CharType =
         std::conditional_t<DIR == Direction::Output, const char, char>;
-    auto Transfer{[=](CharType &x, std::size_t totalBytes,
-                      std::size_t elementBytes) -> bool {
+    auto Transfer{[=](CharType &x, std::size_t totalBytes) -> bool {
       if constexpr (DIR == Direction::Output) {
-        return externalUnf ? externalUnf->Emit(&x, totalBytes, elementBytes)
-            : childUnf     ? childUnf->Emit(&x, totalBytes, elementBytes)
-                           : inq->Emit(&x, totalBytes, elementBytes);
+        return externalUnf ? externalUnf->Emit(&x, totalBytes, swappingBytes)
+            : childUnf     ? childUnf->Emit(&x, totalBytes, swappingBytes)
+                           : inq->Emit(&x, totalBytes, swappingBytes);
       } else {
-        return externalUnf ? externalUnf->Receive(&x, totalBytes, elementBytes)
-                           : childUnf->Receive(&x, totalBytes, elementBytes);
+        return externalUnf ? externalUnf->Receive(&x, totalBytes, swappingBytes)
+                           : childUnf->Receive(&x, totalBytes, swappingBytes);
       }
     }};
-    if (descriptor.IsContiguous()) { // contiguous unformatted I/O
+    bool swapEndianness{externalUnf && externalUnf->unit().swapEndianness()};
+    if (!swapEndianness &&
+        descriptor.IsContiguous()) { // contiguous unformatted I/O
       char &x{ExtractElement<char>(io, descriptor, subscripts)};
-      return Transfer(x, numElements * elementBytes, elementBytes);
-    } else { // non-contiguous unformatted I/O
+      return Transfer(x, numElements * elementBytes);
+    } else { // non-contiguous or byte-swapped intrinsic type unformatted I/O
       for (std::size_t j{0}; j < numElements; ++j) {
         char &x{ExtractElement<char>(io, descriptor, subscripts)};
-        if (!Transfer(x, elementBytes, elementBytes)) {
+        if (!Transfer(x, elementBytes)) {
           return false;
         }
         if (!descriptor.IncrementSubscripts(subscripts) &&

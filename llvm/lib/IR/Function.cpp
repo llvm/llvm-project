@@ -833,7 +833,7 @@ static std::string getMangledTypeStr(Type *Ty, bool &HasUnnamedType) {
         HasUnnamedType = true;
     } else {
       Result += "sl_";
-      for (auto Elem : STyp->elements())
+      for (auto *Elem : STyp->elements())
         Result += getMangledTypeStr(Elem, HasUnnamedType);
     }
     // Ensure nested structs are distinguishable.
@@ -1727,7 +1727,7 @@ Intrinsic::matchIntrinsicSignature(FunctionType *FTy,
 
   unsigned NumDeferredReturnChecks = DeferredChecks.size();
 
-  for (auto Ty : FTy->params())
+  for (auto *Ty : FTy->params())
     if (matchIntrinsicType(Ty, Infos, ArgTys, DeferredChecks, false))
       return MatchIntrinsicTypes_NoMatchArg;
 

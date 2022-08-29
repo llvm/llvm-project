@@ -60,7 +60,7 @@ json::Value JSONEmitter::translateInit(const Init &I) {
     return Str->getValue();
   } else if (auto *List = dyn_cast<ListInit>(&I)) {
     json::Array array;
-    for (auto val : *List)
+    for (auto *val : *List)
       array.push_back(translateInit(*val));
     return std::move(array);
   }

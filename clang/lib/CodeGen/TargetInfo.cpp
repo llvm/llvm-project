@@ -6674,7 +6674,7 @@ ABIArgInfo ARMABIInfo::classifyArgumentType(QualType Ty, bool isVariadic,
   if (getABIKind() == ARMABIInfo::AAPCS_VFP ||
       getABIKind() == ARMABIInfo::AAPCS) {
     TyAlign = getContext().getTypeUnadjustedAlignInChars(Ty).getQuantity();
-    ABIAlign = std::min(std::max(TyAlign, (uint64_t)4), (uint64_t)8);
+    ABIAlign = std::clamp(TyAlign, (uint64_t)4, (uint64_t)8);
   } else {
     TyAlign = getContext().getTypeAlignInChars(Ty).getQuantity();
   }

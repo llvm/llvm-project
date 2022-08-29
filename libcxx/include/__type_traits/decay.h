@@ -12,7 +12,6 @@
 #include <__config>
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/conditional.h>
-#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_referenceable.h>

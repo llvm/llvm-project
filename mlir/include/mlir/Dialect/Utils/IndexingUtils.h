@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_UTILS_INDEXINGUTILS_H
 #define MLIR_DIALECT_UTILS_INDEXINGUTILS_H
 
+#include "mlir/IR/Builders.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -47,6 +48,15 @@ void applyPermutationToVector(SmallVector<T, N> &inVec,
 SmallVector<int64_t, 4> getI64SubArray(ArrayAttr arrayAttr,
                                        unsigned dropFront = 0,
                                        unsigned dropBack = 0);
+
+/// Computes and returns linearized affine expression w.r.t. `basis`.
+mlir::AffineExpr getLinearAffineExpr(ArrayRef<int64_t> basis, mlir::Builder &b);
+
+/// Given the strides in the dimension space, returns the affine expressions for
+/// vector-space offsets in each dimension for a de-linearized index.
+SmallVector<mlir::AffineExpr, 4>
+getDelinearizedAffineExpr(ArrayRef<int64_t> strides, mlir::Builder &b);
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_INDEXINGUTILS_H

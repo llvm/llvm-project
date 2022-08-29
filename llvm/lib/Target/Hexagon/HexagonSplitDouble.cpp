@@ -1150,7 +1150,7 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
   }
 
   MISet Erase;
-  for (auto MI : SplitIns) {
+  for (auto *MI : SplitIns) {
     if (isFixedInstr(MI)) {
       collapseRegPairs(MI, PairMap);
     } else {
@@ -1169,11 +1169,11 @@ bool HexagonSplitDoubleRegs::splitPartition(const USet &Part) {
     for (auto U = MRI->use_nodbg_begin(DR), W = MRI->use_nodbg_end();
          U != W; ++U)
       Uses.insert(U->getParent());
-    for (auto M : Uses)
+    for (auto *M : Uses)
       replaceSubregUses(M, PairMap);
   }
 
-  for (auto MI : Erase) {
+  for (auto *MI : Erase) {
     MachineBasicBlock *B = MI->getParent();
     B->erase(MI);
   }

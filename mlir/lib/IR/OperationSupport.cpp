@@ -342,8 +342,7 @@ MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
 
   // Move the current operands to the new storage.
   MutableArrayRef<OpOperand> newOperands(newOperandStorage, newSize);
-  std::uninitialized_copy(std::make_move_iterator(origOperands.begin()),
-                          std::make_move_iterator(origOperands.end()),
+  std::uninitialized_move(origOperands.begin(), origOperands.end(),
                           newOperands.begin());
 
   // Destroy the original operands.

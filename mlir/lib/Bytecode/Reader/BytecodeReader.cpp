@@ -128,6 +128,17 @@ public:
     return parseMultiByteVarInt(result);
   }
 
+  /// Parse a signed variable length encoded integer from the byte stream. A
+  /// signed varint is encoded as a normal varint with zigzag encoding applied,
+  /// i.e. the low bit of the value is used to indicate the sign.
+  LogicalResult parseSignedVarInt(uint64_t &result) {
+    if (failed(parseVarInt(result)))
+      return failure();
+    // Essentially (but using unsigned): (x >> 1) ^ -(x & 1)
+    result = (result >> 1) ^ (~(result & 1) + 1);
+    return success();
+  }
+
   /// Parse a variable length encoded integer whose low bit is used to encode an
   /// unrelated flag, i.e: `(integerValue << 1) | (flag ? 1 : 0)`.
   LogicalResult parseVarIntWithFlag(uint64_t &result, bool &flag) {
@@ -509,6 +520,52 @@ public:
 
   LogicalResult readVarInt(uint64_t &result) override {
     return reader.parseVarInt(result);
+  }
+
+  LogicalResult readSignedVarInt(int64_t &result) override {
+    uint64_t unsignedResult;
+    if (failed(reader.parseSignedVarInt(unsignedResult)))
+      return failure();
+    result = static_cast<int64_t>(unsignedResult);
+    return success();
+  }
+
+  FailureOr<APInt> readAPIntWithKnownWidth(unsigned bitWidth) override {
+    // Small values are encoded using a single byte.
+    if (bitWidth <= 8) {
+      uint8_t value;
+      if (failed(reader.parseByte(value)))
+        return failure();
+      return APInt(bitWidth, value);
+    }
+
+    // Large values up to 64 bits are encoded using a single varint.
+    if (bitWidth <= 64) {
+      uint64_t value;
+      if (failed(reader.parseSignedVarInt(value)))
+        return failure();
+      return APInt(bitWidth, value);
+    }
+
+    // Otherwise, for really big values we encode the array of active words in
+    // the value.
+    uint64_t numActiveWords;
+    if (failed(reader.parseVarInt(numActiveWords)))
+      return failure();
+    SmallVector<uint64_t, 4> words(numActiveWords);
+    for (uint64_t i = 0; i < numActiveWords; ++i)
+      if (failed(reader.parseSignedVarInt(words[i])))
+        return failure();
+    return APInt(bitWidth, words);
+  }
+
+  FailureOr<APFloat>
+  readAPFloatWithKnownSemantics(const llvm::fltSemantics &semantics) override {
+    FailureOr<APInt> intVal =
+        readAPIntWithKnownWidth(APFloat::getSizeInBits(semantics));
+    if (failed(intVal))
+      return failure();
+    return APFloat(semantics, *intVal);
   }
 
   LogicalResult readString(StringRef &result) override {

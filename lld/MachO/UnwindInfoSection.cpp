@@ -82,18 +82,10 @@ using namespace lld::macho;
 // advantage, achieving a 3-order-of-magnitude reduction in the
 // number of entries.
 //
-// * The __TEXT,__unwind_info format can accommodate up to 127 unique
-// encodings for the space-efficient compressed format. In practice,
-// fewer than a dozen unique encodings are used by C++ programs of
-// all sizes. Therefore, we don't even bother implementing the regular
-// non-compressed format. Time will tell if anyone in the field ever
-// overflows the 127-encodings limit.
-//
 // Refer to the definition of unwind_info_section_header in
 // compact_unwind_encoding.h for an overview of the format we are encoding
 // here.
 
-// TODO(gkm): prune __eh_frame entries superseded by __unwind_info, PR50410
 // TODO(gkm): how do we align the 2nd-level pages?
 
 // The offsets of various fields in the on-disk representation of each compact

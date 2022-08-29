@@ -1201,7 +1201,7 @@ static bool ValidateMVEStore(MachineInstr *MI, MachineLoop *ML) {
     }
 
     if (LookAtSuccessors) {
-      for (auto Succ : BB->successors()) {
+      for (auto *Succ : BB->successors()) {
         if (!Visited.contains(Succ) && !is_contained(Frontier, Succ))
           Frontier.push_back(Succ);
       }
@@ -1317,7 +1317,7 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
   BBUtils->adjustBBOffsetsAfter(&MF->front());
 
   bool Changed = false;
-  for (auto ML : *MLI) {
+  for (auto *ML : *MLI) {
     if (ML->isOutermost())
       Changed |= ProcessLoop(ML);
   }

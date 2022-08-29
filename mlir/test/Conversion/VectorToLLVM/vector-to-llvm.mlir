@@ -416,6 +416,19 @@ func.func @outerproduct_add(%arg0: vector<2xf32>, %arg1: vector<3xf32>, %arg2: v
 // CHECK:       %[[T19:.*]] = builtin.unrealized_conversion_cast %[[T18]] : !llvm.array<2 x vector<3xf32>> to vector<2x3xf32>
 // CHECK:       return %[[T19]] : vector<2x3xf32>
 
+
+// -----
+ 
+func.func @shuffle_0D_direct(%arg0: vector<f32>) -> vector<3xf32> {
+  %1 = vector.shuffle %arg0, %arg0 [0, 1, 0] : vector<f32>, vector<f32>
+  return %1 : vector<3xf32>
+}
+// CHECK-LABEL: @shuffle_0D_direct(
+//  CHECK-SAME:     %[[A:.*]]: vector<f32>
+//       CHECK:   %[[c:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<f32> to vector<1xf32>
+//       CHECK:   %[[s:.*]] = llvm.shufflevector %[[c]], %[[c]] [0, 1, 0] : vector<1xf32>
+//       CHECK:   return %[[s]] : vector<3xf32>
+
 // -----
 
 func.func @shuffle_1D_direct(%arg0: vector<2xf32>, %arg1: vector<2xf32>) -> vector<2xf32> {
@@ -1760,6 +1773,8 @@ func.func @create_mask_1d(%a : index) -> vector<4xi1> {
 // CHECK:  %[[result:.*]] = arith.cmpi slt, %[[indices]], %[[bounds]] : vector<4xi32>
 // CHECK:  return %[[result]] : vector<4xi1>
 
+// -----
+
 func.func @create_mask_1d_scalable(%a : index) -> vector<[4]xi1> {
   %v = vector.create_mask %a : vector<[4]xi1>
   return %v: vector<[4]xi1>
@@ -1773,6 +1788,17 @@ func.func @create_mask_1d_scalable(%a : index) -> vector<[4]xi1> {
 // CHECK:  %[[bounds:.*]] = llvm.shufflevector %[[boundsInsert]], {{.*}} : vector<[4]xi32>
 // CHECK:  %[[result:.*]] = arith.cmpi slt, %[[indices]], %[[bounds]] : vector<[4]xi32>
 // CHECK: return %[[result]] : vector<[4]xi1>
+
+// -----
+
+func.func @transpose_0d(%arg0: vector<f32>) -> vector<f32> {
+  %0 = vector.transpose %arg0, [] : vector<f32> to vector<f32>
+  return %0 : vector<f32>
+}
+
+// CHECK-LABEL: func @transpose_0d
+// CHECK-SAME:  %[[A:.*]]: vector<f32>
+// CHECK:       return %[[A]] : vector<f32>
 
 // -----
 

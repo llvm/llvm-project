@@ -1795,11 +1795,11 @@ void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
         if (Entry.getFile().NumCreatedFIDs)
           ID += Entry.getFile().NumCreatedFIDs - 1 /*because of next ++ID*/;
         continue;
-      } else if (IncludeLoc.isValid()) {
-        // If file was included but not from FID, there is no more files/macros
-        // that may be "contained" in this file.
-        return;
       }
+      // If file was included but not from FID, there is no more files/macros
+      // that may be "contained" in this file.
+      if (IncludeLoc.isValid())
+        return;
       continue;
     }
 

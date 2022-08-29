@@ -439,7 +439,7 @@ void COFFPlatform::pushInitializersLoop(PushInitializersSendResultFn SendResult,
         RegisteredInitSymbols.erase(RISItr);
       }
 
-      for (auto DepJD : JDDepMap[CurJD])
+      for (auto *DepJD : JDDepMap[CurJD])
         if (!Visited.count(DepJD)) {
           Worklist.push_back(DepJD);
           Visited.insert(DepJD);

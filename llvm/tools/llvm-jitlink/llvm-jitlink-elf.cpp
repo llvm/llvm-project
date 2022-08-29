@@ -25,8 +25,8 @@ static bool isELFGOTSection(Section &S) { return S.getName() == "$__GOT"; }
 static bool isELFStubsSection(Section &S) { return S.getName() == "$__STUBS"; }
 
 static Expected<Edge &> getFirstRelocationEdge(LinkGraph &G, Block &B) {
-  auto EItr = std::find_if(B.edges().begin(), B.edges().end(),
-                           [](Edge &E) { return E.isRelocation(); });
+  auto EItr =
+      llvm::find_if(B.edges(), [](Edge &E) { return E.isRelocation(); });
   if (EItr == B.edges().end())
     return make_error<StringError>("GOT entry in " + G.getName() + ", \"" +
                                        B.getSection().getName() +

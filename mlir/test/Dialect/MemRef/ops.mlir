@@ -336,3 +336,20 @@ func.func @generic_atomic_rmw(%I: memref<1x2xf32>, %i : index, %j : index) {
   } { index_attr = 8 : index }
   return
 }
+
+// -----
+
+func.func @extract_strided_metadata(%memref : memref<10x?xf32>) 
+    -> memref<?x?xf32, offset: ?, strides: [?, ?]> {
+
+  %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %memref
+    : memref<10x?xf32> -> memref<f32>, index, index, index, index, index
+
+  %m2 = memref.reinterpret_cast %base to
+      offset: [%offset],
+      sizes: [%sizes#0, %sizes#1],
+      strides: [%strides#0, %strides#1]
+    : memref<f32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
+
+  return %m2: memref<?x?xf32, offset: ?, strides: [?, ?]>
+}

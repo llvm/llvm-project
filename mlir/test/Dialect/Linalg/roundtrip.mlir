@@ -350,3 +350,24 @@ func.func @fill_tensor(%arg0 : index, %arg1 : index, %arg2 : f32) -> tensor<?x?x
   return %1 : tensor<?x?xf32>
 }
 // CHECK: %{{.+}} = linalg.fill ins(%{{.+}} : f32) outs(%{{.+}} : tensor<?x?xf32>) -> tensor<?x?xf32>
+
+// -----
+
+func.func @mixed_parallel_reduced_results(%arg0 : tensor<?x?x?xf32>,
+    %arg1 : tensor<?x?xf32>, %arg2 : tensor<?x?x?xf32>, %arg3 : tensor<?x?xf32>) ->
+    (tensor<?x?x?xf32>, tensor<?x?xf32>) {
+  %0:2 = linalg.generic {
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d1)>],
+      iterator_types = ["parallel", "parallel", "reduction"]}
+      ins(%arg0, %arg1 : tensor<?x?x?xf32>, tensor<?x?xf32>)
+      outs(%arg2, %arg3 : tensor<?x?x?xf32>, tensor<?x?xf32>) {
+    ^bb0(%b0 : f32, %b1 : f32, %b2 : f32, %b3 : f32):
+      %1 = arith.mulf %b0, %b1 : f32
+      %2 = arith.addf %1, %b3 : f32
+      linalg.yield %1, %2 : f32, f32
+  } -> (tensor<?x?x?xf32>, tensor<?x?xf32>)
+  return %0#0, %0#1 : tensor<?x?x?xf32>, tensor<?x?xf32>
+}
+// CHECK-LABEL: func @mixed_parallel_reduced_results
+//       CHECK:     linalg.generic

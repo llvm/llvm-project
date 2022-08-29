@@ -204,6 +204,8 @@ def simm10_lsb0000nonzero : Operand<XLenVT>,
   let ParserMatchClass = SImmAsmOperand<10, "Lsb0000NonZero">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmNonZeroOperand<10>";
+  let OperandType = "OPERAND_SIMM10_LSB0000_NONZERO";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))

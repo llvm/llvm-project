@@ -153,7 +153,7 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
     GO.getMetadata(LLVMContext::MD_type, MDs);
 
     GO.eraseMetadata(LLVMContext::MD_type);
-    for (auto MD : MDs) {
+    for (auto *MD : MDs) {
       auto I = LocalToGlobal.find(MD->getOperand(1));
       if (I == LocalToGlobal.end()) {
         GO.addMetadata(LLVMContext::MD_type, *MD);
@@ -376,7 +376,7 @@ void splitAndWriteThinLTOBitcode(
 
   auto &Ctx = MergedM->getContext();
   SmallVector<MDNode *, 8> CfiFunctionMDs;
-  for (auto V : CfiFunctions) {
+  for (auto *V : CfiFunctions) {
     Function &F = *cast<Function>(V);
     SmallVector<MDNode *, 2> Types;
     F.getMetadata(LLVMContext::MD_type, Types);
@@ -398,7 +398,7 @@ void splitAndWriteThinLTOBitcode(
 
   if(!CfiFunctionMDs.empty()) {
     NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("cfi.functions");
-    for (auto MD : CfiFunctionMDs)
+    for (auto *MD : CfiFunctionMDs)
       NMD->addOperand(MD);
   }
 
@@ -423,7 +423,7 @@ void splitAndWriteThinLTOBitcode(
 
   if (!FunctionAliases.empty()) {
     NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("aliases");
-    for (auto MD : FunctionAliases)
+    for (auto *MD : FunctionAliases)
       NMD->addOperand(MD);
   }
 
@@ -439,7 +439,7 @@ void splitAndWriteThinLTOBitcode(
 
   if (!Symvers.empty()) {
     NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("symvers");
-    for (auto MD : Symvers)
+    for (auto *MD : Symvers)
       NMD->addOperand(MD);
   }
 

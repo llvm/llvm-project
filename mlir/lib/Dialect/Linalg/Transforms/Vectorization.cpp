@@ -539,6 +539,10 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
     return failure();
   }
   for (OpOperand *opOperand : op.getOutputOperands()) {
+    AffineMap indexingMap = op.getTiedIndexingMap(opOperand);
+    if (indexingMap.isPermutation())
+      continue;
+
     Operation *reduceOp = matchLinalgReduction(opOperand);
     if (!reduceOp || !getCombinerOpKind(reduceOp)) {
       LDBG("reduction precondition failed: reduction detection failed");

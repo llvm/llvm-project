@@ -78,7 +78,7 @@ public:
   virtual ~MemoryMapper();
 };
 
-class InProcessMemoryMapper final : public MemoryMapper {
+class InProcessMemoryMapper : public MemoryMapper {
 public:
   InProcessMemoryMapper(size_t PageSize);
 

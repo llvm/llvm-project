@@ -396,11 +396,22 @@ static void createResumeEntryBlock(Function &F, coro::Shape &Shape) {
       // The coroutine should be marked done if it reaches the final suspend
       // point.
       markCoroutineAsDone(Builder, Shape, FramePtr);
-    } else {
+    }
+
+    // If the coroutine don't have unwind coro end, we could omit the store to
+    // the final suspend point since we could infer the coroutine is suspended
+    // at the final suspend point by the nullness of ResumeFnAddr.
+    // However, we can't skip it if the coroutine have unwind coro end. Since
+    // the coroutine reaches unwind coro end is considered suspended at the
+    // final suspend point (the ResumeFnAddr is null) but in fact the coroutine
+    // didn't complete yet. We need the IndexVal for the final suspend point
+    // to make the states clear.
+    if (!S->isFinal() || Shape.SwitchLowering.HasUnwindCoroEnd) {
       auto *GepIndex = Builder.CreateStructGEP(
           FrameTy, FramePtr, Shape.getSwitchIndexField(), "index.addr");
       Builder.CreateStore(IndexVal, GepIndex);
     }
+
     Save->replaceAllUsesWith(ConstantTokenNone::get(C));
     Save->eraseFromParent();
 
@@ -449,19 +460,22 @@ static void createResumeEntryBlock(Function &F, coro::Shape &Shape) {
   Shape.SwitchLowering.ResumeEntryBlock = NewEntry;
 }
 
-
-// Rewrite final suspend point handling. We do not use suspend index to
-// represent the final suspend point. Instead we zero-out ResumeFnAddr in the
-// coroutine frame, since it is undefined behavior to resume a coroutine
-// suspended at the final suspend point. Thus, in the resume function, we can
-// simply remove the last case (when coro::Shape is built, the final suspend
-// point (if present) is always the last element of CoroSuspends array).
-// In the destroy function, we add a code sequence to check if ResumeFnAddress
-// is Null, and if so, jump to the appropriate label to handle cleanup from the
-// final suspend point.
+// In the resume function, we remove the last case  (when coro::Shape is built,
+// the final suspend point (if present) is always the last element of
+// CoroSuspends array) since it is an undefined behavior to resume a coroutine
+// suspended at the final suspend point.
+// In the destroy function, if it isn't possible that the ResumeFnAddr is NULL
+// and the coroutine doesn't suspend at the final suspend point actually (this
+// is possible since the coroutine is considered suspended at the final suspend
+// point if promise.unhandled_exception() exits via an exception), we can
+// remove the last case.
 void CoroCloner::handleFinalSuspend() {
   assert(Shape.ABI == coro::ABI::Switch &&
          Shape.SwitchLowering.HasFinalSuspend);
+
+  if (isSwitchDestroyFunction() && Shape.SwitchLowering.HasUnwindCoroEnd)
+    return;
+
   auto *Switch = cast<SwitchInst>(VMap[Shape.SwitchLowering.ResumeSwitch]);
   auto FinalCaseIt = std::prev(Switch->case_end());
   BasicBlock *ResumeBB = FinalCaseIt->getCaseSuccessor();
@@ -1647,7 +1661,7 @@ static void coerceArguments(IRBuilder<> &Builder, FunctionType *FnTy,
                             ArrayRef<Value *> FnArgs,
                             SmallVectorImpl<Value *> &CallArgs) {
   size_t ArgIdx = 0;
-  for (auto paramTy : FnTy->params()) {
+  for (auto *paramTy : FnTy->params()) {
     assert(ArgIdx < FnArgs.size());
     if (paramTy != FnArgs[ArgIdx]->getType())
       CallArgs.push_back(
@@ -1856,7 +1870,7 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
                                              Shape.CoroSuspends.size()));
 
       // Next, all the directly-yielded values.
-      for (auto ResultTy : Shape.getRetconResultTypes())
+      for (auto *ResultTy : Shape.getRetconResultTypes())
         ReturnPHIs.push_back(Builder.CreatePHI(ResultTy,
                                                Shape.CoroSuspends.size()));
 
@@ -1981,7 +1995,7 @@ static coro::Shape splitCoroutine(Function &F,
 
 /// Remove calls to llvm.coro.end in the original function.
 static void removeCoroEnds(const coro::Shape &Shape) {
-  for (auto End : Shape.CoroEnds) {
+  for (auto *End : Shape.CoroEnds) {
     replaceCoroEnd(End, Shape, Shape.FramePtr, /*in resume*/ false, nullptr);
   }
 }

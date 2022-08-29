@@ -602,3 +602,199 @@ define <vscale x 2 x float> @vpmerge_vfrec7(<vscale x 2 x float> %passthru, <vsc
   %b = call <vscale x 2 x float> @llvm.vp.merge.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
   ret <vscale x 2 x float> %b
 }
+
+; Test vector operations with VLMAX vector length.
+
+; Test binary operator with vp.merge and add.
+define <vscale x 2 x i32> @vpmerge_add(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpmerge_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    ret
+  ; MIR-LABEL: name: vpmerge_add
+  ; MIR: bb.0 (%ir-block.0):
+  ; MIR-NEXT:   liveins: $v8, $v9, $v10, $v0, $x10
+  ; MIR-NEXT: {{  $}}
+  ; MIR-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x10
+  ; MIR-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v0
+  ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY $v10
+  ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vr = COPY $v9
+  ; MIR-NEXT:   [[COPY4:%[0-9]+]]:vrnov0 = COPY $v8
+  ; MIR-NEXT:   $v0 = COPY [[COPY1]]
+  ; MIR-NEXT:   [[PseudoVADD_VV_M1_MASK:%[0-9]+]]:vrnov0 = PseudoVADD_VV_M1_MASK [[COPY4]], [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0
+  ; MIR-NEXT:   $v8 = COPY [[PseudoVADD_VV_M1_MASK]]
+  ; MIR-NEXT:   PseudoRET implicit $v8
+  %a = add <vscale x 2 x i32> %x, %y
+  %b = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test binary operator with vp.merge and fadd.
+define <vscale x 2 x float> @vpmerge_fadd(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpmerge_fadd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vfadd.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    ret
+  ; MIR-LABEL: name: vpmerge_fadd
+  ; MIR: bb.0 (%ir-block.0):
+  ; MIR-NEXT:   liveins: $v8, $v9, $v10, $v0, $x10
+  ; MIR-NEXT: {{  $}}
+  ; MIR-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x10
+  ; MIR-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v0
+  ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY $v10
+  ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vr = COPY $v9
+  ; MIR-NEXT:   [[COPY4:%[0-9]+]]:vrnov0 = COPY $v8
+  ; MIR-NEXT:   $v0 = COPY [[COPY1]]
+  ; MIR-NEXT:   %5:vrnov0 = nofpexcept PseudoVFADD_VV_M1_MASK [[COPY4]], [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0, implicit $frm
+  ; MIR-NEXT:   $v8 = COPY %5
+  ; MIR-NEXT:   PseudoRET implicit $v8
+  %a = fadd <vscale x 2 x float> %x, %y
+  %b = call <vscale x 2 x float> @llvm.vp.merge.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
+  ret <vscale x 2 x float> %b
+}
+
+; Test conversion by fptosi.
+define <vscale x 2 x i16> @vpmerge_fptosi(<vscale x 2 x i16> %passthru, <vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpmerge_fptosi:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, mu
+; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v9, v0.t
+; CHECK-NEXT:    ret
+  ; MIR-LABEL: name: vpmerge_fptosi
+  ; MIR: bb.0 (%ir-block.0):
+  ; MIR-NEXT:   liveins: $v8, $v9, $v0, $x10
+  ; MIR-NEXT: {{  $}}
+  ; MIR-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x10
+  ; MIR-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v0
+  ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY $v9
+  ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
+  ; MIR-NEXT:   $v0 = COPY [[COPY1]]
+  ; MIR-NEXT:   early-clobber %4:vrnov0 = PseudoVFNCVT_RTZ_X_F_W_MF2_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 4 /* e16 */, 0
+  ; MIR-NEXT:   $v8 = COPY %4
+  ; MIR-NEXT:   PseudoRET implicit $v8
+  %a = fptosi <vscale x 2 x float> %x to <vscale x 2 x i16>
+  %b = call <vscale x 2 x i16> @llvm.vp.merge.nxv2i16(<vscale x 2 x i1> %m, <vscale x 2 x i16> %a, <vscale x 2 x i16> %passthru, i32 %vl)
+  ret <vscale x 2 x i16> %b
+}
+
+; Test conversion by sitofp.
+define <vscale x 2 x float> @vpmerge_sitofp(<vscale x 2 x float> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpmerge_sitofp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vfncvt.f.x.w v8, v10, v0.t
+; CHECK-NEXT:    ret
+  ; MIR-LABEL: name: vpmerge_sitofp
+  ; MIR: bb.0 (%ir-block.0):
+  ; MIR-NEXT:   liveins: $v8, $v10m2, $v0, $x10
+  ; MIR-NEXT: {{  $}}
+  ; MIR-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x10
+  ; MIR-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v0
+  ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vrm2 = COPY $v10m2
+  ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
+  ; MIR-NEXT:   $v0 = COPY [[COPY1]]
+  ; MIR-NEXT:   early-clobber %4:vrnov0 = PseudoVFNCVT_F_X_W_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0
+  ; MIR-NEXT:   $v8 = COPY %4
+  ; MIR-NEXT:   PseudoRET implicit $v8
+  %a = sitofp <vscale x 2 x i64> %x to <vscale x 2 x float>
+  %b = call <vscale x 2 x float> @llvm.vp.merge.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
+  ret <vscale x 2 x float> %b
+}
+
+; Test float extension by fpext.
+define <vscale x 2 x double> @vpmerge_fpext(<vscale x 2 x double> %passthru, <vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpmerge_fpext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vfwcvt.f.f.v v8, v10, v0.t
+; CHECK-NEXT:    ret
+  ; MIR-LABEL: name: vpmerge_fpext
+  ; MIR: bb.0 (%ir-block.0):
+  ; MIR-NEXT:   liveins: $v8m2, $v10, $v0, $x10
+  ; MIR-NEXT: {{  $}}
+  ; MIR-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x10
+  ; MIR-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v0
+  ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY $v10
+  ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrm2nov0 = COPY $v8m2
+  ; MIR-NEXT:   $v0 = COPY [[COPY1]]
+  ; MIR-NEXT:   early-clobber %4:vrm2nov0 = PseudoVFWCVT_F_F_V_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0
+  ; MIR-NEXT:   $v8m2 = COPY %4
+  ; MIR-NEXT:   PseudoRET implicit $v8m2
+  %a = fpext <vscale x 2 x float> %x to <vscale x 2 x double>
+  %b = call <vscale x 2 x double> @llvm.vp.merge.nxv2f64(<vscale x 2 x i1> %m, <vscale x 2 x double> %a, <vscale x 2 x double> %passthru, i32 %vl)
+  ret <vscale x 2 x double> %b
+}
+
+; Test float truncation by fptrunc.
+define <vscale x 2 x float> @vpmerge_fptrunc(<vscale x 2 x float> %passthru, <vscale x 2 x double> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpmerge_fptrunc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vfncvt.f.f.w v8, v10, v0.t
+; CHECK-NEXT:    ret
+  ; MIR-LABEL: name: vpmerge_fptrunc
+  ; MIR: bb.0 (%ir-block.0):
+  ; MIR-NEXT:   liveins: $v8, $v10m2, $v0, $x10
+  ; MIR-NEXT: {{  $}}
+  ; MIR-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x10
+  ; MIR-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v0
+  ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vrm2 = COPY $v10m2
+  ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
+  ; MIR-NEXT:   $v0 = COPY [[COPY1]]
+  ; MIR-NEXT:   early-clobber %4:vrnov0 = PseudoVFNCVT_F_F_W_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0
+  ; MIR-NEXT:   $v8 = COPY %4
+  ; MIR-NEXT:   PseudoRET implicit $v8
+  %a = fptrunc <vscale x 2 x double> %x to <vscale x 2 x float>
+  %b = call <vscale x 2 x float> @llvm.vp.merge.nxv2f32(<vscale x 2 x i1> %m, <vscale x 2 x float> %a, <vscale x 2 x float> %passthru, i32 %vl)
+  ret <vscale x 2 x float> %b
+}
+
+; Test integer extension by zext.
+define <vscale x 2 x i32> @vpmerge_zext(<vscale x 2 x i32> %passthru, <vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpmerge_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vzext.vf4 v8, v9, v0.t
+; CHECK-NEXT:    ret
+  ; MIR-LABEL: name: vpmerge_zext
+  ; MIR: bb.0 (%ir-block.0):
+  ; MIR-NEXT:   liveins: $v8, $v9, $v0, $x10
+  ; MIR-NEXT: {{  $}}
+  ; MIR-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x10
+  ; MIR-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v0
+  ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY $v9
+  ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
+  ; MIR-NEXT:   $v0 = COPY [[COPY1]]
+  ; MIR-NEXT:   early-clobber %4:vrnov0 = PseudoVZEXT_VF4_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0
+  ; MIR-NEXT:   $v8 = COPY %4
+  ; MIR-NEXT:   PseudoRET implicit $v8
+  %a = zext <vscale x 2 x i8> %x to <vscale x 2 x i32>
+  %b = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}
+
+; Test integer truncation by trunc.
+define <vscale x 2 x i32> @vpmerge_trunc(<vscale x 2 x i32> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vpmerge_trunc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
+; CHECK-NEXT:    ret
+  ; MIR-LABEL: name: vpmerge_trunc
+  ; MIR: bb.0 (%ir-block.0):
+  ; MIR-NEXT:   liveins: $v8, $v10m2, $v0, $x10
+  ; MIR-NEXT: {{  $}}
+  ; MIR-NEXT:   [[COPY:%[0-9]+]]:gprnox0 = COPY $x10
+  ; MIR-NEXT:   [[COPY1:%[0-9]+]]:vr = COPY $v0
+  ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vrm2 = COPY $v10m2
+  ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
+  ; MIR-NEXT:   $v0 = COPY [[COPY1]]
+  ; MIR-NEXT:   early-clobber %4:vrnov0 = PseudoVNSRL_WI_M1_MASK [[COPY3]], [[COPY2]], 0, $v0, [[COPY]], 5 /* e32 */, 0
+  ; MIR-NEXT:   $v8 = COPY %4
+  ; MIR-NEXT:   PseudoRET implicit $v8
+  %a = trunc <vscale x 2 x i64> %x to <vscale x 2 x i32>
+  %b = call <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1> %m, <vscale x 2 x i32> %a, <vscale x 2 x i32> %passthru, i32 %vl)
+  ret <vscale x 2 x i32> %b
+}

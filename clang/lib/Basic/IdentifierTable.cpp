@@ -13,6 +13,7 @@
 
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
@@ -93,7 +94,7 @@ namespace {
     KEYNOCXX      = 0x80,
     KEYBORLAND    = 0x100,
     KEYOPENCLC    = 0x200,
-    KEYC11        = 0x400,
+    KEYC2X        = 0x400,
     KEYNOMS18     = 0x800,
     KEYNOOPENCL   = 0x1000,
     WCHARSUPPORT  = 0x2000,
@@ -140,15 +141,13 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
 
   switch (Flag) {
   case KEYC99:
-    // FIXME: This should have KS_Future logic here, but that can only happen if
-    // getFutureCompatDiagKind ALSO gets updated. This is safe, since C mode is
-    // ALWAYS implied.
-    return LangOpts.C99 ? KS_Enabled : KS_Unknown;
-  case KEYC11:
-    // FIXME: This should have KS_Future logic here, but that can only happen if
-    // getFutureCompatDiagKind ALSO gets updated. This is safe, since C mode is
-    // ALWAYS implied.
-    return LangOpts.C11 ? KS_Enabled : KS_Unknown;
+    if (LangOpts.C99)
+      return KS_Enabled;
+    return !LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
+  case KEYC2X:
+    if (LangOpts.C2x)
+      return KS_Enabled;
+    return !LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
   case KEYCXX:
     return LangOpts.CPlusPlus ? KS_Enabled : KS_Unknown;
   case KEYCXX11:
@@ -164,7 +163,8 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
   case KEYMS:
     return LangOpts.MicrosoftExt ? KS_Extension : KS_Unknown;
   case BOOLSUPPORT:
-    return LangOpts.Bool ? KS_Enabled : KS_Unknown;
+    if (LangOpts.Bool)      return KS_Enabled;
+    return !LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
   case KEYALTIVEC:
     return LangOpts.AltiVec ? KS_Enabled : KS_Unknown;
   case KEYBORLAND:
@@ -844,4 +844,36 @@ StringRef clang::getNullabilitySpelling(NullabilityKind kind,
     return isContextSensitive ? "null_unspecified" : "_Null_unspecified";
   }
   llvm_unreachable("Unknown nullability kind.");
+}
+
+diag::kind
+IdentifierTable::getFutureCompatDiagKind(const IdentifierInfo &II,
+                                         const LangOptions &LangOpts) {
+  assert(II.isFutureCompatKeyword() && "diagnostic should not be needed");
+
+  unsigned Flags = llvm::StringSwitch<unsigned>(II.getName())
+#define KEYWORD(NAME, FLAGS) .Case(#NAME, FLAGS)
+#include "clang/Basic/TokenKinds.def"
+#undef KEYWORD
+      ;
+
+  if (LangOpts.CPlusPlus) {
+    if ((Flags & KEYCXX11) == KEYCXX11)
+      return diag::warn_cxx11_keyword;
+
+    // char8_t is not modeled as a CXX20_KEYWORD because it's not
+    // unconditionally enabled in C++20 mode. (It can be disabled
+    // by -fno-char8_t.)
+    if (((Flags & KEYCXX20) == KEYCXX20) ||
+        ((Flags & CHAR8SUPPORT) == CHAR8SUPPORT))
+      return diag::warn_cxx20_keyword;
+  } else {
+    if ((Flags & KEYC99) == KEYC99)
+      return diag::warn_c99_keyword;
+    if ((Flags & KEYC2X) == KEYC2X)
+      return diag::warn_c2x_keyword;
+  }
+
+  llvm_unreachable(
+      "Keyword not known to come from a newer Standard or proposed Standard");
 }

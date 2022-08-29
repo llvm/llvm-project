@@ -27,6 +27,7 @@ llvm::Expected<size_t> MainLoopWindows::Poll() {
   for (auto &[fd, info] : m_read_fds) {
     int result = WSAEventSelect(fd, info.event, FD_READ | FD_ACCEPT | FD_CLOSE);
     assert(result == 0);
+    (void)result;
 
     read_events.push_back(info.event);
   }
@@ -37,6 +38,7 @@ llvm::Expected<size_t> MainLoopWindows::Poll() {
   for (auto &fd : m_read_fds) {
     int result = WSAEventSelect(fd.first, WSA_INVALID_EVENT, 0);
     assert(result == 0);
+    (void)result;
   }
 
   if (result >= WSA_WAIT_EVENT_0 &&
@@ -85,6 +87,7 @@ void MainLoopWindows::UnregisterReadObject(IOObject::WaitableHandle handle) {
   assert(it != m_read_fds.end());
   BOOL result = WSACloseEvent(it->second.event);
   assert(result == TRUE);
+  (void)result;
   m_read_fds.erase(it);
 }
 

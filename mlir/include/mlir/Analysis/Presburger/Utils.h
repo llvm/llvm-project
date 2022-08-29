@@ -129,9 +129,7 @@ public:
   // Check whether the `i^th` division has a division representation or not.
   bool hasRepr(unsigned i) const { return denoms[i] != 0; }
   // Check whether all the divisions have a division representation or not.
-  bool hasAllReprs() const {
-    return all_of(denoms, [](unsigned denom) { return denom != 0; });
-  }
+  bool hasAllReprs() const { return !llvm::is_contained(denoms, 0); }
 
   // Clear the division representation of the i^th local variable.
   void clearRepr(unsigned i) { denoms[i] = 0; }

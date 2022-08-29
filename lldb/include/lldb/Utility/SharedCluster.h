@@ -34,6 +34,7 @@ public:
     std::lock_guard<std::mutex> guard(m_mutex);
     auto ret = m_objects.insert(new_object);
     assert(ret.second && "ManageObject called twice for the same object?");
+    (void)ret;
   }
 
   std::shared_ptr<T> GetSharedPointer(T *desired_object) {

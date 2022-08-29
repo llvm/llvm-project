@@ -250,7 +250,7 @@ private:
 } // end anonymous namespace
 
 bool PointerReplacer::collectUsers(Instruction &I) {
-  for (auto U : I.users()) {
+  for (auto *U : I.users()) {
     auto *Inst = cast<Instruction>(&*U);
     if (auto *Load = dyn_cast<LoadInst>(Inst)) {
       if (Load->isVolatile())

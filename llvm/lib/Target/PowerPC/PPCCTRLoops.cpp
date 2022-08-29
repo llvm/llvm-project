@@ -99,7 +99,7 @@ bool PPCCTRLoops::runOnMachineFunction(MachineFunction &MF) {
   TII = static_cast<const PPCInstrInfo *>(MF.getSubtarget().getInstrInfo());
   MRI = &MF.getRegInfo();
 
-  for (auto ML : MLI) {
+  for (auto *ML : MLI) {
     if (ML->isOutermost())
       Changed |= processLoop(ML);
   }
