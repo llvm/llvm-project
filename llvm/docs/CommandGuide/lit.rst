@@ -44,7 +44,10 @@ supplementing or overriding the command-line options supplied to :program:`lit`
 by ``check`` targets defined by a project's build system.
 
 :program:`lit` can also read options from response files which are specified as
-inputs using the ``@path/to/file.rsp`` syntax.
+inputs using the ``@path/to/file.rsp`` syntax. Arguments read from a file must
+be one per line and are treated as if they were in the same place as the
+original file referencing argument on the command line. A response file can
+reference other response files.
 
 Users interested in the :program:`lit` architecture or designing a
 :program:`lit` testing implementation should see :ref:`lit-infrastructure`.
