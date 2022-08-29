@@ -192,9 +192,6 @@ public:
     return *this;
   }
 
-  // [deprecated] `setMemorySpace(Attribute)` should be used instead.
-  Builder &setMemorySpace(unsigned newMemorySpace);
-
   operator MemRefType() {
     return MemRefType::get(shape, elementType, layout, memorySpace);
   }
