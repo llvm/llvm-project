@@ -71,6 +71,7 @@ private:
   bool HasAlu32;
   bool HasJmp32;
   bool HasJmpExt;
+  bool HasMovsx;
 
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
