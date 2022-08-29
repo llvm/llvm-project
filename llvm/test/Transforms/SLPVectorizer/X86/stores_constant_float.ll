@@ -5,9 +5,7 @@ define void @foo() {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = alloca { double, double }, align 8
-; CHECK-NEXT:    [[C_IMAGP:%.*]] = getelementptr inbounds { double, double }, ptr [[C]], i64 0, i32 1
-; CHECK-NEXT:    store double 0.000000e+00, ptr [[C]], align 8
-; CHECK-NEXT:    store double 1.000000e+00, ptr [[C_IMAGP]], align 8
+; CHECK-NEXT:    store <2 x double> <double 0.000000e+00, double 1.000000e+00>, ptr [[C]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
