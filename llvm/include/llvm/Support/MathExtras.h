@@ -151,8 +151,7 @@ template <typename T> struct TrailingZerosCounter<T, 8> {
 ///   valid arguments.
 template <typename T>
 unsigned countTrailingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
-  static_assert(std::numeric_limits<T>::is_integer &&
-                    !std::numeric_limits<T>::is_signed,
+  static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::detail::TrailingZerosCounter<T, sizeof(T)>::count(Val, ZB);
 }
@@ -220,8 +219,7 @@ template <typename T> struct LeadingZerosCounter<T, 8> {
 ///   valid arguments.
 template <typename T>
 unsigned countLeadingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
-  static_assert(std::numeric_limits<T>::is_integer &&
-                    !std::numeric_limits<T>::is_signed,
+  static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::detail::LeadingZerosCounter<T, sizeof(T)>::count(Val, ZB);
 }
@@ -504,8 +502,7 @@ constexpr inline bool isPowerOf2_64(uint64_t Value) {
 /// ZB_Undefined are valid arguments.
 template <typename T>
 unsigned countLeadingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
-  static_assert(std::numeric_limits<T>::is_integer &&
-                    !std::numeric_limits<T>::is_signed,
+  static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return countLeadingZeros<T>(~Value, ZB);
 }
@@ -520,8 +517,7 @@ unsigned countLeadingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
 /// ZB_Undefined are valid arguments.
 template <typename T>
 unsigned countTrailingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
-  static_assert(std::numeric_limits<T>::is_integer &&
-                    !std::numeric_limits<T>::is_signed,
+  static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return countTrailingZeros<T>(~Value, ZB);
 }
@@ -531,8 +527,7 @@ unsigned countTrailingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
 /// Returns 0 if the word is zero.
 template <typename T>
 inline unsigned countPopulation(T Value) {
-  static_assert(std::numeric_limits<T>::is_integer &&
-                    !std::numeric_limits<T>::is_signed,
+  static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return (unsigned)llvm::popcount(Value);
 }
@@ -598,21 +593,6 @@ inline unsigned Log2_32_Ceil(uint32_t Value) {
 /// (64 bit edition.)
 inline unsigned Log2_64_Ceil(uint64_t Value) {
   return 64 - countLeadingZeros(Value - 1);
-}
-
-/// Return the greatest common divisor of the values using Euclid's algorithm.
-template <typename T>
-inline T greatestCommonDivisor(T A, T B) {
-  while (B) {
-    T Tmp = B;
-    B = A % B;
-    A = Tmp;
-  }
-  return A;
-}
-
-inline uint64_t GreatestCommonDivisor64(uint64_t A, uint64_t B) {
-  return greatestCommonDivisor<uint64_t>(A, B);
 }
 
 /// This function takes a 64-bit integer and returns the bit equivalent double.

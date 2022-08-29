@@ -479,6 +479,8 @@ void RTLsTy::registerLib(__tgt_bin_desc *Desc) {
       DP("Registering image " DPxMOD " with RTL %s!\n", DPxPTR(Img->ImageStart),
          R.RTLName.c_str());
       registerImageIntoTranslationTable(TransTable, R, Img);
+      R.UsedImages.insert(Img);
+
       PM->TrlTblMtx.unlock();
       FoundRTL = &R;
 
@@ -506,7 +508,6 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
   for (auto &ImageAndInfo : PM->Images) {
     // Obtain the image and information that was previously extracted.
     __tgt_device_image *Img = &ImageAndInfo.first;
-    __tgt_image_info *Info = &ImageAndInfo.second;
 
     RTLInfoTy *FoundRTL = NULL;
 
@@ -516,20 +517,9 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
 
       assert(R->IsUsed && "Expecting used RTLs.");
 
-      if (R->is_valid_binary_info) {
-        if (!R->is_valid_binary_info(Img, Info)) {
-          DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
-             DPxPTR(Img->ImageStart), R->RTLName.c_str());
-          continue;
-        }
-      } else if (!R->is_valid_binary(Img)) {
-        DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
-           DPxPTR(Img->ImageStart), R->RTLName.c_str());
+      // Ensure that we do not use any unused images associated with this RTL.
+      if (!R->UsedImages.contains(Img))
         continue;
-      }
-
-      DP("Image " DPxMOD " is compatible with RTL " DPxMOD "!\n",
-         DPxPTR(Img->ImageStart), DPxPTR(R->LibraryHandler.get()));
 
       FoundRTL = R;
 

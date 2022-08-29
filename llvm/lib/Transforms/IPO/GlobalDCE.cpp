@@ -240,7 +240,7 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
   if (!TypeCheckedLoadFunc)
     return;
 
-  for (auto U : TypeCheckedLoadFunc->users()) {
+  for (auto *U : TypeCheckedLoadFunc->users()) {
     auto CI = dyn_cast<CallInst>(U);
     if (!CI)
       continue;

@@ -26,7 +26,7 @@
 
 int main(int, char**)
 {
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     static_assert((std::is_same<std::char_traits<char8_t>::char_type,  char8_t>::value), "");
     static_assert((std::is_same<std::char_traits<char8_t>::int_type,   unsigned int>::value), "");
     static_assert((std::is_same<std::char_traits<char8_t>::off_type,   std::streamoff>::value), "");

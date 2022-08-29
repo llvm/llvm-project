@@ -3999,6 +3999,11 @@ static bool tryWidenCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
     return false;
   if (!IfFalseBB->phis().empty())
     return false; // TODO
+  // This helps avoid infinite loop with SimplifyCondBranchToCondBranch which
+  // may undo the transform done here.
+  // TODO: There might be a more fine-grained solution to this.
+  if (!llvm::succ_empty(IfFalseBB))
+    return false;
   // Use lambda to lazily compute expensive condition after cheap ones.
   auto NoSideEffects = [](BasicBlock &BB) {
     return llvm::none_of(BB, [](const Instruction &I) {
@@ -5679,13 +5684,13 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
     if (isPowerOf2_32(CaseCount)) {
       ConstantInt *MinCaseVal = CaseValues[0];
       // Find mininal value.
-      for (auto Case : CaseValues)
+      for (auto *Case : CaseValues)
         if (Case->getValue().slt(MinCaseVal->getValue()))
           MinCaseVal = Case;
 
       // Mark the bits case number touched.
       APInt BitMask = APInt::getZero(MinCaseVal->getBitWidth());
-      for (auto Case : CaseValues)
+      for (auto *Case : CaseValues)
         BitMask |= (Case->getValue() - MinCaseVal->getValue());
 
       // Check if cases with the same result can cover all number

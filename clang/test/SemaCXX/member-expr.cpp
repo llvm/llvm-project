@@ -228,3 +228,19 @@ namespace pr16676 {
         .i;  // expected-error {{member reference type 'S *' is a pointer; did you mean to use '->'}}
   }
 }
+
+namespace LookupTemplateNameAssert {
+void f() {}
+
+typedef int at[];
+const at& f2(){}
+
+void g() {
+  f().junk<int>(); // expected-error {{member reference base type 'void' is not a structure or union}}
+// expected-error@-1 {{expected '(' for function-style cast or type construction}}
+// expected-error@-2 {{expected expression}}
+  f2().junk<int>(); // expected-error {{member reference base type 'const at' (aka 'const int[]') is not a structure or union}}
+// expected-error@-1 {{expected '(' for function-style cast or type construction}}
+// expected-error@-2 {{expected expression}}
+}
+}

@@ -21,11 +21,11 @@ def push_ld_library_path(config, new_path):
   if platform.system() == 'SunOS':
     new_ld_library_path_32 = os.path.pathsep.join(
       (new_path, config.environment.get('LD_LIBRARY_PATH_32', '')))
-    config.environment['LD_32_LIBRARY_PATH'] = new_ld_library_path_32
+    config.environment['LD_LIBRARY_PATH_32'] = new_ld_library_path_32
 
     new_ld_library_path_64 = os.path.pathsep.join(
       (new_path, config.environment.get('LD_LIBRARY_PATH_64', '')))
-    config.environment['LD_64_LIBRARY_PATH'] = new_ld_library_path_64
+    config.environment['LD_LIBRARY_PATH_64'] = new_ld_library_path_64
 
 # Setup config name.
 config.name = 'AddressSanitizer-Unit'

@@ -120,7 +120,7 @@ public:
   /// Iterator over the integer elements of a dense array.
   class PyDenseArrayIterator {
   public:
-    PyDenseArrayIterator(PyAttribute attr) : attr(attr) {}
+    PyDenseArrayIterator(PyAttribute attr) : attr(std::move(attr)) {}
 
     /// Return a copy of the iterator.
     PyDenseArrayIterator dunderIter() { return *this; }
@@ -174,7 +174,7 @@ public:
     });
     c.def("__iter__",
           [](const DerivedT &arr) { return PyDenseArrayIterator(arr); });
-    c.def("__add__", [](DerivedT &arr, py::list extras) {
+    c.def("__add__", [](DerivedT &arr, const py::list &extras) {
       std::vector<EltTy> values;
       intptr_t numOldElements = mlirDenseArrayGetNumElements(arr);
       values.reserve(numOldElements + py::len(extras));

@@ -150,7 +150,6 @@ private:
   mutable std::unique_ptr<Tool> StaticLibTool;
   mutable std::unique_ptr<Tool> IfsMerge;
   mutable std::unique_ptr<Tool> OffloadBundler;
-  mutable std::unique_ptr<Tool> OffloadWrapper;
   mutable std::unique_ptr<Tool> OffloadPackager;
   mutable std::unique_ptr<Tool> LinkerWrapper;
 
@@ -162,7 +161,6 @@ private:
   Tool *getIfsMerge() const;
   Tool *getClangAs() const;
   Tool *getOffloadBundler() const;
-  Tool *getOffloadWrapper() const;
   Tool *getOffloadPackager() const;
   Tool *getLinkerWrapper() const;
 
@@ -258,6 +256,10 @@ public:
   const llvm::Triple &getEffectiveTriple() const {
     assert(!EffectiveTriple.getTriple().empty() && "No effective triple");
     return EffectiveTriple;
+  }
+
+  bool hasEffectiveTriple() const {
+    return !EffectiveTriple.getTriple().empty();
   }
 
   path_list &getLibraryPaths() { return LibraryPaths; }

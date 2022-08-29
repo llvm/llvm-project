@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorMemoryManager.h"
@@ -164,6 +165,9 @@ int main(int argc, char *argv[]) {
                 SimpleRemoteEPCServer::defaultBootstrapSymbols();
             S.services().push_back(
                 std::make_unique<rt_bootstrap::SimpleExecutorMemoryManager>());
+            S.services().push_back(
+                std::make_unique<
+                    rt_bootstrap::ExecutorSharedMemoryMapperService>());
             return Error::success();
           },
           InFD, OutFD));

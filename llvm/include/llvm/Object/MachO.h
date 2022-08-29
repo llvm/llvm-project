@@ -296,6 +296,19 @@ private:
   bool WeakImport;
 };
 
+struct ChainedFixupsSegment {
+  ChainedFixupsSegment(uint8_t SegIdx, uint32_t Offset,
+                       const MachO::dyld_chained_starts_in_segment &Header,
+                       std::vector<uint16_t> &&PageStarts)
+      : SegIdx(SegIdx), Offset(Offset), Header(Header),
+        PageStarts(PageStarts){};
+
+  uint32_t SegIdx;
+  uint32_t Offset; // dyld_chained_starts_in_image::seg_info_offset[SegIdx]
+  MachO::dyld_chained_starts_in_segment Header;
+  std::vector<uint16_t> PageStarts; // page_start[] entries, host endianness
+};
+
 /// MachOAbstractFixupEntry is an abstract class representing a fixup in a
 /// MH_DYLDLINK file. Fixups generally represent rebases and binds. Binds also
 /// subdivide into additional subtypes (weak, lazy, reexport).
@@ -364,19 +377,29 @@ private:
 
 class MachOChainedFixupEntry : public MachOAbstractFixupEntry {
 public:
-  enum class FixupKind { All, Bind, WeakBind, Rebase };
+  enum class FixupKind { Bind, Rebase };
 
   MachOChainedFixupEntry(Error *Err, const MachOObjectFile *O, bool Parse);
 
   bool operator==(const MachOChainedFixupEntry &) const;
+
+  bool isBind() const { return Kind == FixupKind::Bind; }
+  bool isRebase() const { return Kind == FixupKind::Rebase; }
 
   void moveNext();
   void moveToFirst();
   void moveToEnd();
 
 private:
+  void findNextPageWithFixups();
+
   std::vector<ChainedFixupTarget> FixupTargets;
-  uint32_t FixupIndex = 0;
+  std::vector<ChainedFixupsSegment> Segments;
+  ArrayRef<uint8_t> SegmentData;
+  FixupKind Kind;
+  uint32_t InfoSegIndex = 0; // Index into Segments
+  uint32_t PageIndex = 0;    // Index into Segments[InfoSegIdx].PageStarts
+  uint32_t PageOffset = 0;   // Page offset of the current fixup
 };
 using fixup_iterator = content_iterator<MachOChainedFixupEntry>;
 
@@ -436,6 +459,7 @@ public:
 
   /// Return the raw contents of an entire segment.
   ArrayRef<uint8_t> getSegmentContents(StringRef SegmentName) const;
+  ArrayRef<uint8_t> getSegmentContents(size_t SegmentIndex) const;
 
   /// When dsymutil generates the companion file, it strips all unnecessary
   /// sections (e.g. everything in the _TEXT segment) by omitting their body
@@ -697,18 +721,6 @@ public:
   // upstreams their implementation. Please do not rely on this.
   Expected<Optional<MachO::linkedit_data_command>>
   getChainedFixupsLoadCommand() const;
-  struct ChainedFixupsSegment {
-    ChainedFixupsSegment(uint8_t SegIdx, uint32_t Offset,
-                         const MachO::dyld_chained_starts_in_segment &Header,
-                         std::vector<uint16_t> &&PageStarts)
-        : SegIdx(SegIdx), Offset(Offset), Header(Header),
-          PageStarts(PageStarts){};
-
-    uint32_t SegIdx;
-    uint32_t Offset; // dyld_chained_starts_in_image::seg_info_offset[SegIdx]
-    MachO::dyld_chained_starts_in_segment Header;
-    std::vector<uint16_t> PageStarts; // page_start[] entries, host endianness
-  };
   // Returns the number of sections listed in dyld_chained_starts_in_image, and
   // a ChainedFixupsSegment for each segment that has fixups.
   Expected<std::pair<size_t, std::vector<ChainedFixupsSegment>>>

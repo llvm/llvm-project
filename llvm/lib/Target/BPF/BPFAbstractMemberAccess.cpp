@@ -438,7 +438,7 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
 void BPFAbstractMemberAccess::replaceWithGEP(std::vector<CallInst *> &CallList,
                                              uint32_t DimensionIndex,
                                              uint32_t GEPIndex) {
-  for (auto Call : CallList) {
+  for (auto *Call : CallList) {
     uint32_t Dimension = 1;
     if (DimensionIndex > 0)
       Dimension = getConstant(Call->getArgOperand(DimensionIndex));
@@ -491,7 +491,7 @@ bool BPFAbstractMemberAccess::removePreserveAccessIndexIntrinsic(Function &F) {
   //     addr = GEP(base, 0, gep_index)
   replaceWithGEP(PreserveArrayIndexCalls, 1, 2);
   replaceWithGEP(PreserveStructIndexCalls, 0, 1);
-  for (auto Call : PreserveUnionIndexCalls) {
+  for (auto *Call : PreserveUnionIndexCalls) {
     Call->replaceAllUsesWith(Call->getArgOperand(0));
     Call->eraseFromParent();
   }

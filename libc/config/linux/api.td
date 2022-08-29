@@ -274,3 +274,7 @@ def UniStdAPI : PublicAPI<"unistd.h"> {
 def SysStatAPI : PublicAPI<"sys/stat.h"> {
   let Types = ["mode_t"];
 }
+
+def SysSendfileAPI : PublicAPI<"sys/sendfile.h"> {
+  let Types = ["off_t", "size_t", "ssize_t"];
+}

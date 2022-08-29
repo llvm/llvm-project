@@ -51,6 +51,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ftruncate
+  SRCS
+    ftruncate.cpp
+  HDRS
+    ../ftruncate.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   link
   SRCS
     link.cpp
@@ -168,6 +181,19 @@ add_entrypoint_object(
     ../symlinkat.h
   DEPENDS
     libc.include.fcntl
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  truncate
+  SRCS
+    truncate.cpp
+  HDRS
+    ../truncate.h
+  DEPENDS
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil

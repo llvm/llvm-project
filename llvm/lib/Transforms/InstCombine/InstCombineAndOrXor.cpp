@@ -1767,6 +1767,49 @@ static Instruction *reassociateForUses(BinaryOperator &BO,
   return nullptr;
 }
 
+// Match
+// (X + C2) | C
+// (X + C2) ^ C
+// (X + C2) & C
+// and convert to do the bitwise logic first:
+// (X | C) + C2
+// (X ^ C) + C2
+// (X & C) + C2
+// iff bits affected by logic op are lower than last bit affected by math op
+static Instruction *canonicalizeLogicFirst(BinaryOperator &I,
+                                           InstCombiner::BuilderTy &Builder) {
+  Type *Ty = I.getType();
+  Instruction::BinaryOps OpC = I.getOpcode();
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  Value *X;
+  const APInt *C, *C2;
+
+  if (!(match(Op0, m_OneUse(m_Add(m_Value(X), m_APInt(C2)))) &&
+        match(Op1, m_APInt(C))))
+    return nullptr;
+
+  unsigned Width = Ty->getScalarSizeInBits();
+  unsigned LastOneMath = Width - C2->countTrailingZeros();
+
+  switch (OpC) {
+  case Instruction::And:
+    if (C->countLeadingOnes() < LastOneMath)
+      return nullptr;
+    break;
+  case Instruction::Xor:
+  case Instruction::Or:
+    if (C->countLeadingZeros() < LastOneMath)
+      return nullptr;
+    break;
+  default:
+    llvm_unreachable("Unexpected BinaryOp!");
+  }
+
+  Value *NewBinOp = Builder.CreateBinOp(OpC, X, ConstantInt::get(Ty, *C));
+  return BinaryOperator::CreateAdd(NewBinOp, ConstantInt::get(Ty, *C2));
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -1887,14 +1930,6 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         assert((*C & *AddC) != 0 && "Expected common bit");
         Value *NewAnd = Builder.CreateAnd(X, Op1);
         return BinaryOperator::CreateXor(NewAnd, Op1);
-      }
-
-      // If all bits affected by the add are included in a high-bit-mask, do the
-      // mask op before the add. Example:
-      // (X + 16) & -4 --> (X & -4) + 16
-      if (Op0->hasOneUse() && C->isNegatedPowerOf2() && *AddC == (*AddC & *C)) {
-        Value *NewAnd = Builder.CreateAnd(X, Op1);
-        return BinaryOperator::CreateAdd(NewAnd, ConstantInt::get(Ty, *AddC));
       }
     }
 
@@ -2209,18 +2244,20 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       A->getType()->isIntOrIntVectorTy(1))
     return SelectInst::Create(A, Op0, Constant::getNullValue(Ty));
 
-  // (iN X s>> (N-1)) & Y --> (X s< 0) ? Y : 0
-  unsigned FullShift = Ty->getScalarSizeInBits() - 1;
-  if (match(&I, m_c_And(m_OneUse(m_AShr(m_Value(X), m_SpecificInt(FullShift))),
-                        m_Value(Y)))) {
+  // (iN X s>> (N-1)) & Y --> (X s< 0) ? Y : 0 -- with optional sext
+  if (match(&I, m_c_And(m_OneUse(m_SExtOrSelf(
+                            m_AShr(m_Value(X), m_APIntAllowUndef(C)))),
+                        m_Value(Y))) &&
+      *C == X->getType()->getScalarSizeInBits() - 1) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
     return SelectInst::Create(IsNeg, Y, ConstantInt::getNullValue(Ty));
   }
   // If there's a 'not' of the shifted value, swap the select operands:
-  // ~(iN X s>> (N-1)) & Y --> (X s< 0) ? 0 : Y
-  if (match(&I, m_c_And(m_OneUse(m_Not(
-                            m_AShr(m_Value(X), m_SpecificInt(FullShift)))),
-                        m_Value(Y)))) {
+  // ~(iN X s>> (N-1)) & Y --> (X s< 0) ? 0 : Y -- with optional sext
+  if (match(&I, m_c_And(m_OneUse(m_SExtOrSelf(
+                            m_Not(m_AShr(m_Value(X), m_APIntAllowUndef(C))))),
+                        m_Value(Y))) &&
+      *C == X->getType()->getScalarSizeInBits() - 1) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
     return SelectInst::Create(IsNeg, ConstantInt::getNullValue(Ty), Y);
   }
@@ -2237,6 +2274,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
 
   if (Instruction *R = reassociateForUses(I, Builder))
     return R;
+
+  if (Instruction *Canonicalized = canonicalizeLogicFirst(I, Builder))
+    return Canonicalized;
 
   return nullptr;
 }
@@ -3199,6 +3239,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *R = reassociateForUses(I, Builder))
     return R;
 
+  if (Instruction *Canonicalized = canonicalizeLogicFirst(I, Builder))
+    return Canonicalized;
+
   return nullptr;
 }
 
@@ -3938,6 +3981,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
 
   if (Instruction *R = reassociateForUses(I, Builder))
     return R;
+
+  if (Instruction *Canonicalized = canonicalizeLogicFirst(I, Builder))
+    return Canonicalized;
 
   return nullptr;
 }

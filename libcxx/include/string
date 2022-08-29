@@ -4597,14 +4597,31 @@ const typename basic_string<_CharT, _Traits, _Allocator>::size_type
                basic_string<_CharT, _Traits, _Allocator>::npos;
 
 template <class _CharT, class _Allocator>
-struct _LIBCPP_TEMPLATE_VIS
-    hash<basic_string<_CharT, char_traits<_CharT>, _Allocator> >
-    : public __unary_function<basic_string<_CharT, char_traits<_CharT>, _Allocator>, size_t>
+struct __string_hash : public __unary_function<basic_string<_CharT, char_traits<_CharT>, _Allocator>, size_t>
 {
     size_t
     operator()(const basic_string<_CharT, char_traits<_CharT>, _Allocator>& __val) const _NOEXCEPT
     { return __do_string_hash(__val.data(), __val.data() + __val.size()); }
 };
+
+template <class _Allocator>
+struct hash<basic_string<char, char_traits<char>, _Allocator> > : __string_hash<char, _Allocator> {};
+
+#ifndef _LIBCPP_HAS_NO_CHAR8_T
+template <class _Allocator>
+struct hash<basic_string<char8_t, char_traits<char8_t>, _Allocator> > : __string_hash<char8_t, _Allocator> {};
+#endif
+
+template <class _Allocator>
+struct hash<basic_string<char16_t, char_traits<char16_t>, _Allocator> > : __string_hash<char16_t, _Allocator> {};
+
+template <class _Allocator>
+struct hash<basic_string<char32_t, char_traits<char32_t>, _Allocator> > : __string_hash<char32_t, _Allocator> {};
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+template <class _Allocator>
+struct hash<basic_string<wchar_t, char_traits<wchar_t>, _Allocator> > : __string_hash<wchar_t, _Allocator> {};
+#endif
 
 template<class _CharT, class _Traits, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&

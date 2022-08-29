@@ -1,4 +1,4 @@
-; RUN: opt -passes='print-access-info' -disable-output < %s  2>&1 | FileCheck %s
+; RUN: opt -passes='print<access-info>' -disable-output < %s  2>&1 | FileCheck %s
 
 ; In this loop just because we access A through different types (int, float)
 ; we still have a dependence cycle:

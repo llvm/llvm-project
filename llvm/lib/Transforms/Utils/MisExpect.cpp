@@ -155,6 +155,8 @@ void verifyMisExpect(Instruction &I, ArrayRef<uint32_t> RealWeights,
   // We cannot calculate branch probability if either of these invariants aren't
   // met. However, MisExpect diagnostics should not prevent code from compiling,
   // so we simply forgo emitting diagnostics here, and return early.
+  // assert((TotalBranchWeight >= LikelyBranchWeight) && (TotalBranchWeight > 0)
+  //              && "TotalBranchWeight is less than the Likely branch weight");
   if ((TotalBranchWeight == 0) || (TotalBranchWeight <= LikelyBranchWeight))
     return;
 

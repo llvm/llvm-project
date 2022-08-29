@@ -1794,8 +1794,11 @@ LogicalResult ShuffleOp::verify() {
   int64_t resRank = resultType.getRank();
   int64_t v1Rank = v1Type.getRank();
   int64_t v2Rank = v2Type.getRank();
-  if (resRank != v1Rank || v1Rank != v2Rank)
+  bool wellFormed0DCase = v1Rank == 0 && v2Rank == 0 && resRank == 1;
+  bool wellFormedNDCase = v1Rank == resRank && v2Rank == resRank;
+  if (!wellFormed0DCase && !wellFormedNDCase)
     return emitOpError("rank mismatch");
+
   // Verify all but leading dimension sizes.
   for (int64_t r = 1; r < v1Rank; ++r) {
     int64_t resDim = resultType.getDimSize(r);
@@ -1812,7 +1815,8 @@ LogicalResult ShuffleOp::verify() {
   if (maskLength != resultType.getDimSize(0))
     return emitOpError("mask length mismatch");
   // Verify all indices.
-  int64_t indexSize = v1Type.getDimSize(0) + v2Type.getDimSize(0);
+  int64_t indexSize = (v1Type.getRank() == 0 ? 1 : v1Type.getDimSize(0)) +
+                      (v2Type.getRank() == 0 ? 1 : v2Type.getDimSize(0));
   for (const auto &en : llvm::enumerate(maskAttr)) {
     auto attr = en.value().dyn_cast<IntegerAttr>();
     if (!attr || attr.getInt() < 0 || attr.getInt() >= indexSize)
@@ -1828,12 +1832,15 @@ ShuffleOp::inferReturnTypes(MLIRContext *, Optional<Location>,
                             SmallVectorImpl<Type> &inferredReturnTypes) {
   ShuffleOp::Adaptor op(operands, attributes);
   auto v1Type = op.getV1().getType().cast<VectorType>();
-  // Construct resulting type: leading dimension matches mask length,
-  // all trailing dimensions match the operands.
+  auto v1Rank = v1Type.getRank();
+  // Construct resulting type: leading dimension matches mask
+  // length, all trailing dimensions match the operands.
   SmallVector<int64_t, 4> shape;
-  shape.reserve(v1Type.getRank());
+  shape.reserve(v1Rank);
   shape.push_back(std::max<size_t>(1, op.getMask().size()));
-  llvm::append_range(shape, v1Type.getShape().drop_front());
+  // In the 0-D case there is no trailing shape to append.
+  if (v1Rank > 0)
+    llvm::append_range(shape, v1Type.getShape().drop_front());
   inferredReturnTypes.push_back(
       VectorType::get(shape, v1Type.getElementType()));
   return success();
@@ -1849,9 +1856,15 @@ static bool isStepIndexArray(ArrayAttr idxArr, uint64_t begin, size_t width) {
 }
 
 OpFoldResult vector::ShuffleOp::fold(ArrayRef<Attribute> operands) {
+  VectorType v1Type = getV1VectorType();
+  // For consistency: 0-D shuffle return type is 1-D, this cannot be a folding
+  // but must be a canonicalization into a vector.broadcast.
+  if (v1Type.getRank() == 0)
+    return {};
+
   // fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1
-  if (!getV1VectorType().isScalable() &&
-      isStepIndexArray(getMask(), 0, getV1VectorType().getDimSize(0)))
+  if (!v1Type.isScalable() &&
+      isStepIndexArray(getMask(), 0, v1Type.getDimSize(0)))
     return getV1();
   // fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2
   if (!getV1VectorType().isScalable() && !getV2VectorType().isScalable() &&
@@ -1887,6 +1900,30 @@ OpFoldResult vector::ShuffleOp::fold(ArrayRef<Attribute> operands) {
 
 namespace {
 
+// Pattern to rewrite a 0-D shuffle with [0] or [1] mask returning a 1-D vector
+// to a broadcast.
+struct Canonicalize0DShuffleOp : public OpRewritePattern<ShuffleOp> {
+  using OpRewritePattern<ShuffleOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ShuffleOp shuffleOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType v1VectorType = shuffleOp.getV1VectorType();
+    ArrayAttr mask = shuffleOp.getMask();
+    if (v1VectorType.getRank() > 0)
+      return failure();
+    if (mask.size() != 1)
+      return failure();
+    Type resType = VectorType::Builder(v1VectorType).setShape({1});
+    if (mask[0].cast<IntegerAttr>().getInt() == 0)
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(shuffleOp, resType,
+                                                       shuffleOp.getV1());
+    else
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(shuffleOp, resType,
+                                                       shuffleOp.getV2());
+    return success();
+  }
+};
+
 /// Pattern to rewrite a ShuffleOp(SplatOp, SplatOp) to SplatOp.
 class ShuffleSplat final : public OpRewritePattern<ShuffleOp> {
 public:
@@ -1912,7 +1949,7 @@ public:
 
 void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ShuffleSplat>(context);
+  results.add<ShuffleSplat, Canonicalize0DShuffleOp>(context);
 }
 
 //===----------------------------------------------------------------------===//

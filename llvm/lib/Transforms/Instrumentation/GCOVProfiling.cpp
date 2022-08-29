@@ -251,8 +251,8 @@ namespace {
     void writeOut() {
       write(0);
       writeString(Filename);
-      for (int i = 0, e = Lines.size(); i != e; ++i)
-        write(Lines[i]);
+      for (uint32_t L : Lines)
+        write(L);
     }
 
     GCOVLines(GCOVProfiler *P, StringRef F)

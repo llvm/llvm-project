@@ -28,7 +28,7 @@ class Task final {
    public: 
     Task<void> get_return_object() { return Task<void>(std::coroutine_handle<promise_type>::from_promise(*this)); }
 
-    void unhandled_exception();
+    void unhandled_exception() {}
 
     std::suspend_always initial_suspend() { return {}; }
 
