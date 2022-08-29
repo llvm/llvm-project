@@ -162,8 +162,7 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
       thenBlock.getArgument(ivs.index())
           .replaceAllUsesExcept(newIndex, newIndex);
     }
-    thenBlock.eraseArguments(llvm::to_vector<4>(
-        llvm::seq((unsigned)0, thenBlock.getNumArguments())));
+    thenBlock.eraseArguments(0, thenBlock.getNumArguments());
   } else {
     innerLoop.getRegion().takeBody(op.getRegion());
     b.setInsertionPointToStart(innerLoop.getBody());
