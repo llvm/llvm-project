@@ -884,13 +884,13 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   if (match(Op0, m_Not(m_Value(X))))
     return BinaryOperator::CreateSub(InstCombiner::SubOne(Op1C), X);
 
-  // (iN X s>> (N - 1)) + 1 --> (~X) u>> (N - 1)
+  // (iN X s>> (N - 1)) + 1 --> zext (X > -1)
   const APInt *C;
-  if (match(Op0, m_OneUse(m_AShr(m_Value(X), m_APIntAllowUndef(C)))) &&
-      *C == (Ty->getScalarSizeInBits() - 1) && match(Op1, m_One())) {
-    Value *NotX = Builder.CreateNot(X, X->getName() + ".not");
-    return BinaryOperator::CreateLShr(NotX, ConstantInt::get(Ty, *C));
-  }
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+  if (match(Op0, m_OneUse(m_AShr(m_Value(X),
+                                 m_SpecificIntAllowUndef(BitWidth - 1)))) &&
+      match(Op1, m_One()))
+    return new ZExtInst(Builder.CreateIsNotNeg(X, "isnotneg"), Ty);
 
   if (!match(Op1, m_APInt(C)))
     return nullptr;
