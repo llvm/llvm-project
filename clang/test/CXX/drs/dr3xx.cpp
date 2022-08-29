@@ -30,7 +30,7 @@ namespace dr301 { // dr301: yes
     typename T::template operator+<int> a; // expected-error {{typename specifier refers to a non-type template}} expected-error +{{}}
     // FIXME: This shouldn't say (null).
     class T::template operator+<int> b; // expected-error {{identifier followed by '<' indicates a class template specialization but (null) refers to a function template}}
-    enum T::template operator+<int> c; // expected-error {{expected identifier}} expected-error {{does not declare anything}}
+    enum T::template operator+<int> c; // expected-error {{expected identifier}}
     enum T::template operator+<int>::E d; // expected-error {{qualified name refers into a specialization of function template 'T::template operator +'}} expected-error {{forward reference}}
     enum T::template X<int>::E e;
     T::template operator+<int>::foobar(); // expected-error {{qualified name refers into a specialization of function template 'T::template operator +'}}

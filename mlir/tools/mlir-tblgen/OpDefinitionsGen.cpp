@@ -1152,6 +1152,25 @@ generateValueRangeStartAndEnd(Class &opClass, StringRef methodName,
   }
 }
 
+static std::string generateTypeForGetter(bool isAdaptor,
+                                         const NamedTypeConstraint &value) {
+  std::string str = "::mlir::Value";
+  /// If the CPPClassName is not a fully qualified type. Uses of types
+  /// across Dialect fail because they are not in the correct namespace. So we
+  /// dont generate TypedValue unless the type is fully qualified.
+  /// getCPPClassName doesn't return the fully qualified path for
+  /// `mlir::pdl::OperationType` see
+  /// https://github.com/llvm/llvm-project/issues/57279.
+  /// Adaptor will have values that are not from the type of their operation and
+  /// this is expected, so we dont generate TypedValue for Adaptor
+  if (!isAdaptor && value.constraint.getCPPClassName() != "::mlir::Type" &&
+      StringRef(value.constraint.getCPPClassName()).startswith("::"))
+    str = llvm::formatv("::mlir::TypedValue<{0}>",
+                        value.constraint.getCPPClassName())
+              .str();
+  return str;
+}
+
 // Generates the named operand getter methods for the given Operator `op` and
 // puts them in `opClass`.  Uses `rangeType` as the return type of getters that
 // return a range of operands (individual operands are `Value ` and each
@@ -1216,7 +1235,7 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
       continue;
     for (StringRef name : op.getGetterNames(operand.name)) {
       if (operand.isOptional()) {
-        m = opClass.addMethod("::mlir::Value", name);
+        m = opClass.addMethod(generateTypeForGetter(isAdaptor, operand), name);
         ERROR_IF_PRUNED(m, name, op);
         m->body() << "  auto operands = getODSOperands(" << i << ");\n"
                   << "  return operands.empty() ? ::mlir::Value() : "
@@ -1242,7 +1261,7 @@ static void generateNamedOperandGetters(const Operator &op, Class &opClass,
         ERROR_IF_PRUNED(m, name, op);
         m->body() << "  return getODSOperands(" << i << ");";
       } else {
-        m = opClass.addMethod("::mlir::Value", name);
+        m = opClass.addMethod(generateTypeForGetter(isAdaptor, operand), name);
         ERROR_IF_PRUNED(m, name, op);
         m->body() << "  return *getODSOperands(" << i << ").begin();";
       }
@@ -1365,7 +1384,8 @@ void OpEmitter::genNamedResultGetters() {
       continue;
     for (StringRef name : op.getGetterNames(result.name)) {
       if (result.isOptional()) {
-        m = opClass.addMethod("::mlir::Value", name);
+        m = opClass.addMethod(
+            generateTypeForGetter(/*isAdaptor=*/false, result), name);
         ERROR_IF_PRUNED(m, name, op);
         m->body()
             << "  auto results = getODSResults(" << i << ");\n"
@@ -1375,7 +1395,8 @@ void OpEmitter::genNamedResultGetters() {
         ERROR_IF_PRUNED(m, name, op);
         m->body() << "  return getODSResults(" << i << ");";
       } else {
-        m = opClass.addMethod("::mlir::Value", name);
+        m = opClass.addMethod(
+            generateTypeForGetter(/*isAdaptor=*/false, result), name);
         ERROR_IF_PRUNED(m, name, op);
         m->body() << "  return *getODSResults(" << i << ").begin();";
       }

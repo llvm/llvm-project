@@ -11,6 +11,7 @@
 #include "mlir/Support/MathExtras.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compiler.h"
+#include <numeric>
 
 using namespace mlir;
 using namespace presburger;
@@ -149,7 +150,7 @@ unsigned SimplexBase::addRow(ArrayRef<int64_t> coeffs, bool makeRestricted) {
     // row, scaled by the coefficient for the variable, accounting for the two
     // rows potentially having different denominators. The new denominator is
     // the lcm of the two.
-    int64_t lcm = mlir::lcm(tableau(newRow, 0), tableau(pos, 0));
+    int64_t lcm = std::lcm(tableau(newRow, 0), tableau(pos, 0));
     int64_t nRowCoeff = lcm / tableau(newRow, 0);
     int64_t idxRowCoeff = coeffs[i] * (lcm / tableau(pos, 0));
     tableau(newRow, 0) = lcm;

@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_EXECUTORADDRESS_H
 
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/identity.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -29,6 +30,45 @@ using ExecutorAddrDiff = uint64_t;
 /// Represents an address in the executor process.
 class ExecutorAddr {
 public:
+  /// A wrap/unwrap function that leaves pointers unmodified.
+  template <typename T> using rawPtr = llvm::identity<T>;
+
+  /// Default wrap function to use on this host.
+  template <typename T> using defaultWrap = rawPtr<T>;
+
+  /// Default unwrap function to use on this host.
+  template <typename T> using defaultUnwrap = rawPtr<T>;
+
+  /// Merges a tag into the raw address value:
+  ///   P' = P | (TagValue << TagOffset).
+  class Tag {
+  public:
+    constexpr Tag(uintptr_t TagValue, uintptr_t TagOffset)
+        : TagMask(TagValue << TagOffset) {}
+
+    template <typename T> constexpr T *operator()(T *P) {
+      return reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(P) | TagMask);
+    }
+
+  private:
+    uintptr_t TagMask;
+  };
+
+  /// Strips a tag of the given length from the given offset within the pointer:
+  /// P' = P & ~(((1 << TagLen) -1) << TagOffset)
+  class Untag {
+  public:
+    constexpr Untag(uintptr_t TagLen, uintptr_t TagOffset)
+        : UntagMask(~(((uintptr_t(1) << TagLen) - 1) << TagOffset)) {}
+
+    template <typename T> constexpr T *operator()(T *P) {
+      return reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(P) & UntagMask);
+    }
+
+  private:
+    uintptr_t UntagMask;
+  };
+
   ExecutorAddr() = default;
 
   /// Create an ExecutorAddr from the given value.
@@ -36,27 +76,30 @@ public:
 
   /// Create an ExecutorAddr from the given pointer.
   /// Warning: This should only be used when JITing in-process.
-  template <typename T> static ExecutorAddr fromPtr(T *Value) {
+  template <typename T, typename UnwrapFn = defaultUnwrap<T *>>
+  static ExecutorAddr fromPtr(T *Ptr, UnwrapFn &&Unwrap = UnwrapFn()) {
     return ExecutorAddr(
-        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Value)));
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Unwrap(Ptr))));
   }
 
   /// Cast this ExecutorAddr to a pointer of the given type.
   /// Warning: This should only be used when JITing in-process.
-  template <typename T>
-  std::enable_if_t<std::is_pointer<T>::value, T> toPtr() const {
+  template <typename T, typename WrapFn = defaultWrap<T>>
+  std::enable_if_t<std::is_pointer<T>::value, T>
+  toPtr(WrapFn &&Wrap = WrapFn()) const {
     uintptr_t IntPtr = static_cast<uintptr_t>(Addr);
     assert(IntPtr == Addr && "ExecutorAddr value out of range for uintptr_t");
-    return reinterpret_cast<T>(IntPtr);
+    return Wrap(reinterpret_cast<T>(IntPtr));
   }
 
   /// Cast this ExecutorAddr to a pointer of the given function type.
   /// Warning: This should only be used when JITing in-process.
-  template <typename T>
-  std::enable_if_t<std::is_function<T>::value, T *> toPtr() const {
+  template <typename T, typename WrapFn = defaultWrap<T *>>
+  std::enable_if_t<std::is_function<T>::value, T *>
+  toPtr(WrapFn &&Wrap = WrapFn()) const {
     uintptr_t IntPtr = static_cast<uintptr_t>(Addr);
     assert(IntPtr == Addr && "ExecutorAddr value out of range for uintptr_t");
-    return reinterpret_cast<T *>(IntPtr);
+    return Wrap(reinterpret_cast<T *>(IntPtr));
   }
 
   uint64_t getValue() const { return Addr; }

@@ -56,20 +56,11 @@ bool shouldFrameOptimize(const llvm::bolt::BinaryFunction &Function) {
     FrameOptFunctionNamesFile = "";
   }
 
-  bool IsValid = true;
-  if (!FrameOptFunctionNames.empty()) {
-    IsValid = false;
-    for (std::string &Name : FrameOptFunctionNames) {
-      if (Function.hasName(Name)) {
-        IsValid = true;
-        break;
-      }
-    }
-  }
-  if (!IsValid)
-    return false;
-
-  return IsValid;
+  if (FrameOptFunctionNames.empty())
+    return true;
+  return llvm::any_of(FrameOptFunctionNames, [&](std::string &Name) {
+    return Function.hasName(Name);
+  });
 }
 } // namespace opts
 

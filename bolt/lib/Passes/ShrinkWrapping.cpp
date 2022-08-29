@@ -1810,14 +1810,10 @@ BBIterTy ShrinkWrapping::processInsertion(BBIterTy InsertionPoint,
 BBIterTy ShrinkWrapping::processInsertionsList(
     BBIterTy InsertionPoint, BinaryBasicBlock *CurBB,
     std::vector<WorklistItem> &TodoList, int64_t SPVal, int64_t FPVal) {
-  bool HasInsertions = false;
-  for (WorklistItem &Item : TodoList) {
-    if (Item.Action == WorklistItem::Erase ||
-        Item.Action == WorklistItem::ChangeToAdjustment)
-      continue;
-    HasInsertions = true;
-    break;
-  }
+  bool HasInsertions = llvm::any_of(TodoList, [&](WorklistItem &Item) {
+    return Item.Action == WorklistItem::InsertLoadOrStore ||
+           Item.Action == WorklistItem::InsertPushOrPop;
+  });
 
   if (!HasInsertions)
     return InsertionPoint;

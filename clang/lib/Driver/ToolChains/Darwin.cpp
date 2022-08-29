@@ -522,6 +522,8 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
+static void AppendPlatformPrefix(SmallString<128> &Path, const llvm::Triple &T);
+
 void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
                                   const InputInfoList &Inputs,
@@ -719,22 +721,31 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  // DriverKit's framework doesn't have the same layout as other frameworks.
-  // Add missing search paths if necessary.
-  if (getToolChain().getTriple().getOS() == llvm::Triple::DriverKit) {
-    if (const Arg *Root = Args.getLastArg(options::OPT_isysroot)) {
+  // Add non-standard, platform-specific search paths, e.g., for DriverKit:
+  //  -L<sysroot>/System/DriverKit/usr/lib
+  //  -F<sysroot>/System/DriverKit/System/Library/Framework
+  {
+    bool NonStandardSearchPath = false;
+    const auto &Triple = getToolChain().getTriple();
+    if (Triple.isDriverKit()) {
       // ld64 fixed the implicit -F and -L paths in ld64-605.1+.
-      if (Version.getMajor() < 605 ||
-          (Version.getMajor() == 605 && Version.getMinor().value_or(0) < 1)) {
+      NonStandardSearchPath =
+          Version.getMajor() < 605 ||
+          (Version.getMajor() == 605 && Version.getMinor().value_or(0) < 1);
+    }
 
-        SmallString<128> L(Root->getValue());
-        llvm::sys::path::append(L, "System", "DriverKit", "usr", "lib");
-        CmdArgs.push_back(Args.MakeArgString(std::string("-L") + L));
-
-        SmallString<128> F(Root->getValue());
-        llvm::sys::path::append(F, "System", "DriverKit");
-        llvm::sys::path::append(F, "System", "Library", "Frameworks");
-        CmdArgs.push_back(Args.MakeArgString(std::string("-F") + F));
+    if (NonStandardSearchPath) {
+      if (auto *Sysroot = Args.getLastArg(options::OPT_isysroot)) {
+        auto AddSearchPath = [&](StringRef Flag, StringRef SearchPath) {
+          SmallString<128> P(Sysroot->getValue());
+          AppendPlatformPrefix(P, Triple);
+          llvm::sys::path::append(P, SearchPath);
+          if (getToolChain().getVFS().exists(P)) {
+            CmdArgs.push_back(Args.MakeArgString(Flag + P));
+          }
+        };
+        AddSearchPath("-L", "/usr/lib");
+        AddSearchPath("-F", "/System/Library/Frameworks");
       }
     }
   }
@@ -2265,21 +2276,37 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   }
 }
 
-// Returns the effective header sysroot path to use. This comes either from
-// -isysroot or --sysroot.
-llvm::StringRef DarwinClang::GetHeaderSysroot(const llvm::opt::ArgList &DriverArgs) const {
-  if(DriverArgs.hasArg(options::OPT_isysroot))
-    return DriverArgs.getLastArgValue(options::OPT_isysroot);
-  if (!getDriver().SysRoot.empty())
-    return getDriver().SysRoot;
-  return "/";
+// For certain platforms/environments almost all resources (e.g., headers) are
+// located in sub-directories, e.g., for DriverKit they live in
+// <SYSROOT>/System/DriverKit/usr/include (instead of <SYSROOT>/usr/include).
+static void AppendPlatformPrefix(SmallString<128> &Path,
+                                 const llvm::Triple &T) {
+  if (T.isDriverKit()) {
+    llvm::sys::path::append(Path, "System", "DriverKit");
+  }
+}
+
+// Returns the effective sysroot from either -isysroot or --sysroot, plus the
+// platform prefix (if any).
+llvm::SmallString<128>
+DarwinClang::GetEffectiveSysroot(const llvm::opt::ArgList &DriverArgs) const {
+  llvm::SmallString<128> Path("/");
+  if (DriverArgs.hasArg(options::OPT_isysroot))
+    Path = DriverArgs.getLastArgValue(options::OPT_isysroot);
+  else if (!getDriver().SysRoot.empty())
+    Path = getDriver().SysRoot;
+
+  if (hasEffectiveTriple()) {
+    AppendPlatformPrefix(Path, getEffectiveTriple());
+  }
+  return Path;
 }
 
 void DarwinClang::AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                                             llvm::opt::ArgStringList &CC1Args) const {
   const Driver &D = getDriver();
 
-  llvm::StringRef Sysroot = GetHeaderSysroot(DriverArgs);
+  llvm::SmallString<128> Sysroot = GetEffectiveSysroot(DriverArgs);
 
   bool NoStdInc = DriverArgs.hasArg(options::OPT_nostdinc);
   bool NoStdlibInc = DriverArgs.hasArg(options::OPT_nostdlibinc);
@@ -2368,7 +2395,7 @@ void DarwinClang::AddClangCXXStdlibIncludeArgs(
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
-  llvm::StringRef Sysroot = GetHeaderSysroot(DriverArgs);
+  llvm::SmallString<128> Sysroot = GetEffectiveSysroot(DriverArgs);
 
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {

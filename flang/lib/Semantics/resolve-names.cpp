@@ -1690,7 +1690,7 @@ void AttrsVisitor::SetBindNameOn(Symbol &symbol) {
   symbol.SetBindName(std::move(*label));
   if (!oldBindName.empty()) {
     if (const std::string * newBindName{symbol.GetBindName()}) {
-      if (oldBindName.compare(*newBindName) != 0) {
+      if (oldBindName != *newBindName) {
         Say(symbol.name(), "The entity '%s' has multiple BIND names"_err_en_US);
       }
     }

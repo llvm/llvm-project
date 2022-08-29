@@ -636,8 +636,8 @@ struct CountSumOrPercent {
   void reset() {
     NumEntries = 0;
     CountSum = 0.0f;
-    for (unsigned I = 0; I < IPVK_Last - IPVK_First + 1; I++)
-      ValueCounts[I] = 0.0f;
+    for (double &VC : ValueCounts)
+      VC = 0.0f;
   }
 };
 

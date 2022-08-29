@@ -295,7 +295,7 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
 
   Hint *Hints[] = {&Width,        &Interleave, &Force,
                    &IsVectorized, &Predicate,  &Scalable};
-  for (auto H : Hints) {
+  for (auto *H : Hints) {
     if (Name == H->Name) {
       if (H->validate(Val))
         H->Value = Val;

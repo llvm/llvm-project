@@ -918,6 +918,22 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
     return false;
   }
 
+  using namespace llvm::PatternMatch;
+  uint64_t C;
+  if (match(V, m_LShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
+                      m_ConstantInt(C))) ||
+      match(V, m_AShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
+                      m_ConstantInt(C))))
+    return C >= ST->getWavefrontSizeLog2();
+
+  Value *Mask;
+  if (match(V, m_c_And(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
+                       m_Value(Mask)))) {
+    const DataLayout &DL = cast<Instruction>(V)->getModule()->getDataLayout();
+    return computeKnownBits(Mask, DL).countMinTrailingZeros() >=
+           ST->getWavefrontSizeLog2();
+  }
+
   const ExtractValueInst *ExtValue = dyn_cast<ExtractValueInst>(V);
   if (!ExtValue)
     return false;

@@ -1259,8 +1259,8 @@ CallInst *CodeExtractor::emitCallAndSwitchStatement(Function *newFunction,
                                   codeReplacer);
     Reloads.push_back(load);
     std::vector<User *> Users(outputs[i]->user_begin(), outputs[i]->user_end());
-    for (unsigned u = 0, e = Users.size(); u != e; ++u) {
-      Instruction *inst = cast<Instruction>(Users[u]);
+    for (User *U : Users) {
+      Instruction *inst = cast<Instruction>(U);
       if (!Blocks.count(inst->getParent()))
         inst->replaceUsesOfWith(outputs[i], load);
     }

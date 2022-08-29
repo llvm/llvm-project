@@ -886,7 +886,13 @@ private:
         if (isBindC) {
           passBy = PassEntityBy::Value;
           prop = Property::Value;
-          passType = type;
+          if (fir::isa_builtin_cptr_type(type)) {
+            auto recTy = type.dyn_cast<fir::RecordType>();
+            mlir::Type fieldTy = recTy.getTypeList()[0].second;
+            passType = fir::ReferenceType::get(fieldTy);
+          } else {
+            passType = type;
+          }
         } else {
           passBy = PassEntityBy::BaseAddressValueAttribute;
         }
@@ -1238,4 +1244,9 @@ mlir::Type Fortran::lower::getDummyProcedureType(
   if (::mustPassLengthWithDummyProcedure(iface))
     return fir::factory::getCharacterProcedureTupleType(procType);
   return procType;
+}
+
+bool Fortran::lower::isCPtrArgByValueType(mlir::Type ty) {
+  return ty.isa<fir::ReferenceType>() &&
+         fir::isa_integer(fir::unwrapRefType(ty));
 }

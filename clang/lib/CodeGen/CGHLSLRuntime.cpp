@@ -42,16 +42,18 @@ void addDxilValVersion(StringRef ValVersionStr, llvm::Module &M) {
   IRBuilder<> B(M.getContext());
   MDNode *Val = MDNode::get(Ctx, {ConstantAsMetadata::get(B.getInt32(Major)),
                                   ConstantAsMetadata::get(B.getInt32(Minor))});
-  StringRef DxilValKey = "dx.valver";
-  M.addModuleFlag(llvm::Module::ModFlagBehavior::AppendUnique, DxilValKey, Val);
+  StringRef DXILValKey = "dx.valver";
+  auto *DXILValMD = M.getOrInsertNamedMetadata(DXILValKey);
+  DXILValMD->addOperand(Val);
 }
 } // namespace
 
 void CGHLSLRuntime::finishCodeGen() {
   auto &TargetOpts = CGM.getTarget().getTargetOpts();
-
   llvm::Module &M = CGM.getModule();
-  addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
+  Triple T(M.getTargetTriple());
+  if (T.getArch() == Triple::ArchType::dxil)
+    addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
 }
 
 void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {

@@ -2073,6 +2073,19 @@ ArrayRef<uint8_t> getSegmentContents(const MachOObjectFile &Obj,
         Segment.fileoff, Segment.fileoff + Segment.filesize));
   return {};
 }
+
+template <typename LoadCommandType>
+ArrayRef<uint8_t> getSegmentContents(const MachOObjectFile &Obj,
+                                     MachOObjectFile::LoadCommandInfo LoadCmd) {
+  auto SegmentOrErr = getStructOrErr<LoadCommandType>(Obj, LoadCmd.Ptr);
+  if (!SegmentOrErr) {
+    consumeError(SegmentOrErr.takeError());
+    return {};
+  }
+  auto &Segment = SegmentOrErr.get();
+  return arrayRefFromStringRef(
+      Obj.getData().slice(Segment.fileoff, Segment.fileoff + Segment.filesize));
+}
 } // namespace
 
 ArrayRef<uint8_t>
@@ -2093,6 +2106,28 @@ MachOObjectFile::getSegmentContents(StringRef SegmentName) const {
     }
     if (!Contents.empty())
       return Contents;
+  }
+  return {};
+}
+
+ArrayRef<uint8_t>
+MachOObjectFile::getSegmentContents(size_t SegmentIndex) const {
+  size_t Idx = 0;
+  for (auto LoadCmd : load_commands()) {
+    switch (LoadCmd.C.cmd) {
+    case MachO::LC_SEGMENT:
+      if (Idx == SegmentIndex)
+        return ::getSegmentContents<MachO::segment_command>(*this, LoadCmd);
+      ++Idx;
+      break;
+    case MachO::LC_SEGMENT_64:
+      if (Idx == SegmentIndex)
+        return ::getSegmentContents<MachO::segment_command_64>(*this, LoadCmd);
+      ++Idx;
+      break;
+    default:
+      continue;
+    }
   }
   return {};
 }
@@ -3257,6 +3292,8 @@ void MachOAbstractFixupEntry::moveToFirst() {
 
 void MachOAbstractFixupEntry::moveToEnd() { Done = true; }
 
+void MachOAbstractFixupEntry::moveNext() {}
+
 MachOChainedFixupEntry::MachOChainedFixupEntry(Error *E,
                                                const MachOObjectFile *O,
                                                bool Parse)
@@ -3264,17 +3301,54 @@ MachOChainedFixupEntry::MachOChainedFixupEntry(Error *E,
   ErrorAsOutParameter e(E);
   if (!Parse)
     return;
-  if (auto FixupTargetsOrErr = O->getDyldChainedFixupTargets())
+
+  if (auto FixupTargetsOrErr = O->getDyldChainedFixupTargets()) {
     FixupTargets = *FixupTargetsOrErr;
-  else {
+  } else {
     *E = FixupTargetsOrErr.takeError();
     return;
+  }
+
+  if (auto SegmentsOrErr = O->getChainedFixupsSegments()) {
+    Segments = std::move(SegmentsOrErr->second);
+  } else {
+    *E = SegmentsOrErr.takeError();
+    return;
+  }
+}
+
+void MachOChainedFixupEntry::findNextPageWithFixups() {
+  auto FindInSegment = [this]() {
+    const ChainedFixupsSegment &SegInfo = Segments[InfoSegIndex];
+    while (PageIndex < SegInfo.PageStarts.size() &&
+           SegInfo.PageStarts[PageIndex] == MachO::DYLD_CHAINED_PTR_START_NONE)
+      ++PageIndex;
+    return PageIndex < SegInfo.PageStarts.size();
+  };
+
+  while (InfoSegIndex < Segments.size()) {
+    if (FindInSegment()) {
+      PageOffset = Segments[InfoSegIndex].PageStarts[PageIndex];
+      SegmentData = O->getSegmentContents(Segments[InfoSegIndex].SegIdx);
+      return;
+    }
+
+    InfoSegIndex++;
+    PageIndex = 0;
   }
 }
 
 void MachOChainedFixupEntry::moveToFirst() {
   MachOAbstractFixupEntry::moveToFirst();
-  FixupIndex = 0;
+  if (Segments.empty()) {
+    Done = true;
+    return;
+  }
+
+  InfoSegIndex = 0;
+  PageIndex = 0;
+
+  findNextPageWithFixups();
   moveNext();
 }
 
@@ -3282,15 +3356,104 @@ void MachOChainedFixupEntry::moveToEnd() {
   MachOAbstractFixupEntry::moveToEnd();
 }
 
-void MachOChainedFixupEntry::moveNext() { Done = true; }
+void MachOChainedFixupEntry::moveNext() {
+  ErrorAsOutParameter ErrAsOutParam(E);
+
+  if (InfoSegIndex == Segments.size()) {
+    Done = true;
+    return;
+  }
+
+  const ChainedFixupsSegment &SegInfo = Segments[InfoSegIndex];
+  SegmentIndex = SegInfo.SegIdx;
+  SegmentOffset = SegInfo.Header.page_size * PageIndex + PageOffset;
+
+  // FIXME: Handle other pointer formats.
+  uint16_t PointerFormat = SegInfo.Header.pointer_format;
+  if (PointerFormat != MachO::DYLD_CHAINED_PTR_64 &&
+      PointerFormat != MachO::DYLD_CHAINED_PTR_64_OFFSET) {
+    *E = createError("segment " + Twine(SegmentIndex) +
+                     " has unsupported chained fixup pointer_format " +
+                     Twine(PointerFormat));
+    moveToEnd();
+    return;
+  }
+
+  Ordinal = 0;
+  Flags = 0;
+  Addend = 0;
+  PointerValue = 0;
+  SymbolName = {};
+
+  if (SegmentOffset + sizeof(RawValue) > SegmentData.size()) {
+    *E = malformedError("fixup in segment " + Twine(SegmentIndex) +
+                        " at offset " + Twine(SegmentOffset) +
+                        " extends past segment's end");
+    moveToEnd();
+    return;
+  }
+
+  static_assert(sizeof(RawValue) == sizeof(MachO::dyld_chained_import_addend));
+  memcpy(&RawValue, SegmentData.data() + SegmentOffset, sizeof(RawValue));
+  if (O->isLittleEndian() != sys::IsLittleEndianHost)
+    sys::swapByteOrder(RawValue);
+
+  // The bit extraction below assumes little-endian fixup entries.
+  assert(O->isLittleEndian() && "big-endian object should have been rejected "
+                                "by getDyldChainedFixupTargets()");
+  auto Field = [this](uint8_t Right, uint8_t Count) {
+    return (RawValue >> Right) & ((1ULL << Count) - 1);
+  };
+
+  // The `bind` field (most significant bit) of the encoded fixup determines
+  // whether it is dyld_chained_ptr_64_bind or dyld_chained_ptr_64_rebase.
+  bool IsBind = Field(63, 1);
+  Kind = IsBind ? FixupKind::Bind : FixupKind::Rebase;
+  uint32_t Next = Field(51, 12);
+  if (IsBind) {
+    uint32_t ImportOrdinal = Field(0, 24);
+    uint8_t InlineAddend = Field(24, 8);
+
+    if (ImportOrdinal >= FixupTargets.size()) {
+      *E = malformedError("fixup in segment " + Twine(SegmentIndex) +
+                          " at offset " + Twine(SegmentOffset) +
+                          "  has out-of range import ordinal " +
+                          Twine(ImportOrdinal));
+      moveToEnd();
+      return;
+    }
+
+    ChainedFixupTarget &Target = FixupTargets[ImportOrdinal];
+    Ordinal = Target.libOrdinal();
+    Addend = InlineAddend ? InlineAddend : Target.addend();
+    Flags = Target.weakImport() ? MachO::BIND_SYMBOL_FLAGS_WEAK_IMPORT : 0;
+    SymbolName = Target.symbolName();
+  } else {
+    uint64_t Target = Field(0, 36);
+    uint64_t High8 = Field(36, 8);
+
+    PointerValue = Target | (High8 << 56);
+    if (PointerFormat == MachO::DYLD_CHAINED_PTR_64_OFFSET)
+      PointerValue += textAddress();
+  }
+
+  // The stride is 4 bytes for DYLD_CHAINED_PTR_64(_OFFSET).
+  if (Next != 0) {
+    PageOffset += 4 * Next;
+  } else {
+    ++PageIndex;
+    findNextPageWithFixups();
+  }
+}
 
 bool MachOChainedFixupEntry::operator==(
     const MachOChainedFixupEntry &Other) const {
-  if (Done == Other.Done)
+  if (Done && Other.Done)
     return true;
-  if ((FixupIndex == Other.FixupIndex))
-    return true;
-  return false;
+  if (Done != Other.Done)
+    return false;
+  return InfoSegIndex == Other.InfoSegIndex && PageIndex == Other.PageIndex &&
+         PageOffset == Other.PageOffset;
 }
 
 MachORebaseEntry::MachORebaseEntry(Error *E, const MachOObjectFile *O,
@@ -4302,6 +4465,9 @@ iterator_range<bind_iterator> MachOObjectFile::weakBindTable(Error &Err) {
 }
 
 iterator_range<fixup_iterator> MachOObjectFile::fixupTable(Error &Err) {
+  if (BindRebaseSectionTable == nullptr)
+    BindRebaseSectionTable = std::make_unique<BindRebaseSegInfo>(this);
+
   MachOChainedFixupEntry Start(&Err, this, true);
   Start.moveToFirst();
 
@@ -4836,13 +5002,13 @@ MachOObjectFile::getChainedFixupsHeader() const {
   return CFHeader;
 }
 
-Expected<std::pair<size_t, std::vector<MachOObjectFile::ChainedFixupsSegment>>>
+Expected<std::pair<size_t, std::vector<ChainedFixupsSegment>>>
 MachOObjectFile::getChainedFixupsSegments() const {
   auto CFOrErr = getChainedFixupsLoadCommand();
   if (!CFOrErr)
     return CFOrErr.takeError();
 
-  std::vector<MachOObjectFile::ChainedFixupsSegment> Segments;
+  std::vector<ChainedFixupsSegment> Segments;
   if (!CFOrErr->has_value())
     return std::make_pair(0, Segments);
 

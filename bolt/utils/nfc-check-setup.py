@@ -59,7 +59,7 @@ def main():
                            text=True).stdout
     if stash:
         # save local changes before checkout
-        subprocess.run(shlex.split("git stash"), cwd=source_dir)
+        subprocess.run(shlex.split("git stash push -u"), cwd=source_dir)
     # check out the previous commit
     subprocess.run(shlex.split("git checkout -f HEAD^"), cwd=source_dir)
     # get the parent commit hash for logging

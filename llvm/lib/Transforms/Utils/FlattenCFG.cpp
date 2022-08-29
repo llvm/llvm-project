@@ -145,9 +145,7 @@ bool FlattenCFGOpt::FlattenParallelAndOr(BasicBlock *BB, IRBuilder<> &Builder) {
 
   // Check predecessors of \param BB.
   SmallPtrSet<BasicBlock *, 16> Preds(pred_begin(BB), pred_end(BB));
-  for (SmallPtrSetIterator<BasicBlock *> PI = Preds.begin(), PE = Preds.end();
-       PI != PE; ++PI) {
-    BasicBlock *Pred = *PI;
+  for (BasicBlock *Pred : Preds) {
     BranchInst *PBI = dyn_cast<BranchInst>(Pred->getTerminator());
 
     // All predecessors should terminate with a branch.

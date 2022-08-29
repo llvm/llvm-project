@@ -1,6 +1,6 @@
 // Test -fsanitize-memory-use-after-dtor
-// RUN: %clang_cc1 -O0 -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -O0 -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s --implicit-check-not="call void @__sanitizer_"
+// RUN: %clang_cc1 -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s --implicit-check-not="call void @__sanitizer_"
 
 // 24 bytes total
 struct Packed {
@@ -68,7 +68,6 @@ Adjacent ad;
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}EmptyD2Ev
-// CHECK-NOT: call void @__sanitizer_dtor_callback{{.*}}i64 0
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}SimpleD2Ev

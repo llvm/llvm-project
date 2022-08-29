@@ -60,7 +60,6 @@ driver_executable("clang") {
     "//clang/tools/clang-linker-wrapper",
     "//clang/tools/clang-offload-bundler",
     "//clang/tools/clang-offload-packager",
-    "//clang/tools/clang-offload-wrapper",
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",

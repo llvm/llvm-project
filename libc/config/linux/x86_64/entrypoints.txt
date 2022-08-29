@@ -100,6 +100,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
 
+    # sys/sendfile entrypoints
+    libc.src.sys.sendfile.sendfile
+
     # sys/stat.h entrypoints
     libc.src.sys.stat.chmod
     libc.src.sys.stat.fchmod
@@ -112,6 +115,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.close
     libc.src.unistd.fchdir
     libc.src.unistd.fsync
+    libc.src.unistd.ftruncate
     libc.src.unistd.link
     libc.src.unistd.linkat
     libc.src.unistd.lseek
@@ -121,6 +125,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.rmdir
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
+    libc.src.unistd.truncate
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
     libc.src.unistd.write

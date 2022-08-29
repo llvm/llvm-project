@@ -1,8 +1,6 @@
-// RUN: %clangxx_msan %s -O0 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && %run %t >%t.out 2>&1
-
-// RUN: %clangxx_msan %s -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && %run %t >%t.out 2>&1
-
-// RUN: %clangxx_msan %s -O2 -fsanitize=memory -fsanitize-memory-use-after-dtor -o %t && %run %t >%t.out 2>&1
+// RUN: %clangxx_msan %s -O0 -fsanitize-memory-use-after-dtor -fsanitize-memory-track-origins -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_msan %s -O1 -fsanitize-memory-use-after-dtor -fsanitize-memory-track-origins -o %t && %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_msan %s -O2 -fsanitize-memory-use-after-dtor -fsanitize-memory-track-origins -o %t && %run %t 2>&1 | FileCheck %s
 
 #include <sanitizer/msan_interface.h>
 #include <assert.h>
@@ -66,5 +64,21 @@ int main() {
   assert(__msan_test_shadow(&g->b, sizeof(g->b)) == 0);
   assert(__msan_test_shadow(&g->tb1, sizeof(g->tb1)) == 0);
   assert(__msan_test_shadow(&g->d, sizeof(g->d)) == 0);
+
+  __msan_print_shadow(&g->tb0, sizeof(g->tb0));
+  // CHECK: Memory was marked as uninitialized
+  // CHECK: {{#0 0x.* in __sanitizer_dtor_callback}}
+  // CHECK: {{#1 0x.* in .*~Derived.*cpp:}}[[@LINE-20]]:
+
+  __msan_print_shadow(&g->b, sizeof(g->b));
+  // CHECK: Memory was marked as uninitialized
+  // CHECK: {{#0 0x.* in __sanitizer_dtor_callback}}
+  // CHECK: {{#1 0x.* in .*~Base.*cpp:}}[[@LINE-33]]:
+
+  __msan_print_shadow(&g->tb1, sizeof(g->tb1));
+  // CHECK: Memory was marked as uninitialized
+  // CHECK: {{#0 0x.* in __sanitizer_dtor_callback}}
+  // CHECK: {{#1 0x.* in .*~Derived.*cpp:}}[[@LINE-30]]:
+
   return 0;
 }

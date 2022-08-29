@@ -1188,15 +1188,6 @@ static void PrintLinkOptHints(MachOObjectFile *O) {
   }
 }
 
-static void printMachOChainedFixups(object::MachOObjectFile *Obj) {
-  Error Err = Error::success();
-  for (const object::MachOChainedFixupEntry &Entry : Obj->fixupTable(Err)) {
-    (void)Entry;
-  }
-  if (Err)
-    reportError(std::move(Err), Obj->getFileName());
-}
-
 static SmallVector<std::string> GetSegmentNames(object::MachOObjectFile *O) {
   SmallVector<std::string> Ret;
   for (const MachOObjectFile::LoadCommandInfo &Command : O->load_commands()) {
@@ -1255,9 +1246,8 @@ static constexpr std::array<StringRef, 13> PointerFormats{
     "DYLD_CHAINED_PTR_ARM64E_USERLAND24",
 };
 
-static void
-PrintChainedFixupsSegment(const MachOObjectFile::ChainedFixupsSegment &Segment,
-                          StringRef SegName) {
+static void PrintChainedFixupsSegment(const ChainedFixupsSegment &Segment,
+                                      StringRef SegName) {
   outs() << "chained starts in segment " << Segment.SegIdx << " (" << SegName
          << ")\n";
   outs() << "  size = " << Segment.Header.size << '\n';
@@ -1333,7 +1323,7 @@ static void PrintChainedFixups(MachOObjectFile *O) {
            << SegNames[I] << ")\n";
   }
 
-  for (const MachOObjectFile::ChainedFixupsSegment &S : Segments)
+  for (const ChainedFixupsSegment &S : Segments)
     PrintChainedFixupsSegment(S, SegNames[S.SegIdx]);
 
   auto FixupTargets =
@@ -1345,8 +1335,62 @@ static void PrintChainedFixups(MachOObjectFile *O) {
 }
 
 static void PrintDyldInfo(MachOObjectFile *O) {
-  outs() << "dyld information:" << '\n';
-  printMachOChainedFixups(O);
+  Error Err = Error::success();
+
+  size_t SegmentWidth = strlen("segment");
+  size_t SectionWidth = strlen("section");
+  size_t AddressWidth = strlen("address");
+  size_t AddendWidth = strlen("addend");
+  size_t DylibWidth = strlen("dylib");
+  const size_t PointerWidth = 2 + O->getBytesInAddress() * 2;
+
+  auto HexLength = [](uint64_t Num) {
+    return Num ? (size_t)divideCeil(Log2_64(Num), 4) : 1;
+  };
+  for (const object::MachOChainedFixupEntry &Entry : O->fixupTable(Err)) {
+    SegmentWidth = std::max(SegmentWidth, Entry.segmentName().size());
+    SectionWidth = std::max(SectionWidth, Entry.sectionName().size());
+    AddressWidth = std::max(AddressWidth, HexLength(Entry.address()) + 2);
+    if (Entry.isBind()) {
+      AddendWidth = std::max(AddendWidth, HexLength(Entry.addend()) + 2);
+      DylibWidth = std::max(DylibWidth, Entry.symbolName().size());
+    }
+  }
+  // Errors will be handled when printing the table.
+  if (Err)
+    consumeError(std::move(Err));
+
+  outs() << "dyld information:\n";
+  outs() << left_justify("segment", SegmentWidth) << ' '
+         << left_justify("section", SectionWidth) << ' '
+         << left_justify("address", AddressWidth) << ' '
+         << left_justify("pointer", PointerWidth) << " type   "
+         << left_justify("addend", AddendWidth) << ' '
+         << left_justify("dylib", DylibWidth) << " symbol/vm address\n";
+  for (const object::MachOChainedFixupEntry &Entry : O->fixupTable(Err)) {
+    outs() << left_justify(Entry.segmentName(), SegmentWidth) << ' '
+           << left_justify(Entry.sectionName(), SectionWidth) << ' ' << "0x"
+           << left_justify(utohexstr(Entry.address()), AddressWidth - 2) << ' '
+           << format_hex(Entry.rawValue(), PointerWidth, true) << ' ';
+    if (Entry.isBind()) {
+      outs() << "bind   "
+             << "0x" << left_justify(utohexstr(Entry.addend()), AddendWidth - 2)
+             << ' ' << left_justify(ordinalName(O, Entry.ordinal()), DylibWidth)
+             << ' ' << Entry.symbolName();
+      if (Entry.flags() & MachO::BIND_SYMBOL_FLAGS_WEAK_IMPORT)
+        outs() << " (weak import)";
+      outs() << '\n';
+    } else {
+      assert(Entry.isRebase());
+      outs() << "rebase";
+      outs().indent(AddendWidth + DylibWidth + 2);
+      outs() << format("0x%" PRIX64, Entry.pointerValue()) << '\n';
+    }
+  }
+  if (Err)
+    reportError(std::move(Err), O->getFileName());
+
+  // TODO: Print opcode-based fixups if the object uses those.
 }
 
 static void PrintDylibs(MachOObjectFile *O, bool JustId) {

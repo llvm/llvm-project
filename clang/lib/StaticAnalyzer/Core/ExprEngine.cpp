@@ -1217,7 +1217,7 @@ void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
   }
 
   unsigned Idx = 0;
-  if (const auto *AT = dyn_cast<ArrayType>(varType)) {
+  if (isa<ArrayType>(varType)) {
     SVal ElementCount;
     std::tie(state, Idx) = prepareStateForArrayDestruction(
         state, Region, varType, LCtx, &ElementCount);
@@ -1368,7 +1368,7 @@ void ExprEngine::ProcessMemberDtor(const CFGMemberDtor D,
   SVal FieldVal = State->getLValue(Member, ThisLoc);
 
   unsigned Idx = 0;
-  if (const auto *AT = dyn_cast<ArrayType>(T)) {
+  if (isa<ArrayType>(T)) {
     SVal ElementCount;
     std::tie(State, Idx) = prepareStateForArrayDestruction(
         State, FieldVal.getAsRegion(), T, LCtx, &ElementCount);

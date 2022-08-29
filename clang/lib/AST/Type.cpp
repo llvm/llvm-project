@@ -1167,7 +1167,7 @@ public:
       return QualType(T, 0);
 
     return Ctx.getSubstTemplateTypeParmType(T->getReplacedParameter(),
-                                            replacementType, T->getPackIndex());
+                                            replacementType);
   }
 
   // FIXME: Non-trivial to implement, but important for C++

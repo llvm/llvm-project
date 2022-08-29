@@ -44,7 +44,7 @@ static cl::opt<int> RVVVectorBitsMin(
              "with zero meaning no minimum size is assumed. A value of -1 "
              "means use Zvl*b extension. This is primarily used to enable "
              "autovectorization with fixed width vectors."),
-    cl::init(0), cl::Hidden);
+    cl::init(-1), cl::Hidden);
 
 static cl::opt<unsigned> RVVVectorLMULMax(
     "riscv-v-fixed-length-vector-lmul-max",

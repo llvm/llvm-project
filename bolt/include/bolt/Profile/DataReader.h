@@ -449,7 +449,7 @@ protected:
   bool usesEvent(StringRef Name) const {
     for (auto I = EventNames.begin(), E = EventNames.end(); I != E; ++I) {
       StringRef Event = I->getKey();
-      if (Event.find(Name) != StringRef::npos)
+      if (Event.contains(Name))
         return true;
     }
     return false;
