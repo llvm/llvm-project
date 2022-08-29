@@ -56,7 +56,7 @@ to build LLVM. The new requirements are as follows:
 * Visual Studio 2019 >= 16.7
 
 In LLVM 15.x these requirements will be "soft" requirements and the version
-check can be skipped by passing -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=ON
+check can be skipped by passing ``-DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN=ON``
 to CMake.
 
 With the release of LLVM 16.x these requirements will be hard and LLVM developers
@@ -74,6 +74,7 @@ Changes to the LLVM IR
 * Renamed ``llvm.experimental.vector.insert`` intrinsic to ``llvm.vector.insert``.
 * The constant expression variants of the following instructions have been
   removed:
+
   * ``extractvalue``
   * ``insertvalue``
   * ``udiv``
@@ -85,6 +86,7 @@ Changes to the LLVM IR
   * ``fmul``
   * ``fdiv``
   * ``frem``
+
 * Added the support for ``fmax`` and ``fmin`` in ``atomicrmw`` instruction. The
   comparison is expected to match the behavior of ``llvm.maxnum.*`` and
   ``llvm.minnum.*`` respectively.
@@ -146,7 +148,7 @@ Changes to the ARM Backend
 * Implemented generation of Windows SEH unwind information.
 * Switched the MinGW target to use SEH instead of DWARF for unwind information.
 * Added support for the Cortex-M85 CPU.
-* Added support for a new -mframe-chain=(none|aapcs|aapcs+leaf) command-line
+* Added support for a new ``-mframe-chain=(none|aapcs|aapcs+leaf)`` command-line
   option, which controls the generation of AAPCS-compliant Frame Records.
 
 Changes to the AVR Backend
@@ -251,6 +253,7 @@ Changes to the C API
   because the underlying constant expressions are no longer supported. Instead,
   an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
   constant fold the operands if possible and create an instruction otherwise:
+
   * ``LLVMConstExtractValue``
   * ``LLVMConstInsertValue``
   * ``LLVMConstUDiv``
@@ -270,6 +273,7 @@ Changes to the C API
 
 * As part of the opaque pointer migration, the following APIs are deprecated and
   will be removed in the next release:
+
   * ``LLVMBuildLoad`` -> ``LLVMBuildLoad2``
   * ``LLVMBuildCall`` -> ``LLVMBuildCall2``
   * ``LLVMBuildInvoke`` -> ``LLVMBuildInvoke2``
@@ -284,6 +288,7 @@ Changes to the C API
 * Refactor compression namespaces across the project, making way for a possible
   introduction of alternatives to zlib compression in the llvm toolchain.
   Changes are as follows:
+
   * Relocate the ``llvm::zlib`` namespace to ``llvm::compression::zlib``.
   * Remove crc32 from zlib compression namespace, people should use the ``llvm::crc32`` instead.
 
@@ -314,7 +319,7 @@ During this release ...
 Changes to the LLVM tools
 ---------------------------------
 
-* (Experimental) :manpage:`llvm-symbolizer(1)` now has ``--filter-markup`` to
+* (Experimental) :doc:`llvm-symbolizer <CommandGuide/llvm-symbolizer>` now has ``--filter-markup`` to
   filter :doc:`Symbolizer Markup </SymbolizerMarkupFormat>` into human-readable
   form.
 * :doc:`llvm-objcopy <CommandGuide/llvm-objcopy>` has removed support for the legacy ``zlib-gnu`` format.

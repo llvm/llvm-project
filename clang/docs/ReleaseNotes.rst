@@ -127,7 +127,7 @@ Bug Fixes
   This fixes Issue `Issue 53488 <https://github.com/llvm/llvm-project/issues/53488>`_.
 - According to `CWG 1394 <https://wg21.link/cwg1394>`_ and
   `C++20 [dcl.fct.def.general]p2 <https://timsong-cpp.github.io/cppwp/n4868/dcl.fct.def#general-2.sentence-3>`_,
-  Clang should not diagnose incomplete types in function definitions if the function body is "= delete;".
+  Clang should not diagnose incomplete types in function definitions if the function body is ``= delete;``.
   This fixes Issue `Issue 52802 <https://github.com/llvm/llvm-project/issues/52802>`_.
 - Unknown type attributes with a ``[[]]`` spelling are no longer diagnosed twice.
   This fixes Issue `Issue 54817 <https://github.com/llvm/llvm-project/issues/54817>`_.
@@ -163,7 +163,7 @@ Bug Fixes
   promise_type body for coroutines if there is any allocation function
   declaration in the scope of promise_type. Additionally, to implement CWG2585,
   a coroutine will no longer generate a call to a global allocation function
-  with the signature (std::size_t, p0, ..., pn).
+  with the signature ``(std::size_t, p0, ..., pn)``.
   This fixes Issue `Issue 54881 <https://github.com/llvm/llvm-project/issues/54881>`_.
 - Implement `CWG 2394 <https://wg21.link/cwg2394>`_: Const class members
   may be initialized with a defaulted default constructor under the same
@@ -202,7 +202,7 @@ Bug Fixes
   considered to have one positive bit in order to represent the underlying
   value. This effects whether we consider the store of the value one to be well
   defined.
-- An operator introduced to the scope via a `using` statement now correctly references this
+- An operator introduced to the scope via a ``using`` statement now correctly references this
   statement in clangd (hover over the symbol, jump to definition) as well as in the AST dump.
   This also fixes `issue 55095 <https://github.com/llvm/llvm-project/issues/#55095>`_ as a
   side-effect.
@@ -305,7 +305,7 @@ Improvements to Clang's diagnostics
 - When using class templates without arguments, clang now tells developers
   that template arguments are missing in certain contexts.
   This fixes `Issue 55962 <https://github.com/llvm/llvm-project/issues/55962>`_.
-- Printable Unicode characters within `static_assert` messages are no longer
+- Printable Unicode characters within ``static_assert`` messages are no longer
   escaped.
 - The ``-Winfinite-recursion`` diagnostic no longer warns about
   unevaluated operands of a ``typeid`` expression, as they are now
@@ -330,10 +330,10 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-- Improve __builtin_dump_struct:
+- Improve ``__builtin_dump_struct``:
 
   - Support bitfields in struct and union.
-  - Improve the dump format, dump both bitwidth(if its a bitfield) and field
+  - Improve the dump format, dump both bitwidth (if its a bitfield) and field
     value.
   - Remove anonymous tag locations and flatten anonymous struct members.
   - Beautify dump format, add indent for struct members.
@@ -346,8 +346,9 @@ Non-comprehensive list of changes in this release
     custom formatting for non-aggregate types.
 
 - Previously disabled sanitizer options now enabled by default:
-  - ASAN_OPTIONS=detect_stack_use_after_return=1 (only on Linux).
-  - MSAN_OPTIONS=poison_in_dtor=1.
+
+  - ``ASAN_OPTIONS=detect_stack_use_after_return=1`` (only on Linux).
+  - ``MSAN_OPTIONS=poison_in_dtor=1``.
 
 - Some type-trait builtins, such as ``__has_trivial_assign``, have been documented
   as deprecated for a while because their semantics don't mix well with post-C++11 type-traits.
@@ -451,9 +452,9 @@ Attribute Changes in Clang
   ``__attribute__((function_return("keep")))`` was added. This is intended to
   be used by the Linux kernel to mitigate RETBLEED.
 
-- Ignore the `__preferred_name__` attribute when writing for C++20 module interfaces.
+- Ignore the ``__preferred_name__`` attribute when writing for C++20 module interfaces.
   This is a short-term workaround intentionally since clang doesn't take care of the
-  serialization and deserialization of `__preferred_name__`.  See
+  serialization and deserialization of ``__preferred_name__``.  See
   https://github.com/llvm/llvm-project/issues/56490 for example.
 
 Windows Support
@@ -515,8 +516,8 @@ C++ Language Changes in Clang
   unsigned character literals. This fixes `Issue 54886 <https://github.com/llvm/llvm-project/issues/54886>`_.
 - Stopped allowing constraints on non-template functions to be compliant with
   dcl.decl.general p4.
-- Improved ``copy elision`` optimization. It's possible to apply ``NRVO`` for an object if at the moment when
-  any return statement of this object is executed, the ``return slot`` won't be occupied by another object.
+- Improved `copy elision` optimization. It's possible to apply `NRVO` for an object if at the moment when
+  any return statement of this object is executed, the `return slot` won't be occupied by another object.
 
 
 C++20 Feature Support
@@ -565,8 +566,8 @@ C++2b Feature Support
 CUDA/HIP Language Changes in Clang
 ----------------------------------
 
-- Added `__noinline__` as a keyword to avoid diagnostics due to usage of
-  `__attribute__((__noinline__))` in CUDA/HIP programs.
+- Added ``__noinline__`` as a keyword to avoid diagnostics due to usage of
+  ``__attribute__((__noinline__))`` in CUDA/HIP programs.
 
 Objective-C Language Changes in Clang
 -------------------------------------
@@ -634,10 +635,10 @@ For targets without F16C feature or above, please make sure:
 
 - Use GCC 12.0 and above if you are using libgcc.
 - If you are using compiler-rt, use the same version with the compiler.
-Early versions provided FP16 builtins in a different ABI. A workaround is to use
-a small code snippet to check the ABI if you cannot make sure of it.
+  Early versions provided FP16 builtins in a different ABI. A workaround is to use
+  a small code snippet to check the ABI if you cannot make sure of it.
 - If you are using downstream runtimes that provide FP16 conversions, update
-them with the new ABI.
+  them with the new ABI.
 
 DWARF Support in Clang
 ----------------------
@@ -653,10 +654,10 @@ Arm and AArch64 Support in Clang
 --------------------------------
 
 - clang now supports the Cortex-M85 CPU, which can be chosen with
-  `-mcpu=cortex-m85`. By default, this has PACBTI turned on, but it can be
-  disabled with `-mcpu=cortex-m85+nopacbti`.
+  ``-mcpu=cortex-m85``. By default, this has PACBTI turned on, but it can be
+  disabled with ``-mcpu=cortex-m85+nopacbti``.
 - clang now supports using C/C++ operators on sizeless SVE vectors such as
-  `svint32_t`. The set of supported operators is shown in the table Vector
+  ``svint32_t``. The set of supported operators is shown in the table Vector
   Operations found in the :ref:`Clang Language Extensions <Vector Operations>`
   document.
 
@@ -716,10 +717,10 @@ clang-extdef-mapping
 libclang
 --------
 
-- Introduce new option `CLANG_FORCE_MATCHING_LIBCLANG_SOVERSION` that defaults to ON.
+- Introduce new option ``CLANG_FORCE_MATCHING_LIBCLANG_SOVERSION`` that defaults to ON.
   This means that by default libclang's SOVERSION matches the major version of LLVM.
   Setting this to OFF makes the SOVERSION be the ABI compatible version (currently 13).
-  See `discussion<https://discourse.llvm.org/t/rationale-for-removing-versioned-libclang-middle-ground-to-keep-it-behind-option/64410>`_
+  See `discussion <https://discourse.llvm.org/t/rationale-for-removing-versioned-libclang-middle-ground-to-keep-it-behind-option/64410>`_
   here.
 
 Static Analyzer
@@ -733,8 +734,8 @@ Static Analyzer
   positives.
 
 - Added a new checker ``alpha.unix.cstring.UninitializedRead`` this will check for uninitialized reads
-  from common memory copy/manipulation functions such as ``memcpy``, ``mempcpy``, ``memmove``, ``memcmp``, `
-  `strcmp``, ``strncmp``, ``strcpy``, ``strlen``, ``strsep`` and many more. Although
+  from common memory copy/manipulation functions such as ``memcpy``, ``mempcpy``, ``memmove``, ``memcmp``,
+  ``strcmp``, ``strncmp``, ``strcpy``, ``strlen``, ``strsep`` and many more. Although
   this checker currently is in list of alpha checkers due to a false positive.
 
 - Added a new checker ``alpha.unix.Errno``. This can find the first read
@@ -783,5 +784,5 @@ this release by going into the "``clang/docs/``" directory in the Clang
 tree.
 
 If you have any questions or comments about Clang, please feel free to
-contact us on the Discourse forums (Clang Frontend category)
+contact us on the `Discourse forums (Clang Frontend category)
 <https://discourse.llvm.org/c/clang/6>`_.
