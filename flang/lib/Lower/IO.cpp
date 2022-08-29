@@ -1417,8 +1417,7 @@ lowerReferenceAsStringSelect(Fortran::lower::AbstractConverter &converter,
     mlir::Value stringRef;
     mlir::Value stringLen;
     if (eval->isA<Fortran::parser::FormatStmt>()) {
-      assert(text.find('(') != llvm::StringRef::npos &&
-             "FORMAT is unexpectedly ill-formed");
+      assert(text.contains('(') && "FORMAT is unexpectedly ill-formed");
       // This is a format statement, so extract the spec from the text.
       std::tuple<mlir::Value, mlir::Value, mlir::Value> stringLit =
           lowerSourceTextAsStringLit(converter, loc, text, strTy, lenTy);
