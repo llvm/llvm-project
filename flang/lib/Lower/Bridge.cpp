@@ -2689,6 +2689,27 @@ private:
     }
   }
 
+  void mapCPtrArgByValue(const Fortran::semantics::Symbol &sym,
+                         mlir::Value val) {
+    mlir::Type symTy = Fortran::lower::translateSymbolToFIRType(*this, sym);
+    assert(symTy.isa<fir::RecordType>());
+    auto resTy = symTy.dyn_cast<fir::RecordType>();
+    assert(resTy.getTypeList().size() == 1);
+    auto fieldName = resTy.getTypeList()[0].first;
+    auto fieldTy = resTy.getTypeList()[0].second;
+    mlir::Location loc = toLocation();
+    mlir::Value res = builder->create<fir::AllocaOp>(loc, symTy);
+    auto fieldIndexType = fir::FieldType::get(symTy.getContext());
+    mlir::Value field = builder->create<fir::FieldIndexOp>(
+        loc, fieldIndexType, fieldName, resTy,
+        /*typeParams=*/mlir::ValueRange{});
+    mlir::Value resAddr = builder->create<fir::CoordinateOp>(
+        loc, builder->getRefType(fieldTy), res, field);
+    mlir::Value argAddrVal = builder->createConvert(loc, fieldTy, val);
+    builder->create<fir::StoreOp>(loc, argAddrVal, resAddr);
+    addSymbol(sym, res);
+  }
+
   /// Map mlir function block arguments to the corresponding Fortran dummy
   /// variables. When the result is passed as a hidden argument, the Fortran
   /// result is also mapped. The symbol map is used to hold this mapping.
@@ -2707,6 +2728,16 @@ private:
         addSymbol(arg.entity->get(), box);
       } else {
         if (arg.entity.has_value()) {
+          if (arg.passBy == PassBy::Value) {
+            mlir::Type argTy = arg.firArgument.getType();
+            if (argTy.isa<fir::RecordType>())
+              TODO(toLocation(), "derived type argument passed by value");
+            if (Fortran::semantics::IsBuiltinCPtr(arg.entity->get()) &&
+                Fortran::lower::isCPtrArgByValueType(argTy)) {
+              mapCPtrArgByValue(arg.entity->get(), arg.firArgument);
+              return;
+            }
+          }
           addSymbol(arg.entity->get(), arg.firArgument);
         } else {
           assert(funit.parentHasHostAssoc());

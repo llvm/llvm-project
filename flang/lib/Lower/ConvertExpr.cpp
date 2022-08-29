@@ -957,14 +957,6 @@ public:
     return false;
   }
 
-  static bool isBuiltinCPtr(const Fortran::semantics::Symbol &sym) {
-    if (const Fortran::semantics::DeclTypeSpec *declType = sym.GetType())
-      if (const Fortran::semantics::DerivedTypeSpec *derived =
-              declType->AsDerived())
-        return Fortran::semantics::IsIsoCType(derived);
-    return false;
-  }
-
   /// Lower structure constructor without a temporary. This can be used in
   /// fir::GloablOp, and assumes that the structure component is a constant.
   ExtValue genStructComponentInInitializer(
@@ -1003,7 +995,7 @@ public:
       if (isDerivedTypeWithLenParameters(sym))
         TODO(loc, "component with length parameters in structure constructor");
 
-      if (isBuiltinCPtr(sym)) {
+      if (Fortran::semantics::IsBuiltinCPtr(sym)) {
         // Builtin c_ptr and c_funptr have special handling because initial
         // value are handled for them as an extension.
         mlir::Value addr = fir::getBase(Fortran::lower::genExtAddrInInitializer(
@@ -2466,6 +2458,29 @@ public:
     return res;
   }
 
+  /// Lower a type(C_PTR/C_FUNPTR) argument with VALUE attribute into a
+  /// reference. A C pointer can correspond to a Fortran dummy argument of type
+  /// C_PTR with the VALUE attribute. (see 18.3.6 note 3).
+  static mlir::Value
+  genRecordCPtrValueArg(Fortran::lower::AbstractConverter &converter,
+                        mlir::Value rec, mlir::Type ty) {
+    assert(fir::isa_derived(ty));
+    auto recTy = ty.dyn_cast<fir::RecordType>();
+    assert(recTy.getTypeList().size() == 1);
+    auto fieldName = recTy.getTypeList()[0].first;
+    mlir::Type fieldTy = recTy.getTypeList()[0].second;
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    mlir::Location loc = converter.getCurrentLocation();
+    auto fieldIndexType = fir::FieldType::get(ty.getContext());
+    mlir::Value field =
+        builder.create<fir::FieldIndexOp>(loc, fieldIndexType, fieldName, recTy,
+                                          /*typeParams=*/mlir::ValueRange{});
+    mlir::Value cAddr = builder.create<fir::CoordinateOp>(
+        loc, builder.getRefType(fieldTy), rec, field);
+    mlir::Value val = builder.create<fir::LoadOp>(loc, cAddr);
+    return builder.createConvert(loc, builder.getRefType(fieldTy), val);
+  }
+
   /// Given a call site for which the arguments were already lowered, generate
   /// the call and return the result. This function deals with explicit result
   /// allocation and lowering if needed. It also deals with passing the host
@@ -2675,14 +2690,18 @@ public:
           cast = builder.create<fir::EmboxProcOp>(loc, boxProcTy, fst);
         }
       } else {
-        if (fir::isa_derived(snd)) {
+        mlir::Type fromTy = fir::unwrapRefType(fst.getType());
+        if (fir::isa_builtin_cptr_type(fromTy) &&
+            Fortran::lower::isCPtrArgByValueType(snd)) {
+          cast = genRecordCPtrValueArg(converter, fst, fromTy);
+        } else if (fir::isa_derived(snd)) {
           // FIXME: This seems like a serious bug elsewhere in lowering. Paper
           // over the problem for now.
           TODO(loc, "derived type argument passed by value");
+        } else {
+          cast = builder.convertWithSemantics(loc, snd, fst,
+                                              callingImplicitInterface);
         }
-        assert(!fir::isa_derived(snd));
-        cast = builder.convertWithSemantics(loc, snd, fst,
-                                            callingImplicitInterface);
       }
       operands.push_back(cast);
     }
