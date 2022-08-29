@@ -119,7 +119,10 @@
         kmp_lock_hint_adaptive       = (1<<18),
         AMD_fast_fp_atomics          = (1<<19),
         AMD_unsafe_fp_atomics        = AMD_fast_fp_atomics,
-        AMD_safe_fp_atomics          = (1<<20)
+        ompx_fast_fp_atomics         = AMD_fast_fp_atomics,
+        ompx_unsafe_fp_atomics       = AMD_fast_fp_atomics,
+        AMD_safe_fp_atomics          = (1<<20),
+        ompx_safe_fp_atomics         = AMD_safe_fp_atomics
     } omp_sync_hint_t;
 
     /* lock hint type for dynamic user lock */
