@@ -441,20 +441,25 @@ void ClampOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 template <typename IntFolder, typename FloatFolder>
 DenseElementsAttr BinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
-                               RankedTensorType ty) {
+                               RankedTensorType returnTy) {
   if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
-    if (ty.getElementType().isa<IntegerType>()) {
+    auto lETy = lhs.getType().cast<ShapedType>().getElementType();
+    auto rETy = rhs.getType().cast<ShapedType>().getElementType();
+    if (lETy != rETy)
+      return {};
+
+    if (lETy.isa<IntegerType>()) {
       APInt l = lhs.getSplatValue<APInt>();
       APInt r = rhs.getSplatValue<APInt>();
-      APInt result = IntFolder()(l, r);
-      return DenseElementsAttr::get(ty, result);
+      auto result = IntFolder()(l, r);
+      return DenseElementsAttr::get(returnTy, result);
     }
 
-    if (ty.getElementType().isa<FloatType>()) {
+    if (lETy.isa<FloatType>()) {
       APFloat l = lhs.getSplatValue<APFloat>();
       APFloat r = rhs.getSplatValue<APFloat>();
-      APFloat result = FloatFolder()(l, r);
-      return DenseElementsAttr::get(ty, result);
+      auto result = FloatFolder()(l, r);
+      return DenseElementsAttr::get(returnTy, result);
     }
   }
 
@@ -499,6 +504,37 @@ OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
 
   return BinaryFolder<std::plus<APInt>, std::plus<APFloat>>(lhsAttr, rhsAttr,
                                                             lhsTy);
+}
+
+namespace {
+template <typename Cmp>
+struct ComparisonFold {
+  ComparisonFold() {}
+  APInt operator()(const APInt &l, const APInt &r) {
+    return APInt(1, Cmp()(l, r));
+  }
+
+  APInt operator()(const APFloat &l, const APFloat &r) {
+    return APInt(1, Cmp()(l, r));
+  }
+};
+
+struct APIntFoldGreater {
+  APIntFoldGreater() {}
+  APInt operator()(APInt l, APInt r) { return APInt(1, l.sgt(r)); }
+};
+} // namespace
+
+OpFoldResult GreaterOp::fold(ArrayRef<Attribute> operands) {
+  auto resultTy = getType().dyn_cast<RankedTensorType>();
+  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+
+  if (!lhsAttr || !rhsAttr)
+    return {};
+
+  return BinaryFolder<APIntFoldGreater, ComparisonFold<std::greater<APFloat>>>(
+      lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
