@@ -270,7 +270,8 @@ public:
     // All other cases are handled elsewhere.
     if (encDst && encSrc) {
       return failure();
-    } else if (encSrc) {
+    }
+    if (encSrc) {
       RankedTensorType rtp =
           op.getSrc().getType().template cast<RankedTensorType>();
       auto denseTp =
