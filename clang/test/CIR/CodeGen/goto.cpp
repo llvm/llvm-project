@@ -42,3 +42,25 @@ end:
 // CHECK-NEXT: %1 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64}
 // CHECK-NEXT: %2 = cir.alloca i32, cir.ptr <i32>, ["y", cinit] {alignment = 4 : i64}
 // CHECK-NEXT: cir.store %arg0, %0 : i32, cir.ptr <i32>
+
+int g2() {
+  int b = 1;
+  goto end;
+  b = b + 1;
+end:
+  b = b + 2;
+  return 1;
+}
+
+// Make sure (1) we don't get dangling unused cleanup blocks
+//           (2) generated returns consider the function type
+
+// CHECK: cir.func @_Z2g2v() -> i32 {
+
+// CHECK:     cir.br ^bb2
+// CHECK-NEXT:   ^bb1:  // no predecessors
+// CHECK:   ^bb2:  // 2 preds: ^bb0, ^bb1
+
+// CHECK:     [[R:%[0-9]+]] = cir.load %0 : cir.ptr <i32>, i32
+// CHECK-NEXT:     [[R]] : i32
+// CHECK-NEXT:   }

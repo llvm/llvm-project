@@ -270,6 +270,15 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
   auto &builder = CGF.builder;
   auto *localScope = CGF.currLexScope;
 
+  auto buildReturn = [&](mlir::Location loc) {
+    if (CGF.FnRetCIRTy.has_value()) {
+      // If there's anything to return, load it first.
+      auto val = builder.create<LoadOp>(loc, *CGF.FnRetCIRTy, *CGF.FnRetAlloca);
+      return builder.create<ReturnOp>(loc, llvm::ArrayRef(val.getResult()));
+    }
+    return builder.create<ReturnOp>(loc);
+  };
+
   // Handle pending gotos and the solved labels in this scope.
   while (!localScope->PendingGotos.empty()) {
     auto gotoInfo = localScope->PendingGotos.back();
@@ -295,16 +304,9 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
     mlir::Location retLoc = *localScope->getRetLocs()[curLoc];
     curLoc++;
 
-    // TODO: insert actual scope cleanup HERE (dtors and etc)
+    // TODO(cir): insert actual scope cleanup HERE (dtors and etc)
 
-    // If there's anything to return, load it first.
-    if (CGF.FnRetCIRTy.has_value()) {
-      auto val =
-          builder.create<LoadOp>(retLoc, *CGF.FnRetCIRTy, *CGF.FnRetAlloca);
-      builder.create<ReturnOp>(retLoc, llvm::ArrayRef(val.getResult()));
-    } else {
-      builder.create<ReturnOp>(retLoc);
-    }
+    (void)buildReturn(retLoc);
   }
 
   auto insertCleanupAndLeave = [&](mlir::Block *InsPt) {
@@ -314,7 +316,7 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
     if (localScope->Depth != 0) // end of any local scope != function
       builder.create<YieldOp>(localScope->EndLoc);
     else
-      builder.create<ReturnOp>(localScope->EndLoc);
+      (void)buildReturn(localScope->EndLoc);
   };
 
   // If a cleanup block has been created at some point, branch to it
@@ -341,6 +343,9 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
   // An empty non-entry block has nothing to offer.
   if (!entryBlock && currBlock->empty()) {
     currBlock->erase();
+    // Remove unused cleanup blocks.
+    if (cleanupBlock && cleanupBlock->hasNoPredecessors())
+      cleanupBlock->erase();
     return;
   }
 
