@@ -1244,13 +1244,15 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
 
   case Expr::CStyleCastExprClass:
   case Expr::CXXFunctionalCastExprClass:
-  case Expr::CXXStaticCastExprClass:
   case Expr::CXXDynamicCastExprClass:
   case Expr::CXXReinterpretCastExprClass:
   case Expr::CXXConstCastExprClass:
   case Expr::CXXAddrspaceCastExprClass:
   case Expr::ObjCBridgedCastExprClass:
+    emitError(getLoc(E->getExprLoc()), "l-value not implemented for '")
+        << E->getStmtClassName() << "'";
     assert(0 && "Use buildCastLValue below, remove me when adding testcase");
+  case Expr::CXXStaticCastExprClass:
   case Expr::ImplicitCastExprClass:
     return buildCastLValue(cast<CastExpr>(E));
 
