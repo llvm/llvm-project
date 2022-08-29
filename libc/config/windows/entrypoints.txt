@@ -106,6 +106,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
+    libc.src.math.atanf    
     libc.src.math.atanhf
     libc.src.math.copysign
     libc.src.math.copysignf

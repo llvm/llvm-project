@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H
 
-#include "common_constants.h" // Lookup tables EXP_M
 #include "math_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
