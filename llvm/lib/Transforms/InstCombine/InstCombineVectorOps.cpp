@@ -1699,8 +1699,8 @@ static bool canEvaluateShuffled(Value *V, ArrayRef<int> Mask,
       // Verify that 'CI' does not occur twice in Mask. A single 'insertelement'
       // can't put an element into multiple indices.
       bool SeenOnce = false;
-      for (int i = 0, e = Mask.size(); i != e; ++i) {
-        if (Mask[i] == ElementNumber) {
+      for (int I : Mask) {
+        if (I == ElementNumber) {
           if (SeenOnce)
             return false;
           SeenOnce = true;
