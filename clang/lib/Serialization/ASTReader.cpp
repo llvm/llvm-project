@@ -253,6 +253,13 @@ bool ChainedASTReaderListener::visitInputFile(StringRef Filename,
   return Continue;
 }
 
+bool ChainedASTReaderListener::readModuleCacheKey(StringRef ModuleName,
+                                                  StringRef Filename,
+                                                  StringRef CacheKey) {
+  return First->readModuleCacheKey(ModuleName, Filename, CacheKey) ||
+         Second->readModuleCacheKey(ModuleName, Filename, CacheKey);
+}
+
 void ChainedASTReaderListener::readModuleFileExtension(
        const ModuleFileExtensionMetadata &Metadata) {
   First->readModuleFileExtension(Metadata);
@@ -2811,6 +2818,7 @@ ASTReader::ReadControlBlock(ModuleFile &F,
 
         std::string ImportedName = ReadString(Record, Idx);
         std::string ImportedFile;
+        std::string ImportedCacheKey;
 
         // For prebuilt and explicit modules first consult the file map for
         // an override. Note that here we don't search prebuilt module
@@ -2821,12 +2829,26 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           ImportedFile = PP.getHeaderSearchInfo().getPrebuiltModuleFileName(
             ImportedName, /*FileMapOnly*/ true);
 
-        if (ImportedFile.empty())
+        if (ImportedFile.empty()) {
           // Use BaseDirectoryAsWritten to ensure we use the same path in the
           // ModuleCache as when writing.
           ImportedFile = ReadPath(BaseDirectoryAsWritten, Record, Idx);
-        else
+          ImportedCacheKey = ReadString(Record, Idx);
+        } else {
           SkipPath(Record, Idx);
+          SkipString(Record, Idx);
+        }
+
+        if (!ImportedCacheKey.empty()) {
+          if (!Listener || Listener->readModuleCacheKey(
+                               ImportedName, ImportedFile, ImportedCacheKey)) {
+            Diag(diag::err_ast_file_not_found)
+                << moduleKindForDiagnostic(ImportedKind) << ImportedFile << true
+                << std::string("missing or unloadable module cache key") +
+                       ImportedCacheKey;
+            return Failure;
+          }
+        }
 
         // If our client can't cope with us being out of date, we can't cope with
         // our dependency being missing.
@@ -2935,6 +2957,10 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           (const llvm::support::unaligned_uint64_t *)Blob.data();
       F.InputFilesLoaded.resize(NumInputs);
       F.NumUserInputFiles = NumUserInputs;
+      break;
+
+    case MODULE_CACHE_KEY:
+      F.ModuleCacheKey = Blob.str();
       break;
     }
   }
@@ -5354,6 +5380,8 @@ bool ASTReader::readASTFileControlBlock(
         std::string ModuleName = ReadString(Record, Idx);
         std::string Filename = ReadString(Record, Idx);
         ResolveImportedPath(Filename, ModuleDir);
+        std::string CacheKey = ReadString(Record, Idx);
+        Listener.readModuleCacheKey(ModuleName, Filename, CacheKey);
         Listener.visitImport(ModuleName, Filename);
       }
       break;
@@ -5565,6 +5593,8 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
         F.DidReadTopLevelSubmodule = true;
         CurrentModule->setASTFile(F.File);
         CurrentModule->PresumedModuleMapFile = F.ModuleMapPath;
+        if (!F.ModuleCacheKey.empty())
+          CurrentModule->setModuleCacheKey(F.ModuleCacheKey);
       }
 
       CurrentModule->Kind = Kind;

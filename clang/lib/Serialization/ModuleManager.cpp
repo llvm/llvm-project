@@ -471,6 +471,16 @@ bool ModuleManager::lookupModuleFile(StringRef FileName, off_t ExpectedSize,
     FileOrErr = FileMgr.getBypassFile(*FileOrErr);
   }
 #endif
+
+  // If the file is known to the module cache but not in the filesystem, it is
+  // a memory buffer. Create a virtual file for it.
+  if (!FileOrErr) {
+    if (auto *KnownBuffer = getModuleCache().lookupPCM(FileName)) {
+      FileOrErr =
+          FileMgr.getVirtualFileRef(FileName, KnownBuffer->getBufferSize(), 0);
+    }
+  }
+
   if (!FileOrErr)
     return false;
 

@@ -316,6 +316,9 @@ def warn_alias_with_section : Warning<
   "as the %select{aliasee|resolver}2">,
   InGroup<IgnoredAttributes>;
 
+def err_module_cache_key_spelling : Error<
+  "option '-fmodule-file-cache-key' should be of the form <path>=<key>">;
+
 let CategoryName = "Instrumentation Issue" in {
 def warn_profile_data_out_of_date : Warning<
   "profile data may be out of date: of %0 function%s0, %1 %plural{1:has|:have}1"

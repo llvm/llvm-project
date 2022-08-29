@@ -13,6 +13,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticCAS.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangStandard.h"
@@ -23,6 +24,7 @@
 #include "clang/Config/config.h"
 #include "clang/Frontend/CASDependencyCollector.h"
 #include "clang/Frontend/ChainedDiagnosticConsumer.h"
+#include "clang/Frontend/CompileJobCacheResult.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -44,6 +46,8 @@
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Errc.h"
@@ -620,6 +624,23 @@ struct ReadModuleNames : ASTReaderListener {
     LoadedModules.clear();
   }
 };
+
+class CompileCacheASTReaderHelper : public ASTReaderListener {
+public:
+  CompileCacheASTReaderHelper(cas::ObjectStore &CAS, cas::ActionCache &Cache,
+                              InMemoryModuleCache &ModuleCache,
+                              DiagnosticsEngine &Diags)
+      : CAS(CAS), Cache(Cache), ModuleCache(ModuleCache), Diags(Diags) {}
+
+  bool readModuleCacheKey(StringRef ModuleName, StringRef Filename,
+                          StringRef CacheKey) override;
+
+private:
+  cas::ObjectStore &CAS;
+  cas::ActionCache &Cache;
+  InMemoryModuleCache &ModuleCache;
+  DiagnosticsEngine &Diags;
+};
 } // namespace
 
 void CompilerInstance::createPCHExternalASTSource(
@@ -634,7 +655,8 @@ void CompilerInstance::createPCHExternalASTSource(
       getASTContext(), getPCHContainerReader(),
       getFrontendOpts().ModuleFileExtensions, DependencyCollectors,
       DeserializationListener, OwnDeserializationListener, Preamble,
-      getFrontendOpts().UseGlobalModuleIndex, std::move(PCHBuffer));
+      getFrontendOpts().UseGlobalModuleIndex,
+      getOrCreateObjectStore(), getOrCreateActionCache(), std::move(PCHBuffer));
 }
 
 IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
@@ -647,6 +669,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
     void *DeserializationListener, bool OwnDeserializationListener,
     bool Preamble, bool UseGlobalModuleIndex,
+    cas::ObjectStore &CAS, cas::ActionCache &Cache,
     std::unique_ptr<llvm::MemoryBuffer> PCHBuffer) {
   HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
@@ -667,6 +690,9 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
 
   for (auto &Listener : DependencyCollectors)
     Listener->attachToASTReader(*Reader);
+
+  Reader->addListener(std::make_unique<CompileCacheASTReaderHelper>(
+      CAS, Cache, ModuleCache, PP.getDiagnostics()));
 
   auto Listener = std::make_unique<ReadModuleNames>(PP);
   auto &ListenerRef = *Listener;
@@ -1712,6 +1738,10 @@ void CompilerInstance::createASTReader() {
 
   for (auto &Listener : DependencyCollectors)
     Listener->attachToASTReader(*TheASTReader);
+
+  TheASTReader->addListener(std::make_unique<CompileCacheASTReaderHelper>(
+      getOrCreateObjectStore(), getOrCreateActionCache(), getModuleCache(),
+      getDiagnostics()));
 }
 
 bool CompilerInstance::loadModuleFile(StringRef FileName) {
@@ -2313,4 +2343,67 @@ void CompilerInstance::resetAndLeakSema() { llvm::BuryPointer(takeSema()); }
 void CompilerInstance::setExternalSemaSource(
     IntrusiveRefCntPtr<ExternalSemaSource> ESS) {
   ExternalSemaSrc = std::move(ESS);
+}
+
+static bool addCachedModuleFileToInMemoryCache(
+    StringRef Path, StringRef CacheKey, StringRef Provider,
+    cas::ObjectStore &CAS, cas::ActionCache &Cache,
+    InMemoryModuleCache &ModuleCache, DiagnosticsEngine &Diags) {
+
+  if (ModuleCache.lookupPCM(Path))
+    return false;
+
+  auto ID = CAS.parseID(CacheKey);
+  if (!ID) {
+    Diags.Report(diag::err_cas_cannot_get_module_cache_key)
+        << CacheKey << Provider << ID.takeError();
+    return true;
+  }
+
+  auto Value = Cache.get(*ID);
+  if (!Value || !*Value) {
+    auto Diag = Diags.Report(diag::err_cas_cannot_get_module_cache_key)
+                << CacheKey << Provider;
+    if (!Value)
+      Diag << Value.takeError();
+    else
+      Diag << "no such entry in action cache";
+    return true;
+  }
+
+  Optional<cas::CompileJobCacheResult> Result;
+  cas::CompileJobResultSchema Schema(CAS);
+  if (llvm::Error E = Schema.load(**Value).moveInto(Result)) {
+    Diags.Report(diag::err_cas_cannot_get_module_cache_key)
+        << CacheKey << Provider << std::move(E);
+    return true;
+  }
+  auto Output =
+      Result->getOutput(cas::CompileJobCacheResult::OutputKind::MainOutput);
+  if (!Output)
+    llvm::report_fatal_error("missing main output");
+  auto OutputProxy = CAS.getProxy(Output->Object);
+  if (!OutputProxy) {
+    Diags.Report(diag::err_cas_cannot_get_module_cache_key)
+        << CacheKey << Provider << OutputProxy.takeError();
+    return true;
+  }
+
+  ModuleCache.addPCM(Path, OutputProxy->getMemoryBuffer());
+  return false;
+}
+
+bool CompilerInstance::addCachedModuleFile(StringRef Path, StringRef CacheKey,
+                                           StringRef Provider) {
+  return addCachedModuleFileToInMemoryCache(
+      Path, CacheKey, Provider, getOrCreateObjectStore(),
+      getOrCreateActionCache(), getModuleCache(), getDiagnostics());
+}
+
+bool CompileCacheASTReaderHelper::readModuleCacheKey(StringRef ModuleName,
+                                                     StringRef Filename,
+                                                     StringRef CacheKey) {
+  // FIXME: add name/path of the importing module?
+  return addCachedModuleFileToInMemoryCache(
+      Filename, CacheKey, "imported module", CAS, Cache, ModuleCache, Diags);
 }

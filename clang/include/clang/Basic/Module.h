@@ -187,6 +187,9 @@ private:
   /// corresponding serialized AST file, or null otherwise.
   Optional<FileEntryRef> ASTFile;
 
+  /// The \c ActionCache key for this module, if any.
+  Optional<std::string> ModuleCacheKey;
+
   /// The top-level headers associated with this module.
   llvm::SmallSetVector<const FileEntry *, 2> TopHeaders;
 
@@ -617,6 +620,15 @@ public:
     assert((!File || !getASTFile() || getASTFile() == File) &&
            "file path changed");
     getTopLevelModule()->ASTFile = File;
+  }
+
+  Optional<std::string> getModuleCacheKey() const {
+    return getTopLevelModule()->ModuleCacheKey;
+  }
+
+  void setModuleCacheKey(std::string Key) {
+    assert(!getModuleCacheKey() || *getModuleCacheKey() == Key);
+    getTopLevelModule()->ModuleCacheKey = std::move(Key);
   }
 
   /// Retrieve the directory for which this module serves as the

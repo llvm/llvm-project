@@ -5896,6 +5896,12 @@ def ftest_module_file_extension_EQ :
   Joined<["-"], "ftest-module-file-extension=">,
   HelpText<"introduce a module file extension for testing purposes. "
            "The argument is parsed as blockname:major:minor:hashed:user info">;
+def fmodule_file_cache_key : Joined<["-"], "fmodule-file-cache-key=">,
+  MetaVarName<"<path>=<key>">,
+  HelpText<"Make the module with the given compile job cache key available as "
+           "if it were at <path>. This option may be combined with "
+           "-fmodule-file= to import the module. The module must have "
+           "previously been built with -fcache-compile-job.">;
 def fconcepts_ts : Flag<["-"], "fconcepts-ts">,
   HelpText<"Enable C++ Extensions for Concepts. (deprecated - use -std=c++2a)">;
 

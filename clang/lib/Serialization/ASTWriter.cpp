@@ -788,6 +788,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(ORIGINAL_FILE);
   RECORD(ORIGINAL_FILE_ID);
   RECORD(INPUT_FILE_OFFSETS);
+  RECORD(MODULE_CACHE_KEY);
 
   BLOCK(OPTIONS_BLOCK);
   RECORD(LANGUAGE_OPTIONS);
@@ -1326,6 +1327,18 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
     Stream.EmitRecord(MODULE_MAP_FILE, Record);
   }
 
+  // Module Cache Key
+  if (WritingModule) {
+    if (auto Key = WritingModule->getModuleCacheKey()) {
+      auto Abbrev = std::make_shared<BitCodeAbbrev>();
+      Abbrev->Add(BitCodeAbbrevOp(MODULE_CACHE_KEY));
+      Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob));
+      unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
+      RecordData::value_type Record[] = {MODULE_CACHE_KEY};
+      Stream.EmitRecordWithBlob(AbbrevCode, Record, *Key);
+    }
+  }
+
   // Imports
   if (Chain) {
     serialization::ModuleManager &Mgr = Chain->getModuleManager();
@@ -1348,6 +1361,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
       AddString(M.ModuleName, Record);
       AddPath(M.FileName, Record);
+      AddString(M.ModuleCacheKey, Record);
     }
     Stream.EmitRecord(IMPORTS, Record);
   }

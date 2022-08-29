@@ -34,6 +34,17 @@ Error CompileJobCacheResult::forEachOutput(
   return Error::success();
 }
 
+Optional<CompileJobCacheResult::Output>
+CompileJobCacheResult::getOutput(OutputKind Kind) const {
+  size_t Count = getNumOutputs();
+  for (size_t I = 0; I < Count; ++I) {
+    OutputKind K = getOutputKind(I);
+    if (Kind == K)
+      return Output{getOutputObject(I), Kind};
+  }
+  return None;
+}
+
 static void printOutputKind(llvm::raw_ostream &OS,
                             CompileJobCacheResult::OutputKind Kind) {
   switch (Kind) {

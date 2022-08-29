@@ -485,6 +485,8 @@ Optional<int> CompileJobCache::tryReplayCachedResult(CompilerInstance &Clang) {
 
   assert(ResultCacheKey.has_value() && "ResultCacheKey not initialized?");
 
+  Clang.setCompileJobCacheKey(*ResultCacheKey);
+
   Expected<bool> ReplayedResult =
       DisableCachedCompileJobReplay
           ? false

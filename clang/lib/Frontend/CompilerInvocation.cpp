@@ -2742,6 +2742,8 @@ static void GenerateFrontendArgs(const FrontendOptions &Opts,
 
   for (const auto &ModuleFile : Opts.ModuleFiles)
     GenerateArg(Args, OPT_fmodule_file, ModuleFile, SA);
+  for (const auto &A : Opts.ModuleCacheKeys)
+    GenerateArg(Args, OPT_fmodule_file_cache_key, A.first + "=" + A.second, SA);
 
   if (Opts.AuxTargetCPU)
     GenerateArg(Args, OPT_aux_target_cpu, *Opts.AuxTargetCPU, SA);
@@ -2975,6 +2977,14 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
     StringRef Val = A->getValue();
     if (!Val.contains('='))
       Opts.ModuleFiles.push_back(std::string(Val));
+  }
+  for (const Arg *A : Args.filtered(OPT_fmodule_file_cache_key)) {
+    auto [Path, Key] = StringRef(A->getValue()).rsplit('=');
+    if (Key.empty() || Path.empty()) {
+      Diags.Report(diag::err_module_cache_key_spelling);
+    } else {
+      Opts.ModuleCacheKeys.emplace_back(std::string(Path), std::string(Key));
+    }
   }
 
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)

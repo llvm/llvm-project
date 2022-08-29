@@ -53,6 +53,7 @@ namespace llvm {
   // TODO: DenseMap, ...
 
   namespace cas {
+  class ActionCache;
   class ObjectStore;
   class CASID;
   class ObjectProxy;
@@ -99,6 +100,7 @@ namespace clang {
   using llvm::raw_pwrite_stream;
 
   namespace cas {
+  using llvm::cas::ActionCache;
   using llvm::cas::CASID;
   using llvm::cas::ObjectProxy;
   using llvm::cas::ObjectRef;

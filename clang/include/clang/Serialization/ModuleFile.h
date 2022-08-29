@@ -125,6 +125,9 @@ public:
   /// The file name of the module file.
   std::string FileName;
 
+  /// The \c ActionCache key for this module, or empty.
+  std::string ModuleCacheKey;
+
   /// The name of the module.
   std::string ModuleName;
 

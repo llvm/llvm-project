@@ -512,6 +512,10 @@ public:
   /// The list of AST files to merge.
   std::vector<std::string> ASTMergeFiles;
 
+  /// The list of prebuilt module file paths to make available by reading their
+  /// contents from the \c ActionCache with the given compile job cache key.
+  std::vector<std::pair<std::string, std::string>> ModuleCacheKeys;
+
   /// A list of arguments to forward to LLVM's option processing; this
   /// should only be used for debugging and experimental features.
   std::vector<std::string> LLVMArgs;

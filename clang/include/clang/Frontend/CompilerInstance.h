@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CAS/CASID.h"
 #include "llvm/CAS/CASOutputBackend.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/FileSystem.h"
@@ -89,6 +90,9 @@ class CompilerInstance : public ModuleLoader {
 
   /// The ActionCache, if any.
   std::shared_ptr<llvm::cas::ActionCache> ActionCache;
+
+  /// The \c ActionCache key for this compilation, if caching is enabled.
+  Optional<cas::CASID> CompileJobCacheKey;
 
   /// The file manager.
   IntrusiveRefCntPtr<FileManager> FileMgr;
@@ -340,6 +344,14 @@ public:
   }
   const CASOptions &getCASOpts() const {
     return Invocation->getCASOpts();
+  }
+
+  Optional<cas::CASID> getCompileJobCacheKey() const {
+    return CompileJobCacheKey;
+  }
+  void setCompileJobCacheKey(cas::CASID Key) {
+    assert(!CompileJobCacheKey || CompileJobCacheKey == Key);
+    CompileJobCacheKey = std::move(Key);
   }
 
   /// }
@@ -707,6 +719,7 @@ public:
       ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,
       bool Preamble, bool UseGlobalModuleIndex,
+      cas::ObjectStore &CAS, cas::ActionCache &Cache,
       std::unique_ptr<llvm::MemoryBuffer> PCHBuffer = nullptr);
 
   /// Create a code completion consumer using the invocation; note that this
@@ -858,6 +871,16 @@ public:
   }
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
+
+  /// Adds a module to the \c InMemoryModuleCache at \p Path by retrieving the
+  /// pcm output from the \c ActionCache for \p CacheKey.
+  ///
+  /// \param Provider description of what provided this cache key, e.g.
+  /// "-fmodule-file-cache-key", or an imported pcm file. Used in diagnostics.
+  ///
+  /// \returns true on failure.
+  bool addCachedModuleFile(StringRef Path, StringRef CacheKey,
+                           StringRef Provider);
 
   InMemoryModuleCache &getModuleCache() const { return *ModuleCache; }
 };

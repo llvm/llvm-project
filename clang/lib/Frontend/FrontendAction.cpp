@@ -510,6 +510,9 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
   // be resolved relative to the build directory of the module map file.
   CI.getPreprocessor().setMainFileDir(M->Directory);
 
+  if (auto CacheKey = CI.getCompileJobCacheKey())
+    M->setModuleCacheKey(CacheKey->toString());
+
   // If the module was inferred from a different module map (via an expanded
   // umbrella module definition), track that fact.
   // FIXME: It would be preferable to fill this in as part of processing
@@ -1058,6 +1061,12 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
            "modules enabled but created an external source that "
            "doesn't support modules");
   }
+
+  // Provide any modules from the action cache.
+  for (const auto &KeyPair : CI.getFrontendOpts().ModuleCacheKeys)
+    if (CI.addCachedModuleFile(KeyPair.first, KeyPair.second,
+                               "-fmodule-file-cache-key"))
+      return false;
 
   // If we were asked to load any module files, do so now.
   for (const auto &ModuleFile : CI.getFrontendOpts().ModuleFiles)
