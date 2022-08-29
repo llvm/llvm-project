@@ -22,18 +22,16 @@
 #define __XTEAM_LOW_FLOAT -__XTEAM_MAX_FLOAT
 #define __XTEAM_MAX_DOUBLE (__builtin_huge_val())
 #define __XTEAM_LOW_DOUBLE -__XTEAM_MAX_DOUBLE
-#define __XTEAM_MAX_INT 2147483647
-#define __XTEAM_LOW_INT (-__XTEAM_MAX_INT - 1)
-// FIXME  Research!
-#define __XTEAM_MAX_UINT 2147483647
-#define __XTEAM_LOW_UINT 0
-// FIXME  Research!
-#define __XTEAM_MAX_LONG 2147483647
-// FIXME  Research!
-#define __XTEAM_LOW_LONG __XTEAM_LOW_INT
-// FIXME  Research!
-#define __XTEAM_MAX_ULONG 2147483647
-#define __XTEAM_LOW_ULONG 0
+#define __XTEAM_MAX_INT32 2147483647
+#define __XTEAM_LOW_INT32 (-__XTEAM_MAX_INT32 - 1)
+#define __XTEAM_MAX_UINT32 4294967295
+#define __XTEAM_LOW_UINT32 0
+#define __XTEAM_MAX_INT64 9223372036854775807
+// #define __XTEAM_LOW_INT64 -9223372036854775808
+#define __XTEAM_LOW_INT64 (-__XTEAM_MAX_INT64 - 1)
+#define __XTEAM_MAX_UINT64 0xffffffffffffffff
+// #define __XTEAM_MAX_UINT64 18446744073709551615
+#define __XTEAM_LOW_UINT64 0
 #define __XTEAM_NTHREADS 1024
 #define __XTEAM_MAXW_PERTEAM 32
 #define __XTEAM_SHARED_LDS static volatile __attribute__((address_space(3)))
@@ -217,10 +215,10 @@ template <typename T> T xteamr_shfl_xor(T var, int lane_mask, int width) {
 
 double xtreamr_get_low(_d_tag) { return __XTEAM_LOW_DOUBLE; }
 float xtreamr_get_low(_f_tag) { return __XTEAM_LOW_FLOAT; }
-int xtreamr_get_low(_i_tag) { return __XTEAM_LOW_INT; }
-long xtreamr_get_low(_l_tag) { return __XTEAM_LOW_LONG; }
-unsigned int xtreamr_get_low(_ui_tag) { return __XTEAM_LOW_UINT; }
-unsigned long xtreamr_get_low(_ul_tag) { return __XTEAM_LOW_ULONG; }
+int xtreamr_get_low(_i_tag) { return __XTEAM_LOW_INT32; }
+long xtreamr_get_low(_l_tag) { return __XTEAM_LOW_INT64; }
+unsigned int xtreamr_get_low(_ui_tag) { return __XTEAM_LOW_UINT32; }
+unsigned long xtreamr_get_low(_ul_tag) { return __XTEAM_LOW_UINT64; }
 template <typename T> T xtreamr_get_low() {
   typedef typename __dispatch_tag<T>::type tag;
   return xtreamr_get_low(tag());
@@ -228,10 +226,10 @@ template <typename T> T xtreamr_get_low() {
 
 double xteamr_get_max(_d_tag) { return __XTEAM_MAX_DOUBLE; }
 float xteamr_get_max(_f_tag) { return __XTEAM_MAX_FLOAT; }
-int xteamr_get_max(_i_tag) { return __XTEAM_MAX_INT; }
-long xteamr_get_max(_l_tag) { return __XTEAM_MAX_LONG; }
-unsigned int xteamr_get_max(_ui_tag) { return __XTEAM_MAX_UINT; }
-unsigned long xteamr_get_max(_ul_tag) { return __XTEAM_MAX_ULONG; }
+int xteamr_get_max(_i_tag) { return __XTEAM_MAX_INT32; }
+long xteamr_get_max(_l_tag) { return __XTEAM_MAX_INT64; }
+unsigned int xteamr_get_max(_ui_tag) { return __XTEAM_MAX_UINT32; }
+unsigned long xteamr_get_max(_ul_tag) { return __XTEAM_MAX_UINT64; }
 template <typename T> T xteamr_get_max() {
   typedef typename __dispatch_tag<T>::type tag;
   return xteamr_get_max(tag());
