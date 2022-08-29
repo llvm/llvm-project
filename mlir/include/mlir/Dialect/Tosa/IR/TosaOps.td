@@ -542,6 +542,8 @@ def Tosa_DivOp : Tosa_Op<"div", [
   let results = (outs
     Tosa_Int32Tensor:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
