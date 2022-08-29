@@ -2101,7 +2101,7 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
   if (scheduleFound) {
     scheduleFound = LoopPipelinerInfo->shouldUseSchedule(*this, Schedule);
     if (!scheduleFound)
-      dbgs() << "Target rejected schedule\n";
+      LLVM_DEBUG(dbgs() << "Target rejected schedule\n");
   }
 
   if (scheduleFound) {
