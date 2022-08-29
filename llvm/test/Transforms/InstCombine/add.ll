@@ -1900,8 +1900,8 @@ define i8 @not_mul_use2(i8 %x) {
 
 define i8 @full_ashr_inc(i8 %x) {
 ; CHECK-LABEL: @full_ashr_inc(
-; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A]], 1
+; CHECK-NEXT:    [[X_NOT:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[X_NOT]], 7
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a = ashr i8 %x, 7
@@ -1911,14 +1911,16 @@ define i8 @full_ashr_inc(i8 %x) {
 
 define <2 x i6> @full_ashr_inc_vec(<2 x i6> %x) {
 ; CHECK-LABEL: @full_ashr_inc_vec(
-; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i6> [[X:%.*]], <i6 5, i6 poison>
-; CHECK-NEXT:    [[R:%.*]] = add <2 x i6> [[A]], <i6 1, i6 1>
+; CHECK-NEXT:    [[X_NOT:%.*]] = xor <2 x i6> [[X:%.*]], <i6 -1, i6 -1>
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i6> [[X_NOT]], <i6 5, i6 5>
 ; CHECK-NEXT:    ret <2 x i6> [[R]]
 ;
   %a = ashr <2 x i6> %x, <i6 5, i6 poison>
   %r = add <2 x i6> %a, <i6 1, i6 1>
   ret <2 x i6> %r
 }
+
+; negative test - extra use
 
 define i8 @full_ashr_inc_use(i8 %x) {
 ; CHECK-LABEL: @full_ashr_inc_use(
@@ -1933,6 +1935,8 @@ define i8 @full_ashr_inc_use(i8 %x) {
   ret i8 %r
 }
 
+; negative test - wrong shift amount
+
 define i8 @not_full_ashr_inc(i8 %x) {
 ; CHECK-LABEL: @not_full_ashr_inc(
 ; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 6
@@ -1943,6 +1947,8 @@ define i8 @not_full_ashr_inc(i8 %x) {
   %r = add i8 %a, 1
   ret i8 %r
 }
+
+; negative test - wrong add amount
 
 define i8 @full_ashr_not_inc(i8 %x) {
 ; CHECK-LABEL: @full_ashr_not_inc(
