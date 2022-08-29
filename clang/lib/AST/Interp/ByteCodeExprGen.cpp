@@ -612,6 +612,14 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     }
     assert(Func);
 
+    // If the function is being compiled right now, this is a recursive call.
+    // In that case, the function can't be valid yet, even though it will be
+    // later.
+    // If the function is already fully compiled but not constexpr, it was
+    // found to be faulty earlier on, so bail out.
+    if (Func->isFullyCompiled() && !Func->isConstexpr())
+      return false;
+
     QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
     Optional<PrimType> T = classify(ReturnType);
 

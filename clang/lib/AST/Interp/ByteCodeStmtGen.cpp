@@ -241,11 +241,16 @@ bool ByteCodeStmtGen<Emitter>::visitVarDecl(const VarDecl *VD) {
 
   // Integers, pointers, primitives.
   if (Optional<PrimType> T = this->classify(DT)) {
+    const Expr *Init = VD->getInit();
+
+    if (!Init)
+      return false;
+
     auto Off = this->allocateLocalPrimitive(VD, *T, DT.isConstQualified());
-    // Compile the initialiser in its own scope.
+    // Compile the initializer in its own scope.
     {
       ExprScope<Emitter> Scope(this);
-      if (!this->visit(VD->getInit()))
+      if (!this->visit(Init))
         return false;
     }
     // Set the value.
