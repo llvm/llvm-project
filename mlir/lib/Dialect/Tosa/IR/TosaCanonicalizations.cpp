@@ -506,6 +506,36 @@ OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
                                                             lhsTy);
 }
 
+OpFoldResult SubOp::fold(ArrayRef<Attribute> operands) {
+  auto lhsTy = getInput1().getType().dyn_cast<RankedTensorType>();
+  auto rhsTy = getInput2().getType().dyn_cast<RankedTensorType>();
+  auto resultTy = getType().dyn_cast<RankedTensorType>();
+  if (!lhsTy || !rhsTy || !resultTy)
+    return {};
+  if (lhsTy != rhsTy)
+    return {};
+
+  auto resultETy = resultTy.getElementType();
+  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+
+  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<FloatType>()) {
+    if (rhsAttr.getSplatValue<APFloat>().isZero())
+      return getInput1();
+  }
+
+  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
+    if (rhsAttr.getSplatValue<APInt>().isZero())
+      return getInput1();
+  }
+
+  if (!lhsAttr || !rhsAttr)
+    return {};
+
+  return BinaryFolder<std::minus<APInt>, std::minus<APFloat>>(lhsAttr, rhsAttr,
+                                                              lhsTy);
+}
+
 namespace {
 template <typename Cmp>
 struct ComparisonFold {
