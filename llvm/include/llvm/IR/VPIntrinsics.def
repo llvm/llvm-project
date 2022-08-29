@@ -235,6 +235,10 @@ BEGIN_REGISTER_VP(vp_fneg, 1, 2, VP_FNEG, -1)
 VP_PROPERTY_FUNCTIONAL_OPC(FNeg)
 END_REGISTER_VP(vp_fneg, VP_FNEG)
 
+// llvm.vp.fabs(x,mask,vlen)
+BEGIN_REGISTER_VP(vp_fabs, 1, 2, VP_FABS, -1)
+END_REGISTER_VP(vp_fabs, VP_FABS)
+
 // llvm.vp.fma(x,y,z,mask,vlen)
 BEGIN_REGISTER_VP(vp_fma, 3, 4, VP_FMA, -1)
 VP_PROPERTY_CONSTRAINEDFP(1, 1, experimental_constrained_fma)
