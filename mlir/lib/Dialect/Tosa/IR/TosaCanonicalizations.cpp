@@ -506,6 +506,40 @@ OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
                                                             lhsTy);
 }
 
+OpFoldResult DivOp::fold(ArrayRef<Attribute> operands) {
+  auto lhsTy = getInput1().getType().dyn_cast<RankedTensorType>();
+  auto rhsTy = getInput2().getType().dyn_cast<RankedTensorType>();
+  auto resultTy = getType().dyn_cast<RankedTensorType>();
+  if (!lhsTy || !rhsTy || !resultTy)
+    return {};
+  if (lhsTy != rhsTy)
+    return {};
+
+  auto resultETy = resultTy.getElementType();
+  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+  if (lhsAttr && lhsAttr.isSplat()) {
+    if (resultETy.isa<IntegerType>() && lhsAttr.getSplatValue<APInt>().isZero())
+      return lhsAttr;
+  }
+
+  if (rhsAttr && rhsAttr.isSplat()) {
+    if (resultETy.isa<IntegerType>() && rhsAttr.getSplatValue<APInt>().isOne())
+      return getInput1();
+  }
+
+  if (rhsAttr && lhsAttr && rhsAttr.isSplat() && lhsAttr.isSplat()) {
+    if (resultETy.isa<IntegerType>()) {
+      APInt l = lhsAttr.getSplatValue<APInt>();
+      APInt r = rhsAttr.getSplatValue<APInt>();
+      APInt result = l.sdiv(r);
+      return DenseElementsAttr::get(resultTy, result);
+    }
+  }
+
+  return {};
+}
+
 namespace {
 DenseElementsAttr MulBinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
                                   RankedTensorType ty, int32_t shift) {
