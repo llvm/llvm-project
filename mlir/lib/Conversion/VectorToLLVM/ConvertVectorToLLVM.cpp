@@ -595,11 +595,13 @@ public:
 
     // Get rank and dimension sizes.
     int64_t rank = vectorType.getRank();
+#ifndef NDEBUG
     bool wellFormed0DCase =
         v1Type.getRank() == 0 && v2Type.getRank() == 0 && rank == 1;
     bool wellFormedNDCase =
         v1Type.getRank() == rank && v2Type.getRank() == rank;
     assert((wellFormed0DCase || wellFormedNDCase) && "op is not well-formed");
+#endif
 
     // For rank 0 and 1, where both operands have *exactly* the same vector
     // type, there is direct shuffle support in LLVM. Use it!
