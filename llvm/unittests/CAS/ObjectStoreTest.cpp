@@ -1,5 +1,4 @@
-//===- ObjectStoreTest.cpp
-//------------------------------------------------------===//
+//===- ObjectStoreTest.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/ObjectStore.h"
-#include "CASTestConfig.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
+
+#include "CASTestConfig.h"
 
 using namespace llvm;
 using namespace llvm::cas;

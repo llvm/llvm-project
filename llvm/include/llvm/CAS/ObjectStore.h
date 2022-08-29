@@ -1,5 +1,4 @@
-//===- llvm/CAS/ObjectStore.h -----------------------------------------*- C++
-//-*-===//
+//===- llvm/CAS/ObjectStore.h -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CAS_ObjectStore_H
-#define LLVM_CAS_ObjectStore_H
+#ifndef LLVM_CAS_OBJECTSTORE_H
+#define LLVM_CAS_OBJECTSTORE_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
@@ -372,4 +371,4 @@ std::string getDefaultOnDiskCASStableID();
 } // namespace cas
 } // namespace llvm
 
-#endif // LLVM_CAS_ObjectStore_H
+#endif // LLVM_CAS_OBJECTSTORE_H
