@@ -849,6 +849,7 @@ static Instruction *foldNoWrapAdd(BinaryOperator &Add,
 
 Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   Value *Op0 = Add.getOperand(0), *Op1 = Add.getOperand(1);
+  Type *Ty = Add.getType();
   Constant *Op1C;
   if (!match(Op1, m_ImmConstant(Op1C)))
     return nullptr;
@@ -883,7 +884,14 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   if (match(Op0, m_Not(m_Value(X))))
     return BinaryOperator::CreateSub(InstCombiner::SubOne(Op1C), X);
 
+  // (iN X s>> (N - 1)) + 1 --> (~X) u>> (N - 1)
   const APInt *C;
+  if (match(Op0, m_OneUse(m_AShr(m_Value(X), m_APIntAllowUndef(C)))) &&
+      *C == (Ty->getScalarSizeInBits() - 1) && match(Op1, m_One())) {
+    Value *NotX = Builder.CreateNot(X, X->getName() + ".not");
+    return BinaryOperator::CreateLShr(NotX, ConstantInt::get(Ty, *C));
+  }
+
   if (!match(Op1, m_APInt(C)))
     return nullptr;
 
@@ -911,7 +919,6 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
 
   // Is this add the last step in a convoluted sext?
   // add(zext(xor i16 X, -32768), -32768) --> sext X
-  Type *Ty = Add.getType();
   if (match(Op0, m_ZExt(m_Xor(m_Value(X), m_APInt(C2)))) &&
       C2->isMinSignedValue() && C2->sext(Ty->getScalarSizeInBits()) == *C)
     return CastInst::Create(Instruction::SExt, X, Ty);
