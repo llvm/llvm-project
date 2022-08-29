@@ -2078,7 +2078,8 @@ void tokenizeConfigFile(StringRef Source, StringSaver &Saver,
 /// current config file.
 ///
 bool readConfigFile(StringRef CfgFileName, StringSaver &Saver,
-                    SmallVectorImpl<const char *> &Argv);
+                    SmallVectorImpl<const char *> &Argv,
+                    llvm::vfs::FileSystem &FS);
 
 /// Expand response files on a command line recursively using the given
 /// StringSaver and tokenization strategy.  Argv should contain the command line
@@ -2099,7 +2100,7 @@ bool readConfigFile(StringRef CfgFileName, StringSaver &Saver,
 /// the current response file.
 /// \param [in] FS File system used for all file access when running the tool.
 /// \param [in] CurrentDir Path used to resolve relative rsp files. If set to
-/// None, process' cwd is used instead.
+/// None, the file system current directory is used instead.
 /// \return true if all @files were expanded successfully or there were none.
 bool ExpandResponseFiles(StringSaver &Saver, TokenizerCallback Tokenizer,
                          SmallVectorImpl<const char *> &Argv, bool MarkEOLs,
