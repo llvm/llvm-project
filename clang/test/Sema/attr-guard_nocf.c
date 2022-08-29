@@ -2,9 +2,13 @@
 // RUN: %clang_cc1 -triple %ms_abi_triple -fms-extensions -verify -std=c++11 -fsyntax-only -x c++ %s
 // RUN: %clang_cc1 -triple x86_64-w64-windows-gnu -verify -fsyntax-only %s
 // RUN: %clang_cc1 -triple x86_64-w64-windows-gnu -verify -std=c++11 -fsyntax-only -x c++ %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -verify -std=c++11 -fsyntax-only -x c++ %s
 
 // The x86_64-w64-windows-gnu version tests mingw target, which relies on
 // __declspec(...) being defined as __attribute__((...)) by compiler built-in.
+
+#if defined(_WIN32)
 
 // Function definition.
 __declspec(guard(nocf)) void testGuardNoCF(void) { // no warning
@@ -35,3 +39,9 @@ __declspec(guard(nocf, nocf)) void testGuardNoCFTooManyParams(void) { // expecte
 // 'guard' Attribute argument must be a supported identifier.
 __declspec(guard(cf)) void testGuardNoCFInvalidParam(void) { // expected-warning {{'guard' attribute argument not supported: 'cf'}}
 }
+
+#else
+
+__attribute((guard(nocf))) void testGNUStyleGuardNoCF(void) {} // expected-warning {{unknown attribute 'guard' ignored}}
+
+#endif

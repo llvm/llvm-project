@@ -868,6 +868,21 @@ void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
   }
   Symbol::Flag ivDSA{Symbol::Flag::AccPrivate};
 
+  const auto getNextDoConstruct =
+      [this](const parser::Block &block) -> const parser::DoConstruct * {
+    for (const auto &entry : block) {
+      if (const auto *doConstruct = GetDoConstructIf(entry)) {
+        return doConstruct;
+      } else if (parser::Unwrap<parser::CompilerDirective>(entry)) {
+        // It is allowed to have a compiler directive associated with the loop.
+        continue;
+      } else {
+        break;
+      }
+    }
+    return nullptr;
+  };
+
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
   for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
     // go through all the nested do-loops and resolve index variables
@@ -879,8 +894,7 @@ void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
     }
 
     const auto &block{std::get<parser::Block>(loop->t)};
-    const auto it{block.begin()};
-    loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
+    loop = getNextDoConstruct(block);
   }
   CHECK(level == 0);
 }

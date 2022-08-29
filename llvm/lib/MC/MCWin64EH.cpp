@@ -948,7 +948,7 @@ static void ARM64ProcessEpilogs(WinEH::FrameInfo *info,
 
   // Epilogs processed so far.
   std::vector<MCSymbol *> AddedEpilogs;
-  for (auto S : EpilogStarts) {
+  for (auto *S : EpilogStarts) {
     MCSymbol *EpilogStart = S;
     auto &EpilogInstrs = info->EpilogMap[S].Instructions;
     uint32_t CodeBytes = ARM64CountOfUnwindCodes(EpilogInstrs);

@@ -416,6 +416,19 @@ func.func @outerproduct_add(%arg0: vector<2xf32>, %arg1: vector<3xf32>, %arg2: v
 // CHECK:       %[[T19:.*]] = builtin.unrealized_conversion_cast %[[T18]] : !llvm.array<2 x vector<3xf32>> to vector<2x3xf32>
 // CHECK:       return %[[T19]] : vector<2x3xf32>
 
+
+// -----
+ 
+func.func @shuffle_0D_direct(%arg0: vector<f32>) -> vector<3xf32> {
+  %1 = vector.shuffle %arg0, %arg0 [0, 1, 0] : vector<f32>, vector<f32>
+  return %1 : vector<3xf32>
+}
+// CHECK-LABEL: @shuffle_0D_direct(
+//  CHECK-SAME:     %[[A:.*]]: vector<f32>
+//       CHECK:   %[[c:.*]] = builtin.unrealized_conversion_cast %[[A]] : vector<f32> to vector<1xf32>
+//       CHECK:   %[[s:.*]] = llvm.shufflevector %[[c]], %[[c]] [0, 1, 0] : vector<1xf32>
+//       CHECK:   return %[[s]] : vector<3xf32>
+
 // -----
 
 func.func @shuffle_1D_direct(%arg0: vector<2xf32>, %arg1: vector<2xf32>) -> vector<2xf32> {

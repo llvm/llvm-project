@@ -27,7 +27,7 @@ public:
   /// Create a maximal range ([0, uint_max(t)] / [int_min(t), int_max(t)])
   /// range that is used to mark the value as unable to be analyzed further,
   /// where `t` is the type of `value`.
-  static IntegerValueRange getPessimisticValueState(Value value);
+  static IntegerValueRange getMaxRange(Value value);
 
   /// Create an integer value range lattice value.
   IntegerValueRange(ConstantIntRanges value) : value(std::move(value)) {}
@@ -73,6 +73,12 @@ class IntegerRangeAnalysis
     : public SparseDataFlowAnalysis<IntegerValueRangeLattice> {
 public:
   using SparseDataFlowAnalysis::SparseDataFlowAnalysis;
+
+  /// At an entry point, we cannot reason about interger value ranges.
+  void setToEntryState(IntegerValueRangeLattice *lattice) override {
+    propagateIfChanged(lattice, lattice->join(IntegerValueRange::getMaxRange(
+                                    lattice->getPoint())));
+  }
 
   /// Visit an operation. Invoke the transfer function on each operation that
   /// implements `InferIntRangeInterface`.

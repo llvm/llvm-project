@@ -67,20 +67,6 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
   }
 };
 
-class SparseTensorTypeConverter : public TypeConverter {
-public:
-  SparseTensorTypeConverter() {
-    addConversion([](Type type) { return type; });
-    addConversion(convertSparseTensorTypes);
-  }
-  // Maps each sparse tensor type to an opaque pointer.
-  static Optional<Type> convertSparseTensorTypes(Type type) {
-    if (getSparseTensorEncoding(type) != nullptr)
-      return LLVM::LLVMPointerType::get(IntegerType::get(type.getContext(), 8));
-    return llvm::None;
-  }
-};
-
 struct SparseTensorConversionPass
     : public SparseTensorConversionBase<SparseTensorConversionPass> {
 
@@ -93,7 +79,7 @@ struct SparseTensorConversionPass
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    SparseTensorTypeConverter converter;
+    SparseTensorTypeToPtrConverter converter;
     ConversionTarget target(*ctx);
     // Everything in the sparse dialect must go!
     target.addIllegalDialect<SparseTensorDialect>();
@@ -158,7 +144,48 @@ struct SparseTensorConversionPass
   }
 };
 
+struct SparseTensorCodegenPass
+    : public SparseTensorCodegenBase<SparseTensorCodegenPass> {
+
+  SparseTensorCodegenPass() = default;
+  SparseTensorCodegenPass(const SparseTensorCodegenPass &pass) = default;
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    SparseTensorTypeToBufferConverter converter;
+    ConversionTarget target(*ctx);
+    // Everything in the sparse dialect must go!
+    target.addIllegalDialect<SparseTensorDialect>();
+    // All dynamic rules below accept new function, call, return, and various
+    // tensor and bufferization operations as legal output of the rewriting.
+    target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
+      return converter.isSignatureLegal(op.getFunctionType());
+    });
+    target.addDynamicallyLegalOp<func::CallOp>([&](func::CallOp op) {
+      return converter.isSignatureLegal(op.getCalleeType());
+    });
+    target.addDynamicallyLegalOp<func::ReturnOp>([&](func::ReturnOp op) {
+      return converter.isLegal(op.getOperandTypes());
+    });
+    // Populate with rules and apply rewriting rules.
+    populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
+                                                                   converter);
+    populateCallOpTypeConversionPattern(patterns, converter);
+    scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
+                                                         target);
+    populateSparseTensorCodegenPatterns(converter, patterns);
+    if (failed(applyPartialConversion(getOperation(), target,
+                                      std::move(patterns))))
+      signalPassFailure();
+  }
+};
+
 } // namespace
+
+//===----------------------------------------------------------------------===//
+// Strategy flag methods.
+//===----------------------------------------------------------------------===//
 
 SparseParallelizationStrategy
 mlir::sparseParallelizationStrategy(int32_t flag) {
@@ -199,6 +226,10 @@ mlir::sparseToSparseConversionStrategy(int32_t flag) {
   }
 }
 
+//===----------------------------------------------------------------------===//
+// Pass creation methods.
+//===----------------------------------------------------------------------===//
+
 std::unique_ptr<Pass> mlir::createSparsificationPass() {
   return std::make_unique<SparsificationPass>();
 }
@@ -215,4 +246,8 @@ std::unique_ptr<Pass> mlir::createSparseTensorConversionPass() {
 std::unique_ptr<Pass> mlir::createSparseTensorConversionPass(
     const SparseTensorConversionOptions &options) {
   return std::make_unique<SparseTensorConversionPass>(options);
+}
+
+std::unique_ptr<Pass> mlir::createSparseTensorCodegenPass() {
+  return std::make_unique<SparseTensorCodegenPass>();
 }

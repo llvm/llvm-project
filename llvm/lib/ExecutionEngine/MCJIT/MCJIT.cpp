@@ -261,10 +261,10 @@ void MCJIT::finalizeObject() {
   // Generate code for module is going to move objects out of the 'added' list,
   // so we need to copy that out before using it:
   SmallVector<Module*, 16> ModsToAdd;
-  for (auto M : OwnedModules.added())
+  for (auto *M : OwnedModules.added())
     ModsToAdd.push_back(M);
 
-  for (auto M : ModsToAdd)
+  for (auto *M : ModsToAdd)
     generateCodeForModule(M);
 
   finalizeLoadedModules();

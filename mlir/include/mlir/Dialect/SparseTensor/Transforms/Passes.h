@@ -11,8 +11,6 @@
 // In general, this file takes the approach of keeping "mechanism" (the
 // actual steps of applying a transformation) completely separate from
 // "policy" (heuristics for when and where to apply transformations).
-// The only exception is in `SparseToSparseConversionStrategy`; for which,
-// see further discussion there.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,14 +19,12 @@
 
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
 namespace bufferization {
 struct OneShotBufferizationOptions;
 } // namespace bufferization
-
-// Forward.
-class TypeConverter;
 
 //===----------------------------------------------------------------------===//
 // The Sparsification pass.
@@ -95,6 +91,12 @@ createSparsificationPass(const SparsificationOptions &options);
 // The SparseTensorConversion pass.
 //===----------------------------------------------------------------------===//
 
+/// Sparse tensor type converter into an opaque pointer.
+class SparseTensorTypeToPtrConverter : public TypeConverter {
+public:
+  SparseTensorTypeToPtrConverter();
+};
+
 /// Defines a strategy for implementing sparse-to-sparse conversion.
 /// `kAuto` leaves it up to the compiler to automatically determine
 /// the method used.  `kViaCOO` converts the source tensor to COO and
@@ -137,6 +139,22 @@ void populateSparseTensorConversionPatterns(
 std::unique_ptr<Pass> createSparseTensorConversionPass();
 std::unique_ptr<Pass>
 createSparseTensorConversionPass(const SparseTensorConversionOptions &options);
+
+//===----------------------------------------------------------------------===//
+// The SparseTensorCodegen pass.
+//===----------------------------------------------------------------------===//
+
+/// Sparse tensor type converter into an actual buffer.
+class SparseTensorTypeToBufferConverter : public TypeConverter {
+public:
+  SparseTensorTypeToBufferConverter();
+};
+
+/// Sets up sparse tensor conversion rules.
+void populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
+                                         RewritePatternSet &patterns);
+
+std::unique_ptr<Pass> createSparseTensorCodegenPass();
 
 //===----------------------------------------------------------------------===//
 // Other rewriting rules and passes.

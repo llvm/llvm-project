@@ -208,7 +208,7 @@ SmallVector<Metadata *> ReplaceableMetadataImpl::getAllArgListUsers() {
     return UserA->second < UserB->second;
   });
   SmallVector<Metadata *> MDUsers;
-  for (auto UserWithID : MDUsersWithID)
+  for (auto *UserWithID : MDUsersWithID)
     MDUsers.push_back(UserWithID->first.get<Metadata *>());
   return MDUsers;
 }

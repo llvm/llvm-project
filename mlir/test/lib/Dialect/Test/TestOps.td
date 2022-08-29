@@ -2130,7 +2130,7 @@ def FormatInferVariadicTypeFromNonVariadic
               [SameOperandsAndResultType]> {
   let arguments = (ins Variadic<AnyType>:$args);
   let results = (outs AnyType:$result);
-  let assemblyFormat = "$args attr-dict `:` type($result)";
+  let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
 def FormatOptionalUnitAttr : TEST_Op<"format_optional_unit_attribute"> {

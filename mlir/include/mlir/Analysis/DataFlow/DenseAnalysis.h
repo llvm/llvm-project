@@ -38,10 +38,6 @@ public:
 
   /// Join the lattice across control-flow or callgraph edges.
   virtual ChangeResult join(const AbstractDenseLattice &rhs) = 0;
-
-  /// Reset the dense lattice to a pessimistic value. This occurs when the
-  /// analysis cannot reason about the data-flow.
-  virtual ChangeResult reset() = 0;
 };
 
 //===----------------------------------------------------------------------===//
@@ -88,11 +84,9 @@ protected:
   const AbstractDenseLattice *getLatticeFor(ProgramPoint dependent,
                                             ProgramPoint point);
 
-  /// Mark the dense lattice as having reached its pessimistic fixpoint and
-  /// propagate an update if it changed.
-  void reset(AbstractDenseLattice *lattice) {
-    propagateIfChanged(lattice, lattice->reset());
-  }
+  /// Set the dense lattice at control flow entry point and propagate an update
+  /// if it changed.
+  virtual void setToEntryState(AbstractDenseLattice *lattice) = 0;
 
   /// Join a lattice with another and propagate an update if it changed.
   void join(AbstractDenseLattice *lhs, const AbstractDenseLattice &rhs) {
@@ -145,6 +139,13 @@ protected:
   /// Get the dense lattice after this program point.
   LatticeT *getLattice(ProgramPoint point) override {
     return getOrCreate<LatticeT>(point);
+  }
+
+  /// Set the dense lattice at control flow entry point and propagate an update
+  /// if it changed.
+  virtual void setToEntryState(LatticeT *lattice) = 0;
+  void setToEntryState(AbstractDenseLattice *lattice) override {
+    setToEntryState(static_cast<LatticeT *>(lattice));
   }
 
 private:

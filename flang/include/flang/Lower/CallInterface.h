@@ -407,6 +407,10 @@ getOrDeclareFunction(llvm::StringRef name,
 mlir::Type getDummyProcedureType(const Fortran::semantics::Symbol &dummyProc,
                                  Fortran::lower::AbstractConverter &);
 
+/// Return true if \p ty is "!fir.ref<i64>", which is the interface for
+/// type(C_PTR/C_FUNPTR) passed by value.
+bool isCPtrArgByValueType(mlir::Type ty);
+
 /// Is it required to pass \p proc as a tuple<function address, result length> ?
 // This is required to convey  the length of character functions passed as dummy
 // procedures.
