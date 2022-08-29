@@ -3,8 +3,8 @@
 // XFAIL: nvptx64-nvidia-cuda-LTO
 
 // Fails on amdgpu with error: GPU Memory Error
-// XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-LTO
+// UNSUPPORTED: amdgcn-amd-amdhsa
+// UNSUPPORTED: amdgcn-amd-amdhsa-LTO
 
 #include <stdio.h>
 #include <omp.h>
