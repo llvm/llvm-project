@@ -3,6 +3,8 @@
 
 ; Verify the cost of scalar ctpop instructions.
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 define i64 @test_ctpop_i64(i64 %a) {
 ; CHECK-LABEL: 'test_ctpop_i64'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %ctpop = call i64 @llvm.ctpop.i64(i64 %a)

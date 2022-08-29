@@ -2,6 +2,8 @@
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -S -mtriple=aarch64--linux-gnu -mattr=+sve | FileCheck %s
 ; RUN: opt < %s -passes="print<cost-model>" 2>&1 -type-based-intrinsic-cost -disable-output -S -mtriple=aarch64--linux-gnu -mattr=+sve | FileCheck %s --check-prefix=TYPE_BASED_ONLY
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 define void @vector_insert_extract(<vscale x 4 x i32> %v0, <vscale x 16 x i32> %v1, <16 x i32> %v2) {
 ; CHECK-LABEL: 'vector_insert_extract'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 81 for instruction: %extract_fixed_from_scalable = call <16 x i32> @llvm.vector.extract.v16i32.nxv4i32(<vscale x 4 x i32> %v0, i64 0)
