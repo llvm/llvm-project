@@ -146,7 +146,8 @@ Attribute Changes in Clang
   ``[[clang::guard(nocf)]]``, which is equivalent to ``__declspec(guard(nocf))``
   when using the MSVC environment. This is to support enabling Windows Control
   Flow Guard checks with the ability to disable them for specific functions when
-  using the MinGW environment.
+  using the MinGW environment. This attribute is only available for Windows
+  targets.
 
 Windows Support
 ---------------
