@@ -208,7 +208,7 @@ public:
     llvm_unreachable("NYI");
   }
   mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *E) {
-    llvm_unreachable("NYI");
+    return VisitCastExpr(E);
   }
   mlir::Value VisitCastExpr(CastExpr *E);
   mlir::Value VisitCallExpr(const CallExpr *E);
@@ -769,8 +769,18 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm_unreachable("NYI");
   case CK_UserDefinedConversion:
     llvm_unreachable("NYI");
-  case CK_NoOp:
-    llvm_unreachable("NYI");
+  case CK_NoOp: {
+    auto V = Visit(const_cast<Expr *>(E));
+    if (V) {
+      // CK_NoOp can model a pointer qualification conversion, which can remove
+      // an array bound and change the IR type.
+      // FIXME: Once pointee types are removed from IR, remove this.
+      auto T = CGF.convertType(DestTy);
+      if (T != V.getType())
+        assert(0 && "NYI");
+    }
+    return V;
+  }
   case CK_BaseToDerived:
     llvm_unreachable("NYI");
   case CK_DerivedToBase:
