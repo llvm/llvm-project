@@ -1581,6 +1581,16 @@ def sexti32_allwusers : PatFrag<(ops node:$src),
   return hasAllWUsers(Node);
 }]>;
 
+def ImmSExt32 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(SignExtend64<32>(N->getSExtValue()),
+                                   SDLoc(N), N->getValueType(0));
+}]>;
+// Look for constants where the upper 32 bits are 0, but sign extending bit 31
+// would be an simm12.
+def u32simm12 : ImmLeaf<XLenVT, [{
+  return isUInt<32>(Imm) && isInt<12>(SignExtend64<32>(Imm));
+}], ImmSExt32>;
+
 let Predicates = [IsRV64] in {
 
 /// sext and zext
@@ -1616,6 +1626,12 @@ def : PatGprImm<binop_allwusers<shl>, SLLIW, uimm5>;
 // occurs because SimplifyDemandedBits prefers srl over sra.
 def : Pat<(binop_allwusers<srl> (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
           (SRAIW GPR:$rs1, uimm5:$shamt)>;
+
+// Use binop_allwusers to recover immediates that may have been broken by
+// SimplifyDemandedBits.
+// TODO: This is valid for ADDI/ORI/XORI.
+def : Pat<(binop_allwusers<and> GPR:$rs1, u32simm12:$imm),
+          (ANDI GPR:$rs1, u32simm12:$imm)>;
 
 /// Loads
 
