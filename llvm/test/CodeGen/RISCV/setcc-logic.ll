@@ -1184,3 +1184,151 @@ define void @and_ne_ule(i32 signext %0, i32 signext %1, i32 signext %2, i32 sign
 9:                                                ; preds = %8, %4
   ret void
 }
+
+define void @and_sge_gt0(i32 signext %0, i32 signext %1, i32 signext %2) {
+; RV32I-LABEL: and_sge_gt0:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slt a0, a0, a1
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    sgtz a1, a2
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    beqz a0, .LBB37_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB37_2:
+; RV32I-NEXT:    tail bar@plt
+;
+; RV64I-LABEL: and_sge_gt0:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slt a0, a0, a1
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    sgtz a1, a2
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    beqz a0, .LBB37_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB37_2:
+; RV64I-NEXT:    tail bar@plt
+  %4 = icmp sge i32 %0, %1
+  %5 = icmp sgt i32 %2, 0
+  %6 = and i1 %4, %5
+  br i1 %6, label %8, label %7
+
+7:                                                ; preds = %4
+  tail call void @bar()
+  br label %8
+
+8:                                                ; preds = %8, %4
+  ret void
+}
+
+define void @and_sle_lt1(i32 signext %0, i32 signext %1, i32 signext %2) {
+; RV32I-LABEL: and_sle_lt1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slt a0, a1, a0
+; RV32I-NEXT:    not a0, a0
+; RV32I-NEXT:    slti a1, a2, 1
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    beqz a0, .LBB38_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB38_2:
+; RV32I-NEXT:    tail bar@plt
+;
+; RV64I-LABEL: and_sle_lt1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slt a0, a1, a0
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    slti a1, a2, 1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    beqz a0, .LBB38_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB38_2:
+; RV64I-NEXT:    tail bar@plt
+  %4 = icmp sle i32 %0, %1
+  %5 = icmp slt i32 %2, 1
+  %6 = and i1 %4, %5
+  br i1 %6, label %8, label %7
+
+7:                                                ; preds = %4
+  tail call void @bar()
+  br label %8
+
+8:                                                ; preds = %8, %4
+  ret void
+}
+
+define void @or_uge_gt0(i32 signext %0, i32 signext %1, i32 signext %2) {
+; RV32I-LABEL: or_uge_gt0:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltu a0, a0, a1
+; RV32I-NEXT:    xori a0, a0, 1
+; RV32I-NEXT:    sgtz a1, a2
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    beqz a0, .LBB39_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB39_2:
+; RV32I-NEXT:    tail bar@plt
+;
+; RV64I-LABEL: or_uge_gt0:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltu a0, a0, a1
+; RV64I-NEXT:    xori a0, a0, 1
+; RV64I-NEXT:    sgtz a1, a2
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    beqz a0, .LBB39_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB39_2:
+; RV64I-NEXT:    tail bar@plt
+  %4 = icmp uge i32 %0, %1
+  %5 = icmp sgt i32 %2, 0
+  %6 = or i1 %4, %5
+  br i1 %6, label %8, label %7
+
+7:                                                ; preds = %4
+  tail call void @bar()
+  br label %8
+
+8:                                                ; preds = %8, %4
+  ret void
+}
+
+define void @or_ule_lt1(i32 signext %0, i32 signext %1, i32 signext %2) {
+; RV32I-LABEL: or_ule_lt1:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltu a0, a1, a0
+; RV32I-NEXT:    xori a0, a0, 1
+; RV32I-NEXT:    slti a1, a2, 1
+; RV32I-NEXT:    or a0, a0, a1
+; RV32I-NEXT:    beqz a0, .LBB40_2
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    ret
+; RV32I-NEXT:  .LBB40_2:
+; RV32I-NEXT:    tail bar@plt
+;
+; RV64I-LABEL: or_ule_lt1:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltu a0, a1, a0
+; RV64I-NEXT:    xori a0, a0, 1
+; RV64I-NEXT:    slti a1, a2, 1
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    beqz a0, .LBB40_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB40_2:
+; RV64I-NEXT:    tail bar@plt
+  %4 = icmp ule i32 %0, %1
+  %5 = icmp slt i32 %2, 1
+  %6 = or i1 %4, %5
+  br i1 %6, label %8, label %7
+
+7:                                                ; preds = %4
+  tail call void @bar()
+  br label %8
+
+8:                                                ; preds = %8, %4
+  ret void
+}
