@@ -437,6 +437,12 @@ struct ClientCapabilities {
   /// textDocument.signatureHelp
   bool HasSignatureHelp = false;
 
+  /// Client signals that it only supports folding complete lines.
+  /// Client will ignore specified `startCharacter` and `endCharacter`
+  /// properties in a FoldingRange.
+  /// textDocument.foldingRange.lineFoldingOnly
+  bool LineFoldingOnly = false;
+
   /// Client supports processing label offsets instead of a simple label string.
   /// textDocument.signatureHelp.signatureInformation.parameterInformation.labelOffsetSupport
   bool OffsetsInSignatureHelp = false;
