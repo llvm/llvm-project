@@ -785,6 +785,8 @@ def Tosa_SubOp : Tosa_Op<"sub", [
   let results = (outs
     Tosa_Tensor:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
