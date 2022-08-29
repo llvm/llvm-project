@@ -162,7 +162,7 @@ DecomposeLinalgOp::createPeeledGenericOp(GenericOp genericOp,
     // map and result type that correspond to the yielded value.
 
     Optional<unsigned> resultNumber;
-    for (auto user : scalarOpResult.getUsers()) {
+    for (auto *user : scalarOpResult.getUsers()) {
       if (auto yieldOp = dyn_cast<YieldOp>(user)) {
         // Find the first use of the `scalarOpResult` in the yield op.
         for (OpOperand &yieldOperand : yieldOp->getOpOperands()) {
@@ -301,7 +301,7 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
                                                 body->getOperations());
 
   Operation *peeledScalarOperation = &(*peeledGenericOpBody->begin());
-  auto yieldOp = residualGenericOpBody->getTerminator();
+  auto *yieldOp = residualGenericOpBody->getTerminator();
   {
     // Yield all the result of the peeled scalar operation.
     OpBuilder::InsertionGuard g(rewriter);
