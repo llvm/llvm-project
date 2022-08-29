@@ -62,7 +62,7 @@ void AbstractDenseDataFlowAnalysis::visitOperation(Operation *op) {
     // If not all return sites are known, then conservatively assume we can't
     // reason about the data-flow.
     if (!predecessors->allPredecessorsKnown())
-      return reset(after);
+      return setToEntryState(after);
     for (Operation *predecessor : predecessors->getKnownPredecessors())
       join(after, *getLatticeFor(op, predecessor));
     return;
@@ -100,7 +100,7 @@ void AbstractDenseDataFlowAnalysis::visitBlock(Block *block) {
       // If not all callsites are known, conservatively mark all lattices as
       // having reached their pessimistic fixpoints.
       if (!callsites->allPredecessorsKnown())
-        return reset(after);
+        return setToEntryState(after);
       for (Operation *callsite : callsites->getKnownPredecessors()) {
         // Get the dense lattice before the callsite.
         if (Operation *prev = callsite->getPrevNode())
@@ -116,7 +116,7 @@ void AbstractDenseDataFlowAnalysis::visitBlock(Block *block) {
       return visitRegionBranchOperation(block, branch, after);
 
     // Otherwise, we can't reason about the data-flow.
-    return reset(after);
+    return setToEntryState(after);
   }
 
   // Join the state with the state after the block's predecessors.
