@@ -26,10 +26,10 @@ namespace include_cleaner {
 ///
 /// References occur at a particular location, refer to a single symbol, and
 /// that symbol may be provided by several headers.
-/// FIXME: Provide signals about the reference type and providing headers so the
-/// caller can filter and rank the results.
-using UsedSymbolCB = llvm::function_ref<void(
-    SourceLocation RefLoc, Symbol Target, llvm::ArrayRef<Header> Providers)>;
+/// FIXME: Provide signals about the providing headers so the caller can filter
+/// and rank the results.
+using UsedSymbolCB = llvm::function_ref<void(SymbolReference SymRef,
+                                             llvm::ArrayRef<Header> Providers)>;
 
 /// Find and report all references to symbols in a region of code.
 ///

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-include-cleaner/Record.h"
+#include "clang-include-cleaner/Types.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclGroup.h"
@@ -86,8 +87,9 @@ private:
     if (MI.isBuiltinMacro())
       return; // __FILE__ is not a reference.
     Recorded.MacroReferences.push_back(
-        SymbolReference{Macro{Tok.getIdentifierInfo(), MI.getDefinitionLoc()},
-                        Tok.getLocation()});
+        SymbolReference{Tok.getLocation(),
+                        Macro{Tok.getIdentifierInfo(), MI.getDefinitionLoc()},
+                        RefType::Explicit});
   }
 
   bool Active = false;
@@ -253,6 +255,5 @@ RecordedPP::RecordedIncludes::match(Header H) const {
 std::unique_ptr<PPCallbacks> RecordedPP::record(const Preprocessor &PP) {
   return std::make_unique<PPRecorder>(*this, PP);
 }
-
 
 } // namespace clang::include_cleaner
