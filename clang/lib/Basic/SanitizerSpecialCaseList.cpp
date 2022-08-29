@@ -33,7 +33,7 @@ SanitizerSpecialCaseList::createOrDie(const std::vector<std::string> &Paths,
   std::string Error;
   if (auto SSCL = create(Paths, VFS, Error))
     return SSCL;
-  llvm::report_fatal_error(Error);
+  llvm::report_fatal_error(StringRef(Error));
 }
 
 void SanitizerSpecialCaseList::createSanitizerSections() {

@@ -6878,8 +6878,9 @@ InstructionCost BoUpSLP::getSpillCost() const {
 }
 
 /// Check if two insertelement instructions are from the same buildvector.
-static bool areTwoInsertFromSameBuildVector(InsertElementInst *VU,
-                                            InsertElementInst *V) {
+static bool areTwoInsertFromSameBuildVector(
+    InsertElementInst *VU, InsertElementInst *V,
+    function_ref<Value *(InsertElementInst *)> GetBaseOperand) {
   // Instructions must be from the same basic blocks.
   if (VU->getParent() != V->getParent())
     return false;
@@ -6906,14 +6907,14 @@ static bool areTwoInsertFromSameBuildVector(InsertElementInst *VU,
           getInsertIndex(IE1).value_or(Idx2) == Idx2)
         IE1 = nullptr;
       else
-        IE1 = dyn_cast<InsertElementInst>(IE1->getOperand(0));
+        IE1 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE1));
     }
     if (IE2) {
       if ((IE2 != V && !IE2->hasOneUse()) ||
           getInsertIndex(IE2).value_or(Idx1) == Idx1)
         IE2 = nullptr;
       else
-        IE2 = dyn_cast<InsertElementInst>(IE2->getOperand(0));
+        IE2 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE2));
     }
   } while (IE1 || IE2);
   return false;
@@ -7117,12 +7118,18 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
         Optional<unsigned> InsertIdx = getInsertIndex(VU);
         if (InsertIdx) {
           const TreeEntry *ScalarTE = getTreeEntry(EU.Scalar);
-          auto *It =
-              find_if(FirstUsers,
-                      [VU](const std::pair<Value *, const TreeEntry *> &Pair) {
-                        return areTwoInsertFromSameBuildVector(
-                            VU, cast<InsertElementInst>(Pair.first));
-                      });
+          auto *It = find_if(
+              FirstUsers,
+              [this, VU](const std::pair<Value *, const TreeEntry *> &Pair) {
+                return areTwoInsertFromSameBuildVector(
+                    VU, cast<InsertElementInst>(Pair.first),
+                    [this](InsertElementInst *II) -> Value * {
+                      Value *Op0 = II->getOperand(0);
+                      if (getTreeEntry(II) && !getTreeEntry(Op0))
+                        return nullptr;
+                      return Op0;
+                    });
+              });
           int VecId = -1;
           if (It == FirstUsers.end()) {
             (void)ShuffleMasks.emplace_back();
@@ -8590,7 +8597,9 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
                 find_if(ShuffledInserts, [VU](const ShuffledInsertData &Data) {
                   // Checks if 2 insertelements are from the same buildvector.
                   InsertElementInst *VecInsert = Data.InsertElements.front();
-                  return areTwoInsertFromSameBuildVector(VU, VecInsert);
+                  return areTwoInsertFromSameBuildVector(
+                      VU, VecInsert,
+                      [](InsertElementInst *II) { return II->getOperand(0); });
                 });
             unsigned Idx = *InsertIdx;
             if (It == ShuffledInserts.end()) {
