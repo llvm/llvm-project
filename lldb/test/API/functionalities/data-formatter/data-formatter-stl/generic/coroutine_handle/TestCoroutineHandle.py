@@ -23,6 +23,10 @@ class TestCoroutineHandle(TestBase):
         # Run until the initial suspension point
         lldbutil.run_to_source_breakpoint(self, '// Break at initial_suspend',
                 lldb.SBFileSpec("main.cpp", False))
+
+        if self.frame().FindVariable("is_supported").GetValueAsUnsigned(1) == 0:
+            self.skipTest("c++ library not supported")
+
         # Check that we show the correct function pointers and the `promise`. 
         self.expect_expr("gen.hdl",
             result_summary=re.compile("^coro frame = 0x[0-9a-f]*$"),
@@ -63,7 +67,7 @@ class TestCoroutineHandle(TestBase):
         # Check that we still show the remaining data correctly.
         self.expect_expr("gen.hdl",
             result_children=[
-                ValueCheck(name="resume", value = "0x0000000000000000"),
+                ValueCheck(name="resume", value = re.compile("^0x0+$")),
                 ValueCheck(name="destroy", summary = test_generator_func_ptr_re),
                 ValueCheck(name="promise", children=[
                     ValueCheck(name="current_value", value = "42"),

@@ -116,6 +116,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed a false positive in :doc:`bugprone-assignment-in-if-condition
+  <clang-tidy/checks/bugprone/assignment-in-if-condition>` check when there
+  was an assignement in a lambda found in the condition of an ``if``.
+
 - Improved :doc:`bugprone-signal-handler
   <clang-tidy/checks/bugprone/signal-handler>` check. Partial
   support for C++14 signal handler rules was added. Bug report generation was

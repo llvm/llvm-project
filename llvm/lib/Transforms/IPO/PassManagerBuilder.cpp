@@ -246,9 +246,9 @@ void PassManagerBuilder::addExtensionsToPM(ExtensionPointTy ETy,
         std::get<1>(Ext)(*this, PM);
     }
   }
-  for (unsigned i = 0, e = Extensions.size(); i != e; ++i)
-    if (Extensions[i].first == ETy)
-      Extensions[i].second(*this, PM);
+  for (const auto &[PT, Fn] : Extensions)
+    if (PT == ETy)
+      Fn(*this, PM);
 }
 
 void PassManagerBuilder::addInitialAliasAnalysisPasses(

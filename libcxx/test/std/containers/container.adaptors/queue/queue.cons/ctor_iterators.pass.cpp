@@ -24,10 +24,17 @@ static_assert(!std::is_constructible_v<std::queue<int>, int*, int*, int>);
 static_assert( std::is_constructible_v<std::queue<int, std::deque<int, test_allocator<int>>>, int*, int*, test_allocator<int>>);
 static_assert(!std::is_constructible_v<std::queue<int, std::deque<int, test_allocator<int>>>, int*, int*, std::allocator<int>>);
 
-struct alloc : test_allocator<int> {
+template <class T>
+struct alloc : test_allocator<T> {
   alloc(test_allocator_statistics* a);
+
+  template <class U>
+  struct rebind {
+    using other = alloc<U>;
+  };
 };
-static_assert( std::is_constructible_v<std::queue<int, std::deque<int, alloc>>, int*, int*, test_allocator_statistics*>);
+static_assert(
+    std::is_constructible_v<std::queue<int, std::deque<int, alloc<int>>>, int*, int*, test_allocator_statistics*>);
 
 int main(int, char**) {
   const int a[] = {4, 3, 2, 1};

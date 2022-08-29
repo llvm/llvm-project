@@ -935,10 +935,11 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
   if (Tok.is(tok::kw__Static_assert) && !getLangOpts().C11)
     Diag(Tok, diag::ext_c11_feature) << Tok.getName();
   if (Tok.is(tok::kw_static_assert)) {
-    if (!getLangOpts().CPlusPlus)
-      Diag(Tok, diag::ext_ms_static_assert)
-          << FixItHint::CreateReplacement(Tok.getLocation(), "_Static_assert");
-    else
+    if (!getLangOpts().CPlusPlus) {
+      if (!getLangOpts().C2x)
+        Diag(Tok, diag::ext_ms_static_assert) << FixItHint::CreateReplacement(
+            Tok.getLocation(), "_Static_assert");
+    } else
       Diag(Tok, diag::warn_cxx98_compat_static_assert);
   }
 

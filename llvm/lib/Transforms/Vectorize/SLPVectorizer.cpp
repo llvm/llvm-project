@@ -3326,7 +3326,7 @@ template <> struct DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
     raw_string_ostream OS(Str);
     if (isSplat(Entry->Scalars))
       OS << "<splat> ";
-    for (auto V : Entry->Scalars) {
+    for (auto *V : Entry->Scalars) {
       OS << *V;
       if (llvm::any_of(R->ExternalUses, [&](const BoUpSLP::ExternalUser &EU) {
             return EU.Scalar == V;
@@ -10057,7 +10057,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   DT->updateDFSNumbers();
 
   // Scan the blocks in the function in post order.
-  for (auto BB : post_order(&F.getEntryBlock())) {
+  for (auto *BB : post_order(&F.getEntryBlock())) {
     // Start new block - clear the list of reduction roots.
     R.clearReductionData();
     collectSeedInstructions(BB);

@@ -137,7 +137,7 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
     // SCC gets destroyed since its backedges are removed. That may
     // not be necessary if we can retain such backedges.
     if (Headers.count(Child->getHeader())) {
-      for (auto BB : Child->blocks()) {
+      for (auto *BB : Child->blocks()) {
         if (LI.getLoopFor(BB) != Child)
           continue;
         LI.changeLoopFor(BB, NewLoop);

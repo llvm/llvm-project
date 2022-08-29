@@ -66,6 +66,7 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <assert.h>
+#include <numeric>
 #include <type_traits>
 #include <vector>
 
@@ -341,7 +342,7 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
       Info.TripMultiple = 0;
     } else {
       Info.BreakoutTrip = Info.TripMultiple =
-          (unsigned)GreatestCommonDivisor64(ULO.Count, Info.TripMultiple);
+          (unsigned)std::gcd(ULO.Count, Info.TripMultiple);
     }
     Info.ExitOnTrue = !L->contains(BI->getSuccessor(0));
     Info.ExitingBlocks.push_back(ExitingBlock);

@@ -1,7 +1,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=loop-distribute -enable-loop-distribute -verify-loop-info -verify-dom-info -S \
 ; RUN:   < %s | FileCheck %s
 
-; RUN: opt -aa-pipeline=basic-aa -passes='loop-distribute,loop(print-access-info)' -enable-loop-distribute \
+; RUN: opt -aa-pipeline=basic-aa -passes='loop-distribute,loop(print<access-info>)' -enable-loop-distribute \
 ; RUN:   -verify-loop-info -verify-dom-info -disable-output < %s 2>&1 | FileCheck %s --check-prefix=ANALYSIS
 
 ; RUN: opt -aa-pipeline=basic-aa -passes=loop-distribute,loop-vectorize -enable-loop-distribute -force-vector-width=4 -S \

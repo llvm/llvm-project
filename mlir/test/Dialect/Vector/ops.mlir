@@ -165,6 +165,13 @@ func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: ve
   return %4 : vector<8x16xf32>
 }
 
+// CHECK-LABEL: @shuffle0D
+func.func @shuffle0D(%a: vector<f32>) -> vector<3xf32> {
+  // CHECK: vector.shuffle %{{.*}}, %{{.*}}[0, 1, 0] : vector<f32>, vector<f32>
+  %1 = vector.shuffle %a, %a[0, 1, 0] : vector<f32>, vector<f32>
+  return %1 : vector<3xf32>
+}
+
 // CHECK-LABEL: @shuffle1D
 func.func @shuffle1D(%a: vector<2xf32>, %b: vector<4xf32>) -> vector<2xf32> {
   // CHECK: vector.shuffle %{{.*}}, %{{.*}}[0, 1, 2, 3] : vector<2xf32>, vector<2xf32>
@@ -568,6 +575,22 @@ func.func @transpose_int(%arg0: vector<11x7x3x2xi32>) -> vector<2x11x7x3xi32> {
   %0 = vector.transpose %arg0, [3, 0, 1, 2] : vector<11x7x3x2xi32> to vector<2x11x7x3xi32>
   // CHECK: return %[[X]] : vector<2x11x7x3xi32>
   return %0 : vector<2x11x7x3xi32>
+}
+
+// CHECK-LABEL: @transpose_fp_0d
+func.func @transpose_fp_0d(%arg0: vector<f32>) -> vector<f32> {
+  // CHECK: %[[X:.*]] = vector.transpose %{{.*}}, [] : vector<f32> to vector<f32>
+  %0 = vector.transpose %arg0, [] : vector<f32> to vector<f32>
+  // CHECK: return %[[X]] : vector<f32>
+  return %0 : vector<f32>
+}
+
+// CHECK-LABEL: @transpose_int_0d
+func.func @transpose_int_0d(%arg0: vector<i32>) -> vector<i32> {
+  // CHECK: %[[X:.*]] = vector.transpose %{{.*}}, [] : vector<i32> to vector<i32>
+  %0 = vector.transpose %arg0, [] : vector<i32> to vector<i32>
+  // CHECK: return %[[X]] : vector<i32>
+  return %0 : vector<i32>
 }
 
 // CHECK-LABEL: @flat_transpose_fp

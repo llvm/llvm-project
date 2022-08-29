@@ -21,6 +21,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Debug.h"
+#include <numeric>
 
 #define DEBUG_TYPE "presburger"
 
@@ -537,7 +538,7 @@ static void eliminateFromConstraint(IntegerRelation *constraints,
     return;
   int64_t pivotCoeff = constraints->atEq(pivotRow, pivotCol);
   int64_t sign = (leadCoeff * pivotCoeff > 0) ? -1 : 1;
-  int64_t lcm = mlir::lcm(pivotCoeff, leadCoeff);
+  int64_t lcm = std::lcm(pivotCoeff, leadCoeff);
   int64_t pivotMultiplier = sign * (lcm / std::abs(pivotCoeff));
   int64_t rowMultiplier = lcm / std::abs(leadCoeff);
 
@@ -658,7 +659,7 @@ bool IntegerRelation::isEmptyByGCDTest() const {
   for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
     uint64_t gcd = std::abs(atEq(i, 0));
     for (unsigned j = 1; j < numCols - 1; ++j) {
-      gcd = llvm::GreatestCommonDivisor64(gcd, std::abs(atEq(i, j)));
+      gcd = std::gcd(gcd, (uint64_t)std::abs(atEq(i, j)));
     }
     int64_t v = std::abs(atEq(i, numCols - 1));
     if (gcd > 0 && (v % gcd != 0)) {
@@ -1827,7 +1828,7 @@ void IntegerRelation::fourierMotzkinEliminate(unsigned pos, bool darkShadow,
         if (l == pos)
           continue;
         assert(lbCoeff >= 1 && ubCoeff >= 1 && "bounds wrongly identified");
-        int64_t lcm = mlir::lcm(lbCoeff, ubCoeff);
+        int64_t lcm = std::lcm(lbCoeff, ubCoeff);
         ineq.push_back(atIneq(ubPos, l) * (lcm / ubCoeff) +
                        atIneq(lbPos, l) * (lcm / lbCoeff));
         assert(lcm > 0 && "lcm should be positive!");

@@ -111,7 +111,7 @@ convertToHSV(const std::tuple<uint8_t, uint8_t, uint8_t> &Color) {
 // Takes a double precision number, clips it between 0 and 1 and then converts
 // that to an integer between 0x00 and 0xFF with proxpper rounding.
 static uint8_t unitIntervalTo8BitChar(double B) {
-  double n = std::max(std::min(B, 1.0), 0.0);
+  double n = std::clamp(B, 0.0, 1.0);
   return static_cast<uint8_t>(255 * n + 0.5);
 }
 

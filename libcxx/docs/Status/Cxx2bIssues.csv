@@ -173,7 +173,7 @@
 "`3702 <https://wg21.link/LWG3702>`__","Should ``zip_transform_view::iterator`` remove ``operator<``","July 2022","",""
 "`3703 <https://wg21.link/LWG3703>`__","Missing requirements for ``expected<T, E>`` requires ``is_void<T>``","July 2022","",""
 "`3704 <https://wg21.link/LWG3704>`__","LWG 2059 added overloads that might be ill-formed for sets","July 2022","",""
-"`3705 <https://wg21.link/LWG3705>`__","Hashability shouldn't depend on basic_string's allocator","July 2022","",""
+"`3705 <https://wg21.link/LWG3705>`__","Hashability shouldn't depend on basic_string's allocator","July 2022","|Complete|","16.0"
 "`3707 <https://wg21.link/LWG3707>`__","chunk_view::outer-iterator::value_type::size should return unsigned type","July 2022","","","|ranges|"
 "`3708 <https://wg21.link/LWG3708>`__","``take_while_view::sentinel``'s conversion constructor should move","July 2022","","","|ranges|"
 "`3709 <https://wg21.link/LWG3709>`__","LWG-3703 was underly ambitious","July 2022","",""

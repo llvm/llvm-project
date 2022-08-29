@@ -796,7 +796,7 @@ void CompilerInvocation::setFortranOpts() {
 
   // Add the directory supplied through -J/-module-dir to the list of search
   // directories
-  if (moduleDirJ.compare(".") != 0)
+  if (moduleDirJ != ".")
     fortranOptions.searchDirectories.emplace_back(moduleDirJ);
 
   if (frontendOptions.instrumentedParse)

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s --implicit-check-not="call void @__sanitizer_"
+// RUN: %clang_cc1 -no-opaque-pointers -O1 -fsanitize=memory -fsanitize-memory-use-after-dtor -disable-llvm-passes -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s --implicit-check-not="call void @__sanitizer_"
 
 // Base class has trivial dtor => complete dtor poisons base class memory directly.
 

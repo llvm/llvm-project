@@ -221,16 +221,23 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     return replaceInstUsesWith(I, FoldedMul);
 
   // Simplify mul instructions with a constant RHS.
-  if (isa<Constant>(Op1)) {
-    // Canonicalize (X+C1)*CI -> X*CI+C1*CI.
+  Constant *MulC;
+  if (match(Op1, m_ImmConstant(MulC))) {
+    // Canonicalize (X+C1)*MulC -> X*MulC+C1*MulC.
     Value *X;
     Constant *C1;
-    if (match(Op0, m_OneUse(m_Add(m_Value(X), m_Constant(C1))))) {
-      Value *Mul = Builder.CreateMul(C1, Op1);
-      // Only go forward with the transform if C1*CI simplifies to a tidier
-      // constant.
-      if (!match(Mul, m_Mul(m_Value(), m_Value())))
-        return BinaryOperator::CreateAdd(Builder.CreateMul(X, Op1), Mul);
+    if (match(Op0, m_OneUse(m_Add(m_Value(X), m_ImmConstant(C1))))) {
+      // C1*MulC simplifies to a tidier constant.
+      Value *NewC = Builder.CreateMul(C1, MulC);
+      auto *BOp0 = cast<BinaryOperator>(Op0);
+      Value *NewMul = Builder.CreateMul(X, MulC);
+      auto *BO = BinaryOperator::CreateAdd(NewMul, NewC);
+      auto *NewMulBO = dyn_cast<BinaryOperator>(NewMul);
+      if (I.hasNoUnsignedWrap() && BOp0->hasNoUnsignedWrap() && NewMulBO) {
+        NewMulBO->setHasNoUnsignedWrap();
+        BO->setHasNoUnsignedWrap();
+      }
+      return BO;
     }
   }
 

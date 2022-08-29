@@ -87,7 +87,8 @@ def uimm2 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<2>;
 }
 
-def uimm2_plus1 : Operand<GRLenVT> {
+def uimm2_plus1 : Operand<GRLenVT>,
+    ImmLeaf<GRLenVT, [{return isUInt<2>(Imm - 1);}]> {
   let ParserMatchClass = UImmAsmOperand<2, "plus1">;
   let EncoderMethod = "getImmOpValueSub1";
   let DecoderMethod = "decodeUImmOperand<2, 1>";
@@ -733,6 +734,19 @@ def : Pat<(AddLike (i64 BaseAddr:$rj), simm12:$imm12),
           (ADDI_D (i64 BaseAddr:$rj), simm12:$imm12)>;
 } // Predicates = [IsLA64]
 
+/// Shifted addition
+let Predicates = [IsLA32] in {
+def : Pat<(add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
+          (ALSL_W GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
+} // Predicates = [IsLA32]
+let Predicates = [IsLA64] in {
+def : Pat<(add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
+          (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
+def : Pat<(loongarch_bstrpick (add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
+                              (i64 31), (i64 0)),
+          (ALSL_WU GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
+} // Predicates = [IsLA64]
+
 /// Shift
 
 let Predicates = [IsLA32] in {
@@ -929,20 +943,20 @@ defm : LdPat<load, LD_D, i64>;
 
 // LA64 register-register-addressed loads
 let Predicates = [IsLA64] in {
-class RegRegLdPat<PatFrag LoadOp, LAInst Inst>
-  : Pat<(i64 (LoadOp (add BaseAddr:$rj, GPR:$rk))),
+class RegRegLdPat<PatFrag LoadOp, LAInst Inst, ValueType vt>
+  : Pat<(vt (LoadOp (add BaseAddr:$rj, GPR:$rk))),
         (Inst BaseAddr:$rj, GPR:$rk)>;
 
-def : RegRegLdPat<extloadi8, LDX_B>;
-def : RegRegLdPat<sextloadi8, LDX_B>;
-def : RegRegLdPat<zextloadi8, LDX_BU>;
-def : RegRegLdPat<extloadi16, LDX_H>;
-def : RegRegLdPat<sextloadi16, LDX_H>;
-def : RegRegLdPat<zextloadi16, LDX_HU>;
-def : RegRegLdPat<extloadi32, LDX_W>;
-def : RegRegLdPat<sextloadi32, LDX_W>;
-def : RegRegLdPat<zextloadi32, LDX_WU>;
-def : RegRegLdPat<load, LDX_D>;
+def : RegRegLdPat<extloadi8, LDX_B, i64>;
+def : RegRegLdPat<sextloadi8, LDX_B, i64>;
+def : RegRegLdPat<zextloadi8, LDX_BU, i64>;
+def : RegRegLdPat<extloadi16, LDX_H, i64>;
+def : RegRegLdPat<sextloadi16, LDX_H, i64>;
+def : RegRegLdPat<zextloadi16, LDX_HU, i64>;
+def : RegRegLdPat<extloadi32, LDX_W, i64>;
+def : RegRegLdPat<sextloadi32, LDX_W, i64>;
+def : RegRegLdPat<zextloadi32, LDX_WU, i64>;
+def : RegRegLdPat<load, LDX_D, i64>;
 } // Predicates = [IsLA64]
 
 /// Stores
@@ -977,14 +991,15 @@ def : Pat<(store (i64 GPR:$rd), (AddLike BaseAddr:$rj, simm14_lsl2:$imm14)),
 
 // LA64 register-register-addressed stores
 let Predicates = [IsLA64] in {
-class RegRegStPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy>
-  : Pat<(StoreOp (i64 StTy:$rd), (add BaseAddr:$rj, GPR:$rk)),
+class RegRegStPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
+                  ValueType vt>
+  : Pat<(StoreOp (vt StTy:$rd), (add BaseAddr:$rj, GPR:$rk)),
         (Inst StTy:$rd, BaseAddr:$rj, GPR:$rk)>;
 
-def : RegRegStPat<truncstorei8, STX_B, GPR>;
-def : RegRegStPat<truncstorei16, STX_H, GPR>;
-def : RegRegStPat<truncstorei32, STX_W, GPR>;
-def : RegRegStPat<store, STX_D, GPR>;
+def : RegRegStPat<truncstorei8, STX_B, GPR, i64>;
+def : RegRegStPat<truncstorei16, STX_H, GPR, i64>;
+def : RegRegStPat<truncstorei32, STX_W, GPR, i64>;
+def : RegRegStPat<store, STX_D, GPR, i64>;
 } // Predicates = [IsLA64]
 
 /// Atomic loads and stores

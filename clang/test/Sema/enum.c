@@ -160,7 +160,7 @@ struct EnumRedeclStruct {
   } e;
 };
 
-enum struct GH42372_1 { // expected-error {{expected identifier or '{'}} expected-warning {{declaration does not declare anything}}
+enum struct GH42372_1 { // expected-error {{expected identifier or '{'}}
   One
 };
 

@@ -1824,13 +1824,9 @@ bool BinaryFunction::postProcessIndirectBranches(
       // If this block contains an epilogue code and has an indirect branch,
       // then most likely it's a tail call. Otherwise, we cannot tell for sure
       // what it is and conservatively reject the function's CFG.
-      bool IsEpilogue = false;
-      for (const MCInst &Instr : BB) {
-        if (BC.MIB->isLeave(Instr) || BC.MIB->isPop(Instr)) {
-          IsEpilogue = true;
-          break;
-        }
-      }
+      bool IsEpilogue = llvm::any_of(BB, [&](const MCInst &Instr) {
+        return BC.MIB->isLeave(Instr) || BC.MIB->isPop(Instr);
+      });
       if (IsEpilogue) {
         BC.MIB->convertJmpToTailCall(Instr);
         BB.removeAllSuccessors();

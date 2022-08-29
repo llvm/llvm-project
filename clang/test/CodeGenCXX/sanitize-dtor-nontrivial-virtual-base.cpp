@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsanitize=memory -O0 -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -fsanitize=memory -O1 -disable-llvm-passes -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fsanitize=memory -O0 -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s --implicit-check-not="call void @__sanitizer_"
+// RUN: %clang_cc1 -fsanitize=memory -O1 -disable-llvm-passes -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s --implicit-check-not="call void @__sanitizer_"
 
 template <class T>
 class Vector {
@@ -47,6 +47,7 @@ Derived d;
 
 // CHECK-LABEL: define {{.*}}ZN7DerivedD1Ev
 // CHECK: call void {{.*}}ZN11VirtualBaseD2Ev
+// CHECK: call void @__sanitizer_dtor_callback({{.*}}, i64 8)
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}ZN7DerivedD0Ev
@@ -61,11 +62,13 @@ Derived d;
 // poison 2 ints
 // CHECK-LABEL: define {{.*}}ZN11VirtualBaseD2Ev
 // CHECK: call void {{.*}}sanitizer_dtor_callback({{.*}}, i64 8)
+// CHECK: call void {{.*}}sanitizer_dtor_callback({{.*}}, i64 8)
 // CHECK: ret void
 
 // poison int and double
 // CHECK-LABEL: define {{.*}}ZN4BaseD2Ev
 // CHECK: call void {{.*}}sanitizer_dtor_callback({{.*}}, i64 16)
+// CHECK: call void {{.*}}sanitizer_dtor_callback({{.*}}, i64 8)
 // CHECK: ret void
 
 // poison int, ignore vector, poison int

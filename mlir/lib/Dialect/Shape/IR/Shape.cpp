@@ -778,7 +778,7 @@ struct CanonicalizeCastExtentTensorOperandsPattern
                                 PatternRewriter &rewriter) const override {
     // Canonicalize operands.
     bool anyChange = false;
-    auto canonicalizeOperand = [&](Value operand) {
+    auto canonicalizeOperand = [&](Value operand) -> Value {
       if (auto castOp = operand.getDefiningOp<tensor::CastOp>()) {
         // Only eliminate the cast if it holds no shape information.
         bool isInformationLoosingCast =

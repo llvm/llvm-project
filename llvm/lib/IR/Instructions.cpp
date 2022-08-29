@@ -2511,7 +2511,7 @@ static bool isReplicationMaskWithParams(ArrayRef<int> Mask,
 bool ShuffleVectorInst::isReplicationMask(ArrayRef<int> Mask,
                                           int &ReplicationFactor, int &VF) {
   // undef-less case is trivial.
-  if (none_of(Mask, [](int MaskElt) { return MaskElt == UndefMaskElem; })) {
+  if (!llvm::is_contained(Mask, UndefMaskElem)) {
     ReplicationFactor =
         Mask.take_while([](int MaskElt) { return MaskElt == 0; }).size();
     if (ReplicationFactor == 0 || Mask.size() % ReplicationFactor != 0)

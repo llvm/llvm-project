@@ -1102,3 +1102,35 @@ func.func @not_projected_permutation(%arg0: tensor<8x8xf32>) -> tensor<6x6x3x3xf
     } -> tensor<6x6x3x3xf32>
   return %result : tensor<6x6x3x3xf32>
 }
+
+// -----
+
+// Check vectorization can handle cases where outputs are a mix of reduced and non-reduced values.
+func.func @mixed_parallel_reduced_results(%arg0 : tensor<2x4x8xf32>,
+    %arg1 : tensor<2x4xf32>, %arg2 : tensor<2x4x8xf32>, %arg3 : tensor<2x4xf32>) ->
+    (tensor<2x4x8xf32>, tensor<2x4xf32>) {
+  %0:2 = linalg.generic {
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1, d2)>, affine_map<(d0, d1, d2) -> (d0, d1)>],
+      iterator_types = ["parallel", "parallel", "reduction"]}
+      ins(%arg0, %arg1 : tensor<2x4x8xf32>, tensor<2x4xf32>)
+      outs(%arg2, %arg3 : tensor<2x4x8xf32>, tensor<2x4xf32>) {
+    ^bb0(%b0 : f32, %b1 : f32, %b2 : f32, %b3 : f32):
+      %1 = arith.mulf %b0, %b1 : f32
+      %2 = arith.addf %1, %b3 : f32
+      linalg.yield %1, %2 : f32, f32
+  } -> (tensor<2x4x8xf32>, tensor<2x4xf32>)
+  return %0#0, %0#1 : tensor<2x4x8xf32>, tensor<2x4xf32>
+}
+// CHECK-LABEL: func @mixed_parallel_reduced_results(
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<2x4x8xf32>
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<2x4xf32>
+//  CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<2x4x8xf32>
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: tensor<2x4xf32>
+//   CHECK-DAG:   %[[V0:.+]] = vector.transfer_read %[[ARG0]]
+//   CHECK-DAG:   %[[V1:.+]] = vector.transfer_read %[[ARG1]]
+//   CHECK-DAG:   %[[V2:.+]] = vector.transfer_read %[[ARG3]]
+//   CHECK-DAG:   %[[MUL:.+]] = arith.mulf %[[V0]], %[[V1]]
+//   CHECK-DAG:   %[[ADD:.+]] = vector.multi_reduction <add>, %[[MUL]], %[[V2]]
+//   CHECK-DAG:   vector.transfer_write %[[MUL]], %[[ARG2]]
+//   CHECK-DAG:   vector.transfer_write %[[ADD]], %[[ARG3]]

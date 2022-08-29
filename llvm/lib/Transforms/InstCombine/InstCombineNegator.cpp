@@ -248,6 +248,19 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
     return nullptr;
 
   switch (I->getOpcode()) {
+  case Instruction::ZExt: {
+    // Negation of zext of signbit is signbit splat:
+    // 0 - (zext (i8 X u>> 7) to iN) --> sext (i8 X s>> 7) to iN
+    Value *SrcOp = I->getOperand(0);
+    unsigned SrcWidth = SrcOp->getType()->getScalarSizeInBits();
+    const APInt &FullShift = APInt(SrcWidth, SrcWidth - 1);
+    if (IsTrulyNegation &&
+        match(SrcOp, m_LShr(m_Value(X), m_SpecificIntAllowUndef(FullShift)))) {
+      Value *Ashr = Builder.CreateAShr(X, FullShift);
+      return Builder.CreateSExt(Ashr, I->getType());
+    }
+    break;
+  }
   case Instruction::And: {
     Constant *ShAmt;
     // sub(y,and(lshr(x,C),1)) --> add(ashr(shl(x,(BW-1)-C),BW-1),y)

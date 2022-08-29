@@ -70,7 +70,7 @@ static bool BPFPreserveDITypeImpl(Function &F) {
 
   std::string BaseName = "llvm.btf_type_id.";
   static int Count = 0;
-  for (auto Call : PreserveDITypeCalls) {
+  for (auto *Call : PreserveDITypeCalls) {
     const ConstantInt *Flag = dyn_cast<ConstantInt>(Call->getArgOperand(1));
     assert(Flag);
     uint64_t FlagValue = Flag->getValue().getZExtValue();

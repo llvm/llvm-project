@@ -54,7 +54,7 @@ def OpD : NS_Op<"mix_variadic_and_normal_inputs_op", [SameVariadicOperandSize]> 
 // CHECK-LABEL: ::mlir::Operation::operand_range OpD::input1
 // CHECK-NEXT: return getODSOperands(0);
 
-// CHECK-LABEL: ::mlir::Value OpD::input2
+// CHECK-LABEL: ::mlir::TypedValue<::mlir::TensorType> OpD::input2
 // CHECK-NEXT: return *getODSOperands(1).begin();
 
 // CHECK-LABEL: OpD::build

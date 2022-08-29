@@ -1,5 +1,13 @@
 #include <coroutine>
 
+bool is_implementation_supported() {
+#ifdef _GLIBCXX_RELEASE
+  return _GLIBCXX_RELEASE >= 11;
+#else
+  return true;
+#endif
+}
+
 // `int_generator` is a stripped down, minimal coroutine generator
 // type.
 struct int_generator {
@@ -32,6 +40,7 @@ int_generator my_generator_func() { co_yield 42; }
 void empty_function_so_we_can_set_a_breakpoint() {}
 
 int main() {
+  bool is_supported = is_implementation_supported();
   int_generator gen = my_generator_func();
   std::coroutine_handle<> type_erased_hdl = gen.hdl;
   gen.hdl.resume();                            // Break at initial_suspend

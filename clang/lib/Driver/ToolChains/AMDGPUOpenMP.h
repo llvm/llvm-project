@@ -20,49 +20,6 @@ namespace toolchains {
 class AMDGPUOpenMPToolChain;
 }
 
-namespace tools {
-
-namespace AMDGCN {
-// Runs llvm-link/opt/llc/lld, which links multiple LLVM bitcode, together with
-// device library, then compiles it to ISA in a shared object.
-class LLVM_LIBRARY_VISIBILITY OpenMPLinker : public Tool {
-public:
-  OpenMPLinker(const ToolChain &TC)
-      : Tool("AMDGCN::OpenMPLinker", "amdgcn-link", TC) {}
-
-  bool hasIntegratedCPP() const override { return false; }
-
-  void ConstructJob(Compilation &C, const JobAction &JA,
-                    const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::opt::ArgList &TCArgs,
-                    const char *LinkingOutput) const override;
-
-private:
-  /// \return llvm-link output file name.
-  const char *constructLLVMLinkCommand(
-      const toolchains::AMDGPUOpenMPToolChain &AMDGPUOpenMPTC, Compilation &C,
-      const JobAction &JA, const InputInfoList &Inputs,
-      const llvm::opt::ArgList &Args, llvm::StringRef SubArchName,
-      llvm::StringRef OutputFilePrefix) const;
-
-  /// \return llc output file name.
-  const char *constructLlcCommand(Compilation &C, const JobAction &JA,
-                                  const InputInfoList &Inputs,
-                                  const llvm::opt::ArgList &Args,
-                                  llvm::StringRef SubArchName,
-                                  llvm::StringRef OutputFilePrefix,
-                                  const char *InputFileName,
-                                  bool OutputIsAsm = false) const;
-
-  void constructLldCommand(Compilation &C, const JobAction &JA,
-                           const InputInfoList &Inputs, const InputInfo &Output,
-                           const llvm::opt::ArgList &Args,
-                           const char *InputFileName) const;
-};
-
-} // end namespace AMDGCN
-} // end namespace tools
-
 namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY AMDGPUOpenMPToolChain final
@@ -98,9 +55,6 @@ public:
                      const llvm::opt::ArgList &Args) const override;
 
   const ToolChain &HostTC;
-
-protected:
-  Tool *buildLinker() const override;
 };
 
 } // end namespace toolchains

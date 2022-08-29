@@ -97,8 +97,8 @@ public:
     Node *N = Root.get();
     for (auto Ch : Name) {
       std::string Label(1, Ch);
-      auto It = std::find_if(N->Children.begin(), N->Children.end(),
-                             [&](const auto &C) { return C->Name == Label; });
+      auto It = llvm::find_if(N->Children,
+                              [&](const auto &C) { return C->Name == Label; });
       if (It == N->Children.end()) {
         It = N->Children.insert(It, std::make_unique<Node>(Label, N));
       }

@@ -60,6 +60,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
+#include <numeric>
 
 using namespace llvm;
 
@@ -4427,8 +4428,7 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
       // So we can say that the maximum power of two which is a divisor of
       // gcd(Offset, Alignment) is an alignment.
 
-      uint32_t gcd =
-          greatestCommonDivisor(uint32_t(abs((int32_t)Offset)), Alignment);
+      uint32_t gcd = std::gcd(uint32_t(abs((int32_t)Offset)), Alignment);
       Alignment = llvm::PowerOf2Floor(gcd);
     }
   }
@@ -4563,8 +4563,8 @@ struct AAAlignFloating : AAAlignImpl {
           // So we can say that the maximum power of two which is a divisor of
           // gcd(Offset, Alignment) is an alignment.
 
-          uint32_t gcd = greatestCommonDivisor(uint32_t(abs((int32_t)Offset)),
-                                               uint32_t(PA.value()));
+          uint32_t gcd =
+              std::gcd(uint32_t(abs((int32_t)Offset)), uint32_t(PA.value()));
           Alignment = llvm::PowerOf2Floor(gcd);
         } else {
           Alignment = V.getPointerAlignment(DL).value();

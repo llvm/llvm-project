@@ -4747,20 +4747,19 @@ QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
 /// Retrieve a substitution-result type.
 QualType
 ASTContext::getSubstTemplateTypeParmType(const TemplateTypeParmType *Parm,
-                                         QualType Replacement,
-                                         Optional<unsigned> PackIndex) const {
+                                         QualType Replacement) const {
   assert(Replacement.isCanonical()
          && "replacement types must always be canonical");
 
   llvm::FoldingSetNodeID ID;
-  SubstTemplateTypeParmType::Profile(ID, Parm, Replacement, PackIndex);
+  SubstTemplateTypeParmType::Profile(ID, Parm, Replacement);
   void *InsertPos = nullptr;
   SubstTemplateTypeParmType *SubstParm
     = SubstTemplateTypeParmTypes.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!SubstParm) {
     SubstParm = new (*this, TypeAlignment)
-        SubstTemplateTypeParmType(Parm, Replacement, PackIndex);
+      SubstTemplateTypeParmType(Parm, Replacement);
     Types.push_back(SubstParm);
     SubstTemplateTypeParmTypes.InsertNode(SubstParm, InsertPos);
   }
