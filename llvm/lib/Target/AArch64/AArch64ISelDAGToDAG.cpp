@@ -924,7 +924,7 @@ bool AArch64DAGToDAGISel::SelectArithUXTXRegister(SDValue N, SDValue &Reg,
 /// a single pseudo-instruction for an ADRP/ADD pair so over-aggressive folding
 /// leads to duplicated ADRP instructions.
 static bool isWorthFoldingADDlow(SDValue N) {
-  for (auto Use : N->uses()) {
+  for (auto *Use : N->uses()) {
     if (Use->getOpcode() != ISD::LOAD && Use->getOpcode() != ISD::STORE &&
         Use->getOpcode() != ISD::ATOMIC_LOAD &&
         Use->getOpcode() != ISD::ATOMIC_STORE)

@@ -6899,7 +6899,7 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
   // Learn whether the last use/def of each cross-iteration register is a use or
   // def. If it is a def, RegisterPressure will implicitly increase max pressure
   // and we do not have to add the pressure.
-  for (auto SU : ProposedSchedule)
+  for (auto *SU : ProposedSchedule)
     for (ConstMIBundleOperands OperI(*SU->getInstr()); OperI.isValid();
          ++OperI) {
       auto MO = *OperI;
@@ -6928,7 +6928,7 @@ bool ARMPipelinerLoopInfo::tooMuchRegisterPressure(SwingSchedulerDAG &SSD,
 
   bumpCrossIterationPressure(RPTracker, CrossIterationNeeds);
 
-  for (auto SU : ProposedSchedule) {
+  for (auto *SU : ProposedSchedule) {
     MachineBasicBlock::const_iterator CurInstI = SU->getInstr();
     RPTracker.setPos(std::next(CurInstI));
     RPTracker.recede();

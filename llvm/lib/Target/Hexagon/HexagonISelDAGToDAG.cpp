@@ -984,7 +984,7 @@ static bool isMemOPCandidate(SDNode *I, SDNode *U) {
 void HexagonDAGToDAGISel::ppSimplifyOrSelect0(std::vector<SDNode*> &&Nodes) {
   SelectionDAG &DAG = *CurDAG;
 
-  for (auto I : Nodes) {
+  for (auto *I : Nodes) {
     if (I->getOpcode() != ISD::OR)
       continue;
 
@@ -1032,7 +1032,7 @@ void HexagonDAGToDAGISel::ppSimplifyOrSelect0(std::vector<SDNode*> &&Nodes) {
 void HexagonDAGToDAGISel::ppAddrReorderAddShl(std::vector<SDNode*> &&Nodes) {
   SelectionDAG &DAG = *CurDAG;
 
-  for (auto I : Nodes) {
+  for (auto *I : Nodes) {
     if (I->getOpcode() != ISD::STORE)
       continue;
 
