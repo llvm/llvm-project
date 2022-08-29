@@ -2,8 +2,6 @@
 // RUN: %clang_cc1 -std=c++20 -verify=ref %s
 
 
-// expected-no-diagnostics
-// ref-no-diagnostics
 constexpr int getMinus5() {
   int a = 10;
   a = -5;
@@ -53,3 +51,12 @@ constexpr int pointerAssign2() {
   return v;
 }
 static_assert(pointerAssign2() == 12, "");
+
+
+constexpr int unInitLocal() {
+  int a;
+  return a; // ref-note{{read of uninitialized object}}
+}
+static_assert(unInitLocal() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                       // ref-error {{not an integral constant expression}} \
+                                       // ref-note {{in call to 'unInitLocal()'}}
