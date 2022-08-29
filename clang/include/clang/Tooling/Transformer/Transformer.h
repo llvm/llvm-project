@@ -120,6 +120,11 @@ populateMetadata(const transformer::RewriteRuleWith<T> &Rule,
                  size_t SelectedCase,
                  const ast_matchers::MatchFinder::MatchResult &Match,
                  TransformerResult<T> &Result) {
+  // Silence a false positive GCC -Wunused-but-set-parameter warning in constexpr
+  // cases, by marking SelectedCase as used. See
+  // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85827 for details. The issue is
+  // fixed in GCC 10.
+  (void)SelectedCase;
   if constexpr (!std::is_void_v<T>) {
     auto Metadata = Rule.Metadata[SelectedCase]->eval(Match);
     if (!Metadata)
