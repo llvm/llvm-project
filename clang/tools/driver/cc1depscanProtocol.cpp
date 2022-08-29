@@ -10,11 +10,13 @@
 #include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/StringSaver.h"
 
 #if LLVM_ON_UNIX
 #include <sys/socket.h> // FIXME: Unix-only. Not portable.
@@ -144,21 +146,28 @@ Expected<ScanDaemon> ScanDaemon::launchDaemon(StringRef BasePath,
       BasePathCStr.c_str(),
   };
 
-  const char *ArgsTestMode[] = {
-      Arg0,
-      "-cc1depscand",
-      "-run", // -launch if we want the daemon to fork itself.
-      BasePathCStr.c_str(),
-      "-shutdown",
-  };
-
   static bool LaunchTestDaemon =
       llvm::sys::Process::GetEnv("__CLANG_TEST_CC1DEPSCAND_SHUTDOWN")
           .has_value();
+  static Optional<std::string> LaunchTestArgs =
+      llvm::sys::Process::GetEnv("__CLANG_TEST_CC1DEPSCAND_EXTRA_ARGS");
 
-  ArrayRef<const char *> InitialArgs =
-      LaunchTestDaemon ? makeArrayRef(ArgsTestMode) : makeArrayRef(Args);
+  ArrayRef<const char *> InitialArgs = makeArrayRef(Args);
   SmallVector<const char *> LaunchArgs(InitialArgs.begin(), InitialArgs.end());
+  if (LaunchTestDaemon)
+    LaunchArgs.push_back("-shutdown");
+
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Saver(Alloc);
+  if (LaunchTestArgs) {
+    StringRef Arg, Remaining = *LaunchTestArgs;
+    while (!Remaining.empty()) {
+      std::tie(Arg, Remaining) = Remaining.split(' ');
+      StringRef A = Saver.save(Arg);
+      LaunchArgs.push_back(A.data());
+    }
+  }
+
   if (Sharing.ShareViaIdentifier) {
     // Invocations that share state via identifier will be isolated from
     // unrelated daemons, so the daemon they share is safe to stay alive longer.

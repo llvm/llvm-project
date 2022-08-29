@@ -25,6 +25,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/DependencyScanning/ScanAndUpdateArgs.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Bitstream/BitstreamReader.h"
@@ -684,30 +685,36 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
   bool KeepAlive = false;
   bool Detached = false;
   bool Debug = false;
-  if (Argv.size() >= 3) {
-    if (StringRef(Argv[2]) == "-shutdown")
-      ShutDownTest = true;
-    if (StringRef(Argv[2]) == "-detach")
-      Detached = true;
-    if (StringRef(Argv[2]) == "-debug") {
-      // Debug mode. Running in detach mode.
-      Debug = true;
-      Detached = true;
-    }
-  }
-
-  ArrayRef<const char *> CASArgs;
-  auto CASArgsI = std::find(Argv.begin(), Argv.end(), StringRef("-cas-args"));
-  if (CASArgsI != Argv.end()) {
-    CASArgs = llvm::makeArrayRef(CASArgsI + 1, Argv.end());
-  }
+  bool SingleCommandMode = false;
 
   // Whether the daemon can safely stay alive a longer period of time.
   // FIXME: Consider designing a mechanism to notify daemons, started for a
   // particular "build session", to shutdown, then have it stay alive until the
   // session is finished.
-  bool LongRunning =
-      std::find(Argv.begin(), CASArgsI, StringRef("-long-running")) != CASArgsI;
+  bool LongRunning = false;
+
+  // List of cas options.
+  ArrayRef<const char *> CASArgs;
+
+  for (const auto *A = Argv.begin() + 2; A != Argv.end(); ++A) {
+    StringRef Arg(*A);
+    if (Arg == "-shutdown")
+      ShutDownTest = true;
+    else if (Arg == "-detach")
+      Detached = true;
+    else if (Arg == "-long-running")
+      LongRunning = true;
+    else if (Arg == "-single-command")
+      SingleCommandMode = true;
+    else if (Arg == "-debug") {
+      // Debug mode. Running in detach mode.
+      Debug = true;
+      Detached = true;
+    } else if (Arg == "-cas-args") {
+      CASArgs = llvm::makeArrayRef(A + 1, Argv.end());
+      break;
+    }
+  }
 
   auto formSpawnArgsForCommand =
       [&](const char *Command) -> SmallVector<const char *> {
@@ -895,158 +902,171 @@ int cc1depscand_main(ArrayRef<const char *> Argv, const char *Argv0,
     llvm::outs() << "launched in shutdown test state\n";
 #endif
 
-  for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
-    Pool.async([&CAS, &Service, &ShutDown, &ListenSocket, &NumRunning, &Start,
-                &SecondsSinceLastClose, I, Argv0, &SharedOS, ShutDownTest,
-                &ShutdownCleanUp]() {
-      Optional<tooling::dependencies::DependencyScanningTool> Tool;
-      SmallString<256> Message;
-      while (true) {
-        if (ShutDown.load())
-          return;
+  auto ServiceLoop = [&CAS, &Service, &ShutDown, &ListenSocket, &NumRunning,
+                      &Start, &SecondsSinceLastClose, Argv0, &SharedOS,
+                      ShutDownTest, &ShutdownCleanUp,
+                      SingleCommandMode](unsigned I) {
+    Optional<tooling::dependencies::DependencyScanningTool> Tool;
+    SmallString<256> Message;
+    while (true) {
+      if (ShutDown.load())
+        return;
 
-        int Data = cc1depscand::acceptSocket(ListenSocket);
-        if (Data == -1)
-          continue;
+      int Data = cc1depscand::acceptSocket(ListenSocket);
+      if (Data == -1)
+        continue;
 
-        auto CloseData = llvm::make_scope_exit([&]() { ::close(Data); });
-        cc1depscand::CC1DepScanDProtocol Comms(Data);
+      auto CloseData = llvm::make_scope_exit([&]() { ::close(Data); });
+      cc1depscand::CC1DepScanDProtocol Comms(Data);
 
-        auto StopRunning = llvm::make_scope_exit([&]() {
-          SecondsSinceLastClose.store(
-              std::chrono::duration_cast<std::chrono::seconds>(
-                  std::chrono::steady_clock::now() - Start)
-                  .count());
-          --NumRunning;
-        });
+      auto StopRunning = llvm::make_scope_exit([&]() {
+        SecondsSinceLastClose.store(
+            std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::steady_clock::now() - Start)
+                .count());
+        --NumRunning;
+      });
 
-        {
-          ++NumRunning;
+      {
+        ++NumRunning;
 
-          // In test mode, just tear down everything.
-          if (ShutDownTest) {
-            ShutdownCleanUp();
-            ShutDown.store(true);
-            continue;
-          }
-          // Check again for shutdown, since the main thread could have
-          // requested it before we created the service.
-          //
-          // FIXME: Return Optional<ServiceReference> from the map, handling
-          // this condition in getOrCreateService().
-          if (ShutDown.load()) {
-            // Abort the work in shutdown state since the thread can go down
-            // anytime.
-            return; // FIXME: Tell the client about this?
-          }
-        }
-
-        // First put a result kind as a handshake.
-        if (auto E = Comms.putResultKind(
-              cc1depscand::CC1DepScanDProtocol::SuccessResult)) {
-          SharedOS.applyLocked([&](raw_ostream &OS) {
-            OS << I << ": failed to send handshake\n";
-            logAllUnhandledErrors(std::move(E), OS);
-          });
-          continue; // go back to wait when handshake failed.
-        }
-
-        llvm::BumpPtrAllocator Alloc;
-        llvm::StringSaver Saver(Alloc);
-        StringRef WorkingDirectory;
-        SmallVector<const char *> Args;
-        cc1depscand::DepscanPrefixMapping PrefixMapping;
-        if (llvm::Error E = Comms.getCommand(Saver, WorkingDirectory, Args,
-                                             PrefixMapping)) {
-          SharedOS.applyLocked([&](raw_ostream &OS) {
-            OS << I << ": failed to get command\n";
-            logAllUnhandledErrors(std::move(E), OS);
-          });
-          continue; // FIXME: Tell the client something went wrong.
-        }
-
-        if (StringRef(Args[0]) == "-shutdown") {
-          consumeError(Comms.putResultKind(
-              cc1depscand::CC1DepScanDProtocol::SuccessResult));
+        // In test mode, just tear down everything.
+        if (ShutDownTest) {
           ShutdownCleanUp();
           ShutDown.store(true);
           continue;
         }
-
-        // cc1 request.
-        ++NumRequests;
-        auto printScannedCC1 = [&](raw_ostream &OS) {
-          OS << I << ": scanned -cc1:";
-          for (const char *Arg : Args)
-            OS << " " << Arg;
-          OS << "\n";
-        };
-
-        bool ProduceIncludeTree =
-            Service.getFormat() ==
-            tooling::dependencies::ScanningOutputFormat::IncludeTree;
-
-        // Is this safe to reuse? Or does DependendencyScanningWorkerFileSystem
-        // make some bad assumptions about relative paths?
-        if (!Tool) {
-          llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> UnderlyingFS =
-              llvm::vfs::createPhysicalFileSystem();
-          if (ProduceIncludeTree)
-            UnderlyingFS = llvm::cas::createCASProvidingFileSystem(
-                CAS, std::move(UnderlyingFS));
-          Tool.emplace(Service, std::move(UnderlyingFS));
+        // Check again for shutdown, since the main thread could have
+        // requested it before we created the service.
+        //
+        // FIXME: Return Optional<ServiceReference> from the map, handling
+        // this condition in getOrCreateService().
+        if (ShutDown.load()) {
+          // Abort the work in shutdown state since the thread can go down
+          // anytime.
+          return; // FIXME: Tell the client about this?
         }
+      }
 
-        IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
-            CreateAndPopulateDiagOpts(Args);
-        SmallString<128> DiagsBuffer;
-        llvm::raw_svector_ostream DiagsOS(DiagsBuffer);
-        DiagsOS.enable_colors(true);
-        auto DiagsConsumer = std::make_unique<TextDiagnosticPrinter>(
-            DiagsOS, DiagOpts.get(), false);
+      // First put a result kind as a handshake.
+      if (auto E = Comms.putResultKind(
+              cc1depscand::CC1DepScanDProtocol::SuccessResult)) {
+        SharedOS.applyLocked([&](raw_ostream &OS) {
+          OS << I << ": failed to send handshake\n";
+          logAllUnhandledErrors(std::move(E), OS);
+        });
+        continue; // go back to wait when handshake failed.
+      }
 
-        SmallVector<const char *> NewArgs;
-        auto RootID = scanAndUpdateCC1InlineWithTool(
-            *Tool, *DiagsConsumer, &DiagsOS, Argv0, Args, WorkingDirectory,
-            NewArgs, PrefixMapping, *CAS,
-            [&](const Twine &T) { return Saver.save(T).data(); });
-        if (!RootID) {
-          consumeError(Comms.putScanResultFailed(toString(RootID.takeError())));
-          SharedOS.applyLocked([&](raw_ostream &OS) {
-            printScannedCC1(OS);
-            OS << I << ": failed to create compiler invocation\n";
-            OS << DiagsBuffer;
-          });
-          continue;
-        }
+      llvm::BumpPtrAllocator Alloc;
+      llvm::StringSaver Saver(Alloc);
+      StringRef WorkingDirectory;
+      SmallVector<const char *> Args;
+      cc1depscand::DepscanPrefixMapping PrefixMapping;
+      if (llvm::Error E =
+              Comms.getCommand(Saver, WorkingDirectory, Args, PrefixMapping)) {
+        SharedOS.applyLocked([&](raw_ostream &OS) {
+          OS << I << ": failed to get command\n";
+          logAllUnhandledErrors(std::move(E), OS);
+        });
+        continue; // FIXME: Tell the client something went wrong.
+      }
 
-        auto printComputedCC1 = [&](raw_ostream &OS) {
-          OS << I << ": sending back new -cc1 args:\n";
-          for (const char *Arg : NewArgs)
-            OS << " " << Arg;
-          OS << "\n";
-        };
-        if (llvm::Error E = Comms.putScanResultSuccess(
-                RootID->toString(), NewArgs, DiagsOS.str())) {
-          SharedOS.applyLocked([&](raw_ostream &OS) {
-            printScannedCC1(OS);
-            printComputedCC1(OS);
-            logAllUnhandledErrors(std::move(E), OS);
-          });
-          continue; // FIXME: Tell the client something went wrong.
-        }
+      if (StringRef(Args[0]) == "-shutdown") {
+        consumeError(Comms.putResultKind(
+            cc1depscand::CC1DepScanDProtocol::SuccessResult));
+        ShutdownCleanUp();
+        ShutDown.store(true);
+        continue;
+      }
 
-        // Done!
-#ifndef NDEBUG
-        // In +asserts mode, print out -cc1s even on success.
+      // cc1 request.
+      ++NumRequests;
+      auto printScannedCC1 = [&](raw_ostream &OS) {
+        OS << I << ": scanned -cc1:";
+        for (const char *Arg : Args)
+          OS << " " << Arg;
+        OS << "\n";
+      };
+
+      bool ProduceIncludeTree =
+          Service.getFormat() ==
+          tooling::dependencies::ScanningOutputFormat::IncludeTree;
+
+      // Is this safe to reuse? Or does DependendencyScanningWorkerFileSystem
+      // make some bad assumptions about relative paths?
+      if (!Tool) {
+        llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> UnderlyingFS =
+            llvm::vfs::createPhysicalFileSystem();
+        if (ProduceIncludeTree)
+          UnderlyingFS = llvm::cas::createCASProvidingFileSystem(
+              CAS, std::move(UnderlyingFS));
+        Tool.emplace(Service, std::move(UnderlyingFS));
+      }
+
+      IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts =
+          CreateAndPopulateDiagOpts(Args);
+      SmallString<128> DiagsBuffer;
+      llvm::raw_svector_ostream DiagsOS(DiagsBuffer);
+      DiagsOS.enable_colors(true);
+      auto DiagsConsumer = std::make_unique<TextDiagnosticPrinter>(
+          DiagsOS, DiagOpts.get(), false);
+
+      SmallVector<const char *> NewArgs;
+      auto RootID = scanAndUpdateCC1InlineWithTool(
+          *Tool, *DiagsConsumer, &DiagsOS, Argv0, Args, WorkingDirectory,
+          NewArgs, PrefixMapping, *CAS,
+          [&](const Twine &T) { return Saver.save(T).data(); });
+      if (!RootID) {
+        consumeError(Comms.putScanResultFailed(toString(RootID.takeError())));
+        SharedOS.applyLocked([&](raw_ostream &OS) {
+          printScannedCC1(OS);
+          OS << I << ": failed to create compiler invocation\n";
+          OS << DiagsBuffer;
+        });
+        continue;
+      }
+
+      auto printComputedCC1 = [&](raw_ostream &OS) {
+        OS << I << ": sending back new -cc1 args:\n";
+        for (const char *Arg : NewArgs)
+          OS << " " << Arg;
+        OS << "\n";
+      };
+      if (llvm::Error E = Comms.putScanResultSuccess(RootID->toString(),
+                                                     NewArgs, DiagsOS.str())) {
         SharedOS.applyLocked([&](raw_ostream &OS) {
           printScannedCC1(OS);
           printComputedCC1(OS);
+          logAllUnhandledErrors(std::move(E), OS);
         });
-#endif
+        continue; // FIXME: Tell the client something went wrong.
       }
-    });
+
+      // Done!
+#ifndef NDEBUG
+      // In +asserts mode, print out -cc1s even on success.
+      SharedOS.applyLocked([&](raw_ostream &OS) {
+        printScannedCC1(OS);
+        printComputedCC1(OS);
+      });
+#endif
+      if (SingleCommandMode) {
+        ShutdownCleanUp();
+        ShutDown.store(true);
+        return;
+      }
+    }
   };
+
+  if (SingleCommandMode) {
+    // If in run once mode. Run it single thread then exit.
+    ServiceLoop(0);
+    ::exit(0);
+  }
+
+  for (unsigned I = 0; I < Pool.getThreadCount(); ++I)
+    Pool.async(ServiceLoop, I);
 
   // Wait for the work to finish.
   const uint64_t SecondsBetweenAttempts = 5;
