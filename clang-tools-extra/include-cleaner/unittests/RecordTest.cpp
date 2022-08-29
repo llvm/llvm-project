@@ -185,7 +185,7 @@ TEST_F(RecordPPTest, CapturesMacroRefs) {
       SM.translateFile(AST.fileManager().getFile("header.h").get()),
       Header.point("def"));
   ASSERT_THAT(Recorded.MacroReferences, Not(IsEmpty()));
-  Symbol OrigX = Recorded.MacroReferences.front().Symbol;
+  Symbol OrigX = Recorded.MacroReferences.front().Target;
   EXPECT_EQ("X", OrigX.macro().Name->getName());
   EXPECT_EQ(Def, OrigX.macro().Definition);
 
@@ -193,7 +193,7 @@ TEST_F(RecordPPTest, CapturesMacroRefs) {
   std::vector<unsigned> ExpOffsets; // Expansion locs of refs in macro locs.
   std::vector<SourceLocation> RefMacroLocs;
   for (const auto &Ref : Recorded.MacroReferences) {
-    if (Ref.Symbol == OrigX) {
+    if (Ref.Target == OrigX) {
       auto [FID, Off] = SM.getDecomposedLoc(Ref.RefLocation);
       if (FID == SM.getMainFileID()) {
         RefOffsets.push_back(Off);

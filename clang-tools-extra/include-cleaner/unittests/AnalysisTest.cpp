@@ -50,12 +50,12 @@ TEST(WalkUsed, Basic) {
 
   auto &SM = AST.sourceManager();
   llvm::DenseMap<size_t, std::vector<Header>> OffsetToProviders;
-  walkUsed(TopLevelDecls, [&](SourceLocation RefLoc, Symbol S,
-                              llvm::ArrayRef<Header> Providers) {
-    auto [FID, Offset] = SM.getDecomposedLoc(RefLoc);
-    EXPECT_EQ(FID, SM.getMainFileID());
-    OffsetToProviders.try_emplace(Offset, Providers.vec());
-  });
+  walkUsed(TopLevelDecls,
+           [&](SymbolReference SymRef, llvm::ArrayRef<Header> Providers) {
+             auto [FID, Offset] = SM.getDecomposedLoc(SymRef.RefLocation);
+             EXPECT_EQ(FID, SM.getMainFileID());
+             OffsetToProviders.try_emplace(Offset, Providers.vec());
+           });
   auto HeaderFile = Header(AST.fileManager().getFile("header.h").get());
   auto MainFile = Header(SM.getFileEntryForID(SM.getMainFileID()));
   auto VectorSTL = Header(tooling::stdlib::Header::named("<vector>").value());

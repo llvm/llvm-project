@@ -42,9 +42,7 @@ struct Macro {
   /// The location of the Name where the macro is defined.
   SourceLocation Definition;
 
-  bool operator==(const Macro &S) const {
-    return Definition == S.Definition;
-  }
+  bool operator==(const Macro &S) const { return Definition == S.Definition; }
 };
 
 /// An entity that can be referenced in the code.
@@ -78,12 +76,24 @@ private:
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Symbol &);
 
+/// Indicates the relation between the reference and the target.
+enum class RefType {
+  /// Target is named by the reference, e.g. function call.
+  Explicit,
+  /// Target isn't spelled, e.g. default constructor call in `Foo f;`
+  Implicit,
+  /// Target's use can't be proven, e.g. a candidate for an unresolved overload.
+  Ambiguous,
+};
+
 /// Indicates that a piece of code refers to a symbol.
 struct SymbolReference {
-  /// The symbol referred to.
-  Symbol Symbol;
   /// The point in the code that refers to the symbol.
   SourceLocation RefLocation;
+  /// The symbol referred to.
+  Symbol Target;
+  /// Relation type between the reference location and the target.
+  RefType RT;
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolReference &);
 
