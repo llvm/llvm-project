@@ -288,6 +288,9 @@ public:
   /// Create the analysis state at the given program point.
   AnalysisState(ProgramPoint point) : point(point) {}
 
+  /// Returns the program point this static is located at.
+  ProgramPoint getPoint() const { return point; }
+
   /// Returns true if the analysis state is uninitialized.
   virtual bool isUninitialized() const = 0;
 
