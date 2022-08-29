@@ -360,9 +360,9 @@ static bool globalIsInitialized(fir::GlobalOp global) {
 }
 
 /// Call \p genInit to generate code inside \p global initializer region.
-static void
-createGlobalInitialization(fir::FirOpBuilder &builder, fir::GlobalOp global,
-                           std::function<void(fir::FirOpBuilder &)> genInit) {
+void Fortran::lower::createGlobalInitialization(
+    fir::FirOpBuilder &builder, fir::GlobalOp global,
+    std::function<void(fir::FirOpBuilder &)> genInit) {
   mlir::Region &region = global.getRegion();
   region.push_back(new mlir::Block);
   mlir::Block &block = region.back();
@@ -424,24 +424,26 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
         sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
     if (details && details->init()) {
       auto expr = *details->init();
-      createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
-        mlir::Value box =
-            Fortran::lower::genInitialDataTarget(converter, loc, symTy, expr);
-        b.create<fir::HasValueOp>(loc, box);
-      });
+      Fortran::lower::createGlobalInitialization(
+          builder, global, [&](fir::FirOpBuilder &b) {
+            mlir::Value box = Fortran::lower::genInitialDataTarget(
+                converter, loc, symTy, expr);
+            b.create<fir::HasValueOp>(loc, box);
+          });
     } else {
       // Create unallocated/disassociated descriptor if no explicit init
-      createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
-        mlir::Value box =
-            fir::factory::createUnallocatedBox(b, loc, symTy, llvm::None);
-        b.create<fir::HasValueOp>(loc, box);
-      });
+      Fortran::lower::createGlobalInitialization(
+          builder, global, [&](fir::FirOpBuilder &b) {
+            mlir::Value box =
+                fir::factory::createUnallocatedBox(b, loc, symTy, llvm::None);
+            b.create<fir::HasValueOp>(loc, box);
+          });
     }
 
   } else if (const auto *details =
                  sym.detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
     if (details->init()) {
-      createGlobalInitialization(
+      Fortran::lower::createGlobalInitialization(
           builder, global, [&](fir::FirOpBuilder &builder) {
             Fortran::lower::StatementContext stmtCtx(
                 /*cleanupProhibited=*/true);
@@ -452,7 +454,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
             builder.create<fir::HasValueOp>(loc, castTo);
           });
     } else if (hasDefaultInitialization(sym)) {
-      createGlobalInitialization(
+      Fortran::lower::createGlobalInitialization(
           builder, global, [&](fir::FirOpBuilder &builder) {
             Fortran::lower::StatementContext stmtCtx(
                 /*cleanupProhibited=*/true);
@@ -477,7 +479,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
     // conflicts.
     if (sym.attrs().test(Fortran::semantics::Attr::BIND_C))
       TODO(loc, "BIND(C) module variable linkage");
-    createGlobalInitialization(
+    Fortran::lower::createGlobalInitialization(
         builder, global, [&](fir::FirOpBuilder &builder) {
           builder.create<fir::HasValueOp>(
               loc, builder.create<fir::UndefOp>(loc, symTy));
@@ -683,7 +685,7 @@ static fir::GlobalOp defineGlobalAggregateStore(
     if (const auto *objectDetails =
             initSym->detailsIf<Fortran::semantics::ObjectEntityDetails>())
       if (objectDetails->init()) {
-        createGlobalInitialization(
+        Fortran::lower::createGlobalInitialization(
             builder, global, [&](fir::FirOpBuilder &builder) {
               Fortran::lower::StatementContext stmtCtx;
               mlir::Value initVal = fir::getBase(genInitializerExprValue(
@@ -695,11 +697,12 @@ static fir::GlobalOp defineGlobalAggregateStore(
   // Equivalence has no Fortran initial value. Create an undefined FIR initial
   // value to ensure this is consider an object definition in the IR regardless
   // of the linkage.
-  createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &builder) {
-    Fortran::lower::StatementContext stmtCtx;
-    mlir::Value initVal = builder.create<fir::UndefOp>(loc, aggTy);
-    builder.create<fir::HasValueOp>(loc, initVal);
-  });
+  Fortran::lower::createGlobalInitialization(
+      builder, global, [&](fir::FirOpBuilder &builder) {
+        Fortran::lower::StatementContext stmtCtx;
+        mlir::Value initVal = builder.create<fir::UndefOp>(loc, aggTy);
+        builder.create<fir::HasValueOp>(loc, initVal);
+      });
   return global;
 }
 
@@ -1012,7 +1015,7 @@ static void finalizeCommonBlockDefinition(
     LLVM_DEBUG(llvm::dbgs() << "}\n");
     builder.create<fir::HasValueOp>(loc, cb);
   };
-  createGlobalInitialization(builder, global, initFunc);
+  Fortran::lower::createGlobalInitialization(builder, global, initFunc);
 }
 
 void Fortran::lower::defineCommonBlocks(
