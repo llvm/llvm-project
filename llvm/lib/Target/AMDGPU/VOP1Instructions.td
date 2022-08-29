@@ -586,7 +586,7 @@ let SubtargetPredicate = isGFX11Plus in {
                                       /*VOP1Only=*/ 1>;
   defm V_NOT_B16        : VOP1Inst<"v_not_b16", VOP_I16_I16>;
   defm V_CVT_I32_I16    : VOP1Inst<"v_cvt_i32_i16", VOP_I32_I16>;
-  defm V_CVT_U32_U16    : VOP1Inst<"v_cvt_u32_u16", VOP_I16_I16>;
+  defm V_CVT_U32_U16    : VOP1Inst<"v_cvt_u32_u16", VOP_I32_I16>;
 } // End SubtargetPredicate = isGFX11Plus
 
 //===----------------------------------------------------------------------===//
