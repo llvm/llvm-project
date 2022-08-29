@@ -11,7 +11,6 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
-#include <__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -21,10 +20,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if __has_builtin(__is_nothrow_constructible)
 
-template <class _Tp, class... _Args>
+template <
+    class _Tp, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
     : public integral_constant<bool, __is_nothrow_constructible(_Tp, _Args...)> {};
-
 #else
 
 template <bool, bool, class _Tp, class... _Args> struct __libcpp_is_nothrow_constructible;

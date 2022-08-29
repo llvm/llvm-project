@@ -1165,6 +1165,9 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM(12)
         CASE_OPERAND_UIMM(20)
           // clang-format on
+        case RISCVOp::OPERAND_SIMM10_LSB0000_NONZERO:
+          Ok = isShiftedInt<6, 4>(Imm) && (Imm != 0);
+          break;
         case RISCVOp::OPERAND_ZERO:
           Ok = Imm == 0;
           break;

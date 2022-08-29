@@ -126,6 +126,7 @@
 #include <cstdlib>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -8091,7 +8092,7 @@ unsigned ScalarEvolution::getSmallConstantTripMultiple(const Loop *L) {
     unsigned Multiple = getSmallConstantTripMultiple(L, ExitingBB);
     if (!Res)
       Res = Multiple;
-    Res = (unsigned)GreatestCommonDivisor64(*Res, Multiple);
+    Res = (unsigned)std::gcd(*Res, Multiple);
   }
   return Res.value_or(1);
 }

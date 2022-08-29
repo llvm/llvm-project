@@ -1898,10 +1898,10 @@ ReassociatePass::buildMinimalMultiplyDAG(IRBuilderBase &Builder,
   // Iteratively collect the base of each factor with an add power into the
   // outer product, and halve each power in preparation for squaring the
   // expression.
-  for (unsigned Idx = 0, Size = Factors.size(); Idx != Size; ++Idx) {
-    if (Factors[Idx].Power & 1)
-      OuterProduct.push_back(Factors[Idx].Base);
-    Factors[Idx].Power >>= 1;
+  for (Factor &F : Factors) {
+    if (F.Power & 1)
+      OuterProduct.push_back(F.Base);
+    F.Power >>= 1;
   }
   if (Factors[0].Power) {
     Value *SquareRoot = buildMinimalMultiplyDAG(Builder, Factors);

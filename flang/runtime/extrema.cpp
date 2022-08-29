@@ -629,8 +629,8 @@ public:
     8
 #endif
   };
-  using AccumType = CppTypeFor<TypeCategory::Real,
-      std::max(std::min(largestLDKind, KIND), 8)>;
+  using AccumType =
+      CppTypeFor<TypeCategory::Real, std::clamp(KIND, 8, largestLDKind)>;
   explicit Norm2Accumulator(const Descriptor &array) : array_{array} {}
   void Reinitialize() { max_ = sum_ = 0; }
   template <typename A> void GetResult(A *p, int /*zeroBasedDim*/ = -1) const {

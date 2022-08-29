@@ -1,4 +1,4 @@
-; RUN: opt -passes=print-access-info %s -disable-output 2>&1 | FileCheck %s
+; RUN: opt -passes='print<access-info>' %s -disable-output 2>&1 | FileCheck %s
 
 ; This test defends against accidentally using alloc size instead of store size when performing run-time
 ; boundary check of memory accesses. The IR in this file is based on

@@ -1103,6 +1103,27 @@ struct dyld_chained_import_addend64 {
   uint64_t addend;
 };
 
+// The `bind` field (most significant bit) of the encoded fixup determines
+// whether it is dyld_chained_ptr_64_bind or dyld_chained_ptr_64_rebase.
+
+// DYLD_CHAINED_PTR_64/DYLD_CHAINED_PTR_64_OFFSET
+struct dyld_chained_ptr_64_bind {
+  uint64_t ordinal : 24;
+  uint64_t addend : 8;
+  uint64_t reserved : 19;
+  uint64_t next : 12;
+  uint64_t bind : 1; // set to 1
+};
+
+// DYLD_CHAINED_PTR_64/DYLD_CHAINED_PTR_64_OFFSET
+struct dyld_chained_ptr_64_rebase {
+  uint64_t target : 36;
+  uint64_t high8 : 8;
+  uint64_t reserved : 7;
+  uint64_t next : 12;
+  uint64_t bind : 1; // set to 0
+};
+
 // Byte order swapping functions for MachO structs
 
 inline void swapStruct(fat_header &mh) {

@@ -1,7 +1,7 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang -c -### -target x86_64-linux-gnu \
+// RUN: %clang -c -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
@@ -83,19 +83,19 @@
 
 // RUN: touch %T/a.o
 // RUN: touch %T/b.o
-// RUN: %clang --hip-link -### -target x86_64-linux-gnu \
+// RUN: %clang --hip-link -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -fuse-ld=lld -fgpu-rdc -nogpuinc \
 // RUN:   %T/a.o %T/b.o \
 // RUN: 2>&1 | FileCheck -check-prefixes=LINK,LINK-HOST-UNBUNDLE,LLD-TMP,LINK-BUNDLE,LINK-EMBED %s
 
-// RUN: %clang --hip-link -### -target x86_64-linux-gnu \
+// RUN: %clang --hip-link -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -fuse-ld=lld -fgpu-rdc -nogpuinc \
 // RUN:   %T/a.o %T/b.o --cuda-device-only \
 // RUN: 2>&1 | FileCheck -check-prefixes=LINK,LLD-TMP,LINK-BUNDLE,LINK-NOEMBED %s
 
-// RUN: %clang --hip-link -### -target x86_64-linux-gnu \
+// RUN: %clang --hip-link -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -fuse-ld=lld -fgpu-rdc -nogpuinc \
 // RUN:   %T/a.o %T/b.o --cuda-device-only --no-gpu-bundle-output \

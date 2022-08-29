@@ -289,8 +289,14 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
 
   LateParsedAttrList LateParsedAttrs(true);
   if (DeclaratorInfo.isFunctionDeclarator()) {
-    if (Tok.is(tok::kw_requires))
+    if (Tok.is(tok::kw_requires)) {
+      CXXScopeSpec &ScopeSpec = DeclaratorInfo.getCXXScopeSpec();
+      DeclaratorScopeObj DeclScopeObj(*this, ScopeSpec);
+      if (ScopeSpec.isValid() &&
+          Actions.ShouldEnterDeclaratorScope(getCurScope(), ScopeSpec))
+        DeclScopeObj.EnterDeclaratorScope();
       ParseTrailingRequiresClause(DeclaratorInfo);
+    }
 
     MaybeParseGNUAttributes(DeclaratorInfo, &LateParsedAttrs);
   }

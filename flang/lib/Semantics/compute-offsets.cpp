@@ -118,9 +118,12 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   }
   scope.set_size(offset_);
   scope.SetAlignment(alignment_);
-  // Assign offsets in COMMON blocks.
-  for (auto &pair : scope.commonBlocks()) {
-    DoCommonBlock(*pair.second);
+  // Assign offsets in COMMON blocks, unless this scope is a BLOCK construct,
+  // where COMMON blocks are illegal (C1107 and C1108).
+  if (scope.kind() != Scope::Kind::BlockConstruct) {
+    for (auto &pair : scope.commonBlocks()) {
+      DoCommonBlock(*pair.second);
+    }
   }
   for (auto &[symbol, dep] : dependents_) {
     symbol->set_offset(dep.symbol->offset() + dep.offset);

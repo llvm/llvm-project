@@ -111,6 +111,10 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
       Instruction *User = cast<Instruction>(U.getUser());
       BasicBlock *UserBB = User->getParent();
 
+      // Skip uses in unreachable blocks.
+      if (!DT.isReachableFromEntry(UserBB))
+        continue;
+
       // For practical purposes, we consider that the use in a PHI
       // occurs in the respective predecessor block. For more info,
       // see the `phi` doc in LangRef and the LCSSA doc.
@@ -235,7 +239,7 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     llvm::findDbgValues(DbgValues, I);
 
     // Update pre-existing debug value uses that reside outside the loop.
-    for (auto DVI : DbgValues) {
+    for (auto *DVI : DbgValues) {
       BasicBlock *UserBB = DVI->getParent();
       if (InstBB == UserBB || L->contains(UserBB))
         continue;

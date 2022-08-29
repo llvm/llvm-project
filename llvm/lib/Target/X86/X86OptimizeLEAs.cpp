@@ -349,7 +349,7 @@ bool X86OptimizeLEAPass::chooseBestLEA(
   BestLEA = nullptr;
 
   // Loop over all LEA instructions.
-  for (auto DefMI : List) {
+  for (auto *DefMI : List) {
     // Get new address displacement.
     int64_t AddrDispShiftTemp = getAddrDispShift(MI, MemOpNo, *DefMI, 1);
 

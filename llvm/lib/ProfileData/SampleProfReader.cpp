@@ -1720,7 +1720,7 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
     if (Update) {
       // Walk up the inline stack, adding the samples on this line to
       // the total sample count of the callers in the chain.
-      for (auto CallerProfile : NewStack)
+      for (auto *CallerProfile : NewStack)
         CallerProfile->addTotalSamples(Count);
 
       // Update the body samples for the current profile.

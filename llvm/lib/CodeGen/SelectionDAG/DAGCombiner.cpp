@@ -13952,7 +13952,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // guaranteed-non-poison operands then push the freeze through to the one
   // operand that is not guaranteed non-poison.
   if (!DAG.canCreateUndefOrPoison(N0, /*PoisonOnly*/ false,
-                                  /*ConsiderFlags*/ true) &&
+                                  /*ConsiderFlags*/ false) &&
       N0->getNumValues() == 1 && N0->hasOneUse()) {
     SDValue MaybePoisonOperand;
     for (SDValue Op : N0->ops()) {
@@ -13969,7 +13969,6 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     }
     if (MaybePoisonOperand) {
       // Recreate the node with the frozen maybe-poison operand.
-      // TODO: Disable ConsiderFlags and just strip poison generating flags?
       // TODO: Drop the isOnlyUserOf constraint and replace all users of
       // MaybePoisonOperand with FrozenMaybePoisonOperand
       // to match pushFreezeToPreventPoisonFromPropagating behavior.
@@ -13978,7 +13977,11 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       for (SDValue &Op : Ops)
         if (Op == MaybePoisonOperand)
           Op = FrozenMaybePoisonOperand;
-      return DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops);
+      // TODO: Just strip poison generating flags?
+      SDValue R = DAG.getNode(N0.getOpcode(), SDLoc(N0), N0->getVTList(), Ops);
+      assert(DAG.isGuaranteedNotToBeUndefOrPoison(R, /*PoisonOnly*/ false) &&
+             "Can't create node that may be undef/poison!");
+      return R;
     }
   }
 

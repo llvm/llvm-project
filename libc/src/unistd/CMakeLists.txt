@@ -31,6 +31,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ftruncate
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.ftruncate
+)
+
+add_entrypoint_object(
   link
   ALIAS
   DEPENDS
@@ -91,6 +98,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.symlinkat
+)
+
+add_entrypoint_object(
+  truncate
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.truncate
 )
 
 add_entrypoint_object(

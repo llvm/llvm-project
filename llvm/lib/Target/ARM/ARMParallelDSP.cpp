@@ -367,8 +367,8 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
 
   // Record any writes that may alias a load.
   const auto Size = LocationSize::beforeOrAfterPointer();
-  for (auto Write : Writes) {
-    for (auto Read : Loads) {
+  for (auto *Write : Writes) {
+    for (auto *Read : Loads) {
       MemoryLocation ReadLoc =
         MemoryLocation(Read->getPointerOperand(), Size);
 
@@ -389,7 +389,7 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
     if (RAWDeps.count(Dominated)) {
       InstSet &WritesBefore = RAWDeps[Dominated];
 
-      for (auto Before : WritesBefore) {
+      for (auto *Before : WritesBefore) {
         // We can't move the second load backward, past a write, to merge
         // with the first load.
         if (Dominator->comesBefore(Before))

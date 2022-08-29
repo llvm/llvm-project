@@ -1,7 +1,7 @@
-; Check translation of intel_reqd_sub_group_size metadata to SubgroupSize
-; execution mode and back. The IR is producded from the following OpenCL C code:
-; kernel __attribute__((intel_reqd_sub_group_size(8)))
-; void foo() {}
+;; Check translation of intel_reqd_sub_group_size metadata to SubgroupSize
+;; execution mode and back. The IR is producded from the following OpenCL C code:
+;; kernel __attribute__((intel_reqd_sub_group_size(8)))
+;; void foo() {}
 
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 

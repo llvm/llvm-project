@@ -882,7 +882,7 @@ bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   for (NodeAddr<BlockNode *> BA : FA.Addr->members(*DFG))
     Changed |= processBlock(BA);
 
-  for (auto MI : Deleted)
+  for (auto *MI : Deleted)
     MI->eraseFromParent();
 
   if (Changed) {

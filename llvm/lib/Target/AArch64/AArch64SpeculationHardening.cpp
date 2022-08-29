@@ -681,7 +681,7 @@ bool AArch64SpeculationHardening::runOnMachineFunction(MachineFunction &MF) {
   EntryBlocks.push_back(&MF.front());
   for (const LandingPadInfo &LPI : MF.getLandingPads())
     EntryBlocks.push_back(LPI.LandingPadBlock);
-  for (auto Entry : EntryBlocks)
+  for (auto *Entry : EntryBlocks)
     insertSPToRegTaintPropagation(
         *Entry, Entry->SkipPHIsLabelsAndDebug(Entry->begin()));
 

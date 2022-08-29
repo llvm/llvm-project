@@ -3197,8 +3197,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     // We can reduce the size of gc live bundle.
     DenseMap<Value *, unsigned> Val2Idx;
     std::vector<Value *> NewLiveGc;
-    for (unsigned I = 0, E = Bundle->Inputs.size(); I < E; ++I) {
-      Value *V = Bundle->Inputs[I];
+    for (Value *V : Bundle->Inputs) {
       if (Val2Idx.count(V))
         continue;
       if (LiveGcValues.count(V)) {

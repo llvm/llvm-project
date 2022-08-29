@@ -62,8 +62,7 @@ public:
       return false;
     }
     if (auto recTy = ty.dyn_cast<RecordType>()) {
-      if (llvm::any_of(visitedTypes,
-                       [&](mlir::Type rt) { return rt == recTy; }))
+      if (llvm::is_contained(visitedTypes, recTy))
         return false;
       bool result = false;
       visitedTypes.push_back(recTy);

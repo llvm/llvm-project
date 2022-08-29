@@ -1026,7 +1026,7 @@ bool DeadCodeElimination::runOnNode(MachineDomTreeNode *N) {
   for (MachineInstr &MI : llvm::reverse(*B))
     Instrs.push_back(&MI);
 
-  for (auto MI : Instrs) {
+  for (auto *MI : Instrs) {
     unsigned Opc = MI->getOpcode();
     // Do not touch lifetime markers. This is why the target-independent DCE
     // cannot be used.
@@ -1755,7 +1755,7 @@ bool CopyPropagation::processBlock(MachineBasicBlock &B, const RegisterSet&) {
     Instrs.push_back(&MI);
 
   bool Changed = false;
-  for (auto I : Instrs) {
+  for (auto *I : Instrs) {
     unsigned Opc = I->getOpcode();
     if (!CopyPropagation::isCopyReg(Opc, true))
       continue;

@@ -1487,6 +1487,13 @@ func.func @shuffle_1d() -> vector<4xi32> {
   return %shuffle : vector<4xi32>
 }
 
+// CHECK-LABEL: func @shuffle_canonicalize_0d
+func.func @shuffle_canonicalize_0d(%v0 : vector<i32>, %v1 : vector<i32>) -> vector<1xi32> {
+  // CHECK: vector.broadcast %{{.*}} : vector<i32> to vector<1xi32>
+  %shuffle = vector.shuffle %v0, %v1 [0] : vector<i32>, vector<i32>
+  return %shuffle : vector<1xi32>
+}
+
 // CHECK-LABEL: func @shuffle_fold1
 //       CHECK:   %arg0 : vector<4xi32>
 func.func @shuffle_fold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<4xi32> {

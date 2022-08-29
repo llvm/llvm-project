@@ -628,7 +628,8 @@ private:
                                    llvm::StringRef ArchDir,
                                    llvm::StringRef BitDir) const;
 
-  llvm::StringRef GetHeaderSysroot(const llvm::opt::ArgList &DriverArgs) const;
+  llvm::SmallString<128>
+  GetEffectiveSysroot(const llvm::opt::ArgList &DriverArgs) const;
 };
 
 } // end namespace toolchains

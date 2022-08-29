@@ -20,7 +20,7 @@ using Entry = FormatEntity::Entry;
 TEST(FormatEntityTest, DefinitionConstructionNameAndType) {
   Definition d("foo", FormatEntity::Entry::Type::Invalid);
 
-  EXPECT_EQ(d.name, "foo");
+  EXPECT_STREQ(d.name, "foo");
   EXPECT_EQ(d.string, nullptr);
   EXPECT_EQ(d.type, FormatEntity::Entry::Type::Invalid);
   EXPECT_EQ(d.data, 0UL);
@@ -32,8 +32,8 @@ TEST(FormatEntityTest, DefinitionConstructionNameAndType) {
 TEST(FormatEntityTest, DefinitionConstructionNameAndString) {
   Definition d("foo", "string");
 
-  EXPECT_EQ(d.name, "foo");
-  EXPECT_EQ(d.string, "string");
+  EXPECT_STREQ(d.name, "foo");
+  EXPECT_STREQ(d.string, "string");
   EXPECT_EQ(d.type, FormatEntity::Entry::Type::EscapeCode);
   EXPECT_EQ(d.data, 0UL);
   EXPECT_EQ(d.num_children, 0UL);
@@ -44,7 +44,7 @@ TEST(FormatEntityTest, DefinitionConstructionNameAndString) {
 TEST(FormatEntityTest, DefinitionConstructionNameTypeData) {
   Definition d("foo", FormatEntity::Entry::Type::Invalid, 33);
 
-  EXPECT_EQ(d.name, "foo");
+  EXPECT_STREQ(d.name, "foo");
   EXPECT_EQ(d.string, nullptr);
   EXPECT_EQ(d.type, FormatEntity::Entry::Type::Invalid);
   EXPECT_EQ(d.data, 33UL);
@@ -56,14 +56,14 @@ TEST(FormatEntityTest, DefinitionConstructionNameTypeData) {
 TEST(FormatEntityTest, DefinitionConstructionNameTypeChildren) {
   Definition d("foo", FormatEntity::Entry::Type::Invalid, 33);
   Definition parent("parent", FormatEntity::Entry::Type::Invalid, 1, &d);
-  EXPECT_EQ(parent.name, "parent");
-  EXPECT_EQ(parent.string, nullptr);
+  EXPECT_STREQ(parent.name, "parent");
+  EXPECT_STREQ(parent.string, nullptr);
   EXPECT_EQ(parent.type, FormatEntity::Entry::Type::Invalid);
   EXPECT_EQ(parent.num_children, 1UL);
   EXPECT_EQ(parent.children, &d);
   EXPECT_FALSE(parent.keep_separator);
 
-  EXPECT_EQ(parent.children[0].name, "foo");
+  EXPECT_STREQ(parent.children[0].name, "foo");
   EXPECT_EQ(parent.children[0].string, nullptr);
   EXPECT_EQ(parent.children[0].type, FormatEntity::Entry::Type::Invalid);
   EXPECT_EQ(parent.children[0].data, 33UL);

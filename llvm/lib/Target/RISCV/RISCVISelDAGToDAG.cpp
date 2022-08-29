@@ -1919,7 +1919,7 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
 // Is this ADD instruction only used as the base pointer of scalar loads and
 // stores?
 static bool isWorthFoldingAdd(SDValue Add) {
-  for (auto Use : Add->uses()) {
+  for (auto *Use : Add->uses()) {
     if (Use->getOpcode() != ISD::LOAD && Use->getOpcode() != ISD::STORE &&
         Use->getOpcode() != ISD::ATOMIC_LOAD &&
         Use->getOpcode() != ISD::ATOMIC_STORE)
@@ -2672,7 +2672,16 @@ bool RISCVDAGToDAGISel::doPeepholeMergeVVMFold() {
     // Need True has same VL with N.
     unsigned TrueVLIndex = True.getNumOperands() - HasChainOp - 2;
     SDValue TrueVL = True.getOperand(TrueVLIndex);
-    if (TrueVL != VL)
+
+    auto IsNoFPExcept = [this](SDValue N) {
+      return !this->mayRaiseFPException(N.getNode()) ||
+             N->getFlags().hasNoFPExcept();
+    };
+
+    // Allow the peephole for non-exception True with VLMAX vector length, since
+    // all the values after VL of N are dependent on Merge. VLMAX should be
+    // lowered to (XLenVT -1).
+    if (TrueVL != VL && !(IsNoFPExcept(True) && isAllOnesConstant(TrueVL)))
       continue;
 
     SDLoc DL(N);

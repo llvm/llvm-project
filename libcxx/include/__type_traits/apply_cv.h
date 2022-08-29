@@ -10,7 +10,6 @@
 #define _LIBCPP___TYPE_TRAITS_APPLY_CV_H
 
 #include <__config>
-#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_const.h>
 #include <__type_traits/is_volatile.h>
 #include <__type_traits/remove_reference.h>

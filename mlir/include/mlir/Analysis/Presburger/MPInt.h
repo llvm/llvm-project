@@ -19,6 +19,7 @@
 #include "mlir/Analysis/Presburger/SlowMPInt.h"
 #include "mlir/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <numeric>
 
 namespace mlir {
 namespace presburger {
@@ -398,7 +399,7 @@ LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt mod(const MPInt &lhs, const MPInt &rhs) {
 LLVM_ATTRIBUTE_ALWAYS_INLINE MPInt gcd(const MPInt &a, const MPInt &b) {
   assert(a >= 0 && b >= 0 && "operands must be non-negative!");
   if (LLVM_LIKELY(a.isSmall() && b.isSmall()))
-    return MPInt(llvm::greatestCommonDivisor(a.getSmall(), b.getSmall()));
+    return MPInt(std::gcd(a.getSmall(), b.getSmall()));
   return MPInt(gcd(detail::SlowMPInt(a), detail::SlowMPInt(b)));
 }
 

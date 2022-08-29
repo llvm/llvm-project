@@ -213,6 +213,16 @@ add_gen_header(
 )
 
 add_gen_header(
+  sys_sendfile
+  DEF_FILE sys/sendfile.h.def
+  GEN_HDR sys/sendfile.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.off_t
+    .llvm-libc-types.ssize_t
+)
+
+add_gen_header(
   sys_syscall
   DEF_FILE sys/syscall.h.def
   GEN_HDR sys/syscall.h

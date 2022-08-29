@@ -54,6 +54,13 @@ class NamespaceLookupTestCase(TestBase):
             num_expected_locations=1,
             loc_exact=False)
 
+        lldbutil.run_break_set_by_file_and_line(
+            self,
+            "ns3.cpp",
+            self.line_break_after_using_directive,
+            num_expected_locations=1,
+            loc_exact=False)
+
         # Run to BP_global_scope at file scope
         self.runToBkpt("run")
 

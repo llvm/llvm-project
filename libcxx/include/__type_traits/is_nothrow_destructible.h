@@ -10,7 +10,6 @@
 #define _LIBCPP___TYPE_TRAITS_IS_NOTHROW_DESTRUCTIBLE_H
 
 #include <__config>
-#include <__type_traits/add_const.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_destructible.h>
 #include <__type_traits/is_reference.h>

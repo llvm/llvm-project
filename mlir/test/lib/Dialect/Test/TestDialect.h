@@ -14,6 +14,7 @@
 #ifndef MLIR_TESTDIALECT_H
 #define MLIR_TESTDIALECT_H
 
+#include "TestTypes.h"
 #include "TestAttributes.h"
 #include "TestInterfaces.h"
 #include "mlir/Dialect/DLTI/DLTI.h"

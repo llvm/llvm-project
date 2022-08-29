@@ -598,7 +598,7 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
     }
 
     // Fixup debug intrinsics to point to the new alloca.
-    for (auto DVI : Info.DbgVariableIntrinsics)
+    for (auto *DVI : Info.DbgVariableIntrinsics)
       DVI->replaceVariableLocationOp(OldAI, Info.AI);
   }
 

@@ -1517,10 +1517,10 @@ define i8 @sub_not_mask_lowbits(i8 %x) {
 
 define <2 x i8> @sub_mask_lowbits_splat_extra_use(<2 x i8> %x, <2 x i8>* %p) {
 ; CHECK-LABEL: @sub_mask_lowbits_splat_extra_use(
-; CHECK-NEXT:    [[A1:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
-; CHECK-NEXT:    [[A2:%.*]] = and <2 x i8> [[X]], <i8 10, i8 10>
+; CHECK-NEXT:    [[A2:%.*]] = and <2 x i8> [[X:%.*]], <i8 10, i8 10>
 ; CHECK-NEXT:    store <2 x i8> [[A2]], <2 x i8>* [[P:%.*]], align 2
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[A1]], <i8 -11, i8 -11>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[X]], <i8 -11, i8 -11>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[TMP1]], <i8 -64, i8 -64>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a1 = add <2 x i8> %x, <i8 192, i8 192> ; 0xc0

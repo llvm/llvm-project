@@ -153,14 +153,14 @@ func.func @two_d(%arg0: tensor<10x34xf32>,
   // CHECK:      %[[OUT_2:.+]] = tensor.extract_slice %[[PARTIAL_1]]
   // Note that `extract_slice` taking a slice from another `extract_slice` result
   // is folded to use the operand of the first `extract_slice`.
-  // CHECK:      %[[IN_21:.+]] = tensor.extract_slice %[[IN]]
-  // CHECK:      %[[OUT_21:.+]] = tensor.extract_slice %[[PARTIAL_1]]
+  // CHECK:      %[[IN_21:.+]] = tensor.extract_slice %[[IN_2]]
+  // CHECK:      %[[OUT_21:.+]] = tensor.extract_slice %[[OUT_2]]
   // CHECK:      %[[RES_21:.+]] = linalg.generic
   // CHECK-SAME:   ins(%[[IN_21]] : tensor<6x16xf32>)
   // CHECK-SAME:   outs(%[[OUT_21]] : tensor<6x16xf32>)
   // CHECK:      %[[PARTIAL_21:.+]] = tensor.insert_slice %[[RES_21]] into %[[OUT_2]]
   //
-  // CHECK:      %[[IN_22:.+]] = tensor.extract_slice %[[IN]]
+  // CHECK:      %[[IN_22:.+]] = tensor.extract_slice %[[IN_2]]
   // CHECK:      %[[OUT_22:.+]] = tensor.extract_slice %[[PARTIAL_21]]
   // CHECK:      %[[RES_22:.+]] = linalg.generic
   // CHECK-SAME:   ins(%[[IN_22]] : tensor<6x18xf32>)
