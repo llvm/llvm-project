@@ -431,7 +431,11 @@ mlir::LogicalResult CIRGenFunction::buildReturnStmt(const ReturnStmt &S) {
   } else if (!RV) {
     // Do nothing (return value is left uninitialized)
   } else if (FnRetTy->isReferenceType()) {
-    assert(0 && "not implemented");
+    // If this function returns a reference, take the address of the expression
+    // rather than the value.
+    RValue Result = buildReferenceBindingToExpr(RV);
+    builder.create<mlir::cir::StoreOp>(loc, Result.getScalarVal(),
+                                       ReturnValue.getPointer());
   } else {
     mlir::Value V = nullptr;
     switch (CIRGenFunction::getEvaluationKind(RV->getType())) {
