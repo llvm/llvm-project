@@ -4701,10 +4701,12 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   };
   SmallVector<unsigned> SortedIndices;
   BasicBlock *BB = nullptr;
+  bool IsScatterVectorizeUserTE =
+      UserTreeIdx.UserTE &&
+      UserTreeIdx.UserTE->State == TreeEntry::ScatterVectorize;
   bool AreAllSameInsts =
       (S.getOpcode() && allSameBlock(VL)) ||
-      (S.OpValue->getType()->isPointerTy() && UserTreeIdx.UserTE &&
-       UserTreeIdx.UserTE->State == TreeEntry::ScatterVectorize &&
+      (S.OpValue->getType()->isPointerTy() && IsScatterVectorizeUserTE &&
        VL.size() > 2 &&
        all_of(VL,
               [&BB](Value *V) {
@@ -4765,10 +4767,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   // Check that none of the instructions in the bundle are already in the tree.
   for (Value *V : VL) {
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
+    if (!IsScatterVectorizeUserTE && !isa<Instruction>(V))
       continue;
-    if (getTreeEntry(I)) {
+    if (getTreeEntry(V)) {
       LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
                         << ") is already in tree.\n");
       if (TryToFindDuplicates(S))
@@ -5218,9 +5219,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         }
       }
 
-      bool IsScatterUser =
-          UserTreeIdx.UserTE &&
-          UserTreeIdx.UserTE->State == TreeEntry::ScatterVectorize;
       // We don't combine GEPs with non-constant indexes.
       Type *Ty1 = VL0->getOperand(1)->getType();
       for (Value *V : VL) {
@@ -5228,9 +5226,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         if (!I)
           continue;
         auto *Op = I->getOperand(1);
-        if ((!IsScatterUser && !isa<ConstantInt>(Op)) ||
+        if ((!IsScatterVectorizeUserTE && !isa<ConstantInt>(Op)) ||
             (Op->getType() != Ty1 &&
-             ((IsScatterUser && !isa<ConstantInt>(Op)) ||
+             ((IsScatterVectorizeUserTE && !isa<ConstantInt>(Op)) ||
               Op->getType()->getScalarSizeInBits() >
                   DL->getIndexSizeInBits(
                       V->getType()->getPointerAddressSpace())))) {
