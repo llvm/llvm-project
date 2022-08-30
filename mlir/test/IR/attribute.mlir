@@ -589,6 +589,9 @@ func.func @dense_array_attr() attributes {
     x6_bf16 = array<bf16: 1.2, 3.4>,
     x7_f16 = array<f16: 1., 3.>
   }: () -> ()
+
+  // CHECK: test.typed_attr tensor<4xi32> = array<1, 2, 3, 4>
+  test.typed_attr tensor<4xi32> = array<1, 2, 3, 4>
   return
 }
 

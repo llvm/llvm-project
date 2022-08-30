@@ -925,33 +925,59 @@ ParseResult DenseArrayElementParser::parseFloatElement(Parser &p) {
 }
 
 /// Parse a dense array attribute.
-Attribute Parser::parseDenseArrayAttr(Type type) {
+Attribute Parser::parseDenseArrayAttr(Type attrType) {
   consumeToken(Token::kw_array);
   if (parseToken(Token::less, "expected '<' after 'array'"))
     return {};
 
-  // Only bool or integer and floating point elements divisible by bytes are
-  // supported.
   SMLoc typeLoc = getToken().getLoc();
-  if (!type && !(type = parseType()))
-    return {};
-  if (!type.isIntOrIndexOrFloat()) {
-    emitError(typeLoc, "expected integer or float type, got: ") << type;
+  Type eltType;
+  // If an attribute type was provided, use its element type.
+  if (attrType) {
+    auto tensorType = attrType.dyn_cast<RankedTensorType>();
+    if (!tensorType) {
+      emitError(typeLoc, "dense array attribute expected ranked tensor type");
+      return {};
+    }
+    eltType = tensorType.getElementType();
+
+    // Otherwise, parse a type.
+  } else if (!(eltType = parseType())) {
     return {};
   }
-  if (!type.isInteger(1) && type.getIntOrFloatBitWidth() % 8 != 0) {
+
+  // Only bool or integer and floating point elements divisible by bytes are
+  // supported.
+  if (!eltType.isIntOrIndexOrFloat()) {
+    emitError(typeLoc, "expected integer or float type, got: ") << eltType;
+    return {};
+  }
+  if (!eltType.isInteger(1) && eltType.getIntOrFloatBitWidth() % 8 != 0) {
     emitError(typeLoc, "element type bitwidth must be a multiple of 8");
     return {};
   }
 
+  // If a type was provided, check that it matches the parsed type.
+  auto checkProvidedType = [&](DenseArrayAttr result) -> Attribute {
+    if (attrType && result.getType() != attrType) {
+      emitError(typeLoc, "expected attribute type ")
+          << attrType << " does not match parsed type " << result.getType();
+      return {};
+    }
+    return result;
+  };
+
   // Check for empty list.
-  if (consumeIf(Token::greater))
-    return DenseArrayAttr::get(RankedTensorType::get(0, type), {});
-  if (parseToken(Token::colon, "expected ':' after dense array type"))
+  if (consumeIf(Token::greater)) {
+    return checkProvidedType(
+        DenseArrayAttr::get(RankedTensorType::get(0, eltType), {}));
+  }
+  if (!attrType &&
+      parseToken(Token::colon, "expected ':' after dense array type"))
     return {};
 
-  DenseArrayElementParser eltParser(type);
-  if (type.isIntOrIndex()) {
+  DenseArrayElementParser eltParser(eltType);
+  if (eltType.isIntOrIndex()) {
     if (parseCommaSeparatedList(
             [&] { return eltParser.parseIntegerElement(*this); }))
       return {};
@@ -962,7 +988,7 @@ Attribute Parser::parseDenseArrayAttr(Type type) {
   }
   if (parseToken(Token::greater, "expected '>' to close an array attribute"))
     return {};
-  return eltParser.getAttr();
+  return checkProvidedType(eltParser.getAttr());
 }
 
 /// Parse a dense elements attribute.

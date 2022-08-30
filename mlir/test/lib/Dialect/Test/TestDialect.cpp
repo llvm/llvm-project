@@ -461,6 +461,22 @@ TestDialect::getOperationPrinter(Operation *op) const {
 }
 
 //===----------------------------------------------------------------------===//
+// TypedAttrOp
+//===----------------------------------------------------------------------===//
+
+/// Parse an attribute with a given type.
+static ParseResult parseAttrElideType(AsmParser &parser, TypeAttr type,
+                                      Attribute &attr) {
+  return parser.parseAttribute(attr, type.getValue());
+}
+
+/// Print an attribute without its type.
+static void printAttrElideType(AsmPrinter &printer, Operation *op,
+                               TypeAttr type, Attribute attr) {
+  printer.printAttributeWithoutType(attr);
+}
+
+//===----------------------------------------------------------------------===//
 // TestBranchOp
 //===----------------------------------------------------------------------===//
 
