@@ -1388,6 +1388,32 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fputil
 )
 
+add_fp_unittest(
+  atanf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    atanf_test.cpp
+  DEPENDS
+    libc.src.math.atanf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  inv_trigf_utils_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  HDRS
+    in_float_range_test_helper.h
+  SRCS
+    inv_trigf_utils_test.cpp
+  DEPENDS
+    libc.src.math.generic.inv_trigf_utils
+    libc.src.__support.FPUtil.fputil
+)
+
 add_subdirectory(generic)
 add_subdirectory(exhaustive)
 add_subdirectory(differential_testing)
