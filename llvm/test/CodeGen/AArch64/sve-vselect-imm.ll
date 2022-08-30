@@ -360,6 +360,78 @@ define <vscale x 2 x double> @sel_merge_nx2f64_zero(<vscale x 2 x i1> %p, <vscal
 ret <vscale x 2 x double> %sel
 }
 
+define <vscale x 8 x half> @sel_merge_nxv8f16_negative_zero(<vscale x 8 x i1> %p, <vscale x 8 x half> %in) {
+; CHECK-LABEL: sel_merge_nxv8f16_negative_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #32768
+; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    ret
+%vec = shufflevector <vscale x 8 x half> insertelement (<vscale x 8 x half> undef, half -0.0, i32 0), <vscale x 8 x half> zeroinitializer, <vscale x 8 x i32> zeroinitializer
+%sel = select <vscale x 8 x i1> %p, <vscale x 8 x half> %vec, <vscale x 8 x half> %in
+ret <vscale x 8 x half> %sel
+}
+
+define <vscale x 4 x half> @sel_merge_nx4f16_negative_zero(<vscale x 4 x i1> %p, <vscale x 4 x half> %in) {
+; CHECK-LABEL: sel_merge_nx4f16_negative_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #32768
+; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+%vec = shufflevector <vscale x 4 x half> insertelement (<vscale x 4 x half> undef, half -0.0, i32 0), <vscale x 4 x half> zeroinitializer, <vscale x 4 x i32> zeroinitializer
+%sel = select <vscale x 4 x i1> %p, <vscale x 4 x half> %vec, <vscale x 4 x half> %in
+ret <vscale x 4 x half> %sel
+}
+
+define <vscale x 2 x half> @sel_merge_nx2f16_negative_zero(<vscale x 2 x i1> %p, <vscale x 2 x half> %in) {
+; CHECK-LABEL: sel_merge_nx2f16_negative_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #32768
+; CHECK-NEXT:    mov z1.h, w8
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+%vec = shufflevector <vscale x 2 x half> insertelement (<vscale x 2 x half> undef, half -0.0, i32 0), <vscale x 2 x half> zeroinitializer, <vscale x 2 x i32> zeroinitializer
+%sel = select <vscale x 2 x i1> %p, <vscale x 2 x half> %vec, <vscale x 2 x half> %in
+ret <vscale x 2 x half> %sel
+}
+
+define <vscale x 4 x float> @sel_merge_nx4f32_negative_zero(<vscale x 4 x i1> %p, <vscale x 4 x float> %in) {
+; CHECK-LABEL: sel_merge_nx4f32_negative_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-2147483648
+; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+%vec = shufflevector <vscale x 4 x float> insertelement (<vscale x 4 x float> undef, float -0.0, i32 0), <vscale x 4 x float> zeroinitializer, <vscale x 4 x i32> zeroinitializer
+%sel = select <vscale x 4 x i1> %p, <vscale x 4 x float> %vec, <vscale x 4 x float> %in
+ret <vscale x 4 x float> %sel
+}
+
+define <vscale x 2 x float> @sel_merge_nx2f32_negative_zero(<vscale x 2 x i1> %p, <vscale x 2 x float> %in) {
+; CHECK-LABEL: sel_merge_nx2f32_negative_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #-2147483648
+; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+%vec = shufflevector <vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float -0.0, i32 0), <vscale x 2 x float> zeroinitializer, <vscale x 2 x i32> zeroinitializer
+%sel = select <vscale x 2 x i1> %p, <vscale x 2 x float> %vec, <vscale x 2 x float> %in
+ret <vscale x 2 x float> %sel
+}
+
+define <vscale x 2 x double> @sel_merge_nx2f64_negative_zero(<vscale x 2 x i1> %p, <vscale x 2 x double> %in) {
+; CHECK-LABEL: sel_merge_nx2f64_negative_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, #-9223372036854775808
+; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    ret
+%vec = shufflevector <vscale x 2 x double> insertelement (<vscale x 2 x double> undef, double -0.0, i32 0), <vscale x 2 x double> zeroinitializer, <vscale x 2 x i32> zeroinitializer
+%sel = select <vscale x 2 x i1> %p, <vscale x 2 x double> %vec, <vscale x 2 x double> %in
+ret <vscale x 2 x double> %sel
+}
+
 define <vscale x 8 x i16> @sel_merge_16_shifted(<vscale x 8 x i1> %p, <vscale x 8 x i16> %in) {
 ; CHECK-LABEL: sel_merge_16_shifted:
 ; CHECK:       // %bb.0:
