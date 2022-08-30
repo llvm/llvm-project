@@ -744,6 +744,26 @@ void comment_to_html_conversion_37();
 // CHECK-NEXT:         (CXComment_Text Text=[ ] IsWhitespace)
 // CHECK-NEXT:         (CXComment_InlineCommand CommandName=[anchor] RenderAnchor Arg[0]=A)))]
 
+/// Aaa bbb<img/>
+void comment_to_html_conversion_38();
+
+// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-2]]:6: FunctionDecl=comment_to_html_conversion_38:{{.*}} FullCommentAsHTML=[<p class="para-brief"> Aaa bbb<img/></p>] FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-2]]" column="6"><Name>comment_to_html_conversion_38</Name><USR>c:@F@comment_to_html_conversion_38#</USR><Declaration>void comment_to_html_conversion_38()</Declaration><Abstract><Para> Aaa bbb<rawHTML><![CDATA[<img/>]]></rawHTML></Para></Abstract></Function>]
+// CHECK-NEXT:  CommentAST=[
+// CHECK-NEXT:    (CXComment_FullComment
+// CHECK-NEXT:       (CXComment_Paragraph
+// CHECK-NEXT:         (CXComment_Text Text=[ Aaa bbb])
+// CHECK-NEXT:         (CXComment_HTMLStartTag Name=[img] SelfClosing)
+
+/// Aaa ccc<img />
+void comment_to_html_conversion_39();
+
+// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-2]]:6: FunctionDecl=comment_to_html_conversion_39:{{.*}} FullCommentAsHTML=[<p class="para-brief"> Aaa ccc<img/></p>] FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-2]]" column="6"><Name>comment_to_html_conversion_39</Name><USR>c:@F@comment_to_html_conversion_39#</USR><Declaration>void comment_to_html_conversion_39()</Declaration><Abstract><Para> Aaa ccc<rawHTML><![CDATA[<img/>]]></rawHTML></Para></Abstract></Function>]
+// CHECK-NEXT:  CommentAST=[
+// CHECK-NEXT:    (CXComment_FullComment
+// CHECK-NEXT:       (CXComment_Paragraph
+// CHECK-NEXT:         (CXComment_Text Text=[ Aaa ccc])
+// CHECK-NEXT:         (CXComment_HTMLStartTag Name=[img] SelfClosing)
+
 /// Aaa ccc<img src="">
 void comment_to_html_conversion_40();
 
@@ -753,6 +773,36 @@ void comment_to_html_conversion_40();
 // CHECK-NEXT:       (CXComment_Paragraph
 // CHECK-NEXT:         (CXComment_Text Text=[ Aaa ccc])
 // CHECK-NEXT:         (CXComment_HTMLStartTag Name=[img] Attrs: src=)
+
+/// Aaa ccc<img src="path">
+void comment_to_html_conversion_41();
+
+// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-2]]:6: FunctionDecl=comment_to_html_conversion_41:{{.*}} FullCommentAsHTML=[<p class="para-brief"> Aaa ccc<img src="path"></p>] FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-2]]" column="6"><Name>comment_to_html_conversion_41</Name><USR>c:@F@comment_to_html_conversion_41#</USR><Declaration>void comment_to_html_conversion_41()</Declaration><Abstract><Para> Aaa ccc<rawHTML><![CDATA[<img src="path">]]></rawHTML></Para></Abstract></Function>]
+// CHECK-NEXT:  CommentAST=[
+// CHECK-NEXT:    (CXComment_FullComment
+// CHECK-NEXT:       (CXComment_Paragraph
+// CHECK-NEXT:         (CXComment_Text Text=[ Aaa ccc])
+// CHECK-NEXT:         (CXComment_HTMLStartTag Name=[img] Attrs: src=path)
+
+/// Aaa ccc<img src="path"/>
+void comment_to_html_conversion_42();
+
+// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-2]]:6: FunctionDecl=comment_to_html_conversion_42:{{.*}} FullCommentAsHTML=[<p class="para-brief"> Aaa ccc<img src="path"/></p>] FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-2]]" column="6"><Name>comment_to_html_conversion_42</Name><USR>c:@F@comment_to_html_conversion_42#</USR><Declaration>void comment_to_html_conversion_42()</Declaration><Abstract><Para> Aaa ccc<rawHTML><![CDATA[<img src="path"/>]]></rawHTML></Para></Abstract></Function>]
+// CHECK-NEXT:  CommentAST=[
+// CHECK-NEXT:    (CXComment_FullComment
+// CHECK-NEXT:       (CXComment_Paragraph
+// CHECK-NEXT:         (CXComment_Text Text=[ Aaa ccc])
+// CHECK-NEXT:         (CXComment_HTMLStartTag Name=[img] Attrs: src=path SelfClosing)
+
+/// Aaa ddd<img src=""/>
+void comment_to_html_conversion_43();
+
+// CHECK: comment-to-html-xml-conversion.cpp:[[@LINE-2]]:6: FunctionDecl=comment_to_html_conversion_43:{{.*}} FullCommentAsHTML=[<p class="para-brief"> Aaa ddd<img src/></p>] FullCommentAsXML=[<Function file="{{[^"]+}}comment-to-html-xml-conversion.cpp" line="[[@LINE-2]]" column="6"><Name>comment_to_html_conversion_43</Name><USR>c:@F@comment_to_html_conversion_43#</USR><Declaration>void comment_to_html_conversion_43()</Declaration><Abstract><Para> Aaa ddd<rawHTML><![CDATA[<img src/>]]></rawHTML></Para></Abstract></Function>]
+// CHECK-NEXT:  CommentAST=[
+// CHECK-NEXT:    (CXComment_FullComment
+// CHECK-NEXT:       (CXComment_Paragraph
+// CHECK-NEXT:         (CXComment_Text Text=[ Aaa ddd])
+// CHECK-NEXT:         (CXComment_HTMLStartTag Name=[img] Attrs: src= SelfClosing)
 
 /// Aaa.
 class comment_to_xml_conversion_01 {
