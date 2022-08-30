@@ -398,15 +398,20 @@ bool M88kPostLegalizerLoweringInfo::combine(GISelChangeObserver &Observer,
   // swap the operands. The matcher generated from the SDAG patterns expects the
   // constant always as the second operand, otherwise operand is not matched as
   // immediate.
-  if (MI.isCommutable()) {
-    assert(MI.getNumExplicitOperands() == 3 && "Not a binary operation");
+  if (MI.isCommutable() && isPreISelGenericOpcode(MI.getOpcode())) {
+    assert(MI.getNumExplicitOperands() >= 3 && "Not a binary operation");
+    unsigned Opc = MI.getOpcode();
+    bool HasCarry =
+        Opc == TargetOpcode::G_UADDO || Opc == TargetOpcode::G_USUBO ||
+        Opc == TargetOpcode::G_UADDE || Opc == TargetOpcode::G_USUBE;
+    unsigned SrcIdx = HasCarry ? 2 : 1;
     unsigned SrcOpc =
-        getDefIgnoringCopies(MI.getOperand(1).getReg(), *B.getMRI())
+        getDefIgnoringCopies(MI.getOperand(SrcIdx).getReg(), *B.getMRI())
             ->getOpcode();
     if (SrcOpc == TargetOpcode::G_CONSTANT ||
         SrcOpc == TargetOpcode::G_FCONSTANT) {
       Observer.changingInstr(MI);
-      B.getTII().commuteInstruction(MI, false, 1, 2);
+      B.getTII().commuteInstruction(MI, false, SrcIdx, SrcIdx + 1);
       Observer.changedInstr(MI);
     }
   }

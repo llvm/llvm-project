@@ -82,6 +82,8 @@ private:
                         MachineRegisterInfo &MRI) const;
   bool selectPtrAdd(MachineInstr &I, MachineBasicBlock &MBB,
                     MachineRegisterInfo &MRI) const;
+  bool selectAddSubWithCarry(MachineInstr &I, MachineBasicBlock &MBB,
+                             MachineRegisterInfo &MRI) const;
   bool selectMul(MachineInstr &I, MachineBasicBlock &MBB,
                  MachineRegisterInfo &MRI) const;
   bool selectUDiv(MachineInstr &I, MachineBasicBlock &MBB,
@@ -604,6 +606,39 @@ bool M88kInstructionSelector::selectPtrAdd(MachineInstr &I,
              .addReg(PtrReg)
              .addReg(AddendReg);
   }
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
+bool M88kInstructionSelector::selectAddSubWithCarry(
+    MachineInstr &I, MachineBasicBlock &MBB, MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_UADDO ||
+         I.getOpcode() == TargetOpcode::G_USUBO ||
+         I.getOpcode() == TargetOpcode::G_UADDE ||
+         I.getOpcode() == TargetOpcode::G_USUBE && "Unexpected G code");
+
+  static unsigned TargetOpc[] = {
+      M88k::ADDUrrco, M88k::ADDUrrci, M88k::ADDUrrcio, // Add
+      M88k::SUBUrrco, M88k::SUBUrrci, M88k::SUBUrrcio, // Sub
+  };
+  unsigned Opc = I.getOpcode();
+  bool HasCarryInOut =
+      Opc == TargetOpcode::G_UADDE || Opc == TargetOpcode::G_USUBE;
+  bool IsCarryOutUsed =
+      HasCarryInOut && MRI.use_begin(I.getOperand(1).getReg()) != MRI.use_end();
+  bool IsSub = Opc == TargetOpcode::G_USUBO || Opc == TargetOpcode::G_USUBE;
+  unsigned NewOpc =
+      TargetOpc[3 * IsSub + HasCarryInOut + IsCarryOutUsed];
+
+  MachineInstr *MI = nullptr;
+  Register DstReg = I.getOperand(0).getReg();
+  Register Src1Reg = I.getOperand(2).getReg();
+  Register Src2Reg = I.getOperand(3).getReg();
+
+  MI = BuildMI(MBB, I, I.getDebugLoc(), TII.get(NewOpc), DstReg)
+           .addReg(Src1Reg)
+           .addReg(Src2Reg);
+
   I.eraseFromParent();
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
@@ -1131,6 +1166,11 @@ bool M88kInstructionSelector::select(MachineInstr &I) {
     return selectBrJT(I, MBB, MRI);
   case TargetOpcode::G_BRINDIRECT:
     return selectBrIndirect(I, MBB, MRI);
+  case TargetOpcode::G_UADDO:
+  case TargetOpcode::G_USUBO:
+  case TargetOpcode::G_UADDE:
+  case TargetOpcode::G_USUBE:
+    return selectAddSubWithCarry(I, MBB, MRI);
   case TargetOpcode::G_MUL:
     return selectMul(I, MBB, MRI);
   case TargetOpcode::G_UDIV:

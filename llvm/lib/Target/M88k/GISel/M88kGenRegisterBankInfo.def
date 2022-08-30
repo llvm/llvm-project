@@ -23,6 +23,8 @@ RegisterBankInfo::PartialMapping M88kGenRegisterBankInfo::PartMappings[]{
     {0, 32, M88k::GRRegBank},
     // 4: GPR 64-bit value.
     {0, 64, M88k::GRRegBank},
+    // 5: CR 32-bit value.
+    {0, 32, M88k::CRRegBank},
 };
 
 // ValueMappings.
@@ -48,20 +50,24 @@ RegisterBankInfo::ValueMapping M88kGenRegisterBankInfo::ValMappings[]{
     {&M88kGenRegisterBankInfo::PartMappings[PMI_GR32 - PMI_Min], 1},
     {&M88kGenRegisterBankInfo::PartMappings[PMI_GR32 - PMI_Min], 1},
     {&M88kGenRegisterBankInfo::PartMappings[PMI_GR32 - PMI_Min], 1},
-    // 13: 2x GR 32-bit value. <-- This must match Last3OpsIdx.
+    // 13: 2x GR 32-bit value.
     {&M88kGenRegisterBankInfo::PartMappings[PMI_GR64 - PMI_Min], 1},
     {&M88kGenRegisterBankInfo::PartMappings[PMI_GR64 - PMI_Min], 1},
     {&M88kGenRegisterBankInfo::PartMappings[PMI_GR64 - PMI_Min], 1},
-    // 16: GR 32-bit <- XR 32-bit copy. <-- This must match FirstCrossRegCpyIdx.
+    // 16: CR 32-bit value. <-- This must match Last3OpsIdx.
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_CR - PMI_Min], 1},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_CR - PMI_Min], 1},
+    {&M88kGenRegisterBankInfo::PartMappings[PMI_CR - PMI_Min], 1},
+    // 19: GR 32-bit <- XR 32-bit copy. <-- This must match FirstCrossRegCpyIdx.
     {&M88kGenRegisterBankInfo::PartMappings[PMI_GR32 - PMI_Min], 1},
     {&M88kGenRegisterBankInfo::PartMappings[PMI_XR32 - PMI_Min], 1},
-    // 18: XR 32-bit <- GR 32-bit copy.
+    // 21: XR 32-bit <- GR 32-bit copy.
     {&M88kGenRegisterBankInfo::PartMappings[PMI_XR32 - PMI_Min], 1},
     {&M88kGenRegisterBankInfo::PartMappings[PMI_GR32 - PMI_Min], 1},
-    // 20: 2x GR 32-bit <- XR 64-bit copy.
+    // 23: 2x GR 32-bit <- XR 64-bit copy.
     {&M88kGenRegisterBankInfo::PartMappings[PMI_GR64 - PMI_Min], 1},
     {&M88kGenRegisterBankInfo::PartMappings[PMI_XR64 - PMI_Min], 1},
-    // 22: XR 64-bit <- 2x GR 32-bit copy. <-- This must match
+    // 25: XR 64-bit <- 2x GR 32-bit copy. <-- This must match
     // LastCrossRegCpyIdx.
     {&M88kGenRegisterBankInfo::PartMappings[PMI_XR64 - PMI_Min], 1},
     {&M88kGenRegisterBankInfo::PartMappings[PMI_GR64 - PMI_Min], 1},

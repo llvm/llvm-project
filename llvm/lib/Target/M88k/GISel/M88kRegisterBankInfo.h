@@ -31,6 +31,7 @@ protected:
     PMI_XR80,
     PMI_GR32,
     PMI_GR64,
+    PMI_CR,
     PMI_Min = PMI_XR32,
   };
 
@@ -41,9 +42,9 @@ protected:
   enum ValueMappingIdx {
     InvalidIdx = 0,
     First3OpsIdx = 1,
-    Last3OpsIdx = 13,
+    Last3OpsIdx = 16,
     DistanceBetweenRegBanks = 3,
-    FirstCrossRegCpyIdx = 16,
+    FirstCrossRegCpyIdx = 19,
     LastCrossRegCpyIdx = 22,
     DistanceBetweenCrossRegCpy = 2,
   };

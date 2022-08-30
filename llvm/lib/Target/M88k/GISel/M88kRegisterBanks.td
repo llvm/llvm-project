@@ -14,3 +14,4 @@
 /// Register banks.
 def GRRegBank : RegisterBank<"GR", [GPRRC, GPR64RC]>;
 def XRRegBank : RegisterBank<"XR", [XRRC]>;
+def CRRegBank : RegisterBank<"CR", [CRRC]>;
