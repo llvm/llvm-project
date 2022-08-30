@@ -164,6 +164,115 @@ func.func @fold_add_splat_f32() -> tensor<10xf32> {
 
 // -----
 
+
+// CHECK-LABEL: @fold_mul_zero_rhs_f32
+func.func @fold_mul_zero_rhs_f32(%arg0: tensor<f32>) -> tensor<f32> {
+  %zero = "tosa.const"() {value = dense<0.0> : tensor<f32>} : () -> tensor<f32>
+  // CHECK: %[[ZERO:.+]] = "tosa.const"() {value = dense<0.000000e+00> : tensor<f32>}
+  %mul = "tosa.mul"(%arg0, %zero) {shift = 0 : i32} : (tensor<f32>, tensor<f32>) -> tensor<f32>
+  // CHECK: return %[[ZERO]]
+  return %mul : tensor<f32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_mul_zero_lhs_f32
+func.func @fold_mul_zero_lhs_f32(%arg0: tensor<f32>) -> tensor<f32> {
+  %zero = "tosa.const"() {value = dense<0.0> : tensor<f32>} : () -> tensor<f32>
+  // CHECK: %[[ZERO:.+]] = "tosa.const"() {value = dense<0.000000e+00> : tensor<f32>}
+  %mul = "tosa.mul"(%zero, %arg0) {shift = 0 : i32} : (tensor<f32>, tensor<f32>) -> tensor<f32>
+  // CHECK: return %[[ZERO]]
+  return %mul : tensor<f32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_mul_zero_rhs_i32
+func.func @fold_mul_zero_rhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
+  %zero = "tosa.const"() {value = dense<0> : tensor<i32>} : () -> tensor<i32>
+  // CHECK: %[[ZERO:.+]] = "tosa.const"() {value = dense<0> : tensor<i32>}
+  %mul = "tosa.mul"(%arg0, %zero) {shift = 0 : i32} : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  // CHECK: return %[[ZERO]]
+  return %mul : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_mul_zero_lhs_i32
+func.func @fold_mul_zero_lhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
+  %zero = "tosa.const"() {value = dense<0> : tensor<i32>} : () -> tensor<i32>
+  // CHECK: %[[ZERO:.+]] = "tosa.const"() {value = dense<0> : tensor<i32>}
+  %mul = "tosa.mul"(%zero, %arg0) {shift = 0 : i32} : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  // CHECK: return %[[ZERO]]
+  return %mul : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_mul_one_rhs_f32
+func.func @fold_mul_one_rhs_f32(%arg0: tensor<f32>) -> tensor<f32> {
+  %one = "tosa.const"() {value = dense<1.0> : tensor<f32>} : () -> tensor<f32>
+  %mul = "tosa.mul"(%arg0, %one) {shift = 0 : i32} : (tensor<f32>, tensor<f32>) -> tensor<f32>
+  // CHECK: return %arg0
+  return %mul : tensor<f32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_mul_one_lhs_f32
+func.func @fold_mul_one_lhs_f32(%arg0: tensor<f32>) -> tensor<f32> {
+  %one = "tosa.const"() {value = dense<1.0> : tensor<f32>} : () -> tensor<f32>
+  %mul = "tosa.mul"(%one, %arg0) {shift = 0 : i32} : (tensor<f32>, tensor<f32>) -> tensor<f32>
+  // CHECK: return %arg0
+  return %mul : tensor<f32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_mul_one_rhs_i32
+func.func @fold_mul_one_rhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
+  %one = "tosa.const"() {value = dense<64> : tensor<i32>} : () -> tensor<i32>
+  %mul = "tosa.mul"(%arg0, %one) {shift = 6 : i32} : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  // CHECK: return %arg0
+  return %mul : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_mul_one_lhs_i32
+func.func @fold_mul_one_lhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
+  %one = "tosa.const"() {value = dense<64> : tensor<i32>} : () -> tensor<i32>
+  %mul = "tosa.mul"(%one, %arg0) {shift = 6 : i32} : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  // CHECK: return %arg0
+  return %mul : tensor<i32>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_mul_splat_i8
+func.func @fold_mul_splat_i8() -> tensor<10xi8> {
+  %one = "tosa.const"() {value = dense<17> : tensor<10xi8>} : () -> tensor<10xi8>
+  %two = "tosa.const"() {value = dense<32> : tensor<10xi8>} : () -> tensor<10xi8>
+  %mul = "tosa.mul"(%one, %two) {shift = 3 : i32} : (tensor<10xi8>, tensor<10xi8>) -> tensor<10xi8>
+  // CHECK: %[[THREE:.+]] = "tosa.const"() {value = dense<68> : tensor<10xi8>}
+  // CHECK: return %[[THREE]]
+  return %mul : tensor<10xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @fold_mul_splat_f32
+func.func @fold_mul_splat_f32() -> tensor<10xf32> {
+  %one = "tosa.const"() {value = dense<3.0> : tensor<10xf32>} : () -> tensor<10xf32>
+  %two = "tosa.const"() {value = dense<2.0> : tensor<10xf32>} : () -> tensor<10xf32>
+  %mul = "tosa.mul"(%one, %two) {shift = 0 : i32} : (tensor<10xf32>, tensor<10xf32>) -> tensor<10xf32>
+  // CHECK: %[[THREE:.+]] = "tosa.const"() {value = dense<6.000000e+00> : tensor<10xf32>}
+  // CHECK: return %[[THREE]]
+  return %mul : tensor<10xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @fold_sub_zero_rhs_f32
 func.func @fold_sub_zero_rhs_f32(%arg0: tensor<f32>) -> tensor<f32> {
   %zero = "tosa.const"() {value = dense<0.0> : tensor<f32>} : () -> tensor<f32>
