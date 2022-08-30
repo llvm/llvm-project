@@ -717,9 +717,18 @@ OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
   auto inputTy = getInput1().getType().dyn_cast<RankedTensorType>();
   auto outputTy = getType().dyn_cast<RankedTensorType>();
 
-  if (!inputTy || !outputTy || inputTy != outputTy)
+  if (!inputTy || !outputTy)
     return {};
-  return getInput1();
+
+  if (inputTy == outputTy)
+    return getInput1();
+
+  auto operand = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  if (operand && outputTy.hasStaticShape() && operand.isSplat()) {
+    return SplatElementsAttr::get(outputTy, operand.getSplatValue<Attribute>());
+  }
+
+  return {};
 }
 
 OpFoldResult PadOp::fold(ArrayRef<Attribute> operands) {
