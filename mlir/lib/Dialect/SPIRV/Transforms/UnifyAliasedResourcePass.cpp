@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
+
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
-#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -26,6 +26,13 @@
 #include "llvm/Support/Debug.h"
 #include <algorithm>
 #include <iterator>
+
+namespace mlir {
+namespace spirv {
+#define GEN_PASS_DEF_SPIRVUNIFYALIASEDRESOURCEPASS
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
+} // namespace spirv
+} // namespace mlir
 
 #define DEBUG_TYPE "spirv-unify-aliased-resource"
 
@@ -520,14 +527,17 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
 //===----------------------------------------------------------------------===//
 
 namespace {
-class UnifyAliasedResourcePass final
-    : public SPIRVUnifyAliasedResourcePassBase<UnifyAliasedResourcePass> {
+class SPIRVUnifyAliasedResourcePass final
+    : public spirv::impl::SPIRVUnifyAliasedResourcePassBase<
+          SPIRVUnifyAliasedResourcePass> {
 public:
+  using SPIRVUnifyAliasedResourcePassBase::SPIRVUnifyAliasedResourcePassBase;
+
   void runOnOperation() override;
 };
 } // namespace
 
-void UnifyAliasedResourcePass::runOnOperation() {
+void SPIRVUnifyAliasedResourcePass::runOnOperation() {
   spirv::ModuleOp moduleOp = getOperation();
   MLIRContext *context = &getContext();
 
@@ -562,5 +572,5 @@ void UnifyAliasedResourcePass::runOnOperation() {
 
 std::unique_ptr<mlir::OperationPass<spirv::ModuleOp>>
 spirv::createUnifyAliasedResourcePass() {
-  return std::make_unique<UnifyAliasedResourcePass>();
+  return std::make_unique<SPIRVUnifyAliasedResourcePass>();
 }

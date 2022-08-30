@@ -6,16 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Bufferization/Transforms/TensorCopyInsertion.h"
-
-#include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/Bufferization/Transforms/TensorCopyInsertion.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+
+namespace mlir {
+namespace bufferization {
+#define GEN_PASS_DEF_TENSORCOPYINSERTIONPASS
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
+} // namespace bufferization
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -159,7 +165,8 @@ mlir::bufferization::insertTensorCopies(Operation *op,
 
 namespace {
 struct TensorCopyInsertionPass
-    : TensorCopyInsertionBase<TensorCopyInsertionPass> {
+    : bufferization::impl::TensorCopyInsertionPassBase<
+          TensorCopyInsertionPass> {
   TensorCopyInsertionPass() : options(llvm::None) {}
   TensorCopyInsertionPass(const OneShotBufferizationOptions &options)
       : options(options) {}

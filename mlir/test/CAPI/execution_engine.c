@@ -34,9 +34,9 @@ void lowerModuleToLLVM(MlirContext ctx, MlirModule module) {
   MlirPassManager pm = mlirPassManagerCreate(ctx);
   MlirOpPassManager opm = mlirPassManagerGetNestedUnder(
       pm, mlirStringRefCreateFromCString("func.func"));
-  mlirPassManagerAddOwnedPass(pm, mlirCreateConversionConvertFuncToLLVM());
-  mlirOpPassManagerAddOwnedPass(opm,
-                                mlirCreateConversionConvertArithmeticToLLVM());
+  mlirPassManagerAddOwnedPass(pm, mlirCreateConversionConvertFuncToLLVMPass());
+  mlirOpPassManagerAddOwnedPass(
+      opm, mlirCreateConversionConvertArithmeticToLLVMPass());
   MlirLogicalResult status = mlirPassManagerRun(pm, module);
   if (mlirLogicalResultIsFailure(status)) {
     fprintf(stderr, "Unexpected failure running pass pipeline\n");

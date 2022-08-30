@@ -12,11 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
+
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+
+namespace mlir {
+namespace spirv {
+#define GEN_PASS_DEF_SPIRVREWRITEINSERTSPASS
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
+} // namespace spirv
+} // namespace mlir
 
 using namespace mlir;
 
@@ -24,9 +31,11 @@ namespace {
 
 /// Replaces sequential chains of `spirv::CompositeInsertOp` operation into
 /// `spirv::CompositeConstructOp` operation if possible.
-class RewriteInsertsPass
-    : public SPIRVRewriteInsertsPassBase<RewriteInsertsPass> {
+class SPIRVRewriteInsertsPass
+    : public spirv::impl::SPIRVRewriteInsertsPassBase<SPIRVRewriteInsertsPass> {
 public:
+  using SPIRVRewriteInsertsPassBase::SPIRVRewriteInsertsPassBase;
+
   void runOnOperation() override;
 
 private:
@@ -40,7 +49,7 @@ private:
 
 } // namespace
 
-void RewriteInsertsPass::runOnOperation() {
+void SPIRVRewriteInsertsPass::runOnOperation() {
   SmallVector<SmallVector<spirv::CompositeInsertOp, 4>, 4> workList;
   getOperation().walk([this, &workList](spirv::CompositeInsertOp op) {
     SmallVector<spirv::CompositeInsertOp, 4> insertions;
@@ -74,7 +83,7 @@ void RewriteInsertsPass::runOnOperation() {
   }
 }
 
-LogicalResult RewriteInsertsPass::collectInsertionChain(
+LogicalResult SPIRVRewriteInsertsPass::collectInsertionChain(
     spirv::CompositeInsertOp op,
     SmallVectorImpl<spirv::CompositeInsertOp> &insertions) {
   auto indicesArrayAttr = op.indices().cast<ArrayAttr>();
@@ -111,5 +120,5 @@ LogicalResult RewriteInsertsPass::collectInsertionChain(
 
 std::unique_ptr<mlir::OperationPass<spirv::ModuleOp>>
 mlir::spirv::createRewriteInsertsPass() {
-  return std::make_unique<RewriteInsertsPass>();
+  return std::make_unique<SPIRVRewriteInsertsPass>();
 }

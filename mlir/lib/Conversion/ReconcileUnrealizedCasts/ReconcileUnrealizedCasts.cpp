@@ -7,11 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
-#include "../PassDetail.h"
+
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_RECONCILEUNREALIZEDCASTSPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -102,9 +107,10 @@ struct UnrealizedConversionCastPassthrough
 };
 
 /// Pass to simplify and eliminate unrealized conversion casts.
-struct ReconcileUnrealizedCasts
-    : public ReconcileUnrealizedCastsBase<ReconcileUnrealizedCasts> {
-  ReconcileUnrealizedCasts() = default;
+struct ReconcileUnrealizedCastsPass
+    : public impl::ReconcileUnrealizedCastsPassBase<
+          ReconcileUnrealizedCastsPass> {
+  using ReconcileUnrealizedCastsPassBase::ReconcileUnrealizedCastsPassBase;
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -122,8 +128,4 @@ struct ReconcileUnrealizedCasts
 void mlir::populateReconcileUnrealizedCastsPatterns(
     RewritePatternSet &patterns) {
   patterns.add<UnrealizedConversionCastPassthrough>(patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createReconcileUnrealizedCastsPass() {
-  return std::make_unique<ReconcileUnrealizedCasts>();
 }

@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"
-#include "../PassDetail.h"
+
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
@@ -22,7 +22,13 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTSCFTOOPENMPPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -443,7 +449,10 @@ static LogicalResult applyPatterns(ModuleOp module) {
 }
 
 /// A pass converting SCF operations to OpenMP operations.
-struct SCFToOpenMPPass : public ConvertSCFToOpenMPBase<SCFToOpenMPPass> {
+struct ConvertSCFToOpenMPPass
+    : public impl::ConvertSCFToOpenMPPassBase<ConvertSCFToOpenMPPass> {
+  using ConvertSCFToOpenMPPassBase::ConvertSCFToOpenMPPassBase;
+
   /// Pass entry point.
   void runOnOperation() override {
     if (failed(applyPatterns(getOperation())))
@@ -454,5 +463,5 @@ struct SCFToOpenMPPass : public ConvertSCFToOpenMPBase<SCFToOpenMPPass> {
 } // namespace
 
 std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertSCFToOpenMPPass() {
-  return std::make_unique<SCFToOpenMPPass>();
+  return std::make_unique<ConvertSCFToOpenMPPass>();
 }

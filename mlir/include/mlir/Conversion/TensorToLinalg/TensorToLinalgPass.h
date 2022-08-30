@@ -18,6 +18,9 @@
 namespace mlir {
 class ModuleOp;
 
+#define GEN_PASS_DECL_CONVERTTENSORTOLINALGPASS
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Creates a pass to convert Tensor ops to Linalg ops.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertTensorToLinalgPass();
 

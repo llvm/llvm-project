@@ -25,6 +25,10 @@ class BufferizeTypeConverter;
 class RewritePatternSet;
 
 namespace func {
+
+#define GEN_PASS_DECL_FUNCBUFFERIZEPASS
+#include "mlir/Dialect/Func/Transforms/Passes.h.inc"
+
 /// Creates an instance of func bufferization pass.
 std::unique_ptr<Pass> createFuncBufferizePass();
 

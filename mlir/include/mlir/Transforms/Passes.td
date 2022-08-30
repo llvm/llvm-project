@@ -16,7 +16,7 @@
 include "mlir/Pass/PassBase.td"
 include "mlir/Rewrite/PassUtil.td"
 
-def Canonicalizer : Pass<"canonicalize"> {
+def CanonicalizerPass : Pass<"canonicalize"> {
   let summary = "Canonicalize operations";
   let description = [{
     This pass performs various types of canonicalizations over a set of
@@ -37,7 +37,7 @@ def Canonicalizer : Pass<"canonicalize"> {
   ] # RewritePassUtils.options;
 }
 
-def ControlFlowSink : Pass<"control-flow-sink"> {
+def ControlFlowSinkPass : Pass<"control-flow-sink"> {
   let summary = "Sink operations into conditional blocks";
   let description = [{
     This pass implements control-flow sink on operations that implement
@@ -55,13 +55,12 @@ def ControlFlowSink : Pass<"control-flow-sink"> {
     blocks: ops in unreachable blocks may prevent other operations from being
     sunk as they may contain uses of their results
   }];
-  let constructor = "::mlir::createControlFlowSinkPass()";
   let statistics = [
     Statistic<"numSunk", "num-sunk", "Number of operations sunk">,
   ];
 }
 
-def CSE : Pass<"cse"> {
+def CSEPass : Pass<"cse"> {
   let summary = "Eliminate common sub-expressions";
   let description = [{
     This pass implements a generalized algorithm for common sub-expression
@@ -70,14 +69,13 @@ def CSE : Pass<"cse"> {
     operations. See [Common subexpression elimination](https://en.wikipedia.org/wiki/Common_subexpression_elimination)
     for more general details on this optimization.
   }];
-  let constructor = "mlir::createCSEPass()";
   let statistics = [
     Statistic<"numCSE", "num-cse'd", "Number of operations CSE'd">,
     Statistic<"numDCE", "num-dce'd", "Number of operations DCE'd">
   ];
 }
 
-def Inliner : Pass<"inline"> {
+def InlinerPass : Pass<"inline"> {
   let summary = "Inline function calls";
   let constructor = "mlir::createInlinerPass()";
   let options = [
@@ -92,7 +90,7 @@ def Inliner : Pass<"inline"> {
   ];
 }
 
-def LocationSnapshot : Pass<"snapshot-op-locations"> {
+def LocationSnapshotPass : Pass<"snapshot-op-locations"> {
   let summary = "Generate new locations from the current IR";
   let description = [{
     This pass allows for generating new locations from the IR during any stage
@@ -137,12 +135,11 @@ def LocationSnapshot : Pass<"snapshot-op-locations"> {
   ];
 }
 
-def LoopInvariantCodeMotion : Pass<"loop-invariant-code-motion"> {
+def LoopInvariantCodeMotionPass : Pass<"loop-invariant-code-motion"> {
   let summary = "Hoist loop invariant instructions outside of the loop";
-  let constructor = "mlir::createLoopInvariantCodeMotionPass()";
 }
 
-def PrintOpStats : Pass<"print-op-stats"> {
+def PrintOpStatsPass : Pass<"print-op-stats"> {
   let summary = "Print statistics of operations";
   let constructor = "mlir::createPrintOpStatsPass()";
   let options = [
@@ -151,7 +148,7 @@ def PrintOpStats : Pass<"print-op-stats"> {
   ];
 }
 
-def SCCP : Pass<"sccp"> {
+def SCCPPass : Pass<"sccp"> {
   let summary = "Sparse Conditional Constant Propagation";
   let description = [{
     This pass implements a general algorithm for sparse conditional constant
@@ -162,19 +159,17 @@ def SCCP : Pass<"sccp"> {
     This implementation is based on the algorithm described by Wegman and Zadeck
     in [“Constant Propagation with Conditional Branches”](https://dl.acm.org/doi/10.1145/103135.103136) (1991).
   }];
-  let constructor = "mlir::createSCCPPass()";
 }
 
-def StripDebugInfo : Pass<"strip-debuginfo"> {
+def StripDebugInfoPass : Pass<"strip-debuginfo"> {
   let summary = "Strip debug info from all operations";
   let description = [{
     This pass strips the IR of any location information, by replacing all
     operation locations with [`unknown`](Diagnostics.md#unknown-location).
   }];
-  let constructor = "mlir::createStripDebugInfoPass()";
 }
 
-def SymbolDCE : Pass<"symbol-dce"> {
+def SymbolDCEPass : Pass<"symbol-dce"> {
   let summary = "Eliminate dead symbols";
   let description = [{
     This pass deletes all symbols that are found to be unreachable. This is done
@@ -214,14 +209,13 @@ def SymbolDCE : Pass<"symbol-dce"> {
     See [Symbols and SymbolTables](SymbolsAndSymbolTables.md) for more
     information on `Symbols`.
   }];
-  let constructor = "mlir::createSymbolDCEPass()";
 
   let statistics = [
     Statistic<"numDCE", "num-dce'd", "Number of symbols DCE'd">,
   ];
 }
 
-def SymbolPrivatize : Pass<"symbol-privatize"> {
+def SymbolPrivatizePass : Pass<"symbol-privatize"> {
   let summary = "Mark symbols private";
   let description = [{
     This pass marks all top-level symbols of the operation run as `private`
@@ -234,7 +228,7 @@ def SymbolPrivatize : Pass<"symbol-privatize"> {
   let constructor = "mlir::createSymbolPrivatizePass()";
 }
 
-def ViewOpGraph : Pass<"view-op-graph"> {
+def ViewOpGraphPass : Pass<"view-op-graph"> {
   let summary = "Print Graphviz visualization of an operation";
   let description = [{
     This pass prints a Graphviz graph of a module.
@@ -261,10 +255,10 @@ def ViewOpGraph : Pass<"view-op-graph"> {
     Option<"printResultTypes", "print-result-types", "bool",
             /*default=*/"true", "Print result types of operations">
   ];
-  let constructor = "mlir::createPrintOpGraphPass()";
+  let constructor = "mlir::createViewOpGraphPass()";
 }
 
-def TopologicalSort : Pass<"topological-sort"> {
+def TopologicalSortPass : Pass<"topological-sort"> {
   let summary = "Sort regions without SSA dominance in topological order";
   let description = [{
     Recursively sorts all nested regions without SSA dominance in topological
@@ -277,8 +271,6 @@ def TopologicalSort : Pass<"topological-sort"> {
     is not changed. Operations that form a cycle are moved to the end of the
     regions in a stable order.
   }];
-
-  let constructor = "mlir::createTopologicalSortPass()";
 }
 
 #endif // MLIR_TRANSFORMS_PASSES

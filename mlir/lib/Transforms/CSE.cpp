@@ -11,17 +11,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/IR/Dominance.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/RecyclingAllocator.h"
 #include <deque>
+
+namespace mlir {
+#define GEN_PASS_DEF_CSEPASS
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -53,7 +58,9 @@ struct SimpleOperationInfo : public llvm::DenseMapInfo<Operation *> {
 
 namespace {
 /// Simple common sub-expression elimination.
-struct CSE : public CSEBase<CSE> {
+struct CSEPass : public impl::CSEPassBase<CSEPass> {
+  using CSEPassBase::CSEPassBase;
+
   /// Shared implementation of operation elimination and scoped map definitions.
   using AllocatorTy = llvm::RecyclingAllocator<
       llvm::BumpPtrAllocator,
@@ -108,8 +115,8 @@ private:
 };
 } // namespace
 
-void CSE::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
-                               Operation *existing, bool hasSSADominance) {
+void CSEPass::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
+                                   Operation *existing, bool hasSSADominance) {
   // If we find one then replace all uses of the current operation with the
   // existing one and mark it for deletion. We can only replace an operand in
   // an operation if it has not been visited yet.
@@ -142,7 +149,8 @@ void CSE::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
   ++numCSE;
 }
 
-bool CSE::hasOtherSideEffectingOpInBetween(Operation *fromOp, Operation *toOp) {
+bool CSEPass::hasOtherSideEffectingOpInBetween(Operation *fromOp,
+                                               Operation *toOp) {
   assert(fromOp->getBlock() == toOp->getBlock());
   assert(
       isa<MemoryEffectOpInterface>(fromOp) &&
@@ -183,8 +191,8 @@ bool CSE::hasOtherSideEffectingOpInBetween(Operation *fromOp, Operation *toOp) {
 }
 
 /// Attempt to eliminate a redundant operation.
-LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op,
-                                     bool hasSSADominance) {
+LogicalResult CSEPass::simplifyOperation(ScopedMapTy &knownValues,
+                                         Operation *op, bool hasSSADominance) {
   // Don't simplify terminator operations.
   if (op->hasTrait<OpTrait::IsTerminator>())
     return failure();
@@ -239,8 +247,8 @@ LogicalResult CSE::simplifyOperation(ScopedMapTy &knownValues, Operation *op,
   return failure();
 }
 
-void CSE::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
-                        bool hasSSADominance) {
+void CSEPass::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
+                            bool hasSSADominance) {
   for (auto &op : *bb) {
     // If the operation is simplified, we don't process any held regions.
     if (succeeded(simplifyOperation(knownValues, &op, hasSSADominance)))
@@ -268,7 +276,7 @@ void CSE::simplifyBlock(ScopedMapTy &knownValues, Block *bb,
   memEffectsCache.clear();
 }
 
-void CSE::simplifyRegion(ScopedMapTy &knownValues, Region &region) {
+void CSEPass::simplifyRegion(ScopedMapTy &knownValues, Region &region) {
   // If the region is empty there is nothing to do.
   if (region.empty())
     return;
@@ -323,7 +331,7 @@ void CSE::simplifyRegion(ScopedMapTy &knownValues, Region &region) {
   }
 }
 
-void CSE::runOnOperation() {
+void CSEPass::runOnOperation() {
   /// A scoped hash table of defining operations within a region.
   ScopedMapTy knownValues;
 
@@ -347,5 +355,3 @@ void CSE::runOnOperation() {
   markAnalysesPreserved<DominanceInfo, PostDominanceInfo>();
   domInfo = nullptr;
 }
-
-std::unique_ptr<Pass> mlir::createCSEPass() { return std::make_unique<CSE>(); }

@@ -16,6 +16,9 @@ class Pass;
 
 namespace NVVM {
 
+#define GEN_PASS_DECL_NVVMOPTIMIZEFORTARGETPASS
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
+
 /// Creates a pass that optimizes LLVM IR for the NVVM target.
 std::unique_ptr<Pass> createOptimizeForTargetPass();
 

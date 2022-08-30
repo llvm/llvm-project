@@ -11,14 +11,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
+
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
-#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SetVector.h"
+
+namespace mlir {
+namespace spirv {
+#define GEN_PASS_DEF_SPIRVLOWERABIATTRIBUTESPASS
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
+} // namespace spirv
+} // namespace mlir
 
 using namespace mlir;
 
@@ -164,8 +171,11 @@ public:
 };
 
 /// Pass to implement the ABI information specified as attributes.
-class LowerABIAttributesPass final
-    : public SPIRVLowerABIAttributesBase<LowerABIAttributesPass> {
+class SPIRVLowerABIAttributesPass final
+    : public spirv::impl::SPIRVLowerABIAttributesPassBase<
+          SPIRVLowerABIAttributesPass> {
+  using SPIRVLowerABIAttributesPassBase::SPIRVLowerABIAttributesPassBase;
+
   void runOnOperation() override;
 };
 } // namespace
@@ -233,7 +243,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
   return success();
 }
 
-void LowerABIAttributesPass::runOnOperation() {
+void SPIRVLowerABIAttributesPass::runOnOperation() {
   // Uses the signature conversion methodology of the dialect conversion
   // framework to implement the conversion.
   spirv::ModuleOp module = getOperation();
@@ -291,5 +301,5 @@ void LowerABIAttributesPass::runOnOperation() {
 
 std::unique_ptr<OperationPass<spirv::ModuleOp>>
 mlir::spirv::createLowerABIAttributesPass() {
-  return std::make_unique<LowerABIAttributesPass>();
+  return std::make_unique<SPIRVLowerABIAttributesPass>();
 }

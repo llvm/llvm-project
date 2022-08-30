@@ -11,20 +11,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/Passes.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CANONICALIZERPASS
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
 /// Canonicalize operations in nested regions.
-struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
-  Canonicalizer() = default;
-  Canonicalizer(const GreedyRewriteConfig &config,
-                ArrayRef<std::string> disabledPatterns,
-                ArrayRef<std::string> enabledPatterns) {
+struct CanonicalizerPass
+    : public impl::CanonicalizerPassBase<CanonicalizerPass> {
+  CanonicalizerPass() = default;
+  CanonicalizerPass(const GreedyRewriteConfig &config,
+                    ArrayRef<std::string> disabledPatterns,
+                    ArrayRef<std::string> enabledPatterns) {
     this->topDownProcessingEnabled = config.useTopDownTraversal;
     this->enableRegionSimplification = config.enableRegionSimplification;
     this->maxIterations = config.maxIterations;
@@ -59,7 +65,7 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
 
 /// Create a Canonicalizer pass.
 std::unique_ptr<Pass> mlir::createCanonicalizerPass() {
-  return std::make_unique<Canonicalizer>();
+  return std::make_unique<CanonicalizerPass>();
 }
 
 /// Creates an instance of the Canonicalizer pass with the specified config.
@@ -67,6 +73,6 @@ std::unique_ptr<Pass>
 mlir::createCanonicalizerPass(const GreedyRewriteConfig &config,
                               ArrayRef<std::string> disabledPatterns,
                               ArrayRef<std::string> enabledPatterns) {
-  return std::make_unique<Canonicalizer>(config, disabledPatterns,
-                                         enabledPatterns);
+  return std::make_unique<CanonicalizerPass>(config, disabledPatterns,
+                                             enabledPatterns);
 }

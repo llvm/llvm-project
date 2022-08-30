@@ -36,7 +36,11 @@
 #include "../GPUCommon/GPUOpsLowering.h"
 #include "../GPUCommon/IndexIntrinsicsOpLowering.h"
 #include "../GPUCommon/OpToFuncCallLowering.h"
-#include "../PassDetail.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTGPUTONVVMPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -151,10 +155,10 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
 ///
 /// This pass only handles device code and is not meant to be run on GPU host
 /// code.
-struct LowerGpuOpsToNVVMOpsPass
-    : public ConvertGpuOpsToNVVMOpsBase<LowerGpuOpsToNVVMOpsPass> {
-  LowerGpuOpsToNVVMOpsPass() = default;
-  LowerGpuOpsToNVVMOpsPass(unsigned indexBitwidth) {
+struct ConvertGpuToNVVMPass
+    : public impl::ConvertGpuToNVVMPassBase<ConvertGpuToNVVMPass> {
+  ConvertGpuToNVVMPass() = default;
+  ConvertGpuToNVVMPass(unsigned indexBitwidth) {
     this->indexBitwidth = indexBitwidth;
   }
 
@@ -289,6 +293,6 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
-mlir::createLowerGpuOpsToNVVMOpsPass(unsigned indexBitwidth) {
-  return std::make_unique<LowerGpuOpsToNVVMOpsPass>(indexBitwidth);
+mlir::createConvertGpuToNVVMPass(unsigned indexBitwidth) {
+  return std::make_unique<ConvertGpuToNVVMPass>(indexBitwidth);
 }

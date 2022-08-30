@@ -17,10 +17,12 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-namespace tosa {
 
-std::unique_ptr<Pass> createTosaToLinalg();
-std::unique_ptr<Pass> createTosaToLinalgNamed();
+#define GEN_PASS_DECL_CONVERTTOSATOLINALGPASS
+#define GEN_PASS_DECL_CONVERTTOSATOLINALGNAMEDPASS
+#include "mlir/Conversion/Passes.h.inc"
+
+namespace tosa {
 
 /// Populates passes to convert from TOSA to Linalg on buffers. At the end of
 /// the pass, the function will only contain linalg ops or standard ops if the

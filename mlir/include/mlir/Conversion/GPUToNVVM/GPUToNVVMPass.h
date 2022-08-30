@@ -25,6 +25,9 @@ class GPUModuleOp;
 class MMAMatrixType;
 } // namespace gpu
 
+#define GEN_PASS_DECL_CONVERTGPUTONVVMPASS
+#include "mlir/Conversion/Passes.h.inc"
+
 LLVM::LLVMStructType convertMMAToLLVMType(gpu::MMAMatrixType type);
 
 /// Configure target to convert from the GPU dialect to NVVM.
@@ -41,7 +44,7 @@ void populateGpuWMMAToNVVMConversionPatterns(LLVMTypeConverter &converter,
 /// Creates a pass that lowers GPU dialect operations to NVVM counterparts. The
 /// index bitwidth used for the lowering of the device side index computations
 /// is configurable.
-std::unique_ptr<OperationPass<gpu::GPUModuleOp>> createLowerGpuOpsToNVVMOpsPass(
+std::unique_ptr<OperationPass<gpu::GPUModuleOp>> createConvertGpuToNVVMPass(
     unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout);
 
 } // namespace mlir

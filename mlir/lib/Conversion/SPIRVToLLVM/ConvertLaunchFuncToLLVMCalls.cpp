@@ -11,7 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../PassDetail.h"
+#include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVMPass.h"
+
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
@@ -19,18 +20,22 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVM.h"
-#include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVMPass.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_LOWERHOSTCODETOLLVMPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -270,9 +275,11 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
   }
 };
 
-class LowerHostCodeToLLVM
-    : public LowerHostCodeToLLVMBase<LowerHostCodeToLLVM> {
+class LowerHostCodeToLLVMPass
+    : public impl::LowerHostCodeToLLVMPassBase<LowerHostCodeToLLVMPass> {
 public:
+  using LowerHostCodeToLLVMPassBase::LowerHostCodeToLLVMPassBase;
+
   void runOnOperation() override {
     ModuleOp module = getOperation();
 
@@ -317,5 +324,5 @@ public:
 
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 mlir::createLowerHostCodeToLLVMPass() {
-  return std::make_unique<LowerHostCodeToLLVM>();
+  return std::make_unique<LowerHostCodeToLLVMPass>();
 }

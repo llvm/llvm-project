@@ -9,12 +9,11 @@
 // This file implements the linalg dialect Fusion on tensors operations pass.
 //
 //===----------------------------------------------------------------------===//
-#include <utility>
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Linalg/Passes.h"
+
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -24,6 +23,13 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include <utility>
+
+namespace mlir {
+#define GEN_PASS_DEF_LINALGFOLDUNITEXTENTDIMSPASS
+#define GEN_PASS_DEF_LINALGELEMENTWISEOPFUSIONPASS
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -1753,7 +1759,8 @@ namespace {
 // favor of test passes that check the functionality of each of the patterns
 // added here individually.
 struct LinalgElementwiseOpFusionPass
-    : public LinalgElementwiseOpFusionBase<LinalgElementwiseOpFusionPass> {
+    : public impl::LinalgElementwiseOpFusionPassBase<
+          LinalgElementwiseOpFusionPass> {
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext *context = op->getContext();

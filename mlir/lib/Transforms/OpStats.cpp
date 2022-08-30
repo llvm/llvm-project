@@ -6,19 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_PRINTOPSTATSPASS
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
 
 namespace {
-struct PrintOpStatsPass : public PrintOpStatsBase<PrintOpStatsPass> {
+struct PrintOpStatsPass : public impl::PrintOpStatsPassBase<PrintOpStatsPass> {
   explicit PrintOpStatsPass(raw_ostream &os) : os(os) {}
 
   explicit PrintOpStatsPass(raw_ostream &os, bool printAsJSON) : os(os) {
