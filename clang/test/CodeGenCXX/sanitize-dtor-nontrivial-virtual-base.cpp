@@ -47,7 +47,7 @@ Derived d;
 
 // CHECK-LABEL: define {{.*}}ZN7DerivedD1Ev
 // CHECK: call void {{.*}}ZN11VirtualBaseD2Ev
-// CHECK: call void @__sanitizer_dtor_callback({{.*}}, i64 8)
+// CHECK: call void @__sanitizer_dtor_callback({{.*}}){{.*}}, !dbg ![[DI0:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}ZN7DerivedD0Ev
@@ -86,7 +86,8 @@ Derived d;
 
 // CHECK-LABEL: !DIFile{{.*}}.cpp
 
-// CHECK: ![[DI1]] = {{.*}}line: [[@LINE-59]]
-// CHECK: ![[DI2]] = {{.*}}line: [[@LINE-70]]
-// CHECK: ![[DI3]] = {{.*}}line: [[@LINE-51]]
-// CHECK: ![[DI5]] = {{.*}}line: [[@LINE-82]]
+// CHECK: ![[DI0]] = {{.*}}line: [[@LINE-49]]
+// CHECK: ![[DI1]] = {{.*}}line: [[@LINE-60]]
+// CHECK: ![[DI2]] = {{.*}}line: [[@LINE-71]]
+// CHECK: ![[DI3]] = {{.*}}line: [[@LINE-52]]
+// CHECK: ![[DI5]] = {{.*}}line: [[@LINE-83]]
