@@ -29,8 +29,3 @@ class TestDbgInfoContentForwardList(TestBase):
         self.expect_expr("std::distance(a.begin(), a.end())", result_value="3")
         self.expect_expr("a.front().a", result_type="int", result_value="3")
         self.expect_expr("a.begin()->a", result_type="int", result_value="3")
-
-        # FIXME: The value here isn't actually empty.
-        self.expect_expr("a.front()",
-                         result_type=value_type,
-                         result_children=[ValueCheck()])
