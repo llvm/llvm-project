@@ -558,6 +558,22 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                         F->arg_begin()->getType());
       return true;
     }
+    static const Regex LdRegex("^aarch64\\.sve\\.ld[234](.nxv[a-z0-9]+|$)");
+    if (LdRegex.match(Name)) {
+      Type *ScalarTy =
+          dyn_cast<VectorType>(F->getReturnType())->getElementType();
+      ElementCount EC =
+          dyn_cast<VectorType>(F->arg_begin()->getType())->getElementCount();
+      Type *Ty = VectorType::get(ScalarTy, EC);
+      Intrinsic::ID ID =
+          StringSwitch<Intrinsic::ID>(Name)
+              .StartsWith("aarch64.sve.ld2", Intrinsic::aarch64_sve_ld2_sret)
+              .StartsWith("aarch64.sve.ld3", Intrinsic::aarch64_sve_ld3_sret)
+              .StartsWith("aarch64.sve.ld4", Intrinsic::aarch64_sve_ld4_sret)
+              .Default(Intrinsic::not_intrinsic);
+      NewFn = Intrinsic::getDeclaration(F->getParent(), ID, Ty);
+      return true;
+    }
     if (Name.startswith("arm.neon.vclz")) {
       Type* args[2] = {
         F->arg_begin()->getType(),
@@ -3858,7 +3874,30 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
-
+  case Intrinsic::aarch64_sve_ld3_sret:
+  case Intrinsic::aarch64_sve_ld4_sret:
+  case Intrinsic::aarch64_sve_ld2_sret: {
+    StringRef Name = F->getName();
+    Name = Name.substr(5);
+    unsigned N = StringSwitch<unsigned>(Name)
+                     .StartsWith("aarch64.sve.ld2", 2)
+                     .StartsWith("aarch64.sve.ld3", 3)
+                     .StartsWith("aarch64.sve.ld4", 4)
+                     .Default(0);
+    ScalableVectorType *RetTy =
+        dyn_cast<ScalableVectorType>(F->getReturnType());
+    unsigned MinElts = RetTy->getMinNumElements() / N;
+    SmallVector<Value *, 2> Args(CI->args());
+    Value *NewLdCall = Builder.CreateCall(NewFn, Args);
+    Value *Ret = llvm::PoisonValue::get(RetTy);
+    for (unsigned I = 0; I < N; I++) {
+      Value *Idx = ConstantInt::get(Type::getInt64Ty(C), I * MinElts);
+      Value *SRet = Builder.CreateExtractValue(NewLdCall, I);
+      Ret = Builder.CreateInsertVector(RetTy, Ret, SRet, Idx);
+    }
+    NewCall = dyn_cast<CallInst>(Ret);
+    break;
+  }
   case Intrinsic::arm_neon_bfdot:
   case Intrinsic::arm_neon_bfmmla:
   case Intrinsic::arm_neon_bfmlalb:
