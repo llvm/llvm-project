@@ -21,6 +21,10 @@ DECLARE_SPECIAL_CONSTANTS(float)
 constexpr int def_count = 100003;
 constexpr float def_prec = 0.500001f;
 
+auto f_normal = [](float x) -> bool {
+  return !(isnan(x) || isinf(x) || fabs(x) < 2E-38);
+};
+
 TEST(LlvmLibcExpxfTest, InFloatRange) {
   auto fx = [](float x) -> float {
     auto result = __llvm_libc::exp_eval<-1>(x);
@@ -45,11 +49,11 @@ TEST(LlvmLibcExp2xfTest, InFloatRange) {
 }
 
 TEST(LlvmLibcLog2xfTest, InFloatRange) {
-  CHECK_DATA(0.0f, inf, mpfr::Operation::Log2, __llvm_libc::log2_eval, isnormal,
+  CHECK_DATA(0.0f, inf, mpfr::Operation::Log2, __llvm_libc::log2_eval, f_normal,
              def_count, def_prec);
 }
 
 TEST(LlvmLibcLogxfTest, InFloatRange) {
-  CHECK_DATA(0.0f, inf, mpfr::Operation::Log, __llvm_libc::log_eval, isnormal,
+  CHECK_DATA(0.0f, inf, mpfr::Operation::Log, __llvm_libc::log_eval, f_normal,
              def_count, def_prec);
 }
