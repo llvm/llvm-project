@@ -7,13 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
-#include "../PassDetail.h"
+
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTMATHTOLLVMPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -250,8 +256,8 @@ struct RsqrtOpLowering : public ConvertOpToLLVMPattern<math::RsqrtOp> {
 };
 
 struct ConvertMathToLLVMPass
-    : public ConvertMathToLLVMBase<ConvertMathToLLVMPass> {
-  ConvertMathToLLVMPass() = default;
+    : public impl::ConvertMathToLLVMPassBase<ConvertMathToLLVMPass> {
+  using ConvertMathToLLVMPassBase::ConvertMathToLLVMPassBase;
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -294,8 +300,4 @@ void mlir::populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
     SqrtOpLowering
   >(converter);
   // clang-format on
-}
-
-std::unique_ptr<Pass> mlir::createConvertMathToLLVMPass() {
-  return std::make_unique<ConvertMathToLLVMPass>();
 }

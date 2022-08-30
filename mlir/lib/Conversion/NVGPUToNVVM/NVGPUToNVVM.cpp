@@ -7,12 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
-#include "../PassDetail.h"
+
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTNVGPUTONVVMPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -327,8 +333,8 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
 };
 
 struct ConvertNVGPUToNVVMPass
-    : public ConvertNVGPUToNVVMBase<ConvertNVGPUToNVVMPass> {
-  ConvertNVGPUToNVVMPass() = default;
+    : public impl::ConvertNVGPUToNVVMPassBase<ConvertNVGPUToNVVMPass> {
+  using ConvertNVGPUToNVVMPassBase::ConvertNVGPUToNVVMPassBase;
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -437,8 +443,4 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
   patterns.add<MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
                NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering>(
       converter);
-}
-
-std::unique_ptr<Pass> mlir::createConvertNVGPUToNVVMPass() {
-  return std::make_unique<ConvertNVGPUToNVVMPass>();
 }

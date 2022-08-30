@@ -11,9 +11,8 @@
 
 include "mlir/Pass/PassBase.td"
 
-def VectorBufferize : Pass<"vector-bufferize", "func::FuncOp"> {
+def VectorBufferizePass : Pass<"vector-bufferize", "func::FuncOp"> {
   let summary = "Bufferize Vector dialect ops";
-  let constructor = "mlir::vector::createVectorBufferizePass()";
 }
 
 #endif // MLIR_DIALECT_VECTOR_TRANSFORMS_PASSES

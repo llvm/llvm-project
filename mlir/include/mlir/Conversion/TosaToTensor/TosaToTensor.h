@@ -16,9 +16,11 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-namespace tosa {
 
-std::unique_ptr<Pass> createTosaToTensor();
+#define GEN_PASS_DECL_CONVERTTOSATOTENSORPASS
+#include "mlir/Conversion/Passes.h.inc"
+
+namespace tosa {
 
 void populateTosaToTensorConversionPatterns(RewritePatternSet *patterns);
 

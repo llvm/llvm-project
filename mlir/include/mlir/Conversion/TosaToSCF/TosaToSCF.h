@@ -16,9 +16,11 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-namespace tosa {
 
-std::unique_ptr<Pass> createTosaToSCF();
+#define GEN_PASS_DECL_CONVERTTOSATOSCFPASS
+#include "mlir/Conversion/Passes.h.inc"
+
+namespace tosa {
 
 void populateTosaToSCFConversionPatterns(RewritePatternSet *patterns);
 

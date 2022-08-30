@@ -8,7 +8,6 @@
 
 #include "mlir/Conversion/LinalgToStandard/LinalgToStandard.h"
 
-#include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -16,6 +15,12 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTLINALGTOSTANDARDPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -121,7 +126,10 @@ void mlir::linalg::populateLinalgToStandardConversionPatterns(
 
 namespace {
 struct ConvertLinalgToStandardPass
-    : public ConvertLinalgToStandardBase<ConvertLinalgToStandardPass> {
+    : public impl::ConvertLinalgToStandardPassBase<
+          ConvertLinalgToStandardPass> {
+  using ConvertLinalgToStandardPassBase::ConvertLinalgToStandardPassBase;
+
   void runOnOperation() override;
 };
 } // namespace

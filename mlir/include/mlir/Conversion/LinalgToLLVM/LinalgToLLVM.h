@@ -18,6 +18,9 @@ template <typename T>
 class OperationPass;
 class RewritePatternSet;
 
+#define GEN_PASS_DECL_CONVERTLINALGTOLLVMPASS
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Populate the given list with patterns that convert from Linalg to LLVM.
 void populateLinalgToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                             RewritePatternSet &patterns);

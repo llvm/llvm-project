@@ -25,6 +25,12 @@ class FuncOp;
 } // namespace mlir
 
 namespace mlir {
+
+#define GEN_PASS_DECL_SHAPETOSHAPELOWERINGPASS
+#define GEN_PASS_DECL_REMOVESHAPECONSTRAINTSPASS
+#define GEN_PASS_DECL_SHAPEBUFFERIZEPASS
+#include "mlir/Dialect/Shape/Transforms/Passes.h.inc"
+
 /// Creates an instance of the ShapeToShapeLowering pass that legalizes Shape
 /// dialect to be convertible to Arithmetic. For example, `shape.num_elements`
 /// get transformed to `shape.reduce`, which can be lowered to SCF and

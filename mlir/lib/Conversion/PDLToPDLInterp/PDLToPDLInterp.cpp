@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/PDLToPDLInterp/PDLToPDLInterp.h"
-#include "../PassDetail.h"
+
 #include "PredicateTree.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
@@ -19,6 +19,11 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTPDLTOPDLINTERPPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::pdl_to_pdl_interp;
@@ -908,15 +913,17 @@ void PatternLowering::generateOperationResultTypeRewriter(
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct PDLToPDLInterpPass
-    : public ConvertPDLToPDLInterpBase<PDLToPDLInterpPass> {
+struct ConvertPDLToPDLInterpPass
+    : public impl::ConvertPDLToPDLInterpPassBase<ConvertPDLToPDLInterpPass> {
+  using ConvertPDLToPDLInterpPassBase::ConvertPDLToPDLInterpPassBase;
+
   void runOnOperation() final;
 };
 } // namespace
 
 /// Convert the given module containing PDL pattern operations into a PDL
 /// Interpreter operations.
-void PDLToPDLInterpPass::runOnOperation() {
+void ConvertPDLToPDLInterpPass::runOnOperation() {
   ModuleOp module = getOperation();
 
   // Create the main matcher function This function contains all of the match
@@ -944,5 +951,5 @@ void PDLToPDLInterpPass::runOnOperation() {
 }
 
 std::unique_ptr<OperationPass<ModuleOp>> mlir::createPDLToPDLInterpPass() {
-  return std::make_unique<PDLToPDLInterpPass>();
+  return std::make_unique<ConvertPDLToPDLInterpPass>();
 }

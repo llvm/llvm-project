@@ -11,17 +11,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
+
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+
+namespace mlir {
+namespace memref {
+#define GEN_PASS_DEF_FOLDMEMREFALIASOPSPASS
+#include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
+} // namespace memref
+} // namespace mlir
 
 using namespace mlir;
 
@@ -540,11 +547,8 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
 
 namespace {
 
-#define GEN_PASS_CLASSES
-#include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
-
 struct FoldMemRefAliasOpsPass final
-    : public FoldMemRefAliasOpsBase<FoldMemRefAliasOpsPass> {
+    : public memref::impl::FoldMemRefAliasOpsPassBase<FoldMemRefAliasOpsPass> {
   void runOnOperation() override;
 };
 

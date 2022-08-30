@@ -6,12 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
+
+namespace mlir {
+namespace bufferization {
+#define GEN_PASS_DEF_BUFFERRESULTSTOOUTPARAMSPASS
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
+} // namespace bufferization
+} // namespace mlir
 
 using namespace mlir;
 
@@ -179,7 +186,8 @@ mlir::bufferization::promoteBufferResultsToOutParams(ModuleOp module) {
 
 namespace {
 struct BufferResultsToOutParamsPass
-    : BufferResultsToOutParamsBase<BufferResultsToOutParamsPass> {
+    : bufferization::impl::BufferResultsToOutParamsPassBase<
+          BufferResultsToOutParamsPass> {
   void runOnOperation() override {
     if (failed(bufferization::promoteBufferResultsToOutParams(getOperation())))
       return signalPassFailure();

@@ -12,14 +12,15 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
-/// Creates an instance of `tensor` dialect bufferization pass.
-std::unique_ptr<Pass> createTensorBufferizePass();
+namespace tensor {
+
+#define GEN_PASS_DECL_TENSORBUFFERIZEPASS
+#include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
 
-namespace tensor {
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"

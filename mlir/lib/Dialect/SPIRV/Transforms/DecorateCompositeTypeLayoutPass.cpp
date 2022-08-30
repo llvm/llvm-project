@@ -13,15 +13,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
-#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
+
+namespace mlir {
+namespace spirv {
+#define GEN_PASS_DEF_SPIRVDECORATECOMPOSITETYPELAYOUTPASS
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
+} // namespace spirv
+} // namespace mlir
 
 namespace {
 class SPIRVGlobalVariableOpLayoutInfoDecoration
@@ -98,14 +105,17 @@ static void populateSPIRVLayoutInfoPatterns(RewritePatternSet &patterns) {
 }
 
 namespace {
-class DecorateSPIRVCompositeTypeLayoutPass
-    : public SPIRVCompositeTypeLayoutBase<
-          DecorateSPIRVCompositeTypeLayoutPass> {
+class SPIRVDecorateCompositeTypeLayoutPass
+    : public spirv::impl::SPIRVDecorateCompositeTypeLayoutPassBase<
+          SPIRVDecorateCompositeTypeLayoutPass> {
+  using SPIRVDecorateCompositeTypeLayoutPassBase::
+      SPIRVDecorateCompositeTypeLayoutPassBase;
+
   void runOnOperation() override;
 };
 } // namespace
 
-void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
+void SPIRVDecorateCompositeTypeLayoutPass::runOnOperation() {
   auto module = getOperation();
   RewritePatternSet patterns(module.getContext());
   populateSPIRVLayoutInfoPatterns(patterns);
@@ -141,5 +151,5 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
 
 std::unique_ptr<OperationPass<ModuleOp>>
 mlir::spirv::createDecorateSPIRVCompositeTypeLayoutPass() {
-  return std::make_unique<DecorateSPIRVCompositeTypeLayoutPass>();
+  return std::make_unique<SPIRVDecorateCompositeTypeLayoutPass>();
 }

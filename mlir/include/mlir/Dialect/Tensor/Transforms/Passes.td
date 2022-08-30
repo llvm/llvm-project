@@ -11,9 +11,8 @@
 
 include "mlir/Pass/PassBase.td"
 
-def TensorBufferize : Pass<"tensor-bufferize", "func::FuncOp"> {
+def TensorBufferizePass : Pass<"tensor-bufferize", "func::FuncOp"> {
   let summary = "Bufferize the `tensor` dialect";
-  let constructor = "mlir::createTensorBufferizePass()";
 }
 
 #endif // MLIR_DIALECT_TENSOR_TRANSFORMS_PASSES

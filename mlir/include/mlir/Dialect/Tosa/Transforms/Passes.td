@@ -20,18 +20,14 @@ def TosaLayerwiseConstantFoldPass : Pass<"tosa-layerwise-constant-fold", "func::
   let description = [{
     Pass that enables folding of full-layer operations on constant tensors.
   }];
-
-  let constructor = "createTosaLayerwiseConstantFoldPass()";
 }
 
-def TosaInferShapes : Pass<"tosa-infer-shapes", "func::FuncOp"> {
+def TosaInferShapesPass : Pass<"tosa-infer-shapes", "func::FuncOp"> {
   let summary = "Propagate shapes across TOSA operations";
   let description = [{
     Pass that uses operand types and propagates shapes to TOSA operations.
     This includes legalizing rankless and dynamic shapes towards static.
   }];
-
-  let constructor = "createTosaInferShapesPass()";
   let dependentDialects = [
     "func::FuncDialect",
     "tensor::TensorDialect",
@@ -39,7 +35,7 @@ def TosaInferShapes : Pass<"tosa-infer-shapes", "func::FuncOp"> {
   ];
 }
 
-def TosaMakeBroadcastable : Pass<"tosa-make-broadcastable", "func::FuncOp"> {
+def TosaMakeBroadcastablePass : Pass<"tosa-make-broadcastable", "func::FuncOp"> {
   let summary = "TOSA rank Reshape to enable Broadcasting";
   let description = [{
     Pass that enables broadcast by making all input arrays have the same
@@ -48,19 +44,15 @@ def TosaMakeBroadcastable : Pass<"tosa-make-broadcastable", "func::FuncOp"> {
     approach similar to step 1 of Numpy 4-step broadcasting:
     https://numpy.org/doc/stable/reference/ufuncs.html#broadcasting
   }];
-
-  let constructor = "createTosaMakeBroadcastablePass()";
 }
 
-def TosaOptionalDecompositions
+def TosaOptionalDecompositionsPass
   : Pass<"tosa-optional-decompositions", "func::FuncOp"> {
   let summary = "Applies Tosa operations optional decompositions";
   let description = [{
     Pass to apply the Tosa operations decompositions 
     exposed as populate functions in include/mlir/Dialect/Tosa/Transforms/Passes.h
   }];
-
-  let constructor = "tosa::createTosaOptionalDecompositions()";
 }
 
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_PASSES

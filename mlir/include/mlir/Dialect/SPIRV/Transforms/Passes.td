@@ -11,18 +11,18 @@
 
 include "mlir/Pass/PassBase.td"
 
-def SPIRVCompositeTypeLayout
-    : Pass<"decorate-spirv-composite-type-layout", "ModuleOp"> {
+def SPIRVDecorateCompositeTypeLayoutPass
+    : Pass<"decorate-spirv-composite-type-layout", "mlir::ModuleOp"> {
   let summary = "Decorate SPIR-V composite type with layout info";
   let constructor = "mlir::spirv::createDecorateSPIRVCompositeTypeLayoutPass()";
 }
 
-def SPIRVCanonicalizeGL : Pass<"spirv-canonicalize-gl", ""> {
+def SPIRVCanonicalizeGLPass : Pass<"spirv-canonicalize-gl", ""> {
   let summary = "Run canonicalization involving GLSL ops";
   let constructor = "mlir::spirv::createCanonicalizeGLPass()";
 }
 
-def SPIRVLowerABIAttributes : Pass<"spirv-lower-abi-attrs", "spirv::ModuleOp"> {
+def SPIRVLowerABIAttributesPass : Pass<"spirv-lower-abi-attrs", "spirv::ModuleOp"> {
   let summary = "Decorate SPIR-V composite type with layout info";
   let constructor = "mlir::spirv::createLowerABIAttributesPass()";
 }
@@ -40,7 +40,7 @@ def SPIRVUnifyAliasedResourcePass
   let constructor = "mlir::spirv::createUnifyAliasedResourcePass()";
 }
 
-def SPIRVUpdateVCE : Pass<"spirv-update-vce", "spirv::ModuleOp"> {
+def SPIRVUpdateVCEPass : Pass<"spirv-update-vce", "spirv::ModuleOp"> {
   let summary = "Deduce and attach minimal (version, capabilities, extensions) "
                 "requirements to spv.module ops";
   let constructor = "mlir::spirv::createUpdateVersionCapabilityExtensionPass()";

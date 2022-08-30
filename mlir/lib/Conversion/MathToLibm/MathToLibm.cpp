@@ -8,7 +8,6 @@
 
 #include "mlir/Conversion/MathToLibm/MathToLibm.h"
 
-#include "../PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -18,6 +17,12 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTMATHTOLIBMPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -193,7 +198,9 @@ void mlir::populateMathToLibmConversionPatterns(
 
 namespace {
 struct ConvertMathToLibmPass
-    : public ConvertMathToLibmBase<ConvertMathToLibmPass> {
+    : public impl::ConvertMathToLibmPassBase<ConvertMathToLibmPass> {
+  using ConvertMathToLibmPassBase::ConvertMathToLibmPassBase;
+
   void runOnOperation() override;
 };
 } // namespace

@@ -20,6 +20,9 @@ class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
 
+#define GEN_PASS_DECL_CONVERTCONTROLFLOWTOLLVMPASS
+#include "mlir/Conversion/Passes.h.inc"
+
 namespace cf {
 /// Collect the patterns to convert from the ControlFlow dialect to LLVM. The
 /// conversion patterns capture the LLVMTypeConverter by reference meaning the
@@ -27,8 +30,6 @@ namespace cf {
 void populateControlFlowToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                  RewritePatternSet &patterns);
 
-/// Creates a pass to convert the ControlFlow dialect into the LLVMIR dialect.
-std::unique_ptr<Pass> createConvertControlFlowToLLVMPass();
 } // namespace cf
 } // namespace mlir
 

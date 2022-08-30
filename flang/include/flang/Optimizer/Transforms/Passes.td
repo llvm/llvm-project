@@ -16,7 +16,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-class AbstractResultOptBase<string optExt, string operation> 
+class AbstractResultOptBase<string optExt, string operation>
   : Pass<"abstract-result-on-" # optExt # "-opt", operation> {
   let summary = "Convert fir.array, fir.box and fir.rec function result to "
                 "function argument";
@@ -35,15 +35,15 @@ class AbstractResultOptBase<string optExt, string operation>
   ];
 }
 
-def AbstractResultOnFuncOpt : AbstractResultOptBase<"func", "mlir::func::FuncOp"> {
+def AbstractResultOnFuncOptPass : AbstractResultOptBase<"func", "mlir::func::FuncOp"> {
   let constructor = "::fir::createAbstractResultOnFuncOptPass()";
 }
 
-def AbstractResultOnGlobalOpt : AbstractResultOptBase<"global", "fir::GlobalOp"> {
+def AbstractResultOnGlobalOptPass : AbstractResultOptBase<"global", "fir::GlobalOp"> {
   let constructor = "::fir::createAbstractResultOnGlobalOptPass()";
 }
 
-def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
+def AffineDialectPromotionPass : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
   let summary = "Promotes `fir.{do_loop,if}` to `affine.{for,if}`.";
   let description = [{
     Convert fir operations which satisfy affine constraints to the affine
@@ -68,7 +68,7 @@ def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
   ];
 }
 
-def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
+def AffineDialectDemotionPass : Pass<"demote-affine", "::mlir::func::FuncOp"> {
   let summary = "Converts `affine.{load,store}` back to fir operations";
   let description = [{
     Affine dialect's default lowering for loads and stores is different from
@@ -82,7 +82,7 @@ def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
   ];
 }
 
-def AnnotateConstantOperands : Pass<"annotate-constant"> {
+def AnnotateConstantOperandsPass : Pass<"annotate-constant"> {
   let summary = "Annotate constant operands to all FIR operations";
   let description = [{
     The MLIR canonicalizer makes a distinction between constants based on how
@@ -99,7 +99,7 @@ def AnnotateConstantOperands : Pass<"annotate-constant"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def ArrayValueCopy : Pass<"array-value-copy", "::mlir::func::FuncOp"> {
+def ArrayValueCopyPass : Pass<"array-value-copy", "::mlir::func::FuncOp"> {
   let summary = "Convert array value operations to memory operations.";
   let description = [{
     Transform the set of array value primitives to a memory-based array
@@ -119,7 +119,7 @@ def ArrayValueCopy : Pass<"array-value-copy", "::mlir::func::FuncOp"> {
   let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
-def CharacterConversion : Pass<"character-conversion"> {
+def CharacterConversionPass : Pass<"character-conversion"> {
   let summary = "Convert CHARACTER entities with different KINDs";
   let description = [{
     Translates entities of one CHARACTER KIND to another.
@@ -137,7 +137,7 @@ def CharacterConversion : Pass<"character-conversion"> {
   ];
 }
 
-def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
+def CFGConversionPass : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
   let summary = "Convert FIR structured control flow ops to CFG ops.";
   let description = [{
     Transform the `fir.do_loop`, `fir.if`, and `fir.iterate_while` ops into
@@ -157,7 +157,7 @@ def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
   ];
 }
 
-def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
+def ExternalNameConversionPass : Pass<"external-name-interop", "mlir::ModuleOp"> {
   let summary = "Convert name for external interoperability";
   let description = [{
     Demangle FIR internal name and mangle them for external interoperability.
@@ -165,7 +165,7 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   let constructor = "::fir::createExternalNameConversionPass()";
 }
 
-def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> {
+def MemRefDataFlowOptPass : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> {
   let summary =
     "Perform store/load forwarding and potentially removing dead stores.";
   let description = [{
@@ -182,7 +182,7 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
 // functions into the module, which is invalid if a finer grain mlir::Operation
 // is used as the pass specification says to not touch things outside hte scope
 // of the operation being processed.
-def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
+def SimplifyIntrinsicsPass : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
   let summary = "Intrinsics simplification";
   let description = [{
     Qualifying intrinsics calls are replaced with calls to a specialized and
@@ -198,7 +198,7 @@ def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
   ];
 }
 
-def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
+def MemoryAllocationOptPass : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
   let summary = "Convert stack to heap allocations and vice versa.";
   let description = [{
     Convert stack allocations to heap allocations and vice versa based on
@@ -216,7 +216,7 @@ def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
   let constructor = "::fir::createMemoryAllocationPass()";
 }
 
-def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
+def SimplifyRegionLitePass : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
   let summary = "Region simplification";
   let description = [{
     Run region DCE and erase unreachable blocks in regions.
@@ -224,7 +224,7 @@ def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
   let constructor = "::fir::createSimplifyRegionLitePass()";
 }
 
-def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
+def AlgebraicSimplificationPass : Pass<"flang-algebraic-simplification"> {
   let summary = "";
   let description = [{
     Run algebraic simplifications for Math/Complex/etc. dialect operations.

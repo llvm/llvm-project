@@ -12,14 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+namespace memref {
+#define GEN_PASS_DEF_EXPANDOPSPASS
+#include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
+} // namespace memref
+} // namespace mlir
 
 using namespace mlir;
 
@@ -119,7 +125,7 @@ public:
   }
 };
 
-struct ExpandOpsPass : public ExpandOpsBase<ExpandOpsPass> {
+struct ExpandOpsPass : public memref::impl::ExpandOpsPassBase<ExpandOpsPass> {
   void runOnOperation() override {
     MLIRContext &ctx = getContext();
 

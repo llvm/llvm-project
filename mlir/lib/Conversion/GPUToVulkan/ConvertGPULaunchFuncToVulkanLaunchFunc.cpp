@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../PassDetail.h"
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
@@ -23,7 +23,13 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Target/SPIRV/Serialization.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTGPULAUNCHFUNCTOVULKANLAUNCHFUNCPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -37,10 +43,13 @@ namespace {
 /// SPIR-V binary shader from `spirv::ModuleOp` using `spirv::serialize`
 /// function and attaching binary data and entry point name as an attributes to
 /// created vulkan launch call op.
-class ConvertGpuLaunchFuncToVulkanLaunchFunc
-    : public ConvertGpuLaunchFuncToVulkanLaunchFuncBase<
-          ConvertGpuLaunchFuncToVulkanLaunchFunc> {
+class ConvertGpuLaunchFuncToVulkanLaunchFuncPass
+    : public impl::ConvertGpuLaunchFuncToVulkanLaunchFuncPassBase<
+          ConvertGpuLaunchFuncToVulkanLaunchFuncPass> {
 public:
+  using ConvertGpuLaunchFuncToVulkanLaunchFuncPassBase::
+      ConvertGpuLaunchFuncToVulkanLaunchFuncPassBase;
+
   void runOnOperation() override;
 
 private:
@@ -76,7 +85,7 @@ private:
 
 } // namespace
 
-void ConvertGpuLaunchFuncToVulkanLaunchFunc::runOnOperation() {
+void ConvertGpuLaunchFuncToVulkanLaunchFuncPass::runOnOperation() {
   bool done = false;
   getOperation().walk([this, &done](gpu::LaunchFuncOp op) {
     if (done) {
@@ -97,7 +106,8 @@ void ConvertGpuLaunchFuncToVulkanLaunchFunc::runOnOperation() {
     spirvModule.erase();
 }
 
-LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::declareVulkanLaunchFunc(
+LogicalResult
+ConvertGpuLaunchFuncToVulkanLaunchFuncPass::declareVulkanLaunchFunc(
     Location loc, gpu::LaunchFuncOp launchOp) {
   auto builder = OpBuilder::atBlockEnd(getOperation().getBody());
 
@@ -128,7 +138,7 @@ LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::declareVulkanLaunchFunc(
   return success();
 }
 
-LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::createBinaryShader(
+LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFuncPass::createBinaryShader(
     ModuleOp module, std::vector<char> &binaryShader) {
   bool done = false;
   SmallVector<uint32_t, 0> binary;
@@ -146,7 +156,7 @@ LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::createBinaryShader(
   return success();
 }
 
-void ConvertGpuLaunchFuncToVulkanLaunchFunc::convertGpuLaunchFunc(
+void ConvertGpuLaunchFuncToVulkanLaunchFuncPass::convertGpuLaunchFunc(
     gpu::LaunchFuncOp launchOp) {
   ModuleOp module = getOperation();
   OpBuilder builder(launchOp);
@@ -188,5 +198,5 @@ void ConvertGpuLaunchFuncToVulkanLaunchFunc::convertGpuLaunchFunc(
 
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
 mlir::createConvertGpuLaunchFuncToVulkanLaunchFuncPass() {
-  return std::make_unique<ConvertGpuLaunchFuncToVulkanLaunchFunc>();
+  return std::make_unique<ConvertGpuLaunchFuncToVulkanLaunchFuncPass>();
 }

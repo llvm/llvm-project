@@ -10,22 +10,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Passes.h"
+
+#include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Debug.h"
 
-using namespace mlir;
-using namespace mlir::async;
+namespace mlir {
+#define GEN_PASS_DEF_ASYNCRUNTIMEREFCOUNTINGOPTPASS
+#include "mlir/Dialect/Async/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "async-ref-counting"
+
+using namespace mlir;
+using namespace mlir::async;
 
 namespace {
 
 class AsyncRuntimeRefCountingOptPass
-    : public AsyncRuntimeRefCountingOptBase<AsyncRuntimeRefCountingOptPass> {
+    : public impl::AsyncRuntimeRefCountingOptPassBase<
+          AsyncRuntimeRefCountingOptPass> {
 public:
   AsyncRuntimeRefCountingOptPass() = default;
   void runOnOperation() override;

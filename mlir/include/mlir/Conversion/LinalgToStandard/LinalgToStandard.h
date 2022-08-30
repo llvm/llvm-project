@@ -17,6 +17,9 @@ class ModuleOp;
 template <typename T>
 class OperationPass;
 
+#define GEN_PASS_DECL_CONVERTLINALGTOSTANDARDPASS
+#include "mlir/Conversion/Passes.h.inc"
+
 namespace linalg {
 
 //===----------------------------------------------------------------------===//

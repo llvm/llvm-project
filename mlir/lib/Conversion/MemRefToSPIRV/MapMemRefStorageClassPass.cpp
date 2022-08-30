@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../PassDetail.h"
-#include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
 #include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRVPass.h"
+
+#include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
@@ -22,6 +22,11 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_MAPMEMREFSTORAGECLASSPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "mlir-map-memref-storage-class"
 
@@ -284,7 +289,7 @@ void spirv::populateMemorySpaceToStorageClassPatterns(
 
 namespace {
 class MapMemRefStorageClassPass final
-    : public MapMemRefStorageClassBase<MapMemRefStorageClassPass> {
+    : public impl::MapMemRefStorageClassPassBase<MapMemRefStorageClassPass> {
 public:
   explicit MapMemRefStorageClassPass() {
     memorySpaceMap = spirv::mapMemorySpaceToVulkanStorageClass;

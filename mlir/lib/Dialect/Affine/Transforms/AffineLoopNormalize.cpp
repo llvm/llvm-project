@@ -10,10 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
+
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_AFFINELOOPNORMALIZEPASS
+#include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -23,7 +29,7 @@ namespace {
 /// As currently implemented, this pass cannot fail, but it might skip over ops
 /// that are already in a normalized form.
 struct AffineLoopNormalizePass
-    : public AffineLoopNormalizeBase<AffineLoopNormalizePass> {
+    : public impl::AffineLoopNormalizePassBase<AffineLoopNormalizePass> {
 
   void runOnOperation() override {
     getOperation().walk([](Operation *op) {

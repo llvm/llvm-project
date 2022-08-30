@@ -11,14 +11,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/IR/SymbolTable.h"
 #include "mlir/Transforms/Passes.h"
+
+#include "mlir/IR/SymbolTable.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_SYMBOLDCEPASS
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
-struct SymbolDCE : public SymbolDCEBase<SymbolDCE> {
+struct SymbolDCEPass : public impl::SymbolDCEPassBase<SymbolDCEPass> {
+  using SymbolDCEPassBase::SymbolDCEPassBase;
+
   void runOnOperation() override;
 
   /// Compute the liveness of the symbols within the given symbol table.
@@ -31,7 +38,7 @@ struct SymbolDCE : public SymbolDCEBase<SymbolDCE> {
 };
 } // namespace
 
-void SymbolDCE::runOnOperation() {
+void SymbolDCEPass::runOnOperation() {
   Operation *symbolTableOp = getOperation();
 
   // SymbolDCE should only be run on operations that define a symbol table.
@@ -75,10 +82,9 @@ void SymbolDCE::runOnOperation() {
 /// Compute the liveness of the symbols within the given symbol table.
 /// `symbolTableIsHidden` is true if this symbol table is known to be
 /// unaccessible from operations in its parent regions.
-LogicalResult SymbolDCE::computeLiveness(Operation *symbolTableOp,
-                                         SymbolTableCollection &symbolTable,
-                                         bool symbolTableIsHidden,
-                                         DenseSet<Operation *> &liveSymbols) {
+LogicalResult SymbolDCEPass::computeLiveness(
+    Operation *symbolTableOp, SymbolTableCollection &symbolTable,
+    bool symbolTableIsHidden, DenseSet<Operation *> &liveSymbols) {
   // A worklist of live operations to propagate uses from.
   SmallVector<Operation *, 16> worklist;
 
@@ -139,8 +145,4 @@ LogicalResult SymbolDCE::computeLiveness(Operation *symbolTableOp,
   }
 
   return success();
-}
-
-std::unique_ptr<Pass> mlir::createSymbolDCEPass() {
-  return std::make_unique<SymbolDCE>();
 }

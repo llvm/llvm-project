@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Affine/Passes.h"
+
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
@@ -18,20 +19,26 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-using namespace mlir;
+
+namespace mlir {
+#define GEN_PASS_DEF_AFFINELOOPTILINGPASS
+#include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "affine-loop-tile"
+
+using namespace mlir;
 
 namespace {
 
 /// A pass to perform loop tiling on all suitable loop nests of a Function.
-struct LoopTiling : public AffineLoopTilingBase<LoopTiling> {
+struct LoopTiling : public impl::AffineLoopTilingPassBase<LoopTiling> {
   LoopTiling() = default;
   explicit LoopTiling(uint64_t cacheSizeBytes, bool avoidMaxMinBounds = true)
       : avoidMaxMinBounds(avoidMaxMinBounds) {

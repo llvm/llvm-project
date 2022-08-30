@@ -19,18 +19,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Affine/Passes.h"
+
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <algorithm>
+
+namespace mlir {
+#define GEN_PASS_DEF_AFFINEDATACOPYGENERATIONPASS
+#include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "affine-data-copy-generate"
 
@@ -49,14 +55,15 @@ namespace {
 /// provided.
 // TODO: We currently can't generate copies correctly when stores
 // are strided. Check for strided stores.
-struct AffineDataCopyGeneration
-    : public AffineDataCopyGenerationBase<AffineDataCopyGeneration> {
-  AffineDataCopyGeneration() = default;
-  explicit AffineDataCopyGeneration(unsigned slowMemorySpace,
-                                    unsigned fastMemorySpace,
-                                    unsigned tagMemorySpace,
-                                    int minDmaTransferSize,
-                                    uint64_t fastMemCapacityBytes) {
+struct AffineDataCopyGenerationPass
+    : public impl::AffineDataCopyGenerationPassBase<
+          AffineDataCopyGenerationPass> {
+  AffineDataCopyGenerationPass() = default;
+  explicit AffineDataCopyGenerationPass(unsigned slowMemorySpace,
+                                        unsigned fastMemorySpace,
+                                        unsigned tagMemorySpace,
+                                        int minDmaTransferSize,
+                                        uint64_t fastMemCapacityBytes) {
     this->slowMemorySpace = slowMemorySpace;
     this->fastMemorySpace = fastMemorySpace;
     this->tagMemorySpace = tagMemorySpace;
@@ -83,21 +90,21 @@ mlir::createAffineDataCopyGenerationPass(unsigned slowMemorySpace,
                                          unsigned tagMemorySpace,
                                          int minDmaTransferSize,
                                          uint64_t fastMemCapacityBytes) {
-  return std::make_unique<AffineDataCopyGeneration>(
+  return std::make_unique<AffineDataCopyGenerationPass>(
       slowMemorySpace, fastMemorySpace, tagMemorySpace, minDmaTransferSize,
       fastMemCapacityBytes);
 }
 std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::createAffineDataCopyGenerationPass() {
-  return std::make_unique<AffineDataCopyGeneration>();
+  return std::make_unique<AffineDataCopyGenerationPass>();
 }
 
 /// Generate copies for this block. The block is partitioned into separate
 /// ranges: each range is either a sequence of one or more operations starting
 /// and ending with an affine load or store op, or just an affine.forop (which
 /// could have other affine for op's nested within).
-void AffineDataCopyGeneration::runOnBlock(Block *block,
-                                          DenseSet<Operation *> &copyNests) {
+void AffineDataCopyGenerationPass::runOnBlock(
+    Block *block, DenseSet<Operation *> &copyNests) {
   if (block->empty())
     return;
 
@@ -198,7 +205,7 @@ void AffineDataCopyGeneration::runOnBlock(Block *block,
   }
 }
 
-void AffineDataCopyGeneration::runOnOperation() {
+void AffineDataCopyGenerationPass::runOnOperation() {
   func::FuncOp f = getOperation();
   OpBuilder topBuilder(f.getBody());
   zeroIndex = topBuilder.create<arith::ConstantIndexOp>(f.getLoc(), 0);
