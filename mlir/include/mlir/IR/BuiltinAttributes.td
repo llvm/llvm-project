@@ -303,7 +303,7 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
     /// ElementsAttr.
     template <typename T>
     auto try_value_begin_impl(OverloadToken<T>) const {
-      return ::mlir::success(value_begin<T>());
+      return try_value_begin<T>();
     }
 
     /// Convert endianess of input ArrayRef for big-endian(BE) machines. All of
@@ -433,7 +433,7 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
     /// ElementsAttr.
     template <typename T>
     auto try_value_begin_impl(OverloadToken<T>) const {
-      return ::mlir::success(value_begin<T>());
+      return try_value_begin<T>();
     }
 
   protected:
@@ -900,23 +900,17 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
       StringRef
     >;
     using ElementsAttr::Trait<SparseElementsAttr>::getValues;
-
-    /// Provide a `try_value_begin_impl` to enable iteration within
-    /// ElementsAttr.
-    template <typename T>
-    auto try_value_begin_impl(OverloadToken<T>) const {
-      return ::mlir::success(value_begin<T>());
-    }
+    using ElementsAttr::Trait<SparseElementsAttr>::value_begin;
 
     template <typename T>
     using iterator =
         llvm::mapped_iterator<typename decltype(llvm::seq<ptrdiff_t>(0, 0))::iterator,
                               std::function<T(ptrdiff_t)>>;
 
-    /// Return the values of this attribute in the form of the given type 'T'.
-    /// 'T'  may be any of Attribute, APInt, APFloat, c++ integer/float types,
-    /// etc.
-    template <typename T> iterator<T> value_begin() const;
+    /// Provide a `try_value_begin_impl` to enable iteration within
+    /// ElementsAttr.
+    template <typename T>
+    FailureOr<iterator<T>> try_value_begin_impl(OverloadToken<T>) const;
 
   private:
     /// Get a zero APFloat for the given sparse attribute.
