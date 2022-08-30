@@ -2343,7 +2343,7 @@ bool AMDGPULegalizerInfo::legalizeExtractVectorElt(
       getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
   if (!MaybeIdxVal) // Dynamic case will be selected to register indexing.
     return true;
-  const int64_t IdxVal = MaybeIdxVal->Value.getSExtValue();
+  const uint64_t IdxVal = MaybeIdxVal->Value.getZExtValue();
 
   Register Dst = MI.getOperand(0).getReg();
   Register Vec = MI.getOperand(1).getReg();
@@ -2378,7 +2378,7 @@ bool AMDGPULegalizerInfo::legalizeInsertVectorElt(
   if (!MaybeIdxVal) // Dynamic case will be selected to register indexing.
     return true;
 
-  int64_t IdxVal = MaybeIdxVal->Value.getSExtValue();
+  const uint64_t IdxVal = MaybeIdxVal->Value.getZExtValue();
   Register Dst = MI.getOperand(0).getReg();
   Register Vec = MI.getOperand(1).getReg();
   Register Ins = MI.getOperand(2).getReg();
