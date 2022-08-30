@@ -56,16 +56,16 @@ Defaulted_Non_Trivial def_non_trivial;
 // instrumentation inserted.
 // CHECK-LABEL: define {{.*}}SimpleD2Ev
 // CHECK-NOT: store i{{[0-9]+}} 0, {{.*}}@__msan_param_tls
-// CHECK: call void @__sanitizer_dtor_callback{{.*}}, !dbg ![[DI1:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback({{.*}}, !dbg ![[DI1:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}InlinedD2Ev
 // CHECK-NOT: store i{{[0-9]+}} 0, {{.*}}@__msan_param_tls
-// CHECK: call void @__sanitizer_dtor_callback{{.*}}, !dbg ![[DI2:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback({{.*}}, !dbg ![[DI2:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}Defaulted_Non_TrivialD2Ev
-// CHECK: call void @__sanitizer_dtor_callback{{.*}}, !dbg ![[DI3:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback({{.*}}, !dbg ![[DI3:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: !DIFile{{.*}}cpp

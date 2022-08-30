@@ -63,22 +63,22 @@ struct Adjacent {
 Adjacent ad;
 
 // CHECK-LABEL: define {{.*}}PackedD2Ev
-// CHECK: call void @__sanitizer_dtor_callback{{.*}}i64 17{{.*}}, !dbg ![[DI1:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback({{.*}}i64 17{{.*}}, !dbg ![[DI1:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}EmptyD2Ev
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}SimpleD2Ev
-// CHECK: call void @__sanitizer_dtor_callback{{.*}}i64 1{{.*}}, !dbg ![[DI2:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback({{.*}}i64 1{{.*}}, !dbg ![[DI2:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}AnonD2Ev
-// CHECK: call void @__sanitizer_dtor_callback{{.*}}i64 5{{.*}}, !dbg ![[DI3:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback({{.*}}i64 5{{.*}}, !dbg ![[DI3:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}AdjacentD2Ev
-// CHECK: call void @__sanitizer_dtor_callback{{.*}}i64 1{{.*}}, !dbg ![[DI4:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback({{.*}}i64 1{{.*}}, !dbg ![[DI4:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: !DIFile{{.*}}cpp
