@@ -1,28 +1,128 @@
-#TODO(michaelrj): separate the fputil library into individual targets.
 add_header_library(
-  fputil
+  builtin_wrappers
+  HDRS
+    builtin_wrappers.h
+)
+
+add_header_library(
+  fenv_impl
   HDRS
     FEnvImpl.h
-    BasicOperations.h
-    DivisionAndRemainderOperations.h
-    FloatProperties.h
-    FPBits.h
-    BasicOperations.h
-    ManipulationFunctions.h
-    NearestIntegerOperations.h
-    NormalFloat.h
+  DEPENDS
+    libc.include.fenv
+    libc.src.__support.common
+)
+
+add_header_library(
+  platform_defs
+  HDRS
     PlatformDefs.h
-    builtin_wrappers.h
+  DEPENDS
+    libc.src.__support.common
+)
+
+add_header_library(
+  float_properties
+  HDRS
+    FloatProperties.h
+  DEPENDS
+    .platform_defs
+    libc.src.__support.uint128
+)
+
+add_header_library(
+  fp_bits
+  HDRS
+    FPBits.h
+  DEPENDS
+    .platform_defs
+    .float_properties
+    .builtin_wrappers
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.common
+)
+
+add_header_library(
+  nearest_integer_operations
+  HDRS
+    NearestIntegerOperations.h
+  DEPENDS
+    .fp_bits
+    .fenv_impl
+    libc.src.__support.CPP.type_traits
+    libc.include.math
+    libc.include.errno
+    libc.src.errno.errno
+)
+
+add_header_library(
+  normal_float
+  HDRS
+    NormalFloat.h
+  DEPENDS
+    .fp_bits
+    libc.src.__support.CPP.type_traits
+)
+
+add_header_library(
+  manipulation_functions
+  HDRS
+    ManipulationFunctions.h
+  DEPENDS
+    .fp_bits
+    .nearest_integer_operations
+    .normal_float
+    .platform_defs
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+    libc.include.math
+    libc.include.errno
+    libc.src.errno.errno
+)
+
+add_header_library(
+  basic_operations
+  HDRS
+    BasicOperations.h
+  DEPENDS
+    .fp_bits
+    libc.src.__support.CPP.type_traits
+)
+
+add_header_library(
+  division_and_remainder_operations
+  HDRS
+    DivisionAndRemainderOperations.h
+  DEPENDS
+    .fp_bits
+    .manipulation_functions
+    .normal_float
+    libc.src.__support.CPP.type_traits
+)
+
+add_header_library(
+  except_value_utils
+  HDRS
     except_value_utils.h
   DEPENDS
-    libc.include.errno
-    libc.include.fenv
-    libc.include.math
-    libc.src.__support.common
+    .fp_bits
+    .fenv_impl
+)
+
+
+add_header_library(
+  hypot
+  HDRS
+    Hypot.h
+  DEPENDS
+    .basic_operations
+    .fenv_impl
+    .fp_bits
+    .builtin_wrappers
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.uint128
-    libc.src.errno.errno
 )
 
 add_header_library(
@@ -30,7 +130,8 @@ add_header_library(
   HDRS
     XFloat.h
   DEPENDS
-    .fputil #FPBits and NormalFloat
+    .fp_bits
+    .normal_float
     libc.src.__support.uint
 )
 
@@ -39,7 +140,7 @@ add_header_library(
   HDRS
     sqrt.h
   DEPENDS
-    .fputil
+    libc.src.__support.common
     libc.src.__support.FPUtil.generic.sqrt
 )
 
@@ -48,7 +149,8 @@ add_header_library(
   HDRS
     FMA.h
   DEPENDS
-    .fputil
+    libc.src.__support.common
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.generic.fma
   FLAGS
     FMA_OPT
