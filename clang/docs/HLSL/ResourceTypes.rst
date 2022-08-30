@@ -1,6 +1,6 @@
-============
-HLSL Support
-============
+===================
+HLSL Resource Types
+===================
 
 .. contents::
    :local:

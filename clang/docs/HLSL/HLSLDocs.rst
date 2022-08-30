@@ -12,3 +12,4 @@ HLSL Design and Implementation
    :maxdepth: 1
 
    ResourceTypes
+   EntryFunctions

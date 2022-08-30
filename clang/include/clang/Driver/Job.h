@@ -146,6 +146,9 @@ class Command {
   /// Dependent actions
   llvm::SmallVector<const Action *, 4> DependentActions;
 
+  /// Optional redirection for stdin, stdout, stderr.
+  std::vector<Optional<std::string>> RedirectFiles;
+
   /// Information on executable run provided by OS.
   mutable Optional<llvm::sys::ProcessStatistics> ProcStat;
 
@@ -208,6 +211,8 @@ public:
   /// \remark If the environment remains unset, then the environment
   ///         from the parent process will be used.
   virtual void setEnvironment(llvm::ArrayRef<const char *> NewEnvironment);
+
+  void setRedirectFiles(const std::vector<Optional<std::string>> &Redirects);
 
   void replaceArguments(llvm::opt::ArgStringList List) {
     Arguments = std::move(List);

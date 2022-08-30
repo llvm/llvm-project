@@ -596,17 +596,29 @@
 // RUN:   | FileCheck --check-prefix=CHECK-LD-LIBSTDCXX %s
 // CHECK-LD-LIBSTDCXX: LLVM ERROR: linking libstdc++ unimplemented on AIX
 
-// Check powerpc64-ibm-aix7.1.0.0, 32-bit. -shared.
+// Check powerpc-ibm-aix7.1.0.0, 32-bit. -shared.
 // RUN: %clangxx -x c++ %s 2>&1 -### \
-// RUN:        -resource-dir=%S/Inputs/resource_dir \
-// RUN:        -shared \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
 // RUN:        --target=powerpc-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
 // RUN:        --unwindlib=libunwind \
 // RUN:   | FileCheck --check-prefix=CHECK-LD32-SHARED %s
+
+// Check powerpc-ibm-aix7.1.0.0, 32-bit. -shared (with exp option strings in other opt).
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        --unwindlib=libunwind \
+// RUN:        -Wl,-Z/expall/expfull/a-bE:/a-bexport:/ \
+// RUN:   | FileCheck --check-prefix=CHECK-LD32-SHARED %s
+
 // CHECK-LD32-SHARED:     "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
 // CHECK-LD32-SHARED:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-LD32-SHARED:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD32-SHARED:     "{{.*}}llvm-nm"
+// CHECK-LD32-SHARED:     "--export-symbols"
+// CHECK-LD32-SHARED:     "-X" "32"
 // CHECK-LD32-SHARED:     "{{.*}}ld{{(.exe)?}}"
 // CHECK-LD32-SHARED:     "-bM:SRE"
 // CHECK-LD32-SHARED:     "-bnoentry"
@@ -623,10 +635,53 @@
 // CHECK-LD32-SHARED:     "-lm"
 // CHECK-LD32-SHARED:     "-lc"
 
+// Check powerpc-ibm-aix7.1.0.0, 32-bit. -shared with export list.
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -Wl,-bE:input.exp \
+// RUN:   | FileCheck --check-prefix=CHECK-LD32-SHARED-EXPORTS %s
+
+// Check powerpc-ibm-aix7.1.0.0, 32-bit. -shared with export list (no -Wl, variant).
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -bE:input.exp \
+// RUN:   | FileCheck --check-prefix=CHECK-LD32-SHARED-EXPORTS %s
+
+// Check powerpc-ibm-aix7.1.0.0, 32-bit. -shared with export list (-Xlinker variant).
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -Xlinker -bE:input.exp \
+// RUN:   | FileCheck --check-prefix=CHECK-LD32-SHARED-EXPORTS %s
+
+// CHECK-LD32-SHARED-EXPORTS:     "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
+// CHECK-LD32-SHARED-EXPORTS:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LD32-SHARED-EXPORTS:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD32-SHARED-EXPORTS-NOT: "{{.*}}llvm-nm"
+// CHECK-LD32-SHARED-EXPORTS-NOT: "-X"
+// CHECK-LD32-SHARED-EXPORTS-NOT: "32"
+// CHECK-LD32-SHARED-EXPORTS:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD32-SHARED-EXPORTS:     "-bM:SRE"
+// CHECK-LD32-SHARED-EXPORTS:     "-bnoentry"
+// CHECK-LD32-SHARED-EXPORTS:     "-b32"
+// CHECK-LD32-SHARED-EXPORTS:     "-bpT:0x10000000" "-bpD:0x20000000"
+// CHECK-LD32-SHARED-EXPORTS-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-SHARED-EXPORTS-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
+// CHECK-LD32-SHARED-EXPORTS:     "-b{{(" ")?}}E:input.exp"
+// CHECK-LD32-SHARED-EXPORTS-NOT: "-bE:{{[^"]+}}"
+// CHECK-LD32-SHARED-EXPORTS:     "-lc++"
+// CHECK-LD32-SHARED-EXPORTS:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-SHARED-EXPORTS:     "-lm"
+// CHECK-LD32-SHARED-EXPORTS:     "-lc"
+
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared.
 // RUN: %clangxx -x c++ %s 2>&1 -### \
-// RUN:        -resource-dir=%S/Inputs/resource_dir \
-// RUN:        -shared \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
 // RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
 // RUN:        --sysroot %S/Inputs/aix_ppc_tree \
 // RUN:        --unwindlib=libunwind \
@@ -634,6 +689,9 @@
 // CHECK-LD64-SHARED:     "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
 // CHECK-LD64-SHARED:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-LD64-SHARED:     "-isysroot" "[[SYSROOT:[^"]+]]"
+//CHECK-LD64-SHARED:     "{{.*}}llvm-nm"
+// CHECK-LD64-SHARED:     "--export-symbols"
+// CHECK-LD64-SHARED:     "-X" "64"
 // CHECK-LD64-SHARED:     "{{.*}}ld{{(.exe)?}}"
 // CHECK-LD64-SHARED:     "-bM:SRE"
 // CHECK-LD64-SHARED:     "-bnoentry"
@@ -649,6 +707,114 @@
 // CHECK-LD64-SHARED-NOT: "--no-as-needed"
 // CHECK-LD64-SHARED:     "-lm"
 // CHECK-LD64-SHARED:     "-lc"
+
+// Check powerpc-ibm-aix7.1.0.0, 32-bit. -fno-exceptions.
+// RUN: %clangxx %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir \
+// RUN:        -fno-exceptions \
+// RUN:        --target=powerpc-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD32-NOEXCEPTIONS %s
+// CHECK-LD32-NOEXCEPTIONS:     "-cc1" "-triple" "powerpc-ibm-aix7.1.0.0"
+// CHECK-LD32-NOEXCEPTIONS:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LD32-NOEXCEPTIONS:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD32-NOEXCEPTIONS:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD32-NOEXCEPTIONS:     "-b32"
+// CHECK-LD32-NOEXCEPTIONS:     "-bpT:0x10000000" "-bpD:0x20000000"
+// CHECK-LD32-NOEXCEPTIONS:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0.o"
+// CHECK-LD32-NOEXCEPTIONS:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti.o"
+// CHECK-LD32-NOEXCEPTIONS:     "-lc++"
+// CHECK-LD32-NOEXCEPTIONS:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc.a"
+// CHECK-LD32-NOEXCEPTIONS:     "-lm"
+// CHECK-LD32-NOEXCEPTIONS:     "-lc"
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared with export list.
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -Wl,-bE:input.exp \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED-EXPORTS %s
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared with export list (no -Wl, variant).
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -bE:input.exp \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED-EXPORTS %s
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared with export list (-Xlinker variant).
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -Xlinker -bE:input.exp \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED-EXPORTS %s
+
+// CHECK-LD64-SHARED-EXPORTS:     "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
+// CHECK-LD64-SHARED-EXPORTS:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LD64-SHARED-EXPORTS:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD64-SHARED-EXPORTS-NOT: "{{.*}}llvm-nm"
+// CHECK-LD64-SHARED-EXPORTS-NOT: "-X"
+// CHECK-LD64-SHARED-EXPORTS-NOT: "64"
+// CHECK-LD64-SHARED-EXPORTS:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD64-SHARED-EXPORTS:     "-bM:SRE"
+// CHECK-LD64-SHARED-EXPORTS:     "-bnoentry"
+// CHECK-LD64-SHARED-EXPORTS:     "-b64"
+// CHECK-LD64-SHARED-EXPORTS:     "-bpT:0x100000000" "-bpD:0x110000000"
+// CHECK-LD64-SHARED-EXPORTS-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-SHARED-EXPORTS-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
+// CHECK-LD64-SHARED-EXPORTS:     "-b{{(" ")?}}E:input.exp"
+// CHECK-LD64-SHARED-EXPORTS-NOT: "-bE:{{[^"]+}}"
+// CHECK-LD64-SHARED-EXPORTS:     "-lc++"
+// CHECK-LD64-SHARED-EXPORTS:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
+// CHECK-LD64-SHARED-EXPORTS:     "-lm"
+// CHECK-LD64-SHARED-EXPORTS:     "-lc"
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared with alternate export list.
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -Wl,-bexport:input.exp \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED-EXPORTS-ALT %s
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared with alternate export list (no -Wl, variant).
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -bexport:input.exp \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED-EXPORTS-ALT %s
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared with alternate export list (-Xlinker variant).
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -Xlinker -bexport:input.exp \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED-EXPORTS-ALT %s
+
+// CHECK-LD64-SHARED-EXPORTS-ALT:     "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
+// CHECK-LD64-SHARED-EXPORTS-ALT:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LD64-SHARED-EXPORTS-ALT:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD64-SHARED-EXPORTS-ALT-NOT: "{{.*}}llvm-nm"
+// CHECK-LD64-SHARED-EXPORTS-ALT-NOT: "-X"
+// CHECK-LD64-SHARED-EXPORTS-ALT-NOT: "64"
+// CHECK-LD64-SHARED-EXPORTS-ALT:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD64-SHARED-EXPORTS-ALT:     "-bM:SRE"
+// CHECK-LD64-SHARED-EXPORTS-ALT:     "-bnoentry"
+// CHECK-LD64-SHARED-EXPORTS-ALT:     "-b64"
+// CHECK-LD64-SHARED-EXPORTS-ALT:     "-bpT:0x100000000" "-bpD:0x110000000"
+// CHECK-LD64-SHARED-EXPORTS-ALT-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-SHARED-EXPORTS-ALT-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
+// CHECK-LD64-SHARED-EXPORTS-ALT:     "-b{{(" ")?}}export:input.exp"
+// CHECK-LD64-SHARED-EXPORTS-ALT-NOT: "-bE:{{[^"]+}}"
+// CHECK-LD64-SHARED-EXPORTS-ALT:     "-lc++"
+// CHECK-LD64-SHARED-EXPORTS-ALT:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
+// CHECK-LD64-SHARED-EXPORTS-ALT:     "-lm"
+// CHECK-LD64-SHARED-EXPORTS-ALT:     "-lc"
 
 // Check powerpc-ibm-aix7.3.0.0, -fprofile-generate
 // RUN: %clang %s -### 2>&1 \
@@ -677,6 +843,50 @@
 // CHECK-PGO-NON-LTO-NOT: "-lm"
 // CHECK-PGO-NON-LTO:     "-lc"
 
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared with -bexpall.
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -Wl,-bexpall \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED-EXPALL %s
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared with -bexpall (no -Wl, variant).
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -bexpall \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED-EXPALL %s
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared with -bexpall (-Xlinker variant).
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -Xlinker -bexpall \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED-EXPALL %s
+
+// CHECK-LD64-SHARED-EXPALL:     "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
+// CHECK-LD64-SHARED-EXPALL:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LD64-SHARED-EXPALL:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD64-SHARED-EXPALL-NOT: "{{.*}}llvm-nm"
+// CHECK-LD64-SHARED-EXPALL-NOT: "-X"
+// CHECK-LD64-SHARED-EXPALL-NOT: "64"
+// CHECK-LD64-SHARED-EXPALL:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD64-SHARED-EXPALL:     "-bM:SRE"
+// CHECK-LD64-SHARED-EXPALL:     "-bnoentry"
+// CHECK-LD64-SHARED-EXPALL:     "-b64"
+// CHECK-LD64-SHARED-EXPALL:     "-bpT:0x100000000" "-bpD:0x110000000"
+// CHECK-LD64-SHARED-EXPALL-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-SHARED-EXPALL-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
+// CHECK-LD64-SHARED-EXPALL:     "-b{{(" ")?}}expall"
+// CHECK-LD64-SHARED-EXPALL-NOT: "-bE:{{[^"]+}}"
+// CHECK-LD64-SHARED-EXPALL:     "-lc++"
+// CHECK-LD64-SHARED-EXPALL:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
+// CHECK-LD64-SHARED-EXPALL:     "-lm"
+// CHECK-LD64-SHARED-EXPALL:     "-lc"
+
 // Check powerpc-ibm-aix7.2.5.3, -fprofile-generate, -flto
 // RUN: %clang %s -### 2>&1 \
 // RUN:        -resource-dir=%S/Inputs/resource_dir \
@@ -704,3 +914,47 @@
 // CHECK-PGO-LTO-NOT: "--no-as-needed"
 // CHECK-PGO-LTO-NOT: "-lm"
 // CHECK-PGO-LTO:     "-lc"
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared with -bexpfull (no -Wl, variant).
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -Wl,-bexpfull \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED-EXPFULL %s
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared with -bexpfull (no -Wl, variant).
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -bexpfull \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED-EXPFULL %s
+
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. -shared with -bexpfull (-Xlinker variant).
+// RUN: %clangxx -x c++ %s 2>&1 -### \
+// RUN:        -resource-dir=%S/Inputs/resource_dir -shared \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        -Xlinker -bexpfull \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-SHARED-EXPFULL %s
+
+// CHECK-LD64-SHARED-EXPFULL:     "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
+// CHECK-LD64-SHARED-EXPFULL:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LD64-SHARED-EXPFULL:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD64-SHARED-EXPFULL-NOT: "{{.*}}llvm-nm"
+// CHECK-LD64-SHARED-EXPFULL-NOT: "-X"
+// CHECK-LD64-SHARED-EXPFULL-NOT: "64"
+// CHECK-LD64-SHARED-EXPFULL:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD64-SHARED-EXPFULL:     "-bM:SRE"
+// CHECK-LD64-SHARED-EXPFULL:     "-bnoentry"
+// CHECK-LD64-SHARED-EXPFULL:     "-b64"
+// CHECK-LD64-SHARED-EXPFULL:     "-bpT:0x100000000" "-bpD:0x110000000"
+// CHECK-LD64-SHARED-EXPFULL-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crt0_64.o"
+// CHECK-LD64-SHARED-EXPFULL-NOT: "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
+// CHECK-LD64-SHARED-EXPFULL:     "-b{{(" ")?}}expfull"
+// CHECK-LD64-SHARED-EXPFULL-NOT: "-bE:{{[^"]+}}"
+// CHECK-LD64-SHARED-EXPFULL:     "-lc++"
+// CHECK-LD64-SHARED-EXPFULL:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
+// CHECK-LD64-SHARED-EXPFULL:     "-lm"
+// CHECK-LD64-SHARED-EXPFULL:     "-lc"

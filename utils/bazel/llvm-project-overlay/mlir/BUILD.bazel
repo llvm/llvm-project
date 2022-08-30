@@ -9131,6 +9131,7 @@ cc_library(
         ":Pass",
         ":TensorDialect",
         ":Transforms",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
