@@ -40,9 +40,8 @@ namespace builtin {
 /// clear if we always (or ever) need the full 32B, and for an ephemeral
 /// in-memory CAS, we almost certainly don't need it.
 ///
-/// Note that the cost is linear in the number of objects for the builtin CAS
-/// and embedded action cache, since we're using internal offsets and/or
-/// pointers as an optimization.
+/// Note that the cost is linear in the number of objects for the builtin CAS,
+/// since we're using internal offsets and/or pointers as an optimization.
 ///
 /// However, it's possible we'll want to hook up a local builtin CAS to, e.g.,
 /// a distributed generic hash map to use as an ActionCache. In that scenario,
