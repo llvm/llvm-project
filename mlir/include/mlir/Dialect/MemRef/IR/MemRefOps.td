@@ -1142,6 +1142,7 @@ def MemRef_ReinterpretCastOp
   }];
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

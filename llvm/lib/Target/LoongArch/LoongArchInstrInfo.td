@@ -87,7 +87,8 @@ def uimm2 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<2>;
 }
 
-def uimm2_plus1 : Operand<GRLenVT> {
+def uimm2_plus1 : Operand<GRLenVT>,
+    ImmLeaf<GRLenVT, [{return isUInt<2>(Imm - 1);}]> {
   let ParserMatchClass = UImmAsmOperand<2, "plus1">;
   let EncoderMethod = "getImmOpValueSub1";
   let DecoderMethod = "decodeUImmOperand<2, 1>";
@@ -731,6 +732,19 @@ def : Pat<(AddLike (i32 BaseAddr:$rj), simm12:$imm12),
 let Predicates = [IsLA64] in {
 def : Pat<(AddLike (i64 BaseAddr:$rj), simm12:$imm12),
           (ADDI_D (i64 BaseAddr:$rj), simm12:$imm12)>;
+} // Predicates = [IsLA64]
+
+/// Shifted addition
+let Predicates = [IsLA32] in {
+def : Pat<(add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
+          (ALSL_W GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
+} // Predicates = [IsLA32]
+let Predicates = [IsLA64] in {
+def : Pat<(add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
+          (ALSL_D GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
+def : Pat<(loongarch_bstrpick (add GPR:$rk, (shl GPR:$rj, uimm2_plus1:$imm2)),
+                              (i64 31), (i64 0)),
+          (ALSL_WU GPR:$rj, GPR:$rk, uimm2_plus1:$imm2)>;
 } // Predicates = [IsLA64]
 
 /// Shift

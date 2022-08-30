@@ -341,7 +341,7 @@ public:
       auto Type = driver::types::lookupTypeForExtension(Ext);
       if (Type == driver::types::TY_INVALID) {
         elog("System include extraction: invalid file type for {0}", Ext);
-        return {};
+        return Cmd;
       }
       Lang = driver::types::getTypeName(Type);
     }

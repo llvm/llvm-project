@@ -1897,3 +1897,66 @@ define i8 @not_mul_use2(i8 %x) {
   %plusx = add i8 %not, %x
   ret i8 %plusx
 }
+
+define i8 @full_ashr_inc(i8 %x) {
+; CHECK-LABEL: @full_ashr_inc(
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[ISNOTNEG]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 7
+  %r = add i8 %a, 1
+  ret i8 %r
+}
+
+define <2 x i6> @full_ashr_inc_vec(<2 x i6> %x) {
+; CHECK-LABEL: @full_ashr_inc_vec(
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <2 x i6> [[X:%.*]], <i6 -1, i6 -1>
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[ISNOTNEG]] to <2 x i6>
+; CHECK-NEXT:    ret <2 x i6> [[R]]
+;
+  %a = ashr <2 x i6> %x, <i6 5, i6 poison>
+  %r = add <2 x i6> %a, <i6 1, i6 1>
+  ret <2 x i6> %r
+}
+
+; negative test - extra use
+
+define i8 @full_ashr_inc_use(i8 %x) {
+; CHECK-LABEL: @full_ashr_inc_use(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A]], 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 7
+  call void @use(i8 %a)
+  %r = add i8 %a, 1
+  ret i8 %r
+}
+
+; negative test - wrong shift amount
+
+define i8 @not_full_ashr_inc(i8 %x) {
+; CHECK-LABEL: @not_full_ashr_inc(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A]], 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 6
+  %r = add i8 %a, 1
+  ret i8 %r
+}
+
+; negative test - wrong add amount
+
+define i8 @full_ashr_not_inc(i8 %x) {
+; CHECK-LABEL: @full_ashr_not_inc(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 7
+  %r = add i8 %a, 2
+  ret i8 %r
+}

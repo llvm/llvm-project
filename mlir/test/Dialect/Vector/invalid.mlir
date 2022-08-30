@@ -57,6 +57,13 @@ func.func @shuffle_rank_mismatch(%arg0: vector<2xf32>, %arg1: vector<4x2xf32>) {
 }
 
 // -----
+ 
+func.func @shuffle_rank_mismatch_0d(%arg0: vector<f32>, %arg1: vector<1xf32>) {
+  // expected-error@+1 {{'vector.shuffle' op rank mismatch}}
+  %1 = vector.shuffle %arg0, %arg1 [0, 1] : vector<f32>, vector<1xf32>
+}
+
+// -----
 
 func.func @shuffle_trailing_dim_size_mismatch(%arg0: vector<2x2xf32>, %arg1: vector<2x4xf32>) {
   // expected-error@+1 {{'vector.shuffle' op dimension mismatch}}

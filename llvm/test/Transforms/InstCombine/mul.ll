@@ -671,6 +671,110 @@ define i32 @only_mul_nuw(i32 %a) {
   ret i32 %mul
 }
 
+; https://alive2.llvm.org/ce/z/jJ8rZd
+define i32 @PR57278_shl(i32 %a) {
+; CHECK-LABEL: @PR57278_shl(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[ADD:%.*]] = or i32 [[SHL]], 3
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[ADD]], 3
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %shl = shl nsw i32 %a, 2
+  %add = or i32 %shl, 3
+  %mul = mul nsw i32 %add, 3
+  ret i32 %mul
+}
+
+; Negative test: Have common bits set
+define i32 @PR57278_shl_1(i32 %a) {
+; CHECK-LABEL: @PR57278_shl_1(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nsw i32 [[A:%.*]], 2
+; CHECK-NEXT:    [[ADD:%.*]] = or i32 [[SHL]], 4
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[ADD]], 3
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %shl = shl nsw i32 %a, 2
+  %add = or i32 %shl, 4
+  %mul = mul nsw i32 %add, 3
+  ret i32 %mul
+}
+
+; Keep nuw flag in this change, https://alive2.llvm.org/ce/z/awsQrx
+define i32 @PR57278_mul(i32 %a) {
+; CHECK-LABEL: @PR57278_mul(
+; CHECK-NEXT:    [[MUL0:%.*]] = mul nuw i32 [[A:%.*]], 12
+; CHECK-NEXT:    [[ADD:%.*]] = or i32 [[MUL0]], 3
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[ADD]], 3
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %mul0 = mul nuw i32 %a, 12
+  %add = or i32 %mul0, 3
+  %mul = mul nuw i32 %add, 3
+  ret i32 %mul
+}
+
+; Negative test: Have common bits set
+define i32 @PR57278_mul_1(i32 %a) {
+; CHECK-LABEL: @PR57278_mul_1(
+; CHECK-NEXT:    [[MUL0:%.*]] = mul nuw i32 [[A:%.*]], 12
+; CHECK-NEXT:    [[ADD:%.*]] = or i32 [[MUL0]], 4
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i32 [[ADD]], 3
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %mul0 = mul nuw i32 %a, 12
+  %add = or i32 %mul0, 4
+  %mul = mul nuw i32 %add, 3
+  ret i32 %mul
+}
+
+; https://alive2.llvm.org/ce/z/AXKBjK
+define i32 @PR57278_mul_assume(i32 %a) {
+; CHECK-LABEL: @PR57278_mul_assume(
+; CHECK-NEXT:    [[COMBITS:%.*]] = and i32 [[A:%.*]], 3
+; CHECK-NEXT:    [[NOCOMBITS:%.*]] = icmp eq i32 [[COMBITS]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOCOMBITS]])
+; CHECK-NEXT:    [[ADD:%.*]] = or i32 [[A]], 3
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ADD]], 5
+; CHECK-NEXT:    ret i32 [[MUL]]
+;
+  %combits = and i32 %a , 3
+  %nocombits = icmp eq i32 %combits, 0
+  call void @llvm.assume(i1 %nocombits)
+
+  %add = or i32 %a, 3
+  %mul = mul i32 %add, 5
+  ret i32 %mul
+}
+
+declare void @llvm.assume(i1)
+
+; https://alive2.llvm.org/ce/z/XYpv9q
+define <2 x i32> @PR57278_shl_vec(<2 x i32> %v1) {
+; CHECK-LABEL: @PR57278_shl_vec(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[V1:%.*]], <i32 2, i32 3>
+; CHECK-NEXT:    [[ADD:%.*]] = or <2 x i32> [[SHL]], <i32 3, i32 3>
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <2 x i32> [[ADD]], <i32 3, i32 3>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+;
+  %shl = shl nuw <2 x i32> %v1, <i32 2, i32 3>
+  %add = or <2 x i32> %shl, <i32 3, i32 3>
+  %mul = mul nuw <2 x i32> %add, <i32 3, i32 3>
+  ret <2 x i32> %mul
+}
+
+define <2 x i32> @PR57278_shl_vec_poison(<2 x i32> %v1) {
+; CHECK-LABEL: @PR57278_shl_vec_poison(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw <2 x i32> [[V1:%.*]], <i32 2, i32 poison>
+; CHECK-NEXT:    [[ADD:%.*]] = or <2 x i32> [[SHL]], <i32 3, i32 poison>
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <2 x i32> [[ADD]], <i32 3, i32 poison>
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
+;
+  %shl = shl nuw <2 x i32> %v1, <i32 2, i32 poison>
+  %add = or <2 x i32> %shl, <i32 3, i32 poison>
+  %mul = mul nuw <2 x i32> %add, <i32 3, i32 poison>
+  ret <2 x i32> %mul
+}
+
 define <2 x i1> @test21(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test21(
 ; CHECK-NEXT:    [[C:%.*]] = and <2 x i1> [[A:%.*]], [[B:%.*]]

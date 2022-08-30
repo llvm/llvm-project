@@ -618,6 +618,8 @@ void RTLsTy::registerLib(__tgt_bin_desc *Desc) {
       DP("Registering image " DPxMOD " with RTL %s!\n", DPxPTR(Img->ImageStart),
          R.RTLName.c_str());
       registerImageIntoTranslationTable(TransTable, R, Img);
+      R.UsedImages.insert(Img);
+
       PM->TrlTblMtx.unlock();
       FoundRTL = &R;
 
@@ -692,7 +694,6 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
            DPxPTR(Img->ImageStart), DPxPTR(R->LibraryHandler.get()));
         continue;
       }
-
       DP("Image " DPxMOD " is compatible with RTL " DPxMOD "!\n",
          DPxPTR(Img->ImageStart), DPxPTR(R->LibraryHandler.get()));
 

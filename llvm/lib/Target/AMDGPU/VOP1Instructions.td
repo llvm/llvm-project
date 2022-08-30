@@ -362,10 +362,9 @@ class VOP_MOVREL<RegisterOperand Src1RC> : VOPProfile<[untyped, i32, untyped, un
                       dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                       bank_mask:$bank_mask, bound_ctrl:$bound_ctrl, FI:$fi);
   let AsmDPP16 = getAsmDPP16<1, 1, 0>.ret;
-
-  let OutsDPP8 = (outs Src0RC32:$vdst);
   let InsDPP8 = (ins Src0RC32:$old, Src0RC32:$src0, dpp8:$dpp8, FI:$fi);
   let AsmDPP8 = getAsmDPP8<1, 1, 0>.ret;
+  let OutsVOP3DPP = (outs Src0RC64:$vdst);
 
   let HasDst = 0;
   let EmitDst = 1; // force vdst emission

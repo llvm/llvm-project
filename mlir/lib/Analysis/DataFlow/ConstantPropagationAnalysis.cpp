@@ -39,7 +39,7 @@ void SparseConstantPropagation::visitOperation(
   // folds as the desire here is for simulated execution, and not general
   // folding.
   if (op->getNumRegions()) {
-    markAllPessimisticFixpoint(results);
+    setAllToEntryStates(results);
     return;
   }
 
@@ -59,7 +59,7 @@ void SparseConstantPropagation::visitOperation(
   SmallVector<OpFoldResult, 8> foldResults;
   foldResults.reserve(op->getNumResults());
   if (failed(op->fold(constantOperands, foldResults))) {
-    markAllPessimisticFixpoint(results);
+    setAllToEntryStates(results);
     return;
   }
 
@@ -69,7 +69,7 @@ void SparseConstantPropagation::visitOperation(
   if (foldResults.empty()) {
     op->setOperands(originalOperands);
     op->setAttrs(originalAttrs);
-    markAllPessimisticFixpoint(results);
+    setAllToEntryStates(results);
     return;
   }
 
@@ -91,4 +91,10 @@ void SparseConstantPropagation::visitOperation(
           lattice, *getLatticeElement(foldResult.get<Value>()));
     }
   }
+}
+
+void SparseConstantPropagation::setToEntryState(
+    Lattice<ConstantValue> *lattice) {
+  propagateIfChanged(lattice,
+                     lattice->join(ConstantValue::getUnknownConstant()));
 }
