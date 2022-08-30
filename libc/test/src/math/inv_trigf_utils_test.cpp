@@ -21,12 +21,14 @@ DECLARE_SPECIAL_CONSTANTS(float)
 constexpr int def_count = 100003;
 constexpr float def_prec = 0.500001f;
 
+auto f_normal = [](float x) -> bool { return !(isnan(x) || isinf(x)); };
+
 TEST(LlvmLibcAtanfPosTest, InFloatRange) {
-  CHECK_DATA(0.0f, inf, mpfr::Operation::Atan, __llvm_libc::atan_eval, isfinite,
+  CHECK_DATA(0.0f, inf, mpfr::Operation::Atan, __llvm_libc::atan_eval, f_normal,
              def_count, def_prec);
 }
 
 TEST(LlvmLibcAtanfNegTest, InFloatRange) {
   CHECK_DATA(-0.0f, neg_inf, mpfr::Operation::Atan, __llvm_libc::atan_eval,
-             isfinite, def_count, def_prec);
+             f_normal, def_count, def_prec);
 }
