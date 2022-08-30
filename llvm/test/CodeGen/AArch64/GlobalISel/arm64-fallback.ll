@@ -141,6 +141,21 @@ entry:
   ret i1 %obit
 }
 
+; FALLBACK-WITH-REPORT-ERR: remark: <unknown>:0:0: unable to translate instruction: {{.*}}llvm.experimental.gc.statepoint{{.*}} (in function: gc_intr)
+; FALLBACK-WITH-REPORT-ERR: warning: Instruction selection used fallback path for gc_intr
+; FALLBACK-WITH-REPORT-OUT-LABEL: gc_intr
+
+declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, i32()*, i32 immarg, i32 immarg, ...)
+declare i32 @llvm.experimental.gc.result(token)
+
+declare i32 @extern_returning_i32()
+
+define i32 @gc_intr() gc "statepoint-example" {
+   %statepoint_token = call token (i64, i32, i32()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, i32()* elementtype(i32 ()) @extern_returning_i32, i32 0, i32 0, i32 0, i32 0) [ "deopt"() ]
+   %ret = call i32 (token) @llvm.experimental.gc.result(token %statepoint_token)
+   ret i32 %ret
+}
+
 attributes #1 = { "target-features"="+sve" }
 attributes #2 = { "target-features"="+ls64" }
 
