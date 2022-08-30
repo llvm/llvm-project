@@ -11,11 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Tosa/Transforms/Passes.h"
-
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
+#include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -25,13 +25,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/FormatVariadic.h"
-
-namespace mlir {
-namespace tosa {
-#define GEN_PASS_DEF_TOSAINFERSHAPESPASS
-#include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
-} // namespace tosa
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -282,11 +275,8 @@ void propagateShapesInRegion(Region &region) {
 
 /// Pass that performs shape propagation across TOSA operations. This includes
 /// migrating to within the regions of if/while operations.
-struct TosaInferShapesPass
-    : public tosa::impl::TosaInferShapesPassBase<TosaInferShapesPass> {
+struct TosaInferShapes : public TosaInferShapesBase<TosaInferShapes> {
 public:
-  using TosaInferShapesPassBase::TosaInferShapesPassBase;
-
   void runOnOperation() override {
     func::FuncOp func = getOperation();
 
@@ -330,3 +320,7 @@ public:
   }
 };
 } // namespace
+
+std::unique_ptr<Pass> mlir::tosa::createTosaInferShapesPass() {
+  return std::make_unique<TosaInferShapes>();
+}

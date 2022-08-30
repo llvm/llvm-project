@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def OptimizeSharedMemoryPass : Pass<"nvgpu-optimize-shared-memory"> {
+def OptimizeSharedMemory : Pass<"nvgpu-optimize-shared-memory"> {
   let summary = "Optimizes accesses to shard memory memrefs in order to reduce bank conflicts.";
   let constructor = "mlir::nvgpu::createOptimizeSharedMemoryPass()";
   let dependentDialects = [

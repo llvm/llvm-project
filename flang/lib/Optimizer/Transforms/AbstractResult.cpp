@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -17,12 +18,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
-
-namespace fir {
-#define GEN_PASS_DEF_ABSTRACTRESULTONFUNCOPTPASS
-#define GEN_PASS_DEF_ABSTRACTRESULTONGLOBALOPTPASS
-#include "flang/Optimizer/Transforms/Passes.h.inc"
-} // namespace fir
 
 #define DEBUG_TYPE "flang-abstract-result-opt"
 
@@ -252,8 +247,8 @@ public:
 };
 
 class AbstractResultOnFuncOpt
-    : public AbstractResultOptTemplate<
-          AbstractResultOnFuncOpt, fir::impl::AbstractResultOnFuncOptPassBase> {
+    : public AbstractResultOptTemplate<AbstractResultOnFuncOpt,
+                                       fir::AbstractResultOnFuncOptBase> {
 public:
   void runOnSpecificOperation(mlir::func::FuncOp func, bool shouldBoxResult,
                               mlir::RewritePatternSet &patterns,
@@ -297,9 +292,8 @@ inline static bool containsFunctionTypeWithAbstractResult(mlir::Type type) {
 }
 
 class AbstractResultOnGlobalOpt
-    : public AbstractResultOptTemplate<
-          AbstractResultOnGlobalOpt,
-          fir::impl::AbstractResultOnGlobalOptPassBase> {
+    : public AbstractResultOptTemplate<AbstractResultOnGlobalOpt,
+                                       fir::AbstractResultOnGlobalOptBase> {
 public:
   void runOnSpecificOperation(fir::GlobalOp global, bool,
                               mlir::RewritePatternSet &,

@@ -11,8 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
@@ -20,19 +19,12 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_AFFINEVECTORIZEPASS
-#include "mlir/Dialect/Affine/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace vector;
@@ -615,7 +607,7 @@ namespace {
 
 /// Base state for the vectorize pass.
 /// Command line arguments are preempted by non-empty pass arguments.
-struct Vectorize : public impl::AffineVectorizePassBase<Vectorize> {
+struct Vectorize : public AffineVectorizeBase<Vectorize> {
   Vectorize() = default;
   Vectorize(ArrayRef<int64_t> virtualVectorSize);
   void runOnOperation() override;

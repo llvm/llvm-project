@@ -27,14 +27,6 @@ class ModuleOp;
 // Passes
 //===----------------------------------------------------------------------===//
 
-#define GEN_PASS_DECL_SPIRVDECORATECOMPOSITETYPELAYOUTPASS
-#define GEN_PASS_DECL_SPIRVCANONICALIZEGLPASS
-#define GEN_PASS_DECL_SPIRVLOWERABIATTRIBUTESPASS
-#define GEN_PASS_DECL_SPIRVREWRITEINSERTSPASS
-#define GEN_PASS_DECL_SPIRVUNIFYALIASEDRESOURCEPASS
-#define GEN_PASS_DECL_SPIRVUPDATEVCEPASS
-#include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
-
 /// Creates a pass to run canoncalization patterns that involve GL ops.
 /// These patterns cannot be run in default canonicalization because GL ops
 /// aren't always available. So they should be involed specifically when needed.

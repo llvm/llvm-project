@@ -15,6 +15,7 @@
 #include "NvGpuSupport.h"
 #include "mlir/Conversion/VectorToGPU/VectorToGPU.h"
 
+#include "../PassDetail.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -29,11 +30,6 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTVECTORTOGPUPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
@@ -886,7 +882,7 @@ LogicalResult mlir::convertVectorToNVVMCompatibleMMASync(Operation *rootOp) {
 namespace {
 
 struct ConvertVectorToGPUPass
-    : public impl::ConvertVectorToGPUPassBase<ConvertVectorToGPUPass> {
+    : public ConvertVectorToGPUBase<ConvertVectorToGPUPass> {
 
   explicit ConvertVectorToGPUPass(bool useNvGpu_) {
     useNvGpu.setValue(useNvGpu_);

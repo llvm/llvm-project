@@ -14,6 +14,7 @@
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 
+#include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -24,11 +25,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTVECTORTOSCFPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using vector::TransferReadOp;
@@ -1285,7 +1281,7 @@ void mlir::populateVectorToSCFConversionPatterns(
 namespace {
 
 struct ConvertVectorToSCFPass
-    : public impl::ConvertVectorToSCFPassBase<ConvertVectorToSCFPass> {
+    : public ConvertVectorToSCFBase<ConvertVectorToSCFPass> {
   ConvertVectorToSCFPass() = default;
   ConvertVectorToSCFPass(const VectorTransferToSCFOptions &options) {
     this->fullUnroll = options.unroll;

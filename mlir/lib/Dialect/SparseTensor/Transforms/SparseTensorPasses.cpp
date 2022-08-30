@@ -20,24 +20,23 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-namespace mlir {
-#define GEN_PASS_DEF_SPARSIFICATIONPASS
-#define GEN_PASS_DEF_SPARSETENSORCONVERSIONPASS
-#define GEN_PASS_DEF_SPARSETENSORCODEGENPASS
-#include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
-} // namespace mlir
-
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
 namespace {
 
 //===----------------------------------------------------------------------===//
+// Passes declaration.
+//===----------------------------------------------------------------------===//
+
+#define GEN_PASS_CLASSES
+#include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
+
+//===----------------------------------------------------------------------===//
 // Passes implementation.
 //===----------------------------------------------------------------------===//
 
-struct SparsificationPass
-    : public mlir::impl::SparsificationPassBase<SparsificationPass> {
+struct SparsificationPass : public SparsificationBase<SparsificationPass> {
 
   SparsificationPass() = default;
   SparsificationPass(const SparsificationPass &pass) = default;
@@ -69,8 +68,7 @@ struct SparsificationPass
 };
 
 struct SparseTensorConversionPass
-    : public mlir::impl::SparseTensorConversionPassBase<
-          SparseTensorConversionPass> {
+    : public SparseTensorConversionBase<SparseTensorConversionPass> {
 
   SparseTensorConversionPass() = default;
   SparseTensorConversionPass(const SparseTensorConversionPass &pass) = default;
@@ -147,7 +145,7 @@ struct SparseTensorConversionPass
 };
 
 struct SparseTensorCodegenPass
-    : public mlir::impl::SparseTensorCodegenPassBase<SparseTensorCodegenPass> {
+    : public SparseTensorCodegenBase<SparseTensorCodegenPass> {
 
   SparseTensorCodegenPass() = default;
   SparseTensorCodegenPass(const SparseTensorCodegenPass &pass) = default;

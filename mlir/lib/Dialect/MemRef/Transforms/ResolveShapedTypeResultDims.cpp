@@ -11,22 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/MemRef/Transforms/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-namespace mlir {
-namespace memref {
-#define GEN_PASS_DEF_RESOLVERANKEDSHAPETYPERESULTDIMSPASS
-#define GEN_PASS_DEF_RESOLVESHAPEDTYPERESULTDIMSPASS
-#include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
-} // namespace memref
-} // namespace mlir
 
 using namespace mlir;
 
@@ -116,14 +108,13 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
 
 namespace {
 struct ResolveRankedShapeTypeResultDimsPass final
-    : public memref::impl::ResolveRankedShapeTypeResultDimsPassBase<
+    : public ResolveRankedShapeTypeResultDimsBase<
           ResolveRankedShapeTypeResultDimsPass> {
   void runOnOperation() override;
 };
 
 struct ResolveShapedTypeResultDimsPass final
-    : public memref::impl::ResolveShapedTypeResultDimsPassBase<
-          ResolveShapedTypeResultDimsPass> {
+    : public ResolveShapedTypeResultDimsBase<ResolveShapedTypeResultDimsPass> {
   void runOnOperation() override;
 };
 

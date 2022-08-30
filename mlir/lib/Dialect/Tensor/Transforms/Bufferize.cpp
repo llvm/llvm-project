@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
+#include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -23,21 +23,11 @@
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Transforms/DialectConversion.h"
 
-namespace mlir {
-namespace tensor {
-#define GEN_PASS_DEF_TENSORBUFFERIZEPASS
-#include "mlir/Dialect/Tensor/Transforms/Passes.h.inc"
-} // namespace tensor
-} // namespace mlir
-
 using namespace mlir;
 using namespace bufferization;
 
 namespace {
-struct TensorBufferizePass
-    : public tensor::impl::TensorBufferizePassBase<TensorBufferizePass> {
-  using TensorBufferizePassBase::TensorBufferizePassBase;
-
+struct TensorBufferizePass : public TensorBufferizeBase<TensorBufferizePass> {
   void runOnOperation() override {
     BufferizationOptions options = getPartialBufferizationOptions();
     options.opFilter.allowDialect<tensor::TensorDialect>();
@@ -54,3 +44,7 @@ struct TensorBufferizePass
   }
 };
 } // namespace
+
+std::unique_ptr<Pass> mlir::createTensorBufferizePass() {
+  return std::make_unique<TensorBufferizePass>();
+}

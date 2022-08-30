@@ -23,9 +23,6 @@ class ValueRange;
 
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTAFFINETOSTANDARDPASS
-#include "mlir/Conversion/Passes.h.inc"
-
 /// Collect a set of patterns to convert from the Affine dialect to the Standard
 /// dialect, in particular convert structured affine control flow into CFG
 /// branch-based control flow.
@@ -42,6 +39,11 @@ Value lowerAffineLowerBound(AffineForOp op, OpBuilder &builder);
 /// Emit code that computes the upper bound of the given affine loop using
 /// standard arithmetic operations.
 Value lowerAffineUpperBound(AffineForOp op, OpBuilder &builder);
+
+/// Lowers affine control flow operations (ForStmt, IfStmt and AffineApplyOp)
+/// to equivalent lower-level constructs (flow of basic blocks and arithmetic
+/// primitives).
+std::unique_ptr<Pass> createLowerAffinePass();
 
 } // namespace mlir
 

@@ -6,29 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_SCFPARALLELLOOPCOLLAPSINGPASS
-#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
-} // namespace mlir
 
 #define DEBUG_TYPE "parallel-loop-collapsing"
 
 using namespace mlir;
 
 namespace {
-struct SCFParallelLoopCollapsingPass
-    : public impl::SCFParallelLoopCollapsingPassBase<
-          SCFParallelLoopCollapsingPass> {
-  using SCFParallelLoopCollapsingPassBase::SCFParallelLoopCollapsingPassBase;
-
+struct ParallelLoopCollapsing
+    : public SCFParallelLoopCollapsingBase<ParallelLoopCollapsing> {
   void runOnOperation() override {
     Operation *module = getOperation();
 
@@ -47,3 +39,7 @@ struct SCFParallelLoopCollapsingPass
   }
 };
 } // namespace
+
+std::unique_ptr<Pass> mlir::createParallelLoopCollapsingPass() {
+  return std::make_unique<ParallelLoopCollapsing>();
+}

@@ -6,27 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
-
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
+#include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Transforms/DialectConversion.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_SCFBUFFERIZEPASS
-#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::scf;
 
 namespace {
-struct SCFBufferizePass : public impl::SCFBufferizePassBase<SCFBufferizePass> {
-  using SCFBufferizePassBase::SCFBufferizePassBase;
-
+struct SCFBufferizePass : public SCFBufferizeBase<SCFBufferizePass> {
   void runOnOperation() override {
     auto func = getOperation();
     auto *context = &getContext();
@@ -43,3 +36,7 @@ struct SCFBufferizePass : public impl::SCFBufferizePassBase<SCFBufferizePass> {
   };
 };
 } // namespace
+
+std::unique_ptr<Pass> mlir::createSCFBufferizePass() {
+  return std::make_unique<SCFBufferizePass>();
+}

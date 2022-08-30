@@ -10,15 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
-
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/IR/PatternMatch.h"
@@ -27,19 +27,11 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTTOSATOLINALGPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
-
 using namespace mlir;
 
 namespace {
-struct ConvertTosaToLinalgPass
-    : public impl::ConvertTosaToLinalgPassBase<ConvertTosaToLinalgPass> {
+struct TosaToLinalg : public TosaToLinalgBase<TosaToLinalg> {
 public:
-  using ConvertTosaToLinalgPassBase::ConvertTosaToLinalgPassBase;
-
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
         .insert<arith::ArithmeticDialect, linalg::LinalgDialect,
@@ -70,19 +62,22 @@ public:
 };
 } // namespace
 
+std::unique_ptr<Pass> mlir::tosa::createTosaToLinalg() {
+  return std::make_unique<TosaToLinalg>();
+}
+
 void mlir::tosa::addTosaToLinalgPasses(OpPassManager &pm,
                                        bool disableTosaDecompositions) {
   // Optional decompositions are designed to benefit linalg.
   if (!disableTosaDecompositions)
-    pm.addNestedPass<func::FuncOp>(
-        tosa::createTosaOptionalDecompositionsPass());
+    pm.addNestedPass<func::FuncOp>(tosa::createTosaOptionalDecompositions());
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
 
   pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
-  pm.addNestedPass<func::FuncOp>(createConvertTosaToLinalgNamedPass());
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalgNamed());
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
   // TODO: Remove pass that operates on const tensor and enable optionality
   pm.addNestedPass<func::FuncOp>(tosa::createTosaLayerwiseConstantFoldPass());
   pm.addNestedPass<func::FuncOp>(tosa::createTosaMakeBroadcastablePass());
-  pm.addNestedPass<func::FuncOp>(createConvertTosaToLinalgPass());
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());
 }

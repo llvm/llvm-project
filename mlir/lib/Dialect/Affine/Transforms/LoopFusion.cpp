@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
@@ -20,7 +19,6 @@
 #include "mlir/Dialect/Affine/LoopFusionUtils.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -35,12 +33,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <iomanip>
 #include <sstream>
-
-namespace mlir {
-#define GEN_PASS_DEF_AFFINELOOPFUSIONPASS
-#include "mlir/Dialect/Affine/Passes.h.inc"
-} // namespace mlir
-
 #define DEBUG_TYPE "affine-loop-fusion"
 
 using namespace mlir;
@@ -55,7 +47,7 @@ namespace {
 // TODO: Extend this pass to check for fusion preventing dependences,
 // and add support for more general loop fusion algorithms.
 
-struct LoopFusion : public impl::AffineLoopFusionPassBase<LoopFusion> {
+struct LoopFusion : public AffineLoopFusionBase<LoopFusion> {
   LoopFusion() = default;
   LoopFusion(unsigned fastMemorySpace, uint64_t localBufSizeThresholdBytes,
              bool maximalFusion, enum FusionMode affineFusionMode) {

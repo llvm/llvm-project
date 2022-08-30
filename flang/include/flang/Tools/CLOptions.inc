@@ -183,7 +183,7 @@ inline void createDefaultFIROptimizerPassPipeline(
 
   // convert control flow to CFG form
   fir::addCfgConversionPass(pm);
-  pm.addPass(mlir::createConvertSCFToControlFlowPass());
+  pm.addPass(mlir::createConvertSCFToCFPass());
 
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLitePass());

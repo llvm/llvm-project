@@ -11,8 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
@@ -20,16 +19,11 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
+#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h.inc"
 #include "mlir/Dialect/Affine/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/Support/Debug.h"
 #include <deque>
-
-namespace mlir {
-#define GEN_PASS_DEF_AFFINEPARALLELIZEPASS
-#include "mlir/Dialect/Affine/Passes.h.inc"
-} // namespace mlir
 
 #define DEBUG_TYPE "affine-parallel"
 
@@ -37,8 +31,7 @@ using namespace mlir;
 
 namespace {
 /// Convert all parallel affine.for op into 1-D affine.parallel op.
-struct AffineParallelize
-    : public impl::AffineParallelizePassBase<AffineParallelize> {
+struct AffineParallelize : public AffineParallelizeBase<AffineParallelize> {
   void runOnOperation() override;
 };
 

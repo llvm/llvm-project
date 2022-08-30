@@ -7,21 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/ViewOpGraph.h"
-
+#include "PassDetail.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/IndentedOstream.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
 #include <utility>
-
-namespace mlir {
-#define GEN_PASS_DEF_VIEWOPGRAPHPASS
-#include "mlir/Transforms/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
@@ -79,11 +72,10 @@ public:
 /// This pass generates a Graphviz dataflow visualization of an MLIR operation.
 /// Note: See https://www.graphviz.org/doc/info/lang.html for more information
 /// about the Graphviz DOT language.
-class ViewOpGraphPass : public impl::ViewOpGraphPassBase<ViewOpGraphPass> {
+class PrintOpPass : public ViewOpGraphBase<PrintOpPass> {
 public:
-  ViewOpGraphPass(raw_ostream &os) : os(os) {}
-  ViewOpGraphPass(const ViewOpGraphPass &o)
-      : ViewOpGraphPass(o.os.getOStream()) {}
+  PrintOpPass(raw_ostream &os) : os(os) {}
+  PrintOpPass(const PrintOpPass &o) : PrintOpPass(o.os.getOStream()) {}
 
   void runOnOperation() override {
     emitGraph([&]() {
@@ -322,8 +314,8 @@ private:
 
 } // namespace
 
-std::unique_ptr<Pass> mlir::createViewOpGraphPass(raw_ostream &os) {
-  return std::make_unique<ViewOpGraphPass>(os);
+std::unique_ptr<Pass> mlir::createPrintOpGraphPass(raw_ostream &os) {
+  return std::make_unique<PrintOpPass>(os);
 }
 
 /// Generate a CFG for a region and show it in a window.
@@ -336,7 +328,7 @@ static void llvmViewGraph(Region &region, const Twine &name) {
       llvm::errs() << "error opening file '" << filename << "' for writing\n";
       return;
     }
-    ViewOpGraphPass pass(os);
+    PrintOpPass pass(os);
     pass.emitRegionCFG(region);
   }
   llvm::DisplayGraph(filename, /*wait=*/false, llvm::GraphProgram::DOT);

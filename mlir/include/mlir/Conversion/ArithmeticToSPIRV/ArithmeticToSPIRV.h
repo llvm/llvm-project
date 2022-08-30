@@ -18,17 +18,12 @@ class SPIRVTypeConverter;
 class RewritePatternSet;
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTARITHMETICTOSPIRVPASS
-#include "mlir/Conversion/Passes.h.inc"
-
 namespace arith {
 void populateArithmeticToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                        RewritePatternSet &patterns);
 
-} // namespace arith
-
 std::unique_ptr<OperationPass<>> createConvertArithmeticToSPIRVPass();
-
+} // namespace arith
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_ARITHMETICTOSPIRV_ARITHMETICTOSPIRV_H

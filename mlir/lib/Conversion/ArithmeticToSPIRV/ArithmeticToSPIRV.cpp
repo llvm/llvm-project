@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ArithmeticToSPIRV/ArithmeticToSPIRV.h"
-
+#include "../PassDetail.h"
 #include "../SPIRVCommon/Pattern.h"
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
@@ -19,11 +19,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Debug.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTARITHMETICTOSPIRVPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 #define DEBUG_TYPE "arith-to-spirv-pattern"
 
@@ -860,8 +855,8 @@ AddICarryOpPattern::matchAndRewrite(arith::AddUICarryOp op, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
   Type dstElemTy = adaptor.getLhs().getType();
   Location loc = op->getLoc();
-  Value result = rewriter.create<spirv::IAddCarryOp>(loc, adaptor.getLhs(),
-                                                     adaptor.getRhs());
+  Value result = rewriter.create<spirv::IAddCarryOp>(
+      loc, adaptor.getLhs(), adaptor.getRhs());
 
   Value sumResult = rewriter.create<spirv::CompositeExtractOp>(
       loc, result, llvm::makeArrayRef(0));
@@ -953,10 +948,7 @@ void mlir::arith::populateArithmeticToSPIRVPatterns(
 
 namespace {
 struct ConvertArithmeticToSPIRVPass
-    : public impl::ConvertArithmeticToSPIRVPassBase<
-          ConvertArithmeticToSPIRVPass> {
-  using ConvertArithmeticToSPIRVPassBase::ConvertArithmeticToSPIRVPassBase;
-
+    : public ConvertArithmeticToSPIRVBase<ConvertArithmeticToSPIRVPass> {
   void runOnOperation() override {
     Operation *op = getOperation();
     auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
@@ -986,6 +978,7 @@ struct ConvertArithmeticToSPIRVPass
 };
 } // namespace
 
-std::unique_ptr<OperationPass<>> mlir::createConvertArithmeticToSPIRVPass() {
+std::unique_ptr<OperationPass<>>
+mlir::arith::createConvertArithmeticToSPIRVPass() {
   return std::make_unique<ConvertArithmeticToSPIRVPass>();
 }

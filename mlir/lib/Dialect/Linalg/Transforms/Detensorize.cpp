@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -19,11 +18,6 @@
 #include <iterator>
 #include <memory>
 #include <utility>
-
-namespace mlir {
-#define GEN_PASS_DEF_LINALGDETENSORIZEPASS
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -164,8 +158,7 @@ public:
 };
 
 /// @see LinalgDetensorize in Linalg/Passes.td for more details.
-struct LinalgDetensorize
-    : public impl::LinalgDetensorizePassBase<LinalgDetensorize> {
+struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
   LinalgDetensorize() = default;
 
   class CostModel {

@@ -9,13 +9,11 @@
 // This file implements loop unrolling.
 //
 //===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Affine/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -23,14 +21,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
-namespace mlir {
-#define GEN_PASS_DEF_AFFINELOOPUNROLLPASS
-#include "mlir/Dialect/Affine/Passes.h.inc"
-} // namespace mlir
+using namespace mlir;
 
 #define DEBUG_TYPE "affine-loop-unroll"
-
-using namespace mlir;
 
 namespace {
 
@@ -41,7 +34,7 @@ namespace {
 /// full unroll threshold was specified, in which case, fully unrolls all loops
 /// with trip count less than the specified threshold. The latter is for testing
 /// purposes, especially for testing outer loop unrolling.
-struct LoopUnroll : public impl::AffineLoopUnrollPassBase<LoopUnroll> {
+struct LoopUnroll : public AffineLoopUnrollBase<LoopUnroll> {
   // Callback to obtain unroll factors; if this has a callable target, takes
   // precedence over command-line argument or passed argument.
   const std::function<unsigned(AffineForOp)> getUnrollFactor;

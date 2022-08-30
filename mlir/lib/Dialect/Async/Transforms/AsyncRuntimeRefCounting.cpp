@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Async/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Analysis/Liveness.h"
 #include "mlir/Dialect/Async/IR/Async.h"
+#include "mlir/Dialect/Async/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
@@ -22,16 +22,10 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallSet.h"
 
-namespace mlir {
-#define GEN_PASS_DEF_ASYNCRUNTIMEREFCOUNTINGPASS
-#define GEN_PASS_DEF_ASYNCRUNTIMEPOLICYBASEDREFCOUNTINGPASS
-#include "mlir/Dialect/Async/Passes.h.inc"
-} // namespace mlir
-
-#define DEBUG_TYPE "async-runtime-ref-counting"
-
 using namespace mlir;
 using namespace mlir::async;
+
+#define DEBUG_TYPE "async-runtime-ref-counting"
 
 //===----------------------------------------------------------------------===//
 // Utility functions shared by reference counting passes.
@@ -109,8 +103,7 @@ static LogicalResult walkReferenceCountedValues(
 namespace {
 
 class AsyncRuntimeRefCountingPass
-    : public impl::AsyncRuntimeRefCountingPassBase<
-          AsyncRuntimeRefCountingPass> {
+    : public AsyncRuntimeRefCountingBase<AsyncRuntimeRefCountingPass> {
 public:
   AsyncRuntimeRefCountingPass() = default;
   void runOnOperation() override;
@@ -469,7 +462,7 @@ void AsyncRuntimeRefCountingPass::runOnOperation() {
 namespace {
 
 class AsyncRuntimePolicyBasedRefCountingPass
-    : public impl::AsyncRuntimePolicyBasedRefCountingPassBase<
+    : public AsyncRuntimePolicyBasedRefCountingBase<
           AsyncRuntimePolicyBasedRefCountingPass> {
 public:
   AsyncRuntimePolicyBasedRefCountingPass() { initializeDefaultPolicy(); }

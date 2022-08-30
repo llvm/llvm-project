@@ -7,18 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
-
+#include "../PassDetail.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Pass/Pass.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTARITHMETICTOLLVMPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
@@ -321,9 +315,8 @@ CmpFOpLowering::matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
 
 namespace {
 struct ConvertArithmeticToLLVMPass
-    : public impl::ConvertArithmeticToLLVMPassBase<
-          ConvertArithmeticToLLVMPass> {
-  using ConvertArithmeticToLLVMPassBase::ConvertArithmeticToLLVMPassBase;
+    : public ConvertArithmeticToLLVMBase<ConvertArithmeticToLLVMPass> {
+  ConvertArithmeticToLLVMPass() = default;
 
   void runOnOperation() override {
     LLVMConversionTarget target(getContext());
@@ -395,4 +388,8 @@ void mlir::arith::populateArithmeticToLLVMConversionPatterns(
     XOrIOpLowering
   >(converter);
   // clang-format on
+}
+
+std::unique_ptr<Pass> mlir::arith::createConvertArithmeticToLLVMPass() {
+  return std::make_unique<ConvertArithmeticToLLVMPass>();
 }

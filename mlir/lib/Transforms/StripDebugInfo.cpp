@@ -6,29 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_STRIPDEBUGINFOPASS
-#include "mlir/Transforms/Passes.h.inc"
-} // namespace mlir
+#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 
 namespace {
-struct StripDebugInfoPass
-    : public impl::StripDebugInfoPassBase<StripDebugInfoPass> {
-  using StripDebugInfoPassBase::StripDebugInfoPassBase;
-
+struct StripDebugInfo : public StripDebugInfoBase<StripDebugInfo> {
   void runOnOperation() override;
 };
 } // namespace
 
-void StripDebugInfoPass::runOnOperation() {
+void StripDebugInfo::runOnOperation() {
   auto unknownLoc = UnknownLoc::get(&getContext());
 
   // Strip the debug info from all operations.
@@ -43,4 +35,9 @@ void StripDebugInfoPass::runOnOperation() {
       }
     }
   });
+}
+
+/// Creates a pass to strip debug information from a function.
+std::unique_ptr<Pass> mlir::createStripDebugInfoPass() {
+  return std::make_unique<StripDebugInfo>();
 }

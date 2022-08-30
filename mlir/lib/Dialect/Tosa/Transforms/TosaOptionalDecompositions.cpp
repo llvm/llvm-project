@@ -12,29 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Tosa/Transforms/Passes.h"
-
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
+#include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-namespace mlir {
-namespace tosa {
-#define GEN_PASS_DEF_TOSAOPTIONALDECOMPOSITIONSPASS
-#include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
-} // namespace tosa
-} // namespace mlir
 
 using namespace mlir;
 
 namespace {
 
-struct TosaOptionalDecompositionsPass
-    : public tosa::impl::TosaOptionalDecompositionsPassBase<
-          TosaOptionalDecompositionsPass> {
-  using TosaOptionalDecompositionsPassBase::TosaOptionalDecompositionsPassBase;
-
+struct TosaOptionalDecompositions
+    : public TosaOptionalDecompositionsBase<TosaOptionalDecompositions> {
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
@@ -50,3 +39,7 @@ struct TosaOptionalDecompositionsPass
 };
 
 } // namespace
+
+std::unique_ptr<Pass> mlir::tosa::createTosaOptionalDecompositions() {
+  return std::make_unique<TosaOptionalDecompositions>();
+}

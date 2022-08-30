@@ -18,10 +18,6 @@ template <typename T>
 class InterfacePass;
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTAFFINEFORTOGPUPASS
-#define GEN_PASS_DECL_CONVERTPARALLELLOOPTOGPUPASS
-#include "mlir/Conversion/Passes.h.inc"
-
 /// Create a pass that converts loop nests into GPU kernels.  It considers
 /// top-level affine.for operations as roots of loop nests and converts them to
 /// the gpu.launch operations if possible.
@@ -33,6 +29,12 @@ class Pass;
 std::unique_ptr<InterfacePass<FunctionOpInterface>>
 createAffineForToGPUPass(unsigned numBlockDims, unsigned numThreadDims);
 std::unique_ptr<InterfacePass<FunctionOpInterface>> createAffineForToGPUPass();
+
+/// Creates a pass that converts scf.parallel operations into a gpu.launch
+/// operation. The mapping of loop dimensions to launch dimensions is derived
+/// from mapping attributes. See ParallelToGpuLaunchLowering::matchAndRewrite
+/// for a description of the used attributes.
+std::unique_ptr<Pass> createParallelLoopToGpuPass();
 
 } // namespace mlir
 

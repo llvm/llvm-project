@@ -17,9 +17,6 @@ class Pass;
 
 namespace LLVM {
 
-#define GEN_PASS_DECL_LLVMLEGALIZEFOREXPORTPASS
-#include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
-
 /// Make argument-taking successors of each block distinct.  PHI nodes in LLVM
 /// IR use the predecessor ID to identify which value to take. They do not
 /// support different values coming from the same predecessor. If a block has

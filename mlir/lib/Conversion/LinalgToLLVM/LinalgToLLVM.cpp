@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -39,11 +40,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTLINALGTOLLVMPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -78,9 +74,7 @@ void mlir::populateLinalgToLLVMConversionPatterns(LLVMTypeConverter &converter,
 
 namespace {
 struct ConvertLinalgToLLVMPass
-    : public impl::ConvertLinalgToLLVMPassBase<ConvertLinalgToLLVMPass> {
-  using ConvertLinalgToLLVMPassBase::ConvertLinalgToLLVMPassBase;
-
+    : public ConvertLinalgToLLVMBase<ConvertLinalgToLLVMPass> {
   void runOnOperation() override;
 };
 } // namespace

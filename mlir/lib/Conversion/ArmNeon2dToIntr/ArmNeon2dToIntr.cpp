@@ -7,18 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ArmNeon2dToIntr/ArmNeon2dToIntr.h"
-
+#include "../PassDetail.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTARMNEON2DTOINTRPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::arm_neon;
@@ -51,10 +46,8 @@ public:
   }
 };
 
-class ConvertArmNeon2dToIntrPass
-    : public impl::ConvertArmNeon2dToIntrPassBase<ConvertArmNeon2dToIntrPass> {
-  using ConvertArmNeon2dToIntrPassBase::ConvertArmNeon2dToIntrPassBase;
-
+class ConvertArmNeon2dToIntr
+    : public ConvertArmNeon2dToIntrBase<ConvertArmNeon2dToIntr> {
   void runOnOperation() override {
     auto *context = &getContext();
 
@@ -71,4 +64,8 @@ class ConvertArmNeon2dToIntrPass
 
 void mlir::populateConvertArmNeon2dToIntrPatterns(RewritePatternSet &patterns) {
   patterns.add<Sdot2dLoweringPattern>(patterns.getContext());
+}
+
+std::unique_ptr<Pass> mlir::createConvertArmNeon2dToIntrPass() {
+  return std::make_unique<ConvertArmNeon2dToIntr>();
 }
