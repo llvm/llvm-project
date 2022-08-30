@@ -24,6 +24,7 @@
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
+#include "llvm/CAS/ObjectStore.h"
 #include "llvm/Support/Host.h"
 
 using namespace clang;
