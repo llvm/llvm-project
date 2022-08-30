@@ -1476,6 +1476,9 @@ protected:
   void printDenseIntOrFPElementsAttr(DenseIntOrFPElementsAttr attr,
                                      bool allowHex);
 
+  /// Print a dense array attribute.
+  void printDenseArrayAttr(DenseArrayAttr attr);
+
   void printDialectAttribute(Attribute attr);
   void printDialectType(Type type);
 
@@ -1860,12 +1863,13 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
     }
   } else if (auto stridedLayoutAttr = attr.dyn_cast<StridedLayoutAttr>()) {
     stridedLayoutAttr.print(os);
-  } else if (auto denseArrayAttr = attr.dyn_cast<DenseArrayBaseAttr>()) {
+  } else if (auto denseArrayAttr = attr.dyn_cast<DenseArrayAttr>()) {
     typeElision = AttrTypeElision::Must;
     os << "array<" << denseArrayAttr.getType().getElementType();
-    if (!denseArrayAttr.empty())
+    if (!denseArrayAttr.empty()) {
       os << ": ";
-    denseArrayAttr.printWithoutBraces(os);
+      printDenseArrayAttr(denseArrayAttr);
+    }
     os << ">";
   } else if (auto resourceAttr = attr.dyn_cast<DenseResourceElementsAttr>()) {
     os << "dense_resource<";
@@ -1890,11 +1894,11 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
 
 /// Print the integer element of a DenseElementsAttr.
 static void printDenseIntElement(const APInt &value, raw_ostream &os,
-                                 bool isSigned) {
-  if (value.getBitWidth() == 1)
+                                 Type type) {
+  if (type.isInteger(1))
     os << (value.getBoolValue() ? "true" : "false");
   else
-    value.print(os, isSigned);
+    value.print(os, !type.isUnsignedInteger());
 }
 
 static void
@@ -1988,14 +1992,13 @@ void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
     // printDenseElementsAttrImpl. This lambda was hitting a bug in gcc 9.1,9.2
     // and hence was replaced.
     if (complexElementType.isa<IntegerType>()) {
-      bool isSigned = !complexElementType.isUnsignedInteger();
       auto valueIt = attr.value_begin<std::complex<APInt>>();
       printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
         auto complexValue = *(valueIt + index);
         os << "(";
-        printDenseIntElement(complexValue.real(), os, isSigned);
+        printDenseIntElement(complexValue.real(), os, complexElementType);
         os << ",";
-        printDenseIntElement(complexValue.imag(), os, isSigned);
+        printDenseIntElement(complexValue.imag(), os, complexElementType);
         os << ")";
       });
     } else {
@@ -2010,10 +2013,9 @@ void AsmPrinter::Impl::printDenseIntOrFPElementsAttr(
       });
     }
   } else if (elementType.isIntOrIndex()) {
-    bool isSigned = !elementType.isUnsignedInteger();
     auto valueIt = attr.value_begin<APInt>();
     printDenseElementsAttrImpl(attr.isSplat(), type, os, [&](unsigned index) {
-      printDenseIntElement(*(valueIt + index), os, isSigned);
+      printDenseIntElement(*(valueIt + index), os, elementType);
     });
   } else {
     assert(elementType.isa<FloatType>() && "unexpected element type");
@@ -2029,6 +2031,29 @@ void AsmPrinter::Impl::printDenseStringElementsAttr(
   ArrayRef<StringRef> data = attr.getRawStringData();
   auto printFn = [&](unsigned index) { printEscapedString(data[index]); };
   printDenseElementsAttrImpl(attr.isSplat(), attr.getType(), os, printFn);
+}
+
+void AsmPrinter::Impl::printDenseArrayAttr(DenseArrayAttr attr) {
+  Type type = attr.getElementType();
+  unsigned bitwidth = type.isInteger(1) ? 8 : type.getIntOrFloatBitWidth();
+  unsigned byteSize = bitwidth / 8;
+  ArrayRef<char> data = attr.getRawData();
+
+  auto printElementAt = [&](unsigned i) {
+    APInt value(bitwidth, 0);
+    llvm::LoadIntFromMemory(
+        value, reinterpret_cast<const uint8_t *>(data.begin() + byteSize * i),
+        byteSize);
+    // Print the data as-is or as a float.
+    if (type.isIntOrIndex()) {
+      printDenseIntElement(value, getStream(), type);
+    } else {
+      APFloat fltVal(type.cast<FloatType>().getFloatSemantics(), value);
+      printFloatValue(fltVal, getStream());
+    }
+  };
+  llvm::interleaveComma(llvm::seq<unsigned>(0, attr.size()), getStream(),
+                        printElementAt);
 }
 
 void AsmPrinter::Impl::printType(Type type) {

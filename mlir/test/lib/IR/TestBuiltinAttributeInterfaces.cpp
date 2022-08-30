@@ -41,9 +41,8 @@ struct TestElementsAttrInterface
         auto elementsAttr = attr.getValue().dyn_cast<ElementsAttr>();
         if (!elementsAttr)
           continue;
-        if (auto concreteAttr =
-                attr.getValue().dyn_cast<DenseArrayBaseAttr>()) {
-          llvm::TypeSwitch<DenseArrayBaseAttr>(concreteAttr)
+        if (auto concreteAttr = attr.getValue().dyn_cast<DenseArrayAttr>()) {
+          llvm::TypeSwitch<DenseArrayAttr>(concreteAttr)
               .Case([&](DenseBoolArrayAttr attr) {
                 testElementsAttrIteration<bool>(op, attr, "bool");
               })
