@@ -340,39 +340,22 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
-          Return the bufferized type of the given tensor block argument. The
-          block argument is guaranteed to belong to a block of this op.
+          Return the bufferized type of the given tensor value (without
+          bufferizing the IR). The value is either a BlockArgument of a block
+          that belongs to this op or an OpResult of the given op.
+
+          This method is useful when the bufferized type of value must be
+          predicted before modifying any IR.
         }],
         /*retType=*/"FailureOr<BaseMemRefType>",
         /*methodName=*/"getBufferType",
-        /*args=*/(ins "BlockArgument":$bbArg,
+        /*args=*/(ins "Value":$value,
                       "const BufferizationOptions &":$options),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          assert(bbArg.getOwner()->getParentOp() == $_op &&
-                 "bbArg must belong to this op");
-          assert(bbArg.getType().isa<TensorType>() &&
-                 "expected tensor type");
-          return bufferization::getMemRefType(bbArg, options);
-        }]
-      >,
-      InterfaceMethod<
-        /*desc=*/[{
-          Return the memory space of the given tensor OpResult if specified on
-          this op. If not specified, return `failure`.
-
-          This method will never be called with OpResults that do not bufferize
-          to a memory allocation.
-        }],
-        /*retType=*/"FailureOr<unsigned>",
-        /*methodName=*/"getMemorySpace",
-        /*args=*/(ins "OpResult":$opResult),
-        /*methodBody=*/"",
-        /*defaultImplementation=*/[{
-          assert(cast<BufferizableOpInterface>($_op.getOperation())
-                     .bufferizesToAllocation(opResult)
-                 && "expected allocation");
-          return failure();
+          assert(getOwnerOfValue(value) == $_op.getOperation() &&
+                 "expected that value belongs to this op");
+          return bufferization::detail::defaultGetBufferType(value, options);
         }]
       >,
   ];

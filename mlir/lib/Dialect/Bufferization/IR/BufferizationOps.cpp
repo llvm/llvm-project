@@ -152,7 +152,6 @@ void mlir::bufferization::populateDynamicDimSizes(
 LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
                                        const BufferizationOptions &options) {
   OpBuilder::InsertionGuard g(rewriter);
-  Operation *op = this->getOperation();
   Location loc = getLoc();
 
   // Nothing to do for dead AllocTensorOps.
@@ -170,30 +169,17 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
     copyBuffer = *maybeCopyBuffer;
   }
 
-  // Compute memory space of this allocation.
-  unsigned memorySpace;
-  if (getMemorySpace().has_value()) {
-    memorySpace = *getMemorySpace();
-  } else if (getCopy()) {
-    memorySpace =
-        copyBuffer.getType().cast<BaseMemRefType>().getMemorySpaceAsInt();
-  } else if (options.defaultMemorySpace.has_value()) {
-    memorySpace = *options.defaultMemorySpace;
-  } else {
-    return op->emitError("could not infer memory space");
-  }
-
   // Create memory allocation.
-  auto allocType =
-      MemRefType::get(getType().getShape(), getType().getElementType(),
-                      AffineMap(), memorySpace);
+  auto allocType = getBufferType(getResult(), options);
+  if (failed(allocType))
+    return failure();
   SmallVector<Value> dynamicDims = getDynamicSizes();
   if (getCopy()) {
     assert(dynamicDims.empty() && "expected either `copy` or `dynamicDims`");
     populateDynamicDimSizes(rewriter, loc, copyBuffer, dynamicDims);
   }
-  FailureOr<Value> alloc =
-      options.createAlloc(rewriter, loc, allocType, dynamicDims);
+  FailureOr<Value> alloc = options.createAlloc(
+      rewriter, loc, allocType->cast<MemRefType>(), dynamicDims);
   if (failed(alloc))
     return failure();
 
@@ -245,6 +231,28 @@ AllocTensorOp::getAliasingOpResult(OpOperand &opOperand,
                                    const AnalysisState &state) {
   // This is a new allocation. It does not alias with any other buffer.
   return {};
+}
+
+FailureOr<BaseMemRefType>
+AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options) {
+  assert(value == getResult() && "invalid value");
+
+  // Compute memory space of this allocation.
+  unsigned memorySpace;
+  if (getMemorySpace().has_value()) {
+    memorySpace = *getMemorySpace();
+  } else if (getCopy()) {
+    auto copyBufferType = bufferization::getBufferType(getCopy(), options);
+    if (failed(copyBufferType))
+      return failure();
+    memorySpace = copyBufferType->getMemorySpaceAsInt();
+  } else if (options.defaultMemorySpace.has_value()) {
+    memorySpace = *options.defaultMemorySpace;
+  } else {
+    return getOperation()->emitError("could not infer memory space");
+  }
+
+  return getMemRefTypeWithStaticIdentityLayout(getType(), memorySpace);
 }
 
 LogicalResult AllocTensorOp::verify() {

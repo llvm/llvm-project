@@ -38,8 +38,7 @@ namespace bufferization {
 using namespace mlir;
 using namespace bufferization;
 
-/// Return the owner of the given value.
-static Operation *getOwnerOfValue(Value value) {
+Operation *bufferization::getOwnerOfValue(Value value) {
   if (auto opResult = value.dyn_cast<OpResult>())
     return opResult.getDefiningOp();
   return value.cast<BlockArgument>().getOwner()->getParentOp();
@@ -568,47 +567,53 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
       .getResult();
 }
 
+FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
+    Value value, const BufferizationOptions &options) {
+  assert(value.getType().isa<TensorType>() && "expected tensor type");
+
+  // No further analysis is possible for a block argument.
+  if (value.isa<BlockArgument>())
+    return bufferization::getMemRefType(value, options);
+
+  // Value is an OpResult.
+  Operation *op = getOwnerOfValue(value);
+  auto opResult = value.cast<OpResult>();
+  auto bufferizableOp = cast<BufferizableOpInterface>(op);
+  AnalysisState state(options);
+  auto aliasingOperands = bufferizableOp.getAliasingOpOperand(opResult, state);
+  if (!aliasingOperands.empty() &&
+      bufferizableOp.bufferRelation(opResult, state) ==
+          BufferRelation::Equivalent) {
+    // If the OpResult has an equivalent OpOperand, both OpResult and
+    // OpOperand bufferize to the exact same buffer type.
+    Value equivalentOperand = aliasingOperands.front()->get();
+    return getBufferType(equivalentOperand, options);
+  }
+
+  // If we do not know the memory space and there is no default memory space,
+  // report a failure.
+  if (!options.defaultMemorySpace.has_value())
+    return op->emitError("could not infer memory space");
+
+  return getMemRefType(value, options, /*layout=*/{},
+                       *options.defaultMemorySpace);
+}
+
 /// Return the buffer type for a given Value (tensor) after bufferization.
 FailureOr<BaseMemRefType>
 bufferization::getBufferType(Value value, const BufferizationOptions &options) {
   assert(value.getType().isa<TensorType>() && "unexpected non-tensor type");
   Operation *op = getOwnerOfValue(value);
+  auto bufferizableOp = options.dynCastBufferizableOp(op);
+  if (bufferizableOp)
+    return bufferizableOp.getBufferType(value, options);
 
-  // ToTensorOp: Take buffer type directly from the op.
-  if (auto toTensorOp = value.getDefiningOp<bufferization::ToTensorOp>())
-    return toTensorOp.getMemref().getType().cast<BaseMemRefType>();
-
-  // If value is a bbArg of a bufferizable op: query op interface.
-  if (auto bbArg = value.dyn_cast<BlockArgument>())
-    if (auto bufferizableOp =
-            options.dynCastBufferizableOp(bbArg.getOwner()->getParentOp()))
-      return bufferizableOp.getBufferType(bbArg, options);
-
-  // Check value is a new buffer allocation with a memory space attribute. In
-  // that case we can at least infer the memory space.
-  Optional<unsigned> memorySpace;
-  if (auto opResult = value.dyn_cast<OpResult>()) {
-    if (auto bufferizableOp =
-            options.dynCastBufferizableOp(opResult.getDefiningOp())) {
-      if (bufferizableOp.bufferizesToAllocation(opResult)) {
-        FailureOr<unsigned> queriedMemorySpace =
-            bufferizableOp.getMemorySpace(opResult);
-        if (!failed(queriedMemorySpace))
-          memorySpace = *queriedMemorySpace;
-      }
-    }
-  }
-
-  // If we still do not know the memory space, use the default memory space (if
-  // any).
-  if (!memorySpace.has_value())
-    memorySpace = options.defaultMemorySpace;
-
-  // If we still do not know the memory space, report a failure.
-  if (!memorySpace.has_value())
+  // Op is not bufferizable.
+  if (!options.defaultMemorySpace.has_value())
     return op->emitError("could not infer memory space");
 
-  return getMemRefType(value, options, /*layout=*/{}, *memorySpace);
+  return getMemRefType(value, options, /*layout=*/{},
+                       *options.defaultMemorySpace);
 }
 
 void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
