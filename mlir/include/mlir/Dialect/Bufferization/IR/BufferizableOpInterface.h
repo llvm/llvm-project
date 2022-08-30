@@ -495,6 +495,19 @@ FailureOr<Value> getBuffer(RewriterBase &rewriter, Value value,
 FailureOr<BaseMemRefType> getBufferType(Value value,
                                         const BufferizationOptions &options);
 
+/// Return the buffer type for a given Value (tensor) after bufferization
+/// without bufferizing any IR. If at any point during the type computation, the
+/// type of a value in `fixedTypes` in required, the mapped type is used.
+///
+/// Note: It should be sufficient to call `getBuffer()->getType()` in most
+/// cases. However, when a buffer type should be predicted without modifying any
+/// IR, this function can be used.
+///
+/// This function is a wrapper around BufferizableOpInterface::getBufferType.
+FailureOr<BaseMemRefType>
+getBufferType(Value value, const BufferizationOptions &options,
+              const DenseMap<Value, BaseMemRefType> &fixedTypes);
+
 /// Replace an op with replacement values. The op is deleted. Tensor OpResults
 /// must be replaced with memref values.
 void replaceOpWithBufferizedValues(RewriterBase &rewriter, Operation *op,
@@ -551,7 +564,8 @@ namespace detail {
 /// BufferizableOpInterface::getBufferType. Should not be called from other
 /// places.
 FailureOr<BaseMemRefType>
-defaultGetBufferType(Value value, const BufferizationOptions &options);
+defaultGetBufferType(Value value, const BufferizationOptions &options,
+                     const DenseMap<Value, BaseMemRefType> &fixedTypes);
 } // namespace detail
 
 } // namespace bufferization
