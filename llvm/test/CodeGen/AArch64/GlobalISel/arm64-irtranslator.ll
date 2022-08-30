@@ -1549,7 +1549,7 @@ define i32 @test_extractelement(<2 x i32> %vec, i32 %idx) {
 ; CHECK-LABEL: name: test_extractelement
 ; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = COPY $d0
 ; CHECK: [[IDX:%[0-9]+]]:_(s32) = COPY $w0
-; CHECK: [[IDXEXT:%[0-9]+]]:_(s64) = G_SEXT [[IDX]]
+; CHECK: [[IDXEXT:%[0-9]+]]:_(s64) = G_ZEXT [[IDX]]
 ; CHECK: [[RES:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[VEC]](<2 x s32>), [[IDXEXT]](s64)
 ; CHECK: $w0 = COPY [[RES]](s32)
   %res = extractelement <2 x i32> %vec, i32 %idx
@@ -1565,6 +1565,27 @@ define i32 @test_extractelement_const_idx(<2 x i32> %vec) {
   %res = extractelement <2 x i32> %vec, i32 1
   ret i32 %res
 }
+
+define i32 @test_extractelement_const_idx_zext_i1(<2 x i32> %vec) {
+; CHECK-LABEL: name: test_extractelement
+; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+; CHECK: [[IDX:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[VEC]](<2 x s32>), [[IDX]](s64)
+; CHECK: $w0 = COPY [[RES]](s32)
+  %res = extractelement <2 x i32> %vec, i1 true
+  ret i32 %res
+}
+
+define i32 @test_extractelement_const_idx_zext_i8(<2 x i32> %vec) {
+; CHECK-LABEL: name: test_extractelement
+; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+; CHECK: [[IDX:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
+; CHECK: [[RES:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[VEC]](<2 x s32>), [[IDX]](s64)
+; CHECK: $w0 = COPY [[RES]](s32)
+  %res = extractelement <2 x i32> %vec, i8 255
+  ret i32 %res
+}
+
 
 define i32 @test_singleelementvector(i32 %elt){
 ; CHECK-LABEL: name: test_singleelementvector
