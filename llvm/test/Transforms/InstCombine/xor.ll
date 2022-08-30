@@ -4,6 +4,8 @@
 @G1 = global i32 0
 @G2 = global i32 0
 
+declare i32 @llvm.ctlz.i32(i32, i1)
+declare <2 x i8> @llvm.cttz.v2i8(<2 x i8>, i1)
 declare void @use(i8)
 
 define i1 @test0(i1 %A) {
@@ -501,8 +503,8 @@ define i32 @and_xor_commute1(i32 %p1, i32 %p2) {
 ; CHECK-LABEL: @and_xor_commute1(
 ; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[TMP1]]
+; CHECK-NEXT:    [[O1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[O1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = udiv i32 42, %p1
@@ -519,8 +521,8 @@ define i32 @and_xor_commute2(i32 %p1, i32 %p2) {
 ; CHECK-LABEL: @and_xor_commute2(
 ; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[TMP1]]
+; CHECK-NEXT:    [[O1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[O1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = udiv i32 42, %p1
@@ -537,8 +539,8 @@ define i32 @and_xor_commute3(i32 %p1, i32 %p2) {
 ; CHECK-LABEL: @and_xor_commute3(
 ; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[TMP1]]
+; CHECK-NEXT:    [[B1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[B1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = udiv i32 42, %p1
@@ -555,8 +557,8 @@ define i32 @and_xor_commute4(i32 %p1, i32 %p2) {
 ; CHECK-LABEL: @and_xor_commute4(
 ; CHECK-NEXT:    [[A:%.*]] = udiv i32 42, [[P1:%.*]]
 ; CHECK-NEXT:    [[B:%.*]] = udiv i32 42, [[P2:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[A]], -1
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[TMP1]]
+; CHECK-NEXT:    [[O1:%.*]] = xor i32 [[A]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[B]], [[O1]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = udiv i32 42, %p1
@@ -1330,4 +1332,64 @@ define i32 @xor_orn_2use(i32 %a, i32 %b, i32* %s1, i32* %s2) {
   store i32 %l, i32* %s2
   %z = xor i32 %l, %a
   ret i32 %z
+}
+
+define i32 @ctlz_pow2(i32 %x) {
+; CHECK-LABEL: @ctlz_pow2(
+; CHECK-NEXT:    [[N:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[N]], [[X]]
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.ctlz.i32(i32 [[A]], i1 true), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Z]], 31
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %n = sub i32 0, %x
+  %a = and i32 %n, %x
+  %z = call i32 @llvm.ctlz.i32(i32 %a, i1 true) ; 0 is poison
+  %r = xor i32 %z, 31
+  ret i32 %r
+}
+
+define <2 x i8> @cttz_pow2(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @cttz_pow2(
+; CHECK-NEXT:    [[S:%.*]] = shl <2 x i8> <i8 1, i8 1>, [[X:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv exact <2 x i8> [[S]], [[Y:%.*]]
+; CHECK-NEXT:    [[Z:%.*]] = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> [[D]], i1 true)
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[Z]], <i8 7, i8 7>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %s = shl <2 x i8> <i8 1, i8 1>, %x
+  %d = udiv exact <2 x i8> %s, %y
+  %z = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> %d, i1 true) ; 0 is poison
+  %r = xor <2 x i8> %z, <i8 7, i8 7>
+  ret <2 x i8> %r
+}
+
+define i32 @ctlz_pow2_or_zero(i32 %x) {
+; CHECK-LABEL: @ctlz_pow2_or_zero(
+; CHECK-NEXT:    [[N:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[N]], [[X]]
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.ctlz.i32(i32 [[A]], i1 false), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Z]], 31
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %n = sub i32 0, %x
+  %a = and i32 %n, %x
+  %z = call i32 @llvm.ctlz.i32(i32 %a, i1 false) ; 0 is not poison
+  %r = xor i32 %z, 31
+  ret i32 %r
+}
+
+define i32 @ctlz_pow2_wrong_const(i32 %x) {
+; CHECK-LABEL: @ctlz_pow2_wrong_const(
+; CHECK-NEXT:    [[N:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = and i32 [[N]], [[X]]
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.ctlz.i32(i32 [[A]], i1 true), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Z]], 30
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %n = sub i32 0, %x
+  %a = and i32 %n, %x
+  %z = call i32 @llvm.ctlz.i32(i32 %a, i1 true) ; 0 is poison
+  %r = xor i32 %z, 30
+  ret i32 %r
 }
