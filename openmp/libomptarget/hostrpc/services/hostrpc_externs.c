@@ -145,7 +145,7 @@ unsigned long hostrpc_assign_buffer(hsa_agent_t agent, hsa_queue_t *this_Q,
 hsa_status_t hostrpc_init() { return HSA_STATUS_SUCCESS; }
 
 //init hostrpc count per kernel
-char *kernName = NULL;
+const char *kernName = NULL;
 bool printHostRPCFlag = false;
 
 //print host rpc counts for each kernel invocation on GPU

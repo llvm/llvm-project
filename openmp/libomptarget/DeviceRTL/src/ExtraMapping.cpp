@@ -13,8 +13,8 @@ namespace impl {
 /// AMDGCN Implementation
 ///
 ///{
-static uint32_t __kmpc_impl_smid();
-static uint32_t getGenericModeMainThreadId();
+uint32_t __kmpc_impl_smid();
+uint32_t getGenericModeMainThreadId();
 
 #pragma omp begin declare variant match(device = {arch(amdgcn)})
 

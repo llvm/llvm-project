@@ -24,6 +24,7 @@ void omp_set_default_allocator(omp_allocator_handle_t a) {
 }
 
 omp_allocator_handle_t omp_get_default_allocator(void) {
+  return omp_default_mem_alloc;
 }
 
 void *omp_alloc(uint64_t size,

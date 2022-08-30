@@ -59,9 +59,13 @@ extern "C" void hostrpc_handler_SERVICE_SANITIZER(payload_t *packt_payload,
   // index 1,2,3   - contains wg_idx, wg_idy, wg_idz respectively.
   // index 4 to 67 - contains reporting wave ids in a wave-front.
   uint64_t entity_id[68], callstack[1];
+#if SANITIZER_AMDGPU
+#if defined(__linux__)
   uint32_t n_activelanes = __builtin_popcountl(activemask);
   uint64_t access_info = 0, access_size = 0;
   bool is_abort = true;
+#endif
+#endif
   entity_id[0] = *gpu_device;
 
   assert(packt_payload != nullptr && "packet payload is null?");
@@ -83,8 +87,12 @@ extern "C" void hostrpc_handler_SERVICE_SANITIZER(payload_t *packt_payload,
       entity_id[++en_idx] = data_slot[3];
       entity_id[++en_idx] = data_slot[4];
       entity_id[++en_idx] = data_slot[5];
+#if SANITIZER_AMDGPU
+#if defined(__linux__)
       access_info = data_slot[6];
       access_size = data_slot[7];
+#endif
+#endif
       first_workitem = true;
     } else {
       device_failing_addresses[indx] = data_slot[0];
@@ -94,22 +102,34 @@ extern "C" void hostrpc_handler_SERVICE_SANITIZER(payload_t *packt_payload,
     en_idx++;
   }
 
+#if SANITIZER_AMDGPU
+#if defined(__linux__)
   bool is_write = false;
   if (access_info & 0xFFFFFFFF00000000)
     is_abort = false;
   if (access_info & 1)
     is_write = true;
+#endif
+#endif
 
   std::string fileuri;
   uint64_t size = 0, offset = 0;
+#if SANITIZER_AMDGPU
+#if defined(__linux__)
   int64_t loadAddrAdjust = 0;
+#endif
+#endif
   int uri_fd = -1;
 
   if (uri_locator) {
     UriLocator::UriInfo fileuri_info = uri_locator->lookUpUri(callstack[0]);
     std::tie(offset, size) =
         uri_locator->decodeUriAndGetFd(fileuri_info, &uri_fd);
+#if SANITIZER_AMDGPU
+#if defined(__linux__)
     loadAddrAdjust = fileuri_info.loadAddressDiff;
+#endif
+#endif
   }
 
 #if SANITIZER_AMDGPU
