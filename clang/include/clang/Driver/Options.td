@@ -6170,7 +6170,8 @@ def fdeclare_opencl_builtins : Flag<["-"], "fdeclare-opencl-builtins">,
 
 def fpreserve_vec3_type : Flag<["-"], "fpreserve-vec3-type">,
   HelpText<"Preserve 3-component vector type">,
-  MarshallingInfoFlag<CodeGenOpts<"PreserveVec3Type">>;
+  MarshallingInfoFlag<CodeGenOpts<"PreserveVec3Type">>,
+  ImpliedByAnyOf<[hlsl.KeyPath]>;
 def fwchar_type_EQ : Joined<["-"], "fwchar-type=">,
   HelpText<"Select underlying type for wchar_t">,
   Values<"char,short,int">,
