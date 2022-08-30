@@ -398,6 +398,16 @@ func.func @fold_greater_splat_i32_true() -> tensor<10xi1> {
 
 // -----
 
+func.func @reshape_splat() -> tensor<6x5x4xi32> {
+  // CHECK: %[[SPLAT:.+]] = "tosa.const"() {value = dense<42> : tensor<6x5x4xi32>}
+  %splat = "tosa.const"() {value = dense<42> : tensor<4x5x6xi32>} : () -> tensor<4x5x6xi32>
+  %reshape = "tosa.reshape"(%splat) { new_shape = [6, 5, 4] } : (tensor<4x5x6xi32>) -> tensor<6x5x4xi32>
+  // CHECK: return %[[SPLAT]]
+  return %reshape : tensor<6x5x4xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @slice_splat
 func.func @slice_splat() -> tensor<1x1x1xi32> {
   // CHECK: %[[SLICE:.+]] = "tosa.const"() {value = dense<42> : tensor<1x1x1xi32>}
