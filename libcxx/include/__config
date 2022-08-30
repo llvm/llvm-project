@@ -210,18 +210,10 @@
 #    define _LIBCPP_CLANG_VER (__clang_major__ * 100 + __clang_minor__)
 #  elif defined(__GNUC__)
 #    define _LIBCPP_COMPILER_GCC
-#  elif defined(_MSC_VER)
-#    define _LIBCPP_COMPILER_MSVC
 #  endif
 
 #  if !defined(_LIBCPP_COMPILER_CLANG_BASED) && __cplusplus < 201103L
 #    error "libc++ only supports C++03 with Clang-based compilers. Please enable C++11"
-#  endif
-
-#  ifdef _LIBCPP_COMPILER_MSVC
-#    error If you successfully use libc++ with MSVC please tell the libc++ developers and consider upstreaming your \
-changes. We are not aware of anybody using this configuration and know that at least some code is currently broken. \
-If there are users of this configuration we are happy to provide support.
 #  endif
 
 // FIXME: ABI detection should be done via compiler builtin macros. This
@@ -494,27 +486,7 @@ typedef __char32_t char32_t;
 
 #    define _LIBCPP_DISABLE_EXTENSION_WARNING __extension__
 
-#  elif defined(_LIBCPP_COMPILER_MSVC)
-
-#    define _LIBCPP_WARNING(x) __pragma(message(__FILE__ "(" _LIBCPP_TOSTRING(__LINE__) ") : warning note: " x))
-
-#    if _MSC_VER < 1900
-#      error "MSVC versions prior to Visual Studio 2015 are not supported"
-#    endif
-
-#    define _LIBCPP_NORETURN __declspec(noreturn)
-
-#    define _LIBCPP_WEAK
-
-#    define _LIBCPP_HAS_NO_ASAN
-
-#    define _LIBCPP_ALWAYS_INLINE __forceinline
-
-#    define _LIBCPP_HAS_NO_VECTOR_EXTENSION
-
-#    define _LIBCPP_DISABLE_EXTENSION_WARNING
-
-#  endif // _LIBCPP_COMPILER_[CLANG|GCC|MSVC]
+#  endif // _LIBCPP_COMPILER_[CLANG|GCC]
 
 #  if defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
@@ -1085,7 +1057,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_IF_WIDE_CHARACTERS(...) __VA_ARGS__
 #  endif
 
-#  if defined(_LIBCPP_ABI_MICROSOFT) && (defined(_LIBCPP_COMPILER_MSVC) || __has_declspec_attribute(empty_bases))
+#  if defined(_LIBCPP_ABI_MICROSOFT) && __has_declspec_attribute(empty_bases)
 #    define _LIBCPP_DECLSPEC_EMPTY_BASES __declspec(empty_bases)
 #  else
 #    define _LIBCPP_DECLSPEC_EMPTY_BASES
