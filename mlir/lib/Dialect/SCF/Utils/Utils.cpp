@@ -297,7 +297,7 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
       builder.create<arith::ConstantIndexOp>(loc, divisor - 1);
   Value divisorCst = builder.create<arith::ConstantIndexOp>(loc, divisor);
   Value sum = builder.create<arith::AddIOp>(loc, dividend, divisorMinusOneCst);
-  return builder.create<arith::DivSIOp>(loc, sum, divisorCst);
+  return builder.create<arith::DivUIOp>(loc, sum, divisorCst);
 }
 
 // Build the IR that performs ceil division of a positive value by another
@@ -311,7 +311,7 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
   Value cstOne = builder.create<arith::ConstantIndexOp>(loc, 1);
   Value divisorMinusOne = builder.create<arith::SubIOp>(loc, divisor, cstOne);
   Value sum = builder.create<arith::AddIOp>(loc, dividend, divisorMinusOne);
-  return builder.create<arith::DivSIOp>(loc, sum, divisor);
+  return builder.create<arith::DivUIOp>(loc, sum, divisor);
 }
 
 /// Helper to replace uses of loop carried values (iter_args) and loop
