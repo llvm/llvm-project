@@ -1350,7 +1350,7 @@ inline std::string getUniqueInternalLinkagePostfix(const StringRef &FName) {
   llvm::APInt IntHash(128, Str.str(), 16);
   return toString(IntHash, /* Radix = */ 10, /* Signed = */ false)
       .insert(0, FunctionSamples::UniqSuffix);
-};
+}
 
 } // end namespace llvm
 
