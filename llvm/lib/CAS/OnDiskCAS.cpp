@@ -40,9 +40,6 @@ public:
     /// vX.data: main pool, full DataStore record.
     DataPool = 1,
 
-    /// vX.data: main pool, string with 2B size field.
-    DataPoolString2B = 2,
-
     /// vX.<TrieRecordOffset>.data: standalone, with a full DataStore record.
     Standalone = 10,
 
@@ -57,7 +54,7 @@ public:
   };
 
   enum class ObjectKind : uint8_t {
-    /// Object: refs and data.
+    /// Invalid.
     Invalid = 0,
 
     /// Object: refs and data.
@@ -697,9 +694,8 @@ struct OnDiskContent {
 ///   more details.
 /// - db/<prefix>.data: a file for the "data" table, named by \a
 ///   getDataPoolTableName() and managed by \a DataStore. New objects within
-///   TrieRecord::MaxEmbeddedSize are inserted here as either \a
-///   TrieRecord::StorageKind::DataPool or
-///   TrieRecord::StorageKind::DataPoolString2B.
+///   TrieRecord::MaxEmbeddedSize are inserted here as \a
+///   TrieRecord::StorageKind::DataPool.
 ///     - db/<prefix>.<offset>.data: a file storing an object outside the main
 ///       "data" table, named by its offset into the "index" table, with the
 ///       format of \a TrieRecord::StorageKind::Standalone.
@@ -1340,10 +1336,6 @@ void OnDiskCAS::print(raw_ostream &OS) const {
       OS << "datapool         ";
       Pool.push_back({/*IsString2B=*/false, D.Offset.get()});
       break;
-    case TrieRecord::StorageKind::DataPoolString2B:
-      OS << "datapool-string2B";
-      Pool.push_back({/*IsString2B=*/true, D.Offset.get()});
-      break;
     case TrieRecord::StorageKind::Standalone:
       OS << "standalone-data  ";
       break;
@@ -1504,10 +1496,6 @@ OnDiskCAS::makeInternalRef(FileOffset IndexOffset,
 
   case TrieRecord::StorageKind::DataPool:
     return InternalRef::getFromOffset(InternalRef::OffsetKind::DataRecord,
-                                      Object.Offset);
-
-  case TrieRecord::StorageKind::DataPoolString2B:
-    return InternalRef::getFromOffset(InternalRef::OffsetKind::String2B,
                                       Object.Offset);
 
   case TrieRecord::StorageKind::Standalone:
