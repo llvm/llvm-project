@@ -8,6 +8,8 @@
 
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 
+#include "../PassDetail.h"
+
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/AMX/AMXDialect.h"
@@ -22,21 +24,15 @@
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTVECTORTOLLVMPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::vector;
 
 namespace {
-struct ConvertVectorToLLVMPass
-    : public impl::ConvertVectorToLLVMPassBase<ConvertVectorToLLVMPass> {
-  ConvertVectorToLLVMPass(const LowerVectorToLLVMOptions &options) {
+struct LowerVectorToLLVMPass
+    : public ConvertVectorToLLVMBase<LowerVectorToLLVMPass> {
+  LowerVectorToLLVMPass(const LowerVectorToLLVMOptions &options) {
     this->reassociateFPReductions = options.reassociateFPReductions;
     this->force32BitVectorIndices = options.force32BitVectorIndices;
     this->armNeon = options.armNeon;
@@ -62,7 +58,7 @@ struct ConvertVectorToLLVMPass
 };
 } // namespace
 
-void ConvertVectorToLLVMPass::runOnOperation() {
+void LowerVectorToLLVMPass::runOnOperation() {
   // Perform progressive lowering of operations on slices and
   // all contraction operations. Also applies folding and DCE.
   {
@@ -119,5 +115,5 @@ void ConvertVectorToLLVMPass::runOnOperation() {
 
 std::unique_ptr<OperationPass<ModuleOp>>
 mlir::createConvertVectorToLLVMPass(const LowerVectorToLLVMOptions &options) {
-  return std::make_unique<ConvertVectorToLLVMPass>(options);
+  return std::make_unique<LowerVectorToLLVMPass>(options);
 }

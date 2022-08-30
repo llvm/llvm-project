@@ -8,20 +8,16 @@
 
 #include "mlir/Conversion/ComplexToStandard/ComplexToStandard.h"
 
+#include <memory>
+#include <type_traits>
+
+#include "../PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include <memory>
-#include <type_traits>
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTCOMPLEXTOSTANDARDPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
@@ -1085,10 +1081,7 @@ void mlir::populateComplexToStandardConversionPatterns(
 
 namespace {
 struct ConvertComplexToStandardPass
-    : public impl::ConvertComplexToStandardPassBase<
-          ConvertComplexToStandardPass> {
-  using ConvertComplexToStandardPassBase::ConvertComplexToStandardPassBase;
-
+    : public ConvertComplexToStandardBase<ConvertComplexToStandardPass> {
   void runOnOperation() override;
 };
 
@@ -1105,3 +1098,7 @@ void ConvertComplexToStandardPass::runOnOperation() {
     signalPassFailure();
 }
 } // namespace
+
+std::unique_ptr<Pass> mlir::createConvertComplexToStandardPass() {
+  return std::make_unique<ConvertComplexToStandardPass>();
+}

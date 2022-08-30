@@ -13,32 +13,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/ControlFlowSinkUtils.h"
+#include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/SideEffectUtils.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONTROLFLOWSINKPASS
-#include "mlir/Transforms/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
 namespace {
 /// A control-flow sink pass.
-struct ControlFlowSinkPass
-    : public impl::ControlFlowSinkPassBase<ControlFlowSinkPass> {
-  using ControlFlowSinkPassBase::ControlFlowSinkPassBase;
-
+struct ControlFlowSink : public ControlFlowSinkBase<ControlFlowSink> {
   void runOnOperation() override;
 };
 } // end anonymous namespace
 
-void ControlFlowSinkPass::runOnOperation() {
+void ControlFlowSink::runOnOperation() {
   auto &domInfo = getAnalysis<DominanceInfo>();
   getOperation()->walk([&](RegionBranchOpInterface branch) {
     SmallVector<Region *> regionsToSink;
@@ -55,4 +47,8 @@ void ControlFlowSinkPass::runOnOperation() {
           op->moveBefore(&region->front(), region->front().begin());
         });
   });
+}
+
+std::unique_ptr<Pass> mlir::createControlFlowSinkPass() {
+  return std::make_unique<ControlFlowSink>();
 }

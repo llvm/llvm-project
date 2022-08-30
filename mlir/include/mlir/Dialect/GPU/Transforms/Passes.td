@@ -11,13 +11,13 @@
 
 include "mlir/Pass/PassBase.td"
 
-def GpuLaunchSinkIndexComputationsPass : Pass<"gpu-launch-sink-index-computations"> {
+def GpuLaunchSinkIndexComputations : Pass<"gpu-launch-sink-index-computations"> {
   let summary = "Sink index computations into gpu.launch body";
   let constructor = "mlir::createGpuLauchSinkIndexComputationsPass()";
   let dependentDialects = ["mlir::gpu::GPUDialect"];
 }
 
-def GpuKernelOutliningPass : Pass<"gpu-kernel-outlining", "ModuleOp"> {
+def GpuKernelOutlining : Pass<"gpu-kernel-outlining", "ModuleOp"> {
   let summary = "Outline gpu.launch bodies to kernel functions";
   let constructor = "mlir::createGpuKernelOutliningPass()";
   let dependentDialects = ["mlir::DLTIDialect"];

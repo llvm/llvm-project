@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def AsyncParallelForPass : Pass<"async-parallel-for", "ModuleOp"> {
+def AsyncParallelFor : Pass<"async-parallel-for", "ModuleOp"> {
   let summary = "Convert scf.parallel operations to multiple async compute ops "
                 "executed concurrently for non-overlapping iteration ranges";
   let constructor = "mlir::createAsyncParallelForPass()";
@@ -40,7 +40,7 @@ def AsyncParallelForPass : Pass<"async-parallel-for", "ModuleOp"> {
   ];
 }
 
-def AsyncToAsyncRuntimePass : Pass<"async-to-async-runtime", "ModuleOp"> {
+def AsyncToAsyncRuntime : Pass<"async-to-async-runtime", "ModuleOp"> {
   let summary = "Lower high level async operations (e.g. async.execute) to the"
                 "explicit async.runtime and async.coro operations";
   let constructor = "mlir::createAsyncToAsyncRuntimePass()";
@@ -54,7 +54,7 @@ def AsyncToAsyncRuntimePass : Pass<"async-to-async-runtime", "ModuleOp"> {
   let dependentDialects = ["async::AsyncDialect"];
 }
 
-def AsyncRuntimeRefCountingPass : Pass<"async-runtime-ref-counting"> {
+def AsyncRuntimeRefCounting : Pass<"async-runtime-ref-counting"> {
   let summary = "Automatic reference counting for Async runtime operations";
   let description = [{
     This pass works at the async runtime abtraction level, after all
@@ -71,14 +71,14 @@ def AsyncRuntimeRefCountingPass : Pass<"async-runtime-ref-counting"> {
   let dependentDialects = ["async::AsyncDialect"];
 }
 
-def AsyncRuntimeRefCountingOptPass : Pass<"async-runtime-ref-counting-opt"> {
+def AsyncRuntimeRefCountingOpt : Pass<"async-runtime-ref-counting-opt"> {
   let summary = "Optimize automatic reference counting operations for the"
                 "Async runtime by removing redundant operations";
   let constructor = "mlir::createAsyncRuntimeRefCountingOptPass()";
   let dependentDialects = ["async::AsyncDialect"];
 }
 
-def AsyncRuntimePolicyBasedRefCountingPass
+def AsyncRuntimePolicyBasedRefCounting
     : Pass<"async-runtime-policy-based-ref-counting"> {
   let summary = "Policy based reference counting for Async runtime operations";
   let description = [{

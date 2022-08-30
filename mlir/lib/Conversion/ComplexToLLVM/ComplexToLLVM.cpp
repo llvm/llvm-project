@@ -8,17 +8,12 @@
 
 #include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Pass/Pass.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTCOMPLEXTOLLVMPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -323,9 +318,7 @@ void mlir::populateComplexToLLVMConversionPatterns(
 
 namespace {
 struct ConvertComplexToLLVMPass
-    : public impl::ConvertComplexToLLVMPassBase<ConvertComplexToLLVMPass> {
-  using ConvertComplexToLLVMPassBase::ConvertComplexToLLVMPassBase;
-
+    : public ConvertComplexToLLVMBase<ConvertComplexToLLVMPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -341,4 +334,8 @@ void ConvertComplexToLLVMPass::runOnOperation() {
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
+}
+
+std::unique_ptr<Pass> mlir::createConvertComplexToLLVMPass() {
+  return std::make_unique<ConvertComplexToLLVMPass>();
 }

@@ -8,16 +8,12 @@
 
 #include "mlir/Dialect/Linalg/Passes.h"
 
+#include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Transforms/DialectConversion.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTELEMENTWISETOLINALGPASS
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
@@ -125,8 +121,7 @@ void mlir::linalg::populateElementwiseToLinalgConversionPatterns(
 
 namespace {
 class ConvertElementwiseToLinalgPass
-    : public impl::ConvertElementwiseToLinalgPassBase<
-          ConvertElementwiseToLinalgPass> {
+    : public ConvertElementwiseToLinalgBase<ConvertElementwiseToLinalgPass> {
 
   void runOnOperation() final {
     auto *func = getOperation();

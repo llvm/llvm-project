@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Passes.h"
+#include "PassDetail.h"
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -20,19 +19,13 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
 
-namespace mlir {
-#define GEN_PASS_DEF_LINALGBUFFERIZEPASS
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-} // namespace mlir
-
 using namespace mlir;
 using namespace bufferization;
 
 namespace {
 /// Converts Linalg operations that work on tensor-type operands or results to
 /// work on buffers.
-struct LinalgBufferizePass
-    : public impl::LinalgBufferizePassBase<LinalgBufferizePass> {
+struct LinalgBufferizePass : public LinalgBufferizeBase<LinalgBufferizePass> {
   void runOnOperation() override {
     BufferizationOptions options = getPartialBufferizationOptions();
     options.opFilter.allowDialect<linalg::LinalgDialect>();

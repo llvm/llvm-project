@@ -14,9 +14,9 @@
 namespace mlir {
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTMATHTOFUNCSPASS
-#include "mlir/Conversion/Passes.h.inc"
-
+// Pass to convert some Math operations into calls of functions
+// containing software implementation of these operations.
+std::unique_ptr<Pass> createConvertMathToFuncsPass();
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MATHTOFUNCS_MATHTOFUNCS_H

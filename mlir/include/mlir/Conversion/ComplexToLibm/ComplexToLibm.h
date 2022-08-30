@@ -14,9 +14,6 @@ namespace mlir {
 template <typename T>
 class OperationPass;
 
-#define GEN_PASS_DECL_CONVERTCOMPLEXTOLIBMPASS
-#include "mlir/Conversion/Passes.h.inc"
-
 /// Populate the given list with patterns that convert from Complex to Libm
 /// calls.
 void populateComplexToLibmConversionPatterns(RewritePatternSet &patterns,

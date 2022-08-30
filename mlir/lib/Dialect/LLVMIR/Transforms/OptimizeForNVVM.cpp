@@ -7,19 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/Transforms/OptimizeForNVVM.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-namespace mlir {
-namespace NVVM {
-#define GEN_PASS_DEF_NVVMOPTIMIZEFORTARGETPASS
-#include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
-} // namespace NVVM
-} // namespace mlir
 
 using namespace mlir;
 
@@ -39,11 +31,8 @@ private:
                                 PatternRewriter &rewriter) const override;
 };
 
-struct NVVMOptimizeForTargetPass
-    : public NVVM::impl::NVVMOptimizeForTargetPassBase<
-          NVVMOptimizeForTargetPass> {
-  using NVVMOptimizeForTargetPassBase::NVVMOptimizeForTargetPassBase;
-
+struct NVVMOptimizeForTarget
+    : public NVVMOptimizeForTargetBase<NVVMOptimizeForTarget> {
   void runOnOperation() override;
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -95,7 +84,7 @@ LogicalResult ExpandDivF16::matchAndRewrite(LLVM::FDivOp op,
   return success();
 }
 
-void NVVMOptimizeForTargetPass::runOnOperation() {
+void NVVMOptimizeForTarget::runOnOperation() {
   MLIRContext *ctx = getOperation()->getContext();
   RewritePatternSet patterns(ctx);
   patterns.add<ExpandDivF16>(ctx);
@@ -104,5 +93,5 @@ void NVVMOptimizeForTargetPass::runOnOperation() {
 }
 
 std::unique_ptr<Pass> NVVM::createOptimizeForTargetPass() {
-  return std::make_unique<NVVMOptimizeForTargetPass>();
+  return std::make_unique<NVVMOptimizeForTarget>();
 }

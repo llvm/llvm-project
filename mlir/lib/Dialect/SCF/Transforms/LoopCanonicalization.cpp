@@ -11,22 +11,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_SCFFORLOOPCANONICALIZATIONPASS
-#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -197,11 +192,8 @@ struct AffineOpSCFCanonicalizationPattern : public OpRewritePattern<OpTy> {
   }
 };
 
-struct SCFForLoopCanonicalizationPass
-    : public impl::SCFForLoopCanonicalizationPassBase<
-          SCFForLoopCanonicalizationPass> {
-  using SCFForLoopCanonicalizationPassBase::SCFForLoopCanonicalizationPassBase;
-
+struct SCFForLoopCanonicalization
+    : public SCFForLoopCanonicalizationBase<SCFForLoopCanonicalization> {
   void runOnOperation() override {
     auto *parentOp = getOperation();
     MLIRContext *ctx = parentOp->getContext();
@@ -222,4 +214,8 @@ void mlir::scf::populateSCFForLoopCanonicalizationPatterns(
            DimOfIterArgFolder<tensor::DimOp>, DimOfIterArgFolder<memref::DimOp>,
            DimOfLoopResultFolder<tensor::DimOp>,
            DimOfLoopResultFolder<memref::DimOp>>(ctx);
+}
+
+std::unique_ptr<Pass> mlir::createSCFForLoopCanonicalizationPass() {
+  return std::make_unique<SCFForLoopCanonicalization>();
 }

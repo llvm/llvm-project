@@ -11,34 +11,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Visitors.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 
-namespace mlir {
-namespace spirv {
-#define GEN_PASS_DEF_SPIRVUPDATEVCEPASS
-#include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
-} // namespace spirv
-} // namespace mlir
-
 using namespace mlir;
 
 namespace {
 /// Pass to deduce minimal version/extension/capability requirements for a
 /// spirv::ModuleOp.
-class SPIRVUpdateVCEPass final
-    : public spirv::impl::SPIRVUpdateVCEPassBase<SPIRVUpdateVCEPass> {
-  using SPIRVUpdateVCEPassBase::SPIRVUpdateVCEPassBase;
-
+class UpdateVCEPass final : public SPIRVUpdateVCEBase<UpdateVCEPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -99,7 +89,7 @@ static LogicalResult checkAndUpdateCapabilityRequirements(
   return success();
 }
 
-void SPIRVUpdateVCEPass::runOnOperation() {
+void UpdateVCEPass::runOnOperation() {
   spirv::ModuleOp module = getOperation();
 
   spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnv(module);
@@ -189,5 +179,5 @@ void SPIRVUpdateVCEPass::runOnOperation() {
 
 std::unique_ptr<OperationPass<spirv::ModuleOp>>
 mlir::spirv::createUpdateVersionCapabilityExtensionPass() {
-  return std::make_unique<SPIRVUpdateVCEPass>();
+  return std::make_unique<UpdateVCEPass>();
 }

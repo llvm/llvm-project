@@ -8,15 +8,10 @@
 
 #include "mlir/Conversion/ComplexToLibm/ComplexToLibm.h"
 
+#include "../PassDetail.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTCOMPLEXTOLIBMPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
@@ -122,9 +117,7 @@ void mlir::populateComplexToLibmConversionPatterns(RewritePatternSet &patterns,
 
 namespace {
 struct ConvertComplexToLibmPass
-    : public impl::ConvertComplexToLibmPassBase<ConvertComplexToLibmPass> {
-  using ConvertComplexToLibmPassBase::ConvertComplexToLibmPassBase;
-
+    : public ConvertComplexToLibmBase<ConvertComplexToLibmPass> {
   void runOnOperation() override;
 };
 } // namespace

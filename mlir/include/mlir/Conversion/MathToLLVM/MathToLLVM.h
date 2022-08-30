@@ -17,12 +17,10 @@ class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTMATHTOLLVMPASS
-#include "mlir/Conversion/Passes.h.inc"
-
 void populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                           RewritePatternSet &patterns);
 
+std::unique_ptr<Pass> createConvertMathToLLVMPass();
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_MATHTOLLVM_MATHTOLLVM_H

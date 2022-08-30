@@ -6,18 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/OpenACCToSCF/ConvertOpenACCToSCF.h"
-
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTOPENACCTOSCFPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
@@ -62,9 +56,7 @@ void mlir::populateOpenACCToSCFConversionPatterns(RewritePatternSet &patterns) {
 
 namespace {
 struct ConvertOpenACCToSCFPass
-    : public impl::ConvertOpenACCToSCFPassBase<ConvertOpenACCToSCFPass> {
-  using ConvertOpenACCToSCFPassBase::ConvertOpenACCToSCFPassBase;
-
+    : public ConvertOpenACCToSCFBase<ConvertOpenACCToSCFPass> {
   void runOnOperation() override;
 };
 } // namespace

@@ -24,9 +24,6 @@ namespace gpu {
 class GPUModuleOp;
 } // namespace gpu
 
-#define GEN_PASS_DECL_CONVERTGPUTOROCDLPASS
-#include "mlir/Conversion/Passes.h.inc"
-
 /// Collect a set of patterns to convert from the GPU dialect to ROCDL.
 /// If `runtime` is Unknown, gpu.printf will not be lowered
 /// The resulting pattern set should be run over a gpu.module op
@@ -40,7 +37,8 @@ void configureGpuToROCDLConversionLegality(ConversionTarget &target);
 /// Creates a pass that lowers GPU dialect operations to ROCDL counterparts. The
 /// index bitwidth used for the lowering of the device side index computations
 /// is configurable.
-std::unique_ptr<OperationPass<gpu::GPUModuleOp>> createConvertGpuToROCDLPass(
+std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
+createLowerGpuOpsToROCDLOpsPass(
     const std::string &chipset = "gfx900",
     unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout,
     bool useBarePtrCallConv = false,

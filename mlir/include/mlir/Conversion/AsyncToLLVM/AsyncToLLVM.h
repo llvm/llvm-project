@@ -21,8 +21,8 @@ class MLIRContext;
 class TypeConverter;
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTASYNCTOLLVMPASS
-#include "mlir/Conversion/Passes.h.inc"
+/// Create a pass to convert Async operations to the LLVM dialect.
+std::unique_ptr<OperationPass<ModuleOp>> createConvertAsyncToLLVMPass();
 
 /// Populates patterns for async structural type conversions.
 ///
@@ -35,9 +35,6 @@ class RewritePatternSet;
 void populateAsyncStructuralTypeConversionsAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);
-
-/// Create a pass to convert Async operations to the LLVM dialect.
-std::unique_ptr<OperationPass<ModuleOp>> createConvertAsyncToLLVMPass();
 
 } // namespace mlir
 

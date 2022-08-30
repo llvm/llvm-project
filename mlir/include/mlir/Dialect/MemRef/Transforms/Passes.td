@@ -11,12 +11,12 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ExpandOpsPass : Pass<"memref-expand"> {
+def ExpandOps : Pass<"memref-expand"> {
   let summary = "Legalize memref operations to be convertible to LLVM.";
   let constructor = "mlir::memref::createExpandOpsPass()";
 }
 
-def FoldMemRefAliasOpsPass : Pass<"fold-memref-alias-ops"> {
+def FoldMemRefAliasOps : Pass<"fold-memref-alias-ops"> {
   let summary = "Fold memref alias ops into consumer load/store ops";
   let description = [{
     The pass folds loading/storing from/to memref aliasing ops to loading/storing
@@ -28,7 +28,7 @@ def FoldMemRefAliasOpsPass : Pass<"fold-memref-alias-ops"> {
   ];
 }
 
-def NormalizeMemRefsPass : Pass<"normalize-memrefs", "ModuleOp"> {
+def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
   let summary = "Normalize memrefs";
    let description = [{
     This pass transforms memref types with a non-trivial
@@ -144,7 +144,7 @@ def NormalizeMemRefsPass : Pass<"normalize-memrefs", "ModuleOp"> {
   let dependentDialects = ["AffineDialect"];
 }
 
-def ResolveRankedShapeTypeResultDimsPass :
+def ResolveRankedShapeTypeResultDims :
     Pass<"resolve-ranked-shaped-type-result-dims"> {
   let summary = "Resolve memref.dim of result values of ranked shape type";
   let description = [{
@@ -159,7 +159,7 @@ def ResolveRankedShapeTypeResultDimsPass :
   ];
 }
 
-def ResolveShapedTypeResultDimsPass : Pass<"resolve-shaped-type-result-dims"> {
+def ResolveShapedTypeResultDims : Pass<"resolve-shaped-type-result-dims"> {
   let summary = "Resolve memref.dim of result values";
   let description = [{
     The pass resolves memref.dim of result of operations that

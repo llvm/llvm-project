@@ -14,11 +14,6 @@
 namespace mlir {
 namespace arith {
 
-#define GEN_PASS_DECL_ARITHMETICBUFFERIZEPASS
-#define GEN_PASS_DECL_ARITHMETICEXPANDOPSPASS
-#define GEN_PASS_DECL_ARITHMETICUNSIGNEDWHENEQUIVALENTPASS
-#include "mlir/Dialect/Arithmetic/Transforms/Passes.h.inc"
-
 /// Create a pass to bufferize Arithmetic ops.
 std::unique_ptr<Pass> createArithmeticBufferizePass();
 

@@ -17,13 +17,11 @@ class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTARITHMETICTOLLVMPASS
-#include "mlir/Conversion/Passes.h.inc"
-
 namespace arith {
 void populateArithmeticToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                 RewritePatternSet &patterns);
 
+std::unique_ptr<Pass> createConvertArithmeticToLLVMPass();
 } // namespace arith
 } // namespace mlir
 

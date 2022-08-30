@@ -11,14 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Passes.h"
+#include <utility>
 
+#include "PassDetail.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
@@ -32,20 +33,6 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "mlir/Transforms/Passes.h"
-#include <utility>
-
-namespace mlir {
-#define GEN_PASS_DEF_LINALGSTRATEGYTILEANDFUSEPASS
-#define GEN_PASS_DEF_LINALGSTRATEGYTILEPASS
-#define GEN_PASS_DEF_LINALGSTRATEGYPADPASS
-#define GEN_PASS_DEF_LINALGSTRATEGYDECOMPOSEPASS
-#define GEN_PASS_DEF_LINALGSTRATEGYPEELPASS
-#define GEN_PASS_DEF_LINALGSTRATEGYVECTORIZEPASS
-#define GEN_PASS_DEF_LINALGSTRATEGYENABLEPASS
-#define GEN_PASS_DEF_LINALGSTRATEGYLOWERVECTORSPASS
-#define GEN_PASS_DEF_LINALGSTRATEGYREMOVEMARKERSPASS
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -55,8 +42,7 @@ namespace {
 
 /// Configurable pass to apply pattern-based tiling and fusion.
 struct LinalgStrategyTileAndFusePass
-    : public impl::LinalgStrategyTileAndFusePassBase<
-          LinalgStrategyTileAndFusePass> {
+    : public LinalgStrategyTileAndFusePassBase<LinalgStrategyTileAndFusePass> {
 
   LinalgStrategyTileAndFusePass() = default;
 
@@ -93,7 +79,7 @@ struct LinalgStrategyTileAndFusePass
 
 /// Configurable pass to apply pattern-based linalg tiling.
 struct LinalgStrategyTilePass
-    : public impl::LinalgStrategyTilePassBase<LinalgStrategyTilePass> {
+    : public LinalgStrategyTilePassBase<LinalgStrategyTilePass> {
 
   LinalgStrategyTilePass() = default;
 
@@ -126,7 +112,7 @@ struct LinalgStrategyTilePass
 
 /// Configurable pass to apply hoisting and padding.
 struct LinalgStrategyPadPass
-    : public impl::LinalgStrategyPadPassBase<LinalgStrategyPadPass> {
+    : public LinalgStrategyPadPassBase<LinalgStrategyPadPass> {
 
   LinalgStrategyPadPass() = default;
 
@@ -156,11 +142,11 @@ struct LinalgStrategyPadPass
   LinalgTransformationFilter filter;
 };
 
+
 /// Configurable pass to apply lowering of coarser-grained named linalg ops into
 /// finer-grained named versions.
 struct LinalgStrategyDecomposePass
-    : public impl::LinalgStrategyDecomposePassBase<
-          LinalgStrategyDecomposePass> {
+    : public LinalgStrategyDecomposePassBase<LinalgStrategyDecomposePass> {
 
   LinalgStrategyDecomposePass() = default;
 
@@ -183,7 +169,7 @@ struct LinalgStrategyDecomposePass
 
 /// Configurable pass to apply pattern-based linalg peeling.
 struct LinalgStrategyPeelPass
-    : public impl::LinalgStrategyPeelPassBase<LinalgStrategyPeelPass> {
+    : public LinalgStrategyPeelPassBase<LinalgStrategyPeelPass> {
 
   LinalgStrategyPeelPass() = default;
 
@@ -217,8 +203,7 @@ struct LinalgStrategyPeelPass
 
 /// Configurable pass to apply pattern-based linalg vectorization.
 struct LinalgStrategyVectorizePass
-    : public impl::LinalgStrategyVectorizePassBase<
-          LinalgStrategyVectorizePass> {
+    : public LinalgStrategyVectorizePassBase<LinalgStrategyVectorizePass> {
 
   LinalgStrategyVectorizePass() = default;
 
@@ -274,7 +259,7 @@ struct LinalgStrategyVectorizePass
 /// Configurable pass to enable the application of other pattern-based linalg
 /// passes.
 struct LinalgStrategyEnablePass
-    : public impl::LinalgStrategyEnablePassBase<LinalgStrategyEnablePass> {
+    : public LinalgStrategyEnablePassBase<LinalgStrategyEnablePass> {
 
   LinalgStrategyEnablePass(LinalgEnablingOptions opt,
                            LinalgTransformationFilter filt)
@@ -324,7 +309,7 @@ struct LinalgStrategyEnablePass
 
 /// Configurable pass to lower vector operations.
 struct LinalgStrategyLowerVectorsPass
-    : public impl::LinalgStrategyLowerVectorsPassBase<
+    : public LinalgStrategyLowerVectorsPassBase<
           LinalgStrategyLowerVectorsPass> {
 
   LinalgStrategyLowerVectorsPass(LinalgVectorLoweringOptions opt,
@@ -389,7 +374,7 @@ struct LinalgStrategyLowerVectorsPass
 
 /// Configurable pass to lower vector operations.
 struct LinalgStrategyRemoveMarkersPass
-    : public impl::LinalgStrategyRemoveMarkersPassBase<
+    : public LinalgStrategyRemoveMarkersPassBase<
           LinalgStrategyRemoveMarkersPass> {
 
   void runOnOperation() override {

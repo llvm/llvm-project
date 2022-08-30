@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def FuncBufferizePass : Pass<"func-bufferize", "ModuleOp"> {
+def FuncBufferize : Pass<"func-bufferize", "ModuleOp"> {
   let summary = "Bufferize func/call/return ops";
   let description = [{
     A bufferize pass that bufferizes func.func and func.call ops.

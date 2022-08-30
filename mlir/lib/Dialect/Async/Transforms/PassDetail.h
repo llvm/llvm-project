@@ -27,6 +27,9 @@ namespace scf {
 class SCFDialect;
 } // namespace scf
 
+#define GEN_PASS_CLASSES
+#include "mlir/Dialect/Async/Passes.h.inc"
+
 // -------------------------------------------------------------------------- //
 // Utility functions shared by Async Transformations.
 // -------------------------------------------------------------------------- //

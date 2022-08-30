@@ -11,25 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/MathToSPIRV/MathToSPIRVPass.h"
-
+#include "../PassDetail.h"
 #include "mlir/Conversion/MathToSPIRV/MathToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
-#include "mlir/Pass/Pass.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTMATHTOSPIRVPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
 namespace {
 /// A pass converting MLIR Math operations into the SPIR-V dialect.
 class ConvertMathToSPIRVPass
-    : public impl::ConvertMathToSPIRVPassBase<ConvertMathToSPIRVPass> {
-  using ConvertMathToSPIRVPassBase::ConvertMathToSPIRVPassBase;
-
+    : public ConvertMathToSPIRVBase<ConvertMathToSPIRVPass> {
   void runOnOperation() override;
 };
 } // namespace

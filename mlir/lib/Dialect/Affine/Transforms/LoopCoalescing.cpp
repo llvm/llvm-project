@@ -6,22 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/Debug.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_LOOPCOALESCINGPASS
-#include "mlir/Dialect/Affine/Passes.h.inc"
-} // namespace mlir
 
 #define PASS_NAME "loop-coalescing"
 #define DEBUG_TYPE PASS_NAME
@@ -29,8 +22,7 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-struct LoopCoalescingPass
-    : public impl::LoopCoalescingPassBase<LoopCoalescingPass> {
+struct LoopCoalescingPass : public LoopCoalescingBase<LoopCoalescingPass> {
 
   /// Walk either an scf.for or an affine.for to find a band to coalesce.
   template <typename LoopOpTy>

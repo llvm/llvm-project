@@ -10,31 +10,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/TosaToTensor/TosaToTensor.h"
-
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTTOSATOTENSORPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
-
 using namespace mlir;
 using namespace tosa;
 
 namespace {
-struct ConvertTosaToTensorPass
-    : public impl::ConvertTosaToTensorPassBase<ConvertTosaToTensorPass> {
+struct TosaToTensor : public TosaToTensorBase<TosaToTensor> {
 public:
-  using ConvertTosaToTensorPassBase::ConvertTosaToTensorPassBase;
-
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
@@ -50,3 +43,7 @@ public:
   }
 };
 } // namespace
+
+std::unique_ptr<Pass> mlir::tosa::createTosaToTensor() {
+  return std::make_unique<TosaToTensor>();
+}

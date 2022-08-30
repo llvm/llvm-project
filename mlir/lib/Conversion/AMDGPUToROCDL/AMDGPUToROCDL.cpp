@@ -7,17 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
-
+#include "../PassDetail.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/AMDGPU/AMDGPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
-#include "mlir/Pass/Pass.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTAMDGPUTOROCDLPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::amdgpu;
@@ -275,8 +269,8 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
 };
 
 struct ConvertAMDGPUToROCDLPass
-    : public impl::ConvertAMDGPUToROCDLPassBase<ConvertAMDGPUToROCDLPass> {
-  using ConvertAMDGPUToROCDLPassBase::ConvertAMDGPUToROCDLPassBase;
+    : public ConvertAMDGPUToROCDLBase<ConvertAMDGPUToROCDLPass> {
+  ConvertAMDGPUToROCDLPass() = default;
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
@@ -308,4 +302,8 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
       RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawBufferStoreOp>,
       RawBufferOpLowering<RawBufferAtomicFaddOp, ROCDL::RawBufferAtomicFAddOp>>(
       converter, chipset);
+}
+
+std::unique_ptr<Pass> mlir::createConvertAMDGPUToROCDLPass() {
+  return std::make_unique<ConvertAMDGPUToROCDLPass>();
 }

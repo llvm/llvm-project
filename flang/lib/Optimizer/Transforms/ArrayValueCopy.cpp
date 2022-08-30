@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "flang/Optimizer/Builder/Array.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -20,11 +21,6 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Debug.h"
-
-namespace fir {
-#define GEN_PASS_DEF_ARRAYVALUECOPYPASS
-#include "flang/Optimizer/Transforms/Passes.h.inc"
-} // namespace fir
 
 #define DEBUG_TYPE "flang-array-value-copy"
 
@@ -1330,7 +1326,7 @@ public:
 };
 
 class ArrayValueCopyConverter
-    : public fir::impl::ArrayValueCopyPassBase<ArrayValueCopyConverter> {
+    : public ArrayValueCopyBase<ArrayValueCopyConverter> {
 public:
   void runOnOperation() override {
     auto func = getOperation();

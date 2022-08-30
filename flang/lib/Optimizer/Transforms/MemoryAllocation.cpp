@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -16,11 +17,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
-
-namespace fir {
-#define GEN_PASS_DEF_MEMORYALLOCATIONOPTPASS
-#include "flang/Optimizer/Transforms/Passes.h.inc"
-} // namespace fir
 
 #define DEBUG_TYPE "flang-memory-allocation-opt"
 
@@ -155,7 +151,7 @@ private:
 ///   2. If a stack allocation is an array with a runtime evaluated size make
 ///      it a heap allocation.
 class MemoryAllocationOpt
-    : public fir::impl::MemoryAllocationOptPassBase<MemoryAllocationOpt> {
+    : public fir::MemoryAllocationOptBase<MemoryAllocationOpt> {
 public:
   MemoryAllocationOpt() {
     // Set options with default values. (See Passes.td.) Note that the

@@ -11,31 +11,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Vector/Transforms/Passes.h"
 
-namespace mlir {
-namespace vector {
-#define GEN_PASS_DEF_VECTORBUFFERIZEPASS
-#include "mlir/Dialect/Vector/Transforms/Passes.h.inc"
-} // namespace vector
-} // namespace mlir
-
 using namespace mlir;
 using namespace bufferization;
 
 namespace {
-struct VectorBufferizePass
-    : public vector::impl::VectorBufferizePassBase<VectorBufferizePass> {
-  using VectorBufferizePassBase::VectorBufferizePassBase;
-
+struct VectorBufferizePass : public VectorBufferizeBase<VectorBufferizePass> {
   void runOnOperation() override {
     BufferizationOptions options = getPartialBufferizationOptions();
     options.opFilter.allowDialect<vector::VectorDialect>();
@@ -51,3 +40,7 @@ struct VectorBufferizePass
   }
 };
 } // namespace
+
+std::unique_ptr<Pass> mlir::vector::createVectorBufferizePass() {
+  return std::make_unique<VectorBufferizePass>();
+}

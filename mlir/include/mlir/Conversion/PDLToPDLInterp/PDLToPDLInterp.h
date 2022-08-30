@@ -20,9 +20,6 @@ class ModuleOp;
 template <typename OpT>
 class OperationPass;
 
-#define GEN_PASS_DECL_CONVERTPDLTOPDLINTERPPASS
-#include "mlir/Conversion/Passes.h.inc"
-
 /// Creates and returns a pass to convert PDL ops to PDL interpreter ops.
 std::unique_ptr<OperationPass<ModuleOp>> createPDLToPDLInterpPass();
 

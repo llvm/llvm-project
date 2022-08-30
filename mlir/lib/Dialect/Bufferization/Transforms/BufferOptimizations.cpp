@@ -11,23 +11,13 @@
 // allocations and copies during buffer deallocation. The third pass tries to
 // convert heap-based allocations to stack-based allocations, if possible.
 
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
-
-namespace mlir {
-namespace bufferization {
-#define GEN_PASS_DEF_BUFFERHOISTINGPASS
-#define GEN_PASS_DEF_BUFFERLOOPHOISTINGPASS
-#define GEN_PASS_DEF_PROMOTEBUFFERSTOSTACKPASS
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
-} // namespace bufferization
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -371,8 +361,7 @@ public:
 
 /// The buffer hoisting pass that hoists allocation nodes into dominating
 /// blocks.
-struct BufferHoistingPass
-    : bufferization::impl::BufferHoistingPassBase<BufferHoistingPass> {
+struct BufferHoistingPass : BufferHoistingBase<BufferHoistingPass> {
 
   void runOnOperation() override {
     // Hoist all allocations into dominator blocks.
@@ -383,8 +372,7 @@ struct BufferHoistingPass
 };
 
 /// The buffer loop hoisting pass that hoists allocation nodes out of loops.
-struct BufferLoopHoistingPass
-    : bufferization::impl::BufferLoopHoistingPassBase<BufferLoopHoistingPass> {
+struct BufferLoopHoistingPass : BufferLoopHoistingBase<BufferLoopHoistingPass> {
 
   void runOnOperation() override {
     // Hoist all allocations out of loops.
@@ -397,8 +385,7 @@ struct BufferLoopHoistingPass
 /// The promote buffer to stack pass that tries to convert alloc nodes into
 /// alloca nodes.
 class PromoteBuffersToStackPass
-    : public bufferization::impl::PromoteBuffersToStackPassBase<
-          PromoteBuffersToStackPass> {
+    : public PromoteBuffersToStackBase<PromoteBuffersToStackPass> {
 public:
   PromoteBuffersToStackPass(unsigned maxAllocSizeInBytes,
                             unsigned maxRankOfAllocatedMemRef) {

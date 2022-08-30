@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -22,11 +23,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/TypeSwitch.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTASYNCTOLLVMPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 #define DEBUG_TYPE "convert-async-to-llvm"
 
@@ -990,9 +986,7 @@ public:
 
 namespace {
 struct ConvertAsyncToLLVMPass
-    : public impl::ConvertAsyncToLLVMPassBase<ConvertAsyncToLLVMPass> {
-  using ConvertAsyncToLLVMPassBase::ConvertAsyncToLLVMPassBase;
-
+    : public ConvertAsyncToLLVMBase<ConvertAsyncToLLVMPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -1123,6 +1117,10 @@ public:
 };
 } // namespace
 
+std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertAsyncToLLVMPass() {
+  return std::make_unique<ConvertAsyncToLLVMPass>();
+}
+
 void mlir::populateAsyncStructuralTypeConversionsAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target) {
@@ -1137,8 +1135,4 @@ void mlir::populateAsyncStructuralTypeConversionsAndLegality(
 
   target.addDynamicallyLegalOp<AwaitOp, ExecuteOp, async::YieldOp>(
       [&](Operation *op) { return typeConverter.isLegal(op); });
-}
-
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertAsyncToLLVMPass() {
-  return std::make_unique<ConvertAsyncToLLVMPass>();
 }

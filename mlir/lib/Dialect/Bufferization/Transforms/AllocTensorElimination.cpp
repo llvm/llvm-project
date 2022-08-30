@@ -6,22 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "PassDetail.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/AllocTensorElimination.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
-
-namespace mlir {
-namespace bufferization {
-#define GEN_PASS_DEF_ALLOCTENSORELIMINATIONPASS
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
-} // namespace bufferization
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -240,8 +234,7 @@ mlir::bufferization::insertSliceAnchoredAllocTensorEliminationStep(
 
 namespace {
 struct AllocTensorElimination
-    : public bufferization::impl::AllocTensorEliminationPassBase<
-          AllocTensorElimination> {
+    : public AllocTensorEliminationBase<AllocTensorElimination> {
   AllocTensorElimination() = default;
 
   void runOnOperation() override;
