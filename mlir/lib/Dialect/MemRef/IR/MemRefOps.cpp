@@ -2577,13 +2577,13 @@ namespace {
 /// ```
 ///   %0 = memref.cast %V : memref<16x16xf32> to memref<?x?xf32>
 ///   %1 = memref.subview %0[0, 0][3, 4][1, 1] :
-///     memref<?x?xf32> to memref<3x4xf32, offset:?, strides:[?, 1]>
+///     memref<?x?xf32> to memref<3x4xf32, strided<[?, 1], offset: ?>>
 /// ```
 /// is rewritten into:
 /// ```
 ///   %0 = memref.subview %V: memref<16x16xf32> to memref<3x4xf32, #[[map0]]>
-///   %1 = memref.cast %0: memref<3x4xf32, offset:0, strides:[16, 1]> to
-///     memref<3x4xf32, offset:?, strides:[?, 1]>
+///   %1 = memref.cast %0: memref<3x4xf32, strided<[16, 1], offset: 0>> to
+///     memref<3x4xf32, strided<[?, 1], offset: ?>>
 /// ```
 class SubViewOpMemRefCastFolder final : public OpRewritePattern<SubViewOp> {
 public:

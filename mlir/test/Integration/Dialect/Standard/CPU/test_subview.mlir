@@ -13,8 +13,8 @@ func.func @main() {
   %0 = memref.get_global @__constant_5x3xf32 : memref<5x3xf32>
 
   /// Subview with only leading operands.
-  %1 = memref.subview %0[2, 0][3, 3][1, 1]: memref<5x3xf32> to memref<3x3xf32, offset: 6, strides: [3, 1]>
-  %unranked = memref.cast %1 : memref<3x3xf32, offset: 6, strides: [3, 1]> to memref<*xf32>
+  %1 = memref.subview %0[2, 0][3, 3][1, 1]: memref<5x3xf32> to memref<3x3xf32, strided<[3, 1], offset: 6>>
+  %unranked = memref.cast %1 : memref<3x3xf32, strided<[3, 1], offset: 6>> to memref<*xf32>
   call @printMemrefF32(%unranked) : (memref<*xf32>) -> ()
 
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
@@ -26,8 +26,8 @@ func.func @main() {
   // CHECK-SAME: ]
 
   /// Regular subview.
-  %2 = memref.subview %0[0, 2][5, 1][1, 1]: memref<5x3xf32> to memref<5x1xf32, offset: 2, strides: [3, 1]>
-  %unranked2 = memref.cast %2 : memref<5x1xf32, offset: 2, strides: [3, 1]> to memref<*xf32>
+  %2 = memref.subview %0[0, 2][5, 1][1, 1]: memref<5x3xf32> to memref<5x1xf32, strided<[3, 1], offset: 2>>
+  %unranked2 = memref.cast %2 : memref<5x1xf32, strided<[3, 1], offset: 2>> to memref<*xf32>
   call @printMemrefF32(%unranked2) : (memref<*xf32>) -> ()
 
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
@@ -41,8 +41,8 @@ func.func @main() {
   // CHECK-SAME: ]
 
   /// Rank-reducing subview.
-  %3 = memref.subview %0[0, 2][5, 1][1, 1]: memref<5x3xf32> to memref<5xf32, offset: 2, strides: [3]>
-  %unranked3 = memref.cast %3 : memref<5xf32, offset: 2, strides: [3]> to memref<*xf32>
+  %3 = memref.subview %0[0, 2][5, 1][1, 1]: memref<5x3xf32> to memref<5xf32, strided<[3], offset: 2>>
+  %unranked3 = memref.cast %3 : memref<5xf32, strided<[3], offset: 2>> to memref<*xf32>
   call @printMemrefF32(%unranked3) : (memref<*xf32>) -> ()
 
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
@@ -50,8 +50,8 @@ func.func @main() {
   // CHECK-NEXT: [2,  5,  8,  11,  14]
 
   /// Rank-reducing subview with only leading operands.
-  %4 = memref.subview %0[1, 0][1, 3][1, 1]: memref<5x3xf32> to memref<3xf32, offset: 3, strides: [1]>
-  %unranked4 = memref.cast %4 : memref<3xf32, offset: 3, strides: [1]> to memref<*xf32>
+  %4 = memref.subview %0[1, 0][1, 3][1, 1]: memref<5x3xf32> to memref<3xf32, strided<[1], offset: 3>>
+  %unranked4 = memref.cast %4 : memref<3xf32, strided<[1], offset: 3>> to memref<*xf32>
   call @printMemrefF32(%unranked4) : (memref<*xf32>) -> ()
   //      CHECK: Unranked Memref base@ = {{0x[-9a-f]*}}
   // CHECK-SAME: rank = 1 offset = 3 sizes = [3] strides = [1] data =
