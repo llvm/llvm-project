@@ -183,12 +183,10 @@ public:
     case AArch64ISD::DUP:
     case ISD::SPLAT_VECTOR: {
       auto Opnd0 = N->getOperand(0);
-      if (auto CN = dyn_cast<ConstantSDNode>(Opnd0))
-        if (CN->isZero())
-          return true;
-      if (auto CN = dyn_cast<ConstantFPSDNode>(Opnd0))
-        if (CN->isZero())
-          return true;
+      if (isNullConstant(Opnd0))
+        return true;
+      if (isNullFPConstant(Opnd0))
+        return true;
       break;
     }
     default:
@@ -203,12 +201,10 @@ public:
     case AArch64ISD::DUP:
     case ISD::SPLAT_VECTOR: {
       auto Opnd0 = N->getOperand(0);
-      if (auto CN = dyn_cast<ConstantSDNode>(Opnd0))
-        if (CN->isZero())
-          return true;
-      if (auto CN = dyn_cast<ConstantFPSDNode>(Opnd0))
-        if (CN->isZero())
-          return true;
+      if (isNullConstant(Opnd0))
+        return true;
+      if (isNullFPConstant(Opnd0))
+        return true;
       break;
     }
     }
