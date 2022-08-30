@@ -1869,7 +1869,7 @@ private:
         std::string Brace;
         if (Token->BraceCount < 0) {
           assert(Token->BraceCount == -1);
-          Brace = '{';
+          Brace = "\n{";
         } else {
           Brace = '\n' + std::string(Token->BraceCount, '}');
         }
