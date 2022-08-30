@@ -1074,6 +1074,30 @@ inline bool operator!=(StringRef lhs, StringAttr rhs) { return !(lhs == rhs); }
 // Attribute Utilities
 //===----------------------------------------------------------------------===//
 
+namespace mlir {
+
+/// Given a list of strides (in which MemRefType::getDynamicStrideOrOffset()
+/// represents a dynamic value), return the single result AffineMap which
+/// represents the linearized strided layout map. Dimensions correspond to the
+/// offset followed by the strides in order. Symbols are inserted for each
+/// dynamic dimension in order. A stride is always positive.
+///
+/// Examples:
+/// =========
+///
+///   1. For offset: 0 strides: ?, ?, 1 return
+///         (i, j, k)[M, N]->(M * i + N * j + k)
+///
+///   2. For offset: 3 strides: 32, ?, 16 return
+///         (i, j, k)[M]->(3 + 32 * i + M * j + 16 * k)
+///
+///   3. For offset: ? strides: ?, ?, ? return
+///         (i, j, k)[off, M, N, P]->(off + M * i + N * j + P * k)
+AffineMap makeStridedLinearLayoutMap(ArrayRef<int64_t> strides, int64_t offset,
+                                     MLIRContext *context);
+
+} // namespace mlir
+
 namespace llvm {
 
 template <>

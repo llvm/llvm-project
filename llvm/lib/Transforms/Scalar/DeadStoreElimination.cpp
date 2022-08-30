@@ -1075,13 +1075,16 @@ struct DSEState {
       }
 
       MemoryAccess *UseAccess = WorkList[I];
-      // Simply adding the users of MemoryPhi to the worklist is not enough,
-      // because we might miss read clobbers in different iterations of a loop,
-      // for example.
-      // TODO: Add support for phi translation to handle the loop case.
-      if (isa<MemoryPhi>(UseAccess))
-        return false;
+      if (isa<MemoryPhi>(UseAccess)) {
+        // AliasAnalysis does not account for loops. Limit elimination to
+        // candidates for which we can guarantee they always store to the same
+        // memory location.
+        if (!isGuaranteedLoopInvariant(MaybeLoc->Ptr))
+          return false;
 
+        PushMemUses(cast<MemoryPhi>(UseAccess));
+        continue;
+      }
       // TODO: Checking for aliasing is expensive. Consider reducing the amount
       // of times this is called and/or caching it.
       Instruction *UseInst = cast<MemoryUseOrDef>(UseAccess)->getMemoryInst();

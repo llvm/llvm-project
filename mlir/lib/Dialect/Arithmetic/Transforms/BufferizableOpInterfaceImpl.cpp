@@ -155,32 +155,49 @@ struct SelectOpInterface
       return failure();
     Value trueBuffer = *maybeTrueBuffer;
     Value falseBuffer = *maybeFalseBuffer;
-    BaseMemRefType trueType = trueBuffer.getType().cast<BaseMemRefType>();
-    BaseMemRefType falseType = falseBuffer.getType().cast<BaseMemRefType>();
-    if (trueType.getMemorySpaceAsInt() != falseType.getMemorySpaceAsInt())
-      return op->emitError("inconsistent memory space on true/false operands");
 
     // The "true" and the "false" operands must have the same type. If the
     // buffers have different types, they differ only in their layout map. Cast
     // both of them to the most dynamic MemRef type.
     if (trueBuffer.getType() != falseBuffer.getType()) {
-      auto trueType = trueBuffer.getType().cast<MemRefType>();
-      int64_t dynamicOffset = ShapedType::kDynamicStrideOrOffset;
-      SmallVector<int64_t> dynamicStrides(trueType.getRank(),
-                                          ShapedType::kDynamicStrideOrOffset);
-      AffineMap stridedLayout = makeStridedLinearLayoutMap(
-          dynamicStrides, dynamicOffset, op->getContext());
-      auto castedType =
-          MemRefType::get(trueType.getShape(), trueType.getElementType(),
-                          stridedLayout, trueType.getMemorySpaceAsInt());
-      trueBuffer = rewriter.create<memref::CastOp>(loc, castedType, trueBuffer);
+      auto targetType =
+          bufferization::getBufferType(selectOp.getResult(), options);
+      if (failed(targetType))
+        return failure();
+      trueBuffer =
+          rewriter.create<memref::CastOp>(loc, *targetType, trueBuffer);
       falseBuffer =
-          rewriter.create<memref::CastOp>(loc, castedType, falseBuffer);
+          rewriter.create<memref::CastOp>(loc, *targetType, falseBuffer);
     }
 
     replaceOpWithNewBufferizedOp<arith::SelectOp>(
         rewriter, op, selectOp.getCondition(), trueBuffer, falseBuffer);
     return success();
+  }
+
+  FailureOr<BaseMemRefType>
+  getBufferType(Operation *op, Value value, const BufferizationOptions &options,
+                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
+    auto selectOp = cast<arith::SelectOp>(op);
+    assert(value == selectOp.getResult() && "invalid value");
+    auto trueType = bufferization::getBufferType(selectOp.getTrueValue(),
+                                                 options, fixedTypes);
+    auto falseType = bufferization::getBufferType(selectOp.getFalseValue(),
+                                                  options, fixedTypes);
+    if (failed(trueType) || failed(falseType))
+      return failure();
+    if (*trueType == *falseType)
+      return *trueType;
+    if (trueType->getMemorySpaceAsInt() != falseType->getMemorySpaceAsInt())
+      return op->emitError("inconsistent memory space on true/false operands");
+
+    // If the buffers have different types, they differ only in their layout
+    // map.
+    auto memrefType = trueType->cast<MemRefType>();
+    return getMemRefTypeWithFullyDynamicLayout(
+        RankedTensorType::get(memrefType.getShape(),
+                              memrefType.getElementType()),
+        memrefType.getMemorySpaceAsInt());
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,

@@ -23,6 +23,7 @@
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -441,20 +442,25 @@ void ClampOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 template <typename IntFolder, typename FloatFolder>
 DenseElementsAttr BinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
-                               RankedTensorType ty) {
+                               RankedTensorType returnTy) {
   if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
-    if (ty.getElementType().isa<IntegerType>()) {
+    auto lETy = lhs.getType().cast<ShapedType>().getElementType();
+    auto rETy = rhs.getType().cast<ShapedType>().getElementType();
+    if (lETy != rETy)
+      return {};
+
+    if (lETy.isa<IntegerType>()) {
       APInt l = lhs.getSplatValue<APInt>();
       APInt r = rhs.getSplatValue<APInt>();
-      APInt result = IntFolder()(l, r);
-      return DenseElementsAttr::get(ty, result);
+      auto result = IntFolder()(l, r);
+      return DenseElementsAttr::get(returnTy, result);
     }
 
-    if (ty.getElementType().isa<FloatType>()) {
+    if (lETy.isa<FloatType>()) {
       APFloat l = lhs.getSplatValue<APFloat>();
       APFloat r = rhs.getSplatValue<APFloat>();
-      APFloat result = FloatFolder()(l, r);
-      return DenseElementsAttr::get(ty, result);
+      auto result = FloatFolder()(l, r);
+      return DenseElementsAttr::get(returnTy, result);
     }
   }
 
@@ -501,9 +507,244 @@ OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
                                                             lhsTy);
 }
 
+OpFoldResult DivOp::fold(ArrayRef<Attribute> operands) {
+  auto lhsTy = getInput1().getType().dyn_cast<RankedTensorType>();
+  auto rhsTy = getInput2().getType().dyn_cast<RankedTensorType>();
+  auto resultTy = getType().dyn_cast<RankedTensorType>();
+  if (!lhsTy || !rhsTy || !resultTy)
+    return {};
+  if (lhsTy != rhsTy)
+    return {};
+
+  auto resultETy = resultTy.getElementType();
+  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+  if (lhsAttr && lhsAttr.isSplat()) {
+    if (resultETy.isa<IntegerType>() && lhsAttr.getSplatValue<APInt>().isZero())
+      return lhsAttr;
+  }
+
+  if (rhsAttr && rhsAttr.isSplat()) {
+    if (resultETy.isa<IntegerType>() && rhsAttr.getSplatValue<APInt>().isOne())
+      return getInput1();
+  }
+
+  if (rhsAttr && lhsAttr && rhsAttr.isSplat() && lhsAttr.isSplat()) {
+    if (resultETy.isa<IntegerType>()) {
+      APInt l = lhsAttr.getSplatValue<APInt>();
+      APInt r = rhsAttr.getSplatValue<APInt>();
+      APInt result = l.sdiv(r);
+      return DenseElementsAttr::get(resultTy, result);
+    }
+  }
+
+  return {};
+}
+
+namespace {
+DenseElementsAttr MulBinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
+                                  RankedTensorType ty, int32_t shift) {
+  if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
+    if (ty.getElementType().isa<IntegerType>()) {
+      APInt l = lhs.getSplatValue<APInt>();
+      APInt r = rhs.getSplatValue<APInt>();
+
+      if (shift == 0) {
+        return DenseElementsAttr::get(ty, l * r);
+      }
+
+      auto bitwidth = ty.getElementType().getIntOrFloatBitWidth();
+      l = l.sext(bitwidth * 2);
+      r = r.sext(bitwidth * 2);
+      auto result = l * r;
+      result.lshrInPlace(shift);
+      result = result.trunc(bitwidth);
+      return DenseElementsAttr::get(ty, result);
+    }
+
+    if (ty.getElementType().isa<FloatType>()) {
+      APFloat l = lhs.getSplatValue<APFloat>();
+      APFloat r = rhs.getSplatValue<APFloat>();
+      APFloat result = l * r;
+      return DenseElementsAttr::get(ty, result);
+    }
+  }
+
+  return {};
+}
+} // namespace
+
+OpFoldResult MulOp::fold(ArrayRef<Attribute> operands) {
+  auto lhs = getInput1();
+  auto rhs = getInput2();
+  auto lhsTy = lhs.getType().dyn_cast<RankedTensorType>();
+  auto rhsTy = rhs.getType().dyn_cast<RankedTensorType>();
+  auto resultTy = getType().dyn_cast<RankedTensorType>();
+  if (!lhsTy || !rhsTy || !resultTy)
+    return {};
+  if (lhsTy != rhsTy)
+    return {};
+
+  auto resultETy = resultTy.getElementType();
+  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+
+  if (lhsAttr && lhsAttr.isSplat() && resultETy.isa<FloatType>()) {
+    auto val = lhsAttr.getSplatValue<APFloat>();
+    if (val.isZero())
+      return lhsAttr;
+    if (val.isExactlyValue(1.0))
+      return rhs;
+  }
+
+  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<FloatType>()) {
+    auto val = rhsAttr.getSplatValue<APFloat>();
+    if (val.isZero())
+      return rhsAttr;
+    if (val.isExactlyValue(1.0))
+      return lhs;
+  }
+
+  if (lhsAttr && lhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
+    auto val = lhsAttr.getSplatValue<APInt>();
+    if (val.isZero())
+      return lhsAttr;
+    if (val.getSExtValue() == (1 << getShift()))
+      return rhs;
+  }
+
+  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
+    auto val = rhsAttr.getSplatValue<APInt>();
+    if (val.isZero())
+      return rhsAttr;
+    if (val.getSExtValue() == (1 << getShift()))
+      return lhs;
+  }
+
+  return MulBinaryFolder(lhsAttr, rhsAttr, lhsTy, getShift());
+}
+
+OpFoldResult SubOp::fold(ArrayRef<Attribute> operands) {
+  auto lhsTy = getInput1().getType().dyn_cast<RankedTensorType>();
+  auto rhsTy = getInput2().getType().dyn_cast<RankedTensorType>();
+  auto resultTy = getType().dyn_cast<RankedTensorType>();
+  if (!lhsTy || !rhsTy || !resultTy)
+    return {};
+  if (lhsTy != rhsTy)
+    return {};
+
+  auto resultETy = resultTy.getElementType();
+  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+
+  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<FloatType>()) {
+    if (rhsAttr.getSplatValue<APFloat>().isZero())
+      return getInput1();
+  }
+
+  if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
+    if (rhsAttr.getSplatValue<APInt>().isZero())
+      return getInput1();
+  }
+
+  if (!lhsAttr || !rhsAttr)
+    return {};
+
+  return BinaryFolder<std::minus<APInt>, std::minus<APFloat>>(lhsAttr, rhsAttr,
+                                                              lhsTy);
+}
+
+namespace {
+template <typename Cmp>
+struct ComparisonFold {
+  ComparisonFold() {}
+  APInt operator()(const APInt &l, const APInt &r) {
+    return APInt(1, Cmp()(l, r));
+  }
+
+  APInt operator()(const APFloat &l, const APFloat &r) {
+    return APInt(1, Cmp()(l, r));
+  }
+};
+
+struct APIntFoldGreater {
+  APIntFoldGreater() {}
+  APInt operator()(APInt l, APInt r) { return APInt(1, l.sgt(r)); }
+};
+} // namespace
+
+OpFoldResult GreaterOp::fold(ArrayRef<Attribute> operands) {
+  auto resultTy = getType().dyn_cast<RankedTensorType>();
+  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+
+  if (!lhsAttr || !rhsAttr)
+    return {};
+
+  return BinaryFolder<APIntFoldGreater, ComparisonFold<std::greater<APFloat>>>(
+      lhsAttr, rhsAttr, resultTy);
+}
+
 OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
   if (getInput().getType() == getType())
     return getInput();
+
+  auto operand = operands[0].dyn_cast_or_null<ElementsAttr>();
+  if (!operand)
+    return {};
+
+  auto inTy = getInput().getType().cast<ShapedType>();
+  auto outTy = getType().cast<ShapedType>();
+  auto inETy = inTy.getElementType();
+  auto outETy = outTy.getElementType();
+
+  if (operand.isSplat()) {
+    if (inETy.isa<FloatType>() && outETy.isa<FloatType>()) {
+      bool overflow;
+      auto splatVal = operand.getSplatValue<APFloat>();
+      auto &semantics = outETy.cast<FloatType>().getFloatSemantics();
+      splatVal.convert(semantics, llvm::RoundingMode::NearestTiesToEven,
+                       &overflow);
+      return SplatElementsAttr::get(outTy, splatVal);
+    }
+
+    if (inETy.isa<IntegerType>() && outETy.isa<FloatType>()) {
+      auto unsign = inETy.cast<IntegerType>().isUnsignedInteger();
+      APFloat splatVal(outETy.cast<FloatType>().getFloatSemantics());
+      splatVal.convertFromAPInt(operand.getSplatValue<APInt>(), !unsign,
+                                llvm::RoundingMode::NearestTiesToEven);
+      return SplatElementsAttr::get(outTy, splatVal);
+    }
+
+    if (inETy.isa<FloatType>() && outETy.isa<IntegerType>()) {
+      auto unsign = outETy.cast<IntegerType>().isUnsignedInteger();
+      auto intVal =
+          APSInt(outETy.cast<IntegerType>().getIntOrFloatBitWidth(), unsign);
+      auto floatVal = operand.getSplatValue<APFloat>();
+      bool exact;
+      floatVal.convertToInteger(intVal, llvm::RoundingMode::TowardZero, &exact);
+      return SplatElementsAttr::get(outTy, intVal);
+    }
+
+    if (inETy.isa<IntegerType>() && outETy.isa<IntegerType>()) {
+      auto unsignIn = inETy.cast<IntegerType>().isUnsignedInteger();
+      bool trunc =
+          inETy.getIntOrFloatBitWidth() > outETy.getIntOrFloatBitWidth();
+      auto intVal = operand.getSplatValue<APInt>();
+      auto bitwidth = outETy.getIntOrFloatBitWidth();
+
+      if (trunc) {
+        intVal = intVal.trunc(bitwidth);
+      } else if (unsignIn) {
+        intVal = intVal.zext(bitwidth);
+      } else {
+        intVal = intVal.sext(bitwidth);
+      }
+
+      return SplatElementsAttr::get(outTy, intVal);
+    }
+  }
+
   return {};
 }
 
@@ -534,9 +775,18 @@ OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
   auto inputTy = getInput1().getType().dyn_cast<RankedTensorType>();
   auto outputTy = getType().dyn_cast<RankedTensorType>();
 
-  if (!inputTy || !outputTy || inputTy != outputTy)
+  if (!inputTy || !outputTy)
     return {};
-  return getInput1();
+
+  if (inputTy == outputTy)
+    return getInput1();
+
+  auto operand = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  if (operand && outputTy.hasStaticShape() && operand.isSplat()) {
+    return SplatElementsAttr::get(outputTy, operand.getSplatValue<Attribute>());
+  }
+
+  return {};
 }
 
 OpFoldResult PadOp::fold(ArrayRef<Attribute> operands) {
