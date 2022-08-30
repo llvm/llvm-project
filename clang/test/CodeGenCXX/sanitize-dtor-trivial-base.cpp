@@ -20,10 +20,11 @@ Derived d;
 // Poison members, then poison the trivial base class.
 // CHECK-LABEL: define {{.*}}DerivedD2Ev
 // CHECK: %[[GEP:[0-9a-z]+]] = getelementptr i8, i8* {{.*}}, i64 16
-// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}%[[GEP]], i64 4{{.*}}, !dbg ![[DI:[0-9]+]]
-// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, i64 16{{.*}}, !dbg ![[DI]]
+// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}%[[GEP]], i64 4{{.*}}, !dbg ![[DI1:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, i64 16{{.*}}, !dbg ![[DI2:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: !DIFile{{.*}}cpp
 
-// CHECK-DAG: ![[DI]] = {{.*}}line: [[@LINE-14]]
+// CHECK-DAG: ![[DI1]] = {{.*}}line: [[@LINE-16]]
+// CHECK-DAG: ![[DI2]] = {{.*}}line: [[@LINE-24]]
