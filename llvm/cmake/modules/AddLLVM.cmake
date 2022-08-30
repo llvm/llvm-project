@@ -2135,7 +2135,14 @@ function(llvm_add_tool_symlink project link_name target)
     add_custom_command(OUTPUT ${output_path}
                      COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${dest_binary}" "${output_path}"
                      DEPENDS ${target})
-    add_custom_target(${target_name} ALL DEPENDS ${target} ${output_path})
+
+    # TODO: Make use of generator expressions below once CMake 3.19 or higher is the minimum supported version.
+    set(should_build_all)
+    get_target_property(target_excluded_from_all ${target} EXCLUDE_FROM_ALL)
+    if (NOT target_excluded_from_all)
+      set(should_build_all ALL)
+    endif()
+    add_custom_target(${target_name} ${should_build_all} DEPENDS ${target} ${output_path})
     set_target_properties(${target_name} PROPERTIES FOLDER Tools)
 
     # Make sure both the link and target are toolchain tools
