@@ -83,7 +83,7 @@ createCache(ObjectStore &CAS, const CASConfiguration &Config,
     return llvm::cas::createInMemoryActionCache(CAS);
 
   // Compute the path.
-  std::string Path = Config.CASPath;
+  std::string Path = Config.CachePath;
   if (Path == "auto")
     Path = getDefaultOnDiskActionCachePath();
 
