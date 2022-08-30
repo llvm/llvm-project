@@ -304,7 +304,7 @@ public:
   bool isNeeded() const override;
   void writeTo(uint8_t *buf) const override;
 
-  void setup();
+  void setUp();
 
   DylibSymbol *stubBinder = nullptr;
   Defined *dyldPrivate = nullptr;
@@ -324,7 +324,7 @@ public:
   bool isNeeded() const override { return !symbols.empty(); }
   void finalize() override { isec->isFinal = true; }
   void writeTo(uint8_t *buf) const override;
-  void setup();
+  void setUp();
 
   static constexpr llvm::StringLiteral symbolPrefix = "_objc_msgSend$";
 
