@@ -441,17 +441,17 @@ public:
     // of enclosing namespaces for friend function declarations.
     friend raw_ostream &operator<<(raw_ostream &OS, const SCC &C) {
       OS << '(';
-      int i = 0;
+      int I = 0;
       for (LazyCallGraph::Node &N : C) {
-        if (i > 0)
+        if (I > 0)
           OS << ", ";
         // Elide the inner elements if there are too many.
-        if (i > 8) {
+        if (I > 8) {
           OS << "..., " << *C.Nodes.back();
           break;
         }
         OS << N;
-        ++i;
+        ++I;
       }
       OS << ')';
       return OS;
@@ -563,17 +563,17 @@ public:
     // of enclosing namespaces for friend function declarations.
     friend raw_ostream &operator<<(raw_ostream &OS, const RefSCC &RC) {
       OS << '[';
-      int i = 0;
+      int I = 0;
       for (LazyCallGraph::SCC &C : RC) {
-        if (i > 0)
+        if (I > 0)
           OS << ", ";
         // Elide the inner elements if there are too many.
-        if (i > 4) {
+        if (I > 4) {
           OS << "..., " << *RC.SCCs.back();
           break;
         }
         OS << C;
-        ++i;
+        ++I;
       }
       OS << ']';
       return OS;
@@ -1156,14 +1156,14 @@ private:
   /// Allocates an SCC and constructs it using the graph allocator.
   ///
   /// The arguments are forwarded to the constructor.
-  template <typename... Ts> SCC *createSCC(Ts &&... Args) {
+  template <typename... Ts> SCC *createSCC(Ts &&...Args) {
     return new (SCCBPA.Allocate()) SCC(std::forward<Ts>(Args)...);
   }
 
   /// Allocates a RefSCC and constructs it using the graph allocator.
   ///
   /// The arguments are forwarded to the constructor.
-  template <typename... Ts> RefSCC *createRefSCC(Ts &&... Args) {
+  template <typename... Ts> RefSCC *createRefSCC(Ts &&...Args) {
     return new (RefSCCBPA.Allocate()) RefSCC(std::forward<Ts>(Args)...);
   }
 

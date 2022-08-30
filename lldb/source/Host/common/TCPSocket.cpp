@@ -261,8 +261,8 @@ Status TCPSocket::Accept(Socket *&conn_socket) {
     return error;
   }
 
-  int sock = kInvalidSocketValue;
-  int listen_sock = kInvalidSocketValue;
+  NativeSocket sock = kInvalidSocketValue;
+  NativeSocket listen_sock = kInvalidSocketValue;
   lldb_private::SocketAddress AcceptAddr;
   MainLoop accept_loop;
   std::vector<MainLoopBase::ReadHandleUP> handles;

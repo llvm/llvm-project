@@ -584,6 +584,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       {"callHierarchyProvider", true},
       {"clangdInlayHintsProvider", true},
       {"inlayHintProvider", true},
+      {"foldingRangeProvider", true},
   };
 
   {
@@ -613,8 +614,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                  CodeAction::INFO_KIND}}}
           : llvm::json::Value(true);
 
-  if (Opts.FoldingRanges)
-    ServerCaps["foldingRangeProvider"] = true;
 
   std::vector<llvm::StringRef> Commands;
   for (llvm::StringRef Command : Handlers.CommandHandlers.keys())
@@ -1618,8 +1617,7 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.method("clangd/inlayHints", this, &ClangdLSPServer::onClangdInlayHints);
   Bind.method("textDocument/inlayHint", this, &ClangdLSPServer::onInlayHint);
   Bind.method("$/memoryUsage", this, &ClangdLSPServer::onMemoryUsage);
-  if (Opts.FoldingRanges)
-    Bind.method("textDocument/foldingRange", this, &ClangdLSPServer::onFoldingRange);
+  Bind.method("textDocument/foldingRange", this, &ClangdLSPServer::onFoldingRange);
   Bind.command(ApplyFixCommand, this, &ClangdLSPServer::onCommandApplyEdit);
   Bind.command(ApplyTweakCommand, this, &ClangdLSPServer::onCommandApplyTweak);
 
