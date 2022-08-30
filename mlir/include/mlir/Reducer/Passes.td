@@ -24,7 +24,7 @@ def CommonReductionPassOptions {
   ];
 }
 
-def ReductionTreePass : Pass<"reduction-tree"> {
+def ReductionTree : Pass<"reduction-tree"> {
   let summary = "Reduce the input with reduction-tree algorithm";
 
   let constructor = "mlir::createReductionTreePass()";
@@ -36,7 +36,7 @@ def ReductionTreePass : Pass<"reduction-tree"> {
   ] # CommonReductionPassOptions.options;
 }
 
-def OptReductionPass : Pass<"opt-reduction-pass", "ModuleOp"> {
+def OptReduction : Pass<"opt-reduction-pass", "ModuleOp"> {
   let summary = "A wrapper pass that reduces the file with optimization passes";
 
   let constructor = "mlir::createOptReductionPass()";

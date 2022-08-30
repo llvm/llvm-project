@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
-
+#include "../PassDetail.h"
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
@@ -46,11 +46,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
 #include <functional>
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTFUNCTOLLVMPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
@@ -704,7 +699,7 @@ void mlir::populateFuncToLLVMConversionPatterns(LLVMTypeConverter &converter,
 namespace {
 /// A pass converting Func operations into the LLVM IR dialect.
 struct ConvertFuncToLLVMPass
-    : public impl::ConvertFuncToLLVMPassBase<ConvertFuncToLLVMPass> {
+    : public ConvertFuncToLLVMBase<ConvertFuncToLLVMPass> {
   ConvertFuncToLLVMPass() = default;
   ConvertFuncToLLVMPass(bool useBarePtrCallConv, unsigned indexBitwidth,
                         bool useAlignedAlloc,

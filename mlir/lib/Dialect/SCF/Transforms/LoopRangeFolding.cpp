@@ -10,32 +10,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_SCFFORLOOPRANGEFOLDINGPASS
-#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::scf;
 
 namespace {
-struct SCFForLoopRangeFoldingPass
-    : public impl::SCFForLoopRangeFoldingPassBase<SCFForLoopRangeFoldingPass> {
-  using SCFForLoopRangeFoldingPassBase::SCFForLoopRangeFoldingPassBase;
-
+struct ForLoopRangeFolding
+    : public SCFForLoopRangeFoldingBase<ForLoopRangeFolding> {
   void runOnOperation() override;
 };
 } // namespace
 
-void SCFForLoopRangeFoldingPass::runOnOperation() {
+void ForLoopRangeFolding::runOnOperation() {
   getOperation()->walk([&](ForOp op) {
     Value indVar = op.getInductionVar();
 
@@ -86,4 +79,8 @@ void SCFForLoopRangeFoldingPass::runOnOperation() {
       user->erase();
     }
   });
+}
+
+std::unique_ptr<Pass> mlir::createForLoopRangeFoldingPass() {
+  return std::make_unique<ForLoopRangeFolding>();
 }

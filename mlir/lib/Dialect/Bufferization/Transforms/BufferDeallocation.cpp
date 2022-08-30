@@ -50,21 +50,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "PassDetail.h"
 
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "llvm/ADT/SetOperations.h"
-
-namespace mlir {
-namespace bufferization {
-#define GEN_PASS_DEF_BUFFERDEALLOCATIONPASS
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
-} // namespace bufferization
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -640,8 +633,7 @@ struct DefaultAllocationInterface
 /// The actual buffer deallocation pass that inserts and moves dealloc nodes
 /// into the right positions. Furthermore, it inserts additional clones if
 /// necessary. It uses the algorithm described at the top of the file.
-struct BufferDeallocationPass
-    : bufferization::impl::BufferDeallocationPassBase<BufferDeallocationPass> {
+struct BufferDeallocationPass : BufferDeallocationBase<BufferDeallocationPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<bufferization::BufferizationDialect>();
     registry.insert<memref::MemRefDialect>();

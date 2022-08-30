@@ -24,10 +24,6 @@ class ModuleOp;
 template <typename T>
 class OperationPass;
 
-#define GEN_PASS_DECL_CONVERTVULKANLAUNCHFUNCTOVULKANCALLSPASS
-#define GEN_PASS_DECL_CONVERTGPULAUNCHFUNCTOVULKANLAUNCHFUNCPASS
-#include "mlir/Conversion/Passes.h.inc"
-
 std::unique_ptr<OperationPass<ModuleOp>>
 createConvertVulkanLaunchFuncToVulkanCallsPass();
 

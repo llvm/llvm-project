@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Passes.h"
-
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
@@ -25,13 +23,6 @@
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_LINALGLOWERTOAFFINELOOPSPASS
-#define GEN_PASS_DEF_LINALGLOWERTOLOOPSPASS
-#define GEN_PASS_DEF_LINALGLOWERTOPARALLELLOOPSPASS
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -320,7 +311,7 @@ static void lowerLinalgToLoopsImpl(func::FuncOp funcOp) {
 }
 
 struct LowerToAffineLoops
-    : public impl::LinalgLowerToAffineLoopsPassBase<LowerToAffineLoops> {
+    : public LinalgLowerToAffineLoopsBase<LowerToAffineLoops> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
   }
@@ -329,7 +320,7 @@ struct LowerToAffineLoops
   }
 };
 
-struct LowerToLoops : public impl::LinalgLowerToLoopsPassBase<LowerToLoops> {
+struct LowerToLoops : public LinalgLowerToLoopsBase<LowerToLoops> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect, scf::SCFDialect>();
   }
@@ -339,7 +330,7 @@ struct LowerToLoops : public impl::LinalgLowerToLoopsPassBase<LowerToLoops> {
 };
 
 struct LowerToParallelLoops
-    : public impl::LinalgLowerToParallelLoopsPassBase<LowerToParallelLoops> {
+    : public LinalgLowerToParallelLoopsBase<LowerToParallelLoops> {
   void runOnOperation() override {
     lowerLinalgToLoopsImpl<scf::ParallelOp>(getOperation());
   }

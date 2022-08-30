@@ -16,9 +16,6 @@ class MLIRContext;
 class Pass;
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTVECTORTOSCFPASS
-#include "mlir/Conversion/Passes.h.inc"
-
 /// When lowering an N-d vector transfer op to an (N-1)-d vector transfer op,
 /// a temporary buffer is created through which individual (N-1)-d vector are
 /// staged. This pattern can be applied multiple time, until the transfer op

@@ -16,9 +16,6 @@ class ModuleOp;
 template <typename T>
 class OperationPass;
 
-#define GEN_PASS_DECL_CONVERTVECTORTOLLVMPASS
-#include "mlir/Conversion/Passes.h.inc"
-
 /// Options to control Vector to LLVM lowering.
 ///
 /// This should kept in sync with VectorToLLVM options defined for the

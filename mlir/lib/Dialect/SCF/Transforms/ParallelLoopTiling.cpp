@@ -10,18 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_SCFPARALLELLOOPTILINGPASS
-#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -185,9 +180,14 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
 }
 
 namespace {
-struct SCFParallelLoopTilingPass
-    : public impl::SCFParallelLoopTilingPassBase<SCFParallelLoopTilingPass> {
-  using SCFParallelLoopTilingPassBase::SCFParallelLoopTilingPassBase;
+struct ParallelLoopTiling
+    : public SCFParallelLoopTilingBase<ParallelLoopTiling> {
+  ParallelLoopTiling() = default;
+  explicit ParallelLoopTiling(ArrayRef<int64_t> tileSizes,
+                              bool noMinMaxBounds = false) {
+    this->tileSizes = tileSizes;
+    this->noMinMaxBounds = noMinMaxBounds;
+  }
 
   void runOnOperation() override {
     auto *parentOp = getOperation();
@@ -201,3 +201,9 @@ struct SCFParallelLoopTilingPass
   }
 };
 } // namespace
+
+std::unique_ptr<Pass>
+mlir::createParallelLoopTilingPass(ArrayRef<int64_t> tileSizes,
+                                   bool noMinMaxBounds) {
+  return std::make_unique<ParallelLoopTiling>(tileSizes, noMinMaxBounds);
+}

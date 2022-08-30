@@ -8,19 +8,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 #include "mlir/Transforms/DialectConversion.h"
-
-namespace mlir {
-namespace arith {
-#define GEN_PASS_DEF_ARITHMETICUNSIGNEDWHENEQUIVALENTPASS
-#include "mlir/Dialect/Arithmetic/Transforms/Passes.h.inc"
-} // namespace arith
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::arith;
@@ -109,7 +102,7 @@ struct ConvertCmpIToUnsigned : OpConversionPattern<CmpIOp> {
 };
 
 struct ArithmeticUnsignedWhenEquivalentPass
-    : public arith::impl::ArithmeticUnsignedWhenEquivalentPassBase<
+    : public ArithmeticUnsignedWhenEquivalentBase<
           ArithmeticUnsignedWhenEquivalentPass> {
   /// Implementation structure: first find all equivalent ops and collect them,
   /// then perform all the rewrites in a second pass over the target op. This

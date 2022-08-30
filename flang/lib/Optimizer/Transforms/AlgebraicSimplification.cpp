@@ -11,22 +11,16 @@
 // the parameters of the patterns for Fortran programs.
 //===----------------------------------------------------------------------===//
 
+#include "PassDetail.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-namespace fir {
-#define GEN_PASS_DEF_ALGEBRAICSIMPLIFICATIONPASS
-#include "flang/Optimizer/Transforms/Passes.h.inc"
-} // namespace fir
 
 using namespace mlir;
 
 namespace {
 struct AlgebraicSimplification
-    : public fir::impl::AlgebraicSimplificationPassBase<
-          AlgebraicSimplification> {
+    : public fir::AlgebraicSimplificationBase<AlgebraicSimplification> {
   AlgebraicSimplification(const GreedyRewriteConfig &rewriteConfig) {
     config = rewriteConfig;
   }

@@ -6,28 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVGLCanonicalization.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-namespace mlir {
-namespace spirv {
-#define GEN_PASS_DEF_SPIRVCANONICALIZEGLPASS
-#include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
-} // namespace spirv
-} // namespace mlir
 
 using namespace mlir;
 
 namespace {
-class SPIRVCanonicalizeGLPass final
-    : public spirv::impl::SPIRVCanonicalizeGLPassBase<SPIRVCanonicalizeGLPass> {
+class CanonicalizeGLPass final
+    : public SPIRVCanonicalizeGLBase<CanonicalizeGLPass> {
 public:
-  using SPIRVCanonicalizeGLPassBase::SPIRVCanonicalizeGLPassBase;
-
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     spirv::populateSPIRVGLCanonicalizationPatterns(patterns);
@@ -39,5 +30,5 @@ public:
 } // namespace
 
 std::unique_ptr<OperationPass<>> spirv::createCanonicalizeGLPass() {
-  return std::make_unique<SPIRVCanonicalizeGLPass>();
+  return std::make_unique<CanonicalizeGLPass>();
 }

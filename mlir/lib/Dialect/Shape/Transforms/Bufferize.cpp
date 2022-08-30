@@ -6,28 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Shape/Transforms/Passes.h"
-
+#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
+#include "PassDetail.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/Shape/Transforms/BufferizableOpInterfaceImpl.h"
+#include "mlir/Dialect/Shape/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_SHAPEBUFFERIZEPASS
-#include "mlir/Dialect/Shape/Transforms/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace bufferization;
 
 namespace {
-struct ShapeBufferizePass
-    : public impl::ShapeBufferizePassBase<ShapeBufferizePass> {
+struct ShapeBufferizePass : public ShapeBufferizeBase<ShapeBufferizePass> {
   void runOnOperation() override {
     BufferizationOptions options = getPartialBufferizationOptions();
     options.opFilter.allowDialect<shape::ShapeDialect>();

@@ -17,12 +17,11 @@ class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
 
-#define GEN_PASS_DECL_CONVERTAMDGPUTOROCDLPASS
-#include "mlir/Conversion/Passes.h.inc"
-
 void populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
                                              RewritePatternSet &patterns,
                                              amdgpu::Chipset chipset);
+
+std::unique_ptr<Pass> createConvertAMDGPUToROCDLPass();
 
 } // namespace mlir
 

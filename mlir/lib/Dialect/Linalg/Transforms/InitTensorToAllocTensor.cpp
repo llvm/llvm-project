@@ -6,16 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Passes.h"
+#include "PassDetail.h"
 
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_LINALGINITTENSORTOALLOCTENSORPASS
-#include "mlir/Dialect/Linalg/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -34,8 +30,7 @@ struct InitTensorLoweringPattern : public OpRewritePattern<InitTensorOp> {
 };
 
 struct LinalgInitTensorToAllocTensor
-    : public impl::LinalgInitTensorToAllocTensorPassBase<
-          LinalgInitTensorToAllocTensor> {
+    : public LinalgInitTensorToAllocTensorBase<LinalgInitTensorToAllocTensor> {
   LinalgInitTensorToAllocTensor() = default;
 
   void runOnOperation() override;

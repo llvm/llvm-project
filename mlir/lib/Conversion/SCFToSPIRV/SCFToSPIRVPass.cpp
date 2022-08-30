@@ -12,6 +12,7 @@
 
 #include "mlir/Conversion/SCFToSPIRV/SCFToSPIRVPass.h"
 
+#include "../PassDetail.h"
 #include "mlir/Conversion/ArithmeticToSPIRV/ArithmeticToSPIRV.h"
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
 #include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
@@ -20,23 +21,15 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTSCFTOSPIRVPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
-
 using namespace mlir;
 
 namespace {
-struct ConvertSCFToSPIRVPass
-    : public impl::ConvertSCFToSPIRVPassBase<ConvertSCFToSPIRVPass> {
-  using ConvertSCFToSPIRVPassBase::ConvertSCFToSPIRVPassBase;
-
+struct SCFToSPIRVPass : public SCFToSPIRVBase<SCFToSPIRVPass> {
   void runOnOperation() override;
 };
 } // namespace
 
-void ConvertSCFToSPIRVPass::runOnOperation() {
+void SCFToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
   Operation *op = getOperation();
 
@@ -61,5 +54,5 @@ void ConvertSCFToSPIRVPass::runOnOperation() {
 }
 
 std::unique_ptr<OperationPass<>> mlir::createConvertSCFToSPIRVPass() {
-  return std::make_unique<ConvertSCFToSPIRVPass>();
+  return std::make_unique<SCFToSPIRVPass>();
 }

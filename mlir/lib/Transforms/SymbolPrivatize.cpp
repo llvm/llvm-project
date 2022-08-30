@@ -11,21 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Transforms/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/IR/SymbolTable.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_SYMBOLPRIVATIZEPASS
-#include "mlir/Transforms/Passes.h.inc"
-} // namespace mlir
+#include "mlir/Transforms/Passes.h"
 
 using namespace mlir;
 
 namespace {
-struct SymbolPrivatizePass
-    : public impl::SymbolPrivatizePassBase<SymbolPrivatizePass> {
-  explicit SymbolPrivatizePass(ArrayRef<std::string> excludeSymbols);
+struct SymbolPrivatize : public SymbolPrivatizeBase<SymbolPrivatize> {
+  explicit SymbolPrivatize(ArrayRef<std::string> excludeSymbols);
   LogicalResult initialize(MLIRContext *context) override;
   void runOnOperation() override;
 
@@ -34,18 +28,17 @@ struct SymbolPrivatizePass
 };
 } // namespace
 
-SymbolPrivatizePass::SymbolPrivatizePass(
-    llvm::ArrayRef<std::string> excludeSymbols) {
+SymbolPrivatize::SymbolPrivatize(llvm::ArrayRef<std::string> excludeSymbols) {
   exclude = excludeSymbols;
 }
 
-LogicalResult SymbolPrivatizePass::initialize(MLIRContext *context) {
+LogicalResult SymbolPrivatize::initialize(MLIRContext *context) {
   for (const std::string &symbol : exclude)
     excludedSymbols.insert(StringAttr::get(context, symbol));
   return success();
 }
 
-void SymbolPrivatizePass::runOnOperation() {
+void SymbolPrivatize::runOnOperation() {
   for (Region &region : getOperation()->getRegions()) {
     for (Block &block : region) {
       for (Operation &op : block) {
@@ -61,5 +54,5 @@ void SymbolPrivatizePass::runOnOperation() {
 
 std::unique_ptr<Pass>
 mlir::createSymbolPrivatizePass(ArrayRef<std::string> exclude) {
-  return std::make_unique<SymbolPrivatizePass>(exclude);
+  return std::make_unique<SymbolPrivatize>(exclude);
 }

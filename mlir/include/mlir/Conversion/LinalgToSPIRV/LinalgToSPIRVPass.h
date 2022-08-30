@@ -13,18 +13,13 @@
 #ifndef MLIR_CONVERSION_LINALGTOSPIRV_LINALGTOSPIRVPASS_H
 #define MLIR_CONVERSION_LINALGTOSPIRV_LINALGTOSPIRVPASS_H
 
-#include <memory>
+#include "mlir/Pass/Pass.h"
 
 namespace mlir {
 class ModuleOp;
-template <typename T>
-class OperationPass;
-
-#define GEN_PASS_DECL_CONVERTLINALGTOSPIRVPASS
-#include "mlir/Conversion/Passes.h.inc"
 
 /// Creates and returns a pass to convert Linalg ops to SPIR-V ops.
-std::unique_ptr<OperationPass<ModuleOp>> createConvertLinalgToSPIRVPass();
+std::unique_ptr<OperationPass<ModuleOp>> createLinalgToSPIRVPass();
 
 } // namespace mlir
 

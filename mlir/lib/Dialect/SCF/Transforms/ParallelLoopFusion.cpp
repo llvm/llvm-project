@@ -10,19 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
-
+#include "PassDetail.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpDefinition.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_SCFPARALLELLOOPFUSIONPASS
-#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -166,10 +161,8 @@ void mlir::scf::naivelyFuseParallelOps(Region &region) {
 }
 
 namespace {
-struct SCFParallelLoopFusionPass
-    : public impl::SCFParallelLoopFusionPassBase<SCFParallelLoopFusionPass> {
-  using SCFParallelLoopFusionPassBase::SCFParallelLoopFusionPassBase;
-
+struct ParallelLoopFusion
+    : public SCFParallelLoopFusionBase<ParallelLoopFusion> {
   void runOnOperation() override {
     getOperation()->walk([&](Operation *child) {
       for (Region &region : child->getRegions())
@@ -178,3 +171,7 @@ struct SCFParallelLoopFusionPass
   }
 };
 } // namespace
+
+std::unique_ptr<Pass> mlir::createParallelLoopFusionPass() {
+  return std::make_unique<ParallelLoopFusion>();
+}

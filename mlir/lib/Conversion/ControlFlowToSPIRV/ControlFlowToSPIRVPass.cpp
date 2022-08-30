@@ -11,25 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ControlFlowToSPIRV/ControlFlowToSPIRVPass.h"
-
+#include "../PassDetail.h"
 #include "mlir/Conversion/ControlFlowToSPIRV/ControlFlowToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTCONTROLFLOWTOSPIRVPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
 
 using namespace mlir;
 
 namespace {
 /// A pass converting MLIR ControlFlow operations into the SPIR-V dialect.
 class ConvertControlFlowToSPIRVPass
-    : public impl::ConvertControlFlowToSPIRVPassBase<
-          ConvertControlFlowToSPIRVPass> {
-  using ConvertControlFlowToSPIRVPassBase::ConvertControlFlowToSPIRVPassBase;
-
+    : public ConvertControlFlowToSPIRVBase<ConvertControlFlowToSPIRVPass> {
   void runOnOperation() override;
 };
 } // namespace

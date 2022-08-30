@@ -26,11 +26,6 @@ namespace bufferization {
 struct OneShotBufferizationOptions;
 } // namespace bufferization
 
-#define GEN_PASS_DECL_SPARSIFICATIONPASS
-#define GEN_PASS_DECL_SPARSETENSORCONVERSIONPASS
-#define GEN_PASS_DECL_SPARSETENSORCODEGENPASS
-#include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
-
 //===----------------------------------------------------------------------===//
 // The Sparsification pass.
 //===----------------------------------------------------------------------===//

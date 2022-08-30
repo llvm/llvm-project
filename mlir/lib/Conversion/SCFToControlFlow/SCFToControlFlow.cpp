@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
-
+#include "../PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -24,21 +24,13 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
-namespace mlir {
-#define GEN_PASS_DEF_CONVERTSCFTOCONTROLFLOWPASS
-#include "mlir/Conversion/Passes.h.inc"
-} // namespace mlir
-
 using namespace mlir;
 using namespace mlir::scf;
 
 namespace {
 
-struct ConvertSCFToControlFlowPass
-    : public impl::ConvertSCFToControlFlowPassBase<
-          ConvertSCFToControlFlowPass> {
-  using ConvertSCFToControlFlowPassBase::ConvertSCFToControlFlowPassBase;
-
+struct SCFToControlFlowPass
+    : public SCFToControlFlowBase<SCFToControlFlowPass> {
   void runOnOperation() override;
 };
 
@@ -625,7 +617,7 @@ void mlir::populateSCFToControlFlowConversionPatterns(
   patterns.add<DoWhileLowering>(patterns.getContext(), /*benefit=*/2);
 }
 
-void ConvertSCFToControlFlowPass::runOnOperation() {
+void SCFToControlFlowPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateSCFToControlFlowConversionPatterns(patterns);
 
@@ -637,4 +629,8 @@ void ConvertSCFToControlFlowPass::runOnOperation() {
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
+}
+
+std::unique_ptr<Pass> mlir::createConvertSCFToCFPass() {
+  return std::make_unique<SCFToControlFlowPass>();
 }

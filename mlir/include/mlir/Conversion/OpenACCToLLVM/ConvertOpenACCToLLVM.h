@@ -18,9 +18,6 @@ template <typename T>
 class OperationPass;
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTOPENACCTOLLVMPASS
-#include "mlir/Conversion/Passes.h.inc"
-
 static constexpr unsigned kPtrBasePosInDataDescriptor = 0;
 static constexpr unsigned kPtrPosInDataDescriptor = 1;
 static constexpr unsigned kSizePosInDataDescriptor = 2;

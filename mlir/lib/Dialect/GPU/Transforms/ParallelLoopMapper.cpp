@@ -11,18 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/GPU/Transforms/Passes.h"
-
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
+
+#include "PassDetail.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/AffineMap.h"
-
-namespace mlir {
-#define GEN_PASS_DEF_GPUMAPPARALLELLOOPSPASS
-#include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
-} // namespace mlir
 
 namespace mlir {
 
@@ -134,7 +129,7 @@ static void mapParallelOp(ParallelOp parallelOp,
 
 namespace {
 struct GpuMapParallelLoopsPass
-    : public impl::GpuMapParallelLoopsPassBase<GpuMapParallelLoopsPass> {
+    : public GpuMapParallelLoopsPassBase<GpuMapParallelLoopsPass> {
   void runOnOperation() override {
     for (Region &region : getOperation()->getRegions()) {
       region.walk([](ParallelOp parallelOp) { mapParallelOp(parallelOp); });
