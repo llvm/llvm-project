@@ -86,8 +86,8 @@ Derived d;
 
 // CHECK-LABEL: !DIFile{{.*}}.cpp
 
-// CHECK: ![[DI0]] = {{.*}}line: [[@LINE-49]]
-// CHECK: ![[DI1]] = {{.*}}line: [[@LINE-60]]
-// CHECK: ![[DI2]] = {{.*}}line: [[@LINE-71]]
-// CHECK: ![[DI3]] = {{.*}}line: [[@LINE-52]]
-// CHECK: ![[DI5]] = {{.*}}line: [[@LINE-83]]
+// CHECK-DAG: ![[DI0]] = {{.*}}line: [[@LINE-49]]
+// CHECK-DAG: ![[DI1]] = {{.*}}line: [[@LINE-60]]
+// CHECK-DAG: ![[DI2]] = {{.*}}line: [[@LINE-71]]
+// CHECK-DAG: ![[DI3]] = {{.*}}line: [[@LINE-52]]
+// CHECK-DAG: ![[DI5]] = {{.*}}line: [[@LINE-83]]

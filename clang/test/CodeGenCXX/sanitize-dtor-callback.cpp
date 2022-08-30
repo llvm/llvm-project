@@ -70,6 +70,6 @@ Defaulted_Non_Trivial def_non_trivial;
 
 // CHECK-LABEL: !DIFile{{.*}}cpp
 
-// CHECK: ![[DI1]] = {{.*}}line: [[@LINE-64]]
-// CHECK: ![[DI2]] = {{.*}}line: [[@LINE-55]]
-// CHECK: ![[DI3]] = {{.*}}line: [[@LINE-33]]
+// CHECK-DAG: ![[DI1]] = {{.*}}line: [[@LINE-64]]
+// CHECK-DAG: ![[DI2]] = {{.*}}line: [[@LINE-55]]
+// CHECK-DAG: ![[DI3]] = {{.*}}line: [[@LINE-33]]

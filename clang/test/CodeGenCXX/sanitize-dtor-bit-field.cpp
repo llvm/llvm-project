@@ -83,7 +83,7 @@ Adjacent ad;
 
 // CHECK-LABEL: !DIFile{{.*}}cpp
 
-// CHECK: ![[DI1]] = {{.*}}line: [[@LINE-68]]
-// CHECK: ![[DI2]] = {{.*}}line: [[@LINE-53]]
-// CHECK: ![[DI3]] = {{.*}}line: [[@LINE-41]]
-// CHECK: ![[DI4]] = {{.*}}line: [[@LINE-28]]
+// CHECK-DAG: ![[DI1]] = {{.*}}line: [[@LINE-68]]
+// CHECK-DAG: ![[DI2]] = {{.*}}line: [[@LINE-53]]
+// CHECK-DAG: ![[DI3]] = {{.*}}line: [[@LINE-41]]
+// CHECK-DAG: ![[DI4]] = {{.*}}line: [[@LINE-28]]
