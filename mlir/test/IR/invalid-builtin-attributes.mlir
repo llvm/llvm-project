@@ -546,3 +546,18 @@ func.func @duplicate_dictionary_attr_key() {
 
 // expected-error@below {{expected '>' to close an array attribute}}
 #attr = array<i8: 1)
+
+// -----
+
+// expected-error@below {{dense array attribute expected ranked tensor type}}
+test.typed_attr i32 = array<1>
+
+// -----
+
+// expected-error@below {{does not match parsed type}}
+test.typed_attr tensor<1xi32> = array<>
+
+// -----
+
+// expected-error@below {{does not match parsed type}}
+test.typed_attr tensor<0xi32> = array<1>
