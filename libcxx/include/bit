@@ -71,10 +71,6 @@ namespace std {
 #include <type_traits>
 #include <version>
 
-#if defined(_LIBCPP_COMPILER_MSVC)
-#  include <intrin.h>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
