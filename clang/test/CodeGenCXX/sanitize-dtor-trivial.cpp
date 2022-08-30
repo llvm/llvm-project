@@ -12,8 +12,14 @@ struct Trivial {
 };
 Trivial t;
 
-// CHECK: call void @__sanitizer_dtor_callback{{.*}}, !dbg ![[DI:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback({{.*}}, !dbg ![[DI:[0-9]+]]
 
 // CHECK-LABEL: !DIFile{{.*}}.cpp
 
 // CHECK: ![[DI]] = {{.*}}line: [[@LINE-371]]
+
+// CHECK-LABEL: !DIFile{{.*}}cpp
+
+// CHECK: ![[DI1]] = {{.*}}line: [[@LINE-28]]
+// CHECK: ![[DI2]] = {{.*}}line: [[@LINE-37]]
+// CHECK: ![[DI4]] = {{.*}}line: [[@LINE-30]]
