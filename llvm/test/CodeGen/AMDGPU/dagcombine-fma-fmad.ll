@@ -175,6 +175,41 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
   ret float %.i2551
 }
 
+define float @fmac_sequence_simple(float %a, float %b, float %c, float %d, float %e) #0 {
+; GCN-LABEL: fmac_sequence_simple:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
+; GCN-NEXT:    v_fma_f32 v2, v2, v3, v4
+; GCN-NEXT:    v_fmac_f32_e32 v2, v0, v1
+; GCN-NEXT:    v_mov_b32_e32 v0, v2
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %t0 = fmul fast float %a, %b
+  %t1 = fmul fast float %c, %d
+  %t2 = fadd fast float %t0, %t1
+  %t5 = fadd fast float %t2, %e
+  ret float %t5
+}
+
+define float @fmac_sequence_innermost_fmul(float %a, float %b, float %c, float %d, float %e, float %f, float %g) #0 {
+; GCN-LABEL: fmac_sequence_innermost_fmul:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
+; GCN-NEXT:    v_mul_f32_e32 v2, v2, v3
+; GCN-NEXT:    v_fmac_f32_e32 v2, v0, v1
+; GCN-NEXT:    v_fmac_f32_e32 v2, v4, v5
+; GCN-NEXT:    v_add_f32_e32 v0, v2, v6
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %t0 = fmul fast float %a, %b
+  %t1 = fmul fast float %c, %d
+  %t2 = fadd fast float %t0, %t1
+  %t3 = fmul fast float %e, %f
+  %t4 = fadd fast float %t2, %t3
+  %t5 = fadd fast float %t4, %g
+  ret float %t5
+}
+
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare float @llvm.maxnum.f32(float, float) #1
 
