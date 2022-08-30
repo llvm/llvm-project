@@ -22,7 +22,7 @@ std::unique_ptr<mlir::Pass> createTestPassWithCustomConstructor(int v = 0);
 #define GEN_PASS_DEF_TESTPASS
 #define GEN_PASS_DEF_TESTPASSWITHOPTIONS
 #define GEN_PASS_DEF_TESTPASSWITHCUSTOMCONSTRUCTOR
-#include "PassGenTest.cpp.inc"
+#include "PassGenTest.h.inc"
 
 struct TestPass : public impl::TestPassBase<TestPass> {
   using TestPassBase::TestPassBase;
