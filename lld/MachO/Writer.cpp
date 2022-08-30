@@ -1139,7 +1139,7 @@ template <class LP> void Writer::run() {
   // InputSections, we should have `isec->canonical() == isec`.
   scanSymbols();
   if (in.objcStubs->isNeeded())
-    in.objcStubs->setup();
+    in.objcStubs->setUp();
   scanRelocations();
 
   // Do not proceed if there was an undefined symbol.
@@ -1148,7 +1148,7 @@ template <class LP> void Writer::run() {
     return;
 
   if (in.stubHelper->isNeeded())
-    in.stubHelper->setup();
+    in.stubHelper->setUp();
 
   if (in.objCImageInfo->isNeeded())
     in.objCImageInfo->finalizeContents();

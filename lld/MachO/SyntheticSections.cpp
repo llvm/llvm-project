@@ -715,7 +715,7 @@ void StubHelperSection::writeTo(uint8_t *buf) const {
   }
 }
 
-void StubHelperSection::setup() {
+void StubHelperSection::setUp() {
   Symbol *binder = symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr,
                                         /*isWeakRef=*/false);
   if (auto *undefined = dyn_cast<Undefined>(binder))
@@ -769,7 +769,7 @@ void ObjCStubsSection::addEntry(Symbol *sym) {
   symbols.push_back(newSym);
 }
 
-void ObjCStubsSection::setup() {
+void ObjCStubsSection::setUp() {
   Symbol *objcMsgSend = symtab->addUndefined("_objc_msgSend", /*file=*/nullptr,
                                              /*isWeakRef=*/false);
   objcMsgSend->used = true;

@@ -1186,7 +1186,7 @@ static void referenceStubBinder() {
   // dyld_stub_binder is in libSystem.dylib, which is usually linked in. This
   // isn't needed for correctness, but the presence of that symbol suppresses
   // "no symbols" diagnostics from `nm`.
-  // StubHelperSection::setup() adds a reference and errors out if
+  // StubHelperSection::setUp() adds a reference and errors out if
   // dyld_stub_binder doesn't exist in case it is actually needed.
   symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr, /*isWeak=*/false);
 }
