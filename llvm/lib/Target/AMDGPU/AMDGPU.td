@@ -1181,8 +1181,7 @@ def FeatureISAVersion10_1_0 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureSupportsXNACK,
-     FeatureBackOffBarrier])>;
+     FeatureSupportsXNACK])>;
 
 def FeatureISAVersion10_1_1 : FeatureSet<
   !listconcat(FeatureGroup.GFX10_1_Bugs,
@@ -1204,8 +1203,7 @@ def FeatureISAVersion10_1_1 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureSupportsXNACK,
-     FeatureBackOffBarrier])>;
+     FeatureSupportsXNACK])>;
 
 def FeatureISAVersion10_1_2 : FeatureSet<
   !listconcat(FeatureGroup.GFX10_1_Bugs,
@@ -1227,8 +1225,7 @@ def FeatureISAVersion10_1_2 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureSupportsXNACK,
-     FeatureBackOffBarrier])>;
+     FeatureSupportsXNACK])>;
 
 def FeatureISAVersion10_1_3 : FeatureSet<
   !listconcat(FeatureGroup.GFX10_1_Bugs,
@@ -1246,8 +1243,7 @@ def FeatureISAVersion10_1_3 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureSupportsXNACK,
-     FeatureBackOffBarrier])>;
+     FeatureSupportsXNACK])>;
 
 def FeatureISAVersion10_3_0 : FeatureSet<
   [FeatureGFX10,
@@ -1264,8 +1260,7 @@ def FeatureISAVersion10_3_0 : FeatureSet<
    FeatureNSAEncoding,
    FeatureNSAMaxSize13,
    FeatureWavefrontSize32,
-   FeatureShaderCyclesRegister,
-   FeatureBackOffBarrier]>;
+   FeatureShaderCyclesRegister]>;
 
 def FeatureISAVersion11_Common : FeatureSet<
   [FeatureGFX11,
