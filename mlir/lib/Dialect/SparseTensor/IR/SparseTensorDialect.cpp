@@ -72,6 +72,20 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
           dlt.push_back(SparseTensorEncodingAttr::DimLevelType::Dense);
         } else if (strVal == "compressed") {
           dlt.push_back(SparseTensorEncodingAttr::DimLevelType::Compressed);
+        } else if (strVal == "compressed-nu") {
+          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::CompressedNu);
+        } else if (strVal == "compressed-no") {
+          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::CompressedNo);
+        } else if (strVal == "compressed-nu-no") {
+          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::CompressedNuNo);
+        } else if (strVal == "singleton") {
+          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::Singleton);
+        } else if (strVal == "singleton-nu") {
+          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::SingletonNu);
+        } else if (strVal == "singleton-no") {
+          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::SingletonNo);
+        } else if (strVal == "singleton-nu-no") {
+          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::SingletonNuNo);
         } else {
           parser.emitError(parser.getNameLoc(),
                            "unexpected dimension level type: ")
@@ -124,6 +138,27 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
       break;
     case DimLevelType::Compressed:
       printer << "\"compressed\"";
+      break;
+    case DimLevelType::CompressedNu:
+      printer << "\"compressed-nu\"";
+      break;
+    case DimLevelType::CompressedNo:
+      printer << "\"compressed-no\"";
+      break;
+    case DimLevelType::CompressedNuNo:
+      printer << "\"compressed-nu-no\"";
+      break;
+    case DimLevelType::Singleton:
+      printer << "\"singleton\"";
+      break;
+    case DimLevelType::SingletonNu:
+      printer << "\"singleton-nu\"";
+      break;
+    case DimLevelType::SingletonNo:
+      printer << "\"singleton-no\"";
+      break;
+    case DimLevelType::SingletonNuNo:
+      printer << "\"singleton-nu-no\"";
       break;
     }
     if (i != e - 1)

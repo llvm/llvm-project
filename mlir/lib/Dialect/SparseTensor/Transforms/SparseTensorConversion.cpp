@@ -466,6 +466,8 @@ static bool canUseDirectConversion(
       if (alreadyCompressed)
         return false; // Dense after Compressed not yet supported.
       break;
+    default: // TODO: investigate
+      return false;
     }
   }
   return true;

@@ -16,7 +16,7 @@ include "mlir/IR/TensorEncoding.td"
 // All of the Tensor attributes will extend this class.
 class SparseTensor_Attr<string name,
                         list<Trait> traits = []>
-	: AttrDef<SparseTensor_Dialect, name, traits>;
+    : AttrDef<SparseTensor_Dialect, name, traits>;
 
 // Sparse tensor encoding attribute.
 def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
@@ -34,9 +34,21 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     The attribute consists of the following fields.
     - Dimension level type for each dimension of a tensor type:
         - **dense** : dimension is dense, all entries along this dimension
-	  are stored.
+          are stored
         - **compressed** : dimension is sparse, only nonzeros along this dimensions
-	  are stored, without duplicates, i.e., compressed (unique).
+          are stored
+        - **singleton** : dimension stores individual indices with no siblings
+      By default, each dimension level types has the property of being unique
+      (no duplicates at that level) and ordered (indices appear sorted at that
+      level). The following two suffixes can be used to make the last two
+      dimension level types not-unique (duplicates may appear) and not-ordered
+      (indices may appear unsorted).
+        - **-nu** : not unique
+        - **-no** : not ordered
+      Currently, these suffixes, is present, should appear in this order.
+      In the future, we may introduce many more dimension level types and
+      properties, and separate specifying the two completely rather than
+      using this suffix mechanism.
     - Dimension ordering on the indices of this tensor type. Unlike dense
       storage, most sparse storage schemes do not provide fast random access.
       This affine map specifies the order of dimensions that should be supported
@@ -62,6 +74,12 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     }>
     ... tensor<?xf32, #SparseVector> ...
 
+    // Sorted Coordinate Scheme.
+    #SortedCOO = #sparse_tensor.encoding<{
+      dimLevelType = [ "compressed-nu", "singleton" ]
+    }>
+    ... tensor<?x?xf64, #SortedCOO> ...
+
     // Doubly compressed sparse column storage with specific bitwidths.
     #DCSC = #sparse_tensor.encoding<{
       dimLevelType = [ "compressed", "compressed" ],
@@ -76,10 +94,10 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   // Data in sparse tensor encoding.
   let parameters = (
     ins
-    // A dimension level type for each dimension of a tensor type.
+    // A dimension level type for each dimension of the tensor type.
     ArrayRefParameter<
       "SparseTensorEncodingAttr::DimLevelType",
-      "Per-dimension level type (dense or compressed)"
+      "per dimension level type"
       >: $dimLevelType,
     // A dimension order on the indices of this tensor type.
     // TODO: block structure with higher-dim inputs
@@ -94,9 +112,16 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
-    // Dimension level types.
+    // Dimension level types. By default, each type has the unique and
+    // ordered properties. Alternatives properties are indicated by
+    // Nu (not-unique) and No (not-ordered).
+    //
+    // TODO: separate type and property in encoding
+    //
     enum class DimLevelType {
-      Dense, Compressed
+      Dense,
+      Compressed, CompressedNu, CompressedNo, CompressedNuNo,
+      Singleton, SingletonNu, SingletonNo, SingletonNuNo,
     };
   }];
 }
