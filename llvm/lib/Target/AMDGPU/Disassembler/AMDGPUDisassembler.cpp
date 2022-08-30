@@ -926,7 +926,7 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
         AMDGPU::getAddrSizeMIMGOp(BaseOpcode, Dim, IsA16, AMDGPU::hasG16(STI));
 
     // VSAMPLE insts that do not use vaddr3 behave the same as NSA forms.
-    // VIMAGE insts other then BVH never use vaddr4.
+    // VIMAGE insts other than BVH never use vaddr4.
     IsNSA = Info->MIMGEncoding == AMDGPU::MIMGEncGfx10NSA ||
             Info->MIMGEncoding == AMDGPU::MIMGEncGfx11NSA ||
             (Info->MIMGEncoding == AMDGPU::MIMGEncGfx12 &&
@@ -981,8 +981,8 @@ DecodeStatus AMDGPUDisassembler::convertMIMGInst(MCInst &MI) const {
     }
   }
 
-  // For VSAMPLE vaddr3 provides all aditional components in sequential VGPRs if
-  // more then 4 vaddrs are needed.
+  // For VSAMPLE vaddr3 provides all additional components in sequential VGPRs
+  // if more than 4 vaddrs are needed.
   int16_t VAddrSAOp =
       IsVSample ? AMDGPU::OpName::vaddr3 : AMDGPU::OpName::vaddr0;
   int VAddrSAIdx = AMDGPU::getNamedOperandIdx(MI.getOpcode(), VAddrSAOp);

@@ -6009,7 +6009,7 @@ AMDGPUAsmParser::parseNamedBit(StringRef Name, OperandVector &Operands,
     Error(S, "a16 modifier is not supported on this GPU");
     return MatchOperand_ParseFail;
   }
-  // FIXME: Should only be enabled for MI400
+  // TODO-GFX12: Should only be enabled for MI400
   if (Name == "nv" && !isGFX12Plus()) {
     Error(S, "nv modifier is not supported on this GPU");
     return MatchOperand_ParseFail;
