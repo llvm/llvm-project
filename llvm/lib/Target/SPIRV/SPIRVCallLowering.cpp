@@ -301,11 +301,10 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       SPIRVType *SPIRVTy = GR->getOrCreateSPIRVType(Arg.Ty, MIRBuilder);
       GR->assignSPIRVTypeToVReg(SPIRVTy, Arg.Regs[0], MIRBuilder.getMF());
     }
-    auto Res =
-        SPIRV::lowerBuiltin(DemangledName, SPIRV::InstructionSet::OpenCL_std,
-                            MIRBuilder, ResVReg, OrigRetTy, ArgVRegs, GR);
-    if (Res.first)
-      return Res.second;
+    if (auto Res = SPIRV::lowerBuiltin(
+            DemangledName, SPIRV::InstructionSet::OpenCL_std, MIRBuilder,
+            ResVReg, OrigRetTy, ArgVRegs, GR))
+      return *Res;
   }
   if (CF && CF->isDeclaration() &&
       !GR->find(CF, &MIRBuilder.getMF()).isValid()) {

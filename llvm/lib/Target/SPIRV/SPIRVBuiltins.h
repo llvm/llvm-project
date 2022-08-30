@@ -22,19 +22,20 @@ namespace SPIRV {
 /// Lowers a builtin funtion call using the provided \p DemangledCall skeleton
 /// and external instruction \p Set.
 ///
-/// \return a pair of boolean values, the first true means the call recognized
-/// as a builtin, the second one indicates the successful lowering.
+/// \return the lowering success status if the called function is a recognized
+/// builtin, None otherwise.
 ///
 /// \p DemangledCall is the skeleton of the lowered builtin function call.
 /// \p Set is the external instruction set containing the given builtin.
 /// \p OrigRet is the single original virtual return register if defined,
 /// Register(0) otherwise. \p OrigRetTy is the type of the \p OrigRet. \p Args
 /// are the arguments of the lowered builtin call.
-std::pair<bool, bool>
-lowerBuiltin(const StringRef DemangledCall, InstructionSet::InstructionSet Set,
-             MachineIRBuilder &MIRBuilder, const Register OrigRet,
-             const Type *OrigRetTy, const SmallVectorImpl<Register> &Args,
-             SPIRVGlobalRegistry *GR);
+Optional<bool> lowerBuiltin(const StringRef DemangledCall,
+                            InstructionSet::InstructionSet Set,
+                            MachineIRBuilder &MIRBuilder,
+                            const Register OrigRet, const Type *OrigRetTy,
+                            const SmallVectorImpl<Register> &Args,
+                            SPIRVGlobalRegistry *GR);
 } // namespace SPIRV
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVBUILTINS_H
