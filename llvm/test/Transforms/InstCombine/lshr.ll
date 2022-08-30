@@ -944,3 +944,86 @@ define i32 @not_narrow_bswap(i24 %x) {
   %r = lshr i32 %b, 8
   ret i32 %r
 }
+
+define i8 @not_signbit(i8 %x) {
+; CHECK-LABEL: @not_signbit(
+; CHECK-NEXT:    [[A:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[A]], 7
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = xor i8 %x, -1
+  %r = lshr i8 %a, 7
+  ret i8 %r
+}
+
+define <2 x i6> @not_signbit_vec(<2 x i6> %x) {
+; CHECK-LABEL: @not_signbit_vec(
+; CHECK-NEXT:    [[A:%.*]] = xor <2 x i6> [[X:%.*]], <i6 -1, i6 poison>
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i6> [[A]], <i6 5, i6 poison>
+; CHECK-NEXT:    ret <2 x i6> [[R]]
+;
+  %a = xor <2 x i6> %x, <i6 -1, i6 poison>
+  %r = lshr <2 x i6> %a, <i6 5, i6 poison>
+  ret <2 x i6> %r
+}
+
+define i8 @not_signbit_alt_xor(i8 %x) {
+; CHECK-LABEL: @not_signbit_alt_xor(
+; CHECK-NEXT:    [[A:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[A]], 7
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = xor i8 %x, -2
+  %r = lshr i8 %a, 7
+  ret i8 %r
+}
+
+define i8 @not_not_signbit(i8 %x) {
+; CHECK-LABEL: @not_not_signbit(
+; CHECK-NEXT:    [[A:%.*]] = xor i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[A]], 6
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = xor i8 %x, -1
+  %r = lshr i8 %a, 6
+  ret i8 %r
+}
+
+define i32 @not_signbit_use(i32 %x) {
+; CHECK-LABEL: @not_signbit_use(
+; CHECK-NEXT:    [[A:%.*]] = xor i32 [[X:%.*]], -1
+; CHECK-NEXT:    call void @use(i32 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[A]], 31
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = xor i32 %x, -1
+  call void @use(i32 %a)
+  %r = lshr i32 %a, 31
+  ret i32 %r
+}
+
+define i32 @not_signbit_zext(i16 %x) {
+; CHECK-LABEL: @not_signbit_zext(
+; CHECK-NEXT:    [[A:%.*]] = xor i16 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = lshr i16 [[A]], 15
+; CHECK-NEXT:    [[R2:%.*]] = zext i16 [[R]] to i32
+; CHECK-NEXT:    ret i32 [[R2]]
+;
+  %a = xor i16 %x, -1
+  %r = lshr i16 %a, 15
+  %r2 = zext i16 %r to i32
+  ret i32 %r2
+}
+
+define i8 @not_signbit_trunc(i16 %x) {
+; CHECK-LABEL: @not_signbit_trunc(
+; CHECK-NEXT:    [[A:%.*]] = xor i16 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = lshr i16 [[A]], 15
+; CHECK-NEXT:    [[R2:%.*]] = trunc i16 [[R]] to i8
+; CHECK-NEXT:    ret i8 [[R2]]
+;
+  %a = xor i16 %x, -1
+  %r = lshr i16 %a, 15
+  %r2 = trunc i16 %r to i8
+  ret i8 %r2
+}
