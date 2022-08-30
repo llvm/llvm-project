@@ -555,14 +555,13 @@ static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
   // Compute the number of iterations the loop executes: ceildiv(ub - lb, step)
   // assuming the step is strictly positive.  Update the bounds and the step
   // of the loop to go from 0 to the number of iterations, if necessary.
-  // TODO: introduce support for negative steps or emit dynamic asserts
-  // on step positivity, whatever gets implemented first.
   if (isZeroBased && isStepOne)
     return {/*lowerBound=*/lowerBound, /*upperBound=*/upperBound,
             /*step=*/step};
 
   Value diff = boundsBuilder.create<arith::SubIOp>(loc, upperBound, lowerBound);
-  Value newUpperBound = ceilDivPositive(boundsBuilder, loc, diff, step);
+  Value newUpperBound =
+      boundsBuilder.create<arith::CeilDivSIOp>(loc, diff, step);
 
   Value newLowerBound =
       isZeroBased ? lowerBound

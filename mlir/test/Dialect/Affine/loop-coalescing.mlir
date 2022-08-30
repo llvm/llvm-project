@@ -88,10 +88,7 @@ func.func @unnormalized_loops() {
 
   // Number of iterations in the outer scf.
   // CHECK: %[[diff_i:.*]] = arith.subi %[[orig_ub_i]], %[[orig_lb_i]]
-  // CHECK: %[[c1:.*]] = arith.constant 1
-  // CHECK: %[[step_minus_c1:.*]] = arith.subi %[[orig_step_i]], %[[c1]]
-  // CHECK: %[[dividend:.*]] = arith.addi %[[diff_i]], %[[step_minus_c1]]
-  // CHECK: %[[numiter_i:.*]] = arith.divui %[[dividend]], %[[orig_step_i]]
+  // CHECK: %[[numiter_i:.*]] = arith.ceildivsi %[[diff_i]], %[[orig_step_i]]
 
   // Normalized lower bound and step for the outer scf.
   // CHECK: %[[lb_i:.*]] = arith.constant 0
@@ -99,7 +96,7 @@ func.func @unnormalized_loops() {
 
   // Number of iterations in the inner loop, the pattern is the same as above,
   // only capture the final result.
-  // CHECK: %[[numiter_j:.*]] = arith.divui {{.*}}, %[[orig_step_j]]
+  // CHECK: %[[numiter_j:.*]] = arith.ceildivsi {{.*}}, %[[orig_step_j]]
 
   // New bounds of the outer scf.
   // CHECK: %[[range:.*]] = arith.muli %[[numiter_i]], %[[numiter_j]]
@@ -135,13 +132,9 @@ func.func @parametric(%lb1 : index, %ub1 : index, %step1 : index,
   // Compute the number of iterations for each of the loops and the total
   // number of iterations.
   // CHECK: %[[range1:.*]] = arith.subi %[[orig_ub1]], %[[orig_lb1]]
-  // CHECK: %[[orig_step1_minus_1:.*]] = arith.subi %[[orig_step1]], %c1
-  // CHECK: %[[dividend1:.*]] = arith.addi %[[range1]], %[[orig_step1_minus_1]]
-  // CHECK: %[[numiter1:.*]] = arith.divui %[[dividend1]], %[[orig_step1]]
+  // CHECK: %[[numiter1:.*]] = arith.ceildivsi %[[range1]], %[[orig_step1]]
   // CHECK: %[[range2:.*]] = arith.subi %[[orig_ub2]], %[[orig_lb2]]
-  // CHECK: %[[orig_step2_minus_1:.*]] = arith.subi %arg5, %c1
-  // CHECK: %[[dividend2:.*]] = arith.addi %[[range2]], %[[orig_step2_minus_1]]
-  // CHECK: %[[numiter2:.*]] = arith.divui %[[dividend2]], %[[orig_step2]]
+  // CHECK: %[[numiter2:.*]] = arith.ceildivsi %[[range2]], %[[orig_step2]]
   // CHECK: %[[range:.*]] = arith.muli %[[numiter1]], %[[numiter2]] : index
 
   // Check that the outer loop is updated.
