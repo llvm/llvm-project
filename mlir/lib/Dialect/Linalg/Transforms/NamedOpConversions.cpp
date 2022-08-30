@@ -10,14 +10,19 @@
 // canonicalizations of named ops.
 //
 //===----------------------------------------------------------------------===//
-#include "PassDetail.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
+
 #include "mlir/Dialect/Linalg/Passes.h"
+
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
 #include "llvm/ADT/SmallVector.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_LINALGNAMEDOPCONVERSIONPASS
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -135,7 +140,8 @@ struct SimplifyDepthwiseConvQOp
 };
 
 struct LinalgNamedOpConversionPass
-    : public LinalgNamedOpConversionBase<LinalgNamedOpConversionPass> {
+    : public impl::LinalgNamedOpConversionPassBase<
+          LinalgNamedOpConversionPass> {
   LinalgNamedOpConversionPass() = default;
   LinalgNamedOpConversionPass(const LinalgNamedOpConversionPass &) = default;
 

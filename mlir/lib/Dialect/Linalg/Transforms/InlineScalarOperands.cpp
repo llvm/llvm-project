@@ -12,14 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_LINALGINLINESCALAROPERANDSPASS
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -96,7 +102,8 @@ void mlir::linalg::populateInlineConstantOperandsPatterns(
 namespace {
 /// Pass that removes unit-extent dims within generic ops.
 struct LinalgInlineScalarOperandsPass
-    : public LinalgInlineScalarOperandsBase<LinalgInlineScalarOperandsPass> {
+    : public impl::LinalgInlineScalarOperandsPassBase<
+          LinalgInlineScalarOperandsPass> {
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
     MLIRContext *context = funcOp.getContext();

@@ -15,7 +15,6 @@
 
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 
-#include "../PassDetail.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
@@ -38,25 +37,29 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTGPUTOLLVMPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
 
 static constexpr const char *kGpuBinaryStorageSuffix = "_gpubin_cst";
 
 namespace {
 
-class GpuToLLVMConversionPass
-    : public GpuToLLVMConversionPassBase<GpuToLLVMConversionPass> {
+class ConvertGpuToLLVMPass
+    : public impl::ConvertGpuToLLVMPassBase<ConvertGpuToLLVMPass> {
 public:
-  GpuToLLVMConversionPass() = default;
+  ConvertGpuToLLVMPass() = default;
 
-  GpuToLLVMConversionPass(bool kernelBarePtrCallConv)
-      : GpuToLLVMConversionPass() {
+  ConvertGpuToLLVMPass(bool kernelBarePtrCallConv) : ConvertGpuToLLVMPass() {
     if (this->kernelBarePtrCallConv.getNumOccurrences() == 0)
       this->kernelBarePtrCallConv = kernelBarePtrCallConv;
   }
 
-  GpuToLLVMConversionPass(const GpuToLLVMConversionPass &other)
-      : GpuToLLVMConversionPassBase(other) {}
+  ConvertGpuToLLVMPass(const ConvertGpuToLLVMPass &other)
+      : ConvertGpuToLLVMPassBase(other) {}
 
   // Run the dialect converter on the module.
   void runOnOperation() override;
@@ -377,7 +380,7 @@ public:
 };
 } // namespace
 
-void GpuToLLVMConversionPass::runOnOperation() {
+void ConvertGpuToLLVMPass::runOnOperation() {
   LLVMTypeConverter converter(&getContext());
   RewritePatternSet patterns(&getContext());
   LLVMConversionTarget target(getContext());
@@ -896,11 +899,6 @@ LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
-std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
-mlir::createGpuToLLVMConversionPass(bool kernelBarePtrCallConv) {
-  return std::make_unique<GpuToLLVMConversionPass>(kernelBarePtrCallConv);
-}
-
 void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns,
                                                StringRef gpuBinaryAnnotation,
@@ -921,4 +919,9 @@ void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
   patterns.add<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(
       converter, gpuBinaryAnnotation, kernelBarePtrCallConv);
   patterns.add<EraseGpuModuleOpPattern>(&converter.getContext());
+}
+
+std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
+mlir::createConvertGpuToLLVMPass(bool kernelBarePtrCallConv) {
+  return std::make_unique<ConvertGpuToLLVMPass>(kernelBarePtrCallConv);
 }

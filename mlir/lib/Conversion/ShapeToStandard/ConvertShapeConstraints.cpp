@@ -8,7 +8,6 @@
 
 #include "mlir/Conversion/ShapeToStandard/ShapeToStandard.h"
 
-#include "../PassDetail.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
@@ -18,7 +17,13 @@
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTSHAPECONSTRAINTSPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
+
 namespace {
 #include "ShapeToStandard.cpp.inc"
 } // namespace
@@ -48,8 +53,11 @@ namespace {
 // eager (side-effecting) error handling code. After eager error handling code
 // is emitted, witnesses are satisfied, so they are replace with
 // `shape.const_witness true`.
-class ConvertShapeConstraints
-    : public ConvertShapeConstraintsBase<ConvertShapeConstraints> {
+class ConvertShapeConstraintsPass
+    : public impl::ConvertShapeConstraintsPassBase<
+          ConvertShapeConstraintsPass> {
+  using ConvertShapeConstraintsPassBase::ConvertShapeConstraintsPassBase;
+
   void runOnOperation() override {
     auto *func = getOperation();
     auto *context = &getContext();
@@ -62,7 +70,3 @@ class ConvertShapeConstraints
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createConvertShapeConstraintsPass() {
-  return std::make_unique<ConvertShapeConstraints>();
-}

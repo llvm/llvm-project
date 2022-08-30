@@ -13,7 +13,6 @@
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 
-#include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -22,9 +21,13 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTAFFINETOSTANDARDPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -544,7 +547,11 @@ void mlir::populateAffineToVectorConversionPatterns(
 }
 
 namespace {
-class LowerAffinePass : public ConvertAffineToStandardBase<LowerAffinePass> {
+class ConvertAffineToStandardPass
+    : public impl::ConvertAffineToStandardPassBase<
+          ConvertAffineToStandardPass> {
+  using ConvertAffineToStandardPassBase::ConvertAffineToStandardPassBase;
+
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateAffineToStdConversionPatterns(patterns);
@@ -558,9 +565,3 @@ class LowerAffinePass : public ConvertAffineToStandardBase<LowerAffinePass> {
   }
 };
 } // namespace
-
-/// Lowers If and For operations within a function into their lower level CFG
-/// equivalent blocks.
-std::unique_ptr<Pass> mlir::createLowerAffinePass() {
-  return std::make_unique<LowerAffinePass>();
-}

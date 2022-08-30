@@ -37,7 +37,11 @@
 #include "../GPUCommon/GPUOpsLowering.h"
 #include "../GPUCommon/IndexIntrinsicsOpLowering.h"
 #include "../GPUCommon/OpToFuncCallLowering.h"
-#include "../PassDetail.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTGPUTOROCDLPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -61,12 +65,11 @@ namespace {
 //
 // This pass only handles device code and is not meant to be run on GPU host
 // code.
-struct LowerGpuOpsToROCDLOpsPass
-    : public ConvertGpuOpsToROCDLOpsBase<LowerGpuOpsToROCDLOpsPass> {
-  LowerGpuOpsToROCDLOpsPass() = default;
-  LowerGpuOpsToROCDLOpsPass(const std::string &chipset, unsigned indexBitwidth,
-                            bool useBarePtrCallConv,
-                            gpu::amd::Runtime runtime) {
+struct ConvertGpuToROCDLPass
+    : public impl::ConvertGpuToROCDLPassBase<ConvertGpuToROCDLPass> {
+  ConvertGpuToROCDLPass() = default;
+  ConvertGpuToROCDLPass(const std::string &chipset, unsigned indexBitwidth,
+                        bool useBarePtrCallConv, gpu::amd::Runtime runtime) {
     if (this->chipset.getNumOccurrences() == 0)
       this->chipset = chipset;
     if (this->indexBitwidth.getNumOccurrences() == 0)
@@ -220,10 +223,10 @@ void mlir::populateGpuToROCDLConversionPatterns(
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
-mlir::createLowerGpuOpsToROCDLOpsPass(const std::string &chipset,
-                                      unsigned indexBitwidth,
-                                      bool useBarePtrCallConv,
-                                      gpu::amd::Runtime runtime) {
-  return std::make_unique<LowerGpuOpsToROCDLOpsPass>(
-      chipset, indexBitwidth, useBarePtrCallConv, runtime);
+mlir::createConvertGpuToROCDLPass(const std::string &chipset,
+                                  unsigned indexBitwidth,
+                                  bool useBarePtrCallConv,
+                                  gpu::amd::Runtime runtime) {
+  return std::make_unique<ConvertGpuToROCDLPass>(chipset, indexBitwidth,
+                                                 useBarePtrCallConv, runtime);
 }

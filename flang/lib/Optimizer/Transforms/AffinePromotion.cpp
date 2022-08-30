@@ -15,7 +15,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -30,6 +29,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Debug.h"
+
+namespace fir {
+#define GEN_PASS_DEF_AFFINEDIALECTPROMOTIONPASS
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+} // namespace fir
 
 #define DEBUG_TYPE "flang-affine-promotion"
 
@@ -579,7 +583,7 @@ public:
 /// Promote fir.do_loop and fir.if to affine.for and affine.if, in the cases
 /// where such a promotion is possible.
 class AffineDialectPromotion
-    : public AffineDialectPromotionBase<AffineDialectPromotion> {
+    : public fir::impl::AffineDialectPromotionPassBase<AffineDialectPromotion> {
 public:
   void runOnOperation() override {
 

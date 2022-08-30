@@ -10,21 +10,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Func/Transforms/Passes.h"
+
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
-#include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_FUNCBUFFERIZEPASS
+#include "mlir/Dialect/Func/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::func;
 
 namespace {
-struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
-  using FuncBufferizeBase<FuncBufferizePass>::FuncBufferizeBase;
+struct FuncBufferizePass
+    : public impl::FuncBufferizePassBase<FuncBufferizePass> {
+  using FuncBufferizePassBase::FuncBufferizePassBase;
+
   void runOnOperation() override {
     auto module = getOperation();
     auto *context = &getContext();

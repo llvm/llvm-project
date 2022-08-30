@@ -15,12 +15,14 @@ namespace mlir {
 class Pass;
 class RewritePatternSet;
 
+#define GEN_PASS_DECL_CONVERTBUFFERIZATIONTOMEMREFPASS
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Collect a set of patterns to convert memory-related operations from the
 /// Bufferization dialect to the MemRef dialect.
 void populateBufferizationToMemRefConversionPatterns(
     RewritePatternSet &patterns);
 
-std::unique_ptr<Pass> createBufferizationToMemRefPass();
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_BUFFERIZATIONTOMEMREF_BUFFERIZATIONTOMEMREF_H

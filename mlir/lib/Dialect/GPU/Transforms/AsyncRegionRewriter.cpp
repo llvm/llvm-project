@@ -11,10 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Async/IR/Async.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+
+#include "mlir/Dialect/Async/IR/Async.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Utils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
@@ -24,9 +25,16 @@
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_GPUASYNCREGIONPASS
+#include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
+
 namespace {
-class GpuAsyncRegionPass : public GpuAsyncRegionPassBase<GpuAsyncRegionPass> {
+class GpuAsyncRegionPass
+    : public impl::GpuAsyncRegionPassBase<GpuAsyncRegionPass> {
   struct ThreadTokenCallback;
   struct DeferWaitCallback;
   struct SingleTokenUseCallback;

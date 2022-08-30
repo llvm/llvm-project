@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def ArithmeticBufferize : Pass<"arith-bufferize", "ModuleOp"> {
+def ArithmeticBufferizePass : Pass<"arith-bufferize", "ModuleOp"> {
   let summary = "Bufferize Arithmetic dialect ops.";
   let description = [{
     This pass bufferizes arith dialect ops.
@@ -28,12 +28,12 @@ def ArithmeticBufferize : Pass<"arith-bufferize", "ModuleOp"> {
   ];
 }
 
-def ArithmeticExpandOps : Pass<"arith-expand"> {
+def ArithmeticExpandOpsPass : Pass<"arith-expand"> {
   let summary = "Legalize Arithmetic ops to be convertible to LLVM.";
   let constructor = "mlir::arith::createArithmeticExpandOpsPass()";
 }
 
-def ArithmeticUnsignedWhenEquivalent : Pass<"arith-unsigned-when-equivalent"> {
+def ArithmeticUnsignedWhenEquivalentPass : Pass<"arith-unsigned-when-equivalent"> {
   let summary = "Replace signed ops with unsigned ones where they are proven equivalent";
   let description = [{
     Replace signed ops with their unsigned equivalents when integer range analysis

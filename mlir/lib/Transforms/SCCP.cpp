@@ -14,7 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/IR/Builders.h"
@@ -22,7 +23,11 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/FoldUtils.h"
-#include "mlir/Transforms/Passes.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_SCCPPASS
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -109,12 +114,14 @@ static void rewrite(DataFlowSolver &solver, MLIRContext *context,
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct SCCP : public SCCPBase<SCCP> {
+struct SCCPPass : public impl::SCCPPassBase<SCCPPass> {
+  using SCCPPassBase::SCCPPassBase;
+
   void runOnOperation() override;
 };
 } // namespace
 
-void SCCP::runOnOperation() {
+void SCCPPass::runOnOperation() {
   Operation *op = getOperation();
 
   DataFlowSolver solver;
@@ -123,8 +130,4 @@ void SCCP::runOnOperation() {
   if (failed(solver.initializeAndRun(op)))
     return signalPassFailure();
   rewrite(solver, op->getContext(), op->getRegions());
-}
-
-std::unique_ptr<Pass> mlir::createSCCPPass() {
-  return std::make_unique<SCCP>();
 }

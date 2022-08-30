@@ -13,7 +13,6 @@
 
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
 
-#include "../PassDetail.h"
 #include "mlir/Conversion/ArithmeticToSPIRV/ArithmeticToSPIRV.h"
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
@@ -22,6 +21,11 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTGPUTOSPIRVPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -35,9 +39,10 @@ namespace {
 /// replace it).
 ///
 /// 2) Lower the body of the spirv::ModuleOp.
-class GPUToSPIRVPass : public ConvertGPUToSPIRVBase<GPUToSPIRVPass> {
+class ConvertGPUToSPIRVPass
+    : public impl::ConvertGPUToSPIRVPassBase<ConvertGPUToSPIRVPass> {
 public:
-  explicit GPUToSPIRVPass(bool mapMemorySpace)
+  explicit ConvertGPUToSPIRVPass(bool mapMemorySpace)
       : mapMemorySpace(mapMemorySpace) {}
   void runOnOperation() override;
 
@@ -46,7 +51,7 @@ private:
 };
 } // namespace
 
-void GPUToSPIRVPass::runOnOperation() {
+void ConvertGPUToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
   ModuleOp module = getOperation();
 
@@ -94,5 +99,5 @@ void GPUToSPIRVPass::runOnOperation() {
 
 std::unique_ptr<OperationPass<ModuleOp>>
 mlir::createConvertGPUToSPIRVPass(bool mapMemorySpace) {
-  return std::make_unique<GPUToSPIRVPass>(mapMemorySpace);
+  return std::make_unique<ConvertGPUToSPIRVPass>(mapMemorySpace);
 }

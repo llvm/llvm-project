@@ -14,12 +14,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "flang/Optimizer/CodeGen/CodeGen.h"
+
 #include "Target.h"
 #include "flang/Optimizer/Builder/Character.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
-#include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -29,6 +29,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+
+namespace fir {
+#define GEN_PASS_DEF_TARGETREWRITEPASS
+#include "flang/Optimizer/CodeGen/CGPasses.h.inc"
+} // namespace fir
 
 #define DEBUG_TYPE "flang-target-rewrite"
 
@@ -66,7 +71,7 @@ struct FixupTy {
 /// generation that traverses the FIR and modifies types and operations to a
 /// form that is appropriate for the specific target. LLVM IR has specific
 /// idioms that are used for distinct target processor and ABI combinations.
-class TargetRewrite : public fir::TargetRewriteBase<TargetRewrite> {
+class TargetRewrite : public fir::impl::TargetRewritePassBase<TargetRewrite> {
 public:
   TargetRewrite(const fir::TargetRewriteOptions &options) {
     noCharacterConversion = options.noCharacterConversion;

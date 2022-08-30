@@ -10,30 +10,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
-#include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/SideEffectUtils.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_LOOPINVARIANTCODEMOTIONPASS
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
 /// Loop invariant code motion (LICM) pass.
-struct LoopInvariantCodeMotion
-    : public LoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
+struct LoopInvariantCodeMotionPass
+    : public impl::LoopInvariantCodeMotionPassBase<
+          LoopInvariantCodeMotionPass> {
+  using LoopInvariantCodeMotionPassBase::LoopInvariantCodeMotionPassBase;
+
   void runOnOperation() override;
 };
 } // namespace
 
-void LoopInvariantCodeMotion::runOnOperation() {
+void LoopInvariantCodeMotionPass::runOnOperation() {
   // Walk through all loops in a function in innermost-loop-first order. This
   // way, we first LICM from the inner loop, and place the ops in
   // the outer loop, which in turn can be further LICM'ed.
   getOperation()->walk(
       [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
-}
-
-std::unique_ptr<Pass> mlir::createLoopInvariantCodeMotionPass() {
-  return std::make_unique<LoopInvariantCodeMotion>();
 }

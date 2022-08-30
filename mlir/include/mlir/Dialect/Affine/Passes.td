@@ -15,7 +15,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def AffineDataCopyGeneration : Pass<"affine-data-copy-generate", "func::FuncOp"> {
+def AffineDataCopyGenerationPass : Pass<"affine-data-copy-generate", "func::FuncOp"> {
   let summary = "Generate explicit copying for affine memory operations";
   let constructor = "mlir::createAffineDataCopyGenerationPass()";
   let dependentDialects = ["memref::MemRefDialect"];
@@ -43,7 +43,7 @@ def AffineDataCopyGeneration : Pass<"affine-data-copy-generate", "func::FuncOp">
   ];
 }
 
-def AffineLoopFusion : Pass<"affine-loop-fusion", "func::FuncOp"> {
+def AffineLoopFusionPass : Pass<"affine-loop-fusion", "func::FuncOp"> {
   let summary = "Fuse affine loop nests";
   let description = [{
     This pass performs fusion of loop nests using a slicing-based approach. It
@@ -175,13 +175,13 @@ def AffineLoopFusion : Pass<"affine-loop-fusion", "func::FuncOp"> {
   let dependentDialects = ["memref::MemRefDialect"];
 }
 
-def AffineLoopInvariantCodeMotion
+def AffineLoopInvariantCodeMotionPass
     : Pass<"affine-loop-invariant-code-motion", "func::FuncOp"> {
   let summary = "Hoist loop invariant instructions outside of affine loops";
   let constructor = "mlir::createAffineLoopInvariantCodeMotionPass()";
 }
 
-def AffineLoopTiling : Pass<"affine-loop-tile", "func::FuncOp"> {
+def AffineLoopTilingPass : Pass<"affine-loop-tile", "func::FuncOp"> {
   let summary = "Tile affine loop nests";
   let constructor = "mlir::createLoopTilingPass()";
   let options = [
@@ -197,7 +197,7 @@ def AffineLoopTiling : Pass<"affine-loop-tile", "func::FuncOp"> {
   ];
 }
 
-def AffineLoopUnroll : Pass<"affine-loop-unroll", "func::FuncOp"> {
+def AffineLoopUnrollPass : Pass<"affine-loop-unroll", "func::FuncOp"> {
   let summary = "Unroll affine loops";
   let constructor = "mlir::createLoopUnrollPass()";
   let options = [
@@ -217,7 +217,7 @@ def AffineLoopUnroll : Pass<"affine-loop-unroll", "func::FuncOp"> {
   ];
 }
 
-def AffineLoopUnrollAndJam : Pass<"affine-loop-unroll-jam", "func::FuncOp"> {
+def AffineLoopUnrollAndJamPass : Pass<"affine-loop-unroll-jam", "func::FuncOp"> {
   let summary = "Unroll and jam affine loops";
   let constructor = "mlir::createLoopUnrollAndJamPass()";
   let options = [
@@ -227,7 +227,7 @@ def AffineLoopUnrollAndJam : Pass<"affine-loop-unroll-jam", "func::FuncOp"> {
   ];
 }
 
-def AffinePipelineDataTransfer
+def AffinePipelineDataTransferPass
     : Pass<"affine-pipeline-data-transfer", "func::FuncOp"> {
   let summary = "Pipeline non-blocking data transfers between explicitly "
                 "managed levels of the memory hierarchy";
@@ -296,7 +296,7 @@ def AffinePipelineDataTransfer
   let constructor = "mlir::createPipelineDataTransferPass()";
 }
 
-def AffineScalarReplacement : Pass<"affine-scalrep", "func::FuncOp"> {
+def AffineScalarReplacementPass : Pass<"affine-scalrep", "func::FuncOp"> {
   let summary = "Replace affine memref acceses by scalars by forwarding stores "
                 "to loads and eliminating redundant loads";
   let description = [{
@@ -342,7 +342,7 @@ def AffineScalarReplacement : Pass<"affine-scalrep", "func::FuncOp"> {
   let constructor = "mlir::createAffineScalarReplacementPass()";
 }
 
-def AffineVectorize : Pass<"affine-super-vectorize", "func::FuncOp"> {
+def AffineVectorizePass : Pass<"affine-super-vectorize", "func::FuncOp"> {
   let summary = "Vectorize to a target independent n-D vector abstraction";
   let constructor = "mlir::createSuperVectorizePass()";
   let dependentDialects = ["vector::VectorDialect"];
@@ -366,7 +366,7 @@ def AffineVectorize : Pass<"affine-super-vectorize", "func::FuncOp"> {
   ];
 }
 
-def AffineParallelize : Pass<"affine-parallelize", "func::FuncOp"> {
+def AffineParallelizePass : Pass<"affine-parallelize", "func::FuncOp"> {
   let summary = "Convert affine.for ops into 1-D affine.parallel";
   let constructor = "mlir::createAffineParallelizePass()";
   let options = [
@@ -379,25 +379,25 @@ def AffineParallelize : Pass<"affine-parallelize", "func::FuncOp"> {
   ];
 }
 
-def AffineLoopNormalize : Pass<"affine-loop-normalize", "func::FuncOp"> {
+def AffineLoopNormalizePass : Pass<"affine-loop-normalize", "func::FuncOp"> {
   let summary = "Apply normalization transformations to affine loop-like ops";
   let constructor = "mlir::createAffineLoopNormalizePass()";
 }
 
-def LoopCoalescing : Pass<"affine-loop-coalescing", "func::FuncOp"> {
+def LoopCoalescingPass : Pass<"affine-loop-coalescing", "func::FuncOp"> {
   let summary = "Coalesce nested loops with independent bounds into a single "
                 "loop";
   let constructor = "mlir::createLoopCoalescingPass()";
   let dependentDialects = ["arith::ArithmeticDialect"];
 }
 
-def SimplifyAffineStructures : Pass<"affine-simplify-structures", "func::FuncOp"> {
+def SimplifyAffineStructuresPass : Pass<"affine-simplify-structures", "func::FuncOp"> {
   let summary = "Simplify affine expressions in maps/sets and normalize "
                 "memrefs";
   let constructor = "mlir::createSimplifyAffineStructuresPass()";
 }
 
-def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {
+def AffineExpandIndexOpsPass : Pass<"affine-expand-index-ops"> {
   let summary = "Lower affine operations operating on indices into more fundamental operations";
   let constructor = "mlir::createAffineExpandIndexOpsPass()";
 }

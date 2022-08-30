@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
+def BufferDeallocationPass : Pass<"buffer-deallocation", "func::FuncOp"> {
   let summary = "Adds all required dealloc operations for all allocations in "
                 "the input program";
   let description = [{
@@ -88,7 +88,7 @@ def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
   let constructor = "mlir::bufferization::createBufferDeallocationPass()";
 }
 
-def BufferHoisting : Pass<"buffer-hoisting", "func::FuncOp"> {
+def BufferHoistingPass : Pass<"buffer-hoisting", "func::FuncOp"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "into common dominators and out of nested regions";
   let description = [{
@@ -98,7 +98,7 @@ def BufferHoisting : Pass<"buffer-hoisting", "func::FuncOp"> {
   let constructor = "mlir::bufferization::createBufferHoistingPass()";
 }
 
-def BufferLoopHoisting : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
+def BufferLoopHoistingPass : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "out of loop nests";
   let description = [{
@@ -108,7 +108,7 @@ def BufferLoopHoisting : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
   let constructor = "mlir::bufferization::createBufferLoopHoistingPass()";
 }
 
-def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp">  {
+def BufferResultsToOutParamsPass : Pass<"buffer-results-to-out-params", "ModuleOp">  {
   let summary = "Converts memref-typed function results to out-params";
   let description = [{
     Some calling conventions prefer to pass output memrefs as "out params". The
@@ -133,7 +133,7 @@ def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp"> 
   let dependentDialects = ["memref::MemRefDialect"];
 }
 
-def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
+def FinalizingBufferizePass : Pass<"finalizing-bufferize", "func::FuncOp"> {
   let summary = "Finalize a partial bufferization";
   let description = [{
     A bufferize pass that finalizes a partial bufferization by removing
@@ -149,12 +149,12 @@ def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
   let constructor = "mlir::bufferization::createFinalizingBufferizePass()";
 }
 
-def BufferizationBufferize : Pass<"bufferization-bufferize", "func::FuncOp"> {
+def BufferizationBufferizePass : Pass<"bufferization-bufferize", "func::FuncOp"> {
   let summary = "Bufferize the `bufferization` dialect";
   let constructor = "mlir::bufferization::createBufferizationBufferizePass()";
 }
 
-def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "ModuleOp">  {
+def DropEquivalentBufferResultsPass : Pass<"drop-equivalent-buffer-results", "ModuleOp">  {
   let summary = "Remove MemRef return values that are equivalent to a bbArg";
   let description = [{
     This pass removes MemRef return values from functions if they are equivalent
@@ -168,7 +168,7 @@ def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "Module
   let dependentDialects = ["memref::MemRefDialect"];
 }
 
-def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
+def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
   let summary = "One-Shot Bufferize";
   let description = [{
     This pass bufferizes all ops that implement `BufferizableOpInterface`. It
@@ -303,7 +303,7 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
   let constructor = "mlir::bufferization::createOneShotBufferizePass()";
 }
 
-def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
+def PromoteBuffersToStackPass : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
   let summary = "Promotes heap-based allocations to automatically managed "
                 "stack-based allocations";
   let description = [{
@@ -324,7 +324,7 @@ def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
   ];
 }
 
-def TensorCopyInsertion : Pass<"tensor-copy-insertion"> {
+def TensorCopyInsertionPass : Pass<"tensor-copy-insertion"> {
   let summary = "Make all tensor IR inplaceable by inserting copies";
   let description = [{
     This pass runs One-Shot Analysis and inserts copies for all OpOperands that
@@ -355,7 +355,7 @@ def TensorCopyInsertion : Pass<"tensor-copy-insertion"> {
   let constructor = "mlir::bufferization::createTensorCopyInsertionPass()";
 }
 
-def AllocTensorElimination : Pass<"eliminate-alloc-tensors"> {
+def AllocTensorEliminationPass : Pass<"eliminate-alloc-tensors"> {
   let summary = "Try to eliminate all alloc_tensor ops.";
   let description = [{
     This pass tries to eliminate all insert_slice op-anchored alloc_tensor ops.

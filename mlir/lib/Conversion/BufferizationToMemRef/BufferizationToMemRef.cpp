@@ -12,13 +12,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/BufferizationToMemRef/BufferizationToMemRef.h"
-#include "../PassDetail.h"
+
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTBUFFERIZATIONTOMEMREFPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -81,9 +87,11 @@ void mlir::populateBufferizationToMemRefConversionPatterns(
 }
 
 namespace {
-struct BufferizationToMemRefPass
-    : public ConvertBufferizationToMemRefBase<BufferizationToMemRefPass> {
-  BufferizationToMemRefPass() = default;
+struct ConvertBufferizationToMemRefPass
+    : public impl::ConvertBufferizationToMemRefPassBase<
+          ConvertBufferizationToMemRefPass> {
+  using ConvertBufferizationToMemRefPassBase::
+      ConvertBufferizationToMemRefPassBase;
 
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -100,7 +108,3 @@ struct BufferizationToMemRefPass
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::createBufferizationToMemRefPass() {
-  return std::make_unique<BufferizationToMemRefPass>();
-}

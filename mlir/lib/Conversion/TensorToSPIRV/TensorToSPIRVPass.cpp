@@ -11,19 +11,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/TensorToSPIRV/TensorToSPIRVPass.h"
-#include "../PassDetail.h"
+
 #include "mlir/Conversion/ArithmeticToSPIRV/ArithmeticToSPIRV.h"
 #include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
 #include "mlir/Conversion/TensorToSPIRV/TensorToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTTENSORTOSPIRVPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
 
 namespace {
 /// A pass converting MLIR Tensor operations into the SPIR-V dialect.
 class ConvertTensorToSPIRVPass
-    : public ConvertTensorToSPIRVBase<ConvertTensorToSPIRVPass> {
+    : public impl::ConvertTensorToSPIRVPassBase<ConvertTensorToSPIRVPass> {
+  using ConvertTensorToSPIRVPassBase::ConvertTensorToSPIRVPassBase;
+
   void runOnOperation() override {
     MLIRContext *context = &getContext();
     Operation *op = getOperation();

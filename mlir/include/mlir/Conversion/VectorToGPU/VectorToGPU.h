@@ -16,6 +16,9 @@ class MLIRContext;
 class Pass;
 class RewritePatternSet;
 
+#define GEN_PASS_DECL_CONVERTVECTORTOGPUPASS
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Patterns to transform vector ops into a canonical form to convert to MMA
 /// matrix operations. If `useNvGpu` is true, then the patterns will populated
 /// will prepare for conversion to `nvgpu` mma operations rather than the `gpu`

@@ -28,6 +28,19 @@ class GreedyRewriteConfig;
 // Passes
 //===----------------------------------------------------------------------===//
 
+#define GEN_PASS_DECL_CANONICALIZERPASS
+#define GEN_PASS_DECL_CONTROLFLOWSINKPASS
+#define GEN_PASS_DECL_CSEPASS
+#define GEN_PASS_DECL_LOOPINVARIANTCODEMOTIONPASS
+#define GEN_PASS_DECL_STRIPDEBUGINFOPASS
+#define GEN_PASS_DECL_PRINTOPSTATSPASS
+#define GEN_PASS_DECL_INLINERPASS
+#define GEN_PASS_DECL_SCCPPASS
+#define GEN_PASS_DECL_SYMBOLDCEPASS
+#define GEN_PASS_DECL_SYMBOLPRIVATIZEPASS
+#define GEN_PASS_DECL_TOPOLOGICALSORTPASS
+#include "mlir/Transforms/Passes.h.inc"
+
 /// Creates an instance of the Canonicalizer pass, configured with default
 /// settings (which can be overridden by pass options on the command line).
 std::unique_ptr<Pass> createCanonicalizerPass();
@@ -44,19 +57,6 @@ std::unique_ptr<Pass>
 createCanonicalizerPass(const GreedyRewriteConfig &config,
                         ArrayRef<std::string> disabledPatterns = llvm::None,
                         ArrayRef<std::string> enabledPatterns = llvm::None);
-
-/// Creates a pass to perform control-flow sinking.
-std::unique_ptr<Pass> createControlFlowSinkPass();
-
-/// Creates a pass to perform common sub expression elimination.
-std::unique_ptr<Pass> createCSEPass();
-
-/// Creates a loop invariant code motion pass that hoists loop invariant
-/// instructions out of the loop.
-std::unique_ptr<Pass> createLoopInvariantCodeMotionPass();
-
-/// Creates a pass to strip debug information from a function.
-std::unique_ptr<Pass> createStripDebugInfoPass();
 
 /// Creates a pass which prints the list of ops and the number of occurrences in
 /// the module.
@@ -83,23 +83,10 @@ std::unique_ptr<Pass>
 createInlinerPass(llvm::StringMap<OpPassManager> opPipelines,
                   std::function<void(OpPassManager &)> defaultPipelineBuilder);
 
-/// Creates a pass which performs sparse conditional constant propagation over
-/// nested operations.
-std::unique_ptr<Pass> createSCCPPass();
-
-/// Creates a pass which delete symbol operations that are unreachable. This
-/// pass may *only* be scheduled on an operation that defines a SymbolTable.
-std::unique_ptr<Pass> createSymbolDCEPass();
-
 /// Creates a pass which marks top-level symbol operations as `private` unless
 /// listed in `excludeSymbols`.
 std::unique_ptr<Pass>
 createSymbolPrivatizePass(ArrayRef<std::string> excludeSymbols = {});
-
-/// Creates a pass that recursively sorts nested regions without SSA dominance
-/// topologically such that, as much as possible, users of values appear after
-/// their producers.
-std::unique_ptr<Pass> createTopologicalSortPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

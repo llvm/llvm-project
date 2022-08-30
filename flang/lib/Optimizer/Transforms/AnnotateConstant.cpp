@@ -6,10 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+// #include "PassDetail.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/IR/BuiltinAttributes.h"
+
+namespace fir {
+#define GEN_PASS_DEF_ANNOTATECONSTANTOPERANDSPASS
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+} // namespace fir
 
 #define DEBUG_TYPE "flang-annotate-constant"
 
@@ -17,7 +23,7 @@ using namespace fir;
 
 namespace {
 struct AnnotateConstantOperands
-    : AnnotateConstantOperandsBase<AnnotateConstantOperands> {
+    : impl::AnnotateConstantOperandsPassBase<AnnotateConstantOperands> {
   void runOnOperation() override {
     auto *context = &getContext();
     mlir::Dialect *firDialect = context->getLoadedDialect("fir");

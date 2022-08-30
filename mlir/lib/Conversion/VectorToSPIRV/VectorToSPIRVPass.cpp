@@ -12,18 +12,24 @@
 
 #include "mlir/Conversion/VectorToSPIRV/VectorToSPIRVPass.h"
 
-#include "../PassDetail.h"
 #include "mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTVECTORTOSPIRVPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
 
 namespace {
 struct ConvertVectorToSPIRVPass
-    : public ConvertVectorToSPIRVBase<ConvertVectorToSPIRVPass> {
+    : public impl::ConvertVectorToSPIRVPassBase<ConvertVectorToSPIRVPass> {
+  using ConvertVectorToSPIRVPassBase::ConvertVectorToSPIRVPassBase;
+
   void runOnOperation() override;
 };
 } // namespace
