@@ -64,6 +64,7 @@ struct TestElementsAttrInterface
               .Case([&](DenseF64ArrayAttr attr) {
                 testElementsAttrIteration<double>(op, attr, "double");
               });
+          testElementsAttrIteration<int64_t>(op, elementsAttr, "int64_t");
           continue;
         }
         testElementsAttrIteration<int64_t>(op, elementsAttr, "int64_t");

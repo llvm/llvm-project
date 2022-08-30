@@ -28,18 +28,24 @@ arith.constant dense<[10, 11, 12, 13, 14]> : tensor<5xi64>
 arith.constant dense<> : tensor<0xi64>
 
 // expected-error@below {{Test iterating `bool`: true, false, true, false, true, false}}
+// expected-error@below {{Test iterating `int64_t`: unable to iterate type}}
 arith.constant array<i1: true, false, true, false, true, false>
 // expected-error@below {{Test iterating `int8_t`: 10, 11, -12, 13, 14}}
+// expected-error@below {{Test iterating `int64_t`: unable to iterate type}}
 arith.constant array<i8: 10, 11, -12, 13, 14>
 // expected-error@below {{Test iterating `int16_t`: 10, 11, -12, 13, 14}}
+// expected-error@below {{Test iterating `int64_t`: unable to iterate type}}
 arith.constant array<i16: 10, 11, -12, 13, 14>
 // expected-error@below {{Test iterating `int32_t`: 10, 11, -12, 13, 14}}
+// expected-error@below {{Test iterating `int64_t`: unable to iterate type}}
 arith.constant array<i32: 10, 11, -12, 13, 14>
 // expected-error@below {{Test iterating `int64_t`: 10, 11, -12, 13, 14}}
 arith.constant array<i64: 10, 11, -12, 13, 14>
 // expected-error@below {{Test iterating `float`: 10.00, 11.00, -12.00, 13.00, 14.00}}
+// expected-error@below {{Test iterating `int64_t`: unable to iterate type}}
 arith.constant array<f32: 10., 11., -12., 13., 14.>
 // expected-error@below {{Test iterating `double`: 10.00, 11.00, -12.00, 13.00, 14.00}}
+// expected-error@below {{Test iterating `int64_t`: unable to iterate type}}
 arith.constant array<f64: 10., 11., -12., 13., 14.>
 
 // Check that we handle an external constant parsed from the config.

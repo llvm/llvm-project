@@ -763,26 +763,47 @@ DenseArrayAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
-const bool *DenseArrayAttr::value_begin_impl(OverloadToken<bool>) const {
-  return cast<DenseBoolArrayAttr>().asArrayRef().begin();
+FailureOr<const bool *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<bool>) const {
+  if (auto attr = dyn_cast<DenseBoolArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
 }
-const int8_t *DenseArrayAttr::value_begin_impl(OverloadToken<int8_t>) const {
-  return cast<DenseI8ArrayAttr>().asArrayRef().begin();
+FailureOr<const int8_t *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<int8_t>) const {
+  if (auto attr = dyn_cast<DenseI8ArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
 }
-const int16_t *DenseArrayAttr::value_begin_impl(OverloadToken<int16_t>) const {
-  return cast<DenseI16ArrayAttr>().asArrayRef().begin();
+FailureOr<const int16_t *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<int16_t>) const {
+  if (auto attr = dyn_cast<DenseI16ArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
 }
-const int32_t *DenseArrayAttr::value_begin_impl(OverloadToken<int32_t>) const {
-  return cast<DenseI32ArrayAttr>().asArrayRef().begin();
+FailureOr<const int32_t *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<int32_t>) const {
+  if (auto attr = dyn_cast<DenseI32ArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
 }
-const int64_t *DenseArrayAttr::value_begin_impl(OverloadToken<int64_t>) const {
-  return cast<DenseI64ArrayAttr>().asArrayRef().begin();
+FailureOr<const int64_t *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<int64_t>) const {
+  if (auto attr = dyn_cast<DenseI64ArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
 }
-const float *DenseArrayAttr::value_begin_impl(OverloadToken<float>) const {
-  return cast<DenseF32ArrayAttr>().asArrayRef().begin();
+FailureOr<const float *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<float>) const {
+  if (auto attr = dyn_cast<DenseF32ArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
 }
-const double *DenseArrayAttr::value_begin_impl(OverloadToken<double>) const {
-  return cast<DenseF64ArrayAttr>().asArrayRef().begin();
+FailureOr<const double *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<double>) const {
+  if (auto attr = dyn_cast<DenseF64ArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
 }
 
 namespace {
