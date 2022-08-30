@@ -15888,16 +15888,10 @@ static bool IsTailPaddedMemberArray(Sema &S, const llvm::APInt &Size,
   if (!ND)
     return false;
 
-  if (StrictFlexArraysLevel >= 2 && Size != 0)
-    return false;
-
-  if (StrictFlexArraysLevel == 1 && Size.uge(2))
-    return false;
-
   // FIXME: While the default -fstrict-flex-arrays=0 permits Size>1 trailing
   // arrays to be treated as flexible-array-members, we still emit diagnostics
   // as if they are not. Pending further discussion...
-  if (StrictFlexArraysLevel == 0 && Size != 1)
+  if (StrictFlexArraysLevel >= 2 || Size.uge(2))
     return false;
 
   const FieldDecl *FD = dyn_cast<FieldDecl>(ND);
@@ -16065,8 +16059,8 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     if (BaseType->isIncompleteType())
       return;
 
-    // FIXME: this check should belong to the IsTailPaddedMemberArray call
-    // below.
+    // FIXME: this check should be used to set IsUnboundedArray from the
+    // beginning.
     llvm::APInt size = ArrayTy->getSize();
     if (!size.isStrictlyPositive())
       return;
