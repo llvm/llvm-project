@@ -1,7 +1,6 @@
-# RUN: not --crash llc -ppc-asm-full-reg-names -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN: llc -ppc-asm-full-reg-names -mtriple=powerpc64le-unknown-linux-gnu \
 # RUN:   -run-pass=early-tailduplication,ppc-ctrloops %s -o - -verify-machineinstrs 2>&1 | FileCheck %s
 
-# CHECK: Invalid ctr loop
 --- |
   target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
   target triple = "powerpc64le-unknown-linux-gnu"
@@ -65,6 +64,7 @@
 ...
 ---
 name:            test
+# CHECK: test
 alignment:       16
 exposesReturnsTwice: false
 legalized:       false
