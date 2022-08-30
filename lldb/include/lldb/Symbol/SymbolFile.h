@@ -222,6 +222,38 @@ public:
   virtual uint32_t ResolveSymbolContext(const Address &so_addr,
                                         lldb::SymbolContextItem resolve_scope,
                                         SymbolContext &sc) = 0;
+
+  /// Get an error that describes why variables might be missing for a given
+  /// symbol context.
+  ///
+  /// If there is an error in the debug information that prevents variables from
+  /// being fetched, this error will get filled in. If there is no debug
+  /// informaiton, no error should be returned. But if there is debug
+  /// information and something prevents the variables from being available a
+  /// valid error should be returned. Valid cases include:
+  /// - compiler option that removes variables (-gline-tables-only)
+  /// - missing external files
+  ///   - .dwo files in fission are not accessible or missing
+  ///   - .o files on darwin when not using dSYM files that are not accessible
+  ///     or missing
+  /// - mismatched exteral files
+  ///   - .dwo files in fission where the DWO ID doesn't match
+  ///   - .o files on darwin when modification timestamp doesn't match
+  /// - corrupted debug info
+  ///
+  /// \param[in] frame
+  ///   The stack frame to use as a basis for the context to check. The frame
+  ///   address can be used if there is not debug info due to it not being able
+  ///   to be loaded, or if there is a debug info context, like a compile unit,
+  ///   or function, it can be used to track down more information on why
+  ///   variables are missing.
+  ///
+  /// \returns
+  ///   An error specifying why there should have been debug info with variable
+  ///   information but the variables were not able to be resolved.
+  virtual Status GetFrameVariableError(StackFrame &frame) {
+    return Status();
+  }
   virtual uint32_t
   ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
                        lldb::SymbolContextItem resolve_scope,

@@ -257,6 +257,15 @@ public:
 
   lldb_private::DWARFDataExtractor GetLocationData() const;
 
+  /// Returns true if any DIEs in the unit match any DW_TAG values in \a tags.
+  ///
+  /// \param[in] tags
+  ///   An array of dw_tag_t values to check all abbrevitions for.
+  ///
+  /// \returns
+  ///   True if any DIEs match any tag in \a tags, false otherwise.
+  bool HasAny(llvm::ArrayRef<dw_tag_t> tags);
+
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,
