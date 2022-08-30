@@ -26,4 +26,4 @@ Derived d;
 
 // CHECK-LABEL: !DIFile{{.*}}cpp
 
-// CHECK: ![[DI]] = {{.*}}line: [[@LINE-14]]
+// CHECK-DAG: ![[DI]] = {{.*}}line: [[@LINE-14]]

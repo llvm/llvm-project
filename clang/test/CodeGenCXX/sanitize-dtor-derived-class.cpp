@@ -62,5 +62,5 @@ Derived d;
 
 // CHECK-LABEL: !DIFile{{.*}}cpp
 
-// CHECK: ![[DI1]] = {{.*}}line: [[@LINE-49]]
-// CHECK: ![[DI3]] = {{.*}}line: [[@LINE-39]]
+// CHECK-DAG: ![[DI1]] = {{.*}}line: [[@LINE-49]]
+// CHECK-DAG: ![[DI3]] = {{.*}}line: [[@LINE-39]]
