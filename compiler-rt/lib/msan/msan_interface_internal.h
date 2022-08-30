@@ -162,6 +162,10 @@ void __msan_allocated_memory(const void* data, uptr size);
 // uninitialized.
 SANITIZER_INTERFACE_ATTRIBUTE
 void __sanitizer_dtor_callback(const void* data, uptr size);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_dtor_callback_fields(const void *data, uptr size);
+SANITIZER_INTERFACE_ATTRIBUTE
+void __sanitizer_dtor_callback_vptr(const void *data);
 
 SANITIZER_INTERFACE_ATTRIBUTE
 u16 __sanitizer_unaligned_load16(const uu16 *p);
