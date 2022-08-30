@@ -175,8 +175,11 @@ enum SectionType : uint32_t {
   /// S_THREAD_LOCAL_INIT_FUNCTION_POINTERS - Section with thread local
   /// variable initialization pointers to functions.
   S_THREAD_LOCAL_INIT_FUNCTION_POINTERS = 0x15u,
+  /// S_INIT_FUNC_OFFSETS - Section with 32-bit offsets to initializer
+  /// functions.
+  S_INIT_FUNC_OFFSETS = 0x16u,
 
-  LAST_KNOWN_SECTION_TYPE = S_THREAD_LOCAL_INIT_FUNCTION_POINTERS
+  LAST_KNOWN_SECTION_TYPE = S_INIT_FUNC_OFFSETS
 };
 
 enum : uint32_t {
