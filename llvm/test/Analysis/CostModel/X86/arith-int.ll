@@ -100,11 +100,11 @@ define i32 @add(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = add i16 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = add <8 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = add <16 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = add <32 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = add <32 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = add i8 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = add <16 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = add <32 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = add <64 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = add <64 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'add'
@@ -138,11 +138,11 @@ define i32 @add(i32 %arg) {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = add i16 undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = add <8 x i16> undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = add <16 x i16> undef, undef
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = add <32 x i16> undef, undef
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = add <32 x i16> undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = add i8 undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = add <16 x i8> undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = add <32 x i8> undef, undef
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = add <64 x i8> undef, undef
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = add <64 x i8> undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'add'
@@ -314,11 +314,11 @@ define i32 @sub(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = sub i16 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = sub <8 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = sub <16 x i16> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = sub <32 x i16> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = sub <32 x i16> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = sub i8 undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = sub <16 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = sub <32 x i8> undef, undef
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = sub <64 x i8> undef, undef
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = sub <64 x i8> undef, undef
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'sub'
@@ -352,11 +352,11 @@ define i32 @sub(i32 %arg) {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = sub i16 undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8I16 = sub <8 x i16> undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I16 = sub <16 x i16> undef, undef
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V32I16 = sub <32 x i16> undef, undef
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32I16 = sub <32 x i16> undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = sub i8 undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16I8 = sub <16 x i8> undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32I8 = sub <32 x i8> undef, undef
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V64I8 = sub <64 x i8> undef, undef
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V64I8 = sub <64 x i8> undef, undef
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'sub'
