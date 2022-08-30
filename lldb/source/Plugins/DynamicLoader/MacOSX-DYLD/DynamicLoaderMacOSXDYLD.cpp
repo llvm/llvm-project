@@ -885,7 +885,7 @@ uint32_t DynamicLoaderMacOSXDYLD::ParseLoadCommands(const DataExtractor &data,
         break;
 
       case llvm::MachO::LC_UUID:
-        dylib_info.uuid = UUID::fromOptionalData(data.GetData(&offset, 16), 16);
+        dylib_info.uuid = UUID(data.GetData(&offset, 16), 16);
         break;
 
       default:
@@ -1093,7 +1093,7 @@ bool DynamicLoaderMacOSXDYLD::GetSharedCacheInformation(
         uuid_t shared_cache_uuid;
         if (m_process->ReadMemory(sharedCacheUUID_address, shared_cache_uuid,
                                   sizeof(uuid_t), err) == sizeof(uuid_t)) {
-          uuid = UUID::fromOptionalData(shared_cache_uuid, 16);
+          uuid = UUID(shared_cache_uuid, 16);
           if (uuid.IsValid()) {
             using_shared_cache = eLazyBoolYes;
           }

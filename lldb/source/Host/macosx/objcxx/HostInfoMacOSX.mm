@@ -565,7 +565,7 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
         assert(minVmAddr != UINT_MAX);
         assert(maxVmAddr != 0);
         m_images[dyld_image_get_installname(image)] = SharedCacheImageInfo{
-            UUID::fromData(uuid, 16),
+            UUID(uuid, 16),
             std::make_shared<DataBufferUnowned>((uint8_t *)minVmAddr,
                                                 maxVmAddr - minVmAddr)};
       });
@@ -585,12 +585,12 @@ SharedCacheInfo::SharedCacheInfo() {
       _dyld_get_shared_cache_range(&shared_cache_size);
   uuid_t dsc_uuid;
   _dyld_get_shared_cache_uuid(dsc_uuid);
-  m_uuid = UUID::fromData(dsc_uuid);
+  m_uuid = UUID(dsc_uuid);
 
   dyld_shared_cache_iterate_text(
       dsc_uuid, ^(const dyld_shared_cache_dylib_text_info *info) {
         m_images[info->path] = SharedCacheImageInfo{
-            UUID::fromData(info->dylibUuid, 16),
+            UUID(info->dylibUuid, 16),
             std::make_shared<DataBufferUnowned>(
                 shared_cache_start + info->textSegmentOffset,
                 shared_cache_size - info->textSegmentOffset)};
