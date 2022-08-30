@@ -163,52 +163,22 @@ struct IfOpInterface
                           const BufferizationOptions &options) const {
     OpBuilder::InsertionGuard g(rewriter);
     auto ifOp = cast<scf::IfOp>(op);
-    auto thenYieldOp = cast<scf::YieldOp>(ifOp.thenBlock()->getTerminator());
-    auto elseYieldOp = cast<scf::YieldOp>(ifOp.elseBlock()->getTerminator());
 
-    // Reconcile type mismatches between then/else branches by inserting memref
-    // casts.
-    SmallVector<Value> thenResults, elseResults;
-    bool insertedCast = false;
-    for (unsigned i = 0; i < thenYieldOp.getResults().size(); ++i) {
-      Value thenValue = thenYieldOp.getResults()[i];
-      Value elseValue = elseYieldOp.getResults()[i];
-      if (thenValue.getType() == elseValue.getType()) {
-        thenResults.push_back(thenValue);
-        elseResults.push_back(elseValue);
+    // Compute bufferized result types.
+    SmallVector<Type> newTypes;
+    for (Value result : ifOp.getResults()) {
+      if (!result.getType().isa<TensorType>()) {
+        newTypes.push_back(result.getType());
         continue;
       }
-
-      // Type mismatch between then/else yield value. Cast both to a memref type
-      // with a fully dynamic layout map.
-      auto thenMemrefType = thenValue.getType().cast<BaseMemRefType>();
-      auto elseMemrefType = elseValue.getType().cast<BaseMemRefType>();
-      if (thenMemrefType.getMemorySpaceAsInt() !=
-          elseMemrefType.getMemorySpaceAsInt())
-        return op->emitError("inconsistent memory space on then/else branches");
-      rewriter.setInsertionPoint(thenYieldOp);
-      BaseMemRefType memrefType = getMemRefTypeWithFullyDynamicLayout(
-          ifOp.getResultTypes()[i].cast<TensorType>(),
-          thenMemrefType.getMemorySpaceAsInt());
-      thenResults.push_back(rewriter.create<memref::CastOp>(
-          thenYieldOp.getLoc(), memrefType, thenValue));
-      rewriter.setInsertionPoint(elseYieldOp);
-      elseResults.push_back(rewriter.create<memref::CastOp>(
-          elseYieldOp.getLoc(), memrefType, elseValue));
-      insertedCast = true;
-    }
-
-    if (insertedCast) {
-      rewriter.setInsertionPoint(thenYieldOp);
-      rewriter.replaceOpWithNewOp<scf::YieldOp>(thenYieldOp, thenResults);
-      rewriter.setInsertionPoint(elseYieldOp);
-      rewriter.replaceOpWithNewOp<scf::YieldOp>(elseYieldOp, elseResults);
+      auto bufferType = bufferization::getBufferType(result, options);
+      if (failed(bufferType))
+        return failure();
+      newTypes.push_back(*bufferType);
     }
 
     // Create new op.
     rewriter.setInsertionPoint(ifOp);
-    ValueRange resultsValueRange(thenResults);
-    TypeRange newTypes(resultsValueRange);
     auto newIfOp =
         rewriter.create<scf::IfOp>(ifOp.getLoc(), newTypes, ifOp.getCondition(),
                                    /*withElseRegion=*/true);
@@ -221,6 +191,55 @@ struct IfOpInterface
     replaceOpWithBufferizedValues(rewriter, op, newIfOp->getResults());
 
     return success();
+  }
+
+  FailureOr<BaseMemRefType>
+  getBufferType(Operation *op, Value value, const BufferizationOptions &options,
+                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
+    auto ifOp = cast<scf::IfOp>(op);
+    auto thenYieldOp = cast<scf::YieldOp>(ifOp.thenBlock()->getTerminator());
+    auto elseYieldOp = cast<scf::YieldOp>(ifOp.elseBlock()->getTerminator());
+    assert(value.getDefiningOp() == op && "invalid valid");
+
+    // Determine buffer types of the true/false branches.
+    auto opResult = value.cast<OpResult>();
+    auto thenValue = thenYieldOp.getOperand(opResult.getResultNumber());
+    auto elseValue = elseYieldOp.getOperand(opResult.getResultNumber());
+    BaseMemRefType thenBufferType, elseBufferType;
+    if (thenValue.getType().isa<BaseMemRefType>()) {
+      // True branch was already bufferized.
+      thenBufferType = thenValue.getType().cast<BaseMemRefType>();
+    } else {
+      auto maybeBufferType =
+          bufferization::getBufferType(thenValue, options, fixedTypes);
+      if (failed(maybeBufferType))
+        return failure();
+      thenBufferType = *maybeBufferType;
+    }
+    if (elseValue.getType().isa<BaseMemRefType>()) {
+      // False branch was already bufferized.
+      elseBufferType = elseValue.getType().cast<BaseMemRefType>();
+    } else {
+      auto maybeBufferType =
+          bufferization::getBufferType(elseValue, options, fixedTypes);
+      if (failed(maybeBufferType))
+        return failure();
+      elseBufferType = *maybeBufferType;
+    }
+
+    // Best case: Both branches have the exact same buffer type.
+    if (thenBufferType == elseBufferType)
+      return thenBufferType;
+
+    // Memory space mismatch.
+    if (thenBufferType.getMemorySpaceAsInt() !=
+        elseBufferType.getMemorySpaceAsInt())
+      return op->emitError("inconsistent memory space on then/else branches");
+
+    // Layout maps are different: Promote to fully dynamic layout map.
+    return getMemRefTypeWithFullyDynamicLayout(
+        opResult.getType().cast<TensorType>(),
+        thenBufferType.getMemorySpaceAsInt());
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
@@ -973,9 +992,12 @@ struct YieldOpInterface
         if (failed(maybeBuffer))
           return failure();
         Value buffer = *maybeBuffer;
-        if (auto forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp())) {
+        // In case of scf::ForOp / scf::IfOp, we may have to cast the value
+        // before yielding it.
+        // TODO: Do the same for scf::WhileOp.
+        if (isa<scf::ForOp, scf::IfOp>(yieldOp->getParentOp())) {
           FailureOr<BaseMemRefType> resultType = bufferization::getBufferType(
-              forOp.getRegionIterArgs()[it.index()], options);
+              yieldOp->getParentOp()->getResult(it.index()), options);
           if (failed(resultType))
             return failure();
           buffer = castBuffer(rewriter, buffer, *resultType);
