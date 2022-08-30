@@ -81,6 +81,13 @@ static void DescribeOrigin(u32 id) {
         Printf("  %sMemory was marked as uninitialized%s\n", d.Origin(),
                d.Default());
         break;
+      case STACK_TRACE_TAG_FIELDS:
+        Printf("  %sMember fields were destroyed%s\n", d.Origin(), d.Default());
+        break;
+      case STACK_TRACE_TAG_VPTR:
+        Printf("  %sVirtual table ptr was destroyed%s\n", d.Origin(),
+               d.Default());
+        break;
       default:
         Printf("  %sUninitialized value was created%s\n", d.Origin(),
                d.Default());
