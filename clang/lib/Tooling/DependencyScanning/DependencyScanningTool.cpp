@@ -50,6 +50,8 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
   /// Prints out all of the gathered dependencies into a string.
   class MakeDependencyPrinterConsumer : public DependencyConsumer {
   public:
+    void handleBuildCommand(Command) override {}
+
     void
     handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {
       this->Opts = std::make_unique<DependencyOutputOptions>(Opts);
@@ -130,6 +132,7 @@ public:
     // E = llvm::joinErrors(std::move(E), Builder->push(File));
   }
 
+  void handleBuildCommand(Command) override {}
   void handleModuleDependency(ModuleDeps) override {}
   void handlePrebuiltModuleDependency(PrebuiltModuleDep) override {}
   void handleDependencyOutputOpts(const DependencyOutputOptions &) override {}
@@ -523,15 +526,72 @@ DependencyScanningTool::getFullDependencies(
       return Tree.takeError();
   }
 
-  return Consumer.getFullDependencies(CommandLine, CASFileSystemRootID);
+  return Consumer.takeFullDependencies(CASFileSystemRootID);
 }
 
-FullDependenciesResult FullDependencyConsumer::getFullDependencies(
+llvm::Expected<FullDependenciesResult>
+DependencyScanningTool::getFullDependenciesLegacyDriverCommand(
+    const std::vector<std::string> &CommandLine, StringRef CWD,
+    const llvm::StringSet<> &AlreadySeen,
+    LookupModuleOutputCallback LookupModuleOutput,
+    llvm::Optional<StringRef> ModuleName) {
+  FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput,
+                                  Worker.shouldEagerLoadModules());
+
+  llvm::cas::CachingOnDiskFileSystem *FS =
+      Worker.useCAS() ? &Worker.getCASFS() : nullptr;
+  if (FS) {
+    FS->trackNewAccesses();
+    FS->setCurrentWorkingDirectory(CWD);
+  }
+
+  llvm::Error Result =
+      Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
+  if (Result)
+    return std::move(Result);
+
+  Optional<cas::CASID> CASFileSystemRootID;
+  if (FS) {
+    if (auto Tree = FS->createTreeFromNewAccesses())
+      CASFileSystemRootID = Tree->getID();
+    else
+      return Tree.takeError();
+  }
+
+  return Consumer.getFullDependenciesLegacyDriverCommand(CommandLine, CASFileSystemRootID);
+}
+
+FullDependenciesResult FullDependencyConsumer::takeFullDependencies(Optional<cas::CASID> CASFileSystemRootID) {
+  FullDependenciesResult FDR;
+  FullDependencies &FD = FDR.FullDeps;
+
+  FD.ID.ContextHash = std::move(ContextHash);
+  FD.FileDeps = std::move(Dependencies);
+  FD.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
+  FD.Commands = std::move(Commands);
+  FD.CASFileSystemRootID = CASFileSystemRootID;
+
+  for (auto &&M : ClangModuleDeps) {
+    auto &MD = M.second;
+    if (MD.ImportedByMainFile)
+      FD.ClangModuleDeps.push_back(MD.ID);
+    // TODO: Avoid handleModuleDependency even being called for modules
+    //   we've already seen.
+    if (AlreadySeen.count(M.first))
+      continue;
+    FDR.DiscoveredModules.push_back(std::move(MD));
+  }
+
+  return FDR;
+}
+
+FullDependenciesResult
+FullDependencyConsumer::getFullDependenciesLegacyDriverCommand(
     const std::vector<std::string> &OriginalCommandLine,
     Optional<cas::CASID> CASFileSystemRootID) const {
   FullDependencies FD;
 
-  FD.CommandLine = makeTUCommandLineWithoutPaths(
+  FD.DriverCommandLine = makeTUCommandLineWithoutPaths(
       ArrayRef<std::string>(OriginalCommandLine).slice(1));
 
   FD.ID.ContextHash = std::move(ContextHash);
@@ -539,7 +599,7 @@ FullDependenciesResult FullDependencyConsumer::getFullDependencies(
   FD.FileDeps.assign(Dependencies.begin(), Dependencies.end());
 
   for (const PrebuiltModuleDep &PMD : PrebuiltModuleDeps)
-    FD.CommandLine.push_back("-fmodule-file=" + PMD.PCMFile);
+    FD.DriverCommandLine.push_back("-fmodule-file=" + PMD.PCMFile);
 
   for (auto &&M : ClangModuleDeps) {
     auto &MD = M.second;
@@ -547,11 +607,12 @@ FullDependenciesResult FullDependencyConsumer::getFullDependencies(
       FD.ClangModuleDeps.push_back(MD.ID);
       auto PCMPath = LookupModuleOutput(MD.ID, ModuleOutputKind::ModuleFile);
       if (EagerLoadModules) {
-        FD.CommandLine.push_back("-fmodule-file=" + PCMPath);
+        FD.DriverCommandLine.push_back("-fmodule-file=" + PCMPath);
       } else {
-        FD.CommandLine.push_back("-fmodule-map-file=" + MD.ClangModuleMapFile);
-        FD.CommandLine.push_back("-fmodule-file=" + MD.ID.ModuleName + "=" +
-                                 PCMPath);
+        FD.DriverCommandLine.push_back("-fmodule-map-file=" +
+                                       MD.ClangModuleMapFile);
+        FD.DriverCommandLine.push_back("-fmodule-file=" + MD.ID.ModuleName +
+                                       "=" + PCMPath);
       }
     }
   }
