@@ -1319,14 +1319,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  expxf_test
+  explogxf_test
   NEED_MPFR
   SUITE
     libc_math_unittests
+  HDRS
+    in_float_range_test_helper.h
   SRCS
-    expxf_test.cpp
+    explogxf_test.cpp
   DEPENDS
-    libc.src.math.generic.common_constants
+    libc.src.math.generic.explogxf
     libc.src.__support.FPUtil.fputil
 )
 
