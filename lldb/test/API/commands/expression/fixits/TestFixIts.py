@@ -45,7 +45,7 @@ class ExprCommandWithFixits(TestBase):
 
         # Try with one error in a top-level expression.
         # The Fix-It changes "ptr.m" to "ptr->m".
-        expr = "struct X { int m; }; X x; X *ptr = &x; int m = ptr.m;"
+        expr = "struct MyTy { int m; }; MyTy x; MyTy *ptr = &x; int m = ptr.m;"
         value = frame.EvaluateExpression(expr, top_level_options)
         # A successfully parsed top-level expression will yield an error
         # that there is 'no value'. If a parsing error would have happened we
