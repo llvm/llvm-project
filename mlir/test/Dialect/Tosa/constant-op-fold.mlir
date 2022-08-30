@@ -427,3 +427,58 @@ func.func @slice_singleton() -> tensor<1x1xi32> {
   // CHECK: return %[[SLICE]]
   return %slice : tensor<1x1xi32>
 }
+
+// -----
+
+// CHECK: func.func @cast_float_to_float
+func.func @cast_float_to_float() -> tensor<f16> {
+  %splat = "tosa.const"() {value = dense<42.0> : tensor<f32>} : () -> tensor<f32>
+  // CHECK: %[[SPLAT:.+]] = "tosa.const"() {value = dense<4.200000e+01> : tensor<f16>} : () -> tensor<f16>
+  %cast = "tosa.cast"(%splat) : (tensor<f32>) -> tensor<f16>
+  // CHECK: return %[[SPLAT]]
+  return %cast : tensor<f16>
+}
+
+// -----
+
+// CHECK: func.func @cast_int_to_float
+func.func @cast_int_to_float() -> tensor<f16> {
+  %splat = "tosa.const"() {value = dense<4> : tensor<i32>} : () -> tensor<i32>
+  // CHECK: %[[SPLAT:.+]] = "tosa.const"() {value = dense<4.000000e+00> : tensor<f16>} : () -> tensor<f16>
+  %cast = "tosa.cast"(%splat) : (tensor<i32>) -> tensor<f16>
+  // CHECK: return %[[SPLAT]]
+  return %cast : tensor<f16>
+}
+
+// -----
+
+// CHECK: func.func @cast_float_to_int
+func.func @cast_float_to_int() -> tensor<i16> {
+  %splat = "tosa.const"() {value = dense<-4.0> : tensor<f32>} : () -> tensor<f32>
+  // CHECK: %[[SPLAT:.+]] = "tosa.const"() {value = dense<-4> : tensor<i16>} : () -> tensor<i16>
+  %cast = "tosa.cast"(%splat) : (tensor<f32>) -> tensor<i16>
+  // CHECK: return %[[SPLAT]]
+  return %cast : tensor<i16>
+}
+
+// -----
+
+// CHECK: func.func @cast_int_to_int_trunc
+func.func @cast_int_to_int_trunc() -> tensor<i16> {
+  %splat = "tosa.const"() {value = dense<-1> : tensor<i32>} : () -> tensor<i32>
+  // CHECK: %[[SPLAT:.+]] = "tosa.const"() {value = dense<-1> : tensor<i16>} : () -> tensor<i16>
+  %cast = "tosa.cast"(%splat) : (tensor<i32>) -> tensor<i16>
+  // CHECK: return %[[SPLAT]]
+  return %cast : tensor<i16>
+}
+
+// -----
+
+// CHECK: func.func @cast_int_to_int_sign
+func.func @cast_int_to_int_sign() -> tensor<i32> {
+  %splat = "tosa.const"() {value = dense<-1> : tensor<i16>} : () -> tensor<i16>
+  // CHECK: %[[SPLAT:.+]] = "tosa.const"() {value = dense<-1> : tensor<i32>} : () -> tensor<i32>
+  %cast = "tosa.cast"(%splat) : (tensor<i16>) -> tensor<i32>
+  // CHECK: return %[[SPLAT]]
+  return %cast : tensor<i32>
+}

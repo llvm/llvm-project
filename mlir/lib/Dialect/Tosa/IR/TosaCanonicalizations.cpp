@@ -23,6 +23,7 @@
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -687,6 +688,63 @@ OpFoldResult GreaterOp::fold(ArrayRef<Attribute> operands) {
 OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
   if (getInput().getType() == getType())
     return getInput();
+
+  auto operand = operands[0].dyn_cast_or_null<ElementsAttr>();
+  if (!operand)
+    return {};
+
+  auto inTy = getInput().getType().cast<ShapedType>();
+  auto outTy = getType().cast<ShapedType>();
+  auto inETy = inTy.getElementType();
+  auto outETy = outTy.getElementType();
+
+  if (operand.isSplat()) {
+    if (inETy.isa<FloatType>() && outETy.isa<FloatType>()) {
+      bool overflow;
+      auto splatVal = operand.getSplatValue<APFloat>();
+      auto &semantics = outETy.cast<FloatType>().getFloatSemantics();
+      splatVal.convert(semantics, llvm::RoundingMode::NearestTiesToEven,
+                       &overflow);
+      return SplatElementsAttr::get(outTy, splatVal);
+    }
+
+    if (inETy.isa<IntegerType>() && outETy.isa<FloatType>()) {
+      auto unsign = inETy.cast<IntegerType>().isUnsignedInteger();
+      APFloat splatVal(outETy.cast<FloatType>().getFloatSemantics());
+      splatVal.convertFromAPInt(operand.getSplatValue<APInt>(), !unsign,
+                                llvm::RoundingMode::NearestTiesToEven);
+      return SplatElementsAttr::get(outTy, splatVal);
+    }
+
+    if (inETy.isa<FloatType>() && outETy.isa<IntegerType>()) {
+      auto unsign = outETy.cast<IntegerType>().isUnsignedInteger();
+      auto intVal =
+          APSInt(outETy.cast<IntegerType>().getIntOrFloatBitWidth(), unsign);
+      auto floatVal = operand.getSplatValue<APFloat>();
+      bool exact;
+      floatVal.convertToInteger(intVal, llvm::RoundingMode::TowardZero, &exact);
+      return SplatElementsAttr::get(outTy, intVal);
+    }
+
+    if (inETy.isa<IntegerType>() && outETy.isa<IntegerType>()) {
+      auto unsignIn = inETy.cast<IntegerType>().isUnsignedInteger();
+      bool trunc =
+          inETy.getIntOrFloatBitWidth() > outETy.getIntOrFloatBitWidth();
+      auto intVal = operand.getSplatValue<APInt>();
+      auto bitwidth = outETy.getIntOrFloatBitWidth();
+
+      if (trunc) {
+        intVal = intVal.trunc(bitwidth);
+      } else if (unsignIn) {
+        intVal = intVal.zext(bitwidth);
+      } else {
+        intVal = intVal.sext(bitwidth);
+      }
+
+      return SplatElementsAttr::get(outTy, intVal);
+    }
+  }
+
   return {};
 }
 
