@@ -742,3 +742,25 @@ func.func @scf_for_yield_alias_of_non_equivalent(%sz: index) -> tensor<?xf32> {
   }
   return %r : tensor<?xf32>
 }
+
+// -----
+
+// We just check that this example bufferizes to valid IR.
+
+// CHECK-LABEL: func @scf_for_buffer_type_mismatch
+func.func @scf_for_buffer_type_mismatch(%sz: index, %sz2: index) -> f32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = bufferization.alloc_tensor(%sz) : tensor<?xf32>
+  %e2 = tensor.extract_slice %0[1][%sz2][1] : tensor<?xf32> to tensor<?xf32>
+  // init_arg and iter_arg have different buffer types. This must be resolved
+  // with casts.
+  %r = scf.for %iv = %c0 to %c10 step %c1 iter_args(%t = %e2) -> tensor<?xf32> {
+    %s = "test.dummy"() : () -> (index)
+    %e = tensor.extract_slice %t[1][%s][1] : tensor<?xf32> to tensor<?xf32>
+    scf.yield %e : tensor<?xf32>
+  }
+  %x = tensor.extract %r[%c1] : tensor<?xf32>
+  return %x : f32
+}

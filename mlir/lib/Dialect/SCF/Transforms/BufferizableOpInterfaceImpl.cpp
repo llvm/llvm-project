@@ -472,15 +472,76 @@ struct ForOpInterface
   }
 
   FailureOr<BaseMemRefType>
-  getBufferType(Operation *op, Value value,
-                const BufferizationOptions &options) const {
+  getBufferType(Operation *op, Value value, const BufferizationOptions &options,
+                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
     auto forOp = cast<scf::ForOp>(op);
-    // TODO: Only block arguments supported at the moment.
-    if (value.isa<OpResult>())
+    assert(getOwnerOfValue(value) == op && "invalid value");
+    assert(value.getType().isa<TensorType>() && "expected tensor type");
+
+    // Get result/argument number.
+    unsigned resultNum;
+    if (auto bbArg = value.dyn_cast<BlockArgument>()) {
+      resultNum =
+          forOp.getResultForOpOperand(forOp.getOpOperandForRegionIterArg(bbArg))
+              .getResultNumber();
+    } else {
+      resultNum = value.cast<OpResult>().getResultNumber();
+    }
+
+    // Determine the buffer type of the init_arg.
+    Value initArg = forOp.getInitArgs()[resultNum];
+    auto initArgBufferType =
+        bufferization::getBufferType(initArg, options, fixedTypes);
+    if (failed(initArgBufferType))
       return failure();
-    auto bbArg = value.cast<BlockArgument>();
-    return bufferization::getBufferType(
-        forOp.getOpOperandForRegionIterArg(bbArg).get(), options);
+
+    // Fix the iter_arg type, so that recursive lookups return the buffer type
+    // of the init_arg. This is to avoid infinite loops when calculating the
+    // buffer type of the yielded value.
+    //
+    // Note: For more precise layout map computation, a fixpoint iteration could
+    // be done (i.e., re-computing the yielded buffer type until the bufferized
+    // iter_arg type no longer changes). This current implementation immediately
+    // switches to a fully dynamic layout map when a mismatch between bufferized
+    // init_arg type and bufferized yield value type is detected.
+    DenseMap<Value, BaseMemRefType> newFixedTypes(fixedTypes);
+    newFixedTypes[forOp.getRegionIterArgs()[resultNum]] = *initArgBufferType;
+
+    // Compute the buffer type of the yielded value.
+    auto yieldOp =
+        cast<scf::YieldOp>(forOp.getLoopBody().front().getTerminator());
+    Value yieldedValue = yieldOp.getOperand(resultNum);
+    BaseMemRefType yieldedValueBufferType;
+    if (yieldedValue.getType().isa<BaseMemRefType>()) {
+      // scf.yield was already bufferized.
+      yieldedValueBufferType = yieldedValue.getType().cast<BaseMemRefType>();
+    } else {
+      auto maybeBufferType =
+          bufferization::getBufferType(yieldedValue, options, newFixedTypes);
+      if (failed(maybeBufferType))
+        return failure();
+      yieldedValueBufferType = *maybeBufferType;
+    }
+
+    // If yielded type and init_arg type are the same, use that type directly.
+    if (*initArgBufferType == yieldedValueBufferType)
+      return yieldedValueBufferType;
+
+    // If there is a mismatch between the yielded buffer type and the iter_arg
+    // buffer type, the buffer type must be promoted to a fully dynamic layout
+    // map.
+    auto yieldedRanked = yieldedValueBufferType.cast<MemRefType>();
+#ifndef NDEBUG
+    auto iterRanked = initArgBufferType->cast<MemRefType>();
+    assert(llvm::equal(yieldedRanked.getShape(), iterRanked.getShape()) &&
+           "expected same shape");
+    assert(yieldedRanked.getMemorySpaceAsInt() ==
+               iterRanked.getMemorySpaceAsInt() &&
+           "expected same memory space");
+#endif // NDEBUG
+    return getMemRefTypeWithFullyDynamicLayout(
+        forOp.getRegionIterArgs()[resultNum].getType().cast<RankedTensorType>(),
+        yieldedRanked.getMemorySpaceAsInt());
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -499,13 +560,22 @@ struct ForOpInterface
       return failure();
     SmallVector<Value> initArgs = *maybeInitArgs;
 
+    // Cast init_args if necessary.
+    SmallVector<Value> castedInitArgs;
+    for (const auto &it : llvm::enumerate(initArgs)) {
+      Value initArg = it.value();
+      auto targetType =
+          bufferization::getBufferType(forOp->getResult(it.index()), options);
+      if (failed(targetType))
+        return failure();
+      castedInitArgs.push_back(castBuffer(rewriter, initArg, *targetType));
+    }
+
     // Construct a new scf.for op with memref instead of tensor values.
     auto newForOp = rewriter.create<scf::ForOp>(
         forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
-        forOp.getStep(), initArgs);
+        forOp.getStep(), castedInitArgs);
     newForOp->setAttrs(forOp->getAttrs());
-    ValueRange initArgsRange(initArgs);
-    TypeRange initArgsTypes(initArgsRange);
     Block *loopBody = &newForOp.getLoopBody().front();
 
     // Set up new iter_args. The loop body uses tensors, so wrap the (memref)
@@ -904,10 +974,8 @@ struct YieldOpInterface
           return failure();
         Value buffer = *maybeBuffer;
         if (auto forOp = dyn_cast<scf::ForOp>(yieldOp->getParentOp())) {
-          FailureOr<BaseMemRefType> resultType =
-              cast<BufferizableOpInterface>(forOp.getOperation())
-                  .getBufferType(forOp.getRegionIterArgs()[it.index()],
-                                 options);
+          FailureOr<BaseMemRefType> resultType = bufferization::getBufferType(
+              forOp.getRegionIterArgs()[it.index()], options);
           if (failed(resultType))
             return failure();
           buffer = castBuffer(rewriter, buffer, *resultType);

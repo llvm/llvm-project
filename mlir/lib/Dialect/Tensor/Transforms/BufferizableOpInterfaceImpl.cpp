@@ -293,7 +293,7 @@ struct ExtractSliceOpInterface
 
     // Take a subview of the source buffer.
     auto resultMemrefType =
-        getBufferType(op, extractSliceOp.getResult(), options);
+        bufferization::getBufferType(extractSliceOp.getResult(), options);
     if (failed(resultMemrefType))
       return failure();
     Value subView = rewriter.create<memref::SubViewOp>(
@@ -305,12 +305,12 @@ struct ExtractSliceOpInterface
   }
 
   FailureOr<BaseMemRefType>
-  getBufferType(Operation *op, Value value,
-                const BufferizationOptions &options) const {
+  getBufferType(Operation *op, Value value, const BufferizationOptions &options,
+                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
     auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
     assert(value == extractSliceOp.getResult() && "invalid value");
-    auto srcMemrefType =
-        bufferization::getBufferType(extractSliceOp.getSource(), options);
+    auto srcMemrefType = bufferization::getBufferType(
+        extractSliceOp.getSource(), options, fixedTypes);
     if (failed(srcMemrefType))
       return failure();
     SmallVector<OpFoldResult> mixedOffsets = extractSliceOp.getMixedOffsets();

@@ -350,12 +350,14 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         /*retType=*/"FailureOr<BaseMemRefType>",
         /*methodName=*/"getBufferType",
         /*args=*/(ins "Value":$value,
-                      "const BufferizationOptions &":$options),
+                      "const BufferizationOptions &":$options,
+                      "const DenseMap<Value, BaseMemRefType>":$fixedTypes),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           assert(getOwnerOfValue(value) == $_op.getOperation() &&
                  "expected that value belongs to this op");
-          return bufferization::detail::defaultGetBufferType(value, options);
+          return bufferization::detail::defaultGetBufferType(
+              value, options, fixedTypes);
         }]
       >,
   ];

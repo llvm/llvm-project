@@ -92,7 +92,8 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
         OpOperand &opOperand, const AnalysisState &state);
 
     FailureOr<BaseMemRefType> getBufferType(
-        Value value, const BufferizationOptions &options);
+        Value value, const BufferizationOptions &options,
+        const DenseMap<Value, BaseMemRefType> &fixedTypes);
 
     RankedTensorType getType() {
       return getResult().getType().cast<RankedTensorType>();
@@ -323,7 +324,8 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     }
 
     FailureOr<BaseMemRefType> getBufferType(
-        Value value, const BufferizationOptions &options) {
+        Value value, const BufferizationOptions &options,
+        const DenseMap<Value, BaseMemRefType> &fixedTypes) {
       return getMemref().getType().cast<BaseMemRefType>();
     }
   }];
