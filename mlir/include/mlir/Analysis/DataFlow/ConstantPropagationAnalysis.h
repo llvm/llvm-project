@@ -46,8 +46,8 @@ public:
   /// Print the constant value.
   void print(raw_ostream &os) const;
 
-  /// The pessimistic value state of the constant value is unknown.
-  static ConstantValue getPessimisticValueState(Value value) { return {}; }
+  /// The state where the constant value is unknown.
+  static ConstantValue getUnknownConstant() { return {}; }
 
   /// The union with another constant value is null if they are different, and
   /// the same if they are the same.
@@ -79,6 +79,8 @@ public:
   void visitOperation(Operation *op,
                       ArrayRef<const Lattice<ConstantValue> *> operands,
                       ArrayRef<Lattice<ConstantValue> *> results) override;
+
+  void setToEntryState(Lattice<ConstantValue> *lattice) override;
 };
 
 } // end namespace dataflow

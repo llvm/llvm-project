@@ -179,7 +179,7 @@ llvm::Expected<std::vector<FoldingRange>> getFoldingRanges(ParsedAST &AST) {
 // statement bodies).
 // Related issue: https://github.com/clangd/clangd/issues/310
 llvm::Expected<std::vector<FoldingRange>>
-getFoldingRanges(const std::string &Code) {
+getFoldingRanges(const std::string &Code, bool LineFoldingOnly) {
   auto OrigStream = pseudo::lex(Code, clang::pseudo::genericLangOpts());
 
   auto DirectiveStructure = pseudo::DirectiveTree::parse(OrigStream);
@@ -192,15 +192,17 @@ getFoldingRanges(const std::string &Code) {
   pseudo::pairBrackets(ParseableStream);
 
   std::vector<FoldingRange> Result;
-  auto ToFoldingRange = [](Position Start, Position End,
-                           llvm::StringLiteral Kind) {
+  auto AddFoldingRange = [&](Position Start, Position End,
+                             llvm::StringLiteral Kind) {
+    if (Start.line >= End.line)
+      return;
     FoldingRange FR;
     FR.startLine = Start.line;
     FR.startCharacter = Start.character;
     FR.endLine = End.line;
     FR.endCharacter = End.character;
     FR.kind = Kind.str();
-    return FR;
+    Result.push_back(FR);
   };
   auto OriginalToken = [&](const pseudo::Token &T) {
     return OrigStream.tokens()[T.OriginalIndex];
@@ -211,8 +213,11 @@ getFoldingRanges(const std::string &Code) {
   auto StartPosition = [&](const pseudo::Token &T) {
     return offsetToPosition(Code, StartOffset(T));
   };
+  auto EndOffset = [&](const pseudo::Token &T) {
+    return StartOffset(T) + OriginalToken(T).Length;
+  };
   auto EndPosition = [&](const pseudo::Token &T) {
-    return offsetToPosition(Code, StartOffset(T) + OriginalToken(T).Length);
+    return offsetToPosition(Code, EndOffset(T));
   };
   auto Tokens = ParseableStream.tokens();
   // Brackets.
@@ -223,26 +228,43 @@ getFoldingRanges(const std::string &Code) {
       if (Tok.Line < Paired->Line) {
         Position Start = offsetToPosition(Code, 1 + StartOffset(Tok));
         Position End = StartPosition(*Paired);
-        Result.push_back(ToFoldingRange(Start, End, FoldingRange::REGION_KIND));
+        if (LineFoldingOnly)
+          End.line--;
+        AddFoldingRange(Start, End, FoldingRange::REGION_KIND);
       }
     }
   }
+  auto IsBlockComment = [&](const pseudo::Token &T) {
+    assert(T.Kind == tok::comment);
+    return OriginalToken(T).Length >= 2 &&
+           Code.substr(StartOffset(T), 2) == "/*";
+  };
   // Multi-line comments.
-  for (const auto *T = Tokens.begin(); T != Tokens.end();) {
+  for (auto *T = Tokens.begin(); T != Tokens.end();) {
     if (T->Kind != tok::comment) {
       T++;
       continue;
     }
-    Position Start = StartPosition(*T);
-    Position LastCommentEnd = EndPosition(*T);
+    pseudo::Token *FirstComment = T;
+    // Show starting sentinals (// and /*) of the comment.
+    Position Start = offsetToPosition(Code, 2 + StartOffset(*FirstComment));
+    pseudo::Token *LastComment = T;
+    Position End = EndPosition(*T);
     while (T != Tokens.end() && T->Kind == tok::comment &&
-           StartPosition(*T).line <= LastCommentEnd.line + 1) {
-      LastCommentEnd = EndPosition(*T);
+           StartPosition(*T).line <= End.line + 1) {
+      End = EndPosition(*T);
+      LastComment = T;
       T++;
     }
-    if (Start.line < LastCommentEnd.line)
-      Result.push_back(
-          ToFoldingRange(Start, LastCommentEnd, FoldingRange::COMMENT_KIND));
+    if (IsBlockComment(*FirstComment)) {
+      if (LineFoldingOnly)
+        // Show last line of a block comment.
+        End.line--;
+      if (IsBlockComment(*LastComment))
+        // Show ending sentinal "*/" of the block comment.
+        End.character -= 2;
+    }
+    AddFoldingRange(Start, End, FoldingRange::COMMENT_KIND);
   }
   return Result;
 }

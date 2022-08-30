@@ -177,6 +177,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       ClangTidyProvider(Opts.ClangTidyProvider),
       UseDirtyHeaders(Opts.UseDirtyHeaders),
+      LineFoldingOnly(Opts.LineFoldingOnly),
       PreambleParseForwardingFunctions(Opts.PreambleParseForwardingFunctions),
       WorkspaceRoot(Opts.WorkspaceRoot),
       Transient(Opts.ImplicitCancellation ? TUScheduler::InvalidateOnUpdate
@@ -855,8 +856,9 @@ void ClangdServer::foldingRanges(llvm::StringRef File,
     return CB(llvm::make_error<LSPError>(
         "trying to compute folding ranges for non-added document",
         ErrorCode::InvalidParams));
-  auto Action = [CB = std::move(CB), Code = std::move(*Code)]() mutable {
-    CB(clangd::getFoldingRanges(Code));
+  auto Action = [LineFoldingOnly = LineFoldingOnly, CB = std::move(CB),
+                 Code = std::move(*Code)]() mutable {
+    CB(clangd::getFoldingRanges(Code, LineFoldingOnly));
   };
   // We want to make sure folding ranges are always available for all the open
   // files, hence prefer runQuick to not wait for operations on other files.

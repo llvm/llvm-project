@@ -20,14 +20,8 @@ namespace {
 /// This lattice represents a single underlying value for an SSA value.
 class UnderlyingValue {
 public:
-  /// The pessimistic underlying value of a value is itself.
-  static UnderlyingValue getPessimisticValueState(Value value) {
-    return {value};
-  }
-
   /// Create an underlying value state with a known underlying value.
-  UnderlyingValue(Value underlyingValue = {})
-      : underlyingValue(underlyingValue) {}
+  UnderlyingValue(Value underlyingValue) : underlyingValue(underlyingValue) {}
 
   /// Returns the underlying value.
   Value getUnderlyingValue() const { return underlyingValue; }
@@ -36,7 +30,7 @@ public:
   /// go to the pessimistic value.
   static UnderlyingValue join(const UnderlyingValue &lhs,
                               const UnderlyingValue &rhs) {
-    return lhs.underlyingValue == rhs.underlyingValue ? lhs : UnderlyingValue();
+    return lhs.underlyingValue == rhs.underlyingValue ? lhs : Value();
   }
 
   /// Compare underlying values.
@@ -61,9 +55,8 @@ public:
   /// The lattice is always initialized.
   bool isUninitialized() const override { return false; }
 
-  /// Mark the lattice as having reached its pessimistic fixpoint. That is, the
-  /// last modifications of all memory resources are unknown.
-  ChangeResult reset() override {
+  /// Clear all modifications.
+  ChangeResult reset() {
     if (lastMods.empty())
       return ChangeResult::NoChange;
     lastMods.clear();
@@ -131,6 +124,12 @@ public:
   /// resource, then its reaching definition is set to the written value.
   void visitOperation(Operation *op, const LastModification &before,
                       LastModification *after) override;
+
+  /// At an entry point, the last modifications of all memory resources are
+  /// unknown.
+  void setToEntryState(LastModification *lattice) override {
+    propagateIfChanged(lattice, lattice->reset());
+  }
 };
 
 /// Define the lattice class explicitly to provide a type ID.
@@ -152,7 +151,13 @@ public:
   void visitOperation(Operation *op,
                       ArrayRef<const UnderlyingValueLattice *> operands,
                       ArrayRef<UnderlyingValueLattice *> results) override {
-    markAllPessimisticFixpoint(results);
+    setAllToEntryStates(results);
+  }
+
+  /// At an entry point, the underlying value of a value is itself.
+  void setToEntryState(UnderlyingValueLattice *lattice) override {
+    propagateIfChanged(lattice,
+                       lattice->join(UnderlyingValue{lattice->getPoint()}));
   }
 };
 } // end anonymous namespace
@@ -181,7 +186,7 @@ void LastModifiedAnalysis::visitOperation(Operation *op,
   // If we can't reason about the memory effects, then conservatively assume we
   // can't deduce anything about the last modifications.
   if (!memory)
-    return reset(after);
+    return setToEntryState(after);
 
   SmallVector<MemoryEffects::EffectInstance> effects;
   memory.getEffects(effects);
@@ -193,7 +198,7 @@ void LastModifiedAnalysis::visitOperation(Operation *op,
     // If we see an effect on anything other than a value, assume we can't
     // deduce anything about the last modifications.
     if (!value)
-      return reset(after);
+      return setToEntryState(after);
 
     value = getMostUnderlyingValue(value, [&](Value value) {
       return getOrCreateFor<UnderlyingValueLattice>(op, value);

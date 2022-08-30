@@ -457,15 +457,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE};
 
     static const unsigned FloatingPointVPOps[] = {
-        ISD::VP_FADD,        ISD::VP_FSUB,
-        ISD::VP_FMUL,        ISD::VP_FDIV,
-        ISD::VP_FNEG,        ISD::VP_FMA,
-        ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD,
-        ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX,
-        ISD::VP_MERGE,       ISD::VP_SELECT,
-        ISD::VP_SINT_TO_FP,  ISD::VP_UINT_TO_FP,
-        ISD::VP_SETCC,       ISD::VP_FP_ROUND,
-        ISD::VP_FP_EXTEND};
+        ISD::VP_FADD,        ISD::VP_FSUB,        ISD::VP_FMUL,
+        ISD::VP_FDIV,        ISD::VP_FNEG,        ISD::VP_FABS,
+        ISD::VP_FMA,         ISD::VP_REDUCE_FADD, ISD::VP_REDUCE_SEQ_FADD,
+        ISD::VP_REDUCE_FMIN, ISD::VP_REDUCE_FMAX, ISD::VP_MERGE,
+        ISD::VP_SELECT,      ISD::VP_SINT_TO_FP,  ISD::VP_UINT_TO_FP,
+        ISD::VP_SETCC,       ISD::VP_FP_ROUND,    ISD::VP_FP_EXTEND};
 
     static const unsigned IntegerVecReduceOps[] = {
         ISD::VECREDUCE_ADD,  ISD::VECREDUCE_AND,  ISD::VECREDUCE_OR,
@@ -3795,6 +3792,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerVPOp(Op, DAG, RISCVISD::FDIV_VL, /*HasMergeOp*/ true);
   case ISD::VP_FNEG:
     return lowerVPOp(Op, DAG, RISCVISD::FNEG_VL);
+  case ISD::VP_FABS:
+    return lowerVPOp(Op, DAG, RISCVISD::FABS_VL);
   case ISD::VP_FMA:
     return lowerVPOp(Op, DAG, RISCVISD::VFMADD_VL);
   case ISD::VP_SIGN_EXTEND:
@@ -9140,6 +9139,68 @@ static SDValue performSRACombine(SDNode *N, SelectionDAG &DAG,
       DAG.getConstant(32 - ShAmt, DL, MVT::i64));
 }
 
+// Invert (and/or (set cc X, Y), (xor Z, 1)) to (or/and (set !cc X, Y)), Z) if
+// the result is used as the conditon of a br_cc or select_cc we can invert,
+// inverting the setcc is free, and Z is 0/1. Caller will invert the
+// br_cc/select_cc.
+static SDValue tryDemorganOfBooleanCondition(SDValue Cond, SelectionDAG &DAG) {
+  bool IsAnd = Cond.getOpcode() == ISD::AND;
+  if (!IsAnd && Cond.getOpcode() != ISD::OR)
+    return SDValue();
+
+  if (!Cond.hasOneUse())
+    return SDValue();
+
+  SDValue Setcc = Cond.getOperand(0);
+  SDValue Xor = Cond.getOperand(1);
+  // Canonicalize setcc to LHS.
+  if (Setcc.getOpcode() != ISD::SETCC)
+    std::swap(Setcc, Xor);
+  // LHS should be a setcc and RHS should be an xor.
+  if (Setcc.getOpcode() != ISD::SETCC || !Setcc.hasOneUse() ||
+      Xor.getOpcode() != ISD::XOR || !Xor.hasOneUse())
+    return SDValue();
+
+  // If the condition is an And, SimplifyDemandedBits may have changed
+  // (xor Z, 1) to (not Z).
+  SDValue Xor1 = Xor.getOperand(1);
+  if (!isOneConstant(Xor1) && !(IsAnd && isAllOnesConstant(Xor1)))
+    return SDValue();
+
+  EVT VT = Cond.getValueType();
+  SDValue Xor0 = Xor.getOperand(0);
+
+  // The LHS of the xor needs to be 0/1.
+  APInt Mask = APInt::getBitsSetFrom(VT.getSizeInBits(), 1);
+  if (!DAG.MaskedValueIsZero(Xor0, Mask))
+    return SDValue();
+
+  // We can only invert integer setccs.
+  EVT SetCCOpVT = Setcc.getOperand(0).getValueType();
+  if (!SetCCOpVT.isScalarInteger())
+    return SDValue();
+
+  ISD::CondCode CCVal = cast<CondCodeSDNode>(Setcc.getOperand(2))->get();
+  if (ISD::isIntEqualitySetCC(CCVal)) {
+    CCVal = ISD::getSetCCInverse(CCVal, SetCCOpVT);
+    Setcc = DAG.getSetCC(SDLoc(Setcc), VT, Setcc.getOperand(0),
+                         Setcc.getOperand(1), CCVal);
+  } else if (CCVal == ISD::SETLT && isNullConstant(Setcc.getOperand(0))) {
+    // Invert (setlt 0, X) by converting to (setlt X, 1).
+    Setcc = DAG.getSetCC(SDLoc(Setcc), VT, Setcc.getOperand(1),
+                         DAG.getConstant(1, SDLoc(Setcc), VT), CCVal);
+  } else if (CCVal == ISD::SETLT && isOneConstant(Setcc.getOperand(1))) {
+    // (setlt X, 1) by converting to (setlt 0, X).
+    Setcc = DAG.getSetCC(SDLoc(Setcc), VT,
+                         DAG.getConstant(0, SDLoc(Setcc), VT),
+                         Setcc.getOperand(0), CCVal);
+  } else
+    return SDValue();
+
+  unsigned Opc = IsAnd ? ISD::OR : ISD::AND;
+  return DAG.getNode(Opc, SDLoc(Cond), VT, Setcc, Xor.getOperand(0));
+}
+
 // Perform common combines for BR_CC and SELECT_CC condtions.
 static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
                        SelectionDAG &DAG, const RISCVSubtarget &Subtarget) {
@@ -9204,6 +9265,15 @@ static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
     CC = DAG.getCondCode(CCVal);
     RHS = DAG.getConstant(0, DL, LHS.getValueType());
     return true;
+  }
+
+  if (isNullConstant(RHS)) {
+    if (SDValue NewCond = tryDemorganOfBooleanCondition(LHS, DAG)) {
+      CCVal = ISD::getSetCCInverse(CCVal, LHS.getValueType());
+      CC = DAG.getCondCode(CCVal);
+      LHS = NewCond;
+      return true;
+    }
   }
 
   return false;

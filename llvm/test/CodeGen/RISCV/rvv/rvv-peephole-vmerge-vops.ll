@@ -159,7 +159,7 @@ define <vscale x 2 x i16> @vpmerge_vpfptosi(<vscale x 2 x i16> %passthru, <vscal
   ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY $v9
   ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
   ; MIR-NEXT:   $v0 = COPY [[COPY1]]
-  ; MIR-NEXT:   early-clobber %4:vrnov0 = PseudoVFNCVT_RTZ_X_F_W_MF2_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 4 /* e16 */, 0
+  ; MIR-NEXT:   early-clobber %4:vrnov0 = nofpexcept PseudoVFNCVT_RTZ_X_F_W_MF2_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 4 /* e16 */, 0
   ; MIR-NEXT:   $v8 = COPY %4
   ; MIR-NEXT:   PseudoRET implicit $v8
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
@@ -186,7 +186,7 @@ define <vscale x 2 x float> @vpmerge_vpsitofp(<vscale x 2 x float> %passthru, <v
   ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vrm2 = COPY $v10m2
   ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
   ; MIR-NEXT:   $v0 = COPY [[COPY1]]
-  ; MIR-NEXT:   early-clobber %4:vrnov0 = PseudoVFNCVT_F_X_W_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0
+  ; MIR-NEXT:   early-clobber %4:vrnov0 = nofpexcept PseudoVFNCVT_F_X_W_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0, implicit $frm
   ; MIR-NEXT:   $v8 = COPY %4
   ; MIR-NEXT:   PseudoRET implicit $v8
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
@@ -267,7 +267,7 @@ define <vscale x 2 x double> @vpmerge_vpfpext(<vscale x 2 x double> %passthru, <
   ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY $v10
   ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrm2nov0 = COPY $v8m2
   ; MIR-NEXT:   $v0 = COPY [[COPY1]]
-  ; MIR-NEXT:   early-clobber %4:vrm2nov0 = PseudoVFWCVT_F_F_V_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0
+  ; MIR-NEXT:   early-clobber %4:vrm2nov0 = nofpexcept PseudoVFWCVT_F_F_V_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0
   ; MIR-NEXT:   $v8m2 = COPY %4
   ; MIR-NEXT:   PseudoRET implicit $v8m2
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
@@ -294,7 +294,7 @@ define <vscale x 2 x float> @vpmerge_vpfptrunc(<vscale x 2 x float> %passthru, <
   ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vrm2 = COPY $v10m2
   ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
   ; MIR-NEXT:   $v0 = COPY [[COPY1]]
-  ; MIR-NEXT:   early-clobber %4:vrnov0 = PseudoVFNCVT_F_F_W_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0
+  ; MIR-NEXT:   early-clobber %4:vrnov0 = nofpexcept PseudoVFNCVT_F_F_W_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0, implicit $frm
   ; MIR-NEXT:   $v8 = COPY %4
   ; MIR-NEXT:   PseudoRET implicit $v8
   %splat = insertelement <vscale x 2 x i1> poison, i1 -1, i32 0
@@ -671,7 +671,7 @@ define <vscale x 2 x i16> @vpmerge_fptosi(<vscale x 2 x i16> %passthru, <vscale 
   ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY $v9
   ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
   ; MIR-NEXT:   $v0 = COPY [[COPY1]]
-  ; MIR-NEXT:   early-clobber %4:vrnov0 = PseudoVFNCVT_RTZ_X_F_W_MF2_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 4 /* e16 */, 0
+  ; MIR-NEXT:   early-clobber %4:vrnov0 = nofpexcept PseudoVFNCVT_RTZ_X_F_W_MF2_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 4 /* e16 */, 0
   ; MIR-NEXT:   $v8 = COPY %4
   ; MIR-NEXT:   PseudoRET implicit $v8
   %a = fptosi <vscale x 2 x float> %x to <vscale x 2 x i16>
@@ -695,7 +695,7 @@ define <vscale x 2 x float> @vpmerge_sitofp(<vscale x 2 x float> %passthru, <vsc
   ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vrm2 = COPY $v10m2
   ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
   ; MIR-NEXT:   $v0 = COPY [[COPY1]]
-  ; MIR-NEXT:   early-clobber %4:vrnov0 = PseudoVFNCVT_F_X_W_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0
+  ; MIR-NEXT:   early-clobber %4:vrnov0 = nofpexcept PseudoVFNCVT_F_X_W_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0, implicit $frm
   ; MIR-NEXT:   $v8 = COPY %4
   ; MIR-NEXT:   PseudoRET implicit $v8
   %a = sitofp <vscale x 2 x i64> %x to <vscale x 2 x float>
@@ -719,7 +719,7 @@ define <vscale x 2 x double> @vpmerge_fpext(<vscale x 2 x double> %passthru, <vs
   ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vr = COPY $v10
   ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrm2nov0 = COPY $v8m2
   ; MIR-NEXT:   $v0 = COPY [[COPY1]]
-  ; MIR-NEXT:   early-clobber %4:vrm2nov0 = PseudoVFWCVT_F_F_V_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0
+  ; MIR-NEXT:   early-clobber %4:vrm2nov0 = nofpexcept PseudoVFWCVT_F_F_V_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0
   ; MIR-NEXT:   $v8m2 = COPY %4
   ; MIR-NEXT:   PseudoRET implicit $v8m2
   %a = fpext <vscale x 2 x float> %x to <vscale x 2 x double>
@@ -743,7 +743,7 @@ define <vscale x 2 x float> @vpmerge_fptrunc(<vscale x 2 x float> %passthru, <vs
   ; MIR-NEXT:   [[COPY2:%[0-9]+]]:vrm2 = COPY $v10m2
   ; MIR-NEXT:   [[COPY3:%[0-9]+]]:vrnov0 = COPY $v8
   ; MIR-NEXT:   $v0 = COPY [[COPY1]]
-  ; MIR-NEXT:   early-clobber %4:vrnov0 = PseudoVFNCVT_F_F_W_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0
+  ; MIR-NEXT:   early-clobber %4:vrnov0 = nofpexcept PseudoVFNCVT_F_F_W_M1_MASK [[COPY3]], [[COPY2]], $v0, [[COPY]], 5 /* e32 */, 0, implicit $frm
   ; MIR-NEXT:   $v8 = COPY %4
   ; MIR-NEXT:   PseudoRET implicit $v8
   %a = fptrunc <vscale x 2 x double> %x to <vscale x 2 x float>
