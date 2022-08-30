@@ -568,7 +568,8 @@ FailureOr<Value> bufferization::getBuffer(RewriterBase &rewriter, Value value,
 }
 
 FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
-    Value value, const BufferizationOptions &options) {
+    Value value, const BufferizationOptions &options,
+    const DenseMap<Value, BaseMemRefType> &fixedTypes) {
   assert(value.getType().isa<TensorType>() && "expected tensor type");
 
   // No further analysis is possible for a block argument.
@@ -587,7 +588,7 @@ FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
     // If the OpResult has an equivalent OpOperand, both OpResult and
     // OpOperand bufferize to the exact same buffer type.
     Value equivalentOperand = aliasingOperands.front()->get();
-    return getBufferType(equivalentOperand, options);
+    return getBufferType(equivalentOperand, options, fixedTypes);
   }
 
   // If we do not know the memory space and there is no default memory space,
@@ -602,11 +603,26 @@ FailureOr<BaseMemRefType> bufferization::detail::defaultGetBufferType(
 /// Return the buffer type for a given Value (tensor) after bufferization.
 FailureOr<BaseMemRefType>
 bufferization::getBufferType(Value value, const BufferizationOptions &options) {
+  DenseMap<Value, BaseMemRefType> fixedTypes;
+  return getBufferType(value, options, fixedTypes);
+}
+
+/// Return the buffer type for a given Value (tensor) after bufferization.
+FailureOr<BaseMemRefType> bufferization::getBufferType(
+    Value value, const BufferizationOptions &options,
+    const DenseMap<Value, BaseMemRefType> &fixedTypes) {
   assert(value.getType().isa<TensorType>() && "unexpected non-tensor type");
+
+  // If the `value` is in `fixedTypes`, return the mapped type.
+  const auto &it = fixedTypes.find(value);
+  if (it != fixedTypes.end())
+    return it->second;
+
+  // Try querying BufferizableOpInterface.
   Operation *op = getOwnerOfValue(value);
   auto bufferizableOp = options.dynCastBufferizableOp(op);
   if (bufferizableOp)
-    return bufferizableOp.getBufferType(value, options);
+    return bufferizableOp.getBufferType(value, options, fixedTypes);
 
   // Op is not bufferizable.
   if (!options.defaultMemorySpace.has_value())

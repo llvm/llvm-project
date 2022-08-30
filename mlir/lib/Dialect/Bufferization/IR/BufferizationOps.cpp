@@ -170,7 +170,7 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
   }
 
   // Create memory allocation.
-  auto allocType = getBufferType(getResult(), options);
+  auto allocType = bufferization::getBufferType(getResult(), options);
   if (failed(allocType))
     return failure();
   SmallVector<Value> dynamicDims = getDynamicSizes();
@@ -233,8 +233,9 @@ AllocTensorOp::getAliasingOpResult(OpOperand &opOperand,
   return {};
 }
 
-FailureOr<BaseMemRefType>
-AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options) {
+FailureOr<BaseMemRefType> AllocTensorOp::getBufferType(
+    Value value, const BufferizationOptions &options,
+    const DenseMap<Value, BaseMemRefType> &fixedTypes) {
   assert(value == getResult() && "invalid value");
 
   // Compute memory space of this allocation.
@@ -242,7 +243,8 @@ AllocTensorOp::getBufferType(Value value, const BufferizationOptions &options) {
   if (getMemorySpace().has_value()) {
     memorySpace = *getMemorySpace();
   } else if (getCopy()) {
-    auto copyBufferType = bufferization::getBufferType(getCopy(), options);
+    auto copyBufferType =
+        bufferization::getBufferType(getCopy(), options, fixedTypes);
     if (failed(copyBufferType))
       return failure();
     memorySpace = copyBufferType->getMemorySpaceAsInt();
