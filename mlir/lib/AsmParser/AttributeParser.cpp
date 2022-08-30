@@ -1177,7 +1177,8 @@ Attribute Parser::parseStridedLayoutAttr() {
 
     if (getToken().is(Token::integer)) {
       Optional<uint64_t> value = getToken().getUInt64IntegerValue();
-      if (!value || *value > std::numeric_limits<int64_t>::max())
+      if (!value ||
+          *value > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()))
         return emitWrongTokenError();
       consumeToken();
       return static_cast<int64_t>(*value);
