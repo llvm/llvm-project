@@ -28,7 +28,7 @@
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
-// CHECK:            "clang-context-hash": "[[HASH_TU:.*]],
+// CHECK-NEXT:       "clang-context-hash": "[[HASH_TU:.*]],
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "[[HASH_MOD]]",
@@ -36,11 +36,13 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
-// CHECK-NOT:          "-fimplicit-modules"
-// CHECK-NOT:          "-fimplicit-module-maps"
+// CHECK:              "-fno-implicit-modules"
+// CHECK:              "-fno-implicit-module-maps"
 // CHECK:            ],
-// CHECK:            "file-deps": [
+// CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/tu.c"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-NEXT:     }
+// CHECK-NEXT:   ]
+// CHECK-NEXT: }

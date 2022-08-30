@@ -95,7 +95,7 @@ module X { header "X.h" }
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
-// CHECK:            "clang-context-hash": "{{.*}}",
+// CHECK-NEXT:       "clang-context-hash": "{{.*}}",
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "[[HASH_X]]",
@@ -104,13 +104,14 @@ module X { header "X.h" }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
 // CHECK:            ],
-// CHECK:            "file-deps": [
+// CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/test.c"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/test.c"
 // CHECK-NEXT:     }
-
-// CHECK:      {
+// CHECK-NEXT:   ]
+// CHECK-NEXT: }
+// CHECK-NEXT: {
 // CHECK-NEXT:   "modules": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "clang-module-deps": [
@@ -148,7 +149,7 @@ module X { header "X.h" }
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
-// CHECK:            "clang-context-hash": "{{.*}}",
+// CHECK-NEXT:       "clang-context-hash": "{{.*}}",
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "{{.*}}",
@@ -157,8 +158,10 @@ module X { header "X.h" }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
 // CHECK:            ],
-// CHECK:            "file-deps": [
+// CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/test.c"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/test.c"
 // CHECK-NEXT:     }
+// CHECK-NEXT:   ]
+// CHECK-NEXT: }

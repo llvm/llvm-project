@@ -182,11 +182,6 @@ llvm::cl::list<std::string> ModuleDepTargets(
     llvm::cl::desc("The names of dependency targets for the dependency file"),
     llvm::cl::cat(DependencyScannerCategory));
 
-llvm::cl::opt<bool> DeprecatedDriverCommand(
-    "deprecated-driver-command", llvm::cl::Optional,
-    llvm::cl::desc("use a single driver command to build the tu (deprecated)"),
-    llvm::cl::cat(DependencyScannerCategory));
-
 enum ResourceDirRecipeKind {
   RDRK_ModifyCompilerPath,
   RDRK_InvokeCompiler,
@@ -261,7 +256,7 @@ class FullDeps {
 public:
   void mergeDeps(StringRef Input, FullDependenciesResult FDR,
                  size_t InputIndex) {
-    FullDependencies &FD = FDR.FullDeps;
+    const FullDependencies &FD = FDR.FullDeps;
 
     InputDeps ID;
     ID.FileName = std::string(Input);
@@ -279,8 +274,7 @@ public:
       Modules.insert(I, {{MD.ID, InputIndex}, std::move(MD)});
     }
 
-    ID.DriverCommandLine = std::move(FD.DriverCommandLine);
-    ID.Commands = std::move(FD.Commands);
+    ID.CommandLine = FD.CommandLine;
     Inputs.push_back(std::move(ID));
   }
 
@@ -317,33 +311,14 @@ public:
 
     Array TUs;
     for (auto &&I : Inputs) {
-      Array Commands;
-      if (I.DriverCommandLine.empty()) {
-        for (const auto &Cmd : I.Commands) {
-          Object O{
-              {"input-file", I.FileName},
-              {"clang-context-hash", I.ContextHash},
-              {"file-deps", I.FileDeps},
-              {"clang-module-deps", toJSONSorted(I.ModuleDeps)},
-              {"executable", Cmd.Executable},
-              {"command-line", Cmd.Arguments},
-          };
-          Commands.push_back(std::move(O));
-        }
-      } else {
-        Object O{
-            {"input-file", I.FileName},
-            {"clang-context-hash", I.ContextHash},
-            {"file-deps", I.FileDeps},
-            {"clang-module-deps", toJSONSorted(I.ModuleDeps)},
-            {"executable", "clang"},
-            {"command-line", I.DriverCommandLine},
-        };
-        Commands.push_back(std::move(O));
-      }
-      TUs.push_back(Object{
-          {"commands", std::move(Commands)},
-      });
+      Object O{
+          {"input-file", I.FileName},
+          {"clang-context-hash", I.ContextHash},
+          {"file-deps", I.FileDeps},
+          {"clang-module-deps", toJSONSorted(I.ModuleDeps)},
+          {"command-line", I.CommandLine},
+      };
+      TUs.push_back(std::move(O));
     }
 
     Object Output{
@@ -378,8 +353,7 @@ private:
     std::string ContextHash;
     std::vector<std::string> FileDeps;
     std::vector<ModuleID> ModuleDeps;
-    std::vector<std::string> DriverCommandLine;
-    std::vector<Command> Commands;
+    std::vector<std::string> CommandLine;
   };
 
   std::mutex Lock;
@@ -584,14 +558,6 @@ int main(int argc, const char **argv) {
               Input->CommandLine, CWD, MaybeModuleName);
           if (handleMakeDependencyToolResult(Filename, MaybeFile, DependencyOS,
                                              Errs))
-            HadErrors = true;
-        } else if (DeprecatedDriverCommand) {
-          auto MaybeFullDeps =
-              WorkerTools[I]->getFullDependenciesLegacyDriverCommand(
-                  Input->CommandLine, CWD, AlreadySeenModules, LookupOutput,
-                  MaybeModuleName);
-          if (handleFullDependencyToolResult(Filename, MaybeFullDeps, FD,
-                                             LocalIndex, DependencyOS, Errs))
             HadErrors = true;
         } else {
           auto MaybeFullDeps = WorkerTools[I]->getFullDependencies(

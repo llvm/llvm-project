@@ -28,19 +28,9 @@ namespace dependencies {
 
 class DependencyScanningWorkerFilesystem;
 
-/// A command-line tool invocation that is part of building a TU.
-///
-/// \see FullDependencies::Commands.
-struct Command {
-  std::string Executable;
-  std::vector<std::string> Arguments;
-};
-
 class DependencyConsumer {
 public:
   virtual ~DependencyConsumer() {}
-
-  virtual void handleBuildCommand(Command Cmd) = 0;
 
   virtual void
   handleDependencyOutputOpts(const DependencyOutputOptions &Opts) = 0;
