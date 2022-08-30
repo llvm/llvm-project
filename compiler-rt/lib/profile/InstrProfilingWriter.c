@@ -276,9 +276,6 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
   /* Create the header. */
   __llvm_profile_header Header;
 
-  if (!NumData && (!DebugInfoCorrelate || !NumCounters))
-    return 0;
-
   /* Determine how much padding is needed before/after the counters and after
    * the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
