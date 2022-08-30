@@ -215,13 +215,20 @@ def Builtin_DenseArray : Builtin_Attr<
     /// ElementsAttr implementation.
     using ContiguousIterableTypesT =
         std::tuple<bool, int8_t, int16_t, int32_t, int64_t, float, double>;
-    const bool *value_begin_impl(OverloadToken<bool>) const;
-    const int8_t *value_begin_impl(OverloadToken<int8_t>) const;
-    const int16_t *value_begin_impl(OverloadToken<int16_t>) const;
-    const int32_t *value_begin_impl(OverloadToken<int32_t>) const;
-    const int64_t *value_begin_impl(OverloadToken<int64_t>) const;
-    const float *value_begin_impl(OverloadToken<float>) const;
-    const double *value_begin_impl(OverloadToken<double>) const;
+    FailureOr<const bool *>
+    try_value_begin_impl(OverloadToken<bool>) const;
+    FailureOr<const int8_t *>
+    try_value_begin_impl(OverloadToken<int8_t>) const;
+    FailureOr<const int16_t *>
+    try_value_begin_impl(OverloadToken<int16_t>) const;
+    FailureOr<const int32_t *>
+    try_value_begin_impl(OverloadToken<int32_t>) const;
+    FailureOr<const int64_t *>
+    try_value_begin_impl(OverloadToken<int64_t>) const;
+    FailureOr<const float *>
+    try_value_begin_impl(OverloadToken<float>) const;
+    FailureOr<const double *>
+    try_value_begin_impl(OverloadToken<double>) const;
   }];
 
   let genVerifyDecl = 1;
@@ -292,10 +299,11 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
       APFloat, std::complex<APFloat>
     >;
 
-    /// Provide a `value_begin_impl` to enable iteration within ElementsAttr.
+    /// Provide a `try_value_begin_impl` to enable iteration within
+    /// ElementsAttr.
     template <typename T>
-    auto value_begin_impl(OverloadToken<T>) const {
-      return value_begin<T>();
+    auto try_value_begin_impl(OverloadToken<T>) const {
+      return ::mlir::success(value_begin<T>());
     }
 
     /// Convert endianess of input ArrayRef for big-endian(BE) machines. All of
@@ -421,10 +429,11 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
     using ContiguousIterableTypesT = std::tuple<StringRef>;
     using NonContiguousIterableTypesT = std::tuple<Attribute>;
 
-    /// Provide a `value_begin_impl` to enable iteration within ElementsAttr.
+    /// Provide a `try_value_begin_impl` to enable iteration within
+    /// ElementsAttr.
     template <typename T>
-    auto value_begin_impl(OverloadToken<T>) const {
-      return value_begin<T>();
+    auto try_value_begin_impl(OverloadToken<T>) const {
+      return ::mlir::success(value_begin<T>());
     }
 
   protected:
@@ -892,10 +901,11 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
     >;
     using ElementsAttr::Trait<SparseElementsAttr>::getValues;
 
-    /// Provide a `value_begin_impl` to enable iteration within ElementsAttr.
+    /// Provide a `try_value_begin_impl` to enable iteration within
+    /// ElementsAttr.
     template <typename T>
-    auto value_begin_impl(OverloadToken<T>) const {
-      return value_begin<T>();
+    auto try_value_begin_impl(OverloadToken<T>) const {
+      return ::mlir::success(value_begin<T>());
     }
 
     template <typename T>
