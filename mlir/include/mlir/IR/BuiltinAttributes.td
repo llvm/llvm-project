@@ -967,6 +967,60 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
 }
 
 //===----------------------------------------------------------------------===//
+// StridedLayoutAttr
+//===----------------------------------------------------------------------===//
+
+def StridedLayoutAttr : Builtin_Attr<"StridedLayout",
+    [DeclareAttrInterfaceMethods<MemRefLayoutAttrInterface,
+                                 ["verifyLayout"]>]> {
+  let summary = "An Attribute representing a strided layout of a shaped type";
+  let description = [{
+    Syntax:
+
+    ```
+    strided-layout-attribute ::= `strided` `<` `[` stride-list `]`
+                                 (`,` `offset` `:` dimension)? `>`
+    stride-list ::= /*empty*/
+                  | dimension (`,` dimension)*
+    dimension ::= decimal-literal | `?`
+    ```
+
+    A strided layout attribute captures layout information of the memref type in
+    the canonical form. Specifically, it contains a list of _strides_, one for
+    each dimension. A stride is the number of elements in the linear storage
+    one must step over to reflect an increment in the given dimension. For
+    example, a `MxN` row-major contiguous shaped type would have the strides
+    `[N, 1]`. The layout attribute also contains the _offset_ from the base
+    pointer of the shaped type to the first effectively accessed element,
+    expressed in terms of the number of contiguously stored elements.
+
+    Strides must be positive and the offset must be non-negative. Both the
+    strides and the offset may be _dynamic_, i.e. their value may not be known
+    at compile time. This is expressed as a `?` in the assembly syntax and as
+    `ShapedType::kDynamicStrideOrOffset` in the code. Stride and offset values
+    must satisfy the constraints above at runtime, the behavior is undefined
+    otherwise.
+
+    See [Dialects/Builtin.md#memreftype](MemRef type) for more information.
+  }];
+
+  let parameters = (ins
+    "int64_t":$offset,
+    ArrayRefParameter<
+      "int64_t",
+      "array of strides (64-bit integer)"
+    >:$strides
+  );
+  let genVerifyDecl = 1;
+
+  let extraClassDeclaration = [{
+    /// Print the attribute to the given output stream.
+    void print(raw_ostream &os) const;
+  }];
+}
+
+
+//===----------------------------------------------------------------------===//
 // StringAttr
 //===----------------------------------------------------------------------===//
 

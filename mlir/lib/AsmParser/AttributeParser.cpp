@@ -15,6 +15,7 @@
 #include "AsmParserImpl.h"
 #include "mlir/AsmParser/AsmParserState.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -42,6 +43,8 @@ using namespace mlir::detail;
 ///                      (tensor-type | vector-type)
 ///                    | `sparse` `<` attribute-value `,` attribute-value `>`
 ///                      `:` (tensor-type | vector-type)
+///                    | `strided` `<` `[` comma-separated-int-or-question `]`
+///                      (`,` `offset` `:` integer-literal)? `>`
 ///                    | extended-attribute
 ///
 Attribute Parser::parseAttribute(Type type) {
@@ -146,6 +149,10 @@ Attribute Parser::parseAttribute(Type type) {
   // Parse a sparse elements attribute.
   case Token::kw_sparse:
     return parseSparseElementsAttr(type);
+
+  // Parse a strided layout attribute.
+  case Token::kw_strided:
+    return parseStridedLayoutAttr();
 
   // Parse a string attribute.
   case Token::string: {
@@ -1071,4 +1078,75 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
 
   // Build the sparse elements attribute by the indices and values.
   return getChecked<SparseElementsAttr>(loc, type, indices, values);
+}
+
+Attribute Parser::parseStridedLayoutAttr() {
+  // Callback for error emissing at the keyword token location.
+  llvm::SMLoc loc = getToken().getLoc();
+  auto errorEmitter = [&] { return emitError(loc); };
+
+  consumeToken(Token::kw_strided);
+  if (failed(parseToken(Token::less, "expected '<' after 'strided'")) ||
+      failed(parseToken(Token::l_square, "expected '['")))
+    return nullptr;
+
+  // Parses either an integer token or a question mark token. Reports an error
+  // and returns None if the current token is neither. The integer token must
+  // fit into int64_t limits.
+  auto parseStrideOrOffset = [&]() -> Optional<int64_t> {
+    if (consumeIf(Token::question))
+      return ShapedType::kDynamicStrideOrOffset;
+
+    SMLoc loc = getToken().getLoc();
+    auto emitWrongTokenError = [&] {
+      emitError(loc, "expected a non-negative 64-bit signed integer or '?'");
+      return llvm::None;
+    };
+
+    if (getToken().is(Token::integer)) {
+      Optional<uint64_t> value = getToken().getUInt64IntegerValue();
+      if (!value || *value > std::numeric_limits<int64_t>::max())
+        return emitWrongTokenError();
+      consumeToken();
+      return static_cast<int64_t>(*value);
+    }
+
+    return emitWrongTokenError();
+  };
+
+  // Parse strides.
+  SmallVector<int64_t> strides;
+  if (!getToken().is(Token::r_square)) {
+    do {
+      Optional<int64_t> stride = parseStrideOrOffset();
+      if (!stride)
+        return nullptr;
+      strides.push_back(*stride);
+    } while (consumeIf(Token::comma));
+  }
+
+  if (failed(parseToken(Token::r_square, "expected ']'")))
+    return nullptr;
+
+  // Fast path in absence of offset.
+  if (consumeIf(Token::greater)) {
+    if (failed(StridedLayoutAttr::verify(errorEmitter,
+                                         /*offset=*/0, strides)))
+      return nullptr;
+    return StridedLayoutAttr::get(getContext(), /*offset=*/0, strides);
+  }
+
+  if (failed(parseToken(Token::comma, "expected ','")) ||
+      failed(parseToken(Token::kw_offset, "expected 'offset' after comma")) ||
+      failed(parseToken(Token::colon, "expected ':' after 'offset'")))
+    return nullptr;
+
+  Optional<int64_t> offset = parseStrideOrOffset();
+  if (!offset || failed(parseToken(Token::greater, "expected '>'")))
+    return nullptr;
+
+  if (failed(StridedLayoutAttr::verify(errorEmitter, *offset, strides)))
+    return nullptr;
+  return StridedLayoutAttr::get(getContext(), *offset, strides);
+  // return getChecked<StridedLayoutAttr>(loc,getContext(), *offset, strides);
 }
