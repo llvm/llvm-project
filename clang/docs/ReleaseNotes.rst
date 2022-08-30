@@ -159,6 +159,9 @@ Windows Support
 
 AIX Support
 -----------
+* When using `-shared`, the clang driver now invokes llvm-nm to create an
+  export list if the user doesn't specify one via linker flag or pass an
+  alternative export control option.
 
 C Language Changes in Clang
 ---------------------------
