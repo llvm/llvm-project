@@ -472,9 +472,13 @@ struct ForOpInterface
   }
 
   FailureOr<BaseMemRefType>
-  getBufferType(Operation *op, BlockArgument bbArg,
+  getBufferType(Operation *op, Value value,
                 const BufferizationOptions &options) const {
     auto forOp = cast<scf::ForOp>(op);
+    // TODO: Only block arguments supported at the moment.
+    if (value.isa<OpResult>())
+      return failure();
+    auto bbArg = value.cast<BlockArgument>();
     return bufferization::getBufferType(
         forOp.getOpOperandForRegionIterArg(bbArg).get(), options);
   }

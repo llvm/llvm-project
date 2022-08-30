@@ -290,20 +290,37 @@ struct ExtractSliceOpInterface
         getBuffer(rewriter, extractSliceOp.getSource(), options);
     if (failed(srcMemref))
       return failure();
-    auto srcMemrefType = srcMemref->getType().cast<MemRefType>();
 
     // Take a subview of the source buffer.
-    auto subviewMemRefType =
-        memref::SubViewOp::inferRankReducedResultType(
-            extractSliceOp.getType().getShape(), srcMemrefType, mixedOffsets,
-            mixedSizes, mixedStrides)
-            .cast<MemRefType>();
+    auto resultMemrefType =
+        getBufferType(op, extractSliceOp.getResult(), options);
+    if (failed(resultMemrefType))
+      return failure();
     Value subView = rewriter.create<memref::SubViewOp>(
-        loc, subviewMemRefType, *srcMemref, mixedOffsets, mixedSizes,
-        mixedStrides);
+        loc, resultMemrefType->cast<MemRefType>(), *srcMemref, mixedOffsets,
+        mixedSizes, mixedStrides);
 
     replaceOpWithBufferizedValues(rewriter, op, subView);
     return success();
+  }
+
+  FailureOr<BaseMemRefType>
+  getBufferType(Operation *op, Value value,
+                const BufferizationOptions &options) const {
+    auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
+    assert(value == extractSliceOp.getResult() && "invalid value");
+    auto srcMemrefType =
+        bufferization::getBufferType(extractSliceOp.getSource(), options);
+    if (failed(srcMemrefType))
+      return failure();
+    SmallVector<OpFoldResult> mixedOffsets = extractSliceOp.getMixedOffsets();
+    SmallVector<OpFoldResult> mixedSizes = extractSliceOp.getMixedSizes();
+    SmallVector<OpFoldResult> mixedStrides = extractSliceOp.getMixedStrides();
+    return memref::SubViewOp::inferRankReducedResultType(
+               extractSliceOp.getType().getShape(),
+               srcMemrefType->cast<MemRefType>(), mixedOffsets, mixedSizes,
+               mixedStrides)
+        .cast<BaseMemRefType>();
   }
 };
 

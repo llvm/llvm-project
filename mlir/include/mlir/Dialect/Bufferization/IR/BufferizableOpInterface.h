@@ -484,10 +484,14 @@ bool allocationDoesNotEscape(OpResult opResult);
 FailureOr<Value> getBuffer(RewriterBase &rewriter, Value value,
                            const BufferizationOptions &options);
 
-/// Return the buffer type for a given Value (tensor) after bufferization.
+/// Return the buffer type for a given Value (tensor) after bufferization
+/// without bufferizing any IR.
 ///
-/// Note: Op implementations should preferrably call `getBuffer()->getType()`.
-/// This function should only be used if `getBuffer` cannot be used.
+/// Note: It should be sufficient to call `getBuffer()->getType()` in most
+/// cases. However, when a buffer type should be predicted without modifying any
+/// IR, this function can be used.
+///
+/// This function is a wrapper around BufferizableOpInterface::getBufferType.
 FailureOr<BaseMemRefType> getBufferType(Value value,
                                         const BufferizationOptions &options);
 
@@ -537,6 +541,18 @@ BaseMemRefType getMemRefTypeWithFullyDynamicLayout(TensorType tensorType,
 /// the given tensor type is unranked, return an unranked MemRef type.
 BaseMemRefType getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
                                                      unsigned memorySpace = 0);
+
+/// Return the owner of the given value. In case of a BlockArgument that is the
+/// owner of the block. In case of an OpResult that is the defining op.
+Operation *getOwnerOfValue(Value value);
+
+namespace detail {
+/// This is the default implementation of
+/// BufferizableOpInterface::getBufferType. Should not be called from other
+/// places.
+FailureOr<BaseMemRefType>
+defaultGetBufferType(Value value, const BufferizationOptions &options);
+} // namespace detail
 
 } // namespace bufferization
 } // namespace mlir
