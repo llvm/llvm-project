@@ -161,9 +161,6 @@ public:
     /// fetch system include path.
     std::vector<std::string> QueryDriverGlobs;
 
-    /// Enable preview of FoldingRanges feature.
-    bool FoldingRanges = false;
-
     // Whether the client supports folding only complete lines.
     bool LineFoldingOnly = false;
 

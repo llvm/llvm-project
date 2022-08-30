@@ -5,7 +5,6 @@ add_public_tablegen_target(MLIRTableGenEnumsIncGen)
 
 set(LLVM_TARGET_DEFINITIONS passes.td)
 mlir_tablegen(PassGenTest.h.inc -gen-pass-decls -name TableGenTest)
-mlir_tablegen(PassGenTest.cpp.inc -gen-pass-defs -name TableGenTest)
 add_public_tablegen_target(MLIRTableGenTestPassIncGen)
 
 add_mlir_unittest(MLIRTableGenTests

@@ -1,5 +1,8 @@
 // REQUIRES: x86-registered-target
 // XFAIL: *
+// UNSUPPORTED: system-windows
+//   Windows is unsupported because we use the Unix path separator `\`.
+
 // RUN: %clang %s -target x86_64-apple-driverkit19.0 -mlinker-version=0 \
 // RUN:   -isysroot %S/Inputs/DriverKit19.0.sdk -### 2>&1               \
 // RUN: | FileCheck %s --check-prefix=LD64-OLD
@@ -27,6 +30,6 @@ int main() { return 0; }
 // INC:       -isysroot [[PATH:[^ ]*/Inputs/DriverKit19.0.sdk]]
 // INC-LABEL: #include <...> search starts here:
 // INC:       [[PATH]]/System/DriverKit/usr/local/include
-// INC:       /lib/clang/{{[0-9\.]+}}/include
+// INC:       /lib/clang/{{[^/ ]+}}/include
 // INC:       [[PATH]]/System/DriverKit/usr/include
 // INC:       [[PATH]]/System/DriverKit/System/Library/Frameworks (framework directory)

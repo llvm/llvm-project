@@ -105,10 +105,8 @@ public:
 
   /// Erase the argument at 'index' and remove it from the argument list.
   void eraseArgument(unsigned index);
-  /// Erases the arguments listed in `argIndices` and removes them from the
-  /// argument list.
-  /// `argIndices` is allowed to have duplicates and can be in any order.
-  void eraseArguments(ArrayRef<unsigned> argIndices);
+  /// Erases 'num' arguments from the index 'start'.
+  void eraseArguments(unsigned start, unsigned num);
   /// Erases the arguments that have their corresponding bit set in
   /// `eraseIndices` and removes them from the argument list.
   void eraseArguments(const BitVector &eraseIndices);

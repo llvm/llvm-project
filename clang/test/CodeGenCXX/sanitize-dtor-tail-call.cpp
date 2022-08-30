@@ -15,7 +15,7 @@ struct Simple {
 Simple s;
 // Simple internal member is poisoned by compiler-generated dtor
 // CHECK: define {{.*}}SimpleD2Ev{{.*}} [[ATTRIBUTE:#[0-9]+]]
-// CHECK: {{^ *}}call void @__sanitizer_dtor_callback
+// CHECK: {{^ *}}call void @__sanitizer_dtor_callback(
 // CHECK: ret void
 
 // Destructor does not emit any tail calls

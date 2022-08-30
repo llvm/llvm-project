@@ -152,6 +152,26 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     assert(Output.isNothing() && "Invalid output.");
   }
 
+  const bool UseLTO = D.isUsingLTO();
+  const bool UseJMC =
+      Args.hasFlag(options::OPT_fjmc, options::OPT_fno_jmc, false);
+  const bool IsPS4 = TC.getTriple().isPS4();
+  const bool IsPS5 = TC.getTriple().isPS5();
+  assert(IsPS4 || IsPS5);
+
+  // This tells LTO to perform JustMyCode instrumentation.
+  if (UseLTO && UseJMC) {
+    if (IsPS4 && D.getLTOMode() == LTOK_Thin) {
+      CmdArgs.push_back("-lto-thin-debug-options=-enable-jmc-instrument");
+    } else if (IsPS4 && D.getLTOMode() == LTOK_Full) {
+      CmdArgs.push_back("-lto-debug-options=-enable-jmc-instrument");
+    } else if (IsPS5) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-enable-jmc-instrument");
+    } else
+      llvm_unreachable("new LTO mode?");
+  }
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 
@@ -169,6 +189,15 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_pthread)) {
     CmdArgs.push_back("-lpthread");
+  }
+
+  if (UseJMC) {
+    CmdArgs.push_back("--whole-archive");
+    if (IsPS4)
+      CmdArgs.push_back("-lSceDbgJmc");
+    else
+      CmdArgs.push_back("-lSceJmc_nosubmission");
+    CmdArgs.push_back("--no-whole-archive");
   }
 
   if (Args.hasArg(options::OPT_fuse_ld_EQ)) {

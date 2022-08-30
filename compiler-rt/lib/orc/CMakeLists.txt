@@ -40,7 +40,7 @@ set(ORC_COMMON_IMPL_HEADERS
   wrapper_function_utils.h
   )
 
-# Implementation headers for all ORC architectures.  
+# Implementation headers for all ORC architectures.
 set(ALL_ORC_IMPL_HEADERS
   ${ORC_COMMON_IMPL_HEADERS}
   macho_platform.h
@@ -87,7 +87,7 @@ if (APPLE)
     macho_tlv.x86-64.S
     macho_tlv.arm64.S
     )
-  
+
   set(ORC_IMPL_HEADERS
     ${ORC_COMMON_IMPL_HEADERS}
     macho_platform.h
@@ -136,13 +136,13 @@ else() # not Apple
       ${ORC_COMMON_IMPL_HEADERS}
       elfnix_platform.h
       )
-    
+
     set(ORC_SOURCES
       ${ORC_COMMON_SOURCES}
       elfnix_platform.cpp
       )
 
-    add_asm_sources(ORC_ASM_SOURCES 
+    add_asm_sources(ORC_ASM_SOURCES
       elfnix_tls.x86-64.S
       elfnix_tls.aarch64.S
       )

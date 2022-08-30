@@ -186,11 +186,13 @@ void Block::eraseArgument(unsigned index) {
     arg.setArgNumber(index++);
 }
 
-void Block::eraseArguments(ArrayRef<unsigned> argIndices) {
-  BitVector eraseIndices(getNumArguments());
-  for (unsigned i : argIndices)
-    eraseIndices.set(i);
-  eraseArguments(eraseIndices);
+void Block::eraseArguments(unsigned start, unsigned num) {
+  assert(start + num <= arguments.size());
+  for (unsigned i = 0; i < num; ++i)
+    arguments[start + i].destroy();
+  arguments.erase(arguments.begin() + start, arguments.begin() + start + num);
+  for (BlockArgument arg : llvm::drop_begin(arguments, start))
+    arg.setArgNumber(start++);
 }
 
 void Block::eraseArguments(const BitVector &eraseIndices) {

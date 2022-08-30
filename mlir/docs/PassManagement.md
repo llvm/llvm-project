@@ -810,7 +810,8 @@ def MyPass : Pass<"my-pass", "ModuleOp"> {
   }];
 
   // A constructor must be provided to specify how to create a default instance
-  // of MyPass.
+  // of MyPass. It can be skipped for this specific example, because both the
+  // constructor and the registration methods live in the same namespace.
   let constructor = "foo::createMyPass()";
 
   // Specify any options.
@@ -828,12 +829,10 @@ def MyPass : Pass<"my-pass", "ModuleOp"> {
 }
 ```
 
-Using the `gen-pass-decls` and `gen-pass-defs` generators, we can generate most
-of the boilerplate above automatically.
-
-The `gen-pass-decls` generator takes as an input a `-name` parameter, that
+Using the `gen-pass-decls` generator, we can generate most of the boilerplate
+above automatically. This generator takes as an input a `-name` parameter, that
 provides a tag for the group of passes that are being generated. This generator
-produces code with two purposes:
+produces code with multiple purposes:
 
 The first is to register the declared passes with the global registry. For
 each pass, the generator produces a `registerPassName` where
@@ -842,17 +841,23 @@ generates a `registerGroupPasses`, where `Group` is the tag provided via the
 `-name` input parameter, that registers all of the passes present.
 
 ```c++
-// gen-pass-decls -name="Example"
+// Tablegen options: -gen-pass-decls -name="Example"
 
+// Passes.h
+
+namespace foo {
 #define GEN_PASS_REGISTRATION
 #include "Passes.h.inc"
+} // namespace foo
 
 void registerMyPasses() {
   // Register all of the passes.
-  registerExamplePasses();
+  foo::registerExamplePasses();
+  
+  // Or
 
   // Register `MyPass` specifically.
-  registerMyPass();
+  foo::registerMyPass();
 }
 ```
 
@@ -895,34 +900,33 @@ std::unique_ptr<::mlir::Pass> createMyPass(const MyPassOptions &options);
 #endif // GEN_PASS_DECL_MYPASS
 ```
 
-The `gen-pass-defs` generator produces the definitions to be used for the pass
-implementation.
-
-It generates a base class for each of the passes, containing most of the boiler
-plate related to pass definitions. These classes are named in the form of
-`MyPassBase`, where `MyPass` is the name of the pass definition in tablegen. We
-can update the original C++ pass definition as so:
+The last purpose of this generator is to emit a base class for each of the
+passes, containing most of the boiler plate related to pass definitions. These
+classes are named in the form of `MyPassBase` and are declared inside the
+`impl` namespace, where `MyPass` is the name of the pass definition in
+tablegen. We can update the original C++ pass definition as so:
 
 ```c++
+// MyPass.cpp
+
 /// Include the generated base pass class definitions.
+namespace foo {
 #define GEN_PASS_DEF_MYPASS
-#include "Passes.cpp.inc"
+#include "Passes.h.inc"
+}
 
 /// Define the main class as deriving from the generated base class.
-struct MyPass : MyPassBase<MyPass> {
-  /// The explicit constructor is no longer explicitly necessary when defining
-  /// pass options and statistics, the base class takes care of that
-  /// automatically.
-  ...
+struct MyPass : foo::impl::MyPassBase<MyPass> {
+  using MyPassBase::MyPassBase;
 
   /// The definitions of the options and statistics are now generated within
   /// the base class, but are accessible in the same way.
 };
 ```
 
-Similarly to the previous generator, the definitions can be enabled on a
-per-pass basis by defining the appropriate preprocessor `GEN_PASS_DEF_PASSNAME`
-macro, with `PASSNAME` equal to the uppercase version of the name of the pass
+Similarly to the previous cases, the definitions can be enabled on a per-pass
+basis by defining the appropriate preprocessor `GEN_PASS_DEF_PASSNAME` macro,
+with `PASSNAME` equal to the uppercase version of the name of the pass
 definition in tablegen.
 If the `constructor` field has not been specified in tablegen, then the default
 constructors are also defined and expect the name of the actual pass class to

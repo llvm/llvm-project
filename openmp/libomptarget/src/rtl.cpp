@@ -64,9 +64,7 @@ static const char *RTLQuickCheckFiles[][MAX_PLATFORM_CHECK_FILES] = {
 
 PluginManager *PM;
 
-#if OMPTARGET_PROFILE_ENABLED
 static char *ProfileTraceFile = nullptr;
-#endif
 
 __attribute__((constructor(101))) void init() {
   DP("Init target library!\n");
@@ -85,12 +83,10 @@ __attribute__((constructor(101))) void init() {
 
   PM = new PluginManager(UseEventsForAtomicTransfers);
 
-#ifdef OMPTARGET_PROFILE_ENABLED
   ProfileTraceFile = getenv("LIBOMPTARGET_PROFILE");
   // TODO: add a configuration option for time granularity
   if (ProfileTraceFile)
     timeTraceProfilerInitialize(500 /* us */, "libomptarget");
-#endif
 }
 
 __attribute__((destructor(101))) void deinit() {
@@ -114,7 +110,6 @@ __attribute__((destructor(101))) void deinit() {
 
   delete PM;
 
-#ifdef OMPTARGET_PROFILE_ENABLED
   if (ProfileTraceFile) {
     // TODO: add env var for file output
     if (auto E = timeTraceProfilerWrite(ProfileTraceFile, "-"))
@@ -122,7 +117,6 @@ __attribute__((destructor(101))) void deinit() {
 
     timeTraceProfilerCleanup();
   }
-#endif
 }
 
 void RTLsTy::loadRTLs() {

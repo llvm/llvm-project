@@ -149,6 +149,9 @@ Attribute Changes in Clang
   using the MinGW environment. This attribute is only available for Windows
   targets.
 
+- Introduced a new function attribute ``__attribute__((nouwtable))`` to suppress
+  LLVM IR ``uwtable`` function attribute.
+
 Windows Support
 ---------------
 
