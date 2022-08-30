@@ -29,6 +29,6 @@ int main() { return 0; }
 // INC:       -isysroot [[PATH:[^ ]*/Inputs/DriverKit19.0.sdk]]
 // INC-LABEL: #include <...> search starts here:
 // INC:       [[PATH]]/System/DriverKit/usr/local/include
-// INC:       /lib/clang/{{[0-9\.]+}}/include
+// INC:       /lib/clang/{{[^/ ]+}}/include
 // INC:       [[PATH]]/System/DriverKit/usr/include
 // INC:       [[PATH]]/System/DriverKit/System/Library/Frameworks (framework directory)
