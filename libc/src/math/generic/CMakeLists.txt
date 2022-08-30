@@ -1225,3 +1225,20 @@ add_entrypoint_object(
     -O3
 )
 
+add_entrypoint_object(
+  atanhf
+  SRCS
+    atanhf.cpp
+  HDRS
+    ../atanhf.h
+  DEPENDS
+    .explogxf
+    libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.include.math
+  COMPILE_OPTIONS
+    -O3
+)
+
