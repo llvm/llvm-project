@@ -83,7 +83,7 @@ inline static double atan_eval(double x) {
                                             ATAN_K[3], ATAN_K[4]);
   double result;
   if (one_over_x)
-    result = M_PI_2 - fputil::multiply_add(pe, v, ATAN_T[val - 1]);
+    result = M_MATH_PI_2 - fputil::multiply_add(pe, v, ATAN_T[val - 1]);
   else
     result = fputil::multiply_add(pe, v, ATAN_T[val - 1]);
   return sign ? -result : result;
