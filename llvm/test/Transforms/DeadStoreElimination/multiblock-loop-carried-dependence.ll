@@ -6,10 +6,9 @@ target datalayout = "e-m:e-i64:64-n32:64-v256:256:256-v512:512:512"
 
 declare void @use(i32)
 
-; Test cases with a loop carried dependence in %loop.2, where %l.2 reads the
-; value stored by the previous iteration. Hence, the store in %loop.2 is not
-; dead at the end of the function or after the call to lifetime.end().
-
+; Test cases with a loop carried dependence in %loop.2, where both %l.0 and
+; %l.1 read the value stored by the previous iteration. Hence, the store in
+; %loop.2 is not dead at the end of the function.
 define void @test.1() {
 ; CHECK-LABEL: @test.1(
 ; CHECK-NEXT:  entry:
@@ -73,6 +72,9 @@ exit:
   ret void
 }
 
+; Test cases with a loop carried dependence in %loop.2, where both %l.0 and
+; %l.1 read the value stored by the previous iteration. Hence, the store in
+; %loop.2 is not dead at the end of the function or after the call to lifetime.end().
 define void @test.2() {
 ; CHECK-LABEL: @test.2(
 ; CHECK-NEXT:  entry:
@@ -206,6 +208,43 @@ loop.latch:
 
 cleanup:                                          ; preds = %while.body, %while.end, %entry
   call void @llvm.lifetime.end.p0i8(i64 48, i8* nonnull %nodeStack.cast) #3
+  ret void
+}
+
+define void @store_to_invariant_loc() {
+; CHECK-LABEL: @store_to_invariant_loc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca [100 x i32], align 4
+; CHECK-NEXT:    [[PTR_20:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[A]], i64 0, i64 20
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PTR_IV:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[A]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[L_0:%.*]] = load i32, i32* [[PTR_IV]], align 4
+; CHECK-NEXT:    call void @use(i32 [[L_0]])
+; CHECK-NEXT:    store i32 10, i32* [[PTR_20]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV_NEXT]], 100
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %A = alloca [100 x i32], align 4
+  %ptr.20 = getelementptr inbounds [100 x i32], [100 x i32]* %A, i64 0, i64 20
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %ptr.iv = getelementptr inbounds [100 x i32], [100 x i32]* %A, i64 0, i64 %iv
+  %l.0 = load i32, i32* %ptr.iv, align 4
+  call void @use(i32 %l.0)
+  store i32 10, i32* %ptr.20, align 4
+  %iv.next = add nsw i64 %iv, 1
+  %c = icmp slt i64 %iv.next, 100
+  br i1 %c, label %loop , label %exit
+
+exit:
   ret void
 }
 
