@@ -66,3 +66,10 @@ func.func @lds_barrier() {
   amdgpu.lds_barrier
   func.return
 }
+
+// CHECK-LABEL: func @mfma
+func.func @mfma(%arg0 : f32, %arg1 : vector<32xf32>) -> vector<32xf32> {
+  // CHECK: amdgpu.mfma
+  %0 = amdgpu.mfma %arg0 * %arg0 + %arg1 { abid = 1 : i32, cbsz = 1 : i32, k = 1 : i32, m = 32 : i32, n = 32 : i32, blocks = 2 : i32 } blgp = bcast_second_32 : f32, vector<32xf32>
+  func.return %0 : vector<32xf32>
+}
