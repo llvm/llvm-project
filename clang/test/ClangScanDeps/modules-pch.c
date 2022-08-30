@@ -61,7 +61,7 @@
 // CHECK-PCH-NEXT:   ],
 // CHECK-PCH-NEXT:   "translation-units": [
 // CHECK-PCH-NEXT:     {
-// CHECK-PCH:            "clang-context-hash": "[[HASH_PCH:.*]]",
+// CHECK-PCH-NEXT:       "clang-context-hash": "[[HASH_PCH:.*]]",
 // CHECK-PCH-NEXT:       "clang-module-deps": [
 // CHECK-PCH-NEXT:         {
 // CHECK-PCH-NEXT:           "context-hash": "[[HASH_MOD_COMMON_1]]",
@@ -74,11 +74,13 @@
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "command-line": [
 // CHECK-PCH:            ],
-// CHECK-PCH:            "file-deps": [
+// CHECK-PCH-NEXT:       "file-deps": [
 // CHECK-PCH-NEXT:         "[[PREFIX]]/pch.h"
 // CHECK-PCH-NEXT:       ],
 // CHECK-PCH-NEXT:       "input-file": "[[PREFIX]]/pch.h"
 // CHECK-PCH-NEXT:     }
+// CHECK-PCH-NEXT:   ]
+// CHECK-PCH-NEXT: }
 
 // Explicitly build the PCH:
 //
@@ -116,7 +118,7 @@
 // CHECK-TU-NEXT:   ],
 // CHECK-TU-NEXT:   "translation-units": [
 // CHECK-TU-NEXT:     {
-// CHECK-TU:            "clang-context-hash": "[[HASH_TU:.*]]",
+// CHECK-TU-NEXT:       "clang-context-hash": "[[HASH_TU:.*]]",
 // CHECK-TU-NEXT:       "clang-module-deps": [
 // CHECK-TU-NEXT:         {
 // CHECK-TU-NEXT:           "context-hash": "[[HASH_MOD_TU]]",
@@ -125,12 +127,14 @@
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "command-line": [
 // CHECK-TU:            ],
-// CHECK-TU:            "file-deps": [
+// CHECK-TU-NEXT:       "file-deps": [
 // CHECK-TU-NEXT:         "[[PREFIX]]/tu.c",
 // CHECK-TU-NEXT:         "[[PREFIX]]/pch.h.gch"
 // CHECK-TU-NEXT:       ],
 // CHECK-TU-NEXT:       "input-file": "[[PREFIX]]/tu.c"
 // CHECK-TU-NEXT:     }
+// CHECK-TU-NEXT:   ]
+// CHECK-TU-NEXT: }
 
 // Explicitly build the TU:
 //
@@ -164,7 +168,7 @@
 // CHECK-TU-WITH-COMMON-NEXT:   ],
 // CHECK-TU-WITH-COMMON-NEXT:   "translation-units": [
 // CHECK-TU-WITH-COMMON-NEXT:     {
-// CHECK-TU-WITH-COMMON:            "clang-context-hash": "[[HASH_TU_WITH_COMMON:.*]]",
+// CHECK-TU-WITH-COMMON-NEXT:       "clang-context-hash": "[[HASH_TU_WITH_COMMON:.*]]",
 // CHECK-TU-WITH-COMMON-NEXT:       "clang-module-deps": [
 // CHECK-TU-WITH-COMMON-NEXT:         {
 // CHECK-TU-WITH-COMMON-NEXT:           "context-hash": "[[HASH_MOD_TU_WITH_COMMON]]",
@@ -174,12 +178,14 @@
 // CHECK-TU-WITH-COMMON-NEXT:       "command-line": [
 // CHECK-TU-WITH-COMMON:              "-fmodule-file=[[PREFIX]]/build/{{.*}}/ModCommon2-{{.*}}.pcm"
 // CHECK-TU-WITH-COMMON:            ],
-// CHECK-TU-WITH-COMMON:            "file-deps": [
+// CHECK-TU-WITH-COMMON-NEXT:       "file-deps": [
 // CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/tu_with_common.c",
 // CHECK-TU-WITH-COMMON-NEXT:         "[[PREFIX]]/pch.h.gch"
 // CHECK-TU-WITH-COMMON-NEXT:       ],
 // CHECK-TU-WITH-COMMON-NEXT:       "input-file": "[[PREFIX]]/tu_with_common.c"
 // CHECK-TU-WITH-COMMON-NEXT:     }
+// CHECK-TU-WITH-COMMON-NEXT:   ]
+// CHECK-TU-WITH-COMMON-NEXT: }
 
 // Explicitly build the TU that has common modules with the PCH:
 //

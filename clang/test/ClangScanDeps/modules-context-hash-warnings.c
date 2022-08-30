@@ -39,7 +39,7 @@
 // CHECK:            ]
 // CHECK:            "input-file": "{{.*}}tu1.c"
 // CHECK-NEXT:     }
-// CHECK:          {
+// CHECK-NEXT:     {
 // CHECK:            "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "[[HASH2]]"

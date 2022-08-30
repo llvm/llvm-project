@@ -48,9 +48,6 @@ def main():
                       type=str)
   action.add_argument("--tu-index", help="The index of the translation unit to get arguments for",
                       type=int)
-  parser.add_argument("--tu-cmd-index",
-                      help="The index of the command within the translation unit (default=0)",
-                      type=int, default=0)
   args = parser.parse_args()
 
   full_deps = parseFullDeps(json.load(open(args.full_deps_file, 'r')))
@@ -61,8 +58,7 @@ def main():
     if args.module_name:
       cmd = findModule(args.module_name, full_deps)['command-line']
     elif args.tu_index != None:
-      tu = full_deps.translation_units[args.tu_index]
-      cmd = tu['commands'][args.tu_cmd_index]['command-line']
+      cmd = full_deps.translation_units[args.tu_index]['command-line']
 
     print(" ".join(map(quote, cmd)))
   except:
