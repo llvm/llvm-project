@@ -1244,27 +1244,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // at the very end.
   }
 
-  void materializeOneCheck(Instruction *OrigIns, Value *Shadow, Value *Origin,
-                           bool AsCall) {
-    IRBuilder<> IRB(OrigIns);
-    LLVM_DEBUG(dbgs() << "  SHAD0 : " << *Shadow << "\n");
-    Value *ConvertedShadow = convertShadowToScalar(Shadow, IRB);
-    LLVM_DEBUG(dbgs() << "  SHAD1 : " << *ConvertedShadow << "\n");
-
-    const DataLayout &DL = OrigIns->getModule()->getDataLayout();
-    if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
-      if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
-        // Value is initialized or const shadow is ignored.
-        return;
-      }
-      if (llvm::isKnownNonZero(ConvertedShadow, DL)) {
-        // Report as the value is definitely uninitialized.
-        insertWarningFn(IRB, Origin);
-        return;
-      }
-      // Fallback to runtime check, which still can be optimized out later.
-    }
-
+  void materializeOneCheck(IRBuilder<> &IRB, Value *ConvertedShadow,
+                           Value *Origin, bool AsCall) {
+    const DataLayout &DL = F.getParent()->getDataLayout();
     unsigned TypeSizeInBits = DL.getTypeSizeInBits(ConvertedShadow->getType());
     unsigned SizeIndex = TypeSizeToSizeIndex(TypeSizeInBits);
     if (AsCall && SizeIndex < kNumberOfAccessSizes && !MS.CompileKernel) {
@@ -1279,7 +1261,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     } else {
       Value *Cmp = convertToBool(ConvertedShadow, IRB, "_mscmp");
       Instruction *CheckTerm = SplitBlockAndInsertIfThen(
-          Cmp, OrigIns,
+          Cmp, &*IRB.GetInsertPoint(),
           /* Unreachable */ !MS.Recover, MS.ColdCallWeights);
 
       IRB.SetInsertPoint(CheckTerm);
@@ -1288,13 +1270,37 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  void materializeChecks(bool InstrumentWithCalls) {
-    for (const auto &ShadowData : InstrumentationList) {
-      Instruction *OrigIns = ShadowData.OrigIns;
-      Value *Shadow = ShadowData.Shadow;
-      Value *Origin = ShadowData.Origin;
-      materializeOneCheck(OrigIns, Shadow, Origin, InstrumentWithCalls);
+  void materializeInstructionChecks(
+      bool InstrumentWithCalls,
+      ArrayRef<ShadowOriginAndInsertPoint> InstructionChecks) {
+    const DataLayout &DL = F.getParent()->getDataLayout();
+    for (const auto &ShadowData : InstructionChecks) {
+      IRBuilder<> IRB(ShadowData.OrigIns);
+
+      LLVM_DEBUG(dbgs() << "  SHAD0 : " << *ShadowData.Shadow << "\n");
+      Value *ConvertedShadow = convertShadowToScalar(ShadowData.Shadow, IRB);
+      LLVM_DEBUG(dbgs() << "  SHAD1 : " << *ConvertedShadow << "\n");
+
+      if (auto *ConstantShadow = dyn_cast<Constant>(ConvertedShadow)) {
+        if (!ClCheckConstantShadow || ConstantShadow->isZeroValue()) {
+          // Skip, value is initialized or const shadow is ignored.
+          continue;
+        }
+        if (llvm::isKnownNonZero(ConvertedShadow, DL)) {
+          // Report as the value is definitely uninitialized.
+          insertWarningFn(IRB, ShadowData.Origin);
+          // Skip entire instruction,
+          continue;
+        }
+        // Fallback to runtime check, which still can be optimized out later.
+      }
+      materializeOneCheck(IRB, ConvertedShadow, ShadowData.Origin,
+                          InstrumentWithCalls);
     }
+  }
+
+  void materializeChecks(bool InstrumentWithCalls) {
+    materializeInstructionChecks(InstrumentWithCalls, InstrumentationList);
     LLVM_DEBUG(dbgs() << "DONE:\n" << F);
   }
 
