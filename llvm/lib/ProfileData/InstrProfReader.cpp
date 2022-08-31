@@ -545,7 +545,9 @@ Error RawInstrProfReader<IntPtrT>::readValueProfilingData(
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::readNextRecord(NamedInstrProfRecord &Record) {
-  if (atEnd())
+  // Keep reading profiles that consist of only headers and no profile data and
+  // counters.
+  while (atEnd())
     // At this point, ValueDataStart field points to the next header.
     if (Error E = readNextHeader(getNextHeaderPos()))
       return error(std::move(E));

@@ -1389,10 +1389,8 @@ define i64 @sh3adduw_ptrdiff(i64 %diff, i64* %baseptr) {
 define signext i16 @srliw_1_sh1add(i16* %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_1_sh1add:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, 1
-; RV64I-NEXT:    slli a2, a2, 32
-; RV64I-NEXT:    addi a2, a2, -2
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srliw a1, a1, 1
+; RV64I-NEXT:    slli a1, a1, 1
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    lh a0, 0(a0)
 ; RV64I-NEXT:    ret
@@ -1413,10 +1411,8 @@ define signext i16 @srliw_1_sh1add(i16* %0, i32 signext %1) {
 define signext i32 @srliw_2_sh2add(i32* %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_2_sh2add:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, 1
-; RV64I-NEXT:    slli a2, a2, 32
-; RV64I-NEXT:    addi a2, a2, -4
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srliw a1, a1, 2
+; RV64I-NEXT:    slli a1, a1, 2
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    lw a0, 0(a0)
 ; RV64I-NEXT:    ret
@@ -1437,10 +1433,8 @@ define signext i32 @srliw_2_sh2add(i32* %0, i32 signext %1) {
 define i64 @srliw_3_sh3add(i64* %0, i32 signext %1) {
 ; RV64I-LABEL: srliw_3_sh3add:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, 1
-; RV64I-NEXT:    slli a2, a2, 32
-; RV64I-NEXT:    addi a2, a2, -8
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srliw a1, a1, 3
+; RV64I-NEXT:    slli a1, a1, 3
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ld a0, 0(a0)
 ; RV64I-NEXT:    ret

@@ -122,8 +122,8 @@ static UUID parseModuleId(llvm::Triple::OSType os, llvm::StringRef str) {
 
   // On non-windows, the age field should always be zero, so we don't include to
   // match the native uuid format of these platforms.
-  return UUID::fromData(&data, os == llvm::Triple::Win32 ? sizeof(data)
-                                                         : sizeof(data.uuid));
+  return UUID(&data, os == llvm::Triple::Win32 ? sizeof(data)
+                                               : sizeof(data.uuid));
 }
 
 llvm::Optional<Record::Kind> Record::classify(llvm::StringRef Line) {

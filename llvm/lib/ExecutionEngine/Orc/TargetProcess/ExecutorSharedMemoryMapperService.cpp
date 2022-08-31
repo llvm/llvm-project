@@ -192,7 +192,7 @@ Error ExecutorSharedMemoryMapperService::deinitialize(
   {
     std::lock_guard<std::mutex> Lock(Mutex);
 
-    for (auto Base : Bases) {
+    for (auto Base : llvm::reverse(Bases)) {
       if (Error Err = shared::runDeallocActions(
               Allocations[Base].DeinitializationActions)) {
         AllErr = joinErrors(std::move(AllErr), std::move(Err));

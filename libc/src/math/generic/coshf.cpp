@@ -9,7 +9,7 @@
 #include "src/math/coshf.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/multiply_add.h"
-#include "src/math/generic/expxf.h"
+#include "src/math/generic/explogxf.h"
 
 namespace __llvm_libc {
 

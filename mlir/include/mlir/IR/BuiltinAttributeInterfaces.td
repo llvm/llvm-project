@@ -54,33 +54,36 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
     using NonContiguousIterableTypesT = std::tuple<APInt, Attribute>;
     ```
 
-    * Provide a `iterator value_begin_impl(OverloadToken<T>) const` overload for
-      each iterable type
+    * Provide a `FailureOr<iterator> try_value_begin_impl(OverloadToken<T>) const`
+      overload for each iterable type
 
     These overloads should return an iterator to the start of the range for the
-    respective iterable type. Consider the example i64 elements attribute
-    described in the previous section. This attribute may define the
-    value_begin_impl overloads like so:
+    respective iterable type or fail if the type cannot be iterated. Consider
+    the example i64 elements attribute described in the previous section. This
+    attribute may define the value_begin_impl overloads like so:
 
     ```c++
     /// Provide begin iterators for the various iterable types.
     /// * uint64_t
-    auto value_begin_impl(OverloadToken<uint64_t>) const {
+    FailureOr<const uint64_t *>
+    value_begin_impl(OverloadToken<uint64_t>) const {
       return getElements().begin();
     }
     /// * APInt
     auto value_begin_impl(OverloadToken<llvm::APInt>) const {
-      return llvm::map_range(getElements(), [=](uint64_t value) {
+      auto it = llvm::map_range(getElements(), [=](uint64_t value) {
         return llvm::APInt(/*numBits=*/64, value);
       }).begin();
+      return FailureOr<decltype(it)>(std::move(it));
     }
     /// * Attribute
     auto value_begin_impl(OverloadToken<mlir::Attribute>) const {
       mlir::Type elementType = getType().getElementType();
-      return llvm::map_range(getElements(), [=](uint64_t value) {
+      auto it = llvm::map_range(getElements(), [=](uint64_t value) {
         return mlir::IntegerAttr::get(elementType,
                                       llvm::APInt(/*numBits=*/64, value));
       }).begin();
+      return FailureOr<decltype(it)>(std::move(it));
     }
     ```
 
@@ -244,18 +247,22 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
           /*isSplat=*/false, nullptr);
       }
 
-      auto valueIt = $_attr.value_begin_impl(OverloadToken<T>());
+      auto valueIt = $_attr.try_value_begin_impl(OverloadToken<T>());
+      if (::mlir::failed(valueIt))
+        return ::mlir::failure();
       return ::mlir::detail::ElementsAttrIndexer::contiguous(
-        $_attr.isSplat(), &*valueIt);
+        $_attr.isSplat(), &**valueIt);
     }
     /// Build an indexer for the given type `T`, which is represented via a
     /// non-contiguous range.
     template <typename T>
     ::mlir::FailureOr<::mlir::detail::ElementsAttrIndexer> buildValueResult(
         /*isContiguous*/std::false_type) const {
-      auto valueIt = $_attr.value_begin_impl(OverloadToken<T>());
+      auto valueIt = $_attr.try_value_begin_impl(OverloadToken<T>());
+      if (::mlir::failed(valueIt))
+        return ::mlir::failure();
       return ::mlir::detail::ElementsAttrIndexer::nonContiguous(
-        $_attr.isSplat(), valueIt);
+        $_attr.isSplat(), *valueIt);
     }
 
   public:
@@ -275,7 +282,7 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
     /// type `T`.
     template <typename T>
     auto value_begin() const {
-      return $_attr.value_begin_impl(OverloadToken<T>());
+      return *$_attr.try_value_begin_impl(OverloadToken<T>());
     }
 
     /// Return the elements of this attribute as a value of type 'T'.
