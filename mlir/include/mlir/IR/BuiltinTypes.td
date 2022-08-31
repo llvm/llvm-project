@@ -280,10 +280,7 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
     ```
     memref-type ::= `memref` `<` dimension-list-ranked type
                     (`,` layout-specification)? (`,` memory-space)? `>`
-
-    stride-list ::= `[` (dimension (`,` dimension)*)? `]`
-    strided-layout ::= `offset:` dimension `,` `strides: ` stride-list
-    layout-specification ::= semi-affine-map | strided-layout | attribute-value
+    layout-specification ::= attribute-value
     memory-space ::= attribute-value
     ```
 
@@ -309,6 +306,84 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
     - built-in vector types with elements of the above types;
     - another memref type;
     - any other type implementing `MemRefElementTypeInterface`.
+
+    ##### Layout
+
+    A memref may optionally have a layout that indicates how indices are
+    transformed from the multi-dimensional form into a linear address. The
+    layout must avoid internal aliasing, i.e., two distinct tuples of
+    _in-bounds_ indices must be pointing to different elements in memory. The
+    layout is an attribute that implements `MemRefLayoutAttrInterface`. The
+    bulitin dialect offers two kinds of layouts: strided and affine map, each
+    of which is available as an attribute. Other attributes may be used to
+    represent the layout as long as they can be converted to a
+    [semi-affine map](Affine.md/#semi-affine-maps) and implement the required
+    interface. Users of memref are expected to fallback to the affine
+    representation when handling unknown memref layouts. Multi-dimensional
+    affine forms are interpreted in _row-major_ fashion.
+
+    In absence of an explicit layout, a memref is considered to have a
+    multi-dimensional identity affine map layout.  Identity layout maps do not
+    contribute to the MemRef type identification and are discarded on
+    construction. That is, a type with an explicit identity map is
+    `memref<?x?xf32, (i,j)->(i,j)>` is strictly the same as the one without a
+    layout, `memref<?x?xf32>`.
+
+    ##### Affine Map Layout
+
+    The layout may be represented directly as an affine map from the index space
+    to the storage space. For example, the following figure shows an index map
+    which maps a 2-dimensional index from a 2x2 index space to a 3x3 index
+    space, using symbols `S0` and `S1` as offsets.
+
+    ![Index Map Example](/includes/img/index-map.svg)
+
+    Semi-affine maps are sufficiently flexible to represent a wide variety of
+    dense storage layouts, including row- and column-major and tiled:
+
+    ```mlir
+    // MxN matrix stored in row major layout in memory:
+    #layout_map_row_major = (i, j) -> (i, j)
+
+    // MxN matrix stored in column major layout in memory:
+    #layout_map_col_major = (i, j) -> (j, i)
+
+    // MxN matrix stored in a 2-d blocked/tiled layout with 64x64 tiles.
+    #layout_tiled = (i, j) -> (i floordiv 64, j floordiv 64, i mod 64, j mod 64)
+    ```
+
+    ##### Strided Layout
+
+    Memref layout can be expressed using strides to encode the distance, in
+    number of elements, in (linear) memory between successive entries along a
+    particular dimension. For example, a row-major strided layout for
+    `memref<2x3x4xf32>` is `strided<[12, 4, 1]>`, where the last dimension is
+    contiguous as indicated by the unit stride and the remaining strides are
+    products of the sizes of faster-variying dimensions. Strided layout can also
+    express non-contiguity, e.g., `memref<2x3, strided<[6, 2]>>` only accesses
+    even elements of the dense consecutive storage along the innermost
+    dimension.
+
+    The strided layout supports an optional _offset_ that indicates the
+    distance, in the number of elements, between the beginning of the memref
+    and the first accessed element. When omitted, the offset is considered to
+    be zero. That is, `memref<2, strided<[2], offset: 0>>` and
+    `memref<2, strided<[2]>>` are strictly the same type.
+
+    Both offsets and strides may be _dynamic_, that is, unknown at compile time.
+    This is represented by using a question mark (`?`) instead of the value in
+    the textual form of the IR.
+
+    The strided layout converts into the following canonical one-dimensional
+    affine form through explicit linearization:
+
+    ```mlir
+    affine_map<(d0, ... dN)[offset, stride0, ... strideN] -> 
+                (offset + d0 * stride0 + ... dN * strideN)>
+    ```
+
+    Therefore, it is never subject to the implicit row-major layout
+    interpretation.
 
     ##### Codegen of Unranked Memref
 
@@ -425,104 +500,6 @@ def Builtin_MemRef : Builtin_Type<"MemRef", [
     %o = ...
     %A = alloc (%n)[%o] : <16x?xf32, #imapS>
     ```
-
-    ##### Index Space
-
-    A memref dimension list defines an index space within which the memref can
-    be indexed to access data.
-
-    ##### Index
-
-    Data is accessed through a memref type using a multidimensional index into
-    the multidimensional index space defined by the memref's dimension list.
-
-    Examples
-
-    ```mlir
-    // Allocates a memref with 2D index space:
-    //   { (i, j) : 0 <= i < 16, 0 <= j < 32 }
-    %A = alloc() : memref<16x32xf32, #imapA>
-
-    // Loads data from memref '%A' using a 2D index: (%i, %j)
-    %v = load %A[%i, %j] : memref<16x32xf32, #imapA>
-    ```
-
-    ##### Index Map
-
-    An index map is a one-to-one
-    [semi-affine map](Affine.md/#semi-affine-maps) that transforms a
-    multidimensional index from one index space to another. For example, the
-    following figure shows an index map which maps a 2-dimensional index from a
-    2x2 index space to a 3x3 index space, using symbols `S0` and `S1` as
-    offsets.
-
-    ![Index Map Example](/includes/img/index-map.svg)
-
-    The number of domain dimensions and range dimensions of an index map can be
-    different, but must match the number of dimensions of the input and output
-    index spaces on which the map operates. The index space is always
-    non-negative and integral. In addition, an index map must specify the size
-    of each of its range dimensions onto which it maps. Index map symbols must
-    be listed in order with symbols for dynamic dimension sizes first, followed
-    by other required symbols.
-
-    ##### Layout Map
-
-    A layout map is a [semi-affine map](Affine.md/#semi-affine-maps)
-    which encodes logical to physical index space mapping, by mapping input
-    dimensions to their ordering from most-major (slowest varying) to most-minor
-    (fastest varying). Therefore, an identity layout map corresponds to a
-    row-major layout. Identity layout maps do not contribute to the MemRef type
-    identification and are discarded on construction. That is, a type with an
-    explicit identity map is `memref<?x?xf32, (i,j)->(i,j)>` is strictly the
-    same as the one without layout maps, `memref<?x?xf32>`.
-
-    Layout map examples:
-
-    ```mlir
-    // MxN matrix stored in row major layout in memory:
-    #layout_map_row_major = (i, j) -> (i, j)
-
-    // MxN matrix stored in column major layout in memory:
-    #layout_map_col_major = (i, j) -> (j, i)
-
-    // MxN matrix stored in a 2-d blocked/tiled layout with 64x64 tiles.
-    #layout_tiled = (i, j) -> (i floordiv 64, j floordiv 64, i mod 64, j mod 64)
-    ```
-
-    ##### Strided MemRef
-
-    A memref may specify a strided layout as part of its type. A stride
-    specification is a list of integer values that are either static or `?`
-    (dynamic case).
-    Strides encode the distance, in number of elements, in (linear) memory
-    between successive entries along a particular dimension. A stride
-    specification is syntactic sugar for an equivalent strided memref
-    representation with a *single* semi-affine map.
-
-    For example, `memref<42x16xf32, offset: 33, strides: [1, 64]>` specifies a
-    non-contiguous memory region of `42` by `16` `f32` elements such that:
-
-    1.  the minimal size of the enclosing memory region must be
-        `33 + 42 * 1 + 16 * 64 = 1066` elements;
-    2.  the address calculation for accessing element `(i, j)` computes
-        `33 + i + 64 * j`
-    3.  the distance between two consecutive elements along the inner dimension
-        is `1` element and the distance between two consecutive elements along
-        the outer dimension is `64` elements.
-
-    This corresponds to a column major view of the memory region and is
-    internally represented as the type
-    `memref<42x16xf32, (i, j) -> (33 + i + 64 * j)>`.
-
-    The specification of strides must not alias: given an n-D strided memref,
-    indices `(i1, ..., in)` and `(j1, ..., jn)` may not refer to the same memory
-    address unless `i1 == j1, ..., in == jn`.
-
-    Strided memrefs represent a view abstraction over preallocated data. They
-    are constructed with special ops, yet to be introduced. Strided memrefs are
-    a special subclass of memrefs with generic semi-affine map and correspond to
-    a normalized memref descriptor when lowering to LLVM.
   }];
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,

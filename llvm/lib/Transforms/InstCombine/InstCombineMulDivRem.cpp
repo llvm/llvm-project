@@ -224,17 +224,23 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   Constant *MulC;
   if (match(Op1, m_ImmConstant(MulC))) {
     // Canonicalize (X+C1)*MulC -> X*MulC+C1*MulC.
+    // Canonicalize (X|C1)*MulC -> X*MulC+C1*MulC.
     Value *X;
     Constant *C1;
-    if (match(Op0, m_OneUse(m_Add(m_Value(X), m_ImmConstant(C1))))) {
+    if ((match(Op0, m_OneUse(m_Add(m_Value(X), m_ImmConstant(C1))))) ||
+        (match(Op0, m_OneUse(m_Or(m_Value(X), m_ImmConstant(C1)))) &&
+         haveNoCommonBitsSet(X, C1, DL, &AC, &I, &DT))) {
       // C1*MulC simplifies to a tidier constant.
       Value *NewC = Builder.CreateMul(C1, MulC);
       auto *BOp0 = cast<BinaryOperator>(Op0);
+      bool Op0NUW =
+          (BOp0->getOpcode() == Instruction::Or || BOp0->hasNoUnsignedWrap());
       Value *NewMul = Builder.CreateMul(X, MulC);
       auto *BO = BinaryOperator::CreateAdd(NewMul, NewC);
-      auto *NewMulBO = dyn_cast<BinaryOperator>(NewMul);
-      if (I.hasNoUnsignedWrap() && BOp0->hasNoUnsignedWrap() && NewMulBO) {
-        NewMulBO->setHasNoUnsignedWrap();
+      if (I.hasNoUnsignedWrap() && Op0NUW) {
+        // If NewMulBO is constant we also can set BO to nuw.
+        if (auto *NewMulBO = dyn_cast<BinaryOperator>(NewMul))
+          NewMulBO->setHasNoUnsignedWrap();
         BO->setHasNoUnsignedWrap();
       }
       return BO;

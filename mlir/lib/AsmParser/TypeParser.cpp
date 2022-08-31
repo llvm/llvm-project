@@ -146,35 +146,6 @@ Type Parser::parseFunctionType() {
   return builder.getFunctionType(arguments, results);
 }
 
-/// Parse the offset and strides from a strided layout specification.
-///
-///   strided-layout ::= `offset:` dimension `,` `strides: ` stride-list
-///
-ParseResult Parser::parseStridedLayout(int64_t &offset,
-                                       SmallVectorImpl<int64_t> &strides) {
-  // Parse offset.
-  consumeToken(Token::kw_offset);
-  if (parseToken(Token::colon, "expected colon after `offset` keyword"))
-    return failure();
-
-  auto maybeOffset = getToken().getUnsignedIntegerValue();
-  bool question = getToken().is(Token::question);
-  if (!maybeOffset && !question)
-    return emitWrongTokenError("invalid offset");
-  offset = maybeOffset ? static_cast<int64_t>(*maybeOffset)
-                       : MemRefType::getDynamicStrideOrOffset();
-  consumeToken();
-
-  // Parse stride list.
-  if (parseToken(Token::comma, "expected comma after offset value") ||
-      parseToken(Token::kw_strides,
-                 "expected `strides` keyword after offset specification") ||
-      parseToken(Token::colon, "expected colon after `strides` keyword") ||
-      parseStrideList(strides))
-    return failure();
-  return success();
-}
-
 /// Parse a memref type.
 ///
 ///   memref-type ::= ranked-memref-type | unranked-memref-type
@@ -225,29 +196,18 @@ Type Parser::parseMemRefType() {
   Attribute memorySpace;
 
   auto parseElt = [&]() -> ParseResult {
-    // Check for AffineMap as offset/strides.
-    if (getToken().is(Token::kw_offset)) {
-      int64_t offset;
-      SmallVector<int64_t, 4> strides;
-      if (failed(parseStridedLayout(offset, strides)))
-        return failure();
-      // Construct strided affine map.
-      AffineMap map = makeStridedLinearLayoutMap(strides, offset, getContext());
-      layout = AffineMapAttr::get(map);
-    } else {
-      // Either it is MemRefLayoutAttrInterface or memory space attribute.
-      Attribute attr = parseAttribute();
-      if (!attr)
-        return failure();
+    // Either it is MemRefLayoutAttrInterface or memory space attribute.
+    Attribute attr = parseAttribute();
+    if (!attr)
+      return failure();
 
-      if (attr.isa<MemRefLayoutAttrInterface>()) {
-        layout = attr.cast<MemRefLayoutAttrInterface>();
-      } else if (memorySpace) {
-        return emitError("multiple memory spaces specified in memref type");
-      } else {
-        memorySpace = attr;
-        return success();
-      }
+    if (attr.isa<MemRefLayoutAttrInterface>()) {
+      layout = attr.cast<MemRefLayoutAttrInterface>();
+    } else if (memorySpace) {
+      return emitError("multiple memory spaces specified in memref type");
+    } else {
+      memorySpace = attr;
+      return success();
     }
 
     if (isUnranked)
@@ -616,35 +576,4 @@ ParseResult Parser::parseXInDimensionList() {
   consumeToken(Token::bare_identifier);
 
   return success();
-}
-
-// Parse a comma-separated list of dimensions, possibly empty:
-//   stride-list ::= `[` (dimension (`,` dimension)*)? `]`
-ParseResult Parser::parseStrideList(SmallVectorImpl<int64_t> &dimensions) {
-  return parseCommaSeparatedList(
-      Delimiter::Square,
-      [&]() -> ParseResult {
-        if (consumeIf(Token::question)) {
-          dimensions.push_back(MemRefType::getDynamicStrideOrOffset());
-        } else {
-          // This must be an integer value.
-          int64_t val;
-          if (getToken().getSpelling().getAsInteger(10, val))
-            return emitError("invalid integer value: ")
-                   << getToken().getSpelling();
-          // Make sure it is not the one value for `?`.
-          if (ShapedType::isDynamic(val))
-            return emitError("invalid integer value: ")
-                   << getToken().getSpelling()
-                   << ", use `?` to specify a dynamic dimension";
-
-          if (val == 0)
-            return emitError("invalid memref stride");
-
-          dimensions.push_back(val);
-          consumeToken(Token::integer);
-        }
-        return success();
-      },
-      " in stride list");
 }

@@ -31,6 +31,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
@@ -41,6 +42,10 @@
 #include <queue>
 
 using namespace llvm;
+
+// We use this string to indicate that there are
+// multiple static functions map to the same name.
+const std::string DuplicateNameStr = "----";
 
 enum ProfileFormat {
   PF_None = 0,
@@ -461,6 +466,7 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
 /// The profile entry for a function in instrumentation profile.
 struct InstrProfileEntry {
   uint64_t MaxCount = 0;
+  uint64_t NumEdgeCounters = 0;
   float ZeroCounterRatio = 0.0;
   InstrProfRecord *ProfRecord;
   InstrProfileEntry(InstrProfRecord *Record);
@@ -476,33 +482,49 @@ InstrProfileEntry::InstrProfileEntry(InstrProfRecord *Record) {
     ZeroCntNum += !Record->Counts[I];
   }
   ZeroCounterRatio = (float)ZeroCntNum / CntNum;
+  NumEdgeCounters = CntNum;
 }
 
-/// Either set all the counters in the instr profile entry \p IFE to -1
-/// in order to drop the profile or scale up the counters in \p IFP to
-/// be above hot threshold. We use the ratio of zero counters in the
-/// profile of a function to decide the profile is helpful or harmful
-/// for performance, and to choose whether to scale up or drop it.
-static void updateInstrProfileEntry(InstrProfileEntry &IFE,
+/// Either set all the counters in the instr profile entry \p IFE to
+/// -1 / -2 /in order to drop the profile or scale up the
+/// counters in \p IFP to be above hot / cold threshold. We use
+/// the ratio of zero counters in the profile of a function to
+/// decide the profile is helpful or harmful for performance,
+/// and to choose whether to scale up or drop it.
+static void updateInstrProfileEntry(InstrProfileEntry &IFE, bool SetToHot,
                                     uint64_t HotInstrThreshold,
+                                    uint64_t ColdInstrThreshold,
                                     float ZeroCounterThreshold) {
   InstrProfRecord *ProfRecord = IFE.ProfRecord;
   if (!IFE.MaxCount || IFE.ZeroCounterRatio > ZeroCounterThreshold) {
     // If all or most of the counters of the function are zero, the
-    // profile is unaccountable and shuld be dropped. Reset all the
-    // counters to be -1 and PGO profile-use will drop the profile.
+    // profile is unaccountable and should be dropped. Reset all the
+    // counters to be -1 / -2 and PGO profile-use will drop the profile.
     // All counters being -1 also implies that the function is hot so
     // PGO profile-use will also set the entry count metadata to be
     // above hot threshold.
-    for (size_t I = 0; I < ProfRecord->Counts.size(); ++I)
-      ProfRecord->Counts[I] = -1;
+    // All counters being -2 implies that the function is warm so
+    // PGO profile-use will also set the entry count metadata to be
+    // above cold threshold.
+    auto Kind =
+        (SetToHot ? InstrProfRecord::PseudoHot : InstrProfRecord::PseudoWarm);
+    ProfRecord->setPseudoCount(Kind);
     return;
   }
 
-  // Scale up the MaxCount to be multiple times above hot threshold.
+  // Scale up the MaxCount to be multiple times above hot / cold threshold.
   const unsigned MultiplyFactor = 3;
-  uint64_t Numerator = HotInstrThreshold * MultiplyFactor;
+  uint64_t Threshold = (SetToHot ? HotInstrThreshold : ColdInstrThreshold);
+  uint64_t Numerator = Threshold * MultiplyFactor;
+
+  // Make sure Threshold for warm counters is below the HotInstrThreshold.
+  if (!SetToHot && Threshold >= HotInstrThreshold) {
+    Threshold = (HotInstrThreshold + ColdInstrThreshold) / 2;
+  }
+
   uint64_t Denominator = IFE.MaxCount;
+  if (Numerator <= Denominator)
+    return;
   ProfRecord->scale(Numerator, Denominator, [&](instrprof_error E) {
     warn(toString(make_error<InstrProfError>(E)));
   });
@@ -539,7 +561,73 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
                    unsigned InstrProfColdThreshold) {
   // Function to its entry in instr profile.
   StringMap<InstrProfileEntry> InstrProfileMap;
+  StringMap<StringRef> StaticFuncMap;
   InstrProfSummaryBuilder IPBuilder(ProfileSummaryBuilder::DefaultCutoffs);
+
+  auto checkSampleProfileHasFUnique = [&Reader]() {
+    for (const auto &PD : Reader->getProfiles()) {
+      auto &FContext = PD.first;
+      if (FContext.toString().find(FunctionSamples::UniqSuffix) !=
+          std::string::npos) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  bool SampleProfileHasFUnique = checkSampleProfileHasFUnique();
+
+  auto buildStaticFuncMap = [&StaticFuncMap,
+                             SampleProfileHasFUnique](const StringRef Name) {
+    std::string Prefixes[] = {".cpp:", "cc:", ".c:", ".hpp:", ".h:"};
+    size_t PrefixPos = StringRef::npos;
+    for (auto &Prefix : Prefixes) {
+      PrefixPos = Name.find_insensitive(Prefix);
+      if (PrefixPos == StringRef::npos)
+        continue;
+      PrefixPos += Prefix.size();
+      break;
+    }
+
+    if (PrefixPos == StringRef::npos) {
+      return;
+    }
+
+    StringRef NewName = Name.drop_front(PrefixPos);
+    StringRef FName = Name.substr(0, PrefixPos - 1);
+    if (NewName.size() == 0) {
+      return;
+    }
+
+    // This name should have a static linkage.
+    size_t PostfixPos = NewName.find(FunctionSamples::UniqSuffix);
+    bool ProfileHasFUnique = (PostfixPos != StringRef::npos);
+
+    // If sample profile and instrumented profile do not agree on symbol
+    // uniqification.
+    if (SampleProfileHasFUnique != ProfileHasFUnique) {
+      // If instrumented profile uses -funique-internal-linakge-symbols,
+      // we need to trim the name.
+      if (ProfileHasFUnique) {
+        NewName = NewName.substr(0, PostfixPos);
+      } else {
+        // If sample profile uses -funique-internal-linakge-symbols,
+        // we build the map.
+        std::string NStr =
+            NewName.str() + getUniqueInternalLinkagePostfix(FName);
+        NewName = StringRef(NStr);
+        StaticFuncMap[NewName] = Name;
+        return;
+      }
+    }
+
+    if (StaticFuncMap.find(NewName) == StaticFuncMap.end()) {
+      StaticFuncMap[NewName] = Name;
+    } else {
+      StaticFuncMap[NewName] = DuplicateNameStr;
+    }
+  };
+
   for (auto &PD : WC->Writer.getProfileData()) {
     // Populate IPBuilder.
     for (const auto &PDV : PD.getValue()) {
@@ -553,13 +641,20 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 
     // Initialize InstrProfileMap.
     InstrProfRecord *R = &PD.getValue().begin()->second;
-    InstrProfileMap[PD.getKey()] = InstrProfileEntry(R);
+    StringRef FullName = PD.getKey();
+    InstrProfileMap[FullName] = InstrProfileEntry(R);
+    buildStaticFuncMap(FullName);
   }
 
   ProfileSummary InstrPS = *IPBuilder.getSummary();
   ProfileSummary SamplePS = Reader->getSummary();
 
   // Compute cold thresholds for instr profile and sample profile.
+  uint64_t HotSampleThreshold =
+      ProfileSummaryBuilder::getEntryForPercentile(
+          SamplePS.getDetailedSummary(),
+          ProfileSummaryBuilder::DefaultCutoffs[HotPercentileIdx])
+          .MinCount;
   uint64_t ColdSampleThreshold =
       ProfileSummaryBuilder::getEntryForPercentile(
           SamplePS.getDetailedSummary(),
@@ -581,16 +676,30 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
   // Find hot/warm functions in sample profile which is cold in instr profile
   // and adjust the profiles of those functions in the instr profile.
   for (const auto &PD : Reader->getProfiles()) {
-    auto &FContext = PD.first;
     const sampleprof::FunctionSamples &FS = PD.second;
+    uint64_t SampleMaxCount = FS.getMaxCountInside();
+    if (SampleMaxCount < ColdSampleThreshold)
+      continue;
+    auto &FContext = PD.first;
     auto It = InstrProfileMap.find(FContext.toString());
-    if (FS.getHeadSamples() > ColdSampleThreshold &&
-        It != InstrProfileMap.end() &&
-        It->second.MaxCount <= ColdInstrThreshold &&
-        FS.getBodySamples().size() >= SupplMinSizeThreshold) {
-      updateInstrProfileEntry(It->second, HotInstrThreshold,
-                              ZeroCounterThreshold);
+    if (It == InstrProfileMap.end()) {
+      auto NewName = StaticFuncMap.find(FContext.toString());
+      if (NewName != StaticFuncMap.end()) {
+        It = InstrProfileMap.find(NewName->second.str());
+        if (NewName->second == DuplicateNameStr) {
+          WithColor::warning()
+              << "Static function " << FContext.toString()
+              << " has multiple promoted names, cannot adjust profile.\n";
+        }
+      }
     }
+    if (It == InstrProfileMap.end() ||
+        It->second.MaxCount > ColdInstrThreshold ||
+        It->second.NumEdgeCounters < SupplMinSizeThreshold)
+      continue;
+    bool SetToHot = SampleMaxCount >= HotSampleThreshold;
+    updateInstrProfileEntry(It->second, SetToHot, HotInstrThreshold,
+                            ColdInstrThreshold, ZeroCounterThreshold);
   }
 }
 
@@ -2207,9 +2316,27 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
 
     uint64_t FuncMax = 0;
     uint64_t FuncSum = 0;
+
+    auto PseudoKind = Func.getCountPseudoKind();
+    if (PseudoKind != InstrProfRecord::NotPseudo) {
+      if (Show) {
+        if (!ShownFunctions)
+          OS << "Counters:\n";
+        ++ShownFunctions;
+        OS << "  " << Func.Name << ":\n"
+           << "    Hash: " << format("0x%016" PRIx64, Func.Hash) << "\n"
+           << "    Counters: " << Func.Counts.size();
+        if (PseudoKind == InstrProfRecord::PseudoHot)
+          OS << "    <PseudoHot>\n";
+        else if (PseudoKind == InstrProfRecord::PseudoWarm)
+          OS << "    <PseudoWarm>\n";
+        else
+          llvm_unreachable("Unknown PseudoKind");
+      }
+      continue;
+    }
+
     for (size_t I = 0, E = Func.Counts.size(); I < E; ++I) {
-      if (Func.Counts[I] == (uint64_t)-1)
-        continue;
       FuncMax = std::max(FuncMax, Func.Counts[I]);
       FuncSum += Func.Counts[I];
     }

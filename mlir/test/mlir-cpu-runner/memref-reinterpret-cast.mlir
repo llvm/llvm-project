@@ -59,10 +59,10 @@ func.func @cast_ranked_memref_to_dynamic_shape(%input : memref<2x3xf32>) {
   %c6 = arith.constant 6 : index
   %output = memref.reinterpret_cast %input to
            offset: [%c0], sizes: [%c1, %c6], strides: [%c6, %c1]
-           : memref<2x3xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
+           : memref<2x3xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
 
   %unranked_output = memref.cast %output
-      : memref<?x?xf32, offset: ?, strides: [?, ?]> to memref<*xf32>
+      : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<*xf32>
   call @printMemrefF32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [1, 6] strides = [6, 1] data =
   // CHECK-NEXT: [0,   1,   2,   3,   4,   5]
@@ -95,10 +95,10 @@ func.func @cast_unranked_memref_to_dynamic_shape(%input : memref<2x3xf32>) {
   %c6 = arith.constant 6 : index
   %output = memref.reinterpret_cast %unranked_input to
            offset: [%c0], sizes: [%c1, %c6], strides: [%c6, %c1]
-           : memref<*xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
+           : memref<*xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
 
   %unranked_output = memref.cast %output
-      : memref<?x?xf32, offset: ?, strides: [?, ?]> to memref<*xf32>
+      : memref<?x?xf32, strided<[?, ?], offset: ?>> to memref<*xf32>
   call @printMemrefF32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [1, 6] strides = [6, 1] data =
   // CHECK-NEXT: [0,   1,   2,   3,   4,   5]

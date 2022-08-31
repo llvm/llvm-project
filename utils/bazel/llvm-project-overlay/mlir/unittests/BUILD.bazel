@@ -234,10 +234,6 @@ gentbl_cc_library(
             ["-gen-pass-decls"],
             "TableGen/PassGenTest.h.inc",
         ),
-        (
-            ["-gen-pass-defs"],
-            "TableGen/PassGenTest.cpp.inc",
-        ),
     ],
     tblgen = "//mlir:mlir-tblgen",
     td_file = "TableGen/passes.td",

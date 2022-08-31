@@ -2125,9 +2125,8 @@ private:
 
   /// Return information about the vector formed for the specified index
   /// of a vector of (the same) instruction.
-  /// \param EnableFP - If true, check for float constants.
-  TargetTransformInfo::OperandValueInfo
-  getOperandInfo(ArrayRef<Value *> VL, unsigned OpIdx, bool EnableFP);
+  TargetTransformInfo::OperandValueInfo getOperandInfo(ArrayRef<Value *> VL,
+                                                       unsigned OpIdx);
 
   /// \returns the cost of the vectorizable entry.
   InstructionCost getEntryCost(const TreeEntry *E,
@@ -5816,23 +5815,29 @@ static bool isAlternateInstruction(const Instruction *I,
 }
 
 TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> VL,
-                                              unsigned OpIdx, bool EnableFP) {
-  TTI::OperandValueKind VK = TTI::OK_UniformConstantValue;
-  TTI::OperandValueProperties VP = TTI::OP_PowerOf2;
-
-  // If all float operands are constants then set the operand kind to
+                                              unsigned OpIdx) {
+  // If all float point constants are the same, return OK_UniformConstantValue.
+  // If all float operands are different constants then set the operand kind to
   // OK_NonUniformConstantValue. Otherwise, return OK_AnyValue.
   const auto *I0 = cast<Instruction>(VL.front());
   if (I0->getOperand(OpIdx)->getType()->isFloatingPointTy()) {
-    if (!EnableFP || any_of(VL, [OpIdx, I0](Value *V) {
+    if (any_of(VL, [OpIdx, I0](Value *V) {
           const auto *Inst = cast<Instruction>(V);
           assert(Inst->getOpcode() == I0->getOpcode() &&
                  "Expected same opcode");
           return !isConstant(Inst->getOperand(OpIdx));
         }))
       return {TTI::OK_AnyValue, TTI::OP_None};
-    return {TTI::OK_NonUniformConstantValue, TTI::OP_None};
+    const auto *Op0 = I0->getOperand(OpIdx);
+    if (any_of(VL, [OpIdx, Op0](Value *V) {
+          return cast<Instruction>(V)->getOperand(OpIdx) != Op0;
+        }))
+      return {TTI::OK_NonUniformConstantValue, TTI::OP_None};
+    return {TTI::OK_UniformConstantValue, TTI::OP_None};
   }
+
+  TTI::OperandValueKind VK = TTI::OK_UniformConstantValue;
+  TTI::OperandValueProperties VP = TTI::OP_PowerOf2;
 
   // If all operands are exactly the same ConstantInt then set the
   // operand kind to OK_UniformConstantValue.
@@ -6430,8 +6435,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // Certain instructions can be cheaper to vectorize if they have a
       // constant second vector operand.
       const unsigned OpIdx = isa<BinaryOperator>(VL0) ? 1 : 0;
-      // TODO: impact of enabling the analysis there is yet to be determined
-      auto Op2Info = getOperandInfo(VL, OpIdx, /*EnableFP=*/false);
+      auto Op2Info = getOperandInfo(VL, OpIdx);
 
       SmallVector<const Value *, 4> Operands(VL0->operand_values());
       InstructionCost ScalarEltCost =
@@ -6516,7 +6520,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       auto *SI =
           cast<StoreInst>(IsReorder ? VL[E->ReorderIndices.front()] : VL0);
       Align Alignment = SI->getAlign();
-      TTI::OperandValueInfo OpInfo = getOperandInfo(VL, 0, /*EnableFP=*/true);
+      TTI::OperandValueInfo OpInfo = getOperandInfo(VL, 0);
       InstructionCost ScalarEltCost = TTI->getMemoryOpCost(
           Instruction::Store, ScalarTy, Alignment, 0, CostKind, OpInfo, VL0);
       InstructionCost ScalarStCost = VecTy->getNumElements() * ScalarEltCost;
@@ -11989,20 +11993,30 @@ bool SLPVectorizerPass::vectorizeSimpleInstructions(InstSetVector &Instructions,
                                                     bool AtTerminator) {
   bool OpsChanged = false;
   SmallVector<Instruction *, 4> PostponedCmps;
+  SmallVector<WeakTrackingVH> PostponedInsts;
+  // pass1 - try to vectorize reductions only
   for (auto *I : reverse(Instructions)) {
     if (R.isDeleted(I))
+      continue;
+    if (isa<CmpInst>(I)) {
+      PostponedCmps.push_back(I);
+      continue;
+    }
+    OpsChanged |= vectorizeHorReduction(nullptr, I, BB, R, TTI, PostponedInsts);
+  }
+  // pass2 - try to match and vectorize a buildvector sequence.
+  for (auto *I : reverse(Instructions)) {
+    if (R.isDeleted(I) || isa<CmpInst>(I))
       continue;
     if (auto *LastInsertValue = dyn_cast<InsertValueInst>(I)) {
       OpsChanged |= vectorizeInsertValueInst(LastInsertValue, BB, R);
     } else if (auto *LastInsertElem = dyn_cast<InsertElementInst>(I)) {
       OpsChanged |= vectorizeInsertElementInst(LastInsertElem, BB, R);
-    } else if (isa<CmpInst>(I)) {
-      PostponedCmps.push_back(I);
-      continue;
     }
-    // Try to find reductions in buildvector sequnces.
-    OpsChanged |= vectorizeRootInstruction(nullptr, I, BB, R, TTI);
   }
+  // Now try to vectorize postponed instructions.
+  OpsChanged |= tryToVectorize(PostponedInsts, R);
+
   if (AtTerminator) {
     // Try to find reductions first.
     for (Instruction *I : PostponedCmps) {

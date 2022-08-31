@@ -343,12 +343,12 @@ def MemRef_CastOp : MemRef_Op<"cast", [
     // The same holds true for offsets and strides.
 
     // Assert that the input dynamic shape matches the destination static stride.
-    %4 = memref.cast %1 : memref<12x4xf32, offset:?, strides: [?, ?]> to
-                          memref<12x4xf32, offset:5, strides: [4, 1]>
+    %4 = memref.cast %1 : memref<12x4xf32, strided<[?, ?], offset: ?>> to
+                          memref<12x4xf32, strided<[4, 1], offset: 5>>
     // Erase static offset and stride information, replacing it with
     // dynamic information.
-    %5 = memref.cast %1 : memref<12x4xf32, offset:5, strides: [4, 1]> to
-                          memref<12x4xf32, offset:?, strides: [?, ?]>
+    %5 = memref.cast %1 : memref<12x4xf32, strided<[4, 1], offset: 5>> to
+                          memref<12x4xf32, strided<[?, ?], offset: ?>>
     ```
 
     b. Either or both memref types are unranked with the same element type, and
@@ -1067,13 +1067,13 @@ def MemRef_ReinterpretCastOp
       offset: [0],
       sizes: [%size0, 10],
       strides: [1, %stride1]
-    : memref<?x?xf32> to memref<?x10xf32, offset: 0, strides: [1, ?]>
+    : memref<?x?xf32> to memref<?x10xf32, strided<[1, ?], offset: 0>>
 
     memref.reinterpret_cast %unranked to
       offset: [%offset],
       sizes: [%size0, %size1],
       strides: [%stride0, %stride1]
-    : memref<*xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
+    : memref<*xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
     ```
   }];
 
@@ -1639,7 +1639,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
     // After rank reducing:
     // (d0, d1) -> (4 * d0 + d1 + 210)
     %3 = memref.subview %2[3, 4, 2][1, 6, 3][1, 1, 1] :
-      memref<8x16x4xf32> to memref<6x3xf32, offset: 210, strides: [4, 1]>
+      memref<8x16x4xf32> to memref<6x3xf32, strided<[4, 1], offset: 210>>
     ```
   }];
 

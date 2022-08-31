@@ -5,6 +5,7 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   BufferOptimizations.cpp
   BufferResultsToOutParams.cpp
   BufferUtils.cpp
+  BufferViewFlowAnalysis.cpp
   DropEquivalentBufferResults.cpp
   FuncBufferizableOpInterfaceImpl.cpp
   OneShotAnalysis.cpp
@@ -27,5 +28,6 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   MLIRPass
   MLIRTensorDialect
   MLIRTransforms
+  MLIRViewLikeInterface
 )
 
