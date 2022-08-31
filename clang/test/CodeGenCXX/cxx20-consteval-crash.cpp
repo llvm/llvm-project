@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -std=c++20 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-obj -debug-info-kind=constructor -std=c++20 %s -o -
 
 namespace PR50787 {
 // This code would previously cause a crash.
@@ -71,3 +72,23 @@ int foo() {
   return function(Item{'a'}, Item{'a'});
 }
 } // namespace Issue58871
+
+namespace Issue55065 {
+struct Base {
+  consteval virtual int Get() const = 0;
+};
+
+struct Derived : Base {
+  consteval int Get() const override {
+    return 42;
+  }
+};
+
+int foo() {
+  constexpr Derived a;
+
+  auto val = a.Get();
+  return val;
+}
+} // namespace Issue55065
+

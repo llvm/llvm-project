@@ -1534,11 +1534,12 @@ static bool generateVectorLoadStoreInst(const SPIRV::IncomingCall *Call,
 /// Lowers a builtin funtion call using the provided \p DemangledCall skeleton
 /// and external instruction \p Set.
 namespace SPIRV {
-std::pair<bool, bool>
-lowerBuiltin(const StringRef DemangledCall, InstructionSet::InstructionSet Set,
-             MachineIRBuilder &MIRBuilder, const Register OrigRet,
-             const Type *OrigRetTy, const SmallVectorImpl<Register> &Args,
-             SPIRVGlobalRegistry *GR) {
+Optional<bool> lowerBuiltin(const StringRef DemangledCall,
+                            SPIRV::InstructionSet::InstructionSet Set,
+                            MachineIRBuilder &MIRBuilder,
+                            const Register OrigRet, const Type *OrigRetTy,
+                            const SmallVectorImpl<Register> &Args,
+                            SPIRVGlobalRegistry *GR) {
   LLVM_DEBUG(dbgs() << "Lowering builtin call: " << DemangledCall << "\n");
 
   // SPIR-V type and return register.
@@ -1558,7 +1559,7 @@ lowerBuiltin(const StringRef DemangledCall, InstructionSet::InstructionSet Set,
 
   if (!Call) {
     LLVM_DEBUG(dbgs() << "Builtin record was not found!");
-    return {false, false};
+    return {};
   }
 
   // TODO: check if the provided args meet the builtin requirments.
@@ -1570,48 +1571,45 @@ lowerBuiltin(const StringRef DemangledCall, InstructionSet::InstructionSet Set,
   // Match the builtin with implementation based on the grouping.
   switch (Call->Builtin->Group) {
   case SPIRV::Extended:
-    return {true, generateExtInst(Call.get(), MIRBuilder, GR)};
+    return generateExtInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Relational:
-    return {true, generateRelationalInst(Call.get(), MIRBuilder, GR)};
+    return generateRelationalInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Group:
-    return {true, generateGroupInst(Call.get(), MIRBuilder, GR)};
+    return generateGroupInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Variable:
-    return {true, generateBuiltinVar(Call.get(), MIRBuilder, GR)};
+    return generateBuiltinVar(Call.get(), MIRBuilder, GR);
   case SPIRV::Atomic:
-    return {true, generateAtomicInst(Call.get(), MIRBuilder, GR)};
+    return generateAtomicInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Barrier:
-    return {true, generateBarrierInst(Call.get(), MIRBuilder, GR)};
+    return generateBarrierInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Dot:
-    return {true, generateDotOrFMulInst(Call.get(), MIRBuilder, GR)};
+    return generateDotOrFMulInst(Call.get(), MIRBuilder, GR);
   case SPIRV::GetQuery:
-    return {true, generateGetQueryInst(Call.get(), MIRBuilder, GR)};
+    return generateGetQueryInst(Call.get(), MIRBuilder, GR);
   case SPIRV::ImageSizeQuery:
-    return {true, generateImageSizeQueryInst(Call.get(), MIRBuilder, GR)};
+    return generateImageSizeQueryInst(Call.get(), MIRBuilder, GR);
   case SPIRV::ImageMiscQuery:
-    return {true, generateImageMiscQueryInst(Call.get(), MIRBuilder, GR)};
+    return generateImageMiscQueryInst(Call.get(), MIRBuilder, GR);
   case SPIRV::ReadImage:
-    return {true,
-            generateReadImageInst(DemangledCall, Call.get(), MIRBuilder, GR)};
+    return generateReadImageInst(DemangledCall, Call.get(), MIRBuilder, GR);
   case SPIRV::WriteImage:
-    return {true, generateWriteImageInst(Call.get(), MIRBuilder, GR)};
+    return generateWriteImageInst(Call.get(), MIRBuilder, GR);
   case SPIRV::SampleImage:
-    return {true,
-            generateSampleImageInst(DemangledCall, Call.get(), MIRBuilder, GR)};
+    return generateSampleImageInst(DemangledCall, Call.get(), MIRBuilder, GR);
   case SPIRV::Select:
-    return {true, generateSelectInst(Call.get(), MIRBuilder)};
+    return generateSelectInst(Call.get(), MIRBuilder);
   case SPIRV::SpecConstant:
-    return {true, generateSpecConstantInst(Call.get(), MIRBuilder, GR)};
+    return generateSpecConstantInst(Call.get(), MIRBuilder, GR);
   case SPIRV::Enqueue:
-    return {true, generateEnqueueInst(Call.get(), MIRBuilder, GR)};
+    return generateEnqueueInst(Call.get(), MIRBuilder, GR);
   case SPIRV::AsyncCopy:
-    return {true, generateAsyncCopy(Call.get(), MIRBuilder, GR)};
+    return generateAsyncCopy(Call.get(), MIRBuilder, GR);
   case SPIRV::Convert:
-    return {true,
-            generateConvertInst(DemangledCall, Call.get(), MIRBuilder, GR)};
+    return generateConvertInst(DemangledCall, Call.get(), MIRBuilder, GR);
   case SPIRV::VectorLoadStore:
-    return {true, generateVectorLoadStoreInst(Call.get(), MIRBuilder, GR)};
+    return generateVectorLoadStoreInst(Call.get(), MIRBuilder, GR);
   }
-  return {true, false};
+  return false;
 }
 } // namespace SPIRV
 } // namespace llvm

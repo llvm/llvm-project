@@ -6,18 +6,18 @@
 define void @select() {
 ; CHECK-LABEL: 'select'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %1 = select i1 undef, i1 undef, i1 undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %2 = select <1 x i1> undef, <1 x i1> undef, <1 x i1> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %3 = select <2 x i1> undef, <2 x i1> undef, <2 x i1> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %4 = select <4 x i1> undef, <4 x i1> undef, <4 x i1> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %5 = select <8 x i1> undef, <8 x i1> undef, <8 x i1> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %6 = select <16 x i1> undef, <16 x i1> undef, <16 x i1> undef
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %7 = select <32 x i1> undef, <32 x i1> undef, <32 x i1> undef
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %8 = select <vscale x 1 x i1> undef, <vscale x 1 x i1> undef, <vscale x 1 x i1> undef
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %9 = select <vscale x 2 x i1> undef, <vscale x 2 x i1> undef, <vscale x 2 x i1> undef
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %10 = select <vscale x 4 x i1> undef, <vscale x 4 x i1> undef, <vscale x 4 x i1> undef
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %11 = select <vscale x 8 x i1> undef, <vscale x 8 x i1> undef, <vscale x 8 x i1> undef
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %12 = select <vscale x 16 x i1> undef, <vscale x 16 x i1> undef, <vscale x 16 x i1> undef
-; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %13 = select <vscale x 32 x i1> undef, <vscale x 32 x i1> undef, <vscale x 32 x i1> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %2 = select <1 x i1> undef, <1 x i1> undef, <1 x i1> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %3 = select <2 x i1> undef, <2 x i1> undef, <2 x i1> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %4 = select <4 x i1> undef, <4 x i1> undef, <4 x i1> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %5 = select <8 x i1> undef, <8 x i1> undef, <8 x i1> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %6 = select <16 x i1> undef, <16 x i1> undef, <16 x i1> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %7 = select <32 x i1> undef, <32 x i1> undef, <32 x i1> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %8 = select <vscale x 1 x i1> undef, <vscale x 1 x i1> undef, <vscale x 1 x i1> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %9 = select <vscale x 2 x i1> undef, <vscale x 2 x i1> undef, <vscale x 2 x i1> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %10 = select <vscale x 4 x i1> undef, <vscale x 4 x i1> undef, <vscale x 4 x i1> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %11 = select <vscale x 8 x i1> undef, <vscale x 8 x i1> undef, <vscale x 8 x i1> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %12 = select <vscale x 16 x i1> undef, <vscale x 16 x i1> undef, <vscale x 16 x i1> undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %13 = select <vscale x 32 x i1> undef, <vscale x 32 x i1> undef, <vscale x 32 x i1> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %14 = select i1 undef, i8 undef, i8 undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %15 = select <1 x i1> undef, <1 x i8> undef, <1 x i8> undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %16 = select <2 x i1> undef, <2 x i8> undef, <2 x i8> undef

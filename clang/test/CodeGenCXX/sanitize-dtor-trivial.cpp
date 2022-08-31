@@ -14,7 +14,6 @@ Trivial t;
 
 // CHECK: call void @__sanitizer_dtor_callback({{.*}}, !dbg ![[DI:[0-9]+]]
 
+// CHECK-LABEL: !DIFile{{.*}}.cpp
 
-// CHECK-LABEL: !DIFile{{.*}}cpp
-
-// CHECK-DAG: ![[DI]] = {{.*}}line: [[@LINE-28]]
+// CHECK-DAG: ![[DI]] = {{.*}}line: [[@LINE-371]]

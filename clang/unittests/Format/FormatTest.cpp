@@ -25201,6 +25201,13 @@ TEST_F(FormatTest, InsertBraces) {
                "  f();",
                Style);
 
+  verifyFormat("if (a) { //\n"
+               "  b = 1;\n"
+               "}",
+               "if (a) //\n"
+               "  b = 1;",
+               Style);
+
   verifyFormat("if (a) { // comment\n"
                "  // comment\n"
                "  f();\n"
@@ -25265,6 +25272,19 @@ TEST_F(FormatTest, InsertBraces) {
                "}",
                "if (a + b > c)\n"
                "  f();",
+               Style);
+
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.AfterControlStatement = FormatStyle::BWACS_Always;
+  // TODO: Delete the following line after #57421 is fixed.
+  Style.BraceWrapping.AfterFunction = true;
+
+  verifyFormat("if (a) //\n"
+               "{\n"
+               "  b = 1;\n"
+               "}",
+               "if (a) //\n"
+               "  b = 1;",
                Style);
 }
 
