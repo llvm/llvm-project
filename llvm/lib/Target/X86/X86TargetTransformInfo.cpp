@@ -70,15 +70,10 @@ using namespace llvm;
 // Helper struct to store/access costs for each cost kind.
 // TODO: Move this to allow other targets to use it?
 struct CostKindCosts {
-  unsigned RecipThroughputCost;
-  unsigned LatencyCost;
-  unsigned CodeSizeCost;
-  unsigned SizeAndLatencyCost;
-
-  CostKindCosts(unsigned RecipThroughput = ~0U, unsigned Latency = ~0U,
-                unsigned CodeSize = ~0U, unsigned SizeAndLatency = ~0U)
-      : RecipThroughputCost(RecipThroughput), LatencyCost(Latency),
-        CodeSizeCost(CodeSize), SizeAndLatencyCost(SizeAndLatency) {}
+  unsigned RecipThroughputCost = ~0U;
+  unsigned LatencyCost = ~0U;
+  unsigned CodeSizeCost = ~0U;
+  unsigned SizeAndLatencyCost = ~0U;
 
   llvm::Optional<unsigned>
   operator[](TargetTransformInfo::TargetCostKind Kind) const {
