@@ -1356,37 +1356,25 @@ public:
   /// Resolve a list of operands to SSA values, emitting an error on failure, or
   /// appending the results to the list on success. This method should be used
   /// when all operands have the same type.
-  ParseResult resolveOperands(ArrayRef<UnresolvedOperand> operands, Type type,
+  template <typename Operands = ArrayRef<UnresolvedOperand>>
+  ParseResult resolveOperands(Operands &&operands, Type type,
                               SmallVectorImpl<Value> &result) {
-    for (auto elt : operands)
-      if (resolveOperand(elt, type, result))
+    for (const UnresolvedOperand &operand : operands)
+      if (resolveOperand(operand, type, result))
         return failure();
     return success();
+  }
+  template <typename Operands = ArrayRef<UnresolvedOperand>>
+  ParseResult resolveOperands(Operands &&operands, Type type, SMLoc loc,
+                              SmallVectorImpl<Value> &result) {
+    return resolveOperands(std::forward<Operands>(operands), type, result);
   }
 
   /// Resolve a list of operands and a list of operand types to SSA values,
   /// emitting an error and returning failure, or appending the results
   /// to the list on success.
-  ParseResult resolveOperands(ArrayRef<UnresolvedOperand> operands,
-                              ArrayRef<Type> types, SMLoc loc,
-                              SmallVectorImpl<Value> &result) {
-    if (operands.size() != types.size())
-      return emitError(loc)
-             << operands.size() << " operands present, but expected "
-             << types.size();
-
-    for (unsigned i = 0, e = operands.size(); i != e; ++i)
-      if (resolveOperand(operands[i], types[i], result))
-        return failure();
-    return success();
-  }
-  template <typename Operands>
-  ParseResult resolveOperands(Operands &&operands, Type type, SMLoc loc,
-                              SmallVectorImpl<Value> &result) {
-    return resolveOperands(std::forward<Operands>(operands),
-                           ArrayRef<Type>(type), loc, result);
-  }
-  template <typename Operands, typename Types>
+  template <typename Operands = ArrayRef<UnresolvedOperand>,
+            typename Types = ArrayRef<Type>>
   std::enable_if_t<!std::is_convertible<Types, Type>::value, ParseResult>
   resolveOperands(Operands &&operands, Types &&types, SMLoc loc,
                   SmallVectorImpl<Value> &result) {
@@ -1396,8 +1384,8 @@ public:
       return emitError(loc)
              << operandSize << " operands present, but expected " << typeSize;
 
-    for (auto it : llvm::zip(operands, types))
-      if (resolveOperand(std::get<0>(it), std::get<1>(it), result))
+    for (auto [operand, type] : llvm::zip(operands, types))
+      if (resolveOperand(operand, type, result))
         return failure();
     return success();
   }

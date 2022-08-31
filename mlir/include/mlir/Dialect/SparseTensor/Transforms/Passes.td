@@ -77,16 +77,16 @@ def Sparsification : Pass<"sparsification", "ModuleOp"> {
 }
 
 def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {
-  let summary = "Apply conversion rules to sparse tensor primitives and types";
+  let summary = "Convert sparse tensors and primitives to library calls";
   let description = [{
-    A pass that converts sparse tensor primitives to calls into a runtime
-    support library. All sparse tensor types are converted into opaque
-    pointers to the underlying sparse storage schemes.
+    A pass that converts sparse tensor primitives into calls into a runtime
+    support library. Sparse tensor types are converted into opaque pointers
+    to the underlying sparse storage schemes.
 
-    Note that this is a current implementation choice to keep the conversion
-    relatively simple. In principle, these primitives could also be
-    converted to actual elaborate IR code that implements the primitives
-    on the selected sparse tensor storage schemes.
+    The use of opaque pointers together with runtime support library keeps
+    the conversion relatively simple, but at the expense of IR opacity,
+    which obscures opportunities for subsequent optimization of the IR.
+    An alternative is provided by the SparseTensorCodegen pass.
 
     Example of the conversion:
 
@@ -119,6 +119,30 @@ def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {
   let options = [
     Option<"sparseToSparse", "s2s-strategy", "int32_t", "0",
            "Set the strategy for sparse-to-sparse conversion">,
+  ];
+}
+
+def SparseTensorCodegen : Pass<"sparse-tensor-codegen", "ModuleOp"> {
+  let summary = "Convert sparse tensors and primitives to actual code";
+  let description = [{
+    A pass that converts sparse tensor types and primitives to actual
+    compiler visible buffers and compiler IR that implements these
+    primitives on the selected sparse tensor storage schemes.
+
+    This pass provides an alternative to the SparseTensorConversion pass,
+    eliminating the dependence on a runtime support library, and providing
+    much more opportunities for subsequent compiler optimization of the
+    generated code.
+
+    Example of the conversion:
+
+    ```mlir
+    TBD
+    ```
+  }];
+  let constructor = "mlir::createSparseTensorCodegenPass()";
+  let dependentDialects = [
+    "sparse_tensor::SparseTensorDialect",
   ];
 }
 

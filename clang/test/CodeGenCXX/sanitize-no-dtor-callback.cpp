@@ -8,7 +8,6 @@ struct Simple {
 };
 Simple s;
 // CHECK-LABEL: define {{.*}}SimpleD1Ev
-// CHECK-NOT: call void @__sanitizer_dtor_callback
 
 struct Inlined {
   int x;

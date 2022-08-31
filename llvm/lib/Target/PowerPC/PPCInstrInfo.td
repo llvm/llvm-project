@@ -2548,14 +2548,14 @@ def MTCTR : XFXForm_7_ext<31, 467, 9, (outs), (ins gprc:$rS),
                           "mtctr $rS", IIC_SprMTSPR>,
             PPC970_DGroup_First, PPC970_Unit_FXU;
 }
-let hasSideEffects = 1, isCodeGenOnly = 1, Defs = [CTR] in {
+let hasSideEffects = 1, isCodeGenOnly = 1, isNotDuplicable = 1, Defs = [CTR] in {
 let Pattern = [(int_set_loop_iterations i32:$rS)] in
 def MTCTRloop : XFXForm_7_ext<31, 467, 9, (outs), (ins gprc:$rS),
                               "mtctr $rS", IIC_SprMTSPR>,
                 PPC970_DGroup_First, PPC970_Unit_FXU;
 }
 
-let hasSideEffects = 1, hasNoSchedulingInfo = 1, Uses = [CTR], Defs = [CTR] in
+let hasSideEffects = 1, hasNoSchedulingInfo = 1, isNotDuplicable = 1, Uses = [CTR], Defs = [CTR] in
 def DecreaseCTRloop : PPCEmitTimePseudo<(outs crbitrc:$rT), (ins i32imm:$stride),
                                        "#DecreaseCTRloop", [(set i1:$rT, (int_loop_decrement (i32 imm:$stride)))]>;
 

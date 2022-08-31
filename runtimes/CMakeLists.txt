@@ -244,12 +244,14 @@ if(LLVM_INCLUDE_TESTS)
                      ${CMAKE_CURRENT_BINARY_DIR}/llvm-lit)
   endif()
 
-  get_property(LLVM_RUNTIMES_LIT_TESTSUITES GLOBAL PROPERTY LLVM_RUNTIMES_LIT_TESTSUITES)
-  string(REPLACE ";" "\n" LLVM_RUNTIMES_LIT_TESTSUITES "${LLVM_RUNTIMES_LIT_TESTSUITES}")
   if(LLVM_RUNTIMES_TARGET)
-    file(WRITE ${LLVM_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Tests.rsp ${LLVM_RUNTIMES_LIT_TESTSUITES})
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
+      ${LLVM_BINARY_DIR}/runtimes/${LLVM_RUNTIMES_TARGET}/Tests.cmake)
   else()
-    file(WRITE ${LLVM_BINARY_DIR}/runtimes/Tests.rsp ${LLVM_RUNTIMES_LIT_TESTSUITES})
+    configure_file(
+      ${CMAKE_CURRENT_SOURCE_DIR}/Tests.cmake.in
+      ${LLVM_BINARY_DIR}/runtimes/Tests.cmake)
   endif()
 endif()
 

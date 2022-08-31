@@ -436,7 +436,7 @@ func.func @memref_reinterpret_cast_unranked_to_dynamic_shape(%offset: index,
   %output = memref.reinterpret_cast %input to
            offset: [%offset], sizes: [%size_0, %size_1],
            strides: [%stride_0, %stride_1]
-           : memref<*xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
+           : memref<*xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
   return
 }
 // CHECK-SAME: ([[OFFSETarg:%[a-z,0-9]+]]: index,

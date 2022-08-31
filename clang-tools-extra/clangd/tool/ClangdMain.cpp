@@ -308,6 +308,8 @@ RetiredFlag<bool> CollectMainFileRefs("collect-main-file-refs");
 RetiredFlag<bool> CrossFileRename("cross-file-rename");
 RetiredFlag<std::string> ClangTidyChecks("clang-tidy-checks");
 RetiredFlag<std::string> InlayHints("inlay-hints");
+RetiredFlag<std::string> FoldingRanges("folding-ranges");
+
 
 opt<int> LimitResults{
     "limit-results",
@@ -331,14 +333,6 @@ list<std::string> TweakList{
     desc("Specify a list of Tweaks to enable (only for clangd developers)."),
     Hidden,
     CommaSeparated,
-};
-
-opt<bool> FoldingRanges{
-    "folding-ranges",
-    cat(Features),
-    desc("Enable preview of FoldingRanges feature"),
-    init(false),
-    Hidden,
 };
 
 opt<unsigned> WorkerThreadsCount{
@@ -903,7 +897,6 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
     Opts.StaticIndex = PAI.get();
   }
   Opts.AsyncThreadsCount = WorkerThreadsCount;
-  Opts.FoldingRanges = FoldingRanges;
   Opts.MemoryCleanup = getMemoryCleanupFunction();
 
   Opts.CodeComplete.IncludeIneligibleResults = IncludeIneligibleResults;

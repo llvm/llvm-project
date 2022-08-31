@@ -138,8 +138,6 @@ define void @alloca_1(i1 %c) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 1
-; CHECK-NEXT:    store i32 1, i32* [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
@@ -177,12 +175,8 @@ define void @alloca_2(i1 %c) {
 ; CHECK-NEXT:    call void @readonly_use(i32* [[P]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 1
-; CHECK-NEXT:    store i32 1, i32* [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 1
-; CHECK-NEXT:    store i32 1, i32* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void

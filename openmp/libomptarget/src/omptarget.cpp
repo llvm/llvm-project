@@ -1130,26 +1130,6 @@ TableMap *getTableMap(void *HostPtr) {
   return nullptr;
 }
 
-/// Get loop trip count
-/// FIXME: This function will not work right if calling
-/// __kmpc_push_target_tripcount_mapper in one thread but doing offloading in
-/// another thread, which might occur when we call task yield.
-uint64_t getLoopTripCount(int64_t DeviceId) {
-  DeviceTy &Device = *PM->Devices[DeviceId];
-  uint64_t LoopTripCount = 0;
-
-  {
-    std::lock_guard<std::mutex> TblMapLock(PM->TblMapMtx);
-    auto I = Device.LoopTripCnt.find(__kmpc_global_thread_num(NULL));
-    if (I != Device.LoopTripCnt.end()) {
-      LoopTripCount = I->second;
-      Device.LoopTripCnt.erase(I);
-    }
-  }
-
-  return LoopTripCount;
-}
-
 /// A class manages private arguments in a target region.
 class PrivateArgumentManagerTy {
   /// A data structure for the information of first-private arguments. We can
@@ -1512,8 +1492,6 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr, int32_t ArgNum,
   }
   assert(TargetTable && "Global data has not been mapped\n");
 
-  // FIXME: Use legacy tripcount method if it is '-1'.
-  Tripcount = Tripcount == -1UL ? getLoopTripCount(DeviceId) : Tripcount;
   DP("loop trip count is %" PRIu64 ".\n", Tripcount);
 
   // We need to keep bases and offsets separate. Sometimes (e.g. in OpenCL) we

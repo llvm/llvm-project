@@ -775,7 +775,8 @@ def warn_cxx14_compat_template_template_param_typename : Warning<
 def err_template_spec_syntax_non_template : Error<
   "identifier followed by '<' indicates a class template specialization but "
   "%0 %select{does not refer to a template|refers to a function template|"
-  "<unused>|refers to a variable template|<unused>|refers to a concept}1">;
+  "<unused>|refers to a variable template|<unused>|<unused>|"
+  "refers to a concept}1">;
 def err_id_after_template_in_nested_name_spec : Error<
   "expected template name after 'template' keyword in nested name specifier">;
 def err_unexpected_template_in_unqualified_id : Error<

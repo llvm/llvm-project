@@ -3219,21 +3219,21 @@ struct WhileUnusedArg : public OpRewritePattern<WhileOp> {
     // Collect results mapping, new terminator args and new result types.
     SmallVector<Value> newYields;
     SmallVector<Value> newInits;
-    SmallVector<unsigned> argsToErase;
+    llvm::BitVector argsToErase(op.getBeforeArguments().size());
     for (const auto &it : llvm::enumerate(llvm::zip(
              op.getBeforeArguments(), yield.getOperands(), op.getInits()))) {
       Value beforeArg = std::get<0>(it.value());
       Value yieldValue = std::get<1>(it.value());
       Value initValue = std::get<2>(it.value());
       if (beforeArg.use_empty()) {
-        argsToErase.push_back(it.index());
+        argsToErase.set(it.index());
       } else {
         newYields.emplace_back(yieldValue);
         newInits.emplace_back(initValue);
       }
     }
 
-    if (argsToErase.empty())
+    if (argsToErase.none())
       return failure();
 
     rewriter.startRootUpdate(op);
