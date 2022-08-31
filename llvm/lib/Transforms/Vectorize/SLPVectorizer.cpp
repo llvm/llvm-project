@@ -2203,10 +2203,10 @@ private:
   collectUserStores(const BoUpSLP::TreeEntry *TE) const;
 
   /// Helper for `findExternalStoreUsersReorderIndices()`. It checks if the
-  /// stores in \p StoresVec can for a vector instruction. If so it returns true
+  /// stores in \p StoresVec can form a vector instruction. If so it returns true
   /// and populates \p ReorderIndices with the shuffle indices of the the stores
   /// when compared to the sorted vector.
-  bool CanFormVector(const SmallVector<StoreInst *, 4> &StoresVec,
+  bool canFormVector(const SmallVector<StoreInst *, 4> &StoresVec,
                      OrdersType &ReorderIndices) const;
 
   /// Iterates through the users of \p TE, looking for scalar stores that can be
@@ -4327,7 +4327,7 @@ BoUpSLP::collectUserStores(const BoUpSLP::TreeEntry *TE) const {
   return PtrToStoresMap;
 }
 
-bool BoUpSLP::CanFormVector(const SmallVector<StoreInst *, 4> &StoresVec,
+bool BoUpSLP::canFormVector(const SmallVector<StoreInst *, 4> &StoresVec,
                             OrdersType &ReorderIndices) const {
   // We check whether the stores in StoreVec can form a vector by sorting them
   // and checking whether they are consecutive.
@@ -4421,7 +4421,7 @@ BoUpSLP::findExternalStoreUsersReorderIndices(TreeEntry *TE) const {
 
     // If the stores are not consecutive then abandon this StoresVec.
     OrdersType ReorderIndices;
-    if (!CanFormVector(StoresVec, ReorderIndices))
+    if (!canFormVector(StoresVec, ReorderIndices))
       continue;
 
     // We now know that the scalars in StoresVec can form a vector instruction,
