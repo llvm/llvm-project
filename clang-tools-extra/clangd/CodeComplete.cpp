@@ -94,10 +94,14 @@ CompletionItemKind toCompletionItemKind(index::SymbolKind Kind) {
   case SK::Struct:
     return CompletionItemKind::Struct;
   case SK::Class:
-  case SK::Protocol:
   case SK::Extension:
   case SK::Union:
     return CompletionItemKind::Class;
+  case SK::Protocol:
+    // Use interface instead of class for differentiation of classes and
+    // protocols with the same name (e.g. @interface NSObject vs. @protocol
+    // NSObject).
+    return CompletionItemKind::Interface;
   case SK::TypeAlias:
     // We use the same kind as the VSCode C++ extension.
     // FIXME: pick a better option when we have one.
@@ -712,13 +716,13 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
   case CodeCompletionContext::CCC_Type:
   case CodeCompletionContext::CCC_ParenthesizedExpression:
   case CodeCompletionContext::CCC_ObjCInterfaceName:
-  case CodeCompletionContext::CCC_ObjCCategoryName:
   case CodeCompletionContext::CCC_Symbol:
   case CodeCompletionContext::CCC_SymbolOrNewName:
     return true;
   case CodeCompletionContext::CCC_OtherWithMacros:
   case CodeCompletionContext::CCC_DotMemberAccess:
   case CodeCompletionContext::CCC_ArrowMemberAccess:
+  case CodeCompletionContext::CCC_ObjCCategoryName:
   case CodeCompletionContext::CCC_ObjCPropertyAccess:
   case CodeCompletionContext::CCC_MacroName:
   case CodeCompletionContext::CCC_MacroNameUse:
@@ -1343,6 +1347,22 @@ bool allowIndex(CodeCompletionContext &CC) {
   llvm_unreachable("invalid NestedNameSpecifier kind");
 }
 
+// Should we include a symbol from the index given the completion kind?
+// FIXME: Ideally we can filter in the fuzzy find request itself.
+bool includeSymbolFromIndex(CodeCompletionContext::Kind Kind,
+                            const Symbol &Sym) {
+  // Objective-C protocols are only useful in ObjC protocol completions,
+  // in other places they're confusing, especially when they share the same
+  // identifier with a class.
+  if (Sym.SymInfo.Kind == index::SymbolKind::Protocol &&
+      Sym.SymInfo.Lang == index::SymbolLanguage::ObjC)
+    return Kind == CodeCompletionContext::CCC_ObjCProtocolName;
+  else if (Kind == CodeCompletionContext::CCC_ObjCProtocolName)
+    // Don't show anything else in ObjC protocol completions.
+    return false;
+  return true;
+}
+
 std::future<SymbolSlab> startAsyncFuzzyFind(const SymbolIndex &Index,
                                             const FuzzyFindRequest &Req) {
   return runAsync<SymbolSlab>([&Index, Req]() {
@@ -1675,14 +1695,6 @@ private:
     return Output;
   }
 
-  bool includeSymbolFromIndex(const Symbol &Sym) {
-    if (CCContextKind == CodeCompletionContext::CCC_ObjCProtocolName) {
-      return Sym.SymInfo.Lang == index::SymbolLanguage::ObjC &&
-          Sym.SymInfo.Kind == index::SymbolKind::Protocol;
-    }
-    return true;
-  }
-
   SymbolSlab queryIndex() {
     trace::Span Tracer("Query index");
     SPAN_ATTACH(Tracer, "limit", int64_t(Opts.Limit));
@@ -1716,11 +1728,8 @@ private:
 
     // Run the query against the index.
     SymbolSlab::Builder ResultsBuilder;
-    if (Opts.Index->fuzzyFind(Req, [&](const Symbol &Sym) {
-          if (includeSymbolFromIndex(Sym))
-            ResultsBuilder.insert(Sym);
-        }))
-      Incomplete = true;
+    Incomplete |= Opts.Index->fuzzyFind(
+        Req, [&](const Symbol &Sym) { ResultsBuilder.insert(Sym); });
     return std::move(ResultsBuilder).build();
   }
 
@@ -1782,6 +1791,8 @@ private:
     // Now emit any Index-only results.
     for (const auto &IndexResult : IndexResults) {
       if (UsedIndexResults.count(&IndexResult))
+        continue;
+      if (!includeSymbolFromIndex(CCContextKind, IndexResult))
         continue;
       AddToBundles(/*SemaResult=*/nullptr, &IndexResult, nullptr);
     }
