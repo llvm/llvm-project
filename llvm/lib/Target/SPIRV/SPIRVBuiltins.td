@@ -1104,22 +1104,36 @@ def DemangledTypes : GenericTable {
 }
 
 // Function to lookup builtin types by their demangled name.
-def lookupType : SearchIndex {
+def lookupBuiltinType : SearchIndex {
   let Table = DemangledTypes;
   let Key = ["Name"];
 }
 
-// OpenCL builtin types:
 def : DemangledType<"opencl.reserve_id_t", OpTypeReserveId>;
 def : DemangledType<"opencl.event_t", OpTypeEvent>;
 def : DemangledType<"opencl.queue_t", OpTypeQueue>;
 def : DemangledType<"opencl.sampler_t", OpTypeSampler>;
 def : DemangledType<"opencl.clk_event_t", OpTypeDeviceEvent>;
-def : DemangledType<"opencl.clk_event_t", OpTypeDeviceEvent>;
+
+def : DemangledType<"spirv.ReserveId", OpTypeReserveId>;
+def : DemangledType<"spirv.PipeStorage", OpTypePipeStorage>;
+def : DemangledType<"spirv.Queue", OpTypeQueue>;
+def : DemangledType<"spirv.Event", OpTypeEvent>;
+def : DemangledType<"spirv.Sampler", OpTypeSampler>;
+def : DemangledType<"spirv.DeviceEvent", OpTypeDeviceEvent>;
+
+// Some SPIR-V builtin types (e.g. spirv.Image) have a complex list of
+// parameters as part of their name. Some of those parameters should be treated
+// as numeric literals and therefore they cannot be represented in TableGen and
+// should be parsed instead.
+def : DemangledType<"spirv.Image", OpTypeImage>;
+def : DemangledType<"spirv.SampledImage", OpTypeSampledImage>;
+def : DemangledType<"spirv.Pipe", OpTypePipe>;
 
 // Class definining lowering details for various variants of image type indentifiers.
 class ImageType<string name> {
   string Name = name;
+  string Type = "void";
   AccessQualifier Qualifier = !cond(!not(!eq(!find(name, "_ro_t"), -1)) : ReadOnly,
                                   !not(!eq(!find(name, "_wo_t"), -1)) : WriteOnly,
                                   !not(!eq(!find(name, "_rw_t"), -1)) : ReadWrite,
@@ -1130,14 +1144,19 @@ class ImageType<string name> {
                                   !not(!eq(!find(name, "image3"), -1)) : DIM_3D);
   bit Arrayed = !not(!eq(!find(name, "array"), -1));
   bit Depth = !not(!eq(!find(name, "depth"), -1));
+  bit Multisampled = false;
+  bit Sampled = false;
+  ImageFormat Format = Unknown;
 }
 
 // Table gathering all the image type records.
 def ImageTypes : GenericTable {
   let FilterClass = "ImageType";
-  let Fields = ["Name", "Qualifier", "Dimensionality", "Arrayed", "Depth"];
+  let Fields = ["Name", "Type", "Qualifier", "Dimensionality", "Arrayed",
+                "Depth", "Multisampled", "Sampled", "Format"];
   string TypeOf_Qualifier = "AccessQualifier";
   string TypeOf_Dimensionality = "Dim";
+  string TypeOf_Format = "ImageFormat";
 }
 
 // Function to lookup builtin image types by their demangled name.

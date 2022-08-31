@@ -28,13 +28,26 @@ namespace SPIRV {
 /// \p DemangledCall is the skeleton of the lowered builtin function call.
 /// \p Set is the external instruction set containing the given builtin.
 /// \p OrigRet is the single original virtual return register if defined,
-/// Register(0) otherwise. \p OrigRetTy is the type of the \p OrigRet. \p Args
-/// are the arguments of the lowered builtin call.
+/// Register(0) otherwise.
+/// \p OrigRetTy is the type of the \p OrigRet.
+/// \p Args are the arguments of the lowered builtin call.
 Optional<bool> lowerBuiltin(const StringRef DemangledCall,
                             InstructionSet::InstructionSet Set,
                             MachineIRBuilder &MIRBuilder,
                             const Register OrigRet, const Type *OrigRetTy,
                             const SmallVectorImpl<Register> &Args,
+                            SPIRVGlobalRegistry *GR);
+/// Handles the translation of the provided special opaque/builtin type \p Type
+/// to SPIR-V type. Generates the corresponding machine instructions for the
+/// target type or gets the already existing OpType<...> register from the
+/// global registry \p GR.
+///
+/// \return A machine instruction representing the OpType<...> SPIR-V type.
+///
+/// \p Type is the special opaque/builtin type to be lowered.
+SPIRVType *lowerBuiltinType(const StructType *Type,
+                            AccessQualifier::AccessQualifier AccessQual,
+                            MachineIRBuilder &MIRBuilder,
                             SPIRVGlobalRegistry *GR);
 } // namespace SPIRV
 } // namespace llvm
