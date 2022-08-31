@@ -10,6 +10,8 @@
 
 // RUN: %clang_cl -### -- %s 2>&1 | FileCheck -check-prefix=CHECK-MT %s
 // RUN: %clang_cl -### /MT -- %s 2>&1 | FileCheck -check-prefix=CHECK-MT %s
+// RUN: %clang -### --target=x86_64-windows-msvc -fms-runtime-lib=static -- %s \
+// RUN:   2>&1 | FileCheck -check-prefix=CHECK-MT %s
 // CHECK-MT-NOT: "-D_DEBUG"
 // CHECK-MT: "-D_MT"
 // CHECK-MT-NOT: "-D_DLL"
@@ -19,6 +21,8 @@
 
 // RUN: %clang_cl -### /MTd -- %s 2>&1 | FileCheck -check-prefix=CHECK-MTd %s
 // RUN: %clang_cl -### /LD /MTd -- %s 2>&1 | FileCheck -check-prefix=CHECK-MTd %s
+// RUN: %clang -### --target=x86_64-windows-msvc -fms-runtime-lib=static_dbg \
+// RUN:   -- %s 2>&1 | FileCheck -check-prefix=CHECK-MTd %s
 // CHECK-MTd: "-D_DEBUG"
 // CHECK-MTd: "-D_MT"
 // CHECK-MTd-NOT: "-D_DLL"
@@ -27,6 +31,8 @@
 // CHECK-MTd: "--dependent-lib=oldnames"
 
 // RUN: %clang_cl -### /MD -- %s 2>&1 | FileCheck -check-prefix=CHECK-MD %s
+// RUN: %clang -### --target=x86_64-windows-msvc -fms-runtime-lib=dll -- %s \
+// RUN:   2>&1 | FileCheck -check-prefix=CHECK-MD %s
 // CHECK-MD-NOT: "-D_DEBUG"
 // CHECK-MD: "-D_MT"
 // CHECK-MD: "-D_DLL"
@@ -34,6 +40,8 @@
 // CHECK-MD: "--dependent-lib=oldnames"
 
 // RUN: %clang_cl -### /MDd -- %s 2>&1 | FileCheck -check-prefix=CHECK-MDd %s
+// RUN: %clang -### --target=x86_64-windows-msvc -fms-runtime-lib=dll_dbg -- \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK-MDd %s
 // CHECK-MDd: "-D_DEBUG"
 // CHECK-MDd: "-D_MT"
 // CHECK-MDd: "-D_DLL"
