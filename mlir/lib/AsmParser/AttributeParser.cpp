@@ -862,11 +862,14 @@ private:
 } // namespace
 
 void DenseArrayElementParser::append(const APInt &data) {
-  unsigned byteSize = data.getBitWidth() / 8;
-  size_t offset = rawData.size();
-  rawData.insert(rawData.end(), byteSize, 0);
-  llvm::StoreIntToMemory(
-      data, reinterpret_cast<uint8_t *>(rawData.data() + offset), byteSize);
+  if (data.getBitWidth()) {
+    assert(data.getBitWidth() % 8 == 0);
+    unsigned byteSize = data.getBitWidth() / 8;
+    size_t offset = rawData.size();
+    rawData.insert(rawData.end(), byteSize, 0);
+    llvm::StoreIntToMemory(
+        data, reinterpret_cast<uint8_t *>(rawData.data() + offset), byteSize);
+  }
   ++size;
 }
 
