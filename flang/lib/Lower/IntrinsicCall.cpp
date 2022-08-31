@@ -231,18 +231,18 @@ genDotProd(FN func, mlir::Type resultType, fir::FirOpBuilder &builder,
   // Handle required vector arguments
   mlir::Value vectorA = fir::getBase(args[0]);
   mlir::Value vectorB = fir::getBase(args[1]);
+  // Result type is used for picking appropriate runtime function.
+  mlir::Type eleTy = resultType;
 
-  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(vectorA.getType())
-                         .cast<fir::SequenceType>()
-                         .getEleTy();
   if (fir::isa_complex(eleTy)) {
     mlir::Value result = builder.createTemporary(loc, eleTy);
     func(builder, loc, vectorA, vectorB, result);
     return builder.create<fir::LoadOp>(loc, result);
   }
 
-  auto resultBox = builder.create<fir::AbsentOp>(
-      loc, fir::BoxType::get(builder.getI1Type()));
+  // This operation is only used to pass the result type
+  // information to the DotProduct generator.
+  auto resultBox = builder.create<fir::AbsentOp>(loc, fir::BoxType::get(eleTy));
   return func(builder, loc, vectorA, vectorB, resultBox);
 }
 
