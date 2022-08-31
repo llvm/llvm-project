@@ -915,7 +915,7 @@ CompilerInstance::createOutputFileImpl(StringRef OutputPath, bool Binary,
   // If '-working-directory' was passed, the output filename should be
   // relative to that.
   Optional<SmallString<128>> AbsPath;
-  if (!llvm::sys::path::is_absolute(OutputPath)) {
+  if (OutputPath != "-" && !llvm::sys::path::is_absolute(OutputPath)) {
     AbsPath.emplace(OutputPath);
     FileMgr->FixupRelativePath(*AbsPath);
     OutputPath = *AbsPath;
