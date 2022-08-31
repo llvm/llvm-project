@@ -5823,6 +5823,7 @@ TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> VL,
           const auto *Inst = cast<Instruction>(V);
           assert(Inst->getOpcode() == I0->getOpcode() &&
                  "Expected same opcode");
+          (void)I0;
           return !isConstant(Inst->getOperand(OpIdx));
         }))
       return {TTI::OK_AnyValue, TTI::OP_None};
