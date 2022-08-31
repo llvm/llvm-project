@@ -2900,6 +2900,15 @@ static IntrinsicInst *findInitTrampoline(Value *Callee) {
   return nullptr;
 }
 
+static bool callPassesUndefToPassingUndefUBParam(CallBase &Call) {
+  for (unsigned I = 0; I < Call.arg_size(); ++I) {
+    if (isa<UndefValue>(Call.getArgOperand(I)) && Call.isPassingUndefUB(I)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
                                             const TargetLibraryInfo *TLI) {
   // Note: We only handle cases which can't be driven from generic attributes
@@ -3026,9 +3035,11 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
 
   // Calling a null function pointer is undefined if a null address isn't
   // dereferenceable.
+  // Passing undef/poison to any parameter where doing so is UB is undefined (of
+  // course).
   if ((isa<ConstantPointerNull>(Callee) &&
        !NullPointerIsDefined(Call.getFunction())) ||
-      isa<UndefValue>(Callee)) {
+      isa<UndefValue>(Callee) || callPassesUndefToPassingUndefUBParam(Call)) {
     // If Call does not return void then replaceInstUsesWith poison.
     // This allows ValueHandlers and custom metadata to adjust itself.
     if (!Call.getType()->isVoidTy())
