@@ -827,96 +827,168 @@ ParseResult TensorLiteralParser::parseList(SmallVectorImpl<int64_t> &dims) {
 }
 
 //===----------------------------------------------------------------------===//
-// ElementsAttr Parser
+// DenseArrayAttr Parser
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// This class provides an implementation of AsmParser, allowing to call back
-/// into the libMLIRIR-provided APIs for invoking attribute parsing code defined
-/// in libMLIRIR.
-class CustomAsmParser : public AsmParserImpl<AsmParser> {
+/// A generic dense array element parser. It parsers integer and floating point
+/// elements.
+class DenseArrayElementParser {
 public:
-  CustomAsmParser(Parser &parser)
-      : AsmParserImpl<AsmParser>(parser.getToken().getLoc(), parser) {}
+  explicit DenseArrayElementParser(Type type) : type(type) {}
+
+  /// Parse an integer element.
+  ParseResult parseIntegerElement(Parser &p);
+
+  /// Parse a floating point element.
+  ParseResult parseFloatElement(Parser &p);
+
+  /// Convert the current contents to a dense array.
+  DenseArrayAttr getAttr() {
+    return DenseArrayAttr::get(RankedTensorType::get(size, type), rawData);
+  }
+
+private:
+  /// Append the raw data of an APInt to the result.
+  void append(const APInt &data);
+
+  /// The array element type.
+  Type type;
+  /// The resultant byte array representing the contents of the array.
+  std::vector<char> rawData;
+  /// The number of elements in the array.
+  int64_t size = 0;
 };
 } // namespace
 
+void DenseArrayElementParser::append(const APInt &data) {
+  unsigned byteSize = data.getBitWidth() / 8;
+  size_t offset = rawData.size();
+  rawData.insert(rawData.end(), byteSize, 0);
+  llvm::StoreIntToMemory(
+      data, reinterpret_cast<uint8_t *>(rawData.data() + offset), byteSize);
+  ++size;
+}
+
+ParseResult DenseArrayElementParser::parseIntegerElement(Parser &p) {
+  bool isNegative = p.consumeIf(Token::minus);
+
+  // Parse an integer literal as an APInt.
+  Optional<APInt> value;
+  StringRef spelling = p.getToken().getSpelling();
+  if (p.getToken().isAny(Token::kw_true, Token::kw_false)) {
+    if (!type.isInteger(1))
+      return p.emitError("expected i1 type for 'true' or 'false' values");
+    value = APInt(/*numBits=*/8, p.getToken().is(Token::kw_true),
+                  !type.isUnsignedInteger());
+    p.consumeToken();
+  } else if (p.consumeIf(Token::integer)) {
+    value = buildAttributeAPInt(type, isNegative, spelling);
+    if (!value)
+      return p.emitError("integer constant out of range");
+  } else {
+    return p.emitError("expected integer literal");
+  }
+  append(*value);
+  return success();
+}
+
+ParseResult DenseArrayElementParser::parseFloatElement(Parser &p) {
+  bool isNegative = p.consumeIf(Token::minus);
+
+  Token token = p.getToken();
+  Optional<APFloat> result;
+  auto floatType = type.cast<FloatType>();
+  if (p.consumeIf(Token::integer)) {
+    // Parse an integer literal as a float.
+    if (p.parseFloatFromIntegerLiteral(result, token, isNegative,
+                                       floatType.getFloatSemantics(),
+                                       floatType.getWidth()))
+      return failure();
+  } else if (p.consumeIf(Token::floatliteral)) {
+    // Parse a floating point literal.
+    Optional<double> val = token.getFloatingPointValue();
+    if (!val)
+      return failure();
+    result = APFloat(isNegative ? -*val : *val);
+    if (!type.isF64()) {
+      bool unused;
+      result->convert(floatType.getFloatSemantics(),
+                      APFloat::rmNearestTiesToEven, &unused);
+    }
+  } else {
+    return p.emitError("expected integer or floating point literal");
+  }
+
+  append(result->bitcastToAPInt());
+  return success();
+}
+
 /// Parse a dense array attribute.
-Attribute Parser::parseDenseArrayAttr(Type type) {
+Attribute Parser::parseDenseArrayAttr(Type attrType) {
   consumeToken(Token::kw_array);
-  SMLoc typeLoc = getToken().getLoc();
-  if (parseToken(Token::less, "expected '<' after 'array'") ||
-      (!type && !(type = parseType())))
+  if (parseToken(Token::less, "expected '<' after 'array'"))
     return {};
-  CustomAsmParser parser(*this);
-  Attribute result;
+
+  SMLoc typeLoc = getToken().getLoc();
+  Type eltType;
+  // If an attribute type was provided, use its element type.
+  if (attrType) {
+    auto tensorType = attrType.dyn_cast<RankedTensorType>();
+    if (!tensorType) {
+      emitError(typeLoc, "dense array attribute expected ranked tensor type");
+      return {};
+    }
+    eltType = tensorType.getElementType();
+
+    // Otherwise, parse a type.
+  } else if (!(eltType = parseType())) {
+    return {};
+  }
+
+  // Only bool or integer and floating point elements divisible by bytes are
+  // supported.
+  if (!eltType.isIntOrIndexOrFloat()) {
+    emitError(typeLoc, "expected integer or float type, got: ") << eltType;
+    return {};
+  }
+  if (!eltType.isInteger(1) && eltType.getIntOrFloatBitWidth() % 8 != 0) {
+    emitError(typeLoc, "element type bitwidth must be a multiple of 8");
+    return {};
+  }
+
+  // If a type was provided, check that it matches the parsed type.
+  auto checkProvidedType = [&](DenseArrayAttr result) -> Attribute {
+    if (attrType && result.getType() != attrType) {
+      emitError(typeLoc, "expected attribute type ")
+          << attrType << " does not match parsed type " << result.getType();
+      return {};
+    }
+    return result;
+  };
+
   // Check for empty list.
-  bool isEmptyList = getToken().is(Token::greater);
-  if (!isEmptyList &&
+  if (consumeIf(Token::greater)) {
+    return checkProvidedType(
+        DenseArrayAttr::get(RankedTensorType::get(0, eltType), {}));
+  }
+  if (!attrType &&
       parseToken(Token::colon, "expected ':' after dense array type"))
     return {};
 
-  if (auto intType = type.dyn_cast<IntegerType>()) {
-    switch (type.getIntOrFloatBitWidth()) {
-    case 1:
-      if (isEmptyList)
-        result = DenseBoolArrayAttr::get(parser.getContext(), {});
-      else
-        result = DenseBoolArrayAttr::parseWithoutBraces(parser, Type{});
-      break;
-    case 8:
-      if (isEmptyList)
-        result = DenseI8ArrayAttr::get(parser.getContext(), {});
-      else
-        result = DenseI8ArrayAttr::parseWithoutBraces(parser, Type{});
-      break;
-    case 16:
-      if (isEmptyList)
-        result = DenseI16ArrayAttr::get(parser.getContext(), {});
-      else
-        result = DenseI16ArrayAttr::parseWithoutBraces(parser, Type{});
-      break;
-    case 32:
-      if (isEmptyList)
-        result = DenseI32ArrayAttr::get(parser.getContext(), {});
-      else
-        result = DenseI32ArrayAttr::parseWithoutBraces(parser, Type{});
-      break;
-    case 64:
-      if (isEmptyList)
-        result = DenseI64ArrayAttr::get(parser.getContext(), {});
-      else
-        result = DenseI64ArrayAttr::parseWithoutBraces(parser, Type{});
-      break;
-    default:
-      emitError(typeLoc, "expected i1, i8, i16, i32, or i64 but got: ") << type;
+  DenseArrayElementParser eltParser(eltType);
+  if (eltType.isIntOrIndex()) {
+    if (parseCommaSeparatedList(
+            [&] { return eltParser.parseIntegerElement(*this); }))
       return {};
-    }
-  } else if (auto floatType = type.dyn_cast<FloatType>()) {
-    switch (type.getIntOrFloatBitWidth()) {
-    case 32:
-      if (isEmptyList)
-        result = DenseF32ArrayAttr::get(parser.getContext(), {});
-      else
-        result = DenseF32ArrayAttr::parseWithoutBraces(parser, Type{});
-      break;
-    case 64:
-      if (isEmptyList)
-        result = DenseF64ArrayAttr::get(parser.getContext(), {});
-      else
-        result = DenseF64ArrayAttr::parseWithoutBraces(parser, Type{});
-      break;
-    default:
-      emitError(typeLoc, "expected f32 or f64 but got: ") << type;
-      return {};
-    }
   } else {
-    emitError(typeLoc, "expected integer or float type, got: ") << type;
-    return {};
+    if (parseCommaSeparatedList(
+            [&] { return eltParser.parseFloatElement(*this); }))
+      return {};
   }
   if (parseToken(Token::greater, "expected '>' to close an array attribute"))
     return {};
-  return result;
+  return checkProvidedType(eltParser.getAttr());
 }
 
 /// Parse a dense elements attribute.
@@ -1105,7 +1177,8 @@ Attribute Parser::parseStridedLayoutAttr() {
 
     if (getToken().is(Token::integer)) {
       Optional<uint64_t> value = getToken().getUInt64IntegerValue();
-      if (!value || *value > std::numeric_limits<int64_t>::max())
+      if (!value ||
+          *value > static_cast<uint64_t>(std::numeric_limits<int64_t>::max()))
         return emitWrongTokenError();
       consumeToken();
       return static_cast<int64_t>(*value);

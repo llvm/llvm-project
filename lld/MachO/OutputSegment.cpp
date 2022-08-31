@@ -84,10 +84,11 @@ static int sectionOrder(OutputSection *osec) {
   // Sections are uniquely identified by their segment + section name.
   if (segname == segment_names::text) {
     return StringSwitch<int>(osec->name)
-        .Case(section_names::header, -4)
-        .Case(section_names::text, -3)
-        .Case(section_names::stubs, -2)
-        .Case(section_names::stubHelper, -1)
+        .Case(section_names::header, -5)
+        .Case(section_names::text, -4)
+        .Case(section_names::stubs, -3)
+        .Case(section_names::stubHelper, -2)
+        .Case(section_names::initOffsets, -1)
         .Case(section_names::unwindInfo, std::numeric_limits<int>::max() - 1)
         .Case(section_names::ehFrame, std::numeric_limits<int>::max())
         .Default(osec->inputOrder);

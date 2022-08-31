@@ -62,19 +62,4 @@ define void @test3(ptr %0, i64 %1, i64 %2, i64 %3) {
   ret void
 }
 
-; Operand %4 is the higher-half of v2i64, and operand %2 is an input parameter of i64.
-; Test that %2 is duplicated into the proper lane of SIMD directly for optimal codegen.
-define void @test4(ptr %0, <2 x i64> %1, i64 %2) {
-; CHECK-LABEL: test4:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v1.2d, x1
-; CHECK-NEXT:    pmull2 v0.1q, v0.2d, v1.2d
-; CHECK-NEXT:    str q0, [x0]
-; CHECK-NEXT:    ret
-  %4 = extractelement <2 x i64> %1, i64 1
-  %5 = tail call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %4, i64 %2)
-  store <16 x i8> %5, ptr %0, align 16
-  ret void
-}
-
 declare <16 x i8> @llvm.aarch64.neon.pmull64(i64, i64)

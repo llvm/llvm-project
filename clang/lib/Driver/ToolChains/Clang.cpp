@@ -3726,29 +3726,25 @@ static void RenderModulesOptions(Compilation &C, const Driver &D,
                      options::OPT_fno_modules_validate_input_files_content,
                      false))
       CmdArgs.push_back("-fvalidate-ast-input-files-content");
+  }
 
-    // -fmodule-name specifies the module that is currently being built (or
-    // used for header checking by -fmodule-maps).
-    Args.AddLastArg(CmdArgs, options::OPT_fmodule_name_EQ);
+  // -fmodule-name specifies the module that is currently being built (or
+  // used for header checking by -fmodule-maps).
+  Args.AddLastArg(CmdArgs, options::OPT_fmodule_name_EQ);
 
-    // -fmodule-map-file can be used to specify files containing module
-    // definitions.
-    Args.AddAllArgs(CmdArgs, options::OPT_fmodule_map_file);
+  // -fmodule-map-file can be used to specify files containing module
+  // definitions.
+  Args.AddAllArgs(CmdArgs, options::OPT_fmodule_map_file);
 
-    // -fbuiltin-module-map can be used to load the clang
-    // builtin headers modulemap file.
-    if (Args.hasArg(options::OPT_fbuiltin_module_map)) {
-      SmallString<128> BuiltinModuleMap(D.ResourceDir);
-      llvm::sys::path::append(BuiltinModuleMap, "include");
-      llvm::sys::path::append(BuiltinModuleMap, "module.modulemap");
-      if (llvm::sys::fs::exists(BuiltinModuleMap))
-        CmdArgs.push_back(
-            Args.MakeArgString("-fmodule-map-file=" + BuiltinModuleMap));
-    }
-  } else {
-    Args.ClaimAllArgs(options::OPT_fmodule_name_EQ);
-    Args.ClaimAllArgs(options::OPT_fmodule_map_file);
-    Args.ClaimAllArgs(options::OPT_fbuiltin_module_map);
+  // -fbuiltin-module-map can be used to load the clang
+  // builtin headers modulemap file.
+  if (Args.hasArg(options::OPT_fbuiltin_module_map)) {
+    SmallString<128> BuiltinModuleMap(D.ResourceDir);
+    llvm::sys::path::append(BuiltinModuleMap, "include");
+    llvm::sys::path::append(BuiltinModuleMap, "module.modulemap");
+    if (llvm::sys::fs::exists(BuiltinModuleMap))
+      CmdArgs.push_back(
+          Args.MakeArgString("-fmodule-map-file=" + BuiltinModuleMap));
   }
 
   // The -fmodule-file=<name>=<file> form specifies the mapping of module

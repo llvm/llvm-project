@@ -279,10 +279,15 @@ void markLive() {
     // mod_init_funcs, mod_term_funcs sections
     if (sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS ||
         sectionType(isec->getFlags()) == S_MOD_TERM_FUNC_POINTERS) {
+      assert(!config->emitInitOffsets ||
+             sectionType(isec->getFlags()) != S_MOD_INIT_FUNC_POINTERS);
       marker->enqueue(isec, 0);
       continue;
     }
   }
+
+  for (ConcatInputSection *isec : in.initOffsets->inputs())
+    marker->enqueue(isec, 0);
 
   marker->markTransitively();
 }

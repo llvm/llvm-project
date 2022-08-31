@@ -707,7 +707,7 @@ LogicalResult TaskLoopOp::verify() {
           verifyReductionVarList(*this, in_reductions(), in_reduction_vars())))
     return failure();
 
-  if (reduction_vars().size() > 0 && nogroup())
+  if (!reduction_vars().empty() && nogroup())
     return emitError("if a reduction clause is present on the taskloop "
                      "directive, the nogroup clause must not be specified");
   for (auto var : reduction_vars()) {

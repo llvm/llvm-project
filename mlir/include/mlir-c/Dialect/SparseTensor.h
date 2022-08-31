@@ -19,11 +19,8 @@ extern "C" {
 
 MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(SparseTensor, sparse_tensor);
 
-/// Dimension level types that define sparse tensors:
-///   - MLIR_SPARSE_TENSOR_DIM_LEVEL_DENSE - dimension is dense, every
-///   entry is stored
-///   - MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED - dimension is sparse,
-///   only nonzeros are stored (no duplicates).
+/// Dimension level types (and properties) that define sparse tensors.
+/// See the documentation in SparseTensorAttrDefs.td for their meaning.
 ///
 /// These correspond to SparseTensorEncodingAttr::DimLevelType in the C++ API.
 /// If updating, keep them in sync and update the static_assert in the impl
@@ -31,6 +28,13 @@ MLIR_DECLARE_CAPI_DIALECT_REGISTRATION(SparseTensor, sparse_tensor);
 enum MlirSparseTensorDimLevelType {
   MLIR_SPARSE_TENSOR_DIM_LEVEL_DENSE,
   MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED,
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU,
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NO,
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU_NO,
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON,
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU,
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NO,
+  MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU_NO,
 };
 
 //===----------------------------------------------------------------------===//

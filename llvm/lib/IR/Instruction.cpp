@@ -116,6 +116,32 @@ bool Instruction::comesBefore(const Instruction *Other) const {
   return Order < Other->Order;
 }
 
+Instruction *Instruction::getInsertionPointAfterDef() {
+  assert(!getType()->isVoidTy() && "Instruction must define result");
+  BasicBlock *InsertBB;
+  BasicBlock::iterator InsertPt;
+  if (auto *PN = dyn_cast<PHINode>(this)) {
+    InsertBB = PN->getParent();
+    InsertPt = InsertBB->getFirstInsertionPt();
+  } else if (auto *II = dyn_cast<InvokeInst>(this)) {
+    InsertBB = II->getNormalDest();
+    InsertPt = InsertBB->getFirstInsertionPt();
+  } else if (auto *CB = dyn_cast<CallBrInst>(this)) {
+    InsertBB = CB->getDefaultDest();
+    InsertPt = InsertBB->getFirstInsertionPt();
+  } else {
+    assert(!isTerminator() && "Only invoke/callbr terminators return value");
+    InsertBB = getParent();
+    InsertPt = std::next(getIterator());
+  }
+
+  // catchswitch blocks don't have any legal insertion point (because they
+  // are both an exception pad and a terminator).
+  if (InsertPt == InsertBB->end())
+    return nullptr;
+  return &*InsertPt;
+}
+
 bool Instruction::isOnlyUserOfAnyOperand() {
   return any_of(operands(), [](Value *V) { return V->hasOneUser(); });
 }

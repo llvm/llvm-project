@@ -1466,6 +1466,19 @@ func.func private @powf(f32, f32) -> f32
 func.func private @llvm.powi.f64.i32(f64, i32) -> f64
 func.func private @pow(f64, f64) -> f64
 
+//--- exponentiation_integer.fir
+// RUN: fir-opt %t/exponentiation_integer.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/exponentiation_integer.fir
+// CHECK: @_QPtest_int4
+// CHECK: llvm.call @__mlir_math_ipowi_i32({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (i32, i32) -> i32
+
+func.func @_QPtest_int4(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "y"}, %arg2: !fir.ref<i32> {fir.bindc_name = "z"}) {
+  %0 = fir.load %arg0 : !fir.ref<i32>
+  %1 = fir.load %arg1 : !fir.ref<i32>
+  %2 = math.ipowi %0, %1 : i32
+  fir.store %2 to %arg2 : !fir.ref<i32>
+  return
+}
+
 //--- sign_fast.fir
 // RUN: fir-opt %t/sign_fast.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/sign_fast.fir
 // CHECK: @_QPtest_real4
