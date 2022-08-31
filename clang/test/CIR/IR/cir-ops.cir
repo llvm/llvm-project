@@ -1,7 +1,6 @@
 // Test the CIR operations can parse and print correctly (roundtrip)
 
 // RUN: cir-tool %s | cir-tool | FileCheck %s
-// XFAIL: *
 module  {
   cir.func @foo(%arg0: i32) -> i32 {
     %0 = cir.alloca i32, cir.ptr <i32>, ["x", paraminit]
