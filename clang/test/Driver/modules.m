@@ -75,8 +75,8 @@
 // RUN: %clang -fno-modules -fbuild-session-timestamp=123 -### %s 2>&1 | FileCheck -check-prefix=SESSION_FLAG %s
 // SESSION_FLAG-NOT: -fbuild-session-timestamp
 
-// RUN: %clang -fno-modules -fmodules-validate-once-per-build-session -fmodules-validate-system-headers -fmodule-map-file=module.modulemap \
-// RUN:   -### %s 2>&1 | FileCheck -check-prefix=IGNORED_FLAGS %s
-// IGNORED_FLAGS-NOT: -fmodules-validate-once-per-build-session
-// IGNORED_FLAGS-NOT: -fmodules-validate-system-headers
-// IGNORED_FLAGS-NOT: -fmodule-map-file
+// RUN: %clang -fno-modules -fmodules-validate-once-per-build-session -### %s 2>&1 | FileCheck -check-prefix=VALIDATE_ONCE_FLAG %s
+// VALIDATE_ONCE_FLAG-NOT: -fmodules-validate-once-per-build-session
+
+// RUN: %clang -fno-modules -fmodules-validate-system-headers -### %s 2>&1 | FileCheck -check-prefix=VALIDATE_SYSTEM_FLAG %s
+// VALIDATE_SYSTEM_FLAG-NOT: -fmodules-validate-system-headers
