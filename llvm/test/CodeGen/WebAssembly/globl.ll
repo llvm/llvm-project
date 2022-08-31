@@ -5,7 +5,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK: .globl foo
 ; CHECK: .type foo,@function
 ; CHECK-LABEL: foo:
-; CHECK: .size foo,
+; CHECK: end_function
 define i32* @foo() {
   ret i32* @bar
 }
