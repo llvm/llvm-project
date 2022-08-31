@@ -4182,6 +4182,16 @@ py_binary(
 )
 
 cc_library(
+    name = "TestingADT",
+    testonly = True,
+    hdrs = glob([
+        "include/llvm/Testing/ADT/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [":Support"],
+)
+
+cc_library(
     name = "TestingSupport",
     testonly = True,
     srcs = glob([
