@@ -197,10 +197,10 @@ void __tgt_rtl_data_unlock(int device_id, void *ptr) {
 }
 #define __tgt_rtl_data_unlock(...) __tgt_rtl_data_unlock_impl(__VA_ARGS__)
 
-static int32_t __tgt_rtl_data_delete_impl(int device_id, void *tgt_ptr);
-int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr) {
+static int32_t __tgt_rtl_data_delete_impl(int device_id, void *tgt_ptr, int32_t Kind);
+int32_t __tgt_rtl_data_delete(int device_id, void *tgt_ptr, int32_t Kind) {
   auto t = detail::log<int32_t>(__func__, device_id, tgt_ptr);
-  int32_t r = __tgt_rtl_data_delete_impl(device_id, tgt_ptr);
+  int32_t r = __tgt_rtl_data_delete_impl(device_id, tgt_ptr, Kind);
   t.res(r);
   return r;
 }

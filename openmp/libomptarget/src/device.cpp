@@ -662,13 +662,14 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   return tgt_ptr;
 }
 
-int32_t DeviceTy::deleteData(void *TgtPtrBegin) {
+int32_t DeviceTy::deleteData(void *TgtPtrBegin, int32_t Kind) {
   // If enabled, trigger OMPT callbacks before and after data delete. A trace
   // record is generated as well.
   OmptInterfaceTargetDataOpRAII delete_raii(ompt_target_data_delete,
                                             /*host ptr=*/nullptr, TgtPtrBegin,
                                             RTLDeviceID, /*Size=*/0);
-  return RTL->data_delete(RTLDeviceID, TgtPtrBegin);
+
+  return RTL->data_delete(RTLDeviceID, TgtPtrBegin, Kind);
 }
 
 // Submit data to device

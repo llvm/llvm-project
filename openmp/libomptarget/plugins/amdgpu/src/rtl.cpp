@@ -1291,9 +1291,10 @@ public:
 
     // Default state.
     RequiresFlags = OMP_REQ_UNDEFINED;
-
+#if FIX_ISSUE
     for (int I = 0; I < NumberOfDevices; ++I)
       DeviceAllocators.emplace_back(I);
+#endif
     ConstructionSucceeded = true;
   }
 
@@ -3580,7 +3581,7 @@ int32_t __tgt_rtl_data_retrieve_async(int DeviceId, void *HstPtr, void *TgtPtr,
     return __tgt_rtl_data_retrieve(DeviceId, HstPtr, TgtPtr, Size);
 }
 
-int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr) {
+int32_t __tgt_rtl_data_delete(int DeviceId, void *TgtPtr, int32_t) {
   assert(DeviceId < DeviceInfo().NumberOfDevices && "Device ID too large");
   // We don't have HSA-profiling timestamps for device delete, so just get the
   // start and end system timestamps for OMPT

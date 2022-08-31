@@ -1251,7 +1251,9 @@ static void *(*kmp_target_alloc_multi_devices)(size_t size, int num_devices,
                                                int device_nums[]);
 static void *(*kmp_target_lock_mem)(void *ptr, size_t size, int device);
 static void *(*kmp_target_unlock_mem)(void *ptr, int device);
-static void *(*kmp_target_free)(void *ptr, int device);
+static void *(*kmp_target_free_host)(void *ptr, int device);
+static void *(*kmp_target_free_shared)(void *ptr, int device);
+static void *(*kmp_target_free_device)(void *ptr, int device);
 static bool __kmp_target_mem_available;
 #define KMP_IS_TARGET_MEM_SPACE(MS)                                            \
   (MS == llvm_omp_target_host_mem_space ||                                     \
@@ -1364,15 +1366,21 @@ void __kmp_init_target_mem() {
       KMP_DLSYM("llvm_omp_target_alloc_shared");
   *(void **)(&kmp_target_alloc_device) =
       KMP_DLSYM("llvm_omp_target_alloc_device");
-  *(void **)(&kmp_target_free) = KMP_DLSYM("omp_target_free");
   *(void **)(&kmp_target_lock_mem) = KMP_DLSYM("llvm_omp_target_lock_mem");
   *(void **)(&kmp_target_unlock_mem) = KMP_DLSYM("llvm_omp_target_unlock_mem");
   *(void **)(&kmp_target_alloc_multi_devices) =
       KMP_DLSYM("llvm_omp_target_alloc_multi_devices");
-  __kmp_target_mem_available = kmp_target_alloc_host &&
-                               kmp_target_alloc_shared &&
-                               kmp_target_alloc_device && kmp_target_free &&
-                               kmp_target_alloc_multi_devices;
+
+  *(void **)(&kmp_target_free_host) = KMP_DLSYM("llvm_omp_target_free_host");
+  *(void **)(&kmp_target_free_shared) =
+      KMP_DLSYM("llvm_omp_target_free_shared");
+  *(void **)(&kmp_target_free_device) =
+      KMP_DLSYM("llvm_omp_target_free_device");
+  __kmp_target_mem_available =
+      kmp_target_alloc_host && kmp_target_alloc_shared &&
+      kmp_target_alloc_device && kmp_target_free_host &&
+      kmp_target_free_shared && kmp_target_free_device;
+
 }
 
 omp_memspace_handle_t
@@ -1870,23 +1878,18 @@ void ___kmpc_free(int gtid, void *ptr, omp_allocator_handle_t allocator) {
   kmp_mem_desc_t desc;
   kmp_uintptr_t addr_align; // address to return to caller
   kmp_uintptr_t addr_descr; // address of memory block descriptor
-  bool is_tgt_mem_space =
-      (allocator > kmp_max_mem_alloc) && al &&
-      (is_tgt_mem_space =
-           KMP_IS_TARGET_MEM_SPACE(al->memspace) ||
-           (al->memspace > kmp_max_mem_space &&
-            KMP_IS_TARGET_MEM_SPACE(
-                RCAST(kmp_memspace_t *, al->memspace)->memspace)));
-  if (KMP_IS_TARGET_MEM_ALLOC(allocator) ||
-      (allocator > kmp_max_mem_alloc && is_tgt_mem_space)) {
-    KMP_DEBUG_ASSERT(kmp_target_free);
-    kmp_int32 device = -1;
-    if (allocator > kmp_max_mem_alloc && is_tgt_mem_space) {
-      KMP_ASSERT(RCAST(kmp_memspace_t *, al->memspace)->num_devs > 0);
-      device = RCAST(kmp_memspace_t *, al->memspace)->devids[0];
-    } else
-      device = __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
-    kmp_target_free(ptr, device);
+  if (__kmp_target_mem_available && (KMP_IS_TARGET_MEM_ALLOC(allocator) ||
+                                     (allocator > kmp_max_mem_alloc &&
+                                      KMP_IS_TARGET_MEM_SPACE(al->memspace)))) {
+    kmp_int32 device =
+        __kmp_threads[gtid]->th.th_current_task->td_icvs.default_device;
+    if (allocator == llvm_omp_target_host_mem_alloc) {
+      kmp_target_free_host(ptr, device);
+    } else if (allocator == llvm_omp_target_shared_mem_alloc) {
+      kmp_target_free_shared(ptr, device);
+    } else if (allocator == llvm_omp_target_device_mem_alloc) {
+      kmp_target_free_device(ptr, device);
+    }
     return;
   }
 
