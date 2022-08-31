@@ -610,16 +610,18 @@ OpFoldResult MulOp::fold(ArrayRef<Attribute> operands) {
     if (val.isZero())
       return lhsAttr;
     const int64_t shift = getShift();
-    const int64_t shifted = 1 << shift;
+    const int64_t shifted = 1L << shift;
     if (val.getSExtValue() == shifted)
       return rhs;
   }
 
   if (rhsAttr && rhsAttr.isSplat() && resultETy.isa<IntegerType>()) {
     auto val = rhsAttr.getSplatValue<APInt>();
+    const int64_t shift = getShift();
+    const int64_t shifted = 1L << shift;
     if (val.isZero())
       return rhsAttr;
-    if (val.getSExtValue() == (1 << getShift()))
+    if (val.getSExtValue() == shifted)
       return lhs;
   }
 
