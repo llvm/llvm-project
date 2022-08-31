@@ -13956,7 +13956,8 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       N0->getNumValues() == 1 && N0->hasOneUse()) {
     SDValue MaybePoisonOperand;
     for (SDValue Op : N0->ops()) {
-      if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ false))
+      if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ false,
+                                               /*Depth*/ 1))
         continue;
       if ((!MaybePoisonOperand && N0->isOnlyUserOf(Op.getNode())) ||
           MaybePoisonOperand == Op) {

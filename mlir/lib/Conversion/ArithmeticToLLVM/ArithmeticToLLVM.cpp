@@ -7,12 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
-#include "../PassDetail.h"
+
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTARITHMETICTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -315,7 +321,7 @@ CmpFOpLowering::matchAndRewrite(arith::CmpFOp op, OpAdaptor adaptor,
 
 namespace {
 struct ConvertArithmeticToLLVMPass
-    : public ConvertArithmeticToLLVMBase<ConvertArithmeticToLLVMPass> {
+    : public impl::ConvertArithmeticToLLVMBase<ConvertArithmeticToLLVMPass> {
   ConvertArithmeticToLLVMPass() = default;
 
   void runOnOperation() override {

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/PDLToPDLInterp/PDLToPDLInterp.h"
-#include "../PassDetail.h"
+
 #include "PredicateTree.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
@@ -19,6 +19,11 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTPDLTOPDLINTERP
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::pdl_to_pdl_interp;
@@ -909,7 +914,7 @@ void PatternLowering::generateOperationResultTypeRewriter(
 
 namespace {
 struct PDLToPDLInterpPass
-    : public ConvertPDLToPDLInterpBase<PDLToPDLInterpPass> {
+    : public impl::ConvertPDLToPDLInterpBase<PDLToPDLInterpPass> {
   void runOnOperation() final;
 };
 } // namespace

@@ -10,11 +10,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
+
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+namespace mlir {
+namespace tosa {
+#define GEN_PASS_DEF_TOSALAYERWISECONSTANTFOLDPASS
+#include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
+} // namespace tosa
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -35,7 +43,8 @@ void populateTosaOpsCanonicalizationPatterns(MLIRContext *ctx,
 }
 
 struct TosaLayerwiseConstantFoldPass
-    : public TosaLayerwiseConstantFoldPassBase<TosaLayerwiseConstantFoldPass> {
+    : public tosa::impl::TosaLayerwiseConstantFoldPassBase<
+          TosaLayerwiseConstantFoldPass> {
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);

@@ -7,11 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
-#include "../PassDetail.h"
+
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/AMDGPU/AMDGPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTAMDGPUTOROCDL
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::amdgpu;
@@ -269,7 +275,7 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
 };
 
 struct ConvertAMDGPUToROCDLPass
-    : public ConvertAMDGPUToROCDLBase<ConvertAMDGPUToROCDLPass> {
+    : public impl::ConvertAMDGPUToROCDLBase<ConvertAMDGPUToROCDLPass> {
   ConvertAMDGPUToROCDLPass() = default;
 
   void runOnOperation() override {
