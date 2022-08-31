@@ -4794,11 +4794,6 @@ static bool getDefaultInitValue(QualType T, APValue &Result) {
       Result = APValue((const FieldDecl *)nullptr);
       return true;
     }
-    // Can't access properties of an incomplete type.
-    if (!RD->hasDefinition()) {
-      Result = APValue();
-      return false;
-    }
     Result = APValue(APValue::UninitStruct(), RD->getNumBases(),
                      std::distance(RD->field_begin(), RD->field_end()));
 
