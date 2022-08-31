@@ -46,8 +46,11 @@ entry:
 
 ; ADDR-LABEL: @setcsr(
 ; ADDR: %[[A:.*]] = load i64, i64* getelementptr inbounds {{.*}} @__msan_param_tls, i32 0, i32 0), align 8
+; ADDR: %[[C:.*]] = load i32, i32*
 ; ADDR: %[[B:.*]] = icmp ne i64 %[[A]], 0
-; ADDR: br i1 %[[B]], label {{.*}}, label
+; ADDR: %[[D:.*]] = icmp ne i32 %[[C]], 0
+; ADDR: %[[E:.*]] = or i1 %[[B]], %[[D]]
+; ADDR: br i1 %[[E]], label {{.*}}, label
 ; ADDR: call void @__msan_warning_with_origin_noreturn(i32 0)
 ; ADDR: call void @llvm.x86.sse.ldmxcsr(
 ; ADDR: ret void

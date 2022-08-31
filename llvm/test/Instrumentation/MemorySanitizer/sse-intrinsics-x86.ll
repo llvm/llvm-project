@@ -207,17 +207,13 @@ define void @test_x86_sse_ldmxcsr(i8* %a0) #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to i32*
 ; CHECK-NEXT:    [[_LDMXCSR:%.*]] = load i32, i32* [[TMP4]], align 1
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i32 [[_LDMXCSR]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
 ; CHECK:       5:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i32 [[_LDMXCSR]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
-; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR5]]
-; CHECK-NEXT:    unreachable
-; CHECK:       8:
 ; CHECK-NEXT:    call void @llvm.x86.sse.ldmxcsr(i8* [[A0]])
 ; CHECK-NEXT:    ret void
 ;
