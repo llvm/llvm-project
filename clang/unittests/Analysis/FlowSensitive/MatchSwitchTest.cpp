@@ -5,12 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//  This file defines a simplistic version of Constant Propagation as an example
-//  of a forward, monotonic dataflow analysis. The analysis tracks all
-//  variables in the scope, but lacks escape analysis.
-//
-//===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "TestingSupport.h"
