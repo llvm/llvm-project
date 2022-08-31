@@ -7,6 +7,12 @@ add_header_library(
 )
 
 add_header_library(
+  builtin_wrappers
+  HDRS
+    builtin_wrappers.h
+)
+
+add_header_library(
   common
   HDRS
     architectures.h
@@ -62,7 +68,7 @@ add_header_library(
     libc.include.errno
     libc.src.__support.CPP.limits
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.builtin_wrappers
+    libc.src.__support.builtin_wrappers
     libc.src.errno.errno
 )
 
