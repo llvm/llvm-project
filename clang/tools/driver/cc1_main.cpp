@@ -409,20 +409,23 @@ Optional<int> CompileJobCache::tryReplayCachedResult(CompilerInstance &Clang) {
   if (!ResultCacheKey)
     return 1;
 
-  Optional<llvm::cas::ObjectRef> Result;
-  if (auto E = Cache->get(*ResultCacheKey).moveInto(Result))
-    consumeError(std::move(E)); // ignore error and treat it as a cache miss.
-
-  if (Result) {
-    Diags.Report(diag::remark_compile_job_cache_hit)
-        << ResultCacheKey->toString() << CAS->getID(*Result).toString();
-    Optional<int> Status =
-        replayCachedResult(Clang, *Result, /*JustComputedResult=*/false);
-    assert(Status && "Expected a status for a cache hit");
-    return *Status;
+  if (Expected<Optional<llvm::cas::ObjectRef>> Result =
+          Cache->get(*ResultCacheKey)) {
+    if (*Result) {
+      Diags.Report(diag::remark_compile_job_cache_hit)
+          << ResultCacheKey->toString() << CAS->getID(**Result).toString();
+      Optional<int> Status =
+          replayCachedResult(Clang, **Result, /*JustComputedResult=*/false);
+      assert(Status && "Expected a status for a cache hit");
+      return *Status;
+    }
+    Diags.Report(diag::remark_compile_job_cache_miss)
+        << ResultCacheKey->toString();
+  } else {
+    Diags.Report(diag::err_compile_job_cache_failed)
+        << toString(Result.takeError());
+    return 1;
   }
-  Diags.Report(diag::remark_compile_job_cache_miss)
-      << ResultCacheKey->toString();
 
   // Create an on-disk backend for streaming the results live if we run the
   // computation. If we're writing the output as a CASID, skip it here, since
