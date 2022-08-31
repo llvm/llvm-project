@@ -33,9 +33,8 @@ FailureOr<Value> tensor::replaceExtractSliceWithTiledProducer(
     return failure();
 
   FailureOr<Value> tiledResult = producerOp.generateResultTileValue(
-      builder, producer.getResultNumber(),
-      producerOp.getDestinationOperands(builder), sliceOp.getMixedOffsets(),
-      sliceOp.getMixedSizes(), true);
+      builder, producer.getResultNumber(), sliceOp.getMixedOffsets(),
+      sliceOp.getMixedSizes());
   if (failed(tiledResult))
     return failure();
 
