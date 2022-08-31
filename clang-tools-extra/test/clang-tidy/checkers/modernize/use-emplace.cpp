@@ -1061,6 +1061,82 @@ void testAllSTLEmplacyFunctions() {
   // CHECK-FIXES: priority_queue.emplace(13);
 }
 
+void test_AliasEmplacyFunctions() {
+  typedef std::list<Foo> L;
+  using DQ = std::deque<Foo>;
+  L l;
+  l.emplace_back(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: l.emplace_back(3);
+
+  DQ dq;
+  dq.emplace_back(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: dq.emplace_back(3);
+
+  typedef std::stack<Foo> STACK;
+  using PQ = std::priority_queue<Foo>;
+  STACK stack;
+  stack.emplace(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: stack.emplace(3);
+
+  PQ pq;
+  pq.emplace(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: pq.emplace(3);
+
+  typedef std::forward_list<Foo> FL;
+  using DQ2 = std::deque<Foo>;
+  FL fl;
+  fl.emplace_front(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unnecessary temporary object created while calling emplace_front
+  // CHECK-FIXES: fl.emplace_front(3);
+
+  DQ2 dq2;
+  dq2.emplace_front(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: unnecessary temporary object created while calling emplace_front
+  // CHECK-FIXES: dq2.emplace_front(3);
+}
+
+void test_Alias() {
+  typedef std::list<Foo> L;
+  using DQ = std::deque<Foo>;
+  L l;
+  l.push_back(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back instead of push_back [modernize-use-emplace]
+  // CHECK-FIXES: l.emplace_back(3);
+
+  DQ dq;
+  dq.push_back(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back instead of push_back [modernize-use-emplace]
+  // CHECK-FIXES: dq.emplace_back(3);
+
+  typedef std::stack<Foo> STACK;
+  using PQ = std::priority_queue<Foo>;
+  STACK stack;
+  stack.push(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use emplace instead of push [modernize-use-emplace]
+  // CHECK-FIXES: stack.emplace(3);
+
+  PQ pq;
+  pq.push(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace instead of push [modernize-use-emplace]
+  // CHECK-FIXES: pq.emplace(3);
+
+  typedef std::forward_list<Foo> FL;
+  using DQ2 = std::deque<Foo>;
+  FL fl;
+  fl.push_front(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_front instead of push_front [modernize-use-emplace]
+  // CHECK-FIXES: fl.emplace_front(3);
+
+  DQ2 dq2;
+  dq2.push_front(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace_front instead of push_front [modernize-use-emplace]
+  // CHECK-FIXES: dq2.emplace_front(3);
+}
+
 struct Bar {
 public:
   Bar(){};
