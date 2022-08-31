@@ -1273,8 +1273,7 @@ def ignore_optimization_hints : Flag<["-"], "ignore_optimization_hints">,
     HelpText<"Ignore Linker Optimization Hints">,
     Group<grp_undocumented>;
 def init_offsets : Flag<["-"], "init_offsets">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
+    HelpText<"Store __TEXT segment offsets of static initializers">,
     Group<grp_undocumented>;
 def keep_dwarf_unwind : Flag<["-"], "keep_dwarf_unwind">,
     HelpText<"This option is undocumented in ld64">,

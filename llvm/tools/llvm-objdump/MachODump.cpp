@@ -8955,6 +8955,8 @@ static void PrintSection(const char *sectname, const char *segname,
       outs() << " S_THREAD_LOCAL_VARIABLE_POINTERS\n";
     else if (section_type == MachO::S_THREAD_LOCAL_INIT_FUNCTION_POINTERS)
       outs() << " S_THREAD_LOCAL_INIT_FUNCTION_POINTERS\n";
+    else if (section_type == MachO::S_INIT_FUNC_OFFSETS)
+      outs() << " S_INIT_FUNC_OFFSETS\n";
     else
       outs() << format("0x%08" PRIx32, section_type) << "\n";
     outs() << "attributes";

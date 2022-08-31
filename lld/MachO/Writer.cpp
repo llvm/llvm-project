@@ -575,15 +575,6 @@ void Writer::treatSpecialUndefineds() {
   }
 }
 
-// Can a symbol's address can only be resolved at runtime?
-static bool needsBinding(const Symbol *sym) {
-  if (isa<DylibSymbol>(sym))
-    return true;
-  if (const auto *defined = dyn_cast<Defined>(sym))
-    return defined->isExternalWeakDef() || defined->interposable;
-  return false;
-}
-
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
                                     const lld::macho::Reloc &r) {
   assert(sym->isLive());
@@ -1141,6 +1132,8 @@ template <class LP> void Writer::run() {
   if (in.objcStubs->isNeeded())
     in.objcStubs->setUp();
   scanRelocations();
+  if (in.initOffsets->isNeeded())
+    in.initOffsets->setUp();
 
   // Do not proceed if there was an undefined symbol.
   reportPendingUndefinedSymbols();
@@ -1204,6 +1197,7 @@ void macho::createSyntheticSections() {
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();
   in.objCImageInfo = make<ObjCImageInfoSection>();
+  in.initOffsets = make<InitOffsetsSection>();
 
   // This section contains space for just a single word, and will be used by
   // dyld to cache an address to the image loader it uses.
