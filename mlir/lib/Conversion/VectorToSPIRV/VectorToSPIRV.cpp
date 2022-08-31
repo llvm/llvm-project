@@ -12,7 +12,6 @@
 
 #include "mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h"
 
-#include "../PassDetail.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
