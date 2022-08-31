@@ -1752,15 +1752,20 @@ static Instruction *reassociateForUses(BinaryOperator &BO,
                                        InstCombinerImpl::BuilderTy &Builder) {
   Instruction::BinaryOps Opcode = BO.getOpcode();
   Value *X, *Y, *Z;
-  if (match(&BO, m_c_BinOp(Opcode,
-                           m_OneUse(m_c_BinOp(Opcode, m_Value(X),
-                                              m_OneUse(m_Value(Y)))),
-                           m_OneUse(m_Value(Z))))) {
-    // (X op Y) op Z --> (Y op Z) op X
-    if (!isa<Constant>(X) && !isa<Constant>(Y) && !isa<Constant>(Z) &&
-        !X->hasOneUse()) {
-      Value *YZ = Builder.CreateBinOp(Opcode, Y, Z);
-      return BinaryOperator::Create(Opcode, YZ, X);
+  if (match(&BO,
+            m_c_BinOp(Opcode, m_OneUse(m_BinOp(Opcode, m_Value(X), m_Value(Y))),
+                      m_OneUse(m_Value(Z))))) {
+    if (!isa<Constant>(X) && !isa<Constant>(Y) && !isa<Constant>(Z)) {
+      // (X op Y) op Z --> (Y op Z) op X
+      if (!X->hasOneUse()) {
+        Value *YZ = Builder.CreateBinOp(Opcode, Y, Z);
+        return BinaryOperator::Create(Opcode, YZ, X);
+      }
+      // (X op Y) op Z --> (X op Z) op Y
+      if (!Y->hasOneUse()) {
+        Value *XZ = Builder.CreateBinOp(Opcode, X, Z);
+        return BinaryOperator::Create(Opcode, XZ, Y);
+      }
     }
   }
 
