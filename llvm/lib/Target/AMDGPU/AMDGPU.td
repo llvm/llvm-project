@@ -1370,7 +1370,8 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureAtomicFaddNoRtnInsts,
    FeatureImageInsts,
    FeaturePackedTID,
-   FeatureVcmpxPermlaneHazard]>;
+   FeatureVcmpxPermlaneHazard,
+   FeatureSALUFloatInsts]>;
 
 //===----------------------------------------------------------------------===//
 
