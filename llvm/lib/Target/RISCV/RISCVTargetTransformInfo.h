@@ -145,6 +145,10 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      const Instruction *I = nullptr);
 
+  using BaseT::getVectorInstrCost;
+  InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
+                                     unsigned Index);
+
   bool isElementTypeLegalForScalableVector(Type *Ty) const {
     return TLI->isLegalElementTypeForRVV(Ty);
   }
