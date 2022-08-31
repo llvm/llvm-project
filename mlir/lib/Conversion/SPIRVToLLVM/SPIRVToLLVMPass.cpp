@@ -11,18 +11,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVMPass.h"
-#include "../PassDetail.h"
+
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVM.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTSPIRVTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
 /// A pass converting MLIR SPIR-V operations into LLVM dialect.
 class ConvertSPIRVToLLVMPass
-    : public ConvertSPIRVToLLVMBase<ConvertSPIRVToLLVMPass> {
+    : public impl::ConvertSPIRVToLLVMBase<ConvertSPIRVToLLVMPass> {
   void runOnOperation() override;
 };
 } // namespace

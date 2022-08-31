@@ -19,18 +19,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Affine/Passes.h"
+
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <algorithm>
+
+namespace mlir {
+#define GEN_PASS_DEF_AFFINEDATACOPYGENERATION
+#include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "affine-data-copy-generate"
 
@@ -50,7 +56,7 @@ namespace {
 // TODO: We currently can't generate copies correctly when stores
 // are strided. Check for strided stores.
 struct AffineDataCopyGeneration
-    : public AffineDataCopyGenerationBase<AffineDataCopyGeneration> {
+    : public impl::AffineDataCopyGenerationBase<AffineDataCopyGeneration> {
   AffineDataCopyGeneration() = default;
   explicit AffineDataCopyGeneration(unsigned slowMemorySpace,
                                     unsigned fastMemorySpace,

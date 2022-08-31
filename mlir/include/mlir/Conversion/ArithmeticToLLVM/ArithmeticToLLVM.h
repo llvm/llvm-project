@@ -17,6 +17,9 @@ class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
 
+#define GEN_PASS_DECL_CONVERTARITHMETICTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
 namespace arith {
 void populateArithmeticToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                 RewritePatternSet &patterns);

@@ -10,23 +10,28 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../PassDetail.h"
 #include "mlir/Conversion/TosaToSCF/TosaToSCF.h"
+
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_TOSATOSCF
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
 using namespace tosa;
 
 namespace {
-struct TosaToSCF : public TosaToSCFBase<TosaToSCF> {
+struct TosaToSCF : public impl::TosaToSCFBase<TosaToSCF> {
 public:
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());

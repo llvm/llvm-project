@@ -8,7 +8,6 @@
 
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 
-#include "../PassDetail.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -23,6 +22,11 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/TypeSwitch.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTASYNCTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "convert-async-to-llvm"
 
@@ -986,7 +990,7 @@ public:
 
 namespace {
 struct ConvertAsyncToLLVMPass
-    : public ConvertAsyncToLLVMBase<ConvertAsyncToLLVMPass> {
+    : public impl::ConvertAsyncToLLVMBase<ConvertAsyncToLLVMPass> {
   void runOnOperation() override;
 };
 } // namespace

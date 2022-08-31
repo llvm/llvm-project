@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"
-#include "../PassDetail.h"
+
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
@@ -22,7 +22,13 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTSCFTOOPENMP
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -443,7 +449,7 @@ static LogicalResult applyPatterns(ModuleOp module) {
 }
 
 /// A pass converting SCF operations to OpenMP operations.
-struct SCFToOpenMPPass : public ConvertSCFToOpenMPBase<SCFToOpenMPPass> {
+struct SCFToOpenMPPass : public impl::ConvertSCFToOpenMPBase<SCFToOpenMPPass> {
   /// Pass entry point.
   void runOnOperation() override {
     if (failed(applyPatterns(getOperation())))

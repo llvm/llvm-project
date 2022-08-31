@@ -28,6 +28,22 @@ class AffineForOp;
 /// producer-consumer and sibling fusion.
 enum FusionMode { Greedy, ProducerConsumer, Sibling };
 
+#define GEN_PASS_DECL_AFFINEDATACOPYGENERATION
+#define GEN_PASS_DECL_AFFINELOOPFUSION
+#define GEN_PASS_DECL_AFFINELOOPINVARIANTCODEMOTION
+#define GEN_PASS_DECL_AFFINELOOPTILING
+#define GEN_PASS_DECL_AFFINELOOPUNROLL
+#define GEN_PASS_DECL_AFFINELOOPUNROLLANDJAM
+#define GEN_PASS_DECL_AFFINEPIPELINEDATATRANSFER
+#define GEN_PASS_DECL_AFFINESCALARREPLACEMENT
+#define GEN_PASS_DECL_AFFINEVECTORIZE
+#define GEN_PASS_DECL_AFFINEPARALLELIZE
+#define GEN_PASS_DECL_AFFINELOOPNORMALIZE
+#define GEN_PASS_DECL_LOOPCOALESCING
+#define GEN_PASS_DECL_SIMPLIFYAFFINESTRUCTURES
+#define GEN_PASS_DECL_AFFINEEXPANDINDEXOPS
+#include "mlir/Dialect/Affine/Passes.h.inc"
+
 /// Creates a simplification pass for affine structures (maps and sets). In
 /// addition, this pass also normalizes memrefs to have the trivial (identity)
 /// layout map.

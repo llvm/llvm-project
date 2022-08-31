@@ -12,10 +12,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Linalg/Passes.h"
+
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -26,6 +27,11 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_LINALGFOLDUNITEXTENTDIMS
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "linalg-drop-unit-dims"
 
@@ -542,7 +548,7 @@ void mlir::linalg::populateFoldUnitExtentDimsPatterns(
 namespace {
 /// Pass that removes unit-extent dims within generic ops.
 struct LinalgFoldUnitExtentDimsPass
-    : public LinalgFoldUnitExtentDimsBase<LinalgFoldUnitExtentDimsPass> {
+    : public impl::LinalgFoldUnitExtentDimsBase<LinalgFoldUnitExtentDimsPass> {
   void runOnOperation() override {
     Operation *op = getOperation();
     MLIRContext *context = op->getContext();

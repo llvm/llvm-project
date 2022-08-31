@@ -11,11 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Async/Passes.h"
+
 #include "PassDetail.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Async/IR/Async.h"
-#include "mlir/Dialect/Async/Passes.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -27,6 +28,11 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/Debug.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_ASYNCTOASYNCRUNTIME
+#include "mlir/Dialect/Async/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
 using namespace mlir::async;
 
@@ -37,7 +43,7 @@ static constexpr const char kAsyncFnPrefix[] = "async_execute_fn";
 namespace {
 
 class AsyncToAsyncRuntimePass
-    : public AsyncToAsyncRuntimeBase<AsyncToAsyncRuntimePass> {
+    : public impl::AsyncToAsyncRuntimeBase<AsyncToAsyncRuntimePass> {
 public:
   AsyncToAsyncRuntimePass() = default;
   void runOnOperation() override;

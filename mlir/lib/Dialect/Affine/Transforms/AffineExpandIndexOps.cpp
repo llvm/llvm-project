@@ -10,12 +10,16 @@
 // fundamental operations.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Passes.h"
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_AFFINEEXPANDINDEXOPS
+#include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -38,7 +42,7 @@ struct LowerDelinearizeIndexOps
 };
 
 class ExpandAffineIndexOpsPass
-    : public AffineExpandIndexOpsBase<ExpandAffineIndexOpsPass> {
+    : public impl::AffineExpandIndexOpsBase<ExpandAffineIndexOpsPass> {
 public:
   ExpandAffineIndexOpsPass() = default;
 
