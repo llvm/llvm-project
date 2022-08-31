@@ -5,6 +5,7 @@
 
 // Allocate pinned memory on the host
 void *llvm_omp_target_alloc_host(size_t, int);
+void llvm_omp_target_free_host(void *, int);
 
 int main() {
   const int N = 64;
@@ -25,7 +26,7 @@ int main() {
   for (int i = 0; i < N; ++i)
     sum += hst_ptr[i];
 
-  omp_target_free(hst_ptr, device);
+  llvm_omp_target_free_host(hst_ptr, device);
   // CHECK: PASS
   if (sum == N)
     printf ("PASS\n");
