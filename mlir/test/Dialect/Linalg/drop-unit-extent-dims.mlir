@@ -847,3 +847,28 @@ func.func @reduce_dispatch_0() -> tensor<4x2xf32> {
   }  
   return %res: tensor<4x2xf32>
 }
+
+// -----
+
+#map0 = affine_map<(i, j) -> (i, j)>
+#access = [#map0, #map0]
+#trait = {
+  iterator_types = ["parallel", "parallel"],
+  indexing_maps = #access,
+  library_call = "some_external_func"
+}
+
+func.func @drop_all_loops(%arg0 : memref<1x1xf32, 3>) -> memref<1x1xf32, 3>
+{
+  linalg.generic #trait
+     ins(%arg0 : memref<1x1xf32, 3>)
+    outs(%arg0 : memref<1x1xf32, 3>) {
+       ^bb0(%arg1: f32, %arg2: f32) :
+         linalg.yield %arg1 : f32
+       }
+  return %arg0 : memref<1x1xf32, 3>
+}
+
+// CHECK-LABEL: func @drop_all_loops
+//       CHECK:   memref.collapse_shape %{{.*}} [] memref<1x1xf32, 3> into memref<f32, 3>
+//       CHECK:   linalg.generic{{.*}}memref<f32, 3>
