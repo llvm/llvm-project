@@ -213,6 +213,9 @@ def : Pat<(f32 fpimm1), (FFINT_S_W (MOVGR2FR_W (ADDI_W R0, 1)))>;
 
 // FP Conversion
 def : Pat<(loongarch_ftint FPR32:$src), (FTINTRZ_W_S FPR32:$src)>;
+
+// FP reciprocal operation
+def : Pat<(fdiv fpimm1, FPR32:$src), (FRECIP_S $src)>;
 } // Predicates = [HasBasicF]
 
 let Predicates = [HasBasicF, IsLA64] in {
