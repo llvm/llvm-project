@@ -25,6 +25,13 @@
   dimOrdering = affine_map<(i,j,k) -> (k,i,j)>
 }>
 
+// CHECK-LABEL: func @sparse_nop(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
+//       CHECK: return %[[A]] : !llvm.ptr<i8>
+func.func @sparse_nop(%arg0: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #SparseVector> {
+  return %arg0 : tensor<?xf64, #SparseVector>
+}
+
 // CHECK-LABEL: func @sparse_dim1d(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //       CHECK: %[[C:.*]] = arith.constant 0 : index

@@ -140,7 +140,7 @@ def Builtin_ArrayAttr : Builtin_Attr<"Array", [
 }
 
 //===----------------------------------------------------------------------===//
-// DenseArrayBaseAttr
+// DenseArrayAttr
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
@@ -155,23 +155,28 @@ def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
   }];
 }
 
-def Builtin_DenseArrayBase : Builtin_Attr<
-    "DenseArrayBase", [ElementsAttrInterface, TypedAttrInterface]> {
-  let summary = "A dense array of i8, i16, i32, i64, f32, or f64.";
+def Builtin_DenseArray : Builtin_Attr<
+    "DenseArray", [ElementsAttrInterface, TypedAttrInterface]> {
+  let summary = "A dense array of integer or floating point elements.";
   let description = [{
     A dense array attribute is an attribute that represents a dense array of
     primitive element types. Contrary to DenseIntOrFPElementsAttr this is a
     flat unidimensional array which does not have a storage optimization for
     splat. This allows to expose the raw array through a C++ API as
-    `ArrayRef<T>`. This is the base class attribute, the actual access is
-    intended to be managed through the subclasses `DenseI8ArrayAttr`,
-    `DenseI16ArrayAttr`, `DenseI32ArrayAttr`, `DenseI64ArrayAttr`,
-    `DenseF32ArrayAttr`, and `DenseF64ArrayAttr`.
+    `ArrayRef<T>` for compatible types. The element type must be bool or an
+    integer or float whose bitwidth is a multiple of 8. Bool elements are stored
+    as bytes.
+
+    This is the base class attribute. Access to C++ types is intended to be
+    managed through the subclasses `DenseI8ArrayAttr`, `DenseI16ArrayAttr`,
+    `DenseI32ArrayAttr`, `DenseI64ArrayAttr`, `DenseF32ArrayAttr`,
+    and `DenseF64ArrayAttr`.
 
     Syntax:
 
     ```
-    dense-array-attribute ::= `[` `:` (integer-type | float-type) tensor-literal `]`
+    dense-array-attribute ::= `array` `<` (integer-type | float-type)
+                                          (`:` tensor-literal)? `>`
     ```
     Examples:
 
@@ -181,16 +186,26 @@ def Builtin_DenseArrayBase : Builtin_Attr<
     array<f64: 42., 12.>
     ```
 
-    when a specific subclass is used as argument of an operation, the declarative
-    assembly will omit the type and print directly:
-    ```
+    When a specific subclass is used as argument of an operation, the
+    declarative assembly will omit the type and print directly:
+
+    ```mlir
     [1, 2, 3]
     ```
   }];
+
   let parameters = (ins
     AttributeSelfTypeParameter<"", "RankedTensorType">:$type,
     Builtin_DenseArrayRawDataParameter:$rawData
   );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "RankedTensorType":$type,
+                                        "ArrayRef<char>":$rawData), [{
+      return $_get(type.getContext(), type, rawData);
+    }]>,
+  ];
+
   let extraClassDeclaration = [{
     /// Allow implicit conversion to ElementsAttr.
     operator ElementsAttr() const {
@@ -200,20 +215,23 @@ def Builtin_DenseArrayBase : Builtin_Attr<
     /// ElementsAttr implementation.
     using ContiguousIterableTypesT =
         std::tuple<bool, int8_t, int16_t, int32_t, int64_t, float, double>;
-    const bool *value_begin_impl(OverloadToken<bool>) const;
-    const int8_t *value_begin_impl(OverloadToken<int8_t>) const;
-    const int16_t *value_begin_impl(OverloadToken<int16_t>) const;
-    const int32_t *value_begin_impl(OverloadToken<int32_t>) const;
-    const int64_t *value_begin_impl(OverloadToken<int64_t>) const;
-    const float *value_begin_impl(OverloadToken<float>) const;
-    const double *value_begin_impl(OverloadToken<double>) const;
-
-    /// Printer for the short form: will dispatch to the appropriate subclass.
-    void print(AsmPrinter &printer) const;
-    void print(raw_ostream &os) const;
-    /// Print the short form `42, 100, -1` without any braces or prefix.
-    void printWithoutBraces(raw_ostream &os) const;
+    FailureOr<const bool *>
+    try_value_begin_impl(OverloadToken<bool>) const;
+    FailureOr<const int8_t *>
+    try_value_begin_impl(OverloadToken<int8_t>) const;
+    FailureOr<const int16_t *>
+    try_value_begin_impl(OverloadToken<int16_t>) const;
+    FailureOr<const int32_t *>
+    try_value_begin_impl(OverloadToken<int32_t>) const;
+    FailureOr<const int64_t *>
+    try_value_begin_impl(OverloadToken<int64_t>) const;
+    FailureOr<const float *>
+    try_value_begin_impl(OverloadToken<float>) const;
+    FailureOr<const double *>
+    try_value_begin_impl(OverloadToken<double>) const;
   }];
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -281,10 +299,11 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
       APFloat, std::complex<APFloat>
     >;
 
-    /// Provide a `value_begin_impl` to enable iteration within ElementsAttr.
+    /// Provide a `try_value_begin_impl` to enable iteration within
+    /// ElementsAttr.
     template <typename T>
-    auto value_begin_impl(OverloadToken<T>) const {
-      return value_begin<T>();
+    auto try_value_begin_impl(OverloadToken<T>) const {
+      return try_value_begin<T>();
     }
 
     /// Convert endianess of input ArrayRef for big-endian(BE) machines. All of
@@ -410,10 +429,11 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
     using ContiguousIterableTypesT = std::tuple<StringRef>;
     using NonContiguousIterableTypesT = std::tuple<Attribute>;
 
-    /// Provide a `value_begin_impl` to enable iteration within ElementsAttr.
+    /// Provide a `try_value_begin_impl` to enable iteration within
+    /// ElementsAttr.
     template <typename T>
-    auto value_begin_impl(OverloadToken<T>) const {
-      return value_begin<T>();
+    auto try_value_begin_impl(OverloadToken<T>) const {
+      return try_value_begin<T>();
     }
 
   protected:
@@ -880,22 +900,17 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
       StringRef
     >;
     using ElementsAttr::Trait<SparseElementsAttr>::getValues;
-
-    /// Provide a `value_begin_impl` to enable iteration within ElementsAttr.
-    template <typename T>
-    auto value_begin_impl(OverloadToken<T>) const {
-      return value_begin<T>();
-    }
+    using ElementsAttr::Trait<SparseElementsAttr>::value_begin;
 
     template <typename T>
     using iterator =
         llvm::mapped_iterator<typename decltype(llvm::seq<ptrdiff_t>(0, 0))::iterator,
                               std::function<T(ptrdiff_t)>>;
 
-    /// Return the values of this attribute in the form of the given type 'T'.
-    /// 'T'  may be any of Attribute, APInt, APFloat, c++ integer/float types,
-    /// etc.
-    template <typename T> iterator<T> value_begin() const;
+    /// Provide a `try_value_begin_impl` to enable iteration within
+    /// ElementsAttr.
+    template <typename T>
+    FailureOr<iterator<T>> try_value_begin_impl(OverloadToken<T>) const;
 
   private:
     /// Get a zero APFloat for the given sparse attribute.
@@ -965,6 +980,60 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// StridedLayoutAttr
+//===----------------------------------------------------------------------===//
+
+def StridedLayoutAttr : Builtin_Attr<"StridedLayout",
+    [DeclareAttrInterfaceMethods<MemRefLayoutAttrInterface,
+                                 ["verifyLayout"]>]> {
+  let summary = "An Attribute representing a strided layout of a shaped type";
+  let description = [{
+    Syntax:
+
+    ```
+    strided-layout-attribute ::= `strided` `<` `[` stride-list `]`
+                                 (`,` `offset` `:` dimension)? `>`
+    stride-list ::= /*empty*/
+                  | dimension (`,` dimension)*
+    dimension ::= decimal-literal | `?`
+    ```
+
+    A strided layout attribute captures layout information of the memref type in
+    the canonical form. Specifically, it contains a list of _strides_, one for
+    each dimension. A stride is the number of elements in the linear storage
+    one must step over to reflect an increment in the given dimension. For
+    example, a `MxN` row-major contiguous shaped type would have the strides
+    `[N, 1]`. The layout attribute also contains the _offset_ from the base
+    pointer of the shaped type to the first effectively accessed element,
+    expressed in terms of the number of contiguously stored elements.
+
+    Strides must be positive and the offset must be non-negative. Both the
+    strides and the offset may be _dynamic_, i.e. their value may not be known
+    at compile time. This is expressed as a `?` in the assembly syntax and as
+    `ShapedType::kDynamicStrideOrOffset` in the code. Stride and offset values
+    must satisfy the constraints above at runtime, the behavior is undefined
+    otherwise.
+
+    See [Dialects/Builtin.md#memreftype](MemRef type) for more information.
+  }];
+
+  let parameters = (ins
+    "int64_t":$offset,
+    ArrayRefParameter<
+      "int64_t",
+      "array of strides (64-bit integer)"
+    >:$strides
+  );
+  let genVerifyDecl = 1;
+
+  let extraClassDeclaration = [{
+    /// Print the attribute to the given output stream.
+    void print(raw_ostream &os) const;
+  }];
+}
+
 
 //===----------------------------------------------------------------------===//
 // StringAttr

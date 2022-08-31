@@ -536,7 +536,7 @@ add_entrypoint_object(
   HDRS
     ../exp2f.h
   DEPENDS
-    .common_constants
+    .explogxf
     libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
@@ -1166,15 +1166,22 @@ add_entrypoint_object(
     -O3
 )
 
+add_object_library(
+  explogxf
+  HDRS
+    explogxf.h
+  SRCS
+    explogxf.cpp
+)
+
 add_entrypoint_object(
   coshf
   SRCS
     coshf.cpp
   HDRS
     ../coshf.h
-    expxf.h
   DEPENDS
-    .common_constants
+    .explogxf
     libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
@@ -1190,9 +1197,8 @@ add_entrypoint_object(
     sinhf.cpp
   HDRS
     ../sinhf.h
-    expxf.h
   DEPENDS
-    .common_constants
+    .explogxf
     libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
@@ -1208,9 +1214,50 @@ add_entrypoint_object(
     tanhf.cpp
   HDRS
     ../tanhf.h
-    expxf.h 
   DEPENDS
-    .common_constants
+    .explogxf
+    libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.include.math
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
+  atanhf
+  SRCS
+    atanhf.cpp
+  HDRS
+    ../atanhf.h
+  DEPENDS
+    .explogxf
+    libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.include.math
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_object_library(
+  inv_trigf_utils
+  HDRS
+    inv_trigf_utils.h
+  SRCS
+    inv_trigf_utils.cpp
+)
+
+add_entrypoint_object(
+  atanf
+  SRCS
+    atanf.cpp
+  HDRS
+    ../atanf.h
+  DEPENDS
+    .inv_trigf_utils
     libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer

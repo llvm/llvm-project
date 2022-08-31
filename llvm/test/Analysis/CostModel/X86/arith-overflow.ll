@@ -124,11 +124,11 @@ define i32 @sadd(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call { i16, i1 } @llvm.sadd.with.overflow.i16(i16 undef, i16 undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I16 = call { <8 x i16>, <8 x i1> } @llvm.sadd.with.overflow.v8i16(<8 x i16> undef, <8 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call { <16 x i16>, <16 x i1> } @llvm.sadd.with.overflow.v16i16(<16 x i16> undef, <16 x i16> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.sadd.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.sadd.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 undef, i8 undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I8 = call { <16 x i8>, <16 x i1> } @llvm.sadd.with.overflow.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I8 = call { <32 x i8>, <32 x i1> } @llvm.sadd.with.overflow.v32i8(<32 x i8> undef, <32 x i8> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.sadd.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.sadd.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'sadd'
@@ -162,11 +162,11 @@ define i32 @sadd(i32 %arg) {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call { i16, i1 } @llvm.sadd.with.overflow.i16(i16 undef, i16 undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I16 = call { <8 x i16>, <8 x i1> } @llvm.sadd.with.overflow.v8i16(<8 x i16> undef, <8 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call { <16 x i16>, <16 x i1> } @llvm.sadd.with.overflow.v16i16(<16 x i16> undef, <16 x i16> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.sadd.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.sadd.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 undef, i8 undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I8 = call { <16 x i8>, <16 x i1> } @llvm.sadd.with.overflow.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I8 = call { <32 x i8>, <32 x i1> } @llvm.sadd.with.overflow.v32i8(<32 x i8> undef, <32 x i8> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.sadd.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.sadd.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'sadd'
@@ -362,11 +362,11 @@ define i32 @uadd(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call { i16, i1 } @llvm.uadd.with.overflow.i16(i16 undef, i16 undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I16 = call { <8 x i16>, <8 x i1> } @llvm.uadd.with.overflow.v8i16(<8 x i16> undef, <8 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call { <16 x i16>, <16 x i1> } @llvm.uadd.with.overflow.v16i16(<16 x i16> undef, <16 x i16> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.uadd.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.uadd.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 undef, i8 undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I8 = call { <16 x i8>, <16 x i1> } @llvm.uadd.with.overflow.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = call { <32 x i8>, <32 x i1> } @llvm.uadd.with.overflow.v32i8(<32 x i8> undef, <32 x i8> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.uadd.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.uadd.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'uadd'
@@ -400,11 +400,11 @@ define i32 @uadd(i32 %arg) {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call { i16, i1 } @llvm.uadd.with.overflow.i16(i16 undef, i16 undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I16 = call { <8 x i16>, <8 x i1> } @llvm.uadd.with.overflow.v8i16(<8 x i16> undef, <8 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call { <16 x i16>, <16 x i1> } @llvm.uadd.with.overflow.v16i16(<16 x i16> undef, <16 x i16> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.uadd.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.uadd.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 undef, i8 undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I8 = call { <16 x i8>, <16 x i1> } @llvm.uadd.with.overflow.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = call { <32 x i8>, <32 x i1> } @llvm.uadd.with.overflow.v32i8(<32 x i8> undef, <32 x i8> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.uadd.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.uadd.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'uadd'
@@ -600,11 +600,11 @@ define i32 @ssub(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call { i16, i1 } @llvm.ssub.with.overflow.i16(i16 undef, i16 undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I16 = call { <8 x i16>, <8 x i1> } @llvm.ssub.with.overflow.v8i16(<8 x i16> undef, <8 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call { <16 x i16>, <16 x i1> } @llvm.ssub.with.overflow.v16i16(<16 x i16> undef, <16 x i16> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.ssub.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.ssub.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 undef, i8 undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I8 = call { <16 x i8>, <16 x i1> } @llvm.ssub.with.overflow.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I8 = call { <32 x i8>, <32 x i1> } @llvm.ssub.with.overflow.v32i8(<32 x i8> undef, <32 x i8> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.ssub.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.ssub.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'ssub'
@@ -638,11 +638,11 @@ define i32 @ssub(i32 %arg) {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call { i16, i1 } @llvm.ssub.with.overflow.i16(i16 undef, i16 undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I16 = call { <8 x i16>, <8 x i1> } @llvm.ssub.with.overflow.v8i16(<8 x i16> undef, <8 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call { <16 x i16>, <16 x i1> } @llvm.ssub.with.overflow.v16i16(<16 x i16> undef, <16 x i16> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.ssub.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.ssub.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 undef, i8 undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I8 = call { <16 x i8>, <16 x i1> } @llvm.ssub.with.overflow.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V32I8 = call { <32 x i8>, <32 x i1> } @llvm.ssub.with.overflow.v32i8(<32 x i8> undef, <32 x i8> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.ssub.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.ssub.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'ssub'
@@ -838,11 +838,11 @@ define i32 @usub(i32 %arg) {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call { i16, i1 } @llvm.usub.with.overflow.i16(i16 undef, i16 undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I16 = call { <8 x i16>, <8 x i1> } @llvm.usub.with.overflow.v8i16(<8 x i16> undef, <8 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call { <16 x i16>, <16 x i1> } @llvm.usub.with.overflow.v16i16(<16 x i16> undef, <16 x i16> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.usub.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.usub.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 undef, i8 undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I8 = call { <16 x i8>, <16 x i1> } @llvm.usub.with.overflow.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = call { <32 x i8>, <32 x i1> } @llvm.usub.with.overflow.v32i8(<32 x i8> undef, <32 x i8> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.usub.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.usub.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; AVX512BW-LABEL: 'usub'
@@ -876,11 +876,11 @@ define i32 @usub(i32 %arg) {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I16 = call { i16, i1 } @llvm.usub.with.overflow.i16(i16 undef, i16 undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V8I16 = call { <8 x i16>, <8 x i1> } @llvm.usub.with.overflow.v8i16(<8 x i16> undef, <8 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I16 = call { <16 x i16>, <16 x i1> } @llvm.usub.with.overflow.v16i16(<16 x i16> undef, <16 x i16> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.usub.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V32I16 = call { <32 x i16>, <32 x i1> } @llvm.usub.with.overflow.v32i16(<32 x i16> undef, <32 x i16> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I8 = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 undef, i8 undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I8 = call { <16 x i8>, <16 x i1> } @llvm.usub.with.overflow.v16i8(<16 x i8> undef, <16 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V32I8 = call { <32 x i8>, <32 x i1> } @llvm.usub.with.overflow.v32i8(<32 x i8> undef, <32 x i8> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.usub.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V64I8 = call { <64 x i8>, <64 x i1> } @llvm.usub.with.overflow.v64i8(<64 x i8> undef, <64 x i8> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SLM-LABEL: 'usub'

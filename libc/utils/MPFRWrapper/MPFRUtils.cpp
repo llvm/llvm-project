@@ -182,6 +182,18 @@ public:
     return result;
   }
 
+  MPFRNumber atan() const {
+    MPFRNumber result(*this);
+    mpfr_atan(result.value, value, mpfr_rounding);
+    return result;
+  }
+
+  MPFRNumber atanh() const {
+    MPFRNumber result(*this);
+    mpfr_atanh(result.value, value, mpfr_rounding);
+    return result;
+  }
+
   MPFRNumber ceil() const {
     MPFRNumber result(*this);
     mpfr_ceil(result.value, value);
@@ -500,6 +512,10 @@ unary_operation(Operation op, InputType input, unsigned int precision,
   switch (op) {
   case Operation::Abs:
     return mpfrInput.abs();
+  case Operation::Atan:
+    return mpfrInput.atan();
+  case Operation::Atanh:
+    return mpfrInput.atanh();
   case Operation::Ceil:
     return mpfrInput.ceil();
   case Operation::Cos:

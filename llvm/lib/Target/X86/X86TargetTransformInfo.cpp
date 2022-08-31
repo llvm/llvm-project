@@ -70,15 +70,10 @@ using namespace llvm;
 // Helper struct to store/access costs for each cost kind.
 // TODO: Move this to allow other targets to use it?
 struct CostKindCosts {
-  unsigned RecipThroughputCost;
-  unsigned LatencyCost;
-  unsigned CodeSizeCost;
-  unsigned SizeAndLatencyCost;
-
-  CostKindCosts(unsigned RecipThroughput = ~0U, unsigned Latency = ~0U,
-                unsigned CodeSize = ~0U, unsigned SizeAndLatency = ~0U)
-      : RecipThroughputCost(RecipThroughput), LatencyCost(Latency),
-        CodeSizeCost(CodeSize), SizeAndLatencyCost(SizeAndLatency) {}
+  unsigned RecipThroughputCost = ~0U;
+  unsigned LatencyCost = ~0U;
+  unsigned CodeSizeCost = ~0U;
+  unsigned SizeAndLatencyCost = ~0U;
 
   llvm::Optional<unsigned>
   operator[](TargetTransformInfo::TargetCostKind Kind) const {
@@ -645,9 +640,15 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * KindCost.value();
 
   static const CostKindTblEntry AVX512BWCostTable[] = {
-    { ISD::SHL,   MVT::v64i8, { 11 } }, // vpblendvb sequence.
-    { ISD::SRL,   MVT::v64i8, { 11 } }, // vpblendvb sequence.
-    { ISD::SRA,   MVT::v64i8, { 24 } }, // vpblendvb sequence.
+    { ISD::SHL,   MVT::v64i8,   { 11 } }, // vpblendvb sequence.
+    { ISD::SRL,   MVT::v64i8,   { 11 } }, // vpblendvb sequence.
+    { ISD::SRA,   MVT::v64i8,   { 24 } }, // vpblendvb sequence.
+
+    { ISD::ADD,   MVT::v64i8,   {  1 } },
+    { ISD::ADD,   MVT::v32i16,  {  1 } },
+
+    { ISD::SUB,   MVT::v64i8,   {  1 } },
+    { ISD::SUB,   MVT::v32i16,  {  1 } },
   };
 
   // Look for AVX512BW lowering tricks for custom cases.
@@ -678,6 +679,12 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,     MVT::v4i64,   {  1 } },
     { ISD::SRA,     MVT::v8i64,   {  1 } },
 
+    { ISD::ADD,     MVT::v64i8,   {  3 } }, // 2*paddb + split
+    { ISD::ADD,     MVT::v32i16,  {  3 } }, // 2*paddw + split
+
+    { ISD::SUB,     MVT::v64i8,   {  3 } }, // 2*psubb + split
+    { ISD::SUB,     MVT::v32i16,  {  3 } }, // 2*psubw + split
+
     { ISD::MUL,     MVT::v16i32,  {  1 } }, // pmulld (Skylake from agner.org)
     { ISD::MUL,     MVT::v8i32,   {  1 } }, // pmulld (Skylake from agner.org)
     { ISD::MUL,     MVT::v4i32,   {  1 } }, // pmulld (Skylake from agner.org)
@@ -707,7 +714,6 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     if (const auto *Entry = CostTableLookup(AVX512CostTable, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * KindCost.value();
-
 
   static const CostKindTblEntry AVX2ShiftCostTable[] = {
     // Shifts on vXi64/vXi32 on AVX2 is legal even though we declare to

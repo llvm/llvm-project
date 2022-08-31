@@ -2679,8 +2679,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       assert(SrcRB.getID() == DstRB.getID() && "Wrong extract regbank!");
 
       if (SrcRB.getID() == AArch64::GPRRegBankID) {
-        MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {})
-            .addUse(SrcReg, 0, Offset == 0 ? AArch64::sube64 : AArch64::subo64);
+        auto NewI =
+            MIB.buildInstr(TargetOpcode::COPY, {DstReg}, {})
+                .addUse(SrcReg, 0,
+                        Offset == 0 ? AArch64::sube64 : AArch64::subo64);
+        constrainOperandRegClass(MF, TRI, MRI, TII, RBI, *NewI,
+                                 AArch64::GPR64RegClass, NewI->getOperand(0));
         I.eraseFromParent();
         return true;
       }

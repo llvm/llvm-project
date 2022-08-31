@@ -383,7 +383,7 @@ MlirAttribute mlirDenseF64ArrayGet(MlirContext ctx, intptr_t size,
 // Accessors.
 
 intptr_t mlirDenseArrayGetNumElements(MlirAttribute attr) {
-  return unwrap(attr).cast<DenseArrayBaseAttr>().size();
+  return unwrap(attr).cast<DenseArrayAttr>().size();
 }
 
 //===----------------------------------------------------------------------===//

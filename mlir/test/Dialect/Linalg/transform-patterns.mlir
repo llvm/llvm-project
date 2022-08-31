@@ -7,12 +7,12 @@
 // CHECK-DAG: #[[$nm:.*]] = affine_map<(d0, d1, d2) -> (d1, d0)>
 // CHECK-DAG: #[[$km:.*]] = affine_map<(d0, d1, d2) -> (d2, d0)>
 
-func.func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
-          %y: memref<?xf32, offset: ?, strides: [1]>,
+func.func @dot(%x: memref<?xf32, strided<[1], offset: ?>>,
+          %y: memref<?xf32, strided<[1], offset: ?>>,
           %v: memref<f32>) {
   linalg.dot { __internal_linalg_transform__ = "MEM" }
-    ins(%x, %y: memref<?xf32, offset: ?, strides: [1]>,
-                memref<?xf32, offset: ?, strides: [1]>)
+    ins(%x, %y: memref<?xf32, strided<[1], offset: ?>>,
+                memref<?xf32, strided<[1], offset: ?>>)
     outs(%v: memref<f32>)
 
   return
@@ -30,13 +30,13 @@ func.func @dot(%x: memref<?xf32, offset: ?, strides: [1]>,
 // CHECK:               arith.addf
 // CHECK:               store
 
-func.func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-             %x: memref<?xf32, offset: ?, strides: [1]>,
-             %y: memref<?xf32, offset: ?, strides: [1]>) {
+func.func @matvec(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+             %x: memref<?xf32, strided<[1], offset: ?>>,
+             %y: memref<?xf32, strided<[1], offset: ?>>) {
   linalg.matvec
-    ins(%A, %x: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                memref<?xf32, offset: ?, strides: [1]>)
-    outs(%y: memref<?xf32, offset: ?, strides: [1]>)
+    ins(%A, %x: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+                memref<?xf32, strided<[1], offset: ?>>)
+    outs(%y: memref<?xf32, strided<[1], offset: ?>>)
   return
 }
 // CHECK-LABEL: func @matvec
@@ -49,13 +49,13 @@ func.func @matvec(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:               ins({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>, memref<?xf32, #[[$STRIDED_1D]]>)
 // CHECK:              outs({{.*}}: memref<?xf32, #[[$STRIDED_1D]]>)
 
-func.func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-             %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-             %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
+func.func @matmul(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+             %B: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+             %C: memref<?x?xf32, strided<[?, 1], offset: ?>>) {
   linalg.matmul { __internal_linalg_transform__ = "MEM" }
-    ins(%A, %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                memref<?x?xf32, offset: ?, strides: [?, 1]>)
-    outs(%C: memref<?x?xf32, offset: ?, strides: [?, 1]>)
+    ins(%A, %B: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+                memref<?x?xf32, strided<[?, 1], offset: ?>>)
+    outs(%C: memref<?x?xf32, strided<[?, 1], offset: ?>>)
   return
 }
 // CHECK-LABEL: func @matmul
@@ -100,13 +100,13 @@ func.func @matmul(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
   library_call = "linalg_matmul",
   iterator_types = ["parallel", "parallel", "reduction"]
 }
-func.func @permute_generic(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-           %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-           %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
+func.func @permute_generic(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+           %B: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+           %C: memref<?x?xf32, strided<[?, 1], offset: ?>>) {
   linalg.generic #generic_matmul_trait
-    ins(%A, %B : memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                 memref<?x?xf32, offset: ?, strides: [?, 1]>)
-   outs(%C : memref<?x?xf32, offset: ?, strides: [?, 1]>) {
+    ins(%A, %B : memref<?x?xf32, strided<[?, 1], offset: ?>>,
+                 memref<?x?xf32, strided<[?, 1], offset: ?>>)
+   outs(%C : memref<?x?xf32, strided<[?, 1], offset: ?>>) {
     ^bb(%a: f32, %b: f32, %c: f32):
       %d = arith.mulf %a, %b: f32
       %e = arith.addf %c, %d: f32
@@ -127,17 +127,17 @@ transform.with_pdl_patterns {
 // CHECK-SAME:   indexing_maps = [#[[$kn]], #[[$nm]], #[[$km]]],
 // CHECK-SAME:   iterator_types = ["parallel", "reduction", "parallel"],
 // CHECK-SAME:   library_call = "linalg_matmul"}
-// CHECK:          memref<?x?xf32, #[[$STRIDED_2D_u_1]]>,
-// CHECK-SAME:     memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
-// CHECK-SAME:     memref<?x?xf32, #[[$STRIDED_2D_u_1]]>
+// CHECK:          memref<?x?xf32, strided<[?, 1], offset: ?>>,
+// CHECK-SAME:     memref<?x?xf32, strided<[?, 1], offset: ?>>
+// CHECK-SAME:     memref<?x?xf32, strided<[?, 1], offset: ?>>
 
-func.func @matvec_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-             %x: memref<?xf32, offset: ?, strides: [1]>,
-             %y: memref<?xf32, offset: ?, strides: [1]>) {
+func.func @matvec_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+             %x: memref<?xf32, strided<[1], offset: ?>>,
+             %y: memref<?xf32, strided<[1], offset: ?>>) {
   linalg.matvec {__internal_linalg_transform__ = "__with_perm__"}
-    ins(%A, %x: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                memref<?xf32, offset: ?, strides: [1]>)
-   outs(%y: memref<?xf32, offset: ?, strides: [1]>)
+    ins(%A, %x: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+                memref<?xf32, strided<[1], offset: ?>>)
+   outs(%y: memref<?xf32, strided<[1], offset: ?>>)
   return
 }
 // CHECK-LABEL: func @matvec_perm
@@ -150,13 +150,13 @@ func.func @matvec_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
 // CHECK:               ins({{.*}}: memref<?x?xf32, #[[$STRIDED_2D_u_1]]>, memref<?xf32, #[[$STRIDED_1D]]>)
 // CHECK:              outs({{.*}}: memref<?xf32, #[[$STRIDED_1D]]>)
 
-func.func @matmul_perm(%A: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-             %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-             %C: memref<?x?xf32, offset: ?, strides: [?, 1]>) {
+func.func @matmul_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+             %B: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+             %C: memref<?x?xf32, strided<[?, 1], offset: ?>>) {
   linalg.matmul {__internal_linalg_transform__ = "__with_perm__"}
-    ins(%A, %B: memref<?x?xf32, offset: ?, strides: [?, 1]>,
-                memref<?x?xf32, offset: ?, strides: [?, 1]>)
-   outs(%C : memref<?x?xf32, offset: ?, strides: [?, 1]>)
+    ins(%A, %B: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+                memref<?x?xf32, strided<[?, 1], offset: ?>>)
+   outs(%C : memref<?x?xf32, strided<[?, 1], offset: ?>>)
   return
 }
 // CHECK-LABEL: func @matmul_perm

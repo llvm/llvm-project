@@ -61,6 +61,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -2401,6 +2402,10 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
 
   // FIXME: support control flow guard targets.
   if (CI.countOperandBundlesOfType(LLVMContext::OB_cfguardtarget))
+    return false;
+
+  // FIXME: support statepoints and related.
+  if (isa<GCStatepointInst, GCRelocateInst, GCResultInst>(U))
     return false;
 
   if (CI.isInlineAsm())

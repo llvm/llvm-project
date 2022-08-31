@@ -33,7 +33,7 @@ int main() {
 // CHECK: ret void
 
 // CHECK: define {{.*}}VectorIiED2Ev
-// CHECK: call void {{.*}}sanitizer_dtor_callback
+// CHECK: call void @__sanitizer_dtor_callback
 // CHECK: ret void
 
 // When attribute is repressed, the destructor does not emit any tail calls

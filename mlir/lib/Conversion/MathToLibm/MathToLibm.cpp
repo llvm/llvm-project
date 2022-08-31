@@ -11,6 +11,7 @@
 #include "../PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -129,6 +130,14 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
     opFunc = rewriter.create<func::FuncOp>(rewriter.getUnknownLoc(), name,
                                            opFunctionTy);
     opFunc.setPrivate();
+
+    // By definition Math dialect operations imply LLVM's "readnone"
+    // function attribute, so we can set it here to provide more
+    // optimization opportunities (e.g. LICM) for backends targeting LLVM IR.
+    // This will have to be changed, when strict FP behavior is supported
+    // by Math dialect.
+    opFunc->setAttr(LLVM::LLVMDialect::getReadnoneAttrName(),
+                    UnitAttr::get(rewriter.getContext()));
   }
   assert(isa<FunctionOpInterface>(SymbolTable::lookupSymbolIn(module, name)));
 

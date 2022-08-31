@@ -1025,7 +1025,7 @@ LogicalResult BytecodeReader::parseIRSection(ArrayRef<uint8_t> sectionData,
   regionStack.back().curBlock = regionStack.back().curRegion->begin();
   if (failed(parseBlock(reader, regionStack.back())))
     return failure();
-  valueScopes.emplace_back(ValueScope());
+  valueScopes.emplace_back();
   valueScopes.back().push(regionStack.back());
 
   // Iteratively parse regions until everything has been resolved.
@@ -1083,7 +1083,7 @@ BytecodeReader::parseRegions(EncodingReader &reader,
 
           // If the op is isolated from above, push a new value scope.
           if (isIsolatedFromAbove)
-            valueScopes.emplace_back(ValueScope());
+            valueScopes.emplace_back();
           return success();
         }
       }

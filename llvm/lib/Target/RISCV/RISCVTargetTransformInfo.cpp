@@ -445,130 +445,6 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::ctpop, MVT::nxv2i64, 21},
     {Intrinsic::ctpop, MVT::nxv4i64, 21},
     {Intrinsic::ctpop, MVT::nxv8i64, 21},
-    {Intrinsic::sadd_sat, MVT::v2i8, 1},
-    {Intrinsic::sadd_sat, MVT::v4i8, 1},
-    {Intrinsic::sadd_sat, MVT::v8i8, 1},
-    {Intrinsic::sadd_sat, MVT::v16i8, 1},
-    {Intrinsic::sadd_sat, MVT::nxv2i8, 1},
-    {Intrinsic::sadd_sat, MVT::nxv4i8, 1},
-    {Intrinsic::sadd_sat, MVT::nxv8i8, 1},
-    {Intrinsic::sadd_sat, MVT::nxv16i8, 1},
-    {Intrinsic::sadd_sat, MVT::v2i16, 1},
-    {Intrinsic::sadd_sat, MVT::v4i16, 1},
-    {Intrinsic::sadd_sat, MVT::v8i16, 1},
-    {Intrinsic::sadd_sat, MVT::v16i16, 1},
-    {Intrinsic::sadd_sat, MVT::nxv2i16, 1},
-    {Intrinsic::sadd_sat, MVT::nxv4i16, 1},
-    {Intrinsic::sadd_sat, MVT::nxv8i16, 1},
-    {Intrinsic::sadd_sat, MVT::nxv16i16, 1},
-    {Intrinsic::sadd_sat, MVT::v2i32, 1},
-    {Intrinsic::sadd_sat, MVT::v4i32, 1},
-    {Intrinsic::sadd_sat, MVT::v8i32, 1},
-    {Intrinsic::sadd_sat, MVT::v16i32, 1},
-    {Intrinsic::sadd_sat, MVT::nxv2i32, 1},
-    {Intrinsic::sadd_sat, MVT::nxv4i32, 1},
-    {Intrinsic::sadd_sat, MVT::nxv8i32, 1},
-    {Intrinsic::sadd_sat, MVT::nxv16i32, 1},
-    {Intrinsic::sadd_sat, MVT::v2i64, 1},
-    {Intrinsic::sadd_sat, MVT::v4i64, 1},
-    {Intrinsic::sadd_sat, MVT::v8i64, 1},
-    {Intrinsic::sadd_sat, MVT::v16i64, 1},
-    {Intrinsic::sadd_sat, MVT::nxv2i64, 1},
-    {Intrinsic::sadd_sat, MVT::nxv4i64, 1},
-    {Intrinsic::sadd_sat, MVT::nxv8i64, 1},
-    {Intrinsic::uadd_sat, MVT::v2i8, 1},
-    {Intrinsic::uadd_sat, MVT::v4i8, 1},
-    {Intrinsic::uadd_sat, MVT::v8i8, 1},
-    {Intrinsic::uadd_sat, MVT::v16i8, 1},
-    {Intrinsic::uadd_sat, MVT::nxv2i8, 1},
-    {Intrinsic::uadd_sat, MVT::nxv4i8, 1},
-    {Intrinsic::uadd_sat, MVT::nxv8i8, 1},
-    {Intrinsic::uadd_sat, MVT::nxv16i8, 1},
-    {Intrinsic::uadd_sat, MVT::v2i16, 1},
-    {Intrinsic::uadd_sat, MVT::v4i16, 1},
-    {Intrinsic::uadd_sat, MVT::v8i16, 1},
-    {Intrinsic::uadd_sat, MVT::v16i16, 1},
-    {Intrinsic::uadd_sat, MVT::nxv2i16, 1},
-    {Intrinsic::uadd_sat, MVT::nxv4i16, 1},
-    {Intrinsic::uadd_sat, MVT::nxv8i16, 1},
-    {Intrinsic::uadd_sat, MVT::nxv16i16, 1},
-    {Intrinsic::uadd_sat, MVT::v2i32, 1},
-    {Intrinsic::uadd_sat, MVT::v4i32, 1},
-    {Intrinsic::uadd_sat, MVT::v8i32, 1},
-    {Intrinsic::uadd_sat, MVT::v16i32, 1},
-    {Intrinsic::uadd_sat, MVT::nxv2i32, 1},
-    {Intrinsic::uadd_sat, MVT::nxv4i32, 1},
-    {Intrinsic::uadd_sat, MVT::nxv8i32, 1},
-    {Intrinsic::uadd_sat, MVT::nxv16i32, 1},
-    {Intrinsic::uadd_sat, MVT::v2i64, 1},
-    {Intrinsic::uadd_sat, MVT::v4i64, 1},
-    {Intrinsic::uadd_sat, MVT::v8i64, 1},
-    {Intrinsic::uadd_sat, MVT::v16i64, 1},
-    {Intrinsic::uadd_sat, MVT::nxv2i64, 1},
-    {Intrinsic::uadd_sat, MVT::nxv4i64, 1},
-    {Intrinsic::uadd_sat, MVT::nxv8i64, 1},
-    {Intrinsic::usub_sat, MVT::v2i8, 1},
-    {Intrinsic::usub_sat, MVT::v4i8, 1},
-    {Intrinsic::usub_sat, MVT::v8i8, 1},
-    {Intrinsic::usub_sat, MVT::v16i8, 1},
-    {Intrinsic::usub_sat, MVT::nxv2i8, 1},
-    {Intrinsic::usub_sat, MVT::nxv4i8, 1},
-    {Intrinsic::usub_sat, MVT::nxv8i8, 1},
-    {Intrinsic::usub_sat, MVT::nxv16i8, 1},
-    {Intrinsic::usub_sat, MVT::v2i16, 1},
-    {Intrinsic::usub_sat, MVT::v4i16, 1},
-    {Intrinsic::usub_sat, MVT::v8i16, 1},
-    {Intrinsic::usub_sat, MVT::v16i16, 1},
-    {Intrinsic::usub_sat, MVT::nxv2i16, 1},
-    {Intrinsic::usub_sat, MVT::nxv4i16, 1},
-    {Intrinsic::usub_sat, MVT::nxv8i16, 1},
-    {Intrinsic::usub_sat, MVT::nxv16i16, 1},
-    {Intrinsic::usub_sat, MVT::v2i32, 1},
-    {Intrinsic::usub_sat, MVT::v4i32, 1},
-    {Intrinsic::usub_sat, MVT::v8i32, 1},
-    {Intrinsic::usub_sat, MVT::v16i32, 1},
-    {Intrinsic::usub_sat, MVT::nxv2i32, 1},
-    {Intrinsic::usub_sat, MVT::nxv4i32, 1},
-    {Intrinsic::usub_sat, MVT::nxv8i32, 1},
-    {Intrinsic::usub_sat, MVT::nxv16i32, 1},
-    {Intrinsic::usub_sat, MVT::v2i64, 1},
-    {Intrinsic::usub_sat, MVT::v4i64, 1},
-    {Intrinsic::usub_sat, MVT::v8i64, 1},
-    {Intrinsic::usub_sat, MVT::v16i64, 1},
-    {Intrinsic::usub_sat, MVT::nxv2i64, 1},
-    {Intrinsic::usub_sat, MVT::nxv4i64, 1},
-    {Intrinsic::usub_sat, MVT::nxv8i64, 1},
-    {Intrinsic::ssub_sat, MVT::v2i8, 1},
-    {Intrinsic::ssub_sat, MVT::v4i8, 1},
-    {Intrinsic::ssub_sat, MVT::v8i8, 1},
-    {Intrinsic::ssub_sat, MVT::v16i8, 1},
-    {Intrinsic::ssub_sat, MVT::nxv2i8, 1},
-    {Intrinsic::ssub_sat, MVT::nxv4i8, 1},
-    {Intrinsic::ssub_sat, MVT::nxv8i8, 1},
-    {Intrinsic::ssub_sat, MVT::nxv16i8, 1},
-    {Intrinsic::ssub_sat, MVT::v2i16, 1},
-    {Intrinsic::ssub_sat, MVT::v4i16, 1},
-    {Intrinsic::ssub_sat, MVT::v8i16, 1},
-    {Intrinsic::ssub_sat, MVT::v16i16, 1},
-    {Intrinsic::ssub_sat, MVT::nxv2i16, 1},
-    {Intrinsic::ssub_sat, MVT::nxv4i16, 1},
-    {Intrinsic::ssub_sat, MVT::nxv8i16, 1},
-    {Intrinsic::ssub_sat, MVT::nxv16i16, 1},
-    {Intrinsic::ssub_sat, MVT::v2i32, 1},
-    {Intrinsic::ssub_sat, MVT::v4i32, 1},
-    {Intrinsic::ssub_sat, MVT::v8i32, 1},
-    {Intrinsic::ssub_sat, MVT::v16i32, 1},
-    {Intrinsic::ssub_sat, MVT::nxv2i32, 1},
-    {Intrinsic::ssub_sat, MVT::nxv4i32, 1},
-    {Intrinsic::ssub_sat, MVT::nxv8i32, 1},
-    {Intrinsic::ssub_sat, MVT::nxv16i32, 1},
-    {Intrinsic::ssub_sat, MVT::v2i64, 1},
-    {Intrinsic::ssub_sat, MVT::v4i64, 1},
-    {Intrinsic::ssub_sat, MVT::v8i64, 1},
-    {Intrinsic::ssub_sat, MVT::v16i64, 1},
-    {Intrinsic::ssub_sat, MVT::nxv2i64, 1},
-    {Intrinsic::ssub_sat, MVT::nxv4i64, 1},
-    {Intrinsic::ssub_sat, MVT::nxv8i64, 1},
 };
 
 InstructionCost
@@ -583,6 +459,15 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     auto LT = getTypeLegalizationCost(RetTy);
     if ((ST->hasVInstructions() && LT.second.isVector()) ||
         (LT.second.isScalarInteger() && ST->hasStdExtZbb()))
+      return LT.first;
+    break;
+  }
+  case Intrinsic::sadd_sat:
+  case Intrinsic::ssub_sat:
+  case Intrinsic::uadd_sat:
+  case Intrinsic::usub_sat: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (ST->hasVInstructions() && LT.second.isVector())
       return LT.first;
     break;
   }
@@ -795,6 +680,59 @@ InstructionCost RISCVTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     Cost += getVectorImmCost(cast<VectorType>(Src), OpInfo, CostKind);
   return Cost + BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                        CostKind, OpInfo, I);
+}
+
+InstructionCost RISCVTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
+                                                 Type *CondTy,
+                                                 CmpInst::Predicate VecPred,
+                                                 TTI::TargetCostKind CostKind,
+                                                 const Instruction *I) {
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                     I);
+
+  if (isa<FixedVectorType>(ValTy) && !ST->useRVVForFixedLengthVectors())
+    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                     I);
+
+  // Skip if scalar size of ValTy is bigger than ELEN.
+  if (ValTy->isVectorTy() && ValTy->getScalarSizeInBits() > ST->getELEN())
+    return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
+                                     I);
+
+  if (Opcode == Instruction::Select && ValTy->isVectorTy()) {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
+    if (CondTy->isVectorTy()) {
+      if (ValTy->getScalarSizeInBits() == 1) {
+        // vmandn.mm v8, v8, v9
+        // vmand.mm v9, v0, v9
+        // vmor.mm v0, v9, v8
+        return LT.first * 3;
+      }
+      // vselect and max/min are supported natively.
+      return LT.first * 1;
+    }
+
+    // vmv.v.x v10, a0
+    // vmsne.vi v0, v10, 0
+    // vmerge.vvm v8, v9, v8, v0
+    return LT.first * 3;
+  }
+
+  if ((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
+      ValTy->isVectorTy()) {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
+
+    // Support natively.
+    if (CmpInst::isIntPredicate(VecPred))
+      return LT.first * 1;
+
+    // TODO: Add cost for fp vector compare instruction.
+  }
+
+  // TODO: Add cost for scalar type.
+
+  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind, I);
 }
 
 void RISCVTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,

@@ -188,13 +188,13 @@ UnwindInfoSection::UnwindInfoSection()
 // Record function symbols that may need entries emitted in __unwind_info, which
 // stores unwind data for address ranges.
 //
-// Note that if several adjacent functions have the same unwind encoding, LSDA,
-// and personality function, they share one unwind entry. For this to work,
-// functions without unwind info need explicit "no unwind info" unwind entries
-// -- else the unwinder would think they have the unwind info of the closest
-// function with unwind info right before in the image. Thus, we add function
-// symbols for each unique address regardless of whether they have associated
-// unwind info.
+// Note that if several adjacent functions have the same unwind encoding and
+// personality function and no LSDA, they share one unwind entry. For this to
+// work, functions without unwind info need explicit "no unwind info" unwind
+// entries -- else the unwinder would think they have the unwind info of the
+// closest function with unwind info right before in the image. Thus, we add
+// function symbols for each unique address regardless of whether they have
+// associated unwind info.
 void UnwindInfoSection::addSymbol(const Defined *d) {
   if (d->unwindEntry)
     allEntriesAreOmitted = false;
@@ -419,9 +419,9 @@ void UnwindInfoSectionImpl::finalize() {
   // assigned, so we can relocate the __LD,__compact_unwind entries
   // into a temporary buffer. Relocation is necessary in order to sort
   // the CU entries by function address. Sorting is necessary so that
-  // we can fold adjacent CU entries with identical
-  // encoding+personality+lsda. Folding is necessary because it reduces
-  // the number of CU entries by as much as 3 orders of magnitude!
+  // we can fold adjacent CU entries with identical encoding+personality
+  // and without any LSDA. Folding is necessary because it reduces the
+  // number of CU entries by as much as 3 orders of magnitude!
   cuEntries.resize(symbols.size());
   // The "map" part of the symbols MapVector was only needed for deduplication
   // in addSymbol(). Now that we are done adding, move the contents to a plain
@@ -437,7 +437,7 @@ void UnwindInfoSectionImpl::finalize() {
     return cuEntries[a].functionAddress < cuEntries[b].functionAddress;
   });
 
-  // Fold adjacent entries with matching encoding+personality+lsda
+  // Fold adjacent entries with matching encoding+personality and without LSDA
   // We use three iterators on the same cuIndices to fold in-situ:
   // (1) `foldBegin` is the first of a potential sequence of matching entries
   // (2) `foldEnd` is the first non-matching entry after `foldBegin`.
@@ -447,11 +447,32 @@ void UnwindInfoSectionImpl::finalize() {
   auto foldWrite = cuIndices.begin();
   for (auto foldBegin = cuIndices.begin(); foldBegin < cuIndices.end();) {
     auto foldEnd = foldBegin;
+    // Common LSDA encodings (e.g. for C++ and Objective-C) contain offsets from
+    // a base address. The base address is normally not contained directly in
+    // the LSDA, and in that case, the personality function treats the starting
+    // address of the function (which is computed by the unwinder) as the base
+    // address and interprets the LSDA accordingly. The unwinder computes the
+    // starting address of a function as the address associated with its CU
+    // entry. For this reason, we cannot fold adjacent entries if they have an
+    // LSDA, because folding would make the unwinder compute the wrong starting
+    // address for the functions with the folded entries, which in turn would
+    // cause the personality function to misinterpret the LSDA for those
+    // functions. In the very rare case where the base address is encoded
+    // directly in the LSDA, two functions at different addresses would
+    // necessarily have different LSDAs, so their CU entries would not have been
+    // folded anyway.
     while (++foldEnd < cuIndices.end() &&
            cuEntries[*foldBegin].encoding == cuEntries[*foldEnd].encoding &&
+           !cuEntries[*foldBegin].lsda && !cuEntries[*foldEnd].lsda &&
+           // If we've gotten to this point, we don't have an LSDA, which should
+           // also imply that we don't have a personality function, since in all
+           // likelihood a personality function needs the LSDA to do anything
+           // useful. It can be technically valid to have a personality function
+           // and no LSDA though (e.g. the C++ personality __gxx_personality_v0
+           // is just a no-op without LSDA), so we still check for personality
+           // function equivalence to handle that case.
            cuEntries[*foldBegin].personality ==
                cuEntries[*foldEnd].personality &&
-           cuEntries[*foldBegin].lsda == cuEntries[*foldEnd].lsda &&
            canFoldEncoding(cuEntries[*foldEnd].encoding))
       ;
     *foldWrite++ = *foldBegin;

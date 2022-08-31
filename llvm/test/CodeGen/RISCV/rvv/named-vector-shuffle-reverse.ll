@@ -1630,6 +1630,77 @@ define <vscale x 8 x double> @reverse_nxv8f64(<vscale x 8 x double> %a) {
   ret <vscale x 8 x double> %res
 }
 
+; Test widen reverse vector
+
+define <vscale x 3 x i64> @reverse_nxv3i64(<vscale x 3 x i64> %a) {
+; CHECK-LABEL: reverse_nxv3i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a0, a0, 1
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vid.v v12
+; CHECK-NEXT:    vrsub.vx v12, v12, a0
+; CHECK-NEXT:    vrgather.vv v16, v8, v12
+; CHECK-NEXT:    vmv1r.v v8, v17
+; CHECK-NEXT:    vmv1r.v v9, v18
+; CHECK-NEXT:    vmv1r.v v10, v19
+; CHECK-NEXT:    ret
+  %res = call <vscale x 3 x i64> @llvm.experimental.vector.reverse.nxv3i64(<vscale x 3 x i64> %a)
+  ret <vscale x 3 x i64> %res
+}
+
+define <vscale x 6 x i64> @reverse_nxv6i64(<vscale x 6 x i64> %a) {
+; CHECK-LABEL: reverse_nxv6i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vid.v v16
+; CHECK-NEXT:    vrsub.vx v16, v16, a0
+; CHECK-NEXT:    vrgather.vv v24, v8, v16
+; CHECK-NEXT:    vmv2r.v v8, v26
+; CHECK-NEXT:    vmv2r.v v10, v28
+; CHECK-NEXT:    vmv2r.v v12, v30
+; CHECK-NEXT:    ret
+  %res = call <vscale x 6 x i64> @llvm.experimental.vector.reverse.nxv6i64(<vscale x 6 x i64> %a)
+  ret <vscale x 6 x i64> %res
+}
+
+define <vscale x 12 x i64> @reverse_nxv12i64(<vscale x 12 x i64> %a) {
+; CHECK-LABEL: reverse_nxv12i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    addi s0, sp, 64
+; CHECK-NEXT:    .cfi_def_cfa s0, 0
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 4
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    addi a1, a0, -1
+; CHECK-NEXT:    vsetvli a2, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vid.v v24
+; CHECK-NEXT:    vrsub.vx v24, v24, a1
+; CHECK-NEXT:    vrgather.vv v0, v16, v24
+; CHECK-NEXT:    vmv4r.v v16, v4
+; CHECK-NEXT:    vrgather.vv v0, v8, v24
+; CHECK-NEXT:    vmv4r.v v20, v0
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    addi a1, sp, 64
+; CHECK-NEXT:    add a0, a1, a0
+; CHECK-NEXT:    vs4r.v v4, (a0)
+; CHECK-NEXT:    vs8r.v v16, (a1)
+; CHECK-NEXT:    vl8re64.v v16, (a0)
+; CHECK-NEXT:    vl8re64.v v8, (a1)
+; CHECK-NEXT:    addi sp, s0, -64
+; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    ret
+  %res = call <vscale x 12 x i64> @llvm.experimental.vector.reverse.nxv12i64(<vscale x 12 x i64> %a)
+  ret <vscale x 12 x i64> %res
+}
+
 declare <vscale x 2 x i1> @llvm.experimental.vector.reverse.nxv2i1(<vscale x 2 x i1>)
 declare <vscale x 4 x i1> @llvm.experimental.vector.reverse.nxv4i1(<vscale x 4 x i1>)
 declare <vscale x 8 x i1> @llvm.experimental.vector.reverse.nxv8i1(<vscale x 8 x i1>)
@@ -1673,3 +1744,6 @@ declare <vscale x 1 x double> @llvm.experimental.vector.reverse.nxv1f64(<vscale 
 declare <vscale x 2 x double> @llvm.experimental.vector.reverse.nxv2f64(<vscale x 2 x double>)
 declare <vscale x 4 x double> @llvm.experimental.vector.reverse.nxv4f64(<vscale x 4 x double>)
 declare <vscale x 8 x double> @llvm.experimental.vector.reverse.nxv8f64(<vscale x 8 x double>)
+declare <vscale x 3 x i64> @llvm.experimental.vector.reverse.nxv3i64(<vscale x 3 x i64>)
+declare <vscale x 6 x i64> @llvm.experimental.vector.reverse.nxv6i64(<vscale x 6 x i64>)
+declare <vscale x 12 x i64> @llvm.experimental.vector.reverse.nxv12i64(<vscale x 12 x i64>)

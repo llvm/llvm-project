@@ -5495,9 +5495,15 @@ private:
   CC genarr(const Fortran::evaluate::SetLength<KIND> &x) {
     auto lf = genarr(x.left());
     mlir::Value rhs = fir::getBase(asScalar(x.right()));
+    fir::CharBoxValue temp =
+        fir::factory::CharacterExprHelper(builder, getLoc())
+            .createCharacterTemp(
+                fir::CharacterType::getUnknownLen(builder.getContext(), KIND),
+                rhs);
     return [=](IterSpace iters) -> ExtValue {
-      mlir::Value lhs = fir::getBase(lf(iters));
-      return fir::CharBoxValue{lhs, rhs};
+      fir::factory::CharacterExprHelper(builder, getLoc())
+          .createAssign(temp, lf(iters));
+      return temp;
     };
   }
 

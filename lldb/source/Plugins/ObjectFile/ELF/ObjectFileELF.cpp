@@ -627,13 +627,13 @@ size_t ObjectFileELF::GetModuleSpecifications(
             if (gnu_debuglink_crc) {
               // Use 4 bytes of crc from the .gnu_debuglink section.
               u32le data(gnu_debuglink_crc);
-              uuid = UUID::fromData(&data, sizeof(data));
+              uuid = UUID(&data, sizeof(data));
             } else if (core_notes_crc) {
               // Use 8 bytes - first 4 bytes for *magic* prefix, mainly to make
               // it look different form .gnu_debuglink crc followed by 4 bytes
               // of note segments crc.
               u32le data[] = {u32le(g_core_uuid_magic), u32le(core_notes_crc)};
-              uuid = UUID::fromData(data, sizeof(data));
+              uuid = UUID(data, sizeof(data));
             }
           }
 
@@ -788,7 +788,7 @@ UUID ObjectFileELF::GetUUID() {
         // look different form .gnu_debuglink crc - followed by 4 bytes of note
         // segments crc.
         u32le data[] = {u32le(g_core_uuid_magic), u32le(core_notes_crc)};
-        m_uuid = UUID::fromData(data, sizeof(data));
+        m_uuid = UUID(data, sizeof(data));
       }
     } else {
       if (!m_gnu_debuglink_crc)
@@ -796,7 +796,7 @@ UUID ObjectFileELF::GetUUID() {
       if (m_gnu_debuglink_crc) {
         // Use 4 bytes of crc from the .gnu_debuglink section.
         u32le data(m_gnu_debuglink_crc);
-        m_uuid = UUID::fromData(&data, sizeof(data));
+        m_uuid = UUID(&data, sizeof(data));
       }
     }
   }
@@ -1134,7 +1134,7 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
           if (note.n_descsz >= 4) {
             if (const uint8_t *buf = data.PeekData(offset, note.n_descsz)) {
               // Save the build id as the UUID for the module.
-              uuid = UUID::fromData(buf, note.n_descsz);
+              uuid = UUID(buf, note.n_descsz);
             } else {
               error.SetErrorString("failed to read GNU_BUILD_ID note payload");
               return error;

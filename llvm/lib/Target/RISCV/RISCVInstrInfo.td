@@ -431,13 +431,13 @@ def AddiPairImmLarge : SDNodeXForm<imm, [{
 }]>;
 
 def TrailingZeros : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getAPIntValue().countTrailingZeros(),
+  return CurDAG->getTargetConstant(countTrailingZeros(N->getZExtValue()),
                                    SDLoc(N), N->getValueType(0));
 }]>;
 
 def XLenSubTrailingOnes : SDNodeXForm<imm, [{
   uint64_t XLen = Subtarget->getXLen();
-  uint64_t TrailingOnes = N->getAPIntValue().countTrailingOnes();
+  uint64_t TrailingOnes = countTrailingOnes(N->getZExtValue());
   return CurDAG->getTargetConstant(XLen - TrailingOnes, SDLoc(N),
                                    N->getValueType(0));
 }]>;
@@ -455,6 +455,19 @@ def TrailingOnesMask : PatLeaf<(imm), [{
     return false;
   return !isInt<12>(N->getSExtValue()) && isMask_64(N->getZExtValue());
 }], XLenSubTrailingOnes>;
+
+// Similar to LeadingOnesMask, but only consider leading ones in the lower 32
+// bits.
+def LeadingOnesWMask : PatLeaf<(imm), [{
+  if (!N->hasOneUse())
+    return false;
+  // If the value is a uint32 but not an int32, it must have bit 31 set and
+  // bits 63:32 cleared. After that we're looking for a shifted mask but not
+  // an all ones mask.
+  int64_t Imm = N->getSExtValue();
+  return !isInt<32>(Imm) && isUInt<32>(Imm) && isShiftedMask_64(Imm) &&
+         Imm != UINT64_C(0xffffffff);
+}], TrailingZeros>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Formats
@@ -1581,7 +1594,20 @@ def sexti32_allwusers : PatFrag<(ops node:$src),
   return hasAllWUsers(Node);
 }]>;
 
+def ImmSExt32 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(SignExtend64<32>(N->getSExtValue()),
+                                   SDLoc(N), N->getValueType(0));
+}]>;
+// Look for constants where the upper 32 bits are 0, but sign extending bit 31
+// would be an simm12.
+def u32simm12 : ImmLeaf<XLenVT, [{
+  return isUInt<32>(Imm) && isInt<12>(SignExtend64<32>(Imm));
+}], ImmSExt32>;
+
 let Predicates = [IsRV64] in {
+
+def : Pat<(i64 (and GPR:$rs, LeadingOnesWMask:$mask)),
+          (SLLI (SRLIW $rs, LeadingOnesWMask:$mask), LeadingOnesWMask:$mask)>;
 
 /// sext and zext
 
@@ -1616,6 +1642,12 @@ def : PatGprImm<binop_allwusers<shl>, SLLIW, uimm5>;
 // occurs because SimplifyDemandedBits prefers srl over sra.
 def : Pat<(binop_allwusers<srl> (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
           (SRAIW GPR:$rs1, uimm5:$shamt)>;
+
+// Use binop_allwusers to recover immediates that may have been broken by
+// SimplifyDemandedBits.
+// TODO: This is valid for ADDI/ORI/XORI.
+def : Pat<(binop_allwusers<and> GPR:$rs1, u32simm12:$imm),
+          (ANDI GPR:$rs1, u32simm12:$imm)>;
 
 /// Loads
 

@@ -1291,17 +1291,26 @@ def VFMV_V_F : RVInstVX<0b010111, OPFVF, (outs VR:$vd),
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 // Single-Width Floating-Point/Integer Type-Convert Instructions
+let mayRaiseFPException = true in {
+let Uses = [FRM] in {
 defm VFCVT_XU_F_V : VCVTI_FV_VS2<"vfcvt.xu.f.v", 0b010010, 0b00000>;
 defm VFCVT_X_F_V : VCVTI_FV_VS2<"vfcvt.x.f.v", 0b010010, 0b00001>;
+}
 defm VFCVT_RTZ_XU_F_V : VCVTI_FV_VS2<"vfcvt.rtz.xu.f.v", 0b010010, 0b00110>;
 defm VFCVT_RTZ_X_F_V : VCVTI_FV_VS2<"vfcvt.rtz.x.f.v", 0b010010, 0b00111>;
+let Uses = [FRM] in {
 defm VFCVT_F_XU_V : VCVTF_IV_VS2<"vfcvt.f.xu.v", 0b010010, 0b00010>;
 defm VFCVT_F_X_V : VCVTF_IV_VS2<"vfcvt.f.x.v", 0b010010, 0b00011>;
+}
+} // mayRaiseFPException = true
 
 // Widening Floating-Point/Integer Type-Convert Instructions
-let Constraints = "@earlyclobber $vd", RVVConstraint = WidenCvt in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = WidenCvt,
+    mayRaiseFPException = true in {
+let Uses = [FRM] in {
 defm VFWCVT_XU_F_V : VWCVTI_FV_VS2<"vfwcvt.xu.f.v", 0b010010, 0b01000>;
 defm VFWCVT_X_F_V : VWCVTI_FV_VS2<"vfwcvt.x.f.v", 0b010010, 0b01001>;
+}
 defm VFWCVT_RTZ_XU_F_V : VWCVTI_FV_VS2<"vfwcvt.rtz.xu.f.v", 0b010010, 0b01110>;
 defm VFWCVT_RTZ_X_F_V : VWCVTI_FV_VS2<"vfwcvt.rtz.x.f.v", 0b010010, 0b01111>;
 defm VFWCVT_F_XU_V : VWCVTF_IV_VS2<"vfwcvt.f.xu.v", 0b010010, 0b01010>;
@@ -1310,16 +1319,20 @@ defm VFWCVT_F_F_V : VWCVTF_FV_VS2<"vfwcvt.f.f.v", 0b010010, 0b01100>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = WidenCvt
 
 // Narrowing Floating-Point/Integer Type-Convert Instructions
-let Constraints = "@earlyclobber $vd" in {
+let Constraints = "@earlyclobber $vd", mayRaiseFPException = true in {
+let Uses = [FRM] in {
 defm VFNCVT_XU_F_W : VNCVTI_FV_VS2<"vfncvt.xu.f.w", 0b010010, 0b10000>;
 defm VFNCVT_X_F_W : VNCVTI_FV_VS2<"vfncvt.x.f.w", 0b010010, 0b10001>;
+}
 defm VFNCVT_RTZ_XU_F_W : VNCVTI_FV_VS2<"vfncvt.rtz.xu.f.w", 0b010010, 0b10110>;
 defm VFNCVT_RTZ_X_F_W : VNCVTI_FV_VS2<"vfncvt.rtz.x.f.w", 0b010010, 0b10111>;
+let Uses = [FRM] in {
 defm VFNCVT_F_XU_W : VNCVTF_IV_VS2<"vfncvt.f.xu.w", 0b010010, 0b10010>;
 defm VFNCVT_F_X_W : VNCVTF_IV_VS2<"vfncvt.f.x.w", 0b010010, 0b10011>;
 defm VFNCVT_F_F_W : VNCVTF_FV_VS2<"vfncvt.f.f.w", 0b010010, 0b10100>;
+}
 defm VFNCVT_ROD_F_F_W : VNCVTF_FV_VS2<"vfncvt.rod.f.f.w", 0b010010, 0b10101>;
-} // Constraints = "@earlyclobber $vd"
+} // Constraints = "@earlyclobber $vd", mayRaiseFPException = true
 } // Predicates = HasVInstructionsAnyF]
 
 let Predicates = [HasVInstructions] in {

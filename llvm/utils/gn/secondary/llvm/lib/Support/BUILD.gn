@@ -46,6 +46,7 @@ static_library("Support") {
     "AddressRanges.cpp",
     "Allocator.cpp",
     "AutoConvert.cpp",
+    "Base64.cpp",
     "BinaryStreamError.cpp",
     "BinaryStreamReader.cpp",
     "BinaryStreamRef.cpp",

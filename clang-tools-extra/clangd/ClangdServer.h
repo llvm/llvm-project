@@ -161,8 +161,8 @@ public:
     /// fetch system include path.
     std::vector<std::string> QueryDriverGlobs;
 
-    /// Enable preview of FoldingRanges feature.
-    bool FoldingRanges = false;
+    // Whether the client supports folding only complete lines.
+    bool LineFoldingOnly = false;
 
     FeatureModuleSet *FeatureModules = nullptr;
     /// If true, use the dirty buffer contents when building Preambles.
@@ -428,6 +428,9 @@ private:
   TidyProviderRef ClangTidyProvider;
 
   bool UseDirtyHeaders = false;
+
+  // Whether the client supports folding only complete lines.
+  bool LineFoldingOnly = false;
 
   bool PreambleParseForwardingFunctions = false;
 

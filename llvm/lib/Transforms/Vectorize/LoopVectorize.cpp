@@ -4332,8 +4332,10 @@ void LoopVectorizationCostModel::collectLoopScalars(ElementCount VF) {
   // induction variable when the PHI user is scalarized.
   auto ForcedScalar = ForcedScalars.find(VF);
   if (ForcedScalar != ForcedScalars.end())
-    for (auto *I : ForcedScalar->second)
+    for (auto *I : ForcedScalar->second) {
+      LLVM_DEBUG(dbgs() << "LV: Found (forced) scalar instruction: " << *I << "\n");
       Worklist.insert(I);
+    }
 
   // Expand the worklist by looking through any bitcasts and getelementptr
   // instructions we've already identified as scalar. This is similar to the
