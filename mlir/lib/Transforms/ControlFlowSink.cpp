@@ -13,19 +13,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/IR/Dominance.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/ControlFlowSinkUtils.h"
-#include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/SideEffectUtils.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONTROLFLOWSINK
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
 /// A control-flow sink pass.
-struct ControlFlowSink : public ControlFlowSinkBase<ControlFlowSink> {
+struct ControlFlowSink : public impl::ControlFlowSinkBase<ControlFlowSink> {
   void runOnOperation() override;
 };
 } // end anonymous namespace

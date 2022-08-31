@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/TensorCopyInsertion.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -21,6 +20,15 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
+
+namespace mlir {
+namespace bufferization {
+#define GEN_PASS_DEF_FINALIZINGBUFFERIZE
+#define GEN_PASS_DEF_BUFFERIZATIONBUFFERIZE
+#define GEN_PASS_DEF_ONESHOTBUFFERIZE
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
+} // namespace bufferization
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -122,7 +130,8 @@ void mlir::bufferization::populateEliminateBufferizeMaterializationsPatterns(
 
 namespace {
 struct FinalizingBufferizePass
-    : public FinalizingBufferizeBase<FinalizingBufferizePass> {
+    : public bufferization::impl::FinalizingBufferizeBase<
+          FinalizingBufferizePass> {
   using FinalizingBufferizeBase<
       FinalizingBufferizePass>::FinalizingBufferizeBase;
 
@@ -164,7 +173,7 @@ parseLayoutMapOption(const std::string &s) {
 }
 
 struct OneShotBufferizePass
-    : public OneShotBufferizeBase<OneShotBufferizePass> {
+    : public bufferization::impl::OneShotBufferizeBase<OneShotBufferizePass> {
   OneShotBufferizePass() {}
 
   explicit OneShotBufferizePass(const OneShotBufferizationOptions &options)
@@ -255,7 +264,8 @@ private:
 
 namespace {
 struct BufferizationBufferizePass
-    : public BufferizationBufferizeBase<BufferizationBufferizePass> {
+    : public bufferization::impl::BufferizationBufferizeBase<
+          BufferizationBufferizePass> {
   void runOnOperation() override {
     BufferizationOptions options = getPartialBufferizationOptions();
     options.opFilter.allowDialect<BufferizationDialect>();

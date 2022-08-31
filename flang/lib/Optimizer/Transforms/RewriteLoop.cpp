@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
@@ -16,6 +15,11 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/CommandLine.h"
+
+namespace fir {
+#define GEN_PASS_DEF_CFGCONVERSION
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+} // namespace fir
 
 using namespace fir;
 using namespace mlir;
@@ -297,7 +301,7 @@ public:
 };
 
 /// Convert FIR structured control flow ops to CFG ops.
-class CfgConversion : public CFGConversionBase<CfgConversion> {
+class CfgConversion : public fir::impl::CFGConversionBase<CfgConversion> {
 public:
   void runOnOperation() override {
     auto *context = &getContext();

@@ -28,6 +28,22 @@ namespace fir {
 // Passes defined in Passes.td
 //===----------------------------------------------------------------------===//
 
+#define GEN_PASS_DECL_ABSTRACTRESULTONFUNCOPT
+#define GEN_PASS_DECL_ABSTRACTRESULTONGLOBALOPT
+#define GEN_PASS_DECL_AFFINEDIALECTPROMOTION
+#define GEN_PASS_DECL_AFFINEDIALECTDEMOTION
+#define GEN_PASS_DECL_ANNOTATECONSTANTOPERANDS
+#define GEN_PASS_DECL_ARRAYVALUECOPY
+#define GEN_PASS_DECL_CHARACTERCONVERSION
+#define GEN_PASS_DECL_CFGCONVERSION
+#define GEN_PASS_DECL_EXTERNALNAMECONVERSION
+#define GEN_PASS_DECL_MEMREFDATAFLOWOPT
+#define GEN_PASS_DECL_SIMPLIFYINTRINSICS
+#define GEN_PASS_DECL_MEMORYALLOCATIONOPT
+#define GEN_PASS_DECL_SIMPLIFYREGIONLITE
+#define GEN_PASS_DECL_ALGEBRAICSIMPLIFICATION
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+
 std::unique_ptr<mlir::Pass> createAbstractResultOnFuncOptPass();
 std::unique_ptr<mlir::Pass> createAbstractResultOnGlobalOptPass();
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();

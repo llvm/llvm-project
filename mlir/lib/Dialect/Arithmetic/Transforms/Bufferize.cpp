@@ -6,15 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Transforms/BufferizableOpInterfaceImpl.h"
-#include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+
+namespace mlir {
+namespace arith {
+#define GEN_PASS_DEF_ARITHMETICBUFFERIZE
+#include "mlir/Dialect/Arithmetic/Transforms/Passes.h.inc"
+} // namespace arith
+} // namespace mlir
 
 using namespace mlir;
 using namespace bufferization;
@@ -22,7 +28,7 @@ using namespace bufferization;
 namespace {
 /// Pass to bufferize Arithmetic ops.
 struct ArithmeticBufferizePass
-    : public ArithmeticBufferizeBase<ArithmeticBufferizePass> {
+    : public arith::impl::ArithmeticBufferizeBase<ArithmeticBufferizePass> {
   ArithmeticBufferizePass(uint64_t alignment = 0, bool constantOpOnly = false)
       : constantOpOnly(constantOpOnly) {
     this->alignment = alignment;

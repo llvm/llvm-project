@@ -16,6 +16,9 @@ class Pass;
 class LLVMTypeConverter;
 class RewritePatternSet;
 
+#define GEN_PASS_DECL_CONVERTMEMREFTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Collect a set of patterns to convert memory-related operations from the
 /// MemRef dialect to the LLVM dialect.
 void populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,

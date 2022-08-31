@@ -18,6 +18,9 @@ class SPIRVTypeConverter;
 class RewritePatternSet;
 class Pass;
 
+#define GEN_PASS_DECL_CONVERTARITHMETICTOSPIRV
+#include "mlir/Conversion/Passes.h.inc"
+
 namespace arith {
 void populateArithmeticToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                        RewritePatternSet &patterns);

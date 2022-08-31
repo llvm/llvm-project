@@ -86,6 +86,13 @@ LogicalResult multiBuffer(memref::AllocOp allocOp, unsigned multiplier);
 // Passes
 //===----------------------------------------------------------------------===//
 
+#define GEN_PASS_DECL_EXPANDOPS
+#define GEN_PASS_DECL_FOLDMEMREFALIASOPS
+#define GEN_PASS_DECL_NORMALIZEMEMREFS
+#define GEN_PASS_DECL_RESOLVERANKEDSHAPETYPERESULTDIMS
+#define GEN_PASS_DECL_RESOLVESHAPEDTYPERESULTDIMS
+#include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
+
 /// Creates an instance of the ExpandOps pass that legalizes memref dialect ops
 /// to be convertible to LLVM. For example, `memref.reshape` gets converted to
 /// `memref_reinterpret_cast`.

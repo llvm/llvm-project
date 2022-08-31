@@ -7,11 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
-#include "../PassDetail.h"
+
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_RECONCILEUNREALIZEDCASTS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -103,7 +108,7 @@ struct UnrealizedConversionCastPassthrough
 
 /// Pass to simplify and eliminate unrealized conversion casts.
 struct ReconcileUnrealizedCasts
-    : public ReconcileUnrealizedCastsBase<ReconcileUnrealizedCasts> {
+    : public impl::ReconcileUnrealizedCastsBase<ReconcileUnrealizedCasts> {
   ReconcileUnrealizedCasts() = default;
 
   void runOnOperation() override {

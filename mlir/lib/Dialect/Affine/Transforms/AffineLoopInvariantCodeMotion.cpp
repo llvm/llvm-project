@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Affine/Passes.h"
+
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
@@ -18,9 +19,9 @@
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -31,6 +32,11 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_AFFINELOOPINVARIANTCODEMOTION
+#include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "licm"
 
@@ -44,7 +50,7 @@ namespace {
 /// TODO: This code should be removed once the new LICM pass can handle its
 ///       uses.
 struct LoopInvariantCodeMotion
-    : public AffineLoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
+    : public impl::AffineLoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
   void runOnOperation() override;
   void runOnAffineForOp(AffineForOp forOp);
 };
