@@ -217,14 +217,6 @@ public:
   ParseResult parseIntegerInDimensionList(int64_t &value);
   ParseResult parseXInDimensionList();
 
-  /// Parse strided layout specification.
-  ParseResult parseStridedLayout(int64_t &offset,
-                                 SmallVectorImpl<int64_t> &strides);
-
-  // Parse a brace-delimiter list of comma-separated integers with `?` as an
-  // unknown marker.
-  ParseResult parseStrideList(SmallVectorImpl<int64_t> &dimensions);
-
   //===--------------------------------------------------------------------===//
   // Attribute Parsing
   //===--------------------------------------------------------------------===//
@@ -278,6 +270,9 @@ public:
 
   /// Parse a sparse elements attribute.
   Attribute parseSparseElementsAttr(Type attrType);
+
+  /// Parse a strided layout attribute.
+  Attribute parseStridedLayoutAttr();
 
   //===--------------------------------------------------------------------===//
   // Location Parsing

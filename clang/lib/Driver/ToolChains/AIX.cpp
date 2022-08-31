@@ -74,6 +74,29 @@ void aix::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
                                          Exec, CmdArgs, Inputs, Output));
 }
 
+// Determine whether there are any linker options that supply an export list
+// (or equivalent information about what to export) being sent to the linker.
+static bool hasExportListLinkerOpts(const ArgStringList &CmdArgs) {
+  for (size_t i = 0, Size = CmdArgs.size(); i < Size; ++i) {
+    llvm::StringRef ArgString(CmdArgs[i]);
+
+    if (ArgString.startswith("-bE:") || ArgString.startswith("-bexport:") ||
+        ArgString == "-bexpall" || ArgString == "-bexpfull")
+      return true;
+
+    // If we split -b option, check the next opt.
+    if (ArgString == "-b" && i + 1 < Size) {
+      ++i;
+      llvm::StringRef ArgNextString(CmdArgs[i]);
+      if (ArgNextString.startswith("E:") ||
+          ArgNextString.startswith("export:") || ArgNextString == "expall" ||
+          ArgNextString == "expfull")
+        return true;
+    }
+  }
+  return false;
+}
+
 void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                const InputInfo &Output,
                                const InputInfoList &Inputs, const ArgList &Args,
@@ -167,6 +190,39 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Specify linker input file(s).
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
+
+  if (Args.hasArg(options::OPT_shared) && !hasExportListLinkerOpts(CmdArgs)) {
+
+    const char *CreateExportListExec = Args.MakeArgString(
+        path::parent_path(ToolChain.getDriver().ClangExecutable) +
+        "/llvm-nm");
+    ArgStringList CreateExportCmdArgs;
+
+    std::string CreateExportListPath =
+        C.getDriver().GetTemporaryPath("CreateExportList", "exp");
+    const char *ExportList =
+        C.addTempFile(C.getArgs().MakeArgString(CreateExportListPath));
+
+    for (const auto &II : Inputs)
+      if (II.isFilename())
+        CreateExportCmdArgs.push_back(II.getFilename());
+
+    CreateExportCmdArgs.push_back("--export-symbols");
+    CreateExportCmdArgs.push_back("-X");
+    if (IsArch32Bit) {
+      CreateExportCmdArgs.push_back("32");
+    } else {
+      // Must be 64-bit, otherwise asserted already.
+      CreateExportCmdArgs.push_back("64");
+    }
+
+    auto ExpCommand = std::make_unique<Command>(
+        JA, *this, ResponseFileSupport::None(), CreateExportListExec,
+        CreateExportCmdArgs, Inputs, Output);
+    ExpCommand->setRedirectFiles({None, std::string(ExportList), None});
+    C.addCommand(std::move(ExpCommand));
+    CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-bE:") + ExportList));
+  }
 
   // Add directory to library search path.
   Args.AddAllArgs(CmdArgs, options::OPT_L);

@@ -334,10 +334,6 @@ struct DeviceTy {
 
   std::mutex PendingGlobalsMtx, ShadowMtx;
 
-  // NOTE: Once libomp gains full target-task support, this state should be
-  // moved into the target task in libomp.
-  std::map<int32_t, uint64_t> LoopTripCnt;
-
   DeviceTy(RTLInfoTy *RTL);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;

@@ -1019,7 +1019,7 @@ public:
 
   // Read counts for the instrumented BB from profile.
   bool readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
-                    bool &AllMinusOnes);
+                    InstrProfRecord::CountPseudoKind &PseudoKind);
 
   // Populate the counts for all BBs.
   void populateCounters();
@@ -1225,7 +1225,7 @@ static void annotateFunctionWithHashMismatch(Function &F,
 // instrumented BB and the edges. This function also updates ProgramMaxCount.
 // Return true if the profile are successfully read, and false on errors.
 bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
-                              bool &AllMinusOnes) {
+                              InstrProfRecord::CountPseudoKind &PseudoKind) {
   auto &Ctx = M->getContext();
   uint64_t MismatchedFuncSum = 0;
   Expected<InstrProfRecord> Result = PGOReader->getInstrProfRecord(
@@ -1270,17 +1270,19 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros,
     return false;
   }
   ProfileRecord = std::move(Result.get());
+  PseudoKind = ProfileRecord.getCountPseudoKind();
+  if (PseudoKind != InstrProfRecord::NotPseudo) {
+    return true;
+  }
   std::vector<uint64_t> &CountFromProfile = ProfileRecord.Counts;
 
   IsCS ? NumOfCSPGOFunc++ : NumOfPGOFunc++;
   LLVM_DEBUG(dbgs() << CountFromProfile.size() << " counts\n");
-  AllMinusOnes = (CountFromProfile.size() > 0);
+
   uint64_t ValueSum = 0;
   for (unsigned I = 0, S = CountFromProfile.size(); I < S; I++) {
     LLVM_DEBUG(dbgs() << "  " << I << ": " << CountFromProfile[I] << "\n");
     ValueSum += CountFromProfile[I];
-    if (CountFromProfile[I] != (uint64_t)-1)
-      AllMinusOnes = false;
   }
   AllZeros = (ValueSum == 0);
 
@@ -1818,13 +1820,13 @@ static bool annotateAllFunctions(
     SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/false, BPI, BFI);
     PGOUseFunc Func(F, &M, TLI, ComdatMembers, BPI, BFI, PSI, IsCS,
                     InstrumentFuncEntry);
-    // When AllMinusOnes is true, it means the profile for the function
-    // is unrepresentative and this function is actually hot. Set the
-    // entry count of the function to be multiple times of hot threshold
-    // and drop all its internal counters.
-    bool AllMinusOnes = false;
+    // When PseudoKind is set to a vaule other than InstrProfRecord::NotPseudo,
+    // it means the profile for the function is unrepresentative and this
+    // function is actually hot / warm. We will reset the function hot / cold
+    // attribute and drop all the profile counters.
+    InstrProfRecord::CountPseudoKind PseudoKind = InstrProfRecord::NotPseudo;
     bool AllZeros = false;
-    if (!Func.readCounters(PGOReader.get(), AllZeros, AllMinusOnes))
+    if (!Func.readCounters(PGOReader.get(), AllZeros, PseudoKind))
       continue;
     if (AllZeros) {
       F.setEntryCount(ProfileCount(0, Function::PCT_Real));
@@ -1832,13 +1834,13 @@ static bool annotateAllFunctions(
         ColdFunctions.push_back(&F);
       continue;
     }
-    const unsigned MultiplyFactor = 3;
-    if (AllMinusOnes) {
-      uint64_t HotThreshold = PSI->getHotCountThreshold();
-      if (HotThreshold)
-        F.setEntryCount(
-            ProfileCount(HotThreshold * MultiplyFactor, Function::PCT_Real));
-      HotFunctions.push_back(&F);
+    if (PseudoKind != InstrProfRecord::NotPseudo) {
+      // Clear function attribute cold.
+      if (F.hasFnAttribute(Attribute::Cold))
+        F.removeFnAttr(Attribute::Cold);
+      // Set function attribute as hot.
+      if (PseudoKind == InstrProfRecord::PseudoHot)
+        F.addFnAttr(Attribute::Hot);
       continue;
     }
     Func.populateCounters();

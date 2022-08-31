@@ -237,6 +237,60 @@ DictionaryAttr::replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
 }
 
 //===----------------------------------------------------------------------===//
+// StridedLayoutAttr
+//===----------------------------------------------------------------------===//
+
+/// Prints a strided layout attribute.
+void StridedLayoutAttr::print(llvm::raw_ostream &os) const {
+  auto printIntOrQuestion = [&](int64_t value) {
+    if (value == ShapedType::kDynamicStrideOrOffset)
+      os << "?";
+    else
+      os << value;
+  };
+
+  os << "strided<[";
+  llvm::interleaveComma(getStrides(), os, printIntOrQuestion);
+  os << "]";
+
+  if (getOffset() != 0) {
+    os << ", offset: ";
+    printIntOrQuestion(getOffset());
+  }
+  os << ">";
+}
+
+/// Returns the strided layout as an affine map.
+AffineMap StridedLayoutAttr::getAffineMap() const {
+  return makeStridedLinearLayoutMap(getStrides(), getOffset(), getContext());
+}
+
+/// Checks that the type-agnostic strided layout invariants are satisfied.
+LogicalResult
+StridedLayoutAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                          int64_t offset, ArrayRef<int64_t> strides) {
+  if (offset < 0 && offset != ShapedType::kDynamicStrideOrOffset)
+    return emitError() << "offset must be non-negative or dynamic";
+
+  if (llvm::any_of(strides, [&](int64_t stride) {
+        return stride <= 0 && stride != ShapedType::kDynamicStrideOrOffset;
+      })) {
+    return emitError() << "strides must be positive or dynamic";
+  }
+  return success();
+}
+
+/// Checks that the type-specific strided layout invariants are satisfied.
+LogicalResult StridedLayoutAttr::verifyLayout(
+    ArrayRef<int64_t> shape,
+    function_ref<InFlightDiagnostic()> emitError) const {
+  if (shape.size() != getStrides().size())
+    return emitError() << "expected the number of strides to match the rank";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // StringAttr
 //===----------------------------------------------------------------------===//
 
@@ -1782,4 +1836,44 @@ Attribute
 TypeAttr::replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
                                       ArrayRef<Type> replTypes) const {
   return get(replTypes[0]);
+}
+
+//===----------------------------------------------------------------------===//
+// Attribute Utilities
+//===----------------------------------------------------------------------===//
+
+AffineMap mlir::makeStridedLinearLayoutMap(ArrayRef<int64_t> strides,
+                                           int64_t offset,
+                                           MLIRContext *context) {
+  AffineExpr expr;
+  unsigned nSymbols = 0;
+
+  // AffineExpr for offset.
+  // Static case.
+  if (offset != MemRefType::getDynamicStrideOrOffset()) {
+    auto cst = getAffineConstantExpr(offset, context);
+    expr = cst;
+  } else {
+    // Dynamic case, new symbol for the offset.
+    auto sym = getAffineSymbolExpr(nSymbols++, context);
+    expr = sym;
+  }
+
+  // AffineExpr for strides.
+  for (const auto &en : llvm::enumerate(strides)) {
+    auto dim = en.index();
+    auto stride = en.value();
+    assert(stride != 0 && "Invalid stride specification");
+    auto d = getAffineDimExpr(dim, context);
+    AffineExpr mult;
+    // Static case.
+    if (stride != MemRefType::getDynamicStrideOrOffset())
+      mult = getAffineConstantExpr(stride, context);
+    else
+      // Dynamic case, new symbol for each new stride.
+      mult = getAffineSymbolExpr(nSymbols++, context);
+    expr = expr + d * mult;
+  }
+
+  return AffineMap::get(strides.size(), nSymbols, expr);
 }

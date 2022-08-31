@@ -60,6 +60,11 @@ enum InstrProfSectKind {
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
+/// Return the max count value. We reserver a few large values for special use.
+inline uint64_t getInstrMaxCountValue() {
+  return std::numeric_limits<uint64_t>::max() - 2;
+}
+
 /// Return the name of the profile section corresponding to \p IPSK.
 ///
 /// The name of the section depends on the object format type \p OF. If
@@ -818,6 +823,30 @@ struct InstrProfRecord {
   void overlapValueProfData(uint32_t ValueKind, InstrProfRecord &Src,
                             OverlapStats &Overlap,
                             OverlapStats &FuncLevelOverlap);
+
+  enum CountPseudoKind {
+    NotPseudo = 0,
+    PseudoHot,
+    PseudoWarm,
+  };
+  enum PseudoCountVal {
+    HotFunctionVal = -1,
+    WarmFunctionVal = -2,
+  };
+  CountPseudoKind getCountPseudoKind() const {
+    uint64_t FirstCount = Counts[0];
+    if (FirstCount == (uint64_t)HotFunctionVal)
+      return PseudoHot;
+    if (FirstCount == (uint64_t)WarmFunctionVal)
+      return PseudoWarm;
+    return NotPseudo;
+  }
+  void setPseudoCount(CountPseudoKind Kind) {
+    if (Kind == PseudoHot)
+      Counts[0] = (uint64_t)HotFunctionVal;
+    else if (Kind == PseudoWarm)
+      Counts[0] = (uint64_t)WarmFunctionVal;
+  }
 
 private:
   struct ValueProfData {

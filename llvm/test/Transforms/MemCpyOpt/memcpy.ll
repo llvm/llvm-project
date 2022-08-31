@@ -225,12 +225,9 @@ define i8 @test4_read_between(i8 *%P) {
 
 define void @test4_non_local(i8 *%P, i1 %c) {
 ; CHECK-LABEL: @test4_non_local(
-; CHECK-NEXT:    [[A1:%.*]] = alloca [[TMP1:%.*]], align 8
-; CHECK-NEXT:    [[A2:%.*]] = bitcast %1* [[A1]] to i8*
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[A2]], i8* align 4 [[P:%.*]], i64 8, i1 false)
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[CALL:%.*]], label [[EXIT:%.*]]
 ; CHECK:       call:
-; CHECK-NEXT:    call void @test4a(i8* byval(i8) align 1 [[P]])
+; CHECK-NEXT:    call void @test4a(i8* byval(i8) align 1 [[P:%.*]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

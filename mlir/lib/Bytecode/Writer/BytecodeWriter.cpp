@@ -162,9 +162,9 @@ private:
 /// A simple raw_ostream wrapper around a EncodingEmitter. This removes the need
 /// to go through an intermediate buffer when interacting with code that wants a
 /// raw_ostream.
-class raw_emitter_ostream : public raw_ostream {
+class RawEmitterOstream : public raw_ostream {
 public:
-  explicit raw_emitter_ostream(EncodingEmitter &emitter) : emitter(emitter) {
+  explicit RawEmitterOstream(EncodingEmitter &emitter) : emitter(emitter) {
     SetUnbuffered();
   }
 
@@ -468,7 +468,7 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
     // If the entry was not emitted using the dialect interface, emit it using
     // the textual format.
     if (!hasCustomEncoding) {
-      raw_emitter_ostream(attrTypeEmitter) << entryValue;
+      RawEmitterOstream(attrTypeEmitter) << entryValue;
       attrTypeEmitter.emitByte(0);
     }
 
