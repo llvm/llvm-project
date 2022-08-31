@@ -17,7 +17,7 @@ void test() {
   String s3{"abcdefghijklmnop"};
 }
 
-//      CHECK: cir.func @_ZN6StringC2Ev
+//      CHECK: cir.func linkonce_odr @_ZN6StringC2Ev
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22class2EString22>
 // CHECK-NEXT:   cir.store %arg0, %0
 // CHECK-NEXT:   %1 = cir.load %0
@@ -30,7 +30,7 @@ void test() {
 // CHECK-NEXT:   cir.store %6, %4 : i64, cir.ptr <i64>
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
-//      CHECK: cir.func @_ZN6StringC2Ei
+//      CHECK: cir.func linkonce_odr @_ZN6StringC2Ei
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22class2EString22>
 // CHECK-NEXT:   %1 = cir.alloca i32, cir.ptr <i32>, ["size", paraminit]
 // CHECK-NEXT:   cir.store %arg0, %0
@@ -46,7 +46,7 @@ void test() {
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
 
-//      CHECK: cir.func @_ZN6StringC2EPKc
+//      CHECK: cir.func linkonce_odr @_ZN6StringC2EPKc
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>, ["this", paraminit] {alignment = 8 : i64}
 // CHECK-NEXT:   %1 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["s", paraminit] {alignment = 8 : i64}
 // CHECK-NEXT:   cir.store %arg0, %0 : !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>
@@ -57,7 +57,7 @@ void test() {
 // CHECK-NEXT:   cir.store %4, %3 : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
 // CHECK-NEXT:   cir.return
 
-//      CHECK: cir.func @_ZN6StringC1EPKc
+//      CHECK: cir.func linkonce_odr @_ZN6StringC1EPKc
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>, ["this", paraminit] {alignment = 8 : i64}
 // CHECK-NEXT:   %1 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["s", paraminit] {alignment = 8 : i64}
 // CHECK-NEXT:   cir.store %arg0, %0 : !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>

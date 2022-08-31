@@ -8,7 +8,7 @@ void t() {
   DummyString s4 = "yolo";
 }
 
-//      CHECK: cir.func @_ZN11DummyStringC2EPKc
+//      CHECK: cir.func linkonce_odr @_ZN11DummyStringC2EPKc
 // CHECK-NEXT:     %0 = cir.alloca !cir.ptr<!_22struct2EDummyString22>, cir.ptr <!cir.ptr<!_22struct2EDummyString22>>, ["this", paraminit] {alignment = 8 : i64}
 // CHECK-NEXT:     %1 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["s", paraminit] {alignment = 8 : i64}
 // CHECK-NEXT:     cir.store %arg0, %0 : !cir.ptr<!_22struct2EDummyString22>, cir.ptr <!cir.ptr<!_22struct2EDummyString22>>

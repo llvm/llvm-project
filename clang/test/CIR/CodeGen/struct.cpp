@@ -27,14 +27,14 @@ void baz() {
 //      CHECK: !_22struct2EBar22 = !cir.struct<"struct.Bar", i32, i8>
 // CHECK-NEXT: !_22struct2EFoo22 = !cir.struct<"struct.Foo", i32, i8, !cir.struct<"struct.Bar", i32, i8>>
 
-//      CHECK: cir.func @_ZN3Bar6methodEv(%arg0: !cir.ptr<!_22struct2EBar22>
+//      CHECK: cir.func linkonce_odr @_ZN3Bar6methodEv(%arg0: !cir.ptr<!_22struct2EBar22>
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22struct2EBar22>, cir.ptr <!cir.ptr<!_22struct2EBar22>>, ["this", paraminit] {alignment = 8 : i64}
 // CHECK-NEXT:   cir.store %arg0, %0 : !cir.ptr<!_22struct2EBar22>, cir.ptr <!cir.ptr<!_22struct2EBar22>>
 // CHECK-NEXT:   %1 = cir.load %0 : cir.ptr <!cir.ptr<!_22struct2EBar22>>, !cir.ptr<!_22struct2EBar22>
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
 
-//      CHECK: cir.func @_ZN3Bar7method2Ei(%arg0: !cir.ptr<!_22struct2EBar22> {{.*}}, %arg1: i32
+//      CHECK: cir.func linkonce_odr @_ZN3Bar7method2Ei(%arg0: !cir.ptr<!_22struct2EBar22> {{.*}}, %arg1: i32
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22struct2EBar22>, cir.ptr <!cir.ptr<!_22struct2EBar22>>, ["this", paraminit] {alignment = 8 : i64}
 // CHECK-NEXT:   %1 = cir.alloca i32, cir.ptr <i32>, ["a", paraminit] {alignment = 4 : i64}
 // CHECK-NEXT:   cir.store %arg0, %0 : !cir.ptr<!_22struct2EBar22>, cir.ptr <!cir.ptr<!_22struct2EBar22>>
@@ -43,7 +43,7 @@ void baz() {
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
 
-//      CHECK: cir.func @_ZN3Bar7method3Ei(%arg0: !cir.ptr<!_22struct2EBar22> {{.*}}, %arg1: i32
+//      CHECK: cir.func linkonce_odr @_ZN3Bar7method3Ei(%arg0: !cir.ptr<!_22struct2EBar22> {{.*}}, %arg1: i32
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22struct2EBar22>, cir.ptr <!cir.ptr<!_22struct2EBar22>>, ["this", paraminit] {alignment = 8 : i64}
 // CHECK-NEXT:   %1 = cir.alloca i32, cir.ptr <i32>, ["a", paraminit] {alignment = 4 : i64}
 // CHECK-NEXT:   %2 = cir.alloca i32, cir.ptr <i32>, ["__retval", uninitialized] {alignment = 4 : i64}
