@@ -294,6 +294,20 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "__support_osutil",
+    hdrs = ["src/__support/OSUtil/syscall.h"],
+    textual_hdrs = [
+        "src/__support/OSUtil/linux/syscall.h",
+        "src/__support/OSUtil/linux/aarch64/syscall.h",
+        "src/__support/OSUtil/linux/x86_64/syscall.h",
+    ],
+    deps = [
+        ":__support_common",
+        ":libc_root",
+    ],
+)
+
 ################################ fenv targets ################################
 
 libc_function(
@@ -1102,5 +1116,187 @@ libc_function(
     deps = [
         ":__support_common",
         ":string_utils",
+    ],
+)
+
+############################### unistd targets ###############################
+
+libc_function(
+    name = "chdir",
+    srcs = ["src/unistd/linux/chdir.cpp"],
+    hdrs = ["src/unistd/chdir.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "close",
+    srcs = ["src/unistd/linux/close.cpp"],
+    hdrs = ["src/unistd/close.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "fchdir",
+    srcs = ["src/unistd/linux/fchdir.cpp"],
+    hdrs = ["src/unistd/fchdir.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "fsync",
+    srcs = ["src/unistd/linux/fsync.cpp"],
+    hdrs = ["src/unistd/fsync.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "ftruncate",
+    srcs = ["src/unistd/linux/ftruncate.cpp"],
+    hdrs = ["src/unistd/ftruncate.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "link",
+    srcs = ["src/unistd/linux/link.cpp"],
+    hdrs = ["src/unistd/link.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "linkat",
+    srcs = ["src/unistd/linux/linkat.cpp"],
+    hdrs = ["src/unistd/linkat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "lseek",
+    srcs = ["src/unistd/linux/lseek.cpp"],
+    hdrs = ["src/unistd/lseek.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "read",
+    srcs = ["src/unistd/linux/read.cpp"],
+    hdrs = ["src/unistd/read.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "readlink",
+    srcs = ["src/unistd/linux/readlink.cpp"],
+    hdrs = ["src/unistd/readlink.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "readlinkat",
+    srcs = ["src/unistd/linux/readlinkat.cpp"],
+    hdrs = ["src/unistd/readlinkat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "rmdir",
+    srcs = ["src/unistd/linux/rmdir.cpp"],
+    hdrs = ["src/unistd/rmdir.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "symlink",
+    srcs = ["src/unistd/linux/symlink.cpp"],
+    hdrs = ["src/unistd/symlink.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "symlinkat",
+    srcs = ["src/unistd/linux/symlinkat.cpp"],
+    hdrs = ["src/unistd/symlinkat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "truncate",
+    srcs = ["src/unistd/linux/truncate.cpp"],
+    hdrs = ["src/unistd/truncate.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "unlink",
+    srcs = ["src/unistd/linux/unlink.cpp"],
+    hdrs = ["src/unistd/unlink.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "unlinkat",
+    srcs = ["src/unistd/linux/unlinkat.cpp"],
+    hdrs = ["src/unistd/unlinkat.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
+    ],
+)
+
+libc_function(
+    name = "write",
+    srcs = ["src/unistd/linux/write.cpp"],
+    hdrs = ["src/unistd/write.h"],
+    deps = [
+        ":__support_common",
+        ":__support_osutil",
     ],
 )
