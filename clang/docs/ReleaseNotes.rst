@@ -106,9 +106,13 @@ Improvements to Clang's diagnostics
 - ``-Wformat`` now recognizes ``%b`` for the ``printf``/``scanf`` family of
   functions and ``%B`` for the ``printf`` family of functions. Fixes
   `Issue 56885: <https://github.com/llvm/llvm-project/issues/56885>`_.
-- ``-Wbitfield-constant-conversion`` now diagnoses implicit truncation when 1 is
-  assigned to a 1-bit signed integer bitfield. This fixes
-  `Issue 53253 <https://github.com/llvm/llvm-project/issues/53253>`_.
+- Introduced ``-Wsingle-bit-bitfield-constant-conversion``, grouped under
+  ``-Wbitfield-constant-conversion``, which diagnoses implicit truncation when
+  ``1`` is assigned to a 1-bit signed integer bitfield. This fixes
+  `Issue 53253 <https://github.com/llvm/llvm-project/issues/53253>`_. To reduce
+  potential false positives, this diagnostic will not diagnose use of the
+  ``true`` macro (from ``<stdbool.h>>`) in C language mode despite the macro
+  being defined to expand to ``1``.
 - ``-Wincompatible-function-pointer-types`` now defaults to an error in all C
   language modes. It may be downgraded to a warning with
   ``-Wno-error=incompatible-function-pointer-types`` or disabled entirely with
