@@ -77,14 +77,36 @@ LivenessAnalysis::LivenessAnalysis(Function *Func) {
 
       // Record what this instruction uses.
       //
-      // Note that Phi nodes are special and must be skipped. If we consider
-      // their operands as uses, then Phi nodes in loops may use variables
-      // before they are defined, and this messes with the algorithm.
+      // In order to track the operands of PHI nodes we need to be a bit crafty
+      // as otherwise we end up with live values in blocks where they actually
+      // don't exist. To avoid this, we need to mark as live any PHI operand
+      // from one block at the end of all other blocks. This leads to those
+      // values being killed immediately after entering the block in the
+      // backwards pass and thus the value never being live there.
       //
       // The book doesn't cover this quirk, as it explains liveness for
       // non-SSA form, and thus doesn't need to worry about Phi nodes.
-      if (isa<PHINode>(I))
+      if (isa<PHINode>(I)) {
+        PHINode *P = cast<PHINode>(&I);
+        for (unsigned IVC = 0; IVC < P->getNumIncomingValues(); IVC++) {
+          BasicBlock *IBB = P->getIncomingBlock(IVC);
+          Value *IV = P->getIncomingValue(IVC);
+          if (isa<Constant>(IV)) {
+            continue;
+          }
+          // For each block that isn't the incoming block create a Def for this
+          // value. This means when we do the backwards liveness pass this
+          // value is immediately killed in the block.
+          for (auto *BBB = P->block_begin(); BBB != P->block_end(); BBB++) {
+            if (*BBB != IBB) {
+              Instruction *Last = &((*BBB)->back());
+              Defs[Last].insert(IV);
+            }
+          }
+          Uses[&I].insert(IV);
+        }
         continue;
+      }
 
       for (auto *U = I.op_begin(); U < I.op_end(); U++)
         if ((!isa<Constant>(U)) && (!isa<BasicBlock>(U)) &&
