@@ -346,6 +346,14 @@ T *replaceSymbol(Symbol *s, ArgT &&...arg) {
   return sym;
 }
 
+// Can a symbol's address only be resolved at runtime?
+inline bool needsBinding(const Symbol *sym) {
+  if (isa<DylibSymbol>(sym))
+    return true;
+  if (const auto *defined = dyn_cast<Defined>(sym))
+    return defined->isExternalWeakDef() || defined->interposable;
+  return false;
+}
 } // namespace macho
 
 std::string toString(const macho::Symbol &);

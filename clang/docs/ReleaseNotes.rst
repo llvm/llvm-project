@@ -86,6 +86,9 @@ Bug Fixes
   `Issue 57387 <https://github.com/llvm/llvm-project/issues/57387>`_.
 - Fix a crash when emitting a concept-related diagnostic. This fixes
   `Issue 57415 <https://github.com/llvm/llvm-project/issues/57415>`_.
+- Fix a crash when attempting to default a virtual constexpr non-special member
+  function in a derived class. This fixes
+  `Issue 57431 <https://github.com/llvm/llvm-project/issues/57431>`_
 
 
 Improvements to Clang's diagnostics
@@ -118,6 +121,8 @@ Improvements to Clang's diagnostics
 - Correctly diagnose a future keyword if it exist as a keyword in the higher
   language version and specifies in which version it will be a keyword. This
   supports both c and c++ language.
+- When diagnosing multi-level pack expansions of mismatched lengths, Clang will
+  now, in most cases, be able to point to the relevant outer parameter.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -196,10 +201,11 @@ C++20 Feature Support
   and `DR1734 <https://www.open-std.org/jtc1/sc22/wg21/docs/cwg_defects.html#1734>`_.
 - Class member variables are now in scope when parsing a ``requires`` clause. Fixes
   `GH55216 <https://github.com/llvm/llvm-project/issues/55216>`_.
-
 - Correctly set expression evaluation context as 'immediate function context' in
   consteval functions.
   This fixes `GH51182 <https://github.com/llvm/llvm-project/issues/51182>`
+- Fixes an assert crash caused by looking up missing vtable information on ``consteval``
+  virtual functions. Fixes `GH55065 <https://github.com/llvm/llvm-project/issues/55065>`_.
 
 
 C++2b Feature Support

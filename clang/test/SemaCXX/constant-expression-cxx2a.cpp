@@ -1473,3 +1473,13 @@ namespace PR45879 {
   }
   static_assert(g()); // expected-error {{constant expression}} expected-note {{in call}}
 }
+
+namespace GH57431 {
+class B {
+  virtual int constexpr f() = 0;
+};
+
+class D : B {
+  virtual int constexpr f() = default; // expected-error {{only special member functions and comparison operators may be defaulted}}
+};
+}

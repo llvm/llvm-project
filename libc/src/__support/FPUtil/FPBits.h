@@ -196,6 +196,15 @@ template <typename T> struct FPBits {
     }
     return result;
   }
+
+  inline static FPBits<T> create_value(bool sign, UIntType unbiased_exp,
+                                       UIntType mantissa) {
+    FPBits<T> result;
+    result.set_sign(sign);
+    result.set_unbiased_exponent(unbiased_exp);
+    result.set_mantissa(mantissa);
+    return result;
+  }
 };
 
 } // namespace fputil

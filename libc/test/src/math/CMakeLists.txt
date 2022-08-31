@@ -1319,14 +1319,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  expxf_test
+  explogxf_test
   NEED_MPFR
   SUITE
     libc_math_unittests
+  HDRS
+    in_float_range_test_helper.h
   SRCS
-    expxf_test.cpp
+    explogxf_test.cpp
   DEPENDS
-    libc.src.math.generic.common_constants
+    libc.src.math.generic.explogxf
     libc.src.__support.FPUtil.fputil
 )
 
@@ -1371,6 +1373,44 @@ add_fp_unittest(
     tanhf_test.cpp
   DEPENDS
     libc.src.math.tanhf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  atanhf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    atanhf_test.cpp
+  DEPENDS
+    libc.src.math.atanhf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  atanf_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    atanf_test.cpp
+  DEPENDS
+    libc.src.math.atanf
+    libc.src.__support.FPUtil.fputil
+)
+
+add_fp_unittest(
+  inv_trigf_utils_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  HDRS
+    in_float_range_test_helper.h
+  SRCS
+    inv_trigf_utils_test.cpp
+  DEPENDS
+    libc.src.math.generic.inv_trigf_utils
     libc.src.__support.FPUtil.fputil
 )
 
