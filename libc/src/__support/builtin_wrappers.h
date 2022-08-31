@@ -7,11 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_BUILTIN_WRAPPERS_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_BUILTIN_WRAPPERS_H
+#ifndef LLVM_LIBC_SRC_SUPPORT_BUILTIN_WRAPPERS_H
+#define LLVM_LIBC_SRC_SUPPORT_BUILTIN_WRAPPERS_H
 
 namespace __llvm_libc {
-namespace fputil {
 
 // The following overloads are matched based on what is accepted by
 // __builtin_clz/ctz* rather than using the exactly-sized aliases from stdint.h.
@@ -65,7 +64,6 @@ template <typename T> static inline int unsafe_clz(T val) {
   return __internal::clz(val);
 }
 
-} // namespace fputil
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_BUILTIN_WRAPPERS_H
+#endif // LLVM_LIBC_SRC_SUPPORT_BUILTIN_WRAPPERS_H
