@@ -1008,6 +1008,12 @@ public:
     return HasLdsBranchVmemWARHazard;
   }
 
+  // Shift amount of a 64 bit shift cannot be a highest allocated register
+  // if also at the end of the allocation block.
+  bool hasShift64HighRegBug() const {
+    return GFX90AInsts && !GFX940Insts;
+  }
+
   // Has one cycle hazard on transcendental instruction feeding a
   // non transcendental VALU.
   bool hasTransForwardingHazard() const { return GFX940Insts; }
