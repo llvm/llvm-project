@@ -72,7 +72,7 @@ define hidden i32 @test2() local_unnamed_addr {
 ; CHECK-LABEL: <test3>:
 ; CHECK-LABEL: <$d.9>:
 ; CHECK-LABEL: <$x.10>:
-; CHECK-NEXT:    b {{.*}} <test3+0x18>
+; CHECK-NEXT:    b {{.*}} <$x.12+0x4>
 ; CHECK-LABEL: <$x.12>:
 ; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ldr x30, [sp], #16
