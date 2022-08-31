@@ -1,5 +1,4 @@
 // RUN: cir-tool %s | cir-tool | FileCheck %s
-// XFAIL: *
 
 module  {
   cir.func @yolo(%arg0 : i32) {
