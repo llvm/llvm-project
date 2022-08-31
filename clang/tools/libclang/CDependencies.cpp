@@ -125,7 +125,7 @@ static CXFileDependencies *getFullDependencies(
     return nullptr;
   }
 
-  auto FDR = Consumer.getFullDependencies(Compilation);
+  auto FDR = Consumer.getFullDependenciesLegacyDriverCommand(Compilation);
   if (!FDR.DiscoveredModules.empty()) {
     CXModuleDependencySet *MDS = new CXModuleDependencySet;
     MDS->Count = FDR.DiscoveredModules.size();
@@ -154,7 +154,7 @@ static CXFileDependencies *getFullDependencies(
   for (const ModuleID &MID : FD.ClangModuleDeps)
     Modules.push_back(MID.ModuleName + ":" + MID.ContextHash);
   FDeps->ModuleDeps = cxstring::createSet(Modules);
-  FDeps->BuildArguments = cxstring::createSet(FD.CommandLine);
+  FDeps->BuildArguments = cxstring::createSet(FD.DriverCommandLine);
   return FDeps;
 }
 
