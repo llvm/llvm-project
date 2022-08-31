@@ -338,6 +338,17 @@ StringRef CompileJobCache::getPathForOutputKind(OutputKind Kind) {
   }
 }
 
+static std::string fixupRelativePath(const std::string &Path, FileManager &FM) {
+  // FIXME: this needs to stay in sync with createOutputFileImpl. Ideally, clang
+  // would create output files by their "kind" rather than by path.
+  if (!Path.empty() && Path != "-" && !llvm::sys::path::is_absolute(Path)) {
+    SmallString<128> PathStorage(Path);
+    if (FM.FixupRelativePath(PathStorage))
+      return std::string(PathStorage);
+  }
+  return Path;
+}
+
 Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   CompilerInvocation &Invocation = Clang.getInvocation();
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
@@ -372,9 +383,14 @@ Optional<int> CompileJobCache::initialize(CompilerInstance &Clang) {
   // other outputs during replay.
   FrontendOpts.IncludeTimestamps = false;
 
-  OutputFile = FrontendOpts.OutputFile;
-  SerialDiagsFile = Invocation.getDiagnosticOpts().DiagnosticSerializationFile;
-  DependenciesFile = Invocation.getDependencyOutputOpts().OutputFile;
+  if (!Clang.hasFileManager())
+    Clang.createFileManager();
+  FileManager &FM = Clang.getFileManager();
+  OutputFile = fixupRelativePath(FrontendOpts.OutputFile, FM);
+  SerialDiagsFile = fixupRelativePath(
+      Invocation.getDiagnosticOpts().DiagnosticSerializationFile, FM);
+  DependenciesFile =
+      fixupRelativePath(Invocation.getDependencyOutputOpts().OutputFile, FM);
   return None;
 }
 

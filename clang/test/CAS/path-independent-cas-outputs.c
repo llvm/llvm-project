@@ -9,6 +9,25 @@
 // RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/b/t2.o -MMD -MT dependencies -MF %t/b/t2.d --serialize-diagnostics %t/b/t2.dia -Rcompile-job-cache \
 // RUN:   2>&1 | FileCheck %s --check-prefix=CACHE-HIT
 
+// Check that output path is correctly detected with -working-directory.
+
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -working-directory %t -o a/t1_working_dir.o -DNEW_FLAG -Rcompile-job-cache \
+// RUN:   2>&1 | FileCheck %s --check-prefix=CACHE-MISS
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -working-directory %t -o b/t2_working_dir.o -DNEW_FLAG -Rcompile-job-cache \
+// RUN:   2>&1 | FileCheck %s --check-prefix=CACHE-HIT
+// RUN: diff %t/a/t1_working_dir.o %t/b/t2_working_dir.o
+
+// Check that output path is correctly detected with - (stdout)
+
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o - -DNEW_FLAG2 -Rcompile-job-cache > %t/a/t1_stdout.o
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/b/t2_stdout.o -DNEW_FLAG2 -Rcompile-job-cache \
+// RUN:   2>&1 | FileCheck %s --check-prefix=CACHE-HIT
+// RUN: diff %t/a/t1_stdout.o %t/b/t2_stdout.o
+
 // Check PCH output
 
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
