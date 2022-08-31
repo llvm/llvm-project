@@ -20,6 +20,9 @@ class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
 
+#define GEN_PASS_DECL_CONVERTCONTROLFLOWTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
 namespace cf {
 /// Collect the patterns to convert from the ControlFlow dialect to LLVM. The
 /// conversion patterns capture the LLVMTypeConverter by reference meaning the

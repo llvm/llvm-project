@@ -11,11 +11,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Transforms/Passes.h"
+
+#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SetOperations.h"
+
+namespace mlir {
+namespace transform {
+#define GEN_PASS_DEF_CHECKUSES
+#include "mlir/Dialect/Transform/Transforms/Passes.h.inc"
+} // namespace transform
+} // namespace mlir
 
 using namespace mlir;
 
@@ -361,12 +369,9 @@ private:
   DenseMap<Block *, llvm::SmallPtrSet<Block *, 4>> reachableFromCache;
 };
 
-#define GEN_PASS_CLASSES
-#include "mlir/Dialect/Transform/Transforms/Passes.h.inc"
-
 //// A simple pass that warns about any use of a value by a transform operation
 // that may be using the value after it has been freed.
-class CheckUsesPass : public CheckUsesBase<CheckUsesPass> {
+class CheckUsesPass : public transform::impl::CheckUsesBase<CheckUsesPass> {
 public:
   void runOnOperation() override {
     auto &analysis = getAnalysis<TransformOpMemFreeAnalysis>();

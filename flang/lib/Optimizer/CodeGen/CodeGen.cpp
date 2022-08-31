@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
+
 #include "CGOps.h"
-#include "PassDetail.h"
 #include "flang/ISO_Fortran_binding.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -27,12 +27,19 @@
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MathToLibm/MathToLibm.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
+
+namespace fir {
+#define GEN_PASS_DEF_FIRTOLLVMLOWERING
+#include "flang/Optimizer/CodeGen/CGPasses.h.inc"
+} // namespace fir
 
 #define DEBUG_TYPE "flang-codegen"
 
@@ -3045,7 +3052,8 @@ struct IsPresentOpConversion : public FIROpConversion<fir::IsPresentOp> {
     auto ptr = adaptor.getOperands()[0];
 
     if (isPresent.getVal().getType().isa<fir::BoxCharType>()) {
-      [[maybe_unused]] auto structTy = ptr.getType().cast<mlir::LLVM::LLVMStructType>();
+      [[maybe_unused]] auto structTy =
+          ptr.getType().cast<mlir::LLVM::LLVMStructType>();
       assert(!structTy.isOpaque() && !structTy.getBody().empty());
 
       ptr = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, ptr, 0);
@@ -3282,7 +3290,8 @@ namespace {
 ///
 /// This pass lowers all FIR dialect operations to LLVM IR dialect. An
 /// MLIR pass is used to lower residual Std dialect to LLVM IR dialect.
-class FIRToLLVMLowering : public fir::FIRToLLVMLoweringBase<FIRToLLVMLowering> {
+class FIRToLLVMLowering
+    : public fir::impl::FIRToLLVMLoweringBase<FIRToLLVMLowering> {
 public:
   FIRToLLVMLowering() = default;
   FIRToLLVMLowering(fir::FIRToLLVMPassOptions options) : options{options} {}

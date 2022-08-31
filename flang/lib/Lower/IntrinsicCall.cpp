@@ -4117,13 +4117,13 @@ static mlir::Value computeLBOUND(fir::FirOpBuilder &builder, mlir::Location loc,
   return builder.create<mlir::arith::SelectOp>(loc, dimIsEmpty, one, lb);
 }
 
-/// Create a fir.box to be passed to the LBOUND runtime.
+/// Create a fir.box to be passed to the LBOUND/UBOUND runtime.
 /// This ensure that local lower bounds of assumed shape are propagated and that
 /// a fir.box with equivalent LBOUNDs but an explicit shape is created for
 /// assumed size arrays to avoid undefined behaviors in codegen or the runtime.
-static mlir::Value createBoxForLBOUND(mlir::Location loc,
-                                      fir::FirOpBuilder &builder,
-                                      const fir::ExtendedValue &array) {
+static mlir::Value
+createBoxForRuntimeBoundInquiry(mlir::Location loc, fir::FirOpBuilder &builder,
+                                const fir::ExtendedValue &array) {
   if (!array.isAssumedSize())
     return array.match(
         [&](const fir::BoxValue &boxValue) -> mlir::Value {
@@ -4217,7 +4217,7 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
     return builder.createConvert(loc, resultType, lb);
   }
 
-  fir::ExtendedValue box = createBoxForLBOUND(loc, builder, array);
+  fir::ExtendedValue box = createBoxForRuntimeBoundInquiry(loc, builder, array);
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genLboundDim(builder, loc, fir::getBase(box), dim));
@@ -4251,8 +4251,9 @@ IntrinsicLibrary::genUbound(mlir::Type resultType,
     mlir::Value resultIrBox =
         fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
 
-    fir::runtime::genUbound(builder, loc, resultIrBox, fir::getBase(args[0]),
-                            kind);
+    fir::ExtendedValue box =
+        createBoxForRuntimeBoundInquiry(loc, builder, args[0]);
+    fir::runtime::genUbound(builder, loc, resultIrBox, fir::getBase(box), kind);
 
     return readAndAddCleanUp(resultMutableBox, resultType, "UBOUND");
   }

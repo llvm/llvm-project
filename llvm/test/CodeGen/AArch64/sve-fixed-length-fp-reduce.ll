@@ -10,28 +10,41 @@ target triple = "aarch64-unknown-linux-gnu"
 ;
 
 ; No single instruction NEON support. Use SVE.
-define half @fadda_v4f16(half %start, <4 x half> %a) vscale_range(2,0) #0 {
+define half @fadda_v4f16(half %start, <4 x half> %a) vscale_range(1,0) #0 {
 ; CHECK-LABEL: fadda_v4f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    fadda h0, p0, h0, z1.h
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    fadd h0, h0, h1
+; CHECK-NEXT:    mov h3, v1.h[2]
+; CHECK-NEXT:    mov h1, v1.h[3]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    fadd h0, h0, h3
+; CHECK-NEXT:    fadd h0, h0, h1
 ; CHECK-NEXT:    ret
   %res = call half @llvm.vector.reduce.fadd.v4f16(half %start, <4 x half> %a)
   ret half %res
 }
 
 ; No single instruction NEON support. Use SVE.
-define half @fadda_v8f16(half %start, <8 x half> %a) vscale_range(2,0) #0 {
+define half @fadda_v8f16(half %start, <8 x half> %a) vscale_range(1,0) #0 {
 ; CHECK-LABEL: fadda_v8f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
-; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fadda h0, p0, h0, z1.h
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    fadd h0, h0, h1
+; CHECK-NEXT:    mov h3, v1.h[2]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov h2, v1.h[3]
+; CHECK-NEXT:    fadd h0, h0, h3
+; CHECK-NEXT:    mov h3, v1.h[4]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    mov h2, v1.h[5]
+; CHECK-NEXT:    fadd h0, h0, h3
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    fadd h0, h0, h2
+; CHECK-NEXT:    fadd h0, h0, h3
+; CHECK-NEXT:    fadd h0, h0, h1
 ; CHECK-NEXT:    ret
   %res = call half @llvm.vector.reduce.fadd.v8f16(half %start, <8 x half> %a)
   ret half %res
@@ -106,28 +119,29 @@ define half @fadda_v128f16(half %start, <128 x half>* %a) vscale_range(16,0) #0 
 }
 
 ; No single instruction NEON support. Use SVE.
-define float @fadda_v2f32(float %start, <2 x float> %a) vscale_range(2,0) #0 {
+define float @fadda_v2f32(float %start, <2 x float> %a) vscale_range(1,0) #0 {
 ; CHECK-LABEL: fadda_v2f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    fadda s0, p0, s0, z1.s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov s2, v1.s[1]
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    fadd s0, s0, s2
 ; CHECK-NEXT:    ret
   %res = call float @llvm.vector.reduce.fadd.v2f32(float %start, <2 x float> %a)
   ret float %res
 }
 
 ; No single instruction NEON support. Use SVE.
-define float @fadda_v4f32(float %start, <4 x float> %a) vscale_range(2,0) #0 {
+define float @fadda_v4f32(float %start, <4 x float> %a) vscale_range(1,0) #0 {
 ; CHECK-LABEL: fadda_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
-; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fadda s0, p0, s0, z1.s
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-NEXT:    mov s2, v1.s[1]
+; CHECK-NEXT:    fadd s0, s0, s1
+; CHECK-NEXT:    mov s3, v1.s[2]
+; CHECK-NEXT:    mov s1, v1.s[3]
+; CHECK-NEXT:    fadd s0, s0, s2
+; CHECK-NEXT:    fadd s0, s0, s3
+; CHECK-NEXT:    fadd s0, s0, s1
 ; CHECK-NEXT:    ret
   %res = call float @llvm.vector.reduce.fadd.v4f32(float %start, <4 x float> %a)
   ret float %res
@@ -202,28 +216,22 @@ define float @fadda_v64f32(float %start, <64 x float>* %a) vscale_range(16,0) #0
 }
 
 ; No single instruction NEON support. Use SVE.
-define double @fadda_v1f64(double %start, <1 x double> %a) vscale_range(2,0) #0 {
+define double @fadda_v1f64(double %start, <1 x double> %a) vscale_range(1,0) #0 {
 ; CHECK-LABEL: fadda_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ptrue p0.d, vl1
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
-; CHECK-NEXT:    fadda d0, p0, d0, z1.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    ret
   %res = call double @llvm.vector.reduce.fadd.v1f64(double %start, <1 x double> %a)
   ret double %res
 }
 
 ; No single instruction NEON support. Use SVE.
-define double @fadda_v2f64(double %start, <2 x double> %a) vscale_range(2,0) #0 {
+define double @fadda_v2f64(double %start, <2 x double> %a) vscale_range(1,0) #0 {
 ; CHECK-LABEL: fadda_v2f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    fadda d0, p0, d0, z1.d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-NEXT:    mov d2, v1.d[1]
+; CHECK-NEXT:    fadd d0, d0, d1
+; CHECK-NEXT:    fadd d0, d0, d2
 ; CHECK-NEXT:    ret
   %res = call double @llvm.vector.reduce.fadd.v2f64(double %start, <2 x double> %a)
   ret double %res

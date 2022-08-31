@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -18,6 +17,11 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+
+namespace fir {
+#define GEN_PASS_DEF_MEMREFDATAFLOWOPT
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+} // namespace fir
 
 #define DEBUG_TYPE "fir-memref-dataflow-opt"
 
@@ -94,7 +98,7 @@ private:
   mlir::DominanceInfo *domInfo;
 };
 
-class MemDataFlowOpt : public fir::MemRefDataFlowOptBase<MemDataFlowOpt> {
+class MemDataFlowOpt : public fir::impl::MemRefDataFlowOptBase<MemDataFlowOpt> {
 public:
   void runOnOperation() override {
     mlir::func::FuncOp f = getOperation();

@@ -8,7 +8,6 @@
 
 #include "mlir/Conversion/ShapeToStandard/ShapeToStandard.h"
 
-#include "../PassDetail.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -16,8 +15,14 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTSHAPETOSTANDARD
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::shape;
@@ -680,7 +685,7 @@ namespace {
 namespace {
 /// Conversion pass.
 class ConvertShapeToStandardPass
-    : public ConvertShapeToStandardBase<ConvertShapeToStandardPass> {
+    : public impl::ConvertShapeToStandardBase<ConvertShapeToStandardPass> {
 
   void runOnOperation() override;
 };

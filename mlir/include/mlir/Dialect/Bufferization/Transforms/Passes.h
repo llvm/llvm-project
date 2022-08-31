@@ -17,6 +17,19 @@ struct OneShotBufferizationOptions;
 // Passes
 //===----------------------------------------------------------------------===//
 
+#define GEN_PASS_DECL_BUFFERDEALLOCATION
+#define GEN_PASS_DECL_BUFFERHOISTING
+#define GEN_PASS_DECL_BUFFERLOOPHOISTING
+#define GEN_PASS_DECL_BUFFERRESULTSTOOUTPARAMS
+#define GEN_PASS_DECL_FINALIZINGBUFFERIZE
+#define GEN_PASS_DECL_BUFFERIZATIONBUFFERIZE
+#define GEN_PASS_DECL_DROPEQUIVALENTBUFFERRESULTS
+#define GEN_PASS_DECL_ONESHOTBUFFERIZE
+#define GEN_PASS_DECL_PROMOTEBUFFERSTOSTACK
+#define GEN_PASS_DECL_TENSORCOPYINSERTION
+#define GEN_PASS_DECL_ALLOCTENSORELIMINATION
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
+
 /// Creates an instance of the BufferDeallocation pass to free all allocated
 /// buffers.
 std::unique_ptr<Pass> createBufferDeallocationPass();

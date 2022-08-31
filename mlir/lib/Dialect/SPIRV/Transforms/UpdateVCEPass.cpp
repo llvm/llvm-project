@@ -11,24 +11,32 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
+
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
-#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Visitors.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 
+namespace mlir {
+namespace spirv {
+#define GEN_PASS_DEF_SPIRVUPDATEVCE
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
+} // namespace spirv
+} // namespace mlir
+
 using namespace mlir;
 
 namespace {
 /// Pass to deduce minimal version/extension/capability requirements for a
 /// spirv::ModuleOp.
-class UpdateVCEPass final : public SPIRVUpdateVCEBase<UpdateVCEPass> {
+class UpdateVCEPass final
+    : public spirv::impl::SPIRVUpdateVCEBase<UpdateVCEPass> {
   void runOnOperation() override;
 };
 } // namespace

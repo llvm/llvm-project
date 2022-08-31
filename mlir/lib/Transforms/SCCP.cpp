@@ -14,7 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/IR/Builders.h"
@@ -22,7 +23,11 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/FoldUtils.h"
-#include "mlir/Transforms/Passes.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_SCCP
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -109,7 +114,7 @@ static void rewrite(DataFlowSolver &solver, MLIRContext *context,
 //===----------------------------------------------------------------------===//
 
 namespace {
-struct SCCP : public SCCPBase<SCCP> {
+struct SCCP : public impl::SCCPBase<SCCP> {
   void runOnOperation() override;
 };
 } // namespace
