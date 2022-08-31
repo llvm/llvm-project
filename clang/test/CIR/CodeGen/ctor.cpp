@@ -13,13 +13,13 @@ void baz() {
 
 // CHECK: !22struct2EStruk22 = !cir.struct<"struct.Struk", i32>
 
-// CHECK:   cir.func @_ZN5StrukC2Ev(%arg0: !cir.ptr<!22struct2EStruk22>
+// CHECK:   cir.func linkonce_odr @_ZN5StrukC2Ev(%arg0: !cir.ptr<!22struct2EStruk22>
 // CHECK-NEXT:     %0 = cir.alloca !cir.ptr<!22struct2EStruk22>, cir.ptr <!cir.ptr<!22struct2EStruk22>>, ["this", paraminit] {alignment = 8 : i64}
 // CHECK-NEXT:     cir.store %arg0, %0 : !cir.ptr<!22struct2EStruk22>, cir.ptr <!cir.ptr<!22struct2EStruk22>>
 // CHECK-NEXT:     %1 = cir.load %0 : cir.ptr <!cir.ptr<!22struct2EStruk22>>, !cir.ptr<!22struct2EStruk22>
 // CHECK-NEXT:     cir.return
 
-// CHECK:   cir.func @_ZN5StrukC1Ev(%arg0: !cir.ptr<!22struct2EStruk22>
+// CHECK:   cir.func linkonce_odr @_ZN5StrukC1Ev(%arg0: !cir.ptr<!22struct2EStruk22>
 // CHECK-NEXT:     %0 = cir.alloca !cir.ptr<!22struct2EStruk22>, cir.ptr <!cir.ptr<!22struct2EStruk22>>, ["this", paraminit] {alignment = 8 : i64}
 // CHECK-NEXT:     cir.store %arg0, %0 : !cir.ptr<!22struct2EStruk22>, cir.ptr <!cir.ptr<!22struct2EStruk22>>
 // CHECK-NEXT:     %1 = cir.load %0 : cir.ptr <!cir.ptr<!22struct2EStruk22>>, !cir.ptr<!22struct2EStruk22>

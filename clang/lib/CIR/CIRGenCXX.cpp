@@ -25,7 +25,7 @@ mlir::cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
   auto Fn = getAddrOfCXXStructor(GD, &FnInfo, /*FnType=*/nullptr,
                                  /*DontDefer=*/true, ForDefinition);
 
-  // TODO: setFunctionLinkage
+  setFunctionLinkage(GD, Fn);
   CIRGenFunction CGF{*this, builder};
   CurCGF = &CGF;
   {

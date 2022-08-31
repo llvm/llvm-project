@@ -336,7 +336,7 @@ void CIRGenModule::buildGlobalFunctionDefinition(GlobalDecl GD,
   if (!Fn.isDeclaration())
     return;
 
-  // TODO(cir): setFunctionLinkage
+  setFunctionLinkage(GD, Fn);
   // TODO(cir): setGVProperties
   // TODO(cir): MaubeHandleStaticInExternC
   // TODO(cir): maybeSetTrivialComdat
@@ -1183,9 +1183,13 @@ mlir::SymbolTable::Visibility CIRGenModule::getMLIRVisibilityFromCIRLinkage(
     return mlir::SymbolTable::Visibility::Private;
   case mlir::cir::GlobalLinkageKind::ExternalLinkage:
   case mlir::cir::GlobalLinkageKind::ExternalWeakLinkage:
+  case mlir::cir::GlobalLinkageKind::LinkOnceODRLinkage:
     return mlir::SymbolTable::Visibility::Public;
-  default:
+  default: {
+    llvm::errs() << "visibility not implemented for '"
+                 << stringifyGlobalLinkageKind(GLK) << "'\n";
     assert(0 && "not implemented");
+  }
   }
   llvm_unreachable("linkage should be handled above!");
 }
@@ -1458,6 +1462,14 @@ mlir::cir::FuncOp CIRGenModule::createCIRFunction(mlir::Location loc,
       builder.setInsertionPoint(curCGF->CurFn.getOperation());
 
     f = builder.create<mlir::cir::FuncOp>(loc, name, Ty);
+    assert(f.isDeclaration() && "expected empty body");
+
+    // A declaration gets private visibility by default, but external linkage
+    // as the default linkage.
+    f.setLinkageAttr(mlir::cir::GlobalLinkageKindAttr::get(
+        builder.getContext(), mlir::cir::GlobalLinkageKind::ExternalLinkage));
+    mlir::SymbolTable::setSymbolVisibility(
+        f, mlir::SymbolTable::Visibility::Private);
     if (!curCGF)
       theModule.push_back(f);
   }
