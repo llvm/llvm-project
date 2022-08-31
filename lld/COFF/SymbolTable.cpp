@@ -698,12 +698,12 @@ Symbol *SymbolTable::addSynthetic(StringRef n, Chunk *c) {
 
 Symbol *SymbolTable::addRegular(InputFile *f, StringRef n,
                                 const coff_symbol_generic *sym, SectionChunk *c,
-                                uint32_t sectionOffset) {
+                                uint32_t sectionOffset, bool isWeak) {
   auto [s, wasInserted] = insert(n, f);
-  if (wasInserted || !isa<DefinedRegular>(s))
+  if (wasInserted || !isa<DefinedRegular>(s) || s->isWeak)
     replaceSymbol<DefinedRegular>(s, f, n, /*IsCOMDAT*/ false,
-                                  /*IsExternal*/ true, sym, c);
-  else
+                                  /*IsExternal*/ true, sym, c, isWeak);
+  else if (!isWeak)
     reportDuplicate(s, f, c, sectionOffset);
   return s;
 }

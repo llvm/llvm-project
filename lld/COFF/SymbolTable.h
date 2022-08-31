@@ -95,7 +95,8 @@ public:
   Symbol *addAbsolute(StringRef n, COFFSymbolRef s);
   Symbol *addRegular(InputFile *f, StringRef n,
                      const llvm::object::coff_symbol_generic *s = nullptr,
-                     SectionChunk *c = nullptr, uint32_t sectionOffset = 0);
+                     SectionChunk *c = nullptr, uint32_t sectionOffset = 0,
+                     bool isWeak = false);
   std::pair<DefinedRegular *, bool>
   addComdat(InputFile *f, StringRef n,
             const llvm::object::coff_symbol_generic *s = nullptr);
