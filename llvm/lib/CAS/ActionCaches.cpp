@@ -140,9 +140,25 @@ Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key,
                                         Observed.getValue());
 }
 
-std::unique_ptr<ActionCache> cas::createInMemoryActionCache(ObjectStore &CAS) {
+static constexpr StringLiteral DefaultName = "actioncache";
+
+namespace llvm {
+namespace cas {
+
+std::string getDefaultOnDiskActionCachePath() {
+  SmallString<128> Path;
+  if (!llvm::sys::path::cache_directory(Path))
+    report_fatal_error("cannot get default cache directory");
+  llvm::sys::path::append(Path, builtin::DefaultDir, DefaultName);
+  return Path.str().str();
+}
+
+std::unique_ptr<ActionCache> createInMemoryActionCache(ObjectStore &CAS) {
   return std::make_unique<InMemoryActionCache>(CAS);
 }
+
+} // namespace cas
+} // namespace llvm
 
 #if LLVM_ENABLE_ONDISK_CAS
 OnDiskActionCache::OnDiskActionCache(ObjectStore &CAS, StringRef Path,
@@ -206,23 +222,26 @@ Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,
                                         Observed->getValue());
 }
 
-static constexpr StringLiteral DefaultName = "actioncache";
-
-std::string cas::getDefaultOnDiskActionCachePath() {
-  SmallString<128> Path;
-  if (!llvm::sys::path::cache_directory(Path))
-    report_fatal_error("cannot get default cache directory");
-  llvm::sys::path::append(Path, builtin::DefaultDir, DefaultName);
-  return Path.str().str();
-}
+namespace llvm {
+namespace cas {
 
 Expected<std::unique_ptr<ActionCache>>
-cas::createOnDiskActionCache(ObjectStore &CAS, StringRef Path) {
+createOnDiskActionCache(ObjectStore &CAS, StringRef Path) {
   return OnDiskActionCache::create(CAS, Path);
 }
+
+} // namespace cas
+} // namespace llvm
 # else
-Expected<std::unique_ptr<ActionCache>>
-cas::createOnDiskActionCache(ObjectStore &CAS, StringRef Path) {
+
+namespace llvm {
+namespace cas {
+
+Expected<std::unique_ptr<ActionCache>> createOnDiskActionCache(ObjectStore &CAS,
+                                                               StringRef Path) {
   return createStringError(inconvertibleErrorCode(), "OnDiskCache is disabled");
 }
+
+} // namespace cas
+} // namespace llvm
 #endif /* LLVM_ENABLE_ONDISK_CAS */
