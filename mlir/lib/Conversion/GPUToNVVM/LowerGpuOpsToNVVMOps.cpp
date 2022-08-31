@@ -36,7 +36,11 @@
 #include "../GPUCommon/GPUOpsLowering.h"
 #include "../GPUCommon/IndexIntrinsicsOpLowering.h"
 #include "../GPUCommon/OpToFuncCallLowering.h"
-#include "../PassDetail.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTGPUOPSTONVVMOPS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -152,7 +156,7 @@ struct GPULaneIdOpToNVVM : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
 /// This pass only handles device code and is not meant to be run on GPU host
 /// code.
 struct LowerGpuOpsToNVVMOpsPass
-    : public ConvertGpuOpsToNVVMOpsBase<LowerGpuOpsToNVVMOpsPass> {
+    : public impl::ConvertGpuOpsToNVVMOpsBase<LowerGpuOpsToNVVMOpsPass> {
   LowerGpuOpsToNVVMOpsPass() = default;
   LowerGpuOpsToNVVMOpsPass(unsigned indexBitwidth) {
     this->indexBitwidth = indexBitwidth;

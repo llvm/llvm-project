@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
-#include "../PassDetail.h"
+
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
@@ -21,9 +21,15 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTCONTROLFLOWTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -196,7 +202,7 @@ void mlir::cf::populateControlFlowToLLVMConversionPatterns(
 namespace {
 /// A pass converting MLIR operations into the LLVM IR dialect.
 struct ConvertControlFlowToLLVM
-    : public ConvertControlFlowToLLVMBase<ConvertControlFlowToLLVM> {
+    : public impl::ConvertControlFlowToLLVMBase<ConvertControlFlowToLLVM> {
   ConvertControlFlowToLLVM() = default;
 
   /// Run the dialect converter on the module.

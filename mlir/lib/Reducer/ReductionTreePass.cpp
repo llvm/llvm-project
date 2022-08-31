@@ -16,7 +16,6 @@
 
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Reducer/PassDetail.h"
 #include "mlir/Reducer/Passes.h"
 #include "mlir/Reducer/ReductionNode.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
@@ -28,6 +27,11 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ManagedStatic.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_REDUCTIONTREE
+#include "mlir/Reducer/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -183,7 +187,7 @@ public:
 /// This class defines the Reduction Tree Pass. It provides a framework to
 /// to implement a reduction pass using a tree structure to keep track of the
 /// generated reduced variants.
-class ReductionTreePass : public ReductionTreeBase<ReductionTreePass> {
+class ReductionTreePass : public impl::ReductionTreeBase<ReductionTreePass> {
 public:
   ReductionTreePass() = default;
   ReductionTreePass(const ReductionTreePass &pass) = default;

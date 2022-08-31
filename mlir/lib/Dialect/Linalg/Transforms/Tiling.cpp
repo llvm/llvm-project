@@ -10,14 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <utility>
+#include "mlir/Dialect/Linalg/Passes.h"
 
-#include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -28,8 +27,13 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
 #include "llvm/Support/CommandLine.h"
+#include <utility>
+
+namespace mlir {
+#define GEN_PASS_DEF_LINALGTILINGPASS
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -744,7 +748,7 @@ static void applyExtractSliceOfPadTensorSwapPattern(func::FuncOp funcOp) {
 }
 
 namespace {
-struct LinalgTilingPass : public LinalgTilingBase<LinalgTilingPass> {
+struct LinalgTilingPass : public impl::LinalgTilingPassBase<LinalgTilingPass> {
   LinalgTilingPass() = default;
   LinalgTilingPass(ArrayRef<int64_t> tileSizes, LinalgTilingLoopType loopType) {
     this->tileSizes = tileSizes;

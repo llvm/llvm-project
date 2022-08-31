@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
-#include "../PassDetail.h"
+
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -20,7 +20,13 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SmallBitVector.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTMEMREFTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -2042,7 +2048,8 @@ void mlir::populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,
 }
 
 namespace {
-struct MemRefToLLVMPass : public ConvertMemRefToLLVMBase<MemRefToLLVMPass> {
+struct MemRefToLLVMPass
+    : public impl::ConvertMemRefToLLVMBase<MemRefToLLVMPass> {
   MemRefToLLVMPass() = default;
 
   void runOnOperation() override {

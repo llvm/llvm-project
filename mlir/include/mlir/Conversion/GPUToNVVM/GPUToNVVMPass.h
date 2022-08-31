@@ -25,6 +25,9 @@ class GPUModuleOp;
 class MMAMatrixType;
 } // namespace gpu
 
+#define GEN_PASS_DECL_CONVERTGPUOPSTONVVMOPS
+#include "mlir/Conversion/Passes.h.inc"
+
 LLVM::LLVMStructType convertMMAToLLVMType(gpu::MMAMatrixType type);
 
 /// Configure target to convert from the GPU dialect to NVVM.

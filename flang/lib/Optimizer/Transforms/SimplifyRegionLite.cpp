@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "mlir/IR/PatternMatch.h"
@@ -15,10 +14,15 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
 
+namespace fir {
+#define GEN_PASS_DEF_SIMPLIFYREGIONLITE
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+} // namespace fir
+
 namespace {
 
 class SimplifyRegionLitePass
-    : public fir::SimplifyRegionLiteBase<SimplifyRegionLitePass> {
+    : public fir::impl::SimplifyRegionLiteBase<SimplifyRegionLitePass> {
 public:
   void runOnOperation() override;
 };
