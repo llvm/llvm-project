@@ -2606,7 +2606,10 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
 
   if (Style.InsertBraces && !Line->InPPDirective && !Line->Tokens.empty() &&
       PreprocessorDirectives.empty()) {
-    Tok = getLastNonComment(*Line);
+    assert(!Line->Tokens.empty());
+    Tok = Style.BraceWrapping.AfterControlStatement == FormatStyle::BWACS_Never
+              ? getLastNonComment(*Line)
+              : Line->Tokens.back().Tok;
     assert(Tok);
     if (Tok->BraceCount < 0) {
       assert(Tok->BraceCount == -1);
