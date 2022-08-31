@@ -13,15 +13,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
-#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
+
+namespace mlir {
+namespace spirv {
+#define GEN_PASS_DEF_SPIRVCOMPOSITETYPELAYOUT
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
+} // namespace spirv
+} // namespace mlir
 
 namespace {
 class SPIRVGlobalVariableOpLayoutInfoDecoration
@@ -99,7 +106,7 @@ static void populateSPIRVLayoutInfoPatterns(RewritePatternSet &patterns) {
 
 namespace {
 class DecorateSPIRVCompositeTypeLayoutPass
-    : public SPIRVCompositeTypeLayoutBase<
+    : public spirv::impl::SPIRVCompositeTypeLayoutBase<
           DecorateSPIRVCompositeTypeLayoutPass> {
   void runOnOperation() override;
 };

@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def Sparsification : Pass<"sparsification", "ModuleOp"> {
+def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
   let summary = "Automatically generate sparse tensor code from sparse tensor types";
   let description = [{
     A pass that implements the core functionality of a **sparse compiler**.
@@ -76,7 +76,7 @@ def Sparsification : Pass<"sparsification", "ModuleOp"> {
   ];
 }
 
-def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {
+def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
   let summary = "Convert sparse tensors and primitives to library calls";
   let description = [{
     A pass that converts sparse tensor primitives into calls into a runtime

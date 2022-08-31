@@ -18,6 +18,9 @@
 namespace mlir {
 class ModuleOp;
 
+#define GEN_PASS_DECL_CONVERTTENSORTOSPIRV
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Creates a pass to convert Tensor ops to SPIR-V ops.
 std::unique_ptr<OperationPass<>> createConvertTensorToSPIRVPass();
 

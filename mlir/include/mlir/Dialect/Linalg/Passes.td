@@ -112,7 +112,7 @@ def LinalgBufferize : Pass<"linalg-bufferize", "func::FuncOp"> {
   ];
 }
 
-def LinalgTiling : Pass<"linalg-tile", "func::FuncOp"> {
+def LinalgTilingPass : Pass<"linalg-tile", "func::FuncOp"> {
   let summary = "Tile operations in the linalg dialect";
   let constructor = "mlir::createLinalgTilingPass()";
   let dependentDialects = [

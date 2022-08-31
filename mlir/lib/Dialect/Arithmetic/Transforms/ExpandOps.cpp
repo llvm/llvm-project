@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Arithmetic/Transforms/Passes.h"
+
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+namespace arith {
+#define GEN_PASS_DEF_ARITHMETICEXPANDOPS
+#include "mlir/Dialect/Arithmetic/Transforms/Passes.h.inc"
+} // namespace arith
+} // namespace mlir
 
 using namespace mlir;
 
@@ -189,7 +196,7 @@ public:
 };
 
 struct ArithmeticExpandOpsPass
-    : public ArithmeticExpandOpsBase<ArithmeticExpandOpsPass> {
+    : public arith::impl::ArithmeticExpandOpsBase<ArithmeticExpandOpsPass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());

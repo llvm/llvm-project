@@ -13,7 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/Analysis/CallGraph.h"
 #include "mlir/IR/Threading.h"
 #include "mlir/Interfaces/CallInterfaces.h"
@@ -21,9 +22,13 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/Support/Debug.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_INLINER
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "inlining"
 
@@ -582,7 +587,7 @@ static LogicalResult inlineCallsInSCC(Inliner &inliner, CGUseList &useList,
 //===----------------------------------------------------------------------===//
 
 namespace {
-class InlinerPass : public InlinerBase<InlinerPass> {
+class InlinerPass : public impl::InlinerBase<InlinerPass> {
 public:
   InlinerPass();
   InlinerPass(const InlinerPass &) = default;

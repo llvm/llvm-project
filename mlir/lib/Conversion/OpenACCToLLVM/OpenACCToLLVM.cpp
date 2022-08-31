@@ -6,12 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../PassDetail.h"
-#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/OpenACCToLLVM/ConvertOpenACCToLLVM.h"
+
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTOPENACCTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -148,7 +154,7 @@ void mlir::populateOpenACCToLLVMConversionPatterns(
 
 namespace {
 struct ConvertOpenACCToLLVMPass
-    : public ConvertOpenACCToLLVMBase<ConvertOpenACCToLLVMPass> {
+    : public impl::ConvertOpenACCToLLVMBase<ConvertOpenACCToLLVMPass> {
   void runOnOperation() override;
 };
 } // namespace
