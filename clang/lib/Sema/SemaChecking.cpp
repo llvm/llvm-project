@@ -15852,7 +15852,7 @@ static bool IsTailPaddedMemberArray(Sema &S, const llvm::APInt &Size,
   if (StrictFlexArraysLevel >= 2 && Size != 0)
     return false;
 
-  if (StrictFlexArraysLevel == 1 && Size.ule(1))
+  if (StrictFlexArraysLevel == 1 && Size.uge(2))
     return false;
 
   // FIXME: While the default -fstrict-flex-arrays=0 permits Size>1 trailing

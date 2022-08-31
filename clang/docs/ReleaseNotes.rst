@@ -84,6 +84,8 @@ Bug Fixes
 - Fix assert that triggers a crash during template name lookup when a type was
   incomplete but was not also a TagType. This fixes
   `Issue 57387 <https://github.com/llvm/llvm-project/issues/57387>`_.
+- Fix a crash when emitting a concept-related diagnostic. This fixes
+  `Issue 57415 <https://github.com/llvm/llvm-project/issues/57415>`_.
 
 
 Improvements to Clang's diagnostics
@@ -116,6 +118,8 @@ Improvements to Clang's diagnostics
 - Correctly diagnose a future keyword if it exist as a keyword in the higher
   language version and specifies in which version it will be a keyword. This
   supports both c and c++ language.
+- When diagnosing multi-level pack expansions of mismatched lengths, Clang will
+  now, in most cases, be able to point to the relevant outer parameter.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -157,6 +161,9 @@ Windows Support
 
 AIX Support
 -----------
+* When using `-shared`, the clang driver now invokes llvm-nm to create an
+  export list if the user doesn't specify one via linker flag or pass an
+  alternative export control option.
 
 C Language Changes in Clang
 ---------------------------

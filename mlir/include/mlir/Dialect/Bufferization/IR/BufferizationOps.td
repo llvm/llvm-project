@@ -82,12 +82,6 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
 
     bool bufferizesToAllocation(OpResult opResult) { return true; }
 
-    FailureOr<unsigned> getMemorySpace(OpResult opResult) {
-      if (getMemorySpace().has_value())
-        return static_cast<unsigned>(*getMemorySpace());
-      return failure();
-    }
-
     bool bufferizesToMemoryRead(OpOperand &opOperand,
                                 const AnalysisState &state);
 
@@ -96,6 +90,10 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
 
     SmallVector<OpResult> getAliasingOpResult(
         OpOperand &opOperand, const AnalysisState &state);
+
+    FailureOr<BaseMemRefType> getBufferType(
+        Value value, const BufferizationOptions &options,
+        const DenseMap<Value, BaseMemRefType> &fixedTypes);
 
     RankedTensorType getType() {
       return getResult().getType().cast<RankedTensorType>();
@@ -323,6 +321,12 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     bool isWritable(Value value, const AnalysisState &state) const {
       // It is unknown whether the memref operand is writable or not.
       return false;
+    }
+
+    FailureOr<BaseMemRefType> getBufferType(
+        Value value, const BufferizationOptions &options,
+        const DenseMap<Value, BaseMemRefType> &fixedTypes) {
+      return getMemref().getType().cast<BaseMemRefType>();
     }
   }];
 

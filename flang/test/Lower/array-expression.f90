@@ -994,6 +994,7 @@ end subroutine test19f
 ! CHECK:         %[[VAL_24:.*]] = fir.array_load %[[VAL_5]](%[[VAL_22]]) {{\[}}%[[VAL_23]]] : (!fir.ref<!fir.array<140x!fir.char<2,13>>>, !fir.shape<1>, !fir.slice<1>) -> !fir.array<140x!fir.char<2,13>>
 ! CHECK:         %[[VAL_25:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i32) -> i64
+! CHECK:         %[[char_temp:.*]] = fir.alloca !fir.char<4,?>(%16 : i64) {bindc_name = ".chrtmp"}
 ! CHECK:         %[[VAL_27:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_28:.*]] = arith.constant 0 : index
 ! CHECK:         %[[VAL_29:.*]] = arith.subi %[[VAL_13]], %[[VAL_27]] : index
@@ -1024,7 +1025,7 @@ end subroutine test19f
 ! CHECK:           %[[VAL_53:.*]] = arith.muli %[[VAL_51]], %[[VAL_52]] : i64
 ! CHECK:           %[[VAL_54:.*]] = arith.constant false
 ! CHECK:           %[[VAL_55:.*]] = fir.convert %[[VAL_46]] : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<i8>
-! CHECK:           %[[VAL_56:.*]] = fir.convert %[[VAL_34]] : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<i8>
+! CHECK:           %[[VAL_56:.*]] = fir.convert %[[char_temp]] : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<i8>
 ! CHECK:           fir.call @llvm.memmove.p0.p0.i64(%[[VAL_55]], %[[VAL_56]], %[[VAL_53]], %[[VAL_54]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:           %[[VAL_57:.*]] = arith.constant 1 : i32
 ! CHECK:           %[[VAL_58:.*]] = arith.subi %[[VAL_11]], %[[VAL_57]] : i32

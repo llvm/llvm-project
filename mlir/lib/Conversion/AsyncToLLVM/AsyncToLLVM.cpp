@@ -278,6 +278,17 @@ public:
   AsyncRuntimeTypeConverter() {
     addConversion([](Type type) { return type; });
     addConversion(convertAsyncTypes);
+
+    // Use UnrealizedConversionCast as the bridge so that we don't need to pull
+    // in patterns for other dialects.
+    auto addUnrealizedCast = [](OpBuilder &builder, Type type,
+                                ValueRange inputs, Location loc) {
+      auto cast = builder.create<UnrealizedConversionCastOp>(loc, type, inputs);
+      return Optional<Value>(cast.getResult(0));
+    };
+
+    addSourceMaterialization(addUnrealizedCast);
+    addTargetMaterialization(addUnrealizedCast);
   }
 
   static Optional<Type> convertAsyncTypes(Type type) {

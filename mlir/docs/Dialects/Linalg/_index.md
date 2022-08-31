@@ -103,10 +103,10 @@ layout, and the second one is a `memref` of 4-element vectors with a 2-strided,
 #identity = affine_map<(d0) -> (d0)>
 
 func.func @example(%A: memref<?xf32, #identity>,
-              %B: memref<?xvector<4xf32>, offset: 1, strides: [2]>) {
+              %B: memref<?xvector<4xf32>, strided<[2], offset: 1>>) {
   linalg.generic #attrs
   ins(%A: memref<?xf32, #identity>)
-  outs(%B: memref<?xvector<4xf32>, offset: 1, strides: [2]>) {
+  outs(%B: memref<?xvector<4xf32>, strided<[2], offset: 1>>) {
   ^bb0(%a: f32, %b: vector<4xf32>):
     %c = "some_compute"(%a, %b): (f32, vector<4xf32>) -> (vector<4xf32>)
     linalg.yield %c: vector<4xf32>
@@ -186,10 +186,10 @@ uses an identity layout.
   iterator_types = ["parallel", "parallel"]
 }
 
-func.func @example(%A: memref<8x?xf32, offset: 0, strides: [2, 2]>,
+func.func @example(%A: memref<8x?xf32, strided<[2, 2], offset: 0>>,
               %B: memref<?xvector<4xf32>>) {
   linalg.generic #attrs
-  ins(%A: memref<8x?xf32, offset: 0, strides: [2, 2]>)
+  ins(%A: memref<8x?xf32, strided<[2, 2], offset: 0>>)
   outs(%B: memref<?xvector<4xf32>>) {
   ^bb0(%a: f32, %b: vector<4xf32>):
     %c = "some_compute"(%a, %b): (f32, vector<4xf32>) -> (vector<4xf32>)

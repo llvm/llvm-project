@@ -934,8 +934,11 @@ public:
         // when adding support for multiple compressed dimensions or
         // for dense-after-compressed.
         break;
+      default:
+        FATAL("unsupported dimension level type");
       }
       sz = checkedMul(sz, dimSizes[r]);
+
     }
   }
 
