@@ -38,11 +38,10 @@
 // CHECK-NEXT:       ]
 // CHECK-NEXT:       "command-line": [
 // CHECK-NOT:          "-DFOO"
-// CHECK-NOT:          "FOO"
 // CHECK:            ]
 // CHECK:            "input-file": "{{.*}}tu1.c"
 // CHECK-NEXT:     }
-// CHECK:          {
+// CHECK-NEXT:     {
 // CHECK:            "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "[[HASH_FOO]]"
@@ -50,12 +49,11 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ]
 // CHECK-NEXT:       "command-line": [
-// CHECK:              "-D"
-// CHECK-NEXT:         "FOO"
+// CHECK:              "-DFOO"
 // CHECK:            ]
 // CHECK:            "input-file": "{{.*}}tu2.c"
 // CHECK-NEXT:     }
-// CHECK:          {
+// CHECK-NEXT:     {
 // CHECK:            "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "[[HASH_NO_FOO]]"
@@ -63,9 +61,8 @@
 // CHECK-NEXT:         }
 // CHECK-NEXT:       ]
 // CHECK-NEXT:       "command-line": [
+// CHECK:              "-DFOO"
 // CHECK:              "-fmodules-ignore-macro=FOO"
-// CHECK:              "-D"
-// CHECK-NEXT:         "FOO"
 // CHECK:            ]
 // CHECK:            "input-file": "{{.*}}tu3.c"
 

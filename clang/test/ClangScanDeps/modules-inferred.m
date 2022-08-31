@@ -31,7 +31,7 @@ inferred a = 0;
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
-// CHECK:            "clang-context-hash": "[[HASH_TU:[A-Z0-9]+]]",
+// CHECK-NEXT:       "clang-context-hash": "[[HASH_TU:[A-Z0-9]+]]",
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "[[HASH_INFERRED]]",
@@ -40,8 +40,10 @@ inferred a = 0;
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
 // CHECK:            ],
-// CHECK:            "file-deps": [
+// CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/modules_cdb_input.cpp"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/modules_cdb_input.cpp"
 // CHECK-NEXT:     }
+// CHECK-NEXT:   ]
+// CHECK-NEXT: }

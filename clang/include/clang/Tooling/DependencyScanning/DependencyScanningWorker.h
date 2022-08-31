@@ -34,21 +34,11 @@ namespace dependencies {
 
 class DependencyScanningWorkerFilesystem;
 
-/// A command-line tool invocation that is part of building a TU.
-///
-/// \see FullDependencies::Commands.
-struct Command {
-  std::string Executable;
-  std::vector<std::string> Arguments;
-};
-
 class DependencyConsumer {
 public:
   virtual ~DependencyConsumer() {}
 
   virtual void finalize(CompilerInstance &CI) {}
-
-  virtual void handleBuildCommand(Command Cmd) = 0;
 
   virtual void
   handleDependencyOutputOpts(const DependencyOutputOptions &Opts) = 0;
@@ -77,7 +67,6 @@ public:
   virtual void handleHasIncludeCheck(Preprocessor &PP, bool Result) = 0;
 
 protected:
-  void handleBuildCommand(Command) override {}
   void handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {
     llvm::report_fatal_error("unexpected callback for include-tree");
   }

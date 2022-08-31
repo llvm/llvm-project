@@ -181,15 +181,11 @@ class ModuleDepCollector final : public DependencyCollector {
 public:
   ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
-                     CompilerInvocation OriginalCI, bool OptimizeArgs,
+                     CompilerInvocation &&OriginalCI, bool OptimizeArgs,
                      bool EagerLoadModules);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
-
-  /// Apply any changes implied by the discovered dependencies to the given
-  /// invocation, (e.g. disable implicit modules, add explicit module paths).
-  void applyDiscoveredDependencies(CompilerInvocation &CI);
 
 private:
   friend ModuleDepCollectorPP;
