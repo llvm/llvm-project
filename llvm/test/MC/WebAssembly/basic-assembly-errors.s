@@ -1,11 +1,11 @@
-# RUN: not llvm-mc -triple=wasm32-unknown-unknown -mattr=+simd128,+nontrapping-fptoint,+exception-handling < %s 2>&1 | FileCheck %s
+# RUN: not llvm-mc -triple=wasm32-unknown-unknown -mattr=+simd128,+nontrapping-fptoint,+exception-handling %s 2>&1 | FileCheck %s
 
 # CHECK: invalid operand for instruction
 # (must be 0.0 or similar)
     f32.const 0
 
-# CHECK: Wasm doesn't support data symbols in text sections
-	.type	objerr,@object
+# CHECK: basic-assembly-errors.s:9:1: error: Wasm doesn't support data symbols in text sections
+.type objerr,@object
 objerr:
 
 # CHECK: End of block construct with no start: end_try

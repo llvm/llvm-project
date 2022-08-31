@@ -1057,7 +1057,7 @@ public:
     llvm_unreachable("Implement any new match types added!");
   }
 
-  void doBeforeLabelEmit(MCSymbol *Symbol) override {
+  void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) override {
     // Code below only applies to labels in text sections.
     auto CWS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
     if (!CWS || !CWS->getKind().isText())
@@ -1067,7 +1067,7 @@ public:
     // Unlike other targets, we don't allow data in text sections (labels
     // declared with .type @object).
     if (WasmSym->getType() == wasm::WASM_SYMBOL_TYPE_DATA) {
-      Parser.Error(Parser.getTok().getLoc(),
+      Parser.Error(IDLoc,
                    "Wasm doesn\'t support data symbols in text sections");
       return;
     }
