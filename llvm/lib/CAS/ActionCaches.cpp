@@ -161,6 +161,9 @@ std::unique_ptr<ActionCache> createInMemoryActionCache(ObjectStore &CAS) {
 } // namespace llvm
 
 #if LLVM_ENABLE_ONDISK_CAS
+constexpr StringLiteral OnDiskActionCache::ActionCacheFile;
+constexpr StringLiteral OnDiskActionCache::FilePrefix;
+
 OnDiskActionCache::OnDiskActionCache(ObjectStore &CAS, StringRef Path,
                                      OnDiskHashMappedTrie Cache)
     : ActionCache(CAS), Path(Path.str()), Cache(std::move(Cache)) {}
