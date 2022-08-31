@@ -338,7 +338,7 @@ END_REGISTER_VP_INTRINSIC(vp_icmp)
 // llvm.vp.store(val,ptr,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(vp_store, 2, 3)
 // chain = VP_STORE chain,val,base,offset,mask,evl
-BEGIN_REGISTER_VP_SDNODE(VP_STORE, 0, vp_store, 4, 5)
+BEGIN_REGISTER_VP_SDNODE(VP_STORE, 1, vp_store, 4, 5)
 HELPER_MAP_VPID_TO_VPSD(vp_store, VP_STORE)
 VP_PROPERTY_FUNCTIONAL_OPC(Store)
 VP_PROPERTY_FUNCTIONAL_INTRINSIC(masked_store)
