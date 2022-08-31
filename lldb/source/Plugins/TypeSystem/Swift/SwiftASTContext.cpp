@@ -8117,11 +8117,11 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
   struct UserImportFinder : public swift::ASTWalker {
     llvm::SmallDenseSet<swift::ModuleDecl*, 1> imports;
 
-    bool walkToDeclPre(swift::Decl *D) override {
+    PreWalkAction walkToDeclPre(swift::Decl *D) override {
       if (auto *ID = llvm::dyn_cast<swift::ImportDecl>(D))
         if (auto *M = ID->getModule())
           imports.insert(M);
-      return true;
+      return Action::Continue();
     }
   };
   UserImportFinder import_finder;

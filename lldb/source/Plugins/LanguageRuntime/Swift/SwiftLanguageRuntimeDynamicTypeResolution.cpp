@@ -554,14 +554,14 @@ namespace {
 class ASTVerifier : public swift::ASTWalker {
   bool hasMissingPatterns = false;
 
-  bool walkToDeclPre(swift::Decl *D) override {
+  PreWalkAction walkToDeclPre(swift::Decl *D) override {
     if (auto *PBD = llvm::dyn_cast<swift::PatternBindingDecl>(D)) {
       if (PBD->getPatternList().empty()) {
         hasMissingPatterns = true;
-        return false;
+        return Action::SkipChildren();
       }
     }
-    return true;
+    return Action::Continue();
   }
 
 public:
