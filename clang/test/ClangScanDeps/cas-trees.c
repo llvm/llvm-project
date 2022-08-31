@@ -15,7 +15,7 @@
 // FULL-TREE:      {
 // FULL-TREE-NEXT:   "modules": [],
 // FULL-TREE-NEXT:   "translation-units": [
-// FULL-TREE:          {
+// FULL-TREE-NEXT:     {
 // FULL-TREE:            "casfs-root-id": "llvmcas://{{[[:xdigit:]]+}}"
 // FULL-TREE-NEXT:       "clang-context-hash": "{{[A-Z0-9]+}}",
 // FULL-TREE-NEXT:       "clang-module-deps": [],
@@ -27,7 +27,7 @@
 // FULL-TREE-NEXT:         "[[PREFIX]]/n1.h"
 // FULL-TREE-NEXT:       ],
 // FULL-TREE-NEXT:       "input-file": "[[PREFIX]]/t1.c"
-// FULL-TREE:          }
+// FULL-TREE-NEXT:     }
 // FULL-TREE:          {
 // FULL-TREE:            "casfs-root-id": "llvmcas://{{[[:xdigit:]]+}}"
 // FULL-TREE-NEXT:       "clang-context-hash": "{{[A-Z0-9]+}}",
