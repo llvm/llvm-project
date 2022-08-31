@@ -86,6 +86,9 @@ Bug Fixes
   `Issue 57387 <https://github.com/llvm/llvm-project/issues/57387>`_.
 - Fix a crash when emitting a concept-related diagnostic. This fixes
   `Issue 57415 <https://github.com/llvm/llvm-project/issues/57415>`_.
+- Fix a crash when attempting to default a virtual constexpr non-special member
+  function in a derived class. This fixes
+  `Issue 57431 <https://github.com/llvm/llvm-project/issues/57431>`_
 
 
 Improvements to Clang's diagnostics
