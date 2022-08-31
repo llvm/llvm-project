@@ -794,18 +794,14 @@ define <16 x i16> @test_x86_avx2_mpsadbw(<32 x i8> %a0, <32 x i8> %a1) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <32 x i8> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
-; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <32 x i8> [[TMP2]] to i256
+; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP4]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
 ; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <32 x i8> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP6]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
-; CHECK:       7:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       8:
+; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x i16> @llvm.x86.avx2.mpsadbw(<32 x i8> [[A0:%.*]], <32 x i8> [[A1:%.*]], i8 7)
 ; CHECK-NEXT:    store <16 x i16> zeroinitializer, <16 x i16>* bitcast ([100 x i64]* @__msan_retval_tls to <16 x i16>*), align 8
 ; CHECK-NEXT:    ret <16 x i16> [[RES]]
@@ -820,8 +816,8 @@ define <16 x i16> @test_x86_avx2_mpsadbw_load_op0(<32 x i8>* %ptr, <32 x i8> %a1
 ; CHECK-DAG:    [[TMP1:%.*]] = load i64, i64* getelementptr inbounds ([100 x i64], [100 x i64]* @__msan_param_tls, i32 0, i32 0), align 8
 ; CHECK-DAG:    [[TMP2:%.*]] = load <32 x i8>, <32 x i8>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to <32 x i8>*), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
 ; CHECK:       3:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
@@ -832,19 +828,15 @@ define <16 x i16> @test_x86_avx2_mpsadbw_load_op0(<32 x i8>* %ptr, <32 x i8> %a1
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to <32 x i8>*
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load <32 x i8>, <32 x i8>* [[TMP7]], align 32
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <32 x i8> [[_MSLD]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP8]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
-; CHECK:       9:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP8]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <32 x i8> [[TMP2]] to i256
+; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP9]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF0]]
 ; CHECK:       10:
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <32 x i8> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP11]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF0]]
-; CHECK:       12:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       13:
+; CHECK:       11:
 ; CHECK-NEXT:    [[RES:%.*]] = call <16 x i16> @llvm.x86.avx2.mpsadbw(<32 x i8> [[A0]], <32 x i8> [[A1:%.*]], i8 7)
 ; CHECK-NEXT:    store <16 x i16> zeroinitializer, <16 x i16>* bitcast ([100 x i64]* @__msan_retval_tls to <16 x i16>*), align 8
 ; CHECK-NEXT:    ret <16 x i16> [[RES]]
@@ -976,18 +968,14 @@ define <8 x float> @test_x86_avx2_permps(<8 x float> %a0, <8 x i32> %a1) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
-; CHECK:       4:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
+; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP4]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
 ; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP6]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
-; CHECK:       7:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       8:
+; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx2.permps(<8 x float> [[A0:%.*]], <8 x i32> [[A1:%.*]])
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, <8 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <8 x i32>*), align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
@@ -1004,18 +992,14 @@ define <2 x i64> @test_x86_avx2_maskload_q(i8* %a0, <2 x i64> %a1) #0 {
 ; CHECK-DAG:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to <2 x i64>*), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <2 x i64> [[TMP2]] to i128
+; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP3]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
 ; CHECK:       4:
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP2]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       7:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.x86.avx2.maskload.q(i8* [[A0:%.*]], <2 x i64> [[A1:%.*]])
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, <2 x i64>* bitcast ([100 x i64]* @__msan_retval_tls to <2 x i64>*), align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
@@ -1032,18 +1016,14 @@ define <4 x i64> @test_x86_avx2_maskload_q_256(i8* %a0, <4 x i64> %a1) #0 {
 ; CHECK-DAG:    [[TMP2:%.*]] = load <4 x i64>, <4 x i64>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to <4 x i64>*), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i64> [[TMP2]] to i256
+; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP3]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
 ; CHECK:       4:
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i64> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       7:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i64> @llvm.x86.avx2.maskload.q.256(i8* [[A0:%.*]], <4 x i64> [[A1:%.*]])
 ; CHECK-NEXT:    store <4 x i64> zeroinitializer, <4 x i64>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i64>*), align 8
 ; CHECK-NEXT:    ret <4 x i64> [[RES]]
@@ -1060,18 +1040,14 @@ define <4 x i32> @test_x86_avx2_maskload_d(i8* %a0, <4 x i32> %a1) #0 {
 ; CHECK-DAG:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to <4 x i32>*), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
+; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP3]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
 ; CHECK:       4:
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       7:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx2.maskload.d(i8* [[A0:%.*]], <4 x i32> [[A1:%.*]])
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
@@ -1088,18 +1064,14 @@ define <8 x i32> @test_x86_avx2_maskload_d_256(i8* %a0, <8 x i32> %a1) #0 {
 ; CHECK-DAG:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 8) to <8 x i32>*), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
+; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP3]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
 ; CHECK:       4:
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       7:
+; CHECK:       5:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx2.maskload.d.256(i8* [[A0:%.*]], <8 x i32> [[A1:%.*]])
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, <8 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <8 x i32>*), align 8
 ; CHECK-NEXT:    ret <8 x i32> [[RES]]
@@ -1117,25 +1089,17 @@ define void @test_x86_avx2_maskstore_q(i8* %a0, <2 x i64> %a1, <2 x i64> %a2) #0
 ; CHECK-DAG:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 24) to <2 x i64>*), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP2]] to i128
+; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP5]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
+; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i64> [[TMP2]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP6]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       8:
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP9]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF0]]
-; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       11:
 ; CHECK-NEXT:    call void @llvm.x86.avx2.maskstore.q(i8* [[A0:%.*]], <2 x i64> [[A1:%.*]], <2 x i64> [[A2:%.*]])
 ; CHECK-NEXT:    ret void
 ;
@@ -1152,25 +1116,17 @@ define void @test_x86_avx2_maskstore_q_256(i8* %a0, <4 x i64> %a1, <4 x i64> %a2
 ; CHECK-DAG:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 40) to <4 x i64>*), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i64> [[TMP2]] to i256
+; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP4]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i64> [[TMP3]] to i256
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP5]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
+; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i64> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP6]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       8:
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i64> [[TMP3]] to i256
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP9]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF0]]
-; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       11:
 ; CHECK-NEXT:    call void @llvm.x86.avx2.maskstore.q.256(i8* [[A0:%.*]], <4 x i64> [[A1:%.*]], <4 x i64> [[A2:%.*]])
 ; CHECK-NEXT:    ret void
 ;
@@ -1187,25 +1143,17 @@ define void @test_x86_avx2_maskstore_d(i8* %a0, <4 x i32> %a1, <4 x i32> %a2) #0
 ; CHECK-DAG:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 24) to <4 x i32>*), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
+; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP4]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP5]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
+; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[TMP2]] to i128
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i128 [[TMP6]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       8:
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP9]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF0]]
-; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       11:
 ; CHECK-NEXT:    call void @llvm.x86.avx2.maskstore.d(i8* [[A0:%.*]], <4 x i32> [[A1:%.*]], <4 x i32> [[A2:%.*]])
 ; CHECK-NEXT:    ret void
 ;
@@ -1222,25 +1170,17 @@ define void @test_x86_avx2_maskstore_d_256(i8* %a0, <8 x i32> %a1, <8 x i32> %a2
 ; CHECK-DAG:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* inttoptr (i64 add (i64 ptrtoint ([100 x i64]* @__msan_param_tls to i64), i64 40) to <8 x i32>*), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP4:%.*]], label [[TMP5:%.*]], !prof [[PROF0]]
-; CHECK:       4:
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
+; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP4]], 0
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32> [[TMP3]] to i256
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP5]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    br i1 [[_MSOR3]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
+; CHECK:       6:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       5:
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
-; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i256 [[TMP6]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       8:
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <8 x i32> [[TMP3]] to i256
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP9]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF0]]
-; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       11:
 ; CHECK-NEXT:    call void @llvm.x86.avx2.maskstore.d.256(i8* [[A0:%.*]], <8 x i32> [[A1:%.*]], <8 x i32> [[A2:%.*]])
 ; CHECK-NEXT:    ret void
 ;
@@ -1605,31 +1545,19 @@ define <2 x double> @test_x86_avx2_gather_d_pd(<2 x double> %a0, i8* %a1, <4 x i
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[TMP4]] to i128
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i128 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <2 x i64> [[TMP4]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.avx2.gather.d.pd(<2 x double> [[A0:%.*]], i8* [[A1:%.*]], <4 x i32> [[IDX:%.*]], <2 x double> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, <2 x i64>* bitcast ([100 x i64]* @__msan_retval_tls to <2 x i64>*), align 8
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
@@ -1650,31 +1578,19 @@ define <4 x double> @test_x86_avx2_gather_d_pd_256(<4 x double> %a0, i8* %a1, <4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i64> [[TMP4]] to i256
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i256 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i64> [[TMP4]] to i256
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i256 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> [[A0:%.*]], i8* [[A1:%.*]], <4 x i32> [[IDX:%.*]], <4 x double> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <4 x i64> zeroinitializer, <4 x i64>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i64>*), align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
@@ -1695,31 +1611,19 @@ define <2 x double> @test_x86_avx2_gather_q_pd(<2 x double> %a0, i8* %a1, <2 x i
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[TMP4]] to i128
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i128 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <2 x i64> [[TMP4]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.avx2.gather.q.pd(<2 x double> [[A0:%.*]], i8* [[A1:%.*]], <2 x i64> [[IDX:%.*]], <2 x double> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, <2 x i64>* bitcast ([100 x i64]* @__msan_retval_tls to <2 x i64>*), align 8
 ; CHECK-NEXT:    ret <2 x double> [[RES]]
@@ -1740,31 +1644,19 @@ define <4 x double> @test_x86_avx2_gather_q_pd_256(<4 x double> %a0, i8* %a1, <4
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i64> [[TMP3]] to i256
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i64> [[TMP4]] to i256
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i256 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x i64> [[TMP3]] to i256
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i64> [[TMP4]] to i256
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i256 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> [[A0:%.*]], i8* [[A1:%.*]], <4 x i64> [[IDX:%.*]], <4 x double> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <4 x i64> zeroinitializer, <4 x i64>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i64>*), align 8
 ; CHECK-NEXT:    ret <4 x double> [[RES]]
@@ -1785,31 +1677,19 @@ define <4 x float> @test_x86_avx2_gather_d_ps(<4 x float> %a0, i8* %a1, <4 x i32
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i32> [[TMP4]] to i128
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i128 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i32> [[TMP4]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx2.gather.d.ps(<4 x float> [[A0:%.*]], i8* [[A1:%.*]], <4 x i32> [[IDX:%.*]], <4 x float> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
@@ -1830,31 +1710,19 @@ define <8 x float> @test_x86_avx2_gather_d_ps_256(<8 x float> %a0, i8* %a1, <8 x
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i32> [[TMP3]] to i256
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i32> [[TMP4]] to i256
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i256 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <8 x i32> [[TMP3]] to i256
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <8 x i32> [[TMP4]] to i256
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i256 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> [[A0:%.*]], i8* [[A1:%.*]], <8 x i32> [[IDX:%.*]], <8 x float> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, <8 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <8 x i32>*), align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
@@ -1875,31 +1743,19 @@ define <4 x float> @test_x86_avx2_gather_q_ps(<4 x float> %a0, i8* %a1, <2 x i64
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i32> [[TMP4]] to i128
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i128 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i32> [[TMP4]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx2.gather.q.ps(<4 x float> [[A0:%.*]], i8* [[A1:%.*]], <2 x i64> [[IDX:%.*]], <4 x float> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
@@ -1920,31 +1776,19 @@ define <4 x float> @test_x86_avx2_gather_q_ps_256(<4 x float> %a0, i8* %a1, <4 x
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i64> [[TMP3]] to i256
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i32> [[TMP4]] to i128
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i128 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x i64> [[TMP3]] to i256
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i32> [[TMP4]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.avx2.gather.q.ps.256(<4 x float> [[A0:%.*]], i8* [[A1:%.*]], <4 x i64> [[IDX:%.*]], <4 x float> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
 ; CHECK-NEXT:    ret <4 x float> [[RES]]
@@ -1965,31 +1809,19 @@ define <2 x i64> @test_x86_avx2_gather_d_q(<2 x i64> %a0, i8* %a1, <4 x i32> %id
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[TMP4]] to i128
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i128 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <2 x i64> [[TMP4]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.x86.avx2.gather.d.q(<2 x i64> [[A0:%.*]], i8* [[A1:%.*]], <4 x i32> [[IDX:%.*]], <2 x i64> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, <2 x i64>* bitcast ([100 x i64]* @__msan_retval_tls to <2 x i64>*), align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
@@ -2010,31 +1842,19 @@ define <4 x i64> @test_x86_avx2_gather_d_q_256(<4 x i64> %a0, i8* %a1, <4 x i32>
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i64> [[TMP4]] to i256
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i256 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i64> [[TMP4]] to i256
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i256 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i64> @llvm.x86.avx2.gather.d.q.256(<4 x i64> [[A0:%.*]], i8* [[A1:%.*]], <4 x i32> [[IDX:%.*]], <4 x i64> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <4 x i64> zeroinitializer, <4 x i64>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i64>*), align 8
 ; CHECK-NEXT:    ret <4 x i64> [[RES]]
@@ -2055,31 +1875,19 @@ define <2 x i64> @test_x86_avx2_gather_q_q(<2 x i64> %a0, i8* %a1, <2 x i64> %id
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[TMP4]] to i128
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i128 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <2 x i64> [[TMP4]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64> [[A0:%.*]], i8* [[A1:%.*]], <2 x i64> [[IDX:%.*]], <2 x i64> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, <2 x i64>* bitcast ([100 x i64]* @__msan_retval_tls to <2 x i64>*), align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
@@ -2100,31 +1908,19 @@ define <4 x i64> @test_x86_avx2_gather_q_q_256(<4 x i64> %a0, i8* %a1, <4 x i64>
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i64> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i64> [[TMP3]] to i256
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i64> [[TMP4]] to i256
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i256 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x i64> [[TMP3]] to i256
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i64> [[TMP4]] to i256
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i256 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i64> @llvm.x86.avx2.gather.q.q.256(<4 x i64> [[A0:%.*]], i8* [[A1:%.*]], <4 x i64> [[IDX:%.*]], <4 x i64> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <4 x i64> zeroinitializer, <4 x i64>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i64>*), align 8
 ; CHECK-NEXT:    ret <4 x i64> [[RES]]
@@ -2145,31 +1941,19 @@ define <4 x i32> @test_x86_avx2_gather_d_d(<4 x i32> %a0, i8* %a1, <4 x i32> %id
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i32> [[TMP4]] to i128
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i128 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x i32> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i32> [[TMP4]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx2.gather.d.d(<4 x i32> [[A0:%.*]], i8* [[A1:%.*]], <4 x i32> [[IDX:%.*]], <4 x i32> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
@@ -2190,31 +1974,19 @@ define <8 x i32> @test_x86_avx2_gather_d_d_256(<8 x i32> %a0, i8* %a1, <8 x i32>
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i32> [[TMP1]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i32> [[TMP3]] to i256
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i32> [[TMP4]] to i256
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i256 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <8 x i32> [[TMP3]] to i256
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <8 x i32> [[TMP4]] to i256
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i256 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i32> @llvm.x86.avx2.gather.d.d.256(<8 x i32> [[A0:%.*]], i8* [[A1:%.*]], <8 x i32> [[IDX:%.*]], <8 x i32> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, <8 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <8 x i32>*), align 8
 ; CHECK-NEXT:    ret <8 x i32> [[RES]]
@@ -2235,31 +2007,19 @@ define <4 x i32> @test_x86_avx2_gather_q_d(<4 x i32> %a0, i8* %a1, <2 x i64> %id
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i32> [[TMP4]] to i128
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i128 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i32> [[TMP4]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx2.gather.q.d(<4 x i32> [[A0:%.*]], i8* [[A1:%.*]], <2 x i64> [[IDX:%.*]], <4 x i32> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
@@ -2280,31 +2040,19 @@ define <4 x i32> @test_x86_avx2_gather_q_d_256(<4 x i32> %a0, i8* %a1, <4 x i64>
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP1]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <4 x i64> [[TMP3]] to i256
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <4 x i32> [[TMP4]] to i128
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i128 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <4 x i64> [[TMP3]] to i256
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <4 x i32> [[TMP4]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.x86.avx2.gather.q.d.256(<4 x i32> [[A0:%.*]], i8* [[A1:%.*]], <4 x i64> [[IDX:%.*]], <4 x i32> [[MASK:%.*]], i8 2)
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, <4 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <4 x i32>*), align 8
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
@@ -2327,43 +2075,31 @@ define <8 x float>  @test_gather_mask(<8 x float> %a0, float* %a, <8 x i32> %idx
 ; CHECK-NEXT:    [[A_I8:%.*]] = bitcast float* [[A:%.*]] to i8*
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i32> [[TMP2]] to i256
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i256 [[TMP6]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF0]]
-; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       8:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <8 x i32> [[TMP3]] to i256
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i32> [[TMP4]] to i256
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i256 [[TMP8]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP9:%.*]], label [[TMP10:%.*]], !prof [[PROF0]]
 ; CHECK:       9:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       10:
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast <8 x i32> [[TMP3]] to i256
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i256 [[TMP11]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP12:%.*]], label [[TMP13:%.*]], !prof [[PROF0]]
-; CHECK:       12:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       13:
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <8 x i32> [[TMP4]] to i256
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i256 [[TMP14]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP15:%.*]], label [[TMP16:%.*]], !prof [[PROF0]]
-; CHECK:       15:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       16:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> [[A0:%.*]], i8* [[A_I8]], <8 x i32> [[IDX:%.*]], <8 x float> [[MASK:%.*]], i8 4)
 ; CHECK-NEXT:    [[OUT_PTR:%.*]] = bitcast float* [[OUT:%.*]] to <8 x float>*
-; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i64 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP4]], label [[TMP17:%.*]], label [[TMP18:%.*]], !prof [[PROF0]]
-; CHECK:       17:
+; CHECK-NEXT:    [[_MSCMP6:%.*]] = icmp ne i64 [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[_MSCMP6]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
+; CHECK:       11:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       18:
-; CHECK-NEXT:    [[TMP19:%.*]] = ptrtoint <8 x float>* [[OUT_PTR]] to i64
-; CHECK-NEXT:    [[TMP20:%.*]] = xor i64 [[TMP19]], 87960930222080
-; CHECK-NEXT:    [[TMP21:%.*]] = inttoptr i64 [[TMP20]] to <8 x i32>*
-; CHECK-NEXT:    store <8 x i32> [[TMP4]], <8 x i32>* [[TMP21]], align 4
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint <8 x float>* [[OUT_PTR]] to i64
+; CHECK-NEXT:    [[TMP14:%.*]] = xor i64 [[TMP13]], 87960930222080
+; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to <8 x i32>*
+; CHECK-NEXT:    store <8 x i32> [[TMP4]], <8 x i32>* [[TMP15]], align 4
 ; CHECK-NEXT:    store <8 x float> [[MASK]], <8 x float>* [[OUT_PTR]], align 4
 ; CHECK-NEXT:    store <8 x i32> zeroinitializer, <8 x i32>* bitcast ([100 x i64]* @__msan_retval_tls to <8 x i32>*), align 8
 ; CHECK-NEXT:    ret <8 x float> [[RES]]
@@ -2389,31 +2125,19 @@ define <2 x i64> @test_mask_demanded_bits(<2 x i64> %a0, i8* %a1, <2 x i64> %idx
 ; CHECK-NEXT:    [[MASK1:%.*]] = sext <2 x i1> [[MASK:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x i64> [[TMP2]] to i128
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP6:%.*]], label [[TMP7:%.*]], !prof [[PROF0]]
-; CHECK:       6:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       7:
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
+; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <2 x i64> [[TMP4]] to i128
+; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP6]], 0
+; CHECK-NEXT:    [[_MSOR3:%.*]] = or i1 [[_MSOR]], [[_MSCMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[_MSPROP]] to i128
+; CHECK-NEXT:    [[_MSCMP4:%.*]] = icmp ne i128 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSOR5:%.*]] = or i1 [[_MSOR3]], [[_MSCMP4]]
+; CHECK-NEXT:    br i1 [[_MSOR5]], label [[TMP8:%.*]], label [[TMP9:%.*]], !prof [[PROF0]]
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <2 x i64> [[TMP4]] to i128
-; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i128 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF0]]
-; CHECK:       11:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       12:
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <2 x i64> [[_MSPROP]] to i128
-; CHECK-NEXT:    [[_MSCMP3:%.*]] = icmp ne i128 [[TMP13]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP3]], label [[TMP14:%.*]], label [[TMP15:%.*]], !prof [[PROF0]]
-; CHECK:       14:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR6]]
-; CHECK-NEXT:    unreachable
-; CHECK:       15:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.x86.avx2.gather.q.q(<2 x i64> [[A0:%.*]], i8* [[A1:%.*]], <2 x i64> [[IDX:%.*]], <2 x i64> [[MASK1]], i8 2)
 ; CHECK-NEXT:    store <2 x i64> zeroinitializer, <2 x i64>* bitcast ([100 x i64]* @__msan_retval_tls to <2 x i64>*), align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]

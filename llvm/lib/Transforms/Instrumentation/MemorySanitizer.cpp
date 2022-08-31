@@ -1274,7 +1274,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       bool InstrumentWithCalls,
       ArrayRef<ShadowOriginAndInsertPoint> InstructionChecks) {
     const DataLayout &DL = F.getParent()->getDataLayout();
+    // Disable combining in some cases. TrackOrigins checks each shadow to pick
+    // correct origin. InstrumentWithCalls expects to reduce shadow using API.
+    bool Combine = !InstrumentWithCalls && !MS.TrackOrigins;
     Instruction *Instruction = InstructionChecks.front().OrigIns;
+    Value *Shadow = nullptr;
     for (const auto &ShadowData : InstructionChecks) {
       assert(ShadowData.OrigIns == Instruction);
       IRBuilder<> IRB(Instruction);
@@ -1291,13 +1295,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         if (llvm::isKnownNonZero(ConvertedShadow, DL)) {
           // Report as the value is definitely uninitialized.
           insertWarningFn(IRB, ShadowData.Origin);
+          if (!MS.Recover)
+            return; // Always fail and stop here, not need to check the rest.
           // Skip entire instruction,
           continue;
         }
         // Fallback to runtime check, which still can be optimized out later.
       }
-      materializeOneCheck(IRB, ConvertedShadow, ShadowData.Origin,
-                          InstrumentWithCalls);
+
+      if (!Combine) {
+        materializeOneCheck(IRB, ConvertedShadow, ShadowData.Origin,
+                            InstrumentWithCalls);
+        continue;
+      }
+
+      Value *BoolShadow = convertToBool(ConvertedShadow, IRB, "_mscmp");
+      Shadow = Shadow ? IRB.CreateOr(Shadow, BoolShadow, "_msor") : BoolShadow;
+    }
+
+    if (Shadow) {
+      assert(Combine);
+      IRBuilder<> IRB(Instruction);
+      materializeOneCheck(IRB, Shadow, nullptr, false);
     }
   }
 
