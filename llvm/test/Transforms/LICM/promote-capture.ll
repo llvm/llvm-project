@@ -156,7 +156,7 @@ exit:
   ret void
 }
 
-; FIXME: Should not get promoted, because the pointer is captured and may not
+; Should not get promoted, because the pointer is captured and may not
 ; be thread-local.
 define void @test_captured_before_loop_byval(i32* byval(i32) align 4 %count, i32 %len) {
 ; CHECK-LABEL: @test_captured_before_loop_byval(
@@ -172,6 +172,7 @@ define void @test_captured_before_loop_byval(i32* byval(i32) align 4 %count, i32
 ; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[LATCH]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[C_INC:%.*]] = add i32 [[C_INC2]], 1
+; CHECK-NEXT:    store i32 [[C_INC]], i32* [[COUNT]], align 4
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[C_INC1]] = phi i32 [ [[C_INC]], [[IF]] ], [ [[C_INC2]], [[LOOP]] ]
@@ -179,8 +180,6 @@ define void @test_captured_before_loop_byval(i32* byval(i32) align 4 %count, i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[LEN:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[C_INC1_LCSSA:%.*]] = phi i32 [ [[C_INC1]], [[LATCH]] ]
-; CHECK-NEXT:    store i32 [[C_INC1_LCSSA]], i32* [[COUNT]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -212,7 +211,6 @@ define void @test_captured_after_loop_byval(i32* byval(i32) align 4 %count, i32 
 ; CHECK-LABEL: @test_captured_after_loop_byval(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 0, i32* [[COUNT:%.*]], align 4
-; CHECK-NEXT:    call void @capture(i32* [[COUNT]])
 ; CHECK-NEXT:    [[COUNT_PROMOTED:%.*]] = load i32, i32* [[COUNT]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -231,11 +229,11 @@ define void @test_captured_after_loop_byval(i32* byval(i32) align 4 %count, i32 
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[C_INC1_LCSSA:%.*]] = phi i32 [ [[C_INC1]], [[LATCH]] ]
 ; CHECK-NEXT:    store i32 [[C_INC1_LCSSA]], i32* [[COUNT]], align 4
+; CHECK-NEXT:    call void @capture(i32* [[COUNT]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   store i32 0, i32* %count
-  call void @capture(i32* %count)
   br label %loop
 
 loop:
@@ -255,5 +253,6 @@ latch:
   br i1 %cmp, label %exit, label %loop
 
 exit:
+  call void @capture(i32* %count)
   ret void
 }
