@@ -17,6 +17,8 @@
 #include <cstring>
 #include <type_traits>
 
+#include <stdint.h>
+
 namespace llvm {
 
 // This implementation of bit_cast is different from the C++20 one in two ways:
