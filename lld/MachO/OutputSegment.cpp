@@ -44,6 +44,12 @@ static uint32_t maxProt(StringRef name) {
   return initProt(name);
 }
 
+static uint32_t flags(StringRef name) {
+  // If we ever implement shared cache output support, SG_READ_ONLY should not
+  // be used for dylibs that can be placed in it.
+  return name == segment_names::dataConst ? SG_READ_ONLY : 0;
+}
+
 size_t OutputSegment::numNonHiddenSections() const {
   size_t count = 0;
   for (const OutputSection *osec : sections)
@@ -185,6 +191,7 @@ OutputSegment *macho::getOrCreateOutputSegment(StringRef name) {
   segRef->name = name;
   segRef->maxProt = maxProt(name);
   segRef->initProt = initProt(name);
+  segRef->flags = flags(name);
 
   outputSegments.push_back(segRef);
   return segRef;

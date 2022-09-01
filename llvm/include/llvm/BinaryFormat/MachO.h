@@ -107,6 +107,7 @@ enum : uint32_t {
   SG_FVMLIB = 0x2u,
   SG_NORELOC = 0x4u,
   SG_PROTECTED_VERSION_1 = 0x8u,
+  SG_READ_ONLY = 0x10u,
 
   // Constant masks for the "flags" field in llvm::MachO::section and
   // llvm::MachO::section_64
