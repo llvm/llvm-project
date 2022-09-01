@@ -2044,9 +2044,11 @@ void AsmPrinter::Impl::printDenseArrayAttr(DenseArrayAttr attr) {
 
   auto printElementAt = [&](unsigned i) {
     APInt value(bitwidth, 0);
-    llvm::LoadIntFromMemory(
-        value, reinterpret_cast<const uint8_t *>(data.begin() + byteSize * i),
-        byteSize);
+    if (bitwidth) {
+      llvm::LoadIntFromMemory(
+          value, reinterpret_cast<const uint8_t *>(data.begin() + byteSize * i),
+          byteSize);
+    }
     // Print the data as-is or as a float.
     if (type.isIntOrIndex()) {
       printDenseIntElement(value, getStream(), type);
