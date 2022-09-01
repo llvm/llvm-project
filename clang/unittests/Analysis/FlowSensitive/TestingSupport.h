@@ -37,6 +37,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -284,13 +285,12 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
 ///
 ///   Annotations must not be repeated.
 template <typename AnalysisT>
-llvm::Error checkDataflow(
-    AnalysisInputs<AnalysisT> AI,
-    std::function<void(
-        llvm::ArrayRef<std::pair<
-            std::string, DataflowAnalysisState<typename AnalysisT::Lattice>>>,
-        const AnalysisOutputs &)>
-        VerifyResults) {
+llvm::Error
+checkDataflow(AnalysisInputs<AnalysisT> AI,
+              std::function<void(const llvm::StringMap<DataflowAnalysisState<
+                                     typename AnalysisT::Lattice>> &,
+                                 const AnalysisOutputs &)>
+                  VerifyResults) {
   // Compute mapping from nodes of annotated statements to the content in the
   // annotation.
   llvm::DenseMap<const Stmt *, std::string> StmtToAnnotations;
@@ -308,11 +308,9 @@ llvm::Error checkDataflow(
 
   using StateT = DataflowAnalysisState<typename AnalysisT::Lattice>;
 
-  // FIXME: Use a string map instead of a vector of pairs.
-  //
   // Save the states computed for program points immediately following annotated
   // statements. The saved states are keyed by the content of the annotation.
-  std::vector<std::pair<std::string, StateT>> AnnotationStates;
+  llvm::StringMap<StateT> AnnotationStates;
   auto PostVisitCFG = [&StmtToAnnotations, &AnnotationStates,
                        PrevPostVisitCFG = std::move(AI.PostVisitCFG)](
                           ASTContext &Ctx, const CFGElement &Elt,
@@ -329,7 +327,10 @@ llvm::Error checkDataflow(
       return;
     auto *Lattice =
         llvm::any_cast<typename AnalysisT::Lattice>(&State.Lattice.Value);
-    AnnotationStates.emplace_back(It->second, StateT{*Lattice, State.Env});
+    auto [_, InsertSuccess] =
+        AnnotationStates.insert({It->second, StateT{*Lattice, State.Env}});
+    (void)InsertSuccess;
+    assert(InsertSuccess);
   };
   return checkDataflow<AnalysisT>(
       std::move(AI)
@@ -378,12 +379,20 @@ llvm::Error checkDataflow(
                                 std::move(MakeAnalysis))
           .withASTBuildArgs(std::move(Args))
           .withASTBuildVirtualMappedFiles(std::move(VirtualMappedFiles)),
-      [&VerifyResults](
-          llvm::ArrayRef<std::pair<
-              std::string, DataflowAnalysisState<typename AnalysisT::Lattice>>>
-              AnnotationStates,
-          const AnalysisOutputs &AO) {
-        VerifyResults(AnnotationStates, AO.ASTCtx);
+      [&VerifyResults](const llvm::StringMap<DataflowAnalysisState<
+                           typename AnalysisT::Lattice>> &AnnotationStates,
+                       const AnalysisOutputs &AO) {
+        std::vector<std::pair<
+            std::string, DataflowAnalysisState<typename AnalysisT::Lattice>>>
+            AnnotationStatesAsVector;
+        for (const auto &P : AnnotationStates) {
+          AnnotationStatesAsVector.push_back(
+              std::make_pair(P.first().str(), std::move(P.second)));
+        }
+        llvm::sort(AnnotationStatesAsVector,
+                   [](auto a, auto b) { return a.first < b.first; });
+
+        VerifyResults(AnnotationStatesAsVector, AO.ASTCtx);
       });
 }
 
