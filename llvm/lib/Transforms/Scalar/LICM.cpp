@@ -2038,13 +2038,10 @@ bool llvm::promoteLoopAccessesToScalars(
         bool GuaranteedToExecute =
             SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
         StoreIsGuanteedToExecute |= GuaranteedToExecute;
-        if (!DereferenceableInPH || !SafeToInsertStore ||
-            (InstAlignment > Alignment)) {
-          if (GuaranteedToExecute) {
-            DereferenceableInPH = true;
-            SafeToInsertStore = true;
-            Alignment = std::max(Alignment, InstAlignment);
-          }
+        if (GuaranteedToExecute) {
+          DereferenceableInPH = true;
+          SafeToInsertStore = true;
+          Alignment = std::max(Alignment, InstAlignment);
         }
 
         // If a store dominates all exit blocks, it is safe to sink.
