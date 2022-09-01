@@ -134,6 +134,7 @@ cc_test(
         "//clang:serialization",
         "//clang:tooling",
         "//llvm:Support",
+        "//llvm:TestingADT",
         "//llvm:TestingSupport",
         "//llvm:gmock",
         "//llvm:gtest",
