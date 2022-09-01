@@ -1718,7 +1718,7 @@ class piecewise_linear_distribution
 #include <__random/weibull_distribution.h>
 #include <version>
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <algorithm>
 #endif
 

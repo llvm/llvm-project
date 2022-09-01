@@ -148,7 +148,7 @@ template<class R>
 #include <type_traits>  // for remove_cv, etc
 #include <version>
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <functional>
 #  include <iterator>
 #endif

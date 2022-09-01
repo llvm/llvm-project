@@ -539,7 +539,7 @@ POLICY:  For non-variadic implementations, the number of arguments is limited
 #include <typeinfo>
 #include <version>
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <utility>
 #endif
 

@@ -45,7 +45,7 @@ namespace pmr {
 #include <experimental/memory_resource>
 #include <unordered_map>
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <algorithm>
 #  include <array>
 #  include <bit>

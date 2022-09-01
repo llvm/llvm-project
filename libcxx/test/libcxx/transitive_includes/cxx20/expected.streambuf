@@ -4,7 +4,6 @@ atomic
 bit
 cctype
 cerrno
-chrono
 climits
 cmath
 compare
