@@ -31,7 +31,7 @@ using ExecutorAddrDiff = uint64_t;
 class ExecutorAddr {
 public:
   /// A wrap/unwrap function that leaves pointers unmodified.
-  template <typename T> using rawPtr = llvm::identity<T>;
+  template <typename T> using rawPtr = llvm::identity<T *>;
 
   /// Default wrap function to use on this host.
   template <typename T> using defaultWrap = rawPtr<T>;
@@ -76,7 +76,7 @@ public:
 
   /// Create an ExecutorAddr from the given pointer.
   /// Warning: This should only be used when JITing in-process.
-  template <typename T, typename UnwrapFn = defaultUnwrap<T *>>
+  template <typename T, typename UnwrapFn = defaultUnwrap<T>>
   static ExecutorAddr fromPtr(T *Ptr, UnwrapFn &&Unwrap = UnwrapFn()) {
     return ExecutorAddr(
         static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Unwrap(Ptr))));
@@ -84,7 +84,7 @@ public:
 
   /// Cast this ExecutorAddr to a pointer of the given type.
   /// Warning: This should only be used when JITing in-process.
-  template <typename T, typename WrapFn = defaultWrap<T>>
+  template <typename T, typename WrapFn = defaultWrap<std::remove_pointer_t<T>>>
   std::enable_if_t<std::is_pointer<T>::value, T>
   toPtr(WrapFn &&Wrap = WrapFn()) const {
     uintptr_t IntPtr = static_cast<uintptr_t>(Addr);
@@ -94,7 +94,7 @@ public:
 
   /// Cast this ExecutorAddr to a pointer of the given function type.
   /// Warning: This should only be used when JITing in-process.
-  template <typename T, typename WrapFn = defaultWrap<T *>>
+  template <typename T, typename WrapFn = defaultWrap<T>>
   std::enable_if_t<std::is_function<T>::value, T *>
   toPtr(WrapFn &&Wrap = WrapFn()) const {
     uintptr_t IntPtr = static_cast<uintptr_t>(Addr);
