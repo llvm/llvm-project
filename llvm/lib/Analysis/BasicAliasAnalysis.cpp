@@ -769,12 +769,16 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
   else if (Call->onlyAccessesInaccessibleMemOrArgMem())
     Min = FunctionModRefBehavior::inaccessibleOrArgMemOnly(MR);
 
-  // If the call has operand bundles then aliasing attributes from the function
-  // it calls do not directly apply to the call.  This can be made more precise
-  // in the future.
-  if (!Call->hasOperandBundles())
-    if (const Function *F = Call->getCalledFunction())
-      Min &= getBestAAResults().getModRefBehavior(F);
+  if (const Function *F = Call->getCalledFunction()) {
+    FunctionModRefBehavior FMRB = getBestAAResults().getModRefBehavior(F);
+    // Operand bundles on the call may also read or write memory, in addition
+    // to the behavior of the called function.
+    if (Call->hasReadingOperandBundles())
+      FMRB |= FunctionModRefBehavior::readOnly();
+    if (Call->hasClobberingOperandBundles())
+      FMRB |= FunctionModRefBehavior::writeOnly();
+    Min &= FMRB;
+  }
 
   return Min;
 }
@@ -974,26 +978,6 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     if (getBestAAResults().alias(MemoryLocation::getBeforeOrAfter(Call), Loc,
                                  AAQI) == AliasResult::NoAlias)
       return ModRefInfo::NoModRef;
-  }
-
-  // Ideally, there should be no need to special case for memcpy/memove
-  // intrinsics here since general machinery (based on memory attributes) should
-  // already handle it just fine. Unfortunately, it doesn't due to deficiency in
-  // operand bundles support. At the moment it's not clear if complexity behind
-  // enhancing general mechanism worths it.
-  // TODO: Consider improving operand bundles support in general mechanism.
-  if (auto *Inst = dyn_cast<AnyMemTransferInst>(Call)) {
-    AliasResult SrcAA =
-        getBestAAResults().alias(MemoryLocation::getForSource(Inst), Loc, AAQI);
-    AliasResult DestAA =
-        getBestAAResults().alias(MemoryLocation::getForDest(Inst), Loc, AAQI);
-    // It's also possible for Loc to alias both src and dest, or neither.
-    ModRefInfo rv = ModRefInfo::NoModRef;
-    if (SrcAA != AliasResult::NoAlias || Call->hasReadingOperandBundles())
-      rv |= ModRefInfo::Ref;
-    if (DestAA != AliasResult::NoAlias || Call->hasClobberingOperandBundles())
-      rv |= ModRefInfo::Mod;
-    return rv;
   }
 
   // Guard intrinsics are marked as arbitrarily writing so that proper control
