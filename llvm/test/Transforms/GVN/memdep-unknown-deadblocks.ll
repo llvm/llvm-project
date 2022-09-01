@@ -26,11 +26,6 @@
 ; Expected semantic of the function is that verify() will be called three
 ; times, with the values 7, 42 and 42.
 
-; FIXME: The value passed to the verify function is loaded by
-;           %value = load i16, ptr %arr.j, align 1
-;        but currently GVN is replacing it with a faulty PHI in the
-;        store.done block.
-
 declare void @verify(i16)
 
 define void @test(i16 %g) {
@@ -39,8 +34,7 @@ define void @test(i16 %g) {
 ; CHECK-GVN-NEXT:    [[ARR:%.*]] = alloca [4 x i16], align 1
 ; CHECK-GVN-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-GVN:       for.body:
-; CHECK-GVN-NEXT:    [[VALUE2:%.*]] = phi i16 [ undef, [[ENTRY:%.*]] ], [ [[DEAD:%.*]], [[WHILE_END:%.*]] ]
-; CHECK-GVN-NEXT:    [[I:%.*]] = phi i16 [ 0, [[ENTRY]] ], [ [[NEXT_I:%.*]], [[WHILE_END]] ]
+; CHECK-GVN-NEXT:    [[I:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[NEXT_I:%.*]], [[WHILE_END:%.*]] ]
 ; CHECK-GVN-NEXT:    [[CMP0:%.*]] = icmp eq i16 [[I]], 0
 ; CHECK-GVN-NEXT:    br i1 [[CMP0]], label [[STORE_IDX_0:%.*]], label [[STORE_IDX_I:%.*]]
 ; CHECK-GVN:       store.idx.0:
@@ -51,7 +45,6 @@ define void @test(i16 %g) {
 ; CHECK-GVN-NEXT:    store i16 42, ptr [[ARR_I]], align 1
 ; CHECK-GVN-NEXT:    br label [[STORE_DONE]]
 ; CHECK-GVN:       store.done:
-; CHECK-GVN-NEXT:    [[VALUE:%.*]] = phi i16 [ 42, [[STORE_IDX_I]] ], [ [[VALUE2]], [[STORE_IDX_0]] ]
 ; CHECK-GVN-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-GVN:       while.body:
 ; CHECK-GVN-NEXT:    br i1 false, label [[WHILE_BODY_WHILE_BODY_CRIT_EDGE:%.*]], label [[WHILE_END]]
@@ -59,10 +52,10 @@ define void @test(i16 %g) {
 ; CHECK-GVN-NEXT:    br label [[WHILE_BODY]]
 ; CHECK-GVN:       while.end:
 ; CHECK-GVN-NEXT:    [[ARR_J:%.*]] = getelementptr [4 x i16], ptr [[ARR]], i16 0, i16 [[I]]
+; CHECK-GVN-NEXT:    [[VALUE:%.*]] = load i16, ptr [[ARR_J]], align 1
 ; CHECK-GVN-NEXT:    tail call void @verify(i16 [[VALUE]])
 ; CHECK-GVN-NEXT:    [[NEXT_I]] = add i16 [[I]], 1
 ; CHECK-GVN-NEXT:    [[ARR_NEXT_I:%.*]] = getelementptr [4 x i16], ptr [[ARR]], i16 0, i16 [[NEXT_I]]
-; CHECK-GVN-NEXT:    [[DEAD]] = load i16, ptr [[ARR_NEXT_I]], align 1
 ; CHECK-GVN-NEXT:    [[CMP4:%.*]] = icmp slt i16 [[NEXT_I]], 3
 ; CHECK-GVN-NEXT:    br i1 [[CMP4]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK-GVN:       for.end:
@@ -70,7 +63,7 @@ define void @test(i16 %g) {
 ;
 ; CHECK-GVN-O1-LABEL: @test(
 ; CHECK-GVN-O1-NEXT:  entry:
-; CHECK-GVN-O1-NEXT:    tail call void @verify(i16 42)
+; CHECK-GVN-O1-NEXT:    tail call void @verify(i16 7)
 ; CHECK-GVN-O1-NEXT:    tail call void @verify(i16 42)
 ; CHECK-GVN-O1-NEXT:    tail call void @verify(i16 42)
 ; CHECK-GVN-O1-NEXT:    ret void
