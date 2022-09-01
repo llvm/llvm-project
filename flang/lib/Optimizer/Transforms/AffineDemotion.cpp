@@ -16,7 +16,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -35,6 +34,11 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+
+namespace fir {
+#define GEN_PASS_DEF_AFFINEDIALECTDEMOTION
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+} // namespace fir
 
 #define DEBUG_TYPE "flang-affine-demotion"
 
@@ -137,7 +141,7 @@ public:
 };
 
 class AffineDialectDemotion
-    : public AffineDialectDemotionBase<AffineDialectDemotion> {
+    : public fir::impl::AffineDialectDemotionBase<AffineDialectDemotion> {
 public:
   void runOnOperation() override {
     auto *context = &getContext();

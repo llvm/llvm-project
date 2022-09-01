@@ -14,6 +14,9 @@ namespace mlir {
 template <typename T>
 class OperationPass;
 
+#define GEN_PASS_DECL_CONVERTMATHTOLIBM
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Populate the given list with patterns that convert from Math to Libm calls.
 /// If log1pBenefit is present, use it instead of benefit for the Log1p op.
 void populateMathToLibmConversionPatterns(

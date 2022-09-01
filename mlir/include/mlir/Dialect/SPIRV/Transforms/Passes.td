@@ -12,7 +12,7 @@
 include "mlir/Pass/PassBase.td"
 
 def SPIRVCompositeTypeLayout
-    : Pass<"decorate-spirv-composite-type-layout", "ModuleOp"> {
+    : Pass<"decorate-spirv-composite-type-layout", "mlir::ModuleOp"> {
   let summary = "Decorate SPIR-V composite type with layout info";
   let constructor = "mlir::spirv::createDecorateSPIRVCompositeTypeLayoutPass()";
 }
