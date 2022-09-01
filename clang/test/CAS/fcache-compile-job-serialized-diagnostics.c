@@ -38,23 +38,23 @@
 
 // Make sure warnings are merged with driver ones.
 // Using normal compilation as baseline.
-// RUN: %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -arch=nonexistent --serialize-diagnostics %t/t1.diag \
+// RUN: %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Wl,-none --serialize-diagnostics %t/t1.diag \
 // RUN:   2>&1 | FileCheck %s -check-prefix=WARN
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
-// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -arch=nonexistent --serialize-diagnostics %t/t2.diag \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Wl,-none --serialize-diagnostics %t/t2.diag \
 // RUN:   2>&1 | FileCheck %s -check-prefix=WARN
 // RUN: diff %t/t1.diag %t/t2.diag
 
 // Try again with cache hit.
 // RUN: rm %t/t2.diag
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
-// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -arch=nonexistent --serialize-diagnostics %t/t2.diag
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Wl,-none --serialize-diagnostics %t/t2.diag
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
-// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -arch=nonexistent --serialize-diagnostics %t/t2.diag \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t/t.o -Wl,-none --serialize-diagnostics %t/t2.diag \
 // RUN:   2>&1 | FileCheck %s -check-prefix=WARN
 // RUN: diff %t/t1.diag %t/t2.diag
 
-// WARN: warning: argument unused during compilation
+// WARN: warning: -Wl,-none: 'linker' input unused
 // WARN: warning: some warning
 
 #warning some warning

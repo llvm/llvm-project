@@ -6,19 +6,19 @@
 // RUN:   2>&1 | FileCheck %s -check-prefix=ERROR
 
 // Using normal compilation as baseline.
-// RUN: not %clang -target x86_64-apple-macos11 -c %s -o %t.o -arch=nonexistent --serialize-diagnostics %t/t1.diag \
+// RUN: not %clang -target x86_64-apple-macos11 -c %s -o %t.o -Wl,-none --serialize-diagnostics %t/t1.diag \
 // RUN:   2>&1 | FileCheck %s -check-prefix=ERROR -check-prefix=DRIVER
 // RUN: not env LLVM_CACHE_CAS_PATH=%t/cas %clang-cache \
-// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t.o -arch=nonexistent --serialize-diagnostics %t/t2.diag \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t.o -Wl,-none --serialize-diagnostics %t/t2.diag \
 // RUN:   2>&1 | FileCheck %s -check-prefix=ERROR -check-prefix=DRIVER
 // RUN: not env LLVM_CACHE_CAS_PATH=%t/cas cache-build-session %clang-cache \
-// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t.o -arch=nonexistent --serialize-diagnostics %t/t3.diag \
+// RUN:   %clang -target x86_64-apple-macos11 -c %s -o %t.o -Wl,-none --serialize-diagnostics %t/t3.diag \
 // RUN:   2>&1 | FileCheck %s -check-prefix=ERROR -check-prefix=DRIVER
 
 // RUN: diff %t/t1.diag %t/t2.diag
 // RUN: diff %t/t1.diag %t/t3.diag
 
-// DRIVER: warning: argument unused during compilation
+// DRIVER: warning: -Wl,-none: 'linker' input unused
 // ERROR: error: 'non-existent.h' file not found
 // ERROR: 1 error generated.
 
