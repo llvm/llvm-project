@@ -16,4 +16,4 @@ Trivial t;
 
 // CHECK-LABEL: !DIFile{{.*}}.cpp
 
-// CHECK-DAG: ![[DI]] = {{.*}}line: [[@LINE-371]]
+// CHECK: ![[DI]] = {{.*}}line: [[@LINE-9]]

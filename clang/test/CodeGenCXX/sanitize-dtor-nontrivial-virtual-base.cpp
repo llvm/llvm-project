@@ -62,32 +62,34 @@ Derived d;
 // poison 2 ints
 // CHECK-LABEL: define {{.*}}ZN11VirtualBaseD2Ev
 // CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, i64 8){{.*}}, !dbg ![[DI1:[0-9]+]]
-// CHECK: call void @__sanitizer_dtor_callback_vptr({{.*}}){{.*}}, !dbg ![[DI1]]
+// CHECK: call void @__sanitizer_dtor_callback_vptr({{.*}}){{.*}}{{.*}}, !dbg ![[DI2:[0-9]+]]
 // CHECK: ret void
 
 // poison int and double
 // CHECK-LABEL: define {{.*}}ZN4BaseD2Ev
-// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, i64 16){{.*}}, !dbg ![[DI2:[0-9]+]]
-// CHECK: call void @__sanitizer_dtor_callback_vptr({{.*}}{{.*}}, !dbg ![[DI2]]
+// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, i64 16){{.*}}, !dbg ![[DI3:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback_vptr({{.*}}{{.*}}, !dbg ![[DI4:[0-9]+]]
 // CHECK: ret void
 
 // poison int, ignore vector, poison int
 // CHECK-LABEL: define {{.*}}ZN7DerivedD2Ev
-// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, i64 4){{.*}}, !dbg ![[DI3:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, i64 4){{.*}}, !dbg ![[DI5:[0-9]+]]
 // CHECK: call void {{.*}}ZN6VectorIiED1Ev
-// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, i64 4){{.*}}, !dbg ![[DI3]]
+// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, i64 4){{.*}}, !dbg ![[DI6:[0-9]+]]
 // CHECK: call void {{.*}}ZN4BaseD2Ev
 // CHECK: ret void
 
 // poison int
 // CHECK-LABEL: define {{.*}}ZN6VectorIiED2Ev
-// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, i64 4){{.*}}, !dbg ![[DI5:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, i64 4){{.*}}, !dbg ![[DI7:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: !DIFile{{.*}}.cpp
 
 // CHECK-DAG: ![[DI0]] = {{.*}}line: [[@LINE-49]]
-// CHECK-DAG: ![[DI1]] = {{.*}}line: [[@LINE-60]]
-// CHECK-DAG: ![[DI2]] = {{.*}}line: [[@LINE-71]]
-// CHECK-DAG: ![[DI3]] = {{.*}}line: [[@LINE-52]]
-// CHECK-DAG: ![[DI5]] = {{.*}}line: [[@LINE-83]]
+// CHECK-DAG: ![[DI1]] = {{.*}}line: [[@LINE-66]]
+// CHECK-DAG: ![[DI2]] = {{.*}}line: [[@LINE-61]]
+// CHECK-DAG: ![[DI3]] = {{.*}}line: [[@LINE-78]]
+// CHECK-DAG: ![[DI5]] = {{.*}}line: [[@LINE-57]]
+// CHECK-DAG: ![[DI6]] = {{.*}}line: [[@LINE-60]]
+// CHECK-DAG: ![[DI7]] = {{.*}}line: [[@LINE-88]]
