@@ -87,9 +87,9 @@ static_assert(!HasInplaceMergeIter<R<const int*>, const int*>);
 
 template <class In, template <class> class SentWrapper, std::size_t N1, std::size_t N2>
 void testInplaceMergeImpl(std::array<int, N1> input, int midIdx, std::array<int, N2> expected) {
-  std::is_sorted(input.begin(), input.begin() + midIdx);
-  std::is_sorted(input.begin() + midIdx, input.end());
-  std::is_sorted(expected.begin(), expected.end());
+  assert(std::is_sorted(input.begin(), input.begin() + midIdx));
+  assert(std::is_sorted(input.begin() + midIdx, input.end()));
+  assert(std::is_sorted(expected.begin(), expected.end()));
 
   using Sent = SentWrapper<In>;
 
