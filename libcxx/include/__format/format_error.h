@@ -31,7 +31,14 @@ public:
       : runtime_error(__s) {}
   _LIBCPP_HIDE_FROM_ABI explicit format_error(const char* __s)
       : runtime_error(__s) {}
+  // TODO FMT Remove when format is no longer experimental.
+  // Avoids linker errors when building the Clang-cl Windows DLL which doesn't
+  // support the experimental library.
+#  ifndef _LIBCPP_INLINE_FORMAT_ERROR_DTOR
   ~format_error() noexcept override;
+#  else
+  ~format_error() noexcept  override {}
+#  endif
 };
 
 _LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void
