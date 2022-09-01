@@ -14,10 +14,9 @@
 #ifndef LLVM_ADT_BIT_H
 #define LLVM_ADT_BIT_H
 
+#include <cstdint>
 #include <cstring>
 #include <type_traits>
-
-#include <stdint.h>
 
 namespace llvm {
 
