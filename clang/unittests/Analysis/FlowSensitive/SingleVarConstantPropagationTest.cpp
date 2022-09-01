@@ -194,8 +194,8 @@ void RunDataflow(llvm::StringRef Code, Matcher Expectations) {
           },
           [&Expectations](
               llvm::ArrayRef<std::pair<
-                  std::string, DataflowAnalysisState<
-                                    ConstantPropagationAnalysis::Lattice>>>
+                  std::string,
+                  DataflowAnalysisState<ConstantPropagationAnalysis::Lattice>>>
                   Results,
               ASTContext &) { EXPECT_THAT(Results, Expectations); },
           {"-fsyntax-only", "-std=c++17"}),
