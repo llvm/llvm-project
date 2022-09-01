@@ -12,7 +12,7 @@ define void @sdiv129(i129* %ptr, i129* %out) nounwind {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i129 [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i1 false, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i129 @llvm.ctlz.i129(i129 3, i1 true)
-; CHECK-NEXT:    [[TMP7:%.*]] = call i129 @llvm.ctlz.i129(i129 [[TMP2]], i1 true)
+; CHECK-NEXT:    [[TMP7:%.*]] = call i129 @llvm.ctlz.i129(i129 [[TMP2]], i1 false)
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub i129 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt i129 [[TMP8]], 128
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP5]], [[TMP9]]
