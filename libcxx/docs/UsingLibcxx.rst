@@ -248,8 +248,8 @@ thread safety annotations.
   replacement scenarios from working, e.g. replacing `operator new` and
   expecting a non-replaced `operator new[]` to call the replaced `operator new`.
 
-**_LIBCPP_ENABLE_NODISCARD_EXT**:
-  This macro allows the library to apply ``[[nodiscard]]`` to entities as an extension.
+**_LIBCPP_DISABLE_NODISCARD_EXT**:
+  This macro disables library-extensions of ``[[nodiscard]]``.
   See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>` for more information.
 
 **_LIBCPP_DISABLE_DEPRECATION_WARNINGS**:
@@ -340,8 +340,8 @@ Users who want help diagnosing misuses of STL functions may desire a more
 liberal application of ``[[nodiscard]]``.
 
 For this reason libc++ provides an extension that does just that! The
-extension must be enabled by defining ``_LIBCPP_ENABLE_NODISCARD_EXT``. The extended
-applications of ``[[nodiscard]]`` takes two forms:
+extension is enabled by default and can be disabled by defining ``_LIBCPP_DISABLE_NODISCARD_EXT``.
+The extended applications of ``[[nodiscard]]`` takes two forms:
 
 1. Backporting ``[[nodiscard]]`` to entities declared as such by the
    standard in newer dialects, but not in the present one.

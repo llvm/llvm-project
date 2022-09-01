@@ -75,7 +75,7 @@ API Changes
 
 - ``_LIBCPP_ENABLE_NODISCARD`` and ``_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17`` are no longer respected.
   Any standards-required ``[[nodiscard]]`` applications in C++20 are now always enabled. Any extended applications
-  can now be enabled by defining ``_LIBCPP_ENABLE_NODISCARD_EXT``.
+  are now enabled by default and can be disabled by defining ``_LIBCPP_DISABLE_NODISCARD_EXT``.
 
 ABI Affecting Changes
 ---------------------
