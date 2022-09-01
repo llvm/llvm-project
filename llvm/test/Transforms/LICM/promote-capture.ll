@@ -207,3 +207,53 @@ latch:
 exit:
   ret void
 }
+
+define void @test_captured_after_loop_byval(i32* byval(i32) align 4 %count, i32 %len) {
+; CHECK-LABEL: @test_captured_after_loop_byval(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 0, i32* [[COUNT:%.*]], align 4
+; CHECK-NEXT:    call void @capture(i32* [[COUNT]])
+; CHECK-NEXT:    [[COUNT_PROMOTED:%.*]] = load i32, i32* [[COUNT]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[C_INC2:%.*]] = phi i32 [ [[COUNT_PROMOTED]], [[ENTRY:%.*]] ], [ [[C_INC1:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[I_NEXT:%.*]], [[LATCH]] ]
+; CHECK-NEXT:    [[COND:%.*]] = call i1 @cond(i32 [[I]])
+; CHECK-NEXT:    br i1 [[COND]], label [[IF:%.*]], label [[LATCH]]
+; CHECK:       if:
+; CHECK-NEXT:    [[C_INC:%.*]] = add i32 [[C_INC2]], 1
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[C_INC1]] = phi i32 [ [[C_INC]], [[IF]] ], [ [[C_INC2]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[LEN:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_INC1_LCSSA:%.*]] = phi i32 [ [[C_INC1]], [[LATCH]] ]
+; CHECK-NEXT:    store i32 [[C_INC1_LCSSA]], i32* [[COUNT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i32 0, i32* %count
+  call void @capture(i32* %count)
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
+  %cond = call i1 @cond(i32 %i)
+  br i1 %cond, label %if, label %latch
+
+if:
+  %c = load i32, i32* %count
+  %c.inc = add i32 %c, 1
+  store i32 %c.inc, i32* %count
+  br label %latch
+
+latch:
+  %i.next = add nuw i32 %i, 1
+  %cmp = icmp eq i32 %i.next, %len
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
