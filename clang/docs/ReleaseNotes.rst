@@ -127,6 +127,9 @@ Improvements to Clang's diagnostics
   supports both c and c++ language.
 - When diagnosing multi-level pack expansions of mismatched lengths, Clang will
   now, in most cases, be able to point to the relevant outer parameter.
+- no_sanitize("...") on a global variable for known but not relevant sanitizers
+  is now just a warning. It now says that this will be ignored instead of
+  incorrectly saying no_sanitize only applies to functions and methods.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
