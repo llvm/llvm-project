@@ -96,6 +96,11 @@ template <typename AnalysisT> struct AnalysisInputs {
 
   /// Optional fields can be set with methods of the form `withFieldName(...)`.
   AnalysisInputs<AnalysisT> &&
+  withSetupTest(std::function<llvm::Error(AnalysisOutputs &)> Arg) && {
+    SetupTest = std::move(Arg);
+    return std::move(*this);
+  }
+  AnalysisInputs<AnalysisT> &&
   withPostVisitCFG(std::function<void(ASTContext &, const CFGElement &,
                                       const TypeErasedDataflowAnalysisState &)>
                        Arg) && {
@@ -120,6 +125,11 @@ template <typename AnalysisT> struct AnalysisInputs {
   /// takes as argument the AST generated from the code being analyzed and the
   /// initial state from which the analysis starts with.
   std::function<AnalysisT(ASTContext &, Environment &)> MakeAnalysis;
+  /// Optional. If provided, this function is executed immediately before
+  /// running the dataflow analysis to allow for additional setup. All fields in
+  /// the `AnalysisOutputs` argument will be initialized except for the
+  /// `BlockStates` field which is only computed later during the analysis.
+  std::function<llvm::Error(AnalysisOutputs &)> SetupTest = nullptr;
   /// Optional. If provided, this function is applied on each CFG element after
   /// the analysis has been run.
   std::function<void(ASTContext &, const CFGElement &,
@@ -138,54 +148,10 @@ llvm::Expected<llvm::DenseMap<const Stmt *, std::string>>
 buildStatementToAnnotationMapping(const FunctionDecl *Func,
                                   llvm::Annotations AnnotatedCode);
 
-/// Returns line numbers and content of the annotations in `AO.Code`.
+/// Returns line numbers and content of the annotations in `AnnotatedCode`.
 llvm::DenseMap<unsigned, std::string>
-getAnnotationLinesAndContent(const AnalysisOutputs &AO);
-
-// FIXME: Return a string map instead of a vector of pairs.
-//
-/// Returns the analysis states at each annotated statement in `AO.Code`.
-template <typename AnalysisT>
-llvm::Expected<std::vector<
-    std::pair<std::string, DataflowAnalysisState<typename AnalysisT::Lattice>>>>
-getAnnotationStates(const AnalysisOutputs &AO) {
-  using StateT = DataflowAnalysisState<typename AnalysisT::Lattice>;
-  // FIXME: Extend to annotations on non-statement constructs.
-  // Get annotated statements.
-  llvm::Expected<llvm::DenseMap<const Stmt *, std::string>>
-      MaybeStmtToAnnotations =
-          buildStatementToAnnotationMapping(AO.Target, AO.Code);
-  if (!MaybeStmtToAnnotations)
-    return MaybeStmtToAnnotations.takeError();
-  auto &StmtToAnnotations = *MaybeStmtToAnnotations;
-
-  // Compute a map from statement annotations to the state computed
-  // for the program point immediately after the annotated statement.
-  std::vector<std::pair<std::string, StateT>> Results;
-  for (const CFGBlock *Block : AO.CFCtx.getCFG()) {
-    // Skip blocks that were not evaluated.
-    if (!AO.BlockStates[Block->getBlockID()])
-      continue;
-
-    transferBlock(
-        AO.CFCtx, AO.BlockStates, *Block, AO.InitEnv, AO.Analysis,
-        [&Results,
-         &StmtToAnnotations](const clang::CFGElement &Element,
-                             const TypeErasedDataflowAnalysisState &State) {
-          auto Stmt = Element.getAs<CFGStmt>();
-          if (!Stmt)
-            return;
-          auto It = StmtToAnnotations.find(Stmt->getStmt());
-          if (It == StmtToAnnotations.end())
-            return;
-          auto *Lattice =
-              llvm::any_cast<typename AnalysisT::Lattice>(&State.Lattice.Value);
-          Results.emplace_back(It->second, StateT{*Lattice, State.Env});
-        });
-  }
-
-  return Results;
-}
+buildLineToAnnotationMapping(SourceManager &SM,
+                             llvm::Annotations AnnotatedCode);
 
 /// Runs dataflow specified from `AI.MakeAnalysis` and `AI.PostVisitCFG` on the
 /// body of the function that matches `AI.TargetFuncMatcher` in `AI.Code`.
@@ -200,9 +166,9 @@ getAnnotationStates(const AnalysisOutputs &AO) {
 ///
 ///   `VerifyResults` must be provided.
 template <typename AnalysisT>
-llvm::Error checkDataflow(
-    AnalysisInputs<AnalysisT> AI,
-    std::function<llvm::Error(const AnalysisOutputs &)> VerifyResults) {
+llvm::Error
+checkDataflow(AnalysisInputs<AnalysisT> AI,
+              std::function<void(const AnalysisOutputs &)> VerifyResults) {
   // Build AST context from code.
   llvm::Annotations AnnotatedCode(AI.Code);
   auto Unit = tooling::buildASTFromCodeWithArgs(
@@ -236,7 +202,7 @@ llvm::Error checkDataflow(
     return MaybeCFCtx.takeError();
   auto &CFCtx = *MaybeCFCtx;
 
-  // Initialize states and run dataflow analysis.
+  // Initialize states for running dataflow analysis.
   DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>());
   Environment InitEnv(DACtx, *Target);
   auto Analysis = AI.MakeAnalysis(Context, InitEnv);
@@ -251,19 +217,26 @@ llvm::Error checkDataflow(
         };
   }
 
-  // If successful, the run returns a mapping from block IDs to the
-  // post-analysis states for the CFG blocks that have been evaluated.
+  // Additional test setup.
+  AnalysisOutputs AO{AnnotatedCode, Context, Target, CFCtx,
+                     Analysis,      InitEnv, {}};
+  if (AI.SetupTest) {
+    if (auto Error = AI.SetupTest(AO))
+      return Error;
+  }
+
+  // If successful, the dataflow analysis returns a mapping from block IDs to
+  // the post-analysis states for the CFG blocks that have been evaluated.
   llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
       MaybeBlockStates = runTypeErasedDataflowAnalysis(CFCtx, Analysis, InitEnv,
                                                        PostVisitCFGClosure);
   if (!MaybeBlockStates)
     return MaybeBlockStates.takeError();
-  auto &BlockStates = *MaybeBlockStates;
+  AO.BlockStates = *MaybeBlockStates;
 
   // Verify dataflow analysis outputs.
-  AnalysisOutputs AO{AnnotatedCode, Context, Target,     CFCtx,
-                     Analysis,      InitEnv, BlockStates};
-  return VerifyResults(AO);
+  VerifyResults(AO);
+  return llvm::Error::success();
 }
 
 /// Runs dataflow specified from `AI.MakeAnalysis` and `AI.PostVisitCFG` on the
@@ -285,11 +258,10 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
                                  const AnalysisOutputs &)>
                   VerifyResults) {
   return checkDataflow<AnalysisT>(
-      std::move(AI),
-      [&VerifyResults](const AnalysisOutputs &AO) -> llvm::Error {
-        auto AnnotationLinesAndContent = getAnnotationLinesAndContent(AO);
+      std::move(AI), [&VerifyResults](const AnalysisOutputs &AO) {
+        auto AnnotationLinesAndContent =
+            buildLineToAnnotationMapping(AO.ASTCtx.getSourceManager(), AO.Code);
         VerifyResults(AnnotationLinesAndContent, AO);
-        return llvm::Error::success();
       });
 }
 
@@ -319,16 +291,52 @@ llvm::Error checkDataflow(
             std::string, DataflowAnalysisState<typename AnalysisT::Lattice>>>,
         const AnalysisOutputs &)>
         VerifyResults) {
+  // Compute mapping from nodes of annotated statements to the content in the
+  // annotation.
+  llvm::DenseMap<const Stmt *, std::string> StmtToAnnotations;
+  auto SetupTest = [&StmtToAnnotations,
+                    PrevSetupTest = std::move(AI.SetupTest)](
+                       AnalysisOutputs &AO) -> llvm::Error {
+    auto MaybeStmtToAnnotations = buildStatementToAnnotationMapping(
+        cast<FunctionDecl>(AO.InitEnv.getDeclCtx()), AO.Code);
+    if (!MaybeStmtToAnnotations) {
+      return MaybeStmtToAnnotations.takeError();
+    }
+    StmtToAnnotations = std::move(*MaybeStmtToAnnotations);
+    return PrevSetupTest ? PrevSetupTest(AO) : llvm::Error::success();
+  };
+
+  using StateT = DataflowAnalysisState<typename AnalysisT::Lattice>;
+
+  // FIXME: Use a string map instead of a vector of pairs.
+  //
+  // Save the states computed for program points immediately following annotated
+  // statements. The saved states are keyed by the content of the annotation.
+  std::vector<std::pair<std::string, StateT>> AnnotationStates;
+  auto PostVisitCFG = [&StmtToAnnotations, &AnnotationStates,
+                       PrevPostVisitCFG = std::move(AI.PostVisitCFG)](
+                          ASTContext &Ctx, const CFGElement &Elt,
+                          const TypeErasedDataflowAnalysisState &State) {
+    if (PrevPostVisitCFG) {
+      PrevPostVisitCFG(Ctx, Elt, State);
+    }
+    // FIXME: Extend retrieval of state for non statement constructs.
+    auto Stmt = Elt.getAs<CFGStmt>();
+    if (!Stmt)
+      return;
+    auto It = StmtToAnnotations.find(Stmt->getStmt());
+    if (It == StmtToAnnotations.end())
+      return;
+    auto *Lattice =
+        llvm::any_cast<typename AnalysisT::Lattice>(&State.Lattice.Value);
+    AnnotationStates.emplace_back(It->second, StateT{*Lattice, State.Env});
+  };
   return checkDataflow<AnalysisT>(
-      std::move(AI),
-      [&VerifyResults](const AnalysisOutputs &AO) -> llvm::Error {
-        auto MaybeAnnotationStates = getAnnotationStates<AnalysisT>(AO);
-        if (!MaybeAnnotationStates) {
-          return MaybeAnnotationStates.takeError();
-        }
-        auto &AnnotationStates = *MaybeAnnotationStates;
+      std::move(AI)
+          .withSetupTest(std::move(SetupTest))
+          .withPostVisitCFG(std::move(PostVisitCFG)),
+      [&VerifyResults, &AnnotationStates](const AnalysisOutputs &AO) {
         VerifyResults(AnnotationStates, AO);
-        return llvm::Error::success();
       });
 }
 
