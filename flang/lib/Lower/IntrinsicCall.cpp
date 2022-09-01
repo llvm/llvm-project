@@ -557,6 +557,7 @@ struct IntrinsicLibrary {
                              llvm::ArrayRef<mlir::Value> args);
   template <typename Shift>
   mlir::Value genShift(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genShiftA(mlir::Type resultType, llvm::ArrayRef<mlir::Value>);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSpacing(mlir::Type resultType,
@@ -958,7 +959,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"radix", asAddr, handleDynamicOptional}}},
      /*isElemental=*/false},
     {"set_exponent", &I::genSetExponent},
-    {"shifta", &I::genShift<mlir::arith::ShRSIOp>},
+    {"shifta", &I::genShiftA},
     {"shiftl", &I::genShift<mlir::arith::ShLIOp>},
     {"shiftr", &I::genShift<mlir::arith::ShRUIOp>},
     {"sign", &I::genSign},
@@ -4015,7 +4016,7 @@ mlir::Value IntrinsicLibrary::genSetExponent(mlir::Type resultType,
                                    fir::getBase(args[1])));
 }
 
-// SHIFTA, SHIFTL, SHIFTR
+// SHIFTL, SHIFTR
 template <typename Shift>
 mlir::Value IntrinsicLibrary::genShift(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
@@ -4039,6 +4040,31 @@ mlir::Value IntrinsicLibrary::genShift(mlir::Type resultType,
 
   mlir::Value shifted = builder.create<Shift>(loc, args[0], shift);
   return builder.create<mlir::arith::SelectOp>(loc, outOfBounds, zero, shifted);
+}
+
+// SHIFTA
+mlir::Value IntrinsicLibrary::genShiftA(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  unsigned bits = resultType.getIntOrFloatBitWidth();
+  mlir::Value bitSize = builder.createIntegerConstant(loc, resultType, bits);
+  mlir::Value shift = builder.createConvert(loc, resultType, args[1]);
+  mlir::Value shiftEqBitSize = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::eq, shift, bitSize);
+
+  // Lowering of mlir::arith::ShRSIOp is using `ashr`. `ashr` is undefined when
+  // the shift amount is equal to the element size.
+  // So if SHIFT is equal to the bit width then it is handled as a special case.
+  mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
+  mlir::Value minusOne = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value valueIsNeg = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::slt, args[0], zero);
+  mlir::Value specialRes =
+      builder.create<mlir::arith::SelectOp>(loc, valueIsNeg, minusOne, zero);
+
+  mlir::Value shifted =
+      builder.create<mlir::arith::ShRSIOp>(loc, args[0], shift);
+  return builder.create<mlir::arith::SelectOp>(loc, shiftEqBitSize, specialRes,
+                                               shifted);
 }
 
 // SIGN
