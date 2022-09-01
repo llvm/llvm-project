@@ -572,10 +572,18 @@ CUDA/HIP Language Changes in Clang
 Objective-C Language Changes in Clang
 -------------------------------------
 
-OpenCL C Language Changes in Clang
-----------------------------------
+OpenCL Kernel Language Changes in Clang
+---------------------------------------
 
-...
+- Improved/fixed misc issues in the builtin function support and diagnostics.
+- Improved diagnostics for unknown extension pragma, subgroup functions and
+  implicit function prototype.
+- Added ``-cl-ext`` flag to the Clang driver to toggle extensions/features
+  compiled for.
+- Added ``cl_khr_subgroup_rotate`` extension.
+- Removed some ``printf`` and ``hostcall`` related diagnostics when compiling
+  for AMDGPU.
+- Fixed alignment of pointer types in kernel arguments.
 
 ABI Changes in Clang
 --------------------
@@ -660,6 +668,14 @@ Arm and AArch64 Support in Clang
   ``svint32_t``. The set of supported operators is shown in the table Vector
   Operations found in the :ref:`Clang Language Extensions <Vector Operations>`
   document.
+
+SPIR-V Support in Clang
+-----------------------
+
+- Added flag ``-fintegrated-objemitter`` to enable use of experimental
+  integrated LLVM backend when generating SPIR-V binary.
+- The SPIR-V generator continues to produce typed pointers in this release
+  despite the general switch of LLVM to opaque pointers.
 
 Floating Point Support in Clang
 -------------------------------
