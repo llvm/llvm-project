@@ -11,10 +11,10 @@ define void @test(i129* %ptr, i129* %out) nounwind {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i129 @llvm.ctlz.i129(i129 [[A]], i1 true)
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i129 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i129 [[TMP4]], 128
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP1]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP1]], i1 true, i1 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i129 [[TMP4]], 128
 ; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP6]], i129 0, i129 [[A]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP6]], i1 true, i1 [[TMP7]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[UDIV_END:%.*]], label [[UDIV_BB1:%.*]]
 ; CHECK:       udiv-loop-exit:
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi i129 [ 0, [[UDIV_BB1]] ], [ [[TMP25:%.*]], [[UDIV_DO_WHILE:%.*]] ]

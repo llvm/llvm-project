@@ -15,10 +15,10 @@ define void @sdiv129(i129* %ptr, i129* %out) nounwind {
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i129 @llvm.ctlz.i129(i129 [[TMP2]], i1 true)
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub i129 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt i129 [[TMP8]], 128
-; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP5]], i1 true, i1 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i129 [[TMP8]], 128
 ; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP10]], i129 0, i129 [[TMP2]]
-; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP10]], i1 true, i1 [[TMP11]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[UDIV_END:%.*]], label [[UDIV_BB1:%.*]]
 ; CHECK:       udiv-loop-exit:
 ; CHECK-NEXT:    [[TMP14:%.*]] = phi i129 [ 0, [[UDIV_BB1]] ], [ [[TMP29:%.*]], [[UDIV_DO_WHILE:%.*]] ]
