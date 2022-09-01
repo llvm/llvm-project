@@ -850,11 +850,13 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
       BinaryOperator::CreateURem(Ops[0].V, Ops[1].V, SDI->getName(), SDI);
   URem->setDebugLoc(SDI->getDebugLoc());
 
-  Value *Res = URem;
+  auto *Res = URem;
 
   // If the divident was non-positive, we need to negate the result.
-  if (Ops[0].D == Domain::NonPositive)
+  if (Ops[0].D == Domain::NonPositive) {
     Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+    Res->setDebugLoc(SDI->getDebugLoc());
+  }
 
   SDI->replaceAllUsesWith(Res);
   SDI->eraseFromParent();
