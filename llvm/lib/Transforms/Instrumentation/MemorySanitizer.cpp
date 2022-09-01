@@ -1274,8 +1274,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       bool InstrumentWithCalls,
       ArrayRef<ShadowOriginAndInsertPoint> InstructionChecks) {
     const DataLayout &DL = F.getParent()->getDataLayout();
+    Instruction *Instruction = InstructionChecks.front().OrigIns;
     for (const auto &ShadowData : InstructionChecks) {
-      IRBuilder<> IRB(ShadowData.OrigIns);
+      assert(ShadowData.OrigIns == Instruction);
+      IRBuilder<> IRB(Instruction);
 
       LLVM_DEBUG(dbgs() << "  SHAD0 : " << *ShadowData.Shadow << "\n");
       Value *ConvertedShadow = convertShadowToScalar(ShadowData.Shadow, IRB);
@@ -1300,7 +1302,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void materializeChecks(bool InstrumentWithCalls) {
-    materializeInstructionChecks(InstrumentWithCalls, InstrumentationList);
+    llvm::stable_sort(InstrumentationList,
+                      [](const ShadowOriginAndInsertPoint &L,
+                         const ShadowOriginAndInsertPoint &R) {
+                        return L.OrigIns < R.OrigIns;
+                      });
+
+    for (auto I = InstrumentationList.begin();
+         I != InstrumentationList.end();) {
+      auto J =
+          std::find_if(I + 1, InstrumentationList.end(),
+                       [L = I->OrigIns](const ShadowOriginAndInsertPoint &R) {
+                         return L != R.OrigIns;
+                       });
+      // Process all checks of instruction at once.
+      materializeInstructionChecks(InstrumentWithCalls,
+                                   ArrayRef<ShadowOriginAndInsertPoint>(I, J));
+      I = J;
+    }
+
     LLVM_DEBUG(dbgs() << "DONE:\n" << F);
   }
 
