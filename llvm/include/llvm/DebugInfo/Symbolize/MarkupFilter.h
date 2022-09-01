@@ -97,6 +97,7 @@ private:
   bool tryPresentation(const MarkupNode &Node);
   bool trySymbol(const MarkupNode &Node);
   bool tryPC(const MarkupNode &Node);
+  bool tryBackTrace(const MarkupNode &Node);
   bool tryData(const MarkupNode &Node);
 
   bool trySGR(const MarkupNode &Node);
@@ -118,6 +119,7 @@ private:
   Optional<SmallVector<uint8_t>> parseBuildID(StringRef Str) const;
   Optional<std::string> parseMode(StringRef Str) const;
   Optional<PCType> parsePCType(StringRef Str) const;
+  Optional<uint64_t> parseFrameNumber(StringRef Str) const;
 
   bool checkTag(const MarkupNode &Node) const;
   bool checkNumFields(const MarkupNode &Element, size_t Size) const;
