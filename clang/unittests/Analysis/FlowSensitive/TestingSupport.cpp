@@ -52,6 +52,22 @@ isAnnotationDirectlyAfterStatement(const Stmt *Stmt, unsigned AnnotationBegin,
   return true;
 }
 
+llvm::DenseMap<unsigned, std::string>
+test::getAnnotationLinesAndContent(const AnalysisOutputs &AO) {
+  llvm::DenseMap<unsigned, std::string> LineNumberToContent;
+  auto Code = AO.Code.code();
+  auto Annotations = AO.Code.ranges();
+  auto &SM = AO.ASTCtx.getSourceManager();
+  for (auto &AnnotationRange : Annotations) {
+    auto LineNumber =
+        SM.getPresumedLineNumber(SM.getLocForStartOfFile(SM.getMainFileID())
+                                     .getLocWithOffset(AnnotationRange.Begin));
+    auto Content = Code.slice(AnnotationRange.Begin, AnnotationRange.End).str();
+    LineNumberToContent[LineNumber] = Content;
+  }
+  return LineNumberToContent;
+}
+
 llvm::Expected<llvm::DenseMap<const Stmt *, std::string>>
 test::buildStatementToAnnotationMapping(const FunctionDecl *Func,
                                         llvm::Annotations AnnotatedCode) {
