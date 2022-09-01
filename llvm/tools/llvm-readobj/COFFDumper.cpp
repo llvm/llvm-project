@@ -852,11 +852,18 @@ void COFFDumper::printCOFFLoadConfig() {
 
   if (Tables.GuardFidTableVA) {
     ListScope LS(W, "GuardFidTable");
-    if (Tables.GuardFlags & uint32_t(coff_guard_flags::FidTableHasFlags))
-      printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, 5,
+    if (uint32_t Size =
+            Tables.GuardFlags &
+            uint32_t(COFF::GuardFlags::CF_FUNCTION_TABLE_SIZE_MASK)) {
+      // The size mask gives the number of extra bytes in addition to the 4-byte
+      // RVA of each entry in the table. As of writing only a 1-byte extra flag
+      // has been defined.
+      Size = (Size >> 28) + 4;
+      printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, Size,
                     PrintGuardFlags);
-    else
+    } else {
       printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, 4);
+    }
   }
 
   if (Tables.GuardIatTableVA) {
