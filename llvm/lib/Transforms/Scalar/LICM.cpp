@@ -147,9 +147,8 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
                   MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
                   OptimizationRemarkEmitter *ORE);
 static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
-                 BlockFrequencyInfo *BFI, const Loop *CurLoop,
-                 ICFLoopSafetyInfo *SafetyInfo, MemorySSAUpdater &MSSAU,
-                 OptimizationRemarkEmitter *ORE);
+                 const Loop *CurLoop, ICFLoopSafetyInfo *SafetyInfo,
+                 MemorySSAUpdater &MSSAU, OptimizationRemarkEmitter *ORE);
 static bool isSafeToExecuteUnconditionally(
     Instruction &Inst, const DominatorTree *DT, const TargetLibraryInfo *TLI,
     const Loop *CurLoop, const LoopSafetyInfo *SafetyInfo,
@@ -179,8 +178,8 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L);
 namespace {
 struct LoopInvariantCodeMotion {
   bool runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI, DominatorTree *DT,
-                 BlockFrequencyInfo *BFI, TargetLibraryInfo *TLI,
-                 TargetTransformInfo *TTI, ScalarEvolution *SE, MemorySSA *MSSA,
+                 TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
+                 ScalarEvolution *SE, MemorySSA *MSSA,
                  OptimizationRemarkEmitter *ORE, bool LoopNestMode = false);
 
   LoopInvariantCodeMotion(unsigned LicmMssaOptCap,
@@ -216,23 +215,19 @@ struct LegacyLICMPass : public LoopPass {
 
     auto *SE = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
     MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
-    bool hasProfileData = L->getHeader()->getParent()->hasProfileData();
-    BlockFrequencyInfo *BFI =
-        hasProfileData ? &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI()
-                       : nullptr;
     // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
     // pass. Function analyses need to be preserved across loop transformations
     // but ORE cannot be preserved (see comment before the pass definition).
     OptimizationRemarkEmitter ORE(L->getHeader()->getParent());
-    return LICM.runOnLoop(
-        L, &getAnalysis<AAResultsWrapperPass>().getAAResults(),
-        &getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
-        &getAnalysis<DominatorTreeWrapperPass>().getDomTree(), BFI,
-        &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
-            *L->getHeader()->getParent()),
-        &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
-            *L->getHeader()->getParent()),
-        SE ? &SE->getSE() : nullptr, MSSA, &ORE);
+    return LICM.runOnLoop(L,
+                          &getAnalysis<AAResultsWrapperPass>().getAAResults(),
+                          &getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
+                          &getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
+                          &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(
+                              *L->getHeader()->getParent()),
+                          &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
+                              *L->getHeader()->getParent()),
+                          SE ? &SE->getSE() : nullptr, MSSA, &ORE);
   }
 
   /// This transformation requires natural loop information & requires that
@@ -268,8 +263,8 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
 
   LoopInvariantCodeMotion LICM(Opts.MssaOptCap, Opts.MssaNoAccForPromotionCap,
                                Opts.AllowSpeculation);
-  if (!LICM.runOnLoop(&L, &AR.AA, &AR.LI, &AR.DT, AR.BFI, &AR.TLI, &AR.TTI,
-                      &AR.SE, AR.MSSA, &ORE))
+  if (!LICM.runOnLoop(&L, &AR.AA, &AR.LI, &AR.DT, &AR.TLI, &AR.TTI, &AR.SE,
+                      AR.MSSA, &ORE))
     return PreservedAnalyses::all();
 
   auto PA = getLoopPassPreservedAnalyses();
@@ -306,8 +301,8 @@ PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
                                Opts.AllowSpeculation);
 
   Loop &OutermostLoop = LN.getOutermostLoop();
-  bool Changed = LICM.runOnLoop(&OutermostLoop, &AR.AA, &AR.LI, &AR.DT, AR.BFI,
-                                &AR.TLI, &AR.TTI, &AR.SE, AR.MSSA, &ORE, true);
+  bool Changed = LICM.runOnLoop(&OutermostLoop, &AR.AA, &AR.LI, &AR.DT, &AR.TLI,
+                                &AR.TTI, &AR.SE, AR.MSSA, &ORE, true);
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -384,9 +379,8 @@ llvm::SinkAndHoistLICMFlags::SinkAndHoistLICMFlags(
 /// times on one loop.
 bool LoopInvariantCodeMotion::runOnLoop(
     Loop *L, AAResults *AA, LoopInfo *LI, DominatorTree *DT,
-    BlockFrequencyInfo *BFI, TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
-    ScalarEvolution *SE, MemorySSA *MSSA, OptimizationRemarkEmitter *ORE,
-    bool LoopNestMode) {
+    TargetLibraryInfo *TLI, TargetTransformInfo *TTI, ScalarEvolution *SE,
+    MemorySSA *MSSA, OptimizationRemarkEmitter *ORE, bool LoopNestMode) {
   bool Changed = false;
 
   assert(L->isLCSSAForm(*DT) && "Loop is not in LCSSA form.");
@@ -435,15 +429,15 @@ bool LoopInvariantCodeMotion::runOnLoop(
   // us to sink instructions in one pass, without iteration.  After sinking
   // instructions, we perform another pass to hoist them out of the loop.
   if (L->hasDedicatedExits())
-    Changed |= LoopNestMode
-                   ? sinkRegionForLoopNest(DT->getNode(L->getHeader()), AA, LI,
-                                           DT, BFI, TLI, TTI, L, MSSAU,
-                                           &SafetyInfo, Flags, ORE)
-                   : sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, BFI,
-                                TLI, TTI, L, MSSAU, &SafetyInfo, Flags, ORE);
+    Changed |=
+        LoopNestMode
+            ? sinkRegionForLoopNest(DT->getNode(L->getHeader()), AA, LI, DT,
+                                    TLI, TTI, L, MSSAU, &SafetyInfo, Flags, ORE)
+            : sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, TLI, TTI, L,
+                         MSSAU, &SafetyInfo, Flags, ORE);
   Flags.setIsSink(false);
   if (Preheader)
-    Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, BFI, TLI, L,
+    Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, TLI, L,
                            MSSAU, SE, &SafetyInfo, Flags, ORE, LoopNestMode,
                            LicmAllowSpeculation);
 
@@ -526,10 +520,9 @@ bool LoopInvariantCodeMotion::runOnLoop(
 /// definitions, allowing us to sink a loop body in one pass without iteration.
 ///
 bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
-                      DominatorTree *DT, BlockFrequencyInfo *BFI,
-                      TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
-                      Loop *CurLoop, MemorySSAUpdater &MSSAU,
-                      ICFLoopSafetyInfo *SafetyInfo,
+                      DominatorTree *DT, TargetLibraryInfo *TLI,
+                      TargetTransformInfo *TTI, Loop *CurLoop,
+                      MemorySSAUpdater &MSSAU, ICFLoopSafetyInfo *SafetyInfo,
                       SinkAndHoistLICMFlags &Flags,
                       OptimizationRemarkEmitter *ORE, Loop *OutermostLoop) {
 
@@ -577,7 +570,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
           isNotUsedOrFreeInLoop(I, LoopNestMode ? OutermostLoop : CurLoop,
                                 SafetyInfo, TTI, FreeInLoop, LoopNestMode) &&
           canSinkOrHoistInst(I, AA, DT, CurLoop, MSSAU, true, Flags, ORE)) {
-        if (sink(I, LI, DT, BFI, CurLoop, SafetyInfo, MSSAU, ORE)) {
+        if (sink(I, LI, DT, CurLoop, SafetyInfo, MSSAU, ORE)) {
           if (!FreeInLoop) {
             ++II;
             salvageDebugInfo(I);
@@ -593,11 +586,13 @@ bool llvm::sinkRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
   return Changed;
 }
 
-bool llvm::sinkRegionForLoopNest(
-    DomTreeNode *N, AAResults *AA, LoopInfo *LI, DominatorTree *DT,
-    BlockFrequencyInfo *BFI, TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
-    Loop *CurLoop, MemorySSAUpdater &MSSAU, ICFLoopSafetyInfo *SafetyInfo,
-    SinkAndHoistLICMFlags &Flags, OptimizationRemarkEmitter *ORE) {
+bool llvm::sinkRegionForLoopNest(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
+                                 DominatorTree *DT, TargetLibraryInfo *TLI,
+                                 TargetTransformInfo *TTI, Loop *CurLoop,
+                                 MemorySSAUpdater &MSSAU,
+                                 ICFLoopSafetyInfo *SafetyInfo,
+                                 SinkAndHoistLICMFlags &Flags,
+                                 OptimizationRemarkEmitter *ORE) {
 
   bool Changed = false;
   SmallPriorityWorklist<Loop *, 4> Worklist;
@@ -605,8 +600,8 @@ bool llvm::sinkRegionForLoopNest(
   appendLoopsToWorklist(*CurLoop, Worklist);
   while (!Worklist.empty()) {
     Loop *L = Worklist.pop_back_val();
-    Changed |= sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, BFI, TLI,
-                          TTI, L, MSSAU, SafetyInfo, Flags, ORE, CurLoop);
+    Changed |= sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, TLI, TTI, L,
+                          MSSAU, SafetyInfo, Flags, ORE, CurLoop);
   }
   return Changed;
 }
@@ -845,8 +840,7 @@ public:
 /// uses, allowing us to hoist a loop body in one pass without iteration.
 ///
 bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
-                       DominatorTree *DT, BlockFrequencyInfo *BFI,
-                       TargetLibraryInfo *TLI, Loop *CurLoop,
+                       DominatorTree *DT, TargetLibraryInfo *TLI, Loop *CurLoop,
                        MemorySSAUpdater &MSSAU, ScalarEvolution *SE,
                        ICFLoopSafetyInfo *SafetyInfo,
                        SinkAndHoistLICMFlags &Flags,
@@ -1588,9 +1582,8 @@ static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
 /// position, and may either delete it or move it to outside of the loop.
 ///
 static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
-                 BlockFrequencyInfo *BFI, const Loop *CurLoop,
-                 ICFLoopSafetyInfo *SafetyInfo, MemorySSAUpdater &MSSAU,
-                 OptimizationRemarkEmitter *ORE) {
+                 const Loop *CurLoop, ICFLoopSafetyInfo *SafetyInfo,
+                 MemorySSAUpdater &MSSAU, OptimizationRemarkEmitter *ORE) {
   bool Changed = false;
   LLVM_DEBUG(dbgs() << "LICM sinking instruction: " << I << "\n");
 
