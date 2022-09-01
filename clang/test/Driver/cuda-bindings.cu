@@ -216,3 +216,14 @@
 // RUN:        --offload-arch=sm_70 --offload-arch=sm_52 --offload-device-only -c -o %t %s 2>&1 \
 // RUN: | FileCheck -check-prefix=MULTI-D-ONLY-O %s
 // MULTI-D-ONLY-O: error: cannot specify -o when generating multiple output files
+
+//
+// Check to ensure that we can use '-fsyntax-only' for CUDA output with the new
+// driver.
+// 
+// RUN: %clang -### -target powerpc64le-ibm-linux-gnu --offload-new-driver \
+// RUN:        -fsyntax-only --offload-arch=sm_70 --offload-arch=sm_52 -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=SYNTAX-ONLY %s
+// SYNTAX-ONLY: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-fsyntax-only"
+// SYNTAX-ONLY: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-fsyntax-only"
+// SYNTAX-ONLY: "-cc1" "-triple" "powerpc64le-ibm-linux-gnu"{{.*}}"-fsyntax-only"

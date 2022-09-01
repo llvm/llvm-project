@@ -189,3 +189,20 @@
 // RUN:     -mllvm -abc %s 2>&1 | FileCheck -check-prefix=CHK-NEW-DRIVER-MLLVM %s
 
 // CHK-NEW-DRIVER-MLLVM: clang-linker-wrapper{{.*}} "-abc"
+
+//
+// Ensure that we generate the correct bindings for '-fsyntax-only' for OpenMP.
+//
+// RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu \
+// RUN:     -fsyntax-only -ccc-print-bindings %s 2>&1 | FileCheck -check-prefix=CHK-SYNTAX-ONLY %s
+// CHK-SYNTAX-ONLY: # "powerpc64le-ibm-linux-gnu" - "clang", inputs: ["[[INPUT:.+]]"], output: (nothing)
+// CHK-SYNTAX-ONLY: # "powerpc64le-unknown-linux" - "clang", inputs: ["[[INPUT]]", (nothing)], output: (nothing)
+
+//
+// Ensure that we can generate the correct arguments for '-fsyntax-only' for
+// OpenMP.
+//
+// RUN:   %clang -### --target=powerpc64le-linux -fopenmp=libomp -fopenmp-targets=powerpc64le-ibm-linux-gnu \
+// RUN:     -fsyntax-only %s 2>&1 | FileCheck -check-prefix=CHK-SYNTAX-ONLY-ARGS %s
+// CHK-SYNTAX-ONLY-ARGS: "-cc1" "-triple" "powerpc64le-ibm-linux-gnu"{{.*}}"-fsyntax-only"
+// CHK-SYNTAX-ONLY-ARGS: "-cc1" "-triple" "powerpc64le-unknown-linux"{{.*}}"-fsyntax-only"
