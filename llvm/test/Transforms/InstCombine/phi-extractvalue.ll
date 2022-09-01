@@ -393,9 +393,8 @@ define i32 @extractvalue_of_constant_phi(i1 %c) {
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi { i32, i32 } [ { i32 1, i32 2 }, [[IF]] ], [ { i32 3, i32 4 }, [[ELSE]] ]
-; CHECK-NEXT:    [[EV:%.*]] = extractvalue { i32, i32 } [[PHI]], 0
-; CHECK-NEXT:    ret i32 [[EV]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[IF]] ], [ 3, [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
 ;
   br i1 %c, label %if, label %else
 
@@ -415,13 +414,13 @@ define i32 @extractvalue_of_one_constant_phi(i1 %c, { i32, i32 } %arg) {
 ; CHECK-LABEL: @extractvalue_of_one_constant_phi(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[PHI_EV:%.*]] = extractvalue { i32, i32 } [[ARG:%.*]], 0
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi { i32, i32 } [ [[ARG:%.*]], [[IF]] ], [ { i32 3, i32 4 }, [[ELSE]] ]
-; CHECK-NEXT:    [[EV:%.*]] = extractvalue { i32, i32 } [[PHI]], 0
-; CHECK-NEXT:    ret i32 [[EV]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[PHI_EV]], [[IF]] ], [ 3, [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
 ;
   br i1 %c, label %if, label %else
 
@@ -445,9 +444,8 @@ define i32 @extractvalue_of_constant_phi_multi_index(i1 %c) {
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi { i32, { i32, i32 } } [ { i32 1, { i32, i32 } { i32 2, i32 3 } }, [[IF]] ], [ { i32 4, { i32, i32 } { i32 5, i32 6 } }, [[ELSE]] ]
-; CHECK-NEXT:    [[EV:%.*]] = extractvalue { i32, { i32, i32 } } [[PHI]], 1, 1
-; CHECK-NEXT:    ret i32 [[EV]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 3, [[IF]] ], [ 6, [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
 ;
   br i1 %c, label %if, label %else
 
@@ -467,13 +465,13 @@ define i32 @extractvalue_of_one_constant_phi_multi_index(i1 %c, { i32, { i32, i3
 ; CHECK-LABEL: @extractvalue_of_one_constant_phi_multi_index(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[PHI_EV:%.*]] = extractvalue { i32, { i32, i32 } } [[ARG:%.*]], 1, 1
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi { i32, { i32, i32 } } [ [[ARG:%.*]], [[IF]] ], [ { i32 4, { i32, i32 } { i32 5, i32 6 } }, [[ELSE]] ]
-; CHECK-NEXT:    [[EV:%.*]] = extractvalue { i32, { i32, i32 } } [[PHI]], 1, 1
-; CHECK-NEXT:    ret i32 [[EV]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[PHI_EV]], [[IF]] ], [ 6, [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
 ;
   br i1 %c, label %if, label %else
 
