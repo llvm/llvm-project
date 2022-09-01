@@ -29,7 +29,7 @@
 ;     CHECK-NEXT:   .long {{.*}}
 ;     CHECK-NEXT:   .short {{.*}}
 ;     NumLiveVars
-;     CHECK-NEXT:   .short 13
+;     CHECK-NEXT:   .short 16
 ;     LiveVars[NumLiveVars]
 ;       LiveVars[0]
 ;       CHECK-NEXT: .byte   1
@@ -232,6 +232,124 @@
 ;           CHECK-NEXT: .short  0
 ;           CHECK-NEXT: .short  0
 ;           CHECK-NEXT: .long   0
+;       LiveVars[13]
+;         CHECK-NEXT: .byte   4
+;         Locations[0]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   0
+;         Locations[1]
+;           CHECK-NEXT: .byte   1
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  4
+;           CHECK-NEXT: .short  {{.*}}
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   0
+;         Locations[2]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   0
+;         Locations[3]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   0
+;       LiveVars[14]
+;         CHECK-NEXT: .byte   8
+;         Locations[0]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   0
+;         Locations[1]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   0
+;         Locations[2]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   0
+;         Locations[3]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   0
+;         Locations[4]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   0
+;         Locations[5]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   0
+;         Locations[6]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   0
+;         Locations[7]
+;           CHECK-NEXT: .byte   1
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  4
+;           CHECK-NEXT: .short  {{.*}}
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   0
+;       LiveVars[14]
+;         CHECK-NEXT: .byte   4
+;         Locations[0]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   0
+;         Locations[1]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   1
+;         Locations[2]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   2
+;         Locations[3]
+;           CHECK-NEXT: .byte   4
+;           CHECK-NEXT: .byte   0
+;           CHECK-NEXT: .short  8
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .short  0
+;           CHECK-NEXT: .long   3
 
 @p32 = external global i8 addrspace(270)*
 
@@ -249,6 +367,8 @@ entry:
   %structreg1 = insertvalue %struct1 zeroinitializer, i32 %argc, 0
   %structreg2 = insertvalue %struct2 zeroinitializer, i1 %i1reg, 0
   %arrayreg = insertvalue [4 x i32] zeroinitializer, i32 %argc, 0
+  %vec = insertelement <4 x i32> zeroinitializer, i32 %argc, i32 1
+  %bigvec = insertelement <8 x i32> zeroinitializer, i32 %argc, i32 7
   call void (i64, i32, ...) @llvm.experimental.stackmap(
     i64 0,
     i32 0,
@@ -274,6 +394,9 @@ entry:
     %struct2 zeroinitializer,
     %struct2 %structreg2,
     [4 x i32] [i32 0, i32 1, i32 2, i32 3],
-    [4 x i32] %arrayreg)
+    [4 x i32] %arrayreg,
+    <4 x i32> %vec,
+    <8 x i32> %bigvec,
+    <4 x i8> <i8 0, i8 1, i8 2, i8 3>)
   ret i32 0
 }

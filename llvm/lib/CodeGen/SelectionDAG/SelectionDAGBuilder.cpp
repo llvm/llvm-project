@@ -9288,6 +9288,34 @@ void SelectionDAGBuilder::populateCallLoweringInfo(
           Call->countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0);
 }
 
+/// Given the stackmap live variable `N`, search its sub-DAG and return all of
+/// the constituent values that need to be reported in the stackmap table.
+static std::vector<SDValue> findLiveConstituents(SelectionDAG &DAG,
+                                                 const SDValue &N) {
+  std::vector<SDValue> V;
+
+  switch (N.getOpcode()) {
+  case ISD::BUILD_PAIR:
+  case ISD::CONCAT_VECTORS:
+  case ISD::MERGE_VALUES:
+  case ISD::BUILD_VECTOR:
+    for (SDValue Op : N->op_values())
+      V.push_back(Op);
+    break;
+  case ISD::INSERT_VECTOR_ELT: {
+    V = findLiveConstituents(DAG, N.getOperand(0));
+    unsigned Idx =
+        cast<ConstantSDNode>(N.getOperand(2).getNode())->getZExtValue();
+    V[Idx] = N.getOperand(1);
+    break;
+  }
+  default:
+    V.push_back(N);
+  }
+
+  return V;
+}
+
 /// Add a stack map intrinsic call's live variable operands to a stackmap
 /// or patchpoint target node's operand list.
 ///
@@ -9320,12 +9348,8 @@ static void addStackMapLiveVars(const CallBase &Call, unsigned StartIdx,
       Ops.push_back(DAG.getTargetFrameIndex(FI->getIndex(), Op.getValueType()));
     } else {
       // Otherwise emit a target independent node to be legalised.
-      if (Op.getOpcode() == ISD::MERGE_VALUES) {
-        for (unsigned J = 0; J < Op.getNumOperands(); J++)
-          Ops.push_back(Op.getOperand(J));
-      } else {
-        Ops.push_back(Op);
-      }
+      for (SDValue &V : findLiveConstituents(DAG, Op))
+        Ops.push_back(V);
     }
     Ops.push_back(DAG.getTargetConstant(StackMaps::NextLive, DL, MVT::i64));
   }
