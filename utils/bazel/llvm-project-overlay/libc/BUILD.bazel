@@ -129,7 +129,7 @@ cc_library(
 )
 
 cc_library(
-    name = "__support_cpp_uint128",
+    name = "__support_uint128",
     hdrs = ["src/__support/UInt128.h"],
     deps = [
         ":__support_uint",
@@ -157,41 +157,139 @@ cc_library(
     ],
 )
 
-fputil_common_hdrs = [
-    "src/__support/FPUtil/BasicOperations.h",
-    "src/__support/FPUtil/DivisionAndRemainderOperations.h",
-    "src/__support/FPUtil/FEnvImpl.h",
-    "src/__support/FPUtil/FPBits.h",
-    "src/__support/FPUtil/FloatProperties.h",
-    "src/__support/FPUtil/Hypot.h",
-    "src/__support/FPUtil/ManipulationFunctions.h",
-    "src/__support/FPUtil/NearestIntegerOperations.h",
-    "src/__support/FPUtil/NormalFloat.h",
-    "src/__support/FPUtil/PlatformDefs.h",
-    "src/__support/FPUtil/builtin_wrappers.h",
-    "src/__support/FPUtil/except_value_utils.h",
-]
-
-fputil_hdrs = selects.with_or({
-    "//conditions:default": fputil_common_hdrs,
-    PLATFORM_CPU_X86_64: fputil_common_hdrs + [
-        "src/__support/FPUtil/x86_64/LongDoubleBits.h",
-        "src/__support/FPUtil/x86_64/NextAfterLongDouble.h",
-        "src/__support/FPUtil/x86_64/FEnvImpl.h",
+cc_library(
+    name = "__support_fputil_basic_operations",
+    hdrs = ["src/__support/FPUtil/BasicOperations.h"],
+    deps = [
+        ":__support_cpp_type_traits",
+        ":__support_fputil_fp_bits",
+        ":libc_root",
     ],
-    PLATFORM_CPU_ARM64: fputil_common_hdrs + [
-        "src/__support/FPUtil/aarch64/FEnvImpl.h",
-    ],
-})
+)
 
 cc_library(
-    name = "__support_fputil",
-    hdrs = fputil_hdrs,
+    name = "__support_fputil_builtin_wrappers",
+    hdrs = ["src/__support/FPUtil/builtin_wrappers.h"],
+    deps = [
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_fputil_division_and_remainder_operations",
+    hdrs = ["src/__support/FPUtil/DivisionAndRemainderOperations.h"],
+    deps = [
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_manipulation_functions",
+        ":__support_fputil_normal_float",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_fputil_except_value_utils",
+    hdrs = ["src/__support/FPUtil/except_value_utils.h"],
+    deps = [
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_fputil_fenv_impl",
+    hdrs = ["src/__support/FPUtil/FEnvImpl.h"],
+    textual_hdrs = [
+        "src/__support/FPUtil/x86_64/FEnvImpl.h",
+        "src/__support/FPUtil/aarch64/FEnvImpl.h",
+    ],
+    deps = [
+        ":__support_common",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_fputil_float_properties",
+    hdrs = ["src/__support/FPUtil/FloatProperties.h"],
+    deps = [
+        ":__support_fputil_platform_defs",
+        ":__support_uint128",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_fputil_fp_bits",
+    hdrs = ["src/__support/FPUtil/FPBits.h"],
+    textual_hdrs = ["src/__support/FPUtil/x86_64/LongDoubleBits.h"],
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
-        ":__support_cpp_uint128",
+        ":__support_fputil_builtin_wrappers",
+        ":__support_fputil_float_properties",
+        ":__support_fputil_platform_defs",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_fputil_hypot",
+    hdrs = ["src/__support/FPUtil/Hypot.h"],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_cpp_type_traits",
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_builtin_wrappers",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_uint128",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_fputil_manipulation_functions",
+    hdrs = ["src/__support/FPUtil/ManipulationFunctions.h"],
+    textual_hdrs = ["src/__support/FPUtil/x86_64/NextAfterLongDouble.h"],
+    deps = [
+        ":__support_cpp_bit",
+        ":__support_cpp_type_traits",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_nearest_integer_operations",
+        ":__support_fputil_normal_float",
+        ":__support_fputil_platform_defs",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_fputil_nearest_integer_operations",
+    hdrs = ["src/__support/FPUtil/NearestIntegerOperations.h"],
+    deps = [
+        ":__support_cpp_type_traits",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_fputil_normal_float",
+    hdrs = ["src/__support/FPUtil/NormalFloat.h"],
+    deps = [
+        ":__support_cpp_type_traits",
+        ":__support_fputil_fp_bits",
+        ":libc_root",
+    ],
+)
+
+cc_library(
+    name = "__support_fputil_platform_defs",
+    hdrs = ["src/__support/FPUtil/PlatformDefs.h"],
+    deps = [
+        ":__support_common",
         ":libc_root",
     ],
 )
@@ -219,8 +317,11 @@ cc_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
-        ":__support_cpp_uint128",
-        ":__support_fputil",
+        ":__support_fputil_builtin_wrappers",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_platform_defs",
+        ":__support_uint128",
         ":libc_root",
     ],
 )
@@ -245,8 +346,11 @@ cc_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_type_traits",
-        ":__support_cpp_uint128",
-        ":__support_fputil",
+        ":__support_fputil_builtin_wrappers",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_float_properties",
+        ":__support_fputil_fp_bits",
+        ":__support_uint128",
         ":libc_root",
     ],
 )
@@ -316,7 +420,7 @@ libc_function(
     hdrs = ["src/fenv/fetestexcept.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -326,7 +430,7 @@ libc_function(
     hdrs = ["src/fenv/feclearexcept.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -336,7 +440,7 @@ libc_function(
     hdrs = ["src/fenv/feraiseexcept.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -346,7 +450,7 @@ libc_function(
     hdrs = ["src/fenv/fegetround.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -356,7 +460,7 @@ libc_function(
     hdrs = ["src/fenv/fesetround.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -366,7 +470,7 @@ libc_function(
     hdrs = ["src/fenv/fedisableexcept.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -376,7 +480,7 @@ libc_function(
     hdrs = ["src/fenv/feenableexcept.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -386,7 +490,7 @@ libc_function(
     hdrs = ["src/fenv/fegetexcept.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -396,7 +500,7 @@ libc_function(
     hdrs = ["src/fenv/fegetenv.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -406,7 +510,7 @@ libc_function(
     hdrs = ["src/fenv/fesetenv.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -416,7 +520,7 @@ libc_function(
     hdrs = ["src/fenv/feupdateenv.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -426,7 +530,7 @@ libc_function(
     hdrs = ["src/fenv/fegetexceptflag.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -436,7 +540,7 @@ libc_function(
     hdrs = ["src/fenv/fesetexceptflag.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -446,7 +550,7 @@ libc_function(
     hdrs = ["src/fenv/feholdexcept.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fenv_impl",
     ],
 )
 
@@ -480,8 +584,8 @@ cc_library(
         "src/math/generic/range_reduction_fma.h",
     ],
     deps = [
-        ":__support_fputil",
         ":__support_fputil_fma",
+        ":__support_fputil_fp_bits",
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
         ":libc_root",
@@ -493,7 +597,7 @@ cc_library(
     hdrs = ["src/math/generic/sincosf_utils.h"],
     deps = [
         ":__support_common",
-        ":__support_fputil",
+        ":__support_fputil_fp_bits",
         ":__support_fputil_polyeval",
         ":libc_root",
         ":range_reduction",
