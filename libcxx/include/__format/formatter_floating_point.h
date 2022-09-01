@@ -18,7 +18,7 @@
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
-#include <__format/format_fwd.h>
+#include <__format/concepts.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
 #include <__format/formatter_integral.h>
@@ -683,7 +683,7 @@ __format_floating_point(_Tp __value, auto& __ctx, __format_spec::__parsed_specif
 
 } // namespace __formatter
 
-template <__formatter::__char_type _CharT>
+template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS __formatter_floating_point {
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto
@@ -701,13 +701,13 @@ public:
   __format_spec::__parser<_CharT> __parser_;
 };
 
-template <__formatter::__char_type _CharT>
+template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<float, _CharT>
     : public __formatter_floating_point<_CharT> {};
-template <__formatter::__char_type _CharT>
+template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<double, _CharT>
     : public __formatter_floating_point<_CharT> {};
-template <__formatter::__char_type _CharT>
+template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<long double, _CharT>
     : public __formatter_floating_point<_CharT> {};
 

@@ -13,7 +13,7 @@
 #include <__availability>
 #include <__concepts/same_as.h>
 #include <__config>
-#include <__format/format_fwd.h>
+#include <__format/concepts.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
 #include <__format/formatter_integral.h>
@@ -30,7 +30,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER > 17
 
-template <__formatter::__char_type _CharT>
+template <__fmt_char_type _CharT>
 struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT __formatter_char {
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto
