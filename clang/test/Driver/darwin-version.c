@@ -309,7 +309,7 @@
 
 // Target with OS version is not overridden by arch:
 
-// RUN: %clang -target uknown-apple-macos10.11.2 -arch=armv7k -c %s -### 2>&1 | \
+// RUN: %clang -target uknown-apple-macos10.11.2 -c %s -### 2>&1 | \
 // RUN:   FileCheck --check-prefix=CHECK-VERSION-TIGNORE-ARCH1 %s
 // CHECK-VERSION-TIGNORE-ARCH1: "unknown-apple-macosx10.11.2"
 
