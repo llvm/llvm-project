@@ -20,9 +20,6 @@
 // would need to add significant complexity to make that work.
 // UNSUPPORTED: no-localization, no-threads, no-wide-characters, no-filesystem, libcpp-has-no-incomplete-format
 
-// TODO(mordante) FIX C++ 03, the issue is the experimental library doesn't work with C++03 but isn't guarded.
-// UNSUPPORTED: c++03
-
 // When built with modules, this test doesn't work because --trace-includes doesn't
 // report the stack of includes correctly.
 // UNSUPPORTED: modules-build
