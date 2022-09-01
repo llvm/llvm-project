@@ -859,9 +859,6 @@ private:
   Error forEachRef(ObjectHandle Node,
                    function_ref<Error(ObjectRef)> Callback) const final;
 
-  StringRef getPathForID(StringRef BaseDir, CASID ID,
-                         SmallVectorImpl<char> &Storage);
-
   Expected<std::unique_ptr<MemoryBuffer>> openFile(StringRef Path);
   Expected<std::unique_ptr<MemoryBuffer>> openFileWithID(StringRef BaseDir,
                                                          CASID ID);

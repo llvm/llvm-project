@@ -235,12 +235,12 @@ public:
     return storeFromOpenFileImpl(FD, Status);
   }
 
-  static Error createUnknownObjectError(CASID ID);
+  static Error createUnknownObjectError(const CASID &ID);
 
   /// Create ObjectProxy from CASID. If the object doesn't exit, get an error.
-  Expected<ObjectProxy> getProxy(CASID ID);
+  Expected<ObjectProxy> getProxy(const CASID &ID);
   /// Create ObjectProxy from CASID. If the object doesn't exit, get None..
-  Expected<Optional<ObjectProxy>> getProxyOrNone(CASID ID);
+  Expected<Optional<ObjectProxy>> getProxyOrNone(const CASID &ID);
   /// Create ObjectProxy from ObjectRef. If the object can't be loaded, get an
   /// error.
   Expected<ObjectProxy> getProxy(ObjectRef Ref);
@@ -295,13 +295,6 @@ public:
   /// stop early.
   Error forEachReference(function_ref<Error(ObjectRef)> Callback) const {
     return CAS->forEachRef(H, Callback);
-  }
-  Error forEachReferenceID(function_ref<Error(CASID)> Callback) const {
-    return CAS->forEachRef(H, [&](ObjectRef Ref) {
-      Optional<CASID> ID = getCAS().getID(Ref);
-      assert(ID && "Expected reference to be first-class object");
-      return Callback(*ID);
-    });
   }
 
   std::unique_ptr<MemoryBuffer>

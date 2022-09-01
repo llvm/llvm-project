@@ -226,7 +226,7 @@ static Error printCompileJobCacheKey(ObjectStore &CAS, ObjectProxy Node,
   });
 }
 
-Error clang::printCompileJobCacheKey(ObjectStore &CAS, CASID Key,
+Error clang::printCompileJobCacheKey(ObjectStore &CAS, const CASID &Key,
                                      raw_ostream &OS) {
   auto H = CAS.getProxy(Key);
   if (!H)

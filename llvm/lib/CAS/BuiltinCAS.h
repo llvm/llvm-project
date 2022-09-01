@@ -111,12 +111,12 @@ public:
     return getDataConst(Node).size();
   }
 
-  Error createUnknownObjectError(CASID ID) const {
+  Error createUnknownObjectError(const CASID &ID) const {
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "unknown object '" + ID.toString() + "'");
   }
 
-  Error createCorruptObjectError(CASID ID) const {
+  Error createCorruptObjectError(const CASID &ID) const {
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "corrupt object '" + ID.toString() + "'");
   }

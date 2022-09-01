@@ -88,9 +88,11 @@ public:
            LHS.Hash == RHS.Hash;
   }
 
-  friend bool operator!=(CASID LHS, CASID RHS) { return !(LHS == RHS); }
+  friend bool operator!=(const CASID &LHS, const CASID &RHS) {
+    return !(LHS == RHS);
+  }
 
-  friend hash_code hash_value(CASID ID) {
+  friend hash_code hash_value(const CASID &ID) {
     ArrayRef<uint8_t> Hash = ID.getHash();
     return hash_combine_range(Hash.begin(), Hash.end());
   }
