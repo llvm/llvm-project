@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/str_to_num_result.h"
 #include <errno.h>
 #include <limits.h>
 
@@ -63,19 +64,19 @@ static inline int infer_base(const char *__restrict *__restrict src) {
   }
 }
 
-// Takes a pointer to a string, a pointer to a string pointer, and the base to
-// convert to. This function is used as the backend for all of the string to int
-// functions.
+// Takes a pointer to a string and the base to convert to. This function is used
+// as the backend for all of the string to int functions.
 template <class T>
-static inline T strtointeger(const char *__restrict src,
-                             char **__restrict str_end, int base) {
+static inline StrToNumResult<T> strtointeger(const char *__restrict src,
+                                             int base) {
   unsigned long long result = 0;
   bool is_number = false;
   const char *original_src = src;
+  int error_val = 0;
 
   if (base < 0 || base == 1 || base > 36) {
-    errno = EINVAL;
-    return 0;
+    error_val = EINVAL;
+    return {0, 0, error_val};
   }
 
   src = first_non_whitespace(src);
@@ -113,35 +114,35 @@ static inline T strtointeger(const char *__restrict src,
     // the result cannot change, but we still need to advance src to the end of
     // the number.
     if (result == abs_max) {
-      errno = ERANGE;
+      error_val = ERANGE;
       continue;
     }
 
     if (result > abs_max_div_by_base) {
       result = abs_max;
-      errno = ERANGE;
+      error_val = ERANGE;
     } else {
       result = result * base;
     }
     if (result > abs_max - cur_digit) {
       result = abs_max;
-      errno = ERANGE;
+      error_val = ERANGE;
     } else {
       result = result + cur_digit;
     }
   }
 
-  if (str_end != nullptr)
-    *str_end = const_cast<char *>(is_number ? src : original_src);
+  ptrdiff_t str_len = is_number ? (src - original_src) : 0;
 
   if (result == abs_max) {
     if (is_positive || IS_UNSIGNED)
-      return cpp::numeric_limits<T>::max();
+      return {cpp::numeric_limits<T>::max(), str_len, error_val};
     else // T is signed and there is a negative overflow
-      return cpp::numeric_limits<T>::min();
+      return {cpp::numeric_limits<T>::min(), str_len, error_val};
   }
 
-  return is_positive ? static_cast<T>(result) : -static_cast<T>(result);
+  return {is_positive ? static_cast<T>(result) : -static_cast<T>(result),
+          str_len, error_val};
 }
 
 } // namespace internal
