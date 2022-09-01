@@ -8,7 +8,7 @@ define void @test1(i1 %cond, i32* %ptr) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND:%.*]]) [ "deopt"(i32 0) ]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[PTR:%.*]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X_INC:%.*]], [[LOOP]] ]
@@ -34,9 +34,9 @@ define void @test2(i1 %cond, i32* %ptr) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X_INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    store i32 0, i32* [[PTR:%.*]]
+; CHECK-NEXT:    store i32 0, i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND:%.*]]) [ "deopt"(i32 0) ]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[PTR]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[PTR]], align 4
 ; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], [[VAL]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -61,9 +61,9 @@ define void @test2b(i1 %cond, i32* %ptr) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X_INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    store i32 [[X]], i32* [[P2]]
+; CHECK-NEXT:    store i32 [[X]], i32* [[P2]], align 4
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND:%.*]]) [ "deopt"(i32 0) ]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[PTR]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[PTR]], align 4
 ; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], [[VAL]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -86,14 +86,15 @@ define void @test2b_prime(i1 %cond, i32* noalias %ptr) {
 ; CHECK-LABEL: @test2b_prime(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr i32, i32* [[PTR:%.*]], i32 1
-; CHECK-NEXT:    store i32 0, i32* [[P2]]
+; CHECK-NEXT:    store i32 0, i32* [[P2]], align 4
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND:%.*]]) [ "deopt"(i32 0) ]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[PTR]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[PTR]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], [[VAL]]
 ; CHECK-NEXT:    br label [[LOOP]]
+;
 
 entry:
   br label %loop
@@ -117,7 +118,7 @@ define void @test3(i1 %cond, i32* %ptr) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[PTR:%.*]], align 4
-; CHECK-NEXT:    store i32 0, i32* [[PTR]]
+; CHECK-NEXT:    store i32 0, i32* [[PTR]], align 4
 ; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], [[VAL]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
@@ -138,7 +139,7 @@ loop:
 define void @test4(i1 %c, i32* %p) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[INVARIANT_COND:%.*]] = icmp ne i32 [[A]], 100
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[INVARIANT_COND]]) [ "deopt"() ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -192,12 +193,12 @@ define void @test4a(i1 %c, i32* %p, i32* %q) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    store i32 123, i32* [[Q:%.*]]
+; CHECK-NEXT:    store i32 123, i32* [[Q:%.*]], align 4
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       backedge:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[INVARIANT_COND:%.*]] = icmp ne i32 [[A]], 100
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[INVARIANT_COND]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], 1000
@@ -242,7 +243,7 @@ define void @test4b(i1 %c, i32* %p, i32* %q) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[INVARIANT_COND:%.*]] = icmp ne i32 [[A]], 100
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[INVARIANT_COND]]) [ "deopt"() ]
 ; CHECK-NEXT:    br label [[BACKEDGE]]
@@ -284,8 +285,8 @@ exit:
 define void @test4c(i1 %c, i32* %p, i8* noalias %s) {
 ; CHECK-LABEL: @test4c(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i8 0, i8* [[S:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    store i8 0, i8* [[S:%.*]], align 1
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[INVARIANT_COND:%.*]] = icmp ne i32 [[A]], 100
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[INVARIANT_COND]]) [ "deopt"() ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -334,7 +335,7 @@ exit:
 define void @test4d(i1 %c, i32* %p, i8* noalias %s) {
 ; CHECK-LABEL: @test4d(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[INVARIANT_COND:%.*]] = icmp ne i32 [[A]], 100
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -342,7 +343,7 @@ define void @test4d(i1 %c, i32* %p, i8* noalias %s) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    store i8 0, i8* [[S:%.*]]
+; CHECK-NEXT:    store i8 0, i8* [[S:%.*]], align 1
 ; CHECK-NEXT:    br label [[BACKEDGE]]
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[BACKEDGE]]
@@ -384,9 +385,9 @@ exit:
 define void @test4e(i1 %c, i32* %p, i8* noalias %s) {
 ; CHECK-LABEL: @test4e(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[INVARIANT_COND:%.*]] = icmp ne i32 [[A]], 100
-; CHECK-NEXT:    store i8 0, i8* [[S:%.*]]
+; CHECK-NEXT:    store i8 0, i8* [[S:%.*]], align 1
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[INVARIANT_COND]]) [ "deopt"() ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -434,10 +435,10 @@ exit:
 define void @test4f(i1 %c, i32* %p, i8* noalias %s) {
 ; CHECK-LABEL: @test4f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[INVARIANT_COND:%.*]] = icmp ne i32 [[A]], 100
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[INVARIANT_COND]]) [ "deopt"() ]
-; CHECK-NEXT:    store i8 0, i8* [[S:%.*]]
+; CHECK-NEXT:    store i8 0, i8* [[S:%.*]], align 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -484,7 +485,7 @@ exit:
 define void @test5(i1 %c, i32* %p, i32* %q) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[INVARIANT_COND:%.*]] = icmp ne i32 [[A]], 100
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -526,7 +527,7 @@ exit:
 define void @test5a(i1 %c, i32* %p, i32* %q) {
 ; CHECK-LABEL: @test5a(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    [[INVARIANT_COND:%.*]] = icmp ne i32 [[A]], 100
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[INVARIANT_COND]]) [ "deopt"() ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
