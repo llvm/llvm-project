@@ -158,8 +158,7 @@ struct SparseTensorCodegenPass
     ConversionTarget target(*ctx);
     // Everything in the sparse dialect must go!
     target.addIllegalDialect<SparseTensorDialect>();
-    // All dynamic rules below accept new function, call, return, and various
-    // tensor and bufferization operations as legal output of the rewriting.
+    // All dynamic rules below accept new function, call, return.
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       return converter.isSignatureLegal(op.getFunctionType());
     });
@@ -169,6 +168,10 @@ struct SparseTensorCodegenPass
     target.addDynamicallyLegalOp<func::ReturnOp>([&](func::ReturnOp op) {
       return converter.isLegal(op.getOperandTypes());
     });
+    // Legal dialects may occur in generated code.
+    target.addLegalDialect<arith::ArithmeticDialect,
+                           bufferization::BufferizationDialect,
+                           memref::MemRefDialect, scf::SCFDialect>();
     // Populate with rules and apply rewriting rules.
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
                                                                    converter);
