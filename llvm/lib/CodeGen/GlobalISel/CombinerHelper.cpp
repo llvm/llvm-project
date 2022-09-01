@@ -4986,7 +4986,7 @@ MachineInstr *CombinerHelper::buildSDivUsingMul(MachineInstr &MI) {
   SmallVector<Register, 16> Shifts, Factors;
 
   auto *RHSDef = cast<GenericMachineInstr>(getDefIgnoringCopies(RHS, MRI));
-  bool IsSplat = getIConstantSplatVal(*RHSDef, MRI).hasValue();
+  bool IsSplat = getIConstantSplatVal(*RHSDef, MRI).has_value();
 
   auto BuildSDIVPattern = [&](const Constant *C) {
     // Don't recompute inverses for each splat element.
