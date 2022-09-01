@@ -4052,6 +4052,9 @@ def warn_transparent_union_attribute_zero_fields : Warning<
 def warn_attribute_type_not_supported : Warning<
   "%0 attribute argument not supported: %1">,
   InGroup<IgnoredAttributes>;
+def warn_attribute_type_not_supported_global : Warning<
+  "%0 attribute argument '%1' not supported on a global variable">,
+  InGroup<IgnoredAttributes>;
 def warn_attribute_unknown_visibility : Warning<"unknown visibility %0">,
   InGroup<IgnoredAttributes>;
 def warn_attribute_protected_visibility :
