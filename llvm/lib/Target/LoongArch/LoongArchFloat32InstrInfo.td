@@ -171,6 +171,26 @@ def : PatFPSetcc<SETUNE, FCMP_CUNE_S, FPR32>;
 def : PatFPSetcc<SETUO,  FCMP_CUN_S,  FPR32>;
 def : PatFPSetcc<SETLT,  FCMP_CLT_S,  FPR32>;
 
+multiclass PatFPBrcond<CondCode cc, LAInst CmpInst, RegisterClass RegTy> {
+  def : Pat<(brcond (xor (GRLenVT (setcc RegTy:$fj, RegTy:$fk, cc)), -1),
+                     bb:$imm21),
+            (BCEQZ (CmpInst RegTy:$fj, RegTy:$fk), bb:$imm21)>;
+  def : Pat<(brcond (GRLenVT (setcc RegTy:$fj, RegTy:$fk, cc)), bb:$imm21),
+            (BCNEZ (CmpInst RegTy:$fj, RegTy:$fk), bb:$imm21)>;
+}
+
+defm : PatFPBrcond<SETOEQ, FCMP_CEQ_S, FPR32>;
+defm : PatFPBrcond<SETOLT, FCMP_CLT_S, FPR32>;
+defm : PatFPBrcond<SETOLE, FCMP_CLE_S, FPR32>;
+defm : PatFPBrcond<SETONE, FCMP_CNE_S, FPR32>;
+defm : PatFPBrcond<SETO,   FCMP_COR_S, FPR32>;
+defm : PatFPBrcond<SETUEQ, FCMP_CUEQ_S, FPR32>;
+defm : PatFPBrcond<SETULT, FCMP_CULT_S, FPR32>;
+defm : PatFPBrcond<SETULE, FCMP_CULE_S, FPR32>;
+defm : PatFPBrcond<SETUNE, FCMP_CUNE_S, FPR32>;
+defm : PatFPBrcond<SETUO,  FCMP_CUN_S, FPR32>;
+defm : PatFPBrcond<SETLT,  FCMP_CLT_S, FPR32>;
+
 // TODO: Match signaling comparison strict_fsetccs with FCMP_S*_S instructions.
 
 /// Select
