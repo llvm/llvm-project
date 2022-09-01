@@ -53,11 +53,11 @@ isAnnotationDirectlyAfterStatement(const Stmt *Stmt, unsigned AnnotationBegin,
 }
 
 llvm::DenseMap<unsigned, std::string>
-test::getAnnotationLinesAndContent(const AnalysisOutputs &AO) {
+test::buildLineToAnnotationMapping(SourceManager &SM,
+                                   llvm::Annotations AnnotatedCode) {
   llvm::DenseMap<unsigned, std::string> LineNumberToContent;
-  auto Code = AO.Code.code();
-  auto Annotations = AO.Code.ranges();
-  auto &SM = AO.ASTCtx.getSourceManager();
+  auto Code = AnnotatedCode.code();
+  auto Annotations = AnnotatedCode.ranges();
   for (auto &AnnotationRange : Annotations) {
     auto LineNumber =
         SM.getPresumedLineNumber(SM.getLocForStartOfFile(SM.getMainFileID())
