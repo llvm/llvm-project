@@ -835,28 +835,7 @@ void PatternLowering::generateOperationResultTypeRewriter(
     pdl::OperationOp op, function_ref<Value(Value)> mapRewriteValue,
     SmallVectorImpl<Value> &types, DenseMap<Value, Value> &rewriteValues,
     bool &hasInferredResultTypes) {
-  // Look for an operation that was replaced by `op`. The result types will be
-  // inferred from the results that were replaced.
   Block *rewriterBlock = op->getBlock();
-  for (OpOperand &use : op.op().getUses()) {
-    // Check that the use corresponds to a ReplaceOp and that it is the
-    // replacement value, not the operation being replaced.
-    pdl::ReplaceOp replOpUser = dyn_cast<pdl::ReplaceOp>(use.getOwner());
-    if (!replOpUser || use.getOperandNumber() == 0)
-      continue;
-    // Make sure the replaced operation was defined before this one.
-    Value replOpVal = replOpUser.operation();
-    Operation *replacedOp = replOpVal.getDefiningOp();
-    if (replacedOp->getBlock() == rewriterBlock &&
-        !replacedOp->isBeforeInBlock(op))
-      continue;
-
-    Value replacedOpResults = builder.create<pdl_interp::GetResultsOp>(
-        replacedOp->getLoc(), mapRewriteValue(replOpVal));
-    types.push_back(builder.create<pdl_interp::GetValueTypeOp>(
-        replacedOp->getLoc(), replacedOpResults));
-    return;
-  }
 
   // Try to handle resolution for each of the result types individually. This is
   // preferred over type inferrence because it will allow for us to use existing
@@ -892,6 +871,31 @@ void PatternLowering::generateOperationResultTypeRewriter(
   // Otherwise, check if the operation has type inference support itself.
   if (op.hasTypeInference()) {
     hasInferredResultTypes = true;
+    return;
+  }
+
+  // Look for an operation that was replaced by `op`. The result types will be
+  // inferred from the results that were replaced.
+  for (OpOperand &use : op.op().getUses()) {
+    // Check that the use corresponds to a ReplaceOp and that it is the
+    // replacement value, not the operation being replaced.
+    pdl::ReplaceOp replOpUser = dyn_cast<pdl::ReplaceOp>(use.getOwner());
+    if (!replOpUser || use.getOperandNumber() == 0)
+      continue;
+    // Make sure the replaced operation was defined before this one. PDL
+    // rewrites only have single block regions, so if the op isn't in the
+    // rewriter block (i.e. the current block of the operation) we already know
+    // it dominates (i.e. it's in the matcher).
+    Value replOpVal = replOpUser.operation();
+    Operation *replacedOp = replOpVal.getDefiningOp();
+    if (replacedOp->getBlock() == rewriterBlock &&
+        !replacedOp->isBeforeInBlock(op))
+      continue;
+
+    Value replacedOpResults = builder.create<pdl_interp::GetResultsOp>(
+        replacedOp->getLoc(), mapRewriteValue(replOpVal));
+    types.push_back(builder.create<pdl_interp::GetValueTypeOp>(
+        replacedOp->getLoc(), replacedOpResults));
     return;
   }
 
