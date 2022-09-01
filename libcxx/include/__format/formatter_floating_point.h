@@ -12,6 +12,7 @@
 
 #include <__algorithm/copy_n.h>
 #include <__algorithm/find.h>
+#include <__algorithm/max.h>
 #include <__algorithm/min.h>
 #include <__algorithm/rotate.h>
 #include <__algorithm/transform.h>
@@ -181,6 +182,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI int __precision() const { return __precision_; }
   _LIBCPP_HIDE_FROM_ABI int __num_trailing_zeros() const { return __num_trailing_zeros_; }
   _LIBCPP_HIDE_FROM_ABI void __remove_trailing_zeros() { __num_trailing_zeros_ = 0; }
+  _LIBCPP_HIDE_FROM_ABI void __add_trailing_zeros(int __zeros) { __num_trailing_zeros_ += __zeros; }
 
 private:
   int __precision_;
@@ -214,7 +216,7 @@ struct __float_result {
 /// \returns a pointer to the exponent or __last when not found.
 constexpr inline _LIBCPP_HIDE_FROM_ABI char* __find_exponent(char* __first, char* __last) {
   ptrdiff_t __size = __last - __first;
-  if (__size > 4) {
+  if (__size >= 4) {
     __first = __last - _VSTD::min(__size, ptrdiff_t(6));
     for (; __first != __last - 3; ++__first) {
       if (*__first == 'e')
@@ -402,6 +404,7 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer_general_lower_case(__float_
       // In fixed mode the algorithm truncates trailing spaces and possibly the
       // radix point. There's no good guess for the position of the radix point
       // therefore scan the output after the first digit.
+
       __result.__radix_point = _VSTD::find(__first, __result.__last, '.');
     }
   }
@@ -452,7 +455,10 @@ _LIBCPP_HIDE_FROM_ABI __float_result __format_buffer(
   char* __first = __formatter::__insert_sign(__buffer.begin(), __negative, __sign);
   switch (__type) {
   case __format_spec::__type::__default:
-    return __formatter::__format_buffer_default(__buffer, __value, __first);
+    if (__has_precision)
+      return __formatter::__format_buffer_general_lower_case(__buffer, __value, __buffer.__precision(), __first);
+    else
+      return __formatter::__format_buffer_default(__buffer, __value, __first);
 
   case __format_spec::__type::__hexfloat_lower_case:
     return __formatter::__format_buffer_hexadecimal_lower_case(
@@ -623,20 +629,51 @@ __format_floating_point(_Tp __value, auto& __ctx, __format_spec::__parsed_specif
   __float_result __result = __formatter::__format_buffer(
       __buffer, __value, __negative, (__specs.__has_precision()), __specs.__std_.__sign_, __specs.__std_.__type_);
 
-  if (__specs.__std_.__alternate_form_ && __result.__radix_point == __result.__last) {
-    *__result.__last++ = '.';
+  if (__specs.__std_.__alternate_form_) {
+    if (__result.__radix_point == __result.__last) {
+      *__result.__last++ = '.';
 
-    // When there is an exponent the point needs to be moved before the
-    // exponent. When there's no exponent the rotate does nothing. Since
-    // rotate tests whether the operation is a nop, call it unconditionally.
-    _VSTD::rotate(__result.__exponent, __result.__last - 1, __result.__last);
-    __result.__radix_point = __result.__exponent;
+      // When there is an exponent the point needs to be moved before the
+      // exponent. When there's no exponent the rotate does nothing. Since
+      // rotate tests whether the operation is a nop, call it unconditionally.
+      _VSTD::rotate(__result.__exponent, __result.__last - 1, __result.__last);
+      __result.__radix_point = __result.__exponent;
 
-    // The radix point is always placed before the exponent.
-    // - No exponent needs to point to the new last.
-    // - An exponent needs to move one position to the right.
-    // So it's safe to increment the value unconditionally.
-    ++__result.__exponent;
+      // The radix point is always placed before the exponent.
+      // - No exponent needs to point to the new last.
+      // - An exponent needs to move one position to the right.
+      // So it's safe to increment the value unconditionally.
+      ++__result.__exponent;
+    }
+
+    // [format.string.std]/6
+    //   In addition, for g and G conversions, trailing zeros are not removed
+    //   from the result.
+    //
+    // If the type option for a floating-point type is none it may use the
+    // general formatting, but it's not a g or G conversion. So in that case
+    // the formatting should not append trailing zeros.
+    bool __is_general = __specs.__std_.__type_ == __format_spec::__type::__general_lower_case ||
+                        __specs.__std_.__type_ == __format_spec::__type::__general_upper_case;
+
+    if (__is_general) {
+      // https://en.cppreference.com/w/c/io/fprintf
+      // Let P equal the precision if nonzero, 6 if the precision is not
+      // specified, or 1 if the precision is 0. Then, if a conversion with
+      // style E would have an exponent of X:
+      int __p = _VSTD::max(1, (__specs.__has_precision() ? __specs.__precision_ : 6));
+      if (__result.__exponent == __result.__last)
+        // if P > X >= -4, the conversion is with style f or F and precision P - 1 - X.
+        // By including the radix point it calculates P - (1 + X)
+        __p -= __result.__radix_point - __buffer.begin();
+      else
+        // otherwise, the conversion is with style e or E and precision P - 1.
+        --__p;
+
+      ptrdiff_t __precision = (__result.__exponent - __result.__radix_point) - 1;
+      if (__precision < __p)
+        __buffer.__add_trailing_zeros(__p - __precision);
+    }
   }
 
 #  ifndef _LIBCPP_HAS_NO_LOCALIZATION
