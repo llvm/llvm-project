@@ -131,10 +131,6 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-
-Non-comprehensive list of changes in this release
--------------------------------------------------
-
 New Compiler Flags
 ------------------
 
