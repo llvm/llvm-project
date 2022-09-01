@@ -4,6 +4,8 @@
 ; scalable vector does not produce a 'assumption that TypeSize is not scalable'
 ; warning when performing cost analysis.
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %retval = getelementptr
 define <vscale x 16 x i8>* @gep_scalable_vector(<vscale x 16 x i8>* %ptr) {
   %retval = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %ptr, i32 2

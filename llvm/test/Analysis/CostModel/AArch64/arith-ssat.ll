@@ -2,6 +2,8 @@
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=aarch64-none-eabi < %s | FileCheck %s --check-prefix=RECIP
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=code-size -mtriple=aarch64-none-eabi < %s | FileCheck %s --check-prefix=SIZE
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 declare i64        @llvm.sadd.sat.i64(i64, i64)
 declare <2 x i64>  @llvm.sadd.sat.v2i64(<2 x i64>, <2 x i64>)
 declare <4 x i64>  @llvm.sadd.sat.v4i64(<4 x i64>, <4 x i64>)

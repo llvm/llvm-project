@@ -5,6 +5,7 @@
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mcpu=cortex-a510 < %s | FileCheck %s --check-prefix=CHECK-VSCALE-1
 
 target triple="aarch64--linux-gnu"
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define void @masked_scatters(<vscale x 4 x i1> %nxv4i1mask, <vscale x 8 x i1> %nxv8i1mask, <4 x i1> %v4i1mask, <1 x i1> %v1i1mask, <vscale x 1 x i1> %nxv1i1mask) #0 {
 ; CHECK-LABEL: 'masked_scatters'
