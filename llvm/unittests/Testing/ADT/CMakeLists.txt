@@ -3,5 +3,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(TestingADTTests
+  StringMapEntryTest.cpp
   StringMapTest.cpp
   )
