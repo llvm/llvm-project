@@ -94,10 +94,6 @@ protected:
     RClass
   };
   enum ARMArchEnum {
-    ARMv2,
-    ARMv2a,
-    ARMv3,
-    ARMv3m,
     ARMv4,
     ARMv4t,
     ARMv5,
