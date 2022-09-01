@@ -318,8 +318,7 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
   }
 
   SmallVector<Operation *> tiledOps =
-      op.getTiledImplementation(b, destOperands, tiledOffsets, tiledSizes,
-                                /*tileDestOperands=*/true);
+      op.getTiledImplementation(b, tiledOffsets, tiledSizes);
   assert(tiledOps.size() == 1 && "expected a single produced tiled op");
   tiledOp = tiledOps.front();
 
