@@ -40,7 +40,7 @@ private:
 class ExecutorAddr {
 public:
   /// A wrap/unwrap function that leaves pointers unmodified.
-  template <typename T> using rawPtr = __orc_rt::identity<T>;
+  template <typename T> using rawPtr = __orc_rt::identity<T *>;
 
   /// Default wrap function to use on this host.
   template <typename T> using defaultWrap = rawPtr<T>;
@@ -82,14 +82,14 @@ public:
   explicit ExecutorAddr(uint64_t Addr) : Addr(Addr) {}
 
   /// Create an ExecutorAddr from the given pointer.
-  template <typename T, typename UnwrapFn = defaultUnwrap<T *>>
+  template <typename T, typename UnwrapFn = defaultUnwrap<T>>
   static ExecutorAddr fromPtr(T *Ptr, UnwrapFn &&Unwrap = UnwrapFn()) {
     return ExecutorAddr(
         static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Unwrap(Ptr))));
   }
 
   /// Cast this ExecutorAddr to a pointer of the given type.
-  template <typename T, typename WrapFn = defaultWrap<T>>
+  template <typename T, typename WrapFn = defaultWrap<std::remove_pointer_t<T>>>
   std::enable_if_t<std::is_pointer<T>::value, T>
   toPtr(WrapFn &&Wrap = WrapFn()) const {
     uintptr_t IntPtr = static_cast<uintptr_t>(Addr);
@@ -98,7 +98,7 @@ public:
   }
 
   /// Cast this ExecutorAddr to a pointer of the given function type.
-  template <typename T, typename WrapFn = defaultWrap<T *>>
+  template <typename T, typename WrapFn = defaultWrap<T>>
   std::enable_if_t<std::is_function<T>::value, T *>
   toPtr(WrapFn &&Wrap = WrapFn()) const {
     uintptr_t IntPtr = static_cast<uintptr_t>(Addr);
