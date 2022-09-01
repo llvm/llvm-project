@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CAS/CASID.h"
 #include "llvm/CAS/CASReference.h"
 #include "llvm/Support/Error.h"
 
@@ -47,7 +48,7 @@ class ActionCache {
 
 public:
   /// Get a previously computed result for \p ActionKey.
-  Expected<Optional<ObjectRef>> get(const CacheKey &ActionKey) const {
+  Expected<Optional<CASID>> get(const CacheKey &ActionKey) const {
     return getImpl(arrayRefFromStringRef(ActionKey.getKey()));
   }
 
@@ -70,7 +71,7 @@ public:
   virtual ~ActionCache() = default;
 
 protected:
-  virtual Expected<Optional<ObjectRef>>
+  virtual Expected<Optional<CASID>>
   getImpl(ArrayRef<uint8_t> ResolvedKey) const = 0;
   virtual Error putImpl(ArrayRef<uint8_t> ResolvedKey,
                         const ObjectRef &Result) = 0;

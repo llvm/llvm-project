@@ -2370,10 +2370,17 @@ static bool addCachedModuleFileToInMemoryCache(
       Diag << "no such entry in action cache";
     return true;
   }
+  auto ValueRef = CAS.getReference(**Value);
+  if (!ValueRef) {
+    Diags.Report(diag::err_cas_cannot_get_module_cache_key)
+        << CacheKey << Provider << "result module doesn't exist in CAS";
+
+    return true;
+  }
 
   Optional<cas::CompileJobCacheResult> Result;
   cas::CompileJobResultSchema Schema(CAS);
-  if (llvm::Error E = Schema.load(**Value).moveInto(Result)) {
+  if (llvm::Error E = Schema.load(*ValueRef).moveInto(Result)) {
     Diags.Report(diag::err_cas_cannot_get_module_cache_key)
         << CacheKey << Provider << std::move(E);
     return true;

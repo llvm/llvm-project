@@ -42,8 +42,7 @@ public:
   InMemoryActionCache(ObjectStore &CAS);
 
   Error putImpl(ArrayRef<uint8_t> ActionKey, const ObjectRef &Result) final;
-  Expected<Optional<ObjectRef>>
-  getImpl(ArrayRef<uint8_t> ActionKey) const final;
+  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey) const final;
 
 private:
   using DataT = CacheEntry<sizeof(HashType)>;
@@ -56,8 +55,7 @@ private:
 class OnDiskActionCache final : public ActionCache {
 public:
   Error putImpl(ArrayRef<uint8_t> ActionKey, const ObjectRef &Result) final;
-  Expected<Optional<ObjectRef>>
-  getImpl(ArrayRef<uint8_t> ActionKey) const final;
+  Expected<Optional<CASID>> getImpl(ArrayRef<uint8_t> ActionKey) const final;
 
   static Expected<std::unique_ptr<OnDiskActionCache>> create(ObjectStore &CAS,
                                                              StringRef Path);
@@ -93,37 +91,23 @@ static Error createResultCachePoisonedError(StringRef Key, ObjectStore &CAS,
                                             ObjectRef Output,
                                             ArrayRef<uint8_t> ExistingOutput) {
   std::string OutID = CAS.getID(Output).toString();
-  Optional<ObjectRef> ExistingRef = CAS.getReference(ExistingOutput);
-  std::string Existing = ExistingRef ? CAS.getID(*ExistingRef).toString()
-                                     : hashToString(ExistingOutput);
+  std::string Existing =
+      CASID::create(&CAS, toStringRef(ExistingOutput)).toString();
   return createStringError(std::make_error_code(std::errc::invalid_argument),
                            "cache poisoned for '" + Key + "' (new='" + OutID +
                                "' vs. existing '" + Existing + "')");
-}
-
-static Error createResultCacheUnknownObjectError(StringRef Key,
-                                                 StringRef Hash) {
-  return createStringError(
-      std::make_error_code(std::errc::no_such_device_or_address),
-      "the result object for key '" + Key + "' does not exist in CAS: '" +
-          Hash + "'");
 }
 
 // TODO: Check the hash schema is the same between action cache and CAS. If we
 // can derive that from static type information, that would be even better.
 InMemoryActionCache::InMemoryActionCache(ObjectStore &CAS) : ActionCache(CAS) {}
 
-Expected<Optional<ObjectRef>>
+Expected<Optional<CASID>>
 InMemoryActionCache::getImpl(ArrayRef<uint8_t> Key) const {
   auto Result = Cache.find(Key);
   if (!Result)
     return None;
-  return getCAS().getReference(Result->Data.getValue());
-  Optional<ObjectRef> Out = getCAS().getReference(Result->Data.getValue());
-  if (!Out)
-    return createResultCacheUnknownObjectError(
-        hashToString(Key), hashToString(Result->Data.getValue()));
-  return *Out;
+  return CASID::create(&getCAS(), toStringRef(Result->Data.getValue()));
 }
 
 Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key,
@@ -190,7 +174,7 @@ OnDiskActionCache::create(ObjectStore &CAS, StringRef AbsPath) {
       new OnDiskActionCache(CAS, AbsPath, std::move(*ActionCache)));
 }
 
-Expected<Optional<ObjectRef>>
+Expected<Optional<CASID>>
 OnDiskActionCache::getImpl(ArrayRef<uint8_t> Key) const {
   // Check the result cache.
   OnDiskHashMappedTrie::const_pointer ActionP = Cache.find(Key);
@@ -198,12 +182,7 @@ OnDiskActionCache::getImpl(ArrayRef<uint8_t> Key) const {
     return None;
 
   const DataT *Output = reinterpret_cast<const DataT *>(ActionP->Data.data());
-  Optional<ObjectRef> Out = getCAS().getReference(Output->getValue());
-  if (!Out)
-    return createResultCacheUnknownObjectError(
-        hashToString(Key), hashToString(Output->getValue()));
-
-  return *Out;
+  return CASID::create(&getCAS(), toStringRef(Output->getValue()));
 }
 
 Error OnDiskActionCache::putImpl(ArrayRef<uint8_t> Key,

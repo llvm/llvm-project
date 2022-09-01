@@ -166,11 +166,13 @@ void DependencyScanningCASFilesystem::scanForDirectives(
   }
 
   // Check the result cache.
-  if (Optional<ObjectRef> OutputRef =
+  if (Optional<CASID> OutputID =
           reportAsFatalIfError(Cache.get(*InputID))) {
-    reportAsFatalIfError(
-        loadDepDirectives(CAS, *OutputRef, Tokens, Directives));
-    return;
+    if (Optional<ObjectRef> OutputRef = CAS.getReference(*OutputID)) {
+      reportAsFatalIfError(
+          loadDepDirectives(CAS, *OutputRef, Tokens, Directives));
+      return;
+    }
   }
 
   StringRef InputData =
