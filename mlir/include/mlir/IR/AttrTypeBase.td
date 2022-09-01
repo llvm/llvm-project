@@ -401,4 +401,33 @@ class AttributeSelfTypeParameter<string desc,
                          "::mlir::NoneType::get($_ctxt)", typeBuilder);
 }
 
+//===----------------------------------------------------------------------===//
+// ArrayOfAttr
+//===----------------------------------------------------------------------===//
+
+/// This class defines an attribute that contains an array of elements. The
+/// elements can be any type, but if they are attributes, the nested elements
+/// are parsed and printed using the custom attribute syntax.
+class ArrayOfAttr<Dialect dialect, string attrName, string attrMnemonic,
+                  string eltName, list<Trait> traits = []>
+    : AttrDef<dialect, attrName, traits> {
+  let parameters = (ins ArrayRefParameter<eltName>:$value);
+  let mnemonic = attrMnemonic;
+  let assemblyFormat = "`[` $value `]`";
+
+  let returnType = "::llvm::ArrayRef<" # eltName # ">";
+  let constBuilderCall = "$_builder.getAttr<" # attrName # "Attr>($0)";
+  let convertFromStorage = "$_self.getValue()";
+
+  let extraClassDeclaration = [{
+    auto begin() const { return getValue().begin(); }
+    auto end() const { return getValue().end(); }
+    bool empty() const { return getValue().empty(); }
+    size_t size() const { return getValue().size(); }
+    auto &front() const { return getValue().front(); }
+    auto &back() const { return getValue().back(); }
+    auto &operator[](size_t index) { return getValue()[index]; }
+  }];
+}
+
 #endif // ATTRTYPEBASE_TD
