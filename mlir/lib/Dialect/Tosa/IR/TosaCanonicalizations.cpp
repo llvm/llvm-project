@@ -675,6 +675,11 @@ struct APIntFoldGreater {
   APIntFoldGreater() {}
   APInt operator()(APInt l, APInt r) { return APInt(1, l.sgt(r)); }
 };
+
+struct APIntFoldGreaterEqual {
+  APIntFoldGreaterEqual() {}
+  APInt operator()(APInt l, APInt r) { return APInt(1, l.sge(r)); }
+};
 } // namespace
 
 OpFoldResult GreaterOp::fold(ArrayRef<Attribute> operands) {
@@ -687,6 +692,42 @@ OpFoldResult GreaterOp::fold(ArrayRef<Attribute> operands) {
 
   return BinaryFolder<APIntFoldGreater, ComparisonFold<std::greater<APFloat>>>(
       lhsAttr, rhsAttr, resultTy);
+}
+
+OpFoldResult GreaterEqualOp::fold(ArrayRef<Attribute> operands) {
+  auto resultTy = getType().dyn_cast<RankedTensorType>();
+  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+
+  if (!lhsAttr || !rhsAttr)
+    return {};
+
+  return BinaryFolder<APIntFoldGreaterEqual,
+                      ComparisonFold<std::greater_equal<APFloat>>>(
+      lhsAttr, rhsAttr, resultTy);
+}
+
+OpFoldResult EqualOp::fold(ArrayRef<Attribute> operands) {
+  auto resultTy = getType().dyn_cast<RankedTensorType>();
+  auto lhsAttr = operands[0].dyn_cast_or_null<DenseElementsAttr>();
+  auto rhsAttr = operands[1].dyn_cast_or_null<DenseElementsAttr>();
+  Value lhs = getInput1();
+  Value rhs = getInput2();
+  auto lhsTy = lhs.getType().cast<ShapedType>();
+
+  // If we are comparing an integer value to itself it is always true. We can
+  // not do this with float due to float values.
+  if (lhsTy.getElementType().isa<IntegerType>() && resultTy.hasStaticShape() &&
+      lhs == rhs) {
+    return DenseElementsAttr::get(resultTy, true);
+  }
+
+  if (!lhsAttr || !rhsAttr)
+    return {};
+
+  return BinaryFolder<ComparisonFold<std::equal_to<APInt>>,
+                      ComparisonFold<std::equal_to<APFloat>>>(lhsAttr, rhsAttr,
+                                                              resultTy);
 }
 
 OpFoldResult CastOp::fold(ArrayRef<Attribute> operands) {
