@@ -33,6 +33,16 @@ namespace {
 // Helper methods.
 //===----------------------------------------------------------------------===//
 
+/// Reorders stored dimension to logical dimension.
+static unsigned reorder(const SparseTensorEncodingAttr &enc, unsigned d) {
+  auto order = enc.getDimOrdering();
+  if (order) {
+    assert(order.isPermutation());
+    return order.getDimPosition(d);
+  }
+  return d;
+}
+
 /// Maps a sparse tensor type to the appropriate compounded buffers.
 static Optional<Type> convertSparseTensorType(Type type) {
   auto enc = getSparseTensorEncoding(type);
@@ -47,12 +57,14 @@ static Optional<Type> convertSparseTensorType(Type type) {
   Type idxType = idxWidth ? IntegerType::get(context, idxWidth) : indexType;
   Type ptrType = ptrWidth ? IntegerType::get(context, ptrWidth) : indexType;
   Type eltType = rType.getElementType();
+  ArrayRef<int64_t> shape = rType.getShape();
   //
   // Sparse tensor storage for rank-dimensional tensor is organized as a
   // single compound type with the following fields:
   //
   // struct {
-  //   memref<rank x index> dimSize  ; size in each dimension
+  //   ; if dynamic shape:
+  //     memref<rank x index> dimSize    ; size in each dimension
   //   ; per-dimension d:
   //   ;  if dense:
   //        <nothing>
@@ -61,23 +73,31 @@ static Optional<Type> convertSparseTensorType(Type type) {
   //        memref<? x ptr>  pointers-d  ; pointers for sparse dim d
   //   ;  if singleton:
   //        memref<? x idx>  indices-d   ; indices for singleton dim d
-  //   memref<? x eltType> values    ; values
+  //   memref<? x eltType> values        ; values
   // };
   //
-  // TODO: fill in the ? when statically known
-  //
-  // TODO: emit dimSizes when not needed (e.g. all-dense)
-  //
+  int64_t linear = 1;
+  bool allDense = true;
   unsigned rank = rType.getShape().size();
   SmallVector<Type, 8> fields;
-  fields.push_back(MemRefType::get({rank}, indexType));
+  // The dimSizes array.
+  if (!rType.hasStaticShape())
+    fields.push_back(MemRefType::get({rank}, indexType));
+  // Per-dimension storage.
   for (unsigned r = 0; r < rank; r++) {
+    // Get the original dimension (ro) for the current stored dimension (r).
+    unsigned ro = reorder(enc, r);
     // Dimension level types apply in order to the reordered dimension.
     // As a result, the compound type can be constructed directly in the given
     // order. Clients of this type know what field is what from the sparse
     // tensor type.
     switch (enc.getDimLevelType()[r]) {
     case SparseTensorEncodingAttr::DimLevelType::Dense:
+      // Linearize the size of consecutive dense dimensions.
+      if (ShapedType::isDynamic(shape[ro]) || ShapedType::isDynamic(linear))
+        linear = ShapedType::kDynamicSize;
+      else
+        linear *= shape[ro];
       break;
     case SparseTensorEncodingAttr::DimLevelType::Compressed:
     case SparseTensorEncodingAttr::DimLevelType::CompressedNu:
@@ -85,16 +105,23 @@ static Optional<Type> convertSparseTensorType(Type type) {
     case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
       fields.push_back(MemRefType::get({ShapedType::kDynamicSize}, idxType));
       fields.push_back(MemRefType::get({ShapedType::kDynamicSize}, ptrType));
+      allDense = false;
+      linear = 1;
       break;
     case SparseTensorEncodingAttr::DimLevelType::Singleton:
     case SparseTensorEncodingAttr::DimLevelType::SingletonNu:
     case SparseTensorEncodingAttr::DimLevelType::SingletonNo:
     case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
       fields.push_back(MemRefType::get({ShapedType::kDynamicSize}, idxType));
+      allDense = false;
+      linear = 1;
       break;
     }
   }
-  fields.push_back(MemRefType::get({ShapedType::kDynamicSize}, eltType));
+  // The values array.
+  int64_t nnz =
+      (rType.hasStaticShape() && allDense) ? linear : ShapedType::kDynamicSize;
+  fields.push_back(MemRefType::get({nnz}, eltType));
   // Sparse tensor storage (temporarily) lives in a tuple. This allows a
   // simple 1:1 type conversion during codegen. A subsequent pass uses
   // a 1:N type conversion to expand the tuple into its fields.
@@ -102,10 +129,10 @@ static Optional<Type> convertSparseTensorType(Type type) {
 }
 
 //===----------------------------------------------------------------------===//
-// Conversion rules.
+// Codegen rules.
 //===----------------------------------------------------------------------===//
 
-/// Sparse conversion rule for returns.
+/// Sparse codegen rule for returns.
 class SparseReturnConverter : public OpConversionPattern<func::ReturnOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
@@ -114,6 +141,36 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<func::ReturnOp>(op, adaptor.getOperands());
     return success();
+  }
+};
+
+/// Sparse codegen rule for dimension accesses.
+class SparseDimOpConverter : public OpConversionPattern<tensor::DimOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(tensor::DimOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    Type type = op.getSource().getType();
+    // Only rewrite annotated DimOp with constant index.
+    auto enc = getSparseTensorEncoding(type);
+    if (!enc)
+      return failure();
+    Optional<int64_t> index = op.getConstantIndex();
+    if (!index)
+      return failure();
+    // Access into static shape can query original type directly.
+    // Note that this is typically already done by DimOp's folding.
+    RankedTensorType rType = type.cast<RankedTensorType>();
+    if (rType.hasStaticShape()) {
+      rewriter.replaceOp(
+          op, constantIndex(rewriter, loc, rType.getShape()[*index]));
+      return success();
+    }
+    // Any other query can consult the dimSize array.
+    // TODO: this needs tuple access
+    return failure();
   }
 };
 
@@ -136,5 +193,6 @@ mlir::SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
 /// the sparsification of linear algebra operations.
 void mlir::populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
                                                RewritePatternSet &patterns) {
-  patterns.add<SparseReturnConverter>(typeConverter, patterns.getContext());
+  patterns.add<SparseReturnConverter, SparseDimOpConverter>(
+      typeConverter, patterns.getContext());
 }
