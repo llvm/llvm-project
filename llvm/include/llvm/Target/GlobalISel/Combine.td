@@ -764,7 +764,13 @@ def udiv_by_const : GICombineRule<
    [{ return Helper.matchUDivByConst(*${root}); }]),
   (apply [{ Helper.applyUDivByConst(*${root}); }])>;
 
-def intdiv_combines : GICombineGroup<[udiv_by_const]>;
+def sdiv_by_const : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_SDIV):$root,
+   [{ return Helper.matchSDivByConst(*${root}); }]),
+  (apply [{ Helper.applySDivByConst(*${root}); }])>;
+
+def intdiv_combines : GICombineGroup<[udiv_by_const, sdiv_by_const]>;
 
 def reassoc_ptradd : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),
