@@ -57,6 +57,21 @@ std::ostream &operator<<(std::ostream &OS,
 
 namespace test {
 
+/// Returns the environment at the program point marked with `Annotation` from
+/// the mapping of annotated program points to analysis state.
+///
+/// Requirements:
+///
+///   `Annotation` must be present as a key in `AnnotationStates`.
+template <typename LatticeT>
+const Environment &getEnvironmentAtAnnotation(
+    const llvm::StringMap<DataflowAnalysisState<LatticeT>> &AnnotationStates,
+    llvm::StringRef Annotation) {
+  auto It = AnnotationStates.find(Annotation);
+  assert(It != AnnotationStates.end());
+  return It->getValue().Env;
+}
+
 /// Contains data structures required and produced by a dataflow analysis run.
 struct AnalysisOutputs {
   /// Input code that is analyzed. Points within the code may be marked with
