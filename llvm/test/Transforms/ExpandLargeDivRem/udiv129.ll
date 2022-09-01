@@ -8,7 +8,7 @@ define void @test(i129* %ptr, i129* %out) nounwind {
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i1 false, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i129 @llvm.ctlz.i129(i129 3, i1 true)
-; CHECK-NEXT:    [[TMP3:%.*]] = call i129 @llvm.ctlz.i129(i129 [[A]], i1 false)
+; CHECK-NEXT:    [[TMP3:%.*]] = call i129 @llvm.ctlz.i129(i129 [[A]], i1 true)
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i129 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt i129 [[TMP4]], 128
 ; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP1]], [[TMP5]]
