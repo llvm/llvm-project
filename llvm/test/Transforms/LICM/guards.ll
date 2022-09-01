@@ -109,17 +109,18 @@ loop:
   br label %loop
 }
 
-; Hoist guard. Cannot hoist load because of aliasing.
+; Hoist guard. Cannot hoist load because of aliasing, but can promote.
 define void @test3(i1 %cond, i32* %ptr) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[COND:%.*]]) [ "deopt"(i32 0) ]
+; CHECK-NEXT:    [[PTR_PROMOTED:%.*]] = load i32, i32* [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[X_INC:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[PTR_PROMOTED]], [[ENTRY:%.*]] ], [ 0, [[LOOP]] ]
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[X_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    store i32 0, i32* [[PTR]], align 4
-; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], [[VAL]]
+; CHECK-NEXT:    [[X_INC]] = add i32 [[X]], [[TMP0]]
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 
