@@ -148,6 +148,7 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
   ConstantInt *MSB = ConstantInt::get(DivTy, BitWidth - 1);
 
   ConstantInt *True = Builder.getTrue();
+  ConstantInt *False = Builder.getFalse();
 
   BasicBlock *IBB = Builder.GetInsertBlock();
   Function *F = IBB->getParent();
@@ -211,8 +212,8 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
   // ;   %ret0_2      = icmp eq i32 %dividend, 0
   // ;   %ret0_3      = or i1 %ret0_1, %ret0_2
   // ;   %tmp0        = tail call i32 @llvm.ctlz.i32(i32 %divisor, i1 true)
-  // ;   %tmp1        = tail call i32 @llvm.ctlz.i32(i32 %dividend, i1 true)
-  // ;   %sr          = sub nsw i32 %tmp0, %tmp1
+  // ;   %tmp1        = tail call i32 @llvm.ctlz.i32(i32 %dividend, i1 false)
+  // ;   %sr          = sub i32 %tmp0, %tmp1
   // ;   %ret0_4      = icmp ugt i32 %sr, 31
   // ;   %ret0        = or i1 %ret0_3, %ret0_4
   // ;   %retDividend = icmp eq i32 %sr, 31
@@ -224,7 +225,7 @@ static Value *generateUnsignedDivisionCode(Value *Dividend, Value *Divisor,
   Value *Ret0_2      = Builder.CreateICmpEQ(Dividend, Zero);
   Value *Ret0_3      = Builder.CreateOr(Ret0_1, Ret0_2);
   Value *Tmp0 = Builder.CreateCall(CTLZ, {Divisor, True});
-  Value *Tmp1 = Builder.CreateCall(CTLZ, {Dividend, True});
+  Value *Tmp1 = Builder.CreateCall(CTLZ, {Dividend, False});
   Value *SR          = Builder.CreateSub(Tmp0, Tmp1);
   Value *Ret0_4      = Builder.CreateICmpUGT(SR, MSB);
   Value *Ret0        = Builder.CreateOr(Ret0_3, Ret0_4);
