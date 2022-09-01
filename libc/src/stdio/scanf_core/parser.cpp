@@ -50,10 +50,9 @@ FormatSection Parser::get_next_section() {
     // handle width
     section.max_width = -1;
     if (internal::isdigit(str[cur_pos])) {
-      char *int_end;
-      section.max_width =
-          internal::strtointeger<int>(str + cur_pos, &int_end, 10);
-      cur_pos = int_end - str;
+      auto result = internal::strtointeger<int>(str + cur_pos, 10);
+      section.max_width = result.value;
+      cur_pos = cur_pos + result.parsed_len;
     }
 
     // TODO(michaelrj): add posix allocate flag support.
@@ -196,12 +195,11 @@ LengthModifier Parser::parse_length_modifier(size_t *local_pos) {
 
 size_t Parser::parse_index(size_t *local_pos) {
   if (internal::isdigit(str[*local_pos])) {
-    char *int_end;
-    size_t index =
-        internal::strtointeger<size_t>(str + *local_pos, &int_end, 10);
-    if (int_end[0] != '$')
+    auto result = internal::strtointeger<int>(str + *local_pos, 10);
+    size_t index = result.value;
+    if (str[*local_pos + result.parsed_len] != '$')
       return 0;
-    *local_pos = 1 + int_end - str;
+    *local_pos = 1 + result.parsed_len + *local_pos;
     return index;
   }
   return 0;
