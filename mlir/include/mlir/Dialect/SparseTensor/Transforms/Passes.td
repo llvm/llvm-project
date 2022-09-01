@@ -142,6 +142,10 @@ def SparseTensorCodegen : Pass<"sparse-tensor-codegen", "ModuleOp"> {
   }];
   let constructor = "mlir::createSparseTensorCodegenPass()";
   let dependentDialects = [
+    "arith::ArithmeticDialect",
+    "bufferization::BufferizationDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
   ];
 }
