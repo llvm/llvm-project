@@ -384,3 +384,137 @@ end:
   %r = phi i32 [ %i0, %entry ], [ %i0, %left ], [ %i1, %right ]
   ret i32 %r
 }
+
+define i32 @extractvalue_of_constant_phi(i1 %c) {
+; CHECK-LABEL: @extractvalue_of_constant_phi(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi { i32, i32 } [ { i32 1, i32 2 }, [[IF]] ], [ { i32 3, i32 4 }, [[ELSE]] ]
+; CHECK-NEXT:    [[EV:%.*]] = extractvalue { i32, i32 } [[PHI]], 0
+; CHECK-NEXT:    ret i32 [[EV]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi { i32, i32 } [ { i32 1, i32 2 }, %if ], [ { i32 3, i32 4 }, %else ]
+  %ev = extractvalue { i32, i32 } %phi, 0
+  ret i32 %ev
+}
+
+define i32 @extractvalue_of_one_constant_phi(i1 %c, { i32, i32 } %arg) {
+; CHECK-LABEL: @extractvalue_of_one_constant_phi(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi { i32, i32 } [ [[ARG:%.*]], [[IF]] ], [ { i32 3, i32 4 }, [[ELSE]] ]
+; CHECK-NEXT:    [[EV:%.*]] = extractvalue { i32, i32 } [[PHI]], 0
+; CHECK-NEXT:    ret i32 [[EV]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi { i32, i32 } [ %arg, %if ], [ { i32 3, i32 4 }, %else ]
+  %ev = extractvalue { i32, i32 } %phi, 0
+  ret i32 %ev
+}
+
+define i32 @extractvalue_of_constant_phi_multi_index(i1 %c) {
+; CHECK-LABEL: @extractvalue_of_constant_phi_multi_index(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi { i32, { i32, i32 } } [ { i32 1, { i32, i32 } { i32 2, i32 3 } }, [[IF]] ], [ { i32 4, { i32, i32 } { i32 5, i32 6 } }, [[ELSE]] ]
+; CHECK-NEXT:    [[EV:%.*]] = extractvalue { i32, { i32, i32 } } [[PHI]], 1, 1
+; CHECK-NEXT:    ret i32 [[EV]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi { i32, { i32, i32 } } [ { i32 1, { i32, i32 } { i32 2, i32 3 } }, %if ], [ { i32 4, { i32, i32 } { i32 5, i32 6 } }, %else ]
+  %ev = extractvalue { i32, { i32, i32 } } %phi, 1, 1
+  ret i32 %ev
+}
+
+define i32 @extractvalue_of_one_constant_phi_multi_index(i1 %c, { i32, { i32, i32 } } %arg) {
+; CHECK-LABEL: @extractvalue_of_one_constant_phi_multi_index(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi { i32, { i32, i32 } } [ [[ARG:%.*]], [[IF]] ], [ { i32 4, { i32, i32 } { i32 5, i32 6 } }, [[ELSE]] ]
+; CHECK-NEXT:    [[EV:%.*]] = extractvalue { i32, { i32, i32 } } [[PHI]], 1, 1
+; CHECK-NEXT:    ret i32 [[EV]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi { i32, { i32, i32 } } [ %arg, %if ], [ { i32 4, { i32, i32 } { i32 5, i32 6 } }, %else ]
+  %ev = extractvalue { i32, { i32, i32 } } %phi, 1, 1
+  ret i32 %ev
+}
+
+define i32 @extractvalue_of_constant_phi_multiuse(i1 %c) {
+; CHECK-LABEL: @extractvalue_of_constant_phi_multiuse(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi { i32, i32 } [ { i32 1, i32 2 }, [[IF]] ], [ { i32 3, i32 4 }, [[ELSE]] ]
+; CHECK-NEXT:    [[EV0:%.*]] = extractvalue { i32, i32 } [[PHI]], 0
+; CHECK-NEXT:    [[EV1:%.*]] = extractvalue { i32, i32 } [[PHI]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[EV0]], [[EV1]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  br label %join
+
+else:
+  br label %join
+
+join:
+  %phi = phi { i32, i32 } [ { i32 1, i32 2 }, %if ], [ { i32 3, i32 4 }, %else ]
+  %ev0 = extractvalue { i32, i32 } %phi, 0
+  %ev1 = extractvalue { i32, i32 } %phi, 1
+  %add = add i32 %ev0, %ev1
+  ret i32 %add
+}
