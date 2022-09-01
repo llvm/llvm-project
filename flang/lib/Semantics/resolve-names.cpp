@@ -3138,24 +3138,25 @@ void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
     const Symbol &specific{
         symbol == &symbol->GetUltimate() ? bypassed : *symbol};
     const Symbol &ultimate{bypassed.GetUltimate()};
-    if (!ultimate.has<SubprogramDetails>() &&
-        !ultimate.has<SubprogramNameDetails>()) {
-      Say(*name, "'%s' is not a subprogram"_err_en_US);
+    ProcedureDefinitionClass defClass{ClassifyProcedure(ultimate)};
+    if (defClass == ProcedureDefinitionClass::Module) {
+      // ok
+    } else if (kind == ProcedureKind::ModuleProcedure) {
+      Say(*name, "'%s' is not a module procedure"_err_en_US);
       continue;
-    }
-    if (kind == ProcedureKind::ModuleProcedure) {
-      if (const auto *nd{ultimate.detailsIf<SubprogramNameDetails>()}) {
-        if (nd->kind() != SubprogramKind::Module) {
-          Say(*name, "'%s' is not a module procedure"_err_en_US);
-        }
-      } else {
-        // USE-associated procedure
-        const auto *sd{ultimate.detailsIf<SubprogramDetails>()};
-        CHECK(sd);
-        if (ultimate.owner().kind() != Scope::Kind::Module ||
-            sd->isInterface()) {
-          Say(*name, "'%s' is not a module procedure"_err_en_US);
-        }
+    } else {
+      switch (defClass) {
+      case ProcedureDefinitionClass::Intrinsic:
+      case ProcedureDefinitionClass::External:
+      case ProcedureDefinitionClass::Internal:
+        break;
+      case ProcedureDefinitionClass::None:
+        Say(*name, "'%s' is not a procedure"_err_en_US);
+        continue;
+      default:
+        Say(*name,
+            "'%s' is not a procedure that can appear in a generic interface"_err_en_US);
+        continue;
       }
     }
     if (symbolsSeen.insert(ultimate).second /*true if added*/) {
