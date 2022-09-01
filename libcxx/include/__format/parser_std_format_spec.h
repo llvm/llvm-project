@@ -534,10 +534,7 @@ private:
     if (!__width_as_arg_)
       return __width_;
 
-    int32_t __result = __format_spec::__substitute_arg_id(__ctx.arg(__width_));
-    if (__result == 0)
-      __throw_format_error("A format-spec width field replacement should have a positive value");
-    return __result;
+    return __format_spec::__substitute_arg_id(__ctx.arg(__width_));
   }
 
   _LIBCPP_HIDE_FROM_ABI
