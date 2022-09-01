@@ -175,6 +175,10 @@ AIX Support
 C Language Changes in Clang
 ---------------------------
 
+- Adjusted ``-Wformat`` warnings according to `WG14 N2562 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2562.pdf>`_.
+  Clang will now consider default argument promotions in printf, and remove unnecessary warnings.
+  Especially ``int`` argument with specifier ``%hhd`` and ``%hd``.
+
 C2x Feature Support
 -------------------
 
