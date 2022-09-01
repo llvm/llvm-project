@@ -64,6 +64,10 @@ class VPlan;
 class VPReplicateRecipe;
 class VPlanSlp;
 
+namespace Intrinsic {
+typedef unsigned ID;
+}
+
 /// Returns a calculation for the total number of elements for a given \p VF.
 /// For fixed width vectors this value is a constant, whereas for scalable
 /// vectors it is an expression determined at runtime.
@@ -946,12 +950,17 @@ public:
 
 /// A recipe for widening Call instructions.
 class VPWidenCallRecipe : public VPRecipeBase, public VPValue {
+  /// ID of the vector intrinsic to call when widening the call. If set the
+  /// Intrinsic::not_intrinsic, a library call will be used instead.
+  Intrinsic::ID VectorIntrinsicID;
 
 public:
   template <typename IterT>
-  VPWidenCallRecipe(CallInst &I, iterator_range<IterT> CallArguments)
+  VPWidenCallRecipe(CallInst &I, iterator_range<IterT> CallArguments,
+                    Intrinsic::ID VectorIntrinsicID)
       : VPRecipeBase(VPRecipeBase::VPWidenCallSC, CallArguments),
-        VPValue(VPValue::VPVWidenCallSC, &I, this) {}
+        VPValue(VPValue::VPVWidenCallSC, &I, this),
+        VectorIntrinsicID(VectorIntrinsicID) {}
 
   ~VPWidenCallRecipe() override = default;
 

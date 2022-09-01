@@ -6,7 +6,7 @@
 target triple = "arm64-apple-ios"
 
 ; CHECK-LABEL: LV: Checking a loop in 'test'
-; CHECK:      VPlan 'Initial VPlan for VF={2,4},UF>=1' {
+; CHECK:      VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
@@ -19,7 +19,7 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr ir<%src>, vp<%3>
 ; CHECK-NEXT:     WIDEN ir<%l> = load ir<%gep.src>
 ; CHECK-NEXT:     WIDEN ir<%conv> = fpext ir<%l>
-; CHECK-NEXT:     WIDEN-CALL ir<%s> = call @llvm.sin.f64(ir<%conv>)
+; CHECK-NEXT:     WIDEN-CALL ir<%s> = call @llvm.sin.f64(ir<%conv>) (using library function)
 ; CHECK-NEXT:     REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<%3>
 ; CHECK-NEXT:     REPLICATE store ir<%s>, ir<%gep.dst>
 ; CHECK-NEXT:     EMIT vp<%10> = VF * UF +(nuw)  vp<%2>
@@ -31,6 +31,33 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
+
+; CHECK:      VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<%1> = vector-trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: vector.ph:
+; CHECK-NEXT: Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   vector.body:
+; CHECK-NEXT:     EMIT vp<%2> = CANONICAL-INDUCTION
+; CHECK-NEXT:     vp<%3>    = SCALAR-STEPS vp<%2>, ir<0>, ir<1>
+; CHECK-NEXT:     CLONE ir<%gep.src> = getelementptr ir<%src>, vp<%3>
+; CHECK-NEXT:     WIDEN ir<%l> = load ir<%gep.src>
+; CHECK-NEXT:     WIDEN ir<%conv> = fpext ir<%l>
+; CHECK-NEXT:     WIDEN-CALL ir<%s> = call @llvm.sin.f64(ir<%conv>) (using vector intrinsic)
+; CHECK-NEXT:     REPLICATE ir<%gep.dst> = getelementptr ir<%dst>, vp<%3>
+; CHECK-NEXT:     REPLICATE store ir<%s>, ir<%gep.dst>
+; CHECK-NEXT:     EMIT vp<%10> = VF * UF +(nuw)  vp<%2>
+; CHECK-NEXT:     EMIT branch-on-count  vp<%10> vp<%1>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
 ;
 define void @test(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-LABEL: @test(

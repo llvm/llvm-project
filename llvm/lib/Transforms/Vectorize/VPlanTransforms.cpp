@@ -15,6 +15,8 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Intrinsics.h"
 
 using namespace llvm;
 
@@ -22,7 +24,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
     Loop *OrigLoop, VPlanPtr &Plan,
     function_ref<const InductionDescriptor *(PHINode *)>
         GetIntOrFpInductionDescriptor,
-    SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE) {
+    SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE,
+    const TargetLibraryInfo &TLI) {
 
   ReversePostOrderTraversal<VPBlockRecursiveTraversalWrapper<VPBlockBase *>>
       RPOT(Plan->getEntry());
@@ -74,7 +77,8 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
               GEP, Plan->mapToVPValues(GEP->operands()), OrigLoop);
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
           NewRecipe =
-              new VPWidenCallRecipe(*CI, Plan->mapToVPValues(CI->args()));
+              new VPWidenCallRecipe(*CI, Plan->mapToVPValues(CI->args()),
+                                    getVectorIntrinsicIDForCall(CI, &TLI));
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
           bool InvariantCond =
               SE.isLoopInvariant(SE.getSCEV(SI->getOperand(0)), OrigLoop);
