@@ -1,7 +1,5 @@
 // RUN: c-index-test -test-load-source-reparse 1 local %s | FileCheck %s
 
-// XFAIL: *
-
 // See PR 21254. We had too few bits to encode command IDs so if you created
 // enough of them the ID codes would wrap around. This test creates commands up
 // to an ID of 258. Ideally we should check for large numbers, but that would
@@ -37,7 +35,7 @@
 @ei
 @oun
 @ou
-@nl
+@nlnl
 @ien
 @fr
 @en
@@ -58,7 +56,7 @@
 @fro
 @ast
 @ae
-@nN
+@nNnN
 @pc
 @tae
 @ws
@@ -122,10 +120,10 @@
 @an
 @de
 @tel
-@nd
-@dic
+@ndnd
+@dict
 @Lo
-@il
+@ilil
 @tle
 @axt
 @ba
@@ -137,7 +135,7 @@
 @ru
 @m
 @tG
-@it
+@itit
 @rh
 @G
 @rpc
@@ -183,7 +181,7 @@ void f();
 // CHECK:         (CXComment_InlineCommand CommandName=[ei] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[oun] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[ou] RenderNormal HasTrailingNewline)
-// CHECK:         (CXComment_InlineCommand CommandName=[nl] RenderNormal HasTrailingNewline)
+// CHECK:         (CXComment_InlineCommand CommandName=[nlnl] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[ien] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[fr] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[en] RenderNormal HasTrailingNewline)
@@ -204,7 +202,7 @@ void f();
 // CHECK:         (CXComment_InlineCommand CommandName=[fro] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[ast] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[ae] RenderNormal HasTrailingNewline)
-// CHECK:         (CXComment_InlineCommand CommandName=[nN] RenderNormal HasTrailingNewline)
+// CHECK:         (CXComment_InlineCommand CommandName=[nNnN] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[pc] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[tae] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[ws] RenderNormal HasTrailingNewline)
@@ -268,10 +266,10 @@ void f();
 // CHECK:         (CXComment_InlineCommand CommandName=[an] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[de] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[tel] RenderNormal HasTrailingNewline)
-// CHECK:         (CXComment_InlineCommand CommandName=[nd] RenderNormal HasTrailingNewline)
-// CHECK:         (CXComment_InlineCommand CommandName=[dic] RenderNormal HasTrailingNewline)
+// CHECK:         (CXComment_InlineCommand CommandName=[ndnd] RenderNormal HasTrailingNewline)
+// CHECK:         (CXComment_InlineCommand CommandName=[dict] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[Lo] RenderNormal HasTrailingNewline)
-// CHECK:         (CXComment_InlineCommand CommandName=[il] RenderNormal HasTrailingNewline)
+// CHECK:         (CXComment_InlineCommand CommandName=[ilil] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[tle] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[axt] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[ba] RenderNormal HasTrailingNewline)
@@ -283,7 +281,7 @@ void f();
 // CHECK:         (CXComment_InlineCommand CommandName=[ru] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[m] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[tG] RenderNormal HasTrailingNewline)
-// CHECK:         (CXComment_InlineCommand CommandName=[it] RenderNormal HasTrailingNewline)
+// CHECK:         (CXComment_InlineCommand CommandName=[itit] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[rh] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[G] RenderNormal HasTrailingNewline)
 // CHECK:         (CXComment_InlineCommand CommandName=[rpc] RenderNormal HasTrailingNewline)
