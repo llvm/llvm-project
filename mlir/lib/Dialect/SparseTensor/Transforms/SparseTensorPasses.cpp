@@ -157,8 +157,9 @@ struct SparseTensorCodegenPass
     RewritePatternSet patterns(ctx);
     SparseTensorTypeToBufferConverter converter;
     ConversionTarget target(*ctx);
-    // Everything in the sparse dialect must go!
+    // Almost everything in the sparse dialect must go!
     target.addIllegalDialect<SparseTensorDialect>();
+    target.addLegalOp<StorageGetOp, StorageSetOp>();
     // All dynamic rules below accept new function, call, return.
     target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp op) {
       return converter.isSignatureLegal(op.getFunctionType());
