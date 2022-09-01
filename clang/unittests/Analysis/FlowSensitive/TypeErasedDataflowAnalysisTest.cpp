@@ -426,12 +426,12 @@ TEST_F(JoinFlowConditionsTest, JoinDistinctButProvablyEquivalentValues) {
                    std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
                    Results,
                ASTContext &ASTCtx) {
-        ASSERT_THAT(Results, ElementsAre(Pair("p4", _), Pair("p3", _),
-                                         Pair("p2", _), Pair("p1", _)));
-        const Environment &Env1 = Results[3].second.Env;
-        const Environment &Env2 = Results[2].second.Env;
-        const Environment &Env3 = Results[1].second.Env;
-        const Environment &Env4 = Results[0].second.Env;
+        ASSERT_THAT(Results, ElementsAre(Pair("p1", _), Pair("p2", _),
+                                         Pair("p3", _), Pair("p4", _)));
+        const Environment &Env1 = Results[0].second.Env;
+        const Environment &Env2 = Results[1].second.Env;
+        const Environment &Env3 = Results[2].second.Env;
+        const Environment &Env4 = Results[3].second.Env;
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
@@ -579,10 +579,10 @@ TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
                  Results,
              ASTContext &ASTCtx) {
         ASSERT_THAT(Results,
-                    ElementsAre(Pair("p3", _), Pair("p2", _), Pair("p1", _)));
-        const Environment &Env1 = Results[2].second.Env;
+                    ElementsAre(Pair("p1", _), Pair("p2", _), Pair("p3", _)));
+        const Environment &Env1 = Results[0].second.Env;
         const Environment &Env2 = Results[1].second.Env;
-        const Environment &Env3 = Results[0].second.Env;
+        const Environment &Env3 = Results[2].second.Env;
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
@@ -622,12 +622,12 @@ TEST_F(WideningTest, JoinDistinctValuesWithSameProperties) {
                      std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
                      Results,
                  ASTContext &ASTCtx) {
-                ASSERT_THAT(Results, ElementsAre(Pair("p4", _), Pair("p3", _),
-                                                 Pair("p2", _), Pair("p1", _)));
-                const Environment &Env1 = Results[3].second.Env;
-                const Environment &Env2 = Results[2].second.Env;
-                const Environment &Env3 = Results[1].second.Env;
-                const Environment &Env4 = Results[0].second.Env;
+                ASSERT_THAT(Results, ElementsAre(Pair("p1", _), Pair("p2", _),
+                                                 Pair("p3", _), Pair("p4", _)));
+                const Environment &Env1 = Results[0].second.Env;
+                const Environment &Env2 = Results[1].second.Env;
+                const Environment &Env3 = Results[2].second.Env;
+                const Environment &Env4 = Results[3].second.Env;
 
                 const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
                 ASSERT_THAT(FooDecl, NotNull());
@@ -751,14 +751,14 @@ TEST_F(FlowConditionTest, IfStmtSingleVar) {
                 const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
                 ASSERT_THAT(FooDecl, NotNull());
 
-                ASSERT_THAT(Results, ElementsAre(Pair("p2", _), Pair("p1", _)));
+                ASSERT_THAT(Results, ElementsAre(Pair("p1", _), Pair("p2", _)));
 
-                const Environment &Env1 = Results[1].second.Env;
+                const Environment &Env1 = Results[0].second.Env;
                 auto *FooVal1 =
                     cast<BoolValue>(Env1.getValue(*FooDecl, SkipPast::None));
                 EXPECT_TRUE(Env1.flowConditionImplies(*FooVal1));
 
-                const Environment &Env2 = Results[0].second.Env;
+                const Environment &Env2 = Results[1].second.Env;
                 auto *FooVal2 =
                     cast<BoolValue>(Env2.getValue(*FooDecl, SkipPast::None));
                 EXPECT_FALSE(Env2.flowConditionImplies(*FooVal2));
@@ -785,14 +785,14 @@ TEST_F(FlowConditionTest, IfStmtSingleNegatedVar) {
                 const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
                 ASSERT_THAT(FooDecl, NotNull());
 
-                ASSERT_THAT(Results, ElementsAre(Pair("p2", _), Pair("p1", _)));
+                ASSERT_THAT(Results, ElementsAre(Pair("p1", _), Pair("p2", _)));
 
-                const Environment &Env1 = Results[1].second.Env;
+                const Environment &Env1 = Results[0].second.Env;
                 auto *FooVal1 =
                     cast<BoolValue>(Env1.getValue(*FooDecl, SkipPast::None));
                 EXPECT_FALSE(Env1.flowConditionImplies(*FooVal1));
 
-                const Environment &Env2 = Results[0].second.Env;
+                const Environment &Env2 = Results[1].second.Env;
                 auto *FooVal2 =
                     cast<BoolValue>(Env2.getValue(*FooDecl, SkipPast::None));
                 EXPECT_TRUE(Env2.flowConditionImplies(*FooVal2));
@@ -847,9 +847,9 @@ TEST_F(FlowConditionTest, Conjunction) {
                 const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
                 ASSERT_THAT(BarDecl, NotNull());
 
-                ASSERT_THAT(Results, ElementsAre(Pair("p2", _), Pair("p1", _)));
+                ASSERT_THAT(Results, ElementsAre(Pair("p1", _), Pair("p2", _)));
 
-                const Environment &Env1 = Results[1].second.Env;
+                const Environment &Env1 = Results[0].second.Env;
                 auto *FooVal1 =
                     cast<BoolValue>(Env1.getValue(*FooDecl, SkipPast::None));
                 auto *BarVal1 =
@@ -857,7 +857,7 @@ TEST_F(FlowConditionTest, Conjunction) {
                 EXPECT_TRUE(Env1.flowConditionImplies(*FooVal1));
                 EXPECT_TRUE(Env1.flowConditionImplies(*BarVal1));
 
-                const Environment &Env2 = Results[0].second.Env;
+                const Environment &Env2 = Results[1].second.Env;
                 auto *FooVal2 =
                     cast<BoolValue>(Env2.getValue(*FooDecl, SkipPast::None));
                 auto *BarVal2 =
@@ -890,9 +890,9 @@ TEST_F(FlowConditionTest, Disjunction) {
                 const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
                 ASSERT_THAT(BarDecl, NotNull());
 
-                ASSERT_THAT(Results, ElementsAre(Pair("p2", _), Pair("p1", _)));
+                ASSERT_THAT(Results, ElementsAre(Pair("p1", _), Pair("p2", _)));
 
-                const Environment &Env1 = Results[1].second.Env;
+                const Environment &Env1 = Results[0].second.Env;
                 auto *FooVal1 =
                     cast<BoolValue>(Env1.getValue(*FooDecl, SkipPast::None));
                 auto *BarVal1 =
@@ -900,7 +900,7 @@ TEST_F(FlowConditionTest, Disjunction) {
                 EXPECT_FALSE(Env1.flowConditionImplies(*FooVal1));
                 EXPECT_FALSE(Env1.flowConditionImplies(*BarVal1));
 
-                const Environment &Env2 = Results[0].second.Env;
+                const Environment &Env2 = Results[1].second.Env;
                 auto *FooVal2 =
                     cast<BoolValue>(Env2.getValue(*FooDecl, SkipPast::None));
                 auto *BarVal2 =
@@ -933,9 +933,9 @@ TEST_F(FlowConditionTest, NegatedConjunction) {
                 const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
                 ASSERT_THAT(BarDecl, NotNull());
 
-                ASSERT_THAT(Results, ElementsAre(Pair("p2", _), Pair("p1", _)));
+                ASSERT_THAT(Results, ElementsAre(Pair("p1", _), Pair("p2", _)));
 
-                const Environment &Env1 = Results[1].second.Env;
+                const Environment &Env1 = Results[0].second.Env;
                 auto *FooVal1 =
                     cast<BoolValue>(Env1.getValue(*FooDecl, SkipPast::None));
                 auto *BarVal1 =
@@ -943,7 +943,7 @@ TEST_F(FlowConditionTest, NegatedConjunction) {
                 EXPECT_FALSE(Env1.flowConditionImplies(*FooVal1));
                 EXPECT_FALSE(Env1.flowConditionImplies(*BarVal1));
 
-                const Environment &Env2 = Results[0].second.Env;
+                const Environment &Env2 = Results[1].second.Env;
                 auto *FooVal2 =
                     cast<BoolValue>(Env2.getValue(*FooDecl, SkipPast::None));
                 auto *BarVal2 =
@@ -976,9 +976,9 @@ TEST_F(FlowConditionTest, DeMorgan) {
                 const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
                 ASSERT_THAT(BarDecl, NotNull());
 
-                ASSERT_THAT(Results, ElementsAre(Pair("p2", _), Pair("p1", _)));
+                ASSERT_THAT(Results, ElementsAre(Pair("p1", _), Pair("p2", _)));
 
-                const Environment &Env1 = Results[1].second.Env;
+                const Environment &Env1 = Results[0].second.Env;
                 auto *FooVal1 =
                     cast<BoolValue>(Env1.getValue(*FooDecl, SkipPast::None));
                 auto *BarVal1 =
@@ -986,7 +986,7 @@ TEST_F(FlowConditionTest, DeMorgan) {
                 EXPECT_TRUE(Env1.flowConditionImplies(*FooVal1));
                 EXPECT_TRUE(Env1.flowConditionImplies(*BarVal1));
 
-                const Environment &Env2 = Results[0].second.Env;
+                const Environment &Env2 = Results[1].second.Env;
                 auto *FooVal2 =
                     cast<BoolValue>(Env2.getValue(*FooDecl, SkipPast::None));
                 auto *BarVal2 =
@@ -1159,16 +1159,16 @@ TEST_F(FlowConditionTest, PointerToBoolImplicitCast) {
                    std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
                    Results,
                ASTContext &ASTCtx) {
-        ASSERT_THAT(Results, ElementsAre(Pair("p2", _), Pair("p1", _)));
+        ASSERT_THAT(Results, ElementsAre(Pair("p1", _), Pair("p2", _)));
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
 
-        const Environment &Env1 = Results[1].second.Env;
+        const Environment &Env1 = Results[0].second.Env;
         auto &FooVal1 =
             *cast<BoolValue>(Env1.getValue(*FooDecl, SkipPast::Reference));
         EXPECT_TRUE(Env1.flowConditionImplies(FooVal1));
 
-        const Environment &Env2 = Results[0].second.Env;
+        const Environment &Env2 = Results[1].second.Env;
         auto &FooVal2 =
             *cast<BoolValue>(Env2.getValue(*FooDecl, SkipPast::Reference));
         EXPECT_FALSE(Env2.flowConditionImplies(FooVal2));
