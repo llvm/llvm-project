@@ -602,7 +602,7 @@ public:
                              unsigned AddrSpace = 0,
                              Instruction *I = nullptr) const;
 
-  /// Return true if LSR cost of C1 is lower than C1.
+  /// Return true if LSR cost of C1 is lower than C2.
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const;
 
