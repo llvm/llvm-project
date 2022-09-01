@@ -750,12 +750,32 @@ static bool shouldEnableVectorizerAtOLevel(const ArgList &Args, bool isSlpVec) {
   return false;
 }
 
+/// Is -Ofast used?
+static bool isOFastUsed(const ArgList &Args) {
+  if (Arg *A = Args.getLastArg(options::OPT_O_Group))
+    if (A->getOption().matches(options::OPT_Ofast))
+      return true;
+  return false;
+}
+
+/// Is -fopenmp-target-fast or -Ofast used
+static bool isTargetFastUsed(const ArgList &Args) {
+  return Args.hasFlag(options::OPT_fopenmp_target_fast,
+                      options::OPT_fno_openmp_target_fast, isOFastUsed(Args));
+}
+
 /// Ignore possibility of runtime environment variables during kernel code
 /// generation at -O3 (and above) and -Ofast
 static bool shouldIgnoreEnvVars(const ArgList &Args) {
+  if (Args.hasFlag(options::OPT_fno_openmp_target_fast,
+                   options::OPT_fopenmp_target_fast, false))
+    return false;
+
+  if (isTargetFastUsed(Args))
+    return true;
+
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    if (A->getOption().matches(options::OPT_O4) ||
-        A->getOption().matches(options::OPT_Ofast))
+    if (A->getOption().matches(options::OPT_O4))
       return true;
 
     if (A->getOption().matches(options::OPT_O0))
@@ -777,14 +797,6 @@ static bool shouldIgnoreEnvVars(const ArgList &Args) {
     return OptLevel > 2;
   }
 
-  return false;
-}
-
-/// Is -Ofast used?
-static bool isOFastUsed(const ArgList &Args) {
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group))
-    if (A->getOption().matches(options::OPT_Ofast))
-      return true;
   return false;
 }
 
@@ -6172,6 +6184,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                        /*Default=*/false))
         CmdArgs.push_back("-fopenmp-optimistic-collapse");
 
+      if (isTargetFastUsed(Args))
+        CmdArgs.push_back("-fopenmp-target-fast");
+      else
+        CmdArgs.push_back("-fno-openmp-target-fast");
+
       if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
                        options::OPT_fno_openmp_target_new_runtime, true))
         CmdArgs.push_back("-fopenmp-target-new-runtime");
@@ -6224,14 +6241,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (Args.hasFlag(options::OPT_fopenmp_assume_no_thread_state,
                        options::OPT_fno_openmp_assume_no_thread_state,
-                       isOFastUsed(Args)))
+                       isTargetFastUsed(Args)))
         CmdArgs.push_back("-fopenmp-assume-no-thread-state");
       else
         CmdArgs.push_back("-fno-openmp-assume-no-thread-state");
 
       if (Args.hasFlag(options::OPT_fopenmp_assume_no_nested_parallelism,
                        options::OPT_fno_openmp_assume_no_nested_parallelism,
-                       isOFastUsed(Args)))
+                       isTargetFastUsed(Args)))
         CmdArgs.push_back("-fopenmp-assume-no-nested-parallelism");
       else
         CmdArgs.push_back("-fno-openmp-assume-no-nested-parallelism");
