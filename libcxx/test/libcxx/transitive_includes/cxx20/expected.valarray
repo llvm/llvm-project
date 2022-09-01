@@ -27,7 +27,6 @@ type_traits
 typeinfo
 unordered_map
 utility
-valarray
 variant
 vector
 version

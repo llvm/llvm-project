@@ -31,7 +31,6 @@ memory
 mutex
 new
 optional
-ostream
 ratio
 stdexcept
 streambuf

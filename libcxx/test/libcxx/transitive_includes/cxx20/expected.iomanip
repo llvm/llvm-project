@@ -21,7 +21,6 @@ cwctype
 exception
 functional
 initializer_list
-iomanip
 ios
 iosfwd
 istream

@@ -13,7 +13,6 @@ cstring
 ctime
 deque
 exception
-experimental/deque
 experimental/memory_resource
 experimental/utility
 functional

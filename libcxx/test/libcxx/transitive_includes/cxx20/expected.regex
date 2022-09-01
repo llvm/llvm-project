@@ -28,7 +28,6 @@ mutex
 new
 optional
 ratio
-regex
 stdexcept
 string
 string_view

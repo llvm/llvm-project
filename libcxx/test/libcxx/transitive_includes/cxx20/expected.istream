@@ -23,7 +23,6 @@ functional
 initializer_list
 ios
 iosfwd
-istream
 iterator
 limits
 locale

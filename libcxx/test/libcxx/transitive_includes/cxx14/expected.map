@@ -18,7 +18,6 @@ initializer_list
 iosfwd
 iterator
 limits
-map
 memory
 new
 optional

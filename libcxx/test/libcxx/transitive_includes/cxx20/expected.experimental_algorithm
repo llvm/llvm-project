@@ -11,7 +11,6 @@ cstdlib
 cstring
 ctime
 exception
-experimental/algorithm
 initializer_list
 iosfwd
 iterator

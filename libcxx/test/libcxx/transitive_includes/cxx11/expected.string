@@ -27,7 +27,6 @@ new
 optional
 ratio
 stdexcept
-string
 string_view
 tuple
 type_traits

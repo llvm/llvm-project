@@ -25,7 +25,6 @@ memory
 new
 numeric
 optional
-random
 ratio
 stdexcept
 string

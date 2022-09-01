@@ -23,7 +23,6 @@ iosfwd
 iterator
 limits
 memory
-mutex
 new
 optional
 ratio

@@ -27,7 +27,6 @@ mutex
 new
 ostream
 ratio
-sstream
 stdexcept
 streambuf
 string

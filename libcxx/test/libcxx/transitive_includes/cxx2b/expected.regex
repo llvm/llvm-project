@@ -22,7 +22,6 @@ memory
 mutex
 new
 ratio
-regex
 stdexcept
 string
 string_view

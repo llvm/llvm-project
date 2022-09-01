@@ -13,7 +13,6 @@ cstring
 ctime
 exception
 experimental/memory_resource
-experimental/unordered_map
 experimental/utility
 functional
 initializer_list
