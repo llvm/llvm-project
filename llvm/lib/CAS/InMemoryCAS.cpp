@@ -198,22 +198,10 @@ public:
                                 sys::fs::mapped_file_region Map) override;
 
   CASID getID(const InMemoryIndexValueT &I) const {
-    return CASID::getFromInternalID(*this, reinterpret_cast<uintptr_t>(&I));
+    StringRef Hash = toStringRef(I.Hash);
+    return CASID::create(this, Hash);
   }
   CASID getID(const InMemoryObject &O) const { return getID(O.getIndex()); }
-  const InMemoryIndexValueT &extractIndexFromID(CASID ID) const {
-    assert(&ID.getContext() == this);
-    return *reinterpret_cast<const InMemoryIndexValueT *>(
-        (uintptr_t)ID.getInternalID(*this));
-  }
-  InMemoryIndexValueT &extractIndexFromID(CASID ID) {
-    return const_cast<InMemoryIndexValueT &>(
-        const_cast<const InMemoryCAS *>(this)->extractIndexFromID(ID));
-  }
-
-  ArrayRef<uint8_t> getHashImpl(const CASID &ID) const final {
-    return extractIndexFromID(ID).Hash;
-  }
 
   ObjectHandle getObjectHandle(const InMemoryObject &Node) const {
     assert(!(reinterpret_cast<uintptr_t>(&Node) & 0x1ULL));
@@ -232,8 +220,6 @@ public:
   /// TODO: Consider callers to actually do an insert and to return a handle to
   /// the slot in the trie.
   const InMemoryObject *getInMemoryObject(CASID ID) const {
-    if (&ID.getContext() == this)
-      return extractIndexFromID(ID).Data;
     assert(ID.getContext().getHashSchemaIdentifier() ==
                getHashSchemaIdentifier() &&
            "Expected ID from same hash schema");
@@ -264,11 +250,6 @@ public:
   Optional<ObjectRef> getReference(const CASID &ID) const final {
     if (const InMemoryObject *Object = getInMemoryObject(ID))
       return toReference(*Object);
-    return None;
-  }
-  Optional<ObjectRef> getReference(ArrayRef<uint8_t> Hash) const final {
-    if (InMemoryIndexT::const_pointer P = Index.find(Hash))
-      return toReference(*P->Data);
     return None;
   }
   ObjectRef getReference(ObjectHandle Handle) const final {
