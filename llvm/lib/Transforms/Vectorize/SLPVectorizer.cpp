@@ -10555,8 +10555,8 @@ class HorizontalReduction {
   // select x, y, false
   // select x, true, y
   static bool isBoolLogicOp(Instruction *I) {
-    return match(I, m_LogicalAnd(m_Value(), m_Value())) ||
-           match(I, m_LogicalOr(m_Value(), m_Value()));
+    return isa<SelectInst>(I) &&
+           (match(I, m_LogicalAnd()) || match(I, m_LogicalOr()));
   }
 
   /// Checks if instruction is associative and can be vectorized.
@@ -10782,7 +10782,7 @@ class HorizontalReduction {
   /// Checks if the instruction is in basic block \p BB.
   /// For a cmp+sel min/max reduction check that both ops are in \p BB.
   static bool hasSameParent(Instruction *I, BasicBlock *BB) {
-    if (isCmpSelMinMax(I) || (isBoolLogicOp(I) && isa<SelectInst>(I))) {
+    if (isCmpSelMinMax(I) || isBoolLogicOp(I)) {
       auto *Sel = cast<SelectInst>(I);
       auto *Cmp = dyn_cast<Instruction>(Sel->getCondition());
       return Sel->getParent() == BB && Cmp && Cmp->getParent() == BB;
@@ -11304,7 +11304,7 @@ public:
         // To prevent poison from leaking across what used to be sequential,
         // safe, scalar boolean logic operations, the reduction operand must be
         // frozen.
-        if (isa<SelectInst>(RdxRootInst) && isBoolLogicOp(RdxRootInst))
+        if (isBoolLogicOp(RdxRootInst))
           VectorizedRoot = Builder.CreateFreeze(VectorizedRoot);
 
         Value *ReducedSubTree =
