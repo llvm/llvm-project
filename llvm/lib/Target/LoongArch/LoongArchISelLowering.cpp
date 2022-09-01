@@ -104,10 +104,12 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasBasicF()) {
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
+    setOperationAction(ISD::BR_CC, MVT::f32, Expand);
   }
   if (Subtarget.hasBasicD()) {
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f64, Expand);
+    setOperationAction(ISD::BR_CC, MVT::f64, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
   }
