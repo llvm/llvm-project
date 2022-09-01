@@ -1973,7 +1973,6 @@ bool llvm::promoteLoopAccessesToScalars(
 
   const DataLayout &MDL = Preheader->getModule()->getDataLayout();
 
-  bool IsKnownThreadLocalObject = false;
   if (SafetyInfo->anyBlockMayThrow()) {
     // If a loop can throw, we have to insert a store along each unwind edge.
     // That said, we can't actually make the unwind edge explicit. Therefore,
@@ -1983,9 +1982,6 @@ bool llvm::promoteLoopAccessesToScalars(
     Value *Object = getUnderlyingObject(SomePtr);
     if (!isNotVisibleOnUnwindInLoop(Object, CurLoop, DT))
       return false;
-    // Subtlety: Alloca's aren't visible to callers, but *are* potentially
-    // visible to other threads if captured and used during their lifetimes.
-    IsKnownThreadLocalObject = !isa<AllocaInst>(Object);
   }
 
   // Check that all accesses to pointers in the alias set use the same type.
@@ -2113,14 +2109,11 @@ bool llvm::promoteLoopAccessesToScalars(
   // stores along paths which originally didn't have them without violating the
   // memory model.
   if (!SafeToInsertStore) {
-    if (IsKnownThreadLocalObject)
-      SafeToInsertStore = true;
-    else {
-      Value *Object = getUnderlyingObject(SomePtr);
-      SafeToInsertStore =
-          (isNoAliasCall(Object) || isa<AllocaInst>(Object)) &&
-          isNotCapturedBeforeOrInLoop(Object, CurLoop, DT);
-    }
+    Value *Object = getUnderlyingObject(SomePtr);
+    SafeToInsertStore =
+        (isNoAliasCall(Object) || isa<AllocaInst>(Object) ||
+         (isa<Argument>(Object) && cast<Argument>(Object)->hasByValAttr())) &&
+        isNotCapturedBeforeOrInLoop(Object, CurLoop, DT);
   }
 
   // If we've still failed to prove we can sink the store, hoist the load
