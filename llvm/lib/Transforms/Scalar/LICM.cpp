@@ -1910,6 +1910,12 @@ bool llvm::promoteLoopAccessesToScalars(
          SafetyInfo != nullptr &&
          "Unexpected Input to promoteLoopAccessesToScalars");
 
+  LLVM_DEBUG({
+    dbgs() << "Trying to promote set of must-aliased pointers:\n";
+    for (Value *Ptr : PointerMustAliases)
+      dbgs() << "  " << *Ptr << "\n";
+  });
+
   Value *SomePtr = *PointerMustAliases.begin();
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
 
@@ -2097,8 +2103,10 @@ bool llvm::promoteLoopAccessesToScalars(
     return false;
 
   // If we couldn't prove we can hoist the load, bail.
-  if (!DereferenceableInPH)
+  if (!DereferenceableInPH) {
+    LLVM_DEBUG(dbgs() << "Not promoting: Not dereferenceable in preheader\n");
     return false;
+  }
 
   // We know we can hoist the load, but don't have a guaranteed store.
   // Check whether the location is thread-local. If it is, then we can insert
