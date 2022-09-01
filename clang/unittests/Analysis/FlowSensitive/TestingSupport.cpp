@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Annotations.h"
 #include <cassert>
@@ -72,6 +73,7 @@ llvm::Expected<llvm::DenseMap<const Stmt *, std::string>>
 test::buildStatementToAnnotationMapping(const FunctionDecl *Func,
                                         llvm::Annotations AnnotatedCode) {
   llvm::DenseMap<const Stmt *, std::string> Result;
+  llvm::StringSet<> ExistingAnnotations;
 
   auto StmtMatcher =
       findAll(stmt(unless(anyOf(hasParent(expr()), hasParent(returnStmt()))))
@@ -113,7 +115,14 @@ test::buildStatementToAnnotationMapping(const FunctionDecl *Func,
                 .data());
       }
 
-      Result[Stmt] = Code.slice(Range.Begin, Range.End).str();
+      auto Annotation = Code.slice(Range.Begin, Range.End).str();
+      if (!ExistingAnnotations.insert(Annotation).second) {
+        return llvm::createStringError(
+            std::make_error_code(std::errc::invalid_argument),
+            "Repeated use of annotation: %s", Annotation.data());
+      }
+      Result[Stmt] = std::move(Annotation);
+
       I++;
 
       if (I < Annotations.size() && Annotations[I].Begin >= Offset) {
