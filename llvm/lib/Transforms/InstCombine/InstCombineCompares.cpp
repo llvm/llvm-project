@@ -6892,6 +6892,7 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // fcmp oeq/une (bitcast X), 0.0 --> (and X, SignMaskC) ==/!= 0
   if (match(Op1, m_PosZeroFP()) &&
       match(Op0, m_OneUse(m_BitCast(m_Value(X)))) &&
+      X->getType()->isVectorTy() == OpType->isVectorTy() &&
       X->getType()->getScalarSizeInBits() == OpType->getScalarSizeInBits()) {
     ICmpInst::Predicate IntPred = ICmpInst::BAD_ICMP_PREDICATE;
     if (Pred == FCmpInst::FCMP_OEQ)
