@@ -787,7 +787,6 @@ private:
     llvm::support::ulittle32_t constantPoolOff;
   };
 
-  void initOutputSize();
   size_t computeSymtabSize() const;
 
   // Each chunk contains information gathered from debug sections of a
