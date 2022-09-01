@@ -870,5 +870,6 @@ func.func @drop_all_loops(%arg0 : memref<1x1xf32, 3>) -> memref<1x1xf32, 3>
 }
 
 // CHECK-LABEL: func @drop_all_loops
-//       CHECK:   memref.collapse_shape %{{.*}} [] memref<1x1xf32, 3> into memref<f32, 3>
+//       CHECK:   memref.collapse_shape 
+//  CHECK-SAME:     [] : memref<1x1xf32, 3> into memref<f32, 3>
 //       CHECK:   linalg.generic{{.*}}memref<f32, 3>
