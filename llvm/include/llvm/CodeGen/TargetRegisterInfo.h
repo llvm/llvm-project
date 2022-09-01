@@ -565,6 +565,13 @@ public:
   virtual bool isCalleeSavedPhysReg(MCRegister PhysReg,
                                     const MachineFunction &MF) const;
 
+  // Return true if the register is needed for returning from the
+  // function and so must be preserved in the callee even if preserved
+  // by the caller
+  virtual bool isNeededForReturn(MCRegister PhysReg, const MachineFunction &MF) const {
+    return false;
+  }
+
   /// Prior to adding the live-out mask to a stackmap or patchpoint
   /// instruction, provide the target the opportunity to adjust it (mainly to
   /// remove pseudo-registers that should be ignored).
