@@ -12,7 +12,7 @@ typedef __SIZE_TYPE__ size_t;
                       unsigned int : (int)0,                                   \
                       unsigned short : (short)0,                               \
                       unsigned char : (signed char)0))
-typedef __SSIZE_TYPE__ ssize_t;                         
+typedef __SSIZE_TYPE__ ssize_t;
 
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
 #define __UNSIGNED_PTRDIFF_TYPE__                                              \
@@ -224,13 +224,13 @@ void test_ptrdiff_t_types(void) {
 
   ptrdiff_t p2 = 0;
   scanf("%td", &p2); // No warning.
-  
+
   double d2 = 0.;
   scanf("%td", &d2); // expected-warning-re{{format specifies type 'ptrdiff_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 
   ptrdiff_t p3 = 0;
   scanf("%tn", &p3); // No warning.
-  
+
   double d3 = 0.;
   scanf("%tn", &d3); // expected-warning-re{{format specifies type 'ptrdiff_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 }
