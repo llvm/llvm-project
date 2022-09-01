@@ -38,6 +38,9 @@ namespace LLVM {
 class LLVMDialect;
 } // namespace LLVM
 
+#define GEN_PASS_DECL_GPUTOLLVMCONVERSIONPASS
+#include "mlir/Conversion/Passes.h.inc"
+
 using OwnedBlob = std::unique_ptr<std::vector<char>>;
 using BlobGenerator =
     std::function<OwnedBlob(const std::string &, Location, StringRef)>;

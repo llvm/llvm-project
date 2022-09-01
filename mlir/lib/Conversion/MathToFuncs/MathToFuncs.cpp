@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/MathToFuncs/MathToFuncs.h"
-#include "../PassDetail.h"
+
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -18,9 +18,15 @@
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTMATHTOFUNCS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -318,7 +324,7 @@ IPowIOpLowering::matchAndRewrite(math::IPowIOp op,
 
 namespace {
 struct ConvertMathToFuncsPass
-    : public ConvertMathToFuncsBase<ConvertMathToFuncsPass> {
+    : public impl::ConvertMathToFuncsBase<ConvertMathToFuncsPass> {
   ConvertMathToFuncsPass() = default;
 
   void runOnOperation() override;

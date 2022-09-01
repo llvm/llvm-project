@@ -2203,10 +2203,10 @@ private:
   collectUserStores(const BoUpSLP::TreeEntry *TE) const;
 
   /// Helper for `findExternalStoreUsersReorderIndices()`. It checks if the
-  /// stores in \p StoresVec can for a vector instruction. If so it returns true
+  /// stores in \p StoresVec can form a vector instruction. If so it returns true
   /// and populates \p ReorderIndices with the shuffle indices of the the stores
   /// when compared to the sorted vector.
-  bool CanFormVector(const SmallVector<StoreInst *, 4> &StoresVec,
+  bool canFormVector(const SmallVector<StoreInst *, 4> &StoresVec,
                      OrdersType &ReorderIndices) const;
 
   /// Iterates through the users of \p TE, looking for scalar stores that can be
@@ -4327,7 +4327,7 @@ BoUpSLP::collectUserStores(const BoUpSLP::TreeEntry *TE) const {
   return PtrToStoresMap;
 }
 
-bool BoUpSLP::CanFormVector(const SmallVector<StoreInst *, 4> &StoresVec,
+bool BoUpSLP::canFormVector(const SmallVector<StoreInst *, 4> &StoresVec,
                             OrdersType &ReorderIndices) const {
   // We check whether the stores in StoreVec can form a vector by sorting them
   // and checking whether they are consecutive.
@@ -4421,7 +4421,7 @@ BoUpSLP::findExternalStoreUsersReorderIndices(TreeEntry *TE) const {
 
     // If the stores are not consecutive then abandon this StoresVec.
     OrdersType ReorderIndices;
-    if (!CanFormVector(StoresVec, ReorderIndices))
+    if (!canFormVector(StoresVec, ReorderIndices))
       continue;
 
     // We now know that the scalars in StoresVec can form a vector instruction,
@@ -4701,10 +4701,12 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   };
   SmallVector<unsigned> SortedIndices;
   BasicBlock *BB = nullptr;
+  bool IsScatterVectorizeUserTE =
+      UserTreeIdx.UserTE &&
+      UserTreeIdx.UserTE->State == TreeEntry::ScatterVectorize;
   bool AreAllSameInsts =
       (S.getOpcode() && allSameBlock(VL)) ||
-      (S.OpValue->getType()->isPointerTy() && UserTreeIdx.UserTE &&
-       UserTreeIdx.UserTE->State == TreeEntry::ScatterVectorize &&
+      (S.OpValue->getType()->isPointerTy() && IsScatterVectorizeUserTE &&
        VL.size() > 2 &&
        all_of(VL,
               [&BB](Value *V) {
@@ -4765,10 +4767,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   // Check that none of the instructions in the bundle are already in the tree.
   for (Value *V : VL) {
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
+    if (!IsScatterVectorizeUserTE && !isa<Instruction>(V))
       continue;
-    if (getTreeEntry(I)) {
+    if (getTreeEntry(V)) {
       LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
                         << ") is already in tree.\n");
       if (TryToFindDuplicates(S))
@@ -5218,9 +5219,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         }
       }
 
-      bool IsScatterUser =
-          UserTreeIdx.UserTE &&
-          UserTreeIdx.UserTE->State == TreeEntry::ScatterVectorize;
       // We don't combine GEPs with non-constant indexes.
       Type *Ty1 = VL0->getOperand(1)->getType();
       for (Value *V : VL) {
@@ -5228,9 +5226,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         if (!I)
           continue;
         auto *Op = I->getOperand(1);
-        if ((!IsScatterUser && !isa<ConstantInt>(Op)) ||
+        if ((!IsScatterVectorizeUserTE && !isa<ConstantInt>(Op)) ||
             (Op->getType() != Ty1 &&
-             ((IsScatterUser && !isa<ConstantInt>(Op)) ||
+             ((IsScatterVectorizeUserTE && !isa<ConstantInt>(Op)) ||
               Op->getType()->getScalarSizeInBits() >
                   DL->getIndexSizeInBits(
                       V->getType()->getPointerAddressSpace())))) {
@@ -5816,54 +5814,36 @@ static bool isAlternateInstruction(const Instruction *I,
 
 TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> VL,
                                               unsigned OpIdx) {
-  // If all float point constants are the same, return OK_UniformConstantValue.
-  // If all float operands are different constants then set the operand kind to
-  // OK_NonUniformConstantValue. Otherwise, return OK_AnyValue.
-  const auto *I0 = cast<Instruction>(VL.front());
-  if (I0->getOperand(OpIdx)->getType()->isFloatingPointTy()) {
-    if (any_of(VL, [OpIdx, I0](Value *V) {
-          const auto *Inst = cast<Instruction>(V);
-          assert(Inst->getOpcode() == I0->getOpcode() &&
-                 "Expected same opcode");
-          return !isConstant(Inst->getOperand(OpIdx));
-        }))
-      return {TTI::OK_AnyValue, TTI::OP_None};
-    const auto *Op0 = I0->getOperand(OpIdx);
-    if (any_of(VL, [OpIdx, Op0](Value *V) {
-          return cast<Instruction>(V)->getOperand(OpIdx) != Op0;
-        }))
-      return {TTI::OK_NonUniformConstantValue, TTI::OP_None};
-    return {TTI::OK_UniformConstantValue, TTI::OP_None};
-  }
+  assert(!VL.empty());
+  const auto *Op0 = cast<Instruction>(VL.front())->getOperand(OpIdx);
 
-  TTI::OperandValueKind VK = TTI::OK_UniformConstantValue;
-  TTI::OperandValueProperties VP = TTI::OP_PowerOf2;
+  const bool IsConstant = all_of(VL, [&](Value *V) {
+    // TODO: We should allow undef elements here
+    auto *Op = cast<Instruction>(V)->getOperand(OpIdx);
+    return isConstant(Op) && !isa<UndefValue>(Op);
+  });
+  const bool IsUniform = all_of(VL, [&](Value *V) {
+    // TODO: We should allow undef elements here
+    return cast<Instruction>(V)->getOperand(OpIdx) == Op0;
+  });
+  const bool IsPowerOfTwo = all_of(VL, [&](Value *V) {
+    // TODO: We should allow undef elements here
+    auto *Op = cast<Instruction>(V)->getOperand(OpIdx);
+    if (auto *CI = dyn_cast<ConstantInt>(Op))
+      return CI->getValue().isPowerOf2();
+    return false;
+  });
 
-  // If all operands are exactly the same ConstantInt then set the
-  // operand kind to OK_UniformConstantValue.
-  // If instead not all operands are constants, then set the operand kind
-  // to OK_AnyValue. If all operands are constants but not the same,
-  // then set the operand kind to OK_NonUniformConstantValue.
-  ConstantInt *CInt0 = nullptr;
-  for (Value *V : VL) {
-    const auto *Inst = cast<Instruction>(V);
-    assert(Inst->getOpcode() == cast<Instruction>(VL[0])->getOpcode() &&
-           "Expected same opcode");
-    auto *CInt = dyn_cast<ConstantInt>(Inst->getOperand(OpIdx));
-    if (!CInt) {
-      VK = TTI::OK_AnyValue;
-      VP = TTI::OP_None;
-      break;
-    }
-    if (VP == TTI::OP_PowerOf2 && !CInt->getValue().isPowerOf2())
-      VP = TTI::OP_None;
-    if (!CInt0) {
-      CInt0 = CInt;
-      continue;
-    }
-    if (CInt0 != CInt)
-      VK = TTI::OK_NonUniformConstantValue;
-  }
+  TTI::OperandValueKind VK = TTI::OK_AnyValue;
+  if (IsConstant && IsUniform)
+    VK = TTI::OK_UniformConstantValue;
+  else if (IsConstant)
+    VK = TTI::OK_NonUniformConstantValue;
+  else if (IsUniform)
+    VK = TTI::OK_UniformValue;
+
+  const TTI::OperandValueProperties VP =
+    IsPowerOfTwo ? TTI::OP_PowerOf2 : TTI::OP_None;
   return {VK, VP};
 }
 
@@ -10575,8 +10555,8 @@ class HorizontalReduction {
   // select x, y, false
   // select x, true, y
   static bool isBoolLogicOp(Instruction *I) {
-    return match(I, m_LogicalAnd(m_Value(), m_Value())) ||
-           match(I, m_LogicalOr(m_Value(), m_Value()));
+    return isa<SelectInst>(I) &&
+           (match(I, m_LogicalAnd()) || match(I, m_LogicalOr()));
   }
 
   /// Checks if instruction is associative and can be vectorized.
@@ -10802,7 +10782,7 @@ class HorizontalReduction {
   /// Checks if the instruction is in basic block \p BB.
   /// For a cmp+sel min/max reduction check that both ops are in \p BB.
   static bool hasSameParent(Instruction *I, BasicBlock *BB) {
-    if (isCmpSelMinMax(I) || (isBoolLogicOp(I) && isa<SelectInst>(I))) {
+    if (isCmpSelMinMax(I) || isBoolLogicOp(I)) {
       auto *Sel = cast<SelectInst>(I);
       auto *Cmp = dyn_cast<Instruction>(Sel->getCondition());
       return Sel->getParent() == BB && Cmp && Cmp->getParent() == BB;
@@ -11324,7 +11304,7 @@ public:
         // To prevent poison from leaking across what used to be sequential,
         // safe, scalar boolean logic operations, the reduction operand must be
         // frozen.
-        if (isa<SelectInst>(RdxRootInst) && isBoolLogicOp(RdxRootInst))
+        if (isBoolLogicOp(RdxRootInst))
           VectorizedRoot = Builder.CreateFreeze(VectorizedRoot);
 
         Value *ReducedSubTree =

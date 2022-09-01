@@ -5,7 +5,7 @@ add_header_library(
     core_structs.h
   DEPENDS
     libc.src.__support.CPP.string_view
-    libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.fp_bits
 )
 
 add_object_library(
@@ -65,7 +65,8 @@ add_object_library(
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
-    libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.integer_to_string
 )
 

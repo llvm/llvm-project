@@ -8858,6 +8858,12 @@ static void PrintSegmentCommand(uint32_t cmd, uint32_t cmdsize,
         outs() << " PROTECTED_VERSION_1";
         flags &= ~MachO::SG_PROTECTED_VERSION_1;
       }
+      if (flags & MachO::SG_READ_ONLY) {
+        // Apple's otool prints the SG_ prefix for this flag, but not for the
+        // others.
+        outs() << " SG_READ_ONLY";
+        flags &= ~MachO::SG_READ_ONLY;
+      }
       if (flags)
         outs() << format(" 0x%08" PRIx32, flags) << " (unknown flags)\n";
       else
@@ -8955,6 +8961,8 @@ static void PrintSection(const char *sectname, const char *segname,
       outs() << " S_THREAD_LOCAL_VARIABLE_POINTERS\n";
     else if (section_type == MachO::S_THREAD_LOCAL_INIT_FUNCTION_POINTERS)
       outs() << " S_THREAD_LOCAL_INIT_FUNCTION_POINTERS\n";
+    else if (section_type == MachO::S_INIT_FUNC_OFFSETS)
+      outs() << " S_INIT_FUNC_OFFSETS\n";
     else
       outs() << format("0x%08" PRIx32, section_type) << "\n";
     outs() << "attributes";

@@ -1,7 +1,4 @@
-algorithm
 atomic
-bit
-chrono
 climits
 cmath
 compare
@@ -14,7 +11,6 @@ ctime
 exception
 initializer_list
 iosfwd
-iterator
 limits
 memory
 new
@@ -23,7 +19,5 @@ stdexcept
 tuple
 type_traits
 typeinfo
-utility
-variant
 vector
 version

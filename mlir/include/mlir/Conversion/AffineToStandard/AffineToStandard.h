@@ -23,6 +23,9 @@ class ValueRange;
 
 class RewritePatternSet;
 
+#define GEN_PASS_DECL_CONVERTAFFINETOSTANDARD
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Collect a set of patterns to convert from the Affine dialect to the Standard
 /// dialect, in particular convert structured affine control flow into CFG
 /// branch-based control flow.

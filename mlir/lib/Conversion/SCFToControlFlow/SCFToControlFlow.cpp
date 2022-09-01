@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
-#include "../PassDetail.h"
+
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -24,13 +24,18 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_SCFTOCONTROLFLOW
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
 using namespace mlir::scf;
 
 namespace {
 
 struct SCFToControlFlowPass
-    : public SCFToControlFlowBase<SCFToControlFlowPass> {
+    : public impl::SCFToControlFlowBase<SCFToControlFlowPass> {
   void runOnOperation() override;
 };
 

@@ -47,7 +47,6 @@ add_entrypoint_object(
   HDRS
     fmaf.h
   DEPENDS
-    libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.fma
   COMPILE_OPTIONS
     -O3
@@ -60,11 +59,13 @@ add_entrypoint_object(
   HDRS
     fma.h
   DEPENDS
-    libc.src.__support.FPUtil.fputil
     libc.src.__support.FPUtil.fma
   COMPILE_OPTIONS
     -O3
 )
+
+add_math_entrypoint_object(atanf)
+add_math_entrypoint_object(atanhf)
 
 add_math_entrypoint_object(ceil)
 add_math_entrypoint_object(ceilf)

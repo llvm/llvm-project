@@ -44,6 +44,12 @@ static uint32_t maxProt(StringRef name) {
   return initProt(name);
 }
 
+static uint32_t flags(StringRef name) {
+  // If we ever implement shared cache output support, SG_READ_ONLY should not
+  // be used for dylibs that can be placed in it.
+  return name == segment_names::dataConst ? SG_READ_ONLY : 0;
+}
+
 size_t OutputSegment::numNonHiddenSections() const {
   size_t count = 0;
   for (const OutputSection *osec : sections)
@@ -84,10 +90,11 @@ static int sectionOrder(OutputSection *osec) {
   // Sections are uniquely identified by their segment + section name.
   if (segname == segment_names::text) {
     return StringSwitch<int>(osec->name)
-        .Case(section_names::header, -4)
-        .Case(section_names::text, -3)
-        .Case(section_names::stubs, -2)
-        .Case(section_names::stubHelper, -1)
+        .Case(section_names::header, -5)
+        .Case(section_names::text, -4)
+        .Case(section_names::stubs, -3)
+        .Case(section_names::stubHelper, -2)
+        .Case(section_names::initOffsets, -1)
         .Case(section_names::unwindInfo, std::numeric_limits<int>::max() - 1)
         .Case(section_names::ehFrame, std::numeric_limits<int>::max())
         .Default(osec->inputOrder);
@@ -184,6 +191,7 @@ OutputSegment *macho::getOrCreateOutputSegment(StringRef name) {
   segRef->name = name;
   segRef->maxProt = maxProt(name);
   segRef->initProt = initProt(name);
+  segRef->flags = flags(name);
 
   outputSegments.push_back(segRef);
   return segRef;

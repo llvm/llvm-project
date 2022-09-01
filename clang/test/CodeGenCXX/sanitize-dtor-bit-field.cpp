@@ -63,27 +63,27 @@ struct Adjacent {
 Adjacent ad;
 
 // CHECK-LABEL: define {{.*}}PackedD2Ev
-// CHECK: call void @__sanitizer_dtor_callback({{.*}}i64 17{{.*}}, !dbg ![[DI1:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}i64 17{{.*}}, !dbg ![[DI1:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}EmptyD2Ev
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}SimpleD2Ev
-// CHECK: call void @__sanitizer_dtor_callback({{.*}}i64 1{{.*}}, !dbg ![[DI2:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}i64 1{{.*}}, !dbg ![[DI2:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}AnonD2Ev
-// CHECK: call void @__sanitizer_dtor_callback({{.*}}i64 5{{.*}}, !dbg ![[DI3:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}i64 5{{.*}}, !dbg ![[DI3:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}AdjacentD2Ev
-// CHECK: call void @__sanitizer_dtor_callback({{.*}}i64 1{{.*}}, !dbg ![[DI4:[0-9]+]]
+// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}i64 1{{.*}}, !dbg ![[DI4:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: !DIFile{{.*}}cpp
 
-// CHECK-DAG: ![[DI1]] = {{.*}}line: [[@LINE-68]]
-// CHECK-DAG: ![[DI2]] = {{.*}}line: [[@LINE-53]]
-// CHECK-DAG: ![[DI3]] = {{.*}}line: [[@LINE-41]]
-// CHECK-DAG: ![[DI4]] = {{.*}}line: [[@LINE-28]]
+// CHECK-DAG: ![[DI1]] = {{.*}}line: [[@LINE-78]]
+// CHECK-DAG: ![[DI2]] = {{.*}}line: [[@LINE-54]]
+// CHECK-DAG: ![[DI3]] = {{.*}}line: [[@LINE-46]]
+// CHECK-DAG: ![[DI4]] = {{.*}}line: [[@LINE-30]]

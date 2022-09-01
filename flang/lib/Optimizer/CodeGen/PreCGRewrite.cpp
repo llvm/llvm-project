@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CGOps.h"
-#include "PassDetail.h"
 #include "flang/Optimizer/CodeGen/CodeGen.h"
+
+#include "CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -20,6 +20,11 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
+
+namespace fir {
+#define GEN_PASS_DEF_CODEGENREWRITE
+#include "flang/Optimizer/CodeGen/CGPasses.h.inc"
+} // namespace fir
 
 //===----------------------------------------------------------------------===//
 // Codegen rewrite: rewriting of subgraphs of ops
@@ -258,7 +263,7 @@ public:
   }
 };
 
-class CodeGenRewrite : public fir::CodeGenRewriteBase<CodeGenRewrite> {
+class CodeGenRewrite : public fir::impl::CodeGenRewriteBase<CodeGenRewrite> {
 public:
   void runOn(mlir::Operation *op, mlir::Region &region) {
     auto &context = getContext();

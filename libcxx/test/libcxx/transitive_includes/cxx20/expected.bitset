@@ -4,7 +4,6 @@ atomic
 bit
 bitset
 cctype
-chrono
 climits
 cmath
 compare

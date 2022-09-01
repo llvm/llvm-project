@@ -2186,6 +2186,12 @@ public:
   ExtValue lowerIntrinsicArgumentAsBox(const Fortran::lower::SomeExpr &expr) {
     mlir::Location loc = getLoc();
     ExtValue exv = genBoxArg(expr);
+    auto exvTy = fir::getBase(exv).getType();
+    if (exvTy.isa<mlir::FunctionType>()) {
+      auto boxProcTy = builder.getBoxProcType(exvTy.cast<mlir::FunctionType>());
+      return builder.create<fir::EmboxProcOp>(loc, boxProcTy,
+                                              fir::getBase(exv));
+    }
     mlir::Value box = builder.createBox(loc, exv);
     return fir::BoxValue(
         box, fir::factory::getNonDefaultLowerBounds(builder, loc, exv),

@@ -205,7 +205,7 @@ human-readable symbolic form.
     {{{data:0x12345678}}}
     {{{data:0xffffffff9abcdef0}}}
 
-``{{{bt:%u:%p}}}``, ``{{{bt:%u:%p:ra}}}``, ``{{{bt:%u:%p:pc}}}`` [#not_yet_implemented]_
+``{{{bt:%u:%p}}}``, ``{{{bt:%u:%p:ra}}}``, ``{{{bt:%u:%p:pc}}}``
 
   This represents one frame in a backtrace. It usually appears on a line by
   itself (surrounded only by whitespace), in a sequence of such lines with

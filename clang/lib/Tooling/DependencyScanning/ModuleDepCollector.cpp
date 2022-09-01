@@ -174,6 +174,34 @@ void ModuleDepCollector::addModuleFiles(
   }
 }
 
+static bool needsModules(FrontendInputFile FIF) {
+  switch (FIF.getKind().getLanguage()) {
+  case Language::Unknown:
+  case Language::Asm:
+  case Language::LLVM_IR:
+    return false;
+  default:
+    return true;
+  }
+}
+
+void ModuleDepCollector::applyDiscoveredDependencies(CompilerInvocation &CI) {
+  CI.clearImplicitModuleBuildOptions();
+
+  if (llvm::any_of(CI.getFrontendOpts().Inputs, needsModules)) {
+    SmallVector<ModuleID> DirectDeps;
+    for (const auto &KV : ModularDeps)
+      if (KV.second->ImportedByMainFile)
+        DirectDeps.push_back(KV.second->ID);
+
+    addModuleMapFiles(CI, DirectDeps);
+    addModuleFiles(CI, DirectDeps);
+
+    for (const auto &KV : DirectPrebuiltModularDeps)
+      CI.getFrontendOpts().ModuleFiles.push_back(KV.second.PCMFile);
+  }
+}
+
 static std::string getModuleContextHash(const ModuleDeps &MD,
                                         const CompilerInvocation &CI,
                                         bool EagerLoadModules) {
@@ -508,7 +536,7 @@ void ModuleDepCollectorPP::addAffectingModule(
 ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
-    CompilerInvocation &&OriginalCI, bool OptimizeArgs, bool EagerLoadModules)
+    CompilerInvocation OriginalCI, bool OptimizeArgs, bool EagerLoadModules)
     : ScanInstance(ScanInstance), Consumer(C), Opts(std::move(Opts)),
       OriginalInvocation(std::move(OriginalCI)), OptimizeArgs(OptimizeArgs),
       EagerLoadModules(EagerLoadModules) {}

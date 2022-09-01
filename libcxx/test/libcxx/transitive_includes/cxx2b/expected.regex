@@ -1,10 +1,6 @@
-algorithm
-array
 atomic
-bit
 cctype
 cerrno
-chrono
 climits
 cmath
 compare
@@ -19,15 +15,12 @@ cwchar
 cwctype
 deque
 exception
-functional
 initializer_list
 iosfwd
-iterator
 limits
 memory
 mutex
 new
-optional
 ratio
 regex
 stdexcept
@@ -37,8 +30,5 @@ system_error
 tuple
 type_traits
 typeinfo
-unordered_map
-utility
-variant
 vector
 version

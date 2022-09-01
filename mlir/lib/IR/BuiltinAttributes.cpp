@@ -741,48 +741,69 @@ DenseElementsAttr::ComplexIntElementIterator::operator*() const {
 // DenseArrayAttr
 //===----------------------------------------------------------------------===//
 
-const bool *DenseArrayBaseAttr::value_begin_impl(OverloadToken<bool>) const {
-  return cast<DenseBoolArrayAttr>().asArrayRef().begin();
-}
-const int8_t *
-DenseArrayBaseAttr::value_begin_impl(OverloadToken<int8_t>) const {
-  return cast<DenseI8ArrayAttr>().asArrayRef().begin();
-}
-const int16_t *
-DenseArrayBaseAttr::value_begin_impl(OverloadToken<int16_t>) const {
-  return cast<DenseI16ArrayAttr>().asArrayRef().begin();
-}
-const int32_t *
-DenseArrayBaseAttr::value_begin_impl(OverloadToken<int32_t>) const {
-  return cast<DenseI32ArrayAttr>().asArrayRef().begin();
-}
-const int64_t *
-DenseArrayBaseAttr::value_begin_impl(OverloadToken<int64_t>) const {
-  return cast<DenseI64ArrayAttr>().asArrayRef().begin();
-}
-const float *DenseArrayBaseAttr::value_begin_impl(OverloadToken<float>) const {
-  return cast<DenseF32ArrayAttr>().asArrayRef().begin();
-}
-const double *
-DenseArrayBaseAttr::value_begin_impl(OverloadToken<double>) const {
-  return cast<DenseF64ArrayAttr>().asArrayRef().begin();
+LogicalResult
+DenseArrayAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       RankedTensorType type, ArrayRef<char> rawData) {
+  if (type.getRank() != 1)
+    return emitError() << "expected rank 1 tensor type";
+  if (!type.getElementType().isIntOrIndexOrFloat())
+    return emitError() << "expected integer or floating point element type";
+  int64_t dataSize = rawData.size();
+  int64_t size = type.getShape().front();
+  if (type.getElementType().isInteger(1)) {
+    if (size != dataSize)
+      return emitError() << "expected " << size
+                         << " bytes for i1 array but got " << dataSize;
+  } else if (size * type.getElementTypeBitWidth() != dataSize * 8) {
+    return emitError() << "expected data size (" << size << " elements, "
+                       << type.getElementTypeBitWidth()
+                       << " bits each) does not match: " << dataSize
+                       << " bytes";
+  }
+  return success();
 }
 
-void DenseArrayBaseAttr::print(AsmPrinter &printer) const {
-  print(printer.getStream());
+FailureOr<const bool *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<bool>) const {
+  if (auto attr = dyn_cast<DenseBoolArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
 }
-
-void DenseArrayBaseAttr::printWithoutBraces(raw_ostream &os) const {
-  llvm::TypeSwitch<DenseArrayBaseAttr>(*this)
-      .Case<DenseBoolArrayAttr, DenseI8ArrayAttr, DenseI16ArrayAttr,
-            DenseI32ArrayAttr, DenseI64ArrayAttr, DenseF32ArrayAttr,
-            DenseF64ArrayAttr>([&](auto attr) { attr.printWithoutBraces(os); });
+FailureOr<const int8_t *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<int8_t>) const {
+  if (auto attr = dyn_cast<DenseI8ArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
 }
-
-void DenseArrayBaseAttr::print(raw_ostream &os) const {
-  os << "[";
-  printWithoutBraces(os);
-  os << "]";
+FailureOr<const int16_t *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<int16_t>) const {
+  if (auto attr = dyn_cast<DenseI16ArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
+}
+FailureOr<const int32_t *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<int32_t>) const {
+  if (auto attr = dyn_cast<DenseI32ArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
+}
+FailureOr<const int64_t *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<int64_t>) const {
+  if (auto attr = dyn_cast<DenseI64ArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
+}
+FailureOr<const float *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<float>) const {
+  if (auto attr = dyn_cast<DenseF32ArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
+}
+FailureOr<const double *>
+DenseArrayAttr::try_value_begin_impl(OverloadToken<double>) const {
+  if (auto attr = dyn_cast<DenseF64ArrayAttr>())
+    return attr.asArrayRef().begin();
+  return failure();
 }
 
 namespace {
@@ -869,19 +890,19 @@ struct DenseArrayAttrUtil<double> {
 } // namespace
 
 template <typename T>
-void DenseArrayAttr<T>::print(AsmPrinter &printer) const {
+void DenseArrayAttrImpl<T>::print(AsmPrinter &printer) const {
   print(printer.getStream());
 }
 
 template <typename T>
-void DenseArrayAttr<T>::printWithoutBraces(raw_ostream &os) const {
+void DenseArrayAttrImpl<T>::printWithoutBraces(raw_ostream &os) const {
   llvm::interleaveComma(asArrayRef(), os, [&](T value) {
     DenseArrayAttrUtil<T>::printElement(os, value);
   });
 }
 
 template <typename T>
-void DenseArrayAttr<T>::print(raw_ostream &os) const {
+void DenseArrayAttrImpl<T>::print(raw_ostream &os) const {
   os << "[";
   printWithoutBraces(os);
   os << "]";
@@ -889,8 +910,8 @@ void DenseArrayAttr<T>::print(raw_ostream &os) const {
 
 /// Parse a DenseArrayAttr without the braces: `1, 2, 3`
 template <typename T>
-Attribute DenseArrayAttr<T>::parseWithoutBraces(AsmParser &parser,
-                                                Type odsType) {
+Attribute DenseArrayAttrImpl<T>::parseWithoutBraces(AsmParser &parser,
+                                                    Type odsType) {
   SmallVector<T> data;
   if (failed(parser.parseCommaSeparatedList([&]() {
         T value;
@@ -905,7 +926,7 @@ Attribute DenseArrayAttr<T>::parseWithoutBraces(AsmParser &parser,
 
 /// Parse a DenseArrayAttr: `[ 1, 2, 3 ]`
 template <typename T>
-Attribute DenseArrayAttr<T>::parse(AsmParser &parser, Type odsType) {
+Attribute DenseArrayAttrImpl<T>::parse(AsmParser &parser, Type odsType) {
   if (parser.parseLSquare())
     return {};
   // Handle empty list case.
@@ -919,7 +940,7 @@ Attribute DenseArrayAttr<T>::parse(AsmParser &parser, Type odsType) {
 
 /// Conversion from DenseArrayAttr<T> to ArrayRef<T>.
 template <typename T>
-DenseArrayAttr<T>::operator ArrayRef<T>() const {
+DenseArrayAttrImpl<T>::operator ArrayRef<T>() const {
   ArrayRef<char> raw = getRawData();
   assert((raw.size() % sizeof(T)) == 0);
   return ArrayRef<T>(reinterpret_cast<const T *>(raw.data()),
@@ -928,19 +949,19 @@ DenseArrayAttr<T>::operator ArrayRef<T>() const {
 
 /// Builds a DenseArrayAttr<T> from an ArrayRef<T>.
 template <typename T>
-DenseArrayAttr<T> DenseArrayAttr<T>::get(MLIRContext *context,
-                                         ArrayRef<T> content) {
+DenseArrayAttrImpl<T> DenseArrayAttrImpl<T>::get(MLIRContext *context,
+                                                 ArrayRef<T> content) {
   auto shapedType = RankedTensorType::get(
       content.size(), DenseArrayAttrUtil<T>::getElementType(context));
   auto rawArray = ArrayRef<char>(reinterpret_cast<const char *>(content.data()),
                                  content.size() * sizeof(T));
   return Base::get(context, shapedType, rawArray)
-      .template cast<DenseArrayAttr<T>>();
+      .template cast<DenseArrayAttrImpl<T>>();
 }
 
 template <typename T>
-bool DenseArrayAttr<T>::classof(Attribute attr) {
-  if (auto denseArray = attr.dyn_cast<DenseArrayBaseAttr>())
+bool DenseArrayAttrImpl<T>::classof(Attribute attr) {
+  if (auto denseArray = attr.dyn_cast<DenseArrayAttr>())
     return DenseArrayAttrUtil<T>::checkElementType(denseArray.getElementType());
   return false;
 }
@@ -948,13 +969,13 @@ bool DenseArrayAttr<T>::classof(Attribute attr) {
 namespace mlir {
 namespace detail {
 // Explicit instantiation for all the supported DenseArrayAttr.
-template class DenseArrayAttr<bool>;
-template class DenseArrayAttr<int8_t>;
-template class DenseArrayAttr<int16_t>;
-template class DenseArrayAttr<int32_t>;
-template class DenseArrayAttr<int64_t>;
-template class DenseArrayAttr<float>;
-template class DenseArrayAttr<double>;
+template class DenseArrayAttrImpl<bool>;
+template class DenseArrayAttrImpl<int8_t>;
+template class DenseArrayAttrImpl<int16_t>;
+template class DenseArrayAttrImpl<int32_t>;
+template class DenseArrayAttrImpl<int64_t>;
+template class DenseArrayAttrImpl<float>;
+template class DenseArrayAttrImpl<double>;
 } // namespace detail
 } // namespace mlir
 
@@ -1198,68 +1219,42 @@ bool DenseElementsAttr::isSplat() const {
 }
 
 /// Return if the given complex type has an integer element type.
-LLVM_ATTRIBUTE_UNUSED static bool isComplexOfIntType(Type type) {
+static bool isComplexOfIntType(Type type) {
   return type.cast<ComplexType>().getElementType().isa<IntegerType>();
 }
 
-auto DenseElementsAttr::getComplexIntValues() const
-    -> iterator_range_impl<ComplexIntElementIterator> {
-  assert(isComplexOfIntType(getElementType()) &&
-         "expected complex integral type");
-  return {getType(), ComplexIntElementIterator(*this, 0),
-          ComplexIntElementIterator(*this, getNumElements())};
-}
-auto DenseElementsAttr::complex_value_begin() const
-    -> ComplexIntElementIterator {
-  assert(isComplexOfIntType(getElementType()) &&
-         "expected complex integral type");
-  return ComplexIntElementIterator(*this, 0);
-}
-auto DenseElementsAttr::complex_value_end() const -> ComplexIntElementIterator {
-  assert(isComplexOfIntType(getElementType()) &&
-         "expected complex integral type");
-  return ComplexIntElementIterator(*this, getNumElements());
+auto DenseElementsAttr::tryGetComplexIntValues() const
+    -> FailureOr<iterator_range_impl<ComplexIntElementIterator>> {
+  if (!isComplexOfIntType(getElementType()))
+    return failure();
+  return iterator_range_impl<ComplexIntElementIterator>(
+      getType(), ComplexIntElementIterator(*this, 0),
+      ComplexIntElementIterator(*this, getNumElements()));
 }
 
-/// Return the held element values as a range of APFloat. The element type of
-/// this attribute must be of float type.
-auto DenseElementsAttr::getFloatValues() const
-    -> iterator_range_impl<FloatElementIterator> {
-  auto elementType = getElementType().cast<FloatType>();
-  const auto &elementSemantics = elementType.getFloatSemantics();
-  return {getType(), FloatElementIterator(elementSemantics, raw_int_begin()),
-          FloatElementIterator(elementSemantics, raw_int_end())};
-}
-auto DenseElementsAttr::float_value_begin() const -> FloatElementIterator {
-  auto elementType = getElementType().cast<FloatType>();
-  return FloatElementIterator(elementType.getFloatSemantics(), raw_int_begin());
-}
-auto DenseElementsAttr::float_value_end() const -> FloatElementIterator {
-  auto elementType = getElementType().cast<FloatType>();
-  return FloatElementIterator(elementType.getFloatSemantics(), raw_int_end());
+auto DenseElementsAttr::tryGetFloatValues() const
+    -> FailureOr<iterator_range_impl<FloatElementIterator>> {
+  auto eltTy = getElementType().dyn_cast<FloatType>();
+  if (!eltTy)
+    return failure();
+  const auto &elementSemantics = eltTy.getFloatSemantics();
+  return iterator_range_impl<FloatElementIterator>(
+      getType(), FloatElementIterator(elementSemantics, raw_int_begin()),
+      FloatElementIterator(elementSemantics, raw_int_end()));
 }
 
-auto DenseElementsAttr::getComplexFloatValues() const
-    -> iterator_range_impl<ComplexFloatElementIterator> {
-  Type eltTy = getElementType().cast<ComplexType>().getElementType();
-  assert(eltTy.isa<FloatType>() && "expected complex float type");
-  const auto &semantics = eltTy.cast<FloatType>().getFloatSemantics();
-  return {getType(),
-          {semantics, {*this, 0}},
-          {semantics, {*this, static_cast<size_t>(getNumElements())}}};
-}
-auto DenseElementsAttr::complex_float_value_begin() const
-    -> ComplexFloatElementIterator {
-  Type eltTy = getElementType().cast<ComplexType>().getElementType();
-  assert(eltTy.isa<FloatType>() && "expected complex float type");
-  return {eltTy.cast<FloatType>().getFloatSemantics(), {*this, 0}};
-}
-auto DenseElementsAttr::complex_float_value_end() const
-    -> ComplexFloatElementIterator {
-  Type eltTy = getElementType().cast<ComplexType>().getElementType();
-  assert(eltTy.isa<FloatType>() && "expected complex float type");
-  return {eltTy.cast<FloatType>().getFloatSemantics(),
-          {*this, static_cast<size_t>(getNumElements())}};
+auto DenseElementsAttr::tryGetComplexFloatValues() const
+    -> FailureOr<iterator_range_impl<ComplexFloatElementIterator>> {
+  auto complexTy = getElementType().dyn_cast<ComplexType>();
+  if (!complexTy)
+    return failure();
+  auto eltTy = complexTy.getElementType().dyn_cast<FloatType>();
+  if (!eltTy)
+    return failure();
+  const auto &semantics = eltTy.getFloatSemantics();
+  return iterator_range_impl<ComplexFloatElementIterator>(
+      getType(), {semantics, {*this, 0}},
+      {semantics, {*this, static_cast<size_t>(getNumElements())}});
 }
 
 /// Return the raw storage data held by this attribute.

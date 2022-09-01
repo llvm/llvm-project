@@ -10,20 +10,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
+
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/IR/BlockAndValueMapping.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_SCFFORLOOPRANGEFOLDING
+#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::scf;
 
 namespace {
 struct ForLoopRangeFolding
-    : public SCFForLoopRangeFoldingBase<ForLoopRangeFolding> {
+    : public impl::SCFForLoopRangeFoldingBase<ForLoopRangeFolding> {
   void runOnOperation() override;
 };
 } // namespace

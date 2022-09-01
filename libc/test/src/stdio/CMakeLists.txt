@@ -71,6 +71,8 @@ add_libc_unittest(
     sprintf_test.cpp
   DEPENDS
     libc.src.stdio.sprintf
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.platform_defs
 )
 
 add_libc_unittest(
@@ -107,7 +109,6 @@ add_libc_unittest(
   DEPENDS
     libc.src.stdio.printf
     libc.src.fenv.fesetround
-    libc.src.__support.FPUtil.fputil
 )
 
 add_subdirectory(printf_core)

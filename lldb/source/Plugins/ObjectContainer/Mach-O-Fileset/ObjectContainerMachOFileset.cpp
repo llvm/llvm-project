@@ -42,8 +42,9 @@ ObjectContainerMachOFileset::ObjectContainerMachOFileset(
 ObjectContainerMachOFileset::ObjectContainerMachOFileset(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t header_addr)
-    : ObjectContainer(module_sp, nullptr, 0, 0, data_sp, 0),
-      m_memory_addr(header_addr) {}
+    : ObjectContainer(module_sp, nullptr, 0, data_sp->GetByteSize(), data_sp,
+                      0),
+      m_process_wp(process_sp), m_memory_addr(header_addr) {}
 
 ObjectContainer *ObjectContainerMachOFileset::CreateInstance(
     const lldb::ModuleSP &module_sp, DataBufferSP &data_sp,

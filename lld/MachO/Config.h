@@ -131,6 +131,7 @@ struct Configuration {
   bool emitBitcodeBundle = false;
   bool emitDataInCodeInfo = false;
   bool emitEncryptionInfo = false;
+  bool emitInitOffsets = false;
   bool timeTraceEnabled = false;
   bool dataConst = false;
   bool dedupLiterals = true;

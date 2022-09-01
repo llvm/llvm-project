@@ -1,7 +1,6 @@
 algorithm
 atomic
 bit
-chrono
 climits
 cmath
 compare
@@ -15,7 +14,6 @@ exception
 experimental/algorithm
 initializer_list
 iosfwd
-iterator
 limits
 memory
 new
@@ -24,6 +22,4 @@ stdexcept
 tuple
 type_traits
 typeinfo
-utility
-variant
 version

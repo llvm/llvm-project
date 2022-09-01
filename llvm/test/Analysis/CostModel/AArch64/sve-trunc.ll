@@ -1,5 +1,7 @@
 ; RUN: opt -mtriple=aarch64-linux-gnu -mattr=+sve -passes="print<cost-model>" 2>&1 -disable-output < %s | FileCheck %s
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 define void @sve_truncs() {
   ;CHECK-LABEL: 'sve_truncs'
   ;CHECK-NEXT: Cost Model: Found an estimated cost of 1 for instruction:   %trunc_v2i16_to_i1 = trunc <vscale x 2 x i16> undef to <vscale x 2 x i1>

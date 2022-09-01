@@ -44,6 +44,18 @@ DEFAULT_FEATURES = [
           when=lambda cfg: hasCompileFlag(cfg, '-Wuser-defined-warnings'),
           actions=[AddCompileFlag('-Wuser-defined-warnings')]),
 
+  # Tests to validate whether the compiler has a way to set the maximum number
+  # of steps during constant evaluation. Since the flag differs per compiler
+  # store the "valid" flag as a feature. This allows passing the proper compile
+  # flag to the compiler:
+  # // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=12345678
+  # // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=12345678
+  Feature(name='has-fconstexpr-steps',
+          when=lambda cfg: hasCompileFlag(cfg, '-fconstexpr-steps=1')),
+
+  Feature(name='has-fconstexpr-ops-limit',
+          when=lambda cfg: hasCompileFlag(cfg, '-fconstexpr-ops-limit=1')),
+
   Feature(name='has-fblocks',                   when=lambda cfg: hasCompileFlag(cfg, '-fblocks')),
   Feature(name='-fsized-deallocation',          when=lambda cfg: hasCompileFlag(cfg, '-fsized-deallocation')),
   Feature(name='-faligned-allocation',          when=lambda cfg: hasCompileFlag(cfg, '-faligned-allocation')),

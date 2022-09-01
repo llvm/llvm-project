@@ -1,10 +1,6 @@
-algorithm
-array
 atomic
-bit
 cctype
 cerrno
-chrono
 climits
 cmath
 compare
@@ -18,16 +14,13 @@ ctime
 cwchar
 cwctype
 exception
-functional
 future
 initializer_list
 iosfwd
-iterator
 limits
 memory
 mutex
 new
-optional
 ratio
 stdexcept
 string
@@ -37,8 +30,4 @@ thread
 tuple
 type_traits
 typeinfo
-unordered_map
-utility
-variant
-vector
 version

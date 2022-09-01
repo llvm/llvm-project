@@ -27,8 +27,6 @@ static llvm::cl::opt<std::string>
     groupName("name", llvm::cl::desc("The name of this group of passes"),
               llvm::cl::cat(passGenCat));
 
-static void emitOldPassDecl(const Pass &pass, raw_ostream &os);
-
 /// Extract the list of passes from the TableGen records.
 static std::vector<Pass> getPasses(const llvm::RecordKeeper &recordKeeper) {
   std::vector<Pass> passes;
@@ -356,7 +354,15 @@ static void emitPassDefs(const Pass &pass, raw_ostream &os) {
   os << "#endif // " << enableVarName << "\n";
 }
 
-// TODO drop old pass declarations
+static void emitPass(const Pass &pass, raw_ostream &os) {
+  StringRef passName = pass.getDef()->getName();
+  os << llvm::formatv(passHeader, passName);
+
+  emitPassDecls(pass, os);
+  emitPassDefs(pass, os);
+}
+
+// TODO: Drop old pass declarations.
 // The old pass base class is being kept until all the passes have switched to
 // the new decls/defs design.
 const char *const oldPassDeclBegin = R"(
@@ -405,6 +411,7 @@ public:
 protected:
 )";
 
+// TODO: Drop old pass declarations.
 /// Emit a backward-compatible declaration of the pass base class.
 static void emitOldPassDecl(const Pass &pass, raw_ostream &os) {
   StringRef defName = pass.getDef()->getName();
@@ -423,14 +430,6 @@ static void emitOldPassDecl(const Pass &pass, raw_ostream &os) {
   os << "};\n";
 }
 
-static void emitPass(const Pass &pass, raw_ostream &os) {
-  StringRef passName = pass.getDef()->getName();
-  os << llvm::formatv(passHeader, passName);
-
-  emitPassDecls(pass, os);
-  emitPassDefs(pass, os);
-}
-
 static void emitPasses(const llvm::RecordKeeper &recordKeeper,
                        raw_ostream &os) {
   std::vector<Pass> passes = getPasses(recordKeeper);
@@ -443,6 +442,7 @@ static void emitPasses(const llvm::RecordKeeper &recordKeeper,
 
   // TODO: Drop old pass declarations.
   // Emit the old code until all the passes have switched to the new design.
+  os << "// Deprecated. Please use the new per-pass macros.\n";
   os << "#ifdef GEN_PASS_CLASSES\n";
   for (const Pass &pass : passes)
     emitOldPassDecl(pass, os);

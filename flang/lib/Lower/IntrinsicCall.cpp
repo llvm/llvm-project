@@ -231,18 +231,18 @@ genDotProd(FN func, mlir::Type resultType, fir::FirOpBuilder &builder,
   // Handle required vector arguments
   mlir::Value vectorA = fir::getBase(args[0]);
   mlir::Value vectorB = fir::getBase(args[1]);
+  // Result type is used for picking appropriate runtime function.
+  mlir::Type eleTy = resultType;
 
-  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(vectorA.getType())
-                         .cast<fir::SequenceType>()
-                         .getEleTy();
   if (fir::isa_complex(eleTy)) {
     mlir::Value result = builder.createTemporary(loc, eleTy);
     func(builder, loc, vectorA, vectorB, result);
     return builder.create<fir::LoadOp>(loc, result);
   }
 
-  auto resultBox = builder.create<fir::AbsentOp>(
-      loc, fir::BoxType::get(builder.getI1Type()));
+  // This operation is only used to pass the result type
+  // information to the DotProduct generator.
+  auto resultBox = builder.create<fir::AbsentOp>(loc, fir::BoxType::get(eleTy));
   return func(builder, loc, vectorA, vectorB, resultBox);
 }
 
@@ -480,6 +480,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genCpuTime(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genCFunLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -724,6 +725,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"ble", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ule>},
     {"blt", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ult>},
     {"btest", &I::genBtest},
+    {"c_funloc", &I::genCFunLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"c_loc", &I::genCLoc, {{{"x", asBox}}}, /*isElemental=*/false},
     {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
@@ -1153,6 +1155,12 @@ static mlir::FunctionType genF32IntF32FuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {itype, ftype}, {ftype});
 }
 
+template <int Bits>
+static mlir::FunctionType genIntIntIntFuncType(mlir::MLIRContext *context) {
+  auto itype = mlir::IntegerType::get(context, Bits);
+  return mlir::FunctionType::get(context, {itype, itype}, {itype});
+}
+
 /// Callback type for generating lowering for a math operation.
 using MathGeneratorTy = mlir::Value (*)(fir::FirOpBuilder &, mlir::Location,
                                         llvm::StringRef, mlir::FunctionType,
@@ -1220,7 +1228,12 @@ static mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   //           can be also lowered to libm calls for "fast" and "relaxed"
   //           modes.
   mlir::Value result;
-  if (mathRuntimeVersion == preciseVersion) {
+  if (mathRuntimeVersion == preciseVersion &&
+      // Some operations do not have to be lowered as conservative
+      // calls, since they do not affect strict FP behavior.
+      // For example, purely integer operations like exponentiation
+      // with integer operands fall into this class.
+      !mathLibFuncName.empty()) {
     result = genLibCall(builder, loc, mathLibFuncName, mathLibFuncType, args);
   } else {
     LLVM_DEBUG(llvm::dbgs() << "Generating '" << mathLibFuncName
@@ -1310,6 +1323,10 @@ static constexpr MathOperation mathOperations[] = {
     {"nint", "llvm.lround.i64.f32", genIntF32FuncType<64>, genLibCall},
     {"nint", "llvm.lround.i32.f64", genIntF64FuncType<32>, genLibCall},
     {"nint", "llvm.lround.i32.f32", genIntF32FuncType<32>, genLibCall},
+    {"pow", {}, genIntIntIntFuncType<8>, genMathOp<mlir::math::IPowIOp>},
+    {"pow", {}, genIntIntIntFuncType<16>, genMathOp<mlir::math::IPowIOp>},
+    {"pow", {}, genIntIntIntFuncType<32>, genMathOp<mlir::math::IPowIOp>},
+    {"pow", {}, genIntIntIntFuncType<64>, genMathOp<mlir::math::IPowIOp>},
     {"pow", "powf", genF32F32F32FuncType, genMathOp<mlir::math::PowFOp>},
     {"pow", "pow", genF64F64F64FuncType, genMathOp<mlir::math::PowFOp>},
     // TODO: add PowIOp in math and complex dialects.
@@ -2453,20 +2470,29 @@ mlir::Value IntrinsicLibrary::genBtest(mlir::Type resultType,
   return builder.createConvert(loc, resultType, res);
 }
 
-// C_LOC
-fir::ExtendedValue
-IntrinsicLibrary::genCLoc(mlir::Type resultType,
-                          llvm::ArrayRef<fir::ExtendedValue> args) {
+static fir::ExtendedValue
+genCLocOrCFunLoc(fir::FirOpBuilder &builder, mlir::Location loc,
+                 mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args,
+                 bool isFunc = false) {
   assert(args.size() == 1 && resultType.isa<fir::RecordType>());
   auto resTy = resultType.dyn_cast<fir::RecordType>();
   assert(resTy.getTypeList().size() == 1);
   auto fieldName = resTy.getTypeList()[0].first;
   auto fieldTy = resTy.getTypeList()[0].second;
   mlir::Value res = builder.create<fir::AllocaOp>(loc, resultType);
-  const auto *box = args[0].getBoxOf<fir::BoxValue>();
-  assert(box && "c_loc argument must have been lowered to a fix.box");
-  mlir::Value argAddr =
-      builder.create<fir::BoxAddrOp>(loc, box->getMemTy(), fir::getBase(*box));
+  mlir::Value argAddr;
+  if (isFunc) {
+    mlir::Value argValue = fir::getBase(args[0]);
+    assert(argValue.getType().isa<fir::BoxProcType>() &&
+           "c_funloc argument must have been lowered to a fir.boxproc");
+    auto funcTy = argValue.getType().cast<fir::BoxProcType>().getEleTy();
+    argAddr = builder.create<fir::BoxAddrOp>(loc, funcTy, argValue);
+  } else {
+    const auto *box = args[0].getBoxOf<fir::BoxValue>();
+    assert(box && "c_loc argument must have been lowered to a fir.box");
+    argAddr = builder.create<fir::BoxAddrOp>(loc, box->getMemTy(),
+                                             fir::getBase(*box));
+  }
   mlir::Value argAddrVal = builder.createConvert(loc, fieldTy, argAddr);
   auto fieldIndexType = fir::FieldType::get(resultType.getContext());
   mlir::Value field = builder.create<fir::FieldIndexOp>(
@@ -2475,6 +2501,20 @@ IntrinsicLibrary::genCLoc(mlir::Type resultType,
       loc, builder.getRefType(fieldTy), res, field);
   builder.create<fir::StoreOp>(loc, argAddrVal, resAddr);
   return res;
+}
+
+// C_FUNLOC
+fir::ExtendedValue
+IntrinsicLibrary::genCFunLoc(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genCLocOrCFunLoc(builder, loc, resultType, args, /*isFunc=*/true);
+}
+
+// C_LOC
+fir::ExtendedValue
+IntrinsicLibrary::genCLoc(mlir::Type resultType,
+                          llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genCLocOrCFunLoc(builder, loc, resultType, args);
 }
 
 // CEILING
@@ -4102,13 +4142,13 @@ static mlir::Value computeLBOUND(fir::FirOpBuilder &builder, mlir::Location loc,
   return builder.create<mlir::arith::SelectOp>(loc, dimIsEmpty, one, lb);
 }
 
-/// Create a fir.box to be passed to the LBOUND runtime.
+/// Create a fir.box to be passed to the LBOUND/UBOUND runtime.
 /// This ensure that local lower bounds of assumed shape are propagated and that
 /// a fir.box with equivalent LBOUNDs but an explicit shape is created for
 /// assumed size arrays to avoid undefined behaviors in codegen or the runtime.
-static mlir::Value createBoxForLBOUND(mlir::Location loc,
-                                      fir::FirOpBuilder &builder,
-                                      const fir::ExtendedValue &array) {
+static mlir::Value
+createBoxForRuntimeBoundInquiry(mlir::Location loc, fir::FirOpBuilder &builder,
+                                const fir::ExtendedValue &array) {
   if (!array.isAssumedSize())
     return array.match(
         [&](const fir::BoxValue &boxValue) -> mlir::Value {
@@ -4202,7 +4242,7 @@ IntrinsicLibrary::genLbound(mlir::Type resultType,
     return builder.createConvert(loc, resultType, lb);
   }
 
-  fir::ExtendedValue box = createBoxForLBOUND(loc, builder, array);
+  fir::ExtendedValue box = createBoxForRuntimeBoundInquiry(loc, builder, array);
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genLboundDim(builder, loc, fir::getBase(box), dim));
@@ -4236,8 +4276,9 @@ IntrinsicLibrary::genUbound(mlir::Type resultType,
     mlir::Value resultIrBox =
         fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
 
-    fir::runtime::genUbound(builder, loc, resultIrBox, fir::getBase(args[0]),
-                            kind);
+    fir::ExtendedValue box =
+        createBoxForRuntimeBoundInquiry(loc, builder, args[0]);
+    fir::runtime::genUbound(builder, loc, resultIrBox, fir::getBase(box), kind);
 
     return readAndAddCleanUp(resultMutableBox, resultType, "UBOUND");
   }

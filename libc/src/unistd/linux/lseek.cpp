@@ -23,8 +23,8 @@ LLVM_LIBC_FUNCTION(off_t, lseek, (int fd, off_t offset, int whence)) {
   long ret = __llvm_libc::syscall(SYS_lseek, fd, offset, whence);
   result = ret;
 #elif defined(SYS__llseek)
-  long ret = __llvm_libc::syscall(SYS__lseek, fd, offset >> 32, offset, &result,
-                                  whence);
+  long ret = __llvm_libc::syscall(SYS__llseek, fd, offset >> 32, offset,
+                                  &result, whence);
 #else
 #error "lseek and _llseek syscalls not available."
 #endif

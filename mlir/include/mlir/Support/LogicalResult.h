@@ -99,6 +99,13 @@ private:
   using Optional<T>::has_value;
 };
 
+/// Wrap a value on the success path in a FailureOr of the same value type.
+template <typename T,
+          typename = std::enable_if_t<!std::is_convertible_v<T, bool>>>
+inline auto success(T &&t) {
+  return FailureOr<std::decay_t<T>>(std::forward<T>(t));
+}
+
 /// This class represents success/failure for parsing-like operations that find
 /// it important to chain together failable operations with `||`.  This is an
 /// extended version of `LogicalResult` that allows for explicit conversion to
