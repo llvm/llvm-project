@@ -111,7 +111,7 @@ LogicalResult MFMAOp::verify() {
   if (destElem.isF64() && getCbsz() != 0)
     return emitOpError(
         "double-precision ops do not support permuting lanes of A");
-  if (getAbid() >= (1 << getCbsz()))
+  if (getAbid() >= (1u << getCbsz()))
     return emitOpError(
         "block ID for permuting A (abid) must be below 2 ** cbsz");
 
