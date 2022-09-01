@@ -5814,55 +5814,36 @@ static bool isAlternateInstruction(const Instruction *I,
 
 TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> VL,
                                               unsigned OpIdx) {
-  // If all float point constants are the same, return OK_UniformConstantValue.
-  // If all float operands are different constants then set the operand kind to
-  // OK_NonUniformConstantValue. Otherwise, return OK_AnyValue.
-  const auto *I0 = cast<Instruction>(VL.front());
-  if (I0->getOperand(OpIdx)->getType()->isFloatingPointTy()) {
-    if (any_of(VL, [OpIdx, I0](Value *V) {
-          const auto *Inst = cast<Instruction>(V);
-          assert(Inst->getOpcode() == I0->getOpcode() &&
-                 "Expected same opcode");
-          (void)I0;
-          return !isConstant(Inst->getOperand(OpIdx));
-        }))
-      return {TTI::OK_AnyValue, TTI::OP_None};
-    const auto *Op0 = I0->getOperand(OpIdx);
-    if (any_of(VL, [OpIdx, Op0](Value *V) {
-          return cast<Instruction>(V)->getOperand(OpIdx) != Op0;
-        }))
-      return {TTI::OK_NonUniformConstantValue, TTI::OP_None};
-    return {TTI::OK_UniformConstantValue, TTI::OP_None};
-  }
+  assert(!VL.empty());
+  const auto *Op0 = cast<Instruction>(VL.front())->getOperand(OpIdx);
 
-  TTI::OperandValueKind VK = TTI::OK_UniformConstantValue;
-  TTI::OperandValueProperties VP = TTI::OP_PowerOf2;
+  const bool IsConstant = all_of(VL, [&](Value *V) {
+    // TODO: We should allow undef elements here
+    auto *Op = cast<Instruction>(V)->getOperand(OpIdx);
+    return isConstant(Op) && !isa<UndefValue>(Op);
+  });
+  const bool IsUniform = all_of(VL, [&](Value *V) {
+    // TODO: We should allow undef elements here
+    return cast<Instruction>(V)->getOperand(OpIdx) == Op0;
+  });
+  const bool IsPowerOfTwo = all_of(VL, [&](Value *V) {
+    // TODO: We should allow undef elements here
+    auto *Op = cast<Instruction>(V)->getOperand(OpIdx);
+    if (auto *CI = dyn_cast<ConstantInt>(Op))
+      return CI->getValue().isPowerOf2();
+    return false;
+  });
 
-  // If all operands are exactly the same ConstantInt then set the
-  // operand kind to OK_UniformConstantValue.
-  // If instead not all operands are constants, then set the operand kind
-  // to OK_AnyValue. If all operands are constants but not the same,
-  // then set the operand kind to OK_NonUniformConstantValue.
-  ConstantInt *CInt0 = nullptr;
-  for (Value *V : VL) {
-    const auto *Inst = cast<Instruction>(V);
-    assert(Inst->getOpcode() == cast<Instruction>(VL[0])->getOpcode() &&
-           "Expected same opcode");
-    auto *CInt = dyn_cast<ConstantInt>(Inst->getOperand(OpIdx));
-    if (!CInt) {
-      VK = TTI::OK_AnyValue;
-      VP = TTI::OP_None;
-      break;
-    }
-    if (VP == TTI::OP_PowerOf2 && !CInt->getValue().isPowerOf2())
-      VP = TTI::OP_None;
-    if (!CInt0) {
-      CInt0 = CInt;
-      continue;
-    }
-    if (CInt0 != CInt)
-      VK = TTI::OK_NonUniformConstantValue;
-  }
+  TTI::OperandValueKind VK = TTI::OK_AnyValue;
+  if (IsConstant && IsUniform)
+    VK = TTI::OK_UniformConstantValue;
+  else if (IsConstant)
+    VK = TTI::OK_NonUniformConstantValue;
+  else if (IsUniform)
+    VK = TTI::OK_UniformValue;
+
+  const TTI::OperandValueProperties VP =
+    IsPowerOfTwo ? TTI::OP_PowerOf2 : TTI::OP_None;
   return {VK, VP};
 }
 
