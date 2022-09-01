@@ -57,19 +57,6 @@
 using namespace clang;
 using namespace clang::ento;
 
-/// Produce a textual description of the state of \c errno (this describes the
-/// way how it is allowed to be used).
-/// The returned string is insertable into a longer warning message (in the form
-/// "the value 'errno' <...>").
-/// Currently only the \c errno_modeling::MustNotBeChecked state is supported.
-/// But later other kind of errno state may be needed if functions with special
-/// handling of \c errno are added.
-static const char *describeErrnoCheckState(errno_modeling::ErrnoCheckState CS) {
-  assert(CS == errno_modeling::MustNotBeChecked &&
-         "Errno description not applicable.");
-  return "may be undefined after the call and should not be used";
-}
-
 namespace {
 class StdLibraryFunctionsChecker
     : public Checker<check::PreCall, check::PostCall, eval::Call> {
@@ -392,45 +379,42 @@ class StdLibraryFunctionsChecker
   using ConstraintSet = std::vector<ValueConstraintPtr>;
 
   /// Define how a function affects the system variable 'errno'.
-  /// This works together with the ErrnoModeling and ErrnoChecker classes.
+  /// This works together with the \c ErrnoModeling and \c ErrnoChecker classes.
+  /// Currently 3 use cases exist: success, failure, irrelevant.
+  /// In the future the failure case can be customized to set \c errno to a
+  /// more specific constraint (for example > 0), or new case can be added
+  /// for functions which require check of \c errno in both success and failure
+  /// case.
   class ErrnoConstraintBase {
   public:
     /// Apply specific state changes related to the errno variable.
     virtual ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
                                   const Summary &Summary,
                                   CheckerContext &C) const = 0;
-    /// Get a description about what is applied to 'errno' and how is it allowed
-    /// to be used. If ErrnoChecker generates a bug then this message is
-    /// displayed as a note at the function call.
-    /// It may return empty string if no note tag is to be added.
-    virtual std::string describe(StringRef FunctionName) const { return ""; }
+    /// Get a NoteTag about the changes made to 'errno' and the possible bug.
+    /// It may return \c nullptr (if no bug report from \c ErrnoChecker is
+    /// expected).
+    virtual const NoteTag *describe(CheckerContext &C,
+                                    StringRef FunctionName) const {
+      return nullptr;
+    }
 
     virtual ~ErrnoConstraintBase() {}
 
   protected:
-    /// Many of the descendant classes use this value.
-    const errno_modeling::ErrnoCheckState CheckState;
-
-    ErrnoConstraintBase(errno_modeling::ErrnoCheckState CS) : CheckState(CS) {}
+    ErrnoConstraintBase() = default;
 
     /// This is used for conjure symbol for errno to differentiate from the
     /// original call expression (same expression is used for the errno symbol).
     static int Tag;
   };
 
-  /// Set value of 'errno' to be related to 0 in a specified way, with a
-  /// specified "errno check state". For example with \c BO_GT 'errno' is
-  /// constrained to be greater than 0. Use this for failure cases of functions.
-  class ZeroRelatedErrnoConstraint : public ErrnoConstraintBase {
-    BinaryOperatorKind Op;
-
+  /// Set errno constraint at failure cases of standard functions.
+  /// Failure case: 'errno' becomes not equal to 0 and may or may not be checked
+  /// by the program. \c ErrnoChecker does not emit a bug report after such a
+  /// function call.
+  class FailureErrnoConstraint : public ErrnoConstraintBase {
   public:
-    ZeroRelatedErrnoConstraint(clang::BinaryOperatorKind OpK,
-                               errno_modeling::ErrnoCheckState CS)
-        : ErrnoConstraintBase(CS), Op(OpK) {
-      assert(BinaryOperator::isComparisonOp(OpK));
-    }
-
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
                           const Summary &Summary,
                           CheckerContext &C) const override {
@@ -440,62 +424,36 @@ class StdLibraryFunctionsChecker
                                C.getLocationContext(), C.getASTContext().IntTy,
                                C.blockCount())
               .castAs<NonLoc>();
-      NonLoc ZeroVal =
-          SVB.makeZeroVal(C.getASTContext().IntTy).castAs<NonLoc>();
-      DefinedOrUnknownSVal Cond =
-          SVB.evalBinOp(State, Op, ErrnoSVal, ZeroVal, SVB.getConditionType())
-              .castAs<DefinedOrUnknownSVal>();
-      State = State->assume(Cond, true);
-      if (!State)
-        return State;
-      return errno_modeling::setErrnoValue(State, C.getLocationContext(),
-                                           ErrnoSVal, CheckState);
-    }
-
-    std::string describe(StringRef FunctionName) const override {
-      if (CheckState == errno_modeling::Irrelevant)
-        return "";
-      return (Twine("Assuming that function '") + FunctionName.str() +
-              "' fails, in this case the value 'errno' becomes " +
-              BinaryOperator::getOpcodeStr(Op).str() + " 0 and " +
-              describeErrnoCheckState(CheckState))
-          .str();
+      return errno_modeling::setErrnoForStdFailure(State, C, ErrnoSVal);
     }
   };
 
-  /// Applies the constraints to 'errno' for a common case when a standard
-  /// function is successful. The value of 'errno' after the call is not
-  /// specified by the standard (it may change or not). The \c ErrnoChecker can
-  /// generate a bug if 'errno' is read afterwards.
+  /// Set errno constraint at success cases of standard functions.
+  /// Success case: 'errno' is not allowed to be used.
+  /// \c ErrnoChecker can emit bug report after such a function call if errno
+  /// is used.
   class SuccessErrnoConstraint : public ErrnoConstraintBase {
   public:
-    SuccessErrnoConstraint()
-        : ErrnoConstraintBase(errno_modeling::MustNotBeChecked) {}
-
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
                           const Summary &Summary,
                           CheckerContext &C) const override {
-      return errno_modeling::setErrnoState(State, CheckState);
+      return errno_modeling::setErrnoForStdSuccess(State, C);
     }
 
-    std::string describe(StringRef FunctionName) const override {
-      return (Twine("Assuming that function '") + FunctionName.str() +
-              "' is successful, in this case the value 'errno' " +
-              describeErrnoCheckState(CheckState))
-          .str();
+    const NoteTag *describe(CheckerContext &C,
+                            StringRef FunctionName) const override {
+      return errno_modeling::getNoteTagForStdSuccess(C, FunctionName);
     }
   };
 
-  /// Set errno constraints if use of 'errno' is completely irrelevant to the
+  /// Set errno constraints if use of 'errno' is irrelevant to the
   /// modeled function or modeling is not possible.
   class NoErrnoConstraint : public ErrnoConstraintBase {
   public:
-    NoErrnoConstraint() : ErrnoConstraintBase(errno_modeling::Irrelevant) {}
-
     ProgramStateRef apply(ProgramStateRef State, const CallEvent &Call,
                           const Summary &Summary,
                           CheckerContext &C) const override {
-      return errno_modeling::setErrnoState(State, CheckState);
+      return errno_modeling::setErrnoState(State, errno_modeling::Irrelevant);
     }
   };
 
@@ -758,10 +716,9 @@ private:
   /// Usually if a failure return value exists for function, that function
   /// needs different cases for success and failure with different errno
   /// constraints (and different return value constraints).
-  const NoErrnoConstraint ErrnoIrrelevant;
-  const SuccessErrnoConstraint ErrnoMustNotBeChecked;
-  const ZeroRelatedErrnoConstraint ErrnoNEZeroIrrelevant{
-      clang::BinaryOperatorKind::BO_NE, errno_modeling::Irrelevant};
+  const NoErrnoConstraint ErrnoIrrelevant{};
+  const SuccessErrnoConstraint ErrnoMustNotBeChecked{};
+  const FailureErrnoConstraint ErrnoNEZeroIrrelevant{};
 };
 
 int StdLibraryFunctionsChecker::ErrnoConstraintBase::Tag = 0;
@@ -1017,13 +974,10 @@ void StdLibraryFunctionsChecker::checkPostCall(const CallEvent &Call,
 
     if (NewState && NewState != State) {
       if (Case.getNote().empty()) {
-        std::string Note;
+        const NoteTag *NT = nullptr;
         if (const auto *D = dyn_cast_or_null<FunctionDecl>(Call.getDecl()))
-          Note = Case.getErrnoConstraint().describe(D->getNameAsString());
-        if (Note.empty())
-          C.addTransition(NewState);
-        else
-          C.addTransition(NewState, errno_modeling::getErrnoNoteTag(C, Note));
+          NT = Case.getErrnoConstraint().describe(C, D->getNameAsString());
+        C.addTransition(NewState, NT);
       } else {
         StringRef Note = Case.getNote();
         const NoteTag *Tag = C.getNoteTag(
