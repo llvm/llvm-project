@@ -685,6 +685,21 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SUB,     MVT::v64i8,   {  3 } }, // 2*psubb + split
     { ISD::SUB,     MVT::v32i16,  {  3 } }, // 2*psubw + split
 
+    { ISD::AND,     MVT::v32i8,   {  1,  1, 1, 1 } },
+    { ISD::AND,     MVT::v16i16,  {  1,  1, 1, 1 } },
+    { ISD::AND,     MVT::v8i32,   {  1,  1, 1, 1 } },
+    { ISD::AND,     MVT::v4i64,   {  1,  1, 1, 1 } },
+
+    { ISD::OR,      MVT::v32i8,   {  1,  1, 1, 1 } },
+    { ISD::OR,      MVT::v16i16,  {  1,  1, 1, 1 } },
+    { ISD::OR,      MVT::v8i32,   {  1,  1, 1, 1 } },
+    { ISD::OR,      MVT::v4i64,   {  1,  1, 1, 1 } },
+
+    { ISD::XOR,     MVT::v32i8,   {  1,  1, 1, 1 } },
+    { ISD::XOR,     MVT::v16i16,  {  1,  1, 1, 1 } },
+    { ISD::XOR,     MVT::v8i32,   {  1,  1, 1, 1 } },
+    { ISD::XOR,     MVT::v4i64,   {  1,  1, 1, 1 } },
+
     { ISD::MUL,     MVT::v16i32,  {  1 } }, // pmulld (Skylake from agner.org)
     { ISD::MUL,     MVT::v8i32,   {  1 } }, // pmulld (Skylake from agner.org)
     { ISD::MUL,     MVT::v4i32,   {  1 } }, // pmulld (Skylake from agner.org)
@@ -905,6 +920,21 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,     MVT::v8i32,   {  5 } }, // BTVER2 from http://www.agner.org/
     { ISD::MUL,     MVT::v4i64,   { 12 } },
 
+    { ISD::AND,     MVT::v32i8,   {  1,  1, 1, 2 } }, // vandps
+    { ISD::AND,     MVT::v16i16,  {  1,  1, 1, 2 } }, // vandps
+    { ISD::AND,     MVT::v8i32,   {  1,  1, 1, 2 } }, // vandps
+    { ISD::AND,     MVT::v4i64,   {  1,  1, 1, 2 } }, // vandps
+
+    { ISD::OR,      MVT::v32i8,   {  1,  1, 1, 2 } }, // vorps
+    { ISD::OR,      MVT::v16i16,  {  1,  1, 1, 2 } }, // vorps
+    { ISD::OR,      MVT::v8i32,   {  1,  1, 1, 2 } }, // vorps
+    { ISD::OR,      MVT::v4i64,   {  1,  1, 1, 2 } }, // vorps
+
+    { ISD::XOR,     MVT::v32i8,   {  1,  1, 1, 2 } }, // vxorps
+    { ISD::XOR,     MVT::v16i16,  {  1,  1, 1, 2 } }, // vxorps
+    { ISD::XOR,     MVT::v8i32,   {  1,  1, 1, 2 } }, // vxorps
+    { ISD::XOR,     MVT::v4i64,   {  1,  1, 1, 2 } }, // vxorps
+
     { ISD::SUB,     MVT::v32i8,   {  4 } },
     { ISD::ADD,     MVT::v32i8,   {  4 } },
     { ISD::SUB,     MVT::v16i16,  {  4 } },
@@ -1023,6 +1053,21 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SRA,  MVT::v8i16,  { 16 } }, // cmpgtw sequence.
     { ISD::SRA,  MVT::v4i32,  { 12 } }, // Shift each lane + blend.
     { ISD::SRA,  MVT::v2i64,  {  8 } }, // srl/xor/sub splat+shuffle sequence.
+
+    { ISD::AND,  MVT::v16i8,  {  1, 1, 1, 1 } }, // pand
+    { ISD::AND,  MVT::v8i16,  {  1, 1, 1, 1 } }, // pand
+    { ISD::AND,  MVT::v4i32,  {  1, 1, 1, 1 } }, // pand
+    { ISD::AND,  MVT::v2i64,  {  1, 1, 1, 1 } }, // pand
+
+    { ISD::OR,   MVT::v16i8,  {  1, 1, 1, 1 } }, // por
+    { ISD::OR,   MVT::v8i16,  {  1, 1, 1, 1 } }, // por
+    { ISD::OR,   MVT::v4i32,  {  1, 1, 1, 1 } }, // por
+    { ISD::OR,   MVT::v2i64,  {  1, 1, 1, 1 } }, // por
+
+    { ISD::XOR,  MVT::v16i8,  {  1, 1, 1, 1 } }, // pxor
+    { ISD::XOR,  MVT::v8i16,  {  1, 1, 1, 1 } }, // pxor
+    { ISD::XOR,  MVT::v4i32,  {  1, 1, 1, 1 } }, // pxor
+    { ISD::XOR,  MVT::v2i64,  {  1, 1, 1, 1 } }, // pxor
 
     { ISD::MUL,  MVT::v8i16,  {  1 } }, // pmullw
     { ISD::MUL,  MVT::v4i32,  {  6 } }, // 3*pmuludq/4*shuffle
