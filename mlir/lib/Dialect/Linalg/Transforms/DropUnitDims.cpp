@@ -293,10 +293,11 @@ replaceUnitExtents(GenericOp genericOp, OpOperand *opOperand,
     replacementType = elementType;
   } else if (actualType.isa<RankedTensorType>()) {
     replacementType = RankedTensorType::get(newShape, elementType);
-  } else if (actualType.isa<MemRefType>()) {
-    replacementType = MemRefType::get(newShape, elementType);
+  } else {
+    auto memrefType = actualType.cast<MemRefType>();
+    replacementType = MemRefType::get(newShape, elementType, {},
+                                      memrefType.getMemorySpaceAsInt());
   }
-  assert(replacementType && "unsupported shaped type");
   UnitExtentReplacementInfo info = {replacementType,
                                     AffineMap::get(indexingMap.getNumDims(),
                                                    indexingMap.getNumSymbols(),
