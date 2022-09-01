@@ -102,6 +102,7 @@ add_header_library(
   DEPENDS
     .fp_bits
     .fenv_impl
+    libc.src.__support.CPP.optional
 )
 
 

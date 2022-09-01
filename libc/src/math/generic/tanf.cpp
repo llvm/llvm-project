@@ -56,29 +56,23 @@ static constexpr double TAN_K_PI_OVER_32[32] = {
 };
 
 // Exceptional cases for tanf.
-static constexpr int TANF_EXCEPTS = 6;
+static constexpr size_t N_EXCEPTS = 6;
 
-static constexpr fputil::ExceptionalValues<float, TANF_EXCEPTS> TanfExcepts{
-    /* inputs */ {
-        0x531d744c, // x = 0x1.3ae898p39
-        0x57d7b0ed, // x = 0x1.af61dap48
-        0x65ee8695, // x = 0x1.dd0d2ap76
-        0x6798fe4f, // x = 0x1.31fc9ep80
-        0x6ad36709, // x = 0x1.a6ce12p86
-        0x72b505bb, // x = 0x1.6a0b76p102
-    },
-    /* outputs (RZ, RU offset, RD offset, RN offset) */
-    {
-        {0x4591ea1e, 1, 0, 1}, // x = 0x1.3ae898p39, tan(x) = 0x1.23d43cp12 (RZ)
-        {0x3eb068e3, 1, 0, 1}, // x = 0x1.af61dap48, tan(x) = 0x1.60d1c6p-2 (RZ)
-        {0xcaa32f8e, 0, 1,
-         0}, // x = 0x1.dd0d2ap76, tan(x) = -0x1.465f1cp22 (RZ)
-        {0x461e09f7, 1, 0, 0}, // x = 0x1.31fc9ep80, tan(x) = 0x1.3c13eep13 (RZ)
-        {0xbf62b097, 0, 1,
-         0}, // x = 0x1.a6ce12p86, tan(x) = -0x1.c5612ep-1 (RZ)
-        {0xbff2150f, 0, 1,
-         0}, // x = 0x1.6a0b76p102, tan(x) = -0x1.e42a1ep0 (RZ)
-    }};
+static constexpr fputil::ExceptValues<float, N_EXCEPTS> TANF_EXCEPTS{{
+    // (inputs, RZ output, RU offset, RD offset, RN offset)
+    // x = 0x1.3ae898p39, tan(x) = 0x1.23d43cp12 (RZ)
+    {0x531d744c, 0x4591ea1e, 1, 0, 1},
+    // x = 0x1.af61dap48, tan(x) = 0x1.60d1c6p-2 (RZ)
+    {0x57d7b0ed, 0x3eb068e3, 1, 0, 1},
+    // x = 0x1.dd0d2ap76, tan(x) = -0x1.465f1cp22 (RZ)
+    {0x65ee8695, 0xcaa32f8e, 0, 1, 0},
+    // x = 0x1.31fc9ep80, tan(x) = 0x1.3c13eep13 (RZ)
+    {0x6798fe4f, 0x461e09f7, 1, 0, 0},
+    // x = 0x1.a6ce12p86, tan(x) = -0x1.c5612ep-1 (RZ)
+    {0x6ad36709, 0xbf62b097, 0, 1, 0},
+    // x = 0x1.6a0b76p102, tan(x) = -0x1.e42a1ep0 (RZ)
+    {0x72b505bb, 0xbff2150f, 0, 1, 0},
+}};
 
 LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -200,14 +194,9 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
     k = small_range_reduction(xd, y);
   } else {
 
-    using ExceptChecker =
-        typename fputil::ExceptionChecker<float, TANF_EXCEPTS>;
-    {
-      float result;
-      if (ExceptChecker::check_odd_func(TanfExcepts, x_abs, x_sign <= 0.0,
-                                        result))
-        return result;
-    }
+    if (auto r = TANF_EXCEPTS.lookup_odd(x_abs, x_sign <= 0.0);
+        unlikely(r.has_value()))
+      return r.value();
 
     fputil::FPBits<float> x_bits(x_abs);
     k = large_range_reduction(xd, x_bits.get_exponent(), y);
