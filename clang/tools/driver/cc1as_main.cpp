@@ -134,6 +134,7 @@ struct AssemblerInvocation {
   unsigned NoExecStack : 1;
   unsigned FatalWarnings : 1;
   unsigned NoWarn : 1;
+  unsigned NoTypeCheck : 1;
   unsigned IncrementalLinkerCompatible : 1;
   unsigned EmbedBitcode : 1;
 
@@ -166,6 +167,7 @@ public:
     NoExecStack = 0;
     FatalWarnings = 0;
     NoWarn = 0;
+    NoTypeCheck = 0;
     IncrementalLinkerCompatible = 0;
     Dwarf64 = 0;
     DwarfVersion = 0;
@@ -304,6 +306,7 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.NoExecStack = Args.hasArg(OPT_mno_exec_stack);
   Opts.FatalWarnings = Args.hasArg(OPT_massembler_fatal_warnings);
   Opts.NoWarn = Args.hasArg(OPT_massembler_no_warn);
+  Opts.NoTypeCheck = Args.hasArg(OPT_mno_type_check);
   Opts.RelocationModel =
       std::string(Args.getLastArgValue(OPT_mrelocation_model, "pic"));
   Opts.TargetABI = std::string(Args.getLastArgValue(OPT_target_abi));
@@ -468,6 +471,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 
   MCOptions.MCNoWarn = Opts.NoWarn;
   MCOptions.MCFatalWarnings = Opts.FatalWarnings;
+  MCOptions.MCNoTypeCheck = Opts.NoTypeCheck;
   MCOptions.ABIName = Opts.TargetABI;
 
   // FIXME: There is a bit of code duplication with addPassesToEmitFile.
