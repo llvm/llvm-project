@@ -49,10 +49,12 @@
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -2049,10 +2051,41 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   }
 
   if (D->hasAttr<YkOutlineAttr>()) {
-    // Prevent the Yk trace compiler from inlining the call.
-    B.addAttribute("yk_outline");
-    // Prevent LLVM from inlining the call when optimising the trace.
     B.addAttribute(llvm::Attribute::NoInline);
+    B.addAttribute("yk_outline");
+  }
+
+  // Mark all functions containing loops with `yk_outline` unless the function
+  // was annotated `yk_unroll_safe`.
+  //
+  // This needs to be gated so that we don't impact the normal clang and LLVM
+  // tests.
+  //
+  // If `F->empty()` then this is merely a function declaration for which we
+  // have no IR. In this case the JIT will be unable to inline calls to this
+  // function anyway, so there's no need to conservatively add `yk_outline`.
+  if (CodeGenOpts.YkNoinlineFuncsWithLoops && !F->empty()) {
+    llvm::DominatorTree DT(*F);
+    llvm::LoopInfo LI(DT);
+    if (!LI.empty()) {
+      if (!D->hasAttr<YkUnrollSafeAttr>())
+        B.addAttribute("yk_outline");
+
+      // Note that we still mark the loopy function `F` with `noinline` (to
+      // block it being inlined during AOT compilation) regardless of if it can
+      // be inlined into the trace or not, because:
+      //
+      // * if `F` is to be inlined into a trace and we don't block AOT inlining
+      // then `F` may get AOT inlined into a parent function which contains
+      // loops but isn't marked `yk_unroll_safe`. The trace would have to call
+      // the parent, meaning that `F` would not be inlined into the trace!
+      //
+      // * if `F` is to be outlined in a trace and we don't block AOT inlining,
+      // then `F` may be inlined into a parent function and tracing the parent
+      // function would give a trace where `F` was actually inlined instead of
+      // outlined.
+      B.addAttribute(llvm::Attribute::NoInline);
+    }
   }
 
   F->addFnAttrs(B);

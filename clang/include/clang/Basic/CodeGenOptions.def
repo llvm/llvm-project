@@ -333,6 +333,8 @@ CODEGENOPT(DebugColumnInfo, 1, 0) ///< Whether or not to use column information
 CODEGENOPT(DebugTypeExtRefs, 1, 0) ///< Whether or not debug info should contain
                                    ///< external references to a PCH or module.
 
+CODEGENOPT(YkNoinlineFuncsWithLoops, 1, 0) ///< Yk JIT: by default don't inline functions
+                                           ///< containing loops.
 CODEGENOPT(DebugExplicitImport, 1, 0)  ///< Whether or not debug info should
                                        ///< contain explicit imports for
                                        ///< anonymous namespaces
