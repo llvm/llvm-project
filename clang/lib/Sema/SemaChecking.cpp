@@ -15898,16 +15898,23 @@ void Sema::CheckCastAlign(Expr *Op, QualType T, SourceRange TRange) {
     << TRange << Op->getSourceRange();
 }
 
-/// Check whether this array fits the idiom of a size-one tail padded
-/// array member of a struct.
+/// Check whether this array fits the idiom of a flexible array member,
+/// depending on the value of -fstrict-flex-array.
 ///
-/// We avoid emitting out-of-bounds access warnings for such arrays as they are
-/// commonly used to emulate flexible arrays in C89 code.
-static bool IsTailPaddedMemberArray(Sema &S, const llvm::APInt &Size,
-                                    const NamedDecl *ND,
-                                    unsigned StrictFlexArraysLevel) {
+/// We avoid emitting out-of-bounds access warnings for such arrays.
+static bool isFlexibleArrayMemberExpr(Sema &S, const Expr *E,
+                                      const NamedDecl *ND,
+                                      unsigned StrictFlexArraysLevel) {
+
   if (!ND)
     return false;
+
+  const ConstantArrayType *ArrayTy =
+      S.Context.getAsConstantArrayType(E->getType());
+  llvm::APInt Size = ArrayTy->getSize();
+
+  if (Size == 0)
+    return true;
 
   // FIXME: While the default -fstrict-flex-arrays=0 permits Size>1 trailing
   // arrays to be treated as flexible-array-members, we still emit diagnostics
@@ -15974,9 +15981,19 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
   const ConstantArrayType *ArrayTy =
       Context.getAsConstantArrayType(BaseExpr->getType());
 
+  unsigned StrictFlexArraysLevel = getLangOpts().StrictFlexArrays;
+
+  const NamedDecl *ND = nullptr;
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
+    ND = DRE->getDecl();
+  else if (const auto *ME = dyn_cast<MemberExpr>(BaseExpr))
+    ND = ME->getMemberDecl();
+
   const Type *BaseType =
       ArrayTy == nullptr ? nullptr : ArrayTy->getElementType().getTypePtr();
-  bool IsUnboundedArray = (BaseType == nullptr);
+  bool IsUnboundedArray =
+      BaseType == nullptr ||
+      isFlexibleArrayMemberExpr(*this, BaseExpr, ND, StrictFlexArraysLevel);
   if (EffectiveType->isDependentType() ||
       (!IsUnboundedArray && BaseType->isDependentType()))
     return;
@@ -15990,12 +16007,6 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     index.setIsUnsigned(false);
     index = -index;
   }
-
-  const NamedDecl *ND = nullptr;
-  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
-    ND = DRE->getDecl();
-  if (const MemberExpr *ME = dyn_cast<MemberExpr>(BaseExpr))
-    ND = ME->getMemberDecl();
 
   if (IsUnboundedArray) {
     if (EffectiveType->isFunctionType())
@@ -16074,17 +16085,10 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     // example). In this case we have no information about whether the array
     // access exceeds the array bounds. However we can still diagnose an array
     // access which precedes the array bounds.
-    //
-    // FIXME: this check should be redundant with the IsUnboundedArray check
-    // above.
     if (BaseType->isIncompleteType())
       return;
 
-    // FIXME: this check should be used to set IsUnboundedArray from the
-    // beginning.
     llvm::APInt size = ArrayTy->getSize();
-    if (!size.isStrictlyPositive())
-      return;
 
     if (BaseType != EffectiveType) {
       // Make sure we're comparing apples to apples when comparing index to size
@@ -16112,11 +16116,6 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
     // computing the next address after the end of the array is legal and
     // commonly done e.g. in C++ iterators and range-based for loops.
     if (AllowOnePastEnd ? index.ule(size) : index.ult(size))
-      return;
-
-    // Also don't warn for Flexible Array Member emulation.
-    const unsigned StrictFlexArraysLevel = getLangOpts().StrictFlexArrays;
-    if (IsTailPaddedMemberArray(*this, size, ND, StrictFlexArraysLevel))
       return;
 
     // Suppress the warning if the subscript expression (as identified by the
