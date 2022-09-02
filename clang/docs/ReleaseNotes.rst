@@ -289,6 +289,8 @@ libclang
 
 - Introduced the new function `clang_getUnqualifiedType`, which mimics
   the behavior of `QualType::getUnqualifiedType` for `CXType`.
+- Introduced the new function `clang_getNonReferenceType`, which mimics
+  the behavior of `QualType::getNonReferenceType` for `CXType`.
 
 Static Analyzer
 ---------------
