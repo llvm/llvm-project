@@ -33,7 +33,7 @@
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
-// CHECK-NEXT:       "clang-context-hash": "[[HASH_TU:[A-Z0-9]+]]",
+// CHECK:            "clang-context-hash": "[[HASH_TU:[A-Z0-9]+]]",
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "[[HASH_H2]]",
@@ -42,12 +42,10 @@
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
 // CHECK:            ],
-// CHECK-NEXT:       "file-deps": [
+// CHECK:            "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/modules-fmodule-name-no-module-built.m"
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header3.h"
 // CHECK-NEXT:         "[[PREFIX]]/Inputs/header.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/modules-fmodule-name-no-module-built.m"
 // CHECK-NEXT:     }
-// CHECK-NEXT:   ]
-// CHECK-NEXT: }

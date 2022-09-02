@@ -105,29 +105,36 @@ static bool shouldLowerLDSToStruct(const GlobalVariable &GV,
   return Ret;
 }
 
-std::vector<GlobalVariable *> findVariablesToLower(Module &M,
-                                                   const Function *F) {
+bool isLDSVariableToLower(const GlobalVariable &GV) {
+  if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
+    return false;
+  }
+  if (!GV.hasInitializer()) {
+    // addrspace(3) without initializer implies cuda/hip extern __shared__
+    // the semantics for such a variable appears to be that all extern
+    // __shared__ variables alias one another, in which case this transform
+    // is not required
+    return false;
+  }
+  if (!isa<UndefValue>(GV.getInitializer())) {
+    // Initializers are unimplemented for LDS address space.
+    // Leave such variables in place for consistent error reporting.
+    return false;
+  }
+  if (GV.isConstant()) {
+    // A constant undef variable can't be written to, and any load is
+    // undef, so it should be eliminated by the optimizer. It could be
+    // dropped by the back end if not. This pass skips over it.
+    return false;
+  }
+  return true;
+}
+
+std::vector<GlobalVariable *> findLDSVariablesToLower(Module &M,
+                                                      const Function *F) {
   std::vector<llvm::GlobalVariable *> LocalVars;
   for (auto &GV : M.globals()) {
-    if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
-      continue;
-    }
-    if (!GV.hasInitializer()) {
-      // addrspace(3) without initializer implies cuda/hip extern __shared__
-      // the semantics for such a variable appears to be that all extern
-      // __shared__ variables alias one another, in which case this transform
-      // is not required
-      continue;
-    }
-    if (!isa<UndefValue>(GV.getInitializer())) {
-      // Initializers are unimplemented for LDS address space.
-      // Leave such variables in place for consistent error reporting.
-      continue;
-    }
-    if (GV.isConstant()) {
-      // A constant undef variable can't be written to, and any load is
-      // undef, so it should be eliminated by the optimizer. It could be
-      // dropped by the back end if not. This pass skips over it.
+    if (!isLDSVariableToLower(GV)) {
       continue;
     }
     if (!shouldLowerLDSToStruct(GV, F)) {

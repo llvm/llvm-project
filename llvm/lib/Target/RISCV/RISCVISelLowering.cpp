@@ -3633,10 +3633,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
       if (isa<ConstantSDNode>(RHS)) {
         int64_t Imm = cast<ConstantSDNode>(RHS)->getSExtValue();
         if (Imm != 0 && isInt<12>((uint64_t)Imm + 1)) {
-          // If this is an unsigned compare and the constant is -1, incrementing
-          // the constant would change behavior. The result should be false.
-          if (CCVal == ISD::SETUGT && Imm == -1)
-            return DAG.getConstant(0, DL, VT);
+          // X > -1 should have been replaced with false.
+          assert((CCVal != ISD::SETUGT || Imm != -1) &&
+                 "Missing canonicalization");
           // Using getSetCCSwappedOperands will convert SET(U)GT->SET(U)LT.
           CCVal = ISD::getSetCCSwappedOperands(CCVal);
           SDValue SetCC = DAG.getSetCC(
@@ -8744,11 +8743,11 @@ static SDValue combineVWADD_W_VL_VWSUB_W_VL(SDNode *N, SelectionDAG &DAG) {
       return SDValue();
 
     if (IsSigned) {
-      if (DAG.ComputeNumSignBits(Op0) <= (ScalarBits - NarrowSize))
+      if (DAG.ComputeMaxSignificantBits(Op0) > NarrowSize)
         return SDValue();
     } else {
-      APInt Mask = APInt::getBitsSetFrom(ScalarBits, NarrowSize);
-      if (!DAG.MaskedValueIsZero(Op0, Mask))
+      if (!DAG.MaskedValueIsZero(Op0,
+                                 APInt::getBitsSetFrom(ScalarBits, NarrowSize)))
         return SDValue();
     }
 
@@ -8826,16 +8825,15 @@ static SDValue combineMUL_VLToVWMUL_VL(SDNode *N, SelectionDAG &DAG,
       return SDValue();
 
     // If the LHS is a sign extend, try to use vwmul.
-    if (IsSignExt && DAG.ComputeNumSignBits(Op1) > (ScalarBits - NarrowSize)) {
+    if (IsSignExt && DAG.ComputeMaxSignificantBits(Op1) <= NarrowSize) {
       // Can use vwmul.
-    } else {
-      // Otherwise try to use vwmulu or vwmulsu.
-      APInt Mask = APInt::getBitsSetFrom(ScalarBits, NarrowSize);
-      if (DAG.MaskedValueIsZero(Op1, Mask))
-        IsVWMULSU = IsSignExt;
-      else
-        return SDValue();
-    }
+    } else if (DAG.MaskedValueIsZero(
+                   Op1, APInt::getBitsSetFrom(ScalarBits, NarrowSize))) {
+      // Scalar is zero extended, if the vector is sign extended we can use
+      // vwmulsu. If the vector is zero extended we can use vwmulu.
+      IsVWMULSU = IsSignExt;
+    } else
+      return SDValue();
 
     Op1 = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, NarrowVT,
                       DAG.getUNDEF(NarrowVT), Op1, VL);

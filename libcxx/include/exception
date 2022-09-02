@@ -116,11 +116,11 @@ struct __std_exception_data {
 
 class exception { // base of all library exceptions
 public:
-  exception() _NOEXCEPT : _Data() {}
+  exception() _NOEXCEPT : __data_() {}
 
-  explicit exception(char const* __message) _NOEXCEPT : _Data() {
-    _Data._What = __message;
-    _Data._DoFree = true;
+  explicit exception(char const* __message) _NOEXCEPT : __data_() {
+    __data_._What = __message;
+    __data_._DoFree = true;
   }
 
   exception(exception const&) _NOEXCEPT {}
@@ -129,10 +129,10 @@ public:
 
   virtual ~exception() _NOEXCEPT {}
 
-  virtual char const* what() const _NOEXCEPT { return _Data._What ? _Data._What : "Unknown exception"; }
+  virtual char const* what() const _NOEXCEPT { return __data_._What ? __data_._What : "Unknown exception"; }
 
 private:
-  __std_exception_data _Data;
+  __std_exception_data __data_;
 };
 
 class bad_exception : public exception {

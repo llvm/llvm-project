@@ -15,6 +15,8 @@
 #include "x86_64/syscall.h"
 #elif defined(LLVM_LIBC_ARCH_AARCH64)
 #include "aarch64/syscall.h"
+#elif defined(LLVM_LIBC_ARCH_ARM)
+#include "arm/syscall.h"
 #endif
 
 namespace __llvm_libc {

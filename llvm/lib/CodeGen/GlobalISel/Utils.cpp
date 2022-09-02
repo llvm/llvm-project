@@ -1077,8 +1077,8 @@ Optional<APInt> llvm::getIConstantSplatVal(const Register Reg,
   return None;
 }
 
-Optional<APInt> getIConstantSplatVal(const MachineInstr &MI,
-                                     const MachineRegisterInfo &MRI) {
+Optional<APInt> llvm::getIConstantSplatVal(const MachineInstr &MI,
+                                           const MachineRegisterInfo &MRI) {
   return getIConstantSplatVal(MI.getOperand(0).getReg(), MRI);
 }
 

@@ -2152,12 +2152,6 @@ bool Driver::HandleImmediateArgs(const Compilation &C) {
     return false;
   }
 
-  if (C.getArgs().hasArg(options::OPT_print_multiarch)) {
-    llvm::outs() << TC.getMultiarchTriple(*this, TC.getTriple(), SysRoot)
-                 << "\n";
-    return false;
-  }
-
   if (C.getArgs().hasArg(options::OPT_print_targets)) {
     llvm::TargetRegistry::printRegisteredTargetsForVersion(llvm::outs());
     return false;
@@ -3869,11 +3863,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     return;
   }
 
-  // Reject -Z* at the top level, these options should never have been exposed
-  // by gcc.
-  if (Arg *A = Args.getLastArg(options::OPT_Z_Joined))
-    Diag(clang::diag::err_drv_use_of_Z_option) << A->getAsString(Args);
-
   // Diagnose misuse of /Fo.
   if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fo)) {
     StringRef V = A->getValue();
@@ -4541,7 +4530,8 @@ void Driver::BuildJobs(Compilation &C) const {
   //
   // OffloadClass of type TY_Nothing: device-only output will place many outputs
   // into a single offloading action. We should count all inputs to the action
-  // as outputs.
+  // as outputs. Also ignore device-only outputs if we're compiling with
+  // -fsyntax-only.
   if (FinalOutput) {
     unsigned NumOutputs = 0;
     unsigned NumIfsOutputs = 0;
@@ -4555,7 +4545,8 @@ void Driver::BuildJobs(Compilation &C) const {
              A->getInputs().front()->getKind() == Action::IfsMergeJobClass)))
         ++NumOutputs;
       else if (A->getKind() == Action::OffloadClass &&
-               A->getType() == types::TY_Nothing)
+               A->getType() == types::TY_Nothing &&
+               !C.getArgs().hasArg(options::OPT_fsyntax_only))
         NumOutputs += A->size();
     }
 

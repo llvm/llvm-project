@@ -47,7 +47,10 @@ def BinaryLiteral : DiagGroup<"binary-literal", [CXX14BinaryLiteral,
                                                  CXXPre14CompatBinaryLiteral,
                                                  GNUBinaryLiteral]>;
 def GNUCompoundLiteralInitializer : DiagGroup<"gnu-compound-literal-initializer">;
-def BitFieldConstantConversion : DiagGroup<"bitfield-constant-conversion">;
+def SingleBitBitFieldConstantConversion :
+  DiagGroup<"single-bit-bitfield-constant-conversion">;
+def BitFieldConstantConversion : DiagGroup<"bitfield-constant-conversion",
+                                           [SingleBitBitFieldConstantConversion]>;
 def BitFieldEnumConversion : DiagGroup<"bitfield-enum-conversion">;
 def BitFieldWidth : DiagGroup<"bitfield-width">;
 def CompoundTokenSplitByMacro : DiagGroup<"compound-token-split-by-macro">;

@@ -13,7 +13,6 @@ cstdlib
 cstring
 ctime
 exception
-experimental/simd
 functional
 initializer_list
 iosfwd

@@ -34,6 +34,7 @@
 ; CHECK-O: Running pass: CalledValuePropagationPass
 ; CHECK-O: Running pass: GlobalOptPass
 ; CHECK-O: Running pass: PromotePass
+; CHECK-O: Running pass: DeadArgumentEliminationPass
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running pass: InlinerPass on (main)
@@ -73,7 +74,6 @@
 ; CHECK-O: Running pass: LCSSAPass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running pass: InstCombinePass on main
-; CHECK-O: Running pass: DeadArgumentEliminationPass
 ; CHECK-O: Running pass: GlobalOptPass
 ; CHECK-O: Running pass: GlobalDCEPass
 ; CHECK-O: Running pass: EliminateAvailableExternallyPass

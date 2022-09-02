@@ -61,10 +61,9 @@ struct PadOpTiling : public TilingInterface::ExternalModel<PadOpTiling, PadOp> {
   }
 
   SmallVector<Operation *>
-  getTiledImplementation(Operation *op, OpBuilder &b, ValueRange dest,
+  getTiledImplementation(Operation *op, OpBuilder &b,
                          ArrayRef<OpFoldResult> offsets,
-                         ArrayRef<OpFoldResult> sizes,
-                         bool /*tileDestOperands*/) const {
+                         ArrayRef<OpFoldResult> sizes) const {
     Operation *result =
         tensor::bubbleUpPadSlice(b, cast<PadOp>(op), offsets, sizes);
     if (!result)

@@ -10,11 +10,12 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test1(i32* nocapture noalias %a, i1 zeroext %y) uwtable {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load i32, i32* [[A:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_03:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A:%.*]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 1
+; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[A_PROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[I_03:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[ADD1]], 1
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[A]], align 4
 ; CHECK-NEXT:    br i1 [[Y:%.*]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
@@ -150,11 +151,12 @@ for.cond.cleanup:
 define void @test_sret(i32* noalias sret(i32) %a, i1 zeroext %y) uwtable {
 ; CHECK-LABEL: @test_sret(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load i32, i32* [[A:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_03:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A:%.*]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], 1
+; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[A_PROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[I_03:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[ADD1]], 1
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[A]], align 4
 ; CHECK-NEXT:    br i1 [[Y:%.*]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
@@ -466,17 +468,18 @@ fun.ret:
   ret void
 }
 
-; The malloc'ed memory can be captured and therefore not promoted.
+; The malloc'ed memory can be captured and therefore only loads can be promoted.
 define void @malloc_capture(i32** noalias %A) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 ; CHECK-LABEL: @malloc_capture(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i64 4)
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[CALL]] to i32*
+; CHECK-NEXT:    [[DOTPROMOTED:%.*]] = load i32, i32* [[TMP0]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_LATCH:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[TMP0]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], 1
+; CHECK-NEXT:    [[ADD1:%.*]] = phi i32 [ [[DOTPROMOTED]], [[ENTRY:%.*]] ], [ [[ADD:%.*]], [[FOR_LATCH:%.*]] ]
+; CHECK-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[FOR_LATCH]] ]
+; CHECK-NEXT:    [[ADD]] = add nsw i32 [[ADD1]], 1
 ; CHECK-NEXT:    store i32 [[ADD]], i32* [[TMP0]], align 4
 ; CHECK-NEXT:    br label [[FOR_CALL:%.*]]
 ; CHECK:       for.call:
@@ -492,15 +495,15 @@ define void @malloc_capture(i32** noalias %A) personality i8* bitcast (i32 (...)
 ; CHECK:       for.end:
 ; CHECK-NEXT:    br label [[FUN_RET:%.*]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[TMP2:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[TMP1:%.*]] = landingpad { i8*, i32 }
 ; CHECK-NEXT:    catch i8* null
-; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i8*, i32 } [[TMP2]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue { i8*, i32 } [[TMP2]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i8*, i32 } [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { i8*, i32 } [[TMP1]], 1
 ; CHECK-NEXT:    br label [[CATCH:%.*]]
 ; CHECK:       catch:
-; CHECK-NEXT:    [[TMP5:%.*]] = call i8* @__cxa_begin_catch(i8* [[TMP3]])
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[TMP0]] to i8*
-; CHECK-NEXT:    call void @free(i8* [[TMP6]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i8* @__cxa_begin_catch(i8* [[TMP2]])
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP0]] to i8*
+; CHECK-NEXT:    call void @free(i8* [[TMP5]])
 ; CHECK-NEXT:    call void @__cxa_end_catch()
 ; CHECK-NEXT:    br label [[FUN_RET]]
 ; CHECK:       fun.ret:

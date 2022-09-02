@@ -45,6 +45,8 @@ llvm::Expected<std::string> DependencyScanningTool::getDependencyFile(
   /// Prints out all of the gathered dependencies into a string.
   class MakeDependencyPrinterConsumer : public DependencyConsumer {
   public:
+    void handleBuildCommand(Command) override {}
+
     void
     handleDependencyOutputOpts(const DependencyOutputOptions &Opts) override {
       this->Opts = std::make_unique<DependencyOutputOptions>(Opts);
@@ -120,14 +122,53 @@ DependencyScanningTool::getFullDependencies(
       Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
   if (Result)
     return std::move(Result);
-  return Consumer.getFullDependencies(CommandLine);
+  return Consumer.takeFullDependencies();
 }
 
-FullDependenciesResult FullDependencyConsumer::getFullDependencies(
+llvm::Expected<FullDependenciesResult>
+DependencyScanningTool::getFullDependenciesLegacyDriverCommand(
+    const std::vector<std::string> &CommandLine, StringRef CWD,
+    const llvm::StringSet<> &AlreadySeen,
+    LookupModuleOutputCallback LookupModuleOutput,
+    llvm::Optional<StringRef> ModuleName) {
+  FullDependencyConsumer Consumer(AlreadySeen, LookupModuleOutput,
+                                  Worker.shouldEagerLoadModules());
+  llvm::Error Result =
+      Worker.computeDependencies(CWD, CommandLine, Consumer, ModuleName);
+  if (Result)
+    return std::move(Result);
+  return Consumer.getFullDependenciesLegacyDriverCommand(CommandLine);
+}
+
+FullDependenciesResult FullDependencyConsumer::takeFullDependencies() {
+  FullDependenciesResult FDR;
+  FullDependencies &FD = FDR.FullDeps;
+
+  FD.ID.ContextHash = std::move(ContextHash);
+  FD.FileDeps = std::move(Dependencies);
+  FD.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
+  FD.Commands = std::move(Commands);
+
+  for (auto &&M : ClangModuleDeps) {
+    auto &MD = M.second;
+    if (MD.ImportedByMainFile)
+      FD.ClangModuleDeps.push_back(MD.ID);
+    // TODO: Avoid handleModuleDependency even being called for modules
+    //   we've already seen.
+    if (AlreadySeen.count(M.first))
+      continue;
+    FDR.DiscoveredModules.push_back(std::move(MD));
+  }
+
+  return FDR;
+}
+
+FullDependenciesResult
+FullDependencyConsumer::getFullDependenciesLegacyDriverCommand(
     const std::vector<std::string> &OriginalCommandLine) const {
   FullDependencies FD;
 
-  FD.CommandLine = makeTUCommandLineWithoutPaths(
+  FD.DriverCommandLine = makeTUCommandLineWithoutPaths(
       ArrayRef<std::string>(OriginalCommandLine).slice(1));
 
   FD.ID.ContextHash = std::move(ContextHash);
@@ -135,7 +176,7 @@ FullDependenciesResult FullDependencyConsumer::getFullDependencies(
   FD.FileDeps.assign(Dependencies.begin(), Dependencies.end());
 
   for (const PrebuiltModuleDep &PMD : PrebuiltModuleDeps)
-    FD.CommandLine.push_back("-fmodule-file=" + PMD.PCMFile);
+    FD.DriverCommandLine.push_back("-fmodule-file=" + PMD.PCMFile);
 
   for (auto &&M : ClangModuleDeps) {
     auto &MD = M.second;
@@ -143,11 +184,12 @@ FullDependenciesResult FullDependencyConsumer::getFullDependencies(
       FD.ClangModuleDeps.push_back(MD.ID);
       auto PCMPath = LookupModuleOutput(MD.ID, ModuleOutputKind::ModuleFile);
       if (EagerLoadModules) {
-        FD.CommandLine.push_back("-fmodule-file=" + PCMPath);
+        FD.DriverCommandLine.push_back("-fmodule-file=" + PCMPath);
       } else {
-        FD.CommandLine.push_back("-fmodule-map-file=" + MD.ClangModuleMapFile);
-        FD.CommandLine.push_back("-fmodule-file=" + MD.ID.ModuleName + "=" +
-                                 PCMPath);
+        FD.DriverCommandLine.push_back("-fmodule-map-file=" +
+                                       MD.ClangModuleMapFile);
+        FD.DriverCommandLine.push_back("-fmodule-file=" + MD.ID.ModuleName +
+                                       "=" + PCMPath);
       }
     }
   }

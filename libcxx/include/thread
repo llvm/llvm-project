@@ -86,6 +86,7 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__functional/hash.h>
+#include <__memory/unique_ptr.h>
 #include <__mutex_base>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/timed_backoff_policy.h>
@@ -93,14 +94,16 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 #include <__utility/forward.h>
 #include <cstddef>
 #include <iosfwd>
-#include <memory>
 #include <system_error>
 #include <tuple>
 #include <type_traits>
 #include <version>
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  include <chrono>
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#  include <chrono> // IGNORE-CYCLE due to <format>
+#endif
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <functional>
 #endif
 

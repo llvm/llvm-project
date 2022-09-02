@@ -100,8 +100,8 @@ def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
     `bufferization.to_memref` operation in the sense that it provides a bridge
     between a tensor world view and a bufferized world view. Unlike the
     `bufferization.to_memref` operation, however, this sparse operation actually
-    lowers into a call into a support library to obtain access to the
-    pointers array.
+    lowers into code that extracts the pointers array from the sparse storage
+    scheme (either by calling a support library or through direct code).
 
     Example:
 
@@ -125,8 +125,8 @@ def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
     `bufferization.to_memref` operation in the sense that it provides a bridge
     between a tensor world view and a bufferized world view. Unlike the
     `bufferization.to_memref` operation, however, this sparse operation actually
-    lowers into a call into a support library to obtain access to the
-    indices array.
+    lowers into code that extracts the indices array from the sparse storage
+    scheme (either by calling a support library or through direct code).
 
     Example:
 
@@ -150,8 +150,8 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
     the `bufferization.to_memref` operation in the sense that it provides a bridge
     between a tensor world view and a bufferized world view. Unlike the
     `bufferization.to_memref` operation, however, this sparse operation actually
-    lowers into a call into a support library to obtain access to the
-    values array.
+    lowers into code that extracts the values array from the sparse storage
+    scheme (either by calling a support library or through direct code).
 
     Example:
 
@@ -195,8 +195,9 @@ def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", []>,
 // Sparse Tensor Management Operations. These operations are "impure" in the
 // sense that they do not properly operate on SSA values. Instead, the behavior
 // is solely defined by side-effects. These operations provide a bridge between
-// the code generator and the support library. The semantics of these operations
-// may be refined over time as our sparse abstractions evolve.
+// "sparsification" on one hand and a support library or actual code generation
+// on the other hand. The semantics of these operations may be refined over time
+// as our sparse abstractions evolve.
 //===----------------------------------------------------------------------===//
 
 def SparseTensor_LexInsertOp : SparseTensor_Op<"lex_insert", []>,
@@ -620,6 +621,58 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [NoSideEffect, Terminator]>,
   let assemblyFormat = [{
         $result attr-dict `:` type($result)
   }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Sparse Tensor Storage Operation. These operations are used internally by
+// sparse tensor codegen to progressively lower sparse tensors.
+//===----------------------------------------------------------------------===//
+
+def SparseTensor_StorageGetOp : SparseTensor_Op<"storage_get", []>,
+    Arguments<(ins AnyTuple:$storage,
+                   IndexAttr:$idx)>,
+    Results<(outs AnyType:$result)> {
+  let summary = "Get the data stored in the sparse tensor storage at the given index";
+  let description = [{
+     Get the data stored in the sparse tensor storage (represented as a tuple)
+     at the given index.
+
+     The result type should match the corresponding element type in the tuple.
+
+     Example:
+
+     ```mlir
+     %0 = sparse_tensor.storage_get %arg0[0] : tuple<memref<?xf64>, memref<?xf64>, f64> to memref<?xf64>
+     ```
+   }];
+
+  let assemblyFormat = " $storage attr-dict `[`$idx`]` `:` type($storage) `to` type($result)";
+  let hasVerifier = 1;
+}
+
+def SparseTensor_StorageSetOp : SparseTensor_Op<"storage_set", []>,
+    Arguments<(ins AnyTuple:$storage,
+                   AnyType:$value,
+                   IndexAttr:$idx)>,
+    Results<(outs AnyTuple:$result)> {
+  let summary = "Set the data stored in the sparse tensor storage at given index";
+  let description = [{
+     Set the data stored in the sparse tensor storage (represented as a tuple)
+     at the given index. Return a new SSA value with the corresponding element
+     updated (others remain unchanged).
+
+     The result type should match the original tuple type with only the updated
+     element type changed accordingly.
+
+     Example:
+
+     ```mlir
+     %0 = sparse_tensor.storage_set %arg0, %arg1 at 0 : tuple<memref<?xf64>, memref<?xf64>, f64>, memref<?xf64> to tuple<memref<?xf64>, memref<?xf64>, f64>
+     ```
+   }];
+
+  let assemblyFormat = " $storage attr-dict `[`$idx`]``,` $value `:` type($storage) `,` type($value) `to` type($result)";
   let hasVerifier = 1;
 }
 

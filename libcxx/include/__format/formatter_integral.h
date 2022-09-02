@@ -13,8 +13,8 @@
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__format/concepts.h>
 #include <__format/format_error.h>
-#include <__format/formatter.h> // for __char_type TODO FMT Move the concept?
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
 #include <__utility/unreachable.h>
@@ -112,7 +112,7 @@ _LIBCPP_HIDE_FROM_ABI inline string __determine_grouping(ptrdiff_t __size, const
 // Char
 //
 
-template <__formatter::__char_type _CharT>
+template <__fmt_char_type _CharT>
 _LIBCPP_HIDE_FROM_ABI auto __format_char(
     integral auto __value,
     output_iterator<const _CharT&> auto __out_it,

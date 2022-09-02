@@ -1,10 +1,10 @@
-; OpenCL C source:
-; #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
-; #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
-;
-; void foo (volatile atomic_long *object, long desired) {
-;   atomic_fetch_xor(object, desired);
-;}
+;; OpenCL C source:
+;; #pragma OPENCL EXTENSION cl_khr_int64_base_atomics : enable
+;; #pragma OPENCL EXTENSION cl_khr_int64_extended_atomics : enable
+;;
+;; void foo (volatile atomic_long *object, long desired) {
+;;   atomic_fetch_xor(object, desired);
+;; }
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 

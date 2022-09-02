@@ -20,13 +20,13 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // SPIR-V GLSL 4.50 opcode specification.
 //===----------------------------------------------------------------------===//
 
-// Base class for all GL ops.
+// Base class for all OpenGL ops.
 class SPV_GLOp<string mnemonic, int opcode, list<Trait> traits = []> :
   SPV_ExtInstOp<mnemonic, "GL", "GLSL.std.450", opcode, traits> {
 
   let availability = [
     MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
     Capability<[SPV_C_Shader]>
   ];

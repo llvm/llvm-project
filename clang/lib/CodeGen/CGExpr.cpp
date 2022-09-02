@@ -906,10 +906,8 @@ static bool isFlexibleArrayMemberExpr(const Expr *E,
     if (const auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
       // FIXME: Sema doesn't treat a T[1] union member as a flexible array
       // member, only a T[0] or T[] member gets that treatment.
-      // Under StrictFlexArraysLevel, obey c99+ that disallows FAM in union, see
-      // C11 6.7.2.1 §18
       if (FD->getParent()->isUnion())
-        return StrictFlexArraysLevel < 2;
+        return true;
       RecordDecl::field_iterator FI(
           DeclContext::decl_iterator(const_cast<FieldDecl *>(FD)));
       return ++FI == FD->getParent()->field_end();

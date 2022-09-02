@@ -17,6 +17,7 @@
 include "TestDialect.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SubElementInterfaces.td"
 
@@ -265,5 +266,29 @@ def TestExtern1DI64ElementsAttr : Test_Attr<"TestExtern1DI64Elements", [
   }];
   let assemblyFormat = "`<` $handle `>`";
 }
+
+// An array of nested attributes.
+def TestArrayOfUglyAttrs : ArrayOfAttr<Test_Dialect, "ArrayOfUglyAttrs",
+    "array_of_ugly", "TestAttrUglyAttr"> {
+  let assemblyFormat = "`[` $value ` ` `]`";
+}
+
+// An array of integers.
+def TestArrayOfInts : ArrayOfAttr<Test_Dialect, "ArrayOfInts",
+    "array_of_ints", "int32_t">;
+
+// An array of enum attributes.
+def TestSimpleEnum : I32EnumAttr<"SimpleEnum", "", [
+    I32EnumAttrCase<"a", 0>,
+    I32EnumAttrCase<"b", 1>
+  ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::test";
+}
+def TestSimpleEnumAttr : EnumAttr<Test_Dialect, TestSimpleEnum, "simple_enum"> {
+  let assemblyFormat = "`` $value";
+}
+def TestArrayOfEnums : ArrayOfAttr<Test_Dialect, "ArrayOfEnums",
+    "array_of_enums", "SimpleEnumAttr">;
 
 #endif // TEST_ATTRDEFS

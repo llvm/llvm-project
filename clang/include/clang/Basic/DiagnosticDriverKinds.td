@@ -128,8 +128,6 @@ def err_drv_invalid_stdlib_name : Error<
 def err_drv_invalid_output_with_multiple_archs : Error<
   "cannot use '%0' output with multiple -arch options">;
 def err_drv_no_input_files : Error<"no input files">;
-def err_drv_use_of_Z_option : Error<
-  "unsupported use of internal gcc -Z option '%0'">;
 def err_drv_output_argument_with_multiple_files : Error<
   "cannot specify -o when generating multiple output files">;
 def err_drv_out_file_argument_with_multiple_sources : Error<
@@ -668,6 +666,8 @@ def err_drv_invalid_directx_shader_module : Error<
   "invalid profile : %0">;
 def err_drv_dxc_missing_target_profile : Error<
   "target profile option (-T) is missing">;
+def err_drv_hlsl_unsupported_target : Error<
+  "HLSL code generation is unsupported for target '%0'">;
 
 def err_drv_invalid_range_dxil_validator_version : Error<
   "invalid validator version : %0\n"

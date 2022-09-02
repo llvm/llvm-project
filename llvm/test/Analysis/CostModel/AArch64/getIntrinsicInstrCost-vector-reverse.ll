@@ -3,6 +3,8 @@
 
 ; RUN: opt -passes="print<cost-model>" 2>&1 -disable-output -mtriple=aarch64--linux-gnu -mattr=+sve  < %s | FileCheck %s
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 define void @vector_reverse() #0{
 ; CHECK-LABEL: 'vector_reverse'
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %1 = call <16 x i8> @llvm.experimental.vector.reverse.v16i8(<16 x i8> undef)

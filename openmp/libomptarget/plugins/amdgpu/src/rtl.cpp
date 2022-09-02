@@ -2623,6 +2623,7 @@ void *__tgt_rtl_data_alloc(int DeviceId, int64_t Size, void *, int32_t Kind) {
   hsa_amd_memory_pool_t MemoryPool;
   switch (Kind) {
   case TARGET_ALLOC_DEFAULT:
+  case TARGET_ALLOC_DEVICE:
     // GPU memory
     MemoryPool = DeviceInfo().getDeviceMemoryPool(DeviceId);
     break;

@@ -31,9 +31,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 class _LIBCPP_TYPE_VIS __libcpp_debug_randomizer {
 public:
   __libcpp_debug_randomizer() {
-    __state = __seed();
-    __inc = __state + 0xda3e39cb94b95bdbULL;
-    __inc = (__inc << 1) | 1;
+    __state_ = __seed();
+    __inc_ = __state_ + 0xda3e39cb94b95bdbULL;
+    __inc_ = (__inc_ << 1) | 1;
   }
   typedef uint_fast32_t result_type;
 
@@ -41,8 +41,8 @@ public:
   static const result_type _Max = 0xFFFFFFFF;
 
   _LIBCPP_HIDE_FROM_ABI result_type operator()() {
-    uint_fast64_t __oldstate = __state;
-    __state = __oldstate * 6364136223846793005ULL + __inc;
+    uint_fast64_t __oldstate = __state_;
+    __state_ = __oldstate * 6364136223846793005ULL + __inc_;
     return __oldstate >> 32;
   }
 
@@ -50,8 +50,8 @@ public:
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR result_type max() { return _Max; }
 
 private:
-  uint_fast64_t __state;
-  uint_fast64_t __inc;
+  uint_fast64_t __state_;
+  uint_fast64_t __inc_;
   _LIBCPP_HIDE_FROM_ABI static uint_fast64_t __seed() {
 #ifdef _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY_SEED
     return _LIBCPP_DEBUG_RANDOMIZE_UNSPECIFIED_STABILITY_SEED;

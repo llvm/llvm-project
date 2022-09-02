@@ -597,17 +597,6 @@ struct coff_tls_directory {
 using coff_tls_directory32 = coff_tls_directory<support::little32_t>;
 using coff_tls_directory64 = coff_tls_directory<support::little64_t>;
 
-/// Bits in control flow guard flags as we understand them.
-enum class coff_guard_flags : uint32_t {
-  CFInstrumented = 0x00000100,
-  HasFidTable = 0x00000400,
-  ProtectDelayLoadIAT = 0x00001000,
-  DelayLoadIATSection = 0x00002000, // Delay load in separate section
-  HasLongJmpTable = 0x00010000,
-  HasEHContTable = 0x00400000,
-  FidTableHasFlags = 0x10000000, // Indicates that fid tables are 5 bytes
-};
-
 enum class frame_type : uint16_t { Fpo = 0, Trap = 1, Tss = 2, NonFpo = 3 };
 
 struct coff_load_config_code_integrity {

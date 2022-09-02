@@ -3,6 +3,8 @@
 
 ; Verify the cost of scalar ctlz instructions.
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 define i64 @test_cttz_i64(i64 %a) {
 ;
 ; CHECK-LABEL: 'test_cttz_i64'

@@ -10,6 +10,5 @@ ctime
 iosfwd
 limits
 ratio
-semaphore
 type_traits
 version

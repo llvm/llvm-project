@@ -40,11 +40,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _CharT>
 struct _LIBCPP_TEMPLATE_VIS char_traits
 {
-    typedef _CharT    char_type;
-    typedef int       int_type;
-    typedef streamoff off_type;
-    typedef streampos pos_type;
-    typedef mbstate_t state_type;
+    using char_type  = _CharT;
+    using int_type   = int;
+    using off_type   = streamoff;
+    using pos_type   = streampos;
+    using state_type = mbstate_t;
 
     static inline void _LIBCPP_CONSTEXPR_SINCE_CXX17
         assign(char_type& __c1, const char_type& __c2) _NOEXCEPT {__c1 = __c2;}
@@ -189,11 +189,11 @@ _CharT* __char_traits_move(_CharT* __dest, const _CharT* __source, size_t __n) _
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<char>
 {
-    typedef char      char_type;
-    typedef int       int_type;
-    typedef streamoff off_type;
-    typedef streampos pos_type;
-    typedef mbstate_t state_type;
+    using char_type           = char;
+    using int_type            = int;
+    using off_type            = streamoff;
+    using pos_type            = streampos;
+    using state_type          = mbstate_t;
 #if _LIBCPP_STD_VER > 17
     using comparison_category = strong_ordering;
 #endif
@@ -306,14 +306,14 @@ char_traits<char>::find(const char_type* __s, size_t __n, const char_type& __a) 
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t>
 {
-    typedef wchar_t   char_type;
-    typedef wint_t    int_type;
-    typedef streamoff off_type;
-    typedef streampos pos_type;
-    typedef mbstate_t state_type;
-#  if _LIBCPP_STD_VER > 17
+    using char_type           = wchar_t;
+    using int_type            = wint_t;
+    using off_type            = streamoff;
+    using pos_type            = streampos;
+    using state_type          = mbstate_t;
+#if _LIBCPP_STD_VER > 17
     using comparison_category = strong_ordering;
-#  endif
+#endif
 
     static inline _LIBCPP_CONSTEXPR_SINCE_CXX17
     void assign(char_type& __c1, const char_type& __c2) _NOEXCEPT {__c1 = __c2;}
@@ -425,14 +425,14 @@ char_traits<wchar_t>::find(const char_type* __s, size_t __n, const char_type& __
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
 {
-    typedef char8_t        char_type;
-    typedef unsigned int   int_type;
-    typedef streamoff      off_type;
-    typedef u8streampos    pos_type;
-    typedef mbstate_t      state_type;
-#  if _LIBCPP_STD_VER > 17
+    using char_type           = char8_t;
+    using int_type            = unsigned int;
+    using off_type            = streamoff;
+    using pos_type            = u8streampos;
+    using state_type          = mbstate_t;
+#if _LIBCPP_STD_VER > 17
     using comparison_category = strong_ordering;
-#  endif
+#endif
 
     static inline constexpr void assign(char_type& __c1, const char_type& __c2) noexcept
         {__c1 = __c2;}
@@ -529,11 +529,11 @@ char_traits<char8_t>::find(const char_type* __s, size_t __n, const char_type& __
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t>
 {
-    typedef char16_t       char_type;
-    typedef uint_least16_t int_type;
-    typedef streamoff      off_type;
-    typedef u16streampos   pos_type;
-    typedef mbstate_t      state_type;
+    using char_type           = char16_t;
+    using int_type            = uint_least16_t;
+    using off_type            = streamoff;
+    using pos_type            = u16streampos;
+    using state_type          = mbstate_t;
 #if _LIBCPP_STD_VER > 17
     using comparison_category = strong_ordering;
 #endif
@@ -623,11 +623,11 @@ char_traits<char16_t>::find(const char_type* __s, size_t __n, const char_type& _
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<char32_t>
 {
-    typedef char32_t       char_type;
-    typedef uint_least32_t int_type;
-    typedef streamoff      off_type;
-    typedef u32streampos   pos_type;
-    typedef mbstate_t      state_type;
+    using char_type           = char32_t;
+    using int_type            = uint_least32_t;
+    using off_type            = streamoff;
+    using pos_type            = u32streampos;
+    using state_type          = mbstate_t;
 #if _LIBCPP_STD_VER > 17
     using comparison_category = strong_ordering;
 #endif

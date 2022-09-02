@@ -1338,8 +1338,7 @@ define i32 @ctlz_pow2(i32 %x) {
 ; CHECK-LABEL: @ctlz_pow2(
 ; CHECK-NEXT:    [[N:%.*]] = sub i32 0, [[X:%.*]]
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[N]], [[X]]
-; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.ctlz.i32(i32 [[A]], i1 true), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[R:%.*]] = xor i32 [[Z]], 31
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.cttz.i32(i32 [[A]], i1 true), !range [[RNG0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %n = sub i32 0, %x
@@ -1349,12 +1348,13 @@ define i32 @ctlz_pow2(i32 %x) {
   ret i32 %r
 }
 
+; TODO: %d is known not zero, so this should fold even with arg1 set to false.
+
 define <2 x i8> @cttz_pow2(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @cttz_pow2(
 ; CHECK-NEXT:    [[S:%.*]] = shl <2 x i8> <i8 1, i8 1>, [[X:%.*]]
 ; CHECK-NEXT:    [[D:%.*]] = udiv exact <2 x i8> [[S]], [[Y:%.*]]
-; CHECK-NEXT:    [[Z:%.*]] = call <2 x i8> @llvm.cttz.v2i8(<2 x i8> [[D]], i1 true)
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i8> [[Z]], <i8 7, i8 7>
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ctlz.v2i8(<2 x i8> [[D]], i1 true)
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %s = shl <2 x i8> <i8 1, i8 1>, %x
@@ -1363,6 +1363,8 @@ define <2 x i8> @cttz_pow2(<2 x i8> %x, <2 x i8> %y) {
   %r = xor <2 x i8> %z, <i8 7, i8 7>
   ret <2 x i8> %r
 }
+
+; negative test - 0 input returns 63
 
 define i32 @ctlz_pow2_or_zero(i32 %x) {
 ; CHECK-LABEL: @ctlz_pow2_or_zero(
@@ -1378,6 +1380,8 @@ define i32 @ctlz_pow2_or_zero(i32 %x) {
   %r = xor i32 %z, 31
   ret i32 %r
 }
+
+; negative test - must xor with (bitwidth - 1)
 
 define i32 @ctlz_pow2_wrong_const(i32 %x) {
 ; CHECK-LABEL: @ctlz_pow2_wrong_const(

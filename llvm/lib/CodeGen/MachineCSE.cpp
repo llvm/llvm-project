@@ -789,7 +789,7 @@ bool MachineCSE::isPRECandidate(MachineInstr *MI) {
   if (!isCSECandidate(MI) ||
       MI->isNotDuplicable() ||
       MI->mayLoad() ||
-      MI->isAsCheapAsAMove() ||
+      TII->isAsCheapAsAMove(*MI) ||
       MI->getNumDefs() != 1 ||
       MI->getNumExplicitDefs() != 1)
     return false;

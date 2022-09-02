@@ -1,5 +1,4 @@
 atomic
-chrono
 climits
 cmath
 compare
@@ -10,7 +9,6 @@ cstdlib
 cstring
 ctime
 exception
-experimental/memory_resource
 experimental/utility
 initializer_list
 iosfwd

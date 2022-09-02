@@ -8,12 +8,9 @@ cstring
 exception
 initializer_list
 iosfwd
-iterator
 limits
 new
 tuple
 type_traits
-typeinfo
-utility
 variant
 version
