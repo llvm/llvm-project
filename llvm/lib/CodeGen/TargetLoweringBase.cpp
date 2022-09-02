@@ -1385,7 +1385,7 @@ void TargetLoweringBase::computeRegisterProperties(
     NumRegistersForVT[MVT::bf16] = NumRegistersForVT[MVT::f32];
     RegisterTypeForVT[MVT::bf16] = RegisterTypeForVT[MVT::f32];
     TransformToType[MVT::bf16] = MVT::f32;
-    ValueTypeActions.setTypeAction(MVT::bf16, TypePromoteFloat);
+    ValueTypeActions.setTypeAction(MVT::bf16, TypeSoftPromoteHalf);
   }
 
   // Loop over all of the vector value types to see which need transformations.
