@@ -805,9 +805,6 @@ public:
       assert(LostMLocIt != ActiveMLocs.end() &&
              "Variable was using this MLoc, but ActiveMLocs[MLoc] has no "
              "entries?");
-      assert(LostMLocIt->second.contains(LocVarIt.second) &&
-             "Variable was using this MLoc, but does not appear in "
-             "ActiveMLocs?");
       LostMLocIt->second.erase(LocVarIt.second);
     }
 
@@ -1340,19 +1337,6 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
   auto *Scope = LS.findLexicalScope(MI.getDebugLoc().get());
   if (Scope == nullptr)
     return true; // handled it; by doing nothing
-
-  // For now, ignore DBG_VALUE_LISTs when extending ranges. Allow it to
-  // contribute to locations in this block, but don't propagate further.
-  // Interpret it like a DBG_VALUE $noreg.
-  if (MI.isDebugValueList()) {
-    SmallVector<DbgOpID> EmptyDebugOps;
-    SmallVector<ResolvedDbgOp> EmptyResolvedDebugOps;
-    if (VTracker)
-      VTracker->defVar(MI, Properties, EmptyDebugOps);
-    if (TTracker)
-      TTracker->redefVar(MI, Properties, EmptyResolvedDebugOps);
-    return true;
-  }
 
   // MLocTracker needs to know that this register is read, even if it's only
   // read by a debug inst.

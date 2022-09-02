@@ -9,7 +9,6 @@ iosfwd
 limits
 new
 type_traits
-typeindex
 typeinfo
 utility
 version

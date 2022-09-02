@@ -8,7 +8,6 @@ cstring
 exception
 initializer_list
 iosfwd
-iterator
 limits
 new
 tuple

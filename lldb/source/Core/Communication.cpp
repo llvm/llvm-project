@@ -162,14 +162,10 @@ size_t Communication::Read(void *dst, size_t dst_len,
 
       if (event_type & eBroadcastBitReadThreadDidExit) {
         // If the thread exited of its own accord, it either means it
-        // hit an end-of-file condition or lost connection
-        // (we verified that we had an connection above).
-        if (!m_connection_sp) {
-          if (error_ptr)
-            error_ptr->SetErrorString("Lost connection.");
-          status = eConnectionStatusLostConnection;
-        } else
-          status = eConnectionStatusEndOfFile;
+        // hit an end-of-file condition or an error.
+        status = m_pass_status;
+        if (error_ptr)
+          *error_ptr = std::move(m_pass_error);
 
         if (GetCloseOnEOF())
           Disconnect(nullptr);
@@ -384,7 +380,8 @@ lldb::thread_result_t Communication::ReadThread() {
       break;
     }
   }
-  log = GetLog(LLDBLog::Communication);
+  m_pass_status = status;
+  m_pass_error = std::move(error);
   LLDB_LOG(log, "Communication({0}) thread exiting...", this);
 
   // Handle threads wishing to synchronize with us.

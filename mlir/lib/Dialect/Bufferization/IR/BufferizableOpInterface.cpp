@@ -17,6 +17,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "llvm/Support/Debug.h"
 
 //===----------------------------------------------------------------------===//
@@ -783,4 +784,14 @@ bufferization::getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
   return MemRefType::get(rankedTensorType.getShape(),
                          rankedTensorType.getElementType(), layout,
                          memorySpaceAttr);
+}
+
+bool bufferization::detail::defaultIsRepetitiveRegion(
+    BufferizableOpInterface bufferizableOp, unsigned index) {
+  assert(index < bufferizableOp->getNumRegions() && "invalid region index");
+  auto regionInterface =
+      dyn_cast<RegionBranchOpInterface>(bufferizableOp.getOperation());
+  if (!regionInterface)
+    return false;
+  return regionInterface.isRepetitiveRegion(index);
 }

@@ -17,7 +17,6 @@ cwchar
 cwctype
 exception
 initializer_list
-iomanip
 ios
 iosfwd
 istream

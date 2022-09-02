@@ -127,10 +127,9 @@ Improvements to Clang's diagnostics
   supports both c and c++ language.
 - When diagnosing multi-level pack expansions of mismatched lengths, Clang will
   now, in most cases, be able to point to the relevant outer parameter.
-
-Non-comprehensive list of changes in this release
--------------------------------------------------
-
+- no_sanitize("...") on a global variable for known but not relevant sanitizers
+  is now just a warning. It now says that this will be ignored instead of
+  incorrectly saying no_sanitize only applies to functions and methods.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -175,6 +174,10 @@ AIX Support
 C Language Changes in Clang
 ---------------------------
 
+- Adjusted ``-Wformat`` warnings according to `WG14 N2562 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2562.pdf>`_.
+  Clang will now consider default argument promotions in printf, and remove unnecessary warnings.
+  Especially ``int`` argument with specifier ``%hhd`` and ``%hd``.
+
 C2x Feature Support
 -------------------
 
@@ -208,9 +211,16 @@ C++20 Feature Support
 - Correctly set expression evaluation context as 'immediate function context' in
   consteval functions.
   This fixes `GH51182 <https://github.com/llvm/llvm-project/issues/51182>`
+
 - Fixes an assert crash caused by looking up missing vtable information on ``consteval``
   virtual functions. Fixes `GH55065 <https://github.com/llvm/llvm-project/issues/55065>`_.
 
+- Skip rebuilding lambda expressions in arguments of immediate invocations.
+  This fixes `GH56183 <https://github.com/llvm/llvm-project/issues/56183>`_,
+  `GH51695 <https://github.com/llvm/llvm-project/issues/51695>`_,
+  `GH50455 <https://github.com/llvm/llvm-project/issues/50455>`_,
+  `GH54872 <https://github.com/llvm/llvm-project/issues/54872>`_,
+  `GH54587 <https://github.com/llvm/llvm-project/issues/54587>`_.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -279,6 +289,8 @@ libclang
 
 - Introduced the new function `clang_getUnqualifiedType`, which mimics
   the behavior of `QualType::getUnqualifiedType` for `CXType`.
+- Introduced the new function `clang_getNonReferenceType`, which mimics
+  the behavior of `QualType::getNonReferenceType` for `CXType`.
 
 Static Analyzer
 ---------------

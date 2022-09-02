@@ -140,12 +140,11 @@ define amdgpu_kernel void @s_test_urem_i64(i64 addrspace(1)* %out, i64 %x, i64 %
 ; GCN-IR-NEXT:    s_sub_u32 s8, s10, s14
 ; GCN-IR-NEXT:    s_subb_u32 s9, 0, 0
 ; GCN-IR-NEXT:    v_cmp_gt_u64_e64 s[16:17], s[8:9], 63
-; GCN-IR-NEXT:    s_mov_b32 s11, 0
+; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[18:19], s[8:9], 63
 ; GCN-IR-NEXT:    s_or_b64 s[12:13], s[12:13], s[16:17]
-; GCN-IR-NEXT:    v_cmp_ne_u64_e64 s[16:17], s[8:9], 63
-; GCN-IR-NEXT:    s_xor_b64 s[18:19], s[12:13], -1
-; GCN-IR-NEXT:    s_and_b64 s[16:17], s[18:19], s[16:17]
-; GCN-IR-NEXT:    s_and_b64 vcc, exec, s[16:17]
+; GCN-IR-NEXT:    s_or_b64 s[16:17], s[12:13], s[18:19]
+; GCN-IR-NEXT:    s_andn2_b64 vcc, exec, s[16:17]
+; GCN-IR-NEXT:    s_mov_b32 s11, 0
 ; GCN-IR-NEXT:    s_cbranch_vccz .LBB0_5
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
 ; GCN-IR-NEXT:    s_add_u32 s12, s8, 1
@@ -202,8 +201,8 @@ define amdgpu_kernel void @s_test_urem_i64(i64 addrspace(1)* %out, i64 %x, i64 %
 ; GCN-IR-NEXT:    v_mul_lo_u32 v3, s5, v0
 ; GCN-IR-NEXT:    v_mul_lo_u32 v0, s4, v0
 ; GCN-IR-NEXT:    s_mov_b32 s11, 0xf000
-; GCN-IR-NEXT:    v_add_i32_e32 v1, vcc, v2, v1
-; GCN-IR-NEXT:    v_add_i32_e32 v1, vcc, v1, v3
+; GCN-IR-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
+; GCN-IR-NEXT:    v_add_i32_e32 v1, vcc, v3, v1
 ; GCN-IR-NEXT:    v_mov_b32_e32 v2, s3
 ; GCN-IR-NEXT:    v_sub_i32_e32 v0, vcc, s2, v0
 ; GCN-IR-NEXT:    s_mov_b32 s10, -1
@@ -817,20 +816,19 @@ define amdgpu_kernel void @s_test_urem_k_num_i64(i64 addrspace(1)* %out, i64 %x)
 ; GCN-IR:       ; %bb.0: ; %_udiv-special-cases
 ; GCN-IR-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; GCN-IR-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-IR-NEXT:    s_flbit_i32_b32 s4, s2
-; GCN-IR-NEXT:    s_flbit_i32_b32 s5, s3
-; GCN-IR-NEXT:    s_add_i32 s4, s4, 32
-; GCN-IR-NEXT:    s_min_u32 s8, s4, s5
+; GCN-IR-NEXT:    s_flbit_i32_b32 s6, s2
+; GCN-IR-NEXT:    s_flbit_i32_b32 s7, s3
+; GCN-IR-NEXT:    s_add_i32 s6, s6, 32
+; GCN-IR-NEXT:    s_min_u32 s8, s6, s7
 ; GCN-IR-NEXT:    s_add_u32 s6, s8, 0xffffffc5
 ; GCN-IR-NEXT:    s_addc_u32 s7, 0, -1
-; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[2:3], 0
-; GCN-IR-NEXT:    v_cmp_gt_u64_e64 s[12:13], s[6:7], 63
+; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[2:3], 0
+; GCN-IR-NEXT:    v_cmp_gt_u64_e64 s[10:11], s[6:7], 63
+; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[12:13], s[6:7], 63
+; GCN-IR-NEXT:    s_or_b64 s[10:11], s[4:5], s[10:11]
+; GCN-IR-NEXT:    s_or_b64 s[4:5], s[10:11], s[12:13]
+; GCN-IR-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
 ; GCN-IR-NEXT:    s_mov_b64 s[4:5], 0
-; GCN-IR-NEXT:    s_or_b64 s[10:11], s[10:11], s[12:13]
-; GCN-IR-NEXT:    v_cmp_ne_u64_e64 s[12:13], s[6:7], 63
-; GCN-IR-NEXT:    s_xor_b64 s[14:15], s[10:11], -1
-; GCN-IR-NEXT:    s_and_b64 s[12:13], s[14:15], s[12:13]
-; GCN-IR-NEXT:    s_and_b64 vcc, exec, s[12:13]
 ; GCN-IR-NEXT:    s_cbranch_vccz .LBB6_5
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
 ; GCN-IR-NEXT:    s_add_u32 s10, s6, 1
@@ -1005,20 +1003,19 @@ define amdgpu_kernel void @s_test_urem_k_den_i64(i64 addrspace(1)* %out, i64 %x)
 ; GCN-IR:       ; %bb.0: ; %_udiv-special-cases
 ; GCN-IR-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; GCN-IR-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-IR-NEXT:    s_flbit_i32_b32 s4, s2
-; GCN-IR-NEXT:    s_flbit_i32_b32 s5, s3
-; GCN-IR-NEXT:    s_add_i32 s4, s4, 32
-; GCN-IR-NEXT:    s_min_u32 s8, s4, s5
+; GCN-IR-NEXT:    s_flbit_i32_b32 s6, s2
+; GCN-IR-NEXT:    s_flbit_i32_b32 s7, s3
+; GCN-IR-NEXT:    s_add_i32 s6, s6, 32
+; GCN-IR-NEXT:    s_min_u32 s8, s6, s7
 ; GCN-IR-NEXT:    s_sub_u32 s6, 59, s8
 ; GCN-IR-NEXT:    s_subb_u32 s7, 0, 0
-; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[10:11], s[2:3], 0
-; GCN-IR-NEXT:    v_cmp_gt_u64_e64 s[12:13], s[6:7], 63
+; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[4:5], s[2:3], 0
+; GCN-IR-NEXT:    v_cmp_gt_u64_e64 s[10:11], s[6:7], 63
+; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[12:13], s[6:7], 63
+; GCN-IR-NEXT:    s_or_b64 s[10:11], s[4:5], s[10:11]
+; GCN-IR-NEXT:    s_or_b64 s[4:5], s[10:11], s[12:13]
+; GCN-IR-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
 ; GCN-IR-NEXT:    s_mov_b64 s[4:5], 0
-; GCN-IR-NEXT:    s_or_b64 s[10:11], s[10:11], s[12:13]
-; GCN-IR-NEXT:    v_cmp_ne_u64_e64 s[12:13], s[6:7], 63
-; GCN-IR-NEXT:    s_xor_b64 s[14:15], s[10:11], -1
-; GCN-IR-NEXT:    s_and_b64 s[12:13], s[14:15], s[12:13]
-; GCN-IR-NEXT:    s_and_b64 vcc, exec, s[12:13]
 ; GCN-IR-NEXT:    s_cbranch_vccz .LBB7_5
 ; GCN-IR-NEXT:  ; %bb.1: ; %udiv-bb1
 ; GCN-IR-NEXT:    s_add_u32 s10, s6, 1
@@ -1071,7 +1068,7 @@ define amdgpu_kernel void @s_test_urem_k_den_i64(i64 addrspace(1)* %out, i64 %x)
 ; GCN-IR-NEXT:    v_mul_lo_u32 v0, v0, 24
 ; GCN-IR-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-IR-NEXT:    s_mov_b32 s6, -1
-; GCN-IR-NEXT:    v_add_i32_e32 v1, vcc, v1, v2
+; GCN-IR-NEXT:    v_add_i32_e32 v1, vcc, v2, v1
 ; GCN-IR-NEXT:    v_mov_b32_e32 v2, s3
 ; GCN-IR-NEXT:    v_sub_i32_e32 v0, vcc, s2, v0
 ; GCN-IR-NEXT:    s_mov_b32 s4, s0

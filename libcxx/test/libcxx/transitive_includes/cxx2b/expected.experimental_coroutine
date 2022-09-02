@@ -9,7 +9,6 @@ cstdlib
 cstring
 ctime
 exception
-experimental/coroutine
 initializer_list
 iosfwd
 limits

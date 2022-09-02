@@ -13,7 +13,7 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/FPUtil/builtin_wrappers.h"
+#include "src/__support/builtin_wrappers.h"
 #include "src/__support/common.h"
 
 #include "FloatProperties.h"
@@ -183,7 +183,7 @@ template <typename T> struct FPBits {
   inline static constexpr FPBits<T> make_value(UIntType number, int ep) {
     FPBits<T> result;
     // offset: +1 for sign, but -1 for implicit first bit
-    int lz = fputil::unsafe_clz(number) - FloatProp::EXPONENT_WIDTH;
+    int lz = unsafe_clz(number) - FloatProp::EXPONENT_WIDTH;
     number <<= lz;
     ep -= lz;
 

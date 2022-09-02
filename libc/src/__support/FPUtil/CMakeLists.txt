@@ -1,10 +1,4 @@
 add_header_library(
-  builtin_wrappers
-  HDRS
-    builtin_wrappers.h
-)
-
-add_header_library(
   fenv_impl
   HDRS
     FEnvImpl.h
@@ -37,7 +31,7 @@ add_header_library(
   DEPENDS
     .platform_defs
     .float_properties
-    .builtin_wrappers
+    libc.src.__support.builtin_wrappers
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
@@ -108,6 +102,7 @@ add_header_library(
   DEPENDS
     .fp_bits
     .fenv_impl
+    libc.src.__support.CPP.optional
 )
 
 
@@ -119,7 +114,7 @@ add_header_library(
     .basic_operations
     .fenv_impl
     .fp_bits
-    .builtin_wrappers
+    libc.src.__support.builtin_wrappers
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.uint128

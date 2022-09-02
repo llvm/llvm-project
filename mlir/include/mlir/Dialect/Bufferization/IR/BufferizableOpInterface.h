@@ -566,6 +566,12 @@ namespace detail {
 FailureOr<BaseMemRefType>
 defaultGetBufferType(Value value, const BufferizationOptions &options,
                      const DenseMap<Value, BaseMemRefType> &fixedTypes);
+
+/// This is the default implementation of
+/// BufferizableOpInterface::isRepetitiveRegion. Should not be called from other
+/// places.
+bool defaultIsRepetitiveRegion(BufferizableOpInterface bufferizableOp,
+                               unsigned index);
 } // namespace detail
 
 } // namespace bufferization

@@ -4041,10 +4041,10 @@ LogicalResult AffineVectorStoreOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void AffineDelinearizeIndexOp::build(OpBuilder &builder, OperationState &result,
-                                     Value linear_index,
+                                     Value linearIndex,
                                      ArrayRef<OpFoldResult> basis) {
   result.addTypes(SmallVector<Type>(basis.size(), builder.getIndexType()));
-  result.addOperands(linear_index);
+  result.addOperands(linearIndex);
   SmallVector<Value> basisValues =
       llvm::to_vector(llvm::map_range(basis, [&](OpFoldResult ofr) -> Value {
         Optional<int64_t> staticDim = getConstantIntValue(ofr);

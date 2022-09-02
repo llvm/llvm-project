@@ -20,7 +20,6 @@ limits
 memory
 new
 ratio
-shared_mutex
 stdexcept
 string
 string_view

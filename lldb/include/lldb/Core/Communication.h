@@ -324,6 +324,9 @@ protected:
       m_bytes; ///< A buffer to cache bytes read in the ReadThread function.
   std::recursive_mutex m_bytes_mutex; ///< A mutex to protect multi-threaded
                                       ///access to the cached bytes.
+  lldb::ConnectionStatus m_pass_status; ///< Connection status passthrough
+                                        ///from read thread.
+  Status m_pass_error; ///< Error passthrough from read thread.
   std::mutex
       m_write_mutex; ///< Don't let multiple threads write at the same time...
   std::mutex m_synchronize_mutex;

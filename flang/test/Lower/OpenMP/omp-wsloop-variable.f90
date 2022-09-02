@@ -112,7 +112,8 @@ end program wsloop_variable
 !CHECK:             fir.store %[[VAL_25]] to %[[VAL_6]] : !fir.ref<f32>
 !CHECK:             %[[VAL_26:.*]] = arith.addi %[[VAL_20]], %[[VAL_18]] : index
 !CHECK:             %[[STEPCAST:.*]] = fir.convert %[[VAL_18]] : (index) -> i64
-!CHECK:             %[[IVINC:.*]] = arith.addi %[[IV]], %[[STEPCAST]]
+!CHECK:             %[[IVLOAD:.*]] = fir.load %[[VAL_5]] : !fir.ref<i64>
+!CHECK:             %[[IVINC:.*]] = arith.addi %[[IVLOAD]], %[[STEPCAST]]
 !CHECK:             fir.result %[[VAL_26]], %[[IVINC]] : index, i64
 !CHECK:           }
 !CHECK:           fir.store %[[VAL_19]]#1 to %[[VAL_5]] : !fir.ref<i64>

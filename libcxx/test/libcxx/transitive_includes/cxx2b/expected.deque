@@ -8,7 +8,6 @@ cstdint
 cstdlib
 cstring
 ctime
-deque
 exception
 initializer_list
 iosfwd

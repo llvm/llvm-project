@@ -10,7 +10,6 @@ cstring
 ctime
 exception
 experimental/memory_resource
-experimental/set
 experimental/utility
 initializer_list
 iosfwd

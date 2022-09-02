@@ -4188,7 +4188,10 @@ cc_library(
         "include/llvm/Testing/ADT/*.h",
     ]),
     copts = llvm_copts,
-    deps = [":Support"],
+    deps = [
+        ":Support",
+        ":gmock",
+    ],
 )
 
 cc_library(

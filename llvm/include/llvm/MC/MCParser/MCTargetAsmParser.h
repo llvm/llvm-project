@@ -482,7 +482,7 @@ public:
   }
 
   // For actions that have to be performed before a label is emitted
-  virtual void doBeforeLabelEmit(MCSymbol *Symbol) {}
+  virtual void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {}
   
   virtual void onLabelParsed(MCSymbol *Symbol) {}
 

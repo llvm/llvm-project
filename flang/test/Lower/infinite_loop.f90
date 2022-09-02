@@ -97,7 +97,8 @@ end subroutine
 ! CHECK:    fir.store %[[J_IV]] to %[[J_REF]] : !fir.ref<i32>
 ! CHECK:    %[[J_NEXT:.*]] = arith.addi %[[J]], %[[C1_1]] : index
 ! CHECK:    %[[J_STEPCAST:.*]] = fir.convert %[[C1_1]] : (index) -> i32
-! CHECK:    %[[J_IVINC:.*]] = arith.addi %[[J_IV]], %[[J_STEPCAST]] : i32
+! CHECK:    %[[J_IVLOAD:.*]] = fir.load %[[J_REF]] : !fir.ref<i32>
+! CHECK:    %[[J_IVINC:.*]] = arith.addi %[[J_IVLOAD]], %[[J_STEPCAST]] : i32
 ! CHECK:    fir.result %[[J_NEXT]], %[[J_IVINC]] : index, i32
 ! CHECK:  }
 ! CHECK:  fir.store %[[J_FINAL]]#1 to %[[J_REF]] : !fir.ref<i32>

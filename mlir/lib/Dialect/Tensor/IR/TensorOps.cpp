@@ -1124,6 +1124,15 @@ void ExtractSliceOp::build(OpBuilder &b, OperationState &result, Value source,
   build(b, result, RankedTensorType(), source, offsets, sizes, strides, attrs);
 }
 
+/// Build an ExtractSliceOp with mixed static and dynamic entries packed into a
+/// Range vector.
+void ExtractSliceOp::build(OpBuilder &b, OperationState &result, Value source,
+                           ArrayRef<Range> ranges,
+                           ArrayRef<NamedAttribute> attrs) {
+  auto [offsets, sizes, strides] = getOffsetsSizesAndStrides(ranges);
+  build(b, result, RankedTensorType(), source, offsets, sizes, strides, attrs);
+}
+
 /// Build an ExtractSliceOp with dynamic entries and custom result type. If the
 /// type passed is nullptr, it is inferred.
 void ExtractSliceOp::build(OpBuilder &b, OperationState &result,
@@ -1509,6 +1518,15 @@ void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
         dynamicStrides, b.getI64ArrayAttr(staticOffsets),
         b.getI64ArrayAttr(staticSizes), b.getI64ArrayAttr(staticStrides));
   result.addAttributes(attrs);
+}
+
+/// Build an InsertSliceOp with mixed static and dynamic entries packed into a
+/// Range vector.
+void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
+                          Value dest, ArrayRef<Range> ranges,
+                          ArrayRef<NamedAttribute> attrs) {
+  auto [offsets, sizes, strides] = getOffsetsSizesAndStrides(ranges);
+  build(b, result, source, dest, offsets, sizes, strides, attrs);
 }
 
 // Build a InsertSliceOp with dynamic entries.
@@ -2271,6 +2289,16 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
         dynamicStrides, b.getI64ArrayAttr(staticOffsets),
         b.getI64ArrayAttr(staticSizes), b.getI64ArrayAttr(staticStrides));
   result.addAttributes(attrs);
+}
+
+/// Build an ParallelInsertSliceOp with mixed static and dynamic entries packed
+/// into a Range vector.
+void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
+                                  Value source, Value dest,
+                                  ArrayRef<Range> ranges,
+                                  ArrayRef<NamedAttribute> attrs) {
+  auto [offsets, sizes, strides] = getOffsetsSizesAndStrides(ranges);
+  build(b, result, source, dest, offsets, sizes, strides, attrs);
 }
 
 // Build a ParallelInsertSliceOp with dynamic entries.

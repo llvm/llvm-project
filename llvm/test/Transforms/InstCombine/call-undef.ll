@@ -2,7 +2,9 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @c(i32 noundef)
-declare void @d(i32)
+declare void @d(ptr dereferenceable(1))
+declare void @e(i32)
+declare void @f(ptr)
 
 define void @test1() {
 ; CHECK-LABEL: @test1(
@@ -24,27 +26,63 @@ define void @test2() {
 
 define void @test3() {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    call void @d(i32 noundef undef)
+; CHECK-NEXT:    call void @e(i32 noundef undef)
 ; CHECK-NEXT:    ret void
 ;
-  call void @d(i32 noundef undef)
+  call void @e(i32 noundef undef)
   ret void
 }
 
 define void @test4() {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    call void @d(i32 noundef poison)
+; CHECK-NEXT:    call void @e(i32 noundef poison)
 ; CHECK-NEXT:    ret void
 ;
-  call void @d(i32 noundef poison)
+  call void @e(i32 noundef poison)
+  ret void
+}
+
+define void @test5() {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:    call void @d(ptr undef)
+; CHECK-NEXT:    ret void
+;
+  call void @d(ptr undef)
+  ret void
+}
+
+define void @test6() {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:    call void @d(ptr poison)
+; CHECK-NEXT:    ret void
+;
+  call void @d(ptr poison)
+  ret void
+}
+
+define void @test7() {
+; CHECK-LABEL: @test7(
+; CHECK-NEXT:    call void @f(ptr dereferenceable(1) undef)
+; CHECK-NEXT:    ret void
+;
+  call void @f(ptr dereferenceable(1) undef)
+  ret void
+}
+
+define void @test8() {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:    call void @f(ptr dereferenceable(1) poison)
+; CHECK-NEXT:    ret void
+;
+  call void @f(ptr dereferenceable(1) poison)
   ret void
 }
 
 define void @test_mismatched_call() {
 ; CHECK-LABEL: @test_mismatched_call(
-; CHECK-NEXT:    call void @d(i8 poison)
+; CHECK-NEXT:    call void @e(i8 poison)
 ; CHECK-NEXT:    ret void
 ;
-  call void @d(i8 poison)
+  call void @e(i8 poison)
   ret void
 }

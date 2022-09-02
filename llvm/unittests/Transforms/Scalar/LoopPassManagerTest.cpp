@@ -301,6 +301,8 @@ public:
     // Register our mock analysis.
     LAM.registerPass([&] { return MLAHandle.getAnalysis(); });
 
+    LAM.registerPass([&] { return LoopNestAnalysis(); });
+
     // We need DominatorTreeAnalysis for LoopAnalysis.
     FAM.registerPass([&] { return DominatorTreeAnalysis(); });
     FAM.registerPass([&] { return LoopAnalysis(); });

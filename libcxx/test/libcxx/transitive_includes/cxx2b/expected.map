@@ -12,7 +12,6 @@ exception
 initializer_list
 iosfwd
 limits
-map
 memory
 new
 optional

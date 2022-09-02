@@ -119,11 +119,6 @@ struct IncrementLoopInfo {
 
   // Data members for structured loops.
   fir::DoLoopOp doLoop = nullptr;
-  // Do loop block argument holding the current value
-  // of the do-variable. It has the same data type as the original
-  // do-variable. It is non-null after genFIRIncrementLoopBegin()
-  // iff doVarIsALoopArg() returns true.
-  mlir::Value doVarValue = nullptr;
 
   // Data members for unstructured loops.
   bool hasRealControl = false;
@@ -1275,7 +1270,6 @@ private:
           // The loop variable value is the region's argument rather
           // than the DoLoop's index value.
           value = info.doLoop.getRegionIterArgs()[0];
-          info.doVarValue = value;
         }
         builder->create<fir::StoreOp>(loc, value, info.loopVariable);
         if (info.maskExpr) {
@@ -1377,8 +1371,10 @@ private:
             // type, so we need to cast it, first.
             mlir::Value stepCast = builder->createConvert(
                 loc, info.getLoopVariableType(), info.doLoop.getStep());
+            mlir::Value doVarValue =
+                builder->create<fir::LoadOp>(loc, info.loopVariable);
             results.push_back(builder->create<mlir::arith::AddIOp>(
-                loc, info.doVarValue, stepCast));
+                loc, doVarValue, stepCast));
           }
           builder->create<fir::ResultOp>(loc, results);
         }

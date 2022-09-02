@@ -649,8 +649,8 @@ TEST(TransferTest, JoinVarDecl) {
                            std::string, DataflowAnalysisState<NoopLattice>>>
                            Results,
                        ASTContext &ASTCtx) {
-    ASSERT_THAT(Results, ElementsAre(Pair("p4", _), Pair("p3", _),
-                                     Pair("p2", _), Pair("p1", _)));
+    ASSERT_THAT(Results, ElementsAre(Pair("p1", _), Pair("p2", _),
+                                     Pair("p3", _), Pair("p4", _)));
     const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
     ASSERT_THAT(FooDecl, NotNull());
 
@@ -660,24 +660,24 @@ TEST(TransferTest, JoinVarDecl) {
     const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
     ASSERT_THAT(BazDecl, NotNull());
 
-    const Environment &Env1 = Results[3].second.Env;
+    const Environment &Env1 = Results[0].second.Env;
     const StorageLocation *FooLoc =
         Env1.getStorageLocation(*FooDecl, SkipPast::None);
     EXPECT_THAT(FooLoc, NotNull());
     EXPECT_THAT(Env1.getStorageLocation(*BarDecl, SkipPast::None), IsNull());
     EXPECT_THAT(Env1.getStorageLocation(*BazDecl, SkipPast::None), IsNull());
 
-    const Environment &Env2 = Results[2].second.Env;
+    const Environment &Env2 = Results[1].second.Env;
     EXPECT_EQ(Env2.getStorageLocation(*FooDecl, SkipPast::None), FooLoc);
     EXPECT_THAT(Env2.getStorageLocation(*BarDecl, SkipPast::None), NotNull());
     EXPECT_THAT(Env2.getStorageLocation(*BazDecl, SkipPast::None), IsNull());
 
-    const Environment &Env3 = Results[1].second.Env;
+    const Environment &Env3 = Results[2].second.Env;
     EXPECT_EQ(Env3.getStorageLocation(*FooDecl, SkipPast::None), FooLoc);
     EXPECT_THAT(Env3.getStorageLocation(*BarDecl, SkipPast::None), IsNull());
     EXPECT_THAT(Env3.getStorageLocation(*BazDecl, SkipPast::None), NotNull());
 
-    const Environment &Env4 = Results[0].second.Env;
+    const Environment &Env4 = Results[3].second.Env;
     EXPECT_EQ(Env4.getStorageLocation(*FooDecl, SkipPast::None), FooLoc);
     EXPECT_THAT(Env4.getStorageLocation(*BarDecl, SkipPast::None), IsNull());
     EXPECT_THAT(Env4.getStorageLocation(*BazDecl, SkipPast::None), IsNull());
@@ -3305,8 +3305,8 @@ TEST(TransferTest, CorrelatedBranches) {
         ASSERT_THAT(CDecl, NotNull());
 
         {
-          ASSERT_THAT(Results[2], Pair("p0", _));
-          const Environment &Env = Results[2].second.Env;
+          ASSERT_THAT(Results[0], Pair("p0", _));
+          const Environment &Env = Results[0].second.Env;
           const ValueDecl *BDecl = findValueDecl(ASTCtx, "B");
           ASSERT_THAT(BDecl, NotNull());
           auto &BVal = *cast<BoolValue>(Env.getValue(*BDecl, SkipPast::None));
@@ -3322,8 +3322,8 @@ TEST(TransferTest, CorrelatedBranches) {
         }
 
         {
-          ASSERT_THAT(Results[0], Pair("p2", _));
-          const Environment &Env = Results[0].second.Env;
+          ASSERT_THAT(Results[2], Pair("p2", _));
+          const Environment &Env = Results[2].second.Env;
           auto &CVal = *cast<BoolValue>(Env.getValue(*CDecl, SkipPast::None));
           EXPECT_TRUE(Env.flowConditionImplies(CVal));
         }
@@ -3422,9 +3422,9 @@ TEST(TransferTest, LoopWithStructReferenceAssignmentConverges) {
                    Results,
                ASTContext &ASTCtx) {
         ASSERT_THAT(Results,
-                    ElementsAre(Pair("p-outer", _), Pair("p-inner", _)));
-        const Environment &OuterEnv = Results[0].second.Env;
-        const Environment &InnerEnv = Results[1].second.Env;
+                    ElementsAre(Pair("p-inner", _), Pair("p-outer", _)));
+        const Environment &InnerEnv = Results[0].second.Env;
+        const Environment &OuterEnv = Results[1].second.Env;
 
         const ValueDecl *ValDecl = findValueDecl(ASTCtx, "val");
         ASSERT_THAT(ValDecl, NotNull());

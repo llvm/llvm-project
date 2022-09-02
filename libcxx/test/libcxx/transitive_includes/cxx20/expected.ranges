@@ -20,7 +20,6 @@ limits
 memory
 new
 optional
-ranges
 ratio
 span
 stdexcept

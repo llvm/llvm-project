@@ -19,7 +19,6 @@ cwctype
 deque
 exception
 experimental/memory_resource
-experimental/regex
 experimental/string
 experimental/utility
 functional

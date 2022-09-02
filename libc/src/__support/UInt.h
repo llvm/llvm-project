@@ -11,7 +11,9 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/builtin_wrappers.h"
 
 #include <stddef.h> // For size_t
 #include <stdint.h>
@@ -36,6 +38,32 @@ public:
   constexpr UInt(const UInt<Bits> &other) {
     for (size_t i = 0; i < WordCount; ++i)
       val[i] = other.val[i];
+  }
+
+  template <size_t OtherBits> constexpr UInt(const UInt<OtherBits> &other) {
+    if (OtherBits >= Bits) {
+      for (size_t i = 0; i < WordCount; ++i)
+        val[i] = other[i];
+    } else {
+      size_t i = 0;
+      for (; i < OtherBits / 64; ++i)
+        val[i] = other[i];
+      for (; i < WordCount; ++i)
+        val[i] = 0;
+    }
+  }
+
+  // Construct a UInt from a C array.
+  template <size_t N, enable_if_t<N <= WordCount, int> = 0>
+  constexpr UInt(const uint64_t (&nums)[N]) {
+    size_t min_wordcount = N < WordCount ? N : WordCount;
+    size_t i = 0;
+    for (; i < min_wordcount; ++i)
+      val[i] = nums[i];
+
+    // If nums doesn't completely fill val, then fill the rest with zeroes.
+    for (; i < WordCount; ++i)
+      val[i] = 0;
   }
 
   // Initialize the first word to |v| and the rest to 0.
@@ -209,6 +237,8 @@ public:
   constexpr UInt<Bits> operator*(const UInt<Bits> &other) const {
     UInt<Bits> result(0);
     for (size_t i = 0; i < WordCount; ++i) {
+      if (other[i] == 0)
+        continue;
       UInt<Bits> row_result(*this);
       row_result.mul(other[i]);
       row_result.shift_left(64 * i);
@@ -217,9 +247,81 @@ public:
     return result;
   }
 
+  // pow takes a power and sets this to its starting value to that power. Zero
+  // to the zeroth power returns 1.
+  constexpr void pow_n(uint64_t power) {
+    UInt<Bits> result = 1;
+    UInt<Bits> cur_power = *this;
+
+    while (power > 0) {
+      if ((power % 2) > 0) {
+        result = result * cur_power;
+      }
+      power = power >> 1;
+      cur_power *= cur_power;
+    }
+    *this = result;
+  }
+
+  // div takes another UInt of the same size and divides this by it. The value
+  // of this will be set to the quotient, and the return value is the remainder.
+  constexpr optional<UInt<Bits>> div(const UInt<Bits> &other) {
+    UInt<Bits> remainder(0);
+    if (*this < other) {
+      remainder = *this;
+      *this = UInt<Bits>(0);
+      return remainder;
+    }
+    if (other == 1) {
+      return remainder;
+    }
+    if (other == 0) {
+      return nullopt;
+    }
+
+    UInt<Bits> quotient(0);
+    UInt<Bits> subtractor = other;
+    int cur_bit = subtractor.clz() - this->clz();
+    subtractor.shift_left(cur_bit);
+
+    for (; cur_bit >= 0 && *this > 0; --cur_bit, subtractor.shift_right(1)) {
+      if (*this >= subtractor) {
+        this->sub(subtractor);
+        quotient = quotient | (UInt<Bits>(1) << cur_bit);
+      }
+    }
+    remainder = *this;
+    *this = quotient;
+    return remainder;
+  }
+
+  constexpr UInt<Bits> operator/(const UInt<Bits> &other) const {
+    UInt<Bits> result(*this);
+    result.div(other);
+    return result;
+  }
+
+  constexpr UInt<Bits> operator%(const UInt<Bits> &other) const {
+    UInt<Bits> result(*this);
+    return *result.div(other);
+  }
+
   constexpr UInt<Bits> &operator*=(const UInt<Bits> &other) {
     *this = *this * other;
     return *this;
+  }
+
+  constexpr uint64_t clz() {
+    uint64_t leading_zeroes = 0;
+    for (size_t i = WordCount; i > 0; --i) {
+      if (val[i - 1] == 0) {
+        leading_zeroes += sizeof(uint64_t) * 8;
+      } else {
+        leading_zeroes += unsafe_clz(val[i - 1]);
+        break;
+      }
+    }
+    return leading_zeroes;
   }
 
   constexpr void shift_left(size_t s) {
