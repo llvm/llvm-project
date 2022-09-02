@@ -1709,7 +1709,6 @@ template <class BidirectionalIterator, class Compare>
 #include <__debug>
 #include <cstddef>
 #include <cstring>
-#include <memory>
 #include <type_traits>
 #include <version>
 
@@ -1904,7 +1903,11 @@ template <class BidirectionalIterator, class Compare>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <atomic>
+#  include <chrono>
 #  include <iterator>
+#  include <memory>
+#  include <stdexcept>
 #  include <utility>
 #endif
 
@@ -1916,7 +1919,7 @@ template <class BidirectionalIterator, class Compare>
 #endif
 
 #if defined(_LIBCPP_HAS_PARALLEL_ALGORITHMS) && _LIBCPP_STD_VER >= 17
-#   include <__pstl_algorithm>
+#  include <__pstl_algorithm>
 #endif
 
 #endif // _LIBCPP_ALGORITHM

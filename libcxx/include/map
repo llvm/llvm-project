@@ -538,11 +538,14 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__iterator/erase_if_container.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
+#include <__memory/allocator.h>
 #include <__node_handle>
 #include <__tree>
+#include <__type_traits/is_allocator.h>
 #include <__utility/forward.h>
+#include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
-#include <memory>
+#include <tuple>
 #include <type_traits>
 #include <version>
 

@@ -19,6 +19,7 @@
 #include <__config>
 #include <__format/concepts.h>
 #include <__format/format_arg.h>
+#include <__utility/forward.h>
 #include <cstring>
 #include <string>
 #include <string_view>
