@@ -29,20 +29,20 @@
 // PIXEL: #define __SHADER_TARGET_STAGE 0
 // VERTEX: #define __SHADER_TARGET_STAGE 1
 
-// RUN: %clang_cc1 %s -E -dM -o - -std=hlsl2015 | FileCheck -match-full-lines %s --check-prefixes=STD2015
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl2015 | FileCheck -match-full-lines %s --check-prefixes=STD2015
 // STD2015: #define __HLSL_VERSION 2015
 
-// RUN: %clang_cc1 %s -E -dM -o - -std=hlsl2016 | FileCheck -match-full-lines %s --check-prefixes=STD2016
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl2016 | FileCheck -match-full-lines %s --check-prefixes=STD2016
 // STD2016: #define __HLSL_VERSION 2016
 
-// RUN: %clang_cc1 %s -E -dM -o - -std=hlsl2017 | FileCheck -match-full-lines %s --check-prefixes=STD2017
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl2017 | FileCheck -match-full-lines %s --check-prefixes=STD2017
 // STD2017: #define __HLSL_VERSION 2017
 
-// RUN: %clang_cc1 %s -E -dM -o - -std=hlsl2018 | FileCheck -match-full-lines %s --check-prefixes=STD2018
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl2018 | FileCheck -match-full-lines %s --check-prefixes=STD2018
 // STD2018: #define __HLSL_VERSION 2018
 
-// RUN: %clang_cc1 %s -E -dM -o - -std=hlsl2021 | FileCheck -match-full-lines %s --check-prefixes=STD2021
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl2021 | FileCheck -match-full-lines %s --check-prefixes=STD2021
 // STD2021: #define __HLSL_VERSION 2021
 
-// RUN: %clang_cc1 %s -E -dM -o - -std=hlsl202x | FileCheck -match-full-lines %s --check-prefixes=STD202x
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library %s -E -dM -o - -x hlsl -std=hlsl202x | FileCheck -match-full-lines %s --check-prefixes=STD202x
 // STD202x: #define __HLSL_VERSION 2029
