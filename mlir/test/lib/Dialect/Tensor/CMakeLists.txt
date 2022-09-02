@@ -6,7 +6,6 @@ add_mlir_library(MLIRTensorTestPasses
 
   LINK_LIBS PUBLIC
   MLIRArithmeticDialect
-  MLIRLinalgDialect
   MLIRPass
   MLIRSCFDialect
   MLIRTensorDialect
