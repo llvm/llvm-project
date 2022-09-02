@@ -50,14 +50,14 @@ define void @LoadAndCmp(i32* nocapture %a) nounwind uwtable sanitize_memory {
 ; CHECK-DAG:    [[TMP1:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
 ; CHECK-DAG:    call void @__msan_maybe_warning_8(i64 zeroext [[TMP0]], i32 zeroext [[TMP1]]), !dbg [[DBG1]]
 ; CHECK-DAG:    [[TMP2:%.*]] = load i32, i32* [[A:%.*]], align 4, !dbg [[DBG1]]
-; CHECK-DAG:    [[TMP3:%.*]] = ptrtoint i32* [[A]] to i64, !dbg [[DBG7:![0-9]+]]
-; CHECK-DAG:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080, !dbg [[DBG7]]
-; CHECK-DAG:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to i32*, !dbg [[DBG7]]
-; CHECK-DAG:    [[TMP6:%.*]] = add i64 [[TMP4]], 17592186044416, !dbg [[DBG7]]
-; CHECK-DAG:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to i32*, !dbg [[DBG7]]
-; CHECK-DAG:    [[_MSLD:%.*]] = load i32, i32* [[TMP5]], align 4, !dbg [[DBG7]]
-; CHECK-DAG:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4, !dbg [[DBG7]]
-; CHECK-DAG:    [[TMP9:%.*]] = xor i32 [[TMP2]], 0, !dbg [[DBG7]]
+; CHECK-DAG:    [[TMP3:%.*]] = ptrtoint i32* [[A]] to i64, !dbg [[DBG1]]
+; CHECK-DAG:    [[TMP4:%.*]] = xor i64 [[TMP3]], 87960930222080, !dbg [[DBG1]]
+; CHECK-DAG:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to i32*, !dbg [[DBG1]]
+; CHECK-DAG:    [[TMP6:%.*]] = add i64 [[TMP4]], 17592186044416, !dbg [[DBG1]]
+; CHECK-DAG:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to i32*, !dbg [[DBG1]]
+; CHECK-DAG:    [[_MSLD:%.*]] = load i32, i32* [[TMP5]], align 4, !dbg [[DBG1]]
+; CHECK-DAG:    [[TMP8:%.*]] = load i32, i32* [[TMP7]], align 4, !dbg [[DBG1]]
+; CHECK-DAG:    [[TMP9:%.*]] = xor i32 [[TMP2]], 0, !dbg [[DBG7:![0-9]+]]
 ; CHECK-DAG:    [[TMP10:%.*]] = or i32 [[_MSLD]], 0, !dbg [[DBG7]]
 ; CHECK-DAG:    [[TMP11:%.*]] = icmp ne i32 [[TMP10]], 0, !dbg [[DBG7]]
 ; CHECK-DAG:    [[TMP12:%.*]] = xor i32 [[TMP10]], -1, !dbg [[DBG7]]
@@ -137,14 +137,14 @@ define void @SExt(i32* nocapture %a, i16* nocapture %b) nounwind uwtable sanitiz
 ; CHECK-DAG:    [[TMP3:%.*]] = load i32, i32* getelementptr inbounds ([200 x i32], [200 x i32]* @__msan_param_origin_tls, i32 0, i32 0), align 4, !dbg [[DBG1]]
 ; CHECK-DAG:    call void @__msan_maybe_warning_8(i64 zeroext [[TMP0]], i32 zeroext [[TMP1]]), !dbg [[DBG1]]
 ; CHECK-DAG:    [[TMP4:%.*]] = load i16, i16* [[B:%.*]], align 2, !dbg [[DBG1]]
-; CHECK-DAG:    [[TMP5:%.*]] = ptrtoint i16* [[B]] to i64, !dbg [[DBG7]]
-; CHECK-DAG:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080, !dbg [[DBG7]]
-; CHECK-DAG:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to i16*, !dbg [[DBG7]]
-; CHECK-DAG:    [[TMP8:%.*]] = add i64 [[TMP6]], 17592186044416, !dbg [[DBG7]]
-; CHECK-DAG:    [[TMP9:%.*]] = and i64 [[TMP8]], -4, !dbg [[DBG7]]
-; CHECK-DAG:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to i32*, !dbg [[DBG7]]
-; CHECK-DAG:    [[_MSLD:%.*]] = load i16, i16* [[TMP7]], align 2, !dbg [[DBG7]]
-; CHECK-DAG:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4, !dbg [[DBG7]]
+; CHECK-DAG:    [[TMP5:%.*]] = ptrtoint i16* [[B]] to i64, !dbg [[DBG1]]
+; CHECK-DAG:    [[TMP6:%.*]] = xor i64 [[TMP5]], 87960930222080, !dbg [[DBG1]]
+; CHECK-DAG:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to i16*, !dbg [[DBG1]]
+; CHECK-DAG:    [[TMP8:%.*]] = add i64 [[TMP6]], 17592186044416, !dbg [[DBG1]]
+; CHECK-DAG:    [[TMP9:%.*]] = and i64 [[TMP8]], -4, !dbg [[DBG1]]
+; CHECK-DAG:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to i32*, !dbg [[DBG1]]
+; CHECK-DAG:    [[_MSLD:%.*]] = load i16, i16* [[TMP7]], align 2, !dbg [[DBG1]]
+; CHECK-DAG:    [[TMP11:%.*]] = load i32, i32* [[TMP10]], align 4, !dbg [[DBG1]]
 ; CHECK-DAG:    [[_MSPROP:%.*]] = sext i16 [[_MSLD]] to i32, !dbg [[DBG7]]
 ; CHECK-DAG:    [[TMP12:%.*]] = sext i16 [[TMP4]] to i32, !dbg [[DBG7]]
 ; CHECK-DAG:    call void @__msan_maybe_warning_8(i64 zeroext [[TMP2]], i32 zeroext [[TMP3]]), !dbg [[DBG8]]
@@ -395,13 +395,13 @@ define i32 @ShadowLoadAlignmentLarge() nounwind uwtable sanitize_memory {
 ; CHECK-DAG:    [[TMP7:%.*]] = bitcast i32* [[Y]] to i8*, !dbg [[DBG1]]
 ; CHECK-DAG:    call void @__msan_set_alloca_origin_with_descr(i8* [[TMP7]], i64 4, i8* bitcast (i32* @[[GLOB0:[0-9]+]] to i8*), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @[[GLOB1:[0-9]+]], i32 0, i32 0)), !dbg [[DBG1]]
 ; CHECK-DAG:    [[TMP8:%.*]] = load volatile i32, i32* [[Y]], align 64, !dbg [[DBG7]]
-; CHECK-DAG:    [[TMP9:%.*]] = ptrtoint i32* [[Y]] to i64
-; CHECK-DAG:    [[TMP10:%.*]] = xor i64 [[TMP9]], 87960930222080
-; CHECK-DAG:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to i32*
-; CHECK-DAG:    [[TMP12:%.*]] = add i64 [[TMP10]], 17592186044416
-; CHECK-DAG:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to i32*
-; CHECK-DAG:    [[_MSLD:%.*]] = load i32, i32* [[TMP11]], align 64
-; CHECK-DAG:    [[TMP14:%.*]] = load i32, i32* [[TMP13]], align 64
+; CHECK-DAG:    [[TMP9:%.*]] = ptrtoint i32* [[Y]] to i64, !dbg [[DBG7]]
+; CHECK-DAG:    [[TMP10:%.*]] = xor i64 [[TMP9]], 87960930222080, !dbg [[DBG7]]
+; CHECK-DAG:    [[TMP11:%.*]] = inttoptr i64 [[TMP10]] to i32*, !dbg [[DBG7]]
+; CHECK-DAG:    [[TMP12:%.*]] = add i64 [[TMP10]], 17592186044416, !dbg [[DBG7]]
+; CHECK-DAG:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to i32*, !dbg [[DBG7]]
+; CHECK-DAG:    [[_MSLD:%.*]] = load i32, i32* [[TMP11]], align 64, !dbg [[DBG7]]
+; CHECK-DAG:    [[TMP14:%.*]] = load i32, i32* [[TMP13]], align 64, !dbg [[DBG7]]
 ; CHECK-DAG:    store i32 [[_MSLD]], i32* bitcast ([100 x i64]* @__msan_retval_tls to i32*), align 8
 ; CHECK-DAG:    store i32 [[TMP14]], i32* @__msan_retval_origin_tls, align 4
 ; CHECK-DAG:    ret i32 [[TMP8]]
@@ -528,32 +528,32 @@ define void @VAStart(i32 %x, ...) sanitize_memory {
 ; CHECK-DAG:    [[TMP30:%.*]] = inttoptr i64 [[TMP29]] to i32*, !dbg [[DBG11]]
 ; CHECK-DAG:    call void @llvm.memset.p0i8.i64(i8* align 8 [[TMP28]], i8 0, i64 24, i1 false), !dbg [[DBG11]]
 ; CHECK-DAG:    call void @llvm.va_start(i8* [[ARRAYDECAY1]]), !dbg [[DBG11]]
-; CHECK-DAG:    [[TMP31:%.*]] = ptrtoint i8* [[ARRAYDECAY1]] to i64
-; CHECK-DAG:    [[TMP32:%.*]] = add i64 [[TMP31]], 16
-; CHECK-DAG:    [[TMP33:%.*]] = inttoptr i64 [[TMP32]] to i64**
-; CHECK-DAG:    [[TMP34:%.*]] = load i64*, i64** [[TMP33]], align 8
-; CHECK-DAG:    [[TMP35:%.*]] = ptrtoint i64* [[TMP34]] to i64
-; CHECK-DAG:    [[TMP36:%.*]] = xor i64 [[TMP35]], 87960930222080
-; CHECK-DAG:    [[TMP37:%.*]] = inttoptr i64 [[TMP36]] to i8*
-; CHECK-DAG:    [[TMP38:%.*]] = add i64 [[TMP36]], 17592186044416
-; CHECK-DAG:    [[TMP39:%.*]] = inttoptr i64 [[TMP38]] to i32*
-; CHECK-DAG:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP37]], i8* align 16 [[TMP2]], i64 176, i1 false)
-; CHECK-DAG:    [[TMP40:%.*]] = bitcast i32* [[TMP39]] to i8*
-; CHECK-DAG:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP40]], i8* align 16 [[TMP3]], i64 176, i1 false)
-; CHECK-DAG:    [[TMP41:%.*]] = ptrtoint i8* [[ARRAYDECAY1]] to i64
-; CHECK-DAG:    [[TMP42:%.*]] = add i64 [[TMP41]], 8
-; CHECK-DAG:    [[TMP43:%.*]] = inttoptr i64 [[TMP42]] to i64**
-; CHECK-DAG:    [[TMP44:%.*]] = load i64*, i64** [[TMP43]], align 8
-; CHECK-DAG:    [[TMP45:%.*]] = ptrtoint i64* [[TMP44]] to i64
-; CHECK-DAG:    [[TMP46:%.*]] = xor i64 [[TMP45]], 87960930222080
-; CHECK-DAG:    [[TMP47:%.*]] = inttoptr i64 [[TMP46]] to i8*
-; CHECK-DAG:    [[TMP48:%.*]] = add i64 [[TMP46]], 17592186044416
-; CHECK-DAG:    [[TMP49:%.*]] = inttoptr i64 [[TMP48]] to i32*
-; CHECK-DAG:    [[TMP50:%.*]] = getelementptr i8, i8* [[TMP2]], i32 176
-; CHECK-DAG:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP47]], i8* align 16 [[TMP50]], i64 [[TMP0]], i1 false)
-; CHECK-DAG:    [[TMP51:%.*]] = getelementptr i8, i8* [[TMP3]], i32 176
-; CHECK-DAG:    [[TMP52:%.*]] = bitcast i32* [[TMP49]] to i8*
-; CHECK-DAG:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP52]], i8* align 16 [[TMP51]], i64 [[TMP0]], i1 false)
+; CHECK-DAG:    [[TMP31:%.*]] = ptrtoint i8* [[ARRAYDECAY1]] to i64, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP32:%.*]] = add i64 [[TMP31]], 16, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP33:%.*]] = inttoptr i64 [[TMP32]] to i64**, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP34:%.*]] = load i64*, i64** [[TMP33]], align 8, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP35:%.*]] = ptrtoint i64* [[TMP34]] to i64, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP36:%.*]] = xor i64 [[TMP35]], 87960930222080, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP37:%.*]] = inttoptr i64 [[TMP36]] to i8*, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP38:%.*]] = add i64 [[TMP36]], 17592186044416, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP39:%.*]] = inttoptr i64 [[TMP38]] to i32*, !dbg [[DBG11]]
+; CHECK-DAG:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP37]], i8* align 16 [[TMP2]], i64 176, i1 false), !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP40:%.*]] = bitcast i32* [[TMP39]] to i8*, !dbg [[DBG11]]
+; CHECK-DAG:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP40]], i8* align 16 [[TMP3]], i64 176, i1 false), !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP41:%.*]] = ptrtoint i8* [[ARRAYDECAY1]] to i64, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP42:%.*]] = add i64 [[TMP41]], 8, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP43:%.*]] = inttoptr i64 [[TMP42]] to i64**, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP44:%.*]] = load i64*, i64** [[TMP43]], align 8, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP45:%.*]] = ptrtoint i64* [[TMP44]] to i64, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP46:%.*]] = xor i64 [[TMP45]], 87960930222080, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP47:%.*]] = inttoptr i64 [[TMP46]] to i8*, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP48:%.*]] = add i64 [[TMP46]], 17592186044416, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP49:%.*]] = inttoptr i64 [[TMP48]] to i32*, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP50:%.*]] = getelementptr i8, i8* [[TMP2]], i32 176, !dbg [[DBG11]]
+; CHECK-DAG:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP47]], i8* align 16 [[TMP50]], i64 [[TMP0]], i1 false), !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP51:%.*]] = getelementptr i8, i8* [[TMP3]], i32 176, !dbg [[DBG11]]
+; CHECK-DAG:    [[TMP52:%.*]] = bitcast i32* [[TMP49]] to i8*, !dbg [[DBG11]]
+; CHECK-DAG:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 [[TMP52]], i8* align 16 [[TMP51]], i64 [[TMP0]], i1 false), !dbg [[DBG11]]
 ; CHECK-DAG:    ret void
 ;
 entry:
