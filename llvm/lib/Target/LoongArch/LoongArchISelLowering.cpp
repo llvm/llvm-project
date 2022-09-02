@@ -114,6 +114,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
   }
 
+  // Effectively disable jump table generation.
+  setMinimumJumpTableEntries(INT_MAX);
+  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
+
   setOperationAction(ISD::BR_CC, GRLenVT, Expand);
   setOperationAction(ISD::SELECT_CC, GRLenVT, Expand);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
