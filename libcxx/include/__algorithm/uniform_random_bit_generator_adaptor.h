@@ -36,7 +36,7 @@ template <class _Gen>
 class _ClassicGenAdaptor {
 private:
   // The generator is not required to be copyable or movable, so it has to be stored as a reference.
-  _Gen& __gen;
+  _Gen& __gen_;
 
 public:
   using result_type = invoke_result_t<_Gen&>;
@@ -47,10 +47,10 @@ public:
   static constexpr auto max() { return __uncvref_t<_Gen>::max(); }
 
   _LIBCPP_HIDE_FROM_ABI
-  constexpr explicit _ClassicGenAdaptor(_Gen& __g) : __gen(__g) {}
+  constexpr explicit _ClassicGenAdaptor(_Gen& __g) : __gen_(__g) {}
 
   _LIBCPP_HIDE_FROM_ABI
-  constexpr auto operator()() const { return __gen(); }
+  constexpr auto operator()() const { return __gen_(); }
 };
 
 _LIBCPP_END_NAMESPACE_STD
