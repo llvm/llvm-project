@@ -783,10 +783,16 @@ void MemorySanitizer::createUserspaceApi(Module &M) {
   // Create the callback.
   // FIXME: this function should have "Cold" calling conv,
   // which is not yet implemented.
-  StringRef WarningFnName = Recover ? "__msan_warning_with_origin"
-                                    : "__msan_warning_with_origin_noreturn";
-  WarningFn =
-      M.getOrInsertFunction(WarningFnName, IRB.getVoidTy(), IRB.getInt32Ty());
+  if (TrackOrigins) {
+    StringRef WarningFnName = Recover ? "__msan_warning_with_origin"
+                                      : "__msan_warning_with_origin_noreturn";
+    WarningFn =
+        M.getOrInsertFunction(WarningFnName, IRB.getVoidTy(), IRB.getInt32Ty());
+  } else {
+    StringRef WarningFnName =
+        Recover ? "__msan_warning" : "__msan_warning_noreturn";
+    WarningFn = M.getOrInsertFunction(WarningFnName, IRB.getVoidTy());
+  }
 
   // Create the global TLS variables.
   RetvalTLS =
@@ -1238,7 +1244,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (!Origin)
       Origin = (Value *)IRB.getInt32(0);
     assert(Origin->getType()->isIntegerTy());
-    IRB.CreateCall(MS.WarningFn, Origin)->setCannotMerge();
+    if (MS.CompileKernel || MS.TrackOrigins)
+      IRB.CreateCall(MS.WarningFn, Origin)->setCannotMerge();
+    else
+      IRB.CreateCall(MS.WarningFn)->setCannotMerge();
     // FIXME: Insert UnreachableInst if !MS.Recover?
     // This may invalidate some of the following checks and needs to be done
     // at the very end.
