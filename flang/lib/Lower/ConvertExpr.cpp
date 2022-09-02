@@ -34,6 +34,7 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/Factory.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
+#include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Ragged.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -1056,6 +1057,8 @@ public:
     auto recTy = ty.cast<fir::RecordType>();
     auto fieldTy = fir::FieldType::get(ty.getContext());
     mlir::Value res = builder.createTemporary(loc, recTy);
+    mlir::Value box = builder.createBox(loc, fir::ExtendedValue{res});
+    fir::runtime::genDerivedTypeInitialize(builder, loc, box);
 
     for (const auto &value : ctor.values()) {
       const Fortran::semantics::Symbol &sym = *value.first;
