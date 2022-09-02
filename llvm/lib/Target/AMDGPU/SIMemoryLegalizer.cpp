@@ -172,13 +172,13 @@ public:
   }
 
   /// \returns The address spaces be accessed by the machine
-  /// instruction used to create this SiMemOpInfo.
+  /// instruction used to create this SIMemOpInfo.
   SIAtomicAddrSpace getInstrAddrSpace() const {
     return InstrAddrSpace;
   }
 
   /// \returns The address spaces that must be ordered by the machine
-  /// instruction used to create this SiMemOpInfo.
+  /// instruction used to create this SIMemOpInfo.
   SIAtomicAddrSpace getOrderingAddrSpace() const {
     return OrderingAddrSpace;
   }
