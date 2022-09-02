@@ -59,8 +59,9 @@ namespace builtin {
 using HasherT = BLAKE3;
 using HashType = decltype(HasherT::hash(std::declval<ArrayRef<uint8_t> &>()));
 
-class BuiltinCAS : public ObjectStore {
+class BuiltinCASContext : public CASContext {
   void printIDImpl(raw_ostream &OS, const CASID &ID) const final;
+  void anchor() override;
 
 public:
   /// Get the name of the hash for any table identifiers.
@@ -77,6 +78,15 @@ public:
         ("llvm.cas.builtin.v2[" + getHashName() + "]").str();
     return ID;
   }
+
+  static const BuiltinCASContext &getDefaultContext();
+
+  BuiltinCASContext() = default;
+};
+
+class BuiltinCAS : public ObjectStore {
+public:
+  BuiltinCAS() : ObjectStore(BuiltinCASContext::getDefaultContext()) {}
 
   Expected<CASID> parseID(StringRef Reference) final;
 

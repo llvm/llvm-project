@@ -24,13 +24,11 @@ namespace cas {
 class CASID;
 
 /// Context for CAS identifiers.
-///
-/// FIXME: Rename to ObjectContext.
-class CASIDContext {
+class CASContext {
   virtual void anchor();
 
 public:
-  virtual ~CASIDContext() = default;
+  virtual ~CASContext() = default;
 
   /// Get an identifer for the schema used by this CAS context. Two CAS
   /// instances should return \c true for this identifier if and only if their
@@ -97,7 +95,7 @@ public:
     return hash_combine_range(Hash.begin(), Hash.end());
   }
 
-  const CASIDContext &getContext() const {
+  const CASContext &getContext() const {
     assert(Context && "Tombstone or empty key for DenseMap?");
     return *Context;
   }
@@ -111,15 +109,15 @@ public:
 
   CASID() = delete;
 
-  static CASID create(const CASIDContext *Context, StringRef Hash) {
+  static CASID create(const CASContext *Context, StringRef Hash) {
     return CASID(Context, Hash);
   }
 
 private:
-  CASID(const CASIDContext *Context, StringRef Hash)
+  CASID(const CASContext *Context, StringRef Hash)
       : Context(Context), Hash(Hash) {}
 
-  const CASIDContext *Context;
+  const CASContext *Context;
   SmallString<32> Hash;
 };
 

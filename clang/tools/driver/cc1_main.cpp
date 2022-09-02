@@ -706,7 +706,7 @@ Error ObjectStoreCachingOutputs::finishComputedResult(
   Expected<cas::ObjectRef> Result = CachedResultBuilder.build(*CAS);
   if (!Result)
     llvm::report_fatal_error(Result.takeError());
-  if (llvm::Error E = Cache->put(ResultCacheKey, *Result))
+  if (llvm::Error E = Cache->put(ResultCacheKey, CAS->getID(*Result)))
     llvm::report_fatal_error(std::move(E));
 
   // Replay / decanonicalize as necessary.

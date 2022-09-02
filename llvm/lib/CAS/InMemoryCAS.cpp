@@ -199,7 +199,7 @@ public:
 
   CASID getID(const InMemoryIndexValueT &I) const {
     StringRef Hash = toStringRef(I.Hash);
-    return CASID::create(this, Hash);
+    return CASID::create(&getContext(), Hash);
   }
   CASID getID(const InMemoryObject &O) const { return getID(O.getIndex()); }
 
@@ -221,7 +221,7 @@ public:
   /// the slot in the trie.
   const InMemoryObject *getInMemoryObject(CASID ID) const {
     assert(ID.getContext().getHashSchemaIdentifier() ==
-               getHashSchemaIdentifier() &&
+               getContext().getHashSchemaIdentifier() &&
            "Expected ID from same hash schema");
     if (InMemoryIndexT::const_pointer P = Index.find(ID.getHash()))
       return P->Data;

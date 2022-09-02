@@ -730,12 +730,12 @@ class OnDiskCAS : public BuiltinCAS {
 public:
   static StringRef getIndexTableName() {
     static const std::string Name =
-        ("llvm.cas.index[" + getHashName() + "]").str();
+        ("llvm.cas.index[" + BuiltinCASContext::getHashName() + "]").str();
     return Name;
   }
   static StringRef getDataPoolTableName() {
     static const std::string Name =
-        ("llvm.cas.data[" + getHashName() + "]").str();
+        ("llvm.cas.data[" + BuiltinCASContext::getHashName() + "]").str();
     return Name;
   }
 
@@ -818,7 +818,7 @@ public:
 
   CASID getID(const IndexProxy &I) const {
     StringRef Hash = toStringRef(I.Hash);
-    return CASID::create(this, Hash);
+    return CASID::create(&getContext(), Hash);
   }
 
   Optional<ObjectRef> getReference(const CASID &ID) const final;
@@ -1416,7 +1416,7 @@ Optional<ObjectRef> OnDiskCAS::getReference(const CASID &ID) const {
 OnDiskHashMappedTrie::const_pointer
 OnDiskCAS::getInternalIndexPointer(const CASID &ID) const {
   assert(ID.getContext().getHashSchemaIdentifier() ==
-             getHashSchemaIdentifier() &&
+             getContext().getHashSchemaIdentifier() &&
          "Expected ID from same hash schema");
   return Index.find(ID.getHash());
 }
@@ -1454,7 +1454,7 @@ CASID OnDiskCAS::getID(InternalRef Ref) const {
     report_fatal_error(
         "OnDiskCAS: corrupt internal reference to unknown object");
   StringRef Hash = toStringRef(I->Hash);
-  return CASID::create(this, Hash);
+  return CASID::create(&getContext(), Hash);
 }
 
 ArrayRef<char> OnDiskCAS::getDataConst(ObjectHandle Node) const {

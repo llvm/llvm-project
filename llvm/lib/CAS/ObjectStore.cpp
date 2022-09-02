@@ -14,7 +14,7 @@
 using namespace llvm;
 using namespace llvm::cas;
 
-void CASIDContext::anchor() {}
+void CASContext::anchor() {}
 void ObjectStore::anchor() {}
 
 LLVM_DUMP_METHOD void CASID::dump() const { print(dbgs()); }

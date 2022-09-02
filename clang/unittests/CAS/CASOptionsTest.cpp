@@ -119,7 +119,7 @@ TEST(CASOptionsTest, freezeConfig) {
 
   // Check that the configuration is hidden, but calls to
   // getOrCreateObjectStore() still return the original CAS.
-  EXPECT_EQ(CAS->getHashSchemaIdentifier(), Opts.CASPath);
+  EXPECT_EQ(CAS->getContext().getHashSchemaIdentifier(), Opts.CASPath);
 
   // Check that new paths are ignored.
   Opts.CASPath = "";

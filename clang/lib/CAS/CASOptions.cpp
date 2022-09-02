@@ -70,7 +70,8 @@ void CASOptions::freezeConfig(DiagnosticsEngine &Diags) {
   if (Cache.CAS) {
     // Set the CASPath to the hash schema, since that leaks through CASContext's
     // API and is observable.
-    CurrentConfig.CASPath = Cache.CAS->getHashSchemaIdentifier().str();
+    CurrentConfig.CASPath =
+        Cache.CAS->getContext().getHashSchemaIdentifier().str();
   }
   if (Cache.AC)
     CurrentConfig.CachePath = "";
@@ -80,7 +81,7 @@ static std::shared_ptr<llvm::cas::ActionCache>
 createCache(ObjectStore &CAS, const CASConfiguration &Config,
             DiagnosticsEngine &Diags) {
   if (Config.CachePath.empty())
-    return llvm::cas::createInMemoryActionCache(CAS);
+    return llvm::cas::createInMemoryActionCache();
 
   // Compute the path.
   std::string Path = Config.CachePath;
@@ -88,8 +89,8 @@ createCache(ObjectStore &CAS, const CASConfiguration &Config,
     Path = getDefaultOnDiskActionCachePath();
 
   // FIXME: Pass on the actual error from the CAS.
-  if (auto MaybeCache = llvm::expectedToOptional(
-          llvm::cas::createOnDiskActionCache(CAS, Path)))
+  if (auto MaybeCache =
+          llvm::expectedToOptional(llvm::cas::createOnDiskActionCache(Path)))
     return std::move(*MaybeCache);
   Diags.Report(diag::err_builtin_actioncache_cannot_be_initialized) << Path;
   return nullptr;
@@ -108,7 +109,7 @@ CASOptions::getOrCreateActionCache(DiagnosticsEngine &Diags,
     return nullptr;
 
   Cache.CAS = Cache.CAS ? Cache.CAS : llvm::cas::createInMemoryCAS();
-  return llvm::cas::createInMemoryActionCache(*Cache.CAS);
+  return llvm::cas::createInMemoryActionCache();
 }
 
 void CASOptions::ensurePersistentCAS() {
