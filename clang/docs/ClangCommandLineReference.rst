@@ -2729,7 +2729,7 @@ The visibility for definitions without an explicit DLL export class \[-fvisibili
 
 .. option:: -fvisibility=<arg>
 
-Set the default symbol visibility for all global declarations. <arg> must be 'hidden' or 'default'.
+Set the default symbol visibility for all global definitions. <arg> must be 'default', 'protected', 'internal' or 'hidden'.
 
 .. option:: -fwasm-exceptions
 
