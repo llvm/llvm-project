@@ -194,6 +194,19 @@ constexpr bool test() {
     [[maybe_unused]] auto partial = std::views::take(X{});
   }
 
+  // Test when `subrange<Iter>` is not well formed
+  {
+    int input[] = {1, 2, 3};
+    using Iter  = cpp20_input_iterator<int*>;
+    using Sent  = sentinel_wrapper<Iter>;
+    std::ranges::subrange r{Iter{input}, Sent{Iter{input + 3}}};
+    auto tv = std::views::take(std::move(r), 1);
+    auto it                  = tv.begin();
+    assert(*it == 1);
+    ++it;
+    assert(it == tv.end());
+  }
+
   return true;
 }
 
