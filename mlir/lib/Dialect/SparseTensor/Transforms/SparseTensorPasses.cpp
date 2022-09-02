@@ -217,10 +217,12 @@ struct SparseTensorStorageExpansionPass
     target.addDynamicallyLegalOp<func::ReturnOp>([&](func::ReturnOp op) {
       return converter.isLegal(op.getOperandTypes());
     });
+    // We generate UnrealizedConversionCastOp to intermix tuples and a
+    // list of types.
+    target.addLegalOp<UnrealizedConversionCastOp>();
     // Populate with rules and apply rewriting rules.
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
                                                                    converter);
-    populateCallOpTypeConversionPattern(patterns, converter);
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
     populateSparseTensorStorageExpansionPatterns(converter, patterns);
