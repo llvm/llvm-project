@@ -118,10 +118,6 @@ Type SPIRVTypeConverter::getIndexType() const {
   return IntegerType::get(getContext(), options.use64bitIndex ? 64 : 32);
 }
 
-const SPIRVTypeConverter::Options &SPIRVTypeConverter::getOptions() const {
-  return options;
-}
-
 MLIRContext *SPIRVTypeConverter::getContext() const {
   return targetEnv.getAttr().getContext();
 }
