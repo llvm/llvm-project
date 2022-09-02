@@ -1455,13 +1455,13 @@ func.func @canonicalize_parallel_insert_slice_indices(
   %c1 = arith.constant 1 : index
 
   //  CHECK-NOT: tensor.cast
-  //      CHECK: scf.foreach_thread (%[[tidx:[0-9a-z]*]]) in (%[[num_threads]]) -> (tensor<?x?xf32>) {
+  //      CHECK: scf.foreach_thread (%[[tidx:[0-9a-z]*]]) in (%[[num_threads]]) shared_outs(%[[o:.*]] = %[[arg1]]) -> (tensor<?x?xf32>) {
   // CHECK-NEXT:   scf.foreach_thread.perform_concurrently {
-  // CHECK-NEXT:     tensor.parallel_insert_slice %[[arg0]] into %[[arg1]][%[[tidx]], 0] [1, 5] [1, 1]
-  %2 = scf.foreach_thread (%tidx) in (%num_threads)  -> (tensor<?x?xf32>) {
+  // CHECK-NEXT:     tensor.parallel_insert_slice %[[arg0]] into %[[o]][%[[tidx]], 0] [1, 5] [1, 1]
+  %2 = scf.foreach_thread (%tidx) in (%num_threads) shared_outs(%o = %arg1) -> (tensor<?x?xf32>) {
     %3 = tensor.cast %arg0 : tensor<1x5xf32> to tensor<?x5xf32>
     scf.foreach_thread.perform_concurrently {
-      tensor.parallel_insert_slice %3 into %arg1[%tidx, %c0] [%c1, 5] [%c1, %c1] : tensor<?x5xf32> into tensor<?x?xf32>
+      tensor.parallel_insert_slice %3 into %o[%tidx, %c0] [%c1, 5] [%c1, %c1] : tensor<?x5xf32> into tensor<?x?xf32>
     }
   }
   return %2 : tensor<?x?xf32>
@@ -1477,12 +1477,12 @@ func.func @dont_fold_parallel_insert_slice(
 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
-  //      CHECK: scf.foreach_thread () in () -> (tensor<1x5xf32>) {
+  //      CHECK: scf.foreach_thread () in () shared_outs(%[[o:.*]] = %[[arg1]]) -> (tensor<1x5xf32>) {
   // CHECK-NEXT:   scf.foreach_thread.perform_concurrently {
-  // CHECK-NEXT:     tensor.parallel_insert_slice %[[arg0]] into %[[arg1]][0, 0] [1, 5] [1, 1] : tensor<1x5xf32> into tensor<1x5xf32>
-  %2 = scf.foreach_thread () in ()  -> (tensor<1x5xf32>) {
+  // CHECK-NEXT:     tensor.parallel_insert_slice %[[arg0]] into %[[o]][0, 0] [1, 5] [1, 1] : tensor<1x5xf32> into tensor<1x5xf32>
+  %2 = scf.foreach_thread () in () shared_outs(%o = %arg1) -> (tensor<1x5xf32>) {
     scf.foreach_thread.perform_concurrently {
-      tensor.parallel_insert_slice %arg0 into %arg1[%c0, %c0] [1, 5] [%c1, %c1] : tensor<1x5xf32> into tensor<1x5xf32>
+      tensor.parallel_insert_slice %arg0 into %o[%c0, %c0] [1, 5] [%c1, %c1] : tensor<1x5xf32> into tensor<1x5xf32>
     }
   }
   return %2 : tensor<1x5xf32>

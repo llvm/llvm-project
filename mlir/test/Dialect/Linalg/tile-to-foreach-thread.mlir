@@ -15,15 +15,15 @@ module {
   func.func @matmul(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
   //  CHECK-DAG: %[[C10:.*]] = arith.constant 10 : index
   //  CHECK-DAG: %[[C20:.*]] = arith.constant 20 : index
-  //      CHECK: scf.foreach_thread ({{.*}}) in (%[[C10]], %[[C20]]) -> (tensor<?x?xf32>) {
+  //      CHECK: scf.foreach_thread ({{.*}}) in (%[[C10]], %[[C20]]) shared_outs(%[[C_BLK:.*]] = %[[C]]) -> (tensor<?x?xf32>) {
   //      CHECK:   %[[tA:.*]] = tensor.extract_slice %[[A]]{{.*}} : tensor<?x?xf32> to tensor<?x?xf32>
   //      CHECK:   %[[tB:.*]] = tensor.extract_slice %[[B]]{{.*}} : tensor<?x?xf32> to tensor<?x?xf32>
-  //      CHECK:   %[[tC:.*]] = tensor.extract_slice %[[C]]{{.*}} : tensor<?x?xf32> to tensor<?x?xf32>
+  //      CHECK:   %[[tC:.*]] = tensor.extract_slice %[[C_BLK]]{{.*}} : tensor<?x?xf32> to tensor<?x?xf32>
   //      CHECK:   %[[RES:.*]] = linalg.matmul
   // CHECK-SAME:      ins(%[[tA]], %[[tB]] : tensor<?x?xf32>, tensor<?x?xf32>)
   // CHECK-SAME:     outs(%[[tC]] : tensor<?x?xf32>) -> tensor<?x?xf32>
   //      CHECK:   scf.foreach_thread.perform_concurrently {
-  // CHECK-NEXT:     tensor.parallel_insert_slice %[[RES]] into %[[C]]{{.*}} :
+  // CHECK-NEXT:     tensor.parallel_insert_slice %[[RES]] into %[[C_BLK]]{{.*}} :
   // CHECK-SAME:       tensor<?x?xf32> into tensor<?x?xf32>
   // CHECK-NEXT:   }
   // CHECK-NEXT: } {thread_dim_mapping = [1, 0]}
@@ -55,10 +55,10 @@ module {
 //  CHECK-SAME:   %[[A:[0-9a-z]+]]: tensor
 //  CHECK-SAME:   %[[B:[0-9a-z]+]]: tensor
 //  CHECK-SAME:   %[[C:[0-9a-z]+]]: tensor
-func.func @matmul_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: tensor<100x300xf32>) -> tensor<100x300xf32> {  
+func.func @matmul_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: tensor<100x300xf32>) -> tensor<100x300xf32> {
   //  CHECK-DAG: %[[c10:.+]] = arith.constant 10 : index
   //  CHECK-DAG: %[[c21:.+]] = arith.constant 21 : index
-  //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (%[[c10]], %[[c21]])
+  //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (%[[c10]], %[[c21]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
   //      CHECK:   %[[TSMIN:.+]] = affine.min #[[$map0]](%[[IV1]])
   //      CHECK:   %[[TS:.+]] = affine.max #[[$map1]](%[[TSMIN]])
   //  CHECK-NOT:   affine.min
@@ -67,7 +67,7 @@ func.func @matmul_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: t
   //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map3]](%[[IV1]])
   //      CHECK:   %[[tA:.+]] = tensor.extract_slice %[[A]][%[[LB0]], 0] [10, 200] [1, 1] :
   //      CHECK:   %[[tB:.+]] = tensor.extract_slice %[[B]][0, %[[LB1]]] [200, %[[TS]]] [1, 1] :
-  //      CHECK:   %[[tC:.+]] = tensor.extract_slice %[[C]][%[[LB0]], %[[LB1]]] [10, %[[TS]]] [1, 1] :
+  //      CHECK:   %[[tC:.+]] = tensor.extract_slice %[[C_BLK]][%[[LB0]], %[[LB1]]] [10, %[[TS]]] [1, 1] :
   //      CHECK:   linalg.matmul
   //      CHECK:   scf.foreach_thread.perform_concurrently
   // CHECK-NEXT:    tensor.parallel_insert_slice
@@ -104,14 +104,14 @@ func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C
   //      CHECK: %[[N:.+]] = tensor.dim %[[B]], %c1 : 
   //      CHECK: %[[NT0:.+]] = affine.apply #map0()[%[[M]]]
   //      CHECK: %[[NT1:.+]] = affine.apply #map1()[%[[N]]]
-  //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (%[[NT0]], %[[NT1]])
+  //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (%[[NT0]], %[[NT1]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
   //      CHECK:   %[[TS0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]  
   //      CHECK:   %[[TS1:.+]] = affine.min #[[$map4]](%[[IV1]])[%[[N]]]
   //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map5]](%[[IV0]])
-  //      CHECK    tensor.extract_slice %[[A]]
   //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map6]](%[[IV1]])
-  //      CHECK    tensor.extract_slice %[[B]]
-  //      CHECK    tensor.extract_slice %[[C]]
+  //      CHECK:   tensor.extract_slice %[[A]]
+  //      CHECK:   tensor.extract_slice %[[B]]
+  //      CHECK:   tensor.extract_slice %[[C_BLK]]
   //      CHECK:   linalg.matmul
   //      CHECK:   scf.foreach_thread.perform_concurrently
   // CHECK-NEXT:    tensor.parallel_insert_slice
@@ -144,7 +144,7 @@ transform.with_pdl_patterns {
 func.func @matmul_tile_size_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: tensor<100x300xf32>) -> tensor<100x300xf32> {
   //  CHECK-DAG: %[[c10:.+]] = arith.constant 10 :
   //  CHECK-DAG: %[[c15:.+]] = arith.constant 15 :
-  //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (%[[c10]], %[[c15]])
+  //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (%[[c10]], %[[c15]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
   //      CHECK:   %[[TS:.+]] = affine.min #[[$map0]](%[[IV1]])  
   //  CHECK-NOT:   affine.max
   //  CHECK-NOT:   affine.min
@@ -152,7 +152,7 @@ func.func @matmul_tile_size_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf
   //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map3]](%[[IV1]])
   //      CHECK:   %[[tA:.+]] = tensor.extract_slice %[[A]][%[[LB0]], 0] [10, 200] [1, 1] :
   //      CHECK:   %[[tB:.+]] = tensor.extract_slice %[[B]][0, %[[LB1]]] [200, %[[TS]]] [1, 1] :
-  //      CHECK:   %[[tC:.+]] = tensor.extract_slice %[[C]][%[[LB0]], %[[LB1]]] [10, %[[TS]]] [1, 1] :
+  //      CHECK:   %[[tC:.+]] = tensor.extract_slice %[[C_BLK]][%[[LB0]], %[[LB1]]] [10, %[[TS]]] [1, 1] :
   //      CHECK:   linalg.matmul
   //      CHECK:   scf.foreach_thread.perform_concurrently
   // CHECK-NEXT:    tensor.parallel_insert_slice
@@ -199,7 +199,7 @@ module {
 
 // CHECK-LABEL: extract_source(
 //       CHECK:  %[[C2:.*]] = arith.constant 2 : index
-//       CHECK:  scf.foreach_thread (%[[ARG:.*]]) in (%[[C2]]) -> (tensor<4xf32>) {
+//       CHECK:  scf.foreach_thread (%[[ARG:.*]]) in (%[[C2]]) shared_outs(%{{.*}} = %{{.*}}) -> (tensor<4xf32>) {
 //       CHECK:    %[[OFF:.*]] = affine.apply #[[$map0]](%[[ARG]])
 //       CHECK:    scf.foreach_thread.perform_concurrently {
 //       CHECK:      tensor.parallel_insert_slice %{{.*}} into %{{.*}}[%[[OFF]]] [2] [1] : tensor<2xf32> into tensor<4xf32>
@@ -227,10 +227,10 @@ func.func @matmul_tile_size_dynamic_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?x
   //  CHECK-DAG: %[[N:.+]] = tensor.dim %[[B]], %c1 :
   //  CHECK-DAG: %[[NT0:.+]] = affine.apply #[[$map0]]()[%[[M]], %[[tile_size]]]
   //  CHECK-DAG: %[[NT1:.+]] = affine.apply #[[$map1]]()[%[[N]]]
-  //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (%[[NT0]], %[[NT1]])
-  //      CHECK    tensor.extract_slice %[[A]]
-  //      CHECK    tensor.extract_slice %[[B]]
-  //      CHECK    tensor.extract_slice %[[C]]
+  //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (%[[NT0]], %[[NT1]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
+  //      CHECK:   tensor.extract_slice %[[A]]
+  //      CHECK:   tensor.extract_slice %[[B]]
+  //      CHECK:   tensor.extract_slice %[[C_BLK]]
   //      CHECK:   linalg.matmul
   //      CHECK:   scf.foreach_thread.perform_concurrently
   // CHECK-NEXT:    tensor.parallel_insert_slice

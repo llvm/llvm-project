@@ -235,8 +235,8 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
   if (llvm::any_of(loopRanges, hasStrideOne))
     return op->emitOpError("only stride-1 supported atm");
   // TODO: support `getTiledImplementation` with >1 produced tiled ops.
-  auto destOperands = op.getDestinationOperands(b);
-  if (destOperands.size() != 1)
+  auto dest = op.getDestinationOperands(b);
+  if (dest.size() != 1)
     return op->emitOpError("only single dest operand supported atm");
 
   SmallVector<OpFoldResult> nonZeroNumThreads =
@@ -255,8 +255,7 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
   // version because we require the use of RewriterBase in the body, so we
   // manually move the insertion point to the body below.
   scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
-      loc, op->getResultTypes(), ValueRange(materializedNonZeroNumThreads),
-      threadDimMapping);
+      loc, dest, ValueRange(materializedNonZeroNumThreads), threadDimMapping);
 
   // Fill out the ForeachThreadOp body.
   b.setInsertionPointToStart(foreachThreadOp.getBody(0));
@@ -317,17 +316,34 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
     ++threadIdIdx;
   }
 
+  // Clone the tileable op and update its destination operands to use the output
+  // bbArgs of the ForeachThreadOp.
+  ArrayRef<BlockArgument> destBbArgs =
+      foreachThreadOp.getOutputBlockArguments();
+  Operation *clonedOp = b.clone(*op.getOperation());
+  auto destinationStyleOp = dyn_cast<DestinationStyleOpInterface>(clonedOp);
+  if (destinationStyleOp) {
+    for (OpOperand *outOperand : destinationStyleOp.getOutputOperands()) {
+      auto it = llvm::find(dest, outOperand->get());
+      assert(it != dest.end() && "dest operand not found in dest");
+      unsigned destNum = std::distance(dest.begin(), it);
+      outOperand->set(destBbArgs[destNum]);
+    }
+  }
+
+  // Tile the cloned op and delete the clone.
   SmallVector<Operation *> tiledOps =
-      op.getTiledImplementation(b, tiledOffsets, tiledSizes);
+      cast<TilingInterface>(clonedOp).getTiledImplementation(b, tiledOffsets,
+                                                             tiledSizes);
+  b.eraseOp(clonedOp);
   assert(tiledOps.size() == 1 && "expected a single produced tiled op");
   tiledOp = tiledOps.front();
 
   auto tilingInterfaceOp = dyn_cast<TilingInterface>(tiledOp);
   assert(tilingInterfaceOp && "Tiled op does not implement TilingInterface");
   OpBuilder::InsertPoint insertPt = b.saveInsertionPoint();
-  for (auto it :
-       llvm::zip(llvm::seq(unsigned(0), unsigned(destOperands.size())),
-                 tilingInterfaceOp->getResults(), destOperands)) {
+  for (auto it : llvm::zip(llvm::seq(unsigned(0), unsigned(dest.size())),
+                           tilingInterfaceOp->getResults(), destBbArgs)) {
     b.setInsertionPoint(insertPt.getBlock(), insertPt.getPoint());
     SmallVector<OpFoldResult> resultOffsets, resultSizes;
     if (failed(op.getResultTilePosition(b, std::get<0>(it), tiledOffsets,
