@@ -228,11 +228,6 @@ namespace std {
 #include <type_traits>
 #include <version>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <typeinfo>
-#  include <utility>
-#endif
-
 // standard-mandated includes
 #include <compare>
 
@@ -1817,5 +1812,10 @@ constexpr auto&& __unchecked_get(variant<_Types...>& __v) noexcept {
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <typeinfo>
+#  include <utility>
+#endif
 
 #endif // _LIBCPP_VARIANT
