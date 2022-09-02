@@ -24,7 +24,6 @@ def SCF_Dialect : Dialect {
   let name = "scf";
   let cppNamespace = "::mlir::scf";
   let dependentDialects = ["arith::ArithmeticDialect"];
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 // Base class for SCF dialect ops.

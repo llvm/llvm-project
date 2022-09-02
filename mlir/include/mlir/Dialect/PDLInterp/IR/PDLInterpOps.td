@@ -48,7 +48,6 @@ def PDLInterp_Dialect : Dialect {
     /// to rewrite the IR after a successful match.
     static StringRef getRewriterModuleName() { return "rewriters"; }
   }];
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//
