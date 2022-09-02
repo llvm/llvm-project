@@ -100,4 +100,28 @@ spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
     %0 = spv.GroupNonUniformUMin "Workgroup" "Reduce" %val : i32
     spv.ReturnValue %0: i32
   }
+
+  spv.func @group_non_uniform_shuffle(%val: f32, %id: i32) -> f32 "None" {
+    // CHECK: %{{.+}} = spv.GroupNonUniformShuffle <Subgroup> %{{.+}}, %{{.+}} : f32, i32
+    %0 = spv.GroupNonUniformShuffle <Subgroup> %val, %id : f32, i32
+    spv.ReturnValue %0: f32
+  }
+
+  spv.func @group_non_uniform_shuffle_up(%val: f32, %id: i32) -> f32 "None" {
+    // CHECK: %{{.+}} = spv.GroupNonUniformShuffleUp <Subgroup> %{{.+}}, %{{.+}} : f32, i32
+    %0 = spv.GroupNonUniformShuffleUp <Subgroup> %val, %id : f32, i32
+    spv.ReturnValue %0: f32
+  }
+
+  spv.func @group_non_uniform_shuffle_down(%val: f32, %id: i32) -> f32 "None" {
+    // CHECK: %{{.+}} = spv.GroupNonUniformShuffleDown <Subgroup> %{{.+}}, %{{.+}} : f32, i32
+    %0 = spv.GroupNonUniformShuffleDown <Subgroup> %val, %id : f32, i32
+    spv.ReturnValue %0: f32
+  }
+
+  spv.func @group_non_uniform_shuffle_xor(%val: f32, %id: i32) -> f32 "None" {
+    // CHECK: %{{.+}} = spv.GroupNonUniformShuffleXor <Subgroup> %{{.+}}, %{{.+}} : f32, i32
+    %0 = spv.GroupNonUniformShuffleXor <Subgroup> %val, %id : f32, i32
+    spv.ReturnValue %0: f32
+  }
 }

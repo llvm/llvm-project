@@ -121,9 +121,9 @@ def SPV_GroupNonUniformBroadcastOp : SPV_Op<"GroupNonUniformBroadcast",
     integer-float-scalar-vector-type ::= integer-type | float-type |
                                `vector<` integer-literal `x` integer-type `>` |
                                `vector<` integer-literal `x` float-type `>`
-    group-non-uniform-broadcast-op ::= ssa-id `=` 
-	            `spv.GroupNonUniformBroadcast` scope ssa_use,
-                ssa_use `:` integer-float-scalar-vector-type `,` integer-type
+    group-non-uniform-broadcast-op ::= ssa-id `=`
+        `spv.GroupNonUniformBroadcast` scope ssa_use, ssa_use
+        `:` integer-float-scalar-vector-type `,` integer-type
     ```mlir
 
     #### Example:
@@ -662,6 +662,221 @@ def SPV_GroupNonUniformSMinOp : SPV_GroupNonUniformArithmeticOp<"GroupNonUniform
     Extension<[]>,
     Capability<[SPV_C_GroupNonUniformArithmetic, SPV_C_GroupNonUniformClustered, SPV_C_GroupNonUniformPartitionedNV]>
   ];
+}
+
+// -----
+
+def SPV_GroupNonUniformShuffleOp : SPV_Op<"GroupNonUniformShuffle",
+    [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
+  let summary = [{
+    Result is the Value of the invocation identified by the id Id.
+  }];
+
+  let description = [{
+    Result Type  must be a scalar or vector of floating-point type, integer
+    type, or Boolean type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+     The type of Value must be the same as Result Type.
+
+    Id  must be a scalar of integer type, whose Signedness operand is 0.
+
+    The resulting value is undefined if Id is an inactive invocation, or is
+    greater than or equal to the size of the group.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spv.GroupNonUniformShuffle <Subgroup> %val, %id : f32, i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_3>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPV_C_GroupNonUniformShuffle]>
+  ];
+
+  let arguments = (ins
+    SPV_ScopeAttr:$execution_scope,
+    SPV_ScalarOrVector:$value,
+    SPV_Integer:$id
+  );
+
+  let results = (outs
+    SPV_ScalarOrVector:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope operands attr-dict `:` type($value) `,` type($id)
+  }];
+}
+
+// -----
+
+def SPV_GroupNonUniformShuffleDownOp : SPV_Op<"GroupNonUniformShuffleDown",
+    [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
+  let summary = [{
+    Result is the Value of the invocation identified by the current
+    invocation’s id within the group + Delta.
+  }];
+
+  let description = [{
+    Result Type  must be a scalar or vector of floating-point type, integer
+    type, or Boolean type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+     The type of Value must be the same as Result Type.
+
+    Delta  must be a scalar of integer type, whose Signedness operand is 0.
+
+    Delta is treated as unsigned and the resulting value is undefined if
+    Delta is greater than or equal to the size of the group, or if the
+    current invocation’s id within the group + Delta is either an inactive
+    invocation or greater than or equal to the size of the group.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spv.GroupNonUniformShuffleDown <Subgroup> %val, %delta : f32, i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_3>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPV_C_GroupNonUniformShuffleRelative]>
+  ];
+
+  let arguments = (ins
+    SPV_ScopeAttr:$execution_scope,
+    SPV_ScalarOrVector:$value,
+    SPV_Integer:$delta
+  );
+
+  let results = (outs
+    SPV_Type:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope operands attr-dict `:` type($value) `,` type($delta)
+  }];
+}
+
+// -----
+
+def SPV_GroupNonUniformShuffleUpOp : SPV_Op<"GroupNonUniformShuffleUp",
+    [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
+  let summary = [{
+    Result is the Value of the invocation identified by the current
+    invocation’s id within the group - Delta.
+  }];
+
+  let description = [{
+    Result Type  must be a scalar or vector of floating-point type, integer
+    type, or Boolean type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+     The type of Value must be the same as Result Type.
+
+    Delta  must be a scalar of integer type, whose Signedness operand is 0.
+
+    Delta is treated as unsigned and the resulting value is undefined if
+    Delta is greater than the current invocation’s id within the group or if
+    the selected lane is inactive.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spv.GroupNonUniformShuffleUp <Subgroup> %val, %delta : f32, i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_3>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPV_C_GroupNonUniformShuffleRelative]>
+  ];
+
+  let arguments = (ins
+    SPV_ScopeAttr:$execution_scope,
+    SPV_ScalarOrVector:$value,
+    SPV_Integer:$delta
+  );
+
+  let results = (outs
+    SPV_Type:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope operands attr-dict `:` type($value) `,` type($delta)
+  }];
+}
+
+// -----
+
+def SPV_GroupNonUniformShuffleXorOp : SPV_Op<"GroupNonUniformShuffleXor",
+    [NoSideEffect, AllTypesMatch<["value", "result"]>]> {
+  let summary = [{
+    Result is the Value of the invocation identified by the current
+    invocation’s id within the group xor’ed with Mask.
+  }];
+
+  let description = [{
+    Result Type  must be a scalar or vector of floating-point type, integer
+    type, or Boolean type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+     The type of Value must be the same as Result Type.
+
+    Mask  must be a scalar of integer type, whose Signedness operand is 0.
+
+    The resulting value is undefined if current invocation’s id within the
+    group xor’ed with Mask is an inactive invocation, or is greater than or
+    equal to the size of the group.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spv.GroupNonUniformShuffleXor <Subgroup> %val, %mask : f32, i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPV_V_1_3>,
+    MaxVersion<SPV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPV_C_GroupNonUniformShuffle]>
+  ];
+
+  let arguments = (ins
+    SPV_ScopeAttr:$execution_scope,
+    SPV_ScalarOrVector:$value,
+    SPV_Integer:$mask
+  );
+
+  let results = (outs
+    SPV_Type:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope operands attr-dict `:` type($value) `,` type($mask)
+  }];
 }
 
 // -----
