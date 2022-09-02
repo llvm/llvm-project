@@ -72,7 +72,8 @@ const char* Mips::MipsFCCToString(Mips::CondCode CC) {
 }
 
 void MipsInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-  OS << '$' << StringRef(getRegisterName(RegNo)).lower();
+  OS << markup("<reg:") << '$' << StringRef(getRegisterName(RegNo)).lower()
+     << markup(">");
 }
 
 void MipsInstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -132,7 +133,7 @@ void MipsInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 
   if (Op.isImm()) {
-    O << formatImm(Op.getImm());
+    O << markup("<imm:") << formatImm(Op.getImm()) << markup(">");
     return;
   }
 
@@ -148,9 +149,9 @@ void MipsInstPrinter::printJumpOperand(const MCInst *MI, unsigned OpNo,
     return printOperand(MI, OpNo, STI, O);
 
   if (PrintBranchImmAsAddress)
-    O << formatHex(Op.getImm());
+    O << markup("<imm:") << formatHex(Op.getImm()) << markup(">");
   else
-    O << formatImm(Op.getImm());
+    O << markup("<imm:") << formatImm(Op.getImm()) << markup(">");
 }
 
 void MipsInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
@@ -167,9 +168,9 @@ void MipsInstPrinter::printBranchOperand(const MCInst *MI, uint64_t Address,
       Target &= 0xffffffff;
     else if (STI.hasFeature(Mips::FeatureMips16))
       Target &= 0xffff;
-    O << formatHex(Target);
+    O << markup("<imm:") << formatHex(Target) << markup(">");
   } else {
-    O << formatImm(Op.getImm());
+    O << markup("<imm:") << formatImm(Op.getImm()) << markup(">");
   }
 }
 
@@ -182,7 +183,7 @@ void MipsInstPrinter::printUImm(const MCInst *MI, int opNum,
     Imm -= Offset;
     Imm &= (1 << Bits) - 1;
     Imm += Offset;
-    O << formatImm(Imm);
+    O << markup("<imm:") << formatImm(Imm) << markup(">");
     return;
   }
 
@@ -211,10 +212,12 @@ void MipsInstPrinter::printMemOperand(const MCInst *MI, int opNum,
     break;
   }
 
+  O << markup("<mem:");
   printOperand(MI, opNum + 1, STI, O);
   O << "(";
   printOperand(MI, opNum, STI, O);
   O << ")";
+  O << markup(">");
 }
 
 void MipsInstPrinter::printMemOperandEA(const MCInst *MI, int opNum,
