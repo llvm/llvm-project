@@ -24,7 +24,7 @@ void __assert_fail(const char *assertion, const char *file, unsigned line,
                    const char *function);
 }
 
-#if !defined(OMPTARGET_DEBUG) || ( OMPTARGET_DEBUG != 0 )
+#ifdef OMPTARGET_DEBUG
 #define ASSERT(expr)                                                           \
   {                                                                            \
     if (config::isDebugMode(config::DebugKind::Assertion) && !(expr))          \
