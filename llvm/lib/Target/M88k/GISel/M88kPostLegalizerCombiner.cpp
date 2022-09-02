@@ -41,6 +41,82 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
+/*
+Match:
+
+    %2:gr(s32) = G_CONSTANT i32 0
+    %3:gr(s1) = G_ICMP intpred(eq), %0(s32), %2
+    %4:gr(s32) = G_ZEXT %3(s1)
+    %5:gr(s32) = nsw G_ADD %4, %1
+=>
+    %2:gr(s32) = G_CONSTANT i32 0
+               = G_USUBO %2, %0(s32)
+               = G_UADDE
+        subu.co  %r0,%r0,%r2
+        addu.ci  %r4,%r3,%r0
+
+    %2:gr(s32) = G_CONSTANT i32 0
+    %3:gr(s1) = G_ICMP intpred(ne), %1(s32), %2
+    %4:gr(s32) = G_SEXT %3(s1)
+    %5:gr(s32) = G_ADD %4, %0
+=>
+       subu.co  %r0,%r0,%r3
+        subu.ci  %r2,%r2,%r0
+*/
+
+// Match G_ADD ...
+bool matchAddCmpToSubAdd(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         std::tuple<Register, Register, Register> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ADD);
+
+  Register SrcRegA;
+  Register SrcRegB;
+  Optional<ValueAndVReg> CstValReg;
+  CmpInst::Predicate Pred;
+  if (!mi_match(
+          MI, MRI,
+          m_GAdd(m_Reg(SrcRegA), m_GZExt(m_GICmp(m_Pred(Pred), m_Reg(SrcRegB),
+                                                 m_GCst(CstValReg))))))
+    return false;
+
+  if (Pred != CmpInst::ICMP_EQ || !CstValReg || CstValReg->Value != 0)
+    return false;
+
+  MatchInfo = std::make_tuple(SrcRegA, SrcRegB, CstValReg->VReg);
+/*
+  MatchInfo = [=](MachineIRBuilder &B) {
+    Register CarryOut = MRI.createGenericVirtualRegister(LLT::scalar(32));
+
+    B.buildInstr(TargetOpcode::G_USUBO, {}, {});
+    B.buildInstr(TargetOpcode::G_UADDE, {}, {});
+  };
+*/
+  return true;
+}
+
+// Lower to ...
+bool applyAddCmpToSubAdd(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         std::tuple<Register, Register, Register> &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ADD);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcRegA;
+  Register SrcRegB;
+  Register ZeroReg;
+  std::tie(SrcRegA, SrcRegB, ZeroReg) = MatchInfo;
+
+  MachineIRBuilder B(MI);
+  Register Carry = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register UnusedReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  Register UnusedCarry = MRI.createGenericVirtualRegister(LLT::scalar(32));
+
+  B.buildInstr(TargetOpcode::G_USUBO, {UnusedReg, Carry}, {ZeroReg, SrcRegB});
+  B.buildInstr(TargetOpcode::G_UADDE, {DstReg, UnusedCarry},
+               {SrcRegA, ZeroReg, Carry});
+  MI.eraseFromParent();
+  return true;
+}
+
 #define M88KPOSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
 #include "M88kGenPostLegalizeGICombiner.inc"
 #undef M88KPOSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS

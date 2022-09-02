@@ -54,9 +54,23 @@ def M88kPreLegalizerCombinerHelper: GICombinerHelper<
   let AdditionalArguments = [];
 }
 
+// Combine
+//   G_ADD $dst, (G_ZEXT (G_ICMP eq, $src, 0))
+// into
+//   G_UADDE $dst, (G_USUBO 0, %src)
+// under certain restrictions.
+def subadd_from_icmpadd_matchdata : GIDefMatchData<"std::tuple<Register, Register, Register>">;
+def subadd_from_icmpadd : GICombineRule<
+  (defs root:$root, subadd_from_icmpadd_matchdata:$matchinfo),
+  (match (wip_match_opcode G_ADD):$root,
+         [{ return matchAddCmpToSubAdd(*${root}, MRI,
+                                                   ${matchinfo}); }]),
+  (apply [{ applyAddCmpToSubAdd(*${root}, MRI, ${matchinfo}); }])>;
+
 // Post-legalization combines which are primarily optimizations.
 def M88kPostLegalizerCombinerHelper: GICombinerHelper<
   "M88kGenPostLegalizerCombinerHelper", [
+  //subadd_from_icmpadd,
   form_bitfield_extract, // Some rules require legalizer
   rotate_out_of_range // Required for left rotates, which produce a negative constant
   ]> {
