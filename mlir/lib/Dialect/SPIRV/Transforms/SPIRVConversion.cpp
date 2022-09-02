@@ -235,7 +235,7 @@ static Type convertVectorType(const spirv::TargetEnv &targetEnv,
                               const SPIRVTypeConverter::Options &options,
                               VectorType type,
                               Optional<spirv::StorageClass> storageClass = {}) {
-  if (type.getRank() == 1 && type.getNumElements() == 1)
+  if (type.getRank() <= 1 && type.getNumElements() == 1)
     return type.getElementType();
 
   if (!spirv::CompositeType::isValid(type)) {

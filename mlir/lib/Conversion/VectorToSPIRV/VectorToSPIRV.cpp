@@ -41,7 +41,7 @@ struct VectorBitcastConvert final
   LogicalResult
   matchAndRewrite(vector::BitCastOp bitcastOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto dstType = getTypeConverter()->convertType(bitcastOp.getType());
+    Type dstType = getTypeConverter()->convertType(bitcastOp.getType());
     if (!dstType)
       return failure();
 
@@ -60,15 +60,21 @@ struct VectorBroadcastConvert final
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::BroadcastOp broadcastOp, OpAdaptor adaptor,
+  matchAndRewrite(vector::BroadcastOp castOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (broadcastOp.getSource().getType().isa<VectorType>() ||
-        !spirv::CompositeType::isValid(broadcastOp.getVectorType()))
+    Type resultType = getTypeConverter()->convertType(castOp.getVectorType());
+    if (!resultType)
       return failure();
-    SmallVector<Value, 4> source(broadcastOp.getVectorType().getNumElements(),
+
+    if (resultType.isa<spirv::ScalarType>()) {
+      rewriter.replaceOp(castOp, adaptor.getSource());
+      return success();
+    }
+
+    SmallVector<Value, 4> source(castOp.getVectorType().getNumElements(),
                                  adaptor.getSource());
     rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
-        broadcastOp, broadcastOp.getVectorType(), source);
+        castOp, castOp.getVectorType(), source);
     return success();
   }
 };
@@ -85,7 +91,7 @@ struct VectorExtractOpConvert final
     if (resultVectorType && resultVectorType.getNumElements() > 1)
       return failure();
 
-    auto dstType = getTypeConverter()->convertType(extractOp.getType());
+    Type dstType = getTypeConverter()->convertType(extractOp.getType());
     if (!dstType)
       return failure();
 
@@ -108,7 +114,7 @@ struct VectorExtractStridedSliceOpConvert final
   LogicalResult
   matchAndRewrite(vector::ExtractStridedSliceOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto dstType = getTypeConverter()->convertType(extractOp.getType());
+    Type dstType = getTypeConverter()->convertType(extractOp.getType());
     if (!dstType)
       return failure();
 
@@ -183,13 +189,21 @@ struct VectorExtractElementOpConvert final
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::ExtractElementOp extractElementOp, OpAdaptor adaptor,
+  matchAndRewrite(vector::ExtractElementOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!spirv::CompositeType::isValid(extractElementOp.getVectorType()))
+    Type vectorType =
+        getTypeConverter()->convertType(adaptor.getVector().getType());
+    if (!vectorType)
       return failure();
+
+    if (vectorType.isa<spirv::ScalarType>()) {
+      rewriter.replaceOp(extractOp, adaptor.getVector());
+      return success();
+    }
+
     rewriter.replaceOpWithNewOp<spirv::VectorExtractDynamicOp>(
-        extractElementOp, extractElementOp.getType(), adaptor.getVector(),
-        extractElementOp.getPosition());
+        extractOp, extractOp.getType(), adaptor.getVector(),
+        extractOp.getPosition());
     return success();
   }
 };
@@ -199,13 +213,20 @@ struct VectorInsertElementOpConvert final
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(vector::InsertElementOp insertElementOp, OpAdaptor adaptor,
+  matchAndRewrite(vector::InsertElementOp insertOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (!spirv::CompositeType::isValid(insertElementOp.getDestVectorType()))
+    Type vectorType = getTypeConverter()->convertType(insertOp.getType());
+    if (!vectorType)
       return failure();
+
+    if (vectorType.isa<spirv::ScalarType>()) {
+      rewriter.replaceOp(insertOp, adaptor.getSource());
+      return success();
+    }
+
     rewriter.replaceOpWithNewOp<spirv::VectorInsertDynamicOp>(
-        insertElementOp, insertElementOp.getType(), insertElementOp.getDest(),
-        adaptor.getSource(), insertElementOp.getPosition());
+        insertOp, vectorType, insertOp.getDest(), adaptor.getSource(),
+        insertOp.getPosition());
     return success();
   }
 };
@@ -354,7 +375,7 @@ struct VectorShuffleOpConvert final
     auto oldResultType = shuffleOp.getVectorType();
     if (!spirv::CompositeType::isValid(oldResultType))
       return failure();
-    auto newResultType = getTypeConverter()->convertType(oldResultType);
+    Type newResultType = getTypeConverter()->convertType(oldResultType);
 
     auto oldSourceType = shuffleOp.getV1VectorType();
     if (oldSourceType.getNumElements() > 1) {
