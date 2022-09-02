@@ -488,6 +488,10 @@ CXType clang_getUnqualifiedType(CXType CT) {
   return MakeCXType(GetQualType(CT).getUnqualifiedType(), GetTU(CT));
 }
 
+CXType clang_getNonReferenceType(CXType CT) {
+  return MakeCXType(GetQualType(CT).getNonReferenceType(), GetTU(CT));
+}
+
 CXCursor clang_getTypeDeclaration(CXType CT) {
   if (CT.kind == CXType_Invalid)
     return cxcursor::MakeCXCursorInvalid(CXCursor_NoDeclFound);
