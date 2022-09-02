@@ -1031,10 +1031,8 @@ static Expr *buildStdNoThrowDeclRef(Sema &S, SourceLocation Loc) {
 }
 
 // Find an appropriate delete for the promise.
-static FunctionDecl *findDeleteForPromise(Sema &S, SourceLocation Loc,
-                                          QualType PromiseType) {
-  FunctionDecl *OperatorDelete = nullptr;
-
+static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseType,
+                                 FunctionDecl *&OperatorDelete) {
   DeclarationName DeleteName =
       S.Context.DeclarationNames.getCXXOperatorName(OO_Delete);
 
@@ -1046,25 +1044,31 @@ static FunctionDecl *findDeleteForPromise(Sema &S, SourceLocation Loc,
   // scope of the promise type. If nothing is found, a search is performed in
   // the global scope.
   if (S.FindDeallocationFunction(Loc, PointeeRD, DeleteName, OperatorDelete))
-    return nullptr;
+    return false;
 
-  // FIXME: We didn't implement following selection:
   // [dcl.fct.def.coroutine]p12
   //   If both a usual deallocation function with only a pointer parameter and a
   //   usual deallocation function with both a pointer parameter and a size
   //   parameter are found, then the selected deallocation function shall be the
   //   one with two parameters. Otherwise, the selected deallocation function
   //   shall be the function with one parameter.
-
   if (!OperatorDelete) {
     // Look for a global declaration.
-    const bool CanProvideSize = S.isCompleteType(Loc, PromiseType);
+    // Coroutines can always provide their required size.
+    const bool CanProvideSize = true;
     const bool Overaligned = false;
+    // Sema::FindUsualDeallocationFunction will try to find the one with two
+    // parameters first. It will return the deallocation function with one
+    // parameter if failed.
     OperatorDelete = S.FindUsualDeallocationFunction(Loc, CanProvideSize,
                                                      Overaligned, DeleteName);
+
+    if (!OperatorDelete)
+      return false;
   }
+
   S.MarkFunctionReferenced(Loc, OperatorDelete);
-  return OperatorDelete;
+  return true;
 }
 
 
@@ -1319,8 +1323,6 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // lvalue that denotes the parameter copy corresponding to p_i.
 
   FunctionDecl *OperatorNew = nullptr;
-  FunctionDecl *OperatorDelete = nullptr;
-  FunctionDecl *UnusedResult = nullptr;
   bool PassAlignment = false;
   SmallVector<Expr *, 1> PlacementArgs;
 
@@ -1344,11 +1346,13 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     // is performed in the global scope.
     Sema::AllocationFunctionScope NewScope =
         PromiseContainsNew ? Sema::AFS_Class : Sema::AFS_Global;
+    FunctionDecl *UnusedResult = nullptr;
     S.FindAllocationFunctions(Loc, SourceRange(),
                               NewScope,
                               /*DeleteScope*/ Sema::AFS_Both, PromiseType,
                               /*isArray*/ false, PassAlignment, PlacementArgs,
-                              OperatorNew, UnusedResult, /*Diagnose*/ false);
+                              OperatorNew, UnusedResult,
+                              /*Diagnose*/ false);
   };
 
   // We don't expect to call to global operator new with (size, p0, …, pn).
@@ -1379,6 +1383,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
       return false;
     PlacementArgs = {StdNoThrow};
     OperatorNew = nullptr;
+    FunctionDecl *UnusedResult = nullptr;
     S.FindAllocationFunctions(Loc, SourceRange(), /*NewScope*/ Sema::AFS_Both,
                               /*DeleteScope*/ Sema::AFS_Both, PromiseType,
                               /*isArray*/ false, PassAlignment, PlacementArgs,
@@ -1404,7 +1409,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     }
   }
 
-  if ((OperatorDelete = findDeleteForPromise(S, Loc, PromiseType)) == nullptr) {
+  FunctionDecl *OperatorDelete = nullptr;
+  if (!findDeleteForPromise(S, Loc, PromiseType, OperatorDelete)) {
     // FIXME: We should add an error here. According to:
     // [dcl.fct.def.coroutine]p12
     //   If no usual deallocation function is found, the program is ill-formed.
