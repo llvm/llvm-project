@@ -141,3 +141,19 @@ func.func @sparse_values_dcsr(%arg0: tensor<?x?xf64, #DCSR>) -> memref<?xf64> {
   %0 = sparse_tensor.values %arg0 : tensor<?x?xf64, #DCSR> to memref<?xf64>
   return %0 : memref<?xf64>
 }
+
+// CHECK-LABEL: func @sparse_dealloc_csr(
+//  CHECK-SAME: %[[A:.*]]: tuple<memref<2xindex>, memref<?xi32>, memref<?xi64>, memref<?xf64>>)
+//       CHECK: %[[F0:.*]] = sparse_tensor.storage_get %[[A]][0] : tuple<memref<2xindex>, memref<?xi32>, memref<?xi64>, memref<?xf64>> to memref<2xindex>
+//       CHECK: memref.dealloc %[[F0]] : memref<2xindex>
+//       CHECK: %[[F1:.*]] = sparse_tensor.storage_get %[[A]][1] : tuple<memref<2xindex>, memref<?xi32>, memref<?xi64>, memref<?xf64>> to memref<?xi32>
+//       CHECK: memref.dealloc %[[F1]] : memref<?xi32>
+//       CHECK: %[[F2:.*]] = sparse_tensor.storage_get %[[A]][2] : tuple<memref<2xindex>, memref<?xi32>, memref<?xi64>, memref<?xf64>> to memref<?xi64>
+//       CHECK: memref.dealloc %[[F2]] : memref<?xi64>
+//       CHECK: %[[F3:.*]] = sparse_tensor.storage_get %[[A]][3] : tuple<memref<2xindex>, memref<?xi32>, memref<?xi64>, memref<?xf64>> to memref<?xf64>
+//       CHECK: memref.dealloc %[[F3]] : memref<?xf64>
+//       CHECK: return
+func.func @sparse_dealloc_csr(%arg0: tensor<?x?xf64, #CSR>) {
+  bufferization.dealloc_tensor %arg0 : tensor<?x?xf64, #CSR>
+  return
+}
