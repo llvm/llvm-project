@@ -348,7 +348,7 @@ END_REGISTER_VP(vp_store, VP_STORE)
 // llvm.experimental.vp.strided.store(val,ptr,stride,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(experimental_vp_strided_store, 3, 4)
 // chain = EXPERIMENTAL_VP_STRIDED_STORE chain,val,base,offset,stride,mask,evl
-BEGIN_REGISTER_VP_SDNODE(EXPERIMENTAL_VP_STRIDED_STORE, 0, experimental_vp_strided_store, 5, 6)
+BEGIN_REGISTER_VP_SDNODE(EXPERIMENTAL_VP_STRIDED_STORE, 1, experimental_vp_strided_store, 5, 6)
 HELPER_MAP_VPID_TO_VPSD(experimental_vp_strided_store, EXPERIMENTAL_VP_STRIDED_STORE)
 VP_PROPERTY_MEMOP(1, 0)
 END_REGISTER_VP(experimental_vp_strided_store, EXPERIMENTAL_VP_STRIDED_STORE)
@@ -356,7 +356,7 @@ END_REGISTER_VP(experimental_vp_strided_store, EXPERIMENTAL_VP_STRIDED_STORE)
 // llvm.vp.scatter(ptr,val,mask,vlen)
 BEGIN_REGISTER_VP_INTRINSIC(vp_scatter, 2, 3)
 // chain = VP_SCATTER chain,val,base,indices,scale,mask,evl
-BEGIN_REGISTER_VP_SDNODE(VP_SCATTER, -1, vp_scatter, 5, 6)
+BEGIN_REGISTER_VP_SDNODE(VP_SCATTER, 1, vp_scatter, 5, 6)
 HELPER_MAP_VPID_TO_VPSD(vp_scatter, VP_SCATTER)
 VP_PROPERTY_FUNCTIONAL_INTRINSIC(masked_scatter)
 VP_PROPERTY_MEMOP(1, 0)
@@ -399,7 +399,7 @@ END_REGISTER_VP(vp_gather, VP_GATHER)
     "The internal helper macro HELPER_REGISTER_REDUCTION_VP is already defined!"
 #endif
 #define HELPER_REGISTER_REDUCTION_VP(VPID, VPSD, INTRIN)                       \
-  BEGIN_REGISTER_VP(VPID, 2, 3, VPSD, -1)                                      \
+  BEGIN_REGISTER_VP(VPID, 2, 3, VPSD, 1)                                       \
   VP_PROPERTY_FUNCTIONAL_INTRINSIC(INTRIN)                                     \
   VP_PROPERTY_REDUCTION(0, 1)                                                  \
   END_REGISTER_VP(VPID, VPSD)
@@ -462,10 +462,10 @@ HELPER_REGISTER_REDUCTION_VP(vp_reduce_fmin, VP_REDUCE_FMIN,
 #endif
 #define HELPER_REGISTER_REDUCTION_SEQ_VP(VPID, VPSD, SEQ_VPSD, INTRIN)         \
   BEGIN_REGISTER_VP_INTRINSIC(VPID, 2, 3)                                      \
-  BEGIN_REGISTER_VP_SDNODE(VPSD, -1, VPID, 2, 3)                               \
+  BEGIN_REGISTER_VP_SDNODE(VPSD, 1, VPID, 2, 3)                                \
   VP_PROPERTY_REDUCTION(0, 1)                                                  \
   END_REGISTER_VP_SDNODE(VPSD)                                                 \
-  BEGIN_REGISTER_VP_SDNODE(SEQ_VPSD, -1, VPID, 2, 3)                           \
+  BEGIN_REGISTER_VP_SDNODE(SEQ_VPSD, 1, VPID, 2, 3)                            \
   HELPER_MAP_VPID_TO_VPSD(VPID, SEQ_VPSD)                                      \
   VP_PROPERTY_REDUCTION(0, 1)                                                  \
   END_REGISTER_VP_SDNODE(SEQ_VPSD)                                             \
