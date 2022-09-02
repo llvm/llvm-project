@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_TARGETREGISTERINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -522,6 +523,16 @@ public:
   /// register as well, to avoid them getting allocated indirectly. You may use
   /// markSuperRegs() and checkAllSuperRegsMarked() in this case.
   virtual BitVector getReservedRegs(const MachineFunction &MF) const = 0;
+
+  /// Returns either a string explaining why the given register is reserved for
+  /// this function, or an empty optional if no explanation has been written.
+  /// The absence of an explanation does not mean that the register is not
+  /// reserved (meaning, you should check that PhysReg is in fact reserved
+  /// before calling this).
+  virtual llvm::Optional<std::string>
+  explainReservedReg(const MachineFunction &MF, MCRegister PhysReg) const {
+    return {};
+  }
 
   /// Returns false if we can't guarantee that Physreg, specified as an IR asm
   /// clobber constraint, will be preserved across the statement.
