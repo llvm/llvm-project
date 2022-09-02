@@ -185,14 +185,8 @@ SBTypeFilter SBTypeCategory::GetFilterForType(SBTypeNameSpecifier spec) {
   if (!spec.IsValid())
     return SBTypeFilter();
 
-  lldb::TypeFilterImplSP children_sp;
-
-  if (spec.IsRegex())
-    m_opaque_sp->GetRegexTypeFiltersContainer()->GetExact(
-        ConstString(spec.GetName()), children_sp);
-  else
-    m_opaque_sp->GetTypeFiltersContainer()->GetExact(
-        ConstString(spec.GetName()), children_sp);
+  lldb::TypeFilterImplSP children_sp =
+      m_opaque_sp->GetFilterForType(spec.GetSP());
 
   if (!children_sp)
     return lldb::SBTypeFilter();
@@ -211,14 +205,8 @@ SBTypeFormat SBTypeCategory::GetFormatForType(SBTypeNameSpecifier spec) {
   if (!spec.IsValid())
     return SBTypeFormat();
 
-  lldb::TypeFormatImplSP format_sp;
-
-  if (spec.IsRegex())
-    m_opaque_sp->GetRegexTypeFormatsContainer()->GetExact(
-        ConstString(spec.GetName()), format_sp);
-  else
-    m_opaque_sp->GetTypeFormatsContainer()->GetExact(
-        ConstString(spec.GetName()), format_sp);
+  lldb::TypeFormatImplSP format_sp =
+      m_opaque_sp->GetFormatForType(spec.GetSP());
 
   if (!format_sp)
     return lldb::SBTypeFormat();
@@ -235,14 +223,8 @@ SBTypeSummary SBTypeCategory::GetSummaryForType(SBTypeNameSpecifier spec) {
   if (!spec.IsValid())
     return SBTypeSummary();
 
-  lldb::TypeSummaryImplSP summary_sp;
-
-  if (spec.IsRegex())
-    m_opaque_sp->GetRegexTypeSummariesContainer()->GetExact(
-        ConstString(spec.GetName()), summary_sp);
-  else
-    m_opaque_sp->GetTypeSummariesContainer()->GetExact(
-        ConstString(spec.GetName()), summary_sp);
+  lldb::TypeSummaryImplSP summary_sp =
+      m_opaque_sp->GetSummaryForType(spec.GetSP());
 
   if (!summary_sp)
     return lldb::SBTypeSummary();
@@ -259,14 +241,8 @@ SBTypeSynthetic SBTypeCategory::GetSyntheticForType(SBTypeNameSpecifier spec) {
   if (!spec.IsValid())
     return SBTypeSynthetic();
 
-  lldb::SyntheticChildrenSP children_sp;
-
-  if (spec.IsRegex())
-    m_opaque_sp->GetRegexTypeSyntheticsContainer()->GetExact(
-        ConstString(spec.GetName()), children_sp);
-  else
-    m_opaque_sp->GetTypeSyntheticsContainer()->GetExact(
-        ConstString(spec.GetName()), children_sp);
+  lldb::SyntheticChildrenSP children_sp =
+      m_opaque_sp->GetSyntheticForType(spec.GetSP());
 
   if (!children_sp)
     return lldb::SBTypeSynthetic();
