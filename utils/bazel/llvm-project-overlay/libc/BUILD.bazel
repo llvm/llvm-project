@@ -181,6 +181,7 @@ cc_library(
     name = "__support_fputil_division_and_remainder_operations",
     hdrs = ["src/__support/FPUtil/DivisionAndRemainderOperations.h"],
     deps = [
+        ":__support_cpp_type_traits",
         ":__support_fputil_fp_bits",
         ":__support_fputil_manipulation_functions",
         ":__support_fputil_normal_float",
@@ -207,6 +208,7 @@ cc_library(
     ],
     deps = [
         ":__support_common",
+        ":__support_fputil_fp_bits",
         ":libc_root",
     ],
 )
