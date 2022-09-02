@@ -50,9 +50,28 @@ template <class P> struct hash<coroutine_handle<P>>;
 #include <__functional/operations.h>
 #include <cstddef>
 #include <experimental/__config>
-#include <memory> // for hash<T*>
 #include <new>
 #include <type_traits>
+
+#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#  include <atomic>
+#  include <chrono>
+#  include <climits>
+#  include <cmath>
+#  include <compare>
+#  include <concepts>
+#  include <ctime>
+#  include <initializer_list>
+#  include <iosfwd>
+#  include <iterator>
+#  include <memory>
+#  include <ratio>
+#  include <stdexcept>
+#  include <tuple>
+#  include <typeinfo>
+#  include <utility>
+#  include <variant>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
