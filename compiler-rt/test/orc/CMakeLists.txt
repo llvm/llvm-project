@@ -1,8 +1,16 @@
 set(ORC_LIT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(ORC_TESTSUITES)
-set(ORC_TEST_DEPS)
-list(APPEND ORC_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS} llvm-jitlink)
+set(ORC_TEST_DEPS ${SANITIZER_COMMON_LIT_TEST_DEPS})
+
+# TODO: This conditional was added to get standalone builds working
+#       (rdar://99453446). Longer term we should aim to identify and disable
+#       tests that depend on llvm-jitlink, or perhaps just disable ORC runtime
+#       regression testing entirely when it's not available.
+if (NOT ANDROID AND NOT COMPILER_RT_STANDALONE_BUILD AND
+    NOT LLVM_RUNTIMES_BUILD)
+  list(APPEND ORC_TEST_DEPS $llvm-jitlink)
+endif()
 
 set(ORC_TEST_ARCH ${ORC_SUPPORTED_ARCH})
 if (COMPILER_RT_BUILD_ORC AND COMPILER_RT_HAS_ORC)
