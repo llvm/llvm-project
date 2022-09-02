@@ -351,14 +351,40 @@ static bool happensBefore(Operation *a, Operation *b,
   return false;
 }
 
+static Region *
+getEnclosingRepetitiveRegion(Operation *op,
+                             const BufferizationOptions &options) {
+  while (Region *region = op->getParentRegion()) {
+    op = region->getParentOp();
+    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
+      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+  }
+  return nullptr;
+}
+
+static Region *
+getEnclosingRepetitiveRegion(Value value, const BufferizationOptions &options) {
+  Region *region = value.getParentRegion();
+  while (region) {
+    Operation *op = region->getParentOp();
+    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
+      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+    region = op->getParentRegion();
+  }
+  return nullptr;
+}
+
 /// For each given value, find the closest enclosing repetitive region. If this
 /// is the same region for each value, return it. Otherwise return None.
 /// Note: If there is no enclosing repetitive region, return nullptr.
 static Optional<Region *>
-getCommonEnclosingRepetitiveRegion(ArrayRef<Value> values) {
+getCommonEnclosingRepetitiveRegion(ArrayRef<Value> values,
+                                   const BufferizationOptions &options) {
   if (values.empty())
     return None;
-  Region *r = getEnclosingRepetitiveRegion(values.front());
+  Region *r = getEnclosingRepetitiveRegion(values.front(), options);
   for (Value value : values.drop_front())
     if (getEnclosingRepetitiveRegion(value) != r)
       return None;
@@ -432,7 +458,7 @@ static bool hasReadAfterWriteInterference(
   // Find the inner-most enclosing repetitive region of each alias. If this is
   // the same region for every alias, save it in `repetitiveRegionOfWrites`.
   Optional<Region *> repetitiveRegionOfWrites =
-      getCommonEnclosingRepetitiveRegion(writtenAliases);
+      getCommonEnclosingRepetitiveRegion(writtenAliases, options);
 
   for (OpOperand *uRead : usesRead) {
     Operation *readingOp = uRead->getOwner();
@@ -497,7 +523,7 @@ static bool hasReadAfterWriteInterference(
       bool canUseOpDominance =
           writtenAliases.empty() ||
           repetitiveRegionOfWrites ==
-              getEnclosingRepetitiveRegion(conflictingWritingOp);
+              getEnclosingRepetitiveRegion(conflictingWritingOp, options);
 
       // No conflict if the readingOp dominates conflictingWritingOp, i.e., the
       // write is not visible when reading.
