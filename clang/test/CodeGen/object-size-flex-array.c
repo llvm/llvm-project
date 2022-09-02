@@ -24,7 +24,7 @@ typedef struct {
   double c[2];
 } foo2_t;
 
-// CHECK-LABEL: @bar
+// CHECK-LABEL: @bar(
 unsigned bar(foo_t *f) {
   // CHECK-STRICT-0: ret i32 %
   // CHECK-STRICT-1: ret i32 %
@@ -32,7 +32,7 @@ unsigned bar(foo_t *f) {
   return OBJECT_SIZE_BUILTIN(f->c, 1);
 }
 
-// CHECK-LABEL: @bar0
+// CHECK-LABEL: @bar0(
 unsigned bar0(foo0_t *f) {
   // CHECK-STRICT-0: ret i32 %
   // CHECK-STRICT-1: ret i32 %
@@ -40,7 +40,7 @@ unsigned bar0(foo0_t *f) {
   return OBJECT_SIZE_BUILTIN(f->c, 1);
 }
 
-// CHECK-LABEL: @bar1
+// CHECK-LABEL: @bar1(
 unsigned bar1(foo1_t *f) {
   // CHECK-STRICT-0: ret i32 %
   // CHECK-STRICT-1: ret i32 %
@@ -48,7 +48,7 @@ unsigned bar1(foo1_t *f) {
   return OBJECT_SIZE_BUILTIN(f->c, 1);
 }
 
-// CHECK-LABEL: @bar2
+// CHECK-LABEL: @bar2(
 unsigned bar2(foo2_t *f) {
   // CHECK-STRICT-0: ret i32 %
   // CHECK-STRICT-1: ret i32 16
@@ -73,7 +73,7 @@ typedef struct {
   float f;
 } foofoo2_t;
 
-// CHECK-LABEL: @babar0
+// CHECK-LABEL: @babar0(
 unsigned babar0(foofoo0_t *f) {
   // CHECK-STRICT-0: ret i32 0
   // CHECK-STRICT-1: ret i32 0
@@ -81,7 +81,7 @@ unsigned babar0(foofoo0_t *f) {
   return OBJECT_SIZE_BUILTIN(f->c, 1);
 }
 
-// CHECK-LABEL: @babar1
+// CHECK-LABEL: @babar1(
 unsigned babar1(foofoo1_t *f) {
   // CHECK-STRICT-0: ret i32 8
   // CHECK-STRICT-1: ret i32 8
@@ -89,7 +89,7 @@ unsigned babar1(foofoo1_t *f) {
   return OBJECT_SIZE_BUILTIN(f->c, 1);
 }
 
-// CHECK-LABEL: @babar2
+// CHECK-LABEL: @babar2(
 unsigned babar2(foofoo2_t *f) {
   // CHECK-STRICT-0: ret i32 16
   // CHECK-STRICT-1: ret i32 16

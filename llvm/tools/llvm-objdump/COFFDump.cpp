@@ -10,7 +10,7 @@
 /// This file implements the COFF-specific dumper for llvm-objdump.
 /// It outputs the Win64 EH data structures as plain text.
 /// The encoding of the unwind codes is described in MSDN:
-/// http://msdn.microsoft.com/en-us/library/ck9asaa9.aspx
+/// https://docs.microsoft.com/en-us/cpp/build/exception-handling-x64
 ///
 //===----------------------------------------------------------------------===//
 
@@ -194,6 +194,8 @@ static StringRef getUnwindCodeTypeName(uint8_t Code) {
   case UOP_SetFPReg: return "UOP_SetFPReg";
   case UOP_SaveNonVol: return "UOP_SaveNonVol";
   case UOP_SaveNonVolBig: return "UOP_SaveNonVolBig";
+  case UOP_Epilog: return "UOP_Epilog";
+  case UOP_SpareCode: return "UOP_SpareCode";
   case UOP_SaveXMM128: return "UOP_SaveXMM128";
   case UOP_SaveXMM128Big: return "UOP_SaveXMM128Big";
   case UOP_PushMachFrame: return "UOP_PushMachFrame";
@@ -234,9 +236,11 @@ static unsigned getNumUsedSlots(const UnwindCode &UnwindCode) {
     return 1;
   case UOP_SaveNonVol:
   case UOP_SaveXMM128:
+  case UOP_Epilog:
     return 2;
   case UOP_SaveNonVolBig:
   case UOP_SaveXMM128Big:
+  case UOP_SpareCode:
     return 3;
   case UOP_AllocLarge:
     return (UnwindCode.getOpInfo() == 0) ? 2 : 3;

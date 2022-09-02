@@ -10,6 +10,7 @@
 #define ALLOCATORS_H
 
 #include <memory>
+#include <new>
 #include <type_traits>
 #include <utility>
 

@@ -2,6 +2,8 @@
 
 ; Verify the cost of integer division by constant.
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 define <16 x i8> @sdiv8xi16(<16 x i8> %x) {
 ; CHECK-LABEL: function 'sdiv8xi16'
 ; CHECK: Found an estimated cost of 7 for instruction: %div = sdiv <16 x i8> %x, <i8 9, i8 9, i8 9, i8 9, i8 9, i8 9, i8 9, i8 9, i8 9, i8 9, i8 9, i8 9, i8 9, i8 9, i8 9, i8 9>

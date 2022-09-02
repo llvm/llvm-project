@@ -2904,7 +2904,7 @@ Value *ScalarExprEmitter::VisitMinus(const UnaryOperator *E,
 Value *ScalarExprEmitter::VisitUnaryNot(const UnaryOperator *E) {
   TestAndClearIgnoreResultAssign();
   Value *Op = Visit(E->getSubExpr());
-  return Builder.CreateNot(Op, "neg");
+  return Builder.CreateNot(Op, "not");
 }
 
 Value *ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *E) {

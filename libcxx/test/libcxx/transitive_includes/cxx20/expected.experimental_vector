@@ -1,7 +1,6 @@
 algorithm
 atomic
 bit
-chrono
 climits
 cmath
 compare
@@ -14,7 +13,6 @@ ctime
 exception
 experimental/memory_resource
 experimental/utility
-experimental/vector
 initializer_list
 iosfwd
 iterator

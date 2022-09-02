@@ -572,7 +572,7 @@ static void handleLibcall(StringRef name) {
 
 // Equivalent of demote demoteSharedAndLazySymbols() in the ELF linker
 static void demoteLazySymbols() {
-  for (Symbol *sym : symtab->getSymbols()) {
+  for (Symbol *sym : symtab->symbols()) {
     if (auto* s = dyn_cast<LazySymbol>(sym)) {
       if (s->signature) {
         LLVM_DEBUG(llvm::dbgs()

@@ -3,7 +3,6 @@ array
 atomic
 bit
 cctype
-chrono
 climits
 cmath
 compare
@@ -17,7 +16,6 @@ ctime
 cwchar
 cwctype
 exception
-ext/hash_map
 functional
 initializer_list
 iosfwd

@@ -24,6 +24,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
@@ -1702,12 +1703,12 @@ void Writer::createGuardCFTables() {
 
   // Set __guard_flags, which will be used in the load config to indicate that
   // /guard:cf was enabled.
-  uint32_t guardFlags = uint32_t(coff_guard_flags::CFInstrumented) |
-                        uint32_t(coff_guard_flags::HasFidTable);
+  uint32_t guardFlags = uint32_t(GuardFlags::CF_INSTRUMENTED) |
+                        uint32_t(GuardFlags::CF_FUNCTION_TABLE_PRESENT);
   if (config->guardCF & GuardCFLevel::LongJmp)
-    guardFlags |= uint32_t(coff_guard_flags::HasLongJmpTable);
+    guardFlags |= uint32_t(GuardFlags::CF_LONGJUMP_TABLE_PRESENT);
   if (config->guardCF & GuardCFLevel::EHCont)
-    guardFlags |= uint32_t(coff_guard_flags::HasEHContTable);
+    guardFlags |= uint32_t(GuardFlags::EH_CONTINUATION_TABLE_PRESENT);
   Symbol *flagSym = ctx.symtab.findUnderscore("__guard_flags");
   cast<DefinedAbsolute>(flagSym)->setVA(guardFlags);
 }

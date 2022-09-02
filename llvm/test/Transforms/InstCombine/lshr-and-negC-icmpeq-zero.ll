@@ -212,8 +212,8 @@ define i1 @scalar_i32_udiv_and_negC_eq_X_is_constant3(i32 %y) {
 
 ; Negative test
 
-define i1 @scalar_i32_lshr_and_negC_eq_X_is_constant_negtive(i32 %y) {
-; CHECK-LABEL: @scalar_i32_lshr_and_negC_eq_X_is_constant_negtive(
+define i1 @scalar_i32_lshr_and_negC_eq_X_is_constant_negative(i32 %y) {
+; CHECK-LABEL: @scalar_i32_lshr_and_negC_eq_X_is_constant_negative(
 ; CHECK-NEXT:    [[LSHR:%.*]] = lshr i32 16384, [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[LSHR]], 16376
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[AND]], 0

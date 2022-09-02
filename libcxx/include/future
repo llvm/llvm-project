@@ -372,14 +372,14 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <exception>
-#include <memory>
 #include <mutex>
+#include <new>
 #include <system_error>
 #include <thread>
 #include <version>
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  include <chrono>
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#  include <chrono> // IGNORE-CYCLE due to <format>
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

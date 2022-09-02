@@ -3,6 +3,8 @@
 
 ; Verify the cost of scalar bitreverse instructions.
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 declare  i8 @llvm.bitreverse.i8(i8)
 declare i16 @llvm.bitreverse.i16(i16)
 declare i32 @llvm.bitreverse.i32(i32)

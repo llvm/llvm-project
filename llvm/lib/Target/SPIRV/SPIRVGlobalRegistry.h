@@ -208,6 +208,11 @@ private:
   SPIRVType *getOpTypeFunction(SPIRVType *RetType,
                                const SmallVectorImpl<SPIRVType *> &ArgTypes,
                                MachineIRBuilder &MIRBuilder);
+
+  SPIRVType *
+  getOrCreateSpecialType(const Type *Ty, MachineIRBuilder &MIRBuilder,
+                         SPIRV::AccessQualifier::AccessQualifier AccQual);
+
   std::tuple<Register, ConstantInt *, bool> getOrCreateConstIntReg(
       uint64_t Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
       MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
@@ -240,7 +245,6 @@ public:
                                     SPIRVType *SpvType, bool EmitIR = true);
   Register getOrCreateConsIntArray(uint64_t Val, MachineIRBuilder &MIRBuilder,
                                    SPIRVType *SpvType, bool EmitIR = true);
-
   Register buildConstantSampler(Register Res, unsigned AddrMode, unsigned Param,
                                 unsigned FilerMode,
                                 MachineIRBuilder &MIRBuilder,
@@ -270,19 +274,39 @@ public:
   SPIRVType *getOrCreateSPIRVVectorType(SPIRVType *BaseType,
                                         unsigned NumElements, MachineInstr &I,
                                         const SPIRVInstrInfo &TII);
+  SPIRVType *getOrCreateSPIRVArrayType(SPIRVType *BaseType,
+                                       unsigned NumElements, MachineInstr &I,
+                                       const SPIRVInstrInfo &TII);
+
   SPIRVType *getOrCreateSPIRVPointerType(
       SPIRVType *BaseType, MachineIRBuilder &MIRBuilder,
       SPIRV::StorageClass::StorageClass SClass = SPIRV::StorageClass::Function);
   SPIRVType *getOrCreateSPIRVPointerType(
       SPIRVType *BaseType, MachineInstr &I, const SPIRVInstrInfo &TII,
       SPIRV::StorageClass::StorageClass SClass = SPIRV::StorageClass::Function);
+
+  SPIRVType *
+  getOrCreateOpTypeImage(MachineIRBuilder &MIRBuilder, SPIRVType *SampledType,
+                         SPIRV::Dim::Dim Dim, uint32_t Depth, uint32_t Arrayed,
+                         uint32_t Multisampled, uint32_t Sampled,
+                         SPIRV::ImageFormat::ImageFormat ImageFormat,
+                         SPIRV::AccessQualifier::AccessQualifier AccQual);
+
+  SPIRVType *getOrCreateOpTypeSampler(MachineIRBuilder &MIRBuilder);
+
   SPIRVType *getOrCreateOpTypeSampledImage(SPIRVType *ImageType,
                                            MachineIRBuilder &MIRBuilder);
 
+  SPIRVType *
+  getOrCreateOpTypePipe(MachineIRBuilder &MIRBuilder,
+                        SPIRV::AccessQualifier::AccessQualifier AccQual);
   SPIRVType *getOrCreateOpTypeFunctionWithArgs(
       const Type *Ty, SPIRVType *RetType,
       const SmallVectorImpl<SPIRVType *> &ArgTypes,
       MachineIRBuilder &MIRBuilder);
+  SPIRVType *getOrCreateOpTypeByOpcode(const Type *Ty,
+                                       MachineIRBuilder &MIRBuilder,
+                                       unsigned Opcode);
 };
 } // end namespace llvm
 #endif // LLLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H

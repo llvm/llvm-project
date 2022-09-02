@@ -186,7 +186,7 @@ body:             |
 
 # GCN: name: negated_cond_vop3_redef_sel
 # GCN:      %0:sreg_64_xexec = IMPLICIT_DEF
-# GCN-NEXT: %1:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
+# GCN-NEXT: dead %3:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, %0, implicit $exec
 # GCN-NEXT: %1:vgpr_32 = COPY $vgpr0
 # GCN-NEXT: %2:sreg_64_xexec = V_CMP_NE_U32_e64 %1, 1, implicit $exec
 # GCN-NEXT: $vcc = S_AND_B64 %2, $exec, implicit-def dead $scc

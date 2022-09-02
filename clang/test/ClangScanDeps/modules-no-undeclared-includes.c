@@ -52,7 +52,7 @@ module User [no_undeclared_includes] { header "user.h" }
 // CHECK-NEXT:   ],
 // CHECK-NEXT:   "translation-units": [
 // CHECK-NEXT:     {
-// CHECK-NEXT:       "clang-context-hash": "{{.*}}"
+// CHECK:            "clang-context-hash": "{{.*}}"
 // CHECK-NEXT:       "clang-module-deps": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:           "context-hash": "{{.*}}"
@@ -61,13 +61,11 @@ module User [no_undeclared_includes] { header "user.h" }
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "command-line": [
 // CHECK:            ],
-// CHECK-NEXT:       "file-deps": [
+// CHECK:            "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/test.c"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "input-file": "[[PREFIX]]/test.c"
 // CHECK-NEXT:     }
-// CHECK:        ]
-// CHECK-NEXT: }
 
 // RUN: %deps-to-rsp %t/result.json --module-name=User > %t/User.cc1.rsp
 // RUN: %deps-to-rsp %t/result.json --tu-index=0 > %t/tu.rsp

@@ -73,10 +73,14 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
 
   // For --print-changed, if the function name is a candidate, save the
   // serialized MF to be compared later.
-  // TODO Implement --filter-passes.
   SmallString<0> BeforeStr, AfterStr;
-  bool ShouldPrintChanged = PrintChanged != ChangePrinter::None &&
-                            isFunctionInPrintList(MF.getName());
+  StringRef PassID;
+  if (const PassInfo *PI = Pass::lookupPassInfo(getPassID()))
+    PassID = PI->getPassArgument();
+  const bool IsInterestingPass = isPassInPrintList(PassID);
+  const bool ShouldPrintChanged = PrintChanged != ChangePrinter::None &&
+                                  IsInterestingPass &&
+                                  isFunctionInPrintList(MF.getName());
   if (ShouldPrintChanged) {
     raw_svector_ostream OS(BeforeStr);
     MF.print(OS);
@@ -112,15 +116,14 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
 
   // For --print-changed, print if the serialized MF has changed. Modes other
   // than quiet/verbose are unimplemented and treated the same as 'quiet'.
-  if (ShouldPrintChanged) {
-    raw_svector_ostream OS(AfterStr);
-    MF.print(OS);
-    if (BeforeStr != AfterStr) {
-      StringRef Arg;
-      if (const PassInfo *PI = Pass::lookupPassInfo(getPassID()))
-        Arg = PI->getPassArgument();
-      errs() << ("*** IR Dump After " + getPassName() + " (" + Arg + ") on " +
-                 MF.getName() + " ***\n");
+  if (ShouldPrintChanged || !IsInterestingPass) {
+    if (ShouldPrintChanged) {
+      raw_svector_ostream OS(AfterStr);
+      MF.print(OS);
+    }
+    if (IsInterestingPass && BeforeStr != AfterStr) {
+      errs() << ("*** IR Dump After " + getPassName() + " (" + PassID +
+                 ") on " + MF.getName() + " ***\n");
       switch (PrintChanged) {
       case ChangePrinter::None:
         llvm_unreachable("");
@@ -148,8 +151,12 @@ bool MachineFunctionPass::runOnFunction(Function &F) {
                                    ChangePrinter::DiffVerbose,
                                    ChangePrinter::ColourDiffVerbose},
                                   PrintChanged.getValue())) {
-      errs() << ("*** IR Dump After " + getPassName() + " on " + MF.getName() +
-                 " omitted because no change ***\n");
+      const char *Reason =
+          IsInterestingPass ? " omitted because no change" : " filtered out";
+      errs() << "*** IR Dump After " << getPassName();
+      if (!PassID.empty())
+        errs() << " (" << PassID << ")";
+      errs() << " on " << MF.getName() + Reason + " ***\n";
     }
   }
   return RV;

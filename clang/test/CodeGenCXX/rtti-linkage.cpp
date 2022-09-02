@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -no-opaque-pointers %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-BOTH
-// RUN: %clang_cc1 -no-opaque-pointers %s -I%S -triple=x86_64-apple-darwin10 -fvisibility hidden -emit-llvm -o - | FileCheck -check-prefix=CHECK-WITH-HIDDEN -check-prefix=CHECK-BOTH %s
+// RUN: %clang_cc1 -no-opaque-pointers %s -I%S -triple=x86_64-apple-darwin10 -fvisibility=hidden -emit-llvm -o - | FileCheck -check-prefix=CHECK-WITH-HIDDEN -check-prefix=CHECK-BOTH %s
 
 #include <typeinfo>
 

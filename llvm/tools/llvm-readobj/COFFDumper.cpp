@@ -577,6 +577,52 @@ const EnumEntry<uint8_t> FileChecksumKindNames[] = {
   LLVM_READOBJ_ENUM_CLASS_ENT(FileChecksumKind, SHA256),
 };
 
+const EnumEntry<uint32_t> PELoadConfigGuardFlags[] = {
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags, CF_INSTRUMENTED),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags, CFW_INSTRUMENTED),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags, CF_FUNCTION_TABLE_PRESENT),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags, SECURITY_COOKIE_UNUSED),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags, PROTECT_DELAYLOAD_IAT),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                DELAYLOAD_IAT_IN_ITS_OWN_SECTION),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_EXPORT_SUPPRESSION_INFO_PRESENT),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags, CF_ENABLE_EXPORT_SUPPRESSION),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags, CF_LONGJUMP_TABLE_PRESENT),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                EH_CONTINUATION_TABLE_PRESENT),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_5BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_6BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_7BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_8BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_9BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_10BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_11BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_12BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_13BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_14BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_15BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_16BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_17BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_18BYTES),
+    LLVM_READOBJ_ENUM_CLASS_ENT(COFF::GuardFlags,
+                                CF_FUNCTION_TABLE_SIZE_19BYTES),
+};
+
 template <typename T>
 static std::error_code getSymbolAuxData(const COFFObjectFile *Obj,
                                         COFFSymbolRef Symbol,
@@ -806,11 +852,18 @@ void COFFDumper::printCOFFLoadConfig() {
 
   if (Tables.GuardFidTableVA) {
     ListScope LS(W, "GuardFidTable");
-    if (Tables.GuardFlags & uint32_t(coff_guard_flags::FidTableHasFlags))
-      printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, 5,
+    if (uint32_t Size =
+            Tables.GuardFlags &
+            uint32_t(COFF::GuardFlags::CF_FUNCTION_TABLE_SIZE_MASK)) {
+      // The size mask gives the number of extra bytes in addition to the 4-byte
+      // RVA of each entry in the table. As of writing only a 1-byte extra flag
+      // has been defined.
+      Size = (Size >> 28) + 4;
+      printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, Size,
                     PrintGuardFlags);
-    else
+    } else {
       printRVATable(Tables.GuardFidTableVA, Tables.GuardFidTableCount, 4);
+    }
   }
 
   if (Tables.GuardIatTableVA) {
@@ -880,7 +933,9 @@ void COFFDumper::printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables) {
   W.printHex("GuardCFCheckDispatch", Conf->GuardCFCheckDispatch);
   W.printHex("GuardCFFunctionTable", Conf->GuardCFFunctionTable);
   W.printNumber("GuardCFFunctionCount", Conf->GuardCFFunctionCount);
-  W.printHex("GuardFlags", Conf->GuardFlags);
+  W.printFlags("GuardFlags", Conf->GuardFlags,
+               makeArrayRef(PELoadConfigGuardFlags),
+               (uint32_t)COFF::GuardFlags::CF_FUNCTION_TABLE_SIZE_MASK);
 
   Tables.GuardFidTableVA = Conf->GuardCFFunctionTable;
   Tables.GuardFidTableCount = Conf->GuardCFFunctionCount;

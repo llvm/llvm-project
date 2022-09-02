@@ -435,8 +435,14 @@ LogicalResult IntegerAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                          << value.getBitWidth() << ")";
     return success();
   }
-  if (type.isa<IndexType>())
+  if (type.isa<IndexType>()) {
+    if (value.getBitWidth() != IndexType::kInternalStorageBitWidth)
+      return emitError()
+             << "value bit width (" << value.getBitWidth()
+             << ") doesn't match index type internal storage bit width ("
+             << IndexType::kInternalStorageBitWidth << ")";
     return success();
+  }
   return emitError() << "expected integer or index type";
 }
 

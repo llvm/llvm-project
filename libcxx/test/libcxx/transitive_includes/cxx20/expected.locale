@@ -4,7 +4,6 @@ atomic
 bit
 cctype
 cerrno
-chrono
 climits
 cmath
 compare
@@ -25,7 +24,6 @@ ios
 iosfwd
 iterator
 limits
-locale
 memory
 mutex
 new

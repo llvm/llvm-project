@@ -835,15 +835,41 @@ func.func @reduce_dispatch_0() -> tensor<4x2xf32> {
   %c4 = arith.constant 4 : index
   %cst = arith.constant 0.000000e+00 : f32
   %0 = linalg.init_tensor [4, 2] : tensor<4x2xf32>
-  %res = scf.foreach_thread (%arg0, %arg1) in (%c4, %c2) -> (tensor<4x2xf32>) {
+  %res = scf.foreach_thread (%arg0, %arg1) in (%c4, %c2) shared_outs(%o = %0) -> (tensor<4x2xf32>) {
     %1 = linalg.init_tensor [1, 1] : tensor<1x1xf32>
     %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<1x1xf32>) -> tensor<1x1xf32>
     scf.foreach_thread.perform_concurrently {
       //      CHECK: tensor.parallel_insert_slice %{{[0-9a-z]*}} into %{{[0-9a-z]*}}
       // CHECK-SAME: [%{{.*}}, %{{.*}}] [1, 1] [1, 1] : tensor<f32> into tensor<4x2xf32>
-      tensor.parallel_insert_slice %2 into %0[%arg0, %arg1] [1, 1] [1, 1] :
+      tensor.parallel_insert_slice %2 into %o[%arg0, %arg1] [1, 1] [1, 1] :
         tensor<1x1xf32> into tensor<4x2xf32>
     }
-  }  
+  }
   return %res: tensor<4x2xf32>
 }
+
+// -----
+
+#map0 = affine_map<(i, j) -> (i, j)>
+#access = [#map0, #map0]
+#trait = {
+  iterator_types = ["parallel", "parallel"],
+  indexing_maps = #access,
+  library_call = "some_external_func"
+}
+
+func.func @drop_all_loops(%arg0 : memref<1x1xf32, 3>) -> memref<1x1xf32, 3>
+{
+  linalg.generic #trait
+     ins(%arg0 : memref<1x1xf32, 3>)
+    outs(%arg0 : memref<1x1xf32, 3>) {
+       ^bb0(%arg1: f32, %arg2: f32) :
+         linalg.yield %arg1 : f32
+       }
+  return %arg0 : memref<1x1xf32, 3>
+}
+
+// CHECK-LABEL: func @drop_all_loops
+//       CHECK:   memref.collapse_shape 
+//  CHECK-SAME:     [] : memref<1x1xf32, 3> into memref<f32, 3>
+//       CHECK:   linalg.generic{{.*}}memref<f32, 3>

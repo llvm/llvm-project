@@ -157,6 +157,37 @@ void testBranch(RISCVEmulatorTester *tester, EncoderB encoder, bool branched,
     testBranch(this, name, false, rs1, rs2_continued);                         \
   }
 
+void CheckRD(RISCVEmulatorTester *tester, uint64_t rd, uint64_t value) {
+  ASSERT_EQ(tester->gpr.gpr[rd], value);
+}
+
+using RS1 = uint64_t;
+using RS2 = uint64_t;
+using PC = uint64_t;
+using RDComputer = std::function<uint64_t(RS1, RS2, PC)>;
+
+void TestInst(RISCVEmulatorTester *tester, uint64_t inst, bool has_rs2,
+              RDComputer rd_val) {
+
+  lldb::addr_t old_pc = 0x114514;
+  tester->WritePC(old_pc);
+  auto rd = DecodeRD(inst);
+  auto rs1 = DecodeRS1(inst);
+  auto rs2 = 0;
+  if (rs1)
+    tester->gpr.gpr[rs1] = 0x1919;
+
+  if (has_rs2) {
+    rs2 = DecodeRS2(inst);
+    if (rs2)
+      tester->gpr.gpr[rs2] = 0x8181;
+  }
+
+  ASSERT_TRUE(tester->DecodeAndExecute(inst, false));
+  CheckRD(tester, rd,
+          rd_val(tester->gpr.gpr[rs1], rs2 ? tester->gpr.gpr[rs2] : 0, old_pc));
+}
+
 // GEN_BRANCH_TEST(opcode, imm1, imm2, imm3):
 // It should branch for instruction `opcode imm1, imm2`
 // It should do nothing for instruction `opcode imm1, imm3`
@@ -167,30 +198,34 @@ GEN_BRANCH_TEST(BGE, -2, -3, 1)
 GEN_BRANCH_TEST(BLTU, -2, -1, 1)
 GEN_BRANCH_TEST(BGEU, -2, 1, -1)
 
-void testNothing(RISCVEmulatorTester *tester, uint32_t inst) {
-  lldb::addr_t old_pc = 0x114514;
-  tester->WritePC(old_pc);
-  tester->SetInstruction(Opcode(inst, tester->GetByteOrder()),
-                         LLDB_INVALID_ADDRESS, nullptr);
-  ASSERT_TRUE(tester->EvaluateInstruction(0));
-  bool success = false;
-  auto pc = tester->ReadPC(&success);
-  ASSERT_TRUE(success);
-  ASSERT_EQ(pc, old_pc);
-  ASSERT_TRUE(
-      tester->EvaluateInstruction(eEmulateInstructionOptionAutoAdvancePC));
-  pc = tester->ReadPC(&success);
-  ASSERT_TRUE(success);
-  ASSERT_EQ(pc, old_pc + 4);
+struct TestData {
+  uint32_t inst;
+  std::string name;
+  bool has_rs2;
+  RDComputer rd_val;
+};
+
+TEST_F(RISCVEmulatorTester, TestDecodeAndExcute) {
+
+  std::vector<TestData> tests = {
+      {0x00010113, "ADDI", false, [](RS1 rs1, RS2, PC) { return rs1 + 0; }},
+      {0x00023517, "AUIPC", false, [](RS1, RS2, PC pc) { return pc + 143360; }},
+      {0x0006079b, "ADDIW", false, [](RS1 rs1, RS2, PC) { return rs1 + 0; }},
+      {0x00110837, "LUI", false, [](RS1, RS2, PC pc) { return 1114112; }},
+      {0x00147513, "ANDI", false, [](RS1 rs1, RS2, PC) { return rs1 & 1; }},
+      {0x00153513, "SLTIU", false, [](RS1 rs1, RS2, PC) { return rs1 != 0; }},
+      {0x00256513, "ORI", false, [](RS1 rs1, RS2, PC) { return rs1 | 1; }},
+      {0x00451a13, "SLLI", false, [](RS1 rs1, RS2, PC) { return rs1 << 4; }},
+      {0x00455693, "SRLI", false, [](RS1 rs1, RS2, PC) { return rs1 >> 4; }},
+      {0x00a035b3, "SLTU", true, [](RS1 rs1, RS2 rs2, PC) { return rs2 != 0; }},
+      {0x00b50633, "ADD", true, [](RS1 rs1, RS2 rs2, PC) { return rs1 + rs2; }},
+      {0x40d507b3, "SUB", true, [](RS1 rs1, RS2 rs2, PC) { return rs1 - rs2; }},
+  };
+  for (auto i : tests) {
+    const InstrPattern *pattern = this->Decode(i.inst);
+    ASSERT_TRUE(pattern != nullptr);
+    std::string name = pattern->name;
+    ASSERT_EQ(name, i.name);
+    TestInst(this, i.inst, i.has_rs2, i.rd_val);
+  }
 }
-
-#define GEN_NOTHING_TEST(name, inst)                                           \
-  TEST_F(RISCVEmulatorTester, testDoNothing_##name) { testNothing(this, inst); }
-
-// GEN_NOTHING_TEST(name, inst):
-// It should do nothing (except increasing pc) for instruction `inst`
-GEN_NOTHING_TEST(mv, 0x01813083)   // mv a0, a5
-GEN_NOTHING_TEST(li, 0x00078513)   // li a5, 0
-GEN_NOTHING_TEST(sd, 0x02010413)   // sd s0, sp(16)
-GEN_NOTHING_TEST(lw, 0x0007879b)   // lw a5, s0(-20)
-GEN_NOTHING_TEST(addi, 0x00113423) // addi sp, sp, -16

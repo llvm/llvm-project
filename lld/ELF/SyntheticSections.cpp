@@ -2692,20 +2692,6 @@ size_t GdbIndexSection::computeSymtabSize() const {
   return std::max<size_t>(NextPowerOf2(symbols.size() * 4 / 3), 1024);
 }
 
-// Compute the output section size.
-void GdbIndexSection::initOutputSize() {
-  size = sizeof(GdbIndexHeader) + computeSymtabSize() * 8;
-
-  for (GdbChunk &chunk : chunks)
-    size += chunk.compilationUnits.size() * 16 + chunk.addressAreas.size() * 20;
-
-  // Add the constant pool size if exists.
-  if (!symbols.empty()) {
-    GdbSymbol &sym = symbols.back();
-    size += sym.nameOff + sym.name.size() + 1;
-  }
-}
-
 static SmallVector<GdbIndexSection::CuEntry, 0>
 readCuList(DWARFContext &dwarf) {
   SmallVector<GdbIndexSection::CuEntry, 0> ret;
@@ -2780,7 +2766,8 @@ readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
 
 // Create a list of symbols from a given list of symbol names and types
 // by uniquifying them by name.
-static SmallVector<GdbIndexSection::GdbSymbol, 0> createSymbols(
+static std::pair<SmallVector<GdbIndexSection::GdbSymbol, 0>, size_t>
+createSymbols(
     ArrayRef<SmallVector<GdbIndexSection::NameAttrEntry, 0>> nameAttrs,
     const SmallVector<GdbIndexSection::GdbChunk, 0> &chunks) {
   using GdbSymbol = GdbIndexSection::GdbSymbol;
@@ -2857,8 +2844,12 @@ static SmallVector<GdbIndexSection::GdbSymbol, 0> createSymbols(
     sym.nameOff = off;
     off += sym.name.size() + 1;
   }
+  // If off overflows, the last symbol's nameOff likely overflows.
+  if (!isUInt<32>(off))
+    errorOrWarn("--gdb-index: constant pool size (" + Twine(off) +
+                ") exceeds UINT32_MAX");
 
-  return ret;
+  return {ret, off};
 }
 
 // Returns a newly-created .gdb_index section.
@@ -2908,8 +2899,14 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
 
   auto *ret = make<GdbIndexSection>();
   ret->chunks = std::move(chunks);
-  ret->symbols = createSymbols(nameAttrs, ret->chunks);
-  ret->initOutputSize();
+  std::tie(ret->symbols, ret->size) = createSymbols(nameAttrs, ret->chunks);
+
+  // Count the areas other than the constant pool.
+  ret->size += sizeof(GdbIndexHeader) + ret->computeSymtabSize() * 8;
+  for (GdbChunk &chunk : ret->chunks)
+    ret->size +=
+        chunk.compilationUnits.size() * 16 + chunk.addressAreas.size() * 20;
+
   return ret;
 }
 

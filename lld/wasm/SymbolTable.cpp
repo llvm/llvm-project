@@ -854,7 +854,7 @@ void SymbolTable::replaceWithUndefined(Symbol *sym) {
 // will abort at runtime, so that relocations can still provided an operand to
 // the call instruction that passes Wasm validation.
 void SymbolTable::handleWeakUndefines() {
-  for (Symbol *sym : getSymbols()) {
+  for (Symbol *sym : symbols()) {
     if (sym->isUndefWeak() && sym->isUsedInRegularObj) {
       if (sym->getSignature()) {
         replaceWithUndefined(sym);

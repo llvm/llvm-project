@@ -10,12 +10,14 @@
 #ifndef _LIBCPP___FORMAT_FORMATTER_OUTPUT_H
 #define _LIBCPP___FORMAT_FORMATTER_OUTPUT_H
 
+#include <__algorithm/in_out_result.h>
 #include <__algorithm/ranges_copy.h>
 #include <__algorithm/ranges_fill_n.h>
 #include <__algorithm/ranges_transform.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/buffer.h>
+#include <__format/concepts.h>
 #include <__format/formatter.h>
 #include <__format/parser_std_format_spec.h>
 #include <__format/unicode.h>
@@ -91,7 +93,7 @@ __padding_size(size_t __size, size_t __width, __format_spec::__alignment __align
 /// Copy wrapper.
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
-template <__formatter::__char_type _CharT, __formatter::__char_type _OutCharT = _CharT>
+template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT>
 _LIBCPP_HIDE_FROM_ABI auto __copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto __out_it)
     -> decltype(__out_it) {
   if constexpr (_VSTD::same_as<decltype(__out_it), _VSTD::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
@@ -102,14 +104,14 @@ _LIBCPP_HIDE_FROM_ABI auto __copy(basic_string_view<_CharT> __str, output_iterat
   }
 }
 
-template <__formatter::__char_type _CharT, __formatter::__char_type _OutCharT = _CharT>
+template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT>
 _LIBCPP_HIDE_FROM_ABI auto
 __copy(const _CharT* __first, const _CharT* __last, output_iterator<const _OutCharT&> auto __out_it)
     -> decltype(__out_it) {
   return __formatter::__copy(basic_string_view{__first, __last}, _VSTD::move(__out_it));
 }
 
-template <__formatter::__char_type _CharT, __formatter::__char_type _OutCharT = _CharT>
+template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT>
 _LIBCPP_HIDE_FROM_ABI auto __copy(const _CharT* __first, size_t __n, output_iterator<const _OutCharT&> auto __out_it)
     -> decltype(__out_it) {
   return __formatter::__copy(basic_string_view{__first, __n}, _VSTD::move(__out_it));
@@ -118,7 +120,7 @@ _LIBCPP_HIDE_FROM_ABI auto __copy(const _CharT* __first, size_t __n, output_iter
 /// Transform wrapper.
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
-template <__formatter::__char_type _CharT, __formatter::__char_type _OutCharT = _CharT, class _UnaryOperation>
+template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT, class _UnaryOperation>
 _LIBCPP_HIDE_FROM_ABI auto
 __transform(const _CharT* __first,
             const _CharT* __last,
@@ -135,7 +137,7 @@ __transform(const _CharT* __first,
 /// Fill wrapper.
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
-template <__formatter::__char_type _CharT, output_iterator<const _CharT&> _OutIt>
+template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
 _LIBCPP_HIDE_FROM_ABI _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value) {
   if constexpr (_VSTD::same_as<decltype(__out_it), _VSTD::back_insert_iterator<__format::__output_buffer<_CharT>>>) {
     __out_it.__get_container()->__fill(__n, __value);

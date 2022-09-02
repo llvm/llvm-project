@@ -654,22 +654,25 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I || I->getParent() != BB) {
 
-    // Okay, if this is a live-in value, see if it has a known value at the end
-    // of any of our predecessors.
-    //
-    // FIXME: This should be an edge property, not a block end property.
-    /// TODO: Per PR2563, we could infer value range information about a
-    /// predecessor based on its terminator.
-    //
-    // FIXME: change this to use the more-rich 'getPredicateOnEdge' method if
-    // "I" is a non-local compare-with-a-constant instruction.  This would be
-    // able to handle value inequalities better, for example if the compare is
-    // "X < 4" and "X < 3" is known true but "X < 4" itself is not available.
-    // Perhaps getConstantOnEdge should be smart enough to do this?
+    // Okay, if this is a live-in value, see if it has a known value at the any
+    // edge from our predecessors.
     for (BasicBlock *P : predecessors(BB)) {
+      using namespace PatternMatch;
       // If the value is known by LazyValueInfo to be a constant in a
       // predecessor, use that information to try to thread this block.
       Constant *PredCst = LVI->getConstantOnEdge(V, P, BB, CxtI);
+      // If I is a non-local compare-with-constant instruction, use more-rich
+      // 'getPredicateOnEdge' method. This would be able to handle value
+      // inequalities better, for example if the compare is "X < 4" and "X < 3"
+      // is known true but "X < 4" itself is not available.
+      CmpInst::Predicate Pred;
+      Value *Val;
+      Constant *Cst;
+      if (!PredCst && match(V, m_Cmp(Pred, m_Value(Val), m_Constant(Cst)))) {
+        auto Res = LVI->getPredicateOnEdge(Pred, Val, Cst, P, BB, CxtI);
+        if (Res != LazyValueInfo::Unknown)
+          PredCst = ConstantInt::getBool(V->getContext(), Res);
+      }
       if (Constant *KC = getKnownConstant(PredCst, Preference))
         Result.emplace_back(KC, P);
     }

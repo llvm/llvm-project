@@ -776,7 +776,7 @@ bool PdbAstBuilder::CompleteTagDecl(clang::TagDecl &tag) {
       llvm::codeview::visitMemberRecordStream(field_list.Data, completer);
   completer.complete();
 
-  status.resolved = true;
+  m_decl_to_status[&tag].resolved = true;
   if (error) {
     llvm::consumeError(std::move(error));
     return false;

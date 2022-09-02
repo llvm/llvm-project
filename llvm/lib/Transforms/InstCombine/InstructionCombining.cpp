@@ -1280,6 +1280,11 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
         InV = PN->getIncomingValue(i);
       NewPN->addIncoming(InV, PN->getIncomingBlock(i));
     }
+  } else if (auto *EV = dyn_cast<ExtractValueInst>(&I)) {
+    for (unsigned i = 0; i != NumPHIValues; ++i)
+      NewPN->addIncoming(Builder.CreateExtractValue(PN->getIncomingValue(i),
+                                                    EV->getIndices(), "phi.ev"),
+                         PN->getIncomingBlock(i));
   } else {
     CastInst *CI = cast<CastInst>(&I);
     Type *RetTy = CI->getType();
@@ -3251,11 +3256,14 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
 
   // extractvalue (any_mul_with_overflow X, -1), 0 --> -X
   Intrinsic::ID OvID = WO->getIntrinsicID();
-  if (*EV.idx_begin() == 0 &&
-      (OvID == Intrinsic::smul_with_overflow ||
-       OvID == Intrinsic::umul_with_overflow) &&
-      match(WO->getArgOperand(1), m_AllOnes())) {
-    return BinaryOperator::CreateNeg(WO->getArgOperand(0));
+  const APInt *C = nullptr;
+  if (match(WO->getRHS(), m_APIntAllowUndef(C))) {
+    if (*EV.idx_begin() == 0 &&
+        (OvID == Intrinsic::smul_with_overflow ||
+         OvID == Intrinsic::umul_with_overflow) &&
+        C->isAllOnes()) {
+      return BinaryOperator::CreateNeg(WO->getArgOperand(0));
+    }
   }
 
   // We're extracting from an overflow intrinsic. See if we're the only user.
@@ -3284,8 +3292,7 @@ InstCombinerImpl::foldExtractOfOverflowIntrinsic(ExtractValueInst &EV) {
   // If only the overflow result is used, and the right hand side is a
   // constant (or constant splat), we can remove the intrinsic by directly
   // checking for overflow.
-  const APInt *C;
-  if (match(WO->getRHS(), m_APInt(C))) {
+  if (C) {
     // Compute the no-wrap range for LHS given RHS=C, then construct an
     // equivalent icmp, potentially using an offset.
     ConstantRange NWR = ConstantRange::makeExactNoWrapRegion(
@@ -3398,6 +3405,10 @@ Instruction *InstCombinerImpl::visitExtractValueInst(ExtractValueInst &EV) {
       return replaceInstUsesWith(EV, NL);
     }
   }
+
+  if (auto *PN = dyn_cast<PHINode>(Agg))
+    if (Instruction *Res = foldOpIntoPhi(EV, PN))
+      return Res;
 
   // We could simplify extracts from other values. Note that nested extracts may
   // already be simplified implicitly by the above: extract (extract (insert) )

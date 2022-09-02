@@ -13,7 +13,7 @@
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/builtin_wrappers.h"
+#include "src/__support/builtin_wrappers.h"
 #include "src/__support/common.h"
 #include "src/math/generic/math_utils.h"
 

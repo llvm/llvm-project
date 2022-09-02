@@ -50,17 +50,19 @@ Derived d;
 // Poison members and vtable ptr.
 // CHECK-LABEL: define {{.*}}BaseD2Ev
 // CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, !dbg ![[DI1:[0-9]+]]
-// CHECK: call void @__sanitizer_dtor_callback_vptr({{.*}}){{.*}}, !dbg ![[DI1]]
+// CHECK: call void @__sanitizer_dtor_callback_vptr({{.*}}){{.*}}, !dbg ![[DI2:[0-9]+]]
 // CHECK: ret void
 
 // Poison members and destroy non-virtual base.
 // CHECK-LABEL: define {{.*}}DerivedD2Ev
 // CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, !dbg ![[DI3:[0-9]+]]
 // CHECK: call void {{.*}}BaseD2Ev
-// CHECK: call void @__sanitizer_dtor_callback_vptr({{.*}}){{.*}}, !dbg ![[DI3]]
+// CHECK: call void @__sanitizer_dtor_callback_vptr({{.*}}){{.*}}, !dbg ![[DI4:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: !DIFile{{.*}}cpp
 
-// CHECK-DAG: ![[DI1]] = {{.*}}line: [[@LINE-49]]
-// CHECK-DAG: ![[DI3]] = {{.*}}line: [[@LINE-39]]
+// CHECK-DAG: ![[DI1]] = {{.*}}line: [[@LINE-55]]
+// CHECK-DAG: ![[DI2]] = {{.*}}line: [[@LINE-50]]
+// CHECK-DAG: ![[DI3]] = {{.*}}line: [[@LINE-46]]
+// CHECK-DAG: ![[DI4]] = {{.*}}line: [[@LINE-41]]

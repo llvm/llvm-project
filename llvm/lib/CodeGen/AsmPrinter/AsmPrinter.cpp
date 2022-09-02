@@ -1698,8 +1698,11 @@ void AsmPrinter::emitFunctionBody() {
   // Emit target-specific gunk after the function body.
   emitFunctionBodyEnd();
 
-  if (needFuncLabelsForEHOrDebugInfo(*MF) ||
-      MAI->hasDotTypeDotSizeDirective()) {
+  // Even though wasm supports .type and .size in general, function symbols
+  // are automatically sized.
+  bool EmitFunctionSize = MAI->hasDotTypeDotSizeDirective() && !TT.isWasm();
+
+  if (needFuncLabelsForEHOrDebugInfo(*MF) || EmitFunctionSize) {
     // Create a symbol for the end of function.
     CurrentFnEnd = createTempSymbol("func_end");
     OutStreamer->emitLabel(CurrentFnEnd);
@@ -1707,7 +1710,7 @@ void AsmPrinter::emitFunctionBody() {
 
   // If the target wants a .size directive for the size of the function, emit
   // it.
-  if (MAI->hasDotTypeDotSizeDirective()) {
+  if (EmitFunctionSize) {
     // We can get the size as difference between the function label and the
     // temp label.
     const MCExpr *SizeExp = MCBinaryExpr::createSub(

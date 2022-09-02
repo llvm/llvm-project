@@ -240,6 +240,10 @@ func.func @float_vector(
 // CHECK-SAME: %{{.+}}: i32
 func.func @one_element_vector(%arg0: vector<1xi32>) { return }
 
+// CHECK-LABEL: spv.func @zerod_vector
+//  CHECK-SAME: %{{.+}}: f32
+func.func @zerod_vector(%arg0: vector<f32>) { return }
+
 } // end module
 
 // -----

@@ -297,3 +297,19 @@ func.func @async_cp_i4(
   return %0 : !nvgpu.device.async.token
 }
 
+// -----
+
+// CHECK-LABEL: @async_cp_zfill(
+// CHECK-SAME: %[[IDX:[a-zA-Z0-9_]+]]: index, %[[SRCELEMENTS:[a-zA-Z0-9_]+]]: index)
+func.func @async_cp_zfill(
+  %src: memref<128x128xf32>, %dst: memref<3x16x128xf32, 3>, %i : index, %srcElements : index) {
+
+  // CHECK-DAG: lvm.inline_asm has_side_effects asm_dialect = att "cp.async.cg.shared.global [$0], [$1], $2, $3;\0A", "r,l,n,r" %[[DSTPTR:.*]], %[[SRCPTR:.*]], %[[DSTBYTES:.*]], %[[SRCBYTES:.*]] : (!llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>, i32, i32) -> !llvm.void
+  %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 4, %srcElements {bypassL1}: memref<128x128xf32> to memref<3x16x128xf32, 3>
+  // CHECK: nvvm.cp.async.commit.group
+  %1 = nvgpu.device_async_create_group %0
+  // CHECK: nvvm.cp.async.wait.group 1
+  nvgpu.device_async_wait %1 { numGroups = 1 : i32 }
+
+  return
+}
