@@ -1,7 +1,7 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
-; CHECK: %{{[0-9]+}} = OpExtInstImport "OpenCL.std"
-; CHECK: %{{[0-9]+}} = OpTypeInt 32 0
+; CHECK: %[[#]] = OpExtInstImport "OpenCL.std"
+; CHECK: %[[#]] = OpTypeInt 32 0
 
 define spir_kernel void @foo(i32 addrspace(1)* %a) {
 entry:

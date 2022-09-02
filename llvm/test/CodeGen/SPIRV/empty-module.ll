@@ -3,6 +3,6 @@
 ; CHECK-DAG: OpCapability Addresses
 ; CHECK-DAG: OpCapability Linkage
 ; CHECK-DAG: OpCapability Kernel
-; CHECK: %1 = OpExtInstImport "OpenCL.std"
-; CHECK: OpMemoryModel Physical64 OpenCL
-; CHECK: OpSource Unknown 0
+; CHECK:     %1 = OpExtInstImport "OpenCL.std"
+; CHECK:     OpMemoryModel Physical64 OpenCL
+; CHECK:     OpSource Unknown 0

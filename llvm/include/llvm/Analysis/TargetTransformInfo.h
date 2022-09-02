@@ -212,6 +212,8 @@ public:
   ///
   /// There are several different cost models that can be customized by the
   /// target. The normalization of each cost model may be target specific.
+  /// e.g. TCK_SizeAndLatency should be comparable to target thresholds such as
+  /// those derived from MCSchedModel::LoopMicroOpBufferSize etc.
   enum TargetCostKind {
     TCK_RecipThroughput, ///< Reciprocal throughput.
     TCK_Latency,         ///< The latency of instruction.
