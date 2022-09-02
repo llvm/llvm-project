@@ -4541,4 +4541,28 @@ class SPV_ExtInstOp<string mnemonic, string setPrefix, string setName,
   string extendedInstSetName = setName;
 }
 
+// Base classes for SPIR-V vendor ops. These have opcode in the form of
+// Op<Name><VENDOR>, e.g., OpCooperativeMatrixStoreNV.
+class SPV_VendorOp<string mnemonic, string vendorName,
+                   list<Trait> traits = []> :
+  SPV_Op<mnemonic # vendorName, traits> {
+  string spirvOpName = "Op" # mnemonic # vendorName;
+}
+
+class SPV_ExtVendorOp<string mnemonic, list<Trait> traits = []> :
+  SPV_VendorOp<mnemonic, "EXT", traits> {
+}
+
+class SPV_KhrVendorOp<string mnemonic, list<Trait> traits = []> :
+  SPV_VendorOp<mnemonic, "KHR", traits> {
+}
+
+class SPV_IntelVendorOp<string mnemonic, list<Trait> traits = []> :
+  SPV_VendorOp<mnemonic, "INTEL", traits> {
+}
+
+class SPV_NvVendorOp<string mnemonic, list<Trait> traits = []> :
+  SPV_VendorOp<mnemonic, "NV", traits> {
+}
+
 #endif // MLIR_DIALECT_SPIRV_IR_BASE
