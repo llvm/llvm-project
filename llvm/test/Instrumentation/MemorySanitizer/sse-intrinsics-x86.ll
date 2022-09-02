@@ -164,7 +164,7 @@ define i32 @test_x86_sse_cvtss2si(<4 x float> %a0) #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.x86.sse.cvtss2si(<4 x float> [[A0:%.*]])
@@ -185,7 +185,7 @@ define i32 @test_x86_sse_cvttss2si(<4 x float> %a0) #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR5]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.x86.sse.cvttss2si(<4 x float> [[A0:%.*]])
@@ -211,7 +211,7 @@ define void @test_x86_sse_ldmxcsr(i8* %a0) #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR5]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    call void @llvm.x86.sse.ldmxcsr(i8* [[A0]])
@@ -298,7 +298,7 @@ define i32 @test_x86_sse_movmsk_ps(<4 x float> %a0) #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR5]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.x86.sse.movmsk.ps(<4 x float> [[A0:%.*]])
@@ -379,7 +379,7 @@ define void @test_x86_sse_stmxcsr(i8* %a0) #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR5]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    call void @llvm.x86.sse.stmxcsr(i8* [[A0]])

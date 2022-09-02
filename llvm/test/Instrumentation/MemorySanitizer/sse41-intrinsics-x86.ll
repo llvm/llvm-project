@@ -52,7 +52,7 @@ define <2 x double> @test_x86_sse41_dppd(<2 x double> %a0, <2 x double> %a1) #0 
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.sse41.dppd(<2 x double> [[A0:%.*]], <2 x double> [[A1:%.*]], i8 7)
@@ -77,7 +77,7 @@ define <4 x float> @test_x86_sse41_dpps(<4 x float> %a0, <4 x float> %a1) #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse41.dpps(<4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]], i8 7)
@@ -102,7 +102,7 @@ define <4 x float> @test_x86_sse41_insertps(<4 x float> %a0, <4 x float> %a1) #0
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse41.insertps(<4 x float> [[A0:%.*]], <4 x float> [[A1:%.*]], i8 17)
@@ -128,7 +128,7 @@ define <8 x i16> @test_x86_sse41_mpsadbw(<16 x i8> %a0, <16 x i8> %a1) #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8> [[A0:%.*]], <16 x i8> [[A1:%.*]], i8 7)
@@ -148,7 +148,7 @@ define <8 x i16> @test_x86_sse41_mpsadbw_load_op0(<16 x i8>* %ptr, <16 x i8> %a1
 ; CHECK-NEXT:    [[_MSCMP2:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[A0:%.*]] = load <16 x i8>, <16 x i8>* [[PTR:%.*]], align 16
@@ -163,7 +163,7 @@ define <8 x i16> @test_x86_sse41_mpsadbw_load_op0(<16 x i8>* %ptr, <16 x i8> %a1
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP10:%.*]], label [[TMP11:%.*]], !prof [[PROF0]]
 ; CHECK:       10:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8> [[A0]], <16 x i8> [[A1:%.*]], i8 7)
@@ -252,7 +252,7 @@ define i32 @test_x86_sse41_ptestc(<2 x i64> %a0, <2 x i64> %a1) #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.x86.sse41.ptestc(<2 x i64> [[A0:%.*]], <2 x i64> [[A1:%.*]])
@@ -277,7 +277,7 @@ define i32 @test_x86_sse41_ptestnzc(<2 x i64> %a0, <2 x i64> %a1) #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.x86.sse41.ptestnzc(<2 x i64> [[A0:%.*]], <2 x i64> [[A1:%.*]])
@@ -302,7 +302,7 @@ define i32 @test_x86_sse41_ptestz(<2 x i64> %a0, <2 x i64> %a1) #0 {
 ; CHECK-NEXT:    [[_MSOR:%.*]] = or i1 [[_MSCMP]], [[_MSCMP1]]
 ; CHECK-NEXT:    br i1 [[_MSOR]], label [[TMP5:%.*]], label [[TMP6:%.*]], !prof [[PROF0]]
 ; CHECK:       5:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       6:
 ; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.x86.sse41.ptestz(<2 x i64> [[A0:%.*]], <2 x i64> [[A1:%.*]])
@@ -323,7 +323,7 @@ define <2 x double> @test_x86_sse41_round_pd(<2 x double> %a0) #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> [[A0:%.*]], i32 7)
@@ -344,7 +344,7 @@ define <4 x float> @test_x86_sse41_round_ps(<4 x float> %a0) #0 {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> [[A0:%.*]], i32 7)
@@ -381,7 +381,7 @@ define <2 x double> @test_x86_sse41_round_sd_load(<2 x double> %a0, <2 x double>
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[A1B:%.*]] = load <2 x double>, <2 x double>* [[A1:%.*]], align 16
@@ -408,7 +408,7 @@ define <4 x float> @test_x86_sse41_round_ss_load(<4 x float> %a0, <4 x float>* %
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
 ; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[A1B:%.*]] = load <4 x float>, <4 x float>* [[A1:%.*]], align 16

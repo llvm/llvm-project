@@ -51,7 +51,7 @@ entry:
 ; ADDR: %[[MASKBAD:.*]] = icmp ne i4 %[[MASKSHADOWFLAT]], 0
 ; ADDR: %[[OR:.*]] = or i1 %[[ADDRBAD]], %[[MASKBAD]]
 ; ADDR: br i1 %[[OR]], label {{.*}}, label {{.*}}
-; ADDR: call void @__msan_warning_with_origin_noreturn(i32 0)
+; ADDR: call void @__msan_warning_noreturn()
 
 ; ADDR: tail call void @llvm.masked.store.v4i64.p0v4i64(<4 x i64> %v, <4 x i64>* %p, i32 1, <4 x i1> %mask)
 ; ADDR: ret void
@@ -89,7 +89,7 @@ entry:
 ; ADDR: %[[MASKBAD:.*]] = icmp ne i4 %[[MASKSHADOWFLAT]], 0
 ; ADDR: %[[OR:.*]] = or i1 %[[ADDRBAD]], %[[MASKBAD]]
 ; ADDR: br i1 %[[OR]], label {{.*}}, label {{.*}}
-; ADDR: call void @__msan_warning_with_origin_noreturn(i32 0)
+; ADDR: call void @__msan_warning_noreturn()
 
 ; ADDR: = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %p, i32 1, <4 x i1> %mask, <4 x double> %v)
 ; ADDR: ret <4 x double>

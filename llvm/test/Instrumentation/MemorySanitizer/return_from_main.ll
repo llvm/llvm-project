@@ -15,5 +15,5 @@ declare i32 @f() sanitize_memory
 ; CHECK: call i32 @f()
 ; CHECK: store i32 0, {{.*}} @__msan_retval_tls
 ; CHECK: br i1
-; CHECK: call void @__msan_warning_with_origin_noreturn(i32 0)
+; CHECK: call void @__msan_warning_noreturn()
 ; CHECK: ret i32

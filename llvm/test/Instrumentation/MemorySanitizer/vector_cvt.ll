@@ -22,7 +22,7 @@ entry:
 ; CHECK: [[S:%[_01-9a-z]+]] = extractelement <2 x i64> {{.*}}, i32 0
 ; CHECK: icmp ne {{.*}}[[S]], 0
 ; CHECK: br
-; CHECK: call void @__msan_warning_with_origin_noreturn
+; CHECK: call void @__msan_warning_noreturn()
 ; CHECK: call i32 @llvm.x86.sse2.cvtsd2si
 ; CHECK: store i32 0, {{.*}} @__msan_retval_tls
 ; CHECK: ret i32
@@ -41,7 +41,7 @@ entry:
 ; CHECK: [[S:%[_01-9a-z]+]] = or i32
 ; CHECK: icmp ne {{.*}}[[S]], 0
 ; CHECK: br
-; CHECK: call void @__msan_warning_with_origin_noreturn
+; CHECK: call void @__msan_warning_noreturn()
 ; CHECK: call x86_mmx @llvm.x86.sse.cvtps2pi
 ; CHECK: store i64 0, {{.*}} @__msan_retval_tls
 ; CHECK: ret x86_mmx
@@ -58,7 +58,7 @@ entry:
 ; CHECK: extractelement <4 x i32> {{.*}}, i32 0
 ; CHECK: icmp ne i32 {{.*}}, 0
 ; CHECK: br
-; CHECK: call void @__msan_warning_with_origin_noreturn
+; CHECK: call void @__msan_warning_noreturn()
 ; CHECK: call i32 @llvm.x86.avx512.vcvtss2usi32
 ; CHECK: store i32 0, {{.*}} @__msan_retval_tls
 ; CHECK: ret i32
