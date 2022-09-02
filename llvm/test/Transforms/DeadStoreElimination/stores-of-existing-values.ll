@@ -612,10 +612,12 @@ define void @pr49927(i32* %q, i32* %p) {
 ; CHECK-LABEL: @pr49927(
 ; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4
 ; CHECK-NEXT:    store i32 [[V]], i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    store i32 [[V]], i32* [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %v = load i32, i32* %p, align 4
   store i32 %v, i32* %q, align 4
+  ; FIXME: this store can be eliminated
   store i32 %v, i32* %p, align 4
   ret void
 }
