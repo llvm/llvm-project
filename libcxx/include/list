@@ -194,12 +194,19 @@ template <class T, class Allocator, class Predicate>
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
 #include <__iterator/reverse_iterator.h>
+#include <__memory/addressof.h>
+#include <__memory/allocator.h>
+#include <__memory/allocator_traits.h>
+#include <__memory/compressed_pair.h>
+#include <__memory/pointer_traits.h>
+#include <__memory/shared_ptr.h>
 #include <__memory/swap_allocator.h>
+#include <__memory/unique_ptr.h>
+#include <__type_traits/is_allocator.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <limits>
-#include <memory>
 #include <type_traits>
 #include <version>
 

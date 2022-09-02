@@ -185,11 +185,10 @@ const uint64_t Sema::MaximumAlignment;
 
 Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
            TranslationUnitKind TUKind, CodeCompleteConsumer *CodeCompleter)
-    : ExternalSource(nullptr), isMultiplexExternalSource(false),
-      CurFPFeatures(pp.getLangOpts()), LangOpts(pp.getLangOpts()), PP(pp),
-      Context(ctxt), Consumer(consumer), Diags(PP.getDiagnostics()),
-      SourceMgr(PP.getSourceManager()), CollectStats(false),
-      CodeCompleter(CodeCompleter), CurContext(nullptr),
+    : ExternalSource(nullptr), CurFPFeatures(pp.getLangOpts()),
+      LangOpts(pp.getLangOpts()), PP(pp), Context(ctxt), Consumer(consumer),
+      Diags(PP.getDiagnostics()), SourceMgr(PP.getSourceManager()),
+      CollectStats(false), CodeCompleter(CodeCompleter), CurContext(nullptr),
       OriginalLexicalContext(nullptr), MSStructPragmaOn(false),
       MSPointerToMemberRepresentationMethod(
           LangOpts.getMSPointerToMemberRepresentationMethod()),
@@ -473,10 +472,6 @@ Sema::~Sema() {
         = dyn_cast_or_null<ExternalSemaSource>(Context.getExternalSource()))
     ExternalSema->ForgetSema();
 
-  // If Sema's ExternalSource is the multiplexer - we own it.
-  if (isMultiplexExternalSource)
-    delete ExternalSource;
-
   // Delete cached satisfactions.
   std::vector<ConstraintSatisfaction *> Satisfactions;
   Satisfactions.reserve(Satisfactions.size());
@@ -550,12 +545,10 @@ void Sema::addExternalSource(ExternalSemaSource *E) {
     return;
   }
 
-  if (isMultiplexExternalSource)
-    static_cast<MultiplexExternalSemaSource*>(ExternalSource)->addSource(*E);
-  else {
-    ExternalSource = new MultiplexExternalSemaSource(*ExternalSource, *E);
-    isMultiplexExternalSource = true;
-  }
+  if (auto *Ex = dyn_cast<MultiplexExternalSemaSource>(ExternalSource))
+    Ex->AddSource(E);
+  else
+    ExternalSource = new MultiplexExternalSemaSource(ExternalSource.get(), E);
 }
 
 /// Print out statistics about the semantic analysis.
@@ -1291,8 +1284,8 @@ void Sema::ActOnEndOfTranslationUnit() {
   //   translation unit, with an initializer equal to 0.
   llvm::SmallSet<VarDecl *, 32> Seen;
   for (TentativeDefinitionsType::iterator
-            T = TentativeDefinitions.begin(ExternalSource),
-         TEnd = TentativeDefinitions.end();
+           T = TentativeDefinitions.begin(ExternalSource.get()),
+           TEnd = TentativeDefinitions.end();
        T != TEnd; ++T) {
     VarDecl *VD = (*T)->getActingDefinition();
 
@@ -1336,8 +1329,9 @@ void Sema::ActOnEndOfTranslationUnit() {
   if (!Diags.hasErrorOccurred() && TUKind != TU_Module) {
     // Output warning for unused file scoped decls.
     for (UnusedFileScopedDeclsType::iterator
-           I = UnusedFileScopedDecls.begin(ExternalSource),
-           E = UnusedFileScopedDecls.end(); I != E; ++I) {
+             I = UnusedFileScopedDecls.begin(ExternalSource.get()),
+             E = UnusedFileScopedDecls.end();
+         I != E; ++I) {
       if (ShouldRemoveFromUnused(this, *I))
         continue;
 

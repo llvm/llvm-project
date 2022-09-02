@@ -4,16 +4,16 @@
 // RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -emit-llvm -round-trip-args -o - -x c++ %s  | \
 // RUN: FileCheck -check-prefix=VISIBILITY-IR %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -mignore-xcoff-visibility -fvisibility default -emit-llvm -o - -x c++ %s  | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -mignore-xcoff-visibility -fvisibility=default -emit-llvm -o - -x c++ %s  | \
 // RUN: FileCheck -check-prefix=NOVISIBILITY-IR %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -mignore-xcoff-visibility -fvisibility default -emit-llvm -round-trip-args -o - -x c++ %s  | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -mignore-xcoff-visibility -fvisibility=default -emit-llvm -round-trip-args -o - -x c++ %s  | \
 // RUN: FileCheck -check-prefix=NOVISIBILITY-IR %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -fvisibility default -emit-llvm -o - -x c++ %s  | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -fvisibility=default -emit-llvm -o - -x c++ %s  | \
 // RUN: FileCheck -check-prefix=VISIBILITY-IR %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -fvisibility default -round-trip-args -emit-llvm -o - -x c++ %s  | \
+// RUN: %clang_cc1 -no-opaque-pointers -triple powerpc-unknown-aix -fvisibility=default -round-trip-args -emit-llvm -o - -x c++ %s  | \
 // RUN: FileCheck -check-prefix=VISIBILITY-IR %s
 
 __attribute__((visibility("hidden"))) void foo_h(int *p) {

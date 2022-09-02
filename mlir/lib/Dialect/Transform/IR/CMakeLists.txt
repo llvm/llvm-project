@@ -6,6 +6,7 @@ add_mlir_dialect_library(MLIRTransformDialect
   DEPENDS
   MLIRTransformDialectIncGen
   MLIRTransformInterfacesIncGen
+  MLIRTransformOpsIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

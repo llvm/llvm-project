@@ -2475,6 +2475,17 @@ def FormatInferTypeVariadicOperandsOp
 }
 
 //===----------------------------------------------------------------------===//
+// Test ArrayOfAttr
+//===----------------------------------------------------------------------===//
+
+// Embed the array attributes directly in the assembly format for a nice syntax.
+def ArrayOfAttrOp : TEST_Op<"array_of_attr_op"> {
+  let arguments = (ins TestArrayOfUglyAttrs:$a, TestArrayOfInts:$b,
+                       TestArrayOfEnums:$c);
+  let assemblyFormat = "`a` `=` $a `,` `b` `=` $b `,` `c` `=` $c attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
 // Test SideEffects
 //===----------------------------------------------------------------------===//
 

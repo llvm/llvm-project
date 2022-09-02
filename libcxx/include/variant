@@ -490,7 +490,7 @@ struct __variant {
   template <size_t _Ip, class _Vp>
   _LIBCPP_HIDE_FROM_ABI
   static constexpr auto&& __get_alt(_Vp&& __v) {
-    return __base::__get_alt<_Ip>(_VSTD::forward<_Vp>(__v).__impl);
+    return __base::__get_alt<_Ip>(_VSTD::forward<_Vp>(__v).__impl_);
   }
 };
 
@@ -617,7 +617,7 @@ struct __variant {
   __visit_alt_at(size_t __index, _Visitor&& __visitor, _Vs&&... __vs) {
     return __base::__visit_alt_at(__index,
                                   _VSTD::forward<_Visitor>(__visitor),
-                                  _VSTD::forward<_Vs>(__vs).__impl...);
+                                  _VSTD::forward<_Vs>(__vs).__impl_...);
   }
 
   template <class _Visitor, class... _Vs>
@@ -626,7 +626,7 @@ struct __variant {
                                               _Vs&&... __vs) {
     return __base::__visit_alt(
         _VSTD::forward<_Visitor>(__visitor),
-        _VSTD::__as_variant(_VSTD::forward<_Vs>(__vs)).__impl...);
+        _VSTD::__as_variant(_VSTD::forward<_Vs>(__vs)).__impl_...);
   }
 
   template <class _Visitor, class... _Vs>
@@ -1309,7 +1309,7 @@ public:
                         int> = 0>
   _LIBCPP_HIDE_FROM_ABI
   constexpr variant() noexcept(is_nothrow_default_constructible_v<__first_type>)
-      : __impl(in_place_index<0>) {}
+      : __impl_(in_place_index<0>) {}
 
   variant(const variant&) = default;
   variant(variant&&) = default;
@@ -1326,7 +1326,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   constexpr variant(_Arg&& __arg) noexcept(
       is_nothrow_constructible_v<_Tp, _Arg>)
-      : __impl(in_place_index<_Ip>, _VSTD::forward<_Arg>(__arg)) {}
+      : __impl_(in_place_index<_Ip>, _VSTD::forward<_Arg>(__arg)) {}
 
   template <size_t _Ip, class... _Args,
             class = enable_if_t<(_Ip < sizeof...(_Types)), int>,
@@ -1336,7 +1336,7 @@ public:
   explicit constexpr variant(
       in_place_index_t<_Ip>,
       _Args&&... __args) noexcept(is_nothrow_constructible_v<_Tp, _Args...>)
-      : __impl(in_place_index<_Ip>, _VSTD::forward<_Args>(__args)...) {}
+      : __impl_(in_place_index<_Ip>, _VSTD::forward<_Args>(__args)...) {}
 
   template <
       size_t _Ip,
@@ -1352,7 +1352,7 @@ public:
       initializer_list<_Up> __il,
       _Args&&... __args) noexcept(
       is_nothrow_constructible_v<_Tp, initializer_list<_Up>&, _Args...>)
-      : __impl(in_place_index<_Ip>, __il, _VSTD::forward<_Args>(__args)...) {}
+      : __impl_(in_place_index<_Ip>, __il, _VSTD::forward<_Args>(__args)...) {}
 
   template <
       class _Tp,
@@ -1363,7 +1363,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   explicit constexpr variant(in_place_type_t<_Tp>, _Args&&... __args) noexcept(
       is_nothrow_constructible_v<_Tp, _Args...>)
-      : __impl(in_place_index<_Ip>, _VSTD::forward<_Args>(__args)...) {}
+      : __impl_(in_place_index<_Ip>, _VSTD::forward<_Args>(__args)...) {}
 
   template <
       class _Tp,
@@ -1379,7 +1379,7 @@ public:
       initializer_list<_Up> __il,
       _Args&&... __args) noexcept(
       is_nothrow_constructible_v<_Tp, initializer_list< _Up>&, _Args...>)
-      : __impl(in_place_index<_Ip>, __il, _VSTD::forward<_Args>(__args)...) {}
+      : __impl_(in_place_index<_Ip>, __il, _VSTD::forward<_Args>(__args)...) {}
 
   ~variant() = default;
 
@@ -1398,7 +1398,7 @@ public:
   variant& operator=(_Arg&& __arg) noexcept(
       is_nothrow_assignable_v<_Tp&, _Arg> &&
       is_nothrow_constructible_v<_Tp, _Arg>) {
-    __impl.template __assign<_Ip>(_VSTD::forward<_Arg>(__arg));
+    __impl_.template __assign<_Ip>(_VSTD::forward<_Arg>(__arg));
     return *this;
   }
 
@@ -1410,7 +1410,7 @@ public:
       enable_if_t<is_constructible_v<_Tp, _Args...>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _Tp& emplace(_Args&&... __args) {
-    return __impl.template __emplace<_Ip>(_VSTD::forward<_Args>(__args)...);
+    return __impl_.template __emplace<_Ip>(_VSTD::forward<_Args>(__args)...);
   }
 
   template <
@@ -1423,7 +1423,7 @@ public:
                   int> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _Tp& emplace(initializer_list<_Up> __il, _Args&&... __args) {
-    return __impl.template __emplace<_Ip>(__il, _VSTD::forward<_Args>(__args)...);
+    return __impl_.template __emplace<_Ip>(__il, _VSTD::forward<_Args>(__args)...);
   }
 
   template <
@@ -1434,7 +1434,7 @@ public:
       enable_if_t<is_constructible_v<_Tp, _Args...>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _Tp& emplace(_Args&&... __args) {
-    return __impl.template __emplace<_Ip>(_VSTD::forward<_Args>(__args)...);
+    return __impl_.template __emplace<_Ip>(_VSTD::forward<_Args>(__args)...);
   }
 
   template <
@@ -1447,16 +1447,16 @@ public:
                   int> = 0>
   _LIBCPP_HIDE_FROM_ABI
   _Tp& emplace(initializer_list<_Up> __il, _Args&&... __args) {
-    return __impl.template __emplace<_Ip>(__il, _VSTD::forward<_Args>(__args)...);
+    return __impl_.template __emplace<_Ip>(__il, _VSTD::forward<_Args>(__args)...);
   }
 
   _LIBCPP_HIDE_FROM_ABI
   constexpr bool valueless_by_exception() const noexcept {
-    return __impl.valueless_by_exception();
+    return __impl_.valueless_by_exception();
   }
 
   _LIBCPP_HIDE_FROM_ABI
-  constexpr size_t index() const noexcept { return __impl.index(); }
+  constexpr size_t index() const noexcept { return __impl_.index(); }
 
   template <
       bool _Dummy = true,
@@ -1469,11 +1469,11 @@ public:
   void swap(variant& __that) noexcept(
       __all<(is_nothrow_move_constructible_v<_Types> &&
              is_nothrow_swappable_v<_Types>)...>::value) {
-    __impl.__swap(__that.__impl);
+    __impl_.__swap(__that.__impl_);
   }
 
 private:
-  __variant_detail::__impl<_Types...> __impl;
+  __variant_detail::__impl<_Types...> __impl_;
 
   friend struct __variant_detail::__access::__variant;
   friend struct __variant_detail::__visitation::__variant;
