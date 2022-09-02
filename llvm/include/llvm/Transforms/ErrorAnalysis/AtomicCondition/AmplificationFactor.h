@@ -165,6 +165,7 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
   printf("\tFound NodeToAnalyse: %s\n", NodeToAnalyse->InstructionString);
 #endif
 
+#if FAF_DUMP_SYMBOLIC
   // Create a directory if not present
   char *DirectoryName = (char *)malloc((strlen(LOG_DIRECTORY_NAME)+1) * sizeof(char));
   strcpy(DirectoryName, LOG_DIRECTORY_NAME);
@@ -183,18 +184,6 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
   strcat(ExecutionId, ".txt");
   strcat(FileName, ExecutionId);
 
-  // TODO: Build analysis functions with arguments and print the arguments
-  // Get program name and input
-  //  int str_size = 0;
-  //  for (int i=0; i < _FPC_PROG_INPUTS; ++i)
-  //    str_size += strlen(_FPC_PROG_ARGS[i]) + 1;
-  //  char *prog_input = (char *)malloc((sizeof(char) * str_size) + 1);
-  //  prog_input[0] = '\0';
-  //  for (int i=0; i < _FPC_PROG_INPUTS; ++i) {
-  //    strcat(prog_input, _FPC_PROG_ARGS[i]);
-  //    strcat(prog_input, " ");
-  //  }
-
   // Output file for Relative Error Expression
   FILE *FP = fopen(FileName, "w");
 
@@ -205,6 +194,7 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
     exit(EXIT_FAILURE);
   }
   RelativeErrorString[0] = '\0';
+#endif
 
   // Create a Queue object and add NodeToAnalyse to front of Queue
   NodeProcessingQItem *QItem;
@@ -233,7 +223,9 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
   AFItemPointer->AFString[0] = '\0';
   AFResult->FloatAFRecords++;
 
+#if FAF_DUMP_SYMBOLIC
   strcat(RelativeErrorString, "(0");
+#endif
 
   // Amplification Factor Calculation
   // Loop till Queue is empty -> Front == Back
@@ -322,7 +314,8 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
         if(strlen(AFofWRTNode_String) != 0)
           strcat(AFItemPointer->AFString, "*");
         strcat(AFItemPointer->AFString, StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTXstring);
-        
+
+#if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
         // error string.
         strcat(RelativeErrorString, "+");
@@ -334,6 +327,7 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
           strcat(RelativeErrorString, "*");
           strcat(RelativeErrorString, AFItemPointer->AFString);
         }
+#endif
         
         AFResult->FloatAFRecords++;
 
@@ -402,7 +396,8 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
         if(strlen(AFofWRTNode_String) != 0)
           strcat(AFItemPointer->AFString, "*");
         strcat(AFItemPointer->AFString, StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTXstring);
-        
+
+#if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
         // error string.
         strcat(RelativeErrorString, "+");
@@ -414,6 +409,7 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
           strcat(RelativeErrorString, "*");
           strcat(RelativeErrorString, AFItemPointer->AFString);
         }
+#endif
         
         AFResult->FloatAFRecords++;
 
@@ -479,7 +475,8 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
         if(strlen(AFofWRTNode_String) != 0)
           strcat(AFItemPointer->AFString, "*");
         strcat(AFItemPointer->AFString, StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTYstring);
-        
+
+#if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
         // error string.
         strcat(RelativeErrorString, "+");
@@ -491,6 +488,7 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
           strcat(RelativeErrorString, "*");
           strcat(RelativeErrorString, AFItemPointer->AFString);
         }
+#endif
         
         AFResult->FloatAFRecords++;
 
@@ -538,18 +536,23 @@ void fAFfp32Analysis(char *InstructionToAnalyse) {
     free(WRTNode);
   }
 
+#if FAF_DUMP_SYMBOLIC
   strcat(RelativeErrorString, ")");
+#endif
 
 #if FAF_DEBUG
   printf("\nDone Analysing fp32 NodeId: %d, Instruction: %s\n",
          NodeToAnalyse->NodeId, NodeToAnalyse->InstructionString);
 #endif
 
+#if FAF_DUMP_SYMBOLIC
   fprintf(FP, "%s\n", RelativeErrorString);
 
   fclose(FP);
 
-  printf("\nRelative Error written to: %s\n", FileName);
+//  printf("\nRelative Error written to: %s\n", FileName);
+#endif
+
   return ;
 }
 
@@ -607,6 +610,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
   printf("\tFound NodeToAnalyse: %s\n", NodeToAnalyse->InstructionString);
 #endif
 
+#if FAF_DUMP_SYMBOLIC
   // Create a directory if not present
   char *DirectoryName = (char *)malloc((strlen(LOG_DIRECTORY_NAME)+1) * sizeof(char));
   strcpy(DirectoryName, LOG_DIRECTORY_NAME);
@@ -647,6 +651,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
     exit(EXIT_FAILURE);
   }
   RelativeErrorString[0] = '\0';
+#endif
 
   // Create a Queue object and add NodeToAnalyse to front of Queue
   NodeProcessingQItem *QItem;
@@ -675,7 +680,9 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
   AFItemPointer->AFString[0] = '\0';
   AFResult->DoubleAFRecords++;
 
+#if FAF_DUMP_SYMBOLIC
   strcat(RelativeErrorString, "(0");
+#endif
 
   // Amplification Factor Calculation
   // Loop till Queue is empty -> Front == Back
@@ -765,6 +772,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
           strcat(AFItemPointer->AFString, "*");
         strcat(AFItemPointer->AFString, StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTXstring);
 
+#if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
         // error string.
         strcat(RelativeErrorString, "+");
@@ -776,6 +784,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
           strcat(RelativeErrorString, "*");
           strcat(RelativeErrorString, AFItemPointer->AFString);
         }
+#endif
 
         AFResult->DoubleAFRecords++;
 
@@ -846,6 +855,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
           strcat(AFItemPointer->AFString, "*");
         strcat(AFItemPointer->AFString, StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTXstring);
 
+#if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
         // error string.
         strcat(RelativeErrorString, "+");
@@ -857,6 +867,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
           strcat(RelativeErrorString, "*");
           strcat(RelativeErrorString, AFItemPointer->AFString);
         }
+#endif
         
         AFResult->DoubleAFRecords++;
 
@@ -924,6 +935,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
           strcat(AFItemPointer->AFString, "*");
         strcat(AFItemPointer->AFString, StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTYstring);
 
+#if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
         // error string.
         strcat(RelativeErrorString, "+");
@@ -935,6 +947,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
           strcat(RelativeErrorString, "*");
           strcat(RelativeErrorString, AFItemPointer->AFString);
         }
+#endif
 
         AFResult->DoubleAFRecords++;
         
@@ -982,18 +995,23 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
     free(WRTNode);
   }
 
+#if FAF_DUMP_SYMBOLIC
   strcat(RelativeErrorString, ")");
+#endif
 
 #if FAF_DEBUG
   printf("\nDone Analysing fp64 NodeId: %d, Instruction: %s\n",
          NodeToAnalyse->NodeId, NodeToAnalyse->InstructionString);
 #endif
 
+#if FAF_DUMP_SYMBOLIC
   fprintf(FP, "%s\n", RelativeErrorString);
 
   fclose(FP);
 
-  printf("\nRelative Error written to: %s\n", FileName);
+//  printf("\nRelative Error written to: %s\n", FileName);
+#endif
+
   return ;
 }
 

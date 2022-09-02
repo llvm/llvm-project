@@ -326,38 +326,44 @@ char *fCGperformPHIResolution(char *PHIInstruction) {
 #endif
 
   while (1) {
+    int BranchCounter;
+    do {
     // Setting Pointers to traverse PHI Node's basic blocks and corresponding
     // incoming values
     char **IncomingValsUnit = CurrPhiNode->IncomingVals;
     char **BasicBlocksUnit = CurrPhiNode->BasicBlocks;
 
     // Finding the Basic Block in the PHI Instruction record
-    int BranchCounter;
 #if FAF_DEBUG>=2
     printf("\t\tPrevious Basic Block:%s\n", *PreviousBasicBlock);
 #endif
 
-    for(BranchCounter = 0;
-         BranchCounter < CurrPhiNode->NumBranches && strcmp(*BasicBlocksUnit, *PreviousBasicBlock) != 0;
-         BranchCounter++, IncomingValsUnit++, BasicBlocksUnit++);
 
-    // Debugging section printing the Basic Block Execution Chain
-#if FAF_DEBUG>=2
-    char **BBPointer = CG->BasicBlockExecutionChainTail;
-    printf("\n\t\tReversed Basic Block Execution Chain\n");
-    while(*BBPointer != NULL) {
-      printf("\t\t\tBasic Block Execution Chain: %s\n", *BBPointer);
-      BBPointer--;
-    }
-    printf("\n");
+      for (BranchCounter = 0;
+           BranchCounter < CurrPhiNode->NumBranches &&
+           strcmp(*BasicBlocksUnit, *PreviousBasicBlock) != 0;
+           BranchCounter++, IncomingValsUnit++, BasicBlocksUnit++);
+
+        // Debugging section printing the Basic Block Execution Chain
+#if FAF_DEBUG >= 2
+      char **BBPointer = CG->BasicBlockExecutionChainTail;
+      printf("\n\t\tReversed Basic Block Execution Chain\n");
+      while (*BBPointer != NULL) {
+        printf("\t\t\tBasic Block Execution Chain: %s\n", *BBPointer);
+        BBPointer--;
+      }
+      printf("\n");
 #endif
 
-    // In no case can the basic block NOT be found so the branch counter remains
-    // less than the number of branches.
-    assert(BranchCounter < CurrPhiNode->NumBranches);
+      // If branch corresponding to previous basic block is not found jump,
+      // back another basic block in the execution chain.
+      if(BranchCounter >= CurrPhiNode->NumBranches)
+        PreviousBasicBlock--;
+      else
+        // Assuming the correct branch is chosen, saving the Incoming Register
+        ResolvedValue = *IncomingValsUnit;
+    } while (BranchCounter >= CurrPhiNode->NumBranches);
 
-    // Assuming the correct branch is chosen, saving the Incoming Register
-    ResolvedValue = *IncomingValsUnit;
 
 #if FAF_DEBUG>=2
     printf("\t\tResolved Value:%s\n", ResolvedValue);

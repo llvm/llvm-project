@@ -8,16 +8,17 @@ build_pass:
 	$(CXX) --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AtomicCondition.h \
 		   --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/ComputationGraph.h \
 		   --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AmplificationFactor.h \
-	$(OP) -S -emit-llvm operations.c \
-    	  -o operations.ll
-	$(OPT) -passes=error-analysis -S operations.ll \
-								  -o operations_ac.ll
+		   --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/RandomTesting/URT.h \
+	$(OP) -S -emit-llvm URTTest.c \
+    	  -o URTTest.ll
+	$(OPT) -passes=error-analysis -S URTTest.ll \
+								  -o URTTest_ac.ll
 
 run_pass:
-	$(LLI) operations_ac.ll
+	$(LLI) URTTest_ac.ll
 
 build_original:
-	gcc operations.c -lm
+	gcc URTTest.c
 
 clean:
-	rm -rf operations.ll operations_ac.ll .fAC_logs a.out
+	rm -rf URTTest.ll URTTest_ac.ll .fAC_logs a.out

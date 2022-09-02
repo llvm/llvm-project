@@ -5,7 +5,8 @@
 #include <string>
 #include "llvm/Transforms/ErrorAnalysis/AtomicCondition/ACInstrumentation.h"
 #include "llvm/Transforms/ErrorAnalysis/AtomicCondition/ComputationGraph.h"
-
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/IR/InstrTypes.h"
 
 using namespace llvm;
 using namespace atomiccondition;
@@ -259,6 +260,9 @@ void ACInstrumentation::instrumentCallsForUnaryOperation(Instruction* BaseInstru
 
 
   switch (BaseInstruction->getOpcode()) {
+  case 12:
+    OpType = Operation::Neg;
+    break;
   case 45:
     assert(static_cast<FPTruncInst*>(BaseInstruction)->getDestTy()->isFloatTy());
     OpType = Operation::TruncToFloat;
@@ -484,6 +488,117 @@ void ACInstrumentation::instrumentCallsForBinaryOperation(Instruction* BaseInstr
   return;
 }
 
+void ACInstrumentation::instrumentCallsForOtherOperation(
+    Instruction *BaseInstruction, long *NumInstrumentedInstructions) {
+  assert((CGCreateNode!=nullptr) && (ACfp32BinaryFunction!=nullptr) &&
+         (ACfp64BinaryFunction!=nullptr) && "Function not initialized!");
+  BasicBlock::iterator NextInst(BaseInstruction);
+  NextInst++;
+  IRBuilder<> InstructionBuilder( &(*NextInst) );
+
+  if (BaseInstruction->getOpcode() == Instruction::Call &&
+    static_cast<const CallInst*>(BaseInstruction)->getCalledFunction() &&
+    static_cast<const CallInst*>(BaseInstruction)->getCalledFunction()->hasName() &&
+    (static_cast<const CallInst*>(BaseInstruction)->getCalledFunction()->getName().str().find("llvm.fmuladd") !=
+         std::string::npos ||
+    static_cast<const CallInst*>(BaseInstruction)->getCalledFunction()->getName().str().find("llvm.fma") !=
+         std::string::npos)) {
+    //----------------------------------------------------------------------------
+    //------------------ Instrumenting AC Calculating Function ------------------
+    //----------------------------------------------------------------------------
+
+    std::vector<Value *> Args;
+
+    Constant *EmptyValue = ConstantDataArray::getString(BaseInstruction->getModule()->getContext(),
+                                                        "",
+                                                        true);
+
+    Value *EmptyValuePointer = new GlobalVariable(*BaseInstruction->getModule(),
+                                                  EmptyValue->getType(),
+                                                  true,
+                                                  GlobalValue::InternalLinkage,
+                                                  EmptyValue);
+
+    Value *LeftOpRegisterNamePointer;
+    if(!isa<Constant>(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(1)) && !isa<Argument>(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(1)))
+      LeftOpRegisterNamePointer = createRegisterNameGlobalString(static_cast<Instruction*>(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(1)));
+    else
+      LeftOpRegisterNamePointer = EmptyValuePointer;
+
+    Value *RightOpRegisterNamePointer;
+    if(!isa<Constant>(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(2)) && !isa<Argument>(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(2)))
+      RightOpRegisterNamePointer = createRegisterNameGlobalString(static_cast<Instruction*>(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(2)));
+    else
+      RightOpRegisterNamePointer = EmptyValuePointer;
+
+    Args.push_back(LeftOpRegisterNamePointer);
+    Args.push_back(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(1));
+    Args.push_back(RightOpRegisterNamePointer);
+    Args.push_back(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(2));
+    Args.push_back(InstructionBuilder.getInt32(Operation::Add));
+
+    ArrayRef<Value *> ArgsRef(Args);
+
+    CallInst *ACComputingCallInstruction = nullptr;
+
+    // Branch based on data type of operation
+    if(isSingleFPOperation(BaseInstruction)) {
+      ACComputingCallInstruction =
+          InstructionBuilder.CreateCall(ACfp32BinaryFunction, ArgsRef);
+      *NumInstrumentedInstructions+=1;
+    }
+    else if(isDoubleFPOperation(BaseInstruction)) {
+      ACComputingCallInstruction =
+          InstructionBuilder.CreateCall(ACfp64BinaryFunction, ArgsRef);
+      *NumInstrumentedInstructions+=1;
+    }
+
+    //----------------------------------------------------------------------------
+    //----------------- Instrumenting CG Node creating function -----------------
+    //----------------------------------------------------------------------------
+    std::vector<Value *> CGArgs;
+
+    CallInst *CGCallInstruction = nullptr;
+
+    Value *LeftOpInstructionValuePointer;
+    if(!isa<Constant>(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(1)) && !isa<Argument>(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(1)))
+      LeftOpInstructionValuePointer = createInstructionGlobalString(static_cast<Instruction*>(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(1)));
+    else
+      LeftOpInstructionValuePointer = EmptyValuePointer;
+
+    Value *RightOpInstructionValuePointer;
+    if(!isa<Constant>(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(2)) && !isa<Argument>(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(2)))
+      RightOpInstructionValuePointer = createInstructionGlobalString(static_cast<Instruction*>(static_cast<const CallInst*>(BaseInstruction)->getArgOperand(2)));
+    else
+      RightOpInstructionValuePointer = EmptyValuePointer;
+
+    CGArgs.push_back(createInstructionGlobalString(BaseInstruction));
+    CGArgs.push_back(LeftOpInstructionValuePointer);
+    CGArgs.push_back(RightOpInstructionValuePointer);
+    CGArgs.push_back(InstructionBuilder.getInt32(NodeKind::BinaryInstruction));
+    ArrayRef<Value *> CGArgsRef(CGArgs);
+
+    CGCallInstruction = InstructionBuilder.CreateCall(CGCreateNode, CGArgsRef);
+    *NumInstrumentedInstructions+=1;
+
+    assert(ACComputingCallInstruction && CGCallInstruction && "Invalid call instruction!");
+
+//    MulInstruction = InstructionBuilder.CreateFMul(static_cast<const CallInst*>(&(*NextInst))->getArgOperand(0),
+//                                                          static_cast<const CallInst*>(&(*NextInst))->getArgOperand(1));
+//    NextInst++;
+//    AddInstruction = InstructionBuilder.CreateFAdd(MulInstruction,
+//                                                   static_cast<const CallInst*>(BaseInstruction)->getArgOperand(2));
+////    ReplaceInstWithInst(&(*NextInst),  BinaryOperator::Create(Instruction::FAdd, MulInstruction, static_cast<const CallInst*>(&(*NextInst))->getArgOperand(2), "fadd"));
+//    // Replaces all of the uses of the instruction with uses of the value
+//    BaseInstruction->replaceAllUsesWith(AddInstruction);
+
+    assert(ACComputingCallInstruction && CGCallInstruction && "Invalid call instruction!");
+  }
+
+
+  return;
+}
+
 void ACInstrumentation::instrumentCallsForNonACIntrinsicFunction(
     Instruction *BaseInstruction, long *NumInstrumentedInstructions) {
   assert((CGCreateNode!=nullptr) && "Function not initialized!");
@@ -587,6 +702,10 @@ void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
       instrumentCallsForNonACIntrinsicFunction(CurrentInstruction,
                                                NumInstrumentedInstructions);
     }
+    else if(isOtherOperation(CurrentInstruction)) {
+      instrumentCallsForOtherOperation(CurrentInstruction,
+                                       NumInstrumentedInstructions);
+    }
     else if(isUnaryOperation(CurrentInstruction)) {
       instrumentCallsForUnaryOperation(CurrentInstruction,
                                        NumInstrumentedInstructions);
@@ -595,6 +714,7 @@ void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
       instrumentCallsForBinaryOperation(CurrentInstruction,
                                         NumInstrumentedInstructions);
     }
+
 
     // Instrument Amplification Factor Calculating Function
     if(CurrentInstruction->getOpcode() == Instruction::Call) {
@@ -757,7 +877,8 @@ bool ACInstrumentation::isIntegerToFloatCastOperation(const Instruction *Inst) {
 }
 
 bool ACInstrumentation::isUnaryOperation(const Instruction *Inst) {
-  return Inst->getOpcode() == Instruction::FPTrunc ||
+  return Inst->getOpcode() == Instruction::FNeg ||
+         Inst->getOpcode() == Instruction::FPTrunc ||
          Inst->getOpcode() == Instruction::Call;
 }
 
@@ -769,14 +890,25 @@ bool ACInstrumentation::isBinaryOperation(const Instruction *Inst) {
          Inst->getOpcode() == Instruction::FDiv;
 }
 
+bool ACInstrumentation::isOtherOperation(const Instruction *Inst) {
+  return (Inst->getOpcode() == Instruction::Call &&
+          static_cast<const CallInst*>(Inst)->getCalledFunction() &&
+          static_cast<const CallInst*>(Inst)->getCalledFunction()->hasName() &&
+          (static_cast<const CallInst*>(Inst)->getCalledFunction()->getName().str().find("llvm.fmuladd") !=
+              std::string::npos ||
+          static_cast<const CallInst*>(Inst)->getCalledFunction()->getName().str().find("llvm.fma") !=
+             std::string::npos));
+}
+
 bool ACInstrumentation::isNonACInstrinsicFunction(const Instruction *Inst) {
   assert(Inst->getOpcode() == Instruction::Call);
   if(static_cast<const CallInst*>(Inst)->getCalledFunction() &&
       static_cast<const CallInst*>(Inst)->getCalledFunction()->hasName())
-    return static_cast<const CallInst*>(Inst)->getCalledFunction()->getName().str().find("llvm.fmuladd") !=
-               std::string::npos ||
-           static_cast<const CallInst*>(Inst)->getCalledFunction()->getName().str().find("llvm.fma") !=
-               std::string::npos;
+    return false;
+//        static_cast<const CallInst*>(Inst)->getCalledFunction()->getName().str().find("llvm.fmuladd") !=
+//               std::string::npos ||
+//           static_cast<const CallInst*>(Inst)->getCalledFunction()->getName().str().find("llvm.fma") !=
+//               std::string::npos;
 
   return false;
 }
@@ -785,6 +917,8 @@ bool ACInstrumentation::isNonACInstrinsicFunction(const Instruction *Inst) {
 bool ACInstrumentation::isSingleFPOperation(const Instruction *Inst) {
   if (isUnaryOperation(Inst)) {
     switch (Inst->getOpcode()) {
+    case 12:
+      return Inst->getOperand(0)->getType()->isFloatTy();
     case 45:
       return static_cast<const FPTruncInst*>(Inst)->getSrcTy()->isFloatTy();
     case 56:
@@ -792,7 +926,7 @@ bool ACInstrumentation::isSingleFPOperation(const Instruction *Inst) {
       // used to calculate the AC.
       return static_cast<const CallInst*>(Inst)->getArgOperand(0)->getType()->isFloatTy();
     default:
-      errs() << "Not an FP32 operation.";
+      errs() << "Not an FP32 operation.\n";
     }
   } else if(isBinaryOperation(Inst)) {
     return Inst->getOperand(0)->getType()->isFloatTy() &&
@@ -807,6 +941,8 @@ bool ACInstrumentation::isSingleFPOperation(const Instruction *Inst) {
 bool ACInstrumentation::isDoubleFPOperation(const Instruction *Inst) {
   if (isUnaryOperation(Inst)) {
     switch (Inst->getOpcode()) {
+    case 12:
+      return Inst->getOperand(0)->getType()->isDoubleTy();
     case 45:
       return static_cast<const FPTruncInst*>(Inst)->getSrcTy()->isDoubleTy();
     case 56:
@@ -814,7 +950,7 @@ bool ACInstrumentation::isDoubleFPOperation(const Instruction *Inst) {
       // used to calculate the AC.
       return static_cast<const CallInst*>(Inst)->getArgOperand(0)->getType()->isDoubleTy();
     default:
-      errs() << "Not an FP64 operation.";
+      errs() << "Not an FP64 operation.\n";
     }
   } else if(isBinaryOperation(Inst)) {
     return Inst->getOperand(0)->getType()->isDoubleTy() &&

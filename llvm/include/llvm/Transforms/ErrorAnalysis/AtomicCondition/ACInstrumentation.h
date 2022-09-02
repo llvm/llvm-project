@@ -36,8 +36,6 @@ private:
 
   Function *AFfp32AnalysisFunction;
   Function *AFfp64AnalysisFunction;
-  Function *AFfp32DumpRelativeErrorExpression;
-  Function *AFfp64DumpRelativeErrorExpression;
 
   // Additional Utilities
   Function *CGDotGraphFunction;
@@ -57,6 +55,8 @@ public:
                                         long int *NumInstrumentedInstructions);
   void instrumentCallsForBinaryOperation(Instruction *BaseInstruction,
                                          long int *NumInstrumentedInstructions);
+  void instrumentCallsForOtherOperation(Instruction *BaseInstruction,
+                                        long int *NumInstrumentedInstructions);
   void instrumentCallsForNonACIntrinsicFunction(Instruction *BaseInstruction,
                                            long int *NumInstrumentedInstructions);
   void instrumentCallsForAFAnalysis(Instruction *BaseInstruction,
@@ -74,6 +74,7 @@ public:
   static bool isIntegerToFloatCastOperation(const Instruction *Inst);
   static bool isUnaryOperation(const Instruction *Inst);
   static bool isBinaryOperation(const Instruction *Inst);
+  static bool isOtherOperation(const Instruction *Inst);
   static bool isNonACInstrinsicFunction(const Instruction *Inst);
 
   // Categorized by Data Type

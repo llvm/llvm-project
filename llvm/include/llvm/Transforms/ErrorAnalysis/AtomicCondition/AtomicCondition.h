@@ -34,7 +34,8 @@ enum Operation {
   Exp,
   Log,
   Sqrt,
-  TruncToFloat
+  TruncToFloat,
+  Neg
 };
 
 
@@ -107,6 +108,7 @@ float fp32OpError[] = {
     1e-6,
     1e-6, // Does not have a known error
     1e-6, // Truncing is not a GNU library function. Giving it 1 ULP error
+    1e-6,
 };
 
 double fp64OpError[] = {
@@ -127,6 +129,7 @@ double fp64OpError[] = {
     1e-16,
     1e-16, // Does not have a known error
     1e-16, // Truncing is not a GNU library function. Giving it 1 ULP error
+    1e-16,
 };
 
 
@@ -138,7 +141,6 @@ int fACIsBinaryOperation(enum Operation Op) {
           Op == 1 ||
           Op == 2 ||
           Op == 3);
-
 }
 
 char *fACFloatDumpAtomicConditionString(const char *Op1, float Op1Val, const char *Op2, float Op2Val, enum Operation OP, int WRT) {
@@ -450,6 +452,8 @@ char *fACFloatDumpAtomicConditionString(const char *Op1, float Op1Val, const cha
     strcat(ACstring, ")");
     break;
   case 16:
+    break;
+  case 17:
     break;
   default:
     printf("No such operation %d\n", OP);
@@ -769,6 +773,8 @@ char *fACDoubleDumpAtomicConditionString(const char *Op1, double Op1Val, const c
     break;
   case 16:
     break;
+  case 17:
+    break;
   default:
     printf("No such operation %d\n", OP);
     exit(1);
@@ -1053,6 +1059,10 @@ void fACfp32UnaryDriver(const char *XName, float X, enum Operation OP) {
     AC = 0.5;
 //    printf("AC of sqrt(x) | x=%f is %f.\n", X, AC);
     break;
+  case 17:
+    AC = 1.0;
+//    printf("AC of -x | x=%f is %f.\n", X, AC);
+    break;
   default:
     printf("No such operation\n");
     break;
@@ -1176,6 +1186,10 @@ void fACfp64UnaryDriver(const char *XName, double X, enum Operation OP) {
   case 16:
     AC = 1.0;
 //    printf("AC of trunc(x, fp32) | x=%f is %f.\n", X, AC);
+    break;
+  case 17:
+    AC = 1.0;
+//    printf("AC of -x | x=%f is %f.\n", X, AC);
     break;
   default:
     printf("No such operation\n");
