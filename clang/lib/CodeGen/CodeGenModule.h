@@ -1560,6 +1560,9 @@ public:
   void printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
                                        const Decl *D) const;
 
+  /// Given the schedule clause, can No-Loop code be generated?
+  bool isScheduleNoLoopCompatible(const OMPLoopDirective &LD);
+
   /// Helper functions for generating a NoLoop kernel
   /// For a captured statement, get the single For statement, if it exists,
   /// otherwise return nullptr.

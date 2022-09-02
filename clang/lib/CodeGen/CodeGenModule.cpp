@@ -7400,6 +7400,39 @@ bool CodeGenModule::isForStmtXteamRedConforming(const Stmt *OMPStmt) {
   return true;
 }
 
+bool CodeGenModule::isScheduleNoLoopCompatible(const OMPLoopDirective &LD) {
+  for (const auto *C : LD.getClausesOfKind<OMPScheduleClause>()) {
+    OpenMPScheduleClauseKind SchedKind = C->getScheduleKind();
+    if (SchedKind == OMPC_SCHEDULE_guided || SchedKind == OMPC_SCHEDULE_runtime)
+      return false;
+    // No need to examine the monotonic ordering-modifier since with No-Loop,
+    // each thread executes a single iteration. Monotonic refers to ordering
+    // of iterations within a thread which does not apply here.
+    // The other modifier, simd, is ignored since the SIMD construct is ignored
+    // as well for device code generation.
+    assert((SchedKind == OMPC_SCHEDULE_static ||
+            SchedKind == OMPC_SCHEDULE_dynamic ||
+            SchedKind == OMPC_SCHEDULE_auto) &&
+           "Unexpected schedule");
+
+    // Return true if either auto or chunk size is 1.
+    const Expr *ChunkExpr = C->getChunkSize();
+    if (SchedKind == OMPC_SCHEDULE_auto) {
+      assert(ChunkExpr == nullptr && "Chunk size unexpected");
+    } else {
+      bool HasChunkSizeOne = false;
+      Expr::EvalResult Result;
+      if (ChunkExpr && ChunkExpr->EvaluateAsInt(Result, getContext())) {
+        llvm::APSInt EvaluatedChunk = Result.Val.getInt();
+        HasChunkSizeOne = EvaluatedChunk.getLimitedValue() == 1;
+      }
+      if (!HasChunkSizeOne)
+        return false;
+    }
+  }
+  return true;
+}
+
 bool CodeGenModule::areCombinedClausesNoLoopCompatible(
     const OMPExecutableDirective &D) {
   if (D.hasClausesOfKind<OMPDefaultmapClause>() ||
@@ -7417,12 +7450,11 @@ bool CodeGenModule::areCombinedClausesNoLoopCompatible(
       D.hasClausesOfKind<OMPOrderClause>() || // concurrent would be ok
       D.hasClausesOfKind<OMPCopyinClause>() ||
       D.hasClausesOfKind<OMPProcBindClause>() ||
-      D.hasClausesOfKind<OMPOrderedClause>() ||
-      D.hasClausesOfKind<OMPScheduleClause>())
+      D.hasClausesOfKind<OMPOrderedClause>())
     return false;
   if (!isa<OMPLoopDirective>(D))
     return false;
-  return true;
+  return isScheduleNoLoopCompatible(cast<OMPLoopDirective>(D));
 }
 
 bool CodeGenModule::areCombinedClausesXteamRedCompatible(
@@ -7442,10 +7474,11 @@ bool CodeGenModule::areCombinedClausesXteamRedCompatible(
       D.hasClausesOfKind<OMPOrderClause>() || // concurrent would be ok
       D.hasClausesOfKind<OMPCopyinClause>() ||
       D.hasClausesOfKind<OMPProcBindClause>() ||
-      D.hasClausesOfKind<OMPOrderedClause>() ||
-      D.hasClausesOfKind<OMPScheduleClause>())
+      D.hasClausesOfKind<OMPOrderedClause>())
     return false;
-  return true;
+  if (!isa<OMPLoopDirective>(D))
+    return false;
+  return isScheduleNoLoopCompatible(cast<OMPLoopDirective>(D));
 }
 
 bool CodeGenModule::canHandleReductionClause(const OMPExecutableDirective &D) {
