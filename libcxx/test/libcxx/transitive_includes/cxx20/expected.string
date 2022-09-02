@@ -3,7 +3,6 @@ array
 atomic
 bit
 cctype
-chrono
 climits
 cmath
 compare
@@ -27,7 +26,6 @@ new
 optional
 ratio
 stdexcept
-string
 string_view
 tuple
 type_traits

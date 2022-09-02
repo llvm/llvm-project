@@ -502,7 +502,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
     return;
 
   // Filter out scf.for loops that were created out of parallel dimensions.
-  for (auto loop : llvm::enumerate(loopNest.loops)) {
+  for (const auto &loop : llvm::enumerate(loopNest.loops)) {
     if (procInfo[loop.index()].distributionMethod ==
         DistributionMethod::Cyclic) {
       mapLoopToProcessorIds(loop.value(), procInfo[loop.index()].procId,
@@ -704,7 +704,7 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
   unpackRanges(b, loc, loopRanges, lbsStorage, ubsStorage, stepsStorage);
 
   // Modify the lb, ub, and step based on the distribution options.
-  for (auto it : llvm::enumerate(procInfo)) {
+  for (const auto &it : llvm::enumerate(procInfo)) {
     if (it.value().distributionMethod != linalg::DistributionMethod::None) {
       updateBoundsForCyclicDistribution(
           b, loc, it.value().procId, it.value().nprocs, lbsStorage[it.index()],

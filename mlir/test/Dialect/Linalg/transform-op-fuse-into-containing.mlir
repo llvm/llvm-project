@@ -17,10 +17,10 @@ module {
     %1 = affine.apply #map0()[%d0, %arg0]
 
     // CHECK: scf.foreach_thread {{.*}} {
-    %2 = scf.foreach_thread (%arg3) in (%1)  -> (tensor<?xf32>) {
+    %2 = scf.foreach_thread (%arg3) in (%1) shared_outs(%o = %arg2) -> (tensor<?xf32>) {
       %3 = affine.apply #map1(%arg3)[%arg0]
       %4 = affine.min #map2(%arg3)[%d0, %arg0]
-      %5 = tensor.extract_slice %arg2[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+      %5 = tensor.extract_slice %o[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
 
       // CHECK: %[[T0:.*]] = tensor.extract_slice %[[IN]][%{{.*}}] [%{{.*}}] [{{.*}}]
       // CHECK: %[[T1:.*]] = linalg.fill {{.*}} outs(%[[T0]]
@@ -29,7 +29,7 @@ module {
       // CHECK: %[[T2:.*]] = linalg.elemwise_unary ins(%[[T1]]
       %7 = linalg.elemwise_unary ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.foreach_thread.perform_concurrently {
-        tensor.parallel_insert_slice %7 into %arg2[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
+        tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
     }
     // CHECK: }
@@ -70,16 +70,16 @@ module {
     %1 = affine.apply #map0()[%arg0]
 
     // CHECK: scf.foreach_thread {{.*}} {
-    %2 = scf.foreach_thread (%arg3) in (%1)  -> (tensor<64xf32>) {
+    %2 = scf.foreach_thread (%arg3) in (%1) shared_outs(%o = %arg2) -> (tensor<64xf32>) {
       // CHECK: %[[INIT_TENSOR:.*]] = linalg.init_tensor
       %3 = affine.apply #map1(%arg3)[%arg0]
       %4 = affine.min #map2(%arg3)[%arg0]
-      %5 = tensor.extract_slice %arg2[%3] [%4] [1] : tensor<64xf32> to tensor<?xf32>
+      %5 = tensor.extract_slice %o[%3] [%4] [1] : tensor<64xf32> to tensor<?xf32>
 
       // CHECK: %[[T2:.*]] = linalg.elemwise_unary ins(%[[INIT_TENSOR]]
       %7 = linalg.elemwise_unary ins(%0 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
       scf.foreach_thread.perform_concurrently {
-        tensor.parallel_insert_slice %7 into %arg2[%3] [%4] [1] : tensor<?xf32> into tensor<64xf32>
+        tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<64xf32>
       }
     }
     // CHECK: }

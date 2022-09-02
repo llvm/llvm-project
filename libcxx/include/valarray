@@ -360,7 +360,7 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <new>
 #include <version>
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <algorithm>
 #  include <functional>
 #endif

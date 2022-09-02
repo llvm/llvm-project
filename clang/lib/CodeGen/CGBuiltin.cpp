@@ -4647,14 +4647,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__fastfail:
     return RValue::get(EmitMSVCBuiltinExpr(MSVCIntrin::__fastfail, E));
 
-  case Builtin::BI__builtin_coro_size: {
-    auto & Context = getContext();
-    auto SizeTy = Context.getSizeType();
-    auto T = Builder.getIntNTy(Context.getTypeSize(SizeTy));
-    Function *F = CGM.getIntrinsic(Intrinsic::coro_size, T);
-    return RValue::get(Builder.CreateCall(F));
-  }
-
   case Builtin::BI__builtin_coro_id:
     return EmitCoroutineIntrinsic(E, Intrinsic::coro_id);
   case Builtin::BI__builtin_coro_promise:
@@ -4679,6 +4671,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return EmitCoroutineIntrinsic(E, Intrinsic::coro_end);
   case Builtin::BI__builtin_coro_suspend:
     return EmitCoroutineIntrinsic(E, Intrinsic::coro_suspend);
+  case Builtin::BI__builtin_coro_size:
+    return EmitCoroutineIntrinsic(E, Intrinsic::coro_size);
 
   // OpenCL v2.0 s6.13.16.2, Built-in pipe read and write functions
   case Builtin::BIread_pipe:

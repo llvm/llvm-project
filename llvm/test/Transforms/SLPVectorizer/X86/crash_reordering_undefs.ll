@@ -15,11 +15,11 @@ define i32 @crash_reordering_undefs() {
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i64 undef, [[OR1]]
 ; CHECK-NEXT:    [[ADD9:%.*]] = select i1 [[CMP3]], i32 65536, i32 65537
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> undef)
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 undef, [[ADD0]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[ADD2]], [[ADD4]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 [[OP_RDX]], [[OP_RDX1]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = add i32 [[OP_RDX2]], [[ADD9]]
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = add i32 [[TMP0]], [[OP_RDX3]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP0]], undef
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i32 [[ADD0]], [[ADD2]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = add i32 [[ADD4]], [[ADD9]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = add i32 [[OP_RDX]], [[OP_RDX1]]
+; CHECK-NEXT:    [[OP_RDX4:%.*]] = add i32 [[OP_RDX3]], [[OP_RDX2]]
 ; CHECK-NEXT:    ret i32 [[OP_RDX4]]
 ;
 entry:

@@ -3798,6 +3798,17 @@ CINDEX_LINKAGE CXType clang_getPointeeType(CXType T);
 CINDEX_LINKAGE CXType clang_getUnqualifiedType(CXType CT);
 
 /**
+ * For reference types (e.g., "const int&"), returns the type that the
+ * reference refers to (e.g "const int").
+ *
+ * Otherwise, returns the type itself.
+ *
+ * A type that has kind \c CXType_LValueReference or
+ * \c CXType_RValueReference is a reference type.
+ */
+CINDEX_LINKAGE CXType clang_getNonReferenceType(CXType CT);
+
+/**
  * Return the cursor for the declaration of the given type.
  */
 CINDEX_LINKAGE CXCursor clang_getTypeDeclaration(CXType T);

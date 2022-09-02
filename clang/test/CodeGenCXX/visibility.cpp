@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -fvisibility hidden -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
+// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -fvisibility=hidden -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
 // For clang, "internal" is just an alias for "hidden". We could use it for some
 // optimization purposes on 32-bit x86, but it's not worth it.
-// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -fvisibility internal -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
+// RUN: %clang_cc1 %s -std=c++11 -triple=x86_64-apple-darwin10 -fvisibility=internal -emit-llvm -o - | FileCheck %s -check-prefix=CHECK-HIDDEN
 
 #define HIDDEN __attribute__((visibility("hidden")))
 #define PROTECTED __attribute__((visibility("protected")))

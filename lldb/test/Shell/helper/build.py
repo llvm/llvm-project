@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import platform
 import shutil
 import signal
 import subprocess
@@ -274,7 +275,7 @@ class MsvcBuilder(Builder):
     def __init__(self, toolchain_type, args):
         Builder.__init__(self, toolchain_type, args, '.obj')
 
-        if os.getenv('PLATFORM') == 'arm64':
+        if platform.uname().machine.lower() == 'arm64':
             self.msvc_arch_str = 'arm' if self.arch == '32' else 'arm64'
         else:
             self.msvc_arch_str = 'x86' if self.arch == '32' else 'x64'

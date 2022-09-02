@@ -4107,6 +4107,14 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   if (const Arg *A = Args.getLastArg(OPT_frandomize_layout_seed_EQ))
     Opts.RandstructSeed = A->getValue(0);
 
+  // Validate options for HLSL
+  if (Opts.HLSL) {
+    bool SupportedTarget = T.getArch() == llvm::Triple::dxil &&
+                           T.getOS() == llvm::Triple::ShaderModel;
+    if (!SupportedTarget)
+      Diags.Report(diag::err_drv_hlsl_unsupported_target) << T.str();
+  }
+
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 

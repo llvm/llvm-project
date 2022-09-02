@@ -6,7 +6,6 @@ bitset
 ccomplex
 cctype
 cerrno
-chrono
 climits
 cmath
 compare
@@ -18,7 +17,6 @@ cstdint
 cstdio
 cstdlib
 cstring
-ctgmath
 ctime
 cwchar
 cwctype

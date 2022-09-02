@@ -1,5 +1,4 @@
 atomic
-chrono
 climits
 cmath
 compare
@@ -14,7 +13,6 @@ initializer_list
 iosfwd
 iterator
 limits
-memory
 new
 ratio
 stdexcept

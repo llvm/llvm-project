@@ -120,14 +120,14 @@ func.func @scf_foreach_thread_out_of_place(%in: tensor<100xf32>,
 
   // CHECK-FUNC-NOT: alloc_tensor
   // CHECK: %[[alloc:.*]] = bufferization.alloc_tensor() copy(%[[arg1]]) {bufferization.escape = [false]} : tensor<100xf32>
-  // CHECK: scf.foreach_thread
-  %result = scf.foreach_thread (%thread_idx) in (%num_threads) -> tensor<100xf32> {
+  // CHECK: scf.foreach_thread {{.*}} shared_outs(%[[o:.*]] = %[[alloc]])
+  %result = scf.foreach_thread (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> tensor<100xf32> {
       // CHECK: tensor.extract_slice
       // CHECK: scf.foreach_thread.perform_concurrently
-      // CHECK: tensor.parallel_insert_slice %{{.*}} into %[[alloc]]
+      // CHECK: tensor.parallel_insert_slice %{{.*}} into %[[o]]
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
       scf.foreach_thread.perform_concurrently {
-        tensor.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
+        tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
       }
   // CHECK: } {thread_dim_mapping = [5]}

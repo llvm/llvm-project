@@ -31,7 +31,6 @@ stdexcept
 string
 string_view
 system_error
-thread
 tuple
 type_traits
 typeinfo

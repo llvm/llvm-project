@@ -645,6 +645,23 @@ cc_test(
 )
 
 cc_test(
+    name = "testing_adt_tests",
+    size = "small",
+    srcs = glob(
+        [
+            "Testing/ADT/*.cpp",
+        ],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TestingADT",
+        "//llvm:gtest",
+        "//llvm:gtest_main",
+    ],
+)
+
+cc_test(
     name = "transforms_tests",
     size = "small",
     srcs = glob(

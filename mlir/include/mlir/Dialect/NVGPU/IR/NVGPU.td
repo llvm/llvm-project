@@ -151,6 +151,14 @@ def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
     `bypassL1` attribute is hint to the backend and hardware that
     the copy should by pass the L1 cache, this may be dropped by the backend or
     hardware. 
+    `dstElements` attribute is the total number of elements written to 
+    destination (shared memory).
+    `srcElements` argument is the total number of elements read from 
+    source (global memory).
+    
+    srcElements` is an optional argument and when present it only reads 
+    srcElements number of elements from the source global memory and zero fills 
+    the rest of the elements in the destination shared memory.
 
     In order to do a copy and wait for the result we need the following
     combination:
@@ -183,10 +191,11 @@ def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
                        Variadic<Index>:$dstIndices,
                        Arg<AnyMemRef, "", [MemRead]>:$src,
                        Variadic<Index>:$srcIndices,
-                       IndexAttr:$numElements,
+                       IndexAttr:$dstElements,
+                       Optional<Index>:$srcElements,
                        OptionalAttr<UnitAttr>:$bypassL1);
   let assemblyFormat = [{
-    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` `,` $numElements
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` `,` $dstElements (`,` $srcElements^)?
       attr-dict `:` type($src) `to` type($dst)
   }];
   let hasVerifier = 1;

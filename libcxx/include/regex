@@ -772,13 +772,12 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <deque>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 #include <version>
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <iterator>
 #  include <utility>
 #endif

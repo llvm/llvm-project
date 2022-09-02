@@ -241,6 +241,9 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   check_exception("A format-spec width field shouldn't have a leading zero", SV("hello {:0}"), world);
 
   // *** width ***
+  // Width 0 allowed, but not useful for string arguments.
+  check.template operator()<"hello {:{}}">(SV("hello world"), world, 0);
+
 #ifdef _LIBCPP_VERSION
   // This limit isn't specified in the Standard.
   static_assert(std::__format::__number_max == 2'147'483'647, "Update the assert and the test.");
@@ -249,7 +252,6 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   check_exception("The numeric value of the format-spec is too large", SV("{:10000000000}"), world);
 #endif
 
-  check_exception("A format-spec width field replacement should have a positive value", SV("hello {:{}}"), world, 0);
   check_exception("A format-spec arg-id replacement shouldn't have a negative value", SV("hello {:{}}"), world, -1);
   check_exception("A format-spec arg-id replacement exceeds the maximum supported value", SV("hello {:{}}"), world,
                   unsigned(-1));
@@ -2035,8 +2037,8 @@ void format_test_floating_point_general_lower_case(TestFunction check) {
   check.template operator()<"answer is '{:.0g}'">(SV("answer is '0'"), F(0));
   check.template operator()<"answer is '{:#.0g}'">(SV("answer is '0.'"), F(0));
 
-  check.template operator()<"answer is '{:#g}'">(SV("answer is '0.'"), F(0));
-  check.template operator()<"answer is '{:#g}'">(SV("answer is '2.5'"), F(2.5));
+  check.template operator()<"answer is '{:#g}'">(SV("answer is '0.00000'"), F(0));
+  check.template operator()<"answer is '{:#g}'">(SV("answer is '2.50000'"), F(2.5));
 
   check.template operator()<"answer is '{:#g}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
   check.template operator()<"answer is '{:#g}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
@@ -2083,6 +2085,33 @@ void format_test_floating_point_general_lower_case(TestFunction check) {
   check.template operator()<"answer is '{:.4g}'">(SV("answer is '0.03125'"), 0.03125);
   check.template operator()<"answer is '{:.5g}'">(SV("answer is '0.03125'"), 0.03125);
   check.template operator()<"answer is '{:.10g}'">(SV("answer is '0.03125'"), 0.03125);
+
+  // *** precision & alternate form ***
+
+  // Output validated with  printf("%#xg")
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.'"), 1.2, 0);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.'"), 1.2, 1);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.2'"), 1.2, 2);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.20'"), 1.2, 3);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.200'"), 1.2, 4);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.2000'"), 1.2, 5);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.20000'"), 1.2, 6);
+
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.e+03'"), 1200.0, 0);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.e+03'"), 1200.0, 1);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.2e+03'"), 1200.0, 2);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.20e+03'"), 1200.0, 3);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1200.'"), 1200.0, 4);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1200.0'"), 1200.0, 5);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1200.00'"), 1200.0, 6);
+
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.e+06'"), 1200000.0, 0);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.e+06'"), 1200000.0, 1);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.2e+06'"), 1200000.0, 2);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.20e+06'"), 1200000.0, 3);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.200e+06'"), 1200000.0, 4);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.2000e+06'"), 1200000.0, 5);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.20000e+06'"), 1200000.0, 6);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
@@ -2161,8 +2190,8 @@ void format_test_floating_point_general_upper_case(TestFunction check) {
   check.template operator()<"answer is '{:.0G}'">(SV("answer is '0'"), F(0));
   check.template operator()<"answer is '{:#.0G}'">(SV("answer is '0.'"), F(0));
 
-  check.template operator()<"answer is '{:#G}'">(SV("answer is '0.'"), F(0));
-  check.template operator()<"answer is '{:#G}'">(SV("answer is '2.5'"), F(2.5));
+  check.template operator()<"answer is '{:#G}'">(SV("answer is '0.00000'"), F(0));
+  check.template operator()<"answer is '{:#G}'">(SV("answer is '2.50000'"), F(2.5));
 
   check.template operator()<"answer is '{:#G}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
   check.template operator()<"answer is '{:#G}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
@@ -2209,6 +2238,33 @@ void format_test_floating_point_general_upper_case(TestFunction check) {
   check.template operator()<"answer is '{:.4G}'">(SV("answer is '0.03125'"), 0.03125);
   check.template operator()<"answer is '{:.5G}'">(SV("answer is '0.03125'"), 0.03125);
   check.template operator()<"answer is '{:.10G}'">(SV("answer is '0.03125'"), 0.03125);
+
+  // *** precision & alternate form ***
+
+  // Output validated with  printf("%#xg")
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.'"), 1.2, 0);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.'"), 1.2, 1);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.2'"), 1.2, 2);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.20'"), 1.2, 3);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.200'"), 1.2, 4);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.2000'"), 1.2, 5);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.20000'"), 1.2, 6);
+
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.E+03'"), 1200.0, 0);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.E+03'"), 1200.0, 1);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.2E+03'"), 1200.0, 2);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.20E+03'"), 1200.0, 3);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1200.'"), 1200.0, 4);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1200.0'"), 1200.0, 5);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1200.00'"), 1200.0, 6);
+
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.E+06'"), 1200000.0, 0);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.E+06'"), 1200000.0, 1);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.2E+06'"), 1200000.0, 2);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.20E+06'"), 1200000.0, 3);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.200E+06'"), 1200000.0, 4);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.2000E+06'"), 1200000.0, 5);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.20000E+06'"), 1200000.0, 6);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
@@ -2452,6 +2508,32 @@ void format_test_floating_point_default_precision(TestFunction check) {
   check.template operator()<"answer is '{:.4}'">(SV("answer is '0.03125'"), 0.03125);
   check.template operator()<"answer is '{:.5}'">(SV("answer is '0.03125'"), 0.03125);
   check.template operator()<"answer is '{:.10}'">(SV("answer is '0.03125'"), 0.03125);
+
+  // *** precision & alternate form ***
+
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.'"), 1.2, 0);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.'"), 1.2, 1);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2'"), 1.2, 2);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2'"), 1.2, 3);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2'"), 1.2, 4);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2'"), 1.2, 5);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2'"), 1.2, 6);
+
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.e+03'"), 1200.0, 0);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.e+03'"), 1200.0, 1);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+03'"), 1200.0, 2);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+03'"), 1200.0, 3);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1200.'"), 1200.0, 4);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1200.'"), 1200.0, 5);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1200.'"), 1200.0, 6);
+
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.e+06'"), 1200000.0, 0);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.e+06'"), 1200000.0, 1);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+06'"), 1200000.0, 2);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+06'"), 1200000.0, 3);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+06'"), 1200000.0, 4);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+06'"), 1200000.0, 5);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+06'"), 1200000.0, 6);
 
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp

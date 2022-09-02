@@ -25,14 +25,14 @@
 ! CHECK-DAG:         %[[VAL_30:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFEj"}
 ! CHECK-DAG:         %[[VAL_31:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFEk"}
 ! CHECK:         fir.store %[[VAL_24]] to %[[VAL_31]] : !fir.ref<i32>
-! CHECK:         %[[LB:.*]] = fir.convert %[[VAL_5]] : (index) -> i32
-! CHECK:         br ^bb1(%[[LB]], %[[VAL_0]] : i32, index)
+! CHECK:         %[[STEP:.*]] = fir.convert %[[VAL_5]] : (index) -> i32
+! CHECK:         br ^bb1(%[[STEP]], %[[VAL_0]] : i32, index)
 ! CHECK:       ^bb1(%[[VAL_32:.*]]: i32, %[[VAL_33:.*]]: index):
 ! CHECK:         %[[VAL_34:.*]] = arith.cmpi sgt, %[[VAL_33]], %[[VAL_6]] : index
 ! CHECK:         cond_br %[[VAL_34]], ^bb2, ^bb6
 ! CHECK:       ^bb2:
 ! CHECK:         fir.store %[[VAL_32]] to %[[VAL_30]] : !fir.ref<i32>
-! CHECK:         br ^bb3(%[[LB]], %[[VAL_0]] : i32, index)
+! CHECK:         br ^bb3(%[[STEP]], %[[VAL_0]] : i32, index)
 ! CHECK:       ^bb3(%[[VAL_36:.*]]: i32, %[[VAL_37:.*]]: index):
 ! CHECK:         %[[VAL_38:.*]] = arith.cmpi sgt, %[[VAL_37]], %[[VAL_6]] : index
 ! CHECK:         cond_br %[[VAL_38]], ^bb4, ^bb5
@@ -52,7 +52,8 @@
 ! CHECK:         %[[VAL_50:.*]] = arith.subi %[[VAL_49]], %[[VAL_20]] : i64
 ! CHECK:         %[[VAL_51:.*]] = fir.coordinate_of %[[VAL_25]], %[[VAL_47]], %[[VAL_50]] : (!fir.ref<!fir.array<10x10xf32>>, i64, i64) -> !fir.ref<f32>
 ! CHECK:         fir.store %[[VAL_44]] to %[[VAL_51]] : !fir.ref<f32>
-! CHECK:         %[[VAL_52:.*]] = arith.addi %[[VAL_36]], %[[LB]] : i32
+! CHECK:         %[[LOADI:.*]] = fir.load %[[VAL_28]] : !fir.ref<i32>
+! CHECK:         %[[VAL_52:.*]] = arith.addi %[[LOADI]], %[[STEP]] : i32
 ! CHECK:         %[[VAL_53:.*]] = arith.subi %[[VAL_37]], %[[VAL_5]] : index
 ! CHECK:         br ^bb3(%[[VAL_52]], %[[VAL_53]] : i32, index)
 ! CHECK:       ^bb5:
@@ -65,7 +66,8 @@
 ! CHECK:         %[[VAL_60:.*]] = arith.subi %[[VAL_59]], %[[VAL_20]] : i64
 ! CHECK:         %[[VAL_61:.*]] = fir.coordinate_of %[[VAL_27]], %[[VAL_60]] : (!fir.ref<!fir.array<10xf32>>, i64) -> !fir.ref<f32>
 ! CHECK:         fir.store %[[VAL_57]] to %[[VAL_61]] : !fir.ref<f32>
-! CHECK:         %[[VAL_62:.*]] = arith.addi %[[VAL_32]], %[[LB]] : i32
+! CHECK:         %[[LOADJ:.*]] = fir.load %[[VAL_30]] : !fir.ref<i32>
+! CHECK:         %[[VAL_62:.*]] = arith.addi %[[LOADJ]], %[[STEP]] : i32
 ! CHECK:         %[[VAL_63:.*]] = arith.subi %[[VAL_33]], %[[VAL_5]] : index
 ! CHECK:         br ^bb1(%[[VAL_62]], %[[VAL_63]] : i32, index)
 ! CHECK:       ^bb6:

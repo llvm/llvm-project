@@ -3442,8 +3442,10 @@ void Verifier::visitCallBase(CallBase &Call) {
 
   // Verify that each inlinable callsite of a debug-info-bearing function in a
   // debug-info-bearing function has a debug location attached to it. Failure to
-  // do so causes assertion failures when the inliner sets up inline scope info.
+  // do so causes assertion failures when the inliner sets up inline scope info
+  // (Interposable functions are not inlinable).
   if (Call.getFunction()->getSubprogram() && Call.getCalledFunction() &&
+      !Call.getCalledFunction()->isInterposable() &&
       Call.getCalledFunction()->getSubprogram())
     CheckDI(Call.getDebugLoc(),
             "inlinable function call in a function with "
@@ -4502,6 +4504,8 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
         ExpectedNumOperands = IBI->getNumDestinations();
       else if (isa<SelectInst>(&I))
         ExpectedNumOperands = 2;
+      else if (CallBrInst *CI = dyn_cast<CallBrInst>(&I))
+        ExpectedNumOperands = CI->getNumSuccessors();
       else
         CheckFailed("!prof branch_weights are not allowed for this instruction",
                     MD);

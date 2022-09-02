@@ -22,8 +22,9 @@
 #include <__functional/operations.h>
 #include <__functional/ranges_operations.h>
 #include <__iterator/iterator_traits.h>
+#include <__memory/destruct_n.h>
+#include <__memory/unique_ptr.h>
 #include <climits>
-#include <memory>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

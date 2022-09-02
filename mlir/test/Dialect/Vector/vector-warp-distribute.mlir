@@ -4,7 +4,9 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -test-vector-warp-distribute=propagate-distribution -canonicalize | FileCheck --check-prefixes=CHECK-PROP %s
 // RUN: mlir-opt %s -allow-unregistered-dialect -split-input-file -test-vector-warp-distribute="hoist-uniform distribute-transfer-write propagate-distribution" -canonicalize | FileCheck --check-prefixes=CHECK-DIST-AND-PROP %s
 
-
+// CHECK-SCF-IF-DAG: #[[$TIMES2:.*]] = affine_map<()[s0] -> (s0 * 2)>
+// CHECK-SCF-IF-DAG: #[[$TIMES4:.*]] = affine_map<()[s0] -> (s0 * 4)>
+// CHECK-SCF-IF-DAG: #[[$TIMES8:.*]] = affine_map<()[s0] -> (s0 * 8)>
 // CHECK-SCF-IF-DAG: memref.global "private" @__shared_32xf32 : memref<32xf32, 3>
 // CHECK-SCF-IF-DAG: memref.global "private" @__shared_64xf32 : memref<64xf32, 3>
 // CHECK-SCF-IF-DAG: memref.global "private" @__shared_128xf32 : memref<128xf32, 3>
@@ -16,17 +18,14 @@
 func.func @rewrite_warp_op_to_scf_if(%laneid: index,
                                 %v0: vector<4xf32>, %v1: vector<8xf32>) {
 //   CHECK-SCF-IF-DAG:   %[[c0:.*]] = arith.constant 0 : index
-//   CHECK-SCF-IF-DAG:   %[[c2:.*]] = arith.constant 2 : index
-//   CHECK-SCF-IF-DAG:   %[[c4:.*]] = arith.constant 4 : index
-//   CHECK-SCF-IF-DAG:   %[[c8:.*]] = arith.constant 8 : index
 //       CHECK-SCF-IF:   %[[is_lane_0:.*]] = arith.cmpi eq, %[[laneid]], %[[c0]]
 
 //       CHECK-SCF-IF:   %[[buffer_v0:.*]] = memref.get_global @__shared_128xf32
-//       CHECK-SCF-IF:   %[[s0:.*]] = arith.muli %[[laneid]], %[[c4]]
-//       CHECK-SCF-IF:   vector.store %[[v0]], %[[buffer_v0]][%[[s0]]]
+//       CHECK-SCF-IF:   %[[s0:.*]] = affine.apply #[[$TIMES4]]()[%[[laneid]]]
+//       CHECK-SCF-IF:   vector.transfer_write %[[v0]], %[[buffer_v0]][%[[s0]]]
 //       CHECK-SCF-IF:   %[[buffer_v1:.*]] = memref.get_global @__shared_256xf32
-//       CHECK-SCF-IF:   %[[s1:.*]] = arith.muli %[[laneid]], %[[c8]]
-//       CHECK-SCF-IF:   vector.store %[[v1]], %[[buffer_v1]][%[[s1]]]
+//       CHECK-SCF-IF:   %[[s1:.*]] = affine.apply #[[$TIMES8]]()[%[[laneid]]]
+//       CHECK-SCF-IF:   vector.transfer_write %[[v1]], %[[buffer_v1]][%[[s1]]]
 
 //   CHECK-SCF-IF-DAG:   gpu.barrier
 //   CHECK-SCF-IF-DAG:   %[[buffer_def_0:.*]] = memref.get_global @__shared_32xf32
@@ -36,21 +35,21 @@ func.func @rewrite_warp_op_to_scf_if(%laneid: index,
   %r:2 = vector.warp_execute_on_lane_0(%laneid)[32]
       args(%v0, %v1 : vector<4xf32>, vector<8xf32>) -> (vector<1xf32>, vector<2xf32>) {
     ^bb0(%arg0: vector<128xf32>, %arg1: vector<256xf32>):
-//       CHECK-SCF-IF:     %[[arg1:.*]] = vector.load %[[buffer_v1]][%[[c0]]] : memref<256xf32, 3>, vector<256xf32>
-//       CHECK-SCF-IF:     %[[arg0:.*]] = vector.load %[[buffer_v0]][%[[c0]]] : memref<128xf32, 3>, vector<128xf32>
+//       CHECK-SCF-IF:     %[[arg1:.*]] = vector.transfer_read %[[buffer_v1]][%[[c0]]], %{{.*}} {in_bounds = [true]} : memref<256xf32, 3>, vector<256xf32>
+//       CHECK-SCF-IF:     %[[arg0:.*]] = vector.transfer_read %[[buffer_v0]][%[[c0]]], %{{.*}} {in_bounds = [true]} : memref<128xf32, 3>, vector<128xf32>
 //       CHECK-SCF-IF:     %[[def_0:.*]] = "some_def"(%[[arg0]]) : (vector<128xf32>) -> vector<32xf32>
 //       CHECK-SCF-IF:     %[[def_1:.*]] = "some_def"(%[[arg1]]) : (vector<256xf32>) -> vector<64xf32>
     %2 = "some_def"(%arg0) : (vector<128xf32>) -> vector<32xf32>
     %3 = "some_def"(%arg1) : (vector<256xf32>) -> vector<64xf32>
-//       CHECK-SCF-IF:     vector.store %[[def_0]], %[[buffer_def_0]][%[[c0]]]
-//       CHECK-SCF-IF:     vector.store %[[def_1]], %[[buffer_def_1]][%[[c0]]]
+//       CHECK-SCF-IF:     vector.transfer_write %[[def_0]], %[[buffer_def_0]][%[[c0]]]
+//       CHECK-SCF-IF:     vector.transfer_write %[[def_1]], %[[buffer_def_1]][%[[c0]]]
     vector.yield %2, %3 : vector<32xf32>, vector<64xf32>
   }
 //       CHECK-SCF-IF:   }
 //       CHECK-SCF-IF:   gpu.barrier
-//       CHECK-SCF-IF:   %[[o1:.*]] = arith.muli %[[laneid]], %[[c2]]
-//       CHECK-SCF-IF:   %[[r1:.*]] = vector.load %[[buffer_def_1]][%[[o1]]] : memref<64xf32, 3>, vector<2xf32>
-//       CHECK-SCF-IF:   %[[r0:.*]] = vector.load %[[buffer_def_0]][%[[laneid]]] : memref<32xf32, 3>, vector<1xf32>
+//       CHECK-SCF-IF:   %[[o1:.*]] = affine.apply #[[$TIMES2]]()[%[[laneid]]]
+//       CHECK-SCF-IF:   %[[r1:.*]] = vector.transfer_read %[[buffer_def_1]][%[[o1]]], %{{.*}} {in_bounds = [true]} : memref<64xf32, 3>, vector<2xf32>
+//       CHECK-SCF-IF:   %[[r0:.*]] = vector.transfer_read %[[buffer_def_0]][%[[laneid]]], %{{.*}} {in_bounds = [true]} : memref<32xf32, 3>, vector<1xf32>
 //       CHECK-SCF-IF:   "some_use"(%[[r0]]) : (vector<1xf32>) -> ()
 //       CHECK-SCF-IF:   "some_use"(%[[r1]]) : (vector<2xf32>) -> ()
   "some_use"(%r#0) : (vector<1xf32>) -> ()
@@ -630,4 +629,24 @@ func.func @vector_extract_simple(%laneid: index) -> (f32) {
     vector.yield %1 : f32
   }
   return %r : f32
+}
+
+// -----
+
+// CHECK-PROP:   func @lane_dependent_warp_propagate_read
+//  CHECK-PROP-SAME:   %[[ID:.*]]: index
+func.func @lane_dependent_warp_propagate_read(
+    %laneid: index, %src: memref<1x1024xf32>, %dest: memref<1x1024xf32>) {
+  // CHECK-PROP-DAG: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-PROP-NOT: lane_dependent_warp_propagate_read
+  // CHECK-PROP-DAG: %[[R0:.*]] = vector.transfer_read %arg1[%[[C0]], %[[ID]]], %{{.*}} : memref<1x1024xf32>, vector<1x1xf32>
+  // CHECK-PROP: vector.transfer_write %[[R0]], {{.*}} : vector<1x1xf32>, memref<1x1024xf32>
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %r = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x1xf32>) {
+    %2 = vector.transfer_read %src[%c0, %c0], %cst : memref<1x1024xf32>, vector<1x32xf32>
+    vector.yield %2 : vector<1x32xf32>
+  }
+  vector.transfer_write %r, %dest[%c0, %laneid] : vector<1x1xf32>, memref<1x1024xf32>
+  return
 }

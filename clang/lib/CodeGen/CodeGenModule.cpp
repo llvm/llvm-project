@@ -1099,7 +1099,7 @@ llvm::ConstantInt *CodeGenModule::getSize(CharUnits size) {
 
 void CodeGenModule::setGlobalVisibility(llvm::GlobalValue *GV,
                                         const NamedDecl *D) const {
-  if (GV->hasDLLImportStorageClass())
+  if (GV->hasDLLExportStorageClass() || GV->hasDLLImportStorageClass())
     return;
   // Internal definitions always have default visibility.
   if (GV->hasLocalLinkage()) {

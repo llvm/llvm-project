@@ -39,6 +39,12 @@ CheckOptions:
     value: lower_case
   - key:   readability-identifier-naming.ParameterPrefix
     value: __
+  - key:   readability-identifier-naming.PrivateMemberCase
+    value: lower_case
+  - key:   readability-identifier-naming.PrivateMemberPrefix
+    value: __
+  - key:   readability-identifier-naming.PrivateMemberSuffix
+    value: _
 
 # TODO: investigate these checks
 # bugprone-branch-clone,

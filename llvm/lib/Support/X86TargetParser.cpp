@@ -321,7 +321,7 @@ constexpr ProcInfo Processors[] = {
   { {"prescott"}, CK_Prescott, ~0U, FeaturesPrescott },
   { {"nocona"}, CK_Nocona, ~0U, FeaturesNocona },
   // Core microarchitecture based processors.
-  { {"core2"}, CK_Core2, ~0U, FeaturesCore2 },
+  { {"core2"}, CK_Core2, FEATURE_SSSE3, FeaturesCore2 },
   { {"penryn"}, CK_Penryn, ~0U, FeaturesPenryn },
   // Atom processors
   { {"bonnell"}, CK_Bonnell, FEATURE_SSSE3, FeaturesBonnell },

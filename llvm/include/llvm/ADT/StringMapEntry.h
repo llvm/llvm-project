@@ -102,6 +102,8 @@ class StringMapEntry final : public StringMapEntryStorage<ValueTy> {
 public:
   using StringMapEntryStorage<ValueTy>::StringMapEntryStorage;
 
+  using ValueType = ValueTy;
+
   StringRef getKey() const {
     return StringRef(getKeyData(), this->getKeyLength());
   }

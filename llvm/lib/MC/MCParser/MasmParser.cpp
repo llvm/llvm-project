@@ -2278,7 +2278,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       Lex();
     }
 
-    getTargetParser().doBeforeLabelEmit(Sym);
+    getTargetParser().doBeforeLabelEmit(Sym, IDLoc);
 
     // Emit the label.
     if (!getTargetParser().isParsingMSInlineAsm())

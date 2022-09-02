@@ -3065,7 +3065,7 @@ bool Parser::ParseUnqualifiedId(CXXScopeSpec &SS, ParsedType ObjectType,
           << Tok.getIdentifierInfo()->getName() << 0;
       goto ParseIdentifier;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     Diag(Tok, diag::err_expected_unqualified_id) << getLangOpts().CPlusPlus;
     return true;

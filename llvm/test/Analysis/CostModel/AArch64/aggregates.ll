@@ -3,6 +3,8 @@
 ; RUN: opt < %s -mtriple=aarch64-unknown-linux-gnu -passes="print<cost-model>" -cost-kind=latency 2>&1 -disable-output | FileCheck %s --check-prefix=LATENCY
 ; RUN: opt < %s -mtriple=aarch64-unknown-linux-gnu -passes="print<cost-model>" -cost-kind=code-size 2>&1 -disable-output | FileCheck %s --check-prefix=CODESIZE
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
 define i32 @extract_first_i32({i32, i32} %agg) {
 ; THROUGHPUT-LABEL: 'extract_first_i32'
 ; THROUGHPUT-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %r = extractvalue { i32, i32 } %agg, 0

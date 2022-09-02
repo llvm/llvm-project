@@ -97,7 +97,7 @@ namespace std {
 #include <limits>
 #include <type_traits>
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <iosfwd>
 #endif
 

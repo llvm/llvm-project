@@ -152,10 +152,10 @@ define i64 @test_3() #0 {
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = mul i32 [[TMP50]], [[TMP51]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> [[SHUFFLE]])
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = mul i32 [[OP_RDX]], [[TMP52]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = mul i32 [[OP_RDX1]], [[TMP1]]
 ; CHECK-NEXT:    [[OP_RDX3:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    [[OP_RDX4:%.*]] = mul i32 [[OP_RDX2]], [[OP_RDX3]]
-; CHECK-NEXT:    [[OP_RDX5:%.*]] = mul i32 [[OP_RDX1]], [[OP_RDX4]]
+; CHECK-NEXT:    [[OP_RDX5:%.*]] = mul i32 [[OP_RDX4]], [[TMP1]]
 ; CHECK-NEXT:    [[VAL64:%.*]] = add i32 undef, [[OP_RDX5]]
 ; CHECK-NEXT:    [[VAL65:%.*]] = sext i32 [[VAL64]] to i64
 ; CHECK-NEXT:    ret i64 [[VAL65]]

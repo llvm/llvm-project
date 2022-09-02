@@ -39,9 +39,19 @@
 //
 // Test two gpu architectures with complete compilation.
 //
-// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s 2>&1 \
-// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings --offload-arch=sm_30,sm_35 %s 2>&1 \
-// RUN: | FileCheck -check-prefix=BIN2 %s
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
+// RUN:        --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s 2>&1 \
+// RUN: | FileCheck -check-prefixes=BIN2,AOUT %s
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
+// RUN:       --offload-arch=sm_30,sm_35 %s 2>&1 \
+// RUN: | FileCheck -check-prefixes=BIN2,AOUT %s
+// .. same, but with explicitly specified output.
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
+// RUN:       --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s -o %t/out 2>&1 \
+// RUN: | FileCheck -check-prefixes=BIN2,TOUT %s
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings \
+// RUN:        --offload-arch=sm_30,sm_35 %s -o %t/out 2>&1 \
+// RUN: | FileCheck -check-prefixes=BIN2,TOUT %s
 // BIN2: # "nvptx64-nvidia-cuda" - "clang",{{.*}} output:
 // BIN2-NOT: cuda-bindings-device-cuda-nvptx64
 // BIN2: # "nvptx64-nvidia-cuda" - "NVPTX::Assembler",{{.*}} output:
@@ -54,7 +64,50 @@
 // BIN2-NOT: cuda-bindings-device-cuda-nvptx64
 // BIN2: # "powerpc64le-ibm-linux-gnu" - "clang",{{.*}}  output:
 // BIN2-NOT: cuda-bindings-device-cuda-nvptx64
-// BIN2: # "powerpc64le-ibm-linux-gnu" - "GNU::Linker", inputs:{{.*}}, output: "a.out"
+// AOUT: # "powerpc64le-ibm-linux-gnu" - "GNU::Linker", inputs:{{.*}}, output: "a.out"
+// TOUT: # "powerpc64le-ibm-linux-gnu" - "GNU::Linker", inputs:{{.*}}, output: "{{.*}}/out"
+
+// .. same, but with -fsyntax-only
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings -fsyntax-only \
+// RUN:       --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s 2>&1 \
+// RUN: | FileCheck -check-prefix=SYN %s
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings -fsyntax-only \
+// RUN:        --offload-arch=sm_30,sm_35 %s -o %t/out 2>&1 \
+// RUN: | FileCheck -check-prefix=SYN %s
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings -fsyntax-only \
+// RUN:       --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s 2>&1 \
+// RUN: | FileCheck -check-prefix=SYN %s
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings -fsyntax-only \
+// RUN:        --offload-arch=sm_30,sm_35 %s -o %t/out 2>&1 \
+// RUN: | FileCheck -check-prefix=SYN %s
+// SYN-NOT: inputs:
+// SYN: # "powerpc64le-ibm-linux-gnu" - "clang", inputs: [{{.*}}], output: (nothing)
+// SYN-NEXT: # "nvptx64-nvidia-cuda" - "clang", inputs: [{{.*}}], output: (nothing)
+// SYN-NEXT: # "nvptx64-nvidia-cuda" - "clang", inputs: [{{.*}}], output: (nothing)
+// SYN-NOT: inputs
+
+// .. and with --offload-new-driver
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings -fsyntax-only \
+// RUN:       --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 --offload-new-driver %s 2>&1 \
+// RUN: | FileCheck -check-prefix=NDSYN %s
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings -fsyntax-only \
+// RUN:        --offload-arch=sm_30,sm_35 %s --offload-new-driver -o %t/out 2>&1 \
+// RUN: | FileCheck -check-prefix=NDSYN %s
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings -fsyntax-only \
+// RUN:       --cuda-gpu-arch=sm_30 --cuda-gpu-arch=sm_35 %s --offload-new-driver 2>&1 \
+// RUN: | FileCheck -check-prefix=NDSYN %s
+// RUN: %clang -target powerpc64le-ibm-linux-gnu -ccc-print-bindings -fsyntax-only \
+// RUN:        --offload-arch=sm_30,sm_35 %s --offload-new-driver -o %t/out 2>&1 \
+// RUN: | FileCheck -check-prefix=NDSYN %s
+// NDSYN-NOT: inputs:
+// NDSYN: # "nvptx64-nvidia-cuda" - "clang", inputs: [{{.*}}], output: (nothing)
+// NDSYN-NEXT: # "nvptx64-nvidia-cuda" - "clang", inputs: [{{.*}}], output: (nothing)
+// ! FIXME: new driver erroneously attempts to run linker phase w/ no inputs.
+//          Remove these checks once the issue is solved.
+// NDSYN-NEXT: "nvptx64-nvidia-cuda" - "NVPTX::Linker", inputs: [(nothing), (nothing)], output: "{{.*}}"
+// NDSYN-NEXT: # "powerpc64le-ibm-linux-gnu" - "clang", inputs: [{{.*}}], output: (nothing)
+// NDSYN-NOT: inputs:
+
 
 //
 // Test two gpu architectures up to the assemble phase.

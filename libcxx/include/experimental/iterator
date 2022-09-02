@@ -82,19 +82,19 @@ public:
     typedef void                                 reference;
 
     ostream_joiner(ostream_type& __os, _Delim&& __d)
-        : __output_iter(_VSTD::addressof(__os)), __delim(_VSTD::move(__d)), __first(true) {}
+        : __output_iter_(_VSTD::addressof(__os)), __delim_(_VSTD::move(__d)), __first_(true) {}
 
     ostream_joiner(ostream_type& __os, const _Delim& __d)
-        : __output_iter(_VSTD::addressof(__os)), __delim(__d), __first(true) {}
+        : __output_iter_(_VSTD::addressof(__os)), __delim_(__d), __first_(true) {}
 
 
     template<typename _Tp>
     ostream_joiner& operator=(const _Tp& __v)
     {
-        if (!__first)
-            *__output_iter << __delim;
-        __first = false;
-        *__output_iter << __v;
+        if (!__first_)
+            *__output_iter_ << __delim_;
+        __first_ = false;
+        *__output_iter_ << __v;
         return *this;
     }
 
@@ -103,9 +103,9 @@ public:
     ostream_joiner& operator++(int) _NOEXCEPT { return *this; }
 
 private:
-    ostream_type*   __output_iter;
-    _Delim          __delim;
-    bool            __first;
+    ostream_type*   __output_iter_;
+    _Delim          __delim_;
+    bool            __first_;
 };
 
 

@@ -534,10 +534,7 @@ private:
     if (!__width_as_arg_)
       return __width_;
 
-    int32_t __result = __format_spec::__substitute_arg_id(__ctx.arg(__width_));
-    if (__result == 0)
-      __throw_format_error("A format-spec width field replacement should have a positive value");
-    return __result;
+    return __format_spec::__substitute_arg_id(__ctx.arg(__width_));
   }
 
   _LIBCPP_HIDE_FROM_ABI
@@ -653,11 +650,6 @@ template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI constexpr void __process_parsed_floating_point(__parser<_CharT>& __parser) {
   switch (__parser.__type_) {
   case __format_spec::__type::__default:
-    // When no precision specified then it keeps default since that
-    // formatting differs from the other types.
-    if (__parser.__precision_as_arg_ || __parser.__precision_ != -1)
-      __parser.__type_ = __format_spec::__type::__general_lower_case;
-    break;
   case __format_spec::__type::__hexfloat_lower_case:
   case __format_spec::__type::__hexfloat_upper_case:
     // Precision specific behavior will be handled later.

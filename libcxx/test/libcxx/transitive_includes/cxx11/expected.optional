@@ -16,7 +16,6 @@ iterator
 limits
 memory
 new
-optional
 ratio
 stdexcept
 tuple

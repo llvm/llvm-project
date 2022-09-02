@@ -14,6 +14,7 @@ int __attribute__((target("arch=tigerlake"))) foo(void) {return 9;}
 int __attribute__((target("arch=sapphirerapids"))) foo(void) {return 10;}
 int __attribute__((target("arch=alderlake"))) foo(void) {return 11;}
 int __attribute__((target("arch=rocketlake"))) foo(void) {return 12;}
+int __attribute__((target("arch=core2"))) foo(void) {return 13;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar(void) {
@@ -146,6 +147,8 @@ void calls_pr50025c(void) { pr50025c(); }
 // LINUX: ret i32 11
 // LINUX: define{{.*}} i32 @foo.arch_rocketlake()
 // LINUX: ret i32 12
+// LINUX: define{{.*}} i32 @foo.arch_core2()
+// LINUX: ret i32 13
 // LINUX: define{{.*}} i32 @foo()
 // LINUX: ret i32 2
 // LINUX: define{{.*}} i32 @bar()
@@ -175,6 +178,8 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: ret i32 11
 // WINDOWS: define dso_local i32 @foo.arch_rocketlake()
 // WINDOWS: ret i32 12
+// WINDOWS: define dso_local i32 @foo.arch_core2()
+// WINDOWS: ret i32 13
 // WINDOWS: define dso_local i32 @foo()
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @bar()

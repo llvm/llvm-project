@@ -792,8 +792,16 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # Enable -Wstring-conversion to catch misuse of string literals.
   add_flag_if_supported("-Wstring-conversion" STRING_CONVERSION_FLAG)
 
-  # Prevent bugs that can happen with llvm's brace style.
-  add_flag_if_supported("-Wmisleading-indentation" MISLEADING_INDENTATION_FLAG)
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Disable the misleading indentation warning with GCC; GCC can
+    # produce noisy notes about this getting disabled in large files.
+    # See e.g. https://gcc.gnu.org/bugzilla/show_bug.cgi?id=89549
+    check_cxx_compiler_flag("-Wmisleading-indentation" CXX_SUPPORTS_MISLEADING_INDENTATION_FLAG)
+    append_if(CXX_SUPPORTS_MISLEADING_INDENTATION_FLAG "-Wno-misleading-indentation" CMAKE_CXX_FLAGS)
+  else()
+    # Prevent bugs that can happen with llvm's brace style.
+    add_flag_if_supported("-Wmisleading-indentation" MISLEADING_INDENTATION_FLAG)
+  endif()
 
   # Enable -Wctad-maybe-unsupported to catch unintended use of CTAD.
   add_flag_if_supported("-Wctad-maybe-unsupported" CTAD_MAYBE_UNSPPORTED_FLAG)

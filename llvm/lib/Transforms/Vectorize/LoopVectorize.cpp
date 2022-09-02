@@ -475,7 +475,8 @@ public:
 
   /// Widen a single call instruction within the innermost loop.
   void widenCallInstruction(CallInst &CI, VPValue *Def, VPUser &ArgOperands,
-                            VPTransformState &State);
+                            VPTransformState &State,
+                            Intrinsic::ID VectorIntrinsicID);
 
   /// Fix the vectorized code, taking care of header phi's, live-outs, and more.
   void fixVectorizedLoop(VPTransformState &State, VPlan &Plan);
@@ -4152,9 +4153,9 @@ bool InnerLoopVectorizer::useOrderedReductions(
   return Cost->useOrderedReductions(RdxDesc);
 }
 
-void InnerLoopVectorizer::widenCallInstruction(CallInst &CI, VPValue *Def,
-                                               VPUser &ArgOperands,
-                                               VPTransformState &State) {
+void InnerLoopVectorizer::widenCallInstruction(
+    CallInst &CI, VPValue *Def, VPUser &ArgOperands, VPTransformState &State,
+    Intrinsic::ID VectorIntrinsicID) {
   assert(!isa<DbgInfoIntrinsic>(CI) &&
          "DbgInfoIntrinsic should have been dropped during VPlan construction");
   State.setDebugLocFromInst(&CI);
@@ -4163,21 +4164,6 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &CI, VPValue *Def,
   for (Value *ArgOperand : CI.args())
     Tys.push_back(ToVectorTy(ArgOperand->getType(), VF.getKnownMinValue()));
 
-  Intrinsic::ID ID = getVectorIntrinsicIDForCall(&CI, TLI);
-
-  // The flag shows whether we use Intrinsic or a usual Call for vectorized
-  // version of the instruction.
-  // Is it beneficial to perform intrinsic call compared to lib call?
-  bool NeedToScalarize = false;
-  InstructionCost CallCost = Cost->getVectorCallCost(&CI, VF, NeedToScalarize);
-  InstructionCost IntrinsicCost =
-      ID ? Cost->getVectorIntrinsicCost(&CI, VF) : 0;
-  bool UseVectorIntrinsic = ID && IntrinsicCost <= CallCost;
-  assert((UseVectorIntrinsic || !NeedToScalarize) &&
-         "Instruction should be scalarized elsewhere.");
-  assert((IntrinsicCost.isValid() || CallCost.isValid()) &&
-         "Either the intrinsic cost or vector call cost must be valid");
-
   for (unsigned Part = 0; Part < UF; ++Part) {
     SmallVector<Type *, 2> TysForDecl = {CI.getType()};
     SmallVector<Value *, 4> Args;
@@ -4185,23 +4171,23 @@ void InnerLoopVectorizer::widenCallInstruction(CallInst &CI, VPValue *Def,
       // Some intrinsics have a scalar argument - don't replace it with a
       // vector.
       Value *Arg;
-      if (!UseVectorIntrinsic ||
-          !isVectorIntrinsicWithScalarOpAtArg(ID, I.index()))
+      if (!VectorIntrinsicID ||
+          !isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index()))
         Arg = State.get(I.value(), Part);
       else
         Arg = State.get(I.value(), VPIteration(0, 0));
-      if (isVectorIntrinsicWithOverloadTypeAtArg(ID, I.index()))
+      if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index()))
         TysForDecl.push_back(Arg->getType());
       Args.push_back(Arg);
     }
 
     Function *VectorF;
-    if (UseVectorIntrinsic) {
+    if (VectorIntrinsicID) {
       // Use vector version of the intrinsic.
       if (VF.isVector())
         TysForDecl[0] = VectorType::get(CI.getType()->getScalarType(), VF);
       Module *M = State.Builder.GetInsertBlock()->getModule();
-      VectorF = Intrinsic::getDeclaration(M, ID, TysForDecl);
+      VectorF = Intrinsic::getDeclaration(M, VectorIntrinsicID, TysForDecl);
       assert(VectorF && "Can't retrieve vector intrinsic.");
     } else {
       // Use vector version of the function call.
@@ -8320,23 +8306,42 @@ VPWidenCallRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
              ID == Intrinsic::experimental_noalias_scope_decl))
     return nullptr;
 
-  auto willWiden = [&](ElementCount VF) -> bool {
-    // The following case may be scalarized depending on the VF.
-    // The flag shows whether we use Intrinsic or a usual Call for vectorized
-    // version of the instruction.
-    // Is it beneficial to perform intrinsic call compared to lib call?
-    bool NeedToScalarize = false;
-    InstructionCost CallCost = CM.getVectorCallCost(CI, VF, NeedToScalarize);
-    InstructionCost IntrinsicCost = ID ? CM.getVectorIntrinsicCost(CI, VF) : 0;
-    bool UseVectorIntrinsic = ID && IntrinsicCost <= CallCost;
-    return UseVectorIntrinsic || !NeedToScalarize;
-  };
-
-  if (!LoopVectorizationPlanner::getDecisionAndClampRange(willWiden, Range))
-    return nullptr;
-
   ArrayRef<VPValue *> Ops = Operands.take_front(CI->arg_size());
-  return new VPWidenCallRecipe(*CI, make_range(Ops.begin(), Ops.end()));
+
+  // Is it beneficial to perform intrinsic call compared to lib call?
+  bool ShouldUseVectorIntrinsic =
+      ID && LoopVectorizationPlanner::getDecisionAndClampRange(
+                [&](ElementCount VF) -> bool {
+                  bool NeedToScalarize = false;
+                  // Is it beneficial to perform intrinsic call compared to lib
+                  // call?
+                  InstructionCost CallCost =
+                      CM.getVectorCallCost(CI, VF, NeedToScalarize);
+                  InstructionCost IntrinsicCost =
+                      CM.getVectorIntrinsicCost(CI, VF);
+                  return IntrinsicCost <= CallCost;
+                },
+                Range);
+  if (ShouldUseVectorIntrinsic)
+    return new VPWidenCallRecipe(*CI, make_range(Ops.begin(), Ops.end()), ID);
+
+  // Is better to call a vectorized version of the function than to to scalarize
+  // the call?
+  auto ShouldUseVectorCall = LoopVectorizationPlanner::getDecisionAndClampRange(
+      [&](ElementCount VF) -> bool {
+        // The following case may be scalarized depending on the VF.
+        // The flag shows whether we can use a usual Call for vectorized
+        // version of the instruction.
+        bool NeedToScalarize = false;
+        CM.getVectorCallCost(CI, VF, NeedToScalarize);
+        return !NeedToScalarize;
+      },
+      Range);
+  if (ShouldUseVectorCall)
+    return new VPWidenCallRecipe(*CI, make_range(Ops.begin(), Ops.end()),
+                                 Intrinsic::not_intrinsic);
+
+  return nullptr;
 }
 
 bool VPRecipeBuilder::shouldWiden(Instruction *I, VFRange &Range) const {
@@ -9160,7 +9165,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   VPlanTransforms::VPInstructionsToVPRecipes(
       OrigLoop, Plan,
       [this](PHINode *P) { return Legal->getIntOrFpInductionDescriptor(P); },
-      DeadInstructions, *PSE.getSE());
+      DeadInstructions, *PSE.getSE(), *TLI);
 
   // Remove the existing terminator of the exiting block of the top-most region.
   // A BranchOnCount will be added instead when adding the canonical IV recipes.
@@ -9313,7 +9318,7 @@ void VPInterleaveRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   State.ILV->widenCallInstruction(*cast<CallInst>(getUnderlyingInstr()), this,
-                                  *this, State);
+                                  *this, State, VectorIntrinsicID);
 }
 
 void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {

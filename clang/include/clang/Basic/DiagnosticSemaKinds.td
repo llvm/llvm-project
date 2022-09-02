@@ -3846,6 +3846,9 @@ def warn_impcast_integer_64_32 : Warning<
 def warn_impcast_integer_precision_constant : Warning<
   "implicit conversion from %2 to %3 changes value from %0 to %1">,
   InGroup<ConstantConversion>;
+def warn_impcast_single_bit_bitield_precision_constant : Warning<
+  "implicit truncation from %2 to a one-bit wide bit-field changes value from "
+  "%0 to %1">, InGroup<SingleBitBitFieldConstantConversion>;
 def warn_impcast_bitfield_precision_constant : Warning<
   "implicit truncation from %2 to bit-field changes value from %0 to %1">,
   InGroup<BitFieldConstantConversion>;
@@ -4048,6 +4051,9 @@ def warn_transparent_union_attribute_zero_fields : Warning<
   InGroup<IgnoredAttributes>;
 def warn_attribute_type_not_supported : Warning<
   "%0 attribute argument not supported: %1">,
+  InGroup<IgnoredAttributes>;
+def warn_attribute_type_not_supported_global : Warning<
+  "%0 attribute argument '%1' not supported on a global variable">,
   InGroup<IgnoredAttributes>;
 def warn_attribute_unknown_visibility : Warning<"unknown visibility %0">,
   InGroup<IgnoredAttributes>;

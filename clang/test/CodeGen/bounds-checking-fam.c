@@ -35,6 +35,51 @@ int test_two(struct Two *p, int i) {
   return p->a[i] + (p->a)[i];
 }
 
+union uZero {
+  int a[0];
+};
+union uOne {
+  int a[1];
+};
+union uTwo {
+  int a[2];
+};
+union uThree {
+  int a[3];
+};
+
+// CHECK-LABEL: define {{.*}} @{{.*}}test_uzero{{.*}}(
+int test_uzero(union uZero *p, int i) {
+  // CHECK-STRICT-0-NOT: @__ubsan
+  // CHECK-STRICT-1-NOT: @__ubsan
+  // CHECK-STRICT-2-NOT: @__ubsan
+  return p->a[i] + (p->a)[i];
+}
+
+// CHECK-LABEL: define {{.*}} @{{.*}}test_uone{{.*}}(
+int test_uone(union uOne *p, int i) {
+  // CHECK-STRICT-0-NOT: @__ubsan
+  // CHECK-STRICT-1-NOT: @__ubsan
+  // CHECK-STRICT-2: @__ubsan
+  return p->a[i] + (p->a)[i];
+}
+
+// CHECK-LABEL: define {{.*}} @{{.*}}test_utwo{{.*}}(
+int test_utwo(union uTwo *p, int i) {
+  // CHECK-STRICT-0: @__ubsan
+  // CHECK-STRICT-1: @__ubsan
+  // CHECK-STRICT-2: @__ubsan
+  return p->a[i] + (p->a)[i];
+}
+
+// CHECK-LABEL: define {{.*}} @{{.*}}test_uthree{{.*}}(
+int test_uthree(union uThree *p, int i) {
+  // CHECK-STRICT-0: @__ubsan
+  // CHECK-STRICT-1: @__ubsan
+  // CHECK-STRICT-2: @__ubsan
+  return p->a[i] + (p->a)[i];
+}
+
 // CHECK-LABEL: define {{.*}} @{{.*}}test_three{{.*}}(
 int test_three(struct Three *p, int i) {
   // CHECK-STRICT-0:     call void @__ubsan_handle_out_of_bounds_abort(

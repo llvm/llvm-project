@@ -132,24 +132,24 @@ class _BMSkipTable<_Key, _Value, _Hash, _BinaryPredicate, false> {
     typedef _Key   key_type;
 
     const _Value __default_value_;
-    std::unordered_map<_Key, _Value, _Hash, _BinaryPredicate> __table;
+    std::unordered_map<_Key, _Value, _Hash, _BinaryPredicate> __table_;
 
 public:
     _LIBCPP_INLINE_VISIBILITY
     _BMSkipTable(size_t __sz, _Value __default, _Hash __hf, _BinaryPredicate __pred)
-        : __default_value_(__default), __table(__sz, __hf, __pred) {}
+        : __default_value_(__default), __table_(__sz, __hf, __pred) {}
 
     _LIBCPP_INLINE_VISIBILITY
     void insert(const key_type &__key, value_type __val)
     {
-        __table [__key] = __val;    // Would skip_.insert (val) be better here?
+        __table_ [__key] = __val;    // Would skip_.insert (val) be better here?
     }
 
     _LIBCPP_INLINE_VISIBILITY
     value_type operator [](const key_type & __key) const
     {
-        auto __it = __table.find (__key);
-        return __it == __table.end() ? __default_value_ : __it->second;
+        auto __it = __table_.find (__key);
+        return __it == __table_.end() ? __default_value_ : __it->second;
     }
 };
 
@@ -163,25 +163,25 @@ private:
 
     typedef typename make_unsigned<key_type>::type unsigned_key_type;
     typedef std::array<value_type, 256> skip_map;
-    skip_map __table;
+    skip_map __table_;
 
 public:
     _LIBCPP_INLINE_VISIBILITY
     _BMSkipTable(size_t /*__sz*/, _Value __default, _Hash /*__hf*/, _BinaryPredicate /*__pred*/)
     {
-        std::fill_n(__table.begin(), __table.size(), __default);
+        std::fill_n(__table_.begin(), __table_.size(), __default);
     }
 
     _LIBCPP_INLINE_VISIBILITY
     void insert(key_type __key, value_type __val)
     {
-        __table[static_cast<unsigned_key_type>(__key)] = __val;
+        __table_[static_cast<unsigned_key_type>(__key)] = __val;
     }
 
     _LIBCPP_INLINE_VISIBILITY
     value_type operator [](key_type __key) const
     {
-        return __table[static_cast<unsigned_key_type>(__key)];
+        return __table_[static_cast<unsigned_key_type>(__key)];
     }
 };
 

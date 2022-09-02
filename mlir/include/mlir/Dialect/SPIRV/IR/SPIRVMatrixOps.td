@@ -124,7 +124,7 @@ def SPV_MatrixTimesScalarOp : SPV_Op<"MatrixTimesScalar", [NoSideEffect]> {
 
   let availability = [
     MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MaxVersion<SPV_V_1_6>,
     Extension<[]>,
     Capability<[SPV_C_Matrix]>
   ];
