@@ -91,6 +91,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     addressable, // for PRESENT(), &c.; anything (incl. procedure) but BOZ
     nullPointerType, // for ASSOCIATED(NULL())
     exactKind, // a single explicit exactKindValue
+    atomicIntKind, // atomic_int_kind from iso_fortran_env
 )
 
 struct TypePattern {
@@ -176,6 +177,8 @@ static constexpr TypePattern KINDComplex{ComplexType, KindCode::effectiveKind};
 static constexpr TypePattern KINDChar{CharType, KindCode::effectiveKind};
 static constexpr TypePattern KINDLogical{LogicalType, KindCode::effectiveKind};
 
+static constexpr TypePattern AtomicInt{IntType, KindCode::atomicIntKind};
+
 // The default rank pattern for dummy arguments and function results is
 // "elemental".
 ENUM_CLASS(Rank,
@@ -186,6 +189,7 @@ ENUM_CLASS(Rank,
     matrix,
     array, // not scalar, rank is known and greater than zero
     coarray, // rank is known and can be scalar; has nonzero corank
+    atom, // is scalar and has nonzero corank or is coindexed
     known, // rank is known and can be scalar
     anyOrAssumedRank, // rank can be unknown; assumed-type TYPE(*) allowed
     conformable, // scalar, or array of same rank & shape as "array" argument
@@ -1087,6 +1091,16 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
 
 static const IntrinsicInterface intrinsicSubroutine[]{
     {"abort", {}, {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"atomic_fetch_or",
+        {{"atom", AtomicInt, Rank::atom, Optionality::required,
+             common::Intent::InOut},
+            {"value", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"old", AtomicInt, Rank::scalar, Optionality::required,
+                common::Intent::Out},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
     {"co_broadcast",
         {{"a", AnyData, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::InOut},
@@ -1250,6 +1264,33 @@ static DynamicType GetBuiltinDerivedType(
   const semantics::Scope &scope{DEREF(symbol.scope())};
   const semantics::DerivedTypeSpec &derived{DEREF(scope.derivedTypeSpec())};
   return DynamicType{derived};
+}
+
+static std::int64_t GetBuiltinKind(
+    const semantics::Scope *builtinsScope, const char *which) {
+  if (!builtinsScope) {
+    common::die("INTERNAL: The __fortran_builtins module was not found, and "
+                "the kind '%s' was required",
+        which);
+  }
+  auto iter{
+      builtinsScope->find(semantics::SourceName{which, std::strlen(which)})};
+  if (iter == builtinsScope->cend()) {
+    common::die(
+        "INTERNAL: The __fortran_builtins module does not define the kind '%s'",
+        which);
+  }
+  const semantics::Symbol &symbol{*iter->second};
+  const auto &details{
+      DEREF(symbol.detailsIf<semantics::ObjectEntityDetails>())};
+  if (const auto kind{ToInt64(details.init())}) {
+    return *kind;
+  } else {
+    common::die(
+        "INTERNAL: The __fortran_builtins module does not define the kind '%s'",
+        which);
+    return -1;
+  }
 }
 
 // Ensure that the keywords of arguments to MAX/MIN and their variants
@@ -1523,6 +1564,16 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
     case KindCode::exactKind:
       argOk = type->kind() == d.typePattern.exactKindValue;
       break;
+    case KindCode::atomicIntKind:
+      argOk = type->kind() ==
+          GetBuiltinKind(builtinsScope, "__builtin_atomic_int_kind");
+      if (!argOk) {
+        messages.Say(arg->sourceLocation(),
+            "Actual argument for '%s=' must have kind=atomic_int_kind, but is '%s'"_err_en_US,
+            d.keyword, type->AsFortran());
+        return std::nullopt;
+      }
+      break;
     default:
       CRASH_NO_CASE;
     }
@@ -1603,6 +1654,15 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           messages.Say(arg->sourceLocation(),
               "'coarray=' argument must have corank > 0 for intrinsic '%s'"_err_en_US,
               name);
+          return std::nullopt;
+        }
+        break;
+      case Rank::atom:
+        argOk = rank == 0 && (IsCoarray(*arg) || ExtractCoarrayRef(*arg));
+        if (!argOk) {
+          messages.Say(arg->sourceLocation(),
+              "'%s=' argument must be a scalar coarray or coindexed object for intrinsic '%s'"_err_en_US,
+              d.keyword, name);
           return std::nullopt;
         }
         break;
@@ -1858,6 +1918,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   case Rank::shape:
   case Rank::array:
   case Rank::coarray:
+  case Rank::atom:
   case Rank::known:
   case Rank::anyOrAssumedRank:
   case Rank::reduceOperation:
@@ -2482,6 +2543,8 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     }
   } else if (name == "associated") {
     return CheckAssociated(call, context);
+  } else if (name == "atomic_fetch_or") {
+    return CheckForCoindexedObject(context, call.arguments[3], name, "stat");
   } else if (name == "co_broadcast" || name == "co_max" || name == "co_min" ||
       name == "co_sum") {
     bool aOk{CheckForCoindexedObject(context, call.arguments[0], name, "a")};

@@ -16,12 +16,11 @@ module iso_fortran_env
   use __Fortran_builtins, only: &
     event_type => __builtin_event_type, &
     lock_type => __builtin_lock_type, &
-    team_type => __builtin_team_type
+    team_type => __builtin_team_type, &
+    atomic_int_kind => __builtin_atomic_int_kind, &
+    atomic_logical_kind => __builtin_atomic_logical_kind
 
   implicit none
-
-  integer, parameter :: atomic_int_kind = selected_int_kind(18)
-  integer, parameter :: atomic_logical_kind = atomic_int_kind
 
   ! TODO: Use PACK([x],test) in place of the array constructor idiom
   ! [(x, integer::j=1,COUNT([test]))] below once PACK() can be folded.
