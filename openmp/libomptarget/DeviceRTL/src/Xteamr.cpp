@@ -294,7 +294,7 @@ void __local_xteamr_sum(T val, T *result_value, T *xteam_mem,
       unsigned int usableWaves = ((NumTeams - 1) / wsz) + 1;
       for (unsigned int kk = 1; kk < usableWaves; kk++)
         psums[0] += psums[kk];
-      *result_value = psums[0];
+      *result_value += psums[0];
     }
   }
 }
@@ -367,7 +367,8 @@ void __local_xteamr_max(T val, T *result_value, T *xteam_mem,
         if (otherval > psums[0])
           psums[0] = otherval;
       }
-      *result_value = psums[0];
+      if (psums[0] > *result_value)
+        *result_value = psums[0];
     }
   }
 }
@@ -440,7 +441,8 @@ void __local_xteamr_min(T val, T *result_value, T *xteam_mem,
         T otherval = psums[kk];
         psums[0] = (otherval < psums[0]) ? otherval : psums[0];
       }
-      *result_value = psums[0];
+      if (psums[0] < *result_value)
+        *result_value = psums[0];
     }
   }
 }

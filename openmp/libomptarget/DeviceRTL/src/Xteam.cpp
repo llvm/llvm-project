@@ -333,7 +333,7 @@ template <typename T> void __local_xteam_sum(T inval, T *result_value) {
       unsigned int usableWaves = ((NumTeams - 1) / wsz) + 1;
       for (unsigned int kk = 1; kk < usableWaves; kk++)
         psums[0] += psums[kk];
-      *result_value = psums[0];
+      *result_value += psums[0];
     }
   }
 }
@@ -412,7 +412,8 @@ template <typename T> void __local_xteam_max(T inval, T *result_value) {
         if (otherval > psums[0])
           psums[0] = otherval;
       }
-      *result_value = psums[0];
+      if (psums[0] > *result_value)
+        *result_value = psums[0];
     }
   }
 }
@@ -490,7 +491,8 @@ template <typename T> void __local_xteam_min(T inval, T *result_value) {
         T otherval = psums[kk];
         psums[0] = (otherval < psums[0]) ? otherval : psums[0];
       }
-      *result_value = psums[0];
+      if (psums[0] < *result_value)
+        *result_value = psums[0];
     }
   }
 }
