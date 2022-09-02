@@ -1,10 +1,14 @@
-# RUN: llvm-mc -triple=aarch64 --mdis %s | FileCheck %s
+# RUN: llvm-mc -triple=aarch64 -mattr=+all --mdis %s | FileCheck %s
 
-# CHECK: b.ne	<imm:#20>
+# CHECK:      b.ne	<imm:#20>
 0xa1 0x00 0x00 0x54
-# CHECK: asr	w0, w0, <imm:#0>
+# CHECK-NEXT: asr	<reg:w0>, <reg:w0>, <imm:#0>
 0x00 0x7c 0x00 0x13
-# CHECK: subs	x12, x13, x14, asr <imm:#39>
+# CHECK-NEXT: subs	<reg:x12>, <reg:x13>, <reg:x14>, asr <imm:#39>
 0xac 0x9d 0x8e 0xeb
-# CHECK: ldp	w3, w2, [x15, <imm:#16>]!
+# CHECK-NEXT: ldp	<reg:w3>, <reg:w2>, [<reg:x15>, <imm:#16>]!
 0xe3 0x09 0xc2 0x29
+
+## ls64
+# CHECK-NEXT: st64b <reg:x2>, [<reg:x1>]
+0x22 0x90 0x3f 0xf8

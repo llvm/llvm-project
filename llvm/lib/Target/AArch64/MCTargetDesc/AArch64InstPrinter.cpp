@@ -60,8 +60,7 @@ bool AArch64InstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
 }
 
 void AArch64InstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-  // This is for .cfi directives.
-  OS << getRegisterName(RegNo);
+  OS << markup("<reg:") << getRegisterName(RegNo) << markup(">");
 }
 
 void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -149,9 +148,11 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
         shift = immr;
       }
       if (AsmMnemonic) {
-        O << '\t' << AsmMnemonic << '\t' << getRegisterName(Op0.getReg())
-          << ", " << getRegisterName(Op1.getReg()) << ", " << markup("<imm:")
-          << "#" << shift << markup(">");
+        O << '\t' << AsmMnemonic << '\t';
+        printRegName(O, Op0.getReg());
+        O << ", ";
+        printRegName(O, Op1.getReg());
+        O << ", " << markup("<imm:") << "#" << shift << markup(">");
         printAnnotation(O, Annot);
         return;
       }
@@ -902,7 +903,7 @@ void AArch64InstPrinter::printMatrix(const MCInst *MI, unsigned OpNum,
   const MCOperand &RegOp = MI->getOperand(OpNum);
   assert(RegOp.isReg() && "Unexpected operand type!");
 
-  O << getRegisterName(RegOp.getReg());
+  printRegName(O, RegOp.getReg());
   switch (EltSize) {
   case 0:
     break;
@@ -945,7 +946,7 @@ void AArch64InstPrinter::printMatrixTile(const MCInst *MI, unsigned OpNum,
                                          raw_ostream &O) {
   const MCOperand &RegOp = MI->getOperand(OpNum);
   assert(RegOp.isReg() && "Unexpected operand type!");
-  O << getRegisterName(RegOp.getReg());
+  printRegName(O, RegOp.getReg());
 }
 
 void AArch64InstPrinter::printSVCROp(const MCInst *MI, unsigned OpNum,
@@ -965,7 +966,7 @@ void AArch64InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     unsigned Reg = Op.getReg();
-    O << getRegisterName(Reg);
+    printRegName(O, Reg);
   } else if (Op.isImm()) {
     printImm(MI, OpNo, STI, O);
   } else {
@@ -1011,7 +1012,7 @@ void AArch64InstPrinter::printPostIncOperand(const MCInst *MI, unsigned OpNo,
     if (Reg == AArch64::XZR)
       O << markup("<imm:") << "#" << Imm << markup(">");
     else
-      O << getRegisterName(Reg);
+      printRegName(O, Reg);
   } else
     llvm_unreachable("unknown operand kind in printPostIncOperand64");
 }
@@ -1081,14 +1082,14 @@ void AArch64InstPrinter::printShifter(const MCInst *MI, unsigned OpNum,
 void AArch64InstPrinter::printShiftedRegister(const MCInst *MI, unsigned OpNum,
                                               const MCSubtargetInfo &STI,
                                               raw_ostream &O) {
-  O << getRegisterName(MI->getOperand(OpNum).getReg());
+  printRegName(O, MI->getOperand(OpNum).getReg());
   printShifter(MI, OpNum + 1, STI, O);
 }
 
 void AArch64InstPrinter::printExtendedRegister(const MCInst *MI, unsigned OpNum,
                                                const MCSubtargetInfo &STI,
                                                raw_ostream &O) {
-  O << getRegisterName(MI->getOperand(OpNum).getReg());
+  printRegName(O, MI->getOperand(OpNum).getReg());
   printArithExtend(MI, OpNum + 1, STI, O);
 }
 
@@ -1385,7 +1386,7 @@ void AArch64InstPrinter::printMatrixTileList(const MCInst *MI, unsigned OpNum,
     unsigned Reg = RegMask & (1 << I);
     if (Reg == 0)
       continue;
-    O << getRegisterName(AArch64::ZAD0 + I);
+    printRegName(O, AArch64::ZAD0 + I);
     if (Printed + 1 != NumRegs)
       O << ", ";
     ++Printed;
@@ -1702,7 +1703,7 @@ void AArch64InstPrinter::printSVERegOp(const MCInst *MI, unsigned OpNum,
   }
 
   unsigned Reg = MI->getOperand(OpNum).getReg();
-  O << getRegisterName(Reg);
+  printRegName(O, Reg);
   if (suffix != 0)
     O << '.' << suffix;
 }
@@ -1784,7 +1785,7 @@ void AArch64InstPrinter::printZPRasFPR(const MCInst *MI, unsigned OpNum,
     llvm_unreachable("Unsupported width");
   }
   unsigned Reg = MI->getOperand(OpNum).getReg();
-  O << getRegisterName(Reg - AArch64::Z0 + Base);
+  printRegName(O, Reg - AArch64::Z0 + Base);
 }
 
 template <unsigned ImmIs0, unsigned ImmIs1>
@@ -1802,12 +1803,12 @@ void AArch64InstPrinter::printGPR64as32(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {
   unsigned Reg = MI->getOperand(OpNum).getReg();
-  O << getRegisterName(getWRegFromXReg(Reg));
+  printRegName(O, getWRegFromXReg(Reg));
 }
 
 void AArch64InstPrinter::printGPR64x8(const MCInst *MI, unsigned OpNum,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
   unsigned Reg = MI->getOperand(OpNum).getReg();
-  O << getRegisterName(MRI.getSubReg(Reg, AArch64::x8sub_0));
+  printRegName(O, MRI.getSubReg(Reg, AArch64::x8sub_0));
 }
