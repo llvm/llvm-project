@@ -1845,10 +1845,6 @@ public:
   /// if the declaration is not from a module file.
   ModuleFile *getOwningModuleFile(const Decl *D);
 
-  /// Get the best name we know for the module that owns the given
-  /// declaration, or an empty string if the declaration is not from a module.
-  std::string getOwningModuleNameForDiagnostic(const Decl *D);
-
   /// Returns the source location for the decl \p ID.
   SourceLocation getSourceLocationForDeclID(serialization::GlobalDeclID ID);
 
