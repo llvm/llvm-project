@@ -69,8 +69,10 @@ public:
   /// Gets the SPIR-V correspondence for the standard index type.
   Type getIndexType() const;
 
+  const spirv::TargetEnv &getTargetEnv() const { return targetEnv; }
+
   /// Returns the options controlling the SPIR-V type converter.
-  const Options &getOptions() const;
+  const Options &getOptions() const { return options; }
 
 private:
   spirv::TargetEnv targetEnv;
