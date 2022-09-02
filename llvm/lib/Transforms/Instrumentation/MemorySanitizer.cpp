@@ -145,6 +145,7 @@
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
@@ -351,6 +352,12 @@ static cl::opt<uint64_t> ClShadowBase("msan-shadow-base",
 static cl::opt<uint64_t> ClOriginBase("msan-origin-base",
                                       cl::desc("Define custom MSan OriginBase"),
                                       cl::Hidden, cl::init(0));
+
+static cl::opt<int>
+    ClDisambiguateWarning("msan-disambiguate-warning-threshold",
+                          cl::desc("Define threshold for number of checks per "
+                                   "debug location to force origin update."),
+                          cl::Hidden, cl::init(3));
 
 const char kMsanModuleCtorName[] = "msan.module_ctor";
 const char kMsanInitName[] = "__msan_init";
@@ -1105,6 +1112,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         : Shadow(S), Origin(O), OrigIns(I) {}
   };
   SmallVector<ShadowOriginAndInsertPoint, 16> InstrumentationList;
+  DenseMap<const DILocation *, int> LazyWarningDebugLocationCount;
   bool InstrumentLifetimeStart = ClHandleLifetimeIntrinsics;
   SmallSetVector<AllocaInst *, 16> AllocaSet;
   SmallVector<std::pair<IntrinsicInst *, AllocaInst *>, 16> LifetimeStartList;
@@ -1145,6 +1153,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
            (&I == FnPrologueEnd || I.comesBefore(FnPrologueEnd));
   }
 
+  // Creates a new origin and records the stack trace. In general we can call
+  // this function for any origin manipulation we like. However it will cost
+  // runtime resources. So use this wisely only if it can provide additional
+  // information helpful to a user.
   Value *updateOrigin(Value *V, IRBuilder<> &IRB) {
     if (MS.TrackOrigins <= 1)
       return V;
@@ -1261,11 +1273,42 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
+  // Returns true if Debug Location curresponds to multiple warnings.
+  bool shouldDisambiguateWarningLocation(const DebugLoc &DebugLoc) {
+    if (MS.TrackOrigins < 2)
+      return false;
+
+    if (LazyWarningDebugLocationCount.empty())
+      for (const auto &I : InstrumentationList)
+        ++LazyWarningDebugLocationCount[I.OrigIns->getDebugLoc()];
+
+    return LazyWarningDebugLocationCount[DebugLoc] >= ClDisambiguateWarning;
+  }
+
   /// Helper function to insert a warning at IRB's current insert point.
   void insertWarningFn(IRBuilder<> &IRB, Value *Origin) {
     if (!Origin)
       Origin = (Value *)IRB.getInt32(0);
     assert(Origin->getType()->isIntegerTy());
+
+    if (shouldDisambiguateWarningLocation(IRB.getCurrentDebugLocation())) {
+      // Try to create additional origin with debug info of the last origin
+      // instruction. It may provide additional information to the user.
+      if (Instruction *OI = dyn_cast_or_null<Instruction>(Origin)) {
+        assert(MS.TrackOrigins);
+        auto NewDebugLoc = OI->getDebugLoc();
+        // Origin update with missing or the same debug location provides no
+        // additional value.
+        if (NewDebugLoc && NewDebugLoc != IRB.getCurrentDebugLocation()) {
+          // Insert update just before the check, so we call runtime only just
+          // before the report.
+          IRBuilder<> IRBOrigin(&*IRB.GetInsertPoint());
+          IRBOrigin.SetCurrentDebugLocation(NewDebugLoc);
+          Origin = updateOrigin(Origin, IRBOrigin);
+        }
+      }
+    }
+
     if (MS.CompileKernel || MS.TrackOrigins)
       IRB.CreateCall(MS.WarningFn, Origin)->setCannotMerge();
     else
