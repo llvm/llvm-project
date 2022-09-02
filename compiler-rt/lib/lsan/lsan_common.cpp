@@ -26,6 +26,18 @@
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 #if CAN_SANITIZE_LEAKS
+
+#  if SANITIZER_APPLE
+// https://github.com/apple-oss-distributions/objc4/blob/8701d5672d3fd3cd817aeb84db1077aafe1a1604/runtime/objc-runtime-new.h#L127
+#    if SANITIZER_IOS && !SANITIZER_IOSSIM
+#      define OBJC_DATA_MASK 0x0000007ffffffff8UL
+#    else
+#      define OBJC_DATA_MASK 0x00007ffffffffff8UL
+#    endif
+// https://github.com/apple-oss-distributions/objc4/blob/8701d5672d3fd3cd817aeb84db1077aafe1a1604/runtime/objc-runtime-new.h#L139
+#    define OBJC_FAST_IS_RW 0x8000000000000000UL
+#  endif
+
 namespace __lsan {
 
 // This mutex is used to prevent races between DoLeakCheck and IgnoreObject, and
@@ -160,6 +172,17 @@ static uptr GetCallerPC(const StackTrace &stack) {
   return 0;
 }
 
+#  if SANITIZER_APPLE
+// Objective-C class data pointers are stored with flags in the low bits, so
+// they need to be transformed back into something that looks like a pointer.
+static inline void *MaybeTransformPointer(void *p) {
+  uptr ptr = reinterpret_cast<uptr>(p);
+  if ((ptr & OBJC_FAST_IS_RW) == OBJC_FAST_IS_RW)
+    ptr &= OBJC_DATA_MASK;
+  return reinterpret_cast<void *>(ptr);
+}
+#  endif
+
 // On Linux, treats all chunks allocated from ld-linux.so as reachable, which
 // covers dynamically allocated TLS blocks, internal dynamic loader's loaded
 // modules accounting etc.
@@ -276,6 +299,9 @@ void ScanRangeForPointers(uptr begin, uptr end, Frontier *frontier,
     pp = pp + alignment - pp % alignment;
   for (; pp + sizeof(void *) <= end; pp += alignment) {
     void *p = *reinterpret_cast<void **>(pp);
+#  if SANITIZER_APPLE
+    p = MaybeTransformPointer(p);
+#  endif
     if (!MaybeUserPointer(reinterpret_cast<uptr>(p)))
       continue;
     uptr chunk = PointsIntoChunk(p);

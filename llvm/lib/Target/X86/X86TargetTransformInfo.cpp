@@ -1016,15 +1016,15 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
         return LT.first * KindCost.value();
 
   static const CostKindTblEntry SSE42CostTable[] = {
-    { ISD::FADD, MVT::f64,    {  1 } }, // Nehalem from http://www.agner.org/
-    { ISD::FADD, MVT::f32,    {  1 } }, // Nehalem from http://www.agner.org/
-    { ISD::FADD, MVT::v2f64,  {  1 } }, // Nehalem from http://www.agner.org/
-    { ISD::FADD, MVT::v4f32,  {  1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FADD, MVT::f64,    {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FADD, MVT::f32,    {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FADD, MVT::v2f64,  {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FADD, MVT::v4f32,  {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
 
-    { ISD::FSUB, MVT::f64,    {  1 } }, // Nehalem from http://www.agner.org/
-    { ISD::FSUB, MVT::f32 ,   {  1 } }, // Nehalem from http://www.agner.org/
-    { ISD::FSUB, MVT::v2f64,  {  1 } }, // Nehalem from http://www.agner.org/
-    { ISD::FSUB, MVT::v4f32,  {  1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::f64,    {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::f32 ,   {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::v2f64,  {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
+    { ISD::FSUB, MVT::v4f32,  {  1,  3, 1, 1 } }, // Nehalem from http://www.agner.org/
 
     { ISD::FMUL, MVT::f64,    {  1 } }, // Nehalem from http://www.agner.org/
     { ISD::FMUL, MVT::f32,    {  1 } }, // Nehalem from http://www.agner.org/
