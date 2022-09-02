@@ -1054,18 +1054,6 @@ struct YieldOpInterface
   }
 };
 
-/// Return the destinations that an ForeachThreadOp is inserting into. One per
-/// ParallelInsertSliceOp.
-static SmallVector<OpOperand *>
-getInsertionDest(ForeachThreadOp foreachThreadOp) {
-  PerformConcurrentlyOp terminator = foreachThreadOp.getTerminator();
-  SmallVector<OpOperand *> result;
-  terminator.walk([&](tensor::ParallelInsertSliceOp insertOp) {
-    result.push_back(&insertOp->getOpOperand(1) /*dest*/);
-  });
-  return result;
-}
-
 /// Bufferization of ForeachThreadOp. This also bufferizes the terminator of the
 /// region. There are op interfaces for the terminators (PerformConcurrentlyOp
 /// and ParallelInsertSliceOp), but these are only used during analysis. Not
@@ -1073,20 +1061,24 @@ getInsertionDest(ForeachThreadOp foreachThreadOp) {
 struct ForeachThreadOpInterface
     : public BufferizableOpInterface::ExternalModel<ForeachThreadOpInterface,
                                                     ForeachThreadOp> {
-  SmallVector<OpOperand *>
-  getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const AnalysisState &state) const {
-    // Get OpOperand (dest) from corresponding ParallelInsertSliceOp.
+  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
+                              const AnalysisState &state) const {
+    // scf::ForeachThreadOp alone doesn't bufferize to a memory read, one of the
+    // uses of its matching bbArg may.
     auto foreachThreadOp = cast<ForeachThreadOp>(op);
-    return {getInsertionDest(foreachThreadOp)[opResult.getResultNumber()]};
+    return state.isValueRead(foreachThreadOp.getTiedBlockArgument(&opOperand));
   }
 
-  bool isMemoryWrite(Operation *op, OpResult opResult,
-                     const AnalysisState &state) const {
-    // This op is a memory write. Stop lookup here to avoid finding false
-    // conflicts involving this op and one of the ops in the region. This is
-    // similar to how scf.if ops are analyzed.
+  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
+                               const AnalysisState &state) const {
+    // Outputs of scf::ForeachThreadOps are always considered as a write.
     return true;
+  }
+
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
+    auto foreachThreadOp = cast<ForeachThreadOp>(op);
+    return {foreachThreadOp.getTiedOpResult(&opOperand)};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
@@ -1094,35 +1086,88 @@ struct ForeachThreadOpInterface
     return BufferRelation::Equivalent;
   }
 
+  bool isWritable(Operation *op, Value value,
+                  const AnalysisState &state) const {
+    return true;
+  }
+
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
+    OpBuilder::InsertionGuard guard(rewriter);
     auto foreachThreadOp = cast<ForeachThreadOp>(op);
+    int64_t rank = foreachThreadOp.getRank();
 
-#ifndef NDEBUG
-    // ParallelInsertSliceOpInterface replaces all uses.
-    for (OpResult opResult : foreachThreadOp->getOpResults())
-      assert(opResult.getUses().empty() &&
-             "expected that all uses were already replaced");
-#endif // NDEBUG
+    // Get buffers for all output operands.
+    SmallVector<Value> buffers;
+    for (Value out : foreachThreadOp.getOutputs()) {
+      FailureOr<Value> buffer = getBuffer(rewriter, out, options);
+      if (failed(buffer))
+        return failure();
+      buffers.push_back(*buffer);
+    }
+
+    // Use buffers instead of block arguments.
+    rewriter.setInsertionPointToStart(foreachThreadOp.getBody());
+    for (const auto &it :
+         llvm::zip(foreachThreadOp.getBody()->getArguments().drop_front(rank),
+                   buffers)) {
+      BlockArgument bbArg = std::get<0>(it);
+      Value buffer = std::get<1>(it);
+      Value bufferAsTensor =
+          rewriter.create<ToTensorOp>(foreachThreadOp.getLoc(), buffer);
+      bbArg.replaceAllUsesWith(bufferAsTensor);
+    }
 
     // Create new ForeachThreadOp without any results and drop the automatically
     // introduced terminator.
-    TypeRange newResultTypes;
+    rewriter.setInsertionPoint(foreachThreadOp);
     auto newForeachThreadOp = rewriter.create<ForeachThreadOp>(
-        foreachThreadOp.getLoc(), newResultTypes,
+        foreachThreadOp.getLoc(), /*outputs=*/ValueRange(),
         foreachThreadOp.getNumThreads(),
         extractFromI64ArrayAttr(foreachThreadOp.getThreadDimMapping()));
     newForeachThreadOp.getBody()->getTerminator()->erase();
 
     // Move over block contents of the old op.
+    SmallVector<Value> replacementBbArgs;
+    replacementBbArgs.append(
+        newForeachThreadOp.getBody()->getArguments().begin(),
+        newForeachThreadOp.getBody()->getArguments().end());
+    replacementBbArgs.append(foreachThreadOp.getOutputs().size(), Value());
     rewriter.mergeBlocks(foreachThreadOp.getBody(),
-                         newForeachThreadOp.getBody(),
-                         {newForeachThreadOp.getBody()->getArguments()});
+                         newForeachThreadOp.getBody(), replacementBbArgs);
 
-    // Remove the old op.
-    rewriter.eraseOp(op);
+    // Remove the old op and replace all of its uses.
+    replaceOpWithBufferizedValues(rewriter, op, buffers);
 
     return success();
+  }
+
+  FailureOr<BaseMemRefType>
+  getBufferType(Operation *op, Value value, const BufferizationOptions &options,
+                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
+    auto foreachThreadOp = cast<ForeachThreadOp>(op);
+
+    if (auto bbArg = value.dyn_cast<BlockArgument>())
+      // A tensor block argument has the same bufferized type as the
+      // corresponding output operand.
+      return bufferization::getBufferType(
+          foreachThreadOp.getTiedOpOperand(bbArg)->get(), options, fixedTypes);
+
+    // The bufferized result type is the same as the bufferized type of the
+    // corresponding output operand.
+    return bufferization::getBufferType(
+        foreachThreadOp.getOutputs()[value.cast<OpResult>().getResultNumber()],
+        options, fixedTypes);
+  }
+
+  bool isRepetitiveRegion(Operation *op, unsigned index) const {
+    auto foreachThreadOp = cast<ForeachThreadOp>(op);
+    // This op is not repetitive if it has just a single thread.
+    if (llvm::all_of(foreachThreadOp.getNumThreads(), [](Value v) {
+          return getConstantIntValue(v) == static_cast<int64_t>(1);
+        }))
+      return false;
+    return true;
   }
 };
 

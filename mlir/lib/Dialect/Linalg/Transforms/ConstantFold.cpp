@@ -122,7 +122,7 @@ public:
 
     // Identified this as a potential candidate for folding. Now check the
     // policy to see whether we are allowed to proceed.
-    for (auto operand : genericOp.getInputOperands()) {
+    for (auto *operand : genericOp.getInputOperands()) {
       if (!controlFn(operand))
         return failure();
     }
