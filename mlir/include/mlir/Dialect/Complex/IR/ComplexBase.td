@@ -21,7 +21,6 @@ def Complex_Dialect : Dialect {
 
   let dependentDialects = ["arith::ArithmeticDialect"];
   let hasConstantMaterializer = 1;
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
   let useDefaultAttributePrinterParser = 1;
 }
 
