@@ -746,7 +746,7 @@ This phase currently supports all the intrinsic procedures listed above but the 
 
 | Intrinsic Category | Intrinsic Procedures Lacking Support |
 | --- | --- |
-| Coarray intrinsic functions | LCOBOUND, UCOBOUND, IMAGE_INDEX, COSHAPE |
+| Coarray intrinsic functions | IMAGE_INDEX, COSHAPE |
 | Object characteristic inquiry functions | ALLOCATED, ASSOCIATED, EXTENDS_TYPE_OF, IS_CONTIGUOUS, PRESENT, RANK, SAME_TYPE, STORAGE_SIZE |
 | Type inquiry intrinsic functions | BIT_SIZE, DIGITS, EPSILON, HUGE, KIND, MAXEXPONENT, MINEXPONENT, NEW_LINE, PRECISION, RADIX, RANGE, TINY|
 | Non-standard intrinsic functions | AND, OR, XOR, LSHIFT, RSHIFT, SHIFT, ZEXT, IZEXT, COSD, SIND, TAND, ACOSD, ASIND, ATAND, ATAN2D, COMPL, DCMPLX, EQV, NEQV, INT8, JINT, JNINT, KNINT, LOC, QCMPLX, DREAL, DFLOAT, QEXT, QFLOAT, QREAL, DNUM, NUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF, MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR, IARG, IARGC, NARGS, NUMARG, BADDRESS, IADDR, CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, MALLOC |
