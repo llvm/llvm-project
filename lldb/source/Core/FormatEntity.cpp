@@ -825,7 +825,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     bitfield_name.Printf("%s:%d", target->GetTypeName().AsCString(),
                          target->GetBitfieldBitSize());
     auto type_sp = std::make_shared<TypeNameSpecifierImpl>(
-        bitfield_name.GetString(), false);
+        bitfield_name.GetString(), lldb::eFormatterMatchExact);
     if (val_obj_display ==
             ValueObject::eValueObjectRepresentationStyleSummary &&
         !DataVisualization::GetSummaryForType(type_sp))
