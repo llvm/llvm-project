@@ -36,6 +36,7 @@ add_flang_library(flangFrontend
   MLIRTransforms
   MLIRLLVMToLLVMIRTranslation
   MLIRSCFToControlFlow
+  MLIRTargetLLVMIRImport
   ${dialect_libs}
 
   LINK_COMPONENTS
