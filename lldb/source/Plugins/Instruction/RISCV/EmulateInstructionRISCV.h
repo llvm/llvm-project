@@ -16,6 +16,22 @@
 
 namespace lldb_private {
 
+constexpr uint32_t DecodeRD(uint32_t inst) { return (inst & 0xF80) >> 7; }
+constexpr uint32_t DecodeRS1(uint32_t inst) { return (inst & 0xF8000) >> 15; }
+constexpr uint32_t DecodeRS2(uint32_t inst) { return (inst & 0x1F00000) >> 20; }
+
+class EmulateInstructionRISCV;
+
+struct InstrPattern {
+  const char *name;
+  /// Bit mask to check the type of a instruction (B-Type, I-Type, J-Type, etc.)
+  uint32_t type_mask;
+  /// Characteristic value after bitwise-and with type_mask.
+  uint32_t eigen;
+  bool (*exec)(EmulateInstructionRISCV &emulator, uint32_t inst,
+               bool ignore_cond);
+};
+
 class EmulateInstructionRISCV : public EmulateInstruction {
 public:
   static llvm::StringRef GetPluginNameStatic() { return "riscv"; }
@@ -32,6 +48,8 @@ public:
     case eInstructionTypePrologueEpilogue:
     case eInstructionTypeAll:
       return false;
+    default:
+      llvm_unreachable("Unhandled instruction type");
     }
     llvm_unreachable("Fully covered switch above!");
   }
@@ -64,6 +82,8 @@ public:
 
   lldb::addr_t ReadPC(bool *success);
   bool WritePC(lldb::addr_t pc);
+
+  const InstrPattern *Decode(uint32_t inst);
   bool DecodeAndExecute(uint32_t inst, bool ignore_cond);
 };
 
